@@ -7,8 +7,6 @@ package transcripts
 import (
 	"bytes"
 	"cmp"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -94,9 +92,15 @@ type stored struct {
 	Pictures []picture `json:"pictures,omitempty"`
 }
 
+// picture is an image as written: its file's hash, and its length and
+// pixels as it was written (an older daemon's records have neither, which
+// reading takes from the file: read.go).
 type picture struct {
 	MimeType string `json:"mime"`
 	Hash     string `json:"hash"`
+	Size     int64  `json:"size,omitempty"`
+	Width    int    `json:"w,omitempty"`
+	Height   int    `json:"h,omitempty"`
 }
 
 // Append adds items to chat's copy, or replaces an item written before.
@@ -226,43 +230,6 @@ func wholeLines(f *os.File, size int64) (int64, error) {
 		}
 	}
 	return 0, nil
-}
-
-// storeImagesLocked writes an item's images beside chat's file (each once,
-// by its hash) and returns the item as written.
-func (s *Store) storeImagesLocked(chat string, it model.Item) (*stored, error) {
-	st := &stored{Item: it}
-	st.Images = nil
-	for _, img := range it.Images {
-		hash := img.Hash // taken as the image came in
-		if hash == "" {
-			sum := sha256.Sum256(img.Data)
-			hash = hex.EncodeToString(sum[:])
-		}
-		if err := s.writeImageLocked(chat, hash, img.Data); err != nil {
-			return nil, err
-		}
-		st.Pictures = append(st.Pictures, picture{MimeType: img.MimeType, Hash: hash})
-	}
-	return st, nil
-}
-
-// writeImageLocked writes an image under its hash, whole or not at all
-// (atomicfile.ReplaceIn): one there is never written again, so it must
-// never be there empty.
-func (s *Store) writeImageLocked(chat, hash string, data []byte) error {
-	if err := checkChat(chat); err != nil {
-		return err
-	}
-	dir := path.Join(chat, imagesDir)
-	name := path.Join(dir, hash)
-	if _, err := s.root.Lstat(name); err == nil {
-		return nil
-	}
-	if err := s.root.MkdirAll(dir, 0o700); err != nil {
-		return err
-	}
-	return atomicfile.ReplaceIn(s.root, name, data, 0o600)
 }
 
 // Replace writes chat's copy anew as items, in order.

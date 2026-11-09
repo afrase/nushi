@@ -360,14 +360,15 @@ func (c *chat) setOutput(it *model.Item, content []acp.ToolCallContent) {
 	it.Text, it.Diffs, it.Images = strings.Join(parts, "\n\n"), diffs, images
 }
 
-// image decodes an image the agent sent, and takes its hash once, beside
-// the decoding (model.Image.Hash); one given only by URI is left out.
+// image decodes an image the agent sent, and takes its hash and size once,
+// beside the decoding (model.Image.Hash); one given only by URI is left
+// out.
 func image(i *acp.ImageContent) (model.Image, bool) {
 	data, err := base64.StdEncoding.DecodeString(i.Data)
 	if err != nil || len(data) == 0 {
 		return model.Image{}, false
 	}
-	return model.Image{MimeType: i.MimeType, Data: data, Hash: ImageHash(data)}, true
+	return described(model.Image{MimeType: i.MimeType, Data: data}), true
 }
 
 func (c *chat) paths(locs []acp.ToolCallLocation) []string {

@@ -48,6 +48,10 @@ type Copies interface {
 	// those of its items whose ids are ids, whole, reading only them.
 	Heads(chat string) ([]model.Item, error)
 	Pick(chat string, ids []string) ([]model.Item, error)
+	// ImageData returns the bytes of a chat's image of hash, an error if
+	// they aren't size long (0: any); what a chat holds as a reference
+	// (images.go).
+	ImageData(chat, hash string, size int64) ([]byte, error)
 	Delete(chat string) error
 	Has(chat string) bool
 	// List returns every chat's copy, largest first.
@@ -82,8 +86,9 @@ func settled(it *model.Item, last bool) bool {
 
 // copyLocked writes the items that changed since the copy last had them
 // and have settled, or with all every one of them (a turn ended, the agent
-// stopped). While copies are off, or the copy couldn't be read (unread),
-// nothing is written.
+// stopped), then holds their images as references (images.go). While
+// copies are off, or the copy couldn't be read (unread), nothing is
+// written.
 func (c *chat) copyLocked(all bool) {
 	if c.copies == nil || len(c.unsaved) == 0 {
 		return
@@ -95,6 +100,7 @@ func (c *chat) copyLocked(all bool) {
 	}
 	var items []model.Item
 	var after []string
+	var written []int
 	prev := ""
 	for i := range c.items {
 		it := &c.items[i]
@@ -104,7 +110,7 @@ func (c *chat) copyLocked(all bool) {
 		}
 		if c.unsaved[it.ID] && (all || settled(it, i == len(c.items)-1)) {
 			delete(c.unsaved, it.ID)
-			items, after = append(items, *it), append(after, prev)
+			items, after, written = append(items, *it), append(after, prev), append(written, i)
 		}
 		prev = it.ID
 	}
@@ -114,6 +120,10 @@ func (c *chat) copyLocked(all bool) {
 	if err := c.copies.Append(c.id, items, after); err != nil {
 		c.mirrored = false
 		c.logLocked().Warn("transcript copy not written", "items", len(items), "err", err)
+		return
+	}
+	for _, i := range written {
+		c.byRefLocked(i)
 	}
 }
 
@@ -208,9 +218,11 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 			continue
 		}
 		// An open chat shows on what it has, so items it let go come back
-		// before the copy goes.
+		// before the copy goes, and the images it and its side chats' bases
+		// hold as references.
 		ch.mu.Lock()
 		ch.itemsBackLocked()
+		ch.unrefLocked()
 		err := s.copies.Delete(c.Chat)
 		ch.mirrored, ch.unread = false, ch.unread && err != nil // a new copy starts empty
 		gone := ch.sessionGone

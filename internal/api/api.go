@@ -220,6 +220,11 @@ func (s *server) Events(ctx context.Context, req *connect.Request[nushiv1.Events
 	defer s.Chats.Following(-1)
 	// An empty first message tells the client the subscription is live.
 	behind := s.Hub.Subscribe(ctx, func(e model.Event) bool {
+		if e.Item != nil && !req.Msg.ImageRefs {
+			it := []model.Item{*e.Item} // the chat's, perhaps shared: inline gives it new images
+			s.Chats.Inline(e.ChatID, it)
+			e.Item = &it[0]
+		}
 		err = stream.Send(toProto(e, req.Msg.ImageRefs))
 		return err == nil
 	}, events.OnLive(func() bool {

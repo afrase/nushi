@@ -213,12 +213,27 @@ type Subagent struct {
 // lowercase hex SHA-256 of Data, taken once as the image comes in (or read
 // from the transcript copy's file name), so what names an image by it
 // (ADR 0099) never reads Data again; "" when not taken. Data is never
-// changed in place, so the two stay one.
+// changed in place, so the two stay one. Size is Data's length, Width and
+// Height its pixels when its header says (else 0), taken with Hash.
+//
+// An image of a chat's transcript copy past SmallImage is held as a
+// reference (Ref): Hash and Size without Data, its bytes read back from
+// the copy only when something needs them (ADR 0105).
 type Image struct {
-	MimeType string
-	Data     []byte
-	Hash     string `json:"-"`
+	MimeType      string
+	Data          []byte
+	Hash          string `json:"-"`
+	Size          int64  `json:"-"`
+	Width, Height int    `json:"-"`
 }
+
+// SmallImage is the largest image always held and sent with its bytes: a
+// reference and a call of its own would cost more (ADR 0099, 0105).
+const SmallImage = 64 << 10
+
+// Ref says the image is held as a reference: its bytes are in its chat's
+// transcript copy, under Hash, not here.
+func (img Image) Ref() bool { return img.Data == nil && img.Size > 0 }
 
 // Option is a choice the agent offers. Kind is ACP's hint for a permission
 // option, such as "allow_once" or "reject_always".

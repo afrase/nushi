@@ -17,7 +17,7 @@ Measured on that chat, through the API, on a dev daemon:
 - Asleep, it costs its index while it's read (about 1 MB; none once two other chats are read) instead of its transcript: 85 MB of live heap became 5 MB. The first open after a start went from a 233 MB footprint to 157 MB, as its copy is read once.
 - A page of 200 items of an asleep chat (images inline, as the Mac takes them) takes about 70-80 ms, against 16 ms from memory; the first read after a start or a write also reads every head (about 150 ms for a 30 MB copy).
 - Waking reads the transcript back whole: a message to it was answered in 0.5-1.1 s, against 0.1 s while it held its items.
-- An awake chat still holds its images; holding those as references is in [`docs/roadmap.md`](../roadmap.md).
+- An awake chat still held its images; it holds them as references since [ADR 0105](0105-an-awake-chat-holds-its-images-as-references.md).
 
 ## Alternatives considered
 - Taking the chat out of the service: its event numbers, queue, picks and notices would go with it.

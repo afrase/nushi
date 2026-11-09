@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"time"
 
@@ -70,6 +71,10 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 			return errors.New("the agent can't rewind to this message")
 		}
 		msg = messageOf(c.items[i])
+		var err error
+		if msg.Images, err = c.imagesWithBytes(msg.Images); err != nil { // before the cut, which may take their files
+			return fmt.Errorf("couldn't read the message's images back: %w", err)
+		}
 		agent, sid, folder, at, forkAt = c.agent, c.sid, c.record.Folder, c.items[i].ForkAt, c.forkAt
 		c.busy = true
 		c.statusChangedLocked()
@@ -191,6 +196,10 @@ func (s *Service) Stop(ctx context.Context, chatID string, takeBack bool) (*mode
 			return err
 		}
 		id, msg = c.items[i].ID, messageOf(c.items[i])
+		var err error
+		if msg.Images, err = c.imagesWithBytes(msg.Images); err != nil {
+			return fmt.Errorf("the turn stopped, but its message's images couldn't be read back to take it: %w", err)
+		}
 		return nil
 	}()
 	if err != nil || id == "" {

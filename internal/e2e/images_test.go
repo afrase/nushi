@@ -14,6 +14,7 @@ import (
 	"github.com/afrase/nushi/internal/acptest"
 	"github.com/afrase/nushi/internal/features/chats"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/model"
 )
 
 // noisePNG is a w×h PNG of noise, which doesn't compress: about 4·w·h
@@ -81,6 +82,12 @@ func TestImagesAsReferences(t *testing.T) {
 	last := must(phone.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id, Recent: 1})))
 	page := must(phone.c.GetChatItems(ctx, connect.NewRequest(&nushiv1.GetChatItemsRequest{ChatId: id, Before: last.Items[0].Id, ImageRefs: true})))
 	checkRefs(t, "GetChatItems", page.Items[0].Images, big, small)
+	// A page without the flag: the image the chat holds as a reference
+	// (ADR 0105) read back whole.
+	page = must(mac.c.GetChatItems(ctx, connect.NewRequest(&nushiv1.GetChatItemsRequest{ChatId: id, Before: last.Items[0].Id})))
+	if imgs := page.Items[0].Images; len(imgs) != 2 || !bytes.Equal(imgs[0].Data, big) || !bytes.Equal(imgs[1].Data, small) {
+		t.Fatalf("GetChatItems without image_refs: %v", imgs)
+	}
 
 	// The reference brings the bytes, over the device's API (not macOnly),
 	// from that chat only.
@@ -138,5 +145,35 @@ func checkRefs(t *testing.T, where string, images []*nushiv1.ImageData, big, sma
 	}
 	if !bytes.Equal(s.Data, small) || s.Sha256 != "" {
 		t.Errorf("%s: the small image: %d bytes, %q", where, len(s.Data), s.Sha256)
+	}
+}
+
+// An event of an item whose image the chat holds as a reference (ADR
+// 0105) brings its bytes to a client that takes images inline, and one
+// whose copy lost it comes without bytes, never as empty ones.
+func TestAnEventOfAHeldImage(t *testing.T) {
+	ctx := context.Background()
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	mac := open(t, d)
+	big := noisePNG(t, 200, 150)
+	id := mac.start(&nushiv1.StartChatRequest{Agent: "codex", Folder: t.TempDir()})
+	must(mac.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "look",
+		Images: []*nushiv1.ImageData{{MimeType: "image/png", Data: big}}})))
+	mac.waitFor("the reply", turnEnded(id))
+	user := must(mac.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id, ImageRefs: true}))).Items[0]
+	ref := user.Images[0]
+
+	// As a later change of the item would send it (the chat holds it so).
+	held := model.Image{MimeType: "image/png", Hash: ref.Sha256, Size: ref.Size, Width: int(ref.Width), Height: int(ref.Height)}
+	gone := held
+	gone.Hash = chats.ImageHash([]byte("not in the copy"))
+	d.hub.Publish(model.Event{ChatID: id, Item: &model.Item{ID: user.Id, Kind: model.UserMessage, Text: "look", Images: []model.Image{held, gone}}})
+	e := mac.waitFor("the item's event", func(e *nushiv1.EventsResponse) bool { return e.GetItem().GetItem().GetId() == user.Id })
+	imgs := e.GetItem().GetItem().Images
+	if len(imgs) != 2 || !bytes.Equal(imgs[0].Data, big) {
+		t.Fatalf("the event's image: %v", imgs)
+	}
+	if imgs[1].Sha256 != gone.Hash || len(imgs[1].Data) != 0 {
+		t.Errorf("an image not read back: %d bytes, %q", len(imgs[1].Data), imgs[1].Sha256)
 	}
 }
