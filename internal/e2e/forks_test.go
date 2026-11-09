@@ -10,7 +10,6 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/acptest"
-	"github.com/afrase/nushi/internal/features/chats"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
@@ -104,8 +103,7 @@ func TestForkFromAMessage(t *testing.T) {
 // is no longer thrown away when the app goes, and reopens on its own agent
 // with the chat's conversation and its own.
 func TestKeepASideChat(t *testing.T) {
-	defer func(g time.Duration) { chats.SidesGrace = g }(chats.SidesGrace)
-	chats.SidesGrace = 10 * time.Millisecond
+	shortSidesGrace(t)
 	ctx := context.Background()
 	history := &acptest.History{}
 	d := startDaemon(t, t.TempDir(), history)

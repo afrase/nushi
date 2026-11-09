@@ -55,8 +55,7 @@ func TestSideChatsLeaveNoHistory(t *testing.T) {
 
 	// The app quits with a side chat open: nobody will see it again.
 	a.waitFor("the reopen", idle)
-	defer func(g time.Duration) { chats.SidesGrace = g }(chats.SidesGrace)
-	chats.SidesGrace = 10 * time.Millisecond
+	shortSidesGrace(t)
 	s3 := side()
 	a.quit()
 	gone(s3)
@@ -65,8 +64,7 @@ func TestSideChatsLeaveNoHistory(t *testing.T) {
 // Side chats stay while any app follows, the Mac's or a phone's: the Mac
 // quitting doesn't close the one a phone is using.
 func TestSideChatsStayWhileAPhoneFollows(t *testing.T) {
-	defer func(g time.Duration) { chats.SidesGrace = g }(chats.SidesGrace)
-	chats.SidesGrace = 10 * time.Millisecond
+	shortSidesGrace(t)
 	ctx := context.Background()
 	history := &acptest.History{}
 	d := startDaemon(t, t.TempDir(), history)
@@ -110,4 +108,16 @@ func TestASideChatStartsInItsChatsMode(t *testing.T) {
 	if mode := modeOf(next.Config); mode != "read-only" {
 		t.Errorf("a new chat starts in %q: the side chat's mode was remembered", mode)
 	}
+}
+
+// shortSidesGrace makes side chats close 10 ms after the last app goes, for
+// one test. It's put back in a cleanup, not a defer: cleanups run after
+// the test's defers, and an earlier one runs later, so this one runs only
+// once the daemon's (registered after it) has stopped every handler that
+// reads it.
+func shortSidesGrace(t *testing.T) {
+	t.Helper()
+	g := chats.SidesGrace
+	t.Cleanup(func() { chats.SidesGrace = g })
+	chats.SidesGrace = 10 * time.Millisecond
 }
