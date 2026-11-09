@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/back_swipe.dart';
-import 'package:nushi/diff_find.dart';
+import 'package:nushi/diff_box_find.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/review_cards.dart';
@@ -124,11 +124,7 @@ class _DiffBoxState extends State<DiffBox> {
   ReviewComment? _editing; // the comment being changed, if one is
   final _comment = TextEditingController(); // its text; outlives a reload
   SyntaxLines? _source; // the lines of _controller
-  // What was found: for which text in which lines, each hit by its key.
-  (String, SyntaxLines)? _foundFor;
-  List<DiffHit> _also = const [];
-  Map<String, DiffHit> _hits = const {};
-  String? _shown; // the hit last gone to
+  final _found = DiffBoxFind(); // what ⌘F found in them
 
   @override
   void initState() {
@@ -142,35 +138,7 @@ class _DiffBoxState extends State<DiffBox> {
   void _showFind() {
     final (lines, c, f) = (_source, _controller, widget.find);
     if (lines == null || c == null || f == null) return;
-    final q = f.query ?? '';
-    // Not while building: telling the bar rebuilds it.
-    void tell(List<String> keys) =>
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) f.found(keys);
-        });
-    if (q.isEmpty) {
-      if (_foundFor != null) {
-        lines.mark(const [], null);
-        tell(const []);
-      }
-      _foundFor = _shown = null;
-      _hits = const {};
-      return;
-    }
-    if (_foundFor != (q, lines)) {
-      _foundFor = (q, lines);
-      final doc = c.document;
-      final hits = findInDiff(lines, doc.oldLineCount, doc.newLineCount, q);
-      _also = hits.also;
-      _hits = {for (final h in hits.steps) hitKey(h): h};
-      tell(_hits.keys.toList());
-    }
-    final now = _hits[f.current];
-    lines.mark([..._hits.values, ..._also], now);
-    if (now != null && f.current != _shown) {
-      _shown = f.current;
-      c.jumpToLine(now.side, now.line);
-    }
+    _found.show(f, lines, c, () => mounted);
   }
 
   void _takeDraft() {
@@ -545,6 +513,15 @@ class _DiffBoxState extends State<DiffBox> {
           : placeholder;
     }
     final c = _controller!;
+    // A switch of views keeps the find's current hit where it was.
+    if (widget.find case final f? when unified != _unified) {
+      _found.keepHit(
+        f,
+        c,
+        unified: _unified,
+        current: () => mounted && _controller == c,
+      );
+    }
     _unified = unified; // what a click on line numbers selects in
     final scroll = unified ? c.unifiedScroll : c.scroll(PaneSide.neu);
     final inlays = widget.review == null && widget.note == null
