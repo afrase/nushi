@@ -38,10 +38,24 @@ Future<void> openInBrowser(Uri url) async {
 
 /// [openInBrowser] for the user's click, saying in a snack bar why the page
 /// didn't open (no default browser, ADR 0104) rather than doing nothing.
-Future<void> openInBrowserOrSay(BuildContext context, Uri url) async {
+Future<void> openInBrowserOrSay(BuildContext context, Uri url) =>
+    openOrSay(context, () => openInBrowser(url));
+
+/// [openInDefaultBrowser] for a web link the user clicked (Jira's,
+/// GitHub's, a terminal's, the update card's, the agents' or an account's
+/// page), saying why it didn't open as [openInBrowserOrSay] does.
+Future<void> openLinkOrSay(BuildContext context, Uri url) =>
+    openOrSay(context, () => openInDefaultBrowser(url));
+
+/// Runs [open], the default browser opening what the user clicked, and
+/// says in a snack bar under [context] why, when it throws.
+Future<void> openOrSay(
+  BuildContext context,
+  Future<void> Function() open,
+) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   try {
-    await openInBrowser(url);
+    await open();
   } on Object catch (e) {
     messenger
       ?..hideCurrentSnackBar()

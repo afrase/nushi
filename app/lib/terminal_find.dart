@@ -1,11 +1,12 @@
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/skills_list.dart' show revealInFinder;
 import 'package:nushi/terminals.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
-import 'package:nushi/web_views.dart' show openInDefaultBrowser;
+import 'package:nushi/web_page.dart' show openLinkOrSay;
 import 'package:xterm2/xterm.dart';
 
 /// The terminal's text: the picked font, then the bundled Nerd Font
@@ -60,16 +61,18 @@ String wordAt(Terminal terminal, CellOffset at) {
   return (url: null, path: path, line: int.tryParse(m[2] ?? ''));
 }
 
-/// Opens a URL in the browser, or shows a file: in the Changes view when
-/// [showChange] takes it (it's changed), else in Finder.
+/// Opens a URL in the browser, saying under [context] why when it doesn't
+/// open, or shows a file: in the Changes view when [showChange] takes it
+/// (it's changed), else in Finder.
 Future<void> openLink(
+  BuildContext context,
   String word,
   String folder,
   Future<bool> Function(String path) showChange,
 ) async {
   final link = linkOf(word, folder);
   if (link.url case final url?) {
-    await openInDefaultBrowser(url);
+    await openLinkOrSay(context, url);
   } else if (link.path case final path?) {
     if (!await showChange(path)) await revealInFinder(path);
   }

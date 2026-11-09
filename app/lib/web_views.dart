@@ -39,8 +39,9 @@ abstract interface class WebViews {
   /// `webLink`), in the default browser as the platform opens links: on
   /// the Mac through url_launcher (Launch Services), on Linux through the
   /// runner, whose launch gives the browser none of Nushi's variables
-  /// (ADR 0104). Linux's opens nothing else, and throws nothing: a failure
-  /// is logged, as a click on a link has nowhere to say it.
+  /// (ADR 0104). Linux's opens nothing else. Throws when nothing opened, a
+  /// [BrowserError] where the platform has words for why, which the click
+  /// says in a snack bar (`openLinkOrSay`).
   Future<void> openLink(Uri url);
 
   /// How long ago the user last pressed, let go, or hit Return, Enter or
@@ -67,7 +68,9 @@ bool get webEmbedded => !kIsWeb && native.web.embedded;
 /// Opens [url], a web link the user clicked (Jira's, GitHub's, a
 /// terminal's, the agents' or an account's page), in the default browser:
 /// the platform's [WebViews.openLink], or, in the phone's web app, which
-/// has no native edge, a new tab (url_launcher).
+/// has no native edge, a new tab (url_launcher). Throws as
+/// [WebViews.openLink] does; a click goes through `openLinkOrSay`, which
+/// says why.
 Future<void> openInDefaultBrowser(Uri url) async {
   if (kIsWeb) {
     await launchUrl(url);

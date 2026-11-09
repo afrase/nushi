@@ -295,7 +295,7 @@ class _Next extends StatelessWidget {
             'Ping on GitHub',
             size: 12.5,
             tooltip: 'Open the pull request on GitHub, to ask them',
-            onTap: () => openWeb(p.item.url),
+            onTap: () => openWeb(context, p.item.url),
           )
         : null;
     final foot = BoxDecoration(

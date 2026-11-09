@@ -105,7 +105,7 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
               IconTap(
                 Icons.open_in_new,
                 tooltip: 'Open on GitHub',
-                onTap: it.url.isEmpty ? null : () => openWeb(it.url),
+                onTap: it.url.isEmpty ? null : () => openWeb(context, it.url),
               ),
             ],
           ),

@@ -40,7 +40,8 @@ class ChatScreen extends StatelessWidget {
       builder: (context, _) => PhoneScreen(
         title: chat.shownTitle,
         actions: [
-          if (chat.pull != null) PullChip(daemon, chat, onOpen: openWeb),
+          if (chat.pull != null)
+            PullChip(daemon, chat, onOpen: (url) => openWeb(context, url)),
           if (daemon.daemonApi >= previewApi && chatFilesOf(chat).isNotEmpty)
             ListenableBuilder(
               listenable: chat.opened,

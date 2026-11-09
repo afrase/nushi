@@ -14,7 +14,7 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/web_views.dart' show openInDefaultBrowser;
+import 'package:nushi/web_page.dart' show openLinkOrSay;
 import 'package:nushi/widgets.dart';
 
 export 'package:nushi/markdown.dart' show openWeb;
@@ -218,11 +218,15 @@ Future<void> startOn(
 /// fetch anything, and tell who read it).
 Widget githubImage(Uri uri, String? alt) {
   final link = webLink(uri.toString());
-  return LinkText(
-    '[image${alt == null || alt.isEmpty ? '' : ': $alt'}]',
-    size: 12.5,
-    tooltip: link == null ? '' : 'Open the image in the browser',
-    onTap: link == null ? null : () => unawaited(openInDefaultBrowser(link)),
+  return Builder(
+    builder: (context) => LinkText(
+      '[image${alt == null || alt.isEmpty ? '' : ': $alt'}]',
+      size: 12.5,
+      tooltip: link == null ? '' : 'Open the image in the browser',
+      onTap: link == null
+          ? null
+          : () => unawaited(openLinkOrSay(context, link)),
+    ),
   );
 }
 

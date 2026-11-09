@@ -12,7 +12,8 @@ import 'package:nushi/preview.dart' show Previews;
 import 'package:nushi/settings.dart' show linksInBrowserTab;
 import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/web_page.dart' show openInBrowserOrSay;
+import 'package:nushi/web_page.dart'
+    show openInBrowserOrSay, openLinkOrSay, openOrSay;
 import 'package:nushi/web_views.dart' show openInDefaultBrowser, webEmbedded;
 import 'package:nushi/widgets.dart';
 
@@ -49,7 +50,7 @@ Future<void> openWebLink(BuildContext context, Uri url) async {
     browse(url);
     return;
   }
-  await openWebOutside(url);
+  await openOrSay(context, () => openWebOutside(url));
 }
 
 /// Whether a web link opens in a browser tab (ADR 0094): with Open local
@@ -64,9 +65,10 @@ bool linkInTab(Uri url, {required bool setting, required bool fits}) =>
 /// Opens a web link in the default browser. Tests set their own.
 Future<void> Function(Uri url) openWebOutside = openInDefaultBrowser;
 
-/// Opens [url] in the browser, when it's a [webLink].
-void openWeb(String url) {
-  if (webLink(url) case final u?) unawaited(openInDefaultBrowser(u));
+/// Opens [url] in the browser, when it's a [webLink], saying under
+/// [context] why when it doesn't open ([openLinkOrSay]).
+void openWeb(BuildContext context, String url) {
+  if (webLink(url) case final u?) unawaited(openLinkOrSay(context, u));
 }
 
 /// The host a link's [text] names when it reads as an address on another

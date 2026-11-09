@@ -156,7 +156,7 @@ class _Menu extends StatelessWidget {
             'Open on GitHub',
             onPick: () {
               if (cp.pull case final p?) markPullSeen(cp.chat.id, p);
-              openWeb(url);
+              openWeb(context, url);
             },
           ),
         MenuEntry(

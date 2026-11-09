@@ -1,5 +1,4 @@
 import 'package:flutter/services.dart';
-import 'package:nushi/app_log.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/diagram_page.dart';
 import 'package:nushi/outside_page.dart';
@@ -67,27 +66,15 @@ class LinuxWebViews implements WebViews {
     }
   }
 
-  /// The browser that opens https, as [openWithBrowser], for http and
-  /// https alone (never a file, whatever a caller passes); a link that
-  /// opens nothing is logged by why, never the link.
+  /// The browser that opens https, as [openWithBrowser], with its errors,
+  /// for http and https alone (never a file, whatever a caller passes).
   @override
   Future<void> openLink(Uri url) async {
     if (url.scheme != 'http' && url.scheme != 'https') {
-      _noLink('refused');
-      return;
+      throw const BrowserError('Only a web link opens in the browser.');
     }
-    try {
-      await _browser.invokeMethod<void>('open', '$url');
-    } on PlatformException catch (e) {
-      _noLink(e.code);
-    } on MissingPluginException {
-      _noLink('not-implemented');
-    }
+    await openWithBrowser(url);
   }
-
-  /// Logs that a link opened nothing, by the runner's error [code].
-  static void _noLink(String code) =>
-      appLog.warn('the browser opened no link', {'code': code});
 
   /// No web view takes presses.
   @override

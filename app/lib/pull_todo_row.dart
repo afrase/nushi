@@ -215,7 +215,7 @@ class _TodoRowState extends State<TodoRow> {
                           ? 'Open its page on GitHub'
                           : 'The failing part of its log',
                       onPressed: c.id == 0
-                          ? () => openWeb(c.url)
+                          ? () => openWeb(context, c.url)
                           : () => setState(() => _log = !_log),
                     ),
                   if (i case ThreadTodo(thread: final x) when x.canReply)

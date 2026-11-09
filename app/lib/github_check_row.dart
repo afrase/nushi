@@ -133,7 +133,7 @@ class _CheckRowState extends State<CheckRow> {
                 Icons.open_in_new,
                 size: 13,
                 tooltip: 'Open on GitHub',
-                onTap: c.url.isEmpty ? null : () => openWeb(c.url),
+                onTap: c.url.isEmpty ? null : () => openWeb(context, c.url),
               ),
             ],
           ),

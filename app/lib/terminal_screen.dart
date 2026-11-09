@@ -161,6 +161,7 @@ class TerminalScreen extends StatelessWidget {
                     if (cmdPressed()) {
                       unawaited(
                         openLink(
+                          context,
                           clickTarget(s.terminal, at),
                           info.folder,
                           showChange,

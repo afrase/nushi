@@ -209,7 +209,7 @@ class _Mini extends StatelessWidget {
     final c = check;
     final (icon, color) = checkIcon(t, c);
     return Tap(
-      onTap: c.url.isEmpty ? null : () => openWeb(c.url),
+      onTap: c.url.isEmpty ? null : () => openWeb(context, c.url),
       tooltip: c.url.isEmpty ? '' : 'Open on GitHub',
       padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
       child: Row(

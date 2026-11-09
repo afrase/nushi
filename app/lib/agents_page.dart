@@ -9,7 +9,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shell_env_line.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/web_views.dart' show openInDefaultBrowser;
+import 'package:nushi/web_page.dart' show openLinkOrSay;
 import 'package:nushi/widgets.dart';
 
 /// Settings › Agents: each agent as found on this Mac (its version and
@@ -164,7 +164,7 @@ class AgentRow extends StatelessWidget {
         Button(
           label: 'Get it',
           icon: Icons.open_in_new,
-          onPressed: () => openInDefaultBrowser(Uri.parse(agent.page)),
+          onPressed: () => openLinkOrSay(context, Uri.parse(agent.page)),
         ),
       ];
     }

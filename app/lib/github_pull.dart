@@ -363,7 +363,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       Button(
         label: 'Open on GitHub',
         icon: Icons.open_in_new,
-        onPressed: it.url.isEmpty ? null : () => openWeb(it.url),
+        onPressed: it.url.isEmpty ? null : () => openWeb(context, it.url),
       ),
     ];
   }

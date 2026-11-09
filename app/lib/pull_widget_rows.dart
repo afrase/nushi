@@ -122,7 +122,7 @@ class PullRows extends StatelessWidget {
                   label: 'Ready for review',
                   icon: Icons.open_in_new,
                   tooltip: 'Mark it ready for review on GitHub',
-                  onPressed: () => openWeb(it.url),
+                  onPressed: () => openWeb(context, it.url),
                 ),
               ),
             ),
@@ -201,7 +201,7 @@ class PullRows extends StatelessWidget {
                     size: 12,
                     onTap: () {
                       markPullSeen(cp.chat.id, p);
-                      openWeb(it.url);
+                      openWeb(context, it.url);
                     },
                   ),
           ),
@@ -345,7 +345,7 @@ class _Done extends StatelessWidget {
                 LinkText(
                   'Reopen on GitHub',
                   size: 12,
-                  onTap: () => openWeb(p.item.url),
+                  onTap: () => openWeb(context, p.item.url),
                 ),
             ],
           ),

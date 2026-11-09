@@ -310,7 +310,7 @@ class _EntryState extends State<_Entry> {
                       Icons.open_in_new,
                       size: 13,
                       tooltip: 'Open on GitHub',
-                      onTap: () => openWeb(c.url),
+                      onTap: () => openWeb(context, c.url),
                     ),
                 ],
               ),

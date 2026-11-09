@@ -91,8 +91,10 @@ String? updateToShow(Daemon d) {
   return v;
 }
 
-/// Opens the newer release's page on GitHub.
-void openRelease(Daemon d) => openWeb(d.update.url);
+/// Opens the newer release's page on GitHub, saying under [context] why
+/// when it doesn't open.
+void openRelease(BuildContext context, Daemon d) =>
+    openWeb(context, d.update.url);
 
 /// Says a newer release is out, in the window's bottom right corner, out
 /// of the way: not modal, no sound. Copy puts Homebrew's upgrade on the
@@ -206,13 +208,16 @@ class _UpdateToastState extends State<UpdateToast> {
                   tooltip: 'Copy “$brewUpgrade”',
                   onPressed: _copy,
                 ),
-                Button(label: 'Release notes', onPressed: () => openRelease(d)),
+                Button(
+                  label: 'Release notes',
+                  onPressed: () => openRelease(context, d),
+                ),
               ] else
                 Button(
                   label: 'Download',
                   kind: ButtonKind.primary,
                   tooltip: "Open the release's page",
-                  onPressed: () => openRelease(d),
+                  onPressed: () => openRelease(context, d),
                 ),
             ],
           ),

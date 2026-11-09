@@ -38,9 +38,13 @@ class MacWebViews implements WebViews {
   Future<void> openMail(Uri url) => launchUrl(url);
 
   /// Launch Services' default app for the link, as the app always opened
-  /// links.
+  /// links; url_launcher answers false when nothing opened it.
   @override
-  Future<void> openLink(Uri url) => launchUrl(url);
+  Future<void> openLink(Uri url) async {
+    if (!await launchUrl(url)) {
+      throw const BrowserError('Couldn’t open your browser.');
+    }
+  }
 
   /// The Swift side's event monitor sees the presses (the plugin doesn't
   /// give WebKit's navigation type either).
