@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
@@ -15,6 +17,19 @@ import 'package:nushi/widgets.dart';
 
 /// From this wide the Changes bar has the bar's gaps and gutters.
 const double _roomyFrom = 560;
+
+/// How wide the Changes bar must be beside the worktrees' menu for its long
+/// labels (the files' line and counts, Send to agent's, Changed: Reload),
+/// and for the bar's gaps and gutters with its short ones, with Send to
+/// agent ([send]) and Changed ([changed]) beside it: each part at its
+/// largest, the menu still readable (related_worktree_comments_test).
+({double long, double roomy}) _needs({
+  required bool send,
+  required bool changed,
+}) => (
+  long: 640 + (send ? 170 : 0) + (changed ? 110 : 0),
+  roomy: max(_roomyFrom, 480 + (send ? 90 : 0) + (changed ? 60 : 0)),
+);
 
 /// The file list's least width, beside the diff.
 const double changesFilesLeast = 180;
@@ -61,13 +76,19 @@ class ChangesBar extends StatelessWidget {
       listenable: Listenable.merge([reviews, chat]),
       builder: (context, _) => LayoutBuilder(
         builder: (context, box) {
+          final unsent = unsentComments(chat.id).length;
+          final menu = related.list.isNotEmpty;
+          final needs = _needs(send: unsent > 0, changed: behind);
+          // Beside the worktrees' menu, short labels while the long ones
+          // don't fit: the list under it shows the files.
+          final short = menu && box.maxWidth < needs.long;
           // The bar's gaps and gutters while the row has room for them; a
           // narrow window's Send to agent needs it (ADR 0072).
-          final roomy = box.maxWidth >= _roomyFrom;
-          final unsent = unsentComments(chat.id).length;
-          // A narrow bar with the worktrees' menu and Send to agent: the menu
-          // narrower, and Send to agent by its short name, without the icon.
-          final short = !roomy && related.list.isNotEmpty && unsent > 0;
+          final roomy = box.maxWidth >= (short ? needs.roomy : _roomyFrom);
+          final counts = LineCounts(
+            files.fold(0, (n, f) => n + f.added),
+            files.fold(0, (n, f) => n + f.removed),
+          );
           return Container(
             height: 36,
             // The tabs' own 3 points bring their line to the gutter.
@@ -83,46 +104,45 @@ class ChangesBar extends StatelessWidget {
             child: Row(
               spacing: roomy ? NushiTheme.barGap : 10,
               children: [
-                // Not Flexible: beside the Expanded it would take half the
-                // free width (AGENTS.md).
-                if (related.list.isNotEmpty)
-                  _worktreeMenu(
-                    roomy
-                        ? 220
-                        : (box.maxWidth * (short ? 0.15 : 0.2)).clamp(72, 120),
-                  ),
-                if (scopes.length > 1)
-                  PlainTabs(
-                    value: scope,
-                    tabs: [for (final s in scopes) (s, s.label)],
-                    onChanged: (s) => worktree == null
-                        ? chat.scope = s.name
-                        : related.pickScope(s.name),
-                    fill: true,
-                  ),
-                if (stale)
-                  const SizedBox.square(dimension: 12, child: Spinner()),
-                // A narrow bar gives this line's room to the menu: the list
-                // under it shows the files.
-                if (n > 0 && (roomy || related.list.isEmpty))
-                  Text(
-                    '$n file${n == 1 ? '' : 's'}',
-                    style: theme.ui(t.textSecondary, size: 12),
-                  ),
                 Expanded(
-                  // Changed takes a narrow bar's room: the list has the counts.
-                  child: behind && !roomy
-                      ? const SizedBox.shrink()
-                      : LineCounts(
-                          files.fold(0, (n, f) => n + f.added),
-                          files.fold(0, (n, f) => n + f.removed),
+                  child: Row(
+                    spacing: roomy ? NushiTheme.barGap : 10,
+                    children: [
+                      // Flexible in a row of its own (AGENTS.md): it takes
+                      // what the rest leaves, its name cut short, so the
+                      // bar's buttons stay at its edge.
+                      if (menu)
+                        Flexible(child: _worktreeMenu(roomy ? 220 : 120)),
+                      if (scopes.length > 1)
+                        PlainTabs(
+                          value: scope,
+                          tabs: [for (final s in scopes) (s, s.label)],
+                          onChanged: (s) => worktree == null
+                              ? chat.scope = s.name
+                              : related.pickScope(s.name),
+                          fill: true,
                         ),
+                      if (stale)
+                        const SizedBox.square(dimension: 12, child: Spinner()),
+                      if (n > 0 && !short)
+                        Text(
+                          '$n file${n == 1 ? '' : 's'}',
+                          style: theme.ui(t.textSecondary, size: 12),
+                        ),
+                      // Whole beside the menu, which gives way first; cut
+                      // short without one.
+                      if (!short && menu)
+                        counts
+                      else if (!short)
+                        Flexible(child: counts),
+                    ],
+                  ),
                 ),
                 if (behind)
                   Tooltip(
                     message: 'It changed since this was read: Reload shows it',
                     child: Text(
-                      roomy ? 'Changed: Reload' : 'Changed',
+                      short ? 'Changed' : 'Changed: Reload',
                       style: theme.ui(t.textSecondary, size: 12),
                     ),
                   ),

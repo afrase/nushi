@@ -258,6 +258,52 @@ void main() {
     await closeView(tester, daemon);
   });
 
+  testWidgets("a worktree's card on the chat's file and lines is its own: "
+      'taken out of the box, only its comment goes', (tester) async {
+    // Both on same.go's old line 1, which the two folders share.
+    ReviewComment onOld(String id, String where, String text) => ReviewComment(
+      id: id,
+      where: where,
+      path: 'same.go',
+      old: true,
+      start: 1,
+      end: 1,
+      quote: 'old',
+      text: text,
+    );
+    await setUpChat(tester, [
+      onOld('1', 'uncommitted', "The chat's"),
+      _comment('2', inTree, 'other', 'Another'),
+      onOld('3', inTree, "The worktree's"),
+      _comment('4', inTree, 'more', 'And another'),
+    ]);
+    await tester.tap(find.text('Send to agent (4)'));
+    await tester.pumpAndSettle();
+    final cards = chatState.draft.replies.value;
+    expect(cards.map((r) => r.text), [
+      "The chat's",
+      'Another',
+      "The worktree's",
+      'And another',
+    ]);
+    expect(cards[0].quote, cards[2].quote);
+    // Queued and taken back to edit: splitReplies gives the worktree's
+    // lead to its group's first card only.
+    chatState.draft.replies.value = splitReplies(withReplies(cards, '')).$1;
+    expect(chatState.draft.replies.value.last.from, isEmpty);
+    await tester.pump(const Duration(seconds: 3));
+    expect(commentsOf('c').map((c) => c.id), ['1', '2', '3', '4']);
+    // The worktree's card on the chat's quote out: the chat's stays.
+    chatState.draft.replies.value = [...chatState.draft.replies.value]
+      ..removeAt(2);
+    await tester.pump(const Duration(seconds: 3));
+    expect(commentsOf('c').map((c) => c.id), ['1', '2', '4']);
+    expect(commentsOf('c').every((c) => c.sent), isTrue);
+    chatState.draft.replies.value = const [];
+    await tester.pump(const Duration(seconds: 3));
+    await closeView(tester, daemon);
+  });
+
   test("a removed worktree's lead says so, and its last commit", () {
     expect(
       worktreeComments(_tree, _worktree(state: 'removed')),
@@ -335,5 +381,80 @@ void main() {
         matchesGoldenFile('goldens/related_bar_comments_$name.png'),
       );
     });
+  }
+
+  // A subagent's branch is long, and after a turn its worktree reads
+  // Changed until reloaded: what Send to agent shares the bar with.
+  for (final behind in [true, false]) {
+    for (final unsent in [1, 12]) {
+      testWidgets('the bar fits from 500 wide: behind $behind, $unsent '
+          'to send, a long branch, many files', (tester) async {
+        viewport(tester, const Size(1100, 200));
+        final chat = ChatState('c', '/x');
+        chat.related
+          ..take([
+            RelatedWorktree(
+              path: _tree,
+              branch: 'worktree-agent-a91f3c2e7d0b',
+              lastHead: 'c' * 40,
+              state: 'present',
+            ),
+          ])
+          ..pick(_tree);
+        addTearDown(() => setComments('c', []));
+        setComments('c', [
+          for (var i = 0; i < unsent; i++)
+            _comment('$i', inTree, 'tree', 'Why?'),
+        ]);
+        for (var width = 500.0; width <= 1040; width += 20) {
+          await tester.pumpWidget(
+            themed(
+              Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: width,
+                  child: ColoredBox(
+                    color: const NushiTheme(Tokens.dark).t.base,
+                    child: ChangesBar(
+                      chat: chat,
+                      scopes: Scope.values,
+                      scope: Scope.branch,
+                      files: [
+                        for (var i = 0; i < 12; i++)
+                          FileChange(path: '$i.go', added: 1234, removed: 567),
+                      ],
+                      stale: false,
+                      behind: behind,
+                      reloading: false,
+                      onAgain: () {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull, reason: '$width wide');
+          // Reload, last, at the bar's edge, and Send to agent beside it.
+          expect(
+            tester.getTopRight(find.byTooltip('Reload')).dx,
+            lessThanOrEqualTo(width),
+            reason: '$width wide',
+          );
+          expect(find.textContaining('($unsent)'), findsOne);
+          expect(
+            find.textContaining('Changed'),
+            behind ? findsOne : findsNothing,
+          );
+          if (width % 100 == 0) {
+            await render(
+              tester,
+              find.byType(ColoredBox).last,
+              'related_bar_${behind ? 'behind' : 'read'}_${unsent}_$width',
+            );
+          }
+        }
+      });
+    }
   }
 }

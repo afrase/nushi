@@ -263,15 +263,18 @@ String worktreeComments(String folder, RelatedWorktree? w) {
   final branch = plainName(w?.branch ?? '');
   final head = w?.lastHead ?? '';
   final short = head.substring(0, min(7, head.length));
-  final path = plainName(folder);
   return [
-    'My review comments on the changes in the worktree `$path`',
+    _worktreeLead(folder),
     if (branch.isNotEmpty) ' on branch `$branch`',
     if (w != null && w.state != 'present' && head.isNotEmpty)
       ' (removed since: its last commit is `$short`)',
     ', its paths relative to that folder:',
   ].join();
 }
+
+/// How [worktreeComments] starts for [folder], whatever became of it.
+String _worktreeLead(String folder) =>
+    'My review comments on the changes in the worktree `${plainName(folder)}`';
 
 /// A review comment as a reply card in the chat's box (the reply-card
 /// model the Pull request tab's Send to agent uses): the quote is the
@@ -338,13 +341,19 @@ void reviewToBox(ChatState chat) {
 
 /// Whether [c]'s card waits to go to the agent ([_waiting]): its card as it
 /// was put in the box, or (after a restart) any card on its file and lines'
-/// text; the comment may have moved or become outdated since.
+/// text under its place's lead; the comment may have moved or become
+/// outdated since.
 bool _cardWaits(ChatState chat, ReviewComment c) {
   bool of(Reply x) =>
-      x.quote.startsWith('`${c.path}`, ') && x.quote.contains('\n${c.quote}\n');
+      x.quote.startsWith('`${c.path}`, ') &&
+      x.quote.contains('\n${c.quote}\n') &&
+      switch (c.worktree) {
+        final path? => x.from.startsWith(_oneLine(_worktreeLead(path))),
+        null => x.from == myReviewComments,
+      };
   if (_sentAs[c.id] case final r?) return _waiting(chat, r);
-  return chat.draft.replies.value.any(of) ||
-      chat.queue.any((m) => splitReplies(m.text).$1.any(of));
+  return _led(chat.draft.replies.value).any(of) ||
+      chat.queue.any((m) => _led(splitReplies(m.text).$1).any(of));
 }
 
 /// Each comment's card as it was put in the box, by the comment's id: the
@@ -359,16 +368,38 @@ Iterable<String> _said(ChatState chat, Set<String> before) => [
       i.text,
 ];
 
-/// Whether a message in [texts] has the card [r] (by its quote: its text
-/// may be edited).
-bool _carried(Iterable<String> texts, Reply r) => texts.any(
-  (text) => splitReplies(text).$1.any((x) => x.quote == r.quote.trim()),
-);
+/// [cards], each with its group's lead on one line, as [withReplies]
+/// writes it: [splitReplies] gives it to a group's first card only, and a
+/// queued message taken back to edit puts its cards in the box so.
+List<Reply> _led(List<Reply> cards) {
+  var lead = '';
+  return [
+    for (final x in cards)
+      (
+        quote: x.quote,
+        text: x.text,
+        from: lead = x.from.isEmpty ? lead : _oneLine(x.from),
+      ),
+  ];
+}
+
+/// [lead] on one line, as [withReplies] writes it.
+String _oneLine(String lead) => lead.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+/// Whether [x] (its lead as [_led] has it) is the card [r], by its quote and
+/// lead: its text may be edited, and a worktree's file may have the chat's
+/// path and lines.
+bool _isCard(Reply x, Reply r) =>
+    x.quote == r.quote.trim() && x.from == _oneLine(r.from);
+
+/// Whether a message in [texts] has the card [r] ([_isCard]).
+bool _carried(Iterable<String> texts, Reply r) =>
+    texts.any((text) => _led(splitReplies(text).$1).any((x) => _isCard(x, r)));
 
 /// Whether [r] waits to go to the agent: in [chat]'s box, or in a message
 /// in its queue.
 bool _waiting(ChatState chat, Reply r) =>
-    chat.draft.replies.value.any((x) => x.quote == r.quote) ||
+    _led(chat.draft.replies.value).any((x) => _isCard(x, r)) ||
     _carried([for (final m in chat.queue) m.text], r);
 
 /// Follows each comment's card until a message in the transcript has it.
