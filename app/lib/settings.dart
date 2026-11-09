@@ -13,8 +13,8 @@ import 'package:nushi/file_mode.dart';
 /// whether the details panel shows (its toolbar button), which of its widgets
 /// are collapsed and their order, what each chat's Changes view shows, the
 /// side panes' widths (not the details panel's, which is fixed), whether
-/// changed files show flat, which chats show their terminals and their
-/// Files pane, whether it lists ignored files, the
+/// changed files show flat and diffs unified, which chats show their
+/// terminals and their Files pane, whether it lists ignored files, the
 /// terminal's font, whether the chat takes the whole width,
 /// whether the sidebar is hidden, the Jira task list's groups and assignee
 /// filters, the GitHub view's cards and filters, the sidebar's project
@@ -49,6 +49,10 @@ final Pref<Map<String, String>> changeScopes = _byChat(
 
 /// Whether the Changes view lists its files flat rather than as a tree.
 final Pref<bool> changesFlat = _plain('flat', false);
+
+/// Whether diffs show unified, in one column, rather than side by side
+/// (ADR 0107).
+final Pref<bool> diffUnified = _plain('unified', false);
 
 /// The chats whose terminal panel is open.
 final Pref<Set<String>> terminalChats = _set('terminals', chats: true);

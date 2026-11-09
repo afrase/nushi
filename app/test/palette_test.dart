@@ -255,7 +255,11 @@ void main() {
     d.go(const JiraPlace()); // no chat shows: its tabs don't apply
     await tester.pumpAndSettle();
     await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+    await _type(tester, 'show');
     expect(_p('Show changes'), findsNothing);
+    // The app's own choices still apply.
+    expect(_p('Show diffs unified'), findsOneWidget);
+    await _type(tester, 'close');
     expect(_p('Close Jira'), findsOneWidget);
     tester.daemonOf().dispose();
   }, variant: macOS);

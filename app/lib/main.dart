@@ -88,6 +88,7 @@ class _NushiAppState extends State<NushiApp> {
     sidebarHidden.addListener(_sidebarChanged);
     wrapLines.addListener(_sidebarChanged);
     showWhitespace.addListener(_sidebarChanged);
+    diffUnified.addListener(_sidebarChanged);
     // The app coming to the front shows its chat again; the daemon knows
     // whether the window shows (focused or not) or is hidden, and the
     // notifications whether it's in front. Drafts are saved at once when
@@ -182,6 +183,7 @@ class _NushiAppState extends State<NushiApp> {
     sidebarHidden.removeListener(_sidebarChanged);
     wrapLines.removeListener(_sidebarChanged);
     showWhitespace.removeListener(_sidebarChanged);
+    diffUnified.removeListener(_sidebarChanged);
     widget.daemon.removeListener(_pinChanged);
     _alerts.dispose();
     _lifecycle.dispose();
@@ -199,6 +201,7 @@ class _NushiAppState extends State<NushiApp> {
       Act.sidebar when sidebarShut => 'Show Sidebar',
       Act.wrap when wrapLines.value => 'Don’t Wrap Lines',
       Act.whitespace when showWhitespace.value => 'Hide Whitespace',
+      Act.unifiedDiff when diffUnified.value => 'Show Diffs Side by Side',
       _ => act.menuLabel!,
     },
     shortcut: act.key,

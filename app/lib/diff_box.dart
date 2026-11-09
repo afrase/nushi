@@ -9,6 +9,7 @@ import 'package:nushi/diff_find.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/review_cards.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
@@ -21,6 +22,31 @@ const maxDiffLines = 10000;
 /// Diffs at least this long (both sides, in characters) are computed off
 /// the UI thread; smaller ones at once, so a short edit doesn't flicker.
 const offThread = 20000;
+
+/// Narrower than this a diff shows in one column: two panes would each be
+/// too narrow to read (ADR 0107). The app's narrow width, as a pull
+/// request's header and Changes' bar have it.
+const double oneColumnBelow = 560;
+
+/// Whether [d] shows in one column whatever [diffUnified] says: one of its
+/// sides is empty (an added or a deleted file), so the other pane would
+/// be blank (ADR 0107).
+bool oneSided(FileChange d) => d.oldText.isEmpty || d.newText.isEmpty;
+
+/// The lines a selection of unified [rows] stands for, on one side as a
+/// comment is: a side with a line on every row (the new side first), else
+/// the side of its last row (the new side but for a deleted line); its
+/// lines of that side among the rows.
+LineSelection linesOfRows(UnifiedRows u, ModelSpan rows) {
+  final lines = u.linesIn(rows);
+  final side = lines.neu.length == rows.length
+      ? PaneSide.neu
+      : lines.old.length == rows.length
+      ? PaneSide.old
+      : u.textSideAt(rows.end - 1);
+  final span = side == PaneSide.old ? lines.old : lines.neu;
+  return LineSelection(side: side, anchor: span.start, focus: span.end - 1);
+}
 
 int _lines(String s) => s.isEmpty ? 0 : '\n'.allMatches(s).length + 1;
 
@@ -41,13 +67,14 @@ bool _sameDiff(FileChange a, FileChange b) =>
 /// the file).
 typedef DiffNote = ({String id, bool old, int line});
 
-/// A file's change side by side. With [fit] it is only as tall as the
-/// change (up to fifteen lines, then it scrolls), in a thin frame; else as
-/// tall as its box. With [review], a click or a drag on line numbers opens
-/// a box for a comment on those lines, and the chat's comments made in
-/// that view show under their lines. Else [notes] show under their lines,
-/// as [note] builds each, and a click or a drag on line numbers goes to
-/// [onLines].
+/// A file's change side by side, or unified in one column ([diffUnified],
+/// [oneSided], or narrower than [oneColumnBelow]; ADR 0107). With [fit] it
+/// is only as tall as the change (up to fifteen rows, then it scrolls), in
+/// a thin frame; else as tall as its box. With [review], a click or a
+/// drag on line numbers opens a box for a comment on those lines, and the
+/// chat's comments made in that view show under their lines. Else [notes]
+/// show under their lines, as [note] builds each, and a click or a drag on
+/// line numbers goes to [onLines].
 class DiffBox extends StatefulWidget {
   const new(
     this.change, {
@@ -90,7 +117,7 @@ class _DiffBoxState extends State<DiffBox> {
   late DiffThemeData _theme;
   Tokens? _tokens; // what [_theme] was made from
   double? _dpr;
-  double _height = 0;
+  bool _unified = false; // the view shown is the unified one
   bool _selecting = false; // the line selection changed during this click
   bool _went = false; // went to [DiffBox.line] already
   LineSelection? _draft; // the lines a comment is being written for
@@ -184,7 +211,6 @@ class _DiffBoxState extends State<DiffBox> {
     // A new theme or screen: the same view repainted, where it was
     // scrolled, not made again.
     c.configure(theme: _theme, devicePixelRatio: dpr);
-    _height = _heightFor(widget.change);
   }
 
   @override
@@ -205,17 +231,22 @@ class _DiffBoxState extends State<DiffBox> {
     }
   }
 
-  /// The box's height when it fits [d]: at most 15 lines.
-  double _heightFor(FileChange d) {
-    final rows = max(_lines(d.oldText), _lines(d.newText)).clamp(1, 15);
-    return _theme.lineHeightFor(MediaQuery.devicePixelRatioOf(context)) * rows +
+  /// The box's height when it fits the change: at most 15 rows, of the
+  /// view shown ([unified]: one per line shown, a changed line's two).
+  double _height({required bool unified}) {
+    final d = widget.change;
+    final c = _controller;
+    final rows = unified && c != null
+        ? c.unifiedRows.rowCount
+        : max(_lines(d.oldText), _lines(d.newText));
+    return _theme.lineHeightFor(MediaQuery.devicePixelRatioOf(context)) *
+            rows.clamp(1, 15) +
         6;
   }
 
   /// Diffs the change (once per change), then makes the view.
   void _build() {
     final d = widget.change;
-    _height = _heightFor(d);
     if (_of case final of? when _sameDiff(of, d)) {
       if (_diffed case final diff?) _view(diff);
       return;
@@ -278,9 +309,14 @@ class _DiffBoxState extends State<DiffBox> {
     if (widget.line > 0 && !_went && doc.newLineCount > 0) {
       _went = true;
       final at = min(widget.line, doc.newLineCount) - 1;
+      // Selected in both views: either may be the one laid out, or come
+      // with a switch.
       _controller!
         ..jumpToLine(PaneSide.neu, at)
-        ..selection.start(PaneSide.neu, at);
+        ..selection.start(PaneSide.neu, at)
+        ..unifiedSelection.start(
+          _controller!.unifiedRows.rowOf(PaneSide.neu, at),
+        );
       _selecting = false; // selected here, not by a click
     }
     _showFind();
@@ -348,31 +384,43 @@ class _DiffBoxState extends State<DiffBox> {
     ];
   }
 
+  /// The lines selected in the view shown, on one side.
+  LineSelection? get _selected {
+    final c = _controller;
+    if (c == null || !_unified) return c?.selection.value;
+    final rows = c.unifiedSelection.value?.span;
+    return rows == null ? null : linesOfRows(c.unifiedRows, rows);
+  }
+
+  /// Clears both views' selections.
+  void _unselect() {
+    _controller!
+      ..selection.clear()
+      ..unifiedSelection.clear();
+    _selecting = false;
+  }
+
   /// A click or drag on line numbers ended: a comment on those lines.
   void _pointerUp(PointerUpEvent _) {
-    final sel = _controller?.selection.value;
+    final sel = _selected;
     if (_selecting && sel != null && widget.onLines != null) {
-      _selecting = false;
-      _controller!.selection.clear();
+      _unselect();
       widget.onLines!(sel);
       return;
     }
     if (!_selecting || sel == null || widget.review == null) return;
-    _selecting = false;
     _draft = sel;
     _editing = null;
     _comment.clear();
     // The box takes the keys (Shift-arrows, ⌘C), not the diff's selection.
-    _controller!.selection.clear();
-    _selecting = false;
+    _unselect();
     _showComments();
   }
 
   void _closeDraft() {
     _draft = _editing = null;
     _comment.clear();
-    _controller!.selection.clear();
-    _selecting = false;
+    _unselect();
     _showComments();
   }
 
@@ -413,6 +461,9 @@ class _DiffBoxState extends State<DiffBox> {
       made,
     ]);
   }
+
+  static Widget _noInlay(BuildContext context, InlaySpec spec) =>
+      const SizedBox.shrink();
 
   Widget _inlay(BuildContext context, InlaySpec spec) {
     if (spec.id.startsWith('note:')) {
@@ -458,7 +509,19 @@ class _DiffBoxState extends State<DiffBox> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: diffUnified,
+    builder: (context, unified, _) => LayoutBuilder(
+      builder: (context, box) => _box(
+        unified ||
+            oneSided(widget.change) ||
+            kIsWeb ||
+            box.maxWidth < oneColumnBelow,
+      ),
+    ),
+  );
+
+  Widget _box(bool unified) {
     final theme = NushiTheme.of(context);
     final d = widget.change;
     if (_controller == null) {
@@ -473,31 +536,39 @@ class _DiffBoxState extends State<DiffBox> {
         ),
       );
       return widget.fit
-          ? SizedBox(height: long ? 40 : _height, child: placeholder)
+          ? SizedBox(
+              height: long ? 40 : _height(unified: unified),
+              child: placeholder,
+            )
           : placeholder;
     }
-    final scroll = _controller!.scroll(PaneSide.neu);
+    final c = _controller!;
+    _unified = unified; // what a click on line numbers selects in
+    final scroll = unified ? c.unifiedScroll : c.scroll(PaneSide.neu);
+    final inlays = widget.review == null && widget.note == null
+        ? _noInlay
+        : _inlay;
     final diff = Listener(
       onPointerUp: _pointerUp,
-      // diff_view's panes have no scrollbar; one at the right edge, for
-      // the right pane (the left follows it).
+      // diff_view's views have no scrollbar; one at the right edge, for
+      // the unified view or the right pane (the left follows it).
       child: MacScrollbar(
         controller: scroll,
         notificationPredicate: (n) =>
             n.context != null &&
             Scrollable.maybeOf(n.context!)?.widget.controller == scroll,
-        child: SideBySideDiff(
-          controller: _controller!,
-          theme: _theme,
-          inlayBuilder: widget.review == null && widget.note == null
-              ? (context, spec) => const SizedBox.shrink()
-              : _inlay,
-        ),
+        child: unified
+            ? UnifiedDiff(controller: c, theme: _theme, inlayBuilder: inlays)
+            : SideBySideDiff(
+                controller: c,
+                theme: _theme,
+                inlayBuilder: inlays,
+              ),
       ),
     );
     if (!widget.fit) return diff;
     return framed(
-      height: _height,
+      height: _height(unified: unified),
       border: NushiTheme.of(context).t.borderSubtle,
       radius: NushiTheme.control,
       child: diff,

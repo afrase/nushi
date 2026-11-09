@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/diff_box.dart' show oneColumnBelow;
 import 'package:nushi/file_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
@@ -15,15 +16,18 @@ import 'package:nushi/widgets.dart';
 /// From this wide the Changes bar has the bar's gaps and gutters.
 const double _roomyFrom = 560;
 
+/// The file list's least width, beside the diff.
+const double changesFilesLeast = 180;
+
 /// The switcher's name for what the chat itself runs in.
 const _ownFolder = "Chat's folder";
 
 /// The Changes view's bar: the related worktrees' menu, the [scopes]' tabs
 /// ([scope] picked), the [files]' count and lines, Changed when the
 /// worktree shown is [behind] what was read, Send to agent, and the
-/// list's tree or list and Reload ([onAgain], off while [reloading]).
-/// [stale] what's shown is dimmed under a spinner; [readOnly] it can only
-/// be read.
+/// list's tree or list, the diff side by side or unified, and Reload
+/// ([onAgain], off while [reloading]). [stale] what's shown is dimmed under
+/// a spinner; [readOnly] it can only be read.
 class ChangesBar extends StatelessWidget {
   const new({
     required this.chat,
@@ -148,6 +152,22 @@ class ChangesBar extends StatelessWidget {
                       onTap: () => changesFlat.value = !flat,
                     ),
                   ),
+                  // Side by side or unified, for every diff (ADR 0107). In
+                  // a view too narrow for a diff of two panes beside the
+                  // list at its least width it would change nothing here;
+                  // a wider list may still leave the diff one column.
+                  if (box.maxWidth >= changesFilesLeast + oneColumnBelow)
+                    ValueListenableBuilder(
+                      valueListenable: diffUnified,
+                      builder: (context, unified, _) => IconTap(
+                        unified
+                            ? Icons.vertical_split_outlined
+                            : Icons.view_agenda_outlined,
+                        tooltip: unified ? 'Show side by side' : 'Show unified',
+                        size: 15,
+                        onTap: () => diffUnified.value = !unified,
+                      ),
+                    ),
                   IconTap(
                     Icons.refresh,
                     tooltip: 'Reload',
