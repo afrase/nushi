@@ -2,7 +2,7 @@
 
 <h1 align="center">Nushi</h1>
 
-<p align="center">A Mac app that runs your coding agents as chats, beside a diff viewer, your pull requests and your phone.</p>
+<p align="center">A Mac and Linux app that runs your coding agents as chats, beside a diff viewer, your pull requests and your phone.</p>
 
 <p align="center"><a href="#install">Install</a> · <a href="#what-it-does">What it does</a> · <a href="#docs">Docs</a> · <a href="https://github.com/afrase/nushi/releases">Releases</a></p>
 
@@ -14,7 +14,7 @@
 brew install --cask afrase/tap/nushi
 ```
 
-Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades and uninstalling are in [Installing Nushi](docs/install.md).
+Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades and uninstalling are in [Installing Nushi](docs/install.md), and so is Linux's tarball ([On Linux](docs/install.md#on-linux)).
 
 ## What it does
 
@@ -51,12 +51,12 @@ Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades an
 
 ## Requirements
 
-- A Mac with Apple silicon and macOS 13 or later.
+- A Mac with Apple silicon and macOS 13 or later, or Linux on x86_64 or arm64 with glibc 2.34 or later ([On Linux](docs/install.md#on-linux)).
 - An agent's CLI: `claude`, `codex`, `ante`, `omp`, `pi` or `pig`. Pi needs Node, Codex also needs Node and npm; Claude needs neither (Nushi runs it through its own agent).
 
 ## Docs
 
-- [Installing Nushi](docs/install.md): the zip, updates, uninstalling, the daemon and its logs
+- [Installing Nushi](docs/install.md): the zip, Linux's tarball, updates, uninstalling, the daemon and its logs
 - [Chats](docs/chats.md): the window, keys, Changes, previews, terminals, worktrees, history, notifications
 - [Agents](docs/agent-setup.md): each agent and how to set it up
 - [MCP servers and skills](docs/mcp-and-skills.md)
