@@ -71,3 +71,35 @@ func TestSaidWaitsForTheExit(t *testing.T) {
 		t.Errorf("said %q", got)
 	}
 }
+
+// A program that writes and exits by itself leaves all it wrote to be
+// read, though its reader comes to it after the exit.
+func TestOutOutlastsTheExit(t *testing.T) {
+	p, err := Pipe("/bin/sh", []string{"-c", `i=0; while [ $i -lt 2000 ]; do echo "line $i"; i=$((i+1)); done`}, t.TempDir(), nil, nil)
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, p.Wait())
+	out, err := io.ReadAll(p.Out)
+	testcheck.NoErr(t, err)
+	if lines := strings.Count(string(out), "\n"); lines != 2000 || !strings.HasSuffix(string(out), "line 1999\n") {
+		t.Errorf("read %d lines, ending %q", lines, out[max(0, len(out)-20):])
+	}
+}
+
+// A child that left the group holds stdout open past the program's exit;
+// its reader still comes to an end.
+func TestOutEndsPastAnEscapedChild(t *testing.T) {
+	p, err := Pipe("/bin/sh", []string{"-c", `set -m; sleep 100 & echo $!`}, t.TempDir(), nil, nil)
+	testcheck.NoErr(t, err)
+	r := bufio.NewReader(p.Out)
+	line, _ := r.ReadString('\n')
+	child, err := strconv.Atoi(strings.TrimSpace(line))
+	testcheck.NoErr(t, err)
+	t.Cleanup(func() { _ = syscall.Kill(child, syscall.SIGKILL) })
+	ended := make(chan struct{})
+	go func() { _, _ = io.ReadAll(r); close(ended) }()
+	select {
+	case <-ended:
+	case <-time.After(10 * time.Second):
+		t.Fatal("stdout is still read past the exit")
+	}
+}

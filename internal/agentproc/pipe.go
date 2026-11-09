@@ -2,6 +2,7 @@ package agentproc
 
 import (
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -9,10 +10,11 @@ import (
 	"time"
 )
 
-// waitDelay is how long Pipe's program's stderr is read after it exits.
-// Its stderr goes through a copy, which reads to EOF: a child that left
-// the group (an MCP server Ante started that daemonized) holds it open,
-// and without the cut Kill and Wait would wait for that child too.
+// waitDelay is how long Pipe's program's stderr is read after it exits,
+// and how long its stdout is left to its reader after that. Both are read
+// to EOF: a child that left the group (an MCP server Ante started that
+// daemonized) holds them open, and without the cut Kill and Wait would
+// wait for that child too, and the reader would never end.
 const waitDelay = time.Second
 
 // Piped is a program started by Pipe, which a bridge talks to over its
@@ -45,18 +47,47 @@ func Pipe(bin string, args []string, dir string, env []string, stderr io.Writer)
 	if p.In, err = cmd.StdinPipe(); err != nil {
 		return nil, err
 	}
-	if p.Out, err = cmd.StdoutPipe(); err != nil {
+	// Our own pipe, not cmd's: Wait closes that one as the program exits,
+	// under a reader that hasn't yet read what it wrote last.
+	r, w, err := os.Pipe()
+	if err != nil {
 		return nil, err
 	}
-	if err := cmd.Start(); err != nil {
+	cmd.Stdout = w
+	err = cmd.Start()
+	_ = w.Close() // the program has its own copy
+	if err != nil {
+		_ = r.Close()
 		return nil, err
 	}
-	p.Pid = cmd.Process.Pid
+	out := &stdout{f: r, ended: make(chan struct{})}
+	p.Out, p.Pid = out, cmd.Process.Pid
 	go func() {
 		p.err = cmd.Wait()
 		close(p.exited)
+		select {
+		case <-out.ended:
+		case <-time.After(waitDelay):
+		}
+		_ = r.Close() // ends a read that a child holding stdout keeps waiting
 	}()
 	return p, nil
+}
+
+// stdout is the read end of Pipe's program's stdout, which says when its
+// reader has come to the end.
+type stdout struct {
+	f     *os.File
+	once  sync.Once
+	ended chan struct{}
+}
+
+func (s *stdout) Read(b []byte) (int, error) {
+	n, err := s.f.Read(b)
+	if err != nil {
+		s.once.Do(func() { close(s.ended) })
+	}
+	return n, err
 }
 
 // Kill kills its process group and waits for it to exit.
