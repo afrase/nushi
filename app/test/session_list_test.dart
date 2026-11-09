@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -37,6 +38,28 @@ void main() {
     await typeIn(tester, 'zebras');
     expect(find.text('No title says “zebras”.'), findsOne);
     expect(opened, isEmpty);
+    d.dispose();
+  });
+
+  testWidgets('a More that failed: its error goes when the next one loads', (
+    tester,
+  ) async {
+    final (fake, d, _, _) = await pumpSessionList(tester);
+    var failed = false;
+    fake.sessions = (r) {
+      if (r.cursor == 'p2' && !failed) {
+        failed = true;
+        throw ConnectException(Code.unavailable, 'restarting');
+      }
+      return sessionPages(r);
+    };
+    await tester.tap(find.text('More'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('restarting'), findsOne);
+    await tester.tap(find.text('More'));
+    await tester.pumpAndSettle();
+    expect(find.text('Zebra stripes'), findsOne);
+    expect(find.textContaining('restarting'), findsNothing);
     d.dispose();
   });
 

@@ -108,7 +108,10 @@ class _SessionListState extends State<SessionList> {
   }
 
   Future<void> _more() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final r = await widget.daemon.client.listAgentSessions(
         ListAgentSessionsRequest(
