@@ -90,18 +90,44 @@ func (c *chat) byRefLocked(i int) {
 	c.items[i].Images = out
 }
 
-// unrefLocked reads back every image the chat holds as a reference: its
-// copy is about to go. One that can't be read stays a reference, with a
-// warning.
+// unrefLocked reads back every image the chat holds as a reference, and
+// those of its open side chats' bases (whose items are the chat's, which
+// KeepSide reads back from its copy): the copy is about to go. One that
+// can't be read stays a reference, with a warning; the others are read
+// back all the same. A side chat's lock is taken under the chat's, as
+// nothing takes them the other way round.
 func (c *chat) unrefLocked() {
+	log := c.logLocked()
 	for i := range c.items {
-		imgs, err := c.imagesWithBytes(c.items[i].Images)
+		c.items[i].Images = c.readBack(c.items[i].Images, c.items[i].ID, log, "before its copy goes")
+	}
+	for _, side := range c.sides {
+		side.mu.Lock()
+		for i := range side.base {
+			side.base[i].Images = c.readBack(side.base[i].Images, side.base[i].ID, log, "for a side chat's base before its copy goes")
+		}
+		side.mu.Unlock()
+	}
+}
+
+// readBack is images with the bytes of each held as a reference read back
+// (withBytes) where they can be; one that can't stays a reference, with a
+// warning saying when (for), so a lost file costs that image alone. A new
+// slice when any is read back: the chat's may be shared.
+func (c *chat) readBack(images []model.Image, item string, log *slog.Logger, when string) []model.Image {
+	if !slices.ContainsFunc(images, func(img model.Image) bool { return img.Data == nil }) {
+		return images
+	}
+	out := slices.Clone(images)
+	for j, img := range out {
+		got, err := c.withBytes(img)
 		if err != nil {
-			c.logLocked().Warn("an image held as a reference not read back before its copy goes", "item", c.items[i].ID, "err", err)
+			log.Warn("an image held as a reference not read back "+when, "item", item, "err", err)
 			continue
 		}
-		c.items[i].Images = imgs
+		out[j] = got
 	}
+	return out
 }
 
 // withBytes is img with its bytes: its own, or read back from the chat's
@@ -158,6 +184,7 @@ func (c *chat) itemsWithBytes(items []model.Item) error {
 // as an image's bytes that isn't.
 func (s *Service) Inline(chatID string, items []model.Item) {
 	var c *chat
+	var log *slog.Logger
 	for i := range items {
 		if !slices.ContainsFunc(items[i].Images, func(img model.Image) bool { return img.Data == nil }) {
 			continue
@@ -168,17 +195,9 @@ func (s *Service) Inline(chatID string, items []model.Item) {
 				slog.Warn("images not read back: no such chat", "chat", chatID, "err", err)
 				return
 			}
+			log = c.log()
 		}
-		out := slices.Clone(items[i].Images) // the chat's may be shared
-		for j, img := range out {
-			got, err := c.withBytes(img)
-			if err != nil {
-				c.log().Warn("an image held as a reference not read back for a client", "item", items[i].ID, "err", err)
-				continue
-			}
-			out[j] = got
-		}
-		items[i].Images = out
+		items[i].Images = c.readBack(items[i].Images, items[i].ID, log, "for a client")
 	}
 }
 

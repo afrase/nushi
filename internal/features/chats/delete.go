@@ -112,8 +112,9 @@ func (s *Service) startDeleter(ctx context.Context, c *chat) (Agent, bool, error
 
 // Delete deletes a chat: its agent stops, its worktrees and branches go
 // as opts say, the agent deletes its history of each of the chat's sessions
-// (when it can), the chat's scratch folder goes, and then Nushi's record
-// of it. If the worktree or the agent's history can't go, the chat stays.
+// (when it can), the chat's scratch folder goes, then Nushi's record of
+// it, then its transcript's copy. If the worktree, the agent's history or
+// the record can't go, the chat stays, its copy with it.
 // Removing a worktree another chat works in is refused.
 func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions) error {
 	p, err := s.PlanDelete(ctx, chatID)
@@ -150,27 +151,28 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	if err == nil && p.Scratch != "" {
 		err = os.RemoveAll(p.Scratch)
 	}
-	if err == nil && s.copies != nil {
-		err = s.copies.Delete(c.id)
-		c.mu.Lock()
-		c.mirrored = false // if the chat stays, its items can't go to a copy that's gone (letgo.go)
-		c.mu.Unlock()
-	}
 	if err == nil {
 		err = s.removeUploads(c.id)
 	}
 	if err == nil {
 		err = s.forget(c)
 	}
-	if err == nil {
-		c.log().Info("chat deleted", "history", p.History, "worktrees", len(p.Worktrees), "scratch", p.Scratch != "")
-	}
 	if err != nil {
 		c.mu.Lock()
 		c.halting = false // it may reopen
 		c.mu.Unlock()
+		return err
 	}
-	return err
+	c.log().Info("chat deleted", "history", p.History, "worktrees", len(p.Worktrees), "scratch", p.Scratch != "")
+	// The copy goes last, once the chat is gone: a chat that stayed would
+	// hold items it let go, and images by reference (ADR 0105), from a copy
+	// that's gone. One that can't go is left for Settings to list and clear.
+	if s.copies != nil {
+		if err := s.copies.Delete(c.id); err != nil {
+			return fmt.Errorf("the chat is deleted, but not its transcript's copy (Settings › Chat history lists it): %w", err)
+		}
+	}
+	return nil
 }
 
 // othersInWorktrees refuses removing a worktree another chat works in, as

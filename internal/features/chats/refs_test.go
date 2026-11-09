@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -292,27 +294,75 @@ func TestAnImageItsCopyLostFailsVisibly(t *testing.T) {
 	if _, err := svc.Rewind(t.Context(), c.id, msg.ID); err == nil || !strings.Contains(err.Error(), "images") {
 		t.Errorf("Rewind = %v", err)
 	}
-	// Written again, it fails the copy's write: no empty file stands for it.
+	// Written again with an item beside it, the copy leaves the image out:
+	// no empty file stands for it, and the other item is written.
 	c.mu.Lock()
-	c.unsaved[msg.ID] = true
+	reply := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.AgentMessage })
+	c.items[reply].Text = "changed"
+	replyID := c.items[reply].ID
+	c.unsaved[msg.ID], c.unsaved[replyID] = true, true
 	c.copyLocked(true)
-	mirrored := c.mirrored
 	c.mu.Unlock()
-	if _, err := os.Stat(file); err == nil || mirrored {
-		t.Errorf("written again: a file %v, mirrored %v", err, mirrored)
+	if _, err := os.Stat(file); err == nil {
+		t.Error("written again: an image file stands for it")
+	}
+	items, err := c.copies.Read(c.id)
+	testcheck.NoErr(t, err)
+	if i := slices.IndexFunc(items, func(it model.Item) bool { return it.ID == replyID }); i < 0 || items[i].Text != "changed" {
+		t.Errorf("the item beside it wasn't written: %+v", items)
 	}
 }
 
-// Clearing a chat's copy reads back the images it held first.
+// Clearing a chat's copy reads back the images it held first, each it
+// can: one whose file went costs only itself.
 func TestClearingACopyKeepsTheImagesItHeld(t *testing.T) {
-	svc, agent, c, _ := refChat(t)
-	shot := pngOf(80<<10, 100, 100)
+	svc, agent, c, dir := refChat(t)
+	shot, lost := pngOf(80<<10, 100, 100), pngOf(90<<10, 100, 100)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
-	imageTurn(t, svc, c, shot)
+	imageTurn(t, svc, c, lost, shot)
+	testcheck.NoErr(t, os.Remove(filepath.Join(dir, c.id, "images", ImageHash(lost))))
 	if n, _, err := svc.ClearCopies(t.Context(), []string{c.id}); err != nil || n != 1 {
 		t.Fatalf("ClearCopies = %d, %v", n, err)
 	}
 	if img, err := svc.Image(c.id, ImageHash(shot)); err != nil || !bytes.Equal(img.Data, shot) {
 		t.Errorf("Image after the copy went = %d bytes, %v", len(img.Data), err)
+	}
+}
+
+// A side chat opened before its chat's copy was cleared is kept with its
+// base's images: they were read back before the copy went.
+func TestASideChatIsKeptAfterItsChatsCopyWasCleared(t *testing.T) {
+	svc, agent, c, _ := refChat(t)
+	shot := pngOf(80<<10, 100, 100)
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	imageTurn(t, svc, c, shot)
+	side, err := svc.Fork(t.Context(), c.id)
+	testcheck.NoErr(t, err)
+	if _, _, err := svc.ClearCopies(t.Context(), []string{c.id}); err != nil {
+		t.Fatal(err)
+	}
+	kept, err := svc.KeepSide(t.Context(), side)
+	testcheck.NoErr(t, err)
+	if img, err := svc.Image(kept, ImageHash(shot)); err != nil || !bytes.Equal(img.Data, shot) {
+		t.Errorf("the kept side chat's image = %d bytes, %v", len(img.Data), err)
+	}
+}
+
+// A chat whose deletion failed still has its copy, and the images it
+// holds by reference with it.
+func TestAFailedDeleteKeepsTheImages(t *testing.T) {
+	svc, agent, c, _ := refChat(t)
+	shot := pngOf(80<<10, 100, 100)
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	imageTurn(t, svc, c, shot)
+	sessions := svc.sessions.(*memSessions)
+	sessions.mu.Lock()
+	sessions.deleteErr = errors.New("read-only")
+	sessions.mu.Unlock()
+	if err := svc.Delete(t.Context(), c.id, nil); err == nil {
+		t.Fatal("deleted")
+	}
+	if img, err := svc.Image(c.id, ImageHash(shot)); err != nil || !bytes.Equal(img.Data, shot) {
+		t.Errorf("Image after a failed delete = %d bytes, %v", len(img.Data), err)
 	}
 }

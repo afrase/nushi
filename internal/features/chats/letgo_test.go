@@ -339,10 +339,10 @@ func TestAgentReadyWhileLetGo(t *testing.T) {
 	}
 }
 
-// A chat whose deletion failed after its copy went keeps its items: they
-// can't be let go to a copy that's gone.
-func TestFailedDeleteKeepsTheItems(t *testing.T) {
-	svc, agent, c, _, _ := lettingGo(t, nil)
+// A chat whose deletion failed keeps its copy, which goes last: the items
+// it lets go come back from it.
+func TestFailedDeleteKeepsTheCopy(t *testing.T) {
+	svc, agent, c, copies, _ := lettingGo(t, nil)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")
 	sessions := svc.sessions.(*memSessions)
@@ -352,11 +352,15 @@ func TestFailedDeleteKeepsTheItems(t *testing.T) {
 	if err := svc.Delete(t.Context(), c.id, nil); err == nil {
 		t.Fatal("deleted")
 	}
+	if !copies.Has(c.id) {
+		t.Fatal("the copy went with a failed delete")
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.letGoLocked() // as the look each minute does, no client showing it
-	if c.inCopy || describe(c.items) != "user:one agent:m1" {
-		t.Errorf("let go %v, holds %s", c.inCopy, describe(c.items))
+	c.itemsBackLocked()
+	if describe(c.items) != "user:one agent:m1" {
+		t.Errorf("holds %s", describe(c.items))
 	}
 }
 

@@ -218,7 +218,8 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 			continue
 		}
 		// An open chat shows on what it has, so items it let go come back
-		// before the copy goes, and the images it holds as references.
+		// before the copy goes, and the images it and its side chats' bases
+		// hold as references.
 		ch.mu.Lock()
 		ch.itemsBackLocked()
 		ch.unrefLocked()
