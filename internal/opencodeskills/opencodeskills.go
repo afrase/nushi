@@ -12,7 +12,8 @@
 //   - in a place, a folder holding a SKILL.md is a skill and its id is
 //     the folder's name, whatever its front matter says; a folder without
 //     one is a group of them, read six deep; a <name>.md right in the
-//     place is a skill too (scan.go);
+//     place is a skill too, and so is the place itself when it holds a
+//     SKILL.md (scan.go);
 //   - no trust: a folder's skills load as soon as opencode runs there;
 //   - off by id, whichever place it comes from: a skill.use deny among
 //     the policies of your global opencode.json or opencode.jsonc
@@ -122,10 +123,11 @@ func (OpenCode) List(_ context.Context, folder string) (model.Skills, error) {
 
 // Trash moves one of opencode's own skill folders to the Trash: right in
 // your config's skills folder or a .opencode/skills (or skill) opencode
-// reads here. One in a group, and a skill that is a lone file, stay, and
-// the error says which it is: Nushi's Trash takes a skill's folder from
-// its place and nothing else (skillfile.Trash), never a file or a folder
-// further down.
+// reads here. One in a group, and a skill in one file (a lone <name>.md,
+// or the SKILL.md that makes a place a skill), stay, and the error says
+// which it is: Nushi's Trash takes a skill's folder from its place and
+// nothing else (skillfile.Trash), never a file, a folder further down or
+// the place.
 func (OpenCode) Trash(ctx context.Context, folder, path string) error {
 	var project, yours []string
 	for _, r := range roots(git.RealPath(folder)) {

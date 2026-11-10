@@ -34,10 +34,15 @@ func TestSharedThroughALink(t *testing.T) {
 	if to, _ := os.Readlink(link); to != "../../.agents/skills/release" {
 		t.Errorf("the link says %q", to)
 	}
+	// opencode lists a shared folder that holds a SKILL.md as a skill, by
+	// that file: neither it nor the folder is a skill's folder to link.
+	testcheck.Write(t, filepath.Join(top, ".agents", "skills", "SKILL.md"), "x")
 	for _, bad := range []string{
 		filepath.Join(top, ".agents", "skills", "taken"), // .claude/skills/taken is there
 		filepath.Join(top, ".claude", "skills", "taken"), // not a shared skill
 		shared + "/../release",
+		filepath.Join(top, ".agents", "skills", "SKILL.md"),
+		filepath.Join(top, ".agents", "skills"),
 	} {
 		if err := (Claude{}).Link(ctx, deeper, bad); err == nil {
 			t.Errorf("linked %s", bad)

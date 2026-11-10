@@ -249,3 +249,65 @@ func TestTrashOfASharedSkill(t *testing.T) {
 		t.Errorf("%s stayed", paths["deep"])
 	}
 }
+
+// A SKILL.md right in a place makes the place one skill, named for its
+// folder. It is listed as that file, a skill in one file, so Delete has
+// no folder to take: the place, with every other skill in it, stays,
+// whether the app sends the listed path or the place's.
+func TestTrashOfAPlaceThatIsASkill(t *testing.T) {
+	for _, c := range []struct {
+		name    string
+		place   func(home, config, top string) string
+		sibling string
+		want    string
+	}{
+		{"the project's own", func(_, _, top string) string { return filepath.Join(top, ".opencode", "skills") }, "proj", "is a skill in one file"},
+		{"yours", func(_, config, _ string) string { return filepath.Join(config, "skills") }, "mine", "is a skill in one file"},
+		{"the project's shared", func(_, _, top string) string { return filepath.Join(top, ".agents", "skills") }, "release", "isn't a skill's folder"},
+		{"your shared", func(home, _, _ string) string { return filepath.Join(home, ".agents", "skills") }, "everyday", "isn't a skill's folder"},
+		{"the project's Claude", func(_, _, top string) string { return filepath.Join(top, ".claude", "skills") }, "claudeproj", "isn't a skill's folder"},
+		{"your Claude", func(home, _, _ string) string { return filepath.Join(home, ".claude", "skills") }, "claudeuser", "isn't a skill's folder"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			config, top, deeper := setup(t)
+			trashByRemoving(t)
+			place := c.place(os.Getenv("HOME"), config, top)
+			file := filepath.Join(place, "SKILL.md")
+			testcheck.Write(t, file, "---\ndescription: the place\n---\n")
+			svc := skills.New([]string{"opencode"}, map[string]skills.Reader{"opencode": OpenCode{}}, skillfile.Trash)
+			ctx := context.Background()
+			l, err := svc.List(ctx, "opencode", deeper)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var paths []string
+			for _, s := range l.Skills {
+				if s.Name == filepath.Base(place) {
+					paths = append(paths, s.Path)
+				}
+				if s.Path == place {
+					t.Errorf("%s is listed as a skill's folder", place)
+				}
+			}
+			if len(paths) != 1 || paths[0] != file {
+				t.Fatalf("listed at %v, want %s", paths, file)
+			}
+			if err := svc.Trash(ctx, "opencode", deeper, file); err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Errorf("%s: %v, want %q", file, err, c.want)
+			}
+			if err := svc.Trash(ctx, "opencode", deeper, place); err == nil {
+				t.Errorf("%s went to the Trash", place)
+			}
+			for _, p := range []string{file, place} {
+				if err := (OpenCode{}).Trash(ctx, deeper, p); err == nil {
+					t.Errorf("opencode's own Trash took %s", p)
+				}
+			}
+			for _, p := range []string{file, filepath.Join(place, c.sibling, "SKILL.md")} {
+				if _, err := os.Stat(p); err != nil {
+					t.Errorf("%s is gone: %v", p, err)
+				}
+			}
+		})
+	}
+}

@@ -50,7 +50,7 @@ Settings › Skills (or ⋯ › Skills…, which opens that chat's agent) lists 
 
 - Search filters skills and plugins.
 - A skill's ⋯ opens its `SKILL.md` as text, shows it in Finder, or deletes it: its folder, or the link in its place, goes to the Trash, naming every agent that loses it.
-- OpenCode also reads a skill that is one file, `<name>.md` right in a skills folder, and skills in a folder inside one (a group). A one-file skill's ⋯ opens that file and has no Delete or Link; a skill in a group has no Delete in OpenCode's own folders (a shared one has). A group that is a link, inside a project's skills folder, isn't listed, though OpenCode loads its skills.
+- OpenCode also reads a skill that is one file, `<name>.md` right in a skills folder, and skills in a folder inside one (a group). A `SKILL.md` right in a skills folder makes that whole folder one skill, named for it (`skills`), and counts as a one-file skill. A one-file skill's ⋯ opens that file and has no Delete or Link; a skill in a group has no Delete in OpenCode's own folders (a shared one has). A group that is a link, inside a project's skills folder, isn't listed, though OpenCode loads its skills.
 - **Plugins** lists what each brings (skills, commands, agents, MCP servers), turns it on or off, or uninstalls one installed for you.
 - **New skill…** opens a chat with the picked agent in the folder, with a request in the box to write one in `.agents/skills`. For Claude, it asks first: `.claude/skills`, or `.agents/skills` and a link.
 
