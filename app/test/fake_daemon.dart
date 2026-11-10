@@ -13,13 +13,14 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/drafts.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
-/// The five agents, as the daemon lists them: installed, ready.
+/// The seven agents, as the daemon lists them: installed, ready.
 List<Agent> readyAgents() => [
   for (final (name, title) in [
     ('claude', 'Claude'),
     ('codex', 'Codex'),
     ('ante', 'Ante'),
     ('omp', 'oh-my-pi'),
+    ('opencode', 'OpenCode'),
     ('pi', 'Pi'),
     ('pig', 'PiG'),
   ])

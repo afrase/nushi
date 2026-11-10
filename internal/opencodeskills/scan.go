@@ -40,9 +40,12 @@ var skipped = []string{"node_modules", "venv", "__pycache__"}
 // scan reads the skills in root as opencode does (docs/facts/opencode.md):
 // a folder holding a SKILL.md is one skill and nothing below it is read;
 // any other folder is a group, down to maxDepth; a <name>.md right in
-// root is a skill named for the file. Links are followed. One skill an id
-// comes back, in the order of their files.
-func scan(root string) []found {
+// root is a skill named for the file. Links are followed, but for a
+// project's place (links false) a linked group stays out, as its linked
+// places do: a skill found through one would be a folder somewhere else,
+// and Delete would move that. A linked skill folder is still listed. One
+// skill an id comes back, in the order of their files.
+func scan(root string, links bool) []found {
 	type level struct {
 		dir   string
 		depth int
@@ -54,6 +57,9 @@ func scan(root string) []found {
 		groups, files := entries(at.dir)
 		if slices.Contains(files, "SKILL.md") {
 			out = add(out, filepath.Base(at.dir), at.dir, filepath.Join(at.dir, "SKILL.md"))
+			continue
+		}
+		if !links && at.depth > 0 && linked(at.dir) {
 			continue
 		}
 		for _, name := range files {
@@ -115,9 +121,15 @@ func add(out []found, id, path, file string) []found {
 		return out
 	}
 	f := found{File: skillfile.Parse(b), id: id, path: path, file: file}
-	if fi, err := os.Lstat(path); err == nil && fi.Mode()&os.ModeSymlink != 0 {
+	if linked(path) {
 		target, _ := os.Readlink(path)
 		f.linked = skillfile.Clean(target)
 	}
 	return append(out, f)
+}
+
+// linked says whether path is itself a link.
+func linked(path string) bool {
+	fi, err := os.Lstat(path)
+	return err == nil && fi.Mode()&os.ModeSymlink != 0
 }

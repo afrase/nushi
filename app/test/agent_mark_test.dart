@@ -7,7 +7,16 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 import 'theme_sets.dart';
 
-const _agents = ['claude', 'codex', 'ante', 'omp', 'pi', 'pig', 'gemini'];
+const _agents = [
+  'claude',
+  'codex',
+  'ante',
+  'omp',
+  'pi',
+  'pig',
+  'opencode',
+  'gemini',
+];
 
 /// The WCAG contrast of [a] and [b].
 double _contrast(Color a, Color b) {
@@ -40,8 +49,10 @@ void main() {
         }
       }
     }
-    // Codex's Blossom keeps the text's color, as OpenAI draws it.
+    // Codex's Blossom keeps the text's color, as OpenAI draws it, and
+    // OpenCode's O as OpenCode does.
     expect(agentColor('codex', Tokens.dark), isNull);
+    expect(agentColor('opencode', Tokens.dark), isNull);
   });
 
   for (final (name, tokens) in [

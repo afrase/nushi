@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/afrase/nushi/internal/features/skills"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/skillfile"
 	"github.com/afrase/nushi/internal/testcheck"
@@ -71,13 +72,21 @@ func setup(t *testing.T) (config, top, deeper string) {
 }
 
 // opencode's skills, one an id, from the folder up to /; a project's
-// linked places left out; off by the global config's policies.
+// linked places and linked groups left out, a linked group of yours
+// followed; off by the global config's policies.
 func TestList(t *testing.T) {
 	config, top, deeper := setup(t)
 	elsewhere := t.TempDir()
 	skill(t, filepath.Join(elsewhere, "skills"), "victim")
-	if err := os.Symlink(elsewhere, filepath.Join(deeper, ".agents")); err != nil {
-		t.Fatal(err)
+	skill(t, filepath.Join(elsewhere, "dotfiles"), "linked")
+	for link, to := range map[string]string{
+		filepath.Join(deeper, ".agents"):                    elsewhere,
+		filepath.Join(top, ".agents", "skills", "away"):     filepath.Join(elsewhere, "skills"),
+		filepath.Join(top, ".opencode", "skills", "away"):   filepath.Join(elsewhere, "skills"),
+		filepath.Join(config, "skills", "yours"):            filepath.Join(elsewhere, "dotfiles"),
+		filepath.Join(top, ".opencode", "skills", "byLink"): filepath.Join(elsewhere, "dotfiles", "linked"),
+	} {
+		testcheck.NoErr(t, os.Symlink(to, link))
 	}
 	jsonc := filepath.Join(config, "opencode.jsonc")
 	testcheck.Write(t, filepath.Join(config, "opencode.json"), `{"policies": [`+deny("mine")+`, `+deny("proj")+`,
@@ -88,7 +97,7 @@ func TestList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "project both on|project proj on|user nested on|user loose on|user mine off|user older on|" +
+	want := "project both on|project byLink on|project proj on|user nested on|user loose on|user mine off|user linked on|user older on|" +
 		"shared release on|shared above on|shared everyday off|project claudeproj off|user claudeuser off"
 	if g := listed(l.Skills); g != want {
 		t.Errorf("skills:\n%s\nwant\n%s", g, want)
@@ -103,7 +112,10 @@ func TestList(t *testing.T) {
 		case s.Name == "release" && s.Path != filepath.Join(top, "sub", ".agents", "skills", "release"),
 			s.Name == "nested" && s.Path != filepath.Join(config, "skills", "group", "nested"):
 			t.Errorf("%s at %s", s.Name, s.Path)
-		case s.Name == "everyday" && !s.Everywhere, s.Name == "nested" && s.Description != "nested":
+		case s.Name == "everyday" && !s.Everywhere, s.Name == "nested" && s.Description != "nested",
+			s.Name == "loose" && s.Path != filepath.Join(config, "skills", "loose.md"),
+			s.Name == "byLink" && (s.Linked == "" || s.Path != filepath.Join(top, ".opencode", "skills", "byLink")),
+			s.Name == "linked" && s.Path != filepath.Join(config, "skills", "yours", "linked"):
 			t.Errorf("%+v", s)
 		}
 	}
@@ -139,30 +151,101 @@ func TestPolicies(t *testing.T) {
 	}
 }
 
-// Only a folder right in the config's skills or a .opencode/skills goes
-// to the Trash.
-func TestTrash(t *testing.T) {
-	config, top, deeper := setup(t)
+// trashByRemoving has the Trash remove what it is given.
+func trashByRemoving(t *testing.T) {
+	t.Helper()
 	bin := t.TempDir()
 	testcheck.Write(t, filepath.Join(bin, "trash"), "#!/bin/sh\nrm -r \"$1\"\n")
 	testcheck.NoErr(t, os.Chmod(filepath.Join(bin, "trash"), 0o700))
 	old := skillfile.TrashProgram
 	skillfile.TrashProgram = []string{filepath.Join(bin, "trash")}
 	t.Cleanup(func() { skillfile.TrashProgram = old })
+}
+
+// Only a folder right in the config's skills or a .opencode/skills goes
+// to the Trash. A skill that is one file and one in a group stay, in
+// yours and in a project's, with an error that says why; so does what
+// isn't opencode's own.
+func TestTrash(t *testing.T) {
+	config, top, deeper := setup(t)
+	trashByRemoving(t)
+	skill(t, filepath.Join(top, ".opencode", "skills", "group"), "deep")
+	testcheck.Write(t, filepath.Join(top, ".opencode", "skills", "lone.md"), "A lone file.\n")
+	testcheck.Write(t, filepath.Join(config, "skills", "notes.txt"), "Not a skill.\n")
 	ctx := context.Background()
+	for _, c := range []struct{ path, want string }{
+		{filepath.Join(config, "skills", "loose.md"), "is a skill in one file"},
+		{filepath.Join(top, ".opencode", "skills", "lone.md"), "is a skill in one file"},
+		{filepath.Join(config, "skills", "group", "nested"), "is in a group of skills"},
+		{filepath.Join(top, ".opencode", "skills", "group", "deep"), "is in a group of skills"},
+		{filepath.Join(config, "skills", "group"), "isn't a skill's folder"},
+		{filepath.Join(config, "skills", "notes.txt"), "isn't a skill's folder"},
+		{filepath.Join(config, "skills"), "isn't a skill's folder"},
+		{filepath.Join(config, "skills", "mine", "..", "..", "skills"), "isn't a skill's folder"},
+		{filepath.Join(top, ".agents", "skills", "release"), "isn't a skill's folder"},
+		{filepath.Join(top, ".claude", "skills", "claudeproj"), "isn't a skill's folder"},
+	} {
+		err := OpenCode{}.Trash(ctx, deeper, c.path)
+		if err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s: %v, want %q", c.path, err, c.want)
+		}
+		if _, err := os.Stat(c.path); err != nil {
+			t.Errorf("%s is gone: %v", c.path, err)
+		}
+	}
 	for _, p := range []string{filepath.Join(config, "skills", "mine"), filepath.Join(top, ".opencode", "skills", "proj")} {
 		if err := (OpenCode{}).Trash(ctx, deeper, p); err != nil {
 			t.Errorf("%s: %v", p, err)
 		}
 	}
-	for _, p := range []string{filepath.Join(config, "skills", "group", "nested"), filepath.Join(config, "skills", "loose.md"),
-		filepath.Join(top, ".agents", "skills", "release"), filepath.Join(top, ".claude", "skills", "claudeproj")} {
-		if err := (OpenCode{}).Trash(ctx, deeper, p); err == nil {
-			t.Errorf("%s went to the Trash", p)
+	// What went took nothing with it.
+	l, _ := OpenCode{}.List(ctx, deeper)
+	want := "project both on|project deep on|project lone on|user nested on|user loose on|user mine on|user older on|" +
+		"shared release on|shared above on|shared everyday on|project claudeproj on|user claudeuser on"
+	if g := listed(l.Skills); g != want { // the config's skill folder's mine shows once skills' is gone
+		t.Errorf("after:\n%s\nwant\n%s", g, want)
+	}
+}
+
+// A shared skill goes by the Skills view's service, which takes the
+// folder holding it as its place: one in a group goes alone, one that is
+// a file stays, and one in a project's linked group isn't listed, so
+// nothing outside the repository can go.
+func TestTrashOfASharedSkill(t *testing.T) {
+	_, top, deeper := setup(t)
+	trashByRemoving(t)
+	shared := filepath.Join(top, ".agents", "skills")
+	elsewhere, _ := filepath.EvalSymlinks(t.TempDir())
+	skill(t, elsewhere, "victim")
+	testcheck.NoErr(t, os.Symlink(elsewhere, filepath.Join(shared, "away")))
+	skill(t, filepath.Join(shared, "group"), "deep")
+	skill(t, filepath.Join(shared, "group"), "other")
+	testcheck.Write(t, filepath.Join(shared, "lone.md"), "A lone file.\n")
+	svc := skills.New([]string{"opencode"}, map[string]skills.Reader{"opencode": OpenCode{}}, skillfile.Trash)
+	ctx := context.Background()
+	l, err := svc.List(ctx, "opencode", deeper)
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths := map[string]string{}
+	for _, s := range l.Skills {
+		paths[s.Name] = s.Path
+	}
+	if paths["deep"] != filepath.Join(shared, "group", "deep") || paths["lone"] != filepath.Join(shared, "lone.md") || paths["victim"] != "" {
+		t.Fatalf("listed at %v", paths)
+	}
+	for _, p := range []string{paths["lone"], filepath.Join(elsewhere, "victim"), filepath.Join(shared, "away", "victim")} {
+		if err := svc.Trash(ctx, "opencode", deeper, p); err == nil || !strings.Contains(err.Error(), "isn't a skill's folder") {
+			t.Errorf("%s: %v", p, err)
 		}
 	}
-	l, _ := OpenCode{}.List(ctx, deeper)
-	if g := listed(l.Skills); strings.Contains(g, "project proj on") || !strings.Contains(g, "user mine on|user older") {
-		t.Errorf("after: %s", g) // the config's skill folder's mine shows once skills' is gone
+	testcheck.NoErr(t, svc.Trash(ctx, "opencode", deeper, paths["deep"]))
+	for _, p := range []string{paths["lone"], filepath.Join(elsewhere, "victim", "SKILL.md"), filepath.Join(shared, "group", "other", "SKILL.md"), filepath.Join(shared, "release")} {
+		if _, err := os.Stat(p); err != nil {
+			t.Errorf("%s is gone: %v", p, err)
+		}
+	}
+	if _, err := os.Stat(paths["deep"]); err == nil {
+		t.Errorf("%s stayed", paths["deep"])
 	}
 }

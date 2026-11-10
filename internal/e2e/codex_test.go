@@ -21,7 +21,7 @@ func TestACodexChat(t *testing.T) {
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	agents := must(a.c.ListAgents(ctx, connect.NewRequest(&nushiv1.ListAgentsRequest{}))).Agents
-	if len(agents) != 8 || agents[1].Name != "claude" || agents[2].Name != "codex" || agents[2].Resume != "codex resume" || !agents[2].DeleteArchives {
+	if len(agents) != 9 || agents[1].Name != "claude" || agents[2].Name != "codex" || agents[2].Resume != "codex resume" || !agents[2].DeleteArchives {
 		t.Fatalf("agents = %v", agents)
 	}
 

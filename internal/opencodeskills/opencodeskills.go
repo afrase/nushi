@@ -19,15 +19,18 @@
 //     (config.go, switch.go).
 //
 // opencode follows linked places; Nushi leaves a project's out (ADR
-// 0052's rule). Its built-in skills, and those of the system's folder, of
-// a config's skills list or of a Console library, aren't listed. Nothing
-// here runs opencode.
+// 0052's rule), and a linked group in one. Its built-in skills, and those
+// of the system's folder, of a config's skills list or of a Console
+// library, aren't listed. Nothing here runs opencode.
 package opencodeskills
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
@@ -101,7 +104,7 @@ func (OpenCode) List(_ context.Context, folder string) (model.Skills, error) {
 	}
 	seen := map[string]bool{}
 	for _, r := range roots(folder) {
-		for _, f := range scan(r.path) {
+		for _, f := range scan(r.path, !r.project) {
 			if seen[f.id] {
 				continue
 			}
@@ -119,7 +122,10 @@ func (OpenCode) List(_ context.Context, folder string) (model.Skills, error) {
 
 // Trash moves one of opencode's own skill folders to the Trash: right in
 // your config's skills folder or a .opencode/skills (or skill) opencode
-// reads here. One in a group, and a skill that is a lone file, stay.
+// reads here. One in a group, and a skill that is a lone file, stay, and
+// the error says which it is: Nushi's Trash takes a skill's folder from
+// its place and nothing else (skillfile.Trash), never a file or a folder
+// further down.
 func (OpenCode) Trash(ctx context.Context, folder, path string) error {
 	var project, yours []string
 	for _, r := range roots(git.RealPath(folder)) {
@@ -128,6 +134,18 @@ func (OpenCode) Trash(ctx context.Context, folder, path string) error {
 			project = append(project, r.path)
 		case !r.project && filepath.Dir(r.path) == configDir():
 			yours = append(yours, r.path)
+		}
+	}
+	for _, place := range slices.Concat(project, yours) {
+		rel, err := filepath.Rel(place, path)
+		if err != nil || rel == "." || !filepath.IsLocal(rel) || filepath.Clean(path) != path {
+			continue
+		}
+		if filepath.Dir(path) != place {
+			return fmt.Errorf("%s is in a group of skills; Nushi moves only a skill right in %s to the Trash", path, place)
+		}
+		if fi, err := os.Stat(path); err == nil && fi.Mode().IsRegular() && strings.HasSuffix(path, ".md") {
+			return fmt.Errorf("%s is a skill in one file; Nushi moves only a skill's folder to the Trash", path)
 		}
 	}
 	return skillfile.Trash(ctx, project, yours, path)

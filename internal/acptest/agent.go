@@ -83,6 +83,7 @@ type Agent struct {
 	pending map[string]chan json.RawMessage
 	cwds    map[string]string // the sessions open here, by id: their cwd
 	turns   map[string]*turn  // the running turn's, by session
+	calls   int               // opencode's tool calls so far, for their ids
 }
 
 // turn is a running prompt's: cancelled once session/cancel came for it.

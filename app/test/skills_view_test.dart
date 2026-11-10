@@ -7,6 +7,7 @@ import 'package:nushi/skills.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'fake_desktop.dart';
 import 'harness.dart';
 
 const _home = '/Users/me';
@@ -82,6 +83,31 @@ ListSkillsResponse _skills() => ListSkillsResponse(
       switchScope: 'local',
       path: '$_home/.claude/plugins/cache/market/team/0.3.0',
     ),
+  ],
+);
+
+/// OpenCode's skills: a folder's, a lone file's, one in a group, one of
+/// Claude's it reads too, and a shared lone file.
+ListSkillsResponse _opencode() => ListSkillsResponse(
+  readsShared: true,
+  skills: [
+    for (final (name, source, path) in [
+      ('mine', 'user', '$_home/.config/opencode/skills/mine'),
+      ('loose', 'user', '$_home/.config/opencode/skills/loose.md'),
+      ('nested', 'user', '$_home/.config/opencode/skills/group/nested'),
+      ('deploy', 'project', '$_home/app/.claude/skills/deploy'),
+      ('notes', 'shared', '$_home/app/.agents/skills/notes.md'),
+    ])
+      Skill(
+        name: name,
+        source: source,
+        path: path,
+        state: 'on',
+        tokens: 3,
+        agents: [
+          if (source == 'shared') SkillAgent(agent: 'opencode', state: 'on'),
+        ],
+      ),
   ],
 );
 
@@ -206,6 +232,62 @@ void main() {
       fake.calls.whereType<TrashSkillRequest>().single.path,
       '$_home/app/.claude/skills/deploy',
     );
+    await closeView(tester, d);
+  });
+
+  testWidgets('OpenCode: where it reads skills and keeps a switch; a lone '
+      'file opens as itself, and neither it nor a skill in a group is '
+      'deleted', (tester) async {
+    final opened = fakeDesktop();
+    final fake = FakeDaemon([])
+      ..answer = (input) => input is ListSkillsRequest ? _opencode() : null;
+    final d = await fake.connect(tester);
+    d.skillsAgent = 'opencode';
+    await tester.binding.setSurfaceSize(const Size(1000, 860));
+    await tester.pumpWidget(
+      themed(SkillsView(daemon: d, folder: '$_home/opencode')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'In every folder: skills in your OpenCode config folder, and '
+        'Claude’s ~/.claude/skills.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'In this folder: .opencode/skills, .opencode/skill and Claude’s '
+        '.claude/skills, here and in every folder above it.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('in your OpenCode config'), findsNWidgets(4));
+    expect(find.text('for OpenCode'), findsOneWidget);
+    // Each skill's menu: what opens, and whether Delete… is there.
+    for (final (at, open, file, deletable) in [
+      (0, 'Open SKILL.md', '.config/opencode/skills/mine/SKILL.md', true),
+      (1, 'Open loose.md', '.config/opencode/skills/loose.md', false),
+      (
+        2,
+        'Open SKILL.md',
+        '.config/opencode/skills/group/nested/SKILL.md',
+        false,
+      ),
+      (3, 'Open SKILL.md', 'app/.claude/skills/deploy/SKILL.md', false),
+      (4, 'Open notes.md', 'app/.agents/skills/notes.md', false),
+    ]) {
+      await tester.tap(find.byTooltip('More').at(at));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Delete…'),
+        deletable ? findsOneWidget : findsNothing,
+        reason: file,
+      );
+      await tester.tap(find.text(open));
+      await tester.pumpAndSettle();
+      expect(opened.last, ['-t', '$_home/$file']);
+    }
     await closeView(tester, d);
   });
 

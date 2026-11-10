@@ -110,7 +110,7 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	c.storeLocked()
 	c.mu.Unlock()
 	// Only the mode: an agent that keeps the model in its sessions (Ante,
-	// PiG, omp) has the one the session was on.
+	// PiG, omp, opencode) has the one the session was on.
 	if err := c.reapply(ctx, o.agent, o.sid, s.remembered.Mode(k.Name), nil); err != nil {
 		c.log().Warn("starting mode", "err", err)
 	}

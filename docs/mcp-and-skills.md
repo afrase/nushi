@@ -20,6 +20,10 @@ A server that's off stays listed, dimmed. A running chat keeps its servers until
 - A server that asks for a sign-in (HTTP 401) shows "Needs login" with **Log in**, which runs Ante's own command and waits for the browser. Ante keeps the token. It takes Ante 0.2.15 or later; on an older one the row stays "Failed to connect": update Ante.
 - A change applies to new Ante sessions, or a running chat's Reload.
 
+**The other agents' servers** aren't listed: change them with the agent itself.
+
+**Nushi's own tools** (`show`, the previews, a Jira issue's) come through an MCP server Nushi hands the agent with each session. Claude and Codex chats get them. Ante, oh-my-pi, Pi and PiG take no servers from a client. OpenCode takes them, but calls their tools from a script in one tool call, asking nothing and showing each call only at the end, so Nushi hands it none ([ADR 0068](adr/0068-an-agent-opens-a-preview.md)).
+
 ## Skills
 
 Settings › Skills (or ⋯ › Skills…, which opens that chat's agent) lists an agent's skills for a folder. Pick the agent beside the title; Claude comes first ([ADR 0051](adr/0051-the-skills-manager.md), [ADR 0052](adr/0052-skills-for-every-agent-and-the-shared-folder.md)).
@@ -35,8 +39,9 @@ Settings › Skills (or ⋯ › Skills…, which opens that chat's agent) lists 
 | Pi | "in your settings" or "in .pi/settings.json" |
 | PiG | "in your settings" or "in .pig/settings.json" |
 | Ante, oh-my-pi | "by name, everywhere" |
+| OpenCode | "in your OpenCode config" (a `skill.use` deny in your `opencode.json`, by name, everywhere) |
 
-**Shared** is `.agents/skills` (the project's, as the agents walk it) and `~/.agents/skills`, which Codex, Pi, PiG, oh-my-pi and Ante read.
+**Shared** is `.agents/skills` (the project's, as the agents walk it) and `~/.agents/skills`, which Codex, Pi, PiG, oh-my-pi, Ante and OpenCode read.
 
 - Each shared skill says which agents load it ("Off for Codex", "PiG loads it once the folder is trusted"); its switch is the picked agent's.
 - Claude doesn't read `.agents/skills` yet. A shared skill's ⋯ › Link for Claude… makes `.claude/skills/<name>`, a relative link to it, so Claude loads it too.
@@ -45,6 +50,7 @@ Settings › Skills (or ⋯ › Skills…, which opens that chat's agent) lists 
 
 - Search filters skills and plugins.
 - A skill's ⋯ opens its `SKILL.md` as text, shows it in Finder, or deletes it: its folder, or the link in its place, goes to the Trash, naming every agent that loses it.
+- OpenCode also reads a skill that is one file, `<name>.md` right in a skills folder, and skills in a folder inside one (a group). A one-file skill's ⋯ opens that file and has no Delete or Link; a skill in a group has no Delete in OpenCode's own folders (a shared one has). A group that is a link, inside a project's skills folder, isn't listed, though OpenCode loads its skills.
 - **Plugins** lists what each brings (skills, commands, agents, MCP servers), turns it on or off, or uninstalls one installed for you.
 - **New skill…** opens a chat with the picked agent in the folder, with a request in the box to write one in `.agents/skills`. For Claude, it asks first: `.claude/skills`, or `.agents/skills` and a link.
 

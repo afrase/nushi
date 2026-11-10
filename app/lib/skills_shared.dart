@@ -140,6 +140,7 @@ class _SharedRow extends StatelessWidget {
         agentTitle(a.agent) + (a.via.isEmpty ? '' : ' (linked)'),
     ];
     final canLink = mine == null && !list.list.readsShared;
+    final lone = loneFile(skill);
     return Row(
       children: [
         Expanded(
@@ -209,14 +210,18 @@ class _SharedRow extends StatelessWidget {
           size: 15,
           tooltip: 'More',
           entries: [
-            MenuEntry('Open SKILL.md', onPick: () => openSkillFile(skill)),
+            MenuEntry(
+              openSkillLabel(skill),
+              onPick: () => openSkillFile(skill),
+            ),
             MenuEntry(
               conventions.reveal,
               onPick: () => revealInFinder(skill.path),
             ),
-            if (canLink)
+            // A lone file isn't a folder to link to or move to the Trash.
+            if (canLink && !lone)
               MenuEntry('Link for $title…', onPick: () => _link(context)),
-            MenuEntry('Delete…', onPick: () => _delete(context)),
+            if (!lone) MenuEntry('Delete…', onPick: () => _delete(context)),
           ],
         ),
       ],

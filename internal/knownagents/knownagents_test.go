@@ -32,11 +32,14 @@ func TestEveryAgentIsWhole(t *testing.T) {
 		if moves := n == "claude" || n == "codex"; info.Moves != moves {
 			t.Errorf("%s: Moves %v, want %v (ADR 0014)", n, info.Moves, moves)
 		}
-		if claudes := n == "claude"; (info.InitMeta != nil) != claudes || (info.SessionMeta != nil) != claudes || (info.UltracodeMeta != nil) != claudes {
-			t.Errorf("%s: _meta %v, %v, %v, only Claude's has any", n, info.InitMeta, info.SessionMeta, info.UltracodeMeta)
+		// Claude's has all three; opencode's initialize alone asks for
+		// its subagents' updates.
+		claudes := n == "claude"
+		if (info.InitMeta != nil) != (claudes || n == "opencode") || (info.SessionMeta != nil) != claudes || (info.UltracodeMeta != nil) != claudes {
+			t.Errorf("%s: _meta %v, %v, %v, only Claude's and opencode's initialize has any", n, info.InitMeta, info.SessionMeta, info.UltracodeMeta)
 		}
 	}
-	if !slices.Equal(names, []string{"claude", "codex", "ante", "omp", "pi", "pig"}) {
+	if !slices.Equal(names, []string{"claude", "codex", "ante", "omp", "opencode", "pi", "pig"}) {
 		t.Errorf("agents %v", names)
 	}
 }
@@ -89,11 +92,12 @@ func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 	want := map[string]struct{ harness, local []string }{
 		"claude": {[]string{"BackgroundTasks", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "OtherReader", "ReadOnly", "SubagentMessages", "Subagents", "TerminalCommands", "TitleMaker", "ToolReader", "Transcript"},
 			[]string{"ForkFinder", "HistoryChecker", "MessageDater", "OpenFinder", "SessionSearcher", "WorktreeFinder"}},
-		"codex": {[]string{"Forker", "GoneReader", "OtherReader", "ReadOnly", "ToolReader"}, []string{"ForkFinder", "OpenFinder", "SessionSearcher"}},
-		"ante":  {[]string{"ContextAsker", "Forker", "OtherReader", "Subagents", "ToolReader"}, []string{"MessageDater", "OpenFinder"}},
-		"omp":   {[]string{"OtherReader", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
-		"pi":    {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},
-		"pig":   {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},
+		"codex":    {[]string{"Forker", "GoneReader", "OtherReader", "ReadOnly", "ToolReader"}, []string{"ForkFinder", "OpenFinder", "SessionSearcher"}},
+		"ante":     {[]string{"ContextAsker", "Forker", "OtherReader", "Subagents", "ToolReader"}, []string{"MessageDater", "OpenFinder"}},
+		"omp":      {[]string{"OtherReader", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
+		"opencode": {[]string{"CommandHider", "GoneReader", "OtherReader"}, nil},
+		"pi":       {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},
+		"pig":      {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},
 	}
 	for _, a := range All("") {
 		w := want[a.Agent.Name]

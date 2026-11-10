@@ -68,8 +68,9 @@ func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.
 	return a, nil
 }
 
-// CLI is opencode's program, Min the first whose ACP this is (opencode 1,
-// npm's opencode-ai, speaks another), and Page where to get it.
+// CLI is opencode's program, Min the oldest Nushi takes (opencode 1, npm's
+// opencode-ai, was never run with it: docs/facts/opencode.md), and Page
+// where to get it.
 const (
 	CLI  = "opencode"
 	Min  = "2.0.0"

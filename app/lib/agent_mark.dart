@@ -14,10 +14,10 @@ import 'package:svg_path/svg_path.dart';
 /// An agent's mark, [size] square: the agent's own icon where Nushi
 /// bundles one, in the agent's own color ([agentColor]; oh-my-pi's plug in
 /// its orange), and what has no color of its own (Codex's Blossom,
-/// oh-my-pi's π) in [ink], the secondary text's if not given; else its
-/// initial on a rounded square of [ink]. [color], when given, draws it
-/// all in that one color instead (an archived chat's, muted). One mark per
-/// agent wherever a chat's agent shows.
+/// oh-my-pi's π, OpenCode's O) in [ink], the secondary text's if not
+/// given; else its initial on a rounded square of [ink]. [color], when
+/// given, draws it all in that one color instead (an archived chat's,
+/// muted). One mark per agent wherever a chat's agent shows.
 class AgentMark extends StatelessWidget {
   const new(this.agent, {super.key, this.size = 14, this.ink, this.color});
 
@@ -32,6 +32,10 @@ class AgentMark extends StatelessWidget {
     final ink = color ?? this.ink ?? t.textSecondary;
     if (_marks[agent] case (final path, final box)) {
       final layers = switch ((agent, color)) {
+        ('opencode', _) => [
+          (path, ink),
+          (_opencodeBlock, ink.withValues(alpha: _opencodeBlockAlpha)),
+        ],
         (_, final one?) => [(path, one)],
         ('omp', _) => [(_ompParts.$1, ink), (_ompParts.$2, t.ompPlug)],
         _ => [(path, agentColor(agent, t) ?? ink)],
@@ -62,7 +66,8 @@ class AgentMark extends StatelessWidget {
 
 /// The color an agent's mark is drawn in, from its own logo, if it has
 /// one: Claude's is Anthropic's; Codex's Blossom is black or white in
-/// OpenAI's use, so the text's color; oh-my-pi's is its plug's alone.
+/// OpenAI's use, and OpenCode's O in its own, so the text's color;
+/// oh-my-pi's is its plug's alone.
 Color? agentColor(String agent, Tokens t) => switch (agent) {
   'claude' => t.claude,
   'ante' => t.ante,
@@ -103,7 +108,8 @@ class _Mark extends CustomPainter {
 /// `claude-acp.svg` and `codex-acp.svg`), Ante's from its docs' logo
 /// (`ante.png` in AntigmaLabs/ante), oh-my-pi's from its repository
 /// (`assets/icon.svg`), Pi's from pi.dev's `logo.svg`, PiG's from its pig
-/// sprite, all in one color.
+/// sprite, OpenCode's from its repository (`packages/identity/mark.svg`
+/// in anomalyco/opencode), all in one color.
 /// docs/user/agent-marks.md has their terms.
 final Map<String, (Path, Rect)> _marks = {
   'claude': (parseSvgPath(_claude), const Rect.fromLTWH(0, 0, 1200, 1200)),
@@ -112,6 +118,7 @@ final Map<String, (Path, Rect)> _marks = {
   'omp': (_omp(), const Rect.fromLTRB(10, 8, 110, 82)),
   'pi': (parseSvgPath(_pi), const Rect.fromLTRB(165, 165, 635, 635)),
   'pig': (_pig(), const Rect.fromLTRB(1, 0, 15, 12)),
+  'opencode': (parseSvgPath(_opencode), const Rect.fromLTRB(128, 96, 384, 416)),
 };
 
 /// Ante's pixel ghost, its pixels as runs of the 262×266 PNG.
@@ -206,6 +213,18 @@ Path _pig() {
   }
   return path;
 }
+
+/// OpenCode's O: the frame of its mark, without the square it sits on.
+/// The mark fills it by the even-odd rule; its hole runs against the
+/// frame, so the default rule leaves it open too.
+const _opencode = 'M384 416H128V96H384V416ZM320 160H192V352H320V160Z';
+
+/// The block in the lower two thirds of OpenCode's O, a dim gray in its
+/// mark: here the frame's color, faint, as in its one-color logos
+/// (`opencode-logo-transparent-*.svg`: 0.2 on light, 0.28 on dark; the
+/// dark one's here in both themes, so it shows at a mark's size).
+final Path _opencodeBlock = parseSvgPath('M320 224V352H192V224H320Z');
+const _opencodeBlockAlpha = 0.28;
 
 /// Pi's three pieces, in one color here.
 const _pi =

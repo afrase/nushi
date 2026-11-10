@@ -2,6 +2,7 @@ package acptest
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -113,12 +114,18 @@ func (h *History) opencodeOptions(session, id, value string) []map[string]any {
 }
 
 // opencodeTool starts a tool call as opencode does: pending under the
-// tool's name with no input, then in progress with it.
-func (a *Agent) opencodeTool(session, id, name, kind string, input map[string]any, at []map[string]any) {
+// tool's name with no input, then in progress with it. It returns the
+// call's id, a new one each time as a model's are.
+func (a *Agent) opencodeTool(session, name, kind string, input map[string]any, at []map[string]any) string {
+	a.mu.Lock()
+	a.calls++
+	id := fmt.Sprintf("call_%d_0", a.calls)
+	a.mu.Unlock()
 	a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": id, "name": name, "title": name, "kind": kind,
 		"status": "pending", "locations": []any{}, "rawInput": map[string]any{}})
 	a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": id, "status": "in_progress", "kind": kind, "title": name,
 		"locations": at, "rawInput": input})
+	return id
 }
 
 // opencodeToolEnd ends a tool call with its output, or with why it failed.
@@ -139,9 +146,9 @@ func (a *Agent) opencodePermission(session string) string {
 	path := filepath.Join(a.cwds[session], "w.txt")
 	a.mu.Unlock()
 	input, at := map[string]any{"path": path, "content": "one\ntwo\n"}, []map[string]any{{"path": path}}
-	a.opencodeTool(session, "call_1_0", "write", "edit", input, at)
+	id := a.opencodeTool(session, "write", "edit", input, at)
 	res := a.request("session/request_permission", map[string]any{"sessionId": session,
-		"toolCall": map[string]any{"toolCallId": "call_1_0", "name": "write", "title": path, "kind": "edit", "status": "pending", "locations": at, "rawInput": input,
+		"toolCall": map[string]any{"toolCallId": id, "name": "write", "title": path, "kind": "edit", "status": "pending", "locations": at, "rawInput": input,
 			"content": []map[string]any{{"type": "diff", "path": path, "oldText": nil, "newText": "one\ntwo\n"}}},
 		"options": []map[string]any{{"optionId": "once", "kind": "allow_once", "name": "Allow once"},
 			{"optionId": "always", "kind": "allow_always", "name": "Always allow"}, {"optionId": "reject", "kind": "reject_once", "name": "Reject"}}})
@@ -150,10 +157,10 @@ func (a *Agent) opencodePermission(session string) string {
 	}
 	_ = json.Unmarshal(res, &r)
 	if r.Outcome.Outcome != "selected" || r.Outcome.OptionID == "reject" {
-		a.opencodeToolEnd(session, "call_1_0", "The user declined this tool call", true)
+		a.opencodeToolEnd(session, id, "The user declined this tool call", true)
 		return "cancelled"
 	}
-	a.opencodeToolEnd(session, "call_1_0", "Created file successfully: w.txt", false)
+	a.opencodeToolEnd(session, id, "Created file successfully: w.txt", false)
 	a.say(session, "Permission: "+r.Outcome.Outcome+" "+r.Outcome.OptionID)
 	return "end_turn"
 }
@@ -162,10 +169,10 @@ func (a *Agent) opencodePermission(session string) string {
 // came back. A form declined or cancelled fails the call and ends the turn.
 func (a *Agent) opencodeQuestion(session string) string {
 	choices := []map[string]any{{"label": "Red", "description": "A warm one"}, {"label": "Blue", "description": "A cool one"}}
-	a.opencodeTool(session, "call_2_0", "question", "other", map[string]any{"questions": []map[string]any{
+	id := a.opencodeTool(session, "question", "other", map[string]any{"questions": []map[string]any{
 		{"question": "Which colour do you want?", "header": "Colour", "options": choices}}}, []map[string]any{})
 	res := a.request("elicitation/create", map[string]any{
-		"sessionId": session, "toolCallId": "call_2_0", "mode": "form", "message": "Questions",
+		"sessionId": session, "toolCallId": id, "mode": "form", "message": "Questions",
 		"requestedSchema": map[string]any{"type": "object", "required": []string{}, "properties": map[string]any{
 			"q0": map[string]any{"type": "string", "title": "Colour", "description": "Which colour do you want?", "oneOf": []map[string]any{
 				{"const": "Red", "title": "Red", "description": "A warm one"}, {"const": "Blue", "title": "Blue", "description": "A cool one"}}},
@@ -175,10 +182,10 @@ func (a *Agent) opencodeQuestion(session string) string {
 	var r struct{ Action string }
 	_ = json.Unmarshal(res, &r)
 	if r.Action != "accept" {
-		a.opencodeToolEnd(session, "call_2_0", "The user dismissed this question", true)
+		a.opencodeToolEnd(session, id, "The user dismissed this question", true)
 		return "cancelled"
 	}
-	a.opencodeToolEnd(session, "call_2_0", "User has answered your questions.", false)
+	a.opencodeToolEnd(session, id, "User has answered your questions.", false)
 	a.say(session, "Answer: "+strings.TrimSpace(string(res)))
 	return "end_turn"
 }
