@@ -56,9 +56,10 @@ Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades an
 
 ## Docs
 
+- **[The guide](https://github.com/afrase/nushi/wiki)**: how to use Nushi, in short steps. The pages below are the full reference.
 - [Installing Nushi](docs/install.md): the zip, Linux's tarball, updates, uninstalling, the daemon and its logs
 - [Chats](docs/chats.md): the window, keys, Changes, previews, terminals, worktrees, history, notifications
-- [Agents](docs/agent-setup.md): each agent and how to set it up
+- [Agents](docs/agent-setup.md): each agent and what Nushi uses of it
 - [MCP servers and skills](docs/mcp-and-skills.md)
 - [Jira](docs/jira.md) and [GitHub](docs/github.md)
 - [Remote access and the phone](docs/remote.md): pairing, and running your own relay

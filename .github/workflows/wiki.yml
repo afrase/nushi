@@ -1,0 +1,46 @@
+# Publishes docs/wiki to the repository's wiki on each push to main that changes it. The guide is written beside the
+# code it describes, so a feature and its page change in one commit; the wiki is only a copy, and a page edited on the
+# wiki itself is replaced at the next publish. A page is a Markdown file named for it (Getting-started.md is "Getting
+# started"); Home.md is the front page and _Sidebar.md the sidebar. The workflow's own token pushes it.
+name: Wiki
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/wiki/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Push docs/wiki to the wiki
+        env:
+          TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+          git -c http.extraheader="$auth" clone --quiet --depth 1 "https://github.com/$REPO.wiki.git" wiki
+          find wiki -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R docs/wiki/. wiki/
+          cd wiki
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The wiki is current."
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit --quiet -m "Publish docs/wiki at ${SHA::12}"
+          git -c http.extraheader="$auth" push --quiet origin HEAD
