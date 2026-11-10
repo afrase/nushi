@@ -8,9 +8,9 @@
 // the chat's folder and every folder above it up to /, past the
 // repository's root:
 //   - opencode.json and opencode.jsonc, there and in .opencode: plugins,
-//     MCP servers, permission rules, the shell, formatters, LSP servers,
-//     commands, and {file:…} and {env:…}, which copy a file or a variable
-//     into a value;
+//     MCP servers, where a model provider's requests go, permission rules,
+//     the shell, formatters, LSP servers, commands, references, and
+//     {file:…} and {env:…}, which copy a file or a variable into a value;
 //   - .opencode's plugin(s), agent(s), mode(s), command(s) and skill(s)
 //     folders, and tool(s), which 2.2.6 no longer loads but an older
 //     opencode does (the CLI is the user's own);

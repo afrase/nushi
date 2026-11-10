@@ -3,6 +3,8 @@ package opencodetrust
 import (
 	"encoding/json"
 	"maps"
+	"net/url"
+	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -54,7 +56,8 @@ var (
 // it): what it has opencode import, start, run, allow and copy in, in
 // opencode 2's spelling and in opencode 1's, which opencode 2 still takes
 // (docs/facts/opencode.md). The files and folders it names are named,
-// never read.
+// never read; of a plugin's path in the config's own folder Nushi looks
+// whether it is a file (pluginIsFile).
 func configRuns(path string, text []byte) []model.FolderRun {
 	var out []model.FolderRun
 	add := func(what string, lines ...string) {
@@ -74,12 +77,8 @@ func configRuns(path string, text []byte) []model.FolderRun {
 		add("Settings Nushi couldn't read", "a setting's name is copied from a file or a variable: it may be any setting")
 	}
 	for _, entry := range append(as[[]any](c["plugin"]), as[[]any](c["plugins"])...) {
-		switch name := plugin(entry); {
-		case name == "" || strings.HasPrefix(name, "-"): // "-name" takes a plugin away
-		case strings.HasPrefix(name, "file://") || strings.HasPrefix(name, "./") || strings.HasPrefix(name, "../") || filepath.IsAbs(name):
-			add("Plugin, imported at once", name)
-		default:
-			add("Plugin from npm, installed if missing and imported at once", name)
+		if name := plugin(entry); name != "" && !strings.HasPrefix(name, "-") { // "-name" takes a plugin away
+			add(pluginWhat(filepath.Dir(path), name), name)
 		}
 	}
 	// opencode 1 kept MCP servers in mcp itself, opencode 2 keeps them in
@@ -98,6 +97,7 @@ func configRuns(path string, text []byte) []model.FolderRun {
 			}
 		}
 	}
+	providerRuns(c, add)
 	add("Allowed without asking", allowed(c)...)
 	for _, key := range []string{"agent", "mode", "agents"} {
 		agents := as[object](c[key])
@@ -126,6 +126,7 @@ func configRuns(path string, text []byte) []model.FolderRun {
 	add("Instructions read from", strs(c["instructions"])...)
 	skills := as[object](c["skills"]) // a list, or opencode 1's {paths, urls}
 	add("Skills read from", slices.Concat(strs(c["skills"]), strs(skills["paths"]), strs(skills["urls"]))...)
+	add("References cloned or read from", references(c)...)
 	add("Files copied into its settings", fileRefs(string(text))...)
 	add("Environment variables copied into its settings", distinct(envRef.FindAllStringSubmatch(string(text), -1))...)
 	return out
@@ -161,6 +162,116 @@ func plugin(entry any) string {
 		}
 	}
 	return as[string](entry)
+}
+
+// pluginWhat is what the card says of the plugin a config in dir names.
+func pluginWhat(dir, name string) string {
+	switch {
+	case copied(name): // a path or an npm name, whichever that holds
+		return "Plugin named by a file or a variable, imported at once"
+	case strings.HasPrefix(name, "file://") || strings.HasPrefix(name, "./") || strings.HasPrefix(name, "../") || filepath.IsAbs(name):
+		if pluginIsFile(dir, name) {
+			return "Plugin, not imported while it is a file: opencode takes only a folder"
+		}
+		return "Plugin, imported at once"
+	}
+	return "Plugin from npm, installed if missing and imported at once"
+}
+
+// pluginIsFile says whether the path a config in dir names a plugin by is
+// a regular file, which opencode 2.2.6 refuses ("configured plugin path
+// must be a directory"): a file:// URL, a path from dir, or an absolute
+// one, as opencode resolves it, a link followed as opencode follows it.
+// Nushi looks only inside dir, through an os.Root, and opens nothing: of a
+// path that is or leads elsewhere it doesn't know, and says no.
+func pluginIsFile(dir, name string) bool {
+	switch {
+	case strings.HasPrefix(name, "file://"):
+		u, err := url.Parse(name)
+		if err != nil || u.Host != "" {
+			return false
+		}
+		name = filepath.FromSlash(u.Path)
+	case !filepath.IsAbs(name):
+		name = filepath.Join(dir, name)
+	}
+	rel, err := filepath.Rel(dir, name)
+	if err != nil || !filepath.IsLocal(rel) {
+		return false
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return false
+	}
+	defer root.Close() //nolint:errcheck // read-only
+	fi, err := root.Stat(rel)
+	return err == nil && fi.Mode().IsRegular()
+}
+
+// providerRuns adds what a config's model providers do with the user's
+// requests. A provider's entry may send them, the user's key for it with
+// them, anywhere: opencode 2's settings.baseURL, opencode 1's api and
+// options.baseURL, and the same on a model or a variant of one. Both are
+// looked for at any depth of either spelling's entry: a card that names
+// one too many hides none. Of headers only the names show: the values may
+// be secrets. env names the variables it takes that key from, which may
+// be any of the user's.
+func providerRuns(c object, add func(what string, lines ...string)) {
+	for _, key := range []string{"provider", "providers"} {
+		providers := as[object](c[key])
+		for _, id := range sorted(providers) {
+			var urls, headers []string
+			each(providers[id], func(name string, in any) {
+				switch name {
+				case "baseURL", "api":
+					urls = append(urls, as[string](in))
+				case "headers":
+					headers = append(headers, sorted(as[object](in))...)
+				}
+			})
+			add("Requests to model provider "+id+" go to", once(urls)...)
+			add("Headers sent with requests to model provider "+id, once(headers)...)
+			add("Environment variables model provider "+id+" takes its key from", strs(as[object](providers[id])["env"])...)
+		}
+	}
+}
+
+// references is what a config's references name: a folder opencode reads,
+// or a git repository it clones into its cache when the folder opens. Each
+// is a string, {path} or {repository}, under references or the older
+// reference.
+func references(c object) []string {
+	var out []string
+	for _, key := range []string{"reference", "references"} {
+		named := as[object](c[key])
+		for _, name := range sorted(named) {
+			r := as[object](named[name])
+			out = append(out, as[string](named[name]), as[string](r["repository"]), as[string](r["path"]))
+		}
+	}
+	return out
+}
+
+// each calls f with every key of every object in v, at any depth, and
+// what the key holds, an object's keys in their order.
+func each(v any, f func(name string, in any)) {
+	switch v := v.(type) {
+	case object:
+		for _, name := range sorted(v) {
+			f(name, v[name])
+			each(v[name], f)
+		}
+	case []any:
+		for _, in := range v {
+			each(in, f)
+		}
+	}
+}
+
+// once is lines sorted, each once.
+func once(lines []string) []string {
+	slices.Sort(lines)
+	return slices.Compact(lines)
 }
 
 // allowed is the rules of a config, or of one of its agents, that let a
@@ -245,6 +356,5 @@ func distinct(matches [][]string) []string {
 	for _, m := range matches {
 		out = append(out, m[1])
 	}
-	slices.Sort(out)
-	return slices.Compact(out)
+	return once(out)
 }
