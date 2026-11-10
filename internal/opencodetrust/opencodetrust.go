@@ -24,7 +24,6 @@
 package opencodetrust
 
 import (
-	"cmp"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -34,6 +33,7 @@ import (
 	"github.com/afrase/nushi/internal/folderfiles"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/opencode"
 )
 
 // Trust reads what a folder has opencode run.
@@ -80,7 +80,8 @@ var inConfigFolder = []string{
 func files(folder string) []folderfiles.File {
 	home, _ := os.UserHomeDir()
 	home = git.RealPath(home)
-	own := configFolder(home)
+	// opencode walks no folders for a chat in its own config folder.
+	own := git.RealPath(opencode.ConfigDir(home))
 	var roots []string
 	// opencode walks up from the folder as the chat names it: where a link
 	// in that path makes those other folders than the real path's, both
@@ -126,14 +127,6 @@ func inside(dir string, names ...string) []string {
 		out[i] = filepath.Join(dir, name)
 	}
 	return out
-}
-
-// configFolder is opencode's own config folder: $OPENCODE_CONFIG_DIR, else
-// opencode in $XDG_CONFIG_HOME, else in ~/.config. opencode walks no
-// folders for a chat there.
-func configFolder(home string) string {
-	xdg := cmp.Or(os.Getenv("XDG_CONFIG_HOME"), filepath.Join(home, ".config"))
-	return git.RealPath(cmp.Or(os.Getenv("OPENCODE_CONFIG_DIR"), filepath.Join(xdg, "opencode")))
 }
 
 // isConfig says whether path is named as opencode's config is. One so

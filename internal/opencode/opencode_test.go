@@ -3,6 +3,7 @@ package opencode
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -58,6 +59,24 @@ func TestGone(t *testing.T) {
 	} {
 		if got := harness.Gone(c.err); got != c.want {
 			t.Errorf("Gone(%v) = %v", c.err, got)
+		}
+	}
+}
+
+// The config folder is where opencode 2.2.6 looks for it, whatever the
+// owner's environment says.
+func TestConfigDir(t *testing.T) {
+	home := t.TempDir()
+	for _, c := range []struct{ xdg, own, want string }{
+		{"", "", filepath.Join(home, ".config", "opencode")},
+		{"/x/config", "", "/x/config/opencode"},
+		{"", "/own", "/own"},
+		{"/x/config", "/own", "/own"},
+	} {
+		t.Setenv("XDG_CONFIG_HOME", c.xdg)
+		t.Setenv("OPENCODE_CONFIG_DIR", c.own)
+		if got := ConfigDir(home); got != c.want {
+			t.Errorf("XDG_CONFIG_HOME=%q OPENCODE_CONFIG_DIR=%q: got %s, want %s", c.xdg, c.own, got, c.want)
 		}
 	}
 }

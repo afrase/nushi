@@ -6,9 +6,12 @@
 package opencode
 
 import (
+	"cmp"
 	"errors"
 	"log/slog"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -75,6 +78,16 @@ const (
 
 // Tested are the opencode versions Nushi was run with.
 var Tested = []string{"2.2.6"}
+
+// ConfigDir is opencode's global config folder, the user's own
+// (opencode.json, skills, plugins), for a user whose home folder is home:
+// $OPENCODE_CONFIG_DIR, which replaces it, else opencode in
+// $XDG_CONFIG_HOME, else in ~/.config; the same on macOS and Linux. The
+// path is as those name it, links unresolved.
+func ConfigDir(home string) string {
+	xdg := cmp.Or(os.Getenv("XDG_CONFIG_HOME"), filepath.Join(home, ".config"))
+	return cmp.Or(os.Getenv("OPENCODE_CONFIG_DIR"), filepath.Join(xdg, "opencode"))
+}
 
 // Other says field is the free-text answer opencode puts after a question
 // with choices: `<id>_custom`, "Type your own answer".

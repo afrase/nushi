@@ -25,24 +25,23 @@
 package opencodeskills
 
 import (
-	"cmp"
 	"context"
 	"os"
 	"path/filepath"
 
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/opencode"
 	"github.com/afrase/nushi/internal/skillfile"
 )
 
 // OpenCode reads and changes opencode's skills.
 type OpenCode struct{}
 
-// configDir is opencode's global config folder.
+// configDir is opencode's global config folder (opencode.ConfigDir).
 func configDir() string {
 	home, _ := os.UserHomeDir()
-	return cmp.Or(os.Getenv("OPENCODE_CONFIG_DIR"),
-		filepath.Join(cmp.Or(os.Getenv("XDG_CONFIG_HOME"), filepath.Join(home, ".config")), "opencode"))
+	return opencode.ConfigDir(home)
 }
 
 type root struct {
