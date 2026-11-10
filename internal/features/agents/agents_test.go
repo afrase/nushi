@@ -50,7 +50,7 @@ func TestList(t *testing.T) {
 		{Name: "codex", CLI: "codex"},
 		{Name: "odd", CLI: "odd"},
 		{Name: "ante", CLI: "ante", Also: []string{filepath.Join(other, "nope"), off}, Min: "0.2.14"},
-		{Name: "omp", CLI: "omp", Needs: "bun"},
+		{Name: "omp", CLI: "omp"},
 		{Name: "pig", CLI: "pig"},
 		{Name: "gone", CLI: "gone"},
 	}, "", &fakeInstaller{}, &fakeChats{})
@@ -59,7 +59,7 @@ func TestList(t *testing.T) {
 		{Path: bin + "/codex", Version: "0.163.0-alpha.2"},
 		{Path: bin + "/odd"},
 		{Path: off, Version: "0.2.9", Problem: "Needs 0.2.14 or newer"},
-		{Path: bin + "/omp", Version: "18.12.6", Problem: "Needs Bun"},
+		{Path: bin + "/omp", Version: "18.12.6"},
 		{Path: bin + "/pig", Version: "0.5.3"},
 		{Problem: "Not installed"},
 	}

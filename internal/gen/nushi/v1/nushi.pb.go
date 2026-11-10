@@ -2220,7 +2220,7 @@ type Agent struct {
 	Version string `protobuf:"bytes,7,opt,name=version,proto3" json:"version,omitempty"`
 	// Where to get it.
 	Page string `protobuf:"bytes,8,opt,name=page,proto3" json:"page,omitempty"`
-	// Why it can't run, in a few words ("Not installed", "Needs Bun");
+	// Why it can't run, in a few words ("Not installed", "Needs Node");
 	// empty when it can.
 	Problem string `protobuf:"bytes,9,opt,name=problem,proto3" json:"problem,omitempty"`
 	// Whether the CLI is signed in, "yes" or "no", when it can tell

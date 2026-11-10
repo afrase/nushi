@@ -30,8 +30,8 @@ func (Harness) Info() model.HarnessInfo {
 
 // Start starts the user's omp (r's CLI) in its ACP mode, in dir (the
 // daemon's folder) and r's environment (the login shell's, ADR 0048), its
-// stderr to log; its `#!/usr/bin/env bun` finds the user's Bun on that
-// PATH. omp reads its own config and keys (~/.omp, the environment); Nushi
+// stderr to log; an omp installed with Bun finds the user's Bun on that
+// PATH (`#!/usr/bin/env bun`). omp reads its own config and keys (~/.omp, the environment); Nushi
 // never does.
 func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	cmd := exec.Command(r.CLI, "--mode", "acp") //nolint:gosec,noctx // lives until Stop or Close, not a context; the omp found on PATH
@@ -39,12 +39,11 @@ func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.
 	return agentproc.Start(cmd, client, log)
 }
 
-// CLI is omp's program, which runs under Bun (Needs); Page is where to
-// get both.
+// CLI is omp's program: its own binary, or a script that runs under Bun;
+// Page is where to get it.
 const (
-	CLI   = "omp"
-	Needs = "bun"
-	Page  = "https://github.com/can1357/oh-my-pi"
+	CLI  = "omp"
+	Page = "https://github.com/can1357/oh-my-pi"
 )
 
 // Tested are the omp versions Nushi was run with.

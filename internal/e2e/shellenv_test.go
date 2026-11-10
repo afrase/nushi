@@ -43,7 +43,7 @@ func TestAgentsStartWithTheShellsEnvironment(t *testing.T) {
 { env | cut -d= -f1; echo "ONLY_IN_SHELL=$ONLY_IN_SHELL"; echo "CODEX_PATH=$CODEX_PATH"; } > "` + out + `/$(basename "$0").tmp"
 mv "` + out + `/$(basename "$0").tmp" "` + out + `/$(basename "$0")"
 `
-	for _, name := range []string{"omp", "bun", "node", "codex"} {
+	for _, name := range []string{"omp", "node", "codex"} {
 		write(filepath.Join(bin, name), "#!/bin/sh\n"+report)
 	}
 	shell := filepath.Join(t.TempDir(), "fish")
@@ -55,7 +55,7 @@ exec /bin/sh -c "$4"
 	env := shellenv.New(shell, []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "NUSHI_DATA=/data", "NUSHI_TOOLS_KEY=not-for-agents", "NUSHID_LOG=/l"})
 	env.Start()
 	svc := agents.New([]agents.Agent{
-		{Name: "omp", Title: "oh-my-pi", CLI: "omp", Needs: "bun"},
+		{Name: "omp", Title: "oh-my-pi", CLI: "omp"},
 		{Name: "codex", Title: "Codex", CLI: "codex", Adapter: &agents.Adapter{Lock: os.DirFS(t.TempDir()), Package: "p", Bin: "b"}},
 	}, agents.Run(env.Environ), env, t.TempDir(), setUp{})
 	svc.UseChats(noChats{})

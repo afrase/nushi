@@ -107,7 +107,7 @@ func All(projects string) []Agent {
 		},
 		{
 			Harness: omp.Harness{}, Local: omp.Local{},
-			Agent:  agents.Agent{CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
+			Agent:  agents.Agent{CLI: omp.CLI, Page: omp.Page, Tested: omp.Tested},
 			Skills: ompskills.OMP{}, Trust: omptrust.Trust{},
 		},
 		{
@@ -130,7 +130,7 @@ func piFlavor(f pi.Flavor) Agent {
 	h := pi.Harness{Flavor: f}
 	return Agent{
 		Harness: h, Local: h,
-		Agent:  agents.Agent{CLI: f.CLI, Page: f.Page, Min: f.Min, Needs: f.Needs, Tested: []string{f.Version}},
+		Agent:  agents.Agent{CLI: f.CLI, Page: f.Page, Min: f.Min, Tested: []string{f.Version}},
 		Skills: piskills.Skills{Flavor: f}, Trust: pi.Trust{},
 	}
 }

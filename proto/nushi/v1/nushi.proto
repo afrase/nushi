@@ -806,7 +806,7 @@ message Agent {
   string version = 7;
   // Where to get it.
   string page = 8;
-  // Why it can't run, in a few words ("Not installed", "Needs Bun");
+  // Why it can't run, in a few words ("Not installed", "Needs Node");
   // empty when it can.
   string problem = 9;
   // Whether the CLI is signed in, "yes" or "no", when it can tell

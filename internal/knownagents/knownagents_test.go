@@ -135,7 +135,7 @@ func TestWhatTheAppShowsIsOneAgentsAlone(t *testing.T) {
 // and no CLI version pinned (ADR 0066).
 func TestClaudeHasNoAdapter(t *testing.T) {
 	c := All(t.TempDir())[0]
-	if c.Agent.Name != "claude" || c.Agent.Adapter != nil || c.Agent.Needs != "" || len(c.Agent.Tested) != 0 {
+	if c.Agent.Name != "claude" || c.Agent.Adapter != nil || len(c.Agent.Tested) != 0 {
 		t.Errorf("Claude: %+v", c.Agent)
 	}
 }

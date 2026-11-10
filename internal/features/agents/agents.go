@@ -30,7 +30,6 @@ type Agent struct {
 	CLI         string   // its program, looked for on PATH: "claude"
 	Also        []string // where else it may be: Ante's ~/.ante/bin/ante
 	Page        string   // where to get it
-	Needs       string   // a program it runs under, also on PATH: omp's "bun"
 	Min         string   // the oldest version Nushi runs: Ante's bridge follows 0.2.14
 	Adapter     *Adapter // nil when it speaks ACP itself, or through Nushi's bridge
 	Tested      []string // the CLI's versions Nushi was tried with, oldest first
@@ -179,8 +178,6 @@ func (s *Service) find(ctx context.Context, a Agent) (st Status) {
 	switch {
 	case a.Min != "" && st.Version != "" && older(st.Version, a.Min):
 		st.Problem = fmt.Sprintf("Needs %s or newer", a.Min)
-	case a.Needs != "" && s.lookPath(a.Needs, nil) == "":
-		st.Problem = "Needs " + strings.ToUpper(a.Needs[:1]) + a.Needs[1:]
 	case a.Adapter != nil && s.lookPath("node", nil) == "":
 		st.Problem = "Needs Node"
 	}
@@ -245,8 +242,6 @@ func (s *Service) Run(name string) (model.AgentRun, error) {
 	switch {
 	case r.CLI == "":
 		return r, fmt.Errorf("%s isn't installed: there's no %s on PATH", a.Title, a.CLI)
-	case a.Needs != "" && s.lookPath(a.Needs, nil) == "":
-		return r, fmt.Errorf("%s needs %s, and there's none on PATH", a.Title, a.Needs)
 	case a.Adapter == nil:
 		return r, nil
 	case r.Node == "":

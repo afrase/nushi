@@ -44,14 +44,13 @@ Through Nushi's own bridge, `nushid ante-acp`, which runs an `ante serve --stdio
 
 ### oh-my-pi
 
-Nushi runs your `omp --mode acp` under your Bun. Nothing to set up once you've installed both:
+Nushi runs your `omp --mode acp`. Nothing to set up once `omp` is on your login shell's `PATH`. omp's own binary needs nothing else:
 
 ```sh
-brew install oven-sh/bun/bun        # or: npm i -g bun
-bun add -g @oh-my-pi/pi-coding-agent@18.12.6
+brew install can1357/tap/omp        # or: curl -fsSL https://omp.sh/install | sh -s -- --binary --ref v18.12.6
 ```
 
-18.12.6 is the version Nushi was tried with. `~/.bun/bin` must be on your login shell's `PATH`; Settings › Agents then shows omp.
+18.12.6 is the version Nushi was tried with; Homebrew installs the newest. omp installed with Bun (`bun add -g @oh-my-pi/pi-coding-agent`) works too, with `~/.bun/bin` on that `PATH`.
 
 - It uses omp's own config and keys: `~/.omp`, and the environment (`FIREWORKS_API_KEY` for Fireworks, whose models it then lists).
 - To pick the model it starts on, set `modelRoles` in `~/.omp/agent/config.yml`:

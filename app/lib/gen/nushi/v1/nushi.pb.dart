@@ -2683,7 +2683,7 @@ class Agent extends $pb.GeneratedMessage {
   @$pb.TagNumber(8)
   void clearPage() => $_clearField(8);
 
-  /// Why it can't run, in a few words ("Not installed", "Needs Bun");
+  /// Why it can't run, in a few words ("Not installed", "Needs Node");
   /// empty when it can.
   @$pb.TagNumber(9)
   $core.String get problem => $_getSZ(8);
