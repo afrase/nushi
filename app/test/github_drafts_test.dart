@@ -13,6 +13,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/github_thread.dart';
 import 'package:nushi/github_view.dart';
+import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -250,4 +251,54 @@ void main() {
     expect(reviewDrafts(ref), isEmpty, reason: 'sent, so not sent again');
     await closeView(tester, d);
   });
+
+  testWidgets('my own pull request is only commented on: GitHub refuses '
+      'the rest', (tester) async {
+    for (final (author, offered) in [('afrase', false), ('octo', true)]) {
+      final (_, d) = await _files(
+        tester,
+        more: (input) => input is GetGitHubPullRequest
+            ? GetGitHubPullResponse(pull: pull()..item.author = author)
+            : null,
+      );
+      await _openReview(tester);
+      await render(tester, find.byType(MaterialApp), 'review_by_$author');
+      expect(find.text('Approve'), offered ? findsOneWidget : findsNothing);
+      expect(
+        find.text('Request changes'),
+        offered ? findsOneWidget : findsNothing,
+      );
+      await closeView(tester, d);
+    }
+  });
+
+  testWidgets('who I am is asked as Review… opens: a token changed while '
+      'the pull request shows is another account', (tester) async {
+    final (_, d) = await _files(
+      tester,
+      more: (input) => input is GetGitHubPullRequest
+          ? GetGitHubPullResponse(pull: pull()..item.author = 'afrase')
+          : null,
+    );
+    await _openReview(tester);
+    expect(find.text('Approve'), findsNothing, reason: 'my own');
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    // What Settings' listing of the hosts keeps after the token changed.
+    keepGitHubLogins([GitHubHost(host: 'github.com', login: 'other')]);
+    await _openReview(tester);
+    expect(find.text('Approve'), findsOneWidget);
+    expect(find.text('Request changes'), findsOneWidget);
+    await closeView(tester, d);
+  });
+}
+
+/// Opens the review dialog from the pull request's head.
+Future<void> _openReview(WidgetTester tester) async {
+  final review = find.text('Review…', skipOffstage: false);
+  await tester.ensureVisible(review);
+  await tester.pumpAndSettle();
+  await tester.tap(review);
+  await tester.pumpAndSettle();
+  expect(find.text('Submit review'), findsOneWidget);
 }

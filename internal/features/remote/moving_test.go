@@ -78,6 +78,27 @@ func TestASecondRevokeWaitsWhereADeviceWasTold(t *testing.T) {
 	}
 }
 
+// A pairing undone after remote access went off (its reply failed as the
+// off closed it) can empty an id given up; dropping that id mustn't start
+// the waits at the relay again.
+func TestUndonePairingWhileOffStaysOff(t *testing.T) {
+	url := startRelay(t)
+	s := startRemote(t, t.TempDir(), url)
+	s.mu.Lock()
+	ghost, err := s.add("ghost", "web", newKey(t).Public)
+	s.mu.Unlock()
+	testcheck.NoErr(t, err)
+	addRevoke(t, s, "other") // ghost now waits at the id given up
+	testcheck.NoErr(t, s.Set(false, url))
+	s.unpair(ghost)
+	s.mu.Lock()
+	moving, linked := len(s.moving), s.stopLink != nil
+	s.mu.Unlock()
+	if moving != 0 || linked {
+		t.Fatalf("off, with %d ids given up and the relay's waits started: %v", moving, linked)
+	}
+}
+
 // remote-key.json from an older daemon can list an id per revoke: they
 // are cut to the newest maxMoving at start, and saved so.
 func TestMovingFromBeforeIsCutAtStart(t *testing.T) {

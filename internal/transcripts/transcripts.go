@@ -174,20 +174,24 @@ func (s *Store) appendLocked(chat string, recs []record) error {
 		s.repaired[chat] = true
 	}
 	f, err := s.root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
-	if err != nil {
-		return err
+	if err == nil {
+		_, err = f.Write(buf.Bytes())
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
 	}
-	_, err = f.Write(buf.Bytes())
-	if cerr := f.Close(); err == nil {
-		err = cerr
+	if err != nil {
+		// A failed write may have left part of a line (a full disk): the
+		// next append cuts it off first.
+		delete(s.repaired, chat)
 	}
 	return err
 }
 
-// repairLocked cuts off a last line a crash left without its end, so the
-// next record starts a line of its own. It reads only the file's tail: the
-// first write to an asleep chat's copy (EndStalePrompts, at every start)
-// mustn't cost the whole copy.
+// repairLocked cuts off a last line a crash or a failed write left without
+// its end, so the next record starts a line of its own. It reads only the
+// file's tail: the first write to an asleep chat's copy (EndStalePrompts,
+// at every start) mustn't cost the whole copy.
 func (s *Store) repairLocked(name string) error {
 	f, err := s.root.OpenFile(name, os.O_RDWR, 0)
 	if errors.Is(err, fs.ErrNotExist) {

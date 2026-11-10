@@ -358,7 +358,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       if (!_inChat) StartWork(daemon: daemon, item: it),
       Button(
         label: pending > 0 ? 'Review ($pending)…' : 'Review…',
-        onPressed: () => submitReview(context, daemon, p, onDone: _refresh),
+        onPressed: () => _review(context, p),
       ),
       Button(
         label: 'Open on GitHub',
@@ -366,6 +366,20 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
         onPressed: it.url.isEmpty ? null : () => openWeb(context, it.url),
       ),
     ];
+  }
+
+  /// Opens the review dialog; who I am is asked then, as a token changed
+  /// in Settings while this pane shows can be another account's.
+  Future<void> _review(BuildContext context, GitHubPull p) async {
+    final me = await githubLogin(widget.daemon, p.item.ref.host);
+    if (!context.mounted) return;
+    await submitReview(
+      context,
+      widget.daemon,
+      p,
+      onDone: _refresh,
+      mine: me.isNotEmpty && me.toLowerCase() == p.item.author.toLowerCase(),
+    );
   }
 }
 

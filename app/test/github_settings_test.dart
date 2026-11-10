@@ -7,6 +7,7 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_settings.dart';
+import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -177,6 +178,28 @@ void main() {
     expect(add.host, 'git.corp.example');
     expect(find.text('git.corp.example'), findsOneWidget);
     expect(find.text('Add a token'), findsOneWidget);
+    d.dispose();
+  });
+
+  testWidgets('a host listed with another login changes who I am there', (
+    tester,
+  ) async {
+    // Replacing github.com's token with another account's, while Nushi
+    // runs: its pull requests' review dialog asks who I am.
+    final fake = FakeDaemon([]);
+    var login = 'octo';
+    fake.answer = (input) => switch (input) {
+      ListGitHubHostsRequest() => ListGitHubHostsResponse(
+        hosts: [GitHubHost(host: 'github.com', login: login, pasted: true)],
+      ),
+      _ => null,
+    };
+    final d = await fake.connect(tester);
+    expect(await githubLogin(d, 'github.com'), 'octo');
+    login = 'other';
+    await pumpSettings(tester, d, SettingsSection.github);
+    expect(find.textContaining('Signed in as other'), findsOneWidget);
+    expect(await githubLogin(d, 'github.com'), 'other');
     d.dispose();
   });
 }

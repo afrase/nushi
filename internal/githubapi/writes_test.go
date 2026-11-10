@@ -55,6 +55,7 @@ func TestSubmitReview(t *testing.T) {
 	review := f.vars("Review", `{"data":{"addPullRequestReview":{"pullRequestReview":{"id":"R1"}}}}`)
 	thread := f.vars("Thread", `{"data":{"addPullRequestReviewThread":{"thread":{"id":"T9"}}}}`)
 	submit := f.vars("Submit", `{"data":{"submitPullRequestReview":{"pullRequestReview":{"id":"R0"}}}}`)
+	f.vars("PendingReview", `{"data":{"node":{"state":"PENDING","body":"","comments":{"pageInfo":{"hasNextPage":false},"nodes":[]}}}}`)
 	c := f.client()
 	drafts := []Draft{{Path: "a.go", Side: "right", Line: 3, Body: "one"}, {Path: "a.go", Side: "left", Line: 9, StartLine: 7, Body: "range"}}
 	if err := c.SubmitReview(t.Context(), Review{Pull: "PR_1", HeadOID: "abc", Event: "request_changes", Body: "See inline", Drafts: drafts}); err != nil {

@@ -209,6 +209,7 @@ func (s *Service) check(ctx context.Context, name string, h *host) error {
 		h.user = u
 	} else if errors.Is(err, githubapi.ErrUnauthorized) {
 		delete(s.clients, name) // read the token again next time: gh may have a new one
+		s.forget(name)
 	}
 	return err
 }
@@ -278,8 +279,8 @@ func (s *Service) AddToken(ctx context.Context, given, token string) (githubapi.
 	}
 	s.mu.Lock()
 	s.clients[name] = &host{c: c, source: "token", kind: githubapi.TokenKind(token), user: u, asked: time.Now()}
+	s.forget(name)
 	s.mu.Unlock()
-	s.forget(name) // another account's inbox
 	slog.Info("github token added", "host", name, "kind", githubapi.TokenKind(token))
 	return u, nil
 }
@@ -300,8 +301,8 @@ func (s *Service) RemoveToken(name string) error {
 	}
 	s.mu.Lock()
 	delete(s.clients, name)
-	s.mu.Unlock()
 	s.forget(name)
+	s.mu.Unlock()
 	slog.Info("github token removed", "host", name)
 	return s.Store.SaveGitHubTokenHosts(slices.DeleteFunc(hosts, func(h string) bool { return h == name }))
 }

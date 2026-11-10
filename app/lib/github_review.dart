@@ -46,25 +46,28 @@ void forgetReviewDrafts() {
 
 /// Asks for the review (comment, approve, request changes, and what it
 /// says) and submits it with the drafts, and with my review pending on
-/// GitHub if there is one; then [onDone].
+/// GitHub if there is one; then [onDone]. On [mine], my own pull request,
+/// it only comments: GitHub refuses the rest.
 Future<void> submitReview(
   BuildContext context,
   Daemon daemon,
   GitHubPull pull, {
   required Future<void> Function() onDone,
+  bool mine = false,
 }) async {
   final sent = await showDialog<bool>(
     context: context,
-    builder: (_) => _ReviewDialog(daemon, pull),
+    builder: (_) => _ReviewDialog(daemon, pull, mine: mine),
   );
   if (sent ?? false) await onDone();
 }
 
 class _ReviewDialog extends StatefulWidget {
-  const new(this.daemon, this.pull);
+  const new(this.daemon, this.pull, {required this.mine});
 
   final Daemon daemon;
   final GitHubPull pull;
+  final bool mine;
 
   @override
   State<_ReviewDialog> createState() => _ReviewDialogState();
@@ -142,16 +145,18 @@ class _ReviewDialogState extends State<_ReviewDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Segmented(
-              value: _event,
-              segments: const [
-                ('comment', 'Comment'),
-                ('approve', 'Approve'),
-                ('request_changes', 'Request changes'),
-              ],
-              onChanged: (v) => setState(() => _event = v),
-            ),
-            const SizedBox(height: 10),
+            if (!widget.mine) ...[
+              Segmented(
+                value: _event,
+                segments: const [
+                  ('comment', 'Comment'),
+                  ('approve', 'Approve'),
+                  ('request_changes', 'Request changes'),
+                ],
+                onChanged: (v) => setState(() => _event = v),
+              ),
+              const SizedBox(height: 10),
+            ],
             TextField(
               controller: _body,
               autofocus: true,

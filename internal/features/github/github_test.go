@@ -29,6 +29,7 @@ type fakeClient struct {
 	heads    map[string][]githubapi.HeadPull // by repository and head
 	branches map[string]string               // a branch's head, by name
 	pull     *model.GitHubPull               // what Pull answers, when set
+	inboxing func()                          // called as Inbox is asked, when set
 
 	merges    []githubapi.MergeInput // Merge's calls
 	autos     []githubapi.MergeInput // EnableAutoMerge's
@@ -56,6 +57,9 @@ func (f *fakeClient) RateLimits(context.Context) ([]githubapi.Bucket, error) {
 func (f *fakeClient) Budget() []githubapi.Bucket { return nil }
 func (f *fakeClient) Inbox(_ context.Context, in githubapi.InboxFilter) (githubapi.Inbox, error) {
 	f.note(fmt.Sprint("inbox ", in.Teams, " ", strings.Join(in.Repos, ",")))
+	if f.inboxing != nil {
+		f.inboxing()
+	}
 	return f.inbox, f.fail
 }
 
