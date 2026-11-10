@@ -209,14 +209,20 @@ class _SharedRow extends StatelessWidget {
           size: 15,
           tooltip: 'More',
           entries: [
-            MenuEntry('Open SKILL.md', onPick: () => openSkillFile(skill)),
+            MenuEntry(
+              openSkillLabel(skill),
+              onPick: () => openSkillFile(skill),
+            ),
             MenuEntry(
               conventions.reveal,
               onPick: () => revealInFinder(skill.path),
             ),
-            if (canLink)
+            // The daemon says what it would refuse to link or to move to
+            // the Trash (a file; for a link, one in a group too).
+            if (canLink && !skill.noLink)
               MenuEntry('Link for $title…', onPick: () => _link(context)),
-            MenuEntry('Delete…', onPick: () => _delete(context)),
+            if (!skill.noTrash)
+              MenuEntry('Delete…', onPick: () => _delete(context)),
           ],
         ),
       ],

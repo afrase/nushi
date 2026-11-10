@@ -124,11 +124,18 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 				serve(toAgentR, fromAgentW)
 				_ = fromAgentW.Close()
 			}()
-			return pipeAgent{agentproc.Connect(acp.NewAgentConn(fromAgentR, toAgentW, func(*acp.AgentConn) acp.Client { return h }), log)}, nil
+			// acp-go writes to the chat's log, as agentproc.Start has it do for
+			// an agent that is a process.
+			conn := acp.NewAgentConn(fromAgentR, toAgentW, func(*acp.AgentConn) acp.Client { return h }, acp.WithLogger(log))
+			return pipeAgent{agentproc.Connect(conn, log)}, nil
 		}
 	}
-	fake := func(codex, omp bool) chats.Launch {
-		return launch(func(r io.Reader, w io.Writer) { (&acptest.Agent{History: history, Codex: codex, Omp: omp}).Serve(r, w) })
+	// fake is the fake agent shaped like the agent named as; "" is the
+	// plain one.
+	fake := func(as string) chats.Launch {
+		return launch(func(r io.Reader, w io.Writer) {
+			(&acptest.Agent{History: history, Codex: as == "codex", Omp: as == "omp", Opencode: as == "opencode"}).Serve(r, w)
+		})
 	}
 	anteStore := anteStores(dataDir)
 	anteHosts := func(string) (io.WriteCloser, io.Reader, func(), error) { //nolint:unparam // an ante.Spawn, which can fail
@@ -143,12 +150,12 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 	// these tests need: it names its sessions, and its notices read as
 	// Claude's (the fake isn't Claude's agent, so the rest of Claude's
 	// harness stays out). The others are main's (knownagents), each on a
-	// fake: Codex and omp as the fake agent shaped like them, Ante, Pi and
-	// PiG as their bridges on a fake Ante and Pi, Claude as Nushi's Go agent
-	// on fake claudes. "claude-fake" is Claude's harness on the fake agent,
-	// for what the fake agent plays in Claude's terms (a subagent and its
-	// worktree). What reads an agent's own files on this Mac (Agent.Local)
-	// is left out.
+	// fake: Codex, omp and opencode as the fake agent shaped like them,
+	// Ante, Pi and PiG as their bridges on a fake Ante and Pi, Claude as
+	// Nushi's Go agent on fake claudes. "claude-fake" is Claude's harness
+	// on the fake agent, for what the fake agent plays in Claude's terms
+	// (a subagent and its worktree). What reads an agent's own files on
+	// this Mac (Agent.Local) is left out.
 	piStore := piStores(dataDir)
 	pis := func(f pi.Flavor) chats.Launch {
 		return launch(func(r io.Reader, w io.Writer) {
@@ -166,15 +173,16 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 		"claude": launch(func(r io.Reader, w io.Writer) {
 			_ = claudeacp.Serve(context.Background(), r, w, claudeacp.Config{CLIPath: "/fake/claude", ConfigDir: filepath.Join(dataDir, "claude"), Spawn: cls.spawn})
 		}),
-		"codex": fake(true, false),
+		"codex": fake("codex"),
 		"ante": launch(func(r io.Reader, w io.Writer) {
 			ante.Serve(r, w, ante.Config{Spawn: anteHosts, Home: anteStore.Home, Version: "0.2.14"})
 		}),
-		"omp": fake(false, true),
-		"pi":  pis(pi.Pi),
-		"pig": pis(pi.PiG),
+		"omp":      fake("omp"),
+		"opencode": fake("opencode"),
+		"pi":       pis(pi.Pi),
+		"pig":      pis(pi.PiG),
 	}
-	kinds := []chats.Kind{{Harness: fakeHarness{}, Launch: fake(false, false)}}
+	kinds := []chats.Kind{{Harness: fakeHarness{}, Launch: fake("")}}
 	for _, a := range knownagents.All("") { // no projects folder: Local isn't used
 		if l := launches[a.Agent.Name]; l != nil {
 			h := a.Harness
@@ -184,7 +192,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 			kinds = append(kinds, chats.Kind{Harness: h, Launch: l, MCP: a.MCP != nil})
 		}
 	}
-	kinds = append(kinds, chats.Kind{Harness: claudeOnFake{}, Launch: fake(false, false), MCP: true})
+	kinds = append(kinds, chats.Kind{Harness: claudeOnFake{}, Launch: fake(""), MCP: true})
 	copies, err := transcripts.Open(filepath.Join(dataDir, "transcripts"))
 	if err != nil {
 		t.Fatal(err)

@@ -197,10 +197,9 @@ func (Claude) Uninstall(ctx context.Context, folder, id string) error {
 	return err
 }
 
-// Trash moves a skill's folder (or the link in its place) to the Trash
-// (macOS's trash): only a folder right in your skills folder or one of
-// folder's project's, holding a SKILL.md.
-func (Claude) Trash(ctx context.Context, folder, path string) error {
+// CanTrash says why Trash wouldn't move path: nil only for a folder right
+// in your skills folder or one of folder's project's, holding a SKILL.md.
+func (Claude) CanTrash(_ context.Context, folder, path string) error {
 	name := filepath.Base(path)
 	roots := append([]string{userRoot()}, projectRoots(folder)...)
 	if filepath.Clean(path) != path || strings.HasPrefix(name, ".") || !slices.Contains(roots, filepath.Dir(path)) {
@@ -218,6 +217,15 @@ func (Claude) Trash(ctx context.Context, folder, path string) error {
 				return fmt.Errorf("%s is a symlink; not moving what's in it", p)
 			}
 		}
+	}
+	return skillfile.CanTrash(projectRoots(folder), []string{userRoot()}, path)
+}
+
+// Trash moves a skill's folder (or the link in its place) to the Trash
+// (macOS's trash): only one CanTrash passes.
+func (c Claude) Trash(ctx context.Context, folder, path string) error {
+	if err := c.CanTrash(ctx, folder, path); err != nil {
+		return err
 	}
 	return skillfile.Trash(ctx, projectRoots(folder), []string{userRoot()}, path)
 }

@@ -8284,7 +8284,7 @@ type Skill struct {
 	// agent's own) or "shared" (.agents/skills, which several agents read).
 	Source string `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
 	Plugin string `protobuf:"bytes,4,opt,name=plugin,proto3" json:"plugin,omitempty"`
-	// Its folder, which holds SKILL.md.
+	// Its folder, which holds SKILL.md; with one_file, its one file.
 	Path string `protobuf:"bytes,5,opt,name=path,proto3" json:"path,omitempty"`
 	// "on", "name-only", "user-invocable-only" or "off"; set_in names a
 	// settings file that decides it other than the one SetSkillOn changes.
@@ -8297,7 +8297,19 @@ type Skill struct {
 	// A shared skill in your own ~/.agents/skills, not the project's.
 	Everywhere bool `protobuf:"varint,10,opt,name=everywhere,proto3" json:"everywhere,omitempty"`
 	// A shared skill's agents: those that load it, each with its state.
-	Agents        []*SkillAgent `protobuf:"bytes,11,rep,name=agents,proto3" json:"agents,omitempty"`
+	Agents []*SkillAgent `protobuf:"bytes,11,rep,name=agents,proto3" json:"agents,omitempty"`
+	// The three below are unset from a daemon before API 114, whose app
+	// went by the path.
+	// path is the skill's one Markdown file, not a folder holding SKILL.md
+	// (OpenCode's lone <name>.md, or the SKILL.md right in a skills folder).
+	OneFile bool `protobuf:"varint,12,opt,name=one_file,json=oneFile,proto3" json:"one_file,omitempty"`
+	// TrashSkill would refuse it for what it is or where it is (a file, one
+	// in a group of OpenCode's, another agent's, a plugin's): no Delete.
+	NoTrash bool `protobuf:"varint,13,opt,name=no_trash,json=noTrash,proto3" json:"no_trash,omitempty"`
+	// LinkSkill would refuse to give the request's agent this shared skill
+	// (a file, one in a group, a link's place taken, an agent Nushi doesn't
+	// link for): no Link.
+	NoLink        bool `protobuf:"varint,14,opt,name=no_link,json=noLink,proto3" json:"no_link,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8407,6 +8419,27 @@ func (x *Skill) GetAgents() []*SkillAgent {
 		return x.Agents
 	}
 	return nil
+}
+
+func (x *Skill) GetOneFile() bool {
+	if x != nil {
+		return x.OneFile
+	}
+	return false
+}
+
+func (x *Skill) GetNoTrash() bool {
+	if x != nil {
+		return x.NoTrash
+	}
+	return false
+}
+
+func (x *Skill) GetNoLink() bool {
+	if x != nil {
+		return x.NoLink
+	}
+	return false
 }
 
 type SkillAgent struct {
@@ -25147,7 +25180,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"hasBuiltIn\x12\x1f\n" +
 	"\vhas_plugins\x18\n" +
 	" \x01(\bR\n" +
-	"hasPlugins\"\xac\x02\n" +
+	"hasPlugins\"\xfb\x02\n" +
 	"\x05Skill\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x16\n" +
@@ -25162,7 +25195,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"everywhere\x18\n" +
 	" \x01(\bR\n" +
 	"everywhere\x12,\n" +
-	"\x06agents\x18\v \x03(\v2\x14.nushi.v1.SkillAgentR\x06agents\"a\n" +
+	"\x06agents\x18\v \x03(\v2\x14.nushi.v1.SkillAgentR\x06agents\x12\x19\n" +
+	"\bone_file\x18\f \x01(\bR\aoneFile\x12\x19\n" +
+	"\bno_trash\x18\r \x01(\bR\anoTrash\x12\x17\n" +
+	"\ano_link\x18\x0e \x01(\bR\x06noLink\"a\n" +
 	"\n" +
 	"SkillAgent\x12\x14\n" +
 	"\x05agent\x18\x01 \x01(\tR\x05agent\x12\x14\n" +

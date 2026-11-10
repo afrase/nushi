@@ -9,6 +9,7 @@ import (
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/skills"
 	"github.com/afrase/nushi/internal/omp"
+	"github.com/afrase/nushi/internal/opencode"
 	"github.com/afrase/nushi/internal/pi"
 )
 
@@ -62,6 +63,10 @@ var (
 
 	_ chats.OpenFinder = omp.Local{}
 	_ chats.ForkFinder = omp.Local{}
+
+	_ chats.OtherReader  = opencode.Harness{}
+	_ chats.GoneReader   = opencode.Harness{}
+	_ chats.CommandHider = opencode.Harness{}
 
 	_ chats.Forker       = pi.Harness{}
 	_ chats.ContextAsker = pi.Harness{}

@@ -4,8 +4,9 @@
 // trust, its MCP servers). It is wiring, as cmd/nushid is: main builds the
 // features from it, and the e2e tests run its harnesses on fake agents. What
 // each agent does is in its own packages: internal/claude*, internal/codex*,
-// internal/ante* (Ante's bridge too, ADR 0030), internal/omp* and
-// internal/pi (Pi's and PiG's bridge, ADR 0039, 0078).
+// internal/ante* (Ante's bridge too, ADR 0030), internal/omp*,
+// internal/opencode* and internal/pi (Pi's and PiG's bridge, ADR 0039,
+// 0078).
 package knownagents
 
 import (
@@ -35,6 +36,9 @@ import (
 	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/ompskills"
 	"github.com/afrase/nushi/internal/omptrust"
+	"github.com/afrase/nushi/internal/opencode"
+	"github.com/afrase/nushi/internal/opencodeskills"
+	"github.com/afrase/nushi/internal/opencodetrust"
 	"github.com/afrase/nushi/internal/pi"
 	"github.com/afrase/nushi/internal/piskills"
 )
@@ -105,6 +109,11 @@ func All(projects string) []Agent {
 			Harness: omp.Harness{}, Local: omp.Local{},
 			Agent:  agents.Agent{CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
 			Skills: ompskills.OMP{}, Trust: omptrust.Trust{},
+		},
+		{
+			Harness: opencode.Harness{}, Local: opencode.Local{},
+			Agent:  agents.Agent{CLI: opencode.CLI, Page: opencode.Page, Min: opencode.Min, Tested: opencode.Tested},
+			Skills: opencodeskills.OpenCode{}, Trust: opencodetrust.Trust{},
 		},
 		piFlavor(pi.Pi),
 		piFlavor(pi.PiG),

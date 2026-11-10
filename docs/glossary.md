@@ -6,7 +6,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 
 | Term | Meaning | Code | ADR |
 |---|---|---|---|
-| **Agent** | A coding agent Nushi runs: Claude, Codex, Ante, Pi, PiG or oh-my-pi, each your own CLI with its own login, settings and history. | `features/agents`, proto `Agent` | 0037 |
+| **Agent** | A coding agent Nushi runs: Claude, Codex, Ante, Pi, PiG, oh-my-pi or OpenCode, each your own CLI with its own login, settings and history. | `features/agents`, proto `Agent` | 0037 |
 | **Harness** | The agent's own program and rules (Claude Code, Codex…). Not in the UI, which says agent. It owns permissions and history. | `chats.Harness`, `claude.Harness`… | 0007, 0008, 0077 |
 | **Adapter** | The ACP program Nushi sets up for an agent that needs one (Codex's; Claude's until 2026-11-04), from Nushi's own lockfile, into the data folder. Set up, Update, Remove. | `Adapter`, `SetUpAgent`, `internal/codex/adapter` | 0037 |
 | **Bridge** | Nushi's own ACP translator for an agent without ACP: `nushid ante-acp`, `nushid pi-acp`, `nushid pig-acp`. | `internal/ante`, `internal/pi` | 0030, 0039, 0078 |
@@ -204,6 +204,7 @@ One line each; the word after the arrow wins.
 - Open in Finder → **Show in Finder** (it reveals the file).
 - Open in the browser, for a GitHub item → **Open on GitHub**.
 - omp → **oh-my-pi** in the UI; `omp` is its command.
+- opencode → **OpenCode** in the UI; `opencode` is its command.
 - Nushi Next → **Nushi** (ADR 0018).
 - group, for tool rows → **run**.
 - built-in browser → **browser tab**. Only the setting Open local links in built-in browser says it, after Claude desktop's words.

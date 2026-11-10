@@ -290,10 +290,11 @@ func (c *chat) snapshotLocked(items []model.Item) model.Chat {
 // commandsLocked is what a chat's agent can be asked: what it listed, or
 // until it has (a reopen can take a while, and its commands come last)
 // what its kind listed last, so a chat offers them from the start; with
-// the commands Nushi runs in its place either way.
+// the commands Nushi runs in its place either way. A list remembered
+// before its kind hid a command (CommandHider) is offered without it.
 func (c *chat) commandsLocked() []model.Command {
 	if len(c.commands) == 0 {
-		return c.kind.withTerminalCommands(c.remembered.Commands(c.kind.Name))
+		return c.kind.withTerminalCommands(c.kind.offered(c.remembered.Commands(c.kind.Name)))
 	}
 	return slices.Clone(c.commands)
 }

@@ -147,6 +147,16 @@ type TerminalCommands interface {
 	TerminalCommand(text string) (model.OptionCommand, bool)
 }
 
+// CommandHider says which of the slash commands the agent lists it can't
+// run for Nushi: HidesCommand says the one named name, as the agent lists
+// it, isn't to be offered. opencode lists its terminal's commands, but over
+// ACP it answers a prompt of any but /compact at once and runs the turn
+// unseen: nothing of it shows, a permission it asks never arrives, and the
+// next prompt can hang (docs/facts/opencode.md).
+type CommandHider interface {
+	HidesCommand(name string) bool
+}
+
 // ContextCommander has a slash command that says what fills the context:
 // ContextCommand, run unseen in a throwaway fork; ReadContext reads its reply
 // (the reply's messages, in order, at least one).

@@ -13,3 +13,10 @@
 ## Consequences
 - An omp chat in a repository with Claude or Codex hooks or settings asks once for omp too.
 - omp walks some folders above the repository's root (skills, up to the home folder) that the card doesn't show: they hold instructions only.
+
+## Amendment (2026-11-10): opencode
+opencode 2.2.6 (read in its source, `docs/facts/opencode.md`) keeps no record either, and loads more, from further: plugins imported into its own process and local MCP servers started when a folder opens, from `opencode.json`/`.jsonc` and `.opencode` in the chat's folder and every folder above it up to `/`, not only up to the repository's root. Its agents may use every tool unless a rule says otherwise.
+- The card (`internal/opencodetrust`) shows what opencode loads from all of those folders, so a config planted above a repository shows too. It leaves out the home folder itself and opencode's config folder: the user's own, which no folder brings (opencode itself counts `~/opencode.json` and `~/.opencode` as a project's).
+- Agents, modes, commands and skills (`.opencode`'s, and `.claude/skills` and `.agents/skills`) are shown, unlike omp's: with every tool allowed, what instructs runs. `AGENTS.md` stays out, as on every card.
+- Above a config the card says what it runs, allows and copies in. That is a reading aid: the file shows whole below, and the key (`opencode:<folder>#<hash>`) is of the files, not of the summary.
+- A link that leads to one of the places the card lists, or into one, is remembered, by its text and the path it resolves to (`folderfiles.WalkLinked`): what opencode loads through it is on the card as itself. A skill in `.claude/skills` linked to the one in `.agents/skills` (ADR 0052) would else ask at every start. Only a link in a skills place that leads into one is: any other (an `opencode.json`, `.opencode`, anything in its plugin, agent or command folders) would load a skill's file as a config, a plugin or a command, so the folder would be remembered with code the card showed only as a skill's file. Every other link still can't be remembered, nor any link on another agent's card.

@@ -24,8 +24,8 @@ const maxFile = 64 << 20
 var mu sync.Mutex
 
 // ReadFile reads an agent's settings file (JSON, or Codex's TOML, omp's
-// YAML): a regular file of at most 64 MiB, a link to one followed; a
-// fifo or device fails at once rather than waiting.
+// YAML, opencode's JSONC): a regular file of at most 64 MiB, a link to one
+// followed; a fifo or device fails at once rather than waiting.
 func ReadFile(path string) ([]byte, error) { return regularfile.Read(path, maxFile) }
 
 // Read reads the JSON settings file at path into v, through ReadFile; a

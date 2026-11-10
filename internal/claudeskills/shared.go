@@ -59,58 +59,80 @@ func (c Claude) shared(ctx context.Context, folder, key string) []model.Skill {
 	return out
 }
 
-// Link gives Claude a shared skill by a relative link to it: for the
-// project's, <its folder>/.claude/skills/<name> → ../../.agents/skills/<name>
-// beside the .agents holding it; for yours, in your skills folder. Only a
-// skill right in a shared root Nushi lists; nothing replaced; a linked
-// .claude or .claude/skills refused.
-func (Claude) Link(_ context.Context, folder, path string) error {
+// link is the link Link makes for a shared skill: at in base saying to;
+// base is "" for one of yours, whose at is a whole path.
+type link struct{ base, at, to string }
+
+// linkFor is the link that gives Claude the shared skill at path, or why
+// Link makes none: only a skill's folder right in a shared root Nushi
+// lists; nothing replaced; a linked .claude or .claude/skills refused.
+func linkFor(folder, path string) (link, error) {
 	project, yours := sharedRoots(folder)
 	root := filepath.Dir(path)
 	if filepath.Clean(path) != path || !slices.Contains(append(project, yours), root) {
-		return fmt.Errorf("%s isn't a shared skill here", path)
+		return link{}, fmt.Errorf("%s isn't a shared skill here", path)
 	}
 	if _, err := os.Stat(filepath.Join(path, "SKILL.md")); err != nil {
-		return fmt.Errorf("%s isn't a skill's folder", path)
+		return link{}, fmt.Errorf("%s isn't a skill's folder", path)
 	}
+	l := link{at: filepath.Join(userRoot(), filepath.Base(path))}
 	if root == yours {
-		link := filepath.Join(userRoot(), filepath.Base(path))
-		if _, err := os.Lstat(link); !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("%s is already there", link)
-		}
-		if err := os.MkdirAll(userRoot(), 0o755); err != nil { //nolint:gosec // your skills folder, as Claude makes it
-			return err
-		}
 		rel, err := filepath.Rel(realOf(userRoot()), path)
 		if err != nil {
 			rel = path
 		}
-		return os.Symlink(rel, link)
+		l.to = rel
+	} else {
+		dir := filepath.Dir(filepath.Dir(root)) // the folder holding .agents
+		if home, _ := os.UserHomeDir(); dir == home || skillfile.Linked(dir, ".claude/skills") {
+			return link{}, fmt.Errorf("Claude doesn't read %s's .claude/skills as the project's", dir)
+		}
+		l.base = cmp.Or(skillfile.Top(dir), dir)
+		at, err := filepath.Rel(l.base, filepath.Join(dir, ".claude", "skills", filepath.Base(path)))
+		if err != nil {
+			return link{}, err
+		}
+		l.at, l.to = at, filepath.Join("..", "..", ".agents", "skills", filepath.Base(path))
 	}
-	dir := filepath.Dir(filepath.Dir(root)) // the folder holding .agents
-	if home, _ := os.UserHomeDir(); dir == home || skillfile.Linked(dir, ".claude/skills") {
-		return fmt.Errorf("Claude doesn't read %s's .claude/skills as the project's", dir)
+	if _, err := os.Lstat(filepath.Join(l.base, l.at)); !errors.Is(err, os.ErrNotExist) {
+		return link{}, fmt.Errorf("%s is already there", filepath.Join(l.base, l.at))
+	}
+	return l, nil
+}
+
+// CanLink says why Link wouldn't give Claude the shared skill at path,
+// and makes nothing.
+func (Claude) CanLink(_ context.Context, folder, path string) error {
+	_, err := linkFor(folder, path)
+	return err
+}
+
+// Link gives Claude a shared skill by a relative link to it: for the
+// project's, <its folder>/.claude/skills/<name> → ../../.agents/skills/<name>
+// beside the .agents holding it; for yours, in your skills folder. Only
+// where CanLink passes.
+func (Claude) Link(_ context.Context, folder, path string) error {
+	l, err := linkFor(folder, path)
+	if err != nil {
+		return err
+	}
+	if l.base == "" {
+		if err := os.MkdirAll(filepath.Dir(l.at), 0o755); err != nil { //nolint:gosec // your skills folder, as Claude makes it
+			return err
+		}
+		return os.Symlink(l.to, l.at)
 	}
 	// Through an os.Root of the repository: a .claude swapped for a link
-	// meanwhile can't put the link outside it.
-	base := cmp.Or(skillfile.Top(dir), dir)
-	r, err := os.OpenRoot(base)
+	// meanwhile can't put the link outside it. Symlink replaces nothing.
+	r, err := os.OpenRoot(l.base)
 	if err != nil {
 		return err
 	}
 	defer r.Close() //nolint:errcheck // done with it
-	at, err := filepath.Rel(base, filepath.Join(dir, ".claude", "skills"))
-	if err != nil {
+	if err := r.MkdirAll(filepath.Dir(l.at), 0o755); err != nil {
 		return err
 	}
-	link := filepath.Join(at, filepath.Base(path))
-	if _, err := r.Lstat(link); !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("%s is already there", filepath.Join(base, link))
-	}
-	if err := r.MkdirAll(at, 0o755); err != nil {
-		return err
-	}
-	return r.Symlink(filepath.Join("..", "..", ".agents", "skills", filepath.Base(path)), link)
+	return r.Symlink(l.to, l.at)
 }
 
 // realOf is p with its links resolved, as far as it exists.

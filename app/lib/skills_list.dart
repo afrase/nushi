@@ -104,10 +104,18 @@ bool pluginMatches(Plugin p, String query) =>
     p.id.toLowerCase().contains(query) ||
     p.description.toLowerCase().contains(query);
 
-/// Opens a skill's SKILL.md in the default text editor (`open -t`: as
-/// text, whatever the file turns out to be).
-Future<void> openSkillFile(Skill s) =>
-    native.desktop.openAsText('${s.path}/SKILL.md');
+/// A skill's Markdown file: its folder's SKILL.md, or its path itself for
+/// a skill the daemon says is one file (Skill.one_file: OpenCode's lone
+/// `<name>.md`, or the SKILL.md right in a skills folder).
+String skillFile(Skill s) => s.oneFile ? s.path : '${s.path}/SKILL.md';
+
+/// "Open SKILL.md", or "Open `<name>.md`" for a lone file: the menu entry
+/// that runs [openSkillFile].
+String openSkillLabel(Skill s) => 'Open ${skillFile(s).split('/').last}';
+
+/// Opens a skill's Markdown file in the default text editor (`open -t`:
+/// as text, whatever the file turns out to be).
+Future<void> openSkillFile(Skill s) => native.desktop.openAsText(skillFile(s));
 
 /// Shows [path] in Finder ([Native.desktop]).
 Future<void> revealInFinder(String path) => native.desktop.reveal(path);
@@ -120,6 +128,9 @@ String switchWhere(String agent, Skill s) => switch (agent) {
   'pi' || 'pig' when s.source == 'user' || s.everywhere => 'in your settings',
   'pi' => 'in .pi/settings.json',
   'pig' => 'in .pig/settings.json',
+  // A deny policy for its name in your global opencode.json or .jsonc,
+  // whichever folder the skill comes from.
+  'opencode' => 'in your OpenCode config',
   _ => 'by name, everywhere',
 };
 
@@ -146,9 +157,12 @@ Future<void> setSkillOn(SkillsList list, Skill s, {required bool on}) async {
 }
 
 /// Whether the skill at [path] is in one of [agent]'s own folders, which
-/// Nushi deletes from, rather than another agent's it also reads (omp and
-/// Ante read Claude's, omp Codex's and GitHub's). The agent's own built-in
-/// ones aren't deleted either (it puts them back).
+/// Nushi deletes from, rather than another agent's it also reads (omp,
+/// Ante and OpenCode read Claude's, omp Codex's and GitHub's). The agent's
+/// own built-in ones aren't deleted either (it puts them back). A daemon
+/// from API 114 says all of it, and more, as Skill.no_trash, which a row
+/// goes by as well; this stays for an older one still waiting to restart
+/// (ADR 0056), which doesn't.
 bool ownSkill(String agent, String path) {
   final others = {
     '/.claude/skills/': 'claude',

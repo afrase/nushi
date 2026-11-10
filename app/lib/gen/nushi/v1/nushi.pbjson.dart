@@ -2536,6 +2536,9 @@ const Skill$json = {
       '6': '.nushi.v1.SkillAgent',
       '10': 'agents'
     },
+    {'1': 'one_file', '3': 12, '4': 1, '5': 8, '10': 'oneFile'},
+    {'1': 'no_trash', '3': 13, '4': 1, '5': 8, '10': 'noTrash'},
+    {'1': 'no_link', '3': 14, '4': 1, '5': 8, '10': 'noLink'},
   ],
 };
 
@@ -2546,7 +2549,8 @@ final $typed_data.Uint8List skillDescriptor = $convert.base64Decode(
     'CgRwYXRoGAUgASgJUgRwYXRoEhQKBXN0YXRlGAYgASgJUgVzdGF0ZRIVCgZzZXRfaW4YByABKA'
     'lSBXNldEluEhYKBnRva2VucxgIIAEoBVIGdG9rZW5zEhYKBmxpbmtlZBgJIAEoCVIGbGlua2Vk'
     'Eh4KCmV2ZXJ5d2hlcmUYCiABKAhSCmV2ZXJ5d2hlcmUSLAoGYWdlbnRzGAsgAygLMhQubnVzaG'
-    'kudjEuU2tpbGxBZ2VudFIGYWdlbnRz');
+    'kudjEuU2tpbGxBZ2VudFIGYWdlbnRzEhkKCG9uZV9maWxlGAwgASgIUgdvbmVGaWxlEhkKCG5v'
+    'X3RyYXNoGA0gASgIUgdub1RyYXNoEhcKB25vX2xpbmsYDiABKAhSBm5vTGluaw==');
 
 @$core.Deprecated('Use skillAgentDescriptor instead')
 const SkillAgent$json = {

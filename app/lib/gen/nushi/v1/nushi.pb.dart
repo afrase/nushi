@@ -10438,6 +10438,9 @@ class Skill extends $pb.GeneratedMessage {
     $core.String? linked,
     $core.bool? everywhere,
     $core.Iterable<SkillAgent>? agents,
+    $core.bool? oneFile,
+    $core.bool? noTrash,
+    $core.bool? noLink,
   }) {
     final result = Skill._();
     if (name != null) result.name = name;
@@ -10451,6 +10454,9 @@ class Skill extends $pb.GeneratedMessage {
     if (linked != null) result.linked = linked;
     if (everywhere != null) result.everywhere = everywhere;
     if (agents != null) result.agents.addAll(agents);
+    if (oneFile != null) result.oneFile = oneFile;
+    if (noTrash != null) result.noTrash = noTrash;
+    if (noLink != null) result.noLink = noLink;
     return result;
   }
 
@@ -10479,6 +10485,9 @@ class Skill extends $pb.GeneratedMessage {
     ..aOB(10, _omitFieldNames ? '' : 'everywhere')
     ..pPM<SkillAgent>(11, _omitFieldNames ? '' : 'agents',
         subBuilder: SkillAgent.$_createMessage)
+    ..aOB(12, _omitFieldNames ? '' : 'oneFile')
+    ..aOB(13, _omitFieldNames ? '' : 'noTrash')
+    ..aOB(14, _omitFieldNames ? '' : 'noLink')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -10541,7 +10550,7 @@ class Skill extends $pb.GeneratedMessage {
   @$pb.TagNumber(4)
   void clearPlugin() => $_clearField(4);
 
-  /// Its folder, which holds SKILL.md.
+  /// Its folder, which holds SKILL.md; with one_file, its one file.
   @$pb.TagNumber(5)
   $core.String get path => $_getSZ(4);
   @$pb.TagNumber(5)
@@ -10604,6 +10613,42 @@ class Skill extends $pb.GeneratedMessage {
   /// A shared skill's agents: those that load it, each with its state.
   @$pb.TagNumber(11)
   $pb.PbList<SkillAgent> get agents => $_getList(10);
+
+  /// The three below are unset from a daemon before API 114, whose app
+  /// went by the path.
+  /// path is the skill's one Markdown file, not a folder holding SKILL.md
+  /// (OpenCode's lone <name>.md, or the SKILL.md right in a skills folder).
+  @$pb.TagNumber(12)
+  $core.bool get oneFile => $_getBF(11);
+  @$pb.TagNumber(12)
+  set oneFile($core.bool value) => $_setBool(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasOneFile() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearOneFile() => $_clearField(12);
+
+  /// TrashSkill would refuse it for what it is or where it is (a file, one
+  /// in a group of OpenCode's, another agent's, a plugin's): no Delete.
+  @$pb.TagNumber(13)
+  $core.bool get noTrash => $_getBF(12);
+  @$pb.TagNumber(13)
+  set noTrash($core.bool value) => $_setBool(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasNoTrash() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearNoTrash() => $_clearField(13);
+
+  /// LinkSkill would refuse to give the request's agent this shared skill
+  /// (a file, one in a group, a link's place taken, an agent Nushi doesn't
+  /// link for): no Link.
+  @$pb.TagNumber(14)
+  $core.bool get noLink => $_getBF(13);
+  @$pb.TagNumber(14)
+  set noLink($core.bool value) => $_setBool(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasNoLink() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearNoLink() => $_clearField(14);
 }
 
 class SkillAgent extends $pb.GeneratedMessage {

@@ -138,8 +138,13 @@ class _SkillRow extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final muted = theme.ui(theme.t.textMuted, size: 11);
     final plugin = skill.source == 'plugin';
+    // The daemon says what its Trash would refuse (a file, one in a
+    // group, another agent's).
     final deletable =
-        !plugin && skill.source != 'system' && ownSkill(list.agent, skill.path);
+        !plugin &&
+        skill.source != 'system' &&
+        !skill.noTrash &&
+        ownSkill(list.agent, skill.path);
     final word = _stateWord(skill.state);
     return Row(
       children: [
@@ -182,7 +187,10 @@ class _SkillRow extends StatelessWidget {
           size: 15,
           tooltip: 'More',
           entries: [
-            MenuEntry('Open SKILL.md', onPick: () => openSkillFile(skill)),
+            MenuEntry(
+              openSkillLabel(skill),
+              onPick: () => openSkillFile(skill),
+            ),
             MenuEntry(
               conventions.reveal,
               onPick: () => revealInFinder(skill.path),

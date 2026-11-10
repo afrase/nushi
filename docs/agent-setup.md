@@ -1,10 +1,10 @@
 # Agents
 
-Nushi runs six coding agents over the [Agent Client Protocol](https://agentclientprotocol.com): Claude, Codex, Ante, oh-my-pi, Pi and PiG. Each is your own CLI, with its own login, settings and history. Nushi never brings a copy of one ([ADR 0037](adr/0037-agents-you-set-up.md)).
+Nushi runs seven coding agents over the [Agent Client Protocol](https://agentclientprotocol.com): Claude, Codex, Ante, oh-my-pi, OpenCode, Pi and PiG. Each is your own CLI, with its own login, settings and history. Nushi never brings a copy of one ([ADR 0037](adr/0037-agents-you-set-up.md)).
 
 ## Finding them
 
-Settings › Agents shows each agent as Nushi finds it on your login shell's `PATH`: its version and path, or "Not installed" with where to get it. Finding them changes nothing: each CLI is only asked its version, with writes and the network denied.
+Settings › Agents shows each agent as Nushi finds it on your login shell's `PATH`: its version and path, or "Not installed" with where to get it. Finding them asks each CLI its version (and Claude whether it's signed in), run as you with nothing denied, as a chat runs it, for 10 s at most ([ADR 0037](adr/0037-agents-you-set-up.md)'s note of 2026-11-08). Nushi changes nothing itself; a CLI may write what it writes whenever it starts.
 
 ## Their environment
 
@@ -63,6 +63,25 @@ bun add -g @oh-my-pi/pi-coding-agent@18.12.6
 
 - An omp chat resumes in a terminal with `omp --resume <session id>`. Nushi can't delete an omp session's history.
 
+### OpenCode
+
+Nushi runs your `opencode acp`. Nothing to set up once `opencode` is on your login shell's `PATH`:
+
+```sh
+brew install anomalyco/tap/opencode-v2     # or: curl -fsSL https://opencode.ai/v2/install | bash
+```
+
+opencode's README also names Homebrew's own `opencode` formula (the one Nushi was built against) and npm's `@opencode/cli`. Nushi follows opencode 2.2.6 and needs 2.0.0 or newer: opencode 1 (npm's `opencode-ai`) isn't supported.
+
+- It uses opencode's own config, providers and sign-in (`~/.config/opencode`, `~/.local/share/opencode`): sign in with `opencode auth login` in a terminal. Settings › Agents doesn't say whether you're signed in: opencode starts either way, with free models of its own.
+- Model, effort and mode are opencode's. So are its permission prompts (`permissions` in its config): as installed it asks almost nothing, and its `plan` mode still runs shell commands.
+- opencode loads a folder's config, plugins and MCP servers without asking, the folder's own and those of every folder above it. Nushi's trust card lists them before a chat starts there ([ADR 0031](adr/0031-warn-before-a-folder-runs-code-for-ante-and-omp.md)).
+- **Only `/compact` is offered.** opencode 2.2.6 answers its other commands (`/init`, `/review`, `/goal`, your own) at once over ACP and then runs them where Nushi can't see, so the menu leaves them out. One typed by hand still goes out, and the next message waits behind it. If it needs a permission, opencode never asks, and the next message hangs until you press Stop. After the daemon restarts, the chat also shows what the command sent the model and what it answered.
+- A subagent shows as one tool call with its result, not its steps.
+- Background commands aren't listed, and they end when the chat goes to sleep ([ADR 0032](adr/0032-idle-chats-sleep.md)) or its agent stops.
+- An opencode chat gets none of Nushi's tools (`show`, the previews, Jira's): [MCP servers and skills](mcp-and-skills.md).
+- An opencode chat resumes in a terminal with `opencode --session <session id>`. Delete deletes its session, as opencode does. New chat's Sessions list also holds its subagents' sessions, which opencode doesn't mark.
+
 ### Pi
 
 [Pi](https://pi.dev) runs through the same bridge as PiG, `nushid pi-acp`, which runs your `pi --mode rpc` per session ([ADR 0078](adr/0078-pi-and-pig-share-a-bridge.md)). It needs Node 22.19 or newer.
@@ -116,4 +135,4 @@ New chat also opens a session started elsewhere, such as `claude` or `codex` in 
 
 - Press → (or "Sessions →" on the highlighted agent's row) to list the agent's sessions in the folder; from No folder, every folder's. Enter opens one as a chat.
 - The agent replays it, and Nushi keeps its own copy of what shows from then on, as for every chat. It goes on in the same history the terminal resumes.
-- A session still open elsewhere is marked. Claude and Ante let both write (Nushi asks first); Codex and oh-my-pi only one. Pi and PiG leave no mark, and both write.
+- A session still open elsewhere is marked. Claude and Ante let both write (Nushi asks first); Codex and oh-my-pi only one. Pi and PiG leave no mark, and both write. OpenCode leaves none either: it locks nothing.

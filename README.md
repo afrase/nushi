@@ -20,8 +20,8 @@ Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades an
 
 <table>
 <tr>
-<td width="44%"><b>Any ACP agent.</b> Claude, Codex, Ante, oh-my-pi, Pi and PiG run as chats over the <a href="https://agentclientprotocol.com">Agent Client Protocol</a>, each your own CLI with its own login and history, so a chat resumes in a terminal.</td>
-<td><a href="docs/images/agents.png"><img src="docs/images/agents.png" width="440" alt="The New chat dialog listing the five agents"></a></td>
+<td width="44%"><b>Any ACP agent.</b> Claude, Codex, Ante, oh-my-pi, OpenCode, Pi and PiG run as chats over the <a href="https://agentclientprotocol.com">Agent Client Protocol</a>, each your own CLI with its own login and history, so a chat resumes in a terminal.</td>
+<td><a href="docs/images/agents.png"><img src="docs/images/agents.png" width="440" alt="The New chat dialog listing the agents"></a></td>
 </tr>
 <tr>
 <td><b>Changes and review.</b> A side-by-side or unified diff of the chat's work, with comments on its lines that go to the agent as one message.</td>
@@ -52,7 +52,7 @@ Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades an
 ## Requirements
 
 - A Mac with Apple silicon and macOS 13 or later, or Linux on x86_64 or arm64 with glibc 2.34 or later ([On Linux](docs/install.md#on-linux)).
-- An agent's CLI: `claude`, `codex`, `ante`, `omp`, `pi` or `pig`. Pi needs Node, Codex also needs Node and npm; Claude needs neither (Nushi runs it through its own agent).
+- An agent's CLI: `claude`, `codex`, `ante`, `omp`, `opencode`, `pi` or `pig`. Pi needs Node, Codex also needs Node and npm; Claude needs neither (Nushi runs it through its own agent).
 
 ## Docs
 

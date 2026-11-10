@@ -80,6 +80,76 @@ func TestProcessLines(t *testing.T) {
 	}
 }
 
+// untilInputCloses is an agent that says on stderr which came first, a
+// SIGTERM or the end of its input: cat reads the input, and the shell
+// waits for it, which a trapped signal interrupts. It looks a moment after
+// the signal, as an agent that takes time to wind down would.
+const untilInputCloses = `exec 3<&0
+cat <&3 >/dev/null 2>&1 &
+pid=$!
+trap 'sleep 0.2; if kill -0 $pid 2>/dev/null; then echo "term, input open" >&2; else echo "term, input closed" >&2; fi; exit 0' TERM
+echo ready >&2
+wait $pid
+echo eof >&2`
+
+// An agent stopped by signal gets SIGTERM, its input open until it has
+// exited of its own accord; any other sees only its input close.
+func TestStopBySignal(t *testing.T) {
+	log, b := newLog(slog.LevelDebug)
+	a, err := Start(exec.Command("sh", "-c", untilInputCloses), quiet{}, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.StopBySignal()
+	waitLog(t, b, "msg=ready") // its trap is set
+	if err := a.Stop(20 * time.Second); err != nil {
+		t.Fatal(err)
+	}
+	waitLog(t, b, `msg="agent exited"`)
+	got := b.String()
+	for _, want := range []string{`msg="term, input open"`, "code=0", "stopped=true"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("no %q in\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "msg=eof") || strings.Contains(got, `msg="term, input closed"`) {
+		t.Errorf("its input closed before it had exited:\n%s", got)
+	}
+
+	log, b = newLog(slog.LevelDebug)
+	a, err = Start(exec.Command("sh", "-c", untilInputCloses), quiet{}, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitLog(t, b, "msg=ready")
+	if err := a.Stop(20 * time.Second); err != nil {
+		t.Fatal(err)
+	}
+	waitLog(t, b, `msg="agent exited"`)
+	if got := b.String(); !strings.Contains(got, "msg=eof") || strings.Contains(got, "msg=\"term") || !strings.Contains(got, "code=0") {
+		t.Errorf("an agent not stopped by signal:\n%s", got)
+	}
+}
+
+// An agent that ignores the signal is killed once grace is over, as one
+// that ignores its input closing is.
+func TestStopBySignalIgnored(t *testing.T) {
+	log, b := newLog(slog.LevelDebug)
+	a, err := Start(exec.Command("sh", "-c", "trap '' TERM; echo ready >&2; sleep 30"), quiet{}, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.StopBySignal()
+	waitLog(t, b, "msg=ready")
+	if err := a.Stop(200 * time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	waitLog(t, b, `msg="agent exited"`)
+	if got := b.String(); !strings.Contains(got, "signal=SIGKILL") || !strings.Contains(got, "stopped=true") {
+		t.Errorf("got\n%s", got)
+	}
+}
+
 // An agent that sends a line over MaxRead is ended, and the log says why.
 func TestReadLimit(t *testing.T) {
 	MaxRead = 1000

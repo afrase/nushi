@@ -246,6 +246,12 @@ String _about(String agent, String from) => switch ((agent, from)) {
   ('pig', 'user') => 'In every folder: skills in PiG’s agent folder.',
   ('pig', 'project') =>
     'In this folder only: .pig/skills, once PiG trusts the folder.',
+  ('opencode', 'user') =>
+    'In every folder: skills in your OpenCode config folder, and Claude’s '
+        '~/.claude/skills.',
+  ('opencode', 'project') =>
+    'In this folder: .opencode/skills, .opencode/skill and Claude’s '
+        '.claude/skills, here and in every folder above it.',
   (_, 'user') => 'In every folder.',
   (_, 'project') => 'In this folder.',
   (_, 'system') => 'The agent’s own.',
