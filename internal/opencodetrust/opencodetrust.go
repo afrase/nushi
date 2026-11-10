@@ -21,7 +21,8 @@
 // brings (the home folder's opencode.json, .opencode, .claude and .agents,
 // and opencode's config folder), and AGENTS.md, as the other agents' cards
 // leave it out. Nothing is written, and no link followed: a link shows as
-// one, and is remembered only when it leads into what the card shows.
+// one, and is remembered only when it leads into what the card shows and
+// opencode reads no config or command through it.
 package opencodetrust
 
 import (
@@ -81,7 +82,8 @@ var inConfigFolder = []string{
 // listed here (folderfiles.WalkLinked): a skill in .claude/skills linked
 // to the one in .agents/skills, as Nushi's own "Link for Claude…" makes
 // it (ADR 0052), or that whole folder linked, would else ask at every
-// start.
+// start. A link opencode reads a config or a command through stays
+// without a sum wherever it leads (summedThrough).
 func files(folder string) []folderfiles.File {
 	home, _ := os.UserHomeDir()
 	home = git.RealPath(home)
@@ -106,7 +108,26 @@ func files(folder string) []folderfiles.File {
 		roots = append(roots, inside(filepath.Join(dir, ".claude"), "skills")...)
 		roots = append(roots, inside(filepath.Join(dir, ".agents"), "skills")...)
 	}
-	return folderfiles.WalkLinked(roots, "opencode")
+	found := folderfiles.WalkLinked(roots, "opencode")
+	for i := range found {
+		if f := &found[i]; f.Link && f.Sum != nil && summedThrough(f.Path) {
+			f.Sum = nil
+			f.Text = append(f.Text, " without the summary of what it runs: opencode reads a config or a command through this link"...)
+		}
+	}
+	return found
+}
+
+// summedThrough says whether opencode reads a config or a command through
+// the link at path: one named as a config, a .opencode folder, its command
+// folder under either spelling, or anything in one. The card sums up a
+// config or a command under the path opencode loads it by, and what such a
+// link leads to shows under its own, as a file like any other: remembered,
+// it would be a config that starts without its summary ever shown.
+func summedThrough(path string) bool {
+	slashed := filepath.ToSlash(path) + "/"
+	return isConfig(path) || filepath.Base(path) == ".opencode" ||
+		strings.Contains(slashed, "/.opencode/command/") || strings.Contains(slashed, "/.opencode/commands/")
 }
 
 // upToRoot is dir and every folder above it, / first: opencode's walk

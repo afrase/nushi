@@ -296,6 +296,42 @@ func TestALinkIntoWhatTheCardShowsIsRemembered(t *testing.T) {
 	}
 }
 
+// A link opencode reads a config or a command through is never
+// remembered, though it leads into what the card shows: that shows under
+// its own path, as a skill's file, without the summary of what it runs.
+func TestALinkToAConfigOrACommandIsNeverRemembered(t *testing.T) {
+	var tr Trust
+	base, _ := folders(t)
+	for folder, link := range map[string][2]string{ // where the link is, and where in the skill it leads
+		"config":   {"opencode.json", "c.json"},
+		"inside":   {".opencode/opencode.jsonc", "c.json"},
+		"folder":   {".opencode", ""},
+		"commands": {".opencode/commands", "command"},
+		"command":  {".opencode/command/c.md", "command/c.md"},
+	} {
+		folder = filepath.Join(base, folder)
+		skill := filepath.Join(folder, ".agents", "skills", "s")
+		testcheck.Write(t, filepath.Join(skill, "c.json"), `{"shell": "/bin/evil"}`)
+		testcheck.Write(t, filepath.Join(skill, "command", "c.md"), "Run !`make evil` now")
+		at := filepath.Join(folder, link[0])
+		testcheck.NoErr(t, os.MkdirAll(filepath.Dir(at), 0o700))
+		testcheck.NoErr(t, os.Symlink(filepath.Join(skill, link[1]), at))
+		runs, key, err := tr.Runs(folder)
+		testcheck.NoErr(t, err)
+		var got []model.FolderRun
+		for _, r := range runs {
+			if r.File == at {
+				got = append(got, r)
+			}
+		}
+		if key != "" || tr.Key(folder) != "" || len(got) != 1 || !strings.Contains(got[0].What, "can't vouch") ||
+			!strings.Contains(got[0].Command, "a link to "+filepath.Join(skill, link[1])+", which opencode follows") ||
+			!strings.Contains(got[0].Command, "without the summary of what it runs") {
+			t.Errorf("%s: rows %v, key %q", at, got, key)
+		}
+	}
+}
+
 // opencode follows a link, to a folder or to one file: Nushi doesn't, shows
 // it as a link, and can't remember a folder with one that leads out of
 // what the card shows.
