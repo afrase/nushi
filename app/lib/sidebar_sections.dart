@@ -206,13 +206,7 @@ class _SectionView extends StatelessWidget {
           children: [
             _SectionHeader(section: section, chats: chats, drag: drag),
             if (chats.isEmpty && !section.collapsed)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(28, 2, 8, 6),
-                child: Text(
-                  'Drag chats here',
-                  style: theme.ui(t.textMuted, size: 12),
-                ),
-              ),
+              const GroupHint('Drag chats here'),
             MovableRows(
               group: section.key,
               chats: chats,
