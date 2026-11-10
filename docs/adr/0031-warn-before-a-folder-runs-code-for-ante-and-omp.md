@@ -13,3 +13,9 @@
 ## Consequences
 - An omp chat in a repository with Claude or Codex hooks or settings asks once for omp too.
 - omp walks some folders above the repository's root (skills, up to the home folder) that the card doesn't show: they hold instructions only.
+
+## Amendment (2026-11-10): opencode
+opencode 2.2.6 (read in its source, `docs/facts/opencode.md`) keeps no record either, and loads more, from further: plugins imported into its own process and local MCP servers started when a folder opens, from `opencode.json`/`.jsonc` and `.opencode` in the chat's folder and every folder above it up to `/`, not only up to the repository's root. Its agents may use every tool unless a rule says otherwise.
+- The card (`internal/opencodetrust`) shows what opencode loads from all of those folders, so a config planted above a repository shows too. It leaves out the home folder itself and opencode's config folder: the user's own, which no folder brings (opencode itself counts `~/opencode.json` and `~/.opencode` as a project's).
+- Agents, modes, commands and skills (`.opencode`'s, and `.claude/skills` and `.agents/skills`) are shown, unlike omp's: with every tool allowed, what instructs runs. `AGENTS.md` stays out, as on every card.
+- Above a config the card says what it runs, allows and copies in. That is a reading aid: the file shows whole below, and the key (`opencode:<folder>#<hash>`) is of the files, not of the summary.
