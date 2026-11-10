@@ -131,21 +131,36 @@ func at(path string, line, start *int, body string) spot {
 }
 
 // missing is what of drafts the review doesn't hold yet: a comment at
-// the draft's spot, where it was made or where it is now, stands for one
-// draft, so twins need two.
+// the draft's spot stands for one draft, so twins need two. Every draft
+// is matched against where the comments were made first, then the rest
+// against where they are now, so a comment a push moved onto another's
+// lines doesn't take that one's draft.
 func (p pending) missing(drafts []Draft) []Draft {
 	used := make([]bool, len(p.comments))
-	var out []Draft
-next:
-	for _, d := range drafts {
-		k := d.spot()
-		for i, h := range p.comments {
-			if !used[i] && (h.made == k || h.now == k) {
-				used[i] = true
-				continue next
+	found := make([]bool, len(drafts))
+	for _, made := range []bool{true, false} {
+		for j, d := range drafts {
+			if found[j] {
+				continue
+			}
+			k := d.spot()
+			for i, h := range p.comments {
+				at := h.now
+				if made {
+					at = h.made
+				}
+				if !used[i] && at == k {
+					used[i], found[j] = true, true
+					break
+				}
 			}
 		}
-		out = append(out, d)
+	}
+	var out []Draft
+	for j, d := range drafts {
+		if !found[j] {
+			out = append(out, d)
+		}
 	}
 	return out
 }

@@ -311,6 +311,20 @@ func TestPendingRetryWithNoDrafts(t *testing.T) {
 	}
 }
 
+// Comments made at 10 and 20, moved to 20 and 30: draft 20 is the one
+// made there, though the other is there now, whatever the drafts' order.
+func TestPendingMovedOntoAnother(t *testing.T) {
+	p := newPendingFake(t)
+	p.comments = []fakeComment{{Path: "a.go", Line: 10, Moved: 10, Body: "same"}, {Path: "a.go", Line: 20, Moved: 10, Body: "same"}}
+	d := []Draft{{Path: "a.go", Line: 20, Body: "same"}, {Path: "a.go", Line: 10, Body: "same"}}
+	if err := p.client().SubmitReview(t.Context(), into("comment", d)); err != nil {
+		t.Fatal(err)
+	}
+	if got := p.seen(); got != `0 threads, 1 submits: "same same" COMMENTED` {
+		t.Fatal(got)
+	}
+}
+
 func TestPendingTwinDrafts(t *testing.T) {
 	p := newPendingFake(t)
 	twin := Draft{Path: "a.go", Side: "left", Line: 9, StartLine: 7, Body: "same"}
