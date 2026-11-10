@@ -151,18 +151,28 @@ Reply onPull(
 }
 
 /// Who the user is on GitHub [host] ('' when not known), asked of the
-/// daemon once a launch.
+/// daemon once a launch and kept as each listing of the hosts says.
 Future<String> githubLogin(Daemon daemon, String host) async {
   if (_logins[host] case final l?) return l;
   try {
-    final r = await daemon.client.listGitHubHosts(ListGitHubHostsRequest());
-    for (final h in r.hosts) {
-      if (h.login.isNotEmpty) _logins[h.host] = h.login;
-    }
+    keepGitHubLogins(
+      (await daemon.client.listGitHubHosts(ListGitHubHostsRequest())).hosts,
+    );
   } on Object {
     return '';
   }
   return _logins[host] ?? '';
+}
+
+/// Keeps who the user is on each host as [hosts], a listing of them, says:
+/// a token changed in Settings can be another account's.
+void keepGitHubLogins(Iterable<GitHubHost> hosts) {
+  _logins
+    ..clear()
+    ..addAll({
+      for (final h in hosts)
+        if (h.login.isNotEmpty) h.host: h.login,
+    });
 }
 
 final _logins = <String, String>{};

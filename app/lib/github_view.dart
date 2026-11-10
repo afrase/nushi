@@ -14,6 +14,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/token_notices.dart';
 import 'package:nushi/widgets.dart';
@@ -162,6 +163,7 @@ class _GitHubViewState extends State<GitHubView> {
       final r = await widget.daemon.client.listGitHubHosts(
         ListGitHubHostsRequest(),
       );
+      keepGitHubLogins(r.hosts);
       if (!mounted) return;
       setState(() => _hosts = r.hosts);
       _host = _hostNow?.host;
