@@ -107,10 +107,13 @@ func TestSearchSessions(t *testing.T) {
 	}
 }
 
-// A session in two history folders is found once, by the transcript
-// sessions.Store.Get reads (its folder and title are that one's), whatever
-// the other says; one with no folder isn't found (Claude's list leaves it
-// out); a long title is cut as the list cuts it.
+// A session in two history folders is found once, by its newest
+// transcript, which Claude's list tells of: the hit's folder, title and
+// excerpt are that one's, searching every folder or the one it is in, and
+// what only the older one says isn't found. A newer transcript the list
+// leaves out (nothing names it) doesn't hide the older one. One with no
+// folder isn't found (Claude's list leaves it out); a long title is cut
+// as the list cuts it.
 func TestSearchSessionsAsListed(t *testing.T) {
 	projects := filepath.Join(t.TempDir(), "projects")
 	prompt := func(cwd, text string) string {
@@ -123,16 +126,41 @@ func TestSearchSessionsAsListed(t *testing.T) {
 	}
 	now := time.Now()
 	long := strings.Repeat("word ", 100)
-	write("-work-app", sessA, prompt("/work/app", "The old numbat")+
-		`{"type":"custom-title","customTitle":"`+long+`","sessionId":"`+sessA+`"}`+"\n", now.Add(-time.Hour))
-	write("-work-moved", sessA, prompt("/work/moved", "The new numbat"), now)
+	// The older one's folder sorts first: sessions.Store.Get would read it.
+	write("-a-first", sessA, prompt("/a/first", "The old numbat, a bilby"), now.Add(-time.Hour))
+	write("-work-app", sessA, prompt("/work/app", "The new numbat")+
+		`{"type":"custom-title","customTitle":"`+long+`","sessionId":"`+sessA+`"}`+"\n", now)
 	write("-work-none", sessD, `{"type":"user","sessionId":"x","message":{"role":"user","content":"No numbat folder"}}`+"\n", now)
-	hits := search(t, Local{Projects: projects}, model.SessionSearch{Query: "numbat"})
-	if len(hits) != 1 || hits[0].SessionID != sessA || hits[0].Before != "The old " || hits[0].Folder != "/work/app" {
-		t.Fatalf("found %+v", hits)
+	l := Local{Projects: projects}
+	in := func(folder string) func(string) bool { return func(cwd string) bool { return cwd == folder } }
+	for _, s := range []model.SessionSearch{
+		{Query: "numbat"},
+		{Query: "numbat", Folder: "/work/app", InFolder: in("/work/app")},
+	} {
+		hits := search(t, l, s)
+		if len(hits) != 1 || hits[0].SessionID != sessA || hits[0].Before != "The new " || hits[0].Folder != "/work/app" {
+			t.Fatalf("in %q: found %+v", s.Folder, hits)
+		}
+		if r := []rune(hits[0].Title); len(r) != 256 || r[255] != '…' {
+			t.Errorf("in %q: title %d characters: %q", s.Folder, len(r), hits[0].Title)
+		}
 	}
-	if r := []rune(hits[0].Title); len(r) != 256 || r[255] != '…' {
-		t.Errorf("title %d characters: %q", len(r), hits[0].Title)
+	if hits := search(t, l, model.SessionSearch{Query: "bilby"}); len(hits) != 0 {
+		t.Errorf("the older transcript's words: %+v", hits)
+	}
+	// A third, newer still, with nothing to name it by: the list keeps to
+	// the one before, whichever folder comes first.
+	for _, folder := range []string{"-a-empty", "-zz-empty"} {
+		write(folder, sessA, `{"type":"file-history-snapshot","snapshot":{"note":"numbat"}}`+"\n", now.Add(time.Hour))
+		if hits := search(t, l, model.SessionSearch{Query: "numbat"}); len(hits) != 1 || hits[0].Folder != "/work/app" {
+			t.Errorf("with a nameless newer transcript in %s: %+v", folder, hits)
+		}
+		testcheck.NoErr(t, os.Remove(filepath.Join(projects, folder, sessA+".jsonl")))
+	}
+	// Its first folder's own search reads the transcript there.
+	hits := search(t, l, model.SessionSearch{Query: "bilby", Folder: "/a/first", InFolder: in("/a/first")})
+	if len(hits) != 1 || hits[0].Folder != "/a/first" || hits[0].Title != "The old numbat, a bilby" {
+		t.Errorf("in its first folder: %+v", hits)
 	}
 }
 

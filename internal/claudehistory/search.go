@@ -28,9 +28,11 @@ import (
 // (ADR 0035). Forks and what Claude's list leaves out are passed over, by
 // the list's own rules: forkedFrom in the first records, sessions.Store's
 // reading of the transcript's start and end (a subagent's, or one with
-// nothing to name it by), and claudeacp's (no folder); a session in two
-// history folders is found once, by the transcript sessions.Store.Get
-// reads, and its title is cut as the list cuts it.
+// nothing to name it by), and claudeacp's (no folder). A hit's folder and
+// title are those of the transcript that was read, the title cut as the
+// list cuts it; searching every folder, a session with a transcript in
+// more than one is found once, by the one Claude's list of every folder
+// tells of (see transcripts).
 func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]model.SessionHit, bool, error) {
 	q := textfind.New(s.Query)
 	if q.Empty() {
@@ -47,14 +49,13 @@ func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]mod
 		}
 	}
 	files := transcripts(dirs, s.Skip)
-	store := sessions.Store{ConfigDir: filepath.Dir(l.Projects)}
 	return textfind.Each(ctx, len(files), s.Max, func(ctx context.Context, i int) (model.SessionHit, bool) {
 		f := files[i]
 		n, ex := scan(ctx, f.path, q)
 		if n == 0 {
 			return model.SessionHit{}, false
 		}
-		info, err := store.Get(f.id, "")
+		info, err := sessions.ReadInfo(f.path)
 		if err != nil || info.Cwd == "" || s.InFolder != nil && !s.InFolder(info.Cwd) {
 			return model.SessionHit{}, false
 		}
@@ -85,14 +86,13 @@ func listTitle(s string) string {
 }
 
 // transcripts lists the transcripts in dirs, the newest first, but those
-// skip names. Of a session in more than one, the first in dirs' order,
-// which is the one sessions.Store.Get finds and so where its folder and
-// title come from, and what opening it resumes: its excerpt is that
-// transcript's. (Claude's list keeps the newest; the two differ only for a
-// session copied between history folders.)
+// skip names. Of a session in more than one, the newest that Claude's list
+// would tell of, as that list keeps it (sessions.Store.List): a session
+// continued from another folder has a transcript in each, and one of them
+// may be a start with nothing said yet.
 func transcripts(dirs []string, skip func(string) bool) []transcript {
 	var out []transcript
-	seen := map[string]bool{}
+	at := map[string]int{}
 	for _, dir := range dirs {
 		entries, _ := os.ReadDir(dir)
 		for _, e := range entries {
@@ -104,14 +104,25 @@ func transcripts(dirs []string, skip func(string) bool) []transcript {
 			if err != nil || fi.Size() == 0 {
 				continue
 			}
-			if !seen[id] {
-				seen[id] = true
-				out = append(out, transcript{id: id, path: filepath.Join(dir, e.Name()), modified: fi.ModTime()})
+			t := transcript{id: id, path: filepath.Join(dir, e.Name()), modified: fi.ModTime()}
+			if i, ok := at[id]; !ok {
+				at[id] = len(out)
+				out = append(out, t)
+			} else if listed(t) && (t.modified.After(out[i].modified) || !listed(out[i])) {
+				out[i] = t
 			}
 		}
 	}
 	slices.SortStableFunc(out, func(a, b transcript) int { return b.modified.Compare(a.modified) })
 	return out
+}
+
+// listed says Claude's list would tell of t: it isn't a subagent's and
+// has something to name it by. Asked only of a session's second transcript
+// and those it is weighed against.
+func listed(t transcript) bool {
+	_, err := sessions.ReadInfo(t.path)
+	return err == nil
 }
 
 // entry is what search reads of a transcript's record.
