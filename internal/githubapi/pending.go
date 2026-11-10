@@ -54,12 +54,12 @@ func sameText(s string) string {
 // mine, so they're left out).
 type pending struct {
 	state, body string
-	held        []held
+	comments    []placed
 }
 
-// held is an inline comment of the review at the spot it was made at and
+// placed is an inline comment of the review: the spot it was made at and
 // the one it is at now, which a push moves (zero when it left it no line).
-type held struct{ made, now spot }
+type placed struct{ made, now spot }
 
 // readPending reads review r whole; a review GitHub doesn't give is an
 // error.
@@ -103,7 +103,7 @@ func (c *Client) readPending(ctx context.Context, r string) (pending, error) {
 		p.state, p.body = data.Node.State, data.Node.Body
 		for _, n := range data.Node.Comments.Nodes {
 			if n.ReplyTo == nil {
-				p.held = append(p.held, held{at(n.Path, n.OriginalLine, n.OriginalStartLine, n.Body), at(n.Path, n.Line, n.StartLine, n.Body)})
+				p.comments = append(p.comments, placed{at(n.Path, n.OriginalLine, n.OriginalStartLine, n.Body), at(n.Path, n.Line, n.StartLine, n.Body)})
 			}
 		}
 		page := data.Node.Comments.PageInfo
@@ -132,12 +132,12 @@ func at(path string, line, start *int, body string) spot {
 // the draft's spot, where it was made or where it is now, stands for one
 // draft, so twins need two.
 func (p pending) missing(drafts []Draft) []Draft {
-	used := make([]bool, len(p.held))
+	used := make([]bool, len(p.comments))
 	var out []Draft
 next:
 	for _, d := range drafts {
 		k := d.spot()
-		for i, h := range p.held {
+		for i, h := range p.comments {
 			if !used[i] && (h.made == k || h.now == k) {
 				used[i] = true
 				continue next
