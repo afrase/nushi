@@ -44,13 +44,7 @@ Through Nushi's own bridge, `nushid ante-acp`, which runs an `ante serve --stdio
 
 ### oh-my-pi
 
-Nushi runs your `omp --mode acp`. Nothing to set up once `omp` is on your login shell's `PATH`. omp's own binary needs nothing else:
-
-```sh
-brew install can1357/tap/omp        # or: curl -fsSL https://omp.sh/install | sh -s -- --binary --ref v18.12.6
-```
-
-18.12.6 is the version Nushi was tried with; Homebrew installs the newest. omp installed with Bun (`bun add -g @oh-my-pi/pi-coding-agent`) works too, with `~/.bun/bin` on that `PATH`.
+Nushi runs your `omp --mode acp`. Install omp any way [its README](https://github.com/can1357/oh-my-pi#install) gives; nothing to set up once `omp` is on your login shell's `PATH`. Nushi was tried with 18.12.6.
 
 - It uses omp's own config and keys: `~/.omp`, and the environment (`FIREWORKS_API_KEY` for Fireworks, whose models it then lists).
 - To pick the model it starts on, set `modelRoles` in `~/.omp/agent/config.yml`:
@@ -64,13 +58,7 @@ brew install can1357/tap/omp        # or: curl -fsSL https://omp.sh/install | sh
 
 ### OpenCode
 
-Nushi runs your `opencode acp`. Nothing to set up once `opencode` is on your login shell's `PATH`:
-
-```sh
-brew install anomalyco/tap/opencode-v2     # or: curl -fsSL https://opencode.ai/v2/install | bash
-```
-
-opencode's README also names Homebrew's own `opencode` formula (the one Nushi was built against) and npm's `@opencode/cli`. Nushi follows opencode 2.2.6 and needs 2.0.0 or newer: opencode 1 (npm's `opencode-ai`) isn't supported.
+Nushi runs your `opencode acp`. Install opencode 2 any way [its README](https://github.com/anomalyco/opencode#installation) gives; nothing to set up once `opencode` is on your login shell's `PATH`. Nushi follows opencode 2.2.6 and needs 2.0.0 or newer: opencode 1 (npm's `opencode-ai`) isn't supported.
 
 - It uses opencode's own config, providers and sign-in (`~/.config/opencode`, `~/.local/share/opencode`): sign in with `opencode auth login` in a terminal. Settings › Agents doesn't say whether you're signed in: opencode starts either way, with free models of its own.
 - Model, effort and mode are opencode's. So are its permission prompts (`permissions` in its config): as installed it asks almost nothing, and its `plan` mode still runs shell commands.
