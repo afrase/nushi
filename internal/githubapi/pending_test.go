@@ -231,18 +231,38 @@ func TestPendingAlreadySubmitted(t *testing.T) {
 		}{"C1"}},
 	}
 	c := p.client()
-	r := into("approve", drafts("one\nmore", "two"))
-	r.Body = "Looks good\n"
-	if err := c.SubmitReview(t.Context(), r); err != nil {
-		t.Fatalf("an answered submission: %v", err)
+	for _, r := range []Review{
+		into("approve", drafts("one\nmore", "two")),
+		{Pull: "PR_1", Pending: "R0", Event: "approve", Body: "Looks good\n"},
+	} {
+		if err := c.SubmitReview(t.Context(), r); err != nil {
+			t.Fatalf("an answered submission: %v", err)
+		}
 	}
 	for _, r := range []Review{
 		into("approve", drafts("one\nmore", "two", "three")), // three is only a reply
-		{Pull: "PR_1", Pending: "R0", Event: "comment", Body: "Something else"},
+		{Pull: "PR_1", Pending: "R0", Event: "approve", Body: "Something else"},
 	} {
 		if err := c.SubmitReview(t.Context(), r); err == nil || !strings.Contains(err.Error(), "submitted on GitHub meanwhile") {
 			t.Fatal(err)
 		}
+	}
+	if got := p.seen(); !strings.HasPrefix(got, "0 threads, 0 submits") {
+		t.Fatal("into a submitted review:", got)
+	}
+}
+
+// A review submitted on github.com with every draft, as something else
+// and without the text: its comments are sent, so the drafts must go, or
+// the next Submit, after a reload, posts them again.
+func TestPendingSubmittedWithTheDrafts(t *testing.T) {
+	p := newPendingFake(t)
+	p.state = "COMMENTED"
+	p.comments = []fakeComment{{Path: "a.go", Line: 3, Body: "one"}, {Path: "a.go", Line: 4, Body: "two"}}
+	r := into("approve", drafts("one", "two"))
+	r.Body = "LGTM"
+	if err := p.client().SubmitReview(t.Context(), r); err != nil {
+		t.Fatal(err)
 	}
 	if got := p.seen(); !strings.HasPrefix(got, "0 threads, 0 submits") {
 		t.Fatal("into a submitted review:", got)
