@@ -2,7 +2,8 @@
 // card (ADRs 0023, 0029): each file whole, hashed, shown whole, and the
 // key "Start anyway" keeps it under. Links aren't followed, nor fifos
 // waited on: such a file has no hash, so a folder with one can't be
-// remembered (the card fails closed).
+// remembered (the card fails closed). The one link with a hash is
+// WalkLinked's, into what the card already shows.
 package folderfiles
 
 import (
@@ -20,17 +21,44 @@ import (
 )
 
 // File is one of a folder's files: what the card shows (its first Shown+1
-// bytes, or why Sum is nil) and the SHA-256 of all of it.
+// bytes, where a link leads, or why Sum is nil) and the SHA-256 of all of
+// it.
 type File struct {
 	Path string
 	Text []byte
 	Sum  []byte // nil when it can't be hashed (a link, not a regular file, unreadable)
+	Link bool   // a link: Text says where it leads, and Sum, if any, is of that
 }
 
 // Walk returns the files in each of roots (a folder or a file; those that
 // don't exist are left out), empty ones left out too. agent names who
-// follows a link, for the card.
-func Walk(roots []string, agent string) []File {
+// follows a link, for the card. No link has a sum.
+func Walk(roots []string, agent string) []File { return walk(roots, agent, nil) }
+
+// WalkLinked is Walk for a card that shows all the agent loads through a
+// link kept inside the folder (a skill in .claude/skills that is a link
+// to the one in .agents/skills): a link that leads to a root that isn't
+// itself a link, or into one, has a sum. What it leads to is listed and
+// summed under its real path, so the link's sum is of where it leads, its
+// text and the path that resolves to: a link pointed elsewhere asks
+// again, also when it is a link further on that changed. Every other link
+// stays without a sum: where it leads, the card doesn't show.
+func WalkLinked(roots []string, agent string) []File {
+	var listed []string
+	for _, root := range roots {
+		if fi, err := os.Lstat(root); err != nil || fi.Mode()&fs.ModeSymlink != 0 {
+			continue
+		}
+		if resolved, err := filepath.EvalSymlinks(root); err == nil {
+			listed = append(listed, resolved)
+		}
+	}
+	return walk(roots, agent, listed)
+}
+
+// walk is Walk, and WalkLinked with listed: the real paths of the roots
+// that aren't links.
+func walk(roots []string, agent string, listed []string) []File {
 	var out []File
 	for _, root := range roots {
 		fi, err := os.Lstat(root)
@@ -38,7 +66,7 @@ func Walk(roots []string, agent string) []File {
 		case err != nil:
 			continue
 		case fi.Mode()&fs.ModeSymlink != 0:
-			out = append(out, link(root, agent))
+			out = append(out, link(root, agent, listed))
 			continue
 		case !fi.IsDir():
 			if f := Hash(root); len(f.Text) > 0 || f.Sum == nil {
@@ -51,7 +79,7 @@ func Walk(roots []string, agent string) []File {
 			case err != nil:
 				out = append(out, File{Path: path, Text: []byte(err.Error())})
 			case d.Type()&fs.ModeSymlink != 0:
-				out = append(out, link(path, agent))
+				out = append(out, link(path, agent, listed))
 			case d.Type().IsRegular():
 				if f := Hash(path); len(f.Text) > 0 || f.Sum == nil {
 					out = append(out, f)
@@ -65,9 +93,27 @@ func Walk(roots []string, agent string) []File {
 	return out
 }
 
-func link(path, agent string) File {
+// link is the link at path: without a sum, unless it leads into one of
+// listed (WalkLinked).
+func link(path, agent string, listed []string) File {
 	target, _ := os.Readlink(path)
-	return File{Path: path, Text: []byte("a link to " + target + ", which " + agent + " follows")}
+	f := File{Path: path, Link: true, Text: []byte("a link to " + target + ", which " + agent + " follows")}
+	if len(listed) == 0 {
+		return f
+	}
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil { // it leads nowhere, or in a circle
+		return f
+	}
+	for _, root := range listed {
+		if rel, err := filepath.Rel(root, resolved); err == nil && filepath.IsLocal(rel) {
+			sum := sha256.Sum256([]byte(target + "\x00" + resolved))
+			f.Text = []byte("a link to " + target + ", which " + agent + " follows to " + resolved + ", shown here")
+			f.Sum = sum[:]
+			break
+		}
+	}
+	return f
 }
 
 // Hash reads a regular file, without following a link or waiting on a

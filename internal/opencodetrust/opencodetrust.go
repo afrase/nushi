@@ -20,7 +20,8 @@
 // what it has opencode run. It leaves out the user's own, which no folder
 // brings (the home folder's opencode.json, .opencode, .claude and .agents,
 // and opencode's config folder), and AGENTS.md, as the other agents' cards
-// leave it out. Nothing is written, and no link followed.
+// leave it out. Nothing is written, and no link followed: a link shows as
+// one, and is remembered only when it leads into what the card shows.
 package opencodetrust
 
 import (
@@ -53,7 +54,7 @@ func (Trust) Runs(folder string) ([]model.FolderRun, string, error) {
 	fs := files(folder)
 	var out []model.FolderRun
 	for _, f := range fs {
-		if f.Sum != nil && len(f.Text) <= folderfiles.Shown {
+		if f.Sum != nil && !f.Link && len(f.Text) <= folderfiles.Shown {
 			switch {
 			case isConfig(f.Path):
 				out = append(out, configRuns(f.Path, f.Text)...)
@@ -76,7 +77,11 @@ var inConfigFolder = []string{
 // files returns what opencode loads for a chat in folder (see the
 // package's comment), the outermost folder's first; empty files are left
 // out. A link is a file without a sum, as is anything but a regular file:
-// such a folder can't be remembered.
+// such a folder can't be remembered. The exception is a link into what is
+// listed here (folderfiles.WalkLinked): a skill in .claude/skills linked
+// to the one in .agents/skills, as Nushi's own "Link for Claude…" makes
+// it (ADR 0052), or that whole folder linked, would else ask at every
+// start.
 func files(folder string) []folderfiles.File {
 	home, _ := os.UserHomeDir()
 	home = git.RealPath(home)
@@ -101,7 +106,7 @@ func files(folder string) []folderfiles.File {
 		roots = append(roots, inside(filepath.Join(dir, ".claude"), "skills")...)
 		roots = append(roots, inside(filepath.Join(dir, ".agents"), "skills")...)
 	}
-	return folderfiles.Walk(roots, "opencode")
+	return folderfiles.WalkLinked(roots, "opencode")
 }
 
 // upToRoot is dir and every folder above it, / first: opencode's walk
@@ -117,7 +122,8 @@ func upToRoot(dir string) []string {
 }
 
 // inside is names in dir, or dir alone when it is a link: opencode
-// follows it, and Nushi can't vouch for where it leads.
+// follows it, and Nushi can't vouch for where it leads (dir is no place
+// the card lists whole, so no link to one is remembered).
 func inside(dir string, names ...string) []string {
 	if fi, err := os.Lstat(dir); err == nil && fi.Mode()&fs.ModeSymlink != 0 {
 		return []string{dir}
