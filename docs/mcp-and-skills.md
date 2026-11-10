@@ -41,6 +41,8 @@ Settings › Skills (or ⋯ › Skills…, which opens that chat's agent) lists 
 | Ante, oh-my-pi | "by name, everywhere" |
 | OpenCode | "in your OpenCode config" (a `skill.use` deny in your `opencode.json`, by name, everywhere) |
 
+OpenCode reads some policies before your config's, and the earliest decides: those in the system's config folder, in an MDM profile, or in a config your sign-in delivers (your organization's). An allow there keeps a skill loading though Nushi shows it as off.
+
 **Shared** is `.agents/skills` (the project's, as the agents walk it) and `~/.agents/skills`, which Codex, Pi, PiG, oh-my-pi, Ante and OpenCode read.
 
 - Each shared skill says which agents load it ("Off for Codex", "PiG loads it once the folder is trusted"); its switch is the picked agent's.

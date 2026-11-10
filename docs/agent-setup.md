@@ -71,12 +71,12 @@ Nushi runs your `opencode acp`. Nothing to set up once `opencode` is on your log
 brew install anomalyco/tap/opencode-v2     # or: curl -fsSL https://opencode.ai/v2/install | bash
 ```
 
-opencode's README also names Homebrew's own `opencode` formula (the one Nushi was built against) and npm's `@opencode/cli`. Nushi follows opencode 2.2.6 and needs 2.0.0 or newer: opencode 1 (npm's `opencode-ai`) isn't supported, and Settings › Agents says "Needs 2.0.0 or newer" for it.
+opencode's README also names Homebrew's own `opencode` formula (the one Nushi was built against) and npm's `@opencode/cli`. Nushi follows opencode 2.2.6 and needs 2.0.0 or newer: opencode 1 (npm's `opencode-ai`) isn't supported.
 
 - It uses opencode's own config, providers and sign-in (`~/.config/opencode`, `~/.local/share/opencode`): sign in with `opencode auth login` in a terminal. Settings › Agents doesn't say whether you're signed in: opencode starts either way, with free models of its own.
 - Model, effort and mode are opencode's. So are its permission prompts (`permissions` in its config): as installed it asks almost nothing, and its `plan` mode still runs shell commands.
 - opencode loads a folder's config, plugins and MCP servers without asking, the folder's own and those of every folder above it. Nushi's trust card lists them before a chat starts there ([ADR 0031](adr/0031-warn-before-a-folder-runs-code-for-ante-and-omp.md)).
-- **Only `/compact` is offered.** opencode 2.2.6 answers its other commands (`/init`, `/review`, `/goal`, your own) at once over ACP and then runs them where Nushi can't see, so the menu leaves them out. One typed by hand still goes out, and the next message waits behind it.
+- **Only `/compact` is offered.** opencode 2.2.6 answers its other commands (`/init`, `/review`, `/goal`, your own) at once over ACP and then runs them where Nushi can't see, so the menu leaves them out. One typed by hand still goes out, and the next message waits behind it. If it needs a permission, opencode never asks, and the next message hangs until you press Stop. After Nushi restarts, the chat also shows what the command sent the model and what it answered.
 - A subagent shows as one tool call with its result, not its steps.
 - Background commands aren't listed, and they end when the chat goes to sleep ([ADR 0032](adr/0032-idle-chats-sleep.md)) or its agent stops.
 - An opencode chat gets none of Nushi's tools (`show`, the previews, Jira's): [MCP servers and skills](mcp-and-skills.md).
