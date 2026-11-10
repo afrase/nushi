@@ -85,6 +85,7 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 			}
 			listed = append(listed, cmd)
 		}
+		listed = c.kind.offered(listed) // one it can't run here is neither shown nor remembered
 		c.commands = c.kind.withTerminalCommands(listed)
 		c.emitLocked(model.Event{ChatID: c.id, Commands: slices.Clone(c.commands)})
 		c.statusChangedLocked() // CanAskContext

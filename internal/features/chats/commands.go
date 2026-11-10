@@ -8,6 +8,15 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
+// offered is cmds, the commands the agent lists or listed last, without
+// those it can't run for Nushi (CommandHider).
+func (k *kind) offered(cmds []model.Command) []model.Command {
+	if k.commandHider == nil {
+		return cmds
+	}
+	return slices.DeleteFunc(slices.Clone(cmds), func(c model.Command) bool { return k.commandHider.HidesCommand(c.Name) })
+}
+
 // withTerminalCommands is cmds, the commands the agent lists, with those of
 // its terminal Nushi runs in its place (TerminalCommands) that it doesn't.
 func (k *kind) withTerminalCommands(cmds []model.Command) []model.Command {

@@ -3,6 +3,7 @@ package chats
 import (
 	"encoding/json"
 	"slices"
+	"sync"
 	"testing"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -119,5 +120,72 @@ func TestPlanWakesASleepingChat(t *testing.T) {
 	c.mu.Unlock()
 	if sent, _ := agent.texts(); mode != "plan" || asleep || !slices.Equal(sent, []string{"first", "next"}) {
 		t.Errorf("mode %q, asleep %v, sent %q; want plan, awake, the description sent", mode, asleep, sent)
+	}
+}
+
+// hidesCommand is a fake of CommandHider, to embed in a test's harness.
+type hidesCommand func(name string) bool
+
+func (f hidesCommand) HidesCommand(name string) bool { return f(name) }
+
+// An agent that can't run some of the commands it lists (opencode over ACP,
+// all but /compact: docs/facts/opencode.md) is offered and remembered
+// without them, also when the list remembered still has one; an agent that
+// hides none keeps its list as it is.
+func TestCommandsAnAgentHidesArentOffered(t *testing.T) {
+	names := func(cmds []model.Command) []string {
+		out := []string{}
+		for _, c := range cmds {
+			out = append(out, c.Name)
+		}
+		return out
+	}
+	for _, tc := range []struct {
+		name    string
+		harness Harness
+		before  []string // offered from the list remembered, init and compact
+		want    []string // and once it lists init, review and compact
+	}{
+		{"hider", struct {
+			model.HarnessInfo
+			hidesCommand
+		}{model.HarnessInfo{Name: "hider"}, func(name string) bool { return name != "compact" }}, []string{"compact"}, []string{"compact"}},
+		{"plain", model.HarnessInfo{Name: "plain"}, []string{"init", "compact"}, []string{"init", "review", "compact"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			remembered := &memModes{}
+			testcheck.NoErr(t, remembered.SetCommands(tc.name, []model.Command{{Name: "init"}, {Name: "compact"}}))
+			var mu sync.Mutex
+			var told [][]string // each list of commands the clients were sent
+			svc := newService(t, []Kind{{Harness: tc.harness, Launch: (&fakeAgent{}).launch}}, Options{Remembered: remembered, Publish: func(e model.Event) {
+				if e.Commands != nil {
+					mu.Lock()
+					defer mu.Unlock()
+					told = append(told, names(e.Commands))
+				}
+			}})
+			t.Cleanup(svc.Close)
+			id, err := svc.Start(t.Context(), "", t.TempDir(), false)
+			testcheck.NoErr(t, err)
+			before, err := svc.Get(id)
+			testcheck.NoErr(t, err)
+			if got := names(before.Commands); !slices.Equal(got, tc.before) {
+				t.Errorf("from the list remembered, commands %v, want %v", got, tc.before)
+			}
+
+			listed := &acp.AvailableCommandsUpdate{AvailableCommands: []acp.AvailableCommand{{Name: "init"}, {Name: "review"}, {Name: "compact"}}}
+			testcheck.NoErr(t, svc.chats[id].SessionUpdate(t.Context(), &acp.SessionNotification{SessionID: "s1",
+				Update: acp.SessionUpdate{SessionUpdate: "available_commands_update", AvailableCommandsUpdate: listed}}))
+			after, err := svc.Get(id)
+			testcheck.NoErr(t, err)
+			mu.Lock()
+			defer mu.Unlock()
+			if got := names(after.Commands); !slices.Equal(got, tc.want) || len(told) != 1 || !slices.Equal(told[0], tc.want) {
+				t.Errorf("commands %v, clients told %v; want %v, told once", got, told, tc.want)
+			}
+			if got := names(remembered.Commands(tc.name)); !slices.Equal(got, tc.want) {
+				t.Errorf("remembered %v, want %v", got, tc.want)
+			}
+		})
 	}
 }

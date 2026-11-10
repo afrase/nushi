@@ -49,7 +49,7 @@ var capabilities = map[string]func(chats.Harness) bool{
 	"ContextAsker": has[chats.ContextAsker], "GoneReader": has[chats.GoneReader],
 	"OpenFinder": has[chats.OpenFinder], "ForkFinder": has[chats.ForkFinder], "HistoryChecker": has[chats.HistoryChecker], "MessageDater": has[chats.MessageDater],
 	"TitleMaker": has[chats.TitleMaker], "TerminalCommands": has[chats.TerminalCommands], "WorktreeFinder": has[chats.WorktreeFinder],
-	"SessionSearcher": has[chats.SessionSearcher],
+	"SessionSearcher": has[chats.SessionSearcher], "CommandHider": has[chats.CommandHider],
 }
 
 // Every capability chats declares is in capabilities, so a harness can't
