@@ -14,7 +14,9 @@ import (
 type found struct {
 	skillfile.File
 	id string
-	// path is the skill's folder; a lone <name>.md's is the file itself.
+	// path is the skill's folder. A skill in one file has that file: a
+	// lone <name>.md, and a SKILL.md right in the place, whose folder is
+	// the place itself and never a skill's to move.
 	path string
 	// file is its Markdown file: of two with one id in a place, opencode
 	// keeps the one whose file sorts last.
@@ -40,7 +42,11 @@ var skipped = []string{"node_modules", "venv", "__pycache__"}
 // scan reads the skills in root as opencode does (docs/facts/opencode.md):
 // a folder holding a SKILL.md is one skill and nothing below it is read;
 // any other folder is a group, down to maxDepth; a <name>.md right in
-// root is a skill named for the file. Links are followed, but for a
+// root is a skill named for the file. A SKILL.md right in root makes the
+// place one skill, named for the place's folder: it is listed as a skill
+// in one file, so nothing takes the place for a skill's folder (Delete
+// would move every skill in it; List does the same for a place found
+// further down, through a link). Links are followed, but for a
 // project's place (links false) a linked group stays out, as its linked
 // places do: a skill found through one would be a folder somewhere else,
 // and Delete would move that. A linked skill folder is still listed. One
@@ -56,7 +62,12 @@ func scan(root string, links bool) []found {
 		at := queue[i]
 		groups, files := entries(at.dir)
 		if slices.Contains(files, "SKILL.md") {
-			out = add(out, filepath.Base(at.dir), at.dir, filepath.Join(at.dir, "SKILL.md"))
+			file := filepath.Join(at.dir, "SKILL.md")
+			path := at.dir
+			if at.depth == 0 {
+				path = file
+			}
+			out = add(out, filepath.Base(at.dir), path, file)
 			continue
 		}
 		if !links && at.depth > 0 && linked(at.dir) {

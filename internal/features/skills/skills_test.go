@@ -16,6 +16,8 @@ type fakeReader struct {
 	listed int // List's calls
 	calls  *[]string
 	name   string
+	// refused are the paths CanTrash, and a linker's CanLink, refuse.
+	refused []string
 }
 
 func (f *fakeReader) List(context.Context, string) (model.Skills, error) {
@@ -26,7 +28,16 @@ func (f *fakeReader) SetSkillOn(_ context.Context, _, source, name string, on bo
 	*f.calls = append(*f.calls, fmt.Sprintf("%s skill %s %s %v", f.name, source, name, on))
 	return nil
 }
-func (f *fakeReader) Trash(_ context.Context, _, path string) error {
+func (f *fakeReader) CanTrash(_ context.Context, _, path string) error {
+	if slices.Contains(f.refused, path) {
+		return fmt.Errorf("%s refuses %s", f.name, path)
+	}
+	return nil
+}
+func (f *fakeReader) Trash(ctx context.Context, folder, path string) error {
+	if err := f.CanTrash(ctx, folder, path); err != nil {
+		return err
+	}
 	*f.calls = append(*f.calls, f.name+" trash "+path)
 	return nil
 }
@@ -41,13 +52,20 @@ func (f *fakeClaude) SetBuiltInOn(_ context.Context, _ string, on bool) error {
 	*f.calls = append(*f.calls, fmt.Sprintf("builtin %v", on))
 	return nil
 }
-func (f *fakeClaude) Link(_ context.Context, _, path string) error {
+func (f *fakeClaude) CanLink(ctx context.Context, folder, path string) error {
+	return f.CanTrash(ctx, folder, path)
+}
+func (f *fakeClaude) Link(ctx context.Context, folder, path string) error {
+	if err := f.CanLink(ctx, folder, path); err != nil {
+		return err
+	}
 	*f.calls = append(*f.calls, "link "+path)
 	return nil
 }
 
 // Two agents: Codex reads /r/.agents/skills/a and /r/.agents/skills/b;
-// Claude has b through its link /r/.claude/skills/b.
+// Claude has b through its link /r/.claude/skills/b. A shared skill that
+// is a file is no folder for the Trash.
 func fakes() (*Service, *[]string) {
 	svc, _, calls := fakesWithCodex()
 	return svc, calls
@@ -67,7 +85,13 @@ func fakesWithCodex() (*Service, *fakeReader, *[]string) {
 		*calls = append(*calls, fmt.Sprintf("trash %s in %v %v", path, project, yours))
 		return nil
 	}
-	return New([]string{"claude", "codex"}, map[string]Reader{"claude": claude, "codex": codex}, trash), codex, calls
+	canTrash := func(_, _ []string, path string) error {
+		if strings.HasSuffix(path, ".md") {
+			return fmt.Errorf("%s isn't a skill's folder", path)
+		}
+		return nil
+	}
+	return New([]string{"claude", "codex"}, map[string]Reader{"claude": claude, "codex": codex}, canTrash, trash), codex, calls
 }
 
 func show(skills []model.Skill) []string {
@@ -183,5 +207,53 @@ func TestTrashAndLink(t *testing.T) {
 		"claude trash /r/.claude/skills/own", "link /r/.agents/skills/a"}
 	if !reflect.DeepEqual(*calls, want) {
 		t.Errorf("calls:\n%q\nwant\n%q", *calls, want)
+	}
+}
+
+// A list says what Delete and Link would refuse, by the checks they
+// refuse by: an agent's own skill by its reader's, a shared one by its
+// place's and by the reader of each link to it, a link by the agent's
+// (an agent Nushi doesn't link for has none). What is refused moves
+// nothing, a link to it neither.
+func TestListSaysWhatTrashAndLinkRefuse(t *testing.T) {
+	svc, codex, calls := fakesWithCodex()
+	claude, _ := svc.readers["claude"].(*fakeClaude)
+	file := "/r/.agents/skills/lone.md"
+	codex.list.Skills = append(codex.list.Skills, model.Skill{Name: "lone", Source: "shared", Path: file},
+		model.Skill{Name: "c", Source: "shared", Path: "/r/.agents/skills/c"})
+	codex.refused = []string{""} // mine is nowhere Codex's Trash takes from
+	claude.refused = []string{"/r/.claude/skills/b", "/r/.agents/skills/c"}
+	ctx := context.Background()
+	can := func(agent string) []string {
+		l, err := svc.List(ctx, agent, "/r")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, s := range l.Skills {
+			out = append(out, fmt.Sprintf("%s trash:%v link:%v", s.Name, !s.NoTrash, !s.NoLink))
+		}
+		return out
+	}
+	// b's link is refused by Claude's Trash, c's link by its Link.
+	shared := []string{"a trash:true", "b trash:false", "c trash:true", "lone trash:false"}
+	want := []string{"own trash:true link:true", shared[0] + " link:true", shared[1] + " link:true", shared[2] + " link:false", shared[3] + " link:true"}
+	if got := can("claude"); !reflect.DeepEqual(got, want) {
+		t.Errorf("claude's:\n%q\nwant\n%q", got, want)
+	}
+	want = []string{"mine trash:false link:true", shared[0] + " link:false", shared[1] + " link:false", shared[2] + " link:false", shared[3] + " link:false"}
+	if got := can("codex"); !reflect.DeepEqual(got, want) {
+		t.Errorf("codex's:\n%q\nwant\n%q", got, want)
+	}
+	for _, p := range []string{"/r/.agents/skills/b", file} {
+		if err := svc.Trash(ctx, "codex", "/r", p); err == nil {
+			t.Errorf("%s went to the Trash", p)
+		}
+	}
+	if err := svc.Link(ctx, "claude", "/r", "/r/.agents/skills/c"); err == nil {
+		t.Error("linked what Claude refuses")
+	}
+	if len(*calls) != 0 {
+		t.Errorf("calls = %q", *calls)
 	}
 }

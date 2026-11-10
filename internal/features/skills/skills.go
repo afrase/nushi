@@ -28,8 +28,11 @@ type Reader interface {
 	// SetSkillOn turns one of its skills on or off, found by its source
 	// and name among those it lists for folder.
 	SetSkillOn(ctx context.Context, folder, source, name string, on bool) error
+	// CanTrash says why Trash wouldn't move path, for what it is or where
+	// it is, and moves nothing: nil for a skill's folder Trash takes.
+	CanTrash(ctx context.Context, folder, path string) error
 	// Trash moves one of its own skills' folders to the Trash (shared
-	// ones go through Service.Trash).
+	// ones go through Service.Trash): only one CanTrash passes.
 	Trash(ctx context.Context, folder, path string) error
 }
 
@@ -60,6 +63,10 @@ type BuiltIn interface {
 // Linker is an agent that can be given a shared skill it doesn't read by
 // a link of its own (Claude, until it reads .agents/skills).
 type Linker interface {
+	// CanLink says why Link wouldn't make the link, and makes nothing.
+	CanLink(ctx context.Context, folder, path string) error
+	// Link makes the link to the shared skill at path: only where CanLink
+	// passes.
 	Link(ctx context.Context, folder, path string) error
 }
 
@@ -68,14 +75,18 @@ type Service struct {
 	readers map[string]Reader
 	order   []string // the agents' names, as the app lists them
 	// trash moves a shared skill's folder to the Trash, only right in one
-	// of the project's roots or yours (skillfile.Trash).
-	trash func(ctx context.Context, project, yours []string, path string) error
+	// of the project's roots or yours (skillfile.Trash); canTrash says why
+	// it wouldn't, and moves nothing (skillfile.CanTrash).
+	trash    func(ctx context.Context, project, yours []string, path string) error
+	canTrash func(project, yours []string, path string) error
 }
 
-// New takes each agent's reader, in the order the agents are listed, and
-// what moves a shared skill's folder to the Trash (skillfile.Trash).
-func New(order []string, readers map[string]Reader, trash func(ctx context.Context, project, yours []string, path string) error) *Service {
-	return &Service{readers: readers, order: order, trash: trash}
+// New takes each agent's reader, in the order the agents are listed, what
+// says why a shared skill's folder wouldn't go to the Trash
+// (skillfile.CanTrash) and what moves it there (skillfile.Trash).
+func New(order []string, readers map[string]Reader, canTrash func(project, yours []string, path string) error,
+	trash func(ctx context.Context, project, yours []string, path string) error) *Service {
+	return &Service{readers: readers, order: order, canTrash: canTrash, trash: trash}
 }
 
 func absolute(folder string) error {
@@ -96,7 +107,8 @@ func (s *Service) reader(agent string) (Reader, error) {
 // List returns agent's skills and plugins in folder. Its shared skills,
 // and those other agents load from the shared folders, come with every
 // agent that loads each; a skill of the agent's that is a link to a shared
-// one shows as that one.
+// one shows as that one. Each skill says whether Trash, and for a shared
+// one Link, would refuse it, by the checks they refuse by.
 func (s *Service) List(ctx context.Context, agent, folder string) (model.Skills, error) {
 	if err := absolute(folder); err != nil {
 		return model.Skills{}, err
@@ -119,7 +131,15 @@ func (s *Service) List(ctx context.Context, agent, folder string) (model.Skills,
 		}
 	}
 	out.Skills = slices.DeleteFunc(out.Skills, func(sk model.Skill) bool { return sk.Source == "shared" || vias[sk.Path] })
-	out.Skills = append(out.Skills, shared...)
+	for i := range out.Skills {
+		out.Skills[i].NoTrash = r.CanTrash(ctx, folder, out.Skills[i].Path) != nil
+	}
+	for _, sk := range shared {
+		sk.NoTrash = s.canTrashShared(ctx, folder, sk) != nil
+		_, err := s.linker(ctx, r, agent, folder, sk.Path, shared)
+		sk.NoLink = err != nil
+		out.Skills = append(out.Skills, sk)
+	}
 	return out, nil
 }
 
@@ -248,9 +268,33 @@ func (s *Service) Uninstall(ctx context.Context, agent, folder, id string) error
 	return p.Uninstall(context.WithoutCancel(ctx), folder, id)
 }
 
+// place is the folder holding a shared skill, which is the place it goes
+// to the Trash from: the project's, or yours when the skill is everywhere.
+func place(sk model.Skill) (project, yours []string) {
+	if sk.Everywhere {
+		return nil, []string{filepath.Dir(sk.Path)}
+	}
+	return []string{filepath.Dir(sk.Path)}, nil
+}
+
+// canTrashShared says why Trash wouldn't move the shared skill sk, or a
+// link to it an agent lists, and moves nothing.
+func (s *Service) canTrashShared(ctx context.Context, folder string, sk model.Skill) error {
+	for _, a := range sk.Agents {
+		if a.Via != "" {
+			if err := s.readers[a.Agent].CanTrash(ctx, folder, a.Via); err != nil {
+				return err
+			}
+		}
+	}
+	project, yours := place(sk)
+	return s.canTrash(project, yours, sk.Path)
+}
+
 // Trash moves a skill's folder to the Trash: one of agent's own, or a
 // shared one some agent lists (with every link to it an agent lists,
-// which would point at nothing after).
+// which would point at nothing after). Nothing goes unless all of it
+// can.
 func (s *Service) Trash(ctx context.Context, agent, folder, path string) error {
 	ctx = context.WithoutCancel(ctx)
 	if err := absolute(folder); err != nil {
@@ -265,6 +309,9 @@ func (s *Service) Trash(ctx context.Context, agent, folder, path string) error {
 		}
 		return r.Trash(ctx, folder, path)
 	}
+	if err := s.canTrashShared(ctx, folder, shared[i]); err != nil {
+		return err
+	}
 	for _, a := range shared[i].Agents {
 		if a.Via != "" {
 			if err := s.readers[a.Agent].Trash(ctx, folder, a.Via); err != nil {
@@ -272,10 +319,22 @@ func (s *Service) Trash(ctx context.Context, agent, folder, path string) error {
 			}
 		}
 	}
-	if shared[i].Everywhere {
-		return s.trash(ctx, nil, []string{filepath.Dir(path)}, path)
+	project, yours := place(shared[i])
+	return s.trash(ctx, project, yours, path)
+}
+
+// linker is what links the shared skill at path for agent, whose reader
+// is r, or why Link wouldn't: an agent Nushi links for, a shared skill
+// some agent lists here (shared), and a link the agent can make.
+func (s *Service) linker(ctx context.Context, r Reader, agent, folder, path string, shared []model.Skill) (Linker, error) {
+	l, ok := r.(Linker)
+	if !ok {
+		return nil, fmt.Errorf("Nushi doesn't link skills for %s", agent)
 	}
-	return s.trash(ctx, []string{filepath.Dir(path)}, nil, path)
+	if !slices.ContainsFunc(shared, func(sk model.Skill) bool { return sk.Path == path }) {
+		return nil, fmt.Errorf("%s isn't a shared skill here", path)
+	}
+	return l, l.CanLink(ctx, folder, path)
 }
 
 // Link gives agent a shared skill it doesn't load by a link of its own
@@ -289,12 +348,9 @@ func (s *Service) Link(ctx context.Context, agent, folder, path string) error {
 	if err != nil {
 		return err
 	}
-	l, ok := r.(Linker)
-	if !ok {
-		return fmt.Errorf("Nushi doesn't link skills for %s", agent)
-	}
-	if !slices.ContainsFunc(s.shared(ctx, folder, nil), func(sk model.Skill) bool { return sk.Path == path }) {
-		return fmt.Errorf("%s isn't a shared skill here", path)
+	l, err := s.linker(ctx, r, agent, folder, path, s.shared(ctx, folder, nil))
+	if err != nil {
+		return err
 	}
 	return l.Link(ctx, folder, path)
 }

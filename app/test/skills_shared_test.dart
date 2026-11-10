@@ -9,6 +9,7 @@ import 'package:nushi/skills_list.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'fake_desktop.dart';
 import 'harness.dart';
 
 const _home = '/Users/me';
@@ -264,6 +265,68 @@ void main() {
     await tester.tap(find.text('In .agents/skills'));
     await tester.pumpAndSettle();
     expect(fake.started.single.agent, 'claude');
+    await closeView(tester, d);
+  });
+
+  testWidgets('for Claude, a shared skill the daemon says it won’t link '
+      '(one in a group) has no Link for Claude…, and one it won’t move to '
+      'the Trash (a file) no Delete… either', (tester) async {
+    final opened = fakeDesktop();
+    const shared = '$_home/app/.agents/skills';
+    final agents = [SkillAgent(agent: 'opencode', state: 'on')];
+    final fake = FakeDaemon([])
+      ..answer = (input) => input is ListSkillsRequest
+          ? ListSkillsResponse(
+              skills: [
+                _shared().first,
+                Skill(
+                  name: 'deep',
+                  source: 'shared',
+                  path: '$shared/group/deep',
+                  noLink: true,
+                  agents: agents,
+                ),
+                Skill(
+                  name: 'notes',
+                  source: 'shared',
+                  path: '$shared/notes.md',
+                  oneFile: true,
+                  noTrash: true,
+                  noLink: true,
+                  agents: agents,
+                ),
+              ],
+            )
+          : null;
+    final d = await fake.connect(tester);
+    d.skillsAgent = 'claude';
+    await tester.binding.setSurfaceSize(const Size(1000, 700));
+    await tester.pumpWidget(
+      themed(SkillsView(daemon: d, folder: '$_home/grouped')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Not read by Claude'), findsNWidgets(3));
+    for (final (at, file, link, delete) in [
+      (0, 'release/SKILL.md', true, true),
+      (1, 'group/deep/SKILL.md', false, true),
+      (2, 'notes.md', false, false),
+    ]) {
+      await tester.tap(find.byTooltip('More').at(at));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Link for Claude…'),
+        link ? findsOneWidget : findsNothing,
+        reason: file,
+      );
+      expect(
+        find.text('Delete…'),
+        delete ? findsOneWidget : findsNothing,
+        reason: file,
+      );
+      await tester.tap(find.text('Open ${file.split('/').last}'));
+      await tester.pumpAndSettle();
+      expect(opened.last, ['-t', '$shared/$file']);
+    }
     await closeView(tester, d);
   });
 

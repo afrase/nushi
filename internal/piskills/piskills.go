@@ -246,10 +246,9 @@ func (k Skills) SetSkillOn(ctx context.Context, folder, source, name string, on 
 	return jsonsettings.SetKeyIn(folder, filepath.Join(k.Folder, "settings.json"), "skills", change)
 }
 
-// Trash moves one of Pi's own skill folders to the Trash: right in your
-// skills folder or the folder's .pi/skills.
-func (k Skills) Trash(ctx context.Context, folder, path string) error {
-	var project, yours []string
+// own are the places Pi's own skill folders are in: the folder's
+// .pi/skills and your skills folder.
+func (k Skills) own(folder string) (project, yours []string) {
 	for _, r := range k.roots(folder) {
 		switch r.source {
 		case "user":
@@ -258,5 +257,19 @@ func (k Skills) Trash(ctx context.Context, folder, path string) error {
 			project = append(project, r.path)
 		}
 	}
+	return project, yours
+}
+
+// CanTrash says why Trash wouldn't move path: nil only for a skill's
+// folder right in one of Pi's own places.
+func (k Skills) CanTrash(_ context.Context, folder, path string) error {
+	project, yours := k.own(folder)
+	return skillfile.CanTrash(project, yours, path)
+}
+
+// Trash moves one of Pi's own skill folders to the Trash: only one
+// CanTrash passes.
+func (k Skills) Trash(ctx context.Context, folder, path string) error {
+	project, yours := k.own(folder)
 	return skillfile.Trash(ctx, project, yours, path)
 }
