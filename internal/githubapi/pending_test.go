@@ -249,6 +249,29 @@ func TestPendingAlreadySubmitted(t *testing.T) {
 	}
 }
 
+// A call with no drafts is its event and text: a review submitted as
+// something else isn't it.
+func TestPendingSubmittedAsOther(t *testing.T) {
+	p := newPendingFake(t)
+	p.comments = []fakeComment{{Path: "a.go", Line: 3, Body: "from the browser"}}
+	c := p.client()
+	for _, s := range []struct{ state, event string }{
+		{"COMMENTED", "approve"}, {"COMMENTED", "request_changes"}, {"DISMISSED", "approve"}, {"APPROVED", "comment"},
+	} {
+		p.state = s.state
+		if err := c.SubmitReview(t.Context(), into(s.event, nil)); err == nil || !strings.Contains(err.Error(), "submitted on GitHub meanwhile") {
+			t.Fatalf("%s into %s: %v", s.event, s.state, err)
+		}
+	}
+	p.state = "CHANGES_REQUESTED"
+	if err := c.SubmitReview(t.Context(), into("request_changes", nil)); err != nil {
+		t.Fatalf("an answered submission: %v", err)
+	}
+	if got := p.seen(); !strings.HasPrefix(got, "0 threads, 0 submits") {
+		t.Fatal("into a submitted review:", got)
+	}
+}
+
 func TestPendingUnreadable(t *testing.T) {
 	p := newPendingFake(t)
 	c := p.client()

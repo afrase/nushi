@@ -127,10 +127,14 @@ func (p pending) missing(drafts []Draft) []Draft {
 	return out
 }
 
+// submittedAs is the state each event leaves a review in.
+var submittedAs = map[string]string{"COMMENT": "COMMENTED", "APPROVE": "APPROVED", "REQUEST_CHANGES": "CHANGES_REQUESTED"}
+
 // joinPending adds the drafts the review doesn't hold yet to my pending
 // review r and submits it. A review already submitted (by an earlier
 // submission GitHub didn't answer, or on github.com) is this one when it
-// holds every draft and says what this one says; else nothing is added.
+// holds every draft and says what this one says (with no drafts, when it
+// was submitted as this event); else nothing is added.
 func (c *Client) joinPending(ctx context.Context, r Review, event string, body any) error {
 	p, err := c.readPending(ctx, r.Pending)
 	if err != nil {
@@ -138,7 +142,8 @@ func (c *Client) joinPending(ctx context.Context, r Review, event string, body a
 	}
 	missing := p.missing(r.Drafts)
 	if p.state != "PENDING" {
-		if len(missing) == 0 && (strings.TrimSpace(r.Body) == "" || sameText(p.body) == sameText(r.Body)) {
+		if len(missing) == 0 && (len(r.Drafts) > 0 || p.state == submittedAs[event]) &&
+			(strings.TrimSpace(r.Body) == "" || sameText(p.body) == sameText(r.Body)) {
 			return nil
 		}
 		return errors.New("your review was submitted on GitHub meanwhile: reload the pull request")
