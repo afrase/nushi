@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -13,7 +14,8 @@ import (
 // then submits: steps GitHub can refuse one at a time. It reads the
 // review first and adds only the drafts not in it yet, so sending the
 // same review again after a failure never posts a comment twice, and
-// nothing is ever taken back (docs/facts/github.md).
+// nothing is ever taken back (docs/facts/github.md). A failed submission
+// reads the review again, as GitHub may have made it and lost the answer.
 
 const pendingQuery = `query PendingReview($review: ID!, $after: String) {
   node(id: $review) { ... on PullRequestReview {
@@ -157,25 +159,31 @@ func (p pending) submittedAs(event, text string) bool {
 	return p.state == submittedStates[event] && (strings.TrimSpace(text) == "" || sameText(p.body) == sameText(text))
 }
 
+// submitted is nil when p, no longer pending, is this call's submission
+// (by an earlier one GitHub didn't answer, or on github.com): it holds
+// every draft, whatever it was submitted as, since its comments are sent
+// and kept drafts would be posted again after a reload; with no drafts
+// the event and text are all a call says, so it must have been submitted
+// as them. Else it's the error saying it was submitted meanwhile.
+func (p pending) submitted(r Review, event string) error {
+	if len(p.missing(r.Drafts)) > 0 || len(r.Drafts) == 0 && !p.submittedAs(event, r.Body) {
+		return errors.New("your review was submitted on GitHub meanwhile: reload the pull request")
+	}
+	return nil
+}
+
 // joinPending adds the drafts the review doesn't hold yet to my pending
-// review r and submits it. A review already submitted (by an earlier
-// submission GitHub didn't answer, or on github.com) is this one when it
-// holds every draft, whatever it was submitted as: its comments are sent,
-// and kept drafts would be posted again after a reload. With no drafts
-// the event and text are all a call says, so the review must have been
-// submitted as them. Else nothing is added.
+// review r and submits it. A review already submitted is as submitted
+// says; nothing is added to it.
 func (c *Client) joinPending(ctx context.Context, r Review, event string, body any) error {
 	p, err := c.readPending(ctx, r.Pending)
 	if err != nil {
 		return fmt.Errorf("can't read your review pending on GitHub: %w", err)
 	}
-	missing := p.missing(r.Drafts)
 	if p.state != "PENDING" {
-		if len(missing) > 0 || len(r.Drafts) == 0 && !p.submittedAs(event, r.Body) {
-			return errors.New("your review was submitted on GitHub meanwhile: reload the pull request")
-		}
-		return nil
+		return p.submitted(r, event)
 	}
+	missing := p.missing(r.Drafts)
 	held := len(r.Drafts) - len(missing)
 	for _, d := range missing {
 		vars := d.vars()
@@ -186,7 +194,33 @@ func (c *Client) joinPending(ctx context.Context, r Review, event string, body a
 		held++
 	}
 	_, err = c.graphql(ctx, submitMutation, map[string]any{"review": r.Pending, "event": event, "body": body}, new(any))
-	return heldPending(err, held, len(r.Drafts))
+	if err == nil {
+		return nil
+	}
+	return c.failedSubmit(ctx, r, event, err, held)
+}
+
+// rereadLimit bounds the read after a failed submission, which has its
+// own time: the request's may be what ended it.
+const rereadLimit = 10 * time.Second
+
+// failedSubmit is the answer to a submission of r that failed with err,
+// held of its drafts in the review: GitHub may have made it and the
+// answer been lost, or the request ended (cancelled, out of time) after
+// GitHub had it. The review read once more, past the request's end,
+// tells: still pending, it wasn't; else it's as submitted says. Unread,
+// it can't be known.
+func (c *Client) failedSubmit(ctx context.Context, r Review, event string, err error, held int) error {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), rereadLimit)
+	defer cancel()
+	switch p, rerr := c.readPending(ctx, r.Pending); {
+	case rerr != nil:
+		return addSentence(err, "The review may have been submitted: reload the pull request before sending it again")
+	case p.state == "PENDING":
+		return heldPending(err, held, len(r.Drafts))
+	default:
+		return p.submitted(r, event)
+	}
 }
 
 // heldPending is err saying that n of a review's total inline comments
@@ -204,9 +238,14 @@ func heldPending(err error, n, total int) error {
 	case n > 1:
 		what, them = fmt.Sprintf("%d of this review's %d inline comments are", n, total), "them"
 	}
+	return addSentence(err, fmt.Sprintf("%s in your pending review on GitHub now; sending the review again won't add %s twice", what, them))
+}
+
+// addSentence is err followed by sentence s.
+func addSentence(err error, s string) error {
 	sep := ". "
 	if strings.HasSuffix(err.Error(), ".") {
 		sep = " "
 	}
-	return fmt.Errorf("%w%s%s in your pending review on GitHub now; sending the review again won't add %s twice", err, sep, what, them)
+	return fmt.Errorf("%w%s%s", err, sep, s)
 }

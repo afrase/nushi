@@ -1,12 +1,15 @@
 package githubapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 // pendingFake is GitHub holding my review R0, pending: Thread adds its
@@ -19,6 +22,7 @@ type pendingFake struct {
 	comments    []fakeComment
 	refuse      func(op string, vars map[string]any) string // GitHub's refusal, or ""
 	down        bool                                        // the review's read answers 502
+	lost        func()                                      // called when a submission is made, whose answer then never comes
 	threads     int                                         // Thread mutations sent
 	submits     int                                         // Submit mutations sent
 }
@@ -70,6 +74,7 @@ func newPendingFake(t *testing.T) *pendingFake {
 func decodeVars(r *http.Request) map[string]any {
 	var q struct{ Variables map[string]any }
 	_ = json.NewDecoder(r.Body).Decode(&q)
+	_, _ = io.Copy(io.Discard, r.Body) // read to its end, so the server sees the client go
 	return q.Variables
 }
 
@@ -121,15 +126,25 @@ func (p *pendingFake) serveThread(w http.ResponseWriter, r *http.Request) {
 func (p *pendingFake) serveSubmit(w http.ResponseWriter, r *http.Request) {
 	vars := decodeVars(r)
 	p.mu.Lock()
-	defer p.mu.Unlock()
 	p.submits++
 	if no := p.refused("Submit", vars); no != "" {
+		p.mu.Unlock()
 		_, _ = fmt.Fprintf(w, `{"data":{"submitPullRequestReview":null},"errors":[{"type":"UNPROCESSABLE","message":%q}]}`, no)
 		return
 	}
 	p.state = strings.ReplaceAll(vars["event"].(string), "COMMENT", "COMMENTED")
 	if b, ok := vars["body"].(string); ok {
 		p.body = b
+	}
+	lost := p.lost
+	p.mu.Unlock()
+	if lost != nil {
+		lost()
+		select { // until the client has gone
+		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+		}
+		return
 	}
 	_, _ = w.Write([]byte(`{"data":{"submitPullRequestReview":{"pullRequestReview":{"id":"R0"}}}}`))
 }
@@ -233,6 +248,51 @@ func TestPendingRetryAfterPush(t *testing.T) {
 	}
 	if got := p.seen(); got != `2 threads, 2 submits: "one two" COMMENTED` {
 		t.Fatal(got)
+	}
+}
+
+// A submission GitHub made whose answer was lost, the request cancelled
+// meanwhile: the review read again (past the cancellation) holds every
+// draft, so it's sent, and nothing is sent again.
+func TestPendingSubmitAnswerLost(t *testing.T) {
+	p := newPendingFake(t)
+	ctx, cancel := context.WithCancel(t.Context())
+	p.lost = cancel
+	if err := p.client().SubmitReview(ctx, into("comment", drafts("one", "two"))); err != nil {
+		t.Fatal(err)
+	}
+	if got := p.seen(); got != `2 threads, 1 submits: "one two" COMMENTED` || p.count("graphql PendingReview") != 2 {
+		t.Fatal(got, p.count("graphql PendingReview"))
+	}
+}
+
+// A refused submission leaves the review pending, as read again.
+func TestPendingSubmitRefused(t *testing.T) {
+	p := newPendingFake(t)
+	p.refuse = ownPull
+	err := p.client().SubmitReview(t.Context(), into("approve", drafts("one")))
+	if err == nil || !strings.Contains(err.Error(), "Can not approve your own pull request. This review's inline comment is in your pending review on GitHub now") {
+		t.Fatal(err)
+	}
+	if got := p.seen(); got != `1 threads, 1 submits: "one" PENDING` || p.count("graphql PendingReview") != 2 {
+		t.Fatal(got, p.count("graphql PendingReview"))
+	}
+}
+
+// A failed submission whose review can't be read again may have gone
+// through: the error says to reload, not that a retry is safe.
+func TestPendingSubmitFailedUnread(t *testing.T) {
+	p := newPendingFake(t)
+	p.refuse = func(op string, vars map[string]any) string {
+		if op == "Submit" {
+			p.down = true
+			return "Something went wrong"
+		}
+		return ""
+	}
+	err := p.client().SubmitReview(t.Context(), into("comment", drafts("one", "two")))
+	if err == nil || err.Error() != "GitHub: Something went wrong. The review may have been submitted: reload the pull request before sending it again" {
+		t.Fatal(err)
 	}
 }
 
