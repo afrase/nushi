@@ -21,7 +21,7 @@ Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades an
 <table>
 <tr>
 <td width="44%"><b>Any ACP agent.</b> Claude, Codex, Ante, oh-my-pi, OpenCode, Pi and PiG run as chats over the <a href="https://agentclientprotocol.com">Agent Client Protocol</a>, each your own CLI with its own login and history, so a chat resumes in a terminal.</td>
-<td><a href="docs/images/agents.png"><img src="docs/images/agents.png" width="440" alt="The New chat dialog listing the five agents"></a></td>
+<td><a href="docs/images/agents.png"><img src="docs/images/agents.png" width="440" alt="The New chat dialog listing the agents"></a></td>
 </tr>
 <tr>
 <td><b>Changes and review.</b> A side-by-side or unified diff of the chat's work, with comments on its lines that go to the agent as one message.</td>
