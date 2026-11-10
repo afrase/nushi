@@ -23,6 +23,7 @@ type History struct {
 	last     map[key]int // each session's last update, in order
 	n        int
 	prompts  map[string][][]string
+	options  map[string]map[string]string // opencode's, by session (opencode.go)
 }
 
 // Prompts returns the text blocks of each prompt session had.

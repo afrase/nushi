@@ -1,7 +1,7 @@
 // Package acptest is a fake ACP agent for tests, shaped like Claude's
-// agent (or like Codex's adapter, with Agent.Codex: codex.go; or like omp,
-// with Agent.Omp: omp.go). It answers prompts by script, keyed on the
-// prompt's text:
+// agent (or like Codex's adapter, with Agent.Codex: codex.go; like omp,
+// with Agent.Omp: omp.go; or like opencode, with Agent.Opencode:
+// opencode.go). It answers prompts by script, keyed on the prompt's text:
 //
 //   - containing "permission": a tool call that asks permission (options
 //     "allow" and "reject"), then a message naming the option picked, or
@@ -63,11 +63,12 @@ import (
 
 // Agent is one fake agent process.
 type Agent struct {
-	History *History
-	Pause   time.Duration
-	Codex   bool // answers as codex-acp does (codex.go)
-	Omp     bool // answers as omp does (omp.go)
-	Images  bool // says it takes images in prompts (as plain agents don't)
+	History  *History
+	Pause    time.Duration
+	Codex    bool // answers as codex-acp does (codex.go)
+	Omp      bool // answers as omp does (omp.go)
+	Opencode bool // answers as opencode does (opencode.go)
+	Images   bool // says it takes images in prompts (as plain agents don't)
 	// For the log: what it writes to its stderr, how long session/load
 	// takes, and whether it reopens a session it doesn't know (as if
 	// another process had kept it), replaying nothing.
@@ -93,9 +94,14 @@ type frame struct {
 	Method  string          `json:"method,omitempty"`
 	Params  json.RawMessage `json:"params,omitempty"`
 	Result  json.RawMessage `json:"result,omitempty"`
-	Error   *struct {
-		Message string `json:"message"`
-	} `json:"error,omitempty"`
+	Error   *rpcError       `json:"error,omitempty"`
+}
+
+// rpcError is a request's error: the plain agent's is only a message.
+type rpcError struct {
+	Code    int    `json:"code,omitempty"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
 // Serve speaks ACP on r and w until r ends.
@@ -149,9 +155,17 @@ func (a *Agent) cancelled(session string) bool {
 }
 
 func (a *Agent) fail(f frame, msg string) {
-	a.send(frame{ID: f.ID, Error: &struct {
-		Message string `json:"message"`
-	}{msg}})
+	a.send(frame{ID: f.ID, Error: &rpcError{Message: msg}})
+}
+
+// noSession is the error for a session/load of a session the history
+// doesn't have: opencode's is invalid params with the id, not ACP's
+// resource not found (docs/facts/opencode.md).
+func (a *Agent) noSession(id string) *rpcError {
+	if a.Opencode {
+		return &rpcError{Code: -32602, Message: "Invalid params: session not found: " + id, Data: map[string]any{"sessionId": id}}
+	}
+	return &rpcError{Message: "no such session"}
 }
 
 func (a *Agent) send(f frame) {
@@ -211,6 +225,7 @@ func (a *Agent) answer(f frame) {
 		}
 	}
 	var result any
+	opened := "" // the session this request opened
 	switch f.Method {
 	case "initialize":
 		caps := map[string]any{"fork": map[string]any{}, "delete": map[string]any{}, "close": map[string]any{}, "list": map[string]any{}}
@@ -244,7 +259,7 @@ func (a *Agent) answer(f frame) {
 		a.mu.Lock()
 		a.cwds[id] = p.Cwd
 		a.mu.Unlock()
-		result = map[string]any{"sessionId": id}
+		opened, result = id, map[string]any{"sessionId": id}
 		if a.Codex {
 			result = codexSession(id)
 		}
@@ -252,7 +267,7 @@ func (a *Agent) answer(f frame) {
 		time.Sleep(a.LoadDelay)
 		updates, ok := a.History.get(p.Cwd, p.SessionID)
 		if !ok && !a.LoadAny {
-			a.fail(f, "no such session")
+			a.send(frame{ID: f.ID, Error: a.noSession(p.SessionID)})
 			return
 		}
 		a.mu.Lock()
@@ -263,7 +278,7 @@ func (a *Agent) answer(f frame) {
 				a.send(frame{Method: "session/update", Params: json.RawMessage(`{"sessionId":"` + p.SessionID + `","update":` + string(u) + `}`)})
 			}
 		}
-		result = map[string]any{}
+		opened, result = p.SessionID, map[string]any{}
 	case "session/close", "session/delete":
 		a.mu.Lock()
 		delete(a.cwds, p.SessionID)
@@ -280,6 +295,10 @@ func (a *Agent) answer(f frame) {
 		result = map[string]any{"stopReason": a.prompt(p.SessionID, blocks)}
 	default:
 		result = map[string]any{}
+	}
+	if a.Opencode {
+		a.opencodeAnswer(f, opened, result)
+		return
 	}
 	r, _ := json.Marshal(result)
 	a.send(frame{ID: f.ID, Result: r})
@@ -337,6 +356,9 @@ func (a *Agent) prompt(session string, blocks []string) string { //nolint:gocogn
 				a.update(session, map[string]any{"sessionUpdate": "session_info_update", "title": title})
 			})
 		}
+	}
+	if stop := a.opencodeScript(session, text); stop != "" {
+		return stop
 	}
 	switch {
 	case a.Codex && strings.Contains(text, "run"):
