@@ -215,20 +215,27 @@ func pluginIsFile(dir, name string) bool {
 // looked for at any depth of either spelling's entry: a card that names
 // one too many hides none. Of headers only the names show: the values may
 // be secrets. env names the variables it takes that key from, which may
-// be any of the user's.
+// be any of the user's. A provider's package (opencode 2's package, 1's
+// npm, also on a model) is code: opencode installs it from npm when it's
+// missing, or takes a file:// one as it is, and imports it into its own
+// process once a model of that provider is used (read:
+// core/src/plugin/provider/sdk-factory.ts).
 func providerRuns(c object, add func(what string, lines ...string)) {
 	for _, key := range []string{"provider", "providers"} {
 		providers := as[object](c[key])
 		for _, id := range sorted(providers) {
-			var urls, headers []string
+			var packages, urls, headers []string
 			each(providers[id], func(name string, in any) {
 				switch name {
+				case "package", "npm":
+					packages = append(packages, as[string](in))
 				case "baseURL", "api":
 					urls = append(urls, as[string](in))
 				case "headers":
 					headers = append(headers, sorted(as[object](in))...)
 				}
 			})
+			add("Package imported into opencode for model provider "+id+", installed from npm if missing", once(packages)...)
 			add("Requests to model provider "+id+" go to", once(urls)...)
 			add("Headers sent with requests to model provider "+id, once(headers)...)
 			add("Environment variables model provider "+id+" takes its key from", strs(as[object](providers[id])["env"])...)
