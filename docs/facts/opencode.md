@@ -9,7 +9,7 @@ What the code depends on (`internal/opencode*`), from driving Homebrew's `openco
 **Start and version (seen)**
 - `opencode acp` speaks ACP as JSON lines on stdio. It starts a server child of its own, `opencode serve --stdio --port 0`, in its own process group (127.0.0.1 and a random port; a random password too, read), and no background service. stderr is empty by default; its log is `log/opencode.log` in its data folder.
 - `opencode --version` prints `opencode v2.2.6` and exits 0. Only its TUI checks for updates; `acp` doesn't (read).
-- Even `opencode --version` makes opencode's folders: in a fresh `HOME` it left an empty config folder, a 155-byte log, `repos/`, the state folder and `cache/bin`, and in `TMPDIR` a bun dylib and an `opencode/` folder; no config file and no credentials. So Nushi finding its version (Settings › Agents) makes them too.
+- Even `opencode --version` makes opencode's folders: in a fresh `HOME` it left an empty config folder, a 155-byte log, `repos/`, the state folder and `cache/bin`, and in `TMPDIR` a bun dylib and an `opencode/` folder; no config file and no credentials. So Nushi finding the agents makes them too: it asks each one's version when the app connects, when New chat opens and in Settings › Agents (`agents.Service.List`).
 - opencode 1 (npm's `opencode-ai`, 1.19.x) was neither installed nor run, so what its ACP does isn't known here; Nushi asks for 2.0.0 (`opencode.Min`). 2 takes over 1's sessions and sign-ins in the same data folder (read).
 
 **initialize (seen)**
