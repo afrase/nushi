@@ -127,11 +127,20 @@ void main() {
       'Jot it down',
     ]);
     expect(sidebarSections.value.single.chats, ['d']);
+    // Its project stays, its header alone, under those with chats (as
+    // attic, whose one chat is pinned): neither is without chats.
+    expect(find.text('garden'), findsNWidgets(2));
+    expect(find.text('No chats'), findsNothing);
+    expect(
+      tester.getCenter(find.text('garden').last).dy,
+      greaterThan(tester.getCenter(_in('Jot it down')).dy),
+    );
 
     // By a drag onto its header; the last moved in comes first.
     await _dragTo(tester, 'Cap the rates', tester.getCenter(_in('Reviews')));
     expect(sidebarSections.value.single.chats, ['c', 'd']);
-    expect(find.text('cappy'), findsOne); // its row says its project
+    // Its row says its project, whose group stays too.
+    expect(find.text('cappy'), findsNWidgets(2));
     expect(_titles(tester).sublist(2, 5), [
       'Reviews',
       'Cap the rates',
@@ -182,9 +191,9 @@ void main() {
       'Cap the rates',
       'Plant the beds',
     ]);
-    // ledger-poc's chats are all in Reviews: no group of its own, and the
-    // rows say it.
-    expect(find.text('ledger-poc'), findsNWidgets(2));
+    // ledger-poc's chats are all in Reviews: the rows say it, over its
+    // group, which stays with none.
+    expect(find.text('ledger-poc'), findsNWidgets(3));
 
     // Later, by its header, above Reviews.
     await _dragTo(

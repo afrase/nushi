@@ -3,6 +3,7 @@ import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/card_list.dart' show reordered;
 import 'package:nushi/chat.dart';
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
@@ -22,13 +23,18 @@ import 'package:nushi/widgets.dart';
 /// header's chevron collapses it (kept in [sidebarCollapsed]). A collapsed
 /// group shows the most urgent of its chats' states as one dot beside its
 /// name, and of its rows only the selected chat's ([shownChats]), the
-/// others folding away.
+/// others folding away. A group with no chats to show (a project kept,
+/// [sidebarProjects]) is its header alone while its chats are pinned or
+/// in a section; once none of its folder is left unarchived ([live]) it
+/// says "No chats" under its header, unless collapsed, and its menu's
+/// Remove from sidebar forgets it ([forgetProject]).
 class SidebarGroups extends StatelessWidget {
   const new({
     required this.groups,
     required this.selectedId,
     required this.starting,
     required this.startingAgent,
+    required this.live,
     required this.row,
     required this.onNew,
     required this.onTerminal,
@@ -42,6 +48,11 @@ class SidebarGroups extends StatelessWidget {
   /// The folder a chat is starting in, while one is, and its agent.
   final String? starting;
   final String? startingAgent;
+
+  /// The folders with a chat that isn't archived ([liveFolders]), shown
+  /// here or not (pinned, in a section): those the sidebar can't forget,
+  /// and whose empty group doesn't say "No chats".
+  final Set<String> live;
   final Widget Function(ChatState chat, Movable movable) row;
 
   /// A new chat in a folder ('' for none); null while one starts.
@@ -86,7 +97,20 @@ class SidebarGroups extends StatelessWidget {
               onTerminal: folder.isEmpty || chats.isEmpty
                   ? null
                   : () => onTerminal(folder, chats),
+              onRemove: live.contains(folder)
+                  ? null
+                  : () => forgetProject(folder),
               drag: drag,
+            ),
+            // Only when it's true (none pinned or in a section), and not
+            // over the row of a chat starting there.
+            Disclosure(
+              open:
+                  chats.isEmpty &&
+                  !live.contains(folder) &&
+                  !collapsed &&
+                  starting != folder,
+              child: const GroupHint('No chats'),
             ),
             MovableRows(
               standIn: starting == folder
@@ -157,7 +181,9 @@ Map<String, String> twinParents(Iterable<String> folders) {
 /// collapses the group, with the summary dot beside the name while it's
 /// collapsed; a + for a new chat there, shown under the pointer or with
 /// keyboard focus (its room kept, so names don't move). Dragged, it moves
-/// the group.
+/// the group. Its menu (a right-click): New chat here, Open in terminal,
+/// and for a folder Remove from sidebar, off ([onRemove] null) while a
+/// chat of it isn't archived.
 class _Header extends StatefulWidget {
   const new(
     this.folder, {
@@ -166,6 +192,7 @@ class _Header extends StatefulWidget {
     required this.collapsed,
     required this.onNew,
     required this.onTerminal,
+    required this.onRemove,
     required this.drag,
   });
 
@@ -175,6 +202,7 @@ class _Header extends StatefulWidget {
   final bool collapsed;
   final VoidCallback? onNew;
   final VoidCallback? onTerminal; // a terminal there, in one of its chats
+  final VoidCallback? onRemove; // forgets the project, once no chat is live
   final ItemDrag<_Moving> drag;
 
   @override
@@ -196,6 +224,14 @@ class _HeaderState extends State<_Header> {
       entries: [
         MenuEntry('New chat here', onPick: widget.onNew),
         MenuEntry('Open in terminal', onPick: widget.onTerminal),
+        if (folder.isNotEmpty)
+          MenuEntry(
+            'Remove from sidebar',
+            tooltip: widget.onRemove == null
+                ? "It has chats that aren't archived"
+                : '',
+            onPick: widget.onRemove,
+          ),
       ],
       builder: (context, open) => LayoutBuilder(
         builder: (context, box) => widget.drag.draggable(

@@ -159,7 +159,7 @@ class ArchivedSection extends StatelessWidget {
 }
 
 /// What a group with no rows says under its header, muted, at its name's
-/// place: a section's "Drag chats here".
+/// place: a section's "Drag chats here", a project's "No chats".
 class GroupHint extends StatelessWidget {
   const new(this.text, {super.key});
 

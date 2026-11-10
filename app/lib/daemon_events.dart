@@ -187,7 +187,7 @@ extension DaemonEvents on Daemon {
     } else {
       drafts?.attach(chat);
     }
-    return chat
+    chat
       ..worktree = c.hasWorktree() ? c.worktree : null
       ..agent = c.agent
       ..scratch = c.scratch
@@ -212,5 +212,10 @@ extension DaemonEvents on Daemon {
       )
       // Only the list carries a status; a chat event would clear it.
       ..listed(c.hasStatus() ? c.status : null);
+    // The sidebar (not the phone's list) keeps its folder as a project,
+    // with chats or none ([sidebarProjects]); archived, it brings none
+    // back.
+    if (!remote && !chat.archived && !chat.scratch) keepProject(chat.home);
+    return chat;
   }
 }

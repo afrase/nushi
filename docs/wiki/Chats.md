@@ -14,6 +14,13 @@ The shortcuts below are the Mac's. On Linux, use Ctrl where the Mac uses ⌘.
 
 The sidebar lists your chats by project. Click one to open it.
 
+A project stays in the sidebar when its last chat is archived or deleted, with **No chats** under its name, so its **+** starts the next chat there. To take an empty project out:
+
+1. Right-click the project's name.
+2. Pick **Remove from sidebar**.
+
+It comes back when you start a chat in that folder again. **Remove from sidebar** is greyed out while the project still has a chat that isn't archived.
+
 ## Send a message
 
 Type in the box at the bottom and press **⏎** to send. **⇧⏎** starts a new line.

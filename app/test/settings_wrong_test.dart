@@ -19,7 +19,8 @@ void main() {
           'githubTeams', 'githubCards', 'githubCollapsed', 'githubDays',
           'githubHidden', 'githubOwners', 'githubFindings',
           'githubFindingBots', 'githubFindingHeadings', 'sidebarOrder',
-          'sidebarCollapsed', 'sidebarChats', 'pinnedCollapsed', 'models',
+          'sidebarCollapsed', 'sidebarProjects', 'sidebarChats', //
+          'pinnedCollapsed', 'models',
           'opened', 'pins', 'pullSeen', 'cleanUpLater', 'panes',
           'termFont', 'termSize', 'appearance',
           'alertNeedsYou', 'alertFinished', 'alertFailed', 'alertSound',
@@ -42,6 +43,7 @@ void main() {
     expect(githubDays.value, 90);
     expect(githubFindingBots.value, 'wrong');
     expect(sidebarChats.value, isEmpty);
+    expect(sidebarProjects.value, isEmpty);
     expect(chatOpened.value, isEmpty);
     expect(pinnedFiles.value, isEmpty);
     expect(pullSeen.value, isEmpty);

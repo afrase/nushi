@@ -18,9 +18,10 @@ import 'package:nushi/file_mode.dart';
 /// terminal's font, whether the chat takes the whole width,
 /// whether the sidebar is hidden, the Jira task list's groups and assignee
 /// filters, the GitHub view's cards and filters, the sidebar's project
-/// groups' order and which are collapsed, each project's chats' order,
-/// whether Pinned is collapsed, the sidebar's arrangement (grouping, sort,
-/// what rows show) and sections, the models picked last, each repository's
+/// groups' order and which are collapsed, the projects it keeps (with
+/// chats or none), each project's chats' order, whether Pinned is
+/// collapsed, the sidebar's arrangement (grouping, sort, what rows show)
+/// and sections, the models picked last, each repository's
 /// merge method, each chat's pinned artifacts, and the Mac's notifications
 /// and Dock badge, the appearance and the color theme, whether the
 /// composer checks spelling, whether a chat's links open in a browser
@@ -136,6 +137,28 @@ final Pref<Map<String, String>> mergeMethods = Pref(
 /// such as `date:9today`) and the sections (`Section.key`).
 final Pref<List<String>> sidebarOrder = _list('sidebarOrder');
 final Pref<Set<String>> sidebarCollapsed = _set('sidebarCollapsed');
+
+/// The sidebar's projects, by folder path, in the order they joined: each
+/// folder an unarchived chat was in ([keepProject]). One stays with its
+/// chats archived or deleted, an empty group whose + starts the next chat
+/// there, until Remove from sidebar ([forgetProject]).
+final Pref<Set<String>> sidebarProjects = _set('sidebarProjects');
+
+/// Keeps [folder] among the sidebar's projects, if it isn't one yet;
+/// never '', the chats with no folder, which aren't a project.
+void keepProject(String folder) {
+  if (folder.isEmpty || sidebarProjects.value.contains(folder)) return;
+  sidebarProjects.value = {...sidebarProjects.value, folder};
+}
+
+/// Takes [folder] out of the sidebar's projects, and with it its place
+/// among them, its collapse and its chats' order: one save.
+void forgetProject(String folder) {
+  sidebarProjects.value = {...sidebarProjects.value}..remove(folder);
+  sidebarOrder.value = [...sidebarOrder.value.where((f) => f != folder)];
+  sidebarCollapsed.value = {...sidebarCollapsed.value}..remove(folder);
+  sidebarChats.value = {...sidebarChats.value}..remove(folder);
+}
 
 /// The order each project's chats were dragged into, by folder path
 /// ('' for no folder): chat ids, those it doesn't name (new chats) going

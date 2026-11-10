@@ -43,6 +43,7 @@ final _saved = <String, Object?>{
   'githubFindingHeadings': 'Blockers',
   'sidebarOrder': ['/b', '/a'],
   'sidebarCollapsed': ['/a'],
+  'sidebarProjects': ['/b', '/a', '/c'],
   'sidebarChats': {
     '/a': ['y', 'x'],
   },
@@ -94,6 +95,7 @@ List<ValueNotifier<Object?>> get _all => [
   githubFindingHeadings,
   sidebarOrder,
   sidebarCollapsed,
+  sidebarProjects,
   sidebarChats,
   pinnedCollapsed,
   recentModels,
@@ -131,7 +133,7 @@ void main() {
     expect(githubDays.value, 30);
     expect(dismissedUpdate.value, '0.1.17');
     expect(wrapLines.value, isFalse);
-    expect(_all.map((p) => p.value), hasLength(39)); // each made
+    expect(_all.map((p) => p.value), hasLength(40)); // each made
     showDetails.value = true;
     await pumpEventQueue();
     expect(readSaved(), {
