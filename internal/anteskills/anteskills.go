@@ -172,13 +172,26 @@ func (a Ante) SetSkillOn(ctx context.Context, folder, source, name string, on bo
 	})
 }
 
-// Trash moves one of Ante's own skill folders to the Trash: right in
-// your skills folder or the folder's .ante/skills (not Claude's, nor its
-// bundled ones).
-func (Ante) Trash(ctx context.Context, folder, path string) error {
-	var project []string
+// own are the places Ante's own skill folders are in: the folder's
+// .ante/skills and your skills folder (not Claude's, nor its bundled
+// ones).
+func own(folder string) (project, yours []string) {
 	if !skillfile.Linked(folder, ".ante/skills") {
 		project = append(project, filepath.Join(folder, ".ante", "skills"))
 	}
-	return skillfile.Trash(ctx, project, []string{filepath.Join(ante.Home(), "skills")}, path)
+	return project, []string{filepath.Join(ante.Home(), "skills")}
+}
+
+// CanTrash says why Trash wouldn't move path: nil only for a skill's
+// folder right in one of Ante's own places.
+func (Ante) CanTrash(_ context.Context, folder, path string) error {
+	project, yours := own(folder)
+	return skillfile.CanTrash(project, yours, path)
+}
+
+// Trash moves one of Ante's own skill folders to the Trash: only one
+// CanTrash passes.
+func (Ante) Trash(ctx context.Context, folder, path string) error {
+	project, yours := own(folder)
+	return skillfile.Trash(ctx, project, yours, path)
 }

@@ -140,7 +140,6 @@ class _SharedRow extends StatelessWidget {
         agentTitle(a.agent) + (a.via.isEmpty ? '' : ' (linked)'),
     ];
     final canLink = mine == null && !list.list.readsShared;
-    final lone = loneFile(skill);
     return Row(
       children: [
         Expanded(
@@ -218,10 +217,12 @@ class _SharedRow extends StatelessWidget {
               conventions.reveal,
               onPick: () => revealInFinder(skill.path),
             ),
-            // A lone file isn't a folder to link to or move to the Trash.
-            if (canLink && !lone)
+            // The daemon says what it would refuse to link or to move to
+            // the Trash (a file; for a link, one in a group too).
+            if (canLink && !skill.noLink)
               MenuEntry('Link for $title…', onPick: () => _link(context)),
-            if (!lone) MenuEntry('Delete…', onPick: () => _delete(context)),
+            if (!skill.noTrash)
+              MenuEntry('Delete…', onPick: () => _delete(context)),
           ],
         ),
       ],

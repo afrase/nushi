@@ -138,11 +138,12 @@ class _SkillRow extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final muted = theme.ui(theme.t.textMuted, size: 11);
     final plugin = skill.source == 'plugin';
-    // A lone file isn't a folder Nushi moves to the Trash.
+    // The daemon says what its Trash would refuse (a file, one in a
+    // group, another agent's).
     final deletable =
         !plugin &&
         skill.source != 'system' &&
-        !loneFile(skill) &&
+        !skill.noTrash &&
         ownSkill(list.agent, skill.path);
     final word = _stateWord(skill.state);
     return Row(

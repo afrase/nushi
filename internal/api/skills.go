@@ -18,7 +18,8 @@ func (s *server) ListSkills(ctx context.Context, req *connect.Request[nushiv1.Li
 		NoSkills: list.NoSkills, NoSwitch: list.NoSwitch, ReadsShared: list.ReadsShared, HasBuiltIn: list.HasBuiltIn, HasPlugins: list.HasPlugins}
 	for _, k := range list.Skills {
 		sk := &nushiv1.Skill{Name: k.Name, Description: k.Description, Source: k.Source, Plugin: k.Plugin,
-			Path: k.Path, State: k.State, SetIn: k.SetIn, Tokens: int32(min(k.Tokens, 1<<30)), Linked: k.Linked, Everywhere: k.Everywhere}
+			Path: k.Path, State: k.State, SetIn: k.SetIn, Tokens: int32(min(k.Tokens, 1<<30)), Linked: k.Linked, Everywhere: k.Everywhere,
+			OneFile: k.OneFile, NoTrash: k.NoTrash, NoLink: k.NoLink}
 		for _, a := range k.Agents {
 			sk.Agents = append(sk.Agents, &nushiv1.SkillAgent{Agent: a.Agent, State: a.State, SetIn: a.SetIn, Via: a.Via})
 		}

@@ -48,8 +48,11 @@ type Skill struct {
 	// installed with it) or "shared" (.agents/skills, which several agents
 	// read); Plugin is a plugin's id.
 	Source, Plugin string
-	// Path is the skill's folder (SKILL.md is in it).
-	Path string
+	// Path is the skill's folder (SKILL.md is in it); with OneFile, the
+	// skill's one Markdown file, which no folder of its own holds
+	// (opencode's lone <name>.md, or the SKILL.md right in a place).
+	Path    string
+	OneFile bool
 	// State is "on", "name-only", "user-invocable-only" or "off"; SetIn
 	// names a settings file that decides it other than the one Nushi
 	// changes for the skill.
@@ -66,6 +69,12 @@ type Skill struct {
 	// Agents are the agents that read a shared skill's folder, each with
 	// the skill's state for it.
 	Agents []SkillAgent
+	// NoTrash says Nushi's Trash would refuse the skill for what it is or
+	// where it is (a file, one in a group, another agent's, a plugin's),
+	// and NoLink that Link would refuse to give the listing's agent this
+	// shared skill. The Skills service sets both, by the checks Trash and
+	// Link refuse by.
+	NoTrash, NoLink bool
 }
 
 // SkillAgent is a shared skill as one agent has it.

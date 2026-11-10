@@ -221,7 +221,7 @@ func TestTrashOfASharedSkill(t *testing.T) {
 	skill(t, filepath.Join(shared, "group"), "deep")
 	skill(t, filepath.Join(shared, "group"), "other")
 	testcheck.Write(t, filepath.Join(shared, "lone.md"), "A lone file.\n")
-	svc := skills.New([]string{"opencode"}, map[string]skills.Reader{"opencode": OpenCode{}}, skillfile.Trash)
+	svc := skills.New([]string{"opencode"}, map[string]skills.Reader{"opencode": OpenCode{}}, skillfile.CanTrash, skillfile.Trash)
 	ctx := context.Background()
 	l, err := svc.List(ctx, "opencode", deeper)
 	if err != nil {
@@ -274,7 +274,7 @@ func TestTrashOfAPlaceThatIsASkill(t *testing.T) {
 			place := c.place(os.Getenv("HOME"), config, top)
 			file := filepath.Join(place, "SKILL.md")
 			testcheck.Write(t, file, "---\ndescription: the place\n---\n")
-			svc := skills.New([]string{"opencode"}, map[string]skills.Reader{"opencode": OpenCode{}}, skillfile.Trash)
+			svc := skills.New([]string{"opencode"}, map[string]skills.Reader{"opencode": OpenCode{}}, skillfile.CanTrash, skillfile.Trash)
 			ctx := context.Background()
 			l, err := svc.List(ctx, "opencode", deeper)
 			if err != nil {
@@ -309,5 +309,51 @@ func TestTrashOfAPlaceThatIsASkill(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// The list says of each skill whether it is one file and whether Delete
+// would refuse it, and Delete refuses exactly those: a file, one in a
+// group of opencode's own (a group named as a place is, too) and Claude's,
+// but not a shared one in a group. Link is refused for all: Nushi links
+// nothing for opencode.
+func TestTheListSaysWhatTrashRefuses(t *testing.T) {
+	config, top, deeper := setup(t)
+	trashByRemoving(t)
+	skill(t, filepath.Join(top, ".opencode", "skills", "skills"), "inskills")
+	skill(t, filepath.Join(top, ".agents", "skills", "group"), "deep")
+	testcheck.Write(t, filepath.Join(top, ".agents", "skills", "lone.md"), "A lone file.\n")
+	testcheck.Write(t, filepath.Join(config, "skill", "SKILL.md"), "The place itself.\n")
+	svc := skills.New([]string{"opencode"}, map[string]skills.Reader{"opencode": OpenCode{}}, skillfile.CanTrash, skillfile.Trash)
+	ctx := context.Background()
+	l, err := svc.List(ctx, "opencode", deeper)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, s := range l.Skills {
+		got[s.Name] = fmt.Sprintf("file:%v delete:%v", s.OneFile, !s.NoTrash)
+		if fi, err := os.Stat(s.Path); err != nil || fi.Mode().IsRegular() != s.OneFile {
+			t.Errorf("%s: one file %v at %s (%v)", s.Name, s.OneFile, s.Path, err)
+		}
+		if s.Source == "shared" {
+			if err := svc.Link(ctx, "opencode", deeper, s.Path); err == nil || !s.NoLink {
+				t.Errorf("%s: link %v, the list says no link %v", s.Name, err, s.NoLink)
+			}
+		}
+		if err := svc.Trash(ctx, "opencode", deeper, s.Path); (err != nil) != s.NoTrash {
+			t.Errorf("%s: Trash %v, the list says no Trash %v", s.Name, err, s.NoTrash)
+		}
+	}
+	for name, want := range map[string]string{
+		"mine": "file:false delete:true", "proj": "file:false delete:true", "release": "file:false delete:true",
+		"everyday": "file:false delete:true", "deep": "file:false delete:true",
+		"nested": "file:false delete:false", "inskills": "file:false delete:false", "claudeproj": "file:false delete:false",
+		"claudeuser": "file:false delete:false", "loose": "file:true delete:false", "lone": "file:true delete:false",
+		"skill": "file:true delete:false",
+	} {
+		if got[name] != want {
+			t.Errorf("%s: %q, want %q", name, got[name], want)
+		}
 	}
 }

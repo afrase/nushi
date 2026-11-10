@@ -110,8 +110,8 @@ func (OpenCode) List(_ context.Context, folder string) (model.Skills, error) {
 				continue
 			}
 			seen[f.id] = true
-			s := model.Skill{Name: f.id, Description: f.Description, Source: r.source, Path: f.path, Linked: f.linked,
-				Everywhere: r.everywhere, State: "on", Tokens: skillfile.Tokens(f.id + f.Description)}
+			s := model.Skill{Name: f.id, Description: f.Description, Source: r.source, Path: f.path, OneFile: f.path == f.file,
+				Linked: f.linked, Everywhere: r.everywhere, State: "on", Tokens: skillfile.Tokens(f.id + f.Description)}
 			if off, setIn := docs.off(f.id); off {
 				s.State, s.SetIn = "off", setIn
 			}
@@ -121,15 +121,9 @@ func (OpenCode) List(_ context.Context, folder string) (model.Skills, error) {
 	return out, nil
 }
 
-// Trash moves one of opencode's own skill folders to the Trash: right in
-// your config's skills folder or a .opencode/skills (or skill) opencode
-// reads here. One in a group, and a skill in one file (a lone <name>.md,
-// or the SKILL.md that makes a place a skill), stay, and the error says
-// which it is: Nushi's Trash takes a skill's folder from its place and
-// nothing else (skillfile.Trash), never a file, a folder further down or
-// the place.
-func (OpenCode) Trash(ctx context.Context, folder, path string) error {
-	var project, yours []string
+// own are the places opencode's own skill folders are in: each
+// .opencode/skills (or skill) opencode reads here, and your config's.
+func own(folder string) (project, yours []string) {
 	for _, r := range roots(git.RealPath(folder)) {
 		switch {
 		case r.project && r.source == "project" && filepath.Base(filepath.Dir(r.path)) == ".opencode":
@@ -138,6 +132,17 @@ func (OpenCode) Trash(ctx context.Context, folder, path string) error {
 			yours = append(yours, r.path)
 		}
 	}
+	return project, yours
+}
+
+// CanTrash says why Trash wouldn't move path: nil only for a skill's
+// folder right in one of opencode's own places. One in a group, and a
+// skill in one file (a lone <name>.md, or the SKILL.md that makes a place
+// a skill), stay, and the error says which it is: Nushi's Trash takes a
+// skill's folder from its place and nothing else (skillfile.Trash), never
+// a file, a folder further down or the place.
+func (OpenCode) CanTrash(_ context.Context, folder, path string) error {
+	project, yours := own(folder)
 	for _, place := range slices.Concat(project, yours) {
 		rel, err := filepath.Rel(place, path)
 		if err != nil || rel == "." || !filepath.IsLocal(rel) || filepath.Clean(path) != path {
@@ -150,5 +155,15 @@ func (OpenCode) Trash(ctx context.Context, folder, path string) error {
 			return fmt.Errorf("%s is a skill in one file; Nushi moves only a skill's folder to the Trash", path)
 		}
 	}
+	return skillfile.CanTrash(project, yours, path)
+}
+
+// Trash moves one of opencode's own skill folders to the Trash: only one
+// CanTrash passes.
+func (o OpenCode) Trash(ctx context.Context, folder, path string) error {
+	if err := o.CanTrash(ctx, folder, path); err != nil {
+		return err
+	}
+	project, yours := own(folder)
 	return skillfile.Trash(ctx, project, yours, path)
 }

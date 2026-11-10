@@ -209,15 +209,13 @@ func Top(folder string) string {
 	}
 }
 
-// Trash moves a skill's folder (or the link in its place, not what it
-// points at) to the Trash: only a folder right in one of the project's
-// roots or yours, not named with a leading dot, holding a SKILL.md. One of
+// CanTrash says why Trash wouldn't move path, for its shape or its place,
+// and moves nothing: nil for a folder right in one of the project's roots
+// or yours, not named with a leading dot, holding a SKILL.md. One of
 // yours may be reached through a link (your dotfiles'); a project's root
-// must not be one. A project's skill is first moved, through an os.Root of
-// its repository (or the folder holding the root), into a fresh folder
-// there, and trashed from it: a root swapped for a link after the check
-// can't make the Trash take something outside.
-func Trash(ctx context.Context, project, yours []string, path string) error {
+// must not be one. Trash refuses by it, and a listing says by it which
+// skills have no Delete.
+func CanTrash(project, yours []string, path string) error {
 	name := filepath.Base(path)
 	root := filepath.Dir(path)
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path || strings.HasPrefix(name, ".") ||
@@ -227,14 +225,32 @@ func Trash(ctx context.Context, project, yours []string, path string) error {
 	if _, err := os.Stat(filepath.Join(path, "SKILL.md")); err != nil {
 		return fmt.Errorf("%s isn't a skill's folder", path)
 	}
-	if err := trashReady(); err != nil {
-		return err
-	}
 	if !slices.Contains(project, root) {
-		return trash(ctx, path)
+		return nil
 	}
 	if resolved, err := filepath.EvalSymlinks(root); err != nil || resolved != root {
 		return fmt.Errorf("%s is a symlink; not moving what's in it", root)
+	}
+	return nil
+}
+
+// Trash moves a skill's folder (or the link in its place, not what it
+// points at) to the Trash: only one CanTrash passes. A project's skill is
+// first moved, through an os.Root of its repository (or the folder
+// holding the root), into a fresh folder there, and trashed from it: a
+// root swapped for a link after the check can't make the Trash take
+// something outside.
+func Trash(ctx context.Context, project, yours []string, path string) error {
+	if err := CanTrash(project, yours, path); err != nil {
+		return err
+	}
+	if err := trashReady(); err != nil {
+		return err
+	}
+	name := filepath.Base(path)
+	root := filepath.Dir(path)
+	if !slices.Contains(project, root) {
+		return trash(ctx, path)
 	}
 	base := cmp.Or(Top(root), filepath.Dir(filepath.Dir(root)))
 	r, err := os.OpenRoot(base)

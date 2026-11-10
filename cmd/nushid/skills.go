@@ -15,5 +15,5 @@ func newSkills(known []knownagents.Agent) *skills.Service {
 		order = append(order, a.Agent.Name)
 		readers[a.Agent.Name] = a.Skills
 	}
-	return skills.New(order, readers, skillfile.Trash)
+	return skills.New(order, readers, skillfile.CanTrash, skillfile.Trash)
 }

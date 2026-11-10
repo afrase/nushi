@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -31,7 +32,15 @@ func (noExtras) List(context.Context, string) (model.Skills, error) { return mod
 func (noExtras) SetSkillOn(context.Context, string, string, string, bool) error {
 	return nil
 }
-func (noExtras) Trash(context.Context, string, string) error { return nil }
+func (noExtras) CanTrash(context.Context, string, string) error { return nil }
+func (noExtras) Trash(context.Context, string, string) error    { return nil }
+
+// fileSkill is an agent's skills with one, a shared skill in one file.
+type fileSkill struct{ noExtras }
+
+func (fileSkill) List(context.Context, string) (model.Skills, error) {
+	return model.Skills{Skills: []model.Skill{{Name: "notes", Source: "shared", Path: "/r/.agents/skills/notes.md", OneFile: true}}}, nil
+}
 
 // builtInPlugins is an agent's skills with both.
 type builtInPlugins struct{ noExtras }
@@ -43,7 +52,9 @@ func (builtInPlugins) PluginScope(string, model.Plugin) string                 {
 
 // What the app asks of an agent instead of going by its name: the plain
 // MCP view, from the agents as main lists
-// them, and what its skills view shows. Nothing runs: the probe is fake.
+// them, and what its skills view shows; and of a skill instead of going
+// by its path: that it is one file, and that Delete and Link would refuse
+// it. Nothing runs: the probe is fake.
 func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	all := knownagents.All("")
@@ -62,7 +73,8 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 	svc := chats.New(t.Context(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(data, "scratch")})
 	agentSvc := agents.New(found, func(context.Context, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})
 	agentSvc.UseChats(svc)
-	shown := skills.New([]string{"claude", "codex"}, map[string]skills.Reader{"claude": builtInPlugins{}, "codex": noExtras{}}, nil)
+	shown := skills.New([]string{"claude", "codex"}, map[string]skills.Reader{"claude": builtInPlugins{}, "codex": fileSkill{}},
+		func(_, _ []string, path string) error { return fmt.Errorf("%s is a file", path) }, nil)
 	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, MCP: servers, Skills: shown, Transcripts: st})))
 	defer srv.Close()
 	c := nushiv1connect.NewNushiServiceClient(&http.Client{Transport: bearer{}}, srv.URL)
@@ -81,6 +93,11 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 		r := must(c.ListSkills(ctx, connect.NewRequest(&nushiv1.ListSkillsRequest{Agent: agent, Folder: t.TempDir()})))
 		if r.HasBuiltIn != want || r.HasPlugins != want {
 			t.Errorf("%s: built in %v, plugins %v, want %v", agent, r.HasBuiltIn, r.HasPlugins, want)
+		}
+		// The file's place refuses it, and Nushi links nothing for Codex;
+		// Claude's fake has no Link either.
+		if len(r.Skills) != 1 || !r.Skills[0].OneFile || !r.Skills[0].NoTrash || !r.Skills[0].NoLink {
+			t.Errorf("%s: skills %v, want one in one file with no Delete or Link", agent, r.Skills)
 		}
 	}
 }

@@ -1586,7 +1586,7 @@ message Skill {
   // agent's own) or "shared" (.agents/skills, which several agents read).
   string source = 3;
   string plugin = 4;
-  // Its folder, which holds SKILL.md.
+  // Its folder, which holds SKILL.md; with one_file, its one file.
   string path = 5;
   // "on", "name-only", "user-invocable-only" or "off"; set_in names a
   // settings file that decides it other than the one SetSkillOn changes.
@@ -1600,6 +1600,18 @@ message Skill {
   bool everywhere = 10;
   // A shared skill's agents: those that load it, each with its state.
   repeated SkillAgent agents = 11;
+  // The three below are unset from a daemon before API 114, whose app
+  // went by the path.
+  // path is the skill's one Markdown file, not a folder holding SKILL.md
+  // (OpenCode's lone <name>.md, or the SKILL.md right in a skills folder).
+  bool one_file = 12;
+  // TrashSkill would refuse it for what it is or where it is (a file, one
+  // in a group of OpenCode's, another agent's, a plugin's): no Delete.
+  bool no_trash = 13;
+  // LinkSkill would refuse to give the request's agent this shared skill
+  // (a file, one in a group, a link's place taken, an agent Nushi doesn't
+  // link for): no Link.
+  bool no_link = 14;
 }
 
 message SkillAgent {
