@@ -1,15 +1,23 @@
 package opencode
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"log/slog"
+	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestInfo(t *testing.T) {
@@ -89,6 +97,74 @@ func TestHidesCommand(t *testing.T) {
 		if !harness.HidesCommand(name) {
 			t.Errorf("%q isn't hidden", name)
 		}
+	}
+}
+
+// untilInputCloses stands in for the opencode CLI: it says on stderr which
+// came first, a SIGTERM or the end of its input (agentproc's tests script
+// the same agent). cat reads the input, and the shell waits for it, which a
+// trapped signal interrupts; it looks a moment after the signal, as an
+// agent that takes time to wind down would.
+const untilInputCloses = `#!/bin/sh
+exec 3<&0
+cat <&3 >/dev/null 2>&1 &
+pid=$!
+trap 'sleep 0.2; if kill -0 $pid 2>/dev/null; then echo "term, input open" >&2; else echo "term, input closed" >&2; fi; exit 0' TERM
+echo ready >&2
+wait $pid
+echo eof >&2
+`
+
+// logBuffer is a log to look into while the agent's process writes it.
+type logBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (l *logBuffer) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.Write(p)
+}
+
+func (l *logBuffer) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.String()
+}
+
+// An opencode that Start ran is stopped by signal: Stop sends it SIGTERM
+// with its input still open, and closes the input only once it has exited.
+// Its input closing first would leave its server and shell commands
+// running (docs/facts/opencode.md).
+func TestStartStopsBySignal(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("a sh script and SIGTERM")
+	}
+	cli := filepath.Join(t.TempDir(), "opencode")
+	testcheck.NoErr(t, os.WriteFile(cli, []byte(untilInputCloses), 0o700))
+	b := &logBuffer{}
+	log := slog.New(slog.NewTextHandler(b, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	waitLog := func(want string) {
+		t.Helper()
+		if !testcheck.Eventually(func() bool { return strings.Contains(b.String(), want) }) {
+			t.Fatalf("no %q in the log:\n%s", want, b)
+		}
+	}
+	a, err := harness.Start(t.TempDir(), model.AgentRun{CLI: cli, Env: []string{"PATH=" + os.Getenv("PATH")}}, acp.UnimplementedClient{}, log)
+	testcheck.NoErr(t, err)
+	t.Cleanup(func() { _ = a.Close() })
+	waitLog("msg=ready") // its trap is set
+	testcheck.NoErr(t, a.Stop(20*time.Second))
+	waitLog(`msg="agent exited"`)
+	got := b.String()
+	for _, want := range []string{`msg="term, input open"`, "code=0", "stopped=true"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("no %q in\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "msg=eof") || strings.Contains(got, `msg="term, input closed"`) {
+		t.Errorf("its input closed before it had exited:\n%s", got)
 	}
 }
 

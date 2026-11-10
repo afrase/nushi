@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -9,6 +10,8 @@ import (
 
 	"github.com/afrase/nushi/internal/acptest"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/logs"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // commandNames are the commands chat id offers, once it offers any.
@@ -145,6 +148,73 @@ func TestAnOpencodeSessionThatIsGone(t *testing.T) {
 	if lost.Deleted(session) {
 		t.Error("Delete asked opencode to delete the session it no longer has")
 	}
+}
+
+// A subagent of opencode's, on the fake playing one as a run of opencode
+// 2.2.6 showed it. The chat shows its one tool call and nothing the child
+// session said or ran: those come as opencode's own notifications, which
+// acp-go passes over, each a DEBUG line and nothing worse, the last of
+// them after the turn has ended. The child's permission, asked on the
+// chat's session for a call the chat never saw, is a card that can be
+// answered. Allowed, the turn ends as any does; rejected, the subagent's
+// call fails "Subagent cancelled" and the turn still goes on to its end,
+// with no "Stopped" notice.
+func TestAnOpencodeSubagent(t *testing.T) {
+	log := &syncBuffer{}
+	defer slog.SetDefault(slog.Default())
+	slog.SetDefault(slog.New(logs.Handler(log)))
+	logs.SetDebug(true)
+	defer logs.SetDebug(false)
+	ctx := context.Background()
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	a := open(t, d)
+	id := a.start(&nushiv1.StartChatRequest{Agent: "opencode", Folder: t.TempDir()})
+
+	want, passed := "", 0
+	for _, c := range []struct {
+		pick, call string
+		// The child updates the fake sends: the child's statuses, text and
+		// tool call, and when allowed one more once the turn has ended.
+		updates int
+	}{
+		{"once", "<subagent sessionID=\"ses_child_of_call_1_0\" state=\"completed\">\nChild finished.\n</subagent>:completed", 10},
+		{"reject", "Subagent cancelled (sessionID: ses_child_of_call_3_0):failed", 7},
+	} {
+		a.send(id, "run a subagent")
+		perm := a.waitFor("the child's permission prompt", pendingPermission).GetItem().Item
+		if perm.Title != "echo from-child" || len(perm.Options) != 3 {
+			t.Fatalf("the child's permission prompt is %v", perm)
+		}
+		must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: id, ItemId: perm.Id, OptionId: c.pick})))
+		if ended := a.waitFor("the turn's end", turnEnded(id)).GetStatus().GetEnded(); ended != nushiv1.TurnEnd_TURN_END_DONE {
+			t.Errorf("after %s the turn ended %v", c.pick, ended)
+		}
+		passed += c.updates
+		if !testcheck.Eventually(func() bool { return passedOver(log.String(), id) == passed }) {
+			t.Fatalf("after %s the log hasn't %d child updates passed over:\n%s\nthe chat:\n%s", c.pick, passed, log, transcript(a.get(id).Items))
+		}
+		want += "USER_MESSAGE:run a subagent:\nTOOL_CALL:" + c.call + "\nPERMISSION::answered\nAGENT_MESSAGE:Parent done.:\n"
+		if snap := a.get(id); transcript(snap.Items)+"\n" != want || snap.Status.Busy {
+			t.Errorf("after %s (status %v):\n%s\nwant:\n%s", c.pick, snap.Status, transcript(snap.Items), want)
+		}
+	}
+	for line := range strings.Lines(log.String()) {
+		if strings.Contains(line, " chat="+id+" ") && !strings.Contains(line, "level=DEBUG") && !strings.Contains(line, "level=INFO") {
+			t.Errorf("logged of the chat: %s", line)
+		}
+	}
+}
+
+// passedOver counts the child updates the log says acp-go passed over for
+// chat id.
+func passedOver(log, id string) int {
+	n := 0
+	for line := range strings.Lines(log) {
+		if strings.Contains(line, `msg="acp: notification ignored" chat=`+id+" ") && strings.Contains(line, "rpc=opencode/session/child_update") {
+			n++
+		}
+	}
+	return n
 }
 
 // lastItem is the last item of a chat's transcript.

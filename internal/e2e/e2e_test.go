@@ -124,7 +124,10 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 				serve(toAgentR, fromAgentW)
 				_ = fromAgentW.Close()
 			}()
-			return pipeAgent{agentproc.Connect(acp.NewAgentConn(fromAgentR, toAgentW, func(*acp.AgentConn) acp.Client { return h }), log)}, nil
+			// acp-go writes to the chat's log, as agentproc.Start has it do for
+			// an agent that is a process.
+			conn := acp.NewAgentConn(fromAgentR, toAgentW, func(*acp.AgentConn) acp.Client { return h }, acp.WithLogger(log))
+			return pipeAgent{agentproc.Connect(conn, log)}, nil
 		}
 	}
 	// fake is the fake agent shaped like the agent named as; "" is the
