@@ -15,6 +15,27 @@ html, body {
   left: env(safe-area-inset-left, 0px);
 }
 
+/* iOS 26 and later blur the top of a Home Screen web app, the status bar
+   and some way under it, unless a fixed box with a background of its own
+   lies along the page's top edge (others' findings, not Apple's word: at
+   least 6px high, most of the width, within 4px of the top). The app's
+   own box is a canvas with no background, so this strip is that box: the
+   status bar's height where the page reaches under it, else 6px over the
+   app's top, in the page's color. Only there (-webkit-touch-callout is
+   iOS's alone): elsewhere nothing blurs. */
+#top-edge { display: none; }
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) {
+    #top-edge {
+      display: block; position: fixed; z-index: 1; top: 0; right: 0; left: 0;
+      height: max(6px, env(safe-area-inset-top, 0px)); background: #FFFFFF;
+    }
+  }
+  @media (display-mode: standalone) and (prefers-color-scheme: dark) {
+    #top-edge { background: #1E1F22; }
+  }
+}
+
 /* Until the app draws: a spinner and a line, under #app (whose canvas
    covers it once drawn). */
 #loading {
