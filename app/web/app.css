@@ -22,7 +22,8 @@ html, body {
    own box is a canvas with no background, so this strip is that box: the
    status bar's height where the page reaches under it, else 6px over the
    app's top, in the page's color. Only there (-webkit-touch-callout is
-   iOS's alone): elsewhere nothing blurs. */
+   iOS's alone): elsewhere nothing blurs. The owner's iPhone showed the
+   blur without it and none with it (2026-11-10). */
 #top-edge { display: none; }
 @supports (-webkit-touch-callout: none) {
   @media (display-mode: standalone) {
