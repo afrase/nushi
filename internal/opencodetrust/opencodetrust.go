@@ -54,7 +54,7 @@ func (Trust) Runs(folder string) ([]model.FolderRun, string, error) {
 	fs := files(folder)
 	var out []model.FolderRun
 	for _, f := range fs {
-		if f.Sum != nil && !f.Link && len(f.Text) <= folderfiles.Shown {
+		if f.Sum != nil && !f.Link && f.Size <= folderfiles.Shown {
 			switch {
 			case isConfig(f.Path):
 				out = append(out, configRuns(f.Path, f.Text)...)
