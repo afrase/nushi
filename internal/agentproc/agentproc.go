@@ -36,6 +36,7 @@ type Agent struct {
 	log      *slog.Logger
 	canFork  bool        // set by Initialize
 	canSteer bool        // the same
+	bySignal bool        // StopBySignal was called
 	stopped  atomic.Bool // Close or Stop was called: its end isn't a death
 }
 
@@ -118,14 +119,31 @@ func (a *Agent) Close() error {
 	return a.AgentConn.Close()
 }
 
+// StopBySignal has Stop send the agent's process SIGTERM first, and close
+// its input only once it has exited or grace is over. Its harness calls it
+// on the Agent Start returned, before anything else has it. It is for an
+// agent whose input closing is the wrong way to end it: opencode exits at
+// once then and leaves the shell commands it was running, while a SIGTERM
+// cancels its turn and takes them with it (docs/facts/opencode.md). The
+// input stays open meanwhile so that its closing can't be what the agent
+// acts on.
+func (a *Agent) StopBySignal() { a.bySignal = true }
+
 // Stop ends the agent gently: its input closes, which an agent takes as
 // the end of the connection (claudeacp closes its sessions, their turns
 // cancelled, so they are recorded as ended), and once it has exited,
-// or after grace, it is killed.
+// or after grace, it is killed. One stopped by signal (StopBySignal) is
+// sent SIGTERM and waited for before that, within the same grace.
 func (a *Agent) Stop(grace time.Duration) error {
 	a.stopped.Store(true)
 	ctx, cancel := context.WithTimeout(context.Background(), grace)
 	defer cancel()
+	if a.bySignal && a.cmd != nil && a.cmd.Process.Signal(syscall.SIGTERM) == nil {
+		select {
+		case <-a.Done():
+		case <-ctx.Done():
+		}
+	}
 	if err := a.Shutdown(ctx); err != nil && ctx.Err() == nil {
 		return err
 	}
