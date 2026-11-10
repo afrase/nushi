@@ -104,12 +104,16 @@ func (OpenCode) List(_ context.Context, folder string) (model.Skills, error) {
 		out.NoSwitch = err.Error()
 	}
 	seen := map[string]bool{}
-	for _, r := range roots(folder) {
+	places := roots(folder)
+	for _, r := range places {
 		for _, f := range scan(r.path, !r.project) {
 			if seen[f.id] {
 				continue
 			}
 			seen[f.id] = true
+			if f.linked == "" && isPlace(places, f.path) {
+				f.path = f.file
+			}
 			s := model.Skill{Name: f.id, Description: f.Description, Source: r.source, Path: f.path, OneFile: f.path == f.file,
 				Linked: f.linked, Everywhere: r.everywhere, State: "on", Tokens: skillfile.Tokens(f.id + f.Description)}
 			if off, setIn := docs.off(f.id); off {
@@ -119,6 +123,23 @@ func (OpenCode) List(_ context.Context, folder string) (model.Skills, error) {
 		}
 	}
 	return out, nil
+}
+
+// isPlace says whether dir is one of places, found another way: a linked
+// group of yours can lead to the folder a place is in, and the place, when
+// it holds a SKILL.md, is then a skill further down. It is listed as the
+// place is at its own root, as that file: Delete would move every skill in
+// it. A skill folder that is itself a link to a place stays a folder, since
+// Delete moves the link.
+func isPlace(places []root, dir string) bool {
+	fi, err := os.Stat(dir)
+	if err != nil || !fi.IsDir() {
+		return false
+	}
+	return slices.ContainsFunc(places, func(r root) bool {
+		p, err := os.Stat(r.path)
+		return err == nil && os.SameFile(fi, p)
+	})
 }
 
 // own are the places opencode's own skill folders are in: each

@@ -45,7 +45,8 @@ var skipped = []string{"node_modules", "venv", "__pycache__"}
 // root is a skill named for the file. A SKILL.md right in root makes the
 // place one skill, named for the place's folder: it is listed as a skill
 // in one file, so nothing takes the place for a skill's folder (Delete
-// would move every skill in it). Links are followed, but for a
+// would move every skill in it; List does the same for a place found
+// further down, through a link). Links are followed, but for a
 // project's place (links false) a linked group stays out, as its linked
 // places do: a skill found through one would be a folder somewhere else,
 // and Delete would move that. A linked skill folder is still listed. One
