@@ -99,9 +99,10 @@ const submitMutation = `mutation Submit($review: ID!, $event: PullRequestReviewE
 }`
 
 // SubmitReview sends a review with its drafts as threads: one mutation,
-// or, when I have a review pending on GitHub, a thread each into it and
-// then its submission. GitHub refuses a draft whose lines aren't in the
-// diff, and an approval of my own pull request.
+// or, when I have a review pending on GitHub, a thread each for the
+// drafts not in it yet and then its submission (pending.go). GitHub
+// refuses a draft whose lines aren't in the diff, and an approval of my
+// own pull request.
 func (c *Client) SubmitReview(ctx context.Context, r Review) error {
 	event := strings.ToUpper(r.Event)
 	switch event {
@@ -124,15 +125,7 @@ func (c *Client) SubmitReview(ctx context.Context, r Review) error {
 		_, err := c.graphql(ctx, reviewMutation, map[string]any{"pull": r.Pull, "commit": r.HeadOID, "event": event, "body": body, "threads": threads}, new(any))
 		return err
 	}
-	for _, d := range r.Drafts {
-		vars := d.vars()
-		vars["review"] = r.Pending
-		if _, err := c.graphql(ctx, threadMutation, vars, new(any)); err != nil {
-			return err
-		}
-	}
-	_, err := c.graphql(ctx, submitMutation, map[string]any{"review": r.Pending, "event": event, "body": body}, new(any))
-	return err
+	return c.joinPending(ctx, r, event, body)
 }
 
 func (d Draft) vars() map[string]any {
