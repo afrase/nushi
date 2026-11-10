@@ -23,15 +23,32 @@ type pendingFake struct {
 	submits     int                                         // Submit mutations sent
 }
 
-// fakeComment is an inline comment of the review, as the read gives it.
+// fakeComment is an inline comment of the review: Line and StartLine
+// where it was made, Moved how far a push has moved it since, Outdated
+// whether a push has left it no line.
 type fakeComment struct {
-	Path      string `json:"path"`
-	Line      int    `json:"line"`
-	StartLine *int   `json:"startLine"`
-	Body      string `json:"body"`
-	ReplyTo   *struct {
-		ID string `json:"id"`
-	} `json:"replyTo"`
+	Path      string
+	Line      int
+	StartLine *int
+	Moved     int
+	Outdated  bool
+	Body      string
+	ReplyTo   string // the comment it replies to, if it's a reply
+}
+
+// node is the comment as GitHub's read gives it.
+func (c fakeComment) node() map[string]any {
+	n := map[string]any{"path": c.Path, "originalLine": c.Line, "originalStartLine": c.StartLine, "body": c.Body, "line": nil, "startLine": nil, "replyTo": nil}
+	if !c.Outdated {
+		n["line"] = c.Line + c.Moved
+		if c.StartLine != nil {
+			n["startLine"] = *c.StartLine + c.Moved
+		}
+	}
+	if c.ReplyTo != "" {
+		n["replyTo"] = map[string]any{"id": c.ReplyTo}
+	}
+	return n
 }
 
 func newPendingFake(t *testing.T) *pendingFake {
@@ -73,9 +90,13 @@ func (p *pendingFake) serveReview(w http.ResponseWriter, r *http.Request) {
 		from, _ = strconv.Atoi(a)
 	}
 	to := min(from+100, len(p.comments))
+	var nodes []map[string]any
+	for _, c := range p.comments[from:to] {
+		nodes = append(nodes, c.node())
+	}
 	review := map[string]any{"state": p.state, "body": p.body, "comments": map[string]any{
 		"pageInfo": map[string]any{"hasNextPage": to < len(p.comments), "endCursor": strconv.Itoa(to)},
-		"nodes":    p.comments[from:to],
+		"nodes":    nodes,
 	}}
 	_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"node": review}})
 }
@@ -193,6 +214,28 @@ func TestPendingRetryAddsWhatsMissing(t *testing.T) {
 	}
 }
 
+// A push between the failure and the retry moves the comments added, or
+// leaves them no line: they're still the drafts, where they were made.
+func TestPendingRetryAfterPush(t *testing.T) {
+	p := newPendingFake(t)
+	p.refuse = ownPull
+	c := p.client()
+	two := drafts("one", "two")
+	two[1].StartLine = 2
+	if err := c.SubmitReview(t.Context(), into("approve", two)); err == nil || !strings.Contains(err.Error(), "All 2 of") {
+		t.Fatal(err)
+	}
+	p.mu.Lock()
+	p.comments[0].Moved, p.comments[1].Outdated = 5, true
+	p.mu.Unlock()
+	if err := c.SubmitReview(t.Context(), into("comment", two)); err != nil {
+		t.Fatal(err)
+	}
+	if got := p.seen(); got != `2 threads, 2 submits: "one two" COMMENTED` {
+		t.Fatal(got)
+	}
+}
+
 func TestPendingRetryWithNoDrafts(t *testing.T) {
 	p := newPendingFake(t)
 	p.refuse = ownPull
@@ -226,9 +269,7 @@ func TestPendingAlreadySubmitted(t *testing.T) {
 	p.comments = []fakeComment{
 		{Path: "a.go", Line: 3, Body: "one\r\nmore  \r\n"},
 		{Path: "a.go", Line: 4, Body: "two"},
-		{Path: "a.go", Line: 4, Body: "three", ReplyTo: &struct {
-			ID string `json:"id"`
-		}{"C1"}},
+		{Path: "a.go", Line: 4, Body: "three", ReplyTo: "C1"},
 	}
 	c := p.client()
 	for _, r := range []Review{

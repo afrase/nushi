@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"net/http"
 	"strings"
 	"unicode"
@@ -19,7 +18,7 @@ import (
 const pendingQuery = `query PendingReview($review: ID!, $after: String) {
   node(id: $review) { ... on PullRequestReview {
     state body
-    comments(first: 100, after: $after) { pageInfo { hasNextPage endCursor } nodes { path line startLine body replyTo { id } } }
+    comments(first: 100, after: $after) { pageInfo { hasNextPage endCursor } nodes { path line startLine originalLine originalStartLine body replyTo { id } } }
   } }
 }`
 
@@ -51,17 +50,21 @@ func sameText(s string) string {
 }
 
 // pending is my review on GitHub as read: its state (PENDING until
-// submitted), its body, and how many of its inline comments are at each
-// spot (replies aren't drafts of mine, so they're left out).
+// submitted), its body, and its inline comments (replies aren't drafts of
+// mine, so they're left out).
 type pending struct {
 	state, body string
-	have        map[spot]int
+	held        []held
 }
+
+// held is an inline comment of the review at the spot it was made at and
+// the one it is at now, which a push moves (zero when it left it no line).
+type held struct{ made, now spot }
 
 // readPending reads review r whole; a review GitHub doesn't give is an
 // error.
 func (c *Client) readPending(ctx context.Context, r string) (pending, error) {
-	p := pending{have: map[spot]int{}}
+	var p pending
 	var after any
 	for range maxPendingPages {
 		var data struct {
@@ -74,11 +77,13 @@ func (c *Client) readPending(ctx context.Context, r string) (pending, error) {
 						EndCursor   string `json:"endCursor"`
 					} `json:"pageInfo"`
 					Nodes []struct {
-						Path      string    `json:"path"`
-						Line      *int      `json:"line"`
-						StartLine *int      `json:"startLine"`
-						Body      string    `json:"body"`
-						ReplyTo   *struct{} `json:"replyTo"`
+						Path              string    `json:"path"`
+						Line              *int      `json:"line"`
+						StartLine         *int      `json:"startLine"`
+						OriginalLine      *int      `json:"originalLine"`
+						OriginalStartLine *int      `json:"originalStartLine"`
+						Body              string    `json:"body"`
+						ReplyTo           *struct{} `json:"replyTo"`
 					} `json:"nodes"`
 				} `json:"comments"`
 			} `json:"node"`
@@ -94,14 +99,9 @@ func (c *Client) readPending(ctx context.Context, r string) (pending, error) {
 		}
 		p.state, p.body = data.Node.State, data.Node.Body
 		for _, n := range data.Node.Comments.Nodes {
-			if n.ReplyTo != nil || n.Line == nil {
-				continue
+			if n.ReplyTo == nil {
+				p.held = append(p.held, held{at(n.Path, n.OriginalLine, n.OriginalStartLine, n.Body), at(n.Path, n.Line, n.StartLine, n.Body)})
 			}
-			d := Draft{Path: n.Path, Line: *n.Line, Body: n.Body}
-			if n.StartLine != nil {
-				d.StartLine = *n.StartLine
-			}
-			p.have[d.spot()]++
 		}
 		page := data.Node.Comments.PageInfo
 		if !page.HasNextPage {
@@ -112,17 +112,35 @@ func (c *Client) readPending(ctx context.Context, r string) (pending, error) {
 	return p, errors.New("too many comments in the review pending on GitHub to check")
 }
 
-// missing is what of drafts the review doesn't hold yet: one comment
-// stands for one draft, so twins need two.
+// at is the spot of a comment on line (from start) as GitHub gives them:
+// none when it has no line.
+func at(path string, line, start *int, body string) spot {
+	if line == nil {
+		return spot{}
+	}
+	d := Draft{Path: path, Line: *line, Body: body}
+	if start != nil {
+		d.StartLine = *start
+	}
+	return d.spot()
+}
+
+// missing is what of drafts the review doesn't hold yet: a comment at
+// the draft's spot, where it was made or where it is now, stands for one
+// draft, so twins need two.
 func (p pending) missing(drafts []Draft) []Draft {
-	have := maps.Clone(p.have)
+	used := make([]bool, len(p.held))
 	var out []Draft
+next:
 	for _, d := range drafts {
-		if k := d.spot(); have[k] > 0 {
-			have[k]--
-		} else {
-			out = append(out, d)
+		k := d.spot()
+		for i, h := range p.held {
+			if !used[i] && (h.made == k || h.now == k) {
+				used[i] = true
+				continue next
+			}
 		}
+		out = append(out, d)
 	}
 	return out
 }
