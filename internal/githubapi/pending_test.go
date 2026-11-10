@@ -194,8 +194,8 @@ func TestPendingRetryAddsEachOnce(t *testing.T) {
 	c := p.client()
 	two := drafts("one", "two")
 	err := c.SubmitReview(t.Context(), into("approve", two))
-	if err == nil || !strings.Contains(err.Error(), "Can not approve your own pull request") ||
-		!strings.Contains(err.Error(), "All 2 of this review's inline comments are in your pending review on GitHub now") {
+	if err == nil || !strings.HasSuffix(err.Error(), "Can not approve your own pull request. All 2 of this review's inline comments are in your pending review on GitHub now, "+
+		"and go out with it even if removed here (delete them on github.com); sending the review again won't add them twice") {
 		t.Fatal(err)
 	}
 	if err := c.SubmitReview(t.Context(), into("comment", two)); err != nil {
@@ -218,7 +218,7 @@ func TestPendingRetryAddsWhatsMissing(t *testing.T) {
 	three := drafts("one", "two", "three")
 	err := c.SubmitReview(t.Context(), into("comment", three))
 	if err == nil || !strings.Contains(err.Error(), "Line could not be resolved") ||
-		!strings.Contains(err.Error(), "1 of this review's 3 inline comments is in your pending review on GitHub now") {
+		!strings.Contains(err.Error(), "1 of this review's 3 inline comments is in your pending review on GitHub now, and goes out with it even if removed here (delete it on github.com)") {
 		t.Fatal(err)
 	}
 	if err := c.SubmitReview(t.Context(), into("comment", []Draft{three[0], three[2]})); err != nil {
@@ -354,11 +354,18 @@ func TestPendingAlreadySubmitted(t *testing.T) {
 			t.Fatalf("an answered submission: %v", err)
 		}
 	}
-	for _, r := range []Review{
-		into("approve", drafts("one\nmore", "two", "three")), // three is only a reply
-		{Pull: "PR_1", Pending: "R0", Event: "approve", Body: "Something else"},
+	for _, s := range []struct {
+		r    Review
+		want string
+	}{
+		{into("approve", drafts("one\nmore", "two", "three")), // three is only a reply
+			"your review was submitted on GitHub meanwhile with 2 of this review's 3 inline comments in it: reload the pull request, and remove those before sending the rest"},
+		{into("approve", drafts("one\nmore", "four", "three")),
+			"your review was submitted on GitHub meanwhile with 1 of this review's 3 inline comments in it: reload the pull request, and remove it before sending the rest"},
+		{into("approve", drafts("five")), "your review was submitted on GitHub meanwhile: reload the pull request"},
+		{Review{Pull: "PR_1", Pending: "R0", Event: "approve", Body: "Something else"}, "your review was submitted on GitHub meanwhile: reload the pull request"},
 	} {
-		if err := c.SubmitReview(t.Context(), r); err == nil || !strings.Contains(err.Error(), "submitted on GitHub meanwhile") {
+		if err := c.SubmitReview(t.Context(), s.r); err == nil || err.Error() != s.want {
 			t.Fatal(err)
 		}
 	}

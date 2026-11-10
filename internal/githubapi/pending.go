@@ -181,10 +181,19 @@ func (p pending) submittedAs(event, text string) bool {
 // the event and text are all a call says, so it must have been submitted
 // as them. Else it's the error saying it was submitted meanwhile.
 func (p pending) submitted(r Review, event string) error {
-	if len(p.missing(r.Drafts)) > 0 || len(r.Drafts) == 0 && !p.submittedAs(event, r.Body) {
+	missing := len(p.missing(r.Drafts))
+	switch held := len(r.Drafts) - missing; {
+	case missing == 0 && (len(r.Drafts) > 0 || p.submittedAs(event, r.Body)):
+		return nil
+	case held > 0: // the user removes those drafts, or the next review posts them again
+		those := "those"
+		if held == 1 {
+			those = "it"
+		}
+		return fmt.Errorf("your review was submitted on GitHub meanwhile with %d of this review's %d inline comments in it: reload the pull request, and remove %s before sending the rest", held, len(r.Drafts), those)
+	default:
 		return errors.New("your review was submitted on GitHub meanwhile: reload the pull request")
 	}
-	return nil
 }
 
 // joinPending adds the drafts the review doesn't hold yet to my pending
@@ -239,21 +248,23 @@ func (c *Client) failedSubmit(ctx context.Context, r Review, event string, err e
 }
 
 // heldPending is err saying that n of a review's total inline comments
-// are in the pending review on GitHub, so the user knows a retry is safe.
+// are in the pending review on GitHub, so the user knows a retry is safe,
+// and that they go out with it even if their drafts are removed here
+// (nothing on GitHub is deleted).
 func heldPending(err error, n, total int) error {
 	if err == nil || n == 0 {
 		return err
 	}
-	what, them := fmt.Sprintf("%d of this review's %d inline comments is", n, total), "it"
+	what, goes, them := fmt.Sprintf("%d of this review's %d inline comments is", n, total), "goes", "it"
 	switch {
 	case total == 1:
 		what = "This review's inline comment is"
 	case n == total:
-		what, them = fmt.Sprintf("All %d of this review's inline comments are", n), "them"
+		what, goes, them = fmt.Sprintf("All %d of this review's inline comments are", n), "go", "them"
 	case n > 1:
-		what, them = fmt.Sprintf("%d of this review's %d inline comments are", n, total), "them"
+		what, goes, them = fmt.Sprintf("%d of this review's %d inline comments are", n, total), "go", "them"
 	}
-	return addSentence(err, fmt.Sprintf("%s in your pending review on GitHub now; sending the review again won't add %s twice", what, them))
+	return addSentence(err, fmt.Sprintf("%s in your pending review on GitHub now, and %s out with it even if removed here (delete %s on github.com); sending the review again won't add %s twice", what, goes, them, them))
 }
 
 // addSentence is err followed by sentence s.
