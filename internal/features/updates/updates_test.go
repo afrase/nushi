@@ -112,6 +112,47 @@ func TestNewerOnly(t *testing.T) {
 	}
 }
 
+// A Nushi that follows beta versions (it is one, or Beta says so)
+// compares with the highest version among the newest releases, a
+// pre-release or not; any other, and one without Tags, with the latest
+// release only.
+func TestBetaVersions(t *testing.T) {
+	tags := []string{"v0.29.0-beta.2", "nightly", "v0.28.1", "v0.29.0-beta.1"}
+	ask := func(context.Context) (string, error) { return "v0.28.1", nil }
+	yes := func() bool { return true }
+	for _, c := range []struct {
+		name, running string
+		beta          func() bool
+		tags          []string
+		want          string
+	}{
+		{"a release", "0.28.0", nil, tags, "0.28.1"},
+		{"a release, told no", "0.28.0", func() bool { return false }, tags, "0.28.1"},
+		{"a release that follows them", "0.28.0", yes, tags, "0.29.0-beta.2"},
+		{"a beta", "0.29.0-beta.1", nil, tags, "0.29.0-beta.2"},
+		{"a beta whose release is out", "0.29.0-beta.2", nil, []string{"v0.29.0", "v0.29.0-beta.2"}, "0.29.0"},
+		{"the newest beta", "0.29.0-beta.2", nil, tags, ""},
+		{"no version among them", "0.28.0", yes, []string{"nightly"}, "0.28.1"},
+	} {
+		var ev events
+		s := New(ask, &prefs{on: true}, c.running, "https://github.com/afrase/nushi", ev.publish)
+		s.Beta = c.beta
+		s.Tags = func(context.Context) ([]string, error) { return c.tags, nil }
+		got, err := s.Check(t.Context())
+		if err != nil || got.Version != c.want {
+			t.Fatalf("%s: %+v %v", c.name, got, err)
+		}
+		if c.want == "0.29.0-beta.2" && got.URL != "https://github.com/afrase/nushi/releases/tag/v0.29.0-beta.2" {
+			t.Fatalf("%s: %+v", c.name, got)
+		}
+	}
+	var ev events
+	s := New(ask, &prefs{on: true}, "0.29.0-beta.1", "https://github.com/afrase/nushi", ev.publish)
+	if got, err := s.Check(t.Context()); err != nil || got.Version != "" || got.Latest != "0.28.1" {
+		t.Fatalf("without Tags: %+v %v", got, err)
+	}
+}
+
 // A 304 is the answer before, still newer; a failure keeps what was
 // found and says so to Check now; turning the checks off forgets it.
 func TestUnchangedFailedAndOff(t *testing.T) {

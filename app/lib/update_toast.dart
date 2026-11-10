@@ -12,15 +12,20 @@ import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// What upgrades a Nushi that Homebrew's cask installed.
-const brewUpgrade = 'brew update && brew upgrade --cask nushi';
+/// The cask that follows beta versions (ADR 0108); `nushi` has releases
+/// only.
+const betaCask = 'nushi@beta';
 
-/// Whether Homebrew's cask installed the app running as [executable]: it
-/// is Nushi.app in /Applications or ~/Applications (the cask's places),
-/// and Homebrew's Caskroom has nushi (under /opt/homebrew, or /usr/local
-/// on an Intel Mac). Two looks at folders; running `brew --prefix` to
-/// find a moved prefix would cost far more.
-bool installedByHomebrew(
+/// What upgrades a Nushi that Homebrew's [cask] installed.
+String brewUpgrade(String cask) => 'brew update && brew upgrade --cask $cask';
+
+/// The cask of Homebrew's that installed the app running as [executable],
+/// if one did: it is Nushi.app in /Applications or ~/Applications (the
+/// casks' places), and Homebrew's Caskroom has nushi@beta or nushi (one
+/// of them: they conflict; under /opt/homebrew, or /usr/local on an Intel
+/// Mac). A few looks at folders; running `brew --prefix` to find a moved
+/// prefix would cost far more.
+String? homebrewCask(
   String executable,
   String home,
   bool Function(String folder) exists,
@@ -29,18 +34,30 @@ bool installedByHomebrew(
   final app = File(executable).parent.parent.parent.path;
   if (app != '/Applications/Nushi.app' &&
       app != '$home/Applications/Nushi.app') {
-    return false;
+    return null;
   }
-  return exists('/opt/homebrew/Caskroom/nushi') ||
-      exists('/usr/local/Caskroom/nushi');
+  for (final cask in [betaCask, 'nushi']) {
+    if (exists('/opt/homebrew/Caskroom/$cask') ||
+        exists('/usr/local/Caskroom/$cask')) {
+      return cask;
+    }
+  }
+  return null;
 }
 
-/// Whether this app came from Homebrew's cask; tests set it.
-bool byHomebrew = installedByHomebrew(
+/// The cask this app came from, if Homebrew installed it; tests set it.
+String? brewCask = homebrewCask(
   Platform.resolvedExecutable,
   Platform.environment['HOME'] ?? '',
   (f) => Directory(f).existsSync(),
 );
+
+/// The cask whose upgrade brings [version], if Homebrew installed the app
+/// and has it: a beta version is only nushi@beta's.
+String? caskWith(String version) => switch (brewCask) {
+  final cask? when cask == betaCask || !isBeta(version) => cask,
+  _ => null,
+};
 
 /// Orders two versions as semantic versioning does (a pre-release before
 /// its release; build metadata aside); one that isn't a version is before
@@ -96,11 +113,15 @@ String? updateToShow(Daemon d) {
 void openRelease(BuildContext context, Daemon d) =>
     openWeb(context, d.update.url);
 
+/// Whether [version] is a beta version: a pre-release ("0.29.0-beta.1";
+/// ADR 0108).
+bool isBeta(String version) => version.split('+').first.contains('-');
+
 /// Says a newer release is out, in the window's bottom right corner, out
 /// of the way: not modal, no sound. Copy puts Homebrew's upgrade on the
-/// clipboard when Homebrew installed the app (Release notes opens the
-/// release's page), else Download opens the release's page; × dismisses
-/// it until a newer one.
+/// clipboard when Homebrew installed the app and its cask has the release
+/// ([caskWith]; Release notes opens the release's page), else Download
+/// opens the release's page; × dismisses it until a newer one.
 class UpdateToast extends StatefulWidget {
   const new(this.daemon, {super.key});
 
@@ -127,8 +148,8 @@ class _UpdateToastState extends State<UpdateToast> {
     super.dispose();
   }
 
-  Future<void> _copy() async {
-    await Clipboard.setData(const ClipboardData(text: brewUpgrade));
+  Future<void> _copy(String cask) async {
+    await Clipboard.setData(ClipboardData(text: brewUpgrade(cask)));
     if (!mounted) return;
     setState(() => _copied = true);
     _unmark?.cancel();
@@ -201,12 +222,12 @@ class _UpdateToastState extends State<UpdateToast> {
           Row(
             spacing: 8,
             children: [
-              if (byHomebrew) ...[
+              if (caskWith(version) case final cask?) ...[
                 Button(
                   label: _copied ? 'Copied' : 'Copy',
                   kind: ButtonKind.primary,
-                  tooltip: 'Copy “$brewUpgrade”',
-                  onPressed: _copy,
+                  tooltip: 'Copy “${brewUpgrade(cask)}”',
+                  onPressed: () => _copy(cask),
                 ),
                 Button(
                   label: 'Release notes',

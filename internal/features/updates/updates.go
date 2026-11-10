@@ -1,7 +1,8 @@
 // Package updates asks GitHub for Nushi's latest release, at start and
 // every 2 hours while the setting is on, and says when it's newer than
-// the daemon's own version: the app shows it. One check per Mac, however
-// many windows; nothing of the user's is sent (no token).
+// the daemon's own version: the app shows it. For a Nushi that follows
+// beta versions (ADR 0108) a pre-release counts too. One check per Mac,
+// however many windows; nothing of the user's is sent (no token).
 package updates
 
 import (
@@ -20,6 +21,10 @@ import (
 // neither a draft nor a pre-release (internal/githubapi).
 type Latest func(ctx context.Context) (tag string, err error)
 
+// Tags is the tags of the repository's newest releases, pre-releases
+// among them (internal/githubapi).
+type Tags func(ctx context.Context) (tags []string, err error)
+
 // Prefs keeps whether the daemon checks (internal/store).
 type Prefs interface {
 	CheckUpdates() bool
@@ -36,6 +41,13 @@ type Service struct {
 
 	// Every is how often it asks while the setting is on.
 	Every time.Duration
+	// Tags is asked in Latest's place by a Nushi that follows beta
+	// versions (ADR 0108): one that is a beta itself, or whose Beta says
+	// so. nil: a beta version is never found.
+	Tags Tags
+	// Beta says whether this Nushi was installed to follow beta versions
+	// (Homebrew's nushi@beta cask); nil: no.
+	Beta func() bool
 
 	checking sync.Mutex // one check at a time
 	mu       sync.Mutex
@@ -112,7 +124,7 @@ func (s *Service) check(ctx context.Context, auto bool) (model.Update, error) {
 	defer s.checking.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	tag, err := s.latest(ctx)
+	tag, err := s.newest(ctx)
 	if err != nil {
 		return s.Get(), err
 	}
@@ -139,6 +151,32 @@ func (s *Service) check(ctx context.Context, auto bool) (model.Update, error) {
 	}
 	s.publish(model.Event{Update: &found})
 	return found, nil
+}
+
+// newest is the tag a check compares with: GitHub's latest release, or
+// for a Nushi that follows beta versions the highest version among the
+// newest releases, a pre-release or not (a release newer than every beta
+// wins, so a beta moves on to its release).
+func (s *Service) newest(ctx context.Context) (string, error) {
+	running, _ := parse(s.current)
+	if s.Tags == nil || len(running.pre) == 0 && (s.Beta == nil || !s.Beta()) {
+		return s.latest(ctx)
+	}
+	tags, err := s.Tags(ctx)
+	if err != nil {
+		return "", err
+	}
+	best := ""
+	for _, tag := range tags {
+		v := strings.TrimPrefix(tag, "v")
+		if _, ok := parse(v); ok && (best == "" || Compare(v, strings.TrimPrefix(best, "v")) > 0) {
+			best = tag
+		}
+	}
+	if best == "" {
+		return s.latest(ctx) // none yet: its answer says so
+	}
+	return best, nil
 }
 
 // On says whether the checks are on.

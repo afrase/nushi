@@ -260,24 +260,30 @@ jobs:
           gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
 
       # Needs the HOMEBREW_TAP_TOKEN secret: a fine-grained token with Contents read and write on afrase/homebrew-tap
-      # only. Without it the cask is left alone, and for any release but the latest (a pre-release, an older one
-      # rebuilt by hand).
-      - name: Update the Homebrew cask
+      # only; without it the casks are left alone. The latest release updates nushi, and nushi@beta with it; the
+      # newest beta (a pre-release of a later version) nushi@beta alone (ADR 0108); an older one built again by hand
+      # neither. tools/cask.sh says which and writes them.
+      - name: Update the Homebrew casks
         env:
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -z "$TAP_TOKEN" ]; then echo "::warning::No HOMEBREW_TAP_TOKEN secret; the cask isn't updated."; exit 0; fi
+          if [ -z "$TAP_TOKEN" ]; then echo "::warning::No HOMEBREW_TAP_TOKEN secret; the casks aren't updated."; exit 0; fi
           latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
-          if [ "$latest" != "$TAG" ]; then echo "$TAG isn't the latest release ($latest); the cask isn't updated."; exit 0; fi
+          beta=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 30 --json tagName,isPrerelease \
+            --jq '[.[] | select(.isPrerelease)][0].tagName // ""')
+          casks=$(tools/cask.sh which "$TAG" "$latest" "$beta" | xargs)
+          if [ -z "$casks" ]; then
+            echo "$TAG is neither the latest release ($latest) nor the newest beta (${beta:-none}); no cask is updated."; exit 0
+          fi
           sha=$(cut -d ' ' -f 1 "dist/Nushi-$VERSION.zip.sha256")
           git clone --depth 1 "https://x-access-token:${TAP_TOKEN}@github.com/afrase/homebrew-tap.git" tap
           mkdir -p tap/Casks
-          sed -e "s/@VERSION@/$VERSION/" -e "s/@SHA256@/$sha/" packaging/homebrew/nushi.rb > tap/Casks/nushi.rb
+          for cask in $casks; do tools/cask.sh write "$cask" "$VERSION" "$sha" > "tap/Casks/$cask.rb"; done
           cd tap
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Casks/nushi.rb
-          if git diff --cached --quiet; then echo "The cask is already at $VERSION."; exit 0; fi
-          git commit -m "nushi $VERSION"
+          git add Casks
+          if git diff --cached --quiet; then echo "$casks: already at $VERSION."; exit 0; fi
+          git commit -m "$casks $VERSION"
           git push

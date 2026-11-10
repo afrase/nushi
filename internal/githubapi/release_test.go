@@ -46,3 +46,38 @@ func TestLatestRelease(t *testing.T) {
 		t.Fatal("a 502 isn't a release")
 	}
 }
+
+// TestReleaseTags: the newest releases' tags, pre-releases among them and
+// drafts not, with their own ETag beside the latest release's.
+func TestReleaseTags(t *testing.T) {
+	var asked []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		asked = append(asked, r.URL.RequestURI()+" "+r.Header.Get("If-None-Match"))
+		switch {
+		case r.URL.Path == "/repos/afrase/nushi/releases/latest":
+			w.Header().Set("ETag", `"latest"`)
+			_, _ = w.Write([]byte(`{"tag_name": "v0.28.0"}`))
+		case r.Header.Get("If-None-Match") == `"list"`:
+			w.WriteHeader(http.StatusNotModified)
+		default:
+			w.Header().Set("ETag", `"list"`)
+			_, _ = w.Write([]byte(`[{"tag_name": "v0.29.0-beta.2", "prerelease": true}, {"tag_name": "v0.30.0", "draft": true},
+				{"tag_name": "v0.28.0"}, {"tag_name": "v0.29.0-beta.1", "prerelease": true}]`))
+		}
+	}))
+	defer srv.Close()
+	r := &Releases{Repo: "afrase/nushi", Base: srv.URL}
+	if _, err := r.Latest(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		got, err := r.Tags(t.Context())
+		if err != nil || len(got) != 3 || got[0] != "v0.29.0-beta.2" || got[1] != "v0.28.0" || got[2] != "v0.29.0-beta.1" {
+			t.Fatalf("%q %v", got, err)
+		}
+	}
+	want := []string{"/repos/afrase/nushi/releases/latest ", "/repos/afrase/nushi/releases?per_page=10 ", `/repos/afrase/nushi/releases?per_page=10 "list"`}
+	if len(asked) != 3 || asked[0] != want[0] || asked[1] != want[1] || asked[2] != want[2] {
+		t.Fatalf("asked %q", asked)
+	}
+}

@@ -59,6 +59,17 @@ The daemon asks GitHub for the latest release when it starts and every 2 hours, 
 
 Settings › General › Updates turns the check off, and has Check now. The palette's Check for updates does the same.
 
+### Beta versions
+
+A beta is a version to try before its release, such as 0.29.0-beta.1 ([ADR 0108](adr/0108-beta-versions.md)). The tap has a second cask that follows them, and each release that passes them:
+
+```sh
+brew uninstall --cask nushi && brew install --cask afrase/tap/nushi@beta   # follow betas; chats' data stays
+brew uninstall --cask nushi@beta && brew install --cask afrase/tap/nushi   # back to releases only
+```
+
+There's no setting. A Nushi the beta cask installed is told of a newer beta as of any update, and Copy puts `brew update && brew upgrade --cask nushi@beta` on the clipboard. Without Homebrew (and on Linux), a beta installed from its [release's page](https://github.com/afrase/nushi/releases) is told of newer ones too, with Download. A beta keeps chats and settings readable by the latest release.
+
 ## Upgrading
 
 Upgrading quits the app and opens the new one. The daemon keeps running, and its chats with it. It restarts into the new version by itself once nothing would be lost:

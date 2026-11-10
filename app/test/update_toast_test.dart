@@ -66,7 +66,7 @@ void main() {
   setUpAll(loadFonts);
   setUp(() {
     dismissedUpdate.value = null;
-    byHomebrew = false;
+    brewCask = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('nushi/fonts'),
@@ -88,7 +88,7 @@ void main() {
   test('Homebrew installed it: Nushi.app in an Applications folder, and '
       'its Caskroom has nushi', () {
     bool brew(String exe, Set<String> folders) =>
-        installedByHomebrew(exe, '/Users/me', folders.contains);
+        homebrewCask(exe, '/Users/me', folders.contains) == 'nushi';
     const caskroom = {'/opt/homebrew/Caskroom/nushi'};
     expect(
       brew('/Applications/Nushi.app/Contents/MacOS/Nushi', caskroom),
@@ -113,7 +113,50 @@ void main() {
       false,
     );
     expect(brew('/Volumes/x/Nushi.app/Contents/MacOS/Nushi', caskroom), false);
+    // The cask that follows beta versions.
+    expect(
+      homebrewCask(
+        '/Applications/Nushi.app/Contents/MacOS/Nushi',
+        '/Users/me',
+        {'/opt/homebrew/Caskroom/nushi@beta'}.contains,
+      ),
+      'nushi@beta',
+    );
   });
+
+  testWidgets("a beta version: Copy upgrades the beta cask; the release's "
+      "cask doesn't have it, so Download", (tester) async {
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map)['text'] as String?;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    brewCask = betaCask;
+    final d = await _open(tester, _daemon(() => _newer('0.29.0-beta.1')));
+    expect(find.text('Nushi 0.29.0-beta.1 is available.'), findsOneWidget);
+    await tester.tap(find.text('Copy'));
+    await tester.pump();
+    expect(copied, 'brew update && brew upgrade --cask nushi@beta');
+    await tester.pump(const Duration(seconds: 3));
+    d.dispose();
+
+    brewCask = 'nushi';
+    final d2 = await _open(tester, _daemon(() => _newer('0.29.0-beta.1')));
+    expect(find.text('Download'), findsOneWidget);
+    expect(find.text('Copy'), findsNothing);
+    d2.dispose();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   for (final brew in [true, false]) {
     for (final (name, brightness) in [
@@ -124,7 +167,7 @@ void main() {
         final kind = brew ? 'brew' : 'zip';
         testWidgets('the toast ($kind), ${width.toInt()} wide ($name): in '
             'the bottom right corner', (tester) async {
-          byHomebrew = brew;
+          brewCask = brew ? 'nushi' : null;
           final d = await _open(
             tester,
             _daemon(() => _newer('0.1.17')),
@@ -165,7 +208,7 @@ void main() {
   testWidgets('Copy puts the Homebrew command on the clipboard', (
     tester,
   ) async {
-    byHomebrew = true;
+    brewCask = 'nushi';
     String? copied;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       SystemChannels.platform,

@@ -18,6 +18,24 @@ nushi/install.sh
 
 It installs into your home folder, no root needed. Open Nushi from your applications menu.
 
+## Try a beta version
+
+A beta is a version you can try before it's released. With Homebrew on a Mac, swap Nushi for the beta one:
+
+```sh
+brew uninstall --cask nushi && brew install --cask afrase/tap/nushi@beta
+```
+
+Your chats and settings stay. From then on Nushi tells you about each new beta like any update: click **Copy** on the card and paste the command in a terminal.
+
+To go back to releases only:
+
+```sh
+brew uninstall --cask nushi@beta && brew install --cask afrase/tap/nushi
+```
+
+Without Homebrew, or on Linux, download a beta from the [Releases page](https://github.com/afrase/nushi/releases) and install it as you installed Nushi. It tells you about newer betas too.
+
 ## What you need
 
 A coding agent you already use in the terminal, installed and signed in. Nushi works with Claude, Codex, Ante, oh-my-pi, OpenCode, Pi and PiG.

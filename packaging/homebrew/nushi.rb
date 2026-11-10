@@ -1,4 +1,6 @@
-cask "nushi" do
+# Both of the tap's casks, written by tools/cask.sh: nushi has releases only, nushi@beta beta versions too and each
+# release that passes them (ADR 0108). They install the same app, so one of them at a time.
+cask "@CASK@" do
   version "@VERSION@"
   sha256 "@SHA256@"
 
@@ -10,6 +12,7 @@ cask "nushi" do
   # The daemon inside is cgo, built on Apple silicon; Go 1.27 and Start at login need macOS 13.
   depends_on arch: :arm64
   depends_on macos: :ventura
+  conflicts_with cask: "@OTHER@"
 
   app "Nushi.app"
 
