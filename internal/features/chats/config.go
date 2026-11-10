@@ -218,15 +218,20 @@ func (c *chat) setConfig(ctx context.Context, agent Agent, sid, id, value string
 
 // configChangedLocked publishes the chat's options, and stores its mode once
 // the chat is stored. Only a change the agent reports or the user makes is
-// the chat's mode: a new session's default isn't. The picks follow what the
-// agent says an option they have is on (its own /model, a fallback it made
-// for the session), except while they're being put back on a session.
+// the chat's mode: a new session's default isn't, so the mode isn't taken
+// while the chat's mode and picks are being put back on a session (a new
+// chat, a fork and an opened one store theirs after). The picks follow
+// what the agent says an option they have is on (its own /model, a
+// fallback it made for the session), but not then either.
 func (c *chat) configChangedLocked() {
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 	if c.record.ID != "" {
 		c.saveLocked(func(s *model.ChatRecord) {
+			if c.reapplying {
+				return
+			}
 			c.modeLocked(s)
-			if c.agent != nil && !c.reapplying { // not a replay's, nor before reapply
+			if c.agent != nil { // not a replay's
 				s.Picks = c.followedLocked(s.Picks)
 			}
 		})
@@ -271,7 +276,8 @@ func (c *chat) replaceConfigLocked(opts []acp.SessionConfigOption) {
 // reapply puts session sid, just opened on agent, back on picks (the
 // chat's, or for a new chat those last picked for its agent), then on mode
 // (see startMode); the chat keeps the picks the agent still offers. Until
-// then (from useLocked on) what the agent reports doesn't move the picks.
+// then (from useLocked on) what the agent reports doesn't move the picks
+// or the stored mode.
 func (c *chat) reapply(ctx context.Context, agent Agent, sid, mode string, picks map[string]string) error {
 	kept := c.applyPicks(ctx, agent, sid, picks)
 	c.mu.Lock()

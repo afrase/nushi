@@ -251,7 +251,7 @@ func (b *bridge) open(ctx context.Context, cwd, file string, replay bool) (*sess
 	defer cancel()
 	s, opts, err := b.start(ctx, p, cwd, replay)
 	if err != nil {
-		p.stop(time.Second)
+		p.abandon()
 		return nil, nil, err
 	}
 	return s, opts, nil

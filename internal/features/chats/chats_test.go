@@ -29,7 +29,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		mu.Lock()
 		got = append(got, e)
 		mu.Unlock()
-		if e.Status != nil && !e.Status.Busy {
+		if e.Status != nil && !e.Status.Busy && e.Status.Ended != model.NotEnded { // the turn's end, not the new chat's settling
 			close(done)
 		}
 	}
@@ -325,7 +325,7 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 	}
 	done := make(chan struct{})
 	publish := func(e model.Event) {
-		if e.Status != nil && !e.Status.Busy {
+		if e.Status != nil && !e.Status.Busy && e.Status.Ended != model.NotEnded { // the turn's end, not the new chat's settling
 			close(done)
 		}
 	}

@@ -145,6 +145,17 @@ func (h *host) stop(grace time.Duration) {
 	h.kill()
 }
 
+// abandon stops a host whose events nobody reads (one whose session
+// didn't open), reading them meanwhile as stop needs: else its reader
+// waits on a full channel for good, and stop waits out its grace.
+func (h *host) abandon() {
+	go func() {
+		for range h.events {
+		}
+	}()
+	h.stop(time.Second)
+}
+
 // ulid is a new ULID, as Ante's ids need: 48 bits of milliseconds, then 80
 // random bits, in Crockford's base32.
 func ulid() string {

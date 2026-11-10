@@ -58,16 +58,16 @@ func (s *Service) openChats() []*chat {
 	return slices.Collect(maps.Values(s.chats))
 }
 
-// register adds a chat just made to the service, then stores it with its
-// mode: in that order, as a chat found by id must be this one (its
-// record's event can bring the app to look it up).
+// register adds a chat just made to the service, then stores it: in that
+// order, as a chat found by id must be this one (its record's event can
+// bring the app to look it up). A chat whose session is still being put
+// back on its picks (reapply) is registered before that, and busy.
 func (s *Service) register(c *chat) {
 	s.mu.Lock()
 	s.chats[c.id] = c
 	s.mu.Unlock()
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.modeLocked(&c.record)
 	c.storeLocked()
 }
 

@@ -91,8 +91,9 @@ func TestSearchSessions(t *testing.T) {
 	if hits := search(t, l, model.SessionSearch{Query: "wombat"}); ids(hits) != "a" || hits[0].Count != 2 {
 		t.Errorf("wombat: %+v", hits)
 	}
-	// A command reads as typed, a `!` one too.
-	for _, q := range []string{"/compact", "!ls burrow"} {
+	// A command reads as typed, a `!` one too, though the transcript has
+	// no `!` (the query's longest word is "!ls" there).
+	for _, q := range []string{"/compact", "!ls burrow", "!ls"} {
 		if got := ids(search(t, l, model.SessionSearch{Query: q})); got != "a" {
 			t.Errorf("%s: %s", q, got)
 		}
@@ -132,6 +133,19 @@ func TestSearchSessionsAsListed(t *testing.T) {
 	}
 	if r := []rune(hits[0].Title); len(r) != 256 || r[255] != '…' {
 		t.Errorf("title %d characters: %q", len(r), hits[0].Title)
+	}
+}
+
+// A command whose name claude wrote without its slash reads as typed
+// too, though the transcript has no "/fix".
+func TestSearchACommandWithoutItsSlash(t *testing.T) {
+	projects := filepath.Join(t.TempDir(), "projects")
+	testcheck.Write(t, filepath.Join(projects, "-work-app", sessA+".jsonl"),
+		`{"type":"user","cwd":"/work/app","message":{"role":"user","content":"<command-name>fix</command-name>\n<command-args>the relay</command-args>"}}`+"\n")
+	for _, q := range []string{"/fix", "/fix the relay", "fix"} {
+		if hits := search(t, Local{Projects: projects}, model.SessionSearch{Query: q}); len(hits) != 1 || hits[0].Match != q {
+			t.Errorf("%s: %+v", q, hits)
+		}
 	}
 }
 

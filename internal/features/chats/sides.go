@@ -192,6 +192,7 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 		side.log().Warn("mode of the side chat", "err", err)
 	}
 	side.mu.Lock()
+	side.saveLocked(side.modeLocked) // what the agent says it's on: Keep carries it
 	side.publish = s.publish
 	side.mu.Unlock()
 	p.mu.Lock()
