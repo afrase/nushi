@@ -1,0 +1,135 @@
+// Package opencodeskills reads the skills opencode uses in a folder and
+// turns them on and off as opencode does (opencode 2.2.6;
+// docs/facts/opencode.md):
+//   - one skill an id, from the first of these places that has it:
+//     .opencode/skills, then .opencode/skill, in the folder and each
+//     folder above it up to / ("project"); <config>/skills, then
+//     <config>/skill ("user"; OPENCODE_CONFIG_DIR, else
+//     $XDG_CONFIG_HOME/opencode, else ~/.config/opencode); .agents/skills
+//     in the same folders ("shared") and ~/.agents/skills ("shared",
+//     everywhere); .claude/skills in them ("project") and
+//     ~/.claude/skills ("user");
+//   - in a place, a folder holding a SKILL.md is a skill and its id is
+//     the folder's name, whatever its front matter says; a folder without
+//     one is a group of them, read six deep; a <name>.md right in the
+//     place is a skill too (scan.go);
+//   - no trust: a folder's skills load as soon as opencode runs there;
+//   - off by id, whichever place it comes from: a skill.use deny among
+//     the policies of your global opencode.json or opencode.jsonc
+//     (config.go, switch.go).
+//
+// opencode follows linked places; Nushi leaves a project's out (ADR
+// 0052's rule). Its built-in skills, and those of the system's folder, of
+// a config's skills list or of a Console library, aren't listed. Nothing
+// here runs opencode.
+package opencodeskills
+
+import (
+	"cmp"
+	"context"
+	"os"
+	"path/filepath"
+
+	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/skillfile"
+)
+
+// OpenCode reads and changes opencode's skills.
+type OpenCode struct{}
+
+// configDir is opencode's global config folder.
+func configDir() string {
+	home, _ := os.UserHomeDir()
+	return cmp.Or(os.Getenv("OPENCODE_CONFIG_DIR"),
+		filepath.Join(cmp.Or(os.Getenv("XDG_CONFIG_HOME"), filepath.Join(home, ".config")), "opencode"))
+}
+
+type root struct {
+	path, source string
+	everywhere   bool
+	project      bool // in the folder or one above it, not yours
+}
+
+// same says a and b are one folder, however each is reached.
+func same(a, b string) bool {
+	x, errA := os.Stat(a)
+	y, errB := os.Stat(b)
+	return errA == nil && errB == nil && os.SameFile(x, y)
+}
+
+// roots are the skills folders opencode reads for folder, the winner of
+// an id first. Your home folder's own .agents and .claude, and the config
+// folder when it is on the way up, are yours and not a project's; in the
+// config folder itself opencode reads no project at all.
+func roots(folder string) []root {
+	home, _ := os.UserHomeDir()
+	config := configDir()
+	var dirs []string
+	if filepath.IsAbs(folder) && !same(folder, config) {
+		for dir := folder; ; dir = filepath.Dir(dir) {
+			dirs = append(dirs, dir)
+			if dir == filepath.Dir(dir) {
+				break
+			}
+		}
+	}
+	var out []root
+	project := func(source, yours string, rels ...string) {
+		for _, d := range dirs {
+			for _, rel := range rels {
+				if !same(filepath.Join(d, filepath.Dir(rel)), yours) && !skillfile.Linked(d, rel) {
+					out = append(out, root{path: filepath.Join(d, rel), source: source, project: true})
+				}
+			}
+		}
+	}
+	project("project", config, ".opencode/skills", ".opencode/skill")
+	out = append(out, root{path: filepath.Join(config, "skills"), source: "user"}, root{path: filepath.Join(config, "skill"), source: "user"})
+	project("shared", filepath.Join(home, ".agents"), ".agents/skills")
+	out = append(out, root{path: filepath.Join(home, ".agents", "skills"), source: "shared", everywhere: true})
+	project("project", filepath.Join(home, ".claude"), ".claude/skills")
+	return append(out, root{path: filepath.Join(home, ".claude", "skills"), source: "user"})
+}
+
+// List returns opencode's skills in folder, the shared ones among them.
+func (OpenCode) List(_ context.Context, folder string) (model.Skills, error) {
+	out := model.Skills{ReadsShared: true}
+	folder = git.RealPath(folder)
+	docs, err := readGlobal()
+	if err != nil {
+		out.NoSwitch = err.Error()
+	}
+	seen := map[string]bool{}
+	for _, r := range roots(folder) {
+		for _, f := range scan(r.path) {
+			if seen[f.id] {
+				continue
+			}
+			seen[f.id] = true
+			s := model.Skill{Name: f.id, Description: f.Description, Source: r.source, Path: f.path, Linked: f.linked,
+				Everywhere: r.everywhere, State: "on", Tokens: skillfile.Tokens(f.id + f.Description)}
+			if off, setIn := docs.off(f.id); off {
+				s.State, s.SetIn = "off", setIn
+			}
+			out.Skills = append(out.Skills, s)
+		}
+	}
+	return out, nil
+}
+
+// Trash moves one of opencode's own skill folders to the Trash: right in
+// your config's skills folder or a .opencode/skills (or skill) opencode
+// reads here. One in a group, and a skill that is a lone file, stay.
+func (OpenCode) Trash(ctx context.Context, folder, path string) error {
+	var project, yours []string
+	for _, r := range roots(git.RealPath(folder)) {
+		switch {
+		case r.project && r.source == "project" && filepath.Base(filepath.Dir(r.path)) == ".opencode":
+			project = append(project, r.path)
+		case !r.project && filepath.Dir(r.path) == configDir():
+			yours = append(yours, r.path)
+		}
+	}
+	return skillfile.Trash(ctx, project, yours, path)
+}
