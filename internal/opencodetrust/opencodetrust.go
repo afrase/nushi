@@ -91,7 +91,7 @@ func files(folder string) []folderfiles.File {
 	home = git.RealPath(home)
 	// opencode walks no folders for a chat in its own config folder.
 	own := git.RealPath(opencode.ConfigDir(home))
-	var roots []string
+	var roots, places []string
 	// opencode walks up from the folder as the chat names it: where a link
 	// in that path makes those other folders than the real path's, both
 	// count.
@@ -109,37 +109,54 @@ func files(folder string) []folderfiles.File {
 		roots = append(roots, inside(filepath.Join(dir, ".opencode"), inConfigFolder...)...)
 		roots = append(roots, inside(filepath.Join(dir, ".claude"), "skills")...)
 		roots = append(roots, inside(filepath.Join(dir, ".agents"), "skills")...)
+		places = append(places, filepath.Join(dir, ".claude", "skills"), filepath.Join(dir, ".agents", "skills"),
+			filepath.Join(dir, ".opencode", "skills"), filepath.Join(dir, ".opencode", "skill"))
 	}
+	others := slices.DeleteFunc(slices.Clone(roots), func(root string) bool { return slices.Contains(places, root) })
 	found := folderfiles.WalkLinked(roots, "opencode")
 	for i := range found {
-		if f := &found[i]; f.Link && f.Sum != nil && !betweenSkills(f.Path) {
+		if f := &found[i]; f.Link && f.Sum != nil && !betweenSkills(f.Path, places, others) {
 			f.Sum = nil
 			f.Text = append(f.Text, " as more than a skill, which the card doesn't show it as"...)
 		}
 	}
-	return found
-}
-
-// betweenSkills says whether the link at path is in a skills place and
-// leads into one, so opencode reads what it leads to as a skill, as the
-// card shows it. A link anywhere else may load a skill's file as a config,
-// a plugin or a command, without what the card sums up of one.
-func betweenSkills(path string) bool {
-	to, err := filepath.EvalSymlinks(path)
-	return err == nil && inSkills(path) && inSkills(to)
-}
-
-// inSkills says whether path is a project's skills place, .claude/skills,
-// .agents/skills or .opencode's skill folder under either spelling, or is
-// in one.
-func inSkills(path string) bool {
-	slashed := filepath.ToSlash(path) + "/"
-	for _, place := range []string{"/.claude/skills/", "/.agents/skills/", "/.opencode/skills/", "/.opencode/skill/"} {
-		if strings.Contains(slashed, place) {
-			return true
+	// A folder inside a folder above's .agents/skills is walked twice:
+	// each file shows once, without a sum if either time had none (the walk
+	// may have stopped at it the second time).
+	var out []folderfiles.File
+	at := map[string]int{}
+	for _, f := range found {
+		i, seen := at[f.Path]
+		switch {
+		case !seen:
+			at[f.Path] = len(out)
+			out = append(out, f)
+		case f.Sum == nil:
+			out[i] = f
 		}
 	}
-	return false
+	return out
+}
+
+// betweenSkills says whether the link at path is in one of places, the
+// skills places of the folders the card walks, in none of the others it
+// walks, and leads into a place, so opencode reads what it leads to only
+// as a skill, as the card shows it. A link anywhere else may load a
+// skill's file as a config, a plugin or a command, without what the card
+// sums up of one; one in a place that is also in another root (a project
+// inside a folder above's .agents/skills) may too. A place that is a link
+// itself matches nothing it leads to, so such a link asks.
+func betweenSkills(path string, places, others []string) bool {
+	to, err := filepath.EvalSymlinks(path)
+	return err == nil && inAny(path, places) && !inAny(path, others) && inAny(to, places)
+}
+
+// inAny says whether path is one of places or lies inside one.
+func inAny(path string, places []string) bool {
+	return slices.ContainsFunc(places, func(place string) bool {
+		rel, err := filepath.Rel(place, path)
+		return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	})
 }
 
 // upToRoot is dir and every folder above it, / first: opencode's walk

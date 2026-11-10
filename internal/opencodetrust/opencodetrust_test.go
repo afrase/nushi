@@ -1,6 +1,7 @@
 package opencodetrust
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -303,6 +304,9 @@ func TestALinkIntoWhatTheCardShowsIsRemembered(t *testing.T) {
 func TestALinkToMoreThanASkillIsNeverRemembered(t *testing.T) {
 	var tr Trust
 	base, _ := folders(t)
+	// The project itself in a folder named as a skills place changes
+	// nothing: a place is one of the walked folders', not a name in a path.
+	base = filepath.Join(base, "x", ".agents", "skills")
 	for folder, link := range map[string][2]string{ // where the link is, and where in the skill it leads
 		"config":   {"opencode.json", "c.json"},
 		"inside":   {".opencode/opencode.jsonc", "c.json"},
@@ -360,5 +364,22 @@ func TestALinkOutIsNeverRemembered(t *testing.T) {
 		if i < 0 || key != "" || !strings.Contains(runs[i].What, "can't vouch") || !strings.Contains(runs[i].Command, "a link to "+outside) {
 			t.Errorf("%s: runs %v, key %q", link, runs, key)
 		}
+	}
+}
+
+// A project inside a folder above's .agents/skills is walked twice, and
+// the walk may stop at a file the second time that it read the first: the
+// folder is then still never remembered.
+func TestAFileWalkedTwiceKeepsWhereTheWalkStopped(t *testing.T) {
+	var tr Trust
+	base, _ := folders(t)
+	folder := filepath.Join(base, "x", ".agents", "skills", "project")
+	for i := range 2100 {
+		testcheck.Write(t, filepath.Join(folder, ".opencode", "plugins", fmt.Sprintf("p%04d.js", i)), "export default 1")
+	}
+	runs, key, err := tr.Runs(folder)
+	testcheck.NoErr(t, err)
+	if key != "" || !slices.ContainsFunc(runs, func(r model.FolderRun) bool { return strings.Contains(r.Command, "not read, nor what comes after it") }) {
+		t.Errorf("key %q, %d rows", key, len(runs))
 	}
 }
