@@ -84,6 +84,11 @@ type Agent struct {
 	cwds    map[string]string // the sessions open here, by id: their cwd
 	turns   map[string]*turn  // the running turn's, by session
 	calls   int               // opencode's tool calls so far, for their ids
+	// opencode's subagents: whether the client asked for their updates as
+	// child updates, and what a session's script sends once its prompt is
+	// answered.
+	childUpdates bool
+	after        map[string]func()
 }
 
 // turn is a running prompt's: cancelled once session/cancel came for it.

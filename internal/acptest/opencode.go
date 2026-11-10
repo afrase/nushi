@@ -17,8 +17,10 @@ import (
 // invalid params (-32602), not ACP's resource not found; the prompt
 // "permission" writes a file, the call pending with no input before it
 // runs with it, asking with the options "once", "always" and "reject"; the
-// prompt "question" asks with an "Other" field named "<id>_custom"; and a
-// rejected permission or a dismissed question ends the turn "cancelled".
+// prompt "question" asks with an "Other" field named "<id>_custom"; a
+// rejected permission or a dismissed question ends the turn "cancelled";
+// and the prompt "subagent" runs one whose session asks permission
+// (opencode_subagent.go).
 
 func opencodeInit() map[string]any {
 	none := map[string]any{}
@@ -45,6 +47,17 @@ func (a *Agent) opencodeAnswer(f frame, opened string, result any) {
 	_ = json.Unmarshal(f.Params, &set)
 	switch f.Method {
 	case "initialize":
+		var init struct {
+			ClientCapabilities struct {
+				Meta struct {
+					ChildUpdates bool `json:"opencode/child-session-updates"`
+				} `json:"_meta"`
+			}
+		}
+		_ = json.Unmarshal(f.Params, &init)
+		a.mu.Lock()
+		a.childUpdates = init.ClientCapabilities.Meta.ChildUpdates
+		a.mu.Unlock()
 		result = opencodeInit()
 	case "session/new", "session/fork":
 		result = map[string]any{"sessionId": opened, "configOptions": a.History.opencodeOptions(opened, "", "")}
@@ -58,6 +71,15 @@ func (a *Agent) opencodeAnswer(f frame, opened string, result any) {
 	if opened != "" {
 		a.live(opened, opencodeCommands)
 	}
+	if f.Method == "session/prompt" {
+		a.mu.Lock()
+		late := a.after[set.SessionID]
+		delete(a.after, set.SessionID)
+		a.mu.Unlock()
+		if late != nil {
+			late()
+		}
+	}
 }
 
 // opencodeScript plays the prompts opencode has its own script for, and
@@ -67,6 +89,8 @@ func (a *Agent) opencodeScript(session, text string) string {
 		return ""
 	}
 	switch {
+	case strings.Contains(text, "subagent"):
+		return a.opencodeSubagent(session)
 	case strings.Contains(text, "permission"):
 		return a.opencodePermission(session)
 	case strings.Contains(text, "question"):
@@ -117,10 +141,7 @@ func (h *History) opencodeOptions(session, id, value string) []map[string]any {
 // tool's name with no input, then in progress with it. It returns the
 // call's id, a new one each time as a model's are.
 func (a *Agent) opencodeTool(session, name, kind string, input map[string]any, at []map[string]any) string {
-	a.mu.Lock()
-	a.calls++
-	id := fmt.Sprintf("call_%d_0", a.calls)
-	a.mu.Unlock()
+	id := a.opencodeCall()
 	a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": id, "name": name, "title": name, "kind": kind,
 		"status": "pending", "locations": []any{}, "rawInput": map[string]any{}})
 	a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": id, "status": "in_progress", "kind": kind, "title": name,
@@ -128,14 +149,45 @@ func (a *Agent) opencodeTool(session, name, kind string, input map[string]any, a
 	return id
 }
 
+// opencodeCall is a new tool call's id.
+func (a *Agent) opencodeCall() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.calls++
+	return fmt.Sprintf("call_%d_0", a.calls)
+}
+
 // opencodeToolEnd ends a tool call with its output, or with why it failed.
 func (a *Agent) opencodeToolEnd(session, id, text string, failed bool) {
-	status, out := "completed", map[string]any{"metadata": map[string]any{"truncated": false}}
+	meta := map[string]any{"truncated": false}
 	if failed {
-		status, out = "failed", map[string]any{"metadata": map[string]any{}, "error": text}
+		meta = map[string]any{}
 	}
-	a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": id, "status": status,
-		"content": []map[string]any{{"type": "content", "content": map[string]any{"type": "text", "text": text}}}, "rawOutput": out})
+	a.update(session, opencodeEnd(id, text, failed, meta))
+}
+
+// opencodeEnd is the update that ends a tool call with its output, or with
+// why it failed; meta is what the tool says of its result.
+func opencodeEnd(id, text string, failed bool, meta map[string]any) map[string]any {
+	status, out := "completed", map[string]any{"metadata": meta}
+	if failed {
+		status, out = "failed", map[string]any{"metadata": meta, "error": text}
+	}
+	return map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": id, "status": status,
+		"content": []map[string]any{{"type": "content", "content": map[string]any{"type": "text", "text": text}}}, "rawOutput": out}
+}
+
+// opencodeAsk asks permission for a tool call on session, with opencode's
+// three options, and returns the outcome and the option picked.
+func (a *Agent) opencodeAsk(session string, call map[string]any) (outcome, option string) {
+	res := a.request("session/request_permission", map[string]any{"sessionId": session, "toolCall": call,
+		"options": []map[string]any{{"optionId": "once", "kind": "allow_once", "name": "Allow once"},
+			{"optionId": "always", "kind": "allow_always", "name": "Always allow"}, {"optionId": "reject", "kind": "reject_once", "name": "Reject"}}})
+	var r struct {
+		Outcome struct{ Outcome, OptionID string } `json:"outcome"`
+	}
+	_ = json.Unmarshal(res, &r)
+	return r.Outcome.Outcome, r.Outcome.OptionID
 }
 
 // opencodePermission plays opencode's write tool asking first (nothing is
@@ -147,21 +199,14 @@ func (a *Agent) opencodePermission(session string) string {
 	a.mu.Unlock()
 	input, at := map[string]any{"path": path, "content": "one\ntwo\n"}, []map[string]any{{"path": path}}
 	id := a.opencodeTool(session, "write", "edit", input, at)
-	res := a.request("session/request_permission", map[string]any{"sessionId": session,
-		"toolCall": map[string]any{"toolCallId": id, "name": "write", "title": path, "kind": "edit", "status": "pending", "locations": at, "rawInput": input,
-			"content": []map[string]any{{"type": "diff", "path": path, "oldText": nil, "newText": "one\ntwo\n"}}},
-		"options": []map[string]any{{"optionId": "once", "kind": "allow_once", "name": "Allow once"},
-			{"optionId": "always", "kind": "allow_always", "name": "Always allow"}, {"optionId": "reject", "kind": "reject_once", "name": "Reject"}}})
-	var r struct {
-		Outcome struct{ Outcome, OptionID string } `json:"outcome"`
-	}
-	_ = json.Unmarshal(res, &r)
-	if r.Outcome.Outcome != "selected" || r.Outcome.OptionID == "reject" {
+	outcome, option := a.opencodeAsk(session, map[string]any{"toolCallId": id, "name": "write", "title": path, "kind": "edit", "status": "pending",
+		"locations": at, "rawInput": input, "content": []map[string]any{{"type": "diff", "path": path, "oldText": nil, "newText": "one\ntwo\n"}}})
+	if outcome != "selected" || option == "reject" {
 		a.opencodeToolEnd(session, id, "The user declined this tool call", true)
 		return "cancelled"
 	}
 	a.opencodeToolEnd(session, id, "Created file successfully: w.txt", false)
-	a.say(session, "Permission: "+r.Outcome.Outcome+" "+r.Outcome.OptionID)
+	a.say(session, "Permission: "+outcome+" "+option)
 	return "end_turn"
 }
 
