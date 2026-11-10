@@ -195,10 +195,12 @@ func TestARepositorysOwnConfigRunsNothing(t *testing.T) {
 	testcheck.NoErr(t, os.Chmod(filepath.Join(repo, ".git", "hooks", "post-checkout"), 0o755))
 	write(t, filepath.Join(repo, "a.txt"), "one\ntwo\n")
 
-	// A signed commit, and a gpg that marks any check of it.
+	// A signed commit, and a gpg that marks any check of it. It reads what
+	// git signs first: one that exits before git has written it all fails
+	// the commit at random (a broken pipe).
 	gpg := filepath.Join(marks, "gpg.sh")
 	write(t, gpg, "#!/bin/sh\ncase \"$*\" in *--verify*) "+mark("gpg")+"; exit 0;; esac\n"+
-		"echo '[GNUPG:] SIG_CREATED ' >&2\nprintf -- '-----BEGIN PGP SIGNATURE-----\\n\\nx\\n-----END PGP SIGNATURE-----\\n'\n")
+		"cat >/dev/null\necho '[GNUPG:] SIG_CREATED ' >&2\nprintf -- '-----BEGIN PGP SIGNATURE-----\\n\\nx\\n-----END PGP SIGNATURE-----\\n'\n")
 	testcheck.NoErr(t, os.Chmod(gpg, 0o755))
 	testcheck.Git(t, repo, "-c", "gpg.program="+gpg, "commit", "-q", "-S", "--allow-empty", "-m", "signed")
 	testcheck.Git(t, repo, "config", "gpg.program", gpg)
