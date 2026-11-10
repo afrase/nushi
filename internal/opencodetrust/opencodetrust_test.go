@@ -265,9 +265,77 @@ func rows(t *testing.T, file string) []string {
 	return got
 }
 
+// A skill linked to the one in .agents/skills, as "Link for Claude…" makes
+// it, or that whole folder linked, is remembered: the card shows what the
+// link leads to, and asks again when that changes.
+func TestALinkIntoWhatTheCardShowsIsRemembered(t *testing.T) {
+	var tr Trust
+	base, _ := folders(t)
+	for folder, link := range map[string][2]string{
+		"skill": {".claude/skills/s", "../../.agents/skills/s"},
+		"place": {".claude/skills", "../.agents/skills"},
+	} {
+		folder = filepath.Join(base, folder)
+		skill := filepath.Join(folder, ".agents", "skills", "s", "SKILL.md")
+		testcheck.Write(t, skill, "a skill")
+		at := filepath.Join(folder, link[0])
+		testcheck.NoErr(t, os.MkdirAll(filepath.Dir(at), 0o700))
+		testcheck.NoErr(t, os.Symlink(link[1], at))
+		runs, key, err := tr.Runs(folder)
+		testcheck.NoErr(t, err)
+		i := slices.IndexFunc(runs, func(r model.FolderRun) bool { return r.File == at })
+		if i < 0 || key == "" || key != tr.Key(folder) || runs[i].What != "Loaded by opencode" ||
+			!strings.Contains(runs[i].Command, "a link to "+link[1]+", which opencode follows to "+filepath.Join(folder, ".agents", "skills")) {
+			t.Errorf("%s: runs %v, key %q", at, runs, key)
+		}
+		testcheck.Write(t, skill, "a skill that changed")
+		changed := tr.Key(folder)
+		if changed == "" || changed == key {
+			t.Errorf("%s: the linked skill changed, key %q, was %q", at, changed, key)
+		}
+	}
+}
+
+// A link opencode reads a config or a command through is never
+// remembered, though it leads into what the card shows: that shows under
+// its own path, as a skill's file, without the summary of what it runs.
+func TestALinkToAConfigOrACommandIsNeverRemembered(t *testing.T) {
+	var tr Trust
+	base, _ := folders(t)
+	for folder, link := range map[string][2]string{ // where the link is, and where in the skill it leads
+		"config":   {"opencode.json", "c.json"},
+		"inside":   {".opencode/opencode.jsonc", "c.json"},
+		"folder":   {".opencode", ""},
+		"commands": {".opencode/commands", "command"},
+		"command":  {".opencode/command/c.md", "command/c.md"},
+	} {
+		folder = filepath.Join(base, folder)
+		skill := filepath.Join(folder, ".agents", "skills", "s")
+		testcheck.Write(t, filepath.Join(skill, "c.json"), `{"shell": "/bin/evil"}`)
+		testcheck.Write(t, filepath.Join(skill, "command", "c.md"), "Run !`make evil` now")
+		at := filepath.Join(folder, link[0])
+		testcheck.NoErr(t, os.MkdirAll(filepath.Dir(at), 0o700))
+		testcheck.NoErr(t, os.Symlink(filepath.Join(skill, link[1]), at))
+		runs, key, err := tr.Runs(folder)
+		testcheck.NoErr(t, err)
+		var got []model.FolderRun
+		for _, r := range runs {
+			if r.File == at {
+				got = append(got, r)
+			}
+		}
+		if key != "" || tr.Key(folder) != "" || len(got) != 1 || !strings.Contains(got[0].What, "can't vouch") ||
+			!strings.Contains(got[0].Command, "a link to "+filepath.Join(skill, link[1])+", which opencode follows") ||
+			!strings.Contains(got[0].Command, "without the summary of what it runs") {
+			t.Errorf("%s: rows %v, key %q", at, got, key)
+		}
+	}
+}
+
 // opencode follows a link, to a folder or to one file: Nushi doesn't, shows
-// it as a link, and can't remember the folder.
-func TestALinkIsNeverRemembered(t *testing.T) {
+// it as a link, and can't remember a folder with one that leads out of
+// what the card shows.
+func TestALinkOutIsNeverRemembered(t *testing.T) {
 	var tr Trust
 	base, _ := folders(t)
 	outside := filepath.Join(base, "outside")

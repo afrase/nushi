@@ -8,9 +8,9 @@
 // the chat's folder and every folder above it up to /, past the
 // repository's root:
 //   - opencode.json and opencode.jsonc, there and in .opencode: plugins,
-//     MCP servers, permission rules, the shell, formatters, LSP servers,
-//     commands, and {file:…} and {env:…}, which copy a file or a variable
-//     into a value;
+//     MCP servers, where a model provider's requests go, permission rules,
+//     the shell, formatters, LSP servers, commands, references, and
+//     {file:…} and {env:…}, which copy a file or a variable into a value;
 //   - .opencode's plugin(s), agent(s), mode(s), command(s) and skill(s)
 //     folders, and tool(s), which 2.2.6 no longer loads but an older
 //     opencode does (the CLI is the user's own);
@@ -20,7 +20,9 @@
 // what it has opencode run. It leaves out the user's own, which no folder
 // brings (the home folder's opencode.json, .opencode, .claude and .agents,
 // and opencode's config folder), and AGENTS.md, as the other agents' cards
-// leave it out. Nothing is written, and no link followed.
+// leave it out. Nothing is written, and no link followed: a link shows as
+// one, and is remembered only when it leads into what the card shows and
+// opencode reads no config or command through it.
 package opencodetrust
 
 import (
@@ -53,7 +55,7 @@ func (Trust) Runs(folder string) ([]model.FolderRun, string, error) {
 	fs := files(folder)
 	var out []model.FolderRun
 	for _, f := range fs {
-		if f.Sum != nil && len(f.Text) <= folderfiles.Shown {
+		if f.Sum != nil && !f.Link && f.Size <= folderfiles.Shown {
 			switch {
 			case isConfig(f.Path):
 				out = append(out, configRuns(f.Path, f.Text)...)
@@ -76,7 +78,12 @@ var inConfigFolder = []string{
 // files returns what opencode loads for a chat in folder (see the
 // package's comment), the outermost folder's first; empty files are left
 // out. A link is a file without a sum, as is anything but a regular file:
-// such a folder can't be remembered.
+// such a folder can't be remembered. The exception is a link into what is
+// listed here (folderfiles.WalkLinked): a skill in .claude/skills linked
+// to the one in .agents/skills, as Nushi's own "Link for Claude…" makes
+// it (ADR 0052), or that whole folder linked, would else ask at every
+// start. A link opencode reads a config or a command through stays
+// without a sum wherever it leads (summedThrough).
 func files(folder string) []folderfiles.File {
 	home, _ := os.UserHomeDir()
 	home = git.RealPath(home)
@@ -101,7 +108,26 @@ func files(folder string) []folderfiles.File {
 		roots = append(roots, inside(filepath.Join(dir, ".claude"), "skills")...)
 		roots = append(roots, inside(filepath.Join(dir, ".agents"), "skills")...)
 	}
-	return folderfiles.Walk(roots, "opencode")
+	found := folderfiles.WalkLinked(roots, "opencode")
+	for i := range found {
+		if f := &found[i]; f.Link && f.Sum != nil && summedThrough(f.Path) {
+			f.Sum = nil
+			f.Text = append(f.Text, " without the summary of what it runs: opencode reads a config or a command through this link"...)
+		}
+	}
+	return found
+}
+
+// summedThrough says whether opencode reads a config or a command through
+// the link at path: one named as a config, a .opencode folder, its command
+// folder under either spelling, or anything in one. The card sums up a
+// config or a command under the path opencode loads it by, and what such a
+// link leads to shows under its own, as a file like any other: remembered,
+// it would be a config that starts without its summary ever shown.
+func summedThrough(path string) bool {
+	slashed := filepath.ToSlash(path) + "/"
+	return isConfig(path) || filepath.Base(path) == ".opencode" ||
+		strings.Contains(slashed, "/.opencode/command/") || strings.Contains(slashed, "/.opencode/commands/")
 }
 
 // upToRoot is dir and every folder above it, / first: opencode's walk
@@ -117,7 +143,8 @@ func upToRoot(dir string) []string {
 }
 
 // inside is names in dir, or dir alone when it is a link: opencode
-// follows it, and Nushi can't vouch for where it leads.
+// follows it, and Nushi can't vouch for where it leads (dir is no place
+// the card lists whole, so no link to one is remembered).
 func inside(dir string, names ...string) []string {
 	if fi, err := os.Lstat(dir); err == nil && fi.Mode()&fs.ModeSymlink != 0 {
 		return []string{dir}
