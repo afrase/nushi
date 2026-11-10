@@ -25,7 +25,7 @@ type session struct {
 
 	mu    sync.Mutex
 	file  string // the session's file, once pi said
-	turn  *turn  // the running turn, if any
+	turn  *turn  // the running turn, if any (or a stopped one pi hasn't answered the abort of)
 	idle  chan struct{}
 	msgID string         // the assistant message under way
 	sent  map[int]string // what of its blocks went out, by content index
@@ -45,6 +45,7 @@ type session struct {
 // a turn pi started itself), the tokens it used and how it ended.
 type turn struct {
 	result     chan turnResult
+	answered   bool // result has its answer (a Stop gives it before the turn ends)
 	done       bool
 	ran        bool // pi started a run for it
 	usage      acp.Usage
@@ -290,7 +291,8 @@ func (s *session) beginLocked(t *turn) {
 	s.turn, s.idle = t, make(chan struct{})
 }
 
-// endLocked ends turn t with its result, once.
+// endLocked ends turn t, once: the next may begin. Its prompt gets this
+// result unless it has one.
 func (s *session) endLocked(t *turn, resp *acp.PromptResponse, err error) {
 	if t.done {
 		return
@@ -300,6 +302,15 @@ func (s *session) endLocked(t *turn, resp *acp.PromptResponse, err error) {
 		s.turn = nil
 		close(s.idle)
 	}
+	s.answerLocked(t, resp, err)
+}
+
+// answerLocked gives turn t's prompt its result, once.
+func (s *session) answerLocked(t *turn, resp *acp.PromptResponse, err error) {
+	if t.answered {
+		return
+	}
+	t.answered = true
 	t.result <- turnResult{resp, err}
 }
 
@@ -325,6 +336,7 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 			s.caught.Wait()
 		}
 		switch {
+		case err != nil && t.answered: // stopped (its ctx ends with the answer): the abort's answer ends it
 		case err != nil:
 			s.endLocked(t, nil, err)
 		case r.Disposition == "handled" && !t.ran:
@@ -359,28 +371,45 @@ func (s *session) nextTurn(ctx context.Context) (*turn, error) {
 }
 
 // cancel stops the running turn; pi answers once it settled. A turn
-// with no run (an extension's command, which may wait on itself) ends at
-// once.
+// with no run seen (an extension's command, which may wait on itself) is
+// answered at once, but holds the session until pi answers the abort,
+// which it does once a run it had started settled (docs/facts/pig.md):
+// its agent_start may not have been read yet, and the next prompt would be
+// refused meanwhile, or take that run's last events as its own.
 //
 //nolint:contextcheck // the abort goes out on its own; Cancel is a notification
 func (s *session) cancel() {
 	s.mu.Lock()
-	if t := s.turn; t != nil {
+	t := s.turn
+	early := t != nil && !t.ran
+	if t != nil {
 		t.cancelled = true
-		if !t.ran {
-			s.endLocked(t, &acp.PromptResponse{StopReason: "cancelled"}, nil)
-		}
+	}
+	if early {
+		s.answerLocked(t, &acp.PromptResponse{StopReason: "cancelled"}, nil)
 	}
 	s.mu.Unlock()
-	go func() { _ = s.p.call(context.Background(), map[string]any{"type": "abort"}, nil) }() // a dead pi has no run to abort
+	go func() {
+		after, _ := s.p.callAfter(context.Background(), map[string]any{"type": "abort"}, nil) // a dead pi has no run to abort
+		if !early {
+			return
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		for s.handled < after { // the run's events, before the next turn
+			s.caught.Wait()
+		}
+		s.endLocked(t, nil, nil)
+	}()
 }
 
 // steer hands text to the running turn, which takes it after the tools
-// running now; false when no turn runs. One of ownCommands isn't taken: it
-// waits for the turn to end, then runs as the next.
+// running now; false when no turn runs (a stopped one that waits for pi's
+// abort doesn't). One of ownCommands isn't taken: it waits for the turn
+// to end, then runs as the next.
 func (s *session) steer(ctx context.Context, text string, images []image) (bool, error) {
 	s.mu.Lock()
-	running, idle := s.turn != nil, s.idle
+	running, idle := s.turn != nil && !s.turn.answered, s.idle
 	s.mu.Unlock()
 	if !running {
 		return false, nil

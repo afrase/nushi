@@ -292,6 +292,53 @@ func TestCancelAndSteer(t *testing.T) {
 	}
 }
 
+// Stop before the bridge has read pi's agent_start ends the turn at once;
+// the next message waits for pi's abort, so pi doesn't refuse it as still
+// running, nor do the stopped run's last events end it.
+func TestStopBeforeTheRunStarts(t *testing.T) {
+	store := &pitest.Store{Sessions: t.TempDir(), Waiting: make(chan string), Starts: make(chan chan struct{})}
+	c := start(t, store, io.Discard)
+	s := openNew(t, c, t.TempDir())
+	ctx, cancel := context.WithTimeout(t.Context(), turnTimeout)
+	defer cancel()
+	send := func(text string) func(context.Context) (*acp.PromptResponse, error) {
+		w, err := c.StartPrompt(ctx, &acp.PromptRequest{SessionID: s.SessionID, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
+		testcheck.NoErr(t, err)
+		return w
+	}
+	first := send("wait")
+	run := next(ctx, t, store.Starts, "the first run")
+	if err := c.Cancel(ctx, &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
+		t.Error(err)
+	}
+	if r, err := first(ctx); err != nil || r.StopReason != "cancelled" {
+		t.Fatalf("first = %+v, %v", r, err)
+	}
+	second := send("wait")
+	close(run) // the stopped run starts, finds its abort and settles
+	next(ctx, t, store.Waiting, "the first run's wait")
+	close(next(ctx, t, store.Starts, "the second run"))
+	next(ctx, t, store.Waiting, "the second run's wait")
+	if ok, err := c.Steer(ctx, s.SessionID, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "turn left"}}}); !ok || err != nil {
+		t.Fatalf("steer = %v, %v", ok, err)
+	}
+	if r, err := second(ctx); err != nil || r.StopReason != "end_turn" {
+		t.Errorf("second = %+v, %v", r, err)
+	}
+}
+
+// next receives from ch, or fails the test as what never came.
+func next[T any](ctx context.Context, t *testing.T, ch <-chan T, what string) T {
+	t.Helper()
+	var v T
+	select {
+	case v = <-ch:
+	case <-ctx.Done():
+		t.Fatalf("%s never came", what)
+	}
+	return v
+}
+
 // An extension's dialog is a question; its answer goes back, and its
 // notification is a message. pi's lines that aren't JSON, and events
 // nobody knows, are logged and passed over.

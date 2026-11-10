@@ -22,7 +22,8 @@
 //
 // One that waits ("/hang", "wait", a slow compact) says so on the Store's
 // Waiting once it does, so a test stops or steers it when it runs, not
-// after a sleep that may lose the race.
+// after a sleep that may lose the race. As Pi's, abort answers once the
+// run settled, and a prompt is refused until then.
 package pitest
 
 import (
@@ -45,6 +46,10 @@ type Store struct {
 	// waits for an abort or a steer, once it waits. The fake blocks on
 	// it: the test reads each, or gives the channel room.
 	Waiting chan string
+	// Starts, when set, gets a channel for each prompt that starts a run,
+	// before its answer and the run's agent_start, which wait until the
+	// test closes it: a run pi took that the bridge hasn't heard of yet.
+	Starts chan chan struct{}
 
 	mu sync.Mutex
 	n  int
@@ -66,6 +71,7 @@ type Program struct {
 	level    string
 	running  bool
 	aborted  chan struct{}
+	settled  chan struct{} // closed once the run settled
 	steered  chan string
 	answers  map[string]chan map[string]any
 
@@ -198,7 +204,14 @@ func (p *Program) command(cmd map[string]any) {
 			p.mu.Lock()
 			return
 		}
-		p.running, p.aborted, p.steered = true, make(chan struct{}), make(chan string, 4)
+		p.running, p.aborted, p.settled, p.steered = true, make(chan struct{}), make(chan struct{}), make(chan string, 4)
+		if p.st.Starts != nil {
+			held := make(chan struct{})
+			p.mu.Unlock()
+			p.st.Starts <- held
+			<-held
+			p.mu.Lock()
+		}
 		p.respond(cmd, map[string]any{"disposition": "started"}, "")
 		go p.run(text)
 	case "steer":
@@ -209,13 +222,20 @@ func (p *Program) command(cmd map[string]any) {
 		p.steered <- cmd["message"].(string)
 		p.respond(cmd, map[string]any{"disposition": "queued"}, "")
 	case "abort":
-		if p.running {
-			close(p.aborted)
-			p.running = false
-		}
 		if p.compacting != nil {
 			close(p.compacting)
 			p.compacting = nil
+		}
+		if p.running {
+			select {
+			case <-p.aborted:
+			default:
+				close(p.aborted)
+			}
+			settled := p.settled
+			p.mu.Unlock()
+			<-settled
+			p.mu.Lock()
 		}
 		p.respond(cmd, nil, "")
 	case "fork", "clone":
@@ -298,7 +318,7 @@ func (p *Program) run(text string) {
 	p.emit(map[string]any{"type": "message_end", "message": user})
 	p.mu.Lock()
 	p.append(user)
-	aborted, steered := p.aborted, p.steered
+	aborted, settled, steered := p.aborted, p.settled, p.steered
 	p.mu.Unlock()
 	say := func(m map[string]any) {
 		p.emit(map[string]any{"type": "message_start", "message": map[string]any{"role": "assistant", "content": []any{}, "timestamp": m["timestamp"]}})
@@ -322,6 +342,7 @@ func (p *Program) run(text string) {
 		p.mu.Unlock()
 		p.emit(map[string]any{"type": "agent_end"})
 		p.emit(map[string]any{"type": "agent_settled", "aborted": abort})
+		close(settled)
 	}
 	switch {
 	case strings.Contains(text, "tool"):
