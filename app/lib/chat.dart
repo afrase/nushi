@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart'
     show TextEditingController, WidgetsBinding;
 
 import 'package:nushi/agents.dart';
+import 'package:nushi/browser_address.dart' show isWebPage;
 import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_look.dart';
 import 'package:nushi/clock.dart';
@@ -441,13 +442,16 @@ class ChatState extends ChangeNotifier {
   }
 
   /// Shows a server's address at [url] ('http://localhost:3000'): the
-  /// browser tab already at that origin, else a new one (Servers menu,
+  /// browser tab already at that origin, loaded again if it showed that it
+  /// couldn't load (the server wasn't up), else a new one (Servers menu,
   /// ADR 0098), on the Chat tab.
   void showServer(String url) {
-    final origin = Uri.tryParse(url)?.origin;
+    // Uri.origin throws for any page but http(s) to a host (about:blank).
+    final server = Uri.tryParse(url);
+    final origin = isWebPage(server) ? server!.origin : null;
     final open = previewTabs.value.whereType<BrowserTab>().where((b) {
       final at = Uri.tryParse(b.address.value);
-      return at != null && at.hasScheme && at.origin == origin;
+      return isWebPage(at) && at!.origin == origin;
     }).lastOrNull;
     if (open == null) {
       openBrowserTab(url);
@@ -455,11 +459,12 @@ class ChatState extends ChangeNotifier {
     }
     tab.value = ChatTab.chat;
     _show(open);
+    open.view?.retry();
   }
 
   /// Shows a page its agent asked for ([ShowPage]): a server's address
-  /// as [showServer] does; a page within a site in the tab already at it,
-  /// else a new one.
+  /// as [showServer] does; a page within a site in the tab already at it
+  /// (loaded again if it didn't load), else a new one.
   void showPage(String url) {
     final at = Uri.tryParse(url);
     if (at == null || (at.path.isEmpty || at.path == '/') && !at.hasQuery) {
@@ -476,6 +481,7 @@ class ChatState extends ChangeNotifier {
     }
     tab.value = ChatTab.chat;
     _show(open);
+    open.view?.retry();
   }
 
   /// Whether a browser tab shows: the preview's, on the Chat tab.

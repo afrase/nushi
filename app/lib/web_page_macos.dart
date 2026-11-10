@@ -28,13 +28,19 @@ final class CookielessLoads {
         ..ignore();
 
   final Future<void> _ready;
+  bool _stopped = false;
 
   /// Runs [load] once the cookies are off; throws, loading nothing, if
-  /// they can't be.
+  /// they can't be. After [stop] it loads nothing.
   Future<void> load(Future<void> Function() load) async {
     await _ready;
+    if (_stopped) return;
     await load();
   }
+
+  /// Loads nothing from now on, a load still waiting on the cookies too:
+  /// the web view is gone, and a page loaded in it would run unseen.
+  void stop() => _stopped = true;
 }
 
 /// A WKWebView with only its free defaults (the owner's call), and no
@@ -61,7 +67,7 @@ class WebKitPage implements PageHost {
     const PlatformWebViewControllerCreationParams(),
   );
   late final CookielessLoads _loads;
-  String _path = '';
+  final _page = PageFile();
   String _root = '';
   bool _loaded = false;
   num? _scrollTo;
@@ -73,18 +79,19 @@ class WebKitPage implements PageHost {
 
   @override
   Future<void> load(String path, String root) async {
-    _path = path;
+    _page.path = path;
     _root = root;
-    await _loads.load(
-      () => _c.loadFileWithParams(
+    await _loads.load(() {
+      _page.loading(path);
+      return _c.loadFileWithParams(
         WebKitLoadFileParams(absoluteFilePath: path, readAccessPath: root),
-      ),
-    );
+      );
+    });
   }
 
   @override
   Future<void> reload() async {
-    if (_path.isEmpty) return;
+    if (_page.path.isEmpty) return;
     try {
       final y = await _c.runJavaScriptReturningResult('window.scrollY');
       if (y is num && y > 0) _scrollTo = y;
@@ -93,7 +100,7 @@ class WebKitPage implements PageHost {
     }
     // WebKit's reload checks the page's files again (its CSS too); a page
     // that never loaded (missing then) loads afresh.
-    await (_loaded ? _c.reload() : load(_path, _root));
+    await (_loaded ? _c.reload() : load(_page.path, _root));
   }
 
   void _finished(String url) {
@@ -105,7 +112,7 @@ class WebKitPage implements PageHost {
   }
 
   Future<NavigationDecision> _decide(NavigationRequest r) async {
-    switch (await pageNavigation(r.url, _path, mainFrame: r.isMainFrame)) {
+    switch (await pageNavigation(r.url, _page, mainFrame: r.isMainFrame)) {
       case PageNavigation.stay:
         return NavigationDecision.navigate;
       case PageNavigation.open:
@@ -119,7 +126,9 @@ class WebKitPage implements PageHost {
 
   @override
   void dispose() {
-    // The view goes with its widget; the page stops with it.
+    // The view goes with its widget; the page stops with it, and a load
+    // still waiting on the cookies never starts.
+    _loads.stop();
     unawaited(_c.loadRequest(LoadRequestParams(uri: Uri.parse('about:blank'))));
   }
 }

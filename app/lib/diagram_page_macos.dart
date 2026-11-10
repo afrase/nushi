@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/diagram_page.dart';
 import 'package:nushi/mermaid.dart' show cssColor;
 import 'package:nushi/mermaid_macos.dart' show diagramPage;
+import 'package:nushi/web_page.dart' show PageFile;
 import 'package:nushi/web_page_macos.dart' show CookielessLoads, blockCookies;
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
@@ -20,9 +21,11 @@ class WebKitDiagram implements DiagramHost {
     );
     unawaited(
       nav.setOnNavigationRequest(
-        (r) => !_loaded && r.url == Uri.file(_page).toString()
-            ? NavigationDecision.navigate
-            : NavigationDecision.prevent,
+        (r) => switch (Uri.tryParse(r.url)) {
+          final url? when !_loaded && _page.isPage(url) =>
+            NavigationDecision.navigate,
+          _ => NavigationDecision.prevent,
+        },
       ),
     );
     unawaited(nav.setOnPageFinished(_finished));
@@ -33,7 +36,7 @@ class WebKitDiagram implements DiagramHost {
   final _c = WebKitWebViewController(
     const PlatformWebViewControllerCreationParams(),
   );
-  String _page = '';
+  final _page = PageFile();
   bool _loaded = false;
   String? _pending; // the script to run once loaded
 
@@ -42,12 +45,13 @@ class WebKitDiagram implements DiagramHost {
         _c.setJavaScriptMode(JavaScriptMode.unrestricted),
         () => _c.webViewIdentifier,
       ).load(() async {
-        _page = await diagramPage();
-        if (_page.isEmpty) return;
+        final page = await diagramPage();
+        if (page.isEmpty) return;
+        _page.loading(page);
         await _c.loadFileWithParams(
           WebKitLoadFileParams(
-            absoluteFilePath: _page,
-            readAccessPath: _page.substring(0, _page.lastIndexOf('/')),
+            absoluteFilePath: page,
+            readAccessPath: page.substring(0, page.lastIndexOf('/')),
           ),
         );
       });

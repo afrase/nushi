@@ -80,17 +80,17 @@ enum PageNavigation { stay, open, drop }
 /// activation does. The plugin doesn't give WebKit's navigation type.
 const userGesture = Duration(seconds: 1);
 
-/// What a navigation to [url] does in the web view showing the file at
-/// [path], the user having last pressed in it at [pressed]: one that
-/// leaves the page opens in the browser only right after a press, so a
-/// page the agent shows (no click, ADR 0068) can't open tabs on its own.
+/// What a navigation to [url] does in the web view showing [page], the
+/// user having last pressed in it at [pressed]: one that leaves the page
+/// opens in the browser only right after a press, so a page the agent
+/// shows (no click, ADR 0068) can't open tabs on its own.
 PageNavigation navigation(
   String url,
-  String path, {
+  PageFile page, {
   required bool mainFrame,
   DateTime? pressed,
 }) {
-  if (staysInPage(url, path, mainFrame: mainFrame)) return PageNavigation.stay;
+  if (staysInPage(url, page, mainFrame: mainFrame)) return PageNavigation.stay;
   return pressed != null && clock().difference(pressed) <= userGesture
       ? PageNavigation.open
       : PageNavigation.drop;
@@ -100,13 +100,13 @@ PageNavigation navigation(
 /// [WebViews.sincePress], asked only for one that leaves the page.
 Future<PageNavigation> pageNavigation(
   String url,
-  String path, {
+  PageFile page, {
   required bool mainFrame,
 }) async {
-  if (staysInPage(url, path, mainFrame: mainFrame)) return PageNavigation.stay;
+  if (staysInPage(url, page, mainFrame: mainFrame)) return PageNavigation.stay;
   return navigation(
     url,
-    path,
+    page,
     mainFrame: mainFrame,
     pressed: await lastPressInPage(),
   );
@@ -124,15 +124,96 @@ Future<DateTime?> lastPressInPage({bool pointerOnly = false}) async {
   }
 }
 
-/// Whether a navigation to [url] stays in the web view showing the file
-/// at [path]: the page itself (a reload, an anchor in it, a query), a blank
-/// page, and anything in its frames. Any other page opens in the browser.
-bool staysInPage(String url, String path, {required bool mainFrame}) {
+/// Whether a navigation to [url] stays in the web view showing [page]: the
+/// page itself (a reload, an anchor in it, a query), a blank page, and
+/// anything in its frames. Any other page opens in the browser.
+bool staysInPage(String url, PageFile page, {required bool mainFrame}) {
   if (!mainFrame) return true;
   final u = Uri.tryParse(url);
   if (u == null) return false;
   if (u.scheme == 'about') return true;
-  return u.scheme == 'file' && u.host.isEmpty && u.path == Uri.file(path).path;
+  return page.isPage(u);
+}
+
+/// The file a web view shows, and which `file:` addresses are it. WebKit
+/// loads a file through Foundation (`URL(fileURLWithPath:)`), which spells
+/// accented letters, kana and Hangul decomposed (`re%CC%81sume%CC%81`),
+/// where Dart's `Uri.file` keeps the path's own (`r%C3%A9sum%C3%A9`), and
+/// Dart can't normalise Unicode to compare them. So the first main-frame
+/// `file:` navigation after [loading] is taken as that load when its path
+/// is the file's but for such letters, and its spelling is the page's too.
+final class PageFile {
+  new([this.path = '']);
+
+  /// The file's absolute path, '' until one loads.
+  String path;
+
+  bool _loading = false; // the next main-frame file: navigation is the load
+  String? _spelled; // WebKit's path for it, from that load
+
+  /// Says the web view is about to load the file at [path].
+  void loading(String path) {
+    this.path = path;
+    _spelled = null;
+    _loading = true;
+  }
+
+  /// Whether [url], a main frame's address, is the file: each name as Dart
+  /// spells it or as WebKit did when it loaded it.
+  bool isPage(Uri url) {
+    if (url.scheme != 'file' || url.host.isNotEmpty) return false;
+    final load = _loading;
+    _loading = false;
+    if (_spelledEither(url)) return true;
+    if (!load || !_sameButLetters(url)) return false;
+    _spelled = url.path;
+    return true;
+  }
+
+  /// Whether each of [url]'s names, still percent-encoded, is the file's as
+  /// Dart spells it or as WebKit did: a link to the page by name resolves
+  /// against WebKit's address to its folders WebKit's way and the name the
+  /// page's own.
+  bool _spelledEither(Uri url) {
+    final dart = Uri.file(path).path.split('/');
+    final webKit = _spelled?.split('/') ?? dart;
+    final theirs = url.path.split('/');
+    if (theirs.length != dart.length || webKit.length != dart.length) {
+      return false;
+    }
+    for (var i = 0; i < theirs.length; i++) {
+      if (theirs[i] != dart[i] && theirs[i] != webKit[i]) return false;
+    }
+    return true;
+  }
+
+  /// Whether [url]'s path has [path]'s names but for the letters past
+  /// ASCII, which Foundation may spell otherwise ([_asciiPart]).
+  bool _sameButLetters(Uri url) {
+    final mine = Uri.file(path).pathSegments;
+    final theirs = url.pathSegments;
+    if (mine.length != theirs.length) return false;
+    for (var i = 0; i < mine.length; i++) {
+      if (_asciiPart(mine[i]) != _asciiPart(theirs[i])) return false;
+    }
+    return true;
+  }
+}
+
+/// [name]'s ASCII, less the letter a combining accent follows: the same
+/// for an é precomposed (`é` left out) and decomposed (`e` and its accent).
+String _asciiPart(String name) {
+  final kept = <int>[];
+  int? last;
+  for (final c in name.runes) {
+    if (c < 0x80) {
+      kept.add(c);
+    } else if (c >= 0x300 && c < 0x370 && last != null && last < 0x80) {
+      kept.removeLast(); // U+0300–U+036F: Combining Diacritical Marks
+    }
+    last = c;
+  }
+  return String.fromCharCodes(kept);
 }
 
 /// The folder a page may read files from: the chat's folder (or worktree)

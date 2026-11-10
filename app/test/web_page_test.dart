@@ -15,13 +15,14 @@ void main() {
   // opened the browser; only a press in the page just before does now.
   test('a page leaves for the browser only right after a press', () {
     const p = '/repo/out/page.html';
+    final page = PageFile(p);
     final now = clock();
     const away = 'https://phish.example/login';
-    expect(navigation(away, p, mainFrame: true), PageNavigation.drop);
+    expect(navigation(away, page, mainFrame: true), PageNavigation.drop);
     expect(
       navigation(
         away,
-        p,
+        page,
         mainFrame: true,
         pressed: now.subtract(const Duration(seconds: 5)),
       ),
@@ -30,20 +31,105 @@ void main() {
     expect(
       navigation(
         away,
-        p,
+        page,
         mainFrame: true,
         pressed: now.subtract(const Duration(milliseconds: 200)),
       ),
       PageNavigation.open,
     );
     expect(
-      navigation('file://$p#menu', p, mainFrame: true),
+      navigation('file://$p#menu', page, mainFrame: true),
       PageNavigation.stay,
     );
     expect(
-      navigation(away, p, mainFrame: false),
+      navigation(away, page, mainFrame: false),
       PageNavigation.stay,
     ); // a frame
+  });
+
+  // Deep review 2026-11-10, 2: WebKit loads a file through Foundation,
+  // which spells an é (or a kana's dakuten) decomposed, while Dart's
+  // Uri.file keeps the path's own precomposed letter: the page's own load
+  // of résumé.html was refused, and its preview stayed blank.
+  test('a page whose path has accented letters loads as WebKit spells it', () {
+    const path = '/Users/x/café/résumé.html'; // NFC
+    const webKit = 'file:///Users/x/cafe%CC%81/re%CC%81sume%CC%81.html'; // NFD
+    final page = PageFile()..loading(path);
+    expect(navigation(webKit, page, mainFrame: true), PageNavigation.stay);
+    // Its reload and its anchors, in WebKit's spelling or Dart's.
+    expect(navigation(webKit, page, mainFrame: true), PageNavigation.stay);
+    expect(
+      navigation('$webKit#top', page, mainFrame: true),
+      PageNavigation.stay,
+    );
+    expect(
+      navigation('${Uri.file(path)}#top', page, mainFrame: true),
+      PageNavigation.stay,
+    );
+    // Another file is still another page, accented or not.
+    for (final other in [
+      'file:///Users/x/cafe%CC%81/u%CC%88ber.html',
+      'file:///Users/x/cafe%CC%81/notes.html',
+    ]) {
+      expect(
+        navigation(other, page, mainFrame: true),
+        PageNavigation.drop,
+        reason: other,
+      );
+    }
+    // Only the load itself is taken on its letters, and only for this file.
+    for (final other in [
+      'file:///Users/x/cafe%CC%81/notes.html',
+      'file:///Users/y/cafe%CC%81/re%CC%81sume%CC%81.html',
+      'file:///Users/x/re%CC%81sume%CC%81.html',
+    ]) {
+      expect(
+        navigation(other, PageFile()..loading(path), mainFrame: true),
+        PageNavigation.drop,
+        reason: other,
+      );
+    }
+    final kana = PageFile()..loading('/w/が.html'); // が
+    expect(
+      navigation('file:///w/%E3%81%8B%E3%82%99.html', kana, mainFrame: true),
+      PageNavigation.stay,
+    );
+  });
+
+  // Fix review 2026-11-10: a page's link to itself by name, written
+  // precomposed, resolves against WebKit's decomposed address to a path
+  // with the folders WebKit's way and the name the page's: it opened the
+  // browser instead of scrolling.
+  test('a link to the page by name is the page, its folders as WebKit '
+      'spells them', () {
+    const path = '/proj/café/résumé.html'; // NFC
+    const webKit = 'file:///proj/cafe%CC%81/re%CC%81sume%CC%81.html'; // NFD
+    final page = PageFile()..loading(path);
+    expect(navigation(webKit, page, mainFrame: true), PageNavigation.stay);
+    final link = Uri.parse(webKit).resolve('résumé.html#sec');
+    expect(link.path, '/proj/cafe%CC%81/r%C3%A9sum%C3%A9.html');
+    expect(navigation('$link', page, mainFrame: true), PageNavigation.stay);
+    expect(
+      navigation(
+        'file:///proj/caf%C3%A9/re%CC%81sume%CC%81.html',
+        page,
+        mainFrame: true,
+      ),
+      PageNavigation.stay,
+    );
+    // Its neighbours are still other pages, however they're spelled.
+    for (final other in [
+      Uri.parse(webKit).resolve('notes.html'),
+      Uri.parse(webKit).resolve('über.html'),
+      Uri.parse('file:///proj/cafe%CC%81/r%C3%A9sum%C3%A9.html/x'),
+      Uri.parse('file:///other/cafe%CC%81/r%C3%A9sum%C3%A9.html'),
+    ]) {
+      expect(
+        navigation('$other', page, mainFrame: true),
+        PageNavigation.drop,
+        reason: '$other',
+      );
+    }
   });
 
   test('only web, file and mail addresses leave for another app', () async {
@@ -76,6 +162,7 @@ void main() {
   // leaves.
   test("a link's press comes from the window's events", () async {
     const p = '/repo/out/page.html';
+    final page = PageFile(p);
     const away = 'https://example.com/docs';
     final web = fakeWebViews();
     var asked = 0;
@@ -85,20 +172,32 @@ void main() {
       expect(pointerOnly, isFalse); // a key in a file's page counts
       return ago;
     };
-    expect(await pageNavigation(away, p, mainFrame: true), PageNavigation.drop);
+    expect(
+      await pageNavigation(away, page, mainFrame: true),
+      PageNavigation.drop,
+    );
     ago = const Duration(milliseconds: 100);
-    expect(await pageNavigation(away, p, mainFrame: true), PageNavigation.open);
+    expect(
+      await pageNavigation(away, page, mainFrame: true),
+      PageNavigation.open,
+    );
     ago = const Duration(seconds: 3);
-    expect(await pageNavigation(away, p, mainFrame: true), PageNavigation.drop);
+    expect(
+      await pageNavigation(away, page, mainFrame: true),
+      PageNavigation.drop,
+    );
     expect(asked, 3);
     expect(
-      await pageNavigation('file://$p#top', p, mainFrame: true),
+      await pageNavigation('file://$p#top', page, mainFrame: true),
       PageNavigation.stay,
     );
     expect(asked, 3); // not asked for one that stays
     web.since = ({pointerOnly = false}) =>
         Future.error(StateError('no window'));
-    expect(await pageNavigation(away, p, mainFrame: true), PageNavigation.drop);
+    expect(
+      await pageNavigation(away, page, mainFrame: true),
+      PageNavigation.drop,
+    );
   });
 
   // A file's preview shares WebKit's store with browser tabs, and WebKit
@@ -162,12 +261,31 @@ void main() {
     expect(loaded, 2);
   });
 
+  // Deep review 2026-11-10, 19: a preview closed while its cookies were
+  // being turned off still loaded its page in a web view nobody showed.
+  test('a preview closed before its cookies are off loads nothing', () async {
+    final was = blockCookies;
+    addTearDown(() => blockCookies = was);
+    final off = Completer<void>();
+    blockCookies = (id) => off.future;
+    final loads = CookielessLoads(Future.value(), () => 7);
+    var loaded = 0;
+    final waiting = loads.load(() async => loaded++);
+    await pumpEventQueue();
+    loads.stop();
+    off.complete();
+    await waiting;
+    await loads.load(() async => loaded++);
+    expect(loaded, 0);
+  });
+
   // Browser tabs load any site now (ADR 0094) and share WebKit's store
   // with file previews: a site a tab signed in to must never load as a
   // preview's main frame, a press or not (docs/security.md).
   test('a file’s preview loads no site in its view, what a browser tab '
       'would', () {
     const p = '/repo/out/page.html';
+    final page = PageFile(p);
     final press = clock().subtract(const Duration(milliseconds: 200));
     for (final url in [
       'https://mail.example.com/',
@@ -182,13 +300,13 @@ void main() {
         reason: 'a tab: $url',
       );
       expect(
-        navigation(url, p, mainFrame: true),
+        navigation(url, page, mainFrame: true),
         PageNavigation.drop,
         reason: url,
       );
       // A click on a link sends it to the default browser, not the view.
       expect(
-        navigation(url, p, mainFrame: true, pressed: press),
+        navigation(url, page, mainFrame: true, pressed: press),
         PageNavigation.open,
         reason: url,
       );

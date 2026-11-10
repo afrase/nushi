@@ -222,6 +222,57 @@ void main() {
     await _close(tester);
   }, variant: macOnly);
 
+  // Deep review 2026-11-10, 9: Dart's Uri.origin throws for about:blank,
+  // so with a tab there a started server's page never opened, and the
+  // throw stood in the menu as the listing's error.
+  testWidgets('a tab at about:blank doesn’t keep a server’s page from '
+      'opening', (tester) async {
+    final s = _Servers()..rows = [_server('web')];
+    final (d, c) = await _pane(tester, s);
+    final server = c.preview.value;
+    c.openBrowserTab('about:blank');
+    await tester.pumpAndSettle();
+    await _openMenu(tester);
+    await tester.tap(find.byTooltip('Run'));
+    await tester.pumpAndSettle();
+    s.rows[0] = s.rows[0].deepCopy()
+      ..state = DevServerState.DEV_SERVER_STATE_RUNNING;
+    await _changed(tester, d);
+    expect(c.preview.value, same(server));
+    expect(c.previewTabs.value, hasLength(2));
+    expect(_shown.devServers.errorOf('c'), isNull);
+    // With only the blank tab, the server's page opens in a new one.
+    c
+      ..closePreview(server!)
+      ..showServer('http://localhost:3000');
+    await tester.pumpAndSettle();
+    expect(c.previewTabs.value.map((t) => (t as BrowserTab).address.value), [
+      'about:blank',
+      'http://localhost:3000',
+    ]);
+    await _close(tester);
+  }, variant: macOnly);
+
+  testWidgets('a page that can’t open is no error of the listing, and the '
+      'next server’s still opens', (tester) async {
+    final s = _Servers()
+      ..rows = [_server('api', port: 8080), _server('web', index: 1)];
+    final (d, _) = await _pane(tester, s);
+    final opened = <String>[];
+    final servers = _shown.devServers;
+    await servers.start('c', s.rows[0], onReady: (_) => throw StateError('x'));
+    await servers.start('c', s.rows[1], onReady: opened.add);
+    for (var i = 0; i < 2; i++) {
+      s.rows[i] = s.rows[i].deepCopy()
+        ..state = DevServerState.DEV_SERVER_STATE_RUNNING;
+    }
+    await _changed(tester, d);
+    expect(tester.takeException(), isStateError);
+    expect(opened, ['http://localhost:3000']);
+    expect(servers.errorOf('c'), isNull);
+    await _close(tester);
+  }, variant: macOnly);
+
   testWidgets('a start that fails opens nothing', (tester) async {
     final s = _Servers()..rows = [_server('web')];
     final (d, c) = await _pane(tester, s);

@@ -144,6 +144,11 @@ class BrowserPage implements BrowserHost {
             .then((_) => _c.setJavaScriptMode(JavaScriptMode.unrestricted))
             .then((_) => watchCommits(_id = _c.webViewIdentifier, _commit))
             .then((_) => _block())
+            .whenComplete(() {
+              // Closed before it was watched: dispose had no watch to
+              // forget, and the watch would keep this page for good.
+              if (_id case final id? when _gone) forgetCommits(id);
+            })
           // Its error is open's to meet, not the zone's.
           ..ignore();
     localNetworkSites.addListener(_sitesChanged);
@@ -163,6 +168,8 @@ class BrowserPage implements BrowserHost {
   final _failed = ValueNotifier<PageFailure?>(null);
   final _blocked = ValueNotifier<Uri?>(null);
   final _source = NavigationSource();
+  // A load has committed: until one does WebKit has no page to reload (a
+  // first load that failed leaves none), and Reload opens the tab's address.
   bool _loaded = false;
   bool _gone = false; // disposed: the view's last callbacks change nothing
 
@@ -183,7 +190,6 @@ class BrowserPage implements BrowserHost {
   @override
   Future<void> open(Uri url) async {
     if (!inBrowserTab(url)) return;
-    _loaded = true;
     // What the user asked for shows at once, as in a browser.
     tab.address.value = '$url';
     try {
@@ -198,6 +204,8 @@ class BrowserPage implements BrowserHost {
       }
       return;
     }
+    // Closed while its rules were made: the page would run unseen.
+    if (_gone) return;
     _source.asked(NavigationSource.typed, '$url');
     await _c.loadRequest(LoadRequestParams(uri: url));
   }
@@ -273,6 +281,7 @@ class BrowserPage implements BrowserHost {
   /// A load committed at [url] (the Swift side's [watchCommits]).
   void _commit(String url) {
     if (_gone) return;
+    _loaded = true;
     _page.committed(url);
     _source.committed(url);
     unawaited(_moved());

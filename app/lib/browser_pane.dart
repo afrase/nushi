@@ -225,6 +225,11 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
   void reload() => _host?.reload().ignore();
 
   @override
+  void retry() {
+    if (_host?.failed.value != null) reload();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final host = _host;
