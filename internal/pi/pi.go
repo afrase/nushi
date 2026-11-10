@@ -41,7 +41,6 @@ type Flavor struct {
 	CLI         string // its program
 	Version     string // whose RPC mode the bridge follows; newer ones are tried, and say so in the log
 	Min         string // the oldest the bridge runs; see check
-	Page        string // where to get it
 	Folder      string // its folder in your home and in a project
 	Env         string // its variables' prefix
 	XDG         bool   // its home can move: <Env>_HOME, $XDG_CONFIG_HOME/<CLI>
@@ -49,10 +48,10 @@ type Flavor struct {
 
 var (
 	// Pi is Pi itself, a Node program.
-	Pi = Flavor{Name: "pi", Title: "Pi", CLI: "pi", Version: "1.4.0", Min: "0.80.4", Page: "https://pi.dev",
+	Pi = Flavor{Name: "pi", Title: "Pi", CLI: "pi", Version: "1.4.0", Min: "0.80.4",
 		Folder: ".pi", Env: "PI"}
 	// PiG is the Go port.
-	PiG = Flavor{Name: "pig", Title: "PiG", CLI: "pig", Version: "0.5.3", Page: "https://pi-in-go.dev/install/",
+	PiG = Flavor{Name: "pig", Title: "PiG", CLI: "pig", Version: "0.5.3",
 		Folder: ".pig", Env: "PIG", XDG: true}
 )
 

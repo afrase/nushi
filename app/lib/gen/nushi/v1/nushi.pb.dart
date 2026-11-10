@@ -2673,7 +2673,7 @@ class Agent extends $pb.GeneratedMessage {
   @$pb.TagNumber(7)
   void clearVersion() => $_clearField(7);
 
-  /// Where to get it.
+  /// Where to get it, until 0.27.3; no longer sent.
   @$pb.TagNumber(8)
   $core.String get page => $_getSZ(7);
   @$pb.TagNumber(8)

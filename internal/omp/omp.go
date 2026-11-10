@@ -39,12 +39,8 @@ func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.
 	return agentproc.Start(cmd, client, log)
 }
 
-// CLI is omp's program: its own binary, or a script that runs under Bun;
-// Page is where to get it.
-const (
-	CLI  = "omp"
-	Page = "https://github.com/can1357/oh-my-pi"
-)
+// CLI is omp's program: its own binary, or a script that runs under Bun.
+const CLI = "omp"
 
 // Tested are the omp versions Nushi was run with.
 var Tested = []string{"18.12.6"}

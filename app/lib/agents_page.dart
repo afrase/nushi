@@ -9,11 +9,10 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shell_env_line.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/web_page.dart' show openLinkOrSay;
 import 'package:nushi/widgets.dart';
 
 /// Settings › Agents: each agent as found on this Mac (its version and
-/// path, or "Not installed" with where to get it), and for one that runs
+/// path, or "Not installed"), and for one that runs
 /// through an adapter (Codex), Set up, Update and Remove (ADR 0037); Claude
 /// runs through Nushi's Go agent, with nothing to set up (ADR 0066). The
 /// [marked] agent's row stands out: a chat that couldn't start it sent you
@@ -159,15 +158,7 @@ class AgentRow extends StatelessWidget {
     Adapter? ad,
     bool installed,
   ) {
-    if (!installed) {
-      return [
-        Button(
-          label: 'Get it',
-          icon: Icons.open_in_new,
-          onPressed: () => openLinkOrSay(context, Uri.parse(agent.page)),
-        ),
-      ];
-    }
+    if (!installed) return [];
     if (ad == null) {
       return [
         if (agent.ready)

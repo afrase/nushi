@@ -1,10 +1,10 @@
 # Agents
 
-Nushi runs seven coding agents over the [Agent Client Protocol](https://agentclientprotocol.com): Claude, Codex, Ante, oh-my-pi, OpenCode, Pi and PiG. Each is your own CLI, with its own login, settings and history. Nushi never brings a copy of one ([ADR 0037](adr/0037-agents-you-set-up.md)).
+Nushi runs seven coding agents over the [Agent Client Protocol](https://agentclientprotocol.com): Claude, Codex, Ante, oh-my-pi, OpenCode, Pi and PiG. Each is your own CLI, with its own login, settings and history: Nushi offers the ones you have installed, and never brings a copy of one ([ADR 0037](adr/0037-agents-you-set-up.md)).
 
 ## Finding them
 
-Settings › Agents shows each agent as Nushi finds it on your login shell's `PATH`: its version and path, or "Not installed" with where to get it. Finding them asks each CLI its version (and Claude whether it's signed in), run as you with nothing denied, as a chat runs it, for 10 s at most ([ADR 0037](adr/0037-agents-you-set-up.md)'s note of 2026-11-08). Nushi changes nothing itself; a CLI may write what it writes whenever it starts.
+Settings › Agents shows each agent as Nushi finds it on your login shell's `PATH`: its version and path, or "Not installed". Finding them asks each CLI its version (and Claude whether it's signed in), run as you with nothing denied, as a chat runs it, for 10 s at most ([ADR 0037](adr/0037-agents-you-set-up.md)'s note of 2026-11-08). Nushi changes nothing itself; a CLI may write what it writes whenever it starts.
 
 ## Their environment
 
@@ -44,7 +44,7 @@ Through Nushi's own bridge, `nushid ante-acp`, which runs an `ante serve --stdio
 
 ### oh-my-pi
 
-Nushi runs your `omp --mode acp`. Install omp any way [its README](https://github.com/can1357/oh-my-pi#install) gives; nothing to set up once `omp` is on your login shell's `PATH`. Nushi was tried with 18.12.6.
+Nushi runs your `omp --mode acp`. Nothing to set up once `omp` is on your login shell's `PATH`. Nushi was tried with 18.12.6.
 
 - It uses omp's own config and keys: `~/.omp`, and the environment (`FIREWORKS_API_KEY` for Fireworks, whose models it then lists).
 - To pick the model it starts on, set `modelRoles` in `~/.omp/agent/config.yml`:
@@ -58,7 +58,7 @@ Nushi runs your `omp --mode acp`. Install omp any way [its README](https://githu
 
 ### OpenCode
 
-Nushi runs your `opencode acp`. Install opencode 2 any way [its README](https://github.com/anomalyco/opencode#installation) gives; nothing to set up once `opencode` is on your login shell's `PATH`. Nushi follows opencode 2.2.6 and needs 2.0.0 or newer: opencode 1 (npm's `opencode-ai`) isn't supported.
+Nushi runs your `opencode acp`. Nothing to set up once `opencode` is on your login shell's `PATH`. Nushi follows opencode 2.2.6 and needs 2.0.0 or newer: opencode 1 (npm's `opencode-ai`) isn't supported.
 
 - It uses opencode's own config, providers and sign-in (`~/.config/opencode`, `~/.local/share/opencode`): sign in with `opencode auth login` in a terminal. Settings › Agents doesn't say whether you're signed in: opencode starts either way, with free models of its own.
 - Model, effort and mode are opencode's. So are its permission prompts (`permissions` in its config): as installed it asks almost nothing, and its `plan` mode still runs shell commands.
@@ -71,13 +71,7 @@ Nushi runs your `opencode acp`. Install opencode 2 any way [its README](https://
 
 ### Pi
 
-[Pi](https://pi.dev) runs through the same bridge as PiG, `nushid pi-acp`, which runs your `pi --mode rpc` per session ([ADR 0078](adr/0078-pi-and-pig-share-a-bridge.md)). It needs Node 22.19 or newer.
-
-```bash
-curl -fsSL https://pi.dev/install.sh | sh     # or: npm install -g --ignore-scripts @earendil-works/pi-coding-agent
-```
-
-Nushi follows Pi 1.4.0 and needs 0.80.4 or newer; Settings › Agents then says Ready.
+[Pi](https://pi.dev) runs through the same bridge as PiG, `nushid pi-acp`, which runs your `pi --mode rpc` per session ([ADR 0078](adr/0078-pi-and-pig-share-a-bridge.md)). Nothing to set up once `pi` is on your login shell's `PATH`. Nushi follows Pi 1.4.0 and needs 0.80.4 or newer; Settings › Agents then says Ready.
 
 - It uses Pi's own settings, providers and keys in `~/.pi/agent` (or `$PI_CODING_AGENT_DIR`).
 - **Pi has no permission prompts**: its tools run without asking.
@@ -86,13 +80,7 @@ Nushi follows Pi 1.4.0 and needs 0.80.4 or newer; Settings › Agents then says 
 
 ### PiG
 
-[PiG](https://pi-in-go.dev) runs through Nushi's own bridge, `nushid pig-acp`, which runs your `pig --mode rpc` per session ([ADR 0039](adr/0039-our-own-bridge-for-pig.md)). Nothing to set up once `pig` is on your login shell's `PATH`:
-
-```sh
-curl -fsSL https://pi-in-go.dev/install.sh | sh     # or: npm i -g @pi-in-go/pig
-```
-
-Nushi follows PiG 0.5.3; Settings › Agents then says Ready.
+[PiG](https://pi-in-go.dev) runs through Nushi's own bridge, `nushid pig-acp`, which runs your `pig --mode rpc` per session ([ADR 0039](adr/0039-our-own-bridge-for-pig.md)). Nothing to set up once `pig` is on your login shell's `PATH`. Nushi follows PiG 0.5.3; Settings › Agents then says Ready.
 
 - It uses PiG's own settings, providers and keys: `~/.pig` (or `$PIG_HOME`), and the environment (`FIREWORKS_API_KEY` for Fireworks).
 - To pick what new chats start on, set it in `~/.pig/agent/settings.json`:

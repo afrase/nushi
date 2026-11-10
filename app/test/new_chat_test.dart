@@ -153,7 +153,7 @@ void main() {
     expect(find.text('Start a chat'), findsNothing);
     await tester.tap(find.text('Settings › Agents'));
     await tester.pumpAndSettle();
-    expect(find.text('Get it'), findsOneWidget);
+    expect(find.text('Not installed'), findsWidgets);
     d.dispose();
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 

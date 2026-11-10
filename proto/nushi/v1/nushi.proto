@@ -804,7 +804,7 @@ message Agent {
   string path = 6;
   // The CLI's version, as it says it; empty when that couldn't be read.
   string version = 7;
-  // Where to get it.
+  // Where to get it, until 0.27.3; no longer sent.
   string page = 8;
   // Why it can't run, in a few words ("Not installed", "Needs Node");
   // empty when it can.

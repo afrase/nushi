@@ -33,7 +33,7 @@ func (s *server) ListAgents(ctx context.Context, req *connect.Request[nushiv1.Li
 		st := found[info.Name]
 		m := s.MCP[info.Name]
 		a := &nushiv1.Agent{Name: info.Name, Title: info.Title, Resume: info.Resume, Mcp: k.MCP, DeleteArchives: info.DeleteArchives,
-			Path: st.Path, Version: st.Version, Page: st.Page, Problem: st.Problem, SignedIn: st.SignedIn, Ready: st.Ready, Awake: int32(st.Awake),
+			Path: st.Path, Version: st.Version, Problem: st.Problem, SignedIn: st.SignedIn, Ready: st.Ready, Awake: int32(st.Awake),
 			McpUserOnly: m != nil && m.UserOnly()}
 		if ad := st.Adapter; ad != nil {
 			a.Adapter = &nushiv1.Adapter{Package: ad.Package, Pinned: st.Pinned, Installed: st.Installed, Packages: int32(st.Packages),

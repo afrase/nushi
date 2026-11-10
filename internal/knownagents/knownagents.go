@@ -79,19 +79,19 @@ func All(projects string) []Agent {
 	all := []Agent{
 		{
 			Harness: claude.Harness{}, Local: claudehistory.Local{Projects: projects},
-			Agent:  agents.Agent{CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn},
+			Agent:  agents.Agent{CLI: claude.CLI, SignedIn: claude.SignedIn},
 			Skills: claudeskills.Claude{}, Trust: claudetrust.Trust{},
 			MCP: func(func() (model.AgentRun, error)) mcp.Config { return claudemcp.Claude{} },
 		},
 		{
 			Harness: codex.Harness{}, Local: codex.Local{},
-			Agent: agents.Agent{CLI: codex.CLI, Page: codex.Page, Tested: codex.Tested,
+			Agent: agents.Agent{CLI: codex.CLI, Tested: codex.Tested,
 				Adapter: &agents.Adapter{Lock: codex.Adapter, Package: codex.AdapterPackage, Bin: codex.AdapterBin, Download: codex.AdapterDownload, Disk: codex.AdapterDisk}},
 			Skills: codexskills.Codex{}, Trust: codextrust.Trust{},
 		},
 		{
 			Harness: ante.Harness{}, Local: ante.Local{},
-			Agent:  agents.Agent{CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min, Tested: ante.Tested},
+			Agent:  agents.Agent{CLI: ante.CLI, Also: ante.Also(), Min: ante.Min, Tested: ante.Tested},
 			Skills: anteskills.Ante{}, Trust: antetrust.Trust{},
 			// Its servers are checked by a throwaway `ante serve` and signed
 			// in to by `ante` itself, each run as a chat's would be.
@@ -107,12 +107,12 @@ func All(projects string) []Agent {
 		},
 		{
 			Harness: omp.Harness{}, Local: omp.Local{},
-			Agent:  agents.Agent{CLI: omp.CLI, Page: omp.Page, Tested: omp.Tested},
+			Agent:  agents.Agent{CLI: omp.CLI, Tested: omp.Tested},
 			Skills: ompskills.OMP{}, Trust: omptrust.Trust{},
 		},
 		{
 			Harness: opencode.Harness{}, Local: opencode.Local{},
-			Agent:  agents.Agent{CLI: opencode.CLI, Page: opencode.Page, Min: opencode.Min, Tested: opencode.Tested},
+			Agent:  agents.Agent{CLI: opencode.CLI, Min: opencode.Min, Tested: opencode.Tested},
 			Skills: opencodeskills.OpenCode{}, Trust: opencodetrust.Trust{},
 		},
 		piFlavor(pi.Pi),
@@ -130,7 +130,7 @@ func piFlavor(f pi.Flavor) Agent {
 	h := pi.Harness{Flavor: f}
 	return Agent{
 		Harness: h, Local: h,
-		Agent:  agents.Agent{CLI: f.CLI, Page: f.Page, Min: f.Min, Tested: []string{f.Version}},
+		Agent:  agents.Agent{CLI: f.CLI, Min: f.Min, Tested: []string{f.Version}},
 		Skills: piskills.Skills{Flavor: f}, Trust: pi.Trust{},
 	}
 }

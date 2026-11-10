@@ -2218,7 +2218,7 @@ type Agent struct {
 	Path string `protobuf:"bytes,6,opt,name=path,proto3" json:"path,omitempty"`
 	// The CLI's version, as it says it; empty when that couldn't be read.
 	Version string `protobuf:"bytes,7,opt,name=version,proto3" json:"version,omitempty"`
-	// Where to get it.
+	// Where to get it, until 0.27.3; no longer sent.
 	Page string `protobuf:"bytes,8,opt,name=page,proto3" json:"page,omitempty"`
 	// Why it can't run, in a few words ("Not installed", "Needs Node");
 	// empty when it can.

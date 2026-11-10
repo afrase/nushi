@@ -96,11 +96,8 @@ func Environ(env []string) []string {
 	return append(env, TodoTools+"=1")
 }
 
-// CLI is Claude Code's program, and Page where to get it.
-const (
-	CLI  = "claude"
-	Page = "https://code.claude.com/docs/en/setup"
-)
+// CLI is Claude Code's program.
+const CLI = "claude"
 
 // ConfigDir is Claude Code's config folder: $CLAUDE_CONFIG_DIR, else
 // ~/.claude. As every agent's folder, it is read from the daemon's own

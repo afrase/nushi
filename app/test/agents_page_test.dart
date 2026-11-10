@@ -8,7 +8,6 @@ import 'package:nushi/settings_view.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'fake_web_views.dart';
 import 'harness.dart';
 import 'settings_harness.dart';
 
@@ -51,12 +50,7 @@ final _found = [
     version: '0.2.14',
     ready: true,
   ),
-  Agent(
-    name: 'omp',
-    title: 'oh-my-pi',
-    problem: 'Not installed',
-    page: 'https://github.com/can1357/oh-my-pi',
-  ),
+  Agent(name: 'omp', title: 'oh-my-pi', problem: 'Not installed'),
   Agent(
     name: 'pig',
     title: 'PiG',
@@ -119,19 +113,6 @@ void main() {
     expect(find.text('Ready'), findsNWidgets(3)); // Claude, Ante, PiG
     expect(find.text('0.5.3 · /Users/me/.local/bin/pig'), findsOneWidget);
     expect(find.text('Not installed'), findsOneWidget);
-    expect(find.text('Get it'), findsOneWidget);
-    d.dispose();
-  });
-
-  testWidgets("Get it opens the agent's page as the platform opens links", (
-    tester,
-  ) async {
-    final opened = <Uri>[];
-    fakeWebViews().link = (url) async => opened.add(url);
-    final (_, d) = await _settings(tester);
-    await tester.tap(find.text('Get it'));
-    await tester.pump();
-    expect(opened, [Uri.parse('https://github.com/can1357/oh-my-pi')]);
     d.dispose();
   });
 

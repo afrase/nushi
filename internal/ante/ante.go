@@ -31,11 +31,10 @@ import (
 const Command = "ante-acp"
 
 // CLI is Ante's program, Min the Ante whose protocol the bridge follows
-// (older ones are refused, newer ones tried), and Page where to get it.
+// (older ones are refused, newer ones tried).
 const (
-	CLI  = "ante"
-	Min  = "0.2.14"
-	Page = "https://github.com/AntigmaLabs/ante"
+	CLI = "ante"
+	Min = "0.2.14"
 )
 
 // Tested are the Ante versions the bridge was run with (0.3.2 on a fake

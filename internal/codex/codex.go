@@ -65,11 +65,8 @@ const (
 //go:embed adapter
 var adapterFiles embed.FS
 
-// CLI is Codex's program, and Page where to get it.
-const (
-	CLI  = "codex"
-	Page = "https://developers.openai.com/codex/cli"
-)
+// CLI is Codex's program.
+const CLI = "codex"
 
 // Tested are the Codex versions the adapter was run with: its own (until
 // milestone Z), then the user's.

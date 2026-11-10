@@ -29,7 +29,6 @@ type Agent struct {
 	Name, Title string
 	CLI         string   // its program, looked for on PATH: "claude"
 	Also        []string // where else it may be: Ante's ~/.ante/bin/ante
-	Page        string   // where to get it
 	Min         string   // the oldest version Nushi runs: Ante's bridge follows 0.2.14
 	Adapter     *Adapter // nil when it speaks ACP itself, or through Nushi's bridge
 	Tested      []string // the CLI's versions Nushi was tried with, oldest first
