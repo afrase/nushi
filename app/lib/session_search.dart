@@ -22,10 +22,12 @@ final cantSearchSessions = <String>{};
 /// A search of [agent]'s sessions in [folder] for what was said in them
 /// (SearchAgentSessions, ADR 0035), for SessionList's field: asked once
 /// typing pauses for [pause], or at once ([now]). A search asked again,
-/// or left when the dialog closes, is cancelled, which ends the daemon's
-/// read of the transcripts; its answer is dropped.
+/// left when the field is cleared or the dialog closes, is cancelled,
+/// which ends the daemon's read of the transcripts; its answer is dropped.
 class SessionSearch extends ChangeNotifier {
-  new(this.daemon, this.agent, this.folder);
+  new(this.daemon, this.agent, this.folder) {
+    if (daemonOld) daemon.addListener(_restarted);
+  }
 
   final Daemon daemon;
   final String agent;
@@ -70,7 +72,23 @@ class SessionSearch extends ChangeNotifier {
     if (t == text) return; // the caret moved
     text = t;
     _wait?.cancel();
-    if (shown) _wait = Timer(pause, now);
+    if (shown) {
+      _wait = Timer(pause, now);
+    } else {
+      _asking?.cancel();
+      _asking = null;
+      asked = null; // the same text typed again is asked again
+    }
+    notifyListeners();
+  }
+
+  /// An older daemon restarted: once it searches, what the field says is
+  /// asked about after the pause, as if just typed.
+  void _restarted() {
+    if (daemonOld) return;
+    daemon.removeListener(_restarted);
+    _wait?.cancel();
+    if (pending) _wait = Timer(pause, now);
     notifyListeners();
   }
 
@@ -112,6 +130,7 @@ class SessionSearch extends ChangeNotifier {
   @override
   void dispose() {
     _gone = true;
+    daemon.removeListener(_restarted);
     _wait?.cancel();
     _asking?.cancel();
     super.dispose();

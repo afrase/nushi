@@ -284,14 +284,14 @@ void main() {
         EventsResponse(
           chatId: 'c',
           seq: Int64(1),
-          item: ItemEvent(item: _user('u2', continuePrompt)),
+          item: ItemEvent(item: _user('u2', continuePrompt), index: 3),
         ),
       )
       ..emit(
         EventsResponse(
           chatId: 'c',
           seq: Int64(2),
-          item: ItemEvent(item: _notice()..id = 'n2'),
+          item: ItemEvent(item: _notice()..id = 'n2', index: 4),
         ),
       );
     await tester.pump();

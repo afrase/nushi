@@ -76,6 +76,8 @@ final class PhonePlatform {
       push == PushState.on ? subscribedKey : null;
   Future<PushState> pushState() async => push;
 
+  Future<PushSub?> subscription() async => push == PushState.on ? sub : null;
+
   Future<PushSub?> subscribe(Uint8List key) async {
     push = PushState.on;
     subscribedKey = key;

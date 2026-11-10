@@ -872,8 +872,9 @@ class ChatState extends ChangeNotifier {
       return;
     } else if (i < 0) {
       outbox.adopt(e.item);
+      // An append carries no index; any other new item its place, 0 too.
       final at = e.index - older;
-      if (at > 0 && at < items.length) {
+      if (!e.append && at >= 0 && at < items.length) {
         items.insert(at, e.item); // a reopen's: a compaction's mark
       } else {
         items.add(e.item);

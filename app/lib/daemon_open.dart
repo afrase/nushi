@@ -88,8 +88,9 @@ extension DaemonOpen on Daemon {
     _changed();
   }
 
-  /// Lets the items of loaded chats not among the last [Daemon.keptChats]
-  /// picked go; each loads again when opened.
+  /// Lets the items of chats not among the last [Daemon.keptChats] picked
+  /// go; each loads again when opened. A chat unloaded by a reconnect
+  /// still holds its items, so it goes by what it holds.
   void _letGo() {
     if (selectedId case final id?) {
       _picked
@@ -98,7 +99,9 @@ extension DaemonOpen on Daemon {
     }
     if (_picked.length > Daemon.keptChats) _picked.removeAt(0);
     for (final c in chats.values) {
-      if (c.loaded && !_picked.contains(c.id)) c.letGo();
+      if ((c.loaded || c.items.isNotEmpty) && !_picked.contains(c.id)) {
+        c.letGo();
+      }
     }
   }
 

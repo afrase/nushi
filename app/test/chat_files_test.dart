@@ -241,6 +241,7 @@ void main() {
     event(
       ItemEvent(
         item: Item(id: 'm', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE),
+        index: _items.length,
       ),
     );
     final now = chatFilesOf(chat);
@@ -251,7 +252,9 @@ void main() {
       ),
     );
     expect(identical(chatFilesOf(chat), now), isTrue);
-    event(ItemEvent(item: _call('w9', 'docs/more.md')));
+    event(
+      ItemEvent(item: _call('w9', 'docs/more.md'), index: _items.length + 1),
+    );
     expect(chatFilesOf(chat).first, 'docs/more.md');
     expect(chatArtifacts(chat).recent, contains('docs/more.md'));
   });
