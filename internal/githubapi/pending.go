@@ -92,10 +92,13 @@ func (c *Client) readPending(ctx context.Context, r string) (pending, error) {
 		switch {
 		case err != nil:
 			return p, err
+		case data.Node == nil || data.Node.State == "": // gone: GitHub says why, if it does
+			if len(partial) > 0 {
+				return p, fmt.Errorf("%w: reload the pull request", refusal(http.StatusOK, messages(partial)))
+			}
+			return p, errors.New("GitHub has no such review: reload the pull request")
 		case len(partial) > 0: // a page with errors may be missing comments
 			return p, refusal(http.StatusOK, messages(partial))
-		case data.Node == nil || data.Node.State == "":
-			return p, errors.New("GitHub has no such review: reload the pull request")
 		}
 		p.state, p.body = data.Node.State, data.Node.Body
 		for _, n := range data.Node.Comments.Nodes {

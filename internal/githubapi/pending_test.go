@@ -341,7 +341,8 @@ func TestPendingUnreadable(t *testing.T) {
 		t.Fatal("went with no state")
 	}
 	p.down, p.state = false, ""
-	if err := c.SubmitReview(t.Context(), into("comment", drafts("one"))); err == nil || !strings.Contains(err.Error(), "Could not resolve") {
+	if err := c.SubmitReview(t.Context(), into("comment", drafts("one"))); err == nil || !strings.Contains(err.Error(), "Could not resolve") ||
+		!strings.HasSuffix(err.Error(), "reload the pull request") {
 		t.Fatal(err)
 	}
 	if got := p.seen(); !strings.HasPrefix(got, "0 threads, 0 submits") {
