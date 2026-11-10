@@ -283,7 +283,7 @@ func TestPendingSubmitRefused(t *testing.T) {
 // through: the error says to reload, not that a retry is safe.
 func TestPendingSubmitFailedUnread(t *testing.T) {
 	p := newPendingFake(t)
-	p.refuse = func(op string, vars map[string]any) string {
+	p.refuse = func(op string, _ map[string]any) string {
 		if op == "Submit" {
 			p.down = true
 			return "Something went wrong"
