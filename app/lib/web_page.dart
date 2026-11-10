@@ -158,15 +158,32 @@ final class PageFile {
     _loading = true;
   }
 
-  /// Whether [url], a main frame's address, is the file: as Dart spells
-  /// its path, or as WebKit did when it loaded it.
+  /// Whether [url], a main frame's address, is the file: each name as Dart
+  /// spells it or as WebKit did when it loaded it.
   bool isPage(Uri url) {
     if (url.scheme != 'file' || url.host.isNotEmpty) return false;
     final load = _loading;
     _loading = false;
-    if (url.path == Uri.file(path).path || url.path == _spelled) return true;
+    if (_spelledEither(url)) return true;
     if (!load || !_sameButLetters(url)) return false;
     _spelled = url.path;
+    return true;
+  }
+
+  /// Whether each of [url]'s names, still percent-encoded, is the file's as
+  /// Dart spells it or as WebKit did: a link to the page by name resolves
+  /// against WebKit's address to its folders WebKit's way and the name the
+  /// page's own.
+  bool _spelledEither(Uri url) {
+    final dart = Uri.file(path).path.split('/');
+    final webKit = _spelled?.split('/') ?? dart;
+    final theirs = url.path.split('/');
+    if (theirs.length != dart.length || webKit.length != dart.length) {
+      return false;
+    }
+    for (var i = 0; i < theirs.length; i++) {
+      if (theirs[i] != dart[i] && theirs[i] != webKit[i]) return false;
+    }
     return true;
   }
 

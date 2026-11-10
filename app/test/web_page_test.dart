@@ -96,6 +96,42 @@ void main() {
     );
   });
 
+  // Fix review 2026-11-10: a page's link to itself by name, written
+  // precomposed, resolves against WebKit's decomposed address to a path
+  // with the folders WebKit's way and the name the page's: it opened the
+  // browser instead of scrolling.
+  test('a link to the page by name is the page, its folders as WebKit '
+      'spells them', () {
+    const path = '/proj/café/résumé.html'; // NFC
+    const webKit = 'file:///proj/cafe%CC%81/re%CC%81sume%CC%81.html'; // NFD
+    final page = PageFile()..loading(path);
+    expect(navigation(webKit, page, mainFrame: true), PageNavigation.stay);
+    final link = Uri.parse(webKit).resolve('résumé.html#sec');
+    expect(link.path, '/proj/cafe%CC%81/r%C3%A9sum%C3%A9.html');
+    expect(navigation('$link', page, mainFrame: true), PageNavigation.stay);
+    expect(
+      navigation(
+        'file:///proj/caf%C3%A9/re%CC%81sume%CC%81.html',
+        page,
+        mainFrame: true,
+      ),
+      PageNavigation.stay,
+    );
+    // Its neighbours are still other pages, however they're spelled.
+    for (final other in [
+      Uri.parse(webKit).resolve('notes.html'),
+      Uri.parse(webKit).resolve('über.html'),
+      Uri.parse('file:///proj/cafe%CC%81/r%C3%A9sum%C3%A9.html/x'),
+      Uri.parse('file:///other/cafe%CC%81/r%C3%A9sum%C3%A9.html'),
+    ]) {
+      expect(
+        navigation('$other', page, mainFrame: true),
+        PageNavigation.drop,
+        reason: '$other',
+      );
+    }
+  });
+
   test('only web, file and mail addresses leave for another app', () async {
     final opened = <Uri>[];
     fakeWebViews().open = (url) async => opened.add(url);
