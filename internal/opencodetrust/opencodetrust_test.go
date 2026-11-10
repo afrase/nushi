@@ -296,10 +296,11 @@ func TestALinkIntoWhatTheCardShowsIsRemembered(t *testing.T) {
 	}
 }
 
-// A link opencode reads a config or a command through is never
-// remembered, though it leads into what the card shows: that shows under
-// its own path, as a skill's file, without the summary of what it runs.
-func TestALinkToAConfigOrACommandIsNeverRemembered(t *testing.T) {
+// A link outside the skills places is never remembered, though it leads
+// into what the card shows: opencode would load what it leads to as a
+// config, a plugin, an agent or a command, which shows under its own path
+// as a skill's file, without the summary of what it runs.
+func TestALinkToMoreThanASkillIsNeverRemembered(t *testing.T) {
 	var tr Trust
 	base, _ := folders(t)
 	for folder, link := range map[string][2]string{ // where the link is, and where in the skill it leads
@@ -308,6 +309,9 @@ func TestALinkToAConfigOrACommandIsNeverRemembered(t *testing.T) {
 		"folder":   {".opencode", ""},
 		"commands": {".opencode/commands", "command"},
 		"command":  {".opencode/command/c.md", "command/c.md"},
+		"plugin":   {".opencode/plugins/p.js", "c.json"},
+		"plugins":  {".opencode/plugin", "command"},
+		"agent":    {".opencode/agents/a.md", "command/c.md"},
 	} {
 		folder = filepath.Join(base, folder)
 		skill := filepath.Join(folder, ".agents", "skills", "s")
@@ -326,7 +330,7 @@ func TestALinkToAConfigOrACommandIsNeverRemembered(t *testing.T) {
 		}
 		if key != "" || tr.Key(folder) != "" || len(got) != 1 || !strings.Contains(got[0].What, "can't vouch") ||
 			!strings.Contains(got[0].Command, "a link to "+filepath.Join(skill, link[1])+", which opencode follows") ||
-			!strings.Contains(got[0].Command, "without the summary of what it runs") {
+			!strings.Contains(got[0].Command, "as more than a skill") {
 			t.Errorf("%s: rows %v, key %q", at, got, key)
 		}
 	}

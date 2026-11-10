@@ -82,8 +82,10 @@ var inConfigFolder = []string{
 // listed here (folderfiles.WalkLinked): a skill in .claude/skills linked
 // to the one in .agents/skills, as Nushi's own "Link for Claude…" makes
 // it (ADR 0052), or that whole folder linked, would else ask at every
-// start. A link opencode reads a config or a command through stays
-// without a sum wherever it leads (summedThrough).
+// start. Only such a link, from a skills place into one, keeps its sum
+// (betweenSkills): one opencode reads anything else through (a config,
+// .opencode, a plugin, a command) would load as that what the card shows
+// under its own path as a skill's file.
 func files(folder string) []folderfiles.File {
 	home, _ := os.UserHomeDir()
 	home = git.RealPath(home)
@@ -110,24 +112,34 @@ func files(folder string) []folderfiles.File {
 	}
 	found := folderfiles.WalkLinked(roots, "opencode")
 	for i := range found {
-		if f := &found[i]; f.Link && f.Sum != nil && summedThrough(f.Path) {
+		if f := &found[i]; f.Link && f.Sum != nil && !betweenSkills(f.Path) {
 			f.Sum = nil
-			f.Text = append(f.Text, " without the summary of what it runs: opencode reads a config or a command through this link"...)
+			f.Text = append(f.Text, " as more than a skill, which the card doesn't show it as"...)
 		}
 	}
 	return found
 }
 
-// summedThrough says whether opencode reads a config or a command through
-// the link at path: one named as a config, a .opencode folder, its command
-// folder under either spelling, or anything in one. The card sums up a
-// config or a command under the path opencode loads it by, and what such a
-// link leads to shows under its own, as a file like any other: remembered,
-// it would be a config that starts without its summary ever shown.
-func summedThrough(path string) bool {
+// betweenSkills says whether the link at path is in a skills place and
+// leads into one, so opencode reads what it leads to as a skill, as the
+// card shows it. A link anywhere else may load a skill's file as a config,
+// a plugin or a command, without what the card sums up of one.
+func betweenSkills(path string) bool {
+	to, err := filepath.EvalSymlinks(path)
+	return err == nil && inSkills(path) && inSkills(to)
+}
+
+// inSkills says whether path is a project's skills place, .claude/skills,
+// .agents/skills or .opencode's skill folder under either spelling, or is
+// in one.
+func inSkills(path string) bool {
 	slashed := filepath.ToSlash(path) + "/"
-	return isConfig(path) || filepath.Base(path) == ".opencode" ||
-		strings.Contains(slashed, "/.opencode/command/") || strings.Contains(slashed, "/.opencode/commands/")
+	for _, place := range []string{"/.claude/skills/", "/.agents/skills/", "/.opencode/skills/", "/.opencode/skill/"} {
+		if strings.Contains(slashed, place) {
+			return true
+		}
+	}
+	return false
 }
 
 // upToRoot is dir and every folder above it, / first: opencode's walk
