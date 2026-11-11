@@ -151,6 +151,14 @@ class Tokens {
       text.withValues(alpha: brightness == Brightness.dark ? 0.07 : 0.09);
   final Color? _line;
 
+  /// The hairline around what floats (a menu, a dialog, a popover): [line]
+  /// on a light theme; twice as strong on a dark one, where the shadow
+  /// that draws a float's edge is lost and a float may lie on a card of
+  /// its own fill (a menu over the composer).
+  Color get floatLine => brightness == Brightness.dark
+      ? line.withValues(alpha: (line.a * 2).clamp(0, 1))
+      : line;
+
   /// A grey mark that stands back from what it's on: the empty window's
   /// logo, a rail's dashes at rest, the part of a meter that counts for
   /// nothing. A pane's fill, a third of the way to the text's color.

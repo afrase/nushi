@@ -24,7 +24,7 @@ BoxDecoration cardBox(Tokens t, {double radius = NushiTheme.card}) =>
 BoxDecoration floatBox(Tokens t, {double radius = NushiTheme.panel}) =>
     BoxDecoration(
       color: t.raised,
-      border: Border.all(color: t.line),
+      border: Border.all(color: t.floatLine),
       borderRadius: BorderRadius.circular(radius),
       boxShadow: floatShadows(t),
     );
@@ -256,7 +256,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
           shadowColor: WidgetStatePropertyAll(t.floatShadow),
           padding: const WidgetStatePropertyAll(EdgeInsets.all(menuPad)),
           minimumSize: const WidgetStatePropertyAll(Size(200, 0)),
-          side: WidgetStatePropertyAll(BorderSide(color: t.line)),
+          side: WidgetStatePropertyAll(BorderSide(color: t.floatLine)),
           shape: const WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.all(Radius.circular(panel)),
@@ -284,7 +284,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
         shadowColor: t.floatShadow,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(panel),
-          side: BorderSide(color: t.line),
+          side: BorderSide(color: t.floatLine),
         ),
         titleTextStyle: ui(t.text, size: 15, weight: FontWeight.w600),
         contentTextStyle: ui(t.textSecondary),

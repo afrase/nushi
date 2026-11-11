@@ -190,7 +190,8 @@ class _ArrangeButtonState extends State<ArrangeButton> {
                           decoration: BoxDecoration(
                             color: t.accent,
                             shape: BoxShape.circle,
-                            border: Border.all(color: t.raised),
+                            // A ring of what the sidebar lies on, around it.
+                            border: Border.all(color: t.window),
                           ),
                         ),
                       ),
