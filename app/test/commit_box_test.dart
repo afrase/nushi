@@ -276,6 +276,38 @@ void main() {
           find.byType(ChangesView),
           matchesGoldenFile('goldens/stage_commit_${name}_$theme.png'),
         );
+        await render(
+          tester,
+          find.byType(ChangesView),
+          'changes_commit_${name}_$theme',
+        );
+        d.dispose();
+      });
+
+      testWidgets('nothing changed, at $name, $theme', (tester) async {
+        final (d, _, _) = await _view(
+          tester,
+          const [],
+          size: size,
+          brightness: mode,
+        );
+        expect(find.text('No changes'), findsOne);
+        expect(find.byType(CommitBox), findsNothing);
+        // No block of code's surface with no file to show in it.
+        final t = mode == Brightness.dark ? Tokens.dark : Tokens.light;
+        expect(
+          find.byWidgetPredicate(
+            (w) =>
+                w is Container &&
+                (w.decoration as BoxDecoration?)?.color == t.codeBlock,
+          ),
+          findsNothing,
+        );
+        await render(
+          tester,
+          find.byType(ChangesView),
+          'changes_empty_${name}_$theme',
+        );
         d.dispose();
       });
     }

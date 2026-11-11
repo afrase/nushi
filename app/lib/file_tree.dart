@@ -201,7 +201,15 @@ class _FileListState extends State<FileList> {
           // As Text lays it out: over the default text style.
           text: TextSpan(
             style: DefaultTextStyle.of(context).style,
-            children: [_label(theme, r, flat: flat, comments: comments)],
+            children: [
+              _label(
+                theme,
+                r,
+                flat: flat,
+                comments: comments,
+                open: r.file != null,
+              ),
+            ],
           ),
           textDirection: TextDirection.ltr,
           textScaler: scaler,
@@ -281,13 +289,14 @@ class _FileListState extends State<FileList> {
   );
 }
 
-/// A row's text: its name (a flat list's folders muted), its review
-/// comments and its line counts.
+/// A row's text: its name (a flat list's folders muted; semibold for the
+/// file that's [open], ADR 0111), its review comments and its line counts.
 TextSpan _label(
   NushiTheme theme,
   ChangeRow row, {
   required bool flat,
   required int comments,
+  bool open = false,
 }) {
   final t = theme.t;
   final file = row.file;
@@ -302,7 +311,10 @@ TextSpan _label(
       ),
       TextSpan(
         text: row.name.substring(slash),
-        style: theme.ui(file == null ? t.textSecondary : t.text),
+        style: theme.ui(
+          file == null ? t.textSecondary : t.text,
+          weight: open ? FontWeight.w600 : null,
+        ),
       ),
       if (comments > 0) ...[
         TextSpan(
@@ -365,6 +377,7 @@ class _Row extends StatelessWidget {
     return Tap(
       onTap: onTap,
       selected: selected,
+      fill: selected ? t.accentSoft : null,
       tooltip: file == null
           ? ''
           : file.status == 'renamed'
@@ -385,7 +398,7 @@ class _Row extends StatelessWidget {
                 : Text(letter, style: theme.code(color, size: 12)),
           ),
           Text.rich(
-            _label(theme, row, flat: flat, comments: comments),
+            _label(theme, row, flat: flat, comments: comments, open: selected),
             maxLines: 1,
             softWrap: false,
           ),

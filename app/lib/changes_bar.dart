@@ -7,7 +7,6 @@ import 'package:nushi/diff_box.dart' show oneColumnBelow;
 import 'package:nushi/file_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
@@ -40,12 +39,12 @@ const double changesFilesLeast = 180;
 /// The switcher's name for what the chat itself runs in.
 const _ownFolder = "Chat's folder";
 
-/// The Changes view's bar: the related worktrees' menu, the [scopes]' tabs
-/// ([scope] picked), the [files]' count and lines, Changed when the
-/// worktree shown is [behind] what was read, Send to agent, and the
-/// list's tree or list, the diff side by side or unified, and Reload
-/// ([onAgain], off while [reloading]). [stale] what's shown is dimmed under
-/// a spinner.
+/// The Changes view's bar: the related worktrees' menu, the [scopes] as a
+/// filled control ([scope] picked; ADR 0111), the [files]' count and
+/// lines, Changed when the worktree shown is [behind] what was read, Send
+/// to agent, and the list's tree or list, the diff side by side or
+/// unified, and Reload ([onAgain], off while [reloading]). [stale] what's
+/// shown is dimmed under a spinner.
 class ChangesBar extends StatelessWidget {
   const new({
     required this.chat,
@@ -67,6 +66,9 @@ class ChangesBar extends StatelessWidget {
   final bool behind;
   final bool reloading;
   final VoidCallback onAgain;
+
+  /// The bar's height.
+  static const height = 44.0;
 
   @override
   Widget build(BuildContext context) {
@@ -93,18 +95,14 @@ class ChangesBar extends StatelessWidget {
             files.fold(0, (n, f) => n + f.added),
             files.fold(0, (n, f) => n + f.removed),
           );
+          // No line under it: the diff's block and the list start under
+          // it (ADR 0111). Its ends are the header's, 12 from the pane's
+          // edge, where there's room.
           return Container(
-            height: 36,
-            // The tabs' own 3 points bring their line to the gutter.
+            height: ChangesBar.height,
             padding: roomy
-                ? const EdgeInsets.only(
-                    left: NushiTheme.gutter - 3,
-                    right: NushiTheme.gutter,
-                  )
+                ? const EdgeInsets.symmetric(horizontal: 12)
                 : const EdgeInsets.only(left: 8, right: 6),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: t.borderSubtle)),
-            ),
             child: Row(
               spacing: roomy ? NushiTheme.barGap : 10,
               children: [
@@ -118,13 +116,12 @@ class ChangesBar extends StatelessWidget {
                       if (menu)
                         Flexible(child: _worktreeMenu(roomy ? 220 : 120)),
                       if (scopes.length > 1)
-                        PlainTabs(
+                        Segmented(
                           value: scope,
-                          tabs: [for (final s in scopes) (s, s.label)],
+                          segments: [for (final s in scopes) (s, s.label)],
                           onChanged: (s) => worktree == null
                               ? chat.scope = s.name
                               : related.pickScope(s.name),
-                          fill: true,
                         ),
                       if (stale)
                         const SizedBox.square(dimension: 12, child: Spinner()),
@@ -168,7 +165,9 @@ class ChangesBar extends StatelessWidget {
                   ),
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  spacing: roomy ? NushiTheme.iconGap : 10,
+                  // Closer in a narrow bar: the scopes' control is a few
+                  // points wider than the tabs it replaced.
+                  spacing: roomy ? NushiTheme.iconGap : 6,
                   children: [
                     ValueListenableBuilder(
                       valueListenable: changesFlat,

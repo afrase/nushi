@@ -406,7 +406,9 @@ void main() {
     await send(tester, chat);
     await answer(tester, chat, _new);
     expect(commentsOf('c').single.sent, isTrue);
-    expect(find.text('Line 4 · sent'), findsOne); // under its line
+    // Under its line: its lines, and that it's sent in a pill.
+    expect(find.text('Line 4'), findsOne);
+    expect(find.text('Sent'), findsOne);
     await hover(tester, 'Check for overflow.');
     expect(find.byTooltip('Edit'), findsNothing);
     await tester.tap(find.byTooltip('Remove'));
@@ -432,7 +434,10 @@ void main() {
     ];
     await tester.tap(find.byTooltip('Reload'));
     await settle(tester);
-    expect(find.text('Outdated · Line 4 · sent'), findsOne);
+    // Above its file: each state its own pill, its lines between them.
+    expect(find.text('Outdated'), findsOne);
+    expect(find.text('Line 4'), findsOne);
+    expect(find.text('Sent'), findsOne);
     await hover(tester, 'Check for overflow.');
     await tester.tap(find.byTooltip('Remove'));
     await settle(tester);
@@ -468,7 +473,8 @@ void main() {
       await tester.tap(find.byTooltip('Reload'));
       await settle(tester);
       expect(find.text('1 comment not on these files'), findsOne);
-      expect(find.text('Outdated · sub.go · Line 4'), findsOne);
+      expect(find.text('Outdated'), findsOne);
+      expect(find.text('sub.go · Line 4'), findsOne);
       // Above the list, inside the files' column.
       expect(
         tester.getBottomLeft(find.text('Check for overflow.')).dy,

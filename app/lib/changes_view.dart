@@ -461,8 +461,11 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                     initial: 240,
                     min: changesFilesLeast,
                     max: min(560, box.maxWidth - 360),
-                    child: ColoredBox(
-                      color: t.raised,
+                    // On the pane's own fill, beside the diff's block: its
+                    // edge shows only under the pointer (ADR 0111).
+                    line: false,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: _blockGap),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -475,7 +478,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                               padding: const EdgeInsets.only(top: 4),
                               decoration: BoxDecoration(
                                 border: Border(
-                                  bottom: BorderSide(color: t.borderSubtle),
+                                  bottom: BorderSide(color: t.line),
                                 ),
                               ),
                               child: CommitList(
@@ -533,7 +536,9 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                   Expanded(
                     child: Stack(
                       children: [
-                        Positioned.fill(child: _shownFile(file, notShown)),
+                        Positioned.fill(
+                          child: _block(file, _shownFile(file, notShown)),
+                        ),
                         // ⌘F, as over the transcript.
                         ListenableBuilder(
                           listenable: chat.changesFind,
@@ -558,6 +563,29 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
           ),
         ),
       ],
+    );
+  }
+
+  /// The room between the diff's block and the pane's edges, and under
+  /// the file list.
+  static const _blockGap = 8.0;
+
+  /// [child], the file shown, as a block of code's surface set in from the
+  /// pane's edges, its corners a control's (ADR 0111): a sunk block on the
+  /// pane, where the list beside it is on the pane itself. With no [file]
+  /// to show there's no block, only what [child] says.
+  Widget _block(FileChange? file, Widget child) {
+    if (file == null || file.skipped.isNotEmpty) return child;
+    return Padding(
+      padding: const EdgeInsets.only(right: _blockGap, bottom: _blockGap),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: NushiTheme.of(context).t.codeBlock,
+          borderRadius: BorderRadius.circular(NushiTheme.control),
+        ),
+        child: RoundedScroll(corner: NushiTheme.control, child: child),
+      ),
     );
   }
 
@@ -607,6 +635,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                   file,
                   key: ValueKey((file.path, _jumps)),
                   fit: false,
+                  sunk: true,
                   line: _line,
                   find: chat.changesFind,
                   // Comments go with changes, not with a
