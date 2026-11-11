@@ -39,6 +39,9 @@ void main() {
             ('base', t.base),
             ('raised', t.raised),
             ('selected', t.selected),
+            ('window', t.window),
+            ('hovered on window', Color.alphaBlend(t.hover, t.window)),
+            ('the open chat', t.accentSoft),
           ]) {
             expect(
               _contrast(c, bg),

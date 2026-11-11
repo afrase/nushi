@@ -47,8 +47,27 @@ Map<String, Color> tokenColors(Tokens t) {
 
 /// [t] with [colors] (by [tokenColors]' names) in place of its own; a name
 /// it doesn't have is left out.
-Tokens withColors(Tokens t, Map<String, Color> colors) =>
-    _rebuild(t, (name, c) => colors[name] ?? c);
+///
+/// A surface [colors] doesn't name follows the one it's drawn from when
+/// they name that (ADR 0111): `window` follows `base`, `lifted` and
+/// `segment` follow `raised` (a light set's `segment` its `base`), `line`
+/// follows `text`. So a file from before those tokens, which names every
+/// color it knew, gets a window and a hairline of its own palette rather
+/// than the built-in's it starts from.
+Tokens withColors(Tokens t, Map<String, Color> colors) {
+  bool follows(String name, List<String> sources) =>
+      !colors.containsKey(name) && sources.any(colors.containsKey);
+  return _rebuild(
+    t,
+    (name, c) => colors[name] ?? c,
+    derived: {
+      if (follows('window', ['base', 'text'])) 'window',
+      if (follows('lifted', ['raised', 'text'])) 'lifted',
+      if (follows('segment', ['raised', 'base', 'text'])) 'segment',
+      if (follows('line', ['text'])) 'line',
+    },
+  );
+}
 
 /// Reads a theme file: `{"name", "from", "dark", "light"}`, the sets
 /// mapping token names to `#RRGGBB` or `#AARRGGBB`; `from` names the
@@ -176,14 +195,26 @@ final _hidden = RegExp(r'[\p{Cc}\p{Cf}]', unicode: true);
 String shownText(String s) => s.replaceAll(_hidden, '');
 
 /// [t] built again, each color what [pick] makes of its name and its value
-/// in [t]: one list of the tokens for [tokenColors] and [withColors].
-Tokens _rebuild(Tokens t, Color Function(String name, Color c) pick) {
+/// in [t]: one list of the tokens for [tokenColors] and [withColors]. A
+/// surface named in [derived] is left for the set to work out from the
+/// others ([Tokens.window] and the like).
+Tokens _rebuild(
+  Tokens t,
+  Color Function(String name, Color c) pick, {
+  Set<String> derived = const {},
+}) {
   final a = t.terminal;
   final d = t.diff;
+  Color? surface(String name, Color c) =>
+      derived.contains(name) ? null : pick(name, c);
   return Tokens(
     brightness: t.brightness,
+    window: surface('window', t.window),
     base: pick('base', t.base),
     raised: pick('raised', t.raised),
+    lifted: surface('lifted', t.lifted),
+    segment: surface('segment', t.segment),
+    line: surface('line', t.line),
     selected: pick('selected', t.selected),
     borderSubtle: pick('borderSubtle', t.borderSubtle),
     borderStrong: pick('borderStrong', t.borderStrong),

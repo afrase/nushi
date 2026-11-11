@@ -23,6 +23,13 @@ List<String> contrastWarnings(Tokens t) {
     'selected': t.selected,
     'accentSoft': t.accentSoft,
     'base': t.base,
+    'a hovered row on base': on(t.hover, t.base),
+  };
+  // The sidebar's rows, on the window itself (ADR 0111): their text and
+  // their marks.
+  final sidebar = {
+    'window': t.window,
+    'a hovered row on window': on(t.hover, t.window),
   };
   final tints = {
     'toolTint': t.toolTint,
@@ -39,7 +46,11 @@ List<String> contrastWarnings(Tokens t) {
       ('textSecondary', t.textSecondary),
       ('textMuted', t.textMuted),
     ])
-      for (final MapEntry(key: f, value: b) in {...rows, ...tints}.entries)
+      for (final MapEntry(key: f, value: b) in {
+        ...rows,
+        ...sidebar,
+        ...tints,
+      }.entries)
         (ink, c, f, b, 4.5),
     for (final (ink, c) in [
       ('needs', t.needs),
@@ -51,8 +62,15 @@ List<String> contrastWarnings(Tokens t) {
     ])
       for (final MapEntry(key: f, value: b) in rows.entries)
         (ink, c, f, b, 4.5),
-    for (final MapEntry(key: f, value: b) in rows.entries)
-      ('idle', t.idle, f, b, 3),
+    for (final (ink, c) in [
+      ('idle', t.idle),
+      ('needs', t.needs),
+      ('done', t.done),
+      ('running', t.running),
+      ('crashed', t.crashed),
+    ])
+      for (final MapEntry(key: f, value: b) in {...rows, ...sidebar}.entries)
+        (ink, c, f, b, 3),
     ('needs', t.needs, 'needsSoft', t.needsSoft, 4.5),
     ('done', t.done, 'doneSoft', t.doneSoft, 4.5),
     ('crashed', t.crashed, 'crashedSoft', t.crashedSoft, 4.5),
@@ -63,7 +81,7 @@ List<String> contrastWarnings(Tokens t) {
     ('toolAccent', t.toolAccent, 'toolTint', t.toolTint, 3),
     ('onAccent', t.onAccent, 'accent', t.accent, 4.5),
     for (final (i, c) in t.avatars.indexed)
-      for (final MapEntry(key: f, value: b) in rows.entries)
+      for (final MapEntry(key: f, value: b) in {...rows, ...sidebar}.entries)
         ('avatars.${avatarNames[i]}', c, f, b, 3),
     for (final (f, b) in [
       ('base', t.base),

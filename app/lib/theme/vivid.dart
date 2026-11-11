@@ -8,19 +8,24 @@ import 'package:nushi/theme/tokens.dart';
 // chat clearly blue, the tool, subagent and findings tints and the user
 // band plainly tinted, the status softs solid, borders and hover a step
 // further. Inline code's orange is taken a step further from its chip
-// than Nushi's, to hold AA on these stronger fills (`code_ink_test`).
+// than Nushi's, to hold AA on these stronger fills (`code_ink_test`). Its
+// surfaces are Nushi's (ADR 0111), its light cards a shade lighter, where
+// its stronger hover still leaves a row's text AA.
 
 /// Vivid's light set.
 const vividLight = Tokens(
   brightness: Brightness.light,
+  window: Color(0xFFECEEF2),
   base: Color(0xFFFFFFFF),
   raised: Color(0xFFF7F8FA),
+  lifted: Color(0xFFE6E8ED),
+  segment: Color(0xFFFFFFFF),
   selected: Color(0xFFD6E0F3),
   borderSubtle: Color(0xFFDCDEE3),
   borderStrong: Color(0xFFB0B4C1),
   text: Color(0xFF1E1F22),
   textSecondary: Color(0xFF494B57),
-  textMuted: Color(0xFF5D6170),
+  textMuted: Color(0xFF575B68),
   link: Color(0xFF2259D2),
   onAccent: Color(0xFFFFFFFF),
   fieldFill: Color(0xFFFFFFFF),
@@ -116,8 +121,11 @@ const vividLight = Tokens(
 /// Vivid's dark set.
 const vividDark = Tokens(
   brightness: Brightness.dark,
-  base: Color(0xFF1E1F22),
-  raised: Color(0xFF2B2D30),
+  window: Color(0xFF131417),
+  base: Color(0xFF1B1C20),
+  raised: Color(0xFF24262B),
+  lifted: Color(0xFF2F3138),
+  segment: Color(0xFF383B43),
   selected: Color(0xFF2C3951),
   borderSubtle: Color(0xFF494C52),
   borderStrong: Color(0xFF62666E),

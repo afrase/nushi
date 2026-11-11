@@ -58,6 +58,10 @@ void _atLeast(
 
 /// How far a wash or a border must stand off what it's drawn on.
 const _washFloor = 4.5;
+
+/// How far a surface must stand off the one under it: Nushi's own light
+/// card on its window, the quietest step of the approved look, is 1.9.
+const _surfaceFloor = 1.8;
 const _borderFloor = 8.0;
 
 void main() {
@@ -72,6 +76,14 @@ void main() {
       'selected': t.selected,
       'accentSoft': t.accentSoft,
       'base': t.base,
+      'hovered on base': on(t.hover, t.base),
+    };
+    // The sidebar's rows, on the window itself (ADR 0111): their text, and
+    // their marks (a state's dot, a chat's color). A state's word there is
+    // a pill on its own soft fill.
+    final sidebar = {
+      'window': t.window,
+      'hovered on window': on(t.hover, t.window),
     };
     final tints = {
       'toolTint': t.toolTint,
@@ -93,6 +105,7 @@ void main() {
           for (final MapEntry(key: ink, value: c) in inks.entries)
             for (final MapEntry(key: fill, value: f) in {
               ...rows,
+              ...sidebar,
               ...tints,
             }.entries)
               '$ink on $fill': (c, f),
@@ -134,13 +147,41 @@ void main() {
             'crashed': t.crashed,
             'idle': t.idle,
           }.entries)
-            for (final MapEntry(key: row, value: f) in rows.entries)
+            for (final MapEntry(key: row, value: f) in {
+              ...rows,
+              ...sidebar,
+            }.entries)
               '$ink on $row': (c, f),
           'needs on its halo': (t.needs, t.needsSoft),
           'toolAccent on toolTint': (t.toolAccent, t.toolTint),
         },
         3,
         _contrast,
+      );
+    });
+
+    test('each surface is a step off the one it sits on ($name)', () {
+      // Fill, not outline (ADR 0111): a pane on the window, a card on a
+      // pane or on the window (the sidebar's), a raised bit on a card, the
+      // picked segment on its track.
+      _atLeast(
+        {
+          'base on window': (t.base, t.window),
+          'raised on base': (t.raised, t.base),
+          'raised on window': (t.raised, t.window),
+          'lifted on raised': (t.lifted, t.raised),
+          'segment on raised': (t.segment, t.raised),
+        },
+        _surfaceFloor,
+        _apart,
+      );
+      // A hairline shows on a pane, and stays one.
+      final line = _apart(on(t.line, t.base), t.base);
+      expect(line, greaterThanOrEqualTo(_surfaceFloor), reason: 'line on base');
+      expect(
+        line,
+        lessThan(_apart(t.borderStrong, t.base)),
+        reason: 'line under borderStrong',
       );
     });
 
@@ -152,6 +193,8 @@ void main() {
           'selected on raised': (t.selected, t.raised),
           'selected on base': (t.selected, t.base),
           'the open chat on raised': (t.accentSoft, t.raised),
+          'the open chat on window': (t.accentSoft, t.window),
+          'hover on window': (on(t.hover, t.window), t.window),
           'accentSoft on base': (t.accentSoft, t.base),
           'userBand on base': (t.userBand, t.base),
           for (final MapEntry(key: k, value: c) in tints.entries)

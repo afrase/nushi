@@ -6,14 +6,18 @@ import 'package:nushi/theme/tokens.dart';
 // Solarized, Ethan Schoonover's palette (MIT; docs/development.md's
 // Dependencies), on Nushi's tokens (ADR 0086): its base tones for the
 // surfaces and text, its eight accents for status, tints and code, and
-// its own sixteen terminal colors. Where its inks read under AA on a
-// fill they sit on (Solarized's text is base0 on base03, 4.75:1, and
-// lower on a hovered row), they're taken lighter on the dark set and
-// darker on the light one, keeping their hue (`tokens_test`).
+// its own sixteen terminal colors. The surfaces (ADR 0111): dark, base03
+// the panes, base02 the cards and a tone under base03 the window; light,
+// base2 the window, base3 the panes and a tone between them the cards.
+// Where its inks read under AA on a fill they sit on (Solarized's text is
+// base0 on base03, 4.75:1, and lower on a hovered row), they're taken
+// lighter on the dark set and darker on the light one, keeping their hue
+// (`tokens_test`).
 
 /// Solarized's dark set.
 const solarizedDark = Tokens(
   brightness: Brightness.dark,
+  window: Color(0xFF00212B),
   base: Color(0xFF002B36),
   raised: Color(0xFF073642),
   selected: Color(0xFF0E4554),
@@ -123,8 +127,10 @@ const solarizedDark = Tokens(
 /// Solarized's light set.
 const solarizedLight = Tokens(
   brightness: Brightness.light,
+  window: Color(0xFFEEE8D5),
   base: Color(0xFFFDF6E3),
-  raised: Color(0xFFEEE8D5),
+  raised: Color(0xFFF5EFDC),
+  lifted: Color(0xFFE6DFCA),
   selected: Color(0xFFDFD8C1),
   borderSubtle: Color(0xFFE1DAC3),
   borderStrong: Color(0xFFCFC6AA),

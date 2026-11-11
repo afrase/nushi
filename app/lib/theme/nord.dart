@@ -9,13 +9,19 @@ import 'package:nushi/theme/tokens.dart';
 // and nord-iterm2's terminal colors. Nord has a dark form only: the
 // light set is Snow Storm's surfaces with Polar Night's text, Frost and
 // Aurora taken darker to read there. Inks too light or dark for AA on a
-// fill they sit on are moved in lightness, keeping their hue.
+// fill they sit on are moved in lightness, keeping their hue. The
+// surfaces (ADR 0111): dark, nord0 the panes, nord1 the cards, nord2 and
+// nord3 what's raised on them, and a tone under nord0 the window; light,
+// nord4 the window, nord6 the panes and nord5 the cards.
 
 /// Nord's dark set.
 const nordDark = Tokens(
   brightness: Brightness.dark,
+  window: Color(0xFF242933),
   base: Color(0xFF2E3440),
   raised: Color(0xFF3B4252),
+  lifted: Color(0xFF434C5E),
+  segment: Color(0xFF4C566A),
   selected: Color(0xFF464F61),
   borderSubtle: Color(0xFF434C5E),
   borderStrong: Color(0xFF556076),
@@ -121,6 +127,7 @@ const nordDark = Tokens(
 /// Nord's light set.
 const nordLight = Tokens(
   brightness: Brightness.light,
+  window: Color(0xFFD8DEE9),
   base: Color(0xFFECEFF4),
   raised: Color(0xFFE5E9F0),
   selected: Color(0xFFD3D9E4),
@@ -129,16 +136,16 @@ const nordLight = Tokens(
   text: Color(0xFF2E3440),
   textSecondary: Color(0xFF3B4252),
   textMuted: Color(0xFF4C566A),
-  link: Color(0xFF3A608E),
+  link: Color(0xFF375D8B),
   onAccent: Color(0xFFFFFFFF),
   fieldFill: Color(0xFFECEFF4),
   fieldBorder: Color(0xFFC6CEDB),
   fieldBorderHover: Color(0xFFA4AEC0),
   grip: Color(0xFF7B869A),
   accent: Color(0xFF5578A3),
-  accentSoft: Color(0xFFCFDBE9),
-  accentInk: Color(0xFF3A608E),
-  running: Color(0xFF3A608E),
+  accentSoft: Color(0xFFBCDCFF),
+  accentInk: Color(0xFF375D8B),
+  running: Color(0xFF375D8B),
   needs: Color(0xFF7A5806),
   needsSoft: Color(0xFFF2E6C8),
   done: Color(0xFF476730),
@@ -175,8 +182,8 @@ const nordLight = Tokens(
   scrim: Color(0xDD000000),
   claude: Color(0xFFB0582B),
   ante: Color(0xFF93640A),
-  ompPlug: Color(0xFFC2540A),
-  pi: Color(0xFF2F7DA6),
+  ompPlug: Color(0xFFB95008),
+  pi: Color(0xFF2B769E),
   pig: Color(0xFFC24A64),
   monogramText: Color(0xFFFFFFFF),
   avatars: [

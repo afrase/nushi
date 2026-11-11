@@ -5,17 +5,22 @@ import 'package:nushi/theme/tokens.dart';
 
 // Catppuccin's palette (MIT; docs/development.md's Dependencies), on
 // Nushi's tokens (ADR 0086): Mocha for the dark set and Latte for the
-// light one, its style guide's roles (mauve the accent, base, mantle and
-// surface0 the surfaces, overlay2 comments) and its terminal colors.
+// light one, its style guide's roles (mauve the accent, overlay2
+// comments) and its terminal colors. The surfaces (ADR 0111): crust the
+// window and base the panes in both; Mocha's cards a tone between base
+// and surface0, which is what's raised on them; Latte's cards mantle.
 // Latte's inks are taken darker where they read under AA on a fill they
 // sit on, keeping their hue.
 
 /// Catppuccin's dark set.
 const catppuccinDark = Tokens(
   brightness: Brightness.dark,
+  window: Color(0xFF11111B),
   base: Color(0xFF1E1E2E),
-  raised: Color(0xFF181825),
-  selected: Color(0xFF313244),
+  raised: Color(0xFF28293B),
+  lifted: Color(0xFF313244),
+  segment: Color(0xFF3B3C50),
+  selected: Color(0xFF383A4F),
   borderSubtle: Color(0xFF323345),
   borderStrong: Color(0xFF45475A),
   text: Color(0xFFCDD6F4),
@@ -120,14 +125,15 @@ const catppuccinDark = Tokens(
 /// Catppuccin's light set.
 const catppuccinLight = Tokens(
   brightness: Brightness.light,
+  window: Color(0xFFDCE0E8),
   base: Color(0xFFEFF1F5),
   raised: Color(0xFFE6E9EF),
   selected: Color(0xFFD5D9E1),
   borderSubtle: Color(0xFFD1D5DD),
   borderStrong: Color(0xFFC9CDD7),
   text: Color(0xFF4C4F69),
-  textSecondary: Color(0xFF5A5D75),
-  textMuted: Color(0xFF5A5D73),
+  textSecondary: Color(0xFF54576E),
+  textMuted: Color(0xFF54576D),
   link: Color(0xFF1454D2),
   onAccent: Color(0xFFFFFFFF),
   fieldFill: Color(0xFFEFF1F5),
@@ -135,7 +141,7 @@ const catppuccinLight = Tokens(
   fieldBorderHover: Color(0xFFACB0BE),
   grip: Color(0xFF8C8FA1),
   accent: Color(0xFF8839EF),
-  accentSoft: Color(0xFFE0D8F4),
+  accentSoft: Color(0xFFE2D2FF),
   accentInk: Color(0xFF7A2FD6),
   running: Color(0xFF1454D2),
   needs: Color(0xFF865202),
@@ -174,11 +180,11 @@ const catppuccinLight = Tokens(
   scrim: Color(0xDD000000),
   claude: Color(0xFFB0582B),
   ante: Color(0xFF93640A),
-  ompPlug: Color(0xFFC2540A),
-  pi: Color(0xFF2F7DA6),
+  ompPlug: Color(0xFFB95008),
+  pi: Color(0xFF2B769E),
   pig: Color(0xFFC24A64),
   monogramText: Color(0xFFFFFFFF),
-  hover: Color(0x1A4C4F69),
+  hover: Color(0x1C4C4F69),
   pressed: Color(0x2A4C4F69),
   avatars: [
     Color(0xFF1A5AD8), // blue
