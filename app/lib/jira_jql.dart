@@ -131,6 +131,9 @@ class _JqlFieldState extends State<JqlField> {
   GetJiraJqlResponse? _jql;
   List<({String insert, String label})> _shown = const [];
   int _picked = -1;
+
+  /// The suggestions' box's padding around its rows.
+  static const _pad = 4.0;
   Timer? _ask;
   int _asked = 0; // the latest value request, so older answers drop
   late final FocusNode _focus = widget.focusNode ?? FocusNode();
@@ -291,10 +294,12 @@ class _JqlFieldState extends State<JqlField> {
           ),
         ),
         if (_shown.isNotEmpty)
-          framed(
+          // As a menu: the rows set in from the box, the picked one's fill
+          // rounded inside its corners.
+          Container(
             margin: const EdgeInsets.only(top: 2),
-            border: t.borderSubtle,
-            fill: t.raised,
+            padding: const EdgeInsets.all(_pad),
+            decoration: box(t.borderSubtle, fill: t.raised),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -302,9 +307,14 @@ class _JqlFieldState extends State<JqlField> {
                   GestureDetector(
                     onTap: () => _take(i),
                     child: Container(
-                      color: i == _picked ? t.selected : null,
+                      decoration: BoxDecoration(
+                        color: i == _picked ? t.selected : null,
+                        borderRadius: BorderRadius.circular(
+                          NushiTheme.inner(NushiTheme.card, _pad + 1),
+                        ),
+                      ),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
+                        horizontal: 8 - _pad,
                         vertical: 3,
                       ),
                       child: Row(

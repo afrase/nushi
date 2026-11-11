@@ -321,6 +321,40 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('JQL’s suggestions: the picked row’s fill is set in from the '
+      'box and rounded, as a menu’s', (tester) async {
+    final (_, d) = await openView(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.slash);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'project ');
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    Finder around(bool Function(BoxDecoration) is_) => find.ancestor(
+      of: find.text('=').first,
+      matching: find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            is_(w.decoration! as BoxDecoration),
+      ),
+    );
+    final picked = around((b) => b.color != null && b.border == null).first;
+    final row = tester.getRect(picked);
+    final box = tester.getRect(around((b) => b.border != null).first);
+    // The box's border, then its padding: no fill reaches a corner.
+    expect(row.left, box.left + 5);
+    expect(row.right, box.right - 5);
+    expect(row.top, box.top + 2 + 5); // under the box's own margin
+    expect(
+      (tester.widget<Container>(picked).decoration! as BoxDecoration)
+          .borderRadius,
+      BorderRadius.circular(NushiTheme.inner(NushiTheme.card, 5)),
+    );
+    await render(tester, find.byType(JiraView), 'jira_jql_suggestions');
+    await closeView(tester, d);
+  });
+
   testWidgets('the sprint, a saved search, JQL', (tester) async {
     final (fake, d) = await openView(tester);
     await tester.tap(find.text('Sprint'));
