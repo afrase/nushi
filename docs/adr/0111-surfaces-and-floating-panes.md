@@ -51,14 +51,14 @@ The owner approved a mock of a fresh look (2026-11-11) and wants the app to look
 - The composer is 86 high with one line (48 until now), and a tool row 36 (28): a screen shows fewer rows, as the mock does. The transcript's column is 60 narrower.
 - A waiting card is no longer amber all over, and a failed call's row no longer red: each says it with a mark and a word in the state's color. A running call has a spinner again beside its shine.
 - `codeBlock` is darker than the pane on every dark set, and about the window's tone on the light ones (the mock's light value was under a step from a card, where a diff's block would vanish); Nord's dark bubble's muted ink is lighter, to read on a quote there. GitHub's and Jira's text draw quotes, code blocks and tables the same way, as they share the Markdown.
-- `toolTint`, `toolBorder`, `subagentBorder`, `findingsTint`, `findingsBorder` and `userBandBorder` are no longer drawn in the transcript; what still draws them (Settings' theme preview, the pull request's rows, the cleanup dialog) loses them in its own pass.
+- `toolTint`, `toolBorder`, `subagentBorder`, `findingsTint`, `findingsBorder` and `userBandBorder` are no longer drawn in the transcript; what still draws them (Settings' theme preview, the details' pull request widget, the cleanup dialog) loses them in its own pass.
 - Amends 0071 (the header's switch is the filled control again, as the mock has it), 0072 (the header's and the composer's heights and fold numbers), 0076 (a bubble's padding; a tool row's fill and height), 0080 (the top is the sidebar's strip and the pane's header, not one band) and 0092 (the details hide where the transcript would keep less than 484).
 
 ## Still owed, by view
-Each is restyled from this page: cards and rows by fill (`raised` on `base`), hairlines only as dividers, pills for state, no outlines, no side stripes.
-- **The details' widgets' contents**: Context's bar and rows, the pull request's rows and buttons, tasks, artifacts (the column itself is settled: flat, in the pane).
-- **Settings**, **Jira**, **GitHub**, **Chat history**: their bars, lists, cards and tables, and their other tab bars (`PlainTabs`). Settings' theme preview still draws the old tool rows.
-- **The side panes' own parts**: the preview's and the edit bars, a code block's run line, the files pane.
+Each is restyled from this page: cards and rows by fill (`raised` on `base`), hairlines only as dividers, pills for state, no outlines, no side stripes. The shared controls already changed under each of them, so what's left is each view's own boxes, which still draw `borderSubtle`.
+- **The details' widgets' contents**: Context's bar and rows, the pull request's rows (its merged note is still a tinted, outlined box), tasks, artifacts. Whether the widgets stay flat or become rounded cards in the column is open with the owner.
+- **Settings** (its groups, rows and nav, the theme preview's old tool rows), **Jira**, **GitHub** (its lists and cards; a pull request's Files section, whose diff isn't a sunk block as Changes' is), **Chat history** (its table), the agents', MCP's and skills' pages, the cleanup dialog's rows.
+- **The side panes' own parts**: the preview, a code block's run line, the files pane's tree. Their bars are done: a bar in a pane (the terminal's tabs, the browser's bar, a server's log's head, an edit bar) has no fill, only a hairline.
 - **The phone**: its details, cards and sheets.
 - **The traffic lights**: the mock centres them in the sidebar's top row (26 from the top, 20 in). Moving them is native work that needs a look at a real window; with the sidebar hidden they now sit in the pane's top left corner, above its header's middle.
 - **The sidebar's projects** as tiles with a rail: a separate decision (`docs/roadmap.md`).

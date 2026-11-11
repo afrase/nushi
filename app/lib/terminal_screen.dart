@@ -220,7 +220,7 @@ class TerminalScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
             decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: t.borderSubtle)),
+              border: Border(top: BorderSide(color: t.line)),
             ),
             child: Row(
               children: [

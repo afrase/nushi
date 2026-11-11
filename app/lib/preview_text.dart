@@ -142,11 +142,7 @@ class _CsvTableState extends State<CsvTable> {
         DecoratedBox(
           decoration: BoxDecoration(
             color: header ? t.raised : null,
-            border: Border(
-              bottom: BorderSide(
-                color: header ? t.borderStrong : t.borderSubtle,
-              ),
-            ),
+            border: Border(bottom: BorderSide(color: t.line)),
           ),
           child: Row(
             children: [

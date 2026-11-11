@@ -54,7 +54,7 @@ class TerminalTabs extends StatelessWidget {
     return Container(
       height: 32,
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: t.borderSubtle)),
+        border: Border(bottom: BorderSide(color: t.line)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Row(
