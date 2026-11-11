@@ -177,7 +177,7 @@ class _SidebarState extends State<Sidebar> {
                   Padding(
                     padding: EdgeInsets.only(
                       top: headersMoveWindow ? NushiTheme.windowPad : 0,
-                      right: Sidebar.end,
+                      right: Sidebar.end - SidebarButton.reach,
                     ),
                     child: Align(
                       alignment: Alignment.centerRight,
@@ -185,7 +185,7 @@ class _SidebarState extends State<Sidebar> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ArrangeButton(daemon: daemon, hover: _hover),
-                          const SizedBox(width: 2),
+                          const SizedBox(width: NushiTheme.iconGap),
                           const SidebarButton(),
                         ],
                       ),

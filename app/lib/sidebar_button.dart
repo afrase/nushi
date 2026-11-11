@@ -24,8 +24,10 @@ double get lightsInset =>
     kIsWeb ? 0 : max(8, native.window.titleInset - NushiTheme.windowPad);
 
 /// Where a header's own content starts with the sidebar hidden: past the
-/// lights and [ShowSidebarButton].
-double get hiddenHeaderStart => lightsInset + 26 + 8;
+/// lights and [ShowSidebarButton]'s icon, the room around it
+/// ([SidebarButton.iconInset]) and 8 more.
+double get hiddenHeaderStart =>
+    lightsInset + 16 + 2 * SidebarButton.iconInset + 8;
 
 /// Whether the sidebar is hidden, so the main area reaches the window's left
 /// edge. The phone has none, whatever is saved.
@@ -38,7 +40,9 @@ void toggleSidebar() => sidebarHidden.value = !sidebarHidden.value;
 /// The button that hides the sidebar or shows it, the box of [LineIcon.sidebar]
 /// with its left side marked off, where it rests: at the right of the
 /// sidebar's header, or past the lights in a header ([header], through
-/// [ShowSidebarButton]). It's one button: while the sidebar slides, neither
+/// [ShowSidebarButton]). It's the same control as the icon buttons at a
+/// header's right (32 square, [IconTap.header]; ADR 0111), so the two ends
+/// of a header match. It's one button: while the sidebar slides, neither
 /// place draws it, and the one `SidebarBeside` draws over both moves from
 /// one place to the other with the slide ([SidebarGlide]).
 class SidebarButton extends StatelessWidget {
@@ -46,6 +50,15 @@ class SidebarButton extends StatelessWidget {
 
   /// The one drawn while the sidebar slides.
   const new _moving() : header = false, _moving = true;
+
+  /// How far in its icon sits from where the button is placed: past the
+  /// lights in a header, from the sidebar's end in its strip.
+  static const iconInset = 5.0;
+
+  /// How far its box reaches past that place, around the icon: the icon
+  /// stays [iconInset] in, and a header's icon button has more room
+  /// around its icon than that.
+  static const double reach = IconTap.header - iconInset;
 
   /// Whether it rests in a header, past the lights, rather than in the
   /// sidebar.
@@ -62,6 +75,7 @@ class SidebarButton extends StatelessWidget {
         tooltip:
             '${sidebarShut ? 'Show' : 'Hide'} the sidebar '
             '(${Act.sidebar.shortcut})',
+        padding: IconTap.header,
         onTap: toggleSidebar,
       ),
     );
@@ -72,14 +86,14 @@ class SidebarButton extends StatelessWidget {
   }
 }
 
-/// [SidebarButton] in a top header's Stack, just past the lights, over the
-/// header's WindowDrag so it keeps its clicks.
+/// [SidebarButton] in a top header's Stack, its icon just past the lights,
+/// over the header's WindowDrag so it keeps its clicks.
 class ShowSidebarButton extends StatelessWidget {
   const new({super.key});
 
   @override
   Widget build(BuildContext context) => Positioned(
-    left: lightsInset,
+    left: lightsInset - SidebarButton.reach,
     top: 0,
     bottom: 1, // the border's
     child: const Center(widthFactor: 1, child: SidebarButton(header: true)),

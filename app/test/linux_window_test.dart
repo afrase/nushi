@@ -138,7 +138,7 @@ void main() {
     // In the main pane, the window's margin in.
     expect(
       tester.getRect(find.byTooltip(r'Show the sidebar (Ctrl+\)')).left,
-      NushiTheme.windowPad + 8,
+      NushiTheme.windowPad + 8 - SidebarButton.reach,
     );
 
     d.openSettings();
@@ -216,7 +216,10 @@ void main() {
               final show = tester.getRect(
                 find.byTooltip(r'Show the sidebar (Ctrl+\)'),
               );
-              expect(show.left, NushiTheme.windowPad + lightsInset);
+              expect(
+                show.left,
+                NushiTheme.windowPad + lightsInset - SidebarButton.reach,
+              );
               expect(show.top, greaterThanOrEqualTo(0));
               if (name == 'chat') {
                 // The title, after the chat's color.

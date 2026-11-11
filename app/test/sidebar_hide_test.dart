@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -104,7 +105,13 @@ void main() {
       final strip = tester.getRect(find.byType(Sidebar));
       final button = tester.getRect(find.byTooltip(_hide));
       expect(strip.width, 333);
-      expect(button.right, strip.right - Sidebar.end);
+      // Its icon 5 in from the strip's end, as it was; its box, a header's
+      // icon button's, reaches past that.
+      expect(button.right, strip.right - Sidebar.end + SidebarButton.reach);
+      expect(
+        button.center.dx,
+        strip.right - Sidebar.end - SidebarButton.iconInset - 8,
+      );
       // In the strip the traffic lights sit in, level with them and with
       // the header's middle (36 from the window's top: the window's
       // margin and half a header), and clear of them with the sidebar at
@@ -160,6 +167,64 @@ void main() {
       d.dispose();
     }, variant: _mac);
 
+    // The owner, of the beta: the button at a header's left was smaller
+    // than the icon buttons at its right. It's the same control: the same
+    // icon, the same box around it, so the same fill under the pointer.
+    for (final (hidden, brightness) in [
+      for (final hidden in [true, false])
+        for (final b in Brightness.values) (hidden, b),
+    ]) {
+      final state = hidden ? 'hidden' : 'shown';
+      testWidgets('it’s the header’s icon button, as the ones at the '
+          'header’s right, the sidebar $state, ${brightness.name}', (
+        tester,
+      ) async {
+        final d = await _window(tester, hidden: hidden, brightness: brightness);
+        IconTap button(Pattern tooltip) => tester.widget<IconTap>(
+          find.ancestor(
+            of: find.byTooltip(tooltip),
+            matching: find.byType(IconTap),
+          ),
+        );
+        // How large the icon is drawn in the button.
+        Size icon(Pattern tooltip) => tester.getSize(
+          find
+              .descendant(
+                of: find.byTooltip(tooltip),
+                matching: find.byType(CustomPaint),
+              )
+              .first,
+        );
+        final own = hidden ? _show : _hide;
+        final other = RegExp(r'^(Show|Hide) details$');
+        expect(tester.getSize(find.byTooltip(own)), const Size.square(32));
+        expect(
+          tester.getSize(find.byTooltip(own)),
+          tester.getSize(find.byTooltip(other)),
+        );
+        expect(icon(own), const Size.square(16));
+        expect(icon(own), icon(other));
+        expect(button(own).padding, button(other).padding);
+        expect(button(own).padding, IconTap.header);
+        // Level with them.
+        expect(
+          tester.getCenter(find.byTooltip(own)).dy,
+          closeTo(tester.getCenter(find.byTooltip(other)).dy, 0.5),
+        );
+        // To look at: at rest, then under the pointer, its fill the size
+        // of the details button's beside the header's other end.
+        final shot = 'header_sidebar_${state}_${brightness.name}';
+        await render(tester, find.byType(NushiApp), shot);
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: Offset.zero);
+        addTearDown(mouse.removePointer);
+        await mouse.moveTo(tester.getCenter(find.byTooltip(own)));
+        await tester.pump();
+        await render(tester, find.byType(NushiApp), '${shot}_pointer');
+        d.dispose();
+      }, variant: _mac);
+    }
+
     testWidgets('it keeps its clicks, and the strip’s empty space moves and '
         'zooms the window', (tester) async {
       final calls = _windowCalls();
@@ -192,7 +257,10 @@ void main() {
       // Hidden, the same of the header, around its button.
       await tester.pump(const Duration(seconds: 1));
       final show = tester.getRect(find.byTooltip(_show));
-      expect(show.left, NushiTheme.windowPad + lightsInset);
+      expect(
+        show.left,
+        NushiTheme.windowPad + lightsInset - SidebarButton.reach,
+      );
       // In the header's empty middle, between its state and its switch.
       final space = Offset(
         (tester.getRect(find.byType(PhasePill)).right +
@@ -225,8 +293,11 @@ void main() {
     /// The header's row starts past the button, which is past the lights.
     void cleared(WidgetTester tester, String title) {
       final button = tester.getRect(find.byTooltip(_show));
-      expect(button.left, greaterThanOrEqualTo(lightsInset));
-      expect(button.height, 26);
+      expect(
+        button.left,
+        greaterThanOrEqualTo(lightsInset - SidebarButton.reach),
+      );
+      expect(button.size, const Size.square(32));
       // In the middle of the pane's header, over its hairline.
       expect(
         button.center.dy,
@@ -270,7 +341,15 @@ void main() {
             expect(bar.top, NushiTheme.windowPad);
             expect(bar.width, width - 2 * NushiTheme.windowPad);
             final show = tester.getRect(find.byTooltip(_show));
-            expect(show.left, NushiTheme.windowPad + lightsInset);
+            // Its icon 5 past the lights' room, its box around it.
+            expect(
+              show.left,
+              NushiTheme.windowPad + lightsInset - SidebarButton.reach,
+            );
+            expect(
+              show.center.dx,
+              NushiTheme.windowPad + lightsInset + SidebarButton.iconInset + 8,
+            );
             switch (name) {
               case 'chat':
                 // The title, after the chat's color.

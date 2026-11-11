@@ -98,7 +98,10 @@ void main() {
     sidebarHidden.value = true;
     await tester.pumpAndSettle();
     final pastLights = _button(tester);
-    expect(pastLights.left, NushiTheme.windowPad + lightsInset);
+    expect(
+      pastLights.left,
+      NushiTheme.windowPad + lightsInset - SidebarButton.reach,
+    );
     sidebarHidden.value = false;
     await tester.pumpAndSettle();
     expect(_button(tester), inSidebar);
@@ -142,7 +145,9 @@ void main() {
     expect(at.left, inExclusiveRange(pastLights.left, inSidebar.left));
     expect(
       inSidebar.right,
-      tester.getRect(find.byType(Sidebar)).right - Sidebar.end,
+      tester.getRect(find.byType(Sidebar)).right -
+          Sidebar.end +
+          SidebarButton.reach,
     );
     d.dispose();
   }, variant: _mac);
@@ -183,7 +188,10 @@ void main() {
     final d = await _window(tester, hidden: false, still: true);
     sidebarHidden.value = true;
     await tester.pump();
-    expect(_button(tester).left, NushiTheme.windowPad + lightsInset);
+    expect(
+      _button(tester).left,
+      NushiTheme.windowPad + lightsInset - SidebarButton.reach,
+    );
     sidebarHidden.value = false;
     await tester.pump();
     final at = _button(tester);
