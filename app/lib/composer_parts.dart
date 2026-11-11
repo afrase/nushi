@@ -13,6 +13,7 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/reply_cards.dart';
 import 'package:nushi/rewind.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Stops the chat's running turn. If the agent hasn't answered the last
@@ -172,10 +173,9 @@ class DraftCards extends StatelessWidget {
       runSpacing: 6,
       children: [
         if (draft.toSubagent.value case (_, final agent)?)
-          Chip(
-            label: Text('To $agent, through ${chat.agentName}'),
-            onDeleted: () => draft.toSubagent.value = null,
-            visualDensity: VisualDensity.compact,
+          _ToChip(
+            'To $agent, through ${chat.agentName}',
+            onRemove: () => draft.toSubagent.value = null,
           ),
         // Only when there are some: an empty one still takes a spacing,
         // which put the first row 6pt right of the rows wrapped under it.
@@ -199,6 +199,42 @@ class DraftCards extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Whom the box's message is for, when not the chat's agent: a pill on the
+/// card's lifted fill, with its ×.
+class _ToChip extends StatelessWidget {
+  const new(this.label, {required this.onRemove});
+
+  final String label;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Container(
+      padding: const EdgeInsets.only(left: 10, right: 2),
+      decoration: BoxDecoration(
+        color: t.lifted,
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.ui(t.text, size: 12),
+            ),
+          ),
+          IconTap(Icons.close, size: 13, tooltip: 'Remove', onTap: onRemove),
+        ],
+      ),
+    );
+  }
 }
 
 /// The end of the box's row (ADR 0111): while a turn runs and something is
