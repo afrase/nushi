@@ -35,6 +35,45 @@ final _controls = <String, Widget Function({required bool on})>{
     label: const Text('Only me'),
     entries: [if (on) MenuEntry('Only me', onPick: () {})],
   ),
+  // A card's own controls (ADR 0111).
+  'button_quiet': ({required on}) => Button(
+    label: 'Reject',
+    kind: ButtonKind.quiet,
+    onPressed: on ? () {} : null,
+  ),
+  'pill_button': ({required on}) => PillButton(
+    label: 'Stop and send',
+    icon: Icons.fast_forward,
+    onPressed: on ? () {} : null,
+  ),
+  'pill_small': ({required on}) => PillButton(
+    label: 'Preview',
+    icon: Icons.visibility_outlined,
+    small: true,
+    onPressed: on ? () {} : null,
+  ),
+  'round_plain': ({required on}) => RoundButton(
+    tooltip: 'Add',
+    onPressed: on ? () {} : null,
+    glyph: (color) => LineIcon.plus.view(size: 18, color: color),
+  ),
+  'round_primary': ({required on}) => RoundButton(
+    kind: RoundKind.primary,
+    tooltip: 'Send',
+    onPressed: on ? () {} : null,
+    glyph: (color) => Icon(Icons.arrow_upward, size: 17, color: color),
+  ),
+  'round_stop': ({required on}) => RoundButton(
+    kind: RoundKind.stop,
+    tooltip: 'Stop',
+    onPressed: on ? () {} : null,
+    glyph: (color) => Icon(Icons.stop_rounded, size: 18, color: color),
+  ),
+  'menu_pill': ({required on}) => MenuField(
+    pill: true,
+    label: const Text('Accept edits'),
+    entries: [if (on) MenuEntry('Accept edits', onPick: () {})],
+  ),
   'link': ({required on}) =>
       LinkText('Settings › Agents', onTap: on ? () {} : null),
   'icon': ({required on}) =>
@@ -75,7 +114,12 @@ void main() {
     for (final MapEntry(key: control, value: make) in _controls.entries) {
       testWidgets('golden, $control at rest, hovered, focused, pressed, '
           'disabled, $name', (tester) async {
-        viewport(tester, const Size(760, 72), ratio: 2);
+        // A card's controls are taller than the rest.
+        final tall =
+            control.startsWith('pill') ||
+            control.startsWith('round') ||
+            control == 'menu_pill';
+        viewport(tester, Size(760, tall ? 80 : 72), ratio: 2);
         const states = ['rest', 'hover', 'focused', 'pressed', 'disabled'];
         await tester.pumpWidget(
           _app(
@@ -154,7 +198,7 @@ void main() {
     await tester.pumpWidget(
       _app(
         Tokens.dark,
-        Column(
+        Wrap(
           children: [
             for (final make in _controls.values) ...[
               make(on: true),

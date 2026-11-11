@@ -7,6 +7,10 @@ enum ButtonKind {
   /// Every other action: outlined.
   secondary,
 
+  /// Every other action on a card (ADR 0111), where an outline would be
+  /// a box in a box: the card's lifted fill, no outline.
+  quiet,
+
   /// One that deletes or loses something: red text, outlined.
   destructive,
 
@@ -18,13 +22,13 @@ enum ButtonKind {
 /// The ink of a button of [kind].
 Color _fg(Tokens t, ButtonKind kind) => switch (kind) {
   ButtonKind.primary => t.onAccent,
-  ButtonKind.secondary => t.text,
+  ButtonKind.secondary || ButtonKind.quiet => t.text,
   ButtonKind.destructive || ButtonKind.danger => t.crashed,
 };
 
 /// A button's fill and border, as [look] has it, rounded by [r]: the
-/// accent's fill for a primary one, a faint red for a danger one, else
-/// outlined.
+/// accent's fill for a primary one, a faint red for a danger one, the
+/// lifted fill for a quiet one, else outlined.
 BoxDecoration _buttonBox(
   Tokens t,
   ButtonKind kind,
@@ -32,11 +36,10 @@ BoxDecoration _buttonBox(
   BorderRadius r,
 ) {
   final primary = kind == ButtonKind.primary;
-  if (kind == ButtonKind.danger) {
+  if (kind == ButtonKind.danger || kind == ButtonKind.quiet) {
+    final fill = kind == ButtonKind.danger ? t.crashedSoft : t.lifted;
     return BoxDecoration(
-      color: look.hover
-          ? Color.alphaBlend(_tint(t, look), t.crashedSoft)
-          : t.crashedSoft,
+      color: look.hover ? Color.alphaBlend(_tint(t, look), fill) : fill,
       borderRadius: r,
     );
   }
@@ -95,7 +98,8 @@ class Button extends StatelessWidget {
     final t = theme.t;
     final primary = kind == ButtonKind.primary;
     final fg = _fg(t, kind);
-    final style = theme.ui(fg, weight: primary ? FontWeight.w500 : null);
+    final strong = primary || kind == ButtonKind.quiet;
+    final style = theme.ui(fg, weight: strong ? FontWeight.w500 : null);
     final touch = TouchTargets.of(context);
     final lines = wrap && touch ? 3 : 1;
     return Pressable(

@@ -51,9 +51,9 @@ Map<String, Color> tokenColors(Tokens t) {
 /// A surface [colors] doesn't name follows the one it's drawn from when
 /// they name that (ADR 0111): `window` follows `base`, `lifted` and
 /// `segment` follow `raised` (a light set's `segment` its `base`), `line`
-/// follows `text`. So a file from before those tokens, which names every
-/// color it knew, gets a window and a hairline of its own palette rather
-/// than the built-in's it starts from.
+/// and `quote` follow `text`. So a file from before those tokens, which
+/// names every color it knew, gets a window and a hairline of its own
+/// palette rather than the built-in's it starts from.
 Tokens withColors(Tokens t, Map<String, Color> colors) {
   bool follows(String name, List<String> sources) =>
       !colors.containsKey(name) && sources.any(colors.containsKey);
@@ -65,6 +65,7 @@ Tokens withColors(Tokens t, Map<String, Color> colors) {
       if (follows('lifted', ['raised', 'text'])) 'lifted',
       if (follows('segment', ['raised', 'base', 'text'])) 'segment',
       if (follows('line', ['text'])) 'line',
+      if (follows('quote', ['text'])) 'quote',
     },
   );
 }
@@ -265,6 +266,8 @@ Tokens _rebuild(
     selectionBarDivider: pick('selectionBarDivider', t.selectionBarDivider),
     shadow: pick('shadow', t.shadow),
     scrim: pick('scrim', t.scrim),
+    stop: pick('stop', t.stop),
+    onStop: pick('onStop', t.onStop),
     claude: pick('claude', t.claude),
     ante: pick('ante', t.ante),
     ompPlug: pick('ompPlug', t.ompPlug),
@@ -273,6 +276,7 @@ Tokens _rebuild(
     monogramText: pick('monogramText', t.monogramText),
     hover: pick('hover', t.hover),
     pressed: pick('pressed', t.pressed),
+    quote: surface('quote', t.quote),
     avatars: [
       for (final (i, c) in t.avatars.indexed)
         pick('avatars.${avatarNames[i]}', c),

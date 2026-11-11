@@ -24,6 +24,10 @@ BoxDecoration box(
   borderRadius: BorderRadius.circular(radius),
 );
 
+/// A card on a pane (ADR 0111): a card's fill and corners, no outline.
+BoxDecoration cardBox(Tokens t, {double radius = NushiTheme.card}) =>
+    BoxDecoration(color: t.raised, borderRadius: BorderRadius.circular(radius));
+
 /// A rounded box whose [child] is clipped to its corners, its border drawn
 /// over the child: a fill, a bar or a hover inside never covers the
 /// border's curve, as it does under a [box] border.

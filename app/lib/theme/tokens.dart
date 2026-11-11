@@ -93,6 +93,8 @@ class Tokens {
     required this.selectionBarDivider,
     required this.shadow,
     required this.scrim,
+    required this.stop,
+    required this.onStop,
     required this.claude,
     required this.ante,
     required this.ompPlug,
@@ -107,6 +109,7 @@ class Tokens {
     this._line,
     this._hover,
     this._pressed,
+    this._quote,
     this._terminal,
     this._diff,
   });
@@ -208,13 +211,17 @@ class Tokens {
   final Color shine;
   final Color shineBand;
 
-  // The transcript. A user message is a band across it (the chapter's
-  // heading), with its marker (a relay's), its inline code and code
-  // blocks; the agent's text and inline code; a tool call's row and a
-  // subagent's line, each a tint with an accent for its icon; a review's
-  // findings card, its tint, border and accent (its icon, a row's file and
-  // line, its chips' outline); the bar
-  // over a selection; and the scrim behind an image opened whole.
+  // The transcript. A user message is a bubble (a band across a phone's),
+  // with its marker (a relay's), its inline code and code blocks; the
+  // agent's text and inline code; code's own surface ([codeBlock]); a tool
+  // call's icon ([toolAccent]; its row is a card, [raised]) and a
+  // subagent's row, a tint with an accent for its name; a review's
+  // findings, their accent (the card's icon, a row's file and line); the
+  // bar over a selection; and the scrim behind an image opened whole.
+  // [toolTint], the three borders and [findingsTint] are from before the
+  // surfaces told things apart (ADR 0111): the transcript no longer draws
+  // them, and what still does (the pull request's rows, the cleanup
+  // dialog, Settings' theme preview) loses them in its own pass.
   final Color userBand;
   final Color userBandBorder;
   final Color userBandText;
@@ -233,6 +240,10 @@ class Tokens {
   // the band, 7.04 on base.
   final Color inlineCode;
   final Color inlineCodeText;
+
+  /// Behind code: a code block, a tool call's output, a diff in the
+  /// transcript. Sunk, about the window's tone: a step off the pane and off
+  /// a card, since it sits on both (`tokens_test`).
   final Color codeBlock;
   final Color toolTint;
   final Color toolBorder;
@@ -249,6 +260,12 @@ class Tokens {
   final Color selectionBarDivider;
   final Color shadow;
   final Color scrim;
+
+  /// The Stop button's fill, solid red in both brightnesses so that it is
+  /// never mistaken, and the mark on it ([onStop]). [crashed] is an ink:
+  /// on a dark theme too light to fill a button with.
+  final Color stop;
+  final Color onStop;
 
   // The agents' marks' colors, from their own logos (`agent_mark.dart`,
   // docs/user/agent-marks.md): Claude's, Anthropic's own; Ante's ghost,
@@ -298,6 +315,13 @@ class Tokens {
       _pressed ??
       text.withValues(alpha: brightness == Brightness.dark ? 0.14 : 0.16);
   final Color? _pressed;
+
+  /// Behind quoted text (a Markdown quote, the selection a reply quotes):
+  /// a soft fill in the place of a bar down its side (ADR 0111). A tint of
+  /// the text's color, so it shows on whatever the quote sits on (the
+  /// pane, a message's bubble, a card), unless a theme gives its own.
+  Color get quote => _quote ?? text.withValues(alpha: 0.07);
+  final Color? _quote;
 
   /// A gold mark beside [claude]'s orange (Context's System prompt, as
   /// Claude's rail colors it): [needs] on a dark theme; on a light one,
@@ -379,7 +403,7 @@ class Tokens {
     agentText: Color(0xFF1E1F22),
     inlineCode: Color(0x1A8D4100),
     inlineCodeText: Color(0xFF8D4100),
-    codeBlock: Color(0xFFF7F8FA),
+    codeBlock: Color(0xFFECEEF2),
     toolTint: Color(0xFFDAF2EE),
     toolBorder: Color(0xFFA5D6CE),
     toolAccent: Color(0xFF0E8577),
@@ -395,6 +419,8 @@ class Tokens {
     selectionBarDivider: Color(0x33FFFFFF),
     shadow: Color(0x33000000),
     scrim: Color(0xDD000000),
+    stop: Color(0xFFD0303F),
+    onStop: Color(0xFFFFFFFF),
     claude: Color(0xFFB0582B),
     ante: Color(0xFF93640A),
     ompPlug: Color(0xFFC2540A),
@@ -473,7 +499,7 @@ class Tokens {
     agentText: Color(0xFFDFE1E5),
     inlineCode: Color(0x1FF5AD66),
     inlineCodeText: Color(0xFFF5AD66),
-    codeBlock: Color(0xFF2B2D30),
+    codeBlock: Color(0xFF151619),
     toolTint: Color(0xFF193431),
     toolBorder: Color(0xFF2B5753),
     toolAccent: Color(0xFF3AA597),
@@ -489,6 +515,8 @@ class Tokens {
     selectionBarDivider: Color(0x33FFFFFF),
     shadow: Color(0x33000000),
     scrim: Color(0xDD000000),
+    stop: Color(0xFFD0303F),
+    onStop: Color(0xFFFFFFFF),
     claude: Color(0xFFD98A5F),
     ante: Color(0xFFE5A426),
     ompPlug: Color(0xFFF97316),

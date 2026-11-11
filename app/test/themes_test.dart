@@ -44,7 +44,7 @@ void main() {
   test('every token has a name, and a set rebuilt from its names is the '
       'same', () {
     final names = tokenColors(Tokens.dark);
-    expect(names.length, 123);
+    expect(names.length, 126);
     expect(names['base'], Tokens.dark.base);
     expect(names['avatars.teal'], Tokens.dark.avatars[1]);
     expect(names['syntax.keyword'], Tokens.dark.ink(Capture.keyword).color);
@@ -105,7 +105,13 @@ void main() {
     final nordDark = builtInTheme('nord')!.dark;
     final old = {...tokenColors(nordDark)}
       ..removeWhere(
-        (k, _) => const {'window', 'lifted', 'segment', 'line'}.contains(k),
+        (k, _) => const {
+          'window',
+          'lifted',
+          'segment',
+          'line',
+          'quote',
+        }.contains(k),
       );
     final f = readThemeFile(
       'Old.json',
@@ -127,6 +133,7 @@ void main() {
       greaterThan(dark.raised.computeLuminance()),
     );
     expect(dark.line.a, closeTo(0.07, 0.005));
+    expect(dark.quote, nordDark.text.withValues(alpha: 0.07));
     expect(
       (dark.line.r, dark.line.g, dark.line.b),
       (nordDark.text.r, nordDark.text.g, nordDark.text.b),

@@ -16,13 +16,15 @@ class FlushMenus extends InheritedWidget {
 /// A value picked from a list ([entries]) that looks it: [label] and a ▾
 /// in a bordered box, the whole box the target. [compact], for a picker in
 /// a header or a row ("Only me ▾"), drops the box but keeps the ▾ and a
-/// tint under the pointer. With no [entries] it's disabled.
+/// tint under the pointer; [pill], the composer's (ADR 0111), is that as a
+/// pill [PillButton.height] high. With no [entries] it's disabled.
 class MenuField extends StatelessWidget {
   const new({
     required this.label,
     required this.entries,
     super.key,
     this.compact = false,
+    this.pill = false,
     this.tooltip = '',
     this.digits = false,
     this.onOpen,
@@ -33,6 +35,7 @@ class MenuField extends StatelessWidget {
   final Widget label;
   final List<MenuEntry> entries;
   final bool compact;
+  final bool pill;
   final String tooltip;
   final bool digits;
   final VoidCallback? onOpen;
@@ -42,11 +45,15 @@ class MenuField extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final flush = compact && FlushMenus.of(context);
+    final compact = this.compact || pill;
+    final flush = compact && !pill && FlushMenus.of(context);
     final caret = Icon(
       Icons.keyboard_arrow_down,
       size: compact ? 14 : 15,
       color: t.textSecondary,
+    );
+    final corners = BorderRadius.circular(
+      pill ? NushiTheme.pill : NushiTheme.control,
     );
     return Menu(
       entries: entries,
@@ -63,14 +70,20 @@ class MenuField extends StatelessWidget {
               Flexible(
                 child: DefaultTextStyle(
                   style: compact
-                      ? theme.ui(t.textSecondary, size: 12)
+                      ? theme.ui(t.textSecondary, size: pill ? 12.5 : 12)
                       : theme.ui(t.text),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   child: label,
                 ),
               ),
-              SizedBox(width: compact ? 1 : 6),
+              SizedBox(
+                width: pill
+                    ? 3
+                    : compact
+                    ? 1
+                    : 6,
+              ),
               // Flush, the glyph's own margin goes past the edge too.
               if (flush)
                 Transform.translate(offset: const Offset(2, 0), child: caret)
@@ -81,8 +94,14 @@ class MenuField extends StatelessWidget {
           return _faded(
             look,
             Container(
-              height: compact ? null : controlHeight,
-              padding: compact
+              height: pill
+                  ? PillButton.height
+                  : compact
+                  ? null
+                  : controlHeight,
+              padding: pill
+                  ? const EdgeInsets.fromLTRB(12, 0, 8, 0)
+                  : compact
                   ? EdgeInsets.fromLTRB(5, 1, flush ? 0 : 3, 1)
                   : const EdgeInsets.fromLTRB(8, 0, 5, 0),
               decoration: BoxDecoration(
@@ -96,9 +115,9 @@ class MenuField extends StatelessWidget {
                     : Border.all(
                         color: look.hover ? t.fieldBorderHover : t.fieldBorder,
                       ),
-                borderRadius: BorderRadius.circular(NushiTheme.control),
+                borderRadius: corners,
               ),
-              foregroundDecoration: focusRing(t, look),
+              foregroundDecoration: focusRing(t, look, radius: corners),
               child: face,
             ),
           );

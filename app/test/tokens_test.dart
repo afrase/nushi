@@ -130,6 +130,31 @@ void main() {
           'findingsAccent on findingsTint': (t.findingsAccent, t.findingsTint),
           'onAccent on accent': (t.onAccent, t.accent),
           'onAccent on accentPressed': (t.onAccent, t.accentPressed),
+          // The transcript's fills (ADR 0111): code's surface under a tool
+          // call's output, an open file's row and its counts; a pill
+          // button on a card; a subagent's row while its pane is open.
+          for (final MapEntry(key: ink, value: c) in {
+            ...inks,
+            'done': t.done,
+            'crashed': t.crashed,
+          }.entries)
+            '$ink on codeBlock': (c, t.codeBlock),
+          // A quote's soft fill, wherever quoted text sits.
+          for (final MapEntry(key: fill, value: f) in {
+            'base': t.base,
+            'raised': t.raised,
+            'codeBlock': t.codeBlock,
+          }.entries)
+            'muted on a quote on $fill': (t.textMuted, on(t.quote, f)),
+          'userBandMuted on a quote in the bubble': (
+            t.userBandMuted,
+            on(t.quote, t.userBand),
+          ),
+          'text on lifted': (t.text, t.lifted),
+          'secondary on lifted': (t.textSecondary, t.lifted),
+          'text on lifted, hovered': (t.text, on(t.hover, t.lifted)),
+          'subagentAccent on accentSoft': (t.subagentAccent, t.accentSoft),
+          'subagentAccent on crashedSoft': (t.subagentAccent, t.crashedSoft),
         },
         4.5,
         _contrast,
@@ -154,6 +179,15 @@ void main() {
               '$ink on $row': (c, f),
           'needs on its halo': (t.needs, t.needsSoft),
           'toolAccent on toolTint': (t.toolAccent, t.toolTint),
+          // A tool call's icon on its row, a card, hovered too, and on an
+          // open file's row in a run; Stop's mark on its red.
+          'toolAccent on raised': (t.toolAccent, t.raised),
+          'toolAccent on raised, hovered': (
+            t.toolAccent,
+            on(t.hover, t.raised),
+          ),
+          'toolAccent on codeBlock': (t.toolAccent, t.codeBlock),
+          'onStop on stop': (t.onStop, t.stop),
         },
         3,
         _contrast,
@@ -171,6 +205,9 @@ void main() {
           'raised on window': (t.raised, t.window),
           'lifted on raised': (t.lifted, t.raised),
           'segment on raised': (t.segment, t.raised),
+          // Code is sunk, on a pane and on a card alike.
+          'codeBlock on base': (t.codeBlock, t.base),
+          'codeBlock on raised': (t.codeBlock, t.raised),
         },
         _surfaceFloor,
         _apart,
@@ -199,6 +236,8 @@ void main() {
           'userBand on base': (t.userBand, t.base),
           for (final MapEntry(key: k, value: c) in tints.entries)
             '$k on base': (c, t.base),
+          // Stop reads by its hue, on the composer's card.
+          'stop on raised': (t.stop, t.raised),
         },
         _washFloor,
         _apart,
