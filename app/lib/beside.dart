@@ -17,21 +17,32 @@ class SidePane {
     required this.min,
     required this.cap,
     required this.child,
-  });
+  }) : fixed = false;
+
+  /// A pane of one [width], with no edge to drag: the details panel
+  /// (ADR 0092), which shows or hides only.
+  new fixed(this.name, {required double width, required this.child})
+    : initial = width,
+      min = width,
+      cap = width,
+      fixed = true;
 
   final String name;
   final double initial;
   final double min;
   final double cap;
+  final bool fixed;
   final Widget child;
 
-  double get width => paneWidth(name, initial).clamp(min, cap);
+  double get width =>
+      fixed ? initial : paneWidth(name, initial).clamp(min, cap);
 }
 
-/// [main] with [panes] beside it, left to right, each resizable. When
-/// [main] would get narrower than [least], the panes lie over it rather
-/// than beside it, and it keeps its width under them. (A chat's details
-/// are beside the pane all of this is in: `ChatArea`.)
+/// [main] with [panes] beside it, left to right, and [details] at the
+/// right, each resizable but a [SidePane.fixed] one, which has a hairline
+/// at its left instead of an edge to drag. When [main] would get narrower
+/// than [least], the panes lie over it, by the details, rather than beside
+/// it: the details stay, and so does [main]'s width under the panes.
 ///
 /// A pane slides its full width in from the right as it opens and out as
 /// it closes ([Presence], [paneSlide]); one closing keeps its place until
@@ -40,9 +51,7 @@ class SidePane {
 /// gliding there ([Glide]) from where its text was, [columnSides] saying
 /// where that text's column lies in it (the chat's); so do the
 /// panes that stay but move (the side chat, as the preview right of it
-/// closes), and so does [main] as the sidebar comes and goes, or as
-/// [moves] changes (what else moves it sideways: the details beside the
-/// pane it's in).
+/// closes), and so does [main] as the sidebar comes and goes.
 ///
 /// The pane named [cover] takes the whole of it, over the rest (an expanded
 /// browser tab, ADR 0094): they stay laid out where they were, keeping
@@ -54,17 +63,17 @@ class Beside extends StatefulWidget {
     required this.least,
     required this.panes,
     super.key,
+    this.details,
     this.columnSides,
     this.cover,
-    this.moves,
   });
 
   final Widget main;
   final double least;
   final List<SidePane> panes;
+  final SidePane? details;
   final EdgeInsets Function(double width)? columnSides;
   final String? cover;
-  final Object? moves;
 
   @override
   State<Beside> createState() => _BesideState();
@@ -98,19 +107,17 @@ class _BesideState extends State<Beside> {
       valueListenable: paneWidths,
       builder: (context, _, _) {
         final room = box.maxWidth;
+        final details = widget.details;
         final panes = widget.panes;
+        final detailsWidth = details?.width ?? 0;
         final panesWidth = panes.fold(0.0, (w, p) => w + p.width);
-        final over = room - panesWidth < widget.least;
+        final over = room - detailsWidth - panesWidth < widget.least;
         final t = NushiTheme.of(context).t;
-        final shown = panes;
+        final shown = [...panes, ?details];
         final now = {for (final p in shown) p.name};
         // What glides: the panes open, and the sidebar, which moves
         // everything here sideways.
-        final token = [
-          for (final p in shown) p.name,
-          sidebarShut,
-          widget.moves,
-        ].join(',');
+        final token = [for (final p in shown) p.name, sidebarShut].join(',');
         for (final slot in now) {
           if (_shown.contains(slot)) _tokens[slot] = token;
           _tokens.putIfAbsent(slot, () => token);
@@ -128,16 +135,29 @@ class _BesideState extends State<Beside> {
             child: child,
           ),
         );
-        Widget resizable(SidePane p, double most) => Resizable(
-          key: ValueKey(p.name),
-          name: p.name,
-          initial: p.initial,
-          min: p.min,
-          max: min(p.cap, most),
-          left: true,
-          locked: p.name == cover,
-          child: p.child,
-        );
+        Widget resizable(SidePane p, double most) => p.fixed
+            ? SizedBox(
+                key: ValueKey(p.name),
+                width: p.width,
+                // Over the pane, whose own fill would hide it.
+                child: DecoratedBox(
+                  position: DecorationPosition.foreground,
+                  decoration: BoxDecoration(
+                    border: Border(left: BorderSide(color: t.line)),
+                  ),
+                  child: p.child,
+                ),
+              )
+            : Resizable(
+                key: ValueKey(p.name),
+                name: p.name,
+                initial: p.initial,
+                min: p.min,
+                max: min(p.cap, most),
+                left: true,
+                locked: p.name == cover,
+                child: p.child,
+              );
         Widget pane(String slot, Widget? child) => LayoutId(
           key: ValueKey(slot),
           id: slot,
@@ -199,11 +219,17 @@ class _BesideState extends State<Beside> {
                 resizable(
                   p,
                   room -
+                      detailsWidth -
                       (panesWidth - p.width) -
                       (over || p.cap.isInfinite ? 48 : widget.least),
                 ),
                 shadow: over && i == 0,
               ),
+            ),
+          if (details != null)
+            pane(
+              details.name,
+              resizable(details, room - (over ? 0 : panesWidth) - widget.least),
             ),
         ];
         // The pane over all is drawn last; keyed, it keeps its state as it
@@ -218,6 +244,7 @@ class _BesideState extends State<Beside> {
           delegate: _Beside(
             widget.least,
             panes: [for (final p in panes) p.name],
+            details: details?.name,
             going: [
               for (final s in _seen)
                 if (!now.contains(s)) s,
@@ -235,14 +262,16 @@ class _BesideState extends State<Beside> {
 
 enum _Slot { main }
 
-/// Lays the panes at the right, and the main view in what's left; when
-/// that would be under [least], it runs under the panes instead. Those
-/// [going] stay where they were ([at], which it keeps up to date).
-/// Measured as laid out, so a pane being resized moves the rest with it.
+/// Lays the details at the right, the panes left of them, and the main
+/// view in what's left; when that would be under [least], it runs under
+/// the panes instead. Those [going] stay where they were ([at], which it
+/// keeps up to date). Measured as laid out, so a pane being resized moves
+/// the rest with it.
 class _Beside extends MultiChildLayoutDelegate {
   new(
     this.least, {
     required this.panes,
+    required this.details,
     required this.going,
     required this.at,
     required this.widths,
@@ -251,6 +280,7 @@ class _Beside extends MultiChildLayoutDelegate {
 
   final double least;
   final List<String> panes; // left to right
+  final String? details;
   final List<String> going;
   final Map<String, double> at;
   final Map<String, double> widths; // each pane's, as last laid out beside
@@ -263,7 +293,11 @@ class _Beside extends MultiChildLayoutDelegate {
       minHeight: size.height,
       maxHeight: size.height,
     );
-    final right = size.width;
+    var right = size.width;
+    if (details case final d?) {
+      right -= layoutChild(d, tall).width;
+      positionChild(d, Offset(at[d] = right, 0));
+    }
     var x = right;
     for (final p in panes.reversed) {
       if (p == cover) {

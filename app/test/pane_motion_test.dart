@@ -86,12 +86,10 @@ Size _transcript(WidgetTester tester) => tester.getSize(
 
 double _x(WidgetTester tester, Finder f) => tester.getTopLeft(f).dx;
 
-/// Where the chat's pane's right edge is drawn: its box's, and how far past
-/// it (or short of it) it reaches while the details slide.
-double _paneEdge(WidgetTester tester) {
-  final pane = find.byType(Pane);
-  return tester.getRect(pane).right + tester.widget<Pane>(pane).reach!.value;
-}
+/// The chat's pane's right edge: the window's margin, whatever slides in
+/// it (ADR 0111).
+double _paneEdge(WidgetTester tester) =>
+    tester.getRect(find.byType(Pane)).right;
 
 void main() {
   setUpAll(loadFonts);
@@ -113,32 +111,28 @@ void main() {
 
     showDetails.value = true;
     await tester.pump();
-    // The panel and the gap between it and the chat's pane.
-    const width = DetailsPanel.slot;
-    const rest = 1700 - NushiTheme.windowPad - DetailsPanel.width;
+    const width = DetailsPanel.width;
+    const edge = 1700 - NushiTheme.windowPad;
+    const rest = edge - width;
     expect(_transcript(tester).width, wide - width);
-    // Just off the window's margin, its slot's width from where it goes.
-    expect(_x(tester, _details), rest + width);
+    // Just off the pane's edge, its width from where it goes.
+    expect(_x(tester, _details), edge);
     expect(_x(tester, _text), moreOrLessEquals(from, epsilon: 0.5));
-    // The pane's edge hasn't left yet: it follows the cards in.
-    expect(_paneEdge(tester), moreOrLessEquals(1700 - NushiTheme.windowPad));
+    // The pane's edge stays: the details come in inside it.
+    expect(_paneEdge(tester), edge);
 
     await tester.pump(Motion.enter ~/ 2);
     final midPane = _x(tester, _details);
     final midText = _x(tester, _text);
     expect(midPane, inExclusiveRange(rest, rest + width));
     expect(_transcript(tester).width, wide - width); // laid out once
-    // The gap between the pane's drawn edge and the cards stays.
-    expect(
-      midPane - _paneEdge(tester),
-      moreOrLessEquals(NushiTheme.paneGap, epsilon: 0.01),
-    );
+    expect(_paneEdge(tester), edge);
     await tester.pumpAndSettle();
     final to = _x(tester, _text);
     expect(to, lessThan(from));
     expect(midText, inExclusiveRange(to, from));
     expect(_x(tester, _details), rest);
-    expect(_paneEdge(tester), rest - NushiTheme.paneGap);
+    expect(_paneEdge(tester), edge);
     d.dispose();
   }, variant: _mac);
 
@@ -152,14 +146,10 @@ void main() {
 
     showDetails.value = false;
     await tester.pump();
-    expect(_transcript(tester).width, narrow + DetailsPanel.slot);
+    expect(_transcript(tester).width, narrow + DetailsPanel.width);
     expect(_details, findsOneWidget);
     expect(_x(tester, _details), moreOrLessEquals(at, epsilon: 1));
-    // The pane is laid out wide, but drawn no further than the cards yet.
-    expect(
-      _paneEdge(tester),
-      moreOrLessEquals(at - NushiTheme.paneGap, epsilon: 1),
-    );
+    expect(_paneEdge(tester), 1700 - NushiTheme.windowPad);
     final ignoring = tester.widgetList<IgnorePointer>(
       find.ancestor(of: _details, matching: find.byType(IgnorePointer)),
     );

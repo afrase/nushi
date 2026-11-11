@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/changes_view.dart';
 import 'package:nushi/chat.dart';
@@ -12,14 +11,14 @@ import 'package:nushi/panes.dart' show Pane, paneWidth;
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_tab.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/slides.dart';
 import 'package:nushi/terminal_panel.dart';
-import 'package:nushi/theme/theme.dart';
 
-/// A chat in the main area (ADR 0111): a pane of [top] (the window's bars),
-/// its header and, under it, its transcript, its folder's changes or its
-/// pull request, with the terminal below; and beside the pane, on the
-/// window's background, its details as cards, which slide in and out.
+/// A chat in the main area (ADR 0111): one pane of [top] (the window's
+/// bars), its header across all of it and, under that, its transcript, its
+/// folder's changes or its pull request, with the terminal below. Its
+/// details are inside the pane, a column at the transcript's right, so the
+/// header and its buttons are where they were whether the details show or
+/// not.
 class ChatArea extends StatefulWidget {
   const new(this.chat, this.daemon, {super.key, this.top});
 
@@ -43,16 +42,6 @@ class _ChatAreaState extends State<ChatArea> {
   /// what the preview's room is worked out from when the agent asks.
   double _width = double.infinity;
   bool _panel = false;
-
-  /// A browser tab takes the whole area (its Expand): the details go until
-  /// it gives it back, as when they lay under it.
-  bool _covered = false;
-
-  /// Whether it was built before: the details it shows at first don't slide.
-  bool _built = false;
-
-  /// How far past its box the pane is drawn while the details slide.
-  final _reach = _Reach();
 
   @override
   void initState() {
@@ -82,7 +71,6 @@ class _ChatAreaState extends State<ChatArea> {
       widget.chat.previewFits = ChatState.fitsAlways;
     }
     _pull.unfollow();
-    _reach.dispose();
     super.dispose();
   }
 
@@ -127,7 +115,7 @@ class _ChatAreaState extends State<ChatArea> {
         (side ? paneWidth('side', 380).clamp(300, 640) : 0) +
         (files ? paneWidth('files', 260).clamp(200, 480) : 0);
     return _width -
-            (_panel ? DetailsPanel.slot : 0) -
+            (_panel ? DetailsPanel.width : 0) -
             panes -
             ChatView.previewWidth >=
         ChatView.leastBesideWide;
@@ -147,7 +135,7 @@ class _ChatAreaState extends State<ChatArea> {
         final show = showDetails.value;
         // The panel goes when the chat would get too narrow.
         final fits =
-            box.maxWidth >= DetailsPanel.slot + ChatView.leastBesideDetails;
+            box.maxWidth >= DetailsPanel.width + ChatView.leastBesideDetails;
         widget.chat.panelFits = fits;
         // The pull request's tab goes with its link.
         final tab = widget.chat.shownTab;
@@ -190,80 +178,24 @@ class _ChatAreaState extends State<ChatArea> {
                   ChatTab.chat => ChatView(
                     chat: widget.chat,
                     daemon: widget.daemon,
-                    besideDetails: panel,
-                    onCover: (covered) {
-                      if (mounted) setState(() => _covered = covered);
-                    },
+                    details: panel
+                        ? DetailsPanel(
+                            // It follows the chat it was made for.
+                            key: ObjectKey(widget.chat),
+                            chat: widget.chat,
+                            daemon: widget.daemon,
+                            onChanges: () => _tab.value = ChatTab.changes,
+                            onPull: () => _tab.value = ChatTab.pull,
+                          )
+                        : null,
                   ),
                 },
               ),
             ),
           ],
         );
-        // The pane is laid out at once at the width the details leave it,
-        // so a transcript that lays out every entry does so once; the
-        // details slide in from the right and out again ([paneSlide]), and
-        // the pane's edge follows them ([Pane.reach]).
-        final beside = panel && !_covered;
-        final arrives = _built;
-        _built = true;
-        _reach.beside = beside;
-        return Stack(
-          children: [
-            Positioned.fill(
-              right: beside ? DetailsPanel.slot : 0,
-              child: Pane(reach: _reach, child: area),
-            ),
-            Positioned(
-              top: 0,
-              bottom: 0,
-              right: 0,
-              width: DetailsPanel.slot,
-              child: Presence(
-                // What showed as the chat came is there; opened after, it
-                // slides in.
-                arrives: arrives,
-                builder: (_, run, child) {
-                  _reach.run.parent = run;
-                  return paneSlide(run, child);
-                },
-                child: beside
-                    ? Padding(
-                        padding: const EdgeInsets.only(
-                          left: NushiTheme.paneGap,
-                        ),
-                        child: DetailsPanel(
-                          // It follows the chat it was made for.
-                          key: ObjectKey(widget.chat),
-                          chat: widget.chat,
-                          daemon: widget.daemon,
-                          onChanges: () => _tab.value = ChatTab.changes,
-                          onPull: () => _tab.value = ChatTab.pull,
-                        ),
-                      )
-                    : null,
-              ),
-            ),
-          ],
-        );
+        return Pane(child: area);
       },
     ),
   );
-}
-
-/// How much further right than its box a chat's pane is drawn
-/// ([Pane.reach]) as its details slide: laid out [beside] them it still
-/// reaches the room they haven't taken yet, and laid out without them it
-/// stops short of where they still are. Nothing at rest.
-class _Reach extends ChangeNotifier implements ValueListenable<double> {
-  new() {
-    run.addListener(notifyListeners);
-  }
-
-  /// The details' slide: 0 gone, 1 shown.
-  final run = ProxyAnimation(kAlwaysDismissedAnimation);
-  bool beside = false;
-
-  @override
-  double get value => DetailsPanel.slot * ((beside ? 1 : 0) - run.value);
 }

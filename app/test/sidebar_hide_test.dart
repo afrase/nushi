@@ -9,7 +9,6 @@ import 'package:nushi/chat_keys.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_banner.dart';
-import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/main.dart';
@@ -122,11 +121,8 @@ void main() {
       expect(sidebarHidden.value, isTrue);
       expect(find.byType(Sidebar), findsNothing);
       expect(tester.getRect(header).left, NushiTheme.windowPad);
-      // The window less its margins and the details beside the pane.
-      expect(
-        tester.getRect(header).width,
-        1200 - 2 * NushiTheme.windowPad - DetailsPanel.slot,
-      );
+      // The window less its margins: the details are under it.
+      expect(tester.getRect(header).width, 1200 - 2 * NushiTheme.windowPad);
       expect(tester.element(header), same(element), reason: 'the chat stayed');
       expect(readSaved()['sidebarHidden'], isTrue);
       expect(paneWidths.value['sidebar'], 333);
@@ -267,14 +263,7 @@ void main() {
             final bar = tester.getRect(header.first);
             expect(bar.left, NushiTheme.windowPad);
             expect(bar.top, NushiTheme.windowPad);
-            expect(
-              bar.width,
-              width -
-                  2 * NushiTheme.windowPad -
-                  (find.byType(DetailsPanel).evaluate().isEmpty
-                      ? 0
-                      : DetailsPanel.slot),
-            );
+            expect(bar.width, width - 2 * NushiTheme.windowPad);
             final show = tester.getRect(find.byTooltip(_show));
             expect(show.left, NushiTheme.windowPad + lightsInset);
             switch (name) {

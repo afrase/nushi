@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/settings.dart';
@@ -12,72 +11,20 @@ import 'package:nushi/window_drag.dart';
 /// rounded and what's in it cut to them. The window's own background shows
 /// around it; the main area is one. Its lists' scrollbars keep clear of its
 /// corners ([RoundedScroll]).
-///
-/// With [reach], it's drawn that much further right than its box (less, if
-/// negative): a chat's pane is laid out at once at the width the details
-/// beside it leave, and its edge follows them as they slide, so what
-/// glides inside it is never cut at an edge that jumped ahead.
 class Pane extends StatelessWidget {
-  const new({required this.child, super.key, this.reach});
+  const new({required this.child, super.key});
 
   final Widget child;
-  final ValueListenable<double>? reach;
 
   @override
-  Widget build(BuildContext context) {
-    final fill = NushiTheme.of(context).t.base;
-    final inside = RoundedScroll(corner: NushiTheme.panel, child: child);
-    final reach = this.reach;
-    if (reach == null) {
-      return Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: fill,
-          borderRadius: BorderRadius.circular(NushiTheme.panel),
-        ),
-        child: inside,
-      );
-    }
-    return CustomPaint(
-      painter: _PaneFill(fill, reach),
-      child: ClipRRect(clipper: _PaneShape(reach), child: inside),
-    );
-  }
-}
-
-/// A pane's shape in a box of [size], drawn [reach] further right.
-RRect _paneShape(Size size, double reach) => RRect.fromRectAndRadius(
-  Rect.fromLTWH(0, 0, max(0, size.width + reach), size.height),
-  const Radius.circular(NushiTheme.panel),
-);
-
-class _PaneShape extends CustomClipper<RRect> {
-  new(this.reach) : super(reclip: reach);
-
-  final ValueListenable<double> reach;
-
-  @override
-  RRect getClip(Size size) => _paneShape(size, reach.value);
-
-  @override
-  Rect getApproximateClipRect(Size size) => getClip(size).outerRect;
-
-  @override
-  bool shouldReclip(_PaneShape old) => old.reach != reach;
-}
-
-class _PaneFill extends CustomPainter {
-  new(this.fill, this.reach) : super(repaint: reach);
-
-  final Color fill;
-  final ValueListenable<double> reach;
-
-  @override
-  void paint(Canvas canvas, Size size) =>
-      canvas.drawRRect(_paneShape(size, reach.value), Paint()..color = fill);
-
-  @override
-  bool shouldRepaint(_PaneFill old) => old.fill != fill || old.reach != reach;
+  Widget build(BuildContext context) => Container(
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      color: NushiTheme.of(context).t.base,
+      borderRadius: BorderRadius.circular(NushiTheme.panel),
+    ),
+    child: RoundedScroll(corner: NushiTheme.panel, child: child),
+  );
 }
 
 /// A pane of a remembered width, with a draggable edge on its [left] or

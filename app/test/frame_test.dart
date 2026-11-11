@@ -6,6 +6,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/browser_pane.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/daemon.dart';
@@ -16,6 +17,7 @@ import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/status_bar.dart';
+import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -140,13 +142,59 @@ Future<Daemon> _window(
 void main() {
   setUpAll(loadFonts);
 
+  // A toggle never moves when pressed (ADR 0111): the details are inside
+  // the pane, under its header, so the header's buttons stay put.
+  for (final sidebar in [true, false]) {
+    testWidgets('the header’s buttons are where they were with the details '
+        'shown and hidden, the sidebar ${sidebar ? 'shown' : 'hidden'}', (
+      tester,
+    ) async {
+      final d = await _window(
+        tester,
+        size: const Size(1700, 1000),
+        sidebar: sidebar,
+      );
+      Rect at(String tooltip) => tester.getRect(find.byTooltip(tooltip));
+      // The terminal's, the browser's and the menu's buttons beside it.
+      List<Rect> others() => [
+        tester.getRect(find.byType(TerminalButton)),
+        tester.getRect(find.byType(BrowserButton)),
+        at('Chat menu'),
+      ];
+      expect(find.byType(DetailsPanel), findsNothing);
+      final hidden = at('Show details');
+      final rest = others();
+      final header = tester.getRect(find.byType(ChatHeader));
+      final pane = tester.getRect(find.byType(Pane));
+
+      await tester.tap(find.byTooltip('Show details'));
+      await tester.pump();
+      // At once, while they slide in, and once they're there.
+      expect(at('Hide details'), hidden);
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(at('Hide details'), hidden);
+      await tester.pumpAndSettle();
+      expect(find.byType(DetailsPanel), findsOneWidget);
+      expect(at('Hide details'), hidden);
+      expect(others(), rest);
+      expect(tester.getRect(find.byType(ChatHeader)), header);
+      expect(tester.getRect(find.byType(Pane)), pane);
+
+      await tester.tap(find.byTooltip('Hide details'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DetailsPanel), findsNothing);
+      expect(at('Show details'), hidden);
+      await closeView(tester, d);
+    }, variant: _mac);
+  }
+
   for (final (theme, brightness) in [
     ('dark', Brightness.dark),
     ('light', Brightness.light),
   ]) {
     for (final width in [1700.0, 720.0]) {
       final w = width.toInt();
-      testWidgets('a chat, its details beside its pane, $w wide, $theme', (
+      testWidgets('a chat, its details in its pane, $w wide, $theme', (
         tester,
       ) async {
         final d = await _window(
@@ -169,15 +217,19 @@ void main() {
         expect(header.height, PaneHeader.height);
         final menu = tester.getRect(find.byTooltip('Chat menu'));
         expect(menu.right, pane.right - ChatHeader.end);
+        // The pane takes the room whatever shows in it.
+        expect(pane.right, width - NushiTheme.windowPad);
+        expect(header.right, pane.right);
         if (width > 1200) {
-          // The details are cards on the window, the gap from the pane.
+          // The details are a column in the pane, under the header, at
+          // its right.
           final details = tester.getRect(find.byType(DetailsPanel));
-          expect(details.left - pane.right, NushiTheme.paneGap);
-          expect(details.right, width - NushiTheme.windowPad);
-          expect(details.top, pane.top);
+          expect(details.width, DetailsPanel.width);
+          expect(details.right, pane.right);
+          expect(details.top, header.bottom);
+          expect(details.bottom, pane.bottom);
         } else {
           expect(find.byType(DetailsPanel), findsNothing);
-          expect(pane.right, width - NushiTheme.windowPad);
         }
         // The agents' counts and the memory are the sidebar's foot.
         final status = tester.getRect(find.byType(StatusBar));
@@ -187,6 +239,30 @@ void main() {
         expectTextInside(tester, width);
         await closeView(tester, d);
       }, variant: _mac);
+
+      // For the owner's look (2026-11-11): the details shown and hidden.
+      for (final (state, details) in [('open', true), ('closed', false)]) {
+        testWidgets('the details $state, $w wide, $theme', (tester) async {
+          final d = await _window(
+            tester,
+            size: Size(width, 1000),
+            brightness: brightness,
+            details: details,
+            sidebar: false,
+          );
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'details-$state-$w-$theme',
+          );
+          expect(
+            find.byType(DetailsPanel),
+            details && width > 1200 ? findsOneWidget : findsNothing,
+          );
+          expectTextInside(tester, width);
+          await closeView(tester, d);
+        }, variant: _mac);
+      }
 
       testWidgets('the sidebar hidden, $w wide, $theme', (tester) async {
         final d = await _window(

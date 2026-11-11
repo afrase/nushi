@@ -27,10 +27,9 @@ import 'harness.dart';
 // Drawn right of its slot it slides under the panes, drawn over it, and
 // isn't cut: a pane opening at the right on a wide window has barely come
 // in on its first frames, and a cut at the slot's edge chopped the
-// composer, its border and its corner, in plain sight. The chat's pane is
-// narrower at once as its details come, and cuts what's in it to its
-// corners: its edge is drawn following the details in and out
-// (Pane.reach), so the composer isn't cut short of where the pane ends.
+// composer, its border and its corner, in plain sight. The chat's pane
+// cuts what's in it to its own corners, at the window's margin, and never
+// moves: its details slide inside it (ADR 0111).
 
 final _items = [
   Item(
@@ -158,13 +157,10 @@ Future<void> _glide(
     );
     final drawn = _shown(box, clips: false);
     final shown = _shown(box);
-    // The chat's pane cuts what's in it at its own edge (ADR 0111), which
-    // is the window's margin, or follows the details as they slide
-    // (pane_motion_test holds it to them): past that edge there's nothing
-    // to show, so only a cut short of it is one to see.
-    final pane = find.byType(Pane);
-    final end =
-        tester.getRect(pane).right + tester.widget<Pane>(pane).reach!.value;
+    // The chat's pane cuts what's in it at its own edge (ADR 0111), the
+    // window's margin: past that edge there's nothing to show, so only a
+    // cut short of it is one to see.
+    final end = tester.getRect(find.byType(Pane)).right;
     if (shown.right < min(drawn.right, end) - 0.5) {
       spills.add(
         '$name frame $i: the composer drawn to ${drawn.right}, '

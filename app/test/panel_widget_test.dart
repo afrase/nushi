@@ -46,11 +46,7 @@ void main() {
       lessThan(tester.getRect(find.text('Stop all')).left),
     );
 
-    // Off the cards, in the gap under the first.
-    await mouse.moveTo(
-      tester.getRect(find.byType(PanelWidget).first).bottomLeft +
-          const Offset(4, -NushiTheme.paneGap / 2),
-    );
+    await mouse.moveTo(const Offset(1, 1));
     await tester.pumpAndSettle();
     expect(find.byType(DragGrip), findsNothing);
     expect(find.text('57%'), findsOneWidget);
