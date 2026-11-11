@@ -111,21 +111,46 @@ final String? rendersDir = switch (Platform.environment['NUSHI_RENDERS']) {
 /// Writes what [of] shows (the window: `find.byType(NushiApp)`) as
 /// `<name>.png` to [rendersDir], to look at a view at full size; nothing
 /// without it. A render is never compared or committed: only the views
-/// AGENTS.md lists keep a window golden.
+/// AGENTS.md lists keep a window golden. It draws shadows as the app does:
+/// a test paints each as a solid block (`debugDisableShadows`, which keeps
+/// goldens the same from machine to machine), and a render is looked at,
+/// so the window is painted again with real ones for the capture, then as
+/// it was.
 Future<void> render(WidgetTester tester, Finder of, String name) async {
   final dir = rendersDir;
   if (dir == null) return;
-  final capture = captureImage(of.evaluate().single);
-  await tester.runAsync(() async {
-    final image = await capture;
-    try {
-      final png = await image.toByteData(format: ui.ImageByteFormat.png);
-      Directory(dir).createSync(recursive: true);
-      File('$dir/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
-    } finally {
-      image.dispose();
-    }
-  });
+  final solid = debugDisableShadows;
+  await _repaint(tester, solidShadows: false);
+  try {
+    final capture = captureImage(of.evaluate().single);
+    await tester.runAsync(() async {
+      final image = await capture;
+      try {
+        final png = await image.toByteData(format: ui.ImageByteFormat.png);
+        Directory(dir).createSync(recursive: true);
+        File('$dir/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
+      } finally {
+        image.dispose();
+      }
+    });
+  } finally {
+    await _repaint(tester, solidShadows: solid);
+  }
+}
+
+/// Paints everything on screen again with shadows solid or real: a shadow
+/// is drawn as its box paints, and nothing else says it changed.
+Future<void> _repaint(WidgetTester tester, {required bool solidShadows}) async {
+  if (debugDisableShadows == solidShadows) return;
+  debugDisableShadows = solidShadows;
+  void again(RenderObject o) {
+    o
+      ..markNeedsPaint()
+      ..visitChildren(again);
+  }
+
+  tester.binding.renderViews.forEach(again);
+  await tester.pump();
 }
 
 /// Every text shown inside the window's [width]: none runs off its right
