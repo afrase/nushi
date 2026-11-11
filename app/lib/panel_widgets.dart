@@ -26,8 +26,9 @@ abstract final class PanelType {
 
 /// The details panel's widgets in the order they were dragged into
 /// (remembered in [widgetOrder]; widgets it doesn't name go last), one
-/// under another on the panel's own background, a hairline between them
-/// (ADR 0092). A widget is moved by dragging its title.
+/// under another on the window's background, each a card of its own with
+/// the panes' gap between them (ADR 0111; one flat column with hairlines
+/// until then, ADR 0092). A widget is moved by dragging its title.
 class PanelWidgets extends StatelessWidget {
   const new(this.widgets, {super.key});
 
@@ -43,7 +44,7 @@ class PanelWidgets extends StatelessWidget {
         ...byTitle.keys.where((k) => !saved.contains(k)),
       ];
       return CardList(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: EdgeInsets.zero,
         // A widget asked for is there to scroll to.
         buildAll: true,
         onReorder: (from, to) =>
@@ -208,8 +209,9 @@ class PanelWidget extends StatelessWidget {
   }
 }
 
-/// A widget's look ([PanelWidget]): a hairline over it unless it's the
-/// first ([index] 0), a [title] row that folds it ([onToggle]; a triangle
+/// A widget's look ([PanelWidget]): a card on the window's background,
+/// filled as a pane and rounded as one, the panes' gap under it (ADR
+/// 0111); a [title] row that folds it ([onToggle]; a triangle
 /// after the title while it [folds]) and drags it, [trailing] on that
 /// row's right, then [body] while [open]. Under the pointer, or while
 /// dragged, the [DragGrip] takes [trailing]'s place on the right (ADR
@@ -281,52 +283,56 @@ class _SectionState extends State<_Section> {
     final dragged = DraggedCard.of(context);
     final w = widget;
     final grip = _hovered || _menuOpen || dragged;
-    // On the panel's background, dragged too.
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Container(
-        color: t.base,
-        padding: const EdgeInsets.symmetric(horizontal: PanelType.side),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (w.index > 0 && !dragged)
-              SizedBox(height: 1, child: ColoredBox(color: t.borderSubtle)),
-            ReorderableDragStartListener(
-              index: w.index,
-              child: Tap(
-                onTap: w.onToggle,
-                cursor: dragged
-                    ? SystemMouseCursors.grabbing
-                    : SystemMouseCursors.grab,
-                tint: false,
-                padding: const EdgeInsets.only(top: 12, bottom: 6),
-                child: Row(
-                  children: [
-                    w.title,
-                    if (w.folds) ...[
-                      const SizedBox(width: 2),
-                      _Triangle(open: w.open),
-                    ],
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: w.acts && w.trailing != null
-                            ? _action(grip: grip)
-                            : grip
-                            ? const DragGrip()
-                            : w.trailing,
+    // A pane's fill and corners, dragged too; the gap under it isn't its.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: NushiTheme.paneGap),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: PanelType.side),
+          decoration: BoxDecoration(
+            color: t.base,
+            borderRadius: BorderRadius.circular(NushiTheme.panel),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ReorderableDragStartListener(
+                index: w.index,
+                child: Tap(
+                  onTap: w.onToggle,
+                  cursor: dragged
+                      ? SystemMouseCursors.grabbing
+                      : SystemMouseCursors.grab,
+                  tint: false,
+                  padding: const EdgeInsets.only(top: 12, bottom: 6),
+                  child: Row(
+                    children: [
+                      w.title,
+                      if (w.folds) ...[
+                        const SizedBox(width: 2),
+                        _Triangle(open: w.open),
+                      ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: w.acts && w.trailing != null
+                              ? _action(grip: grip)
+                              : grip
+                              ? const DragGrip()
+                              : w.trailing,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Disclosure(open: w.open, child: w.body),
-            const SizedBox(height: 10),
-          ],
+              Disclosure(open: w.open, child: w.body),
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
       ),
     );

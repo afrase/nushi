@@ -81,8 +81,8 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   /// Cards and boxes ([box] and [framed] unless told otherwise).
   static const card = 12.0;
 
-  /// A menu's, a dialog's and a popover's corners, a message's bubble and
-  /// the composer's box.
+  /// A pane's corners (the main area, a details card), a menu's, a
+  /// dialog's and a popover's, a message's bubble and the composer's box.
   static const panel = 14.0;
 
   /// Round ends, whatever the height: chips, badges, counts, round
@@ -96,6 +96,11 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
 
   /// A menu's padding around its rows, which are rounded [inner] of it.
   static const menuPad = 5.0;
+
+  // The window's shell (ADR 0111): the panes float on the window's own
+  // background, this far in from its edges and from each other.
+  static const windowPad = 8.0;
+  static const paneGap = 8.0;
 
   // The Mac's chat area's spacing (ADR 0072). The phone keeps its own values,
   // decided where the two share a widget (TouchTargets).

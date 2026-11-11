@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -8,15 +10,18 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/window_drag.dart';
 
 part 'sidebar_glide.dart';
 
-/// Where what's in the main area's top may start with the sidebar hidden:
-/// past the Mac's traffic lights, which stay where macOS puts them
-/// (ADR 0080), or the window's own inset ([AppWindow.titleInset]). The
-/// phone, whose sidebar never hides, has none.
-double get lightsInset => kIsWeb ? 0 : native.window.titleInset;
+/// Where what's in the main pane's top may start with the sidebar hidden,
+/// from the pane's left edge: past the Mac's traffic lights, which stay
+/// where macOS puts them (ADR 0080), or the window's own inset
+/// ([AppWindow.titleInset]), less the window's margin, which the pane is
+/// already in by (ADR 0111). The phone, whose sidebar never hides, has none.
+double get lightsInset =>
+    kIsWeb ? 0 : max(8, native.window.titleInset - NushiTheme.windowPad);
 
 /// Where a header's own content starts with the sidebar hidden: past the
 /// lights and [ShowSidebarButton].

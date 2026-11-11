@@ -17,13 +17,25 @@ import 'package:nushi/widgets.dart';
 /// milliseconds of the daemon's time.
 const _every = Duration(seconds: 5);
 
-/// The bar along the window's bottom: how many agents work, are awake and
-/// sleep, and the memory Nushi takes (agents, daemon, app), which opens a
-/// list of the awake chats, each with Sleep.
+/// How many agents work, are awake and sleep, and the memory Nushi takes
+/// (agents, daemon, app), which opens a list of the awake chats, each with
+/// Sleep. A [card] at the sidebar's foot (ADR 0111; a bar along the
+/// window's bottom until then); with the sidebar hidden, the same as a line
+/// under the main pane, on the window's background, so nothing it says is
+/// lost with the sidebar.
 class StatusBar extends StatefulWidget {
-  const new(this.daemon, {super.key});
+  const new(this.daemon, {super.key, this.card = false});
 
   final Daemon daemon;
+  final bool card;
+
+  /// The card's height, and the line's.
+  static const cardHeight = 34.0;
+  static const lineHeight = 28.0;
+
+  /// The narrowest it says "working" after the first count: the card of
+  /// a sidebar about 250 wide, with the remote's mark and a memory in GB.
+  static const wordFrom = 212.0;
 
   @override
   State<StatusBar> createState() => _StatusBarState();
@@ -32,7 +44,12 @@ class StatusBar extends StatefulWidget {
 class _StatusBarState extends State<StatusBar> {
   late final Timer _timer;
   late final AppLifecycleListener _lifecycle;
-  GetMemoryResponse? _memory;
+
+  /// The daemon's last reading: the card and the line under the pane are
+  /// two widgets, one going as the other comes with the sidebar, and the
+  /// one that comes shows what the other read rather than nothing.
+  static final _last = Expando<GetMemoryResponse>();
+  late GetMemoryResponse? _memory = _last[widget.daemon];
 
   @override
   void initState() {
@@ -64,6 +81,7 @@ class _StatusBarState extends State<StatusBar> {
       if (!mounted || _memory != null && _shows(m) == _shows(_memory!)) {
         return;
       }
+      _last[widget.daemon] = m;
       setState(() => _memory = m);
     } on Object {
       // The last reading stays until the next one.
@@ -74,7 +92,10 @@ class _StatusBarState extends State<StatusBar> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final small = theme.ui(t.textSecondary, size: 11.5);
+    final card = widget.card;
+    final small = theme
+        .ui(t.textSecondary, size: card ? 12 : 11.5)
+        .copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
     // The chat list is the daemon's; each chat's status is its look's.
     return ListenableBuilder(
       listenable: widget.daemon,
@@ -95,39 +116,71 @@ class _StatusBarState extends State<StatusBar> {
               : ' (${background.length} working in the background)';
           final awake = live.length - asleep - failed - expired;
           return Container(
-            height: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: t.raised,
-              border: Border(top: BorderSide(color: t.borderSubtle)),
+            height: card ? StatusBar.cardHeight : StatusBar.lineHeight,
+            padding: EdgeInsets.only(
+              left: card ? 12 : 16,
+              right: card ? 6 : 10,
             ),
-            child: Row(
-              children: [
-                Tooltip(
-                  message:
-                      '$working working, $awake awake$inBackground, '
-                      '$asleep asleep'
-                      "${failed > 0 ? ", $failed couldn't start" : ''}"
-                      "${expired > 0 ? ', $expired expired' : ''}",
-                  child: Row(
-                    spacing: 4,
-                    children: [
-                      _Dot(t.running, filled: true),
-                      Text('$working', style: small),
-                      const SizedBox(width: 6),
-                      _Dot(t.idle),
-                      Text('$awake', style: small),
-                      const SizedBox(width: 6),
-                      Icon(Icons.bedtime_outlined, size: 11, color: t.idle),
-                      Text('$asleep', style: small),
-                    ],
+            decoration: card
+                ? BoxDecoration(
+                    color: t.raised,
+                    borderRadius: BorderRadius.circular(NushiTheme.control),
+                  )
+                : null,
+            // The first count says what the three are; a sidebar dragged
+            // narrow keeps the numbers alone, which the tooltip names.
+            child: LayoutBuilder(
+              builder: (context, box) => Row(
+                children: [
+                  // What the rest leaves: scaled down rather than cut,
+                  // should a narrow sidebar's card not hold them.
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Tooltip(
+                          message:
+                              '$working working, $awake awake$inBackground, '
+                              '$asleep asleep'
+                              "${failed > 0 ? ", $failed couldn't start" : ''}"
+                              "${expired > 0 ? ', $expired expired' : ''}",
+                          child: Row(
+                            spacing: 5,
+                            children: [
+                              _Dot(t.running, filled: true),
+                              Text(
+                                box.maxWidth >= StatusBar.wordFrom
+                                    ? '$working working'
+                                    : '$working',
+                                style: small,
+                              ),
+                              const SizedBox(width: 6),
+                              _Dot(t.idle),
+                              Text('$awake', style: small),
+                              const SizedBox(width: 6),
+                              Icon(
+                                Icons.bedtime_outlined,
+                                size: 12,
+                                color: t.idle,
+                              ),
+                              Text('$asleep', style: small),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const Spacer(),
-                const RemoteMark(),
-                if (_memory case final m?)
-                  _MemoryButton(m, widget.daemon, onOpen: _read, style: small),
-              ],
+                  const RemoteMark(),
+                  if (_memory case final m?)
+                    _MemoryButton(
+                      m,
+                      widget.daemon,
+                      onOpen: _read,
+                      style: small.copyWith(color: t.textMuted),
+                    ),
+                ],
+              ),
             ),
           );
         },
@@ -144,8 +197,8 @@ class _Dot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    width: 7,
-    height: 7,
+    width: 8,
+    height: 8,
     decoration: BoxDecoration(
       shape: BoxShape.circle,
       color: filled ? color : null,
@@ -274,11 +327,12 @@ class _MemoryButton extends StatelessWidget {
           onOpen();
           menu.open();
         },
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        tooltip: 'The memory Nushi takes',
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         child: Row(
           spacing: 4,
           children: [
-            Icon(Icons.memory, size: 12, color: t.textSecondary),
+            Icon(Icons.memory, size: 12, color: t.textMuted),
             Text(bytes(total), style: style),
           ],
         ),

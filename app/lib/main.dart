@@ -357,129 +357,179 @@ class _NushiAppState extends State<NushiApp> {
   );
 }
 
+/// The window (ADR 0111): its own background, the sidebar straight on it
+/// at the left, and beside it the main area as a pane that floats
+/// [NushiTheme.windowPad] in from the window's edges. A chat puts its
+/// details beside its pane, as cards of their own ([ChatArea]). With the
+/// sidebar hidden the pane reaches the left edge, its header starting past
+/// the traffic lights, and what the sidebar's foot said (the agents'
+/// counts, the memory) is a line under the pane.
 class _Shell extends StatelessWidget {
   const new(this.daemon);
 
   final Daemon daemon;
 
+  /// The bars over the main view: one element wherever they're put (in a
+  /// chat's pane or another view's), so a bar keeps its state, and its
+  /// slide, as the view under it changes.
+  static final GlobalKey _bars = GlobalKey();
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([daemon, sidebarHidden]),
-    builder: (context, _) {
-      final theme = NushiTheme.of(context);
-      // Never connected yet: nothing to show. Once it was, a lost
-      // connection is a banner over the app, which keeps what's open.
-      // Neither has a header: a band moves the window.
-      if (!daemon.connected && daemon.daemonApi == 0) {
-        return TitleBand(
-          child: Center(
-            child: Text(
-              native.install.daemon == null
-                  ? 'Daemon not running'
-                  : daemon.launchFailed
-                  ? "Couldn't start the daemon. Its log: "
-                        '${tildePath('$dataDir/nushid.log')}'
-                  : 'Starting the daemon…',
-              style: theme.ui(theme.t.textSecondary),
-            ),
+    builder: (context, _) => ColoredBox(
+      color: NushiTheme.of(context).t.window,
+      child: _window(context),
+    ),
+  );
+
+  Widget _window(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    // Never connected yet: nothing to show. Once it was, a lost
+    // connection is a banner over the app, which keeps what's open.
+    // Neither has a header: a band moves the window.
+    if (!daemon.connected && daemon.daemonApi == 0) {
+      return TitleBand(
+        child: Center(
+          child: Text(
+            native.install.daemon == null
+                ? 'Daemon not running'
+                : daemon.launchFailed
+                ? "Couldn't start the daemon. Its log: "
+                      '${tildePath('$dataDir/nushid.log')}'
+                : 'Starting the daemon…',
+            style: theme.ui(theme.t.textSecondary),
           ),
-        );
-      }
-      if (daemon.outdated && !daemon.updatesWhenIdle) {
-        return TitleBand(child: OutdatedScreen(daemon));
-      }
-      final chat = daemon.selected;
-      final shut = sidebarShut;
-      // With the sidebar hidden the bars start at the window's left edge,
-      // under the traffic lights, so their text starts past them; with
-      // nothing over the content there (Linux), at their own margin.
-      final barStart = shut ? max(lightsInset, 16.0) : 16.0;
-      final app = LayoutBuilder(
-        // The sidebar slides in and out over the view, which keeps its
-        // state either way.
-        builder: (context, box) => SidebarBeside(
-          sidebar: shut
-              ? null
-              : Resizable(
-                  name: 'sidebar',
-                  initial: 260,
-                  min: 200,
-                  max: min(480, box.maxWidth - 560),
-                  child: Sidebar(daemon: daemon),
+        ),
+      );
+    }
+    if (daemon.outdated && !daemon.updatesWhenIdle) {
+      return TitleBand(child: OutdatedScreen(daemon));
+    }
+    final chat = daemon.selected;
+    final shut = sidebarShut;
+    // With the sidebar hidden the bars start at the window's left edge,
+    // under the traffic lights, so their text starts past them; with
+    // nothing over the content there (Linux), at their own margin.
+    final barStart = shut ? max(lightsInset, 16.0) : 16.0;
+    // The bars at the pane's top, over the view's own header. Always a
+    // column of the same children: a bar coming and going keeps the
+    // others' state.
+    final bars = Column(
+      key: _bars,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // What has no header of its own still keeps the top's line.
+        // Always a child, so the banner under it keeps its state.
+        if (daemon.trustAsk != null ||
+            (daemon.place is ChatPlace && chat == null))
+          const PaneHeader(plain: true, child: SizedBox.shrink())
+        else
+          const SizedBox.shrink(),
+        DaemonBanner(daemon, start: barStart),
+        // Each slides down as it comes and up as it goes,
+        // saying what it said until it's gone.
+        BarSlide(
+          child: daemon.connected && daemon.updatesWhenIdle
+              ? DaemonUpdateBar(daemon, start: barStart)
+              : null,
+        ),
+        BarSlide(
+          child: daemon.connected && daemon.removedChats.isNotEmpty
+              ? RemovedChatsBar(daemon, start: barStart)
+              : null,
+        ),
+        BarSlide(
+          child: daemon.notice != null
+              ? NoticeBar(daemon, start: barStart)
+              : null,
+        ),
+      ],
+    );
+    // A view under the bars, in the main pane. The view is always the
+    // column's last child, so a bar coming and going keeps its state.
+    Widget pane(Widget view) => Pane(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          bars,
+          Expanded(child: view),
+        ],
+      ),
+    );
+    final app = LayoutBuilder(
+      // The sidebar slides in and out over the view, which keeps its
+      // state either way.
+      builder: (context, box) => SidebarBeside(
+        sidebar: shut
+            ? null
+            : Resizable(
+                name: 'sidebar',
+                initial: 260,
+                min: 200,
+                max: min(480, box.maxWidth - 560),
+                line: false,
+                child: Sidebar(daemon: daemon),
+              ),
+        // Beside the sidebar, which brings the gap between them, or alone
+        // in the window, in from its left edge too.
+        main: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const WindowEdge(),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: shut ? NushiTheme.windowPad : 0,
+                  right: NushiTheme.windowPad,
                 ),
-          // Beside the sidebar, clear of the traffic lights, or alone in
-          // the window. Always a column, the view its last child: a bar
-          // coming and going keeps the view's state.
-          main: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // What has no header of its own still keeps the top's line.
-              // Always a child, so the banner under it keeps its state.
-              if (daemon.trustAsk != null ||
-                  (daemon.place is ChatPlace && chat == null))
-                const PaneHeader(plain: true, child: SizedBox.shrink())
-              else
-                const SizedBox.shrink(),
-              DaemonBanner(daemon, start: barStart),
-              // Each slides down as it comes and up as it goes,
-              // saying what it said until it's gone.
-              BarSlide(
-                child: daemon.connected && daemon.updatesWhenIdle
-                    ? DaemonUpdateBar(daemon, start: barStart)
-                    : null,
-              ),
-              BarSlide(
-                child: daemon.connected && daemon.removedChats.isNotEmpty
-                    ? RemovedChatsBar(daemon, start: barStart)
-                    : null,
-              ),
-              BarSlide(
-                child: daemon.notice != null
-                    ? NoticeBar(daemon, start: barStart)
-                    : null,
-              ),
-              Expanded(
                 child: daemon.trustAsk != null
-                    ? TrustCard(daemon.trustAsk!)
+                    ? pane(TrustCard(daemon.trustAsk!))
                     : switch (daemon.place) {
-                        JiraPlace() => JiraView(daemon),
-                        GitHubPlace() => GitHubView(daemon),
-                        ChatPlace() when chat == null => NothingOpen(daemon),
+                        JiraPlace() => pane(JiraView(daemon)),
+                        GitHubPlace() => pane(GitHubView(daemon)),
+                        ChatPlace() when chat == null => pane(
+                          NothingOpen(daemon),
+                        ),
+                        // Its pane has the bars too, its details beside it.
                         ChatPlace() => ChatArea(
                           key: ValueKey(chat!.id),
                           chat,
                           daemon,
+                          top: bars,
                         ),
                       },
               ),
-            ],
-          ),
-        ),
-      );
-      // Settings opens over all of it (ADR 0087).
-      return SettingsModal(
-        daemon: daemon,
-        open: daemon.settingsOpen != null,
-        app: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // A newer release's toast, in the bottom right corner.
-            Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(child: app),
-                  Positioned(
-                    right: UpdateToast.inset,
-                    bottom: UpdateToast.inset,
-                    child: UpdateToast(daemon),
-                  ),
-                ],
-              ),
             ),
-            StatusBar(daemon),
+            // Under the pane what the hidden sidebar's foot said, or the
+            // window's own margin.
+            if (shut)
+              StatusBar(daemon)
+            else
+              const SizedBox(height: NushiTheme.windowPad),
           ],
         ),
-      );
-    },
-  );
+      ),
+    );
+    // Settings opens over all of it (ADR 0087). A newer release's toast,
+    // in the bottom right corner.
+    return SettingsModal(
+      daemon: daemon,
+      open: daemon.settingsOpen != null,
+      app: Stack(
+        children: [
+          Positioned.fill(child: app),
+          Positioned(
+            right: UpdateToast.inset,
+            // Clear of the line under the pane, while that shows.
+            bottom:
+                UpdateToast.inset +
+                (shut ? StatusBar.lineHeight - NushiTheme.windowPad : 0),
+            child: UpdateToast(daemon),
+          ),
+        ],
+      ),
+    );
+  }
 }

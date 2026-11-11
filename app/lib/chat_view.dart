@@ -13,7 +13,6 @@ import 'package:nushi/chat_menu.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/details_panel.dart';
 import 'package:nushi/edit_bars.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/folder_tree.dart';
@@ -35,28 +34,37 @@ import 'package:nushi/turn_status.dart';
 import 'package:nushi/widgets.dart';
 
 /// A chat's transcript with the composer under it, and beside them its
-/// side chat, a subagent's pane and [details], each when open. Escape
-/// stops a running turn. What's being written, and the side chat,
-/// belong to the chat (its draft and side), so they outlive the view.
+/// side chat and a subagent's pane, each when open. Escape stops a running
+/// turn. What's being written, and the side chat, belong to the chat (its
+/// draft and side), so they outlive the view.
 class ChatView extends StatefulWidget {
   const new({
     required this.chat,
     required this.daemon,
     super.key,
-    this.details,
+    this.besideDetails = false,
+    this.onCover,
   });
 
   final ChatState chat;
   final Daemon daemon;
-  final Widget? details;
+
+  /// Whether the details show beside the pane this is in (`ChatArea`): the
+  /// transcript then keeps less beside its panes, and glides as they come
+  /// and go.
+  final bool besideDetails;
+
+  /// Told as a browser tab takes the whole area, or gives it back.
+  final ValueChanged<bool>? onCover;
 
   /// The narrowest the transcript gets beside a panel.
   static const minWidth = 556.0;
 
   /// The narrowest the transcript gets beside the details panel: the
   /// window that held the old 264-point panel beside [minWidth] still
-  /// holds the 320-point one (ADR 0092).
-  static const leastBesideDetails = 500.0;
+  /// holds the 320-point one (ADR 0092), with the window's margins and the
+  /// gap now around them (ADR 0111).
+  static const leastBesideDetails = 476.0;
 
   /// The narrowest the transcript gets beside a pane dragged as wide as
   /// it's wanted (a subagent's, or the preview).
@@ -217,8 +225,8 @@ class _ChatViewState extends State<ChatView> {
 
   /// The transcript, and beside it, left to right: the side chat, a
   /// subagent's or background command's pane (or a file's preview in its
-  /// place), and [ChatView.details], each when open, at its own remembered
-  /// width, each closed on its own; each slides in and out ([Beside]).
+  /// place), each when open, at its own remembered width, each closed on
+  /// its own; each slides in and out ([Beside]).
   Widget _beside(Widget transcript) {
     final chat = widget.chat;
     final side = chat.archived || chat.sideHidden.value
@@ -226,11 +234,15 @@ class _ChatViewState extends State<ChatView> {
         : chat.side.value;
     final id = chat.pane.value;
     final preview = id == null ? chat.preview.value : null;
-    if (preview is! BrowserTab) _expanded = false;
+    if (preview is! BrowserTab && _expanded) {
+      _expanded = false;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => widget.onCover?.call(false),
+      );
+    }
     final files = filesOpen(chat) && widget.daemon.daemonApi >= filesApi;
     // Either is dragged as wide as it's wanted.
     final wide = id != null || preview != null;
-    final details = widget.details;
     return Beside(
       main: transcript,
       // The text's column glides as a pane opens or closes beside it.
@@ -239,10 +251,11 @@ class _ChatViewState extends State<ChatView> {
       // they did by the 264-point panel (ADR 0092).
       least: wide
           ? ChatView.leastBesideWide
-          : details != null
+          : widget.besideDetails
           ? ChatView.leastBesideDetails
           : ChatView.minWidth,
       cover: _expanded ? 'preview' : null,
+      moves: widget.besideDetails,
       panes: [
         if (side != null)
           SidePane(
@@ -303,18 +316,14 @@ class _ChatViewState extends State<ChatView> {
                 tabsKey: _previewTabs,
                 onClose: () => unawaited(closePreviewSaving(context, chat)),
                 expanded: _expanded,
-                onExpand: () => setState(() => _expanded = !_expanded),
+                onExpand: () {
+                  setState(() => _expanded = !_expanded);
+                  widget.onCover?.call(_expanded);
+                },
               ),
             },
           ),
       ],
-      details: details == null
-          ? null
-          : SidePane.fixed(
-              'details',
-              width: DetailsPanel.width,
-              child: details,
-            ),
     );
   }
 
@@ -357,8 +366,7 @@ class _Archived extends StatelessWidget {
     final t = theme.t;
     return Container(
       decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        border: Border(top: BorderSide(color: t.line)),
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: NushiTheme.gutter,
@@ -455,8 +463,7 @@ class _Expired extends StatelessWidget {
     final t = theme.t;
     return Container(
       decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        border: Border(top: BorderSide(color: t.line)),
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: NushiTheme.gutter,

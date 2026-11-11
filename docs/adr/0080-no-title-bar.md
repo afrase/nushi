@@ -20,3 +20,5 @@ The owner: the bar with the traffic lights and the word Nushi is wasted space. m
 - In full screen the sidebar's header stays, with no traffic lights in it.
 - The sidebar can be hidden (⌘\, `sidebarHidden`), and then nothing stands between the main area and the traffic lights. Every top header starts past them (`lightsInset`, 84 points), with the button that shows the sidebar there, and the bars, which then run across the window, start their text past them too. In full screen those insets stay, with no lights beside them.
 - A bar at the window's top doesn't move the window while the sidebar is hidden; the header under it does.
+
+**Amendment (2026-11-11):** the top is no longer one band with a hairline across the window. The sidebar sits on the window's background under a strip 32 high, level with the traffic lights, and the main area is a pane 8 in from the window's edges whose header is 56 high; the 8 points above the pane move and zoom the window too (`WindowEdge`), and `TitleBand` is that much higher. With the sidebar hidden a header still starts past the lights, which now sit in the pane's top left corner ([ADR 0111](0111-surfaces-and-floating-panes.md)).

@@ -23,11 +23,14 @@ const double _roomyFrom = 560;
 /// and for the bar's gaps and gutters with its short ones, with Send to
 /// agent ([send]) and Changed ([changed]) beside it: each part at its
 /// largest, the menu still readable (related_worktree_comments_test).
-({double long, double roomy}) _needs({
+({double long, double plain, double roomy}) _needs({
   required bool send,
   required bool changed,
 }) => (
   long: 640 + (send ? 170 : 0) + (changed ? 110 : 0),
+  // Without the menu: the scopes, the files' line and the buttons take
+  // about 380, Send to agent's long label 160 and Changed: Reload 110.
+  plain: 380 + (send ? 160 : 0) + (changed ? 110 : 0),
   roomy: max(_roomyFrom, 480 + (send ? 90 : 0) + (changed ? 60 : 0)),
 );
 
@@ -79,9 +82,10 @@ class ChangesBar extends StatelessWidget {
           final unsent = unsentComments(chat.id).length;
           final menu = related.list.isNotEmpty;
           final needs = _needs(send: unsent > 0, changed: behind);
-          // Beside the worktrees' menu, short labels while the long ones
-          // don't fit: the list under it shows the files.
-          final short = menu && box.maxWidth < needs.long;
+          // Short labels while the long ones don't fit, beside the
+          // worktrees' menu or in a narrow window's pane: the list under
+          // it shows the files.
+          final short = box.maxWidth < (menu ? needs.long : needs.plain);
           // The bar's gaps and gutters while the row has room for them; a
           // narrow window's Send to agent needs it (ADR 0072).
           final roomy = box.maxWidth >= (short ? needs.roomy : _roomyFrom);

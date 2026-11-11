@@ -9,7 +9,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/list_motion.dart';
 import 'package:nushi/new_chat.dart';
-import 'package:nushi/panes.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_arrange.dart';
@@ -20,9 +19,11 @@ import 'package:nushi/sidebar_row.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/sidebar_sections.dart';
 import 'package:nushi/sidebar_view.dart';
+import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
+import 'package:nushi/window_drag.dart';
 
 /// The chats: the pinned ones first ([PinnedSection]), then the sections
 /// of the user's own ([SidebarSections]), then at first grouped by folder
@@ -35,10 +36,34 @@ import 'package:nushi/widgets.dart';
 /// alone, the first nine chats shown (archived left out) show the number
 /// ⌘ opens them with. Its header's [SidebarButton] hides it ([sidebarHidden]);
 /// `main.dart` then doesn't build it, so it asks nothing while it's hidden.
+///
+/// It sits on the window's own background, with no pane and no border
+/// (ADR 0111): the strip under the traffic lights with its two buttons,
+/// New chat as a card-filled button, the chats, the views' links, and at
+/// its foot the agents' counts and the memory as a card ([StatusBar]).
+/// Its own fill is the window's, so it covers the main pane it slides
+/// over as it goes.
 class Sidebar extends StatefulWidget {
   const new({required this.daemon, super.key});
 
   final Daemon daemon;
+
+  /// The strip at its top, under the traffic lights: the Mac's title bar's
+  /// height, where macOS centres them.
+  static const topHeight = 32.0;
+
+  /// How far its rows and cards are in from its left edge, the window's,
+  /// and from its right edge, where the main pane starts: the window's
+  /// margin and the panes' gap, a little more at the left as the rows have
+  /// no edge of their own.
+  static const double start = NushiTheme.windowPad + 2;
+  static const double end = NushiTheme.paneGap;
+
+  /// A chat's row: its height, the room between rows, and its padding
+  /// inside its rounded fill.
+  static const rowHeight = 34.0;
+  static const rowGap = 2.0;
+  static const rowPad = 10.0;
 
   @override
   State<Sidebar> createState() => _SidebarState();
@@ -125,30 +150,45 @@ class _SidebarState extends State<Sidebar> {
     return MouseRegion(
       onEnter: (_) => _hover.value = true,
       onExit: (_) => _hover.value = false,
-      child: DecoratedBox(
-        decoration: BoxDecoration(color: t.raised),
+      child: ColoredBox(
+        color: t.window,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Under the traffic lights, its hairline the chat header's. Its
-            // empty space moves the window; the buttons keep their clicks.
-            PaneHeader(
-              end: 10,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ArrangeButton(daemon: daemon, hover: _hover),
-                    const SizedBox(width: 2),
-                    const SidebarButton(),
-                  ],
-                ),
+            // Under the traffic lights, which stay where macOS puts them
+            // (ADR 0080): the strip is as high as the title bar they sit
+            // in, so its buttons are level with them. Its empty space moves
+            // the window; the buttons keep their clicks.
+            SizedBox(
+              height: Sidebar.topHeight,
+              child: WindowDrag(
+                background: const SizedBox.shrink(),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: Sidebar.end),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ArrangeButton(daemon: daemon, hover: _hover),
+                          const SizedBox(width: 2),
+                          const SidebarButton(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(10),
-              child: Button(
+              padding: const EdgeInsets.fromLTRB(
+                Sidebar.start,
+                8,
+                Sidebar.end,
+                4,
+              ),
+              child: WideButton(
                 label: 'New chat',
                 icon: Icons.add,
                 hint: keyLabel(newChatKey),
@@ -176,11 +216,47 @@ class _SidebarState extends State<Sidebar> {
                     if (group == GroupBy.status)
                       for (final c in daemon.chats.values) c.look,
                   ]),
-                  builder: (context, _) => _list(context, archived),
+                  // With no line over the links under it (ADR 0111), the
+                  // list's last rows fade into the window's background
+                  // rather than stop at a cut.
+                  builder: (context, _) => Stack(
+                    children: [
+                      Positioned.fill(child: _list(context, archived)),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 12,
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  t.window.withValues(alpha: 0),
+                                  t.window,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
             _Footer(daemon),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Sidebar.start,
+                6,
+                Sidebar.end,
+                NushiTheme.windowPad,
+              ),
+              child: StatusBar(daemon, card: true),
+            ),
           ],
         ),
       ),
@@ -200,7 +276,7 @@ class _SidebarState extends State<Sidebar> {
     // Where each row is before the lists change, and what they show now:
     // a row one loses and another shows moved.
     _motion
-      ..ground = t.raised
+      ..ground = t.window
       ..shown = {
         for (final c in view.pinned) ValueKey(c.id),
         for (final (section, chats) in view.sections) ...[
@@ -238,7 +314,7 @@ class _SidebarState extends State<Sidebar> {
       child: ListView(
         // Hiding the sidebar takes it away: back where it was.
         key: const PageStorageKey('sidebar'),
-        padding: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.only(bottom: 14),
         children: [
           Column(
             key: _motion.space,
@@ -284,8 +360,9 @@ class _SidebarState extends State<Sidebar> {
   }
 }
 
-/// The footer: the views in the chat's place, Jira and GitHub (each again
-/// closes it), and Settings, which opens over the window (ADR 0087). MCP
+/// The links over its foot: the views in the chat's place, Jira and GitHub
+/// (each again closes it), and Settings, which opens over the window (ADR
+/// 0087), as quiet rows; the open view's is filled as the open chat's. MCP
 /// servers and Skills are Settings' sections, reached there, from a chat's
 /// ⋯ and from the palette.
 class _Footer extends StatelessWidget {
@@ -306,20 +383,27 @@ class _Footer extends StatelessWidget {
       selected: open,
       fill: open ? t.accentSoft : null, // as the open chat's row
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: t.textSecondary),
-          const SizedBox(width: 8),
-          Text(label, style: theme.ui(t.textSecondary, size: 12)),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: SizedBox(
+        height: 32,
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: open ? t.text : t.textSecondary),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: theme.ui(
+                open ? t.text : t.textSecondary,
+                weight: open ? FontWeight.w600 : null,
+              ),
+            ),
+          ],
+        ),
       ),
     );
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: t.borderSubtle)),
-      ),
+    // Quiet rows on the window's background, no line over them (ADR 0111).
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Sidebar.start, 6, Sidebar.end, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
