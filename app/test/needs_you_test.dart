@@ -168,9 +168,7 @@ void main() {
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
-    testWidgets('golden, a waiting card, 2×, $name', (
-      tester,
-    ) async {
+    testWidgets('golden, a waiting card, 2×, $name', (tester) async {
       await tester.pumpWidget(
         themed(
           Align(

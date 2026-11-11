@@ -308,9 +308,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
         ),
         tableHead: const TextStyle(fontWeight: FontWeight.w600),
         tableBody: body,
-        tableBorder: TableBorder(
-          horizontalInside: BorderSide(color: s.border),
-        ),
+        tableBorder: TableBorder(horizontalInside: BorderSide(color: s.border)),
         tableColumnWidth: const ContentFlexColumnWidth(),
         tableCellsPadding: const EdgeInsets.symmetric(
           horizontal: 8,

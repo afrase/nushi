@@ -105,13 +105,8 @@ void main() {
     final nordDark = builtInTheme('nord')!.dark;
     final old = {...tokenColors(nordDark)}
       ..removeWhere(
-        (k, _) => const {
-          'window',
-          'lifted',
-          'segment',
-          'line',
-          'quote',
-        }.contains(k),
+        (k, _) =>
+            const {'window', 'lifted', 'segment', 'line', 'quote'}.contains(k),
       );
     final f = readThemeFile(
       'Old.json',
