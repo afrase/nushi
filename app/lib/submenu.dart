@@ -10,6 +10,8 @@ import 'package:flutter/rendering.dart';
 /// menus on its way across; this one slides up only until its bottom is
 /// level with its parent menu's (or the window's bottom margin, when that
 /// is higher), and at most to the window's top, so it stays beside its row.
+/// Either way it stands just clear of its parent menu's edge: Flutter puts
+/// it at its row's end, inside the parent's padding, over its border.
 ///
 /// Flutter takes a menu's place as an offset from its row, given before the
 /// menu has a size. So a submenu opens squeezed flat for one frame, where
@@ -27,6 +29,9 @@ class Submenu extends StatefulWidget {
 
   /// The room Flutter keeps between a menu and the window's edges.
   static const _margin = 8.0;
+
+  /// The room between a submenu and its parent menu's edge.
+  static const gap = 2.0;
 
   /// A menu of no size: its rows are laid out in it, and Flutter clips all
   /// of it away, its border and shadow too.
@@ -59,6 +64,10 @@ class _SubmenuState extends State<Submenu> {
   /// How far above level with its row the submenu opens.
   var _up = 0.0;
 
+  /// How far past its row's end the submenu opens: to its parent menu's
+  /// edge and [Submenu.gap] more.
+  var _out = 0.0;
+
   /// Whether the open submenu has its place; until then it's flat.
   var _placed = true;
 
@@ -66,9 +75,10 @@ class _SubmenuState extends State<Submenu> {
     setState(() => _placed = false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _placed) return;
-      final up = _slide();
+      final (up, out) = (_slide(), _clear());
       setState(() {
         _up = up;
+        _out = out;
         _placed = true;
       });
     });
@@ -114,6 +124,17 @@ class _SubmenuState extends State<Submenu> {
     return level - top;
   }
 
+  /// How far this row's end is inside its menu's panel, and the gap: what
+  /// takes the submenu clear of the panel on either side (the row sits the
+  /// same way in from both). The gap alone when the panel isn't found.
+  double _clear() {
+    final row = context.findRenderObject();
+    final parent = _panel(context);
+    if (row is! RenderBox || parent == null) return Submenu.gap;
+    final end = row.localToGlobal(Offset(row.size.width, 0), ancestor: parent);
+    return max(0, parent.size.width - end.dx) + Submenu.gap;
+  }
+
   /// The panel of the menu [inside] is a row of: Flutter sizes one to its
   /// widest row, so this box is the panel as drawn, and can say how high
   /// it would be.
@@ -122,7 +143,7 @@ class _SubmenuState extends State<Submenu> {
 
   @override
   Widget build(BuildContext context) => SubmenuButton(
-    alignmentOffset: Offset(0, -_up),
+    alignmentOffset: Offset(_out, -_up),
     menuStyle: _placed ? Submenu._snug : Submenu._flat,
     onOpen: _opened,
     leadingIcon: widget.leadingIcon,

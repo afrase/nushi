@@ -9,6 +9,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/submenu.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -38,7 +39,10 @@ void main() {
       expect(sub.top, lessThan(row.top));
       expect(sub.bottom, greaterThanOrEqualTo(row.bottom));
       expect(sub.bottom, moreOrLessEquals(menu.bottom, epsilon: 0.01));
-      expect(sub.left, moreOrLessEquals(row.right, epsilon: 1));
+      expect(
+        sub.left,
+        moreOrLessEquals(menu.right + Submenu.gap, epsilon: 0.01),
+      );
       expect(Offset.zero & window, _contains(sub));
     }, variant: _mac);
 
@@ -49,9 +53,13 @@ void main() {
       await tester.pumpAndSettle();
       final row = _row(tester, 'More');
       expect(tester.getRect(_firstOf(rows)).top, row.top);
+      // Clear of its menu's edge, not over its border.
       expect(
         _panel(tester, find.text('Sub 2')).left,
-        moreOrLessEquals(row.right, epsilon: 1),
+        moreOrLessEquals(
+          _panel(tester, find.text('More')).right + Submenu.gap,
+          epsilon: 0.01,
+        ),
       );
     }, variant: _mac);
 
@@ -109,7 +117,7 @@ void main() {
       final sub = _panel(tester, _firstOf(rows));
       expect(sub.top, 8);
       expect(sub.bottom, window.height - 8);
-      expect(sub.left, moreOrLessEquals(row.right, epsilon: 1));
+      expect(sub.left, greaterThan(row.right));
       // From its top: nothing scrolled it while it was measured.
       final scroll = find.ancestor(
         of: _firstOf(rows),
@@ -130,7 +138,7 @@ void main() {
     final sub = _panel(tester, find.text('A longer row 2'));
     // Its box is as wide as its rows (Flutter's is the theme's least
     // width, with the panel at its start: a gap on this side).
-    expect(sub.right, moreOrLessEquals(row.left, epsilon: 1));
+    expect(sub.right, moreOrLessEquals(menu.left - Submenu.gap, epsilon: 0.01));
     expect(sub.top, lessThan(row.top));
     expect(sub.bottom, greaterThanOrEqualTo(row.bottom));
     expect(sub.bottom, moreOrLessEquals(menu.bottom, epsilon: 0.01));
@@ -169,7 +177,7 @@ void main() {
     final row = _row(tester, 'Deeper');
     final menu = _panel(tester, find.text('Deeper'));
     final sub = _panel(tester, find.text('Deep 2'));
-    expect(sub.left, moreOrLessEquals(row.right, epsilon: 1));
+    expect(sub.left, moreOrLessEquals(menu.right + Submenu.gap, epsilon: 0.01));
     expect(sub.top, lessThan(row.top));
     expect(sub.bottom, moreOrLessEquals(menu.bottom, epsilon: 0.01));
     expect(Offset.zero & _window, _contains(sub));
@@ -263,9 +271,9 @@ void main() {
       expect(Offset.zero & window, _contains(sub));
       // Beside the menu, on whichever side has the room.
       expect(
-        sub.left >= row.right - 1 || sub.right <= row.left + 1,
+        sub.left >= menu.right || sub.right <= menu.left,
         isTrue,
-        reason: '$sub beside $row',
+        reason: '$sub beside $menu',
       );
       await render(
         tester,
