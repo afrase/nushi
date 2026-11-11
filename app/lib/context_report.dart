@@ -137,13 +137,13 @@ class ContextReport extends StatelessWidget {
   /// The color of a kind, as Claude's rail gives its four largest kinds;
   /// the rest grey, the buffer darker, the free space only a square.
   static Color colorOf(Tokens t, ContextCategory c) => switch (c.name) {
-    _ when c.kind == 'free' => t.borderSubtle,
-    _ when c.kind == 'deferred' => t.borderStrong,
+    _ when c.kind == 'free' => t.lifted,
+    _ when c.kind == 'deferred' => t.faint,
     'Messages' => t.accent,
     'System tools' => t.claude,
     'Skills' => t.done,
     'System prompt' => t.gold,
-    'Autocompact buffer' => t.borderStrong,
+    'Autocompact buffer' => t.faint,
     _ => t.textMuted,
   };
 
@@ -300,7 +300,7 @@ class _Bar extends StatelessWidget {
       child: SizedBox(
         height: 6,
         child: ColoredBox(
-          color: t.borderSubtle,
+          color: t.lifted,
           child: LayoutBuilder(
             builder: (context, box) {
               final all = [

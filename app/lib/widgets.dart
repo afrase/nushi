@@ -343,7 +343,7 @@ class RowsLoading extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: t.borderSubtle,
+        color: t.lifted,
         borderRadius: BorderRadius.circular(NushiTheme.tag),
       ),
     );
@@ -397,8 +397,11 @@ class Notice extends StatelessWidget {
     final t = theme.t;
     return Container(
       margin: const EdgeInsets.fromLTRB(10, 8, 10, 0),
-      padding: const EdgeInsets.all(10),
-      decoration: box(t.needs, fill: t.needsSoft),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: t.needsSoft,
+        borderRadius: BorderRadius.circular(NushiTheme.control),
+      ),
       child: Row(
         children: [
           Expanded(child: Text(text, style: theme.ui(t.needs, size: 12))),

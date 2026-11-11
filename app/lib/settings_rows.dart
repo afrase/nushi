@@ -108,7 +108,7 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-/// A group of rows in a rounded box, an optional [title] over it (and
+/// A group of rows in a card, an optional [title] over it (and
 /// [about], what the group holds, under the title) and a [footer] under it;
 /// a hairline between rows, and [empty] ("None") in the box without any.
 class SettingsGroup extends StatelessWidget {
@@ -157,9 +157,11 @@ class SettingsGroup extends StatelessWidget {
                 ],
               ),
             ),
-          framed(
-            border: t.borderSubtle,
-            fill: t.raised,
+          // A card on the modal's pane (ADR 0111): its fill and corners, no
+          // outline, its rows cut to the corners (a row's hover fill).
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: cardBox(t),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -169,7 +171,7 @@ class SettingsGroup extends StatelessWidget {
                     child: Text(empty!, style: muted),
                   ),
                 for (final (i, c) in children.indexed) ...[
-                  if (i > 0) Container(height: 1, color: t.borderSubtle),
+                  if (i > 0) Container(height: 1, color: t.line),
                   c,
                 ],
               ],

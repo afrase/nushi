@@ -300,21 +300,24 @@ class _HistorySectionState extends State<HistorySection> {
             }
             final now = clock();
             return DecoratedSliver(
-              decoration: box(t.borderSubtle, fill: t.raised),
+              decoration: cardBox(t),
               sliver: SliverMainAxisGroup(
                 slivers: [
                   PinnedHeaderSliver(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(
-                          NushiTheme.inner(NushiTheme.card, 1),
+                    // The pane's fill behind its round corners: pinned, no
+                    // row scrolled under it shows past them.
+                    child: ColoredBox(
+                      color: t.base,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(NushiTheme.card),
                         ),
-                      ),
-                      child: HistoryHeader(
-                        sort: _sort,
-                        up: _up,
-                        wide: wide,
-                        onSort: _sortBy,
+                        child: HistoryHeader(
+                          sort: _sort,
+                          up: _up,
+                          wide: wide,
+                          onSort: _sortBy,
+                        ),
                       ),
                     ),
                   ),

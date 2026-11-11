@@ -105,7 +105,7 @@ class HistorySelectionBar extends StatelessWidget {
     return Container(
       height: 48,
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        border: Border(top: BorderSide(color: t.line)),
       ),
       child: Row(
         spacing: 8,
@@ -140,7 +140,7 @@ class HistoryLoading extends StatelessWidget {
       width: width,
       height: 10,
       decoration: BoxDecoration(
-        color: t.borderSubtle,
+        color: t.lifted,
         borderRadius: BorderRadius.circular(NushiTheme.tag),
       ),
     );

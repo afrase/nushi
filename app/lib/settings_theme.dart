@@ -180,7 +180,8 @@ class _Picked extends StatelessWidget {
   }
 }
 
-/// A preview in a hairline frame, its corners rounded.
+/// A preview with a hairline where its edge meets the card (another
+/// theme's window can be the card's own color), its corners rounded.
 class _Framed extends StatelessWidget {
   const new(this.child);
 
@@ -188,7 +189,7 @@ class _Framed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => framed(
-    border: NushiTheme.of(context).t.borderStrong,
+    border: NushiTheme.of(context).t.line,
     // Inside its card's padding (7) and border.
     radius: NushiTheme.inner(NushiTheme.card, 8),
     child: child,
@@ -255,7 +256,6 @@ class ThemeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final nushi = NushiTheme.of(context);
     final t = nushi.t;
-    final ring = picked ? t.accentInk : t.fieldBorder;
     return Semantics(
       selected: picked,
       button: true,
@@ -265,39 +265,42 @@ class ThemeCard extends StatelessWidget {
         builder: (context, look) => Container(
           padding: const EdgeInsets.all(7),
           decoration: BoxDecoration(
+            // A raised bit on the group's card (ADR 0111), no outline; the
+            // picked one keeps its ring, as the focus does.
             color: look.pressed
-                ? Color.alphaBlend(t.pressed, t.fieldFill)
+                ? Color.alphaBlend(t.pressed, t.lifted)
                 : look.hover
-                ? Color.alphaBlend(t.hover, t.fieldFill)
-                : t.fieldFill,
+                ? Color.alphaBlend(t.hover, t.lifted)
+                : t.lifted,
             border: Border.all(
-              color: look.focus ? t.focus : ring,
-              width: picked || look.focus ? 2 : 1,
+              color: look.focus
+                  ? t.focus
+                  : picked
+                  ? t.accentInk
+                  : const Color(0x00000000),
+              width: 2,
             ),
             borderRadius: BorderRadius.circular(NushiTheme.card),
           ),
-          // The border's width never moves what's inside.
-          child: Padding(
-            padding: EdgeInsets.all(picked || look.focus ? 0 : 1),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _Framed(ThemePreview(theme.of(this.look), dark: theme.dark)),
-                const SizedBox(height: 6),
-                _Name(this),
-                for (final w in warnings)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Text(
-                      w,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: nushi.ui(t.needs, size: 11.5),
-                    ),
+          // The ring is always as wide, so it never moves what's inside.
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Framed(ThemePreview(theme.of(this.look), dark: theme.dark)),
+              const SizedBox(height: 6),
+              _Name(this),
+              for (final w in warnings)
+                Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: Text(
+                    w,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: nushi.ui(t.needs, size: 11.5),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),

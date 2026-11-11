@@ -298,8 +298,8 @@ class _JqlFieldState extends State<JqlField> {
           // rounded inside its corners.
           Container(
             margin: const EdgeInsets.only(top: 2),
-            padding: const EdgeInsets.all(_pad),
-            decoration: box(t.borderSubtle, fill: t.raised),
+            padding: const EdgeInsets.all(_pad + 1),
+            decoration: cardBox(t),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

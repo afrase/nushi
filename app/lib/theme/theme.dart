@@ -295,10 +295,31 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
         titleTextStyle: ui(t.text, size: 15, weight: FontWeight.w600),
         contentTextStyle: ui(t.textSecondary),
       ),
-      checkboxTheme: const CheckboxThemeData(
-        shape: RoundedRectangleBorder(
+      // An empty checkbox keeps an edge, as a field does, but a field's,
+      // not Material's two heavy points of the text's color.
+      checkboxTheme: CheckboxThemeData(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(tag)),
         ),
+        side: BorderSide(color: t.fieldBorderHover, width: 1.5),
+      ),
+      // A switch is its fill, never an outline (ADR 0111): off, a raised
+      // bit's with a muted thumb; on, the accent's. Disabled it's
+      // Material's own.
+      switchTheme: SwitchThemeData(
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+        // Maps, which are equal when their colors are: a closure never is,
+        // and an unequal theme rebuilds everything under it.
+        trackColor: WidgetStateProperty<Color?>.fromMap({
+          WidgetState.disabled: null,
+          WidgetState.selected: t.accent,
+          WidgetState.any: t.lifted,
+        }),
+        thumbColor: WidgetStateProperty<Color?>.fromMap({
+          WidgetState.disabled: null,
+          WidgetState.selected: t.onAccent,
+          WidgetState.any: t.textMuted,
+        }),
       ),
       inputDecorationTheme: InputDecorationThemeData(
         isDense: true,

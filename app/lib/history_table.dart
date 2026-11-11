@@ -172,7 +172,7 @@ class HistoryHeader extends StatelessWidget {
       padding: const EdgeInsets.only(left: 8, right: 8),
       decoration: BoxDecoration(
         color: t.raised,
-        border: Border(bottom: BorderSide(color: t.borderSubtle)),
+        border: Border(bottom: BorderSide(color: t.line)),
       ),
       child: historyCells(
         Align(
@@ -303,12 +303,10 @@ class HistoryRowView extends StatelessWidget {
               : hover
               ? t.hover
               : null,
-          border: last
-              ? null
-              : Border(bottom: BorderSide(color: t.borderSubtle)),
+          border: last ? null : Border(bottom: BorderSide(color: t.line)),
           borderRadius: last
-              ? BorderRadius.vertical(
-                  bottom: Radius.circular(NushiTheme.inner(NushiTheme.card, 1)),
+              ? const BorderRadius.vertical(
+                  bottom: Radius.circular(NushiTheme.card),
                 )
               : null,
         ),

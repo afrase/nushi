@@ -154,8 +154,8 @@ class RailDash extends StatelessWidget {
         color: on
             ? (accent ? t.accentInk : t.text)
             : bright
-            ? Color.lerp(t.borderStrong, t.text, 0.5)
-            : t.borderStrong,
+            ? Color.lerp(t.faint, t.text, 0.5)
+            : t.faint,
         borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
     );

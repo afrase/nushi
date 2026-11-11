@@ -296,8 +296,8 @@ class CleanUpProgress extends StatelessWidget {
             ),
           );
       return Container(
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-        decoration: box(t.borderSubtle, fill: t.raised),
+        padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+        decoration: cardBox(t),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

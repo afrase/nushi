@@ -339,10 +339,18 @@ void main() {
             is_(w.decoration! as BoxDecoration),
       ),
     );
-    final picked = around((b) => b.color != null && b.border == null).first;
+    final card = BorderRadius.circular(NushiTheme.card);
+    final picked = around((b) => b.color != null).first;
     final row = tester.getRect(picked);
-    final box = tester.getRect(around((b) => b.border != null).first);
-    // The box's border, then its padding: no fill reaches a corner.
+    final suggestions = around((b) => b.borderRadius == card).first;
+    final box = tester.getRect(suggestions);
+    // A card with no outline (ADR 0111), then its padding: no fill
+    // reaches a corner.
+    expect(
+      (tester.widget<Container>(suggestions).decoration! as BoxDecoration)
+          .border,
+      isNull,
+    );
     expect(row.left, box.left + 5);
     expect(row.right, box.right - 5);
     expect(row.top, box.top + 2 + 5); // under the box's own margin
@@ -675,5 +683,28 @@ void main() {
       );
       await closeView(tester, d);
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+    // The window at both widths, the list and then an issue's page, to
+    // look at (`make renders`).
+    for (final w in [1700.0, 720.0]) {
+      testWidgets('the list and an issue, ${w.round()} wide, $name', (
+        tester,
+      ) async {
+        final (_, d) = await openView(
+          tester,
+          tokens: tokens,
+          size: Size(w, 900),
+          window: true,
+        );
+        final app = find.byType(NushiApp);
+        expectTextInside(tester, w);
+        await render(tester, app, 'jira_list_${w.round()}_$name');
+        await tester.tap(find.text('Log in with a passkey'));
+        await tester.pumpAndSettle();
+        expectTextInside(tester, w);
+        await render(tester, app, 'jira_issue_${w.round()}_$name');
+        await closeView(tester, d);
+      }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+    }
   }
 }

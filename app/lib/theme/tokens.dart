@@ -159,6 +159,11 @@ class Tokens {
       text.withValues(alpha: brightness == Brightness.dark ? 0.07 : 0.09);
   final Color? _line;
 
+  /// A grey mark that stands back from what it's on: the empty window's
+  /// logo, a rail's dashes at rest, the part of a meter that counts for
+  /// nothing. A pane's fill, a third of the way to the text's color.
+  Color get faint => Color.lerp(base, text.withValues(alpha: 1), 0.3)!;
+
   // The outlines from before the surfaces told things apart (ADR 0111):
   // still around what later passes haven't reached, and right for a menu's
   // and a dialog's edge. New dividers are [line].

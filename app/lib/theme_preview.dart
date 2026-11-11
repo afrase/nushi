@@ -5,12 +5,12 @@ import 'package:nushi/theme/theme.dart';
 /// A small picture of Nushi in one set of a theme (ADR 0086), for its
 /// picker (Settings › Appearance, the phone's Settings): the window's
 /// background with the sidebar on it and the main pane beside it (ADR
-/// 0111), a few chats (the open one, status dots, a chat's color), a user
-/// band, the agent's text with inline code, a tool call's row, a
-/// subagent's line, a review's findings, and a code block in the set's
-/// syntax colors. Drawn at [size] under a theme of [tokens], then scaled
-/// to the width it's given, so every part takes its colors and fonts as
-/// the app does, and a theme file's changes show.
+/// 0111), a few chats (the open one, status dots, a chat's color), a
+/// message of yours in its bubble, the agent's text with inline code, a
+/// tool call's row, a subagent's line, a review's findings, and a code
+/// block in the set's syntax colors. Drawn at [size] under a theme of
+/// [tokens], then scaled to the width it's given, so every part takes its
+/// colors and fonts as the app does, and a theme file's changes show.
 class ThemePreview extends StatelessWidget {
   const new(this.tokens, {required this.dark, super.key});
 
@@ -167,72 +167,70 @@ class _Transcript extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final text = theme.ui(t.agentText, size: 8.5);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 6,
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
-          decoration: BoxDecoration(
-            color: t.userBand,
-            border: Border(bottom: BorderSide(color: t.userBandBorder)),
-          ),
-          child: Text.rich(
-            TextSpan(
-              children: [
-                const TextSpan(text: 'Paginate it with a cursor, '),
-                _code(context, '20', t.userBandCode),
-                const TextSpan(text: ' a page.'),
-              ],
-            ),
-            maxLines: 1,
-            style: theme.ui(t.userBandText, size: 8.5),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 4,
-            children: [
-              Text.rich(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 7, 10, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 5,
+        children: [
+          // A message of yours: a bubble at the right (ADR 0111).
+          Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+              decoration: BoxDecoration(
+                color: t.userBand,
+                borderRadius: BorderRadius.circular(_small(NushiTheme.panel)),
+              ),
+              child: Text.rich(
                 TextSpan(
                   children: [
-                    _code(context, 'ListPosts', t.inlineCode),
-                    const TextSpan(text: ' reads the whole table.'),
+                    const TextSpan(text: 'Paginate it with a cursor, '),
+                    _code(context, '20', t.userBandCode),
+                    const TextSpan(text: ' a page.'),
                   ],
                 ),
                 maxLines: 1,
-                style: text,
+                style: theme.ui(t.userBandText, size: 8.5),
               ),
-              _Row(
-                fill: t.toolTint,
-                border: t.toolBorder,
-                icon: Icons.layers_outlined,
-                accent: t.toolAccent,
-                lead: 'Read 2 files, ran 1 search',
-              ),
-              _Row(
-                fill: t.subagentTint,
-                border: t.subagentBorder,
-                icon: Icons.smart_toy_outlined,
-                accent: t.subagentAccent,
-                lead: 'Explore:',
-                rest: ' Find every template',
-              ),
-              _Row(
-                fill: t.findingsTint,
-                border: t.findingsBorder,
-                icon: Icons.fact_check_outlined,
-                accent: t.findingsAccent,
-                lead: 'Review: 1 finding',
-                trail: 'feed.go:42',
-              ),
-              const _Code(),
-            ],
+            ),
           ),
-        ),
-      ],
+          Text.rich(
+            TextSpan(
+              children: [
+                _code(context, 'ListPosts', t.inlineCode),
+                const TextSpan(text: ' reads the whole table.'),
+              ],
+            ),
+            maxLines: 1,
+            style: text,
+          ),
+          _Row(
+            fill: t.raised,
+            icon: Icons.layers_outlined,
+            accent: t.toolAccent,
+            ink: t.textSecondary,
+            lead: 'Read 2 files, ran 1 search',
+          ),
+          _Row(
+            fill: t.subagentTint,
+            icon: Icons.smart_toy_outlined,
+            accent: t.subagentAccent,
+            ink: t.subagentAccent,
+            lead: 'Explore:',
+            rest: ' Find every template',
+          ),
+          _Row(
+            fill: t.raised,
+            icon: Icons.fact_check_outlined,
+            accent: t.findingsAccent,
+            ink: t.text,
+            lead: 'Review: 1 finding',
+            trail: 'feed.go:42',
+          ),
+          const _Code(),
+        ],
+      ),
     );
   }
 }
@@ -253,24 +251,25 @@ InlineSpan _code(BuildContext context, String code, Color fill) {
   );
 }
 
-/// A transcript's row: a tool call's, a subagent's line, the findings'
-/// head; its [fill] and [border], an [icon] in its [accent], [lead] (and
-/// [rest] after it) and [trail], a file, in the accent at its end.
+/// A transcript's row (ADR 0111): a tool call's, a card's fill; a
+/// subagent's line, its tint; the findings' head, a card's. Its [fill], an
+/// [icon] in its [accent], [lead] in [ink] (semibold before [rest], in the
+/// text's color) and [trail], a file, in the findings' accent at its end.
 class _Row extends StatelessWidget {
   const new({
     required this.fill,
-    required this.border,
     required this.icon,
     required this.accent,
+    required this.ink,
     required this.lead,
     this.rest,
     this.trail,
   });
 
   final Color fill;
-  final Color border;
   final IconData icon;
   final Color accent;
+  final Color ink;
   final String lead;
   final String? rest;
   final String? trail;
@@ -281,8 +280,11 @@ class _Row extends StatelessWidget {
     final t = theme.t;
     return Container(
       height: 17,
-      padding: const EdgeInsets.symmetric(horizontal: 5),
-      decoration: box(border, fill: fill, radius: _small(NushiTheme.control)),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(_small(NushiTheme.control)),
+      ),
       child: Row(
         spacing: 4,
         children: [
@@ -297,12 +299,16 @@ class _Row extends StatelessWidget {
                         ? null
                         : const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  if (rest case final r?) TextSpan(text: r),
+                  if (rest case final r?)
+                    TextSpan(
+                      text: r,
+                      style: TextStyle(color: t.textSecondary),
+                    ),
                 ],
               ),
               maxLines: 1,
               overflow: TextOverflow.clip,
-              style: theme.ui(t.text, size: 8),
+              style: theme.ui(ink, size: 8),
             ),
           ),
           if (trail case final f?)
@@ -357,11 +363,10 @@ class _Code extends StatelessWidget {
       ],
     ];
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: box(
-        t.borderSubtle,
-        fill: t.codeBlock,
-        radius: _small(NushiTheme.card),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+      decoration: BoxDecoration(
+        color: t.codeBlock,
+        borderRadius: BorderRadius.circular(_small(NushiTheme.control)),
       ),
       child: Text.rich(
         TextSpan(

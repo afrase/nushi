@@ -136,7 +136,7 @@ class _ContextMeterState extends State<ContextMeter> with ClockRun {
           width: 22,
           height: 8,
           decoration: BoxDecoration(
-            color: t.borderSubtle,
+            color: t.lifted,
             borderRadius: BorderRadius.circular(NushiTheme.pill),
           ),
           alignment: Alignment.centerLeft,

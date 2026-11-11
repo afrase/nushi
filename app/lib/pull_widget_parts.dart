@@ -53,7 +53,7 @@ class ChecksBar extends StatelessWidget {
               (n.failing, t.crashed),
               (n.running, t.needs),
               (n.passed, t.done),
-              (n.other, t.borderStrong),
+              (n.other, t.faint),
             ])
               if (count > 0)
                 Expanded(
