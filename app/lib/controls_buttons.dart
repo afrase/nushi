@@ -158,6 +158,67 @@ class Button extends StatelessWidget {
   }
 }
 
+/// A row-wide action on the window's background or a pane (the sidebar's
+/// New chat, ADR 0111): a card's fill and no outline, taller than a
+/// [Button], [icon] and [label] at its start and its shortcut [hint] as a
+/// key's cap at its end.
+class WideButton extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.onPressed,
+    super.key,
+    this.icon,
+    this.hint,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final String? hint;
+
+  static const height = 38.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Pressable(
+      onTap: onPressed,
+      builder: (context, look) => _faded(
+        look,
+        Container(
+          height: height,
+          padding: const EdgeInsets.only(left: 12, right: 8),
+          decoration: BoxDecoration(
+            color: look.hover
+                ? Color.alphaBlend(_tint(t, look), t.raised)
+                : t.raised,
+            borderRadius: BorderRadius.circular(NushiTheme.control),
+          ),
+          foregroundDecoration: focusRing(t, look),
+          child: Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 16, color: t.text),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.ui(t.text, weight: FontWeight.w500),
+                ),
+              ),
+              if (hint case final hint?) KeyCap(hint),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A button with a second part beside it, a ▾ that opens a menu of how it
 /// goes ("Squash and merge" and the other methods): [label] is the way
 /// picked, and pressing it does that.

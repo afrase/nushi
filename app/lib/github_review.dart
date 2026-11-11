@@ -148,6 +148,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
             if (!widget.mine) ...[
               Segmented(
                 value: _event,
+                onCard: true,
                 segments: const [
                   ('comment', 'Comment'),
                   ('approve', 'Approve'),
