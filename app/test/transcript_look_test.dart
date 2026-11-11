@@ -669,9 +669,30 @@ void main() {
         );
       }
       await render(tester, find.byType(PhoneApp), 'look_phone_${b.name}');
+      final idle = tester.getSize(find.byType(TextField));
       await tester.enterText(find.byType(TextField), 'Also the README');
       await tester.pumpAndSettle();
       await render(tester, find.byType(PhoneApp), 'look_phone_text_${b.name}');
+      // While a turn runs the hint says what a message does, still on one
+      // line: the box is no higher for it (it wrapped at 390, and the box
+      // grew 14 points).
+      await tester.enterText(find.byType(TextField), '');
+      fake.emit(
+        EventsResponse(
+          chatId: 'c',
+          seq: Int64(3),
+          status: ChatStatus(busy: true),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Queue it, or stop and send'), findsOneWidget);
+      expect(tester.getSize(find.byType(TextField)).height, idle.height);
+      await render(
+        tester,
+        find.byType(PhoneApp),
+        'look_phone_working_${b.name}',
+      );
       await endPhone(tester, phone);
     }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
   }

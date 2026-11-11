@@ -154,45 +154,45 @@ class _Themes extends StatelessWidget {
         builder: (context, look) => Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
+            // A card on the screen (ADR 0111), no outline; the picked one
+            // keeps its ring, always as wide, so nothing inside moves.
             color: look.hover ? Color.alphaBlend(t.hover, t.raised) : t.raised,
             border: Border.all(
-              color: picked ? t.accentInk : t.borderSubtle,
-              width: picked ? 2 : 1,
+              color: picked ? t.accentInk : const Color(0x00000000),
+              width: 2,
             ),
             borderRadius: BorderRadius.circular(NushiTheme.card),
           ),
-          child: Padding(
-            padding: EdgeInsets.all(picked ? 0 : 1),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 6,
-              children: [
-                framed(
-                  border: t.borderStrong,
-                  // Inside its card's padding (6, 1) and border.
-                  radius: NushiTheme.inner(NushiTheme.card, 8),
-                  child: ThemePreview(c.of(t.brightness), dark: c.dark),
-                ),
-                SizedBox(
-                  height: 24,
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          c.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: phoneText(context),
-                        ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 6,
+            children: [
+              framed(
+                // A hairline where the picture meets the card: another
+                // theme's window can be the card's own color.
+                border: t.line,
+                // Inside its card's padding (6) and ring.
+                radius: NushiTheme.inner(NushiTheme.card, 8),
+                child: ThemePreview(c.of(t.brightness), dark: c.dark),
+              ),
+              SizedBox(
+                height: 24,
+                child: Row(
+                  children: [
+                    const SizedBox(width: 2),
+                    Expanded(
+                      child: Text(
+                        c.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: phoneText(context),
                       ),
-                      if (picked)
-                        Icon(Icons.check, size: 20, color: t.accentInk),
-                    ],
-                  ),
+                    ),
+                    if (picked) Icon(Icons.check, size: 20, color: t.accentInk),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -499,11 +499,13 @@ class _ComposerState extends State<Composer> {
                         : !chat.busy
                         ? widget.hint
                         : touch
-                        ? 'Queue a message, or stop and send'
+                        ? 'Queue it, or stop and send'
                         : '$enterLabel queues it, '
                               '$cmdEnterLabel stops '
                               '${chat.agentName} and sends',
                     hintStyle: theme.ui(t.textMuted, size: 14),
+                    // A phone's box is one row: a hint never makes it two.
+                    hintMaxLines: touch ? 1 : null,
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 6,
