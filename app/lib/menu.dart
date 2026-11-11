@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -34,6 +35,7 @@ class MenuEntry {
     this.controls,
     this.lit = false,
     this.autofocus = false,
+    this.inTap = false,
   }) : heading = false,
        custom = null;
 
@@ -55,6 +57,7 @@ class MenuEntry {
       controls = null,
       lit = false,
       autofocus = false,
+      inTap = false,
       heading = false;
 
   /// A group's name over its rows.
@@ -72,6 +75,7 @@ class MenuEntry {
       controls = null,
       lit = false,
       autofocus = false,
+      inTap = false,
       heading = true,
       custom = null;
 
@@ -105,6 +109,10 @@ class MenuEntry {
   /// Takes the focus as the menu opens, so Esc, the arrows and Enter work
   /// the menu at once, wherever the focus was (a chip over the transcript).
   final bool autofocus;
+
+  /// Runs [onPick] in the tap itself, not a frame later as Flutter's menus
+  /// do: Safari opens a file picker only from inside the tap.
+  final bool inTap;
 
   /// Whether it can be picked or opened.
   bool get _on => onPick != null || (submenu?.isNotEmpty ?? false);
@@ -545,11 +553,29 @@ Widget _button(
   bool keepFocus = false,
   Widget? icon,
   Key? key,
+  VoidCallback? onPressed,
 }) {
   final t = theme.t;
+  if (e.inTap && e.onPick != null && onPressed == null) {
+    return _InTap(
+      key: key,
+      onPick: e.onPick!,
+      builder: (onPressed) => _button(
+        theme,
+        e,
+        label,
+        digit: digit,
+        lit: lit,
+        checks: checks,
+        keepFocus: keepFocus,
+        icon: icon,
+        onPressed: onPressed,
+      ),
+    );
+  }
   return MenuItemButton(
     key: key,
-    onPressed: e.onPick,
+    onPressed: onPressed ?? e.onPick,
     autofocus: e.autofocus,
     requestFocusOnHover: !keepFocus,
     leadingIcon: icon,
@@ -704,4 +730,42 @@ class _FilteredState extends State<_Filtered> {
       ],
     );
   }
+}
+
+/// A row whose pick runs in the tap itself ([MenuEntry.inTap]): as the
+/// finger lifts where it went down, before Flutter's button, which runs its
+/// own a frame later (and still does for the keyboard's Enter).
+class _InTap extends StatefulWidget {
+  const new({required this.onPick, required this.builder, super.key});
+
+  final VoidCallback onPick;
+  final Widget Function(VoidCallback onPressed) builder;
+
+  @override
+  State<_InTap> createState() => _InTapState();
+}
+
+class _InTapState extends State<_InTap> {
+  Offset? _down;
+  bool _ran = false;
+
+  @override
+  Widget build(BuildContext context) => Listener(
+    onPointerDown: (e) {
+      _down = e.position;
+      _ran = false;
+    },
+    onPointerCancel: (_) => _down = null,
+    onPointerUp: (e) {
+      final down = _down;
+      _down = null;
+      if (down == null || (e.position - down).distance > kTouchSlop) return;
+      _ran = true;
+      widget.onPick();
+    },
+    child: widget.builder(() {
+      if (!_ran) widget.onPick();
+      _ran = false;
+    }),
+  );
 }

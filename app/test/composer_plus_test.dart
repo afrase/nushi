@@ -23,6 +23,7 @@ import 'package:nushi/images.dart' show maxImageBytes;
 import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/native.dart';
+import 'package:nushi/pasted_files.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -545,6 +546,53 @@ void main() {
     expect(sent.files, isEmpty);
     expect(sent.uploads.single.name, 'receipt.pdf');
     expect(sent.uploads.single.data, [1, 2, 3]);
+    _end();
+  }, variant: _mac);
+
+  testWidgets('the phone’s picker opens in the tap itself, once', (
+    tester,
+  ) async {
+    // Safari opens a file picker only from inside the tap; Flutter's menu
+    // runs a row's pick a frame later.
+    await _box(tester);
+    sendWhole = true;
+    var opened = 0;
+    pickFiles = () async {
+      opened++;
+      return [];
+    };
+    await _openMenu(tester);
+    await tester.tap(find.text('Add files or photos'));
+    expect(opened, 1, reason: 'before the next frame');
+    await tester.pump();
+    await tester.pump();
+    expect(opened, 1);
+    expect(find.text('Mention a file'), findsNothing, reason: 'menu closed');
+    _end();
+  }, variant: _mac);
+
+  testWidgets('files pasted into the phone’s page go to the focused box', (
+    tester,
+  ) async {
+    await _box(tester);
+    sendWhole = true;
+    XFile receipt() => XFile.fromData(
+      Uint8List.fromList([1, 2, 3]),
+      name: 'receipt.pdf',
+      path: 'receipt.pdf',
+    );
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+    pastedFiles.add([receipt()]);
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(FileCard), findsNothing, reason: 'not typing in it');
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+    pastedFiles.add([receipt()]);
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(FileCard), findsOne);
     _end();
   }, variant: _mac);
 

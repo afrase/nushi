@@ -61,6 +61,9 @@ class PlusMenu extends StatelessWidget {
           line: LineIcon.paperclip,
           shortcut: touch ? '' : keyLabel(attachKey),
           onPick: attach ? onAttach : null,
+          // The phone's picker is the browser's, which opens only from
+          // inside the tap.
+          inTap: true,
           tooltip: attach
               ? ''
               : '${chat.agentName} doesn’t take images in this chat, and '
