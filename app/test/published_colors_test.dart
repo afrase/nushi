@@ -135,6 +135,55 @@ void main() {
     });
   });
 
+  test('Solarized’s code is its sixteen, and its light terminal', () {
+    final solarized = builtInTheme('solarized')!;
+    // altercation/solarized's table, and its Vim scheme's groups.
+    const accents = {
+      'syntax.keyword': 0x859900, // green
+      'syntax.declaration': 0x268bd2, // blue
+      'syntax.type': 0xb58900, // yellow
+      'syntax.string': 0x2aa198, // cyan
+      'syntax.number': 0xd33682, // magenta
+      'syntax.regexp': 0xdc322f, // red
+      'syntax.constant': 0x6c71c4, // violet
+      'syntax.meta': 0xcb4b16, // orange
+    };
+    const ansi = {
+      'terminal.black': 0x073642, // base02
+      'terminal.red': 0xdc322f,
+      'terminal.green': 0x859900,
+      'terminal.yellow': 0xb58900,
+      'terminal.blue': 0x268bd2,
+      'terminal.magenta': 0xd33682,
+      'terminal.cyan': 0x2aa198,
+      'terminal.white': 0xeee8d5, // base2
+      'terminal.brightRed': 0xcb4b16, // orange
+      'terminal.brightMagenta': 0x6c71c4, // violet
+      'terminal.brightWhite': 0xfdf6e3, // base3
+    };
+    _published('Solarized Dark', solarized.dark, {
+      'base': 0x002b36, // base03
+      'raised': 0x073642, // base02
+      ...accents,
+      'syntax.comment': 0x586e75, // base01
+      'syntax.parameter': 0x93a1a1, // base1
+      ...ansi,
+    });
+    _published('Solarized Light', solarized.light, {
+      'base': 0xfdf6e3, // base3
+      'window': 0xeee8d5, // base2
+      ...accents,
+      'syntax.comment': 0x93a1a1, // base1
+      'syntax.parameter': 0x586e75, // base01
+      ...ansi,
+      'terminal.brightBlack': 0x002b36, // base03
+      'terminal.brightGreen': 0x586e75, // base01
+      'terminal.brightYellow': 0x657b83, // base00
+      'terminal.brightBlue': 0x839496, // base0
+      'terminal.brightCyan': 0x93a1a1, // base1
+    });
+  });
+
   test('code’s colors, the terminal’s, a diff’s and the body text are '
       'no pair of the contrast warnings', () {
     // Each drawn in the pane's own fill, where nothing could read it.
