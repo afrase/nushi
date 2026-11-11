@@ -109,11 +109,7 @@ class MergeControl extends StatelessWidget {
     return Container(
       key: const ValueKey('merge-control'),
       padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
-      decoration: BoxDecoration(
-        color: t.raised,
-        border: Border.all(color: t.borderSubtle),
-        borderRadius: BorderRadius.circular(NushiTheme.control),
-      ),
+      decoration: cardBox(t),
       child: body,
     );
   }

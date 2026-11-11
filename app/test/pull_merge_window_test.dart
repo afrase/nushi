@@ -99,6 +99,25 @@ void main() {
     }
 
     for (final width in [1700.0, 720.0]) {
+      testWidgets('merged at ${width.toInt()}, $theme', (tester) async {
+        final d = await _tab(
+          tester,
+          mergePull('ready')..item.state = 'merged',
+          width,
+          brightness,
+        );
+        expect(find.text('Merged'), findsWidgets);
+        expectTextInside(tester, width);
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'pull_merged_${width.toInt()}_$theme',
+        );
+        d.dispose();
+      }, variant: _mac);
+    }
+
+    for (final width in [1700.0, 720.0]) {
       testWidgets('the confirmation at ${width.toInt()}, $theme', (
         tester,
       ) async {

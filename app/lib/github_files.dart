@@ -154,7 +154,7 @@ class _GitHubFilesState extends State<GitHubFiles> {
     final withThreads = files.where(_open).length;
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        border: Border(top: BorderSide(color: t.line)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -183,7 +183,7 @@ class _GitHubFilesState extends State<GitHubFiles> {
               ],
             ),
           ),
-          VerticalDivider(width: 1, color: t.borderSubtle),
+          VerticalDivider(width: 1, color: t.line),
           Expanded(child: file == null ? const SizedBox() : _diff(theme, file)),
         ],
       ),

@@ -146,7 +146,7 @@ class _TodoRowState extends State<TodoRow> {
     final who = _whose(i, clock());
     return Container(
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        border: Border(top: BorderSide(color: t.line)),
       ),
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
       child: Column(
@@ -326,8 +326,11 @@ class _Tag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        color: soft ? color.withValues(alpha: 0.14) : null,
-        border: soft ? null : Border.all(color: color.withValues(alpha: 0.5)),
+        // A pill by its fill (ADR 0111): the state's tint, or for a plain
+        // word the lifted fill of the card it's on.
+        color: soft
+            ? color.withValues(alpha: 0.14)
+            : NushiTheme.of(context).t.lifted,
         borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
       child: Text(

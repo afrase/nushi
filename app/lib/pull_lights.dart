@@ -17,6 +17,15 @@ Color moodColor(Tokens t, Mood m) => switch (m) {
   Mood.quiet => t.textMuted,
 };
 
+/// The soft fill behind [m]'s mark (a tile's round chip): the state's own,
+/// or for one that asks for nothing the lifted fill.
+Color moodSoft(Tokens t, Mood m) => switch (m) {
+  Mood.bad => t.crashedSoft,
+  Mood.warn => t.needsSoft,
+  Mood.ok => t.doneSoft,
+  Mood.quiet => t.lifted,
+};
+
 /// A pull request's checks, each in one group: failed (the required
 /// first), running, passed, and the rest (skipped, neutral, cancelled).
 ({

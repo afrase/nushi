@@ -15,17 +15,12 @@ class PullSkeleton extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: t.borderSubtle,
+        color: t.lifted,
         borderRadius: BorderRadius.circular(NushiTheme.tag),
       ),
     );
-    Widget box(Widget child) => DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: t.borderSubtle),
-        borderRadius: BorderRadius.circular(NushiTheme.card),
-      ),
-      child: child,
-    );
+    Widget box(Widget child) =>
+        DecoratedBox(decoration: cardBox(t), child: child);
     return Semantics(
       label: 'Loading the pull request',
       child: LayoutBuilder(
@@ -78,9 +73,7 @@ class PullSkeleton extends StatelessWidget {
                       decoration: i == 0
                           ? null
                           : BoxDecoration(
-                              border: Border(
-                                top: BorderSide(color: t.borderSubtle),
-                              ),
+                              border: Border(top: BorderSide(color: t.line)),
                             ),
                       padding: const EdgeInsets.all(12),
                       child: Row(

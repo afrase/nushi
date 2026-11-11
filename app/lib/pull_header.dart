@@ -75,7 +75,10 @@ class PullHeader extends StatelessWidget {
     final t = theme.t;
     Widget branch(String name) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: box(t.borderSubtle, fill: t.raised, radius: NushiTheme.tag),
+      decoration: BoxDecoration(
+        color: t.raised,
+        borderRadius: BorderRadius.circular(NushiTheme.tag),
+      ),
       child: SelectableText(name, style: theme.code(t.text, size: 11.5)),
     );
     // The buttons beside the first line; under the branches when narrow
@@ -291,41 +294,50 @@ class _LightBox extends StatelessWidget {
         PullSection.todo => 'Show the To do list',
         PullSection.activity => 'Show the activity',
       },
-      child: framed(
-        border: t.borderSubtle,
-        fill: t.raised,
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: color, width: 2)),
-          ),
-          padding: const EdgeInsets.fromLTRB(11, 7, 11, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 1,
-            children: [
-              Text(l.name, style: theme.ui(t.textMuted, size: 11.5)),
-              Row(
-                spacing: 5,
+      radius: NushiTheme.card,
+      // A card (ADR 0111): what it says is its mark, in a round chip of
+      // the state's soft fill, and its value in the state's ink. No line
+      // along its top, which tapered in the card's round corners.
+      child: Container(
+        decoration: cardBox(t),
+        padding: const EdgeInsets.fromLTRB(11, 8, 11, 9),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 9,
+          children: [
+            Container(
+              width: 26,
+              height: 26,
+              margin: const EdgeInsets.only(top: 3),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: moodSoft(t, l.mood),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(l.icon, size: 15, color: color),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 1,
                 children: [
-                  Icon(l.icon, size: 14, color: color),
-                  Flexible(
-                    child: Text(
-                      l.value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.ui(color, weight: FontWeight.w600),
-                    ),
+                  Text(l.name, style: theme.ui(t.textMuted, size: 11.5)),
+                  Text(
+                    l.value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.ui(color, weight: FontWeight.w600),
+                  ),
+                  Text(
+                    l.sub.isEmpty ? ' ' : l.sub,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.ui(t.textMuted, size: 11.5),
                   ),
                 ],
               ),
-              Text(
-                l.sub.isEmpty ? ' ' : l.sub,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.ui(t.textMuted, size: 11.5),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
