@@ -36,6 +36,21 @@ const List<String> avatarNames = [
   'green',
 ];
 
+/// Names a theme file may still hold from before the surfaces told things
+/// apart (ADR 0111): the old outlines and the tints the transcript drew.
+/// Nothing draws them, so they're passed over without a note: a file
+/// written from an older Nushi's theme reads as it did.
+const Set<String> retiredTokens = {
+  'borderSubtle',
+  'borderStrong',
+  'toolTint',
+  'toolBorder',
+  'subagentBorder',
+  'findingsTint',
+  'findingsBorder',
+  'userBandBorder',
+};
+
 /// Every color of [t] by its name in a theme file: the tokens by their
 /// own names, then `avatars.<name>`, `syntax.<capture>`, `terminal.<ansi>`
 /// and `diff.<part>`.
@@ -128,7 +143,9 @@ ThemeFile readThemeFile(String file, String text) {
     final colors = <String, Color>{};
     for (final MapEntry(:key, :value) in given.entries) {
       final where = '$which.${_clip(key, 40)}';
-      if (!known.containsKey(key)) {
+      if (retiredTokens.contains(key)) {
+        continue;
+      } else if (!known.containsKey(key)) {
         notes.add('"$where" is no token: ignored.');
       } else if (_color(value) case final c?) {
         colors[key] = c;
@@ -217,8 +234,6 @@ Tokens _rebuild(
     segment: surface('segment', t.segment),
     line: surface('line', t.line),
     selected: pick('selected', t.selected),
-    borderSubtle: pick('borderSubtle', t.borderSubtle),
-    borderStrong: pick('borderStrong', t.borderStrong),
     text: pick('text', t.text),
     textSecondary: pick('textSecondary', t.textSecondary),
     textMuted: pick('textMuted', t.textMuted),
@@ -242,7 +257,6 @@ Tokens _rebuild(
     shine: pick('shine', t.shine),
     shineBand: pick('shineBand', t.shineBand),
     userBand: pick('userBand', t.userBand),
-    userBandBorder: pick('userBandBorder', t.userBandBorder),
     userBandText: pick('userBandText', t.userBandText),
     userBandMuted: pick('userBandMuted', t.userBandMuted),
     userBandCode: pick('userBandCode', t.userBandCode),
@@ -251,14 +265,9 @@ Tokens _rebuild(
     inlineCode: pick('inlineCode', t.inlineCode),
     inlineCodeText: pick('inlineCodeText', t.inlineCodeText),
     codeBlock: pick('codeBlock', t.codeBlock),
-    toolTint: pick('toolTint', t.toolTint),
-    toolBorder: pick('toolBorder', t.toolBorder),
     toolAccent: pick('toolAccent', t.toolAccent),
     subagentTint: pick('subagentTint', t.subagentTint),
-    subagentBorder: pick('subagentBorder', t.subagentBorder),
     subagentAccent: pick('subagentAccent', t.subagentAccent),
-    findingsTint: pick('findingsTint', t.findingsTint),
-    findingsBorder: pick('findingsBorder', t.findingsBorder),
     findingsAccent: pick('findingsAccent', t.findingsAccent),
     selectionBar: pick('selectionBar', t.selectionBar),
     selectionBarText: pick('selectionBarText', t.selectionBarText),

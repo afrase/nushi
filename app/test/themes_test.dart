@@ -44,7 +44,7 @@ void main() {
   test('every token has a name, and a set rebuilt from its names is the '
       'same', () {
     final names = tokenColors(Tokens.dark);
-    expect(names.length, 124);
+    expect(names.length, 116);
     expect(names['base'], Tokens.dark.base);
     expect(names['avatars.teal'], Tokens.dark.avatars[1]);
     expect(names['syntax.keyword'], Tokens.dark.ink(Capture.keyword).color);
@@ -61,6 +61,27 @@ void main() {
     // Nushi's diff is diff_view's own: what it drew before themes.
     expect(Tokens.light.diff, same(DiffColors.intelliJLight));
     expect(Tokens.dark.terminal, same(TerminalColors.vsCodeDark));
+  });
+
+  test('a file from before the surfaces told things apart: the names it '
+      'still holds are passed over, with no note', () {
+    final f = readThemeFile(
+      'Old.json',
+      jsonEncode({
+        'name': 'Old',
+        'dark': {
+          for (final n in retiredTokens) n: '#112233',
+          'base': '#101010',
+          'nonsense': '#101010',
+        },
+      }),
+    );
+    expect(f.notes, ['"dark.nonsense" is no token: ignored.']);
+    expect(f.theme!.dark.base, const Color(0xFF101010));
+    expect(
+      tokenColors(f.theme!.dark).keys.toSet().intersection(retiredTokens),
+      isEmpty,
+    );
   });
 
   test('a file written from a theme reads back as it, no notes', () {

@@ -44,8 +44,6 @@ class Tokens {
     required this.base,
     required this.raised,
     required this.selected,
-    required this.borderSubtle,
-    required this.borderStrong,
     required this.text,
     required this.textSecondary,
     required this.textMuted,
@@ -69,7 +67,6 @@ class Tokens {
     required this.shine,
     required this.shineBand,
     required this.userBand,
-    required this.userBandBorder,
     required this.userBandText,
     required this.userBandMuted,
     required this.userBandCode,
@@ -78,14 +75,9 @@ class Tokens {
     required this.inlineCode,
     required this.inlineCodeText,
     required this.codeBlock,
-    required this.toolTint,
-    required this.toolBorder,
     required this.toolAccent,
     required this.subagentTint,
-    required this.subagentBorder,
     required this.subagentAccent,
-    required this.findingsTint,
-    required this.findingsBorder,
     required this.findingsAccent,
     required this.selectionBar,
     required this.selectionBarText,
@@ -164,12 +156,6 @@ class Tokens {
   /// nothing. A pane's fill, a third of the way to the text's color.
   Color get faint => Color.lerp(base, text.withValues(alpha: 1), 0.3)!;
 
-  // The outlines from before the surfaces told things apart (ADR 0111):
-  // still around what later passes haven't reached, and right for a menu's
-  // and a dialog's edge. New dividers are [line].
-  final Color borderSubtle;
-  final Color borderStrong;
-
   final Color text;
   final Color textSecondary;
   final Color textMuted;
@@ -221,12 +207,7 @@ class Tokens {
   // subagent's row, a tint with an accent for its name; a review's
   // findings, their accent (the card's icon, a row's file and line); the
   // bar over a selection; and the scrim behind an image opened whole.
-  // [toolTint], the three borders and [findingsTint] are from before the
-  // surfaces told things apart (ADR 0111): the transcript no longer draws
-  // them, and what still does (the pull request's rows, the cleanup
-  // dialog, Settings' theme preview) loses them in its own pass.
   final Color userBand;
-  final Color userBandBorder;
   final Color userBandText;
   final Color userBandMuted;
   final Color userBandCode;
@@ -248,14 +229,9 @@ class Tokens {
   /// transcript. Sunk, about the window's tone: a step off the pane and off
   /// a card, since it sits on both (`tokens_test`).
   final Color codeBlock;
-  final Color toolTint;
-  final Color toolBorder;
   final Color toolAccent;
   final Color subagentTint;
-  final Color subagentBorder;
   final Color subagentAccent;
-  final Color findingsTint;
-  final Color findingsBorder;
   final Color findingsAccent;
   final Color selectionBar;
   final Color selectionBarText;
@@ -374,8 +350,6 @@ class Tokens {
     segment: Color(0xFFFFFFFF),
     line: Color(0x17141824),
     selected: Color(0xFFE1E4EB),
-    borderSubtle: Color(0xFFE2E4E9),
-    borderStrong: Color(0xFFBBBFCB),
     text: Color(0xFF1E1F22),
     textSecondary: Color(0xFF494B57),
     textMuted: Color(0xFF5A5E6B),
@@ -399,7 +373,6 @@ class Tokens {
     shine: Color(0xFF6E727E),
     shineBand: Color(0xFF1E1F22),
     userBand: Color(0xFFDAE8FF),
-    userBandBorder: Color(0xFFA5BEF1),
     userBandText: Color(0xFF142A5C),
     userBandMuted: Color(0xFF3A5594),
     userBandCode: Color(0x1A8D4100),
@@ -408,14 +381,9 @@ class Tokens {
     inlineCode: Color(0x1A8D4100),
     inlineCodeText: Color(0xFF8D4100),
     codeBlock: Color(0xFFECEEF2),
-    toolTint: Color(0xFFDAF2EE),
-    toolBorder: Color(0xFFA5D6CE),
     toolAccent: Color(0xFF0E8577),
     subagentTint: Color(0xFFEDE4FE),
-    subagentBorder: Color(0xFFC9B7F1),
     subagentAccent: Color(0xFF4E1FA8),
-    findingsTint: Color(0xFFFAEDD7),
-    findingsBorder: Color(0xFFE5CA98),
     findingsAccent: Color(0xFF8A5300),
     selectionBar: Color(0xFF26272B),
     selectionBarText: Color(0xFFE8E9EC),
@@ -468,8 +436,6 @@ class Tokens {
     segment: Color(0xFF383B43),
     line: Color(0x12FFFFFF),
     selected: Color(0xFF36383E),
-    borderSubtle: Color(0xFF41444A),
-    borderStrong: Color(0xFF585C64),
     text: Color(0xFFDFE1E5),
     textSecondary: Color(0xFFB4B8BF),
     textMuted: Color(0xFFA5A9B1),
@@ -493,7 +459,6 @@ class Tokens {
     shine: Color(0xFF9DA1AA),
     shineBand: Color(0xFFF4F6FA),
     userBand: Color(0xFF233457),
-    userBandBorder: Color(0xFF3A5491),
     userBandText: Color(0xFFE8EEFB),
     userBandMuted: Color(0xFF9DB8F5),
     userBandCode: Color(0x1FF5AD66),
@@ -502,14 +467,9 @@ class Tokens {
     inlineCode: Color(0x1FF5AD66),
     inlineCodeText: Color(0xFFF5AD66),
     codeBlock: Color(0xFF151619),
-    toolTint: Color(0xFF193431),
-    toolBorder: Color(0xFF2B5753),
     toolAccent: Color(0xFF3AA597),
     subagentTint: Color(0xFF2E2749),
-    subagentBorder: Color(0xFF564684),
     subagentAccent: Color(0xFFD2BEFF),
-    findingsTint: Color(0xFF342C1D),
-    findingsBorder: Color(0xFF5C4C2F),
     findingsAccent: Color(0xFFE6B062),
     selectionBar: Color(0xFF26272B),
     selectionBarText: Color(0xFFE8E9EC),

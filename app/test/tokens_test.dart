@@ -86,9 +86,7 @@ void main() {
       'hovered on window': on(t.hover, t.window),
     };
     final tints = {
-      'toolTint': t.toolTint,
       'subagentTint': t.subagentTint,
-      'findingsTint': t.findingsTint,
       'needsSoft': t.needsSoft,
       'doneSoft': t.doneSoft,
       'crashedSoft': t.crashedSoft,
@@ -127,7 +125,8 @@ void main() {
           'userBandText on userBand': (t.userBandText, t.userBand),
           'userBandMuted on userBand': (t.userBandMuted, t.userBand),
           'subagentAccent on subagentTint': (t.subagentAccent, t.subagentTint),
-          'findingsAccent on findingsTint': (t.findingsAccent, t.findingsTint),
+          // A finding's file and line, and the card's mark, on its card.
+          'findingsAccent on raised': (t.findingsAccent, t.raised),
           'onAccent on accent': (t.onAccent, t.accent),
           'onAccent on accentPressed': (t.onAccent, t.accentPressed),
           // The transcript's fills (ADR 0111): code's surface under a tool
@@ -185,7 +184,6 @@ void main() {
             }.entries)
               '$ink on $row': (c, f),
           'needs on its halo': (t.needs, t.needsSoft),
-          'toolAccent on toolTint': (t.toolAccent, t.toolTint),
           // A tool call's icon on its row, a card, hovered too, and on an
           // open file's row in a run.
           'toolAccent on raised': (t.toolAccent, t.raised),
@@ -226,8 +224,8 @@ void main() {
       expect(line, greaterThanOrEqualTo(_surfaceFloor), reason: 'line on base');
       expect(
         line,
-        lessThan(_apart(t.borderStrong, t.base)),
-        reason: 'line under borderStrong',
+        lessThan(_apart(t.fieldBorder, t.base)),
+        reason: 'line under a field’s edge',
       );
     });
 
@@ -251,13 +249,12 @@ void main() {
       );
       _atLeast(
         {
-          'borderSubtle on base': (t.borderSubtle, t.base),
-          'borderStrong on raised': (t.borderStrong, t.raised),
           'fieldBorder on fieldFill': (t.fieldBorder, t.fieldFill),
-          'userBandBorder on base': (t.userBandBorder, t.base),
-          'toolBorder on base': (t.toolBorder, t.base),
-          'subagentBorder on base': (t.subagentBorder, t.base),
-          'findingsBorder on base': (t.findingsBorder, t.base),
+          // A grey mark (a rail's dash, the empty window's logo) on a pane
+          // and on the window, and an empty checkbox's edge on a card.
+          'faint on base': (t.faint, t.base),
+          'faint on window': (t.faint, t.window),
+          'fieldBorderHover on raised': (t.fieldBorderHover, t.raised),
         },
         _borderFloor,
         _apart,

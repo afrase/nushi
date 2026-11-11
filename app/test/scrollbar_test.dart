@@ -201,7 +201,7 @@ Future<void> _looks(WidgetTester tester, Tokens tokens, String name) async {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             rows(left),
-            VerticalDivider(width: 1, color: tokens.borderSubtle),
+            VerticalDivider(width: 1, color: tokens.line),
             rows(null),
           ],
         ),

@@ -13,17 +13,6 @@ export 'terminal_colors.dart';
 export 'themes.dart';
 export 'tokens.dart';
 
-/// A box outlined in [border], filled with [fill], its corners rounded.
-BoxDecoration box(
-  Color border, {
-  Color? fill,
-  double radius = NushiTheme.card,
-}) => BoxDecoration(
-  color: fill,
-  border: Border.all(color: border),
-  borderRadius: BorderRadius.circular(radius),
-);
-
 /// A card on a pane (ADR 0111): a card's fill and corners, no outline.
 BoxDecoration cardBox(Tokens t, {double radius = NushiTheme.card}) =>
     BoxDecoration(color: t.raised, borderRadius: BorderRadius.circular(radius));
@@ -47,9 +36,11 @@ List<BoxShadow> floatShadows(Tokens t) => [
   BoxShadow(color: t.floatShadow, blurRadius: 2, offset: const Offset(0, 1)),
 ];
 
-/// A rounded box whose [child] is clipped to its corners, its border drawn
-/// over the child: a fill, a bar or a hover inside never covers the
-/// border's curve, as it does under a [box] border.
+/// A rounded box whose [child] is clipped to its corners, its edge drawn
+/// over the child in [border]: for a picture that needs one (a theme's
+/// preview, whose own colors may be those of what it lies on). Nothing
+/// else is outlined (ADR 0111): a card is [cardBox], told apart by its
+/// fill.
 Widget framed({
   required Color border,
   required Widget child,
@@ -65,7 +56,10 @@ Widget framed({
     color: fill,
     borderRadius: BorderRadius.circular(radius),
   ),
-  foregroundDecoration: box(border, radius: radius),
+  foregroundDecoration: BoxDecoration(
+    border: Border.all(color: border),
+    borderRadius: BorderRadius.circular(radius),
+  ),
   child: child,
 );
 
@@ -101,7 +95,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   /// line make a lozenge), a code block, a diff, an image.
   static const control = 8.0;
 
-  /// Cards and boxes ([box] and [framed] unless told otherwise).
+  /// Cards and boxes ([cardBox] and [framed] unless told otherwise).
   static const card = 12.0;
 
   /// A pane's corners (the main area, a details card), a menu's, a

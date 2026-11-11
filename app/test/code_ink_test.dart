@@ -80,10 +80,8 @@ void main() {
         'base': t.base,
         'raised': t.raised,
         'code block': t.codeBlock,
-        'findings': _on(t.findingsTint, t.base),
         'hovered': _on(t.hover, t.raised),
         'hovered on base': _on(t.hover, t.base),
-        'findings, hovered': _on(t.hover, _on(t.findingsTint, t.base)),
         'selected': t.selected,
       };
       final fills = {

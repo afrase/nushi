@@ -32,14 +32,11 @@ List<String> contrastWarnings(Tokens t) {
     'a hovered row on window': on(t.hover, t.window),
   };
   final tints = {
-    'toolTint': t.toolTint,
     'subagentTint': t.subagentTint,
-    'findingsTint': t.findingsTint,
     'needsSoft': t.needsSoft,
     'doneSoft': t.doneSoft,
     'crashedSoft': t.crashedSoft,
   };
-  final findings = on(t.findingsTint, t.base);
   final pairs = <(String, Color, String, Color, double)>[
     for (final (ink, c) in [
       ('text', t.text),
@@ -77,8 +74,7 @@ List<String> contrastWarnings(Tokens t) {
     ('userBandText', t.userBandText, 'userBand', t.userBand, 4.5),
     ('userBandMuted', t.userBandMuted, 'userBand', t.userBand, 4.5),
     ('subagentAccent', t.subagentAccent, 'subagentTint', t.subagentTint, 4.5),
-    ('findingsAccent', t.findingsAccent, 'findingsTint', t.findingsTint, 4.5),
-    ('toolAccent', t.toolAccent, 'toolTint', t.toolTint, 3),
+    ('findingsAccent', t.findingsAccent, 'raised', t.raised, 4.5),
     ('toolAccent', t.toolAccent, 'raised', t.raised, 3),
     ('toolAccent', t.toolAccent, 'codeBlock', t.codeBlock, 3),
     for (final (ink, c) in [
@@ -110,7 +106,6 @@ List<String> contrastWarnings(Tokens t) {
       ('base', t.base),
       ('raised', t.raised),
       ('codeBlock', t.codeBlock),
-      ('findingsTint', findings),
       ('a hovered row', on(t.hover, t.raised)),
       ('selected', t.selected),
     ])
