@@ -287,7 +287,7 @@ class _SectionHeaderState extends State<_SectionHeader> {
                   width: 180,
                   child: InlineEdit(
                     text: section.name,
-                    style: theme.ui(t.text, weight: FontWeight.w600),
+                    style: GroupHeader.style(theme).copyWith(color: t.text),
                     onDone: (name) {
                       if (name != null && name.isNotEmpty) {
                         _change(section.id, (s) => s.copyWith(name: name));

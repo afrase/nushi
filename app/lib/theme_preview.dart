@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// A small picture of Nushi in one set of a theme (ADR 0086), for its
-/// picker (Settings › Appearance, the phone's Settings): the sidebar with
-/// a few chats (the open one, status dots, a chat's color bar), a user
+/// picker (Settings › Appearance, the phone's Settings): the window's
+/// background with the sidebar on it and the main pane beside it (ADR
+/// 0111), a few chats (the open one, status dots, a chat's color), a user
 /// band, the agent's text with inline code, a tool call's row, a
 /// subagent's line, a review's findings, and a code block in the set's
 /// syntax colors. Drawn at [size] under a theme of [tokens], then scaled
@@ -51,19 +52,22 @@ class _Window extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     return ColoredBox(
-      color: t.base,
+      color: t.window,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 88,
-            decoration: BoxDecoration(
-              color: t.raised,
-              border: Border(right: BorderSide(color: t.borderSubtle)),
+          const SizedBox(width: 88, child: _Sidebar()),
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(0, 5, 5, 5),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: t.base,
+                borderRadius: BorderRadius.circular(_small(NushiTheme.panel)),
+              ),
+              child: const _Transcript(),
             ),
-            child: const _Sidebar(),
           ),
-          const Expanded(child: _Transcript()),
         ],
       ),
     );
@@ -87,7 +91,7 @@ class _Sidebar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(5, 0, 0, 3),
             child: Text(
               'lumen',
-              style: theme.ui(t.text, size: 9, weight: FontWeight.w600),
+              style: theme.ui(t.textMuted, size: 8, weight: FontWeight.w600),
             ),
           ),
           _ChatRow('Paginate the feed', dot: t.running, open: true),
@@ -102,7 +106,7 @@ class _Sidebar extends StatelessWidget {
 }
 
 /// A chat's row: its status [dot], its title, [open]'s fill, and a
-/// chat's color as the [bar] at its left.
+/// chat's color as the chip at its end ([bar]).
 class _ChatRow extends StatelessWidget {
   const new(this.title, {required this.dot, this.open = false, this.bar});
 
@@ -121,37 +125,35 @@ class _ChatRow extends StatelessWidget {
         color: open ? t.accentSoft : null,
         borderRadius: BorderRadius.circular(_small(NushiTheme.control)),
       ),
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: Row(
-              spacing: 5,
-              children: [
-                Container(
-                  width: 5,
-                  height: 5,
-                  decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
-                ),
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.ui(open ? t.text : t.textSecondary, size: 8.5),
-                  ),
-                ),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5),
+        child: Row(
+          spacing: 5,
+          children: [
+            Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
             ),
-          ),
-          if (bar case final c?)
-            Positioned(
-              left: 0,
-              top: 3,
-              bottom: 3,
-              child: Container(width: 2, color: c),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.ui(open ? t.text : t.textSecondary, size: 8.5),
+              ),
             ),
-        ],
+            if (bar case final c?)
+              Container(
+                width: 7,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c,
+                  borderRadius: BorderRadius.circular(NushiTheme.pill),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

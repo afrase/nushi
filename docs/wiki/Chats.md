@@ -55,7 +55,7 @@ A chat remembers your picks, and a new chat starts with the ones you last picked
 When the agent asks permission to run something, or asks a question, the chat **needs you**:
 
 - A card shows in the chat: a **Permission** card with the agent's choices (such as Allow or Deny), or a question card with **Submit** and **Skip**.
-- The chat's dot in the sidebar turns amber, and Nushi's app icon shows how many chats need you.
+- The chat's dot in the sidebar turns amber and its row says **Needs you**, and Nushi's app icon shows how many chats need you.
 - If you've scrolled up, a **Needs you** chip takes you down to the card.
 
 Nushi never answers for you.

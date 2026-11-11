@@ -7,6 +7,7 @@ import 'package:nushi/chat_pins.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/disclosure.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar.dart';
 import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/slide_list.dart';
 import 'package:nushi/status.dart';
@@ -124,18 +125,30 @@ class ArchivedSection extends StatelessWidget {
         Disclosure(
           open: archived.isNotEmpty,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(6, 12, 6, 2),
+            padding: const EdgeInsets.fromLTRB(
+              Sidebar.start,
+              12,
+              Sidebar.end,
+              2,
+            ),
             child: Tap(
               onTap: onToggle,
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Sidebar.rowPad,
+                vertical: 5,
+              ),
               child: Row(
                 children: [
-                  TurnChevron(open: open, size: 16),
-                  const SizedBox(width: 4),
                   Text(
                     'Archived  ${archived.length}',
-                    style: theme.ui(t.textSecondary, size: 12),
+                    style: theme.ui(
+                      t.textMuted,
+                      size: 11.5,
+                      weight: FontWeight.w600,
+                    ),
                   ),
+                  const SizedBox(width: 4),
+                  TurnChevron(open: open, size: 12, color: t.textMuted),
                 ],
               ),
             ),
@@ -169,7 +182,12 @@ class GroupHint extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 2, 8, 6),
+      padding: const EdgeInsets.fromLTRB(
+        Sidebar.start + Sidebar.rowPad,
+        2,
+        Sidebar.end,
+        6,
+      ),
       child: Text(text, style: theme.ui(theme.t.textMuted, size: 12)),
     );
   }
@@ -205,11 +223,11 @@ class Lifted extends StatelessWidget {
           child: Container(
             constraints: BoxConstraints(maxWidth: width * 0.75),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: box(
-              t.borderSubtle,
-              fill: t.raised,
-              radius: NushiTheme.control,
-            ).copyWith(boxShadow: [BoxShadow(color: t.shadow, blurRadius: 12)]),
+            decoration: BoxDecoration(
+              color: t.raised,
+              borderRadius: BorderRadius.circular(NushiTheme.control),
+              boxShadow: [BoxShadow(color: t.shadow, blurRadius: 12)],
+            ),
             child: Text(
               name,
               maxLines: 1,
@@ -282,12 +300,15 @@ class PinnedHeader extends StatelessWidget {
   );
 }
 
-/// A group's header as a project's looks (Pinned's, a section's, a Date or
-/// Status group's): a chevron that collapses it ([onToggle]), [lead] (an
-/// agent's mark) and [title] in its weight, the most urgent of its
-/// chats' states as one dot while it's [collapsed], and [trailing] at its
-/// end. As tall as a project's header with its + button, so all match.
-class GroupHeader extends StatelessWidget {
+/// A group's header (a project's, Pinned's, a section's, a Date or Status
+/// group's): a small muted label over its rows (ADR 0111), [lead] (an
+/// agent's mark) before [title]; after it the chevron that collapses the
+/// group ([onToggle]), quiet: it shows under the pointer, with the
+/// keyboard's focus, and always while the group is [collapsed], when the
+/// most urgent of its chats' states is one dot beside it; and [trailing]
+/// at its end. As tall as a project's header with its + button, so all
+/// match.
+class GroupHeader extends StatefulWidget {
   const new({
     required this.title,
     required this.chats,
@@ -309,64 +330,100 @@ class GroupHeader extends StatelessWidget {
   /// In [title]'s place (a field to rename a section).
   final Widget? titleWidget;
 
+  /// A group's name, as its header writes it.
+  static TextStyle style(NushiTheme theme) =>
+      theme.ui(theme.t.textMuted, size: 11.5, weight: FontWeight.w600);
+
+  @override
+  State<GroupHeader> createState() => _GroupHeaderState();
+}
+
+class _GroupHeaderState extends State<GroupHeader> {
+  bool _hover = false;
+  bool _focus = false; // the chevron has the keyboard's focus
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 10, 6, 2),
-      child: Row(
-        children: [
-          IconTap.drawn(
-            (size, color) =>
-                TurnChevron(open: !collapsed, size: size, color: color),
-            tooltip: collapsed ? 'Expand' : 'Collapse',
-            size: 12,
-            padding: 6,
-            color: t.textMuted,
-            onTap: onToggle,
-          ),
-          const SizedBox(width: 2),
-          if (lead case final lead?) ...[lead, const SizedBox(width: 6)],
-          Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  child: SizedBox(
-                    height: 26,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: 1,
+    final collapsed = widget.collapsed;
+    return MouseRegion(
+      opaque: false,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: Padding(
+        // Its name starts where its rows' marks do.
+        padding: const EdgeInsets.fromLTRB(
+          Sidebar.start + Sidebar.rowPad,
+          10,
+          Sidebar.end + 2,
+          0,
+        ),
+        child: SizedBox(
+          height: 26,
+          child: Row(
+            children: [
+              if (widget.lead case final lead?) ...[
+                lead,
+                const SizedBox(width: 6),
+              ],
+              // The name takes what the row leaves; the chevron follows it.
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
                       child:
-                          titleWidget ??
+                          widget.titleWidget ??
                           Text(
-                            title,
+                            widget.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.ui(t.text, weight: FontWeight.w600),
+                            style: GroupHeader.style(theme),
                           ),
                     ),
-                  ),
+                    _chevron(t),
+                    if (collapsed) _summary(),
+                  ],
                 ),
-                if (collapsed)
-                  ListenableBuilder(
-                    listenable: Listenable.merge([
-                      for (final c in chats) c.look,
-                    ]),
-                    builder: (context, _) => switch (groupPhase(chats)) {
-                      final phase? => Padding(
-                        padding: const EdgeInsets.only(left: 5),
-                        child: PhaseDot(phase),
-                      ),
-                      null => const SizedBox.shrink(),
-                    },
-                  ),
-              ],
-            ),
+              ),
+              ?widget.trailing,
+            ],
           ),
-          ?trailing,
-        ],
+        ),
       ),
     );
   }
+
+  Widget _chevron(Tokens t) {
+    final collapsed = widget.collapsed;
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (f) => setState(() => _focus = f),
+      child: Opacity(
+        opacity: collapsed || _hover || _focus ? 1 : 0,
+        child: IconTap.drawn(
+          (size, color) =>
+              TurnChevron(open: !collapsed, size: size, color: color),
+          tooltip: collapsed ? 'Expand' : 'Collapse',
+          size: 12,
+          padding: 4,
+          color: t.textMuted,
+          onTap: widget.onToggle,
+        ),
+      ),
+    );
+  }
+
+  /// The most urgent of its chats' states, while it's collapsed.
+  Widget _summary() => ListenableBuilder(
+    listenable: Listenable.merge([for (final c in widget.chats) c.look]),
+    builder: (context, _) => switch (groupPhase(widget.chats)) {
+      final phase? => Padding(
+        padding: const EdgeInsets.only(left: 3),
+        child: PhaseDot(phase),
+      ),
+      null => const SizedBox.shrink(),
+    },
+  );
 }

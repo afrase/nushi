@@ -30,58 +30,41 @@ enum ChatColor {
   /// null, which shows as no color.
   static ChatColor? named(String name) => values.asNameMap()[name];
 
-  /// Its mark: a swatch, a dot, a row's bar ([ColorBar]).
+  /// Its mark: a swatch, a row's or a header's chip ([ColorChip]).
   Color ink(Tokens t) => t.avatars[index];
 }
 
-/// A chat's color on its row: a bar at the row's left edge, over [child]
-/// and taking none of its width, so nothing moves when a color is set. A
-/// mark, never a fill: a wash was too faint to see on the dark theme, and a
-/// blue one read as the open chat's, which is the only row with a fill.
-/// [width] is 3 on the Mac's sidebar, 4 on the phone's list; [inset] keeps
-/// it off the row's top and bottom, far enough in that its square left
-/// edge is inside the row's rounded corners ([NushiTheme.control]).
-class ColorBar extends StatelessWidget {
-  const new({
-    required this.color,
-    required this.child,
-    super.key,
-    this.width = 3,
-    this.inset = 6,
-  });
+/// A chat's color as a mark: a small filled lozenge in it, at the end of
+/// the chat's row in the sidebar and on the phone's list, and before its
+/// title in the header while the sidebar is hidden. A mark, never a fill:
+/// a wash was too faint to see on the dark theme, and a blue one read as
+/// the open chat's. And never a stripe down the row's side (ADR 0111),
+/// which it was until then. Round ends, wider than high, so it reads apart
+/// from the round state dots beside it.
+class ColorChip extends StatelessWidget {
+  const new(this.color, {super.key, this.named = false});
 
-  /// The chat's color, or none, which shows [child] alone.
-  final ChatColor? color;
-  final Widget child;
-  final double width;
-  final double inset;
+  final ChatColor color;
+
+  /// Whether its tooltip names the color (the header's; a row has its
+  /// chat's menu for that).
+  final bool named;
+
+  static const width = 12.0;
+  static const height = 6.0;
 
   @override
   Widget build(BuildContext context) {
-    final c = color;
-    if (c == null) return child;
-    return Stack(
-      children: [
-        child,
-        Positioned(
-          left: 0,
-          top: inset,
-          bottom: inset,
-          width: width,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              key: const Key('color bar'),
-              decoration: BoxDecoration(
-                color: c.ink(NushiTheme.of(context).t),
-                borderRadius: const BorderRadius.horizontal(
-                  right: Radius.circular(NushiTheme.tag),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+    final chip = Container(
+      key: const Key('chat color'),
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: color.ink(NushiTheme.of(context).t),
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
+      ),
     );
+    return named ? Tooltip(message: color.label, child: chip) : chip;
   }
 }
 

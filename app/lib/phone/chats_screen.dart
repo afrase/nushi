@@ -244,8 +244,8 @@ class _Folder extends StatelessWidget {
 }
 
 /// A chat in the list: its state, its agent, its title, and its state in
-/// a word, as the Mac says it ([phaseWord]); its color a bar at its left
-/// ([ColorBar]), as on the Mac, which is where one is set.
+/// a word, as the Mac says it ([phaseWord]); its color a chip before that
+/// word ([ColorChip]), as on the Mac, which is where one is set.
 class ChatRow extends StatelessWidget {
   const new(this.chat, {required this.onTap, super.key});
 
@@ -259,7 +259,7 @@ class ChatRow extends StatelessWidget {
       listenable: chat.look, // not at each streamed chunk
       builder: (context, _) {
         final (word, color) = phaseWord(chat.phase, t);
-        final row = InkWell(
+        return InkWell(
           onTap: onTap,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: touch + 8),
@@ -280,13 +280,16 @@ class ChatRow extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  if (chat.color case final c?) ...[
+                    ColorChip(c),
+                    const SizedBox(width: 8),
+                  ],
                   Text(word, style: phoneText(context, color: color, size: 13)),
                 ],
               ),
             ),
           ),
         );
-        return ColorBar(color: chat.color, width: 4, child: row);
       },
     );
   }

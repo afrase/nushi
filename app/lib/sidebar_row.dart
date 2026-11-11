@@ -14,6 +14,7 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/sidebar_sections.dart';
 import 'package:nushi/status.dart';
@@ -27,9 +28,11 @@ import 'package:nushi/widgets.dart';
 /// ([project]: pinned, in a section, grouped otherwise) says its project
 /// after its title, muted, in the place of its branch or Jira key. What
 /// else it shows is the Arrange menu's Show ([sidebarShows]): its state's
-/// dot, its agent's mark, its branch, and [time] as an age. A chat with a
-/// color has a bar of it at the row's left ([ColorBar]); only the open
-/// chat's row is filled, so a blue chat never reads as the open one.
+/// dot, its agent's mark, its branch, and [time] as an age. One that needs
+/// you says so in a pill at its end, in the place of its branch or
+/// project, where the row has the room (ADR 0111). A chat with a color has
+/// a chip of it at the row's end ([ColorChip]); only the open chat's row
+/// is filled in the accent, so a blue chat never reads as the open one.
 class SidebarRow extends StatefulWidget {
   const new(
     this.chat, {
@@ -57,6 +60,12 @@ class SidebarRow extends StatefulWidget {
 class _SidebarRowState extends State<SidebarRow> {
   bool _renaming = false;
 
+  /// The narrowest row's inside that says "Needs you" in words: under it
+  /// the dot alone says it, and the title keeps the room. Wider where the
+  /// row says its project too.
+  static const _pillFrom = 190.0;
+  static const _pillAndProjectFrom = 280.0;
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -76,7 +85,12 @@ class _SidebarRowState extends State<SidebarRow> {
       builder: (context, _) => movable(
         enabled: !_renaming,
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+          padding: const EdgeInsets.fromLTRB(
+            Sidebar.start,
+            Sidebar.rowGap / 2,
+            Sidebar.end,
+            Sidebar.rowGap / 2,
+          ),
           child: Menu(
             filter: false,
             entries: chatMenu(
@@ -88,29 +102,40 @@ class _SidebarRowState extends State<SidebarRow> {
                 if (!chat.archived) moveToSectionEntry(context, daemon, chat),
               ],
             ),
-            builder: (context, open) => ColorBar(
-              color: chat.color,
-              child: Tap(
-                onTap: () => daemon.select(chat.id),
-                // Built again as it opens: what its entries read (the
-                // review comments, the side chat, a clean-up running) can
-                // change without the row building again.
-                onSecondaryTapUp: (d) {
-                  setState(() {});
-                  open(d.localPosition);
-                },
-                selected: selected,
-                // The open chat in the accent's soft fill: the plain selected
-                // gray is hardly apart from the sidebar's own.
-                fill: shown ? t.accentSoft : null,
-                padding: EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: _renaming ? 1 : 5,
-                ),
-                child: LayoutBuilder(
-                  builder: (context, space) {
-                    final room = space.maxWidth;
-                    return Row(
+            builder: (context, open) => Tap(
+              onTap: () => daemon.select(chat.id),
+              // Built again as it opens: what its entries read (the
+              // review comments, the side chat, a clean-up running) can
+              // change without the row building again.
+              onSecondaryTapUp: (d) {
+                setState(() {});
+                open(d.localPosition);
+              },
+              selected: selected,
+              // The open chat in the accent's soft fill; behind another
+              // view, the tint a row has under the pointer.
+              fill: shown
+                  ? t.accentSoft
+                  : selected
+                  ? t.hover
+                  : null,
+              padding: const EdgeInsets.symmetric(horizontal: Sidebar.rowPad),
+              child: LayoutBuilder(
+                builder: (context, space) {
+                  final room = space.maxWidth;
+                  // Its state in words too, while it waits on the user and
+                  // the row has room for the title beside them: in its
+                  // branch's place, or after its project where the row
+                  // says that. Not under a Status group's own name.
+                  final needs =
+                      chat.phase == ChatPhase.waiting &&
+                      !_renaming &&
+                      sidebarGroupBy.value != GroupBy.status &&
+                      room >=
+                          (widget.project ? _pillAndProjectFrom : _pillFrom);
+                  return SizedBox(
+                    height: Sidebar.rowHeight,
+                    child: Row(
                       children: [
                         // Its state in a word on hover ("needs you"), which the
                         // row leaves to the dot so the title keeps its width.
@@ -119,7 +144,7 @@ class _SidebarRowState extends State<SidebarRow> {
                             message: phaseWord(chat.phase, t).$1,
                             child: ChatDot(chat: chat, sparks: true),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                         ],
                         if (shows.contains(RowPart.agent)) ...[
                           Tooltip(
@@ -129,7 +154,7 @@ class _SidebarRowState extends State<SidebarRow> {
                               color: chat.archived ? t.textMuted : null,
                             ),
                           ),
-                          const SizedBox(width: 7),
+                          const SizedBox(width: 8),
                         ],
                         Expanded(
                           child: _renaming
@@ -143,8 +168,14 @@ class _SidebarRowState extends State<SidebarRow> {
                                   chat.shownTitle,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
+                                  // The open chat's stands out from
+                                  // the rest, which are a step quieter.
                                   style: theme.ui(
-                                    chat.archived ? t.textSecondary : t.text,
+                                    chat.archived
+                                        ? t.textMuted
+                                        : shown
+                                        ? t.text
+                                        : t.textSecondary,
                                     weight: shown ? FontWeight.w600 : null,
                                   ),
                                 ),
@@ -164,7 +195,7 @@ class _SidebarRowState extends State<SidebarRow> {
                               ),
                             ),
                           )
-                        else if (!shows.contains(RowPart.branch))
+                        else if (needs || !shows.contains(RowPart.branch))
                           const SizedBox.shrink()
                         else if (chat.jiraKey.isNotEmpty)
                           Padding(
@@ -175,7 +206,10 @@ class _SidebarRowState extends State<SidebarRow> {
                             ),
                           )
                         else if (chat.worktree case final wt?)
-                          Flexible(
+                          // At most two fifths of the row: the title has the
+                          // rest, and what follows stays at the row's end.
+                          ConstrainedBox(
+                            constraints: BoxConstraints(maxWidth: room * 0.4),
                             child: Padding(
                               padding: const EdgeInsets.only(left: 6),
                               child: Text(
@@ -185,6 +219,11 @@ class _SidebarRowState extends State<SidebarRow> {
                                 style: theme.code(t.textMuted, size: 10.5),
                               ),
                             ),
+                          ),
+                        if (needs)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 6),
+                            child: PhasePill(ChatPhase.waiting, small: true),
                           ),
                         if (chat.pull != null)
                           PullDot(chat, PullStates.of(daemon)),
@@ -204,24 +243,20 @@ class _SidebarRowState extends State<SidebarRow> {
                               ),
                             ),
                           ),
+                        if (chat.color case final color?)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: ColorChip(color),
+                          ),
                         if (widget.number case final n?)
-                          Container(
-                            margin: const EdgeInsets.only(left: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: box(
-                              t.fieldBorder,
-                              fill: t.fieldFill,
-                              radius: NushiTheme.tag,
-                            ),
-                            child: keyText(
-                              keyLabel(chatNumberKey(n)),
-                              theme.code(t.textSecondary, size: 11),
-                            ),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: KeyCap(keyLabel(chatNumberKey(n))),
                           ),
                       ],
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
