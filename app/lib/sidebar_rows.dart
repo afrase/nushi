@@ -226,7 +226,7 @@ class Lifted extends StatelessWidget {
             decoration: BoxDecoration(
               color: t.raised,
               borderRadius: BorderRadius.circular(NushiTheme.control),
-              boxShadow: [BoxShadow(color: t.shadow, blurRadius: 12)],
+              boxShadow: floatShadows(t),
             ),
             child: Text(
               name,

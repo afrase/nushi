@@ -99,6 +99,8 @@ List<String> contrastWarnings(Tokens t) {
     ),
     ('text', t.text, 'lifted', t.lifted, 4.5),
     ('textSecondary', t.textSecondary, 'lifted', t.lifted, 4.5),
+    ('textMuted', t.textMuted, 'lifted', t.lifted, 4.5),
+    ('crashed', t.crashed, 'lifted', t.lifted, 4.5),
     ('subagentAccent', t.subagentAccent, 'accentSoft', t.accentSoft, 4.5),
     ('onStop', t.onStop, 'stop', t.stop, 3),
     ('onAccent', t.onAccent, 'accent', t.accent, 4.5),

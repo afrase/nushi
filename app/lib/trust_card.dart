@@ -107,7 +107,6 @@ class TrustCard extends StatelessWidget {
                   children: [
                     Button(
                       label: 'Cancel',
-                      kind: ButtonKind.quiet,
                       onPressed: () => ask.decide(start: false),
                     ),
                     Button(

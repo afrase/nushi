@@ -261,6 +261,13 @@ class Tokens {
   final Color shadow;
   final Color scrim;
 
+  /// The shadow under what floats over the window (a menu, a dialog, a
+  /// popover, a toast; ADR 0111): [shadow] on a light theme, twice as deep
+  /// on a dark one, where a soft shadow is lost on the dark behind it.
+  Color get floatShadow => brightness == Brightness.dark
+      ? shadow.withValues(alpha: (shadow.a * 2).clamp(0, 1))
+      : shadow;
+
   /// The Stop button's fill, solid red in both brightnesses so that it is
   /// never mistaken, and the mark on it ([onStop]). [crashed] is an ink:
   /// on a dark theme too light to fill a button with.

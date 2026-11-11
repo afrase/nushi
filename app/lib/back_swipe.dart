@@ -260,8 +260,8 @@ class BackArrow extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: ready ? t.accent : t.raised,
-            border: Border.all(color: ready ? t.accent : t.borderStrong),
-            boxShadow: [BoxShadow(color: t.shadow, blurRadius: 8)],
+            border: Border.all(color: ready ? t.accent : t.line),
+            boxShadow: floatShadows(t),
           ),
           child: CustomPaint(
             painter: _Ring(ready ? 0 : progress, t.accent),

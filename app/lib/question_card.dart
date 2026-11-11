@@ -247,7 +247,6 @@ class _QuestionCardState extends State<QuestionCard> {
                 const NeedsYou(),
                 RunButton(
                   label: 'Skip',
-                  kind: ButtonKind.quiet,
                   runner: _sending,
                   run: () => widget.onAnswer(null),
                 ),

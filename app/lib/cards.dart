@@ -300,7 +300,7 @@ class _PermissionCardState extends State<PermissionCard> {
               for (final (i, o) in item.options.indexed)
                 RunButton(
                   label: o.name,
-                  kind: i == 0 ? ButtonKind.primary : ButtonKind.quiet,
+                  kind: i == 0 ? ButtonKind.primary : ButtonKind.secondary,
                   runner: _answering,
                   run: () => widget.onAnswer(o.id),
                   wrap: true, // a phone shows what it allows whole

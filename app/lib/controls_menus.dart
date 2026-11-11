@@ -14,10 +14,10 @@ class FlushMenus extends InheritedWidget {
 }
 
 /// A value picked from a list ([entries]) that looks it: [label] and a ▾
-/// in a bordered box, the whole box the target. [compact], for a picker in
-/// a header or a row ("Only me ▾"), drops the box but keeps the ▾ and a
-/// tint under the pointer; [pill], the composer's (ADR 0111), is that as a
-/// pill [PillButton.height] high. With no [entries] it's disabled.
+/// on the lifted fill (ADR 0111), the whole box the target. [compact], for
+/// a picker in a header or a row ("Only me ▾"), drops the fill but keeps
+/// the ▾ and a tint under the pointer; [pill], the composer's, is that as
+/// a pill [PillButton.height] high. With no [entries] it's disabled.
 class MenuField extends StatelessWidget {
   const new({
     required this.label,
@@ -108,13 +108,8 @@ class MenuField extends StatelessWidget {
                 color: compact
                     ? (look.hover ? _tint(t, look) : null)
                     : (look.hover
-                          ? Color.alphaBlend(_tint(t, look), t.fieldFill)
-                          : t.fieldFill),
-                border: compact
-                    ? null
-                    : Border.all(
-                        color: look.hover ? t.fieldBorderHover : t.fieldBorder,
-                      ),
+                          ? Color.alphaBlend(_tint(t, look), t.lifted)
+                          : t.lifted),
                 borderRadius: corners,
               ),
               foregroundDecoration: focusRing(t, look, radius: corners),

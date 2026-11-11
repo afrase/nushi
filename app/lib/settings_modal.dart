@@ -118,10 +118,8 @@ class _SettingsModalState extends State<SettingsModal> {
                         decoration: BoxDecoration(
                           color: t.base,
                           borderRadius: BorderRadius.circular(NushiTheme.panel),
-                          border: Border.all(color: t.borderStrong),
-                          boxShadow: [
-                            BoxShadow(color: t.shadow, blurRadius: 30),
-                          ],
+                          border: Border.all(color: t.line),
+                          boxShadow: floatShadows(t),
                         ),
                         // Its pages scroll down to the rounded corners.
                         child: RoundedScroll(

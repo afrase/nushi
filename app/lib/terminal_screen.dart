@@ -190,11 +190,7 @@ class TerminalScreen extends StatelessWidget {
                                   horizontal: 6,
                                   vertical: 2,
                                 ),
-                                decoration: box(
-                                  t.borderStrong,
-                                  fill: t.raised,
-                                  radius: NushiTheme.tag,
-                                ),
+                                decoration: floatBox(t, radius: NushiTheme.tag),
                                 child: Text(
                                   link,
                                   maxLines: 1,

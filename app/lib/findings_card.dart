@@ -106,7 +106,6 @@ class _FindingsCardState extends State<FindingsCard> {
           if (widget.json != null)
             Button(
               label: _json ? 'Hide JSON' : 'Show JSON',
-              kind: ButtonKind.quiet,
               onPressed: () => setState(() => _json = !_json),
             ),
         ],
@@ -331,7 +330,6 @@ class _FindingsAgainState extends State<FindingsAgain> {
             const SizedBox(width: 6),
             Button(
               label: _open ? 'Hide JSON' : 'Show JSON',
-              kind: ButtonKind.quiet,
               onPressed: () => setState(() => _open = !_open),
             ),
           ],

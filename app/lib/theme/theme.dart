@@ -28,6 +28,25 @@ BoxDecoration box(
 BoxDecoration cardBox(Tokens t, {double radius = NushiTheme.card}) =>
     BoxDecoration(color: t.raised, borderRadius: BorderRadius.circular(radius));
 
+/// What floats over the window (ADR 0111): a menu, a dialog, a popover,
+/// a toast, a find bar. A card's fill, a hairline where its edge meets
+/// what's under it and a soft shadow, never a strong outline; rounded by
+/// [radius], a panel's unless given.
+BoxDecoration floatBox(Tokens t, {double radius = NushiTheme.panel}) =>
+    BoxDecoration(
+      color: t.raised,
+      border: Border.all(color: t.line),
+      borderRadius: BorderRadius.circular(radius),
+      boxShadow: floatShadows(t),
+    );
+
+/// The shadow under what floats ([floatBox]): a wide soft one for its
+/// height and a tight one that draws its edge.
+List<BoxShadow> floatShadows(Tokens t) => [
+  BoxShadow(color: t.floatShadow, blurRadius: 24, offset: const Offset(0, 8)),
+  BoxShadow(color: t.floatShadow, blurRadius: 2, offset: const Offset(0, 1)),
+];
+
 /// A rounded box whose [child] is clipped to its corners, its border drawn
 /// over the child: a fill, a bar or a hover inside never covers the
 /// border's curve, as it does under a [box] border.
@@ -175,6 +194,10 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
 
   static final _made = Expando<Map<(Brightness, TargetPlatform), ThemeData>>();
 
+  /// How high Material draws what floats (a menu, a dialog, a toast), for
+  /// its shadow: [floatShadows]' reach, about.
+  static const floatElevation = 8.0;
+
   ThemeData toThemeData() {
     final scheme = ColorScheme(
       brightness: t.brightness,
@@ -196,8 +219,8 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
       surfaceContainer: t.raised,
       surfaceContainerHigh: t.raised,
       surfaceContainerHighest: t.selected,
-      outline: t.borderStrong,
-      outlineVariant: t.borderSubtle,
+      outline: t.fieldBorder,
+      outlineVariant: t.line,
     );
     final typography = Typography.material2021();
     // Sizes merged with colors, scaled so body text is 13.
@@ -218,14 +241,16 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
       textTheme: text,
       visualDensity: VisualDensity.compact,
       scaffoldBackgroundColor: t.base,
-      dividerColor: t.borderSubtle,
-      dividerTheme: DividerThemeData(color: t.borderSubtle, space: 1),
+      dividerColor: t.line,
+      dividerTheme: DividerThemeData(color: t.line, space: 1),
       focusColor: t.focus.withValues(alpha: 0.24),
       textSelectionTheme: TextSelectionThemeData(
         selectionColor: t.accent.withValues(alpha: 0.3),
         cursorColor: t.text,
       ),
-      // Quiet: no ripples, menus and dialogs with only a faint shadow.
+      // Quiet: no ripples. What floats (a menu, a dialog, a tooltip, a
+      // toast) is a card's fill with a hairline and a soft shadow, no
+      // outline (ADR 0111).
       splashFactory: NoSplash.splashFactory,
       highlightColor: Colors.transparent,
       hoverColor: t.hover,
@@ -233,11 +258,11 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
         style: MenuStyle(
           backgroundColor: WidgetStatePropertyAll(t.raised),
           surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
-          elevation: const WidgetStatePropertyAll(3),
-          shadowColor: WidgetStatePropertyAll(t.shadow),
+          elevation: const WidgetStatePropertyAll(floatElevation),
+          shadowColor: WidgetStatePropertyAll(t.floatShadow),
           padding: const WidgetStatePropertyAll(EdgeInsets.all(menuPad)),
           minimumSize: const WidgetStatePropertyAll(Size(200, 0)),
-          side: WidgetStatePropertyAll(BorderSide(color: t.borderStrong)),
+          side: WidgetStatePropertyAll(BorderSide(color: t.line)),
           shape: const WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.all(Radius.circular(panel)),
@@ -261,11 +286,11 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
       dialogTheme: DialogThemeData(
         backgroundColor: t.raised,
         surfaceTintColor: Colors.transparent,
-        elevation: 3,
-        shadowColor: t.shadow,
+        elevation: floatElevation,
+        shadowColor: t.floatShadow,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(panel),
-          side: BorderSide(color: t.borderStrong),
+          side: BorderSide(color: t.line),
         ),
         titleTextStyle: ui(t.text, size: 15, weight: FontWeight.w600),
         contentTextStyle: ui(t.textSecondary),
@@ -279,28 +304,55 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
         isDense: true,
         contentPadding: const EdgeInsets.all(8),
         hintStyle: ui(t.textMuted),
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(control)),
-        ),
+        // A field keeps an edge, so it reads as one on any surface (ADR
+        // 0111): the field's border, the focus ring's color once it has
+        // the caret.
+        // One that resolves by state, so a field that asks for no border
+        // (the palette's, an inline edit's) still has none.
+        border: WidgetStateInputBorder.resolveWith((states) {
+          final focused = states.contains(WidgetState.focused);
+          final color = states.contains(WidgetState.error)
+              ? t.crashed
+              : focused
+              ? t.focus
+              : states.contains(WidgetState.disabled)
+              ? t.line
+              : states.contains(WidgetState.hovered)
+              ? t.fieldBorderHover
+              : t.fieldBorder;
+          return OutlineInputBorder(
+            borderRadius: const BorderRadius.all(Radius.circular(control)),
+            borderSide: BorderSide(color: color, width: focused ? 1.5 : 1),
+          );
+        }),
       ),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: t.raised,
-          border: Border.all(color: t.borderStrong),
+          color: t.lifted,
           borderRadius: BorderRadius.circular(control),
+          boxShadow: [
+            BoxShadow(
+              color: t.floatShadow,
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         textStyle: ui(t.text, size: 12),
         waitDuration: const Duration(milliseconds: 500),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: t.raised,
+        // The lifted fill and a hairline, no shadow: Flutter clips a snack
+        // bar to its own box, which cuts a shadow off hard at its sides.
+        backgroundColor: t.lifted,
         contentTextStyle: ui(t.text),
         behavior: SnackBarBehavior.floating,
         // Its own size on the Mac, not the window's; a phone's fills the width.
         width: kIsWeb ? null : 420,
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(card),
-          side: BorderSide(color: t.borderStrong),
+          side: BorderSide(color: t.line),
         ),
       ),
       extensions: [this],

@@ -105,18 +105,7 @@ class _RailMenuState extends State<RailMenu> {
       child: Material(
         type: MaterialType.transparency,
         child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: t.raised,
-            border: Border.all(color: t.borderStrong),
-            borderRadius: BorderRadius.circular(NushiTheme.panel),
-            boxShadow: [
-              BoxShadow(
-                color: t.shadow,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+          decoration: floatBox(t),
           // Scrolled, a row under a corner is clipped to it, and the
           // scrollbar's ends keep off the corners.
           child: ClipRRect(

@@ -233,10 +233,7 @@ class _UpdateToastState extends State<UpdateToast> {
       key: const ValueKey('update-toast'),
       width: UpdateToast.width,
       padding: const EdgeInsets.fromLTRB(12, 8, 6, 12),
-      decoration: box(
-        t.borderStrong,
-        fill: t.raised,
-      ).copyWith(boxShadow: [BoxShadow(color: t.shadow, blurRadius: 12)]),
+      decoration: floatBox(t, radius: NushiTheme.card),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

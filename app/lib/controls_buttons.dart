@@ -1,21 +1,21 @@
 part of 'controls.dart';
 
 enum ButtonKind {
-  /// The one main action of a dialog or card: accent fill.
+  /// The one main action of a dialog, a card or a bar: the accent's fill.
   primary,
 
-  /// Every other action: outlined.
+  /// Every other action: the lifted fill, no outline (ADR 0111).
   secondary,
 
-  /// Every other action on a card (ADR 0111), where an outline would be
-  /// a box in a box: the card's lifted fill, no outline.
+  /// An action beside a filled one that should stand back (an inline
+  /// box's Cancel): no fill until the pointer is on it.
   quiet,
 
-  /// One that deletes or loses something: red text, outlined.
+  /// One that deletes or loses something: red text on the lifted fill.
   destructive,
 
   /// The same beside a dialog's own Done, as Claude desktop draws it (its
-  /// Allowed sites' Clear all): red text on a faint red fill, no outline.
+  /// Allowed sites' Clear all): red text on a faint red fill.
   danger,
 }
 
@@ -26,36 +26,47 @@ Color _fg(Tokens t, ButtonKind kind) => switch (kind) {
   ButtonKind.destructive || ButtonKind.danger => t.crashed,
 };
 
-/// A button's fill and border, as [look] has it, rounded by [r]: the
-/// accent's fill for a primary one, a faint red for a danger one, the
-/// lifted fill for a quiet one, else outlined.
+/// A button's fill, as [look] has it, rounded by [r]: the accent's for a
+/// primary one, a shade lighter under the pointer and darker pressed; a
+/// faint red for a danger one, and for a destructive one under the
+/// pointer; none for a quiet one; else the lifted fill. The pointer's tint
+/// goes over each. No kind has an outline: a
+/// button is told from what it sits on by its fill (ADR 0111).
 BoxDecoration _buttonBox(
   Tokens t,
   ButtonKind kind,
   ControlLook look,
   BorderRadius r,
 ) {
-  final primary = kind == ButtonKind.primary;
-  if (kind == ButtonKind.danger || kind == ButtonKind.quiet) {
-    final fill = kind == ButtonKind.danger ? t.crashedSoft : t.lifted;
+  if (kind == ButtonKind.primary) {
     return BoxDecoration(
-      color: look.hover ? Color.alphaBlend(_tint(t, look), fill) : fill,
+      color: look.pressed
+          ? t.accentPressed
+          : look.hover
+          ? Color.alphaBlend(t.onAccent.withValues(alpha: 0.12), t.accent)
+          : t.accent,
       borderRadius: r,
     );
   }
+  if (kind == ButtonKind.quiet) {
+    return BoxDecoration(
+      color: look.hover ? _tint(t, look) : null,
+      borderRadius: r,
+    );
+  }
+  if (kind == ButtonKind.destructive && look.hover) {
+    // Its red is under AA on the lifted fill once the pointer's tint is
+    // over that, and reads on the red's own soft fill (`tokens_test`).
+    return BoxDecoration(
+      color: look.pressed
+          ? Color.alphaBlend(t.pressed, t.crashedSoft)
+          : t.crashedSoft,
+      borderRadius: r,
+    );
+  }
+  final fill = kind == ButtonKind.danger ? t.crashedSoft : t.lifted;
   return BoxDecoration(
-    color: primary
-        ? (look.pressed
-              ? t.accentPressed
-              : look.hover
-              ? Color.alphaBlend(t.onAccent.withValues(alpha: 0.12), t.accent)
-              : t.accent)
-        : (look.hover
-              ? Color.alphaBlend(_tint(t, look), t.fieldFill)
-              : t.fieldFill),
-    border: primary
-        ? null
-        : Border.all(color: look.hover ? t.fieldBorderHover : t.fieldBorder),
+    color: look.hover ? Color.alphaBlend(_tint(t, look), fill) : fill,
     borderRadius: r,
   );
 }
@@ -98,8 +109,7 @@ class Button extends StatelessWidget {
     final t = theme.t;
     final primary = kind == ButtonKind.primary;
     final fg = _fg(t, kind);
-    final strong = primary || kind == ButtonKind.quiet;
-    final style = theme.ui(fg, weight: strong ? FontWeight.w500 : null);
+    final style = theme.ui(fg, weight: FontWeight.w500);
     final touch = TouchTargets.of(context);
     final lines = wrap && touch ? 3 : 1;
     return Pressable(
@@ -269,7 +279,6 @@ class SplitButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final primary = kind == ButtonKind.primary;
     final fg = _fg(t, kind);
     const round = Radius.circular(NushiTheme.control);
     return Row(
@@ -287,7 +296,7 @@ class SplitButton extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.ui(fg, weight: primary ? FontWeight.w500 : null),
+                style: theme.ui(fg, weight: FontWeight.w500),
               ),
             ),
           ),

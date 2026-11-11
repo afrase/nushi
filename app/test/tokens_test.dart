@@ -153,6 +153,13 @@ void main() {
           'text on lifted': (t.text, t.lifted),
           'secondary on lifted': (t.textSecondary, t.lifted),
           'text on lifted, hovered': (t.text, on(t.hover, t.lifted)),
+          // A button is the lifted fill everywhere (ADR 0111): its key
+          // hint, and a destructive one's red (under the pointer it is on
+          // crashedSoft, above).
+          'muted on lifted': (t.textMuted, t.lifted),
+          'crashed on lifted': (t.crashed, t.lifted),
+          // A review comment's state chip, and a pull request's tiles'.
+          'running on accentSoft': (t.running, t.accentSoft),
           'subagentAccent on accentSoft': (t.subagentAccent, t.accentSoft),
           'subagentAccent on crashedSoft': (t.subagentAccent, t.crashedSoft),
         },
@@ -204,6 +211,9 @@ void main() {
           'raised on base': (t.raised, t.base),
           'raised on window': (t.raised, t.window),
           'lifted on raised': (t.lifted, t.raised),
+          // A button on a pane, and under the pointer on a card.
+          'lifted on base': (t.lifted, t.base),
+          'lifted, hovered': (on(t.hover, t.lifted), t.lifted),
           'segment on raised': (t.segment, t.raised),
           // Code is sunk, on a pane and on a card alike.
           'codeBlock on base': (t.codeBlock, t.base),

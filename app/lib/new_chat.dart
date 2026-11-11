@@ -270,7 +270,7 @@ class _NewChatState extends State<_NewChat> {
                           ),
                         ),
                       if (_offersIssue) ...[
-                        Divider(height: 9, color: t.borderSubtle),
+                        const Divider(height: 9),
                         IssueLines(
                           issue: issue,
                           inFolder: folder.isNotEmpty,

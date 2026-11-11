@@ -227,7 +227,6 @@ class _ImageRefState extends State<ImageRef> {
       );
       final again = Button(
         label: 'Try again',
-        kind: ButtonKind.quiet,
         onPressed: () => setState(() {
           _stopWaiting();
           _failed = false;

@@ -209,7 +209,7 @@ class SelectionToolbar extends StatelessWidget {
       decoration: ShapeDecoration(
         color: t.selectionBar,
         shape: StadiumBorder(side: BorderSide(color: t.selectionBarBorder)),
-        shadows: [BoxShadow(color: t.shadow, blurRadius: 6)],
+        shadows: floatShadows(t),
       ),
       child: Padding(
         padding: const EdgeInsets.all(3),
@@ -295,14 +295,7 @@ class _ReplyBoxState extends State<ReplyBox> {
         // As tall as it was with the quote's bar: its fill's own padding
         // comes out of the box's.
         padding: const EdgeInsets.fromLTRB(12, 8, 6, 2),
-        decoration: ShapeDecoration(
-          color: t.raised,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(NushiTheme.panel),
-            side: BorderSide(color: t.borderStrong),
-          ),
-          shadows: [BoxShadow(color: t.shadow, blurRadius: 6)],
-        ),
+        decoration: floatBox(t),
         child: Material(
           type: MaterialType.transparency,
           child: Column(
