@@ -187,25 +187,25 @@ void main() {
       browserFakes();
       final d = await browserApp(tester);
       final globe = find.byType(BrowserButton);
-      Color ink() => tester
+      // Lit: filled in the accent's soft tint, its icon in the accent.
+      bool lit() => tester
           .widget<IconTap>(
             find.descendant(of: globe, matching: find.byType(IconTap)),
           )
-          .color!;
-      final t = NushiTheme.of(tester.element(globe)).t;
-      expect(ink(), t.textSecondary);
+          .lit;
+      expect(lit(), isFalse);
       await tester.tap(globe);
       await tester.pumpAndSettle();
       final c = d.chats['c']!;
       expect(c.preview.value, isA<BrowserTab>());
       expect(find.byType(BrowserPane), findsOneWidget);
-      expect(ink(), t.accentInk);
+      expect(lit(), isTrue);
       // Pressed again it hides the browser, unlit; again, the same tab.
       final shown = c.preview.value;
       await tester.tap(globe);
       await tester.pumpAndSettle();
       expect(find.byType(BrowserPane), findsNothing);
-      expect(ink(), t.textSecondary);
+      expect(lit(), isFalse);
       expect(find.byTooltip('Show browser'), findsOneWidget);
       await tester.tap(globe);
       await tester.pumpAndSettle();
@@ -226,12 +226,12 @@ void main() {
       final d = await browserApp(tester);
       final c = d.chats['c']!;
       final globe = find.byType(BrowserButton);
-      Color ink() => tester
+      // Lit: filled in the accent's soft tint, its icon in the accent.
+      bool lit() => tester
           .widget<IconTap>(
             find.descendant(of: globe, matching: find.byType(IconTap)),
           )
-          .color!;
-      final t = NushiTheme.of(tester.element(globe)).t;
+          .lit;
       Future<void> toChanges() async {
         c.tab.value = ChatTab.changes;
         await tester.pumpAndSettle();
@@ -243,10 +243,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(c.shownTab, ChatTab.chat);
       expect(find.byType(BrowserPane), findsOneWidget);
-      expect(ink(), t.accentInk);
+      expect(lit(), isTrue);
       // The browser tab still the preview's: lit only while it's in sight.
       await toChanges();
-      expect(ink(), t.textSecondary);
+      expect(lit(), isFalse);
       await tester.tap(globe);
       await tester.pumpAndSettle();
       expect(c.shownTab, ChatTab.chat);

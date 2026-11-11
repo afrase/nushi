@@ -106,7 +106,7 @@ void main() {
       // The sidebar's (the empty pane has one too).
       final button = find.descendant(
         of: find.byType(Sidebar),
-        matching: find.widgetWithText(Button, 'New chat'),
+        matching: find.widgetWithText(WideButton, 'New chat'),
       );
       final box = tester.getRect(button);
       final icon = tester.getRect(
@@ -116,10 +116,12 @@ void main() {
       final label = tester.getRect(
         find.descendant(of: button, matching: find.text('⌘N')),
       );
-      expect(box.width, greaterThan(label.right - icon.left + 40));
-      expect((icon.left - box.left) - (box.right - label.right), closeTo(0, 1));
-      // A secondary button: the accent is for the one action of a card.
-      expect(tester.widget<Button>(button).kind, ButtonKind.secondary);
+      // The icon at its start, the key's cap at its end, as far in.
+      expect(icon.left - box.left, 12);
+      expect(box.right - label.right, closeTo(13, 1));
+      expect(label.left, greaterThan(box.center.dx));
+      // A card's fill, not the accent: that is for the one action of a card.
+      expect(box.height, WideButton.height);
       d.dispose();
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }

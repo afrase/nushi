@@ -709,9 +709,12 @@ void main() {
         find.byType(GitHubView),
         matchesGoldenFile('goldens/github_pull_$name.png'),
       );
-      // The tabs sit near the window's foot: scrolled to, and the tab
-      // checked, so a tap that misses fails here, not as a golden that
-      // repeats the one above.
+      // The tabs sit just under the window's foot (its row scrolls
+      // sideways, so ensureVisible alone moves that): the page is dragged
+      // up to them, and the tab checked, so a tap that misses fails here,
+      // not as a golden that repeats the one above.
+      await tester.drag(find.text('Add Sub and Neg'), const Offset(0, -80));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Checks · 1 failing'));
       await tester.tap(find.text('Checks · 1 failing'));
       await tester.pumpAndSettle();

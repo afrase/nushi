@@ -9,9 +9,11 @@ import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
@@ -84,6 +86,13 @@ Size _transcript(WidgetTester tester) => tester.getSize(
 
 double _x(WidgetTester tester, Finder f) => tester.getTopLeft(f).dx;
 
+/// Where the chat's pane's right edge is drawn: its box's, and how far past
+/// it (or short of it) it reaches while the details slide.
+double _paneEdge(WidgetTester tester) {
+  final pane = find.byType(Pane);
+  return tester.getRect(pane).right + tester.widget<Pane>(pane).reach!.value;
+}
+
 void main() {
   setUpAll(loadFonts);
   setUp(
@@ -104,21 +113,32 @@ void main() {
 
     showDetails.value = true;
     await tester.pump();
-    const width = DetailsPanel.width;
+    // The panel and the gap between it and the chat's pane.
+    const width = DetailsPanel.slot;
+    const rest = 1700 - NushiTheme.windowPad - DetailsPanel.width;
     expect(_transcript(tester).width, wide - width);
-    expect(_x(tester, _details), 1700); // just off the window's edge
+    // Just off the window's margin, its slot's width from where it goes.
+    expect(_x(tester, _details), rest + width);
     expect(_x(tester, _text), moreOrLessEquals(from, epsilon: 0.5));
+    // The pane's edge hasn't left yet: it follows the cards in.
+    expect(_paneEdge(tester), moreOrLessEquals(1700 - NushiTheme.windowPad));
 
     await tester.pump(Motion.enter ~/ 2);
     final midPane = _x(tester, _details);
     final midText = _x(tester, _text);
-    expect(midPane, inExclusiveRange(1700 - width, 1700));
+    expect(midPane, inExclusiveRange(rest, rest + width));
     expect(_transcript(tester).width, wide - width); // laid out once
+    // The gap between the pane's drawn edge and the cards stays.
+    expect(
+      midPane - _paneEdge(tester),
+      moreOrLessEquals(NushiTheme.paneGap, epsilon: 0.01),
+    );
     await tester.pumpAndSettle();
     final to = _x(tester, _text);
     expect(to, lessThan(from));
     expect(midText, inExclusiveRange(to, from));
-    expect(_x(tester, _details), 1700 - width);
+    expect(_x(tester, _details), rest);
+    expect(_paneEdge(tester), rest - NushiTheme.paneGap);
     d.dispose();
   }, variant: _mac);
 
@@ -132,9 +152,14 @@ void main() {
 
     showDetails.value = false;
     await tester.pump();
-    expect(_transcript(tester).width, narrow + DetailsPanel.width);
+    expect(_transcript(tester).width, narrow + DetailsPanel.slot);
     expect(_details, findsOneWidget);
     expect(_x(tester, _details), moreOrLessEquals(at, epsilon: 1));
+    // The pane is laid out wide, but drawn no further than the cards yet.
+    expect(
+      _paneEdge(tester),
+      moreOrLessEquals(at - NushiTheme.paneGap, epsilon: 1),
+    );
     final ignoring = tester.widgetList<IgnorePointer>(
       find.ancestor(of: _details, matching: find.byType(IgnorePointer)),
     );
@@ -191,7 +216,10 @@ void main() {
     final (d, _) = await _app(tester, still: true);
     showDetails.value = true;
     await tester.pump();
-    expect(_x(tester, _details), 1700 - DetailsPanel.width);
+    expect(
+      _x(tester, _details),
+      1700 - NushiTheme.windowPad - DetailsPanel.width,
+    );
     final at = _x(tester, _text);
     await tester.pumpAndSettle();
     expect(_x(tester, _text), at);
@@ -209,7 +237,7 @@ void main() {
 
     sidebarHidden.value = true;
     await tester.pump();
-    expect(_transcript(tester).width, 1700);
+    expect(_transcript(tester).width, 1700 - 2 * NushiTheme.windowPad);
     expect(_x(tester, find.byType(Sidebar)), moreOrLessEquals(0, epsilon: 1));
     expect(_x(tester, _text), moreOrLessEquals(from, epsilon: 0.5));
     await tester.pump(Motion.exit ~/ 2);
@@ -221,7 +249,7 @@ void main() {
 
     sidebarHidden.value = false;
     await tester.pump();
-    expect(_transcript(tester).width, 1700 - width);
+    expect(_transcript(tester).width, 1700 - width - NushiTheme.windowPad);
     expect(_x(tester, find.byType(Sidebar)), -width);
     expect(_x(tester, _text), moreOrLessEquals(to, epsilon: 0.5));
     await tester.pumpAndSettle();

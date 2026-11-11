@@ -195,7 +195,8 @@ void main() {
       'with Edit and Remove', (tester) async {
     final (d, chat) = await open(tester);
     await commit(tester, chat);
-    expect(inHeader('Changes 1'), findsOne);
+    expect(inHeader('Changes'), findsOne);
+    expect(inHeader('1'), findsOne); // its count, a pill in the segment
     expect(find.text('Check for overflow.'), findsOne);
     expect(commentsOf('c').single.outdated, isTrue);
 
@@ -287,7 +288,7 @@ void main() {
       'the new comments', (tester) async {
     final (d, chat) = await open(tester);
     await commit(tester, chat);
-    expect(inHeader('Changes 1'), findsOne);
+    expect(inHeader('1'), findsOne);
     await sendToAgent(tester);
     expect(chat.draft.replies.value, hasLength(1));
     // The card taken out of the box (its ×, or the box cleared).

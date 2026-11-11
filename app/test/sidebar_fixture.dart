@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -139,19 +140,24 @@ Future<(Daemon, FakeDaemon)> arrangedSidebar(
 /// Those of [texts] the sidebar shows, top to bottom (each where it first
 /// shows).
 List<String> shownInOrder(WidgetTester tester, List<String> texts) {
+  // A header's or a row's own words: not a row's Needs you pill, which says
+  // what a Status group is called.
+  Finder words(String t) => find.descendant(
+    of: find.byType(Sidebar),
+    matching: find.byElementPredicate(
+      (e) => switch (e.widget) {
+        final Text w =>
+          (w.data ?? w.textSpan?.toPlainText()) == t &&
+              e.findAncestorWidgetOfExactType<PhasePill>() == null,
+        _ => false,
+      },
+    ),
+  );
   final shown = [
     for (final t in texts)
-      if (find
-          .descendant(of: find.byType(Sidebar), matching: find.text(t))
-          .evaluate()
-          .isNotEmpty)
-        t,
+      if (words(t).evaluate().isNotEmpty) t,
   ];
-  double y(String t) => tester
-      .getTopLeft(
-        find.descendant(of: find.byType(Sidebar), matching: find.text(t)).first,
-      )
-      .dy;
+  double y(String t) => tester.getTopLeft(words(t).first).dy;
   return shown..sort((a, b) => y(a).compareTo(y(b)));
 }
 

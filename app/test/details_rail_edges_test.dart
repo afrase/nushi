@@ -11,6 +11,7 @@ import 'package:nushi/context_report.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
 import 'package:nushi/theme/theme.dart';
@@ -38,21 +39,34 @@ void main() {
     ('dark', Brightness.dark, Tokens.dark),
     ('light', Brightness.light, Tokens.light),
   ]) {
-    testWidgets('a hairline sets the panel off from the chat, $name', (
-      tester,
-    ) async {
+    testWidgets('the window’s background sets the panel’s cards off from '
+        'the chat’s pane, with no hairline, $name', (tester) async {
       final (d, _) = await railApp(tester, brightness: brightness);
       final left = tester.getRect(railPanel).left;
+      final first = tester.getRect(
+        find
+            .descendant(of: railPanel, matching: find.byType(PanelWidget))
+            .first,
+      );
+      expect(first.left, left);
       final ratio = tester.view.devicePixelRatio;
       final element = find.byType(NushiApp).evaluate().single;
       await tester.runAsync(() async {
         final image = await captureImage(element);
         final bytes = (await image.toByteData())!;
-        // Down the panel's whole height: the rule, then its own fill.
-        for (final y in [100.0, 400.0, 900.0]) {
-          expect(_at(image, bytes, left, y, ratio), tokens.borderSubtle);
-          expect(_at(image, bytes, left + 4, y, ratio), tokens.base);
+        // Across the gap at a card's middle: the pane, the window between
+        // them (ADR 0111), then the card's own fill, a pane's.
+        final y = first.center.dy;
+        expect(
+          _at(image, bytes, left - NushiTheme.paneGap - 4, y, ratio),
+          tokens.base,
+        );
+        for (final x in [left - NushiTheme.paneGap + 1, left - 1]) {
+          expect(_at(image, bytes, x, y, ratio), tokens.window);
         }
+        expect(_at(image, bytes, left + 4, y, ratio), tokens.base);
+        // Under the last card the window shows, down to its foot.
+        expect(_at(image, bytes, left + 4, 890, ratio), tokens.window);
         image.dispose();
       });
       await closeView(tester, d);
@@ -99,8 +113,8 @@ void main() {
   }
 
   // A side chat lies over the transcript where it did by the 264-point
-  // panel: beside it at 1470 with the sidebar (1210 for the chat, 510 left
-  // beside the panel and the side chat), over it at 1450 (490).
+  // panel: beside it at 1470 with the sidebar (1202 for the chat, 494 left
+  // beside the panel, the gap and the side chat), over it at 1450 (474).
   for (final (width, beside) in [(1470.0, true), (1450.0, false)]) {
     testWidgets('with the sidebar and a side chat, ${width.toInt()} wide: '
         'the side chat lies ${beside ? 'beside' : 'over'} the transcript', (
@@ -115,7 +129,8 @@ void main() {
       final transcript = tester.getRect(
         find.byWidgetPredicate((w) => w is Transcript && w.items == null).first,
       );
-      expect(side.right, tester.getRect(railPanel).left);
+      // At the right of the chat's pane, the gap from the panel.
+      expect(side.right, tester.getRect(railPanel).left - NushiTheme.paneGap);
       expect(
         transcript.right,
         beside ? lessThanOrEqualTo(side.left) : greaterThan(side.left),

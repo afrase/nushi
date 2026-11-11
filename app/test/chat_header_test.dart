@@ -4,7 +4,6 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -176,7 +175,7 @@ void main() {
                 'github ${github?.number}';
             expect(tester.takeException(), isNull, reason: why);
             final menu = tester.getRect(find.byTooltip('Chat menu'));
-            expect(menu.right, width - NushiTheme.gutter, reason: why);
+            expect(menu.right, width - ChatHeader.end, reason: why);
           }
         }
       }
@@ -234,7 +233,7 @@ void main() {
       expect(find.byIcon(Icons.forum_outlined), findsOne);
       expectTextInside(tester, width);
       final menu = tester.getRect(find.byTooltip('Chat menu'));
-      expect(menu.right, width - NushiTheme.gutter);
+      expect(menu.right, width - ChatHeader.end);
       await render(tester, find.byType(ChatHeader), 'header_pull_$width');
       d.dispose();
     });

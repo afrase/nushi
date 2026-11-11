@@ -38,7 +38,7 @@ void main() {
       find.byTooltip(RegExp('^(Hide|Show) the sidebar')),
     );
     expect(arrange.right, lessThanOrEqualTo(hide.left));
-    expect(hide.right, closeTo(sidebar.right - 10, 1));
+    expect(hide.right, closeTo(sidebar.right - Sidebar.end, 1));
     return d;
   }
 

@@ -19,7 +19,6 @@ import 'package:nushi/main.dart';
 import 'package:nushi/message_actions.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/pickers.dart';
-import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/terminal_panel.dart';
@@ -214,7 +213,7 @@ void main() {
         );
         expect(
           tester.getRect(find.byTooltip('Chat menu')).right,
-          view.right - NushiTheme.gutter,
+          view.right - ChatHeader.end,
         );
         // A message's bubble ends at the column's right.
         expect(
@@ -275,16 +274,22 @@ void main() {
   });
 
   group('the header', () {
-    testWidgets('44 high, the bar’s gaps with room, ⋯ and the tabs in place', (
+    testWidgets('56 high, the bar’s gaps with room, ⋯ and the tabs in place', (
       tester,
     ) async {
       final d = await _app(tester, width: 1700);
       final header = tester.getRect(find.byType(ChatHeader));
-      expect(header.height, 44);
-      final tabs = tester.getRect(find.byType(PlainTabs<ChatTab>));
-      expect(tabs.bottom, header.bottom - 1);
+      expect(header.height, 56);
+      // The segmented control in the row's middle, over its hairline.
+      final tabs = tester.getRect(find.byType(Segmented<ChatTab>));
+      expect(tabs.center.dy, closeTo(header.center.dy - 0.5, 0.01));
       final terminal = tester.getRect(find.byType(TerminalButton));
-      expect(terminal.left - tabs.right, NushiTheme.groupGap);
+      expect(terminal.left - tabs.right, NushiTheme.barGap);
+      // At the pane's edge, which is the window's margin in.
+      expect(
+        tester.getRect(find.byTooltip('Chat menu')).right,
+        1700 - NushiTheme.windowPad - ChatHeader.end,
+      );
       final menu = tester.getRect(find.byTooltip('Chat menu'));
       final files = tester.getRect(find.byType(FilesButton));
       final browser = tester.getRect(find.byType(BrowserButton));
@@ -297,16 +302,17 @@ void main() {
     }, variant: _mac);
 
     test('the bar’s gaps never fold anything', () {
-      // Where each case first folded before them: 455 for the row, 80 for
-      // the title, the browser's button 26, then what the case adds (the
-      // Files button 26); each button's gap 2.
+      // Where each case first folds without them: 524 for the row, 80 for
+      // the title, the browser's button 32, then what the case adds (the
+      // Pull request segment 106, a model 50, the Files button 32); each
+      // button's gap 2.
       for (final (pull, model, files, first) in [
-        (false, false, false, 561.0),
-        (true, false, false, 649.0),
-        (false, true, false, 611.0),
-        (true, true, false, 699.0),
-        (false, false, true, 587.0),
-        (true, true, true, 725.0),
+        (false, false, false, 636.0),
+        (true, false, false, 742.0),
+        (false, true, false, 686.0),
+        (true, true, false, 792.0),
+        (false, false, true, 668.0),
+        (true, true, true, 824.0),
       ]) {
         for (final panel in [false, true]) {
           HeaderFolds at(double width) => headerFolds(
@@ -537,11 +543,10 @@ void main() {
       tester,
     ) async {
       final d = await _app(tester, width: 1700);
-      final t = NushiTheme.of(tester.element(find.byType(ChatView))).t;
       final terminal = find.byType(TerminalButton);
       final details = find.byTooltip('Show details');
-      expect(tester.getSize(terminal), const Size(26, 26));
-      expect(tester.getSize(details), const Size(26, 26));
+      expect(tester.getSize(terminal), const Size(32, 32));
+      expect(tester.getSize(details), const Size(32, 32));
       expect(
         find.descendant(of: terminal, matching: find.byType(Icon)),
         findsNothing,
@@ -561,7 +566,7 @@ void main() {
             .first,
       );
       expect(open.line, LineIcon.details);
-      expect(open.color, t.accentInk); // on: the accent, as the mock has it
+      expect(open.lit, isTrue); // on: the accent on its soft fill
       await closeView(tester, d);
     }, variant: _mac);
   });

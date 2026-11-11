@@ -23,3 +23,5 @@ The owner dislikes the segmented pill (`Segmented`): a rounded box with a filled
 - Converting the form fields too: tried; see above. `MenuField`, ADR 0049's control for a value, would suit them if the pill has to go.
 - The line under the label in a bordered row too, floating above the border: it would differ from the file tabs beside it.
 - A narrower control with tighter padding: it would move what's beside it, and every fold number would need measuring again.
+
+**Amendment (2026-11-11):** the chat header's Chat, Changes and Pull request are the filled segmented control again (`Segmented(roomy:)`, a card-filled track with the picked segment raised), as the mock the owner approved has it; the other tab bars stay `PlainTabs` until their views are restyled, and `PlainTabs` no longer has to measure as the pill does ([ADR 0111](0111-surfaces-and-floating-panes.md)).

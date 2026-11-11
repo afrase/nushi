@@ -37,11 +37,11 @@ class BrowserButton extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([chat.preview, chat.tab]),
     builder: (context, _) {
-      final t = NushiTheme.of(context).t;
       return IconTap.line(
         LineIcon.globe,
         tooltip: tooltip(shown: chat.browserShown),
-        color: chat.browserShown ? t.accentInk : t.textSecondary,
+        padding: IconTap.header,
+        lit: chat.browserShown,
         onTap: chat.showOrHideBrowser,
       );
     },

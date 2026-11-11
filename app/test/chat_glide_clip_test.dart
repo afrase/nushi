@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -8,6 +9,7 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/slides.dart';
@@ -25,7 +27,10 @@ import 'harness.dart';
 // Drawn right of its slot it slides under the panes, drawn over it, and
 // isn't cut: a pane opening at the right on a wide window has barely come
 // in on its first frames, and a cut at the slot's edge chopped the
-// composer, its border and its corner, in plain sight.
+// composer, its border and its corner, in plain sight. The chat's pane is
+// narrower at once as its details come, and cuts what's in it to its
+// corners: its edge is drawn following the details in and out
+// (Pane.reach), so the composer isn't cut short of where the pane ends.
 
 final _items = [
   Item(
@@ -153,7 +158,14 @@ Future<void> _glide(
     );
     final drawn = _shown(box, clips: false);
     final shown = _shown(box);
-    if (shown.right < drawn.right - 0.5) {
+    // The chat's pane cuts what's in it at its own edge (ADR 0111), which
+    // is the window's margin, or follows the details as they slide
+    // (pane_motion_test holds it to them): past that edge there's nothing
+    // to show, so only a cut short of it is one to see.
+    final pane = find.byType(Pane);
+    final end =
+        tester.getRect(pane).right + tester.widget<Pane>(pane).reach!.value;
+    if (shown.right < min(drawn.right, end) - 0.5) {
       spills.add(
         '$name frame $i: the composer drawn to ${drawn.right}, '
         'cut at ${shown.right}',

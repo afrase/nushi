@@ -82,7 +82,8 @@ void main() {
       'removed', (tester) async {
     final d = await _app(tester, 1700);
     final chat = d.chats['c']!;
-    expect(_inHeader('Changes 2'), findsOne);
+    expect(_inHeader('Changes'), findsOne);
+    expect(_inHeader('2'), findsOne); // its count, a pill in the segment
     expect(find.text('2 review comments in Changes aren’t sent.'), findsOne);
     await render(tester, find.byType(NushiApp), 'review_unsent_1700_dark');
     // Its links follow the words, not the bar's far end.
@@ -155,16 +156,17 @@ void main() {
   testWidgets('Changes: Send to agent (n), and the cards waiting with the '
       'way back to the chat, 720 wide', (tester) async {
     final d = await _app(tester, 720);
-    await tester.tap(_inHeader('Changes 2'));
+    await tester.tap(_inHeader('Changes'));
     await tester.pumpAndSettle();
-    expect(find.text('Send to agent (2)'), findsOne);
-    await tester.tap(find.text('Send to agent (2)'));
+    // The short label: the pane beside the sidebar is 512 wide here.
+    expect(find.text('Send (2)'), findsOne);
+    await tester.tap(find.text('Send (2)'));
     await tester.pumpAndSettle();
     // Sending shows the chat; back in Changes, the cards wait there too.
     expect(d.chats['c']!.tab.value.name, 'chat');
     await tester.tap(_inHeader('Changes'));
     await tester.pumpAndSettle();
-    expect(find.text('Send to agent (2)'), findsNothing);
+    expect(find.text('Send (2)'), findsNothing);
     expect(
       find.text(
         "2 waiting in the chat's box. They go with your next message.",

@@ -8,6 +8,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/usage.dart';
 
 import 'fake_daemon.dart';
@@ -175,7 +176,7 @@ void main() {
         await _report(tester, fake, 1, 24000, 0.03);
         if (size == 'wide') {
           final panel = tester.getRect(_context);
-          expect(panel.right, width);
+          expect(panel.right, width - NushiTheme.windowPad);
           // The line's meter, then its cost at the panel's right.
           final meter = tester.getRect(find.byType(ContextMeter));
           final spent = tester.getRect(_says(r'$0.03'));

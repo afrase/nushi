@@ -46,7 +46,7 @@ void main() {
     // The shares line up at the panel's right.
     final right = tester.getRect(inRail(find.text('51.0%'))).right;
     expect(tester.getRect(inRail(find.text('42.1%'))).right, right);
-    expect(right, closeTo(1700 - 16, 1));
+    expect(right, closeTo(1700 - NushiTheme.windowPad - 16, 1));
     // A list opens to its rows.
     expect(inRail(find.text('MCP tools (deferred)')), findsOne);
     expect(inRail(find.text('mcp__docs__read')), findsNothing);
@@ -128,7 +128,7 @@ void main() {
     for (final width in [1000.0, 1400.0, 2400.0]) {
       final (d, _) = await railApp(tester, size: Size(width, 900));
       expect(tester.getRect(railPanel).width, DetailsPanel.width);
-      expect(tester.getRect(railPanel).right, width);
+      expect(tester.getRect(railPanel).right, width - NushiTheme.windowPad);
       expect(
         find.ancestor(of: railPanel, matching: find.byType(Resizable)),
         findsNothing,

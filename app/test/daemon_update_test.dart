@@ -6,6 +6,7 @@ import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -112,9 +113,10 @@ void main() {
         final d = await _open(tester, fake, width: width);
         final bar = tester.getRect(find.byType(DaemonUpdateBar));
         final button = tester.getRect(find.text('Restart now'));
-        expect(bar.right, width);
+        // In the main pane, across it.
+        expect(bar.right, width - NushiTheme.windowPad);
         expect(bar.left, greaterThanOrEqualTo(200)); // clear of the lights
-        expect(button.right, greaterThan(width - 40)); // at the trailing edge
+        expect(button.right, greaterThan(width - 48)); // at the trailing edge
         await render(
           tester,
           find.byType(DaemonUpdateBar),

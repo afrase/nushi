@@ -106,8 +106,8 @@ void main() {
         'or low in the bar', (tester) async {
       final calls = _windowCalls();
       final (d, _) = await _header(tester);
-      final word = tester.getRect(find.byType(ChatStatusWord));
-      final tabs = tester.getRect(find.text('Chat'));
+      final word = tester.getRect(find.byType(PhasePill));
+      final tabs = tester.getRect(find.byType(Segmented<ChatTab>));
       final x = (word.right + tabs.left) / 2;
       expect(tabs.left - word.right, greaterThan(100));
 
@@ -129,8 +129,8 @@ void main() {
         'moves a point or two', (tester) async {
       final calls = _windowCalls();
       final (d, _) = await _header(tester);
-      final word = tester.getRect(find.byType(ChatStatusWord));
-      final tabs = tester.getRect(find.text('Chat'));
+      final word = tester.getRect(find.byType(PhasePill));
+      final tabs = tester.getRect(find.byType(Segmented<ChatTab>));
       final at = Offset((word.right + tabs.left) / 2, word.center.dy);
 
       Future<void> click({required bool moves}) async {
@@ -165,7 +165,7 @@ void main() {
         'the agent’s name': tester.getCenter(find.text('Claude')),
         'the model': model.center,
         'the status dot': tester.getCenter(find.byType(ChatDot)),
-        'the status word': tester.getCenter(find.byType(ChatStatusWord)),
+        'the status pill': tester.getCenter(find.byType(PhasePill)),
         'above the model': Offset(model.center.dx, 3),
         'between the mark and the name': mark.centerRight + const Offset(4, 0),
       };

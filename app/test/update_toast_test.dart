@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
@@ -99,8 +100,14 @@ void main() {
           expect(toastButtons(tester), buttons);
           final box = tester.getRect(updateToast);
           expect(box.right, width - UpdateToast.inset);
-          final status = tester.getRect(find.byType(StatusBar));
-          expect(box.bottom, status.top - UpdateToast.inset);
+          // Over the main pane's corner; the agents' counts are in the
+          // sidebar, not under it.
+          final window = tester.getRect(find.byType(NushiApp));
+          expect(box.bottom, window.bottom - UpdateToast.inset);
+          expect(
+            tester.getRect(find.byType(StatusBar)).right,
+            lessThan(box.left),
+          );
           final last = tester.getRect(find.text(buttons.last));
           expect(last.right, lessThan(box.right - 10)); // not clipped
           if (find

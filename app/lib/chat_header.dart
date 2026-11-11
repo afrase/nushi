@@ -6,6 +6,7 @@ import 'package:nushi/agent_mark.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/browser_pane.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
@@ -17,7 +18,6 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/pickers.dart' show ConfigNames;
-import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
@@ -28,14 +28,17 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:nushi/window_drag.dart';
 
-/// The chat's header: its title (double-click renames it), the agent, its
-/// model and status, the Chat | Changes (| Pull request, while it has one)
-/// switch, the terminal's, the Files pane's, the browser's (ADR 0094) and
-/// the panel's buttons and the chat's menu. (Its
-/// folder is in the sidebar and the details panel's Environment widget; the
-/// files it wrote are in Artifacts.) With the sidebar hidden it starts past
-/// the traffic lights and the button that shows the sidebar, and the chat's
-/// color, if it has one, is a dot before the title (ADR 0080).
+/// The chat's header, at the top of its pane (ADR 0111): its title
+/// (double-click renames it), its Jira issue as a pill, the agent, its
+/// model, and its state as a pill; then the Chat | Changes (| Pull request,
+/// while it has one) switch, a filled track with the one showing raised,
+/// the terminal's, the Files pane's, the browser's (ADR 0094) and the
+/// panel's buttons, each filled in the accent while what it shows is
+/// open, and the chat's menu. (Its folder is in the sidebar and the details
+/// panel's Environment widget; the files it wrote are in Artifacts.) With
+/// the sidebar hidden it starts past the traffic lights and the button that
+/// shows the sidebar, and the chat's color, if it has one, is a chip before
+/// the title (ADR 0080).
 class ChatHeader extends StatelessWidget {
   const new(
     this.chat,
@@ -54,6 +57,12 @@ class ChatHeader extends StatelessWidget {
   final bool panel; // the details panel shows
   final VoidCallback? onPanel; // shows or hides it; null when it can't show
 
+  /// How far its row is in from its pane's left edge, the transcript's
+  /// gutter, and from its right one, where its icon buttons bring their own
+  /// room.
+  static const double start = NushiTheme.gutter;
+  static const end = 12.0;
+
   // The title is a field (a double-click, ⋯'s Rename, or the palette's
   // and the Chat menu's, through the chat).
   bool get _renaming => chat.renaming.value;
@@ -66,25 +75,24 @@ class ChatHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final meta = theme.ui(t.textSecondary, size: 12);
+    final meta = theme.ui(t.textMuted);
     final model = chat.option('model');
     final modelName = model == null || model.current.isEmpty
         ? null
         : model.currentName;
-    final titleStyle = theme.ui(t.text, weight: FontWeight.w600);
+    final titleStyle = theme.ui(t.text, size: 14, weight: FontWeight.w600);
     // The title and the model (a Codex model id is long) share what the
-    // rest of the row leaves (it takes about 455 points, the Pull request
-    // tab 88 more, the Files and browser buttons 26 each), so a narrow
-    // window cuts them
+    // rest of the row leaves ([headerRow], the Pull request tab, the Files
+    // and browser buttons and the rest more), so a narrow window cuts them
     // short rather than overflow. Where all of it fits with room over, the
     // row opens up to the bar's gaps (ADR 0072). Narrower still, the least
     // needed parts fold, so the chat's menu (⋯) stays at the row's end: the
     // browser's button into ⋯ (the palette and the pane's + open tabs too),
     // the model, the agent's name (its mark stays), the details button while
-    // the panel can't show, the tabs into a menu field, the status word
-    // (the dot's tooltip says it), then the terminal's, the files' and the
-    // details' buttons into ⋯. Changes counts the review
-    // comments not sent yet (14 points more); a hidden side chat's chip,
+    // the panel can't show, the state's word (its dot stays, and its
+    // tooltip says it), the tabs into a menu field, then the terminal's,
+    // the files' and the details' buttons into ⋯. Changes counts the review
+    // comments not sent yet (a small pill more); a hidden side chat's chip,
     // the Jira key and the GitHub chip take their own room.
     return ListenableBuilder(
       listenable: Listenable.merge([
@@ -101,18 +109,19 @@ class ChatHeader extends StatelessWidget {
           // The row's room, less what a hidden sidebar's start and dot take.
           final width =
               box.maxWidth -
-              (shut ? hiddenHeaderStart - NushiTheme.gutter : 0) -
+              (shut ? hiddenHeaderStart - ChatHeader.start : 0) -
               (shut && chat.color != null ? _dotRoom : 0);
           final comments = unsentComments(chat.id).isNotEmpty;
           final side = chat.side.value != null && chat.sideHidden.value;
-          // The Jira key, and its gap, as wide as it is.
+          // The Jira key's pill, and its gap, as wide as it is.
           final jira = chat.jiraKey.isEmpty
               ? 0.0
               : NushiTheme.barGap +
+                    PillLink.room +
                     _textWidth(
                       context,
                       chat.jiraKey,
-                      theme.code(t.text, size: 12),
+                      theme.code(t.text, size: 11.5),
                     );
           // The GitHub chip, and its gap: its number as wide as it is, and
           // room for every badge a pull request's can load, so it never
@@ -153,7 +162,7 @@ class ChatHeader extends StatelessWidget {
           // The title takes what the model doesn't (all of it with none),
           // and 60% when both are too long for it.
           final modelWidth = shown ? _textWidth(context, modelName, meta) : 0.0;
-          var title = max(room * 0.6, room - modelWidth).clamp(least, 320.0);
+          var title = max(room * 0.6, room - modelWidth).clamp(least, 360.0);
           if (shown) title = min(title, max(least, room - 40));
           return _row(
             context,
@@ -188,20 +197,22 @@ class ChatHeader extends StatelessWidget {
     final gap = roomy ? NushiTheme.barGap : 8.0;
     final group = roomy ? NushiTheme.groupGap : NushiTheme.barGap;
     final around = roomy ? NushiTheme.groupGap : 6.0;
+    // The review comments not sent yet, which Changes counts.
+    final comments = unsentComments(chat.id).length;
     return SizedBox(
       height: PaneHeader.height,
       child: WindowDrag(
         background: DecoratedBox(
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: t.borderSubtle)),
+            border: Border(bottom: BorderSide(color: t.line)),
           ),
         ),
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(
-              shut ? hiddenHeaderStart : NushiTheme.gutter,
+              shut ? hiddenHeaderStart : ChatHeader.start,
               0,
-              NushiTheme.gutter,
+              ChatHeader.end,
               1, // the border's
             ),
             child: Row(
@@ -215,19 +226,8 @@ class ChatHeader extends StatelessWidget {
                     children: [
                       if (shut)
                         if (chat.color case final color?) ...[
-                          Tooltip(
-                            message: color.label,
-                            child: Container(
-                              key: const Key('chat color'),
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: color.ink(t),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: _dotRoom - 8),
+                          ColorChip(color, named: true),
+                          const SizedBox(width: _dotRoom - ColorChip.width),
                         ],
                       ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: titleMax),
@@ -250,10 +250,9 @@ class ChatHeader extends StatelessWidget {
                       ),
                       if (chat.jiraKey.isNotEmpty) ...[
                         SizedBox(width: gap),
-                        LinkText(
+                        PillLink(
                           chat.jiraKey,
                           mono: true,
-                          size: 12,
                           tooltip: 'Show ${chat.jiraKey} in Jira',
                           onTap: () =>
                               showIssue(daemon, chat.jiraSite, chat.jiraKey),
@@ -270,17 +269,13 @@ class ChatHeader extends StatelessWidget {
                       SizedBox(width: group),
                       Tooltip(
                         message: folds.name ? chat.agentName : '',
-                        child: AgentMark(chat.agent, size: 16, ink: t.text),
+                        child: AgentMark(chat.agent, size: 18, ink: t.text),
                       ),
                       if (!folds.name) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 7),
                         Text(
                           chat.agentName,
-                          style: theme.ui(
-                            t.text,
-                            size: 12,
-                            weight: FontWeight.w500,
-                          ),
+                          style: theme.ui(t.text, weight: FontWeight.w500),
                         ),
                       ],
                       if (modelName != null && !folds.model) ...[
@@ -296,18 +291,17 @@ class ChatHeader extends StatelessWidget {
                         ),
                       ],
                       SizedBox(width: gap),
+                      // Its state as a pill, the dot alone once the word
+                      // folds (its tooltip says it).
                       if (chat.archived)
-                        Text('archived', style: meta)
+                        const PhasePill(ChatPhase.archived)
                       else if (folds.word)
                         Tooltip(
                           message: phaseWord(chat.phase, t).$1,
                           child: ChatDot(chat: chat),
                         )
-                      else ...[
-                        ChatDot(chat: chat),
-                        const SizedBox(width: 5),
-                        ChatStatusWord(chat, style: meta),
-                      ],
+                      else
+                        PhasePill(chat.phase, lead: ChatDot(chat: chat)),
                     ],
                   ),
                 ),
@@ -325,23 +319,31 @@ class ChatHeader extends StatelessWidget {
                     entries: [
                       for (final (each, label) in _tabs(chat))
                         MenuEntry(
-                          label,
+                          each == ChatTab.changes && comments > 0
+                              ? '$label $comments'
+                              : label,
                           detail: keyLabel(tabKey(each)),
                           checked: each == tab,
                           onPick: () => onTab(each),
                         ),
                     ],
-                    label: Text(_tabs(chat).firstWhere((s) => s.$1 == tab).$2),
+                    label: Text(
+                      _tabs(chat).firstWhere((s) => s.$1 == tab).$2 +
+                          (tab == ChatTab.changes && comments > 0
+                              ? ' $comments'
+                              : ''),
+                    ),
                   )
                 else
-                  PlainTabs(
+                  Segmented(
                     value: tab,
-                    tabs: _tabs(chat),
+                    segments: _tabs(chat),
+                    badges: {if (comments > 0) ChatTab.changes: '$comments'},
                     onChanged: onTab,
-                    fill: true,
+                    roomy: true,
                     tooltip: (t) => '${keyLabel(tabKey(t))}   $_stepTabs',
                   ),
-                SizedBox(width: roomy ? NushiTheme.groupGap : 4),
+                SizedBox(width: roomy ? NushiTheme.barGap : 6),
                 // In the order of what they show, the terminal under the
                 // chat, then the Files pane, the preview's browser tab and
                 // the details panel beside it, left to right.
@@ -365,7 +367,8 @@ class ChatHeader extends StatelessWidget {
                         : panel
                         ? 'Hide details'
                         : 'Show details',
-                    color: panel ? t.accentInk : t.textSecondary,
+                    padding: IconTap.header,
+                    lit: panel,
                     onTap: onPanel,
                   ),
                   if (roomy) const SizedBox(width: NushiTheme.iconGap),
@@ -373,6 +376,7 @@ class ChatHeader extends StatelessWidget {
                 MenuIcon.line(
                   LineIcon.more,
                   tooltip: 'Chat menu',
+                  padding: IconTap.header,
                   filter: false,
                   entries: [
                     if (folds.browser && !folds.buttons) ...[
@@ -444,10 +448,7 @@ class ChatHeader extends StatelessWidget {
 
   List<(ChatTab, String)> _tabs(ChatState chat) => [
     (ChatTab.chat, 'Chat'),
-    switch (unsentComments(chat.id).length) {
-      0 => (ChatTab.changes, 'Changes'),
-      final n => (ChatTab.changes, 'Changes $n'),
-    },
+    (ChatTab.changes, 'Changes'),
     if (chat.pull != null) (ChatTab.pull, 'Pull request'),
   ];
 }
@@ -457,8 +458,8 @@ String get _stepTabs =>
     '${keyLabel(nextTabKey)} the next tab, ${keyLabel(previousTabKey)} the '
     'one before';
 
-/// The room the chat's color's dot takes, its gap to the title in it.
-const _dotRoom = 16.0;
+/// The room the chat's color's chip takes, its gap to the title in it.
+const double _dotRoom = ColorChip.width + 8;
 
 /// The GitHub chip without its number: its padding, icon and the gap to the
 /// number (`GitHubChip`).
@@ -474,12 +475,14 @@ const double githubBadgesRoom = 6 + 14 + 8 + 13 + 8 + 13 + 3 + 14.0;
 const githubIssueBadgesRoom = 6.0;
 
 /// Measured: the header's row without its title and model takes about this
-/// (oh-my-pi's name, "in background"), with what it has always spent on gaps.
-const headerRow = 455.0;
+/// (OpenCode's name, "In background" in its pill, the Chat and Changes
+/// segments, the terminal's, the details' and the menu's buttons), with its
+/// tight gaps.
+const headerRow = 524.0;
 
 /// What the bar's full gaps add to [headerRow] (ADR 0072): the row without
-/// the title takes 76 more, a model's gap 2, a hidden side chat's 4.
-const headerGaps = 82.0;
+/// the title takes 62 more, a model's gap 4, a hidden side chat's 4.
+const headerGaps = 70.0;
 
 /// What of the chat's header folds at a width, the least needed first, the
 /// points that frees of the row's [headerRow] (the model's aren't in it),
@@ -522,12 +525,12 @@ HeaderFolds headerFolds(
   double jira = 0,
   double github = 0,
 }) {
-  // The Pull request tab is 88 more, the comments' count 14, the Files
-  // button 26 and the browser's 26 (each with the bar's gap after it).
-  const button = 26.0;
+  // The Pull request segment is 106 more, the comments' count 32, the
+  // Files button 32 and the browser's 32.
+  const button = 32.0;
   final more =
-      (pull ? 88.0 : 0.0) +
-      (comments ? 14.0 : 0.0) +
+      (pull ? 106.0 : 0.0) +
+      (comments ? 32.0 : 0.0) +
       (side ? SideChip.width : 0.0) +
       (files ? button : 0.0) +
       button +
@@ -543,10 +546,12 @@ HeaderFolds headerFolds(
   for (final (part, points) in [
     ('browser', button),
     if (model) ('model', 50.0),
-    ('name', 48.0),
-    if (!panel) ('panel', 26.0),
-    ('tabs', (pull ? 115.0 : 50.0) + (comments ? 14 : 0)),
-    ('word', 45.0),
+    // What [headerRow] counts for each: the longest name and its gap, the
+    // longest state's pill less its dot, the segments less a menu field.
+    ('name', 71.0),
+    if (!panel) ('panel', button),
+    ('word', 106.0),
+    ('tabs', (pull ? 160.0 : 72.0) + (comments ? 16 : 0)),
     ('buttons', (panel ? 2 : 1) * button + (files ? button : 0)),
   ]) {
     if (width + saved >= need) break;
