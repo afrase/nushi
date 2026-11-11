@@ -14,8 +14,8 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 // The sidebar's chat rows that move by dragging (a project's, Pinned's),
-// the Pinned section's header, and the dragged look the projects' headers
-// share (`sidebar_groups.dart`).
+// the Pinned section's header, the dragged look the projects' headers
+// share (`sidebar_groups.dart`), and an empty group's line.
 
 /// Makes a chat's row movable: [child] dragged, unless [enabled] is off
 /// (its title being renamed in place).
@@ -154,6 +154,23 @@ class ArchivedSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// What a group with no rows says under its header, muted, at its name's
+/// place: a section's "Drag chats here", a project's "No chats".
+class GroupHint extends StatelessWidget {
+  const new(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 2, 8, 6),
+      child: Text(text, style: theme.ui(theme.t.textMuted, size: 12)),
     );
   }
 }

@@ -234,12 +234,19 @@ void main() {
     );
     // The project's name after the title, muted.
     expect(
-      _y(tester, 'notes'),
+      tester.getCenter(find.text('notes').first).dy,
       closeTo(_y(tester, 'Jot it down'), 2),
       reason: 'the project on the pinned row',
     );
     expect(find.text('ledger-poc'), findsNWidgets(2)); // b's, the header
-    expect(find.text('notes'), findsOne); // all its chats pinned: no header
+    // All its chats pinned: its header stays, last, alone (it has a
+    // chat, so no "No chats").
+    expect(find.text('notes'), findsNWidgets(2));
+    expect(
+      tester.getCenter(find.text('notes').last).dy,
+      greaterThan(_y(tester, 'Plant the beds')),
+    );
+    expect(find.text('No chats'), findsNothing);
     expect(chatOrder(d).map((c) => c.id), ['e', 'b', 'a', 'f', 'c', 'd']);
 
     // Seed data dragged above Jot it down: the daemon's order changes.

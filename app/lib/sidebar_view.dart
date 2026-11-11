@@ -17,7 +17,8 @@ List<ChatState> pinnedChats(Daemon daemon) =>
 /// its repository; scratch chats under ''), the folder with the newest
 /// chat first, the newest chat first in each. Archived chats aren't in
 /// it, nor pinned ones ([pinnedChats]): a folder whose chats are all
-/// pinned has no group until one is unpinned.
+/// pinned has no group here until one is unpinned ([sidebarGroups] keeps
+/// it, empty).
 Map<String, List<ChatState>> chatGroups(Daemon daemon) {
   final groups = <String, List<ChatState>>{};
   final byNewest =
@@ -29,6 +30,14 @@ Map<String, List<ChatState>> chatGroups(Daemon daemon) {
   return groups;
 }
 
+/// The folders that have a chat that isn't archived, pinned and sectioned
+/// ones too (a worktree's under its repository; not scratch folders): a
+/// project the sidebar can't forget (Remove from sidebar).
+Set<String> liveFolders(Daemon daemon) => {
+  for (final c in daemon.chats.values)
+    if (!c.archived && !c.scratch) c.home,
+};
+
 /// The Mac sidebar's groups ([chatGroups]) in the order they were dragged
 /// into ([sidebarOrder]); a folder it doesn't name goes first, as one
 /// with the newest chat, and with [starting] (the folder a chat is
@@ -36,8 +45,12 @@ Map<String, List<ChatState>> chatGroups(Daemon daemon) {
 /// is there, with chats or not yet. In each, the
 /// chats in the order they were dragged into ([sidebarChats]), a chat it
 /// doesn't name (a new one) first, the newest first. Those of [without]
-/// (in a section) are left out, and a folder left with none with them.
-/// The phone keeps [chatGroups]' order.
+/// (in a section) are left out. A project kept ([sidebarProjects]) with
+/// no chats to show (all archived, deleted, pinned or in a section) is an
+/// empty group, its header alone or over "No chats" ([liveFolders]):
+/// where it was dragged to, else after the others, in the order they
+/// joined. The phone keeps [chatGroups]' order, and no empty
+/// group.
 Map<String, List<ChatState>> sidebarGroups(
   Daemon daemon, {
   String? starting,
@@ -50,13 +63,19 @@ Map<String, List<ChatState>> sidebarGroups(
         key: chats,
   };
   final groups = {?starting: byFolder[starting] ?? <ChatState>[], ...byFolder};
+  final empty = sidebarProjects.value.difference(groups.keys.toSet());
   final saved = sidebarOrder.value;
   final placed = saved.toSet();
   return {
     for (final MapEntry(:key, :value) in groups.entries)
       if (!placed.contains(key)) key: inSavedOrder(key, value),
     for (final k in saved)
-      if (groups[k] case final chats?) k: inSavedOrder(k, chats),
+      if (groups[k] case final chats?)
+        k: inSavedOrder(k, chats)
+      else if (empty.contains(k))
+        k: [],
+    for (final f in empty)
+      if (!placed.contains(f)) f: [],
   };
 }
 
@@ -115,7 +134,8 @@ class SidebarView {
 /// then each section's chats, unarchived and unpinned (a chat in two goes
 /// in the first), in the order moved in under Manual, else sorted; then
 /// the others, each folder's as [sidebarGroups] has them (sorted, unless
-/// Manual) under Project grouping, else in the grouping's groups.
+/// Manual; a kept project with none of them an empty group) under Project
+/// grouping, else in the grouping's groups.
 /// [starting], the folder a chat is starting in.
 SidebarView arrangeSidebar(Daemon daemon, {String? starting}) {
   final group = sidebarGroupBy.value;
