@@ -45,6 +45,28 @@ Future<void> stopTurn(
 String rewindHint(ChatState chat) =>
     chat.stopping ? 'Taking your message back…' : 'Rewinding…';
 
+/// Stop's button in the prompt box: [child] in a small round area that
+/// tints under the pointer, as it was before the redesign (the owner,
+/// 2026-11-11: "the old one was fine").
+Widget boxButton(String tooltip, VoidCallback onPressed, Widget child) => Tap(
+  tooltip: tooltip,
+  onTap: onPressed,
+  radius: NushiTheme.pill,
+  child: SizedBox.square(dimension: 28, child: Center(child: child)),
+);
+
+/// Stop: a filled square in a circle, like a media player's.
+Widget stopIcon(Color color) => Container(
+  width: 16,
+  height: 16,
+  alignment: Alignment.center,
+  decoration: BoxDecoration(
+    shape: BoxShape.circle,
+    border: Border.all(color: color, width: 1.5),
+  ),
+  child: Container(width: 6, height: 6, color: color),
+);
+
 /// Enter in a box that sends (the composer, a reply, the reply dialog, a
 /// subagent's box, a review comment; the keypad's Enter too), one
 /// rule for all of them: Enter sends, alone or with ⌘ (the usual "send" on a
@@ -240,9 +262,10 @@ class _ToChip extends StatelessWidget {
 /// The end of the box's row (ADR 0111): while a turn runs and something is
 /// [written], Queue (⏎: it waits for the agent's next chance) and Stop and
 /// send (⌘⏎), pills on the card with their [words] where the row has room,
-/// else round buttons with the same icons; Stop, round and solid red, while
-/// a turn runs; else Send, round on the accent's fill, once something is
-/// written. Those coming pop in once the box is there ([pop]).
+/// else round buttons with the same icons; Stop, the square in a circle it
+/// always was ([stopIcon]), while a turn runs; else Send, round on the
+/// accent's fill, once something is written. Those coming pop in once the
+/// box is there ([pop]).
 class SendButtons extends StatelessWidget {
   const new(
     this.chat,
@@ -314,12 +337,10 @@ class SendButtons extends StatelessWidget {
           Enter.pop(
             key: const ValueKey('stop'),
             play: pop,
-            child: RoundButton(
-              kind: RoundKind.stop,
-              tooltip: 'Stop (esc)',
-              onPressed: () => stopTurn(context, chat, daemon),
-              glyph: (color) =>
-                  Icon(Icons.stop_rounded, size: 18, color: color),
+            child: boxButton(
+              'Stop (esc)',
+              () => stopTurn(context, chat, daemon),
+              stopIcon(NushiTheme.of(context).t.textSecondary),
             ),
           )
         else if (written && !chat.busy)

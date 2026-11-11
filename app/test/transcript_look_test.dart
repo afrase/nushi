@@ -537,16 +537,15 @@ void main() {
       expect(find.byTooltip('Stop and send (⌘⏎)'), findsNWidgets(2));
       expect(find.byTooltip('Stop (esc)'), findsNWidgets(3));
       expect(find.byTooltip('Send (⏎)'), findsNWidgets(2));
-      // Stop is the stop color's fill, round.
-      final stop = tester.widget<RoundButton>(
-        find
-            .ancestor(
-              of: find.byIcon(Icons.stop_rounded).first,
-              matching: find.byType(RoundButton),
-            )
-            .first,
+      // Stop is the square in a circle it was before the redesign, in a
+      // round area 28 across that tints under the pointer: no fill.
+      final stop = find.byTooltip('Stop (esc)').first;
+      expect(
+        find.ancestor(of: stop, matching: find.byType(RoundButton)),
+        findsNothing,
       );
-      expect(stop.kind, RoundKind.stop);
+      expect(find.ancestor(of: stop, matching: find.byType(Tap)), findsOne);
+      expect(tester.getSize(stop), const Size.square(28));
       expect(find.byType(SendButtons), findsNWidgets(6));
       await expectLater(
         find.byKey(const Key('states')),

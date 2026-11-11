@@ -44,7 +44,7 @@ void main() {
   test('every token has a name, and a set rebuilt from its names is the '
       'same', () {
     final names = tokenColors(Tokens.dark);
-    expect(names.length, 126);
+    expect(names.length, 124);
     expect(names['base'], Tokens.dark.base);
     expect(names['avatars.teal'], Tokens.dark.avatars[1]);
     expect(names['syntax.keyword'], Tokens.dark.ink(Capture.keyword).color);

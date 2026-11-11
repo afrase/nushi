@@ -266,8 +266,6 @@ Tokens _rebuild(
     selectionBarDivider: pick('selectionBarDivider', t.selectionBarDivider),
     shadow: pick('shadow', t.shadow),
     scrim: pick('scrim', t.scrim),
-    stop: pick('stop', t.stop),
-    onStop: pick('onStop', t.onStop),
     claude: pick('claude', t.claude),
     ante: pick('ante', t.ante),
     ompPlug: pick('ompPlug', t.ompPlug),

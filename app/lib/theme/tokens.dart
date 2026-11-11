@@ -93,8 +93,6 @@ class Tokens {
     required this.selectionBarDivider,
     required this.shadow,
     required this.scrim,
-    required this.stop,
-    required this.onStop,
     required this.claude,
     required this.ante,
     required this.ompPlug,
@@ -268,12 +266,6 @@ class Tokens {
       ? shadow.withValues(alpha: (shadow.a * 2).clamp(0, 1))
       : shadow;
 
-  /// The Stop button's fill, solid red in both brightnesses so that it is
-  /// never mistaken, and the mark on it ([onStop]). [crashed] is an ink:
-  /// on a dark theme too light to fill a button with.
-  final Color stop;
-  final Color onStop;
-
   // The agents' marks' colors, from their own logos (`agent_mark.dart`,
   // docs/user/agent-marks.md): Claude's, Anthropic's own; Ante's ghost,
   // its gradient's gold; oh-my-pi's plug (its π is white, so the text's
@@ -426,8 +418,6 @@ class Tokens {
     selectionBarDivider: Color(0x33FFFFFF),
     shadow: Color(0x33000000),
     scrim: Color(0xDD000000),
-    stop: Color(0xFFD0303F),
-    onStop: Color(0xFFFFFFFF),
     claude: Color(0xFFB0582B),
     ante: Color(0xFF93640A),
     ompPlug: Color(0xFFC2540A),
@@ -522,8 +512,6 @@ class Tokens {
     selectionBarDivider: Color(0x33FFFFFF),
     shadow: Color(0x33000000),
     scrim: Color(0xDD000000),
-    stop: Color(0xFFD0303F),
-    onStop: Color(0xFFFFFFFF),
     claude: Color(0xFFD98A5F),
     ante: Color(0xFFE5A426),
     ompPlug: Color(0xFFF97316),

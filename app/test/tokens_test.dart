@@ -187,14 +187,13 @@ void main() {
           'needs on its halo': (t.needs, t.needsSoft),
           'toolAccent on toolTint': (t.toolAccent, t.toolTint),
           // A tool call's icon on its row, a card, hovered too, and on an
-          // open file's row in a run; Stop's mark on its red.
+          // open file's row in a run.
           'toolAccent on raised': (t.toolAccent, t.raised),
           'toolAccent on raised, hovered': (
             t.toolAccent,
             on(t.hover, t.raised),
           ),
           'toolAccent on codeBlock': (t.toolAccent, t.codeBlock),
-          'onStop on stop': (t.onStop, t.stop),
         },
         3,
         _contrast,
@@ -246,8 +245,6 @@ void main() {
           'userBand on base': (t.userBand, t.base),
           for (final MapEntry(key: k, value: c) in tints.entries)
             '$k on base': (c, t.base),
-          // Stop reads by its hue, on the composer's card.
-          'stop on raised': (t.stop, t.raised),
         },
         _washFloor,
         _apart,

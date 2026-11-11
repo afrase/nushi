@@ -87,9 +87,6 @@ enum RoundKind {
 
   /// The one main action (Send): the accent's fill.
   primary,
-
-  /// Stop: solid red, so it is never mistaken ([Tokens.stop]).
-  stop,
 }
 
 /// A round icon button on a card (ADR 0111), [PillButton.height] across:
@@ -114,7 +111,6 @@ class RoundButton extends StatelessWidget {
     final (fill, fg) = switch (kind) {
       RoundKind.plain => (t.lifted, t.text),
       RoundKind.primary => (t.accent, t.onAccent),
-      RoundKind.stop => (t.stop, t.onStop),
     };
     final round = BorderRadius.circular(NushiTheme.pill);
     return Pressable(

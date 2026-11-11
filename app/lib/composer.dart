@@ -35,7 +35,7 @@ import 'package:nushi/worktree.dart';
 /// [attachFiles]), mentions a file or offers the commands ([PlusMenu]);
 /// then the agent's pickers ([Pickers]); and at its end a round Send once
 /// there is something to send, or while a turn runs Queue, Stop and send
-/// and a round red Stop ([SendButtons]). Reply cards and attached images
+/// and Stop ([SendButtons]). Reply cards and attached images
 /// show above the text; the replies go first in the message. Under the
 /// box, only a new chat's folder. A box too narrow for that row
 /// ([Composer.pickersFrom]: a phone's, a side chat's) is one row, the text

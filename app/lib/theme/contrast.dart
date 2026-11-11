@@ -102,7 +102,6 @@ List<String> contrastWarnings(Tokens t) {
     ('textMuted', t.textMuted, 'lifted', t.lifted, 4.5),
     ('crashed', t.crashed, 'lifted', t.lifted, 4.5),
     ('subagentAccent', t.subagentAccent, 'accentSoft', t.accentSoft, 4.5),
-    ('onStop', t.onStop, 'stop', t.stop, 3),
     ('onAccent', t.onAccent, 'accent', t.accent, 4.5),
     for (final (i, c) in t.avatars.indexed)
       for (final MapEntry(key: f, value: b) in {...rows, ...sidebar}.entries)

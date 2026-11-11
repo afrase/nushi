@@ -64,12 +64,6 @@ final _controls = <String, Widget Function({required bool on})>{
     onPressed: on ? () {} : null,
     glyph: (color) => Icon(Icons.arrow_upward, size: 17, color: color),
   ),
-  'round_stop': ({required on}) => RoundButton(
-    kind: RoundKind.stop,
-    tooltip: 'Stop',
-    onPressed: on ? () {} : null,
-    glyph: (color) => Icon(Icons.stop_rounded, size: 18, color: color),
-  ),
   'menu_pill': ({required on}) => MenuField(
     pill: true,
     label: const Text('Accept edits'),
