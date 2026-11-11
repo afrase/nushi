@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/" xml:lang="en-US">
+  <id>tag:github.com,2008:https://github.com/afrase/nushi/releases</id>
+  <link type="text/html" rel="alternate" href="https://github.com/afrase/nushi/releases"/>
+  <link type="application/atom+xml" rel="self" href="https://github.com/afrase/nushi/releases.atom"/>
+  <title>Release notes from nushi</title>
+  <updated>2026-11-11T09:36:23Z</updated>
+  <entry>
+    <id>tag:github.com,2008:Repository/1426906481/v0.29.0-beta.2</id>
+    <updated>2026-11-11T09:45:58Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/afrase/nushi/releases/tag/v0.29.0-beta.2"/>
+    <title>v0.29.0-beta.2</title>
+    <content type="html">&lt;p&gt;The second beta of 0.29.0. On a Nushi from the &lt;code&gt;nushi@beta&lt;/code&gt; cask, click &lt;strong&gt;Update&lt;/strong&gt; on the card.&lt;/p&gt;
+&lt;h2&gt;To try&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;The softer look&lt;/strong&gt;, across the whole app. Before and after pictures are in &lt;a class=&quot;issue-link js-issue-link&quot; href=&quot;https://github.com/afrase/nushi/pull/21&quot;&gt;#21&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;</content>
+    <author>
+      <name>afrase</name>
+    </author>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/3135411?s=60&amp;v=4"/>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Repository/1426906481/v0.29.0-beta.1</id>
+    <updated>2026-11-11T08:57:03Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/afrase/nushi/releases/tag/v0.29.0-beta.1"/>
+    <title>v0.29.0-beta.1</title>
+    <content type="html">&lt;p&gt;The first beta of 0.29.0.&lt;/p&gt;</content>
+    <author>
+      <name>afrase</name>
+    </author>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/3135411?s=60&amp;v=4"/>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Repository/1426906481/v0.28.2</id>
+    <updated>2026-11-11T07:42:43Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/afrase/nushi/releases/tag/v0.28.2"/>
+    <title>v0.28.2</title>
+    <content type="html">&lt;h2&gt;Fixed&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;A submenu stays beside its row.&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;</content>
+    <author>
+      <name>afrase</name>
+    </author>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/3135411?s=60&amp;v=4"/>
+  </entry>
+  <entry>
+    <id>tag:github.com,2008:Repository/1426906481/v0.28.1</id>
+    <updated>2026-11-11T03:58:34Z</updated>
+    <link rel="alternate" type="text/html" href="https://github.com/afrase/nushi/releases/tag/v0.28.1"/>
+    <title>v0.28.1</title>
+    <content type="html">&lt;h2&gt;Fixed&lt;/h2&gt;</content>
+    <author>
+      <name>afrase</name>
+    </author>
+    <media:thumbnail height="30" width="30" url="https://avatars.githubusercontent.com/u/3135411?s=60&amp;v=4"/>
+  </entry>
+</feed>

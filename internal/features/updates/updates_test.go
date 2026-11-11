@@ -181,6 +181,23 @@ func TestUnchangedFailedAndOff(t *testing.T) {
 	}
 }
 
+// GitHub limiting the network's requests, its pages as well as its API,
+// is said to Check now in words about that, with how long to wait.
+func TestLimitedSaysSo(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Retry-After", "300")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer srv.Close()
+	rel := &githubapi.Releases{Repo: "afrase/nushi", Base: srv.URL, Web: srv.URL}
+	var ev events
+	s := New(rel.Latest, &prefs{on: true}, "0.1.16", "https://github.com/afrase/nushi", ev.publish)
+	_, err := s.Check(t.Context())
+	if err == nil || err.Error() != "GitHub is limiting requests from this network. Try again in about 5 minutes." || ev.n() != 0 {
+		t.Fatalf("%v, published %d", err, ev.n())
+	}
+}
+
 // Run checks at start and every 2 hours while on, at once when turned on,
 // and not at all while off; a failure waits for the next tick.
 func TestEveryTwoHours(t *testing.T) {
