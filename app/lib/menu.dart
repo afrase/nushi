@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/controls.dart';
+import 'package:nushi/submenu.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// One row of a [Menu]: [icon] (if any), [label], then [detail] dimmed on
@@ -513,7 +514,7 @@ Widget _row(
         ),
       ],
     );
-    return SubmenuButton(
+    return Submenu(
       key: key,
       leadingIcon: icon,
       submenuIcon: WidgetStatePropertyAll(end),
