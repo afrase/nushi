@@ -17,6 +17,7 @@ import 'package:nushi/jira_view.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/phase_pill.dart';
 import 'package:nushi/pickers.dart' show ConfigNames;
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';

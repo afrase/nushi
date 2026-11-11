@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/phase_pill.dart';
 import 'package:nushi/sidebar.dart';
-import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';

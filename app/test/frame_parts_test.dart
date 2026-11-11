@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_colors.dart';
 import 'package:nushi/controls.dart';
-import 'package:nushi/status.dart';
+import 'package:nushi/phase_pill.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';

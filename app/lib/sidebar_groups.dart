@@ -9,6 +9,7 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/sidebar_group_header.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/slide_list.dart';

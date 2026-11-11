@@ -10,6 +10,7 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/phase_pill.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/status.dart';
