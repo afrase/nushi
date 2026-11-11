@@ -87,6 +87,23 @@ void main() {
     await closeView(tester, again);
   }, variant: _mac);
 
+  testWidgets('Tokyo Night is picked from its card, and kept by its id', (
+    tester,
+  ) async {
+    Directory(dataDir).createSync(recursive: true);
+    final d = await _app(tester);
+    await _tap(tester, find.text('Tokyo Night'));
+    await tester.pumpAndSettle();
+    final tokyo = builtInTheme('tokyo-night')!;
+    expect(_painted(tester, find.byType(SettingsView)), same(tokyo.dark));
+    expect(readSaved()['theme'], 'tokyo-night');
+    expect(pickedTheme(), same(tokyo));
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+    await tester.pumpAndSettle();
+    expect(_painted(tester, find.byType(SettingsView)), same(tokyo.light));
+    await closeView(tester, d);
+  }, variant: _mac);
+
   testWidgets('a theme picked shows on the next frame, and rebuilding the '
       'app with the same theme changes nothing below it', (tester) async {
     final d = await _app(tester);

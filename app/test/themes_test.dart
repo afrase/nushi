@@ -17,9 +17,10 @@ void main() {
     expect(builtInThemes.first, same(nushiTheme));
     expect(nushiTheme.dark, same(Tokens.dark));
     expect(nushiTheme.light, same(Tokens.light));
-    expect({
-      for (final c in builtInThemes) c.id,
-    }, hasLength(builtInThemes.length));
+    expect(
+      [for (final c in builtInThemes) c.id],
+      ['nushi', 'vivid', 'solarized', 'nord', 'catppuccin', 'tokyo-night'],
+    );
     for (final c in builtInThemes) {
       expect(c.dark.brightness, Brightness.dark, reason: c.name);
       expect(c.light.brightness, Brightness.light, reason: c.name);
@@ -114,6 +115,13 @@ void main() {
     expect(t.dark.accent, const Color(0x80FF0000));
     expect(t.dark.raised, builtInTheme('nord')!.dark.raised);
     expect(tokenColors(t.light), tokenColors(builtInTheme('nord')!.light));
+    // An id with a hyphen names its built-in as any other.
+    final tokyo = readThemeFile('T.json', '{"from": "tokyo-night"}');
+    expect(tokyo.notes, isEmpty);
+    expect(
+      tokenColors(tokyo.theme!.dark),
+      tokenColors(builtInTheme('tokyo-night')!.dark),
+    );
     // Nushi's, when it names none.
     final plain = readThemeFile('P.json', '{"light": {"text": "#000000"}}');
     expect(plain.theme!.dark.raised, Tokens.dark.raised);

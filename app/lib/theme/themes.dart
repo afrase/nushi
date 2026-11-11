@@ -4,6 +4,7 @@ import 'package:nushi/theme/catppuccin.dart';
 import 'package:nushi/theme/nord.dart';
 import 'package:nushi/theme/solarized.dart';
 import 'package:nushi/theme/tokens.dart';
+import 'package:nushi/theme/tokyo_night.dart';
 import 'package:nushi/theme/vivid.dart';
 
 /// A color theme (ADR 0086): a named palette, a dark and a light set of
@@ -59,6 +60,12 @@ const List<ColorTheme> builtInThemes = [
     name: 'Catppuccin',
     dark: catppuccinDark,
     light: catppuccinLight,
+  ),
+  ColorTheme(
+    id: 'tokyo-night',
+    name: 'Tokyo Night',
+    dark: tokyoNightDark,
+    light: tokyoNightLight,
   ),
 ];
 
