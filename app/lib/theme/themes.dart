@@ -68,6 +68,8 @@ const List<ColorTheme> builtInThemes = [
     name: 'Catppuccin',
     dark: catppuccinDark,
     light: catppuccinLight,
+    darkName: 'Catppuccin Mocha',
+    lightName: 'Catppuccin Latte',
   ),
   ColorTheme(
     id: 'tokyo-night',

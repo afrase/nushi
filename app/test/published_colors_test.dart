@@ -216,6 +216,70 @@ void main() {
     });
   });
 
+  test('Catppuccin is Mocha and Latte', () {
+    final catppuccin = builtInTheme('catppuccin')!;
+    expect(catppuccin.darkName, 'Catppuccin Mocha');
+    expect(catppuccin.lightName, 'Catppuccin Latte');
+    // catppuccin/palette 1.8.0; the terminals' as catppuccin/kitty's.
+    _published('Mocha', catppuccin.dark, {
+      'window': 0x11111b, // crust
+      'base': 0x1e1e2e,
+      'codeBlock': 0x181825, // mantle
+      'text': 0xcdd6f4,
+      'accent': 0xcba6f7, // mauve
+      'syntax.keyword': 0xcba6f7,
+      'syntax.declaration': 0x89b4fa, // blue
+      'syntax.type': 0xf9e2af, // yellow
+      'syntax.string': 0xa6e3a1, // green
+      'syntax.number': 0xfab387, // peach
+      'syntax.regexp': 0xf5c2e7, // pink
+      'syntax.field': 0xb4befe, // lavender
+      'syntax.symbol': 0xf2cdcd, // flamingo
+      'syntax.parameter': 0xeba0ac, // maroon
+      'syntax.comment': 0x9399b2, // overlay2
+      'terminal.black': 0x45475a,
+      'terminal.red': 0xf38ba8,
+      'terminal.green': 0xa6e3a1,
+      'terminal.yellow': 0xf9e2af,
+      'terminal.blue': 0x89b4fa,
+      'terminal.magenta': 0xf5c2e7,
+      'terminal.cyan': 0x94e2d5,
+      'terminal.white': 0xbac2de,
+      'terminal.brightBlack': 0x585b70,
+      'terminal.brightWhite': 0xa6adc8,
+    });
+    _published('Latte', catppuccin.light, {
+      'window': 0xdce0e8, // crust
+      'base': 0xeff1f5,
+      'raised': 0xe6e9ef, // mantle
+      'text': 0x4c4f69,
+      'accent': 0x8839ef, // mauve
+      'syntax.keyword': 0x8839ef,
+      'syntax.declaration': 0x1e66f5, // blue
+      'syntax.type': 0xdf8e1d, // yellow
+      'syntax.string': 0x40a02b, // green
+      'syntax.number': 0xfe640b, // peach
+      'syntax.regexp': 0xea76cb, // pink
+      'syntax.field': 0x7287fd, // lavender
+      'syntax.symbol': 0xdd7878, // flamingo
+      'syntax.parameter': 0xe64553, // maroon
+      'syntax.comment': 0x7c7f93, // overlay2
+      'terminal.black': 0x5c5f77,
+      'terminal.red': 0xd20f39,
+      'terminal.green': 0x40a02b,
+      'terminal.yellow': 0xdf8e1d,
+      'terminal.blue': 0x1e66f5,
+      'terminal.magenta': 0xea76cb,
+      'terminal.cyan': 0x179299,
+      'terminal.white': 0xacb0be,
+      'terminal.brightBlack': 0x6c6f85,
+      'terminal.brightGreen': 0x40a02b,
+      'terminal.brightYellow': 0xdf8e1d,
+      'terminal.brightMagenta': 0xea76cb,
+      'terminal.brightWhite': 0xbcc0cc,
+    });
+  });
+
   test('code’s colors, the terminal’s, a diff’s and the body text are '
       'no pair of the contrast warnings', () {
     // Each drawn in the pane's own fill, where nothing could read it.

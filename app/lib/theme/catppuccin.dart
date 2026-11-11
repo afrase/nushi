@@ -9,8 +9,10 @@ import 'package:nushi/theme/tokens.dart';
 // comments) and its terminal colors. The surfaces (ADR 0111): crust the
 // window and base the panes in both; Mocha's cards a tone between base
 // and surface0, which is what's raised on them; Latte's cards mantle.
-// Latte's inks are taken darker where they read under AA on a fill they
-// sit on, keeping their hue.
+// Latte's inks are taken darker where Nushi's labels read under AA on a
+// fill they sit on, keeping their hue; its code and its terminal are
+// Latte's own colors, as Mocha's are Mocha's (the terminal's as
+// catppuccin/kitty has them).
 
 /// Catppuccin's dark set.
 const catppuccinDark = Tokens(
@@ -181,36 +183,36 @@ const catppuccinLight = Tokens(
     Color(0xFF2F7A1F), // green
   ],
   syntax: {
-    Capture.keyword: CodeInk(Color(0xFF8635ED)),
-    Capture.declaration: CodeInk(Color(0xFF135CEB)),
-    Capture.type: CodeInk(Color(0xFF955B04)),
-    Capture.string: CodeInk(Color(0xFF2C7808)),
-    Capture.number: CodeInk(Color(0xFFB04805)),
-    Capture.regexp: CodeInk(Color(0xFFAE3A8F)),
-    Capture.constant: CodeInk(Color(0xFFB04805), italic: true),
-    Capture.field: CodeInk(Color(0xFF485DD3)),
-    Capture.symbol: CodeInk(Color(0xFFAD4848)),
-    Capture.parameter: CodeInk(Color(0xFFCC1A39), italic: true),
-    Capture.meta: CodeInk(Color(0xFF955B04)),
-    Capture.tag: CodeInk(Color(0xFF135CEB)),
+    Capture.keyword: CodeInk(Color(0xFF8839EF)),
+    Capture.declaration: CodeInk(Color(0xFF1E66F5)),
+    Capture.type: CodeInk(Color(0xFFDF8E1D)),
+    Capture.string: CodeInk(Color(0xFF40A02B)),
+    Capture.number: CodeInk(Color(0xFFFE640B)),
+    Capture.regexp: CodeInk(Color(0xFFEA76CB)),
+    Capture.constant: CodeInk(Color(0xFFFE640B), italic: true),
+    Capture.field: CodeInk(Color(0xFF7287FD)),
+    Capture.symbol: CodeInk(Color(0xFFDD7878)),
+    Capture.parameter: CodeInk(Color(0xFFE64553), italic: true),
+    Capture.meta: CodeInk(Color(0xFFDF8E1D)),
+    Capture.tag: CodeInk(Color(0xFF1E66F5)),
     Capture.comment: CodeInk(Color(0xFF7C7F93), italic: true),
     Capture.docTag: CodeInk(Color(0xFF8839EF), italic: true, bold: true),
   },
   terminal: TerminalColors(
     black: Color(0xFF5C5F77),
     red: Color(0xFFD20F39),
-    green: Color(0xFF3D9D25),
-    yellow: Color(0xFFC27A02),
+    green: Color(0xFF40A02B),
+    yellow: Color(0xFFDF8E1D),
     blue: Color(0xFF1E66F5),
-    magenta: Color(0xFFD35FB4),
+    magenta: Color(0xFFEA76CB),
     cyan: Color(0xFF179299),
     white: Color(0xFFACB0BE),
     brightBlack: Color(0xFF6C6F85),
     brightRed: Color(0xFFD20F39),
-    brightGreen: Color(0xFF3D9D25),
-    brightYellow: Color(0xFFC27A02),
+    brightGreen: Color(0xFF40A02B),
+    brightYellow: Color(0xFFDF8E1D),
     brightBlue: Color(0xFF1E66F5),
-    brightMagenta: Color(0xFFD35FB4),
+    brightMagenta: Color(0xFFEA76CB),
     brightCyan: Color(0xFF179299),
     brightWhite: Color(0xFFBCC0CC),
   ),
