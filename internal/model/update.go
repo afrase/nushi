@@ -12,4 +12,10 @@ type Update struct {
 	Latest string
 	// Checked is when GitHub last answered; zero: not yet.
 	Checked time.Time
+	// Installing says Homebrew is upgrading Nushi now (ADR 0109);
+	// InstallError why the last upgrade failed, in a sentence or two to
+	// show; Installed the version the last one brought, "" until one has.
+	Installing   bool
+	InstallError string
+	Installed    string
 }

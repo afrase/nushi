@@ -190,12 +190,18 @@ class UpdateCheck extends $pb.GeneratedMessage {
     $core.String? url,
     $core.String? latest,
     $fixnum.Int64? checkedMs,
+    $core.bool? installing,
+    $core.String? installError,
+    $core.String? installed,
   }) {
     final result = UpdateCheck._();
     if (version != null) result.version = version;
     if (url != null) result.url = url;
     if (latest != null) result.latest = latest;
     if (checkedMs != null) result.checkedMs = checkedMs;
+    if (installing != null) result.installing = installing;
+    if (installError != null) result.installError = installError;
+    if (installed != null) result.installed = installed;
     return result;
   }
 
@@ -216,6 +222,9 @@ class UpdateCheck extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'url')
     ..aOS(4, _omitFieldNames ? '' : 'latest')
     ..aInt64(5, _omitFieldNames ? '' : 'checkedMs')
+    ..aOB(6, _omitFieldNames ? '' : 'installing')
+    ..aOS(7, _omitFieldNames ? '' : 'installError')
+    ..aOS(8, _omitFieldNames ? '' : 'installed')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -279,6 +288,39 @@ class UpdateCheck extends $pb.GeneratedMessage {
   $core.bool hasCheckedMs() => $_has(3);
   @$pb.TagNumber(5)
   void clearCheckedMs() => $_clearField(5);
+
+  /// Whether InstallUpdate's install is running. API 115.
+  @$pb.TagNumber(6)
+  $core.bool get installing => $_getBF(4);
+  @$pb.TagNumber(6)
+  set installing($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(6)
+  $core.bool hasInstalling() => $_has(4);
+  @$pb.TagNumber(6)
+  void clearInstalling() => $_clearField(6);
+
+  /// Why the last install failed, in a sentence or two to show; "" when
+  /// it didn't, and once another starts. API 115.
+  @$pb.TagNumber(7)
+  $core.String get installError => $_getSZ(5);
+  @$pb.TagNumber(7)
+  set installError($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(7)
+  $core.bool hasInstallError() => $_has(5);
+  @$pb.TagNumber(7)
+  void clearInstallError() => $_clearField(7);
+
+  /// The version the last install brought, "" until one has: the app
+  /// still running then is the old one, which Homebrew couldn't quit.
+  /// API 115.
+  @$pb.TagNumber(8)
+  $core.String get installed => $_getSZ(6);
+  @$pb.TagNumber(8)
+  set installed($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(8)
+  $core.bool hasInstalled() => $_has(6);
+  @$pb.TagNumber(8)
+  void clearInstalled() => $_clearField(8);
 }
 
 class CheckForUpdatesRequest extends $pb.GeneratedMessage {
@@ -322,6 +364,91 @@ class CheckForUpdatesRequest extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<CheckForUpdatesRequest>(
           CheckForUpdatesRequest.$_createMessage);
   static CheckForUpdatesRequest? _defaultInstance;
+}
+
+class InstallUpdateRequest extends $pb.GeneratedMessage {
+  factory InstallUpdateRequest() => InstallUpdateRequest._();
+
+  InstallUpdateRequest._();
+
+  factory InstallUpdateRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      InstallUpdateRequest()..mergeFromBuffer(data, registry);
+  factory InstallUpdateRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      InstallUpdateRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'InstallUpdateRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: InstallUpdateRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  InstallUpdateRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  InstallUpdateRequest copyWith(void Function(InstallUpdateRequest) updates) =>
+      super.copyWith((message) => updates(message as InstallUpdateRequest))
+          as InstallUpdateRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use InstallUpdateRequest() / InstallUpdateRequest.new instead')
+  static InstallUpdateRequest create() => InstallUpdateRequest._();
+  static $pb.GeneratedMessage $_createMessage() => InstallUpdateRequest._();
+  @$core.override
+  InstallUpdateRequest createEmptyInstance() => InstallUpdateRequest._();
+  @$core.pragma('dart2js:noInline')
+  static InstallUpdateRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<InstallUpdateRequest>(
+          InstallUpdateRequest.$_createMessage);
+  static InstallUpdateRequest? _defaultInstance;
+}
+
+class InstallUpdateResponse extends $pb.GeneratedMessage {
+  factory InstallUpdateResponse() => InstallUpdateResponse._();
+
+  InstallUpdateResponse._();
+
+  factory InstallUpdateResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      InstallUpdateResponse()..mergeFromBuffer(data, registry);
+  factory InstallUpdateResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      InstallUpdateResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'InstallUpdateResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: InstallUpdateResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  InstallUpdateResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  InstallUpdateResponse copyWith(
+          void Function(InstallUpdateResponse) updates) =>
+      super.copyWith((message) => updates(message as InstallUpdateResponse))
+          as InstallUpdateResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use InstallUpdateResponse() / InstallUpdateResponse.new instead')
+  static InstallUpdateResponse create() => InstallUpdateResponse._();
+  static $pb.GeneratedMessage $_createMessage() => InstallUpdateResponse._();
+  @$core.override
+  InstallUpdateResponse createEmptyInstance() => InstallUpdateResponse._();
+  @$core.pragma('dart2js:noInline')
+  static InstallUpdateResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<InstallUpdateResponse>(
+          InstallUpdateResponse.$_createMessage);
+  static InstallUpdateResponse? _defaultInstance;
 }
 
 class CheckForUpdatesResponse extends $pb.GeneratedMessage {
@@ -32075,6 +32202,19 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, CheckForUpdatesRequest request) =>
       _client.invoke<CheckForUpdatesResponse>(ctx, 'NushiService',
           'CheckForUpdates', request, CheckForUpdatesResponse());
+
+  /// Has Homebrew upgrade the cask that installed Nushi (ADR 0109): the
+  /// daemon runs `brew update`, then `brew upgrade --cask` of nushi@beta
+  /// or nushi, whichever its Caskroom has. The request names nothing: no
+  /// cask, path or version. It answers once the install has started;
+  /// UpdateCheck (the update event, Ping) says how it goes. Refused with
+  /// failed_precondition when Homebrew didn't install this Nushi, when no
+  /// newer version was found, or while an install runs. Not on a device's
+  /// channel. API 115.
+  $async.Future<InstallUpdateResponse> installUpdate(
+          $pb.ClientContext? ctx, InstallUpdateRequest request) =>
+      _client.invoke<InstallUpdateResponse>(ctx, 'NushiService',
+          'InstallUpdate', request, InstallUpdateResponse());
 
   /// Lists every stored chat.
   $async.Future<ListChatsResponse> listChats(

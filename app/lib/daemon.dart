@@ -53,7 +53,7 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     : Platform.environment['NUSHI_DATA'] ?? native.install.dataFolder;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 114;
+const apiVersion = 115;
 
 /// The API from which the daemon says what an agent has (Agent.mcp_user_only,
 /// ListSkillsResponse.has_built_in and has_plugins), which
@@ -83,6 +83,10 @@ const rerunApi = 88;
 /// The API from which the daemon checks for a newer release of Nushi
 /// (Ping's update, CheckForUpdates, Settings.check_updates).
 const updatesApi = 86;
+
+/// The API from which the daemon installs a newer version with Homebrew
+/// (InstallUpdate, UpdateCheck.installing; ADR 0109).
+const installApi = 115;
 
 /// The API from which a daemon restarts itself once nothing runs, when
 /// asked (RestartWhenIdle).

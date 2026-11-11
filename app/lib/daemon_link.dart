@@ -41,6 +41,10 @@ extension DaemonLink on Daemon {
     return r.update;
   }
 
+  /// Has the daemon upgrade Nushi with Homebrew (ADR 0109). It answers
+  /// once the install has started; [update] says how it goes.
+  Future<void> installUpdate() => client.installUpdate(InstallUpdateRequest());
+
   /// Whether starting the bundled daemon keeps failing.
   bool get launchFailed => _launcher.launches >= 3 && !connected;
 

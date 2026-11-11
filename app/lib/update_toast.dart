@@ -9,6 +9,7 @@ import 'package:nushi/markdown.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/slides.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -118,10 +119,14 @@ void openRelease(BuildContext context, Daemon d) =>
 bool isBeta(String version) => version.split('+').first.contains('-');
 
 /// Says a newer release is out, in the window's bottom right corner, out
-/// of the way: not modal, no sound. Copy puts Homebrew's upgrade on the
-/// clipboard when Homebrew installed the app and its cask has the release
-/// ([caskWith]; Release notes opens the release's page), else Download
-/// opens the release's page; × dismisses it until a newer one.
+/// of the way: not modal, no sound. When Homebrew installed the app and
+/// its cask has the release ([caskWith]), Update has the daemon run
+/// Homebrew's upgrade (ADR 0109; Release notes opens the release's page):
+/// the card says "Updating…" until Homebrew quits the app and opens the
+/// new one, or why it failed, with Retry and Copy (Homebrew's upgrade on
+/// the clipboard, all a daemon older than [installApi] offers). Without a
+/// cask, Download opens the release's page. × dismisses it until a newer
+/// one.
 class UpdateToast extends StatefulWidget {
   const new(this.daemon, {super.key});
 
@@ -141,10 +146,12 @@ class UpdateToast extends StatefulWidget {
 class _UpdateToastState extends State<UpdateToast> {
   bool _copied = false;
   Timer? _unmark;
+  final _install = Runner();
 
   @override
   void dispose() {
     _unmark?.cancel();
+    _install.dispose();
     super.dispose();
   }
 
@@ -188,6 +195,38 @@ class _UpdateToastState extends State<UpdateToast> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final d = widget.daemon;
+    final u = d.update;
+    final cask = caskWith(version);
+    // What the daemon's own install says, when it has one to offer.
+    final installs = cask != null && d.daemonApi >= installApi;
+    final installing = installs && u.installing;
+    final installed = installs && !installing && u.installed == version;
+    final error = installs && !installing && !installed ? u.installError : '';
+    final notes = Button(
+      label: 'Release notes',
+      onPressed: () => openRelease(context, d),
+    );
+    Widget copy(String cask) => Button(
+      label: _copied ? 'Copied' : 'Copy',
+      kind: ButtonKind.primary,
+      tooltip: 'Copy “${brewUpgrade(cask)}”',
+      onPressed: () => _copy(cask),
+    );
+    Widget update(String cask, {required bool again}) => ListenableBuilder(
+      listenable: _install,
+      builder: (context, _) => Button(
+        label: installing
+            ? 'Updating…'
+            : again
+            ? 'Retry'
+            : 'Update',
+        kind: again ? ButtonKind.secondary : ButtonKind.primary,
+        tooltip: installing ? '' : 'Runs “${brewUpgrade(cask)}”',
+        onPressed: installing || _install.value
+            ? null
+            : () => _install.run(context, d.installUpdate),
+      ),
+    );
     return Container(
       key: const ValueKey('update-toast'),
       width: UpdateToast.width,
@@ -204,10 +243,21 @@ class _UpdateToastState extends State<UpdateToast> {
           Row(
             spacing: 8,
             children: [
-              Icon(Icons.arrow_circle_up, size: 16, color: t.accent),
+              if (installing)
+                const SizedBox.square(dimension: 16, child: Spinner())
+              else
+                Icon(
+                  installed ? Icons.check_circle : Icons.arrow_circle_up,
+                  size: 16,
+                  color: installed ? t.done : t.accent,
+                ),
               Expanded(
                 child: Text(
-                  'Nushi $version is available.',
+                  installing
+                      ? 'Updating to Nushi $version…'
+                      : installed
+                      ? 'Nushi $version is installed.'
+                      : 'Nushi $version is available.',
                   style: theme.ui(t.text),
                 ),
               ),
@@ -219,27 +269,52 @@ class _UpdateToastState extends State<UpdateToast> {
               ),
             ],
           ),
+          if (installed)
+            // Homebrew didn't quit this app, so it didn't open the new one.
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Text(
+                'Quit Nushi and open it again.',
+                style: theme.ui(t.textSecondary, size: 12),
+              ),
+            ),
+          if (error.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Tooltip(
+                message: error,
+                child: Text(
+                  error,
+                  key: const ValueKey('update-error'),
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.ui(t.crashed, size: 12),
+                ),
+              ),
+            ),
           Row(
             spacing: 8,
             children: [
-              if (caskWith(version) case final cask?) ...[
-                Button(
-                  label: _copied ? 'Copied' : 'Copy',
-                  kind: ButtonKind.primary,
-                  tooltip: 'Copy “${brewUpgrade(cask)}”',
-                  onPressed: () => _copy(cask),
-                ),
-                Button(
-                  label: 'Release notes',
-                  onPressed: () => openRelease(context, d),
-                ),
-              ] else
+              if (installed)
+                notes
+              else if (cask == null)
                 Button(
                   label: 'Download',
                   kind: ButtonKind.primary,
                   tooltip: "Open the release's page",
                   onPressed: () => openRelease(context, d),
-                ),
+                )
+              else if (!installs) ...[
+                copy(cask),
+                notes,
+              ] else if (error.isNotEmpty) ...[
+                copy(cask),
+                update(cask, again: true),
+                notes,
+              ] else ...[
+                update(cask, again: false),
+                notes,
+              ],
             ],
           ),
         ],

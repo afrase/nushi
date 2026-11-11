@@ -26,7 +26,7 @@ A beta is a version you can try before it's released. With Homebrew on a Mac, sw
 brew uninstall --cask nushi && brew install --cask afrase/tap/nushi@beta
 ```
 
-Your chats and settings stay. From then on Nushi tells you about each new beta like any update: click **Copy** on the card and paste the command in a terminal.
+Your chats and settings stay. From then on Nushi tells you about each new beta like any update.
 
 To go back to releases only:
 
@@ -35,6 +35,19 @@ brew uninstall --cask nushi@beta && brew install --cask afrase/tap/nushi
 ```
 
 Without Homebrew, or on Linux, download a beta from the [Releases page](https://github.com/afrase/nushi/releases) and install it as you installed Nushi. It tells you about newer betas too.
+
+## Update Nushi
+
+When a newer version is out, a small card appears in the bottom right corner of the window.
+
+1. Click **Update**. The card says "Updating to Nushi…" while Homebrew downloads and installs it.
+2. Nushi closes and opens again as the new version. Your chats keep running.
+
+If the card shows an error instead, click **Retry**. A release can take a few minutes to reach Homebrew. **Copy** puts the Homebrew command on the clipboard if you'd rather run it in a terminal.
+
+If macOS asks whether Nushi Daemon may update other apps, allow it. If the card says the new version is installed, quit Nushi and open it again.
+
+Update shows when you installed Nushi with Homebrew. Otherwise the card has **Download**, which opens the release's page: install it as you installed Nushi.
 
 ## What you need
 

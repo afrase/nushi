@@ -184,11 +184,12 @@ func run() error {
 	// The API, on the socket for the app (with the token) and on each
 	// paired device's channel (ADR 0034).
 	logs.SetDebug(st.DebugLog())
-	restarts := restart.New(chatSvc, restart.Together{termSvc, srvSvc})
+	updateSvc := startUpdates(st, hub.Publish, agentSvc.Environ, home)
+	restarts := restart.New(chatSvc, restart.Together{termSvc, srvSvc, updateSvc})
 	sv := api.Services{LogPrefs: st, Transcripts: st, Chats: chatSvc, Agents: agentSvc, MCP: newMCP(known, agentSvc, chatSvc.MCPChanged), Skills: newSkills(known), Terms: termSvc,
 		Trust: newTrust(known, st), Hub: hub, Memory: memory.New(chatSvc), Restart: restarts, Jira: jiraSvc, Remote: remoteSvc, Servers: srvSvc}
 	sv.GitHub = newGitHub(st, dev)
-	sv.Updates = startUpdates(st, hub.Publish)
+	sv.Updates = updateSvc
 	if err := usePush(st, sv.Remote, chatSvc, kinds); err != nil {
 		return err
 	}

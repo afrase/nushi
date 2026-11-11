@@ -43,6 +43,21 @@ abstract final class NushiService {
     nushiv1nushi.CheckForUpdatesResponse.new,
   );
 
+  /// Has Homebrew upgrade the cask that installed Nushi (ADR 0109): the
+  /// daemon runs `brew update`, then `brew upgrade --cask` of nushi@beta
+  /// or nushi, whichever its Caskroom has. The request names nothing: no
+  /// cask, path or version. It answers once the install has started;
+  /// UpdateCheck (the update event, Ping) says how it goes. Refused with
+  /// failed_precondition when Homebrew didn't install this Nushi, when no
+  /// newer version was found, or while an install runs. Not on a device's
+  /// channel. API 115.
+  static const installUpdate = connect.Spec(
+    '/$name/InstallUpdate',
+    connect.StreamType.unary,
+    nushiv1nushi.InstallUpdateRequest.new,
+    nushiv1nushi.InstallUpdateResponse.new,
+  );
+
   /// Lists every stored chat.
   static const listChats = connect.Spec(
     '/$name/ListChats',

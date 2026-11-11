@@ -53,8 +53,10 @@ On Linux:
 
 The daemon asks GitHub for the latest release when it starts and every 2 hours, with no token ([ADR 0061](adr/0061-the-daemon-checks-for-a-newer-release.md)). A newer one shows as a small card in the window's bottom right corner ("Nushi 0.1.17 is available."):
 
-- **Copy** puts `brew update && brew upgrade --cask nushi` on the clipboard, when Homebrew installed the app; **Release notes** opens the release.
-- **Download** opens the release's page, when Homebrew didn't install it.
+- **Update** installs it, when Homebrew installed the app: the daemon runs `brew update && brew upgrade --cask nushi` ([ADR 0109](adr/0109-update-runs-homebrew.md)). The card says "Updating to Nushi 0.1.17…" until Homebrew quits the app and opens the new one. **Release notes** opens the release.
+- If it fails, the card says why, with **Retry**, **Copy** (the same command on the clipboard, for a terminal) and Release notes; the end of Homebrew's output is in `nushid.log`. "Homebrew doesn't have 0.1.17 yet" means the release is out but its cask isn't: Retry in a few minutes. If macOS refused, allow Nushi Daemon in System Settings › Privacy & Security › App Management.
+- If the card says "Nushi 0.1.17 is installed. Quit Nushi and open it again.", Homebrew couldn't quit the app: do that.
+- **Download** opens the release's page, when Homebrew didn't install it (and on Linux).
 - **×** hides the card until a newer release.
 
 Settings › General › Updates turns the check off, and has Check now. The palette's Check for updates does the same.
@@ -68,7 +70,7 @@ brew uninstall --cask nushi && brew install --cask afrase/tap/nushi@beta   # fol
 brew uninstall --cask nushi@beta && brew install --cask afrase/tap/nushi   # back to releases only
 ```
 
-There's no setting. A Nushi the beta cask installed is told of a newer beta as of any update, and Copy puts `brew update && brew upgrade --cask nushi@beta` on the clipboard. Without Homebrew (and on Linux), a beta installed from its [release's page](https://github.com/afrase/nushi/releases) is told of newer ones too, with Download. A beta keeps chats and settings readable by the latest release.
+There's no setting. A Nushi the beta cask installed is told of a newer beta as of any update, and Update runs `brew update && brew upgrade --cask nushi@beta`. Without Homebrew (and on Linux), a beta installed from its [release's page](https://github.com/afrase/nushi/releases) is told of newer ones too, with Download. A beta keeps chats and settings readable by the latest release.
 
 ## Upgrading
 

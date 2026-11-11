@@ -2,6 +2,8 @@
 
 Status: accepted, 2026-11-11.
 
+Amended by [0109](0109-update-runs-homebrew.md): the toast's Update upgrades the cask the app came from; Copy is its fallback.
+
 ## Context
 The owner wants to try a larger or uncertain change (a redesign, projects that stay in the sidebar) on the work Mac before it's released, and to drop one that doesn't work out (2026-11-11). Until now a change was tried only once it was on `main` and released. `release.yml` already builds a tag like `v1.2.3-beta.1`, and a GitHub pre-release is seen by neither the update check (GitHub's latest release, ADR 0061) nor the cask (the latest release only, ADR 0055). A first cut added a Settings switch that had the check tell of pre-releases, each downloaded by hand from its page; the owner didn't want to be told of an update with no easy way to take it.
 
