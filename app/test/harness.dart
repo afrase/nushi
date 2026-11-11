@@ -119,9 +119,7 @@ final String? rendersDir = switch (Platform.environment['NUSHI_RENDERS']) {
 Future<void> render(WidgetTester tester, Finder of, String name) async {
   final dir = rendersDir;
   if (dir == null) return;
-  final solid = debugDisableShadows;
-  await _repaint(tester, solidShadows: false);
-  try {
+  await withRealShadows(tester, () async {
     final capture = captureImage(of.evaluate().single);
     await tester.runAsync(() async {
       final image = await capture;
@@ -133,6 +131,20 @@ Future<void> render(WidgetTester tester, Finder of, String name) async {
         image.dispose();
       }
     });
+  });
+}
+
+/// Runs [body] with shadows drawn as the app draws them, then puts them
+/// back as they were: for a picture that's looked at, never compared (a
+/// render, the README's screenshots).
+Future<void> withRealShadows(
+  WidgetTester tester,
+  Future<void> Function() body,
+) async {
+  final solid = debugDisableShadows;
+  await _repaint(tester, solidShadows: false);
+  try {
+    await body();
   } finally {
     await _repaint(tester, solidShadows: solid);
   }

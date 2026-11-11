@@ -23,15 +23,22 @@ import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 
 import '../fake_daemon.dart';
+import '../harness.dart';
 import 'demo.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
-/// Writes what [finder] shows as docs/images/[name].png.
-Future<void> _shoot(String name, [Finder? finder]) => expectLater(
-  finder ?? find.byType(NushiApp),
-  matchesGoldenFile('../../../docs/images/$name.png'),
-);
+/// Writes what [finder] shows as docs/images/[name].png, its shadows drawn
+/// as the app draws them (a test's are solid blocks): these are looked at,
+/// never compared.
+Future<void> _shoot(WidgetTester tester, String name, [Finder? finder]) =>
+    withRealShadows(
+      tester,
+      () => expectLater(
+        finder ?? find.byType(NushiApp),
+        matchesGoldenFile('../../../docs/images/$name.png'),
+      ),
+    );
 
 Future<void> _pump(WidgetTester tester, [int times = 6]) async {
   for (var i = 0; i < times; i++) {
@@ -225,7 +232,7 @@ void main() {
     collapsedWidgets.value = {'Environment', 'Changes', 'Artifacts'};
     d.chats['feed']!.pane.value = 'x';
     await _pump(tester);
-    await _shoot('hero');
+    await _shoot(tester, 'hero');
     d.dispose();
   }, variant: _mac);
 
@@ -233,7 +240,7 @@ void main() {
     final (d, _) = await _app(tester, _small, select: 'feed');
     await tester.tap(find.text('New chat').first);
     await _pump(tester);
-    await _shoot('agents');
+    await _shoot(tester, 'agents');
     d.dispose();
   }, variant: _mac);
 
@@ -269,7 +276,7 @@ void main() {
       find.textContaining('cursor.go', findRichText: true).first,
     );
     await _pump(tester, 10);
-    await _shoot('changes');
+    await _shoot(tester, 'changes');
     d.dispose();
   }, variant: _mac);
 
@@ -277,7 +284,7 @@ void main() {
     final (d, _) = await _app(tester, _small, select: 'feed', details: false);
     d.chats['feed']!.openPreview('docs/design/feed-cursor.md');
     await _pump(tester, 10);
-    await _shoot('preview');
+    await _shoot(tester, 'preview');
     d.dispose();
   }, variant: _mac);
 
@@ -285,7 +292,7 @@ void main() {
     final (d, _) = await _app(tester, _small, select: 'feed', details: false);
     d.chats['feed']!.tab.value = ChatTab.pull;
     await _pump(tester, 10);
-    await _shoot('pull-request');
+    await _shoot(tester, 'pull-request');
     d.dispose();
   }, variant: _mac);
 
@@ -295,7 +302,7 @@ void main() {
     await _pump(tester, 10);
     await tester.tap(find.text('Sprint').first);
     await _pump(tester, 10);
-    await _shoot('jira');
+    await _shoot(tester, 'jira');
     d.dispose();
   }, variant: _mac);
 
@@ -329,7 +336,7 @@ void main() {
     await _pump(tester, 8);
     await tester.tap(find.text('Atom feed drops the summary'));
     await _pump(tester, 10);
-    await _shoot('phone', find.byType(PhoneApp));
+    await _shoot(tester, 'phone', find.byType(PhoneApp));
     await phone.close();
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 5));
@@ -339,7 +346,7 @@ void main() {
     terminalChats.value = {heroChat.id};
     final (d, _) = await _app(tester, _small, select: 'feed', details: false);
     await _pump(tester, 10);
-    await _shoot('terminal');
+    await _shoot(tester, 'terminal');
     d.dispose();
   }, variant: _mac);
 }
