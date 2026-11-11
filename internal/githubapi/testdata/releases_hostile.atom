@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <link type="text/html" rel="alternate" href="https://github.com/afrase/nushi/releases/tag/v9.0.0"/>
+  <entry>
+    <link rel="alternate" href="https://evil.example/afrase/nushi/releases/tag/v9.0.1"/>
+  </entry>
+  <entry>
+    <link rel="alternate" href="https://github.com/someone/else/releases/tag/v9.0.2"/>
+  </entry>
+  <entry>
+    <link rel="alternate" href="http://github.com/afrase/nushi/releases/tag/v9.0.3"/>
+  </entry>
+  <entry>
+    <link rel="alternate" href="https://github.com/afrase/nushi/releases/tag/v9.0.4/../../../../evil"/>
+  </entry>
+  <entry>
+    <link rel="alternate" href="https://github.com/afrase/nushi/releases/tag/v9%2F0%2F5"/>
+  </entry>
+  <entry>
+    <link rel="alternate" href="https://user@github.com/afrase/nushi/releases/tag/v9.0.6"/>
+  </entry>
+  <entry>
+    <link rel="alternate" href="/afrase/nushi/releases/tag/v9.0.7"/>
+  </entry>
+  <entry>
+    <link rel="enclosure" href="https://github.com/afrase/nushi/releases/tag/v9.0.8"/>
+  </entry>
+  <entry>
+    <link rel="alternate" href="https://github.com/afrase/nushi/releases/tag/"/>
+  </entry>
+  <entry>
+    <link rel="alternate" href="https://github.com.evil.example/afrase/nushi/releases/tag/v9.0.9"/>
+    <link rel="alternate" href="https://github.com/afrase/nushi/releases/tag/v0.28.2"/>
+  </entry>
+</feed>

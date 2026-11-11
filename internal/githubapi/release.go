@@ -16,11 +16,17 @@ import (
 // Releases asks for a public repository's releases without a token
 // (nothing of the user's is sent), each question with its last answer's
 // ETag: asked again unchanged, GitHub answers 304, which costs nothing.
+// Without a token GitHub allows an address 60 requests an hour, and an
+// office or a VPN is one address: refused for that, the same question
+// goes to the repository's pages on github.com (release_web.go), which
+// that limit doesn't count.
 type Releases struct {
 	Repo      string            // "owner/name"
 	Base      string            // REST's base; "" for api.github.com
+	Web       string            // the pages' base; "" for https://github.com
 	Transport http.RoundTripper // nil: http.DefaultTransport
 
+	now    func() time.Time // nil: time.Now
 	mu     sync.Mutex
 	latest asked[string]
 	tags   asked[[]string]
@@ -42,6 +48,9 @@ func (r *Releases) Latest(ctx context.Context) (string, error) {
 		Tag string `json:"tag_name"`
 	}
 	fresh, err := r.get(ctx, "/releases/latest", &r.latest.etag, &body)
+	if networkLimited(err) {
+		return viaPages(ctx, err, r.webLatest)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -62,6 +71,9 @@ func (r *Releases) Tags(ctx context.Context) ([]string, error) {
 		Draft bool   `json:"draft"`
 	}
 	fresh, err := r.get(ctx, "/releases?per_page=10", &r.tags.etag, &body)
+	if networkLimited(err) {
+		return viaPages(ctx, err, r.webTags)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +124,9 @@ func (r *Releases) get(ctx context.Context, path string, etag *string, out any) 
 	case resp.StatusCode == http.StatusNotFound:
 		return false, ErrNotFound
 	case resp.StatusCode != http.StatusOK:
+		if e := rateRefusal(resp, r.clock()); e != nil {
+			return false, e
+		}
 		return false, fmt.Errorf("GitHub answered %s", resp.Status)
 	}
 	// Ten releases with their notes and files' records are a few hundred kB.
