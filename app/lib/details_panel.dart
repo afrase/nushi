@@ -255,7 +255,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
               ],
             ),
           );
-    // On the pane's own fill, as Claude's rail (ADR 0092): opaque, as it
+    // The cards lie on the pane's own fill (ADR 0111): opaque, as it
     // slides in over the transcript.
     return ColoredBox(
       color: t.base,

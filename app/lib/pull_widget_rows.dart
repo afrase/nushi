@@ -285,9 +285,10 @@ class _Done extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
       // A fill, no outline (ADR 0111): the merged note's is GitHub's
-      // purple, as a subagent's row has it.
+      // purple, as a subagent's row has it; the closed one's the pane's,
+      // set into the widget's card, whose own fill a card's would be.
       decoration: BoxDecoration(
-        color: merged ? t.subagentTint : t.raised,
+        color: merged ? t.subagentTint : t.base,
         borderRadius: BorderRadius.circular(NushiTheme.control),
       ),
       child: Column(

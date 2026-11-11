@@ -150,7 +150,9 @@ List<Item> get busyItems => [
 ];
 
 /// The app at [size] on a busy chat whose agent reported [usage] and, asked,
-/// what fills its context ([context]; null: it can't be asked).
+/// what fills its context ([context]; null: it can't be asked); [also]
+/// answers what it's asked first (a branch, a pull request, MCP servers,
+/// which Nushi reads with [mcp]).
 Future<(Daemon, FakeDaemon)> railApp(
   WidgetTester tester, {
   Size size = const Size(1700, 1000),
@@ -158,6 +160,8 @@ Future<(Daemon, FakeDaemon)> railApp(
   GetContextUsageResponse? context,
   Usage? usage,
   List<Item>? items,
+  Object? Function(Object input)? also,
+  bool mcp = false,
 }) async {
   viewport(tester, size, brightness: brightness);
   forgetContext('c'); // another test's
@@ -172,19 +176,22 @@ Future<(Daemon, FakeDaemon)> railApp(
     status: ChatStatus(canAskContext: context != null),
   );
   final fake = FakeDaemon([c])
-    ..answer = (input) => switch (input) {
-      GetChatRequest() => GetChatResponse(
-        chat: c,
-        items: items ?? busyItems,
-        status: ChatStatus(canAskContext: context != null),
-        commands: [Command(name: 'compact')],
-        usage:
-            usage ??
-            Usage(contextUsed: Int64(545500), contextSize: Int64(1000000)),
-      ),
-      GetContextUsageRequest() => context,
-      _ => null,
-    };
+    ..answer = (input) =>
+        also?.call(input) ??
+        switch (input) {
+          GetChatRequest() => GetChatResponse(
+            chat: c,
+            items: items ?? busyItems,
+            status: ChatStatus(canAskContext: context != null),
+            commands: [Command(name: 'compact')],
+            usage:
+                usage ??
+                Usage(contextUsed: Int64(545500), contextSize: Int64(1000000)),
+          ),
+          GetContextUsageRequest() => context,
+          _ => null,
+        };
+  if (mcp) fake.agents.first.mcp = true; // Claude's, read by Nushi
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/artifacts_widget.dart';
@@ -6,13 +7,71 @@ import 'package:nushi/context_report.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'details_rail_fixture.dart';
 import 'fake_daemon.dart';
+import 'github_fixture.dart' show pull, testRepo;
 import 'harness.dart';
+
+/// A chat on a branch with changes and a pull request, in a folder with
+/// MCP servers.
+Object? _filled(Object input) => switch (input) {
+  GetFolderStatusRequest() => GetFolderStatusResponse(
+    git: true,
+    branch: 'rail-cards',
+    defaultBase: 'main',
+    ahead: 2,
+    files: 4,
+    added: 120,
+    removed: 31,
+  ),
+  FindChatPullRequest() => FindChatPullResponse(
+    host: 'github.com',
+    repo: testRepo,
+    branch: 'rail-cards',
+    pull: GitHubLink(
+      host: 'github.com',
+      repo: testRepo,
+      number: 1,
+      id: 'PR_1',
+      pull: true,
+    ),
+  ),
+  GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
+  ListMcpServersRequest() => ListMcpServersResponse(
+    servers: [
+      McpServer(name: 'github', scope: 'user', state: 'connected'),
+      McpServer(
+        name: 'web',
+        scope: 'project',
+        state: 'connected',
+        approved: true,
+      ),
+      McpServer(name: 'docs', scope: 'project', state: 'failed'),
+    ],
+  ),
+  _ => null,
+};
+
+/// Where the card of the widget at [widget] is: what takes its pointer.
+Rect _card(Element widget) {
+  RenderBox? box;
+  void visit(Element e) {
+    if (box != null) return;
+    if (e.widget is MouseRegion) {
+      box = e.renderObject! as RenderBox;
+    } else {
+      e.visitChildren(visit);
+    }
+  }
+
+  widget.visitChildren(visit);
+  return box!.localToGlobal(Offset.zero) & box!.size;
+}
 
 void main() {
   setUpAll(loadFonts);
@@ -188,6 +247,93 @@ void main() {
       );
       await closeView(tester, d);
     }, variant: macOnly);
+  }
+
+  // Every widget with something in it (a branch with changes, a pull
+  // request, MCP servers with their switches), each a card (ADR 0111): no
+  // card inside a card, no text past a card's edge, the cards 8 in from
+  // the column's sides and 8 apart.
+  for (final (name, brightness) in [
+    ('dark', Brightness.dark),
+    ('light', Brightness.light),
+  ]) {
+    for (final (w, size) in [
+      ('1700', const Size(1700, 1000)),
+      ('1700_tall', const Size(1700, 1900)),
+      ('720', const Size(720, 1000)),
+    ]) {
+      testWidgets('render: every widget filled, $w, $name', (tester) async {
+        final (d, _) = await railApp(
+          tester,
+          size: size,
+          brightness: brightness,
+          context: fullContext,
+          also: _filled,
+          mcp: true,
+        );
+        expectTextInside(tester, size.width);
+        if (size.width < 1000) {
+          // Too narrow for the details: they hide, as before.
+          expect(railPanel, findsNothing);
+        } else {
+          final panel = tester.getRect(railPanel);
+          // Those under the window's foot too: every one is built.
+          final cards = [
+            for (final e
+                in find.byType(PanelWidget, skipOffstage: false).evaluate())
+              _card(e),
+          ];
+          expect(cards.length, greaterThanOrEqualTo(7));
+          expect(cards.first.top, panel.top + PanelType.inset);
+          for (final (i, card) in cards.indexed) {
+            expect(card.left, panel.left + PanelType.inset);
+            expect(card.right, panel.right - PanelType.inset);
+            if (i > 0) expect(card.top, cards[i - 1].bottom + PanelType.inset);
+          }
+          for (final title in ['Pull request', 'MCP', 'Artifacts', 'github']) {
+            expect(
+              find.descendant(
+                of: railPanel,
+                matching: find.text(title, skipOffstage: false),
+                skipOffstage: false,
+              ),
+              findsOne,
+            );
+          }
+          // A card's text is where the flat widget's was: 16 in.
+          expect(
+            tester.getTopLeft(inRail(find.text('Environment'))).dx,
+            panel.left + PanelType.side,
+          );
+        }
+        await render(tester, find.byType(NushiApp), 'details_cards_${w}_$name');
+        if (w == '1700') {
+          // Scrolled, the pointer at its bar, which is then at its widest:
+          // beside the cards, in their margin.
+          final panel = tester.getRect(railPanel);
+          final mouse = await tester.createGesture(
+            kind: PointerDeviceKind.mouse,
+          );
+          await mouse.addPointer(location: panel.center);
+          addTearDown(mouse.removePointer);
+          await tester.sendEventToBinding(
+            PointerScrollEvent(
+              position: panel.center,
+              scrollDelta: const Offset(0, 260),
+            ),
+          );
+          await tester.pump();
+          await mouse.moveTo(Offset(panel.right - 5, panel.center.dy));
+          await tester.pump(const Duration(milliseconds: 300));
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'details_cards_${w}_scrolled_$name',
+          );
+        }
+        await closeView(tester, d);
+      }, variant: macOnly);
+    }
   }
 
   // Every built-in theme, both ways: the panel only (the window's render
