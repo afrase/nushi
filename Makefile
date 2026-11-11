@@ -261,8 +261,8 @@ test-app:
 
 # The Mac window's placement maths (app/macos/Runner/Placement.swift, ADR
 # 0093), what ⌘V attaches (Clipboard.swift, on a pasteboard of its own)
-# and what AppKit takes for its title bar (TitleBar.swift, a window never
-# shown) with their tests, built by swiftc and run with no window on
+# and what AppKit takes for its title bar and where the window's buttons
+# sit (TitleBar.swift, a window never shown) with their tests, built by swiftc and run with no window on
 # screen: RunnerTests is hosted by the app, so xcodebuild test would launch
 # Nushi (macOS only).
 test-window:

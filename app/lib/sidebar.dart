@@ -9,6 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/list_motion.dart';
 import 'package:nushi/new_chat.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_arrange.dart';
@@ -49,9 +50,17 @@ class Sidebar extends StatefulWidget {
 
   final Daemon daemon;
 
-  /// The strip at its top, under the traffic lights: the Mac's title bar's
-  /// height, where macOS centres them.
-  static const topHeight = 32.0;
+  /// The strip at its top, which holds Arrange and the button that hides
+  /// it. On the Mac the traffic lights sit in it, level with the middle of
+  /// the main pane's header (`macos/Runner/TitleBar.swift`'s
+  /// WindowButtons), so the strip ends where that header does and its
+  /// buttons are level with both; elsewhere it's a row of its own.
+  static double get topHeight =>
+      headersMoveWindow ? NushiTheme.windowPad + PaneHeader.height : 32;
+
+  /// The room over New chat: on the Mac the strip's foot is already the
+  /// header's line.
+  static double get topGap => headersMoveWindow ? 0 : 8;
 
   /// How far its rows and cards are in from its left edge, the window's,
   /// and from its right edge, where the main pane starts: the window's
@@ -156,17 +165,20 @@ class _SidebarState extends State<Sidebar> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Under the traffic lights, which stay where macOS puts them
-            // (ADR 0080): the strip is as high as the title bar they sit
-            // in, so its buttons are level with them. Its empty space moves
-            // the window; the buttons keep their clicks.
+            // Around the traffic lights (ADR 0111): the strip's buttons
+            // are level with them and with the header's, in the header's
+            // band under the window's margin. Its empty space moves the
+            // window; the buttons keep their clicks.
             SizedBox(
               height: Sidebar.topHeight,
               child: WindowDrag(
                 background: const SizedBox.shrink(),
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(right: Sidebar.end),
+                    padding: EdgeInsets.only(
+                      top: headersMoveWindow ? NushiTheme.windowPad : 0,
+                      right: Sidebar.end,
+                    ),
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: Row(
@@ -183,9 +195,9 @@ class _SidebarState extends State<Sidebar> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 Sidebar.start,
-                8,
+                Sidebar.topGap,
                 Sidebar.end,
                 4,
               ),

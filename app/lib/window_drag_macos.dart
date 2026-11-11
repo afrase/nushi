@@ -10,9 +10,12 @@ const _channel = MethodChannel('nushi/window');
 class MacWindow implements AppWindow {
   const new();
 
-  /// Past the traffic lights, which stay where macOS puts them (ADR 0080).
+  /// Past the traffic lights, which `macos/Runner/TitleBar.swift`'s
+  /// WindowButtons puts 20 in from the window's edge and level with the
+  /// headers' middle (ADR 0111): the third ends 80 in (each 14 across, 23
+  /// apart), and what follows keeps the 15 it always had from it.
   @override
-  double get titleInset => 84;
+  double get titleInset => 95;
 
   @override
   bool get headersMoveWindow => true;

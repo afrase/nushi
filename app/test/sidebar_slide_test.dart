@@ -33,14 +33,15 @@ List<Chat> _chats({Map<String, int> pins = const {}}) => [
     c..pin = pins[c.id] ?? 0,
 ];
 
-/// The sidebar alone, 260 wide, on [_chats] with [pins]; with Reduce
-/// Motion when [still].
+/// The sidebar alone, 260 wide and [height] high, on [_chats] with [pins];
+/// with Reduce Motion when [still].
 Future<(Daemon, FakeDaemon)> _sidebar(
   WidgetTester tester, {
   Map<String, int> pins = const {},
   bool still = false,
+  double height = 560,
 }) async {
-  viewport(tester, const Size(280, 560));
+  viewport(tester, Size(280, height));
   final fake = FakeDaemon(_chats(pins: pins));
   final d = await fake.connect(tester);
   await tester.pumpWidget(
@@ -56,7 +57,7 @@ Future<(Daemon, FakeDaemon)> _sidebar(
               alignment: Alignment.topLeft,
               child: SizedBox(
                 width: 260,
-                height: 560,
+                height: height,
                 child: ListenableBuilder(
                   listenable: d,
                   builder: (context, _) => Sidebar(daemon: d),
@@ -214,7 +215,9 @@ void main() {
       'slide apart by its height, and a collapsed one stays collapsed', (
     tester,
   ) async {
-    final (d, _) = await _sidebar(tester);
+    // High enough for the last project under the Mac's top strip, which
+    // is as high as a header (ADR 0111): the list doesn't scroll.
+    final (d, _) = await _sidebar(tester, height: 584);
     // notes collapsed: its row hidden, its header alone.
     await tester.tap(
       find.descendant(

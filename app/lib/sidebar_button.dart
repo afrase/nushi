@@ -16,8 +16,8 @@ import 'package:nushi/window_drag.dart';
 part 'sidebar_glide.dart';
 
 /// Where what's in the main pane's top may start with the sidebar hidden,
-/// from the pane's left edge: past the Mac's traffic lights, which stay
-/// where macOS puts them (ADR 0080), or the window's own inset
+/// from the pane's left edge: past the Mac's traffic lights, which sit
+/// level with the header's middle (ADR 0111), or the window's own inset
 /// ([AppWindow.titleInset]), less the window's margin, which the pane is
 /// already in by (ADR 0111). The phone, whose sidebar never hides, has none.
 double get lightsInset =>

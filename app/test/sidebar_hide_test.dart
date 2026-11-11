@@ -105,11 +105,16 @@ void main() {
       final button = tester.getRect(find.byTooltip(_hide));
       expect(strip.width, 333);
       expect(button.right, strip.right - Sidebar.end);
-      // In the strip under the traffic lights, level with them (they're 9
-      // to 23 from the window's top), and clear of them with the sidebar
-      // at its narrowest too (they end 69 from its left).
-      expect(button.center.dy, 16);
-      expect(200 - Sidebar.end - button.width, greaterThan(84));
+      // In the strip the traffic lights sit in, level with them and with
+      // the header's middle (36 from the window's top: the window's
+      // margin and half a header), and clear of them with the sidebar at
+      // its narrowest too (they end 80 from its left).
+      expect(button.center.dy, NushiTheme.windowPad + PaneHeader.height / 2);
+      expect(button.center.dy, 36);
+      expect(200 - Sidebar.end - button.width, greaterThan(95));
+      // The strip ends where the header does, and New chat starts there.
+      expect(Sidebar.topHeight, tester.getRect(find.byType(ChatHeader)).bottom);
+      expect(tester.getRect(find.byType(WideButton)).top, Sidebar.topHeight);
       final header = find.byType(ChatHeader);
       final element = tester.element(header);
       // The main pane starts where the sidebar ends, which brings the gap.

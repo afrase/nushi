@@ -84,7 +84,7 @@ void main() {
     const mac = MacWindow();
     expect(
       (mac.titleInset, mac.headersMoveWindow, mac.menuBar),
-      (84, true, true),
+      (95, true, true),
     );
     const linux = LinuxWindow();
     expect(
