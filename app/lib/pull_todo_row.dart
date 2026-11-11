@@ -328,7 +328,7 @@ class _Tag extends StatelessWidget {
       decoration: BoxDecoration(
         color: soft ? color.withValues(alpha: 0.14) : null,
         border: soft ? null : Border.all(color: color.withValues(alpha: 0.5)),
-        borderRadius: BorderRadius.circular(NushiTheme.pillWas4),
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
       child: Text(
         text,

@@ -317,11 +317,7 @@ class Segmented<T> extends StatelessWidget {
     final t = theme.t;
     return Container(
       padding: const EdgeInsets.all(2),
-      decoration: box(
-        t.borderSubtle,
-        fill: t.base,
-        radius: NushiTheme.pillWas4,
-      ),
+      decoration: box(t.borderSubtle, fill: t.base, radius: NushiTheme.pill),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -329,6 +325,7 @@ class Segmented<T> extends StatelessWidget {
             Tap(
               onTap: () => onChanged(v),
               selected: v == value,
+              radius: NushiTheme.pill,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
               child: Text(
                 text,

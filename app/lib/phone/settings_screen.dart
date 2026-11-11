@@ -159,7 +159,7 @@ class _Themes extends StatelessWidget {
               color: picked ? t.accentInk : t.borderSubtle,
               width: picked ? 2 : 1,
             ),
-            borderRadius: BorderRadius.circular(NushiTheme.cardWas8),
+            borderRadius: BorderRadius.circular(NushiTheme.card),
           ),
           child: Padding(
             padding: EdgeInsets.all(picked ? 0 : 1),
@@ -169,7 +169,8 @@ class _Themes extends StatelessWidget {
               children: [
                 framed(
                   border: t.borderStrong,
-                  radius: NushiTheme.tag,
+                  // Inside its card's padding (6, 1) and border.
+                  radius: NushiTheme.inner(NushiTheme.card, 8),
                   child: ThemePreview(c.of(t.brightness), dark: c.dark),
                 ),
                 SizedBox(

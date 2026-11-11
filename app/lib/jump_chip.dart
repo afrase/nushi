@@ -123,7 +123,7 @@ class _JumpChipState extends State<JumpChip> with ClockRun {
       ),
       child: Tap(
         onTap: widget.onTap,
-        radius: NushiTheme.pillWas14,
+        radius: NushiTheme.pill,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
           mainAxisSize: MainAxisSize.min,

@@ -83,6 +83,37 @@ void main() {
     expect(painter.fadeoutOpacityAnimation.value, 0);
   }, variant: mac);
 
+  testWidgets('in a rounded container, the thumb keeps off the corners', (
+    tester,
+  ) async {
+    viewport(tester, const Size(400, 600));
+    Future<double> endsOf({required bool rounded}) async {
+      final list = ListView.builder(
+        itemExtent: 40,
+        itemCount: 200,
+        itemBuilder: (_, i) => Text('row $i'),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          key: ValueKey(rounded),
+          scrollBehavior: const NativeScroll(),
+          home: rounded
+              ? RoundedScroll(corner: NushiTheme.panel, child: list)
+              : list,
+        ),
+      );
+      await tester.pump();
+      return tester
+          .widget<MacScrollbar>(find.byType(MacScrollbar))
+          .mainAxisMargin;
+    }
+
+    expect(await endsOf(rounded: false), MacScrollbar.margin);
+    // Half the corner: where its curve has come within the thumb's margin
+    // of the side.
+    expect(await endsOf(rounded: true), NushiTheme.panel / 2);
+  }, variant: mac);
+
   for (final selectable in [false, true]) {
     testWidgets('the mouse drags the thumb, and the list scrolls'
         '${selectable ? ' (selectable text, as the transcript)' : ''}', (

@@ -207,8 +207,10 @@ void main() {
         );
         expect(bar.left, box.left);
         expect(bar.width, 3);
-        expect(bar.top, box.top + 4);
-        expect(bar.bottom, box.bottom - 4);
+        // Inside the row's rounded corners, whose curve is past the bar's
+        // square edge there.
+        expect(bar.top, box.top + 6);
+        expect(bar.bottom, box.bottom - 6);
         await expectLater(
           find.byKey(const Key('shot')),
           matchesGoldenFile('goldens/chat_colors_rows_$name.png'),

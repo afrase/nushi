@@ -189,7 +189,8 @@ class _Framed extends StatelessWidget {
   @override
   Widget build(BuildContext context) => framed(
     border: NushiTheme.of(context).t.borderStrong,
-    radius: NushiTheme.tag,
+    // Inside its card's padding (7) and border.
+    radius: NushiTheme.inner(NushiTheme.card, 8),
     child: child,
   );
 }

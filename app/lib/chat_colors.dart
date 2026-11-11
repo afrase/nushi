@@ -39,14 +39,15 @@ enum ChatColor {
 /// mark, never a fill: a wash was too faint to see on the dark theme, and a
 /// blue one read as the open chat's, which is the only row with a fill.
 /// [width] is 3 on the Mac's sidebar, 4 on the phone's list; [inset] keeps
-/// it off the row's top and bottom (and its rounded corners).
+/// it off the row's top and bottom, far enough in that its square left
+/// edge is inside the row's rounded corners ([NushiTheme.control]).
 class ColorBar extends StatelessWidget {
   const new({
     required this.color,
     required this.child,
     super.key,
     this.width = 3,
-    this.inset = 4,
+    this.inset = 6,
   });
 
   /// The chat's color, or none, which shows [child] alone.
@@ -73,7 +74,7 @@ class ColorBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: c.ink(NushiTheme.of(context).t),
                 borderRadius: const BorderRadius.horizontal(
-                  right: Radius.circular(NushiTheme.tagWas2),
+                  right: Radius.circular(NushiTheme.tag),
                 ),
               ),
             ),

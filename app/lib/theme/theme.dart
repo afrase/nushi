@@ -69,17 +69,21 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   // thumb and a drawn icon's own geometry are not corners and keep their
   // sizes.
 
-  /// The smallest things: a key hint, a branch's name, a loading bar.
+  /// The smallest things: a key hint, a branch's name, a loading bar, a
+  /// checkbox.
   static const tag = 4.0;
 
-  /// Buttons, fields, icon buttons, a row's hover and selected fill.
-  static const control = 4.0;
+  /// Buttons, fields, icon buttons, a row's hover and selected fill, and
+  /// the transcript's own parts: a tool call's row (a card's corners on one
+  /// line make a lozenge), a code block, a diff, an image.
+  static const control = 8.0;
 
   /// Cards and boxes ([box] and [framed] unless told otherwise).
-  static const card = 6.0;
+  static const card = 12.0;
 
-  /// A menu's, a dialog's and a popover's corners, and a message's bubble.
-  static const panel = 10.0;
+  /// A menu's, a dialog's and a popover's corners, a message's bubble and
+  /// the composer's box.
+  static const panel = 14.0;
 
   /// Round ends, whatever the height: chips, badges, counts, round
   /// buttons, thin bars.
@@ -90,24 +94,8 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   /// the parent's.
   static double inner(double outer, double gap) => max(0, outer - gap);
 
-  // Today's corners where the rounder pass's token would change them: each
-  // is named for the token that takes its place in the next commit, which
-  // removes them all (ADR 0110).
-  static const tagWas2 = 2.0;
-  static const tagWas3 = 3.0;
-  static const controlWas6 = 6.0;
-  static const controlWas8 = 8.0;
-  static const cardWas8 = 8.0;
-  static const cardWas9 = 9.0;
-  static const cardWas10 = 10.0;
-  static const panelWas6 = 6.0;
-  static const panelWas12 = 12.0;
-  static const panelWas14 = 14.0;
-  static const panelWas16 = 16.0;
-  static const pillWas4 = 4.0;
-  static const pillWas6 = 6.0;
-  static const pillWas10 = 10.0;
-  static const pillWas14 = 14.0;
+  /// A menu's padding around its rows, which are rounded [inner] of it.
+  static const menuPad = 5.0;
 
   // The Mac's chat area's spacing (ADR 0072). The phone keeps its own values,
   // decided where the two share a widget (TouchTargets).
@@ -238,7 +226,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
           surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
           elevation: const WidgetStatePropertyAll(3),
           shadowColor: WidgetStatePropertyAll(t.shadow),
-          padding: const WidgetStatePropertyAll(EdgeInsets.all(5)),
+          padding: const WidgetStatePropertyAll(EdgeInsets.all(menuPad)),
           minimumSize: const WidgetStatePropertyAll(Size(200, 0)),
           side: WidgetStatePropertyAll(BorderSide(color: t.borderStrong)),
           shape: const WidgetStatePropertyAll(
@@ -256,8 +244,8 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
           padding: const EdgeInsets.symmetric(horizontal: 10),
           visualDensity: VisualDensity.standard,
           // Inside the panel's round, by its padding.
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(card)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(inner(panel, menuPad)),
           ),
         ),
       ),
@@ -273,11 +261,18 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
         titleTextStyle: ui(t.text, size: 15, weight: FontWeight.w600),
         contentTextStyle: ui(t.textSecondary),
       ),
+      checkboxTheme: const CheckboxThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(tag)),
+        ),
+      ),
       inputDecorationTheme: InputDecorationThemeData(
         isDense: true,
         contentPadding: const EdgeInsets.all(8),
         hintStyle: ui(t.textMuted),
-        border: const OutlineInputBorder(),
+        border: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(control)),
+        ),
       ),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
@@ -319,7 +314,11 @@ class NativeScroll extends MaterialScrollBehavior {
     BuildContext context,
     Widget child,
     ScrollableDetails details,
-  ) => MacScrollbar(controller: details.controller, child: child);
+  ) => MacScrollbar(
+    controller: details.controller,
+    ends: RoundedScroll.ends(context),
+    child: child,
+  );
 }
 
 /// [BouncingScrollPhysics] in all but the ends: a drag, a flick's glide and

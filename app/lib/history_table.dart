@@ -308,9 +308,7 @@ class HistoryRowView extends StatelessWidget {
               : Border(bottom: BorderSide(color: t.borderSubtle)),
           borderRadius: last
               ? BorderRadius.vertical(
-                  bottom: Radius.circular(
-                    NushiTheme.inner(NushiTheme.cardWas8, 1),
-                  ),
+                  bottom: Radius.circular(NushiTheme.inner(NushiTheme.card, 1)),
                 )
               : null,
         ),

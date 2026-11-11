@@ -366,7 +366,7 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final showing = tab.showing;
-    final round = BorderRadius.circular(NushiTheme.controlWas6);
+    final round = BorderRadius.circular(NushiTheme.control);
     return Padding(
       padding: const EdgeInsets.only(right: _chipGap),
       child: Center(

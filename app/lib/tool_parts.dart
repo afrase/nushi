@@ -401,12 +401,12 @@ class _Pill extends StatelessWidget {
               ? t.hover
               : null,
           border: Border.all(color: on ? t.accent : t.fieldBorder),
-          borderRadius: BorderRadius.circular(NushiTheme.pillWas4),
+          borderRadius: BorderRadius.circular(NushiTheme.pill),
         ),
         foregroundDecoration: focusRing(
           t,
           look,
-          radius: BorderRadius.circular(NushiTheme.pillWas4),
+          radius: BorderRadius.circular(NushiTheme.pill),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

@@ -40,6 +40,10 @@ class ThemePreview extends StatelessWidget {
   );
 }
 
+/// A corner of the app's at the picture's scale: its rows are 17 high for
+/// the app's 28, so about 0.6 of it.
+double _small(double radius) => radius * 0.6;
+
 class _Window extends StatelessWidget {
   const new();
 
@@ -115,7 +119,7 @@ class _ChatRow extends StatelessWidget {
       height: 17,
       decoration: BoxDecoration(
         color: open ? t.accentSoft : null,
-        borderRadius: BorderRadius.circular(NushiTheme.tagWas3),
+        borderRadius: BorderRadius.circular(_small(NushiTheme.control)),
       ),
       child: Stack(
         children: [
@@ -240,7 +244,7 @@ InlineSpan _code(BuildContext context, String code, Color fill) {
       padding: const EdgeInsets.symmetric(horizontal: 2),
       decoration: BoxDecoration(
         color: fill,
-        borderRadius: BorderRadius.circular(NushiTheme.tagWas2),
+        borderRadius: BorderRadius.circular(_small(NushiTheme.tag)),
       ),
       child: Text(code, style: theme.code(theme.t.inlineCodeText, size: 8)),
     ),
@@ -276,7 +280,7 @@ class _Row extends StatelessWidget {
     return Container(
       height: 17,
       padding: const EdgeInsets.symmetric(horizontal: 5),
-      decoration: box(border, fill: fill, radius: NushiTheme.tagWas3),
+      decoration: box(border, fill: fill, radius: _small(NushiTheme.control)),
       child: Row(
         spacing: 4,
         children: [
@@ -355,7 +359,7 @@ class _Code extends StatelessWidget {
       decoration: box(
         t.borderSubtle,
         fill: t.codeBlock,
-        radius: NushiTheme.tagWas3,
+        radius: _small(NushiTheme.card),
       ),
       child: Text.rich(
         TextSpan(

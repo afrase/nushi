@@ -364,7 +364,7 @@ class _Bar extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: fill,
-                    borderRadius: BorderRadius.circular(NushiTheme.pillWas4),
+                    borderRadius: BorderRadius.circular(NushiTheme.pill),
                   ),
                   child: Text(
                     word,

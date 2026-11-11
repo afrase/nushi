@@ -278,7 +278,7 @@ class _Square extends StatelessWidget {
     height: 10,
     decoration: BoxDecoration(
       color: color,
-      borderRadius: BorderRadius.circular(NushiTheme.tagWas2),
+      borderRadius: BorderRadius.circular(NushiTheme.tag),
     ),
   );
 }

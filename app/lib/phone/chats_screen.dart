@@ -286,7 +286,7 @@ class ChatRow extends StatelessWidget {
             ),
           ),
         );
-        return ColorBar(color: chat.color, width: 4, inset: 6, child: row);
+        return ColorBar(color: chat.color, width: 4, child: row);
       },
     );
   }

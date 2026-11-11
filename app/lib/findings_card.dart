@@ -270,7 +270,7 @@ class _FindingsCardState extends State<FindingsCard> {
     return Container(
       margin: const EdgeInsets.only(top: 1),
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: box(t.findingsBorder, radius: NushiTheme.pillWas4),
+      decoration: box(t.findingsBorder, radius: NushiTheme.pill),
       child: Text(text, style: theme.ui(t.textSecondary, size: 11.5)),
     );
   }

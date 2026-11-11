@@ -190,13 +190,13 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
             decoration: box(
               on ? t.accent : t.borderStrong,
               fill: on ? t.accentSoft : null,
-              radius: NushiTheme.pillWas10,
+              radius: NushiTheme.pill,
             ),
             child: Tap(
               onTap: chat.busy || chat.waiting
                   ? null
                   : () => _switch(context, chat, daemon, !on),
-              radius: NushiTheme.pillWas10,
+              radius: NushiTheme.pill,
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               child: Row(
                 spacing: 4,

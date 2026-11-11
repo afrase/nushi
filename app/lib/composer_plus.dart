@@ -76,7 +76,8 @@ class PlusMenu extends StatelessWidget {
 }
 
 /// The + itself: a small filled square, as Claude's app has it, 28 high
-/// like the box's other buttons (ADR 0072).
+/// like the box's other buttons (ADR 0072), its corners a control's, which
+/// sit inside the box's own by its padding.
 class PlusButton extends StatelessWidget {
   const new({required this.onPressed, super.key});
 
@@ -90,14 +91,13 @@ class PlusButton extends StatelessWidget {
     return Tap(
       tooltip: plusTooltip,
       onTap: onPressed,
-      radius: NushiTheme.pillWas6,
       child: Container(
         width: 28,
         height: 28,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: t.hover,
-          borderRadius: BorderRadius.circular(NushiTheme.pillWas6),
+          borderRadius: BorderRadius.circular(NushiTheme.control),
         ),
         child: LineIcon.plus.view(size: 18, color: t.text),
       ),

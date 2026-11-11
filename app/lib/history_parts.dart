@@ -141,7 +141,7 @@ class HistoryLoading extends StatelessWidget {
       height: 10,
       decoration: BoxDecoration(
         color: t.borderSubtle,
-        borderRadius: BorderRadius.circular(NushiTheme.tagWas3),
+        borderRadius: BorderRadius.circular(NushiTheme.tag),
       ),
     );
     return Semantics(

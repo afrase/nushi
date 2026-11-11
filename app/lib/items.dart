@@ -307,7 +307,7 @@ class ItemView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: t.userBand,
-              borderRadius: BorderRadius.circular(NushiTheme.panelWas14),
+              borderRadius: BorderRadius.circular(NushiTheme.panel),
             ),
             child: _contents(context),
           ),

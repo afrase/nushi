@@ -92,6 +92,8 @@ class _QueuePillsState extends State<QueuePills> {
     final onSendNow = widget.onSendNow;
     return Container(
       constraints: const BoxConstraints(maxWidth: 300),
+      // Clipped to its round ends, as an icon button's tint at one isn't.
+      clipBehavior: Clip.antiAlias,
       decoration: ShapeDecoration(
         color: t.raised,
         shape: StadiumBorder(side: BorderSide(color: t.borderStrong)),

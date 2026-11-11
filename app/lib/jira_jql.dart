@@ -291,9 +291,10 @@ class _JqlFieldState extends State<JqlField> {
           ),
         ),
         if (_shown.isNotEmpty)
-          Container(
+          framed(
             margin: const EdgeInsets.only(top: 2),
-            decoration: box(t.borderSubtle, fill: t.raised),
+            border: t.borderSubtle,
+            fill: t.raised,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

@@ -339,7 +339,7 @@ class RowsLoading extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         color: t.borderSubtle,
-        borderRadius: BorderRadius.circular(NushiTheme.tagWas3),
+        borderRadius: BorderRadius.circular(NushiTheme.tag),
       ),
     );
     return Semantics(

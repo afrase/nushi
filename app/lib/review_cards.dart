@@ -198,7 +198,9 @@ class _Inlay extends StatelessWidget {
         decoration: BoxDecoration(
           color: t.raised,
           border: Border(left: BorderSide(color: t.accent, width: 2)),
-          borderRadius: BorderRadius.circular(NushiTheme.control),
+          // A tag's small corners while it has the bar: round a control's,
+          // the bar curls into a bracket.
+          borderRadius: BorderRadius.circular(NushiTheme.tag),
         ),
         child: child,
       ),

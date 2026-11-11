@@ -18,7 +18,7 @@ class ReviewPill extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(5, 1, 7, 1),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(NushiTheme.pillWas4),
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

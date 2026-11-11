@@ -71,6 +71,7 @@ class _ReplyCard extends StatelessWidget {
             ),
             child: Tap(
               onTap: onTap,
+              radius: NushiTheme.inner(NushiTheme.control, 1),
               padding: const EdgeInsets.fromLTRB(8, 6, 8, 5),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

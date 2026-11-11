@@ -123,7 +123,11 @@ class _SettingsModalState extends State<SettingsModal> {
                             BoxShadow(color: t.shadow, blurRadius: 30),
                           ],
                         ),
-                        child: SettingsView(widget.daemon),
+                        // Its pages scroll down to the rounded corners.
+                        child: RoundedScroll(
+                          corner: NushiTheme.panel,
+                          child: SettingsView(widget.daemon),
+                        ),
                       ),
                     ),
                   ),

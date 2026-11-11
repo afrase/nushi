@@ -300,18 +300,14 @@ class _HistorySectionState extends State<HistorySection> {
             }
             final now = clock();
             return DecoratedSliver(
-              decoration: box(
-                t.borderSubtle,
-                fill: t.raised,
-                radius: NushiTheme.cardWas8,
-              ),
+              decoration: box(t.borderSubtle, fill: t.raised),
               sliver: SliverMainAxisGroup(
                 slivers: [
                   PinnedHeaderSliver(
                     child: ClipRRect(
                       borderRadius: BorderRadius.vertical(
                         top: Radius.circular(
-                          NushiTheme.inner(NushiTheme.cardWas8, 1),
+                          NushiTheme.inner(NushiTheme.card, 1),
                         ),
                       ),
                       child: HistoryHeader(

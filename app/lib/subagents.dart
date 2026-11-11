@@ -268,6 +268,7 @@ class SubagentLine extends StatelessWidget {
               ? t.focus
               : t.subagentBorder,
           fill: failed ? t.crashedSoft : t.subagentTint,
+          radius: NushiTheme.control, // one row, as a tool call's
           child: FoldedMarks(
             text: subagentFolded(s),
             builder: (context, found) => Tap(

@@ -51,6 +51,9 @@ class _CollapsibleState extends State<Collapsible> {
     final body = widget.body;
     return framed(
       border: widget.failed ? t.crashed : t.toolBorder,
+      // A control's corners, not a card's: closed, it's one row 28 high,
+      // which a card's would round into a lozenge.
+      radius: NushiTheme.control,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
