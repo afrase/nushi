@@ -4,10 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/main.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'pull_fixture.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
@@ -194,6 +196,29 @@ void main() {
     );
     d.dispose();
   }, variant: _mac);
+
+  // The dialog whole, to look at (`make renders`): a dirty worktree's
+  // warning and the mid-turn choice over its rows.
+  for (final b in Brightness.values) {
+    testWidgets('the dialog, dirty and mid-turn, ${b.name}', (tester) async {
+      final (d, _) = await _open(
+        tester,
+        u: _clean(changed: 2),
+        busy: true,
+        brightness: b,
+      );
+      await tester.tap(_inPull(find.text('Clean up…')));
+      await _pump(tester);
+      expect(find.text('Claude is mid-turn here.'), findsOneWidget);
+      expect(find.text('2 uncommitted files would be lost.'), findsOneWidget);
+      await render(
+        tester,
+        find.byType(NushiApp),
+        'cleanup_dialog_1160_${b.name}',
+      );
+      d.dispose();
+    }, variant: _mac);
+  }
 
   testWidgets('mid-turn: it waits for the turn to end, then cleans up', (
     tester,

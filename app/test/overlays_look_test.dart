@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/new_chat.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/pickers.dart';
 import 'package:nushi/settings.dart';
@@ -139,6 +140,18 @@ void main() {
         // The submenu's rows are in the same overlay, beside the menu's.
         expect(find.byType(MenuItemButton), findsWidgets);
         await shot(tester, 'menu');
+        await closeView(tester, d);
+      }, variant: _mac);
+
+      testWidgets('New chat, ${b.name}, $w wide', (tester) async {
+        final (d, _) = await _app(tester, size: size, brightness: b);
+        unawaited(newChat(tester.element(find.byType(Scaffold).first), d, ''));
+        await tester.pumpAndSettle();
+        expect(find.text('New chat'), findsWidgets);
+        expect(find.text('Claude'), findsWidgets);
+        await shot(tester, 'new_chat');
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
         await closeView(tester, d);
       }, variant: _mac);
 
