@@ -184,6 +184,38 @@ void main() {
     });
   });
 
+  test('Nord’s dark code and terminal are nord0 to nord15', () {
+    // nordtheme/nord's sixteen; the comment is nordtheme/visual-studio-code
+    // 0.19.0's.
+    _published('Nord', builtInTheme('nord')!.dark, {
+      'base': 0x2e3440, // nord0
+      'raised': 0x3b4252, // nord1
+      'lifted': 0x434c5e, // nord2
+      'text': 0xeceff4, // nord6
+      'syntax.keyword': 0x81a1c1, // nord9
+      'syntax.tag': 0x81a1c1,
+      'syntax.declaration': 0x88c0d0, // nord8
+      'syntax.type': 0x8fbcbb, // nord7
+      'syntax.string': 0xa3be8c, // nord14
+      'syntax.number': 0xb48ead, // nord15
+      'syntax.constant': 0xb48ead,
+      'syntax.regexp': 0xebcb8b, // nord13
+      'syntax.meta': 0xd08770, // nord12
+      'syntax.comment': 0x616e88,
+      'terminal.black': 0x3b4252,
+      'terminal.red': 0xbf616a,
+      'terminal.green': 0xa3be8c,
+      'terminal.yellow': 0xebcb8b,
+      'terminal.blue': 0x81a1c1,
+      'terminal.magenta': 0xb48ead,
+      'terminal.cyan': 0x88c0d0,
+      'terminal.white': 0xe5e9f0,
+      'terminal.brightBlack': 0x4c566a,
+      'terminal.brightCyan': 0x8fbcbb,
+      'terminal.brightWhite': 0xeceff4,
+    });
+  });
+
   test('code’s colors, the terminal’s, a diff’s and the body text are '
       'no pair of the contrast warnings', () {
     // Each drawn in the pane's own fill, where nothing could read it.

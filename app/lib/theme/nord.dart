@@ -9,7 +9,10 @@ import 'package:nushi/theme/tokens.dart';
 // and nord-iterm2's terminal colors. Nord has a dark form only: the
 // light set is Snow Storm's surfaces with Polar Night's text, Frost and
 // Aurora taken darker to read there. Inks too light or dark for AA on a
-// fill they sit on are moved in lightness, keeping their hue. The
+// fill Nushi's labels sit on are moved in lightness, keeping their hue;
+// the dark set's code is Nord's own (nord9 keywords, nord8 functions,
+// nord7 types, nord14 strings, nord15 numbers, nord12 annotations), its
+// comments the #616E88 Nord's editor themes use. The
 // surfaces (ADR 0111): dark, nord0 the panes, nord1 the cards, nord2 and
 // nord3 what's raised on them, and a tone under nord0 the window; light,
 // nord4 the window, nord6 the panes and nord5 the cards.
@@ -81,19 +84,19 @@ const nordDark = Tokens(
     Color(0xFFA3BE8C), // green
   ],
   syntax: {
-    Capture.keyword: CodeInk(Color(0xFF92B2D2)),
+    Capture.keyword: CodeInk(Color(0xFF81A1C1)),
     Capture.declaration: CodeInk(Color(0xFF88C0D0)),
     Capture.type: CodeInk(Color(0xFF8FBCBB)),
     Capture.string: CodeInk(Color(0xFFA3BE8C)),
-    Capture.number: CodeInk(Color(0xFFC9A3C2)),
+    Capture.number: CodeInk(Color(0xFFB48EAD)),
     Capture.regexp: CodeInk(Color(0xFFEBCB8B)),
-    Capture.constant: CodeInk(Color(0xFFC9A3C2), italic: true),
+    Capture.constant: CodeInk(Color(0xFFB48EAD), italic: true),
     Capture.field: CodeInk(Color(0xFFD8DEE9)),
-    Capture.symbol: CodeInk(Color(0xFFC9A3C2)),
+    Capture.symbol: CodeInk(Color(0xFFB48EAD)),
     Capture.parameter: CodeInk(Color(0xFFD8DEE9), italic: true),
-    Capture.meta: CodeInk(Color(0xFFE69D86)),
-    Capture.tag: CodeInk(Color(0xFF92B2D2)),
-    Capture.comment: CodeInk(Color(0xFF818EA7), italic: true),
+    Capture.meta: CodeInk(Color(0xFFD08770)),
+    Capture.tag: CodeInk(Color(0xFF81A1C1)),
+    Capture.comment: CodeInk(Color(0xFF616E88), italic: true),
     Capture.docTag: CodeInk(Color(0xFF8FBCBB), italic: true, bold: true),
   },
   terminal: TerminalColors(
