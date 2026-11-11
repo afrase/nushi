@@ -216,7 +216,7 @@ class _QuestionCardState extends State<QuestionCard> {
     if (item.status != 'pending') {
       return SettleCard(
         state: false,
-        decoration: box(t.borderSubtle),
+        decoration: cardBox(t),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 8,
@@ -226,7 +226,7 @@ class _QuestionCardState extends State<QuestionCard> {
     }
     return SettleCard(
       state: true,
-      decoration: box(t.accent.withValues(alpha: 0.6)),
+      decoration: cardBox(t),
       child: Focus(
         focusNode: _focus,
         onKeyEvent: _onKey,
@@ -244,8 +244,10 @@ class _QuestionCardState extends State<QuestionCard> {
                     style: theme.ui(t.text, weight: FontWeight.w600),
                   ),
                 ),
+                const NeedsYou(),
                 RunButton(
                   label: 'Skip',
+                  kind: ButtonKind.quiet,
                   runner: _sending,
                   run: () => widget.onAnswer(null),
                 ),

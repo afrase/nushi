@@ -135,7 +135,12 @@ class BackgroundCommandPane extends StatelessWidget {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: box(t.borderSubtle, fill: t.raised),
+                            decoration: BoxDecoration(
+                              color: t.codeBlock,
+                              borderRadius: BorderRadius.circular(
+                                NushiTheme.control,
+                              ),
+                            ),
                             child: Text('\$ ${it.title}', style: code),
                           ),
                           const SizedBox(height: 8),
@@ -168,7 +173,12 @@ class BackgroundCommandPane extends StatelessWidget {
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: box(t.borderSubtle, fill: t.base),
+                            decoration: BoxDecoration(
+                              color: t.codeBlock,
+                              borderRadius: BorderRadius.circular(
+                                NushiTheme.control,
+                              ),
+                            ),
                             child: Text(
                               it.backgroundCommand.output.isNotEmpty
                                   ? it.backgroundCommand.output

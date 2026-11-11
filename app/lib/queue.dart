@@ -94,9 +94,9 @@ class _QueuePillsState extends State<QueuePills> {
       constraints: const BoxConstraints(maxWidth: 300),
       // Clipped to its round ends, as an icon button's tint at one isn't.
       clipBehavior: Clip.antiAlias,
-      decoration: ShapeDecoration(
+      decoration: BoxDecoration(
         color: t.raised,
-        shape: StadiumBorder(side: BorderSide(color: t.borderStrong)),
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -106,7 +106,7 @@ class _QueuePillsState extends State<QueuePills> {
               onTap: () => onEdit(m),
               tooltip: 'Edit',
               radius: NushiTheme.pill,
-              padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
+              padding: const EdgeInsets.fromLTRB(12, 5, 4, 5),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 spacing: 6,

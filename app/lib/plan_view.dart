@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
@@ -9,14 +7,16 @@ import 'package:nushi/motion.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 
-/// The agent's plan as a checklist, ticked off as the agent works (the
-/// fluidity review's idea 16). A step done while the chat is open draws
-/// its check ([CheckPainter]) as its words dim; while the agent works on
-/// this plan (its turn runs and the plan is the turn's), the running step's
-/// words shine and its mark is a working chat's ring ([StatusMark]); a step
-/// to come is a quiet dashed circle. A plan the chat opened with shows
-/// still, and so does one whose turn has ended. With Reduce Motion only
-/// colors change: the check is whole at once, and nothing shines or rings.
+/// The agent's plan as a checklist on a card (ADR 0111), ticked off as the
+/// agent works (the fluidity review's idea 16): "Plan · 2 of 4 done" and
+/// that count as a thin bar at the card's top right. A step done while the
+/// chat is open draws its check ([CheckPainter]) as its words dim; the
+/// running step is a dot of the accent in a soft halo, its words medium,
+/// and while the agent works on this plan (its turn runs and the plan is
+/// the turn's) they shine and a ring grows out of the dot ([StatusMark]); a
+/// step to come is a quiet ring. A plan the chat opened with shows still,
+/// and so does one whose turn has ended. With Reduce Motion only colors
+/// change: the check is whole at once, and nothing shines or rings.
 class PlanView extends StatefulWidget {
   const new(this.item, this.chat, {super.key});
 
@@ -68,18 +68,75 @@ class _PlanViewState extends State<PlanView> {
     final plan = widget.item.plan;
     final done = plan.where((e) => e.status == 'completed').length;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: box(t.borderSubtle),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: t.raised,
+        borderRadius: BorderRadius.circular(NushiTheme.card),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 4,
+        spacing: 7,
         children: [
-          Text(
-            'Plan · $done of ${plan.length} done',
-            style: theme.ui(t.textSecondary, size: 12, weight: FontWeight.w600),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 3),
+            child: Row(
+              spacing: 10,
+              children: [
+                Icon(Icons.checklist, size: 15, color: t.textSecondary),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'Plan',
+                          style: theme.ui(t.text, weight: FontWeight.w600),
+                        ),
+                        TextSpan(text: ' · $done of ${plan.length} done'),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.ui(t.textMuted),
+                  ),
+                ),
+                if (plan.isNotEmpty) _Progress(done / plan.length),
+              ],
+            ),
           ),
           for (final e in plan) _Step(e.content, e.status, working: _working),
         ],
+      ),
+    );
+  }
+}
+
+/// How much of a plan is done, [part] of 1, as a thin bar with round ends.
+class _Progress extends StatelessWidget {
+  const new(this.part);
+
+  final double part;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return Container(
+      width: 120,
+      height: 6,
+      clipBehavior: Clip.antiAlias,
+      alignment: Alignment.centerLeft,
+      decoration: BoxDecoration(
+        color: t.lifted,
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
+      ),
+      child: FractionallySizedBox(
+        widthFactor: part.clamp(0, 1),
+        heightFactor: 1,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: t.done,
+            borderRadius: BorderRadius.circular(NushiTheme.pill),
+          ),
+        ),
       ),
     );
   }
@@ -98,7 +155,7 @@ class _Step extends StatefulWidget {
 }
 
 class _StepState extends State<_Step> with ClockRun {
-  static const _size = 14.0;
+  static const _size = 16.0;
 
   @override
   void didUpdateWidget(_Step old) {
@@ -117,7 +174,7 @@ class _StepState extends State<_Step> with ClockRun {
     final still = reduceMotion(context);
     final mark = switch (widget.status) {
       'completed' => CheckPainter(
-        t.done,
+        t.textMuted,
         running
             ? part(
                 ranMs,
@@ -129,19 +186,20 @@ class _StepState extends State<_Step> with ClockRun {
         1,
       ),
       // A working chat's ring while the agent works on it; in a still
-      // frame (a golden) its dot ([loopRepaint]).
+      // frame (a golden) its dot in its halo ([loopRepaint]).
       'in_progress' => StatusMark(
         t.running,
+        halo: t.accentSoft,
         ringing: widget.working && !still && loopRepaint != null,
       ),
-      _ => _Dashed(t.textMuted),
+      _ => _Ring(t.textMuted),
     };
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 8,
+      spacing: 10,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 3),
+          padding: const EdgeInsets.only(top: 1),
           child: CustomPaint(size: const Size.square(_size), painter: mark),
         ),
         Expanded(
@@ -150,9 +208,11 @@ class _StepState extends State<_Step> with ClockRun {
           child: AnimatedDefaultTextStyle(
             duration: Motion.standard,
             curve: Motion.size,
-            style: theme.ui(
-              widget.status == 'completed' ? t.textMuted : t.text,
-            ),
+            style: switch (widget.status) {
+              'completed' => theme.ui(t.textMuted),
+              'in_progress' => theme.ui(t.text, weight: FontWeight.w500),
+              _ => theme.ui(t.textSecondary),
+            },
             child: Shine(
               on: widget.status == 'in_progress' && widget.working,
               child: Text(widget.content),
@@ -164,32 +224,24 @@ class _StepState extends State<_Step> with ClockRun {
   }
 }
 
-/// A step to come: a dashed circle of [color], as Claude Code's checklist
-/// draws one.
-class _Dashed extends CustomPainter {
+/// A step to come: a ring of [color].
+class _Ring extends CustomPainter {
   new(this.color);
 
   final Color color;
 
-  static const _dashes = 8;
-
   @override
-  void paint(Canvas canvas, Size size) {
-    final r = size.shortestSide / 2 - 2;
-    final rect = Rect.fromCircle(center: size.center(Offset.zero), radius: r);
-    final paint = Paint()
+  void paint(Canvas canvas, Size size) => canvas.drawCircle(
+    size.center(Offset.zero),
+    size.shortestSide / 2 - 3.5,
+    Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.3
-      ..strokeCap = StrokeCap.round
-      ..color = color;
-    const step = 2 * pi / _dashes;
-    for (var i = 0; i < _dashes; i++) {
-      canvas.drawArc(rect, i * step - pi / 2, step * 0.55, false, paint);
-    }
-  }
+      ..strokeWidth = 1.5
+      ..color = color,
+  );
 
   @override
-  bool shouldRepaint(_Dashed old) => old.color != color;
+  bool shouldRepaint(_Ring old) => old.color != color;
 }
 
 /// The current step of the turn's plan, one line above the composer while

@@ -9,13 +9,16 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 
 /// A dot of [color]; [ringing], a soft ring grows out of it and fades,
-/// again every 1.6 seconds, from the shared clock.
+/// again every 1.6 seconds, from the shared clock. Given [halo], the dot
+/// sits in a soft disc of it, half the dot wider all round (a plan's
+/// running step).
 class StatusMark extends CustomPainter {
-  new(this.color, {this.ringing = false})
+  new(this.color, {this.ringing = false, this.halo})
     : super(repaint: ringing ? loopRepaint : null);
 
   final Color color;
   final bool ringing;
+  final Color? halo;
 
   static const period = Duration(milliseconds: 1600);
 
@@ -23,6 +26,9 @@ class StatusMark extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final r = size.shortestSide / 2 * 0.55;
+    if (halo case final halo?) {
+      canvas.drawCircle(c, r * 1.9, Paint()..color = halo);
+    }
     if (ringing && loopMoving) {
       final v = Curves.easeOut.transform(loopPhase(period));
       canvas.drawCircle(
@@ -39,7 +45,7 @@ class StatusMark extends CustomPainter {
 
   @override
   bool shouldRepaint(StatusMark old) =>
-      old.color != color || old.ringing != ringing;
+      old.color != color || old.ringing != ringing || old.halo != halo;
 }
 
 /// A ring of [color], its line fading in and out slowly ([pulsing]) every

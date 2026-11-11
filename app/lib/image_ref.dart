@@ -187,7 +187,7 @@ class _ImageRefState extends State<ImageRef> {
       return ClickableImage(
         image: image,
         size: widget.size,
-        border: NushiTheme.of(context).t.borderSubtle,
+        fill: NushiTheme.of(context).t.raised,
         waiting: box,
       );
     }
@@ -227,6 +227,7 @@ class _ImageRefState extends State<ImageRef> {
       );
       final again = Button(
         label: 'Try again',
+        kind: ButtonKind.quiet,
         onPressed: () => setState(() {
           _stopWaiting();
           _failed = false;
@@ -258,8 +259,7 @@ class _ImageRefState extends State<ImageRef> {
     }
     final box = DecoratedBox(
       decoration: BoxDecoration(
-        color: t.selected,
-        border: Border.all(color: t.borderStrong),
+        color: t.raised,
         borderRadius: BorderRadius.circular(NushiTheme.control),
       ),
       child: Padding(

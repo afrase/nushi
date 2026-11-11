@@ -220,8 +220,9 @@ class ToolSection extends StatelessWidget {
   }
 }
 
-/// Raw text from the agent (a call's input or output), in code type on a
-/// raised box, folded to [folded] lines ([FoldedText]).
+/// Raw text from the agent (a call's input or output), in code type,
+/// folded to [folded] lines ([FoldedText]); it sits on the code surface of
+/// its call's open row.
 class RawText extends StatelessWidget {
   const new(this.text, {super.key, this.folded = 4});
 
@@ -232,19 +233,12 @@ class RawText extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-      decoration: BoxDecoration(
-        color: t.raised,
-        borderRadius: BorderRadius.circular(NushiTheme.control),
-      ),
-      child: Marks(
-        child: FoldedText(
-          text,
-          style: theme.code(t.text, size: 12).copyWith(height: 1.35),
-          folded: folded,
-          padding: const EdgeInsets.only(top: 2),
-        ),
+    return Marks(
+      child: FoldedText(
+        text,
+        style: theme.code(t.text, size: 12).copyWith(height: 1.35),
+        folded: folded,
+        padding: const EdgeInsets.only(top: 2),
       ),
     );
   }
@@ -307,8 +301,8 @@ class _FoldedTextState extends State<FoldedText> {
   );
 }
 
-/// A tool row's Preview: opens [path]'s preview, marked while it's the
-/// one open. None without [Previews] above to open it.
+/// A tool row's Preview, a small pill: opens [path]'s preview, marked
+/// while it's the one open. None without [Previews] above to open it.
 class PreviewButton extends StatelessWidget {
   const new(this.path, {super.key});
 
@@ -319,11 +313,12 @@ class PreviewButton extends StatelessWidget {
     final previews = Previews.of(context);
     final open = previews?.open;
     if (open == null) return const SizedBox.shrink();
-    Widget pill({required bool on}) => _Pill(
+    Widget pill({required bool on}) => PillButton(
       label: 'Preview',
       icon: Icons.visibility_outlined,
       tooltip: 'Preview ${baseName(path)}',
-      onTap: () => open(path),
+      onPressed: () => open(path),
+      small: true,
       on: on,
     );
     final current = previews?.current;
@@ -357,66 +352,13 @@ class OpenPageButton extends StatelessWidget {
     if (browse == null || at == null || !isWebPage(at)) {
       return const SizedBox.shrink();
     }
-    return _Pill(
+    return PillButton(
       label: 'Open',
       icon: Icons.open_in_browser,
       tooltip: 'Open $url',
-      onTap: () =>
+      small: true,
+      onPressed: () =>
           webEmbedded ? browse(at) : openInBrowserOrSay(context, at).ignore(),
-    );
-  }
-}
-
-/// A tool row's small button: [icon] and [label] in a box, filled while
-/// [on].
-class _Pill extends StatelessWidget {
-  const new({
-    required this.label,
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-    this.on = false,
-  });
-
-  final String label;
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-  final bool on;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Pressable(
-      onTap: onTap,
-      tooltip: tooltip,
-      builder: (context, look) => Container(
-        height: 20,
-        padding: const EdgeInsets.symmetric(horizontal: 7),
-        decoration: BoxDecoration(
-          color: on
-              ? t.accentSoft
-              : look.hover
-              ? t.hover
-              : null,
-          border: Border.all(color: on ? t.accent : t.fieldBorder),
-          borderRadius: BorderRadius.circular(NushiTheme.pill),
-        ),
-        foregroundDecoration: focusRing(
-          t,
-          look,
-          radius: BorderRadius.circular(NushiTheme.pill),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 4,
-          children: [
-            Icon(icon, size: 12, color: t.textSecondary),
-            Text(label, style: theme.ui(t.text, size: 11.5)),
-          ],
-        ),
-      ),
     );
   }
 }

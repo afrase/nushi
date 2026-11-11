@@ -41,7 +41,7 @@ class TrustCard extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: Container(
             padding: const EdgeInsets.all(16),
-            decoration: box(t.needs, fill: t.needsSoft),
+            decoration: cardBox(t),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 10,
@@ -107,6 +107,7 @@ class TrustCard extends StatelessWidget {
                   children: [
                     Button(
                       label: 'Cancel',
+                      kind: ButtonKind.quiet,
                       onPressed: () => ask.decide(start: false),
                     ),
                     Button(
@@ -144,9 +145,13 @@ class _Block extends StatelessWidget {
         Container(
           constraints: const BoxConstraints(maxHeight: 240),
           width: double.infinity,
-          decoration: box(t.borderSubtle, fill: t.base),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: t.codeBlock,
+            borderRadius: BorderRadius.circular(NushiTheme.control),
+          ),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             child: SelectableText(
               run.command,
               style: theme.code(t.text, size: 12),

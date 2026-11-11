@@ -32,7 +32,7 @@ class _HistoryMarkState extends State<HistoryMark> {
     final compacted = item.status == 'compacted';
     final summary = compacted && item.text.isNotEmpty;
     final label = compacted ? item.title : item.text;
-    final rule = Expanded(child: Container(height: 1, color: t.borderSubtle));
+    final rule = Expanded(child: Container(height: 1, color: t.line));
     final style = theme.ui(t.textMuted, size: 12);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -74,7 +74,10 @@ class _HistoryMarkState extends State<HistoryMark> {
         if (_open)
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: box(t.borderSubtle, fill: t.base),
+            decoration: BoxDecoration(
+              color: t.raised,
+              borderRadius: BorderRadius.circular(NushiTheme.card),
+            ),
             child: AgentMarkdown(item.text),
           ),
       ],

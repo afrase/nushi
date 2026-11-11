@@ -115,11 +115,18 @@ class _JumpChipState extends State<JumpChip> with ClockRun {
     final color = needs ? t.needs : t.text;
     final icon = Icon(Icons.arrow_downward, size: 14, color: color);
     final chip = DecoratedBox(
-      decoration: ShapeDecoration(
-        color: needs ? t.needsSoft : t.raised,
-        shape: StadiumBorder(
-          side: BorderSide(color: needs ? t.needs : t.borderStrong),
-        ),
+      // A pill on a card's fill, lifted off the text under it by a soft
+      // shadow, not an outline (ADR 0111).
+      decoration: BoxDecoration(
+        color: needs ? t.needsSoft : t.lifted,
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
+        boxShadow: [
+          BoxShadow(
+            color: t.shadow,
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Tap(
         onTap: widget.onTap,
@@ -132,7 +139,7 @@ class _JumpChipState extends State<JumpChip> with ClockRun {
             if (!needs) icon,
             Text(
               needs ? 'Needs you' : 'Jump to latest',
-              style: theme.ui(color, size: 12),
+              style: theme.ui(color, size: 12, weight: FontWeight.w500),
             ),
             if (needs) icon,
           ],

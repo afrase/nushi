@@ -2,20 +2,23 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 
+import 'package:nushi/chat.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/phase_pill.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart';
 import 'package:nushi/web_views.dart' show webEmbedded;
 import 'package:nushi/widgets.dart';
 
-/// A card for something the agent waits on: amber while it waits, with a
-/// soft amber ring. As it comes ([Arriving]) the ring glows once: it grows
-/// to 6 px and settles at its 2 over 700 ms (with Reduce Motion it's there
-/// at once). Answered, it settles into its answered line ([SettleCard]).
+/// A card for something the agent waits on (ADR 0111): a card's fill, no
+/// outline; that it waits is its amber mark and its "Needs you" pill
+/// ([CardTitle]). As it comes ([Arriving]) an amber ring glows around it
+/// once: it grows to 6 px and fades away over 700 ms (not with Reduce
+/// Motion). Answered, it settles into its answered line ([SettleCard]).
 class WaitingCard extends StatefulWidget {
   const new({required this.waiting, required this.children, super.key});
 
@@ -45,20 +48,17 @@ class _WaitingCardState extends State<WaitingCard> with ClockRun {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final waiting = widget.waiting;
-    final decoration = box(
-      waiting ? t.needs : t.borderSubtle,
-      fill: waiting ? t.needsSoft : null,
-    );
-    // Its spread and alpha: up to 6 px at a third of the way, then 2.
+    final decoration = cardBox(t);
+    // Its spread and alpha: up to 6 px at a third of the way, then gone.
     final v = running
         ? Curves.easeOut.transform(ranMs / WaitingCard.glowFor.inMilliseconds)
         : 1.0;
     final (spread, alpha) = v < 0.35
-        ? (6 * v / 0.35, 0.28 * v / 0.35)
-        : (6 - 4 * (v - 0.35) / 0.65, 0.28 - 0.1 * (v - 0.35) / 0.65);
+        ? (6 * v / 0.35, 0.4 * v / 0.35)
+        : (6 - 4 * (v - 0.35) / 0.65, 0.4 * (1 - (v - 0.35) / 0.65));
     return SettleCard(
       state: waiting,
-      decoration: waiting
+      decoration: waiting && running
           ? decoration.copyWith(
               boxShadow: [
                 BoxShadow(
@@ -78,7 +78,7 @@ class _WaitingCardState extends State<WaitingCard> with ClockRun {
 }
 
 /// A card's box that settles as what it holds changes [state] (a prompt
-/// answered): its border, fill and glow crossfade from what they were to
+/// answered): its fill and glow crossfade from what they were to
 /// [decoration] over [Motion.standard], its new content fades in over
 /// [Motion.quick] and its height eases over [Motion.standard], so the
 /// transcript under it slides rather than jumps. With Reduce Motion the
@@ -132,7 +132,7 @@ class _SettleCardState extends State<SettleCard> with ClockRun {
       child: widget.child,
     );
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: _box(widget.decoration),
       child: Marks(
         child: EaseSize(
@@ -150,9 +150,11 @@ class _SettleCardState extends State<SettleCard> with ClockRun {
   }
 }
 
-/// The card's first line: an icon and what it is about. With no [detail],
-/// the title wraps (an answered question's is the question, however long),
-/// the icon beside its first line.
+/// The card's first line: an icon and what it is about, and while it
+/// [waiting] the "Needs you" pill at its end, as the chat's header and
+/// its row in the sidebar say it. With no [detail], the title wraps (an
+/// answered question's is the question, however long), the icon beside its
+/// first line.
 class CardTitle extends StatelessWidget {
   const new(this.title, {super.key, this.detail = '', this.waiting = true});
 
@@ -166,7 +168,7 @@ class CardTitle extends StatelessWidget {
     final t = theme.t;
     final icon = Icon(
       waiting ? Icons.warning_amber_rounded : Icons.check,
-      size: 14,
+      size: 15,
       color: waiting ? t.needs : t.textMuted,
     );
     final style = theme.ui(t.text, weight: FontWeight.w600);
@@ -180,13 +182,14 @@ class CardTitle extends StatelessWidget {
               top:
                   (MediaQuery.textScalerOf(context).scale(style.fontSize!) *
                           style.height! -
-                      14) /
+                      15) /
                   2,
             ),
             child: icon,
           ),
           const SizedBox(width: 8),
           Expanded(child: Text(title, style: style)),
+          if (waiting) ...[const SizedBox(width: 8), const NeedsYou()],
         ],
       );
     }
@@ -196,16 +199,27 @@ class CardTitle extends StatelessWidget {
         const SizedBox(width: 8),
         Text(title, style: style),
         const SizedBox(width: 8),
-        Flexible(
+        Expanded(
           child: Text(
             detail,
             overflow: TextOverflow.ellipsis,
             style: theme.code(t.text, size: 12).copyWith(height: 1.3),
           ),
         ),
+        if (waiting) ...[const SizedBox(width: 8), const NeedsYou()],
       ],
     );
   }
+}
+
+/// The pill on a card the agent waits on: "Needs you", the waiting
+/// state's ink on its soft fill ([PhasePill]).
+class NeedsYou extends StatelessWidget {
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      const PhasePill(ChatPhase.waiting, small: true);
 }
 
 /// The agent's permission prompt, with its own options as buttons: one
@@ -286,7 +300,7 @@ class _PermissionCardState extends State<PermissionCard> {
               for (final (i, o) in item.options.indexed)
                 RunButton(
                   label: o.name,
-                  kind: i == 0 ? ButtonKind.primary : ButtonKind.secondary,
+                  kind: i == 0 ? ButtonKind.primary : ButtonKind.quiet,
                   runner: _answering,
                   run: () => widget.onAnswer(o.id),
                   wrap: true, // a phone shows what it allows whole

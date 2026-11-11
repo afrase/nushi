@@ -36,11 +36,11 @@ double _opacity(WidgetTester tester, String text) => tester
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('a running call shines, without a spinner; a finished one '
-      'shows neither', (tester) async {
+  testWidgets('a running call shines, a spinner at its row’s end (ADR '
+      '0111); a finished one shows neither', (tester) async {
     await tester.pumpWidget(_app(ToolCallView(_call('in_progress'))));
     expect(find.byType(ShaderMask), findsOneWidget);
-    expect(find.byType(Spinner), findsNothing);
+    expect(find.byType(Spinner), findsOneWidget);
 
     await tester.pumpWidget(_app(ToolCallView(_call('completed'))));
     expect(find.byType(ShaderMask), findsNothing);
@@ -167,7 +167,7 @@ void main() {
   testWidgets('golden, a running call, still, dark', (tester) async {
     Shine.stopAt = 0.4;
     addTearDown(() => Shine.stopAt = 0);
-    viewport(tester, const Size(360, 52), ratio: 3);
+    viewport(tester, const Size(360, 60), ratio: 3);
     await tester.pumpWidget(_app(ToolCallView(_call('in_progress'))));
     await expectLater(
       find.byType(ToolCallView),

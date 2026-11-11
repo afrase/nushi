@@ -29,6 +29,7 @@ class MarkdownStyle {
     required this.highlight,
     this.inlineCode,
     this.inlineCodeColor,
+    this.quote,
     this.languageName,
   });
 
@@ -52,8 +53,13 @@ class MarkdownStyle {
   /// Inline code's text; null leaves it in [code]'s color.
   final Color? inlineCodeColor;
 
-  /// Around code blocks and tables, and a quote's bar.
+  /// A hairline: under a code block's bar, between a table's rows, and a
+  /// rule.
   final Color border;
+
+  /// Behind a quote: a tint, as [inlineCode] is, so it shows on whatever
+  /// the text sits on. Null takes the body's color, faintly.
+  final Color? quote;
 
   /// Quotes, a code block's language label and its copy button.
   final Color muted;
@@ -289,18 +295,22 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
         listIndent: size * 1.6,
         listBullet: body,
         blockquote: body.copyWith(color: s.muted),
-        blockquotePadding: const EdgeInsets.fromLTRB(12, 2, 0, 2),
+        // A quote is set in on a soft fill, no bar down its side; a code
+        // block is its fill alone; a table has hairlines between its rows.
+        blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         blockquoteDecoration: BoxDecoration(
-          border: Border(left: BorderSide(color: s.border, width: 3)),
+          color: s.quote ?? faint,
+          borderRadius: BorderRadius.circular(s.codeRadius),
         ),
         codeblockDecoration: BoxDecoration(
           color: s.codeBackground,
-          border: Border.all(color: s.border),
           borderRadius: BorderRadius.circular(s.codeRadius),
         ),
         tableHead: const TextStyle(fontWeight: FontWeight.w600),
         tableBody: body,
-        tableBorder: TableBorder.all(color: s.border),
+        tableBorder: TableBorder(
+          horizontalInside: BorderSide(color: s.border),
+        ),
         tableColumnWidth: const ContentFlexColumnWidth(),
         tableCellsPadding: const EdgeInsets.symmetric(
           horizontal: 8,

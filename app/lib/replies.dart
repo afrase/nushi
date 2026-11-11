@@ -105,8 +105,8 @@ String withReplies(List<Reply> replies, String text) => [
   return (replies, (rest ?? '').trim());
 }
 
-/// Quoted text, dimmed, with a bar on its left; in a user message's band's
-/// colors when [band].
+/// Quoted text, dimmed, on the quotes' soft fill, no bar down its side
+/// (ADR 0111); in a user message's band's colors when [band].
 class QuoteBlock extends StatelessWidget {
   const new(
     this.text, {
@@ -126,14 +126,10 @@ class QuoteBlock extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return Container(
-      padding: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(
-            color: band ? t.userBandBorder : t.borderStrong,
-            width: 2,
-          ),
-        ),
+        color: t.quote,
+        borderRadius: BorderRadius.circular(NushiTheme.control),
       ),
       child: Text(
         text,
@@ -296,7 +292,9 @@ class _ReplyBoxState extends State<ReplyBox> {
       },
       child: Container(
         width: 400,
-        padding: const EdgeInsets.fromLTRB(12, 10, 6, 4),
+        // As tall as it was with the quote's bar: its fill's own padding
+        // comes out of the box's.
+        padding: const EdgeInsets.fromLTRB(12, 8, 6, 2),
         decoration: ShapeDecoration(
           color: t.raised,
           shape: RoundedRectangleBorder(

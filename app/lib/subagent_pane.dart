@@ -143,8 +143,8 @@ class _Head extends StatelessWidget {
         children: [
           if (call.prompt.isNotEmpty)
             Container(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
-              decoration: box(t.borderSubtle, fill: t.raised),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+              decoration: cardBox(t),
               child: FoldedText(
                 call.prompt,
                 style: theme.ui(t.text, size: 12.5),
@@ -253,7 +253,7 @@ class _ToSubagentBoxState extends State<_ToSubagentBox> {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        border: Border(top: BorderSide(color: t.line)),
       ),
       child: Row(
         children: [

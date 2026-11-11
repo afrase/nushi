@@ -6,13 +6,14 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The agent's config options under the prompt box, without labels, as in
-/// Claude Code: the mode's value on the left (`Auto`); on the right
-/// "Ultracode" while that is on, a "⋯" menu with every option that isn't
-/// mode, model or effort (fast mode, agent, Ultracode, ...), then the
-/// model menu (`Opus 5.5  High`): four models, the ones picked last first,
-/// then the agent's first (1–4 pick them), Effort ▸, and More models ▸ with
-/// the rest.
+/// The agent's config options in the prompt box's row (ADR 0111), without
+/// labels, as in Claude Code, each a quiet pill with a ▾: the mode's value
+/// (`Auto`), then the model menu (`Opus 5.5  High`): four models, the ones
+/// picked last first, then the agent's first (1–4 pick them), Effort ▸,
+/// and More models ▸ with the rest; then a "⋯" menu with every option that
+/// isn't mode, model or effort (fast mode, agent, Ultracode, ...), and
+/// "Ultracode" while that is on. In a narrow row the two values are cut
+/// short before anything leaves it.
 ///
 /// [onClose] runs when a menu closes (the composer takes the focus back).
 class Pickers extends StatelessWidget {
@@ -21,15 +22,11 @@ class Pickers extends StatelessWidget {
     required this.onPick,
     super.key,
     this.onClose,
-    this.leading,
   });
 
   final List<ConfigOption> options;
   final Future<void> Function(String configId, String value) onPick;
   final VoidCallback? onClose;
-
-  /// After the mode, on the left.
-  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -100,27 +97,45 @@ class Pickers extends StatelessWidget {
       for (final v in models)
         if (!top.contains(v)) v,
     ];
-    final value = theme.ui(t.textSecondary, size: 12);
     return Row(
       children: [
         if (mode != null)
-          MenuField(
-            compact: true,
-            tooltip: mode.description.isEmpty ? mode.name : mode.description,
-            onClose: onClose,
-            entries: rows(mode),
-            label: Text(mode.currentName, style: value),
-          ),
-        if (leading != null) Flexible(child: leading!) else const Spacer(),
-        if (leading != null) const SizedBox(width: 12),
-        if (ultracode?.current == 'true')
-          Padding(
-            padding: EdgeInsets.only(
-              right: TouchTargets.of(context) ? 10 : NushiTheme.barGap,
+          Flexible(
+            child: MenuField(
+              pill: true,
+              tooltip: mode.description.isEmpty ? mode.name : mode.description,
+              onClose: onClose,
+              entries: rows(mode),
+              label: Text(mode.currentName),
             ),
-            child: Tooltip(
-              message: ultracode!.description,
-              child: Text('Ultracode', style: theme.ui(t.accentInk, size: 12)),
+          ),
+        if (model != null || effort != null)
+          Flexible(
+            child: MenuField(
+              pill: true,
+              tooltip: [?model?.name, ?effort?.name].join(', '),
+              onClose: onClose,
+              digits: true,
+              entries: [
+                if (model != null) ...rows(model, values: top, tips: true),
+                if (model != null && effort != null) MenuEntry.divider,
+                if (effort != null) submenu('Effort', effort),
+                if (model != null && more.isNotEmpty)
+                  submenu('More models', model, more),
+              ],
+              label: Text.rich(
+                TextSpan(
+                  children: [
+                    if (model != null) TextSpan(text: model.currentName),
+                    if (effort != null)
+                      TextSpan(
+                        text:
+                            '${model == null ? '' : '  '}${effort.currentName}',
+                        style: theme.ui(t.textMuted, size: 12.5),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         if (rest.isNotEmpty)
@@ -130,31 +145,17 @@ class Pickers extends StatelessWidget {
             onClose: onClose,
             entries: [for (final o in rest) submenu(o.name, o)],
           ),
-        if (model != null || effort != null)
-          MenuField(
-            compact: true,
-            tooltip: [?model?.name, ?effort?.name].join(', '),
-            onClose: onClose,
-            digits: true,
-            entries: [
-              if (model != null) ...rows(model, values: top, tips: true),
-              if (model != null && effort != null) MenuEntry.divider,
-              if (effort != null) submenu('Effort', effort),
-              if (model != null && more.isNotEmpty)
-                submenu('More models', model, more),
-            ],
-            label: Text.rich(
-              TextSpan(
-                children: [
-                  if (model != null) TextSpan(text: model.currentName),
-                  if (effort != null)
-                    TextSpan(
-                      text: '${model == null ? '' : '  '}${effort.currentName}',
-                      style: theme.ui(t.textMuted, size: 12),
-                    ),
-                ],
+        if (ultracode?.current == 'true')
+          Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: Tooltip(
+              message: ultracode!.description,
+              child: Text(
+                'Ultracode',
+                maxLines: 1,
+                softWrap: false,
+                style: theme.ui(t.accentInk, size: 12.5),
               ),
-              style: value,
             ),
           ),
       ],

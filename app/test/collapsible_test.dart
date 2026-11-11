@@ -13,9 +13,9 @@ void main() {
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
-    // Enlarged, so the corners show: the border's curve over the red fill.
-    testWidgets('golden, a failed call, $name', (tester) async {
-      viewport(tester, const Size(240, 56), ratio: 4);
+    // Enlarged, so the corners show: the card's fill, cut to a control's.
+    testWidgets('golden, a call’s row, $name', (tester) async {
+      viewport(tester, const Size(240, 60), ratio: 4);
       await tester.pumpWidget(
         themed(
           const Padding(
@@ -23,7 +23,6 @@ void main() {
             child: Collapsible(
               header: Text(r'$ cd ~/x'),
               body: SizedBox(height: 20),
-              failed: true,
             ),
           ),
           tokens: tokens,
@@ -31,7 +30,7 @@ void main() {
       );
       await expectLater(
         find.byType(Collapsible),
-        matchesGoldenFile('goldens/collapsible_failed_$name.png'),
+        matchesGoldenFile('goldens/collapsible_row_$name.png'),
       );
     });
   }

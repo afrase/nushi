@@ -80,7 +80,9 @@ class StoppedView extends StatelessWidget {
 }
 
 /// A dim, italic [label] that opens to [text], shining while [live]; folded,
-/// [line] under it, in its style.
+/// [line] under it, in its style. Open, the text is set in under the label,
+/// past its chevron: its italics and its indent tell it from the agent's
+/// own words, with no bar down its side (ADR 0111).
 class Folded extends StatefulWidget {
   const new(
     this.label,
@@ -106,11 +108,14 @@ class Folded extends StatefulWidget {
 class _FoldedState extends State<Folded> {
   bool _open = false;
 
+  /// Where the label's words start: past the chevron and its gap.
+  static const _indent = 20.0;
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final style = theme
-        .ui(theme.t.textMuted, size: 12.5)
+        .ui(theme.t.textMuted)
         .copyWith(fontStyle: FontStyle.italic);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,20 +149,14 @@ class _FoldedState extends State<Folded> {
           Disclosure(
             open: !_open,
             child: Padding(
-              padding: const EdgeInsets.only(left: 18),
+              padding: const EdgeInsets.only(left: _indent),
               child: line(style),
             ),
           ),
         Disclosure(
           open: _open,
-          child: Container(
-            margin: const EdgeInsets.only(left: 6, top: 4),
-            padding: const EdgeInsets.only(left: 12),
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(color: theme.t.borderStrong, width: 2),
-              ),
-            ),
+          child: Padding(
+            padding: const EdgeInsets.only(left: _indent, top: 2, bottom: 2),
             child: switch (widget.shown) {
               final shown? => Text.rich(pacedSpan(shown, style)),
               null => Text(widget.text, style: style),

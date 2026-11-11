@@ -5,7 +5,6 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The + button's tooltip.
@@ -75,32 +74,17 @@ class PlusMenu extends StatelessWidget {
   }
 }
 
-/// The + itself: a small filled square, as Claude's app has it, 28 high
-/// like the box's other buttons (ADR 0072), its corners a control's, which
-/// sit inside the box's own by its padding.
+/// The + itself: a round button on the card's lifted fill, as the row's
+/// other buttons (ADR 0111).
 class PlusButton extends StatelessWidget {
   const new({required this.onPressed, super.key});
 
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    // The fill is the square's own: a phone's taller touch target around
-    // it stays clear.
-    return Tap(
-      tooltip: plusTooltip,
-      onTap: onPressed,
-      child: Container(
-        width: 28,
-        height: 28,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: t.hover,
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-        ),
-        child: LineIcon.plus.view(size: 18, color: t.text),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => RoundButton(
+    tooltip: plusTooltip,
+    onPressed: onPressed,
+    glyph: (color) => LineIcon.plus.view(size: 18, color: color),
+  );
 }

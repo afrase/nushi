@@ -347,17 +347,19 @@ class SyntaxLines implements DiffLineSource {
 /// The diff theme for [t]: its diff colors, with the transcript's code
 /// colors. A removed line in one column is red, the way an inserted one is
 /// green: side by side its grey sits across from its replacement, but one
-/// above the other it reads like a hover band.
-DiffThemeData diffTheme(Tokens t) {
+/// above the other it reads like a hover band. Given [surface], that is its
+/// background, gutter and divider: the fill it sits on.
+DiffThemeData diffTheme(Tokens t, {Color? surface}) {
   final d = t.diff;
   final dark = t.brightness == Brightness.dark;
+  final background = surface ?? d.background;
   Color removed(double a) =>
-      Color.alphaBlend(t.crashed.withValues(alpha: a), d.background);
+      Color.alphaBlend(t.crashed.withValues(alpha: a), background);
   return DiffThemeData(
     brightness: t.brightness,
-    background: d.background,
+    background: background,
     text: d.text,
-    gutterBackground: d.gutterBackground,
+    gutterBackground: surface ?? d.gutterBackground,
     gutterText: d.gutterText,
     gutterTextChanged: d.gutterTextChanged,
     insertedLine: d.insertedLine,
@@ -371,7 +373,7 @@ DiffThemeData diffTheme(Tokens t) {
     ribbonInserted: d.ribbonInserted,
     ribbonDeleted: d.ribbonDeleted,
     ribbonModified: d.ribbonModified,
-    dividerBackground: d.dividerBackground,
+    dividerBackground: surface ?? d.dividerBackground,
     selection: d.selection,
     selectionOverCap: d.selectionOverCap,
     foldPlaceholderBackground: d.foldPlaceholderBackground,

@@ -25,7 +25,7 @@ It comes back when you start a chat in that folder again. **Remove from sidebar*
 
 Type in the box at the bottom and press **⏎** to send. **⇧⏎** starts a new line.
 
-- **Attach files or images**: click the **+** left of the box and pick **Add files or photos** (**⌘U**), drop files on the chat, or paste a picture.
+- **Attach files or images**: click the **+** in the box and pick **Add files or photos** (**⌘U**), drop files on the chat, or paste a picture.
 - **Mention a file**: type `@` and pick one.
 - **Slash commands**: type `/` to see the agent's commands.
 
@@ -33,19 +33,19 @@ Type in the box at the bottom and press **⏎** to send. **⇧⏎** starts a new
 
 No need to wait for the agent to finish. Type your message, then:
 
-- **⏎ (Queue)** puts it in line, as a pill over the box. An agent that takes input mid-task gets it right away; otherwise it goes when the current turn ends. You can edit or remove a pill, or send it now.
-- **⌘⏎ (Stop and send)** stops what the agent is doing and sends your message at once.
+- **⏎, or the Queue button,** puts it in line, as a pill over the box. An agent that takes input mid-task gets it right away; otherwise it goes when the current turn ends. You can edit or remove a pill, or send it now.
+- **⌘⏎, or the Stop and send button,** stops what the agent is doing and sends your message at once.
 
 ## Stop the agent
 
-Press **Esc**, or click the stop button (a square in a circle) right of the box. Queued messages wait until you send again.
+Press **Esc**, or click the round red **Stop** button at the end of the box's row. Queued messages wait until you send again.
 
 ## Pick the mode, model and effort
 
-Under the box are the agent's own options:
+In the box's bottom row, after the **+**, are the agent's own options (in a side chat and on the phone they're under the box):
 
-- **On the left: the mode.** The agent's permission mode (for example Auto or Plan) decides what it may do without asking. It's the only permission control; Nushi has none of its own.
-- **On the right: the model** and its effort. Click to switch; the menu also has **Effort** and **More models**.
+- **First, the mode.** The agent's permission mode (for example Auto or Plan) decides what it may do without asking. It's the only permission control; Nushi has none of its own.
+- **Then the model** and its effort. Click to switch; the menu also has **Effort** and **More models**.
 - **The ⋯ button** holds any other options the agent offers.
 
 A chat remembers your picks, and a new chat starts with the ones you last picked for that agent.

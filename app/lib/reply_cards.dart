@@ -63,16 +63,14 @@ class _ReplyCard extends StatelessWidget {
           Container(
             width: 168,
             // Taller with the text (the phone's is 1.15 times the Mac's).
-            height: MediaQuery.textScalerOf(context).scale(64),
-            decoration: box(
-              t.borderSubtle,
-              fill: t.raised,
-              radius: NushiTheme.control,
+            height: MediaQuery.textScalerOf(context).scale(68),
+            decoration: BoxDecoration(
+              color: t.lifted,
+              borderRadius: BorderRadius.circular(NushiTheme.control),
             ),
             child: Tap(
               onTap: onTap,
-              radius: NushiTheme.inner(NushiTheme.control, 1),
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 5),
+              padding: const EdgeInsets.fromLTRB(8, 7, 8, 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

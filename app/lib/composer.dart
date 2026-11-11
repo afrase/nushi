@@ -29,13 +29,19 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:nushi/worktree.dart';
 
-/// The composer: "+" on its left attaches files or photos (⌘U; ⌘V and
-/// dropping work too: [attachFiles]), mentions a file or offers the
-/// commands ([PlusMenu]), and on its right a send button once there
-/// is something to send, or a stop button while a turn runs. Reply cards
-/// and attached images show above the text; the replies go first in the
-/// message. Under it, the agent's pickers. Enter sends (⌘⏎ stops and sends
-/// while a turn runs), Shift-Enter starts a line ([isSendKey]); `/` completes the
+/// The composer (ADR 0111): a card with a hairline and a soft shadow, the
+/// text on top and one row of controls under it, inside the box. In the
+/// row, "+" attaches files or photos (⌘U; ⌘V and dropping work too:
+/// [attachFiles]), mentions a file or offers the commands ([PlusMenu]);
+/// then the agent's pickers ([Pickers]); and at its end a round Send once
+/// there is something to send, or while a turn runs Queue, Stop and send
+/// and a round red Stop ([SendButtons]). Reply cards and attached images
+/// show above the text; the replies go first in the message. Under the
+/// box, only a new chat's folder. A box too narrow for that row
+/// ([Composer.pickersFrom]: a phone's, a side chat's) is one row, the text
+/// between the + and what sends it, with the pickers under the box. Enter
+/// sends (⌘⏎ stops and sends while a turn runs), Shift-Enter starts a line
+/// ([isSendKey]); `/` completes the
 /// agent's commands and `@` the folder's files (sent as links); Up in an
 /// empty box brings back the last prompt; Esc Esc lists your messages to
 /// rewind to (on a Mac). While a message is on its way back to the box
@@ -56,6 +62,11 @@ class Composer extends StatefulWidget {
 
   /// Whether a chat without messages shows its folder under the box.
   final bool folder;
+
+  /// The narrowest box whose row holds the agent's pickers: the chat's at
+  /// the narrowest window with the sidebar shown, not a side chat's or a
+  /// phone's.
+  static const pickersFrom = 400.0;
 
   @override
   State<Composer> createState() => _ComposerState();
@@ -417,158 +428,16 @@ class _ComposerState extends State<Composer> {
                 NushiTheme.gutter,
                 4,
                 NushiTheme.gutter,
-                12,
+                16,
               ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // The lines over the box grow in and fold away (grow.dart).
-            GrowLine(
-              child: switch (turnPlan(chat.items)) {
-                final plan? when chat.busy => PlanStatus(plan),
-                _ => null,
-              },
-            ),
-            GrowLine(
-              child: chat.queue.isEmpty
-                  ? null
-                  : QueuePills(
-                      chat,
-                      onEdit: _unlocked(_unqueue),
-                      onRemove: _unlocked((m) => _unqueue(m, drop: true)),
-                      onSendNow: _unlocked(_sendNow),
-                    ),
-            ),
-            GrowLine(
-              child: chat.error.isEmpty
-                  ? null
-                  : Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                        chat.error,
-                        style: theme.ui(t.crashed, size: 12),
-                      ),
-                    ),
-            ),
-            GrowLine(
-              child: _completions.choices.isEmpty || _locked
-                  ? null
-                  : ChoiceList(
-                      _completions.choices,
-                      _completions.picked,
-                      onPick: _completions.accept,
-                    ),
-            ),
-            AnimatedBuilder(
-              animation: _focus,
-              builder: (context, child) => Container(
-                key: _box,
-                decoration: BoxDecoration(
-                  color: t.base,
-                  borderRadius: BorderRadius.circular(NushiTheme.panel),
-                  border: Border.all(
-                    color: _focus.hasFocus ? t.textMuted : t.borderStrong,
-                  ),
-                ),
-                // 48 high on the Mac with one line, the buttons 28 (ADR 0072).
-                padding: touch
-                    ? const EdgeInsets.all(6)
-                    : const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                child: child,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  GrowLine(
-                    child:
-                        _images.value.isEmpty &&
-                            _draft.files.value.isEmpty &&
-                            _draft.replies.value.isEmpty &&
-                            _draft.outputs.value.isEmpty &&
-                            _draft.toSubagent.value == null
-                        ? null
-                        : DraftCards(
-                            _draft,
-                            chat: chat,
-                            onDone: _focus.requestFocus,
-                          ),
-                  ),
-                  Row(
-                    children: [
-                      PlusMenu(
-                        box: _box,
-                        chat: chat,
-                        api: _api,
-                        locked: _locked,
-                        onAttach: () => unawaited(_attach()),
-                        onMention: () {
-                          _completions.mention();
-                          _focus.requestFocus();
-                        },
-                        // The focus first: taking it puts the cursor at the
-                        // end, and the commands want it after the slash.
-                        onSlash: () {
-                          _focus.requestFocus();
-                          _completions.slash();
-                        },
-                      ),
-                      Expanded(
-                        child: SpellArea(
-                          _spell.menu,
-                          child: Focus(
-                            onKeyEvent: _onKey,
-                            skipTraversal: true,
-                            child: TextField(
-                              controller: _text,
-                              focusNode: _focus,
-                              readOnly: _locked,
-                              onTap: _spell.menu.tapped,
-                              contextMenuBuilder: _spell.menu.toolbar,
-                              autofocus: !touch, // no keyboard popping up
-                              minLines: 1,
-                              // A phone's keyboard leaves the transcript little
-                              // room: past six lines the field scrolls.
-                              maxLines: touch ? 6 : 10,
-                              style: theme.ui(t.text),
-                              textAlignVertical: TextAlignVertical.center,
-                              decoration: InputDecoration(
-                                hintText: _locked
-                                    ? rewindHint(chat)
-                                    : !chat.busy
-                                    ? widget.hint
-                                    : touch
-                                    ? 'Queue a message, or stop and send'
-                                    : '$enterLabel queues it, '
-                                          '$cmdEnterLabel stops '
-                                          '${chat.agentName} and sends',
-                                border: InputBorder.none,
-                                // One line (18.2) is as tall as the buttons.
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SendButtons(
-                        chat,
-                        widget.daemon,
-                        written: written,
-                        pop: pop,
-                        onSend: _send,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: touch ? 4 : 8),
-            Pickers(
-              leading: widget.folder && chat.fresh && !chat.archived
-                  ? NewChatBar(chat: chat, daemon: widget.daemon)
-                  : null,
+        child: LayoutBuilder(
+          builder: (context, room) {
+            // The box's row holds the pickers where it's wide enough for
+            // them beside its buttons; in a narrower box (a side chat's)
+            // they stay under it, and on a phone at any width: its screen
+            // is short on its side, under its keyboard.
+            final roomy = !touch && room.maxWidth >= Composer.pickersFrom;
+            final pickers = Pickers(
               options: chat.config,
               onPick: (id, value) => widget.daemon.client.setConfigOption(
                 SetConfigOptionRequest(
@@ -578,8 +447,191 @@ class _ComposerState extends State<Composer> {
                 ),
               ),
               onClose: _focus.requestFocus,
-            ),
-          ],
+            );
+            final plus = PlusMenu(
+              box: _box,
+              chat: chat,
+              api: _api,
+              locked: _locked,
+              onAttach: () => unawaited(_attach()),
+              onMention: () {
+                _completions.mention();
+                _focus.requestFocus();
+              },
+              // The focus first: taking it puts the cursor at the end, and
+              // the commands want it after the slash.
+              onSlash: () {
+                _focus.requestFocus();
+                _completions.slash();
+              },
+            );
+            final send = SendButtons(
+              chat,
+              widget.daemon,
+              written: written,
+              pop: pop,
+              // The words of Queue and Stop and send show where the row has
+              // room for them.
+              words: room.maxWidth >= SendButtons.wordsFrom,
+              onSend: _send,
+            );
+            final field = SpellArea(
+              _spell.menu,
+              child: Focus(
+                onKeyEvent: _onKey,
+                skipTraversal: true,
+                child: TextField(
+                  controller: _text,
+                  focusNode: _focus,
+                  readOnly: _locked,
+                  onTap: _spell.menu.tapped,
+                  contextMenuBuilder: _spell.menu.toolbar,
+                  autofocus: !touch, // no keyboard popping up
+                  minLines: 1,
+                  // A phone's keyboard leaves the transcript little room:
+                  // past six lines the field scrolls.
+                  maxLines: touch ? 6 : 10,
+                  style: theme.ui(t.text, size: 14),
+                  textAlignVertical: TextAlignVertical.center,
+                  decoration: InputDecoration(
+                    hintText: _locked
+                        ? rewindHint(chat)
+                        : !chat.busy
+                        ? widget.hint
+                        : touch
+                        ? 'Queue a message, or stop and send'
+                        : '$enterLabel queues it, '
+                              '$cmdEnterLabel stops '
+                              '${chat.agentName} and sends',
+                    hintStyle: theme.ui(t.textMuted, size: 14),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: roomy ? 2 : 6,
+                    ),
+                  ),
+                ),
+              ),
+            );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // The lines over the box grow in and fold away (grow.dart).
+                GrowLine(
+                  child: switch (turnPlan(chat.items)) {
+                    final plan? when chat.busy => PlanStatus(plan),
+                    _ => null,
+                  },
+                ),
+                GrowLine(
+                  child: chat.queue.isEmpty
+                      ? null
+                      : QueuePills(
+                          chat,
+                          onEdit: _unlocked(_unqueue),
+                          onRemove: _unlocked((m) => _unqueue(m, drop: true)),
+                          onSendNow: _unlocked(_sendNow),
+                        ),
+                ),
+                GrowLine(
+                  child: chat.error.isEmpty
+                      ? null
+                      : Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            chat.error,
+                            style: theme.ui(t.crashed, size: 12),
+                          ),
+                        ),
+                ),
+                GrowLine(
+                  child: _completions.choices.isEmpty || _locked
+                      ? null
+                      : ChoiceList(
+                          _completions.choices,
+                          _completions.picked,
+                          onPick: _completions.accept,
+                        ),
+                ),
+                Container(
+                  key: _box,
+                  decoration: BoxDecoration(
+                    color: t.raised,
+                    borderRadius: BorderRadius.circular(NushiTheme.panel),
+                    border: Border.all(color: t.line),
+                    // Soft, and softer on a light theme, where a shadow shows
+                    // more.
+                    boxShadow: [
+                      BoxShadow(
+                        color: t.shadow.withValues(
+                          alpha: t.brightness == Brightness.dark ? 0.3 : 0.08,
+                        ),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  // Roomy, 12 around the text and the row; narrow, the one
+                  // row's buttons (28, a phone's 44) set its height.
+                  padding: roomy
+                      ? const EdgeInsets.fromLTRB(12, 12, 12, 10)
+                      : EdgeInsets.all(touch ? 6 : 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      GrowLine(
+                        child:
+                            _images.value.isEmpty &&
+                                _draft.files.value.isEmpty &&
+                                _draft.replies.value.isEmpty &&
+                                _draft.outputs.value.isEmpty &&
+                                _draft.toSubagent.value == null
+                            ? null
+                            : DraftCards(
+                                _draft,
+                                chat: chat,
+                                onDone: _focus.requestFocus,
+                              ),
+                      ),
+                      if (roomy) ...[
+                        field,
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            plus,
+                            const SizedBox(width: 6),
+                            Expanded(child: pickers),
+                            send,
+                          ],
+                        ),
+                      ] else
+                        // The text between the + and what sends it, on one
+                        // row: a narrow box is often a short one too (a
+                        // phone's, over its keyboard).
+                        Row(
+                          children: [
+                            plus,
+                            Expanded(child: field),
+                            send,
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+                if (!roomy && chat.config.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(top: touch ? 0 : 6),
+                    child: pickers,
+                  ),
+                // A chat without messages: where it starts, under the box.
+                if (widget.folder && chat.fresh && !chat.archived)
+                  Padding(
+                    padding: EdgeInsets.only(top: touch ? 4 : 10),
+                    child: NewChatBar(chat: chat, daemon: widget.daemon),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

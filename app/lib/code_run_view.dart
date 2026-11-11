@@ -133,10 +133,9 @@ class OutputCard extends StatelessWidget {
           Container(
             constraints: const BoxConstraints(maxWidth: 360),
             padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
-            decoration: box(
-              t.borderSubtle,
-              fill: t.raised,
-              radius: NushiTheme.control,
+            decoration: BoxDecoration(
+              color: t.lifted,
+              borderRadius: BorderRadius.circular(NushiTheme.control),
             ),
             // The command shortened to fit, never how it went.
             child: Row(
@@ -203,7 +202,7 @@ class _RunLine extends StatelessWidget {
         height: 26,
         padding: const EdgeInsets.only(left: 10, right: 2),
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: t.borderSubtle)),
+          border: Border(top: BorderSide(color: t.line)),
         ),
         child: Row(
           spacing: 8,

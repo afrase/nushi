@@ -187,17 +187,16 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
         ),
         if (_git)
           DecoratedBox(
-            decoration: box(
-              on ? t.accent : t.borderStrong,
-              fill: on ? t.accentSoft : null,
-              radius: NushiTheme.pill,
+            decoration: BoxDecoration(
+              color: on ? t.accentSoft : t.raised,
+              borderRadius: BorderRadius.circular(NushiTheme.pill),
             ),
             child: Tap(
               onTap: chat.busy || chat.waiting
                   ? null
                   : () => _switch(context, chat, daemon, !on),
               radius: NushiTheme.pill,
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
               child: Row(
                 spacing: 4,
                 children: [

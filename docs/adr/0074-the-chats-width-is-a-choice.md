@@ -16,3 +16,5 @@ ADR 0072 kept the transcript at `readableWidth` (860) and at the left, under the
 ## Alternatives considered
 - Dropping the cap for everyone: no choice, and long lines by default.
 - Keeping the column at the left: what the owner rejected.
+
+**Amended by [ADR 0111](0111-surfaces-and-floating-panes.md)** (2026-11-11): the chat's column is 800 at most (`chatWidth`); GitHub's text keeps 860.

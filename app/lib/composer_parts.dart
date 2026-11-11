@@ -13,7 +13,6 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/reply_cards.dart';
 import 'package:nushi/rewind.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Stops the chat's running turn. If the agent hasn't answered the last
@@ -44,26 +43,6 @@ Future<void> stopTurn(
 /// taking the message back.
 String rewindHint(ChatState chat) =>
     chat.stopping ? 'Taking your message back…' : 'Rewinding…';
-
-/// A small round icon button inside the prompt box.
-Widget boxButton(String tooltip, VoidCallback onPressed, Widget child) => Tap(
-  tooltip: tooltip,
-  onTap: onPressed,
-  radius: NushiTheme.pill,
-  child: SizedBox.square(dimension: 28, child: Center(child: child)),
-);
-
-/// Stop: a filled square in a circle, like a media player's.
-Widget stopIcon(Color color) => Container(
-  width: 16,
-  height: 16,
-  alignment: Alignment.center,
-  decoration: BoxDecoration(
-    shape: BoxShape.circle,
-    border: Border.all(color: color, width: 1.5),
-  ),
-  child: Container(width: 6, height: 6, color: color),
-);
 
 /// Enter in a box that sends (the composer, a reply, the reply dialog, a
 /// subagent's box, a review comment; the keypad's Enter too), one
@@ -222,9 +201,12 @@ class DraftCards extends StatelessWidget {
   );
 }
 
-/// The box's buttons on its right: Queue and Stop and send while a turn
-/// runs and something is [written], Stop while it runs, else Send. Those
-/// coming pop in once the box is there ([pop]).
+/// The end of the box's row (ADR 0111): while a turn runs and something is
+/// [written], Queue (⏎: it waits for the agent's next chance) and Stop and
+/// send (⌘⏎), pills on the card with their [words] where the row has room,
+/// else round buttons with the same icons; Stop, round and solid red, while
+/// a turn runs; else Send, round on the accent's fill, once something is
+/// written. Those coming pop in once the box is there ([pop]).
 class SendButtons extends StatelessWidget {
   const new(
     this.chat,
@@ -232,6 +214,7 @@ class SendButtons extends StatelessWidget {
     required this.written,
     required this.pop,
     required this.onSend,
+    this.words = true,
     super.key,
   });
 
@@ -239,16 +222,36 @@ class SendButtons extends StatelessWidget {
   final Daemon daemon;
   final bool written;
   final bool pop;
+  final bool words;
 
   /// Sends the box's message; `now` stops the turn first.
   final Future<void> Function({bool now}) onSend;
 
+  /// The narrowest box whose pills keep their words beside the pickers.
+  static const wordsFrom = 620.0;
+
   @override
   Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
     final touch = TouchTargets.of(context);
+    Widget act(String label, String key, IconData icon, VoidCallback run) {
+      final tooltip = touch ? label : '$label ($key)';
+      return words
+          ? PillButton(
+              label: label,
+              icon: icon,
+              tooltip: tooltip,
+              onPressed: run,
+            )
+          : RoundButton(
+              tooltip: tooltip,
+              onPressed: run,
+              glyph: (color) => Icon(icon, size: 16, color: color),
+            );
+    }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
+      spacing: touch ? 0 : 6,
       children: [
         // Queue (after this turn) and Stop and send (stop it, and this goes
         // now): a phone's only way, the Mac's ⏎ and ⌘⏎ as buttons. One
@@ -257,20 +260,17 @@ class SendButtons extends StatelessWidget {
           Enter.pop(
             key: const ValueKey('queue'),
             play: pop,
-            child: boxButton(
-              touch ? 'Queue' : 'Queue ($enterLabel)',
-              onSend,
-              Icon(Icons.queue, size: 16, color: t.textSecondary),
-            ),
+            child: act('Queue', enterLabel, Icons.queue, onSend),
           ),
           if (chat.started != null)
             Enter.pop(
               key: const ValueKey('now'),
               play: pop,
-              child: boxButton(
-                touch ? 'Stop and send' : 'Stop and send ($cmdEnterLabel)',
+              child: act(
+                'Stop and send',
+                cmdEnterLabel,
+                Icons.fast_forward,
                 () => onSend(now: true),
-                Icon(Icons.fast_forward, size: 16, color: t.textSecondary),
               ),
             ),
         ],
@@ -278,20 +278,24 @@ class SendButtons extends StatelessWidget {
           Enter.pop(
             key: const ValueKey('stop'),
             play: pop,
-            child: boxButton(
-              'Stop (esc)',
-              () => stopTurn(context, chat, daemon),
-              stopIcon(t.textSecondary),
+            child: RoundButton(
+              kind: RoundKind.stop,
+              tooltip: 'Stop (esc)',
+              onPressed: () => stopTurn(context, chat, daemon),
+              glyph: (color) =>
+                  Icon(Icons.stop_rounded, size: 18, color: color),
             ),
           )
         else if (written && !chat.busy)
           Enter.pop(
             key: const ValueKey('send'),
             play: pop,
-            child: boxButton(
-              'Send ($enterLabel)',
-              onSend,
-              Icon(Icons.keyboard_return, size: 16, color: t.textSecondary),
+            child: RoundButton(
+              kind: RoundKind.primary,
+              tooltip: 'Send ($enterLabel)',
+              onPressed: onSend,
+              glyph: (color) =>
+                  Icon(Icons.arrow_upward, size: 17, color: color),
             ),
           ),
       ],

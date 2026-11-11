@@ -8,8 +8,8 @@ import 'package:nushi/question_card.dart';
 import 'package:nushi/theme/theme.dart';
 
 // An answered permission or question settles into its answered line: the
-// height eases, the border and fill crossfade (the fluidity review's
-// idea 4).
+// height eases (the fluidity review's idea 4), on the same card's fill
+// (ADR 0111: waiting is the card's mark and pill, not its box).
 
 Item _permission(String status) => Item(
   id: 'p',
@@ -67,16 +67,16 @@ Widget _card(Item item) => MaterialApp(
   ),
 );
 
-/// The card's outline: its box's border color.
-Color? _border(WidgetTester tester, Finder card) {
+/// The card's box: its fill, and whether anything outlines it.
+(Color?, BoxBorder?) _box(WidgetTester tester, Finder card) {
   final box = tester
       .widgetList<Container>(
         find.descendant(of: card, matching: find.byType(Container)),
       )
       .map((c) => c.decoration)
       .whereType<BoxDecoration>()
-      .firstWhere((d) => d.border != null);
-  return (box.border! as Border).top.color;
+      .first;
+  return (box.color, box.border);
 }
 
 void main() {
@@ -89,26 +89,25 @@ void main() {
     ),
     ('question', _question('pending'), _question('answered'), QuestionCard),
   ]) {
-    testWidgets('an answered $name settles: its height eases, its colors '
-        'crossfade', (tester) async {
+    testWidgets('an answered $name settles: its height eases, on the '
+        'card’s fill', (tester) async {
       await tester.pumpWidget(_card(pending));
       await tester.pumpAndSettle();
       final card = find.byType(type);
       final tall = tester.getSize(card).height;
-      final waiting = _border(tester, card);
+      expect(_box(tester, card), (Tokens.dark.raised, null));
+      expect(find.text('Needs you'), findsOneWidget);
 
       await tester.pumpWidget(_card(answered));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 90));
       final mid = tester.getSize(card).height;
-      final midBorder = _border(tester, card);
       await tester.pumpAndSettle();
       final short = tester.getSize(card).height;
-      final settled = _border(tester, card);
       expect(short, lessThan(tall));
       expect(mid, inExclusiveRange(short, tall));
-      expect(midBorder, isNot(anyOf(waiting, settled)));
-      expect(settled, Tokens.dark.borderSubtle);
+      expect(_box(tester, card), (Tokens.dark.raised, null));
+      expect(find.text('Needs you'), findsNothing);
     });
 
     testWidgets('with Reduce Motion an answered $name changes at once', (
@@ -125,7 +124,7 @@ void main() {
       await tester.pumpWidget(_card(answered));
       await tester.pump();
       final at = tester.getSize(card).height;
-      expect(_border(tester, card), Tokens.dark.borderSubtle);
+      expect(find.text('Needs you'), findsNothing);
       await tester.pump(Motion.standard);
       expect(tester.getSize(card).height, at);
     });

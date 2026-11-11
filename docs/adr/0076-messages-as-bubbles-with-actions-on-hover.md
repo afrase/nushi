@@ -20,3 +20,5 @@ The owner, after ADR 0072 took the box off tool rows: "I like that they were mor
 - Tool rows with brighter text and no box: less crowded, but it isn't what the owner liked.
 
 **Note (ADR [0077](0077-each-harness-is-a-type.md)):** `Dialect` and `Kind`'s function fields are now the interfaces of `features/chats/harness.go`, met by each agent's `Harness` type.
+
+**Amended by [ADR 0111](0111-surfaces-and-floating-panes.md)** (2026-11-11): a tool row is a card's fill with no outline, 36 high, its failure a red mark and word; a bubble's padding is 12 by 18.
