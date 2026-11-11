@@ -224,12 +224,21 @@ func TestWatchSendsAChange(t *testing.T) {
 	if n := next(); !slices.Equal(n, []string{"a.md"}) {
 		t.Fatalf("first: %q", n)
 	}
-	testcheck.Write(t, filepath.Join(root, "b.md"), "b")
+	// Each change is one step, so a look between two halves of it can't
+	// send twice: the new file arrives whole (a rename), and the edit is
+	// one write at the file's end (WriteFile empties it first).
+	made := filepath.Join(t.TempDir(), "b.md")
+	testcheck.Write(t, made, "b")
+	testcheck.NoErr(t, os.Rename(made, filepath.Join(root, "b.md")))
 	if n := next(); !slices.Equal(n, []string{"a.md", "b.md"}) {
 		t.Errorf("after an add: %q", n)
 	}
 	// A sent file's size changes, its folder's time not.
-	testcheck.NoErr(t, os.WriteFile(filepath.Join(root, "a.md"), []byte("longer"), 0o600))
+	f, err := os.OpenFile(filepath.Join(root, "a.md"), os.O_WRONLY|os.O_APPEND, 0)
+	testcheck.NoErr(t, err)
+	_, err = f.WriteString("longer")
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, f.Close())
 	if n := next(); !slices.Equal(n, []string{"a.md", "b.md"}) {
 		t.Errorf("after an edit: %q", n)
 	}
