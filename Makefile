@@ -23,7 +23,7 @@ endif
 CHROME := $(if $(filter Linux,$(OS)),$(or $(CHROME_EXECUTABLE),$(shell command -v google-chrome 2>/dev/null)),yes)
 RELEASE := app/build/macos/Build/Products/Release/Nushi.app
 HELPER := $(RELEASE)/Contents/Helpers/Nushi Daemon.app
-# local.mk (not committed) can set COPY_TO=<folder>: make install also copies the app there.
+# local.mk (not committed) holds this machine's own settings (CLAUDE_SCHEMAS).
 -include local.mk
 # The identity package signs with: NUSHI_SIGN, else the first Apple Development
 # certificate in the keychain (Xcode › Settings › Accounts › Manage
@@ -106,7 +106,6 @@ install: package
 	mkdir -p "$(HOME)/Applications"
 	rm -rf "$(HOME)/Applications/Nushi.app"
 	ditto "$(RELEASE)" "$(HOME)/Applications/Nushi.app"
-	if [ -n "$(COPY_TO)" ]; then rm -rf "$(COPY_TO)/Nushi.app" && ditto "$(RELEASE)" "$(COPY_TO)/Nushi.app"; fi
 endif
 
 # The relay (ADR 0033), one static binary: bin/nushi-relay -h lists its flags.
