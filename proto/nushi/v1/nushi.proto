@@ -19,6 +19,15 @@ service NushiService {
   // Settings.check_updates is on), and says what it found. Not on a
   // device's channel. API 86.
   rpc CheckForUpdates(CheckForUpdatesRequest) returns (CheckForUpdatesResponse);
+  // Has Homebrew upgrade the cask that installed Nushi (ADR 0109): the
+  // daemon runs `brew update`, then `brew upgrade --cask` of nushi@beta
+  // or nushi, whichever its Caskroom has. The request names nothing: no
+  // cask, path or version. It answers once the install has started;
+  // UpdateCheck (the update event, Ping) says how it goes. Refused with
+  // failed_precondition when Homebrew didn't install this Nushi, when no
+  // newer version was found, or while an install runs. Not on a device's
+  // channel. API 115.
+  rpc InstallUpdate(InstallUpdateRequest) returns (InstallUpdateResponse);
   // Lists every stored chat.
   rpc ListChats(ListChatsRequest) returns (ListChatsResponse);
   // Returns everything a chat's events have built so far, to pick it up
@@ -524,9 +533,22 @@ message UpdateCheck {
   string latest = 4;
   // When GitHub last answered; 0: not yet.
   int64 checked_ms = 5;
+  // Whether InstallUpdate's install is running. API 115.
+  bool installing = 6;
+  // Why the last install failed, in a sentence or two to show; "" when
+  // it didn't, and once another starts. API 115.
+  string install_error = 7;
+  // The version the last install brought, "" until one has: the app
+  // still running then is the old one, which Homebrew couldn't quit.
+  // API 115.
+  string installed = 8;
 }
 
 message CheckForUpdatesRequest {}
+
+message InstallUpdateRequest {}
+
+message InstallUpdateResponse {}
 
 message CheckForUpdatesResponse {
   UpdateCheck update = 1;

@@ -2,7 +2,9 @@
 // every 2 hours while the setting is on, and says when it's newer than
 // the daemon's own version: the app shows it. For a Nushi that follows
 // beta versions (ADR 0108) a pre-release counts too. One check per Mac,
-// however many windows; nothing of the user's is sent (no token).
+// however many windows; nothing of the user's is sent (no token). Asked
+// by the Mac's app, it has Homebrew install the newer one (install.go,
+// ADR 0109).
 package updates
 
 import (
@@ -31,6 +33,25 @@ type Prefs interface {
 	SetCheckUpdates(on bool) error
 }
 
+// Homebrew is Homebrew's casks of Nushi (internal/homebrew): the way a
+// newer version is installed (ADR 0109).
+type Homebrew interface {
+	// Installed is the cask that installed this Nushi; "" when none did.
+	Installed() string
+	// Has says whether cask is installed at version.
+	Has(cask, version string) bool
+	// Upgrade runs Homebrew's upgrade of cask and returns the end of what
+	// it printed; its error is a sentence to show.
+	Upgrade(ctx context.Context, cask string) (output string, err error)
+}
+
+// What Install refuses with.
+var (
+	ErrNotHomebrew = errors.New("Homebrew didn't install this Nushi")
+	ErrNoUpdate    = errors.New("no newer version of Nushi was found")
+	ErrInstalling  = errors.New("the update is installing already")
+)
+
 // Service checks for a newer release and keeps what it found.
 type Service struct {
 	latest  Latest
@@ -48,6 +69,8 @@ type Service struct {
 	// Beta says whether this Nushi was installed to follow beta versions
 	// (Homebrew's nushi@beta cask); nil: no.
 	Beta func() bool
+	// Brew installs the newer version (Install); nil: nothing does.
+	Brew Homebrew
 
 	checking sync.Mutex // one check at a time
 	mu       sync.Mutex
@@ -141,6 +164,12 @@ func (s *Service) check(ctx context.Context, auto bool) (model.Update, error) {
 	defer s.mu.Unlock()
 	if auto && !s.prefs.CheckUpdates() {
 		return s.found, nil
+	}
+	// An install's state stays; its error goes with the version it was
+	// about.
+	found.Installing, found.Installed = s.found.Installing, s.found.Installed
+	if found.Version == s.found.Version {
+		found.InstallError = s.found.InstallError
 	}
 	before := s.found.Latest
 	s.found = found

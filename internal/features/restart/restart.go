@@ -26,7 +26,9 @@ type Chats interface {
 
 // Terminals are the terminals beside chats (internal/features/terminals),
 // which end with the daemon, and what else does: the dev servers
-// (internal/features/servers, ADR 0098), as Together.
+// (internal/features/servers, ADR 0098), as Together; and an update's
+// install (internal/features/updates, ADR 0109), which doesn't end with
+// the daemon but is waited out.
 type Terminals interface {
 	Busy() bool            // one runs a command
 	Running() []model.Hold // those that run one

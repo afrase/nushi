@@ -4,6 +4,8 @@ Status: accepted, 2026-10-28. Amends [0004](0004-connect-over-unix-socket.md) (t
 
 Amended by [0098](0098-the-daemon-runs-a-folders-dev-servers.md): a running dev server holds the restart as a terminal running a command does, and ends with the daemon.
 
+Amended by [0109](0109-update-runs-homebrew.md): an update's install holds the restart until Homebrew is through.
+
 ## Context
 An upgrade (Homebrew's, or `make install`) leaves the running daemon and its chats alone (0055), and the app then asked the owner to click "Restart daemon" after every one: "Why is a daemon reset always required?" A restart stops agents mid-turn and ends terminals, so doing it blindly loses work; doing it when nothing runs loses nothing that a sleep wouldn't (chats reopen through `session/load` on their next message).
 

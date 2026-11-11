@@ -1,13 +1,11 @@
 import 'dart:async';
 
 import 'package:connectrpc/connect.dart';
-import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
@@ -17,50 +15,7 @@ import 'package:nushi/update_toast.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
-
-final _macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
-const _url = 'https://github.com/afrase/nushi/releases/tag/v0.1.17';
-
-UpdateCheck _newer(String v) => UpdateCheck(
-  version: v,
-  url: _url,
-  latest: v,
-  checkedMs: Int64(fixtureNow.millisecondsSinceEpoch),
-);
-
-/// A daemon (0.1.16) whose check found [found]; Check for updates finds
-/// [checks] (else what it found).
-FakeDaemon _daemon(UpdateCheck Function() found, {UpdateCheck? checks}) =>
-    FakeDaemon([chat('c', 'claude', 'Fix the login redirect')])
-      ..settings = Settings(sleepAfterMinutes: 30, checkUpdates: true)
-      ..answer = (input) => switch (input) {
-        PingRequest() => PingResponse(
-          apiVersion: apiVersion,
-          version: '0.1.16',
-          update: found(),
-        ),
-        CheckForUpdatesRequest() => CheckForUpdatesResponse(
-          update: checks ?? found(),
-        ),
-        _ => null,
-      };
-
-Future<Daemon> _open(
-  WidgetTester tester,
-  FakeDaemon fake, {
-  double width = 1700,
-  Brightness brightness = Brightness.dark,
-}) async {
-  viewport(tester, Size(width, 700), brightness: brightness);
-  final d = await fake.connect(tester);
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
-  d.select('c');
-  await tester.pumpAndSettle();
-  return d;
-}
-
-final Finder _toast = find.byKey(const ValueKey('update-toast'));
+import 'update_fixtures.dart';
 
 void main() {
   setUpAll(loadFonts);
@@ -124,71 +79,41 @@ void main() {
     );
   });
 
-  testWidgets("a beta version: Copy upgrades the beta cask; the release's "
-      "cask doesn't have it, so Download", (tester) async {
-    String? copied;
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
-      (call) async {
-        if (call.method == 'Clipboard.setData') {
-          copied = (call.arguments as Map)['text'] as String?;
-        }
-        return null;
-      },
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        null,
-      ),
-    );
-    brewCask = betaCask;
-    final d = await _open(tester, _daemon(() => _newer('0.29.0-beta.1')));
-    expect(find.text('Nushi 0.29.0-beta.1 is available.'), findsOneWidget);
-    await tester.tap(find.text('Copy'));
-    await tester.pump();
-    expect(copied, 'brew update && brew upgrade --cask nushi@beta');
-    await tester.pump(const Duration(seconds: 3));
-    d.dispose();
-
-    brewCask = 'nushi';
-    final d2 = await _open(tester, _daemon(() => _newer('0.29.0-beta.1')));
-    expect(find.text('Download'), findsOneWidget);
-    expect(find.text('Copy'), findsNothing);
-    d2.dispose();
-  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
-
-  for (final brew in [true, false]) {
+  for (final kind in ['zip', ...toastStates.keys]) {
     for (final (name, brightness) in [
       ('dark', Brightness.dark),
       ('light', Brightness.light),
     ]) {
       for (final width in [1700.0, 720.0]) {
-        final kind = brew ? 'brew' : 'zip';
         testWidgets('the toast ($kind), ${width.toInt()} wide ($name): in '
             'the bottom right corner', (tester) async {
-          brewCask = brew ? 'nushi' : null;
-          final d = await _open(
+          final (found, buttons) =
+              toastStates[kind] ?? (newerUpdate('0.1.17'), ['Download']);
+          brewCask = kind == 'zip' ? null : 'nushi';
+          final d = await openWithUpdate(
             tester,
-            _daemon(() => _newer('0.1.17')),
+            updateDaemon(() => found),
             width: width,
             brightness: brightness,
           );
-          expect(find.text('Nushi 0.1.17 is available.'), findsOneWidget);
-          expect(find.text('Copy'), brew ? findsOneWidget : findsNothing);
-          expect(
-            find.text('Release notes'),
-            brew ? findsOneWidget : findsNothing,
-          );
-          expect(find.text('Download'), brew ? findsNothing : findsOneWidget);
-          final box = tester.getRect(_toast);
+          expect(toastButtons(tester), buttons);
+          final box = tester.getRect(updateToast);
           expect(box.right, width - UpdateToast.inset);
           final status = tester.getRect(find.byType(StatusBar));
           expect(box.bottom, status.top - UpdateToast.inset);
-          final last = tester.getRect(
-            find.text(brew ? 'Release notes' : 'Download'),
-          );
+          final last = tester.getRect(find.text(buttons.last));
           expect(last.right, lessThan(box.right - 10)); // not clipped
+          if (find
+              .byKey(const ValueKey('update-error'))
+              .evaluate()
+              .isNotEmpty) {
+            // The whole sentence, inside the card.
+            final error = tester.getRect(
+              find.byKey(const ValueKey('update-error')),
+            );
+            expect(error.right, lessThan(box.right - 10));
+            expect(error.height, lessThan(40));
+          }
           if (width == 1700) {
             // Over the details panel's empty bottom, its text's width.
             final text = tester.getRect(find.text('Environment')).left;
@@ -200,97 +125,70 @@ void main() {
             'update_toast_${kind}_${width.toInt()}_$name',
           );
           d.dispose();
-        }, variant: _macOS);
+        }, variant: macOSOnly);
       }
     }
   }
 
-  testWidgets('Copy puts the Homebrew command on the clipboard', (
-    tester,
-  ) async {
-    brewCask = 'nushi';
-    String? copied;
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
-      (call) async {
-        if (call.method == 'Clipboard.setData') {
-          copied = (call.arguments as Map)['text'] as String?;
-        }
-        return null;
-      },
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        null,
-      ),
-    );
-    final d = await _open(tester, _daemon(() => _newer('0.1.17')));
-    await tester.tap(find.text('Copy'));
-    await tester.pump();
-    expect(copied, 'brew update && brew upgrade --cask nushi');
-    expect(find.text('Copied'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 3));
-    expect(find.text('Copy'), findsOneWidget);
-    d.dispose();
-  }, variant: _macOS);
-
   testWidgets('Dismiss remembers the version: not again until a newer one', (
     tester,
   ) async {
-    var found = _newer('0.1.17');
-    final d = await _open(tester, _daemon(() => found));
-    expect(_toast, findsOneWidget);
+    var found = newerUpdate('0.1.17');
+    final d = await openWithUpdate(tester, updateDaemon(() => found));
+    expect(updateToast, findsOneWidget);
     await tester.tap(find.byTooltip('Dismiss: not again until a newer one'));
     await tester.pump();
     // It fades where it is, taking no clicks, then it's gone.
-    expect(_toast, findsOneWidget);
+    expect(updateToast, findsOneWidget);
     expect(
       tester
           .widgetList<IgnorePointer>(
-            find.ancestor(of: _toast, matching: find.byType(IgnorePointer)),
+            find.ancestor(
+              of: updateToast,
+              matching: find.byType(IgnorePointer),
+            ),
           )
           .any((w) => w.ignoring),
       isTrue,
     );
     await tester.pumpAndSettle();
-    expect(_toast, findsNothing);
+    expect(updateToast, findsNothing);
     expect(dismissedUpdate.value, '0.1.17');
     await tester.pump(const Duration(seconds: 4)); // pings say it again
-    expect(_toast, findsNothing);
-    found = _newer('0.1.18');
+    expect(updateToast, findsNothing);
+    found = newerUpdate('0.1.18');
     await tester.pump(const Duration(seconds: 2));
     expect(find.text('Nushi 0.1.18 is available.'), findsOneWidget);
     d.dispose();
-  }, variant: _macOS);
+  }, variant: macOSOnly);
 
   testWidgets('a release arrives as an event; nothing found, no toast', (
     tester,
   ) async {
     var found = UpdateCheck();
-    final fake = _daemon(() => found);
-    final d = await _open(tester, fake);
-    expect(_toast, findsNothing);
-    found = _newer('0.1.17');
+    final fake = updateDaemon(() => found);
+    final d = await openWithUpdate(tester, fake);
+    expect(updateToast, findsNothing);
+    found = newerUpdate('0.1.17');
     fake.emit(EventsResponse(update: found));
     await tester.pump();
     await tester.pump();
-    expect(_toast, findsOneWidget);
+    expect(updateToast, findsOneWidget);
     // It rises up to 8 px as it fades in.
     await tester.pump(Motion.enter ~/ 4);
-    final rising = tester.getRect(_toast).bottom;
+    final rising = tester.getRect(updateToast).bottom;
     await tester.pumpAndSettle();
-    final rest = tester.getRect(_toast).bottom;
+    final rest = tester.getRect(updateToast).bottom;
     expect(rising - rest, inExclusiveRange(0, 8));
     d.dispose();
-  }, variant: _macOS);
+  }, variant: macOSOnly);
 
   testWidgets('Settings › General: the switch turns the checks off, and the '
       'toast goes when the daemon forgets the release', (tester) async {
-    var found = _newer('0.1.17');
-    final fake = _daemon(() => found);
-    final d = await _open(tester, fake);
-    expect(_toast, findsOneWidget);
+    var found = newerUpdate('0.1.17');
+    final fake = updateDaemon(() => found);
+    final d = await openWithUpdate(tester, fake);
+    expect(updateToast, findsOneWidget);
     d.openSettings(section: SettingsSection.general);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -312,15 +210,15 @@ void main() {
     found = UpdateCheck(latest: '0.1.17', checkedMs: found.checkedMs);
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle(); // it fades out
-    expect(_toast, findsNothing);
+    expect(updateToast, findsNothing);
     d.dispose();
-  }, variant: _macOS);
+  }, variant: macOSOnly);
 
   testWidgets('the palette checks now: a newer one dismissed before shows '
       'again; none, a note says so', (tester) async {
     dismissedUpdate.value = '0.1.17';
-    var checks = _newer('0.1.17');
-    final fake = _daemon(() => UpdateCheck(latest: '0.1.16'))
+    var checks = newerUpdate('0.1.17');
+    final fake = updateDaemon(() => UpdateCheck(latest: '0.1.16'))
       ..answer = (input) => switch (input) {
         PingRequest() => PingResponse(
           apiVersion: apiVersion,
@@ -329,8 +227,8 @@ void main() {
         CheckForUpdatesRequest() => CheckForUpdatesResponse(update: checks),
         _ => null,
       };
-    final d = await _open(tester, fake);
-    expect(_toast, findsNothing);
+    final d = await openWithUpdate(tester, fake);
+    expect(updateToast, findsNothing);
     Future<void> check() async {
       unawaited(showPalette(tester.element(find.byType(StatusBar)), d));
       await tester.pumpAndSettle();
@@ -348,12 +246,12 @@ void main() {
 
     await check();
     expect(fake.calls.whereType<CheckForUpdatesRequest>(), hasLength(1));
-    expect(_toast, findsOneWidget);
+    expect(updateToast, findsOneWidget);
     expect(dismissedUpdate.value, isNull);
     await tester.tap(find.byTooltip('Dismiss: not again until a newer one'));
     checks = UpdateCheck(latest: '0.1.16', checkedMs: checks.checkedMs);
     await check();
-    expect(_toast, findsNothing);
+    expect(updateToast, findsNothing);
     expect(find.text('Nushi is up to date (0.1.16).'), findsOneWidget);
     final note = find.descendant(
       of: find.byType(SnackBar),
@@ -362,10 +260,10 @@ void main() {
     expect(tester.getSize(note.first).width, 420);
     await render(tester, find.byType(MaterialApp), 'up_to_date_dark');
     d.dispose();
-  }, variant: _macOS);
+  }, variant: macOSOnly);
 
   testWidgets('a failed check says why', (tester) async {
-    final fake = _daemon(UpdateCheck.new)
+    final fake = updateDaemon(UpdateCheck.new)
       ..answer = (input) => switch (input) {
         PingRequest() => PingResponse(
           apiVersion: apiVersion,
@@ -377,11 +275,11 @@ void main() {
         ),
         _ => null,
       };
-    final d = await _open(tester, fake);
+    final d = await openWithUpdate(tester, fake);
     final context = tester.element(find.byType(StatusBar));
     await checkForUpdates(context, d);
     await tester.pump();
     expect(find.textContaining("can't reach GitHub"), findsOneWidget);
     d.dispose();
-  }, variant: _macOS);
+  }, variant: macOSOnly);
 }

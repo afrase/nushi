@@ -2,6 +2,8 @@
 
 Status: accepted, 2026-10-29. Builds on [0055](0055-releases-and-the-homebrew-cask.md) (releases) and [0056](0056-the-daemon-restarts-itself-when-idle.md) (the restart after an upgrade).
 
+Amended by [0109](0109-update-runs-homebrew.md): where the toast had Copy it has Update, which has the daemon run Homebrew's upgrade; Copy stays for a failure and an older daemon.
+
 ## Context
 The owner: "An update checker that shows a toast or something when a new version is released. Have it check every 2 hours, since we release often and only I and maybe a coworker use it. Auto-update is a later thing."
 

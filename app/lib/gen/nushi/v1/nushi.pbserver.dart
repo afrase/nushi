@@ -27,6 +27,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.RestartWhenIdleRequest request);
   $async.Future<$0.CheckForUpdatesResponse> checkForUpdates(
       $pb.ServerContext ctx, $0.CheckForUpdatesRequest request);
+  $async.Future<$0.InstallUpdateResponse> installUpdate(
+      $pb.ServerContext ctx, $0.InstallUpdateRequest request);
   $async.Future<$0.ListChatsResponse> listChats(
       $pb.ServerContext ctx, $0.ListChatsRequest request);
   $async.Future<$0.GetChatResponse> getChat(
@@ -326,6 +328,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.RestartWhenIdleRequest();
       case 'CheckForUpdates':
         return $0.CheckForUpdatesRequest();
+      case 'InstallUpdate':
+        return $0.InstallUpdateRequest();
       case 'ListChats':
         return $0.ListChatsRequest();
       case 'GetChat':
@@ -630,6 +634,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return restartWhenIdle(ctx, request as $0.RestartWhenIdleRequest);
       case 'CheckForUpdates':
         return checkForUpdates(ctx, request as $0.CheckForUpdatesRequest);
+      case 'InstallUpdate':
+        return installUpdate(ctx, request as $0.InstallUpdateRequest);
       case 'ListChats':
         return listChats(ctx, request as $0.ListChatsRequest);
       case 'GetChat':

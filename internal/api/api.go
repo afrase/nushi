@@ -31,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 114
+const Version = 115
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -126,6 +126,9 @@ var macOnly = map[string]bool{
 	nushiv1connect.NushiServiceRestartWhenIdleProcedure: true,
 	// The phone shows nothing of updates.
 	nushiv1connect.NushiServiceCheckForUpdatesProcedure: true,
+	// Homebrew replaces the app on the Mac, on the Mac's word only (ADR
+	// 0109); the call checks for the Mac's socket too (onMac).
+	nushiv1connect.NushiServiceInstallUpdateProcedure: true,
 	// The phone has no Changes view, and a commit's hooks run on the Mac.
 	nushiv1connect.NushiServiceStageFilesProcedure:         true,
 	nushiv1connect.NushiServiceCommitStagedProcedure:       true,

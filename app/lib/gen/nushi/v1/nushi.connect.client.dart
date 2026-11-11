@@ -71,6 +71,31 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Has Homebrew upgrade the cask that installed Nushi (ADR 0109): the
+  /// daemon runs `brew update`, then `brew upgrade --cask` of nushi@beta
+  /// or nushi, whichever its Caskroom has. The request names nothing: no
+  /// cask, path or version. It answers once the install has started;
+  /// UpdateCheck (the update event, Ping) says how it goes. Refused with
+  /// failed_precondition when Homebrew didn't install this Nushi, when no
+  /// newer version was found, or while an install runs. Not on a device's
+  /// channel. API 115.
+  Future<nushiv1nushi.InstallUpdateResponse> installUpdate(
+    nushiv1nushi.InstallUpdateRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.installUpdate,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Lists every stored chat.
   Future<nushiv1nushi.ListChatsResponse> listChats(
     nushiv1nushi.ListChatsRequest input, {

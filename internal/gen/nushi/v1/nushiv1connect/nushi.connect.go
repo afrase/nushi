@@ -41,6 +41,9 @@ const (
 	// NushiServiceCheckForUpdatesProcedure is the fully-qualified name of the NushiService's
 	// CheckForUpdates RPC.
 	NushiServiceCheckForUpdatesProcedure = "/nushi.v1.NushiService/CheckForUpdates"
+	// NushiServiceInstallUpdateProcedure is the fully-qualified name of the NushiService's
+	// InstallUpdate RPC.
+	NushiServiceInstallUpdateProcedure = "/nushi.v1.NushiService/InstallUpdate"
 	// NushiServiceListChatsProcedure is the fully-qualified name of the NushiService's ListChats RPC.
 	NushiServiceListChatsProcedure = "/nushi.v1.NushiService/ListChats"
 	// NushiServiceGetChatProcedure is the fully-qualified name of the NushiService's GetChat RPC.
@@ -457,6 +460,15 @@ type NushiServiceClient interface {
 	// Settings.check_updates is on), and says what it found. Not on a
 	// device's channel. API 86.
 	CheckForUpdates(context.Context, *connect.Request[v1.CheckForUpdatesRequest]) (*connect.Response[v1.CheckForUpdatesResponse], error)
+	// Has Homebrew upgrade the cask that installed Nushi (ADR 0109): the
+	// daemon runs `brew update`, then `brew upgrade --cask` of nushi@beta
+	// or nushi, whichever its Caskroom has. The request names nothing: no
+	// cask, path or version. It answers once the install has started;
+	// UpdateCheck (the update event, Ping) says how it goes. Refused with
+	// failed_precondition when Homebrew didn't install this Nushi, when no
+	// newer version was found, or while an install runs. Not on a device's
+	// channel. API 115.
+	InstallUpdate(context.Context, *connect.Request[v1.InstallUpdateRequest]) (*connect.Response[v1.InstallUpdateResponse], error)
 	// Lists every stored chat.
 	ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error)
 	// Returns everything a chat's events have built so far, to pick it up
@@ -953,6 +965,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceCheckForUpdatesProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("CheckForUpdates")),
+			connect.WithClientOptions(opts...),
+		),
+		installUpdate: connect.NewClient[v1.InstallUpdateRequest, v1.InstallUpdateResponse](
+			httpClient,
+			baseURL+NushiServiceInstallUpdateProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("InstallUpdate")),
 			connect.WithClientOptions(opts...),
 		),
 		listChats: connect.NewClient[v1.ListChatsRequest, v1.ListChatsResponse](
@@ -1833,6 +1851,7 @@ type nushiServiceClient struct {
 	ping                    *connect.Client[v1.PingRequest, v1.PingResponse]
 	restartWhenIdle         *connect.Client[v1.RestartWhenIdleRequest, v1.RestartWhenIdleResponse]
 	checkForUpdates         *connect.Client[v1.CheckForUpdatesRequest, v1.CheckForUpdatesResponse]
+	installUpdate           *connect.Client[v1.InstallUpdateRequest, v1.InstallUpdateResponse]
 	listChats               *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
 	getChat                 *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
 	getChatItems            *connect.Client[v1.GetChatItemsRequest, v1.GetChatItemsResponse]
@@ -1993,6 +2012,11 @@ func (c *nushiServiceClient) RestartWhenIdle(ctx context.Context, req *connect.R
 // CheckForUpdates calls nushi.v1.NushiService.CheckForUpdates.
 func (c *nushiServiceClient) CheckForUpdates(ctx context.Context, req *connect.Request[v1.CheckForUpdatesRequest]) (*connect.Response[v1.CheckForUpdatesResponse], error) {
 	return c.checkForUpdates.CallUnary(ctx, req)
+}
+
+// InstallUpdate calls nushi.v1.NushiService.InstallUpdate.
+func (c *nushiServiceClient) InstallUpdate(ctx context.Context, req *connect.Request[v1.InstallUpdateRequest]) (*connect.Response[v1.InstallUpdateResponse], error) {
+	return c.installUpdate.CallUnary(ctx, req)
 }
 
 // ListChats calls nushi.v1.NushiService.ListChats.
@@ -2736,6 +2760,15 @@ type NushiServiceHandler interface {
 	// Settings.check_updates is on), and says what it found. Not on a
 	// device's channel. API 86.
 	CheckForUpdates(context.Context, *connect.Request[v1.CheckForUpdatesRequest]) (*connect.Response[v1.CheckForUpdatesResponse], error)
+	// Has Homebrew upgrade the cask that installed Nushi (ADR 0109): the
+	// daemon runs `brew update`, then `brew upgrade --cask` of nushi@beta
+	// or nushi, whichever its Caskroom has. The request names nothing: no
+	// cask, path or version. It answers once the install has started;
+	// UpdateCheck (the update event, Ping) says how it goes. Refused with
+	// failed_precondition when Homebrew didn't install this Nushi, when no
+	// newer version was found, or while an install runs. Not on a device's
+	// channel. API 115.
+	InstallUpdate(context.Context, *connect.Request[v1.InstallUpdateRequest]) (*connect.Response[v1.InstallUpdateResponse], error)
 	// Lists every stored chat.
 	ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error)
 	// Returns everything a chat's events have built so far, to pick it up
@@ -3228,6 +3261,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceCheckForUpdatesProcedure,
 		svc.CheckForUpdates,
 		connect.WithSchema(nushiServiceMethods.ByName("CheckForUpdates")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceInstallUpdateHandler := connect.NewUnaryHandler(
+		NushiServiceInstallUpdateProcedure,
+		svc.InstallUpdate,
+		connect.WithSchema(nushiServiceMethods.ByName("InstallUpdate")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceListChatsHandler := connect.NewUnaryHandler(
@@ -4108,6 +4147,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceRestartWhenIdleHandler.ServeHTTP(w, r)
 		case NushiServiceCheckForUpdatesProcedure:
 			nushiServiceCheckForUpdatesHandler.ServeHTTP(w, r)
+		case NushiServiceInstallUpdateProcedure:
+			nushiServiceInstallUpdateHandler.ServeHTTP(w, r)
 		case NushiServiceListChatsProcedure:
 			nushiServiceListChatsHandler.ServeHTTP(w, r)
 		case NushiServiceGetChatProcedure:
@@ -4417,6 +4458,10 @@ func (UnimplementedNushiServiceHandler) RestartWhenIdle(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) CheckForUpdates(context.Context, *connect.Request[v1.CheckForUpdatesRequest]) (*connect.Response[v1.CheckForUpdatesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CheckForUpdates is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) InstallUpdate(context.Context, *connect.Request[v1.InstallUpdateRequest]) (*connect.Response[v1.InstallUpdateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.InstallUpdate is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error) {
