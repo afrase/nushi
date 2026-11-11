@@ -98,6 +98,9 @@ void main() {
     expect(_painted(tester, find.byType(SettingsView)), same(tokyo.dark));
     expect(readSaved()['theme'], 'tokyo-night');
     expect(pickedTheme(), same(tokyo));
+    // Its sets by the names they're known by.
+    expect(find.text('Dark: Tokyo Night'), findsOneWidget);
+    expect(find.text('Light: Tokyo Night Day'), findsOneWidget);
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
     await tester.pumpAndSettle();
     expect(_painted(tester, find.byType(SettingsView)), same(tokyo.light));

@@ -1,7 +1,8 @@
 import 'package:flutter/widgets.dart';
 
 /// A terminal's sixteen ANSI colors, a theme's (`Tokens.terminal`); its
-/// text, background and cursor are the theme's text and base.
+/// background is the theme's base, and its text and cursor the theme's
+/// text unless the theme gives a [foreground].
 @immutable
 class TerminalColors {
   const new({
@@ -21,6 +22,7 @@ class TerminalColors {
     required this.brightMagenta,
     required this.brightCyan,
     required this.brightWhite,
+    this.foreground,
   });
 
   final Color black;
@@ -39,6 +41,11 @@ class TerminalColors {
   final Color brightMagenta;
   final Color brightCyan;
   final Color brightWhite;
+
+  /// The terminal's own text, where a published theme's isn't the ink
+  /// Nushi's labels take (Tokyo Night Day's fg, ADR 0086). Not a theme
+  /// file's to name: a file keeps the one of the theme it starts from.
+  final Color? foreground;
 
   /// VS Code's light terminal palette, the Nushi theme's.
   static const vsCodeLight = TerminalColors(

@@ -1,6 +1,8 @@
 // Each built-in theme (ADR 0086), dark and light, on the README's demo
 // data: the main window mid-turn (the transcript with its diffs, a
-// subagent's pane, the details panel), a narrow one with the terminal, the
+// subagent's pane, the details panel), the chat alone on what a theme is
+// known by (a code block and a permission card after the plan and the
+// diffs), Changes with a diff, a narrow window with the terminal, the
 // phone's chat, and Settings › Appearance. Renders to look at
 // (`make renders TEST=test/theme_renders_test.dart`); here each must draw
 // without an error or text past the window's edge.
@@ -10,6 +12,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/collapsible.dart';
 import 'package:nushi/daemon.dart';
@@ -27,11 +30,61 @@ import 'screenshots/demo.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
+/// Code in a block, for its colors: keywords, a type, strings, numbers, a
+/// comment.
+const _code = '''
+The cursor, as the store reads it:
+
+```go
+// Cursor is where a page of the feed starts.
+type Cursor struct {
+	Published time.Time `json:"published"`
+	ID        int64     `json:"id"`
+}
+
+func (c Cursor) Encode() string {
+	raw := c.Published.Format(time.RFC3339Nano) + "|" + strconv.FormatInt(c.ID, 10)
+	return base64.RawURLEncoding.EncodeToString([]byte(raw))
+}
+```
+''';
+
+/// The hero's transcript, then a code block and a command waiting to be
+/// allowed.
+final List<Item> _known = [
+  ...heroItems,
+  Item(id: 'code', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: _code),
+  Item(
+    id: 'ask',
+    kind: ItemKind.ITEM_KIND_PERMISSION,
+    status: 'pending',
+    title: 'go test ./internal/feed/... -run TestFeed',
+    options: [
+      Option(id: 'y', name: 'Allow once'),
+      Option(id: 'a', name: 'Always allow'),
+      Option(id: 'n', name: 'Reject'),
+    ],
+  ),
+];
+
+/// Whether the hero's transcript ends with [_known]'s code and card.
+bool _withCode = false;
+
 Object? _demo(Object input) => switch (input) {
   GetChatRequest(:final chatId) when chatId == heroChat.id => GetChatResponse(
     chat: heroChat,
-    items: heroItems,
+    items: _withCode ? _known : heroItems,
     status: heroChat.status,
+  ),
+  GetDiffRequest() => GetDiffResponse(files: demoChanges()),
+  GetFolderStatusRequest() => GetFolderStatusResponse(
+    git: true,
+    branch: demoBranch,
+    files: 9,
+    added: 142,
+    removed: 37,
+    defaultBase: 'main',
+    ahead: 3,
   ),
   ListTerminalsRequest() => ListTerminalsResponse(
     terminals: [
@@ -101,6 +154,38 @@ void main() {
         );
         expectTextInside(tester, 1700);
         await render(tester, find.byType(NushiApp), 'theme_${name}_1700');
+        await closeView(tester, d);
+      }, variant: _mac);
+
+      testWidgets('${theme.name}, ${b.name}: the chat, code and a card', (
+        tester,
+      ) async {
+        colorTheme.value = theme.id;
+        showDetails.value = false;
+        _withCode = true;
+        addTearDown(() => _withCode = false);
+        Collapsible.opened.add('e2');
+        addTearDown(Collapsible.opened.clear);
+        final d = await _window(tester, const Size(1100, 1500), b);
+        expect(tester.takeException(), isNull);
+        expectTextInside(tester, 1100);
+        await render(tester, find.byType(NushiApp), 'theme_${name}_chat');
+        await closeView(tester, d);
+      }, variant: _mac);
+
+      testWidgets('${theme.name}, ${b.name}: Changes, a diff', (tester) async {
+        colorTheme.value = theme.id;
+        showDetails.value = false;
+        final d = await _window(tester, const Size(1400, 900), b);
+        d.chats[heroChat.id]!.tab.value = ChatTab.changes;
+        await _pump(tester, 10);
+        final file = find.textContaining('cursor.go', findRichText: true);
+        if (file.evaluate().isNotEmpty) {
+          await tester.tap(file.first);
+          await _pump(tester, 10);
+        }
+        expect(tester.takeException(), isNull);
+        await render(tester, find.byType(NushiApp), 'theme_${name}_changes');
         await closeView(tester, d);
       }, variant: _mac);
 

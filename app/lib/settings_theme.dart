@@ -136,13 +136,20 @@ class _Picked extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    Widget set(String name, Tokens tokens) => Column(
+    // A set a palette names (Tokyo Night Day) says so: "Light: Tokyo
+    // Night Day".
+    Widget set(String name, Tokens tokens, String? known) => Column(
       key: ValueKey('picked-${name.toLowerCase()}'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 5,
       children: [
         _Framed(ThemePreview(tokens, dark: picked.dark)),
-        Text(name, style: theme.ui(t.textMuted, size: 12)),
+        Text(
+          known == null ? name : '$name: $known',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.ui(t.textMuted, size: 12),
+        ),
       ],
     );
     return Padding(
@@ -160,8 +167,8 @@ class _Picked extends StatelessWidget {
           ),
           LayoutBuilder(
             builder: (context, box) {
-              final dark = set('Dark', picked.dark);
-              final light = set('Light', picked.light);
+              final dark = set('Dark', picked.dark, picked.darkName);
+              final light = set('Light', picked.light, picked.lightName);
               return box.maxWidth >= 480
                   ? Row(
                       crossAxisAlignment: CrossAxisAlignment.start,

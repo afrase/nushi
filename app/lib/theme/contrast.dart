@@ -15,6 +15,13 @@ double contrast(Color a, Color b) {
 /// (`tokens_test`, `chat_colors_test`, `code_ink_test`): text AA (4.5:1)
 /// on every fill it sits on, a mark 3:1. Each a line naming the pair, for
 /// a custom theme's warning in Settings; the worst first.
+///
+/// Not among them (ADR 0086): code's colors (`syntax.*`), the terminal's
+/// sixteen and its text (`terminal.*`), a diff's (`diff.*`) and the
+/// transcript's body text (`agentText`). A published theme's are its
+/// authors' and are what it's known by, so a built-in keeps them as
+/// published (`published_colors_test`) though some read under AA
+/// (Tokyo Night's comments, 2.8:1), and a user's are theirs.
 List<String> contrastWarnings(Tokens t) {
   Color on(Color tint, Color surface) => Color.alphaBlend(tint, surface);
   final rows = {

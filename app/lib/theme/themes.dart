@@ -18,12 +18,20 @@ class ColorTheme {
     required this.name,
     required this.dark,
     required this.light,
+    this.darkName,
+    this.lightName,
   });
 
   final String id;
   final String name;
   final Tokens dark;
   final Tokens light;
+
+  /// What each set is known as where the palette names its variants
+  /// (Tokyo Night's light one is Tokyo Night Day): the picker says it
+  /// beside Dark and Light.
+  final String? darkName;
+  final String? lightName;
 
   /// The set for [brightness].
   Tokens of(Brightness brightness) =>
@@ -66,6 +74,8 @@ const List<ColorTheme> builtInThemes = [
     name: 'Tokyo Night',
     dark: tokyoNightDark,
     light: tokyoNightLight,
+    darkName: 'Tokyo Night',
+    lightName: 'Tokyo Night Day',
   ),
 ];
 

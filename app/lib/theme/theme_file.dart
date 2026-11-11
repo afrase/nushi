@@ -313,6 +313,7 @@ Tokens _rebuild(
       brightMagenta: pick('terminal.brightMagenta', a.brightMagenta),
       brightCyan: pick('terminal.brightCyan', a.brightCyan),
       brightWhite: pick('terminal.brightWhite', a.brightWhite),
+      foreground: a.foreground,
     ),
     diff: DiffColors(
       background: pick('diff.background', d.background),

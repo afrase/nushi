@@ -1,0 +1,159 @@
+// A named third-party theme draws what it's known by in its published
+// colors (ADR 0086): the surfaces, the body text, the selection, code's
+// colors, a diff's fills and the terminal's sixteen, each as its source
+// has it (docs/development.md's Dependencies names each source and its
+// version). These are not held to the contrast floors of `tokens_test`:
+// code's colors, the terminal's and a diff's, and the transcript's body
+// text are no pair of `contrastWarnings`.
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/theme/contrast.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/theme/theme_file.dart';
+
+/// [t]'s colors by a theme file's names, and its terminal's own text.
+Map<String, Color> _colors(Tokens t) => {
+  ...tokenColors(t),
+  'terminal.foreground': ?t.terminal.foreground,
+};
+
+void _published(String theme, Tokens t, Map<String, int> rgb) {
+  final colors = _colors(t);
+  for (final MapEntry(key: name, value: hex) in rgb.entries) {
+    expect(
+      colors[name],
+      Color(0xFF000000 | hex),
+      reason: '$theme: $name is #${hex.toRadixString(16).padLeft(6, '0')}',
+    );
+  }
+}
+
+void main() {
+  test('Tokyo Night is tokyonight.nvim’s Night and Day', () {
+    final tokyo = builtInTheme('tokyo-night')!;
+    expect(tokyo.darkName, 'Tokyo Night');
+    expect(tokyo.lightName, 'Tokyo Night Day');
+    // extras/lua/tokyonight_night.lua.
+    _published('Night', tokyo.dark, {
+      'base': 0x1a1b26, // bg
+      'window': 0x16161e, // bg_dark, the side bar's
+      'codeBlock': 0x16161e,
+      'lifted': 0x292e42, // bg_highlight
+      'text': 0xc0caf5, // fg
+      'agentText': 0xc0caf5,
+      'textSecondary': 0xa9b1d6, // fg_dark
+      'accent': 0x7aa2f7, // blue
+      'link': 0x7aa2f7,
+      'accentSoft': 0x283457, // bg_visual, the selection
+      'userBand': 0x283457,
+      'needs': 0xe0af68, // yellow
+      'done': 0x9ece6a, // green
+      'crashed': 0xf7768e, // red
+      'syntax.comment': 0x565f89,
+      'syntax.keyword': 0xbb9af7, // magenta
+      'syntax.declaration': 0x7aa2f7, // blue
+      'syntax.type': 0x2ac3de, // blue1
+      'syntax.string': 0x9ece6a, // green
+      'syntax.number': 0xff9e64, // orange
+      'syntax.constant': 0xff9e64,
+      'syntax.regexp': 0xb4f9f8, // blue6
+      'syntax.field': 0x73daca, // green1
+      'syntax.symbol': 0x89ddff, // blue5
+      'syntax.parameter': 0xe0af68, // yellow
+      'syntax.meta': 0x7dcfff, // cyan
+      'syntax.tag': 0xf7768e, // red
+      'terminal.black': 0x15161e,
+      'terminal.red': 0xf7768e,
+      'terminal.green': 0x9ece6a,
+      'terminal.yellow': 0xe0af68,
+      'terminal.blue': 0x7aa2f7,
+      'terminal.magenta': 0xbb9af7,
+      'terminal.cyan': 0x7dcfff,
+      'terminal.white': 0xa9b1d6,
+      'terminal.brightBlack': 0x414868,
+      'terminal.brightRed': 0xff899d,
+      'terminal.brightGreen': 0x9fe044,
+      'terminal.brightYellow': 0xfaba4a,
+      'terminal.brightBlue': 0x8db0ff,
+      'terminal.brightMagenta': 0xc7a9ff,
+      'terminal.brightCyan': 0xa4daff,
+      'terminal.brightWhite': 0xc0caf5,
+      'diff.background': 0x1a1b26,
+      'diff.text': 0xc0caf5,
+      'diff.insertedLine': 0x243e4a, // diff.add
+      'diff.deletedLine': 0x4a272f, // diff.delete
+      'diff.modifiedLine': 0x1f2231, // diff.change
+      'diff.modifiedWord': 0x394b70, // diff.text
+    });
+    // The terminal's text is the theme's, fg.
+    expect(tokyo.dark.terminal.foreground, isNull);
+    // extras/lua/tokyonight_day.lua.
+    _published('Day', tokyo.light, {
+      'base': 0xe1e2e7, // bg
+      'window': 0xd0d5e3, // bg_dark, the side bar's
+      'codeBlock': 0xd0d5e3,
+      'selected': 0xc4c8da, // bg_highlight
+      'agentText': 0x3760bf, // fg
+      'accentSoft': 0xb7c1e3, // bg_visual, the selection
+      'userBand': 0xb7c1e3,
+      'syntax.comment': 0x848cb5,
+      'syntax.keyword': 0x9854f1, // magenta
+      'syntax.declaration': 0x2e7de9, // blue
+      'syntax.type': 0x188092, // blue1
+      'syntax.string': 0x587539, // green
+      'syntax.number': 0xb15c00, // orange
+      'syntax.constant': 0xb15c00,
+      'syntax.regexp': 0x2e5857, // blue6
+      'syntax.field': 0x387068, // green1
+      'syntax.symbol': 0x006a83, // blue5
+      'syntax.parameter': 0x8c6c3e, // yellow
+      'syntax.meta': 0x007197, // cyan
+      'syntax.tag': 0xf52a65, // red
+      'terminal.foreground': 0x3760bf, // fg
+      'terminal.black': 0xb4b5b9,
+      'terminal.red': 0xf52a65,
+      'terminal.green': 0x587539,
+      'terminal.yellow': 0x8c6c3e,
+      'terminal.blue': 0x2e7de9,
+      'terminal.magenta': 0x9854f1,
+      'terminal.cyan': 0x007197,
+      'terminal.white': 0x6172b0,
+      'terminal.brightBlack': 0xa1a6c5,
+      'terminal.brightRed': 0xff4774,
+      'terminal.brightGreen': 0x5c8524,
+      'terminal.brightYellow': 0xa27629,
+      'terminal.brightBlue': 0x358aff,
+      'terminal.brightMagenta': 0xa463ff,
+      'terminal.brightCyan': 0x007ea8,
+      'terminal.brightWhite': 0x3760bf,
+      'diff.background': 0xe1e2e7,
+      'diff.text': 0x3760bf,
+      'diff.insertedLine': 0xb7ced5, // diff.add
+      'diff.deletedLine': 0xdababe, // diff.delete
+      'diff.modifiedLine': 0xd5d9e4, // diff.change
+      'diff.modifiedWord': 0x92a6d5, // diff.text
+    });
+  });
+
+  test('code’s colors, the terminal’s, a diff’s and the body text are '
+      'no pair of the contrast warnings', () {
+    // Each drawn in the pane's own fill, where nothing could read it.
+    final t = builtInTheme('tokyo-night')!.light;
+    final hidden = withColors(t, {
+      for (final name in tokenColors(t).keys)
+        if (name.startsWith('syntax.') ||
+            name.startsWith('terminal.') ||
+            name.startsWith('diff.') ||
+            name == 'agentText')
+          name: t.base,
+    });
+    expect(hidden.ink(Capture.comment).color, t.base);
+    expect(contrastWarnings(hidden), isEmpty);
+  });
+
+  test('a theme file keeps the terminal text of the theme it starts '
+      'from', () {
+    final f = readThemeFile('T.json', '{"from": "tokyo-night"}');
+    expect(f.theme!.light.terminal.foreground, const Color(0xFF3760BF));
+  });
+}
