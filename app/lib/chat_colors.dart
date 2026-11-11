@@ -73,7 +73,7 @@ class ColorBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: c.ink(NushiTheme.of(context).t),
                 borderRadius: const BorderRadius.horizontal(
-                  right: Radius.circular(2),
+                  right: Radius.circular(NushiTheme.tagWas2),
                 ),
               ),
             ),

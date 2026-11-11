@@ -307,7 +307,11 @@ class HistoryRowView extends StatelessWidget {
               ? null
               : Border(bottom: BorderSide(color: t.borderSubtle)),
           borderRadius: last
-              ? const BorderRadius.vertical(bottom: Radius.circular(7))
+              ? BorderRadius.vertical(
+                  bottom: Radius.circular(
+                    NushiTheme.inner(NushiTheme.cardWas8, 1),
+                  ),
+                )
               : null,
         ),
         // Narrow, Clear has no room of its own: it shows over the end

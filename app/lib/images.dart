@@ -194,9 +194,9 @@ class RemoveBadge extends StatelessWidget {
       child: Tap(
         tooltip: 'Remove',
         onTap: onTap,
-        radius: 9,
+        radius: NushiTheme.pill,
         child: CircleAvatar(
-          radius: 9,
+          radius: 9, // not a corner: the circle's size
           backgroundColor: t.borderStrong,
           child: Icon(Icons.close, size: 12, color: t.text),
         ),

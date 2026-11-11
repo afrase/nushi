@@ -465,7 +465,7 @@ class _ComposerState extends State<Composer> {
                 key: _box,
                 decoration: BoxDecoration(
                   color: t.base,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(NushiTheme.panelWas12),
                   border: Border.all(
                     color: _focus.hasFocus ? t.textMuted : t.borderStrong,
                   ),

@@ -211,7 +211,7 @@ class _SidebarRowState extends State<SidebarRow> {
                             decoration: box(
                               t.fieldBorder,
                               fill: t.fieldFill,
-                              radius: NushiTheme.control,
+                              radius: NushiTheme.tag,
                             ),
                             child: keyText(
                               keyLabel(chatNumberKey(n)),

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -62,10 +64,50 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   static const uiFont = 'IBM Plex Sans';
   static const codeFont = 'JetBrains Mono';
 
-  // Corner radii: controls (buttons, fields) and cards.
+  // Corner radii (ADR 0110): every rounded corner in the app is one of
+  // these, or [inner] of one. A circle (a dot, an avatar), a scrollbar's
+  // thumb and a drawn icon's own geometry are not corners and keep their
+  // sizes.
+
+  /// The smallest things: a key hint, a branch's name, a loading bar.
+  static const tag = 4.0;
+
+  /// Buttons, fields, icon buttons, a row's hover and selected fill.
   static const control = 4.0;
+
+  /// Cards and boxes ([box] and [framed] unless told otherwise).
   static const card = 6.0;
-  static const panel = 10.0; // a menu's and a dialog's corners, as Claude's
+
+  /// A menu's, a dialog's and a popover's corners, and a message's bubble.
+  static const panel = 10.0;
+
+  /// Round ends, whatever the height: chips, badges, counts, round
+  /// buttons, thin bars.
+  static const pill = 999.0;
+
+  /// The corners of a shape set [gap] inside one rounded by [outer] (its
+  /// padding and border), so the two curves stay parallel: never more than
+  /// the parent's.
+  static double inner(double outer, double gap) => max(0, outer - gap);
+
+  // Today's corners where the rounder pass's token would change them: each
+  // is named for the token that takes its place in the next commit, which
+  // removes them all (ADR 0110).
+  static const tagWas2 = 2.0;
+  static const tagWas3 = 3.0;
+  static const controlWas6 = 6.0;
+  static const controlWas8 = 8.0;
+  static const cardWas8 = 8.0;
+  static const cardWas9 = 9.0;
+  static const cardWas10 = 10.0;
+  static const panelWas6 = 6.0;
+  static const panelWas12 = 12.0;
+  static const panelWas14 = 14.0;
+  static const panelWas16 = 16.0;
+  static const pillWas4 = 4.0;
+  static const pillWas6 = 6.0;
+  static const pillWas10 = 10.0;
+  static const pillWas14 = 14.0;
 
   // The Mac's chat area's spacing (ADR 0072). The phone keeps its own values,
   // decided where the two share a widget (TouchTargets).

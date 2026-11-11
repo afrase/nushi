@@ -16,13 +16,13 @@ class PullSkeleton extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         color: t.borderSubtle,
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(NushiTheme.tagWas3),
       ),
     );
     Widget box(Widget child) => DecoratedBox(
       decoration: BoxDecoration(
         border: Border.all(color: t.borderSubtle),
-        borderRadius: BorderRadius.circular(NushiTheme.control + 2),
+        borderRadius: BorderRadius.circular(NushiTheme.card),
       ),
       child: child,
     );

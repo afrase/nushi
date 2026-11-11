@@ -264,7 +264,7 @@ class _Count extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
         color: t.selected,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
       child: Text('$n', style: theme.ui(t.textSecondary, size: 11.5)),
     );

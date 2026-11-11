@@ -278,7 +278,7 @@ class _Square extends StatelessWidget {
     height: 10,
     decoration: BoxDecoration(
       color: color,
-      borderRadius: BorderRadius.circular(2),
+      borderRadius: BorderRadius.circular(NushiTheme.tagWas2),
     ),
   );
 }
@@ -296,7 +296,7 @@ class _Bar extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(3),
+      borderRadius: BorderRadius.circular(NushiTheme.pill),
       child: SizedBox(
         height: 6,
         child: ColoredBox(

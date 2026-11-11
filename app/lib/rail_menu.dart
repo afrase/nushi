@@ -108,7 +108,7 @@ class _RailMenuState extends State<RailMenu> {
           decoration: BoxDecoration(
             color: t.raised,
             border: Border.all(color: t.borderStrong),
-            borderRadius: BorderRadius.circular(NushiTheme.card),
+            borderRadius: BorderRadius.circular(NushiTheme.panelWas6),
             boxShadow: [
               BoxShadow(
                 color: t.shadow,

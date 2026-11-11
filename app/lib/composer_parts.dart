@@ -49,7 +49,7 @@ String rewindHint(ChatState chat) =>
 Widget boxButton(String tooltip, VoidCallback onPressed, Widget child) => Tap(
   tooltip: tooltip,
   onTap: onPressed,
-  radius: 14,
+  radius: NushiTheme.pill,
   child: SizedBox.square(dimension: 28, child: Center(child: child)),
 );
 

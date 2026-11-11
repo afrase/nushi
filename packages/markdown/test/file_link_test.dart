@@ -6,6 +6,7 @@ const _style = MarkdownStyle(
   body: TextStyle(fontSize: 13.5, height: 1.5),
   code: TextStyle(fontSize: 12.5),
   codeBackground: Colors.black12,
+  codeRadius: 6,
   border: Colors.grey,
   muted: Colors.grey,
   link: Colors.blue,

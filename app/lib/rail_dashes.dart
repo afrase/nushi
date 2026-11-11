@@ -156,7 +156,7 @@ class RailDash extends StatelessWidget {
             : bright
             ? Color.lerp(t.borderStrong, t.text, 0.5)
             : t.borderStrong,
-        borderRadius: BorderRadius.circular(_thick / 2),
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
     );
     return deep == 0

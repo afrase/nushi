@@ -46,7 +46,7 @@ class BrowserBar extends StatelessWidget {
 
   /// The field's height, and its corners' radius.
   static const fieldHeight = 30.0;
-  static const _round = 8.0;
+  static const double _round = NushiTheme.controlWas8;
 
   /// The room at the bar's ends.
   static const inset = 8.0;

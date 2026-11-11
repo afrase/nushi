@@ -90,14 +90,14 @@ class PlusButton extends StatelessWidget {
     return Tap(
       tooltip: plusTooltip,
       onTap: onPressed,
-      radius: NushiTheme.card,
+      radius: NushiTheme.pillWas6,
       child: Container(
         width: 28,
         height: 28,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: t.hover,
-          borderRadius: BorderRadius.circular(NushiTheme.card),
+          borderRadius: BorderRadius.circular(NushiTheme.pillWas6),
         ),
         child: LineIcon.plus.view(size: 18, color: t.text),
       ),

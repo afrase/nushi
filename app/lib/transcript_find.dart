@@ -283,7 +283,11 @@ class _FindBarState extends State<FindBar> {
         return Container(
           width: 340,
           padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
-          decoration: box(t.borderStrong, fill: t.raised, radius: 8),
+          decoration: box(
+            t.borderStrong,
+            fill: t.raised,
+            radius: NushiTheme.cardWas8,
+          ),
           child: all == null && !widget.loading
               ? row
               : Column(

@@ -203,7 +203,8 @@ class SelectionToolbar extends StatelessWidget {
       data: NushiTheme(theme.dark, dark: theme.dark).toThemeData(),
       child: Tap(
         onTap: run,
-        radius: 12, // a whole round end, inset evenly in the pill's
+        // A whole round end, inset evenly in the pill's.
+        radius: NushiTheme.pill,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
         child: Text(label, style: theme.ui(fg, size: 12.5)),
       ),
@@ -299,7 +300,7 @@ class _ReplyBoxState extends State<ReplyBox> {
         decoration: ShapeDecoration(
           color: t.raised,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(NushiTheme.panel),
             side: BorderSide(color: t.borderStrong),
           ),
           shadows: [BoxShadow(color: t.shadow, blurRadius: 6)],

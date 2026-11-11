@@ -31,7 +31,7 @@ class StatePill extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(6, 1, 8, 1),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -75,7 +75,7 @@ class PullHeader extends StatelessWidget {
     final t = theme.t;
     Widget branch(String name) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: box(t.borderSubtle, fill: t.raised, radius: 4),
+      decoration: box(t.borderSubtle, fill: t.raised, radius: NushiTheme.tag),
       child: SelectableText(name, style: theme.code(t.text, size: 11.5)),
     );
     // The buttons beside the first line; under the branches when narrow

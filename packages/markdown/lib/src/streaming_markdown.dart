@@ -22,6 +22,7 @@ class MarkdownStyle {
     required this.body,
     required this.code,
     required this.codeBackground,
+    required this.codeRadius,
     required this.border,
     required this.muted,
     required this.link,
@@ -39,6 +40,9 @@ class MarkdownStyle {
 
   /// Behind code blocks.
   final Color codeBackground;
+
+  /// A code block's corners.
+  final double codeRadius;
 
   /// Behind inline code: a tint, since a paragraph paints its selection
   /// under the text and an opaque background would hide it. Null takes the
@@ -292,7 +296,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
         codeblockDecoration: BoxDecoration(
           color: s.codeBackground,
           border: Border.all(color: s.border),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(s.codeRadius),
         ),
         tableHead: const TextStyle(fontWeight: FontWeight.w600),
         tableBody: body,

@@ -172,7 +172,7 @@ class PhoneButton extends StatelessWidget {
     return Material(
       color: primary && onTap != null ? t.accent : t.raised,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(NushiTheme.cardWas10),
         side: primary ? BorderSide.none : BorderSide(color: t.borderSubtle),
       ),
       clipBehavior: Clip.antiAlias,

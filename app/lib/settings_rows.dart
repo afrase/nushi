@@ -160,7 +160,7 @@ class SettingsGroup extends StatelessWidget {
           framed(
             border: t.borderSubtle,
             fill: t.raised,
-            radius: 8,
+            radius: NushiTheme.cardWas8,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

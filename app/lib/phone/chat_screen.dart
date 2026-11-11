@@ -203,7 +203,7 @@ class TranscriptSkeleton extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: t.raised,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(NushiTheme.tag),
       ),
     );
     return Semantics(

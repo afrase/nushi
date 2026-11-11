@@ -401,9 +401,13 @@ class _Pill extends StatelessWidget {
               ? t.hover
               : null,
           border: Border.all(color: on ? t.accent : t.fieldBorder),
-          borderRadius: BorderRadius.circular(NushiTheme.control),
+          borderRadius: BorderRadius.circular(NushiTheme.pillWas4),
         ),
-        foregroundDecoration: focusRing(t, look),
+        foregroundDecoration: focusRing(
+          t,
+          look,
+          radius: BorderRadius.circular(NushiTheme.pillWas4),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           spacing: 4,

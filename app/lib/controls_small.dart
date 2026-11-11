@@ -317,7 +317,11 @@ class Segmented<T> extends StatelessWidget {
     final t = theme.t;
     return Container(
       padding: const EdgeInsets.all(2),
-      decoration: box(t.borderSubtle, fill: t.base, radius: NushiTheme.control),
+      decoration: box(
+        t.borderSubtle,
+        fill: t.base,
+        radius: NushiTheme.pillWas4,
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

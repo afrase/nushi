@@ -103,7 +103,7 @@ class _QueuePillsState extends State<QueuePills> {
             child: Tap(
               onTap: () => onEdit(m),
               tooltip: 'Edit',
-              radius: 14,
+              radius: NushiTheme.pill,
               padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

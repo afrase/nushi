@@ -117,7 +117,7 @@ class _SettingsModalState extends State<SettingsModal> {
                         clipBehavior: Clip.antiAlias,
                         decoration: BoxDecoration(
                           color: t.base,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(NushiTheme.panel),
                           border: Border.all(color: t.borderStrong),
                           boxShadow: [
                             BoxShadow(color: t.shadow, blurRadius: 30),

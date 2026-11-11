@@ -115,7 +115,7 @@ class _ChatRow extends StatelessWidget {
       height: 17,
       decoration: BoxDecoration(
         color: open ? t.accentSoft : null,
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(NushiTheme.tagWas3),
       ),
       child: Stack(
         children: [
@@ -240,7 +240,7 @@ InlineSpan _code(BuildContext context, String code, Color fill) {
       padding: const EdgeInsets.symmetric(horizontal: 2),
       decoration: BoxDecoration(
         color: fill,
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(NushiTheme.tagWas2),
       ),
       child: Text(code, style: theme.code(theme.t.inlineCodeText, size: 8)),
     ),
@@ -276,7 +276,7 @@ class _Row extends StatelessWidget {
     return Container(
       height: 17,
       padding: const EdgeInsets.symmetric(horizontal: 5),
-      decoration: box(border, fill: fill, radius: 3),
+      decoration: box(border, fill: fill, radius: NushiTheme.tagWas3),
       child: Row(
         spacing: 4,
         children: [
@@ -352,7 +352,11 @@ class _Code extends StatelessWidget {
     ];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: box(t.borderSubtle, fill: t.codeBlock, radius: 3),
+      decoration: box(
+        t.borderSubtle,
+        fill: t.codeBlock,
+        radius: NushiTheme.tagWas3,
+      ),
       child: Text.rich(
         TextSpan(
           children: [

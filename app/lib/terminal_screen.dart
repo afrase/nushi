@@ -193,7 +193,7 @@ class TerminalScreen extends StatelessWidget {
                                 decoration: box(
                                   t.borderStrong,
                                   fill: t.raised,
-                                  radius: NushiTheme.control,
+                                  radius: NushiTheme.tag,
                                 ),
                                 child: Text(
                                   link,

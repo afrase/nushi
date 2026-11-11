@@ -84,7 +84,9 @@ class _ScanScreenState extends State<ScanScreen> {
                                   color: Colors.white70,
                                   width: 2,
                                 ),
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(
+                                  NushiTheme.panelWas16,
+                                ),
                               ),
                             ),
                           ),

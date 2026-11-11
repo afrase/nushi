@@ -360,7 +360,7 @@ class _PullChipState extends State<PullChip> {
           onTap: it == null || it.url.isEmpty
               ? null
               : () => widget.onOpen(it.url),
-          radius: 22,
+          radius: 22, // not a corner: its splash's reach
           child: SizedBox(
             height: 44,
             child: Padding(
