@@ -8,6 +8,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:nushi/arrangement.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
+import 'package:nushi/tile_look.dart';
 
 /// What the app remembers across launches, in `app.json` in the data folder:
 /// whether the details panel shows (its toolbar button), which of its widgets
@@ -19,7 +20,9 @@ import 'package:nushi/file_mode.dart';
 /// whether the sidebar is hidden, the Jira task list's groups and assignee
 /// filters, the GitHub view's cards and filters, the sidebar's project
 /// groups' order and which are collapsed, the projects it keeps (with
-/// chats or none), each project's chats' order, whether Pinned is
+/// chats or none), whether it has the project rail, the project it's
+/// narrowed to and each project's tile, each project's chats' order,
+/// whether Pinned is
 /// collapsed, the sidebar's arrangement (grouping, sort, what rows show)
 /// and sections, the models picked last, each repository's
 /// merge method, each chat's pinned artifacts, and the Mac's notifications
@@ -151,9 +154,38 @@ void keepProject(String folder) {
   sidebarProjects.value = {...sidebarProjects.value, folder};
 }
 
+/// Whether the sidebar has its project rail, while it's arranged by
+/// project (the Arrange menu's Project rail; ADR 0112).
+final Pref<bool> projectRail = _plain('projectRail', true);
+
+/// The project the sidebar is narrowed to, by folder path: the tile
+/// picked in the project rail; null for All projects.
+final Pref<String?> sidebarProject = _plain('sidebarProject', null);
+
+/// What the user set for each project's tile (Change tile…), by folder
+/// path: a project not named shows its repository's icon, or its
+/// initials.
+final projectTiles = Pref<Map<String, TileLook>>(
+  'projectTiles',
+  (v) => _entries(v, TileLook.read),
+  write: (tiles) => {
+    for (final MapEntry(:key, :value) in tiles.entries) key: value.toJson(),
+  },
+);
+
+/// Gives [folder]'s tile [look]; an empty one puts it back as it is by
+/// itself.
+void setProjectTile(String folder, TileLook look) => projectTiles.value = {
+  ...{...projectTiles.value}..remove(folder),
+  if (!look.isEmpty) folder: look,
+};
+
 /// Takes [folder] out of the sidebar's projects, and with it its place
-/// among them, its collapse and its chats' order: one save.
+/// among them, its collapse, its chats' order and its tile; the sidebar
+/// narrowed to it shows all again: one save.
 void forgetProject(String folder) {
+  if (sidebarProject.value == folder) sidebarProject.value = null;
+  projectTiles.value = {...projectTiles.value}..remove(folder);
   sidebarProjects.value = {...sidebarProjects.value}..remove(folder);
   sidebarOrder.value = [...sidebarOrder.value.where((f) => f != folder)];
   sidebarCollapsed.value = {...sidebarCollapsed.value}..remove(folder);
