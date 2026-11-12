@@ -12474,6 +12474,141 @@ class RelatedWorktreeStats extends $pb.GeneratedMessage {
   void clearCommitsGone() => $_clearField(6);
 }
 
+class GetProjectIconRequest extends $pb.GeneratedMessage {
+  factory GetProjectIconRequest({
+    $core.String? folder,
+  }) {
+    final result = GetProjectIconRequest._();
+    if (folder != null) result.folder = folder;
+    return result;
+  }
+
+  GetProjectIconRequest._();
+
+  factory GetProjectIconRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetProjectIconRequest()..mergeFromBuffer(data, registry);
+  factory GetProjectIconRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetProjectIconRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetProjectIconRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetProjectIconRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetProjectIconRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetProjectIconRequest copyWith(
+          void Function(GetProjectIconRequest) updates) =>
+      super.copyWith((message) => updates(message as GetProjectIconRequest))
+          as GetProjectIconRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetProjectIconRequest() / GetProjectIconRequest.new instead')
+  static GetProjectIconRequest create() => GetProjectIconRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetProjectIconRequest._();
+  @$core.override
+  GetProjectIconRequest createEmptyInstance() => GetProjectIconRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetProjectIconRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetProjectIconRequest>(
+          GetProjectIconRequest.$_createMessage);
+  static GetProjectIconRequest? _defaultInstance;
+
+  /// The project's folder, an absolute path: the only path the client
+  /// gives. What is read inside it is the daemon's list.
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+}
+
+class GetProjectIconResponse extends $pb.GeneratedMessage {
+  factory GetProjectIconResponse({
+    $core.String? mimeType,
+    $core.List<$core.int>? data,
+  }) {
+    final result = GetProjectIconResponse._();
+    if (mimeType != null) result.mimeType = mimeType;
+    if (data != null) result.data = data;
+    return result;
+  }
+
+  GetProjectIconResponse._();
+
+  factory GetProjectIconResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetProjectIconResponse()..mergeFromBuffer(data, registry);
+  factory GetProjectIconResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetProjectIconResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetProjectIconResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetProjectIconResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'mimeType')
+    ..a<$core.List<$core.int>>(
+        2, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetProjectIconResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetProjectIconResponse copyWith(
+          void Function(GetProjectIconResponse) updates) =>
+      super.copyWith((message) => updates(message as GetProjectIconResponse))
+          as GetProjectIconResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetProjectIconResponse() / GetProjectIconResponse.new instead')
+  static GetProjectIconResponse create() => GetProjectIconResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetProjectIconResponse._();
+  @$core.override
+  GetProjectIconResponse createEmptyInstance() => GetProjectIconResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetProjectIconResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetProjectIconResponse>(
+          GetProjectIconResponse.$_createMessage);
+  static GetProjectIconResponse? _defaultInstance;
+
+  /// "image/png" or "image/jpeg"; "" with no data when the folder has no
+  /// icon.
+  @$pb.TagNumber(1)
+  $core.String get mimeType => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set mimeType($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasMimeType() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearMimeType() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get data => $_getN(1);
+  @$pb.TagNumber(2)
+  set data($core.List<$core.int> value) => $_setBytes(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasData() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearData() => $_clearField(2);
+}
+
 class GetFolderStatusRequest extends $pb.GeneratedMessage {
   factory GetFolderStatusRequest({
     $core.String? folder,
@@ -32621,6 +32756,14 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetFolderStatusRequest request) =>
       _client.invoke<GetFolderStatusResponse>(ctx, 'NushiService',
           'GetFolderStatus', request, GetFolderStatusResponse());
+
+  /// A project's own icon, for its tile in the Mac's sidebar: a small PNG
+  /// or JPEG at one of a fixed list of paths in its folder
+  /// (internal/projecticon), or nothing. The Mac's only. API 116.
+  $async.Future<GetProjectIconResponse> getProjectIcon(
+          $pb.ClientContext? ctx, GetProjectIconRequest request) =>
+      _client.invoke<GetProjectIconResponse>(ctx, 'NushiService',
+          'GetProjectIcon', request, GetProjectIconResponse());
 
   /// The worktrees the chat's subagents work in, in the order found, each
   /// looked at now: its head is recorded, and one that went stays as

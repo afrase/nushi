@@ -65,6 +65,10 @@ class FakeDaemon implements Transport {
   /// hash is NotFound.
   final chatImages = <String, ImageData>{};
 
+  /// The projects' icons GetProjectIcon answers, by folder (ADR 0112);
+  /// another folder has none.
+  final projectIcons = <String, List<int>>{};
+
   /// While set the daemon is gone: every call fails as the transport says
   /// when none answers, pings too.
   bool down = false;
@@ -188,6 +192,14 @@ class FakeDaemon implements Transport {
             ),
             null => throw ConnectException(Code.notFound, 'no such image'),
           },
+          GetProjectIconRequest(:final folder) =>
+            switch (projectIcons[folder]) {
+              final data? => GetProjectIconResponse(
+                mimeType: 'image/png',
+                data: data,
+              ),
+              null => GetProjectIconResponse(),
+            },
           _ => spec.outputFactory(),
         };
     return UnaryResponse(spec, Headers(), out as O, Headers());
