@@ -268,7 +268,7 @@ class _SidebarState extends State<Sidebar> {
                 Sidebar.end,
                 NushiTheme.windowPad,
               ),
-              child: StatusBar(daemon, card: true),
+              child: StatusBar(daemon),
             ),
           ],
         ),

@@ -110,7 +110,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Run** (a code block's) | ▷ on an agent's shell block: the block typed into the chat's terminal, its newest output under the block, its exit once it ends. | `CodeRuns`, `CodeRun`, `RunnableBlock`, `ShellMarks` | 0084 |
 | **File card** | A file attached to the message being written, in the box: its kind, name and size. Sent as a link to the file; the phone's go whole. In a sent message, a **file chip**. | `AttachedFile`, `FileCard`, `FileChip`, `Draft.files`, `SendPromptRequest.uploads` | 0091 |
 | **Output card** | A run's output in the box, sent after your next message's text: only from a run that ended on its own. | `OutputCard`, `Draft.outputs`, `RunOutput`, `withOutputs` | 0084 |
-| **Status card** | The card at the sidebar's foot: working, awake and sleeping agents, and Nushi's memory. With the sidebar hidden, the same on a line under the main pane. | `StatusBar` | 0032, 0111 |
+| **Status card** | The card at the sidebar's foot: working, awake and sleeping agents, and Nushi's memory. | `StatusBar` | 0032, 0111 |
 | **Pane** | A rounded surface floating on the window's background: the main area, with a view's header at its top. A side pane is a column inside it. | `Pane`, `PaneHeader`, `NushiTheme.windowPad`, `paneGap` | 0111 |
 | **Palette** | ⌘K (⌘⇧P): go to a chat or run an action. | `palette.dart`, `AppAction` | |
 | **Open file** | ⌘P: any file that previews in the chat's folder. | `open_file.dart`, `FindChatFiles` | |

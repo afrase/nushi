@@ -276,11 +276,11 @@ void main() {
         expect(pane.left, NushiTheme.windowPad);
         expect(pane.top, NushiTheme.windowPad);
         expect(pane.right, width - NushiTheme.windowPad);
-        // What the sidebar's foot said is a line under the pane.
-        final status = tester.getRect(find.byType(StatusBar));
-        expect(status.top, pane.bottom);
-        expect(status.bottom, 1000);
-        expect(find.textContaining('working'), findsWidgets);
+        // The pane is as high as beside the sidebar, so nothing in it
+        // moves as the sidebar comes and goes; the status card goes with
+        // the sidebar.
+        expect(pane.bottom, 1000 - NushiTheme.windowPad);
+        expect(find.byType(StatusBar), findsNothing);
         // The title starts past the traffic lights.
         final title = tester.getRect(find.text('Paginate the feed'));
         expect(title.left, greaterThan(84));

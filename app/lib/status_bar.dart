@@ -19,19 +19,17 @@ const _every = Duration(seconds: 5);
 
 /// How many agents work, are awake and sleep, and the memory Nushi takes
 /// (agents, daemon, app), which opens a list of the awake chats, each with
-/// Sleep. A [card] at the sidebar's foot (ADR 0111; a bar along the
-/// window's bottom until then); with the sidebar hidden, the same as a line
-/// under the main pane, on the window's background, so nothing it says is
-/// lost with the sidebar.
+/// Sleep: the card at the sidebar's foot (ADR 0111; a bar along the
+/// window's bottom until then). It hides with the sidebar: a line under
+/// the main pane in its place changed the pane's height each time the
+/// sidebar came or went.
 class StatusBar extends StatefulWidget {
-  const new(this.daemon, {super.key, this.card = false});
+  const new(this.daemon, {super.key});
 
   final Daemon daemon;
-  final bool card;
 
-  /// The card's height, and the line's.
+  /// The card's height.
   static const cardHeight = 34.0;
-  static const lineHeight = 28.0;
 
   /// The narrowest it says "working" after the first count: the card of
   /// a sidebar about 250 wide, with the remote's mark and a memory in GB.
@@ -45,9 +43,8 @@ class _StatusBarState extends State<StatusBar> {
   late final Timer _timer;
   late final AppLifecycleListener _lifecycle;
 
-  /// The daemon's last reading: the card and the line under the pane are
-  /// two widgets, one going as the other comes with the sidebar, and the
-  /// one that comes shows what the other read rather than nothing.
+  /// The daemon's last reading: the card goes and comes with the sidebar,
+  /// and one that comes shows what the last read rather than nothing.
   static final _last = Expando<GetMemoryResponse>();
   late GetMemoryResponse? _memory = _last[widget.daemon];
 
@@ -92,9 +89,8 @@ class _StatusBarState extends State<StatusBar> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final card = widget.card;
     final small = theme
-        .ui(t.textSecondary, size: card ? 12 : 11.5)
+        .ui(t.textSecondary, size: 12)
         .copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
     // The chat list is the daemon's; each chat's status is its look's.
     return ListenableBuilder(
@@ -116,17 +112,12 @@ class _StatusBarState extends State<StatusBar> {
               : ' (${background.length} working in the background)';
           final awake = live.length - asleep - failed - expired;
           return Container(
-            height: card ? StatusBar.cardHeight : StatusBar.lineHeight,
-            padding: EdgeInsets.only(
-              left: card ? 12 : 16,
-              right: card ? 6 : 10,
+            height: StatusBar.cardHeight,
+            padding: const EdgeInsets.only(left: 12, right: 6),
+            decoration: BoxDecoration(
+              color: t.raised,
+              borderRadius: BorderRadius.circular(NushiTheme.control),
             ),
-            decoration: card
-                ? BoxDecoration(
-                    color: t.raised,
-                    borderRadius: BorderRadius.circular(NushiTheme.control),
-                  )
-                : null,
             // The first count says what the three are; a sidebar dragged
             // narrow keeps the numbers alone, which the tooltip names.
             child: LayoutBuilder(

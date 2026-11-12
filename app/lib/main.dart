@@ -502,12 +502,9 @@ class _Shell extends StatelessWidget {
                       },
               ),
             ),
-            // Under the pane what the hidden sidebar's foot said, or the
-            // window's own margin.
-            if (shut)
-              StatusBar(daemon)
-            else
-              const SizedBox(height: NushiTheme.windowPad),
+            // The window's margin, the same with the sidebar hidden: the
+            // pane keeps its height as the sidebar comes and goes.
+            const SizedBox(height: NushiTheme.windowPad),
           ],
         ),
       ),
@@ -522,10 +519,7 @@ class _Shell extends StatelessWidget {
           Positioned.fill(child: app),
           Positioned(
             right: UpdateToast.inset,
-            // Clear of the line under the pane, while that shows.
-            bottom:
-                UpdateToast.inset +
-                (shut ? StatusBar.lineHeight - NushiTheme.windowPad : 0),
+            bottom: UpdateToast.inset,
             child: UpdateToast(daemon),
           ),
         ],
