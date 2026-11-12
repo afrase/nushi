@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/project_tile.dart';
@@ -92,6 +93,26 @@ void main() {
     );
     await tester.pump();
     expect(field.text, '👩‍👩‍👧🇯🇵');
+    // Pasted (what a picker that copies leaves to ⌘V), over two letters;
+    // the test's platform pastes with Control.
+    await tester.enterText(find.byType(TextField), 'ab');
+    field.selection = const TextSelection.collapsed(offset: 2);
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async =>
+          call.method == 'Clipboard.getData' ? {'text': '🦊'} : null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyV);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pump();
+    expect(field.text, '🦊');
     await tester.enterText(find.byType(TextField), '🌱x');
     await tester.tap(find.byTooltip('Violet'));
     await tester.pump();
