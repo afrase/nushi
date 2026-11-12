@@ -4,6 +4,7 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/trust_ask.dart';
 import 'package:nushi/widgets.dart';
@@ -165,20 +166,15 @@ class _Block extends StatelessWidget {
 /// Over the app, once, what didn't happen ([Daemon.notice]): a start the
 /// user walked away from. Dismissed with ×.
 class NoticeBar extends StatelessWidget {
-  const new(this.daemon, {super.key, this.start = 16});
+  const new(this.daemon, {super.key});
 
   final Daemon daemon;
-
-  /// Where its text starts: past the traffic lights, with the sidebar hidden.
-  final double start;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    return Container(
-      color: t.raised,
-      padding: EdgeInsets.fromLTRB(start, 4, 8, 4),
+    return FloatBar(
       child: Row(
         spacing: 10,
         children: [

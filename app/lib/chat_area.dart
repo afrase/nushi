@@ -13,20 +13,17 @@ import 'package:nushi/pull_tab.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/terminal_panel.dart';
 
-/// A chat in the main area (ADR 0111): one pane of [top] (the window's
-/// bars), its header across all of it and, under that, its transcript, its
+/// A chat in the main area (ADR 0111): one pane of its header across all
+/// of it and, under that, its transcript, its
 /// folder's changes or its pull request, with the terminal below. Its
 /// details are inside the pane, a column at the transcript's right, so the
 /// header and its buttons are where they were whether the details show or
 /// not.
 class ChatArea extends StatefulWidget {
-  const new(this.chat, this.daemon, {super.key, this.top});
+  const new(this.chat, this.daemon, {super.key});
 
   final ChatState chat;
   final Daemon daemon;
-
-  /// What's over its header, inside its pane: the bars.
-  final Widget? top;
 
   @override
   State<ChatArea> createState() => _ChatAreaState();
@@ -146,7 +143,6 @@ class _ChatAreaState extends State<ChatArea> {
         final area = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ?widget.top,
             ListenableBuilder(
               listenable: widget.chat,
               builder: (context, _) => ChatHeader(

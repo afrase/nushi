@@ -6,6 +6,8 @@ import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/panes.dart';
+import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -113,10 +115,11 @@ void main() {
         final d = await _open(tester, fake, width: width);
         final bar = tester.getRect(find.byType(DaemonUpdateBar));
         final button = tester.getRect(find.text('Restart now'));
-        // In the main pane, across it.
-        expect(bar.right, width - NushiTheme.windowPad);
-        expect(bar.left, greaterThanOrEqualTo(200)); // clear of the lights
-        expect(button.right, greaterThan(width - 48)); // at the trailing edge
+        // A card over the main pane, under its header.
+        expect(bar.top, greaterThan(PaneHeader.height));
+        expect(bar.width, lessThanOrEqualTo(FloatBar.width));
+        expect(bar.right, lessThanOrEqualTo(width - NushiTheme.windowPad - 16));
+        expect(button.right, lessThan(bar.right)); // inside it, at its end
         await render(
           tester,
           find.byType(DaemonUpdateBar),

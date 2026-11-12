@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -67,7 +68,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 16));
     await tester.pump(const Duration(milliseconds: 60));
     expect(find.text(_lost), findsOneWidget);
-    final full = tester.getSize(find.text(_lost)).height + 12;
+    final full = tester.getSize(find.text(_lost)).height + 12 + FloatBar.gap;
     expect(height(tester), inExclusiveRange(0, full));
     await tester.pump(const Duration(milliseconds: 200));
     expect(height(tester), full);

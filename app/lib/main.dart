@@ -36,7 +36,6 @@ import 'package:nushi/settings_modal.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/slides.dart';
-import 'package:nushi/status_bar.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/theme_files.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
@@ -408,52 +407,36 @@ class _Shell extends StatelessWidget {
     }
     final chat = daemon.selected;
     final shut = sidebarShut;
-    // With the sidebar hidden the bars start at the window's left edge,
-    // under the traffic lights, so their text starts past them; with
-    // nothing over the content there (Linux), at their own margin.
-    final barStart = shut ? max(lightsInset, 16.0) : 16.0;
-    // The bars at the pane's top, over the view's own header. Always a
-    // column of the same children: a bar coming and going keeps the
-    // others' state.
+    // The notices float over the pane, under its header (ADR 0111):
+    // nothing in the pane moves as one comes or goes. Always a column of
+    // the same children: one coming and going keeps the others' state.
     final bars = Column(
       key: _bars,
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // What has no header of its own still keeps the top's line.
-        // Always a child, so the banner under it keeps its state.
-        if (daemon.trustAsk != null ||
-            (daemon.place is ChatPlace && chat == null))
-          const PaneHeader(plain: true, child: SizedBox.shrink())
-        else
-          const SizedBox.shrink(),
-        DaemonBanner(daemon, start: barStart),
+        DaemonBanner(daemon),
         // Each slides down as it comes and up as it goes,
         // saying what it said until it's gone.
         BarSlide(
           child: daemon.connected && daemon.updatesWhenIdle
-              ? DaemonUpdateBar(daemon, start: barStart)
+              ? DaemonUpdateBar(daemon)
               : null,
         ),
         BarSlide(
           child: daemon.connected && daemon.removedChats.isNotEmpty
-              ? RemovedChatsBar(daemon, start: barStart)
+              ? RemovedChatsBar(daemon)
               : null,
         ),
-        BarSlide(
-          child: daemon.notice != null
-              ? NoticeBar(daemon, start: barStart)
-              : null,
-        ),
+        BarSlide(child: daemon.notice != null ? NoticeBar(daemon) : null),
       ],
     );
-    // A view under the bars, in the main pane. The view is always the
-    // column's last child, so a bar coming and going keeps its state.
-    Widget pane(Widget view) => Pane(
+    // A view in the main pane. What has no header of its own still keeps
+    // the top's line.
+    Widget pane(Widget view, {bool header = false}) => Pane(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          bars,
+          if (header) const PaneHeader(plain: true, child: SizedBox.shrink()),
           Expanded(child: view),
         ],
       ),
@@ -484,22 +467,41 @@ class _Shell extends StatelessWidget {
                   left: shut ? NushiTheme.windowPad : 0,
                   right: NushiTheme.windowPad,
                 ),
-                child: daemon.trustAsk != null
-                    ? pane(TrustCard(daemon.trustAsk!))
-                    : switch (daemon.place) {
-                        JiraPlace() => pane(JiraView(daemon)),
-                        GitHubPlace() => pane(GitHubView(daemon)),
-                        ChatPlace() when chat == null => pane(
-                          NothingOpen(daemon),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: daemon.trustAsk != null
+                          ? pane(TrustCard(daemon.trustAsk!), header: true)
+                          : switch (daemon.place) {
+                              JiraPlace() => pane(JiraView(daemon)),
+                              GitHubPlace() => pane(GitHubView(daemon)),
+                              ChatPlace() when chat == null => pane(
+                                NothingOpen(daemon),
+                                header: true,
+                              ),
+                              ChatPlace() => ChatArea(
+                                key: ValueKey(chat!.id),
+                                chat,
+                                daemon,
+                              ),
+                            },
+                    ),
+                    Positioned(
+                      top: PaneHeader.height + FloatBar.inset,
+                      left: 16,
+                      right: 16,
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: FloatBar.width,
+                          ),
+                          child: bars,
                         ),
-                        // Its pane has the bars too, its details beside it.
-                        ChatPlace() => ChatArea(
-                          key: ValueKey(chat!.id),
-                          chat,
-                          daemon,
-                          top: bars,
-                        ),
-                      },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             // The window's margin, the same with the sidebar hidden: the

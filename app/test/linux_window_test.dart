@@ -157,8 +157,9 @@ void main() {
     d.dispose();
   }, variant: _linux);
 
-  testWidgets('the bars keep their margin with the sidebar hidden, nothing '
-      'being over the content there', (tester) async {
+  testWidgets('the notices float under the header with the sidebar hidden', (
+    tester,
+  ) async {
     native
       ..window = const LinuxWindow()
       ..conventions = linuxConventions;
@@ -183,7 +184,11 @@ void main() {
       ..listChanged();
     await tester.pumpAndSettle();
     final update = find.textContaining('Nushi will update its daemon');
-    expect(tester.getTopLeft(update).dx, NushiTheme.windowPad + 16);
+    // Under the header, as on the Mac.
+    expect(
+      tester.getTopLeft(update).dy,
+      greaterThan(NushiTheme.windowPad + PaneHeader.height),
+    );
     expect(
       tester.getTopLeft(find.byIcon(Icons.shield_outlined)).dx,
       greaterThanOrEqualTo(NushiTheme.windowPad + 16),
