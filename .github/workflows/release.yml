@@ -1,10 +1,10 @@
 name: Release
 
 # Publishing a GitHub release (Draft a new release, a new tag vX.Y.Z on main, Publish) builds that tag, attaches
-# Nushi-X.Y.Z.zip, the Linux app's nushi-X.Y.Z-linux-{amd64,arm64}.tar.gz, the relay's and the web app's tarballs and a
+# Nushi-X.Y.Z.zip, the Linux app's nushi-X.Y.Z-linux-{amd64,arm64}.tar.gz, the relays' tarballs (the web app built in, ADR 0113) and a
 # .sha256 for each to the release, and updates the cask in afrase/homebrew-tap (ADR 0055). A draft triggers nothing
 # until it is published. Run it by hand to rebuild an existing release's files. The app (macOS), the Linux app (on each
-# architecture: Flutter doesn't cross-build), the relays and the web app (Linux) build in parallel jobs, beside the
+# architecture: Flutter doesn't cross-build), the relays (Linux, with the web app) build in parallel jobs, beside the
 # check; publish attaches them once all are built and the commit is checked. CI builds, installs and starts the Linux
 # app with the same steps (tools/release.sh's linux part) on every push, since this can't run before a release. Actions are pinned by commit, as in CI.
 # Each job that runs steps has a timeout, as CI's do: two to three times its longest recent run (2026-10-29), room
@@ -165,7 +165,7 @@ jobs:
           retention-days: 7
 
   relay:
-    name: Build the relays (Linux)
+    name: Build the relays with the web app (Linux)
     needs: tag
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -182,32 +182,7 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - run: tools/release.sh "$VERSION" relay
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: release-relay
-          path: dist/
-          if-no-files-found: error
-          retention-days: 7
-
-  web:
-    name: Build the web app (Linux)
-    needs: tag
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    env:
-      SHA: ${{ needs.tag.outputs.sha }}
-      VERSION: ${{ needs.tag.outputs.version }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.SHA }}
-          persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
+      # The relay has the phone's web app built in (ADR 0113), so this job builds that first.
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
@@ -218,21 +193,21 @@ jobs:
         with:
           path: ~/.cache/nushi/fallback-fonts
           key: fallback-fonts-${{ runner.os }}-${{ hashFiles('tools/webbuild/fonts.lock') }}
-      - run: tools/release.sh "$VERSION" web
+      - run: tools/release.sh "$VERSION" relay
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: release-web
+          name: release-relay
           path: dist/
           if-no-files-found: error
           retention-days: 7
 
   publish:
     name: Attach and update the cask
-    needs: [tag, ci, app, linux, relay, web]
+    needs: [tag, ci, app, linux, relay]
     # The ci job is skipped when CI already passed on the commit; anything else must have succeeded.
     if: >-
       !cancelled() && needs.tag.result == 'success' && needs.app.result == 'success' &&
-      needs.linux.result == 'success' && needs.relay.result == 'success' && needs.web.result == 'success' &&
+      needs.linux.result == 'success' && needs.relay.result == 'success' &&
       (needs.ci.result == 'success' || needs.ci.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10

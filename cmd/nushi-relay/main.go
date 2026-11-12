@@ -48,8 +48,8 @@ func main() {
 	flag.DurationVar(&lim.HTTPIdle, "http-idle", lim.HTTPIdle, "close a plain HTTP connection (not a WebSocket) idle this long")
 	flag.DurationVar(&lim.FirstWait, "first-wait", lim.FirstWait, "how long a new connection has for its first request's headers")
 	flag.IntVar(&lim.PlainPerIP, "plain-per-ip", lim.PlainPerIP, "plain HTTP connections (not WebSockets) from one address")
-	web := flag.String("web", "", "serve the web app built into this folder (ADR 0054); needs -origin")
-	origin := flag.String("origin", "", "with -web: the origin the browser sees the app at (https://host[:port]), the only one whose pages may connect; with -host, https://<host> by default. Behind a reverse proxy (Tailscale Funnel, cloudflared, Caddy) it is the proxy's public address")
+	web := flag.String("web", "", "serve the web app in this folder instead of the one built into a release's relay (ADR 0113); needs -origin")
+	origin := flag.String("origin", "", "serve the phone's web app (ADR 0054) at this origin, the one the browser sees it at (https://host[:port]) and the only one whose pages may connect; with -web and -host, https://<host> by default. Behind a reverse proxy (Tailscale Funnel, cloudflared, Caddy) it is the proxy's public address")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println("nushi-relay", version) //nolint:forbidigo // -version's answer
@@ -71,17 +71,11 @@ func main() {
 		lim.TrustedProxies = append(lim.TrustedProxies, pre.Masked())
 	}
 
-	if *origin == "" && *web != "" && *host != "" {
-		*origin = "https://" + *host
+	app, err := site(*web, *origin, *host, builtIn())
+	if err != nil {
+		log.Fatalf("-web and -origin: %v", err)
 	}
-
-	if *web != "" || *origin != "" {
-		site, err := relay.LoadSite(*web, *origin)
-		if err != nil {
-			log.Fatalf("-web and -origin: %v", err)
-		}
-		lim.Site = site
-	}
+	lim.Site = app
 	srv := relay.NewServer(lim)
 	if *host == "" {
 		ln, err := new(net.ListenConfig).Listen(context.Background(), "tcp", cmp.Or(*addr, ":8080"))
