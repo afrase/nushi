@@ -33,6 +33,9 @@ Widget _app(Tokens tokens, Daemon d, [void Function(BuildContext)? onGo]) =>
         ],
       ),
       tokens: tokens,
+      // No shimmer over the words: where it is depends on the clock, and a
+      // golden of it differed between machines.
+      still: true,
     );
 
 /// A daemon whose ping answers as [phase] says: 'old', 'gone' (none
