@@ -355,18 +355,33 @@ class _HtmlAsText extends md.HtmlBlockSyntax {
 /// its flex is its widest cell's natural width (48 to 480 points), so a
 /// table fits the width it has, a column of short cells stays narrow and
 /// long cells wrap (CSS's fixed layout, by content) instead of pushing
-/// the table wider than its room.
+/// the table wider than its room. A column is never narrower than its
+/// longest word ([wordRoom] at most), whatever its share: beside three
+/// columns of sentences a column of names got so little that each name
+/// broke every two letters.
 class ContentFlexColumnWidth extends TableColumnWidth {
   /// The one way it sizes columns.
   const new();
 
+  /// The most a column keeps for its longest word; a longer one (a URL, a
+  /// path) breaks where it must.
+  static const wordRoom = 180.0;
+
+  double _word(Iterable<RenderBox> cells) {
+    var widest = 0.0;
+    for (final c in cells) {
+      widest = max(widest, c.getMinIntrinsicWidth(double.infinity));
+    }
+    return min(widest, wordRoom);
+  }
+
   @override
   double minIntrinsicWidth(Iterable<RenderBox> cells, double containerWidth) =>
-      0;
+      _word(cells);
 
   @override
   double maxIntrinsicWidth(Iterable<RenderBox> cells, double containerWidth) =>
-      0;
+      _word(cells);
 
   @override
   double flex(Iterable<RenderBox> cells) {
