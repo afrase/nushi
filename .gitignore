@@ -8,3 +8,6 @@ app/test/failures/
 go.work
 go.work.sum
 dist/
+# The built web app, copied here only while a release's relay is built (ADR 0113).
+/cmd/nushi-relay/web/*
+!/cmd/nushi-relay/web/.keep

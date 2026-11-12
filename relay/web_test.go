@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -386,5 +387,33 @@ func TestFallbackFontsFromDisk(t *testing.T) {
 	testcheck.NoErr(t, os.Remove(filepath.Join(dir, filepath.FromSlash(font))))
 	if resp, _ := get(t, srv.URL+"/"+font, nil); resp.StatusCode != http.StatusNotFound {
 		t.Errorf("a removed font: %d", resp.StatusCode)
+	}
+}
+
+// An app that isn't a folder (the one built into a release's relay) is
+// served the same: its page from memory, a fallback font from the files
+// when asked for, and nothing without a page.
+func TestNewSiteFromFiles(t *testing.T) {
+	font := FallbackDir + "notosansjp/v53/x.0.woff2"
+	site, err := NewSite(fstest.MapFS{
+		"index.html": {Data: []byte("<!doctype html>")},
+		font:         {Data: []byte("wOF2")},
+		".keep":      {Data: []byte("a placeholder")},
+	}, "https://relay.example.com")
+	testcheck.NoErr(t, err)
+	for path, want := range map[string]string{"/": "<!doctype html>", "/" + font: "wOF2"} {
+		w := httptest.NewRecorder()
+		site.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, http.NoBody))
+		if w.Code != http.StatusOK || w.Body.String() != want {
+			t.Errorf("%s: %d %q", path, w.Code, w.Body.String())
+		}
+	}
+	w := httptest.NewRecorder()
+	site.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/.keep", http.NoBody))
+	if w.Code != http.StatusNotFound {
+		t.Errorf(".keep: %d", w.Code)
+	}
+	if _, err := NewSite(fstest.MapFS{".keep": {Data: []byte("a placeholder")}}, "https://relay.example.com"); err == nil {
+		t.Error("files without index.html")
 	}
 }

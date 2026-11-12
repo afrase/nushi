@@ -75,12 +75,13 @@ make relay                                   # bin/nushi-relay, no cgo
 bin/nushi-relay -addr 127.0.0.1:8080         # plain ws://, e.g. behind a reverse proxy
 bin/nushi-relay -host relay.example.com      # wss:// on :443 with a Let's Encrypt certificate
 bin/nushi-relay -h                           # the caps: message size, rate, idle time, connections
-make web                                     # the phone's web app, into app/build/web
-bin/nushi-relay -addr 127.0.0.1:8090 -web app/build/web -origin https://relay.example.com
+make relay-web                               # the same with the phone's web app built in, as a release's
+bin/nushi-relay -addr 127.0.0.1:8090 -origin https://relay.example.com
 ```
 
-- **`-web`** serves the phone's web app at `-origin`, and takes WebSockets from pages there only. Copy `app/build/web` to the relay's machine. `make web` writes a Brotli copy beside each file, which the relay serves to browsers that take it.
-- **`-origin`** is the address the browser sees: scheme, host and port. With `-host`, it's `https://<host>` unless given.
+- **A release's relay has the phone's web app built in** ([ADR 0113](adr/0113-the-relay-has-the-web-app-built-in.md)): one file to copy, or to put in a container. `make relay` builds one without it.
+- **`-origin`** serves the app at that address, the one the browser sees (scheme, host and port), and takes WebSockets from pages there only. Without it the relay only copies messages.
+- **`-web <folder>`** serves the app from a folder instead (`make web` builds it into `app/build/web`), for trying a build. With `-host`, its origin is `https://<host>` unless given.
 - **Behind any HTTPS reverse proxy**, `-origin` is the proxy's public address and `-ip-header` its header with the client's address (below).
 - **Use `wss://`.** Company proxies tunnel 443 but often break a plain `ws://` upgrade, and iOS refuses plain connections by default.
 
@@ -90,7 +91,7 @@ The author's relay runs on a Raspberry Pi behind a Cloudflare named tunnel (`clo
 
 ```sh
 nushi-relay -addr 127.0.0.1:8090 -ip-header CF-Connecting-IP \
-  -web /usr/local/share/nushi-web -origin https://nushi.example.com -plain-per-ip 32
+  -origin https://nushi.example.com -plain-per-ip 32
 ```
 
 The Mac's relay is then `wss://nushi.example.com`.
@@ -159,10 +160,11 @@ app = "my-nushi-relay"
 
 ### Updating a relay from a release
 
-Each release has `nushi-relay-X.Y.Z-linux-arm64.tar.gz` (and `linux-amd64`: static binaries) and `nushi-web-X.Y.Z.tar.gz`. Update the web app along with the Mac:
+Each release has `nushi-relay-X.Y.Z-linux-arm64.tar.gz` (and `linux-amd64`): one static binary with that release's web app built in. Update it along with the Mac:
 
 ```sh
 tar -xzf nushi-relay-X.Y.Z-linux-arm64.tar.gz && sudo install nushi-relay /usr/local/bin/
-sudo rm -rf /usr/local/share/nushi-web && sudo tar -xzf nushi-web-X.Y.Z.tar.gz -C /usr/local/share
 nushi-relay -version                   # then restart its service
 ```
+
+A relay set up before 0.30.0 served the app from a folder: take `-web <folder>` out of its service (keep `-origin`) and delete the folder.

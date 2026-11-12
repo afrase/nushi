@@ -126,11 +126,11 @@ type file struct {
 // its built files, held in memory and served with strict headers, and the
 // origin a browser sees them at, the only one whose pages may open a
 // WebSocket here. The engine's fallback fonts (about 21 MB, of which a
-// phone fetches a few) are read from the folder when asked for.
+// phone fetches a few) are read from where the app is when asked for.
 type Site struct {
 	files  map[string]*file
-	fonts  map[string]bool // the fallback fonts' names, in root
-	root   *os.Root
+	fonts  map[string]bool // the fallback fonts' names, in from
+	from   fs.FS
 	origin string
 	csp    string
 }
@@ -172,17 +172,31 @@ const noTransform = ", no-transform"
 // LoadSite reads the built app in dir, to be served at origin
 // (scheme://host[:port]).
 func LoadSite(dir, origin string) (*Site, error) {
-	origin, err := Origin(origin)
-	if err != nil {
+	if _, err := Origin(origin); err != nil {
 		return nil, err
 	}
 	root, err := os.OpenRoot(dir)
 	if err != nil {
 		return nil, err
 	}
-	s := &Site{files: map[string]*file{}, fonts: map[string]bool{}, root: root, origin: origin, csp: csp(origin)}
+	s, err := NewSite(root.FS(), origin)
+	if err != nil || len(s.fonts) == 0 { // the folder is needed only for them
+		_ = root.Close()
+	}
+	return s, err
+}
+
+// NewSite reads the built app in from (a folder's files, or the ones
+// built into the relay: ADR 0113), to be served at origin
+// (scheme://host[:port]).
+func NewSite(from fs.FS, origin string) (*Site, error) {
+	origin, err := Origin(origin)
+	if err != nil {
+		return nil, err
+	}
+	s := &Site{files: map[string]*file{}, fonts: map[string]bool{}, from: from, origin: origin, csp: csp(origin)}
 	total := 0
-	err = fs.WalkDir(root.FS(), ".", func(name string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(from, ".", func(name string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -199,7 +213,7 @@ func LoadSite(dir, origin string) (*Site, error) {
 			s.fonts[name] = true
 			return nil
 		}
-		body, err := fs.ReadFile(root.FS(), name)
+		body, err := fs.ReadFile(from, name)
 		if err != nil {
 			return err
 		}
@@ -210,14 +224,10 @@ func LoadSite(dir, origin string) (*Site, error) {
 		return nil
 	})
 	if err == nil && s.files["index.html"] == nil {
-		err = errors.New("no index.html in the web app's folder")
+		err = errors.New("no index.html in the web app")
 	}
 	if err != nil {
-		_ = root.Close()
 		return nil, err
-	}
-	if len(s.fonts) == 0 { // the folder is needed only for them
-		_ = root.Close()
 	}
 	// name.br is name's Brotli copy, served in its place, never by itself.
 	for name, f := range s.files {
@@ -355,10 +365,10 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(body) //nolint:gosec // the app's own files, typed by their names, with nosniff and the CSP
 }
 
-// serveFont serves a fallback font (or their licence) from the folder:
+// serveFont serves a fallback font (or their licence) from where the app is:
 // woff2 is compressed already, and its path is versioned.
 func (s *Site) serveFont(w http.ResponseWriter, r *http.Request, name string) {
-	f, err := s.root.Open(name)
+	f, err := s.from.Open(name)
 	if err != nil {
 		http.NotFound(w, r)
 		return
