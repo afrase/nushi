@@ -13,7 +13,9 @@ Widget _app(Daemon d, {bool still = false, Tokens tokens = Tokens.dark}) =>
     themed(
       Column(
         children: [
-          RepaintBoundary(child: DaemonBanner(d)),
+          // The window's width, so CI's few pixels of text are under the
+          // 1% a golden may differ by there.
+          RepaintBoundary(child: Center(child: DaemonBanner(d))),
           const Expanded(child: SizedBox()),
         ],
       ),

@@ -19,7 +19,11 @@ Widget _app(Tokens tokens, Daemon d, [void Function(BuildContext)? onGo]) =>
     themed(
       Column(
         children: [
-          RepaintBoundary(child: DaemonBanner(d)),
+          // The golden is the window's width, not the card's: CI draws
+          // text a few pixels apart from a Mac, which a golden may differ
+          // by in 1% of its pixels (flutter_test_config.dart), and a card
+          // as wide as its few words is over that (57 of 5530).
+          RepaintBoundary(child: Center(child: DaemonBanner(d))),
           Expanded(
             child: Builder(
               builder: (context) => Center(
@@ -68,10 +72,6 @@ void main() {
       await tester.pump();
       await tester.pump(DaemonBanner.slideFor);
       expect(find.text('Restarting the daemon…'), findsOneWidget);
-      // The slide at rest before the golden: a frame short of it the words
-      // sit a fraction of a pixel up, which CI's machine draws a shade
-      // apart from this Mac's.
-      await tester.pump(const Duration(milliseconds: 300));
       await expectLater(
         find.byType(DaemonBanner),
         matchesGoldenFile('goldens/daemon_banner_restarting_$name.png'),
