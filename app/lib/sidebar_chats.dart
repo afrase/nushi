@@ -5,6 +5,8 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/list_motion.dart';
+import 'package:nushi/project_tile.dart';
+import 'package:nushi/project_tile_dialog.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_grouped.dart';
 import 'package:nushi/sidebar_groups.dart';
@@ -14,14 +16,16 @@ import 'package:nushi/sidebar_sections.dart';
 import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/theme/theme.dart';
 
-/// The sidebar's list of chats, as arranged ([arrangeSidebar]): Pinned,
-/// the sections, the projects' groups or the grouping's, and the
-/// archived, in one scroll. A row that moves between them glides
-/// ([motion]). While ⌘ is [held], the first nine rows show the number it
-/// opens them with.
+/// The sidebar's list of chats, as arranged ([view]): Pinned, the
+/// sections, the projects' groups or the grouping's, and the archived,
+/// in one scroll. A row that moves between them glides ([motion]). While
+/// ⌘ is [held], the first nine rows show the number it opens them with.
+/// A project's header has its tile, in its place among [colors].
 class SidebarChats extends StatelessWidget {
   const new({
     required this.daemon,
+    required this.view,
+    required this.colors,
     required this.motion,
     required this.held,
     required this.showArchived,
@@ -32,6 +36,8 @@ class SidebarChats extends StatelessWidget {
   });
 
   final Daemon daemon;
+  final SidebarView view;
+  final Map<String, int> colors;
   final ListMotion motion;
   final bool held;
   final bool showArchived;
@@ -47,13 +53,16 @@ class SidebarChats extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final starting = daemon.starting;
-    final archived = daemon.chats.values.where((c) => c.archived).toList()
-      ..sort((a, b) => b.created.compareTo(a.created));
+    // Narrowed to a project, the archived are that project's too.
+    final archived =
+        daemon.chats.values
+            .where((c) => c.archived && inShownProject(c))
+            .toList()
+          ..sort((a, b) => b.created.compareTo(a.created));
     final group = sidebarGroupBy.value;
     final sort = effectiveSort(group, sidebarSort.value);
     final reorders = dragsOrder(group, sidebarSort.value);
     final shows = sidebarShows.value;
-    final view = arrangeSidebar(daemon, starting: starting);
     // Where each row is before the lists change, and what they show now:
     // a row one loses and another shows moved.
     motion
@@ -120,6 +129,18 @@ class SidebarChats extends StatelessWidget {
                         onTerminal: onTerminal,
                         reorders: reorders,
                         row: (c, movable) => row(c, movable, inProject: true),
+                        tile: (folder) => FolderTile(
+                          daemon: daemon,
+                          folder: folder,
+                          color: colors[folder] ?? 0,
+                          size: ProjectTile.small,
+                        ),
+                        onChangeTile: (folder) => changeTile(
+                          context,
+                          daemon,
+                          folder,
+                          color: colors[folder] ?? 0,
+                        ),
                       )
                     : GroupedChats(
                         groups: view.groups,

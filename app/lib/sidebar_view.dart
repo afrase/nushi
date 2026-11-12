@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'package:nushi/arrangement.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
@@ -12,6 +14,32 @@ import 'package:nushi/settings.dart';
 List<ChatState> pinnedChats(Daemon daemon) =>
     daemon.chats.values.where((c) => c.pin > 0 && !c.archived).toList()
       ..sort((a, b) => a.pin.compareTo(b.pin));
+
+/// Whether the sidebar is wide enough for its project rail: the sidebar
+/// says so as it's laid out (`ProjectRail.minSidebar`).
+final railFits = ValueNotifier<bool>(true);
+
+/// Whether the sidebar has its project rail (ADR 0112): arranged by
+/// project, the Arrange menu's Project rail on, and room for it.
+bool get railShows =>
+    sidebarGroupBy.value == GroupBy.project &&
+    projectRail.value &&
+    railFits.value;
+
+/// The project the sidebar is narrowed to, by folder: the tile picked in
+/// the rail ([sidebarProject]), while the rail shows and the folder is
+/// still one of the sidebar's projects; null for all of them.
+String? get shownProject => switch (sidebarProject.value) {
+  final p? when railShows && sidebarProjects.value.contains(p) => p,
+  _ => null,
+};
+
+/// Whether [c] is of the project the sidebar is narrowed to
+/// ([shownProject]), or it shows them all.
+bool inShownProject(ChatState c) => switch (shownProject) {
+  null => true,
+  final p => !c.scratch && c.home == p,
+};
 
 /// The sidebar's groups: each folder's chats (a chat in a worktree under
 /// its repository; scratch chats under ''), the folder with the newest
@@ -103,10 +131,11 @@ Iterable<ChatState> shownChats(
     ? chats.where((c) => c.id == selectedId)
     : chats;
 
-/// The pinned chats the sidebar shows: all, or with Pinned collapsed
-/// ([pinnedCollapsed]), only the selected one, if it's pinned.
+/// The pinned chats the sidebar shows: those of the project it's
+/// narrowed to ([inShownProject]), or with Pinned collapsed
+/// ([pinnedCollapsed]), only the selected one, if it's one of them.
 Iterable<ChatState> shownPinned(Daemon daemon) {
-  final pinned = pinnedChats(daemon);
+  final pinned = pinnedChats(daemon).where(inShownProject);
   return pinnedCollapsed.value
       ? pinned.where((c) => c.id == daemon.selectedId)
       : pinned;
@@ -114,19 +143,23 @@ Iterable<ChatState> shownPinned(Daemon daemon) {
 
 /// The sidebar as it's arranged ([arrangeSidebar]): Pinned, the sections
 /// of the user's own, then under Project grouping each folder's chats
-/// ([projects]), else the grouping's groups ([groups]).
+/// ([projects]), else the grouping's groups ([groups]). [folders] are
+/// the projects, in the sidebar's order, whichever it's narrowed to: the
+/// project rail's tiles.
 class SidebarView {
   const new({
     required this.pinned,
     required this.sections,
     required this.projects,
     required this.groups,
+    this.folders = const [],
   });
 
   final List<ChatState> pinned;
   final List<(Section, List<ChatState>)> sections;
   final Map<String, List<ChatState>> projects;
   final List<ChatGroup> groups;
+  final List<String> folders;
 }
 
 /// The sidebar's chats arranged as its Arrange menu says
@@ -137,10 +170,16 @@ class SidebarView {
 /// Manual; a kept project with none of them an empty group) under Project
 /// grouping, else in the grouping's groups.
 /// [starting], the folder a chat is starting in.
+///
+/// Narrowed to a project ([shownProject]: its tile picked in the project
+/// rail), it's that project's chats only: its pinned ones, the sections
+/// that have a chat of it with those chats, and its own group. The
+/// sections with none of it and the chats with no folder are left out.
 SidebarView arrangeSidebar(Daemon daemon, {String? starting}) {
   final group = sidebarGroupBy.value;
   final sort = effectiveSort(group, sidebarSort.value);
   final up = sidebarAscending.value;
+  final only = shownProject;
   final live = {
     for (final c in daemon.chats.values)
       if (!c.archived && c.pin == 0) c.id: c,
@@ -153,14 +192,15 @@ SidebarView arrangeSidebar(Daemon daemon, {String? starting}) {
         sortChats(
           [
             for (final id in s.chats)
-              if (live[id] case final c? when placed.add(id)) c,
+              if (live[id] case final c? when placed.add(id))
+                if (inShownProject(c)) c,
           ],
           sort,
           ascending: up,
         ),
       ),
-  ];
-  final projects = group == GroupBy.project
+  ].where((s) => only == null || s.$2.isNotEmpty).toList();
+  final all = group == GroupBy.project
       ? {
           for (final MapEntry(:key, :value) in sidebarGroups(
             daemon,
@@ -170,7 +210,8 @@ SidebarView arrangeSidebar(Daemon daemon, {String? starting}) {
             key: sortChats(value, sort, ascending: up),
         }
       : <String, List<ChatState>>{};
-  final pinned = pinnedChats(daemon);
+  final projects = only == null ? all : {only: all[only] ?? <ChatState>[]};
+  final pinned = pinnedChats(daemon).where(inShownProject).toList();
   final groups = group == GroupBy.project
       ? const <ChatGroup>[]
       : groupChats(
@@ -184,6 +225,7 @@ SidebarView arrangeSidebar(Daemon daemon, {String? starting}) {
     pinned: pinned,
     sections: sections,
     projects: projects,
+    folders: [...all.keys.where((f) => f.isNotEmpty)],
     // None's one list is headed "Chats" under Pinned or a section, so its
     // rows don't read as theirs.
     groups: [

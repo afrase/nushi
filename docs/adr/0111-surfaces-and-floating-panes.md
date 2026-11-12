@@ -61,7 +61,7 @@ The owner found the app's look dated and approved a mock of a fresh one (2026-11
 - Amends 0071 (the header's switch is the filled control again, as the mock has it), 0072 (the header's and the composer's heights and fold numbers), 0076 (a bubble's padding; a tool row's fill and height), 0080 (the top is the sidebar's strip and the pane's header, not one band; the traffic lights are moved after all, and put back on every resize) and 0092 (the details hide where the transcript would keep less than 484).
 
 ## Left
-- **The sidebar's projects** as tiles with a rail, as the mock's Projects page has them: a separate decision (`docs/roadmap.md`).
+- **The sidebar's projects** as tiles with a rail, as the mock's Projects page has them: ADR 0112.
 - **Not seen on a real window**: the traffic lights in full screen and on the way out of it (nothing is placed there, and they're put back as it ends), and a resize by hand (`make test-window` resizes a window that's never shown).
 
 ## Alternatives considered

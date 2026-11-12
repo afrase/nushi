@@ -31,7 +31,8 @@ void resetArrangement() {
 }
 
 /// The menu's rows: Group by, Sort by and Show, each a submenu with the
-/// choice made on its right; New section; Reset to defaults (while it's
+/// choice made on its right; Project rail, checked while the sidebar has
+/// it ([projectRail]); New section; Reset to defaults (while it's
 /// arranged otherwise); View all (Chat history, every chat and session).
 List<MenuEntry> arrangeEntries(BuildContext context, Daemon daemon) {
   final group = sidebarGroupBy.value;
@@ -102,6 +103,15 @@ List<MenuEntry> arrangeEntries(BuildContext context, Daemon daemon) {
             onPick: () => sidebarShows.toggle(p),
           ),
       ],
+    ),
+    MenuEntry(
+      'Project rail',
+      checked: projectRail.value && group == GroupBy.project,
+      // The rail is the projects': there's none under another grouping.
+      tooltip: group == GroupBy.project ? '' : 'Only when grouped by Project',
+      onPick: group == GroupBy.project
+          ? () => projectRail.value = !projectRail.value
+          : null,
     ),
     MenuEntry.divider,
     MenuEntry(

@@ -20,6 +20,7 @@ import 'package:nushi/pull_cache.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/theme_files.dart';
 
 import 'config_home_linux.dart';
@@ -65,6 +66,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
       ..install = FakeAppInstall();
     phoneHost = macConventions;
     resetAppSettings();
+    railFits.value = true;
     forgetPulls();
     forgetReviews();
     forgetReviewDrafts();

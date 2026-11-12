@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:nushi/card_list.dart' show reordered;
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_pins.dart';
 import 'package:nushi/daemon.dart';
@@ -253,7 +254,8 @@ class PinnedSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pinned = pinnedChats(daemon);
+    // Those of the project the sidebar is narrowed to, if it is.
+    final pinned = pinnedChats(daemon).where(inShownProject).toList();
     // Its header grows in with the first pin, its rows gliding there.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -272,9 +274,16 @@ class PinnedSection extends StatelessWidget {
           onMove: (from, to) => unawaited(
             tryOrShow(
               context,
-              () => setChatPins(daemon, [
-                for (final c in reorderedChats(pinned, from, to)) c.id,
-              ]),
+              // A pin not shown keeps its place among the others.
+              () => setChatPins(
+                daemon,
+                reordered(
+                  [for (final c in pinnedChats(daemon)) c.id],
+                  [for (final c in pinned) c.id],
+                  from,
+                  to,
+                ),
+              ),
             ),
           ),
         ),
