@@ -14,10 +14,10 @@ import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_arrange.dart';
 import 'package:nushi/sidebar_button.dart';
+import 'package:nushi/sidebar_chats.dart';
 import 'package:nushi/sidebar_grouped.dart';
 import 'package:nushi/sidebar_groups.dart';
 import 'package:nushi/sidebar_links.dart';
-import 'package:nushi/sidebar_row.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/sidebar_sections.dart';
 import 'package:nushi/sidebar_view.dart';
@@ -154,8 +154,6 @@ class _SidebarState extends State<Sidebar> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final daemon = widget.daemon;
-    final archived = daemon.chats.values.where((c) => c.archived).toList()
-      ..sort((a, b) => b.created.compareTo(a.created));
     final starting = daemon.starting;
     return MouseRegion(
       onEnter: (_) => _hover.value = true,
@@ -234,7 +232,18 @@ class _SidebarState extends State<Sidebar> {
                   // rather than stop at a cut.
                   builder: (context, _) => Stack(
                     children: [
-                      Positioned.fill(child: _list(context, archived)),
+                      Positioned.fill(
+                        child: SidebarChats(
+                          daemon: daemon,
+                          motion: _motion,
+                          held: _hold.value,
+                          showArchived: _showArchived,
+                          onToggleArchived: () =>
+                              setState(() => _showArchived = !_showArchived),
+                          onNew: starting == null ? _new : null,
+                          onTerminal: _terminal,
+                        ),
+                      ),
                       Positioned(
                         left: 0,
                         right: 0,
@@ -272,102 +281,6 @@ class _SidebarState extends State<Sidebar> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _list(BuildContext context, List<ChatState> archived) {
-    final t = NushiTheme.of(context).t;
-    final daemon = widget.daemon;
-    final starting = daemon.starting;
-    final held = _hold.value;
-    final group = sidebarGroupBy.value;
-    final sort = effectiveSort(group, sidebarSort.value);
-    final reorders = dragsOrder(group, sidebarSort.value);
-    final shows = sidebarShows.value;
-    final view = arrangeSidebar(daemon, starting: starting);
-    // Where each row is before the lists change, and what they show now:
-    // a row one loses and another shows moved.
-    _motion
-      ..ground = t.window
-      ..shown = {
-        for (final c in view.pinned) ValueKey(c.id),
-        for (final (section, chats) in view.sections) ...[
-          ValueKey(section.key),
-          for (final c in chats) ValueKey(c.id),
-        ],
-        for (final MapEntry(:key, :value) in view.projects.entries) ...[
-          ValueKey(key),
-          for (final c in value) ValueKey(c.id),
-        ],
-        for (final g in view.groups) ...[
-          ValueKey(g.key),
-          for (final c in g.chats) ValueKey(c.id),
-        ],
-        if (_showArchived)
-          for (final c in archived) ValueKey(c.id),
-      }
-      ..snapshot();
-    final numbers = {
-      for (final (i, c) in chatOrder(daemon).take(9).indexed) c.id: i + 1,
-    };
-    // A row says its project where its group doesn't.
-    Widget row(ChatState c, Movable movable, {bool inProject = false}) =>
-        SidebarRow(
-          c,
-          key: ValueKey(c.id),
-          daemon: daemon,
-          number: held ? numbers[c.id] : null,
-          movable: movable,
-          project: !inProject && shows.contains(RowPart.project),
-          time: shows.contains(RowPart.time) ? chatTime(c, sort) : null,
-        );
-    return ListMotionScope(
-      motion: _motion,
-      child: ListView(
-        // Hiding the sidebar takes it away: back where it was.
-        key: const PageStorageKey('sidebar'),
-        padding: const EdgeInsets.only(bottom: 14),
-        children: [
-          Column(
-            key: _motion.space,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              PinnedSection(daemon, row: row),
-              SidebarSections(
-                daemon: daemon,
-                sections: view.sections,
-                reorders: reorders,
-                row: row,
-              ),
-              LeaveSectionTarget(
-                child: group == GroupBy.project
-                    ? SidebarGroups(
-                        groups: view.projects,
-                        selectedId: daemon.selectedId,
-                        starting: starting,
-                        startingAgent: daemon.startingAgent,
-                        live: liveFolders(daemon),
-                        onNew: starting == null ? _new : null,
-                        onTerminal: _terminal,
-                        reorders: reorders,
-                        row: (c, movable) => row(c, movable, inProject: true),
-                      )
-                    : GroupedChats(
-                        groups: view.groups,
-                        selectedId: daemon.selectedId,
-                        row: row,
-                      ),
-              ),
-              ArchivedSection(
-                archived,
-                open: _showArchived,
-                onToggle: () => setState(() => _showArchived = !_showArchived),
-                row: (c) => SidebarRow(c, key: ValueKey(c.id), daemon: daemon),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
