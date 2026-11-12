@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:nushi/paced.dart';
+import 'package:nushi/pasted_files.dart';
+import 'package:nushi/phone/paste.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
@@ -24,5 +26,6 @@ void main() {
   unawaited(platform.registerWorker());
   final phone = Phone(platform);
   unawaited(phone.start());
+  watchPastes(pastedFiles.add);
   runApp(PhoneApp(phone));
 }

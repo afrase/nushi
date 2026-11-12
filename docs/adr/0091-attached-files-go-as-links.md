@@ -10,6 +10,7 @@ The owner asked for the composer's + to attach any file, not only images (2026-1
 - **No sandbox stands between an agent and a linked file**: Nushi runs no agent under `sandbox-exec`, and Codex's read-only mode limits writes, not reads.
 - **The phone's files come whole** (`SendPromptRequest.uploads`): the daemon saves each in its data folder's `uploads/<chat>/<random>/<name>` (the name's last part only, 0600) and links that copy. At most 8 MB a file and 10 files a message; a chat keeps 100 MB of them, the oldest removed first (never a queued message's, which the agent hasn't had), and deleting the chat removes them (a fork has its own hard links to those it links).
 - The transcript's user message lists its files (`Item.files`); those its text doesn't mention as `@path` show as file chips.
+- 2026-11-12 (the owner, on an iPhone: the + did nothing, and a paste attached nothing): **The phone's picker opens inside the tap, and its paste attaches.** Flutter's menu runs a row's action a frame after the tap, and Safari opens a file picker only from the tap itself, so the + menu's **Add files or photos** runs as the finger lifts (`MenuEntry.inTap`). The page's `paste` event hands its files (`clipboardData.files`: a copied photo, a file) to the box being typed in, as picked files; Nushi never asks the browser for the clipboard.
 
 ## Consequences
 - An agent that can't read a path (an unreachable volume, a file moved since) says so in its turn; Nushi doesn't check that it can first.

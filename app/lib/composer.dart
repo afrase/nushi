@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_selector/file_selector.dart' show XFile;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +18,7 @@ import 'package:nushi/grow.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/pasted_files.dart';
 import 'package:nushi/pickers.dart';
 import 'package:nushi/plan_view.dart';
 import 'package:nushi/queue.dart';
@@ -100,6 +102,15 @@ class _ComposerState extends State<Composer> {
     widget.chat.rewinding.addListener(_imagesChanged);
     widget.chat.takeBack.addListener(_takeBack);
     _takeBack(); // one taken back while the box wasn't there
+    _pasted = pastedFiles.stream.listen(_paste);
+  }
+
+  late final StreamSubscription<List<XFile>> _pasted;
+
+  /// Files pasted into the phone's page go to the box being typed in.
+  void _paste(List<XFile> files) {
+    if (!_focus.hasFocus || _locked) return;
+    unawaited(attached(context, attachFiles(widget.chat, files, api: _api)));
   }
 
   void _imagesChanged() => setState(() {}); // and completions, and the lock
@@ -122,6 +133,7 @@ class _ComposerState extends State<Composer> {
     widget.chat.rewinding.removeListener(_imagesChanged);
     widget.chat.takeBack.removeListener(_takeBack);
     _esc?.cancel();
+    unawaited(_pasted.cancel());
     _completions.dispose();
     _spell.dispose();
     _focus.dispose();
