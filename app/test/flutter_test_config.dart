@@ -22,6 +22,7 @@ import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/theme_files.dart';
+import 'package:nushi/tile_mark.dart';
 
 import 'config_home_linux.dart';
 import 'fake_app_install.dart';
@@ -67,6 +68,9 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     phoneHost = macConventions;
     resetAppSettings();
     railFits.value = true;
+    // A mark's ink is measured by the engine, on the real clock: a
+    // test that looks at where it lands turns it on and waits.
+    centreMarksByInk = false;
     forgetPulls();
     forgetReviews();
     forgetReviewDrafts();

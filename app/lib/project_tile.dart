@@ -6,6 +6,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tile_look.dart';
+import 'package:nushi/tile_mark.dart';
 
 /// A project's tile (ADR 0112): a small rounded square that tells
 /// projects apart at a glance, 20 before the project's name in its
@@ -54,6 +55,21 @@ class ProjectTile extends StatelessWidget {
     // Letters are set small and bold, as initials; an emoji or a symbol
     // fills more of the tile.
     final letters = RegExp(r'^[\p{L}\p{N}]+$', unicode: true).hasMatch(written);
+    final style = theme
+        .ui(
+          t.monogramText,
+          // 12 in the rail, 10 in a header: two letters fill a small
+          // tile as far as they can and still be read.
+          size: letters ? (size > 24 ? size * 0.32 : size * 0.5) : size * 0.5,
+          weight: FontWeight.w700,
+        )
+        .copyWith(
+          height: 1,
+          letterSpacing: letters ? 0.2 : 0,
+          // By name, so a mark is set in the same font, with the same
+          // measures, wherever the system's own fallback would look.
+          fontFamilyFallback: emojiFonts,
+        );
     final initials = Container(
       width: size,
       height: size,
@@ -62,25 +78,7 @@ class ProjectTile extends StatelessWidget {
         color: fill,
         borderRadius: BorderRadius.circular(radius(size)),
       ),
-      child: Text(
-        written,
-        maxLines: 1,
-        softWrap: false,
-        textAlign: TextAlign.center,
-        // The emoji's own colors, not the theme's text scale.
-        textScaler: TextScaler.noScaling,
-        style: theme
-            .ui(
-              t.monogramText,
-              // 12 in the rail, 10 in a header: two letters fill a
-              // small tile as far as they can and still be read.
-              size: letters
-                  ? (size > 24 ? size * 0.32 : size * 0.5)
-                  : size * 0.5,
-              weight: FontWeight.w700,
-            )
-            .copyWith(height: 1, letterSpacing: letters ? 0.2 : 0),
-      ),
+      child: TileMark(written, style: style),
     );
     final image = icon;
     if (image == null || !look.isEmpty) return initials;
