@@ -11,17 +11,24 @@ import (
 )
 
 // runner is a fake brew: it records what it's asked to run, and each
-// command fails with what fail has for its first argument.
+// command fails with what fail has for its first argument. An upgrade
+// that doesn't fail installs: it makes the folder installs names.
 type runner struct {
-	ran  [][]string
-	env  []string
-	says map[string]string
-	fail map[string]error
+	ran      [][]string
+	env      []string
+	says     map[string]string
+	fail     map[string]error
+	installs string
 }
 
 func (r *runner) run(_ context.Context, env []string, name string, args ...string) ([]byte, error) {
 	r.ran = append(r.ran, append([]string{name}, args...))
 	r.env = env
+	if args[0] == "upgrade" && r.fail[args[0]] == nil && r.installs != "" {
+		if err := os.MkdirAll(r.installs, 0o700); err != nil {
+			return nil, err
+		}
+	}
 	return []byte(r.says[args[0]]), r.fail[args[0]]
 }
 
@@ -106,7 +113,7 @@ func TestHas(t *testing.T) {
 func TestUpgrade(t *testing.T) {
 	b, r := mac(t, "1/nushi@beta/0.28.0")
 	r.says = map[string]string{"update": "Already up-to-date.\n", "upgrade": "\x1b[34m==>\x1b[0m Upgrading nushi@beta\n"}
-	out, err := b.Upgrade(t.Context(), BetaCask)
+	out, err := b.Upgrade(t.Context(), BetaCask, "0.29.0")
 	if err != nil || out != "Already up-to-date.\n==> Upgrading nushi@beta\n" {
 		t.Fatalf("%q %v", out, err)
 	}
@@ -119,15 +126,17 @@ func TestUpgrade(t *testing.T) {
 	}
 	for _, cask := range []string{Cask, "nushi; rm -rf ~", "--force", "other", ""} {
 		r.ran = nil
-		if _, err := b.Upgrade(t.Context(), cask); err == nil || r.ran != nil {
+		if _, err := b.Upgrade(t.Context(), cask, "0.29.0"); err == nil || r.ran != nil {
 			t.Fatalf("cask %q: %v, ran %q", cask, err, r.ran)
 		}
 	}
 }
 
-// A failure stops there and says why in a sentence: brew's own last
-// "Error:" line, where to allow it when macOS refused, or how the command
-// ended when it printed nothing. The output's end comes back whole.
+// A failure says why in a sentence: brew's own last "Error:" line, where
+// to allow it when macOS refused, or how the command ended when it
+// printed nothing. A failed upgrade stops there; a failed update goes on
+// to the upgrade, and is the failure when that installs nothing. The
+// output's end comes back whole.
 func TestUpgradeFails(t *testing.T) {
 	exit := errors.New("exit status 1")
 	for _, c := range []struct {
@@ -137,12 +146,12 @@ func TestUpgradeFails(t *testing.T) {
 		ran              int
 	}{
 		{"brew update", "update", "fatal: unable to access 'https://github.com/Homebrew/brew/'\nError: Fetching /opt/homebrew failed!\n", exit,
-			"brew update: Fetching /opt/homebrew failed!", 1},
+			"brew update: Fetching /opt/homebrew failed!", 2},
 		{"brew upgrade", "upgrade", "==> Upgrading 1 outdated package\nError: nushi: Download failed on Cask 'nushi' with message: 404\nsome advice\n", exit,
 			"brew upgrade: nushi: Download failed on Cask 'nushi' with message: 404", 2},
 		{"no Error line", "upgrade", "==> Upgrading\nsomething went wrong\n\n", exit, "brew upgrade: something went wrong", 2},
 		{"nothing printed", "update", "", errors.New("fork/exec /opt/homebrew/bin/brew: no such file or directory"),
-			"brew update: fork/exec /opt/homebrew/bin/brew: no such file or directory", 1},
+			"brew update: fork/exec /opt/homebrew/bin/brew: no such file or directory", 2},
 		{"App Management, Homebrew's words", "upgrade", "Error: Cannot change the ownership of '/Applications/Nushi.app' because your terminal does not have App Management permissions.\n", exit,
 			"System Settings › Privacy & Security › App Management", 2},
 		{"App Management, the system's", "upgrade", "Error: Operation not permitted @ apply2files - /Applications/Nushi.app/Contents\n", exit,
@@ -151,7 +160,7 @@ func TestUpgradeFails(t *testing.T) {
 		b, r := mac(t, "0/nushi/0.28.0")
 		r.says = map[string]string{"update": "Updated 1 tap.\n", c.step: c.says}
 		r.fail = map[string]error{c.step: c.err}
-		out, err := b.Upgrade(t.Context(), Cask)
+		out, err := b.Upgrade(t.Context(), Cask, "0.29.0")
 		if err == nil || !strings.Contains(err.Error(), c.want) || len(r.ran) != c.ran {
 			t.Errorf("%s: %v, ran %q", c.name, err, r.ran)
 		}
@@ -164,25 +173,48 @@ func TestUpgradeFails(t *testing.T) {
 	r.fail = map[string]error{"update": errors.New("signal: killed")}
 	late, cancel := context.WithTimeout(t.Context(), 0)
 	defer cancel()
-	if _, err := b.Upgrade(late, Cask); err == nil || err.Error() != "brew update took over 15 minutes" {
+	if _, err := b.Upgrade(late, Cask, "0.29.0"); err == nil || err.Error() != "brew update took over 15 minutes" {
 		t.Fatalf("out of time: %v", err)
 	}
 	// brew update's own "Operation not permitted" isn't the app's.
 	b, r = mac(t, "0/nushi")
 	r.says, r.fail = map[string]string{"update": "Error: Operation not permitted @ rb_sysopen\n"}, map[string]error{"update": exit}
-	if _, err := b.Upgrade(t.Context(), Cask); err == nil || err.Error() != "brew update: Operation not permitted @ rb_sysopen" {
+	if _, err := b.Upgrade(t.Context(), Cask, "0.29.0"); err == nil || err.Error() != "brew update: Operation not permitted @ rb_sysopen" {
 		t.Fatalf("brew update refused: %v", err)
 	}
 	// A token brew printed is hidden, in the sentence and the output.
 	r.says = map[string]string{"update": "Error: bad credentials for ghp_" + strings.Repeat("a1B2", 9) + "\n"}
-	if out, err := b.Upgrade(t.Context(), Cask); err == nil || strings.Contains(out+err.Error(), "ghp_") {
+	if out, err := b.Upgrade(t.Context(), Cask, "0.29.0"); err == nil || strings.Contains(out+err.Error(), "ghp_") {
 		t.Fatalf("a token: %q %v", out, err)
 	}
 	// A long last line is cut.
 	b, r = mac(t, "0/nushi")
 	r.says, r.fail = map[string]string{"update": "Error: " + strings.Repeat("é", 500)}, map[string]error{"update": exit}
-	if _, err := b.Upgrade(t.Context(), Cask); err == nil || len([]rune(err.Error())) > 220 {
+	if _, err := b.Upgrade(t.Context(), Cask, "0.29.0"); err == nil || len([]rune(err.Error())) > 220 {
 		t.Fatalf("a long line: %v", err)
+	}
+}
+
+// `brew update` fails when one tap can't be fetched (a private tap whose
+// key needs a password or a fingerprint) though it updated the others:
+// the upgrade still runs, and having installed the version is success.
+// An upgrade that fails after it says its own failure.
+func TestUpgradeAfterAFailedUpdate(t *testing.T) {
+	exit := errors.New("exit status 1")
+	b, r := mac(t, "0/nushi@beta/0.29.0")
+	r.says = map[string]string{"update": "Updated 1 tap.\nError: Fetching /opt/homebrew/Library/Taps/work/homebrew-private failed!\n", "upgrade": "==> Upgrading nushi@beta\n"}
+	r.fail = map[string]error{"update": exit}
+	r.installs = filepath.Join(b.Prefixes[0], "Caskroom", BetaCask, "0.30.0")
+	out, err := b.Upgrade(t.Context(), BetaCask, "0.30.0")
+	if err != nil || len(r.ran) != 2 || !strings.Contains(out, "homebrew-private failed!") || !strings.HasSuffix(out, "==> Upgrading nushi@beta\n") {
+		t.Fatalf("%q %v, ran %q", out, err, r.ran)
+	}
+
+	b, r = mac(t, "0/nushi@beta/0.29.0")
+	r.says = map[string]string{"update": "Error: Fetching a tap failed!\n", "upgrade": "Error: nushi@beta: Download failed\n"}
+	r.fail = map[string]error{"update": exit, "upgrade": exit}
+	if _, err := b.Upgrade(t.Context(), BetaCask, "0.30.0"); err == nil || err.Error() != "brew upgrade: nushi@beta: Download failed" {
+		t.Fatalf("both failed: %v", err)
 	}
 }
 

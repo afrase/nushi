@@ -40,9 +40,9 @@ type Homebrew interface {
 	Installed() string
 	// Has says whether cask is installed at version.
 	Has(cask, version string) bool
-	// Upgrade runs Homebrew's upgrade of cask and returns the end of what
-	// it printed; its error is a sentence to show.
-	Upgrade(ctx context.Context, cask string) (output string, err error)
+	// Upgrade runs Homebrew's upgrade of cask, to install version, and
+	// returns the end of what it printed; its error is a sentence to show.
+	Upgrade(ctx context.Context, cask, version string) (output string, err error)
 }
 
 // What Install refuses with.

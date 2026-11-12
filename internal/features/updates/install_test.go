@@ -33,7 +33,7 @@ func (b *brew) Has(cask, version string) bool {
 	return cask == b.cask && version == b.at
 }
 
-func (b *brew) Upgrade(_ context.Context, cask string) (string, error) {
+func (b *brew) Upgrade(_ context.Context, cask, _ string) (string, error) {
 	if b.hold != nil {
 		<-b.hold
 	}

@@ -46,7 +46,7 @@ func (s *Service) Install() error {
 // release is on GitHub some minutes before its cask is in the tap.
 func (s *Service) install(cask, version string) {
 	slog.Info("installing an update with Homebrew", "cask", cask, "version", version)
-	out, err := s.Brew.Upgrade(context.Background(), cask)
+	out, err := s.Brew.Upgrade(context.Background(), cask, version)
 	failed := ""
 	switch {
 	case err != nil:
