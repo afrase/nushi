@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,7 @@ import 'package:nushi/project_tile.dart';
 import 'package:nushi/project_tile_dialog.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tile_images.dart';
 import 'package:nushi/tile_look.dart';
 import 'package:nushi/widgets.dart';
 
@@ -157,10 +159,134 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('Choose image… takes a picture, shown at once and kept as a '
+      'copy on Save; one that can’t be taken is said, and what was there '
+      'stays; Cancel keeps nothing', (tester) async {
+    final before = pickTileImage;
+    addTearDown(() => pickTileImage = before);
+    final picks = Directory('$dataDir/picked')..createSync(recursive: true);
+    final photo = File('${picks.path}/photo.png')
+      ..writeAsBytesSync(await photoPng(tester));
+    final gif = File('${picks.path}/spin.gif')..writeAsBytesSync(animatedGif());
+    final text = File('${picks.path}/notes.png')..writeAsStringSync('hello');
+    File? next = photo;
+    pickTileImage = () async => next == null ? null : XFile(next.path);
+    List<String> stored() => tileImagesDir.existsSync()
+        ? [for (final f in tileImagesDir.listSync()) f.uri.pathSegments.last]
+        : [];
+    ProjectTile preview() =>
+        tester.widget(find.byKey(const Key('tile preview')));
+    Future<void> choose() async {
+      await tester.tap(find.widgetWithText(Button, 'Choose image…'));
+      await tester.pump();
+      for (var i = 0; i < 20; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump();
+      }
+    }
+
+    final d = await _changeTile(tester);
+    expect(find.widgetWithText(Button, 'Remove image'), findsNothing);
+    await choose();
+    expect(preview().picture, isNotNull);
+    expect(find.byType(RawImage), findsWidgets);
+    expect(find.widgetWithText(Button, 'Remove image'), findsOneWidget);
+    // Not kept yet: Cancel leaves no copy.
+    expect(stored(), isEmpty);
+    await tester.tap(find.widgetWithText(Button, 'Cancel'));
+    await tester.pumpAndSettle();
+    expect(stored(), isEmpty);
+    expect(projectTiles.value, isEmpty);
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await choose();
+    await tester.tap(find.widgetWithText(Button, 'Save'));
+    await tester.pumpAndSettle();
+    final first = projectTiles.value[garden]!.image;
+    expect(stored(), [first]);
+    expect(tileImageFile(first)!.readAsBytesSync(), photo.readAsBytesSync());
+    expect(readSaved()['projectTiles'], {
+      garden: {'image': first},
+    });
+
+    // Not an image: a line says so, and the one it had stays.
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    next = text;
+    await choose();
+    expect(find.text('Not a PNG, JPEG, GIF or WebP image.'), findsOneWidget);
+    expect(preview().look.image, first);
+    expect(preview().picture, isNull);
+    // The panel closed with nothing picked: nothing changes.
+    next = null;
+    await choose();
+    expect(preview().look.image, first);
+    // Another in its place: the line goes, and Save deletes the first.
+    next = gif;
+    await choose();
+    expect(find.text('Not a PNG, JPEG, GIF or WebP image.'), findsNothing);
+    await tester.tap(find.widgetWithText(Button, 'Save'));
+    await tester.pumpAndSettle();
+    final second = projectTiles.value[garden]!.image;
+    expect(second, endsWith('.gif'));
+    expect(stored(), [second]);
+
+    // Remove image, with a mark set: the mark stays, the copy goes.
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'G');
+    await tester.tap(find.widgetWithText(Button, 'Remove image'));
+    await tester.pump();
+    expect(find.widgetWithText(Button, 'Remove image'), findsNothing);
+    expect(preview().look.image, '');
+    await tester.tap(find.widgetWithText(Button, 'Save'));
+    await tester.pumpAndSettle();
+    expect(projectTiles.value[garden]?.toJson(), {'mark': 'G'});
+    expect(stored(), isEmpty);
+
+    // Reset deletes an image's copy too.
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    next = photo;
+    await choose();
+    await tester.tap(find.widgetWithText(Button, 'Save'));
+    await tester.pumpAndSettle();
+    expect(stored(), hasLength(1));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Button, 'Reset'));
+    await tester.pumpAndSettle();
+    expect(projectTiles.value, isEmpty);
+    expect(stored(), isEmpty);
+    d.dispose();
+    picks.deleteSync(recursive: true);
+  });
+
   for (final (name, tokens) in [
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
+    testWidgets('golden: Change tile… with an image, $name', (tester) async {
+      viewport(tester, const Size(640, 400));
+      if (tileImagesDir.existsSync()) tileImagesDir.deleteSync(recursive: true);
+      final image = keepTileImage((bytes: await photoPng(tester), kind: 'png'));
+      projectTiles.value = {garden: TileLook(color: 'teal', image: image)};
+      final d = await _changeTile(tester, tokens: tokens);
+      await untilReal(
+        tester,
+        () => find.byType(RawImage).evaluate().isNotEmpty,
+      );
+      await expectLater(
+        find.byType(ChangeTileDialog),
+        matchesGoldenFile('goldens/project_tile_dialog_image_$name.png'),
+      );
+      d.dispose();
+      setProjectTile(garden, const TileLook());
+    });
+
     testWidgets('golden: Change tile…, $name', (tester) async {
       viewport(tester, const Size(640, 360));
       projectTiles.value = {garden: const TileLook(mark: 'G7', color: 'rust')};

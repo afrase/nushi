@@ -7,6 +7,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tile_look.dart';
 import 'package:nushi/tile_mark.dart';
+import 'package:nushi/tile_picture.dart';
 
 /// A project's tile (ADR 0112): a small rounded square that tells
 /// projects apart at a glance, 20 before the project's name in its
@@ -14,12 +15,13 @@ import 'package:nushi/tile_mark.dart';
 /// rail and in Change tile…. (Tried at 18 in the header: 20 reads better
 /// now the header is the one place it always shows, and the header is no
 /// higher for it.) It shows, in this order: what
-/// the user set in Change tile… ([look]: a mark, an emoji or one or two
-/// characters, and a color, either without the other); else the
-/// repository's own [icon]; else the folder's initials ([name]) on
-/// [color], its place in the theme's eight (`tileColors`). A color is the
-/// user's data or worked out from the folder, never a theme's own: it's
-/// drawn from `Tokens.avatars`, as a chat's color is.
+/// the user set in Change tile… ([look]: an image of their own, which
+/// plays under the pointer if it's animated ([TilePictureView]); else a
+/// mark, an emoji or one or two characters; and a color, behind either or
+/// alone); else the repository's own [icon]; else the folder's initials
+/// ([name]) on [color], its place in the theme's eight (`tileColors`). A
+/// color is the user's data or worked out from the folder, never a
+/// theme's own: it's drawn from `Tokens.avatars`, as a chat's color is.
 class ProjectTile extends StatelessWidget {
   const new({
     required this.name,
@@ -27,6 +29,7 @@ class ProjectTile extends StatelessWidget {
     super.key,
     this.look = const TileLook(),
     this.icon,
+    this.picture,
     this.size = large,
   });
 
@@ -38,6 +41,10 @@ class ProjectTile extends StatelessWidget {
   final int color;
   final TileLook look;
   final ImageProvider? icon;
+
+  /// The user's own image, in the place of [look]'s stored one: one
+  /// picked in Change tile… and not kept yet.
+  final TilePicture? picture;
   final double size;
 
   /// Its corners: a control's in the rail, a tag's in a header, where a
@@ -80,29 +87,43 @@ class ProjectTile extends StatelessWidget {
       ),
       child: TileMark(written, style: style),
     );
+    // The repository's icon, unless the user set a mark or a color.
     final image = icon;
-    if (image == null || !look.isEmpty) return initials;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius(size)),
-      child: SizedBox.square(
-        dimension: size,
-        // A see-through icon lies on a raised bit's fill, as a button.
-        child: ColoredBox(
-          color: t.lifted,
-          child: Image(
-            image: image,
-            width: size,
-            height: size,
-            fit: BoxFit.contain,
-            gaplessPlayback: true,
-            excludeFromSemantics: true,
-            // Until it's decoded, and if it can't be: the initials.
-            frameBuilder: (context, child, frame, sync) =>
-                frame == null && !sync ? initials : child,
-            errorBuilder: (context, _, _) => initials,
-          ),
-        ),
-      ),
+    final plain = image == null || look.mark.isNotEmpty || chosen != null
+        ? initials
+        : ClipRRect(
+            borderRadius: BorderRadius.circular(radius(size)),
+            child: SizedBox.square(
+              dimension: size,
+              // A see-through icon lies on a raised bit's fill, as a
+              // button.
+              child: ColoredBox(
+                color: t.lifted,
+                child: Image(
+                  image: image,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.contain,
+                  gaplessPlayback: true,
+                  excludeFromSemantics: true,
+                  // Until it's decoded, and if it can't be: the initials.
+                  frameBuilder: (context, child, frame, sync) =>
+                      frame == null && !sync ? initials : child,
+                  errorBuilder: (context, _, _) => initials,
+                ),
+              ),
+            ),
+          );
+    final own =
+        picture ?? (look.image.isEmpty ? null : TilePicture.stored(look.image));
+    if (own == null) return plain;
+    // The user's own image, over their color where it's see-through.
+    return TilePictureView(
+      picture: own,
+      size: size,
+      radius: radius(size),
+      fill: chosen?.ink(t) ?? t.lifted,
+      fallback: plain,
     );
   }
 }

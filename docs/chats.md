@@ -58,7 +58,9 @@ A theme of your own is a JSON file in the `themes` folder of Nushi's data folder
 
 **Project tiles** ([ADR 0112](adr/0112-project-tiles.md)). Each project's header starts with its tile, a small square that tells projects apart at a glance.
 
-- **What a tile shows**: what you set in **Change tile…** (the project's right-click menu: an emoji or one or two characters, and one of the eight chat colors; either wins), else the repository's own icon, else the folder's initials on a color. **Reset** there puts it back.
+- **What a tile shows**: what you set in **Change tile…** (the project's right-click menu), else the repository's own icon, else the folder's initials on a color. There you set an image of your own (**Choose image…**), an emoji or one or two characters, and one of the eight chat colors, any without the others: the image comes before the mark, and the color fills behind either. **Remove image** takes the image off; **Reset** puts the tile back as it is by itself.
+- **Your own image** is a PNG, JPEG, GIF or WebP of up to 16 MB, of any size in pixels: it's drawn cropped to a square from its middle. Nushi keeps its own copy (in `tiles` in its data folder), so the file you picked can move or go; the copy is deleted when you replace or remove the image, reset the tile, or remove the project. A file that isn't one of those kinds, is too large or can't be shown is said in the dialog, and the tile stays as it was.
+- **A GIF or an animated WebP** shows its first frame, and plays while the pointer is on the tile (in the dialog too). It doesn't play under Reduce Motion, nor while Nushi isn't in front.
 - **The icon** is a PNG or JPEG the daemon finds at one of a few usual places in the folder (`icon`, `logo`, in `.github`, `assets` or `docs/images` too; an app's `AppIcon.appiconset`; `build/icon`, `src-tauri/icons/icon`; a site's `public/`, `static/` or `web/` `favicon`), small and about square; an SVG or an `.ico` isn't used.
 - **Colors** are given so that up to eight projects each have their own, and a project keeps its color as others come.
 - Not on the phone.

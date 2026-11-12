@@ -8,7 +8,9 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:nushi/arrangement.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
+import 'package:nushi/tile_images.dart';
 import 'package:nushi/tile_look.dart';
+import 'package:nushi/tile_picture.dart';
 
 /// What the app remembers across launches, in `app.json` in the data folder:
 /// whether the details panel shows (its toolbar button), which of its widgets
@@ -181,17 +183,31 @@ final projectTiles = Pref<Map<String, TileLook>>(
 );
 
 /// Gives [folder]'s tile [look]; an empty one puts it back as it is by
-/// itself.
-void setProjectTile(String folder, TileLook look) => projectTiles.value = {
-  ...{...projectTiles.value}..remove(folder),
-  if (!look.isEmpty) folder: look,
-};
+/// itself. The stored image it had, if [look] has another or none, is
+/// deleted.
+void setProjectTile(String folder, TileLook look) {
+  _dropImage(projectTiles.value[folder], unless: look.image);
+  projectTiles.value = {
+    ...{...projectTiles.value}..remove(folder),
+    if (!look.isEmpty) folder: look,
+  };
+}
+
+/// Deletes [look]'s stored image, [unless] it's the one still wanted.
+void _dropImage(TileLook? look, {String unless = ''}) {
+  final image = look?.image ?? '';
+  if (image.isEmpty || image == unless) return;
+  dropTileImage(image);
+  forgetPicture(image);
+}
 
 /// Takes [folder] out of the sidebar's projects, and with it its place
-/// among them, its collapse, its chats' order and its tile; the sidebar
+/// among them, its collapse, its chats' order and its tile (its stored
+/// image deleted); the sidebar
 /// narrowed to it shows all again: one save.
 void forgetProject(String folder) {
   if (sidebarProject.value == folder) sidebarProject.value = null;
+  _dropImage(projectTiles.value[folder]);
   projectTiles.value = {...projectTiles.value}..remove(folder);
   sidebarProjects.value = {...sidebarProjects.value}..remove(folder);
   sidebarOrder.value = [...sidebarOrder.value.where((f) => f != folder)];

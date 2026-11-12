@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,7 +10,9 @@ import 'package:nushi/project_rail.dart';
 import 'package:nushi/project_tile.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/tile_images.dart';
 import 'package:nushi/tile_look.dart';
+import 'package:nushi/tile_picture.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
@@ -35,13 +38,37 @@ void main() {
         viewport(tester, Size(width, 900), brightness: brightness);
         paneWidths.value = {};
         sidebarProjects.value = {'/Users/me/zeta'};
-        projectTiles.value = {cappy: const TileLook(mark: 'CR', color: 'teal')};
+        // A mark and a color, an image of the user's own, an animated
+        // one (at rest: its first frame), and a repository's icon.
+        if (tileImagesDir.existsSync()) {
+          tileImagesDir.deleteSync(recursive: true);
+        }
+        final photo = keepTileImage((
+          bytes: await photoPng(tester, width: 1200, height: 800),
+          kind: 'png',
+        ));
+        final gif = keepTileImage((bytes: animatedGif(), kind: 'gif'));
+        addTearDown(() {
+          dropTileImage(photo);
+          dropTileImage(gif);
+        });
+        projectTiles.value = {
+          cappy: const TileLook(mark: 'CR', color: 'teal'),
+          notes: TileLook(image: photo),
+          attic: TileLook(image: gif),
+        };
         final fake = FakeDaemon(arrangeChats())
           ..projectIcons[garden] = await iconPng(tester);
         final d = await fake.connect(tester);
         await tester.pumpWidget(NushiApp(daemon: d));
         await tester.pump(const Duration(seconds: 1));
         await decodeImages(tester);
+        await untilReal(
+          tester,
+          () => tester
+              .stateList<TilePictureViewState>(find.byType(TilePictureView))
+              .every((s) => s.decoded),
+        );
         expectTextInside(tester, width);
         await render(tester, find.byType(NushiApp), 'tiles_$name');
         // No rail: New chat has the sidebar's width, and each project's
@@ -73,6 +100,25 @@ void main() {
         await tester.pump();
         expectTextInside(tester, width);
         await render(tester, find.byType(NushiApp), 'tiles_dialog_$name');
+        // With an image picked.
+        final pick = pickTileImage;
+        addTearDown(() => pickTileImage = pick);
+        pickTileImage = () async => XFile(tileImageFile(photo)!.path);
+        await tester.tap(find.widgetWithText(Button, 'Choose image…'));
+        await tester.pump();
+        await untilReal(
+          tester,
+          () =>
+              find.widgetWithText(Button, 'Remove image').evaluate().isNotEmpty,
+        );
+        await untilReal(
+          tester,
+          () => tester
+              .stateList<TilePictureViewState>(find.byType(TilePictureView))
+              .every((s) => s.decoded),
+        );
+        expectTextInside(tester, width);
+        await render(tester, find.byType(NushiApp), 'tiles_dialog_image_$name');
         await tester.tap(find.widgetWithText(Button, 'Save'));
         for (var i = 0; i < 4; i++) {
           await tester.pump(const Duration(milliseconds: 300));

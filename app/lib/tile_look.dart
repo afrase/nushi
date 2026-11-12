@@ -10,13 +10,13 @@ import 'package:nushi/fnv.dart';
 /// a chat's colors are (`ChatColor`).
 const tileColorCount = 8;
 
-/// What the user set for a project's tile in Change tile…: a [mark] (an
-/// emoji, or one or two characters; '' for none) and a [color] (a
-/// `ChatColor`'s name; '' for none). Either wins over the repository's
-/// icon. Kept by folder in `projectTiles`: the user's data, never a hex,
-/// so each theme draws the color its own way.
+/// What the user set for a project's tile in Change tile…: an [image] of
+/// their own, a [mark] (an emoji, or one or two characters; '' for none)
+/// and a [color] (a `ChatColor`'s name; '' for none). Any of them wins
+/// over the repository's icon. Kept by folder in `projectTiles`: the
+/// user's data, never a hex, so each theme draws the color its own way.
 class TileLook {
-  const new({this.mark = '', this.color = ''});
+  const new({this.mark = '', this.color = '', this.image = ''});
 
   /// [saved] as `app.json` has it; null when it isn't one, or sets
   /// nothing.
@@ -31,6 +31,10 @@ class TileLook {
         final String c => c,
         _ => '',
       },
+      image: switch (saved['image']) {
+        final String i when storedTileImage.hasMatch(i) => i,
+        _ => '',
+      },
     );
     return look.isEmpty ? null : look;
   }
@@ -38,15 +42,26 @@ class TileLook {
   final String mark;
   final String color;
 
+  /// The user's own image for the tile: the name of Nushi's copy of it in
+  /// its data folder's `tiles` (`tile_images.dart`), never a path; '' for
+  /// none. It comes before the mark.
+  final String image;
+
   /// Whether it sets nothing: the tile is then the repository's icon or
   /// the initials.
-  bool get isEmpty => mark.isEmpty && color.isEmpty;
+  bool get isEmpty => mark.isEmpty && color.isEmpty && image.isEmpty;
 
   Map<String, Object?> toJson() => {
     if (mark.isNotEmpty) 'mark': mark,
     if (color.isNotEmpty) 'color': color,
+    if (image.isNotEmpty) 'image': image,
   };
 }
+
+/// What a stored tile image is called: 32 hex digits Nushi made up and
+/// the kind's ending. A name of any other shape (a hand-edited `app.json`)
+/// is no image: nothing outside `tiles` is ever read or deleted by name.
+final storedTileImage = RegExp(r'^[0-9a-f]{32}\.(png|jpg|gif|webp)$');
 
 /// [text] as a tile's mark: trimmed, its first two characters as a reader
 /// counts them (an emoji of several code points is one).

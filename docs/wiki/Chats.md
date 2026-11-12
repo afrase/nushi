@@ -24,6 +24,14 @@ To change a project's tile:
 2. Pick **Change tile…**.
 3. Type an emoji or one or two letters, pick a color, and click **Save**. **Reset** puts the tile back.
 
+To use a picture of your own:
+
+1. Right-click the project's name and pick **Change tile…**.
+2. Click **Choose image…** and pick a PNG, JPEG, GIF or WebP file (up to 16 MB).
+3. Click **Save**.
+
+A GIF plays while the pointer is on the tile. To take the picture off, open **Change tile…** again and click **Remove image**, then **Save**. Nushi keeps its own copy of the picture, so the file you picked can be moved or deleted.
+
 To add a project before it has a chat, click the Arrange button at the top of the sidebar, pick **Add project…** and pick its folder.
 
 ## See one project's chats
