@@ -20,7 +20,8 @@ List<ChatState> pinnedChats(Daemon daemon) =>
 final railFits = ValueNotifier<bool>(true);
 
 /// Whether the sidebar has its project rail (ADR 0112): arranged by
-/// project, the Arrange menu's Project rail on, and room for it.
+/// project, Settings › Appearance's Project rail on (off at first), and
+/// room for it.
 bool get railShows =>
     sidebarGroupBy.value == GroupBy.project &&
     projectRail.value &&

@@ -15,13 +15,14 @@ import 'package:nushi/tile_look.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
-import 'project_rail_fixture.dart';
+import 'project_tile_fixture.dart';
 import 'sidebar_fixture.dart';
 
-// The project rail (ADR 0112): its tiles and their order, narrowing the
-// sidebar to a project, the badge, Add project…, the Arrange menu's row,
-// a header's small tile and Change tile…. The whole window is in
-// `project_rail_window_test.dart`.
+// The project rail (ADR 0112), which Settings › Appearance turns on: its
+// tiles and their order, narrowing the sidebar to a project, the badge,
+// Add project…; and with it off, the sidebar as it was with a header's
+// small tile, Change tile… and the Arrange menu's Add project… row. The
+// whole window is in `project_rail_window_test.dart`.
 
 /// The rail's tile of the project called [name], or of the rail's own
 /// ("All projects", "Add project…").
@@ -70,6 +71,8 @@ String? _picked(WidgetTester tester) => tester
 
 void main() {
   setUpAll(loadFonts);
+  // The rail is off at first (Settings › Appearance): on, for its tests.
+  setUp(() => projectRail.value = true);
 
   testWidgets('the rail has All projects, the projects in the sidebar’s '
       'order, kept empty ones too, and Add project…', (tester) async {
@@ -288,64 +291,107 @@ void main() {
     d.dispose();
   });
 
-  testWidgets('the Arrange menu’s Project rail hides it and shows it; '
-      'hidden, or under another grouping, the sidebar shows every '
-      'project', (tester) async {
+  testWidgets('with the rail off the sidebar is as it was, with the '
+      'headers’ tiles: no rail, every project, a stored pick ignored', (
+    tester,
+  ) async {
+    projectRail.value = false;
+    sidebarProject.value = cappy;
+    final (d, _) = await arrangedSidebar(tester);
+    expect(find.byType(ProjectRail), findsNothing);
+    expect(railShows, isFalse);
+    expect(shownProject, isNull);
+    expect(_chats(tester), hasLength(6));
+    expect([for (final c in chatOrder(d)) c.id], hasLength(6));
+    // New chat and the rows have the sidebar's whole width.
+    final sidebar = tester.getRect(find.byType(Sidebar));
+    final newChat = tester.getRect(find.byType(WideButton));
+    expect(newChat.left, sidebar.left + Sidebar.start);
+    expect(newChat.right, sidebar.right - Sidebar.end);
+    expect(find.byType(FolderTile), findsNWidgets(5));
+    // A chat of another project opening moves no pick.
+    d.select('d');
+    await tester.pumpAndSettle();
+    expect(sidebarProject.value, cappy);
+    expect(_chats(tester), hasLength(6));
+    d.dispose();
+  });
+
+  testWidgets('turned on and off, the rail comes and goes, the pick with '
+      'it; the sidebar’s buttons and edge stay; none by Date', (tester) async {
     sidebarProject.value = cappy;
     final (d, _) = await arrangedSidebar(tester);
     final arrange = find.byTooltip(RegExp('^Arrange the sidebar'));
-    Future<void> pick(List<String> path) async {
-      await tester.tap(arrange);
-      await tester.pumpAndSettle();
-      for (final label in path) {
-        await tester.tap(
-          find
-              .byWidgetPredicate(
-                (w) =>
-                    w is Text &&
-                    switch (w.textSpan?.toPlainText() ?? w.data) {
-                      final t? => t == label || t.startsWith('$label   '),
-                      null => false,
-                    },
-              )
-              .last,
-        );
-        await tester.pumpAndSettle();
-      }
-    }
-
     expect(find.byType(ProjectRail), findsOneWidget);
     expect(_chats(tester), ['Cap the rates']);
     final button = tester.getRect(arrange);
     final withRail = tester.getRect(find.byType(WideButton));
 
-    await pick(['Project rail']);
-    expect(projectRail.value, isFalse);
-    expect(readSaved()['projectRail'], isFalse);
+    projectRail.value = false;
+    await tester.pumpAndSettle();
+    expect(readSaved()['projectRailOn'], isFalse);
     expect(find.byType(ProjectRail), findsNothing);
     expect(_chats(tester), hasLength(6));
-    // The button that hid it is where it was, and so is the sidebar's
-    // edge; the chats take the rail's room.
     expect(tester.getRect(arrange), button);
     final without = tester.getRect(find.byType(WideButton));
     expect(without.right, withRail.right);
     expect(without.left, Sidebar.start);
-    // A header keeps its small tile.
-    expect(find.byType(FolderTile), findsNWidgets(5));
 
-    await pick(['Project rail']);
-    expect(projectRail.value, isTrue);
+    projectRail.value = true;
+    await tester.pumpAndSettle();
     expect(find.byType(ProjectRail), findsOneWidget);
     expect(_chats(tester), ['Cap the rates']);
 
-    // The rail is the projects': none by Date, and the row says so.
-    await pick(['Group by', 'Date']);
+    // The rail is the projects': none by Date.
+    sidebarGroupBy.value = GroupBy.date;
+    await tester.pumpAndSettle();
     expect(find.byType(ProjectRail), findsNothing);
     expect(_chats(tester), hasLength(6));
     expect(tester.getRect(arrange), button);
+    d.dispose();
+  });
+
+  testWidgets('the Arrange menu’s Add project… adds the folder picked, '
+      'with the rail off; by Project only', (tester) async {
+    projectRail.value = false;
+    final before = chooseProjectFolder;
+    addTearDown(() => chooseProjectFolder = before);
+    chooseProjectFolder = () async => '/Users/me/fresh-start';
+    final (d, fake) = await arrangedSidebar(tester);
+    final arrange = find.byTooltip(RegExp('^Arrange the sidebar'));
+    await tester.tap(arrange);
+    await tester.pumpAndSettle();
+    expect(find.text('Project rail'), findsNothing);
+    await tester.tap(find.text('Add project…'));
+    await tester.pumpAndSettle();
+    expect(sidebarProjects.value, contains('/Users/me/fresh-start'));
+    expect(fake.started, isEmpty);
+    // Its group, empty, with its tile.
+    expect(
+      find.descendant(
+        of: find.byType(Sidebar),
+        matching: find.text('fresh-start'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(FolderTile), findsNWidgets(6));
+
+    sidebarGroupBy.value = GroupBy.date;
+    await tester.pumpAndSettle();
     await tester.tap(arrange);
     await tester.pumpAndSettle();
     expect(find.byTooltip('Only when grouped by Project'), findsOneWidget);
+    expect(
+      tester
+          .widget<MenuItemButton>(
+            find.ancestor(
+              of: find.text('Add project…'),
+              matching: find.byType(MenuItemButton),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
     d.dispose();
   });
 

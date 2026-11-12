@@ -14,12 +14,22 @@ import 'package:nushi/widgets.dart';
 Future<String?> Function() chooseProjectFolder = () =>
     getDirectoryPath(confirmButtonText: 'Add');
 
+/// Add project…, the Arrange menu's and the rail's: adds a folder picked
+/// in the system's panel to the sidebar's projects, with no chat; its
+/// group's + starts the first.
+Future<void> addProject() async {
+  final folder = await chooseProjectFolder();
+  if (folder != null && folder.isNotEmpty) keepProject(folder);
+}
+
 /// The project rail (ADR 0112): a narrow column of tiles at the sidebar's
 /// left while it's arranged by project. All projects, a short hairline,
 /// a tile for each of [folders] (the sidebar's projects, in its order),
-/// then Add project…, which adds a folder picked to the sidebar's
-/// projects without starting a chat. A click on a project's tile narrows
-/// the sidebar to it ([sidebarProject]); the one picked wears a ring. A
+/// then Add project… ([addProject]). It's there only once Settings ›
+/// Appearance's Project rail is on ([projectRail]; off at first: the
+/// owner, having tried it, liked the tiles in the list, not the rail).
+/// A click on a project's tile narrows the sidebar to it
+/// ([sidebarProject]); the one picked wears a ring. A
 /// tile says its project's name and path in its tooltip, counts the
 /// project's chats that need you in a badge, and has the project's menu
 /// ([entries]) on a right-click. It scrolls when the tiles don't fit.
@@ -61,11 +71,6 @@ class ProjectRail extends StatelessWidget {
   int _needs(String folder) => daemon.chats.values
       .where((c) => !c.archived && !c.scratch && c.home == folder && c.waiting)
       .length;
-
-  Future<void> _add() async {
-    final folder = await chooseProjectFolder();
-    if (folder != null && folder.isNotEmpty) keepProject(folder);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +137,7 @@ class ProjectRail extends StatelessWidget {
             slot(
               RailTile(
                 tooltip: 'Add project…',
-                onTap: _add,
+                onTap: addProject,
                 child: CustomPaint(
                   painter: _DashedEdge(t.textMuted),
                   child: SizedBox.square(

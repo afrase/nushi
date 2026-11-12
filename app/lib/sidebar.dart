@@ -39,8 +39,8 @@ import 'package:nushi/window_drag.dart';
 /// picks what rows show ([arrangeSidebar]). Archived chats are in a
 /// collapsed group at the bottom. Arranged by project, it has the project
 /// rail at its left ([ProjectRail], ADR 0112; while it's wide enough for
-/// one and the Arrange menu's Project rail is on), whose tiles narrow all
-/// of these to one project's chats. While ⌘ is held
+/// one and Settings' Project rail is on; off at first), whose tiles
+/// narrow all of these to one project's chats. While ⌘ is held
 /// alone, the first nine chats shown (archived left out) show the number
 /// ⌘ opens them with. Its header's [SidebarButton] hides it ([sidebarHidden]);
 /// `main.dart` then doesn't build it, so it asks nothing while it's hidden.

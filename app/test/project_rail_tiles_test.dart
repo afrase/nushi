@@ -10,7 +10,7 @@ import 'package:nushi/tile_look.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
-import 'project_rail_fixture.dart';
+import 'project_tile_fixture.dart';
 
 // The project rail's tiles (ADR 0112), each form of them in one picture.
 // The rail in the sidebar is in `project_rail_test.dart`.

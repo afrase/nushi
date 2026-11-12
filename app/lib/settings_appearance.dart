@@ -45,7 +45,8 @@ class _Preview extends StatelessWidget {
 }
 
 /// The appearance: Light, Dark, or as the system is; remembered (the View
-/// menu's items set it too). And the chat's width (ADR 0074).
+/// menu's items set it too). And the chat's width (ADR 0074), and whether
+/// the sidebar has its project rail (ADR 0112; off at first).
 class _Appearance extends StatelessWidget {
   const new();
 
@@ -92,6 +93,17 @@ class _Appearance extends StatelessWidget {
                 ),
               ],
               label: Text(full ? 'Full width' : 'Centered'),
+            ),
+          ),
+        ),
+        ValueListenableBuilder(
+          valueListenable: projectRail,
+          builder: (context, on, _) => SettingsRow(
+            'Project rail',
+            description: 'A column of project tiles beside the chats.',
+            control: SettingsSwitch(
+              value: on,
+              onChanged: (v) => projectRail.value = v,
             ),
           ),
         ),

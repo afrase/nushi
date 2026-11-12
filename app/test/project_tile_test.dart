@@ -11,7 +11,7 @@ import 'package:nushi/tile_look.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
-import 'project_rail_fixture.dart';
+import 'project_tile_fixture.dart';
 
 // A project's tile (ADR 0112): what it shows, in which order, and its
 // colors; the icons asked of the daemon once.

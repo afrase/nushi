@@ -12,7 +12,7 @@ import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
-import 'project_rail_fixture.dart';
+import 'project_tile_fixture.dart';
 
 // Change tile… (ADR 0112): the dialog that sets a project's tile.
 

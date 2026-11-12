@@ -14,10 +14,11 @@ import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
-import 'project_rail_fixture.dart';
+import 'project_tile_fixture.dart';
 import 'sidebar_fixture.dart';
 
-// The project rail in the whole window, to look at:
+// The sidebar's project tiles in the whole window, and the project rail
+// turned on, to look at:
 // `make renders TEST=test/project_rail_window_test.dart`.
 
 void main() {
@@ -30,9 +31,59 @@ void main() {
   for (final width in [1700.0, 720.0]) {
     for (final brightness in Brightness.values) {
       final name = '${width.toInt()}_${brightness.name}';
+      testWidgets('the window with the projects’ tiles, $name', (tester) async {
+        viewport(tester, Size(width, 900), brightness: brightness);
+        paneWidths.value = {};
+        sidebarProjects.value = {'/Users/me/zeta'};
+        projectTiles.value = {cappy: const TileLook(mark: 'CR', color: 'teal')};
+        final fake = FakeDaemon(arrangeChats())
+          ..projectIcons[garden] = await iconPng(tester);
+        final d = await fake.connect(tester);
+        await tester.pumpWidget(NushiApp(daemon: d));
+        await tester.pump(const Duration(seconds: 1));
+        await decodeImages(tester);
+        expectTextInside(tester, width);
+        await render(tester, find.byType(NushiApp), 'tiles_$name');
+        // No rail: New chat has the sidebar's width, and each project's
+        // header its tile.
+        expect(find.byType(ProjectRail), findsNothing);
+        final sidebar = tester.getRect(find.byType(Sidebar));
+        expect(
+          tester.getRect(find.byType(WideButton)).left,
+          sidebar.left + Sidebar.start,
+        );
+        expect(find.byType(FolderTile), findsNWidgets(6));
+
+        // Change tile…, from a header's menu.
+        await tester.tap(
+          find.descendant(
+            of: find.byType(Sidebar),
+            matching: find.text('garden'),
+          ),
+          buttons: kSecondaryMouseButton,
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        await render(tester, find.byType(NushiApp), 'tiles_menu_$name');
+        await tester.tap(find.text('Change tile…'));
+        for (var i = 0; i < 4; i++) {
+          await tester.pump(const Duration(milliseconds: 300));
+        }
+        await tester.enterText(find.byType(TextField), 'G7');
+        await tester.tap(find.byTooltip('Amber'));
+        await tester.pump();
+        expectTextInside(tester, width);
+        await render(tester, find.byType(NushiApp), 'tiles_dialog_$name');
+        await tester.tap(find.widgetWithText(Button, 'Save'));
+        for (var i = 0; i < 4; i++) {
+          await tester.pump(const Duration(milliseconds: 300));
+        }
+        await closeView(tester, d);
+      }, variant: macOS);
+
       testWidgets('the window with the project rail, $name', (tester) async {
         viewport(tester, Size(width, 900), brightness: brightness);
         paneWidths.value = {};
+        projectRail.value = true;
         sidebarProjects.value = {'/Users/me/zeta'};
         projectTiles.value = {cappy: const TileLook(mark: 'CR', color: 'teal')};
         final fake = FakeDaemon(arrangeChats())

@@ -14,33 +14,28 @@ The shortcuts below are the Mac's. On Linux, use Ctrl where the Mac uses ⌘.
 
 The sidebar lists your chats by project. Click one to open it.
 
-## See one project's chats
+## Tell projects apart
 
-The rail of square tiles at the sidebar's left has one tile for each project.
+Each project in the sidebar has a small square tile before its name. It shows the repository's own icon when it has one (an `icon.png` or `logo.png`, an app's icon, a site's favicon), and otherwise the folder's initials on a color.
 
-1. Click a project's tile. The sidebar shows only that project's chats.
-2. Click **All projects**, the tile at the top, to see every project again.
+To change a project's tile:
 
-A number on a tile counts that project's chats that need you. Hover over a tile for the project's name and folder.
-
-To add a project before it has a chat, click the dashed **Add project…** tile at the bottom and pick its folder.
-
-To change what a project's tile shows:
-
-1. Right-click the tile (or the project's name in the list).
+1. Right-click the project's name.
 2. Pick **Change tile…**.
 3. Type an emoji or one or two letters, pick a color, and click **Save**. **Reset** puts the tile back.
 
-A tile you haven't changed shows the repository's own icon when it has one (an `icon.png` or `logo.png`, an app's icon, a site's favicon), and otherwise the folder's initials.
+To add a project before it has a chat, click the Arrange button at the top of the sidebar, pick **Add project…** and pick its folder.
 
-To hide the rail, click the Arrange button at the top of the sidebar and pick **Project rail**; pick it again to bring it back. The rail also goes when the sidebar is dragged narrow, and it isn't there while the sidebar is grouped by something other than Project.
+## See one project's chats
 
-A project stays in the sidebar when its last chat is archived or deleted, with **No chats** under its name, so its **+** starts the next chat there. To take an empty project out:
+The project rail is a column of larger tiles at the sidebar's left, one for each project. It's off at first.
 
-1. Right-click the project's name.
-2. Pick **Remove from sidebar**.
+1. Open **Settings**, then **Appearance**.
+2. Turn on **Project rail**.
+3. Click a project's tile. The sidebar shows only that project's chats.
+4. Click **All projects**, the tile at the top, to see every project again.
 
-It comes back when you start a chat in that folder again. **Remove from sidebar** is greyed out while the project still has a chat that isn't archived.
+A number on a tile counts that project's chats that need you. Hover over a tile for the project's name and folder. The rail goes when the sidebar is dragged narrow, and it isn't there while the sidebar is grouped by something other than Project.
 
 ## Send a message
 

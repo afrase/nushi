@@ -1,0 +1,34 @@
+# 0112. Project tiles in the sidebar's list; a rail of them as an option
+
+Status: accepted, 2026-11-12; amended the same day, after the owner tried v0.30.0-beta.1.
+
+## Context
+The redesign's mock (ADR 0111) has a Projects page: a narrow rail of square tiles beside the chats, one a project, and the same tile small before each project's name. ADR 0111 left it as a separate decision. The owner approved it (2026-11-12), with one complaint about the mock itself: same-shaped two-letter squares look alike, so a tile has to tell projects apart by more than two letters.
+
+It was built whole and tried as v0.30.0-beta.1, the rail on at first. The owner, the same day: "I'm playing with the project view and I'm not really liking it. I like the icons on the full list though." Then: "Maybe have this project view be a config toggle", and "You can turn that side view off and on from the config."
+
+## Decision
+- **Every project has a tile, 18 square, before its name in its header in the sidebar's list.** This is the default, and all there is until the rail is turned on: the sidebar is otherwise as it was, the chats at its full width.
+- **What a tile shows**, first of: what the user set in **Change tile…** (the project's header's menu: an emoji or up to two characters, and one of the eight chat colors; either without the other); the repository's own icon; the folder's initials (the first letters of its first two words, or a word's first two) on a color. Colors are `Tokens.avatars`, as a chat's color is, kept by name, never a hex. A project with no chosen color takes the one its path names unless a project that joined the sidebar before it has it, then the next free: up to eight projects all differ, and a project's color changes only if an earlier one is removed.
+- **The repository's icon comes from the daemon** (`GetProjectIcon`, API 116; `internal/projecticon`): the app never reads a project's files. Only these paths, in this order, each as `.png` then `.jpg`: `icon`, `logo`, `.github/icon`, `.github/logo`, `assets/icon`, `assets/logo`, `docs/images/logo`; then the PNG with the most pixels in `Assets.xcassets/AppIcon.appiconset`, `macos/Runner/…` or `app/macos/Runner/…` of the same; then `build/icon`, `src-tauri/icons/icon`, `public/icon`, `public/logo`, `public/favicon`, `static/favicon`, `web/favicon`, `app/web/favicon`. A file is taken only if it's a regular file inside the folder (no link followed), 256 KiB at most, a PNG or JPEG by its first bytes, 32 to 1,024 pixels a side and no more than half again as wide as high; else the next path is tried. The app asks once per folder and keeps the answer until it quits. The limits are in `docs/security.md`.
+- **Add project…** is a row of the Arrange menu, under New section: it adds a folder picked in the system's panel to the sidebar's projects (`keepProject`) and starts no chat. Under another grouping it's off, as an empty project shows only among the projects.
+- **The project rail is an option, off at first**: Settings › Appearance › **Project rail** (`projectRail`, kept as `projectRailOn`). The beta saved `projectRail: true` for everyone, touched or not, so that key is ignored and dropped by the next save: who had the beta gets the new default.
+- **With it on**, a column 48 wide stands at the left of the sidebar's chats, under its top strip: **All projects**, a short hairline, a 38-square tile for each project in the sidebar's order (kept empty ones too), then a dashed **Add project…**; the first is level with New chat, and it scrolls when they don't fit. A project's tile narrows the sidebar to that project (`sidebarProject`): its group, its pinned chats, its archived ones, and of each section the chats that are its, a section with none of them and "No folder" left out; ⌘1–⌘9 and ⌘[ ⌘] go through what shows. The tile picked wears a ring of `accentInk`, 2 wide and 2 off the tile, and a tile counts its project's chats that need you in a badge. When a chat of another project opens or starts, the sidebar goes to that project, so the open chat's row is never left out. It shows only while the sidebar is arranged by project and at least 250 wide; else, and with the rail off, a stored pick narrows nothing.
+- **The sidebar keeps its width.** The rail takes 54 of it from the chats: turning it on or off moves neither the sidebar's edge nor the buttons in its strip (ADR 0111: a toggle never moves when pressed).
+
+## Consequences
+- A project's header is as high as it was; its name starts 24 further in, after the tile. "No chats" starts where the tile does.
+- A daemon older than API 116 answers no icon; tiles show initials until it's replaced, and the app asks again once it's back.
+- No SVG and no ICO: the app draws neither without a new dependency, and an SVG is a document someone else wrote. A repository with only a `favicon.ico` or a `logo.svg` gets initials.
+- The daemon doesn't know the sidebar's projects (the app keeps them), so it can't check the folder against them: the call is the Mac's only (`macOnly`, and the handler checks for the Mac's socket), as the calls that read any folder's git state are.
+- With the rail on at the sidebar's first width (260), the chats' rows are 54 narrower.
+- The phone has no tiles and no rail: its list is one column of every project.
+
+## Alternatives considered
+- **The rail on at first** (this page until the owner tried it): the owner didn't like the view, and liked the tiles in the list.
+- **The rail removed**: the owner asked for it as a switch instead.
+- **Its switch in the Arrange menu** (the beta's "Project rail" row): the owner wanted it in Settings, and one place for it is enough.
+- Widening the sidebar by the rail's width: its edge, and Arrange and the hide button with it, would move each time the rail came or went.
+- Keeping the rail at any width: under 250 the rows beside it are too narrow to read a title.
+- A color from the path alone: with five projects two often shared one. In the list's order rather than the order joined: dragging a project would recolor others.
+- Asking the daemon for the kept projects' icons only: it would need the app's list sent to it first, for a call the Mac alone can make anyway.

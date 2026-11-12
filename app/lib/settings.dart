@@ -33,8 +33,9 @@ import 'package:nushi/tile_look.dart';
 /// what reply cards ask the agent, and the newer release whose toast was
 /// dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree, nor whether a subagent's pane
-/// shows wide: an older `worktrees` or `subagentWide` key is ignored, and
-/// dropped by the next save.
+/// shows wide, nor a beta's `projectRail`: an older `worktrees`,
+/// `subagentWide` or `projectRail` key is ignored, and dropped by the
+/// next save.
 final Pref<bool> showDetails = _plain('details', true);
 
 /// The details panel's widgets collapsed, by title.
@@ -155,11 +156,17 @@ void keepProject(String folder) {
 }
 
 /// Whether the sidebar has its project rail, while it's arranged by
-/// project (the Arrange menu's Project rail; ADR 0112).
-final Pref<bool> projectRail = _plain('projectRail', true);
+/// project (Settings › Appearance's Project rail; ADR 0112): off at
+/// first. Kept as `projectRailOn`: the beta that had the rail on at first
+/// saved `projectRail` as true for everyone, touched or not, so that key
+/// says nothing of what the user chose; it's ignored, and dropped by the
+/// next save.
+final Pref<bool> projectRail = _plain('projectRailOn', false);
 
 /// The project the sidebar is narrowed to, by folder path: the tile
-/// picked in the project rail; null for All projects.
+/// picked in the project rail; null for All projects. It counts only
+/// while the rail shows (`shownProject`): with the rail off the sidebar
+/// shows every project, whatever this says.
 final Pref<String?> sidebarProject = _plain('sidebarProject', null);
 
 /// What the user set for each project's tile (Change tile…), by folder
@@ -486,9 +493,10 @@ Map<String, Object?> readSaved() {
 }
 
 /// Keys an older app saved that mean nothing now, dropped by the next
-/// save: `worktrees` (new chats no longer remember one) and `subagentWide`
-/// (a subagent's pane is dragged as wide as it's wanted).
-const _dropped = {'worktrees', 'subagentWide'};
+/// save: `worktrees` (new chats no longer remember one), `subagentWide`
+/// (a subagent's pane is dragged as wide as it's wanted) and `projectRail`
+/// (a beta's, true for everyone; [projectRail] is `projectRailOn`).
+const _dropped = {'worktrees', 'subagentWide', 'projectRail'};
 
 var _saveDue = false;
 
