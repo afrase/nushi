@@ -8,7 +8,7 @@ The redesign's mock (ADR 0111) has a Projects page: a narrow rail of square tile
 It was built whole and tried as v0.30.0-beta.1, the rail on at first. The owner, the same day: "I'm playing with the project view and I'm not really liking it. I like the icons on the full list though." Then: "Maybe have this project view be a config toggle", and "You can turn that side view off and on from the config."
 
 ## Decision
-- **Every project has a tile, 18 square, before its name in its header in the sidebar's list.** This is the default, and all there is until the rail is turned on: the sidebar is otherwise as it was, the chats at its full width.
+- **Every project has a tile, 20 square, before its name in its header in the sidebar's list.** This is the default, and all there is until the rail is turned on: the sidebar is otherwise as it was, the chats at its full width.
 - **What a tile shows**, first of: what the user set in **Change tile…** (the project's header's menu: an emoji or up to two characters, and one of the eight chat colors; either without the other); the repository's own icon; the folder's initials (the first letters of its first two words, or a word's first two) on a color. Colors are `Tokens.avatars`, as a chat's color is, kept by name, never a hex. A project with no chosen color takes the one its path names unless a project that joined the sidebar before it has it, then the next free: up to eight projects all differ, and a project's color changes only if an earlier one is removed.
 - **The repository's icon comes from the daemon** (`GetProjectIcon`, API 116; `internal/projecticon`): the app never reads a project's files. Only these paths, in this order, each as `.png` then `.jpg`: `icon`, `logo`, `.github/icon`, `.github/logo`, `assets/icon`, `assets/logo`, `docs/images/logo`; then the PNG with the most pixels in `Assets.xcassets/AppIcon.appiconset`, `macos/Runner/…` or `app/macos/Runner/…` of the same; then `build/icon`, `src-tauri/icons/icon`, `public/icon`, `public/logo`, `public/favicon`, `static/favicon`, `web/favicon`, `app/web/favicon`. A file is taken only if it's a regular file inside the folder (no link followed), 256 KiB at most, a PNG or JPEG by its first bytes, 32 to 1,024 pixels a side and no more than half again as wide as high; else the next path is tried. The app asks once per folder and keeps the answer until it quits. The limits are in `docs/security.md`.
 - **Add project…** is a row of the Arrange menu, under New section: it adds a folder picked in the system's panel to the sidebar's projects (`keepProject`) and starts no chat. Under another grouping it's off, as an empty project shows only among the projects.
@@ -17,7 +17,7 @@ It was built whole and tried as v0.30.0-beta.1, the rail on at first. The owner,
 - **The sidebar keeps its width.** The rail takes 54 of it from the chats: turning it on or off moves neither the sidebar's edge nor the buttons in its strip (ADR 0111: a toggle never moves when pressed).
 
 ## Consequences
-- A project's header is as high as it was; its name starts 24 further in, after the tile. "No chats" starts where the tile does.
+- A project's header is as high as it was; its name starts 26 further in, after the tile. "No chats" starts where the tile does.
 - A daemon older than API 116 answers no icon; tiles show initials until it's replaced, and the app asks again once it's back.
 - No SVG and no ICO: the app draws neither without a new dependency, and an SVG is a document someone else wrote. A repository with only a `favicon.ico` or a `logo.svg` gets initials.
 - The daemon doesn't know the sidebar's projects (the app keeps them), so it can't check the folder against them: the call is the Mac's only (`macOnly`, and the handler checks for the Mac's socket), as the calls that read any folder's git state are.
@@ -28,6 +28,7 @@ It was built whole and tried as v0.30.0-beta.1, the rail on at first. The owner,
 - **The rail on at first** (this page until the owner tried it): the owner didn't like the view, and liked the tiles in the list.
 - **The rail removed**: the owner asked for it as a switch instead.
 - **Its switch in the Arrange menu** (the beta's "Project rail" row): the owner wanted it in Settings, and one place for it is enough.
+- The header's tile at 18, as the mock: at 20 its letters are a point larger and read better, and the header is no higher.
 - Widening the sidebar by the rail's width: its edge, and Arrange and the hide button with it, would move each time the rail came or went.
 - Keeping the rail at any width: under 250 the rows beside it are too narrow to read a title.
 - A color from the path alone: with five projects two often shared one. In the list's order rather than the order joined: dragging a project would recolor others.

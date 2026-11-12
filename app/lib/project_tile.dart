@@ -8,8 +8,11 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tile_look.dart';
 
 /// A project's tile (ADR 0112): a small rounded square that tells
-/// projects apart at a glance, 38 in the project rail and 18 before the
-/// project's name in its group's header. It shows, in this order: what
+/// projects apart at a glance, 20 before the project's name in its
+/// group's header, where every project has one, and 38 in the project
+/// rail and in Change tile…. (Tried at 18 in the header: 20 reads better
+/// now the header is the one place it always shows, and the header is no
+/// higher for it.) It shows, in this order: what
 /// the user set in Change tile… ([look]: a mark, an emoji or one or two
 /// characters, and a color, either without the other); else the
 /// repository's own [icon]; else the folder's initials ([name]) on
@@ -28,7 +31,7 @@ class ProjectTile extends StatelessWidget {
 
   /// The rail's size and a group header's.
   static const large = 38.0;
-  static const small = 18.0;
+  static const small = 20.0;
 
   final String name;
   final int color;
@@ -69,7 +72,7 @@ class ProjectTile extends StatelessWidget {
         style: theme
             .ui(
               t.monogramText,
-              // 12 in the rail, 9 in a header: two letters fill a
+              // 12 in the rail, 10 in a header: two letters fill a
               // small tile as far as they can and still be read.
               size: letters
                   ? (size > 24 ? size * 0.32 : size * 0.5)
