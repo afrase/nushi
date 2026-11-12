@@ -56,6 +56,27 @@ class _ChangeTileDialogState extends State<ChangeTileDialog> {
     super.dispose();
   }
 
+  /// As many characters as a tile shows, an emoji one. What's entered
+  /// into a full field takes the place of what was there (an emoji from a
+  /// picker over the two letters), where refusing it looked like a field
+  /// that takes no emoji.
+  static final _lettersOnly = RegExp(r'^[\p{L}\p{N}\s]*$', unicode: true);
+
+  static TextEditingValue _fit(TextEditingValue old, TextEditingValue now) {
+    if (now.text.trim().characters.length <= 2) return now;
+    final (from, to) = (old.selection.start, now.selection.end);
+    final entered = from >= 0 && to > from && to <= now.text.length
+        ? now.text.substring(from, to)
+        : now.text;
+    // A third letter is still refused: typing on doesn't wipe the two.
+    if (_lettersOnly.hasMatch(entered.trim())) return old;
+    final kept = tileMark(entered);
+    return TextEditingValue(
+      text: kept,
+      selection: TextSelection.collapsed(offset: kept.length),
+    );
+  }
+
   TileLook get _look =>
       TileLook(mark: tileMark(_mark.text), color: _color?.name ?? '');
 
@@ -103,12 +124,8 @@ class _ChangeTileDialogState extends State<ChangeTileDialog> {
                     decoration: const InputDecoration(
                       hintText: 'Emoji or two letters',
                     ),
-                    // As many characters as a tile shows, an emoji one.
-                    inputFormatters: [
-                      TextInputFormatter.withFunction(
-                        (old, now) =>
-                            now.text.trim().characters.length > 2 ? old : now,
-                      ),
+                    inputFormatters: const [
+                      TextInputFormatter.withFunction(_fit),
                     ],
                     onChanged: (_) => setState(() {}),
                     onSubmitted: (_) => _save(_look),

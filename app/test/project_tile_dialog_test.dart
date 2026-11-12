@@ -69,6 +69,30 @@ void main() {
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       '🌱x',
     );
+    // An emoji entered into a full field (a picker's, pasted or typed at
+    // the cursor) takes the letters' place instead of being refused.
+    final field = tester.widget<TextField>(find.byType(TextField)).controller!;
+    await tester.enterText(find.byType(TextField), 'ab');
+    field.selection = const TextSelection.collapsed(offset: 2);
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: 'ab🦊',
+        selection: TextSelection.collapsed(offset: 4),
+      ),
+    );
+    await tester.pump();
+    expect(field.text, '🦊');
+    // One of several code points (a flag, a family) is one character.
+    await tester.enterText(find.byType(TextField), '');
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '👩‍👩‍👧🇯🇵',
+        selection: TextSelection.collapsed(offset: 12),
+      ),
+    );
+    await tester.pump();
+    expect(field.text, '👩‍👩‍👧🇯🇵');
+    await tester.enterText(find.byType(TextField), '🌱x');
     await tester.tap(find.byTooltip('Violet'));
     await tester.pump();
     expect(preview().look.toJson(), {'mark': '🌱x', 'color': 'violet'});
