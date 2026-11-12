@@ -33,9 +33,6 @@ Widget _app(Tokens tokens, Daemon d, [void Function(BuildContext)? onGo]) =>
         ],
       ),
       tokens: tokens,
-      // No shimmer over the words: where it is depends on the clock, and a
-      // golden of it differed between machines.
-      still: true,
     );
 
 /// A daemon whose ping answers as [phase] says: 'old', 'gone' (none
@@ -71,6 +68,10 @@ void main() {
       await tester.pump();
       await tester.pump(DaemonBanner.slideFor);
       expect(find.text('Restarting the daemon…'), findsOneWidget);
+      // The slide at rest before the golden: a frame short of it the words
+      // sit a fraction of a pixel up, which CI's machine draws a shade
+      // apart from this Mac's.
+      await tester.pump(const Duration(milliseconds: 300));
       await expectLater(
         find.byType(DaemonBanner),
         matchesGoldenFile('goldens/daemon_banner_restarting_$name.png'),
