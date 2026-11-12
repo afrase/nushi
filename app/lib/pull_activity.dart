@@ -248,15 +248,18 @@ class _EntryState extends State<_Entry> {
     return _Gutter(
       login: c.author,
       bot: c.bot,
-      child: framed(
-        border: t.borderSubtle,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: cardBox(t),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              color: t.raised,
               padding: const EdgeInsets.fromLTRB(12, 5, 6, 5),
               constraints: const BoxConstraints(minHeight: 36),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: t.line)),
+              ),
               child: Row(
                 children: [
                   Expanded(

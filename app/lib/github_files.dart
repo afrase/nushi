@@ -154,7 +154,7 @@ class _GitHubFilesState extends State<GitHubFiles> {
     final withThreads = files.where(_open).length;
     return DecoratedBox(
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        border: Border(top: BorderSide(color: t.line)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -183,7 +183,8 @@ class _GitHubFilesState extends State<GitHubFiles> {
               ],
             ),
           ),
-          VerticalDivider(width: 1, color: t.borderSubtle),
+          // The list is on the pane itself and the diff a sunk block
+          // beside it, as in Changes (ADR 0111): no line between them.
           Expanded(child: file == null ? const SizedBox() : _diff(theme, file)),
         ],
       ),
@@ -202,36 +203,43 @@ class _GitHubFilesState extends State<GitHubFiles> {
     final t = theme.t;
     final threads = _threadsOf(f.path).where((x) => !x.resolved).length;
     final drafts = reviewDrafts(_ref).where((d) => d.path == f.path).length;
-    return Tap(
-      selected: f.path == _path,
-      onTap: () => setState(() {
-        _path = f.path;
-        _writing = null;
-      }),
-      tooltip: f.oldPath.isEmpty ? f.path : '${f.oldPath} → ${f.path}',
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              f.path.split('/').last,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.ui(
-                f.status == 'deleted' ? t.textMuted : t.text,
-                size: 12.5,
+    // Its fill is set in from the pane's edges, as a row's in the sidebar
+    // and the Changes tree; the name stays where the group's label is.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Tap(
+        selected: f.path == _path,
+        fill: f.path == _path ? t.accentSoft : null,
+        onTap: () => setState(() {
+          _path = f.path;
+          _writing = null;
+        }),
+        tooltip: f.oldPath.isEmpty ? f.path : '${f.oldPath} → ${f.path}',
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                f.path.split('/').last,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.ui(
+                  f.status == 'deleted' ? t.textMuted : t.text,
+                  size: 12.5,
+                  weight: f.path == _path ? FontWeight.w600 : null,
+                ),
               ),
             ),
-          ),
-          if (threads > 0) ...[
-            Icon(Icons.forum_outlined, size: 12, color: t.needs),
-            Text(' $threads ', style: theme.ui(t.needs, size: 11.5)),
+            if (threads > 0) ...[
+              Icon(Icons.forum_outlined, size: 12, color: t.needs),
+              Text(' $threads ', style: theme.ui(t.needs, size: 11.5)),
+            ],
+            if (drafts > 0)
+              Text('✎$drafts ', style: theme.ui(t.link, size: 11.5)),
+            Text('+${f.added}', style: theme.ui(t.done, size: 11.5)),
+            Text(' −${f.removed}', style: theme.ui(t.crashed, size: 11.5)),
           ],
-          if (drafts > 0)
-            Text('✎$drafts ', style: theme.ui(t.link, size: 11.5)),
-          Text('+${f.added}', style: theme.ui(t.done, size: 11.5)),
-          Text(' −${f.removed}', style: theme.ui(t.crashed, size: 11.5)),
-        ],
+        ),
       ),
     );
   }
@@ -258,10 +266,11 @@ class _GitHubFilesState extends State<GitHubFiles> {
           (id: 'draft:$i', old: d.side == 'left', line: d.line),
       if (w != null) (id: 'new', old: w.side == PaneSide.old, line: w.span.end),
     ];
-    return DiffBox(
+    final diff = DiffBox(
       f,
       key: ValueKey(f.path),
       fit: false,
+      sunk: true,
       notes: notes,
       onLines: (sel) => setState(() => _writing = sel),
       note: (id) {
@@ -286,6 +295,19 @@ class _GitHubFilesState extends State<GitHubFiles> {
                 onChanged: widget.onChanged,
               );
       },
+    );
+    // Code's sunk surface, set in from the pane's edges, its corners a
+    // control's: Changes' block.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 8, 8, 8),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: t.codeBlock,
+          borderRadius: BorderRadius.circular(NushiTheme.control),
+        ),
+        child: RoundedScroll(corner: NushiTheme.control, child: diff),
+      ),
     );
   }
 

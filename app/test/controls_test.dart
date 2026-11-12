@@ -9,6 +9,7 @@ import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
+import 'theme_sets.dart';
 
 /// Each control five times: at rest, under the pointer, focused from the
 /// keyboard, pressed (the pointer down on it), disabled; each builds one,
@@ -34,6 +35,39 @@ final _controls = <String, Widget Function({required bool on})>{
     compact: true,
     label: const Text('Only me'),
     entries: [if (on) MenuEntry('Only me', onPick: () {})],
+  ),
+  // A card's own controls (ADR 0111).
+  'button_quiet': ({required on}) => Button(
+    label: 'Reject',
+    kind: ButtonKind.quiet,
+    onPressed: on ? () {} : null,
+  ),
+  'pill_button': ({required on}) => PillButton(
+    label: 'Stop and send',
+    icon: Icons.fast_forward,
+    onPressed: on ? () {} : null,
+  ),
+  'pill_small': ({required on}) => PillButton(
+    label: 'Preview',
+    icon: Icons.visibility_outlined,
+    small: true,
+    onPressed: on ? () {} : null,
+  ),
+  'round_plain': ({required on}) => RoundButton(
+    tooltip: 'Add',
+    onPressed: on ? () {} : null,
+    glyph: (color) => LineIcon.plus.view(size: 18, color: color),
+  ),
+  'round_primary': ({required on}) => RoundButton(
+    kind: RoundKind.primary,
+    tooltip: 'Send',
+    onPressed: on ? () {} : null,
+    glyph: (color) => Icon(Icons.arrow_upward, size: 17, color: color),
+  ),
+  'menu_pill': ({required on}) => MenuField(
+    pill: true,
+    label: const Text('Accept edits'),
+    entries: [if (on) MenuEntry('Accept edits', onPick: () {})],
   ),
   'link': ({required on}) =>
       LinkText('Settings › Agents', onTap: on ? () {} : null),
@@ -75,7 +109,12 @@ void main() {
     for (final MapEntry(key: control, value: make) in _controls.entries) {
       testWidgets('golden, $control at rest, hovered, focused, pressed, '
           'disabled, $name', (tester) async {
-        viewport(tester, const Size(760, 72), ratio: 2);
+        // A card's controls are taller than the rest.
+        final tall =
+            control.startsWith('pill') ||
+            control.startsWith('round') ||
+            control == 'menu_pill';
+        viewport(tester, Size(760, tall ? 80 : 72), ratio: 2);
         const states = ['rest', 'hover', 'focused', 'pressed', 'disabled'];
         await tester.pumpWidget(
           _app(
@@ -148,13 +187,140 @@ void main() {
     }
   }
 
+  // The filled controls, a field and a checkbox on a pane and on a card,
+  // in every built-in theme: looked at as a render (`make renders
+  // TEST=test/controls_test.dart`), since a button reads by its fill.
+  testWidgets('every kind in every built-in theme, on a pane and a card', (
+    tester,
+  ) async {
+    viewport(tester, Size(1500, everySet.length * 96.0 + 8));
+    Widget row(Tokens t, Color fill) => Container(
+      color: fill,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        spacing: 10,
+        children: [
+          for (final kind in ButtonKind.values)
+            Button(label: kind.name, kind: kind, onPressed: () {}),
+          const Button(label: 'disabled', onPressed: null),
+          MenuField(
+            label: const Text('Menu field'),
+            entries: [MenuEntry('One', onPick: () {})],
+          ),
+          const SizedBox(
+            width: 150,
+            child: TextField(
+              decoration: InputDecoration(hintText: 'A field', isDense: true),
+            ),
+          ),
+          Checkbox(value: false, onChanged: (_) {}),
+          Checkbox(value: true, onChanged: (_) {}),
+          Checkbox(value: null, tristate: true, onChanged: (_) {}),
+          Segmented(
+            value: 1,
+            segments: const [(1, 'One'), (2, 'Two')],
+            onChanged: (_) {},
+          ),
+          IconTap(Icons.refresh, tooltip: 'Reload', onTap: () {}),
+          LinkText('A link', onTap: () {}),
+        ],
+      ),
+    );
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Column(
+          key: const ValueKey('sheet'),
+          children: [
+            for (final (_, t) in everySet)
+              SizedBox(
+                height: 96,
+                child: themed(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: row(t, t.base)),
+                      Expanded(child: row(t, t.raised)),
+                    ],
+                  ),
+                  tokens: t,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(Button), findsNWidgets(everySet.length * 12));
+    await render(
+      tester,
+      find.byKey(const ValueKey('sheet')),
+      'controls_themes',
+    );
+  });
+
+  for (final (name, tokens) in [
+    ('dark', Tokens.dark),
+    ('light', Tokens.light),
+  ]) {
+    testWidgets('golden, a field and a checkbox on a pane and a card, $name', (
+      tester,
+    ) async {
+      viewport(tester, const Size(600, 152), ratio: 2);
+      Widget row(Color fill) => Container(
+        color: fill,
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          spacing: 12,
+          children: [
+            const SizedBox(
+              width: 150,
+              child: TextField(
+                decoration: InputDecoration(hintText: 'Empty', isDense: true),
+              ),
+            ),
+            SizedBox(
+              width: 150,
+              child: TextField(
+                controller: TextEditingController(text: 'Written'),
+                enabled: false,
+                decoration: const InputDecoration(isDense: true),
+              ),
+            ),
+            Checkbox(value: false, onChanged: (_) {}),
+            Checkbox(value: true, onChanged: (_) {}),
+            Checkbox(value: null, tristate: true, onChanged: (_) {}),
+            const Checkbox(value: true, onChanged: null),
+          ],
+        ),
+      );
+      await tester.pumpWidget(
+        _app(
+          tokens,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [row(tokens.base), row(tokens.raised)],
+          ),
+        ),
+      );
+      // The first field has the caret, so its edge is the focus color.
+      await tester.tap(find.byType(TextField).first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300)); // its edge fades
+      await expectLater(
+        find.byType(Scaffold),
+        matchesGoldenFile('goldens/control_fields_$name.png'),
+      );
+    });
+  }
+
   testWidgets('what can be pressed shows the pointing hand; disabled, not', (
     tester,
   ) async {
     await tester.pumpWidget(
       _app(
         Tokens.dark,
-        Column(
+        Wrap(
           children: [
             for (final make in _controls.values) ...[
               make(on: true),

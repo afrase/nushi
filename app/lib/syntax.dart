@@ -347,36 +347,49 @@ class SyntaxLines implements DiffLineSource {
 /// The diff theme for [t]: its diff colors, with the transcript's code
 /// colors. A removed line in one column is red, the way an inserted one is
 /// green: side by side its grey sits across from its replacement, but one
-/// above the other it reads like a hover band.
-DiffThemeData diffTheme(Tokens t) {
+/// above the other it reads like a hover band. Given [surface], that is its
+/// background, gutter and divider: the fill it sits on, and each line's and
+/// ribbon's fill is as far off it as the theme's is off the theme's own
+/// background, so a change shows as well on code's surface as on a pane
+/// (a light set's grey for a deleted line is about its `codeBlock`).
+DiffThemeData diffTheme(Tokens t, {Color? surface}) {
   final d = t.diff;
   final dark = t.brightness == Brightness.dark;
+  final background = surface ?? d.background;
   Color removed(double a) =>
-      Color.alphaBlend(t.crashed.withValues(alpha: a), d.background);
+      Color.alphaBlend(t.crashed.withValues(alpha: a), background);
+  Color on(Color c) => surface == null
+      ? c
+      : Color.from(
+          alpha: 1,
+          red: (c.r + surface.r - d.background.r).clamp(0, 1),
+          green: (c.g + surface.g - d.background.g).clamp(0, 1),
+          blue: (c.b + surface.b - d.background.b).clamp(0, 1),
+        );
   return DiffThemeData(
     brightness: t.brightness,
-    background: d.background,
+    background: background,
     text: d.text,
-    gutterBackground: d.gutterBackground,
+    gutterBackground: surface ?? d.gutterBackground,
     gutterText: d.gutterText,
     gutterTextChanged: d.gutterTextChanged,
-    insertedLine: d.insertedLine,
-    insertedWord: d.insertedWord,
-    deletedLine: d.deletedLine,
-    deletedWord: d.deletedWord,
+    insertedLine: on(d.insertedLine),
+    insertedWord: on(d.insertedWord),
+    deletedLine: on(d.deletedLine),
+    deletedWord: on(d.deletedWord),
     unifiedDeletedLine: removed(dark ? 0.16 : 0.12),
     unifiedDeletedWord: removed(dark ? 0.32 : 0.26),
-    modifiedLine: d.modifiedLine,
-    modifiedWord: d.modifiedWord,
-    ribbonInserted: d.ribbonInserted,
-    ribbonDeleted: d.ribbonDeleted,
-    ribbonModified: d.ribbonModified,
-    dividerBackground: d.dividerBackground,
+    modifiedLine: on(d.modifiedLine),
+    modifiedWord: on(d.modifiedWord),
+    ribbonInserted: on(d.ribbonInserted),
+    ribbonDeleted: on(d.ribbonDeleted),
+    ribbonModified: on(d.ribbonModified),
+    dividerBackground: surface ?? d.dividerBackground,
     selection: d.selection,
     selectionOverCap: d.selectionOverCap,
-    foldPlaceholderBackground: d.foldPlaceholderBackground,
+    foldPlaceholderBackground: on(d.foldPlaceholderBackground),
     foldPlaceholderText: d.foldPlaceholderText,
-    loadingBar: d.loadingBar,
+    loadingBar: on(d.loadingBar),
     hoverAffordance: d.hoverAffordance,
     syntax: {
       for (final MapEntry(key: c, value: ink) in t.syntax.entries)

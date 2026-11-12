@@ -142,7 +142,7 @@ class PinFlash extends StatelessWidget {
       color: on
           ? NushiTheme.of(context).t.accentSoft
           : NushiTheme.of(context).t.accentSoft.withValues(alpha: 0),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(NushiTheme.panel),
     ),
     child: child,
   );

@@ -7,6 +7,7 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'browser_fixture.dart';
 import 'fake_daemon.dart' show loadFonts;
@@ -167,8 +168,11 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         expectTextInside(tester, width);
-        // Its buttons at the window's edge.
-        expect(tester.getRect(_inPane('Close')).right, closeTo(width - 8, 0.5));
+        // Its buttons at the main pane's edge.
+        expect(
+          tester.getRect(_inPane('Close')).right,
+          closeTo(width - NushiTheme.windowPad - 8, 0.5),
+        );
         await render(
           tester,
           find.byType(NushiApp),

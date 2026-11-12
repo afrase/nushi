@@ -117,13 +117,15 @@ class _SettingsModalState extends State<SettingsModal> {
                         clipBehavior: Clip.antiAlias,
                         decoration: BoxDecoration(
                           color: t.base,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: t.borderStrong),
-                          boxShadow: [
-                            BoxShadow(color: t.shadow, blurRadius: 30),
-                          ],
+                          borderRadius: BorderRadius.circular(NushiTheme.panel),
+                          border: Border.all(color: t.floatLine),
+                          boxShadow: floatShadows(t),
                         ),
-                        child: SettingsView(widget.daemon),
+                        // Its pages scroll down to the rounded corners.
+                        child: RoundedScroll(
+                          corner: NushiTheme.panel,
+                          child: SettingsView(widget.daemon),
+                        ),
                       ),
                     ),
                   ),

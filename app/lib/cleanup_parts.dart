@@ -87,19 +87,18 @@ class DirtyWorktree extends StatelessWidget {
     final t = theme.t;
     final n = u.state.changed;
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-      decoration: box(t.findingsBorder, fill: t.findingsTint),
+      padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+      decoration: BoxDecoration(
+        color: t.needsSoft,
+        borderRadius: BorderRadius.circular(NushiTheme.control),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 3,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                size: 14,
-                color: t.findingsAccent,
-              ),
+              Icon(Icons.warning_amber_rounded, size: 14, color: t.needs),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -160,8 +159,11 @@ class MidTurnChoice extends StatelessWidget {
       ),
     );
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
-      decoration: box(t.userBandBorder, fill: t.accentSoft),
+      padding: const EdgeInsets.fromLTRB(11, 9, 11, 5),
+      decoration: BoxDecoration(
+        color: t.accentSoft,
+        borderRadius: BorderRadius.circular(NushiTheme.control),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

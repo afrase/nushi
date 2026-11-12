@@ -2,6 +2,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:nushi/motion.dart';
+import 'package:nushi/theme/theme.dart';
 
 // What comes and goes around a view (the fluidity review's ideas 7, 10 and
 // 11): bars and the terminal sliding open, panes and the sidebar sliding
@@ -126,6 +127,42 @@ class _PresenceState extends State<Presence>
       child: ExcludeFocus(
         excluding: going,
         child: widget.builder(context, _curved, child),
+      ),
+    );
+  }
+}
+
+/// A notice that floats over the main pane, under its header (ADR 0111): a
+/// rounded card with a shadow, [tint] over its fill for one that says a
+/// state, as wide as [child] asks. Under it, the room before the next.
+class FloatBar extends StatelessWidget {
+  const new({required this.child, super.key, this.tint});
+
+  final Widget child;
+  final Color? tint;
+
+  /// The room under each.
+  static const gap = 6.0;
+
+  /// Their room under the pane's header, and the widest one gets.
+  static const inset = 8.0;
+  static const width = 640.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    final radius = BorderRadius.circular(NushiTheme.control);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: gap),
+      child: DecoratedBox(
+        decoration: floatBox(t, radius: NushiTheme.control),
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: tint, borderRadius: radius),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+            child: child,
+          ),
+        ),
       ),
     );
   }

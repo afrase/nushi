@@ -229,7 +229,10 @@ class _JobLogState extends State<JobLog> {
       (final log?, _) => Container(
         constraints: BoxConstraints(maxHeight: widget.maxHeight),
         padding: const EdgeInsets.all(8),
-        decoration: box(t.borderSubtle, fill: t.codeBlock),
+        decoration: BoxDecoration(
+          color: t.codeBlock,
+          borderRadius: BorderRadius.circular(NushiTheme.control),
+        ),
         child: SingleChildScrollView(
           reverse: true, // the end is what matters
           child: SelectableText(

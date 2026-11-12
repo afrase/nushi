@@ -9,6 +9,7 @@ import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/sidebar_button.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -97,7 +98,10 @@ void main() {
     sidebarHidden.value = true;
     await tester.pumpAndSettle();
     final pastLights = _button(tester);
-    expect(pastLights.left, lightsInset);
+    expect(
+      pastLights.left,
+      NushiTheme.windowPad + lightsInset - SidebarButton.reach,
+    );
     sidebarHidden.value = false;
     await tester.pumpAndSettle();
     expect(_button(tester), inSidebar);
@@ -139,7 +143,12 @@ void main() {
     await tester.pumpAndSettle();
     final inSidebar = _button(tester);
     expect(at.left, inExclusiveRange(pastLights.left, inSidebar.left));
-    expect(inSidebar.right, tester.getRect(find.byType(Sidebar)).right - 10);
+    expect(
+      inSidebar.right,
+      tester.getRect(find.byType(Sidebar)).right -
+          Sidebar.end +
+          SidebarButton.reach,
+    );
     d.dispose();
   }, variant: _mac);
 
@@ -179,7 +188,10 @@ void main() {
     final d = await _window(tester, hidden: false, still: true);
     sidebarHidden.value = true;
     await tester.pump();
-    expect(_button(tester).left, lightsInset);
+    expect(
+      _button(tester).left,
+      NushiTheme.windowPad + lightsInset - SidebarButton.reach,
+    );
     sidebarHidden.value = false;
     await tester.pump();
     final at = _button(tester);

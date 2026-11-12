@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/slides.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -9,20 +10,13 @@ import 'package:nushi/widgets.dart';
 /// with a way to restart now. A daemon too old for that gets
 /// [OutdatedScreen].
 class DaemonUpdateBar extends StatelessWidget {
-  const new(this.daemon, {super.key, this.start = 16});
+  const new(this.daemon, {super.key});
 
   final Daemon daemon;
 
-  /// Where its text starts: past the traffic lights, with the sidebar hidden.
-  final double start;
-
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Container(
-      color: t.raised,
-      padding: EdgeInsets.fromLTRB(start, 4, 16, 4),
+    return FloatBar(
       child: Row(
         spacing: 12,
         children: [

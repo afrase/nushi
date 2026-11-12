@@ -1,9 +1,13 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/app_actions.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_keys.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -11,9 +15,11 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/phase_pill.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/sidebar_button.dart';
+import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/trust_ask.dart';
 
@@ -97,29 +103,39 @@ void main() {
       final d = await _window(tester, hidden: false);
       paneWidths.value = {'sidebar': 333};
       await tester.pump();
-      final strip = tester.getRect(
-        find
-            .ancestor(
-              of: find.byTooltip(_hide),
-              matching: find.byType(PaneHeader),
-            )
-            .first,
-      );
+      final strip = tester.getRect(find.byType(Sidebar));
       final button = tester.getRect(find.byTooltip(_hide));
       expect(strip.width, 333);
-      expect(button.right, strip.right - 10);
-      // Clear of the traffic lights, the sidebar at its narrowest too.
-      expect(200 - 10 - button.width, greaterThan(lightsInset));
+      // Its icon 5 in from the strip's end, as it was; its box, a header's
+      // icon button's, reaches past that.
+      expect(button.right, strip.right - Sidebar.end + SidebarButton.reach);
+      expect(
+        button.center.dx,
+        strip.right - Sidebar.end - SidebarButton.iconInset - 8,
+      );
+      // In the strip the traffic lights sit in, level with them and with
+      // the header's middle (36 from the window's top: the window's
+      // margin and half a header), and clear of them with the sidebar at
+      // its narrowest too (they end 80 from its left).
+      expect(button.center.dy, NushiTheme.windowPad + PaneHeader.height / 2);
+      expect(button.center.dy, 36);
+      expect(200 - Sidebar.end - button.width, greaterThan(95));
+      // The strip ends where the header does, and New chat starts there.
+      expect(Sidebar.topHeight, tester.getRect(find.byType(ChatHeader)).bottom);
+      expect(tester.getRect(find.byType(WideButton)).top, Sidebar.topHeight);
       final header = find.byType(ChatHeader);
       final element = tester.element(header);
+      // The main pane starts where the sidebar ends, which brings the gap.
       expect(tester.getRect(header).left, 333);
+      expect(tester.getRect(header).top, NushiTheme.windowPad);
 
       await tester.tap(find.byTooltip(_hide));
       await tester.pumpAndSettle();
       expect(sidebarHidden.value, isTrue);
       expect(find.byType(Sidebar), findsNothing);
-      expect(tester.getRect(header).left, 0);
-      expect(tester.getRect(header).width, 1200);
+      expect(tester.getRect(header).left, NushiTheme.windowPad);
+      // The window less its margins: the details are under it.
+      expect(tester.getRect(header).width, 1200 - 2 * NushiTheme.windowPad);
       expect(tester.element(header), same(element), reason: 'the chat stayed');
       expect(readSaved()['sidebarHidden'], isTrue);
       expect(paneWidths.value['sidebar'], 333);
@@ -151,6 +167,64 @@ void main() {
       expect(tester.state<ScrollableState>(list.first).position.pixels, 300);
       d.dispose();
     }, variant: _mac);
+
+    // The owner, of the beta: the button at a header's left was smaller
+    // than the icon buttons at its right. It's the same control: the same
+    // icon, the same box around it, so the same fill under the pointer.
+    for (final (hidden, brightness) in [
+      for (final hidden in [true, false])
+        for (final b in Brightness.values) (hidden, b),
+    ]) {
+      final state = hidden ? 'hidden' : 'shown';
+      testWidgets('it’s the header’s icon button, as the ones at the '
+          'header’s right, the sidebar $state, ${brightness.name}', (
+        tester,
+      ) async {
+        final d = await _window(tester, hidden: hidden, brightness: brightness);
+        IconTap button(Pattern tooltip) => tester.widget<IconTap>(
+          find.ancestor(
+            of: find.byTooltip(tooltip),
+            matching: find.byType(IconTap),
+          ),
+        );
+        // How large the icon is drawn in the button.
+        Size icon(Pattern tooltip) => tester.getSize(
+          find
+              .descendant(
+                of: find.byTooltip(tooltip),
+                matching: find.byType(CustomPaint),
+              )
+              .first,
+        );
+        final own = hidden ? _show : _hide;
+        final other = RegExp(r'^(Show|Hide) details$');
+        expect(tester.getSize(find.byTooltip(own)), const Size.square(32));
+        expect(
+          tester.getSize(find.byTooltip(own)),
+          tester.getSize(find.byTooltip(other)),
+        );
+        expect(icon(own), const Size.square(16));
+        expect(icon(own), icon(other));
+        expect(button(own).padding, button(other).padding);
+        expect(button(own).padding, IconTap.header);
+        // Level with them.
+        expect(
+          tester.getCenter(find.byTooltip(own)).dy,
+          closeTo(tester.getCenter(find.byTooltip(other)).dy, 0.5),
+        );
+        // To look at: at rest, then under the pointer, its fill the size
+        // of the details button's beside the header's other end.
+        final shot = 'header_sidebar_${state}_${brightness.name}';
+        await render(tester, find.byType(NushiApp), shot);
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: Offset.zero);
+        addTearDown(mouse.removePointer);
+        await mouse.moveTo(tester.getCenter(find.byTooltip(own)));
+        await tester.pump();
+        await render(tester, find.byType(NushiApp), '${shot}_pointer');
+        d.dispose();
+      }, variant: _mac);
+    }
 
     testWidgets('it keeps its clicks, and the strip’s empty space moves and '
         'zooms the window', (tester) async {
@@ -184,14 +258,24 @@ void main() {
       // Hidden, the same of the header, around its button.
       await tester.pump(const Duration(seconds: 1));
       final show = tester.getRect(find.byTooltip(_show));
-      expect(show.left, lightsInset);
-      await tester.tapAt(const Offset(800, 8));
+      expect(
+        show.left,
+        NushiTheme.windowPad + lightsInset - SidebarButton.reach,
+      );
+      // In the header's empty middle, between its state and its switch.
+      final space = Offset(
+        (tester.getRect(find.byType(PhasePill)).right +
+                tester.getRect(find.byType(Segmented<ChatTab>)).left) /
+            2,
+        12,
+      );
+      await tester.tapAt(space);
       await tester.pump(const Duration(milliseconds: 50));
-      await tester.tapAt(const Offset(800, 8));
+      await tester.tapAt(space);
       await tester.pump();
       expect(calls, ['arm', 'arm', 'zoom']);
       await tester.timedDragFrom(
-        const Offset(800, 8),
+        space,
         const Offset(60, 30),
         const Duration(milliseconds: 200),
       );
@@ -210,9 +294,16 @@ void main() {
     /// The header's row starts past the button, which is past the lights.
     void cleared(WidgetTester tester, String title) {
       final button = tester.getRect(find.byTooltip(_show));
-      expect(button.left, greaterThanOrEqualTo(lightsInset));
-      expect(button.height, 26);
-      expect(button.center.dy, closeTo(21.5, 0.5));
+      expect(
+        button.left,
+        greaterThanOrEqualTo(lightsInset - SidebarButton.reach),
+      );
+      expect(button.size, const Size.square(32));
+      // In the middle of the pane's header, over its hairline.
+      expect(
+        button.center.dy,
+        closeTo(NushiTheme.windowPad + (PaneHeader.height - 1) / 2, 0.5),
+      );
       expect(
         tester.getTopLeft(find.text(title).first).dx,
         greaterThanOrEqualTo(button.right),
@@ -245,18 +336,30 @@ void main() {
             go(d);
             await tester.pumpAndSettle();
             expect(tester.takeException(), isNull);
+            // The main pane's top, the window's margin in on every side.
             final bar = tester.getRect(header.first);
-            expect(bar.left, 0);
-            expect(bar.top, 0);
-            expect(bar.width, width);
+            expect(bar.left, NushiTheme.windowPad);
+            expect(bar.top, NushiTheme.windowPad);
+            expect(bar.width, width - 2 * NushiTheme.windowPad);
             final show = tester.getRect(find.byTooltip(_show));
-            expect(show.left, lightsInset);
+            // Its icon 5 past the lights' room, its box around it.
+            expect(
+              show.left,
+              NushiTheme.windowPad + lightsInset - SidebarButton.reach,
+            );
+            expect(
+              show.center.dx,
+              NushiTheme.windowPad + lightsInset + SidebarButton.iconInset + 8,
+            );
             switch (name) {
               case 'chat':
                 // The title, after the chat's color.
                 expect(
                   tester.getTopLeft(find.text(_title).first).dx,
-                  hiddenHeaderStart + 16,
+                  NushiTheme.windowPad +
+                      hiddenHeaderStart +
+                      ColorChip.width +
+                      8,
                 );
               case 'jira':
                 cleared(tester, 'Jira');
@@ -282,22 +385,28 @@ void main() {
       }
     }
 
-    testWidgets('the chat’s color is a dot in its header only while the '
+    testWidgets('the chat’s color is a chip in its header only while the '
         'sidebar is hidden', (tester) async {
-      const dot = Key('chat color');
+      final dot = find.descendant(
+        of: find.byType(ChatHeader),
+        matching: find.byKey(const Key('chat color')),
+      );
       final d = await _window(tester, hidden: false);
-      expect(find.byKey(dot), findsNothing);
+      expect(dot, findsNothing);
       sidebarHidden.value = true;
       await tester.pumpAndSettle();
-      expect(find.byKey(dot), findsOneWidget);
-      expect(tester.getSize(find.byKey(dot)), const Size.square(8));
+      expect(dot, findsOneWidget);
+      expect(
+        tester.getSize(dot),
+        const Size(ColorChip.width, ColorChip.height),
+      );
       expect(find.byTooltip('Amber'), findsOneWidget);
       d.select('b');
       await tester.pumpAndSettle();
-      expect(find.byKey(dot), findsNothing);
+      expect(dot, findsNothing);
       expect(
         tester.getTopLeft(find.text('Bump the API version').first).dx,
-        hiddenHeaderStart,
+        NushiTheme.windowPad + hiddenHeaderStart,
       );
       d.dispose();
     }, variant: _mac);
@@ -320,17 +429,24 @@ void main() {
       final header = tester.getRect(find.byType(ChatHeader));
       expect(
         tester.getRect(find.byTooltip('Chat menu')).right,
-        header.right - NushiTheme.gutter,
+        header.right - ChatHeader.end,
       );
       d.dispose();
     }, variant: _mac);
   });
 
   group('the bars, hidden', () {
-    /// [what] starts past the lights, its bar still from the window's edge.
-    void past(WidgetTester tester, Finder bar, Finder what) {
-      expect(tester.getRect(bar).left, 0);
-      expect(tester.getTopLeft(what).dx, lightsInset);
+    /// [bar] floats under the pane's header, clear of the lights, in the
+    /// pane's middle and no wider than a notice gets.
+    void floats(WidgetTester tester, Finder bar, double width) {
+      final r = tester.getRect(bar);
+      expect(
+        r.top,
+        greaterThanOrEqualTo(NushiTheme.windowPad + PaneHeader.height),
+      );
+      expect(r.width, lessThanOrEqualTo(FloatBar.width));
+      expect(r.left, greaterThanOrEqualTo(NushiTheme.windowPad + 16));
+      expect(r.center.dx, moreOrLessEquals(width / 2, epsilon: 1));
     }
 
     for (final (width, b) in [
@@ -339,71 +455,78 @@ void main() {
       (720.0, Brightness.dark),
       (720.0, Brightness.light),
     ]) {
-      testWidgets('the update’s, removed chats’ and a notice’s text start past '
-          'the lights, $width wide, ${b.name}', (tester) async {
-        viewport(tester, Size(width, 700), brightness: b);
-        paneWidths.value = {};
-        sidebarHidden.value = true;
-        final fake = FakeDaemon(_chats())
-          ..answer = ((input) => switch (input) {
-            PingRequest() => PingResponse(
-              apiVersion: apiVersion,
-              build: '7-1000',
+      testWidgets(
+        'the update’s, removed chats’ and a notice’s cards float under '
+        'the header, $width wide, ${b.name}',
+        (tester) async {
+          viewport(tester, Size(width, 700), brightness: b);
+          paneWidths.value = {};
+          sidebarHidden.value = true;
+          final fake = FakeDaemon(_chats())
+            ..answer = ((input) => switch (input) {
+              PingRequest() => PingResponse(
+                apiVersion: apiVersion,
+                build: '7-1000',
+              ),
+              _ => null,
+            });
+          final d = Daemon(transport: fake)..bundled = '7-2000';
+          await tester.pumpWidget(NushiApp(daemon: d));
+          await tester.pumpAndSettle();
+          d.select('a');
+          fake.emit(
+            EventsResponse(
+              removedChats: RemovedChats(
+                chats: [
+                  RemovedChat(
+                    id: 'k',
+                    agent: 'claude',
+                    title: 'Old',
+                    folder: '/x',
+                  ),
+                ],
+              ),
             ),
-            _ => null,
-          });
-        final d = Daemon(transport: fake)..bundled = '7-2000';
-        await tester.pumpWidget(NushiApp(daemon: d));
-        await tester.pumpAndSettle();
-        d.select('a');
-        fake.emit(
-          EventsResponse(
-            removedChats: RemovedChats(
-              chats: [
-                RemovedChat(
-                  id: 'k',
-                  agent: 'claude',
-                  title: 'Old',
-                  folder: '/x',
-                ),
-              ],
+          );
+          await tester.pumpAndSettle();
+          d
+            ..notice = 'Didn’t start Claude in site'
+            ..listChanged();
+          await tester.pumpAndSettle();
+
+          final update = find.textContaining('Nushi will update its daemon');
+          final removed = find.textContaining('Removed “Old”');
+          final notice = find.text('Didn’t start Claude in site');
+          Finder bar(Finder text) =>
+              find.ancestor(of: text, matching: find.byType(FloatBar));
+          // The header keeps the pane's top: nothing is over or under the
+          // lights, and nothing in the pane moved.
+          expect(
+            tester.getRect(find.byType(ChatHeader)).top,
+            NushiTheme.windowPad,
+          );
+          for (final text in [update, removed, notice]) {
+            floats(tester, bar(text), width);
+          }
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'sidebar_hidden_bars_${width.toInt()}_${b.name}',
+          );
+
+          // Beside the sidebar they are over the pane, not the sidebar.
+          sidebarHidden.value = false;
+          await tester.pumpAndSettle();
+          expect(
+            tester.getRect(bar(update)).left,
+            greaterThanOrEqualTo(
+              tester.getRect(find.byType(Sidebar)).right + 16,
             ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        d
-          ..notice = 'Didn’t start Claude in site'
-          ..listChanged();
-        await tester.pumpAndSettle();
-
-        final update = find.textContaining('Nushi will update its daemon');
-        final removed = find.textContaining('Removed “Old”');
-        final notice = find.text('Didn’t start Claude in site');
-        Finder bar(Finder text) =>
-            find.ancestor(of: text, matching: find.byType(Container)).last;
-        expect(tester.getTopLeft(update).dx, lightsInset);
-        expect(tester.getRect(bar(update)).left, 0);
-        final removedIcon = find.byIcon(Icons.history_toggle_off);
-        past(tester, bar(removed), removedIcon);
-        expect(tester.getTopLeft(removed).dx, greaterThan(lightsInset));
-        final noticeIcon = find.byIcon(Icons.shield_outlined);
-        past(tester, bar(notice), noticeIcon);
-        expect(tester.getTopLeft(notice).dx, greaterThan(lightsInset));
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'sidebar_hidden_bars_${width.toInt()}_${b.name}',
-        );
-
-        // Beside the sidebar they keep their margin from it.
-        sidebarHidden.value = false;
-        await tester.pumpAndSettle();
-        expect(
-          tester.getTopLeft(update).dx,
-          tester.getRect(find.byType(Sidebar)).right + 16,
-        );
-        d.dispose();
-      }, variant: _mac);
+          );
+          d.dispose();
+        },
+        variant: _mac,
+      );
     }
 
     testWidgets('the daemon’s banner too', (tester) async {
@@ -419,9 +542,11 @@ void main() {
       final text = find.text(
         'Lost the connection to the daemon; reconnecting…',
       );
-      expect(tester.getTopLeft(text).dx, lightsInset);
-      expect(tester.getRect(find.byType(DaemonBanner)).left, 0);
-      expect(tester.getRect(find.byType(DaemonBanner)).top, 0);
+      floats(
+        tester,
+        find.ancestor(of: text, matching: find.byType(FloatBar)),
+        tester.getSize(find.byType(NushiApp)).width,
+      );
       fake.answer = null;
       await d.ping();
       await tester.pump(DaemonBanner.backFor);

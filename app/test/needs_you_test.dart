@@ -38,10 +38,9 @@ double? _ring(WidgetTester tester) {
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('a permission that comes glows once: its ring grows to 6 px '
-      'and settles at 2; one the chat opened with has its 2 at once', (
-    tester,
-  ) async {
+  testWidgets('a permission that comes glows once: a ring grows to 6 px '
+      'and fades away; one the chat opened with has none, only its mark '
+      'and its pill (ADR 0111)', (tester) async {
     await tester.pumpWidget(
       _app(
         Arriving(
@@ -55,26 +54,26 @@ void main() {
     await tester.pump(const Duration(milliseconds: 110));
     expect(_ring(tester), greaterThan(4));
     await tester.pumpAndSettle();
-    expect(_ring(tester), 2);
+    expect(_ring(tester), isNull);
+    expect(find.text('Needs you'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(
       _app(PermissionCard(_ask(), onAnswer: (_) async {})),
     );
-    expect(_ring(tester), 2);
+    expect(_ring(tester), isNull);
+    expect(find.text('Needs you'), findsOneWidget);
 
-    // Answered, the ring fades with the amber as the card settles.
+    // Answered, the pill goes as the card settles.
     await tester.pumpWidget(
       _app(PermissionCard(_ask(status: 'answered'), onAnswer: (_) async {})),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(_ring(tester), inExclusiveRange(0, 2));
     await tester.pumpAndSettle();
     expect(_ring(tester), isNull);
+    expect(find.text('Needs you'), findsNothing);
   });
 
-  testWidgets('with Reduce Motion the ring is there at once', (tester) async {
+  testWidgets('with Reduce Motion nothing glows', (tester) async {
     await tester.pumpWidget(
       _app(
         Arriving(
@@ -84,7 +83,8 @@ void main() {
         still: true,
       ),
     );
-    expect(_ring(tester), 2);
+    expect(_ring(tester), isNull);
+    expect(find.text('Needs you'), findsOneWidget);
   });
 
   testWidgets('scrolled up, the Jump chip turns amber and says "Needs you" '
@@ -121,7 +121,12 @@ void main() {
       ..items.add(_ask())
       ..notifyListeners();
     await tester.pump();
-    expect(find.text('Needs you'), findsOneWidget);
+    // The chip's, beside the card's own pill under it.
+    final chip = find.descendant(
+      of: find.byType(JumpChip),
+      matching: find.text('Needs you'),
+    );
+    expect(chip, findsOneWidget);
     await tester.pump(const Duration(milliseconds: 16));
     await tester.pump(const Duration(milliseconds: 200));
     final hop = tester.widget<Transform>(
@@ -133,7 +138,7 @@ void main() {
     expect(hop.transform.getTranslation().y, lessThan(0));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Needs you'));
+    await tester.tap(chip);
     await tester.pumpAndSettle();
     expect(find.byType(JumpChip), findsNothing);
 
@@ -163,15 +168,13 @@ void main() {
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
-    testWidgets('golden, a waiting card with its ring, 2×, $name', (
-      tester,
-    ) async {
+    testWidgets('golden, a waiting card, 2×, $name', (tester) async {
       await tester.pumpWidget(
         themed(
           Align(
             alignment: Alignment.topLeft,
             child: enlarged(
-              const Size(300, 140),
+              const Size(320, 170),
               2,
               ColoredBox(
                 color: tokens.base,
@@ -187,7 +190,7 @@ void main() {
       );
       await expectLater(
         find.byType(FittedBox),
-        matchesGoldenFile('goldens/waiting_ring_$name.png'),
+        matchesGoldenFile('goldens/waiting_card_$name.png'),
       );
     });
   }

@@ -279,28 +279,33 @@ class Chevron extends StatelessWidget {
   );
 }
 
-/// A tool call's title (a command) whole, wrapped, in monospace.
+/// A tool call's title (a command) whole, wrapped, in monospace, on a
+/// block of code's surface; [bare], where it sits on one already (a
+/// call's open row), the text alone.
 class FullTitle extends StatelessWidget {
-  const new(this.title, {super.key});
+  const new(this.title, {super.key, this.bare = false});
 
   final String title;
+  final bool bare;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final text = Marks(
+      child: Text(
+        title,
+        style: theme.code(t.text, size: 12).copyWith(height: 1.35),
+      ),
+    );
+    if (bare) return text;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: t.raised,
+        color: t.codeBlock,
         borderRadius: BorderRadius.circular(NushiTheme.control),
       ),
-      child: Marks(
-        child: Text(
-          title,
-          style: theme.code(t.text, size: 12).copyWith(height: 1.35),
-        ),
-      ),
+      child: text,
     );
   }
 }
@@ -338,8 +343,8 @@ class RowsLoading extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: t.borderSubtle,
-        borderRadius: BorderRadius.circular(3),
+        color: t.lifted,
+        borderRadius: BorderRadius.circular(NushiTheme.tag),
       ),
     );
     return Semantics(
@@ -392,8 +397,11 @@ class Notice extends StatelessWidget {
     final t = theme.t;
     return Container(
       margin: const EdgeInsets.fromLTRB(10, 8, 10, 0),
-      padding: const EdgeInsets.all(10),
-      decoration: box(t.needs, fill: t.needsSoft),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: t.needsSoft,
+        borderRadius: BorderRadius.circular(NushiTheme.control),
+      ),
       child: Row(
         children: [
           Expanded(child: Text(text, style: theme.ui(t.needs, size: 12))),

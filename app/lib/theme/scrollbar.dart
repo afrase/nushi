@@ -1,8 +1,29 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+
+/// Says the lists below reach the corners of a container rounded by
+/// [corner]: their scrollbars' ends keep half of it off the list's ends,
+/// where the curve would otherwise cut the thumb (or, unclipped, the thumb
+/// would stand out past it).
+class RoundedScroll extends InheritedWidget {
+  const new({required this.corner, required super.child, super.key});
+
+  final double corner;
+
+  /// A scrollbar's distance from its list's ends at [context].
+  static double ends(BuildContext context) => max(
+    MacScrollbar.margin,
+    (context.dependOnInheritedWidgetOfExactType<RoundedScroll>()?.corner ?? 0) /
+        2,
+  );
+
+  @override
+  bool updateShouldNotify(RoundedScroll old) => old.corner != corner;
+}
 
 /// A Mac's overlay scrollbar: a thin thumb that shows while scrolling and
 /// fades; it also shows when the pointer comes near it, and then widens
@@ -17,8 +38,12 @@ class MacScrollbar extends RawScrollbar {
     super.controller,
     super.notificationPredicate,
     this.past,
+    double ends = margin,
     super.key,
-  }) : super(interactive: true, mainAxisMargin: 2, crossAxisMargin: 2);
+  }) : super(interactive: true, mainAxisMargin: ends, crossAxisMargin: margin);
+
+  /// How far the thumb keeps from its list's edges.
+  static const margin = 2.0;
 
   static const thin = 6.0;
   static const wide = 10.0;

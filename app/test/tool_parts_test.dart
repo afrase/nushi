@@ -130,7 +130,7 @@ void main() {
   testWidgets('golden, input only, raw output only, nothing, dark', (
     tester,
   ) async {
-    viewport(tester, const Size(720, 420), ratio: 2);
+    viewport(tester, const Size(720, 460), ratio: 2);
     Collapsible.opened.addAll(['1', '2', '3']);
     await tester.pumpWidget(
       _rows([

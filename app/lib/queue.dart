@@ -92,9 +92,11 @@ class _QueuePillsState extends State<QueuePills> {
     final onSendNow = widget.onSendNow;
     return Container(
       constraints: const BoxConstraints(maxWidth: 300),
-      decoration: ShapeDecoration(
+      // Clipped to its round ends, as an icon button's tint at one isn't.
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
         color: t.raised,
-        shape: StadiumBorder(side: BorderSide(color: t.borderStrong)),
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -103,8 +105,8 @@ class _QueuePillsState extends State<QueuePills> {
             child: Tap(
               onTap: () => onEdit(m),
               tooltip: 'Edit',
-              radius: 14,
-              padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
+              radius: NushiTheme.pill,
+              padding: const EdgeInsets.fromLTRB(12, 5, 4, 5),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 spacing: 6,

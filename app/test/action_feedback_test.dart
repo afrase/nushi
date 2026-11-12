@@ -19,7 +19,11 @@ Widget _app(Tokens tokens, Daemon d, [void Function(BuildContext)? onGo]) =>
     themed(
       Column(
         children: [
-          RepaintBoundary(child: DaemonBanner(d)),
+          // The golden is the window's width, not the card's: CI draws
+          // text a few pixels apart from a Mac, which a golden may differ
+          // by in 1% of its pixels (flutter_test_config.dart), and a card
+          // as wide as its few words is over that (57 of 5530).
+          RepaintBoundary(child: Center(child: DaemonBanner(d))),
           Expanded(
             child: Builder(
               builder: (context) => Center(

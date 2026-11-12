@@ -7,14 +7,18 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/folder_tree.dart' show filesApi;
-import 'package:nushi/panes.dart' show paneWidth;
+import 'package:nushi/panes.dart' show Pane, paneWidth;
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_tab.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/terminal_panel.dart';
 
-/// A chat under its header, with a switch between its transcript, its
-/// folder's changes and its pull request.
+/// A chat in the main area (ADR 0111): one pane of its header across all
+/// of it and, under that, its transcript, its
+/// folder's changes or its pull request, with the terminal below. Its
+/// details are inside the pane, a column at the transcript's right, so the
+/// header and its buttons are where they were whether the details show or
+/// not.
 class ChatArea extends StatefulWidget {
   const new(this.chat, this.daemon, {super.key});
 
@@ -136,7 +140,7 @@ class _ChatAreaState extends State<ChatArea> {
         _width = box.maxWidth;
         _panel = panel;
         widget.chat.previewFits = _previewFits;
-        return Column(
+        final area = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ListenableBuilder(
@@ -186,6 +190,7 @@ class _ChatAreaState extends State<ChatArea> {
             ),
           ],
         );
+        return Pane(child: area);
       },
     ),
   );

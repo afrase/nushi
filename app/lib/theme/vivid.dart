@@ -8,19 +8,22 @@ import 'package:nushi/theme/tokens.dart';
 // chat clearly blue, the tool, subagent and findings tints and the user
 // band plainly tinted, the status softs solid, borders and hover a step
 // further. Inline code's orange is taken a step further from its chip
-// than Nushi's, to hold AA on these stronger fills (`code_ink_test`).
+// than Nushi's, to hold AA on these stronger fills (`code_ink_test`). Its
+// surfaces are Nushi's (ADR 0111), its light cards a shade lighter, where
+// its stronger hover still leaves a row's text AA.
 
 /// Vivid's light set.
 const vividLight = Tokens(
   brightness: Brightness.light,
+  window: Color(0xFFECEEF2),
   base: Color(0xFFFFFFFF),
   raised: Color(0xFFF7F8FA),
+  lifted: Color(0xFFE6E8ED),
+  segment: Color(0xFFFFFFFF),
   selected: Color(0xFFD6E0F3),
-  borderSubtle: Color(0xFFDCDEE3),
-  borderStrong: Color(0xFFB0B4C1),
   text: Color(0xFF1E1F22),
   textSecondary: Color(0xFF494B57),
-  textMuted: Color(0xFF5D6170),
+  textMuted: Color(0xFF575B68),
   link: Color(0xFF2259D2),
   onAccent: Color(0xFFFFFFFF),
   fieldFill: Color(0xFFFFFFFF),
@@ -41,7 +44,6 @@ const vividLight = Tokens(
   shine: Color(0xFF6E727E),
   shineBand: Color(0xFF1E1F22),
   userBand: Color(0xFFCDE0FF),
-  userBandBorder: Color(0xFF93B2F2),
   userBandText: Color(0xFF142A5C),
   userBandMuted: Color(0xFF3A5594),
   userBandCode: Color(0x1A8D4100),
@@ -49,15 +51,10 @@ const vividLight = Tokens(
   agentText: Color(0xFF1E1F22),
   inlineCode: Color(0x1A8D4100),
   inlineCodeText: Color(0xFF7F3C03),
-  codeBlock: Color(0xFFF7F8FA),
-  toolTint: Color(0xFFC6EEE7),
-  toolBorder: Color(0xFF8ACBC0),
+  codeBlock: Color(0xFFF0F2F5),
   toolAccent: Color(0xFF0E8577),
   subagentTint: Color(0xFFE7DAFF),
-  subagentBorder: Color(0xFFBEA8EE),
   subagentAccent: Color(0xFF4E1FA8),
-  findingsTint: Color(0xFFF9E4C2),
-  findingsBorder: Color(0xFFDCBA7B),
   findingsAccent: Color(0xFF8A5300),
   selectionBar: Color(0xFF26272B),
   selectionBarText: Color(0xFFE8E9EC),
@@ -116,11 +113,12 @@ const vividLight = Tokens(
 /// Vivid's dark set.
 const vividDark = Tokens(
   brightness: Brightness.dark,
-  base: Color(0xFF1E1F22),
-  raised: Color(0xFF2B2D30),
+  window: Color(0xFF131417),
+  base: Color(0xFF1B1C20),
+  raised: Color(0xFF24262B),
+  lifted: Color(0xFF2F3138),
+  segment: Color(0xFF383B43),
   selected: Color(0xFF2C3951),
-  borderSubtle: Color(0xFF494C52),
-  borderStrong: Color(0xFF62666E),
   text: Color(0xFFDFE1E5),
   textSecondary: Color(0xFFB4B8BF),
   textMuted: Color(0xFFAAAEB6),
@@ -144,7 +142,6 @@ const vividDark = Tokens(
   shine: Color(0xFF9DA1AA),
   shineBand: Color(0xFFF4F6FA),
   userBand: Color(0xFF1E3665),
-  userBandBorder: Color(0xFF405FAA),
   userBandText: Color(0xFFE8EEFB),
   userBandMuted: Color(0xFF9DB8F5),
   userBandCode: Color(0x1FF5AD66),
@@ -152,15 +149,10 @@ const vividDark = Tokens(
   agentText: Color(0xFFDFE1E5),
   inlineCode: Color(0x1FF5AD66),
   inlineCodeText: Color(0xFFFEB874),
-  codeBlock: Color(0xFF2B2D30),
-  toolTint: Color(0xFF083C37),
-  toolBorder: Color(0xFF206761),
+  codeBlock: Color(0xFF151619),
   toolAccent: Color(0xFF3AA597),
   subagentTint: Color(0xFF342958),
-  subagentBorder: Color(0xFF634F9C),
   subagentAccent: Color(0xFFD2BEFF),
-  findingsTint: Color(0xFF3F3116),
-  findingsBorder: Color(0xFF6C552C),
   findingsAccent: Color(0xFFE6B062),
   selectionBar: Color(0xFF26272B),
   selectionBarText: Color(0xFFE8E9EC),

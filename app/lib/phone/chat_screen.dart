@@ -124,8 +124,7 @@ class ExpiredBar extends StatelessWidget {
     final t = NushiTheme.of(context).t;
     return Container(
       decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        border: Border(top: BorderSide(color: t.line)),
       ),
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
       child: Row(
@@ -203,7 +202,7 @@ class TranscriptSkeleton extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: t.raised,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(NushiTheme.tag),
       ),
     );
     return Semantics(

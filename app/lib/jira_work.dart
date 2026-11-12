@@ -82,8 +82,9 @@ Future<List<MenuEntry>> issueMoves(
 }
 
 /// The status, which opens the moves the workflow allows now (asked of
-/// Jira as it opens). [quiet] (a list's rows): its border only under the
-/// pointer.
+/// Jira as it opens): its state's ink on the state's soft fill, no outline
+/// (ADR 0111). [quiet] (a list's rows): its fill only under the pointer or
+/// with the focus.
 class StatusMenu extends StatefulWidget {
   const new(this.issue, {required this.load, super.key, this.quiet = false});
 
@@ -119,6 +120,7 @@ class _StatusMenuState extends State<StatusMenu> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final color = statusColor(t, widget.issue.statusCategory);
+    final soft = statusSoft(t, widget.issue.statusCategory);
     return Menu(
       entries: _entries,
       builder: (context, open) => Pressable(
@@ -129,13 +131,16 @@ class _StatusMenuState extends State<StatusMenu> {
           margin: widget.quiet
               ? null
               : const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          padding: const EdgeInsets.fromLTRB(6, 1, 3, 1),
-          decoration: box(
-            widget.quiet && !look.hover && !look.focus
-                ? const Color(0x00000000)
-                : color,
-            radius: NushiTheme.control,
+          padding: const EdgeInsets.fromLTRB(7, 2, 4, 2),
+          decoration: BoxDecoration(
+            color: look.hover
+                ? Color.alphaBlend(look.pressed ? t.pressed : t.hover, soft)
+                : widget.quiet && !look.focus
+                ? null
+                : soft,
+            borderRadius: BorderRadius.circular(NushiTheme.control),
           ),
+          foregroundDecoration: focusRing(t, look),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

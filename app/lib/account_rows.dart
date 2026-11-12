@@ -163,8 +163,8 @@ class _TokenFormState extends State<TokenForm> {
     final t = theme.t;
     final mono = theme.code(t.text, size: 12);
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: box(t.borderSubtle, fill: t.base),
+      padding: const EdgeInsets.all(13),
+      decoration: cardBox(t),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

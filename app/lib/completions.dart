@@ -199,7 +199,7 @@ class ChoiceList extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(4),
-      decoration: box(t.borderStrong, fill: t.base),
+      decoration: cardBox(t),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -207,6 +207,7 @@ class ChoiceList extends StatelessWidget {
             Tap(
               onTap: () => onPick(c),
               selected: i == picked,
+              radius: NushiTheme.inner(NushiTheme.card, 4),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Text.rich(
                 TextSpan(

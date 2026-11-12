@@ -134,8 +134,10 @@ class UpdateToast extends StatefulWidget {
   /// in a wide window: the panel's width inside its side margins.
   static const width = 288.0;
 
-  /// Its room from the window's right edge: the panel's side margin.
-  static const inset = 16.0;
+  /// Its room from the window's right and bottom edges: the window's
+  /// margin and the panel's side margin, so it lines up with the details
+  /// cards' text.
+  static const double inset = NushiTheme.windowPad + 16;
 
   final Daemon daemon;
 
@@ -231,10 +233,7 @@ class _UpdateToastState extends State<UpdateToast> {
       key: const ValueKey('update-toast'),
       width: UpdateToast.width,
       padding: const EdgeInsets.fromLTRB(12, 8, 6, 12),
-      decoration: box(
-        t.borderStrong,
-        fill: t.raised,
-      ).copyWith(boxShadow: [BoxShadow(color: t.shadow, blurRadius: 12)]),
+      decoration: floatBox(t, radius: NushiTheme.card),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

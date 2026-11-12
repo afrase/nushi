@@ -95,6 +95,62 @@ if let close = covered.standardWindowButton(.closeButton), let bar = close.super
   print("FAIL: no close button")
 }
 
+// The window's buttons, level with the headers (WindowButtons): the maths,
+// then a window's own buttons once placed.
+expect(WindowButtons.barFrame(windowHeight: 600, width: 800), NSRect(x: 0, y: 528, width: 800, height: 72),
+       "the bar: at the top, its middle the header's")
+do {
+  // AppKit's frames on macOS 27: 14 across, 23 apart, 9 in.
+  let first = NSRect(x: 9, y: 9, width: 14, height: 14)
+  let second = NSRect(x: 32, y: 9, width: 14, height: 14)
+  expect(WindowButtons.origin(of: first, first: first, barHeight: 72), NSPoint(x: 20, y: 29), "the first button")
+  expect(WindowButtons.origin(of: second, first: first, barHeight: 72), NSPoint(x: 43, y: 29),
+         "the second keeps AppKit's spacing")
+  // Placed already: the same places again.
+  let placed = NSRect(x: 20, y: 29, width: 14, height: 14)
+  expect(WindowButtons.origin(of: placed, first: placed, barHeight: 72), placed.origin, "placed twice")
+}
+do {
+  let kinds: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
+  let (w, content) = window(covered: true)
+  let frame = w.contentView!.superview!
+  /// A button's box in the window, from its left and its top.
+  func box(_ kind: NSWindow.ButtonType) -> NSRect {
+    let b = w.standardWindowButton(kind)!
+    let r = b.convert(b.bounds, to: nil)
+    return NSRect(x: r.minX, y: w.frame.height - r.maxY, width: r.width, height: r.height)
+  }
+  let apart = box(.miniaturizeButton).minX - box(.closeButton).minX
+  WindowButtons.keep(in: w)
+  /// The buttons are in their place, and each keeps its press.
+  func placed(_ when: String) {
+    for (i, kind) in kinds.enumerated() {
+      let r = box(kind)
+      expect(r.midY, WindowButtons.middle, "\(when): button \(i) is level with a header's middle")
+      expect(r.minX, WindowButtons.leading + CGFloat(i) * apart, "\(when): button \(i) keeps AppKit's spacing")
+      let b = w.standardWindowButton(kind)!
+      let p = frame.convert(NSPoint(x: r.midX, y: w.frame.height - r.midY), from: nil)
+      expect(frame.hitTest(p).map { $0 === b || $0.isDescendant(of: b) } ?? false, true,
+             "\(when): button \(i) keeps its press")
+    }
+    // Beside them and under them the taller bar takes nothing: a header's
+    // buttons there keep their presses, and a double click doesn't zoom.
+    for top in [16.0, WindowButtons.middle, 2 * WindowButtons.middle - 2, 2 * WindowButtons.middle + 20] {
+      let p = frame.convert(NSPoint(x: 400, y: w.frame.height - top), from: nil)
+      expect(frame.hitTest(p) === content, true, "\(when): a press \(top) points from the top is the content's")
+      if asks, top < 2 * WindowButtons.middle {
+        expect(isContent(w, fromTop: top), true, "\(when): \(top) points from the top is content")
+      }
+    }
+  }
+  placed("placed")
+  // AppKit lays its bar out again as the window is resized: they stay.
+  w.setFrame(NSRect(x: 0, y: 0, width: 1000, height: 700), display: false)
+  placed("resized")
+  WindowButtons.place(in: w)
+  placed("placed again")
+}
+
 // HeaderDrag: a header's press, from its down to Flutter's release.
 let at = CGPoint(x: 300, y: 580)
 func point(_ dx: CGFloat) -> CGPoint { CGPoint(x: at.x + dx, y: at.y) }

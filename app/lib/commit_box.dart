@@ -156,7 +156,7 @@ class _CommitBoxState extends State<CommitBox> {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        border: Border(top: BorderSide(color: t.line)),
       ),
       child: ListenableBuilder(
         listenable: Listenable.merge([chat, chat.commitMessage]),

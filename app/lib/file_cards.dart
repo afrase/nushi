@@ -86,8 +86,7 @@ class FileCard extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 240, minHeight: height),
             padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
             decoration: BoxDecoration(
-              color: t.raised,
-              border: Border.all(color: t.borderSubtle),
+              color: t.lifted,
               borderRadius: BorderRadius.circular(NushiTheme.card),
             ),
             child: Row(
@@ -162,7 +161,7 @@ class FileChip extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 280),
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
           decoration: BoxDecoration(
-            border: Border.all(color: t.userBandBorder),
+            color: t.userBandCodeBlock,
             borderRadius: BorderRadius.circular(NushiTheme.control),
           ),
           child: Row(

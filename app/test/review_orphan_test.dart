@@ -195,7 +195,8 @@ void main() {
       'with Edit and Remove', (tester) async {
     final (d, chat) = await open(tester);
     await commit(tester, chat);
-    expect(inHeader('Changes 1'), findsOne);
+    expect(inHeader('Changes'), findsOne);
+    expect(inHeader('1'), findsOne); // its count, a pill in the segment
     expect(find.text('Check for overflow.'), findsOne);
     expect(commentsOf('c').single.outdated, isTrue);
 
@@ -287,7 +288,7 @@ void main() {
       'the new comments', (tester) async {
     final (d, chat) = await open(tester);
     await commit(tester, chat);
-    expect(inHeader('Changes 1'), findsOne);
+    expect(inHeader('1'), findsOne);
     await sendToAgent(tester);
     expect(chat.draft.replies.value, hasLength(1));
     // The card taken out of the box (its ×, or the box cleared).
@@ -405,7 +406,9 @@ void main() {
     await send(tester, chat);
     await answer(tester, chat, _new);
     expect(commentsOf('c').single.sent, isTrue);
-    expect(find.text('Line 4 · sent'), findsOne); // under its line
+    // Under its line: its lines, and that it's sent in a pill.
+    expect(find.text('Line 4'), findsOne);
+    expect(find.text('Sent'), findsOne);
     await hover(tester, 'Check for overflow.');
     expect(find.byTooltip('Edit'), findsNothing);
     await tester.tap(find.byTooltip('Remove'));
@@ -431,7 +434,10 @@ void main() {
     ];
     await tester.tap(find.byTooltip('Reload'));
     await settle(tester);
-    expect(find.text('Outdated · Line 4 · sent'), findsOne);
+    // Above its file: each state its own pill, its lines between them.
+    expect(find.text('Outdated'), findsOne);
+    expect(find.text('Line 4'), findsOne);
+    expect(find.text('Sent'), findsOne);
     await hover(tester, 'Check for overflow.');
     await tester.tap(find.byTooltip('Remove'));
     await settle(tester);
@@ -467,7 +473,8 @@ void main() {
       await tester.tap(find.byTooltip('Reload'));
       await settle(tester);
       expect(find.text('1 comment not on these files'), findsOne);
-      expect(find.text('Outdated · sub.go · Line 4'), findsOne);
+      expect(find.text('Outdated'), findsOne);
+      expect(find.text('sub.go · Line 4'), findsOne);
       // Above the list, inside the files' column.
       expect(
         tester.getBottomLeft(find.text('Check for overflow.')).dy,

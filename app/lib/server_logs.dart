@@ -338,8 +338,7 @@ class _Bar extends StatelessWidget {
       height: 34,
       padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
       decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(bottom: BorderSide(color: t.borderSubtle)),
+        border: Border(bottom: BorderSide(color: t.line)),
       ),
       child: Row(
         spacing: 8,
@@ -364,7 +363,7 @@ class _Bar extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: fill,
-                    borderRadius: BorderRadius.circular(NushiTheme.control),
+                    borderRadius: BorderRadius.circular(NushiTheme.pill),
                   ),
                   child: Text(
                     word,

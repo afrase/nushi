@@ -15,6 +15,13 @@ double contrast(Color a, Color b) {
 /// (`tokens_test`, `chat_colors_test`, `code_ink_test`): text AA (4.5:1)
 /// on every fill it sits on, a mark 3:1. Each a line naming the pair, for
 /// a custom theme's warning in Settings; the worst first.
+///
+/// Not among them (ADR 0086): code's colors (`syntax.*`), the terminal's
+/// sixteen and its text (`terminal.*`), a diff's (`diff.*`) and the
+/// transcript's body text (`agentText`). A published theme's are its
+/// authors' and are what it's known by, so a built-in keeps them as
+/// published (`published_colors_test`) though some read under AA
+/// (Tokyo Night's comments, 2.8:1), and a user's are theirs.
 List<String> contrastWarnings(Tokens t) {
   Color on(Color tint, Color surface) => Color.alphaBlend(tint, surface);
   final rows = {
@@ -23,23 +30,31 @@ List<String> contrastWarnings(Tokens t) {
     'selected': t.selected,
     'accentSoft': t.accentSoft,
     'base': t.base,
+    'a hovered row on base': on(t.hover, t.base),
+  };
+  // The sidebar's rows, on the window itself (ADR 0111): their text and
+  // their marks.
+  final sidebar = {
+    'window': t.window,
+    'a hovered row on window': on(t.hover, t.window),
   };
   final tints = {
-    'toolTint': t.toolTint,
     'subagentTint': t.subagentTint,
-    'findingsTint': t.findingsTint,
     'needsSoft': t.needsSoft,
     'doneSoft': t.doneSoft,
     'crashedSoft': t.crashedSoft,
   };
-  final findings = on(t.findingsTint, t.base);
   final pairs = <(String, Color, String, Color, double)>[
     for (final (ink, c) in [
       ('text', t.text),
       ('textSecondary', t.textSecondary),
       ('textMuted', t.textMuted),
     ])
-      for (final MapEntry(key: f, value: b) in {...rows, ...tints}.entries)
+      for (final MapEntry(key: f, value: b) in {
+        ...rows,
+        ...sidebar,
+        ...tints,
+      }.entries)
         (ink, c, f, b, 4.5),
     for (final (ink, c) in [
       ('needs', t.needs),
@@ -51,25 +66,53 @@ List<String> contrastWarnings(Tokens t) {
     ])
       for (final MapEntry(key: f, value: b) in rows.entries)
         (ink, c, f, b, 4.5),
-    for (final MapEntry(key: f, value: b) in rows.entries)
-      ('idle', t.idle, f, b, 3),
+    for (final (ink, c) in [
+      ('idle', t.idle),
+      ('needs', t.needs),
+      ('done', t.done),
+      ('running', t.running),
+      ('crashed', t.crashed),
+    ])
+      for (final MapEntry(key: f, value: b) in {...rows, ...sidebar}.entries)
+        (ink, c, f, b, 3),
     ('needs', t.needs, 'needsSoft', t.needsSoft, 4.5),
     ('done', t.done, 'doneSoft', t.doneSoft, 4.5),
     ('crashed', t.crashed, 'crashedSoft', t.crashedSoft, 4.5),
     ('userBandText', t.userBandText, 'userBand', t.userBand, 4.5),
     ('userBandMuted', t.userBandMuted, 'userBand', t.userBand, 4.5),
     ('subagentAccent', t.subagentAccent, 'subagentTint', t.subagentTint, 4.5),
-    ('findingsAccent', t.findingsAccent, 'findingsTint', t.findingsTint, 4.5),
-    ('toolAccent', t.toolAccent, 'toolTint', t.toolTint, 3),
+    ('findingsAccent', t.findingsAccent, 'raised', t.raised, 4.5),
+    ('toolAccent', t.toolAccent, 'raised', t.raised, 3),
+    ('toolAccent', t.toolAccent, 'codeBlock', t.codeBlock, 3),
+    for (final (ink, c) in [
+      ('text', t.text),
+      ('textSecondary', t.textSecondary),
+      ('textMuted', t.textMuted),
+      ('done', t.done),
+      ('crashed', t.crashed),
+    ])
+      (ink, c, 'codeBlock', t.codeBlock, 4.5),
+    ('textMuted', t.textMuted, 'a quote on base', on(t.quote, t.base), 4.5),
+    (
+      'userBandMuted',
+      t.userBandMuted,
+      'a quote in userBand',
+      on(t.quote, t.userBand),
+      4.5,
+    ),
+    ('text', t.text, 'lifted', t.lifted, 4.5),
+    ('textSecondary', t.textSecondary, 'lifted', t.lifted, 4.5),
+    ('textMuted', t.textMuted, 'lifted', t.lifted, 4.5),
+    ('crashed', t.crashed, 'lifted', t.lifted, 4.5),
+    ('subagentAccent', t.subagentAccent, 'accentSoft', t.accentSoft, 4.5),
     ('onAccent', t.onAccent, 'accent', t.accent, 4.5),
     for (final (i, c) in t.avatars.indexed)
-      for (final MapEntry(key: f, value: b) in rows.entries)
+      for (final MapEntry(key: f, value: b) in {...rows, ...sidebar}.entries)
         ('avatars.${avatarNames[i]}', c, f, b, 3),
     for (final (f, b) in [
       ('base', t.base),
       ('raised', t.raised),
       ('codeBlock', t.codeBlock),
-      ('findingsTint', findings),
       ('a hovered row', on(t.hover, t.raised)),
       ('selected', t.selected),
     ])

@@ -10,6 +10,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
 import 'package:nushi/subagent_pane.dart';
 import 'package:nushi/subagents.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
@@ -90,13 +91,14 @@ Future<void> _toggleDetails(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// The pane, then the details at its right, both beside the transcript.
+/// The pane, then the details at the chat's pane's right, in from the
+/// window's edge, both beside the transcript.
 void _side(WidgetTester tester) {
   final pane = tester.getRect(_pane);
   final details = tester.getRect(_details);
   final transcript = _transcript(tester);
   expect(pane.right, details.left);
-  expect(details.right, 1400);
+  expect(details.right, 1400 - NushiTheme.windowPad);
   expect(transcript.right, lessThanOrEqualTo(pane.left));
 }
 
@@ -133,7 +135,7 @@ void main() {
     // The details go; the pane stays, at the right.
     await _toggleDetails(tester);
     expect(_details, findsNothing);
-    expect(tester.getRect(_pane).right, 1400);
+    expect(tester.getRect(_pane).right, 1400 - NushiTheme.windowPad);
     await _toggleDetails(tester);
     _side(tester);
     // The pane's ×: the details stay.
@@ -142,7 +144,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(_pane, findsNothing);
-    expect(tester.getRect(_details).right, 1400);
+    expect(tester.getRect(_details).right, 1400 - NushiTheme.windowPad);
     expect(_transcript(tester).right, tester.getRect(_details).left);
     d.dispose();
   }, variant: _mac);
@@ -161,23 +163,24 @@ void main() {
   testWidgets('too narrow for both: the pane lies over the transcript', (
     tester,
   ) async {
-    // 900 for the chat: the details (320) fit beside the transcript
-    // (556), the pane too, but not with the transcript at its least
-    // beside the pane (360).
+    // 892 for the chat's pane: the details (320) fit beside the
+    // transcript (484 at least), the pane too, but not with the transcript
+    // at its least beside the pane (360).
     final d = await _app(tester, width: 1160);
     await _openPane(tester);
     final pane = tester.getRect(_pane);
     final details = tester.getRect(_details);
-    expect(pane.right, details.left);
+    final edge = details.left;
+    expect(pane.right, edge);
     expect(pane.width, 264);
     // The transcript keeps its width, under the pane.
-    expect(_transcript(tester).right, details.left);
+    expect(_transcript(tester).right, edge);
     // Closing the pane uncovers it.
     await tester.tap(
       find.descendant(of: _pane, matching: find.byIcon(Icons.close)),
     );
     await tester.pumpAndSettle();
-    expect(_transcript(tester).right, details.left);
+    expect(_transcript(tester).right, edge);
     d.dispose();
   }, variant: _mac);
 
@@ -190,7 +193,8 @@ void main() {
       findsNothing,
     );
     // Its edge, dragged far left: the pane goes over the transcript until
-    // 48 of it is left (1400 less the sidebar's 260 and the details' 320).
+    // 48 of it is left (1400 less the sidebar's 260, the window's margin
+    // and the details' 320).
     final drag = await tester.startGesture(
       tester.getTopLeft(_pane) + const Offset(2, 200),
     );
@@ -203,7 +207,7 @@ void main() {
     await tester.pump();
     await drag.up();
     await tester.pumpAndSettle();
-    const most = 1400 - 260 - DetailsPanel.width - 48;
+    const most = 1400 - 260 - NushiTheme.windowPad - DetailsPanel.width - 48;
     expect(tester.getRect(_pane).width, most);
     expect(tester.getRect(_pane).right, tester.getRect(_details).left);
     expect((readSaved()['panes']! as Map)['subagent'], most);

@@ -7,9 +7,10 @@ import 'package:nushi/chat_pins.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/disclosure.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar.dart';
+import 'package:nushi/sidebar_group_header.dart';
 import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/slide_list.dart';
-import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -124,18 +125,30 @@ class ArchivedSection extends StatelessWidget {
         Disclosure(
           open: archived.isNotEmpty,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(6, 12, 6, 2),
+            padding: const EdgeInsets.fromLTRB(
+              Sidebar.start,
+              12,
+              Sidebar.end,
+              2,
+            ),
             child: Tap(
               onTap: onToggle,
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Sidebar.rowPad,
+                vertical: 5,
+              ),
               child: Row(
                 children: [
-                  TurnChevron(open: open, size: 16),
-                  const SizedBox(width: 4),
                   Text(
                     'Archived  ${archived.length}',
-                    style: theme.ui(t.textSecondary, size: 12),
+                    style: theme.ui(
+                      t.textMuted,
+                      size: 11.5,
+                      weight: FontWeight.w600,
+                    ),
                   ),
+                  const SizedBox(width: 4),
+                  TurnChevron(open: open, size: 12, color: t.textMuted),
                 ],
               ),
             ),
@@ -169,7 +182,12 @@ class GroupHint extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 2, 8, 6),
+      padding: const EdgeInsets.fromLTRB(
+        Sidebar.start + Sidebar.rowPad,
+        2,
+        Sidebar.end,
+        6,
+      ),
       child: Text(text, style: theme.ui(theme.t.textMuted, size: 12)),
     );
   }
@@ -205,11 +223,11 @@ class Lifted extends StatelessWidget {
           child: Container(
             constraints: BoxConstraints(maxWidth: width * 0.75),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: box(
-              t.borderSubtle,
-              fill: t.raised,
-              radius: NushiTheme.control,
-            ).copyWith(boxShadow: [BoxShadow(color: t.shadow, blurRadius: 12)]),
+            decoration: BoxDecoration(
+              color: t.raised,
+              borderRadius: BorderRadius.circular(NushiTheme.control),
+              boxShadow: floatShadows(t),
+            ),
             child: Text(
               name,
               maxLines: 1,
@@ -280,93 +298,4 @@ class PinnedHeader extends StatelessWidget {
     collapsed: pinnedCollapsed.value,
     onToggle: () => pinnedCollapsed.value = !pinnedCollapsed.value,
   );
-}
-
-/// A group's header as a project's looks (Pinned's, a section's, a Date or
-/// Status group's): a chevron that collapses it ([onToggle]), [lead] (an
-/// agent's mark) and [title] in its weight, the most urgent of its
-/// chats' states as one dot while it's [collapsed], and [trailing] at its
-/// end. As tall as a project's header with its + button, so all match.
-class GroupHeader extends StatelessWidget {
-  const new({
-    required this.title,
-    required this.chats,
-    required this.collapsed,
-    required this.onToggle,
-    super.key,
-    this.lead,
-    this.trailing,
-    this.titleWidget,
-  });
-
-  final String title;
-  final List<ChatState> chats;
-  final bool collapsed;
-  final VoidCallback onToggle;
-  final Widget? lead;
-  final Widget? trailing;
-
-  /// In [title]'s place (a field to rename a section).
-  final Widget? titleWidget;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 10, 6, 2),
-      child: Row(
-        children: [
-          IconTap.drawn(
-            (size, color) =>
-                TurnChevron(open: !collapsed, size: size, color: color),
-            tooltip: collapsed ? 'Expand' : 'Collapse',
-            size: 12,
-            padding: 6,
-            color: t.textMuted,
-            onTap: onToggle,
-          ),
-          const SizedBox(width: 2),
-          if (lead case final lead?) ...[lead, const SizedBox(width: 6)],
-          Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  child: SizedBox(
-                    height: 26,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: 1,
-                      child:
-                          titleWidget ??
-                          Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.ui(t.text, weight: FontWeight.w600),
-                          ),
-                    ),
-                  ),
-                ),
-                if (collapsed)
-                  ListenableBuilder(
-                    listenable: Listenable.merge([
-                      for (final c in chats) c.look,
-                    ]),
-                    builder: (context, _) => switch (groupPhase(chats)) {
-                      final phase? => Padding(
-                        padding: const EdgeInsets.only(left: 5),
-                        child: PhaseDot(phase),
-                      ),
-                      null => const SizedBox.shrink(),
-                    },
-                  ),
-              ],
-            ),
-          ),
-          ?trailing,
-        ],
-      ),
-    );
-  }
 }

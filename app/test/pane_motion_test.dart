@@ -9,9 +9,11 @@ import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
@@ -84,6 +86,11 @@ Size _transcript(WidgetTester tester) => tester.getSize(
 
 double _x(WidgetTester tester, Finder f) => tester.getTopLeft(f).dx;
 
+/// The chat's pane's right edge: the window's margin, whatever slides in
+/// it (ADR 0111).
+double _paneEdge(WidgetTester tester) =>
+    tester.getRect(find.byType(Pane)).right;
+
 void main() {
   setUpAll(loadFonts);
   setUp(
@@ -105,20 +112,27 @@ void main() {
     showDetails.value = true;
     await tester.pump();
     const width = DetailsPanel.width;
+    const edge = 1700 - NushiTheme.windowPad;
+    const rest = edge - width;
     expect(_transcript(tester).width, wide - width);
-    expect(_x(tester, _details), 1700); // just off the window's edge
+    // Just off the pane's edge, its width from where it goes.
+    expect(_x(tester, _details), edge);
     expect(_x(tester, _text), moreOrLessEquals(from, epsilon: 0.5));
+    // The pane's edge stays: the details come in inside it.
+    expect(_paneEdge(tester), edge);
 
     await tester.pump(Motion.enter ~/ 2);
     final midPane = _x(tester, _details);
     final midText = _x(tester, _text);
-    expect(midPane, inExclusiveRange(1700 - width, 1700));
+    expect(midPane, inExclusiveRange(rest, rest + width));
     expect(_transcript(tester).width, wide - width); // laid out once
+    expect(_paneEdge(tester), edge);
     await tester.pumpAndSettle();
     final to = _x(tester, _text);
     expect(to, lessThan(from));
     expect(midText, inExclusiveRange(to, from));
-    expect(_x(tester, _details), 1700 - width);
+    expect(_x(tester, _details), rest);
+    expect(_paneEdge(tester), edge);
     d.dispose();
   }, variant: _mac);
 
@@ -135,6 +149,7 @@ void main() {
     expect(_transcript(tester).width, narrow + DetailsPanel.width);
     expect(_details, findsOneWidget);
     expect(_x(tester, _details), moreOrLessEquals(at, epsilon: 1));
+    expect(_paneEdge(tester), 1700 - NushiTheme.windowPad);
     final ignoring = tester.widgetList<IgnorePointer>(
       find.ancestor(of: _details, matching: find.byType(IgnorePointer)),
     );
@@ -191,7 +206,10 @@ void main() {
     final (d, _) = await _app(tester, still: true);
     showDetails.value = true;
     await tester.pump();
-    expect(_x(tester, _details), 1700 - DetailsPanel.width);
+    expect(
+      _x(tester, _details),
+      1700 - NushiTheme.windowPad - DetailsPanel.width,
+    );
     final at = _x(tester, _text);
     await tester.pumpAndSettle();
     expect(_x(tester, _text), at);
@@ -209,7 +227,7 @@ void main() {
 
     sidebarHidden.value = true;
     await tester.pump();
-    expect(_transcript(tester).width, 1700);
+    expect(_transcript(tester).width, 1700 - 2 * NushiTheme.windowPad);
     expect(_x(tester, find.byType(Sidebar)), moreOrLessEquals(0, epsilon: 1));
     expect(_x(tester, _text), moreOrLessEquals(from, epsilon: 0.5));
     await tester.pump(Motion.exit ~/ 2);
@@ -221,7 +239,7 @@ void main() {
 
     sidebarHidden.value = false;
     await tester.pump();
-    expect(_transcript(tester).width, 1700 - width);
+    expect(_transcript(tester).width, 1700 - width - NushiTheme.windowPad);
     expect(_x(tester, find.byType(Sidebar)), -width);
     expect(_x(tester, _text), moreOrLessEquals(to, epsilon: 0.5));
     await tester.pumpAndSettle();

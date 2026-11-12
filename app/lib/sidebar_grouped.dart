@@ -4,6 +4,7 @@ import 'package:nushi/agent_mark.dart';
 import 'package:nushi/arrangement.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar_group_header.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/slide_list.dart';
 import 'package:nushi/status.dart';

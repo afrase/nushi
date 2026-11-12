@@ -6,6 +6,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/sidebar_button.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -38,7 +39,12 @@ void main() {
       find.byTooltip(RegExp('^(Hide|Show) the sidebar')),
     );
     expect(arrange.right, lessThanOrEqualTo(hide.left));
-    expect(hide.right, closeTo(sidebar.right - 10, 1));
+    // Its icon 5 in from the sidebar's end, its box reaching past that.
+    expect(
+      hide.right,
+      closeTo(sidebar.right - Sidebar.end + SidebarButton.reach, 1),
+    );
+    expect(arrange.size, hide.size);
     return d;
   }
 

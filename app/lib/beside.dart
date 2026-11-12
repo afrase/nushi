@@ -143,7 +143,7 @@ class _BesideState extends State<Beside> {
                 child: DecoratedBox(
                   position: DecorationPosition.foreground,
                   decoration: BoxDecoration(
-                    border: Border(left: BorderSide(color: t.borderSubtle)),
+                    border: Border(left: BorderSide(color: t.line)),
                   ),
                   child: p.child,
                 ),

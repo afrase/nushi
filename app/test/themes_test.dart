@@ -17,9 +17,10 @@ void main() {
     expect(builtInThemes.first, same(nushiTheme));
     expect(nushiTheme.dark, same(Tokens.dark));
     expect(nushiTheme.light, same(Tokens.light));
-    expect({
-      for (final c in builtInThemes) c.id,
-    }, hasLength(builtInThemes.length));
+    expect(
+      [for (final c in builtInThemes) c.id],
+      ['nushi', 'vivid', 'solarized', 'nord', 'catppuccin', 'tokyo-night'],
+    );
     for (final c in builtInThemes) {
       expect(c.dark.brightness, Brightness.dark, reason: c.name);
       expect(c.light.brightness, Brightness.light, reason: c.name);
@@ -44,7 +45,7 @@ void main() {
   test('every token has a name, and a set rebuilt from its names is the '
       'same', () {
     final names = tokenColors(Tokens.dark);
-    expect(names.length, 119);
+    expect(names.length, 116);
     expect(names['base'], Tokens.dark.base);
     expect(names['avatars.teal'], Tokens.dark.avatars[1]);
     expect(names['syntax.keyword'], Tokens.dark.ink(Capture.keyword).color);
@@ -61,6 +62,27 @@ void main() {
     // Nushi's diff is diff_view's own: what it drew before themes.
     expect(Tokens.light.diff, same(DiffColors.intelliJLight));
     expect(Tokens.dark.terminal, same(TerminalColors.vsCodeDark));
+  });
+
+  test('a file from before the surfaces told things apart: the names it '
+      'still holds are passed over, with no note', () {
+    final f = readThemeFile(
+      'Old.json',
+      jsonEncode({
+        'name': 'Old',
+        'dark': {
+          for (final n in retiredTokens) n: '#112233',
+          'base': '#101010',
+          'nonsense': '#101010',
+        },
+      }),
+    );
+    expect(f.notes, ['"dark.nonsense" is no token: ignored.']);
+    expect(f.theme!.dark.base, const Color(0xFF101010));
+    expect(
+      tokenColors(f.theme!.dark).keys.toSet().intersection(retiredTokens),
+      isEmpty,
+    );
   });
 
   test('a file written from a theme reads back as it, no notes', () {
@@ -93,9 +115,61 @@ void main() {
     expect(t.dark.accent, const Color(0x80FF0000));
     expect(t.dark.raised, builtInTheme('nord')!.dark.raised);
     expect(tokenColors(t.light), tokenColors(builtInTheme('nord')!.light));
+    // An id with a hyphen names its built-in as any other.
+    final tokyo = readThemeFile('T.json', '{"from": "tokyo-night"}');
+    expect(tokyo.notes, isEmpty);
+    expect(
+      tokenColors(tokyo.theme!.dark),
+      tokenColors(builtInTheme('tokyo-night')!.dark),
+    );
     // Nushi's, when it names none.
     final plain = readThemeFile('P.json', '{"light": {"text": "#000000"}}');
     expect(plain.theme!.dark.raised, Tokens.dark.raised);
+  });
+
+  test('a surface a file doesn’t name follows the one it does (ADR 0111)', () {
+    // A file from before the window, the raised bits and the hairline were
+    // tokens names every color it knew: they come from its own palette,
+    // not from the built-in it starts from.
+    final nordDark = builtInTheme('nord')!.dark;
+    final old = {...tokenColors(nordDark)}
+      ..removeWhere(
+        (k, _) =>
+            const {'window', 'lifted', 'segment', 'line', 'quote'}.contains(k),
+      );
+    final f = readThemeFile(
+      'Old.json',
+      jsonEncode({
+        'dark': {for (final e in old.entries) e.key: hexColor(e.value)},
+        'light': {'base': '#FFF8E7', 'window': '#E9DFC8'},
+      }),
+    );
+    expect(f.notes, isEmpty);
+    final dark = f.theme!.dark;
+    expect(dark.base, nordDark.base);
+    expect(dark.window, isNot(Tokens.dark.window));
+    expect(
+      dark.window.computeLuminance(),
+      lessThan(dark.base.computeLuminance()),
+    );
+    expect(
+      dark.lifted.computeLuminance(),
+      greaterThan(dark.raised.computeLuminance()),
+    );
+    expect(dark.line.a, closeTo(0.07, 0.005));
+    expect(dark.quote, nordDark.text.withValues(alpha: 0.07));
+    expect(
+      (dark.line.r, dark.line.g, dark.line.b),
+      (nordDark.text.r, nordDark.text.g, nordDark.text.b),
+    );
+    // One it names is kept, and what it leaves alone is the built-in's.
+    final light = f.theme!.light;
+    expect(light.window, const Color(0xFFE9DFC8));
+    expect(light.segment, const Color(0xFFFFF8E7));
+    expect(light.lifted, Tokens.light.lifted);
+    expect(light.line, Tokens.light.line);
+    final plain = readThemeFile('P.json', '{"dark": {"accent": "#5E81AC"}}');
+    expect(plain.theme!.dark.window, Tokens.dark.window);
   });
 
   test('what a file has wrong is a note each, the rest still applies', () {
@@ -159,7 +233,7 @@ void main() {
       'first', () {
     final t = withColors(Tokens.dark, {
       'textMuted': const Color(0xFF55585E),
-      'avatars.blue': const Color(0xFF2B2D30),
+      'avatars.blue': Tokens.dark.raised,
     });
     final w = contrastWarnings(t);
     expect(w.first, startsWith('avatars.blue on raised: 1.00:1, under 3:1'));

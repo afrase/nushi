@@ -167,7 +167,7 @@ void main() {
       final box = tester.getRect(
         find.widgetWithText(PanelWidget, 'Environment'),
       );
-      expect(panel.right, width);
+      expect(panel.right, width - NushiTheme.windowPad);
       final chevron = tester.getRect(
         find
             .descendant(

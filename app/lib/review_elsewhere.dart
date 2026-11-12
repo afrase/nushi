@@ -73,15 +73,15 @@ class _CommentsElsewhereState extends State<CommentsElsewhere> {
         return Container(
           constraints: BoxConstraints(maxHeight: widget.maxHeight),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: t.borderSubtle)),
+            border: Border(bottom: BorderSide(color: t.line)),
           ),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(8, 8, 0, 2),
+            padding: const EdgeInsets.fromLTRB(0, 8, 0, 2),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 2, bottom: 2),
+                  padding: const EdgeInsets.only(left: 10, bottom: 2),
                   child: Text(
                     n == 1
                         ? '1 comment not on these files'

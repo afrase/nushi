@@ -250,6 +250,7 @@ class _FormState extends State<_Form> {
                   else
                     Segmented(
                       value: _scope,
+                      onCard: true,
                       segments: const [
                         ('user', 'User'),
                         ('project', 'Project'),
@@ -275,6 +276,7 @@ class _FormState extends State<_Form> {
                   children: [
                     Segmented(
                       value: _transport,
+                      onCard: true,
                       segments: [
                         ('stdio', 'stdio'),
                         ('http', 'HTTP'),

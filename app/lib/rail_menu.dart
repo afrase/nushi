@@ -105,50 +105,47 @@ class _RailMenuState extends State<RailMenu> {
       child: Material(
         type: MaterialType.transparency,
         child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: t.raised,
-            border: Border.all(color: t.borderStrong),
-            borderRadius: BorderRadius.circular(NushiTheme.card),
-            boxShadow: [
-              BoxShadow(
-                color: t.shadow,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ListenableBuilder(
-            listenable: Listenable.merge([current, lit]),
-            builder: (context, _) => SingleChildScrollView(
-              controller: scroll,
-              padding: const EdgeInsets.all(RailMenu._pad),
-              child: IntrinsicWidth(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final (i, e) in entries.indexed)
-                      _MenuRow(
-                        entry: e,
-                        height: row,
-                        // The dashes line up with the rail's under them.
-                        inset: max(
-                          4,
-                          fit.inset - RailMenu._pad - 1 - RailMenu.shift,
-                        ),
-                        fit: fit,
-                        outline: w.outline,
-                        current: i == current.value,
-                        lit: i == lit.value,
-                        onHover: (on) {
-                          if (on) {
-                            lit.value = i;
-                          } else if (lit.value == i) {
-                            lit.value = null;
-                          }
-                        },
-                        onTap: () => w.onPick(i),
-                      ),
-                  ],
+          decoration: floatBox(t),
+          // Scrolled, a row under a corner is clipped to it, and the
+          // scrollbar's ends keep off the corners.
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(NushiTheme.panel),
+            child: RoundedScroll(
+              corner: NushiTheme.panel,
+              child: ListenableBuilder(
+                listenable: Listenable.merge([current, lit]),
+                builder: (context, _) => SingleChildScrollView(
+                  controller: scroll,
+                  padding: const EdgeInsets.all(RailMenu._pad),
+                  child: IntrinsicWidth(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final (i, e) in entries.indexed)
+                          _MenuRow(
+                            entry: e,
+                            height: row,
+                            // The dashes line up with the rail's under them.
+                            inset: max(
+                              4,
+                              fit.inset - RailMenu._pad - 1 - RailMenu.shift,
+                            ),
+                            fit: fit,
+                            outline: w.outline,
+                            current: i == current.value,
+                            lit: i == lit.value,
+                            onHover: (on) {
+                              if (on) {
+                                lit.value = i;
+                              } else if (lit.value == i) {
+                                lit.value = null;
+                              }
+                            },
+                            onTap: () => w.onPick(i),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -216,7 +213,9 @@ class _MenuRow extends StatelessWidget {
           padding: EdgeInsets.only(left: inset, right: 12),
           decoration: BoxDecoration(
             color: lit ? t.hover : null,
-            borderRadius: BorderRadius.circular(NushiTheme.control),
+            borderRadius: BorderRadius.circular(
+              NushiTheme.inner(NushiTheme.panel, RailMenu._pad),
+            ),
           ),
           child: Row(
             spacing: 10,

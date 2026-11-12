@@ -87,12 +87,7 @@ class ItemView extends StatelessWidget {
                 12,
               ),
               alignment: Alignment.topLeft,
-              decoration: BoxDecoration(
-                color: t.userBand,
-                border: Border.symmetric(
-                  horizontal: BorderSide(color: t.userBandBorder),
-                ),
-              ),
+              color: t.userBand,
               child: _contents(context),
             ),
           ),
@@ -304,10 +299,10 @@ class ItemView extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _bubbleWidth),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             decoration: BoxDecoration(
               color: t.userBand,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(NushiTheme.panel),
             ),
             child: _contents(context),
           ),

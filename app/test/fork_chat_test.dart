@@ -183,7 +183,7 @@ void main() {
     );
     expect(
       tester.getRect(find.byIcon(Icons.close)).right,
-      greaterThan(1400 - NushiTheme.gutter - 8),
+      greaterThan(1400 - NushiTheme.windowPad - NushiTheme.gutter - 8),
     );
     // Not during its turn.
     fake.emit(_sideStatus(1, busy: true));

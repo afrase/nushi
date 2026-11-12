@@ -41,12 +41,14 @@ void main() {
   setUpAll(loadFonts);
   final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
 
-  // Every section, both themes, a wide window and a small one; the general
-  // section, wide, is the settings' window golden (with the sidebar hidden,
-  // which has its own), the others renders.
+  // Every section, both themes, a wide window, a small one and a narrow
+  // one (720, where the window's layout narrows); the general section,
+  // wide, is the settings' window golden (with the sidebar hidden, which
+  // has its own), the others renders.
   for (final (size, sizeName) in [
     (const Size(1700, 1000), 'wide'),
     (const Size(900, 700), 'small'),
+    (const Size(720, 900), 'narrow'),
   ]) {
     for (final (brightness, theme) in [
       (Brightness.dark, 'dark'),

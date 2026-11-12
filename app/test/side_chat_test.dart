@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/composer_plus.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -292,6 +293,8 @@ void main() {
         fake.emit(_config);
         await tester.pumpAndSettle();
         expectTextInside(tester, size.width);
+        // A side chat's box is too narrow for them in its row (ADR
+        // 0111): under the box, inside the pane.
         final pane = tester.getRect(find.byType(SideChat));
         final effort = tester.getRect(
           find.descendant(
@@ -299,8 +302,15 @@ void main() {
             matching: find.textContaining('Sonnet', findRichText: true),
           ),
         );
+        final plus = tester.getRect(
+          find.descendant(
+            of: find.byType(SideChat),
+            matching: find.byType(PlusButton),
+          ),
+        );
         expect(effort.right, lessThanOrEqualTo(pane.right));
-        expect(effort.right, greaterThan(pane.right - 60));
+        expect(effort.left, greaterThan(pane.left));
+        expect(effort.top, greaterThan(plus.bottom));
         await render(
           tester,
           find.byType(NushiApp),

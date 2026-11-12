@@ -31,3 +31,7 @@ The column is centred or takes the whole width, by choice, rather than kept at t
 Tool rows have their box back ([ADR 0076](0076-messages-as-bubbles-with-actions-on-hover.md)).
 
 The ⋯'s dots are heavier (2026-11-06): about twice the stroke across, as solid as Claude desktop's beside its strokes, still lighter than Material's ([ADR 0094](0094-browser-tabs-for-local-web-servers.md)).
+
+The header and the panes' headers are 56 high, and the chat's row and its fold numbers were measured again for its pills, its segmented control and its 32-point icon buttons (2026-11-11, [ADR 0111](0111-surfaces-and-floating-panes.md)).
+
+**Amended by [ADR 0111](0111-surfaces-and-floating-panes.md)** (2026-11-11): the composer is a card with its controls in a row under the text, 86 high with one line, 16 from the pane's bottom; the pickers are in that row, not under the box.

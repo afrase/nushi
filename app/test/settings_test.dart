@@ -60,6 +60,7 @@ final _saved = <String, Object?>{
   'termFont': 'Menlo',
   'termSize': 14.0,
   'appearance': 'dark',
+  'theme': 'tokyo-night',
   'alertNeedsYou': false,
   'alertFinished': false,
   'alertFailed': false,
@@ -107,6 +108,7 @@ List<ValueNotifier<Object?>> get _all => [
   terminalFont,
   terminalFontSize,
   appearance,
+  colorTheme,
   alertNeedsYou,
   alertFinished,
   alertFailed,
@@ -133,7 +135,9 @@ void main() {
     expect(githubDays.value, 30);
     expect(dismissedUpdate.value, '0.1.17');
     expect(wrapLines.value, isFalse);
-    expect(_all.map((p) => p.value), hasLength(40)); // each made
+    // A built-in named by its id is the theme shown (ADR 0086).
+    expect(colorTheme.value, 'tokyo-night');
+    expect(_all.map((p) => p.value), hasLength(41)); // each made
     showDetails.value = true;
     await pumpEventQueue();
     expect(readSaved(), {

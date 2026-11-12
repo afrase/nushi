@@ -209,9 +209,12 @@ class AgentMarkdown extends StatelessWidget {
           .copyWith(height: large ? 22 / 14 : 1.5),
       code: theme.code(typed ? t.userBandText : t.agentText, size: 12.5),
       codeBackground: typed ? t.userBandCodeBlock : t.codeBlock,
+      // A control's corners, as a diff and a quote have.
+      codeRadius: NushiTheme.control,
       inlineCode: typed ? t.userBandCode : t.inlineCode,
       inlineCodeColor: t.inlineCodeText,
-      border: typed ? t.userBandBorder : t.borderSubtle,
+      border: t.line,
+      quote: t.quote,
       muted: typed ? t.userBandMuted : t.textMuted,
       link: t.link,
       highlight: codeHighlighter(t),

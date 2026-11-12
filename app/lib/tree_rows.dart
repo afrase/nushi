@@ -115,7 +115,9 @@ class TreeRowView extends StatelessWidget {
     return Tap(
       onTap: onTap,
       selected: selected,
-      fill: showing && !selected ? t.hover : null,
+      // The file the preview shows is the open row (ADR 0111), the keys'
+      // place or not.
+      fill: showing ? t.accentSoft : null,
       tooltip: _tooltip(r),
       padding: EdgeInsets.only(left: indent, right: 6),
       child: Row(
@@ -142,7 +144,11 @@ class TreeRowView extends StatelessWidget {
               plainPath(r.name),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.ui(dim ? t.textMuted : t.text, size: text),
+              style: theme.ui(
+                dim ? t.textMuted : t.text,
+                size: text,
+                weight: showing ? FontWeight.w600 : null,
+              ),
             ),
           ),
           if (wrote)

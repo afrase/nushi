@@ -101,11 +101,9 @@ class _CardShellState extends State<CardShell> {
         : SystemMouseCursors.grab;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: box(
-        t.borderSubtle,
-        fill: t.raised,
-        radius: NushiTheme.card * 1.5,
-      ),
+      // The point its outline took, so its rows are where they were.
+      padding: const EdgeInsets.all(1),
+      decoration: cardBox(t),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -118,7 +116,7 @@ class _CardShellState extends State<CardShell> {
                 onTap: widget.onToggle,
                 cursor: cursor,
                 tint: false,
-                radius: NushiTheme.card * 1.5,
+                radius: NushiTheme.inner(NushiTheme.card, 1),
                 padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
                 child: Row(
                   children: [

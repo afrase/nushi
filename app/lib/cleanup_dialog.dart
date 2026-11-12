@@ -235,7 +235,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
             const SizedBox(height: 8),
           ],
           for (final (i, r) in rows.indexed) ...[
-            if (i > 0) Divider(height: 1, color: t.borderSubtle),
+            if (i > 0) Divider(height: 1, color: t.line),
             r,
           ],
         ],

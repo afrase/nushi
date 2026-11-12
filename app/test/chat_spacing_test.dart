@@ -7,19 +7,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_pane.dart';
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_column.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/composer.dart';
+import 'package:nushi/composer_plus.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/github_text.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/message_actions.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/pickers.dart';
-import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/terminal_panel.dart';
@@ -169,22 +169,22 @@ Rect _box(WidgetTester tester) => tester.getRect(
 Rect _text(WidgetTester tester, String words) =>
     tester.getRect(find.textContaining(words, findRichText: true).first);
 
-/// The fill of the row of [Collapsible] [at], and the color of its outline.
-(Color, Color) _look(WidgetTester tester, Finder at) {
-  final fill = tester
-      .widgetList<ColoredBox>(
-        find.descendant(of: at, matching: find.byType(ColoredBox)),
-      )
-      .first
-      .color;
+/// The fill of the row of [Collapsible] [at], and what outlines it.
+(Color?, BoxBorder?) _look(WidgetTester tester, Finder at) {
   final frame = tester
       .widgetList<Container>(
         find.descendant(of: at, matching: find.byType(Container)),
       )
       .first;
-  final border = (frame.foregroundDecoration! as BoxDecoration).border!;
-  return (fill, border.top.color);
+  expect(frame.foregroundDecoration, isNull);
+  final box = frame.decoration! as BoxDecoration;
+  return (box.color, box.border);
 }
+
+/// The room beside the chat's column in a view [width] wide.
+double _pad(double width) => width - 2 * NushiTheme.gutter > chatWidth
+    ? (width - chatWidth) / 2
+    : NushiTheme.gutter;
 
 void main() {
   setUpAll(loadFonts);
@@ -197,9 +197,9 @@ void main() {
         final view = tester.getRect(find.byType(ChatView));
         final box = _box(tester);
         // The column's middle on a wide window, the gutter on a narrow one.
-        final left = view.left + readablePad(view.width);
+        final left = view.left + _pad(view.width);
         expect(box.left, left);
-        expect(box.right, view.right - readablePad(view.width));
+        expect(box.right, view.right - _pad(view.width));
         expect(_text(tester, 'I’ll start from').left, left);
         expect(
           tester
@@ -214,12 +214,12 @@ void main() {
         );
         expect(
           tester.getRect(find.byTooltip('Chat menu')).right,
-          view.right - NushiTheme.gutter,
+          view.right - ChatHeader.end,
         );
         // A message's bubble ends at the column's right.
         expect(
           _text(tester, 'Good. Run the whole suite.').right,
-          box.right - 14,
+          box.right - 18,
         );
         await closeView(tester, d);
       }, variant: _mac);
@@ -236,7 +236,7 @@ void main() {
       expect(box.left, left);
       expect(box.right, view.right - NushiTheme.gutter);
       expect(_text(tester, 'I’ll start from').left, left);
-      expect(_text(tester, 'Good. Run the whole suite.').right, box.right - 14);
+      expect(_text(tester, 'Good. Run the whole suite.').right, box.right - 18);
       await closeView(tester, d);
     }, variant: _mac);
 
@@ -244,7 +244,7 @@ void main() {
         'column; its chevron and icon don’t move', (tester) async {
       final d = await _app(tester, width: 1700);
       final view = tester.getRect(find.byType(ChatView));
-      final left = view.left + readablePad(view.width);
+      final left = view.left + _pad(view.width);
       Finder row(String words) => find.ancestor(
         of: find.textContaining(words, findRichText: true).first,
         matching: find.byType(Collapsible),
@@ -254,10 +254,10 @@ void main() {
       final failed = row('go test');
       final fine = row('make check');
       expect(tester.getRect(failed).left, left);
-      expect(tester.getRect(failed).right, left + readableWidth);
+      expect(tester.getRect(failed).right, left + chatWidth);
       final card = tester.getRect(find.byType(WaitingCard));
       expect(card.left, left);
-      expect(card.right, left + readableWidth);
+      expect(card.right, left + chatWidth);
       expect(
         in_(failed, find.byType(Chevron)).left,
         in_(fine, find.byType(Chevron)).left,
@@ -266,25 +266,37 @@ void main() {
         in_(failed, find.byIcon(Icons.terminal)).left,
         in_(fine, find.byIcon(Icons.terminal)).left,
       );
+      // What ends a row ends it at the same place: a failed row's word, a
+      // row's Preview.
       expect(
         in_(failed, find.text('failed')).right,
         tester.getRect(find.byType(PreviewButton)).right,
+      );
+      expect(
+        in_(failed, find.text('failed')).right,
+        tester.getRect(failed).right - Collapsible.side,
       );
       await closeView(tester, d);
     }, variant: _mac);
   });
 
   group('the header', () {
-    testWidgets('44 high, the bar’s gaps with room, ⋯ and the tabs in place', (
+    testWidgets('56 high, the bar’s gaps with room, ⋯ and the tabs in place', (
       tester,
     ) async {
       final d = await _app(tester, width: 1700);
       final header = tester.getRect(find.byType(ChatHeader));
-      expect(header.height, 44);
-      final tabs = tester.getRect(find.byType(PlainTabs<ChatTab>));
-      expect(tabs.bottom, header.bottom - 1);
+      expect(header.height, 56);
+      // The segmented control in the row's middle, over its hairline.
+      final tabs = tester.getRect(find.byType(Segmented<ChatTab>));
+      expect(tabs.center.dy, closeTo(header.center.dy - 0.5, 0.01));
       final terminal = tester.getRect(find.byType(TerminalButton));
-      expect(terminal.left - tabs.right, NushiTheme.groupGap);
+      expect(terminal.left - tabs.right, NushiTheme.barGap);
+      // At the pane's edge, which is the window's margin in.
+      expect(
+        tester.getRect(find.byTooltip('Chat menu')).right,
+        1700 - NushiTheme.windowPad - ChatHeader.end,
+      );
       final menu = tester.getRect(find.byTooltip('Chat menu'));
       final files = tester.getRect(find.byType(FilesButton));
       final browser = tester.getRect(find.byType(BrowserButton));
@@ -297,16 +309,17 @@ void main() {
     }, variant: _mac);
 
     test('the bar’s gaps never fold anything', () {
-      // Where each case first folded before them: 455 for the row, 80 for
-      // the title, the browser's button 26, then what the case adds (the
-      // Files button 26); each button's gap 2.
+      // Where each case first folds without them: 524 for the row, 80 for
+      // the title, the browser's button 32, then what the case adds (the
+      // Pull request segment 106, a model 50, the Files button 32); each
+      // button's gap 2.
       for (final (pull, model, files, first) in [
-        (false, false, false, 561.0),
-        (true, false, false, 649.0),
-        (false, true, false, 611.0),
-        (true, true, false, 699.0),
-        (false, false, true, 587.0),
-        (true, true, true, 725.0),
+        (false, false, false, 636.0),
+        (true, false, false, 742.0),
+        (false, true, false, 686.0),
+        (true, true, false, 792.0),
+        (false, false, true, 668.0),
+        (true, true, true, 824.0),
       ]) {
         for (final panel in [false, true]) {
           HeaderFolds at(double width) => headerFolds(
@@ -336,36 +349,61 @@ void main() {
 
   group('the composer', () {
     for (final width in [1700.0, 720.0]) {
-      testWidgets('48 high, its footer 8 under it, 12 from the bottom, '
-          '${width.toInt()} wide', (tester) async {
+      testWidgets('a card: the text over one row of controls inside it, 16 '
+          'from the bottom, ${width.toInt()} wide', (tester) async {
         final d = await _app(tester, width: width);
         final box = _box(tester);
-        expect(box.height, closeTo(48, 0.5));
-        final footer = tester.getRect(find.byType(Pickers));
-        expect(footer.top - box.bottom, 8);
-        expect(footer.left, box.left);
-        expect(footer.right, box.right);
-        expect(
-          tester.getRect(find.byType(Composer)).bottom - footer.bottom,
-          12,
-        );
+        final t = NushiTheme.of(tester.element(find.byType(Composer))).t;
+        final look =
+            tester
+                    .widget<Container>(
+                      find
+                          .ancestor(
+                            of: find.byType(TextField),
+                            matching: find.byWidgetPredicate(
+                              (w) =>
+                                  w is Container &&
+                                  w.decoration is BoxDecoration &&
+                                  (w.decoration! as BoxDecoration)
+                                          .borderRadius !=
+                                      null,
+                            ),
+                          )
+                          .first,
+                    )
+                    .decoration!
+                as BoxDecoration;
+        expect(look.color, t.raised);
+        expect((look.border! as Border).top.color, t.line);
+        expect(look.boxShadow, isNotEmpty);
+        // The row: the +, the pickers, and what sends; all in the box.
         final input = tester.getRect(find.byType(TextField));
+        final plus = tester.getRect(find.byType(PlusButton));
+        final row = tester.getRect(find.byType(Pickers));
         expect(input.left - box.left, greaterThanOrEqualTo(12));
+        expect(plus.top, greaterThan(input.bottom));
+        expect(plus.left, box.left + 13);
+        expect(plus.size, const Size.square(PillButton.height));
+        expect(row.center.dy, plus.center.dy);
+        expect(row.left, greaterThan(plus.right));
+        expect(row.right, lessThanOrEqualTo(box.right - 13));
+        expect(box.bottom - plus.bottom, 11);
+        expect(tester.getRect(find.byType(Composer)).bottom - box.bottom, 16);
         await closeView(tester, d);
       }, variant: _mac);
     }
   });
 
   group('the transcript', () {
-    testWidgets('14 on 22, at most 860 wide in the middle', (tester) async {
+    testWidgets('14 on 22, at most 800 wide in the middle', (tester) async {
       final d = await _app(tester, width: 1700);
       final line = _text(tester, 'I’ll start from');
       expect(line.height, 22);
       final text = _text(tester, 'The redirect read the session');
-      expect(text.width, lessThanOrEqualTo(860));
+      expect(text.width, lessThanOrEqualTo(chatWidth));
       expect(text.height % 22, 0);
       final view = tester.getRect(find.byType(ChatView));
-      expect(text.left, view.left + readablePad(view.width));
+      expect(text.left, view.left + _pad(view.width));
       await closeView(tester, d);
     }, variant: _mac);
 
@@ -418,23 +456,39 @@ void main() {
       matching: find.byType(Collapsible),
     );
 
-    testWidgets('each in the tool rows’ tint, a failed one in red', (
-      tester,
-    ) async {
+    testWidgets('each a card’s fill with no outline; a failed one says so '
+        'in red, its icon red too', (tester) async {
       final d = await _app(tester, width: 1700);
       final t = NushiTheme.of(tester.element(find.byType(ChatView))).t;
-      for (final words in ['docs/login-report.md', 'make check']) {
-        expect(_look(tester, call(words)), (t.toolTint, t.toolBorder));
+      for (final words in ['docs/login-report.md', 'make check', 'go test']) {
+        expect(_look(tester, call(words)), (t.raised, null));
+        expect(tester.getSize(call(words)).height, Collapsible.height);
       }
-      expect(_look(tester, call('go test')), (t.crashedSoft, t.crashed));
       final failed = call('go test');
       Finder inside(Finder f) => find.descendant(of: failed, matching: f);
-      expect(inside(find.text('failed')), findsOneWidget);
-      expect(inside(find.byIcon(Icons.terminal)), findsOneWidget);
+      expect(
+        tester.widget<Text>(inside(find.text('failed'))).style!.color,
+        t.crashed,
+      );
+      expect(
+        tester.widget<Icon>(inside(find.byIcon(Icons.terminal))).color,
+        t.crashed,
+      );
+      expect(
+        tester
+            .widget<Icon>(
+              find.descendant(
+                of: call('make check'),
+                matching: find.byIcon(Icons.terminal),
+              ),
+            )
+            .color,
+        t.toolAccent,
+      );
       await closeView(tester, d);
     }, variant: _mac);
 
-    testWidgets('on the phone it’s still a card in the tool rows’ tint', (
+    testWidgets('on the phone it’s still a card, a touch target high', (
       tester,
     ) async {
       viewport(tester, const Size(390, 200));
@@ -443,16 +497,24 @@ void main() {
           theme: const NushiTheme(Tokens.dark).toThemeData(),
           home: TouchTargets(
             child: Scaffold(
-              body: ToolCallView(_tool('a', 'read', 'Read', paths: ['a.go'])),
+              body: Align(
+                alignment: Alignment.topCenter,
+                child: ToolCallView(
+                  _tool('a', 'read', 'Read', paths: ['a.go']),
+                ),
+              ),
             ),
           ),
         ),
       );
-      const t = Tokens.dark;
       expect(_look(tester, find.byType(Collapsible)), (
-        t.toolTint,
-        t.toolBorder,
+        Tokens.dark.raised,
+        null,
       ));
+      expect(
+        tester.getSize(find.byType(Collapsible)).height,
+        TouchTargets.size,
+      );
     }, variant: _mac);
   });
 
@@ -537,11 +599,10 @@ void main() {
       tester,
     ) async {
       final d = await _app(tester, width: 1700);
-      final t = NushiTheme.of(tester.element(find.byType(ChatView))).t;
       final terminal = find.byType(TerminalButton);
       final details = find.byTooltip('Show details');
-      expect(tester.getSize(terminal), const Size(26, 26));
-      expect(tester.getSize(details), const Size(26, 26));
+      expect(tester.getSize(terminal), const Size(32, 32));
+      expect(tester.getSize(details), const Size(32, 32));
       expect(
         find.descendant(of: terminal, matching: find.byType(Icon)),
         findsNothing,
@@ -561,7 +622,7 @@ void main() {
             .first,
       );
       expect(open.line, LineIcon.details);
-      expect(open.color, t.accentInk); // on: the accent, as the mock has it
+      expect(open.lit, isTrue); // on: the accent on its soft fill
       await closeView(tester, d);
     }, variant: _mac);
   });

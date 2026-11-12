@@ -9,6 +9,7 @@ import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart';
 import 'package:nushi/typed.dart';
@@ -227,8 +228,7 @@ String groupLabel(List<Item> calls) {
   return label[0].toUpperCase() + label.substring(1);
 }
 
-/// The end of a tool call's header: [failed] in red, on the Mac kept off the
-/// box's edge, under where a Preview button ends.
+/// The end of a tool call's header: [failed] in red.
 class _Failed extends StatelessWidget {
   const new(this.failed);
 
@@ -237,21 +237,64 @@ class _Failed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
-    final text = Text(failed, style: theme.ui(theme.t.crashed, size: 12));
-    return failed.isEmpty || TouchTargets.of(context)
-        ? text
-        : Padding(padding: const EdgeInsets.only(right: 8), child: text);
+    return Text(failed, style: theme.ui(theme.t.crashed, size: 12));
+  }
+}
+
+/// A row's `+n −m`, in code type: the lines its diffs added and removed.
+class LineCounts extends StatelessWidget {
+  const new(this.added, this.removed, {super.key});
+
+  final int added;
+  final int removed;
+
+  /// The lines [calls] added and removed, all their diffs together.
+  static (int, int) of(Iterable<Item> calls) {
+    var (added, removed) = (0, 0);
+    for (final c in calls) {
+      for (final d in c.diffs) {
+        final (a, r) = lineCounts(d);
+        added += a;
+        removed += r;
+      }
+    }
+    return (added, removed);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final code = theme.code(t.text, size: 12);
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '+$added',
+            style: code.copyWith(color: t.done),
+          ),
+          TextSpan(
+            text: ' −$removed',
+            style: code.copyWith(color: t.crashed),
+          ),
+        ],
+      ),
+      maxLines: 1,
+    );
   }
 }
 
 /// One tool call: a one-line summary by kind (the file read or edited, the
-/// command run, `+n −m` for an edit) that opens to its output and diffs.
+/// command run, `+n −m` for an edit) that opens to its output and diffs;
+/// its icon in the tools' color, red once it failed, and a spinner at its
+/// end while it runs. [nested], it's a row of an open run ([Collapsible]).
 class ToolCallView extends StatelessWidget {
   const new(
     this.item, {
     super.key,
     this.images = true,
     this.still = false,
+    this.nested = false,
     this.refs,
   });
 
@@ -265,6 +308,7 @@ class ToolCallView extends StatelessWidget {
 
   /// Whether its images show under it (a run of calls shows them itself).
   final bool images;
+  final bool nested;
 
   @override
   Widget build(BuildContext context) {
@@ -293,32 +337,28 @@ class ToolCallView extends StatelessWidget {
         : mcpName(it.title) == null
         ? null
         : it.title;
-    var (added, removed) = (0, 0);
-    for (final d in it.diffs) {
-      final (a, r) = lineCounts(d);
-      added += a;
-      removed += r;
-    }
+    final (added, removed) = LineCounts.of([it]);
     final command = isCommand(it);
     final preview = previewPath(it);
     final page = show && it.status == 'completed' ? showUrl(it) : null;
     final input = showsInput(it);
     final output = it.text.trim().isNotEmpty;
+    final working = _running(it) && !still;
     return _withImages(
       [if (images) ...it.images],
       refs,
       Collapsible(
         ids: [it.id],
-        failed: failed,
+        nested: nested,
         folded: callFolded(it),
         header: Row(
           children: [
             Icon(
               kindOf(it).icon,
-              size: 13,
+              size: 15,
               color: failed ? t.crashed : t.toolAccent,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             // The title types out as the call comes (the path after the
             // verb), then shines while it runs, the band across the text
             // alone.
@@ -330,22 +370,12 @@ class ToolCallView extends StatelessWidget {
                   Typed(
                     title,
                     keep: pathed ? verb!.length + 1 : 0,
-                    shine: _running(it) && !still,
+                    shine: working,
                   ),
                 ),
               ),
             ),
-            if (it.diffs.isNotEmpty) ...[
-              Text(
-                '+$added',
-                style: code.copyWith(fontSize: 11, color: t.done),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '−$removed',
-                style: code.copyWith(fontSize: 11, color: t.crashed),
-              ),
-            ],
+            if (it.diffs.isNotEmpty) LineCounts(added, removed),
             if (preview != null) ...[
               const SizedBox(width: 8),
               PreviewButton(preview),
@@ -360,38 +390,40 @@ class ToolCallView extends StatelessWidget {
                 on: it.backgroundCommand.state == 'running' && !still,
                 child: Text(
                   'in the background: ${it.backgroundCommand.state}',
-                  style: theme.ui(t.textMuted, size: 11.5),
+                  style: theme.ui(t.textSecondary, size: 12),
                 ),
               ),
-            const SizedBox(width: 8),
-            _Failed(failed ? 'failed' : ''),
+            if (failed) ...[const SizedBox(width: 8), const _Failed('failed')],
+            if (working) ...[
+              const SizedBox(width: 10),
+              SizedBox.square(
+                dimension: 14,
+                child: Spinner(color: t.textSecondary),
+              ),
+            ],
           ],
         ),
         // A call with nothing to show only has its title.
         body: !hasToolBody(it)
             ? null
-            : Padding(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: 8,
-                  children: [
-                    if (command)
-                      FullTitle(
-                        '\$ ${it.title}',
-                      ), // the header cuts it to a line
-                    for (final d in it.diffs) DiffBox(d),
-                    if (input) ToolSection('Input', RawText(it.input)),
-                    if (output && input)
-                      ToolSection('Output', AgentMarkdown(it.text))
-                    else if (output && serverTool(it) != null)
-                      RawText(serverOutput(it.text), folded: 12)
-                    else if (output)
-                      AgentMarkdown(it.text)
-                    else if (showsRawOutput(it))
-                      ToolSection('Output', RawText(it.rawOutput, folded: 12)),
-                  ],
-                ),
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 8,
+                children: [
+                  if (command)
+                    // The header cuts it to a line.
+                    FullTitle('\$ ${it.title}', bare: true),
+                  for (final d in it.diffs) DiffBox(d),
+                  if (input) ToolSection('Input', RawText(it.input)),
+                  if (output && input)
+                    ToolSection('Output', AgentMarkdown(it.text))
+                  else if (output && serverTool(it) != null)
+                    RawText(serverOutput(it.text), folded: 12)
+                  else if (output)
+                    AgentMarkdown(it.text)
+                  else if (showsRawOutput(it))
+                    ToolSection('Output', RawText(it.rawOutput, folded: 12)),
+                ],
               ),
       ),
     );
@@ -419,8 +451,9 @@ Widget _withImages(List<ImageData> images, ImageRefs? refs, Widget child) =>
       );
 
 /// A run of tool calls as one line ("Read 4 files, ran 2 commands") that
-/// opens to each call; while one runs, what it's doing ends the line and
-/// shines ("Read 4 files, searching").
+/// opens to each call, a row of its card; while one runs, what it's doing
+/// ends the line and shines ("Read 4 files, searching"). Its end has what
+/// its edits added and removed, all together.
 class RunView extends StatelessWidget {
   const new(this.calls, {super.key, this.still = false, this.refs});
 
@@ -435,6 +468,8 @@ class RunView extends StatelessWidget {
     final failed = calls.where((c) => c.status == 'failed').length;
     // The last file it wrote that previews, so a folded run offers it too.
     final preview = calls.map(previewPath).nonNulls.lastOrNull;
+    final edits = calls.any((c) => c.diffs.isNotEmpty);
+    final (added, removed) = LineCounts.of(calls);
     return _withImages(
       [for (final c in calls) ...c.images],
       refs,
@@ -442,32 +477,37 @@ class RunView extends StatelessWidget {
         // Open when its first call was, before the next made it a group.
         ids: ['group ${calls.first.id}', calls.first.id],
         folded: runFolded(calls),
-        failed: false, // its failed calls stand out inside, and in the count
+        sunk: false,
         header: Row(
           children: [
-            Icon(Icons.layers_outlined, size: 13, color: t.toolAccent),
-            const SizedBox(width: 6),
-            Expanded(child: _groupTitle(theme, calls, still: still)),
-            if (preview != null) PreviewButton(preview),
+            Icon(Icons.layers_outlined, size: 15, color: t.toolAccent),
             const SizedBox(width: 8),
-            _Failed(failed == 0 ? '' : '$failed failed'),
+            Expanded(child: _groupTitle(theme, calls, still: still)),
+            if (edits) LineCounts(added, removed),
+            if (preview != null) ...[
+              const SizedBox(width: 8),
+              PreviewButton(preview),
+            ],
+            // Its failed calls stand out inside, and in the count.
+            if (failed > 0) ...[
+              const SizedBox(width: 8),
+              _Failed('$failed failed'),
+            ],
           ],
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 4,
-            children: [
-              for (final c in calls)
-                ToolCallView(
-                  c,
-                  key: ValueKey(c.id),
-                  images: false,
-                  still: still,
-                ),
-            ],
-          ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 2,
+          children: [
+            for (final c in calls)
+              ToolCallView(
+                c,
+                key: ValueKey(c.id),
+                images: false,
+                still: still,
+                nested: true,
+              ),
+          ],
         ),
       ),
     );

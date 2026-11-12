@@ -8,6 +8,8 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar.dart';
+import 'package:nushi/sidebar_group_header.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/slide_list.dart';
@@ -177,10 +179,11 @@ Map<String, String> twinParents(Iterable<String> folders) {
 
 /// A group's header: the folder's name (its path in the tooltip; [twin]
 /// after it, muted, when another project has the same name), or "No
-/// folder" ('') for chats in scratch folders; a chevron button that
-/// collapses the group, with the summary dot beside the name while it's
-/// collapsed; a + for a new chat there, shown under the pointer or with
-/// keyboard focus (its room kept, so names don't move). Dragged, it moves
+/// folder" ('') for chats in scratch folders; after it a chevron button
+/// that collapses the group, shown as the + is or while it's collapsed,
+/// with the summary dot beside it then ([GroupHeader]); a + for a new chat
+/// there, shown under the pointer or with keyboard focus (its room kept,
+/// so names don't move). Dragged, it moves
 /// the group. Its menu (a right-click): New chat here, Open in terminal,
 /// and for a folder Remove from sidebar, off ([onRemove] null) while a
 /// chat of it isn't archived.
@@ -264,6 +267,7 @@ class _HeaderState extends State<_Header> {
                     child: IconTap(
                       Icons.add,
                       tooltip: 'New chat here',
+                      size: 14,
                       onTap: widget.onNew,
                     ),
                   ),
@@ -285,13 +289,13 @@ class _HeaderState extends State<_Header> {
           if (widget.twin.isNotEmpty)
             TextSpan(
               text: '  · ${widget.twin}',
-              style: theme.ui(t.textMuted, size: 12),
+              style: theme.ui(t.textMuted, size: 11.5),
             ),
         ],
       ),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: theme.ui(t.text, weight: FontWeight.w600),
+      style: GroupHeader.style(theme),
     );
   }
 }
@@ -311,9 +315,15 @@ class StartingRow extends StatelessWidget {
     // A chat row's room ([Tap]'s padding inside the row's own), so the
     // row comes in its place with no jump.
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.fromLTRB(
+        Sidebar.start,
+        Sidebar.rowGap / 2,
+        Sidebar.end,
+        Sidebar.rowGap / 2,
+      ),
+      child: Container(
+        height: Sidebar.rowHeight,
+        padding: const EdgeInsets.symmetric(horizontal: Sidebar.rowPad),
         child: Row(
           children: [
             // A working chat's ring, still in a still frame ([loopRepaint]):
@@ -325,9 +335,9 @@ class StartingRow extends StatelessWidget {
                 ringing: !reduceMotion(context) && loopRepaint != null,
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             if (agent.isEmpty) const SizedBox(width: 14) else AgentMark(agent),
-            const SizedBox(width: 7),
+            const SizedBox(width: 8),
             Expanded(
               child: Shine(
                 child: Text(

@@ -77,7 +77,7 @@ class _FindingsCardState extends State<FindingsCard> {
     final n = items.length;
     final level = widget.findings.level;
     final header = Padding(
-      padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+      padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
       child: Row(
         spacing: 8,
         children: [
@@ -111,14 +111,15 @@ class _FindingsCardState extends State<FindingsCard> {
         ],
       ),
     );
-    final rule = BorderSide(color: t.findingsBorder);
+    // A card (ADR 0111), hairlines between its rows.
+    final rule = BorderSide(color: t.line);
     return Focus(
       focusNode: _focus,
       onFocusChange: (on) => setState(() => _focused = on),
       onKeyEvent: (_, e) => _key(ids, e),
-      child: framed(
-        border: t.findingsBorder,
-        fill: t.findingsTint,
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: cardBox(t),
         child: Marks(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -126,7 +127,7 @@ class _FindingsCardState extends State<FindingsCard> {
               header,
               if (_json)
                 Container(
-                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
                   decoration: BoxDecoration(border: Border(top: rule)),
                   child: AgentMarkdown(widget.json!),
                 )
@@ -185,7 +186,7 @@ class _FindingsCardState extends State<FindingsCard> {
       },
       selected: _focused && i == _at,
       radius: 0,
-      padding: const EdgeInsets.fromLTRB(6, 5, 10, 5),
+      padding: const EdgeInsets.fromLTRB(10, 7, 14, 7),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -269,8 +270,11 @@ class _FindingsCardState extends State<FindingsCard> {
     final t = theme.t;
     return Container(
       margin: const EdgeInsets.only(top: 1),
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: box(t.findingsBorder, radius: NushiTheme.control),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+      decoration: BoxDecoration(
+        color: t.lifted,
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
+      ),
       child: Text(text, style: theme.ui(t.textSecondary, size: 11.5)),
     );
   }

@@ -64,7 +64,7 @@ class Inlay extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 4, 8, 6),
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
-      decoration: box(t.borderSubtle, fill: t.raised),
+      decoration: cardBox(t, radius: NushiTheme.control),
       child: child,
     );
   }

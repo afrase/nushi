@@ -125,14 +125,14 @@ class _PullTodoState extends State<PullTodo> {
       onSend: () => _send([i]),
       onChanged: widget.onChanged,
     );
-    return framed(
-      border: t.borderSubtle,
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: cardBox(t),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            color: t.raised,
-            padding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 9, 8, 7),
             child: Row(
               children: [
                 Text(
@@ -263,8 +263,8 @@ class _Count extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        color: t.selected,
-        borderRadius: BorderRadius.circular(8),
+        color: t.lifted,
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
       child: Text('$n', style: theme.ui(t.textSecondary, size: 11.5)),
     );
@@ -299,8 +299,7 @@ class _Next extends StatelessWidget {
           )
         : null;
     final foot = BoxDecoration(
-      color: t.raised,
-      border: Border(top: BorderSide(color: t.borderSubtle)),
+      border: Border(top: BorderSide(color: t.line)),
     );
     final headSays = !after && !p.item.draft;
     if (headSays && (waiting.isNotEmpty || running > 0)) {

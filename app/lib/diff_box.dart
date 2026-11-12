@@ -69,8 +69,10 @@ typedef DiffNote = ({String id, bool old, int line});
 
 /// A file's change side by side, or unified in one column ([diffUnified],
 /// [oneSided], or narrower than [oneColumnBelow]; ADR 0107). With [fit] it
-/// is only as tall as the change (up to fifteen rows, then it scrolls), in
-/// a thin frame; else as tall as its box. With [review], a click or a
+/// is only as tall as the change (up to fifteen rows, then it scrolls),
+/// on code's surface, its corners rounded; else as tall as its box, on
+/// the theme's own diff background unless [sunk]. With
+/// [review], a click or a
 /// drag on line numbers opens a box for a comment on those lines, and the
 /// chat's comments made in that view show under their lines. Else [notes]
 /// show under their lines, as [note] builds each, and a click or a drag on
@@ -80,6 +82,7 @@ class DiffBox extends StatefulWidget {
     this.change, {
     super.key,
     this.fit = true,
+    this.sunk,
     this.review,
     this.notes = const [],
     this.note,
@@ -90,6 +93,10 @@ class DiffBox extends StatefulWidget {
 
   final FileChange change;
   final bool fit;
+
+  /// Whether it's drawn on code's surface (ADR 0111): as [fit] unless
+  /// given. Changes' diff fills a block of that surface.
+  final bool? sunk;
   final ({String chat, String where, String agent})? review;
   final List<DiffNote> notes;
   final Widget Function(String id)? note;
@@ -170,7 +177,12 @@ class _DiffBoxState extends State<DiffBox> {
     final first = _tokens == null;
     _tokens = t;
     _dpr = dpr;
-    _theme = diffTheme(t);
+    // In the transcript, on a card and in Changes it sits on code's
+    // surface (ADR 0111).
+    _theme = diffTheme(
+      t,
+      surface: widget.sunk ?? widget.fit ? t.codeBlock : null,
+    );
     final c = _controller;
     if (first || c == null) {
       _build();
@@ -546,11 +558,12 @@ class _DiffBoxState extends State<DiffBox> {
       ),
     );
     if (!widget.fit) return diff;
-    return framed(
+    return SizedBox(
       height: _height(unified: unified),
-      border: NushiTheme.of(context).t.borderSubtle,
-      radius: NushiTheme.control,
-      child: diff,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(NushiTheme.control),
+        child: diff,
+      ),
     );
   }
 }

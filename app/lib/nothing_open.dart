@@ -75,7 +75,7 @@ class _NothingOpenState extends State<NothingOpen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Logo(color: t.borderStrong),
+            Logo(color: t.faint),
             const SizedBox(height: 16),
             if (none)
               SetUpLine(

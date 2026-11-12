@@ -7,6 +7,26 @@ import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/window_drag.dart';
 
+/// A pane of the window (ADR 0111): [child] on the pane's fill, its corners
+/// rounded and what's in it cut to them. The window's own background shows
+/// around it; the main area is one. Its lists' scrollbars keep clear of its
+/// corners ([RoundedScroll]).
+class Pane extends StatelessWidget {
+  const new({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      color: NushiTheme.of(context).t.base,
+      borderRadius: BorderRadius.circular(NushiTheme.panel),
+    ),
+    child: RoundedScroll(corner: NushiTheme.panel, child: child),
+  );
+}
+
 /// A pane of a remembered width, with a draggable edge on its [left] or
 /// right side: a thin line that highlights under the pointer. Dragging it
 /// resizes the pane between [min] and [max]; a double-click resets it to
@@ -26,6 +46,7 @@ class Resizable extends StatefulWidget {
     this.left = false,
     this.top = false,
     this.locked = false,
+    this.line = true,
   });
 
   final String name;
@@ -35,6 +56,11 @@ class Resizable extends StatefulWidget {
   final bool left;
   final bool top;
   final bool locked;
+
+  /// Whether the edge shows as a hairline at rest: a divider inside a pane
+  /// (a side pane's, the terminal's). Off for the sidebar, which sits on
+  /// the window with a gap beside it: its edge shows only under the pointer.
+  final bool line;
   final Widget child;
 
   /// How far in from the pane's side the edge takes the pointer.
@@ -135,7 +161,11 @@ class _ResizableState extends State<Resizable> {
             child: Container(
               width: top ? null : (active ? 2 : 1),
               height: top ? (active ? 2 : 1) : null,
-              color: active ? t.focus : t.borderSubtle,
+              color: active
+                  ? t.focus
+                  : widget.line
+                  ? t.line
+                  : null,
             ),
           ),
         ),
@@ -174,17 +204,17 @@ class _ResizableState extends State<Resizable> {
   );
 }
 
-/// A side pane's header: a raised bar as high as the chat header
-/// ([PaneHeader.height]) with a hairline under it, [child] its row (a side
-/// chat's, a subagent's, a command's, a preview's), [inset] from the left and
-/// [end] from the right: by default the gutters, or what the row has always
-/// had in a pane too narrow for them. [plain] leaves it unraised: a view's
-/// header, at the window's top; with the sidebar hidden such a header runs
-/// under the traffic lights, so its row starts past them and past the button
-/// that shows the sidebar. Empty space in it moves the window, and its
-/// hairline runs on from the sidebar's (ADR 0080). A plain header's [lead],
-/// before [child] and taking the room it leaves, moves with the sidebar's
-/// edge as the sidebar slides ([SidebarFollow]); [child] stays put.
+/// A header inside a pane: as high as the chat header ([PaneHeader.height])
+/// with a hairline under it and no fill of its own (ADR 0111), [child] its
+/// row (a side chat's, a subagent's, a command's, a preview's), [inset] from
+/// the left and [end] from the right: by default the gutters, or what the
+/// row has always had in a pane too narrow for them. [plain] is a view's
+/// header, at the main pane's top; with the sidebar hidden such a header
+/// runs under the traffic lights, so its row starts past them and past the
+/// button that shows the sidebar. Empty space in it moves the window (ADR
+/// 0080). A plain header's [lead], before [child] and taking the room it
+/// leaves, moves with the sidebar's edge as the sidebar slides
+/// ([SidebarFollow]); [child] stays put.
 class PaneHeader extends StatelessWidget {
   const new({
     required this.child,
@@ -195,8 +225,8 @@ class PaneHeader extends StatelessWidget {
     this.lead,
   });
 
-  /// The chat header's height too (ADR 0072).
-  static const height = 44.0;
+  /// The chat header's height too (ADR 0111; 44 until then, ADR 0072).
+  static const height = 56.0;
 
   /// Below this a pane's header keeps its row's room over the gutters: a side
   /// chat's title and buttons take most of the narrowest pane.
@@ -222,8 +252,7 @@ class PaneHeader extends StatelessWidget {
             child: WindowDrag(
               background: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: plain ? null : t.raised,
-                  border: Border(bottom: BorderSide(color: t.borderSubtle)),
+                  border: Border(bottom: BorderSide(color: t.line)),
                 ),
               ),
               children: [
@@ -261,6 +290,20 @@ class PaneHeader extends StatelessWidget {
   }
 }
 
+/// The strip of the window's own background above the panes (ADR 0111),
+/// which does what the top of a title bar did: a drag there moves the
+/// window, a double click zooms it. Nothing where the headers don't move
+/// the window.
+class WindowEdge extends StatelessWidget {
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+    height: NushiTheme.windowPad,
+    child: WindowDrag(background: SizedBox.shrink(), children: []),
+  );
+}
+
 /// [child] under a band across the window's top, a header's height, that
 /// does what a title bar did (ADR 0080) for what covers the window with no
 /// header of its own (the daemon's start and its update, Settings' dim): a
@@ -287,7 +330,7 @@ class TitleBand extends StatelessWidget {
               top: 0,
               left: 0,
               right: 0,
-              height: PaneHeader.height,
+              height: NushiTheme.windowPad + PaneHeader.height,
               child: WindowDrag(
                 background: const SizedBox.shrink(),
                 children: [

@@ -45,11 +45,13 @@ Future<void> stopTurn(
 String rewindHint(ChatState chat) =>
     chat.stopping ? 'Taking your message back…' : 'Rewinding…';
 
-/// A small round icon button inside the prompt box.
+/// Stop's button in the prompt box: [child] in a small round area that
+/// tints under the pointer, as it was before the redesign (the owner,
+/// 2026-11-11: "the old one was fine").
 Widget boxButton(String tooltip, VoidCallback onPressed, Widget child) => Tap(
   tooltip: tooltip,
   onTap: onPressed,
-  radius: 14,
+  radius: NushiTheme.pill,
   child: SizedBox.square(dimension: 28, child: Center(child: child)),
 );
 
@@ -193,10 +195,9 @@ class DraftCards extends StatelessWidget {
       runSpacing: 6,
       children: [
         if (draft.toSubagent.value case (_, final agent)?)
-          Chip(
-            label: Text('To $agent, through ${chat.agentName}'),
-            onDeleted: () => draft.toSubagent.value = null,
-            visualDensity: VisualDensity.compact,
+          _ToChip(
+            'To $agent, through ${chat.agentName}',
+            onRemove: () => draft.toSubagent.value = null,
           ),
         // Only when there are some: an empty one still takes a spacing,
         // which put the first row 6pt right of the rows wrapped under it.
@@ -222,9 +223,49 @@ class DraftCards extends StatelessWidget {
   );
 }
 
-/// The box's buttons on its right: Queue and Stop and send while a turn
-/// runs and something is [written], Stop while it runs, else Send. Those
-/// coming pop in once the box is there ([pop]).
+/// Whom the box's message is for, when not the chat's agent: a pill on the
+/// card's lifted fill, with its ×.
+class _ToChip extends StatelessWidget {
+  const new(this.label, {required this.onRemove});
+
+  final String label;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Container(
+      padding: const EdgeInsets.only(left: 10, right: 2),
+      decoration: BoxDecoration(
+        color: t.lifted,
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.ui(t.text, size: 12),
+            ),
+          ),
+          IconTap(Icons.close, size: 13, tooltip: 'Remove', onTap: onRemove),
+        ],
+      ),
+    );
+  }
+}
+
+/// The end of the box's row (ADR 0111): while a turn runs and something is
+/// [written], Queue (⏎: it waits for the agent's next chance) and Stop and
+/// send (⌘⏎), pills on the card with their [words] where the row has room,
+/// else round buttons with the same icons; Stop, the square in a circle it
+/// always was ([stopIcon]), while a turn runs; else Send, round on the
+/// accent's fill, once something is written. Those coming pop in once the
+/// box is there ([pop]).
 class SendButtons extends StatelessWidget {
   const new(
     this.chat,
@@ -232,6 +273,7 @@ class SendButtons extends StatelessWidget {
     required this.written,
     required this.pop,
     required this.onSend,
+    this.words = true,
     super.key,
   });
 
@@ -239,16 +281,36 @@ class SendButtons extends StatelessWidget {
   final Daemon daemon;
   final bool written;
   final bool pop;
+  final bool words;
 
   /// Sends the box's message; `now` stops the turn first.
   final Future<void> Function({bool now}) onSend;
 
+  /// The narrowest box whose pills keep their words beside the pickers.
+  static const wordsFrom = 620.0;
+
   @override
   Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
     final touch = TouchTargets.of(context);
+    Widget act(String label, String key, IconData icon, VoidCallback run) {
+      final tooltip = touch ? label : '$label ($key)';
+      return words
+          ? PillButton(
+              label: label,
+              icon: icon,
+              tooltip: tooltip,
+              onPressed: run,
+            )
+          : RoundButton(
+              tooltip: tooltip,
+              onPressed: run,
+              glyph: (color) => Icon(icon, size: 16, color: color),
+            );
+    }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
+      spacing: touch ? 0 : 6,
       children: [
         // Queue (after this turn) and Stop and send (stop it, and this goes
         // now): a phone's only way, the Mac's ⏎ and ⌘⏎ as buttons. One
@@ -257,20 +319,17 @@ class SendButtons extends StatelessWidget {
           Enter.pop(
             key: const ValueKey('queue'),
             play: pop,
-            child: boxButton(
-              touch ? 'Queue' : 'Queue ($enterLabel)',
-              onSend,
-              Icon(Icons.queue, size: 16, color: t.textSecondary),
-            ),
+            child: act('Queue', enterLabel, Icons.queue, onSend),
           ),
           if (chat.started != null)
             Enter.pop(
               key: const ValueKey('now'),
               play: pop,
-              child: boxButton(
-                touch ? 'Stop and send' : 'Stop and send ($cmdEnterLabel)',
+              child: act(
+                'Stop and send',
+                cmdEnterLabel,
+                Icons.fast_forward,
                 () => onSend(now: true),
-                Icon(Icons.fast_forward, size: 16, color: t.textSecondary),
               ),
             ),
         ],
@@ -281,17 +340,19 @@ class SendButtons extends StatelessWidget {
             child: boxButton(
               'Stop (esc)',
               () => stopTurn(context, chat, daemon),
-              stopIcon(t.textSecondary),
+              stopIcon(NushiTheme.of(context).t.textSecondary),
             ),
           )
         else if (written && !chat.busy)
           Enter.pop(
             key: const ValueKey('send'),
             play: pop,
-            child: boxButton(
-              'Send ($enterLabel)',
-              onSend,
-              Icon(Icons.keyboard_return, size: 16, color: t.textSecondary),
+            child: RoundButton(
+              kind: RoundKind.primary,
+              tooltip: 'Send ($enterLabel)',
+              onPressed: onSend,
+              glyph: (color) =>
+                  Icon(Icons.arrow_upward, size: 17, color: color),
             ),
           ),
       ],

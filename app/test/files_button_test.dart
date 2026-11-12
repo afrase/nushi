@@ -71,11 +71,13 @@ Future<Daemon> _app(
 
 Finder get _button => find.byType(FilesButton);
 
-Color? _ink(WidgetTester tester) => tester
+/// Whether it's lit: filled in the accent's soft tint, its icon in the
+/// accent.
+bool _lit(WidgetTester tester) => tester
     .widget<IconTap>(
       find.descendant(of: _button, matching: find.byType(IconTap)),
     )
-    .color;
+    .lit;
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
@@ -110,16 +112,15 @@ void main() {
   testWidgets('the header’s Files button shows and hides the pane, lit '
       'while it shows', (tester) async {
     final d = await _app(tester);
-    final t = NushiTheme.of(tester.element(_button)).t;
     expect(find.byType(FilesPane), findsNothing);
     expect(find.byTooltip('Show files  ⇧⌘E'), findsOne);
-    expect(_ink(tester), t.textSecondary);
+    expect(_lit(tester), isFalse);
     await tester.tap(_button);
     await tester.pumpAndSettle();
     expect(find.byType(FilesPane), findsOne);
     expect(filesChats.value, {'c'});
     expect(find.byTooltip('Hide files  ⇧⌘E'), findsOne);
-    expect(_ink(tester), t.accentInk);
+    expect(_lit(tester), isTrue);
     await tester.tap(_button);
     await tester.pumpAndSettle();
     expect(find.byType(FilesPane), findsNothing);
@@ -145,21 +146,20 @@ void main() {
   testWidgets('⇧⌘E and View › Files light and unlight it as the button '
       'would', (tester) async {
     final d = await _app(tester);
-    final t = NushiTheme.of(tester.element(_button)).t;
     await _shiftCmdE(tester);
     expect(find.byType(FilesPane), findsOne);
     expect(find.byTooltip('Hide files  ⇧⌘E'), findsOne);
-    expect(_ink(tester), t.accentInk);
+    expect(_lit(tester), isTrue);
     await _viewFiles(tester);
     expect(find.byType(FilesPane), findsNothing);
     expect(find.byTooltip('Show files  ⇧⌘E'), findsOne);
-    expect(_ink(tester), t.textSecondary);
+    expect(_lit(tester), isFalse);
     await _viewFiles(tester);
     expect(find.byType(FilesPane), findsOne);
-    expect(_ink(tester), t.accentInk);
+    expect(_lit(tester), isTrue);
     await _shiftCmdE(tester);
     expect(find.byType(FilesPane), findsNothing);
-    expect(_ink(tester), t.textSecondary);
+    expect(_lit(tester), isFalse);
     await closeView(tester, d);
   }, variant: _mac);
 
@@ -167,17 +167,16 @@ void main() {
       'with the pane, not close it', (tester) async {
     final d = await _app(tester, open: true);
     final c = d.chats['c']!;
-    final t = NushiTheme.of(tester.element(_button)).t;
     for (final pick in [() => _shiftCmdE(tester), () => _viewFiles(tester)]) {
       c.tab.value = ChatTab.changes;
       await tester.pumpAndSettle();
-      expect(_ink(tester), t.textSecondary);
+      expect(_lit(tester), isFalse);
       await pick();
       expect(c.tab.value, ChatTab.chat);
       expect(filesChats.value, {'c'});
       expect(find.byType(FilesPane), findsOne);
       expect(find.byTooltip('Hide files  ⇧⌘E'), findsOne);
-      expect(_ink(tester), t.accentInk);
+      expect(_lit(tester), isTrue);
     }
     await closeView(tester, d);
   }, variant: _mac);

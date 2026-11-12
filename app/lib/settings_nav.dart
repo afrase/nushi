@@ -38,7 +38,7 @@ class SettingsNav extends StatelessWidget {
     return Container(
       width: width,
       decoration: BoxDecoration(
-        border: Border(right: BorderSide(color: t.borderSubtle)),
+        border: Border(right: BorderSide(color: t.line)),
       ),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
@@ -49,6 +49,8 @@ class SettingsNav extends StatelessWidget {
               child: Tap(
                 key: ValueKey('settings-nav-${s.name}'),
                 selected: s == section,
+                // The open section, as the sidebar's open view (ADR 0111).
+                fill: s == section ? t.accentSoft : null,
                 onTap: () => onPick(s),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Row(
@@ -66,7 +68,7 @@ class SettingsNav extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: theme.ui(
                           s == section ? t.text : t.textSecondary,
-                          weight: s == section ? FontWeight.w500 : null,
+                          weight: s == section ? FontWeight.w600 : null,
                         ),
                       ),
                     ),

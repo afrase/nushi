@@ -13,12 +13,18 @@ final revealWidget = ValueNotifier<String?>(null);
 
 /// The details panel's type and room (ADR 0092): a widget's title and its
 /// rows at the sidebar's size (the theme's own 13), what's said about a
-/// row a step smaller, the side margin and the gap a row takes.
+/// row a step smaller, the side margin, a card's own and the gap a row
+/// takes.
 abstract final class PanelType {
   static const detail = 12.0;
 
   /// The panel's text sits this far in from its sides.
   static const side = 16.0;
+
+  /// A widget's card sits this far in from the panel's sides and top, and
+  /// from the next card (ADR 0111); its text is the rest of [side] inside
+  /// it.
+  static const inset = 8.0;
 
   /// Above and below each row's line.
   static const rowGap = 3.0;
@@ -26,8 +32,9 @@ abstract final class PanelType {
 
 /// The details panel's widgets in the order they were dragged into
 /// (remembered in [widgetOrder]; widgets it doesn't name go last), one
-/// under another on the panel's own background, a hairline between them
-/// (ADR 0092). A widget is moved by dragging its title.
+/// under another in the pane's details column, each a card of its own on
+/// the pane's fill with a gap between them (ADR 0111; flat with hairlines
+/// until then, ADR 0092). A widget is moved by dragging its title.
 class PanelWidgets extends StatelessWidget {
   const new(this.widgets, {super.key});
 
@@ -43,7 +50,8 @@ class PanelWidgets extends StatelessWidget {
         ...byTitle.keys.where((k) => !saved.contains(k)),
       ];
       return CardList(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        // Each card brings the gap under it.
+        padding: const EdgeInsets.only(top: PanelType.inset),
         // A widget asked for is there to scroll to.
         buildAll: true,
         onReorder: (from, to) =>
@@ -56,9 +64,8 @@ class PanelWidgets extends StatelessWidget {
   );
 }
 
-/// One of the details panel's widgets, as Claude Code's right rail draws a
-/// section: no box, a hairline over it unless it's the first, its title in
-/// the text color with a small triangle after it that folds it
+/// One of the details panel's widgets: a rounded card (ADR 0111), its
+/// title in the text color with a small triangle after it that folds it
 /// (remembered in [collapsedWidgets]) and [summary] on its right while
 /// folded; then rows of a quiet label on the left and a value on the
 /// right (a row without a label is a line of its own). With [onTap] the
@@ -208,12 +215,14 @@ class PanelWidget extends StatelessWidget {
   }
 }
 
-/// A widget's look ([PanelWidget]): a hairline over it unless it's the
-/// first ([index] 0), a [title] row that folds it ([onToggle]; a triangle
-/// after the title while it [folds]) and drags it, [trailing] on that
-/// row's right, then [body] while [open]. Under the pointer, or while
+/// A widget's look ([PanelWidget]): a card on the pane's fill, a card's
+/// fill and corners and no outline (ADR 0111), [PanelType.inset] in from
+/// the panel's sides with that gap under it; a [title] row that folds it
+/// ([onToggle]; a triangle after the title while it [folds]) and drags
+/// it, [trailing] on that row's right, then [body] while [open]; folded,
+/// it's a short card, its title in its middle. Under the pointer, or while
 /// dragged, the [DragGrip] takes [trailing]'s place on the right (ADR
-/// 0092's amendment): the rail stays flat at rest, and the grip says the
+/// 0092's amendment): the card is plain at rest, and the grip says the
 /// title drags. A [trailing] that [acts] (a button) stays, the grip left
 /// of it, so it can still be clicked, and a menu it opens keeps the grip
 /// there while the pointer is on the menu.
@@ -281,52 +290,68 @@ class _SectionState extends State<_Section> {
     final dragged = DraggedCard.of(context);
     final w = widget;
     final grip = _hovered || _menuOpen || dragged;
-    // On the panel's background, dragged too.
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Container(
-        color: t.base,
-        padding: const EdgeInsets.symmetric(horizontal: PanelType.side),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (w.index > 0 && !dragged)
-              SizedBox(height: 1, child: ColoredBox(color: t.borderSubtle)),
-            ReorderableDragStartListener(
-              index: w.index,
-              child: Tap(
-                onTap: w.onToggle,
-                cursor: dragged
-                    ? SystemMouseCursors.grabbing
-                    : SystemMouseCursors.grab,
-                tint: false,
-                padding: const EdgeInsets.only(top: 12, bottom: 6),
-                child: Row(
-                  children: [
-                    w.title,
-                    if (w.folds) ...[
-                      const SizedBox(width: 2),
-                      _Triangle(open: w.open),
-                    ],
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: w.acts && w.trailing != null
-                            ? _action(grip: grip)
-                            : grip
-                            ? const DragGrip()
-                            : w.trailing,
+    // A card, dragged too; the gap under it isn't its, nor the pointer's.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        PanelType.inset,
+        0,
+        PanelType.inset,
+        PanelType.inset,
+      ),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Container(
+          decoration: cardBox(t),
+          padding: const EdgeInsets.symmetric(
+            horizontal: PanelType.side - PanelType.inset,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ReorderableDragStartListener(
+                index: w.index,
+                child: Tap(
+                  onTap: w.onToggle,
+                  cursor: dragged
+                      ? SystemMouseCursors.grabbing
+                      : SystemMouseCursors.grab,
+                  tint: false,
+                  padding: const EdgeInsets.only(top: 12, bottom: 6),
+                  child: Row(
+                    children: [
+                      w.title,
+                      if (w.folds) ...[
+                        const SizedBox(width: 2),
+                        _Triangle(open: w.open),
+                      ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: w.acts && w.trailing != null
+                              ? _action(grip: grip)
+                              : grip
+                              ? const DragGrip()
+                              : w.trailing,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Disclosure(open: w.open, child: w.body),
-            const SizedBox(height: 10),
-          ],
+              // The rows end 10 from the card's foot; folded, the title
+              // has as much under it as over it.
+              Disclosure(
+                open: w.open,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: w.body,
+                ),
+              ),
+              const SizedBox(height: 6),
+            ],
+          ),
         ),
       ),
     );

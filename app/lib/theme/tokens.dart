@@ -44,8 +44,6 @@ class Tokens {
     required this.base,
     required this.raised,
     required this.selected,
-    required this.borderSubtle,
-    required this.borderStrong,
     required this.text,
     required this.textSecondary,
     required this.textMuted,
@@ -69,7 +67,6 @@ class Tokens {
     required this.shine,
     required this.shineBand,
     required this.userBand,
-    required this.userBandBorder,
     required this.userBandText,
     required this.userBandMuted,
     required this.userBandCode,
@@ -78,14 +75,9 @@ class Tokens {
     required this.inlineCode,
     required this.inlineCodeText,
     required this.codeBlock,
-    required this.toolTint,
-    required this.toolBorder,
     required this.toolAccent,
     required this.subagentTint,
-    required this.subagentBorder,
     required this.subagentAccent,
-    required this.findingsTint,
-    required this.findingsBorder,
     required this.findingsAccent,
     required this.selectionBar,
     required this.selectionBarText,
@@ -101,21 +93,76 @@ class Tokens {
     required this.monogramText,
     required this.avatars,
     required this.syntax,
+    this._window,
+    this._lifted,
+    this._segment,
+    this._line,
     this._hover,
     this._pressed,
+    this._quote,
     this._terminal,
     this._diff,
   });
 
   final Brightness brightness;
 
-  // Surfaces: the page, panels and bars, and a selected row.
+  // Surfaces (ADR 0111): things are told apart by their fill, a step at a
+  // time. The window behind everything is [window]; a pane on it is
+  // [base]; a card on a pane (and a menu, a dialog) is [raised]; a raised
+  // bit on a card is [lifted]. The sidebar sits on [window] with no pane of
+  // its own, its cards [raised]. [selected] is a selected row in a list.
   final Color base;
   final Color raised;
   final Color selected;
 
-  final Color borderSubtle;
-  final Color borderStrong;
+  /// The window's own background, behind the panes: the sidebar sits on it,
+  /// and the gaps between panes show it. Unless a theme gives its own, a
+  /// step off [base]: darker on a dark theme, a little of the text's color
+  /// mixed in on a light one.
+  Color get window =>
+      _window ??
+      (brightness == Brightness.dark
+          ? Color.lerp(base, const Color(0xFF000000), 0.3)!
+          : Color.lerp(base, text.withValues(alpha: 1), 0.08)!);
+  final Color? _window;
+
+  /// A raised bit on a card: a key's cap, a button on a card, a meter's
+  /// track. Unless a theme gives its own, [raised] a step toward the text.
+  Color get lifted =>
+      _lifted ?? Color.lerp(raised, text.withValues(alpha: 1), 0.06)!;
+  final Color? _lifted;
+
+  /// The picked segment of a segmented control, raised from its [raised]
+  /// track. Unless a theme gives its own: lighter than the track on a dark
+  /// theme, the pane's own fill on a light one.
+  Color get segment =>
+      _segment ??
+      (brightness == Brightness.dark
+          ? Color.lerp(raised, text.withValues(alpha: 1), 0.105)!
+          : base);
+  final Color? _segment;
+
+  /// A hairline: a divider inside a pane (under a header, between a pane
+  /// and the one beside it) and around the composer. Never an outline
+  /// around a card, which its fill tells apart. Unless a theme gives its
+  /// own, the text's color, faint.
+  Color get line =>
+      _line ??
+      text.withValues(alpha: brightness == Brightness.dark ? 0.07 : 0.09);
+  final Color? _line;
+
+  /// The hairline around what floats (a menu, a dialog, a popover): [line]
+  /// on a light theme; twice as strong on a dark one, where the shadow
+  /// that draws a float's edge is lost and a float may lie on a card of
+  /// its own fill (a menu over the composer).
+  Color get floatLine => brightness == Brightness.dark
+      ? line.withValues(alpha: (line.a * 2).clamp(0, 1))
+      : line;
+
+  /// A grey mark that stands back from what it's on: the empty window's
+  /// logo, a rail's dashes at rest, the part of a meter that counts for
+  /// nothing. A pane's fill, a third of the way to the text's color.
+  Color get faint => Color.lerp(base, text.withValues(alpha: 1), 0.3)!;
 
   final Color text;
   final Color textSecondary;
@@ -134,9 +181,10 @@ class Tokens {
   // The accent: [accent] fills (a primary button, a switch that's on),
   // [accentSoft] behind it; [accentInk] where the accent is text or an
   // icon, or the focus ring: [accent] is too dark for that on the dark
-  // theme's surfaces (3.23:1 on base, 2.71 on raised). [accentInk] passes
-  // AA in both: light 6.13 on base, 5.77 on raised, 4.81 on selected,
-  // 4.90 on accentSoft; dark 6.70, 5.61, 4.76, 4.91 (`tokens_test`).
+  // theme's surfaces (3.34:1 on base, 2.97 on raised). [accentInk] passes
+  // AA in both: light 6.13 on base, 5.57 on raised, 5.27 on the window,
+  // 4.81 on selected, 4.64 on accentSoft; dark 6.92, 6.16, 7.49, 4.76,
+  // 4.91 (`tokens_test`).
   final Color accent;
   final Color accentSoft;
   final Color accentInk;
@@ -160,15 +208,14 @@ class Tokens {
   final Color shine;
   final Color shineBand;
 
-  // The transcript. A user message is a band across it (the chapter's
-  // heading), with its marker (a relay's), its inline code and code
-  // blocks; the agent's text and inline code; a tool call's row and a
-  // subagent's line, each a tint with an accent for its icon; a review's
-  // findings card, its tint, border and accent (its icon, a row's file and
-  // line, its chips' outline); the bar
-  // over a selection; and the scrim behind an image opened whole.
+  // The transcript. A user message is a bubble (a band across a phone's),
+  // with its marker (a relay's), its inline code and code blocks; the
+  // agent's text and inline code; code's own surface ([codeBlock]); a tool
+  // call's icon ([toolAccent]; its row is a card, [raised]) and a
+  // subagent's row, a tint with an accent for its name; a review's
+  // findings, their accent (the card's icon, a row's file and line); the
+  // bar over a selection; and the scrim behind an image opened whole.
   final Color userBand;
-  final Color userBandBorder;
   final Color userBandText;
   final Color userBandMuted;
   final Color userBandCode;
@@ -178,22 +225,21 @@ class Tokens {
   // Inline code, in the agent's text, the user's band, a finding and the
   // composer, orange as Slack draws it: [inlineCodeText] on its chip,
   // [inlineCode] (or [userBandCode] in the band), a tint of the ink.
-  // AA on every fill it sits on (`code_ink_test`): light 4.56 at worst, on
-  // the findings card under the pointer, 4.91 on raised selected or
-  // hovered, 5.05 in the band, 6.21 on base; dark 4.64 on the findings card
-  // under the pointer, 4.72 on raised hovered, 4.86 selected, 5.15 in the
-  // band, 6.80 on base.
+  // AA on every fill it sits on (`code_ink_test`): light 4.59 at worst, on
+  // the findings card under the pointer, 4.80 on raised hovered, 4.93
+  // selected, 5.05 in the band, 6.20 on base; dark 4.67 on the findings
+  // card under the pointer, 5.13 on raised hovered, 4.85 selected, 5.18 in
+  // the band, 7.04 on base.
   final Color inlineCode;
   final Color inlineCodeText;
+
+  /// Behind code: a code block, a tool call's output, a diff in the
+  /// transcript. Sunk, about the window's tone: a step off the pane and off
+  /// a card, since it sits on both (`tokens_test`).
   final Color codeBlock;
-  final Color toolTint;
-  final Color toolBorder;
   final Color toolAccent;
   final Color subagentTint;
-  final Color subagentBorder;
   final Color subagentAccent;
-  final Color findingsTint;
-  final Color findingsBorder;
   final Color findingsAccent;
   final Color selectionBar;
   final Color selectionBarText;
@@ -202,12 +248,20 @@ class Tokens {
   final Color shadow;
   final Color scrim;
 
+  /// The shadow under what floats over the window (a menu, a dialog, a
+  /// popover, a toast; ADR 0111): [shadow] on a light theme, twice as deep
+  /// on a dark one, where a soft shadow is lost on the dark behind it.
+  Color get floatShadow => brightness == Brightness.dark
+      ? shadow.withValues(alpha: (shadow.a * 2).clamp(0, 1))
+      : shadow;
+
   // The agents' marks' colors, from their own logos (`agent_mark.dart`,
   // docs/user/agent-marks.md): Claude's, Anthropic's own; Ante's ghost,
   // its gradient's gold; oh-my-pi's plug (its π is white, so the text's
   // color); Pi's, the blue of its middle piece; PiG's pig, its pink. The
   // dark ones are the logos' own, the light ones darker shades of them;
-  // each is at least 3:1 on base, raised and selected (`agent_mark_test`).
+  // each is at least 3:1 on base, raised, selected and the window, where
+  // the sidebar's rows are (`agent_mark_test`).
   // Codex's Blossom has none: OpenAI draws it black or white. Then the
   // letter on an agent's monogram.
   final Color claude;
@@ -218,13 +272,15 @@ class Tokens {
   final Color monogramText;
 
   /// People's colors (a Jira assignee's avatar), each under
-  /// [monogramText]'s initials; also a chat's color as a mark (a swatch, a
-  /// dot, the bar at its row's left), which `ChatColor` takes by position.
-  /// As a bar each must hold 3:1 on what a row can be: raised, [hover] on
-  /// it, [selected], [accentSoft] (the open chat) and base (the phone's
-  /// list). Worst of the eight: light 4.91 on raised, 4.12 hovered, 4.10
-  /// selected, 4.17 open, 5.22 on base; dark 5.55, 4.55, 4.71, 4.85, 6.62
-  /// (`chat_colors_test`, which also holds a row's text to AA on each).
+  /// [monogramText]'s initials; also a chat's color as a mark (a swatch,
+  /// the chip at its row's end), which `ChatColor` takes by position. As a
+  /// mark each must hold 3:1 on what a row can be: the window (the
+  /// sidebar's rows), [hover] on it, raised, [hover] on that, [selected],
+  /// [accentSoft] (the open chat) and base (the phone's list). Worst of the
+  /// eight: light 4.49 on the window, 3.78 hovered, 4.75 on raised, 3.99
+  /// hovered, 4.10 selected, 3.96 open, 5.22 on base; dark 7.40, 6.28,
+  /// 6.08, 5.00, 4.71, 4.85, 6.84 (`chat_colors_test`, which also holds a
+  /// row's text to AA on each).
   final List<Color> avatars;
 
   /// Code's colors, in diffs and code blocks, by [Capture].
@@ -247,6 +303,13 @@ class Tokens {
       _pressed ??
       text.withValues(alpha: brightness == Brightness.dark ? 0.14 : 0.16);
   final Color? _pressed;
+
+  /// Behind quoted text (a Markdown quote, the selection a reply quotes):
+  /// a soft fill in the place of a bar down its side (ADR 0111). A tint of
+  /// the text's color, so it shows on whatever the quote sits on (the
+  /// pane, a message's bubble, a card), unless a theme gives its own.
+  Color get quote => _quote ?? text.withValues(alpha: 0.07);
+  final Color? _quote;
 
   /// A gold mark beside [claude]'s orange (Context's System prompt, as
   /// Claude's rail colors it): [needs] on a dark theme; on a light one,
@@ -288,14 +351,16 @@ class Tokens {
 
   static const light = Tokens(
     brightness: Brightness.light,
+    window: Color(0xFFECEEF2),
     base: Color(0xFFFFFFFF),
-    raised: Color(0xFFF7F8FA),
+    raised: Color(0xFFF3F4F7),
+    lifted: Color(0xFFE6E8ED),
+    segment: Color(0xFFFFFFFF),
+    line: Color(0x17141824),
     selected: Color(0xFFE1E4EB),
-    borderSubtle: Color(0xFFE2E4E9),
-    borderStrong: Color(0xFFBBBFCB),
     text: Color(0xFF1E1F22),
     textSecondary: Color(0xFF494B57),
-    textMuted: Color(0xFF5D6170),
+    textMuted: Color(0xFF5A5E6B),
     link: Color(0xFF2259D2),
     onAccent: Color(0xFFFFFFFF),
     fieldFill: Color(0xFFFFFFFF),
@@ -303,7 +368,7 @@ class Tokens {
     fieldBorderHover: Color(0xFF9FA3AF),
     grip: Color(0xFF8A8E9B),
     accent: Color(0xFF2365EA),
-    accentSoft: Color(0xFFD8E7FF),
+    accentSoft: Color(0xFFD2E1FC),
     accentInk: Color(0xFF2259D2),
     running: Color(0xFF2259D2),
     needs: Color(0xFF8F5200),
@@ -316,7 +381,6 @@ class Tokens {
     shine: Color(0xFF6E727E),
     shineBand: Color(0xFF1E1F22),
     userBand: Color(0xFFDAE8FF),
-    userBandBorder: Color(0xFFA5BEF1),
     userBandText: Color(0xFF142A5C),
     userBandMuted: Color(0xFF3A5594),
     userBandCode: Color(0x1A8D4100),
@@ -324,15 +388,10 @@ class Tokens {
     agentText: Color(0xFF1E1F22),
     inlineCode: Color(0x1A8D4100),
     inlineCodeText: Color(0xFF8D4100),
-    codeBlock: Color(0xFFF7F8FA),
-    toolTint: Color(0xFFDAF2EE),
-    toolBorder: Color(0xFFA5D6CE),
+    codeBlock: Color(0xFFECEEF2),
     toolAccent: Color(0xFF0E8577),
     subagentTint: Color(0xFFEDE4FE),
-    subagentBorder: Color(0xFFC9B7F1),
     subagentAccent: Color(0xFF4E1FA8),
-    findingsTint: Color(0xFFFAEDD7),
-    findingsBorder: Color(0xFFE5CA98),
     findingsAccent: Color(0xFF8A5300),
     selectionBar: Color(0xFF26272B),
     selectionBarText: Color(0xFFE8E9EC),
@@ -378,11 +437,13 @@ class Tokens {
 
   static const dark = Tokens(
     brightness: Brightness.dark,
-    base: Color(0xFF1E1F22),
-    raised: Color(0xFF2B2D30),
+    window: Color(0xFF131417),
+    base: Color(0xFF1B1C20),
+    raised: Color(0xFF24262B),
+    lifted: Color(0xFF2F3138),
+    segment: Color(0xFF383B43),
+    line: Color(0x12FFFFFF),
     selected: Color(0xFF36383E),
-    borderSubtle: Color(0xFF41444A),
-    borderStrong: Color(0xFF585C64),
     text: Color(0xFFDFE1E5),
     textSecondary: Color(0xFFB4B8BF),
     textMuted: Color(0xFFA5A9B1),
@@ -406,7 +467,6 @@ class Tokens {
     shine: Color(0xFF9DA1AA),
     shineBand: Color(0xFFF4F6FA),
     userBand: Color(0xFF233457),
-    userBandBorder: Color(0xFF3A5491),
     userBandText: Color(0xFFE8EEFB),
     userBandMuted: Color(0xFF9DB8F5),
     userBandCode: Color(0x1FF5AD66),
@@ -414,15 +474,10 @@ class Tokens {
     agentText: Color(0xFFDFE1E5),
     inlineCode: Color(0x1FF5AD66),
     inlineCodeText: Color(0xFFF5AD66),
-    codeBlock: Color(0xFF2B2D30),
-    toolTint: Color(0xFF193431),
-    toolBorder: Color(0xFF2B5753),
+    codeBlock: Color(0xFF151619),
     toolAccent: Color(0xFF3AA597),
     subagentTint: Color(0xFF2E2749),
-    subagentBorder: Color(0xFF564684),
     subagentAccent: Color(0xFFD2BEFF),
-    findingsTint: Color(0xFF342C1D),
-    findingsBorder: Color(0xFF5C4C2F),
     findingsAccent: Color(0xFFE6B062),
     selectionBar: Color(0xFF26272B),
     selectionBarText: Color(0xFFE8E9EC),

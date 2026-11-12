@@ -289,6 +289,7 @@ class _Caret extends CustomPainter {
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         const Rect.fromLTWH(1, 0, 2, 13),
+        // not a corner: the drawn caret's round ends, half its width
         const Radius.circular(1),
       ),
       Paint()..color = color.withValues(alpha: alpha),

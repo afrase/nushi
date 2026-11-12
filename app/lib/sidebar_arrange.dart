@@ -177,12 +177,14 @@ class _ArrangeButtonState extends State<ArrangeButton> {
                     tooltip: marked
                         ? 'Arrange the sidebar (arranged your way)'
                         : 'Arrange the sidebar',
+                    // As the button beside it, and a header's.
+                    padding: IconTap.header,
                     onTap: open,
                   ),
                   if (marked)
                     Positioned(
-                      right: 2,
-                      top: 2,
+                      right: IconTap.header - 3,
+                      top: IconTap.header - 3,
                       child: IgnorePointer(
                         child: Container(
                           width: 6,
@@ -190,7 +192,8 @@ class _ArrangeButtonState extends State<ArrangeButton> {
                           decoration: BoxDecoration(
                             color: t.accent,
                             shape: BoxShape.circle,
-                            border: Border.all(color: t.raised),
+                            // A ring of what the sidebar lies on, around it.
+                            border: Border.all(color: t.window),
                           ),
                         ),
                       ),

@@ -36,8 +36,8 @@ import 'package:nushi/widgets.dart';
 
 /// A chat's transcript with the composer under it, and beside them its
 /// side chat, a subagent's pane and [details], each when open. Escape
-/// stops a running turn. What's being written, and the side chat,
-/// belong to the chat (its draft and side), so they outlive the view.
+/// stops a running turn. What's being written, and the side chat, belong
+/// to the chat (its draft and side), so they outlive the view.
 class ChatView extends StatefulWidget {
   const new({
     required this.chat,
@@ -48,6 +48,8 @@ class ChatView extends StatefulWidget {
 
   final ChatState chat;
   final Daemon daemon;
+
+  /// The chat's details, at the transcript's right while they show.
   final Widget? details;
 
   /// The narrowest the transcript gets beside a panel.
@@ -55,8 +57,9 @@ class ChatView extends StatefulWidget {
 
   /// The narrowest the transcript gets beside the details panel: the
   /// window that held the old 264-point panel beside [minWidth] still
-  /// holds the 320-point one (ADR 0092).
-  static const leastBesideDetails = 500.0;
+  /// holds the 320-point one (ADR 0092), with the window's margins now
+  /// around the pane (ADR 0111).
+  static const leastBesideDetails = 484.0;
 
   /// The narrowest the transcript gets beside a pane dragged as wide as
   /// it's wanted (a subagent's, or the preview).
@@ -357,8 +360,7 @@ class _Archived extends StatelessWidget {
     final t = theme.t;
     return Container(
       decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        border: Border(top: BorderSide(color: t.line)),
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: NushiTheme.gutter,
@@ -455,8 +457,7 @@ class _Expired extends StatelessWidget {
     final t = theme.t;
     return Container(
       decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        border: Border(top: BorderSide(color: t.line)),
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: NushiTheme.gutter,

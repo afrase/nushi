@@ -179,7 +179,7 @@ void main() {
   testWidgets('a send that fails puts every field back in the box', (
     tester,
   ) async {
-    viewport(tester, const Size(640, 260));
+    viewport(tester, const Size(640, 300));
     final send = Completer<SendPromptResponse>();
     final sent = <SendPromptRequest>[];
     final fake = FakeDaemon([])

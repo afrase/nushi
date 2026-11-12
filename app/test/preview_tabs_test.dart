@@ -12,6 +12,7 @@ import 'package:nushi/app_actions.dart';
 import 'package:nushi/artifacts_widget.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -217,7 +218,7 @@ Map<String, Rect> _marks(WidgetTester tester) {
     'body': at(_inPane(find.byType(PreviewBody))),
     'transcript': at(find.byType(Transcript)),
     'chat header': at(find.byType(ChatHeader)),
-    'header’s tabs': at(find.byType(PlainTabs<ChatTab>)),
+    'header’s tabs': at(find.byType(Segmented<ChatTab>)),
     'chat menu': at(find.byTooltip('Chat menu')),
     'Chat': at(
       find.descendant(of: find.byType(ChatHeader), matching: find.text('Chat')),
@@ -438,20 +439,21 @@ void main() {
         final d = await _app(tester, files: _three.take(count).toList());
         final header = tester.getRect(find.byType(ChatHeader));
         final row = tester.getRect(_inPane(find.byType(PaneHeader)));
-        expect(header.height, 44);
-        expect(row.height, 44);
+        expect(header.height, 56);
+        expect(row.height, 56);
         expect(row.top, header.bottom);
-        expect(row.bottom, header.bottom + 44);
+        expect(row.bottom, header.bottom + 56);
         final lines = find.descendant(
           of: find.byType(TabFace),
           matching: find.byType(Positioned),
         );
-        // Chat and, with three open, the file showing.
-        expect(lines, findsNWidgets(count == 1 ? 1 : 2));
+        // With three open, the file showing; the header's switch is a
+        // segmented control, with no line (ADR 0111).
+        expect(lines, findsNWidgets(count == 1 ? 0 : 1));
         for (final line in lines.evaluate()) {
           final box = line.renderObject! as RenderBox;
           final bottom = box.localToGlobal(box.size.bottomLeft(Offset.zero)).dy;
-          expect(bottom, anyOf(header.bottom - 1, row.bottom - 1));
+          expect(bottom, row.bottom - 1);
         }
         d.dispose();
       }, variant: _mac);
@@ -816,7 +818,7 @@ void main() {
             final right = tester.getRect(find.byType(NushiApp)).right;
             expect(
               tester.getTopRight(find.byTooltip('Close')).dx,
-              greaterThan(right - NushiTheme.gutter - 1),
+              greaterThan(right - NushiTheme.windowPad - NushiTheme.gutter - 1),
             );
             await render(
               tester,

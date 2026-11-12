@@ -4,6 +4,7 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -15,12 +16,9 @@ const _expires = {
 /// Says, once, which chats the daemon removed because their agent no longer
 /// had their sessions; OK dismisses it (ADR 0015).
 class RemovedChatsBar extends StatelessWidget {
-  const new(this.daemon, {super.key, this.start = 16});
+  const new(this.daemon, {super.key});
 
   final Daemon daemon;
-
-  /// Where its text starts: past the traffic lights, with the sidebar hidden.
-  final double start;
 
   /// The bar's sentence for [removed].
   static String text(List<RemovedChat> removed) {
@@ -50,9 +48,7 @@ class RemovedChatsBar extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final removed = daemon.removedChats;
-    return Container(
-      color: t.raised,
-      padding: EdgeInsets.fromLTRB(start, 4, 16, 4),
+    return FloatBar(
       child: Row(
         spacing: 12,
         children: [

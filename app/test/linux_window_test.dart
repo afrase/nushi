@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
@@ -10,6 +11,7 @@ import 'package:nushi/native.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_button.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/window_drag.dart';
 import 'package:nushi/window_drag_linux.dart';
 import 'package:nushi/window_drag_macos.dart';
@@ -82,7 +84,7 @@ void main() {
     const mac = MacWindow();
     expect(
       (mac.titleInset, mac.headersMoveWindow, mac.menuBar),
-      (84, true, true),
+      (95, true, true),
     );
     const linux = LinuxWindow();
     expect(
@@ -133,9 +135,10 @@ void main() {
     await tester.tap(find.byTooltip(r'Hide the sidebar (Ctrl+\)'));
     await tester.pumpAndSettle();
     expect(sidebarHidden.value, isTrue);
+    // In the main pane, the window's margin in.
     expect(
       tester.getRect(find.byTooltip(r'Show the sidebar (Ctrl+\)')).left,
-      8,
+      NushiTheme.windowPad + 8 - SidebarButton.reach,
     );
 
     d.openSettings();
@@ -154,8 +157,9 @@ void main() {
     d.dispose();
   }, variant: _linux);
 
-  testWidgets('the bars keep their margin with the sidebar hidden, nothing '
-      'being over the content there', (tester) async {
+  testWidgets('the notices float under the header with the sidebar hidden', (
+    tester,
+  ) async {
     native
       ..window = const LinuxWindow()
       ..conventions = linuxConventions;
@@ -180,10 +184,14 @@ void main() {
       ..listChanged();
     await tester.pumpAndSettle();
     final update = find.textContaining('Nushi will update its daemon');
-    expect(tester.getTopLeft(update).dx, 16);
+    // Under the header, as on the Mac.
+    expect(
+      tester.getTopLeft(update).dy,
+      greaterThan(NushiTheme.windowPad + PaneHeader.height),
+    );
     expect(
       tester.getTopLeft(find.byIcon(Icons.shield_outlined)).dx,
-      greaterThanOrEqualTo(16),
+      greaterThanOrEqualTo(NushiTheme.windowPad + 16),
     );
     await render(tester, find.byType(NushiApp), 'linux_bars_720_hidden');
     d.dispose();
@@ -213,13 +221,19 @@ void main() {
               final show = tester.getRect(
                 find.byTooltip(r'Show the sidebar (Ctrl+\)'),
               );
-              expect(show.left, lightsInset);
+              expect(
+                show.left,
+                NushiTheme.windowPad + lightsInset - SidebarButton.reach,
+              );
               expect(show.top, greaterThanOrEqualTo(0));
               if (name == 'chat') {
                 // The title, after the chat's color.
                 expect(
                   tester.getTopLeft(find.text(_title).first).dx,
-                  hiddenHeaderStart + 16,
+                  NushiTheme.windowPad +
+                      hiddenHeaderStart +
+                      ColorChip.width +
+                      8,
                 );
               }
             }

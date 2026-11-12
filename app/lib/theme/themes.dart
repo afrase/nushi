@@ -4,6 +4,7 @@ import 'package:nushi/theme/catppuccin.dart';
 import 'package:nushi/theme/nord.dart';
 import 'package:nushi/theme/solarized.dart';
 import 'package:nushi/theme/tokens.dart';
+import 'package:nushi/theme/tokyo_night.dart';
 import 'package:nushi/theme/vivid.dart';
 
 /// A color theme (ADR 0086): a named palette, a dark and a light set of
@@ -17,12 +18,20 @@ class ColorTheme {
     required this.name,
     required this.dark,
     required this.light,
+    this.darkName,
+    this.lightName,
   });
 
   final String id;
   final String name;
   final Tokens dark;
   final Tokens light;
+
+  /// What each set is known as where the palette names its variants
+  /// (Tokyo Night's light one is Tokyo Night Day): the picker says it
+  /// beside Dark and Light.
+  final String? darkName;
+  final String? lightName;
 
   /// The set for [brightness].
   Tokens of(Brightness brightness) =>
@@ -59,6 +68,16 @@ const List<ColorTheme> builtInThemes = [
     name: 'Catppuccin',
     dark: catppuccinDark,
     light: catppuccinLight,
+    darkName: 'Catppuccin Mocha',
+    lightName: 'Catppuccin Latte',
+  ),
+  ColorTheme(
+    id: 'tokyo-night',
+    name: 'Tokyo Night',
+    dark: tokyoNightDark,
+    light: tokyoNightLight,
+    darkName: 'Tokyo Night',
+    lightName: 'Tokyo Night Day',
   ),
 ];
 

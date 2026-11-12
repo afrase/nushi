@@ -125,14 +125,14 @@ class RepliesWaiting extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    // A banner set in from the pane's edges, as the blocks around it are
+    // (ADR 0111): the accent's soft fill, no line.
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: NushiTheme.gutter,
-        vertical: 6,
-      ),
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      padding: const EdgeInsets.fromLTRB(NushiTheme.gutter - 8, 6, 6, 6),
       decoration: BoxDecoration(
         color: t.accentSoft,
-        border: Border(top: BorderSide(color: t.borderSubtle)),
+        borderRadius: BorderRadius.circular(NushiTheme.control),
       ),
       child: Row(
         children: [

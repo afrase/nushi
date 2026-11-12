@@ -46,7 +46,7 @@ class BrowserBar extends StatelessWidget {
 
   /// The field's height, and its corners' radius.
   static const fieldHeight = 30.0;
-  static const _round = 8.0;
+  static const double _round = NushiTheme.control;
 
   /// The room at the bar's ends.
   static const inset = 8.0;
@@ -83,9 +83,10 @@ class BrowserBar extends StatelessWidget {
     return Container(
       height: height,
       padding: const EdgeInsets.fromLTRB(inset, 0, inset, 1),
+      // A bar in a pane has no fill of its own, only a hairline under it
+      // (ADR 0111).
       decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(bottom: BorderSide(color: t.borderSubtle)),
+        border: Border(bottom: BorderSide(color: t.line)),
       ),
       child: Row(
         spacing: 3,
@@ -161,7 +162,7 @@ class BrowserBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: t.fieldFill,
         border: Border.all(
-          color: focus.hasFocus ? t.focus : t.borderSubtle,
+          color: focus.hasFocus ? t.focus : t.line,
           width: focus.hasFocus ? 1.5 : 1,
         ),
         borderRadius: BorderRadius.circular(_round),

@@ -190,11 +190,7 @@ class TerminalScreen extends StatelessWidget {
                                   horizontal: 6,
                                   vertical: 2,
                                 ),
-                                decoration: box(
-                                  t.borderStrong,
-                                  fill: t.raised,
-                                  radius: NushiTheme.control,
-                                ),
+                                decoration: floatBox(t, radius: NushiTheme.tag),
                                 child: Text(
                                   link,
                                   maxLines: 1,
@@ -224,7 +220,7 @@ class TerminalScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
             decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: t.borderSubtle)),
+              border: Border(top: BorderSide(color: t.line)),
             ),
             child: Row(
               children: [
@@ -249,14 +245,15 @@ class TerminalScreen extends StatelessWidget {
   }
 }
 
-/// The app's colors with the theme's ANSI palette ([Tokens.terminal]);
-/// [cursor] in place of the text's (the background's hides it).
+/// The app's colors with the theme's ANSI palette ([Tokens.terminal]) and
+/// its terminal's own text, if it has one; [cursor] in place of the
+/// text's (the background's hides it).
 TerminalTheme terminalTheme(Tokens t, {Color? cursor}) {
   final a = t.terminal;
   return TerminalTheme(
-    cursor: cursor ?? t.text,
+    cursor: cursor ?? a.foreground ?? t.text,
     selection: t.accent.withValues(alpha: 0.3),
-    foreground: t.text,
+    foreground: a.foreground ?? t.text,
     background: t.base,
     black: a.black,
     red: a.red,

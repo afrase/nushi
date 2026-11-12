@@ -26,9 +26,12 @@ Decoration? _ring(WidgetTester tester, String label) => tester
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('measures what the pill measures, labels where its were', (
-    tester,
-  ) async {
+  testWidgets('as high as a form’s segmented control, its labels as far '
+      'in', (tester) async {
+    // It measured exactly as the pill did while the chat header's fold
+    // was built around it (ADR 0071); the header has its own control now
+    // (ADR 0111), whose picked label is semibold, so only the height and
+    // the first label's place are held.
     viewport(tester, const Size(800, 300));
     await tester.pumpWidget(
       _themed(
@@ -43,14 +46,12 @@ void main() {
     );
     final pill = tester.getRect(find.byType(Segmented<int>));
     final tabs = tester.getRect(find.byType(PlainTabs<int>));
-    expect(tabs.size, pill.size);
-    for (final (_, label) in _labels) {
-      final found = find.text(label);
-      expect(
-        tester.getTopLeft(found.last).dx - tabs.left,
-        tester.getTopLeft(found.first).dx - pill.left,
-      );
-    }
+    expect(tabs.height, pill.height);
+    final first = find.text(_labels.first.$2);
+    expect(
+      tester.getTopLeft(first.last).dx - tabs.left,
+      tester.getTopLeft(first.first).dx - pill.left,
+    );
   });
 
   testWidgets('fill takes its row, the line on the row’s bottom edge', (

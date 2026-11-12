@@ -42,7 +42,7 @@ class ChecksBar extends StatelessWidget {
     final t = NushiTheme.of(context).t;
     final n = countChecks(pull);
     return ClipRRect(
-      borderRadius: BorderRadius.circular(height / 2),
+      borderRadius: BorderRadius.circular(NushiTheme.pill),
       child: SizedBox(
         height: height,
         child: Row(
@@ -53,7 +53,7 @@ class ChecksBar extends StatelessWidget {
               (n.failing, t.crashed),
               (n.running, t.needs),
               (n.passed, t.done),
-              (n.other, t.borderStrong),
+              (n.other, t.faint),
             ])
               if (count > 0)
                 Expanded(
@@ -222,7 +222,7 @@ class NewCount extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
         color: t.accentSoft,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
       child: Text('$n new', style: theme.ui(t.accentInk, size: 11.5)),
     );

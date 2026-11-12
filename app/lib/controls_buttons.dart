@@ -1,58 +1,72 @@
 part of 'controls.dart';
 
 enum ButtonKind {
-  /// The one main action of a dialog or card: accent fill.
+  /// The one main action of a dialog, a card or a bar: the accent's fill.
   primary,
 
-  /// Every other action: outlined.
+  /// Every other action: the lifted fill, no outline (ADR 0111).
   secondary,
 
-  /// One that deletes or loses something: red text, outlined.
+  /// An action beside a filled one that should stand back (an inline
+  /// box's Cancel): no fill until the pointer is on it.
+  quiet,
+
+  /// One that deletes or loses something: red text on the lifted fill.
   destructive,
 
   /// The same beside a dialog's own Done, as Claude desktop draws it (its
-  /// Allowed sites' Clear all): red text on a faint red fill, no outline.
+  /// Allowed sites' Clear all): red text on a faint red fill.
   danger,
 }
 
 /// The ink of a button of [kind].
 Color _fg(Tokens t, ButtonKind kind) => switch (kind) {
   ButtonKind.primary => t.onAccent,
-  ButtonKind.secondary => t.text,
+  ButtonKind.secondary || ButtonKind.quiet => t.text,
   ButtonKind.destructive || ButtonKind.danger => t.crashed,
 };
 
-/// A button's fill and border, as [look] has it, rounded by [r]: the
-/// accent's fill for a primary one, a faint red for a danger one, else
-/// outlined.
+/// A button's fill, as [look] has it, rounded by [r]: the accent's for a
+/// primary one, a shade lighter under the pointer and darker pressed; a
+/// faint red for a danger one, and for a destructive one under the
+/// pointer; none for a quiet one; else the lifted fill. The pointer's tint
+/// goes over each. No kind has an outline: a
+/// button is told from what it sits on by its fill (ADR 0111).
 BoxDecoration _buttonBox(
   Tokens t,
   ButtonKind kind,
   ControlLook look,
   BorderRadius r,
 ) {
-  final primary = kind == ButtonKind.primary;
-  if (kind == ButtonKind.danger) {
+  if (kind == ButtonKind.primary) {
     return BoxDecoration(
-      color: look.hover
-          ? Color.alphaBlend(_tint(t, look), t.crashedSoft)
+      color: look.pressed
+          ? t.accentPressed
+          : look.hover
+          ? Color.alphaBlend(t.onAccent.withValues(alpha: 0.12), t.accent)
+          : t.accent,
+      borderRadius: r,
+    );
+  }
+  if (kind == ButtonKind.quiet) {
+    return BoxDecoration(
+      color: look.hover ? _tint(t, look) : null,
+      borderRadius: r,
+    );
+  }
+  if (kind == ButtonKind.destructive && look.hover) {
+    // Its red is under AA on the lifted fill once the pointer's tint is
+    // over that, and reads on the red's own soft fill (`tokens_test`).
+    return BoxDecoration(
+      color: look.pressed
+          ? Color.alphaBlend(t.pressed, t.crashedSoft)
           : t.crashedSoft,
       borderRadius: r,
     );
   }
+  final fill = kind == ButtonKind.danger ? t.crashedSoft : t.lifted;
   return BoxDecoration(
-    color: primary
-        ? (look.pressed
-              ? t.accentPressed
-              : look.hover
-              ? Color.alphaBlend(t.onAccent.withValues(alpha: 0.12), t.accent)
-              : t.accent)
-        : (look.hover
-              ? Color.alphaBlend(_tint(t, look), t.fieldFill)
-              : t.fieldFill),
-    border: primary
-        ? null
-        : Border.all(color: look.hover ? t.fieldBorderHover : t.fieldBorder),
+    color: look.hover ? Color.alphaBlend(_tint(t, look), fill) : fill,
     borderRadius: r,
   );
 }
@@ -95,7 +109,7 @@ class Button extends StatelessWidget {
     final t = theme.t;
     final primary = kind == ButtonKind.primary;
     final fg = _fg(t, kind);
-    final style = theme.ui(fg, weight: primary ? FontWeight.w500 : null);
+    final style = theme.ui(fg, weight: FontWeight.w500);
     final touch = TouchTargets.of(context);
     final lines = wrap && touch ? 3 : 1;
     return Pressable(
@@ -158,6 +172,67 @@ class Button extends StatelessWidget {
   }
 }
 
+/// A row-wide action on the window's background or a pane (the sidebar's
+/// New chat, ADR 0111): a card's fill and no outline, taller than a
+/// [Button], [icon] and [label] at its start and its shortcut [hint] as a
+/// key's cap at its end.
+class WideButton extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.onPressed,
+    super.key,
+    this.icon,
+    this.hint,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final String? hint;
+
+  static const height = 38.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Pressable(
+      onTap: onPressed,
+      builder: (context, look) => _faded(
+        look,
+        Container(
+          height: height,
+          padding: const EdgeInsets.only(left: 12, right: 8),
+          decoration: BoxDecoration(
+            color: look.hover
+                ? Color.alphaBlend(_tint(t, look), t.raised)
+                : t.raised,
+            borderRadius: BorderRadius.circular(NushiTheme.control),
+          ),
+          foregroundDecoration: focusRing(t, look),
+          child: Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 16, color: t.text),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.ui(t.text, weight: FontWeight.w500),
+                ),
+              ),
+              if (hint case final hint?) KeyCap(hint),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A button with a second part beside it, a ▾ that opens a menu of how it
 /// goes ("Squash and merge" and the other methods): [label] is the way
 /// picked, and pressing it does that.
@@ -204,7 +279,6 @@ class SplitButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final primary = kind == ButtonKind.primary;
     final fg = _fg(t, kind);
     const round = Radius.circular(NushiTheme.control);
     return Row(
@@ -222,7 +296,7 @@ class SplitButton extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.ui(fg, weight: primary ? FontWeight.w500 : null),
+                style: theme.ui(fg, weight: FontWeight.w500),
               ),
             ),
           ),

@@ -18,7 +18,7 @@ class ReviewPill extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(5, 1, 7, 1),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(NushiTheme.control),
+        borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -56,12 +56,14 @@ class PointerChip extends StatelessWidget {
         height: controlHeight,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
+          // A chip by its fill (ADR 0111): the card's, or its color's tint.
           color: Color.alphaBlend(
-            look.hover ? t.hover : const Color(0x00000000),
-            c == null ? t.raised : c.withValues(alpha: 0.08),
-          ),
-          border: Border.all(
-            color: c == null ? t.borderSubtle : c.withValues(alpha: 0.35),
+            look.pressed
+                ? t.pressed
+                : look.hover
+                ? t.hover
+                : const Color(0x00000000),
+            c == null ? t.raised : c.withValues(alpha: 0.14),
           ),
           borderRadius: BorderRadius.circular(NushiTheme.control),
         ),
@@ -106,7 +108,7 @@ class _ResolvedThreadState extends State<ResolvedThread> {
       if (x.comments.length > 1) '${last.author}: ${plainText(last.body)}',
     ].join(' · ');
     return Container(
-      decoration: box(t.borderSubtle, fill: t.raised),
+      decoration: cardBox(t, radius: NushiTheme.control),
       padding: const EdgeInsets.fromLTRB(10, 2, 4, 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

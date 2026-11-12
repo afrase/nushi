@@ -19,6 +19,9 @@ class MainFlutterWindow: NSWindow {
     // And AppKit's title bar keeps off the content under it: the headers
     // are the title bar (lib/window_drag.dart).
     TitleBarCover.cover(flutterViewController.view)
+    // And its buttons sit level with the headers, not in the middle of a
+    // title bar that isn't there (ADR 0111).
+    WindowButtons.keep(in: self)
     placement.restore()
     keepFullScreen()
 

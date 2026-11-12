@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// A small picture of Nushi in one set of a theme (ADR 0086), for its
-/// picker (Settings › Appearance, the phone's Settings): the sidebar with
-/// a few chats (the open one, status dots, a chat's color bar), a user
-/// band, the agent's text with inline code, a tool call's row, a
-/// subagent's line, a review's findings, and a code block in the set's
-/// syntax colors. Drawn at [size] under a theme of [tokens], then scaled
-/// to the width it's given, so every part takes its colors and fonts as
-/// the app does, and a theme file's changes show.
+/// picker (Settings › Appearance, the phone's Settings): the window's
+/// background with the sidebar on it and the main pane beside it (ADR
+/// 0111), a few chats (the open one, status dots, a chat's color), a
+/// message of yours in its bubble, the agent's text with inline code, a
+/// tool call's row, a subagent's line, a review's findings, and a code
+/// block in the set's syntax colors. Drawn at [size] under a theme of
+/// [tokens], then scaled to the width it's given, so every part takes its
+/// colors and fonts as the app does, and a theme file's changes show.
 class ThemePreview extends StatelessWidget {
   const new(this.tokens, {required this.dark, super.key});
 
@@ -40,6 +41,10 @@ class ThemePreview extends StatelessWidget {
   );
 }
 
+/// A corner of the app's at the picture's scale: its rows are 17 high for
+/// the app's 28, so about 0.6 of it.
+double _small(double radius) => radius * 0.6;
+
 class _Window extends StatelessWidget {
   const new();
 
@@ -47,19 +52,22 @@ class _Window extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     return ColoredBox(
-      color: t.base,
+      color: t.window,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 88,
-            decoration: BoxDecoration(
-              color: t.raised,
-              border: Border(right: BorderSide(color: t.borderSubtle)),
+          const SizedBox(width: 88, child: _Sidebar()),
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(0, 5, 5, 5),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: t.base,
+                borderRadius: BorderRadius.circular(_small(NushiTheme.panel)),
+              ),
+              child: const _Transcript(),
             ),
-            child: const _Sidebar(),
           ),
-          const Expanded(child: _Transcript()),
         ],
       ),
     );
@@ -83,7 +91,7 @@ class _Sidebar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(5, 0, 0, 3),
             child: Text(
               'lumen',
-              style: theme.ui(t.text, size: 9, weight: FontWeight.w600),
+              style: theme.ui(t.textMuted, size: 8, weight: FontWeight.w600),
             ),
           ),
           _ChatRow('Paginate the feed', dot: t.running, open: true),
@@ -98,7 +106,7 @@ class _Sidebar extends StatelessWidget {
 }
 
 /// A chat's row: its status [dot], its title, [open]'s fill, and a
-/// chat's color as the [bar] at its left.
+/// chat's color as the chip at its end ([bar]).
 class _ChatRow extends StatelessWidget {
   const new(this.title, {required this.dot, this.open = false, this.bar});
 
@@ -115,39 +123,37 @@ class _ChatRow extends StatelessWidget {
       height: 17,
       decoration: BoxDecoration(
         color: open ? t.accentSoft : null,
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(_small(NushiTheme.control)),
       ),
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: Row(
-              spacing: 5,
-              children: [
-                Container(
-                  width: 5,
-                  height: 5,
-                  decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
-                ),
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.ui(open ? t.text : t.textSecondary, size: 8.5),
-                  ),
-                ),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5),
+        child: Row(
+          spacing: 5,
+          children: [
+            Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
             ),
-          ),
-          if (bar case final c?)
-            Positioned(
-              left: 0,
-              top: 3,
-              bottom: 3,
-              child: Container(width: 2, color: c),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.ui(open ? t.text : t.textSecondary, size: 8.5),
+              ),
             ),
-        ],
+            if (bar case final c?)
+              Container(
+                width: 7,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c,
+                  borderRadius: BorderRadius.circular(NushiTheme.pill),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -161,72 +167,70 @@ class _Transcript extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final text = theme.ui(t.agentText, size: 8.5);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 6,
-      children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
-          decoration: BoxDecoration(
-            color: t.userBand,
-            border: Border(bottom: BorderSide(color: t.userBandBorder)),
-          ),
-          child: Text.rich(
-            TextSpan(
-              children: [
-                const TextSpan(text: 'Paginate it with a cursor, '),
-                _code(context, '20', t.userBandCode),
-                const TextSpan(text: ' a page.'),
-              ],
-            ),
-            maxLines: 1,
-            style: theme.ui(t.userBandText, size: 8.5),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 4,
-            children: [
-              Text.rich(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 7, 10, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 5,
+        children: [
+          // A message of yours: a bubble at the right (ADR 0111).
+          Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+              decoration: BoxDecoration(
+                color: t.userBand,
+                borderRadius: BorderRadius.circular(_small(NushiTheme.panel)),
+              ),
+              child: Text.rich(
                 TextSpan(
                   children: [
-                    _code(context, 'ListPosts', t.inlineCode),
-                    const TextSpan(text: ' reads the whole table.'),
+                    const TextSpan(text: 'Paginate it with a cursor, '),
+                    _code(context, '20', t.userBandCode),
+                    const TextSpan(text: ' a page.'),
                   ],
                 ),
                 maxLines: 1,
-                style: text,
+                style: theme.ui(t.userBandText, size: 8.5),
               ),
-              _Row(
-                fill: t.toolTint,
-                border: t.toolBorder,
-                icon: Icons.layers_outlined,
-                accent: t.toolAccent,
-                lead: 'Read 2 files, ran 1 search',
-              ),
-              _Row(
-                fill: t.subagentTint,
-                border: t.subagentBorder,
-                icon: Icons.smart_toy_outlined,
-                accent: t.subagentAccent,
-                lead: 'Explore:',
-                rest: ' Find every template',
-              ),
-              _Row(
-                fill: t.findingsTint,
-                border: t.findingsBorder,
-                icon: Icons.fact_check_outlined,
-                accent: t.findingsAccent,
-                lead: 'Review: 1 finding',
-                trail: 'feed.go:42',
-              ),
-              const _Code(),
-            ],
+            ),
           ),
-        ),
-      ],
+          Text.rich(
+            TextSpan(
+              children: [
+                _code(context, 'ListPosts', t.inlineCode),
+                const TextSpan(text: ' reads the whole table.'),
+              ],
+            ),
+            maxLines: 1,
+            style: text,
+          ),
+          _Row(
+            fill: t.raised,
+            icon: Icons.layers_outlined,
+            accent: t.toolAccent,
+            ink: t.textSecondary,
+            lead: 'Read 2 files, ran 1 search',
+          ),
+          _Row(
+            fill: t.subagentTint,
+            icon: Icons.smart_toy_outlined,
+            accent: t.subagentAccent,
+            ink: t.subagentAccent,
+            lead: 'Explore:',
+            rest: ' Find every template',
+          ),
+          _Row(
+            fill: t.raised,
+            icon: Icons.fact_check_outlined,
+            accent: t.findingsAccent,
+            ink: t.text,
+            lead: 'Review: 1 finding',
+            trail: 'feed.go:42',
+          ),
+          const _Code(),
+        ],
+      ),
     );
   }
 }
@@ -240,31 +244,32 @@ InlineSpan _code(BuildContext context, String code, Color fill) {
       padding: const EdgeInsets.symmetric(horizontal: 2),
       decoration: BoxDecoration(
         color: fill,
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(_small(NushiTheme.tag)),
       ),
       child: Text(code, style: theme.code(theme.t.inlineCodeText, size: 8)),
     ),
   );
 }
 
-/// A transcript's row: a tool call's, a subagent's line, the findings'
-/// head; its [fill] and [border], an [icon] in its [accent], [lead] (and
-/// [rest] after it) and [trail], a file, in the accent at its end.
+/// A transcript's row (ADR 0111): a tool call's, a card's fill; a
+/// subagent's line, its tint; the findings' head, a card's. Its [fill], an
+/// [icon] in its [accent], [lead] in [ink] (semibold before [rest], in the
+/// text's color) and [trail], a file, in the findings' accent at its end.
 class _Row extends StatelessWidget {
   const new({
     required this.fill,
-    required this.border,
     required this.icon,
     required this.accent,
+    required this.ink,
     required this.lead,
     this.rest,
     this.trail,
   });
 
   final Color fill;
-  final Color border;
   final IconData icon;
   final Color accent;
+  final Color ink;
   final String lead;
   final String? rest;
   final String? trail;
@@ -275,8 +280,11 @@ class _Row extends StatelessWidget {
     final t = theme.t;
     return Container(
       height: 17,
-      padding: const EdgeInsets.symmetric(horizontal: 5),
-      decoration: box(border, fill: fill, radius: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(_small(NushiTheme.control)),
+      ),
       child: Row(
         spacing: 4,
         children: [
@@ -291,12 +299,16 @@ class _Row extends StatelessWidget {
                         ? null
                         : const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  if (rest case final r?) TextSpan(text: r),
+                  if (rest case final r?)
+                    TextSpan(
+                      text: r,
+                      style: TextStyle(color: t.textSecondary),
+                    ),
                 ],
               ),
               maxLines: 1,
               overflow: TextOverflow.clip,
-              style: theme.ui(t.text, size: 8),
+              style: theme.ui(ink, size: 8),
             ),
           ),
           if (trail case final f?)
@@ -351,8 +363,11 @@ class _Code extends StatelessWidget {
       ],
     ];
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: box(t.borderSubtle, fill: t.codeBlock, radius: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+      decoration: BoxDecoration(
+        color: t.codeBlock,
+        borderRadius: BorderRadius.circular(_small(NushiTheme.control)),
+      ),
       child: Text.rich(
         TextSpan(
           children: [

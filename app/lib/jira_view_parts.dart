@@ -65,6 +65,14 @@ Color statusColor(Tokens t, String category) => switch (category) {
   _ => t.textMuted,
 };
 
+/// The fill behind a status in [statusColor]'s ink: the state's soft tint,
+/// or a control's fill for one that asks for nothing (ADR 0111).
+Color statusSoft(Tokens t, String category) => switch (category) {
+  'done' => t.doneSoft,
+  'indeterminate' => t.accentSoft,
+  _ => t.lifted,
+};
+
 /// No site to show: where to add one, or why the sites couldn't be listed
 /// ([error]), with Try again ([onRetry]).
 class NoSite extends StatelessWidget {

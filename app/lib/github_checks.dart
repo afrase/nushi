@@ -146,10 +146,10 @@ class _GitHubChecksState extends State<GitHubChecks> {
             // change under it (a push, a re-run).
             key: ValueKey(c.id != 0 ? c.id : '${c.workflow}/${c.name}'),
             padding: const EdgeInsets.only(bottom: 6),
-            child: framed(
-              border: c.failed
-                  ? t.crashed.withValues(alpha: 0.35)
-                  : t.borderSubtle,
+            // A card (ADR 0111): that it failed is its own mark's to say.
+            child: Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: cardBox(t),
               child: CheckRow(daemon: widget.daemon, ref: p.item.ref, check: c),
             ),
           ),

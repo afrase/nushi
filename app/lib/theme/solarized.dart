@@ -6,19 +6,27 @@ import 'package:nushi/theme/tokens.dart';
 // Solarized, Ethan Schoonover's palette (MIT; docs/development.md's
 // Dependencies), on Nushi's tokens (ADR 0086): its base tones for the
 // surfaces and text, its eight accents for status, tints and code, and
-// its own sixteen terminal colors. Where its inks read under AA on a
-// fill they sit on (Solarized's text is base0 on base03, 4.75:1, and
-// lower on a hovered row), they're taken lighter on the dark set and
-// darker on the light one, keeping their hue (`tokens_test`).
+// its own sixteen terminal colors. The surfaces (ADR 0111): dark, base03
+// the panes, base02 the cards and a tone under base03 the window; light,
+// base2 the window, base3 the panes and a tone between them the cards.
+// Where its inks read under AA on a fill Nushi's labels sit on
+// (Solarized's text is base0 on base03, 4.75:1, and lower on a hovered
+// row), they're taken lighter on the dark set and darker on the light
+// one, keeping their hue (`tokens_test`). Code's colors are the sixteen
+// as published, by Solarized's own Vim scheme's groups (green
+// statements, blue identifiers, yellow types, cyan constants, orange
+// preprocessor, base01 comments), and the light set's terminal is its
+// sixteen; the dark set's bright green, yellow, blue and cyan are
+// lighter accents where Solarized has greys, and its bright black is
+// base01, since the published base03 is the background.
 
 /// Solarized's dark set.
 const solarizedDark = Tokens(
   brightness: Brightness.dark,
+  window: Color(0xFF00212B),
   base: Color(0xFF002B36),
   raised: Color(0xFF073642),
   selected: Color(0xFF0E4554),
-  borderSubtle: Color(0xFF174B58),
-  borderStrong: Color(0xFF2B5C68),
   text: Color(0xFFB4C0C0),
   textSecondary: Color(0xFFA0AEAE),
   textMuted: Color(0xFF9DAEB0),
@@ -42,7 +50,6 @@ const solarizedDark = Tokens(
   shine: Color(0xFF586E75),
   shineBand: Color(0xFFEEE8D5),
   userBand: Color(0xFF0B3C58),
-  userBandBorder: Color(0xFF1F5878),
   userBandText: Color(0xFFEEE8D5),
   userBandMuted: Color(0xFF8BB8D8),
   userBandCode: Color(0x29CB4B16),
@@ -50,15 +57,10 @@ const solarizedDark = Tokens(
   agentText: Color(0xFF93A1A1),
   inlineCode: Color(0x24CB4B16),
   inlineCodeText: Color(0xFFFE9A6F),
-  codeBlock: Color(0xFF073642),
-  toolTint: Color(0xFF063F3F),
-  toolBorder: Color(0xFF14615C),
+  codeBlock: Color(0xFF00252F),
   toolAccent: Color(0xFF2AA198),
   subagentTint: Color(0xFF1C2F4F),
-  subagentBorder: Color(0xFF3A4F80),
   subagentAccent: Color(0xFFA9ADF0),
-  findingsTint: Color(0xFF1F3A2A),
-  findingsBorder: Color(0xFF4A5A22),
   findingsAccent: Color(0xFFC39727),
   selectionBar: Color(0xFF073642),
   selectionBarText: Color(0xFFEEE8D5),
@@ -85,19 +87,19 @@ const solarizedDark = Tokens(
     Color(0xFF859900), // green
   ],
   syntax: {
-    Capture.keyword: CodeInk(Color(0xFF8EA21D)),
-    Capture.declaration: CodeInk(Color(0xFF42A0E7)),
-    Capture.type: CodeInk(Color(0xFFBF931F)),
-    Capture.string: CodeInk(Color(0xFF3AA9A0)),
-    Capture.number: CodeInk(Color(0xFFFC60AB)),
-    Capture.regexp: CodeInk(Color(0xFFFD695F)),
-    Capture.constant: CodeInk(Color(0xFF8D92E5), italic: true),
-    Capture.field: CodeInk(Color(0xFF42A0E7)),
-    Capture.symbol: CodeInk(Color(0xFF8D92E5)),
+    Capture.keyword: CodeInk(Color(0xFF859900)),
+    Capture.declaration: CodeInk(Color(0xFF268BD2)),
+    Capture.type: CodeInk(Color(0xFFB58900)),
+    Capture.string: CodeInk(Color(0xFF2AA198)),
+    Capture.number: CodeInk(Color(0xFFD33682)),
+    Capture.regexp: CodeInk(Color(0xFFDC322F)),
+    Capture.constant: CodeInk(Color(0xFF6C71C4), italic: true),
+    Capture.field: CodeInk(Color(0xFF268BD2)),
+    Capture.symbol: CodeInk(Color(0xFF6C71C4)),
     Capture.parameter: CodeInk(Color(0xFF93A1A1), italic: true),
-    Capture.meta: CodeInk(Color(0xFFF37346)),
-    Capture.tag: CodeInk(Color(0xFF42A0E7)),
-    Capture.comment: CodeInk(Color(0xFF687E85), italic: true),
+    Capture.meta: CodeInk(Color(0xFFCB4B16)),
+    Capture.tag: CodeInk(Color(0xFF268BD2)),
+    Capture.comment: CodeInk(Color(0xFF586E75), italic: true),
     Capture.docTag: CodeInk(Color(0xFF839496), italic: true, bold: true),
   },
   terminal: TerminalColors(
@@ -123,11 +125,11 @@ const solarizedDark = Tokens(
 /// Solarized's light set.
 const solarizedLight = Tokens(
   brightness: Brightness.light,
+  window: Color(0xFFEEE8D5),
   base: Color(0xFFFDF6E3),
-  raised: Color(0xFFEEE8D5),
+  raised: Color(0xFFF5EFDC),
+  lifted: Color(0xFFE6DFCA),
   selected: Color(0xFFDFD8C1),
-  borderSubtle: Color(0xFFE1DAC3),
-  borderStrong: Color(0xFFCFC6AA),
   text: Color(0xFF073642),
   textSecondary: Color(0xFF4B6168),
   textMuted: Color(0xFF4F6066),
@@ -151,7 +153,6 @@ const solarizedLight = Tokens(
   shine: Color(0xFF657B83),
   shineBand: Color(0xFF073642),
   userBand: Color(0xFFE3E8DC),
-  userBandBorder: Color(0xFFB9CBD3),
   userBandText: Color(0xFF073642),
   userBandMuted: Color(0xFF2F5F7F),
   userBandCode: Color(0x1FCB4B16),
@@ -160,14 +161,9 @@ const solarizedLight = Tokens(
   inlineCode: Color(0x1CCB4B16),
   inlineCodeText: Color(0xFF983303),
   codeBlock: Color(0xFFEEE8D5),
-  toolTint: Color(0xFFE0ECDA),
-  toolBorder: Color(0xFFA9D1C6),
   toolAccent: Color(0xFF1D7F78),
   subagentTint: Color(0xFFEBE5E8),
-  subagentBorder: Color(0xFFC9C3E3),
   subagentAccent: Color(0xFF4D52A8),
-  findingsTint: Color(0xFFF3E7C6),
-  findingsBorder: Color(0xFFE0CC8E),
   findingsAccent: Color(0xFF7D5A00),
   selectionBar: Color(0xFF073642),
   selectionBarText: Color(0xFFEEE8D5),
@@ -192,37 +188,37 @@ const solarizedLight = Tokens(
     Color(0xFF5C6B00), // green
   ],
   syntax: {
-    Capture.keyword: CodeInk(Color(0xFF5C6B00)),
-    Capture.declaration: CodeInk(Color(0xFF1B6AA5)),
-    Capture.type: CodeInk(Color(0xFF886107)),
-    Capture.string: CodeInk(Color(0xFF04756E)),
-    Capture.number: CodeInk(Color(0xFFB52A6E)),
-    Capture.regexp: CodeInk(Color(0xFFB82724)),
-    Capture.constant: CodeInk(Color(0xFF5A5FB8), italic: true),
-    Capture.field: CodeInk(Color(0xFF1B6AA5)),
-    Capture.symbol: CodeInk(Color(0xFF5A5FB8)),
-    Capture.parameter: CodeInk(Color(0xFF556B72), italic: true),
-    Capture.meta: CodeInk(Color(0xFFB13F12)),
-    Capture.tag: CodeInk(Color(0xFF1B6AA5)),
-    Capture.comment: CodeInk(Color(0xFF768789), italic: true),
+    Capture.keyword: CodeInk(Color(0xFF859900)),
+    Capture.declaration: CodeInk(Color(0xFF268BD2)),
+    Capture.type: CodeInk(Color(0xFFB58900)),
+    Capture.string: CodeInk(Color(0xFF2AA198)),
+    Capture.number: CodeInk(Color(0xFFD33682)),
+    Capture.regexp: CodeInk(Color(0xFFDC322F)),
+    Capture.constant: CodeInk(Color(0xFF6C71C4), italic: true),
+    Capture.field: CodeInk(Color(0xFF268BD2)),
+    Capture.symbol: CodeInk(Color(0xFF6C71C4)),
+    Capture.parameter: CodeInk(Color(0xFF586E75), italic: true),
+    Capture.meta: CodeInk(Color(0xFFCB4B16)),
+    Capture.tag: CodeInk(Color(0xFF268BD2)),
+    Capture.comment: CodeInk(Color(0xFF93A1A1), italic: true),
     Capture.docTag: CodeInk(Color(0xFF657B83), italic: true, bold: true),
   },
   terminal: TerminalColors(
     black: Color(0xFF073642),
     red: Color(0xFFDC322F),
-    green: Color(0xFF83970A),
-    yellow: Color(0xFFB2870C),
+    green: Color(0xFF859900),
+    yellow: Color(0xFFB58900),
     blue: Color(0xFF268BD2),
     magenta: Color(0xFFD33682),
-    cyan: Color(0xFF249E95),
+    cyan: Color(0xFF2AA198),
     white: Color(0xFFEEE8D5),
     brightBlack: Color(0xFF002B36),
     brightRed: Color(0xFFCB4B16),
     brightGreen: Color(0xFF586E75),
     brightYellow: Color(0xFF657B83),
-    brightBlue: Color(0xFF809193),
+    brightBlue: Color(0xFF839496),
     brightMagenta: Color(0xFF6C71C4),
-    brightCyan: Color(0xFF829090),
+    brightCyan: Color(0xFF93A1A1),
     brightWhite: Color(0xFFFDF6E3),
   ),
 );

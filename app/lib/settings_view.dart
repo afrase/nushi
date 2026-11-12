@@ -169,7 +169,7 @@ class _SettingsViewState extends State<SettingsView> {
               height: PaneHeader.height,
               padding: const EdgeInsets.only(left: 16, right: 8),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: t.borderSubtle)),
+                border: Border(bottom: BorderSide(color: t.line)),
               ),
               child: Row(
                 children: [

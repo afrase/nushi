@@ -36,6 +36,9 @@ Future<void> _press(WidgetTester tester, LogicalKeyboardKey key) async {
 }
 
 void main() {
+  // The real fonts, as the header's fold is measured for: the test font's
+  // square letters are half again as wide.
+  setUpAll(loadFonts);
   final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
 
   testWidgets('holding ⌘ alone numbers the chats, the archived left out', (

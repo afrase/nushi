@@ -239,9 +239,12 @@ String subagentFolded(SubagentRun s) => [
       it.text,
 ].join('\n');
 
-/// A subagent in the transcript, on one line: its type and task ("Explore:
-/// find the scroll handling") and its state, live. A click opens its pane;
-/// under the pointer, a running one's mark becomes its Stop.
+/// A subagent in the transcript, on one line (ADR 0111): a row filled with
+/// the subagents' soft tint, no outline, its type and task ("Explore: find
+/// the scroll handling") and its state at the end, live. A click opens its
+/// pane, and while that is open the row is the accent's soft fill, as any
+/// open row; a failed one is the failures' soft red. Under the pointer, a
+/// running one's mark becomes its Stop.
 class SubagentLine extends StatelessWidget {
   const new(this.s, this.chat, {super.key, this.still = false, this.daemon});
 
@@ -261,74 +264,74 @@ class SubagentLine extends StatelessWidget {
     return Hover(
       builder: (context, {required hover}) => ValueListenableBuilder(
         valueListenable: chat.pane,
-        builder: (context, open, _) => framed(
-          border: failed
-              ? t.crashed
-              : open == s.call.id
-              ? t.focus
-              : t.subagentBorder,
-          fill: failed ? t.crashedSoft : t.subagentTint,
-          child: FoldedMarks(
-            text: subagentFolded(s),
-            builder: (context, found) => Tap(
-              onTap: () => chat.pane.value = s.call.id,
-              tooltip: 'Open its steps',
-              radius: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: SizedBox(
-                height: 28,
-                // Its tag comes and goes with the chat's related worktrees,
-                // and a line stays built (ADR 0026).
-                child: LayoutBuilder(
-                  builder: (context, box) => ListenableBuilder(
-                    listenable: chat.related,
-                    builder: (context, _) => Row(
-                      spacing: 6,
-                      children: [
-                        Icon(
-                          Icons.smart_toy_outlined,
-                          size: 14,
-                          color: failed ? t.crashed : t.subagentAccent,
-                        ),
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: subagentShine(
-                                  s,
-                                  subagentName(context, s),
-                                  still: still,
-                                ),
+        builder: (context, open, _) => FoldedMarks(
+          text: subagentFolded(s),
+          builder: (context, found) => Tap(
+            onTap: () => chat.pane.value = s.call.id,
+            tooltip: 'Open its steps',
+            fill: failed
+                ? t.crashedSoft
+                : open == s.call.id
+                ? t.accentSoft
+                : t.subagentTint,
+            padding: const EdgeInsets.symmetric(horizontal: Collapsible.side),
+            child: SizedBox(
+              height: Collapsible.height, // one row, as a tool call's
+              // Its tag comes and goes with the chat's related worktrees,
+              // and a line stays built (ADR 0026).
+              child: LayoutBuilder(
+                builder: (context, box) => ListenableBuilder(
+                  listenable: chat.related,
+                  builder: (context, _) => Row(
+                    spacing: 8,
+                    children: [
+                      Icon(
+                        Icons.smart_toy_outlined,
+                        size: 15,
+                        color: failed ? t.crashed : t.subagentAccent,
+                      ),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: subagentShine(
+                                s,
+                                subagentName(context, s),
+                                still: still,
                               ),
-                              FoundCount(found),
-                            ],
-                          ),
-                        ),
-                        if (chat.related.tagFor(s.call.id) case final tag
-                            when tag.isNotEmpty)
-                          // A cap, not Flexible, which would
-                          // take half the free width.
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: (box.maxWidth * 0.25).clamp(72, 160),
                             ),
-                            child: WorktreeTag(tag),
-                          ),
-                        // The name takes the room; the state ends the line.
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 240),
-                          child: SubagentState(
-                            s,
-                            style: theme.ui(t.textMuted, size: 12),
-                          ),
+                            FoundCount(found),
+                          ],
                         ),
-                        if (hover && daemon != null && subagentStoppable(s))
-                          stopButton(context, daemon, chat, s.call.id, size: 13)
-                        else
-                          subagentMark(s),
-                        Icon(Icons.chevron_right, size: 14, color: t.textMuted),
-                      ],
-                    ),
+                      ),
+                      if (chat.related.tagFor(s.call.id) case final tag
+                          when tag.isNotEmpty)
+                        // A cap, not Flexible, which would
+                        // take half the free width.
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: (box.maxWidth * 0.25).clamp(72, 160),
+                          ),
+                          child: WorktreeTag(tag),
+                        ),
+                      // The name takes the room; the state ends the line.
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 240),
+                        child: SubagentState(
+                          s,
+                          style: theme.ui(t.textSecondary, size: 12),
+                        ),
+                      ),
+                      if (hover && daemon != null && subagentStoppable(s))
+                        stopButton(context, daemon, chat, s.call.id, size: 13)
+                      else
+                        subagentMark(s),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 15,
+                        color: t.textSecondary,
+                      ),
+                    ],
                   ),
                 ),
               ),

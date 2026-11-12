@@ -8,10 +8,13 @@ import 'package:nushi/review.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// A comment under its lines in the diff: its lines and text, Edit (while
-/// unsent) and Remove on hover; dimmed once sent. An outdated one (its
-/// lines are gone) shows above the file with the lines it was on, and one
-/// away from its file ([place]: where it was made) with them too.
+/// A comment under its lines in the diff: a card with a comment's mark,
+/// its lines and its text, Edit (while unsent) and Remove on hover; dimmed
+/// once sent, and saying so in a pill. An outdated one (its lines are gone)
+/// shows above the file with the lines it was on, its mark a clock's and
+/// "Outdated" an amber pill; one away from its file ([place]: where it was
+/// made) shows them too. What it is and how it stands are a mark and a
+/// pill, never a stripe down its side (ADR 0111).
 class CommentCard extends StatelessWidget {
   const new(
     this.comment, {
@@ -40,15 +43,31 @@ class CommentCard extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  // Flexible in a row of its own (AGENTS.md), so the
+                  // buttons stay at the card's end.
                   Expanded(
-                    child: Text(
-                      [
-                        if (c.outdated) 'Outdated',
-                        ?place,
-                        c.lines,
-                        if (c.sent) 'sent',
-                      ].join(' · '),
-                      style: theme.ui(t.textMuted, size: 11.5),
+                    child: Row(
+                      spacing: 6,
+                      children: [
+                        Icon(
+                          c.outdated
+                              ? Icons.history
+                              : Icons.mode_comment_outlined,
+                          size: 13,
+                          color: c.outdated ? t.needs : t.accentInk,
+                        ),
+                        if (c.outdated)
+                          _State('Outdated', t.needs, t.needsSoft),
+                        Flexible(
+                          child: Text(
+                            [?place, c.lines].join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.ui(t.textMuted, size: 11.5),
+                          ),
+                        ),
+                        if (c.sent) _State('Sent', t.textSecondary, t.lifted),
+                      ],
                     ),
                   ),
                   if (hover && !c.sent)
@@ -167,7 +186,11 @@ class _ReviewCommentBoxState extends State<ReviewCommentBox> {
             mainAxisAlignment: MainAxisAlignment.end,
             spacing: 6,
             children: [
-              Button(label: 'Cancel', onPressed: widget.onCancel),
+              Button(
+                label: 'Cancel',
+                kind: ButtonKind.quiet,
+                onPressed: widget.onCancel,
+              ),
               Button(
                 label: widget.editing ? 'Save' : 'Comment',
                 kind: ButtonKind.primary,
@@ -181,7 +204,30 @@ class _ReviewCommentBoxState extends State<ReviewCommentBox> {
   }
 }
 
-/// An inline box between a diff's lines, with an accent bar on its left.
+/// A comment's state as a small pill: [ink] on its soft [fill].
+class _State extends StatelessWidget {
+  const new(this.word, this.ink, this.fill);
+
+  final String word;
+  final Color ink;
+  final Color fill;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7),
+    decoration: BoxDecoration(
+      color: fill,
+      borderRadius: BorderRadius.circular(NushiTheme.pill),
+    ),
+    child: Text(
+      word,
+      style: NushiTheme.of(context).ui(ink, size: 11, weight: FontWeight.w600),
+    ),
+  );
+}
+
+/// An inline box between a diff's lines: a card (ADR 0111), told from the
+/// code around it by its fill, with no bar down its side.
 class _Inlay extends StatelessWidget {
   const new({required this.child});
 
@@ -191,15 +237,11 @@ class _Inlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 4, 8, 6),
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.fromLTRB(10, 6, 6, 8),
-        decoration: BoxDecoration(
-          color: t.raised,
-          border: Border(left: BorderSide(color: t.accent, width: 2)),
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-        ),
+        decoration: cardBox(t, radius: NushiTheme.control),
         child: child,
       ),
     );

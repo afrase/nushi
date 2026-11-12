@@ -354,12 +354,12 @@ class FilesButton extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([filesChats, chat.tab]),
     builder: (context, _) {
-      final t = NushiTheme.of(context).t;
       final shown = filesShown(chat);
       return IconTap.line(
         LineIcon.folder,
         tooltip: tooltip(shown: shown),
-        color: shown ? t.accentInk : t.textSecondary,
+        padding: IconTap.header,
+        lit: shown,
         onTap: () => showOrHideFiles(chat),
       );
     },

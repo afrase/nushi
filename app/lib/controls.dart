@@ -9,7 +9,9 @@ export 'package:nushi/line_icons.dart';
 
 part 'controls_buttons.dart';
 part 'controls_menus.dart';
+part 'controls_pills.dart';
 part 'controls_press.dart';
+part 'controls_segmented.dart';
 part 'controls_small.dart';
 
 // The app's controls: one look for each kind of thing that can be
@@ -19,9 +21,10 @@ part 'controls_small.dart';
 // [DragGrip] where something can be moved. Plain text is never clickable;
 // all of these show the pointing hand. Their parts: `controls_press`
 // (pressing, touch targets, and [Tap] for rows and tabs),
-// `controls_buttons`, `controls_menus` and `controls_small` (links,
-// icons, swatches, grips, key hints, [Segmented]); what they share is
-// here.
+// `controls_buttons`, `controls_menus`, `controls_small` (links, icons,
+// swatches, grips, key hints and caps), `controls_segmented`
+// ([Segmented]) and `controls_pills` ([PillButton] and [RoundButton], a
+// card's own buttons); what they share is here.
 
 /// A button's and a field's height.
 const controlHeight = 26.0;

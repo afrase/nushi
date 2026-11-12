@@ -38,9 +38,8 @@ void main() {
     ('dark', Brightness.dark, Tokens.dark),
     ('light', Brightness.light, Tokens.light),
   ]) {
-    testWidgets('a hairline sets the panel off from the chat, $name', (
-      tester,
-    ) async {
+    testWidgets('a hairline sets the panel off from the chat, in the same '
+        'pane, $name', (tester) async {
       final (d, _) = await railApp(tester, brightness: brightness);
       final left = tester.getRect(railPanel).left;
       final ratio = tester.view.devicePixelRatio;
@@ -48,10 +47,20 @@ void main() {
       await tester.runAsync(() async {
         final image = await captureImage(element);
         final bytes = (await image.toByteData())!;
-        // Down the panel's whole height: the rule, then its own fill.
+        // Down the panel's whole height: the rule (ADR 0111's hairline, on
+        // the pane), then the pane's own fill on both sides of it.
+        final rule = Color.alphaBlend(tokens.line, tokens.base);
         for (final y in [100.0, 400.0, 900.0]) {
-          expect(_at(image, bytes, left, y, ratio), tokens.borderSubtle);
+          final at = _at(image, bytes, left, y, ratio);
+          for (final (got, want) in [
+            (at.r, rule.r),
+            (at.g, rule.g),
+            (at.b, rule.b),
+          ]) {
+            expect(got, closeTo(want, 1.5 / 255));
+          }
           expect(_at(image, bytes, left + 4, y, ratio), tokens.base);
+          expect(_at(image, bytes, left - 4, y, ratio), tokens.base);
         }
         image.dispose();
       });
@@ -99,8 +108,8 @@ void main() {
   }
 
   // A side chat lies over the transcript where it did by the 264-point
-  // panel: beside it at 1470 with the sidebar (1210 for the chat, 510 left
-  // beside the panel and the side chat), over it at 1450 (490).
+  // panel: beside it at 1470 with the sidebar (1202 for the chat's pane,
+  // 502 left beside the panel and the side chat), over it at 1450 (482).
   for (final (width, beside) in [(1470.0, true), (1450.0, false)]) {
     testWidgets('with the sidebar and a side chat, ${width.toInt()} wide: '
         'the side chat lies ${beside ? 'beside' : 'over'} the transcript', (

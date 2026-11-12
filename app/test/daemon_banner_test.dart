@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -12,7 +13,9 @@ Widget _app(Daemon d, {bool still = false, Tokens tokens = Tokens.dark}) =>
     themed(
       Column(
         children: [
-          RepaintBoundary(child: DaemonBanner(d)),
+          // The window's width, so CI's few pixels of text are under the
+          // 1% a golden may differ by there.
+          RepaintBoundary(child: Center(child: DaemonBanner(d))),
           const Expanded(child: SizedBox()),
         ],
       ),
@@ -67,7 +70,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 16));
     await tester.pump(const Duration(milliseconds: 60));
     expect(find.text(_lost), findsOneWidget);
-    final full = tester.getSize(find.text(_lost)).height + 12;
+    final full = tester.getSize(find.text(_lost)).height + 12 + FloatBar.gap;
     expect(height(tester), inExclusiveRange(0, full));
     await tester.pump(const Duration(milliseconds: 200));
     expect(height(tester), full);

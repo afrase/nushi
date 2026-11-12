@@ -62,7 +62,7 @@ class PhoneScreen extends StatelessWidget {
               if (!cramped)
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: t.borderSubtle)),
+                    border: Border(bottom: BorderSide(color: t.line)),
                   ),
                   child: SizedBox(
                     height: touch + 8,
@@ -144,7 +144,8 @@ class PhoneIcon extends StatelessWidget {
   }
 }
 
-/// A full-width button, 44 points tall: [primary] filled with the accent.
+/// A full-width button, 44 points tall: [primary] filled with the accent,
+/// any other with a button's own fill, no outline (ADR 0111).
 class PhoneButton extends StatelessWidget {
   const new(
     this.label, {
@@ -170,10 +171,9 @@ class PhoneButton extends StatelessWidget {
         ? t.crashed
         : t.text;
     return Material(
-      color: primary && onTap != null ? t.accent : t.raised,
+      color: primary && onTap != null ? t.accent : t.lifted,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: primary ? BorderSide.none : BorderSide(color: t.borderSubtle),
+        borderRadius: BorderRadius.circular(NushiTheme.card),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

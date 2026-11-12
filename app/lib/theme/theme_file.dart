@@ -36,6 +36,21 @@ const List<String> avatarNames = [
   'green',
 ];
 
+/// Names a theme file may still hold from before the surfaces told things
+/// apart (ADR 0111): the old outlines and the tints the transcript drew.
+/// Nothing draws them, so they're passed over without a note: a file
+/// written from an older Nushi's theme reads as it did.
+const Set<String> retiredTokens = {
+  'borderSubtle',
+  'borderStrong',
+  'toolTint',
+  'toolBorder',
+  'subagentBorder',
+  'findingsTint',
+  'findingsBorder',
+  'userBandBorder',
+};
+
 /// Every color of [t] by its name in a theme file: the tokens by their
 /// own names, then `avatars.<name>`, `syntax.<capture>`, `terminal.<ansi>`
 /// and `diff.<part>`.
@@ -47,8 +62,28 @@ Map<String, Color> tokenColors(Tokens t) {
 
 /// [t] with [colors] (by [tokenColors]' names) in place of its own; a name
 /// it doesn't have is left out.
-Tokens withColors(Tokens t, Map<String, Color> colors) =>
-    _rebuild(t, (name, c) => colors[name] ?? c);
+///
+/// A surface [colors] doesn't name follows the one it's drawn from when
+/// they name that (ADR 0111): `window` follows `base`, `lifted` and
+/// `segment` follow `raised` (a light set's `segment` its `base`), `line`
+/// and `quote` follow `text`. So a file from before those tokens, which
+/// names every color it knew, gets a window and a hairline of its own
+/// palette rather than the built-in's it starts from.
+Tokens withColors(Tokens t, Map<String, Color> colors) {
+  bool follows(String name, List<String> sources) =>
+      !colors.containsKey(name) && sources.any(colors.containsKey);
+  return _rebuild(
+    t,
+    (name, c) => colors[name] ?? c,
+    derived: {
+      if (follows('window', ['base', 'text'])) 'window',
+      if (follows('lifted', ['raised', 'text'])) 'lifted',
+      if (follows('segment', ['raised', 'base', 'text'])) 'segment',
+      if (follows('line', ['text'])) 'line',
+      if (follows('quote', ['text'])) 'quote',
+    },
+  );
+}
 
 /// Reads a theme file: `{"name", "from", "dark", "light"}`, the sets
 /// mapping token names to `#RRGGBB` or `#AARRGGBB`; `from` names the
@@ -108,7 +143,9 @@ ThemeFile readThemeFile(String file, String text) {
     final colors = <String, Color>{};
     for (final MapEntry(:key, :value) in given.entries) {
       final where = '$which.${_clip(key, 40)}';
-      if (!known.containsKey(key)) {
+      if (retiredTokens.contains(key)) {
+        continue;
+      } else if (!known.containsKey(key)) {
         notes.add('"$where" is no token: ignored.');
       } else if (_color(value) case final c?) {
         colors[key] = c;
@@ -176,17 +213,27 @@ final _hidden = RegExp(r'[\p{Cc}\p{Cf}]', unicode: true);
 String shownText(String s) => s.replaceAll(_hidden, '');
 
 /// [t] built again, each color what [pick] makes of its name and its value
-/// in [t]: one list of the tokens for [tokenColors] and [withColors].
-Tokens _rebuild(Tokens t, Color Function(String name, Color c) pick) {
+/// in [t]: one list of the tokens for [tokenColors] and [withColors]. A
+/// surface named in [derived] is left for the set to work out from the
+/// others ([Tokens.window] and the like).
+Tokens _rebuild(
+  Tokens t,
+  Color Function(String name, Color c) pick, {
+  Set<String> derived = const {},
+}) {
   final a = t.terminal;
   final d = t.diff;
+  Color? surface(String name, Color c) =>
+      derived.contains(name) ? null : pick(name, c);
   return Tokens(
     brightness: t.brightness,
+    window: surface('window', t.window),
     base: pick('base', t.base),
     raised: pick('raised', t.raised),
+    lifted: surface('lifted', t.lifted),
+    segment: surface('segment', t.segment),
+    line: surface('line', t.line),
     selected: pick('selected', t.selected),
-    borderSubtle: pick('borderSubtle', t.borderSubtle),
-    borderStrong: pick('borderStrong', t.borderStrong),
     text: pick('text', t.text),
     textSecondary: pick('textSecondary', t.textSecondary),
     textMuted: pick('textMuted', t.textMuted),
@@ -210,7 +257,6 @@ Tokens _rebuild(Tokens t, Color Function(String name, Color c) pick) {
     shine: pick('shine', t.shine),
     shineBand: pick('shineBand', t.shineBand),
     userBand: pick('userBand', t.userBand),
-    userBandBorder: pick('userBandBorder', t.userBandBorder),
     userBandText: pick('userBandText', t.userBandText),
     userBandMuted: pick('userBandMuted', t.userBandMuted),
     userBandCode: pick('userBandCode', t.userBandCode),
@@ -219,14 +265,9 @@ Tokens _rebuild(Tokens t, Color Function(String name, Color c) pick) {
     inlineCode: pick('inlineCode', t.inlineCode),
     inlineCodeText: pick('inlineCodeText', t.inlineCodeText),
     codeBlock: pick('codeBlock', t.codeBlock),
-    toolTint: pick('toolTint', t.toolTint),
-    toolBorder: pick('toolBorder', t.toolBorder),
     toolAccent: pick('toolAccent', t.toolAccent),
     subagentTint: pick('subagentTint', t.subagentTint),
-    subagentBorder: pick('subagentBorder', t.subagentBorder),
     subagentAccent: pick('subagentAccent', t.subagentAccent),
-    findingsTint: pick('findingsTint', t.findingsTint),
-    findingsBorder: pick('findingsBorder', t.findingsBorder),
     findingsAccent: pick('findingsAccent', t.findingsAccent),
     selectionBar: pick('selectionBar', t.selectionBar),
     selectionBarText: pick('selectionBarText', t.selectionBarText),
@@ -242,6 +283,7 @@ Tokens _rebuild(Tokens t, Color Function(String name, Color c) pick) {
     monogramText: pick('monogramText', t.monogramText),
     hover: pick('hover', t.hover),
     pressed: pick('pressed', t.pressed),
+    quote: surface('quote', t.quote),
     avatars: [
       for (final (i, c) in t.avatars.indexed)
         pick('avatars.${avatarNames[i]}', c),
@@ -271,6 +313,7 @@ Tokens _rebuild(Tokens t, Color Function(String name, Color c) pick) {
       brightMagenta: pick('terminal.brightMagenta', a.brightMagenta),
       brightCyan: pick('terminal.brightCyan', a.brightCyan),
       brightWhite: pick('terminal.brightWhite', a.brightWhite),
+      foreground: a.foreground,
     ),
     diff: DiffColors(
       background: pick('diff.background', d.background),

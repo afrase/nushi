@@ -96,8 +96,7 @@ class _Bar extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 30),
       padding: const EdgeInsets.fromLTRB(NushiTheme.gutter, 4, 8, 4),
       decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(bottom: BorderSide(color: t.borderSubtle)),
+        border: Border(bottom: BorderSide(color: t.line)),
       ),
       child: Row(
         spacing: 8,

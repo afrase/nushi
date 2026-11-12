@@ -25,7 +25,7 @@ It comes back when you start a chat in that folder again. **Remove from sidebar*
 
 Type in the box at the bottom and press **⏎** to send. **⇧⏎** starts a new line.
 
-- **Attach files or images**: click the **+** left of the box and pick **Add files or photos** (**⌘U**), drop files on the chat, or paste a picture.
+- **Attach files or images**: click the **+** in the box and pick **Add files or photos** (**⌘U**), drop files on the chat, or paste a picture.
 - **Mention a file**: type `@` and pick one.
 - **Slash commands**: type `/` to see the agent's commands.
 
@@ -33,19 +33,19 @@ Type in the box at the bottom and press **⏎** to send. **⇧⏎** starts a new
 
 No need to wait for the agent to finish. Type your message, then:
 
-- **⏎ (Queue)** puts it in line, as a pill over the box. An agent that takes input mid-task gets it right away; otherwise it goes when the current turn ends. You can edit or remove a pill, or send it now.
-- **⌘⏎ (Stop and send)** stops what the agent is doing and sends your message at once.
+- **⏎, or the Queue button,** puts it in line, as a pill over the box. An agent that takes input mid-task gets it right away; otherwise it goes when the current turn ends. You can edit or remove a pill, or send it now.
+- **⌘⏎, or the Stop and send button,** stops what the agent is doing and sends your message at once.
 
 ## Stop the agent
 
-Press **Esc**, or click the stop button (a square in a circle) right of the box. Queued messages wait until you send again.
+Press **Esc**, or click the round red **Stop** button at the end of the box's row. Queued messages wait until you send again.
 
 ## Pick the mode, model and effort
 
-Under the box are the agent's own options:
+In the box's bottom row, after the **+**, are the agent's own options (in a side chat and on the phone they're under the box):
 
-- **On the left: the mode.** The agent's permission mode (for example Auto or Plan) decides what it may do without asking. It's the only permission control; Nushi has none of its own.
-- **On the right: the model** and its effort. Click to switch; the menu also has **Effort** and **More models**.
+- **First, the mode.** The agent's permission mode (for example Auto or Plan) decides what it may do without asking. It's the only permission control; Nushi has none of its own.
+- **Then the model** and its effort. Click to switch; the menu also has **Effort** and **More models**.
 - **The ⋯ button** holds any other options the agent offers.
 
 A chat remembers your picks, and a new chat starts with the ones you last picked for that agent.
@@ -55,7 +55,7 @@ A chat remembers your picks, and a new chat starts with the ones you last picked
 When the agent asks permission to run something, or asks a question, the chat **needs you**:
 
 - A card shows in the chat: a **Permission** card with the agent's choices (such as Allow or Deny), or a question card with **Submit** and **Skip**.
-- The chat's dot in the sidebar turns amber, and Nushi's app icon shows how many chats need you.
+- The chat's dot in the sidebar turns amber and its row says **Needs you**, and Nushi's app icon shows how many chats need you.
 - If you've scrolled up, a **Needs you** chip takes you down to the card.
 
 Nushi never answers for you.
@@ -88,6 +88,7 @@ To keep a chat's work apart from your checkout, click **New worktree** under the
 
 - **Chats belong to your agent.** Each is the agent's own session, so its own resume command, run in the chat's folder, picks it up in a terminal.
 - **Quitting Nushi doesn't stop your agents.** A background helper (the daemon) keeps them and the chat's terminals running. More on terminals in [Previews and terminals](Previews-and-terminals).
+- **The card at the bottom of the sidebar** counts the agents that are working, awake and asleep, and shows the memory Nushi takes. Click the memory to see each awake chat's, with **Sleep** beside it.
 - **Idle chats sleep** after 30 minutes: the agent stops, and your next message wakes it. Change it in **Settings › General › Sleep idle chats**.
 - **Rewind and side chats** show only for agents that support them.
 - **Don't use a session in Nushi and a terminal at once**: both write to it.

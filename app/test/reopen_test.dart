@@ -112,8 +112,8 @@ void main() {
         ),
         tokens: tokens,
       );
-      expect(find.text("couldn't start"), findsOneWidget);
-      expect(find.text('asleep'), findsOneWidget);
+      expect(find.text("Couldn't start"), findsOneWidget);
+      expect(find.text('Asleep'), findsOneWidget);
       for (final label in ['Set up…', 'Move…', 'Try again']) {
         expect(find.text(label), findsOneWidget);
       }
@@ -271,8 +271,8 @@ void main() {
         ),
         tokens: tokens,
       );
-      expect(find.text('expired'), findsOneWidget);
-      expect(find.text("couldn't start"), findsNothing);
+      expect(find.text('Expired'), findsOneWidget);
+      expect(find.text("Couldn't start"), findsNothing);
       expect(find.text('Try again'), findsNothing);
       // Delete… is in the composer's place (history_test.dart).
       expect(find.text('Delete…'), findsNothing);

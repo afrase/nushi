@@ -9,6 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/inline_edit.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar_group_header.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/slide_list.dart';
@@ -287,7 +288,7 @@ class _SectionHeaderState extends State<_SectionHeader> {
                   width: 180,
                   child: InlineEdit(
                     text: section.name,
-                    style: theme.ui(t.text, weight: FontWeight.w600),
+                    style: GroupHeader.style(theme).copyWith(color: t.text),
                     onDone: (name) {
                       if (name != null && name.isNotEmpty) {
                         _change(section.id, (s) => s.copyWith(name: name));

@@ -130,8 +130,14 @@ class IconTap extends StatelessWidget {
   final double size;
   final Color? color;
 
-  /// The room around the icon, on each side (5; 3 in a menu's row).
+  /// The room around the icon, on each side (5; 3 in a menu's row;
+  /// [header] in the chat's header).
   final double padding;
+
+  /// The [padding] of the chat header's icon buttons, 32 points square
+  /// (ADR 0111): the terminal's, the Files pane's, the browser's, the
+  /// details' and the chat's menu.
+  static const header = 8.0;
 
   @override
   Widget build(BuildContext context) {
@@ -297,44 +303,76 @@ Widget keyText(String keys, TextStyle style) => Text.rich(
   strutStyle: StrutStyle.fromTextStyle(style, forceStrutHeight: true),
 );
 
-/// One value of a few for a form to save or send (a server's scope, a
-/// review's verdict). Views of the same thing are `PlainTabs` (ADR 0071).
-class Segmented<T> extends StatelessWidget {
-  const new({
-    required this.value,
-    required this.segments,
-    required this.onChanged,
+/// A shortcut as a key's cap ([keyText] on a small raised chip): beside
+/// the action it does (the sidebar's New chat) and on a chat's row while ⌘
+/// is held. Nothing on a phone, which has no keys.
+class KeyCap extends StatelessWidget {
+  const new(this.keys, {super.key});
+
+  final String keys;
+
+  @override
+  Widget build(BuildContext context) {
+    if (TouchTargets.of(context)) return const SizedBox.shrink();
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: t.lifted,
+        borderRadius: BorderRadius.circular(NushiTheme.tag),
+      ),
+      child: keyText(keys, theme.code(t.textSecondary, size: 11)),
+    );
+  }
+}
+
+/// A small pill that goes somewhere (a chat's Jira issue): the accent's
+/// ink on its soft fill, in code type when [mono], a tint under the
+/// pointer and the ring when focused.
+class PillLink extends StatelessWidget {
+  const new(
+    this.text, {
+    required this.onTap,
     super.key,
+    this.mono = false,
+    this.tooltip = '',
   });
 
-  final T value;
-  final List<(T, String)> segments;
-  final ValueChanged<T> onChanged;
+  final String text;
+  final VoidCallback? onTap;
+  final bool mono;
+  final String tooltip;
+
+  /// What it adds to its text's width: its padding.
+  static const room = 18.0;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: box(t.borderSubtle, fill: t.base, radius: NushiTheme.control),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final (v, text) in segments)
-            Tap(
-              onTap: () => onChanged(v),
-              selected: v == value,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
-              child: Text(
-                text,
-                style: theme.ui(
-                  v == value ? t.text : t.textSecondary,
-                  size: 12,
-                ),
-              ),
-            ),
-        ],
+    return Pressable(
+      onTap: onTap,
+      tooltip: tooltip,
+      builder: (context, look) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: room / 2, vertical: 2),
+        decoration: BoxDecoration(
+          color: look.hover
+              ? Color.alphaBlend(_tint(t, look), t.accentSoft)
+              : t.accentSoft,
+          borderRadius: BorderRadius.circular(NushiTheme.pill),
+        ),
+        foregroundDecoration: focusRing(
+          t,
+          look,
+          radius: BorderRadius.circular(NushiTheme.pill),
+        ),
+        child: Text(
+          text,
+          style: mono
+              ? theme.code(t.accentInk, size: 11.5)
+              : theme.ui(t.accentInk, size: 12, weight: FontWeight.w500),
+        ),
       ),
     );
   }

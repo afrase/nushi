@@ -235,6 +235,8 @@ class _RenderMarks extends RenderProxyBox {
         if (!m._here) continue;
         final isNow = identical(m, current);
         for (final box in m._boxes) {
+          // A found word's box, a line of text high: its corners stay
+          // small whatever the app's (which this package can't see).
           final r = RRect.fromRectAndRadius(
             box.shift(offset).inflate(1),
             const Radius.circular(3),

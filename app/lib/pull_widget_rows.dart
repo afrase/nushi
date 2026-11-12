@@ -283,10 +283,13 @@ class _Done extends StatelessWidget {
         !cleanUpLater.value.contains(cp.chat.id);
     final wt = cp.chat.worktree != null;
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-      decoration: box(
-        merged ? t.subagentBorder : t.borderSubtle,
-        fill: merged ? t.subagentTint : t.raised,
+      padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+      // A fill, no outline (ADR 0111): the merged note's is GitHub's
+      // purple, as a subagent's row has it; the closed one's the pane's,
+      // set into the widget's card, whose own fill a card's would be.
+      decoration: BoxDecoration(
+        color: merged ? t.subagentTint : t.base,
+        borderRadius: BorderRadius.circular(NushiTheme.control),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

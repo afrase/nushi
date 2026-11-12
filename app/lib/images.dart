@@ -166,7 +166,7 @@ class Thumbnails extends StatelessWidget {
                 ClickableImage(
                   image: _provider[img] ??= MemoryImage(bytesOf(img.data)),
                   size: size,
-                  border: t.borderSubtle,
+                  fill: t.raised,
                 ),
               if (onRemove != null) RemoveBadge(() => onRemove!(i)),
             ],
@@ -194,10 +194,10 @@ class RemoveBadge extends StatelessWidget {
       child: Tap(
         tooltip: 'Remove',
         onTap: onTap,
-        radius: 9,
+        radius: NushiTheme.pill,
         child: CircleAvatar(
-          radius: 9,
-          backgroundColor: t.borderStrong,
+          radius: 9, // not a corner: the circle's size
+          backgroundColor: t.segment,
           child: Icon(Icons.close, size: 12, color: t.text),
         ),
       ),
@@ -211,13 +211,16 @@ class ClickableImage extends StatelessWidget {
     required this.image,
     required this.size,
     super.key,
-    this.border,
+    this.fill,
     this.waiting,
   });
 
   final ImageProvider image;
   final double size;
-  final Color? border;
+
+  /// What's behind it, where it is see-through: a card's fill in a
+  /// transcript, where nothing outlines it (ADR 0111).
+  final Color? fill;
 
   /// What shows in its place until the image decodes: an image has no size
   /// before, so a row in a list would shrink to its border and grow back,
@@ -233,7 +236,7 @@ class ClickableImage extends StatelessWidget {
         child: Container(
           constraints: BoxConstraints(maxHeight: size, maxWidth: size * 4),
           decoration: BoxDecoration(
-            border: border == null ? null : Border.all(color: border!),
+            color: fill,
             borderRadius: BorderRadius.circular(NushiTheme.control),
           ),
           clipBehavior: Clip.antiAlias,
@@ -370,7 +373,10 @@ class _RemoteImageState extends State<_RemoteImage> {
       message: widget.uri.toString(),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: box(t.borderSubtle, radius: NushiTheme.control),
+        decoration: BoxDecoration(
+          color: t.raised,
+          borderRadius: BorderRadius.circular(NushiTheme.control),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

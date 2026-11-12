@@ -48,7 +48,6 @@ class TerminalButton extends StatelessWidget {
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: terminalChats,
     builder: (context, open, _) {
-      final t = NushiTheme.of(context).t;
       final on = open.contains(chat.id);
       return IconTap.line(
         LineIcon.terminal,
@@ -57,7 +56,8 @@ class TerminalButton extends StatelessWidget {
             : on
             ? 'Hide terminal  ${keyLabel(toggleTerminalKey)}'
             : 'Show terminal  ${keyLabel(toggleTerminalKey)}',
-        color: on ? t.accentInk : t.textSecondary,
+        padding: IconTap.header,
+        lit: on,
         onTap: !chat.archived ? () => toggleTerminal(chat.id) : null,
       );
     },
