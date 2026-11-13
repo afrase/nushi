@@ -167,19 +167,26 @@ void main() {
     await mouse.moveTo(tester.getCenter(tile));
     await tester.pump();
     await untilReal(tester, () => state.played >= 1);
+    // Until it has shown 6 more of its frames, however long the engine
+    // takes (it decodes on the real clock): never faster than its own
+    // tenth of a second each, on the display's clock.
     const vsync = Duration(microseconds: Duration.microsecondsPerSecond ~/ 60);
     final from = state.played;
     _frames = 0;
     _counting = true;
-    for (var t = Duration.zero; t < const Duration(seconds: 1); t += vsync) {
+    var t = Duration.zero;
+    final real = Stopwatch()..start();
+    while (state.played - from < 6) {
+      if (real.elapsed > const Duration(seconds: 20)) fail('not playing');
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 2)),
       );
       await tester.pump(vsync);
+      t += vsync;
     }
     _counting = false;
     final shown = state.played - from;
-    expect(shown, inInclusiveRange(5, 11));
+    expect(shown, lessThanOrEqualTo(t.inMilliseconds ~/ 100 + 1));
     // No more of the window's frames than the image's own, and a few for
     // the pointer's tint on the header.
     expect(_frames, inInclusiveRange(shown, shown + 6));

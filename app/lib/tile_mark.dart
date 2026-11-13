@@ -17,6 +17,10 @@ bool centreMarksByInk = true;
 final Map<String, Offset> _nudges = runMap();
 final Map<String, Future<Offset>> _measuring = runMap();
 
+/// Whether a mark is being measured now (a test waits for it).
+@visibleForTesting
+bool get measuringMarks => _measuring.isNotEmpty;
+
 /// A tile's mark (its initials, or the emoji or characters the user set)
 /// with its ink in the middle of the tile.
 ///

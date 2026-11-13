@@ -37,9 +37,10 @@ void main() {
     final tree = _shown(d);
     await tester.pump();
     expect(watched, 1); // the pane listed it
-    // Garbage until the VM collects; a held tree never goes.
+    // Garbage until the VM collects, which it does when it will: up to
+    // 20 s, though it takes a few ms; a held tree never goes.
     await tester.runAsync(() async {
-      for (var i = 0; i < 200 && tree.target != null; i++) {
+      for (var i = 0; i < 4000 && tree.target != null; i++) {
         final garbage = [
           for (var j = 0; j < 1000; j++) List<int>.filled(100, j),
         ];

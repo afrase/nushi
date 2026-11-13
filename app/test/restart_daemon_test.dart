@@ -8,6 +8,14 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'fake_app_install.dart';
 import 'fake_daemon.dart';
 
+/// Until [d] has answered its first ping (10 s at most).
+Future<void> _connected(Daemon d) async {
+  for (var i = 0; !d.connected; i++) {
+    if (i == 1000) fail('never connected');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+}
+
 void main() {
   test('a restart returns once the new daemon answers', () async {
     var phase = 'old'; // then 'gone', then 'new'
@@ -22,7 +30,7 @@ void main() {
       };
     final d = Daemon(transport: fake);
     addTearDown(d.dispose);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await _connected(d);
     expect(d.connected, isTrue);
 
     // It goes, then the new one comes a moment later.
@@ -53,7 +61,7 @@ void main() {
       };
     final d = Daemon(transport: fake);
     addTearDown(d.dispose);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await _connected(d);
     Future<void>.delayed(
       const Duration(milliseconds: 100),
       () => phase = 'gone',
@@ -108,7 +116,7 @@ void main() {
         };
       final d = Daemon(transport: fake);
       addTearDown(d.dispose);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await _connected(d);
       Future<void>.delayed(
         const Duration(milliseconds: 100),
         () => phase = 'gone',
