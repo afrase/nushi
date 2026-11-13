@@ -114,13 +114,35 @@ func (c *client) kinds(sid acp.SessionID) string {
 // start runs a bridge on store's fake Ante and initializes it.
 func start(t *testing.T, store *antetest.Store) *peer {
 	t.Helper()
+	c, _ := startDying(t, store)
+	return c
+}
+
+// startDying is start, and die ends every fake host it has started as
+// their processes dying would: their output ends, their input goes
+// nowhere.
+func startDying(t *testing.T, store *antetest.Store) (c *peer, die func()) {
+	t.Helper()
 	toBridgeR, toBridgeW := io.Pipe()
 	fromBridgeR, fromBridgeW := io.Pipe()
+	var hostsMu sync.Mutex
+	var hosts []func()
 	spawn := func(string) (io.WriteCloser, io.Reader, func(), error) { //nolint:unparam // a Spawn, which can fail
 		inR, inW := io.Pipe()
 		outR, outW := io.Pipe()
 		go func() { store.Serve(inR, outW); _ = outW.Close() }()
-		return inW, outR, func() { _, _ = inR.Close(), outW.Close() }, nil
+		kill := func() { _, _ = inR.Close(), outW.Close() }
+		hostsMu.Lock()
+		hosts = append(hosts, kill)
+		hostsMu.Unlock()
+		return inW, outR, kill, nil
+	}
+	die = func() {
+		hostsMu.Lock()
+		defer hostsMu.Unlock()
+		for _, kill := range hosts {
+			kill()
+		}
 	}
 	cat := func() ([]provider, error) {
 		return []provider{{ID: "fake", Models: []struct {
@@ -136,7 +158,7 @@ func start(t *testing.T, store *antetest.Store) *peer {
 		_ = fromBridgeW.Close()
 		close(done)
 	}()
-	c := &peer{client: &client{}}
+	c = &peer{client: &client{}}
 	c.AgentConn = acp.NewAgentConn(fromBridgeR, toBridgeW, func(*acp.AgentConn) acp.Client { return c.client })
 	t.Cleanup(func() { _ = toBridgeW.Close(); <-done })
 	init, err := c.Initialize(context.Background(), &acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion,
@@ -144,7 +166,7 @@ func start(t *testing.T, store *antetest.Store) *peer {
 	if err != nil || !init.AgentCapabilities.LoadSession || init.AgentCapabilities.SessionCapabilities.Fork == nil || !steering.Supported(init.Meta) || init.AgentInfo.Name != AgentName {
 		t.Fatalf("initialize: %+v, %v", init, err)
 	}
-	return c
+	return c, die
 }
 
 // turnTimeout bounds a turn's wait: a turn that never ends fails its test
