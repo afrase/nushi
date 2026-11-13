@@ -41,18 +41,14 @@ func TestRedact(t *testing.T) {
 	maskMu.Unlock()
 	t.Cleanup(func() { maskMu.Lock(); masked = kept; maskMu.Unlock() })
 	Mask("0123456789abcdef0123")
+	// The secrets' shapes are secrets' own (its test has them all); one says
+	// they reach the log. The rest are what logs adds.
 	for in, want := range map[string]string{
-		"key sk-ant-api03-abcdefghijklmnopqrstuv end":       "key [redacted] end",
-		"fw_3ZabcdefghijklmnopqrstUV":                       "[redacted]",
-		"token ghp_abcdefghijklmnopqrstuvwxyz0123456789":    "token [redacted]",
-		"Authorization: Bearer abc.def-ghi_jkl":             "Authorization: Bearer [redacted]",
-		"https://me:hunter22@example.com/x":                 "https://me:[redacted]@example.com/x",
-		"FIREWORKS_API_KEY=abcd1234 next":                   "FIREWORKS_API_KEY=[redacted] next",
-		`{"apiKey": "abcd1234", "x": 1}`:                    `{"apiKey": "[redacted]", "x": 1}`,
-		"jwt eyJhbGciOiJI.eyJzdWIiOiIx.SflKxwRJSMeKKF2QT4f": "jwt [redacted]",
-		"the token 0123456789abcdef0123 is ours":            "the token [redacted] is ours",
-		"session 019a2b3c-4d5e-6f70-8192-a3b4c5d6e7f8 ok":   "session 019a2b3c-4d5e-6f70-8192-a3b4c5d6e7f8 ok",
-		"-----BEGIN OPENSSH PRIVATE KEY-----":               "-----BEGIN OPENSSH PRIVATE KEY-----[redacted]",
+		"key sk-ant-api03-abcdefghijklmnopqrstuv end":     "key [redacted] end",
+		"FIREWORKS_API_KEY=abcd1234 next":                 "FIREWORKS_API_KEY=[redacted] next",
+		`{"apiKey": "abcd1234", "x": 1}`:                  `{"apiKey": "[redacted]", "x": 1}`,
+		"the token 0123456789abcdef0123 is ours":          "the token [redacted] is ours",
+		"session 019a2b3c-4d5e-6f70-8192-a3b4c5d6e7f8 ok": "session 019a2b3c-4d5e-6f70-8192-a3b4c5d6e7f8 ok",
 	} {
 		if got := Redact(in); got != want {
 			t.Errorf("Redact(%q) = %q, want %q", in, got, want)

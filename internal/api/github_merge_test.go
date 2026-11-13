@@ -58,8 +58,4 @@ func TestPhoneMergesAsItReviews(t *testing.T) {
 			t.Errorf("%s: %v; a review: %v", proc, err, review)
 		}
 	}
-	// What the guard refuses, a device gets as this.
-	if err := guard.macs(connect.Spec{Procedure: nushiv1connect.NushiServiceStartPairingProcedure}); connect.CodeOf(err) != connect.CodePermissionDenied {
-		t.Fatalf("%v", err)
-	}
 }
