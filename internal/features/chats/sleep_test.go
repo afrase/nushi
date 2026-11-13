@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -14,11 +15,13 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-type memPrefs struct{ after time.Duration }
+// memPrefs keeps the sleep time; the service's loop reads it as a test
+// sets it.
+type memPrefs struct{ after atomic.Int64 }
 
-func (m *memPrefs) SleepAfter() time.Duration { return m.after }
+func (m *memPrefs) SleepAfter() time.Duration { return time.Duration(m.after.Load()) }
 
-func (m *memPrefs) SetSleepAfter(d time.Duration) error { m.after = d; return nil }
+func (m *memPrefs) SetSleepAfter(d time.Duration) error { m.after.Store(int64(d)); return nil }
 
 // A chat put to sleep keeps its transcript and doesn't wake when opened; a
 // message wakes it through session/load, with the model it had.
@@ -78,12 +81,17 @@ func TestNoSleepWithoutLoad(t *testing.T) {
 }
 
 // A chat sleeps on its own once idle, but not while anything would be
-// lost, and activity puts it off.
+// lost, and activity puts it off. Each check is a doze of its own, with
+// the chat idle for good but for what's checked; the service's loop is
+// set going only at the end (its sleep time is never until then), so no
+// check races it.
 func TestAutoSleep(t *testing.T) {
 	const after = 30 * time.Millisecond
 	agent := &fakeAgent{}
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sleep: &memPrefs{after: after}, Timing: Timing{SleepCheck: 5 * time.Millisecond}})
+	prefs := &memPrefs{}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}},
+		Options{Sleep: prefs, Timing: Timing{SleepCheck: 5 * time.Millisecond}})
 	defer svc.Close()
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
@@ -118,30 +126,33 @@ func TestAutoSleep(t *testing.T) {
 			return func() { delete(c.sides, "x") }
 		},
 	}
+	awake := func() bool {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		return c.agent != nil
+	}
 	for name, block := range blockers {
 		c.mu.Lock()
 		undo := block(c)
+		c.active = time.Time{}
 		c.mu.Unlock()
-		time.Sleep(4 * after)
+		svc.doze(c, after)
 		c.mu.Lock()
-		awake := c.agent != nil
 		undo()
-		c.active = time.Now()
 		c.mu.Unlock()
-		if !awake {
+		if !awake() {
 			t.Fatalf("slept during %s", name)
 		}
 	}
-	// Events put it off.
-	for end := time.Now().Add(4 * after); time.Now().Before(end); time.Sleep(after / 3) {
-		c.mu.Lock()
-		awake := c.agent != nil
-		c.usageChangedLocked()
-		c.mu.Unlock()
-		if !awake {
-			t.Fatal("slept while events came")
-		}
+	// An event puts it off.
+	c.mu.Lock()
+	c.active = time.Time{}
+	c.usageChangedLocked()
+	c.mu.Unlock()
+	if svc.doze(c, after); !awake() {
+		t.Fatal("slept right after an event")
 	}
+	testcheck.NoErr(t, prefs.SetSleepAfter(after))
 	eventually(t, c, func() bool { return c.agent == nil && c.asleep })
 	launches, _, _ := agent.count()
 	turn(t, svc, c, "two")
