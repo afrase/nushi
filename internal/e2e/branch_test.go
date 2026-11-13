@@ -71,8 +71,11 @@ func TestBranchNamedAfterTheChat(t *testing.T) {
 	// its title comes after the first turn; one that doesn't (Codex here),
 	// not. Without the agent's title, the turn after goes on with the
 	// first prompt's line.
+	// The title comes 100 ms after the turn, which a slow machine may take
+	// to answer it: the branch is the first one or the title's, never the
+	// prompt's.
 	idLate, wtLate := start()
-	if r := turn(idLate, "hello\nlate title: Go version bump"); r.Chat.Worktree.Branch != wtLate.Branch {
+	if r := turn(idLate, "hello\nlate title: Go version bump"); r.Chat.Worktree.Branch != wtLate.Branch && r.Chat.Worktree.Branch != "nushi/go-version-bump" {
 		t.Errorf("named before the agent's title: %v", r.Chat.Worktree)
 	}
 	until("the late title's name", func() bool { return a.get(idLate).Chat.Worktree.Branch == "nushi/go-version-bump" })
