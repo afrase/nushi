@@ -80,6 +80,7 @@ class Pressable extends StatefulWidget {
     this.tooltip = '',
     this.autofocus = false,
     this.slop,
+    this.tooltipAt,
   });
 
   final VoidCallback? onTap;
@@ -91,6 +92,10 @@ class Pressable extends StatefulWidget {
   /// drags (`dragSlop`, its drag's own): else Flutter's, a point for a
   /// mouse.
   final double? slop;
+
+  /// Where its tooltip goes, when not below it as every tooltip's is
+  /// (beside the project rail's tiles).
+  final TooltipPositionDelegate? tooltipAt;
 
   @override
   State<Pressable> createState() => _PressableState();
@@ -145,7 +150,11 @@ class _PressableState extends State<Pressable> {
     );
     return widget.tooltip.isEmpty
         ? control
-        : Tooltip(message: widget.tooltip, child: control);
+        : Tooltip(
+            message: widget.tooltip,
+            positionDelegate: widget.tooltipAt,
+            child: control,
+          );
   }
 
   /// [child] clicked, within [Pressable.slop] when it has one.

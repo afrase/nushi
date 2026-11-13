@@ -159,6 +159,7 @@ void main() {
           await tester.pump(const Duration(milliseconds: 300));
           await render(tester, find.byType(NushiApp), 'rail_drag_$name');
           await drag.up();
+          await drag.removePointer();
           await tester.pump(const Duration(milliseconds: 300));
         }
 
@@ -183,6 +184,18 @@ void main() {
         expect(add.left, all.left);
 
         await dragRender();
+
+        // A tile's tooltip, at its right.
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(
+          location: tester.getCenter(find.byTooltip('garden\n$garden')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pump(const Duration(milliseconds: 300));
+        await render(tester, find.byType(NushiApp), 'rail_tooltip_$name');
+        await mouse.removePointer();
+        await tester.pump(const Duration(seconds: 1));
 
         // Narrowed to a project.
         await tester.tap(find.byTooltip('ledger-poc\n$ledger'));

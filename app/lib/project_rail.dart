@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
@@ -258,6 +260,7 @@ class RailTile extends StatelessWidget {
           // A project's tile drags too: a click may move as far as its
           // drag waits for. The rail's own tiles click alike.
           slop: dragSlop,
+          tooltipAt: besideTile,
           builder: (context, look) => Stack(
             clipBehavior: Clip.none,
             children: [
@@ -302,6 +305,35 @@ class RailTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Where a rail tile's tooltip goes: to the tile's right, its middle
+/// level with the tile's, so it covers the chats' edge rather than the
+/// next tile; to its left if there's no room to the right, and below or
+/// above it, as any tooltip, if there's none either side. Kept inside
+/// the window, top to bottom.
+Offset besideTile(TooltipPositionContext at) {
+  const gap = 8.0;
+  final TooltipPositionContext(:target, :targetSize, :tooltipSize) = at;
+  final room = at.overlaySize;
+  final right = target.dx + targetSize.width / 2 + gap;
+  final left = target.dx - targetSize.width / 2 - gap - tooltipSize.width;
+  final x = right + tooltipSize.width <= room.width
+      ? right
+      : left >= 0
+      ? left
+      : null;
+  if (x == null) {
+    return positionDependentBox(
+      size: room,
+      childSize: tooltipSize,
+      target: target,
+      verticalOffset: targetSize.height / 2 + gap,
+      preferBelow: true,
+    );
+  }
+  final y = target.dy - tooltipSize.height / 2;
+  return Offset(x, y.clamp(0, max(0, room.height - tooltipSize.height)));
 }
 
 /// How many of a project's chats need you, on its tile's corner: the
