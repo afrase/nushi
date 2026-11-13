@@ -18,5 +18,6 @@ class FakeDesktop implements Desktop {
   Future<void> openAsText(String path) async => opened.add(['-t', path]);
 }
 
-/// Puts a [FakeDesktop] in the Mac's place for this test; its list.
-List<List<String>> fakeDesktop() => (native.desktop = FakeDesktop()).opened;
+/// What the file manager was asked in this test: every test has a
+/// [FakeDesktop] in the Mac's place (`flutter_test_config.dart`).
+List<List<String>> fakeDesktop() => (native.desktop as FakeDesktop).opened;

@@ -26,6 +26,7 @@ import 'package:nushi/tile_mark.dart';
 
 import 'config_home_linux.dart';
 import 'fake_app_install.dart';
+import 'fake_desktop.dart';
 import 'harness.dart';
 
 /// Goldens are drawn on macOS only (on Linux about a third differ by 1–4%):
@@ -41,7 +42,8 @@ import 'harness.dart';
 /// app's prefs as at launch, no pull request read, no agents, review
 /// comments or drafts, remote state, clones or theme files known; the Mac's
 /// native edge (on every host), no speller, a fake install, so nothing
-/// starts or stops a daemon, and a phone paired with a Mac.
+/// starts or stops a daemon, a fake file manager, so nothing opens on
+/// the desktop, and a phone paired with a Mac.
 /// The test process's data folder goes when its tests end; on Linux it
 /// holds the process's `XDG_CONFIG_HOME` too, where enchant makes its
 /// folder, so no test writes in the user's.
@@ -61,10 +63,13 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     clock = () => fixtureNow;
     // The Mac's native edge, over channels a test may answer, but no
     // speller: one that sets its own gets it (ADR 0097); an install that
-    // runs nothing.
+    // runs nothing; a file manager that opens nothing (the Mac's runs
+    // `open`, which would show Finder or the user's own files): a test
+    // that wants the real one sets it.
     native = macosNative()
       ..speller = null
-      ..install = FakeAppInstall();
+      ..install = FakeAppInstall()
+      ..desktop = FakeDesktop();
     phoneHost = macConventions;
     resetAppSettings();
     railFits.value = true;
