@@ -319,7 +319,7 @@ A shell block in the agent's message (` ```bash `, `sh`, `shell`, `zsh`, `consol
 
 ## Sleep
 
-A chat whose agent isn't needed can sleep: its agent stops, the chat stays, and the next message wakes it (`session/load`). Chats sleep on their own after 30 idle minutes when nothing would be lost (Settings changes the time), or from a chat's menu ([ADR 0032](adr/0032-idle-chats-sleep.md)). Sleep, Archive and Reload ask first while the chat's background tasks run, since they stop with its agent, whether or not the chat is open.
+A chat whose agent isn't needed can sleep: its agent stops, the chat stays, and the next message wakes it (`session/load`). Chats sleep on their own after 30 idle minutes when nothing would be lost (Settings changes the time), or from a chat's menu ([ADR 0032](adr/0032-idle-chats-sleep.md)). Sleep, Archive and Reload ask first while the chat's background tasks run, since they stop with its agent, whether or not the chat is open. A message that wakes a chat whose agent is still stopping waits, queued, until that agent has ended (it's killed after twice the stop's 5 seconds), so two agents never write one session; one that can't be stopped leaves the chat saying so, with Try again.
 
 An asleep chat's transcript stays in its copy rather than in Nushi's memory ([ADR 0103](adr/0103-an-asleep-chat-lets-go-of-its-transcript.md)): it reads the same, a page a little slower, and comes back whole as the chat wakes. So does an archived chat's once no window or phone shows it.
 

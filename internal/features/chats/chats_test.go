@@ -434,13 +434,11 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 }
 
 func TestBackgroundCommandsAreFollowed(t *testing.T) {
-	defer func(d time.Duration) { commandPoll = d }(commandPoll)
-	commandPoll = 10 * time.Millisecond
 	file := filepath.Join(taskDir(t), "b1.output")
 	testcheck.NoErr(t, os.WriteFile(file, []byte("half"), 0o600))
 	events := make(chan model.Event, 100)
 	var counts []int // how many run in the background, as each status said (under c.mu)
-	c := &chat{remembered: &memModes{}, id: "s1", sid: "s1", kind: testKind(testHarness{}), agent: &fakeAgent{}, ctx: t.Context(), record: model.ChatRecord{Folder: "/w"},
+	c := &chat{remembered: &memModes{}, id: "s1", sid: "s1", kind: testKind(testHarness{}), agent: &fakeAgent{}, ctx: t.Context(), timing: Timing{CommandPoll: 10 * time.Millisecond}, record: model.ChatRecord{Folder: "/w"},
 		publish: func(e model.Event) {
 			if e.Status != nil {
 				counts = append(counts, e.Status.Background)
@@ -506,15 +504,13 @@ func TestBackgroundCommandsAreFollowed(t *testing.T) {
 // A line that reads as the end, which the command printed itself, isn't
 // its end: the file goes on growing after it.
 func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
-	defer func(d time.Duration) { commandPoll = d }(commandPoll)
-	commandPoll = time.Millisecond
 	reads := [][2]string{{"[killed]", "killed"}, {"[killed] and on", ""}, {"[killed] and on", "exited with code 0"}, {"[killed] and on", "exited with code 0"}}
 	var states []string
 	read := func(string, string) (string, string, error) {
 		r := reads[min(len(states), len(reads)-1)]
 		return r[0], r[1], nil
 	}
-	c := &chat{remembered: &memModes{}, id: "s1", kind: testKind(testHarness{read: read}), publish: func(e model.Event) {
+	c := &chat{remembered: &memModes{}, id: "s1", timing: Timing{CommandPoll: time.Millisecond}, kind: testKind(testHarness{read: read}), publish: func(e model.Event) {
 		if e.Item != nil && e.Item.BackgroundCommand != nil {
 			states = append(states, e.Item.BackgroundCommand.State)
 		}

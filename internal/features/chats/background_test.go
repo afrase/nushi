@@ -73,13 +73,10 @@ type commandFixture struct {
 // if follow.
 func commandChat(t *testing.T, follow bool, below ...model.Process) commandFixture {
 	t.Helper()
-	poll := commandPoll
-	t.Cleanup(func() { commandPoll = poll }) // last: after the service closed, and its following with it
-	commandPoll = 5 * time.Millisecond
 	agent := &fakeAgent{pid: agentPid}
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
 	procs := &fakeProcesses{below: map[int][]model.Process{agentPid: below}}
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Processes: procs})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Processes: procs, Timing: Timing{CommandPoll: 5 * time.Millisecond}})
 	t.Cleanup(svc.Close)
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)

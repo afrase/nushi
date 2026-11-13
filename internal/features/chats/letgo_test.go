@@ -86,7 +86,7 @@ func (f *follower) follow(t *testing.T, chat string, items []model.Item, seq int
 
 // lettingGo is a chat that keeps copies, whose service counts the copy's
 // whole reads and publishes to a follower.
-func lettingGo(t *testing.T, v Viewers) (*Service, *fakeAgent, *chat, *readCounter, *follower) {
+func lettingGo(t *testing.T, v Viewers, timing Timing) (*Service, *fakeAgent, *chat, *readCounter, *follower) {
 	t.Helper()
 	agent := &fakeAgent{}
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
@@ -94,7 +94,7 @@ func lettingGo(t *testing.T, v Viewers) (*Service, *fakeAgent, *chat, *readCount
 	testcheck.NoErr(t, err)
 	copies, f := &readCounter{Copies: store}, &follower{}
 	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}},
-		Options{Scratch: t.TempDir(), Copies: copies, Publish: f.event, Viewers: v})
+		Options{Scratch: t.TempDir(), Copies: copies, Publish: f.event, Viewers: v, Timing: timing})
 	t.Cleanup(svc.Close)
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
@@ -142,7 +142,7 @@ func look(t *testing.T, svc *Service, id string, n int) seen {
 // it with its items back, and a client that followed its events all along
 // shows what it shows.
 func TestAsleepLetsGoAndComesBackTheSame(t *testing.T) {
-	svc, agent, c, copies, f := lettingGo(t, nil)
+	svc, agent, c, copies, f := lettingGo(t, nil, Timing{})
 	shot := []byte("a screenshot's bytes")
 	agent.updates = append(shotUpdates("m1", "t1", shot), toolDone("t1"))
 	turn(t, svc, c, "one")
@@ -212,10 +212,8 @@ func TestAsleepLetsGoAndComesBackTheSame(t *testing.T) {
 // A chat whose agent doesn't run lets go once no client shows it, and not
 // while one does, unless it's asleep.
 func TestUnseenLetsGo(t *testing.T) {
-	defer func(d time.Duration) { letGoCheck = d }(letGoCheck)
-	letGoCheck = 5 * time.Millisecond
 	v := &viewers{shown: map[string]bool{}}
-	svc, agent, c, _, _ := lettingGo(t, v)
+	svc, agent, c, _, _ := lettingGo(t, v, Timing{LetGoCheck: 5 * time.Millisecond})
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")
 	v.show(c.id, true)
@@ -249,7 +247,7 @@ func TestUnseenLetsGo(t *testing.T) {
 // A chat whose turn ran a subagent lets go once its agent stops: the
 // subagent's session routed only that agent's updates.
 func TestASubagentsChatLetsGo(t *testing.T) {
-	svc, agent, c, _, _ := lettingGo(t, nil)
+	svc, agent, c, _, _ := lettingGo(t, nil, Timing{})
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok"), {SessionUpdate: "subagent_update", SubagentUpdate: &acp.SubagentUpdate{
 		SessionID: "child1", State: acp.Nullable[acp.StateUpdate]{Value: &acp.StateUpdate{Idle: &acp.IdleStateUpdate{StopReason: string(acp.StopReasonEndTurn)}}}}}}
 	turn(t, svc, c, "one")
@@ -274,7 +272,7 @@ func TestASubagentsChatLetsGo(t *testing.T) {
 // After a restart a chat's reopen reads its copy once: the merge with the
 // agent's replay takes the items read back (it read the copy twice).
 func TestRestartReadsTheCopyOnce(t *testing.T) {
-	svc, agent, c, copies, _ := lettingGo(t, nil)
+	svc, agent, c, copies, _ := lettingGo(t, nil, Timing{})
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")
 	agent.updates = []acp.SessionUpdate{chunk("m2", "ok")}
@@ -305,7 +303,7 @@ func TestRestartReadsTheCopyOnce(t *testing.T) {
 // Nothing is let go that the copy doesn't hold as it would be read back,
 // nor while something needs the items.
 func TestLetGoOnlyWhatTheCopyHolds(t *testing.T) {
-	svc, agent, c, _, _ := lettingGo(t, nil)
+	svc, agent, c, _, _ := lettingGo(t, nil, Timing{})
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")
 	testcheck.NoErr(t, svc.Sleep(c.id))
@@ -343,7 +341,7 @@ func TestLetGoOnlyWhatTheCopyHolds(t *testing.T) {
 // A chat whose reopen failed for want of its agent may try again once the
 // agent is ready, its notice set aside while its items are let go.
 func TestAgentReadyWhileLetGo(t *testing.T) {
-	svc, agent, c, _, _ := lettingGo(t, nil)
+	svc, agent, c, _, _ := lettingGo(t, nil, Timing{})
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")
 	testcheck.NoErr(t, svc.Archive(c.id, true))
@@ -367,7 +365,7 @@ func TestAgentReadyWhileLetGo(t *testing.T) {
 // A chat whose deletion failed keeps its copy, which goes last: the items
 // it lets go come back from it.
 func TestFailedDeleteKeepsTheCopy(t *testing.T) {
-	svc, agent, c, copies, _ := lettingGo(t, nil)
+	svc, agent, c, copies, _ := lettingGo(t, nil, Timing{})
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")
 	sessions := svc.sessions.(*memSessions)
@@ -394,7 +392,7 @@ func TestFailedDeleteKeepsTheCopy(t *testing.T) {
 // copy holds. Merged with the agent's replay on a reopen, it is written
 // again, in order.
 func TestUnreadCopyIsLeftAsItIs(t *testing.T) {
-	svc, agent, c, copies, _ := lettingGo(t, nil)
+	svc, agent, c, copies, _ := lettingGo(t, nil, Timing{})
 	store := copies.Copies.(*transcripts.Store)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")

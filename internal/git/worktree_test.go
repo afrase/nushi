@@ -3,11 +3,13 @@ package git
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
@@ -143,6 +145,38 @@ func TestNoWritesThroughARepositorysLinks(t *testing.T) {
 	}
 	if b, _ := os.ReadFile(target); string(b) != "{}" {
 		t.Errorf("the link's target became %q", b)
+	}
+}
+
+// Excludes at once each add their line once: one line asked for by many,
+// and each of many lines, are all there, none twice (excludeMu).
+func TestExcludesAtOnce(t *testing.T) {
+	repo := RealPath(t.TempDir())
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	var wg sync.WaitGroup
+	errs := make(chan error, 40)
+	for i := range 20 {
+		wg.Go(func() { errs <- Exclude(t.Context(), repo, "/.worktrees/") })
+		wg.Go(func() { errs <- Exclude(t.Context(), repo, fmt.Sprintf("/line-%d/", i)) })
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		testcheck.NoErr(t, err)
+	}
+	b, err := os.ReadFile(filepath.Join(repo, ".git", "info", "exclude"))
+	testcheck.NoErr(t, err)
+	seen := map[string]int{}
+	for l := range strings.Lines(string(b)) {
+		seen[strings.TrimSpace(l)]++
+	}
+	for i := range 20 {
+		if n := seen[fmt.Sprintf("/line-%d/", i)]; n != 1 {
+			t.Errorf("/line-%d/ %d times", i, n)
+		}
+	}
+	if n := seen["/.worktrees/"]; n != 1 {
+		t.Errorf("/.worktrees/ %d times", n)
 	}
 }
 

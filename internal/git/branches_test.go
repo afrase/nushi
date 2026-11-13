@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
@@ -106,6 +107,34 @@ func TestWorktreeListBranchesAndSwitch(t *testing.T) {
 	// Git's own refusal reads as a sentence: try is checked out elsewhere.
 	if err := w.Switch(ctx, repo, "try", false); err == nil || err.Error() == "" || errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("a branch in another worktree: %v", err)
+	}
+}
+
+// An untracked file that the branch switched to tracks isn't counted as
+// a change (Changed counts tracked files), so Switch is what keeps it:
+// git refuses to overwrite it, Switch says so, and the file stays as it
+// was (Switch never forces).
+func TestSwitchKeepsAnUntrackedFileTheBranchTracks(t *testing.T) {
+	ctx := t.Context()
+	repo := RealPath(t.TempDir())
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
+	testcheck.Git(t, repo, "switch", "-q", "-c", "b")
+	write(t, filepath.Join(repo, "x"), "the branch's\n")
+	testcheck.Git(t, repo, "add", "x")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "x")
+	testcheck.Git(t, repo, "switch", "-q", "main")
+	write(t, filepath.Join(repo, "x"), "mine\n")
+	w := Worktrees{}
+	if n, err := w.Changed(ctx, repo); n != 0 || err != nil {
+		t.Fatalf("Changed = %d, %v", n, err)
+	}
+	if err := w.Switch(ctx, repo, "b", false); err == nil || !strings.Contains(err.Error(), "git couldn't switch to b") ||
+		!strings.Contains(err.Error(), "untracked") {
+		t.Errorf("Switch = %v", err)
+	}
+	if b, err := os.ReadFile(filepath.Join(repo, "x")); err != nil || string(b) != "mine\n" || w.Branch(ctx, repo) != "main" {
+		t.Errorf("x %q, %v; on %s", b, err, w.Branch(ctx, repo))
 	}
 }
 

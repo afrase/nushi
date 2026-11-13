@@ -284,10 +284,6 @@ func (s *Service) closeSides() {
 	}
 }
 
-// throwAwayWait is how long an agent gets to delete a thrown-away session:
-// one alive but silent would otherwise hold closeSides' loop for good.
-var throwAwayWait = 30 * time.Second
-
 // throwAway has the chat's agent delete a session forked from the chat that
 // nobody will see again (a side chat, a /context fork), and again a moment
 // later for an agent that writes a little of it back as it ends
@@ -298,7 +294,7 @@ var throwAwayWait = 30 * time.Second
 //nolint:contextcheck // the side chat's session is deleted after the request that closed it
 func (s *Service) throwAway(c *chat, agent Agent, sid string) {
 	del := func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), throwAwayWait)
+		ctx, cancel := context.WithTimeout(context.Background(), s.timing.throwAwayWait())
 		defer cancel()
 		_, err := agent.DeleteSession(ctx, &acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)})
 		if err != nil {
@@ -314,7 +310,7 @@ func (s *Service) throwAway(c *chat, agent Agent, sid string) {
 		if err != nil {
 			select {
 			case <-agent.Done():
-			case <-time.After(3 * stopGrace):
+			case <-time.After(3 * s.timing.stopGrace()):
 			}
 			s.discard(c, []string{sid})
 		}

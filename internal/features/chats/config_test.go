@@ -23,11 +23,17 @@ const claudeSession = `{"sessionId":"s1",
 
 func newChat(t *testing.T, session string, modes *memModes) (*Service, *fakeAgent, *chat) {
 	t.Helper()
+	return newTimedChat(t, session, modes, Timing{})
+}
+
+// newTimedChat is newChat on a service of that timing.
+func newTimedChat(t *testing.T, session string, modes *memModes, timing Timing) (*Service, *fakeAgent, *chat) {
+	t.Helper()
 	agent := &fakeAgent{}
 	if err := json.Unmarshal([]byte(session), &agent.session); err != nil {
 		t.Fatal(err)
 	}
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Remembered: modes})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Remembered: modes, Timing: timing})
 	t.Cleanup(svc.Close)
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	if err != nil {

@@ -89,7 +89,12 @@ func newService(t *testing.T, kinds []Kind, o Options) *Service {
 	if o.Sessions == nil {
 		o.Sessions = &memSessions{}
 	}
-	return New(t.Context(), kinds, o)
+	s := New(t.Context(), kinds, o)
+	t.Cleanup(func() { // its loops end with the test, before anything a later cleanup puts back
+		s.cancel()
+		s.loops.Wait()
+	})
+	return s
 }
 
 // fakeAgent replies to each prompt with the given updates. Like Claude, it
@@ -130,25 +135,36 @@ type fakeAgent struct {
 	deleteGate   chan struct{} // when set, deleting a session waits until it is closed
 	loadGate     chan struct{} // when set, session/load waits until it is closed
 	forkGate     chan struct{} // when set, session/fork waits until it is closed
-	forkHook     func()        // when set, runs as session/fork reaches it
-	loadErr      error
-	forkErr      error              // session/fork fails
-	turnErr      error              // a prompt's turn fails
-	lastWords    *acp.SessionUpdate // sent as it stops
-	launches     int
-	closed       int
-	refuseSteer  bool  // steering answers "no turn runs"
-	steerErr     error // steering fails
-	steerable    bool
-	prompts      []string // every prompt's text, and every message steered in
-	steered      []string
-	wire         []string // prompts and cancels, in the order they reach the agent
-	forkMeta     map[string]any
-	history      []acp.SessionUpdate       // what session/load replays
-	early        []acp.SessionUpdate       // what a new session sends ahead of its answer
-	replay       []acp.SessionNotification // and then, on their sessions (s1 is the one loaded)
-	subagents    []acp.SessionID           // its subagents' sessions: a cancel stops only the one
-	cur          *proc                     // the last process launched
+	// stopGate, when set, keeps a stopped process running until it is
+	// closed (it takes its time ending its sessions); a kill (Close) ends
+	// it at once, unless unkillable.
+	stopGate    chan struct{}
+	unkillable  bool
+	overlaps    int  // launches while the last process still ran
+	forks       int  // sessions forked
+	numberForks bool // each fork is fork<n>, not always fork1
+	// entered, when set (buffered), gets a gate's name ("load", "fork",
+	// "delete") as a call reaches it: a test waits for it, not a while.
+	entered     chan string
+	forkHook    func() // when set, runs as session/fork reaches it
+	loadErr     error
+	forkErr     error              // session/fork fails
+	turnErr     error              // a prompt's turn fails
+	lastWords   *acp.SessionUpdate // sent as it stops
+	launches    int
+	closed      int
+	refuseSteer bool  // steering answers "no turn runs"
+	steerErr    error // steering fails
+	steerable   bool
+	prompts     []string // every prompt's text, and every message steered in
+	steered     []string
+	wire        []string // prompts and cancels, in the order they reach the agent
+	forkMeta    map[string]any
+	history     []acp.SessionUpdate       // what session/load replays
+	early       []acp.SessionUpdate       // what a new session sends ahead of its answer
+	replay      []acp.SessionNotification // and then, on their sessions (s1 is the one loaded)
+	subagents   []acp.SessionID           // its subagents' sessions: a cancel stops only the one
+	cur         *proc                     // the last process launched
 }
 
 // proc is one of the fake agent's processes: each launch starts one, and
@@ -164,8 +180,20 @@ func (f *fakeAgent) launch(h acp.Client, _ *slog.Logger) (Agent, error) {
 	defer f.mu.Unlock()
 	f.h = h
 	f.launches++
+	if f.cur != nil && !f.cur.ended() {
+		f.overlaps++
+	}
 	f.cur = &proc{f, make(chan struct{})}
 	return f.cur, nil
+}
+
+func (p *proc) ended() bool {
+	select {
+	case <-p.done:
+		return true
+	default:
+		return false
+	}
 }
 
 // quit ends the agent's last process.
@@ -185,22 +213,50 @@ func (p *proc) end() {
 
 func (p *proc) Done() <-chan struct{} { return p.done }
 
+// enter says a call has reached the gate named gate (entered).
+func (f *fakeAgent) enter(gate string) {
+	f.mu.Lock()
+	entered := f.entered
+	f.mu.Unlock()
+	if entered != nil {
+		entered <- gate
+	}
+}
+
 // Stop ends the process; its last words, if any, still come after, as
 // from a pipe read to its end.
 func (p *proc) Stop(grace time.Duration) error {
 	_ = p.fakeAgent.Stop(grace) // the fake's Stop doesn't fail
 	p.mu.Lock()
-	last, h := p.lastWords, p.h
+	last, h, gate := p.lastWords, p.h, p.stopGate
 	p.mu.Unlock()
 	go func() {
 		if last != nil {
 			time.Sleep(5 * time.Millisecond)
 			_ = h.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: *last})
 		}
+		if gate != nil {
+			select {
+			case <-gate:
+			case <-p.done: // killed meanwhile
+			}
+		}
 		p.mu.Lock()
 		defer p.mu.Unlock()
 		p.end()
 	}()
+	return nil
+}
+
+// Close kills the process: one held at stopGate ends at once, unless it's
+// unkillable.
+func (p *proc) Close() error {
+	_ = p.fakeAgent.Close()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.stopGate != nil && !p.unkillable {
+		p.end()
+	}
 	return nil
 }
 
@@ -260,6 +316,7 @@ func (f *fakeAgent) ListSessions(_ context.Context, req *acp.ListSessionsRequest
 
 func (f *fakeAgent) LoadSession(ctx context.Context, req *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
 	if f.loadGate != nil {
+		f.enter("load")
 		<-f.loadGate
 	}
 	if f.loadErr != nil {
@@ -395,6 +452,7 @@ func (f *fakeAgent) CanFork() bool { return true }
 
 func (f *fakeAgent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
 	if f.forkGate != nil {
+		f.enter("fork")
 		<-f.forkGate
 	}
 	if f.forkHook != nil {
@@ -406,8 +464,15 @@ func (f *fakeAgent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest
 	if f.forkErr != nil {
 		return nil, f.forkErr
 	}
+	f.mu.Lock()
 	f.forkMeta = req.Meta
-	return &acp.ForkSessionResponse{SessionID: "fork1", ConfigOptions: f.session.ConfigOptions, Modes: f.session.Modes}, nil
+	f.forks++
+	sid := acp.SessionID("fork1")
+	if f.numberForks {
+		sid = acp.SessionID(fmt.Sprintf("fork%d", f.forks))
+	}
+	f.mu.Unlock()
+	return &acp.ForkSessionResponse{SessionID: sid, ConfigOptions: f.session.ConfigOptions, Modes: f.session.Modes}, nil
 }
 
 func (f *fakeAgent) CloseSession(context.Context, *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
@@ -416,6 +481,7 @@ func (f *fakeAgent) CloseSession(context.Context, *acp.CloseSessionRequest) (*ac
 
 func (f *fakeAgent) DeleteSession(ctx context.Context, req *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
 	if f.deleteGate != nil {
+		f.enter("delete")
 		select {
 		case <-f.deleteGate:
 		case <-ctx.Done():
