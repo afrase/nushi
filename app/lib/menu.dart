@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:flutter/gestures.dart' show kTouchSlop;
+import 'package:flutter/gestures.dart' show kPrimaryButton, kTouchSlop;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -762,6 +762,12 @@ class _InTapState extends State<_InTap> {
   @override
   Widget build(BuildContext context) => Listener(
     onPointerDown: (e) {
+      // Only a primary press picks, as Flutter's button has it: a
+      // right-click on the row does nothing, and leaves Enter its pick.
+      if (e.buttons != kPrimaryButton) {
+        _down = null;
+        return;
+      }
       _down = e.position;
       _ran = false;
     },

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show kSecondaryMouseButton;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -51,6 +52,47 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(find.text('Filter'), findsNothing);
+  });
+
+  // Deep review 2026-11-13, 16: a right-click on an inTap row (the
+  // composer's Add files or photos) ran its pick and kept the menu open,
+  // and swallowed the next Enter on it.
+  testWidgets('a row picked in the tap is picked by a primary press, not '
+      'a right-click; Enter still picks it after one', (tester) async {
+    var picks = 0;
+    await tester.pumpWidget(
+      themed(
+        Center(
+          child: MenuIcon(
+            Icons.add,
+            tooltip: 'Add',
+            entries: [
+              MenuEntry('Add files', inTap: true, onPick: () => picks++),
+              MenuEntry('Mention a file', onPick: () {}),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add files'), buttons: kSecondaryMouseButton);
+    await tester.pumpAndSettle();
+    expect(picks, 0);
+    expect(find.text('Add files'), findsOne, reason: 'the menu stays open');
+
+    Focus.of(tester.element(find.text('Add files'))).requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(picks, 1);
+    expect(find.text('Add files'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add files'));
+    await tester.pumpAndSettle();
+    expect(picks, 2);
   });
 
   // A list of hundreds (the installed fonts) opened at its top, the current
