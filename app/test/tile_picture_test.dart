@@ -7,9 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/project_tile.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/tile_crop.dart';
 import 'package:nushi/tile_images.dart';
 import 'package:nushi/tile_look.dart';
 import 'package:nushi/tile_picture.dart';
+import 'package:nushi/tile_trim.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -49,6 +51,29 @@ Future<TilePictureViewState> _show(
 
 ui.Image _drawn(WidgetTester tester) =>
     tester.widget<RawImage>(find.byType(RawImage)).image!;
+
+/// Whether the pixel of what's drawn at x, y is the photo's dark disc
+/// (`photoPng`).
+/// The middle pixel of what's drawn, as 0xRRGGBB.
+Future<int> _middle(WidgetTester tester) async {
+  // As the state has it now, by its own handle: a frame shown can be let
+  // go while it's read.
+  await tester.pump();
+  final image = _drawn(tester).clone();
+  final data = await tester.runAsync(image.toByteData);
+  image.dispose();
+  final at = ((image.height ~/ 2) * image.width + image.width ~/ 2) * 4;
+  return data!.getUint8(at) << 16 |
+      data.getUint8(at + 1) << 8 |
+      data.getUint8(at + 2);
+}
+
+Future<bool> _dark(WidgetTester tester, int x, int y) async {
+  final image = _drawn(tester);
+  final data = await tester.runAsync(image.toByteData);
+  final at = (y * image.width + x) * 4;
+  return data!.getUint8(at) < 0x40 && data.getUint8(at + 2) < 0x40;
+}
 
 void main() {
   setUpAll(loadFonts);
@@ -221,6 +246,51 @@ void main() {
     expect(_drawn(tester).width, 80);
   });
 
+  testWidgets('a crop keeps only its square, at the tile’s size at most, '
+      'and a new one shows the last until it’s decoded', (tester) async {
+    viewport(tester, const Size(300, 200), ratio: 2);
+    final name = keepTileImage((bytes: await photoPng(tester), kind: 'png'));
+    // Zoomed four times on the disc in the middle: 50 of the picture's
+    // pixels, fewer than the tile's 76, kept as they are.
+    await _show(tester, TileLook(image: name, crop: const TileCrop(zoom: 4)));
+    expect((_drawn(tester).width, _drawn(tester).height), (50, 50));
+    expect(await _dark(tester, 0, 0), isTrue);
+    expect(await _dark(tester, 49, 49), isTrue);
+    expect(tester.getSize(find.byType(RawImage)), const Size.square(38));
+
+    // Moved to the left edge: no disc. Until it's decoded, the last.
+    final before = _drawn(tester);
+    await tester.pumpWidget(
+      themed(
+        Center(
+          child: ProjectTile(
+            name: 'lumen',
+            color: 0,
+            look: TileLook(
+              mark: 'LU',
+              image: name,
+              crop: const TileCrop(zoom: 4, x: 0),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('LU'), findsNothing);
+    expect(_drawn(tester), same(before));
+    await untilReal(tester, () => !identical(_drawn(tester), before));
+    expect(await _dark(tester, 25, 25), isFalse);
+
+    // A large one is decoded so the square is the tile's, then cut out.
+    final large = keepTileImage((
+      bytes: await photoPng(tester, width: 1600, height: 800),
+      kind: 'png',
+    ));
+    await _show(tester, TileLook(image: large, crop: const TileCrop(zoom: 2)));
+    await untilReal(tester, () => _drawn(tester).width == 76);
+    expect(_drawn(tester).height, 76);
+    expect(await _dark(tester, 38, 38), isTrue);
+  });
+
   testWidgets('an image that’s gone, or can’t be decoded, leaves the mark', (
     tester,
   ) async {
@@ -331,6 +401,58 @@ void main() {
       await pointer.moveTo(const Offset(1, 1));
       await tester.pump();
       expect(state.busy, isFalse);
+    });
+
+    testWidgets('a cropped one plays its square, at the tile’s size', (
+      tester,
+    ) async {
+      viewport(tester, const Size(300, 200), ratio: 2);
+      final big = keepTileImage((
+        bytes: animatedGif(frames: 2, screen: 400),
+        kind: 'gif',
+      ));
+      const crop = TileCrop(zoom: 2, x: 0.25, y: 0.25);
+      final state = await _show(tester, TileLook(image: big, crop: crop));
+      expect((_drawn(tester).width, _drawn(tester).height), (76, 76));
+      final pointer = await mouse(tester);
+      await pointer.moveTo(tester.getCenter(find.byType(TilePictureView)));
+      await tester.pump();
+      await untilReal(tester, () => state.played >= 1);
+      await tester.pump(const Duration(milliseconds: 100));
+      await untilReal(tester, () => state.played >= 2);
+      expect((_drawn(tester).width, _drawn(tester).height), (76, 76));
+      await pointer.moveTo(const Offset(1, 1));
+      await tester.pump();
+      expect(state.busy, isFalse);
+    });
+
+    testWidgets('a trimmed one shows its start at rest, and plays only to '
+        'its end, then from its start again', (tester) async {
+      // Six frames, each one color of four in turn: amber, blue, green,
+      // rose, amber, blue. Kept: the third and fourth.
+      const green = 0x3DB86A;
+      const rose = 0xE85D8A;
+      final six = keepTileImage((bytes: animatedGif(frames: 6), kind: 'gif'));
+      final state = await _show(
+        tester,
+        TileLook(image: six, trim: const TileTrim(2, 4)),
+      );
+      expect(await _middle(tester), green);
+      expect(state.animated, isTrue);
+      final pointer = await mouse(tester);
+      await pointer.moveTo(tester.getCenter(find.byType(TilePictureView)));
+      await tester.pump();
+      final seen = <int>[];
+      for (var n = 1; n <= 5; n++) {
+        await untilReal(tester, () => state.played >= n);
+        seen.add(await _middle(tester));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(seen, [green, rose, green, rose, green]);
+      await pointer.moveTo(const Offset(1, 1));
+      await tester.pump();
+      expect(state.busy, isFalse);
+      expect(await _middle(tester), green);
     });
 
     testWidgets('never plays under Reduce Motion', (tester) async {

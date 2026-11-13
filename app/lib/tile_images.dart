@@ -7,6 +7,7 @@ import 'package:file_selector/file_selector.dart';
 
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
+import 'package:nushi/tile_crop.dart';
 import 'package:nushi/tile_look.dart';
 
 // A project's tile's own image (ADR 0112): a file the user picked, checked
@@ -147,19 +148,26 @@ Future<int> _pixels(Uint8List bytes) async {
 
 /// A codec for [bytes] that decodes at a tile's size, never the image's
 /// own: scaled so its shorter side is [side] pixels (the tile's, in the
-/// screen's pixels), the longer one cropped away as it's drawn. A smaller
-/// image is left as it is. Only a still's: the engine decodes each frame of
-/// an animated one whole, so each goes through [tileFrame].
-Future<ui.Codec> tileImageCodec(Uint8List bytes, int side) async {
+/// screen's pixels), the longer one cropped away as it's drawn; with a
+/// [crop], so the square it frames is [side] pixels, then cut out by
+/// [tileFrame]. A smaller image is left as it is. Only a still's: the
+/// engine decodes each frame of an animated one whole, so each goes
+/// through [tileFrame].
+Future<ui.Codec> tileImageCodec(
+  Uint8List bytes,
+  int side, {
+  TileCrop? crop,
+}) async {
   final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+  final wanted = side * (crop?.zoom.clamp(1, TileCrop.maxZoom) ?? 1);
   return await ui.instantiateImageCodecWithSize(
     buffer,
     getTargetSize: (width, height) {
       final shorter = min(width, height);
-      if (shorter <= side) return const ui.TargetImageSize();
+      if (shorter <= wanted) return const ui.TargetImageSize();
       return ui.TargetImageSize(
-        width: max(1, (width * side / shorter).round()),
-        height: max(1, (height * side / shorter).round()),
+        width: max(1, (width * wanted / shorter).round()),
+        height: max(1, (height * wanted / shorter).round()),
       );
     },
   );
@@ -168,16 +176,31 @@ Future<ui.Codec> tileImageCodec(Uint8List bytes, int side) async {
 /// [frame] scaled as [tileImageCodec] scales a still, its shorter side
 /// [side] pixels, and the whole one let go: a frame of an animated image
 /// comes whole, and only the tile's size of it is kept. A smaller one is
-/// given back as it is.
-Future<ui.Image> tileFrame(ui.Image frame, int side) async {
-  final shorter = min(frame.width, frame.height);
-  if (shorter <= side) return frame;
-  final width = max(1, (frame.width * side / shorter).round());
-  final height = max(1, (frame.height * side / shorter).round());
+/// given back as it is. With a [crop], only the square it frames is kept,
+/// [side] pixels at most: the rest of the frame is let go too.
+Future<ui.Image> tileFrame(ui.Image frame, int side, {TileCrop? crop}) async {
+  final ui.Rect source;
+  final int width;
+  final int height;
+  if (crop == null) {
+    final shorter = min(frame.width, frame.height);
+    if (shorter <= side) return frame;
+    source = ui.Rect.fromLTWH(
+      0,
+      0,
+      frame.width.toDouble(),
+      frame.height.toDouble(),
+    );
+    width = max(1, (frame.width * side / shorter).round());
+    height = max(1, (frame.height * side / shorter).round());
+  } else {
+    source = crop.within(frame.width, frame.height);
+    width = height = max(1, min(side, source.width.round()));
+  }
   final recorder = ui.PictureRecorder();
   ui.Canvas(recorder).drawImageRect(
     frame,
-    ui.Rect.fromLTWH(0, 0, frame.width.toDouble(), frame.height.toDouble()),
+    source,
     ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
     ui.Paint()..filterQuality = ui.FilterQuality.medium,
   );
@@ -187,6 +210,23 @@ Future<ui.Image> tileFrame(ui.Image frame, int side) async {
   } finally {
     picture.dispose();
     frame.dispose();
+  }
+}
+
+/// How long a frame of an animated image shows: its own [duration], but
+/// a file that says none, or next to none, means a tenth of a second, as
+/// browsers take it.
+Duration frameWait(Duration duration) =>
+    duration < const Duration(milliseconds: 20)
+    ? const Duration(milliseconds: 100)
+    : duration;
+
+/// Decodes [count] frames of [codec] and lets each go at once: a GIF
+/// decodes only in order, so a trimmed one's first frame is reached this
+/// way, never holding more than the frame being decoded.
+Future<void> skipFrames(ui.Codec codec, int count) async {
+  for (var i = 0; i < count; i++) {
+    (await codec.getNextFrame()).image.dispose();
   }
 }
 

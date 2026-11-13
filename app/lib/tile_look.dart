@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart' show StringCharacters;
 
 import 'package:nushi/fnv.dart';
+import 'package:nushi/tile_crop.dart';
+import 'package:nushi/tile_trim.dart';
 
 // What a project's tile shows when it isn't the repository's own icon
 // (ADR 0112): what the user set in Change tile…, else initials on a color
@@ -11,17 +13,28 @@ import 'package:nushi/fnv.dart';
 const tileColorCount = 8;
 
 /// What the user set for a project's tile in Change tile…: an [image] of
-/// their own, a [mark] (an emoji, or one or two characters; '' for none)
-/// and a [color] (a `ChatColor`'s name; '' for none). Any of them wins
-/// over the repository's icon. Kept by folder in `projectTiles`: the
+/// their own, how it's framed ([crop]) and what of it plays ([trim]), a
+/// [mark] (an emoji, or one or two characters; '' for none) and a [color]
+/// (a `ChatColor`'s name; '' for none). Any of them wins over the
+/// repository's icon. Kept by folder in `projectTiles`: the
 /// user's data, never a hex, so each theme draws the color its own way.
 class TileLook {
-  const new({this.mark = '', this.color = '', this.image = ''});
+  const new({
+    this.mark = '',
+    this.color = '',
+    this.image = '',
+    this.crop,
+    this.trim,
+  });
 
   /// [saved] as `app.json` has it; null when it isn't one, or sets
   /// nothing.
   static TileLook? read(Object? saved) {
     if (saved is! Map) return null;
+    final image = switch (saved['image']) {
+      final String i when storedTileImage.hasMatch(i) => i,
+      _ => '',
+    };
     final look = TileLook(
       mark: switch (saved['mark']) {
         final String m => tileMark(m),
@@ -31,10 +44,9 @@ class TileLook {
         final String c => c,
         _ => '',
       },
-      image: switch (saved['image']) {
-        final String i when storedTileImage.hasMatch(i) => i,
-        _ => '',
-      },
+      image: image,
+      crop: image.isEmpty ? null : TileCrop.read(saved['crop']),
+      trim: image.isEmpty ? null : TileTrim.read(saved['trim']),
     );
     return look.isEmpty ? null : look;
   }
@@ -47,6 +59,17 @@ class TileLook {
   /// none. It comes before the mark.
   final String image;
 
+  /// How [image] is framed in the square; null for its middle, as an
+  /// entry from before framing has it. An app before framing reads the
+  /// entry without it (only `mark`, `color` and `image` are read), so its
+  /// tile shows the image's middle there.
+  final TileCrop? crop;
+
+  /// The frames of an animated [image] it plays; null for all of them, as
+  /// an entry from before trimming has it (an app before trimming reads
+  /// the entry without it, as it does [crop]).
+  final TileTrim? trim;
+
   /// Whether it sets nothing: the tile is then the repository's icon or
   /// the initials.
   bool get isEmpty => mark.isEmpty && color.isEmpty && image.isEmpty;
@@ -55,6 +78,8 @@ class TileLook {
     if (mark.isNotEmpty) 'mark': mark,
     if (color.isNotEmpty) 'color': color,
     if (image.isNotEmpty) 'image': image,
+    if (image.isNotEmpty && crop != null) 'crop': crop!.toJson(),
+    if (image.isNotEmpty && trim != null) 'trim': trim!.toJson(),
   };
 }
 

@@ -10,9 +10,12 @@ import 'package:nushi/project_rail.dart';
 import 'package:nushi/project_tile.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/tile_crop.dart';
+import 'package:nushi/tile_framer.dart';
 import 'package:nushi/tile_images.dart';
 import 'package:nushi/tile_look.dart';
 import 'package:nushi/tile_picture.dart';
+import 'package:nushi/tile_trimmer.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
@@ -54,7 +57,10 @@ void main() {
         });
         projectTiles.value = {
           cappy: const TileLook(mark: 'CR', color: 'teal'),
-          notes: TileLook(image: photo),
+          notes: TileLook(
+            image: photo,
+            crop: const TileCrop(zoom: 3, x: 0.42, y: 0.38),
+          ),
           attic: TileLook(image: gif),
         };
         final fake = FakeDaemon(arrangeChats())
@@ -120,7 +126,100 @@ void main() {
         );
         expectTextInside(tester, width);
         await render(tester, find.byType(NushiApp), 'tiles_dialog_image_$name');
+        // Framed: zoomed in and dragged, the tile showing it at once.
+        await untilReal(
+          tester,
+          () => tester.state<TileFramerState>(find.byType(TileFramer)).decoded,
+        );
+        tester.widget<Slider>(find.byType(Slider)).onChanged!(0.55);
+        await tester.pump();
+        final framing = find.byKey(const Key('tile framing'));
+        final drag = await tester.startGesture(tester.getCenter(framing));
+        await drag.moveBy(const Offset(20, 10));
+        await drag.moveBy(const Offset(20, 10));
+        await drag.up();
+        await tester.pump(const Duration(milliseconds: 300));
+        await untilReal(
+          tester,
+          () => tester
+              .stateList<TilePictureViewState>(find.byType(TilePictureView))
+              .every((s) => s.decoded),
+        );
+        expectTextInside(tester, width);
+        final dialog = tester.getRect(find.byType(Dialog));
+        expect(tester.getRect(framing).right, lessThan(dialog.right));
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'tiles_dialog_framed_$name',
+        );
         await tester.tap(find.widgetWithText(Button, 'Save'));
+        for (var i = 0; i < 4; i++) {
+          await tester.pump(const Duration(milliseconds: 300));
+        }
+        expect(projectTiles.value[garden]!.crop, isNotNull);
+        await untilReal(
+          tester,
+          () => tester
+              .stateList<TilePictureViewState>(find.byType(TilePictureView))
+              .every((s) => s.decoded),
+        );
+        await render(tester, find.byType(NushiApp), 'tiles_framed_$name');
+
+        // An animated one, trimmed: its end handle held while it moves.
+        final ball = File('$dataDir/ball.gif')..writeAsBytesSync(ballGif());
+        addTearDown(ball.deleteSync);
+        pickTileImage = () async => XFile(ball.path);
+        await tester.tap(
+          find.descendant(
+            of: find.byType(Sidebar),
+            matching: find.text('garden'),
+          ),
+          buttons: kSecondaryMouseButton,
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.text('Change tile…'));
+        for (var i = 0; i < 4; i++) {
+          await tester.pump(const Duration(milliseconds: 300));
+        }
+        await tester.tap(find.widgetWithText(Button, 'Choose image…'));
+        await untilReal(
+          tester,
+          () => find.byType(TileTrimmer).evaluate().isNotEmpty,
+        );
+        final strip = tester.getRect(find.byKey(const Key('tile trim strip')));
+        final start = await tester.startGesture(
+          strip.centerLeft + const Offset(TileTrimmer.handle / 2, 0),
+        );
+        await start.moveBy(Offset(strip.width * 0.1, 0));
+        await start.moveBy(Offset(strip.width * 0.1, 0));
+        await start.up();
+        final end = await tester.startGesture(
+          strip.centerRight - const Offset(TileTrimmer.handle / 2, 0),
+        );
+        await end.moveBy(Offset(-strip.width * 0.1, 0));
+        await end.moveBy(Offset(-strip.width * 0.1, 0));
+        await tester.pump(const Duration(milliseconds: 300));
+        await untilReal(
+          tester,
+          () =>
+              tester.widget<TileFramer>(find.byType(TileFramer)).frames.shown ==
+                  tester
+                      .widget<TileFramer>(find.byType(TileFramer))
+                      .frames
+                      .playhead &&
+              tester
+                  .stateList<TilePictureViewState>(find.byType(TilePictureView))
+                  .every((s) => s.decoded),
+        );
+        expectTextInside(tester, width);
+        expect(
+          tester.getRect(find.byKey(const Key('tile trim strip'))).right,
+          lessThan(tester.getRect(find.byType(Dialog)).right),
+        );
+        await render(tester, find.byType(NushiApp), 'tiles_dialog_trim_$name');
+        await end.up();
+        await tester.tap(find.widgetWithText(Button, 'Cancel'));
         for (var i = 0; i < 4; i++) {
           await tester.pump(const Duration(milliseconds: 300));
         }
@@ -132,13 +231,34 @@ void main() {
         paneWidths.value = {};
         projectRail.value = true;
         sidebarProjects.value = {'/Users/me/zeta'};
-        projectTiles.value = {cappy: const TileLook(mark: 'CR', color: 'teal')};
+        if (tileImagesDir.existsSync()) {
+          tileImagesDir.deleteSync(recursive: true);
+        }
+        final photo = keepTileImage((
+          bytes: await photoPng(tester, width: 1200, height: 800),
+          kind: 'png',
+        ));
+        addTearDown(() => dropTileImage(photo));
+        projectTiles.value = {
+          cappy: const TileLook(mark: 'CR', color: 'teal'),
+          // Framed on the disc's edge.
+          notes: TileLook(
+            image: photo,
+            crop: const TileCrop(zoom: 3, x: 0.42, y: 0.38),
+          ),
+        };
         final fake = FakeDaemon(arrangeChats())
           ..projectIcons[garden] = await iconPng(tester);
         final d = await fake.connect(tester);
         await tester.pumpWidget(NushiApp(daemon: d));
         await tester.pump(const Duration(seconds: 1));
         await decodeImages(tester);
+        await untilReal(
+          tester,
+          () => tester
+              .stateList<TilePictureViewState>(find.byType(TilePictureView))
+              .every((s) => s.decoded),
+        );
         expectTextInside(tester, width);
         await render(tester, find.byType(NushiApp), 'rail_$name');
 
