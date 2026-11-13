@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -206,5 +207,23 @@ func TestChatWorktreeNotUTF8(t *testing.T) {
 	}
 	if got := worktreeProto(&model.Worktree{Repo: "/r", Path: "/r/w", Branch: "fine"}); got == nil || got.Branch != "fine" {
 		t.Errorf("a good one: %v", got)
+	}
+}
+
+// A dev server's env comes from a repository's launch file: a key and a
+// value that aren't UTF-8 are mended, keys and values both, so the answer
+// marshals.
+func TestMapsAreMended(t *testing.T) {
+	s := &nushiv1.DevServer{Env: map[string]string{"K\xff": "v\xfe", "OK": "fine", "V": "x\xfe"}}
+	if _, err := proto.Marshal(s); err == nil {
+		t.Fatal("marshalled unmended: nothing to test")
+	}
+	mendAny(s)
+	if _, err := proto.Marshal(s); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{"K�": "v�", "OK": "fine", "V": "x�"}
+	if !maps.Equal(s.Env, want) {
+		t.Errorf("%q, want %q", s.Env, want)
 	}
 }
