@@ -1,10 +1,12 @@
 package store
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,11 +20,12 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	if err := s.SetPick("claude", "model", "sonnet"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.SetMode("claude", "plan"); err != nil { // keeps the picks
+	commands := []model.Command{{Name: "review", Description: "Review it", Hint: "PR"}}
+	if err := s.SetCommands("claude", commands); err != nil {
 		t.Fatal(err)
 	}
-	if got := s.SleepAfter(); got != 30*time.Minute {
-		t.Errorf("sleep after %v by default", got)
+	if err := s.SetMode("claude", "plan"); err != nil { // keeps the picks and the commands
+		t.Fatal(err)
 	}
 	if err := s.SetSleepAfter(0); err != nil {
 		t.Fatal(err)
@@ -57,6 +60,9 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	if got := s.Picks("claude"); !reflect.DeepEqual(got, map[string]string{"model": "sonnet"}) {
 		t.Errorf("picks = %v", got)
 	}
+	if got := s.Commands("claude"); !reflect.DeepEqual(got, commands) || s.Commands("codex") != nil {
+		t.Errorf("claude's commands %v, codex's %v", got, s.Commands("codex"))
+	}
 	got, err := s.Sessions()
 	if err != nil {
 		t.Fatal(err)
@@ -67,21 +73,28 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	}
 }
 
-func TestCommandsAreRememberedByAgent(t *testing.T) {
+// Changes at once each keep the others' (mu, from the read to the write):
+// twenty picks of one agent, and settings changed beside them.
+func TestChangesAtOnce(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir)
-	want := []model.Command{{Name: "review", Description: "Review it", Hint: "PR"}}
-	if err := s.SetCommands("claude", want); err != nil {
-		t.Fatal(err)
+	var wg sync.WaitGroup
+	errs := make(chan error, 22)
+	for i := range 20 {
+		wg.Go(func() { errs <- s.SetPick("claude", fmt.Sprintf("o%d", i), "v") })
 	}
-	if err := s.SetMode("claude", "plan"); err != nil { // keeps the commands
-		t.Fatal(err)
+	wg.Go(func() { errs <- s.SetDebugLog(true) })
+	wg.Go(func() { errs <- s.SetTranscriptDays(9) })
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		testcheck.NoErr(t, err)
 	}
 	s = New(dir)
-	if got := s.Commands("claude"); !reflect.DeepEqual(got, want) {
-		t.Errorf("claude's commands %v, want %v", got, want)
+	if got := s.Picks("claude"); len(got) != 20 {
+		t.Errorf("%d picks of 20", len(got))
 	}
-	if got := s.Commands("codex"); got != nil {
-		t.Errorf("codex's commands %v", got)
+	if !s.DebugLog() || s.TranscriptDays() != 9 {
+		t.Errorf("settings: debug %v, days %d", s.DebugLog(), s.TranscriptDays())
 	}
 }

@@ -42,11 +42,13 @@ type Service struct {
 	prefs     SleepPrefs  // Options', if chats sleep
 	copies    Copies      // Options', if chats keep copies of their transcripts
 	copiesOn  func() bool // whether they write them now
+	timing    Timing      // Options'
 
 	// ctx ends with Close, and with it what the service started on its own:
 	// its loops, the background commands it follows, its timers.
 	ctx    context.Context //nolint:containedctx // the service's life, which Close ends
 	cancel context.CancelFunc
+	loops  sync.WaitGroup // its loops (sleep, copies, letting go), which Close waits for
 
 	pinMu sync.Mutex // Pin's, one order at a time
 
@@ -133,6 +135,7 @@ type chat struct {
 	copiesOn func() bool     // and whether it writes them
 	viewers  Viewers         // the service's
 	ctx      context.Context //nolint:containedctx // the service's life, which ends what the chat follows on its own
+	timing   Timing          // the service's
 	// serverCommand and serverAnswered are the service's, for a
 	// preview_start ask's card.
 	serverCommand  func(chatID, name string) (command, askID string)
@@ -192,7 +195,7 @@ type chat struct {
 	canLoad    bool             // the agent can reopen the session, so it can sleep
 	asleep     bool             // its agent was stopped to sleep: opening the chat doesn't reopen it
 	reapplying bool             // its session just opened: its picks aren't back on it yet (reapply)
-	retired    <-chan struct{}  // closed once the agent it fell asleep from has ended
+	retiring   Agent            // the agent it fell asleep from, until a reopen has seen it end
 	woke       chan struct{}    // closed when the reopen under way ends
 	active     time.Time        // its last event
 	unsaved    map[string]bool  // items changed since the copy of the transcript last had them (copies.go)
@@ -309,7 +312,7 @@ func checkFolder(folder string) error {
 }
 
 func (s *Service) newChat(k *kind) *chat {
-	return &chat{kind: k, remembered: s.remembered, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, owned: s.ownedWorktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, serverCommand: s.serverCommand, serverAnswered: s.serverAnswered, waiting: map[string]chan<- string{},
+	return &chat{kind: k, remembered: s.remembered, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, owned: s.ownedWorktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, timing: s.timing, serverCommand: s.serverCommand, serverAnswered: s.serverAnswered, waiting: map[string]chan<- string{},
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, children: map[string]*child{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{},
 		mirrored: true} // a new chat's copy is as empty as its transcript
 }
@@ -419,16 +422,16 @@ func (c *chat) cancelLocked() error {
 	if own {
 		c.ownTurn = false
 		c.statusChangedLocked()
-		return cancelTurn(agent, cancel)
+		return cancelTurn(agent, cancel, c.timing.stopGrace())
 	}
 	select {
 	case <-c.sent:
-		return cancelTurn(agent, cancel)
+		return cancelTurn(agent, cancel, c.timing.stopGrace())
 	default: // the cancel must not reach the agent before the prompt
 		sent := c.sent
 		go func() {
 			<-sent
-			if err := cancelTurn(agent, cancel); err != nil {
+			if err := cancelTurn(agent, cancel, c.timing.stopGrace()); err != nil {
 				c.log().Warn("cancelling the turn", "err", err)
 			}
 		}()

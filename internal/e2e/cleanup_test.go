@@ -122,3 +122,63 @@ func TestCleanUp(t *testing.T) {
 	}
 	refused("elsewhere", deleteBranch(id3, true), "another worktree")
 }
+
+// Ignored files (.env, build/) are lost with a worktree, and git's own
+// status doesn't count them, so both ways of removing one refuse them
+// without force, as for uncommitted changes: Delete and Clean up, each
+// leaving the file where it was, then removing it once forced.
+func TestIgnoredFilesNeedForce(t *testing.T) {
+	ctx := context.Background()
+	repo := gitRepo(t)
+	testcheck.Write(t, filepath.Join(repo, ".gitignore"), ".env\n")
+	testcheck.Git(t, repo, "add", ".gitignore")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "ignore .env")
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	a := open(t, d)
+	withSecret := func() (string, *nushiv1.Worktree, string) {
+		id := a.start(&nushiv1.StartChatRequest{Folder: repo, Worktree: true})
+		a.send(id, "pwd")
+		wt := a.settled(id).Chat.Worktree
+		env := filepath.Join(wt.Path, ".env")
+		testcheck.Write(t, env, "TOKEN=mine\n")
+		return id, wt, env
+	}
+	kept := func(what string, err error, env string) {
+		t.Helper()
+		if err == nil || !strings.Contains(err.Error(), "1 ignored") {
+			t.Errorf("%s: %v, want a refusal naming the ignored file", what, err)
+		}
+		if _, err := os.Stat(env); err != nil {
+			t.Fatalf("%s lost .env: %v", what, err)
+		}
+	}
+	gone := func(what string, err error, wt *nushiv1.Worktree) {
+		t.Helper()
+		if _, serr := os.Stat(wt.Path); err != nil || !errors.Is(serr, fs.ErrNotExist) {
+			t.Fatalf("%s, forced: %v, the worktree %v", what, err, serr)
+		}
+	}
+
+	id, wt, env := withSecret()
+	if p := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: id}))); p.Worktrees[0].State.Ignored != 1 || p.Worktrees[0].State.Changed != 0 {
+		t.Fatalf("plan: %v", p.Worktrees[0].State)
+	}
+	del := func(force bool) error {
+		_, err := a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: id, Worktrees: []*nushiv1.WorktreeChoice{
+			{Path: wt.Path, RemoveWorktree: true, ForceWorktree: force}}}))
+		return err
+	}
+	kept("Delete", del(false), env)
+	gone("Delete", del(true), wt)
+
+	id, wt, env = withSecret()
+	if u := must(a.c.GetCleanUp(ctx, connect.NewRequest(&nushiv1.GetCleanUpRequest{ChatId: id}))); u.State.Ignored != 1 || u.State.Changed != 0 {
+		t.Fatalf("clean-up: %v", u.State)
+	}
+	remove := func(force bool) error {
+		_, err := a.c.RemoveChatWorktree(ctx, connect.NewRequest(&nushiv1.RemoveChatWorktreeRequest{ChatId: id, Force: force}))
+		return err
+	}
+	kept("Clean up", remove(false), env)
+	gone("Clean up", remove(true), wt)
+}

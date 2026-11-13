@@ -31,6 +31,7 @@ type player struct {
 	chats   map[string]*chat
 	owner   map[string]string   // subagents' sessions to their parents'
 	asks    map[string]*pending // the agent's requests not yet answered, by id
+	timing  Timing              // its services'
 }
 
 func newPlayer(t *testing.T, prompts bool) *player {
@@ -46,7 +47,7 @@ func (p *player) chatOf(sid string) (*Service, *chat, acp.SessionID) {
 		return p.svcs[parent], p.chats[parent], acp.SessionID(sid)
 	}
 	if p.chats[sid] == nil {
-		svc, _, c := newChat(p.t, claudeSession, &memModes{})
+		svc, _, c := newTimedChat(p.t, claudeSession, &memModes{}, p.timing)
 		c.mu.Lock()
 		c.kind.background = noOutputFile{c.kind.background}
 		c.mu.Unlock()

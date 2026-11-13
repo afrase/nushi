@@ -14,3 +14,6 @@ A chat's pull request merges (or closes) and leaves its worktree, its local bran
 ## Consequences
 - Found worktrees (0016: never removed by Nushi on its own) may now go, but only ticked by hand, "Made outside Nushi" said in the dialog.
 - The GitHub writes are the user's token's: a fork's branch goes only where the user can push; a protected branch's refusal is GitHub's message.
+
+## Amendment (2026-11-13): ignored files need force, as in Delete
+`RemoveChatWorktree` removed a worktree holding ignored files (`.env`, `build/`, local secrets) without force, while Delete refused the same worktree (`git worktree remove` deletes ignored files without asking, and `git status` does not count them). It now follows Delete: ignored files, as `GetCleanUp`'s `ignored` counts them, are refused unless forced, so nothing goes without the same confirmation Delete asks for. The dialog is to start its worktree row unticked when there are any and send force for them, as it does for uncommitted changes.

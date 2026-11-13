@@ -46,7 +46,7 @@ func (s *Service) Reload(chatID string) error {
 	if agent != nil { // its last updates, still on their way, before the cut
 		select {
 		case <-agent.Done():
-		case <-time.After(stopGrace):
+		case <-time.After(s.timing.stopGrace()):
 		}
 	}
 	c.mu.Lock()

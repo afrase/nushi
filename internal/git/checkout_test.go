@@ -61,3 +61,23 @@ func TestTrustRootOnGitFilesThatAreNotFiles(t *testing.T) {
 		})
 	}
 }
+
+// worktreeSet leaves out git's environment but GIT_CONFIG_GLOBAL and
+// GIT_CONFIG_NOSYSTEM, which say which of the user's own config files git
+// reads: make test-go points them at nothing so no test reads the
+// owner's config. Here HOME's config doesn't parse, so git fails if it
+// reads it.
+func TestWorktreeSetKeepsTheConfigChoice(t *testing.T) {
+	home := t.TempDir()
+	testcheck.Write(t, filepath.Join(home, ".gitconfig"), "[not config\n")
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	t.Setenv("GIT_DIR", t.TempDir()) // the rest still goes
+	config := filepath.Join(t.TempDir(), "config")
+	testcheck.Write(t, config, "[core]\n\tworktree = /elsewhere\n")
+	if !worktreeSet(config) {
+		t.Error("core.worktree not read: git read HOME's config, or GIT_DIR's")
+	}
+}

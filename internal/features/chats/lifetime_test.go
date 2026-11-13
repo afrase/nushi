@@ -26,12 +26,11 @@ func TestCloseStopsAnAgentStillOpening(t *testing.T) {
 	turn(t, svc, c, "one")
 	agent.quit()
 	eventually(t, c, func() bool { return c.agent == nil })
-	agent.loadGate = make(chan struct{})
+	agent.loadGate, agent.entered = make(chan struct{}), make(chan string, 1)
 	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "queued while reopening"}, SendQueue); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return c.busy })
-	time.Sleep(10 * time.Millisecond) // the reopen waits on its load
+	<-agent.entered // the reopen waits on its load
 	svc.Close()
 	_, closed, _ := agent.count()
 	close(agent.loadGate)
@@ -106,10 +105,10 @@ func TestAForkAsTheAgentEnds(t *testing.T) {
 	ctx := context.Background()
 	id, _ := svc.Start(ctx, "", t.TempDir(), false)
 	c := svc.chats[id]
-	agent.forkGate = make(chan struct{})
+	agent.forkGate, agent.entered = make(chan struct{}), make(chan string, 1)
 	forked := make(chan error)
 	go func() { _, err := svc.Fork(ctx, id); forked <- err }()
-	time.Sleep(10 * time.Millisecond)
+	<-agent.entered // the fork waits on the agent
 	agent.quit()
 	eventually(t, c, func() bool { return c.agent == nil })
 	close(agent.forkGate)
@@ -139,8 +138,6 @@ func TestARewindOutlivesTheApp(t *testing.T) {
 // command its agent still runs is no longer read once the ctx New was
 // given ends, and Close leaves no side chats' timer behind.
 func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
-	defer func(d time.Duration) { commandPoll = d }(commandPoll)
-	commandPoll = time.Millisecond
 	reads := make(chan struct{}, 1)
 	read := func(string, string) (string, string, error) {
 		select {
@@ -151,7 +148,7 @@ func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
 	}
 	agent := &fakeAgent{}
 	life, end := context.WithCancel(t.Context())
-	svc := New(life, []Kind{{Harness: testHarness{Name: "fake", read: read}, Launch: agent.launch}}, Options{Remembered: &memModes{}, Sessions: &memSessions{}})
+	svc := New(life, []Kind{{Harness: testHarness{Name: "fake", read: read}, Launch: agent.launch}}, Options{Remembered: &memModes{}, Sessions: &memSessions{}, Timing: Timing{CommandPoll: time.Millisecond}})
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
 	c := svc.chats[id]

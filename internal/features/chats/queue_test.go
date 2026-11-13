@@ -2,9 +2,11 @@ package chats
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -60,6 +62,57 @@ func TestQueueGoesAfterTheTurnInOrder(t *testing.T) {
 	eventually(t, c, func() bool { return !c.busy })
 	if got, _ := agent.texts(); !reflect.DeepEqual(got, []string{"one", "two", "four"}) {
 		t.Errorf("prompts = %q", got)
+	}
+}
+
+// Unqueue racing the turn's end, which sends the queue's first message:
+// the message is either taken back or sent, never both and never lost.
+func TestUnqueueAsTheTurnEnds(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate = make(chan struct{})
+	send := func(text string, how Send) {
+		t.Helper()
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, how))
+	}
+	send("first", SendIdle)
+	var took, sent []string
+	for i := range 30 {
+		eventually(t, c, func() bool { return c.busy && len(c.queue) == 0 })
+		text := fmt.Sprintf("q%d", i)
+		send(text, SendQueue)
+		c.mu.Lock()
+		id := c.queue[0].ID
+		c.mu.Unlock()
+		var wg sync.WaitGroup
+		var err error
+		var m model.Message
+		wg.Go(func() { m, err = svc.Unqueue(c.id, id) })
+		wg.Go(agent.release)
+		wg.Wait()
+		switch {
+		case err == nil && m.Text == text:
+			took = append(took, text)
+			eventually(t, c, func() bool { return !c.busy })
+			send(fmt.Sprintf("t%d", i), SendIdle)
+		case err != nil && strings.Contains(err.Error(), "has it already"):
+			sent = append(sent, text)
+		default:
+			t.Fatalf("Unqueue = %+v, %v", m, err)
+		}
+	}
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+	t.Logf("%d taken back, %d sent", len(took), len(sent))
+	prompts, _ := agent.texts()
+	for _, text := range sent {
+		if n := len(slices.DeleteFunc(slices.Clone(prompts), func(p string) bool { return p != text })); n != 1 {
+			t.Errorf("%s, sent, reached the agent %d times", text, n)
+		}
+	}
+	for _, text := range took {
+		if slices.Contains(prompts, text) {
+			t.Errorf("%s, taken back, reached the agent", text)
+		}
 	}
 }
 

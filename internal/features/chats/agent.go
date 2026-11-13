@@ -41,16 +41,12 @@ type Agent interface { //nolint:interfacebloat // the ACP calls a chat makes of 
 	Call(ctx context.Context, method string, params, result any) error
 }
 
-// stopGrace is how long a stopping agent gets to end a turn, and then its
-// sessions.
-var stopGrace = 5 * time.Second
-
-// cancelTurn sends session/cancel, waiting at most stopGrace for the agent
-// to read it.
+// cancelTurn sends session/cancel, waiting at most grace (Timing.StopGrace)
+// for the agent to read it.
 //
 //nolint:contextcheck // a cancel goes out on its own, as its turn ran: a stop outlives the request that asked for it
-func cancelTurn(agent Agent, n *acp.CancelNotification) error {
-	ctx, done := context.WithTimeout(context.Background(), stopGrace)
+func cancelTurn(agent Agent, n *acp.CancelNotification, grace time.Duration) error {
+	ctx, done := context.WithTimeout(context.Background(), grace)
 	defer done()
 	return agent.Cancel(ctx, n)
 }
@@ -313,6 +309,6 @@ func (c *chat) disconnect() {
 	c.orphanLocked(true)
 	c.mu.Unlock()
 	if agent != nil {
-		_ = agent.Stop(stopGrace) // its process is gone either way
+		_ = agent.Stop(c.timing.stopGrace()) // its process is gone either way
 	}
 }

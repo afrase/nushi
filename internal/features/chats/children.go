@@ -193,7 +193,7 @@ func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
 		agent, sid := c.agent, sa.Session
 		c.logLocked().Info("stopping a subagent", "call", callID)
 		c.mu.Unlock()
-		return cancelTurn(agent, &acp.CancelNotification{SessionID: acp.SessionID(sid)})
+		return cancelTurn(agent, &acp.CancelNotification{SessionID: acp.SessionID(sid)}, c.timing.stopGrace())
 	}
 	shell := call.BackgroundCommand != nil
 	if shell && call.BackgroundCommand.Killed {

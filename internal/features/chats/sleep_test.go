@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -13,11 +15,13 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-type memPrefs struct{ after time.Duration }
+// memPrefs keeps the sleep time; the service's loop reads it as a test
+// sets it.
+type memPrefs struct{ after atomic.Int64 }
 
-func (m *memPrefs) SleepAfter() time.Duration { return m.after }
+func (m *memPrefs) SleepAfter() time.Duration { return time.Duration(m.after.Load()) }
 
-func (m *memPrefs) SetSleepAfter(d time.Duration) error { m.after = d; return nil }
+func (m *memPrefs) SetSleepAfter(d time.Duration) error { m.after.Store(int64(d)); return nil }
 
 // A chat put to sleep keeps its transcript and doesn't wake when opened; a
 // message wakes it through session/load, with the model it had.
@@ -77,14 +81,17 @@ func TestNoSleepWithoutLoad(t *testing.T) {
 }
 
 // A chat sleeps on its own once idle, but not while anything would be
-// lost, and activity puts it off.
+// lost, and activity puts it off. Each check is a doze of its own, with
+// the chat idle for good but for what's checked; the service's loop is
+// set going only at the end (its sleep time is never until then), so no
+// check races it.
 func TestAutoSleep(t *testing.T) {
-	defer func(d time.Duration) { sleepCheck = d }(sleepCheck)
-	sleepCheck = 5 * time.Millisecond
 	const after = 30 * time.Millisecond
 	agent := &fakeAgent{}
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sleep: &memPrefs{after: after}})
+	prefs := &memPrefs{}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}},
+		Options{Sleep: prefs, Timing: Timing{SleepCheck: 5 * time.Millisecond}})
 	defer svc.Close()
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
@@ -119,30 +126,33 @@ func TestAutoSleep(t *testing.T) {
 			return func() { delete(c.sides, "x") }
 		},
 	}
+	awake := func() bool {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		return c.agent != nil
+	}
 	for name, block := range blockers {
 		c.mu.Lock()
 		undo := block(c)
+		c.active = time.Time{}
 		c.mu.Unlock()
-		time.Sleep(4 * after)
+		svc.doze(c, after)
 		c.mu.Lock()
-		awake := c.agent != nil
 		undo()
-		c.active = time.Now()
 		c.mu.Unlock()
-		if !awake {
+		if !awake() {
 			t.Fatalf("slept during %s", name)
 		}
 	}
-	// Events put it off.
-	for end := time.Now().Add(4 * after); time.Now().Before(end); time.Sleep(after / 3) {
-		c.mu.Lock()
-		awake := c.agent != nil
-		c.usageChangedLocked()
-		c.mu.Unlock()
-		if !awake {
-			t.Fatal("slept while events came")
-		}
+	// An event puts it off.
+	c.mu.Lock()
+	c.active = time.Time{}
+	c.usageChangedLocked()
+	c.mu.Unlock()
+	if svc.doze(c, after); !awake() {
+		t.Fatal("slept right after an event")
 	}
+	testcheck.NoErr(t, prefs.SetSleepAfter(after))
 	eventually(t, c, func() bool { return c.agent == nil && c.asleep })
 	launches, _, _ := agent.count()
 	turn(t, svc, c, "two")
@@ -167,4 +177,81 @@ func TestSleepAgent(t *testing.T) {
 	if c.agent != nil || !svc.Status(c.record).Asleep || svc.Awake("claude") != 0 {
 		t.Errorf("after SleepAgent: %+v", svc.Status(c.record))
 	}
+}
+
+// A chat woken while the agent it fell asleep from is still stopping
+// waits for that process to end before another opens its session: two
+// processes writing one session corrupt the agent's own history (ADR
+// 0047). The message waits, queued. A process that outlives twice
+// StopGrace is killed; one that outlives the kill keeps the chat from
+// reopening, saying so, until it has ended.
+func TestWakingWaitsForTheOldAgent(t *testing.T) {
+	asleep := func(t *testing.T, grace time.Duration, unkillable bool) (*Service, *fakeAgent, *chat, chan struct{}) {
+		t.Helper()
+		svc, agent, c := newTimedChat(t, claudeSession, &memModes{}, Timing{StopGrace: grace})
+		agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+		turn(t, svc, c, "one")
+		gate := make(chan struct{})
+		agent.mu.Lock()
+		agent.updates = []acp.SessionUpdate{chunk("m2", "ok")}
+		agent.stopGate, agent.unkillable = gate, unkillable
+		agent.mu.Unlock()
+		t.Cleanup(func() {
+			select {
+			case <-gate:
+			default:
+				close(gate)
+			}
+		})
+		svc.doze(c, 0)
+		if !svc.Status(c.record).Asleep {
+			t.Fatal("not asleep")
+		}
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle)) // queued: it doesn't wait or fail
+		return svc, agent, c, gate
+	}
+	check := func(t *testing.T, agent *fakeAgent, launches, kills int) {
+		t.Helper()
+		agent.mu.Lock()
+		defer agent.mu.Unlock()
+		if agent.overlaps != 0 || agent.launches != launches || agent.closed != kills {
+			t.Errorf("%d launches over a running agent; %d launches, want %d; %d kills, want %d", agent.overlaps, agent.launches, launches, agent.closed, kills)
+		}
+	}
+	answered := []string{"user:one", "agent:ok", "user:two", "agent:ok"}
+
+	t.Run("in time", func(t *testing.T) {
+		_, agent, c, gate := asleep(t, time.Second, false)
+		eventually(t, c, func() bool { return c.busy })
+		time.Sleep(50 * time.Millisecond) // a negative window: the reopen waits
+		check(t, agent, 1, 0)
+		close(gate)
+		eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 && c.started.IsZero() && c.agent != nil })
+		check(t, agent, 2, 0)
+		if got := texts(c); !slices.Equal(got, answered) {
+			t.Errorf("items %q", got)
+		}
+	})
+
+	t.Run("killed", func(t *testing.T) {
+		_, agent, c, _ := asleep(t, 10*time.Millisecond, false)
+		eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 && c.started.IsZero() && c.agent != nil })
+		check(t, agent, 2, 1)
+		if got := texts(c); !slices.Equal(got, answered) {
+			t.Errorf("items %q", got)
+		}
+	})
+
+	t.Run("outlives the kill", func(t *testing.T) {
+		svc, agent, c, gate := asleep(t, 10*time.Millisecond, true)
+		eventually(t, c, func() bool { return c.reopenFailed && !c.busy })
+		check(t, agent, 1, 1)
+		if got := texts(c); len(got) != 3 || !strings.Contains(got[2], "still running") {
+			t.Errorf("items %q", got)
+		}
+		close(gate) // it ends at last: Try again reopens it
+		testcheck.NoErr(t, svc.Reopen(c.id))
+		eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+		check(t, agent, 2, 1)
+	})
 }

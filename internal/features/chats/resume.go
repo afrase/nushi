@@ -241,8 +241,7 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	c.mu.Lock()
 	c.itemsBackLocked()
 	sid, folder, fresh, gone := c.sid, c.record.Folder, !c.record.HasMessages, folderGone(c.record)
-	retired := c.retired
-	c.retired = nil
+	old := c.retiring
 	// A transcript that outlived its agent stays; else the replay is merged
 	// with the copy, which has everything shown till now.
 	replay := !c.kept
@@ -254,15 +253,13 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	if gone != nil {
 		return gone
 	}
-	if retired != nil { // the agent it slept from may still be ending the session
-		select {
-		case <-retired:
-		case <-time.After(2 * stopGrace):
+	var o opened
+	err := c.retire(ctx, old)
+	if err == nil {
+		o, err = c.openSession(ctx, sid, folder, false, "")
+		if err != nil && fresh {
+			o, err = c.openSession(ctx, "", folder, false, "")
 		}
-	}
-	o, err := c.openSession(ctx, sid, folder, false, "")
-	if err != nil && fresh {
-		o, err = c.openSession(ctx, "", folder, false, "")
 	}
 	c.mu.Lock()
 	replayed := c.replay
