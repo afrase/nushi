@@ -426,8 +426,12 @@ func (s *session) steer(ctx context.Context, text string, images []image) (bool,
 	return err == nil, err
 }
 
+// stopGrace is how long pi has to end once its input closes, before it is
+// killed. A variable only so a test can shorten it.
+var stopGrace = 5 * time.Second
+
 // stop ends pi, waiting until it has.
 func (s *session) stop() {
-	s.p.stop(5 * time.Second)
+	s.p.stop(stopGrace)
 	<-s.ended
 }
