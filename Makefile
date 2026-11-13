@@ -249,8 +249,11 @@ endif
 # tests in CI, and a goroutine nothing waits for shows up here first.
 # GOTESTFLAGS adds flags (CI's -shuffle=on, which finds tests that pass
 # only in their file's order; go test prints the seed to run it again).
+# Git in the tests reads no config or ignore file of the user's: a global
+# excludes file (XDG_CONFIG_HOME's git/ignore) changed what git check-ignore
+# said in the tests' own repositories.
 test-go:
-	go test -race $(GOTESTFLAGS) ./...
+	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 XDG_CONFIG_HOME=$(CURDIR)/internal/testcheck/noconfig go test -race $(GOTESTFLAGS) ./...
 
 # The packages run anywhere with Go (remote_transport's interop builds a
 # Go peer), and in Chrome where there's one.
