@@ -94,7 +94,10 @@ class ChatHeader extends StatelessWidget {
     // tooltip says it), the tabs into a menu field, then the terminal's,
     // the files' and the details' buttons into ⋯. Changes counts the review
     // comments not sent yet (a small pill more); a hidden side chat's chip,
-    // the Jira key and the GitHub chip take their own room.
+    // the Jira key and the GitHub chip take their own room. The row's own
+    // words were measured in the bundled font: a picked one that sets them
+    // wider (ADR 0114) takes that much more, so the row folds sooner
+    // rather than run past its end.
     return ListenableBuilder(
       listenable: Listenable.merge([
         chat.renaming,
@@ -149,6 +152,7 @@ class ChatHeader extends StatelessWidget {
             side: side,
             jira: jira,
             github: github,
+            wider: _wider(context, theme),
           );
           final shown = modelName != null && !folds.model;
           // What the title and the model (its gap taken out) share.
@@ -440,6 +444,20 @@ class ChatHeader extends StatelessWidget {
     return width;
   }
 
+  /// How much wider the app's font sets the row's own words than the
+  /// bundled one does, which [headerRow] was measured in: 1 for the
+  /// bundled one, and never less (a narrower font only leaves room over).
+  static double _wider(BuildContext context, NushiTheme theme) {
+    if (theme.uiPicked == null) return 1;
+    const words = 'OpenCode In background Chat Changes Pull request';
+    double set(NushiTheme fonts) => _textWidth(
+      context,
+      words,
+      fonts.ui(theme.t.text, weight: FontWeight.w600),
+    );
+    return max(1, set(theme) / set(NushiTheme(theme.t)));
+  }
+
   /// The browser's button as a row of ⋯, once it folds there.
   MenuEntry get _browserEntry => MenuEntry(
     BrowserButton.tooltip(shown: chat.browserShown),
@@ -481,6 +499,13 @@ const githubIssueBadgesRoom = 6.0;
 /// tight gaps.
 const headerRow = 524.0;
 
+/// About how much of [headerRow] is its words, set in the app's font (the
+/// agent's name, the state's word, the Chat and Changes segments), and how
+/// much of the Pull request segment is: what a font wider than the bundled
+/// one makes wider (ADR 0114).
+const headerWords = 250.0;
+const _pullWords = 80.0;
+
 /// What the bar's full gaps add to [headerRow] (ADR 0072): the row without
 /// the title takes 62 more, a model's gap 4, a hidden side chat's 4.
 const headerGaps = 70.0;
@@ -514,7 +539,9 @@ typedef HeaderFolds = ({
 /// Files button shows; [model]: the header names a model (40 points at
 /// least, and its gap); [side]: a hidden side chat's chip shows; [jira]:
 /// what the chat's Jira key takes, its gap with it; [github]: what its
-/// GitHub chip takes, its gap with it.
+/// GitHub chip takes, its gap with it; [wider]: how much wider than the
+/// bundled font the app's sets the row's words (1: as wide), which the row
+/// takes as so much `more`.
 HeaderFolds headerFolds(
   double width, {
   required bool pull,
@@ -525,6 +552,7 @@ HeaderFolds headerFolds(
   bool side = false,
   double jira = 0,
   double github = 0,
+  double wider = 1,
 }) {
   // The Pull request segment is 106 more, the comments' count 32, the
   // Files button 32 and the browser's 32.
@@ -536,7 +564,8 @@ HeaderFolds headerFolds(
       (files ? button : 0.0) +
       button +
       jira +
-      github;
+      github +
+      (wider - 1) * (headerWords + (pull ? _pullWords : 0));
   final gaps =
       headerGaps + NushiTheme.iconGap + (files ? NushiTheme.iconGap : 0);
   final need = headerRow + more + 80 + (model ? 50 : 0);
