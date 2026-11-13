@@ -2,6 +2,8 @@ package chats
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"testing"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -53,6 +55,99 @@ func TestRewindForksBeforeTheMessage(t *testing.T) {
 	if c.record.Mode != "plan" || current(c, "mode") != "plan" {
 		t.Errorf("after rewinding, mode %q (stored %q), want plan", current(c, "mode"), c.record.Mode)
 	}
+}
+
+// Rewind refuses while the chat or its agent works; and a fork that lands
+// after its agent quit or its message went changes nothing: the chat
+// keeps its items, its session and its copy, says why, and the fork is
+// left for Delete or the next reopen to throw away.
+func TestRewindFailures(t *testing.T) {
+	svc, agent, c, store, _ := newCopyingChat(t)
+	for _, text := range []string{"one", "two"} {
+		agent.updates = []acp.SessionUpdate{chunk("m-"+text, "ok")}
+		turn(t, svc, c, text)
+	}
+	two := c.items[2].ID
+	conversation := describe(c.items)
+
+	for _, r := range []struct {
+		name, says string
+		block      func(c *chat) (undo func())
+	}{
+		{"busy", "busy", func(c *chat) func() { c.busy = true; return func() { c.busy = false } }},
+		{"the agent's own turn", "on its own", func(c *chat) func() { c.ownTurn = true; return func() { c.ownTurn = false } }},
+		{"a background subagent", "in the background", func(c *chat) func() {
+			c.items = append(c.items, model.Item{ID: "sa", Subagent: &model.Subagent{State: "running"}})
+			return func() { c.items = c.items[:len(c.items)-1] }
+		}},
+	} {
+		c.mu.Lock()
+		undo := r.block(c)
+		c.mu.Unlock()
+		_, err := svc.Rewind(t.Context(), c.id, two)
+		c.mu.Lock()
+		undo()
+		c.mu.Unlock()
+		if err == nil || !strings.Contains(err.Error(), r.says) {
+			t.Errorf("%s: %v, want %q", r.name, err, r.says)
+		}
+	}
+	if _, err := svc.Rewind(t.Context(), c.id, "nothing"); err == nil {
+		t.Error("rewound to no message")
+	}
+
+	unchanged := func(what string, err error, says string) {
+		t.Helper()
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if err == nil || !strings.Contains(err.Error(), says) {
+			t.Errorf("%s: %v, want %q", what, err, says)
+		}
+		var said []model.Item
+		for _, it := range c.items {
+			if it.Kind == model.Notice {
+				said = append(said, it)
+			}
+		}
+		if len(said) == 0 || !strings.Contains(said[len(said)-1].Text, "Couldn't rewind") {
+			t.Errorf("%s: no notice: %+v", what, said)
+		}
+		if c.sid != "s1" || c.record.SessionID != "s1" || len(c.record.Earlier) != 0 || !slices.Contains(c.record.Throwaway, "fork1") {
+			t.Errorf("%s: session %s, record %+v", what, c.sid, c.record)
+		}
+		if got := copied(t, store, c.id); !strings.HasPrefix(got, conversation) {
+			t.Errorf("%s: the copy was cut: %s", what, got)
+		}
+	}
+	rewind := func() <-chan error {
+		agent.mu.Lock()
+		agent.forkGate, agent.entered = make(chan struct{}), make(chan string, 1)
+		agent.mu.Unlock()
+		done := make(chan error, 1)
+		go func() { _, err := svc.Rewind(context.Background(), c.id, two); done <- err }()
+		<-agent.entered
+		return done
+	}
+
+	// The message goes while the fork is made (the agent cut it: a
+	// compaction, a replay).
+	done := rewind()
+	c.mu.Lock()
+	kept := slices.Clone(c.items)
+	c.items = slices.DeleteFunc(c.items, func(it model.Item) bool { return it.ID == two })
+	c.mu.Unlock()
+	close(agent.forkGate)
+	unchanged("the message gone", <-done, "the message is gone")
+	c.mu.Lock()
+	c.items = append(kept, c.items[len(kept)-1:]...) // back, with the notice
+	c.mu.Unlock()
+
+	// The agent quits mid-fork.
+	done = rewind()
+	agent.quit()
+	eventually(t, c, func() bool { return c.agent == nil })
+	close(agent.forkGate)
+	unchanged("the agent quit", <-done, "the agent quit")
 }
 
 func TestStopTakesBackAnUnansweredMessage(t *testing.T) {
