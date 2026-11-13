@@ -15,6 +15,7 @@ import 'package:nushi/tile_look.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'project_tile_fixture.dart';
 import 'sidebar_fixture.dart';
 
@@ -194,6 +195,63 @@ void main() {
     expect(sidebarProject.value, isNull);
     expect(_picked(tester), 'All projects');
     expect(_tiles(tester), isNot(contains('notes')));
+    d.dispose();
+  });
+
+  // Deep review 2026-11-13, 14: the sidebar isn't built while it's
+  // hidden, so a chat opened meanwhile wasn't followed.
+  testWidgets('a chat of another project opened while the sidebar is '
+      'hidden is followed once it shows', (tester) async {
+    sidebarProject.value = cappy;
+    viewport(tester, const Size(560, 700));
+    final fake = FakeDaemon(arrangeChats());
+    final d = await fake.connect(tester);
+    final shown = ValueNotifier(true);
+    addTearDown(shown.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 260,
+              child: ValueListenableBuilder(
+                valueListenable: shown,
+                builder: (context, show, _) => show
+                    ? ListenableBuilder(
+                        listenable: d,
+                        builder: (context, _) => Sidebar(daemon: d),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    d.select('c'); // cappy's
+    await tester.pumpAndSettle();
+    expect(sidebarProject.value, cappy);
+
+    // Hidden and shown again with no other chat opened: as it was, and a
+    // tile picked meanwhile stays picked.
+    shown.value = false;
+    await tester.pumpAndSettle();
+    sidebarProject.value = notes;
+    shown.value = true;
+    await tester.pumpAndSettle();
+    expect(sidebarProject.value, notes);
+
+    shown.value = false;
+    await tester.pumpAndSettle();
+    d.select('d'); // garden's
+    await tester.pumpAndSettle();
+    shown.value = true;
+    await tester.pumpAndSettle();
+    expect(sidebarProject.value, garden);
+    expect(_chats(tester), ['Plant the beds']);
     d.dispose();
   });
 

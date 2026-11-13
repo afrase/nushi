@@ -118,8 +118,12 @@ class _SidebarState extends State<Sidebar> {
   void initState() {
     super.initState();
     _pulls = PullStates.of(widget.daemon)..watch();
-    _opened = widget.daemon.selectedId;
-    _started = widget.daemon.starting;
+    // Shown again after it was hidden: a chat opened or started meanwhile
+    // is followed now, as it would have been.
+    final seen = _seen[widget.daemon];
+    _opened = seen == null ? widget.daemon.selectedId : seen.opened;
+    _started = seen == null ? widget.daemon.starting : seen.started;
+    if (seen != null) _follow();
     widget.daemon.addListener(_follow);
     sidebarShows.addListener(_tick);
     sidebarGroupBy.addListener(_tick);
@@ -131,6 +135,7 @@ class _SidebarState extends State<Sidebar> {
     sidebarShows.removeListener(_tick);
     sidebarGroupBy.removeListener(_tick);
     widget.daemon.removeListener(_follow);
+    _seen[widget.daemon] = (opened: _opened, started: _started);
     _ticks?.cancel();
     _minute.dispose();
     _hold.dispose();
@@ -159,6 +164,10 @@ class _SidebarState extends State<Sidebar> {
   /// them.
   String? _opened;
   String? _started;
+
+  /// What [_follow] last saw, by daemon, kept while the sidebar is hidden
+  /// (it isn't built then), so it follows what changed meanwhile.
+  static final _seen = Expando<({String? opened, String? started})>();
 
   /// Narrowed to a project, the sidebar goes to another's as a chat of
   /// that one opens or starts (from the palette, a notification, New
