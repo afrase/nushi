@@ -196,14 +196,12 @@ func run() error {
 	go follow(hub, sv.Remote.Follow)
 	// A handler's panic, which net/http recovers, is logged with its stack.
 	errorLog := slog.NewLogLogger(slog.Default().Handler(), slog.LevelError)
-	remoteSrv := &http.Server{Handler: api.ForDevices(sv), ConnContext: api.DeviceConn, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // served only over paired devices' Noise channels
+	socket, devices := api.Handlers(sv, toolSvc, token)
+	remoteSrv := &http.Server{Handler: devices, ConnContext: api.DeviceConn, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // served only over paired devices' Noise channels
 	remoteSrv.Protocols.SetUnencryptedHTTP2(true)
 	// Serve returns once remoteSrv.Close below closes channels.
 	go func() { _ = remoteSrv.Serve(channels) }()
-	mux := http.NewServeMux()
-	mux.Handle("/tools/", api.Tools(toolSvc)) // a chat's key, not the token (ADR 0043)
-	mux.Handle("/", api.WithToken(token, api.New(sv)))
-	srv := &http.Server{Handler: mux, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
+	srv := &http.Server{Handler: socket,Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
 	// On SIGINT or SIGTERM, once its app is deleted, or for a restart
