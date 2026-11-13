@@ -74,16 +74,19 @@ Future<void> endPhone(
 
 /// A phone on [platform] (paired, as [pairedRecord] has it, unless given)
 /// whose daemon answers through [fake], its app shown, started and pumped
-/// a few frames. The window's size and the accessibility features (Reduce
-/// Motion) stay the caller's to set.
+/// a few frames, its chats' drafts kept as the phone keeps them. The
+/// window's size and the accessibility features (Reduce Motion) stay the
+/// caller's to set.
 Future<Phone> startPhone(
   WidgetTester tester,
   Transport fake, {
   PhonePlatform? platform,
 }) async {
-  final phone = Phone(
+  late final Phone phone;
+  phone = Phone(
     platform ?? (PhonePlatform()..saved = pairedRecord()),
-    connectTo: (_) => Daemon(transport: fake, remote: true),
+    connectTo: (_) =>
+        Daemon(transport: fake, remote: true, drafts: phone.drafts),
   );
   await tester.pumpWidget(PhoneApp(phone));
   await phone.start();
