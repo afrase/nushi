@@ -201,7 +201,7 @@ func run() error {
 	remoteSrv.Protocols.SetUnencryptedHTTP2(true)
 	// Serve returns once remoteSrv.Close below closes channels.
 	go func() { _ = remoteSrv.Serve(channels) }()
-	srv := &http.Server{Handler: socket,Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
+	srv := &http.Server{Handler: socket, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
 	// On SIGINT or SIGTERM, once its app is deleted, or for a restart
