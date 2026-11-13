@@ -28,9 +28,10 @@ To use a picture of your own:
 
 1. Right-click the project's name and pick **Change tile…**.
 2. Click **Choose image…** and pick a PNG, JPEG, GIF or WebP file (up to 16 MB; an animated one up to 4K, 3840 × 2160).
-3. Click **Save**.
+3. To show only part of it, zoom in with the **Zoom** slider (or scroll, or pinch) and drag the picture in the square below it. The tile beside shows the result. **Reset framing** shows the middle again.
+4. Click **Save**.
 
-A GIF plays while the pointer is on the tile. To take the picture off, open **Change tile…** again and click **Remove image**, then **Save**. Nushi keeps its own copy of the picture, so the file you picked can be moved or deleted.
+A GIF plays while the pointer is on the tile, framed the same way. The picture itself isn't changed, so you can frame it again later. To take the picture off, open **Change tile…** again and click **Remove image**, then **Save**. Nushi keeps its own copy of the picture, so the file you picked can be moved or deleted.
 
 To add a project before it has a chat, click the Arrange button at the top of the sidebar, pick **Add project…** and pick its folder.
 

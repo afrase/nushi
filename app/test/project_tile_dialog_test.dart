@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +11,8 @@ import 'package:nushi/project_tile.dart';
 import 'package:nushi/project_tile_dialog.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tile_crop.dart';
+import 'package:nushi/tile_framer.dart';
 import 'package:nushi/tile_images.dart';
 import 'package:nushi/tile_look.dart';
 import 'package:nushi/widgets.dart';
@@ -44,6 +48,19 @@ Future<Daemon> _changeTile(
   await tester.pumpAndSettle();
   await decodeImages(tester);
   return d;
+}
+
+/// Waits on the real clock for the tile's picture and the framing's, then
+/// for the Zoom slider to finish coming on (it's off until the picture is
+/// there).
+Future<void> _framed(WidgetTester tester) async {
+  await untilReal(
+    tester,
+    () =>
+        find.byType(RawImage).evaluate().isNotEmpty &&
+        tester.state<TileFramerState>(find.byType(TileFramer)).decoded,
+  );
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 void main() {
@@ -265,27 +282,177 @@ void main() {
     picks.deleteSync(recursive: true);
   });
 
+  testWidgets('an image is framed by a drag, a scroll and the Zoom slider, '
+      'shown at once in the tile and kept beside the image on Save; Reset '
+      'framing, another image or none put it back', (tester) async {
+    final before = pickTileImage;
+    addTearDown(() => pickTileImage = before);
+    if (tileImagesDir.existsSync()) tileImagesDir.deleteSync(recursive: true);
+    final image = keepTileImage((bytes: await photoPng(tester), kind: 'png'));
+    projectTiles.value = {garden: TileLook(image: image)};
+    ProjectTile preview() =>
+        tester.widget(find.byKey(const Key('tile preview')));
+    TileCrop? crop() => preview().look.crop;
+    Button button(String label) =>
+        tester.widget(find.widgetWithText(Button, label));
+    final framing = find.byKey(const Key('tile framing'));
+
+    final d = await _changeTile(tester);
+    await _framed(tester);
+    // From before framing: the middle, nothing to reset.
+    expect(crop(), isNull);
+    expect(button('Reset framing').onPressed, isNull);
+    expect(tester.getSize(framing), const Size.square(TileFramer.size));
+
+    // The Zoom slider: halfway is the square root of the most.
+    tester.widget<Slider>(find.byType(Slider)).onChanged!(0.5);
+    await tester.pump();
+    expect(crop()!.zoom, closeTo(sqrt(TileCrop.maxZoom), 1e-9));
+    expect((crop()!.x, crop()!.y), (0.5, 0.5));
+    expect(button('Reset framing').onPressed, isNotNull);
+    expect(
+      tester.widget<Slider>(find.byType(Slider)).value,
+      closeTo(0.5, 1e-9),
+    );
+
+    // A drag to the right shows more of the picture's left.
+    final gesture = await tester.startGesture(tester.getCenter(framing));
+    await gesture.moveBy(const Offset(30, 0));
+    await gesture.moveBy(const Offset(30, 0));
+    await gesture.up();
+    await tester.pump();
+    final dragged = crop()!;
+    expect(dragged.x, lessThan(0.5));
+    expect(dragged.y, 0.5);
+    expect(dragged.zoom, closeTo(sqrt(TileCrop.maxZoom), 1e-9));
+
+    // A wheel's scroll up zooms in about the pointer; down, out.
+    final wheel = TestPointer(1, PointerDeviceKind.mouse);
+    final at = tester.getCenter(framing);
+    await tester.sendEventToBinding(wheel.hover(at));
+    await tester.sendEventToBinding(wheel.scroll(const Offset(0, -100)));
+    await tester.pump();
+    expect(crop()!.zoom, greaterThan(dragged.zoom));
+    await tester.sendEventToBinding(wheel.scroll(const Offset(0, 2000)));
+    await tester.pump();
+    expect(crop()!.zoom, 1);
+    // A trackpad's two-finger scroll zooms too.
+    final pad = TestPointer(2, PointerDeviceKind.trackpad);
+    await tester.sendEventToBinding(pad.panZoomStart(at));
+    await tester.sendEventToBinding(
+      pad.panZoomUpdate(at, pan: const Offset(0, -60)),
+    );
+    await tester.sendEventToBinding(pad.panZoomEnd());
+    await tester.pump();
+    expect(crop()!.zoom, greaterThan(1));
+    tester.widget<Slider>(find.byType(Slider)).onChanged!(1);
+    await tester.pump();
+    expect(crop()!.zoom, TileCrop.maxZoom);
+
+    // Reset framing: the middle again, and it's off.
+    await tester.tap(find.widgetWithText(Button, 'Reset framing'));
+    await tester.pump();
+    expect(crop(), isNull);
+    expect(button('Reset framing').onPressed, isNull);
+
+    // Saved: beside the image, and there when it's opened again.
+    tester.widget<Slider>(find.byType(Slider)).onChanged!(0.5);
+    await tester.pump();
+    final kept = crop()!;
+    await tester.tap(find.widgetWithText(Button, 'Save'));
+    await tester.pumpAndSettle();
+    expect(projectTiles.value[garden]!.crop, kept);
+    expect(readSaved()['projectTiles'], {
+      garden: {'image': image, 'crop': kept.toJson()},
+    });
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await _framed(tester);
+    expect(crop(), kept);
+
+    // Cancel keeps it as it was.
+    tester.widget<Slider>(find.byType(Slider)).onChanged!(1);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(Button, 'Cancel'));
+    await tester.pumpAndSettle();
+    expect(projectTiles.value[garden]!.crop, kept);
+
+    // Another image starts from its middle.
+    final picked = File('$dataDir/picked.png')
+      ..writeAsBytesSync(await photoPng(tester, width: 200, height: 300));
+    addTearDown(picked.deleteSync);
+    pickTileImage = () async => XFile(picked.path);
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Button, 'Choose image…'));
+    await untilReal(tester, () => preview().picture != null);
+    expect(crop(), isNull);
+    await _framed(tester);
+    // A tall one moves up and down at zoom 1, not across.
+    final tall = await tester.startGesture(tester.getCenter(framing));
+    await tall.moveBy(const Offset(30, 30));
+    await tall.moveBy(const Offset(30, 30));
+    await tall.up();
+    await tester.pump();
+    expect(crop()!.zoom, 1);
+    expect(crop()!.x, 0.5);
+    expect(crop()!.y, lessThan(0.5));
+    await tester.tap(find.widgetWithText(Button, 'Save'));
+    await tester.pumpAndSettle();
+    final second = projectTiles.value[garden]!;
+    expect(second.image, isNot(image));
+    expect(second.crop, isNotNull);
+
+    // No image, no framing.
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TileFramer), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'G');
+    await tester.tap(find.widgetWithText(Button, 'Remove image'));
+    await tester.pump();
+    expect(find.byType(TileFramer), findsNothing);
+    expect(crop(), isNull);
+    await tester.tap(find.widgetWithText(Button, 'Save'));
+    await tester.pumpAndSettle();
+    expect(readSaved()['projectTiles'], {
+      garden: {'mark': 'G'},
+    });
+    d.dispose();
+    setProjectTile(garden, const TileLook());
+  });
+
   for (final (name, tokens) in [
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
-    testWidgets('golden: Change tile… with an image, $name', (tester) async {
-      viewport(tester, const Size(640, 400));
-      if (tileImagesDir.existsSync()) tileImagesDir.deleteSync(recursive: true);
-      final image = keepTileImage((bytes: await photoPng(tester), kind: 'png'));
-      projectTiles.value = {garden: TileLook(color: 'teal', image: image)};
-      final d = await _changeTile(tester, tokens: tokens);
-      await untilReal(
+    for (final (shot, crop) in [
+      ('image', null),
+      ('framed', const TileCrop(zoom: 3, x: 0.45, y: 0.4)),
+    ]) {
+      testWidgets('golden: Change tile… with an image, $shot, $name', (
         tester,
-        () => find.byType(RawImage).evaluate().isNotEmpty,
-      );
-      await expectLater(
-        find.byType(ChangeTileDialog),
-        matchesGoldenFile('goldens/project_tile_dialog_image_$name.png'),
-      );
-      d.dispose();
-      setProjectTile(garden, const TileLook());
-    });
+      ) async {
+        viewport(tester, const Size(640, 480));
+        if (tileImagesDir.existsSync()) {
+          tileImagesDir.deleteSync(recursive: true);
+        }
+        final image = keepTileImage((
+          bytes: await photoPng(tester),
+          kind: 'png',
+        ));
+        projectTiles.value = {
+          garden: TileLook(color: 'teal', image: image, crop: crop),
+        };
+        final d = await _changeTile(tester, tokens: tokens);
+        await _framed(tester);
+        await expectLater(
+          find.byType(ChangeTileDialog),
+          matchesGoldenFile('goldens/project_tile_dialog_${shot}_$name.png'),
+        );
+        d.dispose();
+        setProjectTile(garden, const TileLook());
+      });
+    }
 
     testWidgets('golden: Change tile…, $name', (tester) async {
       viewport(tester, const Size(640, 360));
