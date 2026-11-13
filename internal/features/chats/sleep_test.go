@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,4 +168,84 @@ func TestSleepAgent(t *testing.T) {
 	if c.agent != nil || !svc.Status(c.record).Asleep || svc.Awake("claude") != 0 {
 		t.Errorf("after SleepAgent: %+v", svc.Status(c.record))
 	}
+}
+
+// A chat woken while the agent it fell asleep from is still stopping
+// waits for that process to end before another opens its session: two
+// processes writing one session corrupt the agent's own history (ADR
+// 0047). The message waits, queued. A process that outlives twice
+// stopGrace is killed; one that outlives the kill keeps the chat from
+// reopening, saying so, until it has ended.
+func TestWakingWaitsForTheOldAgent(t *testing.T) {
+	asleep := func(t *testing.T, grace time.Duration, unkillable bool) (*Service, *fakeAgent, *chat, chan struct{}) {
+		t.Helper()
+		was := stopGrace
+		t.Cleanup(func() { stopGrace = was })
+		stopGrace = grace
+		svc, agent, c := newChat(t, claudeSession, &memModes{})
+		agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+		turn(t, svc, c, "one")
+		gate := make(chan struct{})
+		agent.mu.Lock()
+		agent.updates = []acp.SessionUpdate{chunk("m2", "ok")}
+		agent.stopGate, agent.unkillable = gate, unkillable
+		agent.mu.Unlock()
+		t.Cleanup(func() {
+			select {
+			case <-gate:
+			default:
+				close(gate)
+			}
+		})
+		svc.doze(c, 0)
+		if !svc.Status(c.record).Asleep {
+			t.Fatal("not asleep")
+		}
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle)) // queued: it doesn't wait or fail
+		return svc, agent, c, gate
+	}
+	check := func(t *testing.T, agent *fakeAgent, launches, kills int) {
+		t.Helper()
+		agent.mu.Lock()
+		defer agent.mu.Unlock()
+		if agent.overlaps != 0 || agent.launches != launches || agent.closed != kills {
+			t.Errorf("%d launches over a running agent; %d launches, want %d; %d kills, want %d", agent.overlaps, agent.launches, launches, agent.closed, kills)
+		}
+	}
+	answered := []string{"user:one", "agent:ok", "user:two", "agent:ok"}
+
+	t.Run("in time", func(t *testing.T) {
+		_, agent, c, gate := asleep(t, time.Second, false)
+		eventually(t, c, func() bool { return c.busy })
+		time.Sleep(50 * time.Millisecond) // a negative window: the reopen waits
+		check(t, agent, 1, 0)
+		close(gate)
+		eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 && c.started.IsZero() && c.agent != nil })
+		check(t, agent, 2, 0)
+		if got := texts(c); !slices.Equal(got, answered) {
+			t.Errorf("items %q", got)
+		}
+	})
+
+	t.Run("killed", func(t *testing.T) {
+		_, agent, c, _ := asleep(t, 10*time.Millisecond, false)
+		eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 && c.started.IsZero() && c.agent != nil })
+		check(t, agent, 2, 1)
+		if got := texts(c); !slices.Equal(got, answered) {
+			t.Errorf("items %q", got)
+		}
+	})
+
+	t.Run("outlives the kill", func(t *testing.T) {
+		svc, agent, c, gate := asleep(t, 10*time.Millisecond, true)
+		eventually(t, c, func() bool { return c.reopenFailed && !c.busy })
+		check(t, agent, 1, 1)
+		if got := texts(c); len(got) != 3 || !strings.Contains(got[2], "still running") {
+			t.Errorf("items %q", got)
+		}
+		close(gate) // it ends at last: Try again reopens it
+		testcheck.NoErr(t, svc.Reopen(c.id))
+		eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+		check(t, agent, 2, 1)
+	})
 }

@@ -192,7 +192,7 @@ type chat struct {
 	canLoad    bool             // the agent can reopen the session, so it can sleep
 	asleep     bool             // its agent was stopped to sleep: opening the chat doesn't reopen it
 	reapplying bool             // its session just opened: its picks aren't back on it yet (reapply)
-	retired    <-chan struct{}  // closed once the agent it fell asleep from has ended
+	retiring   Agent            // the agent it fell asleep from, until a reopen has seen it end
 	woke       chan struct{}    // closed when the reopen under way ends
 	active     time.Time        // its last event
 	unsaved    map[string]bool  // items changed since the copy of the transcript last had them (copies.go)

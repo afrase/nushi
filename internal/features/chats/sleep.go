@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 	"time"
@@ -98,7 +99,7 @@ func (s *Service) SetSleepAfter(d time.Duration) error {
 // doze puts a chat to sleep if nothing happened in it for after and
 // nothing would be lost (see idleLocked). Its agent is let go under the
 // lock, so a message that comes while it stops wakes the chat on a new one
-// (load waits for the old one to end first).
+// (load waits for the old one to end first: retire).
 func (s *Service) doze(c *chat, after time.Duration) {
 	c.mu.Lock()
 	if !c.idleLocked(after) {
@@ -106,7 +107,7 @@ func (s *Service) doze(c *chat, after time.Duration) {
 		return
 	}
 	agent := c.agent
-	c.asleep, c.retired = true, agent.Done()
+	c.asleep, c.retiring = true, agent
 	c.agent, c.kept = nil, len(c.items) > 0
 	c.statusChangedLocked()
 	c.logLocked().Info("chat asleep", "why", "idle", "after", after)
@@ -117,6 +118,48 @@ func (s *Service) doze(c *chat, after time.Duration) {
 	c.mu.Lock()
 	c.letGoLocked() // once its agent's last updates are in
 	c.mu.Unlock()
+}
+
+// retire waits for old, the agent the chat fell asleep from (nil: none),
+// to have ended before another agent opens its session: two processes
+// writing one session corrupt the agent's own history, the source of truth
+// (ADR 0047). doze's Stop gives it stopGrace and then kills it; one still
+// running at twice that is killed again here (Close, its process group),
+// and one that outlives that too keeps the chat from reopening, saying so,
+// and is waited for again by the next reopen. A message sent meanwhile
+// waits in the queue.
+func (c *chat) retire(ctx context.Context, old Agent) error {
+	if old == nil {
+		return nil
+	}
+	ended := func(wait time.Duration) (bool, error) {
+		select {
+		case <-old.Done():
+			return true, nil
+		case <-ctx.Done():
+			return false, ctx.Err()
+		case <-time.After(wait):
+			return false, nil
+		}
+	}
+	done, err := ended(2 * stopGrace)
+	if !done && err == nil {
+		c.log().Warn("the agent the chat slept from outlived its stop: killing it", "pid", old.Pid())
+		_ = old.Close()
+		done, err = ended(stopGrace)
+	}
+	switch {
+	case err != nil:
+		return err
+	case !done:
+		return fmt.Errorf("the agent this chat slept from is still running (process %d), so its session can't reopen until it ends", old.Pid())
+	}
+	c.mu.Lock()
+	if c.retiring == old {
+		c.retiring = nil
+	}
+	c.mu.Unlock()
+	return nil
 }
 
 // idleLocked says the chat has been idle for after and that stopping its

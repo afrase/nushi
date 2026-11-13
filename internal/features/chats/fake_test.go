@@ -130,25 +130,32 @@ type fakeAgent struct {
 	deleteGate   chan struct{} // when set, deleting a session waits until it is closed
 	loadGate     chan struct{} // when set, session/load waits until it is closed
 	forkGate     chan struct{} // when set, session/fork waits until it is closed
-	forkHook     func()        // when set, runs as session/fork reaches it
-	loadErr      error
-	forkErr      error              // session/fork fails
-	turnErr      error              // a prompt's turn fails
-	lastWords    *acp.SessionUpdate // sent as it stops
-	launches     int
-	closed       int
-	refuseSteer  bool  // steering answers "no turn runs"
-	steerErr     error // steering fails
-	steerable    bool
-	prompts      []string // every prompt's text, and every message steered in
-	steered      []string
-	wire         []string // prompts and cancels, in the order they reach the agent
-	forkMeta     map[string]any
-	history      []acp.SessionUpdate       // what session/load replays
-	early        []acp.SessionUpdate       // what a new session sends ahead of its answer
-	replay       []acp.SessionNotification // and then, on their sessions (s1 is the one loaded)
-	subagents    []acp.SessionID           // its subagents' sessions: a cancel stops only the one
-	cur          *proc                     // the last process launched
+	// stopGate, when set, keeps a stopped process running until it is
+	// closed (it takes its time ending its sessions); a kill (Close) ends
+	// it at once, unless unkillable.
+	stopGate    chan struct{}
+	unkillable  bool
+	stopping    chan struct{} // when set, gets a value as a process is told to stop
+	overlaps    int           // launches while the last process still ran
+	forkHook    func()        // when set, runs as session/fork reaches it
+	loadErr     error
+	forkErr     error              // session/fork fails
+	turnErr     error              // a prompt's turn fails
+	lastWords   *acp.SessionUpdate // sent as it stops
+	launches    int
+	closed      int
+	refuseSteer bool  // steering answers "no turn runs"
+	steerErr    error // steering fails
+	steerable   bool
+	prompts     []string // every prompt's text, and every message steered in
+	steered     []string
+	wire        []string // prompts and cancels, in the order they reach the agent
+	forkMeta    map[string]any
+	history     []acp.SessionUpdate       // what session/load replays
+	early       []acp.SessionUpdate       // what a new session sends ahead of its answer
+	replay      []acp.SessionNotification // and then, on their sessions (s1 is the one loaded)
+	subagents   []acp.SessionID           // its subagents' sessions: a cancel stops only the one
+	cur         *proc                     // the last process launched
 }
 
 // proc is one of the fake agent's processes: each launch starts one, and
@@ -164,8 +171,20 @@ func (f *fakeAgent) launch(h acp.Client, _ *slog.Logger) (Agent, error) {
 	defer f.mu.Unlock()
 	f.h = h
 	f.launches++
+	if f.cur != nil && !f.cur.ended() {
+		f.overlaps++
+	}
 	f.cur = &proc{f, make(chan struct{})}
 	return f.cur, nil
+}
+
+func (p *proc) ended() bool {
+	select {
+	case <-p.done:
+		return true
+	default:
+		return false
+	}
 }
 
 // quit ends the agent's last process.
@@ -190,17 +209,38 @@ func (p *proc) Done() <-chan struct{} { return p.done }
 func (p *proc) Stop(grace time.Duration) error {
 	_ = p.fakeAgent.Stop(grace) // the fake's Stop doesn't fail
 	p.mu.Lock()
-	last, h := p.lastWords, p.h
+	last, h, gate, stopping := p.lastWords, p.h, p.stopGate, p.stopping
 	p.mu.Unlock()
+	if stopping != nil {
+		stopping <- struct{}{}
+	}
 	go func() {
 		if last != nil {
 			time.Sleep(5 * time.Millisecond)
 			_ = h.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: *last})
 		}
+		if gate != nil {
+			select {
+			case <-gate:
+			case <-p.done: // killed meanwhile
+			}
+		}
 		p.mu.Lock()
 		defer p.mu.Unlock()
 		p.end()
 	}()
+	return nil
+}
+
+// Close kills the process: one held at stopGate ends at once, unless it's
+// unkillable.
+func (p *proc) Close() error {
+	_ = p.fakeAgent.Close()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.stopGate != nil && !p.unkillable {
+		p.end()
+	}
 	return nil
 }
 
