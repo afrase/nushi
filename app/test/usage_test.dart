@@ -7,6 +7,13 @@ import 'package:nushi/usage.dart';
 import 'harness.dart';
 
 void main() {
+  test('a cost shows as the agent reports it, and 0 shows nothing', () {
+    expect(cost(Usage(cost: 0.19, currency: 'USD')), r'$0.19');
+    expect(cost(Usage(cost: 1.5, currency: 'EUR')), '1.50 EUR');
+    expect(cost(Usage(cost: 0, currency: 'USD')), '');
+    expect(cost(Usage(cost: 0.19)), '');
+  });
+
   test('what /context lists says how full it is, without the free space, '
       'the buffer or the deferred', () {
     ContextCategory c(String name, int tokens, {String kind = ''}) =>

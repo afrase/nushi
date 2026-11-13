@@ -15,8 +15,10 @@ String _short(double v) =>
     v >= 100 || v == v.roundToDouble() ? '${v.round()}' : v.toStringAsFixed(1);
 
 /// The session's cost so far, as the agent reports it ("$0.19"), or ''.
+/// Nothing for a cost of 0: a login that isn't paid by the token (a
+/// subscription) reports 0, and some agents (oh-my-pi) send nothing then.
 String cost(Usage u) {
-  if (u.currency.isEmpty) return '';
+  if (u.currency.isEmpty || u.cost == 0) return '';
   final amount = u.cost.toStringAsFixed(2);
   return u.currency == 'USD' ? '\$$amount' : '$amount ${u.currency}';
 }
