@@ -25,12 +25,15 @@ import (
 
 // A request over MaxRequest is refused before it is decoded, zipped or not.
 func TestRequestTooLarge(t *testing.T) {
-	text := strings.Repeat("x", MaxRequest+1<<20)
+	limit := MaxRequest
+	t.Cleanup(func() { MaxRequest = limit })
+	MaxRequest = 64 << 10 // the check is the same; the default's 33 MB cost seconds under -race
+	text := strings.Repeat("x", MaxRequest+1<<10)
 	for _, opts := range [][]connect.ClientOption{nil, {connect.WithSendGzip()}} {
 		c := client(t, New(Services{}), opts...)
 		_, err := c.SendPrompt(context.Background(), connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: "c", Text: text}))
 		if connect.CodeOf(err) != connect.CodeResourceExhausted {
-			t.Errorf("a %d MB prompt (%d options): %v", len(text)>>20, len(opts), err)
+			t.Errorf("a %d kB prompt (%d options): %v", len(text)>>10, len(opts), err)
 		}
 	}
 }
