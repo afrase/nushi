@@ -86,10 +86,12 @@ Future<void> _attach(WidgetTester tester, Daemon d) async {
   ];
   draft.images.value = [ImageData(mimeType: 'image/png', data: photo)];
   await tester.pump();
-  // The thumbnail decodes on the real clock.
-  await tester.runAsync(
-    () => Future<void>.delayed(const Duration(milliseconds: 300)),
-  );
+  // The thumbnail decodes on the real clock: for the picture only.
+  if (rendersDir != null) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 300)),
+    );
+  }
 }
 
 void main() {
