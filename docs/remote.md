@@ -23,7 +23,7 @@ The phone is Nushi's web app, added to the Home Screen ([ADR 0054](adr/0054-the-
 - a file the agent wrote, previewed full screen (its tool row's Preview, or Artifacts in the chat's bar). An HTML page or a Mermaid diagram shows in a sandboxed frame, a page without the files beside it; a PDF only on the Mac;
 - New chat, and Settings.
 
-Your relay serves it (`-web`, below), so it comes from a server you run.
+Your relay serves it (`-origin`, below), so it comes from a server you run.
 
 ### Pairing an iPhone
 
@@ -103,12 +103,12 @@ The Mac's relay is then `wss://nushi.example.com`.
 
 ### On a VPS
 
-On any small Linux box: build with `GOOS=linux GOARCH=amd64 make relay`, copy the binary, point a DNS name at the box, and run it as a service with port 443 open:
+On any small Linux box: install a release's relay as in [Updating a relay from a release](#updating-a-relay-from-a-release) (or build one with the app inside, `GOOS=linux GOARCH=amd64 make relay-web`, and copy it there), point a DNS name at the box, and run it as a service with port 443 open:
 
 ```ini
 # /etc/systemd/system/nushi-relay.service
 [Service]
-ExecStart=/usr/local/bin/nushi-relay -host relay.example.com -cert-cache /var/lib/nushi-relay
+ExecStart=/usr/local/bin/nushi-relay -host relay.example.com -origin https://relay.example.com -cert-cache /var/lib/nushi-relay
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 DynamicUser=yes
 StateDirectory=nushi-relay
@@ -121,17 +121,13 @@ The certificate cache is the only thing it writes. Without `-cert-cache`, each s
 
 ### On Fly.io
 
-Run `fly launch --no-deploy`, then `fly deploy`, with Fly terminating TLS:
+The image takes a release's relay, which has the phone's app inside; one built from source with `go build` has none, and refuses to start with `-origin`. In an empty folder, download `nushi-relay-X.Y.Z-linux-amd64.tar.gz` and its `.sha256` from [Releases](https://github.com/afrase/nushi/releases), check and unpack it (`sha256sum -c nushi-relay-X.Y.Z-linux-amd64.tar.gz.sha256 && tar -xzf nushi-relay-X.Y.Z-linux-amd64.tar.gz`), add these two files, then run `fly launch --no-deploy` and `fly deploy`, with Fly terminating TLS:
 
 ```dockerfile
-FROM golang:1.27 AS build
-WORKDIR /src
-COPY . .
-RUN CGO_ENABLED=0 go build -o /nushi-relay ./cmd/nushi-relay
 FROM scratch
-COPY --from=build /nushi-relay /nushi-relay
-# 172.16.0.0/12: where Fly's proxy has been seen connecting from (below)
-CMD ["/nushi-relay", "-addr", ":8080", "-ip-header", "Fly-Client-IP", "-trusted-proxy", "172.16.0.0/12"]
+COPY nushi-relay /nushi-relay
+# -origin: the app's own address. 172.16.0.0/12: where Fly's proxy has been seen connecting from (below).
+CMD ["/nushi-relay", "-addr", ":8080", "-origin", "https://my-nushi-relay.fly.dev", "-ip-header", "Fly-Client-IP", "-trusted-proxy", "172.16.0.0/12", "-plain-per-ip", "32"]
 ```
 
 ```toml
@@ -145,7 +141,8 @@ app = "my-nushi-relay"
     handlers = ["tls", "http"]
 ```
 
-- Fly's edge then sees what the relay sees (ids, timing, sizes, addresses), and may log requests.
+- Fly's edge then sees what the relay sees (ids, timing, sizes, addresses), and may log requests; terminating TLS, it can also serve the app's code, as the relay's host can (ADR 0054).
+- `-plain-per-ip 32`: the app loads a few dozen files at once, as behind Cloudflare. To update, unpack a newer release's relay there and `fly deploy` again.
 - Fly's proxy doesn't reach the relay over loopback, so the relay believes `Fly-Client-IP` only from the `-trusted-proxy` range. Fly doesn't document the proxy's address; its community reports 172.16.x.x, hence 172.16.0.0/12 above. Check it on your machine before relying on it (`ss -tn` in a debug image of the app while a phone connects). A range that misses the proxy counts every client under the proxy's one address (one per-address cap and rate for all, and one `-listen-per-ip` cap of listeners for every daemon behind it); one too wide lets anything in it that reaches port 8080 name its own address (your organization's other machines come over its private IPv6 network, outside this range).
 - For TLS of the relay's own, give the port no handlers, run `-host` with `-cert-cache` on a volume, and copy `/etc/ssl/certs/ca-certificates.crt` into the image (autocert talks to Let's Encrypt over HTTPS).
 
