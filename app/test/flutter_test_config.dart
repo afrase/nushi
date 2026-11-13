@@ -22,13 +22,13 @@ import 'package:nushi/tile_mark.dart';
 import 'config_home_linux.dart';
 import 'fake_app_install.dart';
 import 'fake_desktop.dart';
+import 'golden_tolerance.dart';
 import 'harness.dart';
 
 /// Goldens are drawn on macOS only (on Linux about a third differ by 1–4%):
 /// elsewhere they aren't compared or written. On CI (GitHub's macOS image
-/// draws text a few pixels differently from a Mac), a golden may differ in
-/// up to 1% of its pixels (a card dense with text, as a review's findings,
-/// reaches 0.56% from anti-aliasing alone); here it must match. Every
+/// draws text a few pixels differently from a Mac), a golden may differ
+/// by what `golden_tolerance.dart` allows; here it must match. Every
 /// shine stands still, its band before the text, and so does every loop on
 /// the shared clock that reads `loopPhase` (a pull request's running ring,
 /// a streaming reply's caret), so goldens are one frame and pumpAndSettle
@@ -101,6 +101,9 @@ class _NotHere extends GoldenFileComparator {
       throw FlutterError('Goldens are drawn on macOS only: $golden');
 }
 
+/// CI's comparator: a golden within `goldenWithin` passes. Each that
+/// isn't exact prints its numbers, passed or not, so how near a golden is
+/// to failing shows in CI's log before it fails.
 class _Tolerant extends LocalFileComparator {
   new(super.testFile);
 
@@ -110,7 +113,22 @@ class _Tolerant extends LocalFileComparator {
       imageBytes,
       await getGoldenBytes(golden),
     );
-    if (result.passed || result.diffPercent <= 0.01) {
+    if (result.passed) {
+      result.dispose();
+      return true;
+    }
+    final total = pngPixels(imageBytes);
+    final diff = (result.diffPercent * total).round();
+    final within = total > 0 && goldenWithin(diff, total);
+    // Into CI's log, where the margins are read.
+    // ignore: avoid_print
+    print(
+      'golden ${golden.pathSegments.last}: $diff px of $total '
+      '(${(result.diffPercent * 100).toStringAsFixed(2)}%), '
+      '${within ? 'within' : 'past'} what CI allows '
+      '($goldenFewPixels px, or 1% up to $goldenMostPixels px)',
+    );
+    if (within) {
       result.dispose();
       return true;
     }
