@@ -25,7 +25,11 @@ func TestLookupsDontWaitForEachOther(t *testing.T) {
 	t.Setenv("https_proxy", "")
 	t.Setenv("HTTP_PROXY", "")
 	t.Setenv("http_proxy", "")
-	release := make(chan struct{})
+	// An earlier run's answers (-count) would be taken without a lookup.
+	cache.Lock()
+	cache.m = map[string]*cached{}
+	cache.Unlock()
+	release, entered := make(chan struct{}), make(chan struct{}, 2)
 	calls := 0
 	var mu sync.Mutex
 	old := lookup
@@ -34,17 +38,18 @@ func TestLookupsDontWaitForEachOther(t *testing.T) {
 		calls++
 		mu.Unlock()
 		if u.Host == "slow.example" {
+			entered <- struct{}{}
 			<-release
 		}
 		return []*url.URL{nil}, time.Minute
 	}
-	defer func() { lookup = old }()
+	t.Cleanup(func() { lookup = old })
 	slow, _ := url.Parse("wss://slow.example/v1/listen/a")
 	fast, _ := url.Parse("wss://fast.example/v1/listen/b")
 	done := make(chan struct{}, 2)
 	go func() { _, _ = For(slow); done <- struct{}{} }() // what matters is that fast doesn't wait for it
 	go func() { _, _ = For(slow); done <- struct{}{} }()
-	time.Sleep(50 * time.Millisecond)
+	<-entered // the slow lookup holds its URL
 	if _, err := For(fast); err != nil {
 		t.Fatal(err)
 	}
