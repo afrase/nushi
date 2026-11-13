@@ -14,6 +14,7 @@ import 'package:nushi/settings_rows.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/update_toast.dart';
 
+import 'fake_app_install.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 import 'update_fixtures.dart';
@@ -166,6 +167,27 @@ void main() {
     found = newerUpdate('0.1.18');
     await tester.pump(const Duration(seconds: 2));
     expect(find.text('Nushi 0.1.18 is available.'), findsOneWidget);
+    d.dispose();
+  }, variant: macOSOnly);
+
+  testWidgets('an app already at or past the release found (just upgraded '
+      'by brew, its daemon not restarted yet) shows no toast', (tester) async {
+    final d = await openWithUpdate(
+      tester,
+      updateDaemon(() => newerUpdate('0.1.17')),
+    );
+    expect(updateToast, findsOneWidget); // this app is older (unset)
+    for (final mine in ['0.1.17', '0.1.17+52', '0.1.18-beta.1', '0.2.0']) {
+      fakeInstall.version = mine;
+      d.listChanged();
+      await tester.pumpAndSettle();
+      expect(updateToast, findsNothing, reason: mine);
+    }
+    // A beta before the release still hears of it.
+    fakeInstall.version = '0.1.17-beta.3';
+    d.listChanged();
+    await tester.pumpAndSettle();
+    expect(updateToast, findsOneWidget);
     d.dispose();
   }, variant: macOSOnly);
 
