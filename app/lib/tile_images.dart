@@ -1,0 +1,160 @@
+import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
+import 'package:file_selector/file_selector.dart';
+
+import 'package:nushi/daemon.dart';
+import 'package:nushi/file_mode.dart';
+import 'package:nushi/tile_look.dart';
+
+// A project's tile's own image (ADR 0112): a file the user picked, checked
+// and copied into Nushi's data folder. A tile names its copy, never a
+// path into the user's folders, so nothing of theirs is read again once
+// it's picked, and nothing but Nushi's copy is ever deleted.
+
+/// The largest file taken as a tile's image: a large photo or a long GIF
+/// fits; it's only ever decoded at a tile's size.
+const int maxTileImageBytes = 16 << 20;
+
+/// Picks the image Choose image… takes. A test puts its own in its place:
+/// the system's panel can't be shown in one.
+Future<XFile?> Function() pickTileImage = () => openFile(
+  acceptedTypeGroups: const [
+    XTypeGroup(
+      label: 'Images',
+      extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'],
+      uniformTypeIdentifiers: ['public.image'],
+    ),
+  ],
+  confirmButtonText: 'Choose',
+);
+
+/// The kind of image [bytes] start as, by its stored name's ending: PNG,
+/// JPEG, GIF or WebP, from the bytes and never a file's name; null for
+/// anything else.
+String? tileImageKind(List<int> bytes) {
+  bool starts(List<int> magic, [int at = 0]) {
+    if (bytes.length < at + magic.length) return false;
+    for (final (i, b) in magic.indexed) {
+      if (bytes[at + i] != b) return false;
+    }
+    return true;
+  }
+
+  if (starts(const [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])) {
+    return 'png';
+  }
+  if (starts(const [0xFF, 0xD8, 0xFF])) return 'jpg';
+  if (starts('GIF87a'.codeUnits) || starts('GIF89a'.codeUnits)) return 'gif';
+  if (starts('RIFF'.codeUnits) && starts('WEBP'.codeUnits, 8)) return 'webp';
+  return null;
+}
+
+/// An image picked for a tile and found good: its bytes and their kind.
+typedef PickedImage = ({Uint8List bytes, String kind});
+
+/// Why a file picked can't be a tile's image, in the dialog's words.
+class TileImageRefused implements Exception {
+  const new(this.why);
+
+  final String why;
+
+  @override
+  String toString() => why;
+}
+
+/// Reads the file at [path] as a tile's image, or says why it can't be
+/// one ([TileImageRefused]): only a regular file, [maxTileImageBytes] at
+/// most (asked before it's read), one of the four kinds by its first
+/// bytes, and one the engine decodes (its first frame, at a tile's size).
+Future<PickedImage> readTileImage(String path) async {
+  final file = File(path);
+  final FileStat stat;
+  try {
+    stat = file.statSync();
+  } on FileSystemException {
+    throw const TileImageRefused('That file can’t be read.');
+  }
+  if (stat.type != FileSystemEntityType.file) {
+    throw const TileImageRefused('That file can’t be read.');
+  }
+  if (stat.size > maxTileImageBytes) {
+    throw const TileImageRefused('That image is larger than 16 MB.');
+  }
+  final Uint8List bytes;
+  try {
+    bytes = await file.readAsBytes();
+  } on FileSystemException {
+    throw const TileImageRefused('That file can’t be read.');
+  }
+  // It may have grown since it was asked.
+  if (bytes.length > maxTileImageBytes) {
+    throw const TileImageRefused('That image is larger than 16 MB.');
+  }
+  final kind = tileImageKind(bytes);
+  if (kind == null) {
+    throw const TileImageRefused('Not a PNG, JPEG, GIF or WebP image.');
+  }
+  try {
+    final codec = await tileImageCodec(bytes, 64);
+    final frame = await codec.getNextFrame();
+    frame.image.dispose();
+    codec.dispose();
+  } on Object {
+    throw const TileImageRefused('That image can’t be shown.');
+  }
+  return (bytes: bytes, kind: kind);
+}
+
+/// A codec for [bytes] that decodes at a tile's size, never the image's
+/// own: scaled so its shorter side is [side] pixels (the tile's, in the
+/// screen's pixels), the longer one cropped away as it's drawn. A smaller
+/// image is left as it is.
+Future<ui.Codec> tileImageCodec(Uint8List bytes, int side) async {
+  final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+  return await ui.instantiateImageCodecWithSize(
+    buffer,
+    getTargetSize: (width, height) {
+      final shorter = min(width, height);
+      if (shorter <= side) return const ui.TargetImageSize();
+      return ui.TargetImageSize(
+        width: max(1, (width * side / shorter).round()),
+        height: max(1, (height * side / shorter).round()),
+      );
+    },
+  );
+}
+
+/// Where the tiles' images are kept: `tiles` in Nushi's data folder.
+Directory get tileImagesDir => Directory('$dataDir/tiles');
+
+/// The stored image called [name], if it's a name Nushi gave one.
+File? tileImageFile(String name) =>
+    storedTileImage.hasMatch(name) ? File('${tileImagesDir.path}/$name') : null;
+
+/// Keeps a copy of [image] in [tileImagesDir] and gives its name: random,
+/// with its kind's ending; the folder and the file only the user's.
+String keepTileImage(PickedImage image) {
+  final random = Random.secure();
+  final id = [
+    for (var i = 0; i < 16; i++)
+      random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ].join();
+  final name = '$id.${image.kind}';
+  privateDir(tileImagesDir);
+  writeWhole(File('${tileImagesDir.path}/$name'), image.bytes);
+  return name;
+}
+
+/// Deletes the stored image called [name], if there is one: replaced,
+/// removed, or its project gone.
+void dropTileImage(String name) {
+  try {
+    final file = tileImageFile(name);
+    if (file != null && file.existsSync()) file.deleteSync();
+  } on FileSystemException {
+    // Left behind; nothing names it any more.
+  }
+}

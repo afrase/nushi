@@ -172,6 +172,8 @@ void expectTextInside(WidgetTester tester, double width) {
     final box = e.renderObject! as RenderBox;
     if (!box.hasSize) continue;
     final right = box.localToGlobal(Offset(box.size.width, 0)).dx;
+    // An inline widget past its line's ellipsis is cut, and has no place.
+    if (right.isNaN) continue;
     expect(right, lessThanOrEqualTo(width + 0.5), reason: '${e.widget}');
   }
 }

@@ -27,14 +27,18 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
-    // The installed monospaced font families, for the terminal's font setting.
-    // Worked out once, off the main thread: making an NSFont of every family
-    // to ask it took about a second on a Mac with many fonts, and the window
-    // froze for it each time Settings › Terminal opened.
+    // The installed font families, for the font settings: every one (the
+    // app's font), and the monospaced ones (the terminal's and code's).
+    // Those are worked out once, off the main thread: making an NSFont of
+    // every family to ask it took about a second on a Mac with many fonts,
+    // and the window froze for it each time Settings › Terminal opened.
     FlutterMethodChannel(name: "nushi/fonts", binaryMessenger: flutterViewController.engine.binaryMessenger)
       .setMethodCallHandler { call, result in
-        guard call.method == "monospaced" else { return result(FlutterMethodNotImplemented) }
-        Self.monospaced { families in result(families) }
+        switch call.method {
+        case "monospaced": Self.monospaced { families in result(families) }
+        case "families": result(Self.families())
+        default: result(FlutterMethodNotImplemented)
+        }
       }
 
     // What a title bar did (lib/window_drag.dart).
@@ -275,6 +279,12 @@ class MainFlutterWindow: NSWindow {
     if UserDefaults.standard.bool(forKey: key) {
       DispatchQueue.main.async { [weak self] in self?.toggleFullScreen(nil) }
     }
+  }
+
+  /// The installed families' names, as the font panel has them, without
+  /// the system's private ones (a dot first), which no one picks by name.
+  private static func families() -> [String] {
+    NSFontManager.shared.availableFontFamilies.filter { !$0.hasPrefix(".") }
   }
 
   /// The installed monospaced families, once found.

@@ -63,13 +63,24 @@ Widget framed({
   child: child,
 );
 
+/// [TextStyle]s whose fallback families are added to, never replaced: a
+/// picked font's bundled fallback (ADR 0114) stays ahead of what a widget
+/// adds for its own glyphs (emoji, a key's symbol).
+extension FontsAfter on TextStyle {
+  /// This style with [families] after the fallback families it has.
+  TextStyle thenFonts(List<String> families) =>
+      copyWith(fontFamilyFallback: [...?fontFamilyFallback, ...families]);
+}
+
 /// Carries the [Tokens] and the fonts to widgets: `NushiTheme.of(context)`.
 /// Material's theme is derived from the tokens, never the other way round.
 /// [dark] is the theme's dark set whatever the appearance, for what's dark
-/// in both (the pill over a selection).
+/// in both (the pill over a selection). [uiPicked] and [codePicked] are
+/// the families picked for the app's text and for code (ADR 0114); the
+/// phone gives neither.
 @immutable
 class NushiTheme extends ThemeExtension<NushiTheme> {
-  const new(this.t, {this._dark});
+  const new(this.t, {this._dark, this.uiPicked, this.codePicked});
 
   final Tokens t;
   final Tokens? _dark;
@@ -78,8 +89,26 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   Tokens get dark =>
       _dark ?? (t.brightness == Brightness.dark ? t : Tokens.dark);
 
+  /// The bundled families: what text is set in unless another is picked,
+  /// and what follows a picked one.
   static const uiFont = 'IBM Plex Sans';
   static const codeFont = 'JetBrains Mono';
+
+  /// The families picked in Settings › Appearance (ADR 0114): a name the
+  /// system knows a font by, or null for the bundled one.
+  final String? uiPicked;
+  final String? codePicked;
+
+  /// The family the app's text is set in, and what follows it: the bundled
+  /// font after a picked one, so text still draws when that one is gone or
+  /// lacks a glyph; nothing after the bundled one itself.
+  String get uiFamily => uiPicked ?? uiFont;
+  List<String>? get uiFallback => uiPicked == null ? null : const [uiFont];
+
+  /// The same for code.
+  String get codeFamily => codePicked ?? codeFont;
+  List<String>? get codeFallback =>
+      codePicked == null ? null : const [codeFont];
 
   // Corner radii (ADR 0110): every rounded corner in the app is one of
   // these, or [inner] of one. A circle (a dot, an avatar), a scrollbar's
@@ -132,7 +161,8 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   /// UI text: 13 for body, 12 for meta, 11.5 for small print.
   TextStyle ui(Color color, {double size = 13, FontWeight? weight}) =>
       TextStyle(
-        fontFamily: uiFont,
+        fontFamily: uiFamily,
+        fontFamilyFallback: uiFallback,
         fontSize: size,
         fontWeight: weight,
         height: 1.4,
@@ -141,7 +171,8 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
 
   /// Code text, ligatures off, on a whole-pixel line height.
   TextStyle code(Color color, {double size = 13}) => TextStyle(
-    fontFamily: codeFont,
+    fontFamily: codeFamily,
+    fontFamilyFallback: codeFallback,
     fontSize: size,
     height: (size * 1.45).roundToDouble() / size,
     color: color,
@@ -151,42 +182,64 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
     ],
   );
 
-  // Equal when made of the same token sets, so a ThemeData built again from
-  // the same theme, past forTheme's cache (the replies pill and the theme
-  // previews make theirs on every build), equals the last one: an unequal
-  // one rebuilds every reader of the theme below it, and under a theme
-  // animation on each of its frames. The built-in sets are constants and a
-  // theme file read again makes new ones, so an edited file still
+  /// This theme's fonts with other token sets: for what draws the dark
+  /// set inside the app whatever the appearance (the pill over a
+  /// selection).
+  NushiTheme withTokens(Tokens t, {Tokens? dark}) =>
+      NushiTheme(t, dark: dark, uiPicked: uiPicked, codePicked: codePicked);
+
+  // Equal when made of the same token sets and fonts, so a ThemeData built
+  // again from the same theme, past forTheme's cache (the replies pill and
+  // the theme previews make theirs on every build), equals the last one: an
+  // unequal one rebuilds every reader of the theme below it, and under a
+  // theme animation on each of its frames. The built-in sets are constants
+  // and a theme file read again makes new ones, so an edited file still
   // re-themes.
   @override
   bool operator ==(Object other) =>
       other is NushiTheme &&
       identical(other.t, t) &&
-      identical(other._dark, _dark);
+      identical(other._dark, _dark) &&
+      other.uiPicked == uiPicked &&
+      other.codePicked == codePicked;
 
   @override
-  int get hashCode => Object.hash(identityHashCode(t), identityHashCode(_dark));
+  int get hashCode => Object.hash(
+    identityHashCode(t),
+    identityHashCode(_dark),
+    uiPicked,
+    codePicked,
+  );
 
   @override
-  NushiTheme copyWith({Tokens? t}) => NushiTheme(t ?? this.t, dark: _dark);
+  NushiTheme copyWith({Tokens? t}) => withTokens(t ?? this.t, dark: _dark);
 
   // Light and dark switch at once.
   @override
   NushiTheme lerp(NushiTheme? other, double t) =>
       t < 0.5 || other == null ? this : other;
 
-  /// Material's theme for [theme]'s set for [brightness], made once per
-  /// theme: the app rebuilt with nothing changed (a theme file read again)
-  /// gets the same one, so nothing below it rebuilds for it. ThemeData
-  /// takes the platform it was made on, so that is part of the key too
-  /// (it changes only in tests).
-  static ThemeData forTheme(ColorTheme theme, Brightness brightness) =>
-      (_made[theme] ??= {})[(brightness, defaultTargetPlatform)] ??= NushiTheme(
+  /// Material's theme for [theme]'s set for [brightness] in the picked
+  /// fonts ([ui] and [code], null for the bundled ones), made once per
+  /// theme and pair of fonts: the app rebuilt with nothing changed (a theme
+  /// file read again) gets the same one, so nothing below it rebuilds for
+  /// it. ThemeData takes the platform it was made on, so that is part of
+  /// the key too (it changes only in tests).
+  static ThemeData forTheme(
+    ColorTheme theme,
+    Brightness brightness, {
+    String? ui,
+    String? code,
+  }) => (_made[theme] ??= {})[(brightness, defaultTargetPlatform, ui, code)] ??=
+      NushiTheme(
         theme.of(brightness),
         dark: theme.dark,
+        uiPicked: ui,
+        codePicked: code,
       ).toThemeData();
 
-  static final _made = Expando<Map<(Brightness, TargetPlatform), ThemeData>>();
+  static final _made =
+      Expando<Map<(Brightness, TargetPlatform, String?, String?), ThemeData>>();
 
   /// How high Material draws what floats (a menu, a dialog, a toast), for
   /// its shadow: [floatShadows]' reach, about.
@@ -223,7 +276,8 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
           t.brightness == Brightness.dark ? typography.white : typography.black,
         )
         .apply(
-          fontFamily: uiFont,
+          fontFamily: uiFamily,
+          fontFamilyFallback: uiFallback,
           fontSizeFactor: 13 / 14,
           bodyColor: t.text,
           displayColor: t.text,

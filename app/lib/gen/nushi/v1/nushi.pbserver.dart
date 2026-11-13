@@ -133,6 +133,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ListCommitsRequest request);
   $async.Future<$0.GetFolderStatusResponse> getFolderStatus(
       $pb.ServerContext ctx, $0.GetFolderStatusRequest request);
+  $async.Future<$0.GetProjectIconResponse> getProjectIcon(
+      $pb.ServerContext ctx, $0.GetProjectIconRequest request);
   $async.Future<$0.GetRelatedWorktreesResponse> getRelatedWorktrees(
       $pb.ServerContext ctx, $0.GetRelatedWorktreesRequest request);
   $async.Future<$0.GetRelatedWorktreeStatsResponse> getRelatedWorktreeStats(
@@ -434,6 +436,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.ListCommitsRequest();
       case 'GetFolderStatus':
         return $0.GetFolderStatusRequest();
+      case 'GetProjectIcon':
+        return $0.GetProjectIconRequest();
       case 'GetRelatedWorktrees':
         return $0.GetRelatedWorktreesRequest();
       case 'GetRelatedWorktreeStats':
@@ -742,6 +746,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return listCommits(ctx, request as $0.ListCommitsRequest);
       case 'GetFolderStatus':
         return getFolderStatus(ctx, request as $0.GetFolderStatusRequest);
+      case 'GetProjectIcon':
+        return getProjectIcon(ctx, request as $0.GetProjectIconRequest);
       case 'GetRelatedWorktrees':
         return getRelatedWorktrees(
             ctx, request as $0.GetRelatedWorktreesRequest);

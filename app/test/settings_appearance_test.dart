@@ -12,6 +12,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_appearance.dart';
 import 'package:nushi/settings_general.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_theme.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/theme/theme.dart';
@@ -122,6 +123,34 @@ void main() {
     await _tap(tester, find.text('Centered'));
     await _tap(tester, _menuItem('Full width'));
     expect(chatFullWidth.value, isTrue);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('Project rail is a switch, off at first, kept once set', (
+    tester,
+  ) async {
+    final d = await _app(tester);
+    final row = find.widgetWithText(SettingsRow, 'Project rail');
+    final toggle = find.descendant(
+      of: row,
+      matching: find.byType(SettingsSwitch),
+    );
+    expect(projectRail.value, isFalse);
+    expect(tester.widget<SettingsSwitch>(toggle).value, isFalse);
+    expect(
+      find.descendant(
+        of: row,
+        matching: find.text('A column of project tiles beside the chats.'),
+      ),
+      findsOne,
+    );
+    await _tap(tester, toggle);
+    expect(projectRail.value, isTrue);
+    expect(tester.widget<SettingsSwitch>(toggle).value, isTrue);
+    expect(readSaved()['projectRailOn'], isTrue);
+    await _tap(tester, toggle);
+    expect(projectRail.value, isFalse);
+    expect(readSaved()['projectRailOn'], isFalse);
     d.dispose();
   }, variant: _mac);
 

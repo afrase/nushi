@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/arrangement.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/project_rail.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_sections.dart';
 import 'package:nushi/theme/theme.dart';
@@ -31,7 +32,8 @@ void resetArrangement() {
 }
 
 /// The menu's rows: Group by, Sort by and Show, each a submenu with the
-/// choice made on its right; New section; Reset to defaults (while it's
+/// choice made on its right; New section; Add project… ([addProject]);
+/// Reset to defaults (while it's
 /// arranged otherwise); View all (Chat history, every chat and session).
 List<MenuEntry> arrangeEntries(BuildContext context, Daemon daemon) {
   final group = sidebarGroupBy.value;
@@ -108,6 +110,13 @@ List<MenuEntry> arrangeEntries(BuildContext context, Daemon daemon) {
       'New section',
       icon: Icons.create_new_folder_outlined,
       onPick: () => newSection(context, daemon),
+    ),
+    MenuEntry(
+      'Add project…',
+      icon: Icons.add,
+      // A project with no chats shows only among the projects.
+      tooltip: group == GroupBy.project ? '' : 'Only when grouped by Project',
+      onPick: group == GroupBy.project ? addProject : null,
     ),
     MenuEntry.divider,
     MenuEntry(

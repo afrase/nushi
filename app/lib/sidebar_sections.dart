@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/arrangement.dart';
+import 'package:nushi/card_list.dart' show reordered;
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_pins.dart';
 import 'package:nushi/daemon.dart';
@@ -147,10 +148,19 @@ class SidebarSections extends StatelessWidget {
   Widget build(BuildContext context) => SlideList<_MovingSection>(
     count: sections.length,
     accepts: (_) => true,
-    // Every section shows, so the list's places are theirs.
+    // A section not shown (the sidebar narrowed to a project it has no
+    // chat of) keeps its place among the others.
     onMove: (from, to) {
-      final all = [...sidebarSections.value];
-      sidebarSections.value = all..insert(to, all.removeAt(from));
+      final all = {for (final s in sidebarSections.value) s.id: s};
+      sidebarSections.value = [
+        for (final id in reordered(
+          all.keys.toList(),
+          [for (final (s, _) in sections) s.id],
+          from,
+          to,
+        ))
+          all[id]!,
+      ];
     },
     item: (i, drag) {
       final (section, chats) = sections[i];

@@ -345,6 +345,31 @@ void main() {
         }
       }
     });
+
+    test('a wider app font folds the row sooner, by what its words take '
+        'more', () {
+      // The row's widths were measured in the bundled font (ADR 0114): a
+      // font a quarter wider adds a quarter of the row's words, 250 (and
+      // of the Pull request segment's, 80), to what the row needs.
+      for (final (pull, first) in [(false, 636.0), (true, 742.0)]) {
+        HeaderFolds at(double width, [double wider = 1]) => headerFolds(
+          width,
+          pull: pull,
+          panel: true,
+          files: false,
+          wider: wider,
+        );
+        final more = 0.25 * (headerWords + (pull ? 80 : 0));
+        expect(at(first, 1.25).any, isTrue);
+        expect(at(first + more - 1, 1.25).any, isTrue);
+        expect(at(first + more, 1.25).any, isFalse);
+        expect(at(first + more, 1.25).more - at(first).more, more);
+        // As wide as the bundled one, nothing changes.
+        for (var w = 300.0; w < 900; w += 5) {
+          expect(at(w), headerFolds(w, pull: pull, panel: true, files: false));
+        }
+      }
+    });
   });
 
   group('the composer', () {

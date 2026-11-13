@@ -1,4 +1,5 @@
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -6,11 +7,16 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/pull_states.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/status.dart';
+import 'package:nushi/tile_images.dart';
+import 'package:nushi/tile_look.dart';
+import 'package:nushi/tile_picture.dart';
 
 import 'fake_daemon.dart';
 import 'github_fixture.dart' show item, testRepo;
 import 'harness.dart';
+import 'project_tile_fixture.dart';
 
 // Each frame draws the whole window again (Impeller keeps no raster
 // cache), so what loops at rest costs a full window's text each time it
@@ -131,6 +137,61 @@ void main() {
       await close();
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }
+
+  testWidgets('a project’s animated tile: nothing is drawn while it '
+      'rests, frames only while the pointer is on it', (tester) async {
+    if (tileImagesDir.existsSync()) tileImagesDir.deleteSync(recursive: true);
+    final image = keepTileImage((bytes: animatedGif(), kind: 'gif'));
+    addTearDown(() => dropTileImage(image));
+    projectTiles.value = {'/Users/me/nushi': TileLook(image: image)};
+    final close = await _open(tester, [
+      chat('a', 'claude', 'Speed up CI'),
+      chat('b', 'codex', 'Tidy the docs', age: 30),
+    ], shown: 'a');
+    final tile = find.byType(TilePictureView);
+    expect(tile, findsOneWidget);
+    final state = tester.state<TilePictureViewState>(tile);
+    await untilReal(tester, () => state.animated);
+    await tester.pump(const Duration(seconds: 1));
+
+    // At rest: its first frame, and no frame asked for.
+    expect(await _framesOver(tester, const Duration(seconds: 12)), 0);
+    expect(state.busy, isFalse);
+
+    // Under the pointer it plays, a frame of the window for each of its
+    // own (a tenth of a second each): the engine decodes on the real
+    // clock, so real time passes between the display's.
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: const Offset(900, 500));
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(tester.getCenter(tile));
+    await tester.pump();
+    await untilReal(tester, () => state.played >= 1);
+    const vsync = Duration(microseconds: Duration.microsecondsPerSecond ~/ 60);
+    final from = state.played;
+    _frames = 0;
+    _counting = true;
+    for (var t = Duration.zero; t < const Duration(seconds: 1); t += vsync) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 2)),
+      );
+      await tester.pump(vsync);
+    }
+    _counting = false;
+    final shown = state.played - from;
+    expect(shown, inInclusiveRange(5, 11));
+    // No more of the window's frames than the image's own, and a few for
+    // the pointer's tint on the header.
+    expect(_frames, inInclusiveRange(shown, shown + 6));
+
+    // Off it: the first frame again, and nothing drawn.
+    await mouse.moveTo(const Offset(900, 500));
+    await tester.pump(const Duration(seconds: 1));
+    expect(state.busy, isFalse);
+    expect(await _framesOver(tester, const Duration(seconds: 12)), 0);
+
+    await close();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('every chat idle: the window draws nothing at all', (
     tester,

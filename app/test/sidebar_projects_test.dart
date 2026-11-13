@@ -9,6 +9,7 @@ import 'package:nushi/arrangement.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/project_tile.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/sidebar_view.dart';
@@ -72,6 +73,15 @@ double _y(WidgetTester tester, String text) => tester.getCenter(_in(text)).dy;
 Future<void> _menu(WidgetTester tester, String project) async {
   await tester.tap(_in(project).last, buttons: kSecondaryMouseButton);
   await tester.pumpAndSettle();
+}
+
+/// Closes the open menu with a click beside the sidebar. (Escape closes
+/// one only with the focus in it, which a test's right-click doesn't
+/// give: the menu stayed open under the next click.)
+Future<void> _away(WidgetTester tester) async {
+  await tester.tapAt(const Offset(520, 680));
+  await tester.pumpAndSettle();
+  expect(find.byType(MenuItemButton), findsNothing);
 }
 
 /// The open menu's row [label].
@@ -215,13 +225,19 @@ void main() {
     await _gone(tester, fake, 'c');
     expect(_in('Cap the rates'), findsNothing);
     expect(_in('cappy'), findsOne);
-    // Last, its line under its name and starting where the name does.
+    // Last, its line under its name and starting where its header does,
+    // at its tile.
     expect(_y(tester, 'cappy'), greaterThan(_y(tester, 'Loose end')));
     expect(_y(tester, 'No chats'), greaterThan(_y(tester, 'cappy')));
+    final tile = find.byWidgetPredicate(
+      (w) =>
+          w is ProjectTile && w.name == 'cappy' && w.size == ProjectTile.small,
+    );
     expect(
       tester.getTopLeft(_in('No chats')).dx,
-      closeTo(tester.getTopLeft(_in('cappy')).dx, 3),
+      closeTo(tester.getTopLeft(tile).dx, 3),
     );
+    expect(tester.getTopLeft(_in('cappy')).dx, tester.getTopRight(tile).dx + 6);
     expect(find.byTooltip('/Users/me/cappy'), findsOne);
 
     final header = find.ancestor(
@@ -267,15 +283,13 @@ void main() {
     // Nor has an empty group a chat to open a terminal in.
     expect(_entry(tester, 'Open in terminal').onPressed, isNull);
     expect(_entry(tester, 'New chat here').onPressed, isNotNull);
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await tester.pumpAndSettle();
+    await _away(tester);
 
     // "No folder" isn't a project: nothing to remove.
     await _menu(tester, 'No folder');
     expect(find.text('New chat here'), findsOne);
     expect(find.text('Remove from sidebar'), findsNothing);
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await tester.pumpAndSettle();
+    await _away(tester);
 
     await _gone(tester, fake, 'c');
     expect(_in('No chats'), findsOne); // now it's true

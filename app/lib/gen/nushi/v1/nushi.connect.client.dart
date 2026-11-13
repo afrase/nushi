@@ -1129,6 +1129,26 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// A project's own icon, for its tile in the Mac's sidebar: a small PNG
+  /// or JPEG at one of a fixed list of paths in its folder
+  /// (internal/projecticon), or nothing. The Mac's only. API 116.
+  Future<nushiv1nushi.GetProjectIconResponse> getProjectIcon(
+    nushiv1nushi.GetProjectIconRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getProjectIcon,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// The worktrees the chat's subagents work in, in the order found, each
   /// looked at now: its head is recorded, and one that went stays as
   /// "removed". GetDiff and GetFolderStatus read one by its path, against

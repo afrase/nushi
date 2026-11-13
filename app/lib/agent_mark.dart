@@ -28,7 +28,8 @@ class AgentMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final ink = color ?? this.ink ?? t.textSecondary;
     if (_marks[agent] case (final path, final box)) {
       final layers = switch ((agent, color)) {
@@ -52,13 +53,9 @@ class AgentMark extends StatelessWidget {
       ),
       child: Text(
         agentTitle(agent)[0],
-        style: TextStyle(
-          fontFamily: NushiTheme.uiFont,
-          fontSize: size * 0.64,
-          height: 1,
-          fontWeight: FontWeight.w600,
-          color: t.monogramText,
-        ),
+        style: theme
+            .ui(t.monogramText, size: size * 0.64, weight: FontWeight.w600)
+            .copyWith(height: 1),
       ),
     );
   }

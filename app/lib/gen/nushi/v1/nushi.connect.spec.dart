@@ -571,6 +571,16 @@ abstract final class NushiService {
     nushiv1nushi.GetFolderStatusResponse.new,
   );
 
+  /// A project's own icon, for its tile in the Mac's sidebar: a small PNG
+  /// or JPEG at one of a fixed list of paths in its folder
+  /// (internal/projecticon), or nothing. The Mac's only. API 116.
+  static const getProjectIcon = connect.Spec(
+    '/$name/GetProjectIcon',
+    connect.StreamType.unary,
+    nushiv1nushi.GetProjectIconRequest.new,
+    nushiv1nushi.GetProjectIconResponse.new,
+  );
+
   /// The worktrees the chat's subagents work in, in the order found, each
   /// looked at now: its head is recorded, and one that went stays as
   /// "removed". GetDiff and GetFolderStatus read one by its path, against

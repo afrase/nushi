@@ -3,18 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/settings_fonts.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_theme.dart';
 
 /// Settings › Appearance: Light, Dark or as the system, the chat's width,
-/// whether the preview shows whitespace, and the color theme (ADR 0086).
+/// the app's and code's fonts (ADR 0114), whether the preview shows
+/// whitespace, and the color theme (ADR 0086).
 class AppearanceSection extends StatelessWidget {
   const new({super.key});
 
   @override
   Widget build(BuildContext context) => const SettingsPage(
     title: 'Appearance',
-    children: [_Appearance(), _Preview(), ThemeGroup()],
+    children: [_Appearance(), FontsGroup(), _Preview(), ThemeGroup()],
   );
 }
 
@@ -45,7 +47,8 @@ class _Preview extends StatelessWidget {
 }
 
 /// The appearance: Light, Dark, or as the system is; remembered (the View
-/// menu's items set it too). And the chat's width (ADR 0074).
+/// menu's items set it too). And the chat's width (ADR 0074), and whether
+/// the sidebar has its project rail (ADR 0112; off at first).
 class _Appearance extends StatelessWidget {
   const new();
 
@@ -92,6 +95,17 @@ class _Appearance extends StatelessWidget {
                 ),
               ],
               label: Text(full ? 'Full width' : 'Centered'),
+            ),
+          ),
+        ),
+        ValueListenableBuilder(
+          valueListenable: projectRail,
+          builder: (context, on, _) => SettingsRow(
+            'Project rail',
+            description: 'A column of project tiles beside the chats.',
+            control: SettingsSwitch(
+              value: on,
+              onChanged: (v) => projectRail.value = v,
             ),
           ),
         ),

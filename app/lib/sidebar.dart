@@ -10,14 +10,17 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/list_motion.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/project_rail.dart';
+import 'package:nushi/project_tile.dart';
+import 'package:nushi/project_tile_dialog.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_arrange.dart';
 import 'package:nushi/sidebar_button.dart';
+import 'package:nushi/sidebar_chats.dart';
 import 'package:nushi/sidebar_grouped.dart';
 import 'package:nushi/sidebar_groups.dart';
 import 'package:nushi/sidebar_links.dart';
-import 'package:nushi/sidebar_row.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/sidebar_sections.dart';
 import 'package:nushi/sidebar_view.dart';
@@ -34,7 +37,10 @@ import 'package:nushi/window_drag.dart';
 /// in each the chats as they were dragged, a new one first. Its header's
 /// [ArrangeButton] groups them otherwise ([GroupedChats]), sorts them and
 /// picks what rows show ([arrangeSidebar]). Archived chats are in a
-/// collapsed group at the bottom. While ⌘ is held
+/// collapsed group at the bottom. Arranged by project, it has the project
+/// rail at its left ([ProjectRail], ADR 0112; while it's wide enough for
+/// one and Settings' Project rail is on; off at first), whose tiles
+/// narrow all of these to one project's chats. While ⌘ is held
 /// alone, the first nine chats shown (archived left out) show the number
 /// ⌘ opens them with. Its header's [SidebarButton] hides it ([sidebarHidden]);
 /// `main.dart` then doesn't build it, so it asks nothing while it's hidden.
@@ -68,6 +74,15 @@ class Sidebar extends StatefulWidget {
   /// no edge of their own.
   static const double start = NushiTheme.windowPad + 2;
   static const double end = NushiTheme.paneGap;
+
+  /// How far the project rail is tucked towards the window's edge, and
+  /// the chats towards it: its tiles are five in from its own sides,
+  /// which with [start] on both would leave them 15 from the edge and
+  /// from the chats' rows; tucked, 13.
+  static const double railTuck = 2;
+
+  /// What the project rail takes of the sidebar's width, at its left.
+  static const double railWidth = start + ProjectRail.width - 2 * railTuck;
 
   /// A chat's row: its height, the room between rows, and its padding
   /// inside its rounded fill.
@@ -103,6 +118,9 @@ class _SidebarState extends State<Sidebar> {
   void initState() {
     super.initState();
     _pulls = PullStates.of(widget.daemon)..watch();
+    _opened = widget.daemon.selectedId;
+    _started = widget.daemon.starting;
+    widget.daemon.addListener(_follow);
     sidebarShows.addListener(_tick);
     sidebarGroupBy.addListener(_tick);
     _tick();
@@ -112,6 +130,7 @@ class _SidebarState extends State<Sidebar> {
   void dispose() {
     sidebarShows.removeListener(_tick);
     sidebarGroupBy.removeListener(_tick);
+    widget.daemon.removeListener(_follow);
     _ticks?.cancel();
     _minute.dispose();
     _hold.dispose();
@@ -136,6 +155,41 @@ class _SidebarState extends State<Sidebar> {
     }
   }
 
+  /// The chat open and the folder one starts in, as [_follow] last saw
+  /// them.
+  String? _opened;
+  String? _started;
+
+  /// Narrowed to a project, the sidebar goes to another's as a chat of
+  /// that one opens or starts (from the palette, a notification, New
+  /// chat), so the open chat's row is never left out of it; to all of
+  /// them for a chat with no folder. A tile picked while a chat is open
+  /// stays picked: only a change of chat moves it.
+  void _follow() {
+    final daemon = widget.daemon;
+    final opened = daemon.selectedId;
+    final started = daemon.starting;
+    if (opened == _opened && started == _started) return;
+    final to = switch ((started, daemon.selected)) {
+      (final folder?, _) when started != _started => folder,
+      (_, final chat?) when opened != _opened && !chat.archived =>
+        chat.scratch ? '' : chat.home,
+      _ => null,
+    };
+    _opened = opened;
+    _started = started;
+    if (to == null || shownProject == null || to == shownProject) return;
+    sidebarProject.value = to.isEmpty ? null : to;
+  }
+
+  /// Says whether the sidebar, [width] wide, has room for the rail, once
+  /// this frame is laid out.
+  void _fits(double width) {
+    final fits = width >= ProjectRail.minSidebar;
+    if (fits == railFits.value) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) => railFits.value = fits);
+  }
+
   void _new(String folder) => newChat(context, widget.daemon, folder);
 
   /// Opens a terminal in [folder] for the chat shown, if it's one of
@@ -154,9 +208,6 @@ class _SidebarState extends State<Sidebar> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final daemon = widget.daemon;
-    final archived = daemon.chats.values.where((c) => c.archived).toList()
-      ..sort((a, b) => b.created.compareTo(a.created));
-    final starting = daemon.starting;
     return MouseRegion(
       onEnter: (_) => _hover.value = true,
       onExit: (_) => _hover.value = false,
@@ -194,73 +245,40 @@ class _SidebarState extends State<Sidebar> {
                 ],
               ),
             ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                Sidebar.start,
-                Sidebar.topGap,
-                Sidebar.end,
-                4,
-              ),
-              child: WideButton(
-                label: 'New chat',
-                icon: Icons.add,
-                hint: keyLabel(newChatKey),
-                onPressed: starting == null ? () => _new('') : null,
-              ),
-            ),
             Expanded(
-              child: ValueListenableBuilder(
-                valueListenable: sidebarGroupBy,
-                builder: (context, group, _) => ListenableBuilder(
-                  listenable: Listenable.merge([
-                    _hold,
-                    sidebarOrder,
-                    sidebarCollapsed,
-                    sidebarChats,
-                    sidebarProjects,
-                    pinnedCollapsed,
-                    sidebarSort,
-                    sidebarAscending,
-                    sidebarShows,
-                    sidebarSections,
-                    _minute,
-                    // Grouped by state, a chat regroups as its state
-                    // changes, not at each streamed chunk.
-                    if (group == GroupBy.status)
-                      for (final c in daemon.chats.values) c.look,
-                  ]),
-                  // With no line over the links under it (ADR 0111), the
-                  // list's last rows fade into the window's background
-                  // rather than stop at a cut.
-                  builder: (context, _) => Stack(
-                    children: [
-                      Positioned.fill(child: _list(context, archived)),
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        height: 12,
-                        child: IgnorePointer(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  t.window.withValues(alpha: 0),
-                                  t.window,
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  _fits(box.maxWidth);
+                  return ValueListenableBuilder(
+                    valueListenable: sidebarGroupBy,
+                    builder: (context, group, _) => ListenableBuilder(
+                      listenable: Listenable.merge([
+                        _hold,
+                        sidebarOrder,
+                        sidebarCollapsed,
+                        sidebarChats,
+                        sidebarProjects,
+                        pinnedCollapsed,
+                        sidebarSort,
+                        sidebarAscending,
+                        sidebarShows,
+                        sidebarSections,
+                        projectRail,
+                        sidebarProject,
+                        projectTiles,
+                        railFits,
+                        _minute,
+                        // Grouped by state, a chat regroups as its state
+                        // changes, not at each streamed chunk.
+                        if (group == GroupBy.status)
+                          for (final c in daemon.chats.values) c.look,
+                      ]),
+                      builder: (context, _) => _body(context),
+                    ),
+                  );
+                },
               ),
             ),
-            SidebarLinks(daemon),
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 Sidebar.start,
@@ -276,99 +294,117 @@ class _SidebarState extends State<Sidebar> {
     );
   }
 
-  Widget _list(BuildContext context, List<ChatState> archived) {
+  /// Under the top strip, over the status card: the project rail, if it
+  /// shows, and beside it New chat, the chats and the views' links.
+  Widget _body(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final daemon = widget.daemon;
     final starting = daemon.starting;
-    final held = _hold.value;
-    final group = sidebarGroupBy.value;
-    final sort = effectiveSort(group, sidebarSort.value);
-    final reorders = dragsOrder(group, sidebarSort.value);
-    final shows = sidebarShows.value;
     final view = arrangeSidebar(daemon, starting: starting);
-    // Where each row is before the lists change, and what they show now:
-    // a row one loses and another shows moved.
-    _motion
-      ..ground = t.window
-      ..shown = {
-        for (final c in view.pinned) ValueKey(c.id),
-        for (final (section, chats) in view.sections) ...[
-          ValueKey(section.key),
-          for (final c in chats) ValueKey(c.id),
-        ],
-        for (final MapEntry(:key, :value) in view.projects.entries) ...[
-          ValueKey(key),
-          for (final c in value) ValueKey(c.id),
-        ],
-        for (final g in view.groups) ...[
-          ValueKey(g.key),
-          for (final c in g.chats) ValueKey(c.id),
-        ],
-        if (_showArchived)
-          for (final c in archived) ValueKey(c.id),
-      }
-      ..snapshot();
-    final numbers = {
-      for (final (i, c) in chatOrder(daemon).take(9).indexed) c.id: i + 1,
-    };
-    // A row says its project where its group doesn't.
-    Widget row(ChatState c, Movable movable, {bool inProject = false}) =>
-        SidebarRow(
-          c,
-          key: ValueKey(c.id),
-          daemon: daemon,
-          number: held ? numbers[c.id] : null,
-          movable: movable,
-          project: !inProject && shows.contains(RowPart.project),
-          time: shows.contains(RowPart.time) ? chatTime(c, sort) : null,
-        );
-    return ListMotionScope(
-      motion: _motion,
-      child: ListView(
-        // Hiding the sidebar takes it away: back where it was.
-        key: const PageStorageKey('sidebar'),
-        padding: const EdgeInsets.only(bottom: 14),
-        children: [
-          Column(
-            key: _motion.space,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    final colors = folderTileColors(view.folders);
+    final rail = railShows;
+    final live = liveFolders(daemon);
+    final chats = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            Sidebar.start,
+            Sidebar.topGap,
+            Sidebar.end,
+            4,
+          ),
+          child: WideButton(
+            label: 'New chat',
+            icon: Icons.add,
+            hint: keyLabel(newChatKey),
+            onPressed: starting == null ? () => _new('') : null,
+          ),
+        ),
+        // With no line over the links under it (ADR 0111), the list's
+        // last rows fade into the window's background rather than stop
+        // at a cut.
+        Expanded(
+          child: Stack(
             children: [
-              PinnedSection(daemon, row: row),
-              SidebarSections(
-                daemon: daemon,
-                sections: view.sections,
-                reorders: reorders,
-                row: row,
+              Positioned.fill(
+                child: SidebarChats(
+                  daemon: daemon,
+                  view: view,
+                  colors: colors,
+                  motion: _motion,
+                  held: _hold.value,
+                  showArchived: _showArchived,
+                  onToggleArchived: () =>
+                      setState(() => _showArchived = !_showArchived),
+                  onNew: starting == null ? _new : null,
+                  onTerminal: _terminal,
+                ),
               ),
-              LeaveSectionTarget(
-                child: group == GroupBy.project
-                    ? SidebarGroups(
-                        groups: view.projects,
-                        selectedId: daemon.selectedId,
-                        starting: starting,
-                        startingAgent: daemon.startingAgent,
-                        live: liveFolders(daemon),
-                        onNew: starting == null ? _new : null,
-                        onTerminal: _terminal,
-                        reorders: reorders,
-                        row: (c, movable) => row(c, movable, inProject: true),
-                      )
-                    : GroupedChats(
-                        groups: view.groups,
-                        selectedId: daemon.selectedId,
-                        row: row,
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 12,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [t.window.withValues(alpha: 0), t.window],
                       ),
-              ),
-              ArchivedSection(
-                archived,
-                open: _showArchived,
-                onToggle: () => setState(() => _showArchived = !_showArchived),
-                row: (c) => SidebarRow(c, key: ValueKey(c.id), daemon: daemon),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+        SidebarLinks(daemon),
+      ],
+    );
+    // The chats keep their place in the tree with the rail or without,
+    // so their rows glide from where they were as it comes and goes.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned.fill(left: rail ? Sidebar.railWidth : 0, child: chats),
+        // Its first tile level with New chat; its list starts a little
+        // higher, for the room that tile's ring takes.
+        if (rail)
+          Positioned(
+            left: Sidebar.start - Sidebar.railTuck,
+            top: Sidebar.topGap - ProjectRail.top,
+            bottom: 0,
+            width: ProjectRail.width,
+            child: ProjectRail(
+              daemon: daemon,
+              folders: view.folders,
+              colors: colors,
+              shown: shownProject,
+              entries: (context, folder) {
+                final inFolder = chatGroups(daemon)[folder] ?? const [];
+                return projectEntries(
+                  folder: folder,
+                  onNew: starting == null ? () => _new(folder) : null,
+                  onTerminal: inFolder.isEmpty
+                      ? null
+                      : () => _terminal(folder, inFolder),
+                  onRemove: live.contains(folder)
+                      ? null
+                      : () => forgetProject(folder),
+                  onChangeTile: () => changeTile(
+                    context,
+                    daemon,
+                    folder,
+                    color: colors[folder] ?? 0,
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
     );
   }
 }

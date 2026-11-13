@@ -29,7 +29,8 @@ import 'package:nushi/widgets.dart';
 /// [sidebarProjects]) is its header alone while its chats are pinned or
 /// in a section; once none of its folder is left unarchived ([live]) it
 /// says "No chats" under its header, unless collapsed, and its menu's
-/// Remove from sidebar forgets it ([forgetProject]).
+/// Remove from sidebar forgets it ([forgetProject]). A project's header
+/// starts with its tile, small ([tile]; ADR 0112).
 class SidebarGroups extends StatelessWidget {
   const new({
     required this.groups,
@@ -42,9 +43,15 @@ class SidebarGroups extends StatelessWidget {
     required this.onTerminal,
     super.key,
     this.reorders = true,
+    this.tile,
+    this.onChangeTile,
   });
 
   final Map<String, List<ChatState>> groups;
+
+  /// A project's tile for its header, and its menu's Change tile….
+  final Widget Function(String folder)? tile;
+  final void Function(String folder)? onChangeTile;
   final String? selectedId;
 
   /// The folder a chat is starting in, while one is, and its agent.
@@ -102,6 +109,11 @@ class SidebarGroups extends StatelessWidget {
               onRemove: live.contains(folder)
                   ? null
                   : () => forgetProject(folder),
+              lead: folder.isEmpty ? null : tile?.call(folder),
+              onChangeTile: switch (onChangeTile) {
+                final f? when folder.isNotEmpty => () => f(folder),
+                _ => null,
+              },
               drag: drag,
             ),
             // Only when it's true (none pinned or in a section), and not
@@ -177,6 +189,32 @@ Map<String, String> twinParents(Iterable<String> folders) {
   return out;
 }
 
+/// A project's menu, its group's header's and its tile's in the project
+/// rail: New chat here, Open in terminal, and for a folder Remove from
+/// sidebar, off ([onRemove] null) while a chat of it isn't archived, and
+/// Change tile… ([onChangeTile]).
+List<MenuEntry> projectEntries({
+  required String folder,
+  required VoidCallback? onNew,
+  required VoidCallback? onTerminal,
+  required VoidCallback? onRemove,
+  VoidCallback? onChangeTile,
+}) => [
+  MenuEntry('New chat here', onPick: onNew),
+  MenuEntry('Open in terminal', onPick: onTerminal),
+  if (folder.isNotEmpty) ...[
+    MenuEntry(
+      'Remove from sidebar',
+      tooltip: onRemove == null ? "It has chats that aren't archived" : '',
+      onPick: onRemove,
+    ),
+    if (onChangeTile != null) ...[
+      MenuEntry.divider,
+      MenuEntry('Change tile…', onPick: onChangeTile),
+    ],
+  ],
+];
+
 /// A group's header: the folder's name (its path in the tooltip; [twin]
 /// after it, muted, when another project has the same name), or "No
 /// folder" ('') for chats in scratch folders; after it a chevron button
@@ -184,9 +222,8 @@ Map<String, String> twinParents(Iterable<String> folders) {
 /// with the summary dot beside it then ([GroupHeader]); a + for a new chat
 /// there, shown under the pointer or with keyboard focus (its room kept,
 /// so names don't move). Dragged, it moves
-/// the group. Its menu (a right-click): New chat here, Open in terminal,
-/// and for a folder Remove from sidebar, off ([onRemove] null) while a
-/// chat of it isn't archived.
+/// the group. Its menu (a right-click) is the project's
+/// ([projectEntries]). [lead], the project's tile, comes before its name.
 class _Header extends StatefulWidget {
   const new(
     this.folder, {
@@ -197,6 +234,8 @@ class _Header extends StatefulWidget {
     required this.onTerminal,
     required this.onRemove,
     required this.drag,
+    this.lead,
+    this.onChangeTile,
   });
 
   final String folder;
@@ -206,6 +245,8 @@ class _Header extends StatefulWidget {
   final VoidCallback? onNew;
   final VoidCallback? onTerminal; // a terminal there, in one of its chats
   final VoidCallback? onRemove; // forgets the project, once no chat is live
+  final Widget? lead;
+  final VoidCallback? onChangeTile;
   final ItemDrag<_Moving> drag;
 
   @override
@@ -224,18 +265,13 @@ class _HeaderState extends State<_Header> {
     final folder = widget.folder;
     final name = folder.isEmpty ? 'No folder' : folderParts(folder).$1;
     return Menu(
-      entries: [
-        MenuEntry('New chat here', onPick: widget.onNew),
-        MenuEntry('Open in terminal', onPick: widget.onTerminal),
-        if (folder.isNotEmpty)
-          MenuEntry(
-            'Remove from sidebar',
-            tooltip: widget.onRemove == null
-                ? "It has chats that aren't archived"
-                : '',
-            onPick: widget.onRemove,
-          ),
-      ],
+      entries: projectEntries(
+        folder: folder,
+        onNew: widget.onNew,
+        onTerminal: widget.onTerminal,
+        onRemove: widget.onRemove,
+        onChangeTile: widget.onChangeTile,
+      ),
       builder: (context, open) => LayoutBuilder(
         builder: (context, box) => widget.drag.draggable(
           data: _Moving(folder),
@@ -252,6 +288,7 @@ class _HeaderState extends State<_Header> {
                 chats: widget.chats,
                 collapsed: widget.collapsed,
                 onToggle: _toggle,
+                lead: widget.lead,
                 titleWidget: folder.isEmpty
                     ? _name(theme, name)
                     : Tooltip(

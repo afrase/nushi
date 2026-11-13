@@ -154,10 +154,7 @@ class _Pulse extends ChangeNotifier {
   /// Ticks while something listens and Nushi is in front; with no one
   /// listening, stops listening to the app's state too.
   void _run() {
-    final front =
-        (WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed) ==
-        AppLifecycleState.resumed;
-    if (hasListeners && front) {
+    if (hasListeners && appInFront) {
       if (_timer != null) return;
       final from = _now;
       // A late tick counts the ticks it missed (Timer.tick), so a loop
@@ -175,6 +172,14 @@ class _Pulse extends ChangeNotifier {
     _lifecycle = null;
   }
 }
+
+/// Whether Nushi is in front: the window focused, the phone's page in
+/// front; unknown counts as in front. What moves only then ([pulseClock],
+/// a tile's animated image under the pointer) asks this, so there is one
+/// notion of it.
+bool get appInFront =>
+    (WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed) ==
+    AppLifecycleState.resumed;
 
 /// The one clock of what loops (see [_Pulse]).
 final pulseClock = _Pulse();

@@ -177,6 +177,9 @@ const (
 	// NushiServiceGetFolderStatusProcedure is the fully-qualified name of the NushiService's
 	// GetFolderStatus RPC.
 	NushiServiceGetFolderStatusProcedure = "/nushi.v1.NushiService/GetFolderStatus"
+	// NushiServiceGetProjectIconProcedure is the fully-qualified name of the NushiService's
+	// GetProjectIcon RPC.
+	NushiServiceGetProjectIconProcedure = "/nushi.v1.NushiService/GetProjectIcon"
 	// NushiServiceGetRelatedWorktreesProcedure is the fully-qualified name of the NushiService's
 	// GetRelatedWorktrees RPC.
 	NushiServiceGetRelatedWorktreesProcedure = "/nushi.v1.NushiService/GetRelatedWorktrees"
@@ -670,6 +673,10 @@ type NushiServiceClient interface {
 	// Sums up a folder's changes (as GetDiff lists them) and names its
 	// branch.
 	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
+	// A project's own icon, for its tile in the Mac's sidebar: a small PNG
+	// or JPEG at one of a fixed list of paths in its folder
+	// (internal/projecticon), or nothing. The Mac's only. API 116.
+	GetProjectIcon(context.Context, *connect.Request[v1.GetProjectIconRequest]) (*connect.Response[v1.GetProjectIconResponse], error)
 	// The worktrees the chat's subagents work in, in the order found, each
 	// looked at now: its head is recorded, and one that went stays as
 	// "removed". GetDiff and GetFolderStatus read one by its path, against
@@ -1283,6 +1290,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceGetFolderStatusProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("GetFolderStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		getProjectIcon: connect.NewClient[v1.GetProjectIconRequest, v1.GetProjectIconResponse](
+			httpClient,
+			baseURL+NushiServiceGetProjectIconProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetProjectIcon")),
 			connect.WithClientOptions(opts...),
 		),
 		getRelatedWorktrees: connect.NewClient[v1.GetRelatedWorktreesRequest, v1.GetRelatedWorktreesResponse](
@@ -1904,6 +1917,7 @@ type nushiServiceClient struct {
 	watchChatFolder         *connect.Client[v1.WatchChatFolderRequest, v1.WatchChatFolderResponse]
 	listCommits             *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
 	getFolderStatus         *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
+	getProjectIcon          *connect.Client[v1.GetProjectIconRequest, v1.GetProjectIconResponse]
 	getRelatedWorktrees     *connect.Client[v1.GetRelatedWorktreesRequest, v1.GetRelatedWorktreesResponse]
 	getRelatedWorktreeStats *connect.Client[v1.GetRelatedWorktreeStatsRequest, v1.GetRelatedWorktreeStatsResponse]
 	listBranches            *connect.Client[v1.ListBranchesRequest, v1.ListBranchesResponse]
@@ -2277,6 +2291,11 @@ func (c *nushiServiceClient) ListCommits(ctx context.Context, req *connect.Reque
 // GetFolderStatus calls nushi.v1.NushiService.GetFolderStatus.
 func (c *nushiServiceClient) GetFolderStatus(ctx context.Context, req *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error) {
 	return c.getFolderStatus.CallUnary(ctx, req)
+}
+
+// GetProjectIcon calls nushi.v1.NushiService.GetProjectIcon.
+func (c *nushiServiceClient) GetProjectIcon(ctx context.Context, req *connect.Request[v1.GetProjectIconRequest]) (*connect.Response[v1.GetProjectIconResponse], error) {
+	return c.getProjectIcon.CallUnary(ctx, req)
 }
 
 // GetRelatedWorktrees calls nushi.v1.NushiService.GetRelatedWorktrees.
@@ -2970,6 +2989,10 @@ type NushiServiceHandler interface {
 	// Sums up a folder's changes (as GetDiff lists them) and names its
 	// branch.
 	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
+	// A project's own icon, for its tile in the Mac's sidebar: a small PNG
+	// or JPEG at one of a fixed list of paths in its folder
+	// (internal/projecticon), or nothing. The Mac's only. API 116.
+	GetProjectIcon(context.Context, *connect.Request[v1.GetProjectIconRequest]) (*connect.Response[v1.GetProjectIconResponse], error)
 	// The worktrees the chat's subagents work in, in the order found, each
 	// looked at now: its head is recorded, and one that went stays as
 	// "removed". GetDiff and GetFolderStatus read one by its path, against
@@ -3579,6 +3602,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceGetFolderStatusProcedure,
 		svc.GetFolderStatus,
 		connect.WithSchema(nushiServiceMethods.ByName("GetFolderStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetProjectIconHandler := connect.NewUnaryHandler(
+		NushiServiceGetProjectIconProcedure,
+		svc.GetProjectIcon,
+		connect.WithSchema(nushiServiceMethods.ByName("GetProjectIcon")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceGetRelatedWorktreesHandler := connect.NewUnaryHandler(
@@ -4253,6 +4282,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceListCommitsHandler.ServeHTTP(w, r)
 		case NushiServiceGetFolderStatusProcedure:
 			nushiServiceGetFolderStatusHandler.ServeHTTP(w, r)
+		case NushiServiceGetProjectIconProcedure:
+			nushiServiceGetProjectIconHandler.ServeHTTP(w, r)
 		case NushiServiceGetRelatedWorktreesProcedure:
 			nushiServiceGetRelatedWorktreesHandler.ServeHTTP(w, r)
 		case NushiServiceGetRelatedWorktreeStatsProcedure:
@@ -4670,6 +4701,10 @@ func (UnimplementedNushiServiceHandler) ListCommits(context.Context, *connect.Re
 
 func (UnimplementedNushiServiceHandler) GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetFolderStatus is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetProjectIcon(context.Context, *connect.Request[v1.GetProjectIconRequest]) (*connect.Response[v1.GetProjectIconResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetProjectIcon is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) GetRelatedWorktrees(context.Context, *connect.Request[v1.GetRelatedWorktreesRequest]) (*connect.Response[v1.GetRelatedWorktreesResponse], error) {

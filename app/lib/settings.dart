@@ -8,6 +8,10 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:nushi/arrangement.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
+import 'package:nushi/fonts.dart';
+import 'package:nushi/tile_images.dart';
+import 'package:nushi/tile_look.dart';
+import 'package:nushi/tile_picture.dart';
 
 /// What the app remembers across launches, in `app.json` in the data folder:
 /// whether the details panel shows (its toolbar button), which of its widgets
@@ -15,11 +19,14 @@ import 'package:nushi/file_mode.dart';
 /// side panes' widths (not the details panel's, which is fixed), whether
 /// changed files show flat and diffs unified, which chats show their
 /// terminals and their Files pane, whether it lists ignored files, the
-/// terminal's font, whether the chat takes the whole width,
+/// terminal's font, the app's and code's fonts, whether the chat takes the
+/// whole width,
 /// whether the sidebar is hidden, the Jira task list's groups and assignee
 /// filters, the GitHub view's cards and filters, the sidebar's project
 /// groups' order and which are collapsed, the projects it keeps (with
-/// chats or none), each project's chats' order, whether Pinned is
+/// chats or none), whether it has the project rail, the project it's
+/// narrowed to and each project's tile, each project's chats' order,
+/// whether Pinned is
 /// collapsed, the sidebar's arrangement (grouping, sort, what rows show)
 /// and sections, the models picked last, each repository's
 /// merge method, each chat's pinned artifacts, and the Mac's notifications
@@ -30,8 +37,9 @@ import 'package:nushi/file_mode.dart';
 /// what reply cards ask the agent, and the newer release whose toast was
 /// dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree, nor whether a subagent's pane
-/// shows wide: an older `worktrees` or `subagentWide` key is ignored, and
-/// dropped by the next save.
+/// shows wide, nor a beta's `projectRail`: an older `worktrees`,
+/// `subagentWide` or `projectRail` key is ignored, and dropped by the
+/// next save.
 final Pref<bool> showDetails = _plain('details', true);
 
 /// The details panel's widgets collapsed, by title.
@@ -151,9 +159,58 @@ void keepProject(String folder) {
   sidebarProjects.value = {...sidebarProjects.value, folder};
 }
 
+/// Whether the sidebar has its project rail, while it's arranged by
+/// project (Settings › Appearance's Project rail; ADR 0112): off at
+/// first. Kept as `projectRailOn`: the beta that had the rail on at first
+/// saved `projectRail` as true for everyone, touched or not, so that key
+/// says nothing of what the user chose; it's ignored, and dropped by the
+/// next save.
+final Pref<bool> projectRail = _plain('projectRailOn', false);
+
+/// The project the sidebar is narrowed to, by folder path: the tile
+/// picked in the project rail; null for All projects. It counts only
+/// while the rail shows (`shownProject`): with the rail off the sidebar
+/// shows every project, whatever this says.
+final Pref<String?> sidebarProject = _plain('sidebarProject', null);
+
+/// What the user set for each project's tile (Change tile…), by folder
+/// path: a project not named shows its repository's icon, or its
+/// initials.
+final projectTiles = Pref<Map<String, TileLook>>(
+  'projectTiles',
+  (v) => _entries(v, TileLook.read),
+  write: (tiles) => {
+    for (final MapEntry(:key, :value) in tiles.entries) key: value.toJson(),
+  },
+);
+
+/// Gives [folder]'s tile [look]; an empty one puts it back as it is by
+/// itself. The stored image it had, if [look] has another or none, is
+/// deleted.
+void setProjectTile(String folder, TileLook look) {
+  _dropImage(projectTiles.value[folder], unless: look.image);
+  projectTiles.value = {
+    ...{...projectTiles.value}..remove(folder),
+    if (!look.isEmpty) folder: look,
+  };
+}
+
+/// Deletes [look]'s stored image, [unless] it's the one still wanted.
+void _dropImage(TileLook? look, {String unless = ''}) {
+  final image = look?.image ?? '';
+  if (image.isEmpty || image == unless) return;
+  dropTileImage(image);
+  forgetPicture(image);
+}
+
 /// Takes [folder] out of the sidebar's projects, and with it its place
-/// among them, its collapse and its chats' order: one save.
+/// among them, its collapse, its chats' order and its tile (its stored
+/// image deleted); the sidebar
+/// narrowed to it shows all again: one save.
 void forgetProject(String folder) {
+  if (sidebarProject.value == folder) sidebarProject.value = null;
+  _dropImage(projectTiles.value[folder]);
+  projectTiles.value = {...projectTiles.value}..remove(folder);
   sidebarProjects.value = {...sidebarProjects.value}..remove(folder);
   sidebarOrder.value = [...sidebarOrder.value.where((f) => f != folder)];
   sidebarCollapsed.value = {...sidebarCollapsed.value}..remove(folder);
@@ -260,12 +317,24 @@ final paneWidths = Pref<Map<String, double>>(
 /// its middle (ADR 0074).
 final Pref<bool> chatFullWidth = _plain('chatFullWidth', false);
 
-/// The terminal's font family (null: the bundled JetBrains Mono) and size.
-final Pref<String?> terminalFont = _plain('termFont', null);
+/// The terminal's font family (null: the bundled JetBrains Mono; a saved
+/// value that can't be a family's name reads as that too) and size.
+final terminalFont = Pref<String?>('termFont', _family);
 final terminalFontSize = Pref<double>(
   'termSize',
   (v) => v is num ? v.toDouble() : 12.5,
 );
+
+/// The families the app's text and code are set in (Settings ›
+/// Appearance's Fonts; ADR 0114): null is the bundled one (IBM Plex Sans,
+/// JetBrains Mono). What's saved is anyone's text: only something that
+/// can be a family's name ([isFamilyName]) is read, anything else as
+/// null. The terminal keeps its own, above, read the same way.
+final appFont = Pref<String?>('appFont', _family);
+final codeFont = Pref<String?>('codeFont', _family);
+
+String? _family(Object? saved) =>
+    saved is String && isFamilyName(saved) ? saved : null;
 
 /// The app's appearance (Settings › General, and View's items): light,
 /// dark or as the system is.
@@ -454,9 +523,10 @@ Map<String, Object?> readSaved() {
 }
 
 /// Keys an older app saved that mean nothing now, dropped by the next
-/// save: `worktrees` (new chats no longer remember one) and `subagentWide`
-/// (a subagent's pane is dragged as wide as it's wanted).
-const _dropped = {'worktrees', 'subagentWide'};
+/// save: `worktrees` (new chats no longer remember one), `subagentWide`
+/// (a subagent's pane is dragged as wide as it's wanted) and `projectRail`
+/// (a beta's, true for everyone; [projectRail] is `projectRailOn`).
+const _dropped = {'worktrees', 'subagentWide', 'projectRail'};
 
 var _saveDue = false;
 

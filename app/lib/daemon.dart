@@ -23,6 +23,7 @@ import 'package:nushi/issue_chat.dart';
 import 'package:nushi/mac_view.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/place.dart';
+import 'package:nushi/project_icons.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
@@ -53,7 +54,7 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     : Platform.environment['NUSHI_DATA'] ?? native.install.dataFolder;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 115;
+const apiVersion = 116;
 
 /// The API from which the daemon says what an agent has (Agent.mcp_user_only,
 /// ListSkillsResponse.has_built_in and has_plugins), which
@@ -156,6 +157,16 @@ class Daemon extends ChangeNotifier {
     local: !remote,
     whenBack: whenBack,
   );
+
+  /// The projects' own icons, for their tiles in the Mac's sidebar (ADR
+  /// 0112): each folder's asked of the daemon once (GetProjectIcon) and
+  /// kept until the app quits. A daemon without the call answers none.
+  late final projectIcons = ProjectIcons((folder) async {
+    final got = await client.getProjectIcon(
+      GetProjectIconRequest(folder: folder),
+    );
+    return got.data.isEmpty ? null : bytesOf(got.data);
+  }, whenBack: whenBack);
   bool connected = false;
 
   /// Why the last ping failed (the phone shows it in details).

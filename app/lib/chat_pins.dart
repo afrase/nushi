@@ -40,10 +40,3 @@ Future<void> setChatPins(Daemon d, List<String> ids) async {
     rethrow;
   }
 }
-
-/// [chats] with the one at [from] moved to [to] (its place once it's
-/// out).
-List<ChatState> reorderedChats(List<ChatState> chats, int from, int to) {
-  final out = [...chats];
-  return out..insert(to, out.removeAt(from));
-}

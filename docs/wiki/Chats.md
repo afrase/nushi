@@ -14,12 +14,48 @@ The shortcuts below are the Mac's. On Linux, use Ctrl where the Mac uses ⌘.
 
 The sidebar lists your chats by project. Click one to open it.
 
-A project stays in the sidebar when its last chat is archived or deleted, with **No chats** under its name, so its **+** starts the next chat there. To take an empty project out:
+## Tell projects apart
+
+Each project in the sidebar has a small square tile before its name. It shows the repository's own icon when it has one (an `icon.png` or `logo.png`, an app's icon, a site's favicon), and otherwise the folder's initials on a color.
+
+To change a project's tile:
 
 1. Right-click the project's name.
-2. Pick **Remove from sidebar**.
+2. Pick **Change tile…**.
+3. Type an emoji or one or two letters, pick a color, and click **Save**. **Reset** puts the tile back.
 
-It comes back when you start a chat in that folder again. **Remove from sidebar** is greyed out while the project still has a chat that isn't archived.
+To use a picture of your own:
+
+1. Right-click the project's name and pick **Change tile…**.
+2. Click **Choose image…** and pick a PNG, JPEG, GIF or WebP file (up to 16 MB).
+3. Click **Save**.
+
+A GIF plays while the pointer is on the tile. To take the picture off, open **Change tile…** again and click **Remove image**, then **Save**. Nushi keeps its own copy of the picture, so the file you picked can be moved or deleted.
+
+To add a project before it has a chat, click the Arrange button at the top of the sidebar, pick **Add project…** and pick its folder.
+
+## See one project's chats
+
+The project rail is a column of larger tiles at the sidebar's left, one for each project. It's off at first.
+
+1. Open **Settings**, then **Appearance**.
+2. Turn on **Project rail**.
+3. Click a project's tile. The sidebar shows only that project's chats.
+4. Click **All projects**, the tile at the top, to see every project again.
+
+A number on a tile counts that project's chats that need you. Hover over a tile for the project's name and folder. The rail goes when the sidebar is dragged narrow, and it isn't there while the sidebar is grouped by something other than Project.
+
+## Change the fonts
+
+Nushi comes with its own fonts. You can use any font installed on your computer instead, one for the app's text and one for code.
+
+1. Open **Settings**, then **Appearance**.
+2. Under **Fonts**, click **App font** and pick a font. The whole window changes at once.
+3. Click **Code font** and pick a font for code in chats, diffs and files.
+
+The list is long: type a few letters to find a font. To go back, pick the first font in the list, the one marked **bundled**. On a Mac, **System** is the font macOS itself uses.
+
+The terminal has its own font, in **Settings**, then **Terminal**. The phone always uses Nushi's own fonts.
 
 ## Send a message
 

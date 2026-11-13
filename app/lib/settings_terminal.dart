@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/settings_fonts.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/terminal_find.dart' show terminalStyle;
 import 'package:nushi/theme/theme.dart';
@@ -19,13 +20,6 @@ const terminalPreview =
 
 const _sizes = [10.0, 11.0, 12.0, 12.5, 13.0, 14.0, 15.0, 16.0, 18.0, 20.0];
 
-/// The installed monospaced families ([Native.fonts]), but the bundled
-/// one's name.
-Future<List<String>> _monospaced() async {
-  final all = await native.fonts.monospaced();
-  return [...?all?.where((f) => f != NushiTheme.codeFont)];
-}
-
 /// Settings › Terminal: the font, its size, and a preview.
 class TerminalSection extends StatefulWidget {
   const new({super.key});
@@ -35,7 +29,10 @@ class TerminalSection extends StatefulWidget {
 }
 
 class _TerminalSectionState extends State<TerminalSection> {
-  final Future<List<String>> _families = _monospaced();
+  final Future<List<String>> _families = installedFamilies(
+    native.fonts.monospaced,
+    bundled: NushiTheme.codeFont,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -51,26 +48,10 @@ class _TerminalSectionState extends State<TerminalSection> {
               SettingsRow(
                 'Font',
                 description: 'Nerd Font icons come from a bundled font.',
-                control: FutureBuilder(
-                  future: _families,
-                  builder: (context, families) => MenuField(
-                    entries: [
-                      MenuEntry(
-                        NushiTheme.codeFont,
-                        detail: 'bundled',
-                        checked: terminalFont.value == null,
-                        onPick: () => terminalFont.value = null,
-                      ),
-                      MenuEntry.divider,
-                      for (final f in families.data ?? const <String>[])
-                        MenuEntry(
-                          f,
-                          checked: terminalFont.value == f,
-                          onPick: () => terminalFont.value = f,
-                        ),
-                    ],
-                    label: Text(terminalFont.value ?? NushiTheme.codeFont),
-                  ),
+                control: FontField(
+                  picked: terminalFont,
+                  bundled: NushiTheme.codeFont,
+                  families: _families,
                 ),
               ),
               SettingsRow(

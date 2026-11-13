@@ -229,6 +229,10 @@ service NushiService {
   // Sums up a folder's changes (as GetDiff lists them) and names its
   // branch.
   rpc GetFolderStatus(GetFolderStatusRequest) returns (GetFolderStatusResponse);
+  // A project's own icon, for its tile in the Mac's sidebar: a small PNG
+  // or JPEG at one of a fixed list of paths in its folder
+  // (internal/projecticon), or nothing. The Mac's only. API 116.
+  rpc GetProjectIcon(GetProjectIconRequest) returns (GetProjectIconResponse);
   // The worktrees the chat's subagents work in, in the order found, each
   // looked at now: its head is recorded, and one that went stays as
   // "removed". GetDiff and GetFolderStatus read one by its path, against
@@ -1781,6 +1785,19 @@ message RelatedWorktreeStats {
   int32 ahead = 5;
   // It's removed and git no longer has last_head: nothing is left to diff.
   bool commits_gone = 6;
+}
+
+message GetProjectIconRequest {
+  // The project's folder, an absolute path: the only path the client
+  // gives. What is read inside it is the daemon's list.
+  string folder = 1;
+}
+
+message GetProjectIconResponse {
+  // "image/png" or "image/jpeg"; "" with no data when the folder has no
+  // icon.
+  string mime_type = 1;
+  bytes data = 2;
 }
 
 message GetFolderStatusRequest {

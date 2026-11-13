@@ -96,17 +96,21 @@ List<Chat> arrangeChats() => [
   )..pin = 1,
 ];
 
-/// The sidebar alone, 260 wide in a window of [size], over [chats]
-/// ([arrangeChats] unless given), still (no ring turns), in [tokens].
+/// The sidebar alone, [width] wide (260 unless given) in a window of
+/// [size], over [chats] ([arrangeChats] unless given), still (no ring
+/// turns), in [tokens]; [icons], the projects' icons the daemon has, by
+/// folder.
 Future<(Daemon, FakeDaemon)> arrangedSidebar(
   WidgetTester tester, {
   List<Chat>? chats,
   Tokens tokens = Tokens.dark,
   Size size = const Size(560, 700),
+  double width = 260,
+  Map<String, List<int>> icons = const {},
 }) async {
   Directory(dataDir).createSync(recursive: true);
   viewport(tester, size);
-  final fake = FakeDaemon(chats ?? arrangeChats());
+  final fake = FakeDaemon(chats ?? arrangeChats())..projectIcons.addAll(icons);
   final d = await fake.connect(tester);
   await tester.pumpWidget(
     MaterialApp(
@@ -120,7 +124,7 @@ Future<(Daemon, FakeDaemon)> arrangedSidebar(
             child: RepaintBoundary(
               key: const Key('shot'),
               child: SizedBox(
-                width: 260,
+                width: width,
                 height: size.height,
                 child: ListenableBuilder(
                   listenable: d,
