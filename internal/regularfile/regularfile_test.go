@@ -105,3 +105,18 @@ func TestTooLargeSays(t *testing.T) {
 		}
 	}
 }
+
+// The check after the open: a fifo put where a regular file was stat'ed
+// (opened without waiting, as Open does) is refused and closed, not read.
+func TestCheckedAfterTheOpen(t *testing.T) {
+	path := filepath.Join(files(t), "fifo")
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	testcheck.NoErr(t, err)
+	got, fi, err := checked(f, path)
+	if !errors.Is(err, ErrNotRegular) || got != nil || fi != nil {
+		t.Fatalf("a fifo: %v, %v, %v", got, fi, err)
+	}
+	if _, err := f.Stat(); !errors.Is(err, os.ErrClosed) {
+		t.Errorf("the fifo is open: %v", err)
+	}
+}
