@@ -137,6 +137,33 @@ const _lines = [
 void main() {
   setUpAll(loadFonts);
 
+  testWidgets('R on a selection opens the reply box on it, empty; with a '
+      'modifier, or with nothing selected, it does nothing', (tester) async {
+    final (fake, close) = await _open(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
+    await tester.pumpAndSettle();
+    expect(find.byType(ReplyBox), findsNothing);
+    await _reply(tester, open: false);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+    expect(find.byType(ReplyBox), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
+    await tester.pumpAndSettle();
+    expect(find.byType(ReplyBox), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ReplyBox),
+        matching: find.textContaining(_quote),
+      ),
+      findsWidgets,
+    );
+    expect(tester.widget<TextField>(_field).controller!.text, isEmpty);
+    expect(tester.widget<TextField>(_field).focusNode!.hasFocus, isTrue);
+    await close();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
   testWidgets('Shift-Enter starts a line, the box grows upward from where '
       'it opened, and Enter sends the reply with its lines', (tester) async {
     final (fake, end) = await _open(tester, low: true);

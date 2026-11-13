@@ -15,8 +15,9 @@ const _scrollbarEdge = 16.0;
 /// it offers: a toolbar above selected text to ask a side chat about it
 /// ([onSide]) or to reply to it ([onReply]), and the reply box; selected
 /// by touch, the selection's own menu has those beside Copy. ⌘C copies it
-/// with its lines. Pacing holds while a pointer is down or text is
-/// selected. It spans the transcript's box, where the toolbar is placed.
+/// with its lines; R opens the reply box, as Reply does. Pacing holds
+/// while a pointer is down or text is selected. It spans the
+/// transcript's box, where the toolbar is placed.
 class TranscriptSelection extends StatefulWidget {
   const new({
     required this.width,
@@ -51,7 +52,7 @@ class _TranscriptSelectionState extends State<TranscriptSelection> {
   // selection without reporting it: the toolbar goes with it. An open reply
   // box stays, its quote kept.
   late final FocusNode _areaFocus =
-      FocusNode(debugLabel: 'transcript', onKeyEvent: _copy)..addListener(() {
+      FocusNode(debugLabel: 'transcript', onKeyEvent: _key)..addListener(() {
         if (!_areaFocus.hasFocus && _at != null && _replyTo == null) {
           _closeToolbar();
         }
@@ -162,6 +163,30 @@ class _TranscriptSelectionState extends State<TranscriptSelection> {
     final box = _area.currentContext?.findRenderObject();
     final lines = box == null ? '' : selectionLines(box);
     return lines.isEmpty ? _selected : lines;
+  }
+
+  /// The selection's keys: R replies to it ([_reply]), ⌘C copies it
+  /// ([_copy]).
+  KeyEventResult _key(FocusNode node, KeyEvent e) =>
+      _reply(e) ? KeyEventResult.handled : _copy(node, e);
+
+  /// R, no modifier, with text selected and no reply box open: opens one
+  /// on it, as the toolbar's Reply does.
+  bool _reply(KeyEvent e) {
+    final keys = HardwareKeyboard.instance;
+    if (e is KeyUpEvent ||
+        e.logicalKey != LogicalKeyboardKey.keyR ||
+        keys.isMetaPressed ||
+        keys.isControlPressed ||
+        keys.isAltPressed ||
+        keys.isShiftPressed ||
+        widget.onReply == null ||
+        _replyTo != null ||
+        _selected.trim().isEmpty) {
+      return false;
+    }
+    if (e is KeyDownEvent) _openReply();
+    return true;
   }
 
   /// ⌘C: the selection with its lines, not the run-together text the
