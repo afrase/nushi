@@ -127,12 +127,21 @@ func TestThroughAProxy(t *testing.T) {
 	}
 }
 
+// A proxy that wants a password, given none or a wrong one, fails the dial
+// saying so; the error, which shows in Remote and the log, never holds the
+// password given.
 func TestProxyWantsAPassword(t *testing.T) {
 	proxyURL, _ := connectProxy(t, "me:secret")
-	u, _ := url.Parse(proxyURL)
-	dl := relay.Dialer{Proxies: func(*url.URL) ([]*url.URL, error) { return []*url.URL{u}, nil }}
-	_, err := dl.Dial(context.Background(), "ws://relay.test:1", "AAAAAAAAAAAAAAAAAAAAAA")
-	if err == nil || !strings.Contains(err.Error(), "Proxy Authentication Required") {
-		t.Fatalf("got %v", err)
+	for _, user := range []*url.Userinfo{nil, url.UserPassword("me", "wrong")} {
+		u, _ := url.Parse(proxyURL)
+		u.User = user
+		dl := relay.Dialer{Proxies: func(*url.URL) ([]*url.URL, error) { return []*url.URL{u}, nil }}
+		_, err := dl.Dial(context.Background(), "ws://relay.test:1", "AAAAAAAAAAAAAAAAAAAAAA")
+		if err == nil || !strings.Contains(err.Error(), "Proxy Authentication Required") {
+			t.Fatalf("as %v: got %v", user, err)
+		}
+		if strings.Contains(err.Error(), "wrong") {
+			t.Errorf("the error holds the password: %v", err)
+		}
 	}
 }
