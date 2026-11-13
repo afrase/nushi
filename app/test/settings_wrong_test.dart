@@ -22,11 +22,11 @@ void main() {
           'sidebarCollapsed', 'sidebarProjects', 'sidebarChats', //
           'pinnedCollapsed', 'models',
           'opened', 'pins', 'pullSeen', 'cleanUpLater', 'panes',
-          'termFont', 'termSize', 'appearance',
+          'termFont', 'termSize', 'appFont', 'codeFont', 'appearance',
           'alertNeedsYou', 'alertFinished', 'alertFailed', 'alertSound',
           'dockBadge', 'dismissedUpdate',
         ])
-          key: key == 'termFont' ? 7 : 'wrong',
+          key: key.endsWith('Font') ? 7 : 'wrong',
       }),
     );
   });
@@ -51,6 +51,8 @@ void main() {
     expect(paneWidths.value, isEmpty);
     expect(terminalFont.value, isNull);
     expect(terminalFontSize.value, 12.5);
+    expect(appFont.value, isNull);
+    expect(codeFont.value, isNull);
     expect(appearance.value, ThemeMode.system);
     expect(alertNeedsYou.value, isTrue);
     expect(alertSound.value, isFalse);

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'package:nushi/arrangement.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
+import 'package:nushi/fonts.dart';
 import 'package:nushi/tile_images.dart';
 import 'package:nushi/tile_look.dart';
 import 'package:nushi/tile_picture.dart';
@@ -18,7 +19,8 @@ import 'package:nushi/tile_picture.dart';
 /// side panes' widths (not the details panel's, which is fixed), whether
 /// changed files show flat and diffs unified, which chats show their
 /// terminals and their Files pane, whether it lists ignored files, the
-/// terminal's font, whether the chat takes the whole width,
+/// terminal's font, the app's and code's fonts, whether the chat takes the
+/// whole width,
 /// whether the sidebar is hidden, the Jira task list's groups and assignee
 /// filters, the GitHub view's cards and filters, the sidebar's project
 /// groups' order and which are collapsed, the projects it keeps (with
@@ -315,12 +317,24 @@ final paneWidths = Pref<Map<String, double>>(
 /// its middle (ADR 0074).
 final Pref<bool> chatFullWidth = _plain('chatFullWidth', false);
 
-/// The terminal's font family (null: the bundled JetBrains Mono) and size.
-final Pref<String?> terminalFont = _plain('termFont', null);
+/// The terminal's font family (null: the bundled JetBrains Mono; a saved
+/// value that can't be a family's name reads as that too) and size.
+final terminalFont = Pref<String?>('termFont', _family);
 final terminalFontSize = Pref<double>(
   'termSize',
   (v) => v is num ? v.toDouble() : 12.5,
 );
+
+/// The families the app's text and code are set in (Settings ›
+/// Appearance's Fonts; ADR 0114): null is the bundled one (IBM Plex Sans,
+/// JetBrains Mono). What's saved is anyone's text: only something that
+/// can be a family's name ([isFamilyName]) is read, anything else as
+/// null. The terminal keeps its own, above, read the same way.
+final appFont = Pref<String?>('appFont', _family);
+final codeFont = Pref<String?>('codeFont', _family);
+
+String? _family(Object? saved) =>
+    saved is String && isFamilyName(saved) ? saved : null;
 
 /// The app's appearance (Settings › General, and View's items): light,
 /// dark or as the system is.
