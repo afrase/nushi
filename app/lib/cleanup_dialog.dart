@@ -79,6 +79,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
             u.hasWorktree() &&
             !st.gone &&
             st.changed == 0 &&
+            st.ignored == 0 &&
             st.error.isEmpty &&
             u.others.isEmpty &&
             !u.worktree.found;
@@ -111,6 +112,10 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
         '1 file'
       else if (_worktree && st.changed > 1)
         '${st.changed} files',
+      if (_worktree && st.ignored == 1)
+        '1 ignored file'
+      else if (_worktree && st.ignored > 1)
+        '${st.ignored} ignored files',
       if (_branch && _canBranch && !_merged && commits == 1)
         '1 commit'
       else if (_branch && _canBranch && !_merged && commits > 1)
@@ -174,7 +179,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
                       Navigator.pop(context);
                     },
                   )
-                : st.ignored > 0 && _worktree
+                : st.ignored > 0 && !st.gone
                 ? Text(
                     st.ignored == 1
                         ? '1 ignored file or folder goes with it.'
@@ -263,7 +268,9 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
             : () => Navigator.pop<CleanUpPicks>(context, (
                 archive: _archive && !chat.archived,
                 worktree: _worktree,
-                force: _worktree && (st?.changed ?? 0) > 0,
+                force:
+                    _worktree &&
+                    ((st?.changed ?? 0) > 0 || (st?.ignored ?? 0) > 0),
                 branch: _branch && _canBranch,
                 forceBranch: _branch && _canBranch && (st?.commits ?? 0) > 0,
                 remote: _remote && _hasRemote,

@@ -23,15 +23,18 @@ final _wt = Worktree(
 
 GitHubPull _merged() => fixturePull()..item.state = 'merged';
 
-GetCleanUpResponse _clean({int changed = 0, int commits = 1}) =>
-    GetCleanUpResponse(
-      worktree: _wt,
-      state: WorktreeState(changed: changed, commits: commits),
-      changes: [
-        if (changed > 0) 'M app/notebooks/page_spec.rb',
-        if (changed > 1) '?? tmp/q_params_repro.rb',
-      ],
-    );
+GetCleanUpResponse _clean({
+  int changed = 0,
+  int commits = 1,
+  int ignored = 0,
+}) => GetCleanUpResponse(
+  worktree: _wt,
+  state: WorktreeState(changed: changed, commits: commits, ignored: ignored),
+  changes: [
+    if (changed > 0) 'M app/notebooks/page_spec.rb',
+    if (changed > 1) '?? tmp/q_params_repro.rb',
+  ],
+);
 
 Finder get _pull => find.ancestor(
   of: find.text('Pull request').last,
@@ -189,6 +192,25 @@ void main() {
     boxes = tester.widgetList<Checkbox>(find.byType(Checkbox)).toList();
     expect(boxes[1].onChanged, isNotNull);
     await tester.tap(find.text('Clean up, losing 2 files'));
+    await tester.pumpAndSettle();
+    expect(
+      fake.calls.whereType<RemoveChatWorktreeRequest>().single.force,
+      isTrue,
+    );
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('ignored files start it unticked; ticking it names them and '
+      'forces', (tester) async {
+    final (d, fake) = await _open(tester, u: _clean(ignored: 3));
+    await tester.tap(_inPull(find.text('Clean up…')));
+    await tester.pumpAndSettle();
+    expect(find.text('3 ignored files or folders go with it.'), findsOneWidget);
+    final boxes = tester.widgetList<Checkbox>(find.byType(Checkbox)).toList();
+    expect(boxes.first.value, isFalse);
+    await tester.tap(find.byType(Checkbox).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clean up, losing 3 ignored files'));
     await tester.pumpAndSettle();
     expect(
       fake.calls.whereType<RemoveChatWorktreeRequest>().single.force,
