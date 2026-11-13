@@ -70,13 +70,10 @@ class ProjectTile extends StatelessWidget {
           size: letters ? (size > 24 ? size * 0.32 : size * 0.5) : size * 0.5,
           weight: FontWeight.w700,
         )
-        .copyWith(
-          height: 1,
-          letterSpacing: letters ? 0.2 : 0,
-          // By name, so a mark is set in the same font, with the same
-          // measures, wherever the system's own fallback would look.
-          fontFamilyFallback: emojiFonts,
-        );
+        .copyWith(height: 1, letterSpacing: letters ? 0.2 : 0)
+        // By name, so a mark is set in the same font, with the same
+        // measures, wherever the system's own fallback would look.
+        .thenFonts(emojiFonts);
     final initials = Container(
       width: size,
       height: size,

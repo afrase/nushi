@@ -588,11 +588,9 @@ Widget _button(
             padding: const EdgeInsets.only(left: 24),
             child: keyText(
               e.shortcut,
-              // The label's font; its keys' symbols from the code font,
-              // which has them.
-              theme
-                  .ui(t.textMuted)
-                  .copyWith(fontFamilyFallback: const [NushiTheme.codeFont]),
+              // The label's font; its keys' symbols from the bundled code
+              // font, which has them.
+              theme.ui(t.textMuted).thenFonts(const [NushiTheme.codeFont]),
             ),
           ),
         if (checks)
