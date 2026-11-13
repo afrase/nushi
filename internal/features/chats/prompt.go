@@ -390,8 +390,10 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	}
 	c.lookRelatedLocked()
 	end, failure := c.verdictLocked(resp, err, quit)
-	c.turnEndedLocked(end, failure)
+	// The copy has the turn's last items before the turn is said to have
+	// ended, as releaseLocked has it: whoever reads it then reads them.
 	c.copyLocked(true)
+	c.turnEndedLocked(end, failure)
 	// A stopped or failed turn holds the queue until the next one ends: one
 	// the user stopped even when the agent ended it as the stop came.
 	c.held = end != model.TurnDone
