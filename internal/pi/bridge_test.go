@@ -121,6 +121,14 @@ func (c *client) find(t *testing.T, sid acp.SessionID, kind string, ok func(acp.
 // initializes it; the bridge's own lines go to log.
 func start(t *testing.T, store *pitest.Store, log io.Writer) *peer {
 	t.Helper()
+	c, _ := startDying(t, store, log)
+	return c
+}
+
+// startDying is start, and die ends every fake pi it has started as their
+// processes dying would: their output ends, their input goes nowhere.
+func startDying(t *testing.T, store *pitest.Store, log io.Writer) (c *peer, die func()) {
+	t.Helper()
 	logMu.Lock()
 	logTo = log
 	logMu.Unlock()
@@ -131,11 +139,24 @@ func start(t *testing.T, store *pitest.Store, log io.Writer) *peer {
 	})
 	toBridgeR, toBridgeW := io.Pipe()
 	fromBridgeR, fromBridgeW := io.Pipe()
+	var progsMu sync.Mutex
+	var progs []func()
 	spawn := func(cwd string, args ...string) (Program, error) { //nolint:unparam // a Spawn, which can fail
 		inR, inW := io.Pipe()
 		outR, outW := io.Pipe()
 		go func() { store.Serve(inR, outW, cwd, args); _ = outW.Close() }()
-		return Program{In: inW, Out: outR, Kill: func() { _, _ = inR.Close(), outW.Close() }}, nil
+		kill := func() { _, _ = inR.Close(), outW.Close() }
+		progsMu.Lock()
+		progs = append(progs, kill)
+		progsMu.Unlock()
+		return Program{In: inW, Out: outR, Kill: kill}, nil
+	}
+	die = func() {
+		progsMu.Lock()
+		defer progsMu.Unlock()
+		for _, kill := range progs {
+			kill()
+		}
 	}
 	done := make(chan struct{})
 	go func() {
@@ -143,14 +164,14 @@ func start(t *testing.T, store *pitest.Store, log io.Writer) *peer {
 		_ = fromBridgeW.Close()
 		close(done)
 	}()
-	c := &peer{client: &client{}}
+	c = &peer{client: &client{}}
 	c.AgentConn = acp.NewAgentConn(fromBridgeR, toBridgeW, func(*acp.AgentConn) acp.Client { return c.client })
 	t.Cleanup(func() { _ = toBridgeW.Close(); <-done })
 	if _, err := c.Initialize(context.Background(), &acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion,
 		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}}); err != nil {
 		t.Fatal(err)
 	}
-	return c
+	return c, die
 }
 
 // turnTimeout bounds a turn's wait: a turn that never ends fails its test
