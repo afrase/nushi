@@ -438,14 +438,19 @@ func TestWaitsAgain(t *testing.T) {
 	lim := relay.Defaults
 	lim.MaxWait = 200 * time.Millisecond
 	lim.DialWait = 3 * time.Second
-	srv := httptest.NewServer(relay.New(lim))
+	srv := httptest.NewUnstartedServer(relay.New(lim))
+	tl := &tracked{Listener: srv.Listener}
+	srv.Listener = tl
+	srv.Start()
 	defer srv.Close()
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
 	// Waits this short back off, as flapping ones.
 	s := startRemote(t, t.TempDir(), url, func(tm *timing) { tm.maxBackoff = 300 * time.Millisecond })
 	phone := newKey(t)
 	o, id := pairOne(t, s, phone)
-	time.Sleep(time.Second) // several waits ended
+	// Several waits ended: the daemon came back for two more.
+	after := tl.accepted()
+	waitFor(t, func() bool { return tl.accepted() >= after+2 })
 	conn, err := phoneConnect(url, id, o.key, phone)
 	if err != nil || !talks(conn) {
 		t.Fatal("no connection after the relay ended waits", err)
@@ -455,33 +460,30 @@ func TestWaitsAgain(t *testing.T) {
 // A relay that restarts (the Pi's, to deploy) drops the daemon's wait:
 // the Mac says it's reconnecting, and the daemon waits there again once
 // the relay is back, however long it was gone, so a phone gets through.
+// The listener stays open while the relay is "down", so no other process
+// can take its port meanwhile; it ends each connection as it comes.
 func TestRelayRestart(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	addr := ln.Addr().String()
-	serve := func(ln net.Listener) *tracked {
-		lim := relay.Defaults
-		lim.DialWait = 3 * time.Second
-		tl := &tracked{Listener: ln}
-		go func() { _ = (&http.Server{Handler: relay.New(lim), ReadHeaderTimeout: time.Second}).Serve(tl) }()
-		return tl
-	}
-	srv := serve(ln)
-	url := "ws://" + addr
+	lim := relay.Defaults
+	lim.DialWait = 3 * time.Second
+	tl := &tracked{Listener: ln}
+	hs := &http.Server{Handler: relay.New(lim), ReadHeaderTimeout: time.Second}
+	go func() { _ = hs.Serve(tl) }()
+	t.Cleanup(func() { _ = hs.Close(); tl.kill() })
+	url := "ws://" + ln.Addr().String()
 	s := startRemote(t, t.TempDir(), url, func(tm *timing) { tm.maxBackoff = 200 * time.Millisecond })
 	phone := newKey(t)
 	o, id := pairOne(t, s, phone)
 
-	srv.kill() // as the process going: every connection ends
+	tl.kill() // as the process going: every connection ends, and new ones too
 	waitFor(t, func() bool { st := s.Get().State; return st == "reconnecting" || st == "error" })
 	waitFor(t, func() bool { return s.Get().State == "error" }) // a try failed
-	time.Sleep(time.Second)                                     // several, backing off
-	if ln, err = net.Listen("tcp", addr); err != nil {
-		t.Fatal(err)
-	}
-	defer serve(ln).kill()
+	refused := tl.refused()
+	waitFor(t, func() bool { return tl.refused() >= refused+3 }) // several, backing off
+	tl.revive()
 	waitFor(t, func() bool { return s.Get().State == "connected" })
 	conn, err := phoneConnect(url, id, o.key, phone)
 	if err != nil || !talks(conn) {
@@ -489,31 +491,66 @@ func TestRelayRestart(t *testing.T) {
 	}
 }
 
-// tracked is a listener that can end every connection it took, hijacked
-// (WebSockets) or not, as a relay's process going would.
+// tracked is a listener that counts what it accepts, and can end every
+// connection it took, hijacked (WebSockets) or not, as a relay's process
+// going would; until revived it then ends each new one at once, its port
+// still held.
 type tracked struct {
 	net.Listener
-	mu    sync.Mutex
-	conns []net.Conn
+	mu       sync.Mutex
+	conns    []net.Conn
+	down     bool
+	accepts  int
+	refusals int
 }
 
 func (l *tracked) Accept() (net.Conn, error) {
-	c, err := l.Listener.Accept()
-	if err == nil {
+	for {
+		c, err := l.Listener.Accept()
+		if err != nil {
+			return nil, err
+		}
 		l.mu.Lock()
+		if l.down {
+			l.refusals++
+			l.mu.Unlock()
+			_ = c.Close()
+			continue
+		}
+		l.accepts++
 		l.conns = append(l.conns, c)
 		l.mu.Unlock()
+		return c, nil
 	}
-	return c, err
 }
 
+// kill ends every connection, and those to come until revive.
 func (l *tracked) kill() {
-	_ = l.Close()
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	l.down = true
 	for _, c := range l.conns {
 		_ = c.Close()
 	}
+	l.conns = nil
+}
+
+func (l *tracked) revive() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.down = false
+}
+
+func (l *tracked) accepted() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.accepts
+}
+
+func (l *tracked) refused() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.refusals
 }
 
 // The first handshake with the secret uses the pairing up, even with no
