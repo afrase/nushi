@@ -89,7 +89,12 @@ func newService(t *testing.T, kinds []Kind, o Options) *Service {
 	if o.Sessions == nil {
 		o.Sessions = &memSessions{}
 	}
-	return New(t.Context(), kinds, o)
+	s := New(t.Context(), kinds, o)
+	t.Cleanup(func() { // its loops end with the test, before anything a later cleanup puts back
+		s.cancel()
+		s.loops.Wait()
+	})
+	return s
 }
 
 // fakeAgent replies to each prompt with the given updates. Like Claude, it

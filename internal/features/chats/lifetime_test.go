@@ -139,8 +139,6 @@ func TestARewindOutlivesTheApp(t *testing.T) {
 // command its agent still runs is no longer read once the ctx New was
 // given ends, and Close leaves no side chats' timer behind.
 func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
-	defer func(d time.Duration) { commandPoll = d }(commandPoll)
-	commandPoll = time.Millisecond
 	reads := make(chan struct{}, 1)
 	read := func(string, string) (string, string, error) {
 		select {
@@ -151,7 +149,7 @@ func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
 	}
 	agent := &fakeAgent{}
 	life, end := context.WithCancel(t.Context())
-	svc := New(life, []Kind{{Harness: testHarness{Name: "fake", read: read}, Launch: agent.launch}}, Options{Remembered: &memModes{}, Sessions: &memSessions{}})
+	svc := New(life, []Kind{{Harness: testHarness{Name: "fake", read: read}, Launch: agent.launch}}, Options{Remembered: &memModes{}, Sessions: &memSessions{}, Timing: Timing{CommandPoll: time.Millisecond}})
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
 	c := svc.chats[id]

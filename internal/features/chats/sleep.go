@@ -57,13 +57,10 @@ type SleepPrefs interface {
 	SetSleepAfter(time.Duration) error
 }
 
-// sleepCheck is how often idle chats are looked for.
-var sleepCheck = time.Minute
-
 // autoSleep puts chats to sleep once they have idled as long as the
 // service's prefs say, until the service's life ends.
 func (s *Service) autoSleep() {
-	tick := time.NewTicker(sleepCheck)
+	tick := time.NewTicker(s.timing.sleepCheck())
 	defer tick.Stop()
 	for {
 		select {
@@ -112,7 +109,7 @@ func (s *Service) doze(c *chat, after time.Duration) {
 	c.statusChangedLocked()
 	c.logLocked().Info("chat asleep", "why", "idle", "after", after)
 	c.mu.Unlock()
-	if err := agent.Stop(stopGrace); err != nil {
+	if err := agent.Stop(s.timing.stopGrace()); err != nil {
 		c.log().Warn("stopping the agent to sleep", "err", err)
 	}
 	c.mu.Lock()
@@ -123,7 +120,7 @@ func (s *Service) doze(c *chat, after time.Duration) {
 // retire waits for old, the agent the chat fell asleep from (nil: none),
 // to have ended before another agent opens its session: two processes
 // writing one session corrupt the agent's own history, the source of truth
-// (ADR 0047). doze's Stop gives it stopGrace and then kills it; one still
+// (ADR 0047). doze's Stop gives it StopGrace and then kills it; one still
 // running at twice that is killed again here (Close, its process group),
 // and one that outlives that too keeps the chat from reopening, saying so,
 // and is waited for again by the next reopen. A message sent meanwhile
@@ -142,11 +139,11 @@ func (c *chat) retire(ctx context.Context, old Agent) error {
 			return false, nil
 		}
 	}
-	done, err := ended(2 * stopGrace)
+	done, err := ended(2 * c.timing.stopGrace())
 	if !done && err == nil {
 		c.log().Warn("the agent the chat slept from outlived its stop: killing it", "pid", old.Pid())
 		_ = old.Close()
-		done, err = ended(stopGrace)
+		done, err = ended(c.timing.stopGrace())
 	}
 	switch {
 	case err != nil:

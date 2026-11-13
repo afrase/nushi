@@ -110,6 +110,9 @@ type Options struct {
 	// Sleep says how long a chat idles before its agent sleeps; nil: chats
 	// sleep only when asked (sleep.go).
 	Sleep SleepPrefs
+	// Timing is how long it waits and how often it looks; zero: the
+	// defaults.
+	Timing Timing
 }
 
 // New makes the service for agents, the first of them the default. What
@@ -118,7 +121,7 @@ type Options struct {
 func New(ctx context.Context, agents []Kind, o Options) *Service {
 	s := &Service{remembered: o.Remembered, sessions: o.Sessions, worktrees: o.Worktrees,
 		scratch: o.Scratch, uploads: o.Uploads, publish: o.Publish, viewers: o.Viewers, procs: o.Processes, prefs: o.Sleep, copies: o.Copies, copiesOn: o.CopiesOn,
-		chats: map[string]*chat{}, live: map[Agent]bool{}, opening: map[string]bool{}}
+		timing: o.Timing, chats: map[string]*chat{}, live: map[Agent]bool{}, opening: map[string]bool{}}
 	s.ctx, s.cancel = context.WithCancel(ctx)
 	if s.publish == nil {
 		s.publish = func(model.Event) {}
@@ -132,13 +135,13 @@ func New(ctx context.Context, agents []Kind, o Options) *Service {
 		s.kinds = append(s.kinds, kn)
 	}
 	if o.Sleep != nil {
-		go s.autoSleep()
+		s.loops.Go(s.autoSleep)
 	}
 	if o.Copies != nil && o.CopyDays != nil {
-		go s.autoClearCopies(o.CopyDays)
+		s.loops.Go(func() { s.autoClearCopies(o.CopyDays) })
 	}
 	if o.Copies != nil {
-		go s.letGoUnseen()
+		s.loops.Go(s.letGoUnseen)
 	}
 	return s
 }

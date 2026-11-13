@@ -80,12 +80,10 @@ func TestNoSleepWithoutLoad(t *testing.T) {
 // A chat sleeps on its own once idle, but not while anything would be
 // lost, and activity puts it off.
 func TestAutoSleep(t *testing.T) {
-	defer func(d time.Duration) { sleepCheck = d }(sleepCheck)
-	sleepCheck = 5 * time.Millisecond
 	const after = 30 * time.Millisecond
 	agent := &fakeAgent{}
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sleep: &memPrefs{after: after}})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sleep: &memPrefs{after: after}, Timing: Timing{SleepCheck: 5 * time.Millisecond}})
 	defer svc.Close()
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
@@ -174,15 +172,12 @@ func TestSleepAgent(t *testing.T) {
 // waits for that process to end before another opens its session: two
 // processes writing one session corrupt the agent's own history (ADR
 // 0047). The message waits, queued. A process that outlives twice
-// stopGrace is killed; one that outlives the kill keeps the chat from
+// StopGrace is killed; one that outlives the kill keeps the chat from
 // reopening, saying so, until it has ended.
 func TestWakingWaitsForTheOldAgent(t *testing.T) {
 	asleep := func(t *testing.T, grace time.Duration, unkillable bool) (*Service, *fakeAgent, *chat, chan struct{}) {
 		t.Helper()
-		was := stopGrace
-		t.Cleanup(func() { stopGrace = was })
-		stopGrace = grace
-		svc, agent, c := newChat(t, claudeSession, &memModes{})
+		svc, agent, c := newTimedChat(t, claudeSession, &memModes{}, Timing{StopGrace: grace})
 		agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 		turn(t, svc, c, "one")
 		gate := make(chan struct{})
