@@ -2,8 +2,10 @@ package jsonsettings
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -64,5 +66,33 @@ func TestRead(t *testing.T) {
 	}
 	if err := Read(good, &v); err != nil || v["k"] != 2 {
 		t.Errorf("good: %v %v", v, err)
+	}
+}
+
+// Edits at once each keep the others': twenty keys, each set by its own
+// Edit, are all in the file after (mu, from the read to the write).
+func TestEditsAtOnce(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	var wg sync.WaitGroup
+	errs := make(chan error, 20)
+	for i := range 20 {
+		wg.Go(func() {
+			_, err := Edit(path, func(m map[string]json.RawMessage) error {
+				m[fmt.Sprintf("k%d", i)] = json.RawMessage(`true`)
+				return nil
+			})
+			errs <- err
+		})
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	var got map[string]bool
+	if err := Read(path, &got); err != nil || len(got) != 20 {
+		t.Errorf("%d keys of 20, %v", len(got), err)
 	}
 }

@@ -1,10 +1,12 @@
 package store
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -68,5 +70,31 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	if len(got) != 2 || got[1].ID != "a" || got[1].Title != "Fix the build" || !got[1].Created.Equal(created) || got[0].ID != "../b" ||
 		got[1].SessionID != "a" || got[0].SessionID != "s2" { // an older chat has one id for both
 		t.Errorf("sessions = %+v", got)
+	}
+}
+
+// Changes at once each keep the others' (mu, from the read to the write):
+// twenty picks of one agent, and settings changed beside them.
+func TestChangesAtOnce(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	var wg sync.WaitGroup
+	errs := make(chan error, 22)
+	for i := range 20 {
+		wg.Go(func() { errs <- s.SetPick("claude", fmt.Sprintf("o%d", i), "v") })
+	}
+	wg.Go(func() { errs <- s.SetDebugLog(true) })
+	wg.Go(func() { errs <- s.SetTranscriptDays(9) })
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		testcheck.NoErr(t, err)
+	}
+	s = New(dir)
+	if got := s.Picks("claude"); len(got) != 20 {
+		t.Errorf("%d picks of 20", len(got))
+	}
+	if !s.DebugLog() || s.TranscriptDays() != 9 {
+		t.Errorf("settings: debug %v, days %d", s.DebugLog(), s.TranscriptDays())
 	}
 }
