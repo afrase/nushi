@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -17,10 +18,12 @@ func TestHandler(t *testing.T) {
 	var b bytes.Buffer
 	log := slog.New(Handler(&b))
 	log.Info("opened "+home+"/repo", "folder", home+"/repo", "err", errors.New("in "+home), "n", 3)
+	level := Level.Level()
+	t.Cleanup(func() { Level.Set(level) })
+	SetDebug(false)
 	log.Debug("hidden")
 	SetDebug(true)
 	log.Debug("shown")
-	SetDebug(false)
 	got := b.String()
 	for _, want := range []string{`level=INFO msg="opened ~/repo" folder=~/repo err="in ~" n=3`, `level=DEBUG msg=shown`} {
 		if !strings.Contains(got, want) {
@@ -33,6 +36,10 @@ func TestHandler(t *testing.T) {
 }
 
 func TestRedact(t *testing.T) {
+	maskMu.Lock()
+	kept := slices.Clone(masked)
+	maskMu.Unlock()
+	t.Cleanup(func() { maskMu.Lock(); masked = kept; maskMu.Unlock() })
 	Mask("0123456789abcdef0123")
 	for in, want := range map[string]string{
 		"key sk-ant-api03-abcdefghijklmnopqrstuv end":       "key [redacted] end",
