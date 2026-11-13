@@ -213,7 +213,7 @@ func (s *Service) end(c *chat) []string {
 	if err == nil && running {
 		select {
 		case <-done:
-		case <-time.After(stopGrace):
+		case <-time.After(s.timing.stopGrace()):
 		}
 	}
 	sides := s.dropSides(c)

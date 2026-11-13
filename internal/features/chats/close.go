@@ -14,9 +14,10 @@ import (
 // is cancelled and gets a few seconds to end, so the agent records how it
 // ended. Their side chats are deleted from the agent's history the next
 // time each chat opens (model.ChatRecord.Throwaway). What the service started
-// on its own ends first (its ctx).
+// on its own ends first (its ctx, and its loops are waited for).
 func (s *Service) Close() {
 	s.cancel()
+	s.loops.Wait()
 	s.mu.Lock()
 	s.closing = true
 	if s.idle != nil {

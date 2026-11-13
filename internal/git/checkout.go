@@ -87,12 +87,17 @@ func TrustRoot(folder string) (top, key string) {
 const gitfileLimit = 64 << 10
 
 // worktreeSet says whether a repository's config file sets core.worktree
-// (includes followed); git's own environment is left out. git gets 5 s.
+// (includes followed); git's own environment is left out (GIT_DIR and the
+// rest would point it elsewhere), but for which of the user's config files
+// it reads (GIT_CONFIG_GLOBAL, GIT_CONFIG_NOSYSTEM: the tests read none).
+// git gets 5 s.
 func worktreeSet(config string) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "git", "config", "--file", config, "--includes", "--get", "core.worktree")
-	cmd.Env = slices.DeleteFunc(os.Environ(), func(e string) bool { return strings.HasPrefix(e, "GIT_") })
+	cmd.Env = slices.DeleteFunc(os.Environ(), func(e string) bool {
+		return strings.HasPrefix(e, "GIT_") && !strings.HasPrefix(e, "GIT_CONFIG_GLOBAL=") && !strings.HasPrefix(e, "GIT_CONFIG_NOSYSTEM=")
+	})
 	procgroup.Bound(cmd)
 	return cmd.Run() == nil
 }

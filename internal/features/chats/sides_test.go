@@ -111,12 +111,9 @@ func TestASideChatThatEndsSaysSo(t *testing.T) {
 // An agent that never answers a side chat's delete doesn't hold CloseSide
 // (and closeSides' loop after it) for good.
 func TestClosingASideChatGivesUpOnASilentDelete(t *testing.T) {
-	wait, grace := throwAwayWait, stopGrace
-	t.Cleanup(func() { throwAwayWait, stopGrace = wait, grace })
-	throwAwayWait, stopGrace = 10*time.Millisecond, 10*time.Millisecond
 	agent := &fakeAgent{}
-	// The second delete is done before Cleanup puts the tunables back.
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake", redelete: 20 * time.Millisecond}, Launch: agent.launch}}, Options{})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake", redelete: 20 * time.Millisecond}, Launch: agent.launch}},
+		Options{Timing: Timing{ThrowAwayWait: 10 * time.Millisecond, StopGrace: 10 * time.Millisecond}})
 	t.Cleanup(svc.Close)
 	ctx := context.Background()
 	id, _ := svc.Start(ctx, "", t.TempDir(), false)

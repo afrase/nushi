@@ -4,6 +4,7 @@ package store
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -19,6 +20,9 @@ type Store struct {
 	dir string
 	mu  sync.Mutex
 	set *settings // settings.json as read or last written; nil until read
+	// setErr is why settings.json couldn't be read, until a change is
+	// written; set is then as much of it as could be.
+	setErr error
 	// cacheMu keeps the cache's files apart from mu: a cache file's rewrite
 	// doesn't hold up the settings, which chats read under their lock.
 	cacheMu sync.Mutex
@@ -88,14 +92,15 @@ func (s *Store) SetCommands(agent string, commands []model.Command) error {
 func (s *Store) changeAgent(agent string, change func(*agentPrefs)) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	path := filepath.Join(s.dir, "agents.json")
 	prefs, err := s.agents()
-	if err != nil {
+	if err := clearForWrite(path, err); err != nil {
 		return err
 	}
 	p := prefs[agent]
 	change(&p)
 	prefs[agent] = p
-	return writeJSON(filepath.Join(s.dir, "agents.json"), prefs)
+	return writeJSON(path, prefs)
 }
 
 func (s *Store) agents() (map[string]agentPrefs, error) {
@@ -138,7 +143,8 @@ func writeJSON(path string, v any) error {
 }
 
 // readJSON reads path into v; false when there's no file, which is no
-// error: a file not written yet is the empty state.
+// error: a file not written yet is the empty state. A file that doesn't
+// parse is an *unparsed error, which clearForWrite sets aside.
 func readJSON(path string, v any) (bool, error) {
 	b, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -147,5 +153,8 @@ func readJSON(path string, v any) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return true, json.Unmarshal(b, v)
+	if err := json.Unmarshal(b, v); err != nil {
+		return true, &unparsed{fmt.Errorf("%s: %w", filepath.Base(path), err)}
+	}
+	return true, nil
 }

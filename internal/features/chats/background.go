@@ -26,9 +26,6 @@ func (c *chat) backgroundCommandLocked(it *model.Item) {
 	go c.followCommand(it.ID, id, file, agent)
 }
 
-// commandPoll is how often a running background command's output is read.
-var commandPoll = time.Second
-
 // A command can print a line that reads as Claude's end line, so an end is
 // taken only once the file stops growing after it (while the command's
 // agent runs: else there's nothing more to wait for).
@@ -67,7 +64,7 @@ func (c *chat) followCommand(callID, id, file string, agent Agent) {
 			return
 		}
 		select {
-		case <-time.After(commandPoll):
+		case <-time.After(c.timing.commandPoll()):
 		case <-c.ctx.Done():
 			return // the service closed: its agents end, and nobody is left to tell
 		}
