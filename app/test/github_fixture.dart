@@ -264,7 +264,7 @@ Future<(FakeDaemon, Daemon)> openView(
         };
   final d = await fake.connect(tester);
   forgetGitHubView(); // it keeps what it had while the app runs
-  viewport(tester, size); // put back after the test, at 1×
+  await tester.binding.setSurfaceSize(size);
   if (window) {
     // The window on the view, the sidebar hidden (it has its own goldens).
     viewport(
