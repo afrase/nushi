@@ -4,8 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/diagram_page_macos.dart';
 import 'package:nushi/web_page.dart';
 import 'package:nushi/web_page_macos.dart';
+import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart'
+    show NavigationDecision;
 
 import 'fake_web_views.dart';
 
@@ -277,6 +280,38 @@ void main() {
     await waiting;
     await loads.load(() async => loaded++);
     expect(loaded, 0);
+  });
+
+  // Deep review 2026-11-13, 11: a Mermaid preview's own filter refused the
+  // about:blank its close loads, so the diagram ran on unseen.
+  test('a diagram’s view loads its page once while open, and only '
+      'about:blank once closed', () {
+    const html = '/Applications/Nushi.app/mermaid/mermaid.html';
+    final blank = Uri.parse('about:blank');
+    final file = Uri.file(html);
+    NavigationDecision open(Uri url, {bool loaded = false}) =>
+        diagramNavigation(
+          url,
+          PageFile()..loading(html),
+          loaded: loaded,
+          gone: false,
+        );
+    NavigationDecision closed(Uri url) => diagramNavigation(
+      url,
+      PageFile()..loading(html),
+      loaded: false,
+      gone: true,
+    );
+    expect(open(file), NavigationDecision.navigate);
+    expect(open(file, loaded: true), NavigationDecision.prevent);
+    expect(open(blank), NavigationDecision.prevent);
+    expect(open(Uri.parse('https://example.com/')), NavigationDecision.prevent);
+    expect(closed(blank), NavigationDecision.navigate);
+    expect(closed(file), NavigationDecision.prevent);
+    expect(
+      diagramNavigation(null, PageFile(), loaded: false, gone: true),
+      NavigationDecision.prevent,
+    );
   });
 
   // Browser tabs load any site now (ADR 0094) and share WebKit's store
