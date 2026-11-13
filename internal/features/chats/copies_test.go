@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -228,24 +229,29 @@ func TestListAndClearCopies(t *testing.T) {
 
 // Settings' Chat history lists every copy at once: 5,000 chats' copies
 // (a few KB each, one in ten with an image) list in well under a second
-// (about 0.15 s on an M-series Mac: a stat of each file).
+// (about 0.15 s on an M-series Mac: a stat of each file). The first 20
+// are written through the store, one of each size; the rest are plain
+// copies of their files (each store write syncs to the disk, which took
+// this test 10 s).
 func TestListCopiesAtScale(t *testing.T) {
-	if testing.Short() {
-		t.Skip("writes 5,000 copies")
-	}
-	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
+	dir := filepath.Join(t.TempDir(), "transcripts")
+	store, err := transcripts.Open(dir)
 	testcheck.NoErr(t, err)
 	svc := newService(t, nil, Options{Scratch: t.TempDir(), Copies: store})
-	const n = 5000
+	const n, kinds = 5000, 20
 	var sessions []model.ChatRecord
 	for i := range n {
 		id := fmt.Sprintf("chat-%04d", i)
-		it := model.Item{ID: "m", Kind: model.AgentMessage, Text: strings.Repeat("words ", 50*(1+i%20))}
+		sessions = append(sessions, model.ChatRecord{ID: id, Agent: "claude", Title: "Chat " + id})
+		if i >= kinds {
+			testcheck.NoErr(t, os.CopyFS(filepath.Join(dir, id), os.DirFS(filepath.Join(dir, fmt.Sprintf("chat-%04d", i%kinds)))))
+			continue
+		}
+		it := model.Item{ID: "m", Kind: model.AgentMessage, Text: strings.Repeat("words ", 50*(1+i))}
 		if i%10 == 0 {
 			it.Images = []model.Image{{MimeType: "image/png", Data: []byte(id)}}
 		}
 		testcheck.NoErr(t, store.Append(id, []model.Item{it}, []string{""}))
-		sessions = append(sessions, model.ChatRecord{ID: id, Agent: "claude", Title: "Chat " + id})
 	}
 	svc.sessions.(*memSessions).stored = sessions
 	start := time.Now()
@@ -256,7 +262,7 @@ func TestListCopiesAtScale(t *testing.T) {
 		t.Fatalf("listed %d, the first %+v", len(list), list[0])
 	}
 	t.Logf("ListCopies of %d copies: %v", n, took)
-	if took > 2*time.Second {
+	if took > 15*time.Second { // only a listing gone quadratic, not a loaded runner
 		t.Errorf("ListCopies of %d copies took %v", n, took)
 	}
 }

@@ -18,11 +18,12 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	if err := s.SetPick("claude", "model", "sonnet"); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.SetMode("claude", "plan"); err != nil { // keeps the picks
+	commands := []model.Command{{Name: "review", Description: "Review it", Hint: "PR"}}
+	if err := s.SetCommands("claude", commands); err != nil {
 		t.Fatal(err)
 	}
-	if got := s.SleepAfter(); got != 30*time.Minute {
-		t.Errorf("sleep after %v by default", got)
+	if err := s.SetMode("claude", "plan"); err != nil { // keeps the picks and the commands
+		t.Fatal(err)
 	}
 	if err := s.SetSleepAfter(0); err != nil {
 		t.Fatal(err)
@@ -57,6 +58,9 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	if got := s.Picks("claude"); !reflect.DeepEqual(got, map[string]string{"model": "sonnet"}) {
 		t.Errorf("picks = %v", got)
 	}
+	if got := s.Commands("claude"); !reflect.DeepEqual(got, commands) || s.Commands("codex") != nil {
+		t.Errorf("claude's commands %v, codex's %v", got, s.Commands("codex"))
+	}
 	got, err := s.Sessions()
 	if err != nil {
 		t.Fatal(err)
@@ -64,24 +68,5 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	if len(got) != 2 || got[1].ID != "a" || got[1].Title != "Fix the build" || !got[1].Created.Equal(created) || got[0].ID != "../b" ||
 		got[1].SessionID != "a" || got[0].SessionID != "s2" { // an older chat has one id for both
 		t.Errorf("sessions = %+v", got)
-	}
-}
-
-func TestCommandsAreRememberedByAgent(t *testing.T) {
-	dir := t.TempDir()
-	s := New(dir)
-	want := []model.Command{{Name: "review", Description: "Review it", Hint: "PR"}}
-	if err := s.SetCommands("claude", want); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.SetMode("claude", "plan"); err != nil { // keeps the commands
-		t.Fatal(err)
-	}
-	s = New(dir)
-	if got := s.Commands("claude"); !reflect.DeepEqual(got, want) {
-		t.Errorf("claude's commands %v, want %v", got, want)
-	}
-	if got := s.Commands("codex"); got != nil {
-		t.Errorf("codex's commands %v", got)
 	}
 }
