@@ -35,15 +35,42 @@ void main() {
     ]);
   });
 
+  test("every family is fc-list's without a pattern, and no name reaches "
+      "the system's font", () async {
+    final asked = <List<String>>[];
+    final fonts = LinuxFonts(
+      run: (program, arguments) async {
+        asked.add([program, ...arguments]);
+        return ProcessResult(
+          1,
+          0,
+          'Noto Sans\nDejaVu Sans Mono,DejaVu Sans Mono Book\nCantarell\n',
+          '',
+        );
+      },
+    );
+    expect(await fonts.families(), [
+      'Cantarell',
+      'DejaVu Sans Mono',
+      'Noto Sans',
+    ]);
+    expect(asked, [
+      ['fc-list', ':', 'family'],
+    ]);
+    expect(fonts.system, isNull);
+  });
+
   test('no fc-list, or one that fails, is no answer', () async {
     final missing = LinuxFonts(
       run: (program, _) async =>
           throw ProcessException(program, const [], 'No such file', 2),
     );
     expect(await missing.monospaced(), isNull);
+    expect(await missing.families(), isNull);
     final failing = LinuxFonts(
       run: (_, _) async => ProcessResult(1, 1, '', 'Fontconfig error'),
     );
     expect(await failing.monospaced(), isNull);
+    expect(await failing.families(), isNull);
   });
 }

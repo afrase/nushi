@@ -9,19 +9,29 @@ typedef RunProcess = Future<ProcessResult> Function(
 );
 
 /// Linux's installed fonts, as fontconfig lists them (`fc-list`, ADR
-/// 0104): the families whose glyphs are all one width.
+/// 0104): every family, or those whose glyphs are all one width.
 class LinuxFonts implements Fonts {
   /// Running `fc-list` with [run].
   const new({this.run = Process.run});
 
   final RunProcess run;
 
-  /// No answer without `fc-list` or when it fails.
   @override
-  Future<List<String>?> monospaced() async {
+  Future<List<String>?> monospaced() => _list(':spacing=mono');
+
+  @override
+  Future<List<String>?> families() => _list(':');
+
+  /// No one name: the interface font is the desktop's own setting.
+  @override
+  String? get system => null;
+
+  /// The families of the fonts matching [pattern] (`:` is every font);
+  /// no answer without `fc-list` or when it fails.
+  Future<List<String>?> _list(String pattern) async {
     final ProcessResult r;
     try {
-      r = await run('fc-list', [':spacing=mono', 'family']);
+      r = await run('fc-list', [pattern, 'family']);
     } on ProcessException {
       return null;
     }
