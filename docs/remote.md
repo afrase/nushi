@@ -54,7 +54,7 @@ Revoke it on the Mac (Settings › Remote access). The daemon moves to a new id 
 
 Whoever serves the web app (the relay's host, a proxy that terminates TLS such as Cloudflare) can serve code that takes the device's key. If that may have happened:
 
-1. Put the relay's web folder back from the release's tarball (its sha256 is in the release), and restart the relay.
+1. Reinstall `nushi-relay` from the release's tarball, checked against its `.sha256` from the release ([Updating a relay from a release](#updating-a-relay-from-a-release)), and restart it; the app is inside the binary, so that puts it back. A relay still run with `-web <folder>` serves that folder instead: take `-web` out of its service (keep `-origin`) and delete the folder.
 2. Purge the proxy's cache (Cloudflare keeps the app's hashed files at its edge for a year).
 3. Cut a new release if the files themselves were wrong.
 4. Revoke every phone on the Mac.
@@ -160,6 +160,7 @@ app = "my-nushi-relay"
 Each release has `nushi-relay-X.Y.Z-linux-arm64.tar.gz` (and `linux-amd64`): one static binary with that release's web app built in. Update it along with the Mac:
 
 ```sh
+sha256sum -c nushi-relay-X.Y.Z-linux-arm64.tar.gz.sha256   # its .sha256, from the same release
 tar -xzf nushi-relay-X.Y.Z-linux-arm64.tar.gz && sudo install nushi-relay /usr/local/bin/
 nushi-relay -version                   # then restart its service
 ```
