@@ -15,8 +15,15 @@ import 'package:nushi/tile_look.dart';
 // it's picked, and nothing but Nushi's copy is ever deleted.
 
 /// The largest file taken as a tile's image: a large photo or a long GIF
-/// fits; it's only ever decoded at a tile's size.
+/// fits; it's only ever kept at a tile's size.
 const int maxTileImageBytes = 16 << 20;
+
+/// The most pixels a frame of an animated image taken for a tile has: 4K's.
+/// The engine decodes an animated image's frames whole, each then drawn
+/// again at the tile's size ([tileFrame]), so one whole frame is in memory
+/// while it's decoded; a flat GIF of 16 MB could be 10000 square, 400 MB a
+/// frame. A still has no such limit: it's decoded at the tile's size.
+const int maxAnimatedPixels = 3840 * 2160;
 
 /// Picks the image Choose image… takes. A test puts its own in its place:
 /// the system's panel can't be shown in one.
@@ -68,7 +75,8 @@ class TileImageRefused implements Exception {
 /// Reads the file at [path] as a tile's image, or says why it can't be
 /// one ([TileImageRefused]): only a regular file, [maxTileImageBytes] at
 /// most (asked before it's read), one of the four kinds by its first
-/// bytes, and one the engine decodes (its first frame, at a tile's size).
+/// bytes, an animated one of [maxAnimatedPixels] at most by its header, and
+/// one the engine decodes (its first frame, at a tile's size).
 Future<PickedImage> readTileImage(String path) async {
   final file = File(path);
   final FileStat stat;
@@ -97,21 +105,51 @@ Future<PickedImage> readTileImage(String path) async {
   if (kind == null) {
     throw const TileImageRefused('Not a PNG, JPEG, GIF or WebP image.');
   }
+  final ui.Codec codec;
+  final int pixels;
   try {
-    final codec = await tileImageCodec(bytes, 64);
-    final frame = await codec.getNextFrame();
-    frame.image.dispose();
-    codec.dispose();
+    codec = await tileImageCodec(bytes, 64);
+    pixels = await _pixels(bytes);
   } on Object {
     throw const TileImageRefused('That image can’t be shown.');
   }
+  try {
+    // Asked before a frame is decoded: an animated one's comes whole.
+    if (codec.frameCount > 1 && pixels > maxAnimatedPixels) {
+      throw const TileImageRefused(
+        'That animated image has more pixels than 4K (3840 × 2160).',
+      );
+    }
+    final frame = await codec.getNextFrame();
+    frame.image.dispose();
+  } on TileImageRefused {
+    rethrow;
+  } on Object {
+    throw const TileImageRefused('That image can’t be shown.');
+  } finally {
+    codec.dispose();
+  }
   return (bytes: bytes, kind: kind);
+}
+
+/// The pixels of [bytes]' image, from its header: nothing is decoded.
+Future<int> _pixels(Uint8List bytes) async {
+  final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+  try {
+    final image = await ui.ImageDescriptor.encoded(buffer);
+    final pixels = image.width * image.height;
+    image.dispose();
+    return pixels;
+  } finally {
+    buffer.dispose();
+  }
 }
 
 /// A codec for [bytes] that decodes at a tile's size, never the image's
 /// own: scaled so its shorter side is [side] pixels (the tile's, in the
 /// screen's pixels), the longer one cropped away as it's drawn. A smaller
-/// image is left as it is.
+/// image is left as it is. Only a still's: the engine decodes each frame of
+/// an animated one whole, so each goes through [tileFrame].
 Future<ui.Codec> tileImageCodec(Uint8List bytes, int side) async {
   final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
   return await ui.instantiateImageCodecWithSize(
@@ -125,6 +163,31 @@ Future<ui.Codec> tileImageCodec(Uint8List bytes, int side) async {
       );
     },
   );
+}
+
+/// [frame] scaled as [tileImageCodec] scales a still, its shorter side
+/// [side] pixels, and the whole one let go: a frame of an animated image
+/// comes whole, and only the tile's size of it is kept. A smaller one is
+/// given back as it is.
+Future<ui.Image> tileFrame(ui.Image frame, int side) async {
+  final shorter = min(frame.width, frame.height);
+  if (shorter <= side) return frame;
+  final width = max(1, (frame.width * side / shorter).round());
+  final height = max(1, (frame.height * side / shorter).round());
+  final recorder = ui.PictureRecorder();
+  ui.Canvas(recorder).drawImageRect(
+    frame,
+    ui.Rect.fromLTWH(0, 0, frame.width.toDouble(), frame.height.toDouble()),
+    ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+    ui.Paint()..filterQuality = ui.FilterQuality.medium,
+  );
+  final picture = recorder.endRecording();
+  try {
+    return await picture.toImage(width, height);
+  } finally {
+    picture.dispose();
+    frame.dispose();
+  }
 }
 
 /// Where the tiles' images are kept: `tiles` in Nushi's data folder.

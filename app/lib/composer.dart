@@ -79,6 +79,11 @@ class _ComposerState extends State<Composer> {
   final GlobalKey _box = GlobalKey(
     debugLabel: 'box',
   ); // the + menu opens over it
+  // The text field moves into the row and out as the box crosses
+  // [Composer.pickersFrom]: keyed, it's moved, not made again, so it keeps
+  // its connection to the text input (a new one on a focused node opens
+  // none, and typed keys went nowhere).
+  final GlobalKey _field = GlobalKey(debugLabel: 'field');
   late final Draft _draft = widget.chat.draft;
   late final TextEditingController _text = _draft.text;
   late final _completions = Completions(widget.chat, widget.daemon);
@@ -489,6 +494,7 @@ class _ComposerState extends State<Composer> {
             );
             final field = SpellArea(
               _spell.menu,
+              key: _field,
               child: Focus(
                 onKeyEvent: _onKey,
                 skipTraversal: true,

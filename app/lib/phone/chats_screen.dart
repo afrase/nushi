@@ -181,16 +181,31 @@ class _NeedsYouState extends State<_NeedsYou> {
 }
 
 /// Opens [chat] on its own screen; the daemon knows it shows, so no push
-/// comes for it meanwhile.
+/// comes for it meanwhile. Opened over another chat's screen (a fork, a
+/// new chat from an expired one's bar), Back opens that one again: it is
+/// selected, so it loads after a reconnect, and the daemon knows it shows.
 Future<void> openPhoneChat(
   BuildContext context,
   Phone phone,
   ChatState chat,
 ) async {
   phone.open(chat.id);
-  await Navigator.of(context)
-      .push(MaterialPageRoute<void>(builder: (_) => ChatScreen(phone, chat)));
-  if (phone.daemon?.selectedId == chat.id) phone.daemon?.selectedId = null;
+  phone.onScreen.add(chat.id);
+  try {
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => ChatScreen(phone, chat)));
+  } finally {
+    phone.onScreen.removeAt(phone.onScreen.lastIndexOf(chat.id));
+  }
+  final d = phone.daemon;
+  final selected = d?.selectedId;
+  if (selected != null && selected != chat.id) return; // another opened since
+  if (phone.onScreen.lastOrNull case final under?
+      when d?.chats.containsKey(under) ?? false) {
+    phone.open(under);
+    return;
+  }
+  d?.selectedId = null;
   unawaited(phone.view(null));
 }
 

@@ -8,7 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/conventions.dart';
-import 'package:nushi/daemon.dart' show apiVersion;
+import 'package:nushi/daemon.dart' show DaemonLink, apiVersion;
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
@@ -474,6 +474,82 @@ void main() {
       await endPhone(tester, phone);
     });
   }
+
+  testWidgets('Back from a fork shows the chat under it, selected and '
+      'viewed, and it stays live across a reconnect', (tester) async {
+    final status = ChatStatus(canFork: true);
+    // Each subscription to the events gets a stream of its own, so the
+    // link can drop and subscribe again.
+    final subscriptions = <StreamController<EventsResponse>>[];
+    final fake = FakeDaemon(_chats)
+      ..answer = ((input) => switch (input) {
+        GetChatRequest(chatId: 'c') => GetChatResponse(
+          chat: _chats[2],
+          status: status,
+        ),
+        _ => null,
+      })
+      ..streams = (r) {
+        if (r is! EventsRequest) return null;
+        final events = StreamController<EventsResponse>()
+          ..add(EventsResponse());
+        addTearDown(events.close);
+        subscriptions.add(events);
+        return events.stream;
+      };
+    final (phone, _) = await _app(tester, fake);
+    await tester.tap(find.text('Web Push from the daemon'));
+    await tester.pumpAndSettle();
+    subscriptions.last.add(
+      EventsResponse(chatId: 'c', seq: Int64(9), status: status),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Chat'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fork'));
+    await tester.pumpAndSettle();
+    // The fake announces the fork on its own stream; this one is the app's.
+    subscriptions.last.add(EventsResponse(chatId: 'fork', chat: _chats.last));
+    await tester.pumpAndSettle();
+    expect(find.text('Web Push from the daemon (fork)'), findsOne);
+    expect(fake.calls.whereType<SetDeviceViewRequest>().last.chatId, 'fork');
+    _chats.removeWhere((c) => c.id == 'fork'); // the fake listed it
+
+    await tester.tap(find.bySemanticsLabel('Back').first);
+    await tester.pumpAndSettle();
+    final daemon = phone.daemon!;
+    expect(daemon.selectedId, 'c', reason: 'the chat on screen is selected');
+    expect(
+      fake.calls.whereType<SetDeviceViewRequest>().last.chatId,
+      'c',
+      reason: 'the daemon knows it shows: no push for it',
+    );
+
+    // The link drops and comes back: the chat on screen loads again and
+    // what the agent says next shows.
+    final before = subscriptions.length;
+    daemon.relink();
+    await phone.link!.check();
+    await tester.pumpAndSettle();
+    expect(subscriptions, hasLength(before + 1));
+    expect(daemon.chats['c']!.loaded, isTrue);
+    subscriptions.last.add(
+      EventsResponse(
+        chatId: 'c',
+        seq: Int64(20),
+        item: ItemEvent(
+          item: Item(
+            id: 'late',
+            kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+            text: 'The relay test passes now.',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('The relay test passes now.'), findsOne);
+    await endPhone(tester, phone);
+  });
 
   testWidgets('notifications on and off: the subscription to the daemon', (
     tester,

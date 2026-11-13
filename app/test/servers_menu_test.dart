@@ -34,9 +34,10 @@ DevServer _server(
   List<String> flagged = const [],
   String problem = '',
   int port = 3000,
+  bool nameOk = true,
 }) => DevServer(
   name: name,
-  nameOk: true,
+  nameOk: nameOk,
   index: index,
   source: source,
   command: 'pnpm',
@@ -330,6 +331,36 @@ void main() {
     await _close(tester);
   }, variant: macOnly);
 
+  // Deep review 2026-11-13, 19: the proto said such a row shows marked,
+  // and nothing read name_ok.
+  testWidgets('an entry the agent can’t name is marked, and runs from the '
+      'menu by its place', (tester) async {
+    final s = _Servers()
+      ..rows = [
+        _server('api', port: 8080),
+        _server('Frontend (vite)', index: 1, nameOk: false, port: 5173),
+      ];
+    await _pane(tester, s);
+    await _openMenu(tester);
+    final mark = find.text('Agent can’t name it');
+    expect(mark, findsOne);
+    final row = tester.getRect(find.text('Frontend (vite)'));
+    expect(tester.getRect(mark).center.dy, closeTo(row.center.dy, 2));
+    // Its own tooltip, the nearest, says why and what to do.
+    expect(
+      tester
+          .widget<Tooltip>(
+            find.ancestor(of: mark, matching: find.byType(Tooltip)).first,
+          )
+          .message,
+      contains('letters, digits and : _ . -'),
+    );
+    await tester.tap(find.byTooltip('Run').last);
+    await tester.pumpAndSettle();
+    expect(s.starts.single.index, 1);
+    await _close(tester);
+  }, variant: macOnly);
+
   testWidgets('a failed row’s tooltip has the end of its output', (
     tester,
   ) async {
@@ -500,6 +531,17 @@ void main() {
       ),
       _server('storybook', index: 2, port: 6006),
     ],
+    // A name the agent can't use (ADR 0095), beside one it can.
+    'misnamed': () => [
+      _server(
+        'api',
+        state: DevServerState.DEV_SERVER_STATE_RUNNING,
+        id: 'a',
+        logId: 'a',
+        port: 8080,
+      ),
+      _server('Frontend (vite)', index: 1, nameOk: false, port: 5173),
+    ],
   };
   for (final (theme, tokens, brightness) in [
     ('light', Tokens.light, Brightness.light),
@@ -530,7 +572,11 @@ void main() {
         viewport(tester, Size(width, 900), brightness: brightness);
         showDetails.value = false;
         paneWidths.value = {};
-        final s = _Servers()..rows = states['several']!();
+        final s = _Servers()
+          ..rows = [
+            ...states['several']!(),
+            _server('Frontend (vite)', index: 3, nameOk: false, port: 5173),
+          ];
         final fake = FakeDaemon([chat('c', 'claude', 'Build the tea shop')])
           ..answer = s.answer;
         final d = await fake.connect(tester);

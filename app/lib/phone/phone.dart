@@ -321,6 +321,10 @@ class Phone extends ChangeNotifier {
   /// The chat a notification asked to open, until the app opens it.
   final opening = ValueNotifier<String?>(null);
 
+  /// The chats whose screens are open, each over the one before it
+  /// (`openPhoneChat`): the last is the one shown.
+  final onScreen = <String>[];
+
   /// Opens [chatId] (shown on its screen): the daemon knows it shows.
   void open(String chatId) {
     daemon?.select(chatId);

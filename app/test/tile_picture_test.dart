@@ -105,6 +105,17 @@ void main() {
       ((await read(_picked('a.gif', animatedGif()))) as PickedImage).kind,
       'gif',
     );
+    // An animated one bigger than 4K: its frames come whole, so it's
+    // refused by its header, before one is decoded. A still that big is
+    // taken: it's decoded at a tile's size.
+    expect(
+      await read(_picked('big.gif', animatedGif(frames: 2, screen: 4000))),
+      'That animated image has more pixels than 4K (3840 × 2160).',
+    );
+    expect(
+      await read(_picked('big.gif', animatedGif(frames: 1, screen: 4000))),
+      isA<PickedImage>(),
+    );
 
     expect(
       await read(_picked('notes.png', 'not an image'.codeUnits)),
@@ -292,6 +303,31 @@ void main() {
       await pointer.moveTo(tester.getCenter(find.byType(TilePictureView)));
       await tester.pump();
       await untilReal(tester, () => state.played >= 1);
+      await pointer.moveTo(const Offset(1, 1));
+      await tester.pump();
+      expect(state.busy, isFalse);
+    });
+
+    testWidgets('a large one is kept and played at the tile’s size, as a '
+        'still is', (tester) async {
+      viewport(tester, const Size(300, 200), ratio: 2);
+      // The engine decodes an animated image's frames whole (400 square).
+      final big = keepTileImage((
+        bytes: animatedGif(frames: 2, screen: 400),
+        kind: 'gif',
+      ));
+      final state = await _show(tester, TileLook(image: big));
+      // A tile 38 square at two pixels a point.
+      expect((_drawn(tester).width, _drawn(tester).height), (76, 76));
+      final pointer = await mouse(tester);
+      await pointer.moveTo(tester.getCenter(find.byType(TilePictureView)));
+      await tester.pump();
+      await untilReal(tester, () => state.played >= 1);
+      for (var n = 2; n <= 3; n++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await untilReal(tester, () => state.played >= n);
+        expect((_drawn(tester).width, _drawn(tester).height), (76, 76));
+      }
       await pointer.moveTo(const Offset(1, 1));
       await tester.pump();
       expect(state.busy, isFalse);

@@ -8,7 +8,7 @@ Shortcuts below are the Mac's. On Linux, use Ctrl where the Mac uses ⌘, and Al
 
 ## Open a preview
 
-When the agent writes a document, page, image or diagram, its row in the chat has a **Preview** button. Click it and the file opens beside the chat.
+When the agent writes a document, page, image or diagram, its row in the chat has a **Preview** button. Click it and the file opens beside the chat. Where the row is narrow (a subagent's pane), the button is inside the row: click the row to open it first.
 
 You can also open files in these ways:
 
@@ -56,7 +56,7 @@ A browser tab shows a web page beside the chat, such as the dev server the agent
 
 The bar has Back, Forward and Reload (⌘R). ⌘L jumps to the address field. **Expand** gives the browser the whole chat area, and **Collapse** gives the chat back.
 
-If your project lists dev servers in a launch file (`.claude/launch.json` or `.agents/launch.json`), the **Servers** button starts and stops them. **Logs** shows a server's output.
+If your project lists dev servers in a launch file (`.claude/launch.json` or `.agents/launch.json`), the **Servers** button starts and stops them. **Logs** shows a server's output. A server marked **Agent can't name it** has a name the agent can't use (only letters, digits and `: _ . -`): start it from the menu, or rename it in the launch file.
 
 ## Open a terminal
 
