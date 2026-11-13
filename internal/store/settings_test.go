@@ -51,6 +51,9 @@ func TestSettingsKept(t *testing.T) {
 	if !s.DebugLog() {
 		t.Error("read settings.json again")
 	}
+	if os.Geteuid() == 0 {
+		t.Skip("root writes in a folder whatever its mode")
+	}
 	testcheck.NoErr(t, os.Chmod(dir, 0o500)) // its new file can't be made
 	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
 	if err := s.SetDebugLog(false); err == nil {
