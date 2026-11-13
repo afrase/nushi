@@ -5,7 +5,10 @@
 // diffs), Changes with a diff, a narrow window with the terminal, the
 // phone's chat, and Settings › Appearance. Renders to look at
 // (`make renders TEST=test/theme_renders_test.dart`); here each must draw
-// without an error or text past the window's edge.
+// without an error or text past the window's edge. A theme is colours,
+// and its code's italic and bold (the chat with code): without renders,
+// only Nushi's own theme draws the other windows, since each would lay
+// out the same in every theme.
 import 'dart:async';
 import 'dart:convert';
 
@@ -137,25 +140,30 @@ void main() {
   for (final theme in builtInThemes) {
     for (final b in Brightness.values) {
       final name = '${theme.id}_${b.name}';
+      // The windows a theme lays out as Nushi's does: only to look at.
+      final sameLayout = theme != nushiTheme && rendersDir == null;
 
-      testWidgets('${theme.name}, ${b.name}: the window mid-turn', (
-        tester,
-      ) async {
-        colorTheme.value = theme.id;
-        Collapsible.opened.add('e2');
-        addTearDown(Collapsible.opened.clear);
-        final d = await _window(tester, const Size(1700, 1000), b);
-        d.chats[heroChat.id]!.pane.value = 'x';
-        await _pump(tester);
-        expect(tester.takeException(), isNull);
-        expect(
-          NushiTheme.of(tester.element(find.byType(Scaffold).first)).t,
-          same(theme.of(b)),
-        );
-        expectTextInside(tester, 1700);
-        await render(tester, find.byType(NushiApp), 'theme_${name}_1700');
-        await closeView(tester, d);
-      }, variant: _mac);
+      testWidgets(
+        '${theme.name}, ${b.name}: the window mid-turn',
+        (tester) async {
+          colorTheme.value = theme.id;
+          Collapsible.opened.add('e2');
+          addTearDown(Collapsible.opened.clear);
+          final d = await _window(tester, const Size(1700, 1000), b);
+          d.chats[heroChat.id]!.pane.value = 'x';
+          await _pump(tester);
+          expect(tester.takeException(), isNull);
+          expect(
+            NushiTheme.of(tester.element(find.byType(Scaffold).first)).t,
+            same(theme.of(b)),
+          );
+          expectTextInside(tester, 1700);
+          await render(tester, find.byType(NushiApp), 'theme_${name}_1700');
+          await closeView(tester, d);
+        },
+        variant: _mac,
+        skip: sameLayout,
+      );
 
       testWidgets('${theme.name}, ${b.name}: the chat, code and a card', (
         tester,
@@ -173,46 +181,57 @@ void main() {
         await closeView(tester, d);
       }, variant: _mac);
 
-      testWidgets('${theme.name}, ${b.name}: Changes, a diff', (tester) async {
-        colorTheme.value = theme.id;
-        showDetails.value = false;
-        final d = await _window(tester, const Size(1400, 900), b);
-        d.chats[heroChat.id]!.tab.value = ChatTab.changes;
-        await _pump(tester, 10);
-        final file = find.textContaining('cursor.go', findRichText: true);
-        if (file.evaluate().isNotEmpty) {
-          await tester.tap(file.first);
+      testWidgets(
+        '${theme.name}, ${b.name}: Changes, a diff',
+        (tester) async {
+          colorTheme.value = theme.id;
+          showDetails.value = false;
+          final d = await _window(tester, const Size(1400, 900), b);
+          d.chats[heroChat.id]!.tab.value = ChatTab.changes;
           await _pump(tester, 10);
-        }
-        expect(tester.takeException(), isNull);
-        await render(tester, find.byType(NushiApp), 'theme_${name}_changes');
-        await closeView(tester, d);
-      }, variant: _mac);
+          final file = find.textContaining('cursor.go', findRichText: true);
+          if (file.evaluate().isNotEmpty) {
+            await tester.tap(file.first);
+            await _pump(tester, 10);
+          }
+          expect(tester.takeException(), isNull);
+          await render(tester, find.byType(NushiApp), 'theme_${name}_changes');
+          await closeView(tester, d);
+        },
+        variant: _mac,
+        skip: sameLayout,
+      );
 
-      testWidgets('${theme.name}, ${b.name}: narrow, the terminal open', (
-        tester,
-      ) async {
-        colorTheme.value = theme.id;
-        terminalChats.value = {heroChat.id};
-        showDetails.value = false;
-        final d = await _window(tester, const Size(720, 900), b);
-        expect(tester.takeException(), isNull);
-        expectTextInside(tester, 720);
-        await render(tester, find.byType(NushiApp), 'theme_${name}_720');
-        await closeView(tester, d);
-      }, variant: _mac);
+      testWidgets(
+        '${theme.name}, ${b.name}: narrow, the terminal open',
+        (tester) async {
+          colorTheme.value = theme.id;
+          terminalChats.value = {heroChat.id};
+          showDetails.value = false;
+          final d = await _window(tester, const Size(720, 900), b);
+          expect(tester.takeException(), isNull);
+          expectTextInside(tester, 720);
+          await render(tester, find.byType(NushiApp), 'theme_${name}_720');
+          await closeView(tester, d);
+        },
+        variant: _mac,
+        skip: sameLayout,
+      );
 
-      testWidgets('${theme.name}, ${b.name}: Settings › Appearance', (
-        tester,
-      ) async {
-        colorTheme.value = theme.id;
-        final d = await _window(tester, const Size(1200, 900), b);
-        d.openSettings(section: SettingsSection.appearance);
-        await _pump(tester, 4);
-        expect(tester.takeException(), isNull);
-        await render(tester, find.byType(NushiApp), 'theme_${name}_settings');
-        await closeView(tester, d);
-      }, variant: _mac);
+      testWidgets(
+        '${theme.name}, ${b.name}: Settings › Appearance',
+        (tester) async {
+          colorTheme.value = theme.id;
+          final d = await _window(tester, const Size(1200, 900), b);
+          d.openSettings(section: SettingsSection.appearance);
+          await _pump(tester, 4);
+          expect(tester.takeException(), isNull);
+          await render(tester, find.byType(NushiApp), 'theme_${name}_settings');
+          await closeView(tester, d);
+        },
+        variant: _mac,
+        skip: sameLayout,
+      );
 
       testWidgets('${theme.name}, ${b.name}: the phone’s chat', (tester) async {
         viewport(tester, const Size(390, 844), ratio: 2, brightness: b);
@@ -232,7 +251,7 @@ void main() {
         expect(tester.takeException(), isNull);
         await render(tester, find.byType(PhoneApp), 'theme_${name}_phone');
         await endPhone(tester, phone);
-      });
+      }, skip: sameLayout);
     }
   }
 }
