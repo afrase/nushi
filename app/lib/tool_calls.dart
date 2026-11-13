@@ -241,6 +241,25 @@ class _Failed extends StatelessWidget {
   }
 }
 
+/// What a tool row's header holds beside its title, by the row's width:
+/// in a narrow one (a subagent's pane, a phone) its `+n −m` goes first
+/// (its open diffs say the same), then its Preview (into the open row; a
+/// run's goes, its edit's row inside has it), so the title and a failed
+/// count keep their room.
+abstract final class RowRoom {
+  /// The narrowest row of one call that shows its counts in its header.
+  static const counts = 290.0;
+
+  /// The narrowest row of one call that has its Preview in its header.
+  static const preview = 250.0;
+
+  /// The narrowest run's row that shows its counts in its header.
+  static const runCounts = 350.0;
+
+  /// The narrowest run's row that has a Preview in its header.
+  static const runPreview = 290.0;
+}
+
 /// A row's `+n −m`, in code type: the lines its diffs added and removed.
 class LineCounts extends StatelessWidget {
   const new(this.added, this.removed, {super.key});
@@ -344,87 +363,107 @@ class ToolCallView extends StatelessWidget {
     final input = showsInput(it);
     final output = it.text.trim().isNotEmpty;
     final working = _running(it) && !still;
+    final body = hasToolBody(it);
     return _withImages(
       [if (images) ...it.images],
       refs,
-      Collapsible(
-        ids: [it.id],
-        nested: nested,
-        folded: callFolded(it),
-        header: Row(
-          children: [
-            Icon(
-              kindOf(it).icon,
-              size: 15,
-              color: failed ? t.crashed : t.toolAccent,
-            ),
-            const SizedBox(width: 8),
-            // The title types out as the call comes (the path after the
-            // verb), then shines while it runs, the band across the text
-            // alone.
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: _tooltip(
-                  rawName,
-                  Typed(
-                    title,
-                    keep: pathed ? verb!.length + 1 : 0,
-                    shine: working,
+      LayoutBuilder(
+        builder: (context, box) {
+          final counts = box.maxWidth >= RowRoom.counts;
+          // Narrow, an open row has it, as long as the row opens.
+          final previewAbove = !body || box.maxWidth >= RowRoom.preview;
+          return Collapsible(
+            ids: [it.id],
+            nested: nested,
+            folded: callFolded(it),
+            header: Row(
+              children: [
+                Icon(
+                  kindOf(it).icon,
+                  size: 15,
+                  color: failed ? t.crashed : t.toolAccent,
+                ),
+                const SizedBox(width: 8),
+                // The title types out as the call comes (the path after the
+                // verb), then shines while it runs, the band across the text
+                // alone.
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _tooltip(
+                      rawName,
+                      Typed(
+                        title,
+                        keep: pathed ? verb!.length + 1 : 0,
+                        shine: working,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            if (it.diffs.isNotEmpty) LineCounts(added, removed),
-            if (preview != null) ...[
-              const SizedBox(width: 8),
-              PreviewButton(preview),
-            ],
-            if (page != null) ...[
-              const SizedBox(width: 8),
-              OpenPageButton(page),
-            ],
-            // The call ends; the command runs on (background_commands.dart).
-            if (it.hasBackgroundCommand())
-              Shine(
-                on: it.backgroundCommand.state == 'running' && !still,
-                child: Text(
-                  'in the background: ${it.backgroundCommand.state}',
-                  style: theme.ui(t.textSecondary, size: 12),
-                ),
-              ),
-            if (failed) ...[const SizedBox(width: 8), const _Failed('failed')],
-            if (working) ...[
-              const SizedBox(width: 10),
-              SizedBox.square(
-                dimension: 14,
-                child: Spinner(color: t.textSecondary),
-              ),
-            ],
-          ],
-        ),
-        // A call with nothing to show only has its title.
-        body: !hasToolBody(it)
-            ? null
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 8,
-                children: [
-                  if (command)
-                    // The header cuts it to a line.
-                    FullTitle('\$ ${it.title}', bare: true),
-                  for (final d in it.diffs) DiffBox(d),
-                  if (input) ToolSection('Input', RawText(it.input)),
-                  if (output && input)
-                    ToolSection('Output', AgentMarkdown(it.text))
-                  else if (output && serverTool(it) != null)
-                    RawText(serverOutput(it.text), folded: 12)
-                  else if (output)
-                    AgentMarkdown(it.text)
-                  else if (showsRawOutput(it))
-                    ToolSection('Output', RawText(it.rawOutput, folded: 12)),
+                if (it.diffs.isNotEmpty && counts) LineCounts(added, removed),
+                if (preview != null && previewAbove) ...[
+                  const SizedBox(width: 8),
+                  PreviewButton(preview),
                 ],
-              ),
+                if (page != null) ...[
+                  const SizedBox(width: 8),
+                  OpenPageButton(page),
+                ],
+                // The call ends; the command runs on
+                // (background_commands.dart).
+                if (it.hasBackgroundCommand())
+                  Shine(
+                    on: it.backgroundCommand.state == 'running' && !still,
+                    child: Text(
+                      'in the background: ${it.backgroundCommand.state}',
+                      style: theme.ui(t.textSecondary, size: 12),
+                    ),
+                  ),
+                if (failed) ...[
+                  const SizedBox(width: 8),
+                  const _Failed('failed'),
+                ],
+                if (working) ...[
+                  const SizedBox(width: 10),
+                  SizedBox.square(
+                    dimension: 14,
+                    child: Spinner(color: t.textSecondary),
+                  ),
+                ],
+              ],
+            ),
+            // A call with nothing to show only has its title.
+            body: !body
+                ? null
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 8,
+                    children: [
+                      if (preview != null && !previewAbove)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: PreviewButton(preview),
+                        ),
+                      if (command)
+                        // The header cuts it to a line.
+                        FullTitle('\$ ${it.title}', bare: true),
+                      for (final d in it.diffs) DiffBox(d),
+                      if (input) ToolSection('Input', RawText(it.input)),
+                      if (output && input)
+                        ToolSection('Output', AgentMarkdown(it.text))
+                      else if (output && serverTool(it) != null)
+                        RawText(serverOutput(it.text), folded: 12)
+                      else if (output)
+                        AgentMarkdown(it.text)
+                      else if (showsRawOutput(it))
+                        ToolSection(
+                          'Output',
+                          RawText(it.rawOutput, folded: 12),
+                        ),
+                    ],
+                  ),
+          );
+        },
       ),
     );
   }
@@ -473,41 +512,44 @@ class RunView extends StatelessWidget {
     return _withImages(
       [for (final c in calls) ...c.images],
       refs,
-      Collapsible(
-        // Open when its first call was, before the next made it a group.
-        ids: ['group ${calls.first.id}', calls.first.id],
-        folded: runFolded(calls),
-        sunk: false,
-        header: Row(
-          children: [
-            Icon(Icons.layers_outlined, size: 15, color: t.toolAccent),
-            const SizedBox(width: 8),
-            Expanded(child: _groupTitle(theme, calls, still: still)),
-            if (edits) LineCounts(added, removed),
-            if (preview != null) ...[
+      LayoutBuilder(
+        builder: (context, box) => Collapsible(
+          // Open when its first call was, before the next made it a group.
+          ids: ['group ${calls.first.id}', calls.first.id],
+          folded: runFolded(calls),
+          sunk: false,
+          header: Row(
+            children: [
+              Icon(Icons.layers_outlined, size: 15, color: t.toolAccent),
               const SizedBox(width: 8),
-              PreviewButton(preview),
+              Expanded(child: _groupTitle(theme, calls, still: still)),
+              if (edits && box.maxWidth >= RowRoom.runCounts)
+                LineCounts(added, removed),
+              if (preview != null && box.maxWidth >= RowRoom.runPreview) ...[
+                const SizedBox(width: 8),
+                PreviewButton(preview),
+              ],
+              // Its failed calls stand out inside, and in the count.
+              if (failed > 0) ...[
+                const SizedBox(width: 8),
+                _Failed('$failed failed'),
+              ],
             ],
-            // Its failed calls stand out inside, and in the count.
-            if (failed > 0) ...[
-              const SizedBox(width: 8),
-              _Failed('$failed failed'),
+          ),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 2,
+            children: [
+              for (final c in calls)
+                ToolCallView(
+                  c,
+                  key: ValueKey(c.id),
+                  images: false,
+                  still: still,
+                  nested: true,
+                ),
             ],
-          ],
-        ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 2,
-          children: [
-            for (final c in calls)
-              ToolCallView(
-                c,
-                key: ValueKey(c.id),
-                images: false,
-                still: still,
-                nested: true,
-              ),
-          ],
+          ),
         ),
       ),
     );

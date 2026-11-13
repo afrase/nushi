@@ -247,7 +247,7 @@ The browser's tabs are chips in the pane's title row (a file's tab beside them i
 
 **Artifacts** are the files made to be looked at: everything but code and text, which Changes shows. Open one from:
 
-- its tool row's Preview;
+- its tool row's Preview (in a narrow row, such as a subagent's pane's, inside the opened row; a narrow row leaves out its `+n −m` too, which its diffs show);
 - the Artifacts widget in the details panel, the open one marked. The palette's Artifacts… shows the panel and the widget, or lists them in a window too narrow for the panel.
 
 Each list shows the files the chat wrote that way, in the same order:

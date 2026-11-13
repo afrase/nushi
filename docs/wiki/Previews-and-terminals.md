@@ -8,7 +8,7 @@ Shortcuts below are the Mac's. On Linux, use Ctrl where the Mac uses ⌘, and Al
 
 ## Open a preview
 
-When the agent writes a document, page, image or diagram, its row in the chat has a **Preview** button. Click it and the file opens beside the chat.
+When the agent writes a document, page, image or diagram, its row in the chat has a **Preview** button. Click it and the file opens beside the chat. Where the row is narrow (a subagent's pane), the button is inside the row: click the row to open it first.
 
 You can also open files in these ways:
 
