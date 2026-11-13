@@ -55,8 +55,8 @@ bool canKeepSide(Daemon d, ChatState side) =>
     d.daemonApi >= forkApi && !side.busy && !side.waiting;
 
 /// Keep as chat: [chat]'s side chat becomes a chat of its own in the
-/// sidebar. The side pane closes and [chat] stays shown; a toast says so,
-/// with Go to chat.
+/// sidebar, with what was written in its box. The side pane closes and
+/// [chat] stays shown; a toast says so, with Go to chat.
 Future<void> keepSide(BuildContext context, Daemon d, ChatState chat) async {
   final side = chat.side.value;
   if (side == null) return;
@@ -65,7 +65,11 @@ Future<void> keepSide(BuildContext context, Daemon d, ChatState chat) async {
     final r = await d.client.keepSideChat(KeepSideChatRequest(chatId: side.id));
     if (chat.side.value == side) chat.side.value = null;
     d.sides.remove(side.id);
-    d.chats[r.chatId] ??= ChatState(r.chatId, chat.folder);
+    final kept = d.chats[r.chatId] ??= ChatState(r.chatId, chat.folder);
+    // What was half written in the side box goes on in the kept chat's,
+    // followed (and kept on disk) as its draft.
+    d.drafts?.attach(kept);
+    if (kept.draft.isEmpty) kept.draft.takeFrom(side.draft);
     d.listChanged();
     toast
       ?..hideCurrentSnackBar()

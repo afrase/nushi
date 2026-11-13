@@ -118,6 +118,23 @@ class Draft extends ChangeNotifier {
     mentions.addAll(m.mentions);
   }
 
+  /// Puts everything written in [from] in this draft, empty: the box's
+  /// text where its cursor was, its cards, images, files, outputs, quote,
+  /// subagent and subagents' boxes (a side chat kept as a chat).
+  void takeFrom(Draft from) {
+    text.value = from.text.value;
+    mentions.addAll(from.mentions);
+    replies.value = from.replies.value;
+    images.value = from.images.value;
+    files.value = from.files.value;
+    outputs.value = from.outputs.value;
+    quote.value = from.quote.value;
+    toSubagent.value = from.toSubagent.value;
+    for (final MapEntry(:key, :value) in from._subagents.entries) {
+      subagentBox(key).text = value.text;
+    }
+  }
+
   /// Nothing written: no text, card, image or quote in any box.
   bool get isEmpty =>
       text.text.trim().isEmpty &&
