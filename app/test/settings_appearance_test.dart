@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/arrangement.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
@@ -15,6 +16,7 @@ import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_theme.dart';
 import 'package:nushi/settings_view.dart';
+import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/theme_files.dart';
 import 'package:nushi/theme_preview.dart';
@@ -151,6 +153,31 @@ void main() {
     await _tap(tester, toggle);
     expect(projectRail.value, isFalse);
     expect(readSaved()['projectRailOn'], isFalse);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets("Project rail says why it isn't shown while it's on", (
+    tester,
+  ) async {
+    final d = await _app(tester);
+    final row = find.widgetWithText(SettingsRow, 'Project rail');
+    Finder says(String text) =>
+        find.descendant(of: row, matching: find.text(text));
+    projectRail.value = true;
+    sidebarGroupBy.value = GroupBy.date;
+    await tester.pumpAndSettle();
+    expect(says('Shows while chats are grouped by project.'), findsOne);
+    sidebarGroupBy.value = GroupBy.project;
+    railFits.value = false;
+    await tester.pumpAndSettle();
+    expect(says('Shows in a wider window.'), findsOne);
+    railFits.value = true;
+    await tester.pumpAndSettle();
+    expect(says('A column of project tiles beside the chats.'), findsOne);
+    projectRail.value = false;
+    sidebarGroupBy.value = GroupBy.date;
+    await tester.pumpAndSettle();
+    expect(says('A column of project tiles beside the chats.'), findsOne);
     d.dispose();
   }, variant: _mac);
 

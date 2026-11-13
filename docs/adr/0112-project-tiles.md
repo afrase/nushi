@@ -55,5 +55,7 @@ It was built whole and tried as v0.30.0-beta.1, the rail on at first. The owner,
 - An order of the rail's own: the rail and the list would disagree, and a project would have two places to keep.
 - Widening the sidebar by the rail's width: its edge, and Arrange and the hide button with it, would move each time the rail came or went.
 - Keeping the rail at any width: under 250 the rows beside it are too narrow to read a title.
+
+Amended 2026-11-13: a sidebar dragged under 250 hid the rail, so turning it on seemed to do nothing (a coworker's report). While the rail is wanted (on, arranged by project) the sidebar's least width is 250, as far as the window has room (`railWanted`; the width dragged is kept, for the rail off); only a window under about 810 has no room. While it's on and not shown, its setting says why (grouped otherwise; the window too narrow).
 - A color from the path alone: with five projects two often shared one. In the list's order rather than the order joined: dragging a project would recolor others.
 - Asking the daemon for the kept projects' icons only: it would need the app's list sent to it first, for a call the Mac alone can make anyway.

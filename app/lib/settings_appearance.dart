@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'package:nushi/arrangement.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_fonts.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_theme.dart';
+import 'package:nushi/sidebar_view.dart';
 
 /// Settings › Appearance: Light, Dark or as the system, the chat's width,
 /// the app's and code's fonts (ADR 0114), whether the preview shows
@@ -98,13 +100,13 @@ class _Appearance extends StatelessWidget {
             ),
           ),
         ),
-        ValueListenableBuilder(
-          valueListenable: projectRail,
-          builder: (context, on, _) => SettingsRow(
+        ListenableBuilder(
+          listenable: Listenable.merge([projectRail, sidebarGroupBy, railFits]),
+          builder: (context, _) => SettingsRow(
             'Project rail',
-            description: 'A column of project tiles beside the chats.',
+            description: _railNote(),
             control: SettingsSwitch(
-              value: on,
+              value: projectRail.value,
               onChanged: (v) => projectRail.value = v,
             ),
           ),
@@ -113,3 +115,14 @@ class _Appearance extends StatelessWidget {
     ),
   );
 }
+
+/// What Project rail says: what it is, or, while it's on and not shown,
+/// why not (the sidebar grouped by something else, or the window too
+/// narrow for it), which
+/// a switch that changed nothing left unsaid.
+String _railNote() => switch (projectRail.value) {
+  true when sidebarGroupBy.value != GroupBy.project =>
+    'Shows while chats are grouped by project.',
+  true when !railFits.value => 'Shows in a wider window.',
+  _ => 'A column of project tiles beside the chats.',
+};

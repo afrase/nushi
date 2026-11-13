@@ -19,13 +19,16 @@ List<ChatState> pinnedChats(Daemon daemon) =>
 /// says so as it's laid out (`ProjectRail.minSidebar`).
 final railFits = ValueNotifier<bool>(true);
 
-/// Whether the sidebar has its project rail (ADR 0112): arranged by
-/// project, Settings › Appearance's Project rail on (off at first), and
-/// room for it.
-bool get railShows =>
-    sidebarGroupBy.value == GroupBy.project &&
-    projectRail.value &&
-    railFits.value;
+/// Whether the sidebar would have its project rail, room allowing:
+/// arranged by project and Settings › Appearance's Project rail on (off
+/// at first). The sidebar is then kept wide enough for it, as far as the
+/// window has room.
+bool get railWanted =>
+    sidebarGroupBy.value == GroupBy.project && projectRail.value;
+
+/// Whether the sidebar has its project rail (ADR 0112): wanted
+/// ([railWanted]) and room for it.
+bool get railShows => railWanted && railFits.value;
 
 /// The project the sidebar is narrowed to, by folder: the tile picked in
 /// the rail ([sidebarProject]), while the rail shows and the folder is

@@ -29,12 +29,14 @@ import 'package:nushi/nothing_open.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart' show baseName;
+import 'package:nushi/project_rail.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/removed_chats.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_modal.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/sidebar_button.dart';
+import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/theme_files.dart';
@@ -462,12 +464,23 @@ class _Shell extends StatelessWidget {
       builder: (context, box) => SidebarBeside(
         sidebar: shut
             ? null
-            : Resizable(
-                name: 'sidebar',
-                initial: 260,
-                min: 200,
-                max: min(480, box.maxWidth - 560),
-                line: false,
+            : ListenableBuilder(
+                listenable: Listenable.merge([projectRail, sidebarGroupBy]),
+                builder: (context, child) {
+                  final most = min(480.0, box.maxWidth - 560);
+                  return Resizable(
+                    name: 'sidebar',
+                    initial: 260,
+                    // With the project rail wanted, no narrower than it
+                    // needs, as far as the window has room.
+                    min: railWanted
+                        ? min(ProjectRail.minSidebar, max(200.0, most))
+                        : 200,
+                    max: most,
+                    line: false,
+                    child: child!,
+                  );
+                },
                 child: Sidebar(daemon: daemon),
               ),
         // Beside the sidebar, which brings the gap between them, or alone
