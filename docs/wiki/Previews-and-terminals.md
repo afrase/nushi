@@ -56,7 +56,7 @@ A browser tab shows a web page beside the chat, such as the dev server the agent
 
 The bar has Back, Forward and Reload (⌘R). ⌘L jumps to the address field. **Expand** gives the browser the whole chat area, and **Collapse** gives the chat back.
 
-If your project lists dev servers in a launch file (`.claude/launch.json` or `.agents/launch.json`), the **Servers** button starts and stops them. **Logs** shows a server's output.
+If your project lists dev servers in a launch file (`.claude/launch.json` or `.agents/launch.json`), the **Servers** button starts and stops them. **Logs** shows a server's output. A server marked **Agent can't name it** has a name the agent can't use (only letters, digits and `: _ . -`): start it from the menu, or rename it in the launch file.
 
 ## Open a terminal
 

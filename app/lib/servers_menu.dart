@@ -279,6 +279,7 @@ class ServerRow extends StatelessWidget {
         ),
         if (hint.isNotEmpty)
           Text(hint, style: theme.ui(t.textMuted, size: 11.5)),
+        if (!s.nameOk) const _NameMark(),
       ],
     );
     final text = Column(
@@ -436,4 +437,37 @@ String _details(DevServer s) {
     ...env,
     if (s.url.isNotEmpty) s.url,
   ].map(plainPath).join('\n');
+}
+
+/// On an entry whose name an agent's tools can't use (ADR 0095): its
+/// preview_list counts it as unnamed and preview_start can't start it, so
+/// only this menu runs it. The needs' ink on its soft fill, as a pill.
+class _NameMark extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Tooltip(
+      message:
+          'The agent can’t start this server: a name it can use has only '
+          'letters, digits and : _ . -, starts with a letter or digit, and '
+          'is 64 characters at most. Rename it in its launch file, or run '
+          'it from here.',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: t.needsSoft,
+          borderRadius: BorderRadius.circular(NushiTheme.pill),
+        ),
+        child: Text(
+          'Agent can’t name it',
+          maxLines: 1,
+          softWrap: false,
+          style: theme.ui(t.needs, size: 11, weight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
 }
