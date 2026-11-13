@@ -228,17 +228,17 @@ func (k Keychain) failed(call string, st C.OSStatus) error {
 func kind(status int) error {
 	switch st := C.OSStatus(status); st {
 	case C.errSecItemNotFound:
-		if C.kc_default() != C.errSecSuccess {
+		if !hasKeychain() {
 			return ErrNoKeychain // nothing is found without a keychain
 		}
 		return ErrNotFound
 	case C.errSecInteractionNotAllowed, C.errSecAuthFailed, C.errSecUserCanceled:
-		if cantAsk() != "" {
+		if asking() != "" {
 			return ErrRestart
 		}
 		return ErrNeedsOK
 	case errnoBase + C.OSStatus(syscall.ENOENT):
-		if C.kc_default() != C.errSecSuccess {
+		if !hasKeychain() {
 			return ErrNoKeychain
 		}
 		return ErrRestart
@@ -247,6 +247,15 @@ func kind(status int) error {
 	}
 	return nil
 }
+
+// hasKeychain says there is a login keychain this process can find, and
+// asking says why it can't ask for the user's OK (cantAsk): kind's two
+// looks at the machine, which a test replaces so that it never asks the
+// real keychain.
+var (
+	hasKeychain = func() bool { return C.kc_default() == C.errSecSuccess }
+	asking      = cantAsk
+)
 
 // errnoBase is where the Security framework's statuses for a Unix errno
 // start (errSecErrnoBase): 100000 + errno.
