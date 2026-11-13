@@ -64,8 +64,13 @@ func (t *transcript) apply(c change) {
 			t.placeWaiting()
 		}
 	case c.cut != "":
+		// What comes from the cut item on, as entries gives it: the list's
+		// rest and all that waits, or, for an item still waiting, it and
+		// what waits after it.
 		if i := t.index(c.cut); i >= 0 {
 			t.list, t.waiting, t.pos = t.list[:i], nil, nil
+		} else if j := slices.IndexFunc(t.waiting, func(w change) bool { return w.item.id == c.cut }); j >= 0 {
+			t.waiting = t.waiting[:j]
 		}
 	case c.drop != "":
 		if i := t.index(c.drop); i >= 0 {
