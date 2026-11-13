@@ -266,3 +266,40 @@ func TestListCopiesAtScale(t *testing.T) {
 		t.Errorf("ListCopies of %d copies took %v", n, took)
 	}
 }
+
+// The service clears copies on its own: those last written more than
+// the setting's days ago go, the newer stay, and 0 days keeps them all.
+// The setting is read again at each look, so a change needs no restart.
+func TestCopiesClearThemselves(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "transcripts")
+	store, err := transcripts.Open(dir)
+	testcheck.NoErr(t, err)
+	for _, id := range []string{"OLD", "NEW"} {
+		testcheck.NoErr(t, store.Append(id, []model.Item{{ID: "m", Kind: model.AgentMessage, Text: id}}, []string{""}))
+	}
+	long := time.Now().Add(-3 * 24 * time.Hour)
+	testcheck.NoErr(t, os.Chtimes(filepath.Join(dir, "OLD", "items.jsonl"), long, long))
+	var days, looks atomic.Int64
+	setting := func() int { looks.Add(1); return int(days.Load()) }
+	newService(t, nil, Options{Copies: store, CopyDays: setting, Timing: Timing{CopiesCheck: 5 * time.Millisecond}})
+	looked := func(n int64) { // n more looks from now
+		t.Helper()
+		from := looks.Load()
+		if !testcheck.Eventually(func() bool { return looks.Load() >= from+n }) {
+			t.Fatal("the service stopped looking")
+		}
+	}
+
+	looked(3)
+	if !store.Has("OLD") || !store.Has("NEW") {
+		t.Fatal("0 days cleared a copy")
+	}
+	days.Store(2)
+	if !testcheck.Eventually(func() bool { return !store.Has("OLD") }) {
+		t.Fatal("a copy 3 days old outlived 2 days")
+	}
+	looked(3)
+	if !store.Has("NEW") {
+		t.Error("a new copy went")
+	}
+}
