@@ -20,6 +20,7 @@ The owner (2026-11-13): "App font. Right now you can only set terminal font but 
 
 ## Consequences
 - Line height is 1.4 of the text's size whatever the font, so rows keep their heights. Widths don't: in a wide font, titles and rows are cut with an ellipsis sooner.
+- Only the chat's header re-measures. Other rows still count on the bundled font's widths, and `wide_font_test.dart` holds the main window, a chat, Changes and every section of Settings to no overflow in JetBrains Mono at 1700 and 720, naming what's known and left: at 720, a server's row in Settings › MCP servers runs ten points past its end.
 - A picked family that's no longer installed stays picked and listed ("not installed"), and its text is drawn in the bundled font meanwhile.
 - The filtered menu builds every row (Flutter's menu is as wide as its widest row, so its list can't be built lazily without a fixed width): about 300 rows open in a third of a second in a debug test. Fine for a font menu; a longer list would want a fixed width and a lazy list.
 - `flutter test` draws a family it hasn't loaded in its test font, not in the fallback: tests assert the families asked for, and renders use the fonts the app bundles.
