@@ -14,7 +14,8 @@ import (
 // and its branch go, each only when asked, each with its guards (the
 // clean-up dialog shows what they'd lose first, and the daemon checks
 // again): never mid-turn, never under another chat, never uncommitted
-// work without force, never a branch a worktree has checked out.
+// work or ignored files without force, never a branch a worktree has
+// checked out.
 
 // CleanUp is what the clean-up dialog shows of a chat's worktree and its
 // branch: nil Worktree when the chat has none.
@@ -72,7 +73,8 @@ func (s *Service) othersIn(c *chat, folder string) ([]string, error) {
 
 // RemoveWorktree removes the chat's worktree (git worktree remove): refused
 // while the chat's turn runs or another chat works in it, and with
-// uncommitted changes unless force. The chat's agent stops first (it
+// uncommitted changes or ignored files (which git's remove deletes
+// without asking) unless force, as Delete refuses them. The chat's agent stops first (it
 // sleeps, when it can reopen), and its terminals end. From the check that
 // the chat is quiet to the end, the chat takes no prompts and doesn't
 // reopen (removing), so no turn starts in a folder about to go.
@@ -116,8 +118,11 @@ func (s *Service) RemoveWorktree(ctx context.Context, chatID string, force bool)
 	if err != nil {
 		return err
 	}
-	if st.Changed > 0 && !force {
+	switch { // Delete's rule (deleteWorktree): ignored files are lost as surely as changes
+	case st.Changed > 0 && !force:
 		return fmt.Errorf("the worktree has %d uncommitted changes", st.Changed)
+	case st.Ignored > 0 && !force:
+		return fmt.Errorf("the worktree has %d ignored files or folders", st.Ignored)
 	}
 	c.mu.Lock()
 	running := c.agent != nil
