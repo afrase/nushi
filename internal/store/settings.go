@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"log/slog"
 	"path/filepath"
 	"time"
@@ -24,7 +25,8 @@ const defaultSleepAfter = 30 * time.Minute
 
 // settingsLocked is settings.json, read once and then kept (a hand edit
 // while the daemon runs is seen at its next start); one that can't be
-// read is as if empty.
+// read is as if empty, and one that doesn't parse counts for what it
+// could read. Either way the read's error is kept for the next change.
 func (s *Store) settingsLocked() settings {
 	if s.set != nil {
 		return *s.set
@@ -32,19 +34,31 @@ func (s *Store) settingsLocked() settings {
 	var set settings
 	if _, err := readJSON(filepath.Join(s.dir, "settings.json"), &set); err != nil {
 		slog.Warn("reading settings.json", "err", err)
+		s.setErr = err
 	}
 	s.set = &set
 	return set
 }
 
 // changeSettings applies change to settings.json, and keeps the result
-// once it's written.
+// once it's written. A file that couldn't be read is never written over
+// (clearForWrite): one that doesn't parse is set aside first, and one
+// that can't be read at all is tried again, refusing the change if it
+// still can't.
 func (s *Store) changeSettings(change func(*settings)) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	path := filepath.Join(s.dir, "settings.json")
+	if u := (*unparsed)(nil); s.setErr != nil && !errors.As(s.setErr, &u) {
+		s.set, s.setErr = nil, nil
+	}
 	set := s.settingsLocked()
+	if err := clearForWrite(path, s.setErr); err != nil {
+		return err
+	}
+	s.setErr = nil // set aside: the bytes are kept, and the write below replaces nothing unread
 	change(&set)
-	if err := writeJSON(filepath.Join(s.dir, "settings.json"), set); err != nil {
+	if err := writeJSON(path, set); err != nil {
 		return err
 	}
 	s.set = &set
