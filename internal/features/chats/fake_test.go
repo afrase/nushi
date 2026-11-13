@@ -138,9 +138,11 @@ type fakeAgent struct {
 	// stopGate, when set, keeps a stopped process running until it is
 	// closed (it takes its time ending its sessions); a kill (Close) ends
 	// it at once, unless unkillable.
-	stopGate   chan struct{}
-	unkillable bool
-	overlaps   int // launches while the last process still ran
+	stopGate    chan struct{}
+	unkillable  bool
+	overlaps    int  // launches while the last process still ran
+	forks       int  // sessions forked
+	numberForks bool // each fork is fork<n>, not always fork1
 	// entered, when set (buffered), gets a gate's name ("load", "fork",
 	// "delete") as a call reaches it: a test waits for it, not a while.
 	entered     chan string
@@ -462,8 +464,15 @@ func (f *fakeAgent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest
 	if f.forkErr != nil {
 		return nil, f.forkErr
 	}
+	f.mu.Lock()
 	f.forkMeta = req.Meta
-	return &acp.ForkSessionResponse{SessionID: "fork1", ConfigOptions: f.session.ConfigOptions, Modes: f.session.Modes}, nil
+	f.forks++
+	sid := acp.SessionID("fork1")
+	if f.numberForks {
+		sid = acp.SessionID(fmt.Sprintf("fork%d", f.forks))
+	}
+	f.mu.Unlock()
+	return &acp.ForkSessionResponse{SessionID: sid, ConfigOptions: f.session.ConfigOptions, Modes: f.session.Modes}, nil
 }
 
 func (f *fakeAgent) CloseSession(context.Context, *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {

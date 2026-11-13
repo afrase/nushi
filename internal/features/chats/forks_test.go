@@ -7,6 +7,7 @@ import (
 	"slices"
 	"sync"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -320,5 +321,71 @@ func TestNewChatsAreFoundOnceStored(t *testing.T) {
 	}
 	if got := modes[fork]; len(got) == 0 || slices.ContainsFunc(got, func(m string) bool { return m != "plan" }) {
 		t.Errorf("the fork's stored modes %v, want plan", got)
+	}
+}
+
+// Keeping a side chat as it's closed (Keep against Close, or the app
+// going): one of them has it, never both. A kept side chat's session is
+// never deleted, and one that wasn't kept is.
+func TestKeepingASideChatAsItCloses(t *testing.T) {
+	agent := &fakeAgent{deletes: true, numberForks: true}
+	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude", redelete: 10 * time.Millisecond}, Launch: agent.launch}}, Options{})
+	t.Cleanup(svc.Close)
+	ctx := t.Context()
+	cid, err := svc.Start(ctx, "", t.TempDir(), false)
+	testcheck.NoErr(t, err)
+	c := svc.chats[cid]
+	turn(t, svc, c, "one")
+	var kept, closed []string
+	for range 40 {
+		side, err := svc.Fork(ctx, c.id)
+		testcheck.NoErr(t, err)
+		var wg sync.WaitGroup
+		var keepErr, closeErr error
+		var id string
+		start := make(chan struct{})
+		wg.Go(func() { <-start; id, keepErr = svc.KeepSide(ctx, side) })
+		wg.Go(func() { <-start; closeErr = svc.CloseSide(side) })
+		close(start)
+		wg.Wait()
+		if keepErr == nil {
+			kept = append(kept, side)
+			if _, err := svc.stored(id); err != nil {
+				t.Fatalf("kept %s as %s: %v", side, id, err)
+			}
+		} else {
+			closed = append(closed, side)
+		}
+		if closeErr != nil && keepErr != nil {
+			t.Fatalf("neither kept nor closed: %v, %v", keepErr, closeErr)
+		}
+		if _, err := svc.Get(side); err == nil {
+			t.Fatalf("%s is still a side chat", side)
+		}
+	}
+	t.Logf("%d kept, %d closed", len(kept), len(closed))
+	if !testcheck.Eventually(func() bool {
+		_, _, deleted := agent.count()
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		return len(slices.Compact(slices.Sorted(slices.Values(deleted)))) == len(closed) && len(c.record.Throwaway) == 0 && len(c.sides) == 0
+	}) {
+		_, _, deleted := agent.count()
+		c.mu.Lock()
+		throwaway, sides := c.record.Throwaway, len(c.sides)
+		c.mu.Unlock()
+		t.Fatalf("deleted %v, closed %v; still to throw away %v, sides %d", deleted, closed, throwaway, sides)
+	}
+	_, _, deleted := agent.count()
+	for _, side := range closed {
+		if !slices.Contains(deleted, acp.SessionID(side)) {
+			t.Errorf("closed %s, not deleted", side)
+		}
+	}
+	for _, side := range kept {
+		if slices.Contains(deleted, acp.SessionID(side)) {
+			t.Errorf("kept %s, deleted", side)
+		}
 	}
 }
