@@ -85,7 +85,16 @@ final class PhonePlatform {
   }
 
   Future<void> unsubscribe() async => push = PushState.off;
-  void onVisible(void Function({required bool visible}) f) {}
+
+  /// Calls [f] when the page shows or hides; a test calls
+  /// [visibilityChanged].
+  // A method, as the browser's PhonePlatform has it.
+  // ignore: use_setters_to_change_properties
+  void onVisible(void Function({required bool visible}) f) =>
+      visibilityChanged = f;
+
+  /// What [onVisible] was given: the page shown or hidden.
+  void Function({required bool visible})? visibilityChanged;
 
   /// Calls [f] when the network comes back.
   void onOnline(void Function() f) {}

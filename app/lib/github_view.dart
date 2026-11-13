@@ -14,6 +14,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/token_notices.dart';
@@ -48,7 +49,7 @@ void showItem(Daemon daemon, GitHubRef ref, {required bool pull}) {
 
 /// The cards whose older items show too ("Show"), until Nushi quits or
 /// the span or host changes.
-final _wide = <String>{};
+final Set<String> _wide = runSet();
 
 /// Forgets what the view had (tests start afresh).
 @visibleForTesting

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -17,7 +18,7 @@ const searchSessionsApi = 113;
 
 /// The agents found to have no search of what was said in their sessions,
 /// while the app runs: their field filters titles only.
-final cantSearchSessions = <String>{};
+final Set<String> cantSearchSessions = runSet();
 
 /// A search of [agent]'s sessions in [folder] for what was said in them
 /// (SearchAgentSessions, ADR 0035), for SessionList's field: asked once

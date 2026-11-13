@@ -9,6 +9,7 @@ import 'package:nushi/diff_box_find.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/review_cards.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
@@ -115,7 +116,8 @@ class DiffBox extends StatefulWidget {
 
 /// Comments half written in a file's view that went (another file picked,
 /// the file left the list), by chat, view and file, until it shows again.
-final _drafts = <String, ({LineSelection at, String text, String? editing})>{};
+final Map<String, ({LineSelection at, String text, String? editing})> _drafts =
+    runMap();
 
 class _DiffBoxState extends State<DiffBox> {
   DiffViewController? _controller; // once the diff is in

@@ -589,11 +589,8 @@ void main() {
     );
     await tester.pump();
     await tester.tap(find.text('Pair'));
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pump();
-    expect(find.textContaining("isn't a Nushi pairing link"), findsOneWidget);
+    final refused = find.textContaining("isn't a Nushi pairing link");
+    await untilReal(tester, () => refused.evaluate().isNotEmpty);
     expect(phone.paired, isNull);
     await endPhone(tester, phone);
   });
@@ -608,11 +605,8 @@ void main() {
     );
     await tester.pump();
     await tester.tap(find.text('Pair'));
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pump();
-    expect(find.textContaining('for the relay at evil.example.com'), findsOne);
+    final refused = find.textContaining('for the relay at evil.example.com');
+    await untilReal(tester, () => refused.evaluate().isNotEmpty);
     expect(phone.paired, isNull);
     await endPhone(tester, phone);
   });

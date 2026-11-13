@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:nushi/comment_box.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// My review's inline comments not sent yet, by pull request; on the Mac
 /// they outlive a restart (ADR 0073). They go to GitHub with the review
 /// (Review…), never before.
-final _drafts = <String, List<GitHubDraft>>{};
+final Map<String, List<GitHubDraft>> _drafts = runMap();
 
 /// Says the drafts changed, for the views that show them.
 final ValueNotifier<int> draftsChanged = ValueNotifier(0);

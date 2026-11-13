@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/disclosure.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/widgets.dart';
@@ -45,7 +46,7 @@ class Collapsible extends StatefulWidget {
   static const side = 12.0;
 
   /// The ids of what the user opened.
-  static final opened = <String>{};
+  static final Set<String> opened = runSet();
 
   @override
   State<Collapsible> createState() => _CollapsibleState();

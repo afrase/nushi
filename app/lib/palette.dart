@@ -11,6 +11,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/theme/theme.dart';
@@ -41,7 +42,7 @@ class PaletteRow {
 
 /// What was picked in the palette lately, the newest first, while the app
 /// runs: first in it when nothing is typed.
-final recentRows = <String>[];
+final List<String> recentRows = runList();
 
 /// ⌘K: the palette. The chats (the pinned first, then the last opened
 /// first), the actions that apply now ([appActions], the shown chat's

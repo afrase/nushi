@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/keys.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -10,7 +11,7 @@ import 'package:nushi/widgets.dart';
 /// answers ([CommentBox.draft]): the box goes with its view (a look at a
 /// chat, or at Settings), the text waits for it, and on the Mac outlives a
 /// restart (ADR 0073). Posted, emptied or cancelled, it goes.
-final _drafts = <String, String>{};
+final Map<String, String> _drafts = runMap();
 
 /// Says a draft changed, for the other boxes of its key (a thread's reply
 /// in To do and in Files), which show the same text, and for the file

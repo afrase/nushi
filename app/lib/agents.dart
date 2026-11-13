@@ -4,16 +4,17 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/run_state.dart';
 
 /// The agents the daemon runs (ListAgents), by name, the default first,
 /// as last found on this Mac.
-final agentList = ValueNotifier<Map<String, Agent>>({});
+final ValueNotifier<Map<String, Agent>> agentList = runValue({});
 
 Map<String, Agent> get knownAgents => agentList.value;
 
 /// How the daemon last read the login shell's environment, which agents
 /// start with (ADR 0048); null until Settings › Agents asked.
-final shellEnvironment = ValueNotifier<ShellEnvironment?>(null);
+final ValueNotifier<ShellEnvironment?> shellEnvironment = runValue(null);
 
 /// Has the daemon find the agents again; with [refreshEnvironment], read
 /// the shell's environment first if it was read over a minute ago, with

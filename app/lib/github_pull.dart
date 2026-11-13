@@ -20,6 +20,7 @@ import 'package:nushi/pull_skeleton.dart';
 import 'package:nushi/pull_todo.dart';
 import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/review_findings.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -32,7 +33,7 @@ const pullPoll = Duration(seconds: 30);
 /// Each pull request's tab (Activity, Checks, Files) as left, while the
 /// app runs: a look at a chat comes back to it, and to what was being
 /// written there.
-final _tabLeft = <String, PullSection>{};
+final Map<String, PullSection> _tabLeft = runMap();
 
 /// No pull request's tab left (tests: each starts afresh).
 @visibleForTesting

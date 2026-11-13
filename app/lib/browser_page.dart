@@ -6,6 +6,7 @@ import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_local.dart';
 import 'package:nushi/browser_navigation.dart';
 import 'package:nushi/native.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart' show localNetworkSites;
 import 'package:nushi/web_views.dart';
 
@@ -99,7 +100,7 @@ void disallowLocalNetwork(String host) =>
 /// The default browser's name ("Google Chrome"), as the bar's button
 /// names it: null until [lookUpDefaultBrowser] has it, or when the Mac
 /// can't say.
-final defaultBrowser = ValueNotifier<String?>(null);
+final ValueNotifier<String?> defaultBrowser = runValue(null);
 
 /// Removes every site's data from the web views' store
 /// ([WebViews.clearData]): the ⋯ menu's Clear browsing data.

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart' show errorText;
 
@@ -37,7 +38,7 @@ class McpServers extends ChangeNotifier {
     unawaited(refresh());
   }
 
-  static final _byFolder = <(String, String), McpServers>{};
+  static final Map<(String, String), McpServers> _byFolder = runMap();
 
   /// How long a list is taken as current.
   static const fresh = Duration(minutes: 5);

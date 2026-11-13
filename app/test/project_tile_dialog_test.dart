@@ -193,20 +193,19 @@ void main() {
         : [];
     ProjectTile preview() =>
         tester.widget(find.byKey(const Key('tile preview')));
-    Future<void> choose() async {
+    bool picked() => preview().picture != null;
+    const refused = 'Not a PNG, JPEG, GIF or WebP image.';
+    bool says() => find.text(refused).evaluate().isNotEmpty;
+    // The file is read and decoded on the real clock: until [done].
+    Future<void> choose(bool Function() done) async {
       await tester.tap(find.widgetWithText(Button, 'Choose image…'));
       await tester.pump();
-      for (var i = 0; i < 20; i++) {
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 20)),
-        );
-        await tester.pump();
-      }
+      await untilReal(tester, done);
     }
 
     final d = await _changeTile(tester);
     expect(find.widgetWithText(Button, 'Remove image'), findsNothing);
-    await choose();
+    await choose(() => picked() && find.byType(RawImage).evaluate().isNotEmpty);
     expect(preview().picture, isNotNull);
     expect(find.byType(RawImage), findsWidgets);
     expect(find.widgetWithText(Button, 'Remove image'), findsOneWidget);
@@ -219,7 +218,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await choose();
+    await choose(picked);
     await tester.tap(find.widgetWithText(Button, 'Save'));
     await tester.pumpAndSettle();
     final first = projectTiles.value[garden]!.image;
@@ -233,18 +232,18 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     next = text;
-    await choose();
-    expect(find.text('Not a PNG, JPEG, GIF or WebP image.'), findsOneWidget);
+    await choose(says);
+    expect(find.text(refused), findsOneWidget);
     expect(preview().look.image, first);
     expect(preview().picture, isNull);
     // The panel closed with nothing picked: nothing changes.
     next = null;
-    await choose();
+    await choose(() => true);
     expect(preview().look.image, first);
     // Another in its place: the line goes, and Save deletes the first.
     next = gif;
-    await choose();
-    expect(find.text('Not a PNG, JPEG, GIF or WebP image.'), findsNothing);
+    await choose(picked);
+    expect(find.text(refused), findsNothing);
     await tester.tap(find.widgetWithText(Button, 'Save'));
     await tester.pumpAndSettle();
     final second = projectTiles.value[garden]!.image;
@@ -268,7 +267,7 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     next = photo;
-    await choose();
+    await choose(picked);
     await tester.tap(find.widgetWithText(Button, 'Save'));
     await tester.pumpAndSettle();
     expect(stored(), hasLength(1));

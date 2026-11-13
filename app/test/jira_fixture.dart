@@ -109,7 +109,7 @@ Future<(FakeDaemon, Daemon)> openView(
         };
   final d = await fake.connect(tester);
   forgetJiraView(); // it keeps what it had while the app runs
-  await tester.binding.setSurfaceSize(size);
+  viewport(tester, size); // put back after the test, at 1×
   if (window) {
     // The window on the view, the sidebar hidden (it has its own goldens).
     viewport(

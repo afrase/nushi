@@ -7,6 +7,7 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/session_rows.dart';
 import 'package:nushi/session_search.dart';
 import 'package:nushi/theme/theme.dart';
@@ -16,7 +17,7 @@ export 'package:nushi/session_rows.dart' show mayOpen;
 
 /// The agents found not to list their sessions, while the app runs: the
 /// New chat dialog offers them no "Sessions →".
-final cantListSessions = <String>{};
+final Set<String> cantListSessions = runSet();
 
 /// The New chat dialog's second step: [agent]'s sessions in [folder] ('':
 /// every folder's) that aren't chats, newest first, for [onOpen]. Its

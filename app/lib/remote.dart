@@ -8,13 +8,14 @@ import 'package:nushi/commits.dart' show ago;
 import 'package:nushi/conventions.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:qr/qr.dart';
 
 /// Remote access as the daemon last said (ADR 0034); null until it has.
-final remoteState = ValueNotifier<Remote?>(null);
+final ValueNotifier<Remote?> remoteState = runValue(null);
 
 const _states = {
   'connected': 'Connected',

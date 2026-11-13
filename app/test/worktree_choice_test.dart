@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/settings.dart';
 import 'package:nushi/worktree.dart';
 
 import 'fake_daemon.dart';
@@ -23,7 +22,8 @@ void main() {
   setUpAll(() async {
     await loadFonts();
     // An older app's app.json, which remembered the repositories
-    // whose new chats got a worktree; read before anything else is.
+    // whose new chats got a worktree; read before anything else is (that
+    // the key goes with the next save: settings_test.dart).
     Directory(dataDir).createSync(recursive: true); // the tests' own
     _appJson.writeAsStringSync(
       jsonEncode({
@@ -31,16 +31,6 @@ void main() {
         'worktrees': [_repo],
       }),
     );
-  });
-
-  test('an old app.json with worktrees loads, and the key goes on the next '
-      'save', () async {
-    expect(showDetails.value, isFalse); // the rest of it was read
-    showDetails.value = true;
-    await pumpEventQueue(); // saved once the changes are in
-    final saved = jsonDecode(_appJson.readAsStringSync()) as Map;
-    expect(saved['details'], isTrue);
-    expect(saved.containsKey('worktrees'), isFalse);
   });
 
   testWidgets('the New worktree chip moves this chat only: the next new chat '

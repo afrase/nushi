@@ -46,7 +46,6 @@ Widget _rows(List<Item> calls, {Tokens tokens = Tokens.dark}) => themed(
 
 void main() {
   setUpAll(loadFonts);
-  tearDown(Collapsible.opened.clear);
 
   test("an MCP call's title is its server, tool and the tool it runs", () {
     expect(mcpName(_gateway), ('litellm-mcp-gateway', 'invoke_tool'));

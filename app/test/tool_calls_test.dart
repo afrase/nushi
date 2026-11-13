@@ -21,8 +21,23 @@ void main() {
   test('a long rewrite is counted at once, not diffed on the UI thread', () {
     final old = [for (var i = 0; i < 9000; i++) 'old $i'].join('\n');
     final next = [for (var i = 0; i < 9000; i++) 'new $i'].join('\n');
-    final clock = Stopwatch()..start();
     expect(lineCounts(FileChange(oldText: old, newText: next)), (9000, 9000));
-    expect(clock.elapsedMilliseconds, lessThan(300));
+    // Counted, not diffed: a line moved isn't one added and one removed,
+    // as a diff (a short change's) has it.
+    List<String> moved(List<String> l) => [...l.skip(1), l.first];
+    final long = [for (var i = 0; i < 9000; i++) 'line $i'];
+    expect(
+      lineCounts(
+        FileChange(oldText: long.join('\n'), newText: moved(long).join('\n')),
+      ),
+      (0, 0),
+    );
+    final short = ['a', 'b', 'c'];
+    expect(
+      lineCounts(
+        FileChange(oldText: short.join('\n'), newText: moved(short).join('\n')),
+      ),
+      (1, 1),
+    );
   });
 }

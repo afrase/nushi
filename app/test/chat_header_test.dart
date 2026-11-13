@@ -149,7 +149,14 @@ void main() {
             ('', _) => 320.0,
             _ => 400.0,
           };
-          for (var width = least; width <= 1200; width += 10) {
+          // The least width and the one past it, where the most has
+          // folded, then every 40 to 1200: what folds goes by width, so a
+          // part too wide shows at every width it's kept at.
+          for (final width in [
+            least,
+            least + 1,
+            for (var w = least + 40; w <= 1200; w += 40) w,
+          ]) {
             await tester.pumpWidget(
               themed(
                 Align(

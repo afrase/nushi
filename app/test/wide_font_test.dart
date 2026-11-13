@@ -218,7 +218,7 @@ void main() {
   // pull request, each agent's name and state), the sidebar shown or not.
   // Down to 600: under about 560 with the sidebar showing, what never
   // folds is wider than the pane in the bundled font too.
-  testWidgets('the chat header fits at every width in a wide app font', (
+  testWidgets('the chat header fits from 1700 down to 600 in a wide app font', (
     tester,
   ) async {
     var where = '';
@@ -228,7 +228,8 @@ void main() {
         sidebarHidden.value = hidden;
         for (final c in demoChats()) {
           d.select(c.id);
-          for (var w = 1700.0; w >= 600; w -= 20) {
+          // Every 40, and a laptop's 720.
+          for (final w in [for (var w = 1700.0; w >= 600; w -= 40) w, 720.0]) {
             where = '${c.title}, $w${hidden ? ', no sidebar' : ''}:';
             tester.view.physicalSize = Size(w, 900);
             await tester.pump(const Duration(milliseconds: 100));
@@ -242,11 +243,14 @@ void main() {
 
   // What the pictures above compare with: the same window in the bundled
   // font. A render only.
-  testWidgets('the main window in the bundled font, for comparison', (
-    tester,
-  ) async {
-    final d = await _window(tester, const Size(1700, 1000), font: null);
-    await render(tester, find.byType(NushiApp), 'wide_font_window_bundled');
-    await closeView(tester, d);
-  }, variant: _mac);
+  testWidgets(
+    'the main window in the bundled font, for comparison',
+    (tester) async {
+      final d = await _window(tester, const Size(1700, 1000), font: null);
+      await render(tester, find.byType(NushiApp), 'wide_font_window_bundled');
+      await closeView(tester, d);
+    },
+    variant: _mac,
+    skip: rendersDir == null,
+  );
 }

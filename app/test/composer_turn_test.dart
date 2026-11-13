@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,13 +20,22 @@ import 'harness.dart';
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
 /// A box for a chat whose turn runs, with one message queued.
-Future<(FakeDaemon, Daemon, ChatState)> _box(WidgetTester tester) async {
+/// With [sendFails], the daemon refuses every send.
+Future<(FakeDaemon, Daemon, ChatState)> _box(
+  WidgetTester tester, {
+  bool sendFails = false,
+}) async {
   final fake = FakeDaemon([])
-    ..answer = (input) => input is UnqueueRequest
-        ? UnqueueResponse(
-            message: QueuedMessage(id: 'q1', text: 'Then docs'),
-          )
-        : null;
+    ..answer = (input) => switch (input) {
+      UnqueueRequest() => UnqueueResponse(
+        message: QueuedMessage(id: 'q1', text: 'Then docs'),
+      ),
+      SendPromptRequest() when sendFails => throw ConnectException(
+        Code.internal,
+        'the agent is gone',
+      ),
+      _ => null,
+    };
   final d = await fake.connect(tester);
   final chat = ChatState('c', '/Users/me/nushi')
     ..agent = 'claude'
@@ -108,6 +118,18 @@ void main() {
     chat.apply(EventsResponse(seq: Int64(1), status: ChatStatus()));
     await tester.pump();
     expect(find.byTooltip('Send now: stop the turn and send it'), findsNothing);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('a queued message sent now that fails to send is back in the '
+      'box, after what was written', (tester) async {
+    final (fake, d, chat) = await _box(tester, sendFails: true);
+    await tester.enterText(find.byType(TextField), 'Also the README');
+    await tester.tap(find.byTooltip('Send now: stop the turn and send it'));
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<UnqueueRequest>().single.id, 'q1');
+    expect(chat.draft.text.text, 'Also the README\n\nThen docs');
+    expect(find.textContaining('the agent is gone'), findsOne);
     d.dispose();
   }, variant: _mac);
 }

@@ -209,21 +209,27 @@ void main() {
   }
 
   for (final width in [1700.0, 720.0]) {
-    testWidgets('render at ${width.round()}', (tester) async {
-      localNetworkSites.value = {'keishicho-gto.metro.tokyo.lg.jp'};
-      await _open(tester, size: Size(width, 900));
-      await render(
-        tester,
-        find.byType(MaterialApp),
-        'allowed_sites_${width.round()}',
-      );
-      localNetworkSites.value = const {};
-      await tester.pumpAndSettle();
-      await render(
-        tester,
-        find.byType(MaterialApp),
-        'allowed_sites_${width.round()}_empty',
-      );
-    }, variant: macOnly);
+    // To look at only (`make renders`): the goldens above check it.
+    testWidgets(
+      'render at ${width.round()}',
+      (tester) async {
+        localNetworkSites.value = {'keishicho-gto.metro.tokyo.lg.jp'};
+        await _open(tester, size: Size(width, 900));
+        await render(
+          tester,
+          find.byType(MaterialApp),
+          'allowed_sites_${width.round()}',
+        );
+        localNetworkSites.value = const {};
+        await tester.pumpAndSettle();
+        await render(
+          tester,
+          find.byType(MaterialApp),
+          'allowed_sites_${width.round()}_empty',
+        );
+      },
+      variant: macOnly,
+      skip: rendersDir == null,
+    );
   }
 }

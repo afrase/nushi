@@ -208,6 +208,31 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
+  testWidgets('Keep as chat keeps what was half written in the side box in '
+      'the kept chat’s', (tester) async {
+    final (d, fake) = await _app(tester);
+    _side(d);
+    await tester.pumpAndSettle();
+    fake.emit(_sideStatus(1));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(SideChat),
+        matching: find.byType(TextField),
+      ),
+      'and the 404 page?',
+    );
+    await tester.tap(find.text('Keep as chat'));
+    await tester.pumpAndSettle();
+    expect(d.chats['kept']!.draft.text.text, 'and the 404 page?');
+    // The chat the side chat came from keeps its own (empty) box.
+    expect(d.chats['c']!.draft.text.text, isEmpty);
+    await tester.tap(find.text('Go to chat'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, 'and the 404 page?'), findsOne);
+    await closeView(tester, d);
+  }, variant: _mac);
+
   for (final (name, brightness) in [
     ('light', Brightness.light),
     ('dark', Brightness.dark),

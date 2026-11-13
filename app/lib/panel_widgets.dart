@@ -3,13 +3,14 @@ import 'package:nushi/card_list.dart';
 import 'package:nushi/disclosure.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The title of a widget to open and scroll into view once it's built (the
 /// palette's Artifacts…); cleared once it is.
-final revealWidget = ValueNotifier<String?>(null);
+final ValueNotifier<String?> revealWidget = runValue(null);
 
 /// The details panel's type and room (ADR 0092): a widget's title and its
 /// rows at the sidebar's size (the theme's own 13), what's said about a

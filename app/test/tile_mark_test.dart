@@ -46,12 +46,7 @@ Future<Offset> _offCentre(WidgetTester tester, String mark, double size) async {
     ),
   );
   // The measuring is the engine's, on the real clock.
-  for (var i = 0; i < 6; i++) {
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 50)),
-    );
-    await tester.pump();
-  }
+  await untilReal(tester, () => !measuringMarks);
   final boundary = tester.renderObject<RenderRepaintBoundary>(
     find.byKey(const Key('tile')),
   );

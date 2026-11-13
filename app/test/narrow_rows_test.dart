@@ -97,7 +97,6 @@ Finder get _runTitle => find.descendant(
 
 void main() {
   setUpAll(loadFonts);
-  setUp(Collapsible.opened.clear); // what a test opened stays open
   setUp(
     () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(

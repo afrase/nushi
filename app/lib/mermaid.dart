@@ -9,6 +9,7 @@ import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/native.dart';
 import 'package:nushi/plain_tabs.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// A Mermaid diagram as the Mac drew it: a PNG of [width] by [height]
@@ -54,7 +55,7 @@ String cssColor(Color c) =>
 /// Diagrams drawn, by their text and colors: each once, at the width of
 /// the block that asked first (narrower blocks scale it down); one whose
 /// drawing failed for a passing reason ([DrawnDiagram.retry]) is let go.
-final _drawn = <(String, bool, Color), Future<DrawnDiagram>>{};
+final Map<(String, bool, Color), Future<DrawnDiagram>> _drawn = runMap();
 
 Future<DrawnDiagram> _drawnOnce(
   String source, {

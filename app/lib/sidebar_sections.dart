@@ -9,6 +9,7 @@ import 'package:nushi/chat_pins.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/inline_edit.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_group_header.dart';
 import 'package:nushi/sidebar_rows.dart';
@@ -24,7 +25,7 @@ import 'package:nushi/widgets.dart';
 
 /// The section whose name is being edited in place, by id: a new one's
 /// at once.
-final renamingSection = ValueNotifier<String?>(null);
+final ValueNotifier<String?> renamingSection = runValue(null);
 
 /// Makes a section, named "New section" to be renamed at once, with
 /// [chat] moved into it if given, after the others.

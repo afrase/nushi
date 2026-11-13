@@ -39,7 +39,9 @@ import 'package:nushi/tile_picture.dart';
 /// Not whether new chats get a worktree, nor whether a subagent's pane
 /// shows wide, nor a beta's `projectRail`: an older `worktrees`,
 /// `subagentWide` or `projectRail` key is ignored, and dropped by the
-/// next save.
+/// next save. What a newer app saved (a beta's, ADR 0108) stays as it
+/// was: a key this one has no pref for, and a value it can't read until
+/// the user changes that pref.
 final Pref<bool> showDetails = _plain('details', true);
 
 /// The details panel's widgets collapsed, by title.
@@ -255,7 +257,13 @@ final sidebarShows = Pref<Set<RowPart>>(
   (v) => v is List
       ? {for (final n in v) ?RowPart.values.asNameMap()[n]}
       : defaultRowParts,
-  write: (parts) => [for (final p in parts) p.name],
+  write: (parts) => [
+    for (final p in parts) p.name,
+    // What a newer app's rows show that this one doesn't know stays.
+    if (_saved['sidebarShows'] case final List<Object?> saved)
+      for (final n in saved)
+        if (n is String && !RowPart.values.asNameMap().containsKey(n)) n,
+  ],
 );
 
 /// The sidebar's sections of the user's own, in the order they were
@@ -311,6 +319,7 @@ final Pref<Set<String>> cleanUpLater = _set('cleanUpLater', chats: true);
 final paneWidths = Pref<Map<String, double>>(
   'panes',
   (v) => _entries(v, (w) => w is num ? w.toDouble() : null)..remove('details'),
+  rewrite: true,
 );
 
 /// Whether the chat takes the pane's whole width rather than a column in
@@ -419,14 +428,30 @@ void forgetChats(Set<String> ids) {
 /// any type, or null, and gives the value: the default for nothing or a
 /// wrong type, never an error), and saved with the others whenever it
 /// changes (`write` gives what's saved; the value itself unless given).
+/// Until it's changed, what was there is saved back as it was, so a value
+/// a newer app wrote that this one reads as its default (a beta's
+/// grouping, ADR 0108) isn't lost; one that [rewrite]s saves what it read
+/// instead (an old part it drops goes with the next save).
 /// One kept by chat says which chats it has something for (`chats`) and
 /// how it goes without some (`without`).
 final class Pref<T> extends ValueNotifier<T> {
-  new(this.key, this._read, {this._write, this._chats, this._without})
-    : super(_read(_saved[key])) {
+  new(
+    this.key,
+    this._read, {
+    this._write,
+    this._chats,
+    this._without,
+    this.rewrite = false,
+  }) : super(_read(_saved[key])) {
     _made.add(this);
-    addListener(_saveSoon);
+    addListener(_changed);
   }
+
+  /// Whether what was saved is rewritten as read, changed or not.
+  final bool rewrite;
+
+  /// Whether the value is no longer the one read at launch.
+  bool _touched = false;
 
   final String key;
   final T Function(Object? saved) _read;
@@ -444,12 +469,23 @@ final class Pref<T> extends ValueNotifier<T> {
     }
   }
 
+  void _changed() {
+    _touched = true;
+    _saveSoon();
+  }
+
+  /// Whether it's saved as it was at launch: untouched, and there.
+  bool get _asSaved => !_touched && !rewrite && _saved.containsKey(key);
+
   Object? get _saving => switch (_write) {
     final write? => write(value),
     null => value,
   };
 
-  void _reset() => value = _read(_saved[key]);
+  void _reset() {
+    value = _read(_saved[key]);
+    _touched = false;
+  }
 }
 
 /// A set pref's toggle, for what's kept as a set of ids or names (the
@@ -551,7 +587,8 @@ void _save() {
         jsonEncode({
           for (final MapEntry(:key, :value) in _saved.entries)
             if (!_dropped.contains(key)) key: value,
-          for (final p in _made) p.key: p._saving,
+          for (final p in _made)
+            if (!p._asSaved) p.key: p._saving,
         }),
       ),
     );

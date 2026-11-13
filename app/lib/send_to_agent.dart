@@ -5,6 +5,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/review_findings.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/widgets.dart';
 
@@ -175,7 +176,7 @@ void keepGitHubLogins(Iterable<GitHubHost> hosts) {
     });
 }
 
-final _logins = <String, String>{};
+final Map<String, String> _logins = runMap();
 
 /// A comment in the pull request's conversation, for the agent.
 Reply commentReply(GitHubComment c) => (
