@@ -117,6 +117,7 @@ class ProjectTile extends StatelessWidget {
     // The user's own image, over their color where it's see-through.
     return TilePictureView(
       picture: own,
+      crop: look.crop,
       size: size,
       radius: radius(size),
       fill: chosen?.ink(t) ?? t.lifted,

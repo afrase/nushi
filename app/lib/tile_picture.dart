@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import 'package:nushi/motion.dart';
+import 'package:nushi/tile_crop.dart';
 import 'package:nushi/tile_images.dart';
 
 /// A tile's own image: Nushi's stored copy by its name, or one just picked
@@ -29,10 +30,12 @@ class TilePicture {
 /// A picture's first frame at one size, and whether it has more.
 typedef _First = ({ui.Image image, bool animated});
 
-/// The first frames decoded so far, by picture and size in pixels, so a
-/// tile built again (a list that rebuilds) shows its image at once. Small:
-/// each is a tile's size, an animated one's too ([tileFrame]). One goes
-/// when its picture does ([forgetPicture]).
+/// The first frames decoded so far, by picture, size in pixels and crop,
+/// so a tile built again (a list that rebuilds) shows its image at once.
+/// Small: each is a tile's size, an animated one's too ([tileFrame]). One
+/// goes when its picture does ([forgetPicture]); of a picture at one size,
+/// only the uncropped one and the last crop are kept, so framing in
+/// Change tile… doesn't leave one behind for each step of a drag.
 final _firsts = <String, _First>{};
 final _decoding = <String, Future<_First?>>{};
 
@@ -42,8 +45,16 @@ void forgetPicture(String key) {
   _firsts.removeWhere((k, _) => k.startsWith('$key@'));
 }
 
+/// Keeps [first] under [key], a crop of the picture at a size ([at]) in
+/// the place of any other.
+void _keep(String at, String key, _First first) {
+  if (key != at) _firsts.removeWhere((k, _) => k.startsWith('$at#'));
+  _firsts[key] = first;
+}
+
 /// [picture] in a tile [size] square: decoded at that size in the screen's
-/// pixels, never its own, cropped to the square from its middle, on [fill]
+/// pixels, never its own, cropped to the square from its middle or to
+/// [crop]'s, on [fill]
 /// where it's see-through, its corners [radius]. Until it's decoded, and
 /// if it can't be, [fallback].
 ///
@@ -61,9 +72,13 @@ class TilePictureView extends StatefulWidget {
     required this.fill,
     required this.fallback,
     super.key,
+    this.crop,
   });
 
   final TilePicture picture;
+
+  /// The square of it shown; null for the middle one.
+  final TileCrop? crop;
   final double size;
   final double radius;
   final Color fill;
@@ -77,6 +92,7 @@ class TilePictureView extends StatefulWidget {
 class TilePictureViewState extends State<TilePictureView> {
   int _side = 0; // the tile's side in the screen's pixels
   _First? _first;
+  String? _shown; // what _first is of: another crop's, while one decodes
   bool _hover = false;
 
   // While it plays: the codec, the frame shown, the wait for the next,
@@ -87,15 +103,17 @@ class TilePictureViewState extends State<TilePictureView> {
   AppLifecycleListener? _front;
   int _run = 0; // which start of playing is the current one
   bool _opening = false; // its file is being read to play
+  bool _loading = false; // its first frame is being decoded
 
   /// How many frames it has shown since it last started playing; 0 at
   /// rest, where it shows the first.
   @visibleForTesting
   int played = 0;
 
-  /// Whether its picture's first frame is here.
+  /// Whether its picture's first frame is here, as it's to be shown (its
+  /// crop's, not the last one's).
   @visibleForTesting
-  bool get decoded => _first != null;
+  bool get decoded => _first != null && _shown == _key;
 
   /// Whether its picture is decoded and has more than one frame.
   @visibleForTesting
@@ -106,7 +124,11 @@ class TilePictureViewState extends State<TilePictureView> {
   bool get busy =>
       _opening || _codec != null || _next != null || _front != null;
 
-  String get _key => '${widget.picture.key}@$_side';
+  String get _at => '${widget.picture.key}@$_side';
+  String get _key => switch (widget.crop) {
+    final c? => '$_at#${c.key}',
+    null => _at,
+  };
 
   @override
   void didChangeDependencies() {
@@ -122,8 +144,12 @@ class TilePictureViewState extends State<TilePictureView> {
   void didUpdateWidget(TilePictureView oldWidget) {
     super.didUpdateWidget(oldWidget);
     final side = (widget.size * MediaQuery.devicePixelRatioOf(context)).ceil();
-    if (oldWidget.picture.key != widget.picture.key || side != _side) {
+    final another = oldWidget.picture.key != widget.picture.key;
+    if (another || side != _side || oldWidget.crop != widget.crop) {
       _side = side;
+      // Another crop or size of the same picture shows the last until
+      // it's decoded: framing it doesn't blink to the fallback.
+      if (another) _first = null;
       _stop();
       _load();
     }
@@ -135,31 +161,49 @@ class TilePictureViewState extends State<TilePictureView> {
     super.dispose();
   }
 
+  /// Decodes its first frame as it's to be shown, one at a time: while
+  /// one is decoded, a change (a crop dragged) waits, and only the last
+  /// is decoded after it.
   void _load() {
     final key = _key;
-    _first = _firsts[key];
-    if (_first != null) return;
-    final picture = widget.picture;
-    final side = _side;
-    final decoded = _decoding[key] ??= _decodeFirst(picture, side);
+    if (_firsts[key] case final first?) {
+      _first = first;
+      _shown = key;
+      return;
+    }
+    if (_loading) return;
+    _loading = true;
+    final (at, picture, side, crop) = (_at, widget.picture, _side, widget.crop);
+    final decoded = _decoding[key] ??= _decodeFirst(picture, side, crop);
     unawaited(
       decoded.then((first) {
         unawaited(_decoding.remove(key));
-        if (first != null) _firsts[key] = first;
-        if (!mounted || key != _key) return;
-        setState(() => _first = first);
+        if (first != null) _keep(at, key, first);
+        _loading = false;
+        if (!mounted) return;
+        if (key != _key) return setState(_load);
+        setState(() {
+          _first = first;
+          _shown = key;
+        });
         if (_hover) _start();
       }),
     );
   }
 
-  static Future<_First?> _decodeFirst(TilePicture picture, int side) async {
+  static Future<_First?> _decodeFirst(
+    TilePicture picture,
+    int side,
+    TileCrop? crop,
+  ) async {
     try {
-      final codec = await tileImageCodec(await picture.read(), side);
+      final bytes = await picture.read();
+      final codec = await tileImageCodec(bytes, side, crop: crop);
       final frame = await codec.getNextFrame();
       final animated = codec.frameCount > 1;
       codec.dispose();
-      return (image: await tileFrame(frame.image, side), animated: animated);
+      final image = await tileFrame(frame.image, side, crop: crop);
+      return (image: image, animated: animated);
     } on Object {
       return null; // gone, or not an image after all: the fallback
     }
@@ -191,7 +235,11 @@ class TilePictureViewState extends State<TilePictureView> {
   Future<void> _open(int run) async {
     _opening = true;
     try {
-      final codec = await tileImageCodec(await widget.picture.read(), _side);
+      final codec = await tileImageCodec(
+        await widget.picture.read(),
+        _side,
+        crop: widget.crop,
+      );
       _opening = false;
       if (run != _run || !mounted) return codec.dispose();
       _codec = codec;
@@ -215,7 +263,7 @@ class TilePictureViewState extends State<TilePictureView> {
     if (run != _run || !mounted) return frame.image.dispose();
     final ui.Image image;
     try {
-      image = await tileFrame(frame.image, _side);
+      image = await tileFrame(frame.image, _side, crop: widget.crop);
     } on Object {
       if (run == _run) _pause();
       return;
