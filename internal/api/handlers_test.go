@@ -69,3 +69,40 @@ func TestHandlersAsServed(t *testing.T) {
 		t.Errorf("a device pairing another: %v, want permission denied", err)
 	}
 }
+
+// A chat's tools refuse a request without that chat's key (none, or the
+// client token in its place), one that isn't a POST, and a call whose JSON
+// runs past 1 MB.
+func TestToolsRefusals(t *testing.T) {
+	ts := tools.New()
+	key := ts.Key(tools.Grant{Chat: "c", Agent: "fake"})
+	socket, _ := Handlers(Services{}, ts, "tok")
+	srv := httptest.NewServer(socket)
+	t.Cleanup(srv.Close)
+	do := func(method, path, bearer, body string) int {
+		req, err := http.NewRequestWithContext(context.Background(), method, srv.URL+path, strings.NewReader(body))
+		testcheck.NoErr(t, err)
+		req.Header.Set("Authorization", "Bearer "+bearer)
+		resp, err := http.DefaultClient.Do(req)
+		testcheck.NoErr(t, err)
+		_ = resp.Body.Close()
+		return resp.StatusCode
+	}
+	call := `{"name":"nope","arguments":{}}`
+	huge := `{"name":"nope","arguments":"` + strings.Repeat("x", 1<<20) + `"}`
+	for _, tc := range []struct {
+		name, method, path, bearer, body string
+		want                             int
+	}{
+		{"the key", http.MethodPost, "/tools/call", key, call, http.StatusOK},
+		{"no key, list", http.MethodPost, "/tools/list", "", "{}", http.StatusUnauthorized},
+		{"no key, call", http.MethodPost, "/tools/call", "", call, http.StatusUnauthorized},
+		{"the client token, call", http.MethodPost, "/tools/call", "tok", call, http.StatusUnauthorized},
+		{"GET", http.MethodGet, "/tools/list", key, "", http.StatusMethodNotAllowed},
+		{"over 1 MB", http.MethodPost, "/tools/call", key, huge, http.StatusBadRequest},
+	} {
+		if got := do(tc.method, tc.path, tc.bearer, tc.body); got != tc.want {
+			t.Errorf("%s: %d, want %d", tc.name, got, tc.want)
+		}
+	}
+}
