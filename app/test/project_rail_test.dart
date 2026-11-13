@@ -210,7 +210,7 @@ void main() {
     addTearDown(shown.dispose);
     await tester.pumpWidget(
       MaterialApp(
-        theme: NushiTheme(Tokens.dark).toThemeData(),
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
           body: Align(
             alignment: Alignment.topLeft,
