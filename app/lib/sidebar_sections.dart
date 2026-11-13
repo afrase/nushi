@@ -225,15 +225,20 @@ class _SectionView extends StatelessWidget {
               reorders: reorders,
               selectedId: daemon.selectedId,
               row: row,
-              onMove: (from, to) => _change(section.id, (s) {
-                final ids = [for (final c in chats) c.id];
-                ids.insert(to, ids.removeAt(from));
-                // Those it doesn't show (pinned, archived) keep their
-                // places after.
-                return s.copyWith(
-                  chats: [...ids, ...s.chats.where((c) => !ids.contains(c))],
-                );
-              }),
+              // Those it doesn't show (another project's while the
+              // sidebar is narrowed to one, pinned, archived) keep their
+              // places among the rest.
+              onMove: (from, to) => _change(
+                section.id,
+                (s) => s.copyWith(
+                  chats: reordered(
+                    s.chats,
+                    [for (final c in chats) c.id],
+                    from,
+                    to,
+                  ),
+                ),
+              ),
             ),
           ],
         ),

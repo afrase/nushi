@@ -7,6 +7,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/sidebar_view.dart' show shownProject;
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -303,6 +304,34 @@ void main() {
       'Jot it down',
       'Plant the beds',
     ]);
+    d.dispose();
+  });
+
+  // Deep review 2026-11-13, 15: a chat dragged within a section while the
+  // sidebar was narrowed to a project sent the section's chats of other
+  // projects to its end.
+  testWidgets('a chat dragged in a section narrowed to a project leaves '
+      'the chats of other projects where they were', (tester) async {
+    sidebarSections.value = const [
+      Section(id: 's1', name: 'Reviews', chats: ['e', 'a', 'b']),
+    ];
+    sidebarGroupBy.value = GroupBy.project;
+    sidebarSort.value = SortBy.manual;
+    projectRail.value = true;
+    sidebarProject.value = '/Users/me/ledger-poc';
+    final (d, _) = await arrangedSidebar(tester);
+    expect(shownProject, '/Users/me/ledger-poc');
+    expect(_titles(tester).take(3), [
+      'Reviews',
+      'Wire the ledger',
+      'Seed data',
+    ]);
+    await _dragTo(
+      tester,
+      'Seed data',
+      tester.getTopLeft(_in('Wire the ledger')) + const Offset(10, 2),
+    );
+    expect(sidebarSections.value.single.chats, ['e', 'b', 'a']);
     d.dispose();
   });
 
