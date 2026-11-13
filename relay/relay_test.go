@@ -196,7 +196,10 @@ func TestCaps(t *testing.T) {
 	lim.Total = 6
 	lim.PerIP = 3
 	lim.IPHeader = "X-Test-IP"
-	url := start(t, lim)
+	s := New(lim).(*server)
+	srv := httptest.NewServer(s)
+	t.Cleanup(srv.Close)
+	url := "ws" + strings.TrimPrefix(srv.URL, "http")
 
 	t.Run("message size", func(t *testing.T) {
 		l, d := pair(t, url, newKey())
@@ -206,7 +209,10 @@ func TestCaps(t *testing.T) {
 		expectClosed(t, d)
 		expectClosed(t, l)
 	})
-	time.Sleep(100 * time.Millisecond) // the closed pair leaves
+	// The closed pair leaves the relay's count.
+	if !testcheck.Eventually(func() bool { s.mu.Lock(); defer s.mu.Unlock(); return s.total == 0 }) {
+		t.Fatal("the closed pair is still counted")
+	}
 
 	key := newKey()
 	for _, addr := range []string{"192.0.2.1", "192.0.2.2"} {
@@ -270,9 +276,10 @@ func TestIdle(t *testing.T) {
 	// Pings keep a connection open. The client gives up on a pong after
 	// three pings, so they're far enough apart for a loaded CI runner.
 	old := KeepAlive
+	t.Cleanup(func() { KeepAlive = old }) // should pair fail
 	KeepAlive = 200 * time.Millisecond
 	l, d := pair(t, url, newKey())
-	KeepAlive = old
+	KeepAlive = old // read as a connection starts: the next pair goes without pings
 	got := make(chan string, 1)
 	go func() { m, _ := l.ReadMessage(); got <- string(m) }() // reading takes the pongs in
 	time.Sleep(5 * lim.Idle / 2)
@@ -483,8 +490,8 @@ func TestWaitingLifetime(t *testing.T) {
 	// The client gives up on a pong after three pings, so they're far
 	// enough apart for a loaded CI runner (as in TestIdle).
 	old := KeepAlive
+	t.Cleanup(func() { KeepAlive = old })
 	KeepAlive = 200 * time.Millisecond
-	defer func() { KeepAlive = old }()
 	var dl Dialer
 	l, err := dl.Listen(context.Background(), url, newKey())
 	if err != nil {
