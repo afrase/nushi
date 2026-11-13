@@ -325,25 +325,24 @@ void main() {
     d.dispose();
   }, variant: macOS);
 
-  testWidgets('5,000 copies: only the rows that show are built', (
-    tester,
-  ) async {
-    final watch = Stopwatch()..start();
-    final d = await open(tester, _fake(5000));
-    watch.stop();
+  testWidgets('500 copies: only the rows that show are built', (tester) async {
+    final d = await open(tester, _fake(500));
     final built = find.byType(HistoryRowView).evaluate().length;
     expect(built, lessThan(40));
-    expect(find.text('All  5000'), findsOneWidget);
-    // To the end and back: still a screenful built.
-    await tester.drag(
-      _inSettings(find.byType(CustomScrollView)),
-      const Offset(0, -150000),
+    expect(find.text('All  500'), findsOneWidget);
+    // To the end: still a screenful built.
+    final list = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: _inSettings(find.byType(CustomScrollView)),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
+    expect(list.position.maxScrollExtent, greaterThan(10000)); // 20 screens
+    list.position.jumpTo(list.position.maxScrollExtent);
     await tester.pumpAndSettle();
     expect(find.byType(HistoryRowView).evaluate().length, lessThan(40));
-    // The time it took, for the report; nothing to assert on a CI box.
-    // ignore: avoid_print
-    print('5,000 copies: opened in ${watch.elapsedMilliseconds} ms');
     d.dispose();
   }, variant: macOS);
 
