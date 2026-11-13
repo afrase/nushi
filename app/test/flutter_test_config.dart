@@ -3,24 +3,19 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/agents.dart';
 import 'package:nushi/clock.dart';
-import 'package:nushi/comment_box.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/github_files.dart';
-import 'package:nushi/github_parts.dart';
-import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_review.dart';
+import 'package:nushi/github_view.dart';
+import 'package:nushi/jira_view.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/native_macos.dart';
-import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/pull_cache.dart';
-import 'package:nushi/remote.dart';
 import 'package:nushi/review.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/theme_files.dart';
 import 'package:nushi/tile_mark.dart';
 
@@ -39,8 +34,9 @@ import 'harness.dart';
 /// a streaming reply's caret), so goldens are one frame and pumpAndSettle
 /// settles while a call runs; the app's clock stands at [fixtureNow], so an
 /// age a golden shows never moves. No test sees what another left: the
-/// app's prefs as at launch, no pull request read, no agents, review
-/// comments or drafts, remote state, clones or theme files known; the Mac's
+/// app's prefs as at launch, nothing the app holds in memory while it runs
+/// (`run_state.dart`'s: agents, caches, drafts, groups opened…), no pull
+/// request read, review comments, clones or theme files known; the Mac's
 /// native edge (on every host), no speller, a fake install, so nothing
 /// starts or stops a daemon, a fake file manager, so nothing opens on
 /// the desktop, and a phone paired with a Mac.
@@ -72,21 +68,20 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
       ..desktop = FakeDesktop();
     phoneHost = macConventions;
     resetAppSettings();
-    railFits.value = true;
+    // What the app holds while it runs (caches, half-written comments,
+    // groups opened…), each made through run_state.dart.
+    forgetRunState();
     // A mark's ink is measured by the engine, on the real clock: a
     // test that looks at where it lands turns it on and waits.
     centreMarksByInk = false;
+    // And what's kept beside it: pull requests read (on disk too),
+    // review comments (read from disk at first), the Jira and GitHub
+    // views' places, theme files.
     forgetPulls();
     forgetReviews();
     forgetReviewDrafts();
-    forgetCommentDrafts();
-    forgetPullTabs();
-    forgetFilesLeft();
-    agentList.value = {};
-    shellEnvironment.value = null;
-    remoteState.value = null;
-    githubFolders.value = {};
-    revealWidget.value = null;
+    forgetJiraView();
+    forgetGitHubView();
     unawaited(themeFiles.forget());
   });
   tearDownAll(() {

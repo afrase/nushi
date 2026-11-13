@@ -6,6 +6,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/run_state.dart';
 
 /// What last filled each chat's context (its /context categories) and when
 /// it was asked, in `context.json` in the data folder, so the Context widget
@@ -54,7 +55,7 @@ final Map<String, (DateTime, GetContextUsageResponse)> _known = () {
 /// What each chat's context held when asked in this run, and when (a
 /// markdown-only answer too): the Details panel's, kept across panels so
 /// switching chats doesn't ask again.
-final _asked = <String, (DateTime, GetContextUsageResponse)>{};
+final Map<String, (DateTime, GetContextUsageResponse)> _asked = runMap();
 
 /// What [chatId]'s context held when last asked, and when; null if never.
 (DateTime, GetContextUsageResponse)? recalledContext(String chatId) =>

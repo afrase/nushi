@@ -6,13 +6,14 @@ import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Attachments fetched through the daemon (Jira's own, from the site
 /// added), by site and id: the last [_keep]. One that failed isn't kept:
 /// shown again, it's asked for again (after Allow…, or the daemon back).
-final _fetched = <String, Future<GetJiraAttachmentResponse>>{};
+final Map<String, Future<GetJiraAttachmentResponse>> _fetched = runMap();
 const _keep = 64;
 
 Future<GetJiraAttachmentResponse> _fetch(

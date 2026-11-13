@@ -13,6 +13,7 @@ import 'package:nushi/markdown.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/pull_states.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/web_page.dart' show openLinkOrSay;
 import 'package:nushi/widgets.dart';
@@ -176,7 +177,8 @@ List<MenuEntry> startEntries(
 
 /// The folders that are clones of each repository, by [repoKey], as the
 /// daemon last said (ListGitHubRepos).
-final githubFolders = ValueNotifier<Map<(String, String), List<String>>>({});
+final ValueNotifier<Map<(String, String), List<String>>> githubFolders =
+    runValue({});
 
 /// A repository's key in any case: GitHub's names are unique regardless
 /// of case, and a remote (so ListGitHubRepos, and a chat's pull request

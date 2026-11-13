@@ -68,7 +68,6 @@ Future<(Daemon, FakeDaemon)> _app(
     d.select(select);
     await tester.pumpAndSettle();
   }
-  addTearDown(recentRows.clear);
   return (d, fake);
 }
 

@@ -10,6 +10,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/github_thread.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -39,13 +40,13 @@ class GitHubFiles extends StatefulWidget {
 
 /// The files a head was last read at, by pull request and head, while the
 /// app runs: a commit's files don't change. The last [_readMost] only.
-final _read = <String, List<FileChange>>{};
+final Map<String, List<FileChange>> _read = runMap();
 const _readMost = 20;
 
 /// Where each pull request's Files tab was left, while the app runs: the
 /// file picked and the lines a comment was being written for, so a look
 /// at a chat finds them (and the comment's text, kept by its box) again.
-final _left = <String, (String?, LineSelection?)>{};
+final Map<String, (String?, LineSelection?)> _left = runMap();
 
 /// No Files tab left anywhere (tests: each starts afresh).
 @visibleForTesting

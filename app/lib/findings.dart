@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:nushi/fnv.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/run_state.dart';
 
 /// A code review's findings that an agent wrote as JSON in a message (a
 /// fenced block, or a bare array), with the text around them and the
@@ -151,7 +152,7 @@ List<String>? _segments(String path) {
   return out;
 }
 
-final _real = <String, String?>{};
+final Map<String, String?> _real = runMap();
 
 /// [folder] with its links resolved (`/tmp` is `/private/tmp` on macOS),
 /// as the agent may write it; null if it can't be.

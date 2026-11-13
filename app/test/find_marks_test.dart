@@ -5,7 +5,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:markdown_view/markdown_view.dart';
-import 'package:nushi/collapsible.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -147,7 +146,6 @@ List<Item> _everything() => [
 
 void main() {
   setUpAll(loadFonts);
-  setUp(Collapsible.opened.clear);
 
   testWidgets('every match is of the exact text shown, case aside', (
     tester,

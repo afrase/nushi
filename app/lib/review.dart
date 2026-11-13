@@ -12,6 +12,7 @@ import 'package:nushi/fnv.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/plain_text.dart';
 import 'package:nushi/replies.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/syntax.dart';
 
 /// A review comment on lines [start]–[end] (from 1) of a file's [old] or
@@ -358,7 +359,7 @@ bool _cardWaits(ChatState chat, ReviewComment c) {
 
 /// Each comment's card as it was put in the box, by the comment's id: the
 /// comment moves or becomes outdated after, and its card stays as it was.
-final _sentAs = <String, Reply>{};
+final Map<String, Reply> _sentAs = runMap();
 
 /// The texts of [chat]'s messages in its transcript, but for those in
 /// [before] (by id): an earlier message may quote the same lines.

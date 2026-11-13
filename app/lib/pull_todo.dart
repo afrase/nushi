@@ -8,6 +8,7 @@ import 'package:nushi/pull_merge_state.dart';
 import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/pull_todo_row.dart';
 import 'package:nushi/replies.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -249,7 +250,7 @@ class _OlderGroup extends StatelessWidget {
 
 /// The cards To do put in a chat's box, by pull request and item: a row
 /// whose card is still there says so.
-final _sent = <String, Reply>{};
+final Map<String, Reply> _sent = runMap();
 
 class _Count extends StatelessWidget {
   const new(this.n);

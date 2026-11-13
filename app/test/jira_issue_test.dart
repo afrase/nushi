@@ -21,8 +21,8 @@ Int64 _ago(Duration d) => Int64(_now.subtract(d).millisecondsSinceEpoch);
 
 // A red 8×8 PNG.
 final Uint8List _png = base64Decode(
-  'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEklEQVR4nGP4z8CAFTEMLQkA'
-  'jkg/wfZGjoUAAAAASUVORK5CYII=',
+  'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEUlEQVR42mO4o6aGFTEMLQkA'
+  'F/tKAVIwUJgAAAAASUVORK5CYII=',
 );
 
 JiraIssue _issue() => JiraIssue(
@@ -395,6 +395,13 @@ void main() {
   ]) {
     testWidgets('golden, $name', (tester) async {
       final (_, d, _) = await _open(tester, tokens: tokens);
+      // The description's image, decoded on the real clock.
+      await untilReal(
+        tester,
+        () => tester
+            .widgetList<RawImage>(find.byType(RawImage))
+            .any((r) => r.image != null),
+      );
       await expectLater(
         find.byType(JiraIssuePane),
         matchesGoldenFile('goldens/jira_issue_$name.png'),

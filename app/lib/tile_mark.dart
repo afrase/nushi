@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:nushi/run_state.dart';
 
 /// The fonts an emoji in a mark is set in, by name, so it's the same font
 /// wherever the system's own fallback would look: the Mac's, then Linux's.
@@ -13,8 +14,8 @@ const emojiFonts = ['Apple Color Emoji', 'Noto Color Emoji'];
 bool centreMarksByInk = true;
 
 /// How far each mark measured so far has to move, by what it is.
-final _nudges = <String, Offset>{};
-final _measuring = <String, Future<Offset>>{};
+final Map<String, Offset> _nudges = runMap();
+final Map<String, Future<Offset>> _measuring = runMap();
 
 /// A tile's mark (its initials, or the emoji or characters the user set)
 /// with its ink in the middle of the tile.

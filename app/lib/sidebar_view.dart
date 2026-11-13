@@ -4,6 +4,7 @@ import 'package:nushi/arrangement.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
 
 // The sidebar's chats as it shows them: its groups, its sections and
@@ -17,7 +18,7 @@ List<ChatState> pinnedChats(Daemon daemon) =>
 
 /// Whether the sidebar is wide enough for its project rail: the sidebar
 /// says so as it's laid out (`ProjectRail.minSidebar`).
-final railFits = ValueNotifier<bool>(true);
+final ValueNotifier<bool> railFits = runValue(true);
 
 /// Whether the sidebar would have its project rail, room allowing:
 /// arranged by project and Settings › Appearance's Project rail on (off

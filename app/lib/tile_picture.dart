@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import 'package:nushi/motion.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/tile_crop.dart';
 import 'package:nushi/tile_images.dart';
 import 'package:nushi/tile_trim.dart';
@@ -37,8 +38,8 @@ typedef _First = ({ui.Image image, bool animated});
 /// goes when its picture does ([forgetPicture]); of a picture at one size,
 /// only the uncropped one and the last crop are kept, so framing in
 /// Change tile… doesn't leave one behind for each step of a drag.
-final _firsts = <String, _First>{};
-final _decoding = <String, Future<_First?>>{};
+final Map<String, _First> _firsts = runMap();
+final Map<String, Future<_First?>> _decoding = runMap();
 
 /// Lets go of what's kept of the picture called [key]: its stored image
 /// was deleted, or the dialog that picked it closed.

@@ -25,7 +25,6 @@ String _excerpt(WidgetTester tester, String match) => tester
 
 void main() {
   setUpAll(loadFonts);
-  tearDown(cantSearchSessions.clear);
 
   testWidgets('once typing pauses, what was said is searched; the sessions '
       'found show under the titles, the hit marked, and open', (tester) async {

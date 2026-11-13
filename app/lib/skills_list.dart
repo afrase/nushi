@@ -6,6 +6,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/native.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/widgets.dart' show errorText;
 
 /// The skills (and Claude's plugins) an agent uses in a folder, from the
@@ -19,7 +20,7 @@ class SkillsList extends ChangeNotifier {
       _byKey[(agent, folder)] ??= SkillsList._(daemon, folder, agent);
   new _(this.daemon, this.folder, this.agent);
 
-  static final _byKey = <(String, String), SkillsList>{};
+  static final Map<(String, String), SkillsList> _byKey = runMap();
 
   final Daemon daemon;
   final String folder;

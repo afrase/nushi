@@ -5,6 +5,7 @@ import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/run_state.dart';
 
 /// The pull requests last read whole, so a chat's Pull request tab and
 /// its PR widget show them at once (and after the app restarts), asked
@@ -15,7 +16,7 @@ const _keep = 50;
 
 Directory get _dir => Directory('$dataDir/pulls');
 
-final _known = <String, (DateTime, GitHubPull)>{};
+final Map<String, (DateTime, GitHubPull)> _known = runMap();
 
 /// A file name for [ref]: its host, repository and number, from
 /// GitHub's characters only (else not kept).
