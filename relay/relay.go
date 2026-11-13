@@ -116,6 +116,10 @@ type room struct {
 type peer struct {
 	ws    *websocket.Conn
 	other atomic.Pointer[peer]
+	// wmu holds a listener's writes back until it's told it's listening,
+	// which it's told only once it's the one waiting: a dialer's first
+	// message can't come before that, nor an older listener replace it.
+	wmu sync.Mutex
 }
 
 // New returns the relay's handler.
@@ -177,7 +181,9 @@ func (s *server) listen(w http.ResponseWriter, r *http.Request) {
 	})
 	defer waited.Stop()
 	// A second listener is the key's holder again (a daemon that came
-	// back): it replaces the one waiting.
+	// back): it replaces the one waiting. Only then is it told it's
+	// listening, so listeners take over in the order they're told.
+	p.wmu.Lock()
 	s.mu.Lock()
 	rm := s.enter(id, false)
 	if rm.waiting != nil {
@@ -188,10 +194,17 @@ func (s *server) listen(w http.ResponseWriter, r *http.Request) {
 	rm.arrived = make(chan struct{})
 	s.mu.Unlock()
 	defer s.unwait(id, p)
+	_ = ws.SetWriteDeadline(time.Now().Add(s.lim.Idle))
+	told := ws.WriteMessage(websocket.BinaryMessage, nil) == nil
+	p.wmu.Unlock()
+	if !told {
+		return
+	}
 	s.pump(p, b)
 }
 
-// prove asks p for the signature of id's key on a fresh challenge.
+// prove asks p for the signature of id's key on a fresh challenge; its
+// caller tells it it's listening once it waits.
 func (s *server) prove(p *peer, b *bucket, id string) bool {
 	challenge := make([]byte, 32)
 	rand.Read(challenge)
@@ -205,10 +218,7 @@ func (s *server) prove(p *peer, b *bucket, id string) bool {
 		return false
 	}
 	pub := ed25519.PublicKey(m[:ed25519.PublicKeySize])
-	if ListenID(pub) != id || !ed25519.Verify(pub, proven(id, challenge), m[ed25519.PublicKeySize:]) || !late.Stop() {
-		return false
-	}
-	return p.ws.WriteMessage(websocket.BinaryMessage, nil) == nil
+	return ListenID(pub) == id && ed25519.Verify(pub, proven(id, challenge), m[ed25519.PublicKeySize:]) && late.Stop()
 }
 
 func (s *server) dial(w http.ResponseWriter, r *http.Request) {
@@ -385,6 +395,8 @@ func (s *server) forward(p *peer, msg []byte) bool {
 	if o == nil {
 		return false
 	}
+	o.wmu.Lock()
+	defer o.wmu.Unlock()
 	_ = o.ws.SetWriteDeadline(time.Now().Add(s.lim.Idle))
 	return o.ws.WriteMessage(websocket.BinaryMessage, msg) == nil
 }
