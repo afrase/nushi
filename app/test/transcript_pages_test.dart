@@ -70,6 +70,23 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
+/// How many entries are built.
+int _built() => find.byType(PinFlash).evaluate().length;
+
+/// The most entries any one of the next [frames] frames built (a page
+/// taken in above builds over frames, never all at once).
+Future<int> _mostAFrame(WidgetTester tester, {int frames = 40}) async {
+  var was = _built();
+  var most = 0;
+  for (var i = 0; i < frames; i++) {
+    await tester.pump(const Duration(milliseconds: 16));
+    final now = _built();
+    if (now - was > most) most = now - was;
+    was = now;
+  }
+  return most;
+}
+
 /// The transcript's scroll.
 ScrollPosition _scroll(WidgetTester tester) => tester
     .state<ScrollableState>(
@@ -241,9 +258,11 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
-  testWidgets('a pin on a message not loaded yet goes there', (tester) async {
+  testWidgets('a pin on a message not loaded yet goes there, built over '
+      'frames', (tester) async {
     final (d, paged) = await _window(tester, pins: ['c-a2']);
-    expect(_chat(d).items.any((it) => it.id == 'c-a2'), isFalse);
+    final c = _chat(d);
+    expect(c.items.any((it) => it.id == 'c-a2'), isFalse);
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: const Offset(900, 600));
     addTearDown(mouse.removePointer);
@@ -256,11 +275,15 @@ void main() {
       ),
     );
     await _settle(tester);
+    final before = _built();
     await tester.tap(
       find.descendant(of: find.byType(Rail), matching: find.text('Pin c-a2')),
     );
-    await _settle(tester);
-    expect(_chat(d).items.any((it) => it.id == 'c-a2'), isTrue);
+    final most = await _mostAFrame(tester);
+    expect(c.items.any((it) => it.id == 'c-a2'), isTrue);
+    expect(c.items.length, paged.items.length - c.older);
+    expect(_built(), greaterThan(before + 300));
+    expect(most, lessThanOrEqualTo(4 * 24 + 4), reason: 'never all at once');
     expect(
       paged.pages.where((p) => p.limit == 500),
       isNotEmpty,
@@ -300,8 +323,8 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
-  testWidgets('⌘F says it looks in what’s loaded; Load all takes the rest '
-      'and finds there', (tester) async {
+  testWidgets('⌘F says it looks in what’s loaded; Load all takes the rest, '
+      'built over frames, and finds there', (tester) async {
     final (d, _) = await _window(tester);
     final c = _chat(d);
     c.find
@@ -317,10 +340,17 @@ void main() {
       reason: 'what the transcript keeps clear of it',
     );
     await tester.tap(find.text('Load all'));
-    await _settle(tester);
+    final most = await _mostAFrame(tester);
     expect(c.older, 0);
+    expect(most, lessThanOrEqualTo(4 * 24 + 4), reason: 'never all at once');
     expect(find.text('Searching loaded messages · '), findsNothing);
     expect(c.find.count, '1 of 1');
+    final list = tester.getRect(find.byType(SelectionArea));
+    final hit = tester.getRect(
+      find.textContaining('Turn 3:', findRichText: true).first,
+    );
+    expect(hit.top, greaterThanOrEqualTo(list.top));
+    expect(hit.bottom, lessThanOrEqualTo(list.bottom));
     await closeView(tester, d);
   }, variant: _mac);
 
