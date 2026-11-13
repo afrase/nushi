@@ -128,6 +128,8 @@ class _WindowDragState extends State<WindowDrag> {
             onPointerCancel: (e) => _downs.remove(e.pointer),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
+              // The window's to move, not a control VoiceOver offers.
+              excludeFromSemantics: true,
               // The window's drag in the arena, as a pan: a press that moves
               // is no click of what's in the bar (TitleBand's tap), as the
               // window takes its moves and Flutter sees only the first.

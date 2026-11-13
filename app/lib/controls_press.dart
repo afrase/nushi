@@ -181,10 +181,12 @@ class _PressableState extends State<Pressable> {
   };
 }
 
-/// A quiet pressable area: a light tint under the pointer (unless not
-/// [tint]: a card's title, which shows its grip instead) or when
-/// [selected], a deeper one from the pointer's going down (a click shows
-/// at once, before what it opens is built), no ripple.
+/// A quiet pressable area: a light tint under the pointer or with the
+/// keyboard's focus (unless not [tint]: a card's title, which shows its
+/// grip instead) or when [selected], a deeper one from the pointer's going
+/// down (a click shows at once, before what it opens is built), no
+/// ripple. A button to the keyboard (Tab reaches it, Enter or Space
+/// press it) and to VoiceOver, as [Pressable] is; without [onTap], none.
 class Tap extends StatefulWidget {
   const new({
     required this.onTap,
@@ -224,6 +226,7 @@ class Tap extends StatefulWidget {
 
 class _TapState extends State<Tap> {
   bool _hover = false;
+  bool _focus = false;
   bool _down = false;
 
   void _press(bool down) {
@@ -235,42 +238,62 @@ class _TapState extends State<Tap> {
     final t = NushiTheme.of(context).t;
     final on = widget.onTap != null;
     final rest = widget.fill ?? (widget.selected ? t.selected : null);
+    final lit = (_hover || _focus) && on && widget.tint;
+    // The pointer's tint as before: a MouseRegion's, which a touch
+    // highlight mode doesn't hide; the keyboard's focus beside it.
     final tap = MouseRegion(
       cursor:
           widget.cursor ?? (on ? SystemMouseCursors.click : MouseCursor.defer),
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: PressWatch(
-        onPress: (down) => _press(down && on),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          onSecondaryTapUp: widget.onSecondaryTapUp,
-          child: Container(
-            padding: widget.padding,
-            constraints: TouchTargets.of(context)
-                ? const BoxConstraints(minHeight: TouchTargets.size)
-                : null,
-            alignment: TouchTargets.of(context)
-                ? AlignmentDirectional.centerStart
-                : null,
-            decoration: BoxDecoration(
-              color: _down && on
-                  ? (rest == null
-                        ? t.pressed
-                        : Color.alphaBlend(t.pressed, rest))
-                  : !widget.selected && _hover && on && widget.tint
-                  ? (rest == null ? t.hover : Color.alphaBlend(t.hover, rest))
-                  : rest,
-              borderRadius: BorderRadius.circular(widget.radius),
+      child: FocusableActionDetector(
+        enabled: on,
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) => widget.onTap?.call(),
+          ),
+        },
+        onShowFocusHighlight: (v) => setState(() => _focus = v),
+        child: PressWatch(
+          onPress: (down) => _press(down && on),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
+            onSecondaryTapUp: widget.onSecondaryTapUp,
+            child: Container(
+              padding: widget.padding,
+              constraints: TouchTargets.of(context)
+                  ? const BoxConstraints(minHeight: TouchTargets.size)
+                  : null,
+              alignment: TouchTargets.of(context)
+                  ? AlignmentDirectional.centerStart
+                  : null,
+              decoration: BoxDecoration(
+                color: _down && on
+                    ? (rest == null
+                          ? t.pressed
+                          : Color.alphaBlend(t.pressed, rest))
+                    : !widget.selected && lit
+                    ? (rest == null ? t.hover : Color.alphaBlend(t.hover, rest))
+                    : rest,
+                borderRadius: BorderRadius.circular(widget.radius),
+              ),
+              child: widget.child,
             ),
-            child: widget.child,
           ),
         ),
       ),
     );
+    final button = on
+        ? Semantics(
+            button: true,
+            enabled: true,
+            selected: widget.selected ? true : null,
+            child: tap,
+          )
+        : tap;
     return widget.tooltip.isEmpty
-        ? tap
-        : Tooltip(message: widget.tooltip, child: tap);
+        ? button
+        : Tooltip(message: widget.tooltip, child: button);
   }
 }
