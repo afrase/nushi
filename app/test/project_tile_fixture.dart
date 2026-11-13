@@ -80,8 +80,14 @@ Future<Uint8List> photoPng(
 /// each one flat color of four (amber, blue, green, rose, in turn), a
 /// tenth of a second each, looping for ever. With [screen], the image is
 /// that square and its frames [side] square in its corner: a big image in
-/// few bytes, as a flat GIF packs.
-Uint8List animatedGif({int frames = 3, int side = 8, int? screen}) {
+/// few bytes, as a flat GIF packs. With [pixel], each pixel's color of the
+/// four is its answer, by frame and place, rather than the frame's own.
+Uint8List animatedGif({
+  int frames = 3,
+  int side = 8,
+  int? screen,
+  int Function(int frame, int x, int y)? pixel,
+}) {
   final whole = screen ?? side;
   final out = BytesBuilder()
     ..add('GIF89a'.codeUnits)
@@ -106,7 +112,7 @@ Uint8List animatedGif({int frames = 3, int side = 8, int? screen}) {
     final codes = <int>[];
     for (var p = 0; p < side * side; p++) {
       if (p.isEven) codes.add(4);
-      codes.add(f % 4);
+      codes.add(pixel?.call(f, p % side, p ~/ side) ?? f % 4);
     }
     codes.add(5);
     final packed = <int>[];
@@ -132,3 +138,17 @@ Uint8List animatedGif({int frames = 3, int side = 8, int? screen}) {
   out.addByte(0x3B);
   return out.toBytes();
 }
+
+/// A ball (rose) rolling right across a field (green) above the ground
+/// (amber), on a sky (blue): 24 frames 48 square, each a tenth of a
+/// second.
+Uint8List ballGif() => animatedGif(
+  frames: 24,
+  side: 48,
+  pixel: (f, x, y) {
+    final (cx, cy) = (4 + f * 40 / 23, 30.0);
+    if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= 36) return 3;
+    if (y >= 37) return 0;
+    return y < 16 ? 1 : 2;
+  },
+);

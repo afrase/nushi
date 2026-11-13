@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -8,19 +7,19 @@ import 'package:flutter/material.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tile_crop.dart';
-import 'package:nushi/tile_images.dart';
-import 'package:nushi/tile_picture.dart';
+import 'package:nushi/tile_frames.dart';
 
 /// Framing a tile's own image, in Change tile… (ADR 0112): the square the
 /// tile will show, larger, to drag the picture in and zoom (a scroll, a
 /// pinch or the Zoom slider), and Reset framing for the middle square
-/// again. It shows [picture]'s first frame, decoded once at a few times
-/// its own size so zooming in stays sharp a while, never the picture's
-/// own size; [crop] is what's set (null for the middle), and each change
-/// goes to [onChanged], the middle as null.
+/// again. It shows [frames]' frame at the playhead (the trim's start, as
+/// the tile shows at rest, unless the trimmer moved it), decoded at a few
+/// times the square's own pixels ([detail]) so zooming in stays sharp a
+/// while, never the picture's own size; [crop] is what's set (null for
+/// the middle), and each change goes to [onChanged], the middle as null.
 class TileFramer extends StatefulWidget {
   const new({
-    required this.picture,
+    required this.frames,
     required this.crop,
     required this.onChanged,
     required this.fill,
@@ -31,9 +30,9 @@ class TileFramer extends StatefulWidget {
   static const size = 112.0;
 
   /// How many times the square's pixels the picture is decoded at.
-  static const _detail = 3;
+  static const detail = 3;
 
-  final TilePicture picture;
+  final TileFrames frames;
   final TileCrop? crop;
   final ValueChanged<TileCrop?> onChanged;
 
@@ -46,68 +45,19 @@ class TileFramer extends StatefulWidget {
 
 /// The state of a [TileFramer]; a test waits on its picture.
 class TileFramerState extends State<TileFramer> {
-  ui.Image? _image;
-  int _decodes = 0; // which decode is the current one
   TileCrop _from = const TileCrop(); // the crop a gesture started from
   Offset _start = Offset.zero; // where it started, in the square
   bool _dragging = false;
 
   /// Whether its picture is decoded and shown.
   @visibleForTesting
-  bool get decoded => _image != null;
+  bool get decoded => widget.frames.frame.value != null;
+
+  ui.Image? get _image => widget.frames.frame.value;
 
   TileCrop get _crop => widget.crop ?? const TileCrop();
 
   Size get _size => Size(_image!.width.toDouble(), _image!.height.toDouble());
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_decodes == 0) unawaited(_decode());
-  }
-
-  @override
-  void didUpdateWidget(TileFramer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.picture.key == widget.picture.key) return;
-    // The last picture's shape would frame this one wrong: none until
-    // it's decoded.
-    final before = _image;
-    _image = null;
-    WidgetsBinding.instance.addPostFrameCallback((_) => before?.dispose());
-    unawaited(_decode());
-  }
-
-  @override
-  void dispose() {
-    _decodes++;
-    _image?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _decode() async {
-    final run = ++_decodes;
-    final side =
-        (TileFramer.size *
-                MediaQuery.devicePixelRatioOf(context) *
-                TileFramer._detail)
-            .ceil();
-    ui.Image? image;
-    try {
-      final codec = await tileImageCodec(await widget.picture.read(), side);
-      try {
-        image = await tileFrame((await codec.getNextFrame()).image, side);
-      } finally {
-        codec.dispose();
-      }
-    } on Object {
-      image = null; // not an image after all: the square stays empty
-    }
-    if (run != _decodes || !mounted) return image?.dispose();
-    final before = _image;
-    setState(() => _image = image);
-    WidgetsBinding.instance.addPostFrameCallback((_) => before?.dispose());
-  }
 
   void _set(TileCrop crop) => widget.onChanged(crop.isWhole ? null : crop);
 
@@ -149,10 +99,14 @@ class TileFramerState extends State<TileFramer> {
   static final double _top = log(TileCrop.maxZoom);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: widget.frames.frame,
+    builder: (context, image, _) => _framing(context, image),
+  );
+
+  Widget _framing(BuildContext context, ui.Image? image) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final image = _image;
     final crop = _crop;
     final view = MouseRegion(
       cursor: _dragging ? SystemMouseCursors.grabbing : SystemMouseCursors.grab,

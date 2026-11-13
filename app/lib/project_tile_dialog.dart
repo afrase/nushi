@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -9,9 +11,11 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tile_crop.dart';
 import 'package:nushi/tile_framer.dart';
+import 'package:nushi/tile_frames.dart';
 import 'package:nushi/tile_images.dart';
 import 'package:nushi/tile_look.dart';
 import 'package:nushi/tile_picture.dart';
+import 'package:nushi/tile_trimmer.dart';
 import 'package:nushi/widgets.dart';
 
 /// Change tile…, from a project's menu: an image of the user's own, an
@@ -33,8 +37,9 @@ Future<void> changeTile(
 /// The dialog of [changeTile]: the tile as it will be, a field for its
 /// mark, the eight colors, and Choose image… (the system's panel: a PNG,
 /// JPEG, GIF or WebP, checked as it's picked; one that can't be taken is
-/// said in a line, and what was there stays), with Remove image and its
-/// framing ([TileFramer]) once there's one. Save keeps them, the image as
+/// said in a line, and what was there stays), with Remove image, its
+/// framing ([TileFramer]) and, for an animated one, its trim
+/// ([TileTrimmer]) once there's one. Save keeps them, the image as
 /// a copy in Nushi's data (`tile_images.dart`) and its framing beside its
 /// name; Cancel keeps nothing, a picked image included.
 /// Reset puts the tile back as it is by itself (the repository's icon,
@@ -67,12 +72,14 @@ class _ChangeTileDialogState extends State<ChangeTileDialog> {
   late TileCrop? _crop = _before.crop; // its framing; null for the middle
   PickedImage? _picked;
   int _picks = 0;
+  TileFrames? _frames; // the image decoded to frame and trim; its trim
   String? _refused; // why the last file picked wasn't taken
 
   String get _pickedKey => 'picked:${widget.folder}:$_picks';
 
   @override
   void dispose() {
+    _frames?.dispose();
     forgetPicture(_pickedKey);
     _mark.dispose();
     super.dispose();
@@ -112,6 +119,27 @@ class _ChangeTileDialogState extends State<ChangeTileDialog> {
   TilePicture? get _framed =>
       _picture ?? (_image.isEmpty ? null : TilePicture.stored(_image));
 
+  /// [picture] decoded to frame and trim: once for each image, with the
+  /// stored trim for the stored image, none for another.
+  TileFrames? _framesOf(TilePicture? picture) {
+    if (_frames?.picture.key == picture?.key) return _frames;
+    // Let go once the views of it are gone.
+    final before = _frames;
+    WidgetsBinding.instance.addPostFrameCallback((_) => before?.dispose());
+    _frames = null;
+    if (picture == null) return null;
+    final ratio = MediaQuery.devicePixelRatioOf(context);
+    final frames = TileFrames(
+      picture,
+      side: (TileFramer.size * ratio * TileFramer.detail).ceil(),
+      thumbSide: (TileTrimmer.height * ratio).ceil(),
+      trim: picture.key == _before.image ? _before.trim : null,
+    );
+    // Once it's decoded, the trimmer if it has frames to trim.
+    unawaited(frames.load().then((_) => mounted ? setState(() {}) : null));
+    return _frames = frames;
+  }
+
   /// As many characters as a tile shows, an emoji one. What's entered
   /// into a full field takes the place of what was there (an emoji from a
   /// picker over the two letters), where refusing it looked like a field
@@ -138,6 +166,7 @@ class _ChangeTileDialogState extends State<ChangeTileDialog> {
     color: _color?.name ?? '',
     image: _image,
     crop: _crop,
+    trim: _frames?.trim,
   );
 
   /// Keeps what's set: a picked image is copied into Nushi's data only
@@ -151,6 +180,7 @@ class _ChangeTileDialogState extends State<ChangeTileDialog> {
           color: look.color,
           image: keepTileImage(p),
           crop: look.crop,
+          trim: look.trim,
         ),
         null => look,
       });
@@ -171,8 +201,8 @@ class _ChangeTileDialogState extends State<ChangeTileDialog> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final name = folderParts(widget.folder).$1;
+    final frames = _framesOf(_framed);
     final look = _look;
-    final framed = _framed;
     return nushiDialog(
       'Change tile',
       Row(
@@ -246,13 +276,19 @@ class _ChangeTileDialogState extends State<ChangeTileDialog> {
                       ),
                   ],
                 ),
-                if (framed != null)
+                if (frames != null) ...[
                   TileFramer(
-                    picture: framed,
+                    frames: frames,
                     crop: _crop,
                     fill: ChatColor.named(look.color)?.ink(t) ?? t.lifted,
                     onChanged: (crop) => setState(() => _crop = crop),
                   ),
+                  if (frames.loaded && frames.count > 1)
+                    TileTrimmer(
+                      frames: frames,
+                      onChanged: () => setState(() {}),
+                    ),
+                ],
                 if (_refused case final why?)
                   Text(why, style: theme.ui(t.crashed, size: 12)),
                 Text(
