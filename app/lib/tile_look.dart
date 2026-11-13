@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart' show StringCharacters;
 
 import 'package:nushi/fnv.dart';
 import 'package:nushi/tile_crop.dart';
+import 'package:nushi/tile_trim.dart';
 
 // What a project's tile shows when it isn't the repository's own icon
 // (ADR 0112): what the user set in Change tile…, else initials on a color
@@ -12,13 +13,19 @@ import 'package:nushi/tile_crop.dart';
 const tileColorCount = 8;
 
 /// What the user set for a project's tile in Change tile…: an [image] of
-/// their own and how it's framed ([crop]), a [mark] (an emoji, or one or
-/// two characters; '' for none) and a [color] (a `ChatColor`'s name; ''
-/// for none). Any of them wins
-/// over the repository's icon. Kept by folder in `projectTiles`: the
+/// their own, how it's framed ([crop]) and what of it plays ([trim]), a
+/// [mark] (an emoji, or one or two characters; '' for none) and a [color]
+/// (a `ChatColor`'s name; '' for none). Any of them wins over the
+/// repository's icon. Kept by folder in `projectTiles`: the
 /// user's data, never a hex, so each theme draws the color its own way.
 class TileLook {
-  const new({this.mark = '', this.color = '', this.image = '', this.crop});
+  const new({
+    this.mark = '',
+    this.color = '',
+    this.image = '',
+    this.crop,
+    this.trim,
+  });
 
   /// [saved] as `app.json` has it; null when it isn't one, or sets
   /// nothing.
@@ -39,6 +46,7 @@ class TileLook {
       },
       image: image,
       crop: image.isEmpty ? null : TileCrop.read(saved['crop']),
+      trim: image.isEmpty ? null : TileTrim.read(saved['trim']),
     );
     return look.isEmpty ? null : look;
   }
@@ -57,6 +65,11 @@ class TileLook {
   /// tile shows the image's middle there.
   final TileCrop? crop;
 
+  /// The frames of an animated [image] it plays; null for all of them, as
+  /// an entry from before trimming has it (an app before trimming reads
+  /// the entry without it, as it does [crop]).
+  final TileTrim? trim;
+
   /// Whether it sets nothing: the tile is then the repository's icon or
   /// the initials.
   bool get isEmpty => mark.isEmpty && color.isEmpty && image.isEmpty;
@@ -66,6 +79,7 @@ class TileLook {
     if (color.isNotEmpty) 'color': color,
     if (image.isNotEmpty) 'image': image,
     if (image.isNotEmpty && crop != null) 'crop': crop!.toJson(),
+    if (image.isNotEmpty && trim != null) 'trim': trim!.toJson(),
   };
 }
 

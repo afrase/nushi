@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/tile_crop.dart';
 import 'package:nushi/tile_images.dart';
+import 'package:nushi/tile_trim.dart';
 
 /// A tile's own image: Nushi's stored copy by its name, or one just picked
 /// in Change tile…, not kept yet.
@@ -58,8 +59,9 @@ void _keep(String at, String key, _First first) {
 /// where it's see-through, its corners [radius]. Until it's decoded, and
 /// if it can't be, [fallback].
 ///
-/// A GIF or an animated WebP shows its first frame, and plays, looping,
-/// only while the pointer is over the tile: not under Reduce Motion, and
+/// A GIF or an animated WebP shows its first frame ([trim]'s start), and
+/// plays, looping (back to [trim]'s start after its end), only while the
+/// pointer is over the tile: not under Reduce Motion, and
 /// not while Nushi isn't in front ([appInFront]). At rest there is no
 /// timer, ticker or listener, and no codec: an image that played always
 /// would keep the window drawing frames for as long as it showed (ADR
@@ -73,12 +75,16 @@ class TilePictureView extends StatefulWidget {
     required this.fallback,
     super.key,
     this.crop,
+    this.trim,
   });
 
   final TilePicture picture;
 
   /// The square of it shown; null for the middle one.
   final TileCrop? crop;
+
+  /// The frames of it played; null for all.
+  final TileTrim? trim;
   final double size;
   final double radius;
   final Color fill;
@@ -104,6 +110,11 @@ class TilePictureViewState extends State<TilePictureView> {
   int _run = 0; // which start of playing is the current one
   bool _opening = false; // its file is being read to play
   bool _loading = false; // its first frame is being decoded
+  // While a trimmed one plays: the frames played, the next one's index,
+  // and the file's bytes, to start again from its start.
+  TileTrim? _range;
+  int _index = 0;
+  Uint8List? _bytes;
 
   /// How many frames it has shown since it last started playing; 0 at
   /// rest, where it shows the first.
@@ -125,10 +136,11 @@ class TilePictureViewState extends State<TilePictureView> {
       _opening || _codec != null || _next != null || _front != null;
 
   String get _at => '${widget.picture.key}@$_side';
-  String get _key => switch (widget.crop) {
-    final c? => '$_at#${c.key}',
-    null => _at,
-  };
+  String get _key {
+    final (crop, start) = (widget.crop, widget.trim?.start ?? 0);
+    if (crop == null && start == 0) return _at;
+    return '$_at#${crop?.key ?? ''}>$start';
+  }
 
   @override
   void didChangeDependencies() {
@@ -145,7 +157,10 @@ class TilePictureViewState extends State<TilePictureView> {
     super.didUpdateWidget(oldWidget);
     final side = (widget.size * MediaQuery.devicePixelRatioOf(context)).ceil();
     final another = oldWidget.picture.key != widget.picture.key;
-    if (another || side != _side || oldWidget.crop != widget.crop) {
+    if (another ||
+        side != _side ||
+        oldWidget.crop != widget.crop ||
+        oldWidget.trim != widget.trim) {
       _side = side;
       // Another crop or size of the same picture shows the last until
       // it's decoded: framing it doesn't blink to the fallback.
@@ -173,8 +188,13 @@ class TilePictureViewState extends State<TilePictureView> {
     }
     if (_loading) return;
     _loading = true;
-    final (at, picture, side, crop) = (_at, widget.picture, _side, widget.crop);
-    final decoded = _decoding[key] ??= _decodeFirst(picture, side, crop);
+    final (at, picture, side) = (_at, widget.picture, _side);
+    final decoded = _decoding[key] ??= _decodeFirst(
+      picture,
+      side,
+      widget.crop,
+      widget.trim,
+    );
     unawaited(
       decoded.then((first) {
         unawaited(_decoding.remove(key));
@@ -195,10 +215,14 @@ class TilePictureViewState extends State<TilePictureView> {
     TilePicture picture,
     int side,
     TileCrop? crop,
+    TileTrim? trim,
   ) async {
     try {
       final bytes = await picture.read();
       final codec = await tileImageCodec(bytes, side, crop: crop);
+      // A trimmed one's first is its start's: the frames before it are
+      // decoded and let go, one at a time.
+      await skipFrames(codec, trim?.of(codec.frameCount)?.start ?? 0);
       final frame = await codec.getNextFrame();
       final animated = codec.frameCount > 1;
       codec.dispose();
@@ -235,14 +259,16 @@ class TilePictureViewState extends State<TilePictureView> {
   Future<void> _open(int run) async {
     _opening = true;
     try {
-      final codec = await tileImageCodec(
-        await widget.picture.read(),
-        _side,
-        crop: widget.crop,
-      );
+      final bytes = await widget.picture.read();
+      final codec = await tileImageCodec(bytes, _side, crop: widget.crop);
+      final range = widget.trim?.of(codec.frameCount);
+      await skipFrames(codec, range?.start ?? 0);
       _opening = false;
       if (run != _run || !mounted) return codec.dispose();
       _codec = codec;
+      _range = range;
+      _index = range?.start ?? 0;
+      _bytes = range == null ? null : bytes;
       await _advance(run);
     } on Object {
       _opening = false;
@@ -251,11 +277,24 @@ class TilePictureViewState extends State<TilePictureView> {
   }
 
   Future<void> _advance(int run) async {
-    final codec = _codec;
+    var codec = _codec;
     if (codec == null) return;
     final ui.FrameInfo frame;
     try {
+      if (_range case final range? when _index >= range.end) {
+        // Past its end: back to its start, from a codec made again and
+        // the frames before the start decoded and let go, rather than
+        // decoding on through the rest.
+        codec.dispose();
+        _codec = null;
+        codec = await tileImageCodec(_bytes!, _side, crop: widget.crop);
+        await skipFrames(codec, range.start);
+        if (run != _run || !mounted) return codec.dispose();
+        _codec = codec;
+        _index = range.start;
+      }
       frame = await codec.getNextFrame();
+      _index++;
     } on Object {
       if (run == _run) _pause();
       return;
@@ -275,12 +314,7 @@ class TilePictureViewState extends State<TilePictureView> {
       played++;
     });
     before?.dispose();
-    // A file that says no time, or next to none, means a tenth of a
-    // second, as browsers take it.
-    final wait = frame.duration < const Duration(milliseconds: 20)
-        ? const Duration(milliseconds: 100)
-        : frame.duration;
-    _next = Timer(wait, () => unawaited(_advance(run)));
+    _next = Timer(frameWait(frame.duration), () => unawaited(_advance(run)));
   }
 
   /// Stops playing and shows the first frame; the watch stays while the
@@ -291,6 +325,8 @@ class TilePictureViewState extends State<TilePictureView> {
     _next = null;
     _codec?.dispose();
     _codec = null;
+    _range = null;
+    _bytes = null;
     final frame = _frame;
     _frame = null;
     if (frame == null && played == 0) return;
@@ -310,6 +346,8 @@ class TilePictureViewState extends State<TilePictureView> {
     _next = null;
     _codec?.dispose();
     _codec = null;
+    _range = null;
+    _bytes = null;
     _frame?.dispose();
     _frame = null;
   }

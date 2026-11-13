@@ -118,6 +118,7 @@ class ProjectTile extends StatelessWidget {
     return TilePictureView(
       picture: own,
       crop: look.crop,
+      trim: look.trim,
       size: size,
       radius: radius(size),
       fill: chosen?.ink(t) ?? t.lifted,

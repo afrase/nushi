@@ -213,6 +213,23 @@ Future<ui.Image> tileFrame(ui.Image frame, int side, {TileCrop? crop}) async {
   }
 }
 
+/// How long a frame of an animated image shows: its own [duration], but
+/// a file that says none, or next to none, means a tenth of a second, as
+/// browsers take it.
+Duration frameWait(Duration duration) =>
+    duration < const Duration(milliseconds: 20)
+    ? const Duration(milliseconds: 100)
+    : duration;
+
+/// Decodes [count] frames of [codec] and lets each go at once: a GIF
+/// decodes only in order, so a trimmed one's first frame is reached this
+/// way, never holding more than the frame being decoded.
+Future<void> skipFrames(ui.Codec codec, int count) async {
+  for (var i = 0; i < count; i++) {
+    (await codec.getNextFrame()).image.dispose();
+  }
+}
+
 /// Where the tiles' images are kept: `tiles` in Nushi's data folder.
 Directory get tileImagesDir => Directory('$dataDir/tiles');
 

@@ -11,6 +11,7 @@ import 'package:nushi/tile_crop.dart';
 import 'package:nushi/tile_images.dart';
 import 'package:nushi/tile_look.dart';
 import 'package:nushi/tile_picture.dart';
+import 'package:nushi/tile_trim.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -51,8 +52,22 @@ Future<TilePictureViewState> _show(
 ui.Image _drawn(WidgetTester tester) =>
     tester.widget<RawImage>(find.byType(RawImage)).image!;
 
-/// Whether the pixel of what's drawn at [x], [y] is the photo's dark disc
+/// Whether the pixel of what's drawn at x, y is the photo's dark disc
 /// (`photoPng`).
+/// The middle pixel of what's drawn, as 0xRRGGBB.
+Future<int> _middle(WidgetTester tester) async {
+  // As the state has it now, by its own handle: a frame shown can be let
+  // go while it's read.
+  await tester.pump();
+  final image = _drawn(tester).clone();
+  final data = await tester.runAsync(image.toByteData);
+  image.dispose();
+  final at = ((image.height ~/ 2) * image.width + image.width ~/ 2) * 4;
+  return data!.getUint8(at) << 16 |
+      data.getUint8(at + 1) << 8 |
+      data.getUint8(at + 2);
+}
+
 Future<bool> _dark(WidgetTester tester, int x, int y) async {
   final image = _drawn(tester);
   final data = await tester.runAsync(image.toByteData);
@@ -409,6 +424,35 @@ void main() {
       await pointer.moveTo(const Offset(1, 1));
       await tester.pump();
       expect(state.busy, isFalse);
+    });
+
+    testWidgets('a trimmed one shows its start at rest, and plays only to '
+        'its end, then from its start again', (tester) async {
+      // Six frames, each one color of four in turn: amber, blue, green,
+      // rose, amber, blue. Kept: the third and fourth.
+      const green = 0x3DB86A;
+      const rose = 0xE85D8A;
+      final six = keepTileImage((bytes: animatedGif(frames: 6), kind: 'gif'));
+      final state = await _show(
+        tester,
+        TileLook(image: six, trim: const TileTrim(2, 4)),
+      );
+      expect(await _middle(tester), green);
+      expect(state.animated, isTrue);
+      final pointer = await mouse(tester);
+      await pointer.moveTo(tester.getCenter(find.byType(TilePictureView)));
+      await tester.pump();
+      final seen = <int>[];
+      for (var n = 1; n <= 5; n++) {
+        await untilReal(tester, () => state.played >= n);
+        seen.add(await _middle(tester));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(seen, [green, rose, green, rose, green]);
+      await pointer.moveTo(const Offset(1, 1));
+      await tester.pump();
+      expect(state.busy, isFalse);
+      expect(await _middle(tester), green);
     });
 
     testWidgets('never plays under Reduce Motion', (tester) async {
