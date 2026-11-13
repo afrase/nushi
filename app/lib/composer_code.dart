@@ -73,7 +73,8 @@ List<SpanPaint> codePaints(
 }) {
   final t = theme.t;
   final mono = TextStyle(
-    fontFamily: NushiTheme.codeFont,
+    fontFamily: theme.codeFamily,
+    fontFamilyFallback: theme.codeFallback,
     fontSize: (base.fontSize ?? 13) * 0.92,
     fontFeatures: const [
       FontFeature.disable('liga'),

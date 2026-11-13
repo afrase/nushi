@@ -45,6 +45,18 @@ The project rail is a column of larger tiles at the sidebar's left, one for each
 
 A number on a tile counts that project's chats that need you. Hover over a tile for the project's name and folder. The rail goes when the sidebar is dragged narrow, and it isn't there while the sidebar is grouped by something other than Project.
 
+## Change the fonts
+
+Nushi comes with its own fonts. You can use any font installed on your computer instead, one for the app's text and one for code.
+
+1. Open **Settings**, then **Appearance**.
+2. Under **Fonts**, click **App font** and pick a font. The whole window changes at once.
+3. Click **Code font** and pick a font for code in chats, diffs and files.
+
+The list is long: type a few letters to find a font. To go back, pick the first font in the list, the one marked **bundled**. On a Mac, **System** is the font macOS itself uses.
+
+The terminal has its own font, in **Settings**, then **Terminal**. The phone always uses Nushi's own fonts.
+
 ## Send a message
 
 Type in the box at the bottom and press **⏎** to send. **⇧⏎** starts a new line.

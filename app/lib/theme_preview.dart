@@ -29,7 +29,9 @@ class ThemePreview extends StatelessWidget {
     child: FittedBox(
       child: SizedBox.fromSize(
         size: size,
-        // Its own text size whatever the phone's: it's a picture.
+        // Its own text size whatever the phone's: it's a picture. And the
+        // bundled fonts whatever the app's (ADR 0114): its rows are laid
+        // out to their measures, and what it shows is a theme's colors.
         child: MediaQuery.withNoTextScaling(
           child: Theme(
             data: NushiTheme(tokens, dark: dark).toThemeData(),

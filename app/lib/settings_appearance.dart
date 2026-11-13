@@ -3,18 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/settings_fonts.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_theme.dart';
 
 /// Settings › Appearance: Light, Dark or as the system, the chat's width,
-/// whether the preview shows whitespace, and the color theme (ADR 0086).
+/// the app's and code's fonts (ADR 0114), whether the preview shows
+/// whitespace, and the color theme (ADR 0086).
 class AppearanceSection extends StatelessWidget {
   const new({super.key});
 
   @override
   Widget build(BuildContext context) => const SettingsPage(
     title: 'Appearance',
-    children: [_Appearance(), _Preview(), ThemeGroup()],
+    children: [_Appearance(), FontsGroup(), _Preview(), ThemeGroup()],
   );
 }
 

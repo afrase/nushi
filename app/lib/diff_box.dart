@@ -122,7 +122,8 @@ class _DiffBoxState extends State<DiffBox> {
   TextDiff? _diffed;
   FileChange? _of; // the change _diffed is of, or is being computed for
   late DiffThemeData _theme;
-  Tokens? _tokens; // what [_theme] was made from
+  Tokens? _tokens; // what [_theme] was made from, and its code font
+  String? _family;
   double? _dpr;
   bool _unified = false; // the view shown is the unified one
   bool _selecting = false; // the line selection changed during this click
@@ -171,17 +172,19 @@ class _DiffBoxState extends State<DiffBox> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final t = NushiTheme.of(context).t;
+    final NushiTheme(:t, codePicked: family) = NushiTheme.of(context);
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    if (identical(t, _tokens) && dpr == _dpr) return;
+    if (identical(t, _tokens) && family == _family && dpr == _dpr) return;
     final first = _tokens == null;
     _tokens = t;
+    _family = family;
     _dpr = dpr;
     // In the transcript, on a card and in Changes it sits on code's
     // surface (ADR 0111).
     _theme = diffTheme(
       t,
       surface: widget.sunk ?? widget.fit ? t.codeBlock : null,
+      family: family,
     );
     final c = _controller;
     if (first || c == null) {

@@ -280,18 +280,33 @@ class _NushiAppState extends State<NushiApp> {
   /// The window below the menu bar, made again only for a new daemon: a
   /// menu label's change (the sidebar shown or hidden, the chat pinned)
   /// rebuilds the menus alone. The appearance picks the light or dark set,
-  /// the theme the palette (ADR 0086); a change to either, or to the
-  /// theme's file, repaints.
+  /// the theme the palette (ADR 0086), the fonts the families (ADR 0114);
+  /// a change to any, or to the theme's file, repaints.
   late Widget _window = _makeWindow();
 
+  /// The picked theme's set for [brightness], in the picked fonts (ADR
+  /// 0114).
+  ThemeData _theme(Brightness brightness) => NushiTheme.forTheme(
+    pickedTheme(),
+    brightness,
+    ui: appFont.value,
+    code: codeFont.value,
+  );
+
   Widget _makeWindow() => ListenableBuilder(
-    listenable: Listenable.merge([appearance, colorTheme, themeFiles]),
+    listenable: Listenable.merge([
+      appearance,
+      colorTheme,
+      themeFiles,
+      appFont,
+      codeFont,
+    ]),
     builder: (context, home) => MaterialApp(
       navigatorKey: _navigator,
       title: 'Nushi',
       debugShowCheckedModeBanner: false,
-      theme: NushiTheme.forTheme(pickedTheme(), Brightness.light),
-      darkTheme: NushiTheme.forTheme(pickedTheme(), Brightness.dark),
+      theme: _theme(Brightness.light),
+      darkTheme: _theme(Brightness.dark),
       themeMode: appearance.value,
       // Light and dark switch at once (NushiTheme.lerp), so no frames of a
       // theme animation, each a rebuild of what reads the theme.

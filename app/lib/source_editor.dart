@@ -166,6 +166,7 @@ class _SourceEditorState extends State<SourceEditor> {
         ),
         style: CodeEditorStyle(
           fontFamily: code.fontFamily,
+          fontFamilyFallback: code.fontFamilyFallback,
           fontSize: code.fontSize,
           fontHeight: code.height,
           textColor: t.text,

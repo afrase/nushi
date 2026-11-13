@@ -352,7 +352,10 @@ class SyntaxLines implements DiffLineSource {
 /// ribbon's fill is as far off it as the theme's is off the theme's own
 /// background, so a change shows as well on code's surface as on a pane
 /// (a light set's grey for a deleted line is about its `codeBlock`).
-DiffThemeData diffTheme(Tokens t, {Color? surface}) {
+///
+/// Its code is set in [family], a picked code font (ADR 0114), the bundled
+/// one after it; in the bundled one without.
+DiffThemeData diffTheme(Tokens t, {Color? surface, String? family}) {
   final d = t.diff;
   final dark = t.brightness == Brightness.dark;
   final background = surface ?? d.background;
@@ -367,6 +370,12 @@ DiffThemeData diffTheme(Tokens t, {Color? surface}) {
           blue: (c.b + surface.b - d.background.b).clamp(0, 1),
         );
   return DiffThemeData(
+    fontFamily: family ?? NushiTheme.codeFont,
+    fontFamilyFallback: [
+      if (family != null) NushiTheme.codeFont,
+      'Menlo',
+      'monospace',
+    ],
     brightness: t.brightness,
     background: background,
     text: d.text,

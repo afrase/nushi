@@ -53,6 +53,69 @@ void main() {
     expect(find.text('Filter'), findsNothing);
   });
 
+  // A list of hundreds (the installed fonts) opened at its top, the current
+  // one out of sight a long scroll away.
+  testWidgets('a long menu opens on its current row, and at its top with '
+      'none or the first current', (tester) async {
+    viewport(tester, const Size(800, 600));
+    Future<void> open(int? current) async {
+      await tester.pumpWidget(
+        themed(
+          Align(
+            alignment: Alignment.topLeft,
+            child: MenuField(
+              key: ValueKey(current),
+              entries: [
+                for (var i = 0; i < 300; i++)
+                  MenuEntry('Row $i', checked: i == current, onPick: () {}),
+              ],
+              label: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    Finder row(int i) => find.ancestor(
+      of: find.text('Row $i', findRichText: true),
+      matching: find.byType(MenuItemButton),
+    );
+    Rect list() => tester.getRect(
+      find.ancestor(of: row(0), matching: find.byType(Scrollable)).first,
+    );
+
+    await open(250);
+    final shown = tester.getRect(row(250));
+    expect(shown.top, greaterThan(list().top));
+    expect(shown.bottom, lessThan(list().bottom));
+    // About the middle of the list, rows on either side of it.
+    expect(shown.center.dy, moreOrLessEquals(list().center.dy, epsilon: 16));
+    expect(
+      find.descendant(of: row(250), matching: find.byIcon(Icons.check)),
+      findsOne,
+    );
+    // Enter still picks it, and the arrows go on from it.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    await tester.pump();
+    expect(tester.getRect(row(251)).bottom, lessThanOrEqualTo(list().bottom));
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    for (final current in [null, 0]) {
+      await open(current);
+      expect(
+        tester.getRect(row(0)).top,
+        moreOrLessEquals(list().top),
+        reason: '$current',
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+    }
+  });
+
   // The owner's report: a panel widget's ⋯ at the window's right opened
   // its menu off to one side. Flutter pushes a menu with no room on its
   // opener's right back to the window's edge; a trailing button's ends
