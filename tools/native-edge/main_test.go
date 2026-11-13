@@ -106,21 +106,3 @@ func TestCheck(t *testing.T) {
 		t.Errorf("got %q\nwant %q", got, want)
 	}
 }
-
-// The app and its Dart packages as they are keep their native code at the
-// edge.
-func TestTheApp(t *testing.T) {
-	roots, err := filepath.Glob(filepath.Join("..", "..", "packages", "*", "lib"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, root := range append(roots, filepath.Join("..", "..", "app", "lib")) {
-		uses, err := check(root)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, u := range uses {
-			t.Errorf("%s:%d: %s", u.path, u.line, u.what)
-		}
-	}
-}

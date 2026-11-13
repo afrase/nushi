@@ -139,31 +139,57 @@ func screenshot(t *testing.T, w, h int, alpha uint8) []byte {
 	return b.Bytes()
 }
 
-// A pasted image is written as Ante can take it: a big one scaled down
-// under its room with its aspect kept, as JPEG, unless it has
-// transparency; a small one byte for byte; one that can't fit still
-// written, and counted.
+// noise is a w×h PNG of noise, which no encoder makes much smaller;
+// alpha < 255 makes its top see-through.
+func noise(t *testing.T, w, h int, alpha uint8) []byte {
+	t.Helper()
+	m := image.NewNRGBA(image.Rect(0, 0, w, h))
+	seed := uint32(7)
+	for i := range len(m.Pix) {
+		seed = seed*1664525 + 1013904223
+		m.Pix[i] = uint8(seed >> 24)
+	}
+	for y := range h / 4 {
+		for x := range w {
+			m.Pix[m.PixOffset(x, y)+3] = alpha
+		}
+	}
+	if alpha == 255 {
+		for i := 3; i < len(m.Pix); i += 4 {
+			m.Pix[i] = 255
+		}
+	}
+	var b bytes.Buffer
+	if err := png.Encode(&b, m); err != nil {
+		t.Fatal(err)
+	}
+	return b.Bytes()
+}
+
+// A pasted image is written as Ante can take it: one over its room
+// re-encoded (imagefit, which has its own tests for how), as JPEG unless
+// it has transparency, under its room; a small one byte for byte; one
+// that can't fit still written, as small as it got, and counted. The
+// images are small, and so is the room: about 3 KB.
 func TestImagesScaledToFit(t *testing.T) {
-	big, seeThrough, small := screenshot(t, 1800, 900, 255), screenshot(t, 1800, 1200, 100), screenshot(t, 300, 200, 255)
-	fresh128K := contextUse{9_600, 131_072}
-	room := imageRoom(fresh128K, 0, 1)
-	if len(big) <= room || len(small) > room {
-		t.Fatalf("the fixtures: %d and %d bytes, room %d", len(big), len(small), room)
+	opaque, seeThrough, small := noise(t, 64, 32, 255), noise(t, 64, 32, 100), noise(t, 8, 8, 255)
+	tight := contextUse{0, 37_778} // 34,000 tokens less two margins: 2,000 tokens, 3,000 bytes
+	room := imageRoom(tight, 0, 1)
+	if room != 3000 || len(opaque) <= room || len(seeThrough) <= room || len(small) > room {
+		t.Fatalf("the fixtures: %d, %d and %d bytes, room %d", len(opaque), len(seeThrough), len(small), room)
 	}
 	for _, c := range []struct {
-		name   string
-		data   []byte
-		fill   contextUse
-		ext    string
-		same   bool
-		over   int
-		long   int // the longest edge it may come out with
-		aspect float64
+		name string
+		data []byte
+		fill contextUse
+		ext  string
+		same bool
+		over int
 	}{
-		{"big", big, fresh128K, ".jpg", false, 0, 1568, 2},
-		{"transparent", seeThrough, contextUse{9_600, 1_048_576}, ".png", false, 0, 1568, 1.5},
-		{"small", small, fresh128K, ".png", true, 0, 300, 1.5},
-		{"no room left", big, contextUse{120_000, 131_072}, ".jpg", false, 1, 768, 2},
+		{"over its room", opaque, tight, ".jpg", false, 0},
+		{"transparent", seeThrough, tight, ".png", true, 1}, // re-encoded noise is no smaller: its own bytes
+		{"small", small, tight, ".png", true, 0},
+		{"no room left", opaque, contextUse{120_000, 131_072}, ".jpg", false, 1},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			b := &bridge{}
@@ -187,13 +213,8 @@ func TestImagesScaledToFit(t *testing.T) {
 			if c.over == 0 && len(got) > imageRoom(c.fill, 0, 1) {
 				t.Errorf("%d bytes, over its room", len(got))
 			}
-			m, _, err := image.Decode(bytes.NewReader(got))
-			if err != nil {
-				t.Fatal(err)
-			}
-			w, h := m.Bounds().Dx(), m.Bounds().Dy()
-			if max(w, h) > c.long || float64(w)/float64(h) < c.aspect*0.995 || float64(w)/float64(h) > c.aspect*1.005 {
-				t.Errorf("%d×%d, want a long edge of %d at most and an aspect of %.2f", w, h, c.long, c.aspect)
+			if _, _, err := image.Decode(bytes.NewReader(got)); err != nil {
+				t.Errorf("not an image: %v", err)
 			}
 		})
 	}

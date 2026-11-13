@@ -83,8 +83,9 @@ func TestGitHubLogsNoTokenNorText(t *testing.T) {
 	log := &lockedBuffer{}
 	defer slog.SetDefault(slog.Default())
 	slog.SetDefault(slog.New(logs.Handler(log)))
+	debug := logs.Level.Level()
+	t.Cleanup(func() { logs.Level.Set(debug) })
 	logs.SetDebug(true)
-	defer logs.SetDebug(false)
 
 	svc := github.New(github.Deps{
 		Gh:     github.Gh{Token: func(context.Context, string) (string, string, error) { return "", "", nil }, Hosts: func() []string { return nil }, Reload: func() {}},

@@ -132,6 +132,10 @@ func (h *host) stopped(what string) error {
 
 func opID() string { return "op_" + ulid() }
 
+// stopGrace is how long a host has to end once asked, before it is
+// killed. A variable only so a test can shorten it.
+var stopGrace = 5 * time.Second
+
 // stop ends the host: Shutdown, then its input closes (EOF is Shutdown
 // too); it is killed if its output hasn't ended after grace. Its events
 // must be read meanwhile.

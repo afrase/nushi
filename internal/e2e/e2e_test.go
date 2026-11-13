@@ -54,14 +54,13 @@ import (
 // others on fakes (startDaemon). The fake agents share one History, as
 // Claude's sessions outlive its processes.
 type daemon struct {
-	url     string // the API as the Mac's socket serves it
+	url     string // the API as the Mac's socket serves it, the chats' tools under /tools/ too
 	devices string // as a paired device's channel does
 	stop    func()
 	kill    func() // ends the last agent started, as if its process died
 	restart *restart.Service
 	claudes *claudes // the fake claudes Claude's Go agent ran
 	tools   *tools.Service
-	toolAPI string // the tools' endpoint, as the daemon's socket serves it
 	hub     *events.Hub
 }
 
@@ -217,12 +216,12 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 	restarts.Every = 20 * time.Millisecond
 	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts,
 		Servers: srvs}
-	srv := httptest.NewServer(api.WithToken("tok", api.New(sv)))
-	devices := httptest.NewServer(api.ForDevices(sv))
-	toolAPI := httptest.NewServer(api.Tools(toolSvc))
+	socket, forDevices := api.Handlers(sv, toolSvc, "tok") // as main serves them
+	srv := httptest.NewServer(socket)
+	devices := httptest.NewServer(forDevices)
 	stop := func() {
 		unfollow()
-		for _, s := range []*httptest.Server{srv, devices, toolAPI} {
+		for _, s := range []*httptest.Server{srv, devices} {
 			s.CloseClientConnections()
 			s.Close()
 		}
@@ -231,7 +230,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 		svc.Close()
 	}
 	t.Cleanup(stop)
-	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, restart: restarts, claudes: cls, tools: toolSvc, toolAPI: toolAPI.URL, hub: hub, kill: func() {
+	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, restart: restarts, claudes: cls, tools: toolSvc, hub: hub, kill: func() {
 		mu.Lock()
 		defer mu.Unlock()
 		kill()

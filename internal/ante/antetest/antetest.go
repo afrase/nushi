@@ -17,6 +17,11 @@
 //     when the text also has "unsaved"), then its report and a message;
 //     with "wait" in the text too, it waits after its lines, and an
 //     Interrupt cancels it; with "fail", its model fails;
+//   - containing "fail" (and not "subagent"): the turn ends Failed, as an
+//     expired sign-in ends it (kind "oauth", headline "Not signed in",
+//     details "the token expired");
+//   - containing "refuse": the input is refused, an Error answering it in
+//     place of its turn;
 //   - anything else: "You said: <text>", as two deltas and the whole text.
 //
 // A session has the skill "review" (argument hint "<path>"); SlashCommand
@@ -169,6 +174,10 @@ func (h *Host) refreshed(parent string) {
 
 // input starts a turn for op id, which runs text.
 func (h *Host) input(id, text string, echo bool) {
+	if strings.Contains(text, "refuse") {
+		h.emit(id, map[string]any{"Error": "input refused: the session is busy compacting"}, false)
+		return
+	}
 	h.store.mu.Lock()
 	h.s.inputs, h.s.cuts = append(h.s.inputs, id), append(h.s.cuts, len(h.s.log))
 	h.store.mu.Unlock()
@@ -338,6 +347,8 @@ func (h *Host) run(turn, text string) {
 	switch {
 	case strings.Contains(text, "subagent"):
 		status = h.subagent(turn, text)
+	case strings.Contains(text, "fail"):
+		status = map[string]any{"Failed": map[string]any{"kind": "oauth", "headline": "Not signed in", "details": []string{"the token expired"}}}
 	case strings.Contains(text, "write"):
 		call := map[string]any{"id": "call_w", "name": "Write", "args": map[string]any{"file_path": "x.txt", "content": "hi\n"}}
 		decision := "Accept"

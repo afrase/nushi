@@ -45,14 +45,18 @@ func pngOf(t *testing.T, m image.Image) []byte {
 }
 
 func TestFit(t *testing.T) {
-	big := pngOf(t, screen(1800, 900, 255))
+	// The images are as small as each case allows (under -race their
+	// encoding is most of the test's time): big just over the 1568 px edge,
+	// mid between the two smaller steps.
+	big := pngOf(t, screen(1600, 800, 255))
+	mid := pngOf(t, screen(1000, 500, 255))
 	var flat bytes.Buffer
 	if err := jpeg.Encode(&flat, screen(400, 300, 255), nil); err != nil {
 		t.Fatal(err)
 	}
-	seeThrough := pngOf(t, screen(1650, 1100, 128))
+	seeThrough := pngOf(t, screen(1100, 733, 128))
 	var still bytes.Buffer
-	if err := gif.Encode(&still, screen(900, 600, 255), nil); err != nil {
+	if err := gif.Encode(&still, screen(450, 300, 255), nil); err != nil {
 		t.Fatal(err)
 	}
 	webp, err := os.ReadFile("testdata/gradient.webp") // 400×200, cwebp -lossless
@@ -74,10 +78,10 @@ func TestFit(t *testing.T) {
 		{"a big screenshot comes out under the limit, as JPEG", big, "image/png", 300_000, 2000, "image/jpeg", true, false, 1568, 2},
 		{"over the long edge alone it's scaled too", big, "image/png", len(big), 1200, "image/jpeg", true, false, 1200, 2},
 		{"a small one stays as it is", flat.Bytes(), "image/jpeg", 400_000, 2000, "image/jpeg", true, true, 400, 4.0 / 3},
-		{"a transparent one stays PNG", seeThrough, "image/png", len(seeThrough) / 2, 2000, "image/png", true, false, 1568, 1.5},
-		{"a GIF", still.Bytes(), "image/gif", 60_000, 2000, "image/jpeg", true, false, 900, 1.5},
+		{"a transparent one stays PNG", seeThrough, "image/png", len(seeThrough) * 4 / 5, 2000, "image/png", true, false, 768, 1.5},
+		{"a GIF", still.Bytes(), "image/gif", still.Len() / 2, 2000, "image/jpeg", true, false, 450, 1.5},
 		{"a WebP", webp, "image/webp", 20_000, 300, "image/jpeg", true, false, 300, 2},
-		{"what can't fit comes out as small as it gets", big, "image/png", 1000, 2000, "image/jpeg", false, false, 768, 2},
+		{"what can't fit comes out as small as it gets", mid, "image/png", 1000, 2000, "image/jpeg", false, false, 768, 2},
 		{"bad bytes stay as they are", []byte("not a png"), "image/png", 400_000, 2000, "image/png", true, true, 0, 0},
 		{"too big and bad: as they are, not ok", []byte("not a png"), "image/png", 3, 2000, "image/png", false, true, 0, 0},
 		{"a type it doesn't read", []byte("BM...."), "image/bmp", 400_000, 2000, "image/bmp", true, true, 0, 0},

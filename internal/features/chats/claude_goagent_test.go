@@ -214,11 +214,12 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 			}
 		}
 	}
-	// readUntil reads the Go agent's messages until done says so, for 2 s at
-	// most: what it waits for is what the adapter had sent, and if the Go
-	// agent never sends it, the chats compared say how it differs.
-	readUntil := func(done func() bool) {
-		deadline := time.After(2 * time.Second)
+	// readUntil reads the Go agent's messages until done says so, for 10 s at
+	// most: what it waits for is what the adapter had sent. If the Go agent
+	// never sends it the test fails saying what it waited for, and goes on,
+	// so the chats compared also say how they differ.
+	readUntil := func(what string, done func() bool) {
+		deadline := time.After(10 * time.Second)
 		for !done() {
 			select {
 			case m, ok := <-msgs:
@@ -229,6 +230,7 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 					held = append(held, m)
 				}
 			case <-deadline:
+				t.Errorf("waited 10 s for the Go agent to send %s, as the adapter had", what)
 				return
 			}
 		}
@@ -238,7 +240,7 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 	// next line, which may count on it (a cancel once a subagent runs).
 	seen := 0 // the marks waited past
 	sent := func(want string) {
-		readUntil(func() bool {
+		readUntil("the update marked "+want, func() bool {
 			i := slices.Index(marks[seen:], want)
 			if i >= 0 {
 				seen += i + 1
@@ -276,7 +278,7 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 	heard := func() {
 		for _, sid := range opened {
 			live := cmp.Or(ids[sid], sid) // a subagent's session has claude's id
-			readUntil(func() bool { return updated[live] })
+			readUntil("an update in session "+live, func() bool { return updated[live] })
 		}
 		opened = nil
 	}
@@ -288,7 +290,7 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 	metered := func() {
 		for sid, want := range adapterMeters {
 			live := cmp.Or(ids[sid], sid)
-			readUntil(func() bool { return goMeters[live] == want })
+			readUntil(fmt.Sprintf("the usage %+v in session %s", want, live), func() bool { return goMeters[live] == want })
 		}
 	}
 	// sessions is a recorded message with the live sessions' ids.

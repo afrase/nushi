@@ -16,6 +16,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // fake is a scripted GitHub Enterprise server (so its host is the test
@@ -277,7 +279,11 @@ func TestAFewAtOnce(t *testing.T) {
 	for range 3 * parallel {
 		wg.Go(func() { _, _ = c.Viewer(t.Context()) })
 	}
-	time.Sleep(200 * time.Millisecond)
+	// parallel get in; a moment more shows no more than that do.
+	if !testcheck.Eventually(func() bool { return now.Load() == parallel }) {
+		t.Fatalf("%d of %d at once", now.Load(), parallel)
+	}
+	time.Sleep(50 * time.Millisecond)
 	close(release)
 	wg.Wait()
 	if most.Load() != parallel {

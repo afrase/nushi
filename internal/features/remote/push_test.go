@@ -9,10 +9,15 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/webpush"
+	"github.com/afrase/nushi/noiseconn"
+	"github.com/afrase/nushi/relay"
 )
 
 // pushes records what the daemon pushed, and answers with err.
@@ -45,11 +50,11 @@ func (p *pushes) take() []payload {
 	return out
 }
 
-// settle waits for the pushes sent in the background, and takes them.
-func (p *pushes) settle(t *testing.T, n int) []payload {
-	t.Helper()
-	waitFor(t, func() bool { p.mu.Lock(); defer p.mu.Unlock(); return len(p.sent) >= n })
-	time.Sleep(50 * time.Millisecond) // none more than n
+// settle runs the bubble's clock past every turn's wait and lets each push
+// go, then takes what was pushed: exactly that, nothing still to come.
+func (p *pushes) settle() []payload {
+	time.Sleep(time.Second)
+	synctest.Wait()
 	return p.take()
 }
 
@@ -62,28 +67,56 @@ func subscription(t *testing.T) *webpush.Subscription {
 	return &webpush.Subscription{Endpoint: "https://web.push.apple.com/QGuQyav", P256DH: k.Public, Auth: make([]byte, 16)}
 }
 
-// pushing is remote access with a paired web device whose notifications
-// are on; chat "c1" is Claude's, anything else a side chat. A turn's end
-// is pushed after 20 ms, and tune may shorten other waits.
+// connect gives device a channel to s, as a phone dialing through the
+// relay would have: over an in-memory transport, with no relay.
+func connect(t *testing.T, s *Service, device string) *noiseconn.Conn {
+	t.Helper()
+	s.mu.Lock()
+	key := s.key
+	s.mu.Unlock()
+	a, b := pipes()
+	go func() {
+		if c, err := noiseconn.Initiate(a, noiseconn.Config{Static: newKey(t), Prologue: prologue("x")}, key.Public); err == nil {
+			_, _ = c.Write([]byte("hi"))
+		}
+	}()
+	conn, err := noiseconn.Respond(b, noiseconn.Config{Static: key, Prologue: prologue("x")}, func([]byte) error { return nil })
+	testcheck.NoErr(t, err)
+	s.mu.Lock()
+	s.conns[conn] = device
+	s.mu.Unlock()
+	return conn
+}
+
+// pushing is remote access with a paired web device, "d1", connected and
+// with notifications on; chat "c1" is Claude's, anything else a side chat.
+// A turn's end is pushed after 20 ms, and tune may shorten other waits.
+// Remote access is off: no relay is needed to push. Run in a synctest
+// bubble, its waits pass on the bubble's clock.
 func pushing(t *testing.T, tune ...func(*timing)) (*Service, *pushes, string, string) {
 	t.Helper()
 	dir := t.TempDir()
-	tune = append([]func(*timing){func(tm *timing) { tm.finished = 20 * time.Millisecond }}, tune...)
-	s := startRemote(t, dir, startRelay(t), tune...)
+	st := store.New(dir)
+	testcheck.NoErr(t, st.SaveRemote(model.RemoteSettings{Relay: "ws://relay.test"}))
+	testcheck.NoErr(t, st.SaveDevices([]model.Device{{ID: "d1", Name: "Test phone", Kind: "web", Key: newKey(t).Public, Paired: time.Now()}}))
+	tm := defaultTiming()
+	tm.finished = 20 * time.Millisecond
+	for _, f := range tune {
+		f(&tm)
+	}
+	s, err := newService(st, &relay.Dialer{}, echo, func() func() { return func() {} }, func(model.Event) {}, tm)
+	testcheck.NoErr(t, err)
+	t.Cleanup(s.Close)
 	p := &pushes{}
 	s.UsePush(Push{Key: "key", Send: p.send, Agent: func(id string) (string, bool) { return "Claude", id == "c1" }}, false)
-	pairOne(t, s, newKey(t))
-	d := s.Get().Devices[0]
-	if d.Kind != "web" {
-		t.Fatalf("kind %q", d.Kind)
-	}
-	if err := s.SetPush(d.ID, subscription(t)); err != nil {
+	connect(t, s, "d1")
+	if err := s.SetPush("d1", subscription(t)); err != nil {
 		t.Fatal(err)
 	}
 	if !s.Get().Devices[0].Connected || s.Get().Devices[0].Push == nil {
 		t.Fatal("not connected, or no subscription")
 	}
-	return s, p, d.ID, dir
+	return s, p, "d1", dir
 }
 
 // turn is a turn in chat that the agent ended.
@@ -95,85 +128,95 @@ func turn(s *Service, chat string) {
 }
 
 func TestPushSaysOnlyWhatHappened(t *testing.T) {
-	s, p, _, _ := pushing(t)
-	turn(s, "c1")
-	ask := func(kind model.ItemKind, id string) {
-		s.Follow(model.Event{ChatID: "c1", Item: &model.Item{ID: id, Kind: kind, Status: "pending", Text: "SECRET the agent's words", Title: "SECRET rm -rf"}})
-	}
-	ask(model.Permission, "p1")
-	ask(model.Permission, "p1") // an update of the same prompt
-	ask(model.Question, "q1")
-	s.Follow(model.Event{ChatID: "c1", Item: &model.Item{ID: "q1", Kind: model.Question, Status: "answered"}})
-	s.Follow(model.Event{ChatID: "c1", Item: &model.Item{ID: "m", Kind: model.AgentMessage, Text: "SECRET"}})
-	turn(s, "side") // not a stored chat
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Asleep: true}})
-	got := p.settle(t, 3)
-	want := map[string]payload{
-		"finished":   {Title: "Claude finished", Kind: "finished", Agent: "Claude", Chat: "c1"},
-		"permission": {Title: "Claude needs you", Kind: "permission", Agent: "Claude", Chat: "c1"},
-		"question":   {Title: "Claude has a question", Kind: "question", Agent: "Claude", Chat: "c1"},
-	}
-	if len(got) != 3 {
-		t.Fatalf("pushed %+v", got)
-	}
-	for _, g := range got {
-		if want[g.Kind] != g {
-			t.Errorf("pushed %+v", g)
+	synctest.Test(t, func(t *testing.T) {
+		s, p, _, _ := pushing(t)
+		turn(s, "c1")
+		ask := func(kind model.ItemKind, id string) {
+			s.Follow(model.Event{ChatID: "c1", Item: &model.Item{ID: id, Kind: kind, Status: "pending", Text: "SECRET the agent's words", Title: "SECRET rm -rf"}})
 		}
-		b, _ := json.Marshal(g)
-		if strings.Contains(string(b), "SECRET") {
-			t.Errorf("chat content in a push: %s", b)
+		ask(model.Permission, "p1")
+		ask(model.Permission, "p1") // an update of the same prompt
+		ask(model.Question, "q1")
+		s.Follow(model.Event{ChatID: "c1", Item: &model.Item{ID: "q1", Kind: model.Question, Status: "answered"}})
+		s.Follow(model.Event{ChatID: "c1", Item: &model.Item{ID: "m", Kind: model.AgentMessage, Text: "SECRET"}})
+		turn(s, "side") // not a stored chat
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Asleep: true}})
+		got := p.settle()
+		want := map[string]payload{
+			"finished":   {Title: "Claude finished", Kind: "finished", Agent: "Claude", Chat: "c1"},
+			"permission": {Title: "Claude needs you", Kind: "permission", Agent: "Claude", Chat: "c1"},
+			"question":   {Title: "Claude has a question", Kind: "question", Agent: "Claude", Chat: "c1"},
 		}
-	}
-	if p.subj[0] != "https://"+strings.TrimPrefix(s.Get().Relay, "ws://") {
-		t.Errorf("subject %q", p.subj[0])
-	}
+		if len(got) != 3 {
+			t.Fatalf("pushed %+v", got)
+		}
+		for _, g := range got {
+			if want[g.Kind] != g {
+				t.Errorf("pushed %+v", g)
+			}
+			b, _ := json.Marshal(g)
+			if strings.Contains(string(b), "SECRET") {
+				t.Errorf("chat content in a push: %s", b)
+			}
+		}
+		if p.subj[0] != "https://relay.test" {
+			t.Errorf("subject %q", p.subj[0])
+		}
+	})
 }
 
 func TestNoPushWhileTheChatIsOpen(t *testing.T) {
-	s, p, device, _ := pushing(t)
-	s.SetView(device, "c1")
-	turn(s, "c1")
-	time.Sleep(100 * time.Millisecond)
-	if got := p.take(); len(got) != 0 {
-		t.Fatalf("pushed while the chat was open: %+v", got)
-	}
-	s.SetView(device, "c2")
-	turn(s, "c1")
-	if got := p.settle(t, 1); len(got) != 1 {
-		t.Fatalf("another chat open: %+v", got)
-	}
-	// Disconnected, the open chat doesn't count.
-	s.SetView(device, "c1")
-	s.mu.Lock()
-	for c := range s.conns {
-		_ = c.Close()
-	}
-	s.mu.Unlock()
-	waitFor(t, func() bool { return !s.Get().Devices[0].Connected })
-	turn(s, "c1")
-	if got := p.settle(t, 1); len(got) != 1 {
-		t.Fatalf("disconnected: %+v", got)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		s, p, device, _ := pushing(t)
+		s.SetView(device, "c1")
+		turn(s, "c1")
+		if got := p.settle(); len(got) != 0 {
+			t.Fatalf("pushed while the chat was open: %+v", got)
+		}
+		s.SetView(device, "c2")
+		turn(s, "c1")
+		if got := p.settle(); len(got) != 1 {
+			t.Fatalf("another chat open: %+v", got)
+		}
+		// Disconnected, the open chat doesn't count.
+		s.SetView(device, "c1")
+		s.mu.Lock()
+		var conns []*noiseconn.Conn
+		for c := range s.conns {
+			conns = append(conns, c)
+		}
+		s.mu.Unlock()
+		for _, c := range conns {
+			_ = (&served{Conn: c, s: s, device: device}).Close() // as the API's server closes it
+		}
+		if s.Get().Devices[0].Connected {
+			t.Fatal("still connected")
+		}
+		turn(s, "c1")
+		if got := p.settle(); len(got) != 1 {
+			t.Fatalf("disconnected: %+v", got)
+		}
+	})
 }
 
 func TestGoneSubscriptionIsForgotten(t *testing.T) {
-	s, p, device, dir := pushing(t)
-	p.err = webpush.ErrGone
-	if err := s.TestPush(context.Background(), device); err == nil {
-		t.Fatal("a gone subscription's test passed")
-	}
-	if s.Get().Devices[0].Push != nil {
-		t.Fatal("kept a gone subscription")
-	}
-	if b, _ := os.ReadFile(filepath.Join(dir, "devices.json")); strings.Contains(string(b), "web.push.apple.com") {
-		t.Fatalf("devices.json keeps it: %s", b)
-	}
-	turn(s, "c1")
-	time.Sleep(100 * time.Millisecond)
-	if got := p.take(); len(got) != 1 { // the test only
-		t.Fatalf("pushed after it was gone: %+v", got)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		s, p, device, dir := pushing(t)
+		p.err = webpush.ErrGone
+		if err := s.TestPush(context.Background(), device); err == nil {
+			t.Fatal("a gone subscription's test passed")
+		}
+		if s.Get().Devices[0].Push != nil {
+			t.Fatal("kept a gone subscription")
+		}
+		if b, _ := os.ReadFile(filepath.Join(dir, "devices.json")); strings.Contains(string(b), "web.push.apple.com") {
+			t.Fatalf("devices.json keeps it: %s", b)
+		}
+		turn(s, "c1")
+		if got := p.settle(); len(got) != 1 { // the test only
+			t.Fatalf("pushed after it was gone: %+v", got)
+		}
+	})
 }
 
 func TestRevokeDropsTheSubscription(t *testing.T) {
@@ -215,31 +258,35 @@ func TestSubscriptionsOnlyToPushServices(t *testing.T) {
 // A turn the chat says failed (an error, or its agent quit mid-turn) is
 // pushed as failed, as the Mac says it, and nothing of the error goes.
 func TestAFailedTurnPushesFailed(t *testing.T) {
-	s, p, _, _ := pushing(t)
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnFailed, Failure: "SECRET the agent's error"}})
-	got := p.settle(t, 1)
-	if want := (payload{Title: "Claude's turn failed", Kind: "failed", Agent: "Claude", Chat: "c1"}); len(got) != 1 || got[0] != want {
-		t.Fatalf("pushed %+v, want %+v", got, want)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		s, p, _, _ := pushing(t)
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnFailed, Failure: "SECRET the agent's error"}})
+		got := p.settle()
+		if want := (payload{Title: "Claude's turn failed", Kind: "failed", Agent: "Claude", Chat: "c1"}); len(got) != 1 || got[0] != want {
+			t.Fatalf("pushed %+v, want %+v", got, want)
+		}
+	})
 }
 
 // A turn's end replaces the last one at the push service, finished or
 // failed, so a Try again that worked leaves no stale failure; a question
 // keeps its own.
 func TestATurnsEndReplacesTheLast(t *testing.T) {
-	s, p, _, _ := pushing(t)
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnFailed, Failure: "boom"}})
-	p.settle(t, 1)
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnDone}})
-	p.settle(t, 1)
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if len(p.topics) != 2 || p.topics[0] != p.topics[1] || p.topics[0] == "" {
-		t.Fatalf("topics %q: want one for both ends", p.topics)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		s, p, _, _ := pushing(t)
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnFailed, Failure: "boom"}})
+		p.settle()
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnDone}})
+		p.settle()
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		if len(p.topics) != 2 || p.topics[0] != p.topics[1] || p.topics[0] == "" {
+			t.Fatalf("topics %q: want one for both ends", p.topics)
+		}
+	})
 }
 
 // A turn the chat says was stopped (the user stopped it, its agent was
@@ -247,56 +294,64 @@ func TestATurnsEndReplacesTheLast(t *testing.T) {
 // from (the next queued message), aren't pushed; nor is a status that
 // merely has no turn running.
 func TestNoFinishedForAStopOrAQueue(t *testing.T) {
-	s, p, _, _ := pushing(t)
-	started := &model.Status{Busy: true, Started: time.Now()}
-	s.Follow(model.Event{ChatID: "c1", Status: started})
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnStopped}})
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{}})
-	s.Follow(model.Event{ChatID: "c1", Status: started})
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnFailed}})
-	s.Follow(model.Event{ChatID: "c1", Status: started}) // Try again, at once
-	s.Follow(model.Event{ChatID: "c1", Status: started})
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnDone}})
-	s.Follow(model.Event{ChatID: "c1", Status: started}) // the queue's next
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Asleep: true}})
-	time.Sleep(100 * time.Millisecond)
-	if got := p.take(); len(got) != 0 {
-		t.Fatalf("pushed %+v", got)
-	}
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnDone}})
-	if got := p.settle(t, 1); len(got) != 1 || got[0].Kind != "finished" {
-		t.Fatalf("pushed %+v", got)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		s, p, _, _ := pushing(t)
+		started := &model.Status{Busy: true, Started: time.Now()}
+		s.Follow(model.Event{ChatID: "c1", Status: started})
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnStopped}})
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{}})
+		s.Follow(model.Event{ChatID: "c1", Status: started})
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnFailed}})
+		s.Follow(model.Event{ChatID: "c1", Status: started}) // Try again, at once
+		s.Follow(model.Event{ChatID: "c1", Status: started})
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnDone}})
+		s.Follow(model.Event{ChatID: "c1", Status: started}) // the queue's next
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Asleep: true}})
+		if got := p.settle(); len(got) != 0 {
+			t.Fatalf("pushed %+v", got)
+		}
+		s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnDone}})
+		if got := p.settle(); len(got) != 1 || got[0].Kind != "finished" {
+			t.Fatalf("pushed %+v", got)
+		}
+	})
 }
 
 // An open chat counts only while the device keeps saying so.
 func TestTheViewLapses(t *testing.T) {
-	s, p, device, _ := pushing(t, func(tm *timing) { tm.viewLease = 50 * time.Millisecond })
-	s.SetView(device, "c1")
-	time.Sleep(80 * time.Millisecond)
-	turn(s, "c1")
-	if got := p.settle(t, 1); len(got) != 1 {
-		t.Fatalf("a lapsed view: %+v", got)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		s, p, device, _ := pushing(t, func(tm *timing) { tm.viewLease = 50 * time.Millisecond })
+		s.SetView(device, "c1")
+		time.Sleep(49 * time.Millisecond)
+		if !s.Shown("c1") {
+			t.Fatal("the view lapsed early")
+		}
+		time.Sleep(time.Millisecond)
+		turn(s, "c1")
+		if got := p.settle(); len(got) != 1 {
+			t.Fatalf("a lapsed view: %+v", got)
+		}
+	})
 }
 
 // Shown counts the Mac's view (device "", no connection) and a connected
 // device's, each while its lease holds; the Mac's view sends no push.
 func TestShownByTheMacOrADevice(t *testing.T) {
-	s, p, device, _ := pushing(t, func(tm *timing) { tm.viewLease = 50 * time.Millisecond })
-	s.SetView("", "c1")
-	s.SetView(device, "c2")
-	if !s.Shown("c1") || !s.Shown("c2") || s.Shown("c3") {
-		t.Fatalf("shown: c1 %v, c2 %v, c3 %v", s.Shown("c1"), s.Shown("c2"), s.Shown("c3"))
-	}
-	turn(s, "c1")
-	if got := p.settle(t, 1); len(got) != 1 {
-		t.Fatalf("the Mac's view kept the phone's push: %+v", got)
-	}
-	time.Sleep(80 * time.Millisecond)
-	if s.Shown("c1") || s.Shown("c2") {
-		t.Error("a lapsed view still shows")
-	}
+	synctest.Test(t, func(t *testing.T) {
+		s, p, device, _ := pushing(t, func(tm *timing) { tm.viewLease = 50 * time.Millisecond })
+		s.SetView("", "c1")
+		s.SetView(device, "c2")
+		if !s.Shown("c1") || !s.Shown("c2") || s.Shown("c3") {
+			t.Fatalf("shown: c1 %v, c2 %v, c3 %v", s.Shown("c1"), s.Shown("c2"), s.Shown("c3"))
+		}
+		turn(s, "c1")
+		if got := p.settle(); len(got) != 1 {
+			t.Fatalf("the Mac's view kept the phone's push: %+v", got)
+		}
+		if s.Shown("c1") || s.Shown("c2") {
+			t.Error("a lapsed view still shows")
+		}
+	})
 }
 
 // A new VAPID key: the subscriptions made with the old one are dropped.
@@ -311,6 +366,7 @@ func TestFreshKeyDropsSubscriptions(t *testing.T) {
 	}
 }
 
+// Not in a bubble: the file's time is the real clock's.
 func TestSameSubscriptionWritesNothing(t *testing.T) {
 	s, _, device, dir := pushing(t)
 	path := filepath.Join(dir, "devices.json")
@@ -328,71 +384,72 @@ func TestSameSubscriptionWritesNothing(t *testing.T) {
 // While a push is in flight, other chats' pushes wait their turn: only the
 // same chat's push of the same kind takes the place of one waiting.
 func TestPushesWaitWhileOneIsSent(t *testing.T) {
-	s, p, device, _ := pushing(t)
-	release, first := make(chan struct{}), make(chan struct{}, 1)
-	s.UsePush(Push{Key: "key", Agent: func(string) (string, bool) { return "Claude", true },
-		Send: func(ctx context.Context, subject string, sub webpush.Subscription, m webpush.Message) error {
-			select {
-			case first <- struct{}{}:
-				<-release // the first push is slow: a proxy, a hanging push service
-			default:
-			}
-			return p.send(ctx, subject, sub, m)
-		}}, false)
-	waiting := func(n int) {
-		t.Helper()
-		waitFor(t, func() bool {
+	synctest.Test(t, func(t *testing.T) {
+		s, p, device, _ := pushing(t)
+		release, first := make(chan struct{}), make(chan struct{}, 1)
+		s.UsePush(Push{Key: "key", Agent: func(string) (string, bool) { return "Claude", true },
+			Send: func(ctx context.Context, subject string, sub webpush.Subscription, m webpush.Message) error {
+				select {
+				case first <- struct{}{}:
+					<-release // the first push is slow: a proxy, a hanging push service
+				default:
+				}
+				return p.send(ctx, subject, sub, m)
+			}}, false)
+		waiting := func(n int) {
+			t.Helper()
+			synctest.Wait()
 			s.notes.mu.Lock()
 			defer s.notes.mu.Unlock()
-			ob := s.notes.outbox[device]
-			return ob != nil && len(ob.waiting) == n
-		})
-	}
-	ask := func(chat, id string, kind model.ItemKind) {
-		s.Follow(model.Event{ChatID: chat, Item: &model.Item{ID: id, Kind: kind, Status: "pending"}})
-	}
-	ask("c1", "q", model.Question)
-	<-first
-	ask("c2", "p", model.Permission)
-	waiting(1)
-	ask("c3", "q", model.Question)
-	waiting(2)
-	ask("c2", "p2", model.Permission) // c2 waits already with a permission
-	ask("c2", "q", model.Question)
-	waiting(3)
-	close(release)
-	var got []string
-	for _, g := range p.settle(t, 4) {
-		got = append(got, g.Chat+" "+g.Kind)
-	}
-	if want := []string{"c1 question", "c2 permission", "c3 question", "c2 question"}; !slices.Equal(got, want) {
-		t.Errorf("pushed %q, want %q", got, want)
-	}
+			if ob := s.notes.outbox[device]; ob == nil || len(ob.waiting) != n {
+				t.Fatalf("waiting: %+v, want %d", ob, n)
+			}
+		}
+		ask := func(chat, id string, kind model.ItemKind) {
+			s.Follow(model.Event{ChatID: chat, Item: &model.Item{ID: id, Kind: kind, Status: "pending"}})
+		}
+		ask("c1", "q", model.Question)
+		<-first
+		ask("c2", "p", model.Permission)
+		waiting(1)
+		ask("c3", "q", model.Question)
+		waiting(2)
+		ask("c2", "p2", model.Permission) // c2 waits already with a permission
+		ask("c2", "q", model.Question)
+		waiting(3)
+		close(release)
+		var got []string
+		for _, g := range p.settle() {
+			got = append(got, g.Chat+" "+g.Kind)
+		}
+		if want := []string{"c1 question", "c2 permission", "c3 question", "c2 question"}; !slices.Equal(got, want) {
+			t.Errorf("pushed %q, want %q", got, want)
+		}
+	})
 }
 
 // A turn's "finished" wait is the service's: Close ends it, and nothing
 // of it runs into the service (or the chats, through Agent) after Close
 // returned.
 func TestCloseEndsTheFinishedWait(t *testing.T) {
-	s, p, _, _ := pushing(t, func(tm *timing) { tm.finished = 200 * time.Millisecond })
-	var mu sync.Mutex
-	closed, after := false, false
-	s.UsePush(Push{Key: "key", Send: p.send,
-		Agent: func(string) (string, bool) {
-			mu.Lock()
-			defer mu.Unlock()
-			after = after || closed
-			return "Claude", true
-		}}, false)
-	turn(s, "c1")
-	s.Close()
-	mu.Lock()
-	closed = true
-	mu.Unlock()
-	time.Sleep(400 * time.Millisecond) // past the wait
-	mu.Lock()
-	defer mu.Unlock()
-	if after || len(p.take()) > 0 {
-		t.Error("the finished wait called into the service after Close returned")
-	}
+	synctest.Test(t, func(t *testing.T) {
+		s, p, _, _ := pushing(t, func(tm *timing) { tm.finished = 200 * time.Millisecond })
+		var mu sync.Mutex
+		closed, after := false, false
+		s.UsePush(Push{Key: "key", Send: p.send,
+			Agent: func(string) (string, bool) {
+				mu.Lock()
+				defer mu.Unlock()
+				after = after || closed
+				return "Claude", true
+			}}, false)
+		turn(s, "c1")
+		s.Close()
+		mu.Lock()
+		closed = true
+		mu.Unlock()
+		if after || len(p.settle()) > 0 { // past the wait
+			t.Error("the finished wait called into the service after Close returned")
+		}
+	})
 }

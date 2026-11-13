@@ -65,9 +65,9 @@ func (s *Service) device(key []byte, id string) string {
 func (s *Service) run(conn *noiseconn.Conn, device, id string) {
 	s.mu.Lock()
 	i := s.deviceIndexLocked(device)
-	if i < 0 || !s.settings.On || len(s.conns) >= MaxConns {
+	if n := len(s.conns); i < 0 || !s.settings.On || n >= MaxConns {
 		s.mu.Unlock()
-		slog.Info("device turned away", "device", device, "connections", len(s.conns))
+		slog.Info("device turned away", "device", device, "connections", n)
 		_ = conn.Close()
 		return
 	}

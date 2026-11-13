@@ -28,7 +28,7 @@ func callTool(t *testing.T, d *daemon, key, tool string, args any) (text string,
 	t.Helper()
 	body, err := json.Marshal(map[string]any{"name": tool, "arguments": args})
 	testcheck.NoErr(t, err)
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, d.toolAPI+"/tools/call", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, d.url+"/tools/call", bytes.NewReader(body))
 	testcheck.NoErr(t, err)
 	req.Header.Set("Authorization", "Bearer "+key)
 	resp, err := http.DefaultClient.Do(req)

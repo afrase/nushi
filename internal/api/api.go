@@ -107,8 +107,9 @@ func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Ha
 
 // MaxRequest is the largest request read, unzipped: a prompt as large as
 // an agent takes (agentproc.MaxMessage, its images too) fits; a larger one
-// is refused with ResourceExhausted before it is decoded.
-const MaxRequest = 32 << 20
+// is refused with ResourceExhausted before it is decoded. A variable only
+// so a test can lower it, read as a handler is made.
+var MaxRequest = 32 << 20
 
 // macOnly are the calls that pair, revoke or move remote access, and
 // those only the Mac's app has a use for: a device's channel never makes

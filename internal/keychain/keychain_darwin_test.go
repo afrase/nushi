@@ -71,11 +71,27 @@ func TestAnotherProgram(t *testing.T) {
 	}
 }
 
+// What a status means, on a machine with a login keychain and a process
+// that can ask for the user's OK, and on one without either: the
+// machine's own are replaced, so the test never asks the real keychain.
 func TestKinds(t *testing.T) {
-	for status, want := range map[int]error{-25308: ErrNeedsOK, -25293: ErrNeedsOK, -128: ErrNeedsOK, 100002: ErrRestart,
-		-25307: ErrNoKeychain, -25294: ErrNoKeychain, -25291: ErrNoKeychain, -25299: nil} {
-		if got := kind(status); !errors.Is(got, want) || (got == nil) != (want == nil) {
-			t.Errorf("%d: %v, want %v", status, got, want)
+	keychain, ask := hasKeychain, asking
+	t.Cleanup(func() { hasKeychain, asking = keychain, ask })
+	for _, m := range []struct {
+		keychain bool
+		why      string // asking's
+		want     map[int]error
+	}{
+		{true, "", map[int]error{-25300: ErrNotFound, -25308: ErrNeedsOK, -25293: ErrNeedsOK, -128: ErrNeedsOK, 100002: ErrRestart,
+			-25307: ErrNoKeychain, -25294: ErrNoKeychain, -25291: ErrNoKeychain, -25299: nil}},
+		{false, "it runs outside your login session", map[int]error{-25300: ErrNoKeychain, -25308: ErrRestart, -128: ErrRestart, 100002: ErrNoKeychain}},
+	} {
+		hasKeychain = func() bool { return m.keychain }
+		asking = func() string { return m.why }
+		for status, want := range m.want {
+			if got := kind(status); !errors.Is(got, want) || (got == nil) != (want == nil) {
+				t.Errorf("keychain %v, can't ask %q: %d: %v, want %v", m.keychain, m.why, status, got, want)
+			}
 		}
 	}
 }

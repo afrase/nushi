@@ -1,6 +1,7 @@
 package relay
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"crypto/rand"
@@ -301,7 +302,8 @@ func TestSlowReaderLetGo(t *testing.T) {
 	dir := webDir(t)
 	big := make([]byte, 32<<20)
 	_, _ = rand.Read(big) // incompressible
-	testcheck.NoErr(t, os.WriteFile(filepath.Join(dir, "big.0123456789abcdef.wasm"), big, 0o600))
+	// A .bin, which the site doesn't gzip: a .wasm's 32 MB at BestCompression took seconds under -race.
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(dir, "big.0123456789abcdef.bin"), big, 0o600))
 	site, err := LoadSite(dir, "http://127.0.0.1")
 	testcheck.NoErr(t, err)
 	lim := Defaults
@@ -311,11 +313,15 @@ func TestSlowReaderLetGo(t *testing.T) {
 	c, err := net.Dial("tcp", strings.TrimPrefix(srv.URL, "http://"))
 	testcheck.NoErr(t, err)
 	defer c.Close() //nolint:errcheck // a test's connection
-	_, err = io.WriteString(c, "GET /big.0123456789abcdef.wasm HTTP/1.1\r\nHost: x\r\n\r\n")
+	_, err = io.WriteString(c, "GET /big.0123456789abcdef.bin HTTP/1.1\r\nHost: x\r\n\r\n")
 	testcheck.NoErr(t, err)
-	time.Sleep(time.Second) // reading nothing, past its time
+	time.Sleep(500 * time.Millisecond) // reading nothing, past its time
 	testcheck.NoErr(t, c.SetReadDeadline(time.Now().Add(10*time.Second)))
-	n, err := io.Copy(io.Discard, c)
+	r := bufio.NewReader(c)
+	if status, err := r.ReadString('\n'); err != nil || !strings.HasPrefix(status, "HTTP/1.1 200 ") {
+		t.Fatalf("answered %q: %v", status, err)
+	}
+	n, err := io.Copy(io.Discard, r)
 	if err != nil || n >= int64(len(big)) {
 		t.Fatalf("read %d of %d: %v", n, len(big), err)
 	}

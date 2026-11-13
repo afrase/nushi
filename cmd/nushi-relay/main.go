@@ -56,20 +56,11 @@ func main() {
 		return
 	}
 
-	for p := range strings.SplitSeq(*proxies, ",") {
-		if p = strings.TrimSpace(p); p == "" {
-			continue
-		}
-		pre, err := netip.ParsePrefix(p)
-		if err != nil {
-			a, aerr := netip.ParseAddr(p)
-			if aerr != nil {
-				log.Fatalf("-trusted-proxy: %q is neither an address nor a CIDR", p)
-			}
-			pre = netip.PrefixFrom(a, a.BitLen())
-		}
-		lim.TrustedProxies = append(lim.TrustedProxies, pre.Masked())
+	trusted, err := trustedProxies(*proxies)
+	if err != nil {
+		log.Fatalf("-trusted-proxy: %v", err)
 	}
+	lim.TrustedProxies = trusted
 
 	app, err := site(*web, *origin, *host, builtIn())
 	if err != nil {
@@ -96,4 +87,27 @@ func main() {
 	}
 	log.Printf("nushi-relay listening on %s, TLS for %s", ln.Addr(), *host)
 	log.Fatal(srv.ServeTLS(ln, "", ""))
+}
+
+// trustedProxies parses -trusted-proxy: comma-separated addresses (each a
+// prefix of its full length) and CIDRs, masked. A mistake is an error, not
+// a skipped entry: per-address caps would otherwise believe a header from
+// a peer the operator didn't name, or not from one they did.
+func trustedProxies(list string) ([]netip.Prefix, error) {
+	var out []netip.Prefix
+	for p := range strings.SplitSeq(list, ",") {
+		if p = strings.TrimSpace(p); p == "" {
+			continue
+		}
+		pre, err := netip.ParsePrefix(p)
+		if err != nil {
+			a, aerr := netip.ParseAddr(p)
+			if aerr != nil {
+				return nil, fmt.Errorf("%q is neither an address nor a CIDR", p)
+			}
+			pre = netip.PrefixFrom(a, a.BitLen())
+		}
+		out = append(out, pre.Masked())
+	}
+	return out, nil
 }

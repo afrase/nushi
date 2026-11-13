@@ -61,8 +61,9 @@ func TestNothingPrivateLogged(t *testing.T) {
 	log := &syncBuffer{}
 	defer slog.SetDefault(slog.Default())
 	slog.SetDefault(slog.New(logs.Handler(log)))
+	debug := logs.Level.Level()
+	t.Cleanup(func() { logs.Level.Set(debug) }) // after the daemon's goroutines, which log at it
 	logs.SetDebug(true)
-	defer logs.SetDebug(false)
 	const token = "MARKER-TOKEN-0123456789abcdef"
 	logs.Mask(token)
 	t.Setenv("NUSHI_TEST_SECRET", "MARKER-ENV-5d1c")
