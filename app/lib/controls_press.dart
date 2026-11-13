@@ -79,12 +79,23 @@ class Pressable extends StatefulWidget {
     super.key,
     this.tooltip = '',
     this.autofocus = false,
+    this.slop,
+    this.tooltipAt,
   });
 
   final VoidCallback? onTap;
   final Widget Function(BuildContext context, ControlLook look) builder;
   final String tooltip;
   final bool autofocus;
+
+  /// How far the pointer may move in a click, for a control that also
+  /// drags (`dragSlop`, its drag's own): else Flutter's, a point for a
+  /// mouse.
+  final double? slop;
+
+  /// Where its tooltip goes, when not below it as every tooltip's is
+  /// (beside the project rail's tiles).
+  final TooltipPositionDelegate? tooltipAt;
 
   @override
   State<Pressable> createState() => _PressableState();
@@ -124,10 +135,8 @@ class _PressableState extends State<Pressable> {
       onShowFocusHighlight: (v) => _set(_hover, v),
       child: PressWatch(
         onPress: (down) => _press(down && on),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          child: touchTarget(
+        child: _taps(
+          touchTarget(
             context,
             widget.builder(context, (
               hover: (_hover || _down) && on,
@@ -141,8 +150,35 @@ class _PressableState extends State<Pressable> {
     );
     return widget.tooltip.isEmpty
         ? control
-        : Tooltip(message: widget.tooltip, child: control);
+        : Tooltip(
+            message: widget.tooltip,
+            positionDelegate: widget.tooltipAt,
+            child: control,
+          );
   }
+
+  /// [child] clicked, within [Pressable.slop] when it has one.
+  Widget _taps(Widget child) => switch (widget.slop) {
+    null => GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap,
+      child: child,
+    ),
+    final slop => RawGestureDetector(
+      behavior: HitTestBehavior.opaque,
+      gestures: {
+        TapGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+              () => TapGestureRecognizer(
+                preAcceptSlopTolerance: slop,
+                postAcceptSlopTolerance: slop,
+              ),
+              (r) => r.onTap = widget.onTap,
+            ),
+      },
+      child: child,
+    ),
+  };
 }
 
 /// A quiet pressable area: a light tint under the pointer (unless not
