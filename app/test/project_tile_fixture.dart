@@ -78,11 +78,14 @@ Future<Uint8List> photoPng(
 
 /// An animated GIF made here, byte by byte: [frames] frames [side] square,
 /// each one flat color of four (amber, blue, green, rose, in turn), a
-/// tenth of a second each, looping for ever.
-Uint8List animatedGif({int frames = 3, int side = 8}) {
+/// tenth of a second each, looping for ever. With [screen], the image is
+/// that square and its frames [side] square in its corner: a big image in
+/// few bytes, as a flat GIF packs.
+Uint8List animatedGif({int frames = 3, int side = 8, int? screen}) {
+  final whole = screen ?? side;
   final out = BytesBuilder()
     ..add('GIF89a'.codeUnits)
-    ..add([side & 0xFF, side >> 8, side & 0xFF, side >> 8])
+    ..add([whole & 0xFF, whole >> 8, whole & 0xFF, whole >> 8])
     // A global table of four colors.
     ..add([0xF1, 0, 0])
     ..add([0xE8, 0xA3, 0x3D, 0x3D, 0x6F, 0xE8, 0x3D, 0xB8, 0x6A])

@@ -27,7 +27,7 @@ To change a project's tile:
 To use a picture of your own:
 
 1. Right-click the project's name and pick **Change tile…**.
-2. Click **Choose image…** and pick a PNG, JPEG, GIF or WebP file (up to 16 MB).
+2. Click **Choose image…** and pick a PNG, JPEG, GIF or WebP file (up to 16 MB; an animated one up to 4K, 3840 × 2160).
 3. Click **Save**.
 
 A GIF plays while the pointer is on the tile. To take the picture off, open **Change tile…** again and click **Remove image**, then **Save**. Nushi keeps its own copy of the picture, so the file you picked can be moved or deleted.

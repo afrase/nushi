@@ -31,7 +31,8 @@ typedef _First = ({ui.Image image, bool animated});
 
 /// The first frames decoded so far, by picture and size in pixels, so a
 /// tile built again (a list that rebuilds) shows its image at once. Small:
-/// each is a tile's size. One goes when its picture does ([forgetPicture]).
+/// each is a tile's size, an animated one's too ([tileFrame]). One goes
+/// when its picture does ([forgetPicture]).
 final _firsts = <String, _First>{};
 final _decoding = <String, Future<_First?>>{};
 
@@ -158,7 +159,7 @@ class TilePictureViewState extends State<TilePictureView> {
       final frame = await codec.getNextFrame();
       final animated = codec.frameCount > 1;
       codec.dispose();
-      return (image: frame.image, animated: animated);
+      return (image: await tileFrame(frame.image, side), animated: animated);
     } on Object {
       return null; // gone, or not an image after all: the fallback
     }
@@ -212,9 +213,17 @@ class TilePictureViewState extends State<TilePictureView> {
       return;
     }
     if (run != _run || !mounted) return frame.image.dispose();
+    final ui.Image image;
+    try {
+      image = await tileFrame(frame.image, _side);
+    } on Object {
+      if (run == _run) _pause();
+      return;
+    }
+    if (run != _run || !mounted) return image.dispose();
     final before = _frame;
     setState(() {
-      _frame = frame.image;
+      _frame = image;
       played++;
     });
     before?.dispose();
