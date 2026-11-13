@@ -637,6 +637,18 @@ class _FilteredState extends State<_Filtered> {
   // The row Enter picks, of those shown: the current one at first.
   late int _at = max(0, _shown.indexWhere((e) => e.checked));
 
+  /// Opens on the current row, wherever it is in a long list (a font
+  /// among hundreds), in the middle of what shows.
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_lit.currentContext case final c? when _at > 0) {
+        Scrollable.ensureVisible(c, alignment: 0.5);
+      }
+    });
+  }
+
   @override
   void dispose() {
     _text.dispose();
