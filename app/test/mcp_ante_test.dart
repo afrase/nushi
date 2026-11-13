@@ -254,4 +254,38 @@ void main() {
     expect(list.userOnly, isTrue);
     await closeView(tester, d);
   });
+
+  testWidgets('a change in one folder asks for the agent’s others again, '
+      'the same lists', (tester) async {
+    final (fake, d) = await _daemon(tester);
+    final a = McpServers.of(d, '/changed/a');
+    final shown = McpServers.of(d, '/changed/shown');
+    final hidden = McpServers.of(d, '/changed/hidden');
+    final ante = McpServers.of(d, '/changed/a', agent: 'ante');
+    await tester.pumpAndSettle();
+    var told = 0;
+    void tell() => told++;
+    shown.addListener(tell);
+    addTearDown(() => shown.removeListener(tell));
+    int asked(String folder, [String agent = 'claude']) => fake.calls
+        .whereType<ListMcpServersRequest>()
+        .where((r) => r.folder == folder && r.agent == agent)
+        .length;
+    final before = (asked('/changed/shown'), asked('/changed/hidden'));
+    final anteBefore = asked('/changed/a', 'ante');
+    a.changed();
+    await tester.pumpAndSettle();
+    // The shown list is asked for again at once (list, then check), the
+    // hidden one only when next asked for; another agent's not at all.
+    expect(asked('/changed/shown'), before.$1 + 2);
+    expect(told, greaterThan(0));
+    expect(asked('/changed/hidden'), before.$2);
+    expect(McpServers.of(d, '/changed/hidden'), same(hidden));
+    expect(McpServers.of(d, '/changed/shown'), same(shown));
+    await tester.pumpAndSettle();
+    expect(asked('/changed/hidden'), before.$2 + 2);
+    expect(McpServers.of(d, '/changed/a', agent: 'ante'), same(ante));
+    expect(asked('/changed/a', 'ante'), anteBefore);
+    await closeView(tester, d);
+  });
 }
