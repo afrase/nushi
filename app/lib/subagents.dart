@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
@@ -314,9 +315,13 @@ class SubagentLine extends StatelessWidget {
                           ),
                           child: WorktreeTag(tag),
                         ),
-                      // The name takes the room; the state ends the line.
+                      // The name takes the room; the state ends the line,
+                      // a third of it at most where the row is narrow (a
+                      // phone's), so the name still says which it is.
                       ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 240),
+                        constraints: BoxConstraints(
+                          maxWidth: math.min(240, box.maxWidth / 3),
+                        ),
                         child: SubagentState(
                           s,
                           style: theme.ui(t.textSecondary, size: 12),

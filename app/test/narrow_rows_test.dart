@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/subagent_pane.dart';
@@ -14,8 +15,9 @@ import 'package:nushi/tool_calls.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-// Deep review 2026-11-13, finding 5: a run of a subagent's tool calls lost
-// its title and its failed count at the pane's widths.
+// Deep review 2026-11-13, findings 5 and 18: a run of a subagent's tool
+// calls lost its title and its failed count at the pane's widths, and a
+// running subagent's row gave its state all the room, its name none.
 
 /// A chat whose running subagent read, edited a Markdown file (so its run
 /// previews, with +n −m) and ran a command that failed, then went on.
@@ -195,5 +197,30 @@ void main() {
       await tester.pump();
     }
     expect(find.text('1 failed'), findsOne);
+  });
+
+  testWidgets("a running subagent's row on the phone shows which it is", (
+    tester,
+  ) async {
+    viewport(tester, const Size(390, 844), ratio: 3);
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    final c = chat('c', 'claude', 'Callers of store.Get');
+    final fake = FakeDaemon([c])
+      ..answer = (input) => input is GetChatRequest
+          ? GetChatResponse(chat: c, items: _items())
+          : null;
+    final phone = await startPhone(tester, fake);
+    await tester.tap(find.text('Callers of store.Get'));
+    await _pump(tester);
+    final line = find.byType(SubagentLine);
+    final name = find.descendant(
+      of: line,
+      matching: find.textContaining('Explore', findRichText: true),
+    );
+    expect(tester.getSize(name.first).width, greaterThan(100));
+    await render(tester, find.byType(PhoneApp), 'narrow_rows_phone');
+    await endPhone(tester, phone);
   });
 }
