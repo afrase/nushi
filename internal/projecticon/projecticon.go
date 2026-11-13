@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/afrase/nushi/internal/imagesize"
 	"github.com/afrase/nushi/internal/regularfile"
@@ -107,9 +108,14 @@ func named(root *os.Root, stems []string) (Icon, bool) {
 }
 
 // largest is the icon with the most pixels among the PNGs of the icon
-// set at dir.
+// set at dir. Only a folder is opened, never a link, a fifo or a device:
+// the Lstat says it's one before the open, and the open itself takes
+// only a folder and never waits, so a fifo put there since can't hang it.
 func largest(root *os.Root, dir string) (Icon, bool) {
-	d, err := root.Open(dir)
+	if fi, err := root.Lstat(dir); err != nil || !fi.IsDir() {
+		return Icon{}, false
+	}
+	d, err := root.OpenFile(dir, os.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return Icon{}, false
 	}
