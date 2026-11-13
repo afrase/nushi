@@ -80,6 +80,7 @@ void main() {
         // No rail: New chat has the sidebar's width, and each project's
         // header its tile.
         expect(find.byType(ProjectRail), findsNothing);
+
         final sidebar = tester.getRect(find.byType(Sidebar));
         expect(
           tester.getRect(find.byType(WideButton)).left,
@@ -261,6 +262,27 @@ void main() {
         expectTextInside(tester, width);
         await render(tester, find.byType(NushiApp), 'rail_$name');
 
+        /// A tile mid-drag, rendered: lifted under the pointer, the others
+        /// apart; dropped after.
+        Future<void> dragRender() async {
+          var at = tester.getCenter(find.byTooltip('cappy\n$cappy'));
+          final goal = tester.getRect(find.byTooltip('notes\n$notes')).bottom;
+          final drag = await tester.startGesture(
+            at,
+            kind: PointerDeviceKind.mouse,
+          );
+          while (at.dy < goal) {
+            at += const Offset(0, 6);
+            await drag.moveTo(at);
+            await tester.pump();
+          }
+          await tester.pump(const Duration(milliseconds: 300));
+          await render(tester, find.byType(NushiApp), 'rail_drag_$name');
+          await drag.up();
+          await drag.removePointer();
+          await tester.pump(const Duration(milliseconds: 300));
+        }
+
         final sidebar = tester.getRect(find.byType(Sidebar));
         final rail = find.byType(ProjectRail);
         if (sidebar.width < ProjectRail.minSidebar) {
@@ -280,6 +302,20 @@ void main() {
         // Nothing of the rail runs under the status card.
         final add = tester.getRect(find.byTooltip('Add project…'));
         expect(add.left, all.left);
+
+        await dragRender();
+
+        // A tile's tooltip, at its right.
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(
+          location: tester.getCenter(find.byTooltip('garden\n$garden')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pump(const Duration(milliseconds: 300));
+        await render(tester, find.byType(NushiApp), 'rail_tooltip_$name');
+        await mouse.removePointer();
+        await tester.pump(const Duration(seconds: 1));
 
         // Narrowed to a project.
         await tester.tap(find.byTooltip('ledger-poc\n$ledger'));

@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 
 import 'package:nushi/list_motion.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/slop_draggable.dart';
 
 // Lists whose items move by dragging, the others sliding apart to open
 // the gap where the dragged one would land and settling on the drop, as
@@ -30,6 +31,10 @@ const _slideFor = Duration(milliseconds: 200);
 /// [standIn], while given (keyed), shows at the top for an item on its
 /// way, and the first new item to come takes its place, with no jump;
 /// nothing drags meanwhile.
+///
+/// [before] and [after], when given, stand above and below the items and
+/// never move: a drag over one of them lands at that end (the project
+/// rail's All projects and Add project…).
 class SlideList<T extends Object> extends StatefulWidget {
   const new({
     required this.count,
@@ -38,10 +43,14 @@ class SlideList<T extends Object> extends StatefulWidget {
     required this.onMove,
     super.key,
     this.standIn,
+    this.before,
+    this.after,
   });
 
   final int count;
   final Widget? standIn;
+  final Widget? before;
+  final Widget? after;
 
   /// The item at an index, keyed; its [ItemDrag] makes the part that
   /// drags it.
@@ -61,14 +70,18 @@ class ItemDrag<T extends Object> {
   final int _i;
 
   /// [child] dragging its item, carrying [data], [feedback] under the
-  /// pointer; not while [enabled] is off.
+  /// pointer (its top left there); not while [enabled] is off. The drag
+  /// starts once the pointer has moved past [slop] (`dragSlop` for one
+  /// that's clicked too), else at once.
   Widget draggable({
     required T data,
     required Widget feedback,
     required Widget child,
     bool enabled = true,
-  }) => Draggable<T>(
+    double slop = 0,
+  }) => SlopDraggable<T>(
     data: data,
+    slop: slop,
     maxSimultaneousDrags: enabled && !_list._standing ? null : 0,
     dragAnchorStrategy: pointerDragAnchorStrategy,
     feedback: feedback,
@@ -343,11 +356,20 @@ class _SlideListState<T extends Object> extends State<SlideList<T>> {
         if (d != null && widget.accepts(d)) setState(() => _dropAt = null);
       },
       onAcceptWithDetails: (_) => _drop(),
-      builder: (context, _, _) => GlideColumn(
-        key: _column,
-        motion: ListMotion.of(context),
-        children: [for (final k in order) slot(k, _keys.indexOf(k))],
-      ),
+      builder: (context, _, _) {
+        final column = GlideColumn(
+          key: _column,
+          motion: ListMotion.of(context),
+          children: [for (final k in order) slot(k, _keys.indexOf(k))],
+        );
+        if (widget.before == null && widget.after == null) return column;
+        // Over them the pointer is above the items' first or below their
+        // last, which is where [_over] puts the drop.
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [?widget.before, column, ?widget.after],
+        );
+      },
     );
   }
 }

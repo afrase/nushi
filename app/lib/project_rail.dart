@@ -1,11 +1,16 @@
+import 'dart:math';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/card_list.dart' show reordered;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/project_tile.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/slide_list.dart';
+import 'package:nushi/slop_draggable.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -32,7 +37,11 @@ Future<void> addProject() async {
 /// ([sidebarProject]); the one picked wears a ring. A
 /// tile says its project's name and path in its tooltip, counts the
 /// project's chats that need you in a badge, and has the project's menu
-/// ([entries]) on a right-click. It scrolls when the tiles don't fit.
+/// ([entries]) on a right-click. A project's tile dragged moves the
+/// project ([SlideList]), setting the sidebar's own order
+/// ([sidebarOrder]), so the list follows; All projects and Add project…
+/// never move. It scrolls when the tiles don't fit, and as a drag nears
+/// its top or bottom edge.
 class ProjectRail extends StatelessWidget {
   const new({
     required this.daemon,
@@ -72,6 +81,55 @@ class ProjectRail extends StatelessWidget {
       .where((c) => !c.archived && !c.scratch && c.home == folder && c.waiting)
       .length;
 
+  /// [folder]'s tile: a click narrows the sidebar to it, a right-click
+  /// opens its menu, and a drag past [dragSlop] moves it, a copy of the
+  /// tile lifted under the pointer as the sidebar's header's is.
+  Widget _project(BuildContext context, String folder, ItemDrag<_Moving> drag) {
+    final t = NushiTheme.of(context).t;
+    Widget tile() =>
+        FolderTile(daemon: daemon, folder: folder, color: colors[folder] ?? 0);
+    return Menu(
+      filter: false,
+      entries: entries(context, folder),
+      builder: (context, open) => drag.draggable(
+        data: _Moving(folder),
+        slop: dragSlop,
+        // Its middle under the pointer, which is where it lands.
+        feedback: Transform.translate(
+          offset: const Offset(-ProjectTile.large / 2, -ProjectTile.large / 2),
+          child: Opacity(
+            opacity: 0.85,
+            child: Material(
+              type: MaterialType.transparency,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(NushiTheme.control),
+                  boxShadow: floatShadows(t),
+                ),
+                child: tile(),
+              ),
+            ),
+          ),
+        ),
+        child: RailTile(
+          tooltip: '${folderParts(folder).$1}\n${tildePath(folder)}',
+          picked: shown == folder,
+          onTap: () => sidebarProject.value = folder,
+          onMenu: open,
+          // The count follows each chat's state, not the list's.
+          badge: ListenableBuilder(
+            listenable: Listenable.merge([
+              for (final c in daemon.chats.values)
+                if (c.home == folder) c.look,
+            ]),
+            builder: (context, _) => TileBadge(_needs(folder)),
+          ),
+          child: tile(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
@@ -89,60 +147,57 @@ class ProjectRail extends StatelessWidget {
           // Room for the first tile's ring and the last's.
           padding: const EdgeInsets.only(top: top, bottom: 6),
           children: [
-            slot(
-              RailTile(
-                tooltip: 'All projects',
-                picked: shown == null,
-                onTap: () => sidebarProject.value = null,
-                child: _Plain(
-                  fill: t.lifted,
-                  child: Icon(
-                    Icons.layers_outlined,
-                    size: 18,
-                    color: t.textSecondary,
-                  ),
-                ),
+            // The projects' tiles move; All projects and Add project…
+            // stay put, and a tile dragged over one lands at that end.
+            SlideList<_Moving>(
+              count: folders.length,
+              accepts: (_) => true,
+              onMove: (from, to) => sidebarOrder.value = reordered(
+                sidebarOrder.value,
+                folders,
+                from,
+                to,
               ),
-            ),
-            slot(
-              SizedBox(width: 20, height: 1, child: ColoredBox(color: t.line)),
-            ),
-            for (final folder in folders)
-              slot(
-                Menu(
-                  key: ValueKey(folder),
-                  filter: false,
-                  entries: entries(context, folder),
-                  builder: (context, open) => RailTile(
-                    tooltip: '${folderParts(folder).$1}\n${tildePath(folder)}',
-                    picked: shown == folder,
-                    onTap: () => sidebarProject.value = folder,
-                    onMenu: open,
-                    // The count follows each chat's state, not the list's.
-                    badge: ListenableBuilder(
-                      listenable: Listenable.merge([
-                        for (final c in daemon.chats.values)
-                          if (c.home == folder) c.look,
-                      ]),
-                      builder: (context, _) => TileBadge(_needs(folder)),
-                    ),
-                    child: FolderTile(
-                      daemon: daemon,
-                      folder: folder,
-                      color: colors[folder] ?? 0,
+              item: (i, drag) => KeyedSubtree(
+                key: ValueKey(folders[i]),
+                child: slot(_project(context, folders[i], drag)),
+              ),
+              before: Column(
+                children: [
+                  slot(
+                    RailTile(
+                      tooltip: 'All projects',
+                      picked: shown == null,
+                      onTap: () => sidebarProject.value = null,
+                      child: _Plain(
+                        fill: t.lifted,
+                        child: Icon(
+                          Icons.layers_outlined,
+                          size: 18,
+                          color: t.textSecondary,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  slot(
+                    SizedBox(
+                      width: 20,
+                      height: 1,
+                      child: ColoredBox(color: t.line),
+                    ),
+                  ),
+                ],
               ),
-            slot(
-              RailTile(
-                tooltip: 'Add project…',
-                onTap: addProject,
-                child: CustomPaint(
-                  painter: _DashedEdge(t.textMuted),
-                  child: SizedBox.square(
-                    dimension: ProjectTile.large,
-                    child: Icon(Icons.add, size: 18, color: t.textMuted),
+              after: slot(
+                RailTile(
+                  tooltip: 'Add project…',
+                  onTap: addProject,
+                  child: CustomPaint(
+                    painter: _DashedEdge(t.textMuted),
+                    child: SizedBox.square(
+                      dimension: ProjectTile.large,
+                      child: Icon(Icons.add, size: 18, color: t.textMuted),
+                    ),
                   ),
                 ),
               ),
@@ -152,6 +207,13 @@ class ProjectRail extends StatelessWidget {
       ),
     );
   }
+}
+
+/// What a tile's drag carries: its project's folder.
+class _Moving {
+  const new(this.folder);
+
+  final String folder;
 }
 
 /// A tile of the rail as a control: [child], 38 square, pressed with a
@@ -195,6 +257,10 @@ class RailTile extends StatelessWidget {
         child: Pressable(
           onTap: onTap,
           tooltip: tooltip,
+          // A project's tile drags too: a click may move as far as its
+          // drag waits for. The rail's own tiles click alike.
+          slop: dragSlop,
+          tooltipAt: besideTile,
           builder: (context, look) => Stack(
             clipBehavior: Clip.none,
             children: [
@@ -239,6 +305,35 @@ class RailTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Where a rail tile's tooltip goes: to the tile's right, its middle
+/// level with the tile's, so it covers the chats' edge rather than the
+/// next tile; to its left if there's no room to the right, and below or
+/// above it, as any tooltip, if there's none either side. Kept inside
+/// the window, top to bottom.
+Offset besideTile(TooltipPositionContext at) {
+  const gap = 8.0;
+  final TooltipPositionContext(:target, :targetSize, :tooltipSize) = at;
+  final room = at.overlaySize;
+  final right = target.dx + targetSize.width / 2 + gap;
+  final left = target.dx - targetSize.width / 2 - gap - tooltipSize.width;
+  final x = right + tooltipSize.width <= room.width
+      ? right
+      : left >= 0
+      ? left
+      : null;
+  if (x == null) {
+    return positionDependentBox(
+      size: room,
+      childSize: tooltipSize,
+      target: target,
+      verticalOffset: targetSize.height / 2 + gap,
+      preferBelow: true,
+    );
+  }
+  final y = target.dy - tooltipSize.height / 2;
+  return Offset(x, y.clamp(0, max(0, room.height - tooltipSize.height)));
 }
 
 /// How many of a project's chats need you, on its tile's corner: the

@@ -45,6 +45,8 @@ The project rail is a column of larger tiles at the sidebar's left, one for each
 3. Click a project's tile. The sidebar shows only that project's chats.
 4. Click **All projects**, the tile at the top, to see every project again.
 
+To change the projects' order, drag a tile up or down the rail. The sidebar's list takes the same order, as dragging a project's header there changes the rail.
+
 A number on a tile counts that project's chats that need you. Hover over a tile for the project's name and folder. The rail goes when the sidebar is dragged narrow, and it isn't there while the sidebar is grouped by something other than Project.
 
 ## Change the fonts
