@@ -26,12 +26,11 @@ func TestCloseStopsAnAgentStillOpening(t *testing.T) {
 	turn(t, svc, c, "one")
 	agent.quit()
 	eventually(t, c, func() bool { return c.agent == nil })
-	agent.loadGate = make(chan struct{})
+	agent.loadGate, agent.entered = make(chan struct{}), make(chan string, 1)
 	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "queued while reopening"}, SendQueue); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return c.busy })
-	time.Sleep(10 * time.Millisecond) // the reopen waits on its load
+	<-agent.entered // the reopen waits on its load
 	svc.Close()
 	_, closed, _ := agent.count()
 	close(agent.loadGate)
@@ -106,10 +105,10 @@ func TestAForkAsTheAgentEnds(t *testing.T) {
 	ctx := context.Background()
 	id, _ := svc.Start(ctx, "", t.TempDir(), false)
 	c := svc.chats[id]
-	agent.forkGate = make(chan struct{})
+	agent.forkGate, agent.entered = make(chan struct{}), make(chan string, 1)
 	forked := make(chan error)
 	go func() { _, err := svc.Fork(ctx, id); forked <- err }()
-	time.Sleep(10 * time.Millisecond)
+	<-agent.entered // the fork waits on the agent
 	agent.quit()
 	eventually(t, c, func() bool { return c.agent == nil })
 	close(agent.forkGate)

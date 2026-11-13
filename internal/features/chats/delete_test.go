@@ -162,11 +162,11 @@ func TestAChatStaysIfItsWorktreeOrHistoryCantGo(t *testing.T) {
 // While a chat is being deleted, nothing reopens it or sends to it.
 func TestNothingReopensAChatBeingDeleted(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	agent.deletes, agent.deleteGate = true, make(chan struct{})
+	agent.deletes, agent.deleteGate, agent.entered = true, make(chan struct{}), make(chan string, 1)
 	deleted := make(chan error)
 	go func() { deleted <- svc.Delete(context.Background(), c.id, nil) }()
 	eventually(t, c, func() bool { return c.halting && c.agent == nil })
-	time.Sleep(20 * time.Millisecond) // the deleter is waiting on its delete
+	<-agent.entered // the deleter is waiting on its delete
 	agent.mu.Lock()
 	launches := agent.launches
 	agent.mu.Unlock()
