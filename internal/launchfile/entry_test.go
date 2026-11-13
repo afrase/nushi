@@ -45,6 +45,10 @@ func TestProblems(t *testing.T) {
 		{`{"name": "a", "program": "a.js", "port": 3000, "url": "http://localhost:4000"}`, "another port than the entry's"},
 		{`{"name": "a", "program": "a.js", "port": 3000, "url": "https://localhost"}`, "another port than the entry's"},
 		{`{"name": "a", "program": "a.js", "cwd": "../x"}`, `"cwd" must be a folder inside`},
+		{`{"name": "a", "program": "a.js", "env": {"NODE_OPTIONS=--require ./evil": ".js"}}`, `"env" names must be`},
+		{`{"name": "a", "program": "a.js", "env": {"PATH=/tmp/evilbin:": "/usr/bin:/bin"}}`, `"env" names must be`},
+		{`{"name": "a", "program": "a.js", "env": {"": "x"}}`, `"env" names must be`},
+		{`{"name": "a", "program": "a.js", "env": {"A\u0000B": "x"}}`, `"env" names must be`},
 	} {
 		e := p.entry(json.RawMessage(c.configuration))
 		if !strings.Contains(e.Problem, c.problem) || e.Hash != "" {
