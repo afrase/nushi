@@ -70,6 +70,7 @@ A theme of your own is a JSON file in the `themes` folder of Nushi's data folder
 
 - **A project's tile** narrows the sidebar to that project: its chats, its pinned ones, its archived ones, and of each section only its chats (a section with none of them isn't shown). The tile picked has a ring; **All projects** shows everything again. Nushi remembers the tile picked. ⌘1–⌘9 and ⌘[ ⌘] go through what shows. Opening or starting a chat of another project (from the palette, a notification, New chat) takes the sidebar to that project, so the open chat is always in the list.
 - **A badge** on a tile counts the project's chats that need you, pinned ones and ones in a section too.
+- **Dragging a tile** moves the project, as dragging its header in the list does: the rail and the list keep one order. The others slide apart where it would land; dropped over **All projects** it goes first, over **Add project…** last, and those two never move. A drag starts once the pointer has moved a few points, so a click that wobbles is still a click. Dragged near the rail's top or bottom edge, the rail scrolls. As with the headers, there's no key for it.
 - **A tile's tooltip** is the project's name and path; its right-click menu is the project's (New chat here, Open in terminal, Remove from sidebar, Change tile…).
 - The sidebar keeps its width with the rail or without. There's no rail under another grouping, nor while the sidebar is narrower than 250 points: the sidebar then shows every project, as it does with the rail off.
 

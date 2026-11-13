@@ -1,6 +1,6 @@
 # 0112. Project tiles in the sidebar's list; a rail of them as an option
 
-Status: accepted, 2026-11-12; amended the same day, after the owner tried v0.30.0-beta.1, and again after beta.2 (a tile's own image).
+Status: accepted, 2026-11-12; amended the same day, after the owner tried v0.30.0-beta.1, and again after beta.2 (a tile's own image); amended 2026-11-13 (tiles move by dragging).
 
 ## Context
 The redesign's mock (ADR 0111) has a Projects page: a narrow rail of square tiles beside the chats, one a project, and the same tile small before each project's name. ADR 0111 left it as a separate decision. The owner approved it (2026-11-12), with one complaint about the mock itself: same-shaped two-letter squares look alike, so a tile has to tell projects apart by more than two letters.
@@ -17,6 +17,7 @@ It was built whole and tried as v0.30.0-beta.1, the rail on at first. The owner,
 - **Add project…** is a row of the Arrange menu, under New section: it adds a folder picked in the system's panel to the sidebar's projects (`keepProject`) and starts no chat. Under another grouping it's off, as an empty project shows only among the projects.
 - **The project rail is an option, off at first**: Settings › Appearance › **Project rail** (`projectRail`, kept as `projectRailOn`). The beta saved `projectRail: true` for everyone, touched or not, so that key is ignored and dropped by the next save: who had the beta gets the new default.
 - **With it on**, a column 48 wide stands at the left of the sidebar's chats, under its top strip: **All projects**, a short hairline, a 38-square tile for each project in the sidebar's order (kept empty ones too), then a dashed **Add project…**; the first is level with New chat, and it scrolls when they don't fit. A project's tile narrows the sidebar to that project (`sidebarProject`): its group, its pinned chats, its archived ones, and of each section the chats that are its, a section with none of them and "No folder" left out; ⌘1–⌘9 and ⌘[ ⌘] go through what shows. The tile picked wears a ring of `accentInk`, 2 wide and 2 off the tile, and a tile counts its project's chats that need you in a badge. When a chat of another project opens or starts, the sidebar goes to that project, so the open chat's row is never left out. It shows only while the sidebar is arranged by project and at least 250 wide; else, and with the rail off, a stored pick narrows nothing.
+- **A tile moves by dragging, and so does its project** (2026-11-13). The rail has no order of its own: a drop sets the sidebar's (`sidebarOrder`), as dragging a project's header does, so the rail and the list never disagree, and a folder the order doesn't name keeps its place among the others ("No folder" too). It slides as the list does (`SlideList`): the others move apart where the tile would land, the tile faded there and a lifted copy under the pointer, its middle there; and a project's tile grows in and folds away as its header does. All projects and Add project… stand above and below the projects' tiles and never move; a tile dragged over one lands at that end, never past it. The drag waits until the pointer has moved 4 points (`dragSlop`), and a click is still one within them (`Pressable.slop`): Flutter's own wait is a point for a mouse, and a trackpad's click can move more. Near the rail's top or bottom edge a drag scrolls it. No key moves a tile, as none moves a header.
 - **The sidebar keeps its width.** The rail takes 54 of it from the chats: turning it on or off moves neither the sidebar's edge nor the buttons in its strip (ADR 0111: a toggle never moves when pressed).
 
 ## Consequences
@@ -29,6 +30,7 @@ It was built whole and tried as v0.30.0-beta.1, the rail on at first. The owner,
 - The daemon doesn't know the sidebar's projects (the app keeps them), so it can't check the folder against them: the call is the Mac's only (`macOnly`, and the handler checks for the Mac's socket), as the calls that read any folder's git state are.
 - With the rail on at the sidebar's first width (260), the chats' rows are 54 narrower.
 - The phone has no tiles and no rail: its list is one column of every project.
+- The headers of the list still start their drag after a point: only the rail's tiles wait for 4.
 
 ## Alternatives considered
 - **The rail on at first** (this page until the owner tried it): the owner didn't like the view, and liked the tiles in the list.
@@ -39,6 +41,8 @@ It was built whole and tried as v0.30.0-beta.1, the rail on at first. The owner,
 - Keeping the picked file's path: the tile would break when the file moved, and Nushi would read from the user's folders at every launch.
 - Centring a mark by its font's ascent and descent: tried, and an emoji still sat a point or two off, as its ink isn't in the middle of them.
 - The header's tile at 18, as the mock: at 20 its letters are a point larger and read better, and the header is no higher.
+- A tile dropped over All projects or Add project… going back where it was: a drag that overshoots the first or last tile by a few points would be lost.
+- An order of the rail's own: the rail and the list would disagree, and a project would have two places to keep.
 - Widening the sidebar by the rail's width: its edge, and Arrange and the hide button with it, would move each time the rail came or went.
 - Keeping the rail at any width: under 250 the rows beside it are too narrow to read a title.
 - A color from the path alone: with five projects two often shared one. In the list's order rather than the order joined: dragging a project would recolor others.
