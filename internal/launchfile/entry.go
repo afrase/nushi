@@ -147,6 +147,9 @@ func (p place) resolve(c config, e *Entry) error {
 	if port < 0 || port > 65535 {
 		return errors.New("the port the command names isn't from 1 to 65535")
 	}
+	if err := checkEnv(c.env); err != nil {
+		return err
+	}
 	e.Port, e.Env, e.AutoPort, e.URL = port, c.env, autoPort, to.href
 	if e.Name == "" {
 		e.NameDerived = true
@@ -154,6 +157,19 @@ func (p place) resolve(c config, e *Entry) error {
 			e.Name = derivedName(e.Args)
 		} else {
 			e.Name = to.host
+		}
+	}
+	return nil
+}
+
+// checkEnv refuses an env name a variable can't have. One with "=" sets
+// the variable before it, so "NODE_OPTIONS=x" would set NODE_OPTIONS
+// under a name the row doesn't mark (flagged); no shell could set an
+// empty one or one with NUL either.
+func checkEnv(env map[string]string) error {
+	for k := range env {
+		if k == "" || strings.ContainsAny(k, "=\x00") {
+			return errors.New(`"env" names must be non-empty, without "=" or NUL`)
 		}
 	}
 	return nil

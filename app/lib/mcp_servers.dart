@@ -25,7 +25,9 @@ class McpServers extends ChangeNotifier {
       agent,
     );
     final at = list._at;
-    if (!list.checking && at != null && DateTime.now().difference(at) > fresh) {
+    final old = at != null && DateTime.now().difference(at) > fresh;
+    if (!list.checking && (list._stale || old)) {
+      list._stale = false;
       unawaited(Future.microtask(list.refresh)); // not while a build asks
     }
     return list;
@@ -57,6 +59,7 @@ class McpServers extends ChangeNotifier {
   String error = ''; // why the list or the check failed
 
   bool _again = false; // refresh once the running one is done
+  bool _stale = false; // refresh when next asked for: another folder's changed
   DateTime? _at; // when the last refresh ended
   late final _back = LoadAgain(daemon, () => unawaited(refresh()));
 
@@ -85,9 +88,21 @@ class McpServers extends ChangeNotifier {
   }
 
   /// After a change here: the agent's other folders' lists may be out of
-  /// date too.
+  /// date too. One shown, or being read, is asked for again now; the rest
+  /// when next asked for (of). They stay the folders' lists, each only
+  /// ever made once: one dropped would stay on agentList's listeners for
+  /// good, and a view still holding it would never hear of a change.
   void changed() {
-    _byFolder.removeWhere((k, l) => l != this && k.$1 == agent);
+    // A copy: a refresh tells its listeners at once, which may ask for
+    // another folder's list.
+    for (final MapEntry(key: (a, _), value: l) in _byFolder.entries.toList()) {
+      if (l == this || a != agent) continue;
+      if (l.checking || l.hasListeners) {
+        unawaited(l.refresh());
+      } else {
+        l._stale = true;
+      }
+    }
     unawaited(refresh());
   }
 

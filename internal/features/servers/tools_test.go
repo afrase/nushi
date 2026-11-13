@@ -263,6 +263,27 @@ func TestAnAskHoldsItsOwnStart(t *testing.T) {
 	}
 }
 
+// A card whose name no entry can have, as when it was masked for looking
+// like a secret, said no entry runs: allowing it holds the start under the
+// real name, which is refused, never run unshown.
+func TestAnAskWithAMaskedNameRunsNothing(t *testing.T) {
+	p := freePort(t)
+	s, _, _ := setup(t, entry("sk-dev-server-preview", p))
+	set, _ := agentTools(s)
+	command, ask := s.Command("c", "••••")
+	if command != "" {
+		t.Fatalf("Command(••••) = %q", command)
+	}
+	s.Answered(ask, true)
+	_, err := call(t, set, "preview_start", map[string]string{"name": "sk-dev-server-preview"})
+	if err == nil || !strings.Contains(err.Error(), "changed since the permission card") {
+		t.Errorf("the start: %v", err)
+	}
+	if s.Busy() {
+		t.Error("the entry runs")
+	}
+}
+
 // A start stopped before it answered says so, and who stopped it: it
 // didn't fail.
 func TestAStartStoppedBeforeItAnswers(t *testing.T) {

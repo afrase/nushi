@@ -21,7 +21,7 @@ import (
 // ask is a chat's ask to run the entry of a name.
 type ask struct {
 	id, chat string
-	name     string    // without case; "" when the card couldn't tell which, and it holds any start of the chat
+	name     string    // without case; "" when the card couldn't tell which (none, or one no entry can have), and it holds any start of the chat
 	hash     string    // the entry's as the card showed it; noEntry when none could run
 	allowed  time.Time // when the user allowed it; zero while the card waits
 }
@@ -44,6 +44,12 @@ const allowedFor = 10 * time.Minute
 // ask, and its id goes to Answered with the user's answer.
 func (s *Service) Command(chatID, name string) (command, askID string) {
 	a := ask{id: rand.Text()[:12], chat: chatID, name: strings.ToLower(name), hash: noEntry}
+	if !launchfile.ValidName(name) {
+		// No entry can have it (a name masked on the card, say), so the
+		// card says none runs, and the ask holds any start of the chat to
+		// that: one under the real name is refused, not run unchecked.
+		a.name = ""
+	}
 	if e, ok := s.runnable(chatID, name); ok {
 		a.hash, command = e.Hash, s.commandLine(e)
 	}

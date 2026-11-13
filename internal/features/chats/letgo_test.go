@@ -246,6 +246,31 @@ func TestUnseenLetsGo(t *testing.T) {
 	}
 }
 
+// A chat whose turn ran a subagent lets go once its agent stops: the
+// subagent's session routed only that agent's updates.
+func TestASubagentsChatLetsGo(t *testing.T) {
+	svc, agent, c, _, _ := lettingGo(t, nil)
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok"), {SessionUpdate: "subagent_update", SubagentUpdate: &acp.SubagentUpdate{
+		SessionID: "child1", State: acp.Nullable[acp.StateUpdate]{Value: &acp.StateUpdate{Idle: &acp.IdleStateUpdate{StopReason: string(acp.StopReasonEndTurn)}}}}}}
+	turn(t, svc, c, "one")
+	c.mu.Lock()
+	ran := len(c.children)
+	c.mu.Unlock()
+	if ran != 1 {
+		t.Fatalf("%d subagent sessions", ran)
+	}
+	testcheck.NoErr(t, svc.Sleep(c.id))
+	c.mu.Lock()
+	let, items, children := c.inCopy, len(c.items), len(c.children)
+	c.mu.Unlock()
+	if !let || items != 0 || children != 0 {
+		t.Errorf("asleep: let go %v, %d items, %d subagent sessions", let, items, children)
+	}
+	if got := shown(c); got != "user:one agent:m1" {
+		t.Errorf("let go, it shows %s", got)
+	}
+}
+
 // After a restart a chat's reopen reads its copy once: the merge with the
 // agent's replay takes the items read back (it read the copy twice).
 func TestRestartReadsTheCopyOnce(t *testing.T) {

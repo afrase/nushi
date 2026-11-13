@@ -8,7 +8,9 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -114,6 +116,36 @@ func TestLinks(t *testing.T) {
 	testcheck.NoErr(t, os.Symlink("inside.png", filepath.Join(dir, "logo.png")))
 	if _, ok := Find(dir); ok {
 		t.Error("a link inside the folder was followed")
+	}
+}
+
+// An icon set that's a fifo, or a link to a folder, is passed over at
+// once: never opened, so never waited on.
+func TestIconSetNotAFolder(t *testing.T) {
+	dir := t.TempDir()
+	fifo := filepath.Join(dir, "Assets.xcassets", "AppIcon.appiconset")
+	testcheck.NoErr(t, os.MkdirAll(filepath.Dir(fifo), 0o700))
+	testcheck.NoErr(t, syscall.Mkfifo(fifo, 0o600))
+	put(t, dir, "icons/app_icon_64.png", pngOf(t, 64, 64, false))
+	link := filepath.Join(dir, "macos", "Runner", "Assets.xcassets", "AppIcon.appiconset")
+	testcheck.NoErr(t, os.MkdirAll(filepath.Dir(link), 0o700))
+	testcheck.NoErr(t, os.Symlink("../../../icons", link))
+	found := make(chan bool, 1)
+	go func() {
+		_, ok := Find(dir)
+		found <- ok
+	}()
+	select {
+	case ok := <-found:
+		if ok {
+			t.Error("an icon was found")
+		}
+	case <-time.After(5 * time.Second):
+		// Opened for writing, the fifo lets the waiting open go.
+		if w, err := os.OpenFile(fifo, os.O_WRONLY|syscall.O_NONBLOCK, 0); err == nil {
+			_ = w.Close()
+		}
+		t.Fatal("Find waits on a fifo")
 	}
 }
 

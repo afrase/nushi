@@ -170,6 +170,29 @@ func TestCutAndDrop(t *testing.T) {
 	}
 }
 
+// A cut of an item still waiting for its After (the copy missed an item)
+// cuts it and what waits after it, as reading shows them: the rewound
+// items don't come back before the next one.
+func TestCutWhileWaiting(t *testing.T) {
+	s, _ := open(t)
+	add(t, s, "C", "", msg("a", "A"))
+	add(t, s, "C", "never", msg("u1", "1"), msg("x1", "X1"), msg("u2", "2"), msg("x2", "X2"))
+	testcheck.NoErr(t, s.Cut("C", "u2"))
+	add(t, s, "C", "x1", msg("u3", "3"))
+	if got := ids(read(t, s, "C")); got != "a=A u1=1 x1=X1 u3=3" {
+		t.Fatalf("read: %s", got)
+	}
+	heads, err := s.Heads("C")
+	testcheck.NoErr(t, err)
+	var got []string
+	for _, h := range heads {
+		got = append(got, h.ID)
+	}
+	if strings.Join(got, " ") != "a u1 x1 u3" {
+		t.Errorf("heads: %q", got)
+	}
+}
+
 // A crash in the middle of a write leaves a last line without its end:
 // reading skips it, and the next write starts a line of its own.
 func TestCrashMidWrite(t *testing.T) {

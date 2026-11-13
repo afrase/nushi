@@ -68,17 +68,21 @@ func (c *chat) letGoLocked() {
 	}
 	n := len(c.items)
 	c.items, c.aside, c.inCopy = nil, aside, true
+	clear(c.children) // the stopped agent's routes, which openSession clears anyway
 	c.logLocked().Info("transcript let go", "items", n, "asleep", c.asleep)
 }
 
 // canLetGoLocked says the copy holds every item that doesn't only show,
 // as reading it back would give it (nothing under way, which reading back
 // ends), and nothing of the chat's needs them now: no agent, no work, no
-// side chat, no pin being titled.
+// side chat, no pin being titled. Its subagents' sessions don't count:
+// they route a running agent's updates (children.go), and no agent runs;
+// they stay set until the next one opens, so a chat that ever ran a
+// subagent would never let go.
 func (c *chat) canLetGoLocked() bool {
 	return c.copies != nil && c.copiesOn() && c.mirrored && len(c.unsaved) == 0 && len(c.items) > 0 &&
 		c.parent == nil && c.agent == nil && !c.busy && !c.opening && !c.replaying && !c.halting && !c.removing && !c.stopping &&
-		len(c.sides) == 0 && len(c.children) == 0 && len(c.titling) == 0 && c.quietLocked() &&
+		len(c.sides) == 0 && len(c.titling) == 0 && c.quietLocked() &&
 		!slices.ContainsFunc(c.items, underWay)
 }
 
