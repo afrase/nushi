@@ -102,11 +102,18 @@ func (b *Brew) Has(cask, version string) bool {
 }
 
 // Upgrade runs `brew update` and `brew upgrade --cask cask` with the brew
-// of the prefix whose Caskroom has cask, and returns the end of what they
-// printed. cask is one of the tap's two, or it's refused. The error is a
-// sentence to show: brew's own last "Error:" line when it printed one,
-// or where to allow it when macOS refused the change to the app.
-func (b *Brew) Upgrade(ctx context.Context, cask string) (string, error) {
+// of the prefix whose Caskroom has cask, to install version, and returns
+// the end of what they printed. cask is one of the tap's two, or it's
+// refused. The error is a sentence to show: brew's own last "Error:"
+// line when it printed one, or where to allow it when macOS refused the
+// change to the app.
+//
+// A failed `brew update` doesn't stop the upgrade: it fails when any tap
+// can't be fetched (a private one whose key needs a password or a
+// fingerprint, which nothing can ask for here) though it updated the
+// rest. Its failure is the error only when the upgrade then leaves the
+// cask without version.
+func (b *Brew) Upgrade(ctx context.Context, cask, version string) (string, error) {
 	prefix := b.prefix(cask)
 	if prefix == "" {
 		return "", fmt.Errorf("Homebrew has no cask %q installed", cask)
@@ -116,13 +123,22 @@ func (b *Brew) Upgrade(ctx context.Context, cask string) (string, error) {
 	brew := filepath.Join(prefix, "bin", "brew")
 	env := append(slices.Clone(b.Env()), quiet...) // exec takes a name's last value
 	var out []byte
+	var stale error // brew update's failure
 	for _, args := range [][]string{{"update"}, {"upgrade", "--cask", cask}} {
 		printed, err := b.Run(ctx, env, brew, args...)
 		out = append(out, printed...)
 		out = out[max(0, len(out)-maxOutput):]
-		if err != nil {
-			return plain(out), failure(ctx, args[0], plain(printed), err)
+		if err == nil {
+			continue
 		}
+		why := failure(ctx, args[0], plain(printed), err)
+		if args[0] != "update" || ctx.Err() != nil {
+			return plain(out), why
+		}
+		stale = why
+	}
+	if stale != nil && !b.Has(cask, version) {
+		return plain(out), stale
 	}
 	return plain(out), nil
 }

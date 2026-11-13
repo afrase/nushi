@@ -42,7 +42,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package package-linux install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart lint-linux check check-app golden-diff renders lines relay icons adapters web web-fonts web-cut mermaid screenshots claude-record
+.PHONY: run daemon stop app package package-linux install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart lint-linux check check-app golden-diff renders lines relay relay-web icons adapters web web-fonts web-cut mermaid screenshots claude-record
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -112,7 +112,17 @@ endif
 relay:
 	CGO_ENABLED=0 go build -o bin/nushi-relay ./cmd/nushi-relay
 
-# The phone's web app (ADR 0052), served by the relay's -web: app/build/web.
+# The relay with the phone's web app built in, as a release's is (ADR
+# 0113): bin/nushi-relay -origin <address> serves it. The app goes into the
+# folder the relay embeds for the build only.
+relay-web: web
+	git clean -qfdx cmd/nushi-relay/web
+	cp -R app/build/web/. cmd/nushi-relay/web/
+	CGO_ENABLED=0 go build -o bin/nushi-relay ./cmd/nushi-relay
+	git clean -qfdx cmd/nushi-relay/web
+
+# The phone's web app (ADR 0052), built into a release's relay or served
+# from its folder by the relay's -web: app/build/web.
 # The engine's fallback fonts come once from Google's font host into a
 # cache outside the repository, checked against tools/webbuild/fonts.lock.
 FLUTTER_WEB = cd app && flutter build web -t lib/phone_main.dart --release --no-web-resources-cdn --no-wasm-dry-run --no-source-maps

@@ -20,6 +20,9 @@ The card for a newer version offered Copy: the owner pasted `brew update && brew
 - A Homebrew prefix elsewhere than the two usual ones isn't seen, as before (0061): Download.
 - A daemon stopped mid-install (a crash, Restart now) leaves brew running without anyone reading it; the next daemon knows nothing of it.
 
+## Amendments
+- 2026-11-13 (the owner's work Mac: "brew update: Fetching … failed!" for a private tap whose key needs a password or a fingerprint, which a command without a terminal can't be asked for): **a failed `brew update` no longer stops the upgrade.** It fails when any one tap can't be fetched, though it updated the others, Nushi's among them. The upgrade runs all the same; having the version afterwards is success, and `brew update`'s failure is shown only when the cask is left without it. Out of time still stops there. Fetching Nushi's tap alone (git in the tap's folder) was turned down: `brew update` is also what keeps the brew that upgrades current.
+
 ## Alternatives considered
 - The app running brew: Homebrew quits the app, taking brew with it mid-upgrade.
 - A terminal opened on the command: still a terminal to watch and close.

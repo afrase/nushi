@@ -2,32 +2,31 @@
 # Builds a release's files into dist/ (ADR 0055), as the release workflow
 # does, so it can be tried here: Nushi-X.Y.Z.zip (make package, ad hoc
 # signed unless NUSHI_SIGN names an identity), nushi-relay-X.Y.Z-<os>-<arch>.tar.gz
-# for the Pi, a Linux box and a Mac, nushi-web-X.Y.Z.tar.gz (make web,
-# the phone's web app, under nushi-web/), nushi-X.Y.Z-linux-<arch>.tar.gz
+# for the Pi and a Linux box (one static binary with the phone's web app,
+# make web's, built in: ADR 0113), nushi-X.Y.Z-linux-<arch>.tar.gz
 # (make package-linux, the Linux app under nushi/, for this machine's
 # architecture: Flutter doesn't cross-build), and a .sha256 beside each.
-# Usage: tools/release.sh X.Y.Z[-suffix] [app] [relay] [web] [linux]
-# Without parts, those this machine builds: app, relay and web on a Mac,
-# relay, web and linux on Linux. The workflow builds each in a job of its
-# own (the app on macOS, the rest on Linux, the Linux app on each
-# architecture).
+# Usage: tools/release.sh X.Y.Z[-suffix] [app] [relay] [linux]
+# Without parts, those this machine builds: app and relay on a Mac, relay
+# and linux on Linux. The workflow builds each in a job of its own (the
+# app on macOS, the rest on Linux, the Linux app on each architecture).
 set -eu
 version=${1:-}
 if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
-  echo "usage: tools/release.sh X.Y.Z[-suffix] [app] [relay] [web] [linux]" >&2
+  echo "usage: tools/release.sh X.Y.Z[-suffix] [app] [relay] [linux]" >&2
   exit 2
 fi
 shift
 if [ "$(uname -s)" = Linux ]; then
-  parts=${*:-relay web linux}
+  parts=${*:-relay linux}
 else
-  parts=${*:-app relay web}
+  parts=${*:-app relay}
 fi
 for part in $parts; do
   case $part in
-  app | relay | web | linux) ;;
+  app | relay | linux) ;;
   *)
-    echo "tools/release.sh: no part $part (app, relay, web, linux)" >&2
+    echo "tools/release.sh: no part $part (app, relay, linux)" >&2
     exit 2
     ;;
   esac
@@ -53,6 +52,12 @@ for part in $parts; do
     ditto -c -k --keepParent app/build/macos/Build/Products/Release/Nushi.app "dist/Nushi-$version.zip"
     ;;
   relay)
+    # The web app goes into the folder the relay embeds (cmd/nushi-relay/web,
+    # which the repository keeps empty), for these builds only.
+    make web
+    git clean -qfdx cmd/nushi-relay/web
+    cp -R app/build/web/. cmd/nushi-relay/web/
+    test -f cmd/nushi-relay/web/index.html
     for target in linux/arm64 linux/amd64; do
       os=${target%/*}
       arch=${target#*/}
@@ -63,13 +68,7 @@ for part in $parts; do
       tgz "dist/nushi-relay-$version-$os-$arch.tar.gz" -C "$out" nushi-relay
       rm -rf "$out"
     done
-    ;;
-  web)
-    make web
-    rm -rf dist/nushi-web
-    cp -R app/build/web dist/nushi-web
-    tgz "dist/nushi-web-$version.tar.gz" -C dist nushi-web
-    rm -rf dist/nushi-web
+    git clean -qfdx cmd/nushi-relay/web
     ;;
   linux)
     make package-linux NUSHI_VERSION="$version"
