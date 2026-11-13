@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -76,8 +77,18 @@ func (c *chat) requestPermission(ctx context.Context, req *acp.RequestPermission
 		if c.parent != nil {
 			chatID = c.parent.id // a side chat's tools are its chat's
 		}
+		// The name is read from the call's raw input, not item.Input, which
+		// is display text: a name that looks secret is masked there, and the
+		// card would ask about no entry while the start runs the real one.
+		// Codex's request has no input, and its call's is masked as well;
+		// the servers take a name no entry could have as none, so that
+		// card's start is refused.
+		input := req.ToolCall.RawInput
+		if empty(bytes.TrimSpace(input)) {
+			input = json.RawMessage(item.Input)
+		}
 		c.mu.Unlock()
-		item.ServerCommand, askID = c.serverCommand(chatID, entryName(item.Input))
+		item.ServerCommand, askID = c.serverCommand(chatID, entryName(string(input)))
 		c.mu.Lock()
 	}
 	id := c.addLocked(item)
