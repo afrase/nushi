@@ -8,7 +8,6 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/afrase/acp-go/steering"
 	acp "github.com/afrase/acp-go/unstable"
@@ -77,7 +76,7 @@ func Serve(r io.Reader, w io.Writer, cfg Config) {
 	b.mu.Unlock()
 	var wg sync.WaitGroup
 	for _, s := range open {
-		wg.Go(func() { s.h.stop(5 * time.Second) })
+		wg.Go(func() { s.h.stop(stopGrace) })
 	}
 	wg.Wait()
 }
@@ -176,7 +175,7 @@ func (b *bridge) ListSessions(_ context.Context, req *acp.ListSessionsRequest) (
 
 func (b *bridge) CloseSession(_ context.Context, req *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
 	if s, err := b.session(req.SessionID); err == nil {
-		s.h.stop(5 * time.Second)
+		s.h.stop(stopGrace)
 		<-s.ended
 	}
 	return &acp.CloseSessionResponse{}, nil

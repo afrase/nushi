@@ -174,7 +174,7 @@ func (b *bridge) fork(ctx context.Context, from acp.SessionID, cwd, after string
 			h.abandon()
 			return nil, err
 		}
-		defer func() { src.h.stop(5 * time.Second); <-src.ended }()
+		defer func() { src.h.stop(stopGrace); <-src.ended }()
 	}
 	src.mu.Lock()
 	op := map[string]any{}
@@ -268,7 +268,7 @@ func (b *bridge) delete(id acp.SessionID) error {
 		return fmt.Errorf("%q isn't one of Ante's sessions", id)
 	}
 	if s, err := b.session(id); err == nil {
-		s.h.stop(5 * time.Second)
+		s.h.stop(stopGrace)
 		<-s.ended
 	}
 	return os.RemoveAll(filepath.Join(b.home, "sessions", string(id)))
