@@ -19,6 +19,7 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/phase_pill.dart';
 import 'package:nushi/pickers.dart' show ConfigNames;
+import 'package:nushi/pulls_chip.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
@@ -130,19 +131,35 @@ class ChatHeader extends StatelessWidget {
           // The GitHub chip, and its gap: its number as wide as it is, and
           // room for every badge a pull request's can load, so it never
           // pushes ⋯ past the edge when its states land.
-          final github = switch (chat.github) {
-            null => 0.0,
-            final link =>
+          // An issue it started from keeps its chip; its pull requests
+          // have theirs (ADR 0117), whose badges a narrow header drops
+          // first.
+          final issue = switch (chat.github) {
+            final link? when !link.pull =>
               NushiTheme.barGap +
                   githubChipRoom +
-                  (link.pull ? githubBadgesRoom : githubIssueBadgesRoom) +
+                  githubIssueBadgesRoom +
                   _textWidth(
                     context,
                     '#${link.number}',
                     theme.code(t.link, size: 12),
                   ),
+            _ => 0.0,
           };
-          final folds = headerFolds(
+          final pulls = chat.pulls;
+          final more = pulls.length > 1 ? ' +${pulls.length - 1}' : '';
+          final pullsChip = switch (chat.pull ?? pulls.firstOrNull) {
+            null => 0.0,
+            final link =>
+              NushiTheme.barGap +
+                  githubChipRoom +
+                  _textWidth(
+                    context,
+                    '#${link.number}$more',
+                    theme.code(t.link, size: 12),
+                  ),
+          };
+          HeaderFolds foldsWith(double badges) => headerFolds(
             width,
             pull: chat.pull != null,
             panel: onPanel != null,
@@ -151,9 +168,12 @@ class ChatHeader extends StatelessWidget {
             comments: comments,
             side: side,
             jira: jira,
-            github: github,
+            github: issue + pullsChip + badges,
             wider: _wider(context, theme),
           );
+          var folds = foldsWith(pullsChip > 0 ? githubBadgesRoom : 0);
+          final badges = !folds.any;
+          if (!badges) folds = foldsWith(0);
           final shown = modelName != null && !folds.model;
           // What the title and the model (its gap taken out) share.
           final room =
@@ -175,6 +195,7 @@ class ChatHeader extends StatelessWidget {
             meta,
             modelName,
             folds,
+            badges: badges,
             titleMax: title,
             modelMax: (room - title).clamp(40.0, 200.0),
           );
@@ -189,6 +210,7 @@ class ChatHeader extends StatelessWidget {
     TextStyle meta,
     String? modelName,
     HeaderFolds folds, {
+    required bool badges,
     required double titleMax,
     required double modelMax,
   }) {
@@ -263,12 +285,21 @@ class ChatHeader extends StatelessWidget {
                               showIssue(daemon, chat.jiraSite, chat.jiraKey),
                         ),
                       ],
-                      if (chat.github case final link?) ...[
+                      if (chat.github case final link? when !link.pull) ...[
                         SizedBox(width: gap),
                         GitHubChip(
                           key: ValueKey(link.id),
                           daemon: daemon,
                           link: link,
+                        ),
+                      ],
+                      if (chat.pull != null || chat.pulls.isNotEmpty) ...[
+                        SizedBox(width: gap),
+                        PullsChip(
+                          daemon,
+                          chat,
+                          badges: badges,
+                          onShow: () => onTab(ChatTab.pull),
                         ),
                       ],
                       SizedBox(width: group),

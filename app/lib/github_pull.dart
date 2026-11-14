@@ -39,6 +39,11 @@ final Map<String, PullSection> _tabLeft = runMap();
 @visibleForTesting
 void forgetPullTabs() => _tabLeft.clear();
 
+/// Opens [ref]'s pull request at [section] the next time it shows (a
+/// row's View changes, its badge's Show checks).
+void openPullAt(GitHubRef ref, PullSection section) =>
+    _tabLeft['${ref.host} ${ref.repo} ${ref.number}'] = section;
+
 /// A pull request's page: its head ([PullHeader]: state, title, branches,
 /// whose move it is, the status lights), then its activity (the
 /// description, comments and reviews), its checks, or its files with the

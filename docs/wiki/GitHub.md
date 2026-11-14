@@ -44,9 +44,19 @@ A link with words of its own stays words, with the same card. Links in code and 
 
 ## Open a pull request from a chat
 
-There's no "create pull request" button. Ask the agent ("push this and open a PR"). A few seconds later the chat finds the pull request for its branch, and a **Pull request** tab appears.
+There's no "create pull request" button. Ask the agent ("push this and open a PR"). When its `gh pr create` finishes, the chat links the new pull request, and a **Pull request** tab appears. A pull request for the chat's branch is found by itself too.
 
-If it finds the wrong one, use **Chat › Link Pull Request…** to link one by its link, `owner/repo#123` or number.
+A chat can hold up to 10 pull requests, such as a stack the agent opened branch by branch. To add one by hand, use **Link another pull request…** in the **Pull requests** widget's ⋯ (or **Chat › Link Pull Request…**), and paste its link, `owner/repo#123` or number.
+
+## The Pull requests widget
+
+The details panel lists the chat's pull requests, a row each: its state's icon, title, checks (`8/11`) and one thing to know, such as **2 threads** or **Ready to merge**. A stack lists its base first.
+
+- Click a row to open its **Pull request** tab.
+- Click the checks to see them, or **Fix checks** to send the failures to the agent.
+- Use a row's **⋯** for **Merge…**, **Send open threads to agent**, **Clean up…** or **Unlink**.
+
+The chip next to the chat's title shows the first pull request and `+2` for the others; hold the pointer on it to see them all. With several, the tab has a menu at the top to pick which one it shows.
 
 ## The Pull request tab
 

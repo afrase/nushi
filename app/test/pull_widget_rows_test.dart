@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/panel_widgets.dart';
+import 'package:nushi/pull_rows.dart';
 import 'package:nushi/pull_summary.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -72,9 +73,8 @@ Widget _summary(GitHubPull p, {Tokens tokens = Tokens.dark}) => themed(
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets("Fix checks and Address put cards in this chat's box", (
-    tester,
-  ) async {
+  testWidgets("Fix checks (the badge's) and Send open threads to agent (the "
+      "row's ⋯) put cards in this chat's box", (tester) async {
     final (d, _) = await openPullTab(
       tester,
       fixturePull(),
@@ -82,7 +82,9 @@ void main() {
       open: false,
     );
     final box = d.chats['c']!.draft.replies;
-    await tester.tap(_inPull(find.text('Fix checks')));
+    await tester.tap(_inPull(find.byType(ChecksBadge)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fix checks'));
     await tester.pumpAndSettle();
     expect(box.value, hasLength(3));
     expect(box.value.first.from, startsWith('Failed checks on PR'));
@@ -91,7 +93,16 @@ void main() {
       box.value.first.from,
       endsWith('on PR octo/notes#412 (GitHub), my pull request:'),
     );
-    await tester.tap(_inPull(find.text('Address')));
+    await tester.tap(
+      _inPull(
+        find.descendant(
+          of: find.byType(PullRow),
+          matching: find.byTooltip('Pull request'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Send open threads to agent'));
     await tester.pumpAndSettle();
     expect(box.value, hasLength(5));
     expect(box.value.last.from, startsWith('Review comments from @mona'));
@@ -114,62 +125,26 @@ void main() {
     expect(find.text('Ready'), findsNothing);
   }, variant: _mac);
 
-  testWidgets('a code owner waited on; ready; closed', (tester) async {
-    var (d, _) = await openPullTab(
-      tester,
-      states['running']!(),
-      details: true,
-      open: false,
-    );
-    expect(_inPull(find.text('@notes-reviewers')), findsOneWidget);
-    expect(_inPull(find.byTooltip('Asked as a code owner')), findsOneWidget);
-    expect(_inPull(find.text('checks, review')), findsOneWidget);
-    d.dispose();
-    (d, _) = await openPullTab(
-      tester,
-      states['ready']!(),
-      details: true,
-      open: false,
-    );
-    expect(_inPull(find.text('Ready to merge')), findsOneWidget);
-    expect(_inPull(find.text('All 10 checks passed')), findsNothing);
-    expect(
-      _inPull(find.textContaining('checks passed', findRichText: true)),
-      findsNothing, // two skipped: a legend, not "all passed"
-    );
-    d.dispose();
-    // Unstable: a check its base doesn't require didn't pass. It can
-    // merge, as the header says.
-    (d, _) = await openPullTab(
-      tester,
-      states['unstable']!(),
-      details: true,
-      open: false,
-    );
-    expect(_inPull(find.text('Ready to merge')), findsOneWidget);
-    expect(
-      _inPull(find.text('Checks not passing (not required)')),
-      findsOneWidget,
-    );
-    expect(_inPull(find.text('Merge blocked')), findsNothing);
-    d.dispose();
-    (d, _) = await openPullTab(
-      tester,
-      states['closed']!(),
-      details: true,
-      open: false,
-    );
-    expect(
-      _inPull(
-        find.text(
-          'Closed without merging. Its 1 commit stays on filters-malformed-q.',
-          findRichText: true,
-        ),
-      ),
-      findsOneWidget,
-    );
-    expect(_inPull(find.text('Reopen on GitHub')), findsOneWidget);
-    d.dispose();
+  testWidgets("each state's one cue under the row's title", (tester) async {
+    for (final (state, cue) in [
+      ('failing', 'changes requested'),
+      ('ready', 'Ready to merge'),
+      ('merged', 'Merged into main'),
+      ('closed', 'Closed without merging'),
+    ]) {
+      final (d, _) = await openPullTab(
+        tester,
+        states[state]!(),
+        details: true,
+        open: false,
+      );
+      expect(
+        _inPull(find.textContaining(cue, findRichText: true)),
+        findsOneWidget,
+        reason: state,
+      );
+      d.dispose();
+    }
   }, variant: _mac);
 
   for (final (name, brightness) in [

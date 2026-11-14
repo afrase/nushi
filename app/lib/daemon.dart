@@ -313,8 +313,17 @@ class Daemon extends ChangeNotifier {
   /// it.
   final cantStart = <String, String>{};
 
+  final _disposers = <VoidCallback>[];
+
+  /// Runs [f] as the daemon is disposed: a store of its own ends its
+  /// timers (`GitHubItems`'s).
+  void whenDisposed(VoidCallback f) => _disposers.add(f);
+
   @override
   void dispose() {
+    for (final f in _disposers) {
+      f();
+    }
     _timer?.cancel();
     _loadRetry?.cancel();
     unawaited(_events?.cancel());

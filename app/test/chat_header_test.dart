@@ -4,6 +4,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_items.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -144,11 +145,14 @@ void main() {
           // A Jira key and a GitHub chip never fold: everything else
           // folded, a long key fits from about 380, an issue's chip from
           // 350, a pull request's with its badges from 430.
-          final least = switch ((jira, github)) {
-            (_, final GitHubLink l) => l.pull ? 430.0 : 350.0,
-            ('', _) => 320.0,
-            _ => 400.0,
-          };
+          // A found pull request's chip (ADR 0117) takes about 50 more.
+          final least =
+              switch ((jira, github)) {
+                (_, final GitHubLink l) => l.pull ? 430.0 : 350.0,
+                ('', _) => 320.0,
+                _ => 400.0,
+              } +
+              (pull ? 50.0 : 0.0);
           // The least width and the one past it, where the most has
           // folded, then every 40 to 1200: what folds goes by width, so a
           // part too wide shows at every width it's kept at.
@@ -198,10 +202,15 @@ void main() {
     ) async {
       viewport(tester, Size(width, 100));
       final fake = FakeDaemon([])
-        ..answer = (i) => i is GetGitHubStatesRequest
-            ? GetGitHubStatesResponse(
+        ..answer = (i) => i is GetGitHubItemsRequest
+            ? GetGitHubItemsResponse(
                 items: [
                   GitHubItem(
+                    ref: GitHubRef(
+                      host: 'github.com',
+                      repo: 'o/r',
+                      number: 12345,
+                    ),
                     id: 'PR_1',
                     pull: true,
                     state: 'open',
@@ -217,12 +226,37 @@ void main() {
         ..agent = 'claude'
         ..title = 'Fix the login redirect after the session expires'
         ..github = GitHubLink(
+          host: 'github.com',
           id: 'PR_1',
           repo: 'o/r',
           number: 12345,
           pull: true,
         )
-        ..pull = GitHubLink(number: 12345, pull: true);
+        ..linkPull(
+          GitHubLink(
+            host: 'github.com',
+            id: 'PR_1',
+            repo: 'o/r',
+            number: 12345,
+            pull: true,
+          ),
+          all: [
+            GitHubLink(
+              host: 'github.com',
+              id: 'PR_1',
+              repo: 'o/r',
+              number: 12345,
+              pull: true,
+            ),
+            GitHubLink(
+              host: 'github.com',
+              id: 'PR_2',
+              repo: 'o/r',
+              number: 12346,
+              pull: true,
+            ),
+          ],
+        );
       await tester.pumpWidget(
         themed(
           ChatHeader(
@@ -235,9 +269,15 @@ void main() {
           ),
         ),
       );
+      await tester.pump(GitHubItems.gather);
       await tester.pump();
       expect(tester.takeException(), isNull);
-      expect(find.byIcon(Icons.forum_outlined), findsOne);
+      // A narrow header drops the badges first (ADR 0117).
+      expect(
+        find.byIcon(Icons.forum_outlined),
+        width >= 1400 ? findsOne : findsNothing,
+      );
+      expect(find.text('+1'), findsOne);
       expectTextInside(tester, width);
       final menu = tester.getRect(find.byTooltip('Chat menu'));
       expect(menu.right, width - ChatHeader.end);

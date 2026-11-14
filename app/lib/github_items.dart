@@ -139,7 +139,14 @@ class GitHubItems extends ChangeNotifier {
   /// The one of [daemon].
   factory of(Daemon daemon) => _all[daemon] ??= GitHubItems._(daemon);
 
-  new _(this.daemon);
+  new _(this.daemon) {
+    daemon.whenDisposed(() {
+      for (final t in _timers.values) {
+        t.cancel();
+      }
+      _timers.clear();
+    });
+  }
 
   static final _all = Expando<GitHubItems>();
 

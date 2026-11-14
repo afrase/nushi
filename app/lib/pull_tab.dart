@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
+import 'package:nushi/github_card.dart';
 import 'package:nushi/github_pull.dart';
+import 'package:nushi/github_text.dart' show readablePad;
+import 'package:nushi/menu.dart';
 import 'package:nushi/pull_link.dart';
+import 'package:nushi/pull_rows.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/send_to_agent.dart';
@@ -31,10 +36,18 @@ class PullTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l = chat.pull;
+    final source = ChatPull.of(daemon, chat);
+    return ListenableBuilder(
+      listenable: source,
+      builder: (context, _) => _build(context, source),
+    );
+  }
+
+  Widget _build(BuildContext context, ChatPull source) {
+    final l = source.current;
     if (l == null) return const SizedBox.shrink();
     final ref = l.asRef;
-    final source = ChatPull.of(daemon, chat);
+    final links = source.links;
     // What went in shows on its rows ("In the box ✓") and in the bar at
     // the foot, with its Go to chat; a toast says only that nothing new
     // did, which neither of those would show.
@@ -75,6 +88,7 @@ class PullTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (links.length >= 2) _Picker(source, l, links),
           Expanded(
             child: GitHubPullPane(
               key: ValueKey('${chat.id} ${l.id}'),
@@ -90,6 +104,67 @@ class PullTab extends StatelessWidget {
                 : RepliesWaiting(replies.length, onChat: onChat),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// With several pull requests (ADR 0117), the tab's head starts with a
+/// menu field of their rows; the one picked is remembered for the chat.
+class _Picker extends StatelessWidget {
+  const new(this.cp, this.shown, this.links);
+
+  final ChatPull cp;
+  final GitHubLink shown;
+  final List<GitHubLink> links;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final it = cp.itemOf(shown);
+    // Over the pane's column ([readablePad]), where its head starts.
+    return LayoutBuilder(
+      builder: (context, box) => Padding(
+        padding: EdgeInsets.fromLTRB(readablePad(box.maxWidth), 12, 16, 0),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: MenuField(
+            compact: true,
+            tooltip: "The chat's pull requests",
+            label: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 6,
+                children: [
+                  ItemIcon(it, pull: true, size: 13),
+                  Text(
+                    '#${shown.number}',
+                    style: theme.code(t.textSecondary, size: 12),
+                  ),
+                  Flexible(
+                    child: Text(
+                      it?.title ?? shown.repo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.ui(t.text, size: 12.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            entries: [
+              for (final l in links)
+                MenuEntry.row(
+                  (close) => SizedBox(
+                    width: 340,
+                    child: PullRow(cp, l, onShow: close, menu: false),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

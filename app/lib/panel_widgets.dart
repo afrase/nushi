@@ -85,6 +85,7 @@ class PanelWidget extends StatelessWidget {
     this.index = 0,
     this.note,
     this.tooltip,
+    this.label,
   });
 
   /// This widget as the [i]th of the list, which its title row drags in.
@@ -98,7 +99,12 @@ class PanelWidget extends StatelessWidget {
     index: i,
     note: note,
     tooltip: tooltip,
+    label: label,
   );
+
+  /// What the title says, when not [title] (which keys the widget's order
+  /// and folding): "Pull requests" with two or more.
+  final String? label;
 
   /// The title's tooltip, worded as it's hovered (a time in it is
   /// current).
@@ -139,7 +145,7 @@ class PanelWidget extends StatelessWidget {
     final t = theme.t;
     final muted = theme.ui(t.textMuted);
     Widget titleText = Text(
-      title,
+      label ?? title,
       style: theme.ui(t.text, weight: FontWeight.w500),
     );
     if (tooltip case final words?) titleText = _HoverTip(words, titleText);

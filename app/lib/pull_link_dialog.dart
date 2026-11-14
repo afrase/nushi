@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_items.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/theme/theme.dart';
@@ -55,6 +56,12 @@ class _LinkPullState extends State<_LinkPull> {
   bool _busy = false;
 
   String get _host => widget.cp.found?.host ?? widget.cp.link?.host ?? '';
+
+  /// The chat has one: this one joins it (ADR 0117), and the list leaves
+  /// out those linked.
+  bool get _another =>
+      widget.cp.links.isNotEmpty &&
+      widget.cp.daemon.daemonApi >= githubItemsApi;
   String get _repo => widget.cp.found?.repo ?? widget.cp.link?.repo ?? '';
 
   @override
@@ -78,7 +85,12 @@ class _LinkPullState extends State<_LinkPull> {
       final seen = <int>{};
       final pulls = [
         for (final it in [...r.mine, ...r.review])
-          if (it.pull && it.state == 'open' && seen.add(it.ref.number)) it,
+          if (it.pull &&
+              it.state == 'open' &&
+              seen.add(it.ref.number) &&
+              !(_another &&
+                  widget.cp.links.any((l) => l.number == it.ref.number)))
+            it,
       ];
       if (mounted) setState(() => _pulls = pulls);
     } on Object {
@@ -95,15 +107,14 @@ class _LinkPullState extends State<_LinkPull> {
       final r = await widget.cp.daemon.client.getGitHubPull(
         GetGitHubPullRequest(ref: ref),
       );
-      await widget.cp.setLink(
-        GitHubLink(
-          host: ref.host,
-          repo: ref.repo,
-          number: ref.number,
-          id: r.pull.item.id,
-          pull: true,
-        ),
+      final link = GitHubLink(
+        host: ref.host,
+        repo: ref.repo,
+        number: ref.number,
+        id: r.pull.item.id,
+        pull: true,
       );
+      await (_another ? widget.cp.addLink(link) : widget.cp.setLink(link));
       if (mounted) Navigator.pop(context);
     } on Object catch (e) {
       if (mounted) setState(() => _error = errorText(e));
@@ -126,11 +137,19 @@ class _LinkPullState extends State<_LinkPull> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return nushiDialog(
-      'Link pull request',
+      _another ? 'Link another pull request' : 'Link pull request',
       Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (_another)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                "It joins this chat's pull requests; the others stay.",
+                style: theme.ui(t.textMuted, size: 12),
+              ),
+            ),
           CallbackShortcuts(
             bindings: {
               const SingleActivator(LogicalKeyboardKey.enter): _submit,
