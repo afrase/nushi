@@ -7,6 +7,7 @@ import 'package:nushi/comment_box.dart';
 import 'package:nushi/file_mode.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show GitHubDraft;
 import 'package:nushi/github_review.dart';
+import 'package:nushi/motion.dart';
 
 /// The Mac's GitHub and Jira drafts across a restart (ADR 0073): the
 /// comment boxes' text and each pull request's unsent inline comments, in
@@ -14,7 +15,7 @@ import 'package:nushi/github_review.dart';
 /// once none is left. Read here at start, saved [delay] after they stop
 /// changing and on [flush] (the app going to the back or quitting).
 final class CommentDraftFile {
-  new(String dir, {this.delay = const Duration(milliseconds: 500)})
+  new(String dir, {this.delay = Waits.save})
     : _file = File('$dir/comment_drafts.json') {
     _load();
     _changes.addListener(_changed);

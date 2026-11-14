@@ -6,6 +6,7 @@ import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/errors.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 
 export 'package:nushi/controls.dart';
@@ -54,7 +55,7 @@ Future<void> runAndSay(
     );
   // Said only past a moment: a quick call goes straight to [done].
   var shown = false;
-  final slow = Timer(const Duration(milliseconds: 300), () {
+  final slow = Timer(Waits.slow, () {
     shown = true;
     say(running, lasts: const Duration(minutes: 5));
   });
@@ -331,7 +332,7 @@ class Dimmed extends StatelessWidget {
     ignoring: on,
     child: AnimatedOpacity(
       opacity: on ? 0.4 : 1,
-      duration: const Duration(milliseconds: 120),
+      duration: Motion.quick,
       child: child,
     ),
   );

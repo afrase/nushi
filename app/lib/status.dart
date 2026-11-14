@@ -20,6 +20,7 @@ class StatusMark extends CustomPainter {
   final bool ringing;
   final Color? halo;
 
+  // design: a loop's beat, on pulseClock
   static const period = Duration(milliseconds: 1600);
 
   @override
@@ -57,6 +58,7 @@ class _Ring extends CustomPainter {
   final Color color;
   final bool pulsing;
 
+  // design: a loop's beat, on pulseClock
   static const period = Duration(milliseconds: 2400);
 
   @override
@@ -111,6 +113,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
   late bool _ran = widget.chat.started != null; // a turn ran, not a reopen
   bool _sparks = false; // the check's sparks fly
 
+  // design: how long a state shows, not motion
   static const _checkFor = Duration(milliseconds: 2700);
 
   @override

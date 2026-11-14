@@ -107,6 +107,7 @@ final class Scanner {
         ..onerror = ((web.Event _) => _busy = false).toJS;
     }
     _timer = Timer.periodic(
+      // design: a camera frame's poll, not motion
       const Duration(milliseconds: 200),
       (_) => unawaited(_frame()),
     );

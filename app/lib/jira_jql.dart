@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// What the word being typed in JQL is: a field, an operator after one, a
@@ -202,7 +203,7 @@ class _JqlFieldState extends State<JqlField> {
             if (p.isNotEmpty && starts(f)) (insert: f, label: f),
         ];
         final n = ++_asked;
-        _ask = Timer(const Duration(milliseconds: 200), () async {
+        _ask = Timer(Waits.typing, () async {
           try {
             final r = await widget.client.suggestJiraJql(
               SuggestJiraJqlRequest(

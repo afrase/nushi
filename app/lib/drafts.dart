@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show ImageData;
+import 'package:nushi/motion.dart';
 
 /// Where [Drafts] keeps them: `drafts.json` on the Mac (drafts_mac.dart),
 /// the browser's IndexedDB on the phone.
@@ -28,7 +29,7 @@ abstract interface class DraftStore {
 /// [flush] (the app going to the background or quitting); put back when
 /// the chat is [attach]ed, and dropped with the chat ([forget]).
 final class Drafts {
-  new(this.store, {this.delay = const Duration(milliseconds: 500)}) {
+  new(this.store, {this.delay = Waits.save}) {
     unawaited(_load());
   }
 

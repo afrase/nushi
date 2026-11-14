@@ -54,6 +54,7 @@ class _LiveMarkState extends State<LiveMark>
     with SingleTickerProviderStateMixin {
   late final _pulse = AnimationController(
     vsync: this,
+    // design: a live mark's beat
     duration: const Duration(milliseconds: 500),
     value: 1,
   );

@@ -73,6 +73,7 @@ class Rail extends StatefulWidget {
   final bool outline;
 
   /// How long the menu stays once the pointer has left it and the rail.
+  // design: a hover's grace, not motion
   static const linger = Duration(milliseconds: 150);
 
   @override

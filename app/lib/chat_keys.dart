@@ -159,6 +159,7 @@ final Map<ShortcutActivator, Intent> chatKeys = {
 
 /// How long ⌘ is held alone before the chats show their numbers, so a
 /// quick shortcut doesn't flash them.
+// design: how long ⌘ is held before the hints show, as macOS's
 const commandHoldDelay = Duration(milliseconds: 300);
 
 /// Whether the command key (⌘, Control on Linux) is held alone (for

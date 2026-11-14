@@ -10,6 +10,7 @@ import 'package:nushi/history_parts.dart';
 import 'package:nushi/history_table.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
@@ -71,7 +72,7 @@ class _HistorySectionState extends State<HistorySection> {
   @override
   void initState() {
     super.initState();
-    _slowTimer = Timer(const Duration(milliseconds: 150), () {
+    _slowTimer = Timer(Waits.loading, () {
       if (mounted) setState(() => _slow = true);
     });
     unawaited(_load());

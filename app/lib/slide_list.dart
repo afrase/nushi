@@ -16,7 +16,7 @@ import 'package:nushi/slop_draggable.dart';
 // go with motion (`list_motion.dart`).
 
 /// How long the others take to slide apart, or back.
-const _slideFor = Duration(milliseconds: 200);
+const Duration _slideFor = Motion.standard;
 
 /// Items ([count] of them, [item] building each, keyed) that move by
 /// dragging within this list: a drag whose data it [accepts] opens a gap

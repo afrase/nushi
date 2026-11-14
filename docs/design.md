@@ -4,7 +4,7 @@ The one page to read before any work on the app's UI: what to draw a view with, 
 
 Three things hold it:
 
-- **`tools/design-check`** (in `make lint-dart`) fails on code that goes around the shared pieces: a raw `Tooltip(`, a Material button, an `AlertDialog(` outside `nushiDialog`, a tooltip's shortcut in brackets or after spaces, a `Color(0x…)` or `Colors.<name>` (not `transparent`), a `fontSize:` number. A deliberate use takes `// design: <why>` on its line or alone on the line above.
+- **`tools/design-check`** (in `make lint-dart`) fails on code that goes around the shared pieces: a raw `Tooltip(`, a Material button, an `AlertDialog(` outside `nushiDialog`, a tooltip's shortcut in brackets or after spaces, a `Color(0x…)` or `Colors.<name>` (not `transparent`), a `fontSize:` number, a `Duration(milliseconds: …)` (`Motion` or `Waits` instead; in the controls' files too). A deliberate use takes `// design: <why>` on its line or alone on the line above.
 - **`corners_test.dart`** fails on a corner that isn't a radius token (ADR [0110](adr/0110-corners-come-from-the-theme.md)); **`tokens_test.dart`** holds every theme's text to AA on its fills, and a field's hint to 3:1 and a clear step under its value.
 - **The gallery**: `make gallery` draws every shared control in every state, one sheet per group, dark and light, to `app/build/gallery/` (`app/test/gallery/sheets.dart`); `gallery_test.dart` keeps the buttons', the small controls' and the fields' sheets as goldens, so a change to a component shows in review. A sheet forces each state with `ShowLook`. Add a new shared piece to a sheet.
 
@@ -120,6 +120,10 @@ A control's size comes from where it sits, never from the call: a `ControlScale`
 | `size` | curve | heights and widths |
 | `leave` | curve | leaving |
 
+What waits, where several places wait alike, is `Waits.` (`motion.dart`; not motion, so Reduce Motion leaves it): `loading` 150 ms before a load's loading look shows, `typing` 250 ms of a pause in typing before it's acted on, `slow` 300 ms before a call that shows nothing says it's running, `save` 500 ms before a draft is written.
+
+No view writes `Duration(milliseconds: …)`: `tools/design-check` flags it outside `motion.dart` and the theme's files, the controls' included. A duration that is no step of either, its own thing (a loop's beat on `pulseClock`, how long a state shows, a one-off flourish such as a check drawing itself, a hover's grace, a poll), keeps its number with `// design: <why>`.
+
 Input never waits: the state changes at once and motion is only drawn; a second press reverses from where the motion is. Exits are faster than entries. Under `reduceMotion` sizes and places jump (a press's tint stays). Nothing runs at rest: what loops for as long as a state lasts repaints from `pulseClock` (20 Hz, only while Nushi is in front). The transcript's width never eases: lay out once at the final width and glide by a transform.
 
 ## Components
@@ -184,7 +188,6 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 
 Follow-ups, found while writing this page and drawing the gallery. Two small bugs it showed were fixed with it: a disabled `IconTap(danger:)` or `IconTap(lit:)` kept its fill and lost its mark, and a toast's action was all but invisible on a light set.
 
-- **Durations written as numbers**: about 70 `Duration(milliseconds: …)` outside `motion.dart`, some equal to `Motion`'s (`Dimmed`'s 120, a panel widget's 200) but not named so.
 - **Empty states' punctuation**: "No checks." and "No sessions here." end with a full stop, "No chats", "Nothing matches" and "None" don't.
 - **The phone's own controls** (`PhoneIcon`, `PhoneButton`) are Material's ink wells, not `Pressable`: no focus ring and no pressed tint (the theme turns splashes off).
 - **`WideButton` keeps `control` corners** at 38 high, where `ControlSize`'s share of the height would give it 11.7.

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/composer_code.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show ItemKind;
+import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/spell_menu.dart';
 import 'package:nushi/spell_scan.dart';
@@ -12,7 +13,7 @@ import 'package:nushi/speller.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// How long typing pauses before new words go to the checker.
-const spellPause = Duration(milliseconds: 250);
+const Duration spellPause = Waits.typing;
 
 /// How much of a prompt is checked: anything longer is a paste, not typing.
 const spellLimit = 20000;

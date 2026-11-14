@@ -311,6 +311,7 @@ class HoverCard extends StatefulWidget {
     required this.card,
     super.key,
     this.onShow,
+    // design: a hover card's wait, as a tooltip's
     this.delay = const Duration(milliseconds: 400),
   });
 
@@ -345,6 +346,7 @@ class _HoverCardState extends State<HoverCard> {
     _wait?.cancel();
     _wait = null;
     _leave?.cancel();
+    // design: a hover card's linger, as a tooltip's
     _leave = Timer(const Duration(milliseconds: 150), () {
       if (mounted && _portal.isShowing) _portal.hide();
     });

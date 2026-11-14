@@ -91,6 +91,7 @@ const double _findBarWidth = 340.0 + NushiTheme.gutter;
 const _pinGap = 16.0;
 
 /// How long a message gone to from the pins' menu stays tinted.
+// design: how long a state shows, not motion
 const _flashFor = Duration(milliseconds: 1400);
 
 class _TranscriptState extends State<Transcript> {

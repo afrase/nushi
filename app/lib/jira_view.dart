@@ -13,6 +13,7 @@ import 'package:nushi/jira_tasks.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/token_notices.dart';
@@ -255,7 +256,7 @@ class _JiraViewState extends State<JiraView> {
         _slow = false;
       });
       _slowTimer?.cancel();
-      _slowTimer = Timer(const Duration(milliseconds: 150), () {
+      _slowTimer = Timer(Waits.loading, () {
         if (mounted && n == _asked && _loading) setState(() => _slow = true);
       });
       if (_shown != key) unawaited(_showKept(n, key, on, ask));

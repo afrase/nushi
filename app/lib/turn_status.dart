@@ -29,8 +29,9 @@ class TurnStatus extends StatefulWidget {
   final ChatState chat;
   final String? what;
 
+  // design: how long a state shows, not motion
   static const receiptFor = Duration(milliseconds: 1400);
-  static const foldFor = Duration(milliseconds: 200);
+  static const Duration foldFor = Motion.standard;
 
   @override
   State<TurnStatus> createState() => _TurnStatusState();
@@ -211,9 +212,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
       ),
       // "Waiting for you" crossfades in as a prompt comes, and out.
       AnimatedSwitcher(
-        duration: reduceMotion(context)
-            ? Duration.zero
-            : const Duration(milliseconds: 150),
+        duration: reduceMotion(context) ? Duration.zero : Motion.quick,
         layoutBuilder: (current, previous) => Stack(
           alignment: Alignment.centerLeft,
           children: [...previous, ?current],

@@ -17,6 +17,7 @@ import 'package:nushi/widgets.dart';
 // rewind the chat to.
 
 /// How soon a second Esc must follow the first.
+// design: a double press, as macOS times one
 const escEscWithin = Duration(milliseconds: 500);
 
 /// Lists [chat]'s messages that can be rewound to ([RewindPicker]) and

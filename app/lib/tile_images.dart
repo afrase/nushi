@@ -217,9 +217,12 @@ Future<ui.Image> tileFrame(ui.Image frame, int side, {TileCrop? crop}) async {
 /// a file that says none, or next to none, means a tenth of a second, as
 /// browsers take it.
 Duration frameWait(Duration duration) =>
-    duration < const Duration(milliseconds: 20)
-    ? const Duration(milliseconds: 100)
-    : duration;
+    duration < _leastFrame ? _tenth : duration;
+
+// design: an animated image's frames, as browsers time them
+const _leastFrame = Duration(milliseconds: 20);
+// design: an animated image's frames, as browsers time them
+const _tenth = Duration(milliseconds: 100);
 
 /// Decodes [count] frames of [codec] and lets each go at once: a GIF
 /// decodes only in order, so a trimmed one's first frame is reached this

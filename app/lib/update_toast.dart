@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/daemon.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/slides.dart';
@@ -330,7 +331,7 @@ Future<void> checkForUpdates(BuildContext context, Daemon d) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   // From the menu bar or the palette: nothing else shows it's asking.
   final slow = Timer(
-    const Duration(milliseconds: 300),
+    Waits.slow,
     () => messenger?.showSnackBar(
       const SnackBar(
         content: Text('Checking for updates…'),

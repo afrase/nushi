@@ -50,7 +50,8 @@ class Paced extends StatefulWidget {
   static const _least = 45.0; // characters a second
   static const _behind = 0.22; // seconds of backlog at most, steady
   static const _end = 0.25; // seconds to show the rest once it ended
-  static const fade = Duration(milliseconds: 160);
+  static const Duration fade = Motion.quick;
+  // design: the reply's caret lingering, its pacing
   static const caretOut = Duration(milliseconds: 300);
 
   @override
@@ -174,6 +175,7 @@ class _PacedState extends State<Paced> {
     final caretGone = _ended != null && now - _ended! >= Paced.caretOut || _off;
     final idle = all && _steps.isEmpty && (widget.live || caretGone);
     // At most 30 times a second, and at once when it settles.
+    // design: a frame budget, not motion
     if (now - _drawn >= const Duration(milliseconds: 33) || idle) {
       _drawn = now;
       setState(() {});
@@ -280,6 +282,7 @@ class _Caret extends CustomPainter {
   final Color color;
   final double opacity;
 
+  // design: a loop's beat, on pulseClock
   static const period = Duration(milliseconds: 1200);
 
   @override

@@ -35,6 +35,7 @@ class SessionSearch extends ChangeNotifier {
   final String folder;
 
   /// How long typing pauses before the search is asked.
+  // design: a pause in typing before a search of every transcript
   static const pause = Duration(milliseconds: 500);
 
   Timer? _wait;

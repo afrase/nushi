@@ -325,6 +325,7 @@ class ServerRow extends StatelessWidget {
       message: failed && s.output.isNotEmpty
           ? [_tail(s.output), if (logs) _seeLogs].join('\n\n')
           : _details(s),
+      // design: a tooltip's wait, longer for a log
       waitDuration: const Duration(milliseconds: 600),
       textStyle: theme.code(t.text, size: 11.5),
       child: Padding(

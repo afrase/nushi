@@ -186,6 +186,7 @@ extension DaemonLink on Daemon {
     // The first ping that fails starts the bundled daemon.
     _launcher.launched = DateTime(0);
     for (var i = 0; i < 50 && connected; i++) {
+      // design: a retry's pause, not motion
       await Future<void>.delayed(const Duration(milliseconds: 200));
       await ping();
     }
@@ -200,6 +201,7 @@ extension DaemonLink on Daemon {
     // while none answers fails quietly and leaves what asked for the
     // restart on screen.
     for (var i = 0; i < 100 && !connected; i++) {
+      // design: a retry's pause, not motion
       await Future<void>.delayed(const Duration(milliseconds: 200));
       await ping();
     }
@@ -254,6 +256,7 @@ extension SendPrompt on Daemon {
       }
       final before = daemonBuild;
       for (var i = 0; i < 300 && !(connected && daemonBuild != before); i++) {
+        // design: a retry's pause, not motion
         await Future<void>.delayed(const Duration(milliseconds: 200));
       }
       return await client.sendPrompt(r);

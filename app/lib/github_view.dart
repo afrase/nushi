@@ -14,6 +14,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/run_state.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/settings.dart';
@@ -224,7 +225,7 @@ class _GitHubViewState extends State<GitHubView> {
         _slow = false;
       });
       _slowTimer?.cancel();
-      _slowTimer = Timer(const Duration(milliseconds: 150), () {
+      _slowTimer = Timer(Waits.loading, () {
         if (mounted && n == _asked && _loading) setState(() => _slow = true);
       });
       if (_shown != key) unawaited(_showKept(n, key, req));

@@ -24,7 +24,7 @@ class BottomFollower extends ChangeNotifier {
   double Function()? shift;
 
   /// How long [follow]'s glide takes, whatever the distance.
-  static const glideFor = Duration(milliseconds: 260);
+  static const Duration glideFor = Motion.enter;
 
   Ticker? _glide;
   double _glideFrom = 0; // how far from the bottom it set out

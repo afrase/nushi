@@ -38,7 +38,9 @@ class _Arc extends CustomPainter {
   final double strokeWidth;
   final bool turning;
 
+  // design: Material's spinner's beat
   static const turn = Duration(milliseconds: 1333);
+  // design: Material's spinner's beat
   static const breath = Duration(milliseconds: 2666);
 
   @override

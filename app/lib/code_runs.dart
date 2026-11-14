@@ -196,6 +196,7 @@ class CodeRuns extends ChangeNotifier {
       );
       // A shell without marks: ▷ comes back once its program is done.
       if (run.justTyped) {
+        // design: the shell's own pace, not motion
         Timer(const Duration(milliseconds: 1500), () {
           run
             ..justTyped = false
@@ -252,6 +253,7 @@ class CodeRuns extends ChangeNotifier {
       quiet = f.chunks == seen ? quiet + 1 : 0;
       seen = f.chunks;
       if (!f.marks.seen && f.chunks > 0 && quiet >= 4) break;
+      // design: a poll of the shell, not motion
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
     return f;

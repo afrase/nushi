@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_view_parts.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -73,7 +74,7 @@ class _IssuePickerState extends State<IssuePicker> {
     if (_text.text == _last) return; // the caret moved
     _last = _text.text;
     _wait?.cancel();
-    _wait = Timer(const Duration(milliseconds: 250), () => unawaited(_find()));
+    _wait = Timer(Waits.typing, () => unawaited(_find()));
   }
 
   Future<void> _find() async {

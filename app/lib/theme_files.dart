@@ -115,6 +115,7 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
       privateDir(dir);
       _watching = dir.watch().listen((_) {
         _soon?.cancel();
+        // design: a file watch's settling, not motion
         _soon = Timer(const Duration(milliseconds: 150), load);
       }, onError: (Object _) {});
     } on FileSystemException {

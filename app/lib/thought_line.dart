@@ -38,8 +38,8 @@ class ThoughtLine extends StatefulWidget {
   final bool live;
   final TextStyle style;
 
-  static const slideFor = Duration(milliseconds: 180);
-  static const foldFor = Duration(milliseconds: 200);
+  static const Duration slideFor = Motion.standard;
+  static const Duration foldFor = Motion.standard;
 
   @override
   State<ThoughtLine> createState() => _ThoughtLineState();
