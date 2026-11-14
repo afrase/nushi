@@ -207,9 +207,10 @@ class _Row extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Tooltip(
-                          message: server.source,
-                          child: Text(
+                        child: tooltip(
+                          context,
+                          server.source,
+                          Text(
                             target(c),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

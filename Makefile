@@ -228,9 +228,11 @@ lint-linux: $(GOLANGCI)
 
 # The protos' and Dart's, and the native code of the app and its Dart
 # packages only in a platform's *_macos.dart or *_linux.dart files
-# (tools/native-edge, ADR 0097, 0104): anywhere.
+# (tools/native-edge, ADR 0097, 0104), and the app's views built from the
+# shared controls and tokens (tools/design-check, docs/design.md): anywhere.
 lint-dart:
 	go run ./tools/native-edge $(addsuffix /lib,$(DART_DIRS))
+	go run ./tools/design-check app/lib
 	$(BUF) lint
 	$(BUF) format --diff --exit-code
 	@for d in $(DART_DIRS); do echo "flutter analyze $$d"; (cd $$d && flutter analyze --fatal-infos) || exit 1; done

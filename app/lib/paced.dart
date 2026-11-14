@@ -305,6 +305,7 @@ class _Caret extends CustomPainter {
 /// faded, the caret at its end.
 TextSpan pacedSpan(Shown shown, TextStyle style) {
   final text = shown.text;
+  // design: only for a style with no color, which the app never gives.
   final color = style.color ?? const Color(0xFF000000);
   final out = <InlineSpan>[];
   var at = 0;

@@ -62,7 +62,7 @@ class PointerChip extends StatelessWidget {
                 ? t.pressed
                 : look.hover
                 ? t.hover
-                : const Color(0x00000000),
+                : Colors.transparent,
             c == null ? t.raised : c.withValues(alpha: 0.14),
           ),
           borderRadius: BorderRadius.circular(NushiTheme.control),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_header.dart';
 import 'package:nushi/theme/theme.dart';
@@ -162,9 +163,10 @@ class WidgetRow extends StatelessWidget {
     // A value at most 130 wide, else the label's room ([keepLabel]).
     Widget valueText(String v) => ConstrainedBox(
       constraints: BoxConstraints(maxWidth: keepLabel ? double.infinity : 130),
-      child: Tooltip(
-        message: tip,
-        child: Text(
+      child: tooltip(
+        context,
+        tip,
+        Text(
           v,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

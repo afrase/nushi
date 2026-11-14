@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-
 import 'package:nushi/agents.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/run_state.dart';
@@ -203,9 +203,10 @@ class McpDot extends StatelessWidget {
     final (word, color) = stateOf(server, t);
     final ring =
         server.off || ['', 'disabled', 'unknown'].contains(server.state);
-    return Tooltip(
-      message: server.detail.isEmpty ? word : '$word: ${server.detail}',
-      child: Container(
+    return tooltip(
+      context,
+      server.detail.isEmpty ? word : '$word: ${server.detail}',
+      Container(
         width: 7,
         height: 7,
         margin: const EdgeInsets.all(2),

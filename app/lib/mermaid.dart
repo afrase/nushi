@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:markdown_view/markdown_view.dart';
 
+import 'package:nushi/controls.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/run_state.dart';
@@ -112,8 +113,6 @@ class _MermaidBlockState extends State<MermaidBlock> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
     final style = widget.style;
     final code = widget.code;
     if (widget.open) {
@@ -125,14 +124,7 @@ class _MermaidBlockState extends State<MermaidBlock> {
         code: code,
         style: style,
         actions: [
-          TextButton(
-            onPressed: () => show(context, code),
-            style: TextButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-              textStyle: theme.ui(t.link, size: 12),
-            ),
-            child: const Text('Show diagram'),
-          ),
+          LinkText('Show diagram', size: 12, onTap: () => show(context, code)),
         ],
       );
     }

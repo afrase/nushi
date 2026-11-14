@@ -166,15 +166,12 @@ class ExpiredBar extends StatelessWidget {
               style: phoneText(context, color: t.textSecondary, size: 14),
             ),
           ),
-          TextButton(
-            onPressed: () => newPhoneChat(
+          PhoneLink(
+            'New chat here',
+            onTap: () => newPhoneChat(
               context,
               phone,
               folder: chat.scratch ? '' : chat.folder,
-            ),
-            child: Text(
-              'New chat here',
-              style: phoneText(context, color: t.link, size: 14),
             ),
           ),
         ],
@@ -193,19 +190,15 @@ class Earlier extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
     final n = chat.older;
     return SizedBox(
       height: touch,
       child: Center(
         child: chat.loadingOlder
             ? const PhoneSpinner()
-            : TextButton(
-                onPressed: () => unawaited(daemon.loadOlder(chat)),
-                child: Text(
-                  n == 1 ? '1 earlier item' : '$n earlier items',
-                  style: phoneText(context, color: t.link, size: 14),
-                ),
+            : PhoneLink(
+                n == 1 ? '1 earlier item' : '$n earlier items',
+                onTap: () => unawaited(daemon.loadOlder(chat)),
               ),
       ),
     );

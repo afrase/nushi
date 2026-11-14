@@ -257,9 +257,10 @@ class HistoryRowView extends StatelessWidget {
       [
         Padding(
           padding: const EdgeInsets.only(left: 4, right: 8),
-          child: Tooltip(
-            message: r.folder.isEmpty ? '' : '$parent/$name',
-            child: Text(
+          child: tooltip(
+            context,
+            r.folder.isEmpty ? '' : '$parent/$name',
+            Text(
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -282,9 +283,10 @@ class HistoryRowView extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.only(right: 4),
-          child: Tooltip(
-            message: dateTime(r.last),
-            child: Text(ago(now.difference(r.last), r.last), style: small),
+          child: tooltip(
+            context,
+            dateTime(r.last),
+            Text(ago(now.difference(r.last), r.last), style: small),
           ),
         ),
       ],

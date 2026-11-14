@@ -71,7 +71,11 @@ class _ScanScreenState extends State<ScanScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      ColoredBox(color: Colors.black, child: _scanner.view()),
+                      ColoredBox(
+                        // design: behind the camera's picture, as it starts.
+                        color: Colors.black,
+                        child: _scanner.view(),
+                      ),
                       // Where the code goes.
                       Center(
                         child: FractionallySizedBox(
@@ -81,6 +85,7 @@ class _ScanScreenState extends State<ScanScreen> {
                             child: DecoratedBox(
                               decoration: BoxDecoration(
                                 border: Border.all(
+                                  // design: on the camera's picture.
                                   color: Colors.white70,
                                   width: 2,
                                 ),

@@ -273,11 +273,11 @@ class _PaletteState extends State<Palette> {
                     border: InputBorder.none,
                     prefixIcon: const Icon(Icons.search, size: 15),
                     prefixIconConstraints: const BoxConstraints(minWidth: 28),
-                    suffixIcon: Tooltip(
-                      message:
-                          'The palette: ${keyLabel(paletteKey)}, or '
-                          '${keyLabel(paletteKeyToo)} (in a terminal too)',
-                      child: Padding(
+                    suffixIcon: tooltip(
+                      context,
+                      'The palette: ${keyLabel(paletteKey)}, or '
+                      '${keyLabel(paletteKeyToo)} (in a terminal too)',
+                      Padding(
                         padding: const EdgeInsets.only(right: 4),
                         child: keyText(
                           keyLabel(paletteKey),

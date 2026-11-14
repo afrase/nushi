@@ -78,10 +78,9 @@ class WhitespaceMarks extends SingleChildRenderObjectWidget {
   final double column;
 
   @override
-  RenderObject createRenderObject(BuildContext context) => _RenderMarks()
+  RenderObject createRenderObject(BuildContext context) => _RenderMarks(color)
     ..line = line
     ..show = show
-    ..color = color
     ..column = column;
 
   @override
@@ -94,9 +93,11 @@ class WhitespaceMarks extends SingleChildRenderObjectWidget {
 }
 
 class _RenderMarks extends RenderProxyBox {
+  new(this._color);
+
   String _line = '';
   bool _show = false;
-  Color _color = const Color(0x00000000);
+  Color _color;
   double _column = 0;
 
   String get line => _line;

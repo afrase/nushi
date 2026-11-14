@@ -214,11 +214,11 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
           spacing: 10,
           children: [
             if (u.contextSize > 0)
-              Tooltip(
-                message:
-                    '${tokens(u.contextUsed.toInt())} / '
-                    '${tokens(u.contextSize.toInt())}',
-                child: ContextMeter(u),
+              tooltip(
+                context,
+                '${tokens(u.contextUsed.toInt())} / '
+                '${tokens(u.contextSize.toInt())}',
+                ContextMeter(u),
               ),
             if (spent.isNotEmpty)
               Text(spent, style: theme.ui(t.text, size: 12)),
@@ -343,9 +343,10 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
             if (lastTurn(u).isNotEmpty)
               (
                 'Last turn',
-                Tooltip(
-                  message: cacheUse(u).isEmpty ? '' : 'Cache: ${cacheUse(u)}',
-                  child: Text(lastTurn(u), style: theme.ui(t.text, size: 12)),
+                tooltip(
+                  context,
+                  cacheUse(u).isEmpty ? '' : 'Cache: ${cacheUse(u)}',
+                  Text(lastTurn(u), style: theme.ui(t.text, size: 12)),
                 ),
               ),
             if (cost(u).isNotEmpty)

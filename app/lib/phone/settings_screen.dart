@@ -158,7 +158,7 @@ class _Themes extends StatelessWidget {
             // keeps its ring, always as wide, so nothing inside moves.
             color: look.hover ? Color.alphaBlend(t.hover, t.raised) : t.raised,
             border: Border.all(
-              color: picked ? t.accentInk : const Color(0x00000000),
+              color: picked ? t.accentInk : Colors.transparent,
               width: 2,
             ),
             borderRadius: BorderRadius.circular(NushiTheme.card),

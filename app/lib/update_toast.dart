@@ -280,9 +280,10 @@ class _UpdateToastState extends State<UpdateToast> {
           if (error.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 6),
-              child: Tooltip(
-                message: error,
-                child: Text(
+              child: tooltip(
+                context,
+                error,
+                Text(
                   error,
                   key: const ValueKey('update-error'),
                   maxLines: 4,

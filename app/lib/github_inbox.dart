@@ -266,9 +266,10 @@ class _ItemRowState extends State<ItemRow> {
             padding: const EdgeInsets.fromLTRB(8, 4, 2, 4),
             child: Row(
               children: [
-                Tooltip(
-                  message: itemState(it),
-                  child: Icon(
+                tooltip(
+                  context,
+                  itemState(it),
+                  Icon(
                     it.pull ? Icons.merge_type : Icons.adjust,
                     size: 14,
                     color: itemColor(t, it),
@@ -299,9 +300,10 @@ class _ItemRowState extends State<ItemRow> {
                   20,
                   review == null
                       ? null
-                      : Tooltip(
-                          message: review.$1,
-                          child: Icon(
+                      : tooltip(
+                          context,
+                          review.$1,
+                          Icon(
                             Icons.rate_review_outlined,
                             size: 13,
                             color: review.$2,
@@ -312,16 +314,13 @@ class _ItemRowState extends State<ItemRow> {
                   20,
                   checks == null
                       ? null
-                      : Tooltip(
-                          message: checks.words,
-                          child: Icon(
-                            checks.icon,
-                            size: 14,
-                            color: checks.color,
-                          ),
+                      : tooltip(
+                          context,
+                          checks.words,
+                          Icon(checks.icon, size: 14, color: checks.color),
                         ),
                 ),
-                _column(40, _talk(theme, it)),
+                _column(40, _talk(context, theme, it)),
                 const SizedBox(width: 6),
                 ItemAge(it.updatedMs.toInt()),
                 SizedBox(
@@ -365,7 +364,7 @@ class _ItemRowState extends State<ItemRow> {
   );
 
   /// Threads not resolved (in the warning color), else comments.
-  static Widget? _talk(NushiTheme theme, GitHubItem it) {
+  static Widget? _talk(BuildContext context, NushiTheme theme, GitHubItem it) {
     final t = theme.t;
     final (n, icon, color, words) = it.unresolved > 0
         ? (
@@ -381,9 +380,10 @@ class _ItemRowState extends State<ItemRow> {
             '${it.comments} comment${it.comments == 1 ? '' : 's'}',
           );
     if (n == 0) return null;
-    return Tooltip(
-      message: words,
-      child: Row(
+    return tooltip(
+      context,
+      words,
+      Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12.5, color: color),

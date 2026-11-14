@@ -391,6 +391,7 @@ class ToolCallView extends StatelessWidget {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: _tooltip(
+                      context,
                       rawName,
                       Typed(
                         title,
@@ -469,8 +470,8 @@ class ToolCallView extends StatelessWidget {
   }
 }
 
-Widget _tooltip(String? message, Widget child) =>
-    message == null ? child : Tooltip(message: message, child: child);
+Widget _tooltip(BuildContext context, String? message, Widget child) =>
+    message == null ? child : tooltip(context, message, child);
 
 /// A tool call, or a run of them, with the images they returned under it;
 /// those that came as references are fetched from [refs] (ADR 0099).

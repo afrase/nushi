@@ -284,7 +284,7 @@ class ThemeCard extends StatelessWidget {
                   ? t.focus
                   : picked
                   ? t.accentInk
-                  : const Color(0x00000000),
+                  : Colors.transparent,
               width: 2,
             ),
             borderRadius: BorderRadius.circular(NushiTheme.card),

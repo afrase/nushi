@@ -455,9 +455,10 @@ class ReloadButton extends StatelessWidget {
   final Daemon daemon;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: chat.busy ? 'Once ${chat.agentName} is done' : '',
-    child: RunButton(
+  Widget build(BuildContext context) => tooltip(
+    context,
+    chat.busy ? 'Once ${chat.agentName} is done' : '',
+    RunButton(
       label: 'Reload',
       run: chat.busy ? null : () => reloadChat(context, chat, daemon),
     ),

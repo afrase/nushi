@@ -520,7 +520,7 @@ Widget _row(
       overflow: TextOverflow.ellipsis,
     ),
   );
-  if (e.tooltip.isNotEmpty) label = Tooltip(message: e.tooltip, child: label);
+  if (e.tooltip.isNotEmpty) label = tooltip(context, e.tooltip, label);
   if (e.submenu case final sub?) {
     // Its value and chevron as the one decoration, so the row's space
     // goes before them and they sit at its end.

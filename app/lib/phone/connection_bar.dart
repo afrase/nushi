@@ -9,6 +9,7 @@ import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 import 'package:remote_transport/remote_transport.dart' show Unreachable;
 
 /// How the link to the Mac stands, while it's down: a quiet
@@ -104,19 +105,9 @@ class ConnectionBar extends StatelessWidget {
                             child: Center(child: PhoneSpinner()),
                           )
                         else
-                          TextButton(
-                            onPressed: () => unawaited(link.check(user: true)),
-                            style: TextButton.styleFrom(
-                              minimumSize: const Size(touch, touch),
-                            ),
-                            child: Text(
-                              'Try again',
-                              style: phoneText(
-                                context,
-                                color: t.link,
-                                size: 14,
-                              ),
-                            ),
+                          PhoneLink(
+                            'Try again',
+                            onTap: () => unawaited(link.check(user: true)),
                           ),
                         PhoneIcon(
                           Icons.info_outline,
@@ -135,9 +126,9 @@ class ConnectionBar extends StatelessWidget {
   static void _details(BuildContext context, Link link) => unawaited(
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Connection'),
-        content: SelectableText(
+      builder: (context) => nushiDialog(
+        'Connection',
+        SelectableText(
           [
             'Tries that failed: ${link.failures}',
             if (link.next case final n?)
@@ -145,12 +136,7 @@ class ConnectionBar extends StatelessWidget {
             if (link.error case final e?) '$e',
           ].join('\n\n'),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
+        [Button(label: 'Close', onPressed: () => Navigator.of(context).pop())],
       ),
     ),
   );
@@ -207,16 +193,7 @@ class UpdateBar extends StatelessWidget {
                 style: phoneText(context, size: 14),
               ),
             ),
-            TextButton(
-              onPressed: phone.platform.applyUpdate,
-              style: TextButton.styleFrom(
-                minimumSize: const Size(touch, touch),
-              ),
-              child: Text(
-                'Reload',
-                style: phoneText(context, color: t.link, size: 14),
-              ),
-            ),
+            PhoneLink('Reload', onTap: phone.platform.applyUpdate),
           ],
         ),
       ),

@@ -60,29 +60,28 @@ class ItemBadges extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (checks != null)
-          Tooltip(
-            message: checks.words,
-            child: Icon(checks.icon, size: 14, color: checks.color),
+          tooltip(
+            context,
+            checks.words,
+            Icon(checks.icon, size: 14, color: checks.color),
           ),
         if (review != null) ...[
           const SizedBox(width: 8),
           if (wide)
             Text(review.$1, style: theme.ui(review.$2, size: 11.5))
           else
-            Tooltip(
-              message: review.$1,
-              child: Icon(
-                Icons.rate_review_outlined,
-                size: 13,
-                color: review.$2,
-              ),
+            tooltip(
+              context,
+              review.$1,
+              Icon(Icons.rate_review_outlined, size: 13, color: review.$2),
             ),
         ],
         if (it.unresolved > 0) ...[
           const SizedBox(width: 8),
-          Tooltip(
-            message: unresolvedWords(it.unresolved),
-            child: Row(
+          tooltip(
+            context,
+            unresolvedWords(it.unresolved),
+            Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.forum_outlined, size: 13, color: t.needs),
@@ -118,9 +117,10 @@ class ItemAge extends StatelessWidget {
     )..layout();
     final width = longest.width.ceilToDouble();
     longest.dispose();
-    return Tooltip(
-      message: 'Updated ${dateTime(when)}',
-      child: SizedBox(
+    return tooltip(
+      context,
+      'Updated ${dateTime(when)}',
+      SizedBox(
         width: width,
         child: Text(
           agoShort(clock().difference(when)),

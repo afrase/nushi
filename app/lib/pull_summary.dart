@@ -12,6 +12,7 @@ import 'package:nushi/theme/theme.dart';
 /// requested or a reviewer waiting, threads not resolved, new comments),
 /// or "Ready" once it can merge; "Draft", "Merged", "Closed" else.
 Widget pullSummary(
+  BuildContext context,
   NushiTheme theme, {
   required int number,
   required GitHubPull? pull,
@@ -21,9 +22,10 @@ Widget pullSummary(
 }) {
   final t = theme.t;
   final p = pull;
-  Widget count(IconData icon, Color color, String words, String tip) => Tooltip(
-    message: tip,
-    child: Row(
+  Widget count(IconData icon, Color color, String words, String tip) => tooltip(
+    context,
+    tip,
+    Row(
       mainAxisSize: MainAxisSize.min,
       spacing: 3,
       children: [
@@ -82,9 +84,10 @@ Widget pullSummary(
           );
         } else if (waiting) {
           parts.add(
-            Tooltip(
-              message: 'A reviewer is waited on',
-              child: Container(
+            tooltip(
+              context,
+              'A reviewer is waited on',
+              Container(
                 width: size,
                 height: size,
                 decoration: BoxDecoration(

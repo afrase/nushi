@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
 import 'package:nushi/chat.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
@@ -225,11 +225,12 @@ class _PullDotState extends State<PullDot> with ClockRun {
         ? 0.0
         : hopHeight((ms - 400) / 1200);
     final fade = passed ? 1 - part(ms, 4000, 300) : 1.0;
-    return Tooltip(
-      message: widget.chat.pulls.length > 1
+    return tooltip(
+      context,
+      widget.chat.pulls.length > 1
           ? 'Pull requests: checks $words'
           : '#${widget.chat.pull?.number}: checks $words',
-      child: Padding(
+      Padding(
         padding: const EdgeInsets.only(left: 6),
         child: Transform.translate(
           offset: Offset(0, -hop),
@@ -409,6 +410,7 @@ class _PullChipState extends State<PullChip> {
                         spacing: 6,
                         children: [
                           pullSummary(
+                            context,
                             theme,
                             number: l.number,
                             pull: p,

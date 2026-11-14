@@ -128,9 +128,10 @@ class OutsideMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
-    return Tooltip(
-      message: "Not the repository's owner, a member or a collaborator",
-      child: Text('  outside', style: theme.ui(theme.t.needs, size: 11.5)),
+    return tooltip(
+      context,
+      "Not the repository's owner, a member or a collaborator",
+      Text('  outside', style: theme.ui(theme.t.needs, size: 11.5)),
     );
   }
 }
@@ -150,6 +151,7 @@ class Clamped extends StatelessWidget {
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
       stops: [0.55, 1],
+      // design: a fade's mask, of which only the alpha counts.
       colors: [Color(0xFFFFFFFF), Color(0x00FFFFFF)],
     ).createShader(r),
     child: ClipRect(

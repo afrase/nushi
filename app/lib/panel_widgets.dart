@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/card_list.dart';
+import 'package:nushi/controls.dart' as controls show tooltip;
 import 'package:nushi/disclosure.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
@@ -159,14 +160,10 @@ class PanelWidget extends StatelessWidget {
         folds: false,
         onToggle: null,
         title: titleText,
-        trailing: Tooltip(
-          message: n,
-          child: Text(
-            n,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: muted,
-          ),
+        trailing: controls.tooltip(
+          context,
+          n,
+          Text(n, maxLines: 1, overflow: TextOverflow.ellipsis, style: muted),
         ),
         body: const SizedBox.shrink(),
       );
@@ -404,6 +401,6 @@ class _HoverTipState extends State<_HoverTip> {
   @override
   Widget build(BuildContext context) => MouseRegion(
     onEnter: (_) => setState(() {}),
-    child: Tooltip(message: widget.words(), child: widget.child),
+    child: tooltip(context, widget.words(), widget.child),
   );
 }

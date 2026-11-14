@@ -83,6 +83,7 @@ class _Summary extends StatelessWidget {
         !cleanUpLater.value.contains(cp.chat.id) &&
         !CleanUpJob.of(cp.chat).started;
     return pullSummary(
+      context,
       theme,
       number: l.number,
       pull: p,

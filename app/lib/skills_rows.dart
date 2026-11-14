@@ -35,12 +35,13 @@ class SkillSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
-    return Tooltip(
-      message: why.isNotEmpty
+    return tooltip(
+      context,
+      why.isNotEmpty
           ? why
           : '${on ? 'On' : 'Off'} $where. Chats pick up a '
                 'change when they restart.',
-      child: Row(
+      Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
@@ -158,17 +159,19 @@ class _SkillRow extends StatelessWidget {
               const SizedBox(width: 8),
               if (word != null && word != 'Off') Text(word, style: muted),
               if (skill.linked.isNotEmpty)
-                Tooltip(
-                  message: 'A link to ${skill.linked}',
-                  child: Text('linked', style: muted),
+                tooltip(
+                  context,
+                  'A link to ${skill.linked}',
+                  Text('linked', style: muted),
                 ),
             ],
           ),
         ),
         const SizedBox(width: 12),
-        Tooltip(
-          message: 'About what listing it costs every chat’s context',
-          child: Text('≈ ${skill.tokens} tokens', style: muted),
+        tooltip(
+          context,
+          'About what listing it costs every chat’s context',
+          Text('≈ ${skill.tokens} tokens', style: muted),
         ),
         if (plugin)
           Padding(
