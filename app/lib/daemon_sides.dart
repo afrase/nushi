@@ -28,6 +28,41 @@ extension DaemonSides on Daemon {
     client.closeSideChat(CloseSideChatRequest(chatId: side.id)).ignore();
   }
 
+  /// Ends [chat]'s side chat as its × does (ArchiveSideChat, ADR 0115):
+  /// the daemon archives one with messages, and this returns the archived
+  /// chat's id; '' when it kept nothing (it was empty, or already gone).
+  Future<String> archiveSide(ChatState chat) async {
+    final side = chat.side.value;
+    if (side == null) return '';
+    final r = await client.archiveSideChat(
+      ArchiveSideChatRequest(chatId: side.id),
+    );
+    if (chat.side.value == side) chat.side.value = null;
+    sides.remove(side.id);
+    _changed();
+    return r.chatId;
+  }
+
+  /// Undoes [archiveSide] (RestoreSideChat): the archived chat [archived]
+  /// is [chat]'s side chat again, shown beside it, what was written in
+  /// [was]'s box in its own.
+  Future<void> restoreSide(
+    ChatState chat,
+    String archived, {
+    ChatState? was,
+  }) async {
+    final r = await client.restoreSideChat(
+      RestoreSideChatRequest(chatId: archived),
+    );
+    final side = sides[r.chatId] = ChatState(r.chatId, chat.folder)
+      ..agent = chat.agent;
+    if (was != null) side.draft.takeFrom(was.draft);
+    unawaited(_load(side));
+    chat.sideHidden.value = false;
+    chat.side.value = side;
+    _changed();
+  }
+
   /// Applies [e] to [side]; a turn that ends while it's hidden is unseen
   /// (its chip's dot) until it shows again.
   void _applySide(ChatState side, EventsResponse e) {
