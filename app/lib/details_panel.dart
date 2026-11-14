@@ -369,7 +369,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
             else if (!status.git)
               (
                 null,
-                status.gone ? 'The folder is gone.' : 'Not a git repository.',
+                status.gone ? 'The folder is gone' : 'Not a git repository',
               )
             else ...[
               (_scope.label, lines!),

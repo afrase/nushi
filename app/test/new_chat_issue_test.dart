@@ -195,7 +195,7 @@ void main() {
       findsOneWidget,
     );
     await _type(tester, 'nothing like it');
-    expect(find.text('No issues match.'), findsOneWidget);
+    expect(find.text('No issues match'), findsOneWidget);
     await _key(tester, LogicalKeyboardKey.enter); // nothing to pick
     await _key(tester, LogicalKeyboardKey.escape);
     expect(find.text('New chat in nushi'), findsOneWidget); // still open

@@ -230,7 +230,7 @@ class _JiraPageState extends State<JiraPage> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              'No Jira sites.',
+              'No Jira sites',
               style: theme.ui(t.textMuted, size: 12),
             ),
           ),

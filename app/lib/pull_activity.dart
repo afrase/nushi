@@ -326,7 +326,7 @@ class _EntryState extends State<_Entry> {
                 children: [
                   if (text.isEmpty)
                     Text(
-                      widget.what.isNotEmpty ? 'No description.' : 'No text.',
+                      widget.what.isNotEmpty ? 'No description' : 'No text',
                       style: theme.ui(t.textMuted, size: 12),
                     )
                   else if (clamped)

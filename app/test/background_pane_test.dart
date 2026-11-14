@@ -78,7 +78,7 @@ void main() {
     final (_, d, chat, _) = await _pane(tester, [_command('done')]);
     expect(find.byTooltip('Stop'), findsNothing);
     expect(find.text('Output'), findsOne);
-    expect(find.text('None.'), findsOne);
+    expect(find.text('None'), findsOne);
     // Its agent stopped first: it may still run.
     chat
       ..items.first = _command('started')

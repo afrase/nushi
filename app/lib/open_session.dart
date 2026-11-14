@@ -204,13 +204,13 @@ class _SessionListState extends State<SessionList> {
       _ when _error != null => _error,
       _ when last == null => 'Looking…',
       _ when !last.canList => "$title can't list its sessions.",
-      _ when _sessions.isEmpty && !filtering => 'No other sessions here.',
+      _ when _sessions.isEmpty && !filtering => 'No other sessions here',
       _ => null,
     };
     final noTitle = switch (()) {
       _ when !filtering || shown.isNotEmpty || last == null => null,
-      _ when _hasMore => 'No title loaded so far says “${_search.text}”.',
-      _ => 'No title says “${_search.text}”.',
+      _ when _hasMore => 'No title loaded so far says “${_search.text}”',
+      _ => 'No title says “${_search.text}”',
     };
     _at = _rows == 0 ? 0 : _at.clamp(0, _rows - 1);
     return Focus(

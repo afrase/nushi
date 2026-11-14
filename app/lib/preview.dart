@@ -407,7 +407,7 @@ class PreviewBody extends StatelessWidget {
                 bytesOf(f.data),
                 gaplessPlayback: true,
                 errorBuilder: (_, _, _) => Text(
-                  'Not an image Nushi can show.',
+                  'Not an image Nushi can show',
                   style: theme.ui(t.textSecondary),
                 ),
               ),

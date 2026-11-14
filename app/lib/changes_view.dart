@@ -251,9 +251,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       final status = span.status;
       if (!status.git) {
         setState(() {
-          _error = status.gone
-              ? 'The folder is gone.'
-              : 'Not a git repository.';
+          _error = status.gone ? 'The folder is gone.' : 'Not a git repository';
         });
         return;
       }
@@ -435,7 +433,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     final file = _plain ?? _files.where((f) => f.path == _path).firstOrNull;
     final notShown = file == null
         ? ''
-        : 'Not shown: ${plainName(file.path)} is ${file.skipped}.';
+        : 'Not shown: ${plainName(file.path)} is ${file.skipped}';
     final commits = _span?.scope == Scope.commits;
     final staging = _span?.scope == Scope.uncommitted && !_readOnly;
     final empty = _reloading

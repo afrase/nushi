@@ -139,7 +139,7 @@ class _IssuePickerState extends State<IssuePicker> {
       _ when found == null => 'Looking…',
       _ when unknown.isNotEmpty => null,
       _ when found.issues.isEmpty =>
-        _asked!.isEmpty ? 'No issues looked at lately.' : 'No issues match.',
+        _asked!.isEmpty ? 'No issues looked at lately' : 'No issues match',
       _ => null,
     };
     final sites = {for (final f in _issues) f.site};

@@ -655,6 +655,17 @@ Widget _settings() => page('Text, settings rows, empty states', [
     width: 640,
     child: SettingsGroup(title: 'MCP servers', empty: 'None', children: []),
   ),
+  const SizedBox(height: 8),
+  // An empty state with what to do: a phrase, no full stop.
+  Builder(
+    builder: (context) {
+      final theme = NushiTheme.of(context);
+      return Text(
+        'No inline comments: select lines in Files to add some',
+        style: theme.ui(theme.t.textMuted),
+      );
+    },
+  ),
 ]);
 
 Widget _dialogs() => page('Dialogs', [
@@ -771,7 +782,7 @@ final List<Sheet> sheets = [
   (name: 'small', size: const Size(1200, 820), build: _small, open: null),
   (name: 'fields', size: const Size(1200, 940), build: _fields, open: null),
   (name: 'pills', size: const Size(1200, 860), build: _pills, open: null),
-  (name: 'settings', size: const Size(760, 500), build: _settings, open: null),
+  (name: 'settings', size: const Size(760, 540), build: _settings, open: null),
   (name: 'dialogs', size: const Size(1340, 340), build: _dialogs, open: null),
   (
     name: 'confirm',

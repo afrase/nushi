@@ -70,7 +70,7 @@ class _GitHubChecksState extends State<GitHubChecks> {
     if (p.checks.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Text('No checks.', style: theme.ui(t.textMuted)),
+        child: Text('No checks', style: theme.ui(t.textMuted)),
       );
     }
     final jobs = failed.where((c) => c.id != 0).toList();

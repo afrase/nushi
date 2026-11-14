@@ -326,7 +326,7 @@ class _Next extends StatelessWidget {
         ? (then, null, 'checks: $running running.')
         : after || ready
         ? (null, null, '')
-        : (null, null, 'Nothing else waits: it can merge once its rules pass.');
+        : (null, null, 'Nothing else waits: it can merge once its rules pass');
     if (lead == null && rest.isEmpty) return const SizedBox.shrink();
     return Container(
       decoration: foot,

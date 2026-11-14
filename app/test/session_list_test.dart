@@ -29,14 +29,14 @@ void main() {
   ) async {
     final (fake, d, opened, _) = await pumpSessionList(tester);
     await typeIn(tester, 'zebra');
-    expect(find.text('No title loaded so far says “zebra”.'), findsOne);
+    expect(find.text('No title loaded so far says “zebra”'), findsOne);
     await press(tester, LogicalKeyboardKey.enter); // right after typing: search
     expect(fake.searched.single.text, 'zebra');
     await press(tester, LogicalKeyboardKey.enter); // More, the only row
     expect(fake.listed.last.cursor, 'p2');
     expect(find.text('Zebra stripes'), findsOne);
     await typeIn(tester, 'zebras');
-    expect(find.text('No title says “zebras”.'), findsOne);
+    expect(find.text('No title says “zebras”'), findsOne);
     expect(opened, isEmpty);
     d.dispose();
   });

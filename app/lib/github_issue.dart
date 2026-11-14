@@ -157,7 +157,7 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
             ),
           ),
           if (i.body.isEmpty)
-            Text('No description.', style: theme.ui(t.textMuted, size: 12)),
+            Text('No description', style: theme.ui(t.textMuted, size: 12)),
           for (final c in i.conversation) CommentEntry(c),
           const SizedBox(height: 16),
           CommentBox(

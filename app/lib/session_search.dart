@@ -233,7 +233,7 @@ class SearchState extends StatelessWidget {
             LinkText('Try again', size: 12, onTap: search.again),
           ],
         ),
-        _ => Text('No sessions mention “${search.text}”.', style: style),
+        _ => Text('No sessions mention “${search.text}”', style: style),
       },
     );
   }
