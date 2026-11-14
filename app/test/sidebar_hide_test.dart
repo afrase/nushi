@@ -108,7 +108,7 @@ void main() {
       final button = tester.getRect(find.byTooltip(_hide));
       expect(strip.width, 333);
       // Its icon 5 past where the lights leave room; its box, a header's
-      // icon button's, reaches before that (ADR 0116).
+      // icon button's, reaches before that (ADR 0118).
       expect(button.left, NushiTheme.windowPad + lightsInset - 3);
       expect(button.left, TitleButtons.left);
       // In the strip the traffic lights sit in, level with them and with

@@ -1,4 +1,4 @@
-# 0119. Typing anywhere in the chat writes in its box
+# 0121. Typing anywhere in the chat writes in its box
 
 Status: accepted, 2026-11-14.
 

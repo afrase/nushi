@@ -22,7 +22,7 @@ extension DaemonPlaces on Daemon {
     _changed();
   }
 
-  /// Whether Back and Forward have somewhere to go (ADR 0117).
+  /// Whether Back and Forward have somewhere to go (ADR 0119).
   bool get canGoBack => visits.can(-1, _live);
   bool get canGoForward => visits.can(1, _live);
 

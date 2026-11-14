@@ -58,7 +58,7 @@ class Draft extends ChangeNotifier {
   final put = ValueNotifier<String?>(null);
 
   /// Takes a character typed with nothing that takes text focused (ADR
-  /// 0119): the box's, while it's there, which puts it at its end and takes
+  /// 0121): the box's, while it's there, which puts it at its end and takes
   /// the focus; whether it took it.
   bool Function(String typed)? typed;
 

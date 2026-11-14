@@ -7,7 +7,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/theme/theme.dart';
 
-// A project's own sort (ADR 0118), from the Sort button on its header, as
+// A project's own sort (ADR 0120), from the Sort button on its header, as
 // Claude desktop has a Group and sort button on each project's: how that
 // project's chats are sorted and which way. Grouping stays the sidebar's
 // (it makes the headers), as does what rows show (one look down the list).

@@ -111,7 +111,7 @@ class _ComposerState extends State<Composer> {
     _draft.typed = _typed;
   }
 
-  /// A character typed elsewhere in the chat (ADR 0119): at the box's end,
+  /// A character typed elsewhere in the chat (ADR 0121): at the box's end,
   /// as if typed there, the focus with it. Not while it's locked.
   bool _typed(String c) {
     if (_locked) return false;

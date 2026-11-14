@@ -70,7 +70,7 @@ class _TranscriptSelectionState extends State<TranscriptSelection> {
   @override
   void initState() {
     super.initState();
-    // A character typed with it focused goes to the box (ADR 0119), but R
+    // A character typed with it focused goes to the box (ADR 0121), but R
     // with text selected, which replies.
     typesThrough.add(_areaFocus);
   }

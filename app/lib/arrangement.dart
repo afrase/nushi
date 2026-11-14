@@ -47,7 +47,7 @@ enum SortBy {
   bool get naturallyAscending => this == name;
 }
 
-/// A project's own sort (its header's Sort button, ADR 0118): how its
+/// A project's own sort (its header's Sort button, ADR 0120): how its
 /// chats are sorted and which way, in place of the sidebar's.
 @immutable
 class ProjectSort {

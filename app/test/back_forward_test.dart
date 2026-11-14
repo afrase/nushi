@@ -18,7 +18,7 @@ import 'package:nushi/window_drag_linux.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-// Back and Forward through the places visited (ADR 0117): the chevrons
+// Back and Forward through the places visited (ADR 0119): the chevrons
 // after the sidebar's button, ⌘[ and ⌘], View's items and the palette's.
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);

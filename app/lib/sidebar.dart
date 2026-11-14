@@ -58,13 +58,13 @@ class Sidebar extends StatefulWidget {
   final Daemon daemon;
 
   /// Whether it floats over the main pane as it peeks (`SidebarBeside`,
-  /// ADR 0116): its card is already in from the window's top by the
+  /// ADR 0118): its card is already in from the window's top by the
   /// window's margin, so its strip is that much shorter, its buttons
   /// where they are when it shows.
   final bool floating;
 
   /// The strip at its top, which holds Arrange at its right and has the
-  /// title buttons drawn over its left ([TitleButtons], ADR 0116). On the
+  /// title buttons drawn over its left ([TitleButtons], ADR 0118). On the
   /// Mac the traffic lights sit in it too, level with the middle of the
   /// main pane's header (`macos/Runner/TitleBar.swift`'s WindowButtons).
   /// The strip ends where that header does, so its buttons are level with
@@ -246,7 +246,7 @@ class _SidebarState extends State<Sidebar> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Around the traffic lights and the title buttons, which are
-            // drawn over it (ADR 0111, 0116): Arrange at its right is level
+            // drawn over it (ADR 0111, 0118): Arrange at its right is level
             // with them and with the header's, in the header's band under
             // the window's margin. Its empty space moves the window; the
             // buttons keep their clicks.

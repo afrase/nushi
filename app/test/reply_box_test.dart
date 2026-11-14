@@ -139,7 +139,7 @@ void main() {
 
   testWidgets('R on a selection opens the reply box on it, empty; with a '
       'modifier, or with nothing selected, it opens none, and is typed in '
-      'the chat’s box (ADR 0119)', (tester) async {
+      'the chat’s box (ADR 0121)', (tester) async {
     final (fake, close) = await _open(tester);
     String box() => tester
         .widget<EditableText>(

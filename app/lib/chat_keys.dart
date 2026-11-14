@@ -11,7 +11,7 @@ import 'package:nushi/sidebar_view.dart';
 
 // Switching chats by keyboard, as Claude Code does: ⌘ held alone numbers
 // the sidebar's chats, ⌘1–⌘9 opens one, ⌥⌘↑ and ⌥⌘↓ go to the one before
-// and after (⌘[ and ⌘] are Back and Forward, ADR 0117). And the chat's
+// and after (⌘[ and ⌘] are Back and Forward, ADR 0119). And the chat's
 // tabs: ⌃Tab and ⌃⇧Tab go through them. On Linux, Control in ⌘'s place
 // (`keys.dart`).
 
@@ -83,7 +83,7 @@ const _chatNumberKeys = [
   Cmd(LogicalKeyboardKey.digit9),
 ];
 
-/// ⌥⌘↑ and ⌥⌘↓, which no text field or editor binds (ADR 0117; ⌘[ and
+/// ⌥⌘↑ and ⌥⌘↓, which no text field or editor binds (ADR 0119; ⌘[ and
 /// ⌘] until Back and Forward took them); on Linux Ctrl+Page Up and
 /// Ctrl+Page Down, as a browser's tabs.
 const previousChatKey = Cmd(

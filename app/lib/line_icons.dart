@@ -33,7 +33,7 @@ enum LineIcon {
   /// Arrange (the sidebar's grouping and sort): three lines, each shorter.
   arrange,
 
-  /// Sort (a project's own, ADR 0118): an arrow up beside an arrow down,
+  /// Sort (a project's own, ADR 0120): an arrow up beside an arrow down,
   /// as Claude desktop's Group and sort.
   sort,
 
@@ -59,7 +59,7 @@ enum LineIcon {
   /// A browser tab's Forward: an arrow to the right.
   forward,
 
-  /// Back through the places visited (ADR 0117): a chevron to the left,
+  /// Back through the places visited (ADR 0119): a chevron to the left,
   /// as Claude desktop's.
   chevronBack,
 

@@ -401,7 +401,7 @@ void main() {
     }, variant: macOnly);
 
     testWidgets('⌘[ and ⌘] are the app’s Back and Forward from the address '
-        'field too (ADR 0117)', (tester) async {
+        'field too (ADR 0119)', (tester) async {
       browserFakes();
       final d = await browserApp(tester);
       d.select('d');

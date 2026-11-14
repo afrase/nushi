@@ -39,7 +39,7 @@ void toggleSidebar() => sidebarHidden.value = !sidebarHidden.value;
 /// The button that hides the sidebar or shows it, the box of
 /// [LineIcon.sidebar] with its left side marked off. It's the first of
 /// [TitleButtons], at one place in the window whether the sidebar shows or
-/// not (ADR 0116: a toggle never moves when pressed), and the same control
+/// not (ADR 0118: a toggle never moves when pressed), and the same control
 /// as the icon buttons at a header's right (32 square, [IconTap.header];
 /// ADR 0111), so the two ends of the top match.
 class SidebarButton extends StatelessWidget {
@@ -69,11 +69,11 @@ class SidebarButton extends StatelessWidget {
 
 /// The buttons at the window's top left, past the traffic lights, level
 /// with the headers' middle: [SidebarButton], then Back and Forward
-/// through the places visited (`goBack`, ADR 0117), each greyed
+/// through the places visited (`goBack`, ADR 0119), each greyed
 /// out while there's nowhere to go. They're drawn over the
 /// sidebar's top strip and the main pane's header alike, at the same place
 /// in the window whether the sidebar shows, is hidden or slides (ADR
-/// 0116); `SidebarBeside` puts them there. [onSidebarHover] hears the
+/// 0118); `SidebarBeside` puts them there. [onSidebarHover] hears the
 /// pointer come onto the sidebar's button and leave it.
 class TitleButtons extends StatelessWidget {
   const new({required this.daemon, super.key, this.onSidebarHover});

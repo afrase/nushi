@@ -31,4 +31,4 @@ The owner wants Claude desktop's browser beside the chat: look at the dev server
 - Back and Forward on ⌘← and ⌘→: in a field inside the page they move the caret, and the menu can't tell.
 
 ## Amendment (2026-11-14)
-⌘[ and ⌘] are the app's Back and Forward through the places visited ([ADR 0117](0117-back-and-forward.md)), not chat switching; a browser tab's own Back and Forward stay its buttons.
+⌘[ and ⌘] are the app's Back and Forward through the places visited ([ADR 0119](0119-back-and-forward.md)), not chat switching; a browser tab's own Back and Forward stay its buttons.

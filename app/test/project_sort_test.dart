@@ -17,7 +17,7 @@ import 'harness.dart';
 import 'sidebar_fixture.dart';
 
 // Each project sorts its own way from the Sort button on its header (ADR
-// 0118), as Claude desktop's Group and sort; one that hasn't picked sorts
+// 0120), as Claude desktop's Group and sort; one that hasn't picked sorts
 // as the sidebar does, which stays the default.
 
 Chat _chat(String id, String title, String folder, int made, int updated) =>

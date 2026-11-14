@@ -59,7 +59,7 @@ The owner found the app's look dated and approved a mock of a fresh one (2026-11
 - Eight tokens are gone, with nothing left to draw them: `borderSubtle`, `borderStrong`, `toolTint`, `toolBorder`, `subagentBorder`, `findingsTint`, `findingsBorder` and `userBandBorder`. A theme file that still names them reads as it did: they're passed over without a note (`retiredTokens`). One came, `faint`, worked out from `base` and `text`, which no file names.
 - The sidebar's New chat and chats start 24 lower on the Mac (at the header's line, 64, not 40), and a header with the sidebar hidden starts 11 further in.
 - Amends 0071 (the header's switch is the filled control again, as the mock has it), 0072 (the header's and the composer's heights and fold numbers), 0076 (a bubble's padding; a tool row's fill and height), 0080 (the top is the sidebar's strip and the pane's header, not one band; the traffic lights are moved after all, and put back on every resize) and 0092 (the details hide where the transcript would keep less than 484).
-- Amended by 0116: the sidebar's button stays past the traffic lights whether the sidebar shows or not, and the strip has Arrange alone at its right.
+- Amended by 0118: the sidebar's button stays past the traffic lights whether the sidebar shows or not, and the strip has Arrange alone at its right.
 
 ## Left
 - **The sidebar's projects** as tiles with a rail, as the mock's Projects page has them: ADR 0112 (the tiles in the list; the rail an option, off at first).

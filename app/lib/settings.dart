@@ -257,7 +257,7 @@ final sidebarSort = Pref<SortBy>(
 final Pref<bool> sidebarAscending = _plain('sidebarAscending', false);
 
 /// Each project's own sort, by folder path ('' for no folder), from its
-/// header's Sort button (ADR 0118): a project not named sorts as
+/// header's Sort button (ADR 0120): a project not named sorts as
 /// [sidebarSort] and [sidebarAscending] say, the sidebar's, which stays
 /// the default. Only while the sidebar is grouped by project.
 final projectSorts = Pref<Map<String, ProjectSort>>(

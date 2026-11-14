@@ -21,4 +21,4 @@ The owner wanted the sidebar arranged as Claude Code's desktop app lets you: gro
 - The Arrange button always shown: easier to find, but every sidebar golden and the default look change for a control most never touch.
 
 ## Amendment (2026-11-14)
-Sort by is the default for the projects: each can sort its own way from its header ([ADR 0118](0118-each-project-sorts-its-own-way.md)).
+Sort by is the default for the projects: each can sort its own way from its header ([ADR 0120](0120-each-project-sorts-its-own-way.md)).

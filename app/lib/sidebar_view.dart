@@ -168,7 +168,7 @@ class SidebarView {
 }
 
 /// How [folder]'s chats sort under Project grouping: its own sort
-/// ([projectSorts], ADR 0118), else the sidebar's.
+/// ([projectSorts], ADR 0120), else the sidebar's.
 ({SortBy sort, bool ascending}) projectSort(String folder) =>
     switch (projectSorts.value[folder]) {
       final own? => (sort: own.sort, ascending: own.ascending),

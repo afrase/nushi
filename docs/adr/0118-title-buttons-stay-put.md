@@ -1,4 +1,4 @@
-# 0116. The title buttons stay put, and a hidden sidebar peeks
+# 0118. The title buttons stay put, and a hidden sidebar peeks
 
 Status: accepted, 2026-11-14.
 

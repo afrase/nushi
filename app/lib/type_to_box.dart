@@ -6,7 +6,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/menu.dart' show openMenus;
 import 'package:nushi/run_state.dart';
 
-// Type to write (ADR 0119): with the chat in sight and nothing that takes
+// Type to write (ADR 0121): with the chat in sight and nothing that takes
 // text focused, a character typed goes into the chat's box, which takes
 // the focus, as if typed there, so `/` opens the commands' list. Keys
 // with ⌘, Control or Option, Esc, the arrows, Tab, Enter and Space keep

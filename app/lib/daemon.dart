@@ -218,7 +218,7 @@ class Daemon extends ChangeNotifier {
   String? selectedId;
   ChatState? get selected => chats[selectedId];
 
-  /// The places visited, for Back and Forward (ADR 0117): what shows is
+  /// The places visited, for Back and Forward (ADR 0119): what shows is
   /// noted each time this notifies.
   final visits = Visits();
 

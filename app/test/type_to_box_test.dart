@@ -14,7 +14,7 @@ import 'package:nushi/widgets.dart' show confirm;
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-// Type to write (ADR 0119): a character typed with nothing that takes text
+// Type to write (ADR 0121): a character typed with nothing that takes text
 // focused goes into the chat's box, as if typed there.
 
 const _answer =

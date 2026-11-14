@@ -95,7 +95,7 @@ List<MenuEntry> arrangeEntries(BuildContext context, Daemon daemon) {
               ? 'Drag chats to put them in order'
               : 'The sort sets the order; drag a chat into a section',
         ),
-        // Each project may sort its own way, from its header (ADR 0118).
+        // Each project may sort its own way, from its header (ADR 0120).
         if (group == GroupBy.project)
           const MenuEntry.heading('A project’s ⇅ sorts it its own way'),
       ],

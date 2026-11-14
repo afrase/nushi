@@ -64,7 +64,7 @@ const pinKey = Cmd(LogicalKeyboardKey.keyD);
 /// ⌘\: hide the sidebar, or show it.
 const sidebarKey = Cmd(LogicalKeyboardKey.backslash);
 
-/// ⌘[ and ⌘]: Back and Forward through the places visited (ADR 0117), as
+/// ⌘[ and ⌘]: Back and Forward through the places visited (ADR 0119), as
 /// Claude's desktop app and a browser. On Linux Alt+Left and Alt+Right, a
 /// browser's there (Control and `[` is Escape): a text field keeps them
 /// for its own moves, and a terminal for its shell.
@@ -214,7 +214,7 @@ const paletteKeyToo = Cmd(LogicalKeyboardKey.keyP, shift: true);
 
 /// Whether [act]'s key is the focused text field's own, which keeps it:
 /// Linux's Back and Forward, Alt+Left and Alt+Right, move along its line
-/// there (ADR 0117). The Mac's ⌘[ and ⌘] are no field's.
+/// there (ADR 0119). The Mac's ⌘[ and ⌘] are no field's.
 bool actKeyTaken(Act act) =>
     (act == Act.back || act == Act.forward) &&
     commandKey == CommandKey.control &&

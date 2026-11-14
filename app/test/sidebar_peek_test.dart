@@ -15,7 +15,7 @@ import 'package:nushi/window_drag_linux.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-// The sidebar peeks while it's hidden (ADR 0116): the pointer on the
+// The sidebar peeks while it's hidden (ADR 0118): the pointer on the
 // sidebar's button, or resting on the window's left edge, slides it in over
 // the chat, which doesn't move; it goes once the pointer has been off it
 // for a moment, never while its menu is open.

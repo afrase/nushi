@@ -381,7 +381,7 @@ class _NushiAppState extends State<NushiApp> {
             // Focused when nothing in the window is, so the keys still
             // come here (an empty pane, after a click on the sidebar).
             // A character typed there, or on the transcript, goes into the
-            // chat's box (ADR 0119).
+            // chat's box (ADR 0121).
             child: Focus(
               autofocus: true,
               onKeyEvent: (node, e) => typeIntoBox(widget.daemon, node, e),

@@ -209,7 +209,7 @@ class Menu extends StatefulWidget {
 }
 
 /// How many menus are open: a key typed while one is goes to it, not to
-/// the chat's box (ADR 0119).
+/// the chat's box (ADR 0121).
 final ValueNotifier<int> openMenus = runValue(0);
 
 class _MenuState extends State<Menu> {

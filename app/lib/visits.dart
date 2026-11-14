@@ -21,7 +21,7 @@ class Visit {
   int get hashCode => Object.hash(place, chat);
 }
 
-/// The places visited, in order, as a browser's history (ADR 0117): Back
+/// The places visited, in order, as a browser's history (ADR 0119): Back
 /// and Forward step through them. A new place is noted after the one
 /// they're at, those after it dropped; stepping only moves along. It keeps
 /// the last [most]. A visit may no longer be live (its chat deleted or

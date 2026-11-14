@@ -15,10 +15,10 @@ import 'package:nushi/theme/theme.dart';
 /// What's in [main] that should glide (the chat's column) does so itself
 /// (`Beside`), and what leads a header past the lights follows the
 /// sidebar's edge ([SidebarGlide]). Over all of it, at one place whatever
-/// the sidebar does, [TitleButtons] (ADR 0116).
+/// the sidebar does, [TitleButtons] (ADR 0118).
 ///
 /// While it's hidden ([shut]), the pointer on the sidebar's button, or
-/// resting on the window's left edge, peeks at it (ADR 0116): it slides in
+/// resting on the window's left edge, peeks at it (ADR 0118): it slides in
 /// over [main], floating ([sidebar] given true: a raised card with a
 /// shadow), without moving [main], and works as it does shown. It slides
 /// away once the pointer has been off it, the title buttons and the edge
