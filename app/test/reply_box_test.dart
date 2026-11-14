@@ -138,17 +138,34 @@ void main() {
   setUpAll(loadFonts);
 
   testWidgets('R on a selection opens the reply box on it, empty; with a '
-      'modifier, or with nothing selected, it does nothing', (tester) async {
+      'modifier, or with nothing selected, it opens none, and is typed in '
+      'the chat’s box (ADR 0119)', (tester) async {
     final (fake, close) = await _open(tester);
+    String box() => tester
+        .widget<EditableText>(
+          find
+              .descendant(
+                of: find.byType(Composer),
+                matching: find.byType(EditableText),
+              )
+              .first,
+        )
+        .controller
+        .text;
     await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
     await tester.pumpAndSettle();
     expect(find.byType(ReplyBox), findsNothing);
+    expect(box(), 'r');
     await _reply(tester, open: false);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await tester.pumpAndSettle();
     expect(find.byType(ReplyBox), findsNothing);
+    // The test's key carries no shifted character.
+    expect(box().toLowerCase(), 'rr');
+    // Selected again, the transcript has the focus back.
+    await _reply(tester, open: false);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
     await tester.pumpAndSettle();
     expect(find.byType(ReplyBox), findsOneWidget);

@@ -89,6 +89,8 @@ The terminal has its own font, in **Settings**, then **Terminal**. The phone alw
 
 Type in the box at the bottom and press **⏎** to send. **⇧⏎** starts a new line.
 
+You don't have to click the box first: start typing anywhere in the chat and the letters go into it (a menu, a dialog or another text field keeps them).
+
 - **Attach files or images**: click the **+** in the box and pick **Add files or photos** (**⌘U**), drop files on the chat, or paste a picture.
 - **Mention a file**: type `@` and pick one.
 - **Slash commands**: type `/` to see the agent's commands.

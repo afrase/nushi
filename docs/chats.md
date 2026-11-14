@@ -110,6 +110,7 @@ Nushi remembers all of it. ⌘1–⌘9 and ⌥⌘↑ ⌥⌘↓ go through the ch
 | ⌘S | Save the file being edited in the preview (File › Save). |
 | ⌘K, ⌘⇧P | The command palette. |
 | ⌘F | Find. |
+| Any character | Typed with nothing that takes text focused (after a click on the transcript, say), it goes at the end of the chat's box, which takes the focus, as if typed there: `/` opens the commands. Keys with ⌘, ⌃ or ⌥, Esc, the arrows, Tab, Enter and Space keep their meaning, as do R on a selection (reply), a field, a terminal, the preview's editor, an open menu and a dialog ([ADR 0119](adr/0119-type-to-write.md)). |
 | ⌘; | The next typo in the composer ([Spell check](#spell-check)). |
 | ⌘P | Open file. |
 | ⇧⌘E | Show or hide the Files pane. |

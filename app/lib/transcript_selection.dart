@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/paced.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/selection_lines.dart';
+import 'package:nushi/type_to_box.dart';
 
 /// How wide the scrollbar's strip is, at the transcript's right edge.
 const _scrollbarEdge = 16.0;
@@ -67,7 +68,16 @@ class _TranscriptSelectionState extends State<TranscriptSelection> {
   _Anchor _anchor = _Anchor(); // where the reply box opened
 
   @override
+  void initState() {
+    super.initState();
+    // A character typed with it focused goes to the box (ADR 0119), but R
+    // with text selected, which replies.
+    typesThrough.add(_areaFocus);
+  }
+
+  @override
   void dispose() {
+    typesThrough.remove(_areaFocus);
     _hold.dispose();
     _areaFocus.dispose();
     super.dispose();

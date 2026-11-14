@@ -42,6 +42,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/theme_files.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/trust_card.dart';
+import 'package:nushi/type_to_box.dart';
 import 'package:nushi/update_toast.dart';
 import 'package:nushi/widgets.dart' show confirm;
 
@@ -379,8 +380,11 @@ class _NushiAppState extends State<NushiApp> {
             },
             // Focused when nothing in the window is, so the keys still
             // come here (an empty pane, after a click on the sidebar).
+            // A character typed there, or on the transcript, goes into the
+            // chat's box (ADR 0119).
             child: Focus(
               autofocus: true,
+              onKeyEvent: (node, e) => typeIntoBox(widget.daemon, node, e),
               child: Scaffold(
                 // The Scaffold's text style blends to a new theme's over
                 // 200 ms, rebuilding every text below on each frame;
