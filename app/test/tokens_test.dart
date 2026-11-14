@@ -167,6 +167,22 @@ void main() {
       );
     });
 
+    test('a field’s hint stands clearly under a typed value and muted '
+        'text, and still reads ($name)', () {
+      final hint = _contrast(t.hint, t.fieldFill);
+      expect(hint, greaterThanOrEqualTo(3), reason: 'hint on fieldFill');
+      expect(
+        _contrast(t.text, t.fieldFill) / hint,
+        greaterThanOrEqualTo(1.5),
+        reason: 'text over hint',
+      );
+      expect(
+        hint,
+        lessThanOrEqualTo(_contrast(t.textMuted, t.fieldFill)),
+        reason: 'hint under muted',
+      );
+    });
+
     test('a status mark reads 3:1 on every row, a tint’s mark on it '
         '($name)', () {
       _atLeast(

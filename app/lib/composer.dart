@@ -536,7 +536,7 @@ class _ComposerState extends State<Composer> {
                         : '$enterLabel queues it, '
                               '$cmdEnterLabel stops '
                               '${chat.agentName} and sends',
-                    hintStyle: theme.ui(t.textMuted, size: 14),
+                    hintStyle: theme.ui(t.hintOn(t.raised), size: 14),
                     // A phone's box is one row: a hint never makes it two.
                     hintMaxLines: touch ? 1 : null,
                     border: InputBorder.none,

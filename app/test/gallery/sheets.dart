@@ -403,6 +403,8 @@ Widget _fields() => page('Fields and pickers', [
   plainRow('TextField', [
     ('value', _field(text: 'npx')),
     ('hint', _field(hint: 'my-server')),
+    ('value, code', _field(text: 'npx', code: true)),
+    ('hint, code', _field(hint: 'npx', code: true)),
     ('error', _field(text: 'my server', error: true)),
     ('disabled', _field(text: 'github', enabled: false)),
   ]),
@@ -433,13 +435,24 @@ Widget _field({
   String? hint,
   bool error = false,
   bool enabled = true,
-}) => SizedBox(
-  width: 170,
-  child: TextField(
-    controller: TextEditingController(text: text),
-    enabled: enabled,
-    decoration: InputDecoration(hintText: hint, errorText: error ? '' : null),
-  ),
+  bool code = false,
+}) => Builder(
+  builder: (context) {
+    final theme = NushiTheme.of(context);
+    return SizedBox(
+      width: 170,
+      child: TextField(
+        controller: TextEditingController(text: text),
+        enabled: enabled,
+        // In the Code font, as the MCP form's command.
+        style: code ? theme.code(theme.t.text) : null,
+        decoration: InputDecoration(
+          hintText: hint,
+          errorText: error ? '' : null,
+        ),
+      ),
+    );
+  },
 );
 
 Widget _pills() => page('Pills, chips, cards', [
@@ -713,7 +726,7 @@ Widget _floats() => page('Menus, tooltips, toasts', [
 final List<Sheet> sheets = [
   (name: 'buttons', size: const Size(1200, 1080), build: _buttons, open: null),
   (name: 'small', size: const Size(1200, 820), build: _small, open: null),
-  (name: 'fields', size: const Size(1200, 860), build: _fields, open: null),
+  (name: 'fields', size: const Size(1200, 940), build: _fields, open: null),
   (name: 'pills', size: const Size(1200, 860), build: _pills, open: null),
   (name: 'settings', size: const Size(760, 420), build: _settings, open: null),
   (name: 'dialogs', size: const Size(1340, 340), build: _dialogs, open: null),

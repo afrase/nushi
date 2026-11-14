@@ -5,7 +5,7 @@ The one page to read before any work on the app's UI: what to draw a view with, 
 Three things hold it:
 
 - **`tools/design-check`** (in `make lint-dart`) fails on code that goes around the shared pieces: a raw `Tooltip(`, a Material button, an `AlertDialog(` outside `nushiDialog`, a tooltip's shortcut in brackets or after spaces, a `Color(0x…)` or `Colors.<name>` (not `transparent`), a `fontSize:` number. A deliberate use takes `// design: <why>` on its line or alone on the line above.
-- **`corners_test.dart`** fails on a corner that isn't a radius token (ADR [0110](adr/0110-corners-come-from-the-theme.md)); **`tokens_test.dart`** holds every theme's text to AA on its fills.
+- **`corners_test.dart`** fails on a corner that isn't a radius token (ADR [0110](adr/0110-corners-come-from-the-theme.md)); **`tokens_test.dart`** holds every theme's text to AA on its fills, and a field's hint to 3:1 and a clear step under its value.
 - **The gallery**: `make gallery` draws every shared control in every state, one sheet per group, dark and light, to `app/build/gallery/` (`app/test/gallery/sheets.dart`); `gallery_test.dart` keeps the buttons', the small controls' and the fields' sheets as goldens, so a change to a component shows in review. A sheet forces each state with `ShowLook`. Add a new shared piece to a sheet.
 
 ## Tokens
@@ -36,7 +36,8 @@ Every colour is a token of `Tokens`; a theme changes values, never names. Read t
 |---|---|
 | `text` | body text, a value, a title, an open row's label |
 | `textSecondary` | a row's title at rest, a label beside a value, a tooltip's words, an icon button's icon |
-| `textMuted` | meta and small print: an age, a count, a hint, a description under a row, an empty state |
+| `textMuted` | meta and small print: an age, a count, a description under a row, an empty state |
+| `hint` | a field's hint, an example of what goes in it: `textMuted` taken toward the field's fill to 3.5:1 (`hintOn(fill)` for a box on another fill, as the composer's), a clear step under a typed value, so it never reads as typed |
 | `faint` | a grey mark that stands back: the empty window's logo, a rail's dashes, the part of a meter that counts for nothing |
 | `link` | `LinkText` only |
 | `onAccent` | on the accent's fill |
@@ -185,7 +186,6 @@ Follow-ups, found while writing this page and drawing the gallery. Two small bug
 
 - **The focus ring vanishes on a primary button in a light set**: `focus` is `accentInk`, within a shade of `accent`'s fill (light `#2259D2` on `#2365EA`), so a focused Done, Send to agent or Squash and merge looks at rest; it reads on dark sets.
 
-- **A field's hint is barely dimmer than its value.** A hint is `textMuted` in the UI font; `textMuted` is close to `textSecondary` and, in a code-set field, the hint reads as typed text (the MCP form's "npx", "my-server").
 - **`textSecondary` and `textMuted` are a hair apart** (dark `#B4B8BF` and `#A5A9B1`, light `#494B57` and `#5A5E6B`), so the three greys read as two.
 - **Type sizes off the scale**: besides 11, 11.5, 12, 13 and 14, views set 12.5 (54 places), 13.5, 10.5, 8 and 8.5 with `ui()`, and 12.5 and 10.5 with `code()`.
 - **Durations written as numbers**: about 70 `Duration(milliseconds: …)` outside `motion.dart`, some equal to `Motion`'s (`Dimmed`'s 120, a panel widget's 200) but not named so.

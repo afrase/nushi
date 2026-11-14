@@ -270,7 +270,7 @@ class _ToSubagentBoxState extends State<_ToSubagentBox> {
                   hintText:
                       'Message ${widget.s.call.agent} through '
                       '${widget.chat.agentName}',
-                  hintStyle: theme.ui(t.textMuted),
+                  hintStyle: theme.ui(t.hintOn(t.base)),
                 ),
               ),
             ),
