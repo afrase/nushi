@@ -36,6 +36,12 @@ A GIF plays while the pointer is on the tile, framed and trimmed the same way. T
 
 To add a project before it has a chat, click the Arrange button at the top of the sidebar, pick **Add project…** and pick its folder.
 
+## Hide the sidebar
+
+Press **⌘\**, or click the sidebar button at the top left of the window, right of the window's own buttons. The chat takes the whole window. The button stays in the same place, so the same click brings the sidebar back.
+
+To glance at the sidebar while it's hidden, point at the sidebar button (or rest the pointer on the window's left edge). The sidebar slides in over the chat: pick a chat or use its menus there. It slides away when the pointer leaves it. Click the button while it's out to keep it shown.
+
 ## See one project's chats
 
 The project rail is a column of larger tiles at the sidebar's left, one for each project. It's off at first.

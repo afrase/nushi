@@ -98,28 +98,29 @@ void main() {
   setUpAll(loadFonts);
 
   group('the button', () {
-    testWidgets('the sidebar’s top strip: right-aligned; hiding gives the main '
-        'area the window, showing brings it back at its width', (tester) async {
+    testWidgets('it stays at one place past the lights, shown or hidden; '
+        'hiding gives the main area the window, showing brings it back at its '
+        'width', (tester) async {
       final d = await _window(tester, hidden: false);
       paneWidths.value = {'sidebar': 333};
       await tester.pump();
       final strip = tester.getRect(find.byType(Sidebar));
       final button = tester.getRect(find.byTooltip(_hide));
       expect(strip.width, 333);
-      // Its icon 5 in from the strip's end, as it was; its box, a header's
-      // icon button's, reaches past that.
-      expect(button.right, strip.right - Sidebar.end + SidebarButton.reach);
-      expect(
-        button.center.dx,
-        strip.right - Sidebar.end - SidebarButton.iconInset - 8,
-      );
+      // Its icon 5 past where the lights leave room; its box, a header's
+      // icon button's, reaches before that (ADR 0116).
+      expect(button.left, NushiTheme.windowPad + lightsInset - 3);
+      expect(button.left, TitleButtons.left);
       // In the strip the traffic lights sit in, level with them and with
       // the header's middle (36 from the window's top: the window's
-      // margin and half a header), and clear of them with the sidebar at
-      // its narrowest too (they end 80 from its left).
-      expect(button.center.dy, NushiTheme.windowPad + PaneHeader.height / 2);
-      expect(button.center.dy, 36);
-      expect(200 - Sidebar.end - button.width, greaterThan(95));
+      // margin and half a header, less its hairline).
+      expect(button.center.dy, closeTo(36, 0.5));
+      // Arrange, at the strip's right, is clear of it with the sidebar at
+      // its narrowest too.
+      expect(
+        Sidebar.minWidth - (Sidebar.end - SidebarButton.reach) - 32,
+        greaterThan(TitleButtons.right),
+      );
       // The strip ends where the header does, and New chat starts there.
       expect(Sidebar.topHeight, tester.getRect(find.byType(ChatHeader)).bottom);
       expect(tester.getRect(find.byType(WideButton)).top, Sidebar.topHeight);
@@ -133,6 +134,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(sidebarHidden.value, isTrue);
       expect(find.byType(Sidebar), findsNothing);
+      expect(tester.getRect(find.byTooltip(_show)), button, reason: 'put');
       expect(tester.getRect(header).left, NushiTheme.windowPad);
       // The window less its margins: the details are under it.
       expect(tester.getRect(header).width, 1200 - 2 * NushiTheme.windowPad);
@@ -231,7 +233,7 @@ void main() {
       final calls = _windowCalls();
       final d = await _window(tester, hidden: false);
       final button = tester.getRect(find.byTooltip(_hide));
-      const empty = Offset(120, 20);
+      const empty = Offset(210, 20);
 
       await tester.tapAt(empty);
       await tester.pump(const Duration(milliseconds: 50));
@@ -675,7 +677,7 @@ void main() {
     await tester.tap(find.text(_title));
     await tester.pumpAndSettle();
     expect(find.byType(SidebarButton), findsNothing);
-    expect(find.byType(ShowSidebarButton), findsNothing);
+    expect(find.byType(TitleButtons), findsNothing);
     await _key(tester, LogicalKeyboardKey.backslash);
     expect(sidebarHidden.value, isTrue);
     await endPhone(tester, phone);

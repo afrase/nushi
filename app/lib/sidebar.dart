@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -42,31 +43,46 @@ import 'package:nushi/window_drag.dart';
 /// one and Settings' Project rail is on; off at first), whose tiles
 /// narrow all of these to one project's chats. While ⌘ is held
 /// alone, the first nine chats shown (archived left out) show the number
-/// ⌘ opens them with. Its header's [SidebarButton] hides it ([sidebarHidden]);
+/// ⌘ opens them with. [SidebarButton] hides it ([sidebarHidden]);
 /// `main.dart` then doesn't build it, so it asks nothing while it's hidden.
 ///
 /// It sits on the window's own background, with no pane and no border
-/// (ADR 0111): the strip under the traffic lights with its two buttons,
+/// (ADR 0111): the strip under the traffic lights and the title buttons,
 /// New chat as a card-filled button, the chats, the views' links, and at
 /// its foot the agents' counts and the memory as a card ([StatusBar]).
 /// Its own fill is the window's, so it covers the main pane it slides
 /// over as it goes.
 class Sidebar extends StatefulWidget {
-  const new({required this.daemon, super.key});
+  const new({required this.daemon, super.key, this.floating = false});
 
   final Daemon daemon;
 
-  /// The strip at its top, which holds Arrange and the button that hides
-  /// it. On the Mac the traffic lights sit in it, level with the middle of
-  /// the main pane's header (`macos/Runner/TitleBar.swift`'s
-  /// WindowButtons), so the strip ends where that header does and its
-  /// buttons are level with both; elsewhere it's a row of its own.
-  static double get topHeight =>
-      headersMoveWindow ? NushiTheme.windowPad + PaneHeader.height : 32;
+  /// Whether it floats over the main pane as it peeks (`SidebarBeside`,
+  /// ADR 0116): its card is already in from the window's top by the
+  /// window's margin, so its strip is that much shorter, its buttons
+  /// where they are when it shows.
+  final bool floating;
 
-  /// The room over New chat: on the Mac the strip's foot is already the
-  /// header's line.
-  static double get topGap => headersMoveWindow ? 0 : 8;
+  /// The strip at its top, which holds Arrange at its right and has the
+  /// title buttons drawn over its left ([TitleButtons], ADR 0116). On the
+  /// Mac the traffic lights sit in it too, level with the middle of the
+  /// main pane's header (`macos/Runner/TitleBar.swift`'s WindowButtons).
+  /// The strip ends where that header does, so its buttons are level with
+  /// the header's, on Linux too, where the title buttons stay put as on
+  /// the Mac.
+  static const double topHeight = NushiTheme.windowPad + PaneHeader.height;
+
+  /// The room over New chat: the strip's foot is already the header's
+  /// line.
+  static const double topGap = 0;
+
+  /// The narrowest it's dragged to: room in its top strip for the title
+  /// buttons and Arrange beside them, past the Mac's traffic lights.
+  static double get minWidth => max(
+    200,
+    TitleButtons.right + WindowDrag.near + IconTap.header * 2 + 16 + end -
+        SidebarButton.reach,
+  );
 
   /// How far its rows and cards are in from its left edge, the window's,
   /// and from its right edge, where the main pane starts: the window's
@@ -225,30 +241,27 @@ class _SidebarState extends State<Sidebar> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Around the traffic lights (ADR 0111): the strip's buttons
-            // are level with them and with the header's, in the header's
-            // band under the window's margin. Its empty space moves the
-            // window; the buttons keep their clicks.
+            // Around the traffic lights and the title buttons, which are
+            // drawn over it (ADR 0111, 0116): Arrange at its right is level
+            // with them and with the header's, in the header's band under
+            // the window's margin. Its empty space moves the window; the
+            // buttons keep their clicks.
             SizedBox(
-              height: Sidebar.topHeight,
+              height:
+                  Sidebar.topHeight -
+                  (widget.floating ? NushiTheme.windowPad : 0),
               child: WindowDrag(
                 background: const SizedBox.shrink(),
                 children: [
                   Padding(
                     padding: EdgeInsets.only(
-                      top: headersMoveWindow ? NushiTheme.windowPad : 0,
+                      top: widget.floating ? 0 : NushiTheme.windowPad,
                       right: Sidebar.end - SidebarButton.reach,
+                      bottom: 1, // as a header's hairline
                     ),
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ArrangeButton(daemon: daemon, hover: _hover),
-                          const SizedBox(width: NushiTheme.iconGap),
-                          const SidebarButton(),
-                        ],
-                      ),
+                      child: ArrangeButton(daemon: daemon, hover: _hover),
                     ),
                   ),
                 ],
@@ -317,7 +330,7 @@ class _SidebarState extends State<Sidebar> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(
+          padding: const EdgeInsets.fromLTRB(
             Sidebar.start,
             Sidebar.topGap,
             Sidebar.end,

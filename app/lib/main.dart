@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:nushi/alerts.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/app_log.dart';
-import 'package:nushi/beside.dart';
 import 'package:nushi/chat_area.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/comment_drafts_mac.dart';
@@ -35,6 +34,7 @@ import 'package:nushi/removed_chats.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_modal.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/sidebar_beside.dart';
 import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/slides.dart';
@@ -462,27 +462,27 @@ class _Shell extends StatelessWidget {
       // The sidebar slides in and out over the view, which keeps its
       // state either way.
       builder: (context, box) => SidebarBeside(
-        sidebar: shut
-            ? null
-            : ListenableBuilder(
-                listenable: Listenable.merge([projectRail, sidebarGroupBy]),
-                builder: (context, child) {
-                  final most = min(480.0, box.maxWidth - 560);
-                  return Resizable(
-                    name: 'sidebar',
-                    initial: 260,
-                    // With the project rail wanted, no narrower than it
-                    // needs, as far as the window has room.
-                    min: railWanted
-                        ? min(ProjectRail.minSidebar, max(200.0, most))
-                        : 200,
-                    max: most,
-                    line: false,
-                    child: child!,
-                  );
-                },
-                child: Sidebar(daemon: daemon),
-              ),
+        shut: shut,
+        // Shown, or floating over the view while it's hidden and peeks.
+        sidebar: ({required floating}) => ListenableBuilder(
+          listenable: Listenable.merge([projectRail, sidebarGroupBy]),
+          builder: (context, child) {
+            final most = min(480.0, box.maxWidth - 560);
+            return Resizable(
+              name: 'sidebar',
+              initial: 260,
+              // With the project rail wanted, no narrower than it
+              // needs, as far as the window has room.
+              min: railWanted
+                  ? min(ProjectRail.minSidebar, max(Sidebar.minWidth, most))
+                  : Sidebar.minWidth,
+              max: most,
+              line: false,
+              child: child!,
+            );
+          },
+          child: Sidebar(daemon: daemon, floating: floating),
+        ),
         // Beside the sidebar, which brings the gap between them, or alone
         // in the window, in from its left edge too.
         main: Column(
