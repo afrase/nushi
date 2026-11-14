@@ -80,7 +80,11 @@ class Sidebar extends StatefulWidget {
   /// buttons and Arrange beside them, past the Mac's traffic lights.
   static double get minWidth => max(
     200,
-    TitleButtons.right + WindowDrag.near + IconTap.header * 2 + 16 + end -
+    TitleButtons.right +
+        WindowDrag.near +
+        IconTap.header * 2 +
+        16 +
+        end -
         SidebarButton.reach,
   );
 

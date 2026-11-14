@@ -301,10 +301,7 @@ class _SidebarBeside extends MultiChildLayoutDelegate {
       const top = TitleButtons.top + TitleButtons.height;
       layoutChild(
         #edge,
-        BoxConstraints.tightFor(
-          width: pad,
-          height: max(0, size.height - top),
-        ),
+        BoxConstraints.tightFor(width: pad, height: max(0, size.height - top)),
       );
       positionChild(#edge, const Offset(0, top));
     }
