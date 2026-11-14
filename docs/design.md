@@ -4,7 +4,7 @@ The one page to read before any work on the app's UI: what to draw a view with, 
 
 Three things hold it:
 
-- **`tools/design-check`** (in `make lint-dart`) fails on code that goes around the shared pieces: a raw `Tooltip(`, a Material button, an `AlertDialog(` outside `nushiDialog`, a tooltip's shortcut in brackets or after spaces, a `Color(0x…)` or `Colors.<name>` (not `transparent`), a `fontSize:` number, a `Duration(milliseconds: …)` (`Motion` or `Waits` instead; in the controls' files too). A deliberate use takes `// design: <why>` on its line or alone on the line above.
+- **`tools/design-check`** (in `make lint-dart`) fails on code that goes around the shared pieces: a raw `Tooltip(`, a Material button, an `AlertDialog(` outside `nushiDialog`, a tooltip's shortcut in brackets or after spaces, a `Color(0x…)` or `Colors.<name>` (not `transparent`), a `fontSize:` number, a `Duration(milliseconds: …)` (`Motion` or `Waits` instead; in the controls' files too), a `SnackBar(` or `SnackBarAction(` (`showToast` instead). A deliberate use takes `// design: <why>` on its line or alone on the line above.
 - **`corners_test.dart`** fails on a corner that isn't a radius token (ADR [0110](adr/0110-corners-come-from-the-theme.md)); **`tokens_test.dart`** holds every theme's text to AA on its fills, and a field's hint to 3:1 and a clear step under its value.
 - **The gallery**: `make gallery` draws every shared control in every state, one sheet per group, dark and light, to `app/build/gallery/` (`app/test/gallery/sheets.dart`); `gallery_test.dart` keeps the buttons', the small controls' and the fields' sheets as goldens, so a change to a component shows in review. A sheet forces each state with `ShowLook`. Add a new shared piece to a sheet.
 
@@ -159,7 +159,7 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 | Chips: `ColorChip`, `GitHubLinkChip`, `JumpChip`, `FileChip`, `SideChip` | a chat's colour as a small lozenge; a GitHub link with its state; what floats over the text; a file; a side chat | a stripe down a side |
 | `Menu`, `MenuEntry` (`menu.dart`) | the app's one menu, opened at once from one of the controls above or a row's right-click: rows with an icon, a `detail`, a `shortcut`, `checked`, `danger` (red), `submenu`, `heading`; a filter field past ten choices | a menu opened from bare text |
 | `tooltip()`, `withKey()` | a tooltip: `Pressable`/`Tap`/`IconTap` take `tooltip:`, anything else is wrapped in `tooltip(context, words, child)`. A shortcut goes with `withKey('Forward', '⌘]')` | `Tooltip(` itself; "(⌘K)" |
-| Toasts: `showError`, `tryOrShow`, `runAndSay`, `Runner` (`widgets.dart`) | an error, a call's error, a slow call's "running" then "done": a snack bar, `lifted` with a hairline, 420 wide on the Mac | a dialog for news |
+| Toasts: `showToast` (`toast.dart`); `showError`, `tryOrShow`, `runAndSay`, `Runner` (`widgets.dart`) on it | the one toast: a line of text, an optional icon (red when `failed`), an action as a compact `Button` (Undo, Go to chat) and a × when `closable`; `replace` takes the showing one's place. A snack bar, `lifted` with a hairline, 420 wide on the Mac. An error, a call's error, a slow call's "running" then "done", news with an action | a dialog for news; a `SnackBar(` or `SnackBarAction(` of a view's own (`tools/design-check`) |
 | `Notice`, `FloatBar` | a problem or an old list above it (`needsSoft`); what floats over the pane under its header (the daemon's lost, an update waiting) | a bar across the pane's top |
 | `SettingsPage`, `SettingsGroup`, `SettingsRow` (`settings_rows.dart`) | Settings' pages: a title, rounded groups of rows, each a label (and a muted line) at the left, its control at the right | |
 
@@ -187,6 +187,4 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 
 ## Known inconsistencies
 
-Follow-ups, found while writing this page and drawing the gallery. Two small bugs it showed were fixed with it: a disabled `IconTap(danger:)` or `IconTap(lit:)` kept its fill and lost its mark, and a toast's action was all but invisible on a light set.
-
-- **Two kinds of toast**: most are a plain snack bar, with Material's `SnackBarAction` where there's an action (the side chat's Go to chat); the archived side chat's is the app's own row of compact buttons (Undo, ×).
+None open. The follow-ups found while writing this page and drawing the gallery are fixed: a disabled `IconTap(danger:)` or `IconTap(lit:)` kept its fill and lost its mark, a toast's action was all but invisible on a light set, and the list this section held (a destructive dialog's focus, hints, the greys, the focus ring on the accent, the type scale, durations, empty states' punctuation, the phone's controls, `WideButton`'s corners and `PillLink`'s disabled look, the two kinds of toast). A new one goes here until it's fixed.

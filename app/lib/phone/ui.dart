@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/toast.dart';
 
 /// The phone's touch target: 44 points, as iOS asks.
 const touch = 44.0;
@@ -277,9 +278,7 @@ class PhoneHeading extends StatelessWidget {
 
 /// Shows [message] at the bottom of the screen.
 void phoneSay(BuildContext context, String message) =>
-    ScaffoldMessenger.maybeOf(context)
-      ?..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    showToast(ScaffoldMessenger.maybeOf(context), message, replace: true);
 
 /// A small spinner, for what's on its way.
 class PhoneSpinner extends StatelessWidget {

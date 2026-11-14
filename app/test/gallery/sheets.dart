@@ -729,12 +729,14 @@ Future<void> _openFloats(WidgetTester tester) async {
         ),
       )
       .ensureTooltipVisible();
-  ScaffoldMessenger.of(tester.element(find.byType(Scaffold))).showSnackBar(
-    const SnackBar(
-      content: Text('Archived “Paginate the feed”'),
-      action: SnackBarAction(label: 'Undo', onPressed: _tap),
-      duration: Duration(days: 1),
-    ),
+  // Every part a toast can have: an icon, its action, its ×.
+  showToast(
+    ScaffoldMessenger.of(tester.element(find.byType(Scaffold))),
+    'Archived “Paginate the feed”',
+    icon: Icons.info_outline,
+    action: (label: 'Undo', onPressed: _tap),
+    closable: true,
+    duration: const Duration(days: 1),
   );
   await tester.pumpAndSettle();
 }

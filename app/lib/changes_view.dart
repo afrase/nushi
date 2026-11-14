@@ -769,9 +769,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
           index: seenIndex ?? _span?.index,
         ),
       );
-      messenger?.showSnackBar(
-        SnackBar(content: Text('Committed ${done.short}')),
-      );
+      showToast(messenger, 'Committed ${done.short}');
     } finally {
       chat.committed();
     }

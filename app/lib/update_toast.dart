@@ -332,11 +332,10 @@ Future<void> checkForUpdates(BuildContext context, Daemon d) async {
   // From the menu bar or the palette: nothing else shows it's asking.
   final slow = Timer(
     Waits.slow,
-    () => messenger?.showSnackBar(
-      const SnackBar(
-        content: Text('Checking for updates…'),
-        duration: Duration(minutes: 1),
-      ),
+    () => showToast(
+      messenger,
+      'Checking for updates…',
+      duration: const Duration(minutes: 1),
     ),
   );
   await tryOrShow(context, () async {
@@ -348,16 +347,12 @@ Future<void> checkForUpdates(BuildContext context, Daemon d) async {
       dismissedUpdate.value = null;
     }
     if (updateToShow(d) == null) {
-      messenger?.showSnackBar(
-        SnackBar(
-          content: Text(switch (u.latest) {
-            '' => 'Nushi has no release yet.',
-            final latest when d.daemonVersion.isEmpty =>
-              'The latest release is $latest; this is a development build.',
-            final latest => 'Nushi is up to date ($latest).',
-          }),
-        ),
-      );
+      showToast(messenger, switch (u.latest) {
+        '' => 'Nushi has no release yet.',
+        final latest when d.daemonVersion.isEmpty =>
+          'The latest release is $latest; this is a development build.',
+        final latest => 'Nushi is up to date ($latest).',
+      });
     }
   });
 }

@@ -6,6 +6,7 @@ import 'package:nushi/clock.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/toast.dart';
 import 'package:nushi/web_views.dart';
 
 /// What draws a page (HTML, SVG, PDF) the agent wrote, from disk: on the
@@ -57,9 +58,7 @@ Future<void> openOrSay(
   try {
     await open();
   } on Object catch (e) {
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(_browserFailure(e))));
+    showToast(messenger, _browserFailure(e), replace: true);
   }
 }
 

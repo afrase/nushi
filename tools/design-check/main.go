@@ -5,10 +5,11 @@
 // brackets or after spaces (withKey instead), a raw Color(0x…) or a
 // Colors.<name> other than transparent (a token instead), a fontSize
 // literal (NushiTheme's ui() or code() at a size instead), and a
-// Duration(milliseconds: …) literal (Motion's or Waits' instead). The
+// Duration(milliseconds: …) literal (Motion's or Waits' instead), and a
+// raw SnackBar (showToast instead, toast.dart's). The
 // controls' and the theme's own files make the pieces, so they're left
 // out, the controls' files but for durations, and so are motion.dart for
-// durations and generated code. A deliberate use stays with a marker on its line or
+// durations, toast.dart for the snack bar it makes, and generated code. A deliberate use stays with a marker on its line or
 // alone on the line above: `// design: <why>`. It prints each use and
 // exits 1. make lint-dart runs it from the repository root over app/lib
 // (or the folders it's given).
@@ -60,6 +61,7 @@ var rules = []rule{
 	{regexp.MustCompile(`\bColor\(0x`), "a raw color: a token of theme/tokens.dart", "", false, ""},
 	{regexp.MustCompile(`\bColors\.[a-z]\w*`), "a Material color: a token of theme/tokens.dart", "Colors.transparent", false, ""},
 	{regexp.MustCompile(`\bfontSize:\s*\d`), "a font size: NushiTheme's ui() or code() at a size", "", false, ""},
+	{regexp.MustCompile(`\bSnackBar(?:Action)?\(`), "a raw snack bar: showToast", "", false, "toast.dart"},
 	{
 		regexp.MustCompile(`\bDuration\(\s*milliseconds:`),
 		"a duration in milliseconds: one of motion.dart's Motion or Waits",

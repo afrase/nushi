@@ -47,14 +47,11 @@ class _GitHubChecksState extends State<GitHubChecks> {
         ),
       );
       if (!mounted) return;
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(
-          content: Text(
-            r.runs == 1
-                ? 'Re-running the failed jobs of 1 workflow run'
-                : 'Re-running the failed jobs of ${r.runs} workflow runs',
-          ),
-        ),
+      showToast(
+        ScaffoldMessenger.maybeOf(context),
+        r.runs == 1
+            ? 'Re-running the failed jobs of 1 workflow run'
+            : 'Re-running the failed jobs of ${r.runs} workflow runs',
       );
       await widget.onChanged?.call();
     });

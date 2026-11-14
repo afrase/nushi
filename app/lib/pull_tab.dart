@@ -67,13 +67,11 @@ class PullTab extends StatelessWidget {
       if (replies.isEmpty) return;
       toast?.hideCurrentSnackBar();
       if (added > 0) return;
-      toast?.showSnackBar(
-        SnackBar(
-          // 520 wide at most, centred, above the bar that counts the
-          // cards.
-          margin: EdgeInsets.fromLTRB(side, 0, side, 64),
-          content: Text(sentWords(replies.length, added, what)),
-        ),
+      showToast(
+        toast,
+        sentWords(replies.length, added, what),
+        // 520 wide at most, centred, above the bar that counts the cards.
+        margin: EdgeInsets.fromLTRB(side, 0, side, 64),
       );
     }
 
