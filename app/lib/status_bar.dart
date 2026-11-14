@@ -275,7 +275,7 @@ class _MemoryButton extends StatelessWidget {
     Widget label(String text, [String detail = '']) => Text.rich(
       TextSpan(
         children: [
-          TextSpan(text: text, style: theme.ui(t.text, size: 12.5)),
+          TextSpan(text: text, style: theme.ui(t.text, size: 12)),
           if (detail.isNotEmpty)
             TextSpan(text: '  $detail', style: theme.ui(t.textMuted, size: 12)),
         ],

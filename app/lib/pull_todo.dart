@@ -294,7 +294,7 @@ class _Next extends StatelessWidget {
     final ping = waiting.isNotEmpty && p.item.url.isNotEmpty
         ? LinkText(
             'Ping on GitHub',
-            size: 12.5,
+            size: 12,
             tooltip: 'Open the pull request on GitHub, to ask them',
             onTap: () => openWeb(context, p.item.url),
           )
@@ -345,14 +345,14 @@ class _Next extends StatelessWidget {
                       text: who,
                       style: theme.ui(
                         t.text,
-                        size: 12.5,
+                        size: 12,
                         weight: FontWeight.w500,
                       ),
                     ),
                   TextSpan(text: rest),
                 ],
               ),
-              style: theme.ui(t.textSecondary, size: 12.5),
+              style: theme.ui(t.textSecondary, size: 12),
             ),
           ),
           ?ping,

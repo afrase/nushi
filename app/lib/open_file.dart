@@ -159,7 +159,7 @@ class _OpenFileBoxState extends State<OpenFileBox> {
                       children: [
                         TextSpan(
                           text: baseName(f),
-                          style: theme.code(t.text, size: 12.5),
+                          style: theme.code(t.text, size: 12),
                         ),
                         TextSpan(
                           text: '   ${folderOf(f)}',

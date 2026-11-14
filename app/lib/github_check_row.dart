@@ -90,7 +90,7 @@ class _CheckRowState extends State<CheckRow> {
                       if (c.workflow.isNotEmpty)
                         TextSpan(
                           text: '${c.workflow} / ',
-                          style: theme.ui(t.textMuted, size: 12.5),
+                          style: theme.ui(t.textMuted, size: 12),
                         ),
                       TextSpan(text: c.name),
                       if (c.title.isNotEmpty)
@@ -102,7 +102,7 @@ class _CheckRowState extends State<CheckRow> {
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.ui(t.text, size: 12.5),
+                  style: theme.ui(t.text, size: 12),
                 ),
               ),
               if (c.required)

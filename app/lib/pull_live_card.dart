@@ -131,7 +131,7 @@ class _LivePullCardState extends State<LivePullCard> {
         final link = cp.chat.pulls
             .where((l) => pullKey(l) == a.key)
             .firstOrNull;
-        final muted = theme.ui(t.textMuted, size: 12.5);
+        final muted = theme.ui(t.textMuted, size: 12);
         final n = it == null ? null : badgeCounts(it);
         final cue = it == null || link == null
             ? null
@@ -150,12 +150,12 @@ class _LivePullCardState extends State<LivePullCard> {
                   ),
                   Text(
                     checksSentence(n),
-                    style: theme.ui(t.textSecondary, size: 12.5),
+                    style: theme.ui(t.textSecondary, size: 12),
                   ),
                 ],
               )
             : cue != null
-            ? Text(cue.words, style: theme.ui(cue.color, size: 12.5))
+            ? Text(cue.words, style: theme.ui(cue.color, size: 12))
             : null;
         final head = [
           '${a.repo} #${a.number}',
@@ -200,7 +200,7 @@ class _LivePullCardState extends State<LivePullCard> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: it == null
-                          ? theme.code(t.textSecondary, size: 12.5)
+                          ? theme.code(t.textSecondary, size: 12)
                           : theme.ui(t.text, size: 14),
                     ),
                   ),

@@ -90,7 +90,7 @@ class TrustCard extends StatelessWidget {
                                     children: [
                                       TextSpan(
                                         text: '${r.what}  ',
-                                        style: theme.ui(t.text, size: 12.5),
+                                        style: theme.ui(t.text, size: 12),
                                       ),
                                       TextSpan(
                                         text: r.command,
@@ -141,7 +141,7 @@ class _Block extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 4,
       children: [
-        Text(run.what, style: theme.ui(t.text, size: 12.5)),
+        Text(run.what, style: theme.ui(t.text, size: 12)),
         Container(
           constraints: const BoxConstraints(maxHeight: 240),
           width: double.infinity,

@@ -97,7 +97,7 @@ class _FindingsCardState extends State<FindingsCard> {
                   if (level.isNotEmpty)
                     TextSpan(
                       text: ' · $level',
-                      style: theme.ui(t.textMuted, size: 12.5),
+                      style: theme.ui(t.textMuted, size: 12),
                     ),
                 ],
               ),

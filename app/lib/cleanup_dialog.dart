@@ -264,7 +264,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
             Text(
               _stillOpen,
               key: const ValueKey('cleanup-still-open'),
-              style: theme.ui(t.textSecondary, size: 12.5),
+              style: theme.ui(t.textSecondary, size: 12),
             ),
             const SizedBox(height: 10),
           ],

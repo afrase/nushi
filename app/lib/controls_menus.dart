@@ -75,7 +75,7 @@ class MenuField extends StatelessWidget {
               Flexible(
                 child: DefaultTextStyle(
                   style: compact
-                      ? theme.ui(t.textSecondary, size: pill ? 12.5 : 12)
+                      ? theme.ui(t.textSecondary, size: pill ? 13 : 12)
                       : theme.ui(t.text, size: size.text),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

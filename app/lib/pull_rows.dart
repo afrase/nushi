@@ -292,7 +292,7 @@ class ChecksBadge extends StatelessWidget {
       children: [
         _Dot(c),
         const SizedBox(width: 8),
-        Expanded(child: Text(label, style: theme.ui(t.text, size: 12.5))),
+        Expanded(child: Text(label, style: theme.ui(t.text, size: 12))),
         Text('$v', style: theme.code(t.textSecondary, size: 12)),
       ],
     );
@@ -449,7 +449,7 @@ class _PullRowState extends State<PullRow> {
                   it?.title ?? '${l.repo}#${l.number}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.ui(t.text, size: 12.5, weight: FontWeight.w500),
+                  style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
                 ),
                 Row(
                   children: [

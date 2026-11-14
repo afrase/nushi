@@ -181,11 +181,11 @@ class _IssuePickerState extends State<IssuePicker> {
               children: [
                 Text(
                   "${Uri.tryParse(unknown)?.host ?? unknown} isn't added. ",
-                  style: theme.ui(t.textMuted, size: 12.5),
+                  style: theme.ui(t.textMuted, size: 12),
                 ),
                 LinkText(
                   'Settings › Jira',
-                  size: 12.5,
+                  size: 12,
                   // Out of the New chat dialog, to Settings over the window.
                   onTap: () {
                     Navigator.popUntil(context, (r) => r.isFirst);
@@ -198,7 +198,7 @@ class _IssuePickerState extends State<IssuePicker> {
         else if (note != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 10),
-            child: Text(note, style: theme.ui(t.textMuted, size: 12.5)),
+            child: Text(note, style: theme.ui(t.textMuted, size: 12)),
           )
         else
           ConstrainedBox(

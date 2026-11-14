@@ -60,7 +60,7 @@ class _CommentEntryState extends State<CommentEntry> {
         ],
         Text(
           c.author,
-          style: theme.ui(t.text, size: 12.5, weight: FontWeight.w600),
+          style: theme.ui(t.text, size: 12, weight: FontWeight.w600),
         ),
         if (c.bot) Text('  bot', style: theme.ui(t.textMuted, size: 11.5)),
         if (c.outside && !c.bot) const OutsideMark(),

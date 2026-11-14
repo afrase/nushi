@@ -276,7 +276,7 @@ class CleanUpProgress extends StatelessWidget {
     builder: (context, _) {
       final theme = NushiTheme.of(context);
       final t = theme.t;
-      final small = theme.ui(t.text, size: 12.5);
+      final small = theme.ui(t.text, size: 12);
       Widget line(IconData? icon, Color color, String text, {Widget? lead}) =>
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
@@ -308,7 +308,7 @@ class CleanUpProgress extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
                   'Waiting for the turn to end…',
-                  style: theme.ui(t.textSecondary, size: 12.5),
+                  style: theme.ui(t.textSecondary, size: 12),
                 ),
               ),
             for (final s in job.steps) ...[

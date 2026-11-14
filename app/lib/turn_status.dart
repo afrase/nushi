@@ -225,7 +225,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
             what,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.ui(waiting ? t.needs : t.textSecondary, size: 12.5),
+            style: theme.ui(waiting ? t.needs : t.textSecondary, size: 12),
           ),
         ),
       ),
@@ -268,7 +268,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
           _receipt!,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: theme.ui(t.done, size: 12.5),
+          style: theme.ui(t.done, size: 12),
         ),
       ),
     );

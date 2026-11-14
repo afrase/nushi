@@ -590,6 +590,30 @@ Widget _settings() => page('Text, settings rows, empty states', [
       );
     },
   ),
+  const SizedBox(height: 8),
+  // The type scale, every step (docs/design.md's Type).
+  Builder(
+    builder: (context) {
+      final theme = NushiTheme.of(context);
+      return Row(
+        spacing: 20,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          for (final (name, size) in const [
+            ('20', 20.0),
+            ('15', 15.0),
+            ('14', 14.0),
+            ('13', 13.0),
+            ('12', 12.0),
+            ('11.5', 11.5),
+          ])
+            Text(name, style: theme.ui(theme.t.text, size: size)),
+          Text('11 code', style: theme.code(theme.t.text, size: 11)),
+        ],
+      );
+    },
+  ),
   const SizedBox(height: 12),
   SizedBox(
     width: 640,
@@ -747,7 +771,7 @@ final List<Sheet> sheets = [
   (name: 'small', size: const Size(1200, 820), build: _small, open: null),
   (name: 'fields', size: const Size(1200, 940), build: _fields, open: null),
   (name: 'pills', size: const Size(1200, 860), build: _pills, open: null),
-  (name: 'settings', size: const Size(760, 460), build: _settings, open: null),
+  (name: 'settings', size: const Size(760, 500), build: _settings, open: null),
   (name: 'dialogs', size: const Size(1340, 340), build: _dialogs, open: null),
   (
     name: 'confirm',

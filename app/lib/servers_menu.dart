@@ -177,7 +177,7 @@ class _Note extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: _rowWidth + 90),
         child: Text(
           plainPath(text),
-          style: theme.ui(danger ? t.crashed : t.textMuted, size: 12.5),
+          style: theme.ui(danger ? t.crashed : t.textMuted, size: 12),
         ),
       ),
     );
@@ -272,7 +272,6 @@ class ServerRow extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: theme.ui(
               runnable || s.attach ? t.text : t.textMuted,
-              size: 13.5,
               weight: FontWeight.w400,
             ),
           ),

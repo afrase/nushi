@@ -367,7 +367,7 @@ class TileBadge extends StatelessWidget {
           // The window's color reads on the needs color in every theme:
           // dark on its amber, light on a light set's brown.
           style: theme
-              .ui(t.window, size: 10.5, weight: FontWeight.w700)
+              .ui(t.window, size: 11, weight: FontWeight.w700)
               .copyWith(height: 1),
         ),
       ),

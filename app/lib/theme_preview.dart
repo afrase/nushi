@@ -47,6 +47,9 @@ class ThemePreview extends StatelessWidget {
 /// the app's 28, so about 0.6 of it.
 double _small(double radius) => radius * 0.6;
 
+/// A step of the app's type scale (docs/design.md) at the picture's scale.
+double _type(double size) => _small(size);
+
 class _Window extends StatelessWidget {
   const new();
 
@@ -93,7 +96,11 @@ class _Sidebar extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(5, 0, 0, 3),
             child: Text(
               'lumen',
-              style: theme.ui(t.textMuted, size: 8, weight: FontWeight.w600),
+              style: theme.ui(
+                t.textMuted,
+                size: _type(13),
+                weight: FontWeight.w600,
+              ),
             ),
           ),
           _ChatRow('Paginate the feed', dot: t.running, open: true),
@@ -142,7 +149,10 @@ class _ChatRow extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.ui(open ? t.text : t.textSecondary, size: 8.5),
+                style: theme.ui(
+                  open ? t.text : t.textSecondary,
+                  size: _type(14),
+                ),
               ),
             ),
             if (bar case final c?)
@@ -168,7 +178,7 @@ class _Transcript extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final text = theme.ui(t.agentText, size: 8.5);
+    final text = theme.ui(t.agentText, size: _type(14));
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 7, 10, 0),
       child: Column(
@@ -193,7 +203,7 @@ class _Transcript extends StatelessWidget {
                   ],
                 ),
                 maxLines: 1,
-                style: theme.ui(t.userBandText, size: 8.5),
+                style: theme.ui(t.userBandText, size: _type(14)),
               ),
             ),
           ),
@@ -248,7 +258,10 @@ InlineSpan _code(BuildContext context, String code, Color fill) {
         color: fill,
         borderRadius: BorderRadius.circular(_small(NushiTheme.tag)),
       ),
-      child: Text(code, style: theme.code(theme.t.inlineCodeText, size: 8)),
+      child: Text(
+        code,
+        style: theme.code(theme.t.inlineCodeText, size: _type(13)),
+      ),
     ),
   );
 }
@@ -310,11 +323,11 @@ class _Row extends StatelessWidget {
               ),
               maxLines: 1,
               overflow: TextOverflow.clip,
-              style: theme.ui(ink, size: 8),
+              style: theme.ui(ink, size: _type(13)),
             ),
           ),
           if (trail case final f?)
-            Text(f, style: theme.code(t.findingsAccent, size: 7.5)),
+            Text(f, style: theme.code(t.findingsAccent, size: _type(12))),
         ],
       ),
     );
@@ -382,7 +395,7 @@ class _Code extends StatelessWidget {
         maxLines: lines.length,
         softWrap: false,
         overflow: TextOverflow.clip,
-        style: theme.code(t.text, size: 7.5),
+        style: theme.code(t.text, size: _type(12)),
       ),
     );
   }

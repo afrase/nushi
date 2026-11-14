@@ -116,7 +116,7 @@ class FileCard extends StatelessWidget {
                         plainPath(file.name),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.ui(t.text, size: 12.5),
+                        style: theme.ui(t.text, size: 12),
                       ),
                       Text(
                         fileCardDetail(file),
@@ -175,7 +175,7 @@ class FileChip extends StatelessWidget {
                   plainPath(baseName(path)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.ui(ink, size: 12.5),
+                  style: theme.ui(ink, size: 12),
                 ),
               ),
             ],

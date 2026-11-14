@@ -156,7 +156,7 @@ class WidgetRow extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: theme.ui(
         color ?? (muted ? t.textSecondary : t.text),
-        size: 12.5,
+        size: 12,
         weight: bold ? FontWeight.w600 : null,
       ),
     );

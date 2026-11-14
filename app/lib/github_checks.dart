@@ -223,7 +223,7 @@ class _Mini extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: theme.ui(
                 c.state == 'success' ? t.textSecondary : t.textMuted,
-                size: 12.5,
+                size: 12,
               ),
             ),
           ),

@@ -148,7 +148,7 @@ class _Picker extends StatelessWidget {
                       it?.title ?? shown.repo,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.ui(t.text, size: 12.5),
+                      style: theme.ui(t.text, size: 12),
                     ),
                   ),
                 ],
@@ -219,11 +219,7 @@ class RepliesWaiting extends StatelessWidget {
                 children: [
                   TextSpan(
                     text: '$n',
-                    style: theme.ui(
-                      t.text,
-                      size: 12.5,
-                      weight: FontWeight.w600,
-                    ),
+                    style: theme.ui(t.text, size: 12, weight: FontWeight.w600),
                   ),
                   const TextSpan(
                     text:
@@ -232,7 +228,7 @@ class RepliesWaiting extends StatelessWidget {
                   ),
                 ],
               ),
-              style: theme.ui(t.text, size: 12.5),
+              style: theme.ui(t.text, size: 12),
             ),
           ),
           Button(label: 'Go to chat', onPressed: onChat),

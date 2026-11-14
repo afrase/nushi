@@ -259,7 +259,7 @@ class _SessionListState extends State<SessionList> {
           if (note != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 4, 8, 10),
-              child: Text(note, style: theme.ui(t.textMuted, size: 12.5)),
+              child: Text(note, style: theme.ui(t.textMuted, size: 12)),
             ),
           if (shown.isNotEmpty || (_hasMore && last != null) || filtering)
             ConstrainedBox(
@@ -275,7 +275,7 @@ class _SessionListState extends State<SessionList> {
                       padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
                       child: Text(
                         noTitle,
-                        style: theme.ui(t.textMuted, size: 12.5),
+                        style: theme.ui(t.textMuted, size: 12),
                       ),
                     ),
                   for (final (i, s) in shown.indexed)
@@ -298,7 +298,7 @@ class _SessionListState extends State<SessionList> {
                       ),
                       child: Text(
                         _loading ? 'Looking…' : 'More',
-                        style: theme.ui(t.textSecondary, size: 12.5),
+                        style: theme.ui(t.textSecondary, size: 12),
                       ),
                     ),
                   if (filtering) ..._said(shown.length + (_hasMore ? 1 : 0)),

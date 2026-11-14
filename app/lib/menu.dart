@@ -441,10 +441,7 @@ Widget _controlsRow(
                   : Icon(e.icon, size: 16, color: t.textSecondary),
             ),
           if (icons) const SizedBox(width: 8),
-          Text(
-            e.label,
-            style: theme.ui(t.text, size: 13.5, weight: FontWeight.w400),
-          ),
+          Text(e.label, style: theme.ui(t.text, weight: FontWeight.w400)),
           const SizedBox(width: 12),
           const Spacer(),
           controls,
@@ -507,12 +504,12 @@ Widget _row(
         children: [
           TextSpan(
             text: e.label,
-            style: theme.ui(color, size: 13.5, weight: FontWeight.w400),
+            style: theme.ui(color, weight: FontWeight.w400),
           ),
           if (e.detail.isNotEmpty && e.submenu == null)
             TextSpan(
               text: '   ${e.detail}',
-              style: theme.ui(t.textMuted, size: 12.5, weight: FontWeight.w400),
+              style: theme.ui(t.textMuted, size: 12, weight: FontWeight.w400),
             ),
         ],
       ),
@@ -531,7 +528,7 @@ Widget _row(
         if (e.detail.isNotEmpty)
           Text(
             e.detail,
-            style: theme.ui(t.textMuted, size: 12.5, weight: FontWeight.w400),
+            style: theme.ui(t.textMuted, size: 12, weight: FontWeight.w400),
           ),
         LineIcon.chevron.view(
           size: _check,
@@ -624,7 +621,7 @@ Widget _button(
             child: Text(
               digit,
               textAlign: TextAlign.right,
-              style: theme.ui(t.textMuted, size: 12.5),
+              style: theme.ui(t.textMuted, size: 12),
             ),
           ),
       ],

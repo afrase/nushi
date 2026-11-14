@@ -378,7 +378,7 @@ class SendButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.ui(
                     t.onAccent,
-                    size: size.text - 0.5,
+                    size: size.text,
                     weight: FontWeight.w500,
                   ),
                 ),

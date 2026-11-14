@@ -41,7 +41,7 @@ class IssueLines extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final small = theme.ui(t.textSecondary, size: 12.5);
+    final small = theme.ui(t.textSecondary, size: 12);
     final issue = this.issue;
     if (issue == null) {
       return Tap(

@@ -131,7 +131,7 @@ class Pickers extends StatelessWidget {
                       TextSpan(
                         text:
                             '${model == null ? '' : '  '}${effort.currentName}',
-                        style: theme.ui(t.textMuted, size: 12.5),
+                        style: theme.ui(t.textMuted, size: 12),
                       ),
                   ],
                 ),
@@ -155,7 +155,7 @@ class Pickers extends StatelessWidget {
                 'Ultracode',
                 maxLines: 1,
                 softWrap: false,
-                style: theme.ui(t.accentInk, size: 12.5),
+                style: theme.ui(t.accentInk, size: 12),
               ),
             ),
           ),

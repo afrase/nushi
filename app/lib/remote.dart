@@ -177,7 +177,7 @@ class _DeviceRow extends StatelessWidget {
             child: Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(text: d.name, style: theme.ui(t.text, size: 12.5)),
+                  TextSpan(text: d.name, style: theme.ui(t.text, size: 12)),
                   TextSpan(
                     text:
                         '  ${d.kind == 'web' ? 'Web' : 'iPhone app'}'

@@ -66,7 +66,7 @@ Text is set with `theme.ui(color, size:, weight:)` (the App font, IBM Plex Sans 
 | 11.5 | small print: a group's name (semibold, `textMuted`), a count in a pill |
 | 11 | a key hint (`keyHint`, code) |
 
-Code is 13 in an editor and 12 in the transcript's blocks and tool rows. The phone's text is larger (`phoneText`, 16; 14 for a bar's words). Labels of controls are medium (w500); an open row's or a picked segment's label is semibold.
+Nothing is set between the steps: a size that was (12.5, 13.5, 10.5) went to the nearest, and a tie to the smaller, but a control's label, which is 13 (`PillButton`, a pill `MenuField`, `SendButton`, the selection bar's actions). The theme picker's small picture of the app sets these steps at its own scale. Code is 13 in an editor and 12 in the transcript's blocks and tool rows. The phone's text is larger (`phoneText`, 16; 14 for a bar's words). Labels of controls are medium (w500); an open row's or a picked segment's label is semibold.
 
 ### Spacing (`NushiTheme`, ADR [0072](adr/0072-the-chat-areas-spacing.md), [0111](adr/0111-surfaces-and-floating-panes.md))
 
@@ -184,7 +184,6 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 
 Follow-ups, found while writing this page and drawing the gallery. Two small bugs it showed were fixed with it: a disabled `IconTap(danger:)` or `IconTap(lit:)` kept its fill and lost its mark, and a toast's action was all but invisible on a light set.
 
-- **Type sizes off the scale**: besides 11, 11.5, 12, 13 and 14, views set 12.5 (54 places), 13.5, 10.5, 8 and 8.5 with `ui()`, and 12.5 and 10.5 with `code()`.
 - **Durations written as numbers**: about 70 `Duration(milliseconds: …)` outside `motion.dart`, some equal to `Motion`'s (`Dimmed`'s 120, a panel widget's 200) but not named so.
 - **Empty states' punctuation**: "No checks." and "No sessions here." end with a full stop, "No chats", "Nothing matches" and "None" don't.
 - **The phone's own controls** (`PhoneIcon`, `PhoneButton`) are Material's ink wells, not `Pressable`: no focus ring and no pressed tint (the theme turns splashes off).

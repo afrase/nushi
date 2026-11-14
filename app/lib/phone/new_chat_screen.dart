@@ -203,7 +203,7 @@ class _TrustRuns extends StatelessWidget {
                     padding: const EdgeInsets.only(left: 12),
                     child: Text(
                       r.command,
-                      style: theme.code(t.textSecondary, size: 12.5),
+                      style: theme.code(t.textSecondary, size: 12),
                     ),
                   ),
               ],

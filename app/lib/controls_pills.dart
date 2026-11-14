@@ -66,7 +66,7 @@ class PillButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.ui(
                     fg,
-                    size: small ? 12 : 12.5,
+                    size: small ? 12 : 13,
                     weight: FontWeight.w500,
                   ),
                 ),

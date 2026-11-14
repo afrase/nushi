@@ -94,7 +94,7 @@ class TreeRowView extends StatelessWidget {
     final t = theme.t;
     final r = row;
     final indent = (large ? 12.0 : 4.0) + r.depth * (large ? 18 : 14);
-    final text = large ? 15.0 : 12.5;
+    final text = large ? 15.0 : 12.0;
     final icon = large ? 18.0 : 14.0;
     if (!r.entry) {
       return Padding(

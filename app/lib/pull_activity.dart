@@ -269,7 +269,7 @@ class _EntryState extends State<_Entry> {
                           c.author,
                           style: theme.ui(
                             t.text,
-                            size: 12.5,
+                            size: 12,
                             weight: FontWeight.w600,
                           ),
                         ),
@@ -327,7 +327,7 @@ class _EntryState extends State<_Entry> {
                   if (text.isEmpty)
                     Text(
                       widget.what.isNotEmpty ? 'No description.' : 'No text.',
-                      style: theme.ui(t.textMuted, size: 12.5),
+                      style: theme.ui(t.textMuted, size: 12),
                     )
                   else if (clamped)
                     Clamped(body)

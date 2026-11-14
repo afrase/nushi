@@ -213,7 +213,7 @@ class WorktreeTag extends StatelessWidget {
       branch,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: theme.code(theme.t.textMuted, size: 10.5),
+      style: theme.code(theme.t.textMuted, size: 11),
     );
   }
 }

@@ -191,7 +191,7 @@ class _TodoRowState extends State<TodoRow> {
                           detail,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.ui(t.textSecondary, size: 12.5),
+                          style: theme.ui(t.textSecondary, size: 12),
                         ),
                       ),
                     if (who.isNotEmpty)
