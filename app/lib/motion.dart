@@ -47,6 +47,24 @@ abstract final class Motion {
   static const Cubic leave = Cubic(0.4, 0, 1, 1);
 }
 
+/// Nushi's waits: how long before something shows or is done, where
+/// several places wait alike. Not motion: Reduce Motion leaves them.
+abstract final class Waits {
+  /// A load's loading look shows only past this: a quick load goes
+  /// straight to what it loaded, with no flash of a spinner.
+  static const loading = Duration(milliseconds: 150);
+
+  /// A pause in typing before what's typed is acted on (checked, looked
+  /// up, highlighted).
+  static const typing = Duration(milliseconds: 250);
+
+  /// A call that shows nothing of its own says it's running past this.
+  static const slow = Duration(milliseconds: 300);
+
+  /// A draft's change is written this long after the last.
+  static const save = Duration(milliseconds: 500);
+}
+
 /// One clock for the motions that run once ([ClockRun]) and the reply's
 /// pacing, every frame: it ticks only while something listens, so they
 /// move in step and stop together, and what listens repaints from it

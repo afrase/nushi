@@ -204,13 +204,13 @@ class _SessionListState extends State<SessionList> {
       _ when _error != null => _error,
       _ when last == null => 'Looking…',
       _ when !last.canList => "$title can't list its sessions.",
-      _ when _sessions.isEmpty && !filtering => 'No other sessions here.',
+      _ when _sessions.isEmpty && !filtering => 'No other sessions here',
       _ => null,
     };
     final noTitle = switch (()) {
       _ when !filtering || shown.isNotEmpty || last == null => null,
-      _ when _hasMore => 'No title loaded so far says “${_search.text}”.',
-      _ => 'No title says “${_search.text}”.',
+      _ when _hasMore => 'No title loaded so far says “${_search.text}”',
+      _ => 'No title says “${_search.text}”',
     };
     _at = _rows == 0 ? 0 : _at.clamp(0, _rows - 1);
     return Focus(
@@ -259,7 +259,7 @@ class _SessionListState extends State<SessionList> {
           if (note != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 4, 8, 10),
-              child: Text(note, style: theme.ui(t.textMuted, size: 12.5)),
+              child: Text(note, style: theme.ui(t.textMuted, size: 12)),
             ),
           if (shown.isNotEmpty || (_hasMore && last != null) || filtering)
             ConstrainedBox(
@@ -275,7 +275,7 @@ class _SessionListState extends State<SessionList> {
                       padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
                       child: Text(
                         noTitle,
-                        style: theme.ui(t.textMuted, size: 12.5),
+                        style: theme.ui(t.textMuted, size: 12),
                       ),
                     ),
                   for (final (i, s) in shown.indexed)
@@ -298,7 +298,7 @@ class _SessionListState extends State<SessionList> {
                       ),
                       child: Text(
                         _loading ? 'Looking…' : 'More',
-                        style: theme.ui(t.textSecondary, size: 12.5),
+                        style: theme.ui(t.textSecondary, size: 12),
                       ),
                     ),
                   if (filtering) ..._said(shown.length + (_hasMore ? 1 : 0)),

@@ -17,6 +17,7 @@ class CheckPainter extends CustomPainter {
   final Sparks? sparks;
 
   /// How long a check takes to draw.
+  // design: a check drawing itself, a one-off flourish
   static const drawFor = Duration(milliseconds: 350);
 
   @override
@@ -65,6 +66,7 @@ class Sparks {
   static const after = Duration(seconds: 10);
 
   /// How long the burst lasts.
+  // design: a burst, a one-off flourish
   static const length = Duration(milliseconds: 520);
   static const _ring = 450.0;
   static const _curve = Cubic(0.2, 0.8, 0.2, 1);

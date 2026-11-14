@@ -4,8 +4,8 @@ The one page to read before any work on the app's UI: what to draw a view with, 
 
 Three things hold it:
 
-- **`tools/design-check`** (in `make lint-dart`) fails on code that goes around the shared pieces: a raw `Tooltip(`, a Material button, an `AlertDialog(` outside `nushiDialog`, a tooltip's shortcut in brackets or after spaces, a `Color(0x…)` or `Colors.<name>` (not `transparent`), a `fontSize:` number. A deliberate use takes `// design: <why>` on its line or alone on the line above.
-- **`corners_test.dart`** fails on a corner that isn't a radius token (ADR [0110](adr/0110-corners-come-from-the-theme.md)); **`tokens_test.dart`** holds every theme's text to AA on its fills.
+- **`tools/design-check`** (in `make lint-dart`) fails on code that goes around the shared pieces: a raw `Tooltip(`, a Material button, an `AlertDialog(` outside `nushiDialog`, a tooltip's shortcut in brackets or after spaces, a `Color(0x…)` or `Colors.<name>` (not `transparent`), a `fontSize:` number, a `Duration(milliseconds: …)` (`Motion` or `Waits` instead; in the controls' files too), a `SnackBar(` or `SnackBarAction(` (`showToast` instead). A deliberate use takes `// design: <why>` on its line or alone on the line above.
+- **`corners_test.dart`** fails on a corner that isn't a radius token (ADR [0110](adr/0110-corners-come-from-the-theme.md)); **`tokens_test.dart`** holds every theme's text to AA on its fills, and a field's hint to 3:1 and a clear step under its value.
 - **The gallery**: `make gallery` draws every shared control in every state, one sheet per group, dark and light, to `app/build/gallery/` (`app/test/gallery/sheets.dart`); `gallery_test.dart` keeps the buttons', the small controls' and the fields' sheets as goldens, so a change to a component shows in review. A sheet forces each state with `ShowLook`. Add a new shared piece to a sheet.
 
 ## Tokens
@@ -30,13 +30,14 @@ Every colour is a token of `Tokens`; a theme changes values, never names. Read t
 
 **Lines**: `line` is a hairline, only a divider inside a pane (under a header, between rows) and around the composer; `floatLine` the edge of what floats. A border stays only on a text field (`fieldBorder`, `fieldBorderHover`; `focus` with the caret, `crashed` in error) and as the focus ring.
 
-**Text**, from strongest to faintest:
+**Text**, from strongest to faintest, three greys a clear step apart (at least 6 in L*, `tokens_test`; `textMuted` sits at AA on the fills it's on, `textSecondary` halfway to `text`). A named theme keeps its published colours, so four sets keep two greys nearly as one: Tokyo Night's (its own fg_dark and #9AA5CE; Day's text and AA floor sit together), Catppuccin Latte's (its Text, and Subtext1 and Subtext0 taken to AA land on it) and Solarized's dark set (its greys taken to AA land within 7 of each other).
 
 | Token | For |
 |---|---|
 | `text` | body text, a value, a title, an open row's label |
 | `textSecondary` | a row's title at rest, a label beside a value, a tooltip's words, an icon button's icon |
-| `textMuted` | meta and small print: an age, a count, a hint, a description under a row, an empty state |
+| `textMuted` | meta and small print: an age, a count, a description under a row, an empty state |
+| `hint` | a field's hint, an example of what goes in it: `textMuted` taken toward the field's fill to 3.5:1 (`hintOn(fill)` for a box on another fill, as the composer's), a clear step under a typed value, so it never reads as typed |
 | `faint` | a grey mark that stands back: the empty window's logo, a rail's dashes, the part of a meter that counts for nothing |
 | `link` | `LinkText` only |
 | `onAccent` | on the accent's fill |
@@ -65,7 +66,7 @@ Text is set with `theme.ui(color, size:, weight:)` (the App font, IBM Plex Sans 
 | 11.5 | small print: a group's name (semibold, `textMuted`), a count in a pill |
 | 11 | a key hint (`keyHint`, code) |
 
-Code is 13 in an editor and 12 in the transcript's blocks and tool rows. The phone's text is larger (`phoneText`, 16; 14 for a bar's words). Labels of controls are medium (w500); an open row's or a picked segment's label is semibold.
+Nothing is set between the steps: a size that was (12.5, 13.5, 10.5) went to the nearest, and a tie to the smaller, but a control's label, which is 13 (`PillButton`, a pill `MenuField`, `SendButton`, the selection bar's actions). The theme picker's small picture of the app sets these steps at its own scale. Code is 13 in an editor and 12 in the transcript's blocks and tool rows. The phone's text is larger (`phoneText`, 16; 14 for a bar's words). Labels of controls are medium (w500); an open row's or a picked segment's label is semibold.
 
 ### Spacing (`NushiTheme`, ADR [0072](adr/0072-the-chat-areas-spacing.md), [0111](adr/0111-surfaces-and-floating-panes.md))
 
@@ -105,7 +106,7 @@ A control's size comes from where it sits, never from the call: a `ControlScale`
 | `regular` | 30 | 13 | 12 | 14 | — | everywhere else: a bar, a card, a settings row, a form; every text field |
 | `large` | 34 | 14 | 16 | 15 | 80 | a dialog's actions (`nushiDialog` sets it), a view's main call to action |
 
-`Button`, `MenuButton`, `SplitButton`, `SendButton`, a filled `MenuField`, `Segmented` and `LineSlider` follow it; corners scale with the height. These keep their own sizes, set by what they sit in: the composer's pills and round buttons (32), a tool row's small pills (24), `IconTap` (26; 32 in a header), `WideButton` (38), menu rows (30), settings rows (46). A new dense place says `ControlScale.compact`, or its buttons grow.
+`Button`, `MenuButton`, `SplitButton`, `SendButton`, a filled `MenuField`, `Segmented` and `LineSlider` follow it; corners scale with the height. These keep their own sizes, set by what they sit in: the composer's pills and round buttons (32), a tool row's small pills (24), `IconTap` (26; 32 in a header), `WideButton` (38, its corners its height's share all the same: `ControlSize.radiusFor`), menu rows (30), settings rows (46). A new dense place says `ControlScale.compact`, or its buttons grow.
 
 ### Motion (`motion.dart`, ADR [0102](adr/0102-loops-run-on-a-pulse-only-in-front.md))
 
@@ -118,6 +119,10 @@ A control's size comes from where it sits, never from the call: a `ControlScale`
 | `settle` | curve | entering and moving |
 | `size` | curve | heights and widths |
 | `leave` | curve | leaving |
+
+What waits, where several places wait alike, is `Waits.` (`motion.dart`; not motion, so Reduce Motion leaves it): `loading` 150 ms before a load's loading look shows, `typing` 250 ms of a pause in typing before it's acted on, `slow` 300 ms before a call that shows nothing says it's running, `save` 500 ms before a draft is written.
+
+No view writes `Duration(milliseconds: …)`: `tools/design-check` flags it outside `motion.dart` and the theme's files, the controls' included. A duration that is no step of either, its own thing (a loop's beat on `pulseClock`, how long a state shows, a one-off flourish such as a check drawing itself, a hover's grace, a poll), keeps its number with `// design: <why>`.
 
 Input never waits: the state changes at once and motion is only drawn; a second press reverses from where the motion is. Exits are faster than entries. Under `reduceMotion` sizes and places jump (a press's tint stays). Nothing runs at rest: what loops for as long as a state lasts repaints from `pulseClock` (20 Hz, only while Nushi is in front). The transcript's width never eases: lay out once at the final width and glide by a transform.
 
@@ -144,28 +149,29 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 | `RoundButton` | a round icon button on a card: `plain` (the composer's +), `primary` (Send) | |
 | `Tap` | a list's row or a tab: a hover tint, `selected`, `fill` (a chat's colour), no ripple; focus shows as the tint | a button (use one) |
 | `Pressable` | the base of every control: hover, focus, press and its tooltip, for a new shared control in `controls*.dart` | a view's one-off button |
+| `PhoneIcon`, `PhoneButton` (`phone/ui.dart`) | the phone's icon button (44 square, a round tint pressed) and its full-width button (`primary` on the accent, `destructive` in red): on `Pressable`, so the focus ring and a press at once, as the Mac's | the Mac (`IconTap`, `Button`) |
 | `Swatch`, `DragGrip`, `KeyCap`, `keyHint`, `LineSlider` | a colour to pick; what can be dragged; a key's cap beside its action; a shortcut in small code; a value along a line | |
 | `SettingsSwitch` | an on/off, Settings' size everywhere; `run` makes it a call | |
 | `nushiDialog` (`widgets.dart`) | every dialog: a title, content 460 wide (`width` for a form), actions large at the right; `onClose` puts a × at the title's end (a list to manage) | an `AlertDialog` of a view's own |
-| `confirm` | a yes/no question: Cancel and the action, `destructive` in red | |
+| `confirm` | a yes/no question: Cancel and the action, `destructive` in red (Cancel then has the focus) | |
 | `cardBox`, `floatBox`, `framed` (`theme.dart`) | a card on a pane; what floats (hairline, soft shadow); a picture that needs an edge | an outlined box |
 | `PhasePill`, `NeedsYou`, `StatePill`/`ItemStatePill` | a state in words: its ink on its soft fill; "Needs you" on a card that waits; a pull request's state | a tinted card |
 | Chips: `ColorChip`, `GitHubLinkChip`, `JumpChip`, `FileChip`, `SideChip` | a chat's colour as a small lozenge; a GitHub link with its state; what floats over the text; a file; a side chat | a stripe down a side |
 | `Menu`, `MenuEntry` (`menu.dart`) | the app's one menu, opened at once from one of the controls above or a row's right-click: rows with an icon, a `detail`, a `shortcut`, `checked`, `danger` (red), `submenu`, `heading`; a filter field past ten choices | a menu opened from bare text |
 | `tooltip()`, `withKey()` | a tooltip: `Pressable`/`Tap`/`IconTap` take `tooltip:`, anything else is wrapped in `tooltip(context, words, child)`. A shortcut goes with `withKey('Forward', '⌘]')` | `Tooltip(` itself; "(⌘K)" |
-| Toasts: `showError`, `tryOrShow`, `runAndSay`, `Runner` (`widgets.dart`) | an error, a call's error, a slow call's "running" then "done": a snack bar, `lifted` with a hairline, 420 wide on the Mac | a dialog for news |
+| Toasts: `showToast` (`toast.dart`); `showError`, `tryOrShow`, `runAndSay`, `Runner` (`widgets.dart`) on it | the one toast: a line of text, an optional icon (red when `failed`), an action as a compact `Button` (Undo, Go to chat) and a × when `closable`; `replace` takes the showing one's place. A snack bar, `lifted` with a hairline, 420 wide on the Mac. An error, a call's error, a slow call's "running" then "done", news with an action | a dialog for news; a `SnackBar(` or `SnackBarAction(` of a view's own (`tools/design-check`) |
 | `Notice`, `FloatBar` | a problem or an old list above it (`needsSoft`); what floats over the pane under its header (the daemon's lost, an update waiting) | a bar across the pane's top |
 | `SettingsPage`, `SettingsGroup`, `SettingsRow` (`settings_rows.dart`) | Settings' pages: a title, rounded groups of rows, each a label (and a muted line) at the left, its control at the right | |
 
 ## Patterns
 
-- **Dialogs**: `nushiDialog`: a title that says what's asked ("Delete this chat?"), content in plain sentences, actions at the right, Cancel first and the one main action last. The main action is `primary`; one that deletes or loses something is `destructive` and says what it does ("Delete", not "OK"). A list to manage has a × and a Done. Esc cancels.
+- **Dialogs**: `nushiDialog`: a title that says what's asked ("Delete this chat?"), content in plain sentences, actions at the right, Cancel first and the one main action last. The main action is `primary`; one that deletes or loses something is `destructive` and says what it does ("Delete", not "OK"). The main action has the focus, unless it deletes or loses something: then Cancel has it, so Enter never deletes, as the Mac's alerts (`confirm(destructive: true)`, the chat's Delete, Clean up). A list to manage has a × and a Done. Esc cancels.
 - **Cards in the transcript** (ADR [0111](adr/0111-surfaces-and-floating-panes.md)): a tool call's row is one line on `raised`, corners `control`; open, a card with its output in a `codeBlock` block. A card that waits on you (a permission, a question, the trust card) is a `cardBox` with an amber mark and `NeedsYou`; its one main answer solid, the rest secondary. Nothing is outlined, and nothing in a card is a card.
-- **Empty states**: a muted line where the content would be, in `textMuted`: "None" in a settings group (`SettingsGroup.empty`), "No chats" in a group, "Nothing matches" under a filter. A view with nothing open offers its main action large (the empty window's New chat).
+- **Empty states**: a muted line where the content would be, in `textMuted`: "None" in a settings group (`SettingsGroup.empty`), "No chats" in a group, "Nothing matches" under a filter, "Not shown: a.png is binary" in place of a file. It's a phrase, never a sentence: no full stop, even when a clause says what to do after a colon ("No inline comments: select lines in Files to add some"). An error or an explanation is a sentence and keeps its stop. A view with nothing open offers its main action large (the empty window's New chat).
 - **Settings rows**: label left (13, `text`), an optional description under it (12, `textMuted`), the control at the group's right edge; a group is a card with hairlines between rows. Copy is short (the owner's rule).
 - **Headers and bars**: 56 high, a hairline under, no fill; the title semibold 14 at the gutter, icon buttons 32 square at the end, 12 from the edge; controls `barGap` apart, groups `groupGap`. Empty space in a header moves the window (ADR [0080](adr/0080-no-title-bar.md)). Nothing a button opens changes the width of the bar it's in.
-- **Hover and focus**: under the pointer a control takes `hover` over its fill (a filled primary goes a shade lighter), pressed `pressed`; focused from the keyboard it wears the 2-point ring in `focus` (`focusRing`). A row (`Tap`) shows focus as the hover tint. A toggle that's on is `lit` or `held`, never a different shape.
-- **Disabled**: a control without its action is drawn at 45% (`_faded`), with no hand and no focus; an `IconTap` greys its icon instead (Claude desktop's Back with nowhere to go); a field's border goes to `line`.
+- **Hover and focus**: under the pointer a control takes `hover` over its fill (a filled primary goes a shade lighter), pressed `pressed`; focused from the keyboard it wears the 2-point ring in `focus` (`focusRing`); on the accent's fill (a primary button, `SplitButton`, `SendButton`, a primary `RoundButton`) the ring sits just outside it, with a 2-point line of `onAccent` at its edge (`accentFocusRing`), since a light set's `focus` is within a shade of `accent`. A row (`Tap`) shows focus as the hover tint. A toggle that's on is `lit` or `held`, never a different shape.
+- **Disabled**: a control without its action is drawn at 45% (`_faded`; `PillLink` too), with no hand and no focus; an `IconTap` greys its icon instead (Claude desktop's Back with nowhere to go); a field's border goes to `line`.
 - **Words**: the glossary's (`docs/glossary.md`); sentence case; a shortcut in a tooltip via `withKey`.
 
 ## The owner's rules
@@ -181,17 +187,4 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 
 ## Known inconsistencies
 
-Follow-ups, found while writing this page and drawing the gallery. Two small bugs it showed were fixed with it: a disabled `IconTap(danger:)` or `IconTap(lit:)` kept its fill and lost its mark, and a toast's action was all but invisible on a light set.
-
-- **The focus ring vanishes on a primary button in a light set**: `focus` is `accentInk`, within a shade of `accent`'s fill (light `#2259D2` on `#2365EA`), so a focused Done, Send to agent or Squash and merge looks at rest; it reads on dark sets.
-
-- **A field's hint is barely dimmer than its value.** A hint is `textMuted` in the UI font; `textMuted` is close to `textSecondary` and, in a code-set field, the hint reads as typed text (the MCP form's "npx", "my-server").
-- **`textSecondary` and `textMuted` are a hair apart** (dark `#B4B8BF` and `#A5A9B1`, light `#494B57` and `#5A5E6B`), so the three greys read as two.
-- **A destructive dialog autofocuses its Delete**: `confirm(destructive: true)` and the chat's Delete dialog (`chat_menu.dart`) put the focus on the red button, so Enter deletes; History's "Keep copies" dialog focuses the safe choice.
-- **Type sizes off the scale**: besides 11, 11.5, 12, 13 and 14, views set 12.5 (54 places), 13.5, 10.5, 8 and 8.5 with `ui()`, and 12.5 and 10.5 with `code()`.
-- **Durations written as numbers**: about 70 `Duration(milliseconds: …)` outside `motion.dart`, some equal to `Motion`'s (`Dimmed`'s 120, a panel widget's 200) but not named so.
-- **Empty states' punctuation**: "No checks." and "No sessions here." end with a full stop, "No chats", "Nothing matches" and "None" don't.
-- **The phone's own controls** (`PhoneIcon`, `PhoneButton`) are Material's ink wells, not `Pressable`: no focus ring and no pressed tint (the theme turns splashes off).
-- **`WideButton` keeps `control` corners** at 38 high, where `ControlSize`'s share of the height would give it 11.7.
-- **`PillLink` has no disabled look**: without its tap it's drawn as at rest.
-- **Two kinds of toast**: most are a plain snack bar, with Material's `SnackBarAction` where there's an action (the side chat's Go to chat); the archived side chat's is the app's own row of compact buttons (Undo, ×).
+None open. The follow-ups found while writing this page and drawing the gallery are fixed: a disabled `IconTap(danger:)` or `IconTap(lit:)` kept its fill and lost its mark, a toast's action was all but invisible on a light set, and the list this section held (a destructive dialog's focus, hints, the greys, the focus ring on the accent, the type scale, durations, empty states' punctuation, the phone's controls, `WideButton`'s corners and `PillLink`'s disabled look, the two kinds of toast). A new one goes here until it's fixed.

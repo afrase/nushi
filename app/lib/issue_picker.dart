@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_view_parts.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -73,7 +74,7 @@ class _IssuePickerState extends State<IssuePicker> {
     if (_text.text == _last) return; // the caret moved
     _last = _text.text;
     _wait?.cancel();
-    _wait = Timer(const Duration(milliseconds: 250), () => unawaited(_find()));
+    _wait = Timer(Waits.typing, () => unawaited(_find()));
   }
 
   Future<void> _find() async {
@@ -138,7 +139,7 @@ class _IssuePickerState extends State<IssuePicker> {
       _ when found == null => 'Looking…',
       _ when unknown.isNotEmpty => null,
       _ when found.issues.isEmpty =>
-        _asked!.isEmpty ? 'No issues looked at lately.' : 'No issues match.',
+        _asked!.isEmpty ? 'No issues looked at lately' : 'No issues match',
       _ => null,
     };
     final sites = {for (final f in _issues) f.site};
@@ -181,11 +182,11 @@ class _IssuePickerState extends State<IssuePicker> {
               children: [
                 Text(
                   "${Uri.tryParse(unknown)?.host ?? unknown} isn't added. ",
-                  style: theme.ui(t.textMuted, size: 12.5),
+                  style: theme.ui(t.textMuted, size: 12),
                 ),
                 LinkText(
                   'Settings › Jira',
-                  size: 12.5,
+                  size: 12,
                   // Out of the New chat dialog, to Settings over the window.
                   onTap: () {
                     Navigator.popUntil(context, (r) => r.isFirst);
@@ -198,7 +199,7 @@ class _IssuePickerState extends State<IssuePicker> {
         else if (note != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 10),
-            child: Text(note, style: theme.ui(t.textMuted, size: 12.5)),
+            child: Text(note, style: theme.ui(t.textMuted, size: 12)),
           )
         else
           ConstrainedBox(

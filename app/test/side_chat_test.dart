@@ -120,8 +120,8 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
-  testWidgets('an older daemon: one with messages asks first; Cancel and '
-      'Esc keep it', (tester) async {
+  testWidgets('an older daemon: one with messages asks first; Cancel, Esc '
+      'and ⏎ keep it', (tester) async {
     final (d, fake, side) = await _app(tester, old: true);
     await _close(tester);
     expect(_dialog, findsOne);
@@ -131,15 +131,15 @@ void main() {
       ),
       findsOne,
     );
-    // End is the default: the focus starts on it.
-    final focused = FocusManager.instance.primaryFocus!.context!;
-    expect(
-      find.ancestor(
-        of: find.text('End'),
-        matching: find.byWidget(focused.widget),
-      ),
-      findsOne,
-    );
+    // Ending deletes its conversation: the focus starts on Cancel, so ⏎
+    // keeps it (docs/design.md).
+    expect(focusedButton(tester), 'Cancel');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(_dialog, findsNothing);
+    _open(d, fake, side);
+
+    await _close(tester);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(_dialog, findsNothing);
@@ -153,21 +153,16 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
-  testWidgets('an older daemon: End and ⏎ end it', (tester) async {
-    for (final end in [
-      () => tester.tap(find.text('End')),
-      () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
-    ]) {
-      final (d, fake, side) = await _app(tester, old: true);
-      await _close(tester);
-      expect(_dialog, findsOne);
-      _open(d, fake, side);
-      await end();
-      await tester.pumpAndSettle();
-      expect(_dialog, findsNothing);
-      _ended(d, fake);
-      await closeView(tester, d);
-    }
+  testWidgets('an older daemon: End ends it', (tester) async {
+    final (d, fake, side) = await _app(tester, old: true);
+    await _close(tester);
+    expect(_dialog, findsOne);
+    _open(d, fake, side);
+    await tester.tap(find.text('End'));
+    await tester.pumpAndSettle();
+    expect(_dialog, findsNothing);
+    _ended(d, fake);
+    await closeView(tester, d);
   }, variant: _mac);
 
   testWidgets('⇧⌘B or − hides it, alive: its transcript and draft stay; '

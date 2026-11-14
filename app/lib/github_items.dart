@@ -151,6 +151,7 @@ class GitHubItems extends ChangeNotifier {
   static final _all = Expando<GitHubItems>();
 
   /// How long the gathering waits for more chips before it asks.
+  // design: a batch of asks, not motion
   static const gather = Duration(milliseconds: 250);
 
   final Daemon daemon;

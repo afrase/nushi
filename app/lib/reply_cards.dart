@@ -92,7 +92,7 @@ class _ReplyCard extends StatelessWidget {
                       ),
                     ),
                   const Spacer(),
-                  Text('Reply', style: theme.ui(t.textMuted, size: 10.5)),
+                  Text('Reply', style: theme.ui(t.textMuted, size: 11)),
                 ],
               ),
             ),

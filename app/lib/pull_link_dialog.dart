@@ -190,7 +190,7 @@ class _LinkPullState extends State<_LinkPull> {
                         it.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.ui(t.text, size: 12.5),
+                        style: theme.ui(t.text, size: 12),
                       ),
                     ),
                     const SizedBox(width: 8),

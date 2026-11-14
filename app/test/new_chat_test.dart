@@ -332,7 +332,7 @@ void main() {
     final (fake, d) = await _sidebar(tester);
     await _open(tester);
     await _key(tester, LogicalKeyboardKey.arrowRight);
-    expect(find.text('No other sessions here.'), findsOneWidget);
+    expect(find.text('No other sessions here'), findsOneWidget);
     await _key(tester, LogicalKeyboardKey.arrowLeft);
     await _key(tester, LogicalKeyboardKey.arrowDown); // codex → ante
     // The hint follows the highlight; a click on it opens Ante's.

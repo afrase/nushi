@@ -209,12 +209,12 @@ class AgentMarkdown extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final large = transcript && !TouchTargets.of(context);
-    final size = large ? 14.0 : 13.5;
+    final size = large ? 14.0 : 13.0;
     final style = MarkdownStyle(
       body: theme
           .ui(typed ? t.userBandText : t.agentText, size: size)
           .copyWith(height: large ? 22 / 14 : 1.5),
-      code: theme.code(typed ? t.userBandText : t.agentText, size: 12.5),
+      code: theme.code(typed ? t.userBandText : t.agentText, size: 12),
       codeBackground: typed ? t.userBandCodeBlock : t.codeBlock,
       // A control's corners, as a diff and a quote have.
       codeRadius: NushiTheme.control,

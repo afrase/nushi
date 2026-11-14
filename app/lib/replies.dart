@@ -112,7 +112,7 @@ class QuoteBlock extends StatelessWidget {
     this.text, {
     super.key,
     this.maxLines,
-    this.size = 12.5,
+    this.size = 12,
     this.band = false,
   });
 
@@ -169,7 +169,7 @@ class UserMessageText extends StatelessWidget {
               if (r.quote.isNotEmpty)
                 QuoteBlock(
                   r.quote,
-                  size: TouchTargets.of(context) ? 13.5 : 14,
+                  size: TouchTargets.of(context) ? 13 : 14,
                   band: true,
                 ),
               if (r.text.isNotEmpty)
@@ -208,7 +208,7 @@ class SelectionToolbar extends StatelessWidget {
         // A whole round end, inset evenly in the pill's.
         radius: NushiTheme.pill,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-        child: Text(label, style: theme.ui(fg, size: 12.5)),
+        child: Text(label, style: theme.ui(fg)),
       ),
     );
     return DecoratedBox(
@@ -308,7 +308,7 @@ class _ReplyBoxState extends State<ReplyBox> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              QuoteBlock(widget.quote.trim(), maxLines: 2, size: 12),
+              QuoteBlock(widget.quote.trim(), maxLines: 2),
               // In a short window the field gives way, and scrolls.
               Flexible(
                 child: Row(

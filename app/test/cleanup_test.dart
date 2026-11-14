@@ -1,5 +1,6 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/daemon.dart';
@@ -197,6 +198,22 @@ void main() {
       fake.calls.whereType<RemoveChatWorktreeRequest>().single.force,
       isTrue,
     );
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('Cancel has the focus, ticking a loss or not: Enter cleans '
+      'nothing up', (tester) async {
+    final (d, fake) = await _open(tester, u: _clean(changed: 2));
+    await tester.tap(_inPull(find.text('Clean up…')));
+    await tester.pumpAndSettle();
+    expect(focusedButton(tester), 'Cancel');
+    await tester.tap(find.byType(Checkbox).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Clean up, losing 2 files'), findsOneWidget);
+    expect(focusedButton(tester), isNot('Clean up, losing 2 files'));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<RemoveChatWorktreeRequest>(), isEmpty);
     d.dispose();
   }, variant: _mac);
 

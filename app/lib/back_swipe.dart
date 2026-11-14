@@ -213,7 +213,7 @@ class _BackSwipeState extends State<BackSwipe> {
                   child: Center(
                     child: AnimatedOpacity(
                       opacity: _fading ? 0 : 1,
-                      duration: Duration(milliseconds: _fading ? 160 : 0),
+                      duration: _fading ? Motion.exit : Duration.zero,
                       onEnd: () {
                         if (_fading) {
                           setState(() {

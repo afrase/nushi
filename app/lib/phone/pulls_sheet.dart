@@ -119,7 +119,7 @@ class _Row extends StatelessWidget {
                         if (it != null && it.state != 'open')
                           TextSpan(
                             text: ' · ${stateWord(it)}',
-                            style: theme.ui(t.textMuted, size: 12.5),
+                            style: theme.ui(t.textMuted, size: 12),
                           ),
                       ],
                     ),
@@ -144,7 +144,7 @@ class _Row extends StatelessWidget {
                   ),
                   Text(
                     '${n.passed}/${n.total}',
-                    style: theme.code(t.textSecondary, size: 12.5),
+                    style: theme.code(t.textSecondary, size: 12),
                   ),
                 ],
               ),

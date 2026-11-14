@@ -217,7 +217,7 @@ void main() {
     expect(find.text('team@market'), findsNothing);
     await tester.enterText(find.byType(TextField), 'nothing like it');
     await tester.pumpAndSettle();
-    expect(find.text('No skills or plugins match.'), findsOneWidget);
+    expect(find.text('No skills or plugins match'), findsOneWidget);
     await closeView(tester, d);
   });
 

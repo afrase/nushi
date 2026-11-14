@@ -394,7 +394,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
           horizontal: 8,
           vertical: _fieldPad,
         ),
-        hintStyle: ui(t.textMuted).copyWith(height: _hintLine / 13),
+        hintStyle: ui(t.hint).copyWith(height: _hintLine / 13),
         // A field keeps an edge, so it reads as one on any surface (ADR
         // 0111): the field's border, the focus ring's color once it has
         // the caret.

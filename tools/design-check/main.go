@@ -3,10 +3,13 @@
 // tooltip or tooltip() instead), a Material button (Button, IconTap,
 // LinkText…), an AlertDialog outside nushiDialog, a tooltip's shortcut in
 // brackets or after spaces (withKey instead), a raw Color(0x…) or a
-// Colors.<name> other than transparent (a token instead), and a fontSize
-// literal (NushiTheme's ui() or code() at a size instead). The controls'
-// and the theme's own files make the pieces, so they're left out, and so
-// is generated code. A deliberate use stays with a marker on its line or
+// Colors.<name> other than transparent (a token instead), a fontSize
+// literal (NushiTheme's ui() or code() at a size instead), and a
+// Duration(milliseconds: …) literal (Motion's or Waits' instead), and a
+// raw SnackBar (showToast instead, toast.dart's). The
+// controls' and the theme's own files make the pieces, so they're left
+// out, the controls' files but for durations, and so are motion.dart for
+// durations, toast.dart for the snack bar it makes, and generated code. A deliberate use stays with a marker on its line or
 // alone on the line above: `// design: <why>`. It prints each use and
 // exits 1. make lint-dart runs it from the repository root over app/lib
 // (or the folders it's given).
@@ -28,6 +31,13 @@ type rule struct {
 	pattern *regexp.Regexp
 	what    string
 	except  string // a match that's fine (Colors.transparent)
+	// inControls: the rule holds in the controls' files too, which make
+	// the shared pieces but take their timing from motion.dart like any
+	// view.
+	inControls bool
+	// notIn is a file the rule leaves out (motion.dart, which names the
+	// durations).
+	notIn string
 }
 
 // stringLiteral finds a Dart string literal on one line, for the rules
@@ -45,12 +55,18 @@ var (
 // rules are checked on every line of code but comments, outside the
 // controls' and the theme's files.
 var rules = []rule{
-	{regexp.MustCompile(`\bTooltip\(`), "a raw Tooltip: Pressable's or Tap's tooltip, or tooltip()", ""},
-	{regexp.MustCompile(`\b(?:ElevatedButton|TextButton|OutlinedButton|IconButton|FilledButton)\b`), "a Material button: Button, IconTap, LinkText or another of controls.dart's", ""},
-	{regexp.MustCompile(`\bAlertDialog\(`), "an AlertDialog: nushiDialog or confirm", ""},
-	{regexp.MustCompile(`\bColor\(0x`), "a raw color: a token of theme/tokens.dart", ""},
-	{regexp.MustCompile(`\bColors\.[a-z]\w*`), "a Material color: a token of theme/tokens.dart", "Colors.transparent"},
-	{regexp.MustCompile(`\bfontSize:\s*\d`), "a font size: NushiTheme's ui() or code() at a size", ""},
+	{regexp.MustCompile(`\bTooltip\(`), "a raw Tooltip: Pressable's or Tap's tooltip, or tooltip()", "", false, ""},
+	{regexp.MustCompile(`\b(?:ElevatedButton|TextButton|OutlinedButton|IconButton|FilledButton)\b`), "a Material button: Button, IconTap, LinkText or another of controls.dart's", "", false, ""},
+	{regexp.MustCompile(`\bAlertDialog\(`), "an AlertDialog: nushiDialog or confirm", "", false, ""},
+	{regexp.MustCompile(`\bColor\(0x`), "a raw color: a token of theme/tokens.dart", "", false, ""},
+	{regexp.MustCompile(`\bColors\.[a-z]\w*`), "a Material color: a token of theme/tokens.dart", "Colors.transparent", false, ""},
+	{regexp.MustCompile(`\bfontSize:\s*\d`), "a font size: NushiTheme's ui() or code() at a size", "", false, ""},
+	{regexp.MustCompile(`\bSnackBar(?:Action)?\(`), "a raw snack bar: showToast", "", false, "toast.dart"},
+	{
+		regexp.MustCompile(`\bDuration\(\s*milliseconds:`),
+		"a duration in milliseconds: one of motion.dart's Motion or Waits",
+		"", true, "motion.dart",
+	},
 }
 
 // keyInString is the rule on what a string says: a tooltip's shortcut is
@@ -107,23 +123,26 @@ func check(root string) ([]use, error) {
 				return filepath.SkipDir
 			}
 			return nil
-		case !strings.HasSuffix(path, ".dart") || exempt(path):
+		case !strings.HasSuffix(path, ".dart") || generatedCode(path):
 			return nil
 		}
-		found, err := inFile(path)
+		found, err := inFile(path, controls(path))
 		uses = append(uses, found...)
 		return err
 	})
 	return uses, err
 }
 
-// exempt says whether path makes the shared pieces (controls.dart and its
-// parts) or is generated.
-func exempt(path string) bool {
+// controls says whether path makes the shared pieces (controls.dart and
+// its parts).
+func controls(path string) bool {
 	base := filepath.Base(path)
-	if base == "controls.dart" || strings.HasPrefix(base, "controls_") {
-		return true
-	}
+	return base == "controls.dart" || strings.HasPrefix(base, "controls_")
+}
+
+// generatedCode says whether path is protoc's or Connect's.
+func generatedCode(path string) bool {
+	base := filepath.Base(path)
 	for _, s := range generated {
 		if strings.HasSuffix(base, s) {
 			return true
@@ -132,8 +151,9 @@ func exempt(path string) bool {
 	return strings.Contains(base, ".connect.")
 }
 
-// inFile lists one file's uses, comments and marked lines left out.
-func inFile(path string) ([]use, error) {
+// inFile lists one file's uses, comments and marked lines left out; in
+// the controls' files ([controls]), only the rules that hold there.
+func inFile(path string, controls bool) ([]use, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -154,22 +174,38 @@ func inFile(path string) ([]use, error) {
 		if at := strings.Index(code, " // "); at >= 0 && !inString(code, at) {
 			code = code[:at]
 		}
-		for _, r := range rules {
-			for _, m := range r.pattern.FindAllString(code, -1) {
-				if m != r.except {
-					uses = append(uses, use{path, n, r.what})
-					break
-				}
-			}
+		for _, what := range onLine(code, filepath.Base(path), controls) {
+			uses = append(uses, use{path, n, what})
 		}
-		for _, s := range stringLiteral.FindAllString(code, -1) {
-			if bracketedKey.MatchString(s) || spacedKey.MatchString(s) {
-				uses = append(uses, use{path, n, keyInString})
+	}
+	return uses, sc.Err()
+}
+
+// onLine lists what one line of code (its comment cut) goes around, in
+// the file named base; in the controls' files, only the rules that hold
+// there.
+func onLine(code, base string, controls bool) []string {
+	var found []string
+	for _, r := range rules {
+		if controls && !r.inControls || r.notIn == base {
+			continue
+		}
+		for _, m := range r.pattern.FindAllString(code, -1) {
+			if m != r.except {
+				found = append(found, r.what)
 				break
 			}
 		}
 	}
-	return uses, sc.Err()
+	if controls {
+		return found
+	}
+	for _, s := range stringLiteral.FindAllString(code, -1) {
+		if bracketedKey.MatchString(s) || spacedKey.MatchString(s) {
+			return append(found, keyInString)
+		}
+	}
+	return found
 }
 
 // inString says whether byte at of line is inside a string literal.

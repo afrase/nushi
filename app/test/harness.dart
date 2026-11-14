@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
@@ -206,4 +207,17 @@ extension PreviewNames on ChatState {
         final BrowserTab b => b.address.value,
       },
   ];
+}
+
+/// The label of the [Button] that has the keyboard's focus.
+String? focusedButton(WidgetTester tester) {
+  final focused = FocusManager.instance.primaryFocus?.context;
+  if (focused == null) return null;
+  final button = find.ancestor(
+    of: find.byWidget(focused.widget),
+    matching: find.byType(Button),
+  );
+  return button.evaluate().isEmpty
+      ? null
+      : tester.widget<Button>(button.first).label;
 }

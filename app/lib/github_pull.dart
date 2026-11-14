@@ -9,6 +9,7 @@ import 'package:nushi/github_files.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/item_chats.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/pull_activity.dart';
 import 'package:nushi/pull_cache.dart';
@@ -179,7 +180,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       if (to == null || !to.mounted) return;
       Scrollable.ensureVisible(
         to,
-        duration: const Duration(milliseconds: 220),
+        duration: Motion.standard,
         curve: Curves.easeOutCubic,
       );
     }
@@ -200,7 +201,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       if (to == null || !to.mounted) return;
       Scrollable.ensureVisible(
         to,
-        duration: const Duration(milliseconds: 220),
+        duration: Motion.standard,
         curve: Curves.easeOutCubic,
       );
     });

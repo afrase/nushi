@@ -188,15 +188,11 @@ class _CommentBoxState extends State<CommentBox> {
         setState(() => _error = why);
       } else if (messenger != null && messenger.mounted) {
         // Its box is gone, and with it the line that would say so.
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              key == null
-                  ? "A comment wasn't posted: $why"
-                  : "A comment wasn't posted: $why. Its text is back in "
-                        'its box.',
-            ),
-          ),
+        showToast(
+          messenger,
+          key == null
+              ? "A comment wasn't posted: $why"
+              : "A comment wasn't posted: $why. Its text is back in its box.",
         );
       }
     } finally {

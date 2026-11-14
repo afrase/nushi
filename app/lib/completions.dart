@@ -214,7 +214,7 @@ class ChoiceList extends StatelessWidget {
                   children: [
                     TextSpan(
                       text: c.label,
-                      style: theme.code(t.text, size: 12.5),
+                      style: theme.code(t.text, size: 12),
                     ),
                     if (c.detail.isNotEmpty)
                       TextSpan(

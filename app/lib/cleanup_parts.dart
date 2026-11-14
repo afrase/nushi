@@ -105,7 +105,7 @@ class DirtyWorktree extends StatelessWidget {
                   n == 1
                       ? '1 uncommitted file would be lost.'
                       : '$n uncommitted files would be lost.',
-                  style: theme.ui(t.text, size: 12.5, weight: FontWeight.w500),
+                  style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
                 ),
               ),
             ],
@@ -154,7 +154,7 @@ class MidTurnChoice extends StatelessWidget {
             color: stop == value ? t.accentInk : t.textMuted,
           ),
           const SizedBox(width: 8),
-          Text(words, style: theme.ui(t.text, size: 12.5)),
+          Text(words, style: theme.ui(t.text, size: 12)),
         ],
       ),
     );

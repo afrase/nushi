@@ -298,7 +298,7 @@ class _Note extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
     child: Text(
       plainPath(text),
-      style: NushiTheme.of(context).ui(color, size: 12.5),
+      style: NushiTheme.of(context).ui(color, size: 12),
     ),
   );
 }
@@ -343,7 +343,7 @@ class _Bar extends StatelessWidget {
       child: Row(
         spacing: 8,
         children: [
-          Text('Logs', style: theme.ui(t.textSecondary, size: 12.5)),
+          Text('Logs', style: theme.ui(t.textSecondary, size: 12)),
           Expanded(
             child: Row(
               spacing: 8,

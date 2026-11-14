@@ -389,8 +389,10 @@ class _DeleteDialogState extends State<_DeleteDialog> {
         },
       ),
       [
+        // Cancel has the focus, so Enter never deletes (docs/design.md).
         Button(
           label: 'Cancel',
+          autofocus: true,
           onPressed: _deleting ? null : () => Navigator.pop(context),
         ),
         FutureBuilder(
@@ -398,7 +400,6 @@ class _DeleteDialogState extends State<_DeleteDialog> {
           builder: (context, snap) => Button(
             label: _deleting ? 'Deleting…' : 'Delete',
             kind: ButtonKind.destructive,
-            autofocus: true,
             onPressed: snap.hasData && !_deleting ? _delete : null,
           ),
         ),

@@ -9,6 +9,7 @@ import 'package:nushi/errors.dart';
 import 'package:nushi/file_text.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/merge_lines.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/source_spans.dart';
 import 'package:nushi/syntax.dart';
 import 'package:nushi/tab_indent.dart';
@@ -119,7 +120,7 @@ class FileEdit extends ChangeNotifier {
         notifyListeners();
       }
       _soon?.cancel();
-      _soon = Timer(const Duration(milliseconds: 300), _highlight);
+      _soon = Timer(Waits.typing, _highlight);
     }
     if (_held case (final sha, final file) when !controller.isComposing) {
       _held = null;

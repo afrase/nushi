@@ -87,10 +87,43 @@ typedef ControlLook = ({bool hover, bool focus, bool pressed, bool enabled});
 BoxDecoration? focusRing(Tokens t, ControlLook look, {BorderRadius? radius}) =>
     look.focus
     ? BoxDecoration(
-        border: Border.all(color: t.focus, width: 2),
+        border: Border.all(color: t.focus, width: _ringWidth),
         borderRadius: radius ?? BorderRadius.circular(NushiTheme.control),
       )
     : null;
+
+/// The ring a focused control on the accent's fill wears (a primary
+/// button, Send): a line of [Tokens.onAccent] at its edge and the focus
+/// color's ring just outside it, so it reads where [Tokens.focus] is
+/// within a shade of the fill (a light set's `accentInk` on its `accent`),
+/// as a focused default button on the Mac stands off its ring.
+Decoration? accentFocusRing(
+  Tokens t,
+  ControlLook look, {
+  BorderRadius? radius,
+}) {
+  if (!look.focus) return null;
+  final corners = radius ?? BorderRadius.circular(NushiTheme.control);
+  // A sum of shapes paints its last outermost.
+  return ShapeDecoration(
+    shape:
+        RoundedRectangleBorder(
+          side: BorderSide(color: t.onAccent, width: _ringWidth),
+          borderRadius: corners,
+        ) +
+        RoundedRectangleBorder(
+          side: BorderSide(
+            color: t.focus,
+            width: _ringWidth,
+            strokeAlign: BorderSide.strokeAlignOutside,
+          ),
+          borderRadius: corners,
+        ),
+  );
+}
+
+/// The focus ring's width.
+const _ringWidth = 2.0;
 
 /// The tint under a control: deeper while it's pressed.
 Color _tint(Tokens t, ControlLook look) => look.pressed ? t.pressed : t.hover;

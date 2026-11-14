@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/markdown.dart' show openWeb, openWebLink;
 import 'package:nushi/native.dart';
 import 'package:nushi/terminal_find.dart' show openLink;
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/web_page.dart' show openInBrowser, openLinkOrSay;
 import 'package:nushi/web_views.dart';
 import 'package:nushi/web_views_linux.dart';
@@ -40,6 +41,8 @@ Future<BuildContext> _window(WidgetTester tester) async {
   late BuildContext context;
   await tester.pumpWidget(
     MaterialApp(
+      // The app's theme, which its toasts are drawn in.
+      theme: const NushiTheme(Tokens.dark).toThemeData(),
       home: Scaffold(
         body: Builder(
           builder: (c) {

@@ -244,10 +244,7 @@ class _MenuRow extends StatelessWidget {
                     entry.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.ui(
-                      bright ? t.text : railTitleDim(t),
-                      size: 13.5,
-                    ),
+                    style: theme.ui(bright ? t.text : railTitleDim(t)),
                   ),
                 ),
               ),

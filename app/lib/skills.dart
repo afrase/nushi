@@ -189,7 +189,7 @@ class _SkillsViewState extends State<SkillsView> {
         Text(r.noSkills, style: muted)
       else ...[
         if (list.loaded && !any)
-          Text('No skills or plugins match.', style: muted),
+          Text('No skills or plugins match', style: muted),
         if (list.loaded)
           for (final MapEntry(key: from, value: skills) in groups.entries)
             if (from == 'shared')

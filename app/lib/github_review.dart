@@ -173,7 +173,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
             const SizedBox(height: 8),
             Text(
               inline.isEmpty
-                  ? 'No inline comments: select lines in Files to add some.'
+                  ? 'No inline comments: select lines in Files to add some'
                   : 'With ${inline.join(' and ')}.',
               style: theme.ui(t.textMuted, size: 12),
             ),

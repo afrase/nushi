@@ -57,7 +57,9 @@ class _ContextMeterState extends State<ContextMeter> with ClockRun {
   double? _to; // the fill it goes to
   bool _drain = false; // a compaction: the figure follows the fill
 
+  // design: a meter's fill, its own pace
   static const _fillFor = Duration(milliseconds: 400);
+  // design: a meter's drain, its own pace
   static const _drainFor = Duration(milliseconds: 600);
   static const _colorFor = 300.0;
 

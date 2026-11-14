@@ -188,8 +188,8 @@ void main() {
     await typeIn(tester, 'quokka');
     await press(tester, LogicalKeyboardKey.enter);
     expect(fake.searched.single.text, 'quokka');
-    expect(find.text('No sessions mention “quokka”.'), findsOne);
-    expect(find.text('No title loaded so far says “quokka”.'), findsOne);
+    expect(find.text('No sessions mention “quokka”'), findsOne);
+    expect(find.text('No title loaded so far says “quokka”'), findsOne);
     d.dispose();
   });
 

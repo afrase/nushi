@@ -192,16 +192,12 @@ class PullHeader extends StatelessWidget {
                     children: [
                       TextSpan(
                         text: move.lead,
-                        style: theme.ui(
-                          t.text,
-                          size: 13.5,
-                          weight: FontWeight.w600,
-                        ),
+                        style: theme.ui(t.text, weight: FontWeight.w600),
                       ),
                       if (move.rest.isNotEmpty) TextSpan(text: ' ${move.rest}'),
                     ],
                   ),
-                  style: theme.ui(t.textSecondary, size: 13.5),
+                  style: theme.ui(t.textSecondary),
                 ),
               ),
             ],

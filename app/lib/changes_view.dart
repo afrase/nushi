@@ -11,6 +11,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/file_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/plain_text.dart';
 import 'package:nushi/pull_tab.dart';
@@ -117,7 +118,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   /// ones don't flicker).
   void _waiting() {
     _slow?.cancel();
-    _slow = Timer(const Duration(milliseconds: 150), () {
+    _slow = Timer(Waits.loading, () {
       if (mounted) setState(() => _stale = true);
     });
   }
@@ -250,9 +251,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       final status = span.status;
       if (!status.git) {
         setState(() {
-          _error = status.gone
-              ? 'The folder is gone.'
-              : 'Not a git repository.';
+          _error = status.gone ? 'The folder is gone.' : 'Not a git repository';
         });
         return;
       }
@@ -434,7 +433,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     final file = _plain ?? _files.where((f) => f.path == _path).firstOrNull;
     final notShown = file == null
         ? ''
-        : 'Not shown: ${plainName(file.path)} is ${file.skipped}.';
+        : 'Not shown: ${plainName(file.path)} is ${file.skipped}';
     final commits = _span?.scope == Scope.commits;
     final staging = _span?.scope == Scope.uncommitted && !_readOnly;
     final empty = _reloading
@@ -770,9 +769,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
           index: seenIndex ?? _span?.index,
         ),
       );
-      messenger?.showSnackBar(
-        SnackBar(content: Text('Committed ${done.short}')),
-      );
+      showToast(messenger, 'Committed ${done.short}');
     } finally {
       chat.committed();
     }

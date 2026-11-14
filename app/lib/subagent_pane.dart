@@ -147,7 +147,7 @@ class _Head extends StatelessWidget {
               decoration: cardBox(t),
               child: FoldedText(
                 call.prompt,
-                style: theme.ui(t.text, size: 12.5),
+                style: theme.ui(t.text, size: 12),
                 folded: 5,
                 padding: const EdgeInsets.symmetric(vertical: 2),
               ),
@@ -270,7 +270,7 @@ class _ToSubagentBoxState extends State<_ToSubagentBox> {
                   hintText:
                       'Message ${widget.s.call.agent} through '
                       '${widget.chat.agentName}',
-                  hintStyle: theme.ui(t.textMuted),
+                  hintStyle: theme.ui(t.hintOn(t.base)),
                 ),
               ),
             ),

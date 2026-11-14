@@ -62,7 +62,7 @@ class _Servers extends StatelessWidget {
           if (!list.loaded && list.checking)
             Text('…', style: muted)
           else if (list.loaded && list.used.isEmpty)
-            Text('No MCP servers.', style: muted),
+            Text('No MCP servers', style: muted),
           if (list.error.isNotEmpty && !list.checking) ...[
             Text(list.error, style: theme.ui(t.crashed, size: 12)),
             Padding(

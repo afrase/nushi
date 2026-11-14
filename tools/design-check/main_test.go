@@ -19,12 +19,19 @@ func TestCheck(t *testing.T) {
 		"size.dart":    "TextStyle(fontSize: 12);\n",
 		"keys.dart":    "tooltip: 'Forward (⌘])',\ntooltip: 'Close  ⌘W',\ntooltip: 'Find (${keyLabel(k)})',\nlabel: 'Back (${Act.back.shortcut})',\n",
 		"phone/x.dart": "OutlinedButton(onPressed: f);\n",
+		"wait.dart":    "Timer(const Duration(milliseconds: 150), f);\n",
+		"say.dart":     "m.showSnackBar(SnackBar(content: c));\naction: SnackBarAction(label: l),\nm.hideCurrentSnackBar();\n",
+		// A control's timing is motion.dart's too.
+		"controls_small.dart": "duration: const Duration(milliseconds: 120),\n",
 		// Fine: the shared pieces, a token, a marked line, comments, names
 		// that only look alike.
 		"fine.dart": "tooltip(context, 'x', c);\nColors.transparent;\nTooltipThemeData();\nfontSize: style.fontSize! * 2,\n" +
 			"// a Tooltip( in a comment\nfinal s = TextStyle(fontSize: 0); // design: hidden\n" +
 			"// design: a QR code is dark on white\ncolor: Colors.white,\nwithKey('Close', '⌘W');\n" +
-			"label: 'Send (3)',\ntooltip: 'Run tests',\nfinal c = t.text; // Colors.red was too loud\n",
+			"label: 'Send (3)',\ntooltip: 'Run tests',\nfinal c = t.text; // Colors.red was too loud\n" +
+			"const Duration(seconds: 10);\nduration: Motion.quick,\n// design: a debounce, not motion\nTimer(const Duration(milliseconds: 250), f);\n",
+		"motion.dart":            "static const quick = Duration(milliseconds: 120);\n",
+		"toast.dart":             "messenger.showSnackBar(SnackBar(content: c));\n",
 		"controls.dart":          "return Tooltip(message: m, child: c);\n",
 		"controls_buttons.dart":  "Color(0x2E000000);\n",
 		"theme/tokens.dart":      "base: Color(0xFFFFFFFF),\n",
@@ -58,20 +65,26 @@ func TestCheck(t *testing.T) {
 		raw    = "a raw color: a token of theme/tokens.dart"
 		named  = "a Material color: a token of theme/tokens.dart"
 		size   = "a font size: NushiTheme's ui() or code() at a size"
+		ms     = "a duration in milliseconds: one of motion.dart's Motion or Waits"
+		snack  = "a raw snack bar: showToast"
 	)
 	want := []string{
 		"button.dart:1: " + button,
 		"button.dart:2: " + button,
 		"color.dart:1: " + raw,
 		"color.dart:2: " + named,
+		"controls_small.dart:1: " + ms,
 		"dialog.dart:1: " + dialog,
 		"keys.dart:1: " + keyInString,
 		"keys.dart:2: " + keyInString,
 		"keys.dart:3: " + keyInString,
 		"keys.dart:4: " + keyInString,
 		"phone/x.dart:1: " + button,
+		"say.dart:1: " + snack,
+		"say.dart:2: " + snack,
 		"size.dart:1: " + size,
 		"tip.dart:1: " + tip,
+		"wait.dart:1: " + ms,
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("got %q\nwant %q", got, want)

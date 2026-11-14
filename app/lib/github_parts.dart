@@ -223,7 +223,7 @@ Widget githubImage(Uri uri, String? alt) {
   return Builder(
     builder: (context) => LinkText(
       '[image${alt == null || alt.isEmpty ? '' : ': $alt'}]',
-      size: 12.5,
+      size: 12,
       tooltip: link == null ? '' : 'Open the image in the browser',
       onTap: link == null
           ? null

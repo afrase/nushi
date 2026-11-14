@@ -136,10 +136,7 @@ class PanelWidget extends StatelessWidget {
         }
         revealWidget.value = null;
         if (context.mounted) {
-          Scrollable.ensureVisible(
-            context,
-            duration: const Duration(milliseconds: 200),
-          );
+          Scrollable.ensureVisible(context, duration: Motion.standard);
         }
       });
 

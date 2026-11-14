@@ -45,10 +45,12 @@ class SidebarBeside extends StatefulWidget {
   /// How long a peek stays once the pointer is off it: a move from the
   /// button or the edge to it on a slant, through the window's margin,
   /// doesn't close it.
+  // design: a hover's grace, not motion
   static const grace = Duration(milliseconds: 300);
 
   /// How long the pointer rests on the window's left edge before the
   /// sidebar peeks: a pass on the way elsewhere doesn't bring it.
+  // design: a hover's dwell, not motion
   static const dwell = Duration(milliseconds: 150);
 
   @override

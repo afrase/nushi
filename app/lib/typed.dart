@@ -23,11 +23,13 @@ class Typed extends StatefulWidget {
   static const rate = 90.0;
 
   /// The longest a title takes, and a changed one typed again.
+  // design: a title's typing, its own pace
   static const most = Duration(milliseconds: 260);
+  // design: a title's typing, its own pace
   static const again = Duration(milliseconds: 180);
 
   /// The caret fading once the title is all there.
-  static const fade = Duration(milliseconds: 120);
+  static const Duration fade = Motion.quick;
 
   @override
   State<Typed> createState() => _TypedState();
@@ -98,6 +100,7 @@ class RunLine extends StatefulWidget {
   final TextStyle style;
 
   /// The least a running call's words show before the next replace them.
+  // design: how long a state shows, not motion
   static const hold = Duration(milliseconds: 250);
 
   @override

@@ -353,14 +353,14 @@ class _QuestionCardState extends State<QuestionCard> {
         Text.rich(
           TextSpan(
             text: '${q.field.title}   ',
-            style: theme.ui(t.textMuted, size: 12.5),
+            style: theme.ui(t.textMuted, size: 12),
             children: [
               if (_said(q) case final s when s.isNotEmpty)
-                TextSpan(text: s, style: theme.ui(t.text, size: 12.5))
+                TextSpan(text: s, style: theme.ui(t.text, size: 12))
               else
                 TextSpan(
                   text: 'Not answered',
-                  style: theme.ui(t.needs, size: 12.5),
+                  style: theme.ui(t.needs, size: 12),
                 ),
             ],
           ),

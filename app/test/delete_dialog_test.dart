@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/chat_view.dart';
@@ -77,6 +78,18 @@ void main() {
       [req.worktrees.single.removeWorktree, req.worktrees.single.deleteBranch],
       [false, false],
     );
+    await closeView(tester, d);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('Cancel has the focus: Enter closes it and deletes nothing', (
+    tester,
+  ) async {
+    final (fake, d) = await _open(tester, []);
+    expect(focusedButton(tester), 'Cancel');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.text('Delete'), findsNothing);
+    expect(fake.calls.whereType<DeleteChatRequest>(), isEmpty);
     await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 

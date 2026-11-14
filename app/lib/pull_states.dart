@@ -157,7 +157,9 @@ class PullDot extends StatefulWidget {
   /// The dot's width, as the row lays it out (the ring paints past it).
   static const size = 6.0;
 
+  // design: how long a state shows, not motion
   static const passedFor = Duration(milliseconds: 4300);
+  // design: how long a state shows, not motion
   static const failedFor = Duration(milliseconds: 1600);
 
   @override
@@ -260,6 +262,7 @@ class ChecksMark extends CustomPainter {
   final bool ringing;
   final double scale;
 
+  // design: a loop's beat, on pulseClock
   static const period = Duration(milliseconds: 1600);
 
   @override

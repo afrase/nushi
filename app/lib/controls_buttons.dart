@@ -71,6 +71,17 @@ BoxDecoration _buttonBox(
   );
 }
 
+/// The focus ring of a button of [kind]: on the accent's fill, the one
+/// that stands off it.
+Decoration? _ring(
+  Tokens t,
+  ButtonKind kind,
+  ControlLook look,
+  BorderRadius r,
+) => kind == ButtonKind.primary
+    ? accentFocusRing(t, look, radius: r)
+    : focusRing(t, look, radius: r);
+
 /// A button: [label], an optional leading [icon], a shortcut [hint] after
 /// the label (not on a phone). Its height, padding, type and corners are
 /// its place's [ControlSize]; stretched wider than its content, the
@@ -132,7 +143,7 @@ class Button extends StatelessWidget {
             vertical: lines > 1 ? 5 : 0,
           ),
           decoration: _buttonBox(t, kind, look, corners),
-          foregroundDecoration: focusRing(t, look, radius: corners),
+          foregroundDecoration: _ring(t, kind, look, corners),
           // Centred when its parent stretches it (the sidebar's New chat);
           // a value picker is a MenuField, which keeps its value at the left.
           child: Row(
@@ -196,6 +207,8 @@ class WideButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    // Its corners are its height's share, as every control's (ADR 0122).
+    final corners = BorderRadius.circular(ControlSize.radiusFor(height));
     return Pressable(
       onTap: onPressed,
       builder: (context, look) => _faded(
@@ -207,9 +220,9 @@ class WideButton extends StatelessWidget {
             color: look.hover
                 ? Color.alphaBlend(_tint(t, look), t.raised)
                 : t.raised,
-            borderRadius: BorderRadius.circular(NushiTheme.control),
+            borderRadius: corners,
           ),
-          foregroundDecoration: focusRing(t, look),
+          foregroundDecoration: focusRing(t, look, radius: corners),
           child: Row(
             children: [
               if (icon != null) ...[
@@ -269,7 +282,7 @@ class SplitButton extends StatelessWidget {
         height: size.height,
         padding: EdgeInsets.symmetric(horizontal: size.pad - 2),
         decoration: _buttonBox(t, kind, look, r),
-        foregroundDecoration: focusRing(t, look, radius: r),
+        foregroundDecoration: _ring(t, kind, look, r),
         // As wide as its content, whatever room it's given.
         child: Center(widthFactor: 1, child: child),
       ),
@@ -354,7 +367,7 @@ class SendButton extends StatelessWidget {
           height: size.height,
           padding: EdgeInsets.fromLTRB(size.pad - 3, 0, size.pad - 1, 0),
           decoration: _buttonBox(t, ButtonKind.primary, look, corners),
-          foregroundDecoration: focusRing(t, look, radius: corners),
+          foregroundDecoration: accentFocusRing(t, look, radius: corners),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -367,7 +380,7 @@ class SendButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.ui(
                     t.onAccent,
-                    size: size.text - 0.5,
+                    size: size.text,
                     weight: FontWeight.w500,
                   ),
                 ),

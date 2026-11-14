@@ -35,6 +35,7 @@ class SessionSearch extends ChangeNotifier {
   final String folder;
 
   /// How long typing pauses before the search is asked.
+  // design: a pause in typing before a search of every transcript
   static const pause = Duration(milliseconds: 500);
 
   Timer? _wait;
@@ -204,7 +205,7 @@ class SearchState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final style = theme.ui(t.textMuted, size: 12.5);
+    final style = theme.ui(t.textMuted, size: 12);
     final error = search.error;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
@@ -229,10 +230,10 @@ class SearchState extends StatelessWidget {
         _ when error != null => Wrap(
           children: [
             Text("Couldn't search: $error ", style: style),
-            LinkText('Try again', size: 12.5, onTap: search.again),
+            LinkText('Try again', size: 12, onTap: search.again),
           ],
         ),
-        _ => Text('No sessions mention “${search.text}”.', style: style),
+        _ => Text('No sessions mention “${search.text}”', style: style),
       },
     );
   }

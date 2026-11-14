@@ -183,8 +183,8 @@ class BackgroundCommandPane extends StatelessWidget {
                               it.backgroundCommand.output.isNotEmpty
                                   ? it.backgroundCommand.output
                                   : commandRunning(it)
-                                  ? 'None yet.'
-                                  : 'None.',
+                                  ? 'None yet'
+                                  : 'None',
                               style: it.backgroundCommand.output.isEmpty
                                   ? small
                                   : code,

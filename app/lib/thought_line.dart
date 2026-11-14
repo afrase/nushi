@@ -38,8 +38,8 @@ class ThoughtLine extends StatefulWidget {
   final bool live;
   final TextStyle style;
 
-  static const slideFor = Duration(milliseconds: 180);
-  static const foldFor = Duration(milliseconds: 200);
+  static const Duration slideFor = Motion.standard;
+  static const Duration foldFor = Motion.standard;
 
   @override
   State<ThoughtLine> createState() => _ThoughtLineState();
@@ -88,7 +88,7 @@ class _ThoughtLineState extends State<ThoughtLine> with ClockRun {
   @override
   Widget build(BuildContext context) {
     if (!widget.live && !(_folding && running)) return const SizedBox.shrink();
-    final height = (widget.style.fontSize ?? 12.5) * 1.6;
+    final height = (widget.style.fontSize ?? 12) * 1.6;
     var line = _line(_now.text);
     if (running && _folding) {
       final v = part(

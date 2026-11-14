@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/widgets.dart';
 
 import 'package:nushi/theme/diff_colors.dart';
@@ -167,6 +169,39 @@ class Tokens {
   final Color text;
   final Color textSecondary;
   final Color textMuted;
+
+  /// A field's hint (an example of what goes in it): [hintOn] its fill.
+  Color get hint => hintOn(fieldFill);
+
+  /// A hint on [fill]: [textMuted] taken toward [fill] until it stands
+  /// [hintContrast] off it, a clear step under a typed value (a field's
+  /// [text]) and under muted text, so an example never reads as typed;
+  /// [textMuted] itself where that's already as faint.
+  Color hintOn(Color fill) {
+    double off(Color c) {
+      final (x, y) = (c.computeLuminance(), fill.computeLuminance());
+      return (max(x, y) + 0.05) / (min(x, y) + 0.05);
+    }
+
+    if (off(textMuted) <= hintContrast) return textMuted;
+    var (lo, hi) = (0.0, 1.0); // how far toward the fill: lo still reads
+    for (var i = 0; i < 16; i++) {
+      final mid = (lo + hi) / 2;
+      if (off(Color.lerp(textMuted, fill, mid)!) >= hintContrast) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+    return Color.lerp(textMuted, fill, lo)!;
+  }
+
+  /// How far a hint stands off its field: 3.5:1, over the 3:1 a mark is
+  /// held to and under the 4.5:1 of text, as the Mac's placeholders sit
+  /// under its labels (a field's label says what it is; its hint is only
+  /// an example).
+  static const hintContrast = 3.5;
+
   final Color link;
   final Color onAccent;
 
@@ -359,7 +394,7 @@ class Tokens {
     line: Color(0x17141824),
     selected: Color(0xFFE1E4EB),
     text: Color(0xFF1E1F22),
-    textSecondary: Color(0xFF494B57),
+    textSecondary: Color(0xFF3B3D46),
     textMuted: Color(0xFF5A5E6B),
     link: Color(0xFF2259D2),
     onAccent: Color(0xFFFFFFFF),
@@ -445,7 +480,7 @@ class Tokens {
     line: Color(0x12FFFFFF),
     selected: Color(0xFF36383E),
     text: Color(0xFFDFE1E5),
-    textSecondary: Color(0xFFB4B8BF),
+    textSecondary: Color(0xFFC1C5CB),
     textMuted: Color(0xFFA5A9B1),
     link: Color(0xFF77A4FF),
     onAccent: Color(0xFFFFFFFF),

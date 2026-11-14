@@ -47,14 +47,11 @@ class _GitHubChecksState extends State<GitHubChecks> {
         ),
       );
       if (!mounted) return;
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(
-          content: Text(
-            r.runs == 1
-                ? 'Re-running the failed jobs of 1 workflow run'
-                : 'Re-running the failed jobs of ${r.runs} workflow runs',
-          ),
-        ),
+      showToast(
+        ScaffoldMessenger.maybeOf(context),
+        r.runs == 1
+            ? 'Re-running the failed jobs of 1 workflow run'
+            : 'Re-running the failed jobs of ${r.runs} workflow runs',
       );
       await widget.onChanged?.call();
     });
@@ -70,7 +67,7 @@ class _GitHubChecksState extends State<GitHubChecks> {
     if (p.checks.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Text('No checks.', style: theme.ui(t.textMuted)),
+        child: Text('No checks', style: theme.ui(t.textMuted)),
       );
     }
     final jobs = failed.where((c) => c.id != 0).toList();
@@ -223,7 +220,7 @@ class _Mini extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: theme.ui(
                 c.state == 'success' ? t.textSecondary : t.textMuted,
-                size: 12.5,
+                size: 12,
               ),
             ),
           ),

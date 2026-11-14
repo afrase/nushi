@@ -205,7 +205,7 @@ class _SidebarRowState extends State<SidebarRow> {
                             padding: const EdgeInsets.only(left: 6),
                             child: Text(
                               chat.jiraKey,
-                              style: theme.code(t.textMuted, size: 10.5),
+                              style: theme.code(t.textMuted, size: 11),
                             ),
                           )
                         else if (chat.worktree case final wt?)
@@ -219,7 +219,7 @@ class _SidebarRowState extends State<SidebarRow> {
                                 wt.branch.replaceFirst('nushi/', ''),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: theme.code(t.textMuted, size: 10.5),
+                                style: theme.code(t.textMuted, size: 11),
                               ),
                             ),
                           ),
@@ -243,7 +243,7 @@ class _SidebarRowState extends State<SidebarRow> {
                               at.toString().substring(0, 16),
                               Text(
                                 agoShort(clock().difference(at)),
-                                style: theme.code(t.textMuted, size: 10.5),
+                                style: theme.code(t.textMuted, size: 11),
                               ),
                             ),
                           ),

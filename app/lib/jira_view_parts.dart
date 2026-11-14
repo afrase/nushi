@@ -24,7 +24,7 @@ Future<JiraBoard?> pickBoard(BuildContext context, List<JiraBoard> boards) =>
                 padding: const EdgeInsets.all(6),
                 child: Text('${b.name}  ·  ${b.project}'),
               ),
-            if (boards.isEmpty) const Text('No boards on this site.'),
+            if (boards.isEmpty) const Text('No boards on this site'),
           ],
         ),
         [Button(label: 'Cancel', onPressed: () => Navigator.pop(context))],

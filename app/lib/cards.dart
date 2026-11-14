@@ -25,6 +25,7 @@ class WaitingCard extends StatefulWidget {
   final bool waiting;
   final List<Widget> children;
 
+  // design: a waiting card's glow, a one-off flourish
   static const glowFor = Duration(milliseconds: 700);
 
   @override

@@ -20,7 +20,9 @@ class DaemonBanner extends StatefulWidget {
 
   final Daemon daemon;
 
+  // design: how long a state shows, not motion
   static const grace = Duration(milliseconds: 800);
+  // design: how long a state shows, not motion
   static const backFor = Duration(milliseconds: 1200);
 
   /// How long it takes to slide down (its slide up is [Motion.exit]).

@@ -18,6 +18,7 @@ import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/server_logs.dart';
 import 'package:nushi/servers_menu.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/toast.dart';
 import 'package:nushi/web_page.dart' show openInBrowserOrSay;
 import 'package:nushi/web_views.dart';
 
@@ -175,9 +176,8 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
   }
 
   /// Says [text] under the pane, in place of what it said last.
-  void _note(String text) => ScaffoldMessenger.maybeOf(context)
-    ?..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(text)));
+  void _note(String text) =>
+      showToast(ScaffoldMessenger.maybeOf(context), text, replace: true);
 
   /// The field's text on Return: a page loads here (and, without the app's
   /// own web views, opens in the browser too: the user asked for it, ADR

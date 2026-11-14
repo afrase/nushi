@@ -50,7 +50,7 @@ class MergeControl extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final view = mergeView(pull)!;
-    final size = compact ? 12.5 : 13.0;
+    final size = compact ? 12.0 : 13.0;
     final words = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -207,6 +208,35 @@ void main() {
     expect(d.selectedId, 'kept');
     await closeView(tester, d);
   }, variant: _mac);
+
+  // The toast Keep as chat leaves, with its Go to chat, to look at
+  // (`make renders`): the app's one toast (toast.dart).
+  for (final (what, size) in [
+    ('wide', const Size(1700, 900)),
+    ('narrow', const Size(720, 800)),
+  ]) {
+    for (final b in Brightness.values) {
+      testWidgets('the kept side chat’s toast, $what, ${b.name}', (
+        tester,
+      ) async {
+        final (d, fake) = await _app(tester, size: size, brightness: b);
+        _side(d);
+        await tester.pumpAndSettle();
+        fake.emit(_sideStatus(1));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Keep as chat'));
+        await tester.pumpAndSettle();
+        expect(find.widgetWithText(Button, 'Go to chat'), findsOne);
+        expectTextInside(tester, size.width);
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'fork_kept_toast_${what}_${b.name}',
+        );
+        await closeView(tester, d);
+      }, variant: _mac);
+    }
+  }
 
   testWidgets('Keep as chat keeps what was half written in the side box in '
       'the kept chat’s', (tester) async {

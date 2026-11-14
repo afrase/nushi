@@ -226,7 +226,7 @@ class _GitHubFilesState extends State<GitHubFiles> {
                 overflow: TextOverflow.ellipsis,
                 style: theme.ui(
                   f.status == 'deleted' ? t.textMuted : t.text,
-                  size: 12.5,
+                  size: 12,
                   weight: f.path == _path ? FontWeight.w600 : null,
                 ),
               ),

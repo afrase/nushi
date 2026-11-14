@@ -67,13 +67,11 @@ class PullTab extends StatelessWidget {
       if (replies.isEmpty) return;
       toast?.hideCurrentSnackBar();
       if (added > 0) return;
-      toast?.showSnackBar(
-        SnackBar(
-          // 520 wide at most, centred, above the bar that counts the
-          // cards.
-          margin: EdgeInsets.fromLTRB(side, 0, side, 64),
-          content: Text(sentWords(replies.length, added, what)),
-        ),
+      showToast(
+        toast,
+        sentWords(replies.length, added, what),
+        // 520 wide at most, centred, above the bar that counts the cards.
+        margin: EdgeInsets.fromLTRB(side, 0, side, 64),
       );
     }
 
@@ -148,7 +146,7 @@ class _Picker extends StatelessWidget {
                       it?.title ?? shown.repo,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.ui(t.text, size: 12.5),
+                      style: theme.ui(t.text, size: 12),
                     ),
                   ),
                 ],
@@ -219,11 +217,7 @@ class RepliesWaiting extends StatelessWidget {
                 children: [
                   TextSpan(
                     text: '$n',
-                    style: theme.ui(
-                      t.text,
-                      size: 12.5,
-                      weight: FontWeight.w600,
-                    ),
+                    style: theme.ui(t.text, size: 12, weight: FontWeight.w600),
                   ),
                   const TextSpan(
                     text:
@@ -232,7 +226,7 @@ class RepliesWaiting extends StatelessWidget {
                   ),
                 ],
               ),
-              style: theme.ui(t.text, size: 12.5),
+              style: theme.ui(t.text, size: 12),
             ),
           ),
           Button(label: 'Go to chat', onPressed: onChat),

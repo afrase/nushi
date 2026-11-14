@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/phone/ui.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -343,6 +344,103 @@ void main() {
         reason: 'control $i',
       );
     }
+  });
+
+  // In a light set the focus color is within a shade of the accent's fill
+  // (Nushi's 1.2:1): a focused primary has a line of onAccent at its edge,
+  // its ring outside it, which read in every set (`tokens_test`'s
+  // onAccent on accent).
+  for (final (name, t) in everySet) {
+    testWidgets('a focused primary button’s ring stands off its fill '
+        '($name)', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          t,
+          Button(label: 'Done', kind: ButtonKind.primary, onPressed: () {}),
+        ),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final box = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(Button),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final ring = (box.foregroundDecoration! as ShapeDecoration).shape;
+      // The line's 2 inside its edge (the ring is outside), in those colors.
+      expect(ring.dimensions, const EdgeInsets.all(2));
+      expect('$ring', allOf(contains('${t.focus}'), contains('${t.onAccent}')));
+    });
+  }
+
+  testWidgets('the phone’s icon and button are Pressables: Tab focuses '
+      'each, its ring shows, Enter presses it', (tester) async {
+    var presses = 0;
+    await tester.pumpWidget(
+      _app(
+        Tokens.light,
+        TouchTargets(
+          child: Column(
+            children: [
+              PhoneIcon(Icons.close, label: 'Close', onTap: () => presses++),
+              PhoneButton('Archive', onTap: () => presses++),
+            ],
+          ),
+        ),
+      ),
+    );
+    for (final control in [PhoneIcon, PhoneButton]) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final ring = tester
+          .widgetList<Container>(
+            find.descendant(
+              of: find.byType(control),
+              matching: find.byType(Container),
+            ),
+          )
+          .where((c) => c.foregroundDecoration != null);
+      expect(ring, isNotEmpty, reason: '$control focused');
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    }
+    expect(presses, 2);
+  });
+
+  testWidgets('WideButton’s corners are its height’s share; a PillLink '
+      'without its tap is faded', (tester) async {
+    await tester.pumpWidget(
+      _app(
+        Tokens.light,
+        Column(
+          children: [
+            WideButton(label: 'New chat', onPressed: () {}),
+            const PillLink('NUS-142', onTap: null),
+          ],
+        ),
+      ),
+    );
+    final wide = tester.widget<Container>(
+      find
+          .descendant(
+            of: find.byType(WideButton),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    expect(
+      (wide.decoration! as BoxDecoration).borderRadius,
+      BorderRadius.circular(ControlSize.radiusFor(WideButton.height)),
+    );
+    expect(
+      find.descendant(
+        of: find.byType(PillLink),
+        matching: find.byType(Opacity),
+      ),
+      findsOne,
+    );
   });
 
   testWidgets('Enter and Space press a focused control', (tester) async {

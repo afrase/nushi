@@ -71,16 +71,11 @@ Future<void> keepSide(BuildContext context, Daemon d, ChatState chat) async {
     d.drafts?.attach(kept);
     if (kept.draft.isEmpty) kept.draft.takeFrom(side.draft);
     d.listChanged();
-    toast
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: const Text('The side chat is now a chat in the sidebar'),
-          action: SnackBarAction(
-            label: 'Go to chat',
-            onPressed: () => d.select(r.chatId),
-          ),
-        ),
-      );
+    showToast(
+      toast,
+      'The side chat is now a chat in the sidebar',
+      action: (label: 'Go to chat', onPressed: () => d.select(r.chatId)),
+      replace: true,
+    );
   });
 }

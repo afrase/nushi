@@ -190,7 +190,7 @@ class _MergeDialogState extends State<_MergeDialog> {
     final t = theme.t;
     final p = _pull;
     final (title, action, working, note) = _words;
-    final small = theme.ui(t.textSecondary, size: 12.5);
+    final small = theme.ui(t.textSecondary, size: 12);
     final code = theme.code(t.text, size: 12);
     final short = p.headOid.substring(0, p.headOid.length.clamp(0, 7));
     // Anyone's names, in the one place that must read as what it is: git

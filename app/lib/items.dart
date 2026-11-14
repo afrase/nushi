@@ -178,9 +178,7 @@ class ItemView extends StatelessWidget {
           spacing: 6,
           children: [
             Icon(icon, size: 14, color: color),
-            Expanded(
-              child: Text(item.text, style: theme.ui(color, size: 12.5)),
-            ),
+            Expanded(child: Text(item.text, style: theme.ui(color, size: 12))),
             if (fix case (final label, final onPressed))
               Button(label: label, onPressed: chat.busy ? null : onPressed),
           ],

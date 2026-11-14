@@ -16,6 +16,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_card.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/phase_pill.dart';
+import 'package:nushi/phone/ui.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
@@ -403,6 +404,8 @@ Widget _fields() => page('Fields and pickers', [
   plainRow('TextField', [
     ('value', _field(text: 'npx')),
     ('hint', _field(hint: 'my-server')),
+    ('value, code', _field(text: 'npx', code: true)),
+    ('hint, code', _field(hint: 'npx', code: true)),
     ('error', _field(text: 'my server', error: true)),
     ('disabled', _field(text: 'github', enabled: false)),
   ]),
@@ -433,13 +436,24 @@ Widget _field({
   String? hint,
   bool error = false,
   bool enabled = true,
-}) => SizedBox(
-  width: 170,
-  child: TextField(
-    controller: TextEditingController(text: text),
-    enabled: enabled,
-    decoration: InputDecoration(hintText: hint, errorText: error ? '' : null),
-  ),
+  bool code = false,
+}) => Builder(
+  builder: (context) {
+    final theme = NushiTheme.of(context);
+    return SizedBox(
+      width: 170,
+      child: TextField(
+        controller: TextEditingController(text: text),
+        enabled: enabled,
+        // In the Code font, as the MCP form's command.
+        style: code ? theme.code(theme.t.text) : null,
+        decoration: InputDecoration(
+          hintText: hint,
+          errorText: error ? '' : null,
+        ),
+      ),
+    );
+  },
 );
 
 Widget _pills() => page('Pills, chips, cards', [
@@ -557,7 +571,50 @@ GitHubItem _item(String state, {bool draft = false}) => GitHubItem(
   createdMs: Int64(fixtureNow.millisecondsSinceEpoch),
 );
 
-Widget _settings() => page('Settings rows, empty states', [
+Widget _settings() => page('Text, settings rows, empty states', [
+  // The greys, strongest to faintest (docs/design.md's Text).
+  Builder(
+    builder: (context) {
+      final theme = NushiTheme.of(context);
+      final t = theme.t;
+      return Row(
+        spacing: 24,
+        children: [
+          for (final (name, color) in [
+            ('text', t.text),
+            ('textSecondary', t.textSecondary),
+            ('textMuted', t.textMuted),
+            ('hint', t.hint),
+          ])
+            Text(name, style: theme.ui(color)),
+        ],
+      );
+    },
+  ),
+  const SizedBox(height: 8),
+  // The type scale, every step (docs/design.md's Type).
+  Builder(
+    builder: (context) {
+      final theme = NushiTheme.of(context);
+      return Row(
+        spacing: 20,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          for (final (name, size) in const [
+            ('20', 20.0),
+            ('15', 15.0),
+            ('14', 14.0),
+            ('13', 13.0),
+            ('12', 12.0),
+            ('11.5', 11.5),
+          ])
+            Text(name, style: theme.ui(theme.t.text, size: size)),
+          Text('11 code', style: theme.code(theme.t.text, size: 11)),
+        ],
+      );
+    },
+  ),
   const SizedBox(height: 12),
   SizedBox(
     width: 640,
@@ -598,6 +655,17 @@ Widget _settings() => page('Settings rows, empty states', [
   const SizedBox(
     width: 640,
     child: SettingsGroup(title: 'MCP servers', empty: 'None', children: []),
+  ),
+  const SizedBox(height: 8),
+  // An empty state with what to do: a phrase, no full stop.
+  Builder(
+    builder: (context) {
+      final theme = NushiTheme.of(context);
+      return Text(
+        'No inline comments: select lines in Files to add some',
+        style: theme.ui(theme.t.textMuted),
+      );
+    },
   ),
 ]);
 
@@ -661,12 +729,14 @@ Future<void> _openFloats(WidgetTester tester) async {
         ),
       )
       .ensureTooltipVisible();
-  ScaffoldMessenger.of(tester.element(find.byType(Scaffold))).showSnackBar(
-    const SnackBar(
-      content: Text('Archived “Paginate the feed”'),
-      action: SnackBarAction(label: 'Undo', onPressed: _tap),
-      duration: Duration(days: 1),
-    ),
+  // Every part a toast can have: an icon, its action, its ×.
+  showToast(
+    ScaffoldMessenger.of(tester.element(find.byType(Scaffold))),
+    'Archived “Paginate the feed”',
+    icon: Icons.info_outline,
+    action: (label: 'Undo', onPressed: _tap),
+    closable: true,
+    duration: const Duration(days: 1),
   );
   await tester.pumpAndSettle();
 }
@@ -709,18 +779,59 @@ Widget _floats() => page('Menus, tooltips, toasts', [
   ),
 ]);
 
+/// The phone's own controls, on [Pressable] as the Mac's are, with its
+/// 44-point targets.
+Widget _phone() => page('The phone’s controls', [
+  TouchTargets(
+    child: Column(
+      children: [
+        heading('PhoneIcon'),
+        stateRow(
+          'icon',
+          ({required on}) => PhoneIcon(
+            Icons.more_horiz,
+            label: 'More',
+            onTap: on ? _tap : null,
+          ),
+        ),
+        heading('PhoneButton'),
+        for (final (name, primary, destructive) in [
+          ('plain', false, false),
+          ('primary', true, false),
+          ('destructive', false, true),
+        ])
+          stateRow(
+            name,
+            // Narrower than its cell, as a phone's screen has its margin.
+            ({required on}) => SizedBox(
+              width: 170,
+              child: PhoneButton(
+                'Archive',
+                primary: primary,
+                destructive: destructive,
+                onTap: on ? _tap : null,
+              ),
+            ),
+          ),
+      ],
+    ),
+  ),
+]);
+
 /// Every sheet, in the order the gallery shows them.
 final List<Sheet> sheets = [
   (name: 'buttons', size: const Size(1200, 1080), build: _buttons, open: null),
   (name: 'small', size: const Size(1200, 820), build: _small, open: null),
-  (name: 'fields', size: const Size(1200, 860), build: _fields, open: null),
+  (name: 'fields', size: const Size(1200, 940), build: _fields, open: null),
   (name: 'pills', size: const Size(1200, 860), build: _pills, open: null),
-  (name: 'settings', size: const Size(760, 420), build: _settings, open: null),
+  (name: 'settings', size: const Size(760, 540), build: _settings, open: null),
+  (name: 'phone', size: const Size(1200, 420), build: _phone, open: null),
   (name: 'dialogs', size: const Size(1340, 340), build: _dialogs, open: null),
   (
     name: 'confirm',
     size: const Size(760, 420),
-    build: () => page('confirm()', const []),
+    build: () =>
+        page('confirm(destructive: true): Cancel has the focus', const []),
     open: _openConfirm,
   ),
   (

@@ -156,13 +156,11 @@ Future<void> saveScreenshot(BuildContext context, BrowserHost host) async {
     if (path == null) return;
     await File(path).writeAsBytes(png, flush: true);
   } on Object catch (e) {
-    messenger
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Couldn’t save the screenshot: ${errorText(e)}'),
-        ),
-      );
+    showToast(
+      messenger,
+      'Couldn’t save the screenshot: ${errorText(e)}',
+      replace: true,
+    );
   }
 }
 

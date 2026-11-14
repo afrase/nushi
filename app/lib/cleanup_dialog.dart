@@ -264,7 +264,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
             Text(
               _stillOpen,
               key: const ValueKey('cleanup-still-open'),
-              style: theme.ui(t.textSecondary, size: 12.5),
+              style: theme.ui(t.textSecondary, size: 12),
             ),
             const SizedBox(height: 10),
           ],
@@ -290,8 +290,15 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
         (_remote && _hasRemote) ||
         (_archive && !chat.archived);
     final st = u?.state;
+    // Cleaning up deletes a worktree or a branch, and a tick can make it
+    // lose work while the focus stays put: Cancel has the focus, so Enter
+    // never deletes (docs/design.md).
     return nushiDialog(title, SingleChildScrollView(child: body), [
-      Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
+      Button(
+        label: 'Cancel',
+        autofocus: true,
+        onPressed: () => Navigator.pop(context),
+      ),
       Button(
         label: loss.isNotEmpty
             ? 'Clean up, losing $loss'
@@ -299,7 +306,6 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
             ? 'Clean up when done'
             : 'Clean up',
         kind: loss.isNotEmpty ? ButtonKind.destructive : ButtonKind.primary,
-        autofocus: true,
         onPressed: u == null || !any
             ? null
             : () => Navigator.pop<CleanUpPicks>(context, (

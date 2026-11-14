@@ -6,15 +6,17 @@ import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/errors.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/toast.dart';
 
 export 'package:nushi/controls.dart';
 export 'package:nushi/errors.dart';
+export 'package:nushi/toast.dart';
 
-/// Shows [message] in a snack bar.
+/// Shows [message] in a toast.
 void showError(BuildContext context, Object message) =>
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(errorText(message))));
+    showToast(ScaffoldMessenger.of(context), errorText(message));
 
 /// Runs a call, showing its error, if any, in a snack bar: the app's, also
 /// once the widget that asked is gone (a trust card replaced it).
@@ -29,7 +31,7 @@ Future<void> tryOrShow(
     if (context.mounted) {
       showError(context, e);
     } else {
-      messenger?.showSnackBar(SnackBar(content: Text(errorText(e))));
+      showToast(messenger, errorText(e));
     }
   }
 }
@@ -44,17 +46,11 @@ Future<void> runAndSay(
   String? done,
 }) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
-  void say(String text, {Duration? lasts}) => messenger
-    ?..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        content: Text(text),
-        duration: lasts ?? const Duration(seconds: 4),
-      ),
-    );
+  void say(String text, {Duration lasts = const Duration(seconds: 4)}) =>
+      showToast(messenger, text, replace: true, duration: lasts);
   // Said only past a moment: a quick call goes straight to [done].
   var shown = false;
-  final slow = Timer(const Duration(milliseconds: 300), () {
+  final slow = Timer(Waits.slow, () {
     shown = true;
     say(running, lasts: const Duration(minutes: 5));
   });
@@ -244,7 +240,8 @@ Widget nushiDialog(
 );
 
 /// Asks [title] with [text] in a dialog; true once [action] is pressed
-/// ([destructive]: it deletes or loses something, so it's in red).
+/// ([destructive]: it deletes or loses something, so it's in red, and
+/// Cancel has the focus, so Enter never deletes, as the Mac's alerts).
 Future<bool> confirm(
   BuildContext context,
   String title,
@@ -255,11 +252,15 @@ Future<bool> confirm(
     await showDialog<bool>(
       context: context,
       builder: (context) => nushiDialog(title, Text(text), [
-        Button(label: 'Cancel', onPressed: () => Navigator.pop(context, false)),
+        Button(
+          label: 'Cancel',
+          autofocus: destructive,
+          onPressed: () => Navigator.pop(context, false),
+        ),
         Button(
           label: action,
           kind: destructive ? ButtonKind.destructive : ButtonKind.primary,
-          autofocus: true,
+          autofocus: !destructive,
           onPressed: () => Navigator.pop(context, true),
         ),
       ]),
@@ -326,7 +327,7 @@ class Dimmed extends StatelessWidget {
     ignoring: on,
     child: AnimatedOpacity(
       opacity: on ? 0.4 : 1,
-      duration: const Duration(milliseconds: 120),
+      duration: Motion.quick,
       child: child,
     ),
   );
