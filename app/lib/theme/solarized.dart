@@ -131,7 +131,7 @@ const solarizedLight = Tokens(
   lifted: Color(0xFFE6DFCA),
   selected: Color(0xFFDFD8C1),
   text: Color(0xFF073642),
-  textSecondary: Color(0xFF4B6168),
+  textSecondary: Color(0xFF284B55),
   textMuted: Color(0xFF4F6066),
   link: Color(0xFF07619C),
   onAccent: Color(0xFFFFFFFF),

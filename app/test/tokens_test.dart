@@ -11,6 +11,33 @@ double _contrast(Color a, Color b) {
   return (max(x, y) + 0.05) / (min(x, y) + 0.05);
 }
 
+/// [c]'s CIE lightness, L*, from 0 (black) to 100 (white): how light it
+/// looks, in even steps.
+double _lightness(Color c) {
+  final y = c.computeLuminance();
+  return y > 216 / 24389 ? 116 * pow(y, 1 / 3) - 16 : y * 24389 / 27;
+}
+
+/// How far apart, in L*, text, textSecondary and textMuted must be, each
+/// from the next, to read as three greys.
+const _greyStep = 6.0;
+
+/// The sets whose greys can't be three steps, each with why: a named
+/// theme keeps its published colors (ADR 0086), and its AA floor can sit
+/// right under its text.
+const _greysTogether = {
+  // fg_dark and #9AA5CE, both Tokyo Night's own.
+  'Tokyo Night, dark',
+  // Day's text is its fg, and AA on its fills sits just under it.
+  'Tokyo Night, light',
+  // Latte's text is its own; Subtext1 and Subtext0, taken darker to AA,
+  // land on it.
+  'Catppuccin, light',
+  // Solarized's greys are under AA on its fills: taken to AA, its text,
+  // base0 and base01 land within 7 of each other.
+  'Solarized, dark',
+};
+
 /// How far apart [a] and [b] look: their OKLab distance, times 100. A
 /// wash's contrast says little on the dark theme, where a fill reads by
 /// its hue more than its lightness.
@@ -165,6 +192,19 @@ void main() {
         4.5,
         _contrast,
       );
+    });
+
+    test('text, textSecondary and textMuted are three steps ($name)', () {
+      if (_greysTogether.contains(name)) return;
+      final (text, secondary, muted) = (
+        _lightness(t.text),
+        _lightness(t.textSecondary),
+        _lightness(t.textMuted),
+      );
+      expect([
+        (text - secondary).abs(),
+        (secondary - muted).abs(),
+      ], everyElement(greaterThanOrEqualTo(_greyStep)));
     });
 
     test('a field’s hint stands clearly under a typed value and muted '

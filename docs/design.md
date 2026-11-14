@@ -30,7 +30,7 @@ Every colour is a token of `Tokens`; a theme changes values, never names. Read t
 
 **Lines**: `line` is a hairline, only a divider inside a pane (under a header, between rows) and around the composer; `floatLine` the edge of what floats. A border stays only on a text field (`fieldBorder`, `fieldBorderHover`; `focus` with the caret, `crashed` in error) and as the focus ring.
 
-**Text**, from strongest to faintest:
+**Text**, from strongest to faintest, three greys a clear step apart (at least 6 in L*, `tokens_test`; `textMuted` sits at AA on the fills it's on, `textSecondary` halfway to `text`). A named theme keeps its published colours, so four sets keep two greys nearly as one: Tokyo Night's (its own fg_dark and #9AA5CE; Day's text and AA floor sit together), Catppuccin Latte's (its Text, and Subtext1 and Subtext0 taken to AA land on it) and Solarized's dark set (its greys taken to AA land within 7 of each other).
 
 | Token | For |
 |---|---|
@@ -186,7 +186,6 @@ Follow-ups, found while writing this page and drawing the gallery. Two small bug
 
 - **The focus ring vanishes on a primary button in a light set**: `focus` is `accentInk`, within a shade of `accent`'s fill (light `#2259D2` on `#2365EA`), so a focused Done, Send to agent or Squash and merge looks at rest; it reads on dark sets.
 
-- **`textSecondary` and `textMuted` are a hair apart** (dark `#B4B8BF` and `#A5A9B1`, light `#494B57` and `#5A5E6B`), so the three greys read as two.
 - **Type sizes off the scale**: besides 11, 11.5, 12, 13 and 14, views set 12.5 (54 places), 13.5, 10.5, 8 and 8.5 with `ui()`, and 12.5 and 10.5 with `code()`.
 - **Durations written as numbers**: about 70 `Duration(milliseconds: …)` outside `motion.dart`, some equal to `Motion`'s (`Dimmed`'s 120, a panel widget's 200) but not named so.
 - **Empty states' punctuation**: "No checks." and "No sessions here." end with a full stop, "No chats", "Nothing matches" and "None" don't.

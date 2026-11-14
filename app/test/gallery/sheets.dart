@@ -570,7 +570,26 @@ GitHubItem _item(String state, {bool draft = false}) => GitHubItem(
   createdMs: Int64(fixtureNow.millisecondsSinceEpoch),
 );
 
-Widget _settings() => page('Settings rows, empty states', [
+Widget _settings() => page('Text, settings rows, empty states', [
+  // The greys, strongest to faintest (docs/design.md's Text).
+  Builder(
+    builder: (context) {
+      final theme = NushiTheme.of(context);
+      final t = theme.t;
+      return Row(
+        spacing: 24,
+        children: [
+          for (final (name, color) in [
+            ('text', t.text),
+            ('textSecondary', t.textSecondary),
+            ('textMuted', t.textMuted),
+            ('hint', t.hint),
+          ])
+            Text(name, style: theme.ui(color)),
+        ],
+      );
+    },
+  ),
   const SizedBox(height: 12),
   SizedBox(
     width: 640,
@@ -728,7 +747,7 @@ final List<Sheet> sheets = [
   (name: 'small', size: const Size(1200, 820), build: _small, open: null),
   (name: 'fields', size: const Size(1200, 940), build: _fields, open: null),
   (name: 'pills', size: const Size(1200, 860), build: _pills, open: null),
-  (name: 'settings', size: const Size(760, 420), build: _settings, open: null),
+  (name: 'settings', size: const Size(760, 460), build: _settings, open: null),
   (name: 'dialogs', size: const Size(1340, 340), build: _dialogs, open: null),
   (
     name: 'confirm',
