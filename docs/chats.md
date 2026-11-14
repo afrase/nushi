@@ -93,7 +93,7 @@ Nushi remembers all of it. ⌘1–⌘9 and ⌘[ ⌘] go through the chats in the
 - Unpin puts a chat back where it was in its project.
 - The daemon keeps the pins, so the phone has them too. Archiving unpins.
 
-**Colors.** With many chats, a color tells them apart when the titles no longer do. The swatches on the Color row of a chat's menu (its ⋯, its row's right-click) put a chip of that color at the end of its row; No color takes it off. Only the open chat's row is filled, so a colored chat never reads as the open one. The daemon keeps it, so the phone's list shows it too, and a fork, or a side chat kept as a chat, starts with its chat's color.
+**Colors.** With many chats, a color tells them apart when the titles no longer do. The swatches on the Color row of a chat's menu (its ⋯, its row's right-click) put a chip of that color at the end of its row; No color takes it off. Only the open chat's row is filled, so a colored chat never reads as the open one. The daemon keeps it, so the phone's list shows it too, and a fork, or a side chat kept as a chat or archived, starts with its chat's color.
 
 ## Keys
 
@@ -126,7 +126,7 @@ The chat keys work in a terminal too.
 
 Rows match as you type, each with its key. Actions that don't apply now are left out, and what you picked lately comes first.
 
-**Side chat** (⇧⌘B) opens a fork of the chat beside it. It knows the conversation and doesn't add to it; you can go back and forth in it. ⇧⌘B (or its −) hides it and shows it again, alive all the while: hidden, a Side chat chip in the chat's header shows it, with a dot while it works or when a turn ended unseen. Its × ends it and deletes its conversation, so one with messages asks first; **Keep as chat**, beside it, makes it a chat of its own in the sidebar instead (a fork, below). It starts in the chat's mode and on its model and effort; its own pickers change them for the side chat alone (not the chat, nor what new chats start on), and Keep as chat keeps them. While it's open, the Context widget shows its context and cost on a Side chat line under the chat's.
+**Side chat** (⇧⌘B) opens a fork of the chat beside it. It knows the conversation and doesn't add to it; you can go back and forth in it. ⇧⌘B (or its −) hides it and shows it again, alive all the while: hidden, a Side chat chip in the chat's header shows it, with a dot while it works or when a turn ended unseen. Its × ends it at once. One with messages is archived, not deleted: it shows in Archived as "Side chat of <the chat's title>", in the chat's color, and Delete there removes it as any chat. A toast, **Archived side chat**, has **Undo** (for ten seconds), which brings it back beside the chat with its conversation, mode, model and effort, and what was in its box; when it can't (the chat was deleted or archived, or has another side chat open) the toast says why. One with no messages just ends. **Keep as chat**, beside it, makes it a chat of its own in the sidebar instead (a fork, below). It starts in the chat's mode and on its model and effort; its own pickers change them for the side chat alone (not the chat, nor what new chats start on), and Keep as chat keeps them. While it's open, the Context widget shows its context and cost on a Side chat line under the chat's.
 
 **Text selected in the transcript** has a toolbar over it: **Side chat** asks a side chat about it, **Reply** opens a box under it to write a reply that goes with your next message as a quote. **R** does what Reply does.
 

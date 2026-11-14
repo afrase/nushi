@@ -24,3 +24,5 @@ The app also keeps in memory only what's written in a GitHub or Jira comment box
 
 ## Amendment (2026-11-01)
 GitHub's and Jira's drafts and a review's inline comments moved to disk ([ADR 0073](0073-comment-drafts-kept-on-disk.md)); a pull request's tab and Files' file and lines stay in memory.
+
+**Note (ADR [0115](0115-closing-a-side-chat-archives-it.md)):** a side chat with messages closed with its × is kept as an archived chat, on disk like any.

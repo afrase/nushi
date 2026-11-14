@@ -103,8 +103,9 @@ func TestADevicesCallsAreItsOwn(t *testing.T) {
 var deviceMay = []string{
 	"Ping", "ListChats", "GetChat", "GetChatItems", "GetChatImage", "StartChat", "ListAgents", "SetUpAgent", "RemoveAgent",
 	"ListAgentSessions", "OpenAgentSession", "SearchAgentSessions", "MoveChat", "SendPrompt", "RewindChat", "Unqueue",
-	"CancelTurn", "StopTask", "ForkChat", "CloseSideChat", "ForkAsChat", "KeepSideChat", "RenameChat", "PinChats",
-	"SetChatColor", "PinMessage", "RenameBranch", "SwitchBranch", "ArchiveChat", "SleepChat", "ReopenChat", "GetMemory",
+	"CancelTurn", "StopTask", "ForkChat", "CloseSideChat", "ForkAsChat", "KeepSideChat", "ArchiveSideChat",
+	"RestoreSideChat", "RenameChat", "PinChats", "SetChatColor", "PinMessage", "RenameBranch", "SwitchBranch",
+	"ArchiveChat", "SleepChat", "ReopenChat", "GetMemory",
 	"GetSettings", "SetSettings", "ListTranscripts", "ClearTranscripts", "PlanDeleteChat", "DeleteChat",
 	"DismissRemovedChats", "AnswerPermission", "AnswerQuestion", "SetConfigOption", "GetDiff", "GetFile",
 	"WatchChatFile", "FindChatFiles", "WatchChatFolder", "ListCommits", "GetFolderStatus", "GetRelatedWorktrees",

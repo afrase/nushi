@@ -160,6 +160,7 @@ type fakeAgent struct {
 	steered     []string
 	wire        []string // prompts and cancels, in the order they reach the agent
 	forkMeta    map[string]any
+	forkedFrom  []acp.SessionID           // each fork's session, in order
 	history     []acp.SessionUpdate       // what session/load replays
 	early       []acp.SessionUpdate       // what a new session sends ahead of its answer
 	replay      []acp.SessionNotification // and then, on their sessions (s1 is the one loaded)
@@ -466,6 +467,7 @@ func (f *fakeAgent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest
 	}
 	f.mu.Lock()
 	f.forkMeta = req.Meta
+	f.forkedFrom = append(f.forkedFrom, req.SessionID)
 	f.forks++
 	sid := acp.SessionID("fork1")
 	if f.numberForks {

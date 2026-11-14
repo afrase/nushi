@@ -112,7 +112,14 @@ The agent forgets everything from that message on, and the message goes back in 
 
 ## Ask a side question
 
-Press **⇧⌘B** to open a **side chat** beside the main one. It knows the conversation but doesn't add to it, so you can ask "why did you do that?" without sidetracking the agent. ⇧⌘B hides it again; **×** ends it, and **Keep as chat** makes it a chat of its own.
+Press **⇧⌘B** to open a **side chat** beside the main one. It knows the conversation but doesn't add to it, so you can ask "why did you do that?" without sidetracking the agent. ⇧⌘B hides it again; **Keep as chat** makes it a chat of its own.
+
+**×** ends it at once. If it has messages, it's archived rather than deleted, and a toast says **Archived side chat**:
+
+- Click **Undo** in the toast (within ten seconds) to bring it back beside the chat, as it was.
+- Later, find it in **Archived** as "Side chat of" the chat's title. Delete it there if you don't need it.
+
+If Undo can't bring it back (the chat was deleted or archived, or has another side chat open), the toast says so.
 
 ## Work in a worktree
 

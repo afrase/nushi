@@ -187,6 +187,13 @@ func forkTitle(title string) string {
 // side chat opened, then the side chat's. Only between turns, and for an
 // agent that can reopen sessions.
 func (s *Service) KeepSide(ctx context.Context, id string) (string, error) {
+	return s.keepSide(ctx, id, false)
+}
+
+// keepSide is KeepSide, or with archive what ArchiveSide keeps: the chat
+// archived, titled for the chat it came from, with where it came from
+// (model.SideOf), its running turn stopped rather than refused.
+func (s *Service) keepSide(ctx context.Context, id string, archive bool) (string, error) {
 	s.mu.Lock()
 	side := s.chats[id]
 	s.mu.Unlock()
@@ -204,7 +211,7 @@ func (s *Service) KeepSide(ctx context.Context, id string) (string, error) {
 	switch {
 	case !canLoad:
 		return "", errors.New("the agent can't reopen sessions, so the side chat can't be kept")
-	case busy:
+	case busy && !archive:
 		return "", errors.New("the side chat is busy; keep it once its turn has ended")
 	}
 	// The side chat's base is the chat's items, which may hold images as
@@ -261,10 +268,23 @@ func (s *Service) KeepSide(ctx context.Context, id string) (string, error) {
 	c.mu.Lock()
 	c.record = forkRecord(c.id, sid, of)
 	c.record.Mode, c.record.Picks = mode, picks
+	if archive {
+		c.record.Archived, c.record.Name, c.record.Title = true, "", sideTitle(of)
+		c.record.SideOf = &model.SideOf{Chat: p.id, Base: len(base)}
+	}
 	c.lastItem = lastItem
 	c.forkedLocked(items)
 	c.mu.Unlock()
 	s.register(c)
-	c.log().Info("side chat kept", "from", p.id)
+	c.log().Info("side chat kept", "from", p.id, "archived", archive)
 	return c.id, nil
+}
+
+// sideTitle is an archived side chat's title: it names the chat it came
+// from, as the user calls it.
+func sideTitle(of model.ChatRecord) string {
+	if t := cmp.Or(of.Name, of.Title); t != "" {
+		return "Side chat of " + t
+	}
+	return "Side chat"
 }

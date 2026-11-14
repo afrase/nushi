@@ -264,6 +264,30 @@ abstract final class NushiService {
     nushiv1nushi.KeepSideChatResponse.new,
   );
 
+  /// Ends a side chat as its × does (ADR 0115): one with messages is kept
+  /// as KeepSideChat keeps it (a running turn is stopped first), but
+  /// archived, titled "Side chat of <the chat's title>"; one without ends
+  /// as with CloseSideChat. Refused when its agent can't reopen sessions.
+  /// (API 117)
+  static const archiveSideChat = connect.Spec(
+    '/$name/ArchiveSideChat',
+    connect.StreamType.unary,
+    nushiv1nushi.ArchiveSideChatRequest.new,
+    nushiv1nushi.ArchiveSideChatResponse.new,
+  );
+
+  /// Undoes ArchiveSideChat: the archived chat becomes its chat's side chat
+  /// again, with its transcript, mode and picks (the chat's agent forks its
+  /// session), and is removed (a removed event). Refused when the chat it
+  /// came from was deleted or archived, or has a side chat open, and once
+  /// the archived chat was unarchived. (API 117)
+  static const restoreSideChat = connect.Spec(
+    '/$name/RestoreSideChat',
+    connect.StreamType.unary,
+    nushiv1nushi.RestoreSideChatRequest.new,
+    nushiv1nushi.RestoreSideChatResponse.new,
+  );
+
   /// Sets the chat's title; it wins over the agent's. An empty title goes
   /// back to the agent's.
   static const renameChat = connect.Spec(

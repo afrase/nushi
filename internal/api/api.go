@@ -31,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 116
+const Version = 117
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged

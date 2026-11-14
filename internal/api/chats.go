@@ -194,6 +194,22 @@ func (s *server) KeepSideChat(ctx context.Context, req *connect.Request[nushiv1.
 	return connect.NewResponse(&nushiv1.KeepSideChatResponse{ChatId: id}), nil
 }
 
+func (s *server) ArchiveSideChat(ctx context.Context, req *connect.Request[nushiv1.ArchiveSideChatRequest]) (*connect.Response[nushiv1.ArchiveSideChatResponse], error) {
+	id, err := s.Chats.ArchiveSide(ctx, req.Msg.ChatId)
+	if err != nil {
+		return nil, refused(err)
+	}
+	return connect.NewResponse(&nushiv1.ArchiveSideChatResponse{ChatId: id}), nil
+}
+
+func (s *server) RestoreSideChat(ctx context.Context, req *connect.Request[nushiv1.RestoreSideChatRequest]) (*connect.Response[nushiv1.RestoreSideChatResponse], error) {
+	id, err := s.Chats.RestoreSide(ctx, req.Msg.ChatId)
+	if err != nil {
+		return nil, refused(err)
+	}
+	return connect.NewResponse(&nushiv1.RestoreSideChatResponse{ChatId: id}), nil
+}
+
 func (s *server) CloseSideChat(_ context.Context, req *connect.Request[nushiv1.CloseSideChatRequest]) (*connect.Response[nushiv1.CloseSideChatResponse], error) {
 	return done[nushiv1.CloseSideChatResponse](s.Chats.CloseSide(req.Msg.ChatId), notFound)
 }
