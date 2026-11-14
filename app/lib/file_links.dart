@@ -207,6 +207,7 @@ class _LinkedMarkdownState extends State<LinkedMarkdown> {
     onTapFile: onTapFile,
     transcript: true,
     codeBlock: _block,
+    chips: true,
   );
 
   Widget _linked(BuildContext context) {

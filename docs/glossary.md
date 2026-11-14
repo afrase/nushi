@@ -137,6 +137,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **GitHub view** | ⌘G: GitHub in the chat's place: the inbox, and an item's details. | `github_view.dart` | 0046 |
 | **Inbox** | The GitHub view's three cards: Review requested, My pull requests, Assigned issues. | `ListGitHubInbox`, `github_inbox.dart` | 0046 |
 | **Item** (GitHub) | A pull request or an issue in the inbox. | `GitHubItem`, `GitHubRef` | |
+| **Link chip** | A pull request's or an issue's address in a message as a chip: its state's icon, `owner/repo#n` and the title; its **hover card** (the state pill, age, title, author, size) after 400 ms. A link with words of its own stays words, with the same card. | `GitHubLinkChip`, `GitHubLinkWords`, `GitHubCard`, `GitHubItems`, `GetGitHubItems` | 0117 |
 | **Start work** | Start a chat on an issue or pull request: pick a folder, then New chat with it, in a worktree. | `StartChatRequest`, `new_chat_issue.dart` | |
 | **Pull request** (a chat's) | The pull request whose head is the chat's branch, found by itself or linked by hand (Link pull request…, Unlink). | `FindChatPull`, `LinkChatPull`, `ChatRecord.Pull`, `PullLink` | 0059 |
 | **Pull request tab** | The chat's pull request in the chat's place: its head, the To do list, then conversation, checks, files with review threads. | `PullTab`, `GitHubPullPane` | 0059 |

@@ -33,6 +33,15 @@ Click a row (or press ⏎) to see its details. Press Esc to go back.
 
 For a pull request, the chat works on its branch, so the agent's pushes go to that pull request. For an issue, Nushi makes a branch named after it.
 
+## Links in a chat
+
+A pull request or issue link in a message, yours or the agent's, shows as a chip: its state's icon, `owner/repo#123` and its title. Hold the pointer on it to see its state, author, age and size.
+
+- Click a chip to open it on GitHub.
+- Right-click it for **Copy link**, **Show in GitHub view** and, for a pull request, **Link to this chat**.
+
+A link with words of its own stays words, with the same card. Links in code and in tool output stay as written, and a link to a host Nushi has no token for stays a plain link.
+
 ## Open a pull request from a chat
 
 There's no "create pull request" button. Ask the agent ("push this and open a PR"). A few seconds later the chat finds the pull request for its branch, and a **Pull request** tab appears.

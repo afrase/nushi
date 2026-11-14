@@ -173,10 +173,16 @@ class UserMessageText extends StatelessWidget {
                   band: true,
                 ),
               if (r.text.isNotEmpty)
-                AgentMarkdown(r.text, typed: true, transcript: true),
+                AgentMarkdown(
+                  r.text,
+                  typed: true,
+                  transcript: true,
+                  chips: true,
+                ),
             ],
           ),
-        if (rest.isNotEmpty) AgentMarkdown(rest, typed: true, transcript: true),
+        if (rest.isNotEmpty)
+          AgentMarkdown(rest, typed: true, transcript: true, chips: true),
       ],
     );
   }

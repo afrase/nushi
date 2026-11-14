@@ -56,6 +56,12 @@ The chat's header shows the pull request's or issue's state, checks, review and 
 
 A pull request's To do list (below) puts reply cards in its chat's box: the chat picked when it has several, or Start work first when it has none. It works as in a chat's Pull request tab (a failed check with its log's failing part; a review thread; a finding): read, change and send them with your message. What GitHub holds goes in as data, never as instructions, and authors outside the repository are marked.
 
+## Links in messages
+
+A pull request's or an issue's address in a message, the user's or the agent's, on a host Nushi gives a token to, shows as a chip once the message has finished streaming ([ADR 0117](adr/0117-github-links-as-chips-and-a-chats-pull-requests.md)): the state's icon (GitHub's shapes), `owner/repo#n` from the address and the title. A link whose text is the address, `#n` or `owner/repo#n` is a chip; one with words of its own stays words. Either has the hover card after 400 ms: the state pill, the age, the title, the author, `+adds −dels` and files, or an issue's comments; or why there's nothing to show (GitHub doesn't show it to the account, sign in, couldn't ask). A click opens it on GitHub; right-click: Open on GitHub, Copy link, Show in GitHub view, Link to this chat. Code, code blocks and tool output are left alone.
+
+The app asks the daemon once a chip is built (`GetGitHubItems`, the chips of a moment gathered into one call a host, quiet), and again on hover for what's over a minute old; chips never poll. The daemon keeps each a while (30 s open, 10 minutes merged, closed or unseen).
+
 ## A chat's pull request
 
 A chat on a branch finds its pull request by itself: the one whose head is the branch ([ADR 0059](adr/0059-a-chats-pull-request.md)). It looks:

@@ -164,12 +164,28 @@ class ChatState extends ChangeNotifier {
   /// head is its branch (found, or linked by hand). API 81.
   GitHubLink? pull;
 
-  /// Sets [pull] as the daemon just said it, ahead of the chat's event.
-  void linkPull(GitHubLink? link) {
-    if (link == pull) return;
+  /// All its pull requests, the primary ([pull]) first (ADR 0117; a
+  /// daemon before API 118 says only the primary).
+  List<GitHubLink> pulls = const [];
+
+  /// Sets [pull] (and [pulls], when [all] is given) as the daemon just said
+  /// it, ahead of the chat's event.
+  void linkPull(GitHubLink? link, {List<GitHubLink>? all}) {
+    final list =
+        all ?? (link == null ? const <GitHubLink>[] : _withPrimary(link));
+    if (link == pull && listEquals(list, pulls)) return;
     pull = link;
+    pulls = list;
     notifyListeners();
   }
+
+  /// [pulls] with [link] first, for a daemon that says only the primary.
+  List<GitHubLink> _withPrimary(GitHubLink link) => [
+    link,
+    for (final p in pulls)
+      if (p.host != link.host || p.repo != link.repo || p.number != link.number)
+        p,
+  ];
 
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived

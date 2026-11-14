@@ -6,6 +6,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_items.dart';
 import 'package:nushi/pull_cache.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
@@ -240,7 +241,10 @@ class ChatPull extends ChangeNotifier {
         FindChatPullRequest(chatId: chat.id, quiet: quiet),
       );
       found = f;
-      chat.linkPull(f.hasPull() ? f.pull : null);
+      chat.linkPull(
+        f.hasPull() ? f.pull : null,
+        all: daemon.daemonApi >= githubItemsApi ? f.pulls : null,
+      );
       error = f.error.isEmpty ? null : f.error;
       final l = chat.pull;
       if (l == null) {
@@ -285,6 +289,15 @@ class ChatPull extends ChangeNotifier {
   /// them.
   void markSeen() {
     if (pull case final p?) markPullSeen(chat.id, p);
+  }
+
+  /// Adds [link] by hand after the chat's others (Link another pull
+  /// request…, a chip's Link to this chat; ADR 0117).
+  Future<void> addLink(GitHubLink link) async {
+    await daemon.client.linkChatPull(
+      LinkChatPullRequest(chatId: chat.id, pull: link, add: true),
+    );
+    await again();
   }
 
   /// Links [link] by hand, or unlinks (null).

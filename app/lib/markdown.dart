@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/browser_address.dart' show isWebPage;
 import 'package:nushi/browser_local.dart' show isLocalNetwork;
+import 'package:nushi/github_link_chip.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/mermaid.dart';
 import 'package:nushi/paced.dart';
@@ -140,7 +141,13 @@ class AgentMarkdown extends StatelessWidget {
     this.transcript = false,
     this.codeBlock,
     this.headingMark,
+    this.chips = false,
   });
+
+  /// It's a message: a pull request's or an issue's address in it is a
+  /// chip with a hover card, under a [GitHubLinks] (ADR 0117). Tool output
+  /// and code stay as written.
+  final bool chips;
 
   final String text;
 
@@ -237,6 +244,16 @@ class AgentMarkdown extends StatelessWidget {
         files: files,
         onTapFile: onTapFile,
         headingMark: headingMark,
+        linkBuilder: chips && mayHoldGitHubLinks(text)
+            ? (context, href, text, style) => githubLink(
+                context,
+                href,
+                text,
+                style,
+                typed: typed,
+                onOpen: () => unawaited(_open(context, href, text)),
+              )
+            : null,
         codeBlock: (language, code, {required open}) => language == 'mermaid'
             ? MermaidBlock(code, style: style, open: open)
             : open
