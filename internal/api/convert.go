@@ -216,7 +216,7 @@ func chatProto(s model.ChatRecord) *nushiv1.Chat {
 	if is := s.Issue; is != nil {
 		out.JiraSite, out.JiraKey = is.Site, is.Key
 	}
-	out.Github, out.Pull = linkProto(s.GitHub), linkProto(s.PullLink())
+	out.Github, out.Pull, out.Pulls = linkProto(s.GitHub), linkProto(s.PullLink()), pullsProto(s)
 	return out
 }
 

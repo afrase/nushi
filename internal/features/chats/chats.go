@@ -37,6 +37,7 @@ type Service struct {
 
 	terminals Terminals   // set once at startup, if there are any
 	servers   Servers     // set once at startup, if there are any
+	gitHub    GitHubHosts // set once at startup
 	viewers   Viewers     // Options', for chats done while nobody looked (seen.go)
 	procs     Processes   // Options', for stopping background commands
 	prefs     SleepPrefs  // Options', if chats sleep
@@ -100,6 +101,21 @@ type Servers interface {
 // to be made first.
 func (s *Service) UseServers(sv Servers) { s.servers = sv }
 
+// GitHubHosts are the GitHub hosts Nushi gives a token to
+// (internal/features/github): a pull request a chat's tool call opened on
+// one is linked to the chat (ADR 0117).
+type GitHubHosts interface {
+	Known(host string) bool
+}
+
+// UseGitHub tells the chats about GitHub's hosts.
+func (s *Service) UseGitHub(g GitHubHosts) { s.gitHub = g }
+
+// gitHubHost is GitHubHosts.Known, false where there's none.
+func (s *Service) gitHubHost(host string) bool {
+	return s.gitHub != nil && s.gitHub.Known(host)
+}
+
 // serverCommand is Servers.Command, "" where no servers run.
 func (s *Service) serverCommand(chatID, name string) (command, askID string) {
 	if s.servers == nil {
@@ -140,6 +156,8 @@ type chat struct {
 	// preview_start ask's card.
 	serverCommand  func(chatID, name string) (command, askID string)
 	serverAnswered func(askID string, allowed bool)
+	// gitHubHost is the service's, for a pull request a tool call opened.
+	gitHubHost func(host string) bool
 
 	mu           sync.Mutex
 	items        []model.Item
@@ -312,7 +330,7 @@ func checkFolder(folder string) error {
 }
 
 func (s *Service) newChat(k *kind) *chat {
-	return &chat{kind: k, remembered: s.remembered, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, owned: s.ownedWorktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, timing: s.timing, serverCommand: s.serverCommand, serverAnswered: s.serverAnswered, waiting: map[string]chan<- string{},
+	return &chat{kind: k, remembered: s.remembered, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, owned: s.ownedWorktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, timing: s.timing, serverCommand: s.serverCommand, serverAnswered: s.serverAnswered, gitHubHost: s.gitHubHost, waiting: map[string]chan<- string{},
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, children: map[string]*child{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{},
 		mirrored: true} // a new chat's copy is as empty as its transcript
 }

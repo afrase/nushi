@@ -127,6 +127,8 @@ func clone(sess model.ChatRecord) model.ChatRecord {
 	sess.Issue = copyOf(sess.Issue)
 	sess.GitHub = copyOf(sess.GitHub)
 	sess.Pull = copyOf(sess.Pull)
+	sess.Pulls = slices.Clone(sess.Pulls)
+	sess.NoPulls = slices.Clone(sess.NoPulls)
 	sess.Picks = maps.Clone(sess.Picks)
 	sess.Pins = slices.Clone(sess.Pins)
 	sess.SideOf = copyOf(sess.SideOf)

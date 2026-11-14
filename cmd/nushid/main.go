@@ -191,6 +191,7 @@ func run() error {
 	sv := api.Services{LogPrefs: st, Transcripts: st, Chats: chatSvc, Agents: agentSvc, MCP: newMCP(known, agentSvc, chatSvc.MCPChanged), Skills: newSkills(known), Terms: termSvc,
 		Trust: newTrust(known, st), Hub: hub, Memory: memory.New(chatSvc), Restart: restarts, Jira: jiraSvc, Remote: remoteSvc, Servers: srvSvc}
 	sv.GitHub = newGitHub(st, dev)
+	chatSvc.UseGitHub(sv.GitHub)
 	sv.Updates = updateSvc
 	if err := usePush(st, sv.Remote, chatSvc, kinds); err != nil {
 		return err

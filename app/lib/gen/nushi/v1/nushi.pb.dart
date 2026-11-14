@@ -1075,6 +1075,7 @@ class Chat extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? pinnedMessages,
     $fixnum.Int64? updatedUnixMs,
     $core.Iterable<MessagePin>? messagePins,
+    $core.Iterable<GitHubLink>? pulls,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -1098,6 +1099,7 @@ class Chat extends $pb.GeneratedMessage {
     if (pinnedMessages != null) result.pinnedMessages.addAll(pinnedMessages);
     if (updatedUnixMs != null) result.updatedUnixMs = updatedUnixMs;
     if (messagePins != null) result.messagePins.addAll(messagePins);
+    if (pulls != null) result.pulls.addAll(pulls);
     return result;
   }
 
@@ -1140,6 +1142,8 @@ class Chat extends $pb.GeneratedMessage {
     ..aInt64(20, _omitFieldNames ? '' : 'updatedUnixMs')
     ..pPM<MessagePin>(21, _omitFieldNames ? '' : 'messagePins',
         subBuilder: MessagePin.$_createMessage)
+    ..pPM<GitHubLink>(22, _omitFieldNames ? '' : 'pulls',
+        subBuilder: GitHubLink.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1378,6 +1382,12 @@ class Chat extends $pb.GeneratedMessage {
   /// own when it can make one (Claude). A client lists a pin by it. API 104.
   @$pb.TagNumber(21)
   $pb.PbList<MessagePin> get messagePins => $_getList(20);
+
+  /// Its pull requests, the primary (pull) first: the one it was started
+  /// from, found by its branch's head, opened by its tool call, or linked by
+  /// hand; 10 at most (ADR 0117). API 118.
+  @$pb.TagNumber(22)
+  $pb.PbList<GitHubLink> get pulls => $_getList(21);
 }
 
 /// A pinned message: its item, and the title a client lists it by. The
@@ -27058,6 +27068,15 @@ class GitHubItem extends $pb.GeneratedMessage {
     $core.String? review,
     $core.int? unresolved,
     $core.int? comments,
+    $core.int? additions,
+    $core.int? deletions,
+    $core.int? changedFiles,
+    $fixnum.Int64? createdMs,
+    GitHubCheckCounts? checkCounts,
+    $core.String? mergeState,
+    $core.String? stateReason,
+    $core.String? base,
+    $core.String? head,
   }) {
     final result = GitHubItem._();
     if (ref != null) result.ref = ref;
@@ -27073,6 +27092,15 @@ class GitHubItem extends $pb.GeneratedMessage {
     if (review != null) result.review = review;
     if (unresolved != null) result.unresolved = unresolved;
     if (comments != null) result.comments = comments;
+    if (additions != null) result.additions = additions;
+    if (deletions != null) result.deletions = deletions;
+    if (changedFiles != null) result.changedFiles = changedFiles;
+    if (createdMs != null) result.createdMs = createdMs;
+    if (checkCounts != null) result.checkCounts = checkCounts;
+    if (mergeState != null) result.mergeState = mergeState;
+    if (stateReason != null) result.stateReason = stateReason;
+    if (base != null) result.base = base;
+    if (head != null) result.head = head;
     return result;
   }
 
@@ -27103,6 +27131,16 @@ class GitHubItem extends $pb.GeneratedMessage {
     ..aOS(11, _omitFieldNames ? '' : 'review')
     ..aI(12, _omitFieldNames ? '' : 'unresolved')
     ..aI(13, _omitFieldNames ? '' : 'comments')
+    ..aI(14, _omitFieldNames ? '' : 'additions')
+    ..aI(15, _omitFieldNames ? '' : 'deletions')
+    ..aI(16, _omitFieldNames ? '' : 'changedFiles')
+    ..aInt64(17, _omitFieldNames ? '' : 'createdMs')
+    ..aOM<GitHubCheckCounts>(18, _omitFieldNames ? '' : 'checkCounts',
+        subBuilder: GitHubCheckCounts.$_createMessage)
+    ..aOS(19, _omitFieldNames ? '' : 'mergeState')
+    ..aOS(20, _omitFieldNames ? '' : 'stateReason')
+    ..aOS(21, _omitFieldNames ? '' : 'base')
+    ..aOS(22, _omitFieldNames ? '' : 'head')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -27249,6 +27287,189 @@ class GitHubItem extends $pb.GeneratedMessage {
   $core.bool hasComments() => $_has(12);
   @$pb.TagNumber(13)
   void clearComments() => $_clearField(13);
+
+  /// What GetGitHubItems adds (the inbox leaves them unset). API 118.
+  @$pb.TagNumber(14)
+  $core.int get additions => $_getIZ(13);
+  @$pb.TagNumber(14)
+  set additions($core.int value) => $_setSignedInt32(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasAdditions() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearAdditions() => $_clearField(14);
+
+  @$pb.TagNumber(15)
+  $core.int get deletions => $_getIZ(14);
+  @$pb.TagNumber(15)
+  set deletions($core.int value) => $_setSignedInt32(14, value);
+  @$pb.TagNumber(15)
+  $core.bool hasDeletions() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearDeletions() => $_clearField(15);
+
+  @$pb.TagNumber(16)
+  $core.int get changedFiles => $_getIZ(15);
+  @$pb.TagNumber(16)
+  set changedFiles($core.int value) => $_setSignedInt32(15, value);
+  @$pb.TagNumber(16)
+  $core.bool hasChangedFiles() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearChangedFiles() => $_clearField(16);
+
+  @$pb.TagNumber(17)
+  $fixnum.Int64 get createdMs => $_getI64(16);
+  @$pb.TagNumber(17)
+  set createdMs($fixnum.Int64 value) => $_setInt64(16, value);
+  @$pb.TagNumber(17)
+  $core.bool hasCreatedMs() => $_has(16);
+  @$pb.TagNumber(17)
+  void clearCreatedMs() => $_clearField(17);
+
+  @$pb.TagNumber(18)
+  GitHubCheckCounts get checkCounts => $_getN(17);
+  @$pb.TagNumber(18)
+  set checkCounts(GitHubCheckCounts value) => $_setField(18, value);
+  @$pb.TagNumber(18)
+  $core.bool hasCheckCounts() => $_has(17);
+  @$pb.TagNumber(18)
+  void clearCheckCounts() => $_clearField(18);
+  @$pb.TagNumber(18)
+  GitHubCheckCounts ensureCheckCounts() => $_ensure(17);
+
+  /// A pull request's merge state: "clean", "blocked", "behind", "dirty",
+  /// "unstable", "has_hooks", "draft", "unknown" or "".
+  @$pb.TagNumber(19)
+  $core.String get mergeState => $_getSZ(18);
+  @$pb.TagNumber(19)
+  set mergeState($core.String value) => $_setString(18, value);
+  @$pb.TagNumber(19)
+  $core.bool hasMergeState() => $_has(18);
+  @$pb.TagNumber(19)
+  void clearMergeState() => $_clearField(19);
+
+  /// A closed issue's reason: "completed", "not_planned" or "".
+  @$pb.TagNumber(20)
+  $core.String get stateReason => $_getSZ(19);
+  @$pb.TagNumber(20)
+  set stateReason($core.String value) => $_setString(19, value);
+  @$pb.TagNumber(20)
+  $core.bool hasStateReason() => $_has(19);
+  @$pb.TagNumber(20)
+  void clearStateReason() => $_clearField(20);
+
+  /// A pull request's base and head branches.
+  @$pb.TagNumber(21)
+  $core.String get base => $_getSZ(20);
+  @$pb.TagNumber(21)
+  set base($core.String value) => $_setString(20, value);
+  @$pb.TagNumber(21)
+  $core.bool hasBase() => $_has(20);
+  @$pb.TagNumber(21)
+  void clearBase() => $_clearField(21);
+
+  @$pb.TagNumber(22)
+  $core.String get head => $_getSZ(21);
+  @$pb.TagNumber(22)
+  set head($core.String value) => $_setString(21, value);
+  @$pb.TagNumber(22)
+  $core.bool hasHead() => $_has(21);
+  @$pb.TagNumber(22)
+  void clearHead() => $_clearField(22);
+}
+
+/// A pull request's checks at its head, by state: a neutral one is passed;
+/// skipped ones count in neither side of passed/total.
+class GitHubCheckCounts extends $pb.GeneratedMessage {
+  factory GitHubCheckCounts({
+    $core.int? passed,
+    $core.int? failed,
+    $core.int? running,
+    $core.int? skipped,
+  }) {
+    final result = GitHubCheckCounts._();
+    if (passed != null) result.passed = passed;
+    if (failed != null) result.failed = failed;
+    if (running != null) result.running = running;
+    if (skipped != null) result.skipped = skipped;
+    return result;
+  }
+
+  GitHubCheckCounts._();
+
+  factory GitHubCheckCounts.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubCheckCounts()..mergeFromBuffer(data, registry);
+  factory GitHubCheckCounts.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubCheckCounts()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubCheckCounts',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubCheckCounts.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'passed')
+    ..aI(2, _omitFieldNames ? '' : 'failed')
+    ..aI(3, _omitFieldNames ? '' : 'running')
+    ..aI(4, _omitFieldNames ? '' : 'skipped')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubCheckCounts clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubCheckCounts copyWith(void Function(GitHubCheckCounts) updates) =>
+      super.copyWith((message) => updates(message as GitHubCheckCounts))
+          as GitHubCheckCounts;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubCheckCounts() / GitHubCheckCounts.new instead')
+  static GitHubCheckCounts create() => GitHubCheckCounts._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubCheckCounts._();
+  @$core.override
+  GitHubCheckCounts createEmptyInstance() => GitHubCheckCounts._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubCheckCounts getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubCheckCounts>(
+          GitHubCheckCounts.$_createMessage);
+  static GitHubCheckCounts? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get passed => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set passed($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPassed() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPassed() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get failed => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set failed($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFailed() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFailed() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get running => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set running($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRunning() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRunning() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get skipped => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set skipped($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSkipped() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSkipped() => $_clearField(4);
 }
 
 class ListGitHubInboxRequest extends $pb.GeneratedMessage {
@@ -27564,7 +27785,8 @@ class ListGitHubInboxResponse extends $pb.GeneratedMessage {
 }
 
 /// A pull request or an issue a chat is on: its host and node id, and its
-/// repository and number.
+/// repository and number. A pull request a chat's tool call opened may have
+/// no id yet (its address alone; ADR 0117).
 class GitHubLink extends $pb.GeneratedMessage {
   factory GitHubLink({
     $core.String? host,
@@ -27747,6 +27969,7 @@ class FindChatPullResponse extends $pb.GeneratedMessage {
     $core.bool? defaultBranch,
     GitHubLink? pull,
     $core.String? error,
+    $core.Iterable<GitHubLink>? pulls,
   }) {
     final result = FindChatPullResponse._();
     if (host != null) result.host = host;
@@ -27755,6 +27978,7 @@ class FindChatPullResponse extends $pb.GeneratedMessage {
     if (defaultBranch != null) result.defaultBranch = defaultBranch;
     if (pull != null) result.pull = pull;
     if (error != null) result.error = error;
+    if (pulls != null) result.pulls.addAll(pulls);
     return result;
   }
 
@@ -27778,6 +28002,8 @@ class FindChatPullResponse extends $pb.GeneratedMessage {
     ..aOM<GitHubLink>(5, _omitFieldNames ? '' : 'pull',
         subBuilder: GitHubLink.$_createMessage)
     ..aOS(6, _omitFieldNames ? '' : 'error')
+    ..pPM<GitHubLink>(7, _omitFieldNames ? '' : 'pulls',
+        subBuilder: GitHubLink.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -27864,16 +28090,24 @@ class FindChatPullResponse extends $pb.GeneratedMessage {
   $core.bool hasError() => $_has(5);
   @$pb.TagNumber(6)
   void clearError() => $_clearField(6);
+
+  /// All of the chat's pull requests, as Chat.pulls. API 118.
+  @$pb.TagNumber(7)
+  $pb.PbList<GitHubLink> get pulls => $_getList(6);
 }
 
 class LinkChatPullRequest extends $pb.GeneratedMessage {
   factory LinkChatPullRequest({
     $core.String? chatId,
     GitHubLink? pull,
+    $core.bool? add,
+    GitHubLink? unlink,
   }) {
     final result = LinkChatPullRequest._();
     if (chatId != null) result.chatId = chatId;
     if (pull != null) result.pull = pull;
+    if (add != null) result.add = add;
+    if (unlink != null) result.unlink = unlink;
     return result;
   }
 
@@ -27892,6 +28126,9 @@ class LinkChatPullRequest extends $pb.GeneratedMessage {
       createEmptyInstance: LinkChatPullRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<GitHubLink>(2, _omitFieldNames ? '' : 'pull',
+        subBuilder: GitHubLink.$_createMessage)
+    ..aOB(3, _omitFieldNames ? '' : 'add')
+    ..aOM<GitHubLink>(4, _omitFieldNames ? '' : 'unlink',
         subBuilder: GitHubLink.$_createMessage)
     ..hasRequiredFields = false;
 
@@ -27927,7 +28164,7 @@ class LinkChatPullRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearChatId() => $_clearField(1);
 
-  /// The pull request to link; none unlinks the chat's.
+  /// The pull request to link; none unlinks the chat's (its primary).
   @$pb.TagNumber(2)
   GitHubLink get pull => $_getN(1);
   @$pb.TagNumber(2)
@@ -27938,6 +28175,30 @@ class LinkChatPullRequest extends $pb.GeneratedMessage {
   void clearPull() => $_clearField(2);
   @$pb.TagNumber(2)
   GitHubLink ensurePull() => $_ensure(1);
+
+  /// Adds pull after the chat's others, rather than in the primary's
+  /// place. API 118.
+  @$pb.TagNumber(3)
+  $core.bool get add => $_getBF(2);
+  @$pb.TagNumber(3)
+  set add($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAdd() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAdd() => $_clearField(3);
+
+  /// Unlinks this one of the chat's pull requests (pull unset), never found
+  /// or opened again. API 118.
+  @$pb.TagNumber(4)
+  GitHubLink get unlink => $_getN(3);
+  @$pb.TagNumber(4)
+  set unlink(GitHubLink value) => $_setField(4, value);
+  @$pb.TagNumber(4)
+  $core.bool hasUnlink() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearUnlink() => $_clearField(4);
+  @$pb.TagNumber(4)
+  GitHubLink ensureUnlink() => $_ensure(3);
 }
 
 class LinkChatPullResponse extends $pb.GeneratedMessage {
@@ -27980,6 +28241,165 @@ class LinkChatPullResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<LinkChatPullResponse>(
           LinkChatPullResponse.$_createMessage);
   static LinkChatPullResponse? _defaultInstance;
+}
+
+class GetGitHubItemsRequest extends $pb.GeneratedMessage {
+  factory GetGitHubItemsRequest({
+    $core.Iterable<GitHubRef>? refs,
+    $core.bool? quiet,
+  }) {
+    final result = GetGitHubItemsRequest._();
+    if (refs != null) result.refs.addAll(refs);
+    if (quiet != null) result.quiet = quiet;
+    return result;
+  }
+
+  GetGitHubItemsRequest._();
+
+  factory GetGitHubItemsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubItemsRequest()..mergeFromBuffer(data, registry);
+  factory GetGitHubItemsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubItemsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubItemsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubItemsRequest.$_createMessage)
+    ..pPM<GitHubRef>(1, _omitFieldNames ? '' : 'refs',
+        subBuilder: GitHubRef.$_createMessage)
+    ..aOB(2, _omitFieldNames ? '' : 'quiet')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubItemsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubItemsRequest copyWith(
+          void Function(GetGitHubItemsRequest) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubItemsRequest))
+          as GetGitHubItemsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubItemsRequest() / GetGitHubItemsRequest.new instead')
+  static GetGitHubItemsRequest create() => GetGitHubItemsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubItemsRequest._();
+  @$core.override
+  GetGitHubItemsRequest createEmptyInstance() => GetGitHubItemsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubItemsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubItemsRequest>(
+          GetGitHubItemsRequest.$_createMessage);
+  static GetGitHubItemsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<GitHubRef> get refs => $_getList(0);
+
+  /// The app's own asking, not the user's: held back while the rate limit
+  /// runs low.
+  @$pb.TagNumber(2)
+  $core.bool get quiet => $_getBF(1);
+  @$pb.TagNumber(2)
+  set quiet($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasQuiet() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearQuiet() => $_clearField(2);
+}
+
+class GetGitHubItemsResponse extends $pb.GeneratedMessage {
+  factory GetGitHubItemsResponse({
+    $core.Iterable<GitHubItem>? items,
+    $core.Iterable<GitHubRef>? unseen,
+    $core.String? error,
+    $core.bool? signIn,
+  }) {
+    final result = GetGitHubItemsResponse._();
+    if (items != null) result.items.addAll(items);
+    if (unseen != null) result.unseen.addAll(unseen);
+    if (error != null) result.error = error;
+    if (signIn != null) result.signIn = signIn;
+    return result;
+  }
+
+  GetGitHubItemsResponse._();
+
+  factory GetGitHubItemsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubItemsResponse()..mergeFromBuffer(data, registry);
+  factory GetGitHubItemsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubItemsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubItemsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubItemsResponse.$_createMessage)
+    ..pPM<GitHubItem>(1, _omitFieldNames ? '' : 'items',
+        subBuilder: GitHubItem.$_createMessage)
+    ..pPM<GitHubRef>(2, _omitFieldNames ? '' : 'unseen',
+        subBuilder: GitHubRef.$_createMessage)
+    ..aOS(3, _omitFieldNames ? '' : 'error')
+    ..aOB(4, _omitFieldNames ? '' : 'signIn')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubItemsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubItemsResponse copyWith(
+          void Function(GetGitHubItemsResponse) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubItemsResponse))
+          as GetGitHubItemsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubItemsResponse() / GetGitHubItemsResponse.new instead')
+  static GetGitHubItemsResponse create() => GetGitHubItemsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubItemsResponse._();
+  @$core.override
+  GetGitHubItemsResponse createEmptyInstance() => GetGitHubItemsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubItemsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubItemsResponse>(
+          GetGitHubItemsResponse.$_createMessage);
+  static GetGitHubItemsResponse? _defaultInstance;
+
+  /// Those known, as they are now or last were.
+  @$pb.TagNumber(1)
+  $pb.PbList<GitHubItem> get items => $_getList(0);
+
+  /// Those GitHub doesn't show the account (private, or missing: GitHub
+  /// doesn't say which).
+  @$pb.TagNumber(2)
+  $pb.PbList<GitHubRef> get unseen => $_getList(1);
+
+  /// Why a host couldn't be asked this time; items then has what was last
+  /// known.
+  @$pb.TagNumber(3)
+  $core.String get error => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set error($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasError() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearError() => $_clearField(3);
+
+  /// A host has no token, or one Settings › GitHub must allow.
+  @$pb.TagNumber(4)
+  $core.bool get signIn => $_getBF(3);
+  @$pb.TagNumber(4)
+  set signIn($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSignIn() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSignIn() => $_clearField(4);
 }
 
 class GetGitHubStatesRequest extends $pb.GeneratedMessage {
@@ -33501,6 +33921,15 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetGitHubStatesRequest request) =>
       _client.invoke<GetGitHubStatesResponse>(ctx, 'NushiService',
           'GetGitHubStates', request, GetGitHubStatesResponse());
+
+  /// Pull requests and issues by their numbers (a link's chip, a pull
+  /// request's row; ADR 0117): kept a while, the rest asked of each host,
+  /// 50 a query. A host Nushi doesn't give a token to is never asked.
+  /// API 118.
+  $async.Future<GetGitHubItemsResponse> getGitHubItems(
+          $pb.ClientContext? ctx, GetGitHubItemsRequest request) =>
+      _client.invoke<GetGitHubItemsResponse>(ctx, 'NushiService',
+          'GetGitHubItems', request, GetGitHubItemsResponse());
   $async.Future<GetGitHubPullResponse> getGitHubPull(
           $pb.ClientContext? ctx, GetGitHubPullRequest request) =>
       _client.invoke<GetGitHubPullResponse>(ctx, 'NushiService',

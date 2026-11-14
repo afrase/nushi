@@ -279,6 +279,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ListGitHubInboxRequest request);
   $async.Future<$0.GetGitHubStatesResponse> getGitHubStates(
       $pb.ServerContext ctx, $0.GetGitHubStatesRequest request);
+  $async.Future<$0.GetGitHubItemsResponse> getGitHubItems(
+      $pb.ServerContext ctx, $0.GetGitHubItemsRequest request);
   $async.Future<$0.GetGitHubPullResponse> getGitHubPull(
       $pb.ServerContext ctx, $0.GetGitHubPullRequest request);
   $async.Future<$0.GetGitHubIssueResponse> getGitHubIssue(
@@ -586,6 +588,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.ListGitHubInboxRequest();
       case 'GetGitHubStates':
         return $0.GetGitHubStatesRequest();
+      case 'GetGitHubItems':
+        return $0.GetGitHubItemsRequest();
       case 'GetGitHubPull':
         return $0.GetGitHubPullRequest();
       case 'GetGitHubIssue':
@@ -905,6 +909,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return listGitHubInbox(ctx, request as $0.ListGitHubInboxRequest);
       case 'GetGitHubStates':
         return getGitHubStates(ctx, request as $0.GetGitHubStatesRequest);
+      case 'GetGitHubItems':
+        return getGitHubItems(ctx, request as $0.GetGitHubItemsRequest);
       case 'GetGitHubPull':
         return getGitHubPull(ctx, request as $0.GetGitHubPullRequest);
       case 'GetGitHubIssue':

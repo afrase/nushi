@@ -27,6 +27,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -59,6 +60,9 @@ type Client struct {
 	log   *slog.Logger
 	lim   *limits
 	etags *etags
+	// noCounts says the host refused the checks' counts (refitems.go):
+	// an Enterprise server older than them.
+	noCounts atomic.Bool
 }
 
 // New makes a client of host for token; transport may be nil.

@@ -124,6 +124,11 @@ func (s *Service) forget(name string) {
 			delete(s.states, id)
 		}
 	}
+	for k := range s.items {
+		if strings.HasPrefix(k, name+"/") {
+			delete(s.items, k)
+		}
+	}
 }
 
 // CachedInbox is the host's inbox (f says which) as GitHub gave it last,

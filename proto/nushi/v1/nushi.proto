@@ -455,6 +455,11 @@ service NushiService {
   rpc ListGitHubInbox(ListGitHubInboxRequest) returns (ListGitHubInboxResponse);
   // Items as they are now, by node id (a chat's status chip).
   rpc GetGitHubStates(GetGitHubStatesRequest) returns (GetGitHubStatesResponse);
+  // Pull requests and issues by their numbers (a link's chip, a pull
+  // request's row; ADR 0117): kept a while, the rest asked of each host,
+  // 50 a query. A host Nushi doesn't give a token to is never asked.
+  // API 118.
+  rpc GetGitHubItems(GetGitHubItemsRequest) returns (GetGitHubItemsResponse);
   rpc GetGitHubPull(GetGitHubPullRequest) returns (GetGitHubPullResponse);
   rpc GetGitHubIssue(GetGitHubIssueRequest) returns (GetGitHubIssueResponse);
   // A pull request's files from its merge base to its head, both sides'
@@ -676,6 +681,10 @@ message Chat {
   // a few words made from the message at once, replaced by the agent's
   // own when it can make one (Claude). A client lists a pin by it. API 104.
   repeated MessagePin message_pins = 21;
+  // Its pull requests, the primary (pull) first: the one it was started
+  // from, found by its branch's head, opened by its tool call, or linked by
+  // hand; 10 at most (ADR 0117). API 118.
+  repeated GitHubLink pulls = 22;
 }
 
 // A pinned message: its item, and the title a client lists it by. The
@@ -3319,6 +3328,29 @@ message GitHubItem {
   // Its review threads not resolved.
   int32 unresolved = 12;
   int32 comments = 13;
+  // What GetGitHubItems adds (the inbox leaves them unset). API 118.
+  int32 additions = 14;
+  int32 deletions = 15;
+  int32 changed_files = 16;
+  int64 created_ms = 17;
+  GitHubCheckCounts check_counts = 18;
+  // A pull request's merge state: "clean", "blocked", "behind", "dirty",
+  // "unstable", "has_hooks", "draft", "unknown" or "".
+  string merge_state = 19;
+  // A closed issue's reason: "completed", "not_planned" or "".
+  string state_reason = 20;
+  // A pull request's base and head branches.
+  string base = 21;
+  string head = 22;
+}
+
+// A pull request's checks at its head, by state: a neutral one is passed;
+// skipped ones count in neither side of passed/total.
+message GitHubCheckCounts {
+  int32 passed = 1;
+  int32 failed = 2;
+  int32 running = 3;
+  int32 skipped = 4;
 }
 
 message ListGitHubInboxRequest {
@@ -3365,7 +3397,8 @@ message ListGitHubInboxResponse {
 }
 
 // A pull request or an issue a chat is on: its host and node id, and its
-// repository and number.
+// repository and number. A pull request a chat's tool call opened may have
+// no id yet (its address alone; ADR 0117).
 message GitHubLink {
   string host = 1;
   string id = 2;
@@ -3393,15 +3426,43 @@ message FindChatPullResponse {
   GitHubLink pull = 5;
   // Why GitHub couldn't be asked this time (the link stays as it was).
   string error = 6;
+  // All of the chat's pull requests, as Chat.pulls. API 118.
+  repeated GitHubLink pulls = 7;
 }
 
 message LinkChatPullRequest {
   string chat_id = 1;
-  // The pull request to link; none unlinks the chat's.
+  // The pull request to link; none unlinks the chat's (its primary).
   GitHubLink pull = 2;
+  // Adds pull after the chat's others, rather than in the primary's
+  // place. API 118.
+  bool add = 3;
+  // Unlinks this one of the chat's pull requests (pull unset), never found
+  // or opened again. API 118.
+  GitHubLink unlink = 4;
 }
 
 message LinkChatPullResponse {}
+
+message GetGitHubItemsRequest {
+  repeated GitHubRef refs = 1;
+  // The app's own asking, not the user's: held back while the rate limit
+  // runs low.
+  bool quiet = 2;
+}
+
+message GetGitHubItemsResponse {
+  // Those known, as they are now or last were.
+  repeated GitHubItem items = 1;
+  // Those GitHub doesn't show the account (private, or missing: GitHub
+  // doesn't say which).
+  repeated GitHubRef unseen = 2;
+  // Why a host couldn't be asked this time; items then has what was last
+  // known.
+  string error = 3;
+  // A host has no token, or one Settings › GitHub must allow.
+  bool sign_in = 4;
+}
 
 message GetGitHubStatesRequest {
   repeated GitHubLink items = 1;
