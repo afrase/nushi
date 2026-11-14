@@ -490,11 +490,11 @@ func TestOptions(t *testing.T) {
 func TestToolCalls(t *testing.T) {
 	s := &session{cwd: "/repo"}
 	call := s.toolCall("c1", "edit", json.RawMessage(`{"path":"a.txt","edits":[{"oldText":"two","newText":"three"},{"oldText":"x","newText":"y"}]}`), "in_progress", toolcall.Old{})
-	if call.Title != "edit a.txt" || call.Kind != "edit" || len(call.Content) != 2 || call.Content[0].Diff.OldText != "two" || call.Content[1].Diff.NewText != "y" || call.Content[0].Diff.Path != "/repo/a.txt" {
+	if call.Title != "edit a.txt" || call.Kind != "edit" || len(call.Content) != 2 || *call.Content[0].Diff.OldText != "two" || call.Content[1].Diff.NewText != "y" || call.Content[0].Diff.Path != "/repo/a.txt" {
 		t.Errorf("edit = %+v", call)
 	}
-	call = s.toolCall("c2", "write", json.RawMessage(`{"path":"/abs/b.txt","content":"new"}`), "in_progress", toolcall.Old{Text: "old"})
-	if d := call.Content[0].Diff; d.OldText != "old" || d.NewText != "new" || d.Path != "/abs/b.txt" {
+	call = s.toolCall("c2", "write", json.RawMessage(`{"path":"/abs/b.txt","content":"new"}`), "in_progress", toolcall.Old{Text: "old", Exists: true})
+	if d := call.Content[0].Diff; d.OldText == nil || *d.OldText != "old" || d.NewText != "new" || d.Path != "/abs/b.txt" {
 		t.Errorf("write = %+v", d)
 	}
 	if call := s.toolCall("c3", "grep", json.RawMessage(`{"pattern":"TODO"}`), "", toolcall.Old{}); call.Title != "grep TODO" || call.Kind != "search" {

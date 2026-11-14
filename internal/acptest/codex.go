@@ -20,19 +20,31 @@ func codexInit() map[string]any {
 }
 
 func codexSession(id string) map[string]any {
+	return map[string]any{"sessionId": id,
+		"modes":         map[string]any{"currentModeId": "agent", "availableModes": codexModes},
+		"models":        map[string]any{"currentModelId": "m1[medium]", "availableModels": []map[string]any{{"modelId": "m1[low]", "name": "M1 (low)"}, {"modelId": "m1[medium]", "name": "M1 (medium)"}}},
+		"configOptions": codexOptions("", "")}
+}
+
+// codexOptions are a session's config options, the one set to value; a
+// session/set_config_option answers with them all, as ACP requires.
+func codexOptions(set, value string) []map[string]any {
 	var modes []map[string]any
 	for _, m := range codexModes {
 		modes = append(modes, map[string]any{"value": m["id"], "name": m["name"]})
 	}
-	return map[string]any{"sessionId": id,
-		"modes":  map[string]any{"currentModeId": "agent", "availableModes": codexModes},
-		"models": map[string]any{"currentModelId": "m1[medium]", "availableModels": []map[string]any{{"modelId": "m1[low]", "name": "M1 (low)"}, {"modelId": "m1[medium]", "name": "M1 (medium)"}}},
-		"configOptions": []map[string]any{
-			{"id": "mode", "name": "Mode", "category": "mode", "type": "select", "currentValue": "agent", "options": modes},
-			{"id": "model", "name": "Model", "category": "model", "type": "select", "currentValue": "m1", "options": []map[string]any{{"value": "m1", "name": "M1"}}},
-			{"id": "reasoning_effort", "name": "Reasoning effort", "category": "thought_level", "type": "select", "currentValue": "medium",
-				"options": []map[string]any{{"value": "low", "name": "Low"}, {"value": "medium", "name": "Medium"}}},
-		}}
+	opts := []map[string]any{
+		{"id": "mode", "name": "Mode", "category": "mode", "type": "select", "currentValue": "agent", "options": modes},
+		{"id": "model", "name": "Model", "category": "model", "type": "select", "currentValue": "m1", "options": []map[string]any{{"value": "m1", "name": "M1"}}},
+		{"id": "reasoning_effort", "name": "Reasoning effort", "category": "thought_level", "type": "select", "currentValue": "medium",
+			"options": []map[string]any{{"value": "low", "name": "Low"}, {"value": "medium", "name": "Medium"}}},
+	}
+	for _, o := range opts {
+		if o["id"] == set {
+			o["currentValue"] = value
+		}
+	}
+	return opts
 }
 
 // run plays a command as codex-acp reports one to a client without

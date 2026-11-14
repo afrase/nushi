@@ -96,7 +96,7 @@ func TestOneModePickerAndTheModeIsRemembered(t *testing.T) {
 
 func TestLegacyModesBecomeOneOption(t *testing.T) {
 	modes := &memModes{"claude": "yolo"} // not offered: the chat keeps the agent's default
-	svc, agent, c := newChat(t, `{"modes":{"currentModeId":"default","availableModes":[{"id":"default","name":"Default"},{"id":"plan","name":"Plan"}]}}`, modes)
+	svc, agent, c := newChat(t, `{"sessionId":"s1","modes":{"currentModeId":"default","availableModes":[{"id":"default","name":"Default"},{"id":"plan","name":"Plan"}]}}`, modes)
 	if len(c.config) != 2 || c.config[1].ID != legacyMode || current(c, legacyMode) != "default" { // after Ultracode
 		t.Fatalf("config = %+v", c.config)
 	}

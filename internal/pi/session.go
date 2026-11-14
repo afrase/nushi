@@ -39,6 +39,11 @@ type session struct {
 
 	compaction string // the tool call of the compaction under way
 	estimate   int64  // the context's tokens after the last compaction, Pi's estimate
+
+	// cancelSeq is where the latest session/cancel came among the
+	// client's messages (acp.SequenceFromContext): a prompt from before
+	// it that begins its turn after it is cancelled already.
+	cancelSeq uint64
 }
 
 // turn is a running turn: Nushi's prompt (result, which nobody reads for
@@ -53,7 +58,27 @@ type turn struct {
 	failed     string // and its error
 	cancelled  bool
 	compactEnd chan struct{} // closed when the compaction /compact asked for ends
+	// sent is closed (by wrote, once) when the turn's command has gone to
+	// pi, so a Stop's abort comes after it; nil for a turn pi began itself.
+	sent  chan struct{}
+	wrote func()
+	// taken is closed (by take, once) when pi has taken the turn's
+	// command: its answer to a prompt, or its run's start. pi handles a
+	// command as it reads it, and a prompt sets up before its run, so an
+	// abort read right behind the prompt can find no run, and the run
+	// starts after it.
+	taken chan struct{}
+	take  func()
 }
+
+// takeWait is the longest a Stop's abort waits for pi to take the
+// prompt it stops: a prompt is taken at once, an extension's command
+// answered only once it ends (cancel).
+const takeWait = 2 * time.Second
+
+// errCancelled is a prompt a session/cancel that came after it stopped
+// before its turn began.
+var errCancelled = errors.New("cancelled before it began")
 
 type turnResult struct {
 	resp *acp.PromptResponse
@@ -168,6 +193,9 @@ func (s *session) handle(ev event) {
 			s.beginLocked(&turn{result: make(chan turnResult, 1)})
 		}
 		s.turn.ran = true
+		if s.turn.take != nil {
+			s.turn.take()
+		}
 	case "message_start":
 		if m := e.Message; m != nil && m.Role == "assistant" {
 			s.msgID, s.sent = messageID(m), map[int]string{}
@@ -322,6 +350,9 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 		return s.runOwn(ctx, name, arg)
 	}
 	t, err := s.nextTurn(ctx)
+	if errors.Is(err, errCancelled) {
+		return &acp.PromptResponse{StopReason: "cancelled"}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +360,11 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 		var r struct {
 			Disposition string `json:"disposition"`
 		}
-		after, err := s.p.callAfter(ctx, map[string]any{"type": "prompt", "message": text, "images": images}, &r)
+		// pi's answer is waited for even once the prompt is answered (a
+		// Stop ends its ctx): it says pi has taken it (take), which a
+		// Stop's abort waits for.
+		after, err := s.p.callWritten(context.WithoutCancel(ctx), map[string]any{"type": "prompt", "message": text, "images": images}, &r, t.wrote)
+		t.take()
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		for s.handled < after { // the events pi sent first, before the turn ends
@@ -347,7 +382,10 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 	return res.resp, res.err
 }
 
-// nextTurn begins a turn once the running one, if any, has ended.
+// nextTurn begins a turn once the running one, if any, has ended; none,
+// errCancelled, when a session/cancel came after the request ctx is for:
+// acp-go starts a request's handler before it reads on, but a cancel's
+// runs beside it, and may have found no turn to stop.
 func (s *session) nextTurn(ctx context.Context) (*turn, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -365,7 +403,12 @@ func (s *session) nextTurn(ctx context.Context) (*turn, error) {
 		}
 		s.mu.Lock()
 	}
-	t := &turn{result: make(chan turnResult, 1)}
+	if seq, ok := acp.SequenceFromContext(ctx); ok && seq < s.cancelSeq {
+		return nil, errCancelled
+	}
+	sent, taken := make(chan struct{}), make(chan struct{})
+	t := &turn{result: make(chan turnResult, 1), sent: sent, wrote: sync.OnceFunc(func() { close(sent) }),
+		taken: taken, take: sync.OnceFunc(func() { close(taken) })}
 	s.beginLocked(t)
 	return t, nil
 }
@@ -375,21 +418,43 @@ func (s *session) nextTurn(ctx context.Context) (*turn, error) {
 // answered at once, but holds the session until pi answers the abort,
 // which it does once a run it had started settled (docs/facts/pig.md):
 // its agent_start may not have been read yet, and the next prompt would be
-// refused meanwhile, or take that run's last events as its own.
+// refused meanwhile, or take that run's last events as its own. The abort
+// goes once pi has taken the turn's command (turn.taken): an abort pi
+// reads before its prompt, or handles while the prompt sets up, finds no
+// run, is answered at once, and the session would be let go while the
+// run starts after it. An extension's command is answered only once it
+// ends, so the abort waits for that at most takeWait. seq is where the
+// cancel came among the client's messages: a prompt from before it whose
+// turn hasn't begun is cancelled as it begins (nextTurn).
 //
 //nolint:contextcheck // the abort goes out on its own; Cancel is a notification
-func (s *session) cancel() {
+func (s *session) cancel(seq uint64) {
 	s.mu.Lock()
+	s.cancelSeq = max(s.cancelSeq, seq)
 	t := s.turn
 	early := t != nil && !t.ran
+	var sent, taken chan struct{}
 	if t != nil {
-		t.cancelled = true
+		t.cancelled, sent, taken = true, t.sent, t.taken
 	}
 	if early {
 		s.answerLocked(t, &acp.PromptResponse{StopReason: "cancelled"}, nil)
 	}
 	s.mu.Unlock()
 	go func() {
+		if sent != nil {
+			select {
+			case <-sent:
+			case <-s.ended:
+			}
+			timer := time.NewTimer(takeWait)
+			select {
+			case <-taken:
+			case <-s.ended:
+			case <-timer.C:
+			}
+			timer.Stop()
+		}
 		after, _ := s.p.callAfter(context.Background(), map[string]any{"type": "abort"}, nil) // a dead pi has no run to abort
 		if !early {
 			return

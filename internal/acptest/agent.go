@@ -299,6 +299,8 @@ func (a *Agent) answer(f frame) {
 			blocks = append(blocks, b.Text)
 		}
 		result = map[string]any{"stopReason": a.prompt(p.SessionID, blocks)}
+	case "session/set_config_option":
+		result = a.optionsSet(f.Params)
 	default:
 		result = map[string]any{}
 	}
@@ -308,6 +310,17 @@ func (a *Agent) answer(f frame) {
 	}
 	r, _ := json.Marshal(result)
 	a.send(frame{ID: f.ID, Result: r})
+}
+
+// optionsSet answers session/set_config_option: with every option, as
+// ACP requires (the plain agent has none).
+func (a *Agent) optionsSet(params json.RawMessage) map[string]any {
+	if !a.Codex {
+		return map[string]any{"configOptions": []map[string]any{}}
+	}
+	var set struct{ ConfigID, Value string }
+	_ = json.Unmarshal(params, &set)
+	return map[string]any{"configOptions": codexOptions(set.ConfigID, set.Value)}
 }
 
 // list answers session/list a page at a time (the cursor is the next

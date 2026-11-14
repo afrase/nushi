@@ -98,8 +98,10 @@ func Connect(conn *acp.AgentConn, log *slog.Logger) *Agent {
 const MaxMessage = 30 << 20
 
 // MaxRead is the largest message read from an agent, generous: a longer
-// line ends the connection and the agent with it (its chat sees it die),
-// rather than the daemon growing until it does. A var for tests.
+// line is read to its end and skipped, rather than the daemon growing
+// until it holds it (acp-go answers a request so with an error, fails the
+// call a response answers, drops a notification, and logs it), and the
+// connection goes on. A var for tests.
 var MaxRead = 256 << 20
 
 func handlerOf(l *slog.Logger) *handler { return &handler{l.Handler()} }
@@ -244,12 +246,9 @@ func (a *Agent) exited(ran time.Duration) {
 	} else {
 		args = append(args, "code", a.cmd.ProcessState.ExitCode())
 	}
-	switch {
-	case errors.Is(a.Err(), acp.ErrTooLarge):
-		a.log.Warn("agent ended: it sent a message over the read limit", append(args, "limit", MaxRead)...)
-	case a.stopped.Load():
+	if a.stopped.Load() {
 		a.log.Info("agent exited", append(args, "stopped", true)...)
-	default:
-		a.log.Warn("agent died", args...)
+		return
 	}
+	a.log.Warn("agent died", args...)
 }

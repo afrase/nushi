@@ -36,6 +36,10 @@ type session struct {
 	compact compaction            // the last compaction shown
 	fill    contextUse            // the context as Ante last told it
 	ended   chan struct{}         // closed once the host is gone
+	// cancelSeq is where the latest session/cancel came among the
+	// client's messages (acp.SequenceFromContext): a prompt from before
+	// it that begins its turn after it is cancelled already.
+	cancelSeq uint64
 }
 
 // contextUse is how full a session's context is, in tokens, as Ante says:
@@ -67,7 +71,16 @@ type turn struct {
 	done    bool // ended: result has its answer
 	result  chan turnResult
 	usage   acp.Usage
+	// sent is closed (by wrote, once) when the turn's op has gone to the
+	// host, so a Stop's Interrupt comes after it; nil for a turn Ante
+	// began itself.
+	sent  chan struct{}
+	wrote func()
 }
+
+// errCancelled is a prompt a session/cancel that came after it stopped
+// before its turn began.
+var errCancelled = errors.New("cancelled before it began")
 
 type turnResult struct {
 	resp *acp.PromptResponse
@@ -345,10 +358,15 @@ func (s *session) prompt(ctx context.Context, text string) (*acp.PromptResponse,
 	}
 	op := s.opOf(text)
 	t, err := s.next(ctx)
+	if errors.Is(err, errCancelled) {
+		return &acp.PromptResponse{StopReason: "cancelled"}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-	if err := s.h.write(t.id, op); err != nil {
+	err = s.h.write(t.id, op)
+	t.wrote()
+	if err != nil {
 		s.mu.Lock()
 		s.endLocked(t, nil, err)
 		s.mu.Unlock()
@@ -358,7 +376,10 @@ func (s *session) prompt(ctx context.Context, text string) (*acp.PromptResponse,
 }
 
 // next begins a turn once the running one, if any, has ended; its id is
-// the op's that runs it.
+// the op's that runs it. None, errCancelled, when a session/cancel came
+// after the request ctx is for: acp-go starts a request's handler before
+// it reads on, but a cancel's runs beside it, and may have found no turn
+// to stop.
 func (s *session) next(ctx context.Context) (*turn, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -376,9 +397,35 @@ func (s *session) next(ctx context.Context) (*turn, error) {
 		}
 		s.mu.Lock()
 	}
-	t := &turn{id: opID(), result: make(chan turnResult, 1)}
+	if seq, ok := acp.SequenceFromContext(ctx); ok && seq < s.cancelSeq {
+		return nil, errCancelled
+	}
+	sent := make(chan struct{})
+	t := &turn{id: opID(), result: make(chan turnResult, 1), sent: sent, wrote: sync.OnceFunc(func() { close(sent) })}
 	s.beginLocked(t)
 	return t, nil
+}
+
+// cancel stops the running turn: Ante's Interrupt, once the turn's op has
+// gone to the host (an Interrupt before it stops nothing, and the op then
+// runs). seq is where the cancel came among the client's messages: a
+// prompt from before it whose turn hasn't begun is cancelled as it begins
+// (next).
+func (s *session) cancel(seq uint64) {
+	s.mu.Lock()
+	s.cancelSeq = max(s.cancelSeq, seq)
+	var sent chan struct{}
+	if s.turn != nil {
+		sent = s.turn.sent
+	}
+	s.mu.Unlock()
+	if sent != nil {
+		select {
+		case <-sent:
+		case <-s.ended:
+		}
+	}
+	_ = s.h.send("Interrupt") // a dead host has no turn to stop
 }
 
 // steer hands text to the running turn, which takes it at its next step;

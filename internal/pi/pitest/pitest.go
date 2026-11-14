@@ -50,6 +50,14 @@ type Store struct {
 	// before its answer and the run's agent_start, which wait until the
 	// test closes it: a run pi took that the bridge hasn't heard of yet.
 	Starts chan chan struct{}
+	// PromptLag, when set, is how long a prompt takes to be taken: pi
+	// handles each command as it reads it, and its prompt sets up before
+	// a run starts, so an abort read right after a prompt can be handled
+	// first, find no run, and leave the run to start after it.
+	PromptLag time.Duration
+	// Read, when set, gets each prompt's text as pi reads it, before its
+	// PromptLag.
+	Read chan string
 
 	mu sync.Mutex
 	n  int
@@ -160,6 +168,12 @@ func (p *Program) respond(cmd map[string]any, data any, err string) {
 }
 
 func (p *Program) command(cmd map[string]any) {
+	if cmd["type"] == "prompt" {
+		if p.st.Read != nil {
+			p.st.Read <- cmd["message"].(string)
+		}
+		time.Sleep(p.st.PromptLag)
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	switch cmd["type"] {

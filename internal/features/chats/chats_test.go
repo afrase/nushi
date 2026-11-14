@@ -106,7 +106,9 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Title: "ls -la", Content: text("List files")}},
 		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed", Content: text("a.txt")}},
 		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t2", Title: "Edit", Kind: "edit", Content: []acp.ToolCallContent{
-			{Type: "diff", Diff: &acp.Diff{Path: "/w/a.txt", OldText: "one\ntwo\n", NewText: "three"}},
+			{Type: "diff", Diff: &acp.Diff{Path: "/w/a.txt", OldText: new("one\ntwo\n"), NewText: "three"}},
+			{Type: "diff", Diff: &acp.Diff{Path: "/w/new.txt", NewText: "made"}},                  // no old text: a new file
+			{Type: "diff", Diff: &acp.Diff{Path: "/w/empty.txt", OldText: new(""), NewText: "x"}}, // "": an empty one
 		}, Locations: []acp.ToolCallLocation{{Path: "/w/a.txt"}, {Path: "/elsewhere/b.txt"}}}},
 	} {
 		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
@@ -114,7 +116,8 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 	want := []model.Item{
 		{ID: "t1", Kind: model.ToolCall, Title: "ls -la", ToolKind: "execute", Status: "completed", Text: "a.txt"},
 		{ID: "t2", Kind: model.ToolCall, Title: "Edit", ToolKind: "edit", Paths: []string{"a.txt", "/elsewhere/b.txt"},
-			Diffs: []model.FileChange{{Path: "a.txt", Status: "modified", Old: "one\ntwo\n", New: "three"}}},
+			Diffs: []model.FileChange{{Path: "a.txt", Status: "modified", Old: "one\ntwo\n", New: "three"},
+				{Path: "new.txt", Status: "added", New: "made"}, {Path: "empty.txt", Status: "modified", New: "x"}}},
 	}
 	if !reflect.DeepEqual(c.items, want) {
 		t.Errorf("items = %+v\nwant %+v", c.items, want)

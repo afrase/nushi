@@ -47,6 +47,9 @@ func ownCommand(text string) (name, arg string, ok bool) {
 // compaction). A compaction that fails says why in its tool call.
 func (s *session) runOwn(ctx context.Context, name, arg string) (*acp.PromptResponse, error) {
 	t, err := s.nextTurn(ctx)
+	if errors.Is(err, errCancelled) {
+		return &acp.PromptResponse{StopReason: "cancelled"}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +59,11 @@ func (s *session) runOwn(ctx context.Context, name, arg string) (*acp.PromptResp
 		t.compactEnd = compacted
 		s.mu.Unlock()
 	}
+	// pi answers these once done, and its abort cancels a compaction
+	// running: a Stop's abort waits only for the command to have gone.
+	sent := func() { t.wrote(); t.take() }
 	go func() {
+		defer sent() // also when nothing went to pi
 		var err error
 		switch {
 		case name == "compact":
@@ -64,11 +71,11 @@ func (s *session) runOwn(ctx context.Context, name, arg string) (*acp.PromptResp
 			if arg != "" {
 				cmd["customInstructions"] = arg
 			}
-			err = s.p.call(ctx, cmd, nil)
+			_, err = s.p.callWritten(ctx, cmd, nil, sent)
 		case arg == "":
 			err = errors.New("give the name after /name")
 		default:
-			err = s.p.call(ctx, map[string]any{"type": "set_session_name", "name": arg}, nil)
+			_, err = s.p.callWritten(ctx, map[string]any{"type": "set_session_name", "name": arg}, nil, sent)
 		}
 		if err != nil && name == "compact" {
 			// pi writes compaction_end before its answer, but the answer

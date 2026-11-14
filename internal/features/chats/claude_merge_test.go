@@ -93,24 +93,27 @@ func loadAfter(t *testing.T, dir string, node []event, sent []acpLine) (string, 
 	if sid == "" {
 		t.Skip("no prompt: nothing to merge")
 	}
-	var cwd string
+	// The load sets the session up as session/new did (its folder, MCP
+	// servers and _meta): the session is still open in the Go agent,
+	// which restarts claude for a load that sets it up otherwise, as
+	// claude-agent-acp does, and Nushi only loads with the same setup.
+	var params map[string]json.RawMessage
 	for _, l := range sent {
 		var m rpc
 		testcheck.NoErr(t, json.Unmarshal(l.Msg, &m))
 		var p struct {
 			SessionID string `json:"sessionId"`
-			Cwd       string `json:"cwd"`
 		}
 		_ = json.Unmarshal(m.Params, &p)
 		if l.Dir == "in" && p.SessionID == sid && (m.Method == "session/close" || m.Method == "session/delete") {
 			t.Skipf("the scenario ends session %s", sid)
 		}
-		if l.Dir == "in" && m.Method == "session/new" && cwd == "" {
-			cwd = p.Cwd
+		if l.Dir == "in" && m.Method == "session/new" && params == nil {
+			testcheck.NoErr(t, json.Unmarshal(m.Params, &params))
 		}
 	}
-	load, err := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": "merge-load", "method": "session/load",
-		"params": acp.LoadSessionRequest{SessionID: acp.SessionID(sid), Cwd: cwd, MCPServers: []acp.MCPServer{}}})
+	params["sessionId"] = json.RawMessage(testcheck.JSON(t, sid))
+	load, err := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": "merge-load", "method": "session/load", "params": params})
 	testcheck.NoErr(t, err)
 	return sid, []acpLine{{Dir: "in", Msg: load}, {Dir: "out", Msg: json.RawMessage(`{"jsonrpc":"2.0","id":"merge-load","result":{}}`)}}
 }

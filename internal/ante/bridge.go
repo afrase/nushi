@@ -221,9 +221,10 @@ func (b *bridge) tooBig(s *session, over int) {
 	b.update(s.id, chunk(false, note, acp.MessageID("images-"+opID())))
 }
 
-func (b *bridge) Cancel(_ context.Context, n *acp.CancelNotification) error {
+func (b *bridge) Cancel(ctx context.Context, n *acp.CancelNotification) error {
 	if s, err := b.session(n.SessionID); err == nil {
-		_ = s.h.send("Interrupt") // a dead host has no turn to stop
+		seq, _ := acp.SequenceFromContext(ctx)
+		s.cancel(seq)
 	}
 	return nil
 }

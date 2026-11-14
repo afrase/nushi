@@ -199,6 +199,7 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 	b, err := os.ReadFile(path)
 	testcheck.NoErr(t, err)
 	asked := map[string]event{} // the marked requests, by id
+	loading := 0                // loads not answered yet: what comes is their replay
 	for line := range bytes.Lines(b) {
 		if len(bytes.TrimSpace(line)) == 0 {
 			continue
@@ -212,13 +213,22 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 		case l.Dir == "out" && m.Method == sessionUpdate:
 			var n acp.SessionNotification
 			testcheck.NoErr(t, json.Unmarshal(m.Params, &n))
+			if loading > 0 {
+				replayedAsLive(&n)
+			}
 			events = append(events, event{note: &n})
 		case l.Dir == "in" && marked(m.Method):
 			e := request(m)
 			asked[string(m.ID)] = e
 			events = append(events, e)
+			if m.Method == "session/load" {
+				loading++
+			}
 		case l.Dir == "out" && m.Method == "":
 			if e, ok := asked[string(m.ID)]; ok {
+				if e.method == "session/load" {
+					loading--
+				}
 				e.done = true
 				events = append(events, e)
 			}
@@ -229,4 +239,23 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 		}
 	}
 	return events, all
+}
+
+// noOutput is claude's text for the model of a command that printed
+// nothing, as claude-agent-acp 0.94's replay showed it.
+const noOutput = "```console\n(Bash completed with no output)\n```"
+
+// replayedAsLive drops what the adapter's replay (a session/load's
+// updates) showed of a command that printed nothing: claude-agent-acp
+// showed nothing live (from claude's structured tool_use_result) but
+// claude's text for the model in a replay, and claudeacp (since
+// claude-acp-go v0.4.0) replays it as live.
+func replayedAsLive(n *acp.SessionNotification) {
+	u := n.Update.ToolCallUpdate
+	if u == nil || len(u.Content) != 1 || u.Content[0].Content == nil {
+		return
+	}
+	if text := u.Content[0].Content.Content.Text; text != nil && text.Text == noOutput {
+		u.Content = nil
+	}
 }
