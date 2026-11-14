@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/phone/ui.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -374,6 +375,39 @@ void main() {
       expect('$ring', allOf(contains('${t.focus}'), contains('${t.onAccent}')));
     });
   }
+
+  testWidgets('the phone’s icon and button are Pressables: Tab focuses '
+      'each, its ring shows, Enter presses it', (tester) async {
+    var presses = 0;
+    await tester.pumpWidget(
+      _app(
+        Tokens.light,
+        TouchTargets(
+          child: Column(
+            children: [
+              PhoneIcon(Icons.close, label: 'Close', onTap: () => presses++),
+              PhoneButton('Archive', onTap: () => presses++),
+            ],
+          ),
+        ),
+      ),
+    );
+    for (final control in [PhoneIcon, PhoneButton]) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final ring = tester
+          .widgetList<Container>(
+            find.descendant(
+              of: find.byType(control),
+              matching: find.byType(Container),
+            ),
+          )
+          .where((c) => c.foregroundDecoration != null);
+      expect(ring, isNotEmpty, reason: '$control focused');
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    }
+    expect(presses, 2);
+  });
 
   testWidgets('Enter and Space press a focused control', (tester) async {
     var presses = 0;

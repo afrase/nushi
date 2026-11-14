@@ -16,6 +16,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_card.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/phase_pill.dart';
+import 'package:nushi/phone/ui.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
@@ -776,6 +777,45 @@ Widget _floats() => page('Menus, tooltips, toasts', [
   ),
 ]);
 
+/// The phone's own controls, on [Pressable] as the Mac's are, with its
+/// 44-point targets.
+Widget _phone() => page('The phone’s controls', [
+  TouchTargets(
+    child: Column(
+      children: [
+        heading('PhoneIcon'),
+        stateRow(
+          'icon',
+          ({required on}) => PhoneIcon(
+            Icons.more_horiz,
+            label: 'More',
+            onTap: on ? _tap : null,
+          ),
+        ),
+        heading('PhoneButton'),
+        for (final (name, primary, destructive) in [
+          ('plain', false, false),
+          ('primary', true, false),
+          ('destructive', false, true),
+        ])
+          stateRow(
+            name,
+            // Narrower than its cell, as a phone's screen has its margin.
+            ({required on}) => SizedBox(
+              width: 170,
+              child: PhoneButton(
+                'Archive',
+                primary: primary,
+                destructive: destructive,
+                onTap: on ? _tap : null,
+              ),
+            ),
+          ),
+      ],
+    ),
+  ),
+]);
+
 /// Every sheet, in the order the gallery shows them.
 final List<Sheet> sheets = [
   (name: 'buttons', size: const Size(1200, 1080), build: _buttons, open: null),
@@ -783,6 +823,7 @@ final List<Sheet> sheets = [
   (name: 'fields', size: const Size(1200, 940), build: _fields, open: null),
   (name: 'pills', size: const Size(1200, 860), build: _pills, open: null),
   (name: 'settings', size: const Size(760, 540), build: _settings, open: null),
+  (name: 'phone', size: const Size(1200, 420), build: _phone, open: null),
   (name: 'dialogs', size: const Size(1340, 340), build: _dialogs, open: null),
   (
     name: 'confirm',

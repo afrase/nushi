@@ -115,7 +115,8 @@ class PhoneScreen extends StatelessWidget {
   }
 }
 
-/// An icon button with a 44-point target.
+/// An icon button with a 44-point target: [Pressable]'s focus ring and
+/// press, a round tint behind the icon under the finger.
 class PhoneIcon extends StatelessWidget {
   const new(this.icon, {required this.label, required this.onTap, super.key});
 
@@ -123,21 +124,40 @@ class PhoneIcon extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
 
+  /// The round tint's size, inside the target.
+  static const _tint = 36.0;
+
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
+    final round = BorderRadius.circular(NushiTheme.pill);
     return Semantics(
       button: true,
       label: label,
-      child: InkResponse(
+      child: Pressable(
         onTap: onTap,
-        radius: touch / 2,
-        child: SizedBox.square(
+        builder: (context, look) => SizedBox.square(
           dimension: touch,
-          child: Icon(
-            icon,
-            size: 20,
-            color: onTap == null ? t.textMuted : t.text,
+          child: Center(
+            child: Container(
+              width: _tint,
+              height: _tint,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: look.pressed
+                    ? t.pressed
+                    : look.hover
+                    ? t.hover
+                    : null,
+                borderRadius: round,
+              ),
+              foregroundDecoration: focusRing(t, look, radius: round),
+              child: Icon(
+                icon,
+                size: 20,
+                color: onTap == null ? t.textMuted : t.text,
+              ),
+            ),
           ),
         ),
       ),
@@ -162,7 +182,8 @@ class PhoneLink extends StatelessWidget {
 }
 
 /// A full-width button, 44 points tall: [primary] filled with the accent,
-/// any other with a button's own fill, no outline (ADR 0111).
+/// any other with a button's own fill, no outline (ADR 0111); on
+/// [Pressable], so it shows a press at once and wears the focus ring.
 class PhoneButton extends StatelessWidget {
   const new(
     this.label, {
@@ -187,22 +208,29 @@ class PhoneButton extends StatelessWidget {
         : destructive
         ? t.crashed
         : t.text;
-    return Material(
-      color: primary && onTap != null ? t.accent : t.lifted,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(NushiTheme.card),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          height: touch + 4,
-          child: Center(
-            child: Text(
-              label,
-              style: phoneText(context, color: fg, weight: FontWeight.w600),
-            ),
-          ),
+    final filled = primary && onTap != null;
+    final corners = BorderRadius.circular(NushiTheme.card);
+    return Pressable(
+      onTap: onTap,
+      builder: (context, look) => Container(
+        height: touch + 4,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: filled
+              ? (look.pressed ? t.accentPressed : t.accent)
+              : look.pressed
+              ? Color.alphaBlend(t.pressed, t.lifted)
+              : look.hover
+              ? Color.alphaBlend(t.hover, t.lifted)
+              : t.lifted,
+          borderRadius: corners,
+        ),
+        foregroundDecoration: filled
+            ? accentFocusRing(t, look, radius: corners)
+            : focusRing(t, look, radius: corners),
+        child: Text(
+          label,
+          style: phoneText(context, color: fg, weight: FontWeight.w600),
         ),
       ),
     );
