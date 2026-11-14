@@ -28,3 +28,6 @@ The details panel's widgets are flat sections now, dragged by the title with the
 
 ## Amendment (2026-11-14)
 ⌘[ and ⌘] are Back and Forward through the places visited ([ADR 0119](0119-back-and-forward.md)); the chat before and after is ⌥⌘↑ and ⌥⌘↓.
+
+## Amendment (2026-11-14): the phone's text actions
+On the phone an action may be link-coloured text (`PhoneLink`), as iOS draws a bar's or a dialog's text buttons; that was already the phone's look. On the Mac and Linux, LinkText stays for going somewhere, never for an action.
