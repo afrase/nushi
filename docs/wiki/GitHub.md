@@ -105,4 +105,4 @@ After the merge, **Clean up…** offers to delete the worktree and branches and 
 - A fine-grained token works, but sees only one owner's repositories and can't show checks.
 - Nushi only checks GitHub while the GitHub view or a chat with a pull request is open, and only writes what you send.
 - Text you're writing in a reply or review waits for you if you switch to another chat, but is lost if you quit Nushi.
-- The [Phone](Phone) shows a one-line pull request summary in the chat, but has no Pull request tab.
+- The [Phone](Phone) shows a one-line pull request summary in the chat (`+2` for the others) and the link chips, but has no Pull request tab.

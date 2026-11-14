@@ -205,14 +205,12 @@ class _GitHubLinkChipState extends State<GitHubLinkChip> {
               listenable: items,
               builder: (_, _) => GitHubCard(a, items.look(a)),
             ),
-            child: Tap(
+            child: _ChipTap(
               onTap: scope.onTapChip == null
                   ? widget.onOpen
                   : () => scope.onTapChip!(context, a),
               onSecondaryTapUp: (d) => open(d.localPosition),
-              radius: NushiTheme.tag,
               fill: widget.typed ? t.userBandCodeBlock : t.raised,
-              padding: const EdgeInsets.fromLTRB(5, 1, 6, 1),
               child: chip,
             ),
           ),
@@ -267,6 +265,54 @@ class _GitHubLinkWordsState extends State<GitHubLinkWords> {
             onSecondaryTapUp: (d) => open(d.localPosition),
             child: Text(widget.text, style: widget.style),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A chip's press: its fill, the hover tint over it under the pointer.
+/// Not a [Tap]: a chip sits in a line of text, so it takes no touch
+/// target's height, and a tap on the phone is its own.
+class _ChipTap extends StatefulWidget {
+  const new({
+    required this.onTap,
+    required this.onSecondaryTapUp,
+    required this.fill,
+    required this.child,
+  });
+
+  final VoidCallback onTap;
+  final GestureTapUpCallback onSecondaryTapUp;
+  final Color fill;
+  final Widget child;
+
+  @override
+  State<_ChipTap> createState() => _ChipTapState();
+}
+
+class _ChipTapState extends State<_ChipTap> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onSecondaryTapUp: widget.onSecondaryTapUp,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(5, 1, 6, 1),
+          decoration: BoxDecoration(
+            color: _hover
+                ? Color.alphaBlend(t.hover, widget.fill)
+                : widget.fill,
+            borderRadius: BorderRadius.circular(NushiTheme.tag),
+          ),
+          child: widget.child,
         ),
       ),
     );

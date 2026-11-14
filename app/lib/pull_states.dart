@@ -291,9 +291,19 @@ class ChecksMark extends CustomPainter {
 /// whole, asked at once and then (quietly) as the PR widget asks for it
 /// ([pullPoll]: each minute, merged or closed every 15) while it shows;
 /// until then its number and checks' icon from the chats' states. A tap
-/// opens it on GitHub.
+/// opens it on GitHub; with several (ADR 0117) it says `+2` for the others
+/// and a tap shows them all ([onMore]).
 class PullChip extends StatefulWidget {
-  const new(this.daemon, this.chat, {required this.onOpen, super.key});
+  const new(
+    this.daemon,
+    this.chat, {
+    required this.onOpen,
+    super.key,
+    this.onMore,
+  });
+
+  /// Shows the chat's pull requests, when it has several.
+  final VoidCallback? onMore;
 
   final Daemon daemon;
   final ChatState chat;
@@ -368,8 +378,10 @@ class _PullChipState extends State<PullChip> {
       final it = p?.item ?? _states.item(l);
       final checks = it == null ? null : checksIcon(t, it.checks);
       final open = p?.threads.where((x) => !x.resolved).length ?? 0;
+      final more = widget.chat.pulls.length - 1;
       final words = [
         'Pull request #${l.number}',
+        if (more > 0) 'and $more more',
         if (it != null) itemState(it),
         ?checks?.words.toLowerCase(),
         if (open > 0) '$open open thread${open == 1 ? '' : 's'}',
@@ -379,7 +391,9 @@ class _PullChipState extends State<PullChip> {
         label: words,
         excludeSemantics: true,
         child: InkResponse(
-          onTap: it == null || it.url.isEmpty
+          onTap: more > 0 && widget.onMore != null
+              ? widget.onMore
+              : it == null || it.url.isEmpty
               ? null
               : () => widget.onOpen(it.url),
           radius: 22, // not a corner: its splash's reach
@@ -390,11 +404,19 @@ class _PullChipState extends State<PullChip> {
               child: p != null
                   ? Center(
                       widthFactor: 1,
-                      child: pullSummary(
-                        theme,
-                        number: l.number,
-                        pull: p,
-                        size: 13,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 6,
+                        children: [
+                          pullSummary(
+                            theme,
+                            number: l.number,
+                            pull: p,
+                            size: 13,
+                          ),
+                          if (more > 0)
+                            Text('+$more', style: theme.code(t.textMuted)),
+                        ],
                       ),
                     )
                   : Row(
@@ -410,6 +432,8 @@ class _PullChipState extends State<PullChip> {
                         ),
                         if (checks != null)
                           Icon(checks.icon, size: 15, color: checks.color),
+                        if (more > 0)
+                          Text(' +$more', style: theme.code(t.textMuted)),
                       ],
                     ),
             ),
