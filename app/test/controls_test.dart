@@ -409,6 +409,40 @@ void main() {
     expect(presses, 2);
   });
 
+  testWidgets('WideButton’s corners are its height’s share; a PillLink '
+      'without its tap is faded', (tester) async {
+    await tester.pumpWidget(
+      _app(
+        Tokens.light,
+        Column(
+          children: [
+            WideButton(label: 'New chat', onPressed: () {}),
+            const PillLink('NUS-142', onTap: null),
+          ],
+        ),
+      ),
+    );
+    final wide = tester.widget<Container>(
+      find
+          .descendant(
+            of: find.byType(WideButton),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    expect(
+      (wide.decoration! as BoxDecoration).borderRadius,
+      BorderRadius.circular(ControlSize.radiusFor(WideButton.height)),
+    );
+    expect(
+      find.descendant(
+        of: find.byType(PillLink),
+        matching: find.byType(Opacity),
+      ),
+      findsOne,
+    );
+  });
+
   testWidgets('Enter and Space press a focused control', (tester) async {
     var presses = 0;
     await tester.pumpWidget(

@@ -106,7 +106,7 @@ A control's size comes from where it sits, never from the call: a `ControlScale`
 | `regular` | 30 | 13 | 12 | 14 | — | everywhere else: a bar, a card, a settings row, a form; every text field |
 | `large` | 34 | 14 | 16 | 15 | 80 | a dialog's actions (`nushiDialog` sets it), a view's main call to action |
 
-`Button`, `MenuButton`, `SplitButton`, `SendButton`, a filled `MenuField`, `Segmented` and `LineSlider` follow it; corners scale with the height. These keep their own sizes, set by what they sit in: the composer's pills and round buttons (32), a tool row's small pills (24), `IconTap` (26; 32 in a header), `WideButton` (38), menu rows (30), settings rows (46). A new dense place says `ControlScale.compact`, or its buttons grow.
+`Button`, `MenuButton`, `SplitButton`, `SendButton`, a filled `MenuField`, `Segmented` and `LineSlider` follow it; corners scale with the height. These keep their own sizes, set by what they sit in: the composer's pills and round buttons (32), a tool row's small pills (24), `IconTap` (26; 32 in a header), `WideButton` (38, its corners its height's share all the same: `ControlSize.radiusFor`), menu rows (30), settings rows (46). A new dense place says `ControlScale.compact`, or its buttons grow.
 
 ### Motion (`motion.dart`, ADR [0102](adr/0102-loops-run-on-a-pulse-only-in-front.md))
 
@@ -171,7 +171,7 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 - **Settings rows**: label left (13, `text`), an optional description under it (12, `textMuted`), the control at the group's right edge; a group is a card with hairlines between rows. Copy is short (the owner's rule).
 - **Headers and bars**: 56 high, a hairline under, no fill; the title semibold 14 at the gutter, icon buttons 32 square at the end, 12 from the edge; controls `barGap` apart, groups `groupGap`. Empty space in a header moves the window (ADR [0080](adr/0080-no-title-bar.md)). Nothing a button opens changes the width of the bar it's in.
 - **Hover and focus**: under the pointer a control takes `hover` over its fill (a filled primary goes a shade lighter), pressed `pressed`; focused from the keyboard it wears the 2-point ring in `focus` (`focusRing`); on the accent's fill (a primary button, `SplitButton`, `SendButton`, a primary `RoundButton`) the ring sits just outside it, with a 2-point line of `onAccent` at its edge (`accentFocusRing`), since a light set's `focus` is within a shade of `accent`. A row (`Tap`) shows focus as the hover tint. A toggle that's on is `lit` or `held`, never a different shape.
-- **Disabled**: a control without its action is drawn at 45% (`_faded`), with no hand and no focus; an `IconTap` greys its icon instead (Claude desktop's Back with nowhere to go); a field's border goes to `line`.
+- **Disabled**: a control without its action is drawn at 45% (`_faded`; `PillLink` too), with no hand and no focus; an `IconTap` greys its icon instead (Claude desktop's Back with nowhere to go); a field's border goes to `line`.
 - **Words**: the glossary's (`docs/glossary.md`); sentence case; a shortcut in a tooltip via `withKey`.
 
 ## The owner's rules
@@ -189,6 +189,4 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 
 Follow-ups, found while writing this page and drawing the gallery. Two small bugs it showed were fixed with it: a disabled `IconTap(danger:)` or `IconTap(lit:)` kept its fill and lost its mark, and a toast's action was all but invisible on a light set.
 
-- **`WideButton` keeps `control` corners** at 38 high, where `ControlSize`'s share of the height would give it 11.7.
-- **`PillLink` has no disabled look**: without its tap it's drawn as at rest.
 - **Two kinds of toast**: most are a plain snack bar, with Material's `SnackBarAction` where there's an action (the side chat's Go to chat); the archived side chat's is the app's own row of compact buttons (Undo, ×).

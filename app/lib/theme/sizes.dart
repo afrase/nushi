@@ -45,7 +45,12 @@ enum ControlSize {
   /// Its corners: [NushiTheme.control] at the compact height, the same
   /// share of the height at the others, so every size has one shape and a
   /// rounder theme rounds them all (ADR 0110).
-  double get radius => NushiTheme.control * height / compact.height;
+  double get radius => radiusFor(height);
+
+  /// The corners of a control [height] high by the same rule, for one
+  /// that keeps its own height (`WideButton`'s 38).
+  static double radiusFor(double height) =>
+      NushiTheme.control * height / compact.height;
 
   /// The size the controls under [context] take: the nearest
   /// [ControlScale]'s, else [regular].

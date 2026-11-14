@@ -362,24 +362,30 @@ class PillLink extends StatelessWidget {
     return Pressable(
       onTap: onTap,
       tooltip: tooltip,
-      builder: (context, look) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: room / 2, vertical: 2),
-        decoration: BoxDecoration(
-          color: look.hover
-              ? Color.alphaBlend(_tint(t, look), t.accentSoft)
-              : t.accentSoft,
-          borderRadius: BorderRadius.circular(NushiTheme.pill),
-        ),
-        foregroundDecoration: focusRing(
-          t,
-          look,
-          radius: BorderRadius.circular(NushiTheme.pill),
-        ),
-        child: Text(
-          text,
-          style: mono
-              ? theme.code(t.accentInk, size: 11.5)
-              : theme.ui(t.accentInk, size: 12, weight: FontWeight.w500),
+      builder: (context, look) => _faded(
+        look,
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: room / 2,
+            vertical: 2,
+          ),
+          decoration: BoxDecoration(
+            color: look.hover
+                ? Color.alphaBlend(_tint(t, look), t.accentSoft)
+                : t.accentSoft,
+            borderRadius: BorderRadius.circular(NushiTheme.pill),
+          ),
+          foregroundDecoration: focusRing(
+            t,
+            look,
+            radius: BorderRadius.circular(NushiTheme.pill),
+          ),
+          child: Text(
+            text,
+            style: mono
+                ? theme.code(t.accentInk, size: 11.5)
+                : theme.ui(t.accentInk, size: 12, weight: FontWeight.w500),
+          ),
         ),
       ),
     );

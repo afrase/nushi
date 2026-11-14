@@ -207,6 +207,8 @@ class WideButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    // Its corners are its height's share, as every control's (ADR 0122).
+    final corners = BorderRadius.circular(ControlSize.radiusFor(height));
     return Pressable(
       onTap: onPressed,
       builder: (context, look) => _faded(
@@ -218,9 +220,9 @@ class WideButton extends StatelessWidget {
             color: look.hover
                 ? Color.alphaBlend(_tint(t, look), t.raised)
                 : t.raised,
-            borderRadius: BorderRadius.circular(NushiTheme.control),
+            borderRadius: corners,
           ),
-          foregroundDecoration: focusRing(t, look),
+          foregroundDecoration: focusRing(t, look, radius: corners),
           child: Row(
             children: [
               if (icon != null) ...[
