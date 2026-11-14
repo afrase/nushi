@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/plain_tabs.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
@@ -26,19 +27,22 @@ Decoration? _ring(WidgetTester tester, String label) => tester
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('as high as a form’s segmented control, its labels as far '
+  testWidgets('as high as a compact segmented control, its labels as far '
       'in', (tester) async {
     // It measured exactly as the pill did while the chat header's fold
     // was built around it (ADR 0071); the header has its own control now
     // (ADR 0111), whose picked label is semibold, so only the height and
-    // the first label's place are held.
+    // the first label's place are held. A form's own is regular now, a
+    // step taller (ADR 0122).
     viewport(tester, const Size(800, 300));
     await tester.pumpWidget(
       _themed(
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Segmented(value: 0, segments: _labels, onChanged: (_) {}),
+            ControlScale.compact(
+              child: Segmented(value: 0, segments: _labels, onChanged: (_) {}),
+            ),
             _tabs((_) {}),
           ],
         ),

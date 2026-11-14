@@ -299,6 +299,11 @@ class _FormState extends State<_Form> {
                     minLines: 1,
                     maxLines: 6,
                     style: mono,
+                    // An example, as the command's; its line holds the
+                    // field at a regular control's height (ADR 0122).
+                    decoration: const InputDecoration(
+                      hintText: '@playwright/mcp@latest',
+                    ),
                   ),
                   label('Environment variables'),
                   PairRows(_env, 'NAME', () => setState(() {})),
@@ -345,23 +350,28 @@ class _FormState extends State<_Form> {
       // The switch to JSON at the left, under the fields; Cancel and Add
       // at the right.
       actions: [
-        SizedBox(
-          width: 520,
-          child: Row(
-            children: [
-              Button(
-                label: _asJson ? 'Edit in the form' : 'Edit as JSON',
-                onPressed: _toggleJson,
-              ),
-              const Spacer(),
-              Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
-              const SizedBox(width: 8),
-              Button(
-                label: _saving ? 'Saving…' : (_editing ? 'Save' : 'Add'),
-                kind: ButtonKind.primary,
-                onPressed: _saving ? null : _save,
-              ),
-            ],
+        ControlScale.large(
+          child: SizedBox(
+            width: 520,
+            child: Row(
+              children: [
+                Button(
+                  label: _asJson ? 'Edit in the form' : 'Edit as JSON',
+                  onPressed: _toggleJson,
+                ),
+                const Spacer(),
+                Button(
+                  label: 'Cancel',
+                  onPressed: () => Navigator.pop(context),
+                ),
+                const SizedBox(width: 8),
+                Button(
+                  label: _saving ? 'Saving…' : (_editing ? 'Save' : 'Add'),
+                  kind: ButtonKind.primary,
+                  onPressed: _saving ? null : _save,
+                ),
+              ],
+            ),
           ),
         ),
       ],

@@ -232,6 +232,7 @@ class _RenameDialogState extends State<_RenameDialog> {
     content: TextField(
       controller: _text,
       autofocus: true,
+      style: phoneText(context),
       onSubmitted: (v) => Navigator.pop(context, v),
     ),
     actions: [

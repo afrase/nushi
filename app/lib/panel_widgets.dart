@@ -50,16 +50,19 @@ class PanelWidgets extends StatelessWidget {
         ...saved.where(byTitle.containsKey),
         ...byTitle.keys.where((k) => !saved.contains(k)),
       ];
-      return CardList(
-        // Each card brings the gap under it.
-        padding: const EdgeInsets.only(top: PanelType.inset),
-        // A widget asked for is there to scroll to.
-        buildAll: true,
-        onReorder: (from, to) =>
-            widgetOrder.value = reordered(saved, titles, from, to),
-        children: [
-          for (final (i, title) in titles.indexed) byTitle[title]!.at(i),
-        ],
+      // The details panel is dense: its controls are compact (ADR 0122).
+      return ControlScale.compact(
+        child: CardList(
+          // Each card brings the gap under it.
+          padding: const EdgeInsets.only(top: PanelType.inset),
+          // A widget asked for is there to scroll to.
+          buildAll: true,
+          onReorder: (from, to) =>
+              widgetOrder.value = reordered(saved, titles, from, to),
+          children: [
+            for (final (i, title) in titles.indexed) byTitle[title]!.at(i),
+          ],
+        ),
       );
     },
   );

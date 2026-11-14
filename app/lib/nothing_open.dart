@@ -83,24 +83,27 @@ class _NothingOpenState extends State<NothingOpen> {
                 onTap: () => d.openSettings(section: SettingsSection.agents),
               )
             else ...[
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.center,
-                children: [
-                  Button(
-                    label: 'New chat',
-                    kind: ButtonKind.primary,
-                    icon: Icons.add,
-                    hint: Act.newChat.shortcut,
-                    onPressed: () => newChat(context, d, ''),
-                  ),
-                  Button(
-                    label: 'Open a folder…',
-                    icon: Icons.folder_open_outlined,
-                    onPressed: _openFolder,
-                  ),
-                ],
+              // The view's main call to action: large (ADR 0122).
+              ControlScale.large(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    Button(
+                      label: 'New chat',
+                      kind: ButtonKind.primary,
+                      icon: Icons.add,
+                      hint: Act.newChat.shortcut,
+                      onPressed: () => newChat(context, d, ''),
+                    ),
+                    Button(
+                      label: 'Open a folder…',
+                      icon: Icons.folder_open_outlined,
+                      onPressed: _openFolder,
+                    ),
+                  ],
+                ),
               ),
               if (recent.isNotEmpty) ...[
                 const SizedBox(height: 22),

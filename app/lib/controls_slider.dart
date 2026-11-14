@@ -43,7 +43,7 @@ class LineSlider extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8),
         ),
         child: SizedBox(
-          height: controlHeight,
+          height: ControlSize.of(context).height,
           child: Slider(value: value.clamp(0, 1), onChanged: onChanged),
         ),
       ),

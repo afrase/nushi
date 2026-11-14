@@ -46,6 +46,7 @@ class MenuField extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final compact = this.compact || pill;
+    final size = ControlSize.of(context);
     final flush = compact && !pill && FlushMenus.of(context);
     final caret = Icon(
       Icons.keyboard_arrow_down,
@@ -53,7 +54,11 @@ class MenuField extends StatelessWidget {
       color: t.textSecondary,
     );
     final corners = BorderRadius.circular(
-      pill ? NushiTheme.pill : NushiTheme.control,
+      pill
+          ? NushiTheme.pill
+          : compact
+          ? NushiTheme.control
+          : size.radius,
     );
     return Menu(
       entries: entries,
@@ -71,7 +76,7 @@ class MenuField extends StatelessWidget {
                 child: DefaultTextStyle(
                   style: compact
                       ? theme.ui(t.textSecondary, size: pill ? 12.5 : 12)
-                      : theme.ui(t.text),
+                      : theme.ui(t.text, size: size.text),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   child: label,
@@ -98,12 +103,12 @@ class MenuField extends StatelessWidget {
                   ? PillButton.height
                   : compact
                   ? null
-                  : controlHeight,
+                  : size.height,
               padding: pill
                   ? const EdgeInsets.fromLTRB(12, 0, 8, 0)
                   : compact
                   ? EdgeInsets.fromLTRB(5, 1, flush ? 0 : 3, 1)
-                  : const EdgeInsets.fromLTRB(8, 0, 5, 0),
+                  : EdgeInsets.fromLTRB(size.pad - 2, 0, size.pad - 5, 0),
               decoration: BoxDecoration(
                 color: compact
                     ? (look.hover ? _tint(t, look) : null)

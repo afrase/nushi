@@ -28,8 +28,10 @@ part 'controls_small.dart';
 // ([Segmented]) and `controls_pills` ([PillButton] and [RoundButton], a
 // card's own buttons); what they share is here.
 
-/// A button's and a field's height.
-const controlHeight = 26.0;
+// A control's height, padding, type and corners come from its place: a
+// [ControlScale] above it says [ControlSize.compact] or
+// [ControlSize.large], and without one it's [ControlSize.regular]
+// (`theme/sizes.dart`, ADR 0122).
 
 /// A tooltip's words with a [key] after them ("Forward ⌘]"), as Claude
 /// desktop's: no brackets, the key in a fainter grey ([tooltip] draws it).

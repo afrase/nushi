@@ -248,7 +248,10 @@ class HistoryRowView extends StatelessWidget {
                 : null,
           );
     final (name, parent) = r.folder.isEmpty ? ('', '') : folderParts(r.folder);
-    final clear = Button(label: 'Clear', onPressed: onClear);
+    // A table's row: its button is compact (ADR 0122).
+    final clear = ControlScale.compact(
+      child: Button(label: 'Clear', onPressed: onClear),
+    );
     final cells = historyCells(
       Padding(padding: const EdgeInsets.only(left: 4), child: title),
       [

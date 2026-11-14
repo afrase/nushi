@@ -258,9 +258,13 @@ class _FindBarState extends State<FindBar> {
                   autofocus: true,
                   style: theme.ui(t.text),
                   onChanged: (q) => f.query = q,
+                  // A line of the bar, no box: its own padding and hint,
+                  // not a field's, so the bar stays [FindBar.height].
                   decoration: InputDecoration(
                     hintText: widget.hint,
+                    hintStyle: theme.ui(t.textMuted),
                     isDense: true,
+                    contentPadding: const EdgeInsets.all(8),
                     border: InputBorder.none,
                   ),
                 ),
