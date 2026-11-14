@@ -512,6 +512,50 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Ends a side chat as its × does (ADR 0115): one with messages is kept
+  /// as KeepSideChat keeps it (a running turn is stopped first), but
+  /// archived, titled "Side chat of <the chat's title>"; one without ends
+  /// as with CloseSideChat. Refused when its agent can't reopen sessions.
+  /// (API 117)
+  Future<nushiv1nushi.ArchiveSideChatResponse> archiveSideChat(
+    nushiv1nushi.ArchiveSideChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.archiveSideChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Undoes ArchiveSideChat: the archived chat becomes its chat's side chat
+  /// again, with its transcript, mode and picks (the chat's agent forks its
+  /// session), and is removed (a removed event). Refused when the chat it
+  /// came from was deleted or archived, or has a side chat open, and once
+  /// the archived chat was unarchived. (API 117)
+  Future<nushiv1nushi.RestoreSideChatResponse> restoreSideChat(
+    nushiv1nushi.RestoreSideChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.restoreSideChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Sets the chat's title; it wins over the agent's. An empty title goes
   /// back to the agent's.
   Future<nushiv1nushi.RenameChatResponse> renameChat(

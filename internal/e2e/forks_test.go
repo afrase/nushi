@@ -136,3 +136,50 @@ func TestKeepASideChat(t *testing.T) {
 	a.send(kept, "more")
 	a.waitFor("the kept chat's reply", turnEnded(kept))
 }
+
+// A side chat's × archives it, and Undo brings it back beside its chat:
+// its conversation as it was (the agent knows it too), the archived chat
+// gone, its session with it.
+func TestArchiveASideChatAndUndo(t *testing.T) {
+	ctx := context.Background()
+	history := &acptest.History{}
+	d := startDaemon(t, t.TempDir(), history)
+	a := open(t, d)
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.send(id, "hello")
+	a.waitFor("the reply", turnEnded(id))
+	side := must(a.c.ForkChat(ctx, connect.NewRequest(&nushiv1.ForkChatRequest{ChatId: id}))).ChatId
+	a.send(side, "aside")
+	a.waitFor("the side chat's reply", turnEnded(side))
+
+	archived := must(a.c.ArchiveSideChat(ctx, connect.NewRequest(&nushiv1.ArchiveSideChatRequest{ChatId: side}))).ChatId
+	snap := a.get(archived)
+	if !snap.Chat.Archived || snap.Chat.Title != "Side chat of hello" {
+		t.Errorf("archived %v, title %q", snap.Chat.Archived, snap.Chat.Title)
+	}
+	if !history.Has(side) {
+		t.Fatal("the archived side chat's session was deleted")
+	}
+
+	back := must(a.c.RestoreSideChat(ctx, connect.NewRequest(&nushiv1.RestoreSideChatRequest{ChatId: archived}))).ChatId
+	if _, err := a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: archived})); err == nil {
+		t.Error("the archived chat stayed")
+	}
+	if got, want := transcript(a.get(back).Items), "USER_MESSAGE:aside:\nAGENT_MESSAGE:You said: aside:"; got != want {
+		t.Errorf("the side chat brought back:\n%s\nwant:\n%s", got, want)
+	}
+	until(t, "the archived session deleted", func() bool { return !history.Has(side) })
+	a.send(back, "more")
+	a.waitFor("the side chat's reply", turnEnded(back))
+
+	// Its chat's side chat is open now: another Undo has nothing to apply to.
+	if _, err := a.c.RestoreSideChat(ctx, connect.NewRequest(&nushiv1.RestoreSideChatRequest{ChatId: archived})); err == nil {
+		t.Error("brought back twice")
+	}
+	// One without messages just ends.
+	must(a.c.CloseSideChat(ctx, connect.NewRequest(&nushiv1.CloseSideChatRequest{ChatId: back})))
+	empty := must(a.c.ForkChat(ctx, connect.NewRequest(&nushiv1.ForkChatRequest{ChatId: id}))).ChatId
+	if got := must(a.c.ArchiveSideChat(ctx, connect.NewRequest(&nushiv1.ArchiveSideChatRequest{ChatId: empty}))).ChatId; got != "" {
+		t.Errorf("an empty side chat was archived as %s", got)
+	}
+}
