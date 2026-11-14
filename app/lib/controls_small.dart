@@ -148,7 +148,10 @@ class IconTap extends StatelessWidget {
       builder: (context, look) {
         // Off reads as off (Claude desktop's Back with nowhere to go);
         // under the pointer one that isn't comes up to the text's color.
-        final tint = !look.enabled
+        // A filled one (danger, lit) keeps its ink and fades as a filled
+        // button does, so a red Stop that can't be pressed keeps its mark.
+        final filled = danger || lit;
+        final tint = !look.enabled && !filled
             ? t.textMuted.withValues(alpha: 0.4)
             : danger
             ? t.base
@@ -157,7 +160,7 @@ class IconTap extends StatelessWidget {
             : look.hover && color == null
             ? t.text
             : color ?? t.textSecondary;
-        return Container(
+        final button = Container(
           padding: EdgeInsets.all(padding),
           decoration: BoxDecoration(
             color: danger
@@ -181,6 +184,7 @@ class IconTap extends StatelessWidget {
               line?.view(size: size, color: tint) ??
               Icon(icon, size: size, color: tint),
         );
+        return filled ? _faded(look, button) : button;
       },
     );
   }
