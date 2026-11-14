@@ -71,6 +71,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ForkAsChatRequest request);
   $async.Future<$0.KeepSideChatResponse> keepSideChat(
       $pb.ServerContext ctx, $0.KeepSideChatRequest request);
+  $async.Future<$0.ArchiveSideChatResponse> archiveSideChat(
+      $pb.ServerContext ctx, $0.ArchiveSideChatRequest request);
+  $async.Future<$0.RestoreSideChatResponse> restoreSideChat(
+      $pb.ServerContext ctx, $0.RestoreSideChatRequest request);
   $async.Future<$0.RenameChatResponse> renameChat(
       $pb.ServerContext ctx, $0.RenameChatRequest request);
   $async.Future<$0.PinChatsResponse> pinChats(
@@ -374,6 +378,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.ForkAsChatRequest();
       case 'KeepSideChat':
         return $0.KeepSideChatRequest();
+      case 'ArchiveSideChat':
+        return $0.ArchiveSideChatRequest();
+      case 'RestoreSideChat':
+        return $0.RestoreSideChatRequest();
       case 'RenameChat':
         return $0.RenameChatRequest();
       case 'PinChats':
@@ -683,6 +691,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return forkAsChat(ctx, request as $0.ForkAsChatRequest);
       case 'KeepSideChat':
         return keepSideChat(ctx, request as $0.KeepSideChatRequest);
+      case 'ArchiveSideChat':
+        return archiveSideChat(ctx, request as $0.ArchiveSideChatRequest);
+      case 'RestoreSideChat':
+        return restoreSideChat(ctx, request as $0.RestoreSideChatRequest);
       case 'RenameChat':
         return renameChat(ctx, request as $0.RenameChatRequest);
       case 'PinChats':

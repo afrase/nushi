@@ -14,10 +14,13 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 /// The app at [size] on chat c, with a side chat open: [talked], one with
-/// a question and its answer in it; else an empty one.
+/// a question and its answer in it; else an empty one. With [old], on a
+/// daemon older than [archiveSideApi], whose × deletes a side chat (the
+/// archive and its toast: side_archive_test.dart).
 Future<(Daemon, FakeDaemon, ChatState)> _app(
   WidgetTester tester, {
   bool talked = true,
+  bool old = false,
   Size size = const Size(1400, 800),
 }) async {
   viewport(tester, size);
@@ -55,6 +58,8 @@ Future<(Daemon, FakeDaemon, ChatState)> _app(
     ..sides['s'] = side
     ..chats['c']!.side.value = side;
   await tester.pumpAndSettle();
+  // Only what the × does depends on it.
+  if (old) d.daemonApi = archiveSideApi - 1;
   return (d, fake, side);
 }
 
@@ -105,18 +110,19 @@ final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('an empty side chat ends at once by its ×', (tester) async {
-    final (d, fake, _) = await _app(tester, talked: false);
+  testWidgets('an older daemon: an empty side chat ends at once by its ×', (
+    tester,
+  ) async {
+    final (d, fake, _) = await _app(tester, talked: false, old: true);
     await _close(tester);
     expect(_dialog, findsNothing);
     _ended(d, fake);
     await closeView(tester, d);
   }, variant: _mac);
 
-  testWidgets('one with messages asks first; Cancel and Esc keep it', (
-    tester,
-  ) async {
-    final (d, fake, side) = await _app(tester);
+  testWidgets('an older daemon: one with messages asks first; Cancel and '
+      'Esc keep it', (tester) async {
+    final (d, fake, side) = await _app(tester, old: true);
     await _close(tester);
     expect(_dialog, findsOne);
     expect(
@@ -147,12 +153,12 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
-  testWidgets('End and ⏎ end it', (tester) async {
+  testWidgets('an older daemon: End and ⏎ end it', (tester) async {
     for (final end in [
       () => tester.tap(find.text('End')),
       () => tester.sendKeyEvent(LogicalKeyboardKey.enter),
     ]) {
-      final (d, fake, side) = await _app(tester);
+      final (d, fake, side) = await _app(tester, old: true);
       await _close(tester);
       expect(_dialog, findsOne);
       _open(d, fake, side);
@@ -187,9 +193,6 @@ void main() {
       );
       expect(find.text('And the fragment?'), findsOne); // the side's box
     }
-    // × still asks.
-    await _close(tester);
-    expect(_dialog, findsOne);
     await closeView(tester, d);
   }, variant: _mac);
 
@@ -329,8 +332,10 @@ void main() {
       ('wide', const Size(1700, 900)),
       ('narrow', const Size(720, 800)),
     ]) {
-      testWidgets('the dialog, $what ($name)', (tester) async {
-        final (d, _, _) = await _app(tester, size: size);
+      testWidgets('the dialog of an older daemon, $what ($name)', (
+        tester,
+      ) async {
+        final (d, _, _) = await _app(tester, size: size, old: true);
         tester.platformDispatcher.platformBrightnessTestValue = brightness;
         addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
         await _close(tester);

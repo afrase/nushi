@@ -6030,6 +6030,246 @@ class CloseSideChatResponse extends $pb.GeneratedMessage {
   static CloseSideChatResponse? _defaultInstance;
 }
 
+class ArchiveSideChatRequest extends $pb.GeneratedMessage {
+  factory ArchiveSideChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = ArchiveSideChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  ArchiveSideChatRequest._();
+
+  factory ArchiveSideChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArchiveSideChatRequest()..mergeFromBuffer(data, registry);
+  factory ArchiveSideChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArchiveSideChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ArchiveSideChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ArchiveSideChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArchiveSideChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArchiveSideChatRequest copyWith(
+          void Function(ArchiveSideChatRequest) updates) =>
+      super.copyWith((message) => updates(message as ArchiveSideChatRequest))
+          as ArchiveSideChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ArchiveSideChatRequest() / ArchiveSideChatRequest.new instead')
+  static ArchiveSideChatRequest create() => ArchiveSideChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ArchiveSideChatRequest._();
+  @$core.override
+  ArchiveSideChatRequest createEmptyInstance() => ArchiveSideChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ArchiveSideChatRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ArchiveSideChatRequest>(
+          ArchiveSideChatRequest.$_createMessage);
+  static ArchiveSideChatRequest? _defaultInstance;
+
+  /// The side chat's id.
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class ArchiveSideChatResponse extends $pb.GeneratedMessage {
+  factory ArchiveSideChatResponse({
+    $core.String? chatId,
+  }) {
+    final result = ArchiveSideChatResponse._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  ArchiveSideChatResponse._();
+
+  factory ArchiveSideChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArchiveSideChatResponse()..mergeFromBuffer(data, registry);
+  factory ArchiveSideChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArchiveSideChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ArchiveSideChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ArchiveSideChatResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArchiveSideChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArchiveSideChatResponse copyWith(
+          void Function(ArchiveSideChatResponse) updates) =>
+      super.copyWith((message) => updates(message as ArchiveSideChatResponse))
+          as ArchiveSideChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ArchiveSideChatResponse() / ArchiveSideChatResponse.new instead')
+  static ArchiveSideChatResponse create() => ArchiveSideChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ArchiveSideChatResponse._();
+  @$core.override
+  ArchiveSideChatResponse createEmptyInstance() => ArchiveSideChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ArchiveSideChatResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ArchiveSideChatResponse>(
+          ArchiveSideChatResponse.$_createMessage);
+  static ArchiveSideChatResponse? _defaultInstance;
+
+  /// The archived chat's id; "" when nothing was kept (it had no messages).
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class RestoreSideChatRequest extends $pb.GeneratedMessage {
+  factory RestoreSideChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = RestoreSideChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  RestoreSideChatRequest._();
+
+  factory RestoreSideChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestoreSideChatRequest()..mergeFromBuffer(data, registry);
+  factory RestoreSideChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestoreSideChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RestoreSideChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RestoreSideChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestoreSideChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestoreSideChatRequest copyWith(
+          void Function(RestoreSideChatRequest) updates) =>
+      super.copyWith((message) => updates(message as RestoreSideChatRequest))
+          as RestoreSideChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RestoreSideChatRequest() / RestoreSideChatRequest.new instead')
+  static RestoreSideChatRequest create() => RestoreSideChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RestoreSideChatRequest._();
+  @$core.override
+  RestoreSideChatRequest createEmptyInstance() => RestoreSideChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RestoreSideChatRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RestoreSideChatRequest>(
+          RestoreSideChatRequest.$_createMessage);
+  static RestoreSideChatRequest? _defaultInstance;
+
+  /// The archived side chat's id (ArchiveSideChatResponse.chat_id).
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class RestoreSideChatResponse extends $pb.GeneratedMessage {
+  factory RestoreSideChatResponse({
+    $core.String? chatId,
+  }) {
+    final result = RestoreSideChatResponse._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  RestoreSideChatResponse._();
+
+  factory RestoreSideChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestoreSideChatResponse()..mergeFromBuffer(data, registry);
+  factory RestoreSideChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestoreSideChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RestoreSideChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RestoreSideChatResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestoreSideChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestoreSideChatResponse copyWith(
+          void Function(RestoreSideChatResponse) updates) =>
+      super.copyWith((message) => updates(message as RestoreSideChatResponse))
+          as RestoreSideChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RestoreSideChatResponse() / RestoreSideChatResponse.new instead')
+  static RestoreSideChatResponse create() => RestoreSideChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RestoreSideChatResponse._();
+  @$core.override
+  RestoreSideChatResponse createEmptyInstance() => RestoreSideChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RestoreSideChatResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RestoreSideChatResponse>(
+          RestoreSideChatResponse.$_createMessage);
+  static RestoreSideChatResponse? _defaultInstance;
+
+  /// The side chat's id.
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
 class RenameChatRequest extends $pb.GeneratedMessage {
   factory RenameChatRequest({
     $core.String? chatId,
@@ -32513,6 +32753,26 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, KeepSideChatRequest request) =>
       _client.invoke<KeepSideChatResponse>(
           ctx, 'NushiService', 'KeepSideChat', request, KeepSideChatResponse());
+
+  /// Ends a side chat as its × does (ADR 0115): one with messages is kept
+  /// as KeepSideChat keeps it (a running turn is stopped first), but
+  /// archived, titled "Side chat of <the chat's title>"; one without ends
+  /// as with CloseSideChat. Refused when its agent can't reopen sessions.
+  /// (API 117)
+  $async.Future<ArchiveSideChatResponse> archiveSideChat(
+          $pb.ClientContext? ctx, ArchiveSideChatRequest request) =>
+      _client.invoke<ArchiveSideChatResponse>(ctx, 'NushiService',
+          'ArchiveSideChat', request, ArchiveSideChatResponse());
+
+  /// Undoes ArchiveSideChat: the archived chat becomes its chat's side chat
+  /// again, with its transcript, mode and picks (the chat's agent forks its
+  /// session), and is removed (a removed event). Refused when the chat it
+  /// came from was deleted or archived, or has a side chat open, and once
+  /// the archived chat was unarchived. (API 117)
+  $async.Future<RestoreSideChatResponse> restoreSideChat(
+          $pb.ClientContext? ctx, RestoreSideChatRequest request) =>
+      _client.invoke<RestoreSideChatResponse>(ctx, 'NushiService',
+          'RestoreSideChat', request, RestoreSideChatResponse());
 
   /// Sets the chat's title; it wins over the agent's. An empty title goes
   /// back to the agent's.

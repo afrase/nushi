@@ -108,6 +108,18 @@ service NushiService {
   // kept; the side chat ends (a removed event) without its session being
   // deleted. Refused during its turn. (API 94)
   rpc KeepSideChat(KeepSideChatRequest) returns (KeepSideChatResponse);
+  // Ends a side chat as its × does (ADR 0115): one with messages is kept
+  // as KeepSideChat keeps it (a running turn is stopped first), but
+  // archived, titled "Side chat of <the chat's title>"; one without ends
+  // as with CloseSideChat. Refused when its agent can't reopen sessions.
+  // (API 117)
+  rpc ArchiveSideChat(ArchiveSideChatRequest) returns (ArchiveSideChatResponse);
+  // Undoes ArchiveSideChat: the archived chat becomes its chat's side chat
+  // again, with its transcript, mode and picks (the chat's agent forks its
+  // session), and is removed (a removed event). Refused when the chat it
+  // came from was deleted or archived, or has a side chat open, and once
+  // the archived chat was unarchived. (API 117)
+  rpc RestoreSideChat(RestoreSideChatRequest) returns (RestoreSideChatResponse);
   // Sets the chat's title; it wins over the agent's. An empty title goes
   // back to the agent's.
   rpc RenameChat(RenameChatRequest) returns (RenameChatResponse);
@@ -1178,6 +1190,26 @@ message CloseSideChatRequest {
 }
 
 message CloseSideChatResponse {}
+
+message ArchiveSideChatRequest {
+  // The side chat's id.
+  string chat_id = 1;
+}
+
+message ArchiveSideChatResponse {
+  // The archived chat's id; "" when nothing was kept (it had no messages).
+  string chat_id = 1;
+}
+
+message RestoreSideChatRequest {
+  // The archived side chat's id (ArchiveSideChatResponse.chat_id).
+  string chat_id = 1;
+}
+
+message RestoreSideChatResponse {
+  // The side chat's id.
+  string chat_id = 1;
+}
 
 message RenameChatRequest {
   string chat_id = 1;

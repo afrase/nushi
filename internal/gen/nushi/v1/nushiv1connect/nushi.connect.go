@@ -94,6 +94,12 @@ const (
 	// NushiServiceKeepSideChatProcedure is the fully-qualified name of the NushiService's KeepSideChat
 	// RPC.
 	NushiServiceKeepSideChatProcedure = "/nushi.v1.NushiService/KeepSideChat"
+	// NushiServiceArchiveSideChatProcedure is the fully-qualified name of the NushiService's
+	// ArchiveSideChat RPC.
+	NushiServiceArchiveSideChatProcedure = "/nushi.v1.NushiService/ArchiveSideChat"
+	// NushiServiceRestoreSideChatProcedure is the fully-qualified name of the NushiService's
+	// RestoreSideChat RPC.
+	NushiServiceRestoreSideChatProcedure = "/nushi.v1.NushiService/RestoreSideChat"
 	// NushiServiceRenameChatProcedure is the fully-qualified name of the NushiService's RenameChat RPC.
 	NushiServiceRenameChatProcedure = "/nushi.v1.NushiService/RenameChat"
 	// NushiServicePinChatsProcedure is the fully-qualified name of the NushiService's PinChats RPC.
@@ -552,6 +558,18 @@ type NushiServiceClient interface {
 	// kept; the side chat ends (a removed event) without its session being
 	// deleted. Refused during its turn. (API 94)
 	KeepSideChat(context.Context, *connect.Request[v1.KeepSideChatRequest]) (*connect.Response[v1.KeepSideChatResponse], error)
+	// Ends a side chat as its × does (ADR 0115): one with messages is kept
+	// as KeepSideChat keeps it (a running turn is stopped first), but
+	// archived, titled "Side chat of <the chat's title>"; one without ends
+	// as with CloseSideChat. Refused when its agent can't reopen sessions.
+	// (API 117)
+	ArchiveSideChat(context.Context, *connect.Request[v1.ArchiveSideChatRequest]) (*connect.Response[v1.ArchiveSideChatResponse], error)
+	// Undoes ArchiveSideChat: the archived chat becomes its chat's side chat
+	// again, with its transcript, mode and picks (the chat's agent forks its
+	// session), and is removed (a removed event). Refused when the chat it
+	// came from was deleted or archived, or has a side chat open, and once
+	// the archived chat was unarchived. (API 117)
+	RestoreSideChat(context.Context, *connect.Request[v1.RestoreSideChatRequest]) (*connect.Response[v1.RestoreSideChatResponse], error)
 	// Sets the chat's title; it wins over the agent's. An empty title goes
 	// back to the agent's.
 	RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error)
@@ -1104,6 +1122,18 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceKeepSideChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("KeepSideChat")),
+			connect.WithClientOptions(opts...),
+		),
+		archiveSideChat: connect.NewClient[v1.ArchiveSideChatRequest, v1.ArchiveSideChatResponse](
+			httpClient,
+			baseURL+NushiServiceArchiveSideChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ArchiveSideChat")),
+			connect.WithClientOptions(opts...),
+		),
+		restoreSideChat: connect.NewClient[v1.RestoreSideChatRequest, v1.RestoreSideChatResponse](
+			httpClient,
+			baseURL+NushiServiceRestoreSideChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RestoreSideChat")),
 			connect.WithClientOptions(opts...),
 		),
 		renameChat: connect.NewClient[v1.RenameChatRequest, v1.RenameChatResponse](
@@ -1886,6 +1916,8 @@ type nushiServiceClient struct {
 	closeSideChat           *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
 	forkAsChat              *connect.Client[v1.ForkAsChatRequest, v1.ForkAsChatResponse]
 	keepSideChat            *connect.Client[v1.KeepSideChatRequest, v1.KeepSideChatResponse]
+	archiveSideChat         *connect.Client[v1.ArchiveSideChatRequest, v1.ArchiveSideChatResponse]
+	restoreSideChat         *connect.Client[v1.RestoreSideChatRequest, v1.RestoreSideChatResponse]
 	renameChat              *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
 	pinChats                *connect.Client[v1.PinChatsRequest, v1.PinChatsResponse]
 	setChatColor            *connect.Client[v1.SetChatColorRequest, v1.SetChatColorResponse]
@@ -2136,6 +2168,16 @@ func (c *nushiServiceClient) ForkAsChat(ctx context.Context, req *connect.Reques
 // KeepSideChat calls nushi.v1.NushiService.KeepSideChat.
 func (c *nushiServiceClient) KeepSideChat(ctx context.Context, req *connect.Request[v1.KeepSideChatRequest]) (*connect.Response[v1.KeepSideChatResponse], error) {
 	return c.keepSideChat.CallUnary(ctx, req)
+}
+
+// ArchiveSideChat calls nushi.v1.NushiService.ArchiveSideChat.
+func (c *nushiServiceClient) ArchiveSideChat(ctx context.Context, req *connect.Request[v1.ArchiveSideChatRequest]) (*connect.Response[v1.ArchiveSideChatResponse], error) {
+	return c.archiveSideChat.CallUnary(ctx, req)
+}
+
+// RestoreSideChat calls nushi.v1.NushiService.RestoreSideChat.
+func (c *nushiServiceClient) RestoreSideChat(ctx context.Context, req *connect.Request[v1.RestoreSideChatRequest]) (*connect.Response[v1.RestoreSideChatResponse], error) {
+	return c.restoreSideChat.CallUnary(ctx, req)
 }
 
 // RenameChat calls nushi.v1.NushiService.RenameChat.
@@ -2868,6 +2910,18 @@ type NushiServiceHandler interface {
 	// kept; the side chat ends (a removed event) without its session being
 	// deleted. Refused during its turn. (API 94)
 	KeepSideChat(context.Context, *connect.Request[v1.KeepSideChatRequest]) (*connect.Response[v1.KeepSideChatResponse], error)
+	// Ends a side chat as its × does (ADR 0115): one with messages is kept
+	// as KeepSideChat keeps it (a running turn is stopped first), but
+	// archived, titled "Side chat of <the chat's title>"; one without ends
+	// as with CloseSideChat. Refused when its agent can't reopen sessions.
+	// (API 117)
+	ArchiveSideChat(context.Context, *connect.Request[v1.ArchiveSideChatRequest]) (*connect.Response[v1.ArchiveSideChatResponse], error)
+	// Undoes ArchiveSideChat: the archived chat becomes its chat's side chat
+	// again, with its transcript, mode and picks (the chat's agent forks its
+	// session), and is removed (a removed event). Refused when the chat it
+	// came from was deleted or archived, or has a side chat open, and once
+	// the archived chat was unarchived. (API 117)
+	RestoreSideChat(context.Context, *connect.Request[v1.RestoreSideChatRequest]) (*connect.Response[v1.RestoreSideChatResponse], error)
 	// Sets the chat's title; it wins over the agent's. An empty title goes
 	// back to the agent's.
 	RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error)
@@ -3416,6 +3470,18 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceKeepSideChatProcedure,
 		svc.KeepSideChat,
 		connect.WithSchema(nushiServiceMethods.ByName("KeepSideChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceArchiveSideChatHandler := connect.NewUnaryHandler(
+		NushiServiceArchiveSideChatProcedure,
+		svc.ArchiveSideChat,
+		connect.WithSchema(nushiServiceMethods.ByName("ArchiveSideChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceRestoreSideChatHandler := connect.NewUnaryHandler(
+		NushiServiceRestoreSideChatProcedure,
+		svc.RestoreSideChat,
+		connect.WithSchema(nushiServiceMethods.ByName("RestoreSideChat")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceRenameChatHandler := connect.NewUnaryHandler(
@@ -4220,6 +4286,10 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceForkAsChatHandler.ServeHTTP(w, r)
 		case NushiServiceKeepSideChatProcedure:
 			nushiServiceKeepSideChatHandler.ServeHTTP(w, r)
+		case NushiServiceArchiveSideChatProcedure:
+			nushiServiceArchiveSideChatHandler.ServeHTTP(w, r)
+		case NushiServiceRestoreSideChatProcedure:
+			nushiServiceRestoreSideChatHandler.ServeHTTP(w, r)
 		case NushiServiceRenameChatProcedure:
 			nushiServiceRenameChatHandler.ServeHTTP(w, r)
 		case NushiServicePinChatsProcedure:
@@ -4577,6 +4647,14 @@ func (UnimplementedNushiServiceHandler) ForkAsChat(context.Context, *connect.Req
 
 func (UnimplementedNushiServiceHandler) KeepSideChat(context.Context, *connect.Request[v1.KeepSideChatRequest]) (*connect.Response[v1.KeepSideChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.KeepSideChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ArchiveSideChat(context.Context, *connect.Request[v1.ArchiveSideChatRequest]) (*connect.Response[v1.ArchiveSideChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ArchiveSideChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RestoreSideChat(context.Context, *connect.Request[v1.RestoreSideChatRequest]) (*connect.Response[v1.RestoreSideChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RestoreSideChat is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error) {

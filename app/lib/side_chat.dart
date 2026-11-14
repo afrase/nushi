@@ -9,6 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/side_toast.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
@@ -18,8 +19,8 @@ import 'package:nushi/widgets.dart';
 /// A side chat: a forked session beside the chat, which knows the
 /// conversation so far but doesn't add to it; you can go back and forth in
 /// it. ⇧⌘B or its − hides it ([toggleSide]), alive all the same; its ×
-/// ends it ([endSide]), the only way to, unless Keep as chat makes it a
-/// chat of its own ([keepSide]).
+/// ends it ([endSide]: archived, with Undo), the only way to, unless Keep
+/// as chat makes it a chat of its own ([keepSide]).
 class SideChat extends StatelessWidget {
   const new({
     required this.side,
@@ -156,10 +157,15 @@ void showSide(ChatState chat) {
   chat.side.value?.done = null;
 }
 
-/// Ends [chat]'s side chat ([DaemonSides.closeSide]): its ×, the one way the
-/// user ends one. Ending deletes its session for good and nothing of it
-/// reaches the chat, so one with anything in it asks first; an empty one
-/// just goes.
+/// The API that archives a side chat its × ends (ADR 0115).
+const archiveSideApi = 117;
+
+/// Ends [chat]'s side chat: its ×, the one way the user ends one. It goes
+/// at once; the daemon archives one with messages ([DaemonSides.archiveSide])
+/// and a toast says so, with Undo ([showArchivedSide]). A daemon older
+/// than [archiveSideApi], or one that can't archive it (its agent can't
+/// reopen sessions), deletes it instead ([DaemonSides.closeSide]), so one
+/// with anything in it asks first.
 Future<void> endSide(
   BuildContext context,
   Daemon daemon,
@@ -167,11 +173,28 @@ Future<void> endSide(
 ) async {
   final side = chat.side.value;
   if (side == null) return;
-  if (side.items.isNotEmpty &&
+  String? why; // why it couldn't be archived
+  if (daemon.daemonApi >= archiveSideApi) {
+    final toast = ScaffoldMessenger.maybeOf(context);
+    try {
+      final archived = await daemon.archiveSide(chat);
+      if (archived.isNotEmpty && toast != null) {
+        showArchivedSide(toast, daemon, chat, archived, was: side);
+      }
+      return;
+    } on Object catch (e) {
+      why = errorText(e);
+    }
+    if (!context.mounted || chat.side.value != side) return;
+  }
+  if ((side.items.isNotEmpty || why != null) &&
       !await confirm(
         context,
         'End the side chat?',
-        'Its conversation is deleted; nothing from it is added to the chat.',
+        [
+          if (why != null) "It can't be archived: $why.",
+          'Its conversation is deleted; nothing from it is added to the chat.',
+        ].join(' '),
         'End',
         destructive: true,
       )) {

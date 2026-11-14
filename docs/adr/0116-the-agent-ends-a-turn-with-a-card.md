@@ -1,4 +1,4 @@
-# 0115. Agent tools are opt-in, and the agent ends a turn with a card of reply buttons
+# 0116. Agent tools are opt-in, and the agent ends a turn with a card of reply buttons
 
 Status: proposed, 2026-11-14; amended the same day with the owner's answers. Builds on [0043](0043-an-mcp-server-of-nushis-own-for-a-chats-tools.md) (Nushi's MCP server) and [0068](0068-an-agent-opens-a-preview.md); amends both: their tools now come only with Agent tools on.
 
