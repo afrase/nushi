@@ -33,7 +33,7 @@ Nushi is an agentic development environment for macOS and Linux: coding agents (
 - **`make gen`** after editing `proto/`; the generated code is committed and CI checks it is current.
 - **`make check-app`**: `make lint-dart`, `make test-app`, then `flutter build macos` (`linux` on Linux; build only), stopping at the first failure; its output is short, with the failing tests' reasons and the full log's path, so don't pipe it. Not part of `make check` or CI.
 - **`make golden-diff`**: each golden changed against `BASE=<ref>` (default `HEAD`; `TO=<ref>` instead of the working tree): size, changed box and pixel count, identical boxes grouped, outliers listed. `ROWS=0-44` fails on a change outside those rows; a changed size always fails.
-- **Others**: `make lines` (hand-written line counts), `make relay`, `make web` (the phone's app), `make icons`, `make adapters` (an adapter's lockfile), `make claude-record` (the Claude parity recordings: `internal/features/chats/testdata/claude-parity/README.md`), `make screenshots` (the README's images, not part of `make test`), `make package-linux` (on Linux). `make install` and releases: [`docs/development.md`](docs/development.md).
+- **Others**: `make lines` (hand-written line counts), `make relay`, `make web` (the phone's app), `make icons`, `make adapters` (an adapter's lockfile), `make claude-record` (the Claude parity recordings: `internal/features/chats/testdata/claude-parity/README.md`), `make screenshots` (the README's images, not part of `make test`), `make gallery` (every shared control in every state, a sheet per group, in `app/build/gallery`), `make package-linux` (on Linux). `make install` and releases: [`docs/development.md`](docs/development.md).
 
 ## Common changes
 

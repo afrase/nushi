@@ -42,7 +42,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package package-linux install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart lint-linux check check-app golden-diff renders lines relay relay-web icons adapters web web-fonts web-cut mermaid screenshots claude-record
+.PHONY: run daemon stop app package package-linux install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart lint-linux check check-app golden-diff renders lines relay relay-web icons adapters web web-fonts web-cut mermaid screenshots gallery claude-record
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -298,6 +298,15 @@ test-web:
 # make test (the file's name doesn't end in _test.dart).
 screenshots:
 	cd app && flutter test --update-goldens test/screenshots/readme_shots.dart
+
+# The component gallery (docs/design.md): every shared control in every
+# state, a sheet per group, dark and light, as PNGs in app/build/gallery
+# (app/test/screenshots/gallery.dart). Not part of make test;
+# gallery_test.dart keeps a few sheets as goldens.
+GALLERY ?= $(CURDIR)/app/build/gallery
+gallery:
+	cd app && NUSHI_RENDERS='$(GALLERY)' flutter test test/screenshots/gallery.dart
+	@echo "gallery in $(GALLERY)"
 
 # make lint-dart, make test-app and flutter build macos (on Linux, flutter
 # build linux; build only), stopping at the first failure: a line per step,
