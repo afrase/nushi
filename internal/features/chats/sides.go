@@ -16,7 +16,9 @@ import (
 // A side chat is a session the agent forks from a chat's: it knows the
 // conversation so far but doesn't add to it. It shares the chat's agent,
 // isn't stored, and ends with CloseSide (or the daemon), which also has
-// the agent delete its history of it: it is never shown again.
+// the agent delete its history of it: it is never shown again. Its ×
+// archives one with messages instead (ArchiveSide, ADR 0115), which
+// RestoreSide can bring back.
 
 // SessionUpdate, RequestPermission and CreateElicitation take what the
 // agent sends to the chat or to one of its side chats. A side chat's
@@ -125,18 +127,45 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return s.openSide(ctx, p, nil)
+}
+
+// sideSource is what a side chat opens from when it isn't a new fork of its
+// chat's session but an archived side chat brought back (RestoreSide): its
+// session, the chat's items it started with, its own, and its mode and
+// picks.
+type sideSource struct {
+	sid         string
+	base, items []model.Item
+	mode        string
+	picks       map[string]string
+}
+
+// errOtherSide refuses a side chat brought back beside one already open:
+// the app shows one at a time.
+var errOtherSide = errors.New("the chat has another side chat open")
+
+// openSide opens a side chat of p, a fork of its session, or with from a
+// fork of an archived side chat's, and returns its id.
+func (s *Service) openSide(ctx context.Context, p *chat, from *sideSource) (string, error) {
 	p.mu.Lock()
 	agent, sid, folder := p.agent, p.sid, p.record.Folder
 	can := p.canFork && p.parent == nil
 	base, _ := p.finishedLocked() // the side chat forks the whole session
 	lastItem := p.lastItem        // the side chat's own items come after
 	reopening := p.settlingLocked()
+	other := from != nil && len(p.sides) > 0
 	p.mu.Unlock()
+	if from != nil {
+		sid, base = from.sid, from.base
+	}
 	switch {
 	case agent == nil || !can:
 		return "", errors.New("the agent can't fork this chat")
 	case reopening:
 		return "", errSettling
+	case other:
+		return "", errOtherSide
 	}
 	id, config, err := p.forkSession(ctx, agent, sid, folder, nil)
 	if err != nil {
@@ -157,6 +186,13 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	side.reapplying = true // until reapply: the fork's own options aren't picks
 	side.copies = nil      // nobody sees a side chat again, so Nushi keeps no copy of it
 	side.record = model.ChatRecord{ID: side.id, SessionID: side.sid, Agent: p.kind.Name, Folder: folder, Title: "Side chat", Created: time.Now()}
+	if from != nil { // its conversation and picks as they were
+		s.adoptUploads(side.id, from.items)
+		side.items, side.record.HasMessages, side.record.Picks = from.items, true, maps.Clone(from.picks)
+		for _, it := range from.items {
+			side.noteID(it.ID)
+		}
+	}
 	side.modeLocked(&side.record) // the fork's mode, as the agent says, until reapply
 	// The app hears of the side chat from Fork's answer, then loads it:
 	// what it says before (putting the chat's mode and picks on it) would
@@ -172,11 +208,18 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 		p.mu.Unlock()
 		s.throwAway(p, agent, id)
 		return "", errSettling
+	case from != nil && len(p.sides) > 0: // one opened meanwhile
+		p.mu.Unlock()
+		s.throwAway(p, agent, id)
+		return "", errOtherSide
 	}
 	// Read now, not before the fork: a change made meanwhile is carried.
 	mode, picks := p.record.Mode, maps.Clone(p.record.Picks)
 	if i := modeIndex(p.config); i >= 0 {
 		mode = p.config[i].Current // what the agent says the chat is on
+	}
+	if from != nil {
+		mode, picks = from.mode, maps.Clone(from.picks)
 	}
 	p.sides[side.id] = side
 	side.commands = slices.Clone(p.commands) // the agent's, which it told only the chat

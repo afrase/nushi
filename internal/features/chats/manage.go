@@ -141,6 +141,8 @@ func (s *Service) Archive(chatID string, archived bool) error {
 		s.Archived, s.Done = archived, s.Done && !archived
 		if archived {
 			s.Pin = 0
+		} else {
+			s.SideOf = nil // a chat of its own now, no longer one Undo brings back
 		}
 	})
 	c.logLocked().Info("chat archived", "archived", archived)
@@ -160,9 +162,13 @@ func (s *Service) halt(chatID string) (*chat, error) {
 		return nil, err
 	}
 	c.mu.Lock()
-	if c.reopeningLocked() {
+	switch {
+	case c.reopeningLocked():
 		c.mu.Unlock()
 		return nil, errReopening
+	case c.halting: // a delete, or an archived side chat brought back
+		c.mu.Unlock()
+		return nil, errors.New("the chat is already going")
 	}
 	c.halting = true
 	c.mu.Unlock()

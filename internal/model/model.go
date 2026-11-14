@@ -82,6 +82,10 @@ type ChatRecord struct {
 	// Pins are the chat's pinned messages, in the order they were pinned
 	// (chats.PinMessage, ADR 0085): the agent's alone.
 	Pins []MessagePin `json:",omitempty"`
+	// SideOf is where an archived side chat came from: a side chat with
+	// messages is archived as it's closed (ADR 0115), and Undo makes it
+	// that chat's side chat again. Unarchiving clears it.
+	SideOf *SideOf `json:",omitempty"`
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`
@@ -109,6 +113,14 @@ type MessagePin struct {
 	Runes int
 	Nth   int    `json:",omitempty"`
 	Title string `json:",omitempty"`
+}
+
+// SideOf is the chat an archived side chat came from (its id), and how many
+// of its items were that chat's when the side chat opened: the rest are
+// the side chat's own.
+type SideOf struct {
+	Chat string
+	Base int
 }
 
 // AgentSession is one of the agent's sessions: its id and folder (cwd).
