@@ -384,7 +384,9 @@ class _TaskRowState extends State<TaskRow> {
         Icons.play_arrow_outlined,
         size: 15,
         padding: 2,
-        tooltip: widget.selected ? 'Start work ($cmdEnterLabel)' : 'Start work',
+        tooltip: widget.selected
+            ? withKey('Start work', cmdEnterLabel)
+            : 'Start work',
         onTap: open,
       );
     },

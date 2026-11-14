@@ -113,13 +113,13 @@ void main() {
       'while it shows', (tester) async {
     final d = await _app(tester);
     expect(find.byType(FilesPane), findsNothing);
-    expect(find.byTooltip('Show files  ⇧⌘E'), findsOne);
+    expect(find.byTooltip('Show files\u2002⇧⌘E'), findsOne);
     expect(_lit(tester), isFalse);
     await tester.tap(_button);
     await tester.pumpAndSettle();
     expect(find.byType(FilesPane), findsOne);
     expect(filesChats.value, {'c'});
-    expect(find.byTooltip('Hide files  ⇧⌘E'), findsOne);
+    expect(find.byTooltip('Hide files\u2002⇧⌘E'), findsOne);
     expect(_lit(tester), isTrue);
     await tester.tap(_button);
     await tester.pumpAndSettle();
@@ -134,7 +134,7 @@ void main() {
     final c = d.chats['c']!;
     c.tab.value = ChatTab.changes;
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Show files  ⇧⌘E'), findsOne);
+    expect(find.byTooltip('Show files\u2002⇧⌘E'), findsOne);
     await tester.tap(_button);
     await tester.pumpAndSettle();
     expect(c.tab.value, ChatTab.chat);
@@ -148,11 +148,11 @@ void main() {
     final d = await _app(tester);
     await _shiftCmdE(tester);
     expect(find.byType(FilesPane), findsOne);
-    expect(find.byTooltip('Hide files  ⇧⌘E'), findsOne);
+    expect(find.byTooltip('Hide files\u2002⇧⌘E'), findsOne);
     expect(_lit(tester), isTrue);
     await _viewFiles(tester);
     expect(find.byType(FilesPane), findsNothing);
-    expect(find.byTooltip('Show files  ⇧⌘E'), findsOne);
+    expect(find.byTooltip('Show files\u2002⇧⌘E'), findsOne);
     expect(_lit(tester), isFalse);
     await _viewFiles(tester);
     expect(find.byType(FilesPane), findsOne);
@@ -175,7 +175,7 @@ void main() {
       expect(c.tab.value, ChatTab.chat);
       expect(filesChats.value, {'c'});
       expect(find.byType(FilesPane), findsOne);
-      expect(find.byTooltip('Hide files  ⇧⌘E'), findsOne);
+      expect(find.byTooltip('Hide files\u2002⇧⌘E'), findsOne);
       expect(_lit(tester), isTrue);
     }
     await closeView(tester, d);

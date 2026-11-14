@@ -314,7 +314,7 @@ void main() {
     );
     await pump(1200);
     expect(find.text('Pull request'), findsOne);
-    expect(find.byTooltip('Show terminal  ⌃`'), findsOne);
+    expect(find.byTooltip('Show terminal\u2002⌃`'), findsOne);
     await pump(460);
     expect(find.text('Pull request'), findsNothing);
     await tester.tap(find.byType(MenuField));
@@ -323,7 +323,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(picked, ChatTab.pull);
     await pump(330);
-    expect(find.byTooltip('Show terminal  ⌃`'), findsNothing);
+    expect(find.byTooltip('Show terminal\u2002⌃`'), findsNothing);
     await tester.tap(find.byTooltip('Chat menu'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Show terminal', findRichText: true), findsOne);

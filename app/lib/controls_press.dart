@@ -150,10 +150,11 @@ class _PressableState extends State<Pressable> {
     );
     return widget.tooltip.isEmpty
         ? control
-        : Tooltip(
-            message: widget.tooltip,
+        : tooltip(
+            context,
+            widget.tooltip,
+            control,
             positionDelegate: widget.tooltipAt,
-            child: control,
           );
   }
 
@@ -294,6 +295,6 @@ class _TapState extends State<Tap> {
         : tap;
     return widget.tooltip.isEmpty
         ? button
-        : Tooltip(message: widget.tooltip, child: button);
+        : tooltip(context, widget.tooltip, button);
   }
 }

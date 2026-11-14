@@ -127,7 +127,7 @@ void main() {
         viewportHeight: top,
       );
       await tester.pumpAndSettle();
-      final send = find.byTooltip('Add to the message (⏎)');
+      final send = find.byTooltip('Add to the message\u2002⏎');
       expect(tester.getRect(box).bottom, lessThanOrEqualTo(top));
       expect(tester.getRect(box).top, greaterThanOrEqualTo(0));
       expect(tester.getRect(send).bottom, lessThanOrEqualTo(top));

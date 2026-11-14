@@ -103,7 +103,7 @@ void main() {
     await tester.tap(find.byTooltip('Copy as Markdown'));
     await tester.pump();
     expect(copied, ['Run the suite']);
-    await tester.tap(find.byTooltip('Rewind to here (Esc Esc)'));
+    await tester.tap(find.byTooltip('Rewind to here\u2002Esc Esc'));
     expect(rewound, 1);
     d.dispose();
   }, variant: _mac);

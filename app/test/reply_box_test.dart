@@ -200,7 +200,7 @@ void main() {
       last = now;
     }
     // The send button beside the last line, at the box's bottom right.
-    final send = tester.getRect(find.byTooltip('Add to the message (⏎)'));
+    final send = tester.getRect(find.byTooltip('Add to the message\u2002⏎'));
     expect(send.bottom, closeTo(last.bottom, 8));
     expect(send.right, closeTo(last.right, 8));
 

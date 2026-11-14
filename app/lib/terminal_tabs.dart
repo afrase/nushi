@@ -68,7 +68,7 @@ class TerminalTabs extends StatelessWidget {
               onReorderItem: (from, to) => terms.move(chatId, from, to),
               footer: IconTap(
                 Icons.add,
-                tooltip: 'New terminal  ${keyLabel(newTerminalKey)}',
+                tooltip: withKey('New terminal', keyLabel(newTerminalKey)),
                 onTap: () => tryOrShow(context, () => terms.open(chatId)),
               ),
               itemBuilder: (context, i) => ReorderableDragStartListener(
@@ -84,7 +84,7 @@ class TerminalTabs extends StatelessWidget {
           ),
           IconTap(
             Icons.keyboard_arrow_down,
-            tooltip: 'Hide terminal  ${keyLabel(toggleTerminalKey)}',
+            tooltip: withKey('Hide terminal', keyLabel(toggleTerminalKey)),
             onTap: onHide,
           ),
         ],
@@ -191,7 +191,7 @@ class _TabState extends State<_Tab> {
                 child: IconTap(
                   Icons.close,
                   size: 12,
-                  tooltip: 'Close  ${keyLabel(closeTerminalKey)}',
+                  tooltip: withKey('Close', keyLabel(closeTerminalKey)),
                   onTap: () => closeTerminal(context, widget.terms, info),
                 ),
               ),

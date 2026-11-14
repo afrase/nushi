@@ -23,8 +23,8 @@ import 'harness.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
-const _back = 'Back (⌘[)';
-const _forward = 'Forward (⌘])';
+const _back = 'Back\u2002⌘[';
+const _forward = 'Forward\u2002⌘]';
 
 Future<Daemon> _app(
   WidgetTester tester, {
@@ -145,7 +145,7 @@ void main() {
     expect(_on(tester, _back), isFalse);
     expect(_on(tester, _forward), isFalse);
     // After the sidebar's button, in a row, level with it.
-    final sidebar = tester.getRect(find.byTooltip(r'Hide the sidebar (⌘\)'));
+    final sidebar = tester.getRect(find.byTooltip('Hide the sidebar\u2002⌘\\'));
     final back = tester.getRect(find.byTooltip(_back));
     final forward = tester.getRect(find.byTooltip(_forward));
     expect(back.left, sidebar.right + 2);
@@ -256,7 +256,7 @@ void main() {
       ..conventions = linuxConventions;
     final d = await _app(tester);
     await _visit(tester, d, ['c', 'a']);
-    expect(find.byTooltip('Back (Alt+Left)'), findsOneWidget);
+    expect(find.byTooltip('Back\u2002Alt+Left'), findsOneWidget);
     Future<void> alt(LogicalKeyboardKey key) async {
       await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
       await tester.sendKeyEvent(key);

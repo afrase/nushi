@@ -138,7 +138,7 @@ void main() {
       await mouse.addPointer(location: Offset.zero);
       await mouse.moveTo(tester.getCenter(find.text('Retry flaky uploads')));
       await tester.pumpAndSettle();
-      expect(find.byTooltip('Start work (⌘⏎)'), findsOneWidget);
+      expect(find.byTooltip('Start work\u2002⌘⏎'), findsOneWidget);
       expect(find.byTooltip('Start work'), findsOneWidget); // the hovered
       await expectLater(
         find.byType(CardShell).first,

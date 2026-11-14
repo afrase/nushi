@@ -511,7 +511,7 @@ class _JiraViewState extends State<JiraView> {
                               children: [
                                 IconTap(
                                   Icons.arrow_back,
-                                  tooltip: 'The list (Esc)',
+                                  tooltip: withKey('The list', 'Esc'),
                                   onTap: _back,
                                 ),
                               ],

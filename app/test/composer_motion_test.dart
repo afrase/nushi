@@ -200,15 +200,15 @@ void main() {
     tester,
   ) async {
     final (d, _) = await _box(tester);
-    expect(find.byTooltip('Send (⏎)'), findsNothing);
+    expect(find.byTooltip('Send\u2002⏎'), findsNothing);
     final field = tester.getSize(find.byType(TextField));
     await tester.enterText(find.byType(TextField), 'Hello');
     await tester.pump();
-    expect(find.byTooltip('Send (⏎)'), findsOneWidget);
+    expect(find.byTooltip('Send\u2002⏎'), findsOneWidget);
     final pop = tester.widget<Opacity>(
       find
           .ancestor(
-            of: find.byTooltip('Send (⏎)'),
+            of: find.byTooltip('Send\u2002⏎'),
             matching: find.byType(Opacity),
           )
           .first,

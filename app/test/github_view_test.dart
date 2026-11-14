@@ -521,7 +521,7 @@ void main() {
     // Pull request 1, selected, by ⌘⏎: its Start work shows.
     await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Start work (⌘⏎)'), findsOneWidget);
+    expect(find.byTooltip('Start work\u2002⌘⏎'), findsOneWidget);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);

@@ -77,24 +77,24 @@ void main() {
     'written while a turn runs: Queue and Stop and send beside Stop',
     (tester) async {
       final (fake, d, _) = await _box(tester);
-      expect(find.byTooltip('Queue (⏎)'), findsNothing); // nothing written
+      expect(find.byTooltip('Queue\u2002⏎'), findsNothing); // nothing written
       await tester.enterText(find.byType(TextField), 'Also the README');
       await tester.pump();
-      expect(find.byTooltip('Queue (⏎)'), findsOne);
-      expect(find.byTooltip('Stop and send (⌘⏎)'), findsOne);
-      expect(find.byTooltip('Stop (esc)'), findsOne);
+      expect(find.byTooltip('Queue\u2002⏎'), findsOne);
+      expect(find.byTooltip('Stop and send\u2002⌘⏎'), findsOne);
+      expect(find.byTooltip('Stop\u2002Esc'), findsOne);
       await tester.pump(Motion.quick); // the buttons popped in
       await expectLater(
         find.byKey(const Key('box')),
         matchesGoldenFile('goldens/composer_turn_dark.png'),
       );
-      await tester.tap(find.byTooltip('Stop and send (⌘⏎)'));
+      await tester.tap(find.byTooltip('Stop and send\u2002⌘⏎'));
       await tester.pump();
       final sent = fake.calls.whereType<SendPromptRequest>().single;
       expect((sent.text, sent.now), ('Also the README', true));
       await tester.enterText(find.byType(TextField), 'And the tests');
       await tester.pump();
-      await tester.tap(find.byTooltip('Queue (⏎)'));
+      await tester.tap(find.byTooltip('Queue\u2002⏎'));
       await tester.pump();
       final queued = fake.calls.whereType<SendPromptRequest>().last;
       expect(

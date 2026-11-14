@@ -244,7 +244,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'Why did it fail?');
       await tester.pump();
-      await tester.tap(find.byTooltip('Send (⏎)'));
+      await tester.tap(find.byTooltip('Send\u2002⏎'));
       await _settle(tester);
       final fake = shells.fake;
       expect(

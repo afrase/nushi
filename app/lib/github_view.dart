@@ -463,7 +463,7 @@ class _GitHubViewState extends State<GitHubView> {
             children: [
               IconTap(
                 Icons.arrow_back,
-                tooltip: 'The inbox (Esc)',
+                tooltip: withKey('The inbox', 'Esc'),
                 onTap: _back,
               ),
             ],

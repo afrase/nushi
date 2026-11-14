@@ -228,7 +228,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Add a test for it');
     await tester.pump();
-    await tester.tap(find.byTooltip('Send (⏎)'));
+    await tester.tap(find.byTooltip('Send\u2002⏎'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(_inTranscript('Add a test for it'), findsOneWidget);

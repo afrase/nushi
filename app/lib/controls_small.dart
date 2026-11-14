@@ -146,12 +146,16 @@ class IconTap extends StatelessWidget {
       onTap: onTap,
       tooltip: tooltip,
       builder: (context, look) {
+        // Off reads as off (Claude desktop's Back with nowhere to go);
+        // under the pointer one that isn't comes up to the text's color.
         final tint = !look.enabled
-            ? t.textMuted
+            ? t.textMuted.withValues(alpha: 0.4)
             : danger
             ? t.base
             : lit
             ? t.accentInk
+            : look.hover && color == null
+            ? t.text
             : color ?? t.textSecondary;
         return Container(
           padding: EdgeInsets.all(padding),

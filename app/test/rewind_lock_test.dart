@@ -185,7 +185,7 @@ void main() {
         b.chat.draft.text.selection,
         const TextSelection.collapsed(offset: 'Add the login page'.length),
       );
-      expect(find.byTooltip('Send (⏎)'), findsOne);
+      expect(find.byTooltip('Send\u2002⏎'), findsOne);
 
       // Unlocked, the same keys work: the ones above did reach the box.
       await _paste(tester, ' now');
@@ -201,11 +201,11 @@ void main() {
       final b = await _box(tester);
       b.chat.draft.text.text = 'Mind the footer';
       await tester.pump();
-      expect(find.byTooltip('Send (⏎)'), findsOne);
+      expect(find.byTooltip('Send\u2002⏎'), findsOne);
       await _rewind(tester, b);
 
       expect(find.text('Mind the footer'), findsOne);
-      expect(find.byTooltip('Send (⏎)'), findsNothing);
+      expect(find.byTooltip('Send\u2002⏎'), findsNothing);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pump();
       expect(b.sent, isEmpty);
@@ -225,13 +225,13 @@ void main() {
       ..queue = [QueuedMessage(id: 'q1', text: 'Then docs')]
       ..draft.text.text = 'Also the README';
     await tester.pump();
-    expect(find.byTooltip('Queue (⏎)'), findsOne);
-    expect(find.byTooltip('Stop and send (⌘⏎)'), findsOne);
+    expect(find.byTooltip('Queue\u2002⏎'), findsOne);
+    expect(find.byTooltip('Stop and send\u2002⌘⏎'), findsOne);
 
     await _stop(tester, b);
     expect(_field(tester).readOnly, isTrue);
-    expect(find.byTooltip('Queue (⏎)'), findsNothing);
-    expect(find.byTooltip('Stop and send (⌘⏎)'), findsNothing);
+    expect(find.byTooltip('Queue\u2002⏎'), findsNothing);
+    expect(find.byTooltip('Stop and send\u2002⌘⏎'), findsNothing);
 
     await tester.tap(find.byTooltip('Edit'));
     await tester.tap(find.byTooltip('Send now: stop the turn and send it'));
@@ -257,7 +257,7 @@ void main() {
     expect(b.chat.rewinding.value, isFalse);
     expect(_field(tester).readOnly, isFalse);
     expect(b.text, 'Mind the footer');
-    expect(find.byTooltip('Send (⏎)'), findsOne);
+    expect(find.byTooltip('Send\u2002⏎'), findsOne);
     expect(find.textContaining('the agent quit'), findsOne);
     await tester.pumpAndSettle(const Duration(seconds: 1)); // its snack bar
     await _done(tester, b);

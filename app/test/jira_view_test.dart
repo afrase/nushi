@@ -33,7 +33,7 @@ void main() {
     expect(find.text('To Do  1'), findsOneWidget);
     expect(find.byType(JiraIssuePane), findsNothing); // a list, no details
     // Its close names Esc, as Settings' and GitHub's do (UX review, 22).
-    expect(find.byTooltip('Close (esc)'), findsOne);
+    expect(find.byTooltip('Close\u2002Esc'), findsOne);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
@@ -46,7 +46,7 @@ void main() {
     await tester.tap(find.text('Write the release notes'));
     await tester.pumpAndSettle();
     expect(shown(tester), 'ACME-3');
-    await tester.tap(find.byTooltip('The list (Esc)'));
+    await tester.tap(find.byTooltip('The list\u2002Esc'));
     await tester.pumpAndSettle();
     expect(find.text('Write the release notes'), findsOneWidget);
     // ⌘⏎: the selected row's Start work, its folders.
@@ -227,7 +227,7 @@ void main() {
     expect((moved.key, moved.transition), ('ACME-12', '31'));
     // Start work (the selected row's): a folder, then the New chat
     // dialog with the issue.
-    await tester.tap(find.byTooltip('Start work (⌘⏎)'));
+    await tester.tap(find.byTooltip('Start work\u2002⌘⏎'));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('nushi', findRichText: true).last);
     await tester.pumpAndSettle();
@@ -464,7 +464,7 @@ void main() {
       testSite.id,
     );
     // Back: the list.
-    await tester.tap(find.byTooltip('The list (Esc)'));
+    await tester.tap(find.byTooltip('The list\u2002Esc'));
     await tester.pumpAndSettle();
     expect(find.byType(JiraIssuePane), findsNothing);
     await closeView(tester, d);
@@ -557,7 +557,7 @@ void main() {
           : null,
     );
     // ⌘R on Mine, held; then JQL, with nothing typed.
-    await tester.tap(find.byTooltip('Refresh (⌘R)'));
+    await tester.tap(find.byTooltip('Refresh\u2002⌘R'));
     await tester.pump();
     await tester.tap(find.text('JQL'));
     await tester.pump();

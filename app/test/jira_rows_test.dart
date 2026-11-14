@@ -305,7 +305,7 @@ void main() {
     await _list(tester, 'Sprint');
     // The selected row's only.
     expect(find.byIcon(Icons.play_arrow_outlined), findsOneWidget);
-    expect(find.byTooltip('Start work (⌘⏎)'), findsOneWidget);
+    expect(find.byTooltip('Start work\u2002⌘⏎'), findsOneWidget);
     expect(find.text('Start work'), findsNothing); // no button on every row
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);

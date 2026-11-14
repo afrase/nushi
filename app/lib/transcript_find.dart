@@ -273,15 +273,19 @@ class _FindBarState extends State<FindBar> {
             Text(f.count, style: theme.ui(t.textMuted, size: 12)),
             IconTap(
               Icons.keyboard_arrow_up,
-              tooltip: 'Previous (${keyLabel(_previousKey)})',
+              tooltip: withKey('Previous', keyLabel(_previousKey)),
               onTap: f.canStep ? () => f.step(-1) : null,
             ),
             IconTap(
               Icons.keyboard_arrow_down,
-              tooltip: 'Next ($enterLabel)',
+              tooltip: withKey('Next', enterLabel),
               onTap: f.canStep ? () => f.step(1) : null,
             ),
-            IconTap(Icons.close, tooltip: 'Close (esc)', onTap: f.close),
+            IconTap(
+              Icons.close,
+              tooltip: withKey('Close', 'Esc'),
+              onTap: f.close,
+            ),
           ],
         );
         return Container(

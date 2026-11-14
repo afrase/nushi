@@ -101,7 +101,7 @@ class BrowserBar extends StatelessWidget {
             ),
             IconTap.line(
               LineIcon.reload,
-              tooltip: 'Reload  ${Act.reloadPage.shortcut}',
+              tooltip: withKey('Reload', Act.reloadPage.shortcut ?? ''),
               size: _icon,
               padding: _iconPadding,
               color: t.text,

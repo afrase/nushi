@@ -33,6 +33,49 @@ part 'controls_small.dart';
 // [ControlSize.large], and without one it's [ControlSize.regular]
 // (`theme/sizes.dart`, ADR 0122).
 
+/// A tooltip's words with a [key] after them ("Forward ⌘]"), as Claude
+/// desktop's: no brackets, the key in a fainter grey ([tooltip] draws it).
+String withKey(String label, String key) =>
+    key.isEmpty ? label : '$label$_keyGap$key';
+
+/// What parts a tooltip's words from its key: an en space.
+const _keyGap = '\u2002';
+
+/// [child] with [message] as its tooltip: muted words, and a key after
+/// them ([withKey]) fainter still.
+Widget tooltip(
+  BuildContext context,
+  String message,
+  Widget child, {
+  TooltipPositionDelegate? positionDelegate,
+}) {
+  final at = message.indexOf(_keyGap);
+  if (at < 0) {
+    return Tooltip(
+      message: message,
+      positionDelegate: positionDelegate,
+      child: child,
+    );
+  }
+  final t = NushiTheme.of(context).t;
+  return Tooltip(
+    richMessage: TextSpan(
+      children: [
+        TextSpan(text: message.substring(0, at)),
+        TextSpan(
+          text: message.substring(at),
+          style: TextStyle(color: tooltipKey(t)),
+        ),
+      ],
+    ),
+    positionDelegate: positionDelegate,
+    child: child,
+  );
+}
+
+/// A tooltip's key's grey: its words' muted grey, a step further back.
+Color tooltipKey(Tokens t) => t.textMuted.withValues(alpha: 0.6);
+
 /// How a control is, to draw it: under the pointer, focused from the
 /// keyboard, pressed (the pointer down on it: a click shows at once, before
 /// what it does is done), pressable at all. A pressed control is also

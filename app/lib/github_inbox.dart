@@ -349,7 +349,9 @@ class _ItemRowState extends State<ItemRow> {
       return IconTap(
         Icons.play_arrow_outlined,
         size: 15,
-        tooltip: widget.selected ? 'Start work ($cmdEnterLabel)' : 'Start work',
+        tooltip: widget.selected
+            ? withKey('Start work', cmdEnterLabel)
+            : 'Start work',
         onTap: open,
       );
     },

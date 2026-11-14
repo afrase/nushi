@@ -114,7 +114,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Ship it');
     await tester.pump(_wait);
     expect(json.existsSync(), isTrue);
-    await tester.tap(find.byTooltip('Send (⏎)'));
+    await tester.tap(find.byTooltip('Send\u2002⏎'));
     await tester.pump();
     expect(fake.calls.whereType<SendPromptRequest>().single.text, 'Ship it');
     expect(json.existsSync(), isFalse);

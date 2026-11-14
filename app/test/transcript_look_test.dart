@@ -404,7 +404,7 @@ void main() {
         // the row is one line.
         expect(find.text('Queue'), findsOneWidget);
         expect(find.text('Stop and send'), findsOneWidget);
-        final stop = tester.getRect(find.byTooltip('Stop (esc)'));
+        final stop = tester.getRect(find.byTooltip('Stop\u2002Esc'));
         final plus = tester.getRect(find.byType(PlusButton));
         expect(stop.center.dy, plus.center.dy);
         expect(tester.getRect(find.byType(Pickers)).center.dy, plus.center.dy);
@@ -533,13 +533,13 @@ void main() {
       // With room, the words; beside a pane, the same actions as icons.
       expect(find.text('Queue'), findsOneWidget);
       expect(find.text('Stop and send'), findsOneWidget);
-      expect(find.byTooltip('Queue (⏎)'), findsNWidgets(2));
-      expect(find.byTooltip('Stop and send (⌘⏎)'), findsNWidgets(2));
-      expect(find.byTooltip('Stop (esc)'), findsNWidgets(3));
-      expect(find.byTooltip('Send (⏎)'), findsNWidgets(2));
+      expect(find.byTooltip('Queue\u2002⏎'), findsNWidgets(2));
+      expect(find.byTooltip('Stop and send\u2002⌘⏎'), findsNWidgets(2));
+      expect(find.byTooltip('Stop\u2002Esc'), findsNWidgets(3));
+      expect(find.byTooltip('Send\u2002⏎'), findsNWidgets(2));
       // Stop is the square in a circle it was before the redesign, in a
       // round area 28 across that tints under the pointer: no fill.
-      final stop = find.byTooltip('Stop (esc)').first;
+      final stop = find.byTooltip('Stop\u2002Esc').first;
       expect(
         find.ancestor(of: stop, matching: find.byType(RoundButton)),
         findsNothing,

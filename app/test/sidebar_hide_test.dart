@@ -28,8 +28,8 @@ import 'harness.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
-const _hide = r'Hide the sidebar (⌘\)';
-const _show = r'Show the sidebar (⌘\)';
+const _hide = 'Hide the sidebar\u2002⌘\\';
+const _show = 'Show the sidebar\u2002⌘\\';
 
 const _title = 'Fix the login redirect after it expires';
 

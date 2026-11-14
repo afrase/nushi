@@ -22,7 +22,7 @@ import 'harness.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
-const _show = r'Show the sidebar (⌘\)';
+const _show = 'Show the sidebar\u2002⌘\\';
 
 Future<Daemon> _window(
   WidgetTester tester, {
@@ -169,10 +169,10 @@ void main() {
     await tester.pumpWidget(NushiApp(daemon: d));
     await tester.pumpAndSettle();
     final mouse = await _mouse(tester);
-    final hide = tester.getCenter(find.byTooltip(r'Hide the sidebar (⌘\)'));
+    final hide = tester.getCenter(find.byTooltip('Hide the sidebar\u2002⌘\\'));
     await mouse.moveTo(hide);
     await tester.pump();
-    await tester.tap(find.byTooltip(r'Hide the sidebar (⌘\)'));
+    await tester.tap(find.byTooltip('Hide the sidebar\u2002⌘\\'));
     await tester.pumpAndSettle();
     expect(sidebarHidden.value, isTrue);
     expect(find.byType(Sidebar), findsNothing);
@@ -224,7 +224,7 @@ void main() {
     final d = await _window(tester, width: 720);
     final mouse = await _mouse(tester);
     await mouse.moveTo(
-      tester.getCenter(find.byTooltip(r'Show the sidebar (Ctrl+\)')),
+      tester.getCenter(find.byTooltip('Show the sidebar\u2002Ctrl+\\')),
     );
     await tester.pumpAndSettle();
     expect(find.byType(Sidebar), findsOneWidget);

@@ -181,7 +181,7 @@ class _SettingsViewState extends State<SettingsView> {
                   ),
                   IconTap(
                     Icons.close,
-                    tooltip: 'Close (esc)',
+                    tooltip: withKey('Close', 'Esc'),
                     onTap: daemon.closeSettings,
                   ),
                 ],

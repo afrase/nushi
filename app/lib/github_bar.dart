@@ -152,10 +152,14 @@ class GitHubBar extends StatelessWidget {
             ),
           IconTap(
             Icons.refresh,
-            tooltip: 'Refresh (${cmdLabel(LogicalKeyboardKey.keyR)})',
+            tooltip: withKey('Refresh', cmdLabel(LogicalKeyboardKey.keyR)),
             onTap: onRefresh,
           ),
-          IconTap(Icons.close, tooltip: 'Close (esc)', onTap: onClose),
+          IconTap(
+            Icons.close,
+            tooltip: withKey('Close', 'Esc'),
+            onTap: onClose,
+          ),
         ],
       ),
     );
