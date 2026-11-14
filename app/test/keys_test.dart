@@ -67,7 +67,7 @@ void main() {
         keyLabel(toggleTerminalKey),
         keyLabel(wrapKey),
       ],
-      ['⇧⌘E', '⌃⌘1', '⌘;', '⌘[', '⌘3', '⌥⌘1', '⌃⇥', '⌃`', '⌥Z'],
+      ['⇧⌘E', '⌃⌘1', '⌘;', '⌥⌘↑', '⌘3', '⌥⌘1', '⌃⇥', '⌃`', '⌥Z'],
     );
     expect(filesKey.single.meta, isTrue);
     expect(filesKey.single.control, isFalse);
@@ -110,7 +110,7 @@ void main() {
     // A ShortcutManager indexes both forms' keys, so a switch of the
     // conventions after it was built still reaches the Linux form.
     expect(previousChatKey.triggers, [
-      LogicalKeyboardKey.bracketLeft,
+      LogicalKeyboardKey.arrowUp,
       LogicalKeyboardKey.pageUp,
     ]);
   });

@@ -12,6 +12,7 @@ import 'package:nushi/chat_pins.dart';
 import 'package:nushi/cleanup_dialog.dart';
 import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/composer_parts.dart';
+import 'package:nushi/conventions.dart' show CommandKey;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/edit_bars.dart';
 import 'package:nushi/files_pane.dart';
@@ -63,6 +64,19 @@ const pinKey = Cmd(LogicalKeyboardKey.keyD);
 /// ⌘\: hide the sidebar, or show it.
 const sidebarKey = Cmd(LogicalKeyboardKey.backslash);
 
+/// ⌘[ and ⌘]: Back and Forward through the places visited (ADR 0117), as
+/// Claude's desktop app and a browser. On Linux Alt+Left and Alt+Right, a
+/// browser's there (Control and `[` is Escape): a text field keeps them
+/// for its own moves, and a terminal for its shell.
+const backKey = Cmd(
+  LogicalKeyboardKey.bracketLeft,
+  linux: SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true),
+);
+const forwardKey = Cmd(
+  LogicalKeyboardKey.bracketRight,
+  linux: SingleActivator(LogicalKeyboardKey.arrowRight, alt: true),
+);
+
 /// ⌘;: the next flagged word in the composer, as macOS's Check Spelling.
 /// On Linux F7, LibreOffice's spelling key: IBus takes Ctrl+; for its emoji.
 const nextTypoKey = Cmd(
@@ -99,6 +113,9 @@ enum Act {
   changes(key: changesTabKey, menu: ActMenu.view, menuLabel: 'Changes'),
   pull(key: pullTabKey, menu: ActMenu.view, menuLabel: 'Pull Request'),
   sidebar(key: sidebarKey, menu: ActMenu.view, menuLabel: 'Hide Sidebar'),
+  // The menu bar's in View, by Previous and Next Chat (main.dart).
+  back(key: backKey),
+  forward(key: forwardKey),
   details,
   files(key: filesKey, menu: ActMenu.view, menuLabel: 'Files'),
   chatWidth,
@@ -194,6 +211,16 @@ class OpenPaletteIntent extends Intent {
 /// passes on too.
 const paletteKey = Cmd(LogicalKeyboardKey.keyK);
 const paletteKeyToo = Cmd(LogicalKeyboardKey.keyP, shift: true);
+
+/// Whether [act]'s key is the focused text field's own, which keeps it:
+/// Linux's Back and Forward, Alt+Left and Alt+Right, move along its line
+/// there (ADR 0117). The Mac's ⌘[ and ⌘] are no field's.
+bool actKeyTaken(Act act) =>
+    (act == Act.back || act == Act.forward) &&
+    commandKey == CommandKey.control &&
+    FocusManager.instance.primaryFocus?.context
+            ?.findAncestorStateOfType<EditableTextState>() !=
+        null;
 
 /// The keys of the actions that have one, as the intents that run them.
 final Map<ShortcutActivator, Intent> actKeys = {
@@ -312,6 +339,8 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       sidebarHidden.value ? 'Show the sidebar' : 'Hide the sidebar',
       run: toggleSidebar,
     ),
+    AppAction(.back, 'Back', enabled: d.canGoBack, run: d.goBack),
+    AppAction(.forward, 'Forward', enabled: d.canGoForward, run: d.goForward),
     AppAction(
       .details,
       details ? 'Hide details' : 'Show details',

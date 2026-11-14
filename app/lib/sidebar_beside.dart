@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'package:nushi/daemon.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/slides.dart';
@@ -26,11 +27,15 @@ import 'package:nushi/theme/theme.dart';
 /// floated.
 class SidebarBeside extends StatefulWidget {
   const new({
+    required this.daemon,
     required this.sidebar,
     required this.shut,
     required this.main,
     super.key,
   });
+
+  /// Whose places Back and Forward go through ([TitleButtons]).
+  final Daemon daemon;
 
   /// The sidebar, floating in a peek or not.
   final Widget Function({required bool floating}) sidebar;
@@ -211,7 +216,10 @@ class _SidebarBesideState extends State<SidebarBeside> {
       child: MouseRegion(
         onEnter: (_) => _titleHover(true),
         onExit: (_) => _titleHover(false),
-        child: TitleButtons(onSidebarHover: _sidebarHover),
+        child: TitleButtons(
+          daemon: widget.daemon,
+          onSidebarHover: _sidebarHover,
+        ),
       ),
     );
     // Keyed, so each keeps its state as they swap: the sidebar first, as it

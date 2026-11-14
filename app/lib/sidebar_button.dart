@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
@@ -67,21 +68,24 @@ class SidebarButton extends StatelessWidget {
 }
 
 /// The buttons at the window's top left, past the traffic lights, level
-/// with the headers' middle: [SidebarButton]. They're drawn over the
+/// with the headers' middle: [SidebarButton], then Back and Forward
+/// through the places visited (`goBack`, ADR 0117), each greyed
+/// out while there's nowhere to go. They're drawn over the
 /// sidebar's top strip and the main pane's header alike, at the same place
 /// in the window whether the sidebar shows, is hidden or slides (ADR
 /// 0116); `SidebarBeside` puts them there. [onSidebarHover] hears the
 /// pointer come onto the sidebar's button and leave it.
 class TitleButtons extends StatelessWidget {
-  const new({super.key, this.onSidebarHover});
+  const new({required this.daemon, super.key, this.onSidebarHover});
 
+  final Daemon daemon;
   final ValueChanged<bool>? onSidebarHover;
 
   /// A button's box: a header's icon button.
   static const double _box = 16 + 2 * IconTap.header;
 
   /// How many there are.
-  static const _count = 1;
+  static const _count = 3;
 
   /// Where they start, from the window's left edge: the first one's icon
   /// [SidebarButton.iconInset] past the lights.
@@ -109,6 +113,30 @@ class TitleButtons extends StatelessWidget {
           onEnter: (_) => onSidebarHover?.call(true),
           onExit: (_) => onSidebarHover?.call(false),
           child: const SidebarButton(),
+        ),
+        const SizedBox(width: NushiTheme.iconGap),
+        // What they can do changes as the daemon does: a chat archived or
+        // deleted is passed over.
+        ListenableBuilder(
+          listenable: daemon,
+          builder: (context, _) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconTap.line(
+                LineIcon.chevronBack,
+                tooltip: 'Back (${Act.back.shortcut})',
+                padding: IconTap.header,
+                onTap: daemon.canGoBack ? daemon.goBack : null,
+              ),
+              const SizedBox(width: NushiTheme.iconGap),
+              IconTap.line(
+                LineIcon.chevronForward,
+                tooltip: 'Forward (${Act.forward.shortcut})',
+                padding: IconTap.header,
+                onTap: daemon.canGoForward ? daemon.goForward : null,
+              ),
+            ],
+          ),
         ),
       ],
     ),

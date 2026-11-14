@@ -28,9 +28,15 @@ Future<Daemon> _app(WidgetTester tester) async {
   return d;
 }
 
-Future<void> _press(WidgetTester tester, LogicalKeyboardKey key) async {
+Future<void> _press(
+  WidgetTester tester,
+  LogicalKeyboardKey key, {
+  bool alt = false,
+}) async {
   await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+  if (alt) await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
   await tester.sendKeyEvent(key);
+  if (alt) await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
   await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
   await tester.pumpAndSettle();
 }
@@ -79,7 +85,7 @@ void main() {
     tester.daemonOf().dispose();
   }, variant: macOS);
 
-  testWidgets('⌘1–⌘9 open a chat; ⌘[ and ⌘] step through them, wrapping', (
+  testWidgets('⌘1–⌘9 open a chat; ⌥⌘↑ and ⌥⌘↓ step through them, wrapping', (
     tester,
   ) async {
     final d = await _app(tester);
@@ -87,11 +93,11 @@ void main() {
     expect(d.selectedId, 'a');
     await _press(tester, LogicalKeyboardKey.digit9); // no ninth: stays
     expect(d.selectedId, 'a');
-    await _press(tester, LogicalKeyboardKey.bracketRight);
+    await _press(tester, LogicalKeyboardKey.arrowDown, alt: true);
     expect(d.selectedId, 'c');
-    await _press(tester, LogicalKeyboardKey.bracketRight); // wraps
+    await _press(tester, LogicalKeyboardKey.arrowDown, alt: true); // wraps
     expect(d.selectedId, 'b');
-    await _press(tester, LogicalKeyboardKey.bracketLeft); // and back
+    await _press(tester, LogicalKeyboardKey.arrowUp, alt: true); // and back
     expect(d.selectedId, 'c');
     await _press(tester, LogicalKeyboardKey.digit1);
     expect(d.selectedId, 'b');

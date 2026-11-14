@@ -55,6 +55,13 @@ enum LineIcon {
   /// A browser tab's Forward: an arrow to the right.
   forward,
 
+  /// Back through the places visited (ADR 0117): a chevron to the left,
+  /// as Claude desktop's.
+  chevronBack,
+
+  /// Forward through them: a chevron to the right.
+  chevronForward,
+
   /// A browser tab's Reload: a circle's arrow turning clockwise, its head
   /// at the top right.
   reload,
@@ -268,6 +275,16 @@ enum LineIcon {
         ..lineTo(4, 14)
         ..moveTo(4, 20)
         ..lineTo(10, 14),
+    chevronBack =>
+      Path()
+        ..moveTo(14.5, 6)
+        ..lineTo(8.5, 12)
+        ..lineTo(14.5, 18),
+    chevronForward =>
+      Path()
+        ..moveTo(9.5, 6)
+        ..lineTo(15.5, 12)
+        ..lineTo(9.5, 18),
     chevron =>
       Path()
         ..moveTo(9.5, 6)

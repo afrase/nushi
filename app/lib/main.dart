@@ -156,12 +156,24 @@ class _NushiAppState extends State<NushiApp> {
   }
 
   /// Whether the shown chat is pinned: the Chat menu's Pin Chat says
-  /// Unpin Chat then.
+  /// Unpin Chat then. Whether Back and Forward have somewhere to go:
+  /// their View menu items are greyed out while they don't.
   bool _pinned = false;
+  bool _back = false;
+  bool _forward = false;
 
   void _pinChanged() {
-    final pinned = (widget.daemon.selected?.pin ?? 0) > 0;
-    if (pinned != _pinned) setState(() => _pinned = pinned);
+    final d = widget.daemon;
+    final pinned = (d.selected?.pin ?? 0) > 0;
+    final back = d.canGoBack;
+    final forward = d.canGoForward;
+    if (pinned != _pinned || back != _back || forward != _forward) {
+      setState(() {
+        _pinned = pinned;
+        _back = back;
+        _forward = forward;
+      });
+    }
   }
 
   /// The View menu's Hide Sidebar says Show Sidebar while it's hidden,
@@ -206,8 +218,10 @@ class _NushiAppState extends State<NushiApp> {
       _ => act.menuLabel!,
     },
     shortcut: act.key,
-    onSelected: () => runAct(_navigator.currentContext!, widget.daemon, act),
+    onSelected: () => _run(act),
   );
+
+  void _run(Act act) => runAct(_navigator.currentContext!, widget.daemon, act);
 
   List<PlatformMenuItem> _items(ActMenu menu) => [
     for (final a in Act.values)
@@ -244,6 +258,20 @@ class _NushiAppState extends State<NushiApp> {
               unawaited(showPalette(_navigator.currentContext!, widget.daemon)),
         ),
         PlatformMenuItemGroup(members: _items(ActMenu.view)),
+        PlatformMenuItemGroup(
+          members: [
+            PlatformMenuItem(
+              label: 'Back',
+              shortcut: backKey,
+              onSelected: _back ? () => _run(Act.back) : null,
+            ),
+            PlatformMenuItem(
+              label: 'Forward',
+              shortcut: forwardKey,
+              onSelected: _forward ? () => _run(Act.forward) : null,
+            ),
+          ],
+        ),
         PlatformMenuItemGroup(
           members: [
             PlatformMenuItem(
@@ -320,9 +348,7 @@ class _NushiAppState extends State<NushiApp> {
       home: Builder(
         builder: (context) => Actions(
           actions: {
-            RunActIntent: CallbackAction<RunActIntent>(
-              onInvoke: (i) => runAct(context, widget.daemon, i.act),
-            ),
+            RunActIntent: _RunAct((act) => runAct(context, widget.daemon, act)),
             OpenPaletteIntent: CallbackAction<OpenPaletteIntent>(
               onInvoke: (_) => unawaited(showPalette(context, widget.daemon)),
             ),
@@ -341,7 +367,7 @@ class _NushiAppState extends State<NushiApp> {
               },
             ),
           },
-          // The actions' keys, ⌘K, ⌘1–⌘9, ⌘[ and ⌘], ⌃Tab and ⌃⇧Tab:
+          // The actions' keys, ⌘K, ⌘1–⌘9, ⌥⌘↑ and ⌥⌘↓, ⌃Tab and ⌃⇧Tab:
           // wherever the focus is; and Quit's without a menu bar.
           child: Shortcuts(
             shortcuts: {
@@ -462,6 +488,7 @@ class _Shell extends StatelessWidget {
       // The sidebar slides in and out over the view, which keeps its
       // state either way.
       builder: (context, box) => SidebarBeside(
+        daemon: daemon,
         shut: shut,
         // Shown, or floating over the view while it's hidden and peeks.
         sidebar: ({required floating}) => ListenableBuilder(
@@ -555,5 +582,22 @@ class _Shell extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Runs an action from its key, unless the key is a text field's own
+/// there ([actKeyTaken]): then it isn't handled, and goes on to the field.
+class _RunAct extends Action<RunActIntent> {
+  new(this._run);
+
+  final void Function(Act act) _run;
+
+  @override
+  bool isEnabled(RunActIntent intent) => !actKeyTaken(intent.act);
+
+  @override
+  Object? invoke(RunActIntent intent) {
+    _run(intent.act);
+    return null;
   }
 }

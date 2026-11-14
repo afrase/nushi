@@ -133,16 +133,24 @@ String get enterLabel => keyName(LogicalKeyboardKey.enter);
 /// ⌘⏎, or Ctrl+Enter on Linux: what sends now, posts or commits.
 String get cmdEnterLabel => cmdLabel(LogicalKeyboardKey.enter);
 
-/// [key] alone as the platform writes it: ⏎ and ⇥ on the Mac, Enter and
-/// Tab on Linux.
+/// [key] alone as the platform writes it: ⏎, ⇥ and ↑ on the Mac, Enter,
+/// Tab and Up on Linux.
 String keyName(LogicalKeyboardKey key) => switch (commandKey) {
   CommandKey.meta => switch (key) {
     LogicalKeyboardKey.enter => '⏎',
     LogicalKeyboardKey.tab => '⇥',
+    LogicalKeyboardKey.arrowUp => '↑',
+    LogicalKeyboardKey.arrowDown => '↓',
+    LogicalKeyboardKey.arrowLeft => '←',
+    LogicalKeyboardKey.arrowRight => '→',
     _ => key.keyLabel.toUpperCase(),
   },
   CommandKey.control => switch (key) {
     LogicalKeyboardKey.escape => 'Esc',
+    LogicalKeyboardKey.arrowUp => 'Up',
+    LogicalKeyboardKey.arrowDown => 'Down',
+    LogicalKeyboardKey.arrowLeft => 'Left',
+    LogicalKeyboardKey.arrowRight => 'Right',
     _ => key.keyLabel,
   },
 };

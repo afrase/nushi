@@ -25,3 +25,6 @@ The owner couldn't tell what was clickable: Settings › General's terminal font
 
 ## Amendment (2026-11-05)
 The details panel's widgets are flat sections now, dragged by the title with the open hand and no grip ([ADR 0092](0092-the-details-panel-is-claude-codes-rail.md)); DragGrip stays on the GitHub and Jira cards.
+
+## Amendment (2026-11-14)
+⌘[ and ⌘] are Back and Forward through the places visited ([ADR 0117](0117-back-and-forward.md)); the chat before and after is ⌥⌘↑ and ⌥⌘↓.
