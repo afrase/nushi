@@ -337,11 +337,14 @@ class ServerRow extends StatelessWidget {
             // In a box of one width, so each row's ▶ lines up.
             SizedBox(
               width: 50,
+              // A menu's row: compact (ADR 0122).
               child: logs
-                  ? Button(
-                      label: 'Logs',
-                      tooltip: 'Show its output below the page',
-                      onPressed: _logs,
+                  ? ControlScale.compact(
+                      child: Button(
+                        label: 'Logs',
+                        tooltip: 'Show its output below the page',
+                        onPressed: _logs,
+                      ),
                     )
                   : null,
             ),

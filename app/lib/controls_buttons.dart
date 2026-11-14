@@ -72,8 +72,9 @@ BoxDecoration _buttonBox(
 }
 
 /// A button: [label], an optional leading [icon], a shortcut [hint] after
-/// the label (not on a phone). Every button has the same height and
-/// padding; stretched wider than its content, the content is centred.
+/// the label (not on a phone). Its height, padding, type and corners are
+/// its place's [ControlSize]; stretched wider than its content, the
+/// content is centred.
 /// [wrap]: on a phone, a long label wraps to three lines, the button
 /// growing, rather than being cut (a permission's option says what it
 /// allows).
@@ -109,9 +110,11 @@ class Button extends StatelessWidget {
     final t = theme.t;
     final primary = kind == ButtonKind.primary;
     final fg = _fg(t, kind);
-    final style = theme.ui(fg, weight: FontWeight.w500);
+    final size = ControlSize.of(context);
+    final style = theme.ui(fg, size: size.text, weight: FontWeight.w500);
     final touch = TouchTargets.of(context);
     final lines = wrap && touch ? 3 : 1;
+    final corners = BorderRadius.circular(size.radius);
     return Pressable(
       onTap: onPressed,
       autofocus: autofocus,
@@ -119,20 +122,17 @@ class Button extends StatelessWidget {
       builder: (context, look) => _faded(
         look,
         Container(
-          height: lines > 1 ? null : controlHeight,
-          constraints: lines > 1
-              ? const BoxConstraints(minHeight: controlHeight)
-              : null,
-          padding: lines > 1
-              ? const EdgeInsets.symmetric(horizontal: 10, vertical: 5)
-              : const EdgeInsets.symmetric(horizontal: 10),
-          decoration: _buttonBox(
-            t,
-            kind,
-            look,
-            BorderRadius.circular(NushiTheme.control),
+          height: lines > 1 ? null : size.height,
+          constraints: BoxConstraints(
+            minHeight: lines > 1 ? size.height : 0,
+            minWidth: size.minWidth,
           ),
-          foregroundDecoration: focusRing(t, look),
+          padding: EdgeInsets.symmetric(
+            horizontal: size.pad,
+            vertical: lines > 1 ? 5 : 0,
+          ),
+          decoration: _buttonBox(t, kind, look, corners),
+          foregroundDecoration: focusRing(t, look, radius: corners),
           // Centred when its parent stretches it (the sidebar's New chat);
           // a value picker is a MenuField, which keeps its value at the left.
           child: Row(
@@ -140,7 +140,7 @@ class Button extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 14, color: fg),
+                Icon(icon, size: size.icon, color: fg),
                 const SizedBox(width: 6),
               ],
               Flexible(
@@ -262,11 +262,12 @@ class SplitButton extends StatelessWidget {
     Widget child,
   ) {
     final t = NushiTheme.of(context).t;
+    final size = ControlSize.of(context);
     return _faded(
       look,
       Container(
-        height: controlHeight,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        height: size.height,
+        padding: EdgeInsets.symmetric(horizontal: size.pad - 2),
         decoration: _buttonBox(t, kind, look, r),
         foregroundDecoration: focusRing(t, look, radius: r),
         // As wide as its content, whatever room it's given.
@@ -280,7 +281,8 @@ class SplitButton extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final fg = _fg(t, kind);
-    const round = Radius.circular(NushiTheme.control);
+    final size = ControlSize.of(context);
+    final round = Radius.circular(size.radius);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -291,12 +293,12 @@ class SplitButton extends StatelessWidget {
             builder: (context, look) => _part(
               context,
               look,
-              const BorderRadius.horizontal(left: round),
+              BorderRadius.horizontal(left: round),
               Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.ui(fg, weight: FontWeight.w500),
+                style: theme.ui(fg, size: size.text, weight: FontWeight.w500),
               ),
             ),
           ),
@@ -310,7 +312,7 @@ class SplitButton extends StatelessWidget {
             builder: (context, look) => _part(
               context,
               look,
-              const BorderRadius.horizontal(right: round),
+              BorderRadius.horizontal(right: round),
               Icon(Icons.keyboard_arrow_down, size: 15, color: fg),
             ),
           ),
@@ -341,21 +343,18 @@ class SendButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final size = ControlSize.of(context);
+    final corners = BorderRadius.circular(size.radius);
     return Pressable(
       onTap: onPressed,
       tooltip: tooltip,
       builder: (context, look) => _faded(
         look,
         Container(
-          height: controlHeight,
-          padding: const EdgeInsets.fromLTRB(7, 0, 9, 0),
-          decoration: _buttonBox(
-            t,
-            ButtonKind.primary,
-            look,
-            BorderRadius.circular(NushiTheme.control),
-          ),
-          foregroundDecoration: focusRing(t, look),
+          height: size.height,
+          padding: EdgeInsets.fromLTRB(size.pad - 3, 0, size.pad - 1, 0),
+          decoration: _buttonBox(t, ButtonKind.primary, look, corners),
+          foregroundDecoration: focusRing(t, look, radius: corners),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -368,7 +367,7 @@ class SendButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.ui(
                     t.onAccent,
-                    size: 12.5,
+                    size: size.text - 0.5,
                     weight: FontWeight.w500,
                   ),
                 ),

@@ -1,13 +1,14 @@
 part of 'controls.dart';
 
 /// One of a few, as a filled track with the picked segment raised on it
-/// (ADR 0111): the chat header's Chat, Changes and Pull request ([roomy],
-/// a header's size), and a value a form saves or sends (a server's scope,
-/// a review's verdict). Other views of the same thing are still
-/// `PlainTabs` (ADR 0071). The track is a card's fill, so on a card or a
-/// dialog ([onCard]) it's a step up from that. A segment takes the
-/// keyboard's focus; Enter and Space pick it. Its width doesn't change as
-/// it's picked, though its label turns semibold.
+/// (ADR 0111): the chat header's Chat, Changes and Pull request ([roomy]:
+/// [ControlSize.large], a header's), and a value a form saves or sends (a
+/// server's scope, a review's verdict), its place's [ControlSize] high.
+/// Other views of the same thing are still `PlainTabs` (ADR 0071). The
+/// track is a card's fill, so on a card or a dialog ([onCard]) it's a step
+/// up from that. A segment takes the keyboard's focus; Enter and Space pick
+/// it. Its width doesn't change as it's picked, though its label turns
+/// semibold.
 class Segmented<T> extends StatelessWidget {
   const new({
     required this.value,
@@ -38,15 +39,14 @@ class Segmented<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final size = roomy ? 13.0 : 12.0;
-    final corners = BorderRadius.circular(
-      NushiTheme.inner(NushiTheme.control, pad),
-    );
+    final scale = roomy ? ControlSize.large : ControlSize.of(context);
+    final size = scale.text - 1;
+    final corners = BorderRadius.circular(NushiTheme.inner(scale.radius, pad));
     return Container(
       padding: const EdgeInsets.all(pad),
       decoration: BoxDecoration(
         color: onCard ? t.lifted : t.raised,
-        borderRadius: BorderRadius.circular(NushiTheme.control),
+        borderRadius: BorderRadius.circular(scale.radius),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -61,10 +61,14 @@ class Segmented<T> extends StatelessWidget {
                 builder: (context, look) {
                   final picked = v == value;
                   return Container(
-                    height: roomy ? 28 : null,
+                    // Compact, its label's line and a point either side
+                    // (25 in all, as PlainTabs are); else the size's.
+                    height: scale == ControlSize.compact
+                        ? null
+                        : scale.height - 2 * pad,
                     padding: EdgeInsets.symmetric(
                       horizontal: roomy ? 14 : 10,
-                      vertical: roomy ? 0 : 1,
+                      vertical: scale == ControlSize.compact ? 1 : 0,
                     ),
                     decoration: BoxDecoration(
                       color: picked

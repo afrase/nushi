@@ -269,7 +269,7 @@ class _SettingsSwitchState extends State<SettingsSwitch> {
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: _runner,
     builder: (context, running, _) => SizedBox(
-      height: 20,
+      height: 22,
       child: FittedBox(
         child: Switch(
           value: widget.value,

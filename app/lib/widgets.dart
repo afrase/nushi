@@ -209,8 +209,9 @@ class _HoverState extends State<Hover> {
 }
 
 /// A dialog: [title], [content] 460 wide, and its [actions], at the right
-/// unless [actionsAlignment] says otherwise. [onClose] puts a × at the
-/// title's end, as Claude desktop's dialogs that are lists to manage have.
+/// unless [actionsAlignment] says otherwise, large (ADR 0122). [onClose]
+/// puts a × at the title's end, as Claude desktop's dialogs that are lists
+/// to manage have.
 Widget nushiDialog(
   String title,
   Widget content,
@@ -236,7 +237,7 @@ Widget nushiDialog(
           ],
         ),
   content: SizedBox(width: 460, child: content),
-  actions: actions,
+  actions: [for (final a in actions) ControlScale.large(child: a)],
   actionsAlignment: actionsAlignment,
 );
 

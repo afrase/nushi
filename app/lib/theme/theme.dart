@@ -4,11 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/theme/scrollbar.dart';
+import 'package:nushi/theme/sizes.dart';
 import 'package:nushi/theme/themes.dart';
 import 'package:nushi/theme/tokens.dart';
 
 export 'diff_colors.dart';
 export 'scrollbar.dart';
+export 'sizes.dart';
 export 'terminal_colors.dart';
 export 'themes.dart';
 export 'tokens.dart';
@@ -378,6 +380,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
         // the caret.
         // One that resolves by state, so a field that asks for no border
         // (the palette's, an inline edit's) still has none.
+        // Its corners are a regular control's (ADR 0122), as it's as high.
         border: WidgetStateInputBorder.resolveWith((states) {
           final focused = states.contains(WidgetState.focused);
           final color = states.contains(WidgetState.error)
@@ -390,7 +393,9 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
               ? t.fieldBorderHover
               : t.fieldBorder;
           return OutlineInputBorder(
-            borderRadius: const BorderRadius.all(Radius.circular(control)),
+            borderRadius: BorderRadius.all(
+              Radius.circular(ControlSize.regular.radius),
+            ),
             borderSide: BorderSide(color: color, width: focused ? 1.5 : 1),
           );
         }),

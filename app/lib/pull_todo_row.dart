@@ -203,40 +203,43 @@ class _TodoRowState extends State<TodoRow> {
                 ),
               ),
               const SizedBox(width: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 6,
-                children: [
-                  if (i case CheckTodo(check: final c)
-                      when c.id != 0 || c.url.isNotEmpty)
-                    Button(
-                      label: _log ? 'Hide log' : 'Log',
-                      tooltip: c.id == 0
-                          ? 'Open its page on GitHub'
-                          : 'The failing part of its log',
-                      onPressed: c.id == 0
-                          ? () => openWeb(context, c.url)
-                          : () => setState(() => _log = !_log),
+              // A row of a list: its actions are compact (ADR 0122).
+              ControlScale.compact(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 6,
+                  children: [
+                    if (i case CheckTodo(check: final c)
+                        when c.id != 0 || c.url.isNotEmpty)
+                      Button(
+                        label: _log ? 'Hide log' : 'Log',
+                        tooltip: c.id == 0
+                            ? 'Open its page on GitHub'
+                            : 'The failing part of its log',
+                        onPressed: c.id == 0
+                            ? () => openWeb(context, c.url)
+                            : () => setState(() => _log = !_log),
+                      ),
+                    if (i case ThreadTodo(thread: final x) when x.canReply)
+                      Button(
+                        label: 'Reply',
+                        onPressed: () => setState(() => _replying = true),
+                      ),
+                    if (i case ThreadTodo(thread: final x) when x.canResolve)
+                      Button(
+                        label: 'Resolve',
+                        onPressed: _busy ? null : () => _resolve(x),
+                      ),
+                    SendButton(
+                      label: widget.inBox ? 'In the box ✓' : 'Send',
+                      tooltip: widget.inBox
+                          ? "Its card waits in the chat's box"
+                          : "Its reply card in the chat's box, to send with "
+                                'your message',
+                      onPressed: widget.inBox ? null : widget.onSend,
                     ),
-                  if (i case ThreadTodo(thread: final x) when x.canReply)
-                    Button(
-                      label: 'Reply',
-                      onPressed: () => setState(() => _replying = true),
-                    ),
-                  if (i case ThreadTodo(thread: final x) when x.canResolve)
-                    Button(
-                      label: 'Resolve',
-                      onPressed: _busy ? null : () => _resolve(x),
-                    ),
-                  SendButton(
-                    label: widget.inBox ? 'In the box ✓' : 'Send',
-                    tooltip: widget.inBox
-                        ? "Its card waits in the chat's box"
-                        : "Its reply card in the chat's box, to send with "
-                              'your message',
-                    onPressed: widget.inBox ? null : widget.onSend,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

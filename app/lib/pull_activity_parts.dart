@@ -53,7 +53,7 @@ class PointerChip extends StatelessWidget {
     return Pressable(
       onTap: onTap,
       builder: (context, look) => Container(
-        height: controlHeight,
+        height: ControlSize.compact.height,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           // A chip by its fill (ADR 0111): the card's, or its color's tint.

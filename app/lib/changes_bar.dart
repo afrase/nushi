@@ -103,108 +103,118 @@ class ChangesBar extends StatelessWidget {
             padding: roomy
                 ? const EdgeInsets.symmetric(horizontal: 12)
                 : const EdgeInsets.only(left: 8, right: 6),
-            child: Row(
-              spacing: roomy ? NushiTheme.barGap : 10,
-              children: [
-                Expanded(
-                  child: Row(
-                    spacing: roomy ? NushiTheme.barGap : 10,
+            // Narrow, the bar is dense: its controls compact (ADR 0122).
+            child: ControlScale(
+              size: roomy ? ControlSize.regular : ControlSize.compact,
+              child: Row(
+                spacing: roomy ? NushiTheme.barGap : 10,
+                children: [
+                  Expanded(
+                    child: Row(
+                      spacing: roomy ? NushiTheme.barGap : 10,
+                      children: [
+                        // Flexible in a row of its own (AGENTS.md): it takes
+                        // what the rest leaves, its name cut short, so the
+                        // bar's buttons stay at its edge.
+                        if (menu)
+                          Flexible(child: _worktreeMenu(roomy ? 220 : 120)),
+                        if (scopes.length > 1)
+                          Segmented(
+                            value: scope,
+                            segments: [for (final s in scopes) (s, s.label)],
+                            onChanged: (s) => worktree == null
+                                ? chat.scope = s.name
+                                : related.pickScope(s.name),
+                          ),
+                        if (stale)
+                          const SizedBox.square(
+                            dimension: 12,
+                            child: Spinner(),
+                          ),
+                        if (n > 0 && !short)
+                          Text(
+                            '$n file${n == 1 ? '' : 's'}',
+                            style: theme.ui(t.textSecondary, size: 12),
+                          ),
+                        // Whole beside the menu, which gives way first; cut
+                        // short without one.
+                        if (!short && menu)
+                          counts
+                        else if (!short)
+                          Flexible(child: counts),
+                      ],
+                    ),
+                  ),
+                  if (behind)
+                    Tooltip(
+                      message:
+                          'It changed since this was read: Reload shows it',
+                      child: Text(
+                        short ? 'Changed' : 'Changed: Reload',
+                        style: theme.ui(t.textSecondary, size: 12),
+                      ),
+                    ),
+                  // As the Pull request tab's Send to agent: reply cards in the
+                  // chat's box, to go with the next message; a related
+                  // worktree's too, naming it (ADR 0081).
+                  if (unsent > 0)
+                    Button(
+                      label: short
+                          ? 'Send ($unsent)'
+                          : 'Send to agent ($unsent)',
+                      icon: short ? null : Icons.subdirectory_arrow_right,
+                      kind: ButtonKind.primary,
+                      tooltip:
+                          "${short ? 'Send to agent: each' : 'Each'} comment "
+                          "as a reply card in the chat's box, to send with "
+                          'your next message',
+                      onPressed: chat.archived || chat.sessionGone
+                          ? null
+                          : () => reviewToBox(chat),
+                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    // Closer in a narrow bar: the scopes' control is a few
+                    // points wider than the tabs it replaced.
+                    spacing: roomy ? NushiTheme.iconGap : 6,
                     children: [
-                      // Flexible in a row of its own (AGENTS.md): it takes
-                      // what the rest leaves, its name cut short, so the
-                      // bar's buttons stay at its edge.
-                      if (menu)
-                        Flexible(child: _worktreeMenu(roomy ? 220 : 120)),
-                      if (scopes.length > 1)
-                        Segmented(
-                          value: scope,
-                          segments: [for (final s in scopes) (s, s.label)],
-                          onChanged: (s) => worktree == null
-                              ? chat.scope = s.name
-                              : related.pickScope(s.name),
+                      ValueListenableBuilder(
+                        valueListenable: changesFlat,
+                        builder: (context, flat, _) => IconTap(
+                          flat ? Icons.account_tree_outlined : Icons.list,
+                          tooltip: flat ? 'Show as a tree' : 'Show as a list',
+                          size: 15,
+                          onTap: () => changesFlat.value = !flat,
                         ),
-                      if (stale)
-                        const SizedBox.square(dimension: 12, child: Spinner()),
-                      if (n > 0 && !short)
-                        Text(
-                          '$n file${n == 1 ? '' : 's'}',
-                          style: theme.ui(t.textSecondary, size: 12),
+                      ),
+                      // Side by side or unified, for every diff (ADR 0107). In
+                      // a view too narrow for a diff of two panes beside the
+                      // list at its least width it would change nothing here;
+                      // a wider list may still leave the diff one column.
+                      if (box.maxWidth >= changesFilesLeast + oneColumnBelow)
+                        ValueListenableBuilder(
+                          valueListenable: diffUnified,
+                          builder: (context, unified, _) => IconTap(
+                            unified
+                                ? Icons.vertical_split_outlined
+                                : Icons.view_agenda_outlined,
+                            tooltip: unified
+                                ? 'Show side by side'
+                                : 'Show unified',
+                            size: 15,
+                            onTap: () => diffUnified.value = !unified,
+                          ),
                         ),
-                      // Whole beside the menu, which gives way first; cut
-                      // short without one.
-                      if (!short && menu)
-                        counts
-                      else if (!short)
-                        Flexible(child: counts),
+                      IconTap(
+                        Icons.refresh,
+                        tooltip: 'Reload',
+                        size: 15,
+                        onTap: reloading ? null : onAgain,
+                      ),
                     ],
                   ),
-                ),
-                if (behind)
-                  Tooltip(
-                    message: 'It changed since this was read: Reload shows it',
-                    child: Text(
-                      short ? 'Changed' : 'Changed: Reload',
-                      style: theme.ui(t.textSecondary, size: 12),
-                    ),
-                  ),
-                // As the Pull request tab's Send to agent: reply cards in the
-                // chat's box, to go with the next message; a related
-                // worktree's too, naming it (ADR 0081).
-                if (unsent > 0)
-                  Button(
-                    label: short ? 'Send ($unsent)' : 'Send to agent ($unsent)',
-                    icon: short ? null : Icons.subdirectory_arrow_right,
-                    kind: ButtonKind.primary,
-                    tooltip:
-                        "${short ? 'Send to agent: each' : 'Each'} comment "
-                        "as a reply card in the chat's box, to send with "
-                        'your next message',
-                    onPressed: chat.archived || chat.sessionGone
-                        ? null
-                        : () => reviewToBox(chat),
-                  ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  // Closer in a narrow bar: the scopes' control is a few
-                  // points wider than the tabs it replaced.
-                  spacing: roomy ? NushiTheme.iconGap : 6,
-                  children: [
-                    ValueListenableBuilder(
-                      valueListenable: changesFlat,
-                      builder: (context, flat, _) => IconTap(
-                        flat ? Icons.account_tree_outlined : Icons.list,
-                        tooltip: flat ? 'Show as a tree' : 'Show as a list',
-                        size: 15,
-                        onTap: () => changesFlat.value = !flat,
-                      ),
-                    ),
-                    // Side by side or unified, for every diff (ADR 0107). In
-                    // a view too narrow for a diff of two panes beside the
-                    // list at its least width it would change nothing here;
-                    // a wider list may still leave the diff one column.
-                    if (box.maxWidth >= changesFilesLeast + oneColumnBelow)
-                      ValueListenableBuilder(
-                        valueListenable: diffUnified,
-                        builder: (context, unified, _) => IconTap(
-                          unified
-                              ? Icons.vertical_split_outlined
-                              : Icons.view_agenda_outlined,
-                          tooltip: unified
-                              ? 'Show side by side'
-                              : 'Show unified',
-                          size: 15,
-                          onTap: () => diffUnified.value = !unified,
-                        ),
-                      ),
-                    IconTap(
-                      Icons.refresh,
-                      tooltip: 'Reload',
-                      size: 15,
-                      onTap: reloading ? null : onAgain,
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

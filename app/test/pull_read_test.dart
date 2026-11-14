@@ -124,6 +124,9 @@ void main() {
     final p = fixturePull();
     p.conversation.first.bot = false; // shown whole
     final (d, _) = await openPullTab(tester, p, size: const Size(1100, 900));
+    // Past the pane's fold at this height, its buttons regular (ADR 0122).
+    await tester.ensureVisible(find.text('Activity 4'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Activity 4'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

@@ -105,7 +105,11 @@ class ToastLine extends StatelessWidget {
       children: [
         Icon(icon, size: 16, color: failed ? t.crashed : t.textSecondary),
         Expanded(child: Text(text)),
-        if (onUndo case final undo?) Button(label: 'Undo', onPressed: undo),
+        // A toast's one line: compact (ADR 0122).
+        if (onUndo case final undo?)
+          ControlScale.compact(
+            child: Button(label: 'Undo', onPressed: undo),
+          ),
         IconTap(Icons.close, size: 14, tooltip: 'Dismiss', onTap: onClose),
       ],
     );
