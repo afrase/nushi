@@ -7,8 +7,11 @@
 // The application's name. By default this is also the title of the Flutter window.
 PRODUCT_NAME = Nushi
 
-// The application's bundle identifier
+// The application's bundle identifier. Debug and Profile builds get their own, so Homebrew reopening
+// `com.nushihq.Nushi` after an upgrade (`open -b`) can't land on a development build left in app/build.
 PRODUCT_BUNDLE_IDENTIFIER = com.nushihq.Nushi
+PRODUCT_BUNDLE_IDENTIFIER[config=Debug] = com.nushihq.Nushi.dev
+PRODUCT_BUNDLE_IDENTIFIER[config=Profile] = com.nushihq.Nushi.dev
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.nushihq. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Aaron Frase
