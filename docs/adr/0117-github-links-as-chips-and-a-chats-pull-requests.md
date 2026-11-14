@@ -1,6 +1,6 @@
 # 0117. GitHub links are chips with a hover card; a chat has several pull requests, each a row of the PR widget
 
-Status: proposed, 2026-11-14. Amends [0059](0059-a-chats-pull-request.md) (one pull request a chat) and [0092](0092-the-details-panel-is-claude-codes-rail.md) (the PR widget).
+Status: accepted, 2026-11-14. Amends [0059](0059-a-chats-pull-request.md) (one pull request a chat) and [0092](0092-the-details-panel-is-claude-codes-rail.md) (the PR widget).
 
 ## Context
 The owner liked three things in Claude's desktop app: a pull request or issue link in a message is an inline chip (its icon, `owner/repo#N · title`) with a hover card (state, author, age, size); its rail lists a session's pull requests, one row each (icon in the state's color, title, `#N +adds −dels`, a CI badge `● 1/2` with a popover, a ⋯ menu); and a session has several. In Nushi such a link is underlined text, a chat has one pull request (`ChatRecord.Pull`: found by its branch's head or linked by hand), and the PR widget is a tall summary of it (checks bar, reviewers, threads with Address, the Merge control, comments). An agent that opens two pull requests, or a stack, leaves all but one outside the chat. Claude's Auto-fix is out of scope (the roadmap's "Fixing CI from the chat").
@@ -53,11 +53,21 @@ The owner liked three things in Claude's desktop app: a pull request or issue li
 - **Chips from the address alone**: no title, most of the point.
 - **GitHub's avatar images**: another host to reach and a cache to keep.
 
-## Open questions
-1. Rows in their own widget (decided) or inside Changes, as Claude's?
-2. A chip's click: the browser (decided, as any link), Nushi's GitHub view, or the tab for a linked one?
-3. Bare `owner/repo#n` and `#n` as chips? `#n` needs the chat's repository and misreads "#1 priority".
-4. Merge only from the ⋯ and the tab, or a button on a ready row?
-5. Under the rows, pull requests the chat mentions but hasn't linked ("Mentioned: #415 · Link")?
-6. 10 a chat?
-7. GitHub's icon shapes everywhere (the inbox, the tab's head), not only where this touches?
+**4. A card where the chat opened one.** When the daemon links a pull request because a tool call opened it (section 3, `Opened`), the transcript shows a card for it, as Claude's app does, after that tool call's turn group, so a collapsed group doesn't hide it. It should stand out, as opening a pull request is a big moment in a chat:
+- a filled `raised` card, corners `card`, full width of the messages column, with no coloured edge;
+- a top line: the state pill (as the hover card), `owner/repo #n · author · age` muted;
+- the title, two lines at most, in the body's size and weight;
+- on the right of the title, the files count and `+adds −dels` as two `tag` chips;
+- under a hairline, one line: the CI badge and its words (`2 of 3 checks passed`, `Checks running`, `1 check failing`), or the cue from the row (section 2), or nothing;
+- a click opens the Pull request tab on it; the right-click menu is the row's ⋯; no buttons on the card itself.
+It reads the same `GetGitHubItems` data as the chips and rows; before it answers, the card shows `owner/repo #n` and the tool output's address. `ChatGitHub` gains `OpenedBy` (the tool call's id), which places the card; an unlinked pull request's card goes with it. Not on the phone.
+
+## Settled
+1. Rows in their own widget, not inside Changes.
+2. A chip's click opens the browser, as any link.
+3. Only addresses become chips; bare `owner/repo#n` and `#n` stay text.
+4. Merge only from the row's ⋯ and the tab.
+5. No "Mentioned" list.
+6. 10 a chat.
+7. GitHub's shapes wherever `StatePill` and the state icons are drawn.
+8. The card of section 4: yes (the owner, 2026-11-14).
