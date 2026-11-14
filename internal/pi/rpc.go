@@ -140,6 +140,13 @@ func (p *proc) call(ctx context.Context, cmd map[string]any, out any) error {
 // callAfter is call, and says how many events pi sent before its
 // response.
 func (p *proc) callAfter(ctx context.Context, cmd map[string]any, out any) (after int, err error) {
+	return p.callWritten(ctx, cmd, out, func() {})
+}
+
+// callWritten is callAfter, and calls written once cmd has gone to pi (or
+// failed to): what must reach pi after it waits for that (a Stop's abort
+// after its turn's prompt).
+func (p *proc) callWritten(ctx context.Context, cmd map[string]any, out any, written func()) (after int, err error) {
 	p.mu.Lock()
 	p.next++
 	id := "n" + strconv.Itoa(p.next)
@@ -147,7 +154,9 @@ func (p *proc) callAfter(ctx context.Context, cmd map[string]any, out any) (afte
 	p.waiting[id] = ch
 	p.mu.Unlock()
 	cmd["id"] = id
-	if err := p.write(cmd); err != nil {
+	err = p.write(cmd)
+	written()
+	if err != nil {
 		p.mu.Lock()
 		delete(p.waiting, id)
 		p.mu.Unlock()

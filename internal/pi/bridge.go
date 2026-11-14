@@ -170,9 +170,10 @@ func (b *bridge) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Promp
 	return s.prompt(ctx, text, images)
 }
 
-func (b *bridge) Cancel(_ context.Context, n *acp.CancelNotification) error {
+func (b *bridge) Cancel(ctx context.Context, n *acp.CancelNotification) error {
 	if s, err := b.session(n.SessionID); err == nil {
-		s.cancel()
+		seq, _ := acp.SequenceFromContext(ctx)
+		s.cancel(seq)
 	}
 	return nil
 }
