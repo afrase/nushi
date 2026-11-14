@@ -345,6 +345,36 @@ void main() {
     }
   });
 
+  // In a light set the focus color is within a shade of the accent's fill
+  // (Nushi's 1.2:1): a focused primary has a line of onAccent at its edge,
+  // its ring outside it, which read in every set (`tokens_test`'s
+  // onAccent on accent).
+  for (final (name, t) in everySet) {
+    testWidgets('a focused primary button’s ring stands off its fill '
+        '($name)', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          t,
+          Button(label: 'Done', kind: ButtonKind.primary, onPressed: () {}),
+        ),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final box = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(Button),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final ring = (box.foregroundDecoration! as ShapeDecoration).shape;
+      // The line's 2 inside its edge (the ring is outside), in those colors.
+      expect(ring.dimensions, const EdgeInsets.all(2));
+      expect('$ring', allOf(contains('${t.focus}'), contains('${t.onAccent}')));
+    });
+  }
+
   testWidgets('Enter and Space press a focused control', (tester) async {
     var presses = 0;
     await tester.pumpWidget(

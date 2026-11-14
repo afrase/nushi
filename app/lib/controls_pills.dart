@@ -130,7 +130,9 @@ class RoundButton extends StatelessWidget {
                 : fill,
             borderRadius: round,
           ),
-          foregroundDecoration: focusRing(t, look, radius: round),
+          foregroundDecoration: kind == RoundKind.primary
+              ? accentFocusRing(t, look, radius: round)
+              : focusRing(t, look, radius: round),
           child: glyph(fg),
         ),
       ),

@@ -165,7 +165,7 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 - **Empty states**: a muted line where the content would be, in `textMuted`: "None" in a settings group (`SettingsGroup.empty`), "No chats" in a group, "Nothing matches" under a filter. A view with nothing open offers its main action large (the empty window's New chat).
 - **Settings rows**: label left (13, `text`), an optional description under it (12, `textMuted`), the control at the group's right edge; a group is a card with hairlines between rows. Copy is short (the owner's rule).
 - **Headers and bars**: 56 high, a hairline under, no fill; the title semibold 14 at the gutter, icon buttons 32 square at the end, 12 from the edge; controls `barGap` apart, groups `groupGap`. Empty space in a header moves the window (ADR [0080](adr/0080-no-title-bar.md)). Nothing a button opens changes the width of the bar it's in.
-- **Hover and focus**: under the pointer a control takes `hover` over its fill (a filled primary goes a shade lighter), pressed `pressed`; focused from the keyboard it wears the 2-point ring in `focus` (`focusRing`). A row (`Tap`) shows focus as the hover tint. A toggle that's on is `lit` or `held`, never a different shape.
+- **Hover and focus**: under the pointer a control takes `hover` over its fill (a filled primary goes a shade lighter), pressed `pressed`; focused from the keyboard it wears the 2-point ring in `focus` (`focusRing`); on the accent's fill (a primary button, `SplitButton`, `SendButton`, a primary `RoundButton`) the ring sits just outside it, with a 2-point line of `onAccent` at its edge (`accentFocusRing`), since a light set's `focus` is within a shade of `accent`. A row (`Tap`) shows focus as the hover tint. A toggle that's on is `lit` or `held`, never a different shape.
 - **Disabled**: a control without its action is drawn at 45% (`_faded`), with no hand and no focus; an `IconTap` greys its icon instead (Claude desktop's Back with nowhere to go); a field's border goes to `line`.
 - **Words**: the glossary's (`docs/glossary.md`); sentence case; a shortcut in a tooltip via `withKey`.
 
@@ -183,8 +183,6 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 ## Known inconsistencies
 
 Follow-ups, found while writing this page and drawing the gallery. Two small bugs it showed were fixed with it: a disabled `IconTap(danger:)` or `IconTap(lit:)` kept its fill and lost its mark, and a toast's action was all but invisible on a light set.
-
-- **The focus ring vanishes on a primary button in a light set**: `focus` is `accentInk`, within a shade of `accent`'s fill (light `#2259D2` on `#2365EA`), so a focused Done, Send to agent or Squash and merge looks at rest; it reads on dark sets.
 
 - **Type sizes off the scale**: besides 11, 11.5, 12, 13 and 14, views set 12.5 (54 places), 13.5, 10.5, 8 and 8.5 with `ui()`, and 12.5 and 10.5 with `code()`.
 - **Durations written as numbers**: about 70 `Duration(milliseconds: …)` outside `motion.dart`, some equal to `Motion`'s (`Dimmed`'s 120, a panel widget's 200) but not named so.
