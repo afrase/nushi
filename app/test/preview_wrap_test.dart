@@ -163,7 +163,7 @@ void main() {
       'in step, and it’s remembered', (tester) async {
     final d = await _app(tester);
     expect(wrapLines.value, isTrue, reason: 'on at first');
-    expect(find.byTooltip('Don’t wrap lines  ⌥Z'), findsOneWidget);
+    expect(find.byTooltip('Don’t wrap lines\u2002⌥Z'), findsOneWidget);
     expect(_viewMenu(tester), contains('Don’t Wrap Lines'));
     expect(_across(tester), isNull);
 
@@ -171,7 +171,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(wrapLines.value, isFalse);
     expect(readSaved()['wrap'], isFalse);
-    expect(find.byTooltip('Wrap lines  ⌥Z'), findsOneWidget);
+    expect(find.byTooltip('Wrap lines\u2002⌥Z'), findsOneWidget);
     expect(_viewMenu(tester), contains('Wrap Lines'));
     expect(_across(tester), isNotNull);
 
@@ -187,7 +187,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(wrapLines.value, isFalse);
     expect(readSaved()['wrap'], isFalse);
-    expect(find.byTooltip('Wrap lines  ⌥Z'), findsOneWidget);
+    expect(find.byTooltip('Wrap lines\u2002⌥Z'), findsOneWidget);
     await closeView(tester, d);
   }, variant: _mac);
 

@@ -290,7 +290,7 @@ class ItemView extends StatelessWidget {
             Icons.history,
             size: 15,
             color: t.textMuted,
-            tooltip: 'Rewind to here (Esc Esc)',
+            tooltip: withKey('Rewind to here', 'Esc Esc'),
             onTap: rewind,
           ),
       ],

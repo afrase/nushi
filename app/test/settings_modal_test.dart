@@ -116,7 +116,10 @@ void main() {
       'Esc': () => _key(tester, LogicalKeyboardKey.escape),
       'Close': () async {
         await tester.tap(
-          find.descendant(of: _modal, matching: find.byTooltip('Close (esc)')),
+          find.descendant(
+            of: _modal,
+            matching: find.byTooltip('Close\u2002Esc'),
+          ),
         );
         await tester.pumpAndSettle();
       },

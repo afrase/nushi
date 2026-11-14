@@ -407,7 +407,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
             ),
           ],
         ),
-        textStyle: ui(t.text, size: 12),
+        textStyle: ui(t.textSecondary, size: 12),
         waitDuration: const Duration(milliseconds: 500),
       ),
       snackBarTheme: SnackBarThemeData(

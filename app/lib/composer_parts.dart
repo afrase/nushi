@@ -293,7 +293,7 @@ class SendButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final touch = TouchTargets.of(context);
     Widget act(String label, String key, IconData icon, VoidCallback run) {
-      final tooltip = touch ? label : '$label ($key)';
+      final tooltip = touch ? label : withKey(label, key);
       return words
           ? PillButton(
               label: label,
@@ -338,7 +338,7 @@ class SendButtons extends StatelessWidget {
             key: const ValueKey('stop'),
             play: pop,
             child: boxButton(
-              'Stop (esc)',
+              withKey('Stop', 'Esc'),
               () => stopTurn(context, chat, daemon),
               stopIcon(NushiTheme.of(context).t.textSecondary),
             ),

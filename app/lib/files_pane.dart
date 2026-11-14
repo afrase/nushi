@@ -348,7 +348,7 @@ class FilesButton extends StatelessWidget {
 
   /// Its tooltip: Show files or Hide files, and the key.
   static String tooltip({required bool shown}) =>
-      '${shown ? 'Hide' : 'Show'} files  ${keyLabel(filesKey)}';
+      withKey('${shown ? 'Hide' : 'Show'} files', keyLabel(filesKey));
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(

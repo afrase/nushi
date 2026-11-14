@@ -132,12 +132,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(window.calls, isEmpty);
 
-    await tester.tap(find.byTooltip(r'Hide the sidebar (Ctrl+\)'));
+    await tester.tap(find.byTooltip('Hide the sidebar\u2002Ctrl+\\'));
     await tester.pumpAndSettle();
     expect(sidebarHidden.value, isTrue);
     // In the main pane, the window's margin in.
     expect(
-      tester.getRect(find.byTooltip(r'Show the sidebar (Ctrl+\)')).left,
+      tester.getRect(find.byTooltip('Show the sidebar\u2002Ctrl+\\')).left,
       NushiTheme.windowPad + 8 - SidebarButton.reach,
     );
 
@@ -219,7 +219,7 @@ void main() {
             expect(find.byType(PlatformMenuBar), findsNothing);
             if (hidden && name != 'settings') {
               final show = tester.getRect(
-                find.byTooltip(r'Show the sidebar (Ctrl+\)'),
+                find.byTooltip('Show the sidebar\u2002Ctrl+\\'),
               );
               expect(
                 show.left,

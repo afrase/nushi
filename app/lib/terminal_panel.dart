@@ -54,8 +54,8 @@ class TerminalButton extends StatelessWidget {
         tooltip: chat.archived
             ? 'An archived chat has no terminals'
             : on
-            ? 'Hide terminal  ${keyLabel(toggleTerminalKey)}'
-            : 'Show terminal  ${keyLabel(toggleTerminalKey)}',
+            ? withKey('Hide terminal', keyLabel(toggleTerminalKey))
+            : withKey('Show terminal', keyLabel(toggleTerminalKey)),
         padding: IconTap.header,
         lit: on,
         onTap: !chat.archived ? () => toggleTerminal(chat.id) : null,

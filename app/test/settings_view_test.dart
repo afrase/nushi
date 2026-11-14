@@ -129,7 +129,7 @@ void main() {
     await _key(tester, LogicalKeyboardKey.comma, meta: true);
     expect(find.byType(SettingsView), findsNothing);
     await _key(tester, LogicalKeyboardKey.comma, meta: true);
-    await tester.tap(find.byTooltip('Close (esc)'));
+    await tester.tap(find.byTooltip('Close\u2002Esc'));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsView), findsNothing);
     d.dispose();
@@ -223,7 +223,7 @@ void main() {
     await tester.tap(
       find.descendant(
         of: find.byType(SettingsView),
-        matching: find.byTooltip('Close (esc)'),
+        matching: find.byTooltip('Close\u2002Esc'),
       ),
     );
     await tester.pumpAndSettle();

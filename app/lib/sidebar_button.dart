@@ -58,9 +58,10 @@ class SidebarButton extends StatelessWidget {
     valueListenable: sidebarHidden,
     builder: (context, _, _) => IconTap.line(
       LineIcon.sidebar,
-      tooltip:
-          '${sidebarShut ? 'Show' : 'Hide'} the sidebar '
-          '(${Act.sidebar.shortcut})',
+      tooltip: withKey(
+        '${sidebarShut ? 'Show' : 'Hide'} the sidebar',
+        Act.sidebar.shortcut ?? '',
+      ),
       padding: IconTap.header,
       onTap: toggleSidebar,
     ),
@@ -124,14 +125,14 @@ class TitleButtons extends StatelessWidget {
             children: [
               IconTap.line(
                 LineIcon.chevronBack,
-                tooltip: 'Back (${Act.back.shortcut})',
+                tooltip: withKey('Back', Act.back.shortcut ?? ''),
                 padding: IconTap.header,
                 onTap: daemon.canGoBack ? daemon.goBack : null,
               ),
               const SizedBox(width: NushiTheme.iconGap),
               IconTap.line(
                 LineIcon.chevronForward,
-                tooltip: 'Forward (${Act.forward.shortcut})',
+                tooltip: withKey('Forward', Act.forward.shortcut ?? ''),
                 padding: IconTap.header,
                 onTap: daemon.canGoForward ? daemon.goForward : null,
               ),

@@ -88,7 +88,10 @@ class SideChat extends StatelessWidget {
                     ),
                   IconTap(
                     Icons.remove,
-                    tooltip: 'Hide the side chat   ${keyLabel(sideChatKey)}',
+                    tooltip: withKey(
+                      'Hide the side chat',
+                      keyLabel(sideChatKey),
+                    ),
                     size: 15,
                     onTap: onHide,
                   ),
@@ -232,9 +235,10 @@ class SideChip extends StatelessWidget {
           ChatPhase.done,
         ].contains(phase);
         return Tap(
-          tooltip:
-              '${marked ? '${phaseWord(phase, t).$1}. ' : ''}'
-              'Show the side chat   ${keyLabel(sideChatKey)}',
+          tooltip: withKey(
+            '${marked ? '${phaseWord(phase, t).$1}. ' : ''}Show the side chat',
+            keyLabel(sideChatKey),
+          ),
           onTap: () => showSide(chat),
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           child: Row(

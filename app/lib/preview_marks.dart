@@ -30,7 +30,7 @@ class WrapButton extends StatelessWidget {
     valueListenable: wrapLines,
     builder: (context, wrap, _) => IconTap(
       Icons.wrap_text,
-      tooltip: '${wrapLabel(wrap: wrap)}  ${keyLabel(wrapKey)}',
+      tooltip: withKey(wrapLabel(wrap: wrap), keyLabel(wrapKey)),
       size: 15,
       held: wrap,
       onTap: toggleWrap,

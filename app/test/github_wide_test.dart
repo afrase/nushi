@@ -12,7 +12,7 @@ void main() {
 
   testWidgets('golden: the view in a wide window', (tester) async {
     final (_, d) = await openView(tester, size: const Size(1700, 360));
-    final close = tester.getTopRight(find.byTooltip('Close (esc)'));
+    final close = tester.getTopRight(find.byTooltip('Close\u2002Esc'));
     expect(close.dx, greaterThan(1700 - 40));
     await expectLater(
       find.byType(MaterialApp),

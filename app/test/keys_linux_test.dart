@@ -134,7 +134,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.byTooltip('Show terminal  Ctrl+`'), findsOneWidget);
+      expect(find.byTooltip('Show terminal\u2002Ctrl+`'), findsOneWidget);
       if (width > 1000) {
         expect(
           find.byTooltip(
