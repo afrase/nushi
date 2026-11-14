@@ -119,6 +119,25 @@ bool itemReady(GitHubItem it) =>
   return null;
 }
 
+/// The chat's branch: its worktree's, else the folder's as found.
+String chatBranch(ChatPull cp) =>
+    cp.chat.worktree?.branch ?? cp.found?.branch ?? '';
+
+/// The chat's pull requests other than [link] still open on its branch
+/// (ADR 0117): while there are any, Clean up… on [link] takes only its
+/// branch on GitHub.
+List<int> openOnBranch(ChatPull cp, GitHubLink link) {
+  final branch = chatBranch(cp);
+  if (branch.isEmpty) return const [];
+  return [
+    for (final l in cp.links)
+      if (pullKey(l) != pullKey(link))
+        if (cp.itemOf(l) case final it?
+            when it.state == 'open' && it.head == branch)
+          l.number,
+  ];
+}
+
 Future<void> _cleanUp(
   BuildContext context,
   ChatPull cp,
@@ -126,7 +145,14 @@ Future<void> _cleanUp(
 ) async {
   final whole = await cp.whole(context, link);
   if (whole == null || !context.mounted) return;
-  await showCleanUp(context, cp.daemon, cp.chat, pull: whole);
+  await showCleanUp(
+    context,
+    cp.daemon,
+    cp.chat,
+    pull: whole,
+    openOnBranch: openOnBranch(cp, link),
+    branch: chatBranch(cp),
+  );
 }
 
 /// The ⋯ menu of a pull request's row (and the right-click of the

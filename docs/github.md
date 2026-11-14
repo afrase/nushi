@@ -158,6 +158,8 @@ A dialog ticks what loses nothing, and says what each costs:
 - deleting the branch on GitHub;
 - archiving the chat.
 
+With several pull requests ([ADR 0117](adr/0117-github-links-as-chips-and-a-chats-pull-requests.md)), a row's Clean up… takes only that pull request's branch on GitHub while another of the chat's is still open on its branch: the dialog names which, and the worktree, the local branch and archiving wait until those merge or close.
+
 Mid-turn, it waits for the turn to end, or stops it. The daemon refuses again what the dialog didn't clear: another chat in the worktree, a branch that moved on since the pull request, the default branch.
 
 The widget then shows each part as it goes and what it kept, with Restore branch (on GitHub, at the pull request's head) and Unarchive.

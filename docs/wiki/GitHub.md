@@ -95,7 +95,7 @@ When the pull request can merge, the merge box says **Ready to merge**. If it ca
 
 If the repository allows it, **Enable auto-merge** lets GitHub merge it by itself once it's ready. If the base branch uses a merge queue, you'll see **Add to queue** or **Merge when ready** instead.
 
-After the merge, **Clean up…** offers to delete the worktree and branches and archive the chat.
+After the merge, **Clean up…** offers to delete the worktree and branches and archive the chat. If another of the chat's pull requests is still open on its branch, it only deletes the merged one's branch on GitHub, and says which pull request keeps the rest.
 
 ## Good to know
 
