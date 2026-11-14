@@ -53,14 +53,14 @@ The owner liked three things in Claude's desktop app: a pull request or issue li
 - **Chips from the address alone**: no title, most of the point.
 - **GitHub's avatar images**: another host to reach and a cache to keep.
 
-**4. A card where the chat opened one.** When the daemon links a pull request because a tool call opened it (section 3, `Opened`), the transcript shows a card for it, as Claude's app does, after that tool call's turn group, so a collapsed group doesn't hide it. It should stand out, as opening a pull request is a big moment in a chat:
+**4. A card where the chat opened or merged one.** Live only, as in Claude's app: when a tool call of the open chat opens a pull request (`gh pr create`, a `create_pull_request` tool; the daemon links it, section 3, `Opened`) or merges one linked to the chat (`gh pr merge`, a `merge_pull_request` tool), the transcript shows a card for it after that tool call's turn group, so a collapsed group doesn't hide it. It lives in the app's memory for that open chat only: switching to another chat or restarting the app drops it, and it is never saved with the chat; the chip in the text and the rows stay. It should stand out, as opening or merging a pull request is a big moment in a chat:
 - a filled `raised` card, corners `card`, full width of the messages column, with no coloured edge;
-- a top line: the state pill (as the hover card), `owner/repo #n · author · age` muted;
+- a top line: the state pill (as the hover card; the current state, Open or Merged), `owner/repo #n · author · age` muted;
 - the title, two lines at most, in the body's size and weight;
 - on the right of the title, the files count and `+adds −dels` as two `tag` chips;
 - under a hairline, one line: the CI badge and its words (`2 of 3 checks passed`, `Checks running`, `1 check failing`), or the cue from the row (section 2), or nothing;
 - a click opens the Pull request tab on it; the right-click menu is the row's ⋯; no buttons on the card itself.
-It reads the same `GetGitHubItems` data as the chips and rows; before it answers, the card shows `owner/repo #n` and the tool output's address. `ChatGitHub` gains `OpenedBy` (the tool call's id), which places the card; an unlinked pull request's card goes with it. Not on the phone.
+It reads the same `GetGitHubItems` data as the chips and rows; before it answers, the card shows `owner/repo #n` and the tool output's address. Not on the phone.
 
 ## Settled
 1. Rows in their own widget, not inside Changes.
@@ -70,4 +70,4 @@ It reads the same `GetGitHubItems` data as the chips and rows; before it answers
 5. No "Mentioned" list.
 6. 10 a chat.
 7. GitHub's shapes wherever `StatePill` and the state icons are drawn.
-8. The card of section 4: yes (the owner, 2026-11-14).
+8. The card of section 4: yes, live only, as Claude's app (the owner, 2026-11-14).
