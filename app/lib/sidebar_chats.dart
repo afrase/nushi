@@ -88,17 +88,19 @@ class SidebarChats extends StatelessWidget {
     final numbers = {
       for (final (i, c) in chatOrder(daemon).take(9).indexed) c.id: i + 1,
     };
-    // A row says its project where its group doesn't.
-    Widget row(ChatState c, Movable movable, {bool inProject = false}) =>
-        SidebarRow(
-          c,
-          key: ValueKey(c.id),
-          daemon: daemon,
-          number: held ? numbers[c.id] : null,
-          movable: movable,
-          project: !inProject && shows.contains(RowPart.project),
-          time: shows.contains(RowPart.time) ? chatTime(c, sort) : null,
-        );
+    // A row says its project where its group doesn't; in its project, its
+    // time is the one that project sorts by.
+    Widget row(ChatState c, Movable movable, {String? project}) => SidebarRow(
+      c,
+      key: ValueKey(c.id),
+      daemon: daemon,
+      number: held ? numbers[c.id] : null,
+      movable: movable,
+      project: project == null && shows.contains(RowPart.project),
+      time: shows.contains(RowPart.time)
+          ? chatTime(c, project == null ? sort : projectSort(project).sort)
+          : null,
+    );
     return ListMotionScope(
       motion: motion,
       child: ListView(
@@ -127,8 +129,10 @@ class SidebarChats extends StatelessWidget {
                         live: liveFolders(daemon),
                         onNew: onNew,
                         onTerminal: onTerminal,
-                        reorders: reorders,
-                        row: (c, movable) => row(c, movable, inProject: true),
+                        reorders: (folder) =>
+                            projectSort(folder).sort == SortBy.manual,
+                        row: (folder, c, movable) =>
+                            row(c, movable, project: folder),
                         tile: (folder) => FolderTile(
                           daemon: daemon,
                           folder: folder,

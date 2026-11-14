@@ -287,6 +287,7 @@ class _SidebarState extends State<Sidebar> {
                         pinnedCollapsed,
                         sidebarSort,
                         sidebarAscending,
+                        projectSorts,
                         sidebarShows,
                         sidebarSections,
                         projectRail,

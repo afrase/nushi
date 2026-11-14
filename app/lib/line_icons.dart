@@ -33,6 +33,10 @@ enum LineIcon {
   /// Arrange (the sidebar's grouping and sort): three lines, each shorter.
   arrange,
 
+  /// Sort (a project's own, ADR 0118): an arrow up beside an arrow down,
+  /// as Claude desktop's Group and sort.
+  sort,
+
   /// Add: the composer's +.
   plus,
 
@@ -170,6 +174,18 @@ enum LineIcon {
         ..lineTo(17, 12)
         ..moveTo(10, 17)
         ..lineTo(14, 17),
+    sort =>
+      Path()
+        ..moveTo(8, 19)
+        ..lineTo(8, 5)
+        ..moveTo(4.5, 8.5)
+        ..lineTo(8, 5)
+        ..lineTo(11.5, 8.5)
+        ..moveTo(16, 5)
+        ..lineTo(16, 19)
+        ..moveTo(12.5, 15.5)
+        ..lineTo(16, 19)
+        ..lineTo(19.5, 15.5),
     more =>
       Path()
         ..addOval(_dot(6))

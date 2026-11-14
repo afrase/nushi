@@ -15,19 +15,22 @@ import 'package:nushi/widgets.dart';
 // and View all (`arrangement.dart` has the choices).
 
 /// Whether the sidebar is arranged as it is at first: grouped by Project,
-/// sorted by hand, its rows showing what they show at first. Sections
-/// aren't counted: they're the user's chats' places, not a view of them.
+/// sorted by hand, no project sorted its own way, its rows showing what
+/// they show at first. Sections aren't counted: they're the user's chats'
+/// places, not a view of them.
 bool get arrangedAsDefault =>
     sidebarGroupBy.value == GroupBy.project &&
     sidebarSort.value == SortBy.manual &&
+    projectSorts.value.isEmpty &&
     setEquals(sidebarShows.value, defaultRowParts);
 
-/// Puts the grouping, the sort and what rows show back as at first; the
-/// sections stay.
+/// Puts the grouping, the sort (the projects' own too) and what rows show
+/// back as at first; the sections stay.
 void resetArrangement() {
   sidebarGroupBy.value = GroupBy.project;
   sidebarSort.value = SortBy.manual;
   sidebarAscending.value = false;
+  projectSorts.value = const {};
   sidebarShows.value = defaultRowParts;
 }
 
@@ -92,6 +95,9 @@ List<MenuEntry> arrangeEntries(BuildContext context, Daemon daemon) {
               ? 'Drag chats to put them in order'
               : 'The sort sets the order; drag a chat into a section',
         ),
+        // Each project may sort its own way, from its header (ADR 0118).
+        if (group == GroupBy.project)
+          const MenuEntry.heading('A project’s ⇅ sorts it its own way'),
       ],
     ),
     MenuEntry(
@@ -160,6 +166,7 @@ class _ArrangeButtonState extends State<ArrangeButton> {
         sidebarGroupBy,
         sidebarSort,
         sidebarAscending,
+        projectSorts,
         sidebarShows,
         sidebarSections,
       ]),

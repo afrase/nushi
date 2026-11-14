@@ -63,6 +63,16 @@ To change the projects' order, drag a tile up or down the rail. The sidebar's li
 
 A number on a tile counts that project's chats that need you. Hover over a tile for the project's name and folder. While the rail is on, the sidebar can't be dragged narrower than the rail needs. The rail isn't there in a very narrow window, or while the sidebar is grouped by something other than Project; its setting then says why.
 
+## Sort a project's chats
+
+Each project can sort its chats its own way. The rest keep the order set in the Arrange menu's **Sort by**.
+
+1. Point at the project's name in the sidebar.
+2. Click the **⇅** button beside its **+**.
+3. Pick **Last updated**, **Date created**, **Name** or **Manual** (the order you drag them into), and which way.
+
+The ⇅ stays, in color, while the project sorts its own way. Pick **Sidebar’s sort** to go back.
+
 ## Change the fonts
 
 Nushi comes with its own fonts. You can use any font installed on your computer instead, one for the app's text and one for code.

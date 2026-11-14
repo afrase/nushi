@@ -27,12 +27,12 @@ import 'package:nushi/tile_picture.dart';
 /// chats or none), whether it has the project rail, the project it's
 /// narrowed to and each project's tile, each project's chats' order,
 /// whether Pinned is
-/// collapsed, the sidebar's arrangement (grouping, sort, what rows show)
-/// and sections, the models picked last, each repository's
-/// merge method, each chat's pinned artifacts, and the Mac's notifications
-/// and Dock badge, the appearance and the color theme, whether the
-/// composer checks spelling, whether a chat's links open in a browser
-/// tab and which sites there may reach the local network, whether a
+/// collapsed, the sidebar's arrangement (grouping, sort, what rows show),
+/// each project's own sort, and sections, the models picked last, each
+/// repository's merge method, each chat's pinned artifacts, and the Mac's
+/// notifications and Dock badge, the appearance and the color theme,
+/// whether the composer checks spelling, whether a chat's links open in a
+/// browser tab and which sites there may reach the local network, whether a
 /// preview's source wraps its lines and shows its whitespace,
 /// what reply cards ask the agent, and the newer release whose toast was
 /// dismissed. Each is a [Pref].
@@ -206,8 +206,8 @@ void _dropImage(TileLook? look, {String unless = ''}) {
 }
 
 /// Takes [folder] out of the sidebar's projects, and with it its place
-/// among them, its collapse, its chats' order and its tile (its stored
-/// image deleted); the sidebar
+/// among them, its collapse, its chats' order, its own sort and its tile
+/// (its stored image deleted); the sidebar
 /// narrowed to it shows all again: one save.
 void forgetProject(String folder) {
   if (sidebarProject.value == folder) sidebarProject.value = null;
@@ -217,6 +217,9 @@ void forgetProject(String folder) {
   sidebarOrder.value = [...sidebarOrder.value.where((f) => f != folder)];
   sidebarCollapsed.value = {...sidebarCollapsed.value}..remove(folder);
   sidebarChats.value = {...sidebarChats.value}..remove(folder);
+  if (projectSorts.value.containsKey(folder)) {
+    projectSorts.value = {...projectSorts.value}..remove(folder);
+  }
 }
 
 /// The order each project's chats were dragged into, by folder path
@@ -252,6 +255,18 @@ final sidebarSort = Pref<SortBy>(
   write: (s) => s.name,
 );
 final Pref<bool> sidebarAscending = _plain('sidebarAscending', false);
+
+/// Each project's own sort, by folder path ('' for no folder), from its
+/// header's Sort button (ADR 0118): a project not named sorts as
+/// [sidebarSort] and [sidebarAscending] say, the sidebar's, which stays
+/// the default. Only while the sidebar is grouped by project.
+final projectSorts = Pref<Map<String, ProjectSort>>(
+  'projectSorts',
+  (v) => _entries(v, ProjectSort.read),
+  write: (sorts) => {
+    for (final MapEntry(:key, :value) in sorts.entries) key: value.toJson(),
+  },
+);
 final sidebarShows = Pref<Set<RowPart>>(
   'sidebarShows',
   (v) => v is List

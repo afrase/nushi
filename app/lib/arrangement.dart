@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show immutable;
+
 import 'package:nushi/agents.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/status.dart';
@@ -43,6 +45,39 @@ enum SortBy {
 
   /// The way it's usually wanted: the newest first, names from A.
   bool get naturallyAscending => this == name;
+}
+
+/// A project's own sort (its header's Sort button, ADR 0118): how its
+/// chats are sorted and which way, in place of the sidebar's.
+@immutable
+class ProjectSort {
+  const new(this.sort, {this.ascending = false});
+
+  /// [saved] as `app.json` has it; null when it isn't one.
+  static ProjectSort? read(Object? saved) => switch (saved) {
+    {'sort': final String name} => switch (SortBy.values.asNameMap()[name]) {
+      final sort? => ProjectSort(sort, ascending: saved['ascending'] == true),
+      null => null,
+    },
+    _ => null,
+  };
+
+  final SortBy sort;
+  final bool ascending;
+
+  Map<String, Object?> toJson() => {
+    'sort': sort.name,
+    if (ascending) 'ascending': true,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is ProjectSort &&
+      other.sort == sort &&
+      other.ascending == ascending;
+
+  @override
+  int get hashCode => Object.hash(sort, ascending);
 }
 
 /// What a sidebar row can show besides its title: its state's dot, its
