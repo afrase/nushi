@@ -6,6 +6,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/panel_widgets.dart';
+import 'package:nushi/pull_rows.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -96,26 +97,25 @@ Future<void> _pump(WidgetTester tester) async {
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('merged: Clean up… and Not now; the menu keeps it', (
+  testWidgets("merged: the row's cue offers Clean up…, and its ⋯ has it", (
     tester,
   ) async {
     final (d, _) = await _open(tester);
     expect(
-      _inPull(
-        find.textContaining(
-          "This chat's worktree and branch aren't needed any more.",
-          findRichText: true,
-        ),
-      ),
+      _inPull(find.textContaining('Merged into main', findRichText: true)),
       findsOneWidget,
     );
-    await tester.tap(_inPull(find.text('Not now')));
+    expect(_inPull(find.text('Clean up…')), findsOneWidget);
+    await tester.tap(
+      _inPull(
+        find.descendant(
+          of: find.byType(PullRow),
+          matching: find.byTooltip('Pull request'),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
-    expect(cleanUpLater.value, {'c'});
-    expect(_inPull(find.text('Clean up…')), findsNothing);
-    await tester.tap(_inPull(find.byTooltip('Pull request')));
-    await tester.pumpAndSettle();
-    expect(find.text('Clean up…'), findsOneWidget); // the menu's
+    expect(find.text('Clean up…'), findsNWidgets(2)); // the menu's too
     d.dispose();
   }, variant: _mac);
 

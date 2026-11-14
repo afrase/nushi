@@ -1234,6 +1234,17 @@ abstract final class NushiService {
     nushiv1nushi.GetGitHubStatesResponse.new,
   );
 
+  /// Pull requests and issues by their numbers (a link's chip, a pull
+  /// request's row; ADR 0117): kept a while, the rest asked of each host,
+  /// 50 a query. A host Nushi doesn't give a token to is never asked.
+  /// API 118.
+  static const getGitHubItems = connect.Spec(
+    '/$name/GetGitHubItems',
+    connect.StreamType.unary,
+    nushiv1nushi.GetGitHubItemsRequest.new,
+    nushiv1nushi.GetGitHubItemsResponse.new,
+  );
+
   static const getGitHubPull = connect.Spec(
     '/$name/GetGitHubPull',
     connect.StreamType.unary,

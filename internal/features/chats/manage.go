@@ -64,63 +64,6 @@ func (s *Service) Session(id string) (model.ChatRecord, error) {
 	return c.record, nil
 }
 
-// LinkPull sets the pull request of a chat's branch (found, or picked by
-// hand), or unlinks it (nil): a chat started from a pull request forgets
-// it, and the one unlinked isn't found again. A found one (its Branch
-// set) doesn't take the place of one linked by hand, nor come back once
-// unlinked.
-func (s *Service) LinkPull(chatID string, pull *model.ChatGitHub) error {
-	c, err := s.listed(chatID)
-	if err != nil {
-		return err
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	now := c.record.PullLink()
-	switch {
-	case pull == nil && now == nil:
-		return nil
-	case pull == nil:
-		c.saveLocked(func(s *model.ChatRecord) {
-			s.NoPull = now.Number
-			if s.GitHub != nil && s.GitHub.Pull {
-				s.GitHub = nil
-			} else {
-				s.Pull = nil
-			}
-		})
-		c.logLocked().Info("pull request unlinked")
-		return nil
-	case pull.Branch != "" && (pull.Number == c.record.NoPull || now != nil && now.Branch == ""):
-		return nil // linked by hand, or unlinked: kept
-	}
-	p := *pull
-	c.saveLocked(func(s *model.ChatRecord) {
-		s.Pull, s.NoPull = &p, 0
-		if s.GitHub != nil && s.GitHub.Pull {
-			s.GitHub = nil // linked by hand to another
-		}
-	})
-	if now == nil || now.ID != p.ID {
-		c.logLocked().Info("pull request linked", "number", p.Number, "found", p.Branch != "")
-	}
-	return nil
-}
-
-// DropFoundPull unlinks the pull request found for a branch the chat's
-// folder is no longer on.
-func (s *Service) DropFoundPull(chatID, branch string) {
-	c, err := s.listed(chatID)
-	if err != nil {
-		return
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if p := c.record.Pull; p != nil && p.Branch != "" && p.Branch != branch {
-		c.saveLocked(func(s *model.ChatRecord) { s.Pull = nil })
-	}
-}
-
 // Archive stops a chat's agent and marks the chat archived; its transcript
 // stays readable until the daemon restarts. Unarchiving (archived false)
 // reopens it through session/load, which replays the transcript.

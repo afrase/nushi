@@ -19,11 +19,14 @@ import 'package:nushi/files_pane.dart';
 import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_link_chip.dart';
+import 'package:nushi/github_view.dart' show showItem;
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_pane.dart';
+import 'package:nushi/pull_link.dart';
 import 'package:nushi/review_cards.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
@@ -44,10 +47,14 @@ class ChatView extends StatefulWidget {
     required this.daemon,
     super.key,
     this.details,
+    this.onPull,
   });
 
   final ChatState chat;
   final Daemon daemon;
+
+  /// Opens the chat's Pull request tab.
+  final VoidCallback? onPull;
 
   /// The chat's details, at the transcript's right while they show.
   final Widget? details;
@@ -131,39 +138,54 @@ class _ChatViewState extends State<ChatView> {
             builder: (context, _) => Stack(
               children: [
                 Positioned.fill(
-                  child: Transcript(
-                    chat: chat,
+                  child: GitHubLinks(
                     daemon: widget.daemon,
-                    onReply: chat.archived || chat.sessionGone
-                        ? null
-                        : chat.draft.addReply,
-                    onSide: chat.archived || chat.sessionGone ? null : _ask,
-                    // Under it, its scrollbar running down beside them.
-                    bottom: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        TurnStatus(
-                          chat,
-                          what: chat.forking.value
-                              ? 'Starting a side chat'
-                              : null,
-                        ),
-                        if (chat.mcpChanged && !chat.archived)
-                          _McpChanged(chat, widget.daemon),
-                        if (!chat.archived && !chat.sessionGone)
-                          UnsentReview(chat),
-                        if (chat.archived)
-                          _Archived(chat, widget.daemon)
-                        else if (chat.sessionGone)
-                          _Expired(chat, widget.daemon)
-                        else
-                          Composer(
-                            chat: chat,
-                            daemon: widget.daemon,
-                            folder: true,
+                    chat: chat,
+                    onPull: widget.onPull,
+                    onShow: (a) => showItem(widget.daemon, a.ref, pull: a.pull),
+                    onLink: (a, it) => ChatPull.of(widget.daemon, chat).addLink(
+                      GitHubLink(
+                        host: a.host,
+                        id: it.id,
+                        repo: a.repo,
+                        number: a.number,
+                        pull: true,
+                      ),
+                    ),
+                    child: Transcript(
+                      chat: chat,
+                      daemon: widget.daemon,
+                      onReply: chat.archived || chat.sessionGone
+                          ? null
+                          : chat.draft.addReply,
+                      onSide: chat.archived || chat.sessionGone ? null : _ask,
+                      // Under it, its scrollbar running down beside them.
+                      bottom: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TurnStatus(
+                            chat,
+                            what: chat.forking.value
+                                ? 'Starting a side chat'
+                                : null,
                           ),
-                      ],
+                          if (chat.mcpChanged && !chat.archived)
+                            _McpChanged(chat, widget.daemon),
+                          if (!chat.archived && !chat.sessionGone)
+                            UnsentReview(chat),
+                          if (chat.archived)
+                            _Archived(chat, widget.daemon)
+                          else if (chat.sessionGone)
+                            _Expired(chat, widget.daemon)
+                          else
+                            Composer(
+                              chat: chat,
+                              daemon: widget.daemon,
+                              folder: true,
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

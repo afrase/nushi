@@ -66,6 +66,24 @@ class PullStates extends ChangeNotifier {
   /// [link]'s pull request as last known.
   GitHubItem? item(GitHubLink? link) => link == null ? null : _items[link.id];
 
+  /// The worst checks of [chat]'s open pull requests (ADR 0117): failing,
+  /// then running, then passed; its primary's when none is open.
+  String? checksOf(ChatState chat) {
+    int rank(String? c) => switch (c) {
+      'failure' || 'error' => 3,
+      'pending' => 2,
+      'success' => 1,
+      _ => 0,
+    };
+    String? worst;
+    for (final l in chat.pulls) {
+      final it = _items[l.id];
+      if (l.id.isEmpty || it == null || it.state != 'open') continue;
+      if (rank(it.checks) > rank(worst)) worst = it.checks;
+    }
+    return worst ?? item(chat.pull)?.checks;
+  }
+
   /// Takes [it] as current (a widget read the pull request whole).
   void put(GitHubItem it) {
     if (_items[it.id] == it) return;
@@ -92,7 +110,9 @@ class PullStates extends ChangeNotifier {
 
   Iterable<GitHubLink> get _links => [
     for (final ChatState c in daemon.chats.values)
-      if (c.pull case final l? when !c.archived) l,
+      if (!c.archived)
+        for (final l in c.pulls.isEmpty ? [?c.pull] : c.pulls)
+          if (l.id.isNotEmpty) l,
   ];
 
   /// A chat got a pull request (or lost one): ask in a moment.
@@ -151,7 +171,7 @@ class _PullDotState extends State<PullDot> with ClockRun {
   void initState() {
     super.initState();
     widget.states.addListener(_changed);
-    _checks = widget.states.item(widget.chat.pull)?.checks;
+    _checks = widget.states.checksOf(widget.chat);
   }
 
   @override
@@ -161,7 +181,7 @@ class _PullDotState extends State<PullDot> with ClockRun {
   }
 
   void _changed() {
-    final now = widget.states.item(widget.chat.pull)?.checks;
+    final now = widget.states.checksOf(widget.chat);
     if (now == _checks) return;
     final was = _checks;
     _checks = now;
@@ -184,15 +204,15 @@ class _PullDotState extends State<PullDot> with ClockRun {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    final it = widget.states.item(widget.chat.pull);
-    final passed = it?.checks == 'success' && running;
-    final (color, words) = switch (it?.checks) {
+    final checks = widget.states.checksOf(widget.chat);
+    final passed = checks == 'success' && running;
+    final (color, words) = switch (checks) {
       'failure' || 'error' => (t.crashed, 'failing'),
       'pending' => (t.needs, 'running'),
       'success' when passed => (t.done, 'passed'),
       _ => (null, ''),
     };
-    if (it == null || color == null) return const SizedBox.shrink();
+    if (checks == null || color == null) return const SizedBox.shrink();
     final still = reduceMotion(context);
     final ms = running ? ranMs : double.infinity;
     // Scale 1 → 1.6 (at 30%) → 1 over 400 ms; then, failing, a hop.
@@ -206,7 +226,9 @@ class _PullDotState extends State<PullDot> with ClockRun {
         : hopHeight((ms - 400) / 1200);
     final fade = passed ? 1 - part(ms, 4000, 300) : 1.0;
     return Tooltip(
-      message: '#${it.ref.number}: checks $words',
+      message: widget.chat.pulls.length > 1
+          ? 'Pull requests: checks $words'
+          : '#${widget.chat.pull?.number}: checks $words',
       child: Padding(
         padding: const EdgeInsets.only(left: 6),
         child: Transform.translate(
@@ -215,7 +237,7 @@ class _PullDotState extends State<PullDot> with ClockRun {
             size: const Size.square(PullDot.size),
             painter: ChecksMark(
               color.withValues(alpha: color.a * fade),
-              ringing: it.checks == 'pending' && !still,
+              ringing: checks == 'pending' && !still,
               scale: pop,
             ),
           ),
@@ -269,9 +291,19 @@ class ChecksMark extends CustomPainter {
 /// whole, asked at once and then (quietly) as the PR widget asks for it
 /// ([pullPoll]: each minute, merged or closed every 15) while it shows;
 /// until then its number and checks' icon from the chats' states. A tap
-/// opens it on GitHub.
+/// opens it on GitHub; with several (ADR 0117) it says `+2` for the others
+/// and a tap shows them all ([onMore]).
 class PullChip extends StatefulWidget {
-  const new(this.daemon, this.chat, {required this.onOpen, super.key});
+  const new(
+    this.daemon,
+    this.chat, {
+    required this.onOpen,
+    super.key,
+    this.onMore,
+  });
+
+  /// Shows the chat's pull requests, when it has several.
+  final VoidCallback? onMore;
 
   final Daemon daemon;
   final ChatState chat;
@@ -346,8 +378,10 @@ class _PullChipState extends State<PullChip> {
       final it = p?.item ?? _states.item(l);
       final checks = it == null ? null : checksIcon(t, it.checks);
       final open = p?.threads.where((x) => !x.resolved).length ?? 0;
+      final more = widget.chat.pulls.length - 1;
       final words = [
         'Pull request #${l.number}',
+        if (more > 0) 'and $more more',
         if (it != null) itemState(it),
         ?checks?.words.toLowerCase(),
         if (open > 0) '$open open thread${open == 1 ? '' : 's'}',
@@ -357,7 +391,9 @@ class _PullChipState extends State<PullChip> {
         label: words,
         excludeSemantics: true,
         child: InkResponse(
-          onTap: it == null || it.url.isEmpty
+          onTap: more > 0 && widget.onMore != null
+              ? widget.onMore
+              : it == null || it.url.isEmpty
               ? null
               : () => widget.onOpen(it.url),
           radius: 22, // not a corner: its splash's reach
@@ -368,11 +404,19 @@ class _PullChipState extends State<PullChip> {
               child: p != null
                   ? Center(
                       widthFactor: 1,
-                      child: pullSummary(
-                        theme,
-                        number: l.number,
-                        pull: p,
-                        size: 13,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 6,
+                        children: [
+                          pullSummary(
+                            theme,
+                            number: l.number,
+                            pull: p,
+                            size: 13,
+                          ),
+                          if (more > 0)
+                            Text('+$more', style: theme.code(t.textMuted)),
+                        ],
                       ),
                     )
                   : Row(
@@ -388,6 +432,8 @@ class _PullChipState extends State<PullChip> {
                         ),
                         if (checks != null)
                           Icon(checks.icon, size: 15, color: checks.color),
+                        if (more > 0)
+                          Text(' +$more', style: theme.code(t.textMuted)),
                       ],
                     ),
             ),

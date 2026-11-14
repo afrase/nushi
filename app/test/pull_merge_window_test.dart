@@ -78,24 +78,6 @@ void main() {
           d.dispose();
         }, variant: _mac);
       }
-
-      testWidgets('$state in the widget, $theme', (tester) async {
-        final (d, _) = await openPullTab(
-          tester,
-          mergePull(state),
-          size: const Size(1700, 1000),
-          brightness: brightness,
-          details: true,
-          open: false,
-        );
-        _inside(tester, 1700);
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'pull_merge_widget_${state}_$theme',
-        );
-        d.dispose();
-      }, variant: _mac);
     }
 
     for (final width in [1700.0, 720.0]) {

@@ -118,7 +118,7 @@ var deviceMay = []string{
 	"RemoveJiraSite", "CheckJiraSite", "ListJiraBoards", "SetJiraBoard", "SetJiraSearches", "ListJiraIssues",
 	"GetJiraJql", "SuggestJiraJql", "GetJiraIssue", "ListJiraTransitions", "TransitionJiraIssue", "AddJiraComment",
 	"FindJiraIssues", "GetJiraAttachment", "ListGitHubHosts", "AddGitHubToken", "RemoveGitHubToken",
-	"ListGitHubRepos", "ListGitHubInbox", "GetGitHubStates", "GetGitHubPull", "GetGitHubIssue", "GetGitHubFiles",
+	"ListGitHubRepos", "ListGitHubInbox", "GetGitHubStates", "GetGitHubItems", "GetGitHubPull", "GetGitHubIssue", "GetGitHubFiles",
 	"GetGitHubJobLog", "ReplyGitHubThread", "ResolveGitHubThread", "AddGitHubComment", "SubmitGitHubReview",
 	"RerunGitHubChecks", "GetGitHubMergeText", "MergeGitHubPull", "EnableGitHubAutoMerge", "DisableGitHubAutoMerge",
 	"EnqueueGitHubPull", "DequeueGitHubPull", "GetCleanUp", "RemoveChatWorktree", "DeleteChatBranch",

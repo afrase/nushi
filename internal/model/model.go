@@ -1,7 +1,10 @@
 // Package model holds the plain types that features and the API share.
 package model
 
-import "time"
+import (
+	"slices"
+	"time"
+)
 
 // ChatRecord is what Nushi keeps of a chat, to list and reopen it (Chat is
 // a snapshot of it with its items). The agent keeps the rest, its session.
@@ -49,11 +52,18 @@ type ChatRecord struct {
 	// GitHub is the GitHub pull request or issue the chat was started
 	// from, if it was.
 	GitHub *ChatGitHub `json:",omitempty"`
-	// Pull is the pull request whose head is the chat's branch, found or
-	// linked by hand, unless the chat was started from one (GitHub).
-	// NoPull is the pull request unlinked by hand, not found again.
-	Pull   *ChatGitHub `json:",omitempty"`
-	NoPull int         `json:",omitempty"`
+	// Pulls are the chat's pull requests other than the one it was started
+	// from (GitHub), in the order linked (ADR 0117): found by its branch's
+	// head, opened by a tool call of the chat, or linked by hand; at most
+	// MaxPulls with GitHub's. Pull is the first of them, still written for
+	// a release before Pulls (ADR 0108); a record without Pulls takes it as
+	// its first. NoPulls are the ones unlinked by hand (node ids, or Key
+	// for one without), never found or opened again; NoPull is the number
+	// a release before Pulls kept for that.
+	Pulls   []ChatGitHub `json:",omitempty"`
+	NoPulls []string     `json:",omitempty"`
+	Pull    *ChatGitHub  `json:",omitempty"`
+	NoPull  int          `json:",omitempty"`
 	// Ultracode is the chat's Ultracode option (its agent's standing
 	// multi-agent workflows), off by default.
 	Ultracode bool `json:",omitempty"`
@@ -91,13 +101,42 @@ type ChatRecord struct {
 	Scratch bool `json:"-"`
 }
 
-// PullLink is the chat's pull request: the one it was started from, else
-// the one of its branch; nil when it has none.
+// MaxPulls is how many pull requests a chat holds at most (ADR 0117).
+const MaxPulls = 10
+
+// PullLink is the chat's primary pull request: the one it was started
+// from, else its first; nil when it has none.
 func (s ChatRecord) PullLink() *ChatGitHub {
-	if s.GitHub != nil && s.GitHub.Pull {
-		return s.GitHub
+	if all := s.AllPulls(); len(all) > 0 {
+		return &all[0]
 	}
-	return s.Pull
+	return nil
+}
+
+// LinkedPulls are the chat's pull requests other than the one it was
+// started from: Pulls, or Pull for a record written before them.
+func (s ChatRecord) LinkedPulls() []ChatGitHub {
+	if len(s.Pulls) == 0 && s.Pull != nil {
+		return []ChatGitHub{*s.Pull}
+	}
+	return slices.Clone(s.Pulls)
+}
+
+// AllPulls are the chat's pull requests, the one it was started from
+// first.
+func (s ChatRecord) AllPulls() []ChatGitHub {
+	out := s.LinkedPulls()
+	if s.GitHub != nil && s.GitHub.Pull {
+		out = append([]ChatGitHub{*s.GitHub}, out...)
+	}
+	return out
+}
+
+// Unlinked says the user unlinked p from the chat: it isn't found or
+// opened again.
+func (s ChatRecord) Unlinked(p ChatGitHub) bool {
+	return p.ID != "" && slices.Contains(s.NoPulls, p.ID) || slices.Contains(s.NoPulls, p.Key()) ||
+		p.Branch != "" && p.Number == s.NoPull
 }
 
 // MessagePin is a message the user pinned: its item's id, and what finds it

@@ -63,6 +63,32 @@ func (f *fakeClient) Inbox(_ context.Context, in githubapi.InboxFilter) (githuba
 	return f.inbox, f.fail
 }
 
+// Items answers from states by node id "<repo>#<number>"; any other is
+// unseen.
+func (f *fakeClient) Items(_ context.Context, refs []model.GitHubRef) ([]model.GitHubItem, []model.GitHubRef, error) {
+	names := make([]string, 0, len(refs))
+	for _, r := range refs {
+		names = append(names, fmt.Sprint(r.Repo, "#", r.Number))
+	}
+	f.note("items " + strings.Join(names, ","))
+	if f.fail != nil {
+		return nil, nil, f.fail
+	}
+	var items []model.GitHubItem
+	var unseen []model.GitHubRef
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for i, r := range refs {
+		if it, ok := f.states[names[i]]; ok {
+			it.GitHubRef = r
+			items = append(items, it)
+		} else {
+			unseen = append(unseen, r)
+		}
+	}
+	return items, unseen, nil
+}
+
 func (f *fakeClient) Status(_ context.Context, ids []string) (map[string]model.GitHubItem, error) {
 	f.note("status " + strings.Join(ids, ","))
 	if f.fail != nil {

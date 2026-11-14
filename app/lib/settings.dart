@@ -34,8 +34,8 @@ import 'package:nushi/tile_picture.dart';
 /// whether the composer checks spelling, whether a chat's links open in a
 /// browser tab and which sites there may reach the local network, whether a
 /// preview's source wraps its lines and shows its whitespace,
-/// what reply cards ask the agent, and the newer release whose toast was
-/// dismissed. Each is a [Pref].
+/// what reply cards ask the agent, the pull request each chat's tab shows,
+/// and the newer release whose toast was dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree, nor whether a subagent's pane
 /// shows wide, nor a beta's `projectRail`: an older `worktrees`,
 /// `subagentWide` or `projectRail` key is ignored, and dropped by the
@@ -324,6 +324,13 @@ final Pref<Map<String, int>> pullSeen = _byChat(
   (v) => v is num ? v.toInt() : null,
 );
 
+/// The pull request each chat's Pull request tab shows, picked among its
+/// several (ADR 0117), as host/owner/repo#n.
+final Pref<Map<String, String>> pickedPulls = _byChat(
+  'pickedPulls',
+  (v) => v is String ? v : null,
+);
+
 /// The chats whose PR widget no longer offers Clean up… (Not now); its
 /// menu still has it.
 final Pref<Set<String>> cleanUpLater = _set('cleanUpLater', chats: true);
@@ -425,6 +432,7 @@ List<Pref<Object?>> get _chatPrefs => [
   chatOpened,
   pinnedFiles,
   pullSeen,
+  pickedPulls,
   cleanUpLater,
 ];
 

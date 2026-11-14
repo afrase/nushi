@@ -2522,6 +2522,27 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Pull requests and issues by their numbers (a link's chip, a pull
+  /// request's row; ADR 0117): kept a while, the rest asked of each host,
+  /// 50 a query. A host Nushi doesn't give a token to is never asked.
+  /// API 118.
+  Future<nushiv1nushi.GetGitHubItemsResponse> getGitHubItems(
+    nushiv1nushi.GetGitHubItemsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getGitHubItems,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   Future<nushiv1nushi.GetGitHubPullResponse> getGitHubPull(
     nushiv1nushi.GetGitHubPullRequest input, {
     connect.Headers? headers,

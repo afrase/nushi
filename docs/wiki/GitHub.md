@@ -33,11 +33,30 @@ Click a row (or press ⏎) to see its details. Press Esc to go back.
 
 For a pull request, the chat works on its branch, so the agent's pushes go to that pull request. For an issue, Nushi makes a branch named after it.
 
+## Links in a chat
+
+A pull request or issue link in a message, yours or the agent's, shows as a chip: its state's icon, `owner/repo#123` and its title. Hold the pointer on it to see its state, author, age and size.
+
+- Click a chip to open it on GitHub.
+- Right-click it for **Copy link**, **Show in GitHub view** and, for a pull request, **Link to this chat**.
+
+A link with words of its own stays words, with the same card. Links in code and in tool output stay as written, and a link to a host Nushi has no token for stays a plain link.
+
 ## Open a pull request from a chat
 
-There's no "create pull request" button. Ask the agent ("push this and open a PR"). A few seconds later the chat finds the pull request for its branch, and a **Pull request** tab appears.
+There's no "create pull request" button. Ask the agent ("push this and open a PR"). When its `gh pr create` finishes, the chat links the new pull request, a card for it shows in the chat (its state, title, size and checks; click it to open the tab), and a **Pull request** tab appears. A merge the agent runs gets the same card. The card is only there while you stay on the chat. A pull request for the chat's branch is found by itself too.
 
-If it finds the wrong one, use **Chat › Link Pull Request…** to link one by its link, `owner/repo#123` or number.
+A chat can hold up to 10 pull requests, such as a stack the agent opened branch by branch. To add one by hand, use **Link another pull request…** in the **Pull requests** widget's ⋯ (or **Chat › Link Pull Request…**), and paste its link, `owner/repo#123` or number.
+
+## The Pull requests widget
+
+The details panel lists the chat's pull requests, a row each: its state's icon, title, checks (`8/11`) and one thing to know, such as **2 threads** or **Ready to merge**. A stack lists its base first.
+
+- Click a row to open its **Pull request** tab.
+- Click the checks to see them, or **Fix checks** to send the failures to the agent.
+- Use a row's **⋯** for **Merge…**, **Send open threads to agent**, **Clean up…** or **Unlink**.
+
+The chip next to the chat's title shows the first pull request and `+2` for the others; hold the pointer on it to see them all. With several, the tab has a menu at the top to pick which one it shows.
 
 ## The Pull request tab
 
@@ -76,7 +95,7 @@ When the pull request can merge, the merge box says **Ready to merge**. If it ca
 
 If the repository allows it, **Enable auto-merge** lets GitHub merge it by itself once it's ready. If the base branch uses a merge queue, you'll see **Add to queue** or **Merge when ready** instead.
 
-After the merge, **Clean up…** offers to delete the worktree and branches and archive the chat.
+After the merge, **Clean up…** offers to delete the worktree and branches and archive the chat. If another of the chat's pull requests is still open on its branch, it only deletes the merged one's branch on GitHub, and says which pull request keeps the rest.
 
 ## Good to know
 
@@ -86,4 +105,4 @@ After the merge, **Clean up…** offers to delete the worktree and branches and 
 - A fine-grained token works, but sees only one owner's repositories and can't show checks.
 - Nushi only checks GitHub while the GitHub view or a chat with a pull request is open, and only writes what you send.
 - Text you're writing in a reply or review waits for you if you switch to another chat, but is lost if you quit Nushi.
-- The [Phone](Phone) shows a one-line pull request summary in the chat, but has no Pull request tab.
+- The [Phone](Phone) shows a one-line pull request summary in the chat (`+2` for the others) and the link chips, but has no Pull request tab.

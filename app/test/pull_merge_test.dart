@@ -9,6 +9,7 @@ import 'package:nushi/pull_cache.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_merge.dart';
 import 'package:nushi/pull_merge_state.dart';
+import 'package:nushi/pull_rows.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -491,12 +492,7 @@ void main() {
   });
 
   testWidgets('the split button is as wide as its label', (tester) async {
-    final (d, _) = await openPullTab(
-      tester,
-      mergePull('ready'),
-      details: true,
-      open: false,
-    );
+    final (d, _) = await openPullTab(tester, mergePull('ready'));
     final split = find.byType(SplitButton);
     final caret = find.descendant(
       of: split,
@@ -507,16 +503,23 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('the details widget has it too', (tester) async {
+  // ADR 0117: the Merge control left the widget; a row's ⋯ has Merge….
+  testWidgets("the details widget's row has Merge… instead", (tester) async {
     final (d, _) = await openPullTab(
       tester,
       mergePull('ready'),
       details: true,
       open: false,
     );
-    expect(find.byType(MergeControl), findsOneWidget);
-    expect(find.text('Squash and merge'), findsOneWidget);
-    expect(find.text('Merge blocked'), findsNothing);
+    expect(find.byType(MergeControl), findsNothing);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(PullRow),
+        matching: find.byTooltip('Pull request'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Merge…', findRichText: true), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 

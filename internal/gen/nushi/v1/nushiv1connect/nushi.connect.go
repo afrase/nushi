@@ -384,6 +384,9 @@ const (
 	// NushiServiceGetGitHubStatesProcedure is the fully-qualified name of the NushiService's
 	// GetGitHubStates RPC.
 	NushiServiceGetGitHubStatesProcedure = "/nushi.v1.NushiService/GetGitHubStates"
+	// NushiServiceGetGitHubItemsProcedure is the fully-qualified name of the NushiService's
+	// GetGitHubItems RPC.
+	NushiServiceGetGitHubItemsProcedure = "/nushi.v1.NushiService/GetGitHubItems"
 	// NushiServiceGetGitHubPullProcedure is the fully-qualified name of the NushiService's
 	// GetGitHubPull RPC.
 	NushiServiceGetGitHubPullProcedure = "/nushi.v1.NushiService/GetGitHubPull"
@@ -904,6 +907,11 @@ type NushiServiceClient interface {
 	ListGitHubInbox(context.Context, *connect.Request[v1.ListGitHubInboxRequest]) (*connect.Response[v1.ListGitHubInboxResponse], error)
 	// Items as they are now, by node id (a chat's status chip).
 	GetGitHubStates(context.Context, *connect.Request[v1.GetGitHubStatesRequest]) (*connect.Response[v1.GetGitHubStatesResponse], error)
+	// Pull requests and issues by their numbers (a link's chip, a pull
+	// request's row; ADR 0117): kept a while, the rest asked of each host,
+	// 50 a query. A host Nushi doesn't give a token to is never asked.
+	// API 118.
+	GetGitHubItems(context.Context, *connect.Request[v1.GetGitHubItemsRequest]) (*connect.Response[v1.GetGitHubItemsResponse], error)
 	GetGitHubPull(context.Context, *connect.Request[v1.GetGitHubPullRequest]) (*connect.Response[v1.GetGitHubPullResponse], error)
 	GetGitHubIssue(context.Context, *connect.Request[v1.GetGitHubIssueRequest]) (*connect.Response[v1.GetGitHubIssueResponse], error)
 	// A pull request's files from its merge base to its head, both sides'
@@ -1748,6 +1756,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("GetGitHubStates")),
 			connect.WithClientOptions(opts...),
 		),
+		getGitHubItems: connect.NewClient[v1.GetGitHubItemsRequest, v1.GetGitHubItemsResponse](
+			httpClient,
+			baseURL+NushiServiceGetGitHubItemsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetGitHubItems")),
+			connect.WithClientOptions(opts...),
+		),
 		getGitHubPull: connect.NewClient[v1.GetGitHubPullRequest, v1.GetGitHubPullResponse](
 			httpClient,
 			baseURL+NushiServiceGetGitHubPullProcedure,
@@ -2020,6 +2034,7 @@ type nushiServiceClient struct {
 	listGitHubRepos         *connect.Client[v1.ListGitHubReposRequest, v1.ListGitHubReposResponse]
 	listGitHubInbox         *connect.Client[v1.ListGitHubInboxRequest, v1.ListGitHubInboxResponse]
 	getGitHubStates         *connect.Client[v1.GetGitHubStatesRequest, v1.GetGitHubStatesResponse]
+	getGitHubItems          *connect.Client[v1.GetGitHubItemsRequest, v1.GetGitHubItemsResponse]
 	getGitHubPull           *connect.Client[v1.GetGitHubPullRequest, v1.GetGitHubPullResponse]
 	getGitHubIssue          *connect.Client[v1.GetGitHubIssueRequest, v1.GetGitHubIssueResponse]
 	getGitHubFiles          *connect.Client[v1.GetGitHubFilesRequest, v1.GetGitHubFilesResponse]
@@ -2690,6 +2705,11 @@ func (c *nushiServiceClient) GetGitHubStates(ctx context.Context, req *connect.R
 	return c.getGitHubStates.CallUnary(ctx, req)
 }
 
+// GetGitHubItems calls nushi.v1.NushiService.GetGitHubItems.
+func (c *nushiServiceClient) GetGitHubItems(ctx context.Context, req *connect.Request[v1.GetGitHubItemsRequest]) (*connect.Response[v1.GetGitHubItemsResponse], error) {
+	return c.getGitHubItems.CallUnary(ctx, req)
+}
+
 // GetGitHubPull calls nushi.v1.NushiService.GetGitHubPull.
 func (c *nushiServiceClient) GetGitHubPull(ctx context.Context, req *connect.Request[v1.GetGitHubPullRequest]) (*connect.Response[v1.GetGitHubPullResponse], error) {
 	return c.getGitHubPull.CallUnary(ctx, req)
@@ -3256,6 +3276,11 @@ type NushiServiceHandler interface {
 	ListGitHubInbox(context.Context, *connect.Request[v1.ListGitHubInboxRequest]) (*connect.Response[v1.ListGitHubInboxResponse], error)
 	// Items as they are now, by node id (a chat's status chip).
 	GetGitHubStates(context.Context, *connect.Request[v1.GetGitHubStatesRequest]) (*connect.Response[v1.GetGitHubStatesResponse], error)
+	// Pull requests and issues by their numbers (a link's chip, a pull
+	// request's row; ADR 0117): kept a while, the rest asked of each host,
+	// 50 a query. A host Nushi doesn't give a token to is never asked.
+	// API 118.
+	GetGitHubItems(context.Context, *connect.Request[v1.GetGitHubItemsRequest]) (*connect.Response[v1.GetGitHubItemsResponse], error)
 	GetGitHubPull(context.Context, *connect.Request[v1.GetGitHubPullRequest]) (*connect.Response[v1.GetGitHubPullResponse], error)
 	GetGitHubIssue(context.Context, *connect.Request[v1.GetGitHubIssueRequest]) (*connect.Response[v1.GetGitHubIssueResponse], error)
 	// A pull request's files from its merge base to its head, both sides'
@@ -4096,6 +4121,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("GetGitHubStates")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceGetGitHubItemsHandler := connect.NewUnaryHandler(
+		NushiServiceGetGitHubItemsProcedure,
+		svc.GetGitHubItems,
+		connect.WithSchema(nushiServiceMethods.ByName("GetGitHubItems")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceGetGitHubPullHandler := connect.NewUnaryHandler(
 		NushiServiceGetGitHubPullProcedure,
 		svc.GetGitHubPull,
@@ -4494,6 +4525,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceListGitHubInboxHandler.ServeHTTP(w, r)
 		case NushiServiceGetGitHubStatesProcedure:
 			nushiServiceGetGitHubStatesHandler.ServeHTTP(w, r)
+		case NushiServiceGetGitHubItemsProcedure:
+			nushiServiceGetGitHubItemsHandler.ServeHTTP(w, r)
 		case NushiServiceGetGitHubPullProcedure:
 			nushiServiceGetGitHubPullHandler.ServeHTTP(w, r)
 		case NushiServiceGetGitHubIssueProcedure:
@@ -5063,6 +5096,10 @@ func (UnimplementedNushiServiceHandler) ListGitHubInbox(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) GetGitHubStates(context.Context, *connect.Request[v1.GetGitHubStatesRequest]) (*connect.Response[v1.GetGitHubStatesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetGitHubStates is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetGitHubItems(context.Context, *connect.Request[v1.GetGitHubItemsRequest]) (*connect.Response[v1.GetGitHubItemsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetGitHubItems is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) GetGitHubPull(context.Context, *connect.Request[v1.GetGitHubPullRequest]) (*connect.Response[v1.GetGitHubPullResponse], error) {

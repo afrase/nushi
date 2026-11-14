@@ -47,9 +47,9 @@ What isn't built yet and the decisions still open, each checked against the code
 
 ### GitHub
 
-- **A found pull request's chip** in the chat's header: the header's chip shows only the pull request or issue a chat started from; a found one gets just its tab.
 - **The agent's own GitHub tools** on Nushi's MCP server ([ADR 0043](adr/0043-an-mcp-server-of-nushis-own-for-a-chats-tools.md)): a `tools.Set` scoped to the chat's pull request, as Jira's chats have for their issue.
 - **Fixing CI from the chat** (the owner, 2026-11-14, after seeing Claude's Auto-fix; later, once the current work settles): Claude's app watches a pull request and wakes the session to fix a failed check, a merge conflict or a review comment, pushing without asking. Nushi would rather not act unasked (it spends money and acts on text others wrote): a failed check on a chat's pull request would make the chat Needs you, with an **Ask to fix** button that sends the agent the failing check's log as your message.
+- **A chat's pull requests, follow-ups** (ADR 0117, left out of its first build): the Pull request tab's pull request is still read whole each minute while the chat is open, not only while the tab shows (the folded summary and new comments read it); and the primary is the one the chat started from, else the first linked, not the first open one (the daemon doesn't know states).
 - **GitHub, next**: stacked pull requests, notifications as a source (If-Modified-Since, X-Poll-Interval), reactions, files marked viewed, Enterprise capabilities probed, a review's inline comments kept across app restarts (quitting loses them).
 
 ### Jira

@@ -17,15 +17,22 @@ import 'package:nushi/widgets.dart';
 /// unticked, and ticking it makes the button red and names the loss; the
 /// local branch can't go while its worktree stays; mid-turn it waits for
 /// the turn to end, or stops it. Nothing goes that the dialog didn't name.
+///
+/// [openOnBranch] are the chat's other pull requests still open on its
+/// branch (ADR 0117): while there are any, only [pull]'s branch on GitHub
+/// can go; the dialog names them, and the worktree, the local branch and
+/// archiving wait until they merge or close.
 Future<void> showCleanUp(
   BuildContext context,
   Daemon daemon,
   ChatState chat, {
   GitHubPull? pull,
+  List<int> openOnBranch = const [],
+  String branch = '',
 }) async {
   final picks = await showDialog<CleanUpPicks>(
     context: context,
-    builder: (_) => _CleanUpDialog(daemon, chat, pull),
+    builder: (_) => _CleanUpDialog(daemon, chat, pull, openOnBranch, branch),
   );
   if (picks == null) return;
   final ref = pull?.item.ref;
@@ -33,11 +40,13 @@ Future<void> showCleanUp(
 }
 
 class _CleanUpDialog extends StatefulWidget {
-  const new(this.daemon, this.chat, this.pull);
+  const new(this.daemon, this.chat, this.pull, this.openOnBranch, this.branch);
 
   final Daemon daemon;
   final ChatState chat;
   final GitHubPull? pull;
+  final List<int> openOnBranch;
+  final String branch;
 
   @override
   State<_CleanUpDialog> createState() => _CleanUpDialogState();
@@ -53,6 +62,10 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
   bool _stopTurn = false;
 
   GitHubPull? get _pull => widget.pull;
+
+  /// The worktree, the local branch and archiving are offered: no other
+  /// pull request is still open on the chat's branch.
+  bool get _local => widget.openOnBranch.isEmpty;
   bool get _merged => _pull?.item.state == 'merged';
   bool get _hasRemote =>
       _pull != null && (_merged || _pull!.item.state == 'closed');
@@ -60,7 +73,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
   @override
   void initState() {
     super.initState();
-    _archive = !widget.chat.archived;
+    _archive = _local && !widget.chat.archived;
     _remote = _merged;
     unawaited(_load());
   }
@@ -76,6 +89,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
         _u = u;
         // What loses nothing starts ticked; what would, unticked.
         _worktree =
+            _local &&
             u.hasWorktree() &&
             !st.gone &&
             st.changed == 0 &&
@@ -83,7 +97,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
             st.error.isEmpty &&
             u.others.isEmpty &&
             !u.worktree.found;
-        _branch = _canBranch && (st.commits == 0 || _merged);
+        _branch = _local && _canBranch && (st.commits == 0 || _merged);
       });
     } on Object catch (e) {
       if (mounted) setState(() => _error = errorText(e));
@@ -99,6 +113,20 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
         !u.branchElsewhere &&
         st.error.isEmpty &&
         (_worktree || st.gone);
+  }
+
+  /// Which of the chat's pull requests are still open on its branch, and
+  /// what waits for them: "#221 and #224 are still open on cursor-ties:
+  /// …".
+  String get _stillOpen {
+    final n = [for (final x in widget.openOnBranch) '#$x'];
+    final which = n.length == 1
+        ? '${n.single} is'
+        : '${n.sublist(0, n.length - 1).join(', ')} and ${n.last} are';
+    final on = widget.branch.isEmpty ? "this chat's branch" : widget.branch;
+    return '$which still open on $on. The worktree, its branch and this '
+        'chat stay until ${n.length == 1 ? 'it merges or closes' : 'they '
+                  'merge or close'}.';
   }
 
   /// What can't be got back, in words; empty when nothing.
@@ -131,7 +159,8 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
     final u = _u;
     final chat = widget.chat;
     final p = _pull;
-    final busy = chat.busy;
+    // Mid-turn matters only to what's local: the branch on GitHub goes now.
+    final busy = chat.busy && _local;
     final title = p == null
         ? 'Clean up'
         : 'Clean up after #${p.item.ref.number}';
@@ -146,7 +175,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
       final wt = u.worktree;
       final name = wt.path.split('/').last;
       final rows = <Widget>[
-        if (u.hasWorktree())
+        if (u.hasWorktree() && _local)
           CleanUpChoice(
             label: 'Delete the worktree',
             value: _worktree,
@@ -188,7 +217,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
                   )
                 : null,
           ),
-        if (u.hasWorktree() && !st.branchGone)
+        if (u.hasWorktree() && !st.branchGone && _local)
           CleanUpChoice(
             label: 'Delete the local branch',
             code: wt.branch,
@@ -217,7 +246,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
                 ? 'GitHub kept it. The pull request can restore it.'
                 : 'Its commits stay in the pull request on GitHub.',
           ),
-        if (!chat.archived)
+        if (!chat.archived && _local)
           CleanUpChoice(
             label: 'Archive this chat',
             value: _archive,
@@ -231,6 +260,14 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (!_local) ...[
+            Text(
+              _stillOpen,
+              key: const ValueKey('cleanup-still-open'),
+              style: theme.ui(t.textSecondary, size: 12.5),
+            ),
+            const SizedBox(height: 10),
+          ],
           if (busy) ...[
             MidTurnChoice(
               agent: chat.agentName,

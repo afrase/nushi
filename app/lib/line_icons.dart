@@ -101,7 +101,18 @@ enum LineIcon {
   pause,
 
   /// A file's source (ADR 0106): `</>`, as Claude desktop's View source.
-  source;
+  source,
+
+  /// GitHub's pull request and issue states, after its own shapes (ADR
+  /// 0117): open, draft, merged and closed; an issue open, closed as
+  /// completed, closed as not planned.
+  pullOpen,
+  pullDraft,
+  pullMerged,
+  pullClosed,
+  issueOpen,
+  issueDone,
+  issueNotPlanned;
 
   /// The stroke on the 24 box; it scales with the size.
   static const _stroke = 1.6;
@@ -378,9 +389,67 @@ enum LineIcon {
         ..lineTo(16.5, 17)
         ..moveTo(13.5, 5)
         ..lineTo(10.5, 19),
+    pullOpen =>
+      _pullLeft()
+        ..addOval(_ring(18, 18.5))
+        ..moveTo(18, 16.2)
+        ..lineTo(18, 9.5)
+        ..quadraticBezierTo(18, 6.5, 15, 6.5)
+        ..lineTo(11.5, 6.5)
+        ..moveTo(13.8, 4.2)
+        ..lineTo(11.5, 6.5)
+        ..lineTo(13.8, 8.8),
+    pullDraft =>
+      _pullLeft()
+        ..addOval(_ring(18, 18.5))
+        ..moveTo(18, 12)
+        ..lineTo(18, 13)
+        ..moveTo(18, 6.5)
+        ..lineTo(18, 7.5),
+    pullClosed =>
+      _pullLeft()
+        ..addOval(_ring(18, 18.5))
+        ..moveTo(18, 16.2)
+        ..lineTo(18, 11.5)
+        ..moveTo(15.5, 3.5)
+        ..lineTo(20.5, 8.5)
+        ..moveTo(20.5, 3.5)
+        ..lineTo(15.5, 8.5),
+    pullMerged =>
+      _pullLeft()
+        ..addOval(_ring(18, 12))
+        ..moveTo(6, 7.8)
+        ..quadraticBezierTo(6.5, 12, 15.7, 12),
+    issueOpen =>
+      Path()
+        ..addOval(Rect.fromCircle(center: const Offset(12, 12), radius: 9))
+        ..addOval(Rect.fromCircle(center: const Offset(12, 12), radius: 1)),
+    issueDone =>
+      Path()
+        ..addOval(Rect.fromCircle(center: const Offset(12, 12), radius: 9))
+        ..moveTo(8, 12.3)
+        ..lineTo(10.8, 15)
+        ..lineTo(16, 9.5),
+    issueNotPlanned =>
+      Path()
+        ..addOval(Rect.fromCircle(center: const Offset(12, 12), radius: 9))
+        ..moveTo(5.8, 18.2)
+        ..lineTo(18.2, 5.8),
   };
 
   static Radius _r(double r) => Radius.circular(r);
+
+  /// A pull request icon's ring at [x], [y].
+  static Rect _ring(double x, double y) =>
+      Rect.fromCircle(center: Offset(x, y), radius: 2.3);
+
+  /// The left of GitHub's pull request icons: two rings and the line
+  /// between them.
+  static Path _pullLeft() => Path()
+    ..addOval(_ring(6, 5.5))
+    ..addOval(_ring(6, 18.5))
+    ..moveTo(6, 7.8)
+    ..lineTo(6, 16.2);
 
   /// A turn of [angle] clockwise about the box's middle.
   static Float64List _turn(double angle, {double scale = 1}) =>

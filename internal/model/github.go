@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
 
 // GitHubRef names a pull request or an issue: its host (github.com or an
 // Enterprise server), its repository (owner/name) and its number.
@@ -27,6 +31,22 @@ type GitHubItem struct {
 	Checks, Review string
 	Unresolved     int
 	Comments       int
+	// What GetGitHubItems adds (ADR 0117; the inbox leaves them unset): a
+	// pull request's size, its checks counted, its merge state ("clean",
+	// "blocked", …, as GitHubPull's), its base and head branches; an
+	// issue's close reason ("completed", "not_planned" or "").
+	Additions, Deletions, ChangedFiles int
+	Created                            time.Time
+	CheckCounts                        CheckCounts
+	MergeState, StateReason            string
+	Base, Head                         string
+}
+
+// CheckCounts are a pull request's checks by state, at its head: a
+// neutral one counts as passed; skipped ones count in neither side of
+// passed/total.
+type CheckCounts struct {
+	Passed, Failed, Running, Skipped int
 }
 
 // GitHubComment is a comment, or a review with what it said. Body is
@@ -165,13 +185,31 @@ type GitHubIssue struct {
 	Conversation      []GitHubComment
 }
 
-// ChatGitHub is the pull request or issue a chat was started from, or the
-// pull request of its branch (ID is its node id). Branch is the head
-// branch a pull request was found by; empty when it was linked by hand
-// (or the chat started from it).
+// ChatGitHub is the pull request or issue a chat was started from, or
+// one of its pull requests (ID is its node id; "" for one the chat opened,
+// known by its address alone). Branch is the head branch a pull request
+// was found by; empty when it was linked by hand, opened in the chat, or
+// the chat started from it. Opened says a tool call of the chat opened it
+// (ADR 0117): it stays when the branch changes.
 type ChatGitHub struct {
 	GitHubRef
 	Pull   bool   `json:"pull,omitempty"`
 	ID     string `json:"id"`
 	Branch string `json:"branch,omitempty"`
+	Opened bool   `json:"opened,omitempty"`
+}
+
+// Key is the link's item as host/owner/repo#number, what a link opened in
+// the chat is told apart by until its node id is known.
+func (g ChatGitHub) Key() string {
+	return fmt.Sprintf("%s/%s#%d", g.Host, strings.ToLower(g.Repo), g.Number)
+}
+
+// Same says two links are the same item: by node id when both have one,
+// else by host, repository and number.
+func (g ChatGitHub) Same(o ChatGitHub) bool {
+	if g.ID != "" && o.ID != "" {
+		return g.ID == o.ID
+	}
+	return g.Key() == o.Key()
 }

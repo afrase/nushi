@@ -77,6 +77,7 @@ If a phone is lost or stolen, revoke it on your computer right away. A paired ph
 - If your computer is asleep, offline, or has remote access turned off, the phone first shows **Reconnecting…** with a spinner, then **Can't reach your Mac** (or **computer**) and why. It keeps trying on its own. Tap **Try again** to retry now.
 - When the phone app has a new version, it shows **Nushi was updated**. Tap **Reload**.
 - A chat's **⋯** menu shows its folder, branch, model and agent, with actions such as **Rename…**, **Files**, **Fork**, **Pin**, **Sleep** and **Archive**.
+- A chat's pull request shows at the top of the chat, with `+2` when it has more. Tap it to open it on GitHub, or, with several, to list them all. A pull request or issue link in a message is a chip: tap it to see its state and title, then **Open on GitHub**.
 - Files the agent wrote open full screen from **Artifacts** at the top of the chat. More on these in [Previews and terminals](Previews-and-terminals).
 - The phone app also works in a desktop browser. Chrome on a Mac gets notifications too.
 - Closing a laptop's lid can still put it to sleep, even with remote access on.

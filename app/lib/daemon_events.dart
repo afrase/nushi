@@ -199,6 +199,9 @@ extension DaemonEvents on Daemon {
           : c.github.pull
           ? c.github
           : null
+      ..pulls = c.pulls.isNotEmpty
+          ? c.pulls
+          : [if (c.hasPull()) c.pull else if (c.github.pull) c.github]
       ..title = c.title
       ..archived = c.archived
       ..done = daemonApi >= doneApi ? c.done : null

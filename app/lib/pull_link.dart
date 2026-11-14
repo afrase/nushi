@@ -6,7 +6,11 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_items.dart';
+import 'package:nushi/github_pull.dart' show openPullAt;
 import 'package:nushi/pull_cache.dart';
+import 'package:nushi/pull_lights.dart' show PullSection;
+import 'package:nushi/pull_live_card.dart' show LivePull, livePullOf;
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/widgets.dart';
@@ -79,6 +83,102 @@ void markPullSeen(String chat, GitHubPull p) {
   pullSeen.value = {...pullSeen.value, chat: newest};
 }
 
+/// [l] as the item store keys it.
+GitHubAddress addressOf(GitHubLink l) =>
+    GitHubAddress(host: l.host, repo: l.repo, number: l.number, pull: l.pull);
+
+/// What tells two links apart: host, repository (any case) and number.
+String pullKey(GitHubLink l) => addressOf(l).key;
+
+/// A pull request read whole as a row's item, for a daemon before
+/// GetGitHubItems: its size, base and head, and its checks counted.
+GitHubItem rowItem(GitHubPull p) {
+  var passed = 0;
+  var failed = 0;
+  var running = 0;
+  var skipped = 0;
+  for (final c in p.checks) {
+    switch (c.state) {
+      case 'success' || 'neutral':
+        passed++;
+      case 'pending':
+        running++;
+      case 'skipped' || 'stale':
+        skipped++;
+      default:
+        failed++;
+    }
+  }
+  return p.item.deepCopy()
+    ..pull = true
+    ..additions = p.additions
+    ..deletions = p.deletions
+    ..changedFiles = p.changedFiles
+    ..mergeState = p.mergeState
+    ..unresolved = p.threads.where((x) => !x.resolved).length
+    ..base = p.base
+    ..head = p.head
+    ..checkCounts = GitHubCheckCounts(
+      passed: passed,
+      failed: failed,
+      running: running,
+      skipped: skipped,
+    );
+}
+
+/// [links] in the widget's order (ADR 0117): as linked, except that a
+/// stack (one's base is another's head, in one repository) lists its base
+/// first, each pull request right after the one it's on.
+List<GitHubLink> orderPulls(
+  List<GitHubLink> links,
+  GitHubItem? Function(GitHubLink) item,
+) {
+  GitHubLink? baseOf(GitHubLink l) {
+    final it = item(l);
+    if (it == null || it.base.isEmpty) return null;
+    for (final o in links) {
+      final oi = item(o);
+      if (pullKey(o) != pullKey(l) &&
+          oi != null &&
+          oi.head == it.base &&
+          o.host == l.host &&
+          o.repo.toLowerCase() == l.repo.toLowerCase()) {
+        return o;
+      }
+    }
+    return null;
+  }
+
+  final bases = {for (final l in links) pullKey(l): baseOf(l)};
+  final out = <GitHubLink>[];
+  final done = <String>{};
+  void add(GitHubLink l) {
+    if (!done.add(pullKey(l))) return;
+    out.add(l);
+    for (final o in links) {
+      if (bases[pullKey(o)] case final b? when pullKey(b) == pullKey(l)) {
+        add(o);
+      }
+    }
+  }
+
+  // Each stack where its first linked one is, from its base.
+  for (final l in links) {
+    var root = l;
+    final seen = {pullKey(l)};
+    for (
+      var b = bases[pullKey(root)];
+      b != null && seen.add(pullKey(b));
+      b = bases[pullKey(b)]
+    ) {
+      root = b;
+    }
+    add(root);
+    add(l); // one in a cycle
+  }
+  return out;
+}
+
 /// A chat's pull request, as its widget and the header's tab show it: what
 /// the daemon found of its folder (repository, branch) and the pull
 /// request whole. It asks while the chat is open ([follow]), whether the
@@ -115,7 +215,7 @@ class ChatPull extends ChangeNotifier {
 
   /// What was read last of the linked pull request, until it's asked.
   void _seed() {
-    final l = chat.pull;
+    final l = current;
     if (pull != null || l == null) return;
     if (cachedPull(l.asRef) case (final at, final p)) {
       pull = p;
@@ -132,12 +232,110 @@ class ChatPull extends ChangeNotifier {
   AppLifecycleListener? _front;
   bool _busy = false;
   final _seen = <String>{};
+  final _seenLive = <String>{};
+
+  /// The transcript's live cards (ADR 0117 section 4): the pull requests a
+  /// tool call opened or merged while the chat showed, by the call's id;
+  /// dropped once it no longer shows, never saved.
+  final Map<String, LivePull> live = {};
   Future<void>? _asking;
   DateTime? _asked;
   int _rechecks = 0;
 
-  /// The chat's link: the daemon's last word, else the chat's.
-  GitHubLink? get link => chat.pull;
+  /// The tab's pull request ([current]).
+  GitHubLink? get link => current;
+
+  /// The chat's pull requests in the widget's order: as linked, a stack's
+  /// base first (ADR 0117).
+  List<GitHubLink> get links => orderPulls(chat.pulls, itemOf);
+
+  /// The pull request the tab shows: the one picked there (remembered for
+  /// the chat), else the primary.
+  GitHubLink? get current {
+    final picked = pickedPulls.value[chat.id];
+    if (picked != null) {
+      for (final l in chat.pulls) {
+        if (pullKey(l) == picked) return l;
+      }
+    }
+    return chat.pull;
+  }
+
+  /// Shows [link] in the tab from now on; with [files] or [checks], at
+  /// that section.
+  void pick(GitHubLink link, {bool files = false, bool checks = false}) {
+    if (files || checks) {
+      openPullAt(link.asRef, files ? PullSection.files : PullSection.checks);
+    }
+    final was = current;
+    if (was != null && pullKey(was) == pullKey(link)) return;
+    pickedPulls.value = {...pickedPulls.value, chat.id: pullKey(link)};
+    pull = null;
+    keptAt = null;
+    _seed();
+    notifyListeners();
+    unawaited(refresh());
+  }
+
+  /// [link]'s pull request as a row shows it (GetGitHubItems'; the one
+  /// read whole, from a daemon before them).
+  GitHubItem? itemOf(GitHubLink link) {
+    final kept = GitHubItems.of(daemon).look(addressOf(link)).item;
+    if (kept != null) return kept;
+    final p = pull;
+    final l = current;
+    if (p == null || l == null || pullKey(l) != pullKey(link)) return null;
+    return rowItem(p);
+  }
+
+  /// [link]'s new comments: known for the one read whole.
+  int unreadOf(GitHubLink link) {
+    final p = pull;
+    final l = current;
+    if (p == null || l == null || pullKey(l) != pullKey(link)) return 0;
+    return unreadComments(chat.id, p);
+  }
+
+  /// [link]'s pull request whole, for Fix checks, Merge…, Clean up…: the
+  /// tab's when it's that one, else asked of GitHub now; null, said under
+  /// [context], when it can't be.
+  Future<GitHubPull?> whole(BuildContext context, GitHubLink link) async {
+    final l = current;
+    if (pull case final p? when l != null && pullKey(l) == pullKey(link)) {
+      return p;
+    }
+    try {
+      final r = await daemon.client.getGitHubPull(
+        GetGitHubPullRequest(ref: link.asRef),
+      );
+      return r.pull;
+    } on Object catch (e) {
+      if (context.mounted) showError(context, e);
+      return null;
+    }
+  }
+
+  /// Unlinks [link] from the chat: never found or opened again for it.
+  Future<void> unlink(GitHubLink link) async {
+    if (daemon.daemonApi < githubItemsApi) {
+      await setLink(null);
+      return;
+    }
+    await daemon.client.linkChatPull(
+      LinkChatPullRequest(chatId: chat.id, unlink: link),
+    );
+    chat.linkPull(
+      chat.pull != null && pullKey(chat.pull!) == pullKey(link)
+          ? chat.pulls.where((l) => pullKey(l) != pullKey(link)).firstOrNull
+          : chat.pull,
+      all: [
+        for (final l in chat.pulls)
+          if (pullKey(l) != pullKey(link)) l,
+      ],
+    );
+    notifyListeners();
+    await again();
+  }
 
   /// When it was last looked for and how often, as the widget's tooltip
   /// says it: "Checked 20 s ago · every minute".
@@ -154,6 +352,10 @@ class ChatPull extends ChangeNotifier {
     if (_followers++ == 0) {
       _busy = chat.busy;
       _seen.addAll(chat.items.map((i) => i.id));
+      _seenLive.addAll([
+        for (final i in chat.items)
+          if (i.status == 'completed') i.id,
+      ]);
       chat.addListener(_chatChanged);
       _front = AppLifecycleListener(
         onResume: () => unawaited(refresh(again: false)),
@@ -165,6 +367,8 @@ class ChatPull extends ChangeNotifier {
 
   void unfollow() {
     if (--_followers > 0) return;
+    live.clear(); // the chat no longer shows
+    _seenLive.clear();
     chat.removeListener(_chatChanged);
     _front?.dispose();
     _front = null;
@@ -187,6 +391,15 @@ class ChatPull extends ChangeNotifier {
     var pushed = false;
     for (final it in chat.items.reversed.take(8)) {
       if (pushedOrOpened(it) && _seen.add(it.id)) pushed = true;
+      if (it.kind == ItemKind.ITEM_KIND_TOOL_CALL &&
+          it.status == 'completed' &&
+          _seenLive.add(it.id)) {
+        final knows = GitHubItems.of(daemon).knows;
+        if (livePullOf(it, chat, knows) case final p?) {
+          live[it.id] = p;
+          notifyListeners();
+        }
+      }
     }
     if (ended || pushed) {
       _soon?.cancel();
@@ -240,9 +453,14 @@ class ChatPull extends ChangeNotifier {
         FindChatPullRequest(chatId: chat.id, quiet: quiet),
       );
       found = f;
-      chat.linkPull(f.hasPull() ? f.pull : null);
+      chat.linkPull(
+        f.hasPull() ? f.pull : null,
+        // A daemon before API 118 says only the primary.
+        all: f.pulls.isNotEmpty ? f.pulls : null,
+      );
       error = f.error.isEmpty ? null : f.error;
-      final l = chat.pull;
+      await _rows(quiet);
+      final l = current;
       if (l == null) {
         pull = null;
         keptAt = null;
@@ -265,6 +483,14 @@ class ChatPull extends ChangeNotifier {
     }
   }
 
+  /// The rows' items, all in one call a host (GetGitHubItems), from a
+  /// daemon that has it.
+  Future<void> _rows(bool quiet) async {
+    if (daemon.daemonApi < githubItemsApi || chat.pulls.isEmpty) return;
+    await GitHubItems.of(daemon)
+        .ask([for (final l in chat.pulls) addressOf(l)], quiet: quiet);
+  }
+
   /// GitHub works out whether a pull request merges when it's asked, so
   /// "unknown" usually lasts seconds, not until the next minute's ask: asked
   /// again soon, three times at most in a row.
@@ -285,6 +511,15 @@ class ChatPull extends ChangeNotifier {
   /// them.
   void markSeen() {
     if (pull case final p?) markPullSeen(chat.id, p);
+  }
+
+  /// Adds [link] by hand after the chat's others (Link another pull
+  /// request…, a chip's Link to this chat; ADR 0117).
+  Future<void> addLink(GitHubLink link) async {
+    await daemon.client.linkChatPull(
+      LinkChatPullRequest(chatId: chat.id, pull: link, add: true),
+    );
+    await again();
   }
 
   /// Links [link] by hand, or unlinks (null).

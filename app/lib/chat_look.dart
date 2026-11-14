@@ -34,6 +34,7 @@ class ChatLook extends ChangeNotifier {
     c.worktree?.branch,
     c.jiraKey,
     c.pull,
+    Object.hashAll(c.pulls),
     // What the row's menu offers.
     (c.canFork, c.canSleep, c.canRewind, c.stopping, c.background),
   );

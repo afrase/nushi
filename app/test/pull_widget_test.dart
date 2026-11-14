@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/clock.dart';
-import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_checks.dart';
@@ -14,6 +13,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
+import 'package:nushi/pull_rows.dart';
 import 'package:nushi/pull_widget_parts.dart';
 import 'package:nushi/settings.dart';
 
@@ -73,6 +73,14 @@ Finder get _pull => find.ancestor(
 );
 
 Finder _inPull(Finder f) => find.descendant(of: _pull, matching: f);
+
+/// The first row's ⋯.
+Finder get _rowMenu => _inPull(
+  find.descendant(
+    of: find.byType(PullRow),
+    matching: find.byTooltip('Pull request'),
+  ),
+);
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
@@ -275,42 +283,36 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('a draft: grey, no merge row, Ready for review', (tester) async {
+  // ADR 0117: a row a pull request; the details are the tab's.
+  testWidgets("a draft: its row's icon says so; its ⋯ has Ready for review", (
+    tester,
+  ) async {
     final (d, _) = await _app(
       tester,
       whole: pull()
         ..item = item(1, 'Add Sub and Neg', draft: true)
         ..checks.clear(),
     );
-    expect(_inPull(find.text('Draft')), findsOneWidget);
-    expect(_inPull(find.text('Ready for review')), findsOneWidget);
-    expect(_inPull(find.text('Merge blocked')), findsNothing);
+    expect(_inPull(find.text('Add Sub and Neg')), findsOneWidget);
     expect(_inPull(find.byType(ChecksBar)), findsNothing);
+    await tester.tap(_rowMenu);
+    await tester.pumpAndSettle();
+    expect(find.text('Ready for review on GitHub'), findsOneWidget);
+    expect(find.textContaining('Merge…', findRichText: true), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('open with a failing check: the bar and its legend, Fix '
-      'checks, a row a reviewer, the threads, what blocks merging', (
-    tester,
-  ) async {
+  testWidgets('open with a failing check: the row, its badge and one cue; '
+      'collapsed, the one-line summary', (tester) async {
     final (d, _) = await _app(tester, whole: pull());
     expect(_inPull(find.text('Add Sub and Neg')), findsOneWidget);
-    expect(_inPull(find.text('Open')), findsOneWidget);
-    expect(_inPull(find.byType(ChecksBar)), findsOneWidget);
+    expect(_inPull(find.byType(ChecksBadge)), findsOneWidget);
+    expect(_inPull(find.text('1/2')), findsOneWidget);
     expect(
-      _inPull(find.textContaining('1 failed', findRichText: true)),
+      _inPull(find.textContaining('2 threads', findRichText: true)),
       findsOneWidget,
     );
-    expect(_inPull(find.text('Fix checks')), findsOneWidget);
-    expect(_inPull(find.text('octo')), findsOneWidget);
-    expect(_inPull(find.text('Approved')), findsOneWidget);
-    expect(_inPull(find.text('@core-team')), findsOneWidget);
-    expect(_inPull(find.text('waiting')), findsOneWidget);
-    expect(_inPull(find.text('2 open threads')), findsOneWidget);
-    expect(_inPull(find.text('Address')), findsOneWidget);
-    expect(_inPull(find.text('Merge blocked')), findsOneWidget);
-    expect(_inPull(find.text('checks, review, threads')), findsOneWidget);
-    expect(_inPull(find.text('5 comments')), findsOneWidget);
+    expect(_inPull(find.byType(ChecksBar)), findsNothing);
     // Collapsed: its number, the failing count, the threads.
     await tester.tap(_inPull(find.text('Pull request')));
     await tester.pumpAndSettle();
@@ -321,23 +323,24 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('merged: what it merged into, no rows; a new comment counted '
-      'while open', (tester) async {
+  testWidgets('merged: what it merged into; a new comment is the cue while '
+      'open', (tester) async {
     final p = pull()..item = item(1, 'Add Sub and Neg', state: 'merged');
     final (d, _) = await _app(tester, whole: p);
-    expect(_inPull(find.text('Merged')), findsOneWidget);
     expect(
-      _inPull(find.text('Merged into main.', findRichText: true)),
+      _inPull(find.textContaining('Merged into main', findRichText: true)),
       findsOneWidget,
     );
-    expect(_inPull(find.text('Merge blocked')), findsNothing);
-    expect(_inPull(find.text('Fix checks')), findsNothing);
-    final q = pull();
+    expect(_inPull(find.byType(ChecksBadge)), findsNothing);
+    d.dispose();
+    final q = pull()..threads.clear();
     final (e, _) = await _app(tester, whole: q);
     pullSeen.value = {'c': pullSeen.value['c']! - 1};
     await tester.pump();
-    expect(_inPull(find.text('1 new')), findsOneWidget);
-    d.dispose();
+    expect(
+      _inPull(find.textContaining('1 new comment', findRichText: true)),
+      findsOneWidget,
+    );
     e.dispose();
   }, variant: _mac);
 
@@ -369,7 +372,7 @@ void main() {
     pullSeen.value = {'c': pullSeen.value['c']! - 1};
     await tester.pump();
     expect(find.text('Pull request'), findsNWidgets(2)); // switch, widget
-    await tester.tap(find.text('1 new'));
+    await tester.tap(_inPull(find.text('Add Sub and Neg')));
     await tester.pumpAndSettle();
     expect(find.byType(GitHubPullPane), findsOneWidget);
     expect(
@@ -412,11 +415,12 @@ void main() {
   }, variant: _mac);
 
   // The owner's report: the widget's ⋯, at the window's right, opened its
-  // menu off to one side; and the pointer going onto it closed it.
-  testWidgets("the widget's ⋯ opens its menu under it, ending at its right "
+  // menu off to one side; and the pointer going onto it closed it. A row's
+  // ⋯ is the same kind of button.
+  testWidgets("a row's ⋯ opens its menu under it, ending at its right "
       'edge, and it stays open to be picked from', (tester) async {
     final (d, fake) = await _app(tester, whole: pull());
-    final more = _inPull(find.byType(IconTap));
+    final more = _rowMenu;
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: tester.getCenter(more));
     addTearDown(mouse.removePointer);
@@ -431,8 +435,10 @@ void main() {
         matching: find.byType(MenuItemButton),
       ),
     );
-    // The row, inside the menu's padding.
-    expect(unlink.right, moreOrLessEquals(opener.right - 5, epsilon: 1));
+    // Under it, toward the panel's inside, ending near its right edge.
+    expect(unlink.right, lessThanOrEqualTo(opener.right));
+    expect(unlink.right, greaterThan(opener.right - 40));
+    expect(unlink.left, lessThan(opener.left));
     expect(unlink.top, greaterThan(opener.bottom));
 
     await mouse.moveTo(unlink.center);
@@ -442,11 +448,9 @@ void main() {
     await mouse.up();
     await tester.pumpAndSettle();
     expect(find.text('Unlink'), findsNothing);
-    expect(
-      fake.calls.whereType<LinkChatPullRequest>().map((r) => r.hasPull()),
-      [false],
-      reason: 'Unlink ran',
-    );
+    final sent = fake.calls.whereType<LinkChatPullRequest>().single;
+    expect(sent.hasPull(), isFalse, reason: 'Unlink ran');
+    expect(sent.unlink.number, 1);
     d.dispose();
   }, variant: _mac);
 }

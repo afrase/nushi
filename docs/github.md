@@ -56,6 +56,12 @@ The chat's header shows the pull request's or issue's state, checks, review and 
 
 A pull request's To do list (below) puts reply cards in its chat's box: the chat picked when it has several, or Start work first when it has none. It works as in a chat's Pull request tab (a failed check with its log's failing part; a review thread; a finding): read, change and send them with your message. What GitHub holds goes in as data, never as instructions, and authors outside the repository are marked.
 
+## Links in messages
+
+A pull request's or an issue's address in a message, the user's or the agent's, on a host Nushi gives a token to, shows as a chip once the message has finished streaming ([ADR 0117](adr/0117-github-links-as-chips-and-a-chats-pull-requests.md)): the state's icon (GitHub's shapes), `owner/repo#n` from the address and the title. A link whose text is the address, `#n` or `owner/repo#n` is a chip; one with words of its own stays words. Either has the hover card after 400 ms: the state pill, the age, the title, the author, `+adds −dels` and files, or an issue's comments; or why there's nothing to show (GitHub doesn't show it to the account, sign in, couldn't ask). A click opens it on GitHub; right-click: Open on GitHub, Copy link, Show in GitHub view, Link to this chat. Code, code blocks and tool output are left alone.
+
+The app asks the daemon once a chip is built (`GetGitHubItems`, the chips of a moment gathered into one call a host, quiet), and again on hover for what's over a minute old; chips never poll. The daemon keeps each a while (30 s open, 10 minutes merged, closed or unseen).
+
 ## A chat's pull request
 
 A chat on a branch finds its pull request by itself: the one whose head is the branch ([ADR 0059](adr/0059-a-chats-pull-request.md)). It looks:
@@ -68,20 +74,21 @@ The widget's title says when it last looked ("Checked 20 s ago · every minute")
 
 ### The Pull request widget
 
-The details panel's **Pull request** widget sums it up:
+A chat can hold up to 10 pull requests ([ADR 0117](adr/0117-github-links-as-chips-and-a-chats-pull-requests.md)): the one of its branch (found, and gone when the branch changes), each its own tool call opened (`gh pr create` or a `create_pull_request` tool, linked as the call completes; it stays when the branch changes), and those linked by hand (Link another pull request…, or a link chip's Link to this chat). Unlinking one keeps it from being found or linked again.
 
-- its state, number and title;
-- the checks as a bar with their counts, and Fix checks while some fail;
-- a row for each reviewer who counts: one asked and waiting, or how they reviewed, so an approval can't hide a missing code owner;
-- the open review threads, with Address;
-- Ready to merge, or Merge blocked and by what (checks, review, threads, conflicts);
-- the comments, and how many are new.
+The details panel's **Pull request** widget ("Pull requests" with two or more) is a row each, 44 tall, in the order linked except that a stack (one's base is another's head) lists its base first:
 
-A draft says its reviewers aren't asked yet (Ready for review opens GitHub); a merged one says what it merged into; a closed one where its commits stay (Reopen on GitHub).
+- the state's icon, the title and the CI badge: a dot (red with any failing, amber with any running, else green) and `passed/total` (skipped in neither); none when merged, closed or without checks. Its click opens In progress, Passed, Failed, with Fix checks, Show checks and Open on GitHub;
+- under it `#n`, `+adds −dels` and one cue, the first that applies: Merged into `main` (with Clean up… while offered), Closed without merging, changes requested, N threads, N new comments, Ready to merge;
+- its ⋯ (under the pointer): Open on GitHub, Copy link, View changes, Merge… (ADR 0069's dialog; off with why while blocked), Send open threads to agent, Ready for review on GitHub, Clean up…, Unlink.
 
-Collapsed, it's one line: the number in its state's color, then failing or running checks, changes requested or a reviewer waited on, open threads and new comments; or Ready, Draft, Merged, Closed.
+A click opens the Pull request tab on it. The checks bar, the reviewers, the threads, the Merge control and the comments are the tab's. Folded, one pull request is one line (the number in its state's color, failing or running checks, changes requested or a reviewer waited on, open threads and new comments; or Ready, Draft, Merged, Closed); several are their count by state and the worst checks.
 
-Its menu opens it on GitHub, links another (a link, `owner/name#n`, a number, or one of yours) or unlinks it. Without one it says "No pull request for `branch`", with Link….
+While the chat shows, a tool call of its that opens a pull request (`gh pr create`, a `create_pull_request` tool) or merges one of its own (`gh pr merge`, a `merge_pull_request` tool) gets a card after its turn group: a filled card with the state pill, `owner/repo #n · author · age`, the title, the files and `+adds −dels` as tags, and under a hairline the checks in words or the row's cue. A click opens the tab on it; right-click is the row's ⋯. It lives in the app's memory only: leaving the chat, or quitting, drops it (ADR 0117).
+
+The rows are asked each minute while the chat is open, in one `GetGitHubItems` call a host; the tab's pull request is read whole as before. The widget's ⋯ links one by hand; without one it says "No pull request for `branch`", with Link….
+
+The header's chip is the chat's pull requests: the primary's icon, number and badges (a narrow header drops the badges first), then `+2`; its hover is the card for one, the rows for several; a click opens the tab, which with several starts with a menu field of the rows (its pick remembered for the chat).
 
 ### The Pull request tab
 
@@ -151,11 +158,13 @@ A dialog ticks what loses nothing, and says what each costs:
 - deleting the branch on GitHub;
 - archiving the chat.
 
+With several pull requests ([ADR 0117](adr/0117-github-links-as-chips-and-a-chats-pull-requests.md)), a row's Clean up… takes only that pull request's branch on GitHub while another of the chat's is still open on its branch: the dialog names which, and the worktree, the local branch and archiving wait until those merge or close.
+
 Mid-turn, it waits for the turn to end, or stops it. The daemon refuses again what the dialog didn't clear: another chat in the worktree, a branch that moved on since the pull request, the default branch.
 
 The widget then shows each part as it goes and what it kept, with Restore branch (on GitHub, at the pull request's head) and Unarchive.
 
 ### Elsewhere
 
-- A chat's row in the sidebar gets a red dot while its pull request's checks fail, amber while they run.
-- The phone shows the widget's one-line summary in the chat's bar (the number in its state's color, failing or running checks, changes requested or a reviewer waited on, open threads; or Ready, Draft, Merged, Closed), asked each minute while the chat shows. A tap opens it on GitHub. The phone has no Pull request tab, so no Merge control; the daemon lets a paired phone merge as it lets it post a review ([ADR 0069](adr/0069-merging-a-pull-request.md)).
+- A chat's row in the sidebar gets a red dot while any of its open pull requests' checks fail, amber while they run.
+- The phone shows the widget's one-line summary in the chat's bar (the number in its state's color, failing or running checks, changes requested or a reviewer waited on, open threads; or Ready, Draft, Merged, Closed), asked each minute while the chat shows, then `+2` for its other pull requests (ADR 0117). A tap opens it on GitHub; with several, a sheet of their rows, each opening GitHub. A message's link chips are there too; a tap opens the card as a sheet, with Open on GitHub. No linking or unlinking on the phone. The phone has no Pull request tab, so no Merge control; the daemon lets a paired phone merge as it lets it post a review ([ADR 0069](adr/0069-merging-a-pull-request.md)).

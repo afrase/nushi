@@ -55,7 +55,7 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     : Platform.environment['NUSHI_DATA'] ?? native.install.dataFolder;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 117;
+const apiVersion = 118;
 
 /// The API from which the daemon says what an agent has (Agent.mcp_user_only,
 /// ListSkillsResponse.has_built_in and has_plugins), which
@@ -327,8 +327,17 @@ class Daemon extends ChangeNotifier {
   /// it.
   final cantStart = <String, String>{};
 
+  final _disposers = <VoidCallback>[];
+
+  /// Runs [f] as the daemon is disposed: a store of its own ends its
+  /// timers (`GitHubItems`'s).
+  void whenDisposed(VoidCallback f) => _disposers.add(f);
+
   @override
   void dispose() {
+    for (final f in _disposers) {
+      f();
+    }
     _timer?.cancel();
     _loadRetry?.cancel();
     unawaited(_events?.cancel());

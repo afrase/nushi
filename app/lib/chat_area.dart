@@ -174,6 +174,7 @@ class _ChatAreaState extends State<ChatArea> {
                   ChatTab.chat => ChatView(
                     chat: widget.chat,
                     daemon: widget.daemon,
+                    onPull: () => _tab.value = ChatTab.pull,
                     details: panel
                         ? DetailsPanel(
                             // It follows the chat it was made for.

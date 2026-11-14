@@ -112,6 +112,27 @@ func (s *server) GetGitHubStates(ctx context.Context, req *connect.Request[nushi
 	return connect.NewResponse(out), nil
 }
 
+// GetGitHubItems answers pull requests and issues by their numbers (ADR
+// 0117).
+func (s *server) GetGitHubItems(ctx context.Context, req *connect.Request[nushiv1.GetGitHubItemsRequest]) (*connect.Response[nushiv1.GetGitHubItemsResponse], error) {
+	if len(req.Msg.Refs) > 500 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("at most 500 at a time"))
+	}
+	refs := make([]model.GitHubRef, 0, len(req.Msg.Refs))
+	for _, r := range req.Msg.Refs {
+		refs = append(refs, ref(r))
+	}
+	items, unseen, signIn, err := s.GitHub.Items(ctx, refs, req.Msg.Quiet)
+	out := &nushiv1.GetGitHubItemsResponse{Items: ghItemsProto(items), SignIn: signIn}
+	for _, r := range unseen {
+		out.Unseen = append(out.Unseen, &nushiv1.GitHubRef{Host: r.Host, Repo: r.Repo, Number: int32(r.Number)})
+	}
+	if err != nil {
+		out.Error = err.Error()
+	}
+	return connect.NewResponse(out), nil
+}
+
 func ref(r *nushiv1.GitHubRef) model.GitHubRef {
 	return model.GitHubRef{Host: r.GetHost(), Repo: r.GetRepo(), Number: int(r.GetNumber())}
 }
@@ -194,7 +215,17 @@ func (s *server) SubmitGitHubReview(ctx context.Context, req *connect.Request[nu
 func ghItemProto(it model.GitHubItem) *nushiv1.GitHubItem {
 	return &nushiv1.GitHubItem{Ref: &nushiv1.GitHubRef{Host: it.Host, Repo: it.Repo, Number: int32(it.Number)}, Id: it.ID, Pull: it.Pull,
 		Title: it.Title, Url: it.URL, State: it.State, Draft: it.Draft, Author: it.Author, UpdatedMs: unixMs(it.Updated), Checks: it.Checks,
-		Review: it.Review, Unresolved: int32(it.Unresolved), Comments: int32(it.Comments)}
+		Review: it.Review, Unresolved: int32(it.Unresolved), Comments: int32(it.Comments),
+		Additions: int32(it.Additions), Deletions: int32(it.Deletions), ChangedFiles: int32(it.ChangedFiles), CreatedMs: unixMs(it.Created),
+		MergeState: it.MergeState, StateReason: it.StateReason, Base: it.Base, Head: it.Head, CheckCounts: checkCountsProto(it.CheckCounts)}
+}
+
+// checkCountsProto is nil for no checks.
+func checkCountsProto(c model.CheckCounts) *nushiv1.GitHubCheckCounts {
+	if c == (model.CheckCounts{}) {
+		return nil
+	}
+	return &nushiv1.GitHubCheckCounts{Passed: int32(c.Passed), Failed: int32(c.Failed), Running: int32(c.Running), Skipped: int32(c.Skipped)}
 }
 
 func ghItemsProto(items []model.GitHubItem) []*nushiv1.GitHubItem {

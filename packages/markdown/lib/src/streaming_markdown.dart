@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -104,6 +105,7 @@ class StreamingMarkdown extends StatefulWidget {
     this.fresh = const [],
     this.caret,
     this.headingMark,
+    this.linkBuilder,
   });
 
   /// The markdown so far.
@@ -146,6 +148,18 @@ class StreamingMarkdown extends StatefulWidget {
   /// While streaming, drawn where the text ends, in its line and taking no
   /// room, when the text ends in a line of prose ([caretFits]).
   final Widget? caret;
+
+  /// Draws a link in the line, once [text] has finished streaming: given
+  /// its destination, its text and the link's style where it is, a widget
+  /// (a chip), or null for a link as any. Given, every link of the text is
+  /// built through it, and those it leaves are plain linked text.
+  final Widget? Function(
+    BuildContext context,
+    String href,
+    String text,
+    TextStyle style,
+  )?
+  linkBuilder;
 
   /// Draws a mark at the start of each heading ([HeadingMarkBuilder]), once
   /// [text] has finished streaming.
@@ -232,10 +246,16 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
     final imageBuilder = w.imageBuilder;
     final faint = (body.color ?? s.muted).withValues(alpha: 0.07);
     final mark = streaming ? null : w.headingMark;
+    final links = streaming ? null : w.linkBuilder;
     return MarkdownBody(
       // The body parses again only for new text or a new style sheet:
-      // other links, another body.
-      key: linking ? ValueKey(Object.hashAllUnordered(files.keys)) : null,
+      // other links (files', or links drawn on their own), another body.
+      key: linking || links != null
+          ? ValueKey((
+              linking ? Object.hashAllUnordered(files.keys) : 0,
+              links != null,
+            ))
+          : null,
       data: data,
       softLineBreak: w.lineBreaks,
       blockSyntaxes: [
@@ -254,6 +274,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
           _FilePathSyntax.tag: _FileLinkBuilder(files, w.onTapFile!),
         },
         if (mark != null) _HeadingMark.markTag: _HeadingMarkBuilder(mark),
+        if (links != null) 'a': _LinkBuilder(links, onTapLink),
       },
       // A task list's box ("- [x]"), as text so it lines up with the item.
       checkboxBuilder: (checked) => Padding(
@@ -321,6 +342,46 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
         horizontalRuleDecoration: BoxDecoration(
           border: Border(top: BorderSide(color: s.border)),
         ),
+      ),
+    );
+  }
+}
+
+/// A link drawn by [StreamingMarkdown.linkBuilder], or as linked text in
+/// its place: with a builder for links, the Markdown body draws none of
+/// its own.
+class _LinkBuilder extends MarkdownElementBuilder {
+  new(this.build, this.onTap);
+
+  final Widget? Function(BuildContext, String, String, TextStyle) build;
+  final void Function(String href, String text)? onTap;
+
+  @override
+  Widget? visitElementAfterWithContext(
+    BuildContext context,
+    md.Element element,
+    TextStyle? preferredStyle,
+    TextStyle? parentStyle,
+  ) {
+    final href = element.attributes['href'] ?? '';
+    final text = element.textContent;
+    final style = (parentStyle ?? const TextStyle()).merge(preferredStyle);
+    final built = build(context, href, text, style);
+    if (built != null) {
+      return Text.rich(
+        TextSpan(
+          children: [
+            WidgetSpan(alignment: PlaceholderAlignment.middle, child: built),
+          ],
+        ),
+      );
+    }
+    return Text.rich(
+      TextSpan(
+        text: text,
+        style: style,
+        recognizer: TapGestureRecognizer()
+          ..onTap = () => onTap?.call(href, text),
       ),
     );
   }

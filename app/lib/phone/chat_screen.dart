@@ -7,6 +7,7 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_link_chip.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/phone/artifacts_screen.dart';
 import 'package:nushi/phone/chat_sheet.dart';
@@ -15,6 +16,7 @@ import 'package:nushi/phone/connection_bar.dart';
 import 'package:nushi/phone/new_chat_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/preview_screen.dart';
+import 'package:nushi/phone/pulls_sheet.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/pull_states.dart';
@@ -41,7 +43,19 @@ class ChatScreen extends StatelessWidget {
         title: chat.shownTitle,
         actions: [
           if (chat.pull != null)
-            PullChip(daemon, chat, onOpen: (url) => openWeb(context, url)),
+            PullChip(
+              daemon,
+              chat,
+              onOpen: (url) => openWeb(context, url),
+              onMore: () => unawaited(
+                showPullsSheet(
+                  context,
+                  daemon,
+                  chat,
+                  onOpen: (url) => openWeb(context, url),
+                ),
+              ),
+            ),
           if (daemon.daemonApi >= previewApi && chatFilesOf(chat).isNotEmpty)
             ListenableBuilder(
               listenable: chat.opened,
@@ -75,13 +89,26 @@ class ChatScreen extends StatelessWidget {
                           ? (path) =>
                                 PreviewScreen.open(context, daemon, chat, path)
                           : null,
-                      child: Transcript(
-                        chat: chat,
+                      // Link chips, a tap their card as a sheet; no linking
+                      // on the phone (ADR 0117).
+                      child: GitHubLinks(
                         daemon: daemon,
-                        header: chat.older > 0 ? Earlier(daemon, chat) : null,
-                        onReply: chat.archived || chat.sessionGone
-                            ? null
-                            : chat.draft.addReply,
+                        onTapChip: (context, a) => unawaited(
+                          showItemSheet(
+                            context,
+                            daemon,
+                            a,
+                            onOpen: (url) => openWeb(context, url),
+                          ),
+                        ),
+                        child: Transcript(
+                          chat: chat,
+                          daemon: daemon,
+                          header: chat.older > 0 ? Earlier(daemon, chat) : null,
+                          onReply: chat.archived || chat.sessionGone
+                              ? null
+                              : chat.draft.addReply,
+                        ),
                       ),
                     ),
             ),

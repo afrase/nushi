@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/github_parts.dart';
+import 'package:nushi/github_card.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_merge_state.dart';
 import 'package:nushi/theme/theme.dart';
@@ -10,42 +10,15 @@ import 'package:nushi/widgets.dart';
 
 export 'package:nushi/pull_lights.dart';
 
-/// A pull request's state as a pill: its icon and word on its color's
-/// tint.
+/// A pull request's state as a pill ([ItemStatePill]): GitHub's icon and word
+/// on its color's tint.
 class StatePill extends StatelessWidget {
   const new(this.item, {super.key});
 
   final GitHubItem item;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final (icon, fg, bg) = switch (item.state) {
-      'merged' => (Icons.merge_type, t.subagentAccent, t.subagentTint),
-      'closed' => (closedIcon, t.crashed, t.crashedSoft),
-      _ when item.draft => (Icons.edit_outlined, t.textSecondary, t.selected),
-      _ => (Icons.merge, t.done, t.doneSoft),
-    };
-    return Container(
-      padding: const EdgeInsets.fromLTRB(6, 1, 8, 1),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(NushiTheme.pill),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 4,
-        children: [
-          Icon(icon, size: 13, color: fg),
-          Text(
-            itemState(item),
-            style: theme.ui(fg, size: 12, weight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ItemStatePill(item);
 }
 
 /// The page's head: the state pill, `repo#n`, who opened it and when, the
