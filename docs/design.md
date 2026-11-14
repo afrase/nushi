@@ -147,7 +147,7 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 | `Swatch`, `DragGrip`, `KeyCap`, `keyHint`, `LineSlider` | a colour to pick; what can be dragged; a key's cap beside its action; a shortcut in small code; a value along a line | |
 | `SettingsSwitch` | an on/off, Settings' size everywhere; `run` makes it a call | |
 | `nushiDialog` (`widgets.dart`) | every dialog: a title, content 460 wide (`width` for a form), actions large at the right; `onClose` puts a × at the title's end (a list to manage) | an `AlertDialog` of a view's own |
-| `confirm` | a yes/no question: Cancel and the action, `destructive` in red | |
+| `confirm` | a yes/no question: Cancel and the action, `destructive` in red (Cancel then has the focus) | |
 | `cardBox`, `floatBox`, `framed` (`theme.dart`) | a card on a pane; what floats (hairline, soft shadow); a picture that needs an edge | an outlined box |
 | `PhasePill`, `NeedsYou`, `StatePill`/`ItemStatePill` | a state in words: its ink on its soft fill; "Needs you" on a card that waits; a pull request's state | a tinted card |
 | Chips: `ColorChip`, `GitHubLinkChip`, `JumpChip`, `FileChip`, `SideChip` | a chat's colour as a small lozenge; a GitHub link with its state; what floats over the text; a file; a side chat | a stripe down a side |
@@ -159,7 +159,7 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 
 ## Patterns
 
-- **Dialogs**: `nushiDialog`: a title that says what's asked ("Delete this chat?"), content in plain sentences, actions at the right, Cancel first and the one main action last. The main action is `primary`; one that deletes or loses something is `destructive` and says what it does ("Delete", not "OK"). A list to manage has a × and a Done. Esc cancels.
+- **Dialogs**: `nushiDialog`: a title that says what's asked ("Delete this chat?"), content in plain sentences, actions at the right, Cancel first and the one main action last. The main action is `primary`; one that deletes or loses something is `destructive` and says what it does ("Delete", not "OK"). The main action has the focus, unless it deletes or loses something: then Cancel has it, so Enter never deletes, as the Mac's alerts (`confirm(destructive: true)`, the chat's Delete, Clean up). A list to manage has a × and a Done. Esc cancels.
 - **Cards in the transcript** (ADR [0111](adr/0111-surfaces-and-floating-panes.md)): a tool call's row is one line on `raised`, corners `control`; open, a card with its output in a `codeBlock` block. A card that waits on you (a permission, a question, the trust card) is a `cardBox` with an amber mark and `NeedsYou`; its one main answer solid, the rest secondary. Nothing is outlined, and nothing in a card is a card.
 - **Empty states**: a muted line where the content would be, in `textMuted`: "None" in a settings group (`SettingsGroup.empty`), "No chats" in a group, "Nothing matches" under a filter. A view with nothing open offers its main action large (the empty window's New chat).
 - **Settings rows**: label left (13, `text`), an optional description under it (12, `textMuted`), the control at the group's right edge; a group is a card with hairlines between rows. Copy is short (the owner's rule).
@@ -187,7 +187,6 @@ Follow-ups, found while writing this page and drawing the gallery. Two small bug
 
 - **A field's hint is barely dimmer than its value.** A hint is `textMuted` in the UI font; `textMuted` is close to `textSecondary` and, in a code-set field, the hint reads as typed text (the MCP form's "npx", "my-server").
 - **`textSecondary` and `textMuted` are a hair apart** (dark `#B4B8BF` and `#A5A9B1`, light `#494B57` and `#5A5E6B`), so the three greys read as two.
-- **A destructive dialog autofocuses its Delete**: `confirm(destructive: true)` and the chat's Delete dialog (`chat_menu.dart`) put the focus on the red button, so Enter deletes; History's "Keep copies" dialog focuses the safe choice.
 - **Type sizes off the scale**: besides 11, 11.5, 12, 13 and 14, views set 12.5 (54 places), 13.5, 10.5, 8 and 8.5 with `ui()`, and 12.5 and 10.5 with `code()`.
 - **Durations written as numbers**: about 70 `Duration(milliseconds: …)` outside `motion.dart`, some equal to `Motion`'s (`Dimmed`'s 120, a panel widget's 200) but not named so.
 - **Empty states' punctuation**: "No checks." and "No sessions here." end with a full stop, "No chats", "Nothing matches" and "None" don't.

@@ -720,7 +720,8 @@ final List<Sheet> sheets = [
   (
     name: 'confirm',
     size: const Size(760, 420),
-    build: () => page('confirm()', const []),
+    build: () =>
+        page('confirm(destructive: true): Cancel has the focus', const []),
     open: _openConfirm,
   ),
   (

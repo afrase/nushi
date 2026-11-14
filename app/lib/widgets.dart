@@ -244,7 +244,8 @@ Widget nushiDialog(
 );
 
 /// Asks [title] with [text] in a dialog; true once [action] is pressed
-/// ([destructive]: it deletes or loses something, so it's in red).
+/// ([destructive]: it deletes or loses something, so it's in red, and
+/// Cancel has the focus, so Enter never deletes, as the Mac's alerts).
 Future<bool> confirm(
   BuildContext context,
   String title,
@@ -255,11 +256,15 @@ Future<bool> confirm(
     await showDialog<bool>(
       context: context,
       builder: (context) => nushiDialog(title, Text(text), [
-        Button(label: 'Cancel', onPressed: () => Navigator.pop(context, false)),
+        Button(
+          label: 'Cancel',
+          autofocus: destructive,
+          onPressed: () => Navigator.pop(context, false),
+        ),
         Button(
           label: action,
           kind: destructive ? ButtonKind.destructive : ButtonKind.primary,
-          autofocus: true,
+          autofocus: !destructive,
           onPressed: () => Navigator.pop(context, true),
         ),
       ]),
