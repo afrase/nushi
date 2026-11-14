@@ -3,6 +3,7 @@ package ante
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -124,9 +125,13 @@ func (s *session) opOf(text string) any {
 // (UpdateSession, from the next turn on) and says the new one.
 func (s *session) setting(ctx context.Context, name, arg string) (*acp.PromptResponse, error) {
 	t, err := s.next(ctx)
+	if errors.Is(err, errCancelled) {
+		return &acp.PromptResponse{StopReason: "cancelled"}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
+	t.wrote() // no op: a Stop's Interrupt need not wait
 	reply, err := s.change(ctx, name, arg)
 	if err == nil {
 		s.b.update(s.id, chunk(false, reply, acp.MessageID("cmd-"+t.id)))
