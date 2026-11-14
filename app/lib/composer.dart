@@ -108,6 +108,20 @@ class _ComposerState extends State<Composer> {
     widget.chat.takeBack.addListener(_takeBack);
     _takeBack(); // one taken back while the box wasn't there
     _pasted = pastedFiles.stream.listen(_paste);
+    _draft.typed = _typed;
+  }
+
+  /// A character typed elsewhere in the chat (ADR 0121): at the box's end,
+  /// as if typed there, the focus with it. Not while it's locked.
+  bool _typed(String c) {
+    if (_locked) return false;
+    final text = '${_text.text}$c';
+    _text.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    _focus.requestFocus();
+    return true;
   }
 
   late final StreamSubscription<List<XFile>> _pasted;
@@ -132,6 +146,7 @@ class _ComposerState extends State<Composer> {
 
   @override
   void dispose() {
+    if (_draft.typed == _typed) _draft.typed = null;
     _draft.removeListener(_draftChanged);
     _draft.quote.removeListener(_quote);
     _draft.put.removeListener(_put);

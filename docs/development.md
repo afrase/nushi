@@ -33,6 +33,7 @@ tools/linux-smoke.sh dist/nushi-1.2.0-linux-amd64.tar.gz  # install and start it
 ```
 
 - With `make run`, start and stop the daemon yourself.
+- Debug and Profile builds of the Mac app are `com.nushihq.Nushi.dev`, so Homebrew's reopen after an upgrade (`open -b com.nushihq.Nushi`) opens the installed release, not a build in `app/build`. Their settings (`~/Library/Preferences`) are the dev id's.
 - `make package` checks the bundle's layout and signatures (`tools/check-bundle.sh`); `make package-linux` the Linux package's layout, nushid's version against the app's, and the newest glibc it needs (no newer than `NUSHI_GLIBC` when set).
 - To try a build beside a Nushi that's in use, give both another data folder: `NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev make run` (and the same for `make stop`). On Linux the usual folder is `$XDG_DATA_HOME/nushi` (else `~/.local/share/nushi`), `make app` runs `flutter run -d linux`, and `make stop` needs psmisc's `fuser`.
 

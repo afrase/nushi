@@ -167,13 +167,22 @@ class SidebarView {
   final List<String> folders;
 }
 
+/// How [folder]'s chats sort under Project grouping: its own sort
+/// ([projectSorts], ADR 0120), else the sidebar's.
+({SortBy sort, bool ascending}) projectSort(String folder) =>
+    switch (projectSorts.value[folder]) {
+      final own? => (sort: own.sort, ascending: own.ascending),
+      null => (sort: sidebarSort.value, ascending: sidebarAscending.value),
+    };
+
 /// The sidebar's chats arranged as its Arrange menu says
 /// (`arrangement.dart`): the pinned ones on top whatever the grouping;
 /// then each section's chats, unarchived and unpinned (a chat in two goes
 /// in the first), in the order moved in under Manual, else sorted; then
-/// the others, each folder's as [sidebarGroups] has them (sorted, unless
-/// Manual; a kept project with none of them an empty group) under Project
-/// grouping, else in the grouping's groups.
+/// the others, each folder's as [sidebarGroups] has them (sorted by its
+/// own sort or the sidebar's, [projectSort], unless Manual; a kept project
+/// with none of them an empty group) under Project grouping, else in the
+/// grouping's groups.
 /// [starting], the folder a chat is starting in.
 ///
 /// Narrowed to a project ([shownProject]: its tile picked in the project
@@ -212,7 +221,13 @@ SidebarView arrangeSidebar(Daemon daemon, {String? starting}) {
             starting: starting,
             without: placed,
           ).entries)
-            key: sortChats(value, sort, ascending: up),
+            key: switch (projectSort(key)) {
+              (:final sort, :final ascending) => sortChats(
+                value,
+                sort,
+                ascending: ascending,
+              ),
+            },
         }
       : <String, List<ChatState>>{};
   final projects = only == null ? all : {only: all[only] ?? <ChatState>[]};

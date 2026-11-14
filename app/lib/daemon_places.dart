@@ -22,6 +22,32 @@ extension DaemonPlaces on Daemon {
     _changed();
   }
 
+  /// Whether Back and Forward have somewhere to go (ADR 0119).
+  bool get canGoBack => visits.can(-1, _live);
+  bool get canGoForward => visits.can(1, _live);
+
+  /// Back and Forward: the place visited before, or after going back,
+  /// opened as a pick does; a chat deleted or archived since is passed
+  /// over.
+  void goBack() => _revisit(-1);
+  void goForward() => _revisit(1);
+
+  void _revisit(int step) {
+    switch (visits.step(step, _live)) {
+      case Visit(:final chat?):
+        select(chat);
+      case Visit(:final place):
+        go(place);
+      case null:
+    }
+  }
+
+  /// Whether [v] can still be gone to: its chat is there, unarchived.
+  bool _live(Visit v) => switch (v.chat) {
+    null => true,
+    final id => chats[id]?.archived == false,
+  };
+
   /// Leaves Jira or GitHub for the chat.
   void back() {
     if (place is ChatPlace) return;

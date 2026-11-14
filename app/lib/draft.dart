@@ -57,6 +57,11 @@ class Draft extends ChangeNotifier {
   /// sent by itself.
   final put = ValueNotifier<String?>(null);
 
+  /// Takes a character typed with nothing that takes text focused (ADR
+  /// 0121): the box's, while it's there, which puts it at its end and takes
+  /// the focus; whether it took it.
+  bool Function(String typed)? typed;
+
   /// The subagent a message taken back was for: its call and type. The
   /// message goes there again.
   final toSubagent = ValueNotifier<(String call, String agent)?>(null);

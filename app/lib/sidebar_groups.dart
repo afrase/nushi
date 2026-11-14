@@ -7,6 +7,7 @@ import 'package:nushi/disclosure.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/project_sort.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/sidebar_group_header.dart';
@@ -42,7 +43,7 @@ class SidebarGroups extends StatelessWidget {
     required this.onNew,
     required this.onTerminal,
     super.key,
-    this.reorders = true,
+    this.reorders,
     this.tile,
     this.onChangeTile,
   });
@@ -62,7 +63,7 @@ class SidebarGroups extends StatelessWidget {
   /// here or not (pinned, in a section): those the sidebar can't forget,
   /// and whose empty group doesn't say "No chats".
   final Set<String> live;
-  final Widget Function(ChatState chat, Movable movable) row;
+  final Widget Function(String folder, ChatState chat, Movable movable) row;
 
   /// A new chat in a folder ('' for none); null while one starts.
   final void Function(String folder)? onNew;
@@ -70,9 +71,9 @@ class SidebarGroups extends StatelessWidget {
   /// A terminal in a folder, in one of its group's chats.
   final void Function(String folder, List<ChatState> chats) onTerminal;
 
-  /// Whether a project's rows move by dragging (Manual sort); else they
-  /// drag only into a section.
-  final bool reorders;
+  /// Whether a project's rows move by dragging (its sort is Manual); else
+  /// they drag only into a section. All do without it.
+  final bool Function(String folder)? reorders;
 
   @override
   Widget build(BuildContext context) {
@@ -136,9 +137,9 @@ class SidebarGroups extends StatelessWidget {
               group: folder,
               chats: chats,
               collapsed: collapsed,
-              reorders: reorders,
+              reorders: reorders?.call(folder) ?? true,
               selectedId: selectedId,
-              row: row,
+              row: (c, movable) => row(folder, c, movable),
               onMove: (from, to) => moveInProject(folder, chats, from, to),
             ),
           ],
@@ -219,10 +220,11 @@ List<MenuEntry> projectEntries({
 /// after it, muted, when another project has the same name), or "No
 /// folder" ('') for chats in scratch folders; after it a chevron button
 /// that collapses the group, shown as the + is or while it's collapsed,
-/// with the summary dot beside it then ([GroupHeader]); a + for a new chat
-/// there, shown under the pointer or with keyboard focus (its room kept,
-/// so names don't move). Dragged, it moves
-/// the group. Its menu (a right-click) is the project's
+/// with the summary dot beside it then ([GroupHeader]); its Sort button
+/// ([ProjectSortButton]) and a + for a new chat there, shown under the
+/// pointer or with keyboard focus (their room kept, so names don't move),
+/// the Sort button always while the project sorts its own way. Dragged, it
+/// moves the group. Its menu (a right-click) is the project's
 /// ([projectEntries]). [lead], the project's tile, comes before its name.
 class _Header extends StatefulWidget {
   const new(
@@ -299,14 +301,20 @@ class _HeaderState extends State<_Header> {
                   canRequestFocus: false,
                   skipTraversal: true,
                   onFocusChange: (f) => setState(() => _focus = f),
-                  child: Opacity(
-                    opacity: _hover || _focus ? 1 : 0,
-                    child: IconTap(
-                      Icons.add,
-                      tooltip: 'New chat here',
-                      size: 14,
-                      onTap: widget.onNew,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ProjectSortButton(folder, shown: _hover || _focus),
+                      Opacity(
+                        opacity: _hover || _focus ? 1 : 0,
+                        child: IconTap(
+                          Icons.add,
+                          tooltip: 'New chat here',
+                          size: 14,
+                          onTap: widget.onNew,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/controls.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/submenu.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -207,12 +208,26 @@ class Menu extends StatefulWidget {
   State<Menu> createState() => _MenuState();
 }
 
+/// How many menus are open: a key typed while one is goes to it, not to
+/// the chat's box (ADR 0121).
+final ValueNotifier<int> openMenus = runValue(0);
+
 class _MenuState extends State<Menu> {
   late final MenuController _menu = widget.controller ?? MenuController();
   final _focus = FocusNode(debugLabel: 'menu');
 
+  /// Whether this one counts in [openMenus].
+  bool _counted = false;
+
+  void _count({required bool open}) {
+    if (open == _counted) return;
+    _counted = open;
+    openMenus.value += open ? 1 : -1;
+  }
+
   @override
   void dispose() {
+    _count(open: false);
     _focus.dispose();
     super.dispose();
   }
@@ -313,12 +328,14 @@ class _MenuState extends State<Menu> {
             ),
       ],
       onOpen: () {
+        _count(open: true);
         if (widget.digits) _focus.requestFocus();
         const MenuOpened(open: true).dispatch(context);
         widget.onOpen?.call();
       },
       // After the menu has settled its own focus.
       onClose: () => WidgetsBinding.instance.addPostFrameCallback((_) {
+        _count(open: false);
         if (mounted) const MenuOpened(open: false).dispatch(context);
         widget.onClose?.call();
       }),

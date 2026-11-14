@@ -29,6 +29,7 @@ import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/trust_ask.dart';
+import 'package:nushi/visits.dart';
 import 'package:uds_transport/uds_transport.dart';
 
 export 'package:nushi/issue_chat.dart';
@@ -216,6 +217,19 @@ class Daemon extends ChangeNotifier {
   final sides = <String, ChatState>{};
   String? selectedId;
   ChatState? get selected => chats[selectedId];
+
+  /// The places visited, for Back and Forward (ADR 0119): what shows is
+  /// noted each time this notifies.
+  final visits = Visits();
+
+  @override
+  void notifyListeners() {
+    visits.see(switch (place) {
+      ChatPlace() => selectedId == null ? null : Visit(place, chat: selectedId),
+      final other => Visit(other),
+    });
+    super.notifyListeners();
+  }
 
   connect.AnyFn<I, O> _auth<I extends Object, O extends Object>(
     connect.AnyFn<I, O> next,

@@ -33,6 +33,10 @@ enum LineIcon {
   /// Arrange (the sidebar's grouping and sort): three lines, each shorter.
   arrange,
 
+  /// Sort (a project's own, ADR 0120): an arrow up beside an arrow down,
+  /// as Claude desktop's Group and sort.
+  sort,
+
   /// Add: the composer's +.
   plus,
 
@@ -54,6 +58,13 @@ enum LineIcon {
 
   /// A browser tab's Forward: an arrow to the right.
   forward,
+
+  /// Back through the places visited (ADR 0119): a chevron to the left,
+  /// as Claude desktop's.
+  chevronBack,
+
+  /// Forward through them: a chevron to the right.
+  chevronForward,
 
   /// A browser tab's Reload: a circle's arrow turning clockwise, its head
   /// at the top right.
@@ -174,6 +185,18 @@ enum LineIcon {
         ..lineTo(17, 12)
         ..moveTo(10, 17)
         ..lineTo(14, 17),
+    sort =>
+      Path()
+        ..moveTo(8, 19)
+        ..lineTo(8, 5)
+        ..moveTo(4.5, 8.5)
+        ..lineTo(8, 5)
+        ..lineTo(11.5, 8.5)
+        ..moveTo(16, 5)
+        ..lineTo(16, 19)
+        ..moveTo(12.5, 15.5)
+        ..lineTo(16, 19)
+        ..lineTo(19.5, 15.5),
     more =>
       Path()
         ..addOval(_dot(6))
@@ -279,6 +302,16 @@ enum LineIcon {
         ..lineTo(4, 14)
         ..moveTo(4, 20)
         ..lineTo(10, 14),
+    chevronBack =>
+      Path()
+        ..moveTo(14.5, 6)
+        ..lineTo(8.5, 12)
+        ..lineTo(14.5, 18),
+    chevronForward =>
+      Path()
+        ..moveTo(9.5, 6)
+        ..lineTo(15.5, 12)
+        ..lineTo(9.5, 18),
     chevron =>
       Path()
         ..moveTo(9.5, 6)

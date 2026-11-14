@@ -280,7 +280,6 @@ class PaneHeader extends StatelessWidget {
                     null => child,
                   },
                 ),
-                if (shut) const ShowSidebarButton(),
               ],
             ),
           );

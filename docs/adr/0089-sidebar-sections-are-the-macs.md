@@ -19,3 +19,6 @@ The owner wanted the sidebar arranged as Claude Code's desktop app lets you: gro
 - Sections in the daemon, as pins: the phone and another Mac would have them, at the cost of an API for what is a way of looking at the list.
 - A section keeping a pinned chat in Pinned without unpinning: a move that shows nothing.
 - The Arrange button always shown: easier to find, but every sidebar golden and the default look change for a control most never touch.
+
+## Amendment (2026-11-14)
+Sort by is the default for the projects: each can sort its own way from its header ([ADR 0120](0120-each-project-sorts-its-own-way.md)).

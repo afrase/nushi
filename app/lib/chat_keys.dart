@@ -10,14 +10,15 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/sidebar_view.dart';
 
 // Switching chats by keyboard, as Claude Code does: ⌘ held alone numbers
-// the sidebar's chats, ⌘1–⌘9 opens one, ⌘[ and ⌘] go to the one before
-// and after. And the chat's tabs: ⌃Tab and ⌃⇧Tab go through them. On
-// Linux, Control in ⌘'s place (`keys.dart`).
+// the sidebar's chats, ⌘1–⌘9 opens one, ⌥⌘↑ and ⌥⌘↓ go to the one before
+// and after (⌘[ and ⌘] are Back and Forward, ADR 0119). And the chat's
+// tabs: ⌃Tab and ⌃⇧Tab go through them. On Linux, Control in ⌘'s place
+// (`keys.dart`).
 
 /// The chats as the sidebar shows them, top to bottom, Pinned first, then
 /// the sections and the groups, the archived (in their collapsed group)
 /// and those of collapsed sections and headed groups left out but the
-/// selected one: what ⌘1–⌘9, ⌘[ and ⌘] go through.
+/// selected one: what ⌘1–⌘9, ⌥⌘↑ and ⌥⌘↓ go through.
 List<ChatState> chatOrder(Daemon daemon) {
   final view = arrangeSidebar(daemon);
   final selected = daemon.selectedId;
@@ -59,7 +60,7 @@ class OpenChatIntent extends Intent {
   final int n;
 }
 
-/// Opens the chat [step] places on in the sidebar (⌘[ is -1, ⌘] 1).
+/// Opens the chat [step] places on in the sidebar (⌥⌘↑ is -1, ⌥⌘↓ 1).
 class StepChatIntent extends Intent {
   const new(this.step);
 
@@ -82,14 +83,17 @@ const _chatNumberKeys = [
   Cmd(LogicalKeyboardKey.digit9),
 ];
 
-/// ⌘[ and ⌘]; on Linux Ctrl+Page Up and Ctrl+Page Down, as a browser's
-/// tabs, since Control and `[` is Escape.
+/// ⌥⌘↑ and ⌥⌘↓, which no text field or editor binds (ADR 0119; ⌘[ and
+/// ⌘] until Back and Forward took them); on Linux Ctrl+Page Up and
+/// Ctrl+Page Down, as a browser's tabs.
 const previousChatKey = Cmd(
-  LogicalKeyboardKey.bracketLeft,
+  LogicalKeyboardKey.arrowUp,
+  alt: true,
   linux: SingleActivator(LogicalKeyboardKey.pageUp, control: true),
 );
 const nextChatKey = Cmd(
-  LogicalKeyboardKey.bracketRight,
+  LogicalKeyboardKey.arrowDown,
+  alt: true,
   linux: SingleActivator(LogicalKeyboardKey.pageDown, control: true),
 );
 
@@ -142,7 +146,7 @@ void stepTab(ChatState chat, int step) {
   chat.tab.value = tabs[(tabs.indexOf(chat.shownTab) + step) % tabs.length];
 }
 
-/// ⌘1–⌘9, ⌘[ and ⌘] that switch chats, ⌃Tab and ⌃⇧Tab that switch its
+/// ⌘1–⌘9, ⌥⌘↑ and ⌥⌘↓ that switch chats, ⌃Tab and ⌃⇧Tab that switch its
 /// tabs, wherever the focus is (a terminal, which keeps ⌘ and ⌃ keys,
 /// passes them on as these intents).
 final Map<ShortcutActivator, Intent> chatKeys = {

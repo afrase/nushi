@@ -400,17 +400,20 @@ void main() {
       await closeView(tester, d);
     }, variant: macOnly);
 
-    testWidgets('⌘[ and ⌘] still switch chats from the address field', (
-      tester,
-    ) async {
+    testWidgets('⌘[ and ⌘] are the app’s Back and Forward from the address '
+        'field too (ADR 0119)', (tester) async {
       browserFakes();
       final d = await browserApp(tester);
+      d.select('d');
+      await tester.pumpAndSettle();
+      d.select('c');
+      await tester.pumpAndSettle();
       d.chats['c']!.openBrowserTab();
       await tester.pumpAndSettle();
       expect(addressEditable(tester).widget.focusNode.hasFocus, isTrue);
-      await pressMeta(tester, LogicalKeyboardKey.bracketRight);
-      expect(d.selectedId, 'd');
       await pressMeta(tester, LogicalKeyboardKey.bracketLeft);
+      expect(d.selectedId, 'd');
+      await pressMeta(tester, LogicalKeyboardKey.bracketRight);
       expect(d.selectedId, 'c');
       await closeView(tester, d);
     }, variant: macOnly);

@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:nushi/alerts.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/app_log.dart';
-import 'package:nushi/beside.dart';
 import 'package:nushi/chat_area.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/comment_drafts_mac.dart';
@@ -35,6 +34,7 @@ import 'package:nushi/removed_chats.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_modal.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/sidebar_beside.dart';
 import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/slides.dart';
@@ -42,6 +42,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/theme_files.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/trust_card.dart';
+import 'package:nushi/type_to_box.dart';
 import 'package:nushi/update_toast.dart';
 import 'package:nushi/widgets.dart' show confirm;
 
@@ -156,12 +157,24 @@ class _NushiAppState extends State<NushiApp> {
   }
 
   /// Whether the shown chat is pinned: the Chat menu's Pin Chat says
-  /// Unpin Chat then.
+  /// Unpin Chat then. Whether Back and Forward have somewhere to go:
+  /// their View menu items are greyed out while they don't.
   bool _pinned = false;
+  bool _back = false;
+  bool _forward = false;
 
   void _pinChanged() {
-    final pinned = (widget.daemon.selected?.pin ?? 0) > 0;
-    if (pinned != _pinned) setState(() => _pinned = pinned);
+    final d = widget.daemon;
+    final pinned = (d.selected?.pin ?? 0) > 0;
+    final back = d.canGoBack;
+    final forward = d.canGoForward;
+    if (pinned != _pinned || back != _back || forward != _forward) {
+      setState(() {
+        _pinned = pinned;
+        _back = back;
+        _forward = forward;
+      });
+    }
   }
 
   /// The View menu's Hide Sidebar says Show Sidebar while it's hidden,
@@ -206,8 +219,10 @@ class _NushiAppState extends State<NushiApp> {
       _ => act.menuLabel!,
     },
     shortcut: act.key,
-    onSelected: () => runAct(_navigator.currentContext!, widget.daemon, act),
+    onSelected: () => _run(act),
   );
+
+  void _run(Act act) => runAct(_navigator.currentContext!, widget.daemon, act);
 
   List<PlatformMenuItem> _items(ActMenu menu) => [
     for (final a in Act.values)
@@ -244,6 +259,20 @@ class _NushiAppState extends State<NushiApp> {
               unawaited(showPalette(_navigator.currentContext!, widget.daemon)),
         ),
         PlatformMenuItemGroup(members: _items(ActMenu.view)),
+        PlatformMenuItemGroup(
+          members: [
+            PlatformMenuItem(
+              label: 'Back',
+              shortcut: backKey,
+              onSelected: _back ? () => _run(Act.back) : null,
+            ),
+            PlatformMenuItem(
+              label: 'Forward',
+              shortcut: forwardKey,
+              onSelected: _forward ? () => _run(Act.forward) : null,
+            ),
+          ],
+        ),
         PlatformMenuItemGroup(
           members: [
             PlatformMenuItem(
@@ -320,9 +349,7 @@ class _NushiAppState extends State<NushiApp> {
       home: Builder(
         builder: (context) => Actions(
           actions: {
-            RunActIntent: CallbackAction<RunActIntent>(
-              onInvoke: (i) => runAct(context, widget.daemon, i.act),
-            ),
+            RunActIntent: _RunAct((act) => runAct(context, widget.daemon, act)),
             OpenPaletteIntent: CallbackAction<OpenPaletteIntent>(
               onInvoke: (_) => unawaited(showPalette(context, widget.daemon)),
             ),
@@ -341,7 +368,7 @@ class _NushiAppState extends State<NushiApp> {
               },
             ),
           },
-          // The actions' keys, ⌘K, ⌘1–⌘9, ⌘[ and ⌘], ⌃Tab and ⌃⇧Tab:
+          // The actions' keys, ⌘K, ⌘1–⌘9, ⌥⌘↑ and ⌥⌘↓, ⌃Tab and ⌃⇧Tab:
           // wherever the focus is; and Quit's without a menu bar.
           child: Shortcuts(
             shortcuts: {
@@ -353,8 +380,11 @@ class _NushiAppState extends State<NushiApp> {
             },
             // Focused when nothing in the window is, so the keys still
             // come here (an empty pane, after a click on the sidebar).
+            // A character typed there, or on the transcript, goes into the
+            // chat's box (ADR 0121).
             child: Focus(
               autofocus: true,
+              onKeyEvent: (node, e) => typeIntoBox(widget.daemon, node, e),
               child: Scaffold(
                 // The Scaffold's text style blends to a new theme's over
                 // 200 ms, rebuilding every text below on each frame;
@@ -462,27 +492,28 @@ class _Shell extends StatelessWidget {
       // The sidebar slides in and out over the view, which keeps its
       // state either way.
       builder: (context, box) => SidebarBeside(
-        sidebar: shut
-            ? null
-            : ListenableBuilder(
-                listenable: Listenable.merge([projectRail, sidebarGroupBy]),
-                builder: (context, child) {
-                  final most = min(480.0, box.maxWidth - 560);
-                  return Resizable(
-                    name: 'sidebar',
-                    initial: 260,
-                    // With the project rail wanted, no narrower than it
-                    // needs, as far as the window has room.
-                    min: railWanted
-                        ? min(ProjectRail.minSidebar, max(200.0, most))
-                        : 200,
-                    max: most,
-                    line: false,
-                    child: child!,
-                  );
-                },
-                child: Sidebar(daemon: daemon),
-              ),
+        daemon: daemon,
+        shut: shut,
+        // Shown, or floating over the view while it's hidden and peeks.
+        sidebar: ({required floating}) => ListenableBuilder(
+          listenable: Listenable.merge([projectRail, sidebarGroupBy]),
+          builder: (context, child) {
+            final most = min(480.0, box.maxWidth - 560);
+            return Resizable(
+              name: 'sidebar',
+              initial: 260,
+              // With the project rail wanted, no narrower than it
+              // needs, as far as the window has room.
+              min: railWanted
+                  ? min(ProjectRail.minSidebar, max(Sidebar.minWidth, most))
+                  : Sidebar.minWidth,
+              max: most,
+              line: false,
+              child: child!,
+            );
+          },
+          child: Sidebar(daemon: daemon, floating: floating),
+        ),
         // Beside the sidebar, which brings the gap between them, or alone
         // in the window, in from its left edge too.
         main: Column(
@@ -555,5 +586,22 @@ class _Shell extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Runs an action from its key, unless the key is a text field's own
+/// there ([actKeyTaken]): then it isn't handled, and goes on to the field.
+class _RunAct extends Action<RunActIntent> {
+  new(this._run);
+
+  final void Function(Act act) _run;
+
+  @override
+  bool isEnabled(RunActIntent intent) => !actKeyTaken(intent.act);
+
+  @override
+  Object? invoke(RunActIntent intent) {
+    _run(intent.act);
+    return null;
   }
 }

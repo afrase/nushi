@@ -36,6 +36,20 @@ A GIF plays while the pointer is on the tile, framed and trimmed the same way. T
 
 To add a project before it has a chat, click the Arrange button at the top of the sidebar, pick **Add project…** and pick its folder.
 
+## Hide the sidebar
+
+Press **⌘\**, or click the sidebar button at the top left of the window, right of the window's own buttons. The chat takes the whole window. The button stays in the same place, so the same click brings the sidebar back.
+
+To glance at the sidebar while it's hidden, point at the sidebar button (or rest the pointer on the window's left edge). The sidebar slides in over the chat: pick a chat or use its menus there. It slides away when the pointer leaves it. Click the button while it's out to keep it shown.
+
+## Go back to a chat
+
+The **<** and **>** buttons right of the sidebar button go back to the chat you had open before, and forward again, as a browser's Back and Forward do. Jira and GitHub count as places too. A chat you've since deleted or archived is skipped.
+
+- **⌘[**: Back (on Linux, **Alt+Left**).
+- **⌘]**: Forward (on Linux, **Alt+Right**).
+- **⌥⌘↑** and **⌥⌘↓**: the chat above or below in the sidebar (on Linux, **Ctrl+Page Up** and **Ctrl+Page Down**).
+
 ## See one project's chats
 
 The project rail is a column of larger tiles at the sidebar's left, one for each project. It's off at first.
@@ -48,6 +62,16 @@ The project rail is a column of larger tiles at the sidebar's left, one for each
 To change the projects' order, drag a tile up or down the rail. The sidebar's list takes the same order, as dragging a project's header there changes the rail.
 
 A number on a tile counts that project's chats that need you. Hover over a tile for the project's name and folder. While the rail is on, the sidebar can't be dragged narrower than the rail needs. The rail isn't there in a very narrow window, or while the sidebar is grouped by something other than Project; its setting then says why.
+
+## Sort a project's chats
+
+Each project can sort its chats its own way. The rest keep the order set in the Arrange menu's **Sort by**.
+
+1. Point at the project's name in the sidebar.
+2. Click the **⇅** button beside its **+**.
+3. Pick **Last updated**, **Date created**, **Name** or **Manual** (the order you drag them into), and which way.
+
+The ⇅ stays, in color, while the project sorts its own way. Pick **Sidebar’s sort** to go back.
 
 ## Change the fonts
 
@@ -64,6 +88,8 @@ The terminal has its own font, in **Settings**, then **Terminal**. The phone alw
 ## Send a message
 
 Type in the box at the bottom and press **⏎** to send. **⇧⏎** starts a new line.
+
+You don't have to click the box first: start typing anywhere in the chat and the letters go into it (a menu, a dialog or another text field keeps them).
 
 - **Attach files or images**: click the **+** in the box and pick **Add files or photos** (**⌘U**), drop files on the chat, or paste a picture.
 - **Mention a file**: type `@` and pick one.

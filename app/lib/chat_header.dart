@@ -456,7 +456,6 @@ class ChatHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (shut) const ShowSidebarButton(),
         ],
       ),
     );
