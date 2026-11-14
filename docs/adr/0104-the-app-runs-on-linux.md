@@ -48,3 +48,6 @@ The daemon runs on Linux (ADR 0101); the app was the Mac's only. ADR 0097 made t
 - A `.deb`, Flatpak or AppImage for the first release: a `.deb` serves one family of distributions (a tarball serves all; the AUR's package comes next, with the owner's account); Flatpak's sandbox fights a daemon that runs the user's own CLIs and shells; an AppImage's path changes on every run, which breaks the daemon's check of its package and Start at login's `Exec`.
 - Super as the command key, as ⌘ is the Mac's: GNOME and KDE take it for themselves, and Linux's apps use Control. Keys whose trigger isn't a letter passed on by a terminal, as a rule: Ctrl+\ would hide the sidebar rather than quit the shell's program. Ctrl+; for the next typo: IBus takes it.
 - Drawing the window's chrome now: it needs drawn close, maximize and minimize buttons and a move from GTK on a press, which on Wayland needs the press's own serial; none of it can be checked without real input.
+
+## Amendment (2026-11-14)
+The app's Back and Forward ([ADR 0119](0119-back-and-forward.md)) are Alt+Left and Alt+Right: a focused text field keeps them for its line, and a terminal for its shell. Ctrl+Page Up and Down stay the chat before and after.

@@ -38,10 +38,12 @@ void main() {
     final hide = tester.getRect(
       find.byTooltip(RegExp('^(Hide|Show) the sidebar')),
     );
-    expect(arrange.right, lessThanOrEqualTo(hide.left));
-    // Its icon 5 in from the sidebar's end, its box reaching past that.
+    // The title buttons at the strip's left, Arrange at its right: its
+    // icon 5 in from the sidebar's end, its box reaching past that.
+    expect(hide.left, TitleButtons.left);
+    expect(hide.right, lessThan(arrange.left));
     expect(
-      hide.right,
+      arrange.right,
       closeTo(sidebar.right - Sidebar.end + SidebarButton.reach, 1),
     );
     expect(arrange.size, hide.size);

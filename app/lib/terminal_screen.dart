@@ -92,7 +92,8 @@ class TerminalScreen extends StatelessWidget {
   /// The keys the panel keeps for itself; the rest go to the shell.
   Map<ShortcutActivator, Intent> _keys(BuildContext context, TermSession s) => {
     // The app's keys a terminal passes on (`terminalPasses`: ⌘N, ⌘,,
-    // ⌃⌘1–3…, ⌘⇧P, the palette, and ⌘1–9, ⌘[ and ⌘] that switch chats,
+    // ⌃⌘1–3…, ⌘⇧P, the palette, ⌘[ and ⌘] (Back and Forward), and ⌘1–9,
+    // ⌥⌘↑ and ⌥⌘↓ that switch chats,
     // ⌃Tab and ⌃⇧Tab the chat's tabs); ⌘K clears here, as in Terminal, ⌘F
     // finds here and ⌘W closes this terminal, not a preview tab.
     for (final MapEntry(:key, :value) in {

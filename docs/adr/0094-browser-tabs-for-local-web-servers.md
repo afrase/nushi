@@ -29,3 +29,6 @@ The owner wants Claude desktop's browser beside the chat: look at the dev server
 - A browser as its own place, beside Chat and Changes: the owner rejected file tabs in the header (ADR 0070), and the page is wanted beside the chat.
 - Any http(s) site in the tab now: logins would share WebKit's store with file previews, and a local page could send the tab anywhere; the owner wants it, and it follows as its own change.
 - Back and Forward on ⌘← and ⌘→: in a field inside the page they move the caret, and the menu can't tell.
+
+## Amendment (2026-11-14)
+⌘[ and ⌘] are the app's Back and Forward through the places visited ([ADR 0119](0119-back-and-forward.md)), not chat switching; a browser tab's own Back and Forward stay its buttons.

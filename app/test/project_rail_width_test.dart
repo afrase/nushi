@@ -40,7 +40,7 @@ void main() {
     tester,
   ) async {
     final d = await open(tester, 1700);
-    expect(sidebar(tester), 200);
+    expect(sidebar(tester), Sidebar.minWidth);
     expect(find.byType(ProjectRail), findsNothing);
 
     projectRail.value = true;
@@ -52,12 +52,12 @@ void main() {
 
     sidebarGroupBy.value = GroupBy.date; // no rail: no need for the room
     await tester.pump(const Duration(seconds: 1));
-    expect(sidebar(tester), 200);
+    expect(sidebar(tester), Sidebar.minWidth);
 
     sidebarGroupBy.value = GroupBy.project;
     projectRail.value = false;
     await tester.pump(const Duration(seconds: 1));
-    expect(sidebar(tester), 200);
+    expect(sidebar(tester), Sidebar.minWidth);
     await closeView(tester, d);
   }, variant: macOS);
 
@@ -66,7 +66,7 @@ void main() {
   ) async {
     projectRail.value = true;
     final d = await open(tester, 720);
-    expect(sidebar(tester), 200);
+    expect(sidebar(tester), Sidebar.minWidth);
     expect(find.byType(ProjectRail), findsNothing);
     await closeView(tester, d);
   }, variant: macOS);

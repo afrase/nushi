@@ -16,7 +16,7 @@ import 'harness.dart';
 import 'long_chat.dart';
 
 /// The most widgets a frame of the slide may rebuild: its own builders,
-/// the moving sidebar button, a focus scope or two.
+/// the title buttons, a focus scope or two.
 const _mostPerFrame = 20;
 
 /// What each frame rebuilt: every widget, the transcript's rows, texts,
