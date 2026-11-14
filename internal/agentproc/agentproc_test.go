@@ -150,24 +150,42 @@ func TestStopBySignalIgnored(t *testing.T) {
 	}
 }
 
-// An agent that sends a line over MaxRead is ended, and the log says why.
+// updates records the session updates an agent sends.
+type updates struct {
+	acp.UnimplementedClient
+	got chan acp.SessionNotification
+}
+
+func (u updates) SessionUpdate(_ context.Context, n *acp.SessionNotification) error {
+	u.got <- *n
+	return nil
+}
+
+// A message over MaxRead is skipped, and the log says so: the agent goes
+// on, and what it sends next arrives (acp-go since v0.4.0).
 func TestReadLimit(t *testing.T) {
 	MaxRead = 1000
 	defer func() { MaxRead = 256 << 20 }()
 	log, b := newLog(slog.LevelInfo)
-	a, err := Start(exec.Command("sh", "-c", "head -c 5000 /dev/zero | tr '\\0' x; echo; sleep 30"), quiet{}, log)
+	next := `{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"after"}}}}`
+	u := updates{got: make(chan acp.SessionNotification, 1)}
+	a, err := Start(exec.Command("sh", "-c", "head -c 5000 /dev/zero | tr '\\0' x; echo; echo '"+next+"'; sleep 30"), u, log)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// acp-go gives it a second to exit before it kills the group, and
-	// waits up to a second more for it: on a busy CI runner 5s was too few.
+	defer a.Close() //nolint:errcheck // the test's end
 	select {
+	case n := <-u.got:
+		if c := n.Update.AgentMessageChunk; c == nil || c.Content.Text == nil || c.Content.Text.Text != "after" {
+			t.Errorf("update = %+v", n.Update)
+		}
 	case <-a.Done():
+		t.Fatal("the agent was ended")
 	case <-time.After(20 * time.Second):
-		t.Fatal("the agent wasn't ended")
+		t.Fatal("what the agent sent next never came")
 	}
-	waitLog(t, b, `msg="agent ended: it sent a message over the read limit"`)
-	if got := b.String(); !strings.Contains(got, "limit=1000") || !strings.Contains(got, "signal=SIGKILL") {
+	waitLog(t, b, `msg="acp: a message over the read limit"`)
+	if got := b.String(); !strings.Contains(got, "limit=1000") {
 		t.Errorf("got\n%s", got)
 	}
 }

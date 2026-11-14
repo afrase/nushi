@@ -27,7 +27,9 @@ func TestMain(m *testing.M) {
 	case filepath.Base(os.Args[0]) == "claude":
 		os.Exit(fakeClaude(os.Args[1:]))
 	case os.Getenv("RECORD_TEST_AGENT") == "1":
-		claudeacp.Main()
+		if claudeacp.Main() != nil {
+			os.Exit(1) // Main logged why
+		}
 	case os.Getenv("RECORD_TEST_AGENT") == "hang":
 		hangingAgent()
 	case os.Getenv("RECORD_TEST_AGENT") == "linger":
@@ -169,7 +171,7 @@ func TestRecord(t *testing.T) {
 	}
 	got := acpLines(t, filepath.Join(dir, acpFile))
 	for _, want := range []string{"in initialize", "out answer _meta,agentCapabilities,agentInfo,protocolVersion", "in session/new", "out update agent_message_chunk",
-		"out session/request_permission", "in answer outcome", "out answer stopReason,usage", "in session/list", "out answer sessions"} {
+		"out session/request_permission", "in answer outcome", "out answer _meta,stopReason,usage", "in session/list", "out answer sessions"} {
 		if !slices.ContainsFunc(got, func(l string) bool { return strings.HasPrefix(l, want) }) {
 			t.Errorf("no %q in the ACP recording:\n%s", want, strings.Join(got, "\n"))
 		}
@@ -208,7 +210,7 @@ func TestHelloScenario(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := acpLines(t, filepath.Join(dir, acpFile))
-	if !slices.Contains(got, "out update agent_message_chunk") || got[len(got)-1] != "out answer stopReason,usage" {
+	if !slices.Contains(got, "out update agent_message_chunk") || got[len(got)-1] != "out answer _meta,stopReason,usage" {
 		t.Errorf("the ACP recording:\n%s", strings.Join(got, "\n"))
 	}
 }

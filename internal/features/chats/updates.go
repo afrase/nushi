@@ -351,11 +351,12 @@ func (c *chat) setOutput(it *model.Item, content []acp.ToolCallContent) {
 			}
 		case tc.Diff != nil:
 			d := tc.Diff
-			status := "modified"
-			if d.OldText == "" {
-				status = "added"
+			// No old text is a new file, "" an empty one (ACP's Diff).
+			status, old := "added", ""
+			if d.OldText != nil {
+				status, old = "modified", *d.OldText
 			}
-			diffs = append(diffs, model.FileChange{Path: c.rel(d.Path), Status: status, Old: d.OldText, New: d.NewText})
+			diffs = append(diffs, model.FileChange{Path: c.rel(d.Path), Status: status, Old: old, New: d.NewText})
 		}
 	}
 	it.Text, it.Diffs, it.Images = strings.Join(parts, "\n\n"), diffs, images

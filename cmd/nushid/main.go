@@ -65,7 +65,9 @@ func main() {
 		}
 	}
 	if len(os.Args) > 1 && os.Args[1] == claude.AgentCommand { // and Claude, through its Go agent (ADR 0066)
-		claudeacp.Main()
+		if claudeacp.Main() != nil {
+			os.Exit(1) // Main logged why
+		}
 		return
 	}
 	if len(os.Args) > 1 && os.Args[1] == mcpserver.Command { // a chat's agent's MCP server of Nushi's tools
