@@ -47,10 +47,14 @@ class ChatView extends StatefulWidget {
     required this.daemon,
     super.key,
     this.details,
+    this.onPull,
   });
 
   final ChatState chat;
   final Daemon daemon;
+
+  /// Opens the chat's Pull request tab.
+  final VoidCallback? onPull;
 
   /// The chat's details, at the transcript's right while they show.
   final Widget? details;
@@ -137,6 +141,7 @@ class _ChatViewState extends State<ChatView> {
                   child: GitHubLinks(
                     daemon: widget.daemon,
                     chat: chat,
+                    onPull: widget.onPull,
                     onShow: (a) => showItem(widget.daemon, a.ref, pull: a.pull),
                     onLink: (a, it) => ChatPull.of(widget.daemon, chat).addLink(
                       GitHubLink(

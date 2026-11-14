@@ -84,6 +84,8 @@ The details panel's **Pull request** widget ("Pull requests" with two or more) i
 
 A click opens the Pull request tab on it. The checks bar, the reviewers, the threads, the Merge control and the comments are the tab's. Folded, one pull request is one line (the number in its state's color, failing or running checks, changes requested or a reviewer waited on, open threads and new comments; or Ready, Draft, Merged, Closed); several are their count by state and the worst checks.
 
+While the chat shows, a tool call of its that opens a pull request (`gh pr create`, a `create_pull_request` tool) or merges one of its own (`gh pr merge`, a `merge_pull_request` tool) gets a card after its turn group: a filled card with the state pill, `owner/repo #n · author · age`, the title, the files and `+adds −dels` as tags, and under a hairline the checks in words or the row's cue. A click opens the tab on it; right-click is the row's ⋯. It lives in the app's memory only: leaving the chat, or quitting, drops it (ADR 0117).
+
 The rows are asked each minute while the chat is open, in one `GetGitHubItems` call a host; the tab's pull request is read whole as before. The widget's ⋯ links one by hand; without one it says "No pull request for `branch`", with Link….
 
 The header's chip is the chat's pull requests: the primary's icon, number and badges (a narrow header drops the badges first), then `+2`; its hover is the card for one, the rows for several; a click opens the tab, which with several starts with a menu field of the rows (its pick remembered for the chat).

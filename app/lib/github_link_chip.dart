@@ -23,7 +23,11 @@ class GitHubLinks extends InheritedWidget {
     this.onShow,
     this.onLink,
     this.onTapChip,
+    this.onPull,
   });
+
+  /// Opens the chat's Pull request tab (a live card's click).
+  final VoidCallback? onPull;
 
   final Daemon daemon;
   final ChatState? chat;

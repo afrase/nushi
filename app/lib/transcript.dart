@@ -11,10 +11,13 @@ import 'package:nushi/chat_column.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_link_chip.dart' show GitHubLinks;
 import 'package:nushi/items.dart';
 import 'package:nushi/jump_chip.dart';
 import 'package:nushi/message_pins.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/pull_link.dart';
+import 'package:nushi/pull_live_card.dart';
 import 'package:nushi/rail.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
@@ -369,6 +372,48 @@ class _TranscriptState extends State<Transcript> {
           ? EdgeInsets.only(top: top)
           : EdgeInsets.fromLTRB(sides.left, top, sides.right, 0),
       child: view,
+    );
+  }
+
+  /// [entry], and after it the live cards of what [e]'s tool calls did to
+  /// pull requests (ADR 0117 section 4): the Mac's own transcript only.
+  Widget _withLiveCards(
+    BuildContext context,
+    Object e,
+    EdgeInsets sides,
+    Widget entry,
+  ) {
+    final cards = _liveCards(context, e, sides);
+    if (cards == null) return entry;
+    return Column(
+      key: ValueKey('cards ${_key(e)}'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [entry, cards],
+    );
+  }
+
+  Widget? _liveCards(BuildContext context, Object e, EdgeInsets sides) {
+    if (widget.items != null || widget.daemon.remote) return null;
+    final calls = [
+      for (final it in entryItems(e))
+        if (it.kind == ItemKind.ITEM_KIND_TOOL_CALL) it.id,
+    ];
+    if (calls.isEmpty) return null;
+    final cp = ChatPull.of(widget.daemon, widget.chat);
+    final onPull = GitHubLinks.of(context)?.onPull ?? () {};
+    return ListenableBuilder(
+      listenable: cp,
+      builder: (context, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final id in calls)
+            if (cp.live[id] case final p?)
+              Padding(
+                padding: sides.copyWith(top: 10),
+                child: LivePullCard(cp, p, onShow: onPull),
+              ),
+        ],
+      ),
     );
   }
 
@@ -860,20 +905,27 @@ class _TranscriptState extends State<Transcript> {
                           children: [
                             if (header case final h?)
                               Padding(padding: sides, child: h),
+                            // A live card goes with its entry: the column's
+                            // children stay one an entry.
                             for (final (i, e) in entries.indexed.skip(from))
-                              _entry(
-                                before,
+                              _withLiveCards(
+                                context,
                                 e,
-                                live: live && i == entries.length - 1,
-                                still: chat.waiting,
-                                top: entryGap(
-                                  entries,
-                                  i,
-                                  header: header != null,
-                                  phone: TouchTargets.of(context),
+                                sides,
+                                _entry(
+                                  before,
+                                  e,
+                                  live: live && i == entries.length - 1,
+                                  still: chat.waiting,
+                                  top: entryGap(
+                                    entries,
+                                    i,
+                                    header: header != null,
+                                    phone: TouchTargets.of(context),
+                                  ),
+                                  sides: sides,
+                                  rise: arrived.contains(_key(e)),
                                 ),
-                                sides: sides,
-                                rise: arrived.contains(_key(e)),
                               ),
                             if (widget.footer case final f?)
                               Padding(padding: sides, child: f),

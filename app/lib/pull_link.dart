@@ -10,6 +10,7 @@ import 'package:nushi/github_items.dart';
 import 'package:nushi/github_pull.dart' show openPullAt;
 import 'package:nushi/pull_cache.dart';
 import 'package:nushi/pull_lights.dart' show PullSection;
+import 'package:nushi/pull_live_card.dart' show LivePull, livePullOf;
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/widgets.dart';
@@ -109,6 +110,7 @@ GitHubItem rowItem(GitHubPull p) {
     }
   }
   return p.item.deepCopy()
+    ..pull = true
     ..additions = p.additions
     ..deletions = p.deletions
     ..changedFiles = p.changedFiles
@@ -230,6 +232,12 @@ class ChatPull extends ChangeNotifier {
   AppLifecycleListener? _front;
   bool _busy = false;
   final _seen = <String>{};
+  final _seenLive = <String>{};
+
+  /// The transcript's live cards (ADR 0117 section 4): the pull requests a
+  /// tool call opened or merged while the chat showed, by the call's id;
+  /// dropped once it no longer shows, never saved.
+  final Map<String, LivePull> live = {};
   Future<void>? _asking;
   DateTime? _asked;
   int _rechecks = 0;
@@ -344,6 +352,10 @@ class ChatPull extends ChangeNotifier {
     if (_followers++ == 0) {
       _busy = chat.busy;
       _seen.addAll(chat.items.map((i) => i.id));
+      _seenLive.addAll([
+        for (final i in chat.items)
+          if (i.status == 'completed') i.id,
+      ]);
       chat.addListener(_chatChanged);
       _front = AppLifecycleListener(
         onResume: () => unawaited(refresh(again: false)),
@@ -355,6 +367,8 @@ class ChatPull extends ChangeNotifier {
 
   void unfollow() {
     if (--_followers > 0) return;
+    live.clear(); // the chat no longer shows
+    _seenLive.clear();
     chat.removeListener(_chatChanged);
     _front?.dispose();
     _front = null;
@@ -377,6 +391,15 @@ class ChatPull extends ChangeNotifier {
     var pushed = false;
     for (final it in chat.items.reversed.take(8)) {
       if (pushedOrOpened(it) && _seen.add(it.id)) pushed = true;
+      if (it.kind == ItemKind.ITEM_KIND_TOOL_CALL &&
+          it.status == 'completed' &&
+          _seenLive.add(it.id)) {
+        final knows = GitHubItems.of(daemon).knows;
+        if (livePullOf(it, chat, knows) case final p?) {
+          live[it.id] = p;
+          notifyListeners();
+        }
+      }
     }
     if (ended || pushed) {
       _soon?.cancel();
