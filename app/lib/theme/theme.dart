@@ -243,6 +243,20 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   static final _made =
       Expando<Map<(Brightness, TargetPlatform, String?, String?), ThemeData>>();
 
+  /// The line a field's hint takes: a point taller than UI text's, as
+  /// tall as code's at 13, so a field is as high in either font. Flutter
+  /// keeps a hint's room while there's text, so the taller line holds.
+  static const _hintLine = 19.0;
+
+  /// A field's padding above and below its hint's line, so a field is a
+  /// regular control's height (ADR 0122): what's left of the height once
+  /// the line is in and the compact density has taken its 8 off.
+  static final double _fieldPad =
+      (ControlSize.regular.height -
+          _hintLine -
+          VisualDensity.compact.baseSizeAdjustment.dy) /
+      2;
+
   /// How high Material draws what floats (a menu, a dialog, a toast), for
   /// its shadow: [floatShadows]' reach, about.
   static const floatElevation = 8.0;
@@ -283,7 +297,10 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
           fontSizeFactor: 13 / 14,
           bodyColor: t.text,
           displayColor: t.text,
-        );
+        )
+        // A field's text unless it says (Material's default for a field):
+        // UI text, so a field without a style is as high as the rest.
+        .copyWith(bodyLarge: ui(t.text));
     return ThemeData(
       colorScheme: scheme,
       brightness: t.brightness,
@@ -373,8 +390,11 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
       ),
       inputDecorationTheme: InputDecorationThemeData(
         isDense: true,
-        contentPadding: const EdgeInsets.all(8),
-        hintStyle: ui(t.textMuted),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 8,
+          vertical: _fieldPad,
+        ),
+        hintStyle: ui(t.textMuted).copyWith(height: _hintLine / 13),
         // A field keeps an edge, so it reads as one on any surface (ADR
         // 0111): the field's border, the focus ring's color once it has
         // the caret.

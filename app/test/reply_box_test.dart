@@ -350,7 +350,9 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget, reason: 'not saved');
     await tester.enterText(field, _lines.join('\n'));
     await tester.pump();
-    expect(tester.getSize(field).height, greaterThan(one * 3));
+    // Four lines: three more lines' height than the one (a field's
+    // padding is in both).
+    expect(tester.getSize(field).height, greaterThan(one + 3 * 17));
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsNothing);

@@ -299,6 +299,11 @@ class _FormState extends State<_Form> {
                     minLines: 1,
                     maxLines: 6,
                     style: mono,
+                    // An example, as the command's; its line holds the
+                    // field at a regular control's height (ADR 0122).
+                    decoration: const InputDecoration(
+                      hintText: '@playwright/mcp@latest',
+                    ),
                   ),
                   label('Environment variables'),
                   PairRows(_env, 'NAME', () => setState(() {})),
