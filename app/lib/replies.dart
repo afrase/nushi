@@ -328,7 +328,7 @@ class _ReplyBoxState extends State<ReplyBox> {
                     ),
                     IconTap(
                       Icons.arrow_upward,
-                      tooltip: 'Add to the message ($enterLabel)',
+                      tooltip: withKey('Add to the message', enterLabel),
                       onTap: _send,
                     ),
                   ],

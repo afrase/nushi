@@ -274,7 +274,7 @@ class _FindBarState extends State<FindBar> {
             ),
             IconTap(
               Icons.keyboard_arrow_down,
-              tooltip: 'Next ($enterLabel)',
+              tooltip: withKey('Next', enterLabel),
               onTap: f.canStep ? () => f.step(1) : null,
             ),
             IconTap(

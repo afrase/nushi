@@ -349,7 +349,7 @@ class SendButtons extends StatelessWidget {
             play: pop,
             child: RoundButton(
               kind: RoundKind.primary,
-              tooltip: 'Send ($enterLabel)',
+              tooltip: withKey('Send', enterLabel),
               onPressed: onSend,
               glyph: (color) =>
                   Icon(Icons.arrow_upward, size: 17, color: color),
