@@ -48,17 +48,16 @@ class Avatar extends StatelessWidget {
     final t = theme.t;
     final shown = plainName(name);
     if (shown.isEmpty) {
-      return Tooltip(
-        message: 'Unassigned',
-        child: CustomPaint(
-          size: Size.square(size),
-          painter: _Dashed(t.textMuted),
-        ),
+      return tooltip(
+        context,
+        'Unassigned',
+        CustomPaint(size: Size.square(size), painter: _Dashed(t.textMuted)),
       );
     }
-    return Tooltip(
-      message: shown,
-      child: Container(
+    return tooltip(
+      context,
+      shown,
+      Container(
         width: size,
         height: size,
         alignment: Alignment.center,

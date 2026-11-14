@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
@@ -202,9 +202,10 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
           painter: StatusMark(t.running, ringing: !still),
         );
       case .background:
-        return Tooltip(
-          message: backgroundWords(chat.background),
-          child: CustomPaint(
+        return tooltip(
+          context,
+          backgroundWords(chat.background),
+          CustomPaint(
             size: const Size.square(size * 1.6),
             painter: _Ring(t.running, pulsing: !still),
           ),
@@ -348,27 +349,24 @@ class PhaseDot extends StatelessWidget {
     const size = ChatDot.size;
     final t = NushiTheme.of(context).t;
     final (word, color) = phaseWord(phase, t);
-    return Tooltip(
-      message: word,
-      child: switch (phase) {
-        .working => CustomPaint(
-          size: const Size.square(size * 1.6),
-          painter: StatusMark(color, ringing: !reduceMotion(context)),
+    return tooltip(context, word, switch (phase) {
+      .working => CustomPaint(
+        size: const Size.square(size * 1.6),
+        painter: StatusMark(color, ringing: !reduceMotion(context)),
+      ),
+      .background => CustomPaint(
+        size: const Size.square(size * 1.6),
+        painter: _Ring(color, pulsing: !reduceMotion(context)),
+      ),
+      .waiting => _waitingDot(t),
+      _ => Padding(
+        padding: const EdgeInsets.all(size * 0.3),
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          child: const SizedBox.square(dimension: size),
         ),
-        .background => CustomPaint(
-          size: const Size.square(size * 1.6),
-          painter: _Ring(color, pulsing: !reduceMotion(context)),
-        ),
-        .waiting => _waitingDot(t),
-        _ => Padding(
-          padding: const EdgeInsets.all(size * 0.3),
-          child: DecoratedBox(
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: const SizedBox.square(dimension: size),
-          ),
-        ),
-      },
-    );
+      ),
+    });
   }
 }
 

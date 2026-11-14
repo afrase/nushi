@@ -303,9 +303,10 @@ class ChatHeader extends StatelessWidget {
                         ),
                       ],
                       SizedBox(width: group),
-                      Tooltip(
-                        message: folds.name ? chat.agentName : '',
-                        child: AgentMark(chat.agent, size: 18, ink: t.text),
+                      tooltip(
+                        context,
+                        folds.name ? chat.agentName : '',
+                        AgentMark(chat.agent, size: 18, ink: t.text),
                       ),
                       if (!folds.name) ...[
                         const SizedBox(width: 7),
@@ -332,9 +333,10 @@ class ChatHeader extends StatelessWidget {
                       if (chat.archived)
                         const PhasePill(ChatPhase.archived)
                       else if (folds.word)
-                        Tooltip(
-                          message: phaseWord(chat.phase, t).$1,
-                          child: ChatDot(chat: chat),
+                        tooltip(
+                          context,
+                          phaseWord(chat.phase, t).$1,
+                          ChatDot(chat: chat),
                         )
                       else
                         PhasePill(chat.phase, lead: ChatDot(chat: chat)),

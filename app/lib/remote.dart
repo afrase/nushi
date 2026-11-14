@@ -338,6 +338,7 @@ class _Pairing extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
+                  // design: a QR code is read dark on white.
                   color: Colors.white,
                   padding: const EdgeInsets.all(12),
                   child: SizedBox.square(
@@ -366,9 +367,7 @@ class _Pairing extends StatelessWidget {
             children: [
               Text(
                 p.code,
-                style: theme
-                    .code(t.text)
-                    .copyWith(fontSize: 32, letterSpacing: 4),
+                style: theme.code(t.text, size: 32).copyWith(letterSpacing: 4),
               ),
               const SizedBox(height: 8),
               Text(
@@ -429,6 +428,7 @@ class _QrPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final n = _image.moduleCount;
     final cell = size.width / n;
+    // design: a QR code is read dark on white.
     final dark = Paint()..color = Colors.black;
     for (var y = 0; y < n; y++) {
       for (var x = 0; x < n; x++) {
@@ -459,11 +459,11 @@ class RemoteMark extends StatelessWidget {
       builder: (context, r, _) {
         if (r == null || !r.on) return const SizedBox.shrink();
         final phones = r.devices.where((d) => d.connected).length;
-        return Tooltip(
-          message:
-              'Remote access: ${_states[r.state] ?? r.state}'
-              '${phones > 0 ? ', $phones connected' : ''}',
-          child: Padding(
+        return tooltip(
+          context,
+          'Remote access: ${_states[r.state] ?? r.state}'
+          '${phones > 0 ? ', $phones connected' : ''}',
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: Icon(
               Icons.phone_iphone,

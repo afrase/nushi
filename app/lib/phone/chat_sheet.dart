@@ -227,22 +227,20 @@ class _RenameDialogState extends State<_RenameDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Rename'),
-    content: TextField(
+  Widget build(BuildContext context) => nushiDialog(
+    'Rename',
+    TextField(
       controller: _text,
       autofocus: true,
       style: phoneText(context),
       onSubmitted: (v) => Navigator.pop(context, v),
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
-      ),
-      TextButton(
+    [
+      Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
+      Button(
+        label: 'Rename',
+        kind: ButtonKind.primary,
         onPressed: () => Navigator.pop(context, _text.text),
-        child: const Text('Rename'),
       ),
     ],
   );

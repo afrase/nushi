@@ -54,11 +54,11 @@ class RemovedChatsBar extends StatelessWidget {
         children: [
           Icon(Icons.history_toggle_off, size: 14, color: t.textMuted),
           Expanded(
-            child: Tooltip(
-              message: [
-                for (final r in removed) '${r.title} — ${tildePath(r.folder)}',
-              ].join('\n'),
-              child: Text(
+            child: tooltip(
+              context,
+              [for (final r in removed) '${r.title} — ${tildePath(r.folder)}']
+                  .join('\n'),
+              Text(
                 text(removed),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,

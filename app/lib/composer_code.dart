@@ -88,6 +88,7 @@ List<SpanPaint> codePaints(
   final marker = inline.copyWith(color: t.textMuted);
   // No size and no spacing: the box's text inherits the theme's letter
   // spacing, which a glyph of no size would still take.
+  // design: a marker kept in the text but not drawn.
   final hidden = marker.copyWith(fontSize: 0, letterSpacing: 0);
   final fence = mono.copyWith(color: t.textMuted);
   return [

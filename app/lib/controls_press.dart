@@ -14,6 +14,22 @@ class TouchTargets extends InheritedWidget {
   bool updateShouldNotify(TouchTargets oldWidget) => false;
 }
 
+/// Makes every [Pressable] and [Tap] below it look hovered, focused or
+/// pressed as [look] says, whatever the pointer and the keyboard do: for
+/// the component gallery (`app/test/gallery`), which draws each state side
+/// by side. Never in the app.
+class ShowLook extends InheritedWidget {
+  const new({required this.look, required super.child, super.key});
+
+  final ({bool hover, bool focus, bool pressed}) look;
+
+  static ({bool hover, bool focus, bool pressed})? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ShowLook>()?.look;
+
+  @override
+  bool updateShouldNotify(ShowLook oldWidget) => oldWidget.look != look;
+}
+
 /// [child] centred in a target of at least 44 points under [TouchTargets],
 /// else as it is.
 Widget touchTarget(BuildContext context, Widget child) =>
@@ -122,6 +138,10 @@ class _PressableState extends State<Pressable> {
   @override
   Widget build(BuildContext context) {
     final on = widget.onTap != null;
+    final shown = ShowLook.of(context);
+    final hover = shown?.hover ?? _hover;
+    final focus = shown?.focus ?? _focus;
+    final down = shown?.pressed ?? _down;
     final control = FocusableActionDetector(
       enabled: on,
       autofocus: widget.autofocus,
@@ -139,9 +159,9 @@ class _PressableState extends State<Pressable> {
           touchTarget(
             context,
             widget.builder(context, (
-              hover: (_hover || _down) && on,
-              focus: _focus && on,
-              pressed: _down && on,
+              hover: (hover || down) && on,
+              focus: focus && on,
+              pressed: down && on,
               enabled: on,
             )),
           ),
@@ -239,7 +259,12 @@ class _TapState extends State<Tap> {
     final t = NushiTheme.of(context).t;
     final on = widget.onTap != null;
     final rest = widget.fill ?? (widget.selected ? t.selected : null);
-    final lit = (_hover || _focus) && on && widget.tint;
+    final shown = ShowLook.of(context);
+    final down = shown?.pressed ?? _down;
+    final lit =
+        ((shown?.hover ?? _hover) || (shown?.focus ?? _focus)) &&
+        on &&
+        widget.tint;
     // The pointer's tint as before: a MouseRegion's, which a touch
     // highlight mode doesn't hide; the keyboard's focus beside it.
     final tap = MouseRegion(
@@ -270,7 +295,7 @@ class _TapState extends State<Tap> {
                   ? AlignmentDirectional.centerStart
                   : null,
               decoration: BoxDecoration(
-                color: _down && on
+                color: down && on
                     ? (rest == null
                           ? t.pressed
                           : Color.alphaBlend(t.pressed, rest))

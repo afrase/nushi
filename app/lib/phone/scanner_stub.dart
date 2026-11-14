@@ -27,6 +27,7 @@ final class Scanner {
     return refuse;
   }
 
+  // design: where the camera's picture would be, black as it starts.
   Widget view() => const ColoredBox(color: Color(0xFF000000));
 
   void stop() {

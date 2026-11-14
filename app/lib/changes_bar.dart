@@ -146,10 +146,10 @@ class ChangesBar extends StatelessWidget {
                     ),
                   ),
                   if (behind)
-                    Tooltip(
-                      message:
-                          'It changed since this was read: Reload shows it',
-                      child: Text(
+                    tooltip(
+                      context,
+                      'It changed since this was read: Reload shows it',
+                      Text(
                         short ? 'Changed' : 'Changed: Reload',
                         style: theme.ui(t.textSecondary, size: 12),
                       ),

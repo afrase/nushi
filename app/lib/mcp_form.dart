@@ -219,159 +219,150 @@ class _FormState extends State<_Form> {
       padding: const EdgeInsets.only(top: 12, bottom: 4),
       child: Text(text, style: theme.ui(t.textSecondary, size: 12)),
     );
-    return AlertDialog(
-      title: Text(
-        _editing
-            ? 'Edit ${widget.server!.name}'
-            : userOnly
-            ? 'Add an MCP server for $title'
-            : 'Add MCP server',
-      ),
-      content: SizedBox(
-        width: 520,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              label('Name'),
+    return nushiDialog(
+      _editing
+          ? 'Edit ${widget.server!.name}'
+          : userOnly
+          ? 'Add an MCP server for $title'
+          : 'Add MCP server',
+      width: 520,
+      SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            label('Name'),
+            TextField(
+              controller: _nameCtl,
+              enabled: !_editing,
+              autofocus: !_editing,
+              style: mono,
+              decoration: const InputDecoration(hintText: 'my-server'),
+            ),
+            label('Scope'),
+            Row(
+              children: [
+                if (_editing || userOnly)
+                  Text(scopes[_scope]!.$1, style: theme.ui(t.text))
+                else
+                  Segmented(
+                    value: _scope,
+                    onCard: true,
+                    segments: const [
+                      ('user', 'User'),
+                      ('project', 'Project'),
+                      ('local', 'Local'),
+                    ],
+                    onChanged: (v) => setState(() => _scope = v),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(where, style: muted),
+            if (_asJson) ...[
+              label('Config'),
               TextField(
-                controller: _nameCtl,
-                enabled: !_editing,
-                autofocus: !_editing,
+                controller: _json,
+                minLines: 8,
+                maxLines: 16,
                 style: mono,
-                decoration: const InputDecoration(hintText: 'my-server'),
               ),
-              label('Scope'),
+            ] else ...[
+              label('Transport'),
               Row(
                 children: [
-                  if (_editing || userOnly)
-                    Text(scopes[_scope]!.$1, style: theme.ui(t.text))
-                  else
-                    Segmented(
-                      value: _scope,
-                      onCard: true,
-                      segments: const [
-                        ('user', 'User'),
-                        ('project', 'Project'),
-                        ('local', 'Local'),
-                      ],
-                      onChanged: (v) => setState(() => _scope = v),
-                    ),
+                  Segmented(
+                    value: _transport,
+                    onCard: true,
+                    segments: [
+                      ('stdio', 'stdio'),
+                      ('http', 'HTTP'),
+                      if (!userOnly || _transport == 'sse') ('sse', 'SSE'),
+                    ],
+                    onChanged: (v) => setState(() => _transport = v),
+                  ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(where, style: muted),
-              if (_asJson) ...[
-                label('Config'),
+              if (stdio) ...[
+                label('Command'),
                 TextField(
-                  controller: _json,
-                  minLines: 8,
-                  maxLines: 16,
+                  controller: _command,
                   style: mono,
+                  decoration: const InputDecoration(hintText: 'npx'),
                 ),
+                label('Arguments, one per line'),
+                TextField(
+                  controller: _args,
+                  minLines: 1,
+                  maxLines: 6,
+                  style: mono,
+                  // An example, as the command's; its line holds the
+                  // field at a regular control's height (ADR 0122).
+                  decoration: const InputDecoration(
+                    hintText: '@playwright/mcp@latest',
+                  ),
+                ),
+                label('Environment variables'),
+                PairRows(_env, 'NAME', () => setState(() {})),
               ] else ...[
-                label('Transport'),
-                Row(
-                  children: [
-                    Segmented(
-                      value: _transport,
-                      onCard: true,
-                      segments: [
-                        ('stdio', 'stdio'),
-                        ('http', 'HTTP'),
-                        if (!userOnly || _transport == 'sse') ('sse', 'SSE'),
-                      ],
-                      onChanged: (v) => setState(() => _transport = v),
-                    ),
-                  ],
+                label('URL'),
+                TextField(
+                  controller: _url,
+                  style: mono,
+                  decoration: const InputDecoration(
+                    hintText: 'https://example.com/mcp',
+                  ),
                 ),
-                if (stdio) ...[
-                  label('Command'),
-                  TextField(
-                    controller: _command,
-                    style: mono,
-                    decoration: const InputDecoration(hintText: 'npx'),
-                  ),
-                  label('Arguments, one per line'),
-                  TextField(
-                    controller: _args,
-                    minLines: 1,
-                    maxLines: 6,
-                    style: mono,
-                    // An example, as the command's; its line holds the
-                    // field at a regular control's height (ADR 0122).
-                    decoration: const InputDecoration(
-                      hintText: '@playwright/mcp@latest',
-                    ),
-                  ),
-                  label('Environment variables'),
-                  PairRows(_env, 'NAME', () => setState(() {})),
-                ] else ...[
-                  label('URL'),
-                  TextField(
-                    controller: _url,
-                    style: mono,
-                    decoration: const InputDecoration(
-                      hintText: 'https://example.com/mcp',
-                    ),
-                  ),
-                  label('Headers'),
-                  PairRows(_headers, 'Header', () => setState(() {})),
-                  // A fact of Ante's versions, not of having only yours.
-                  if (widget.list.agent == 'ante')
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'Ante sends headers from version 0.2.15 on.',
-                        style: muted,
-                      ),
-                    ),
-                ],
-                if (_editing)
+                label('Headers'),
+                PairRows(_headers, 'Header', () => setState(() {})),
+                // A fact of Ante's versions, not of having only yours.
+                if (widget.list.agent == 'ante')
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      'Values shown as •••• stay only if nothing else '
-                      'changes; else type them again.',
+                      'Ante sends headers from version 0.2.15 on.',
                       style: muted,
                     ),
                   ),
               ],
-              if (_error.isNotEmpty)
+              if (_editing)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(_error, style: theme.ui(t.crashed, size: 12)),
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'Values shown as •••• stay only if nothing else '
+                    'changes; else type them again.',
+                    style: muted,
+                  ),
                 ),
             ],
-          ),
+            if (_error.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(_error, style: theme.ui(t.crashed, size: 12)),
+              ),
+          ],
         ),
       ),
       // The switch to JSON at the left, under the fields; Cancel and Add
       // at the right.
-      actions: [
-        ControlScale.large(
-          child: SizedBox(
-            width: 520,
-            child: Row(
-              children: [
-                Button(
-                  label: _asJson ? 'Edit in the form' : 'Edit as JSON',
-                  onPressed: _toggleJson,
-                ),
-                const Spacer(),
-                Button(
-                  label: 'Cancel',
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const SizedBox(width: 8),
-                Button(
-                  label: _saving ? 'Saving…' : (_editing ? 'Save' : 'Add'),
-                  kind: ButtonKind.primary,
-                  onPressed: _saving ? null : _save,
-                ),
-              ],
-            ),
+      [
+        SizedBox(
+          width: 520,
+          child: Row(
+            children: [
+              Button(
+                label: _asJson ? 'Edit in the form' : 'Edit as JSON',
+                onPressed: _toggleJson,
+              ),
+              const Spacer(),
+              Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
+              const SizedBox(width: 8),
+              Button(
+                label: _saving ? 'Saving…' : (_editing ? 'Save' : 'Add'),
+                kind: ButtonKind.primary,
+                onPressed: _saving ? null : _save,
+              ),
+            ],
           ),
         ),
       ],

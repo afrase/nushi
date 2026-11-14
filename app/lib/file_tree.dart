@@ -322,6 +322,7 @@ TextSpan _label(
           style: TextStyle(
             fontFamily: mark.fontFamily,
             package: mark.fontPackage,
+            // design: an icon's glyph set as text, at an icon's size.
             fontSize: 12,
             color: t.accentInk,
           ),

@@ -155,9 +155,10 @@ class _SharedRow extends StatelessWidget {
                   const SizedBox(width: 8),
                   if (skill.everywhere) Text('~/.agents/skills', style: muted),
                   if (skill.linked.isNotEmpty)
-                    Tooltip(
-                      message: 'A link to ${skill.linked}',
-                      child: Text(' linked', style: muted),
+                    tooltip(
+                      context,
+                      'A link to ${skill.linked}',
+                      Text(' linked', style: muted),
                     ),
                 ],
               ),
@@ -175,9 +176,10 @@ class _SharedRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Tooltip(
-          message: 'About what listing it costs every chat’s context',
-          child: Text('≈ ${skill.tokens} tokens', style: muted),
+        tooltip(
+          context,
+          'About what listing it costs every chat’s context',
+          Text('≈ ${skill.tokens} tokens', style: muted),
         ),
         if (mine == null)
           Padding(
@@ -190,11 +192,11 @@ class _SharedRow extends StatelessWidget {
         else if (mine.state == 'untrusted')
           Padding(
             padding: const EdgeInsets.only(left: 6),
-            child: Tooltip(
-              message:
-                  '$title loads a folder’s skills only once you trust the '
-                  'folder in $title.',
-              child: Text('Loads once the folder is trusted', style: muted),
+            child: tooltip(
+              context,
+              '$title loads a folder’s skills only once you trust the '
+              'folder in $title.',
+              Text('Loads once the folder is trusted', style: muted),
             ),
           )
         else

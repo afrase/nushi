@@ -369,9 +369,10 @@ class _RemoteImageState extends State<_RemoteImage> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final alt = widget.alt;
-    return Tooltip(
-      message: widget.uri.toString(),
-      child: Container(
+    return tooltip(
+      context,
+      widget.uri.toString(),
+      Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: t.raised,

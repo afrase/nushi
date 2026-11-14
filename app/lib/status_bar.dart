@@ -130,13 +130,13 @@ class _StatusBarState extends State<StatusBar> {
                       alignment: Alignment.centerLeft,
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Tooltip(
-                          message:
-                              '$working working, $awake awake$inBackground, '
-                              '$asleep asleep'
-                              "${failed > 0 ? ", $failed couldn't start" : ''}"
-                              "${expired > 0 ? ', $expired expired' : ''}",
-                          child: Row(
+                        child: tooltip(
+                          context,
+                          '$working working, $awake awake$inBackground, '
+                          '$asleep asleep'
+                          "${failed > 0 ? ", $failed couldn't start" : ''}"
+                          "${expired > 0 ? ', $expired expired' : ''}",
+                          Row(
                             spacing: 5,
                             children: [
                               _Dot(t.running, filled: true),

@@ -85,12 +85,10 @@ class MessageTime extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
-    return Tooltip(
-      message: fullTime(DateTime.fromMillisecondsSinceEpoch(ms)),
-      child: Text(
-        agoAt(ms, clock()),
-        style: theme.ui(theme.t.textMuted, size: 12),
-      ),
+    return tooltip(
+      context,
+      fullTime(DateTime.fromMillisecondsSinceEpoch(ms)),
+      Text(agoAt(ms, clock()), style: theme.ui(theme.t.textMuted, size: 12)),
     );
   }
 }
@@ -104,9 +102,10 @@ class ReadMark extends StatelessWidget {
   final String agent;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: read ? 'Read by $agent' : 'Sent',
-    child: Padding(
+  Widget build(BuildContext context) => tooltip(
+    context,
+    read ? 'Read by $agent' : 'Sent',
+    Padding(
       padding: const EdgeInsets.only(right: 4),
       child: Icon(
         read ? Icons.done_all : Icons.done,

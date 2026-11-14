@@ -321,6 +321,7 @@ class ServerRow extends StatelessWidget {
       ],
     );
     final logs = s.logId.isNotEmpty;
+    // design: a server's output, in code type, which tooltip() doesn't set.
     return Tooltip(
       message: failed && s.output.isNotEmpty
           ? [_tail(s.output), if (logs) _seeLogs].join('\n\n')
@@ -452,13 +453,13 @@ class _NameMark extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    return Tooltip(
-      message:
-          'The agent can’t start this server: a name it can use has only '
-          'letters, digits and : _ . -, starts with a letter or digit, and '
-          'is 64 characters at most. Rename it in its launch file, or run '
-          'it from here.',
-      child: Container(
+    return tooltip(
+      context,
+      'The agent can’t start this server: a name it can use has only '
+      'letters, digits and : _ . -, starts with a letter or digit, and '
+      'is 64 characters at most. Rename it in its launch file, or run '
+      'it from here.',
+      Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
           color: t.needsSoft,

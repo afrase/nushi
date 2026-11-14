@@ -97,9 +97,10 @@ class _LiveMarkState extends State<LiveMark>
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    return Tooltip(
-      message: 'Updates as the file changes',
-      child: Row(
+    return tooltip(
+      context,
+      'Updates as the file changes',
+      Row(
         mainAxisSize: MainAxisSize.min,
         spacing: 5,
         children: [

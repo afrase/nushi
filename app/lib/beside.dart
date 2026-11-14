@@ -181,7 +181,7 @@ class _BesideState extends State<Beside> {
             boxShadow: [
               if (shadow)
                 BoxShadow(
-                  color: const Color(0xFF000000).withValues(
+                  color: t.shadow.withValues(
                     alpha: t.brightness == Brightness.dark ? 0.4 : 0.12,
                   ),
                   blurRadius: 12,

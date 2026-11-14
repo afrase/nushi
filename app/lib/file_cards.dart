@@ -77,12 +77,13 @@ class FileCard extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Tooltip(
-          message: file.data != null
+        tooltip(
+          context,
+          file.data != null
               ? '${plainPath(file.name)}: saved on the ${conventions.machine} '
                     'for the agent when sent'
               : plainPath(file.path),
-          child: Container(
+          Container(
             constraints: const BoxConstraints(maxWidth: 240, minHeight: height),
             padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
             decoration: BoxDecoration(

@@ -141,16 +141,18 @@ class _SidebarRowState extends State<SidebarRow> {
                         // Its state in a word on hover ("needs you"), which the
                         // row leaves to the dot so the title keeps its width.
                         if (shows.contains(RowPart.status)) ...[
-                          Tooltip(
-                            message: phaseWord(chat.phase, t).$1,
-                            child: ChatDot(chat: chat, sparks: true),
+                          tooltip(
+                            context,
+                            phaseWord(chat.phase, t).$1,
+                            ChatDot(chat: chat, sparks: true),
                           ),
                           const SizedBox(width: 8),
                         ],
                         if (shows.contains(RowPart.agent)) ...[
-                          Tooltip(
-                            message: chat.agentName,
-                            child: AgentMark(
+                          tooltip(
+                            context,
+                            chat.agentName,
+                            AgentMark(
                               chat.agent,
                               color: chat.archived ? t.textMuted : null,
                             ),
@@ -236,9 +238,10 @@ class _SidebarRowState extends State<SidebarRow> {
                         if (widget.time case final at?)
                           Padding(
                             padding: const EdgeInsets.only(left: 6),
-                            child: Tooltip(
-                              message: at.toString().substring(0, 16),
-                              child: Text(
+                            child: tooltip(
+                              context,
+                              at.toString().substring(0, 16),
+                              Text(
                                 agoShort(clock().difference(at)),
                                 style: theme.code(t.textMuted, size: 10.5),
                               ),

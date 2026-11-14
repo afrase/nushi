@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -142,6 +143,22 @@ class PhoneIcon extends StatelessWidget {
       ),
     );
   }
+}
+
+/// An action in a line of the phone's text (Try again, Reload, New chat
+/// here): [LinkText] at the phone's size, a button's room either side,
+/// and a 44-point target ([TouchTargets]).
+class PhoneLink extends StatelessWidget {
+  const new(this.label, {required this.onTap, super.key});
+
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    child: LinkText(label, size: 14, onTap: onTap),
+  );
 }
 
 /// A full-width button, 44 points tall: [primary] filled with the accent,

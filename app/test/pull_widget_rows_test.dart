@@ -65,7 +65,7 @@ GitHubPull _optionalFailing() => mergePull('ready')
 Widget _summary(GitHubPull p, {Tokens tokens = Tokens.dark}) => themed(
   Builder(
     builder: (context) =>
-        pullSummary(NushiTheme.of(context), number: 412, pull: p),
+        pullSummary(context, NushiTheme.of(context), number: 412, pull: p),
   ),
   tokens: tokens,
 );
@@ -195,6 +195,7 @@ void main() {
                               child: Text(s, style: theme.ui(tokens.textMuted)),
                             ),
                             pullSummary(
+                              context,
                               theme,
                               number: 412,
                               pull: p(),

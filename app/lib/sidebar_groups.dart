@@ -293,10 +293,7 @@ class _HeaderState extends State<_Header> {
                 lead: widget.lead,
                 titleWidget: folder.isEmpty
                     ? _name(theme, name)
-                    : Tooltip(
-                        message: tildePath(folder),
-                        child: _name(theme, name),
-                      ),
+                    : tooltip(context, tildePath(folder), _name(theme, name)),
                 trailing: Focus(
                   canRequestFocus: false,
                   skipTraversal: true,

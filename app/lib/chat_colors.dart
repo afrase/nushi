@@ -64,7 +64,7 @@ class ColorChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(NushiTheme.pill),
       ),
     );
-    return named ? Tooltip(message: color.label, child: chip) : chip;
+    return named ? tooltip(context, color.label, chip) : chip;
   }
 }
 

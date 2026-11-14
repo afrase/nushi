@@ -100,9 +100,10 @@ class _McpActionsState extends State<McpActions> {
         ),
     ];
     Widget button(String label, VoidCallback onPressed, {String tip = ''}) =>
-        Tooltip(
-          message: tip,
-          child: Button(label: label, onPressed: _working ? null : onPressed),
+        tooltip(
+          context,
+          tip,
+          Button(label: label, onPressed: _working ? null : onPressed),
         );
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -189,11 +190,11 @@ class McpSwitch extends StatelessWidget {
     final muted = theme.ui(theme.t.textMuted, size: 11);
     if (list.userOnly) return const SizedBox.shrink(); // no off switch
     if (!switchable.contains(server.scope)) {
-      return Tooltip(
-        message:
-            'Claude only lets you turn this off with /mcp in a terminal'
-            '${server.scope == 'plugin' ? ', or with its whole plugin' : ''}.',
-        child: Padding(
+      return tooltip(
+        context,
+        'Claude only lets you turn this off with /mcp in a terminal'
+        '${server.scope == 'plugin' ? ', or with its whole plugin' : ''}.',
+        Padding(
           padding: const EdgeInsets.only(left: 6),
           child: Text(
             label ? 'Off only with /mcp in a terminal' : '/mcp only',
@@ -210,9 +211,10 @@ class McpSwitch extends StatelessWidget {
               'there.'
         : '${server.off ? 'Off' : 'On'} in this project. Chats pick up a '
               'change when they restart.';
-    return Tooltip(
-      message: tip,
-      child: Row(
+    return tooltip(
+      context,
+      tip,
+      Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (label)

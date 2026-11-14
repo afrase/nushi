@@ -16,6 +16,7 @@ class Logo extends StatelessWidget {
       CustomPaint(size: Size.square(size), painter: _Lake(color));
 }
 
+// design: the logo's own orange, whatever the theme.
 const _light = Color(0xFFF5A524);
 
 // On a 100-unit grid: radius, stroke, segments, drawn share, rotation.

@@ -283,9 +283,10 @@ class UnsavedDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final needs = edit.theirs != null || edit.deleted;
-    return Tooltip(
-      message: needs ? 'Unsaved: changed on disk' : 'Unsaved',
-      child: Container(
+    return tooltip(
+      context,
+      needs ? 'Unsaved: changed on disk' : 'Unsaved',
+      Container(
         width: 7,
         height: 7,
         decoration: BoxDecoration(

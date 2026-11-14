@@ -165,9 +165,10 @@ class _TabState extends State<_Tab> {
             children: [
               if (info.program.isNotEmpty && !info.exited) ...[
                 // A command runs: not the agent, so only here.
-                Tooltip(
-                  message: 'A command is running',
-                  child: Container(
+                tooltip(
+                  context,
+                  'A command is running',
+                  Container(
                     width: 6,
                     height: 6,
                     decoration: BoxDecoration(
