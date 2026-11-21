@@ -197,6 +197,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(second('Next tab', 'Off'), findsOne);
     expect(second('Previous tab', '⇧⌘['), findsOne);
+    // ⇧⌘} held by another binding is ⇧⌘], so that second key goes too.
+    shortcutKeys.value = {'sidebar': 'Shift+Cmd+}'};
+    await tester.pumpAndSettle();
+    expect(second('Next tab', 'Off'), findsOne);
     d.dispose();
   }, variant: onMac);
 

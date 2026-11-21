@@ -323,6 +323,12 @@ bool sameKey(SingleActivator a, SingleActivator b) =>
     a.meta == b.meta &&
     a.trigger == b.trigger;
 
+/// Whether [a] and [b] are one key in a clash: held the same, a US
+/// symbol ⇧ makes taken as its key (⇧⌘} is ⇧⌘]), as a keyboard may
+/// report either.
+bool oneKey(SingleActivator a, SingleActivator b) =>
+    sameKey(_unshifted(a), _unshifted(b));
+
 /// [a] with a US symbol ⇧ makes as its key (⇧⌘} as ⇧⌘]).
 SingleActivator _unshifted(SingleActivator a) =>
     switch (a.shift ? _toBase[a.trigger.keyId] : null) {
@@ -398,7 +404,7 @@ Map<String, Resolved> _settle(Map<String, String> saved) {
     }
     final holder = [
       for (final (h, a) in used)
-        if (sameKey(a, k)) h,
+        if (oneKey(a, k)) h,
     ];
     settled[id] = holder.isEmpty
         ? (key: k, chosen: true, issue: null, stored: text)
@@ -416,7 +422,7 @@ Map<String, Resolved> _settle(Map<String, String> saved) {
     final stored = asDefault.contains(id) ? null : saved[id];
     final holder = [
       for (final (h, a) in used)
-        if (sameKey(a, b.standard)) h,
+        if (oneKey(a, b.standard)) h,
     ];
     settled[id] = holder.isEmpty
         ? (key: b.standard, chosen: false, issue: unused[id], stored: stored)
@@ -451,12 +457,7 @@ bool aliasBound(String of, SingleActivator alias) {
   final now = _now;
   final r = now[of];
   if (r == null || r.chosen || r.key == null) return false;
-  // ⇧⌘} is the same key as ⇧⌘] here: the second keys list both, as a
-  // keyboard may report either.
-  final plain = _unshifted(alias);
-  return !now.values.any(
-    (o) => o.key != null && (sameKey(o.key!, alias) || sameKey(o.key!, plain)),
-  );
+  return !now.values.any((o) => o.key != null && oneKey(o.key!, alias));
 }
 
 /// Whether Settings › Keyboard shortcuts is taking a key: the menu bar's

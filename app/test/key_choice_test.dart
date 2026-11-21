@@ -383,6 +383,8 @@ void main() {
       expect(alias.single, isNull);
       shortcutKeys.value = {'sidebar': 'Shift+Cmd+]'};
       expect(nextTabKeysToo.every((k) => k.single == null), isTrue);
+      shortcutKeys.value = {'sidebar': 'Shift+Cmd+}'};
+      expect(nextTabKeysToo.every((k) => k.single == null), isTrue);
       shortcutKeys.value = {'palette': 'Alt+Cmd+K'};
       expect(paletteKeyToo.single, isNull);
       resetAllKeys();
@@ -442,6 +444,13 @@ void main() {
       expect(paletteKeyToo.single, isNotNull);
       // The file is left as it was.
       expect(shortcutKeys.value, hasLength(3));
+    });
+
+    test('a shifted symbol and its key are one key: the first keeps it', () {
+      shortcutKeys.value = {'sidebar': 'Shift+Cmd+}', 'pin': 'Shift+Cmd+]'};
+      expect(keyLabel(sidebarKey), '⇧⌘}');
+      expect(pinKey.single, isNull);
+      expect(resolved('pin').issue, "⇧⌘] is Show or hide sidebar's");
     });
 
     test('a conventions switch settles again', () {

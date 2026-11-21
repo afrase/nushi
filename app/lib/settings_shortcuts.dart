@@ -89,7 +89,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
   Cmd? _holder(Cmd key, SingleActivator k) {
     for (final b in rebindable) {
       if (b.id == key.id) continue;
-      if (b.single case final a? when sameKey(a, k)) return b;
+      if (b.single case final a? when oneKey(a, k)) return b;
     }
     return null;
   }
@@ -98,7 +98,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
   Cmd? _aliasHolder(Cmd key, SingleActivator k) {
     for (final a in [...nextTabKeysToo, ...previousTabKeysToo, paletteKeyToo]) {
       if (a.aliasOf == key.id) continue; // its own: no clash
-      if (a.single case final s? when sameKey(s, k)) {
+      if (a.single case final s? when oneKey(s, k)) {
         return rebindable.firstWhere((b) => b.id == a.aliasOf);
       }
     }
