@@ -529,11 +529,7 @@ void main() {
         (LogicalKeyboardKey.digit4, [_shift, _meta], '⇧⌘4: macOS keeps it'),
         (LogicalKeyboardKey.keyC, [_meta], '⌘C: A text field keeps it'),
         (LogicalKeyboardKey.keyA, [_ctrl], '⌃A: A text field keeps it'),
-        (
-          LogicalKeyboardKey.enter,
-          [_alt, _meta],
-          '⌥⌘⏎: The composer keeps it',
-        ),
+        (LogicalKeyboardKey.enter, [_alt, _meta], '⌥⌘⏎: The composer keeps it'),
         // A fixed key's reason names it already.
         (LogicalKeyboardKey.digit1, [_meta], '⌘1 opens a chat'),
       ]) {
