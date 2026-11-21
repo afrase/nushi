@@ -69,7 +69,7 @@ type Service struct {
 	resting   atomic.Bool // Rest: no prompt is taken any more
 	live      map[Agent]bool
 	opening   map[string]bool     // sessions Open is making chats of
-	signingIn map[string]bool     // the agents SignIn runs a sign-in of, by name
+	signingIn map[string]*signIn  // the sign-in SignIn runs of each agent, by name
 	removed   []model.RemovedChat // removed because their agent no longer had their sessions (gone.go)
 	swept     time.Time           // the last Sweep
 	sweeping  bool

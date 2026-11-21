@@ -10,6 +10,11 @@ import (
 	"github.com/afrase/nushi/internal/procgroup"
 )
 
+// lsofTimeout bounds lsof, which reads every process's open files: about
+// a tenth of a second, far longer on a machine that is busy. Past it no
+// session counts as open elsewhere.
+var lsofTimeout = 3 * time.Second
+
 // openFiles runs lsof on files and returns the id (of) of each one some
 // process has open.
 func openFiles(files []string, of func(file string) string) map[string]string {
@@ -17,7 +22,7 @@ func openFiles(files []string, of func(file string) string) map[string]string {
 	if len(files) == 0 {
 		return out
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), lsofTimeout)
 	defer cancel()
 	// -F n prints a line "n<path>" per open file; lsof exits 1 when one of
 	// the files isn't open, so the output counts, not the status.

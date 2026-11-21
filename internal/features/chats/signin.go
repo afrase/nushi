@@ -94,30 +94,21 @@ type signInClient struct{ acp.UnimplementedClient }
 // authenticate, and stopped, with its process group, once it has answered,
 // or when ctx ends or SignInTimeout passes, which ends its login. The agent
 // runs its own login: Codex opens the browser and waits for the user.
-// One sign-in at a time for each agent. Once it is signed in, its chats
-// whose reopen failed for want of it may reopen when next shown.
+// One sign-in at a time for each agent (beginSignIn). Once it is signed
+// in, its chats whose reopen failed for want of it may reopen when next
+// shown.
 func (s *Service) SignIn(ctx context.Context, agent, method string) error {
 	k, err := s.kindOf(agent)
 	if err != nil {
 		return err
 	}
-	s.mu.Lock()
-	if s.signingIn[k.Name] {
-		s.mu.Unlock()
-		return fmt.Errorf("%s is signing in already: finish in the browser, or cancel that first", k.Title)
-	}
-	if s.signingIn == nil {
-		s.signingIn = map[string]bool{}
-	}
-	s.signingIn[k.Name] = true
-	s.mu.Unlock()
-	defer func() {
-		s.mu.Lock()
-		delete(s.signingIn, k.Name)
-		s.mu.Unlock()
-	}()
 	ctx, cancel := context.WithTimeout(ctx, SignInTimeout)
 	defer cancel()
+	run, err := s.beginSignIn(ctx, k)
+	if err != nil {
+		return err
+	}
+	defer s.endSignIn(k.Name, run) // after its agent's Close, below
 	log := slog.With("agent", k.Name, "for", "sign-in")
 	a, init, err := initialize(ctx, k, signInClient{}, log)
 	if err != nil {
@@ -139,6 +130,53 @@ func (s *Service) SignIn(ctx context.Context, agent, method string) error {
 	log.Info("agent signed in")
 	s.signedIn(k.Name)
 	return nil
+}
+
+// signIn is a sign-in SignIn runs.
+type signIn struct {
+	ended <-chan struct{} // closed once its call ended or its time ran out: it stops its agent
+	gone  chan struct{}   // closed once its agent has stopped
+}
+
+// beginSignIn makes a sign-in of k's agent the one that runs, for the call
+// of ctx. While another waits for the user it is refused. One whose call
+// ended (the app's Cancel) or timed out is waited for instead: it is
+// stopping its agent, and the app has its answer before that is done, so
+// Cancel and then Sign in again would be refused.
+func (s *Service) beginSignIn(ctx context.Context, k *kind) (*signIn, error) {
+	run := &signIn{ended: ctx.Done(), gone: make(chan struct{})}
+	for {
+		s.mu.Lock()
+		other := s.signingIn[k.Name]
+		if other == nil {
+			if s.signingIn == nil {
+				s.signingIn = map[string]*signIn{}
+			}
+			s.signingIn[k.Name] = run
+			s.mu.Unlock()
+			return run, nil
+		}
+		s.mu.Unlock()
+		select {
+		case <-other.ended:
+		default:
+			return nil, fmt.Errorf("%s is signing in already: finish in the browser, or cancel that first", k.Title)
+		}
+		select {
+		case <-other.gone:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+}
+
+// endSignIn lets the next sign-in of the agent named name run: run's
+// agent has stopped.
+func (s *Service) endSignIn(name string, run *signIn) {
+	s.mu.Lock()
+	delete(s.signingIn, name)
+	s.mu.Unlock()
+	close(run.gone)
 }
 
 // signInFailed is a sign-in's error in plain words: the agent's own

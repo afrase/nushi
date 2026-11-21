@@ -74,7 +74,7 @@ func TestSignInBeforeStart(t *testing.T) {
 
 	d.signIn.Finish <- errors.New("Sign-in did not complete")
 	if err := signIn(t.Context(), "chat-gpt"); connect.CodeOf(err) != connect.CodeFailedPrecondition || err.Error() != "failed_precondition: Signin didn't sign in: Sign-in did not complete" {
-		t.Errorf("a failed SignInAgent: %v", err)
+		t.Fatalf("a failed SignInAgent: %v", err) // its Finish wasn't taken: the next send would wait for ever
 	}
 	d.signIn.Finish <- nil
 	if err := signIn(t.Context(), "chat-gpt"); err != nil {

@@ -30,7 +30,8 @@ type signInFake struct {
 	signedIn bool
 	finish   chan error    // what each authenticate waits for
 	begun    chan string   // gets each authenticate's method as it begins (buffered)
-	closed   chan struct{} // closed as each process is killed (Close), in turn
+	closed   chan struct{} // gets one as each process is killed (Close), in turn
+	hold     chan struct{} // when set, a killed process isn't gone until it closes
 	asked    []string      // the methods authenticate was asked for
 }
 
@@ -124,6 +125,9 @@ func (p *signInProc) Authenticate(ctx context.Context, req *acp.AuthenticateRequ
 
 func (p *signInProc) Close() error {
 	p.f.closed <- struct{}{}
+	if p.f.hold != nil {
+		<-p.f.hold
+	}
 	return p.proc.Close()
 }
 
@@ -265,4 +269,39 @@ func TestSignInCancelled(t *testing.T) {
 	// And the next one may run.
 	f.finish <- nil
 	testcheck.NoErr(t, svc.SignIn(t.Context(), "fake", "chat-gpt"))
+}
+
+// A sign-in begun while a cancelled one still stops its agent (the app's
+// Cancel, then Sign in again) isn't refused: it waits for that agent to be
+// gone, or for its own call to end, and then runs.
+func TestSignInAfterACancelledOne(t *testing.T) {
+	f := newSignInFake()
+	f.methods = codexMethods(t)
+	f.hold = make(chan struct{})
+	svc := newService(t, []Kind{f.kindFor()}, Options{})
+	ctx, cancel := context.WithCancel(t.Context())
+	first := make(chan error, 1)
+	go func() { first <- svc.SignIn(ctx, "fake", "chat-gpt") }()
+	<-f.begun
+	cancel()
+	<-f.closed // its process is being killed, and isn't gone
+
+	// One whose own call has ended gives up waiting, saying so.
+	over, end := context.WithCancel(t.Context())
+	end()
+	if err := svc.SignIn(over, "fake", "chat-gpt"); !errors.Is(err, context.Canceled) {
+		t.Errorf("a sign-in whose call ended while the cancelled one's agent stops = %v", err)
+	}
+
+	f.finish <- nil
+	next := make(chan error, 1)
+	go func() { next <- svc.SignIn(t.Context(), "fake", "chat-gpt") }()
+	close(f.hold)
+	if err := <-first; !errors.Is(err, context.Canceled) {
+		t.Errorf("the cancelled sign-in = %v", err)
+	}
+	testcheck.NoErr(t, <-next)
+	if !slices.Equal(f.asked, []string{"chat-gpt", "chat-gpt"}) {
+		t.Errorf("authenticate asked %v", f.asked)
+	}
 }
