@@ -20,13 +20,17 @@ const _macSystem = [
   SingleActivator(LogicalKeyboardKey.keyQ, meta: true),
   SingleActivator(LogicalKeyboardKey.keyQ, meta: true, shift: true),
   SingleActivator(LogicalKeyboardKey.keyQ, meta: true, control: true),
+  SingleActivator(LogicalKeyboardKey.keyQ, meta: true, shift: true, alt: true),
   SingleActivator(LogicalKeyboardKey.keyH, meta: true),
   SingleActivator(LogicalKeyboardKey.keyH, meta: true, alt: true),
   SingleActivator(LogicalKeyboardKey.keyM, meta: true),
   SingleActivator(LogicalKeyboardKey.keyD, meta: true, alt: true),
   SingleActivator(LogicalKeyboardKey.tab, meta: true),
   SingleActivator(LogicalKeyboardKey.tab, meta: true, shift: true),
+  SingleActivator(LogicalKeyboardKey.tab, meta: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.tab, meta: true, alt: true, shift: true),
   SingleActivator(LogicalKeyboardKey.backquote, meta: true),
+  SingleActivator(LogicalKeyboardKey.backquote, meta: true, shift: true),
   SingleActivator(LogicalKeyboardKey.space, meta: true),
   SingleActivator(LogicalKeyboardKey.space, meta: true, alt: true),
   SingleActivator(LogicalKeyboardKey.digit3, meta: true, shift: true),
@@ -96,6 +100,32 @@ const _linuxSystem = [
   SingleActivator(LogicalKeyboardKey.delete, control: true, alt: true),
   SingleActivator(LogicalKeyboardKey.keyT, control: true, alt: true),
   SingleActivator(LogicalKeyboardKey.keyL, control: true, alt: true),
+];
+
+/// Keys Linux's desktops keep that Windows doesn't: GNOME's and KDE's
+/// Alt+F1 and Alt+F2 (the launcher, Run), mutter's Alt+F7, Alt+F8 and
+/// Alt+F10 (move, resize, maximize), GNOME's Alt+` (the app's windows),
+/// Ctrl+Alt+Tab, and Ctrl+Alt+F1–F12 (a text console).
+const _linuxDesktop = [
+  SingleActivator(LogicalKeyboardKey.f1, alt: true),
+  SingleActivator(LogicalKeyboardKey.f2, alt: true),
+  SingleActivator(LogicalKeyboardKey.f7, alt: true),
+  SingleActivator(LogicalKeyboardKey.f8, alt: true),
+  SingleActivator(LogicalKeyboardKey.f10, alt: true),
+  SingleActivator(LogicalKeyboardKey.backquote, alt: true),
+  SingleActivator(LogicalKeyboardKey.tab, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f1, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f2, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f3, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f4, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f5, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f6, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f7, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f8, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f9, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f10, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f11, control: true, alt: true),
+  SingleActivator(LogicalKeyboardKey.f12, control: true, alt: true),
 ];
 
 /// Keys IBus takes on Linux (Windows has none of them): its two emoji keys
@@ -170,12 +200,15 @@ String? _macRefusal(SingleActivator k) {
 
 String? _linuxRefusal(SingleActivator k) {
   final t = k.trigger;
-  if (k.meta || _among(k, _linuxSystem)) return 'The system keeps it';
+  final linux = !identical(conventions, windowsConventions);
+  if (k.meta || _among(k, _linuxSystem) || linux && _among(k, _linuxDesktop)) {
+    return 'The system keeps it';
+  }
   if (sameKey(
         k,
         const SingleActivator(LogicalKeyboardKey.space, control: true),
       ) ||
-      !identical(conventions, windowsConventions) && _among(k, _ibus)) {
+      linux && _among(k, _ibus)) {
     return 'The input method takes it';
   }
   if (_among(k, _linuxField) ||

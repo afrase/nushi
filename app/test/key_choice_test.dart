@@ -730,6 +730,39 @@ void main() {
       }
     });
 
+    test('the desktop keys that never reach the recorder are refused, so '
+        'a saved one is', () {
+      for (final k in [
+        _k(LogicalKeyboardKey.keyQ, meta: true, shift: true, alt: true),
+        _k(LogicalKeyboardKey.tab, meta: true, alt: true),
+        _k(LogicalKeyboardKey.tab, meta: true, alt: true, shift: true),
+        _k(LogicalKeyboardKey.backquote, meta: true, shift: true),
+      ]) {
+        expect(refusal(k), 'macOS keeps it', reason: keyLabel(k));
+      }
+      native.conventions = linuxConventions;
+      for (final k in [
+        for (final f in [
+          LogicalKeyboardKey.f1,
+          LogicalKeyboardKey.f2,
+          LogicalKeyboardKey.f7,
+          LogicalKeyboardKey.f8,
+          LogicalKeyboardKey.f10,
+          LogicalKeyboardKey.backquote,
+        ])
+          _k(f, alt: true),
+        for (final f in [
+          LogicalKeyboardKey.tab,
+          LogicalKeyboardKey.f1,
+          LogicalKeyboardKey.f3,
+          LogicalKeyboardKey.f12,
+        ])
+          _k(f, control: true, alt: true),
+      ]) {
+        expect(refusal(k), 'The system keeps it', reason: keyLabel(k));
+      }
+    });
+
     test('on Windows, Ctrl+Alt is AltGr; IBus’s keys are free', () {
       native.conventions = windowsConventions;
       expect(
@@ -740,6 +773,12 @@ void main() {
       expect(
         refusal(_k(LogicalKeyboardKey.space, alt: true)),
         'The system keeps it',
+      );
+      // Linux's desktop keys aren't Windows's either.
+      expect(refusal(_k(LogicalKeyboardKey.f2, alt: true)), isNull);
+      expect(
+        refusal(_k(LogicalKeyboardKey.f3, control: true, alt: true)),
+        'Ctrl+Alt is AltGr on Windows',
       );
       // An input method's switch, but IBus's keys aren't Windows's.
       expect(
