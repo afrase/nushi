@@ -781,6 +781,49 @@ void main() {
       d.dispose();
     }, variant: onMac);
 
+    testWidgets('narrow on Linux, a long key is shown at a readable size, in '
+        "a field as wide as every row's; a clash fits beside it", (
+      tester,
+    ) async {
+      _onLinux();
+      shortcutKeys.value = {'newChat': 'Alt+Shift+Cmd+PageDown'};
+      // In the app, where Settings leaves the page least room.
+      final d = await pumpSettingsApp(
+        tester,
+        settingsFake(),
+        SettingsSection.shortcuts,
+        size: const Size(720, 900),
+      );
+      final other = tester.getRect(_key('settings'));
+      final field = tester.getRect(_key('newChat'));
+      expect(field.width, 168);
+      expect(other.left, field.left);
+      expect(other.width, field.width);
+      final fit = tester.renderObject<RenderBox>(
+        find.descendant(of: _key('newChat'), matching: find.byType(FittedBox)),
+      );
+      final words = tester.renderObject<RenderBox>(
+        find.descendant(
+          of: _key('newChat'),
+          matching: find.text('Ctrl+Alt+Shift+Page Down', findRichText: true),
+        ),
+      );
+      // At least 10 of its 12 points.
+      expect(fit.size.width / words.size.width, greaterThanOrEqualTo(10 / 12));
+      await _record(tester, 'newChat', LogicalKeyboardKey.keyS, [_ctrl]);
+      expect(find.byKey(const ValueKey('shortcut-take-newChat')), findsOne);
+      expect(tester.getRect(_key('newChat')).left, field.left);
+      expect(tester.getRect(_key('newChat')).width, field.width);
+      expect(
+        tester
+            .getRect(find.byKey(const ValueKey('shortcut-take-newChat')))
+            .right,
+        lessThanOrEqualTo(tester.getRect(_row('newChat')).right),
+      );
+      expect(tester.takeException(), isNull);
+      d.dispose();
+    }, variant: onMac);
+
     testWidgets('on Linux a chosen Ctrl+Alt+R notes the shell keeps it; reset, '
         'the note goes and nothing moves', (tester) async {
       _onLinux();

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,10 +33,6 @@ const _controlHeight = 34.0;
 
 /// The room a clear or reset button keeps, shown or not.
 const _slot = 28.0;
-
-/// The room a stacked row keeps after its field for a clash's pill and
-/// buttons.
-const _stackedActions = 228.0;
 
 /// A key another binding holds, waiting on Take it or Cancel; alias:
 /// it's the holder's second key, which goes once the key's binding has
@@ -360,24 +355,40 @@ class _KeyRow extends StatelessWidget {
     );
   }
 
-  /// Narrow: the field at the label's left, the rest after it in the
-  /// reverse order, so each keeps its place there too.
+  /// Narrow: the field at the label's left, as wide as beside it on every
+  /// row, so its key is never shrunk past reading; the rest after it in
+  /// the reverse order, so each keeps its place there too. A clash's
+  /// pill gives way to its buttons where the row has no room for both:
+  /// the line under the label names the clash.
   Widget _stacked(BuildContext context, double inner) {
-    final width = min(_fieldWidth, max(112.0, inner - 8 - _stackedActions));
+    final actions = _actions(context).reversed.toList();
     return SizedBox(
       width: inner,
       child: Row(
         spacing: 8,
         children: [
-          _field(width),
+          _field(_fieldWidth),
           Expanded(
-            child: Row(
-              spacing: 8,
-              children: [
-                for (final a in _actions(context).reversed)
-                  if (a is NotePill) Flexible(child: a) else a,
-              ],
-            ),
+            child: pending != null
+                ? Align(
+                    alignment: Alignment.centerLeft,
+                    child: GivesWay(
+                      gap: 8,
+                      lead: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 8,
+                        children: actions.sublist(0, 2),
+                      ),
+                      extra: actions.last,
+                    ),
+                  )
+                : Row(
+                    spacing: 8,
+                    children: [
+                      for (final a in actions)
+                        if (a is NotePill) Flexible(child: a) else a,
+                    ],
+                  ),
           ),
         ],
       ),
