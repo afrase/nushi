@@ -424,7 +424,9 @@ class _KeyRow extends StatelessWidget {
     return [
       ?pill,
       _slotted(
-        r.stored != null,
+        // Saved, or its default another binding's chosen key holds:
+        // Reset offers to take it back.
+        r.stored != null || (!r.chosen && r.key == null),
         IconTap(
           Icons.restart_alt,
           key: ValueKey('shortcut-reset-$_id'),

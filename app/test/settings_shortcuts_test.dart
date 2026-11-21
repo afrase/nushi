@@ -616,6 +616,20 @@ void main() {
       d.dispose();
     }, variant: onMac);
 
+    testWidgets('a row with nothing saved whose default another holds has '
+        'Reset, which offers to take it back', (tester) async {
+      final d = await _page(tester);
+      shortcutKeys.value = {'sidebar': 'Cmd+D'};
+      await tester.pumpAndSettle();
+      expect(_in('pin', "⌘D is Show or hide sidebar's"), findsOne);
+      await _tap(tester, find.byKey(const ValueKey('shortcut-reset-pin')));
+      expect(_in('pin', 'Show or hide sidebar has ⌘D'), findsOne);
+      await _tap(tester, find.byKey(const ValueKey('shortcut-take-pin')));
+      expect(_saved(), {'sidebar': ''});
+      expect(_shows(tester, 'pin'), '⌘D');
+      d.dispose();
+    }, variant: onMac);
+
     testWidgets("saved keys that clash or are refused say they aren't used", (
       tester,
     ) async {
