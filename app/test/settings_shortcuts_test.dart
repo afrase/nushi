@@ -392,6 +392,32 @@ void main() {
       d.dispose();
     }, variant: onMac);
 
+    testWidgets('on Linux AltGr alone is held, not taken', (tester) async {
+      _onLinux();
+      final d = await _page(tester);
+      await _tap(tester, _key('sidebar'));
+      await tester.sendKeyDownEvent(_ctrl);
+      // GTK's ISO_Level3_Shift, the right Alt key.
+      const altRight = PhysicalKeyboardKey.altRight;
+      await tester.sendKeyDownEvent(
+        LogicalKeyboardKey.altGraph,
+        physicalKey: altRight,
+      );
+      await tester.pumpAndSettle();
+      expect(shortcutRecording.value, isTrue);
+      expect(_shows(tester, 'sidebar'), 'Press keys…');
+      await tester.sendKeyEvent(LogicalKeyboardKey.f6);
+      await tester.sendKeyUpEvent(
+        LogicalKeyboardKey.altGraph,
+        physicalKey: altRight,
+      );
+      await tester.sendKeyUpEvent(_ctrl);
+      await tester.pumpAndSettle();
+      expect(shortcutRecording.value, isFalse);
+      expect(_saved(), {'sidebar': 'Cmd+F6'});
+      d.dispose();
+    }, variant: onMac);
+
     testWidgets("on Linux a refused Ctrl+Q's repeats don't quit; lifted, it "
         'quits again', (tester) async {
       _onLinux();

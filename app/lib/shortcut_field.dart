@@ -20,6 +20,8 @@ final _modifiers = <LogicalKeyboardKey>{
   LogicalKeyboardKey.metaLeft,
   LogicalKeyboardKey.metaRight,
   LogicalKeyboardKey.superKey,
+  // Right Alt, where a Linux layout makes it AltGr (ISO_Level3_Shift).
+  LogicalKeyboardKey.altGraph,
   LogicalKeyboardKey.capsLock,
   LogicalKeyboardKey.fn,
   LogicalKeyboardKey.fnLock,
