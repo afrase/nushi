@@ -227,11 +227,13 @@ bool terminalOwns(SingleActivator a) => [
 ].any((t) => sameKey(a, t.standard));
 
 /// What to know of a chosen [k]: a focused terminal keeps it, for itself
-/// or its shell; null when it passes it on.
+/// or its shell; null when it passes it on. The same test as
+/// terminalPasses: a chosen key passes only with the command key held, and
+/// where that is Control, not as a shell's control character.
 String? note(SingleActivator k) {
   if (terminalOwns(k)) return 'A focused terminal keeps it';
   final mac = commandKey == CommandKey.meta;
-  if (mac ? !k.meta : shellKey(k)) {
+  if (mac ? !k.meta : !k.control || shellKey(k)) {
     return 'A focused terminal keeps it for the shell';
   }
   return null;

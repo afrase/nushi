@@ -681,5 +681,24 @@ void main() {
         'A focused terminal keeps it',
       );
     });
+
+    test('on Linux a chosen key without Ctrl notes the shell keeps it', () {
+      // A focused terminal passes a chosen key only when it holds Ctrl
+      // (terminalPasses), so F5 or Alt+P stays the shell's there.
+      native.conventions = linuxConventions;
+      for (final k in [
+        _k(LogicalKeyboardKey.f5),
+        _k(LogicalKeyboardKey.keyP, alt: true),
+        _k(LogicalKeyboardKey.keyK, alt: true, shift: true),
+      ]) {
+        chooseKey(pinKey, k);
+        expect(terminalPasses(pinKey), isFalse, reason: keyLabel(k));
+        expect(
+          note(k),
+          'A focused terminal keeps it for the shell',
+          reason: keyLabel(k),
+        );
+      }
+    });
   });
 }
