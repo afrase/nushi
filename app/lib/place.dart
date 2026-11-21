@@ -6,6 +6,7 @@ enum SettingsSection {
   general('General'),
   appearance('Appearance'),
   terminal('Terminal'),
+  shortcuts('Keyboard shortcuts'),
   history('Chat history'),
   usage('Usage'),
   remote('Remote access'),

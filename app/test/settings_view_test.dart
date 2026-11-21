@@ -306,6 +306,7 @@ void main() {
         'General',
         'Appearance',
         'Terminal',
+        'Keyboard shortcuts',
         'Agents',
         'Agents',
         'MCP servers',

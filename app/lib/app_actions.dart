@@ -176,6 +176,7 @@ enum Act {
   delete(menu: ActMenu.chat, menuLabel: 'Delete…'),
   settings(key: settingsKey, menu: ActMenu.nushi, menuLabel: 'Settings…'),
   appearance,
+  shortcuts,
   jira(key: jiraKey, menu: ActMenu.view, menuLabel: 'Jira'),
   github(key: githubKey, menu: ActMenu.view, menuLabel: 'GitHub'),
   restart,
@@ -488,6 +489,11 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       run: () => d.openSettings(section: SettingsSection.appearance),
     ),
     AppAction(
+      .shortcuts,
+      'Keyboard shortcuts',
+      run: () => d.openSettings(section: SettingsSection.shortcuts),
+    ),
+    AppAction(
       .jira,
       d.place is JiraPlace ? 'Close Jira' : 'Jira',
       run: () => d.toggle(const JiraPlace()),
@@ -694,7 +700,12 @@ void runAct(BuildContext context, Daemon d, Act act) {
   // Only the menu bar (and Linux's Quit) reaches here past Settings (it
   // stops the keys): what runs is elsewhere, so Settings shuts first (ADR
   // 0087).
-  if (!const {Act.settings, Act.appearance, Act.quit}.contains(act)) {
+  if (!const {
+    Act.settings,
+    Act.appearance,
+    Act.shortcuts,
+    Act.quit,
+  }.contains(act)) {
     d.closeSettings();
   }
   final a = appActions(context, d).firstWhere((a) => a.act == act);

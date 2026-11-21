@@ -132,6 +132,7 @@ class _SettingsViewState extends State<SettingsView> {
     ),
     SettingsSection.appearance => const AppearanceSection(),
     SettingsSection.terminal => const TerminalSection(),
+    SettingsSection.shortcuts => SettingsPage(title: s.title),
     SettingsSection.history => HistorySection(
       daemon: daemon,
       settings: _set,
