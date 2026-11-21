@@ -11,6 +11,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/pane_tabs.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/source_editor.dart';
 import 'package:re_editor/re_editor.dart';
 
@@ -52,6 +53,33 @@ void main() {
     ]);
     expect(e.unsaved, isFalse);
     expect(unsavedDot, findsNothing);
+    await endEditor(tester, d);
+  }, variant: onMac);
+
+  testWidgets('in the editor ⌥Z is a character, a chosen Wrap lines key '
+      'wraps', (tester) async {
+    final (d, _) = await openEditor(tester, {'main.go': utf8.encode('a\n')});
+    await tester.tap(find.byType(CodeEditor));
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'editor');
+    final before = wrapLines.value;
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+    await tester.pump();
+    expect(wrapLines.value, before);
+    // A chosen key types nothing, so the editor's focus doesn't hold it
+    // back (ADR 0146).
+    shortcutKeys.value = {'wrap': 'Shift+Cmd+L'};
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'editor');
+    expect(wrapLines.value, !before);
     await endEditor(tester, d);
   }, variant: onMac);
 
