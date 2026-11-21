@@ -4,7 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/settings.dart';
 
 File get _appJson => File('$dataDir/app.json');
@@ -74,7 +76,7 @@ final _saved = <String, Object?>{
   'indentGuides': false,
   'scrollPastEnd': true,
   'dismissedUpdate': '0.1.17',
-  'shortcuts': {'nextTab': 'Shift+Cmd+]', 'x': 'bogus'},
+  'shortcuts': {'nextTab': 'Shift+Cmd+]', 'x': 'bogus', 'pin': 5},
   'fromANewerApp': {'kept': true},
   'worktrees': ['/a'],
   'subagentWide': true,
@@ -161,6 +163,10 @@ void main() {
     expect(scrollPastEnd.value, isTrue);
     // A built-in named by its id is the theme shown (ADR 0086).
     expect(colorTheme.value, 'tokyo-night');
+    // The keys chosen: a text this app can't read is kept, one that isn't
+    // text is dropped (ADR 0146).
+    expect(shortcutKeys.value, {'nextTab': 'Shift+Cmd+]', 'x': 'bogus'});
+    expect(keyLabel(nextTabKey), '⇧⌘]');
     expect(_all.map((p) => p.value), hasLength(48)); // each made
     showDetails.value = true;
     await pumpEventQueue();
