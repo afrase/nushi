@@ -323,9 +323,11 @@ bool sameKey(SingleActivator a, SingleActivator b) =>
     a.meta == b.meta &&
     a.trigger == b.trigger;
 
-/// Whether [a] and [b] are one key in a clash: held the same, a US
-/// symbol ⇧ makes taken as its key (⇧⌘} is ⇧⌘]), as a keyboard may
-/// report either.
+/// Whether [a] is the second key [b] or its other form: held the same, a
+/// US symbol ⇧ makes taken as its key (⇧⌘} is ⇧⌘]), as a keyboard may
+/// report either. Only for the second keys, which are US keys: two chosen
+/// keys are compared as saved ([sameKey]), since another layout's `?` and
+/// `/` are two keys.
 bool oneKey(SingleActivator a, SingleActivator b) =>
     sameKey(_unshifted(a), _unshifted(b));
 
@@ -404,7 +406,7 @@ Map<String, Resolved> _settle(Map<String, String> saved) {
     }
     final holder = [
       for (final (h, a) in used)
-        if (oneKey(a, k)) h,
+        if (sameKey(a, k)) h,
     ];
     settled[id] = holder.isEmpty
         ? (key: k, chosen: true, issue: null, stored: text)
@@ -422,7 +424,7 @@ Map<String, Resolved> _settle(Map<String, String> saved) {
     final stored = asDefault.contains(id) ? null : saved[id];
     final holder = [
       for (final (h, a) in used)
-        if (oneKey(a, b.standard)) h,
+        if (sameKey(a, b.standard)) h,
     ];
     settled[id] = holder.isEmpty
         ? (key: b.standard, chosen: false, issue: unused[id], stored: stored)

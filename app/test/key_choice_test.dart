@@ -446,11 +446,12 @@ void main() {
       expect(shortcutKeys.value, hasLength(3));
     });
 
-    test('a shifted symbol and its key are one key: the first keeps it', () {
-      shortcutKeys.value = {'sidebar': 'Shift+Cmd+}', 'pin': 'Shift+Cmd+]'};
-      expect(keyLabel(sidebarKey), '⇧⌘}');
-      expect(pinKey.single, isNull);
-      expect(resolved('pin').issue, "⇧⌘] is Show or hide sidebar's");
+    test('two chosen keys clash only as saved: another layout’s ⇧⌘? and '
+        '⇧⌘/ are two keys', () {
+      shortcutKeys.value = {'sidebar': 'Shift+Cmd+?', 'pin': 'Shift+Cmd+/'};
+      expect(keyLabel(sidebarKey), '⇧⌘?');
+      expect(keyLabel(pinKey), '⇧⌘/');
+      expect(resolved('pin').issue, isNull);
     });
 
     test('a conventions switch settles again', () {

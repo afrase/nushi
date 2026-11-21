@@ -84,7 +84,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
   Cmd? _holder(Cmd key, SingleActivator k) {
     for (final b in rebindable) {
       if (b.id == key.id) continue;
-      if (b.single case final a? when oneKey(a, k)) return b;
+      if (b.single case final a? when sameKey(a, k)) return b;
     }
     return null;
   }
