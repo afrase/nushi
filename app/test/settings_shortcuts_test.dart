@@ -2,6 +2,8 @@
 // a key, refusals, clashes and Take it, clear and reset, Reset all, the
 // menu bar quiet while a field listens, controls that never move, and
 // goldens and renders of the page.
+import 'dart:ui' show AppExitResponse;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -104,6 +106,17 @@ FocusNode _node(WidgetTester tester, String id) => tester
     )
     .map((f) => f.focusNode)
     .firstWhere((n) => n?.debugLabel == 'shortcut-$id')!;
+
+/// Counts the app's requests to quit, and cancels each.
+class _ExitAsks with WidgetsBindingObserver {
+  int count = 0;
+
+  @override
+  Future<AppExitResponse> didRequestAppExit() async {
+    count++;
+    return AppExitResponse.cancel;
+  }
+}
 
 void _onLinux() => native
   ..conventions = linuxConventions
@@ -376,6 +389,81 @@ void main() {
       }
       expect(d.settingsOpen, isNotNull);
       expect(_saved(), {'sidebar': 'Alt+Cmd+S'});
+      d.dispose();
+    }, variant: onMac);
+
+    testWidgets("on Linux a refused Ctrl+Q's repeats don't quit; lifted, it "
+        'quits again', (tester) async {
+      _onLinux();
+      final d = await pumpSettingsApp(
+        tester,
+        settingsFake(),
+        SettingsSection.shortcuts,
+      );
+      final exits = _ExitAsks();
+      tester.binding.addObserver(exits);
+      addTearDown(() => tester.binding.removeObserver(exits));
+      await _tap(tester, _key('sidebar'));
+      await tester.sendKeyDownEvent(_ctrl);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.keyQ);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: _row('sidebar'),
+          matching: find.textContaining('It quits Nushi', findRichText: true),
+        ),
+        findsOne,
+      );
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyQ);
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyQ);
+      await tester.pumpAndSettle();
+      expect(exits.count, 0);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.keyQ);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.keyQ);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.keyQ);
+      await tester.sendKeyUpEvent(_ctrl);
+      await tester.pumpAndSettle();
+      expect(exits.count, 1);
+      d.dispose();
+    }, variant: onMac);
+
+    testWidgets("the Settings key's repeats, just recorded or in a clash, "
+        "don't shut Settings; lifted, it does", (tester) async {
+      final d = await pumpSettingsApp(
+        tester,
+        settingsFake(),
+        SettingsSection.shortcuts,
+      );
+      // ⌥⌘. recorded on the Settings row, then pressed on Sidebar's: a
+      // clash, the focus on Cancel.
+      for (final (id, key, holding) in [
+        ('settings', LogicalKeyboardKey.period, [_alt, _meta]),
+        ('sidebar', LogicalKeyboardKey.period, [_alt, _meta]),
+      ]) {
+        await _tap(tester, _key(id));
+        for (final k in holding) {
+          await tester.sendKeyDownEvent(k);
+        }
+        await tester.sendKeyDownEvent(key);
+        await tester.pumpAndSettle();
+        expect(shortcutRecording.value, isFalse);
+        // Each repeat on its own: two toggles would open it again.
+        for (var i = 0; i < 2; i++) {
+          await tester.sendKeyRepeatEvent(key);
+          await tester.pumpAndSettle();
+          expect(d.settingsOpen, isNotNull, reason: id);
+        }
+        await tester.sendKeyUpEvent(key);
+        for (final k in holding.reversed) {
+          await tester.sendKeyUpEvent(k);
+        }
+        await tester.pumpAndSettle();
+      }
+      expect(_saved(), {'settings': 'Alt+Cmd+.'});
+      expect(_in('sidebar', 'In use'), findsOne);
+      await _tap(tester, find.byKey(const ValueKey('shortcut-cancel-sidebar')));
+      await _press(tester, LogicalKeyboardKey.period, [_alt, _meta]);
+      expect(d.settingsOpen, isNull);
       d.dispose();
     }, variant: onMac);
   });

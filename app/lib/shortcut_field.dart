@@ -62,8 +62,9 @@ class _ShortcutFieldState extends State<ShortcutField> {
 
   /// The key just taken, while it's still held. Its repeats and its
   /// lifting come after the field stopped listening (and the focus may
-  /// have gone to Cancel), when the menu bar has its keys back: unhandled,
-  /// the Mac's would run the item the key now belongs to.
+  /// have gone to Cancel), when the app's keys and the menu bar's are
+  /// back: unhandled, a repeat would run what the key belongs to (Quit,
+  /// or the Settings key shutting Settings).
   PhysicalKeyboardKey? _taken;
 
   @override
@@ -118,22 +119,24 @@ class _ShortcutFieldState extends State<ShortcutField> {
   }
 
   /// Takes the repeats and the lifting of the key just taken, wherever
-  /// the focus is now.
-  bool _holdBack(KeyEvent e) {
-    if (e.physicalKey != _taken) return false;
+  /// the focus is now: before any key handler in the focus tree, so
+  /// neither the app's Shortcuts nor Settings' see them, and handled, so
+  /// the menu bar doesn't either.
+  KeyEventResult _holdBack(KeyEvent e) {
+    if (e.physicalKey != _taken) return KeyEventResult.ignored;
     // Pressed again, its lifting was missed (the window lost the keys).
     if (e is KeyDownEvent) {
       _release();
-      return false;
+      return KeyEventResult.ignored;
     }
     if (e is KeyUpEvent) _release();
-    return true;
+    return KeyEventResult.handled;
   }
 
   void _release() {
     if (_taken == null) return;
     _taken = null;
-    HardwareKeyboard.instance.removeHandler(_holdBack);
+    FocusManager.instance.removeEarlyKeyEventHandler(_holdBack);
   }
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
@@ -151,7 +154,7 @@ class _ShortcutFieldState extends State<ShortcutField> {
     final shift = held.isShiftPressed;
     _release();
     _taken = e.physicalKey;
-    HardwareKeyboard.instance.addHandler(_holdBack);
+    FocusManager.instance.addEarlyKeyEventHandler(_holdBack);
     _stop();
     widget.onKey(
       SingleActivator(
