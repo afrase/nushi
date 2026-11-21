@@ -168,10 +168,9 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
     );
     if (!yes || !mounted) return;
     resetAllKeys();
-    setState(() {
-      _pending = null;
-      _refused = null;
-    });
+    // The button goes off, which would leave the keyboard nowhere: the
+    // first row's field gets it.
+    _done(shortcutGroups.first.$2.first);
   }
 
   @override

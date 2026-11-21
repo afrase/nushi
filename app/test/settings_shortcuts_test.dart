@@ -719,6 +719,39 @@ void main() {
       expect(button().onPressed, isNull);
       d.dispose();
     }, variant: onMac);
+
+    testWidgets('from the keyboard, Reset all leaves the focus on the first '
+        "row's field, with its ring", (tester) async {
+      final d = await _page(tester);
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      addTearDown(
+        () => FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.automatic,
+      );
+      shortcutKeys.value = {'pin': 'Cmd+J'};
+      await tester.pumpAndSettle();
+      final first = rebindable.first.id!;
+      Focus.of(tester.element(find.text('Reset all to defaults')))
+          .requestFocus();
+      await tester.pumpAndSettle();
+      await _press(tester, LogicalKeyboardKey.enter);
+      expect(find.text('Reset all keys?'), findsOne);
+      // Cancel has the focus first; Reset all is after it.
+      await _press(tester, LogicalKeyboardKey.tab);
+      await _press(tester, LogicalKeyboardKey.enter);
+      expect(_saved(), isEmpty);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'shortcut-$first');
+      final ring = tester
+          .widgetList<Container>(
+            find.descendant(of: _key(first), matching: find.byType(Container)),
+          )
+          .map((c) => c.foregroundDecoration)
+          .whereType<BoxDecoration>()
+          .single;
+      expect((ring.border! as Border).top.width, 2);
+      d.dispose();
+    }, variant: onMac);
   });
 
   group('layout', () {
