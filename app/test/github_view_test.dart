@@ -523,14 +523,15 @@ void main() {
     shortcutKeys.value = {'palette': 'Ctrl+Alt+J'};
     await tester.pumpAndSettle();
     // The list has the focus, as after a click on it.
-    tester
-        .widget<Focus>(
-          find.byWidgetPredicate(
-            (w) => w is Focus && w.focusNode?.debugLabel == 'github list',
-          ),
-        )
-        .focusNode!
-        .requestFocus();
+    final list =
+        tester
+              .widget<Focus>(
+                find.byWidgetPredicate(
+                  (w) => w is Focus && w.focusNode?.debugLabel == 'github list',
+                ),
+              )
+              .focusNode!
+          ..requestFocus();
     await tester.pump();
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
@@ -538,6 +539,15 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await tester.pumpAndSettle();
+    expect(find.byType(Palette), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    // An arrow too: the list's ↓ is the bare key.
+    shortcutKeys.value = {'palette': 'Alt+Shift+Cmd+Down'};
+    await tester.pumpAndSettle();
+    list.requestFocus();
+    await tester.pump();
+    await _heldArrowDown(tester);
     expect(find.byType(Palette), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await closeView(tester, d);
@@ -815,4 +825,21 @@ void main() {
       }, variant: onMac);
     }
   }
+}
+
+/// ⇧⌥⌘↓, pressed and let go.
+Future<void> _heldArrowDown(WidgetTester tester) async {
+  const held = [
+    LogicalKeyboardKey.shiftLeft,
+    LogicalKeyboardKey.altLeft,
+    LogicalKeyboardKey.metaLeft,
+  ];
+  for (final m in held) {
+    await tester.sendKeyDownEvent(m);
+  }
+  await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+  for (final m in held.reversed) {
+    await tester.sendKeyUpEvent(m);
+  }
+  await tester.pumpAndSettle();
 }

@@ -334,11 +334,13 @@ class _GitHubViewState extends State<GitHubView> {
     final items = _items;
     if (k == LogicalKeyboardKey.enter && items.isNotEmpty && _at >= 0) {
       meta ? _startWork() : _open(items[_at]);
-    } else if (k == LogicalKeyboardKey.arrowDown ||
-        k == LogicalKeyboardKey.keyJ && barePressed()) {
+    } else if ((k == LogicalKeyboardKey.arrowDown ||
+            k == LogicalKeyboardKey.keyJ) &&
+        barePressed()) {
       _move(1);
-    } else if (k == LogicalKeyboardKey.arrowUp ||
-        k == LogicalKeyboardKey.keyK && barePressed()) {
+    } else if ((k == LogicalKeyboardKey.arrowUp ||
+            k == LogicalKeyboardKey.keyK) &&
+        barePressed()) {
       _move(-1);
     } else {
       return KeyEventResult.ignored;

@@ -92,6 +92,15 @@ void main() {
     expect(find.byType(Palette), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget); // the palette's, no JQL
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    // An arrow too: the list's ↓ is the bare key.
+    shortcutKeys.value = {'palette': 'Alt+Shift+Cmd+Down'};
+    await tester.pumpAndSettle();
+    list.focusNode!.requestFocus();
+    await tester.pump();
+    await _heldArrowDown(tester);
+    expect(find.byType(Palette), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -732,4 +741,21 @@ void main() {
       }, variant: onMac);
     }
   }
+}
+
+/// ⇧⌥⌘↓, pressed and let go.
+Future<void> _heldArrowDown(WidgetTester tester) async {
+  const held = [
+    LogicalKeyboardKey.shiftLeft,
+    LogicalKeyboardKey.altLeft,
+    LogicalKeyboardKey.metaLeft,
+  ];
+  for (final m in held) {
+    await tester.sendKeyDownEvent(m);
+  }
+  await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+  for (final m in held.reversed) {
+    await tester.sendKeyUpEvent(m);
+  }
+  await tester.pumpAndSettle();
 }

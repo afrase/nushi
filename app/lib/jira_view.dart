@@ -437,11 +437,13 @@ class _JiraViewState extends State<JiraView> {
     final at = _visible.where((x) => idOf(x) == _picked).firstOrNull;
     if (k == LogicalKeyboardKey.enter && at != null) {
       meta ? _startWork() : _open(at);
-    } else if (k == LogicalKeyboardKey.arrowDown ||
-        k == LogicalKeyboardKey.keyJ && barePressed()) {
+    } else if ((k == LogicalKeyboardKey.arrowDown ||
+            k == LogicalKeyboardKey.keyJ) &&
+        barePressed()) {
       _move(1);
-    } else if (k == LogicalKeyboardKey.arrowUp ||
-        k == LogicalKeyboardKey.keyK && barePressed()) {
+    } else if ((k == LogicalKeyboardKey.arrowUp ||
+            k == LogicalKeyboardKey.keyK) &&
+        barePressed()) {
       _move(-1);
     } else if (k == LogicalKeyboardKey.slash && barePressed(shift: true)) {
       _pickList(const Jql());
