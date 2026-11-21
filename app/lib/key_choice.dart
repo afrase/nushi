@@ -375,6 +375,7 @@ Map<String, Resolved> _settle(Map<String, String> saved) {
   final settled = <String, Resolved>{};
   final unused = <String, String>{};
   final used = <(Cmd, SingleActivator)>[];
+  final asDefault = <String>{};
   for (final b in rebindable) {
     final id = b.id!;
     final text = saved[id];
@@ -385,6 +386,12 @@ Map<String, Resolved> _settle(Map<String, String> saved) {
     }
     final k = parseShortcut(text);
     if (k == null) continue; // unreadable: the default, the text kept
+    // Its own default is no choice: as if nothing were saved (the file
+    // is left as it is).
+    if (sameKey(k, b.standard)) {
+      asDefault.add(id);
+      continue;
+    }
     if (refusal(k, own: b) ?? fixedReason(k) case final why?) {
       unused[id] = "Your ${keyLabel(k)} isn't used: $why";
       continue;
@@ -406,17 +413,18 @@ Map<String, Resolved> _settle(Map<String, String> saved) {
   for (final b in rebindable) {
     final id = b.id!;
     if (settled.containsKey(id)) continue;
+    final stored = asDefault.contains(id) ? null : saved[id];
     final holder = [
       for (final (h, a) in used)
         if (sameKey(a, b.standard)) h,
     ];
     settled[id] = holder.isEmpty
-        ? (key: b.standard, chosen: false, issue: unused[id], stored: saved[id])
+        ? (key: b.standard, chosen: false, issue: unused[id], stored: stored)
         : (
             key: null,
             chosen: false,
             issue: "${keyLabel(b.standard)} is ${bindingName(holder.first)}'s",
-            stored: saved[id],
+            stored: stored,
           );
   }
   return settled;

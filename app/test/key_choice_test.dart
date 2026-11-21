@@ -426,6 +426,24 @@ void main() {
       expect(resolved('find').issue, "Your ⌘1 isn't used: ⌘1 opens a chat");
     });
 
+    test('a saved key that is its own default is no choice', () {
+      shortcutKeys.value = {
+        'nextTab': 'Ctrl+Tab',
+        'palette': 'Cmd+K',
+        'wrap': 'Alt+Z',
+      };
+      for (final b in [nextTabKey, paletteKey, wrapKey]) {
+        expect(b.chosen, isFalse, reason: b.id);
+        expect(sameKey(b.single!, b.standard), isTrue, reason: b.id);
+        expect(resolved(b.id!).stored, isNull, reason: b.id);
+        expect(resolved(b.id!).issue, isNull, reason: b.id);
+      }
+      expect(nextTabKeysToo.every((k) => k.single != null), isTrue);
+      expect(paletteKeyToo.single, isNotNull);
+      // The file is left as it was.
+      expect(shortcutKeys.value, hasLength(3));
+    });
+
     test('a conventions switch settles again', () {
       shortcutKeys.value = {'pin': 'Ctrl+R'};
       expect(keyLabel(pinKey), '⌃R');
