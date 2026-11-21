@@ -128,7 +128,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Output card** | A run's output in the box, sent after your next message's text: only from a run that ended on its own. | `OutputCard`, `Draft.outputs`, `RunOutput`, `withOutputs` | 0084 |
 | **Status card** | The card at the sidebar's foot: working, awake and sleeping agents, and Nushi's memory. | `StatusBar` | 0032, 0111 |
 | **Pane** | A rounded surface floating on the window's background: the main area, with a view's header at its top. A side pane is a column inside it. | `Pane`, `PaneHeader`, `NushiTheme.windowPad`, `paneGap` | 0111 |
-| **Palette** | ⌘K (⌘⇧P): go to a chat or run an action. | `palette.dart`, `AppAction` | |
+| **Palette** | ⌘K (⇧⌘P): go to a chat or run an action. | `palette.dart`, `AppAction` | |
 | **Open file** | ⌘P: any file that previews in the chat's folder. | `open_file.dart`, `FindChatFiles` | |
 | **Find** | ⌘F: in the chat, in Changes' files and diffs, in a terminal's scrollback, or in the file the Files pane shows while it has the focus (rendered Markdown, a CSV's table, its editor, a read-only source), or a page in a web view on the Mac (an HTML preview, a browser tab). | `Find`, `ChangesFind`, `TerminalFind`, `EditorFind`, `PreviewFind`, `WebFind` (each in a `FindBar`), `FindSlot`, `PageFinder`, `TextMarks` | 0082, 0096, 0143 |
 | **Settings** | A modal over the window (⌘,), a nav of sections; it never takes the chat's place. | `settings_modal.dart`, `settings_view.dart`, `SettingsSection`, `Daemon.settingsOpen` | 0053, 0087 |
@@ -205,7 +205,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Update** | The card's button that installs the newer version: the daemon runs Homebrew's upgrade of the app's cask. "Updating…" while it runs; Retry after a failure. | `InstallUpdate`, `updates.Service.Install`, `internal/homebrew` | 0109 |
 | **Beta version** | A version to try before its release (0.29.0-beta.1), a GitHub pre-release; the `nushi@beta` cask follows them. "A beta" for short. | `updates.Service.Beta`, `betaCask`, `isBeta`, `tools/cask.sh` | 0108 |
 | **Chosen key** | A key you set for an action in Settings › Keyboard shortcuts, in place of its default, or no key. The menu bar, the palette and the tooltips show it. | `shortcutKeys`, `Cmd.id`, `key_choice.dart`, `key_rules.dart` | 0146 |
-| **Second keys** | An action's extra key beside its own: ⇧⌘] and ⇧⌘[ for the next and previous tab, ⌘⇧P for the palette. Not changed on their own: each works only while its action keeps its default key and no action has it; else it reads Off. | `nextTabKeysToo`, `previousTabKeysToo`, `paletteKeyToo`, `Cmd.aliasOf`, `aliasBound` | 0146 |
+| **Second keys** | An action's extra key beside its own: ⇧⌘] and ⇧⌘[ for the next and previous tab, ⇧⌘P for the palette. Not changed on their own: each works only while its action keeps its default key and no action has it; else it reads Off. | `nextTabKeysToo`, `previousTabKeysToo`, `paletteKeyToo`, `Cmd.aliasOf`, `aliasBound` | 0146 |
 | **Fixed** (keys) | Keys Settings › Keyboard shortcuts lists but doesn't let change: Esc, Esc Esc, ⌘1–9, ⌥⌘1–9 and Quit's. | `fixedReason`, `_fixed` | 0146 |
 | **Jira site** | A Jira Cloud site with your email and API token (kept in the keychain). | `JiraSite`, `internal/jiracloud` | 0042 |
 | **Task list** | The Jira view (⌘J): your open issues in a card per status, or a sprint, saved search or JQL. | `jira_tasks.dart`, `JiraSearch`, `JiraBoard` | 0042 |
