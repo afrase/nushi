@@ -21,6 +21,7 @@ import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/key_choice.dart' show sameKey;
 import 'package:nushi/keys.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/new_chat.dart';
@@ -250,14 +251,25 @@ const paletteKeyToo = Cmd(
 );
 
 /// Whether [act]'s key is the focused text field's own, which keeps it:
-/// Linux's Back and Forward, Alt+Left and Alt+Right, move along its line
-/// there (ADR 0119). The Mac's ⌘[ and ⌘] are no field's.
-bool actKeyTaken(Act act) =>
-    (act == Act.back || act == Act.forward) &&
-    commandKey == CommandKey.control &&
-    FocusManager.instance.primaryFocus?.context
-            ?.findAncestorStateOfType<EditableTextState>() !=
-        null;
+/// Alt+Left and Alt+Right, Linux's Back and Forward by default, move along
+/// its line there (ADR 0119); a key chosen in their place is no field's.
+/// The Mac's ⌘[ and ⌘] are no field's.
+bool actKeyTaken(Act act) {
+  final key = act.key?.single;
+  return key != null &&
+      commandKey == CommandKey.control &&
+      _fieldMoves.any((k) => sameKey(k, key)) &&
+      FocusManager.instance.primaryFocus?.context
+              ?.findAncestorStateOfType<EditableTextState>() !=
+          null;
+}
+
+/// Alt+Left and Alt+Right, which a text field moves by where the command
+/// key is Control.
+const _fieldMoves = [
+  SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true),
+  SingleActivator(LogicalKeyboardKey.arrowRight, alt: true),
+];
 
 /// The keys of the actions that have one, as the intents that run them.
 final Map<ShortcutActivator, Intent> actKeys = {

@@ -226,7 +226,15 @@ class _ComposerState extends State<Composer> {
       // Text, if any, pastes as usual.
       unawaited(attached(context, pasteFiles(widget.chat, api: _api)));
     }
-    if (key == LogicalKeyboardKey.arrowUp && _text.text.isEmpty) {
+    // Up alone: Up held with any modifier is another key's (⌥⌘↑ is
+    // Previous chat's), and goes on.
+    final keys = HardwareKeyboard.instance;
+    if (key == LogicalKeyboardKey.arrowUp &&
+        _text.text.isEmpty &&
+        !keys.isShiftPressed &&
+        !keys.isAltPressed &&
+        !keys.isControlPressed &&
+        !keys.isMetaPressed) {
       unawaited(_recall());
       return KeyEventResult.handled;
     }

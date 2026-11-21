@@ -333,7 +333,10 @@ class KeyCap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (TouchTargets.of(context)) return const SizedBox.shrink();
+    // No key (one the user cleared), no cap.
+    if (keys.isEmpty || TouchTargets.of(context)) {
+      return const SizedBox.shrink();
+    }
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return Container(

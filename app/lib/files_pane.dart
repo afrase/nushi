@@ -283,11 +283,16 @@ class FilesBlank extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    tree
-                        ? 'Pick a file in the tree, or click a file path in '
-                              'the conversation'
-                        : 'Go to a file with ${keyLabel(openFileKey)}, or '
-                              'click a file path in the conversation',
+                    switch ((tree, keyLabel(openFileKey))) {
+                      (true, _) =>
+                        'Pick a file in the tree, or click a file path in '
+                            'the conversation',
+                      // Open file's key cleared.
+                      (false, '') => 'Click a file path in the conversation',
+                      (false, final key) =>
+                        'Go to a file with $key, or click a file path in '
+                            'the conversation',
+                    },
                     textAlign: TextAlign.center,
                     style: theme.ui(t.textMuted, size: 12),
                   ),

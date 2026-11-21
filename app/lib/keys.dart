@@ -5,6 +5,7 @@ import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/key_choice.dart';
+import 'package:nushi/key_rules.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/terminal_panel.dart';
 
@@ -289,10 +290,43 @@ final List<ShortcutActivator> _linuxTerminalPasses = [
 ];
 
 /// Whether a focused terminal passes [key], one of the app's, on to the
-/// app. On the Mac every ⌘ key but ⌘F and ⌘W, which find in it and close
-/// it (⌘K, its clear, is no action's); where the command key is Control,
-/// only [_linuxTerminalPasses].
-bool terminalPasses(ShortcutActivator key) => switch (commandKey) {
-  CommandKey.meta => !identical(key, findKey) && !identical(key, closeTabKey),
-  CommandKey.control => _linuxTerminalPasses.contains(key),
-};
+/// app: never a key it has none of now, nor one of the terminal's own
+/// (⌘F finds in it, ⌘W closes it, ⌘K clears it). On the Mac every other
+/// default, and a chosen key held with ⌘ (a chosen ⌃ or ⌥ key is the
+/// shell's); where the command key is Control, of the defaults only
+/// [_linuxTerminalPasses], and a chosen key held with Ctrl that no shell
+/// reads as a control character (ADR 0146, amending 0104).
+bool terminalPasses(ShortcutActivator key) {
+  final a = key is Cmd ? key.single : key as SingleActivator?;
+  if (a == null || terminalOwns(a)) return false;
+  final chosen = key is Cmd && key.chosen;
+  return switch (commandKey) {
+    CommandKey.meta => !chosen || a.meta,
+    CommandKey.control =>
+      chosen ? a.control && !shellKey(a) : _linuxTerminalPasses.contains(key),
+  };
+}
+
+/// [key] as the menu bar's item shows it and takes it: none while
+/// Settings › Keyboard shortcuts is taking a key (so the key comes to the
+/// page), nor for a binding with no key now. A chosen key with ⇧ on a
+/// symbol is given as the character ⇧ makes (⇧⌘] as ⇧⌘}), which is what
+/// the menu bar compares a key with.
+MenuSerializableShortcut? menuShortcut(ShortcutActivator? key) {
+  if (key == null || shortcutRecording.value) return null;
+  if (key is! Cmd) return key as MenuSerializableShortcut;
+  final a = key.single;
+  if (a == null) return null;
+  if (a.shift && key.chosen) {
+    if (shiftedTwin(a.trigger) case final twin?) {
+      return SingleActivator(
+        twin,
+        control: a.control,
+        shift: true,
+        alt: a.alt,
+        meta: a.meta,
+      );
+    }
+  }
+  return key;
+}
