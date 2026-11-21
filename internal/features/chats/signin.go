@@ -108,13 +108,19 @@ func (s *Service) SignIn(ctx context.Context, agent, method string) error {
 	if err != nil {
 		return err
 	}
-	defer s.endSignIn(k.Name, run) // after its agent's Close, below
+	var a Agent
+	defer func() {
+		cancel() // it has ended, however: one begun now waits for its agent (beginSignIn)
+		if a != nil {
+			_ = a.Close() // its group, and with it a login still waiting
+		}
+		s.endSignIn(k.Name, run)
+	}()
 	log := slog.With("agent", k.Name, "for", "sign-in")
 	a, init, err := initialize(ctx, k, signInClient{}, log)
 	if err != nil {
 		return k.explain(err)
 	}
-	defer func() { _ = a.Close() }() // its group, and with it a login still waiting
 	if !slices.ContainsFunc(k.signInMethods(init), func(o model.Option) bool { return o.ID == method }) {
 		return fmt.Errorf("%s doesn't offer that way to sign in", k.Title)
 	}
@@ -134,15 +140,15 @@ func (s *Service) SignIn(ctx context.Context, agent, method string) error {
 
 // signIn is a sign-in SignIn runs.
 type signIn struct {
-	ended <-chan struct{} // closed once its call ended or its time ran out: it stops its agent
+	ended <-chan struct{} // closed once it has ended, however (its ctx): it stops its agent
 	gone  chan struct{}   // closed once its agent has stopped
 }
 
 // beginSignIn makes a sign-in of k's agent the one that runs, for the call
-// of ctx. While another waits for the user it is refused. One whose call
-// ended (the app's Cancel) or timed out is waited for instead: it is
-// stopping its agent, and the app has its answer before that is done, so
-// Cancel and then Sign in again would be refused.
+// of ctx. While another waits for the user it is refused. One that has
+// ended, however (signed in, failed, its call ended or timed out), is
+// waited for instead: it is stopping its agent, and the app has its answer
+// before that is done, so Cancel and then Sign in again would be refused.
 func (s *Service) beginSignIn(ctx context.Context, k *kind) (*signIn, error) {
 	run := &signIn{ended: ctx.Done(), gone: make(chan struct{})}
 	for {
@@ -161,6 +167,9 @@ func (s *Service) beginSignIn(ctx context.Context, k *kind) (*signIn, error) {
 		case <-other.ended:
 		default:
 			return nil, fmt.Errorf("%s is signing in already: finish in the browser, or cancel that first", k.Title)
+		}
+		if s.signInWaits != nil {
+			s.signInWaits()
 		}
 		select {
 		case <-other.gone:

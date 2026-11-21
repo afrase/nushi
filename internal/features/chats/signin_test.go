@@ -305,3 +305,33 @@ func TestSignInAfterACancelledOne(t *testing.T) {
 		t.Errorf("authenticate asked %v", f.asked)
 	}
 }
+
+// So does one begun while a sign-in that has answered (here, signed in)
+// still stops its agent: it isn't signing in any more.
+func TestSignInAfterOneThatAnswered(t *testing.T) {
+	f := newSignInFake()
+	f.methods = codexMethods(t)
+	f.hold = make(chan struct{})
+	svc := newService(t, []Kind{f.kindFor()}, Options{})
+	f.finish <- nil
+	first := make(chan error, 1)
+	go func() { first <- svc.SignIn(t.Context(), "fake", "chat-gpt") }()
+	<-f.closed // signed in; its process is being killed, and isn't gone
+
+	waits := make(chan struct{}, 1)
+	svc.signInWaits = func() { waits <- struct{}{} }
+	next := make(chan error, 1)
+	go func() { next <- svc.SignIn(t.Context(), "fake", "chat-gpt") }()
+	select {
+	case <-waits:
+	case err := <-next:
+		t.Fatalf("a sign-in begun while one that signed in stops its agent = %v", err)
+	}
+	f.finish <- nil
+	close(f.hold)
+	testcheck.NoErr(t, <-first)
+	testcheck.NoErr(t, <-next)
+	if !slices.Equal(f.asked, []string{"chat-gpt", "chat-gpt"}) {
+		t.Errorf("authenticate asked %v", f.asked)
+	}
+}

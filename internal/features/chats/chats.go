@@ -61,6 +61,10 @@ type Service struct {
 	// for but a test, to see what one did.
 	expires sync.WaitGroup
 
+	// signInWaits, when set (a test), runs as a sign-in begins to wait for
+	// an ended one's agent to stop (beginSignIn).
+	signInWaits func()
+
 	pinMu sync.Mutex // Pin's, one order at a time
 
 	mu        sync.Mutex
