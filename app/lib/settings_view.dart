@@ -19,6 +19,7 @@ import 'package:nushi/settings_appearance.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_nav.dart';
 import 'package:nushi/settings_rows.dart';
+import 'package:nushi/settings_shortcuts.dart';
 import 'package:nushi/settings_terminal.dart';
 import 'package:nushi/skills.dart';
 import 'package:nushi/usage_page.dart';
@@ -132,7 +133,7 @@ class _SettingsViewState extends State<SettingsView> {
     ),
     SettingsSection.appearance => const AppearanceSection(),
     SettingsSection.terminal => const TerminalSection(),
-    SettingsSection.shortcuts => SettingsPage(title: s.title),
+    SettingsSection.shortcuts => const ShortcutsSection(),
     SettingsSection.history => HistorySection(
       daemon: daemon,
       settings: _set,
