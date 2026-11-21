@@ -107,11 +107,11 @@ Nushi remembers all of it. ⌘1–⌘9 and ⌥⌘↑ ⌥⌘↓ go through the ch
 | ⌘1 – ⌘9 | Open one of the first nine chats. Hold ⌘ and the sidebar numbers them, top to bottom, Pinned first, archived left out. |
 | ⌘[ and ⌘] | Back and Forward: the chat (or Jira, or GitHub) shown before, or after going back (View › Back, Forward, and the chevrons beside the sidebar button). A deleted or archived chat is passed over. On Linux Alt+Left and Alt+Right. |
 | ⌥⌘↑ and ⌥⌘↓ | The chat before or after in the sidebar (View › Previous Chat, Next Chat; ⌘[ and ⌘] until Back and Forward took them). On Linux Ctrl+Page Up and Ctrl+Page Down. |
-| ⌃Tab, ⌃⇧Tab | The next tab and the one before, round, as in a browser: Chat, Changes and Pull request (when the chat has one); wherever the focus is (View › Next Tab, Previous Tab). ⇧⌘] and ⇧⌘[ do the same, as in Chrome and Safari. On Linux Ctrl+Tab and Ctrl+Shift+Tab (and Ctrl+Shift+] and Ctrl+Shift+[). |
+| ⌃Tab, ⌃⇧Tab | The next tab and the one before, round, as in a browser: Chat, Changes and Pull request (when the chat has one); wherever the focus is (View › Next Tab, Previous Tab). ⇧⌘] and ⇧⌘[ do the same, as in Chrome and Safari, while Next Tab and Previous Tab keep their default keys. On Linux Ctrl+Tab and Ctrl+Shift+Tab (and Ctrl+Shift+] and Ctrl+Shift+[). |
 | ⌃⌘1, ⌃⌘2, ⌃⌘3 | Show Chat, Changes or Pull Request (View menu). On Linux Ctrl+Alt+1–3; on Windows Ctrl+Shift+1–3, since Ctrl+Alt is AltGr there, which types `@`, `#` and `|` on many keyboards. |
 | ⌘W | Close the tab showing (File › Close Tab), its changes saved first: the open file's, in the Files pane (the last leaves the pane open, blank), or the browser's (the last closes the browser), whichever pane has the focus, else the one whose tab showed last. A focused terminal keeps it, to close itself. |
 | ⌘S | Save the file being edited in the Files pane (File › Save). |
-| ⌘K, ⌘⇧P | The command palette. |
+| ⌘K, ⌘⇧P | The command palette. ⌘⇧P works while the palette keeps ⌘K. |
 | ⌘F | Find. |
 | Any character | Typed with nothing that takes text focused (after a click on the transcript, say), it goes at the end of the chat's box, which takes the focus, as if typed there: `/` opens the commands. Keys with ⌘, ⌃ or ⌥ (but AltGr's characters on Windows), Esc, the arrows, Tab, Enter and Space keep their meaning, as do R on a selection (reply), a field, a terminal, the Files pane's editor, an open menu and a dialog ([ADR 0121](adr/0121-type-to-write.md)). |
 | ⌘; | The next typo in the composer ([Spell check](#spell-check)). On Linux F7 (IBus takes Ctrl+; for its emoji). |
@@ -122,13 +122,13 @@ Nushi remembers all of it. ⌘1–⌘9 and ⌥⌘↑ ⌥⌘↓ go through the ch
 | Esc | Stop a running turn. |
 | Esc Esc | Rewind: list your messages. |
 
-**Your own keys.** Settings › Keyboard shortcuts (or the palette's Keyboard shortcuts) lists every action's key, grouped as the menus are, and the keys that can't change last (Esc, Esc Esc, ⌘1–9, ⌥⌘1–9, ⌘Q). Click a key and press the new one (Esc leaves it as it was): it must hold ⌘, ⌃ or ⌥ (Ctrl or Alt on Linux), or be a function key. Clear leaves an action with no key, Reset puts back its own, Reset all to defaults all of them. A key macOS, a text field or the composer keeps, or one ⌥ types a character with, is refused with the reason; one another action has is offered with Take it, which leaves the other with none. The menu bar, the palette and the tooltips show the key you chose, and it works from a web page too. Nushi keeps them in `app.json` ([ADR 0146](adr/0146-you-choose-your-own-keys.md)).
+**Your own keys.** Settings › Keyboard shortcuts (or the palette's Keyboard shortcuts) lists every action's key, grouped as the menus are, then the second keys and last the keys that can't change (Esc, Esc Esc, ⌘1–9, ⌥⌘1–9, ⌘Q). Click a key and press the new one (Esc leaves it as it was): it must hold ⌘, ⌃ or ⌥ (Ctrl or Alt on Linux), or be a function key. Clear leaves an action with no key, Reset puts back its own, Reset all to defaults all of them. A key macOS, a text field or the composer keeps, or one ⌥ types a character with, is refused with the reason; one another action has is offered with Take it, which leaves the other with none. The menu bar, the palette and the tooltips show the key you chose, and it works from a web page too. Nushi keeps them in `app.json` ([ADR 0146](adr/0146-you-choose-your-own-keys.md)). The second keys (⇧⌘] and ⇧⌘[ for the tabs, ⌘⇧P for the palette) work only while their action is on its default key: once you give the action another key or none, or another action takes the second key, it stops, and its row under Second keys reads Off.
 
 The chat keys work in a terminal too: on the Mac every ⌘ key but ⌘F and ⌘W, which the terminal keeps. On Linux, where Ctrl and a key is the shell's, only Ctrl+Shift+P, Ctrl+Shift+B, Ctrl+Shift+E, Ctrl+Shift+Y, Ctrl+,, Ctrl+\`, Ctrl+Alt+1–3, Ctrl+1–9, Ctrl+Page Up and Down, Ctrl+Tab and Ctrl+Shift+Tab get past a focused terminal. A key you chose gets past by what it is: on the Mac one with ⌘; on Linux one with Ctrl that isn't the shell's (Ctrl or Ctrl+Alt and a letter). The terminal's own keys never do.
 
 ## The palette
 
-⌘K (View › Command Palette…) opens the palette. In a terminal ⌘K clears it, so use ⌘⇧P there, which works everywhere.
+⌘K (View › Command Palette…) opens the palette. In a terminal ⌘K clears it, so use ⌘⇧P there, which works everywhere while the palette keeps ⌘K.
 
 - **Go to a chat** by its title: the pinned first, then the last opened. Archived chats are listed last, marked.
 - **Run an action**: New chat, Open file…, Artifacts…, Chat, Changes, Pull request, show or hide the sidebar, Back, Forward, the details and the terminal, Rewind…; the chat's own: Side chat, Fork chat, Send review comments, Stop, Rename, Pin or Unpin, Sleep, Reload, Link pull request…, Archive or Unarchive, MCP servers, Skills, Delete…; and Settings, Jira, GitHub, Restart daemon.
