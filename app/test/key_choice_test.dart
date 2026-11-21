@@ -621,6 +621,10 @@ void main() {
           'The system keeps it',
         ),
         (
+          SingleActivator(LogicalKeyboardKey.space, alt: true),
+          'The system keeps it',
+        ),
+        (
           SingleActivator(LogicalKeyboardKey.keyT, control: true, alt: true),
           'The system keeps it',
         ),
@@ -679,6 +683,10 @@ void main() {
         'Ctrl+Alt is AltGr on Windows',
       );
       expect(refusal(_k(LogicalKeyboardKey.keyR, control: true)), isNull);
+      expect(
+        refusal(_k(LogicalKeyboardKey.space, alt: true)),
+        'The system keeps it',
+      );
     });
 
     for (final (name, c) in _platforms) {

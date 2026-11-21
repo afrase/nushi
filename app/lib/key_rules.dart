@@ -86,8 +86,10 @@ const _linuxField = [
   SingleActivator(LogicalKeyboardKey.keyY, control: true),
 ];
 
-/// Keys Linux's desktops and Windows keep.
+/// Keys Linux's desktops and Windows keep (Alt+Space opens the window's
+/// menu in GNOME, KDE and Windows).
 const _linuxSystem = [
+  SingleActivator(LogicalKeyboardKey.space, alt: true),
   SingleActivator(LogicalKeyboardKey.tab, alt: true),
   SingleActivator(LogicalKeyboardKey.tab, alt: true, shift: true),
   SingleActivator(LogicalKeyboardKey.f4, alt: true),
