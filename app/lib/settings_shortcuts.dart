@@ -44,8 +44,8 @@ const _stackedActions = 228.0;
 /// it.
 typedef _Pending = ({Cmd key, SingleActivator chosen, Cmd holder, bool alias});
 
-/// A key a binding's row refused, and why.
-typedef _Refused = ({Cmd key, String reason});
+/// A binding's row that refused the key pressed, and why.
+typedef _Refused = ({Cmd key, SingleActivator pressed, String reason});
 
 /// Settings › Keyboard shortcuts.
 class ShortcutsSection extends StatefulWidget {
@@ -115,8 +115,8 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
     });
   }
 
-  void _refuse(Cmd key, String reason) =>
-      setState(() => _refused = (key: key, reason: reason));
+  void _refuse(Cmd key, SingleActivator pressed, String reason) =>
+      setState(() => _refused = (key: key, pressed: pressed, reason: reason));
 
   /// What [k], recorded on [key]'s row (or its default, by Reset), does:
   /// nothing is changed behind the user's back.
@@ -134,9 +134,9 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
       if (resolved(key.id!).stored != null) resetKey(key);
       return;
     }
-    if (refusal(k, own: key) case final why?) return _refuse(key, why);
+    if (refusal(k, own: key) case final why?) return _refuse(key, k, why);
     if (key.single case final now? when sameKey(now, k)) return;
-    if (fixedReason(k) case final why?) return _refuse(key, why);
+    if (fixedReason(k) case final why?) return _refuse(key, k, why);
     if (_holder(key, k) case final h?) return _pend(key, k, h, alias: false);
     if (_aliasHolder(key, k) case final h?) {
       return _pend(key, k, h, alias: true);
@@ -298,15 +298,17 @@ class _KeyRow extends StatelessWidget {
     final t = NushiTheme.of(context).t;
     final r = settled;
     final (String? line, Color? color) = switch ((pending, refused)) {
+      // The field still shows the row's key: the line names the one
+      // pressed.
       (final p?, _) when p.alias => (
-        "${bindingName(p.holder)}'s second key",
+        "${keyLabel(p.chosen)} is ${bindingName(p.holder)}'s second key",
         t.needs,
       ),
       (final p?, _) => (
         '${bindingName(p.holder)} has ${keyLabel(p.chosen)}',
         t.needs,
       ),
-      (_, final f?) => (f.reason, t.crashed),
+      (_, final f?) => (_refusedLine(f), t.crashed),
       _ when r.issue != null => (r.issue, t.needs),
       _ => (r.chosen && r.key != null ? note(r.key!) : null, null),
     };
@@ -454,4 +456,11 @@ class _FixedRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A refusal's line: the key pressed and why, unless the reason names it
+/// (a fixed key's: "⌘1 opens a chat").
+String _refusedLine(_Refused f) {
+  final label = keyLabel(f.pressed);
+  return f.reason.startsWith(label) ? f.reason : '$label: ${f.reason}';
 }

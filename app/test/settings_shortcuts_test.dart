@@ -352,13 +352,14 @@ void main() {
   group('refusals', () {
     testWidgets('a key needs ⌘, ⌃ or ⌥, but F5', (tester) async {
       final d = await _page(tester);
-      for (final (key, holding) in [
-        (LogicalKeyboardKey.keyJ, <LogicalKeyboardKey>[]),
-        (LogicalKeyboardKey.keyJ, [_shift]),
-        (LogicalKeyboardKey.tab, <LogicalKeyboardKey>[]),
+      // The line names the key pressed: the field still shows the row's.
+      for (final (key, holding, label) in [
+        (LogicalKeyboardKey.keyJ, <LogicalKeyboardKey>[], 'J'),
+        (LogicalKeyboardKey.keyJ, [_shift], '⇧J'),
+        (LogicalKeyboardKey.tab, <LogicalKeyboardKey>[], '⇥'),
       ]) {
         await _record(tester, 'pin', key, holding);
-        expect(_in('pin', 'Hold ⌘, ⌃ or ⌥ with it'), findsOne);
+        expect(_in('pin', '$label: Hold ⌘, ⌃ or ⌥ with it'), findsOne);
         expect(_in('pin', 'Not allowed'), findsOne);
         expect(_saved(), isEmpty);
       }
@@ -374,11 +375,16 @@ void main() {
     ) async {
       final d = await _page(tester);
       for (final (key, holding, why) in [
-        (LogicalKeyboardKey.keyQ, [_meta], 'macOS keeps it'),
-        (LogicalKeyboardKey.digit4, [_shift, _meta], 'macOS keeps it'),
-        (LogicalKeyboardKey.keyC, [_meta], 'A text field keeps it'),
-        (LogicalKeyboardKey.keyA, [_ctrl], 'A text field keeps it'),
-        (LogicalKeyboardKey.enter, [_alt, _meta], 'A message box keeps it'),
+        (LogicalKeyboardKey.keyQ, [_meta], '⌘Q: macOS keeps it'),
+        (LogicalKeyboardKey.digit4, [_shift, _meta], '⇧⌘4: macOS keeps it'),
+        (LogicalKeyboardKey.keyC, [_meta], '⌘C: A text field keeps it'),
+        (LogicalKeyboardKey.keyA, [_ctrl], '⌃A: A text field keeps it'),
+        (
+          LogicalKeyboardKey.enter,
+          [_alt, _meta],
+          '⌥⌘⏎: A message box keeps it',
+        ),
+        // A fixed key's reason names it already.
         (LogicalKeyboardKey.digit1, [_meta], '⌘1 opens a chat'),
       ]) {
         await _record(tester, 'pin', key, holding);
@@ -396,7 +402,7 @@ void main() {
       ]);
       expect(_saved(), isEmpty);
       await _record(tester, 'sidebar', LogicalKeyboardKey.keyZ, [_alt]);
-      expect(_in('sidebar', '⌥ and a key types a character'), findsOne);
+      expect(_in('sidebar', '⌥Z: ⌥ and a key types a character'), findsOne);
       // Esc drops the refusal, and Settings stays.
       await _press(tester, LogicalKeyboardKey.escape);
       expect(_in('sidebar', 'Not allowed'), findsNothing);
@@ -441,7 +447,7 @@ void main() {
         _shift,
         _meta,
       ]);
-      expect(_in('sidebar', "Next tab's second key"), findsOne);
+      expect(_in('sidebar', "⇧⌘] is Next tab's second key"), findsOne);
       await _tap(tester, find.byKey(const ValueKey('shortcut-take-sidebar')));
       expect(_saved(), {'sidebar': 'Shift+Cmd+]'});
       expect(_shows(tester, 'nextTab'), '⌃⇥');
