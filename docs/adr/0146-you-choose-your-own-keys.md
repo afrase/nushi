@@ -1,0 +1,20 @@
+# 0146. You choose your own keys
+
+Status: accepted, 2026-11-21 (#79). Amends 0104.
+
+## Context
+Every key was a constant (`app_actions.dart`, `chat_keys.dart`), one per platform through `Cmd` ([0104](0104-the-app-runs-on-linux.md)). The owner wants to change them, as Chrome's ⇧⌘[ and ⇧⌘] for the tabs, and have the menu bar, the palette and the tooltips follow. Code tells bindings apart with `identical` (a focused terminal's list of keys it passes), and Dart merges equal consts: Jira's and GitHub's ⌘R are the same object as Reload Page's.
+
+## Decision
+- **One override layer, by name.** The constants stay, as the defaults. Each binding a user can change is a `Cmd` with an `id`, its Act's name (`'palette'` for the palette), which also keeps it a distinct const. `Cmd.standard` is the platform's default; `Cmd.single` is the chosen key, the default or null (no key). Every reader goes through `single`: `accepts`, the menu's serialisation, `keyLabel`, tooltips and palette rows, so a no-key binding takes nothing and shows nothing. `Cmd.triggers` is null, so Flutter's cached index of a `Shortcuts` map can't go stale (precedence is the map's order). The plain tab, terminal and wrap keys became `Cmd(..., command: false)` for the same layer.
+- **Second keys** (⇧⌘] and ⇧⌘[ for the tabs, ⇧⌘P for the palette) hold only while their action is on its default and no binding's key equals them.
+- **Saved in `app.json`** as `shortcuts`: a binding's name to its key in words (`Shift+Cmd+]`, where Cmd is the platform's command key), `""` for no key. Defaults aren't stored, so a later release's default reaches everyone who left it. A name or text this app can't read is ignored and kept, for a newer app.
+- **Settled on load.** A chosen key beats a default, and the first in the page's order beats a later one; the loser has no key. A saved key the page would refuse stays unused, on the default. Both show as Not used with the reason: they come from a hand-edited file, a newer app or a new default, never from the page.
+- **The page refuses or asks, never applies silently.** Settings › Keyboard shortcuts takes a key that holds ⌘, ⌃ or ⌥ (Ctrl or Alt elsewhere), or a function key. It refuses, with the reason, what macOS or the desktop keeps, what a text field or the composer keeps (editing keys, arrows with ⌘ or ⌥, ⌃ letters Flutter's Mac map binds, Enter), what types a character (⌥ and a key), and what the input method takes; each row's own default is exempt (⌥Z stays Wrap's, but would type Ω everywhere if Sidebar took it). A key another binding has is offered with Take it, which leaves the other with no key. Esc, Esc Esc, ⌘1–9, ⌥⌘1–9 and Quit (a menu item macOS provides) are fixed, listed so the page is a cheat sheet too.
+- **Keys macOS takes first** (⌘Tab, ⌘Space, ⇧⌘3/4/5, likely ⌘Q and ⌘H) never reach the recorder; they're in the table so a saved one is refused.
+- **The menu bar follows** the chosen key and changes with it, so a key that reaches the app only through the menu while a web page has the focus ([0094](0094-browser-tabs-for-local-web-servers.md)) still works once changed. While a key field records, the menu has no keys, so ⌘, or ⌘1 are recorded rather than run. A change rebuilds every element under the app, as some twenty label sites read keys without a context.
+- **A focused terminal passes a chosen key by what it is** (amends 0104's list): on the Mac one with ⌘; elsewhere one with Ctrl that is no shell control key (Ctrl or Ctrl+Alt with a letter or `[ \ ] / - Space`, without Shift). The terminal's own keys never pass. A chosen key a focused terminal keeps gets a line under it.
+- **View-local keys** (Jira's and GitHub's ⌘R, the composer's ⌘U) are outside the clash check; the deeper widget wins in its view, as before.
+
+## Consequences
+A new Act key must carry its `id` (a test checks every one) and a name on the page. Code that compares a binding by identity still can, but must read its key through `single`. What a key does in AppKit before Flutter (the shifted-symbol menu equivalents, keys from a web page) is checked by hand on a Mac.
