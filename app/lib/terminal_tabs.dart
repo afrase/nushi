@@ -6,7 +6,6 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
 import 'package:nushi/inline_edit.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/terminal_panel.dart';
-import 'package:nushi/terminal_screen.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';

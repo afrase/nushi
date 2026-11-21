@@ -537,9 +537,9 @@ void main() {
     test(r'⌘\ is its own key: no action’s or the chats’ but this', () {
       expect(Act.sidebar.shortcut, r'⌘\');
       expect(Act.sidebar.key, sidebarKey);
-      final key = sidebarKey.single;
+      final key = sidebarKey.single!;
       bool same(ShortcutActivator k) {
-        final a = k is Cmd ? k.single : k as SingleActivator;
+        final a = k is Cmd ? k.single! : k as SingleActivator;
         return a.trigger == key.trigger &&
             a.meta == key.meta &&
             a.control == key.control &&

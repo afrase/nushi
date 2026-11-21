@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/conventions.dart';
+import 'package:nushi/key_choice.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/terminal_panel.dart';
 
@@ -23,23 +24,35 @@ bool cmdPressed() => switch (commandKey) {
 };
 
 /// A shortcut held with the command key ([commandKey]), with [shift], [alt]
-/// and [ctrl] as given: ⌘ on the Mac, Control on Linux and Windows. Where
-/// Control and the same key won't do there (⌃⌘ keys, Control and `[`, which
-/// is Escape), [linux] is its own form, and [windows] where that holds
-/// Control and Alt, which are AltGr on Windows. One value for every
-/// platform, so it stays const and `identical` to itself, and a test that
-/// switches the conventions switches it.
+/// and [ctrl] as given: ⌘ on the Mac, Control on Linux and Windows; or,
+/// with [command] false, without it (⌃Tab, ⌥Z). Where Control and the same
+/// key won't do there (⌃⌘ keys, Control and `[`, which is Escape), [linux]
+/// is its own form, and [windows] where that holds Control and Alt, which
+/// are AltGr on Windows. One value for every platform, so it stays const
+/// and `identical` to itself, and a test that switches the conventions
+/// switches it.
+///
+/// One the user may rebind has an [id], the binding's name (its Act's, or
+/// `palette`), and is held as they chose in Settings › Keyboard shortcuts
+/// ([single]); an [aliasOf] is a second key of the binding with that id,
+/// bound only while that binding is on its default (ADR 0146).
 class Cmd extends ShortcutActivator with MenuSerializableShortcut {
   const new(
     this.trigger, {
     this.shift = false,
     this.alt = false,
     this.ctrl = false,
+    this.command = true,
     this.includeRepeats = true,
     this.terminal = false,
     this.linux,
     this.windows,
-  }) : assert(!ctrl || linux != null, 'Control is the command key on Linux');
+    this.id,
+    this.aliasOf,
+  }) : assert(
+         !ctrl || !command || linux != null,
+         'Control is the command key on Linux',
+       );
 
   /// The key that, with the modifiers, triggers it.
   final LogicalKeyboardKey trigger;
@@ -50,8 +63,13 @@ class Cmd extends ShortcutActivator with MenuSerializableShortcut {
   /// Whether ⌥ (Alt) is held too.
   final bool alt;
 
-  /// Whether ⌃ is held too, on the Mac: such a key gives its [linux] form.
+  /// Whether ⌃ is held too, on the Mac: with [command], such a key gives
+  /// its [linux] form.
   final bool ctrl;
+
+  /// Whether the command key is held: false for a key held with ⌃ or ⌥
+  /// alone on every platform (⌃Tab, ⌥Z).
+  final bool command;
 
   /// Whether a held key's repeats trigger it again.
   final bool includeRepeats;
@@ -68,50 +86,109 @@ class Cmd extends ShortcutActivator with MenuSerializableShortcut {
   /// [linux]'s holds both.
   final SingleActivator? windows;
 
+  /// The binding's name, for one the user may rebind: its Act's name, or
+  /// `palette`. A name and not the value itself, since Dart makes equal
+  /// consts one object: a view's own `const Cmd(keyR)` would otherwise be
+  /// Reload Page's key.
+  final String? id;
+
+  /// The binding this is a second key of ([id]'s), as ⇧⌘] is Next tab's.
+  final String? aliasOf;
+
   /// The Mac's form: ⌘ and the rest.
   SingleActivator get mac => SingleActivator(
     trigger,
-    meta: true,
+    meta: command,
     control: ctrl,
     shift: shift,
     alt: alt,
     includeRepeats: includeRepeats,
   );
 
-  /// The key as it is held now, by [commandKey].
-  SingleActivator get single => switch (commandKey) {
+  /// The key as it is held by default now, by [commandKey].
+  SingleActivator get standard => switch (commandKey) {
     CommandKey.meta => mac,
     CommandKey.control =>
       (conventions.altGr ? windows : null) ??
           linux ??
           SingleActivator(
             trigger,
-            control: true,
+            control: command || ctrl,
             shift: shift || terminal,
             alt: alt,
             includeRepeats: includeRepeats,
           ),
   };
 
-  /// Every form's keys: a [ShortcutManager] indexes them once, and the
-  /// conventions may change after (a test's).
+  /// The key as it is held now: the user's choice for its binding, or the
+  /// default ([standard]); null when the binding has none (cleared, or its
+  /// default taken by another's choice), and for an alias whose binding is
+  /// off its default.
+  SingleActivator? get single => switch ((id, aliasOf)) {
+    (final id?, _) => effectiveKey(id, standard),
+    (_, final of?) => aliasBound(of, standard) ? standard : null,
+    _ => standard,
+  };
+
+  /// Whether the key held now is one the user chose.
+  bool get chosen => id != null && hasChosenKey(id!);
+
+  /// None: a [ShortcutManager] that indexed the keys once would keep a key
+  /// the user has since changed (or the conventions a test switched), so
+  /// every [Cmd] is asked about every key, in its map's order.
   @override
-  Iterable<LogicalKeyboardKey> get triggers => [
-    trigger,
-    ?linux?.trigger,
-    ?windows?.trigger,
-  ];
+  Iterable<LogicalKeyboardKey>? get triggers => null;
 
   @override
-  bool accepts(KeyEvent event, HardwareKeyboard state) =>
-      single.accepts(event, state);
+  bool accepts(KeyEvent event, HardwareKeyboard state) {
+    final a = single;
+    if (a == null) return false;
+    if (a.accepts(event, state)) return true;
+    // A chosen ⇧⌘] may arrive as the key ⇧ makes of it, `}`.
+    if (!a.shift || !chosen) return false;
+    return switch (shiftedTwin(a.trigger)) {
+      final twin? => SingleActivator(
+        twin,
+        control: a.control,
+        shift: true,
+        alt: a.alt,
+        meta: a.meta,
+        includeRepeats: a.includeRepeats,
+      ).accepts(event, state),
+      null => false,
+    };
+  }
 
   @override
-  ShortcutSerialization serializeForMenu() => single.serializeForMenu();
+  ShortcutSerialization serializeForMenu() =>
+      (single ?? standard).serializeForMenu();
 
   @override
-  String debugDescribeKeys() => single.debugDescribeKeys();
+  String debugDescribeKeys() => (single ?? standard).debugDescribeKeys();
 }
+
+// A terminal's own keys: ⌘ and a letter, as Terminal has them; on Linux
+// Ctrl+Shift and the letter, as GNOME Terminal has them, since Ctrl and a
+// letter is the shell's (ADR 0104). Here beside the app's, which a key the
+// user chooses is checked against (`key_rules.dart`).
+
+/// Copies the terminal's selection.
+const terminalCopyKey = Cmd(LogicalKeyboardKey.keyC, terminal: true);
+
+/// Pastes into the terminal.
+const terminalPasteKey = Cmd(LogicalKeyboardKey.keyV, terminal: true);
+
+/// Clears the terminal's screen and scrollback.
+const terminalClearKey = Cmd(LogicalKeyboardKey.keyK, terminal: true);
+
+/// Opens another terminal for the chat.
+const newTerminalKey = Cmd(LogicalKeyboardKey.keyT, terminal: true);
+
+/// Closes the terminal.
+const closeTerminalKey = Cmd(LogicalKeyboardKey.keyW, terminal: true);
+
+/// Finds in the terminal.
+const terminalFindKey = Cmd(LogicalKeyboardKey.keyF, terminal: true);
 
 /// ⌥⌘ and the digit [n] (1–9), which picks one of a view's own (a terminal,
 /// a Jira list); Alt and the digit on Linux, as GNOME Terminal's tabs.
@@ -122,9 +199,10 @@ Cmd altDigitKey(int n) {
 
 /// [key] as the platform's menus write it: ⌃⌥⇧⌘ and then the key on the
 /// Mac (and the phone), Ctrl+Alt+Shift+ and then the key on Linux. [key] is
-/// a [Cmd] or a [SingleActivator].
+/// a [Cmd] or a [SingleActivator]; '' for a [Cmd] with no key now.
 String keyLabel(ShortcutActivator key) {
   final a = key is Cmd ? key.single : key as SingleActivator;
+  if (a == null) return '';
   final name = keyName(a.trigger);
   return switch (commandKey) {
     CommandKey.meta =>
@@ -159,6 +237,13 @@ String keyName(LogicalKeyboardKey key) => switch (commandKey) {
     LogicalKeyboardKey.arrowDown => '↓',
     LogicalKeyboardKey.arrowLeft => '←',
     LogicalKeyboardKey.arrowRight => '→',
+    LogicalKeyboardKey.space => 'Space',
+    LogicalKeyboardKey.backspace => '⌫',
+    LogicalKeyboardKey.delete => '⌦',
+    LogicalKeyboardKey.home => '↖',
+    LogicalKeyboardKey.end => '↘',
+    LogicalKeyboardKey.pageUp => '⇞',
+    LogicalKeyboardKey.pageDown => '⇟',
     _ => key.keyLabel.toUpperCase(),
   },
   CommandKey.control => switch (key) {
@@ -167,6 +252,13 @@ String keyName(LogicalKeyboardKey key) => switch (commandKey) {
     LogicalKeyboardKey.arrowDown => 'Down',
     LogicalKeyboardKey.arrowLeft => 'Left',
     LogicalKeyboardKey.arrowRight => 'Right',
+    LogicalKeyboardKey.space => 'Space',
+    LogicalKeyboardKey.backspace => 'Backspace',
+    LogicalKeyboardKey.delete => 'Delete',
+    LogicalKeyboardKey.home => 'Home',
+    LogicalKeyboardKey.end => 'End',
+    LogicalKeyboardKey.pageUp => 'Page Up',
+    LogicalKeyboardKey.pageDown => 'Page Down',
     _ => key.keyLabel,
   },
 };

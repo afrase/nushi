@@ -19,7 +19,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘N: a new chat, as the sidebar's button starts one.
-const newChatKey = Cmd(LogicalKeyboardKey.keyN);
+const newChatKey = Cmd(LogicalKeyboardKey.keyN, id: 'newChat');
 
 /// Asks which agent a new chat in [folder] ('' for none) runs, then
 /// starts it there; or, a step further, opens one of the agent's sessions

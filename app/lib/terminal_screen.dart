@@ -17,27 +17,8 @@ import 'package:nushi/transcript_find.dart';
 import 'package:nushi/widgets.dart';
 import 'package:xterm2/xterm.dart';
 
-// A terminal's own keys: ⌘ and a letter, as Terminal has them; on Linux
-// Ctrl+Shift and the letter, as GNOME Terminal has them, since Ctrl and a
-// letter is the shell's (ADR 0104).
-
-/// Copies the terminal's selection.
-const terminalCopyKey = Cmd(LogicalKeyboardKey.keyC, terminal: true);
-
-/// Pastes into the terminal.
-const terminalPasteKey = Cmd(LogicalKeyboardKey.keyV, terminal: true);
-
-/// Clears the terminal's screen and scrollback.
-const terminalClearKey = Cmd(LogicalKeyboardKey.keyK, terminal: true);
-
-/// Opens another terminal for the chat.
-const newTerminalKey = Cmd(LogicalKeyboardKey.keyT, terminal: true);
-
-/// Closes the terminal.
-const closeTerminalKey = Cmd(LogicalKeyboardKey.keyW, terminal: true);
-
-/// Finds in the terminal.
-const terminalFindKey = Cmd(LogicalKeyboardKey.keyF, terminal: true);
+// A terminal's own keys (`terminalCopyKey` and the rest) are in
+// `keys.dart`.
 
 /// Ctrl+C, the shell's interrupt.
 const _interruptKey = SingleActivator(LogicalKeyboardKey.keyC, control: true);

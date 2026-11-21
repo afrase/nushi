@@ -91,33 +91,43 @@ const previousChatKey = Cmd(
   LogicalKeyboardKey.arrowUp,
   alt: true,
   linux: SingleActivator(LogicalKeyboardKey.pageUp, control: true),
+  id: 'previousChat',
 );
 const nextChatKey = Cmd(
   LogicalKeyboardKey.arrowDown,
   alt: true,
   linux: SingleActivator(LogicalKeyboardKey.pageDown, control: true),
+  id: 'nextChat',
 );
 
 /// ⌃Tab and ⌃⇧Tab: the chat's next tab and the one before, wrapping
 /// ([stepTab]); a Mac's own tabs' keys, which no text field binds.
-const nextTabKey = SingleActivator(LogicalKeyboardKey.tab, control: true);
-const previousTabKey = SingleActivator(
+const nextTabKey = Cmd(
   LogicalKeyboardKey.tab,
-  control: true,
+  command: false,
+  ctrl: true,
+  id: 'nextTab',
+);
+const previousTabKey = Cmd(
+  LogicalKeyboardKey.tab,
+  command: false,
+  ctrl: true,
   shift: true,
+  id: 'previousTab',
 );
 
 /// ⇧⌘] and ⇧⌘[: the same, as Chrome and Safari have both (the owner,
 /// 2026-11-19, whose hands know Chrome's). Bound beside ⌃Tab, not shown:
 /// a tooltip and a menu item name one key. Each also by the key ⇧ makes
-/// of it, `}` and `{`, which is what a keyboard may report.
-const nextTabKeysToo = <ShortcutActivator>[
-  Cmd(LogicalKeyboardKey.bracketRight, shift: true),
-  Cmd(LogicalKeyboardKey.braceRight, shift: true),
+/// of it, `}` and `{`, which is what a keyboard may report. Only while
+/// the tab keys are their defaults and no chosen key is these (ADR 0146).
+const nextTabKeysToo = <Cmd>[
+  Cmd(LogicalKeyboardKey.bracketRight, shift: true, aliasOf: 'nextTab'),
+  Cmd(LogicalKeyboardKey.braceRight, shift: true, aliasOf: 'nextTab'),
 ];
-const previousTabKeysToo = <ShortcutActivator>[
-  Cmd(LogicalKeyboardKey.bracketLeft, shift: true),
-  Cmd(LogicalKeyboardKey.braceLeft, shift: true),
+const previousTabKeysToo = <Cmd>[
+  Cmd(LogicalKeyboardKey.bracketLeft, shift: true, aliasOf: 'previousTab'),
+  Cmd(LogicalKeyboardKey.braceLeft, shift: true, aliasOf: 'previousTab'),
 ];
 
 /// ⌃⌘1–⌃⌘3 show Chat, Changes and Pull request (⌘⇧3 is macOS's
@@ -133,6 +143,7 @@ const chatTabKey = Cmd(
     control: true,
     shift: true,
   ),
+  id: 'chat',
 );
 const changesTabKey = Cmd(
   LogicalKeyboardKey.digit2,
@@ -143,6 +154,7 @@ const changesTabKey = Cmd(
     control: true,
     shift: true,
   ),
+  id: 'changes',
 );
 const pullTabKey = Cmd(
   LogicalKeyboardKey.digit3,
@@ -153,11 +165,12 @@ const pullTabKey = Cmd(
     control: true,
     shift: true,
   ),
+  id: 'pull',
 );
 
 /// ⌘W: closes the preview tab showing, and with the last the pane. A focused
 /// terminal keeps it, to close itself.
-const closeTabKey = Cmd(LogicalKeyboardKey.keyW);
+const closeTabKey = Cmd(LogicalKeyboardKey.keyW, id: 'closeTab');
 
 Cmd tabKey(ChatTab tab) => switch (tab) {
   .chat => chatTabKey,

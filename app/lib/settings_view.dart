@@ -24,7 +24,7 @@ import 'package:nushi/skills.dart';
 import 'package:nushi/usage_page.dart';
 import 'package:nushi/widgets.dart';
 
-const settingsKey = Cmd(LogicalKeyboardKey.comma);
+const settingsKey = Cmd(LogicalKeyboardKey.comma, id: 'settings');
 
 /// Settings, open over the window (ADR 0087; ⌘,, Esc or Close shut it): a
 /// nav of sections and the picked one's page. The daemon's settings are

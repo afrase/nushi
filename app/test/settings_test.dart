@@ -74,6 +74,7 @@ final _saved = <String, Object?>{
   'indentGuides': false,
   'scrollPastEnd': true,
   'dismissedUpdate': '0.1.17',
+  'shortcuts': {'nextTab': 'Shift+Cmd+]', 'x': 'bogus'},
   'fromANewerApp': {'kept': true},
   'worktrees': ['/a'],
   'subagentWide': true,
@@ -131,6 +132,7 @@ List<ValueNotifier<Object?>> get _all => [
   indentGuides,
   scrollPastEnd,
   dismissedUpdate,
+  shortcutKeys,
 ];
 
 void main() {
@@ -159,7 +161,7 @@ void main() {
     expect(scrollPastEnd.value, isTrue);
     // A built-in named by its id is the theme shown (ADR 0086).
     expect(colorTheme.value, 'tokyo-night');
-    expect(_all.map((p) => p.value), hasLength(47)); // each made
+    expect(_all.map((p) => p.value), hasLength(48)); // each made
     showDetails.value = true;
     await pumpEventQueue();
     // A pref this file's other tests read that wasn't in the file (the

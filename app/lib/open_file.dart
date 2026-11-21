@@ -13,7 +13,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘P: Open file… in the chat shown.
-const openFileKey = Cmd(LogicalKeyboardKey.keyP);
+const openFileKey = Cmd(LogicalKeyboardKey.keyP, id: 'openFile');
 
 /// Opens a file of the chat shown in its preview, picked in a small box
 /// that matches as you type ([OpenFileBox]); nothing when no chat shows.
