@@ -232,13 +232,13 @@ func TestSignIn(t *testing.T) {
 // so, and its agent, and with it the login, is stopped.
 func TestSignInTimesOut(t *testing.T) {
 	old := SignInTimeout
-	SignInTimeout = 50 * time.Millisecond
+	SignInTimeout = 0 // already passed as it begins: no clock to race
 	t.Cleanup(func() { SignInTimeout = old })
 	f := newSignInFake()
 	f.methods = codexMethods(t)
 	svc := newService(t, []Kind{f.kindFor()}, Options{})
 	err := svc.SignIn(t.Context(), "fake", "chat-gpt")
-	if err == nil || err.Error() != "Fake didn't finish signing in within 50ms: context deadline exceeded" {
+	if err == nil || err.Error() != "Fake didn't finish signing in within 0s: context deadline exceeded" {
 		t.Errorf("a sign-in that ran out of time = %v", err)
 	}
 	<-f.closed
