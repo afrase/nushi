@@ -294,8 +294,15 @@ func TestSignInAfterACancelledOne(t *testing.T) {
 	}
 
 	f.finish <- nil
+	waits := make(chan struct{}, 1)
+	svc.signInWaits = func() { waits <- struct{}{} }
 	next := make(chan error, 1)
 	go func() { next <- svc.SignIn(t.Context(), "fake", "chat-gpt") }()
+	select {
+	case <-waits: // it waits for the cancelled one's agent
+	case err := <-next:
+		t.Fatalf("a sign-in begun while the cancelled one's agent stops = %v", err)
+	}
 	close(f.hold)
 	if err := <-first; !errors.Is(err, context.Canceled) {
 		t.Errorf("the cancelled sign-in = %v", err)
