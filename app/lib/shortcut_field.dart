@@ -27,14 +27,16 @@ final _modifiers = <LogicalKeyboardKey>{
   LogicalKeyboardKey.fnLock,
 };
 
-/// A binding's key in Settings › Keyboard shortcuts, and the recorder
-/// that changes it: [label] (its key, '' for none) in a field [width]
-/// wide that never changes size; a click (or Enter or Space) makes it
-/// listen, "Press keys…", and the next key held with its modifiers goes
-/// to [onKey]. Esc stops it. While it listens it takes every key, so
-/// Settings' Esc, the app's keys and the menu bar's (`shortcutRecording`)
-/// never see one; it stops when it loses the focus or a click lands
-/// elsewhere. [onStart] says it began.
+/// A binding's key in Settings › Keyboard shortcuts, as a key's cap that
+/// is the control that changes it: [label] (its key, '' for none) on a
+/// cap [ShortcutCap.height] high that hugs it; a click (or Enter or Space)
+/// makes it listen, "Press keys…", and the next key held with its
+/// modifiers goes to [onKey]. Esc stops it. While it listens it takes
+/// every key, so Settings' Esc, the app's keys and the menu bar's
+/// (`shortcutRecording`) never see one; it stops when it loses the focus
+/// or a click lands elsewhere. [onStart] says it began; its state's
+/// `listen` starts it from elsewhere (a click on its row). [chosen]: a
+/// key the user chose, on the accent's soft fill.
 class ShortcutField extends StatefulWidget {
   const new({
     required this.label,
@@ -42,23 +44,21 @@ class ShortcutField extends StatefulWidget {
     required this.onKey,
     super.key,
     this.onStart,
-    this.width = 168,
+    this.chosen = false,
   });
 
   final String label;
   final FocusNode focusNode;
   final ValueChanged<SingleActivator> onKey;
   final VoidCallback? onStart;
-  final double width;
-
-  /// Its height: a regular control's.
-  static const height = 30.0;
+  final bool chosen;
 
   @override
-  State<ShortcutField> createState() => _ShortcutFieldState();
+  State<ShortcutField> createState() => ShortcutFieldState();
 }
 
-class _ShortcutFieldState extends State<ShortcutField> {
+/// A [ShortcutField]'s state: [listen] makes it listen.
+class ShortcutFieldState extends State<ShortcutField> {
   bool _recording = false;
   bool _focused = false;
 
@@ -76,10 +76,10 @@ class _ShortcutFieldState extends State<ShortcutField> {
   }
 
   @override
-  void didUpdateWidget(ShortcutField old) {
-    super.didUpdateWidget(old);
-    if (old.focusNode != widget.focusNode) {
-      old.focusNode.removeListener(_onFocus);
+  void didUpdateWidget(ShortcutField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode != widget.focusNode) {
+      oldWidget.focusNode.removeListener(_onFocus);
       widget.focusNode.addListener(_onFocus);
     }
   }
@@ -103,7 +103,8 @@ class _ShortcutFieldState extends State<ShortcutField> {
     }
   }
 
-  void _start() {
+  /// Takes the focus and listens for a key, as a click on it does.
+  void listen() {
     widget.focusNode.requestFocus();
     if (_recording) return;
     widget.onStart?.call();
@@ -174,18 +175,22 @@ class _ShortcutFieldState extends State<ShortcutField> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final corners = BorderRadius.circular(NushiTheme.control);
+    final none = widget.label.isEmpty;
     final words = _recording
         ? Text(
             'Press keys…',
             maxLines: 1,
             style: theme.ui(t.accentInk, size: 12, weight: FontWeight.w600),
           )
-        : widget.label.isEmpty
+        : none
         ? Text('None', maxLines: 1, style: theme.ui(t.textMuted, size: 12))
-        : keyText(widget.label, theme.code(t.text, size: 12));
+        : keyText(
+            widget.label,
+            theme.code(widget.chosen ? t.accentInk : t.text, size: 12),
+          );
     // Listening, it's unmistakable: the accent's soft fill, its ring and
-    // words; focused, the ring alone; else a field's fill and border.
+    // words; focused, the ring alone. No key, an outline round an empty
+    // place; a chosen key on the accent's soft fill; else a key's cap.
     final ring = _recording || _focused;
     return Focus(
       canRequestFocus: false,
@@ -195,25 +200,68 @@ class _ShortcutFieldState extends State<ShortcutField> {
         onTapOutside: (_) => _stop(),
         child: Tap(
           focusNode: widget.focusNode,
-          onTap: _start,
+          onTap: listen,
           tooltip: _recording ? '' : 'Click, then press the keys',
-          fill: _recording ? t.accentSoft : t.fieldFill,
-          child: Container(
-            width: widget.width,
-            height: ShortcutField.height,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            foregroundDecoration: BoxDecoration(
-              border: Border.all(
-                color: ring ? t.focus : t.fieldBorder,
-                width: ring ? 2 : 1,
-              ),
-              borderRadius: corners,
-            ),
-            child: FittedBox(fit: BoxFit.scaleDown, child: words),
+          fill: _recording || (widget.chosen && !none)
+              ? t.accentSoft
+              : none
+              ? null
+              : t.lifted,
+          child: ShortcutCap.box(
+            words,
+            border: ring
+                ? Border.all(color: t.focus, width: 2)
+                : none
+                ? Border.all(color: t.fieldBorder)
+                : null,
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A key's cap on Settings › Keyboard shortcuts that can't be changed
+/// there (a fixed key, an action's second key): [keys] in code type on
+/// `lifted`, in `textSecondary`, the shape of a [ShortcutField]'s.
+class ShortcutCap extends StatelessWidget {
+  const new(this.keys, {super.key});
+
+  final String keys;
+
+  /// A cap's height.
+  static const height = 24.0;
+
+  /// A cap's least width, so a short key (⌘K) isn't a crumb.
+  static const minWidth = 46.0;
+
+  /// A cap's corners.
+  static const double radius = NushiTheme.control;
+
+  /// [child] centred in a cap's box, [border] drawn over it.
+  static Widget box(Widget child, {Border? border}) => Container(
+    height: height,
+    constraints: const BoxConstraints(minWidth: minWidth),
+    alignment: Alignment.center,
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    foregroundDecoration: border == null
+        ? null
+        : BoxDecoration(
+            border: border,
+            borderRadius: BorderRadius.circular(radius),
+          ),
+    child: child,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.t.lifted,
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: box(keyText(keys, theme.code(theme.t.textSecondary, size: 12))),
     );
   }
 }

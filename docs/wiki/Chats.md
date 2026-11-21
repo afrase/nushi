@@ -114,14 +114,14 @@ The list is long: type a few letters to find a font. To go back, pick the first 
 You can give any action its own key, or none. The menu bar, the command palette and the tooltips then show your key.
 
 1. Open **Settings**, then **Keyboard shortcuts**.
-2. Click the key beside the action. It reads **Press keys…**.
+2. Click the action's key, at the right of its row (or anywhere on the row). It reads **Press keys…**.
 3. Press the new keys. Hold ⌘, ⌃ or ⌥ with them (Ctrl or Alt on Linux), or press a function key. Esc leaves the key as it was.
 
 If another action has that key, the row says which: click **Take it** to move it here, or **Cancel**. A key macOS, your desktop or a text box needs is refused, with the reason under the action's name.
 
-The **×** beside a key leaves its action with no key; the arrow puts its own key back. **Reset all to defaults** puts every key back.
+A key you chose is tinted blue, with an arrow beside it that puts the action's own key back. Point at a row (or Tab to it) for the **×**, which leaves its action with no key: its key then reads **None**. **Reset all to defaults** puts every key back.
 
-Under **Second keys** are the extra keys some actions have: ⇧⌘] and ⇧⌘[ for the next and previous tab, and ⇧⌘P for the command palette. You can't change them. Each works only while its action keeps its own key: give the action another key or none, or give the second key to another action, and it stops working and reads **Off**. It comes back once that's undone.
+Some actions have a second key, shown fainter in their row: ⇧⌘] and ⇧⌘[ for the next and previous tab, and ⇧⌘P for the command palette. You can't change them. Each works only while its action keeps its own key: give the action another key or none, or give the second key to another action, and it stops working and goes from the row. It comes back once that's undone.
 
 The keys at the bottom, under **Fixed**, can't be changed.
 

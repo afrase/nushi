@@ -45,6 +45,15 @@ void main() {
           size: size,
           brightness: b,
         );
+        // [id]'s row a third of the way down, its neighbours in sight.
+        Future<void> toward(String id) async {
+          await Scrollable.ensureVisible(
+            tester.element(rowOf(id)),
+            alignment: 0.3,
+          );
+          await tester.pumpAndSettle();
+        }
+
         Future<void> shot(String state) async {
           expect(tester.takeException(), isNull, reason: state);
           expectTextInside(tester, size.width);
@@ -61,16 +70,20 @@ void main() {
         await mouse.moveTo(const Offset(1, 1));
         await tester.pumpAndSettle();
         await mouse.removePointer();
-        await tapIt(tester, keyOf('closeTab'));
+        await toward('closeTab');
+        await tester.tap(keyOf('closeTab'));
+        await tester.pumpAndSettle();
         expect(shortcutRecording.value, isTrue);
         await shot('listening');
         await pressKey(tester, LogicalKeyboardKey.keyS, [command]);
+        await toward('closeTab');
         await shot('clash');
         await tapIt(
           tester,
           find.byKey(const ValueKey('shortcut-cancel-closeTab')),
         );
         await recordKey(tester, 'closeTab', LogicalKeyboardKey.keyC, [command]);
+        await toward('closeTab');
         await shot('refused');
         await pressKey(tester, LogicalKeyboardKey.escape);
         // Keys not used (a saved key refused, a default another holds),
@@ -97,8 +110,7 @@ void main() {
           -300,
           scrollable: page,
         );
-        await tester.ensureVisible(rowOf('palette'));
-        await tester.pumpAndSettle();
+        await toward('find');
         await shot('notused');
         await tester.scrollUntilVisible(
           find.text('Quit'),

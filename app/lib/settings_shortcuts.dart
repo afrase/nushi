@@ -11,28 +11,17 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shortcut_field.dart';
+import 'package:nushi/shortcut_row.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 // Settings › Keyboard shortcuts (ADR 0146): every key the user may
-// change, by the menus' groups, each a field that records a new one, its
-// clear and reset; a clash offered to take, a key the system or a field
-// owns refused with why; and the keys that stay as they are, read-only at
-// the end, so the page is a cheat sheet too.
-
-/// The key field's width beside its label.
-const _fieldWidth = 168.0;
-
-/// A row's width (inside its padding) under which its key goes under the
-/// label: beside, a clash's buttons, the field and a line of words need
-/// it.
-const _stackBelow = 620.0;
-
-/// The controls' height: a button's, the field's, a little more.
-const _controlHeight = 34.0;
-
-/// The room a clear or reset button keeps, shown or not.
-const _slot = 28.0;
+// change, by the menus' groups, one line each as desktop apps' keymaps
+// are: its name, its key as a cap that records a new one, Reset and No
+// key beside it, and an action's second key in its row; a clash offered
+// to take, a key the system or a field owns refused with why, on a line
+// under the name; and the keys that stay as they are, read-only at the
+// end, so the page is a cheat sheet too.
 
 /// A key another binding holds, waiting on Take it or Cancel; alias:
 /// it's the holder's second key, which goes once the key's binding has
@@ -54,6 +43,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
   _Pending? _pending;
   _Refused? _refused;
   final _fields = <String, FocusNode>{};
+  final _caps = <String, GlobalKey<ShortcutFieldState>>{};
   final _cancel = FocusNode(debugLabel: 'shortcut-cancel');
 
   @override
@@ -69,6 +59,10 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
     key.id!,
     () => FocusNode(debugLabel: 'shortcut-${key.id}'),
   );
+
+  /// [key]'s cap, so a click on its row makes it listen.
+  GlobalKey<ShortcutFieldState> _cap(Cmd key) =>
+      _caps.putIfAbsent(key.id!, GlobalKey<ShortcutFieldState>.new);
 
   /// Drops a clash or a refusal; [key]'s field gets the focus back, so a
   /// keyboard user keeps their row when the button they pressed goes.
@@ -189,52 +183,119 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
         ),
       ],
       children: [
-        for (final (name, keys) in shortcutGroups)
-          SettingsGroup(title: name, children: [for (final k in keys) _row(k)]),
-        SettingsGroup(
-          title: 'Second keys',
-          about: 'Each works while its action keeps its default key',
-          children: [
-            for (final (label, key) in _secondKeys())
-              _FixedRow(label: label, keys: keyLabel(key), group: 'second'),
-          ],
-        ),
-        SettingsGroup(
-          title: 'Fixed',
-          about: "These keys can't be changed",
-          children: [
-            for (final (label, keys) in _fixed())
-              _FixedRow(label: label, keys: keys),
-          ],
-        ),
+        for (final g in _groups())
+          if (g.rows.where(_shows).toList() case final rows
+              when rows.isNotEmpty)
+            SettingsGroup(
+              title: g.title,
+              about: g.about,
+              children: [
+                for (final e in rows)
+                  if (e.binding case final b?)
+                    _row(context, b)
+                  else
+                    _FixedRow(label: e.label, keys: e.keys),
+              ],
+            ),
       ],
     ),
   );
 
-  Widget _row(Cmd key) {
-    final r = resolved(key.id!);
-    final pending = _pending?.key.id == key.id ? _pending : null;
-    final refused = _refused?.key.id == key.id ? _refused : null;
+  /// Whether [e]'s row shows: the one place that narrows the list (every
+  /// row shows, but a group left with none isn't drawn).
+  bool _shows(_Entry e) => true;
+
+  Widget _row(BuildContext context, Cmd key) {
+    final t = NushiTheme.of(context).t;
+    final id = key.id!;
+    final r = resolved(id);
+    final pending = _pending?.key.id == id ? _pending : null;
+    final refused = _refused?.key.id == id ? _refused : null;
     void cancel() => _done(key);
-    final row = _KeyRow(
-      binding: key,
-      settled: r,
-      pending: pending,
-      refused: refused,
-      field: _field(key),
-      cancelFocus: _cancel,
-      onKey: (k) => _propose(key, k),
-      onStart: () => setState(() {
-        _pending = null;
-        _refused = null;
-      }),
-      onClear: () => _clear(key),
-      onReset: () => _reset(key),
-      onTake: pending == null ? null : () => _take(pending),
-      onCancel: cancel,
+    final (String? line, Color? color) = switch ((pending, refused)) {
+      // The cap still shows the row's key: the line names the one pressed.
+      (final p?, _) when p.alias => (
+        "${keyLabel(p.chosen)} is ${bindingName(p.holder)}'s second key",
+        t.needs,
+      ),
+      (final p?, _) => (
+        '${bindingName(p.holder)} has ${keyLabel(p.chosen)}',
+        t.needs,
+      ),
+      (_, final f?) => (_refusedLine(f), t.crashed),
+      _ when r.issue != null => (r.issue, t.needs),
+      _ => (r.chosen && r.key != null ? note(r.key!) : null, null),
+    };
+    final second = _secondOf(key);
+    final secondKeys = second == null ? '' : keyLabel(second);
+    final row = ShortcutRow(
+      key: ValueKey('shortcut-row-$id'),
+      label: bindingName(key),
+      onTap: () => _cap(key).currentState?.listen(),
+      // Gone once it stops working: the action has a chosen key, or
+      // another holds it.
+      second: secondKeys.isEmpty
+          ? null
+          : tooltip(
+              context,
+              'Second key: works while ${bindingName(key)} keeps its '
+              'default key',
+              ShortcutCap(secondKeys, key: ValueKey('shortcut-second-$id')),
+            ),
+      // Saved, or its default another binding's chosen key holds: Reset
+      // offers to take it back.
+      reset: r.stored != null || (!r.chosen && r.key == null)
+          ? IconTap(
+              Icons.restart_alt,
+              key: ValueKey('shortcut-reset-$id'),
+              tooltip: 'Back to ${keyLabel(key.standard)}',
+              onTap: () => _reset(key),
+            )
+          : null,
+      clear: r.key != null
+          ? IconTap(
+              Icons.close,
+              key: ValueKey('shortcut-clear-$id'),
+              tooltip: 'No key',
+              onTap: () => _clear(key),
+            )
+          : null,
+      line: line,
+      lineColor: color,
+      lineEnd: [
+        if (pending != null) ...[
+          Button(
+            key: ValueKey('shortcut-take-$id'),
+            label: 'Take it',
+            kind: ButtonKind.primary,
+            onPressed: () => _take(pending),
+          ),
+          Button(
+            key: ValueKey('shortcut-cancel-$id'),
+            label: 'Cancel',
+            kind: ButtonKind.quiet,
+            focusNode: _cancel,
+            onPressed: cancel,
+          ),
+        ],
+      ],
+      cap: KeyedSubtree(
+        key: ValueKey('shortcut-key-$id'),
+        child: ShortcutField(
+          key: _cap(key),
+          label: keyLabel(key),
+          chosen: r.chosen,
+          focusNode: _field(key),
+          onKey: (k) => _propose(key, k),
+          onStart: () => setState(() {
+            _pending = null;
+            _refused = null;
+          }),
+        ),
+      ),
     );
     // Esc drops a clash or a refusal, not Settings. Always there, empty or
-    // not, so the row's field keeps its state as one comes and goes.
+    // not, so the row keeps its state as one comes and goes.
     return CallbackShortcuts(
       bindings: {
         if (pending != null || refused != null)
@@ -245,16 +306,45 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
   }
 }
 
-/// The keys bound beside an action's own (Chrome's tab keys, ⇧⌘P for the
-/// palette), shown so the page is the whole list. They can't be changed:
-/// each goes when its action gets a chosen key or another binding takes
-/// it (ADR 0146), and then reads Off. ⇧⌘} and ⇧⌘{ are the same keys as
-/// a keyboard may report them, so not rows of their own.
-List<(String, Cmd)> _secondKeys() => [
-  ('Previous tab', previousTabKeysToo.first),
-  ('Next tab', nextTabKeysToo.first),
-  ('Command palette', paletteKeyToo),
+/// A row of the page: a binding's, which can change, or a fixed key's,
+/// its keys as the page shows them.
+typedef _Entry = ({String label, Cmd? binding, String keys});
+
+/// A group of the page's rows, as a [SettingsGroup] shows it.
+typedef _Group = ({String title, String? about, List<_Entry> rows});
+
+/// Every group and its rows, in the page's order: the menus' groups, then
+/// the fixed keys.
+List<_Group> _groups() => [
+  for (final (name, keys) in shortcutGroups)
+    (
+      title: name,
+      about: null,
+      rows: [
+        for (final k in keys)
+          (label: bindingName(k), binding: k, keys: keyLabel(k)),
+      ],
+    ),
+  (
+    title: 'Fixed',
+    about: "These keys can't be changed",
+    rows: [
+      for (final (label, keys) in _fixed())
+        (label: label, binding: null, keys: keys),
+    ],
+  ),
 ];
+
+/// The key bound beside [key]'s own (Chrome's tab keys, ⇧⌘P for the
+/// palette), shown in its row. It can't be changed: it goes when the
+/// action gets a chosen key or another binding takes it (ADR 0146), and
+/// then reads '' and isn't shown. ⇧⌘} and ⇧⌘{ are the same keys as a
+/// keyboard may report them, so not shown apart.
+Cmd? _secondOf(Cmd key) => [
+  previousTabKeysToo.first,
+  nextTabKeysToo.first,
+  paletteKeyToo,
+].where((a) => a.aliasOf == key.id).firstOrNull;
 
 /// The keys the page shows but doesn't let change: Esc's, the chats' and
 /// terminals' numbers, Quit.
@@ -269,239 +359,22 @@ List<(String, String)> _fixed() => [
   ('Quit', keyLabel(quitKey)),
 ];
 
-/// One binding's row: its name, a line under it (a clash, a refusal, why
-/// a saved key isn't used, or what a focused terminal does with it), and
-/// its controls: its key's field, at the group's edge (or under the label
-/// at the left, narrow), and beside it the pill, Reset and Clear, or a
-/// clash's Take it and Cancel. Each keeps its place whatever the others
-/// show.
-class _KeyRow extends StatelessWidget {
-  const new({
-    required this.binding,
-    required this.settled,
-    required this.pending,
-    required this.refused,
-    required this.field,
-    required this.cancelFocus,
-    required this.onKey,
-    required this.onStart,
-    required this.onClear,
-    required this.onReset,
-    required this.onTake,
-    required this.onCancel,
-  });
-
-  final Cmd binding;
-  final Resolved settled;
-  final _Pending? pending;
-  final _Refused? refused;
-  final FocusNode field;
-  final FocusNode cancelFocus;
-  final ValueChanged<SingleActivator> onKey;
-  final VoidCallback onStart;
-  final VoidCallback onClear;
-  final VoidCallback onReset;
-  final VoidCallback? onTake;
-  final VoidCallback onCancel;
-
-  String get _id => binding.id!;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    final r = settled;
-    final (String? line, Color? color) = switch ((pending, refused)) {
-      // The field still shows the row's key: the line names the one
-      // pressed.
-      (final p?, _) when p.alias => (
-        "${keyLabel(p.chosen)} is ${bindingName(p.holder)}'s second key",
-        t.needs,
-      ),
-      (final p?, _) => (
-        '${bindingName(p.holder)} has ${keyLabel(p.chosen)}',
-        t.needs,
-      ),
-      (_, final f?) => (_refusedLine(f), t.crashed),
-      _ when r.issue != null => (r.issue, t.needs),
-      _ => (r.chosen && r.key != null ? note(r.key!) : null, null),
-    };
-    return LayoutBuilder(
-      builder: (context, box) {
-        // As SettingsRow decides it, inside its padding.
-        final inner = box.maxWidth - 28;
-        final stacked = inner < _stackBelow;
-        return SettingsRow(
-          bindingName(binding),
-          key: ValueKey('shortcut-row-$_id'),
-          description: line,
-          descriptionColor: color,
-          keepDescriptionLine: true,
-          stackBelow: _stackBelow,
-          // One height whatever shows beside the field, so it never
-          // shifts.
-          control: SizedBox(
-            height: _controlHeight,
-            child: stacked
-                ? _stacked(context, inner)
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    spacing: 8,
-                    children: [..._actions(context), _field(_fieldWidth)],
-                  ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// Narrow: the field at the label's left, as wide as beside it on every
-  /// row, so its key is never shrunk past reading; the rest after it in
-  /// the reverse order, so each keeps its place there too. A clash's
-  /// pill gives way to its buttons where the row has no room for both:
-  /// the line under the label names the clash.
-  Widget _stacked(BuildContext context, double inner) {
-    final actions = _actions(context).reversed.toList();
-    return SizedBox(
-      width: inner,
-      child: Row(
-        spacing: 8,
-        children: [
-          _field(_fieldWidth),
-          Expanded(
-            child: pending != null
-                ? Align(
-                    alignment: Alignment.centerLeft,
-                    child: GivesWay(
-                      gap: 8,
-                      lead: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        spacing: 8,
-                        children: actions.sublist(0, 2),
-                      ),
-                      extra: actions.last,
-                    ),
-                  )
-                : Row(
-                    spacing: 8,
-                    children: [
-                      for (final a in actions)
-                        if (a is NotePill) Flexible(child: a) else a,
-                    ],
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Its field, keyed by its focus so it keeps its state (listening, its
-  /// ring) when the window crosses [_stackBelow] and it moves.
-  Widget _field(double width) => KeyedSubtree(
-    key: GlobalObjectKey(field),
-    child: ShortcutField(
-      key: ValueKey('shortcut-key-$_id'),
-      label: keyLabel(binding),
-      focusNode: field,
-      width: width,
-      onKey: onKey,
-      onStart: onStart,
-    ),
-  );
-
-  /// The controls beside the field, in the order they stand before it.
-  List<Widget> _actions(BuildContext context) {
-    if (pending != null) {
-      return [
-        const NotePill('In use', tone: NoteTone.needs),
-        Button(
-          key: ValueKey('shortcut-take-$_id'),
-          label: 'Take it',
-          kind: ButtonKind.primary,
-          onPressed: onTake,
-        ),
-        Button(
-          key: ValueKey('shortcut-cancel-$_id'),
-          label: 'Cancel',
-          kind: ButtonKind.quiet,
-          focusNode: cancelFocus,
-          onPressed: onCancel,
-        ),
-      ];
-    }
-    final r = settled;
-    final pill = refused != null
-        ? const NotePill('Not allowed', tone: NoteTone.crashed)
-        : r.issue != null
-        ? const NotePill('Not used', tone: NoteTone.needs)
-        : r.chosen
-        ? const NotePill('Edited', tone: NoteTone.accent)
-        : null;
-    return [
-      ?pill,
-      _slotted(
-        // Saved, or its default another binding's chosen key holds:
-        // Reset offers to take it back.
-        r.stored != null || (!r.chosen && r.key == null),
-        IconTap(
-          Icons.restart_alt,
-          key: ValueKey('shortcut-reset-$_id'),
-          tooltip: 'Back to ${keyLabel(binding.standard)}',
-          onTap: onReset,
-        ),
-      ),
-      _slotted(
-        r.key != null,
-        IconTap(
-          Icons.close,
-          key: ValueKey('shortcut-clear-$_id'),
-          tooltip: 'No key',
-          onTap: onClear,
-        ),
-      ),
-    ];
-  }
-
-  /// [button] in its slot, which keeps its room when it isn't [shown].
-  Widget _slotted(bool shown, Widget button) => SizedBox(
-    width: _slot,
-    height: _slot,
-    child: shown ? Center(child: button) : null,
-  );
-}
-
-/// A key the page lists but doesn't let change: its [label] and [keys],
-/// where a binding's field would show its key, in the same width.
+/// A key the page lists but doesn't let change: its [label] and [keys]
+/// on a quiet cap where a binding's would be, with no hover, hand or
+/// focus.
 class _FixedRow extends StatelessWidget {
-  const new({required this.label, required this.keys, this.group = 'fixed'});
+  const new({required this.label, required this.keys});
 
   final String label;
   final String keys;
 
-  /// Its key's prefix, so a label two groups share stays two rows.
-  final String group;
-
   @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    return SettingsRow(
-      label,
-      key: ValueKey('shortcut-$group-$label'),
-      control: SizedBox(
-        width: _fieldWidth,
-        height: ShortcutField.height,
-        child: Center(
-          // An empty label is a second key that's gone.
-          child: keys.isEmpty
-              ? Text(
-                  'Off',
-                  maxLines: 1,
-                  style: theme.ui(theme.t.textMuted, size: 12),
-                )
-              : keyText(keys, theme.code(theme.t.textSecondary, size: 12)),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ShortcutRow(
+    key: ValueKey('shortcut-fixed-$label'),
+    label: label,
+    slots: false,
+    cap: ShortcutCap(keys),
+  );
 }
 
 /// A refusal's line: the key pressed and why, unless the reason names it
