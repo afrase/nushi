@@ -198,6 +198,14 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
         for (final (name, keys) in shortcutGroups)
           SettingsGroup(title: name, children: [for (final k in keys) _row(k)]),
         SettingsGroup(
+          title: 'Second keys',
+          about: 'Each works while its action keeps its default key',
+          children: [
+            for (final (label, key) in _secondKeys())
+              _FixedRow(label: label, keys: keyLabel(key), group: 'second'),
+          ],
+        ),
+        SettingsGroup(
           title: 'Fixed',
           about: "These keys can't be changed",
           children: [
@@ -242,6 +250,17 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
     );
   }
 }
+
+/// The keys bound beside an action's own (Chrome's tab keys, ⇧⌘P for the
+/// palette), shown so the page is the whole list. They can't be changed:
+/// each goes when its action gets a chosen key or another binding takes
+/// it (ADR 0146), and then reads Off. ⇧⌘} and ⇧⌘{ are the same keys as
+/// a keyboard may report them, so not rows of their own.
+List<(String, Cmd)> _secondKeys() => [
+  ('Previous tab', previousTabKeysToo.first),
+  ('Next tab', nextTabKeysToo.first),
+  ('Command palette', paletteKeyToo),
+];
 
 /// The keys the page shows but doesn't let change: Esc's, the chats' and
 /// terminals' numbers, Quit.
@@ -436,22 +455,32 @@ class _KeyRow extends StatelessWidget {
 /// A key the page lists but doesn't let change: its [label] and [keys],
 /// where a binding's field would show its key, in the same width.
 class _FixedRow extends StatelessWidget {
-  const new({required this.label, required this.keys});
+  const new({required this.label, required this.keys, this.group = 'fixed'});
 
   final String label;
   final String keys;
+
+  /// Its key's prefix, so a label two groups share stays two rows.
+  final String group;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     return SettingsRow(
       label,
-      key: ValueKey('shortcut-fixed-$label'),
+      key: ValueKey('shortcut-$group-$label'),
       control: SizedBox(
         width: _fieldWidth,
         height: ShortcutField.height,
         child: Center(
-          child: keyText(keys, theme.code(theme.t.textSecondary, size: 12)),
+          // An empty label is a second key that's gone.
+          child: keys.isEmpty
+              ? Text(
+                  'Off',
+                  maxLines: 1,
+                  style: theme.ui(theme.t.textMuted, size: 12),
+                )
+              : keyText(keys, theme.code(theme.t.textSecondary, size: 12)),
         ),
       ),
     );

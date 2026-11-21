@@ -160,6 +160,7 @@ void main() {
       ],
       'Chat': ['Side chat', 'Pin chat', 'Next typo'],
       'Other': ['Terminal'],
+      'Second keys': ['Previous tab', 'Next tab', 'Command palette'],
       'Fixed': ['Stop', 'Rewind', 'Open chat 1–9', 'Terminal 1–9', 'Quit'],
     });
     expect(_in('sidebar', r'⌘\'), findsOne);
@@ -168,6 +169,36 @@ void main() {
     expect(find.text('⌘Q'), findsOne);
     d.dispose();
   }, variant: onMac);
+
+  testWidgets("the second keys are listed, and read Off once their action's "
+      'key is changed', (tester) async {
+    final d = await _page(tester);
+    Finder second(String label, String text) => find.descendant(
+      of: find.byKey(ValueKey('shortcut-second-$label')),
+      matching: find.text(text),
+    );
+    expect(second('Next tab', '⇧⌘]'), findsOne);
+    expect(second('Previous tab', '⇧⌘['), findsOne);
+    expect(second('Command palette', '⇧⌘P'), findsOne);
+    shortcutKeys.value = {'nextTab': 'Alt+Cmd+N'};
+    await tester.pumpAndSettle();
+    expect(second('Next tab', 'Off'), findsOne);
+    expect(second('Previous tab', '⇧⌘['), findsOne);
+    d.dispose();
+  }, variant: onMac);
+
+  testWidgets('the second keys in Linux words', (tester) async {
+    _onLinux();
+    final d = await _page(tester);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('shortcut-second-Command palette')),
+        matching: find.text('Ctrl+Shift+P'),
+      ),
+      findsOne,
+    );
+    d.dispose();
+  });
 
   test('every action with a key has a name on the page, but Quit', () {
     for (final a in Act.values) {

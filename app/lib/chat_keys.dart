@@ -117,10 +117,11 @@ const previousTabKey = Cmd(
 );
 
 /// ⇧⌘] and ⇧⌘[: the same, as Chrome and Safari have both (the owner,
-/// 2026-11-19, whose hands know Chrome's). Bound beside ⌃Tab, not shown:
-/// a tooltip and a menu item name one key. Each also by the key ⇧ makes
-/// of it, `}` and `{`, which is what a keyboard may report. Only while
-/// the tab keys are their defaults and no chosen key is these (ADR 0146).
+/// 2026-11-19, whose hands know Chrome's). Bound beside ⌃Tab, not on a
+/// tooltip or a menu item, which name one key (Settings lists them).
+/// Each also by the key ⇧ makes of it, `}` and `{`, which is what a
+/// keyboard may report. Only while the tab keys are their defaults and
+/// no chosen key is these (ADR 0146).
 const nextTabKeysToo = <Cmd>[
   Cmd(LogicalKeyboardKey.bracketRight, shift: true, aliasOf: 'nextTab'),
   Cmd(LogicalKeyboardKey.braceRight, shift: true, aliasOf: 'nextTab'),
