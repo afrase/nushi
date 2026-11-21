@@ -294,6 +294,42 @@ void main() {
       expect(reload().shortcut, isNotNull);
       d.dispose();
     }, variant: onMac);
+
+    testWidgets("a held key's repeats after it's taken stay the page's, so "
+        "the menu bar, its keys back, doesn't run them", (tester) async {
+      final d = await pumpSettingsApp(
+        tester,
+        settingsFake(),
+        SettingsSection.shortcuts,
+      );
+      // ⌘D is Pin chat's: a clash, the focus goes to Cancel; ⌥⌘S is
+      // taken. Either way the menu has its keys again before the repeats.
+      for (final (key, holding) in [
+        (LogicalKeyboardKey.keyD, [_meta]),
+        (LogicalKeyboardKey.keyS, [_alt, _meta]),
+      ]) {
+        await _tap(tester, _key('sidebar'));
+        for (final k in holding) {
+          await tester.sendKeyDownEvent(k);
+        }
+        expect(await tester.sendKeyDownEvent(key), isTrue);
+        await tester.pumpAndSettle();
+        expect(shortcutRecording.value, isFalse);
+        expect(await tester.sendKeyRepeatEvent(key), isTrue);
+        expect(await tester.sendKeyRepeatEvent(key), isTrue);
+        expect(await tester.sendKeyUpEvent(key), isTrue);
+        for (final k in holding.reversed) {
+          await tester.sendKeyUpEvent(k);
+        }
+        await tester.pumpAndSettle();
+        if (find.text('Cancel').evaluate().isNotEmpty) {
+          await _tap(tester, find.text('Cancel'));
+        }
+      }
+      expect(d.settingsOpen, isNotNull);
+      expect(_saved(), {'sidebar': 'Alt+Cmd+S'});
+      d.dispose();
+    }, variant: onMac);
   });
 
   group('refusals', () {

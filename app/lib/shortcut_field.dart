@@ -60,6 +60,12 @@ class _ShortcutFieldState extends State<ShortcutField> {
   bool _recording = false;
   bool _focused = false;
 
+  /// The key just taken, while it's still held. Its repeats and its
+  /// lifting come after the field stopped listening (and the focus may
+  /// have gone to Cancel), when the menu bar has its keys back: unhandled,
+  /// the Mac's would run the item the key now belongs to.
+  PhysicalKeyboardKey? _taken;
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +84,7 @@ class _ShortcutFieldState extends State<ShortcutField> {
   @override
   void dispose() {
     widget.focusNode.removeListener(_onFocus);
+    _release();
     // Settings shut mid-record: the menu bar gets its keys back (main.dart
     // waits for the frame to end before it rebuilds).
     if (_recording) shortcutRecording.value = false;
@@ -110,6 +117,25 @@ class _ShortcutFieldState extends State<ShortcutField> {
     shortcutRecording.value = false;
   }
 
+  /// Takes the repeats and the lifting of the key just taken, wherever
+  /// the focus is now.
+  bool _holdBack(KeyEvent e) {
+    if (e.physicalKey != _taken) return false;
+    // Pressed again, its lifting was missed (the window lost the keys).
+    if (e is KeyDownEvent) {
+      _release();
+      return false;
+    }
+    if (e is KeyUpEvent) _release();
+    return true;
+  }
+
+  void _release() {
+    if (_taken == null) return;
+    _taken = null;
+    HardwareKeyboard.instance.removeHandler(_holdBack);
+  }
+
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     if (!_recording) return KeyEventResult.ignored;
     // A repeat and a key's lifting are taken and do nothing: Enter's,
@@ -123,6 +149,9 @@ class _ShortcutFieldState extends State<ShortcutField> {
     if (_modifiers.contains(key)) return KeyEventResult.handled;
     final held = HardwareKeyboard.instance;
     final shift = held.isShiftPressed;
+    _release();
+    _taken = e.physicalKey;
+    HardwareKeyboard.instance.addHandler(_holdBack);
     _stop();
     widget.onKey(
       SingleActivator(
