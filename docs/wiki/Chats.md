@@ -117,9 +117,13 @@ You can give any action its own key, or none. The menu bar, the command palette 
 2. Click the key beside the action. It reads **Press keys…**.
 3. Press the new keys. Hold ⌘, ⌃ or ⌥ with them (Ctrl or Alt on Linux), or press a function key. Esc leaves the key as it was.
 
-If another action has that key, the row says which: click **Take it** to move it here, or **Cancel**. A key macOS or a text box needs is refused, with the reason under the action's name.
+If another action has that key, the row says which: click **Take it** to move it here, or **Cancel**. A key macOS, your desktop or a text box needs is refused, with the reason under the action's name.
 
-The **×** beside a key leaves its action with no key; the arrow puts its own key back. **Reset all to defaults** puts every key back. The keys at the bottom, under **Fixed**, can't be changed.
+The **×** beside a key leaves its action with no key; the arrow puts its own key back. **Reset all to defaults** puts every key back.
+
+Under **Second keys** are the extra keys some actions have: ⇧⌘] and ⇧⌘[ for the next and previous tab, and ⌘⇧P for the command palette. You can't change them. Each works only while its action keeps its own key: give the action another key or none, or give the second key to another action, and it stops working and reads **Off**. It comes back once that's undone.
+
+The keys at the bottom, under **Fixed**, can't be changed.
 
 ## Send a message
 
