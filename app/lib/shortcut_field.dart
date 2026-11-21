@@ -155,7 +155,7 @@ class _ShortcutFieldState extends State<ShortcutField> {
     _stop();
     widget.onKey(
       SingleActivator(
-        baseKey(key, shift: shift),
+        recordedKey(key, e.physicalKey, shift: shift),
         control: held.isControlPressed,
         shift: shift,
         alt: held.isAltPressed,

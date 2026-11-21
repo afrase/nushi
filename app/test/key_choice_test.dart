@@ -29,13 +29,14 @@ Future<bool> _accepts(
   ShortcutActivator key,
   LogicalKeyboardKey trigger, {
   List<LogicalKeyboardKey> held = const [],
+  PhysicalKeyboardKey at = PhysicalKeyboardKey.keyA,
 }) async {
   for (final h in held) {
     await tester.sendKeyDownEvent(h, platform: 'macos');
   }
   final taken = key.accepts(
     KeyDownEvent(
-      physicalKey: PhysicalKeyboardKey.keyA,
+      physicalKey: at,
       logicalKey: trigger,
       timeStamp: Duration.zero,
     ),
@@ -105,10 +106,7 @@ void main() {
             final back = parseShortcut(text);
             expect(back, isNotNull, reason: text);
             expect(sameKey(back!, k), isTrue, reason: text);
-            // ⇧ and `+` is written as ⇧ and its key, `=`.
-            if (baseKey(key, shift: k.shift) == key) {
-              expect(shortcutText(back), text);
-            }
+            expect(shortcutText(back), text);
           }
         }
       });
@@ -136,21 +134,55 @@ void main() {
       expect(bang.trigger, LogicalKeyboardKey.exclamation);
       expect(bang.shift, isFalse);
       expect(parseShortcut('F5')!.trigger, LogicalKeyboardKey.f5);
+      // A symbol is kept as written: on a French keyboard ⇧ù comes as %.
       expect(
         parseShortcut('Shift+Cmd+}')!.trigger,
-        LogicalKeyboardKey.bracketRight,
-      );
-    });
-
-    test('a shifted symbol is its key only with ⇧ held', () {
-      expect(
-        baseKey(LogicalKeyboardKey.braceRight, shift: true),
-        LogicalKeyboardKey.bracketRight,
-      );
-      expect(
-        baseKey(LogicalKeyboardKey.braceRight, shift: false),
         LogicalKeyboardKey.braceRight,
       );
+      expect(parseShortcut('Shift+Cmd+%')!.trigger, LogicalKeyboardKey.percent);
+    });
+
+    test('a shifted symbol is its key only with ⇧ held, where a US '
+        'keyboard has that key', () {
+      expect(
+        recordedKey(
+          LogicalKeyboardKey.braceRight,
+          PhysicalKeyboardKey.bracketRight,
+          shift: true,
+        ),
+        LogicalKeyboardKey.bracketRight,
+      );
+      expect(
+        recordedKey(
+          LogicalKeyboardKey.braceRight,
+          PhysicalKeyboardKey.bracketRight,
+          shift: false,
+        ),
+        LogicalKeyboardKey.braceRight,
+      );
+      // A French Mac: ⇧ù reports %, and ⇧ and its , key reports ?.
+      expect(
+        recordedKey(
+          LogicalKeyboardKey.percent,
+          PhysicalKeyboardKey.quote,
+          shift: true,
+        ),
+        LogicalKeyboardKey.percent,
+      );
+      expect(
+        recordedKey(
+          LogicalKeyboardKey.question,
+          PhysicalKeyboardKey.keyM,
+          shift: true,
+        ),
+        LogicalKeyboardKey.question,
+      );
+      const percent = SingleActivator(
+        LogicalKeyboardKey.percent,
+        shift: true,
+        meta: true,
+      );
+      expect(refusal(percent), isNull);
       expect(
         shiftedTwin(LogicalKeyboardKey.bracketRight),
         LogicalKeyboardKey.braceRight,
@@ -271,8 +303,20 @@ void main() {
           sidebarKey,
           LogicalKeyboardKey.braceRight,
           held: shiftMeta,
+          at: PhysicalKeyboardKey.bracketRight,
         ),
         isTrue,
+      );
+      // Another layout's } is another key.
+      expect(
+        await _accepts(
+          tester,
+          sidebarKey,
+          LogicalKeyboardKey.braceRight,
+          held: shiftMeta,
+          at: PhysicalKeyboardKey.minus,
+        ),
+        isFalse,
       );
       expect(
         await _accepts(
@@ -493,9 +537,12 @@ void main() {
           SingleActivator(LogicalKeyboardKey.digit4, meta: true, shift: true),
           'macOS keeps it',
         ),
+        // A digit's key reports its digit on any layout (Flutter maps the
+        // digits first), so a key reported as $ is another key: a French
+        // keyboard's own $ key.
         (
           SingleActivator(LogicalKeyboardKey.dollar, meta: true, shift: true),
-          'macOS keeps it',
+          null,
         ),
         (
           SingleActivator(LogicalKeyboardKey.arrowLeft, control: true),

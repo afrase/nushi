@@ -145,8 +145,13 @@ class Cmd extends ShortcutActivator with MenuSerializableShortcut {
     final a = single;
     if (a == null) return false;
     if (a.accepts(event, state)) return true;
-    // A chosen ⇧⌘] may arrive as the key ⇧ makes of it, `}`.
+    // A chosen ⇧⌘] may arrive as the key ⇧ makes of it, `}`, from where
+    // a US keyboard has `]` (another layout's `}` is another key).
     if (!a.shift || !chosen) return false;
+    if (recordedKey(event.logicalKey, event.physicalKey, shift: true) !=
+        a.trigger) {
+      return false;
+    }
     return switch (shiftedTwin(a.trigger)) {
       final twin? => SingleActivator(
         twin,

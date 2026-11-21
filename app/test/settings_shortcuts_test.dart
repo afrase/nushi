@@ -220,6 +220,23 @@ void main() {
       d.dispose();
     }, variant: onMac);
 
+    testWidgets("a French keyboard's shifted symbols are saved as they come, "
+        'not as the US keys that make them', (tester) async {
+      final d = await _page(tester);
+      // ⇧⌘ on ù reports %, which is not ⇧⌘5 there; on its , key, ?.
+      await _record(tester, 'pin', LogicalKeyboardKey.percent, [
+        _shift,
+        _meta,
+      ], PhysicalKeyboardKey.quote);
+      await _record(tester, 'sidebar', LogicalKeyboardKey.question, [
+        _shift,
+        _meta,
+      ], PhysicalKeyboardKey.keyM);
+      expect(_saved(), {'pin': 'Shift+Cmd+%', 'sidebar': 'Shift+Cmd+?'});
+      expect(_shows(tester, 'pin'), '⇧⌘%');
+      d.dispose();
+    }, variant: onMac);
+
     testWidgets('Esc while listening stops it, not Settings; a second Esc '
         'closes Settings', (tester) async {
       final d = await _page(tester);

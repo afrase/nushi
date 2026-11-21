@@ -215,12 +215,13 @@ SingleActivator? parseShortcut(String text) {
   }
   final key = _textKey(parts.last);
   if (key == null) return null;
-  final trigger = baseKey(key, shift: shift);
-  if (!control && !alt && !meta && !functionKeys.contains(trigger)) {
+  // A symbol is kept as written: `%` with ⇧ may be ⇧5 on one layout and
+  // another key's on the next (the recorder folds by the key's place).
+  if (!control && !alt && !meta && !functionKeys.contains(key)) {
     return null;
   }
   return SingleActivator(
-    trigger,
+    key,
     control: control,
     alt: alt,
     shift: shift,
@@ -263,13 +264,47 @@ final Map<int, int> _toTwin = {
   for (final MapEntry(:key, :value) in _toBase.entries) value: key,
 };
 
-/// The key [k] is the shifted symbol of, with ⇧ held ([shift]); [k]
-/// itself otherwise, since another layout types that symbol unshifted.
-LogicalKeyboardKey baseKey(LogicalKeyboardKey k, {required bool shift}) =>
-    switch (shift ? _toBase[k.keyId] : null) {
-      final base? => LogicalKeyboardKey(base),
-      null => k,
-    };
+/// Where a US keyboard has each key ⇧ makes a symbol of.
+final Map<int, PhysicalKeyboardKey> _usPlace = {
+  for (final (base, at) in const [
+    ('[', PhysicalKeyboardKey.bracketLeft),
+    (']', PhysicalKeyboardKey.bracketRight),
+    (r'\', PhysicalKeyboardKey.backslash),
+    (';', PhysicalKeyboardKey.semicolon),
+    ("'", PhysicalKeyboardKey.quote),
+    (',', PhysicalKeyboardKey.comma),
+    ('.', PhysicalKeyboardKey.period),
+    ('/', PhysicalKeyboardKey.slash),
+    ('`', PhysicalKeyboardKey.backquote),
+    ('-', PhysicalKeyboardKey.minus),
+    ('=', PhysicalKeyboardKey.equal),
+    ('1', PhysicalKeyboardKey.digit1),
+    ('2', PhysicalKeyboardKey.digit2),
+    ('3', PhysicalKeyboardKey.digit3),
+    ('4', PhysicalKeyboardKey.digit4),
+    ('5', PhysicalKeyboardKey.digit5),
+    ('6', PhysicalKeyboardKey.digit6),
+    ('7', PhysicalKeyboardKey.digit7),
+    ('8', PhysicalKeyboardKey.digit8),
+    ('9', PhysicalKeyboardKey.digit9),
+    ('0', PhysicalKeyboardKey.digit0),
+  ])
+    base.codeUnitAt(0): at,
+};
+
+/// The key a keyboard reported as [k] at [at], with ⇧ held ([shift]): a
+/// US symbol ⇧ makes (`}`) is its key (`]`) only where a US keyboard has
+/// that key. Elsewhere the symbol is the key: the Mac and GTK report the
+/// shifted character for a symbol key whose own is no letter or digit,
+/// so on a French keyboard ⇧ù comes as `%`, which is not ⇧5 there.
+LogicalKeyboardKey recordedKey(
+  LogicalKeyboardKey k,
+  PhysicalKeyboardKey at, {
+  required bool shift,
+}) => switch (shift ? _toBase[k.keyId] : null) {
+  final base? when _usPlace[base] == at => LogicalKeyboardKey(base),
+  _ => k,
+};
 
 /// The symbol ⇧ makes of [base] (`}` of `]`), if it has one.
 LogicalKeyboardKey? shiftedTwin(LogicalKeyboardKey base) =>
@@ -278,14 +313,28 @@ LogicalKeyboardKey? shiftedTwin(LogicalKeyboardKey base) =>
       null => null,
     };
 
-/// Whether [a] and [b] are held the same: the same modifiers and key, a
-/// shifted symbol the same as its key with ⇧.
+/// Whether [a] and [b] are held the same: the same modifiers and key. A
+/// recorded key is already folded ([recordedKey]), so a symbol is only
+/// itself.
 bool sameKey(SingleActivator a, SingleActivator b) =>
     a.control == b.control &&
     a.shift == b.shift &&
     a.alt == b.alt &&
     a.meta == b.meta &&
-    baseKey(a.trigger, shift: a.shift) == baseKey(b.trigger, shift: b.shift);
+    a.trigger == b.trigger;
+
+/// [a] with a US symbol ⇧ makes as its key (⇧⌘} as ⇧⌘]).
+SingleActivator _unshifted(SingleActivator a) =>
+    switch (a.shift ? _toBase[a.trigger.keyId] : null) {
+      final base? => SingleActivator(
+        LogicalKeyboardKey(base),
+        control: a.control,
+        shift: true,
+        alt: a.alt,
+        meta: a.meta,
+      ),
+      null => a,
+    };
 
 /// A binding as settled now: its key (null for none), whether the user's
 /// choice decides it (`chosen`: a key, a cleared one, or one taken by an
@@ -394,7 +443,12 @@ bool aliasBound(String of, SingleActivator alias) {
   final now = _now;
   final r = now[of];
   if (r == null || r.chosen || r.key == null) return false;
-  return !now.values.any((o) => o.key != null && sameKey(o.key!, alias));
+  // ⇧⌘} is the same key as ⇧⌘] here: the second keys list both, as a
+  // keyboard may report either.
+  final plain = _unshifted(alias);
+  return !now.values.any(
+    (o) => o.key != null && (sameKey(o.key!, alias) || sameKey(o.key!, plain)),
+  );
 }
 
 /// Whether Settings › Keyboard shortcuts is taking a key: the menu bar's
