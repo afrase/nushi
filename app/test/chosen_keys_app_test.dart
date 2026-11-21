@@ -385,10 +385,15 @@ void main() {
     });
 
     testWidgets('on Linux a chosen Ctrl+R for Terminal goes to the shell, '
-        'and a chosen Ctrl+Shift+O for Pin passes', (tester) async {
+        'and a chosen Ctrl+Shift+O for Pin and Ctrl+Shift+G for the palette '
+        'pass', (tester) async {
       _onLinux();
       terminalChats.value = {'a'};
-      shortcutKeys.value = {'terminal': 'Cmd+R', 'pin': 'Shift+Cmd+O'};
+      shortcutKeys.value = {
+        'terminal': 'Cmd+R',
+        'pin': 'Shift+Cmd+O',
+        'palette': 'Shift+Cmd+G',
+      };
       late FakeShells shells;
       final d = await _app(
         tester,
@@ -410,6 +415,15 @@ void main() {
         LogicalKeyboardKey.shiftLeft,
       ]);
       expect(d.chats['a']!.pin, isNot(pinned));
+      expect(shells.typedAll.join(), '\x12');
+      // The palette is no key the terminal binds by default: it passes
+      // only because the terminal offers the palette's key too.
+      expect(find.byType(Palette), findsNothing);
+      await _press(tester, LogicalKeyboardKey.keyG, [
+        LogicalKeyboardKey.controlLeft,
+        LogicalKeyboardKey.shiftLeft,
+      ]);
+      expect(find.byType(Palette), findsOne);
       expect(shells.typedAll.join(), '\x12');
       await closeView(tester, d);
     }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
