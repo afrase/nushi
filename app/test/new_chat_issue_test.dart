@@ -228,6 +228,29 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('I and W held with Alt are left for a chosen key', (
+    tester,
+  ) async {
+    final (fake, d) = await _sidebar(tester);
+    Future<void> alt(LogicalKeyboardKey key) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+      await tester.sendKeyEvent(key);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+      await tester.pumpAndSettle();
+    }
+
+    await _open(tester);
+    await alt(LogicalKeyboardKey.keyI);
+    expect(find.byType(TextField), findsNothing);
+    await _key(tester, LogicalKeyboardKey.keyI);
+    await _key(tester, LogicalKeyboardKey.enter);
+    await alt(LogicalKeyboardKey.keyW);
+    await _key(tester, LogicalKeyboardKey.enter);
+    final s = fake.started.last;
+    expect((s.jiraKey, s.worktree), ('ACME-12', true));
+    d.dispose();
+  });
+
   testWidgets('without a Jira site the dialog offers no issue', (tester) async {
     final (fake, d) = await _sidebar(tester);
     fake.answer = null;

@@ -24,6 +24,18 @@ bool cmdPressed() => switch (commandKey) {
   CommandKey.control => HardwareKeyboard.instance.isControlPressed,
 };
 
+/// Whether a view's own plain key (J, K, /) is pressed as it is: no ⌘,
+/// Ctrl or Alt held, and Shift only where the character needs it
+/// ([shift]). So a chosen key with that letter (⌃⌥K, Alt+K, ⌘/) passes to
+/// its command (ADR 0146).
+bool barePressed({bool shift = false}) {
+  final keys = HardwareKeyboard.instance;
+  return !keys.isMetaPressed &&
+      !keys.isControlPressed &&
+      !keys.isAltPressed &&
+      (shift || !keys.isShiftPressed);
+}
+
 /// A shortcut held with the command key ([commandKey]), with [shift], [alt]
 /// and [ctrl] as given: ⌘ on the Mac, Control on Linux and Windows; or,
 /// with [command] false, without it (⌃Tab, ⌥Z). Where Control and the same

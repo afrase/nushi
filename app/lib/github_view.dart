@@ -335,10 +335,10 @@ class _GitHubViewState extends State<GitHubView> {
     if (k == LogicalKeyboardKey.enter && items.isNotEmpty && _at >= 0) {
       meta ? _startWork() : _open(items[_at]);
     } else if (k == LogicalKeyboardKey.arrowDown ||
-        k == LogicalKeyboardKey.keyJ && !meta) {
+        k == LogicalKeyboardKey.keyJ && barePressed()) {
       _move(1);
     } else if (k == LogicalKeyboardKey.arrowUp ||
-        k == LogicalKeyboardKey.keyK && !meta) {
+        k == LogicalKeyboardKey.keyK && barePressed()) {
       _move(-1);
     } else {
       return KeyEventResult.ignored;

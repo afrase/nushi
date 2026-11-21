@@ -12,6 +12,8 @@ import 'package:nushi/jira_issue.dart';
 import 'package:nushi/jira_tasks.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/palette.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -57,6 +59,41 @@ void main() {
     );
     await closeView(tester, d);
   });
+
+  testWidgets('a chosen key with J, K or / runs its command in the list, '
+      'not the list’s key', (tester) async {
+    final (_, d) = await openView(tester, window: true);
+    // The list has the focus, as after a click on it.
+    final list = tester.widget<Focus>(
+      find.byWidgetPredicate(
+        (w) => w is Focus && w.focusNode?.debugLabel == 'jira list',
+      ),
+    );
+    list.focusNode!.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
+    shortcutKeys.value = {'palette': 'Ctrl+Alt+K'};
+    await tester.pumpAndSettle();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(find.byType(Palette), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(Palette), findsNothing);
+    shortcutKeys.value = {'palette': 'Cmd+/'};
+    await tester.pumpAndSettle();
+    list.focusNode!.requestFocus();
+    await tester.pump();
+    await cmdKey(tester, LogicalKeyboardKey.slash);
+    expect(find.byType(Palette), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget); // the palette's, no JQL
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await closeView(tester, d);
+  }, variant: onMac);
 
   testWidgets('↓ keeps the selection in view; ⌘⏎ starts work on it, not '
       'on the row before', (tester) async {

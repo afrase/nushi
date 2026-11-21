@@ -178,15 +178,18 @@ class _NewChatState extends State<_NewChat> {
         _sessions(true);
       case LogicalKeyboardKey.keyV when cmdPressed():
         unawaited(_paste());
-      case LogicalKeyboardKey.keyI when _offersIssue:
+      case LogicalKeyboardKey.keyI when _offersIssue && barePressed():
         _pickIssue();
       case LogicalKeyboardKey.backspace || LogicalKeyboardKey.delete
           when issue != null:
         setState(() => _issue = null);
-      case LogicalKeyboardKey.keyW when worktree:
+      case LogicalKeyboardKey.keyW when worktree && barePressed():
         setState(() => issue.worktree = !issue.worktree);
       case LogicalKeyboardKey.keyB
-          when worktree && issue.worktree && issue.github?.pull != true:
+          when worktree &&
+              issue.worktree &&
+              issue.github?.pull != true &&
+              barePressed():
         setState(() => _editingBranch = true);
       case _ when digit >= 1 && digit <= n && digit <= 9:
         _start(digit - 1);

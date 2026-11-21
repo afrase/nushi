@@ -438,12 +438,12 @@ class _JiraViewState extends State<JiraView> {
     if (k == LogicalKeyboardKey.enter && at != null) {
       meta ? _startWork() : _open(at);
     } else if (k == LogicalKeyboardKey.arrowDown ||
-        k == LogicalKeyboardKey.keyJ && !meta) {
+        k == LogicalKeyboardKey.keyJ && barePressed()) {
       _move(1);
     } else if (k == LogicalKeyboardKey.arrowUp ||
-        k == LogicalKeyboardKey.keyK && !meta) {
+        k == LogicalKeyboardKey.keyK && barePressed()) {
       _move(-1);
-    } else if (k == LogicalKeyboardKey.slash) {
+    } else if (k == LogicalKeyboardKey.slash && barePressed(shift: true)) {
       _pickList(const Jql());
     } else {
       return KeyEventResult.ignored;

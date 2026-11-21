@@ -19,6 +19,7 @@ import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -515,6 +516,32 @@ void main() {
     expect(fake.started.single.github.number, 40);
     await closeView(tester, d);
   });
+
+  testWidgets('a chosen key with J or K runs its command in the list, not '
+      'the list’s key', (tester) async {
+    final (_, d) = await openView(tester, window: true);
+    shortcutKeys.value = {'palette': 'Ctrl+Alt+J'};
+    await tester.pumpAndSettle();
+    // The list has the focus, as after a click on it.
+    tester
+        .widget<Focus>(
+          find.byWidgetPredicate(
+            (w) => w is Focus && w.focusNode?.debugLabel == 'github list',
+          ),
+        )
+        .focusNode!
+        .requestFocus();
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(find.byType(Palette), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await closeView(tester, d);
+  }, variant: onMac);
 
   testWidgets("Start work on a pull request: its head's branch, which the "
       'daemon fetches', (tester) async {
