@@ -1,109 +1,29 @@
 // Settings › Keyboard shortcuts (ADR 0146): the rows by group, recording
 // a key, refusals, clashes and Take it, clear and reset, Reset all, the
 // menu bar quiet while a field listens, controls that never move, and
-// goldens and renders of the page.
+// goldens (its renders: settings_shortcuts_renders_test.dart).
 import 'dart:ui' show AppExitResponse;
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/controls.dart' show Button;
-import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/key_choice.dart';
-import 'package:nushi/main.dart';
-import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/window_drag_linux.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
 import 'settings_harness.dart';
-
-/// Settings alone at Keyboard shortcuts in a window of [size], tall
-/// enough that every row is built.
-Future<Daemon> _page(
-  WidgetTester tester, {
-  Size size = const Size(1000, 2600),
-  Tokens tokens = Tokens.dark,
-}) async {
-  final d = await FakeDaemon([]).connect(tester);
-  await pumpSettings(
-    tester,
-    d,
-    SettingsSection.shortcuts,
-    size: size,
-    tokens: tokens,
-  );
-  return d;
-}
-
-Finder _key(String id) => find.byKey(ValueKey('shortcut-key-$id'));
-Finder _row(String id) => find.byKey(ValueKey('shortcut-row-$id'));
-Finder _in(String id, String text) =>
-    find.descendant(of: _row(id), matching: find.text(text));
-
-Future<void> _tap(WidgetTester tester, Finder f) async {
-  await tester.ensureVisible(f);
-  await tester.pumpAndSettle();
-  await tester.tap(f);
-  await tester.pumpAndSettle();
-}
-
-/// [key] pressed with [holding] held, then settled.
-Future<void> _press(
-  WidgetTester tester,
-  LogicalKeyboardKey key, [
-  List<LogicalKeyboardKey> holding = const [],
-  PhysicalKeyboardKey? physical,
-]) async {
-  for (final k in holding) {
-    await tester.sendKeyDownEvent(k);
-  }
-  await tester.sendKeyEvent(key, physicalKey: physical);
-  for (final k in holding.reversed) {
-    await tester.sendKeyUpEvent(k);
-  }
-  await tester.pumpAndSettle();
-}
-
-/// [id]'s field clicked and [key] pressed with [holding].
-Future<void> _record(
-  WidgetTester tester,
-  String id,
-  LogicalKeyboardKey key, [
-  List<LogicalKeyboardKey> holding = const [],
-  PhysicalKeyboardKey? physical,
-]) async {
-  await _tap(tester, _key(id));
-  await _press(tester, key, holding, physical);
-}
-
-const LogicalKeyboardKey _meta = LogicalKeyboardKey.metaLeft;
-const LogicalKeyboardKey _alt = LogicalKeyboardKey.altLeft;
-const LogicalKeyboardKey _shift = LogicalKeyboardKey.shiftLeft;
-const LogicalKeyboardKey _ctrl = LogicalKeyboardKey.controlLeft;
-
-/// The keys `app.json` holds, none before the first change.
-Map<String, Object?> _saved() =>
-    readSaved()['shortcuts'] as Map<String, Object?>? ?? {};
-
-/// What [id]'s field shows.
-String _shows(WidgetTester tester, String id) {
-  final texts = tester.widgetList<Text>(
-    find.descendant(of: _key(id), matching: find.byType(Text)),
-  );
-  return texts.map((t) => t.data ?? t.textSpan!.toPlainText()).join();
-}
+import 'shortcuts_harness.dart';
 
 /// [id]'s field's focus.
 FocusNode _node(WidgetTester tester, String id) => tester
     .widgetList<Focus>(
-      find.descendant(of: _key(id), matching: find.byType(Focus)),
+      find.descendant(of: keyOf(id), matching: find.byType(Focus)),
     )
     .map((f) => f.focusNode)
     .firstWhere((n) => n?.debugLabel == 'shortcut-$id')!;
@@ -119,16 +39,12 @@ class _ExitAsks with WidgetsBindingObserver {
   }
 }
 
-void _onLinux() => native
-  ..conventions = linuxConventions
-  ..window = const LinuxWindow();
-
 void main() {
   setUpAll(loadFonts);
 
   testWidgets("the rows, by group, in the menus' order, and the fixed keys "
       'last', (tester) async {
-    final d = await _page(tester);
+    final d = await shortcutsPage(tester);
     final groups = {
       for (final g in tester.widgetList<SettingsGroup>(
         find.byType(SettingsGroup),
@@ -177,7 +93,7 @@ void main() {
       'Second keys': ['Previous tab', 'Next tab', 'Command palette'],
       'Fixed': ['Stop', 'Rewind', 'Open chat 1–9', 'Terminal 1–9', 'Quit'],
     });
-    expect(_in('sidebar', r'⌘\'), findsOne);
+    expect(inRow('sidebar', r'⌘\'), findsOne);
     expect(find.text('⌘1–⌘9'), findsOne);
     expect(find.text('⌥⌘1–⌥⌘9'), findsOne);
     expect(find.text('⌘Q'), findsOne);
@@ -186,7 +102,7 @@ void main() {
 
   testWidgets("the second keys are listed, and read Off once their action's "
       'key is changed', (tester) async {
-    final d = await _page(tester);
+    final d = await shortcutsPage(tester);
     Finder second(String label, String text) => find.descendant(
       of: find.byKey(ValueKey('shortcut-second-$label')),
       matching: find.text(text),
@@ -206,8 +122,8 @@ void main() {
   }, variant: onMac);
 
   testWidgets('the second keys in Linux words', (tester) async {
-    _onLinux();
-    final d = await _page(tester);
+    shortcutsOnLinux();
+    final d = await shortcutsPage(tester);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('shortcut-second-Command palette')),
@@ -233,77 +149,77 @@ void main() {
     testWidgets('a click listens, and the keys pressed are saved', (
       tester,
     ) async {
-      final d = await _page(tester);
-      await _tap(tester, _key('sidebar'));
-      expect(_shows(tester, 'sidebar'), 'Press keys…');
+      final d = await shortcutsPage(tester);
+      await tapIt(tester, keyOf('sidebar'));
+      expect(keyShows(tester, 'sidebar'), 'Press keys…');
       expect(shortcutRecording.value, isTrue);
       expect(
         FocusManager.instance.primaryFocus?.debugLabel,
         'shortcut-sidebar',
       );
       // A modifier alone waits.
-      await tester.sendKeyDownEvent(_meta);
-      await tester.sendKeyDownEvent(_alt);
+      await tester.sendKeyDownEvent(metaKey);
+      await tester.sendKeyDownEvent(altKey);
       await tester.pumpAndSettle();
-      expect(_shows(tester, 'sidebar'), 'Press keys…');
+      expect(keyShows(tester, 'sidebar'), 'Press keys…');
       await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
-      await tester.sendKeyUpEvent(_alt);
-      await tester.sendKeyUpEvent(_meta);
+      await tester.sendKeyUpEvent(altKey);
+      await tester.sendKeyUpEvent(metaKey);
       await tester.pumpAndSettle();
-      expect(_saved(), {'sidebar': 'Alt+Cmd+S'});
-      expect(_shows(tester, 'sidebar'), '⌥⌘S');
+      expect(savedKeys(), {'sidebar': 'Alt+Cmd+S'});
+      expect(keyShows(tester, 'sidebar'), '⌥⌘S');
       expect(shortcutRecording.value, isFalse);
-      expect(_in('sidebar', 'Edited'), findsOne);
+      expect(inRow('sidebar', 'Edited'), findsOne);
       d.dispose();
     }, variant: onMac);
 
     testWidgets('⇧⌘} as a keyboard reports it is saved as ⇧⌘], and is '
         "Next tab's own second key, so no clash", (tester) async {
-      final d = await _page(tester);
-      await _record(tester, 'nextTab', LogicalKeyboardKey.braceRight, [
-        _shift,
-        _meta,
+      final d = await shortcutsPage(tester);
+      await recordKey(tester, 'nextTab', LogicalKeyboardKey.braceRight, [
+        shiftKey,
+        metaKey,
       ], PhysicalKeyboardKey.bracketRight);
-      expect(_saved(), {'nextTab': 'Shift+Cmd+]'});
-      expect(_shows(tester, 'nextTab'), '⇧⌘]');
+      expect(savedKeys(), {'nextTab': 'Shift+Cmd+]'});
+      expect(keyShows(tester, 'nextTab'), '⇧⌘]');
       d.dispose();
     }, variant: onMac);
 
     testWidgets("a French keyboard's shifted symbols are saved as they come, "
         'not as the US keys that make them', (tester) async {
-      final d = await _page(tester);
+      final d = await shortcutsPage(tester);
       // ⇧⌘ on ù reports %, which is not ⇧⌘5 there; on its , key, ?.
-      await _record(tester, 'pin', LogicalKeyboardKey.percent, [
-        _shift,
-        _meta,
+      await recordKey(tester, 'pin', LogicalKeyboardKey.percent, [
+        shiftKey,
+        metaKey,
       ], PhysicalKeyboardKey.quote);
-      await _record(tester, 'sidebar', LogicalKeyboardKey.question, [
-        _shift,
-        _meta,
+      await recordKey(tester, 'sidebar', LogicalKeyboardKey.question, [
+        shiftKey,
+        metaKey,
       ], PhysicalKeyboardKey.keyM);
-      expect(_saved(), {'pin': 'Shift+Cmd+%', 'sidebar': 'Shift+Cmd+?'});
-      expect(_shows(tester, 'pin'), '⇧⌘%');
+      expect(savedKeys(), {'pin': 'Shift+Cmd+%', 'sidebar': 'Shift+Cmd+?'});
+      expect(keyShows(tester, 'pin'), '⇧⌘%');
       d.dispose();
     }, variant: onMac);
 
     testWidgets('Esc while listening stops it, not Settings; a second Esc '
         'closes Settings', (tester) async {
-      final d = await _page(tester);
+      final d = await shortcutsPage(tester);
       final before = shortcutKeys.value;
-      await _tap(tester, _key('find'));
-      await _press(tester, LogicalKeyboardKey.escape);
+      await tapIt(tester, keyOf('find'));
+      await pressKey(tester, LogicalKeyboardKey.escape);
       expect(find.text('closed'), findsNothing);
       expect(shortcutKeys.value, same(before));
-      expect(_shows(tester, 'find'), '⌘F');
+      expect(keyShows(tester, 'find'), '⌘F');
       expect(shortcutRecording.value, isFalse);
-      await _press(tester, LogicalKeyboardKey.escape);
+      await pressKey(tester, LogicalKeyboardKey.escape);
       expect(find.text('closed'), findsOne);
       d.dispose();
     }, variant: onMac);
 
     testWidgets("started with Enter, Enter's repeat and lifting don't end "
         'it', (tester) async {
-      final d = await _page(tester);
+      final d = await shortcutsPage(tester);
       FocusManager.instance.highlightStrategy =
           FocusHighlightStrategy.alwaysTraditional;
       addTearDown(
@@ -318,13 +234,13 @@ void main() {
       );
       await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
       await tester.pump();
-      expect(_shows(tester, 'settings'), 'Press keys…');
+      expect(keyShows(tester, 'settings'), 'Press keys…');
       await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
-      expect(_shows(tester, 'settings'), 'Press keys…');
-      expect(_saved(), isEmpty);
-      await _press(tester, LogicalKeyboardKey.escape);
+      expect(keyShows(tester, 'settings'), 'Press keys…');
+      expect(savedKeys(), isEmpty);
+      await pressKey(tester, LogicalKeyboardKey.escape);
       d.dispose();
     }, variant: onMac);
 
@@ -340,17 +256,17 @@ void main() {
       PlatformMenuItem reload() =>
           viewItems(tester).firstWhere((m) => m.label == 'Reload Page');
       expect(reload().shortcut, isNotNull);
-      await _tap(tester, _key('reloadPage'));
+      await tapIt(tester, keyOf('reloadPage'));
       expect(reload().shortcut, isNull);
-      await _press(tester, LogicalKeyboardKey.escape);
+      await pressKey(tester, LogicalKeyboardKey.escape);
       expect(reload().shortcut, isNotNull);
       expect(d.settingsOpen, isNotNull);
-      await _press(tester, LogicalKeyboardKey.escape);
+      await pressKey(tester, LogicalKeyboardKey.escape);
       expect(d.settingsOpen, isNull);
       // Again, and Settings shut by a click on the dim.
       d.openSettings(section: SettingsSection.shortcuts);
       await tester.pumpAndSettle();
-      await _tap(tester, _key('reloadPage'));
+      await tapIt(tester, keyOf('reloadPage'));
       expect(reload().shortcut, isNull);
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
@@ -371,10 +287,10 @@ void main() {
       // ⌘D is Pin chat's: a clash, the focus goes to Cancel; ⌥⌘S is
       // taken. Either way the menu has its keys again before the repeats.
       for (final (key, holding) in [
-        (LogicalKeyboardKey.keyD, [_meta]),
-        (LogicalKeyboardKey.keyS, [_alt, _meta]),
+        (LogicalKeyboardKey.keyD, [metaKey]),
+        (LogicalKeyboardKey.keyS, [altKey, metaKey]),
       ]) {
-        await _tap(tester, _key('sidebar'));
+        await tapIt(tester, keyOf('sidebar'));
         for (final k in holding) {
           await tester.sendKeyDownEvent(k);
         }
@@ -389,19 +305,19 @@ void main() {
         }
         await tester.pumpAndSettle();
         if (find.text('Cancel').evaluate().isNotEmpty) {
-          await _tap(tester, find.text('Cancel'));
+          await tapIt(tester, find.text('Cancel'));
         }
       }
       expect(d.settingsOpen, isNotNull);
-      expect(_saved(), {'sidebar': 'Alt+Cmd+S'});
+      expect(savedKeys(), {'sidebar': 'Alt+Cmd+S'});
       d.dispose();
     }, variant: onMac);
 
     testWidgets('on Linux AltGr alone is held, not taken', (tester) async {
-      _onLinux();
-      final d = await _page(tester);
-      await _tap(tester, _key('sidebar'));
-      await tester.sendKeyDownEvent(_ctrl);
+      shortcutsOnLinux();
+      final d = await shortcutsPage(tester);
+      await tapIt(tester, keyOf('sidebar'));
+      await tester.sendKeyDownEvent(ctrlKey);
       // GTK's ISO_Level3_Shift, the right Alt key.
       const altRight = PhysicalKeyboardKey.altRight;
       await tester.sendKeyDownEvent(
@@ -410,22 +326,22 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(shortcutRecording.value, isTrue);
-      expect(_shows(tester, 'sidebar'), 'Press keys…');
+      expect(keyShows(tester, 'sidebar'), 'Press keys…');
       await tester.sendKeyEvent(LogicalKeyboardKey.f6);
       await tester.sendKeyUpEvent(
         LogicalKeyboardKey.altGraph,
         physicalKey: altRight,
       );
-      await tester.sendKeyUpEvent(_ctrl);
+      await tester.sendKeyUpEvent(ctrlKey);
       await tester.pumpAndSettle();
       expect(shortcutRecording.value, isFalse);
-      expect(_saved(), {'sidebar': 'Cmd+F6'});
+      expect(savedKeys(), {'sidebar': 'Cmd+F6'});
       d.dispose();
     }, variant: onMac);
 
     testWidgets("on Linux a refused Ctrl+Q's repeats don't quit; lifted, it "
         'quits again', (tester) async {
-      _onLinux();
+      shortcutsOnLinux();
       final d = await pumpSettingsApp(
         tester,
         settingsFake(),
@@ -434,13 +350,13 @@ void main() {
       final exits = _ExitAsks();
       tester.binding.addObserver(exits);
       addTearDown(() => tester.binding.removeObserver(exits));
-      await _tap(tester, _key('sidebar'));
-      await tester.sendKeyDownEvent(_ctrl);
+      await tapIt(tester, keyOf('sidebar'));
+      await tester.sendKeyDownEvent(ctrlKey);
       await tester.sendKeyDownEvent(LogicalKeyboardKey.keyQ);
       await tester.pumpAndSettle();
       expect(
         find.descendant(
-          of: _row('sidebar'),
+          of: rowOf('sidebar'),
           matching: find.textContaining('It quits Nushi', findRichText: true),
         ),
         findsOne,
@@ -452,7 +368,7 @@ void main() {
       await tester.sendKeyUpEvent(LogicalKeyboardKey.keyQ);
       await tester.sendKeyDownEvent(LogicalKeyboardKey.keyQ);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.keyQ);
-      await tester.sendKeyUpEvent(_ctrl);
+      await tester.sendKeyUpEvent(ctrlKey);
       await tester.pumpAndSettle();
       expect(exits.count, 1);
       d.dispose();
@@ -468,10 +384,10 @@ void main() {
       // ⌥⌘. recorded on the Settings row, then pressed on Sidebar's: a
       // clash, the focus on Cancel.
       for (final (id, key, holding) in [
-        ('settings', LogicalKeyboardKey.period, [_alt, _meta]),
-        ('sidebar', LogicalKeyboardKey.period, [_alt, _meta]),
+        ('settings', LogicalKeyboardKey.period, [altKey, metaKey]),
+        ('sidebar', LogicalKeyboardKey.period, [altKey, metaKey]),
       ]) {
-        await _tap(tester, _key(id));
+        await tapIt(tester, keyOf(id));
         for (final k in holding) {
           await tester.sendKeyDownEvent(k);
         }
@@ -490,10 +406,13 @@ void main() {
         }
         await tester.pumpAndSettle();
       }
-      expect(_saved(), {'settings': 'Alt+Cmd+.'});
-      expect(_in('sidebar', 'In use'), findsOne);
-      await _tap(tester, find.byKey(const ValueKey('shortcut-cancel-sidebar')));
-      await _press(tester, LogicalKeyboardKey.period, [_alt, _meta]);
+      expect(savedKeys(), {'settings': 'Alt+Cmd+.'});
+      expect(inRow('sidebar', 'In use'), findsOne);
+      await tapIt(
+        tester,
+        find.byKey(const ValueKey('shortcut-cancel-sidebar')),
+      );
+      await pressKey(tester, LogicalKeyboardKey.period, [altKey, metaKey]);
       expect(d.settingsOpen, isNull);
       d.dispose();
     }, variant: onMac);
@@ -501,21 +420,21 @@ void main() {
 
   group('refusals', () {
     testWidgets('a key needs ⌘, ⌃ or ⌥, but F5', (tester) async {
-      final d = await _page(tester);
+      final d = await shortcutsPage(tester);
       // The line names the key pressed: the field still shows the row's.
       for (final (key, holding, label) in [
         (LogicalKeyboardKey.keyJ, <LogicalKeyboardKey>[], 'J'),
-        (LogicalKeyboardKey.keyJ, [_shift], '⇧J'),
+        (LogicalKeyboardKey.keyJ, [shiftKey], '⇧J'),
         (LogicalKeyboardKey.tab, <LogicalKeyboardKey>[], '⇥'),
       ]) {
-        await _record(tester, 'pin', key, holding);
-        expect(_in('pin', '$label: Hold ⌘, ⌃ or ⌥ with it'), findsOne);
-        expect(_in('pin', 'Not allowed'), findsOne);
-        expect(_saved(), isEmpty);
+        await recordKey(tester, 'pin', key, holding);
+        expect(inRow('pin', '$label: Hold ⌘, ⌃ or ⌥ with it'), findsOne);
+        expect(inRow('pin', 'Not allowed'), findsOne);
+        expect(savedKeys(), isEmpty);
       }
-      await _record(tester, 'pin', LogicalKeyboardKey.f5);
-      expect(_saved(), {'pin': 'F5'});
-      expect(_in('pin', 'Not allowed'), findsNothing);
+      await recordKey(tester, 'pin', LogicalKeyboardKey.f5);
+      expect(savedKeys(), {'pin': 'F5'});
+      expect(inRow('pin', 'Not allowed'), findsNothing);
       d.dispose();
     }, variant: onMac);
 
@@ -523,35 +442,39 @@ void main() {
         "refused with why; a fixed key too; a row's own default isn't", (
       tester,
     ) async {
-      final d = await _page(tester);
+      final d = await shortcutsPage(tester);
       for (final (key, holding, why) in [
-        (LogicalKeyboardKey.keyQ, [_meta], '⌘Q: macOS keeps it'),
-        (LogicalKeyboardKey.digit4, [_shift, _meta], '⇧⌘4: macOS keeps it'),
-        (LogicalKeyboardKey.keyC, [_meta], '⌘C: A text field keeps it'),
-        (LogicalKeyboardKey.keyA, [_ctrl], '⌃A: A text field keeps it'),
-        (LogicalKeyboardKey.enter, [_alt, _meta], '⌥⌘⏎: The composer keeps it'),
+        (LogicalKeyboardKey.keyQ, [metaKey], '⌘Q: macOS keeps it'),
+        (LogicalKeyboardKey.digit4, [shiftKey, metaKey], '⇧⌘4: macOS keeps it'),
+        (LogicalKeyboardKey.keyC, [metaKey], '⌘C: A text field keeps it'),
+        (LogicalKeyboardKey.keyA, [ctrlKey], '⌃A: A text field keeps it'),
+        (
+          LogicalKeyboardKey.enter,
+          [altKey, metaKey],
+          '⌥⌘⏎: The composer keeps it',
+        ),
         // A fixed key's reason names it already.
-        (LogicalKeyboardKey.digit1, [_meta], '⌘1 opens a chat'),
+        (LogicalKeyboardKey.digit1, [metaKey], '⌘1 opens a chat'),
       ]) {
-        await _record(tester, 'pin', key, holding);
-        expect(_in('pin', why), findsOne, reason: why);
-        expect(_saved(), isEmpty, reason: why);
-        expect(_shows(tester, 'pin'), '⌘D');
+        await recordKey(tester, 'pin', key, holding);
+        expect(inRow('pin', why), findsOne, reason: why);
+        expect(savedKeys(), isEmpty, reason: why);
+        expect(keyShows(tester, 'pin'), '⌘D');
       }
       // ⌥Z types Ω elsewhere, but is Wrap lines' own.
       shortcutKeys.value = {'wrap': 'Alt+Cmd+W', 'previousChat': 'Alt+Cmd+P'};
       await tester.pumpAndSettle();
-      await _record(tester, 'wrap', LogicalKeyboardKey.keyZ, [_alt]);
-      await _record(tester, 'previousChat', LogicalKeyboardKey.arrowUp, [
-        _alt,
-        _meta,
+      await recordKey(tester, 'wrap', LogicalKeyboardKey.keyZ, [altKey]);
+      await recordKey(tester, 'previousChat', LogicalKeyboardKey.arrowUp, [
+        altKey,
+        metaKey,
       ]);
-      expect(_saved(), isEmpty);
-      await _record(tester, 'sidebar', LogicalKeyboardKey.keyZ, [_alt]);
-      expect(_in('sidebar', '⌥Z: ⌥ and a key types a character'), findsOne);
+      expect(savedKeys(), isEmpty);
+      await recordKey(tester, 'sidebar', LogicalKeyboardKey.keyZ, [altKey]);
+      expect(inRow('sidebar', '⌥Z: ⌥ and a key types a character'), findsOne);
       // Esc drops the refusal, and Settings stays.
-      await _press(tester, LogicalKeyboardKey.escape);
-      expect(_in('sidebar', 'Not allowed'), findsNothing);
+      await pressKey(tester, LogicalKeyboardKey.escape);
+      expect(inRow('sidebar', 'Not allowed'), findsNothing);
       expect(find.text('closed'), findsNothing);
       d.dispose();
     }, variant: onMac);
@@ -560,25 +483,28 @@ void main() {
   group('clashes', () {
     testWidgets("another binding's key is offered to take: Cancel changes "
         'nothing, Take it leaves the other with none', (tester) async {
-      final d = await _page(tester);
-      await _record(tester, 'sidebar', LogicalKeyboardKey.keyD, [_meta]);
-      expect(_in('sidebar', 'Pin chat has ⌘D'), findsOne);
-      expect(_in('sidebar', 'In use'), findsOne);
+      final d = await shortcutsPage(tester);
+      await recordKey(tester, 'sidebar', LogicalKeyboardKey.keyD, [metaKey]);
+      expect(inRow('sidebar', 'Pin chat has ⌘D'), findsOne);
+      expect(inRow('sidebar', 'In use'), findsOne);
       expect(FocusManager.instance.primaryFocus?.debugLabel, 'shortcut-cancel');
-      await _tap(tester, find.byKey(const ValueKey('shortcut-cancel-sidebar')));
-      expect(_saved(), isEmpty);
-      expect(_in('sidebar', 'In use'), findsNothing);
+      await tapIt(
+        tester,
+        find.byKey(const ValueKey('shortcut-cancel-sidebar')),
+      );
+      expect(savedKeys(), isEmpty);
+      expect(inRow('sidebar', 'In use'), findsNothing);
       // Esc cancels too, not Settings.
-      await _record(tester, 'sidebar', LogicalKeyboardKey.keyD, [_meta]);
-      await _press(tester, LogicalKeyboardKey.escape);
-      expect(_in('sidebar', 'In use'), findsNothing);
+      await recordKey(tester, 'sidebar', LogicalKeyboardKey.keyD, [metaKey]);
+      await pressKey(tester, LogicalKeyboardKey.escape);
+      expect(inRow('sidebar', 'In use'), findsNothing);
       expect(find.text('closed'), findsNothing);
-      expect(_saved(), isEmpty);
-      await _record(tester, 'sidebar', LogicalKeyboardKey.keyD, [_meta]);
-      await _tap(tester, find.byKey(const ValueKey('shortcut-take-sidebar')));
-      expect(_saved(), {'sidebar': 'Cmd+D', 'pin': ''});
-      expect(_shows(tester, 'sidebar'), '⌘D');
-      expect(_shows(tester, 'pin'), 'None');
+      expect(savedKeys(), isEmpty);
+      await recordKey(tester, 'sidebar', LogicalKeyboardKey.keyD, [metaKey]);
+      await tapIt(tester, find.byKey(const ValueKey('shortcut-take-sidebar')));
+      expect(savedKeys(), {'sidebar': 'Cmd+D', 'pin': ''});
+      expect(keyShows(tester, 'sidebar'), '⌘D');
+      expect(keyShows(tester, 'pin'), 'None');
       expect(
         FocusManager.instance.primaryFocus?.debugLabel,
         'shortcut-sidebar',
@@ -588,57 +514,60 @@ void main() {
 
     testWidgets("⇧⌘] for another binding is Next tab's second key: taken, "
         'it goes', (tester) async {
-      final d = await _page(tester);
-      await _record(tester, 'sidebar', LogicalKeyboardKey.bracketRight, [
-        _shift,
-        _meta,
+      final d = await shortcutsPage(tester);
+      await recordKey(tester, 'sidebar', LogicalKeyboardKey.bracketRight, [
+        shiftKey,
+        metaKey,
       ]);
-      expect(_in('sidebar', "⇧⌘] is Next tab's second key"), findsOne);
-      await _tap(tester, find.byKey(const ValueKey('shortcut-take-sidebar')));
-      expect(_saved(), {'sidebar': 'Shift+Cmd+]'});
-      expect(_shows(tester, 'nextTab'), '⌃⇥');
+      expect(inRow('sidebar', "⇧⌘] is Next tab's second key"), findsOne);
+      await tapIt(tester, find.byKey(const ValueKey('shortcut-take-sidebar')));
+      expect(savedKeys(), {'sidebar': 'Shift+Cmd+]'});
+      expect(keyShows(tester, 'nextTab'), '⌃⇥');
       d.dispose();
     }, variant: onMac);
 
     testWidgets('reset on a row whose default another took offers to take '
         'it back', (tester) async {
-      final d = await _page(tester);
+      final d = await shortcutsPage(tester);
       shortcutKeys.value = {'pin': 'Cmd+J', 'sidebar': 'Cmd+D'};
       await tester.pumpAndSettle();
-      await _tap(tester, find.byKey(const ValueKey('shortcut-reset-pin')));
-      expect(_in('pin', 'Show or hide sidebar has ⌘D'), findsOne);
-      await _tap(tester, find.byKey(const ValueKey('shortcut-take-pin')));
-      expect(_saved(), {'sidebar': ''});
-      expect(_shows(tester, 'pin'), '⌘D');
+      await tapIt(tester, find.byKey(const ValueKey('shortcut-reset-pin')));
+      expect(inRow('pin', 'Show or hide sidebar has ⌘D'), findsOne);
+      await tapIt(tester, find.byKey(const ValueKey('shortcut-take-pin')));
+      expect(savedKeys(), {'sidebar': ''});
+      expect(keyShows(tester, 'pin'), '⌘D');
       d.dispose();
     }, variant: onMac);
 
     testWidgets('a row with nothing saved whose default another holds has '
         'Reset, which offers to take it back', (tester) async {
-      final d = await _page(tester);
+      final d = await shortcutsPage(tester);
       shortcutKeys.value = {'sidebar': 'Cmd+D'};
       await tester.pumpAndSettle();
-      expect(_in('pin', "⌘D is Show or hide sidebar's"), findsOne);
-      await _tap(tester, find.byKey(const ValueKey('shortcut-reset-pin')));
-      expect(_in('pin', 'Show or hide sidebar has ⌘D'), findsOne);
-      await _tap(tester, find.byKey(const ValueKey('shortcut-take-pin')));
-      expect(_saved(), {'sidebar': ''});
-      expect(_shows(tester, 'pin'), '⌘D');
+      expect(inRow('pin', "⌘D is Show or hide sidebar's"), findsOne);
+      await tapIt(tester, find.byKey(const ValueKey('shortcut-reset-pin')));
+      expect(inRow('pin', 'Show or hide sidebar has ⌘D'), findsOne);
+      await tapIt(tester, find.byKey(const ValueKey('shortcut-take-pin')));
+      expect(savedKeys(), {'sidebar': ''});
+      expect(keyShows(tester, 'pin'), '⌘D');
       d.dispose();
     }, variant: onMac);
 
     testWidgets("saved keys that clash or are refused say they aren't used", (
       tester,
     ) async {
-      final d = await _page(tester);
+      final d = await shortcutsPage(tester);
       shortcutKeys.value = {'sidebar': 'Cmd+K', 'pin': 'Cmd+C'};
       await tester.pumpAndSettle();
-      expect(_shows(tester, 'palette'), 'None');
-      expect(_in('palette', 'Not used'), findsOne);
-      expect(_in('palette', "⌘K is Show or hide sidebar's"), findsOne);
-      expect(_shows(tester, 'pin'), '⌘D');
-      expect(_in('pin', 'Not used'), findsOne);
-      expect(_in('pin', "Your ⌘C isn't used: A text field keeps it"), findsOne);
+      expect(keyShows(tester, 'palette'), 'None');
+      expect(inRow('palette', 'Not used'), findsOne);
+      expect(inRow('palette', "⌘K is Show or hide sidebar's"), findsOne);
+      expect(keyShows(tester, 'pin'), '⌘D');
+      expect(inRow('pin', 'Not used'), findsOne);
+      expect(
+        inRow('pin', "Your ⌘C isn't used: A text field keeps it"),
+        findsOne,
+      );
       d.dispose();
     }, variant: onMac);
   });
@@ -653,38 +582,38 @@ void main() {
       );
       PlatformMenuItem reload() =>
           viewItems(tester).firstWhere((m) => m.label == 'Reload Page');
-      await _tap(
+      await tapIt(
         tester,
         find.byKey(const ValueKey('shortcut-clear-reloadPage')),
       );
-      expect(_shows(tester, 'reloadPage'), 'None');
-      expect(_saved(), {'reloadPage': ''});
+      expect(keyShows(tester, 'reloadPage'), 'None');
+      expect(savedKeys(), {'reloadPage': ''});
       expect(reload().shortcut, isNull);
-      await _tap(
+      await tapIt(
         tester,
         find.byKey(const ValueKey('shortcut-reset-reloadPage')),
       );
-      expect(_shows(tester, 'reloadPage'), '⌘R');
-      expect(_saved(), isEmpty);
+      expect(keyShows(tester, 'reloadPage'), '⌘R');
+      expect(savedKeys(), isEmpty);
       expect(reload().shortcut, isNotNull);
       d.dispose();
     }, variant: onMac);
 
     testWidgets("from the keyboard, Clear leaves the focus on its row's "
         'field', (tester) async {
-      final d = await _page(tester);
+      final d = await shortcutsPage(tester);
       FocusManager.instance.highlightStrategy =
           FocusHighlightStrategy.alwaysTraditional;
       addTearDown(
         () => FocusManager.instance.highlightStrategy =
             FocusHighlightStrategy.automatic,
       );
-      await _tap(tester, _key('sidebar'));
-      await _press(tester, LogicalKeyboardKey.escape);
+      await tapIt(tester, keyOf('sidebar'));
+      await pressKey(tester, LogicalKeyboardKey.escape);
       // Back a step from the field: its row's Clear.
-      await _press(tester, LogicalKeyboardKey.tab, [_shift]);
-      await _press(tester, LogicalKeyboardKey.space);
-      expect(_saved(), {'sidebar': ''});
+      await pressKey(tester, LogicalKeyboardKey.tab, [shiftKey]);
+      await pressKey(tester, LogicalKeyboardKey.space);
+      expect(savedKeys(), {'sidebar': ''});
       expect(
         FocusManager.instance.primaryFocus?.debugLabel,
         'shortcut-sidebar',
@@ -696,7 +625,7 @@ void main() {
   group('reset all', () {
     testWidgets('asks first; Reset all keeps a name this app does not know; '
         'off with only those', (tester) async {
-      final d = await _page(tester);
+      final d = await shortcutsPage(tester);
       Button button() => tester.widget<Button>(
         find.byKey(const ValueKey('shortcuts-reset-all')),
       );
@@ -705,20 +634,20 @@ void main() {
       expect(button().onPressed, isNull);
       shortcutKeys.value = {'later': 'Cmd+J', 'pin': 'Cmd+J'};
       await tester.pumpAndSettle();
-      await _tap(tester, find.byKey(const ValueKey('shortcuts-reset-all')));
+      await tapIt(tester, find.byKey(const ValueKey('shortcuts-reset-all')));
       expect(find.text('Reset all keys?'), findsOne);
-      await _tap(tester, find.text('Cancel'));
-      expect(_saved(), {'later': 'Cmd+J', 'pin': 'Cmd+J'});
-      await _tap(tester, find.byKey(const ValueKey('shortcuts-reset-all')));
-      await _tap(tester, find.text('Reset all'));
-      expect(_saved(), {'later': 'Cmd+J'});
+      await tapIt(tester, find.text('Cancel'));
+      expect(savedKeys(), {'later': 'Cmd+J', 'pin': 'Cmd+J'});
+      await tapIt(tester, find.byKey(const ValueKey('shortcuts-reset-all')));
+      await tapIt(tester, find.text('Reset all'));
+      expect(savedKeys(), {'later': 'Cmd+J'});
       expect(button().onPressed, isNull);
       d.dispose();
     }, variant: onMac);
 
     testWidgets('from the keyboard, Reset all leaves the focus on the first '
         "row's field, with its ring", (tester) async {
-      final d = await _page(tester);
+      final d = await shortcutsPage(tester);
       FocusManager.instance.highlightStrategy =
           FocusHighlightStrategy.alwaysTraditional;
       addTearDown(
@@ -731,16 +660,16 @@ void main() {
       Focus.of(tester.element(find.text('Reset all to defaults')))
           .requestFocus();
       await tester.pumpAndSettle();
-      await _press(tester, LogicalKeyboardKey.enter);
+      await pressKey(tester, LogicalKeyboardKey.enter);
       expect(find.text('Reset all keys?'), findsOne);
       // Cancel has the focus first; Reset all is after it.
-      await _press(tester, LogicalKeyboardKey.tab);
-      await _press(tester, LogicalKeyboardKey.enter);
-      expect(_saved(), isEmpty);
+      await pressKey(tester, LogicalKeyboardKey.tab);
+      await pressKey(tester, LogicalKeyboardKey.enter);
+      expect(savedKeys(), isEmpty);
       expect(FocusManager.instance.primaryFocus?.debugLabel, 'shortcut-$first');
       final ring = tester
           .widgetList<Container>(
-            find.descendant(of: _key(first), matching: find.byType(Container)),
+            find.descendant(of: keyOf(first), matching: find.byType(Container)),
           )
           .map((c) => c.foregroundDecoration)
           .whereType<BoxDecoration>()
@@ -754,29 +683,29 @@ void main() {
     for (final width in [1000.0, 720.0]) {
       testWidgets('Clear, Reset and Take it move neither the field nor the '
           'controls left, ${width.toInt()} wide', (tester) async {
-        final d = await _page(tester, size: Size(width, 2600));
+        final d = await shortcutsPage(tester, size: Size(width, 2600));
         Rect at(Finder f) => tester.getRect(f);
-        await tester.ensureVisible(_row('pin'));
+        await tester.ensureVisible(rowOf('pin'));
         await tester.pumpAndSettle();
-        final field = at(_key('pin'));
+        final field = at(keyOf('pin'));
         final clear = at(find.byKey(const ValueKey('shortcut-clear-pin')));
-        final row = at(_row('pin'));
-        await _tap(tester, find.byKey(const ValueKey('shortcut-clear-pin')));
-        expect(at(_key('pin')), field);
-        expect(at(_row('pin')), row);
+        final row = at(rowOf('pin'));
+        await tapIt(tester, find.byKey(const ValueKey('shortcut-clear-pin')));
+        expect(at(keyOf('pin')), field);
+        expect(at(rowOf('pin')), row);
         final reset = at(find.byKey(const ValueKey('shortcut-reset-pin')));
-        await _tap(tester, find.byKey(const ValueKey('shortcut-reset-pin')));
-        expect(at(_key('pin')), field);
+        await tapIt(tester, find.byKey(const ValueKey('shortcut-reset-pin')));
+        expect(at(keyOf('pin')), field);
         expect(at(find.byKey(const ValueKey('shortcut-clear-pin'))), clear);
-        expect(at(_row('pin')), row);
+        expect(at(rowOf('pin')), row);
         // A clash: its buttons come and go beside a field that stays.
-        await _record(tester, 'pin', LogicalKeyboardKey.backslash, [_meta]);
-        expect(at(_key('pin')), field);
-        expect(at(_row('pin')), row);
-        await _tap(tester, find.byKey(const ValueKey('shortcut-take-pin')));
-        expect(at(_key('pin')), field);
+        await recordKey(tester, 'pin', LogicalKeyboardKey.backslash, [metaKey]);
+        expect(at(keyOf('pin')), field);
+        expect(at(rowOf('pin')), row);
+        await tapIt(tester, find.byKey(const ValueKey('shortcut-take-pin')));
+        expect(at(keyOf('pin')), field);
         expect(at(find.byKey(const ValueKey('shortcut-reset-pin'))), reset);
-        expect(at(_row('pin')), row);
+        expect(at(rowOf('pin')), row);
         expectControlsAtEdge(tester);
         expect(tester.takeException(), isNull);
         d.dispose();
@@ -787,21 +716,21 @@ void main() {
         'the window narrows past where the rows stack and back', (
       tester,
     ) async {
-      final d = await _page(tester);
-      await _tap(tester, _key('pin'));
+      final d = await shortcutsPage(tester);
+      await tapIt(tester, keyOf('pin'));
       for (final width in [720.0, 1000.0, 720.0]) {
         await tester.binding.setSurfaceSize(Size(width, 2600));
         await tester.pumpAndSettle();
-        expect(_shows(tester, 'pin'), 'Press keys…', reason: '$width');
+        expect(keyShows(tester, 'pin'), 'Press keys…', reason: '$width');
         expect(shortcutRecording.value, isTrue, reason: '$width');
       }
-      await _press(tester, LogicalKeyboardKey.keyS, [_meta, _alt]);
-      expect(_saved(), {'pin': 'Alt+Cmd+S'});
+      await pressKey(tester, LogicalKeyboardKey.keyS, [metaKey, altKey]);
+      expect(savedKeys(), {'pin': 'Alt+Cmd+S'});
       expect(shortcutRecording.value, isFalse);
       expect(FocusManager.instance.primaryFocus?.debugLabel, 'shortcut-pin');
       final ring = tester
           .widgetList<Container>(
-            find.descendant(of: _key('pin'), matching: find.byType(Container)),
+            find.descendant(of: keyOf('pin'), matching: find.byType(Container)),
           )
           .map((c) => c.foregroundDecoration)
           .whereType<BoxDecoration>()
@@ -814,7 +743,7 @@ void main() {
         "a field as wide as every row's; a clash fits beside it", (
       tester,
     ) async {
-      _onLinux();
+      shortcutsOnLinux();
       shortcutKeys.value = {'newChat': 'Alt+Shift+Cmd+PageDown'};
       // In the app, where Settings leaves the page least room.
       final d = await pumpSettingsApp(
@@ -823,31 +752,31 @@ void main() {
         SettingsSection.shortcuts,
         size: const Size(720, 900),
       );
-      final other = tester.getRect(_key('settings'));
-      final field = tester.getRect(_key('newChat'));
+      final other = tester.getRect(keyOf('settings'));
+      final field = tester.getRect(keyOf('newChat'));
       expect(field.width, 168);
       expect(other.left, field.left);
       expect(other.width, field.width);
       final fit = tester.renderObject<RenderBox>(
-        find.descendant(of: _key('newChat'), matching: find.byType(FittedBox)),
+        find.descendant(of: keyOf('newChat'), matching: find.byType(FittedBox)),
       );
       final words = tester.renderObject<RenderBox>(
         find.descendant(
-          of: _key('newChat'),
+          of: keyOf('newChat'),
           matching: find.text('Ctrl+Alt+Shift+Page Down', findRichText: true),
         ),
       );
       // At least 10 of its 12 points.
       expect(fit.size.width / words.size.width, greaterThanOrEqualTo(10 / 12));
-      await _record(tester, 'newChat', LogicalKeyboardKey.keyS, [_ctrl]);
+      await recordKey(tester, 'newChat', LogicalKeyboardKey.keyS, [ctrlKey]);
       expect(find.byKey(const ValueKey('shortcut-take-newChat')), findsOne);
-      expect(tester.getRect(_key('newChat')).left, field.left);
-      expect(tester.getRect(_key('newChat')).width, field.width);
+      expect(tester.getRect(keyOf('newChat')).left, field.left);
+      expect(tester.getRect(keyOf('newChat')).width, field.width);
       expect(
         tester
             .getRect(find.byKey(const ValueKey('shortcut-take-newChat')))
             .right,
-        lessThanOrEqualTo(tester.getRect(_row('newChat')).right),
+        lessThanOrEqualTo(tester.getRect(rowOf('newChat')).right),
       );
       expect(tester.takeException(), isNull);
       d.dispose();
@@ -855,21 +784,27 @@ void main() {
 
     testWidgets('on Linux a chosen Ctrl+Alt+R notes the shell keeps it; reset, '
         'the note goes and nothing moves', (tester) async {
-      _onLinux();
-      final d = await _page(tester);
-      final field = tester.getRect(_key('pin'));
-      final row = tester.getRect(_row('pin'));
+      shortcutsOnLinux();
+      final d = await shortcutsPage(tester);
+      final field = tester.getRect(keyOf('pin'));
+      final row = tester.getRect(rowOf('pin'));
       // Ctrl+R is Reload page's there.
-      await _record(tester, 'pin', LogicalKeyboardKey.keyR, [_ctrl, _alt]);
-      expect(_saved(), {'pin': 'Alt+Cmd+R'});
-      expect(_in('pin', 'A focused terminal keeps it for the shell'), findsOne);
-      await _tap(tester, find.byKey(const ValueKey('shortcut-reset-pin')));
+      await recordKey(tester, 'pin', LogicalKeyboardKey.keyR, [
+        ctrlKey,
+        altKey,
+      ]);
+      expect(savedKeys(), {'pin': 'Alt+Cmd+R'});
       expect(
-        _in('pin', 'A focused terminal keeps it for the shell'),
+        inRow('pin', 'A focused terminal keeps it for the shell'),
+        findsOne,
+      );
+      await tapIt(tester, find.byKey(const ValueKey('shortcut-reset-pin')));
+      expect(
+        inRow('pin', 'A focused terminal keeps it for the shell'),
         findsNothing,
       );
-      expect(tester.getRect(_key('pin')), field);
-      expect(tester.getRect(_row('pin')), row);
+      expect(tester.getRect(keyOf('pin')), field);
+      expect(tester.getRect(rowOf('pin')), row);
       d.dispose();
     }, variant: onMac);
   });
@@ -881,20 +816,24 @@ void main() {
   ]) {
     for (final state in ['pending', 'refused']) {
       testWidgets('golden, $state, $name', (tester) async {
-        final d = await _page(tester, tokens: tokens);
+        final d = await shortcutsPage(tester, tokens: tokens);
         if (state == 'pending') {
           shortcutKeys.value = {'newChat': 'Shift+Cmd+N'};
           await tester.pumpAndSettle();
-          await _record(tester, 'closeTab', LogicalKeyboardKey.keyS, [_meta]);
+          await recordKey(tester, 'closeTab', LogicalKeyboardKey.keyS, [
+            metaKey,
+          ]);
         } else {
-          await _record(tester, 'closeTab', LogicalKeyboardKey.keyC, [_meta]);
+          await recordKey(tester, 'closeTab', LogicalKeyboardKey.keyC, [
+            metaKey,
+          ]);
         }
         // The pointer and the focus away, as a golden is looked at.
         FocusManager.instance.primaryFocus?.unfocus();
         await tester.pumpAndSettle();
         await expectLater(
           find.ancestor(
-            of: _row('closeTab'),
+            of: rowOf('closeTab'),
             matching: find.byType(SettingsGroup),
           ),
           matchesGoldenFile('goldens/settings_shortcuts_${state}_$name.png'),
@@ -902,98 +841,5 @@ void main() {
         d.dispose();
       }, variant: onMac);
     }
-  }
-
-  // The page at full size, in the app.
-  for (final (size, w) in [
-    (const Size(1700, 1000), 'wide'),
-    (const Size(720, 900), 'narrow'),
-  ]) {
-    for (final b in Brightness.values) {
-      testWidgets('renders, $w, ${b.name}', (tester) async {
-        final d = await pumpSettingsApp(
-          tester,
-          settingsFake(),
-          SettingsSection.shortcuts,
-          size: size,
-          brightness: b,
-        );
-        expect(tester.takeException(), isNull);
-        expectTextInside(tester, size.width);
-        expectControlsAtEdge(tester);
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'settings_shortcuts_${w}_${b.name}',
-        );
-        shortcutKeys.value = {'newChat': 'Shift+Cmd+N', 'pin': 'Cmd+C'};
-        await tester.pumpAndSettle();
-        await _record(tester, 'closeTab', LogicalKeyboardKey.keyS, [_meta]);
-        expect(tester.takeException(), isNull);
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'settings_shortcuts_${w}_${b.name}_clash',
-        );
-        final page = tester.widget<CustomScrollView>(
-          find.ancestor(
-            of: _row('closeTab'),
-            matching: find.byType(CustomScrollView),
-          ),
-        );
-        await tester.dragUntilVisible(
-          find.text('Quit'),
-          find.byWidget(page),
-          const Offset(0, -300),
-        );
-        await tester.pumpAndSettle();
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'settings_shortcuts_${w}_${b.name}_end',
-        );
-        d.dispose();
-      }, variant: onMac);
-    }
-  }
-
-  // A long chosen key, on the page and on the sidebar's New chat, on the
-  // Mac and on Linux, where its words are long.
-  for (final (size, w) in [
-    (const Size(1700, 1000), 'wide'),
-    (const Size(720, 900), 'narrow'),
-  ]) {
-    testWidgets('renders a long chosen key, $w', (tester) async {
-      final linux = defaultTargetPlatform == TargetPlatform.linux;
-      if (linux) _onLinux();
-      final p = linux ? 'linux' : 'mac';
-      shortcutKeys.value = {
-        'newChat': 'Alt+Shift+Cmd+PageUp',
-        'pin': 'Alt+Shift+Cmd+PageDown',
-      };
-      final d = await pumpSettingsApp(
-        tester,
-        settingsFake(),
-        SettingsSection.shortcuts,
-        size: size,
-      );
-      await render(
-        tester,
-        find.byType(NushiApp),
-        'settings_shortcuts_long_${p}_$w',
-      );
-      await _record(tester, 'closeTab', LogicalKeyboardKey.keyS, [
-        if (linux) _ctrl else _meta,
-      ]);
-      await render(
-        tester,
-        find.byType(NushiApp),
-        'settings_shortcuts_long_${p}_${w}_clash',
-      );
-      d.select('a');
-      await tester.pumpAndSettle();
-      await render(tester, find.byType(NushiApp), 'sidebar_long_key_${p}_$w');
-      d.dispose();
-    }, variant: macAndLinux);
   }
 }
