@@ -641,7 +641,7 @@ void main() {
         ),
         (
           SingleActivator(LogicalKeyboardKey.enter, meta: true, alt: true),
-          'A message box keeps it',
+          'The composer keeps it',
         ),
         (
           SingleActivator(LogicalKeyboardKey.escape, meta: true),
@@ -712,7 +712,7 @@ void main() {
         ),
         (
           SingleActivator(LogicalKeyboardKey.enter, control: true),
-          'A message box keeps it',
+          'The composer keeps it',
         ),
         (SingleActivator(LogicalKeyboardKey.keyR, control: true), null),
         (

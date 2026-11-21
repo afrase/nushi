@@ -137,7 +137,7 @@ String? refusal(SingleActivator k, {Cmd? own}) {
   }
   final why = mac ? _macRefusal(k) : _linuxRefusal(k);
   if (why != null) return why;
-  if (k.trigger == LogicalKeyboardKey.enter) return 'A message box keeps it';
+  if (k.trigger == LogicalKeyboardKey.enter) return 'The composer keeps it';
   return null;
 }
 

@@ -532,7 +532,7 @@ void main() {
         (
           LogicalKeyboardKey.enter,
           [_alt, _meta],
-          '⌥⌘⏎: A message box keeps it',
+          '⌥⌘⏎: The composer keeps it',
         ),
         // A fixed key's reason names it already.
         (LogicalKeyboardKey.digit1, [_meta], '⌘1 opens a chat'),
