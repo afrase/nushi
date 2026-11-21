@@ -754,6 +754,33 @@ void main() {
       }, variant: onMac);
     }
 
+    testWidgets('a field listening goes on listening, its ring and all, as '
+        'the window narrows past where the rows stack and back', (
+      tester,
+    ) async {
+      final d = await _page(tester);
+      await _tap(tester, _key('pin'));
+      for (final width in [720.0, 1000.0, 720.0]) {
+        await tester.binding.setSurfaceSize(Size(width, 2600));
+        await tester.pumpAndSettle();
+        expect(_shows(tester, 'pin'), 'Press keys…', reason: '$width');
+        expect(shortcutRecording.value, isTrue, reason: '$width');
+      }
+      await _press(tester, LogicalKeyboardKey.keyS, [_meta, _alt]);
+      expect(_saved(), {'pin': 'Alt+Cmd+S'});
+      expect(shortcutRecording.value, isFalse);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'shortcut-pin');
+      final ring = tester
+          .widgetList<Container>(
+            find.descendant(of: _key('pin'), matching: find.byType(Container)),
+          )
+          .map((c) => c.foregroundDecoration)
+          .whereType<BoxDecoration>()
+          .single;
+      expect((ring.border! as Border).top.width, 2);
+      d.dispose();
+    }, variant: onMac);
+
     testWidgets('on Linux a chosen Ctrl+Alt+R notes the shell keeps it; reset, '
         'the note goes and nothing moves', (tester) async {
       _onLinux();

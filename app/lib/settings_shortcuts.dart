@@ -384,13 +384,18 @@ class _KeyRow extends StatelessWidget {
     );
   }
 
-  Widget _field(double width) => ShortcutField(
-    key: ValueKey('shortcut-key-$_id'),
-    label: keyLabel(binding),
-    focusNode: field,
-    width: width,
-    onKey: onKey,
-    onStart: onStart,
+  /// Its field, keyed by its focus so it keeps its state (listening, its
+  /// ring) when the window crosses [_stackBelow] and it moves.
+  Widget _field(double width) => KeyedSubtree(
+    key: GlobalObjectKey(field),
+    child: ShortcutField(
+      key: ValueKey('shortcut-key-$_id'),
+      label: keyLabel(binding),
+      focusNode: field,
+      width: width,
+      onKey: onKey,
+      onStart: onStart,
+    ),
   );
 
   /// The controls beside the field, in the order they stand before it.
