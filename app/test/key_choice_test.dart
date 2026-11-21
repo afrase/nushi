@@ -234,6 +234,29 @@ void main() {
       });
     });
 
+    test('an entry in another shape (a newer app’s) is ignored, and kept by '
+        'the next change', () async {
+      shortcutKeys.readFrom({
+        'shortcuts': {
+          'nextTab': ['Ctrl+Tab', 'Shift+Cmd+]'],
+          'pin': 'Alt+Cmd+P',
+        },
+      });
+      expect(shortcutKeys.value, {'pin': 'Alt+Cmd+P'});
+      expect(nextTabKey.chosen, isFalse);
+      chooseKey(sidebarKey, parseShortcut('Alt+Cmd+S'));
+      await pumpEventQueue();
+      expect(readSaved()['shortcuts'], {
+        'nextTab': ['Ctrl+Tab', 'Shift+Cmd+]'],
+        'pin': 'Alt+Cmd+P',
+        'sidebar': 'Alt+Cmd+S',
+      });
+      // A key chosen for it here replaces it.
+      chooseKey(nextTabKey, parseShortcut('Alt+Cmd+N'));
+      await pumpEventQueue();
+      expect(readSaved()['shortcuts'], containsPair('nextTab', 'Alt+Cmd+N'));
+    });
+
     test('choosing the default takes the entry away; Reset all keeps '
         'unknown names', () {
       chooseKey(pinKey, parseShortcut('Alt+Cmd+P'));

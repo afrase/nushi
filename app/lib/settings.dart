@@ -550,8 +550,26 @@ final Pref<String?> dismissedUpdate = _plain('dismissedUpdate', null);
 /// A binding on its default has no entry. Changed only by a fresh map.
 final Pref<Map<String, String>> shortcutKeys = Pref(
   'shortcuts',
-  (v) => _entries(v, (s) => s is String ? s : null),
+  (v) {
+    _otherShortcuts = {
+      if (v is Map)
+        for (final MapEntry(:key, :value) in v.entries)
+          if ((key, value) case (final String k, final Object? v)
+              when v is! String)
+            k: v,
+    };
+    return _entries(v, (s) => s is String ? s : null);
+  },
+  write: (keys) => {
+    for (final MapEntry(:key, :value) in _otherShortcuts.entries)
+      if (!keys.containsKey(key)) key: value,
+    ...keys,
+  },
 );
+
+/// `shortcuts`' entries in a shape this app doesn't read (a newer app's),
+/// as last read: written back unchanged.
+Map<String, Object?> _otherShortcuts = const {};
 
 /// The prefs kept by chat, which [chatsKept] and [forgetChats] go through.
 /// Named here rather than found among those made: a pref is made when
