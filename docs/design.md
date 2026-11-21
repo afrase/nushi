@@ -132,12 +132,12 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 
 | Piece | Use it for | Not for |
 |---|---|---|
-| `Button` | an action. Kinds: `primary` (the one main action of a dialog, card or bar: accent fill), `secondary` (every other: `lifted`), `quiet` (one that stands back beside a filled one: an inline box's Cancel), `destructive` (deletes or loses something: red on `lifted`), `danger` (red on its soft fill, beside a dialog's own Done, as Claude desktop's Clear all). `icon`, `hint` (a shortcut after the label), `menu` (a ▾) | going somewhere (`LinkText`); more than one primary in a place |
+| `Button` | an action. Kinds: `primary` (the one main action of a dialog, card or bar: accent fill), `secondary` (every other: `lifted`), `quiet` (one that stands back beside a filled one: an inline box's Cancel), `destructive` (deletes or loses something: red on `lifted`), `danger` (red on its soft fill, beside a dialog's own Done, as Claude desktop's Clear all). `icon`, `hint` (a shortcut after the label, dropped when both don't fit: a chosen key can be long), `menu` (a ▾) | going somewhere (`LinkText`); more than one primary in a place |
 | `RunButton` (`widgets.dart`) | a `Button` whose action is a call: off while it runs, its error shown, `running` its label meanwhile | a call that shows its own progress |
 | `MenuButton` | an action with choices ("Start work ▾") | a value (`MenuField`) |
 | `SplitButton` | an action and a ▾ of how it goes ("Squash and merge") | |
 | `SendButton` | every "send to the agent" (Send, Fix checks, Send all): arrow and label on the accent | the pull request page's Send to agent and Send N to agent, beside its one primary (the merge button): a quiet `Button` with the arrow (ADR [0137](adr/0137-the-pull-request-tab-follows-githubs-page.md)) |
-| `WideButton` | a row-wide action on the window or a pane (the sidebar's New chat), its key as a `KeyCap` | inside a card or a bar |
+| `WideButton` | a row-wide action on the window or a pane (the sidebar's New chat), its key as a `KeyCap`, which gives way to the label (`GivesWay`) | inside a card or a bar |
 | `MenuField` | a value picked from a list: its value and a ▾ on `lifted`. `compact` (no fill) in a header or a row; `pill` in the composer's row | an action (`MenuButton`) |
 | `Segmented` | one of a few: the chat header's Chat, Changes, Pull request (`roomy`), and a value a form saves (a server's scope, a review's verdict). `onCard` on a card or dialog | other views of one thing (`PlainTabs`, ADR [0071](adr/0071-one-look-for-tabs.md)) |
 | `PlainTabs` (`plain_tabs.dart`) | views of the same thing: a pull request's sections, History's filters; the Files pane's open files are plain tabs too (`PaneTabs`), the browser's chips | a form's value |

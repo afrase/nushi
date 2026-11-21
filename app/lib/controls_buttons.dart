@@ -128,6 +128,13 @@ class Button extends StatelessWidget {
     final touch = TouchTargets.of(context);
     final lines = wrap && touch ? 3 : 1;
     final corners = BorderRadius.circular(size.radius);
+    final text = Text(
+      label,
+      style: style,
+      maxLines: lines,
+      overflow: TextOverflow.ellipsis,
+      textAlign: lines > 1 ? TextAlign.center : null,
+    );
     return Pressable(
       onTap: onPressed,
       autofocus: autofocus,
@@ -158,22 +165,19 @@ class Button extends StatelessWidget {
                 const SizedBox(width: 6),
               ],
               Flexible(
-                child: Text(
-                  label,
-                  style: style,
-                  maxLines: lines,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: lines > 1 ? TextAlign.center : null,
-                ),
+                child: switch (hint) {
+                  // Its key gives way to its label.
+                  final hint? when !touch => GivesWay(
+                    lead: text,
+                    extra: keyHint(
+                      context,
+                      hint,
+                      color: primary ? t.onAccent : t.textMuted,
+                    ),
+                  ),
+                  _ => text,
+                },
               ),
-              if (hint != null && !touch) ...[
-                const SizedBox(width: 6),
-                keyHint(
-                  context,
-                  hint!,
-                  color: primary ? t.onAccent : t.textMuted,
-                ),
-              ],
               if (menu) ...[
                 const SizedBox(width: 3),
                 Icon(Icons.keyboard_arrow_down, size: 15, color: fg),
@@ -231,14 +235,19 @@ class WideButton extends StatelessWidget {
                 const SizedBox(width: 8),
               ],
               Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.ui(t.text, weight: FontWeight.w500),
+                // Its key gives way to its label.
+                child: GivesWay(
+                  fill: true,
+                  gap: hint?.isNotEmpty ?? false ? 8 : 0,
+                  lead: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.ui(t.text, weight: FontWeight.w500),
+                  ),
+                  extra: KeyCap(hint ?? ''),
                 ),
               ),
-              if (hint case final hint?) KeyCap(hint),
             ],
           ),
         ),

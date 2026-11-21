@@ -1,5 +1,8 @@
+import 'dart:math' show max;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'package:nushi/line_icons.dart';
 import 'package:nushi/menu.dart';
@@ -9,6 +12,7 @@ import 'package:nushi/theme/theme.dart';
 export 'package:nushi/line_icons.dart';
 
 part 'controls_buttons.dart';
+part 'controls_gives_way.dart';
 part 'controls_menus.dart';
 part 'controls_pills.dart';
 part 'controls_press.dart';
@@ -24,7 +28,8 @@ part 'controls_toggle.dart';
 // [DragGrip] where something can be moved. Plain text is never clickable;
 // all of these show the pointing hand. Their parts: `controls_press`
 // (pressing, touch targets, and [Tap] for rows and tabs),
-// `controls_buttons`, `controls_menus`, `controls_small` (links, icons,
+// `controls_buttons`, `controls_gives_way` ([GivesWay], a key that
+// gives way to its label), `controls_menus`, `controls_small` (links, icons,
 // swatches, grips, key hints and caps), `controls_slider` ([LineSlider]),
 // `controls_segmented`
 // ([Segmented]), `controls_toggle` ([Toggle], an on/off) and `controls_pills` ([PillButton] and [RoundButton], a

@@ -4,6 +4,7 @@
 // goldens and renders of the page.
 import 'dart:ui' show AppExitResponse;
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -855,5 +856,45 @@ void main() {
         d.dispose();
       }, variant: onMac);
     }
+  }
+
+  // A long chosen key, on the page and on the sidebar's New chat, on the
+  // Mac and on Linux, where its words are long.
+  for (final (size, w) in [
+    (const Size(1700, 1000), 'wide'),
+    (const Size(720, 900), 'narrow'),
+  ]) {
+    testWidgets('renders a long chosen key, $w', (tester) async {
+      final linux = defaultTargetPlatform == TargetPlatform.linux;
+      if (linux) _onLinux();
+      final p = linux ? 'linux' : 'mac';
+      shortcutKeys.value = {
+        'newChat': 'Alt+Shift+Cmd+PageUp',
+        'pin': 'Alt+Shift+Cmd+PageDown',
+      };
+      final d = await pumpSettingsApp(
+        tester,
+        settingsFake(),
+        SettingsSection.shortcuts,
+        size: size,
+      );
+      await render(
+        tester,
+        find.byType(NushiApp),
+        'settings_shortcuts_long_${p}_$w',
+      );
+      await _record(tester, 'closeTab', LogicalKeyboardKey.keyS, [
+        if (linux) _ctrl else _meta,
+      ]);
+      await render(
+        tester,
+        find.byType(NushiApp),
+        'settings_shortcuts_long_${p}_${w}_clash',
+      );
+      d.select('a');
+      await tester.pumpAndSettle();
+      await render(tester, find.byType(NushiApp), 'sidebar_long_key_${p}_$w');
+      d.dispose();
+    }, variant: macAndLinux);
   }
 }

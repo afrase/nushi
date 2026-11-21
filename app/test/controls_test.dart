@@ -443,6 +443,61 @@ void main() {
     );
   });
 
+  testWidgets('a long key gives way to its label in a WideButton and a '
+      'Button: the label stays whole, nothing overflows', (tester) async {
+    const keys = 'Ctrl+Alt+Shift+Page Up';
+    for (final (width, shows) in [
+      (140.0, false),
+      (230.0, false),
+      (400.0, true),
+    ]) {
+      await tester.pumpWidget(
+        _app(
+          Tokens.dark,
+          Center(
+            child: SizedBox(
+              width: width,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  WideButton(
+                    label: 'New chat',
+                    icon: Icons.add,
+                    hint: keys,
+                    onPressed: () {},
+                  ),
+                  Button(label: 'New chat', hint: keys, onPressed: () {}),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull, reason: '$width');
+      for (final button in [WideButton, Button]) {
+        final inside = find.descendant(
+          of: find.byType(button),
+          matching: find.text('New chat'),
+        );
+        final label = tester.renderObject<RenderParagraph>(inside);
+        expect(label.didExceedMaxLines, isFalse, reason: '$button $width');
+        final key = find.descendant(
+          of: find.byType(button),
+          matching: find.text(keys, findRichText: true),
+        );
+        final hits = tester
+            .hitTestOnBinding(tester.getCenter(key))
+            .path
+            .map((e) => e.target);
+        expect(
+          hits.contains(tester.renderObject(key)),
+          shows,
+          reason: '$button $width',
+        );
+      }
+    }
+  });
+
   testWidgets('Enter and Space press a focused control', (tester) async {
     var presses = 0;
     await tester.pumpWidget(
