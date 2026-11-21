@@ -730,7 +730,7 @@ void main() {
       }
     });
 
-    test('on Windows, Ctrl+Alt is AltGr', () {
+    test('on Windows, Ctrl+Alt is AltGr; IBus’s keys are free', () {
       native.conventions = windowsConventions;
       expect(
         refusal(_k(LogicalKeyboardKey.keyR, control: true, alt: true)),
@@ -741,6 +741,18 @@ void main() {
         refusal(_k(LogicalKeyboardKey.space, alt: true)),
         'The system keeps it',
       );
+      // An input method's switch, but IBus's keys aren't Windows's.
+      expect(
+        refusal(_k(LogicalKeyboardKey.space, control: true)),
+        'The input method takes it',
+      );
+      for (final k in [
+        _k(LogicalKeyboardKey.keyU, control: true, shift: true),
+        _k(LogicalKeyboardKey.semicolon, control: true),
+        _k(LogicalKeyboardKey.period, control: true),
+      ]) {
+        expect(refusal(k), isNull, reason: keyLabel(k));
+      }
     });
 
     for (final (name, c) in _platforms) {

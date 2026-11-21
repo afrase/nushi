@@ -98,10 +98,10 @@ const _linuxSystem = [
   SingleActivator(LogicalKeyboardKey.keyL, control: true, alt: true),
 ];
 
-/// Keys an input method takes on Linux: IBus's switch, its two emoji keys
-/// (so Next typo is F7 there) and its Unicode entry.
-const _linuxInput = [
-  SingleActivator(LogicalKeyboardKey.space, control: true),
+/// Keys IBus takes on Linux (Windows has none of them): its two emoji keys
+/// (so Next typo is F7 there) and its Unicode entry. Ctrl+Space, an input
+/// method's switch, is refused on both.
+const _ibus = [
   SingleActivator(LogicalKeyboardKey.semicolon, control: true),
   SingleActivator(LogicalKeyboardKey.period, control: true),
   SingleActivator(LogicalKeyboardKey.keyU, control: true, shift: true),
@@ -171,7 +171,13 @@ String? _macRefusal(SingleActivator k) {
 String? _linuxRefusal(SingleActivator k) {
   final t = k.trigger;
   if (k.meta || _among(k, _linuxSystem)) return 'The system keeps it';
-  if (_among(k, _linuxInput)) return 'The input method takes it';
+  if (sameKey(
+        k,
+        const SingleActivator(LogicalKeyboardKey.space, control: true),
+      ) ||
+      !identical(conventions, windowsConventions) && _among(k, _ibus)) {
+    return 'The input method takes it';
+  }
   if (_among(k, _linuxField) ||
       (k.control || k.alt) && _arrows.contains(t) ||
       k.control &&
