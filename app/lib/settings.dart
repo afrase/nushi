@@ -560,15 +560,18 @@ final Pref<Map<String, String>> shortcutKeys = Pref(
     };
     return _entries(v, (s) => s is String ? s : null);
   },
-  write: (keys) => {
-    for (final MapEntry(:key, :value) in _otherShortcuts.entries)
-      if (!keys.containsKey(key)) key: value,
-    ...keys,
+  write: (keys) {
+    _otherShortcuts = {
+      for (final MapEntry(:key, :value) in _otherShortcuts.entries)
+        if (!keys.containsKey(key)) key: value,
+    };
+    return {..._otherShortcuts, ...keys};
   },
 );
 
 /// `shortcuts`' entries in a shape this app doesn't read (a newer app's),
-/// as last read: written back unchanged.
+/// as last read: written back unchanged, until a key is chosen here for
+/// that name, which replaces it for good (a later Reset is the default).
 Map<String, Object?> _otherShortcuts = const {};
 
 /// The prefs kept by chat, which [chatsKept] and [forgetChats] go through.

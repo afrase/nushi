@@ -255,6 +255,13 @@ void main() {
       chooseKey(nextTabKey, parseShortcut('Alt+Cmd+N'));
       await pumpEventQueue();
       expect(readSaved()['shortcuts'], containsPair('nextTab', 'Alt+Cmd+N'));
+      // For good: Reset is then the default, not the other shape again.
+      resetKey(nextTabKey);
+      await pumpEventQueue();
+      expect(readSaved()['shortcuts'], {
+        'pin': 'Alt+Cmd+P',
+        'sidebar': 'Alt+Cmd+S',
+      });
     });
 
     test('choosing the default takes the entry away; Reset all keeps '
