@@ -98,11 +98,12 @@ const _linuxSystem = [
   SingleActivator(LogicalKeyboardKey.keyL, control: true, alt: true),
 ];
 
-/// Keys an input method takes on Linux: IBus's switch, its emoji (so
-/// Next typo is F7 there) and its Unicode entry.
+/// Keys an input method takes on Linux: IBus's switch, its two emoji keys
+/// (so Next typo is F7 there) and its Unicode entry.
 const _linuxInput = [
   SingleActivator(LogicalKeyboardKey.space, control: true),
   SingleActivator(LogicalKeyboardKey.semicolon, control: true),
+  SingleActivator(LogicalKeyboardKey.period, control: true),
   SingleActivator(LogicalKeyboardKey.keyU, control: true, shift: true),
 ];
 

@@ -683,6 +683,10 @@ void main() {
           'The input method takes it',
         ),
         (
+          SingleActivator(LogicalKeyboardKey.period, control: true),
+          'The input method takes it',
+        ),
+        (
           SingleActivator(LogicalKeyboardKey.keyU, control: true, shift: true),
           'The input method takes it',
         ),
