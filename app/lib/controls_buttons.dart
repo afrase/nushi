@@ -98,11 +98,16 @@ class Button extends StatelessWidget {
     this.tooltip = '',
     this.menu = false,
     this.wrap = false,
+    this.focusNode,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool wrap;
+
+  /// Its focus, for a view that moves the keyboard to it; its own
+  /// without one.
+  final FocusNode? focusNode;
   final ButtonKind kind;
   final IconData? icon;
   final String? hint;
@@ -126,6 +131,7 @@ class Button extends StatelessWidget {
     return Pressable(
       onTap: onPressed,
       autofocus: autofocus,
+      focusNode: focusNode,
       tooltip: tooltip,
       builder: (context, look) => _faded(
         look,

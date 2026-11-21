@@ -9,7 +9,6 @@ import 'package:nushi/native.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/terminal_panel.dart';
-import 'package:nushi/terminal_screen.dart';
 
 // The app's keys on each platform (ADR 0104): the same values held with ⌘
 // on the Mac and Control on Linux, written as each platform writes them,
@@ -70,8 +69,8 @@ void main() {
       ],
       ['⇧⌘E', '⇧⌘Y', '⌃⌘1', '⌘;', '⌥⌘↑', '⌘3', '⌥⌘1', '⌃⇥', '⌃`', '⌥Z'],
     );
-    expect(filesKey.single.meta, isTrue);
-    expect(filesKey.single.control, isFalse);
+    expect(filesKey.single!.meta, isTrue);
+    expect(filesKey.single!.control, isFalse);
   });
 
   test('on Linux, Control in ⌘’s place, written Ctrl+Shift+E; ⌃⌘, ⌥⌘, '
@@ -106,14 +105,12 @@ void main() {
         'Alt+Z',
       ],
     );
-    expect(filesKey.single.meta, isFalse);
-    expect(filesKey.single.control, isTrue);
-    // A ShortcutManager indexes both forms' keys, so a switch of the
-    // conventions after it was built still reaches the Linux form.
-    expect(previousChatKey.triggers, [
-      LogicalKeyboardKey.arrowUp,
-      LogicalKeyboardKey.pageUp,
-    ]);
+    expect(filesKey.single!.meta, isFalse);
+    expect(filesKey.single!.control, isTrue);
+    // No keys for a ShortcutManager to index: a switch of the conventions
+    // (or a key the user chose) after it was built still reaches the key
+    // held now.
+    expect(previousChatKey.triggers, isNull);
   });
 
   test('on Windows, Linux’s keys but none with Control and Alt, which is '
@@ -139,7 +136,7 @@ void main() {
       ],
     );
     for (final k in [..._appKeys, ..._terminalKeys]) {
-      final a = k is Cmd ? k.single : k as SingleActivator;
+      final a = k is Cmd ? k.single! : k as SingleActivator;
       expect(a.control && a.alt, isFalse, reason: keyLabel(k));
     }
     expect(terminalPasses(changesTabKey), isTrue);
@@ -200,7 +197,7 @@ void main() {
     native.conventions = linuxConventions;
     final passed = _toTerminal.where(terminalPasses).toList();
     for (final k in passed) {
-      final a = k is Cmd ? k.single : k as SingleActivator;
+      final a = k is Cmd ? k.single! : k as SingleActivator;
       final letter =
           a.trigger.keyId >= LogicalKeyboardKey.keyA.keyId &&
           a.trigger.keyId <= LogicalKeyboardKey.keyZ.keyId;

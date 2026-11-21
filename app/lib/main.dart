@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import 'package:nushi/alerts.dart';
 import 'package:nushi/app_actions.dart';
@@ -22,6 +23,8 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/images.dart' show limitImageCache;
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/key_choice.dart' show shortcutRecording;
+import 'package:nushi/keys.dart' show menuShortcut;
 import 'package:nushi/native.dart';
 import 'package:nushi/native_linux.dart';
 import 'package:nushi/native_macos.dart';
@@ -105,6 +108,8 @@ class _NushiAppState extends State<NushiApp> {
       p.addListener(_sidebarChanged);
     }
     diffUnified.addListener(_sidebarChanged);
+    shortcutKeys.addListener(_keysChanged);
+    shortcutRecording.addListener(_recordingChanged);
     // The app coming to the front shows its chat again; the daemon knows
     // whether the window shows (focused or not) or is hidden, and the
     // notifications whether it's in front. Drafts are saved at once when
@@ -244,12 +249,56 @@ class _NushiAppState extends State<NushiApp> {
       p.removeListener(_sidebarChanged);
     }
     diffUnified.removeListener(_sidebarChanged);
+    shortcutKeys.removeListener(_keysChanged);
+    shortcutRecording.removeListener(_recordingChanged);
     widget.daemon.removeListener(_pinChanged);
     _tabOf?.tab.removeListener(_pinChanged);
     _alerts.dispose();
     ChecksWatch.of(widget.daemon).stop();
     _lifecycle.dispose();
     super.dispose();
+  }
+
+  /// The keys chosen in Settings changed: the menu bar's, and every
+  /// label and tooltip that names a key, which read it as they build
+  /// (ADR 0146).
+  void _keysChanged() => _afterBuild(() {
+    setState(() {});
+    _rebuildAll();
+  });
+
+  /// Settings started or stopped taking a key: the menu bar's keys go or
+  /// come back.
+  void _recordingChanged() => _afterBuild(() => setState(() {}));
+
+  /// [change] now, or after this frame when it comes mid-frame (a key
+  /// field let go as Settings closes, while the tree is locked).
+  void _afterBuild(VoidCallback change) {
+    if (!mounted) return;
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase == SchedulerPhase.idle ||
+        phase == SchedulerPhase.postFrameCallbacks) {
+      change();
+      return;
+    }
+    SchedulerBinding.instance
+      ..addPostFrameCallback((_) {
+        if (mounted) change();
+      })
+      ..scheduleFrame();
+  }
+
+  /// Every widget built again, State kept: about twenty places name a key
+  /// without a context to hear it change by, the kept [_window] and const
+  /// widgets among them.
+  void _rebuildAll() {
+    void mark(Element e) {
+      e
+        ..markNeedsBuild()
+        ..visitChildren(mark);
+    }
+
+    (context as Element).visitChildren(mark);
   }
 
   /// What the View menu's Files options say follows: each option's pref,
@@ -275,7 +324,7 @@ class _NushiAppState extends State<NushiApp> {
         viewMenuLabel(act, widget.daemon.selected, widget.daemon) ??
             act.menuLabel!,
     },
-    shortcut: act.key,
+    shortcut: menuShortcut(act.key),
     onSelected: () => _run(act),
   );
 
@@ -327,7 +376,7 @@ class _NushiAppState extends State<NushiApp> {
       menus: [
         PlatformMenuItem(
           label: 'Command Palette…',
-          shortcut: paletteKey,
+          shortcut: menuShortcut(paletteKey),
           onSelected: () =>
               unawaited(showPalette(_navigator.currentContext!, widget.daemon)),
         ),
@@ -336,12 +385,12 @@ class _NushiAppState extends State<NushiApp> {
           members: [
             PlatformMenuItem(
               label: 'Back',
-              shortcut: backKey,
+              shortcut: menuShortcut(backKey),
               onSelected: _back ? () => _run(Act.back) : null,
             ),
             PlatformMenuItem(
               label: 'Forward',
-              shortcut: forwardKey,
+              shortcut: menuShortcut(forwardKey),
               onSelected: _forward ? () => _run(Act.forward) : null,
             ),
           ],
@@ -350,12 +399,12 @@ class _NushiAppState extends State<NushiApp> {
           members: [
             PlatformMenuItem(
               label: 'Previous Chat',
-              shortcut: previousChatKey,
+              shortcut: menuShortcut(previousChatKey),
               onSelected: () => stepChat(widget.daemon, -1),
             ),
             PlatformMenuItem(
               label: 'Next Chat',
-              shortcut: nextChatKey,
+              shortcut: menuShortcut(nextChatKey),
               onSelected: () => stepChat(widget.daemon, 1),
             ),
             // Hold ⌘ to see the numbers in the sidebar.
@@ -365,7 +414,7 @@ class _NushiAppState extends State<NushiApp> {
                 for (var n = 1; n <= 9; n++)
                   PlatformMenuItem(
                     label: 'Chat $n in the Sidebar',
-                    shortcut: chatNumberKey(n),
+                    shortcut: menuShortcut(chatNumberKey(n)),
                     onSelected: () => openNthChat(widget.daemon, n),
                   ),
               ],

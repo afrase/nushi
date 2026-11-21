@@ -243,8 +243,10 @@ class _FileViewState extends State<FileView> {
       return KeyEventResult.handled;
     }
     if (!_shown.showsSource) return KeyEventResult.ignored;
-    // In the editor ⌥Z types its character.
-    if (_shown.edit != null && !_focus.hasPrimaryFocus) {
+    // In the editor the default ⌥Z types its character; a chosen key
+    // types none (the Mac refuses a chosen ⌥ key), so it wraps there too
+    // (ADR 0146).
+    if (_shown.edit != null && !_focus.hasPrimaryFocus && !wrapKey.chosen) {
       return KeyEventResult.ignored;
     }
     if (!wrapKey.accepts(e, HardwareKeyboard.instance)) {

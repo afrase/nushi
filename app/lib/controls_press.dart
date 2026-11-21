@@ -101,12 +101,17 @@ class Pressable extends StatefulWidget {
     this.autofocus = false,
     this.slop,
     this.tooltipAt,
+    this.focusNode,
   });
 
   final VoidCallback? onTap;
   final Widget Function(BuildContext context, ControlLook look) builder;
   final String tooltip;
   final bool autofocus;
+
+  /// Its focus, for a view that moves the keyboard to it (a clash's
+  /// Cancel in Settings › Keyboard shortcuts); its own without one.
+  final FocusNode? focusNode;
 
   /// How far the pointer may move in a click, for a control that also
   /// drags (`dragSlop`, its drag's own): else Flutter's, a point for a
@@ -148,6 +153,7 @@ class _PressableState extends State<Pressable> {
     final down = shown?.pressed ?? _down;
     final control = FocusableActionDetector(
       enabled: on,
+      focusNode: widget.focusNode,
       autofocus: widget.autofocus,
       mouseCursor: on ? SystemMouseCursors.click : MouseCursor.defer,
       actions: {
@@ -225,10 +231,16 @@ class Tap extends StatefulWidget {
     this.cursor,
     this.tint = true,
     this.fill,
+    this.focusNode,
   });
 
   final VoidCallback? onTap;
   final GestureTapUpCallback? onSecondaryTapUp;
+
+  /// Its focus, for a view that moves the keyboard to it or listens to
+  /// its keys (Settings › Keyboard shortcuts' key field); its own without
+  /// one.
+  final FocusNode? focusNode;
   final Widget child;
   final bool selected;
 
@@ -278,6 +290,7 @@ class _TapState extends State<Tap> {
       onExit: (_) => setState(() => _hover = false),
       child: FocusableActionDetector(
         enabled: on,
+        focusNode: widget.focusNode,
         actions: {
           ActivateIntent: CallbackAction<ActivateIntent>(
             onInvoke: (_) => widget.onTap?.call(),

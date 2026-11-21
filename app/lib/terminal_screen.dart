@@ -17,27 +17,8 @@ import 'package:nushi/transcript_find.dart';
 import 'package:nushi/widgets.dart';
 import 'package:xterm2/xterm.dart';
 
-// A terminal's own keys: ⌘ and a letter, as Terminal has them; on Linux
-// Ctrl+Shift and the letter, as GNOME Terminal has them, since Ctrl and a
-// letter is the shell's (ADR 0104).
-
-/// Copies the terminal's selection.
-const terminalCopyKey = Cmd(LogicalKeyboardKey.keyC, terminal: true);
-
-/// Pastes into the terminal.
-const terminalPasteKey = Cmd(LogicalKeyboardKey.keyV, terminal: true);
-
-/// Clears the terminal's screen and scrollback.
-const terminalClearKey = Cmd(LogicalKeyboardKey.keyK, terminal: true);
-
-/// Opens another terminal for the chat.
-const newTerminalKey = Cmd(LogicalKeyboardKey.keyT, terminal: true);
-
-/// Closes the terminal.
-const closeTerminalKey = Cmd(LogicalKeyboardKey.keyW, terminal: true);
-
-/// Finds in the terminal.
-const terminalFindKey = Cmd(LogicalKeyboardKey.keyF, terminal: true);
+// A terminal's own keys (`terminalCopyKey` and the rest) are in
+// `keys.dart`.
 
 /// Ctrl+C, the shell's interrupt.
 const _interruptKey = SingleActivator(LogicalKeyboardKey.keyC, control: true);
@@ -76,10 +57,12 @@ class TerminalScreen extends StatelessWidget {
     // The app's keys a terminal passes on (`terminalPasses`: ⌘N, ⌘,,
     // ⌃⌘1–3…, ⌘⇧P, the palette, ⌘[ and ⌘] (Back and Forward), and ⌘1–9,
     // ⌥⌘↑ and ⌥⌘↓ that switch chats,
-    // ⌃Tab and ⌃⇧Tab the chat's tabs); ⌘K clears here, as in Terminal, ⌘F
-    // finds here and ⌘W closes this terminal, not a preview tab.
+    // ⌃Tab and ⌃⇧Tab the chat's tabs, and a key chosen for one that
+    // passes); ⌘K clears here, as in Terminal, ⌘F finds here and ⌘W
+    // closes this terminal, not a preview tab.
     for (final MapEntry(:key, :value) in {
       ...actKeys,
+      paletteKey: const OpenPaletteIntent(),
       paletteKeyToo: const OpenPaletteIntent(),
       ...chatKeys,
     }.entries)
@@ -94,7 +77,9 @@ class TerminalScreen extends StatelessWidget {
       () => closeTerminal(context, terms, info),
     ),
     terminalFindKey: VoidCallbackIntent(s.find.open),
-    toggleTerminalKey: VoidCallbackIntent(onHide),
+    // Hides it, as the app's key; not a chosen key the shell keeps.
+    if (terminalPasses(toggleTerminalKey))
+      toggleTerminalKey: VoidCallbackIntent(onHide),
     // ⌥⌘1–9 a terminal.
     for (var i = 0; i < 9 && i < list.length; i++)
       altDigitKey(i + 1): VoidCallbackIntent(
@@ -118,7 +103,12 @@ class TerminalScreen extends StatelessWidget {
       children: [
         Expanded(
           child: ListenableBuilder(
-            listenable: Listenable.merge([s, terminalFont, terminalFontSize]),
+            listenable: Listenable.merge([
+              s,
+              terminalFont,
+              terminalFontSize,
+              shortcutKeys,
+            ]),
             builder: (context, _) => Stack(
               children: [
                 TerminalView(

@@ -25,7 +25,7 @@ void main() {
           'alertNeedsYou', 'alertFinished', 'alertFailed', 'alertSound',
           'dockBadge', 'dismissedUpdate', 'files', 'filesIgnored', //
           'filesTree', 'filesTreeSide', 'previewTabs', 'tabSize',
-          'indentGuides', 'scrollPastEnd', 'wrap', 'whitespace',
+          'indentGuides', 'scrollPastEnd', 'wrap', 'whitespace', 'shortcuts',
         ])
           key: key.endsWith('Font') ? 7 : 'wrong',
       }),
@@ -69,5 +69,6 @@ void main() {
     expect(scrollPastEnd.value, isFalse);
     expect(wrapLines.value, isTrue);
     expect(showWhitespace.value, isFalse);
+    expect(shortcutKeys.value, isEmpty);
   });
 }

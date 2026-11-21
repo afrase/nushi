@@ -19,12 +19,13 @@ import 'package:nushi/settings_appearance.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_nav.dart';
 import 'package:nushi/settings_rows.dart';
+import 'package:nushi/settings_shortcuts.dart';
 import 'package:nushi/settings_terminal.dart';
 import 'package:nushi/skills.dart';
 import 'package:nushi/usage_page.dart';
 import 'package:nushi/widgets.dart';
 
-const settingsKey = Cmd(LogicalKeyboardKey.comma);
+const settingsKey = Cmd(LogicalKeyboardKey.comma, id: 'settings');
 
 /// Settings, open over the window (ADR 0087; ⌘,, Esc or Close shut it): a
 /// nav of sections and the picked one's page. The daemon's settings are
@@ -132,6 +133,7 @@ class _SettingsViewState extends State<SettingsView> {
     ),
     SettingsSection.appearance => const AppearanceSection(),
     SettingsSection.terminal => const TerminalSection(),
+    SettingsSection.shortcuts => const ShortcutsSection(),
     SettingsSection.history => HistorySection(
       daemon: daemon,
       settings: _set,

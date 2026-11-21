@@ -23,7 +23,7 @@ import 'package:nushi/top_notices.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘G shows GitHub in place of the chat, and back.
-const githubKey = Cmd(LogicalKeyboardKey.keyG);
+const githubKey = Cmd(LogicalKeyboardKey.keyG, id: 'github');
 
 /// How often the inbox is asked for again while the view shows (a quiet
 /// ask: the daemon holds it back while a rate limit runs low).

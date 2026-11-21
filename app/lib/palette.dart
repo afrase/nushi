@@ -179,6 +179,15 @@ List<PaletteRow> matchRows(List<PaletteRow> rows, String query) {
   );
 }
 
+/// The palette's keys as its field's tooltip names them: ⌘K, or ⇧⌘P (in
+/// a terminal too) while both are bound; one alone, or '' for none.
+String get _paletteKeys =>
+    switch ((keyLabel(paletteKey), keyLabel(paletteKeyToo))) {
+      ('', '') => '',
+      (final one, '') || ('', final one) => one,
+      (final first, final second) => '$first, or $second (in a terminal too)',
+    };
+
 /// The palette's box, as ⌘P's: a field, and under it the rows that match
 /// what's typed. ↑↓ move, ⏎ or a click picks (the dialog pops with the
 /// row), Esc closes.
@@ -273,18 +282,22 @@ class _PaletteState extends State<Palette> {
                     border: InputBorder.none,
                     prefixIcon: const Icon(Icons.search, size: 15),
                     prefixIconConstraints: const BoxConstraints(minWidth: 28),
-                    suffixIcon: tooltip(
-                      context,
-                      'The palette: ${keyLabel(paletteKey)}, or '
-                      '${keyLabel(paletteKeyToo)} (in a terminal too)',
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: keyText(
-                          keyLabel(paletteKey),
-                          theme.code(t.textMuted, size: 12),
+                    suffixIcon: switch (_paletteKeys) {
+                      '' => null,
+                      final keys => tooltip(
+                        context,
+                        'The palette: $keys',
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: keyText(
+                            keyLabel(paletteKey).isEmpty
+                                ? keyLabel(paletteKeyToo)
+                                : keyLabel(paletteKey),
+                            theme.code(t.textMuted, size: 12),
+                          ),
                         ),
                       ),
-                    ),
+                    },
                     suffixIconConstraints: const BoxConstraints(),
                   ),
                 ),

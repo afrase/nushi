@@ -10,6 +10,7 @@ extension SectionIcon on SettingsSection {
     .general => Icons.tune,
     .appearance => Icons.palette_outlined,
     .terminal => Icons.terminal,
+    .shortcuts => Icons.keyboard_outlined,
     .history => Icons.history,
     .usage => Icons.bar_chart_rounded,
     .remote => Icons.phone_iphone,
@@ -25,7 +26,7 @@ extension SectionIcon on SettingsSection {
 /// The nav's groups, in order, each its heading and its sections; the
 /// last has none (Logs & advanced, set apart). Every section is in one.
 const List<(String?, List<SettingsSection>)> settingsGroups = [
-  ('App', [.general, .appearance, .terminal]),
+  ('App', [.general, .appearance, .terminal, .shortcuts]),
   ('Agents', [.agents, .mcp, .skills, .history, .usage]),
   ('Connections', [.github, .jira, .remote]),
   (null, [.logs]),

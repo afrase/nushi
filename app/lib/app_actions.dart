@@ -21,6 +21,7 @@ import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/key_choice.dart' show sameKey;
 import 'package:nushi/keys.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/new_chat.dart';
@@ -57,16 +58,16 @@ enum ActMenu { nushi, file, view, chat }
 /// terminal keeps it for its own find, the preview's editor for the
 /// file's (`EditorFind`), and a preview with the focus for what it shows
 /// (`FindSlot`).
-const findKey = Cmd(LogicalKeyboardKey.keyF);
+const findKey = Cmd(LogicalKeyboardKey.keyF, id: 'find');
 
 /// ⇧⌘B: a side chat (Claude Code's /btw, "by the way").
-const sideChatKey = Cmd(LogicalKeyboardKey.keyB, shift: true);
+const sideChatKey = Cmd(LogicalKeyboardKey.keyB, shift: true, id: 'sideChat');
 
 /// ⌘D: pin the chat, or unpin it (Arc's key for pinning a tab).
-const pinKey = Cmd(LogicalKeyboardKey.keyD);
+const pinKey = Cmd(LogicalKeyboardKey.keyD, id: 'pin');
 
 /// ⌘\: hide the sidebar, or show it.
-const sidebarKey = Cmd(LogicalKeyboardKey.backslash);
+const sidebarKey = Cmd(LogicalKeyboardKey.backslash, id: 'sidebar');
 
 /// ⌘[ and ⌘]: Back and Forward through the places visited (ADR 0119), as
 /// Claude's desktop app and a browser. On Linux Alt+Left and Alt+Right, a
@@ -75,10 +76,12 @@ const sidebarKey = Cmd(LogicalKeyboardKey.backslash);
 const backKey = Cmd(
   LogicalKeyboardKey.bracketLeft,
   linux: SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true),
+  id: 'back',
 );
 const forwardKey = Cmd(
   LogicalKeyboardKey.bracketRight,
   linux: SingleActivator(LogicalKeyboardKey.arrowRight, alt: true),
+  id: 'forward',
 );
 
 /// ⌘;: the next flagged word in the composer, as macOS's Check Spelling.
@@ -86,25 +89,26 @@ const forwardKey = Cmd(
 const nextTypoKey = Cmd(
   LogicalKeyboardKey.semicolon,
   linux: SingleActivator(LogicalKeyboardKey.f7),
+  id: 'nextTypo',
 );
 
 /// ⇧⌘E: the Files pane (VS Code's key for its Explorer).
-const filesKey = Cmd(LogicalKeyboardKey.keyE, shift: true);
+const filesKey = Cmd(LogicalKeyboardKey.keyE, shift: true, id: 'files');
 
 /// ⇧⌘Y: the Files pane's tree, shown or hidden (Claude desktop's key).
 /// The View menu's item has it too, so it comes while WebKit has the keys.
-const fileTreeKey = Cmd(LogicalKeyboardKey.keyY, shift: true);
+const fileTreeKey = Cmd(LogicalKeyboardKey.keyY, shift: true, id: 'fileTree');
 
 /// ⌘S: the preview's file, edited (ADR 0096). The editor leaves it to
 /// the app.
-const saveKey = Cmd(LogicalKeyboardKey.keyS);
+const saveKey = Cmd(LogicalKeyboardKey.keyS, id: 'save');
 
 /// ⌘L: the browser tab's address field (Safari's Open Location).
-const addressKey = Cmd(LogicalKeyboardKey.keyL);
+const addressKey = Cmd(LogicalKeyboardKey.keyL, id: 'address');
 
 /// ⌘R: the browser tab's page again. Jira and GitHub keep ⌘R for their own
 /// reload: their views bind it, under the app's keys.
-const reloadPageKey = Cmd(LogicalKeyboardKey.keyR);
+const reloadPageKey = Cmd(LogicalKeyboardKey.keyR, id: 'reloadPage');
 
 /// An action of the app, in the palette's order with an empty query.
 enum Act {
@@ -172,6 +176,7 @@ enum Act {
   delete(menu: ActMenu.chat, menuLabel: 'Delete…'),
   settings(key: settingsKey, menu: ActMenu.nushi, menuLabel: 'Settings…'),
   appearance,
+  shortcuts,
   jira(key: jiraKey, menu: ActMenu.view, menuLabel: 'Jira'),
   github(key: githubKey, menu: ActMenu.view, menuLabel: 'GitHub'),
   restart,
@@ -184,18 +189,19 @@ enum Act {
   new({this.key, this.shows, this.keyText, this.menu, this.menuLabel});
 
   /// The key the app binds to it, wherever the focus is.
-  final MenuSerializableShortcut? key;
-  final ShortcutActivator? shows; // shown, not bound: another widget has it
+  final Cmd? key;
+  final Cmd? shows; // shown, not bound: another widget has it
   final String? keyText; // the same, in words
   final ActMenu? menu;
   final String? menuLabel;
 
-  /// Its key as the palette and tooltips show it.
+  /// Its key as the palette and tooltips show it; null for none, a key
+  /// the user cleared too.
   String? get shortcut =>
       keyText ??
       switch (key ?? shows) {
-        final k? => keyLabel(k),
-        null => null,
+        final k? when keyLabel(k).isNotEmpty => keyLabel(k),
+        _ => null,
       };
 }
 
@@ -237,19 +243,34 @@ class OpenPaletteIntent extends Intent {
 }
 
 /// ⌘K opens the palette, and ⌘⇧P, which a terminal (where ⌘K clears)
-/// passes on too.
-const paletteKey = Cmd(LogicalKeyboardKey.keyK);
-const paletteKeyToo = Cmd(LogicalKeyboardKey.keyP, shift: true);
+/// passes on too: the second only while the first is the default.
+const paletteKey = Cmd(LogicalKeyboardKey.keyK, id: 'palette');
+const paletteKeyToo = Cmd(
+  LogicalKeyboardKey.keyP,
+  shift: true,
+  aliasOf: 'palette',
+);
 
 /// Whether [act]'s key is the focused text field's own, which keeps it:
-/// Linux's Back and Forward, Alt+Left and Alt+Right, move along its line
-/// there (ADR 0119). The Mac's ⌘[ and ⌘] are no field's.
-bool actKeyTaken(Act act) =>
-    (act == Act.back || act == Act.forward) &&
-    commandKey == CommandKey.control &&
-    FocusManager.instance.primaryFocus?.context
-            ?.findAncestorStateOfType<EditableTextState>() !=
-        null;
+/// Alt+Left and Alt+Right, Linux's Back and Forward by default, move along
+/// its line there (ADR 0119); a key chosen in their place is no field's.
+/// The Mac's ⌘[ and ⌘] are no field's.
+bool actKeyTaken(Act act) {
+  final key = act.key?.single;
+  return key != null &&
+      commandKey == CommandKey.control &&
+      _fieldMoves.any((k) => sameKey(k, key)) &&
+      FocusManager.instance.primaryFocus?.context
+              ?.findAncestorStateOfType<EditableTextState>() !=
+          null;
+}
+
+/// Alt+Left and Alt+Right, which a text field moves by where the command
+/// key is Control.
+const _fieldMoves = [
+  SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true),
+  SingleActivator(LogicalKeyboardKey.arrowRight, alt: true),
+];
 
 /// The keys of the actions that have one, as the intents that run them.
 final Map<ShortcutActivator, Intent> actKeys = {
@@ -468,6 +489,11 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       run: () => d.openSettings(section: SettingsSection.appearance),
     ),
     AppAction(
+      .shortcuts,
+      'Keyboard shortcuts',
+      run: () => d.openSettings(section: SettingsSection.shortcuts),
+    ),
+    AppAction(
       .jira,
       d.place is JiraPlace ? 'Close Jira' : 'Jira',
       run: () => d.toggle(const JiraPlace()),
@@ -674,7 +700,12 @@ void runAct(BuildContext context, Daemon d, Act act) {
   // Only the menu bar (and Linux's Quit) reaches here past Settings (it
   // stops the keys): what runs is elsewhere, so Settings shuts first (ADR
   // 0087).
-  if (!const {Act.settings, Act.appearance, Act.quit}.contains(act)) {
+  if (!const {
+    Act.settings,
+    Act.appearance,
+    Act.shortcuts,
+    Act.quit,
+  }.contains(act)) {
     d.closeSettings();
   }
   final a = appActions(context, d).firstWhere((a) => a.act == act);

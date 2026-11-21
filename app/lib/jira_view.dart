@@ -21,7 +21,7 @@ import 'package:nushi/top_notices.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘J shows Jira in place of the chat, and back.
-const jiraKey = Cmd(LogicalKeyboardKey.keyJ);
+const jiraKey = Cmd(LogicalKeyboardKey.keyJ, id: 'jira');
 
 /// How often the open list is asked for again while the view shows.
 const jiraPoll = Duration(minutes: 1);

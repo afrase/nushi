@@ -19,9 +19,11 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌃`: shows or hides the terminal panel.
-const toggleTerminalKey = SingleActivator(
+const toggleTerminalKey = Cmd(
   LogicalKeyboardKey.backquote,
-  control: true,
+  command: false,
+  ctrl: true,
+  id: 'terminal',
 );
 
 /// Shows or hides a chat's terminal panel.

@@ -220,6 +220,10 @@ const settingsRowHeight = 46.0;
 /// A row of a [SettingsGroup]: [label] and its [description] on the left
 /// (cut to [descriptionLines] when given: text that isn't Nushi's own, as
 /// a reply card's words), [control] on the right, at the group's edge.
+/// [keepDescriptionLine] keeps the description's line, one line, with or
+/// without words in it (the label centred in its room without), so a row
+/// whose line comes and goes (a key's note in Settings › Keyboard
+/// shortcuts) never changes its height and its control never moves.
 class SettingsRow extends StatelessWidget {
   const new(
     this.label, {
@@ -229,6 +233,7 @@ class SettingsRow extends StatelessWidget {
     this.descriptionColor,
     this.descriptionLines,
     this.stackBelow,
+    this.keepDescriptionLine = false,
   });
 
   final String label;
@@ -242,24 +247,32 @@ class SettingsRow extends StatelessWidget {
   /// two buttons); null keeps it beside at any width.
   final double? stackBelow;
 
+  /// Whether the description's line is kept, empty or not, and cut to one
+  /// line.
+  final bool keepDescriptionLine;
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final words = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: theme.ui(t.text)),
-        if (description case final d? when d.isNotEmpty)
-          Text(
-            d,
-            maxLines: descriptionLines,
-            overflow: descriptionLines == null ? null : TextOverflow.ellipsis,
-            style: theme.ui(descriptionColor ?? t.textMuted, size: 12),
-          ),
-      ],
-    );
+    final words = keepDescriptionLine
+        ? _keptLine(context, theme)
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, style: theme.ui(t.text)),
+              if (description case final d? when d.isNotEmpty)
+                Text(
+                  d,
+                  maxLines: descriptionLines,
+                  overflow: descriptionLines == null
+                      ? null
+                      : TextOverflow.ellipsis,
+                  style: theme.ui(descriptionColor ?? t.textMuted, size: 12),
+                ),
+            ],
+          );
     Widget beside() => Row(
       children: [
         Expanded(child: words),
@@ -285,6 +298,49 @@ class SettingsRow extends StatelessWidget {
           ),
           _ => beside(),
         },
+      ),
+    );
+  }
+
+  /// The label and its description in the room of both, always: the
+  /// label centred alone, the line under it once it has words. Each line's
+  /// height is forced, as a glyph from a fallback font would make it
+  /// taller, and a key's glyphs (⌘) fall back to the code font, which has
+  /// them.
+  Widget _keptLine(BuildContext context, NushiTheme theme) {
+    final t = theme.t;
+    final big = theme.ui(t.text);
+    final small = theme.ui(t.textMuted, size: 12);
+    final scale = MediaQuery.textScalerOf(context);
+    double high(TextStyle s) => scale.scale(s.fontSize!) * s.height!;
+    return SizedBox(
+      height: high(big) + high(small),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: big,
+            strutStyle: StrutStyle.fromTextStyle(big, forceStrutHeight: true),
+          ),
+          if (description case final d? when d.isNotEmpty)
+            Text(
+              d,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              strutStyle: StrutStyle.fromTextStyle(
+                small,
+                forceStrutHeight: true,
+              ),
+              style: small.copyWith(
+                color: descriptionColor ?? t.textMuted,
+                fontFamilyFallback: [...?theme.uiFallback, NushiTheme.codeFont],
+              ),
+            ),
+        ],
       ),
     );
   }

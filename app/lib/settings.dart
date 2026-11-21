@@ -44,8 +44,9 @@ import 'package:nushi/usage_range.dart';
 /// what reply cards ask the agent, the pull request each chat's tab shows,
 /// the failed checks each chat's user acted on, the comments seen of
 /// each chat's pull requests,
-/// the range Settings › Usage shows, and the newer release whose toast
-/// was dismissed. Each is a [Pref].
+/// the range Settings › Usage shows, the newer release whose toast
+/// was dismissed, and the keys chosen in Settings › Keyboard shortcuts.
+/// Each is a [Pref].
 /// Not whether new chats get a worktree, nor whether a subagent's pane
 /// shows wide, nor a beta's `projectRail`: an older `worktrees`,
 /// `subagentWide` or `projectRail` key is ignored, and dropped by the
@@ -542,6 +543,15 @@ final usageRange = Pref<UsageRange>(
 /// The newer release whose toast was dismissed ("0.1.17"): it shows again
 /// only for a newer one.
 final Pref<String?> dismissedUpdate = _plain('dismissedUpdate', null);
+
+/// The keys chosen in Settings › Keyboard shortcuts (ADR 0146), by
+/// binding (an Act's name, or 'palette'), each in `shortcutText`'s words,
+/// "" for none. A name or text this app can't read is ignored, and kept.
+/// A binding on its default has no entry. Changed only by a fresh map.
+final Pref<Map<String, String>> shortcutKeys = Pref(
+  'shortcuts',
+  (v) => _entries(v, (s) => s is String ? s : null),
+);
 
 /// The prefs kept by chat, which [chatsKept] and [forgetChats] go through.
 /// Named here rather than found among those made: a pref is made when
