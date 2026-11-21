@@ -204,6 +204,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Updates** | The daemon's check for a newer Nushi release; Check for updates. | `features/updates`, `UpdateCheck` | 0061 |
 | **Update** | The card's button that installs the newer version: the daemon runs Homebrew's upgrade of the app's cask. "Updating…" while it runs; Retry after a failure. | `InstallUpdate`, `updates.Service.Install`, `internal/homebrew` | 0109 |
 | **Beta version** | A version to try before its release (0.29.0-beta.1), a GitHub pre-release; the `nushi@beta` cask follows them. "A beta" for short. | `updates.Service.Beta`, `betaCask`, `isBeta`, `tools/cask.sh` | 0108 |
+| **Chosen key** | A key you set for an action in Settings › Keyboard shortcuts, in place of its default, or no key. The menu bar, the palette and the tooltips show it. | `shortcutKeys`, `Cmd.id`, `key_choice.dart`, `key_rules.dart` | 0146 |
 | **Jira site** | A Jira Cloud site with your email and API token (kept in the keychain). | `JiraSite`, `internal/jiracloud` | 0042 |
 | **Task list** | The Jira view (⌘J): your open issues in a card per status, or a sprint, saved search or JQL. | `jira_tasks.dart`, `JiraSearch`, `JiraBoard` | 0042 |
 | **Move** (Jira) | Change an issue's status, as its workflow allows. | `TransitionJiraIssue`, `JiraTransition` | |
