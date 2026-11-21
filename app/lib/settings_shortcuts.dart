@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:nushi/app_actions.dart' show paletteKeyToo, quitKey;
+import 'package:nushi/app_actions.dart' show paletteKeyToo;
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/key_choice.dart';
 import 'package:nushi/key_rules.dart';
@@ -11,7 +11,9 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shortcut_field.dart';
+import 'package:nushi/shortcut_list.dart';
 import 'package:nushi/shortcut_row.dart';
+import 'package:nushi/shortcut_search.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -21,7 +23,8 @@ import 'package:nushi/widgets.dart';
 // key beside it, and an action's second key in its row; a clash offered
 // to take, a key the system or a field owns refused with why, on a line
 // under the name; and the keys that stay as they are, read-only at the
-// end, so the page is a cheat sheet too.
+// end, so the page is a cheat sheet too. A search over it, kept in view
+// as the list scrolls, narrows it by name or key.
 
 /// A key another binding holds, waiting on Take it or Cancel; alias:
 /// it's the holder's second key, which goes once the key's binding has
@@ -45,9 +48,29 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
   final _fields = <String, FocusNode>{};
   final _caps = <String, GlobalKey<ShortcutFieldState>>{};
   final _cancel = FocusNode(debugLabel: 'shortcut-cancel');
+  final _search = TextEditingController();
+  String _query = '';
+
+  /// The row last worked on (listening, a key recorded, cleared or
+  /// reset): it stays in a search's list until the search changes, so it
+  /// never goes from under the user.
+  String? _kept;
+
+  @override
+  void initState() {
+    super.initState();
+    _search.addListener(() {
+      if (_search.text == _query) return; // the caret moved
+      setState(() {
+        _query = _search.text;
+        _kept = null;
+      });
+    });
+  }
 
   @override
   void dispose() {
+    _search.dispose();
     for (final f in _fields.values) {
       f.dispose();
     }
@@ -70,6 +93,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
     setState(() {
       _pending = null;
       _refused = null;
+      _kept = key.id;
     });
     _field(key).requestFocus();
   }
@@ -113,6 +137,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
     setState(() {
       _pending = null;
       _refused = null;
+      _kept = key.id;
     });
     // Its own default: back to it, unless another binding has it now.
     if (sameKey(k, key.standard)) {
@@ -163,47 +188,85 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
     if (!yes || !mounted) return;
     resetAllKeys();
     // The button goes off, which would leave the keyboard nowhere: the
-    // first row's field gets it.
-    _done(shortcutGroups.first.$2.first);
+    // first row's field gets it (the first a search shows).
+    final rows = [
+      for (final g in shortcutGroupsShown())
+        for (final e in g.rows)
+          if (e.binding case final b? when _shows(g, e)) b,
+    ];
+    _done(rows.firstOrNull ?? shortcutGroups.first.$2.first);
   }
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: shortcutKeys,
-    builder: (context, saved, _) => SettingsPage(
-      title: 'Keyboard shortcuts',
-      actions: [
-        // Off rather than gone, so it never moves.
-        Button(
-          key: const ValueKey('shortcuts-reset-all'),
-          label: 'Reset all to defaults',
-          onPressed: rebindable.any((b) => saved.containsKey(b.id))
-              ? () => unawaited(_resetAll())
-              : null,
-        ),
-      ],
-      children: [
-        for (final g in _groups())
-          if (g.rows.where(_shows).toList() case final rows
+    builder: (context, saved, _) {
+      final groups = [
+        for (final g in shortcutGroupsShown())
+          if (g.rows.where((e) => _shows(g, e)).toList() case final rows
               when rows.isNotEmpty)
+            (group: g, rows: rows),
+      ];
+      final theme = NushiTheme.of(context);
+      return SettingsPage(
+        title: 'Keyboard shortcuts',
+        actions: [
+          // Off rather than gone, so it never moves.
+          Button(
+            key: const ValueKey('shortcuts-reset-all'),
+            label: 'Reset all to defaults',
+            onPressed: rebindable.any((b) => saved.containsKey(b.id))
+                ? () => unawaited(_resetAll())
+                : null,
+          ),
+        ],
+        head: Padding(
+          padding: const EdgeInsets.only(bottom: 18),
+          child: ShortcutSearchField(controller: _search),
+        ),
+        children: [
+          if (groups.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 2),
+              child: Text(
+                'Nothing matches',
+                key: const ValueKey('shortcuts-none'),
+                style: theme.ui(theme.t.textMuted),
+              ),
+            ),
+          for (final (:group, :rows) in groups)
             SettingsGroup(
-              title: g.title,
-              about: g.about,
+              title: group.title,
+              about: group.about,
               children: [
                 for (final e in rows)
                   if (e.binding case final b?)
                     _row(context, b)
                   else
-                    _FixedRow(label: e.label, keys: e.keys),
+                    FixedShortcutRow(label: e.label, keys: e.keys),
               ],
             ),
-      ],
-    ),
+        ],
+      );
+    },
   );
 
-  /// Whether [e]'s row shows: the one place that narrows the list (every
-  /// row shows, but a group left with none isn't drawn).
-  bool _shows(_Entry e) => true;
+  /// Whether [e]'s row in [g] shows: it matches the search, or it's the
+  /// row being worked on (in a clash, refused, or last listened on), which
+  /// stays while the search leaves it out.
+  bool _shows(ShortcutGroup g, ShortcutEntry e) {
+    final id = e.binding?.id;
+    if (id != null &&
+        (id == _kept || id == _pending?.key.id || id == _refused?.key.id)) {
+      return true;
+    }
+    return shortcutMatches(
+      _query,
+      name: e.label,
+      group: g.title,
+      keys: e.match,
+    );
+  }
 
   Widget _row(BuildContext context, Cmd key) {
     final t = NushiTheme.of(context).t;
@@ -226,7 +289,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
       _ when r.issue != null => (r.issue, t.needs),
       _ => (r.chosen && r.key != null ? note(r.key!) : null, null),
     };
-    final second = _secondOf(key);
+    final second = secondKeyOf(key);
     final secondKeys = second == null ? '' : keyLabel(second);
     final row = ShortcutRow(
       key: ValueKey('shortcut-row-$id'),
@@ -290,6 +353,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
           onStart: () => setState(() {
             _pending = null;
             _refused = null;
+            _kept = id;
           }),
         ),
       ),
@@ -304,77 +368,6 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
       child: row,
     );
   }
-}
-
-/// A row of the page: a binding's, which can change, or a fixed key's,
-/// its keys as the page shows them.
-typedef _Entry = ({String label, Cmd? binding, String keys});
-
-/// A group of the page's rows, as a [SettingsGroup] shows it.
-typedef _Group = ({String title, String? about, List<_Entry> rows});
-
-/// Every group and its rows, in the page's order: the menus' groups, then
-/// the fixed keys.
-List<_Group> _groups() => [
-  for (final (name, keys) in shortcutGroups)
-    (
-      title: name,
-      about: null,
-      rows: [
-        for (final k in keys)
-          (label: bindingName(k), binding: k, keys: keyLabel(k)),
-      ],
-    ),
-  (
-    title: 'Fixed',
-    about: "These keys can't be changed",
-    rows: [
-      for (final (label, keys) in _fixed())
-        (label: label, binding: null, keys: keys),
-    ],
-  ),
-];
-
-/// The key bound beside [key]'s own (Chrome's tab keys, ⇧⌘P for the
-/// palette), shown in its row. It can't be changed: it goes when the
-/// action gets a chosen key or another binding takes it (ADR 0146), and
-/// then reads '' and isn't shown. ⇧⌘} and ⇧⌘{ are the same keys as a
-/// keyboard may report them, so not shown apart.
-Cmd? _secondOf(Cmd key) => [
-  previousTabKeysToo.first,
-  nextTabKeysToo.first,
-  paletteKeyToo,
-].where((a) => a.aliasOf == key.id).firstOrNull;
-
-/// The keys the page shows but doesn't let change: Esc's, the chats' and
-/// terminals' numbers, Quit.
-List<(String, String)> _fixed() => [
-  ('Stop', 'Esc'),
-  ('Rewind', 'Esc Esc'),
-  (
-    'Open chat 1–9',
-    '${keyLabel(chatNumberKey(1))}–${keyLabel(chatNumberKey(9))}',
-  ),
-  ('Terminal 1–9', '${keyLabel(altDigitKey(1))}–${keyLabel(altDigitKey(9))}'),
-  ('Quit', keyLabel(quitKey)),
-];
-
-/// A key the page lists but doesn't let change: its [label] and [keys]
-/// on a quiet cap where a binding's would be, with no hover, hand or
-/// focus.
-class _FixedRow extends StatelessWidget {
-  const new({required this.label, required this.keys});
-
-  final String label;
-  final String keys;
-
-  @override
-  Widget build(BuildContext context) => ShortcutRow(
-    key: ValueKey('shortcut-fixed-$label'),
-    label: label,
-    slots: false,
-    cap: ShortcutCap(keys),
-  );
 }
 
 /// A refusal's line: the key pressed and why, unless the reason names it

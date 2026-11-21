@@ -2,8 +2,9 @@
 // narrow, dark and light, on the Mac and on Linux (where a chosen key's
 // words are long), in each state a row has: an edited row with the
 // pointer off it and on it, listening, a clash, a refusal, keys not
-// used, and the page's end. Renders to look at (`make renders`), and
-// what they show checked as they're drawn.
+// used, the page's end, partway down (its head kept in view), and
+// searches by name, by key and finding nothing. Renders to look at
+// (`make renders`), and what they show checked as they're drawn.
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
@@ -119,6 +120,31 @@ void main() {
         );
         await tester.pumpAndSettle();
         await shot('end');
+        // Partway down: the title, Reset all and the search stay in view.
+        shortcutKeys.value = {
+          'newChat': linux ? 'Alt+Shift+Cmd+PageUp' : 'Shift+Cmd+N',
+        };
+        await Scrollable.ensureVisible(tester.element(rowOf('find')));
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(find.byKey(const ValueKey('shortcuts-search'))).top,
+          lessThan(150),
+        );
+        await shot('scrolled');
+        // Searches: by name, by a key in words, and one finding nothing.
+        final search = find.byKey(const ValueKey('shortcuts-search'));
+        for (final (state, query) in [
+          ('search_name', 'tab'),
+          ('search_key', linux ? 'ctrl tab' : 'cmd k'),
+          ('search_none', 'xyzzy'),
+        ]) {
+          await tester.enterText(search, query);
+          await tester.pumpAndSettle();
+          await shot(state);
+        }
+        expect(find.text('Nothing matches'), findsOneWidget);
+        await tester.enterText(search, '');
+        await tester.pumpAndSettle();
         // The long key on the sidebar's New chat too.
         if (b == Brightness.dark) {
           d.select('a');

@@ -113,7 +113,7 @@ The list is long: type a few letters to find a font. To go back, pick the first 
 
 You can give any action its own key, or none. The menu bar, the command palette and the tooltips then show your key.
 
-1. Open **Settings**, then **Keyboard shortcuts**.
+1. Open **Settings**, then **Keyboard shortcuts**. To find an action, type in **Search actions and keys**: part of its name, its group, or a key as shown or in words (`cmd k`, `ctrl tab`). Esc empties the search.
 2. Click the action's key, at the right of its row (or anywhere on the row). It reads **Press keys…**.
 3. Press the new keys. Hold ⌘, ⌃ or ⌥ with them (Ctrl or Alt on Linux), or press a function key. Esc leaves the key as it was.
 

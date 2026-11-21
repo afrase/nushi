@@ -14,7 +14,9 @@ import 'package:nushi/widgets.dart';
 /// and [children], then any [slivers] (a long list built lazily), in a
 /// column at most [maxWidth] wide, [gutter] from the nav (left-aligned:
 /// centered, a wide window put the content far from the nav it belongs
-/// to); [bottom] stays under it all, outside the scroll.
+/// to); [bottom] stays under it all, outside the scroll. A [head] (a
+/// search field) goes under the title, and the two then stay in view
+/// while the rest scrolls.
 class SettingsPage extends StatelessWidget {
   const new({
     required this.title,
@@ -22,6 +24,7 @@ class SettingsPage extends StatelessWidget {
     this.actions = const [],
     this.children = const [],
     this.slivers = const [],
+    this.head,
     this.bottom,
     this.controller,
   });
@@ -45,6 +48,7 @@ class SettingsPage extends StatelessWidget {
   final List<Widget> actions;
   final List<Widget> children;
   final List<Widget> slivers;
+  final Widget? head;
   final Widget? bottom;
   final ScrollController? controller;
 
@@ -95,16 +99,28 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ),
         );
+        final pinned = head == null
+            ? null
+            : Padding(
+                padding: pad.copyWith(top: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [heading, head!],
+                ),
+              );
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            ?pinned,
             Expanded(
               child: CustomScrollView(
                 controller: controller,
                 slivers: [
                   SliverPadding(
-                    padding: pad.copyWith(top: 18),
-                    sliver: SliverList.list(children: [heading, ...children]),
+                    padding: pad.copyWith(top: pinned == null ? 18 : 0),
+                    sliver: SliverList.list(
+                      children: [if (pinned == null) heading, ...children],
+                    ),
                   ),
                   for (final s in slivers)
                     SliverPadding(padding: pad, sliver: s),
