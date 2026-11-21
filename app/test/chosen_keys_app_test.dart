@@ -159,6 +159,50 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 
+  testWidgets('the Mac is sent the chosen key, as a web view with the '
+      'focus needs it (ADR 0094)', (tester) async {
+    // What the menu bar is given goes over the menu channel: an item read
+    // from the widget tree serializes its key when asked, so only the
+    // message shows the key reached the Mac.
+    final sent = <Object?>[];
+    final messenger = tester.binding.defaultBinaryMessenger
+      ..setMockMethodCallHandler(SystemChannels.menu, (call) async {
+        if (call.method == 'Menu.setMenus') sent.add(call.arguments);
+        return null;
+      });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.menu, null),
+    );
+    Map<Object?, Object?> reloadSent() {
+      Map<Object?, Object?>? item(Object? node) => switch (node) {
+        final Map<Object?, Object?> m when m['label'] == 'Reload Page' => m,
+        final Map<Object?, Object?> m =>
+          m.values.map(item).nonNulls.firstOrNull,
+        final List<Object?> l => l.map(item).nonNulls.firstOrNull,
+        _ => null,
+      };
+      return item(sent.last)!;
+    }
+
+    final d = await _app(tester);
+    Map<String, Object?> wire(SingleActivator a) =>
+        a.serializeForMenu().toChannelRepresentation();
+    final before = wire(
+      const SingleActivator(LogicalKeyboardKey.keyR, meta: true),
+    );
+    expect(reloadSent()['shortcutTrigger'], before['shortcutTrigger']);
+    expect(reloadSent()['shortcutModifiers'], before['shortcutModifiers']);
+    final count = sent.length;
+    await _choose(tester, {'reloadPage': 'Alt+Cmd+R'});
+    expect(sent.length, greaterThan(count));
+    final after = wire(
+      const SingleActivator(LogicalKeyboardKey.keyR, meta: true, alt: true),
+    );
+    expect(reloadSent()['shortcutTrigger'], after['shortcutTrigger']);
+    expect(reloadSent()['shortcutModifiers'], after['shortcutModifiers']);
+    await closeView(tester, d);
+  }, variant: onMac);
+
   testWidgets("a chosen ⌘K takes the palette's: its item has no key, and "
       '⌘K hides the sidebar', (tester) async {
     final d = await _app(tester);
