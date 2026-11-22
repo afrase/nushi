@@ -61,9 +61,12 @@ func mcpTools(t *tools.Service, socket string) chats.Tools {
 	}
 }
 
-// proxiedTransport is net/http's default transport through the system's
-// proxy, as macOS would pick it (a company network): Jira's, GitHub's and
-// Web Push's.
+// proxiedTransport is net/http's default transport through sysproxy's
+// proxy (a company network): the environment's HTTPS_PROXY or HTTP_PROXY
+// with NO_PROXY, else on the Mac scutil's settings or PAC file as macOS
+// would pick them, on Linux ALL_PROXY, elsewhere a direct connection. The
+// environment is the login shell's on Linux, the daemon's own on the Mac
+// and Windows. Jira's, GitHub's, Web Push's and the update check's.
 func proxiedTransport() *http.Transport {
 	t := http.DefaultTransport.(*http.Transport).Clone() //nolint:forcetypeassert // net/http's default is a *Transport
 	t.Proxy = sysproxy.Proxy
