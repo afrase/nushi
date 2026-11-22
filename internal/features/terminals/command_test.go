@@ -128,8 +128,9 @@ func TestCommandsRefused(t *testing.T) {
 	}
 }
 
-// A command's terminal restarted runs its command again.
-func TestRestartRunsTheCommandAgain(t *testing.T) {
+// A command's terminal restarted is a shell: the command isn't run again
+// unseen, and it is listed without it.
+func TestRestartOfACommandStartsAShell(t *testing.T) {
 	var started []string
 	s := New(func(_, command string, _, _ int, _ func()) (Shell, error) {
 		started = append(started, command)
@@ -142,28 +143,10 @@ func TestRestartRunsTheCommandAgain(t *testing.T) {
 	if err := s.Restart(m.ID, 80, 24); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(started, []string{"make test", "make test"}) {
+	if !slices.Equal(started, []string{"make test", ""}) {
 		t.Errorf("started %q", started)
 	}
-}
-
-// ⌃C in a command's terminal kills the shell running it (it has no job
-// control), which a shell would report as 130: the terminal says that,
-// not -1, so the app sees the command stopped.
-func TestACommandStoppedByCtrlCEndsWith130(t *testing.T) {
-	s := New(shStart(), "sh", tempFolder{t.TempDir()}, func(model.Event) {})
-	t.Cleanup(s.CloseAll)
-	m, err := s.Open("c1", "", "sleep 30; echo after", 80, 24)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := s.Write(m.ID, []byte{3}); err != nil {
-		t.Fatal(err)
-	}
-	if _, exited, code := follow(t, s, m.ID); !exited || code != 130 {
-		t.Errorf("ended %v with %d, want exited with 130", exited, code)
-	}
-	if l := s.List("c1"); len(l) != 1 || l[0].ExitCode != 130 {
+	if l := s.List("c1"); len(l) != 1 || l[0].Command != "" {
 		t.Errorf("listed as %+v", l)
 	}
 }

@@ -222,14 +222,15 @@ func (s *Service) Arrange(chatID string, ids []string) {
 }
 
 // Restart starts a new shell in a terminal's folder in place of its old
-// one, which is closed if it still runs; a command's terminal runs its
-// command again.
+// one, which is closed if it still runs. A command's terminal becomes a
+// shell too, not the command run again: its Restart says "shell", and
+// rerunning a command unseen (git clean, a deploy) could do harm.
 func (s *Service) Restart(id string, cols, rows int) error {
 	t, err := s.get(id)
 	if err != nil {
 		return err
 	}
-	sh, err := s.start(t.Folder, t.Command, cols, rows, func() { s.changed(t.ChatID) })
+	sh, err := s.start(t.Folder, "", cols, rows, func() { s.changed(t.ChatID) })
 	if err != nil {
 		return err
 	}
@@ -238,6 +239,7 @@ func (s *Service) Restart(id string, cols, rows int) error {
 	old := t.shell
 	if listed {
 		t.shell = sh
+		t.Command = ""
 		if name := sh.Name(); name != "" { // the new shell may be another (Windows)
 			t.Shell = name
 		}
