@@ -128,10 +128,7 @@ Future<(FakeDaemon, Daemon)> _view(
   final fake = FakeDaemon([])
     ..answer = (input) => switch (input) {
       PingRequest() => PingResponse(apiVersion: api),
-      ListSkillsRequest() =>
-        _skills()
-          ..hasBuiltIn = api >= agentFactsApi
-          ..hasPlugins = api >= agentFactsApi,
+      ListSkillsRequest() => _skills(),
       _ => null,
     };
   final d = await fake.connect(tester);
@@ -172,13 +169,6 @@ void main() {
     await tester.pumpAndSettle();
     final plugin = fake.calls.whereType<SetPluginOnRequest>().single;
     expect((plugin.id, plugin.on), ('team@market', true));
-    await closeView(tester, d);
-  });
-
-  testWidgets('a daemon too old to say still has Claude’s built-in skills '
-      'and plugins, by its name', (tester) async {
-    final (_, d) = await _view(tester, '$_home/old', api: agentFactsApi - 1);
-    expect(find.byType(Toggle), findsNWidgets(7)); // as in the test above
     await closeView(tester, d);
   });
 

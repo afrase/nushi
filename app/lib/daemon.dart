@@ -67,12 +67,6 @@ const oneFileDiffApi = 121;
 /// (GetDiffRequest.names), what the Files tree's dots come from.
 const namesDiffApi = 123;
 
-/// The API from which the daemon says what an agent has (Agent.mcp_user_only,
-/// ListSkillsResponse.has_built_in and has_plugins), which
-/// the app went by the agent's name for. While an older daemon waits to
-/// restart (ADR 0056) it still does, or Ante would offer what it refuses.
-const agentFactsApi = 97;
-
 /// The API from which the daemon keeps a chat's color (Chat.color,
 /// SetChatColor).
 const chatColorApi = 100;

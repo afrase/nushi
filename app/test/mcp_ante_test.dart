@@ -58,7 +58,7 @@ Future<(FakeDaemon, Daemon)> _daemon(
   for (final a in fake.agents) {
     a
       ..mcp = a.name == 'claude' || a.name == 'ante'
-      ..mcpUserOnly = api >= agentFactsApi && a.name == 'ante';
+      ..mcpUserOnly = a.name == 'ante';
   }
   return (fake, await fake.connect(tester));
 }
@@ -165,19 +165,6 @@ void main() {
     await tester.pumpAndSettle();
     final out = fake.calls.whereType<LogoutMcpServerRequest>().single;
     expect((out.agent, out.name), ('ante', 'web'));
-    await closeView(tester, d);
-  });
-
-  testWidgets('a daemon too old to say still has Ante’s as yours only, by '
-      'its name', (tester) async {
-    final (_, d) = await _daemon(tester, api: agentFactsApi - 1);
-    viewport(tester, const Size(1000, 900), ratio: 3);
-    await tester.pumpWidget(
-      themed(McpView(daemon: d, folder: '/Users/me/old')),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text(McpView.userOnlyAbout('Ante')), findsOneWidget);
-    expect(find.byType(Toggle), findsOneWidget); // Claude's alone
     await closeView(tester, d);
   });
 

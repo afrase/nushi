@@ -51,9 +51,7 @@ class McpServers extends ChangeNotifier {
 
   /// They are only yours, with no off switch or legacy SSE, as the daemon
   /// says of the agent.
-  bool get userOnly => daemon.daemonApi < agentFactsApi
-      ? agent == 'ante'
-      : knownAgents[agent]?.mcpUserOnly ?? false;
+  bool get userOnly => knownAgents[agent]?.mcpUserOnly ?? false;
   List<McpServer> servers = [];
   bool loaded = false;
   bool checking = false;
