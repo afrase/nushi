@@ -35,8 +35,10 @@ String commandIn(String text) => text.substring(1).trim();
 /// has no command terminal, and the box runs nothing there.
 bool canRunCommands(Daemon daemon) => daemon.daemonApi >= commandTerminalApi;
 
-/// What the box says when its daemon is too old to run a command.
-const oldDaemonWords = "This daemon can't run commands";
+/// What the box says when its daemon is too old to run a command: mostly
+/// one an update left running until things are idle (ADR 0056), so it
+/// names the daemon, not an update of Nushi the user just made.
+const oldDaemonWords = 'Running commands needs a newer daemon';
 
 /// Runs the command in [chat]'s box: out of the box, into a card over it
 /// (`CommandRuns.command`), at once, whether or not the agent works. An
@@ -53,7 +55,7 @@ Future<void> runBoxCommand(
   final command = commandIn(typed);
   if (command.isEmpty) return;
   if (!canRunCommands(daemon)) {
-    showError(context, '$oldDaemonWords: update Nushi');
+    showError(context, oldDaemonWords);
     return;
   }
   box.clear();

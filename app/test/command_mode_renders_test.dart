@@ -64,6 +64,10 @@ void main() {
           await tester.enterText(field, '!npm test');
           await tester.pumpAndSettle();
           await render(tester, find.byType(NushiApp), '${name}_card');
+          d.daemonApi = commandTerminalApi - 1;
+          await tester.enterText(field, '!ls');
+          await tester.pumpAndSettle();
+          await render(tester, find.byType(NushiApp), '${name}_old');
           await closeView(tester, d);
           await tester.pump(const Duration(seconds: 2)); // a session's retry
         }, variant: onMac);

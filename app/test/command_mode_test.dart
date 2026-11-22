@@ -208,7 +208,7 @@ void main() {
     d.daemonApi = commandTerminalApi - 1;
     await _type(tester, '!git status');
     await tester.pumpAndSettle();
-    expect(find.text(oldDaemonWords), findsOneWidget);
+    expect(find.text('Running commands needs a newer daemon'), findsOne);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await _settle(tester);
     expect(shells.opened, isEmpty);
