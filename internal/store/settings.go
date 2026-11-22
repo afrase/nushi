@@ -136,12 +136,6 @@ func (s *Store) SleepAfter() time.Duration {
 	return defaultSleepAfter
 }
 
-// SetSleepAfter remembers how long a chat idles before its agent sleeps.
-func (s *Store) SetSleepAfter(d time.Duration) error {
-	m := int(d / time.Minute)
-	return s.changeSettings(func(set *settings) { set.SleepAfterMinutes = &m })
-}
-
 // DebugLog says whether the log has DEBUG lines (ADR 0038).
 func (s *Store) DebugLog() bool {
 	s.mu.Lock()

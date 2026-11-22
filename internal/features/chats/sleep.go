@@ -54,7 +54,6 @@ func (c *chat) canSleepLocked() error {
 // SleepPrefs keeps how long a chat idles before its agent sleeps.
 type SleepPrefs interface {
 	SleepAfter() time.Duration // 0: never
-	SetSleepAfter(time.Duration) error
 }
 
 // autoSleep puts chats to sleep once they have idled as long as the
@@ -83,14 +82,6 @@ func (s *Service) SleepAfter() time.Duration {
 		return 0
 	}
 	return s.prefs.SleepAfter()
-}
-
-// SetSleepAfter sets how long a chat idles before its agent sleeps.
-func (s *Service) SetSleepAfter(d time.Duration) error {
-	if s.prefs == nil {
-		return errors.New("chats don't sleep here")
-	}
-	return s.prefs.SetSleepAfter(d)
 }
 
 // doze puts a chat to sleep if nothing happened in it for after and

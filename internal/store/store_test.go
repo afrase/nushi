@@ -27,7 +27,8 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	if err := s.SetMode("claude", "plan"); err != nil { // keeps the picks and the commands
 		t.Fatal(err)
 	}
-	if err := s.SetSleepAfter(0); err != nil {
+	never := time.Duration(0)
+	if err := s.ChangeSettings(model.SettingsChange{SleepAfter: &never}); err != nil {
 		t.Fatal(err)
 	}
 	created := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)

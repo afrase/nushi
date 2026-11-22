@@ -21,8 +21,6 @@ type memPrefs struct{ after atomic.Int64 }
 
 func (m *memPrefs) SleepAfter() time.Duration { return time.Duration(m.after.Load()) }
 
-func (m *memPrefs) SetSleepAfter(d time.Duration) error { m.after.Store(int64(d)); return nil }
-
 // A chat put to sleep keeps its transcript and doesn't wake when opened; a
 // message wakes it through session/load, with the model it had.
 func TestSleepAndWakeOnSend(t *testing.T) {
@@ -148,7 +146,7 @@ func TestAutoSleep(t *testing.T) {
 	if svc.doze(c, time.Hour); !awake() { // an hour, as the event is only just past
 		t.Fatal("slept right after an event")
 	}
-	testcheck.NoErr(t, prefs.SetSleepAfter(after))
+	prefs.after.Store(int64(after))
 	eventually(t, c, func() bool { return c.agent == nil && c.asleep })
 	launches, _, _ := agent.count()
 	turn(t, svc, c, "two")
