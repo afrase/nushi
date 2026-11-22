@@ -148,7 +148,7 @@ func (c *chat) cutCopyLocked(item string) {
 		}
 	}
 	switch {
-	case c.copies == nil:
+	case c.copies == nil, item == "": // "": nothing the copy holds is cut
 	case c.halting: // being deleted: a write would make the copy again
 		c.mirrored = false
 	default:

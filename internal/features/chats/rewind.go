@@ -123,19 +123,9 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		}
 		c.sid, c.config, c.reapplying = next, config, true
 		c.emitLocked(model.Event{ChatID: c.id, Cut: c.items[i].ID})
-		// The copy is cut at the first item it holds: a mark that only
-		// shows (a compaction's, after the copy's earlier part) isn't in
-		// it, and a cut there would keep what's rewound. The rewound
-		// message is one it holds, so there's always one.
-		k := slices.IndexFunc(c.items[i:], func(it model.Item) bool { return !shownOnly(it) })
-		cut := ""
-		if k >= 0 {
-			cut = c.items[i+k].ID
-		}
+		cut := copyCut(c.items[i:])
 		c.items = c.items[:i]
-		if cut != "" {
-			c.cutCopyLocked(cut)
-		}
+		c.cutCopyLocked(cut)
 		c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(config)})
 		c.saveLocked(func(s *model.ChatRecord) {
 			s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
@@ -165,6 +155,18 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 	}
 	c.log().Info("chat rewound", "old", sid, "to", itemID)
 	return msg, nil
+}
+
+// copyCut is where the copy is cut when the transcript is cut before
+// cut[0]: at the first item the copy holds. A mark that only shows (a
+// compaction's, after the copy's earlier part) isn't in it, and a cut
+// there would keep what's rewound. A rewind's message is one it holds, so
+// "" (no cut) never comes of one.
+func copyCut(cut []model.Item) string {
+	if k := slices.IndexFunc(cut, func(it model.Item) bool { return !shownOnly(it) }); k >= 0 {
+		return cut[k].ID
+	}
+	return ""
 }
 
 // indexLocked returns the index of the item with id, or -1, looking from
