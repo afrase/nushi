@@ -113,6 +113,11 @@ extension DaemonEvents on Daemon {
         ...?drafts?.ids,
       };
       _forget(kept.difference(ids).difference(sides.keys.toSet()));
+      // An unreadable chat already listed (its record stopped reading
+      // across a restart) leaves the list: the daemon has no such chat.
+      for (final id in resp.unreadable) {
+        if (!listed.any((c) => c.id == id)) chats.remove(id);
+      }
       for (final side in sides.values) {
         side.loading = true; // its events wait for its snapshot
       }

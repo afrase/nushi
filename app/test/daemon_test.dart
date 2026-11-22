@@ -240,6 +240,55 @@ void main() {
     expect(reviews.value.keys, ['bad']);
   });
 
+  test('a listed chat whose record stops reading after a restart leaves '
+      'the list, its comments kept', () async {
+    setComments('bad', [
+      ReviewComment(
+        id: 'bad',
+        where: 'branch',
+        path: 'main.go',
+        old: false,
+        start: 1,
+        end: 1,
+        quote: 'x',
+        text: 'why?',
+      ),
+    ]);
+    addTearDown(() => setComments('bad', []));
+    final a = Chat(id: 'a', folder: '/x', agent: 'claude');
+    var unreadable = false; // the restarted daemon can't read "bad"
+    late StreamController<EventsResponse> events;
+    final fake = FakeDaemon([a])
+      ..streams = ((input) => input is EventsRequest
+          ? (events = StreamController()..add(EventsResponse())).stream
+          : null)
+      ..answer = (input) => switch (input) {
+        ListChatsRequest() => ListChatsResponse(
+          chats: [
+            a,
+            if (!unreadable) Chat(id: 'bad', folder: '/x'),
+          ],
+          unreadable: [if (unreadable) 'bad'],
+        ),
+        GetChatRequest() => GetChatResponse(seq: Int64(1)),
+        _ => null,
+      };
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    await pumpEventQueue(); // live: the chats are listed
+    d.select('bad');
+    await pumpEventQueue();
+    expect(d.chats.keys, unorderedEquals(['a', 'bad']));
+    unreadable = true;
+    await events.close();
+    await pumpEventQueue();
+    await d.ping(); // back, on a daemon with no chat "bad"
+    await pumpEventQueue();
+    expect(d.chats.keys, ['a']);
+    expect(d.selectedId, isNull);
+    expect(reviews.value.keys, ['bad']);
+  });
+
   test('events while the list is on its way come after it', () async {
     final list = Completer<ListChatsResponse>();
     final fake = _fake(list: list);
