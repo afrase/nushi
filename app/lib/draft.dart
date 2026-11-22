@@ -45,8 +45,9 @@ class Draft extends ChangeNotifier {
     return true;
   }
 
-  /// The outputs of code block runs that ended, as cards, sent after the
-  /// next message's text; not saved.
+  /// The outputs of code block runs that ended and of commands run after
+  /// `!` (those still running too), as cards; the done ones are sent after
+  /// the next message's text ([outputDone]); not saved.
   final outputs = ValueNotifier<List<RunOutput>>(const []);
 
   /// Text to quote in the box (a side chat's start), taken by the box.
@@ -73,22 +74,24 @@ class Draft extends ChangeNotifier {
   final _subagents = <String, TextEditingController>{};
 
   /// There's a message to send: text, an image, a file, a reply card or a
-  /// run's output in the box (a quote or a subagent's box isn't one).
+  /// run's output in the box (a quote, a subagent's box or a command still
+  /// running isn't one).
   bool get hasMessage =>
       text.text.trim().isNotEmpty ||
       images.value.isNotEmpty ||
       files.value.isNotEmpty ||
       replies.value.isNotEmpty ||
-      outputs.value.isNotEmpty;
+      outputs.value.any(outputDone);
 
-  /// Takes the box's message out to send, leaving the box empty.
+  /// Takes the box's message out to send, leaving the box empty but for
+  /// the commands still running, whose cards wait for the message after.
   Outgoing take() {
     final m = (
       text: text.text.trim(),
       images: images.value,
       files: files.value,
       replies: replies.value,
-      outputs: outputs.value,
+      outputs: [...outputs.value.where(outputDone)],
       mentions: {...mentions},
       toSubagent: toSubagent.value,
     );
@@ -96,7 +99,7 @@ class Draft extends ChangeNotifier {
     images.clear();
     files.value = const [];
     replies.value = const [];
-    outputs.value = const [];
+    outputs.value = [...outputs.value.where((o) => !outputDone(o))];
     toSubagent.value = null;
     mentions.clear();
     return m;

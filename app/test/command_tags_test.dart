@@ -10,8 +10,14 @@ import 'package:nushi/run_text.dart';
 // A command and its output as they go to the agent (bare tags, Claude
 // Code's own for a `!` command) and as a sent message reads back.
 
-RunOutput _o(String command, String text, {int exit = 0}) =>
-    (key: command, command: command, exit: exit, lines: 1, text: text);
+RunOutput _o(String command, String text, {int exit = 0}) => (
+  key: command,
+  command: command,
+  exit: exit,
+  lines: 1,
+  text: text,
+  run: null,
+);
 
 /// [splitCommands]'s answer as a list, which a matcher compares item by
 /// item (a record holding a list is equal only to itself).
@@ -140,7 +146,7 @@ void main() {
     final message = withOutputs('Hi', [_o('ls', 'a\nb', exit: 1)]);
     final cards = sentOutputs(splitCommands(message).$2);
     expect(cards, [
-      (key: 'ls', command: 'ls', exit: 1, lines: 2, text: 'a\nb'),
+      (key: 'ls', command: 'ls', exit: 1, lines: 2, text: 'a\nb', run: null),
     ]);
     expect(withOutputs('Hi', cards), message);
   });

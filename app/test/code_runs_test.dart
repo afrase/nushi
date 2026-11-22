@@ -130,6 +130,7 @@ void main() {
       exit: 1,
       lines: 2,
       text: '```\nquoted',
+      run: null,
     );
     expect(
       withOutputs('Why?', [o]),

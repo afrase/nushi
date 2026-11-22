@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:nushi/code_runs.dart';
+
 /// The fences whose blocks run: a shell's.
 const shellLanguages = {'bash', 'sh', 'shell', 'zsh', 'console', 'terminal'};
 
@@ -37,16 +39,25 @@ String? runnableScript(String language, String code) {
   return script.isEmpty ? null : script;
 }
 
-/// A run's output waiting in the composer, sent with the next message:
-/// the block it ran (`key`, its code), its command (the whole script), how
-/// it exited, how many lines it wrote, and the text sent ([keptOutput]).
+/// A run's output in the composer, sent with the next message once it's
+/// done: what names it (`key`: a block's code, or a command's own key),
+/// its command (the whole script), how it exited, how many lines it
+/// wrote, and the text sent ([keptOutput]); its `run` is a command's
+/// run typed after `!`, which shows in the card while it goes and is sent
+/// only once its state is `RunState.ended`; null for a ▷ run's, which
+/// comes ended.
 typedef RunOutput = ({
   String key,
   String command,
   int exit,
   int lines,
   String text,
+  CodeRun? run,
 });
+
+/// Whether [o] is done and goes with the next message: not a command
+/// still running.
+bool outputDone(RunOutput o) => o.run == null || o.run!.state == RunState.ended;
 
 const _keptLines = 400;
 const int _keptBytes = 32 << 10;
@@ -105,6 +116,7 @@ List<RunOutput> sentOutputs(List<SentCommand> commands) => [
         exit: c.exit ?? 0,
         lines: text.isEmpty ? 0 : '\n'.allMatches(text).length + 1,
         text: text,
+        run: null,
       ),
 ];
 

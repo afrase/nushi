@@ -13,6 +13,7 @@ import 'package:nushi/composer_plus.dart';
 import 'package:nushi/copy_command.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/draft.dart';
+import 'package:nushi/draft_cards.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/grow.dart';
 import 'package:nushi/images.dart';
@@ -626,6 +627,7 @@ class _ComposerState extends State<Composer> {
                             : DraftCards(
                                 _draft,
                                 chat: chat,
+                                daemon: widget.daemon,
                                 onDone: _focus.requestFocus,
                               ),
                       ),

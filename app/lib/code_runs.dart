@@ -7,6 +7,8 @@ import 'package:nushi/run_text.dart';
 import 'package:nushi/shell_marks.dart';
 import 'package:nushi/terminals.dart';
 
+part 'code_runs_command.dart';
+
 /// Where a run stands.
 enum RunState {
   /// Never run, in this app's run.
@@ -58,6 +60,10 @@ class CodeRun extends ChangeNotifier {
 
   /// Whether the user stopped it.
   bool stopAsked = false;
+
+  /// Whether the user opened its terminal (a command's card's Show): it
+  /// stays when the command ends, as a terminal they look at.
+  bool shown = false;
 
   /// Just typed, in a shell without marks: the daemon lists a terminal's
   /// program only twice a second, so it runs until that can show.
@@ -158,6 +164,11 @@ class CodeRuns {
 
   final _runs = <String, CodeRun>{};
   final _follows = <String, _Follow>{};
+
+  /// The commands run after `!`, while followed ([CommandRuns.command]);
+  /// each stream is cancelled when its command ends, or by [close].
+  final _commands = <CodeRun, StreamSubscription<pb.AttachTerminalResponse>>{};
+  int _nextCommand = 0;
 
   /// The run of the block of [code], idle until run.
   CodeRun of(String code) => _runs[code] ??= CodeRun(code);
@@ -356,6 +367,7 @@ class CodeRuns {
         exit: exit,
         lines: lines.length,
         text: keptOutput(lines),
+        run: null,
       ),
     ];
   }
@@ -366,5 +378,9 @@ class CodeRuns {
       unawaited(f.sub?.cancel());
     }
     _follows.clear();
+    for (final sub in _commands.values) {
+      unawaited(sub.cancel());
+    }
+    _commands.clear();
   }
 }

@@ -22,7 +22,7 @@ AttachedFile _file(String name) =>
     AttachedFile(name: name, size: 1, path: '/tmp/$name');
 
 RunOutput _output(String key, String text) =>
-    (key: key, command: 'ls', exit: 0, lines: 1, text: text);
+    (key: key, command: 'ls', exit: 0, lines: 1, text: text, run: null);
 
 /// A draft with something in every field of a message.
 Draft _full() {

@@ -42,6 +42,9 @@ class FakeShells {
   /// The commands opened, in order.
   final opened = <String>[];
 
+  /// The terminals closed, in order: each leaves [list].
+  final closed = <String>[];
+
   /// The command in terminal [id] ends with [exit]: its stream's last
   /// message says so, and it's listed as exited.
   void ends(String id, {int exit = 0}) {
@@ -81,6 +84,7 @@ class FakeShells {
       terminalId,
       utf8.decode(data),
     ),
+    CloseTerminalRequest(:final terminalId) => _close(terminalId),
     _ => null,
   };
 
@@ -99,6 +103,12 @@ class FakeShells {
       opened.add(command);
     }
     return OpenTerminalResponse(terminal: t);
+  }
+
+  CloseTerminalResponse _close(String id) {
+    closed.add(id);
+    list.removeWhere((t) => t.id == id);
+    return CloseTerminalResponse();
   }
 
   WriteTerminalResponse _typed(String id, String s) {

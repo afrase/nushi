@@ -3,7 +3,6 @@ import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/code_runs.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/images.dart' show RemoveBadge;
 import 'package:nushi/run_text.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/spinner.dart';
@@ -107,61 +106,6 @@ class RunnableBlock extends StatelessWidget {
               : _RunLine(run, busy: busy, chat: chat, daemon: daemon),
         );
       },
-    );
-  }
-}
-
-/// A run's output waiting in the composer, to go with the next message:
-/// "Output of `cmd` · exit 0 · 42 lines"; hovering it shows a button that
-/// removes it.
-class OutputCard extends StatelessWidget {
-  const new(this.output, {required this.onRemove, super.key});
-
-  final RunOutput output;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final o = output;
-    final muted = theme.ui(t.textMuted, size: 11.5);
-    return Hover(
-      builder: (context, {required hover}) => Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            constraints: const BoxConstraints(maxWidth: 360),
-            padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
-            decoration: BoxDecoration(
-              color: t.lifted,
-              borderRadius: BorderRadius.circular(NushiTheme.control),
-            ),
-            // The command shortened to fit, never how it went.
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Output of ', style: muted),
-                Flexible(
-                  child: Text(
-                    o.command,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.code(t.text, size: 11.5),
-                  ),
-                ),
-                Text(
-                  ' · exit ${o.exit} · ${o.lines} '
-                  '${o.lines == 1 ? 'line' : 'lines'}',
-                  style: muted,
-                ),
-              ],
-            ),
-          ),
-          if (hover) RemoveBadge(onRemove),
-        ],
-      ),
     );
   }
 }
