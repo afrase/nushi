@@ -28,6 +28,10 @@ void main() {
     expect(keys.toSet(), hasLength(keys.length));
   });
 
+  test('the prefs kept by chat are those of allPrefs kept by chat', () {
+    expect(chatPrefs, allPrefs.where((p) => p.keptByChat).toList());
+  });
+
   test('a value of any wrong type reads as something, never an error', () {
     for (final p in allPrefs) {
       for (final v in _wrong) {

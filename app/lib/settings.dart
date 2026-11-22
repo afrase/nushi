@@ -588,9 +588,11 @@ final Pref<Map<String, String>> shortcutKeys = Pref(
 Map<String, Object?> _otherShortcuts = const {};
 
 /// Every pref, in the order they're declared: the one list of them, which
-/// the prefs kept by chat are found in and tests go through (a new pref
-/// goes here too; a test counts the declarations). Reading it makes every
-/// pref, so each is saved from then on, as one read is.
+/// tests go through (a new pref goes here too; a test counts the
+/// declarations). Only tests read it: it makes every pref, and a pref made
+/// is saved from then on, so the app reading it would pin every default
+/// into `app.json`, and a later release's new default would never reach
+/// the user.
 @visibleForTesting
 List<Pref<Object?>> get allPrefs => [
   showDetails,
@@ -675,17 +677,33 @@ List<Pref<Object?>> get allPrefs => [
 ];
 
 /// The prefs kept by chat, which [chatsKept] and [forgetChats] go
-/// through: found among them all rather than those made, as a pref is made
-/// when first read, and a chat gone is forgotten from those not read yet
-/// too.
-Iterable<Pref<Object?>> get _chatPrefs => allPrefs.where((p) => p._keptByChat);
+/// through. Named here rather than found among those made, as a pref is
+/// made when first read, and a chat gone is forgotten from those not read
+/// yet too; nor found in [allPrefs], which would make every pref (a test
+/// checks this list is [allPrefs]' kept by chat).
+@visibleForTesting
+List<Pref<Object?>> get chatPrefs => [
+  changeScopes,
+  terminalChats,
+  filesChats,
+  fileTabsKept,
+  sidebarChats,
+  sidebarSections,
+  chatOpened,
+  pinnedFiles,
+  pullSeen,
+  pullSeenComments,
+  checksSeen,
+  pickedPulls,
+  cleanUpLater,
+];
 
 /// The chats some pref keeps something for.
-Set<String> chatsKept() => {for (final p in _chatPrefs) ...p.chats};
+Set<String> chatsKept() => {for (final p in chatPrefs) ...p.chats};
 
 /// Forgets the chats [ids] (gone) in every pref kept by chat: one save.
 void forgetChats(Set<String> ids) {
-  for (final p in _chatPrefs) {
+  for (final p in chatPrefs) {
     p.forget(ids);
   }
 }
@@ -729,7 +747,8 @@ final class Pref<T> extends ValueNotifier<T> {
   /// Whether it's kept by chat. (Asked of it, not read off its `_chats`:
   /// a pref seen as a `Pref<Object?>` can't give a function of its own
   /// type.)
-  bool get _keptByChat => _chats != null;
+  @visibleForTesting
+  bool get keptByChat => _chats != null;
 
   /// The chats this keeps something for (none unless it's kept by chat).
   Iterable<String> get chats => _chats?.call(value) ?? const [];
