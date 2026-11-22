@@ -136,11 +136,34 @@ class FakeDaemon implements Transport {
 
   /// The requests whose caller cancelled them, as each was.
   final cancelled = <Object>[];
-  // The fake's stream, which lives as long as the test.
-  final _events = StreamController<EventsResponse>()..add(EventsResponse());
 
-  /// Sends [e] down the events stream.
-  void emit(EventsResponse e) => _events.add(e);
+  /// Each Events subscription the app made, first to last, as the daemon
+  /// gives each its own stream: a second one is a reconnect.
+  final subscriptions = <EventsSubscription>[];
+
+  /// What [emit] sent while no subscription was live, for the next one.
+  final _unsent = <EventsResponse>[];
+
+  /// Sends [e] down every live events subscription.
+  void emit(EventsResponse e) {
+    final live = [...subscriptions.where((s) => s.live)];
+    if (live.isEmpty) _unsent.add(e);
+    for (final s in live) {
+      s._out.add(e);
+    }
+  }
+
+  /// A new events subscription for [request]: its first message, empty,
+  /// says it's live (internal/api/api.go's Events).
+  EventsSubscription _subscribe(EventsRequest request) {
+    final s = EventsSubscription._(request);
+    s._out.add(EventsResponse());
+    _unsent
+      ..forEach(s._out.add)
+      ..clear();
+    subscriptions.add(s);
+    return s;
+  }
 
   /// A [Daemon] on this fake, its chats and agents listed; it keeps
   /// drafts in [drafts], if given.
@@ -482,7 +505,8 @@ class FakeDaemon implements Transport {
   }
 
   /// Answers a stream call (its request): its messages, or null for the
-  /// events' stream. Every such request is in [calls].
+  /// fake's own answer (Events: a new [subscriptions] entry). Every
+  /// request it answers is in [calls].
   Stream<Object>? Function(Object input)? streams;
 
   /// The dev servers' output WatchServerLog sends (ADR 0100), by
@@ -510,6 +534,15 @@ class FakeDaemon implements Transport {
     if (streams?.call(request) case final s?) {
       calls.add(request);
       return StreamResponse(spec, Headers(), s.cast<O>(), Headers());
+    }
+    if (request is EventsRequest) {
+      final s = _subscribe(request);
+      return StreamResponse(
+        spec,
+        Headers(),
+        s._out.stream.cast<O>(),
+        Headers(),
+      );
     }
     // A folder the test doesn't list is empty, and stays watched while the
     // test runs (the Files pane's tree, open with every file, ADR 0123).
@@ -557,13 +590,30 @@ class FakeDaemon implements Transport {
         );
       }
     }
-    return StreamResponse(
-      spec,
-      Headers(),
-      _events.stream as Stream<O>,
-      Headers(),
+    throw ConnectException(
+      Code.unimplemented,
+      'FakeDaemon has no stream for ${request.runtimeType}',
     );
   }
+}
+
+/// One events subscription on a [FakeDaemon]: what the app asked for, and
+/// whether its stream is still open (the app hasn't let it go and the
+/// daemon hasn't dropped it).
+class EventsSubscription {
+  new _(this.request);
+
+  /// The request the app subscribed with.
+  final EventsRequest request;
+
+  /// Whether the stream still delivers: the app hasn't cancelled it and
+  /// the daemon hasn't dropped it.
+  bool get live => !_out.isClosed;
+
+  // Closed when the app cancels, as the daemon's handler ends then.
+  late final StreamController<EventsResponse> _out = StreamController(
+    onCancel: () => _out.close(),
+  );
 }
 
 /// A chat for [FakeDaemon], [age] minutes old.
