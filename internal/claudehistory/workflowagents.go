@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"slices"
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/regularfile"
@@ -85,17 +86,19 @@ func (l Local) WorkflowAgentItems(sid, folder string, w model.Workflow, id strin
 		if err := s.read(f, fi.Size()); err != nil {
 			return err
 		}
-		items, earlier = s.items, s.dropped
+		// Copied here, under the run's lock: the next read settles a
+		// call's step in place and shifts the cached steps.
+		n := len(s.items)
+		if limit > 0 && n > limit {
+			n = limit
+		}
+		items, earlier = slices.Clone(s.items[len(s.items)-n:]), s.dropped+len(s.items)-n
 		return nil
 	})
 	if err != nil {
 		return nil, 0, err
 	}
-	if limit > 0 && len(items) > limit {
-		earlier += len(items) - limit
-		items = items[len(items)-limit:]
-	}
-	return append([]model.Item(nil), items...), earlier, nil
+	return items, earlier, nil
 }
 
 // preview is the start of an agent's task or answer, as the snapshot kept

@@ -19,7 +19,7 @@ const stepCap = 8 << 10
 const (
 	maxStepLine = 8 << 20   // a transcript line longer is passed over
 	maxAgentLog = 256 << 20 // the most of an agent's transcript read
-	maxSteps    = 2000      // the most steps kept of one agent: the pane shows the last 400
+	maxSteps    = 400       // the most steps kept of one agent: the most the API asks for
 )
 
 // steps are a workflow agent's transcript as items, its steps as its pane

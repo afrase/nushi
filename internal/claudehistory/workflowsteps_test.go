@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
@@ -100,5 +102,51 @@ func TestWorkflowAgentStepsMasked(t *testing.T) {
 	}
 	if !strings.Contains(items[0].Input, "GH_TOKEN=••••") || !strings.Contains(items[0].Title, "GH_TOKEN=••••") {
 		t.Errorf("input %q, title %q", items[0].Input, items[0].Title)
+	}
+}
+
+// Two panes reading one agent's steps at once while its transcript grows
+// (the desktop's and the phone's) each get their own copy: a call's
+// result settles the cached step in place, under the run's lock, so a
+// copy taken after it would race (go test -race).
+func TestWorkflowAgentStepsReadAtOnce(t *testing.T) {
+	l, id, folder, session := fakeRun(t, launchedLine+startA, "")
+	agent := filepath.Join(session, "subagents", "workflows", "wf_abc", "agent-a1.jsonl")
+	testcheck.Write(t, agent, "")
+	f, err := os.OpenFile(agent, os.O_APPEND|os.O_WRONLY, 0)
+	testcheck.NoErr(t, err)
+	defer f.Close() //nolint:errcheck // written whole below
+	w := model.Workflow{RunID: "wf_abc"}
+	line := func(l, tu string) string { return strings.ReplaceAll(l, "tu1", tu) }
+	for i := range 100 {
+		_, err := f.WriteString(line(callLine, "tu"+strconv.Itoa(i)))
+		testcheck.NoErr(t, err)
+	}
+	_, _, err = l.WorkflowAgentItems(id, folder, w, "a1", 400)
+	testcheck.NoErr(t, err)
+	var wg sync.WaitGroup
+	var done atomic.Bool
+	for range 2 {
+		wg.Go(func() {
+			for !done.Load() {
+				if _, _, err := l.WorkflowAgentItems(id, folder, w, "a1", 400); err != nil {
+					t.Error(err)
+					return
+				}
+			}
+		})
+	}
+	for i := range 100 {
+		_, err := f.WriteString(line(resultLine, "tu"+strconv.Itoa(i)))
+		testcheck.NoErr(t, err)
+		_, _, err = l.WorkflowAgentItems(id, folder, w, "a1", 400)
+		testcheck.NoErr(t, err)
+	}
+	done.Store(true)
+	wg.Wait()
+	items, _, err := l.WorkflowAgentItems(id, folder, w, "a1", 400)
+	testcheck.NoErr(t, err)
+	if len(items) != 100 || items[99].Status != "completed" {
+		t.Errorf("%d steps, the last %+v", len(items), items[len(items)-1])
 	}
 }
