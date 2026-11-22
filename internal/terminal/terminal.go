@@ -229,7 +229,12 @@ func (t *Terminal) Signal() int {
 // Attach calls fn with the output kept so far (possibly empty), then with
 // new output as it comes, until the program exits, stop is closed, fn
 // returns false, or the client falls too far behind.
-func (t *Terminal) Attach(stop <-chan struct{}, fn func([]byte) bool) {
+func (t *Terminal) Attach(stop <-chan struct{}, fn func([]byte) bool) { t.Follow(stop, fn) }
+
+// Follow is Attach, saying whether the client kept up: false when it fell
+// too far behind and was dropped, its output's tail never given it, so
+// its caller doesn't tell it the program's end as if it had all of it.
+func (t *Terminal) Follow(stop <-chan struct{}, fn func([]byte) bool) (kept bool) {
 	s := &sub{wake: make(chan struct{}, 1)}
 	t.mu.Lock()
 	replay := bytes.Clone(t.output)
@@ -241,13 +246,13 @@ func (t *Terminal) Attach(stop <-chan struct{}, fn func([]byte) bool) {
 		t.mu.Unlock()
 	}()
 	if !fn(replay) {
-		return
+		return true
 	}
 	for {
 		exited := false
 		select {
 		case <-stop:
-			return
+			return true
 		case <-t.done:
 			exited = true
 		case <-s.wake:
@@ -256,8 +261,11 @@ func (t *Terminal) Attach(stop <-chan struct{}, fn func([]byte) bool) {
 		next, dropped := s.pending, s.dropped
 		s.pending = nil
 		t.mu.Unlock()
-		if dropped || len(next) > 0 && !fn(next) || exited {
-			return
+		if dropped {
+			return false
+		}
+		if len(next) > 0 && !fn(next) || exited {
+			return true
 		}
 	}
 }

@@ -22,7 +22,9 @@ type Shell interface {
 	Program() string    // the foreground program, as last seen
 	Foreground() string // the foreground program now, "" at the prompt
 	Exit() (exited bool, code int)
-	Attach(stop <-chan struct{}, fn func([]byte) bool)
+	// Follow attaches fn until the shell exits or stop is closed, and says
+	// whether fn kept up (false: dropped for falling behind).
+	Follow(stop <-chan struct{}, fn func([]byte) bool) (kept bool)
 	Close()
 	// Name is the shell's name ("zsh", "pwsh"), "" when it doesn't say.
 	// It may differ from one shell to the next: on Windows each is
@@ -158,7 +160,8 @@ func (s *Service) Resize(id string, cols, rows int) error {
 }
 
 // Attach calls fn with the terminal's recent output, then with new output,
-// until its shell exits (and says how) or stop is closed. A shell that
+// until its shell exits (and says how) or stop is closed; a client dropped
+// for falling behind isn't told it exited. A shell that
 // ended because the terminal restarted (Restart) isn't the terminal
 // exiting: it says not exited, so the client attaches again, to the new
 // one.
@@ -170,11 +173,14 @@ func (s *Service) Attach(id string, stop <-chan struct{}, fn func([]byte) bool) 
 	s.mu.Lock()
 	sh := t.shell
 	s.mu.Unlock()
-	sh.Attach(stop, fn)
+	kept := sh.Follow(stop, fn)
 	s.mu.Lock()
 	replaced := t.shell != sh
 	s.mu.Unlock()
-	if replaced {
+	// A client dropped for falling behind missed the output's tail: told
+	// the shell exited, it would take what it has for all of it (a
+	// command's card would send it so).
+	if replaced || !kept {
 		return false, 0, nil
 	}
 	exited, code = exitOf(sh, t.Command)

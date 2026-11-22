@@ -15,14 +15,14 @@ type fakeShell struct {
 	name   string
 }
 
-func (*fakeShell) Write([]byte) error                        { return nil }
-func (*fakeShell) Resize(int, int) error                     { return nil }
-func (*fakeShell) Program() string                           { return "" }
-func (*fakeShell) Foreground() string                        { return "" }
-func (f *fakeShell) Exit() (bool, int)                       { return f.closed, 0 }
-func (*fakeShell) Attach(<-chan struct{}, func([]byte) bool) {}
-func (f *fakeShell) Close()                                  { f.closed = true }
-func (f *fakeShell) Name() string                            { return f.name }
+func (*fakeShell) Write([]byte) error                             { return nil }
+func (*fakeShell) Resize(int, int) error                          { return nil }
+func (*fakeShell) Program() string                                { return "" }
+func (*fakeShell) Foreground() string                             { return "" }
+func (f *fakeShell) Exit() (bool, int)                            { return f.closed, 0 }
+func (*fakeShell) Follow(<-chan struct{}, func([]byte) bool) bool { return true }
+func (f *fakeShell) Close()                                       { f.closed = true }
+func (f *fakeShell) Name() string                                 { return f.name }
 
 type folders struct{}
 
@@ -111,12 +111,13 @@ func (e *endingShell) Exit() (bool, int) {
 	}
 }
 
-func (e *endingShell) Attach(stop <-chan struct{}, _ func([]byte) bool) {
+func (e *endingShell) Follow(stop <-chan struct{}, _ func([]byte) bool) bool {
 	e.attached <- struct{}{}
 	select {
 	case <-stop:
 	case <-e.done:
 	}
+	return true
 }
 
 func (e *endingShell) Close() { close(e.done) }
@@ -230,5 +231,27 @@ func TestRestartNamesTheNewShell(t *testing.T) {
 		if got := s.List("c1")[0].Shell; got != "bash" {
 			t.Errorf("restarted as %q, want bash", got)
 		}
+	}
+}
+
+// droppedShell drops its client, then has exited by the time it's asked.
+type droppedShell struct{ fakeShell }
+
+func (*droppedShell) Exit() (bool, int)                              { return true, 0 }
+func (*droppedShell) Follow(<-chan struct{}, func([]byte) bool) bool { return false }
+
+// A client dropped for falling behind isn't told the shell exited, though
+// it has since: it missed the output's tail, and a command's card would
+// send what it had as the whole output.
+func TestADroppedClientIsNotToldOfTheExit(t *testing.T) {
+	s := New(func(string, string, int, int, func()) (Shell, error) {
+		return &droppedShell{}, nil
+	}, "zsh", folders{}, func(model.Event) {})
+	m, err := s.Open("c1", "", "cat big.log", 80, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exited, _, err := s.Attach(m.ID, nil, func([]byte) bool { return true }); err != nil || exited {
+		t.Errorf("exited %v, %v", exited, err)
 	}
 }
