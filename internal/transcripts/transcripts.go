@@ -29,12 +29,49 @@ const (
 // Store keeps the copies in one folder. Every path it opens is in that
 // folder (an os.Root: no link leads out of it), and every name it makes
 // comes from a chat id it checked or an image's hash.
+//
+// Nothing on disk is shared between chats, so each chat has a lock of its
+// own (lock), and one chat's slow copy work never holds up another's; a
+// method named ...Locked runs under its chat's. mu guards only the maps
+// below, briefly, and is taken after a chat's lock, never before.
 type Store struct {
-	mu       sync.Mutex
 	root     *os.Root
-	repaired map[string]bool   // chats whose file's end was checked in this run
-	indexes  map[string]*index // the last chats' indexes (index.go)
-	indexed  []string          // their chats, the latest last
+	mu       sync.Mutex
+	chats    map[string]*sync.Mutex // each chat's lock, made once and never pruned: a lock removed while a caller waits on it would let two in
+	repaired map[string]bool        // chats whose file's end was checked in this run
+	indexes  map[string]*index      // the last chats' indexes (index.go)
+	indexed  []string               // their chats, the latest last
+}
+
+// lock takes chat's lock and returns it, held.
+func (s *Store) lock(chat string) *sync.Mutex {
+	s.mu.Lock()
+	m := s.chats[chat]
+	if m == nil {
+		m = &sync.Mutex{}
+		s.chats[chat] = m
+	}
+	s.mu.Unlock()
+	m.Lock()
+	return m
+}
+
+// wasRepaired says whether chat's file's end was checked in this run;
+// setRepaired sets it.
+func (s *Store) wasRepaired(chat string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.repaired[chat]
+}
+
+func (s *Store) setRepaired(chat string, ok bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if ok {
+		s.repaired[chat] = true
+	} else {
+		delete(s.repaired, chat)
+	}
 }
 
 // Open opens the store in dir, made 0700 if it isn't there, and removes
@@ -51,7 +88,7 @@ func Open(dir string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{root: root, repaired: map[string]bool{}, indexes: map[string]*index{}}
+	s := &Store{root: root, chats: map[string]*sync.Mutex{}, repaired: map[string]bool{}, indexes: map[string]*index{}}
 	var half []string
 	for _, p := range []string{"*/.nushi-*", "*/" + imagesDir + "/.nushi-*", "*/" + imagesDir + "/*.tmp*", "*/" + itemsFile + ".tmp"} {
 		m, _ := fs.Glob(root.FS(), p)
@@ -112,12 +149,15 @@ func (s *Store) Append(chat string, items []model.Item, after []string) error {
 	if len(items) == 0 {
 		return nil
 	}
+	if err := checkChat(chat); err != nil {
+		return err
+	}
 	recs := make([]record, len(items))
 	for i := range items {
 		recs[i] = record{After: after[i]}
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	held := s.lock(chat)
+	defer held.Unlock()
 	for i, it := range items {
 		st, err := s.storeImagesLocked(chat, it)
 		if err != nil {
@@ -131,8 +171,11 @@ func (s *Store) Append(chat string, items []model.Item, after []string) error {
 // Cut takes item and every item after it out of chat's copy, as a rewind
 // does the transcript.
 func (s *Store) Cut(chat, item string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	if checkChat(chat) != nil {
+		return nil // no such copy
+	}
+	held := s.lock(chat)
+	defer held.Unlock()
 	if !s.hasLocked(chat) {
 		return nil
 	}
@@ -141,8 +184,11 @@ func (s *Store) Cut(chat, item string) error {
 
 // Drop takes one item out of chat's copy (a message the agent never got).
 func (s *Store) Drop(chat, item string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	if checkChat(chat) != nil {
+		return nil // no such copy
+	}
+	held := s.lock(chat)
+	defer held.Unlock()
 	if !s.hasLocked(chat) {
 		return nil
 	}
@@ -165,13 +211,13 @@ func (s *Store) appendLocked(chat string, recs []record) error {
 	if err := s.root.MkdirAll(chat, 0o700); err != nil {
 		return err
 	}
-	s.forgetIndexLocked(chat)
+	s.forgetIndex(chat)
 	name := path.Join(chat, itemsFile)
-	if !s.repaired[chat] {
+	if !s.wasRepaired(chat) {
 		if err := s.repairLocked(name); err != nil {
 			return err
 		}
-		s.repaired[chat] = true
+		s.setRepaired(chat, true)
 	}
 	f, err := s.root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
 	if err == nil {
@@ -183,7 +229,7 @@ func (s *Store) appendLocked(chat string, recs []record) error {
 	if err != nil {
 		// A failed write may have left part of a line (a full disk): the
 		// next append cuts it off first.
-		delete(s.repaired, chat)
+		s.setRepaired(chat, false)
 	}
 	return err
 }
@@ -241,8 +287,8 @@ func (s *Store) Replace(chat string, items []model.Item) error {
 	if err := checkChat(chat); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	held := s.lock(chat)
+	defer held.Unlock()
 	st := make([]*stored, len(items))
 	for i, it := range items {
 		p, err := s.storeImagesLocked(chat, it)
@@ -278,11 +324,11 @@ func (s *Store) rewriteLocked(chat string, items []*stored) error {
 	if err := s.root.MkdirAll(chat, 0o700); err != nil {
 		return err
 	}
-	s.forgetIndexLocked(chat)
+	s.forgetIndex(chat)
 	if err := atomicfile.ReplaceIn(s.root, path.Join(chat, itemsFile), buf.Bytes(), 0o600); err != nil {
 		return err
 	}
-	s.repaired[chat] = true
+	s.setRepaired(chat, true)
 	pics, _ := fs.ReadDir(s.root.FS(), path.Join(chat, imagesDir))
 	for _, p := range pics {
 		if !used[p.Name()] {
@@ -297,19 +343,16 @@ func (s *Store) Delete(chat string) error {
 	if err := checkChat(chat); err != nil {
 		return err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.repaired, chat)
-	s.forgetIndexLocked(chat)
+	held := s.lock(chat)
+	defer held.Unlock()
+	s.setRepaired(chat, false)
+	s.forgetIndex(chat)
 	return s.root.RemoveAll(chat)
 }
 
-// Has says whether chat has a copy.
-func (s *Store) Has(chat string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.hasLocked(chat)
-}
+// Has says whether chat has a copy. It takes no lock: a look at one name,
+// as ImageData's read (images.go).
+func (s *Store) Has(chat string) bool { return s.hasLocked(chat) }
 
 func (s *Store) hasLocked(chat string) bool {
 	if checkChat(chat) != nil {
@@ -320,10 +363,11 @@ func (s *Store) hasLocked(chat string) bool {
 }
 
 // List returns every chat's copy, largest first. Links are counted as
-// themselves, never followed.
+// themselves, never followed. It takes no lock, so a long walk (Settings ›
+// Chat history, the hourly sweep) holds up no chat: a copy written
+// meanwhile only counts a size a moment old, and one removed isn't
+// counted.
 func (s *Store) List() ([]model.TranscriptCopy, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	dirs, err := fs.ReadDir(s.root.FS(), ".")
 	if err != nil {
 		return nil, err

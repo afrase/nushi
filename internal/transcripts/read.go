@@ -23,8 +23,8 @@ func (s *Store) Read(chat string) ([]model.Item, error) {
 	if err := checkChat(chat); err != nil {
 		return nil, err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	held := s.lock(chat)
+	defer held.Unlock()
 	t, lines, size, err := s.replayLocked(chat, func(line []byte, _ int64) (change, bool) {
 		var r record
 		if json.Unmarshal(line, &r) != nil {
@@ -89,8 +89,8 @@ func (s *Store) Find(chat string, want func(model.Item) bool) (items []model.Ite
 	if err := checkChat(chat); err != nil {
 		return nil, nil, err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	held := s.lock(chat)
+	defer held.Unlock()
 	t, _, _, err := s.replayLocked(chat, func(line []byte, _ int64) (change, bool) {
 		var h head
 		if json.Unmarshal(line, &h) != nil {

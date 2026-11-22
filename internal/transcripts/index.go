@@ -46,12 +46,8 @@ func (s *Store) indexLocked(chat string) (*index, error) {
 	if err != nil {
 		return nil, err
 	}
-	if i := slices.IndexFunc(s.indexed, func(c string) bool { return c == chat }); i >= 0 {
-		if ix := s.indexes[chat]; ix.size == fi.Size() && ix.mod.Equal(fi.ModTime()) {
-			s.indexed = append(slices.Delete(s.indexed, i, i+1), chat)
-			return ix, nil
-		}
-		s.forgetIndexLocked(chat)
+	if ix := s.keptIndex(chat, fi); ix != nil {
+		return ix, nil
 	}
 	t, _, _, err := s.replayLocked(chat, func(line []byte, at int64) (change, bool) {
 		var h head
@@ -75,15 +71,42 @@ func (s *Store) indexLocked(chat string) (*index, error) {
 	for i, e := range entries {
 		ix.heads[i], ix.spans[i], ix.pos[e.id] = *e.head, span{e.at, e.n}, i
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if len(s.indexed) >= keptIndexes {
-		s.forgetIndexLocked(s.indexed[0])
+		s.forgetIndexMu(s.indexed[0])
 	}
 	s.indexes[chat], s.indexed = ix, append(s.indexed, chat)
 	return ix, nil
 }
 
-// forgetIndexLocked drops chat's index: its file changed.
-func (s *Store) forgetIndexLocked(chat string) {
+// keptIndex is chat's index as kept, if its file is as it was then (fi),
+// made the latest; nil when there's none to use. An index never changes
+// once made, so it's used after mu is let go.
+func (s *Store) keptIndex(chat string, fi fs.FileInfo) *index {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i := slices.IndexFunc(s.indexed, func(c string) bool { return c == chat })
+	if i < 0 {
+		return nil
+	}
+	if ix := s.indexes[chat]; ix.size == fi.Size() && ix.mod.Equal(fi.ModTime()) {
+		s.indexed = append(slices.Delete(s.indexed, i, i+1), chat)
+		return ix
+	}
+	s.forgetIndexMu(chat)
+	return nil
+}
+
+// forgetIndex drops chat's index: its file changed.
+func (s *Store) forgetIndex(chat string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.forgetIndexMu(chat)
+}
+
+// forgetIndexMu is forgetIndex with mu held.
+func (s *Store) forgetIndexMu(chat string) {
 	delete(s.indexes, chat)
 	s.indexed = slices.DeleteFunc(s.indexed, func(c string) bool { return c == chat })
 }
@@ -97,8 +120,8 @@ func (s *Store) Heads(chat string) ([]model.Item, error) {
 	if err := checkChat(chat); err != nil {
 		return nil, err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	held := s.lock(chat)
+	defer held.Unlock()
 	ix, err := s.indexLocked(chat)
 	if errors.Is(err, errNoCopy) {
 		return nil, nil
@@ -120,8 +143,8 @@ func (s *Store) Pick(chat string, ids []string) ([]model.Item, error) {
 	if err := checkChat(chat); err != nil {
 		return nil, err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	held := s.lock(chat)
+	defer held.Unlock()
 	ix, err := s.indexLocked(chat)
 	if errors.Is(err, errNoCopy) {
 		return nil, nil
