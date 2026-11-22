@@ -161,7 +161,10 @@ func change(edit func(map[string]json.RawMessage) error) error {
 
 // normalize is a server's config as Ante takes it: "type" (Nushi's and
 // Claude's word) dropped with "transport", so Ante infers it from the
-// command or URL; exactly one of them. A null key is left out, as unset:
+// command or URL; exactly one of them. A type that is the config's own
+// "transport" (one shown kept, such as "sse") stays as Ante stored it,
+// so what Servers lists always goes back, as Edit's put-back needs; a new
+// SSE server is refused. A null key is left out, as unset:
 // Ante writes null for every key it knows that a server hasn't.
 func normalize(config string) (json.RawMessage, error) {
 	var cfg map[string]any
@@ -174,11 +177,15 @@ func normalize(config string) (json.RawMessage, error) {
 		}
 	}
 	if t, ok := cfg["type"]; ok {
-		if t == "sse" {
-			return nil, errors.New("Ante doesn't speak the legacy SSE transport: use the server's Streamable HTTP URL")
-		}
 		delete(cfg, "type")
-		delete(cfg, "transport")
+		own, _ := cfg["transport"].(string)
+		switch {
+		case own != "" && t == own: // Ante's own transport, which shown kept as the type
+		case t == "sse":
+			return nil, errors.New("Ante doesn't speak the legacy SSE transport: use the server's Streamable HTTP URL")
+		default:
+			delete(cfg, "transport")
+		}
 	}
 	_, command := cfg["command"]
 	_, url := cfg["url"]
@@ -192,7 +199,8 @@ func normalize(config string) (json.RawMessage, error) {
 // says it: Ante's "transport" goes, and a URL's server says "type"
 // "http" (Ante's "streamable-http" or "http", or none, which Ante infers
 // from the URL); a command's says none, as stdio. Any other transport
-// (one Ante refuses, such as "sse") stays as the type. Empty "args" and
+// (one Ante refuses, such as "sse") is also the type, and "transport"
+// stays, so normalize puts it back as it was. Empty "args" and
 // "env", which Ante writes for every server, go as the form leaves them
 // out, and so does a null key, which Ante writes for each one it knows
 // that a server hasn't (docs/facts/ante.md): a null "url" isn't a URL.
@@ -214,12 +222,14 @@ func shown(raw json.RawMessage) string {
 	}
 	var transport string
 	_ = json.Unmarshal(cfg["transport"], &transport) // not text: inferred, as Ante does
-	delete(cfg, "transport")
 	switch _, url := cfg["url"]; {
 	case transport == "streamable-http" || transport == "http" || transport == "" && url:
+		delete(cfg, "transport")
 		cfg["type"] = json.RawMessage(`"http"`)
-	case transport != "" && transport != "stdio":
-		cfg["type"], _ = json.Marshal(transport) // a string encodes
+	case transport == "" || transport == "stdio":
+		delete(cfg, "transport")
+	default:
+		cfg["type"] = cfg["transport"]
 	}
 	b, err := json.Marshal(cfg)
 	if err != nil {

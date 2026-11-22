@@ -26,7 +26,7 @@ func TestServersInTheFormsShape(t *testing.T) {
 		"api":  {"type": "http", "url": "https://api.example.com/mcp", "headers": map[string]any{"Authorization": "Bearer s3cret"}, "enabled_tools": []any{"a"}},
 		"bare": {"type": "http", "url": "https://bare.example.com/mcp", "enabled_tools": []any{}},
 		"fs":   {"command": "fs-mcp"},
-		"old":  {"type": "sse", "url": "https://old.example.com/sse"},
+		"old":  {"type": "sse", "transport": "sse", "url": "https://old.example.com/sse"},
 	}
 	for _, sv := range got {
 		var c map[string]any
@@ -106,5 +106,34 @@ func TestAnteRewrittenServersReadAndEdit(t *testing.T) {
 	}
 	if got := servers(t, path)["api"]["headers"]; !reflect.DeepEqual(got, map[string]any{"Authorization": "Bearer s3cret"}) {
 		t.Errorf("api's headers = %v", got)
+	}
+}
+
+// A server whose transport the form has no word for (an "sse" one Ante
+// fails) reads back with it as the type and keeps Ante's own key, so it
+// goes back as stored: an edit that fails puts it back, and one sent back
+// as shown keeps it. A new SSE server is still refused.
+func TestEditingAnAnteSSEServerKeepsIt(t *testing.T) {
+	path := home(t, `{"mcp_servers": {
+		"old": {"url": "https://old.example.com/sse", "transport": "sse", "headers": {"Authorization": "Bearer s3cret"}}
+	}}`)
+	ctx := context.Background()
+	svc := mcp.New("ante", Ante{}, nil)
+	list, _, err := svc.List(ctx, "/f", false)
+	if err != nil || len(list) != 1 {
+		t.Fatalf("list = %+v, %v", list, err)
+	}
+	want := map[string]any{"url": "https://old.example.com/sse", "transport": "sse", "headers": map[string]any{"Authorization": "Bearer s3cret"}}
+	if err := svc.Edit(ctx, "/f", "user", "old", list[0].Config); err != nil {
+		t.Errorf("sent back as shown: %v", err)
+	}
+	if got := servers(t, path)["old"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("old = %v, want %v", got, want)
+	}
+	if err := svc.Edit(ctx, "/f", "user", "old", `{"type": "sse", "url": "https://new.example.com/sse"}`); err == nil {
+		t.Error("an SSE server without Ante's own transport was taken")
+	}
+	if got := servers(t, path)["old"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("after a refused edit: old = %v, want %v", got, want)
 	}
 }
