@@ -127,6 +127,42 @@ func TestAPromptWaitsForTheMessageOutForSteering(t *testing.T) {
 	}
 }
 
+// A message sent while a steer is out, after the turn failed (its queue
+// held), goes as the next prompt, ahead of the held queue, as in any held
+// chat; the message out for steering goes back to the queue's front.
+func TestAPromptAfterAFailedTurnGoesAheadOfTheSteer(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.steerable, c.steer = true, true
+	agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})
+	agent.refuseSteer = true // the turn ended as it came
+	prompts := func(want ...string) func() bool {
+		return func() bool {
+			agent.mu.Lock()
+			defer agent.mu.Unlock()
+			return slices.Equal(agent.prompts, want)
+		}
+	}
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	ranTool(c, "t1") // "two" goes out for steering, and waits there
+	eventually(t, c, func() bool { return c.steering && len(c.queue) == 0 })
+	agent.mu.Lock()
+	agent.turnErr = errors.New("overloaded")
+	agent.mu.Unlock()
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy && c.held })
+	agent.mu.Lock()
+	agent.turnErr = nil
+	agent.mu.Unlock()
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "three"}, SendIdle))
+	close(agent.steerGate)
+	testcheck.Wait(t, "three as the next prompt", prompts("one", "three"))
+	agent.release()
+	testcheck.Wait(t, "two after it", prompts("one", "three", "two"))
+	agent.release()
+	idle(t, c)
+}
+
 // A permission prompt in a turn the agent started itself: Stop cancels it,
 // and nothing rewinds past it meanwhile.
 func TestAPromptInTheAgentsOwnTurn(t *testing.T) {

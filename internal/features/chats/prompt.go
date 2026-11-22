@@ -122,7 +122,9 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 	}
 	// A message out for steering as the turn ended starts the next turn
 	// (steerQueue): one sent meanwhile goes after it, however it's sent.
-	queue := c.reopeningLocked() || c.steering && !c.busy || c.busy && how == SendQueue
+	// Not when that turn was stopped or failed: the message out goes back to
+	// the held queue, and a new one goes ahead of it, as in any held chat.
+	queue := c.reopeningLocked() || c.steering && !c.busy && !c.held || c.busy && how == SendQueue
 	switch {
 	case len(m.Images) > 0 && !c.canImage && !c.reopeningLocked():
 		// Reopening, the agent's answer isn't known yet: the queue checks.
