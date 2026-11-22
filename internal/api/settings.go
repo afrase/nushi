@@ -32,6 +32,9 @@ func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.Set
 	if m < 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("sleep_after_minutes can't be negative"))
 	}
+	if err := s.checkGoAgents(req.Msg.GetSettings()); err != nil {
+		return nil, err
+	}
 	if err := s.Chats.SetSleepAfter(time.Duration(m) * time.Minute); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}

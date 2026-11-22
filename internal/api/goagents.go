@@ -48,17 +48,10 @@ func (s *server) goAgents(set *nushiv1.Settings) {
 // (a field it doesn't know, kept) beside the codex_go_agent it changed,
 // a newer one codex_go_agent as it was beside go_agents. So of the two
 // for the same agent, the one that differs from what's set is the change.
-// An agent without the switch is refused (InvalidArgument).
+// checkGoAgents is checked first.
 func (s *server) setGoAgents(set *nushiv1.Settings) error {
 	if s.GoAgents == nil {
 		return nil
-	}
-	if s.Agents != nil {
-		for name := range set.GoAgents {
-			if !slices.Contains(s.Agents.WithOwn(), name) {
-				return invalid(fmt.Errorf("%s has no Go agent to switch to", name))
-			}
-		}
 	}
 	want := map[string]bool{}
 	for _, name := range slices.Sorted(maps.Keys(set.GoAgents)) {
@@ -76,6 +69,21 @@ func (s *server) setGoAgents(set *nushiv1.Settings) error {
 			return connect.NewError(connect.CodeInternal, err)
 		}
 		slog.Info("go agent", "agent", name, "on", want[name])
+	}
+	return nil
+}
+
+// checkGoAgents refuses (InvalidArgument) go_agents naming an agent
+// without the switch. SetSettings asks it before setting anything, so a
+// refused request changes nothing.
+func (s *server) checkGoAgents(set *nushiv1.Settings) error {
+	if s.GoAgents == nil || s.Agents == nil {
+		return nil
+	}
+	for name := range set.GetGoAgents() {
+		if !slices.Contains(s.Agents.WithOwn(), name) {
+			return invalid(fmt.Errorf("%s has no Go agent to switch to", name))
+		}
 	}
 	return nil
 }

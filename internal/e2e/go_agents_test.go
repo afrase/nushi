@@ -89,12 +89,15 @@ func TestGoAgentsBothWays(t *testing.T) {
 	}
 
 	// A request with neither leaves it; one naming an agent without the
-	// switch is refused.
+	// switch is refused, and changes nothing.
 	testcheck.NoErr(t, set(&nushiv1.Settings{SleepAfterMinutes: 30}))
 	if !get().GoAgents["codex"] {
 		t.Error("a request without it turned it off")
 	}
-	if err := set(&nushiv1.Settings{SleepAfterMinutes: 30, GoAgents: map[string]bool{"claude": true}}); connect.CodeOf(err) != connect.CodeInvalidArgument {
+	if err := set(&nushiv1.Settings{SleepAfterMinutes: 5, GoAgents: map[string]bool{"claude": true}}); connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("claude's Go agent: %v", err)
+	}
+	if got := get().SleepAfterMinutes; got != 30 {
+		t.Errorf("a refused request still set sleep_after_minutes to %d", got)
 	}
 }
