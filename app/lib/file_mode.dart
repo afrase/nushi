@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:nushi/app_log.dart';
 import 'package:nushi/native.dart';
 
 /// What makes the user's own files theirs only (ADR 0097): on the Mac,
@@ -21,6 +23,71 @@ void writeWhole(File file, List<int> bytes, {int mode = 0x180}) {
   final tmp = File('${file.path}.tmp')..writeAsBytesSync(bytes, flush: true);
   setMode(tmp.path, mode);
   tmp.renameSync(file.path);
+}
+
+/// What [readKept] found in a file the app keeps: its JSON object
+/// ([json]: empty when there's no file, or it was set aside), and whether
+/// it was set aside.
+typedef Kept = ({Map<String, Object?> json, bool setAside});
+
+/// Reads [file], a JSON object the app keeps, by the daemon's rule
+/// (`clearForWrite`, internal/store/aside.go): no file is the empty state;
+/// one that doesn't parse as an object is renamed beside it to
+/// `<name>.unreadable-<time>` and reads as empty, so the next save
+/// replaces nothing unread; any other error (permissions, I/O, a set-aside
+/// that fails) is thrown, and the caller saves nothing over the file while
+/// it stands.
+Kept readKept(File file) {
+  final List<int> bytes;
+  try {
+    bytes = file.readAsBytesSync();
+  } on PathNotFoundException {
+    return (json: <String, Object?>{}, setAside: false);
+  }
+  try {
+    if (jsonDecode(utf8.decode(bytes)) case final Map<String, Object?> j) {
+      return (json: j, setAside: false);
+    }
+  } on FormatException {
+    // Set aside, below.
+  }
+  file.renameSync(_asideName(file));
+  return (json: <String, Object?>{}, setAside: true);
+}
+
+/// Keeps a copy of [file] beside it as `<name>.unreadable-<time>`, for a
+/// reader that drops some of what's in it (a record it can't read): the
+/// next save writes the rest over the file, and nothing is lost.
+/// The copy is only the user's (0600), as the file is.
+void copyAside(File file) {
+  final aside = _asideName(file);
+  file.copySync(aside);
+  setMode(aside, 0x180);
+}
+
+/// A free name for [file] set aside, logged: its name, then
+/// `.unreadable-` and the local time to the microsecond, as the daemon's.
+String _asideName(File file) {
+  final t = DateTime.now();
+  String two(int n) => '$n'.padLeft(2, '0');
+  final at =
+      '${t.year}-${two(t.month)}-${two(t.day)}T${two(t.hour)}-'
+      '${two(t.minute)}-${two(t.second)}.'
+      '${'${t.millisecond * 1000 + t.microsecond}'.padLeft(6, '0')}';
+  var aside = '${file.path}.unreadable-$at';
+  for (
+    var n = 2;
+    FileSystemEntity.typeSync(aside) != FileSystemEntityType.notFound;
+    n++
+  ) {
+    aside = '${file.path}.unreadable-$at-$n';
+  }
+  final name = file.uri.pathSegments.last;
+  appLog.warn("set aside a file that doesn't read", {
+    'file': name,
+    'as': aside.substring(aside.lastIndexOf('/') + 1),
+  });
+  return aside;
 }
 
 /// Makes [dir] (and the folders it's in) unless it's there, [dir] only
