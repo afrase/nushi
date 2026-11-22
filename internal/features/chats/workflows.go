@@ -185,12 +185,12 @@ func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone
 		f.gone = now // a last read after a grace, for the snapshot it may have left
 		return &got, c.svc.timing.workflowGrace()
 	case f.owner != nil && gone:
-		return quit(got, now), 0
+		return quit(got, now, c.kind.Title), 0
 	case !f.missing.IsZero() && now.Sub(f.missing) >= c.svc.timing.workflowFind():
 		got.State, got.End, got.Ended, got.Running, got.RunningCount = "unknown", "its files are gone", now, nil, 0
 		return &got, 0 // Claude's files of the run went (a Move, the session deleted)
 	case f.owner == nil && now.Sub(got.Active) >= c.svc.timing.workflowQuiet():
-		return quit(got, now), 0 // no agent of this daemon's runs it, and its files are still
+		return quit(got, now, c.kind.Title), 0 // no agent of this daemon's runs it, and its files are still
 	case f.owner != nil && now.Sub(got.Active) >= c.svc.timing.workflowStall():
 		got.Stalled = true
 		return &got, c.svc.timing.workflowStalledPoll()
@@ -198,10 +198,11 @@ func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone
 	return &got, poll
 }
 
-// quit is w ended with the agent that ran it: a run lives in the agent's
-// process, and Claude itself calls a run it left so stopped.
-func quit(w model.Workflow, now time.Time) *model.Workflow {
-	w.State, w.End, w.Ended, w.Running, w.RunningCount = "stopped", "Claude quit while it ran", now, nil, 0
+// quit is w ended with the agent that ran it, title as people read the
+// agent's name: a run lives in the agent's process, and Claude itself
+// calls a run it left so stopped.
+func quit(w model.Workflow, now time.Time, title string) *model.Workflow {
+	w.State, w.End, w.Ended, w.Running, w.RunningCount = "stopped", title+" quit while it ran", now, nil, 0
 	return &w
 }
 
@@ -242,7 +243,7 @@ func stopWorkflow(call model.Item) *model.ToSubagent {
 	if call.Workflow == nil || call.TaskID == "" {
 		return nil
 	}
-	return &model.ToSubagent{Agent: "Workflow", AgentID: call.TaskID, Stop: true}
+	return &model.ToSubagent{Agent: cmp.Or(call.Workflow.Name, "workflow"), AgentID: call.TaskID, Stop: true}
 }
 
 // ErrNoWorkflow says the chat has no such workflow, or the workflow no

@@ -132,7 +132,7 @@ func workflowService(t *testing.T, timing Timing, read func(model.Workflow) (mod
 	files := &fakeWorkflows{read: read, reads: make(chan int, 1000)}
 	timing.WorkflowPoll = cmpDuration(timing.WorkflowPoll, 5*time.Millisecond)
 	events := make(chan model.Event, 10000)
-	svc := newService(t, []Kind{{Harness: workflowHarness{testHarness{Name: "claude"}, files}, Launch: agent.launch}}, Options{Timing: timing,
+	svc := newService(t, []Kind{{Harness: workflowHarness{testHarness{Name: "claude", Title: "Claude"}, files}, Launch: agent.launch}}, Options{Timing: timing,
 		Publish: func(e model.Event) {
 			select {
 			case events <- e:
