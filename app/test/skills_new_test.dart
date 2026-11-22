@@ -131,7 +131,7 @@ void main() {
     await tester.tap(find.text('New skill…'));
     await tester.pumpAndSettle();
     expect(
-      find.textContaining('every agent that reads that folder'),
+      find.textContaining('the other agents that read that folder get it'),
       findsOneWidget,
     );
     expect(find.textContaining('oh-my-pi'), findsNothing);

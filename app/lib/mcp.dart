@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:nushi/agent_words.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
@@ -149,7 +150,10 @@ class _Lists extends StatelessWidget {
                     in scopes.entries)
                   if (scope != 'other' ||
                       list.servers.any((s) => s.scope == scope))
-                    _Group(list, scope, title, about),
+                    _Group(list, scope, title, switch (scope) {
+                      'plugin' => _withPluginCommand(about, list.agent),
+                      _ => about,
+                    }),
             ],
           ],
         );
@@ -157,6 +161,15 @@ class _Lists extends StatelessWidget {
     );
   }
 }
+
+/// [about] with how [agent]'s plugins are added, in its own command's
+/// words ([agentWords]), as the Skills view's Plugins group says it.
+String _withPluginCommand(String about, String agent) => switch (agentWords(
+  agent,
+).pluginCommand) {
+  final command? => '$about Add them with $command in ${agentTitle(agent)}.',
+  null => about,
+};
 
 /// One scope's servers, under its heading.
 class _Group extends StatelessWidget {

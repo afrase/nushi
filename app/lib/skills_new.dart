@@ -23,8 +23,8 @@ Future<void> newSkill(BuildContext context, SkillsList list) async {
         'New skill for $title',
         Text(
           '$title doesn’t read .agents/skills yet: put it in .claude/skills '
-          'instead, or link it there. A skill in .agents/skills is read by '
-          'every agent that reads that folder; once it’s written, “Link for '
+          'instead, or link it there. In .agents/skills, the other agents '
+          'that read that folder get it too; once it’s written, “Link for '
           '$title…” in its menu gives it to $title.',
         ),
         [

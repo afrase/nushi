@@ -120,6 +120,17 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('the Plugins scope says how to add them in the agent’s words, '
+      'as Skills does', (tester) async {
+    final (_, d) = await _view(tester, '/Users/me/plugins');
+    expect(
+      find.textContaining('Add them with /plugin in Claude.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Claude Code'), findsNothing);
+    await closeView(tester, d);
+  });
+
   testWidgets('the page lists the agents the daemon says have MCP: Reading… '
       'until it has listed them, a line when none has', (tester) async {
     final (fake, d) = await _daemon(tester);
