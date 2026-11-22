@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -13,6 +14,7 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/reply_cards.dart';
 import 'package:nushi/rewind.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -69,19 +71,51 @@ Widget stopIcon(Color color) => Container(
 
 /// Enter in a box that sends (the composer, a reply, the reply dialog, a
 /// subagent's box, a review comment; the keypad's Enter too), one
-/// rule for all of them: Enter sends, alone or with ⌘ (the usual "send" on a
+/// rule for all of them, which Settings › General's "Enter starts a new
+/// line" ([enterStartsLine], ADR 0147) changes for all of them at once.
+/// Off (at first): Enter sends, alone or with ⌘ (the usual "send" on a
 /// Mac, as ⌘⏎ posts from GitHub's comment box); with ⇧, ⌥ or ⌃ it starts a
-/// line. Nushi writes that line itself ([startLine]) and keeps the key from
-/// the field, so there is one way for all and never two lines: left to
-/// macOS's text input, a Flutter field starts one for ⇧ and ⌥ but types a
-/// space for ⌃ (seen in a release build). A phone's Return is Enter
-/// without them (the browser's keydown): it sends there too. Where Control
-/// is the command key (Linux), Ctrl+Enter sends now, as ⌘⏎ does.
-bool isSendKey(KeyEvent e) => _isEnter(e) && !_lineModifier;
+/// line. On: Enter starts a line, alone or with ⇧, ⌥ or ⌃, and sends only
+/// with ⌘ held, as GitHub's comment box and Slack's "start a new line"
+/// have it. Nushi writes that line itself ([startLine]) and keeps the key
+/// from the field, so there is one way for all and never two lines: left
+/// to macOS's text input, a Flutter field starts one for ⇧ and ⌥ but types
+/// a space for ⌃ (seen in a release build). A phone's Return is Enter
+/// without them (the browser's keydown): it sends there, whatever the
+/// pref (the phone has no such setting). Where Control is the command key
+/// (Linux), Ctrl+Enter is ⌘⏎.
+bool isSendKey(KeyEvent e) =>
+    _isEnter(e) && (enterLines ? cmdPressed() : !_lineModifier);
 
-/// Whether [e] is Enter with ⇧, ⌥ or ⌃ (not the command key), which starts
-/// a line ([isSendKey]).
-bool isLineKey(KeyEvent e) => _isEnter(e) && _lineModifier;
+/// Whether [e] is Enter that starts a line ([isSendKey]): with ⇧, ⌥ or ⌃
+/// (not the command key), or, with "Enter starts a new line" on, without
+/// the command key.
+bool isLineKey(KeyEvent e) => _isEnter(e) && !isSendKey(e);
+
+/// Whether Enter, sending from the composer while a turn runs, stops the
+/// turn and sends now rather than queueing: ⌘ held, or ⇧⌘ with "Enter
+/// starts a new line" on, where ⌘⏎ alone queues (ADR 0147).
+bool sendNowHeld() =>
+    cmdPressed() && (!enterLines || HardwareKeyboard.instance.isShiftPressed);
+
+/// Enter in a menu open over a box that sends (the spelling menu): plain
+/// Enter (or ⌘⏎) picks, in both modes of [isSendKey]; with ⇧, ⌥ or ⌃ it
+/// isn't the menu's.
+bool isPickKey(KeyEvent e) => _isEnter(e) && !_lineModifier;
+
+/// Whether "Enter starts a new line" applies: its pref ([enterStartsLine]),
+/// never on the phone (the web build), whose Return sends.
+bool get enterLines => !kIsWeb && enterStartsLine.value;
+
+/// The key that sends, as the platform writes it ([isSendKey]): ⏎, or ⌘⏎
+/// with "Enter starts a new line" on; what queues while a turn runs.
+String get sendKeyLabel => enterLines ? cmdEnterLabel : enterLabel;
+
+/// The key that stops the turn and sends now ([sendNowHeld]): ⌘⏎, or ⇧⌘⏎
+/// with "Enter starts a new line" on.
+String get sendNowKeyLabel => enterLines
+    ? keyLabel(const Cmd(LogicalKeyboardKey.enter, shift: true))
+    : cmdEnterLabel;
 
 bool _isEnter(KeyEvent e) =>
     e is! KeyUpEvent &&
@@ -153,7 +187,7 @@ KeyEventResult enterKey(
 }
 
 /// [child], a multi-line text field on [controller], with the composer's
-/// keys ([isSendKey]): Enter (or ⌘⏎) runs [onEnter], ⇧⏎ (⌥⏎, ⌃⏎) starts a
+/// keys ([isSendKey]): the send key runs [onEnter], a line key starts a
 /// line.
 class EnterSends extends StatelessWidget {
   const new({

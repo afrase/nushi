@@ -37,7 +37,8 @@ import 'package:nushi/usage_range.dart';
 /// each project's own sort, and sections, the models picked last, each
 /// repository's merge method, each chat's pinned artifacts, and the Mac's
 /// notifications and Dock badge, the appearance and the color theme,
-/// whether the composer checks spelling, whether the plan pinned over it
+/// whether the composer checks spelling, whether Enter starts a line in
+/// the boxes that send, whether the plan pinned over it
 /// shows collapsed, whether a chat's links open in a
 /// browser tab and which sites there may reach the local network, whether a
 /// preview's source wraps its lines and shows its whitespace,
@@ -503,6 +504,12 @@ final Pref<bool> dockBadge = _plain('dockBadge', true);
 /// Whether the Mac's composer checks spelling (ADR 0083): off, it asks
 /// nothing and flags nothing.
 final Pref<bool> checkSpelling = _plain('checkSpelling', true);
+
+/// Whether Enter starts a line in the boxes that send to an agent or save
+/// a reply, which then send with the command key held (off at first:
+/// Enter sends; `isSendKey`, ADR 0147). The Mac's and Linux's: the phone's
+/// Return always sends.
+final Pref<bool> enterStartsLine = _plain('enterStartsLine', false);
 
 /// Whether the plan pinned over the composer shows collapsed, its summary
 /// line alone (ADR 0135); every chat's, the Mac's only (the phone's opens

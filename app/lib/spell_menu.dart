@@ -211,7 +211,9 @@ class SpellMenu extends ChangeNotifier {
       if (_back != null) _return(_text.selection.end);
       return true;
     }
-    if (isSendKey(e)) {
+    // Plain Enter picks whether or not Enter starts a line in the box
+    // (`isPickKey`): it neither sends nor starts one.
+    if (isPickKey(e)) {
       _enterHeld = true;
       fixes.isEmpty ? close() : take(w, fixes.first);
       return true;
