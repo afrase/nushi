@@ -87,6 +87,76 @@ func TestRotate(t *testing.T) {
 	}
 }
 
+// A log removed while the daemon runs is made again at the next
+// rotation, and lines go to it, not to the removed file for good.
+func TestRotateRemakesARemovedLog(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "nushid.log")
+	f, err := Open(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = f.Close() })
+	f.max = 100
+	line := func(i int) {
+		t.Helper()
+		if _, err := fmt.Fprintf(f, "line %02d %s\n", i, strings.Repeat("x", 30)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	line(0)
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	for i := 1; i < 4; i++ {
+		line(i)
+	}
+	if b, err := os.ReadFile(path); err != nil || !strings.HasPrefix(string(b), "line 02") {
+		t.Errorf("log: %q, %v", b, err)
+	}
+}
+
+// A rotation that fails for another reason (here a folder it can't
+// change) waits another max bytes before it tries again, rather than
+// trying on every line.
+func TestAFailedRotationWaits(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root renames in a folder whatever its mode")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "nushid.log")
+	f, err := Open(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = f.Close() })
+	f.max = 100
+	line := func(i int) {
+		t.Helper()
+		if _, err := fmt.Fprintf(f, "line %02d %s\n", i, strings.Repeat("x", 30)); err != nil { // 40 bytes
+			t.Fatal(err)
+		}
+	}
+	line(0)
+	line(1)
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+	line(2) // the rotation fails: written to the file it has
+	if err := os.Chmod(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	line(3) // within max bytes of the failure: no rotation yet
+	if _, err := os.Stat(path + ".1"); err == nil {
+		t.Error("rotated again on the next line")
+	}
+	line(4)
+	line(5) // past max bytes since: it rotates
+	if _, err := os.Stat(path + ".1"); err != nil {
+		t.Errorf("never rotated again: %v", err)
+	}
+}
+
 // TestCrashOutput: a panic nobody recovers, after the log rotated, lands
 // in the log of the moment with its stack, as the Go runtime prints it.
 func TestCrashOutput(t *testing.T) {

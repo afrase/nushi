@@ -1,7 +1,9 @@
 package logs
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"sync"
 )
@@ -58,7 +60,8 @@ func (l *File) open() error {
 }
 
 // Write appends p, rotating first when p would take the file past max.
-// A failed rotation keeps writing to the file it has.
+// A failed rotation keeps writing to the file it has, and tries again
+// only after another max bytes.
 func (l *File) Write(p []byte) (int, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -71,14 +74,19 @@ func (l *File) Write(p []byte) (int, error) {
 }
 
 // rotate moves path to path.1, path.1 to path.2 and so on, the oldest
-// dropped, and starts path again.
+// dropped, and starts path again. A path removed while the daemon runs is
+// made again. Any other failure leaves lines going to the file it had
+// (perhaps .1 now), counted from zero, so it waits another max bytes
+// before it tries again rather than trying on every line.
 func (l *File) rotate() {
 	for i := Keep; i > 1; i-- {
 		_ = os.Rename(fmt.Sprintf("%s.%d", l.path, i-1), fmt.Sprintf("%s.%d", l.path, i)) // an older copy missing is fine
 	}
-	if os.Rename(l.path, l.path+".1") == nil {
-		_ = l.open() // when it fails, lines go on to the file it had (now .1)
+	err := os.Rename(l.path, l.path+".1")
+	if (err == nil || errors.Is(err, fs.ErrNotExist)) && l.open() == nil {
+		return
 	}
+	l.size = 0
 }
 
 func (l *File) Close() error {
