@@ -14,6 +14,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/key_choice.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/settings_rows.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -96,16 +97,16 @@ void main() {
           'reloadPage': 'Alt+Cmd+R',
         };
         await tester.pumpAndSettle();
-        final page = find.byWidget(
-          tester.widget(
-            find
-                .ancestor(
-                  of: rowOf('closeTab'),
-                  matching: find.byType(Scrollable),
-                )
-                .first,
-          ),
-        );
+        // The page's list (not the search field's own scrollable).
+        final page = find
+            .descendant(
+              of: find.descendant(
+                of: find.byType(SettingsPage),
+                matching: find.byType(CustomScrollView),
+              ),
+              matching: find.byType(Scrollable),
+            )
+            .first;
         await tester.scrollUntilVisible(
           rowOf('palette'),
           -300,

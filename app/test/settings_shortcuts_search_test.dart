@@ -249,6 +249,12 @@ void main() {
             matching: find.byType(Scrollable),
           )
           .first;
+      // A hairline under the head once the list is under it, not before.
+      final edge = find.descendant(
+        of: find.byKey(const ValueKey('settings-head-edge')),
+        matching: find.byType(ColoredBox),
+      );
+      expect(edge, findsNothing);
       await tester.scrollUntilVisible(find.text('Quit'), 300, scrollable: page);
       await tester.pumpAndSettle();
       expect(tester.getRect(find.text('Keyboard shortcuts').last), title);
@@ -259,6 +265,10 @@ void main() {
       );
       // No row drawn over the field: the list's view starts below it.
       expect(tester.getRect(page).top, greaterThan(field.bottom));
+      expect(edge, findsOne);
+      // A search short enough to leave the list at its top: no hairline.
+      await _type(tester, 'xyzzy');
+      expect(edge, findsNothing);
       d.dispose();
     }, variant: onMac);
   });

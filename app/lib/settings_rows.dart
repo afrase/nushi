@@ -60,84 +60,136 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    return LayoutBuilder(
-      builder: (context, box) {
-        final pad = EdgeInsets.only(left: gutter, right: right(box.maxWidth));
-        final name = Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.ui(t.text, size: 20, weight: FontWeight.w600),
-        );
-        // Narrow, the actions go under the title rather than cut it.
-        final narrow =
-            box.maxWidth - gutter - right(box.maxWidth) < 520 &&
-            actions.isNotEmpty;
-        // The title's line stays clear of Close in the corner.
-        final heading = Padding(
-          padding: EdgeInsets.only(
-            bottom: 18,
-            right: max(0, closeRoom - right(box.maxWidth)),
-          ),
-          child: narrow
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 10,
-                  children: [
-                    SizedBox(height: 30, child: name),
-                    Row(spacing: 8, children: actions),
-                  ],
-                )
-              : SizedBox(
-                  height: 30,
-                  child: Row(
-                    spacing: 8,
+    return _Scrolled(
+      builder: (context, scrolled, _) => LayoutBuilder(
+        builder: (context, box) {
+          final pad = EdgeInsets.only(left: gutter, right: right(box.maxWidth));
+          final name = Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.ui(t.text, size: 20, weight: FontWeight.w600),
+          );
+          // Narrow, the actions go under the title rather than cut it.
+          final narrow =
+              box.maxWidth - gutter - right(box.maxWidth) < 520 &&
+              actions.isNotEmpty;
+          // The title's line stays clear of Close in the corner.
+          final heading = Padding(
+            padding: EdgeInsets.only(
+              bottom: 18,
+              right: max(0, closeRoom - right(box.maxWidth)),
+            ),
+            child: narrow
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 10,
                     children: [
-                      Expanded(child: name),
-                      ...actions,
+                      SizedBox(height: 30, child: name),
+                      Row(spacing: 8, children: actions),
+                    ],
+                  )
+                : SizedBox(
+                    height: 30,
+                    child: Row(
+                      spacing: 8,
+                      children: [
+                        Expanded(child: name),
+                        ...actions,
+                      ],
+                    ),
+                  ),
+          );
+          // A hairline under it once the list has scrolled under it, so the
+          // cut reads as an edge (as macOS draws it); its room kept before.
+          final pinned = head == null
+              ? null
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: pad.copyWith(top: 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [heading, head!],
+                      ),
+                    ),
+                    SizedBox(
+                      key: const ValueKey('settings-head-edge'),
+                      height: 1,
+                      child: scrolled ? ColoredBox(color: t.line) : null,
+                    ),
+                  ],
+                );
+          // Its own traversal group: Tab goes through the page in order,
+          // not to the nav beside it and back by where each stop sits.
+          return FocusTraversalGroup(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ?pinned,
+                Expanded(
+                  child: CustomScrollView(
+                    controller: controller,
+                    slivers: [
+                      SliverPadding(
+                        padding: pad.copyWith(top: pinned == null ? 18 : 0),
+                        sliver: SliverList.list(
+                          children: [if (pinned == null) heading, ...children],
+                        ),
+                      ),
+                      for (final s in slivers)
+                        SliverPadding(padding: pad, sliver: s),
+                      const SliverToBoxAdapter(child: SizedBox(height: 28)),
                     ],
                   ),
                 ),
-        );
-        final pinned = head == null
-            ? null
-            : Padding(
-                padding: pad.copyWith(top: 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [heading, head!],
-                ),
-              );
-        // Its own traversal group: Tab goes through the page in order,
-        // not to the nav beside it and back by where each stop sits.
-        return FocusTraversalGroup(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ?pinned,
-              Expanded(
-                child: CustomScrollView(
-                  controller: controller,
-                  slivers: [
-                    SliverPadding(
-                      padding: pad.copyWith(top: pinned == null ? 18 : 0),
-                      sliver: SliverList.list(
-                        children: [if (pinned == null) heading, ...children],
-                      ),
-                    ),
-                    for (final s in slivers)
-                      SliverPadding(padding: pad, sliver: s),
-                    const SliverToBoxAdapter(child: SizedBox(height: 28)),
-                  ],
-                ),
-              ),
-              if (bottom case final b?) Padding(padding: pad, child: b),
-            ],
-          ),
-        );
-      },
+                if (bottom case final b?) Padding(padding: pad, child: b),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
+}
+
+/// [builder] told whether the page's list has scrolled from its top.
+class _Scrolled extends StatefulWidget {
+  const new({required this.builder});
+
+  final ValueWidgetBuilder<bool> builder;
+
+  @override
+  State<_Scrolled> createState() => _ScrolledState();
+}
+
+class _ScrolledState extends State<_Scrolled> {
+  bool _scrolled = false;
+
+  void _at(ScrollMetrics m) {
+    if (m.axis != Axis.vertical) return;
+    final scrolled = m.pixels > m.minScrollExtent;
+    if (scrolled != _scrolled) setState(() => _scrolled = scrolled);
+  }
+
+  // A scroll, and the list's own size changing (a search shortening it
+  // puts it back at its top without a scroll).
+  @override
+  Widget build(BuildContext context) =>
+      NotificationListener<ScrollMetricsNotification>(
+        onNotification: (n) {
+          if (n.depth == 0) _at(n.metrics);
+          return false;
+        },
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n.depth == 0) _at(n.metrics);
+            return false;
+          },
+          child: widget.builder(context, _scrolled, null),
+        ),
+      );
 }
 
 /// A group of rows in a card, an optional [title] over it (with [actions]
