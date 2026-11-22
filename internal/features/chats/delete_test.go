@@ -511,3 +511,24 @@ func TestDeleteKeepsTheHistoryThePlanSaidStays(t *testing.T) {
 		t.Errorf("history deleted though the dialog said it stays: %v", agent.deleted)
 	}
 }
+
+// A delete that fails after it stopped a running turn writes the copy as
+// that turn's end would have: everything, its plan too, since the agent
+// that could still change it is gone.
+func TestAFailedDeleteWritesTheStoppedTurnsCopy(t *testing.T) {
+	svc, agent, c, store, _ := newCopyingChat(t)
+	agent.deletes, agent.deleteErr = true, errors.New("busy")
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	send(c, acp.SessionUpdate{SessionUpdate: "plan", Plan: &acp.Plan{Entries: []acp.PlanEntry{{Content: "step", Status: "in_progress"}}}})
+	if err := svc.Delete(t.Context(), c.id, nil); err == nil {
+		t.Fatal("deleted")
+	}
+	idle(t, c)
+	c.mu.Lock()
+	unsaved := len(c.unsaved)
+	c.mu.Unlock()
+	if got := copied(t, store, c.id); unsaved != 0 || !strings.Contains(got, "plan:") {
+		t.Errorf("unsaved %d, copy %q; want the plan written", unsaved, got)
+	}
+}

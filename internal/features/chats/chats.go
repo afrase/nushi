@@ -424,11 +424,13 @@ func (c *chat) storeLocked() {
 }
 
 // unhaltLocked keeps a chat whose delete failed: what changed while it was
-// going (storeLocked, copyLocked) is written now.
+// going (storeLocked, copyLocked) is written now. The halt stopped the
+// agent, and a turn it stopped skipped its copy: with no agent, what's left
+// has settled, and all of it is written, as at a turn's end.
 func (c *chat) unhaltLocked() {
 	c.halting = false
 	c.storeLocked()
-	c.copyLocked(false)
+	c.copyLocked(c.agent == nil)
 }
 
 func (c *chat) usageChangedLocked() {
