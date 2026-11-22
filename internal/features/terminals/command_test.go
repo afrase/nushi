@@ -110,6 +110,9 @@ func TestCommandsRefused(t *testing.T) {
 		"echo \x1b[2Jhidden",
 		"echo \x00",
 		"echo \xff",
+		"echo \u202Egnp.exe",
+		"ls \u2066x\u2069",
+		"rm \u200Fa",
 	} {
 		if _, err := s.Open("c1", "", bad, 80, 24); !errors.Is(err, ErrBadCommand) {
 			t.Errorf("%.20q: %v", bad, err)

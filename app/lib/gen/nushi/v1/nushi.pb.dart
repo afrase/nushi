@@ -20044,7 +20044,8 @@ class OpenTerminalRequest extends $pb.GeneratedMessage {
   /// profile's shell with its command flag) and the terminal ends when it
   /// does, AttachTerminal's last message carrying its exit code. Empty: a
   /// shell. Refused when it is only spaces, holds a control character
-  /// other than tab and newline, or is over 65,536 bytes.
+  /// other than tab and newline or a bidirectional override, or is over
+  /// 65,536 bytes.
   @$pb.TagNumber(5)
   $core.String get command => $_getSZ(4);
   @$pb.TagNumber(5)

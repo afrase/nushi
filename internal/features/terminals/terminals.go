@@ -4,7 +4,6 @@ package terminals
 
 import (
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,8 +11,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -353,33 +350,6 @@ func closeAll(shells []Shell) {
 		wg.Go(sh.Close)
 	}
 	wg.Wait()
-}
-
-// ErrBadCommand is a command a terminal won't run (checkCommand).
-var ErrBadCommand = errors.New("a command a terminal won't run")
-
-// maxCommand is the longest command a terminal runs, in bytes, as Claude
-// Code limits a "!" command.
-const maxCommand = 64 << 10
-
-// checkCommand refuses a command of only spaces, one over maxCommand
-// bytes, and one holding a control character other than tab and newline
-// (as Claude Code does for a "!" command): a carriage return or an escape
-// could hide what runs from what was shown. "" is no command: a shell.
-func checkCommand(command string) error {
-	switch {
-	case command == "":
-		return nil
-	case strings.TrimSpace(command) == "":
-		return fmt.Errorf("%w: it is empty", ErrBadCommand)
-	case len(command) > maxCommand:
-		return fmt.Errorf("%w: it is over %d bytes", ErrBadCommand, maxCommand)
-	case !utf8.ValidString(command):
-		return fmt.Errorf("%w: it isn't UTF-8 text", ErrBadCommand)
-	case strings.ContainsFunc(command, func(r rune) bool { return r != '\t' && r != '\n' && unicode.IsControl(r) }):
-		return fmt.Errorf("%w: it holds a control character other than tab and newline", ErrBadCommand)
-	}
-	return nil
 }
 
 // checkFolder refuses a folder that isn't an absolute path to an existing

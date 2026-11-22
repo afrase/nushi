@@ -15440,7 +15440,8 @@ type OpenTerminalRequest struct {
 	// profile's shell with its command flag) and the terminal ends when it
 	// does, AttachTerminal's last message carrying its exit code. Empty: a
 	// shell. Refused when it is only spaces, holds a control character
-	// other than tab and newline, or is over 65,536 bytes.
+	// other than tab and newline or a bidirectional override, or is over
+	// 65,536 bytes.
 	Command       string `protobuf:"bytes,5,opt,name=command,proto3" json:"command,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
