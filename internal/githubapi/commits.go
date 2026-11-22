@@ -36,10 +36,10 @@ func (c *Client) Commits(ctx context.Context, repo string, number int) ([]model.
 					Nodes      []struct {
 						Commit struct {
 							OID             string    `json:"oid"`
-							MessageHeadline string    `json:"messageHeadline"`
+							MessageHeadline text      `json:"messageHeadline"`
 							CommittedDate   time.Time `json:"committedDate"`
 							Author          *struct {
-								Name string `json:"name"`
+								Name text   `json:"name"`
 								User *login `json:"user"`
 							} `json:"author"`
 							StatusCheckRollup *struct {
@@ -62,9 +62,9 @@ func (c *Client) Commits(ctx context.Context, repo string, number int) ([]model.
 	out := make([]model.GitHubCommit, 0, len(cs.Nodes))
 	for _, n := range cs.Nodes {
 		x := n.Commit
-		cm := model.GitHubCommit{OID: x.OID, Headline: plain(x.MessageHeadline, 1024), Committed: x.CommittedDate}
+		cm := model.GitHubCommit{OID: x.OID, Headline: plain(string(x.MessageHeadline), 1024), Committed: x.CommittedDate}
 		if a := x.Author; a != nil {
-			cm.AuthorName = plain(a.Name, 256)
+			cm.AuthorName = plain(string(a.Name), 256)
 			if a.User != nil {
 				cm.Author = a.User.Login
 			}

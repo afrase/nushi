@@ -1,6 +1,7 @@
 package githubapi
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"slices"
@@ -10,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // TestPullOverview: what the Pull request tab's overview reads beside the
@@ -114,10 +116,7 @@ func TestCommits(t *testing.T) {
 // around it, and a color that isn't six hex digits goes.
 func TestLabelsPlain(t *testing.T) {
 	var l labels
-	l.Nodes = append(l.Nodes, struct {
-		Name  string `json:"name"`
-		Color string `json:"color"`
-	}{Name: "ok\u202e\x1b[31m", Color: "red;}"})
+	testcheck.NoErr(t, json.Unmarshal([]byte(`{"nodes":[{"name":"ok\u202e\u001b[31m","color":"red;}"}]}`), &l))
 	if got := l.labels(); got[0] != (model.GitHubLabel{Name: "ok[31m"}) {
 		t.Fatalf("%+v", got)
 	}

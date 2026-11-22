@@ -152,7 +152,7 @@ func (w *mdWriter) block(n, prev *xhtml.Node) string {
 	case atom.Hr:
 		return "---"
 	case atom.Pre:
-		return mdwrite.Fence(text(n), language(n))
+		return mdwrite.Fence(nodeText(n), language(n))
 	case atom.Blockquote:
 		return mdwrite.Quote(w.blocks(children(n)))
 	case atom.Ul, atom.Ol:
@@ -178,8 +178,8 @@ func language(pre *xhtml.Node) string {
 	return ""
 }
 
-// text is what n holds as text, as a code block shows it (no comments).
-func text(n *xhtml.Node) string {
+// nodeText is what n holds as text, as a code block shows it (no comments).
+func nodeText(n *xhtml.Node) string {
 	var b strings.Builder
 	var walk func(*xhtml.Node)
 	walk = func(n *xhtml.Node) {
@@ -370,7 +370,7 @@ func (w *mdWriter) span(n *xhtml.Node) string {
 	case atom.Del, atom.S, atom.Strike:
 		return around("~~", inner())
 	case atom.Code, atom.Tt, atom.Kbd, atom.Samp:
-		if t := text(n); t != "" {
+		if t := nodeText(n); t != "" {
 			return mdwrite.Code(t)
 		}
 		return ""

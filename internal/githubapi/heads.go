@@ -31,7 +31,7 @@ func (c *Client) PullsByHead(ctx context.Context, repo, head string) ([]HeadPull
 	var r []struct {
 		Number   int    `json:"number"`
 		NodeID   string `json:"node_id"`
-		Title    string `json:"title"`
+		Title    text   `json:"title"`
 		HTMLURL  string `json:"html_url"`
 		State    string `json:"state"`
 		Draft    bool   `json:"draft"`
@@ -57,7 +57,7 @@ func (c *Client) PullsByHead(ctx context.Context, repo, head string) ([]HeadPull
 			state = "merged"
 		}
 		created, _ := time.Parse(time.RFC3339, p.Created)
-		out = append(out, HeadPull{Number: p.Number, ID: p.NodeID, Title: p.Title, URL: webURL(p.HTMLURL), State: state, Draft: p.Draft, Created: created})
+		out = append(out, HeadPull{Number: p.Number, ID: p.NodeID, Title: string(p.Title), URL: webURL(p.HTMLURL), State: state, Draft: p.Draft, Created: created})
 	}
 	var wait time.Duration
 	if s, err := strconv.Atoi(h.Get("X-Poll-Interval")); err == nil && s > 0 {

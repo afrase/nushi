@@ -146,30 +146,30 @@ func (t thread) thread() model.GitHubThread {
 type checkNode struct {
 	Typename    string    `json:"__typename"`
 	DatabaseID  int64     `json:"databaseId"`
-	Name        string    `json:"name"`
+	Name        text      `json:"name"`
 	Status      string    `json:"status"`
 	Conclusion  string    `json:"conclusion"`
 	DetailsURL  string    `json:"detailsUrl"`
-	Title       string    `json:"title"`
+	Title       text      `json:"title"`
 	Summary     string    `json:"summary"`
 	StartedAt   time.Time `json:"startedAt"`
 	CompletedAt time.Time `json:"completedAt"`
 	IsRequired  bool      `json:"isRequired"`
 	CheckSuite  struct {
 		App *struct {
-			Name string `json:"name"`
+			Name text `json:"name"`
 		} `json:"app"`
 		WorkflowRun *struct {
 			Workflow struct {
-				Name string `json:"name"`
+				Name text `json:"name"`
 			} `json:"workflow"`
 		} `json:"workflowRun"`
 	} `json:"checkSuite"`
 	Annotations struct {
 		Nodes []struct {
-			Path            string `json:"path"`
-			Title           string `json:"title"`
-			Message         string `json:"message"`
+			Path            text   `json:"path"`
+			Title           text   `json:"title"`
+			Message         text   `json:"message"`
 			AnnotationLevel string `json:"annotationLevel"`
 			Location        struct {
 				Start struct {
@@ -179,10 +179,10 @@ type checkNode struct {
 		} `json:"nodes"`
 	} `json:"annotations"`
 	// A commit status's.
-	Context     string    `json:"context"`
+	Context     text      `json:"context"`
 	State       string    `json:"state"`
 	TargetURL   string    `json:"targetUrl"`
-	Description string    `json:"description"`
+	Description text      `json:"description"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
@@ -192,22 +192,22 @@ func (n checkNode) check() model.GitHubCheck {
 		if state == "expected" {
 			state = "pending"
 		}
-		return model.GitHubCheck{Name: n.Context, State: state, URL: webURL(n.TargetURL), Summary: n.Description, Required: n.IsRequired, Started: n.CreatedAt}
+		return model.GitHubCheck{Name: string(n.Context), State: state, URL: webURL(n.TargetURL), Summary: string(n.Description), Required: n.IsRequired, Started: n.CreatedAt}
 	}
-	c := model.GitHubCheck{ID: n.DatabaseID, Name: n.Name, State: "pending", URL: webURL(n.DetailsURL), Title: n.Title, Summary: Markdown(n.Summary),
+	c := model.GitHubCheck{ID: n.DatabaseID, Name: string(n.Name), State: "pending", URL: webURL(n.DetailsURL), Title: string(n.Title), Summary: Markdown(n.Summary),
 		Required: n.IsRequired, Started: n.StartedAt, Completed: n.CompletedAt}
 	if n.Status == "COMPLETED" {
 		c.State = strings.ToLower(n.Conclusion)
 	}
 	if a := n.CheckSuite.App; a != nil {
-		c.App = a.Name
+		c.App = string(a.Name)
 	}
 	if w := n.CheckSuite.WorkflowRun; w != nil {
-		c.Workflow = w.Workflow.Name
+		c.Workflow = string(w.Workflow.Name)
 	}
 	for _, a := range n.Annotations.Nodes {
-		c.Annotations = append(c.Annotations, model.GitHubAnnotation{Path: a.Path, Level: strings.ToLower(a.AnnotationLevel),
-			Title: a.Title, Message: Brief(a.Message), Line: a.Location.Start.Line})
+		c.Annotations = append(c.Annotations, model.GitHubAnnotation{Path: string(a.Path), Level: strings.ToLower(a.AnnotationLevel),
+			Title: string(a.Title), Message: Brief(string(a.Message)), Line: a.Location.Start.Line})
 	}
 	return c
 }
@@ -414,7 +414,7 @@ func (c *Client) Issue(ctx context.Context, repo string, number int) (model.GitH
 	}
 	is := data.Repository.Issue
 	out := model.GitHubIssue{GitHubItem: is.item(c.Host), Body: Markdown(is.Body), Association: is.AuthorAssociation}
-	for _, l := range is.Labels.Nodes {
+	for _, l := range is.Labels.labels() {
 		out.Labels = append(out.Labels, l.Name)
 	}
 	for _, a := range is.Assignees.Nodes {
@@ -435,7 +435,7 @@ var colorRE = regexp.MustCompile(`^[0-9a-fA-F]{6}$`)
 
 type labels struct {
 	Nodes []struct {
-		Name  string `json:"name"`
+		Name  text   `json:"name"`
 		Color string `json:"color"`
 	} `json:"nodes"`
 }
@@ -443,7 +443,7 @@ type labels struct {
 func (ls labels) labels() []model.GitHubLabel {
 	var out []model.GitHubLabel
 	for _, n := range ls.Nodes {
-		l := model.GitHubLabel{Name: plain(n.Name, 256)}
+		l := model.GitHubLabel{Name: plain(string(n.Name), 256)}
 		if colorRE.MatchString(n.Color) {
 			l.Color = n.Color
 		}

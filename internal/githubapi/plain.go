@@ -1,6 +1,7 @@
 package githubapi
 
 import (
+	"encoding/json"
 	"regexp"
 	"strings"
 	"unicode"
@@ -23,6 +24,28 @@ func plain(s string, limit int) string {
 		b.WriteRune(r)
 	}
 	return b.String()
+}
+
+// maxText bounds a text field as it's decoded: generous, so a field
+// with its own, smaller cap (a label's, a commit title's, an annotation's
+// in Brief) is cut there and not before.
+const maxText = 64 << 10
+
+// text is a string field of GitHub's answer that holds someone else's
+// words (a title, a check's name, an annotation's message), plain as it's
+// decoded, so no decoder can forget to clean one. Markdown fields (bodies,
+// summaries) are cleaned by Markdown instead, and ids, enums, logins and
+// addresses stay strings.
+type text string
+
+// UnmarshalJSON decodes a JSON string (or null, which is "") through plain.
+func (t *text) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	*t = text(plain(s, maxText))
+	return nil
 }
 
 // loginRE is a GitHub login: letters, digits and dashes, 39 at most, a

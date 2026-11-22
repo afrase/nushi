@@ -124,10 +124,10 @@ func (c *Client) MergeText(ctx context.Context, repo string, number int) (MergeT
 	var data struct {
 		Repository *struct {
 			PullRequest *struct {
-				MergeTitle  string `json:"mergeTitle"`
-				MergeBody   string `json:"mergeBody"`
-				SquashTitle string `json:"squashTitle"`
-				SquashBody  string `json:"squashBody"`
+				MergeTitle  text `json:"mergeTitle"`
+				MergeBody   text `json:"mergeBody"`
+				SquashTitle text `json:"squashTitle"`
+				SquashBody  text `json:"squashBody"`
 			} `json:"pullRequest"`
 		} `json:"repository"`
 	}
@@ -138,8 +138,8 @@ func (c *Client) MergeText(ctx context.Context, repo string, number int) (MergeT
 		return MergeText{}, ErrNotFound
 	}
 	p := data.Repository.PullRequest
-	return MergeText{MergeTitle: plain(p.MergeTitle, MaxCommitTitle), MergeBody: plain(p.MergeBody, MaxCommitBody),
-		SquashTitle: plain(p.SquashTitle, MaxCommitTitle), SquashBody: plain(p.SquashBody, MaxCommitBody)}, nil
+	return MergeText{MergeTitle: plain(string(p.MergeTitle), MaxCommitTitle), MergeBody: plain(string(p.MergeBody), MaxCommitBody),
+		SquashTitle: plain(string(p.SquashTitle), MaxCommitTitle), SquashBody: plain(string(p.SquashBody), MaxCommitBody)}, nil
 }
 
 // MergeInput is a merge or auto-merge the user confirmed. HeadOID is the

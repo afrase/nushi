@@ -39,7 +39,7 @@ type row struct {
 	Typename   string    `json:"__typename"`
 	ID         string    `json:"id"`
 	Number     int       `json:"number"`
-	Title      string    `json:"title"`
+	Title      text      `json:"title"`
 	URL        string    `json:"url"`
 	State      string    `json:"state"`
 	IsDraft    bool      `json:"isDraft"`
@@ -85,7 +85,7 @@ func (l *login) name() string {
 func (r row) item(host string) model.GitHubItem {
 	it := model.GitHubItem{
 		Host: host, Repo: r.Repository.NameWithOwner, Number: r.Number,
-		ID: r.ID, Pull: r.Typename != "Issue", Title: r.Title, URL: webURL(r.URL), State: strings.ToLower(r.State),
+		ID: r.ID, Pull: r.Typename != "Issue", Title: string(r.Title), URL: webURL(r.URL), State: strings.ToLower(r.State),
 		Draft: r.IsDraft, Author: r.Author.name(), Updated: r.UpdatedAt, Review: strings.ToLower(r.ReviewDecision),
 		Comments: r.TotalCommentsCount + r.CommentCount.TotalCount,
 	}

@@ -42,7 +42,7 @@ type itemNode struct {
 	Typename           string    `json:"__typename"`
 	ID                 string    `json:"id"`
 	Number             int       `json:"number"`
-	Title              string    `json:"title"`
+	Title              text      `json:"title"`
 	URL                string    `json:"url"`
 	State              string    `json:"state"`
 	StateReason        string    `json:"stateReason"`
@@ -88,7 +88,7 @@ type stateCount struct {
 }
 
 // plainTitle is a title from GitHub as one line of plain text.
-func plainTitle(s string) string { return oneLine(plain(s, 1024)) }
+func plainTitle(s text) string { return oneLine(plain(string(s), 1024)) }
 
 func (n itemNode) item(host, repo string) model.GitHubItem {
 	it := model.GitHubItem{
