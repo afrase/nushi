@@ -21,7 +21,9 @@ type GoAgentPref interface {
 }
 
 // oldGoAgent is the agent Settings.codex_go_agent is for, which an older
-// app sends (API 138 to 141; ADR 0004).
+// app sends (API 138 to 141; ADR 0004): v0.52.0's app on a beta's daemon,
+// going back (ADR 0108). Delete after the v0.53.0 tag, with
+// codex_go_agent's read below and in setGoAgents.
 const oldGoAgent = "codex"
 
 // goAgents fills set with each agent's Go agent: go_agents for each agent

@@ -48,8 +48,9 @@ func TestGoAgentSetting(t *testing.T) {
 }
 
 // A settings.json written before the setting was kept by agent, with
-// codexGoAgent on, reads as Codex's Go agent on; the old key is gone once
-// a change is written, Codex's kept under goAgents.
+// codexGoAgent on, reads as Codex's Go agent on. A change written keeps
+// Codex's under goAgents and mirrors it into codexGoAgent, the key
+// v0.52.0 reads, so going back to it keeps the choice (ADR 0108).
 func TestOldCodexGoAgentKeyReads(t *testing.T) {
 	dir := t.TempDir()
 	testcheck.Write(t, filepath.Join(dir, "settings.json"), `{"sleepAfterMinutes": 15, "codexGoAgent": true}`)
@@ -60,16 +61,26 @@ func TestOldCodexGoAgentKeyReads(t *testing.T) {
 	testcheck.NoErr(t, s.SetDebugLog(true))
 	b, err := os.ReadFile(filepath.Join(dir, "settings.json"))
 	testcheck.NoErr(t, err)
-	if strings.Contains(string(b), "codexGoAgent") || !strings.Contains(string(b), `"codex": true`) {
+	if !strings.Contains(string(b), `"codexGoAgent": true`) || !strings.Contains(string(b), `"codex": true`) {
 		t.Errorf("written: %s", b)
 	}
 	if !New(dir).GoAgent("codex") {
 		t.Error("not kept")
 	}
-	// Turned off, it stays off: the old key isn't read again.
+	// Turned off, it stays off: the mirror goes with it.
 	testcheck.NoErr(t, s.SetGoAgent("codex", false))
-	if New(dir).GoAgent("codex") {
-		t.Error("the old key came back")
+	b, err = os.ReadFile(filepath.Join(dir, "settings.json"))
+	testcheck.NoErr(t, err)
+	if strings.Contains(string(b), "codexGoAgent") || New(dir).GoAgent("codex") {
+		t.Errorf("turned off, written: %s", b)
+	}
+	// Turned on in a new file, v0.52.0's key is written too.
+	fresh := t.TempDir()
+	testcheck.NoErr(t, New(fresh).SetGoAgent("codex", true))
+	b, err = os.ReadFile(filepath.Join(fresh, "settings.json"))
+	testcheck.NoErr(t, err)
+	if !strings.Contains(string(b), `"codexGoAgent": true`) {
+		t.Errorf("turned on, written: %s", b)
 	}
 }
 

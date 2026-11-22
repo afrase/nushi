@@ -22,8 +22,10 @@ type settings struct {
 	// that's off isn't kept.
 	GoAgents map[string]bool `json:"goAgents,omitempty"`
 	// CodexGoAgent is goAgents' "codex" as written before it was kept by
-	// agent (ADR 0142): read into GoAgents, and gone once a change is
-	// written.
+	// agent (ADR 0142), the key v0.52.0 reads: read into GoAgents, and
+	// mirrored from it on every write so going back to v0.52.0 keeps the
+	// choice (ADR 0108). The mirror goes after the v0.53.0 tag; the read
+	// after v0.54.0, since a file is rewritten only when a setting changes.
 	CodexGoAgent bool `json:"codexGoAgent,omitempty"`
 }
 
@@ -47,7 +49,7 @@ func (s *Store) settingsLocked() settings {
 		slog.Warn("reading settings.json", "err", err)
 		s.setErr = err
 	}
-	if set.CodexGoAgent {
+	if set.CodexGoAgent { // the old key's read: delete after v0.54.0
 		if _, ok := set.GoAgents[oldGoAgent]; !ok {
 			if set.GoAgents == nil {
 				set.GoAgents = map[string]bool{}
@@ -78,6 +80,9 @@ func (s *Store) changeSettings(change func(*settings)) error {
 	}
 	s.setErr = nil // set aside: the bytes are kept, and the write below replaces nothing unread
 	change(&set)
+	// v0.52.0 reads only codexGoAgent (ADR 0108's going back): delete
+	// after the v0.53.0 tag.
+	set.CodexGoAgent = set.GoAgents[oldGoAgent]
 	if err := writeJSON(path, set); err != nil {
 		return err
 	}
