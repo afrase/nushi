@@ -251,6 +251,17 @@ void main() {
     await _end(tester, d);
   }, variant: onMac);
 
+  testWidgets('a chat without a folder runs in a scratch folder, so the '
+      'box says', (tester) async {
+    final (_, _, d, chat) = await _box(tester);
+    chat.scratch = true;
+    await _type(tester, '!ls');
+    await tester.pumpAndSettle();
+    expect(find.text('Runs in a scratch folder'), findsOne);
+    expect(find.textContaining('Runs in nushi'), findsNothing);
+    await _end(tester, d);
+  }, variant: onMac);
+
   testWidgets("a side chat's box has no command mode", (tester) async {
     final (fake, shells, d, _) = await _box(tester, commands: false);
     await _type(tester, '!git status');

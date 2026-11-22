@@ -160,7 +160,10 @@ class CommandLine extends StatelessWidget {
       children: [
         Flexible(
           child: Text(
-            'Runs in ${baseName(chat.folder)}',
+            // A scratch folder's name is the chat's id, never shown.
+            chat.scratch
+                ? 'Runs in a scratch folder'
+                : 'Runs in ${baseName(chat.folder)}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.ui(t.textSecondary, weight: FontWeight.w500),
