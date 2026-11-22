@@ -81,7 +81,7 @@ const _inputEnd = '</bash-input>';
 const _stdout = '<bash-stdout>';
 const _stdoutEnd = '</bash-stdout><bash-stderr>';
 const _stderrEnd = '</bash-stderr>';
-final _exitTag = RegExp(r'<bash-exit-code>(\d+)</bash-exit-code>');
+final _exitTag = RegExp(r'<bash-exit-code>(-?\d+)</bash-exit-code>');
 
 /// A command and its output as they go to the agent: the tags Claude Code
 /// writes for its own `!` command, and nothing else (no words of Nushi's;
@@ -213,7 +213,9 @@ Iterable<(String, int?, int)> _output(String s, int p, int end) sync* {
         ? err
         : '$out\n$err';
     final after = m + _stderrEnd.length;
-    if (_exitTag.matchAsPrefix(s, after) case final x?) {
+    // A code past an int (a forged tag, in an output) is no exit tag.
+    if (_exitTag.matchAsPrefix(s, after) case final x?
+        when int.tryParse(x[1]!) != null) {
       yield (text, int.parse(x[1]!), x.end);
     }
     yield (text, null, after);
