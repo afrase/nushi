@@ -13,7 +13,7 @@ The owner wants Claude Code's `!`: type a shell command in the chat's box, it ru
 - **The desktop app only**, as ▷: on the phone `!x` is a message, as before. A daemon older than API 143 can't run one: the box says "This daemon can't run commands" and runs nothing, never sending `!x` to the agent by surprise.
 
 ## Consequences
-`-l -c` reads the login files, not `.zshrc` or `.bashrc`, so aliases made only for interactive shells aren't there (the docs say so). A command that asks for input is answered in its terminal from the card's Show. A message that really starts with `!` needs a space first on the desktop.
+`-l -c` reads the login files, not `.zshrc` or `.bashrc`, so aliases made only for interactive shells aren't there (the docs say so). Its terminal is a PTY, so it has no pager (`PAGER`, `GIT_PAGER` and `MANPAGER` are `cat`, `SYSTEMD_PAGER` empty): `git log` or `man` would otherwise wait in `less` and never end. A command that asks for input is answered in its terminal from the card's Show. A message that really starts with `!` needs a space first on the desktop.
 
 ## Alternatives considered
 - **Typing it into the chat's terminal session, as ▷**: its end is known only from OSC 133 marks, so on most Macs it would never report.

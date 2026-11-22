@@ -54,3 +54,32 @@ func TestShellStarterRunsACommand(t *testing.T) {
 		t.Errorf("output %q", got)
 	}
 }
+
+// A command's terminal pages nothing: git log, man and the rest print in
+// full and end, never waiting in less for keys.
+func TestACommandsTerminalHasNoPager(t *testing.T) {
+	was := loginShell
+	loginShell = func() string { return "/bin/sh" }
+	t.Cleanup(func() { loginShell = was })
+	t.Setenv("PAGER", "less")
+	t.Setenv("GIT_PAGER", "less")
+	sh, err := shellStarter(noEnviron{})(t.TempDir(), `echo "[$PAGER|$GIT_PAGER|$MANPAGER|${SYSTEMD_PAGER-unset}]"`, 80, 24, func() {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(sh.Close)
+	var out strings.Builder
+	done := make(chan struct{})
+	go func() {
+		sh.Attach(nil, func(b []byte) bool { out.Write(b); return true })
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the command didn't end")
+	}
+	if got := out.String(); !strings.Contains(got, "[cat|cat|cat|]") {
+		t.Errorf("output %q", got)
+	}
+}

@@ -344,13 +344,31 @@ var loginShell = sync.OnceValue(func() string {
 // shellStarter starts the user's shell in a terminal (terminalShell: the
 // login shell, or Windows Terminal's default profile's), or that shell
 // running a command, with terminalEnv's environment, built on
-// terminalBase's.
+// terminalBase's (and commandEnv's for a command).
 func shellStarter(agents interface{ Environ() []string }) terminals.Start {
 	return func(folder, command string, cols, rows int, changed func()) (terminals.Shell, error) {
 		base := terminalBase(agents)
 		argv := terminalShell(base, command)
-		return terminal.Start(argv, folder, terminalEnv(base, argv[0]), cols, rows, changed)
+		env := terminalEnv(base, argv[0])
+		if command != "" {
+			env = commandEnv(env)
+		}
+		return terminal.Start(argv, folder, env, cols, rows, changed)
 	}
+}
+
+// commandEnv is a command's terminal's environment: env with no pager.
+// It is a terminal, so git log, man or journalctl would page their output
+// through less and wait there for keys, and the command would never end;
+// its output goes in a card, in full, as it does where nothing is a
+// terminal.
+func commandEnv(env []string) []string {
+	pagers := []string{"PAGER=cat", "GIT_PAGER=cat", "MANPAGER=cat", "SYSTEMD_PAGER="}
+	env = slices.DeleteFunc(slices.Clone(env), func(v string) bool {
+		name, _, _ := strings.Cut(v, "=")
+		return slices.ContainsFunc(pagers, func(p string) bool { return strings.HasPrefix(p, name+"=") })
+	})
+	return append(env, pagers...)
 }
 
 // terminalEnv is a terminal's environment: the daemon's, $SHELL naming
