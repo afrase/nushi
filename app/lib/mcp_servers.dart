@@ -174,16 +174,16 @@ String transport(Map<String, dynamic> c) => switch (c['type']) {
 /// Its command line, or its URL, as text whatever their types.
 String target(Map<String, dynamic> c) => switch ((c['url'], c['args'])) {
   (final Object url, _) => '$url',
-  (_, final List args) => [c['command'], ...args].join(' '),
+  (_, final List<Object?> args) => [c['command'], ...args].join(' '),
   (_, final Object args) => '${c['command']} $args',
   _ => '${c['command']}',
 };
 
 /// Its env vars and headers, values masked as the daemon sends them.
 String secrets(Map<String, dynamic> c) => [
-  if (c['env'] case final Map env)
+  if (c['env'] case final Map<Object?, Object?> env)
     for (final k in env.keys) '$k=••••',
-  if (c['headers'] case final Map headers)
+  if (c['headers'] case final Map<Object?, Object?> headers)
     for (final k in headers.keys) '$k: ••••',
 ].join('  ');
 
