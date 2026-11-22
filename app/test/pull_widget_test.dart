@@ -92,14 +92,14 @@ Finder get _rowMenu => _inPull(
   ),
 );
 
-/// From now on FindChatPull finds #1 (opened since), and GetGitHubPull
-/// answers it whole.
+/// From now on FindChatPull finds #1 (opened since) and links it, so the
+/// chat list says it too, and GetGitHubPull answers it whole.
 void _opened(FakeDaemon fake) => fake.answer = (input) => switch (input) {
-  FindChatPullRequest() => FindChatPullResponse(
+  FindChatPullRequest(:final chatId) => FindChatPullResponse(
     host: 'github.com',
     repo: _repo,
     branch: 'subtract',
-    pull: _link,
+    pull: (fake.chats.firstWhere((c) => c.id == chatId)..pull = _link).pull,
   ),
   GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
   _ => null,

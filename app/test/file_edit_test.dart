@@ -408,6 +408,8 @@ void main() {
       await tester.tap(find.text('Discard'));
       await tester.pumpAndSettle();
       fake.down = false;
+      // A watch the daemon was gone for asks again two seconds on.
+      await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
       expect(chatC(d).fileNames, ['b.go']);
       expect(fake.writes, isEmpty);

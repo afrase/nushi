@@ -108,8 +108,24 @@ class FakeDaemon implements Transport {
   GetUsageResponse usage = GetUsageResponse();
 
   /// While set the daemon is gone: every call fails as the transport says
-  /// when none answers, pings too.
-  bool down = false;
+  /// when none answers, pings too, and setting it drops every events
+  /// subscription with that error, as a daemon that stops ends them.
+  bool get down => _down;
+  set down(bool gone) {
+    _down = gone;
+    if (!gone) return;
+    for (final s in subscriptions.where((s) => s.live)) {
+      s._out
+        ..addError(_unavailable())
+        ..close().ignore();
+    }
+  }
+
+  bool _down = false;
+
+  /// The transport's error when no daemon answers.
+  ConnectException _unavailable() =>
+      ConnectException(Code.unavailable, 'daemon unavailable: dial failed');
 
   /// The daemon gone for a ping, then back, as across a restart.
   Future<void> restart(WidgetTester tester) async {
@@ -184,12 +200,7 @@ class FakeDaemon implements Transport {
     I input, [
     CallOptions? options,
   ]) async {
-    if (down) {
-      throw ConnectException(
-        Code.unavailable,
-        'daemon unavailable: dial failed',
-      );
-    }
+    if (down) throw _unavailable();
     if (options?.signal case final signal?) {
       unawaited(signal.future.then((_) => cancelled.add(input)));
     }
@@ -533,6 +544,7 @@ class FakeDaemon implements Transport {
     Stream<I> input, [
     CallOptions? options,
   ]) async {
+    if (down) throw _unavailable();
     final request = await input.first;
     if (streams?.call(request) case final s?) {
       calls.add(request);

@@ -28,4 +28,25 @@ void main() {
     final fake = FakeDaemon([]);
     expect(() => fake.emit(EventsResponse(chatId: 'a')), throwsStateError);
   });
+
+  testWidgets('a daemon gone drops the subscription; back, the app '
+      'subscribes again', (tester) async {
+    final fake = FakeDaemon([chat('a', 'claude', 'Fix the login')]);
+    final d = await fake.connect(tester);
+    fake.down = true;
+    await tester.pump();
+    expect(fake.subscriptions.single.live, isFalse);
+    expect(() => fake.emit(EventsResponse(chatId: 'a')), throwsStateError);
+    await tester.pump(const Duration(seconds: 2));
+    expect(d.connected, isFalse);
+    expect(fake.subscriptions, hasLength(1)); // none while it's gone
+
+    fake.down = false;
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(fake.subscriptions, hasLength(2));
+    expect(fake.subscriptions.last.live, isTrue);
+    expect(d.chats.keys, ['a']); // listed again
+    d.dispose(); // its ping timer ends with the test
+  });
 }
