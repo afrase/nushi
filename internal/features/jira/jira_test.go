@@ -362,20 +362,34 @@ func TestCache(t *testing.T) {
 	}
 }
 
-// A token the keychain won't delete keeps its site: removing it says why,
-// and nothing is forgotten that the token still opens.
-func TestRemoveSiteKeepsItWhenTheTokenStays(t *testing.T) {
+// A token the keychain won't delete (no keyring, a dismissed prompt)
+// never keeps its site: the site and what it showed go first, and the
+// token is left in the keychain, never read again.
+func TestRemoveSiteWhenTheTokenStays(t *testing.T) {
 	s, tokens, _ := newService(t)
-	if _, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{}); err != nil {
+	site, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.List(t.Context(), "e.atlassian.net", Mine, ""); err != nil {
 		t.Fatal(err)
 	}
 	tokens.Fail = errRestart
-	if err := s.RemoveSite("e.atlassian.net"); !errors.Is(err, errRestart) {
+	if err := s.RemoveSite("e.atlassian.net"); err != nil {
 		t.Errorf("remove: %v", err)
 	}
 	tokens.Fail = nil
-	if st, err := s.Sites(); err != nil || len(st) != 1 {
-		t.Errorf("after a failed remove: %+v, %v", st, err)
+	if st, err := s.Sites(); err != nil || len(st) != 0 {
+		t.Errorf("after the remove: %+v, %v", st, err)
+	}
+	var kept json.RawMessage
+	if at, err := s.store.Cached(cacheArea, "e.atlassian.net", listKey(site, Mine, ""), &kept); err != nil || !at.IsZero() {
+		t.Errorf("its list kept: %s %v %v", kept, at, err)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.clients["e.atlassian.net"] != nil {
+		t.Error("its client kept")
 	}
 }
 

@@ -179,14 +179,20 @@ func (s *Service) AddSite(ctx context.Context, site, email, token string, expire
 	return got, nil
 }
 
-// RemoveSite forgets a site and deletes its token from the keychain.
+// RemoveSite forgets a site, then deletes its token from the keychain as
+// best it can: a keychain that can't (no keyring, a dismissed prompt)
+// never leaves a site that can't be removed; the token then stays in it,
+// logged, and is never read again.
 func (s *Service) RemoveSite(id string) error {
 	site, err := s.site(id)
 	if err != nil {
 		return err
 	}
-	if err := s.tokens.Delete(account(site)); err != nil {
-		return fmt.Errorf("deleting the token from the keychain: %w", err)
+	err = s.change(func(sites []model.JiraSite) []model.JiraSite {
+		return slices.DeleteFunc(sites, func(x model.JiraSite) bool { return SiteID(x) == id })
+	})
+	if err != nil {
+		return err
 	}
 	s.mu.Lock()
 	delete(s.clients, id)
@@ -194,9 +200,10 @@ func (s *Service) RemoveSite(id string) error {
 	s.mu.Unlock()
 	s.forget(id)
 	slog.Info("jira site removed", "site", id)
-	return s.change(func(sites []model.JiraSite) []model.JiraSite {
-		return slices.DeleteFunc(sites, func(x model.JiraSite) bool { return SiteID(x) == id })
-	})
+	if err := s.tokens.Delete(account(site)); err != nil {
+		slog.Warn("jira token left in the keychain", "site", id, "err", err)
+	}
+	return nil
 }
 
 // AllowToken reads a site's token with macOS's prompt, which asks the

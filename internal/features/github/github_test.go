@@ -465,6 +465,27 @@ func TestRefusedDropKeepsANewerToken(t *testing.T) {
 	}
 }
 
+// Removing a token forgets the host first: a keychain that can't delete
+// it (no keyring, a dismissed prompt) doesn't leave the host stuck.
+func TestRemoveTokenKeychainFails(t *testing.T) {
+	w := newWorld(t)
+	if _, err := w.s.AddToken(t.Context(), "git.example.com", "ghp_ent"); err != nil {
+		t.Fatal(err)
+	}
+	w.tokens.Fail = errors.New("your keyring is locked")
+	if err := w.s.RemoveToken("git.example.com"); err != nil {
+		t.Fatal(err)
+	}
+	if hosts, _ := w.s.Store.GitHubTokenHosts(); len(hosts) != 0 {
+		t.Fatalf("still given a token: %v", hosts)
+	}
+	w.s.mu.Lock()
+	defer w.s.mu.Unlock()
+	if w.s.clients["git.example.com"] != nil {
+		t.Fatal("its client kept")
+	}
+}
+
 func TestNoToken(t *testing.T) {
 	w := newWorld(t)
 	w.ghHosts = append(w.ghHosts, "git.example.com") // gh knows it, but has no token for it

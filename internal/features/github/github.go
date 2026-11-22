@@ -313,17 +313,20 @@ func (s *Service) AddToken(ctx context.Context, given, token string) (githubapi.
 }
 
 // RemoveToken deletes a host's pasted token: the host goes back to gh's
-// login, if gh has one.
+// login, if gh has one. The host forgets the token first, then the
+// keychain deletes it as best it can: a keychain that can't (no keyring,
+// a dismissed prompt) never leaves a host that can't be removed; the
+// token then stays in it, logged, and is never read again.
 func (s *Service) RemoveToken(name string) error {
 	name, ok := normalHost(name)
 	if !ok {
 		return errors.New("not a host's name")
 	}
-	if err := s.Tokens.Delete(name); err != nil {
-		return fmt.Errorf("deleting the token from the keychain: %w", err)
-	}
 	hosts, err := s.Store.GitHubTokenHosts()
 	if err != nil {
+		return err
+	}
+	if err := s.Store.SaveGitHubTokenHosts(slices.DeleteFunc(hosts, func(h string) bool { return h == name })); err != nil {
 		return err
 	}
 	s.mu.Lock()
@@ -331,7 +334,10 @@ func (s *Service) RemoveToken(name string) error {
 	s.forget(name)
 	s.mu.Unlock()
 	slog.Info("github token removed", "host", name)
-	return s.Store.SaveGitHubTokenHosts(slices.DeleteFunc(hosts, func(h string) bool { return h == name }))
+	if err := s.Tokens.Delete(name); err != nil {
+		slog.Warn("github token left in the keychain", "host", name, "err", err)
+	}
+	return nil
 }
 
 // AllowToken reads a host's pasted token with macOS's prompt, which asks
