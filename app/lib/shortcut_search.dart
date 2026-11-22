@@ -31,6 +31,10 @@ const _same = {
   '→': 'right',
   '⌫': 'backspace',
   '⌦': 'delete',
+  '⇞': 'pageup',
+  '⇟': 'pagedown',
+  '↖': 'home',
+  '↘': 'end',
   'del': 'delete',
   'pgup': 'pageup',
   'pgdn': 'pagedown',
@@ -38,10 +42,15 @@ const _same = {
 
 String _word(String w) => _same[w] ?? w;
 
+/// The Mac's key glyphs, each a word of its own however it's typed
+/// ("⇧⌘P" is shift, cmd and p).
+final _glyph = RegExp('[⌘⌃⌥⇧⏎⇥↑↓←→⌫⌦⇞⇟↖↘]');
+
 /// [query]'s words, case aside, a space and `+` alike.
 List<String> _words(String query) => query
     .toLowerCase()
     .replaceAll('+', ' ')
+    .replaceAllMapped(_glyph, (m) => ' ${m[0]} ')
     .split(RegExp(r'\s+'))
     .where((w) => w.isNotEmpty)
     .toList();
@@ -57,13 +66,16 @@ Set<String> _keyWords(SingleActivator k) => {
   for (final text in [?shortcutText(k), keyLabel(k)])
     for (final w in _words(text)) _word(w),
   for (final w in _words(keyName(k.trigger))) _word(w),
+  // A key of two words as one ("pageup").
+  _word(keyName(k.trigger).toLowerCase().replaceAll(' ', '')),
 };
 
 /// Whether a row named [name] in [group], its keys [keys], shows for
 /// [query]: every word typed in its name or its group's ("tab", "view"),
-/// or every word one of its keys' ("cmd k", "ctrl tab", "esc"; a word of
-/// two letters or more may be a key word's start), or the whole as one
-/// of its keys is shown ("⌘K", "⌃⇥").
+/// or every word one of its keys' as shown or in words ("⌘K", "⌃⇥",
+/// "cmd k", "ctrl tab", "esc"; a word of two letters or more may be a key
+/// word's start, a single letter is the key itself). A key's words are
+/// whole: "ctrl s" doesn't find Ctrl+Shift+P.
 bool shortcutMatches(
   String query, {
   required String name,
@@ -74,12 +86,7 @@ bool shortcutMatches(
   if (words.isEmpty) return true;
   final names = '$group $name'.toLowerCase();
   if (words.every(names.contains)) return true;
-  final whole = words.join();
   for (final k in keys) {
-    if (keyLabel(k).toLowerCase().replaceAll(RegExp(r'[+\s]'), '')
-        case final shown when shown.contains(whole)) {
-      return true;
-    }
     final known = _keyWords(k);
     bool has(String w) =>
         known.contains(w) ||

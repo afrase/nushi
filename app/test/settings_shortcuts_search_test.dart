@@ -88,6 +88,23 @@ void main() {
         expect(matches(q, pageUp), isTrue, reason: q);
       }
       expect(matches('super tab', linuxTab), isFalse);
+      // A key's words are whole: Ctrl+Shift+P has no S, Ctrl+Alt+1 no A,
+      // Ctrl+Tab no T.
+      const linuxP = SingleActivator(
+        LogicalKeyboardKey.keyP,
+        control: true,
+        shift: true,
+      );
+      const linuxAlt1 = SingleActivator(
+        LogicalKeyboardKey.digit1,
+        control: true,
+        alt: true,
+      );
+      expect(matches('ctrl s', linuxP), isFalse);
+      expect(matches('ctrl+a', linuxAlt1), isFalse);
+      expect(matches('ctrl t', linuxTab), isFalse);
+      expect(matches('ctrl shift p', linuxP), isTrue);
+      expect(matches('Ctrl+Alt+1', linuxAlt1), isTrue);
     }, variant: onMac);
   });
 
