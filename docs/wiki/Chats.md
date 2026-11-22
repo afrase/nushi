@@ -129,7 +129,7 @@ The keys at the bottom, under **Fixed**, can't be changed.
 
 Type in the box at the bottom and press **⏎** to send. **⇧⏎** starts a new line.
 
-Rather press Enter for new lines? Turn on **Enter starts a new line** in **Settings › General**. Then **⏎** starts a new line and **⌘⏎** (or the Send button) sends. This goes for every box that sends to the agent: a reply, a review comment and a subagent's box too. The phone always sends with Return.
+Rather press Enter for new lines? Turn on **Enter starts a new line** in **Settings › General**. Then **⏎** starts a new line and **⌘⏎** (or the Send button) sends. This goes for every box where Enter sends: a reply, a review comment and a subagent's box too. The phone always sends with Return.
 
 You don't have to click the box first. Start typing anywhere in the chat and the letters go into the box. (A menu, a dialog or another text field keeps what you type.)
 
