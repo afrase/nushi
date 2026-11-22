@@ -250,13 +250,20 @@ class FileWatch extends ChangeNotifier {
         );
   }
 
-  void _again() => Timer(const Duration(seconds: 2), () {
-    if (!_disposed) _watch();
-  });
+  /// The wait before watching again, cancelled with the watch.
+  Timer? _waiting;
+
+  void _again() {
+    _waiting?.cancel();
+    _waiting = Timer(const Duration(seconds: 2), () {
+      if (!_disposed) _watch();
+    });
+  }
 
   @override
   void dispose() {
     _disposed = true;
+    _waiting?.cancel();
     unawaited(_sub?.cancel());
     super.dispose();
   }
