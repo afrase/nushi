@@ -22493,6 +22493,7 @@ class Remote extends $pb.GeneratedMessage {
     $core.String? rendezvous,
     $core.List<$core.int>? key,
     $core.String? id,
+    RemoteReset? wasReset,
   }) {
     final result = Remote._();
     if (on != null) result.on = on;
@@ -22504,6 +22505,7 @@ class Remote extends $pb.GeneratedMessage {
     if (rendezvous != null) result.rendezvous = rendezvous;
     if (key != null) result.key = key;
     if (id != null) result.id = id;
+    if (wasReset != null) result.wasReset = wasReset;
     return result;
   }
 
@@ -22532,6 +22534,8 @@ class Remote extends $pb.GeneratedMessage {
     ..a<$core.List<$core.int>>(
         8, _omitFieldNames ? '' : 'key', $pb.PbFieldType.OY)
     ..aOS(9, _omitFieldNames ? '' : 'id')
+    ..aOM<RemoteReset>(10, _omitFieldNames ? '' : 'wasReset',
+        subBuilder: RemoteReset.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -22648,6 +22652,90 @@ class Remote extends $pb.GeneratedMessage {
   $core.bool hasId() => $_has(8);
   @$pb.TagNumber(9)
   void clearId() => $_clearField(9);
+
+  /// Set while remote access has started over because a file of it
+  /// didn't parse, until a phone is next paired (ADR 0034's 2026-11-22
+  /// amendment); unset otherwise.
+  @$pb.TagNumber(10)
+  RemoteReset get wasReset => $_getN(9);
+  @$pb.TagNumber(10)
+  set wasReset(RemoteReset value) => $_setField(10, value);
+  @$pb.TagNumber(10)
+  $core.bool hasWasReset() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearWasReset() => $_clearField(10);
+  @$pb.TagNumber(10)
+  RemoteReset ensureWasReset() => $_ensure(9);
+}
+
+/// RemoteReset says remote access started over: a fresh key and no paired
+/// devices, so every phone pairs again.
+class RemoteReset extends $pb.GeneratedMessage {
+  factory RemoteReset({
+    $fixnum.Int64? at,
+    $core.Iterable<$core.String>? files,
+  }) {
+    final result = RemoteReset._();
+    if (at != null) result.at = at;
+    if (files != null) result.files.addAll(files);
+    return result;
+  }
+
+  RemoteReset._();
+
+  factory RemoteReset.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoteReset()..mergeFromBuffer(data, registry);
+  factory RemoteReset.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoteReset()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoteReset',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoteReset.$_createMessage)
+    ..aInt64(1, _omitFieldNames ? '' : 'at')
+    ..pPS(2, _omitFieldNames ? '' : 'files')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoteReset clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoteReset copyWith(void Function(RemoteReset) updates) =>
+      super.copyWith((message) => updates(message as RemoteReset))
+          as RemoteReset;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RemoteReset() / RemoteReset.new instead')
+  static RemoteReset create() => RemoteReset._();
+  static $pb.GeneratedMessage $_createMessage() => RemoteReset._();
+  @$core.override
+  RemoteReset createEmptyInstance() => RemoteReset._();
+  @$core.pragma('dart2js:noInline')
+  static RemoteReset getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RemoteReset>(
+          RemoteReset.$_createMessage);
+  static RemoteReset? _defaultInstance;
+
+  /// Unix milliseconds.
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get at => $_getI64(0);
+  @$pb.TagNumber(1)
+  set at($fixnum.Int64 value) => $_setInt64(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAt() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAt() => $_clearField(1);
+
+  /// The files that didn't parse, each as it was set aside beside the
+  /// others: "remote-key.json.unreadable-<time>". The name before
+  /// ".unreadable-" says which: remote-key.json (the key), devices.json
+  /// (the paired devices) or vapid.json (the notifications' key).
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.String> get files => $_getList(1);
 }
 
 class Device extends $pb.GeneratedMessage {

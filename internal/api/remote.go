@@ -46,5 +46,8 @@ func remoteProto(r model.Remote) *nushiv1.Remote {
 	if p := r.Pairing; p != nil {
 		out.Pairing = &nushiv1.Pairing{Name: p.Name, Code: p.Code}
 	}
+	if rs := r.Reset; rs != nil {
+		out.WasReset = &nushiv1.RemoteReset{At: rs.At.UnixMilli(), Files: rs.Files}
+	}
 	return out
 }

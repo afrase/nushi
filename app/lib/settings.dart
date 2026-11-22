@@ -46,7 +46,8 @@ import 'package:nushi/usage_range.dart';
 /// the failed checks each chat's user acted on, the comments seen of
 /// each chat's pull requests,
 /// the range Settings › Usage shows, the newer release whose toast
-/// was dismissed, and the keys chosen in Settings › Keyboard shortcuts.
+/// was dismissed, the remote access reset last said in a toast, and the
+/// keys chosen in Settings › Keyboard shortcuts.
 /// Each is a [Pref].
 /// Not whether new chats get a worktree, nor whether a subagent's pane
 /// shows wide, nor a beta's `projectRail`: an older `worktrees`,
@@ -550,6 +551,10 @@ final usageRange = Pref<UsageRange>(
 /// The newer release whose toast was dismissed ("0.1.17"): it shows again
 /// only for a newer one.
 final Pref<String?> dismissedUpdate = _plain('dismissedUpdate', null);
+
+/// The remote access reset last said in a toast, by its time (Unix ms;
+/// 0 none): another reset is said again, this one never.
+final Pref<int> remoteResetToasted = _plain('remoteResetToasted', 0);
 
 /// The keys chosen in Settings › Keyboard shortcuts (ADR 0146), by
 /// binding (an Act's name, or 'palette'), each in `shortcutText`'s words,

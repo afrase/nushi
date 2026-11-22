@@ -3164,6 +3164,22 @@ message Remote {
   // it dials keeps this one and key from then on (its old one answers it,
   // with the old key, for 30 days).
   string id = 9;
+  // Set while remote access has started over because a file of it
+  // didn't parse, until a phone is next paired (ADR 0034's 2026-11-22
+  // amendment); unset otherwise.
+  RemoteReset was_reset = 10;
+}
+
+// RemoteReset says remote access started over: a fresh key and no paired
+// devices, so every phone pairs again.
+message RemoteReset {
+  // Unix milliseconds.
+  int64 at = 1;
+  // The files that didn't parse, each as it was set aside beside the
+  // others: "remote-key.json.unreadable-<time>". The name before
+  // ".unreadable-" says which: remote-key.json (the key), devices.json
+  // (the paired devices) or vapid.json (the notifications' key).
+  repeated string files = 2;
 }
 
 message Device {

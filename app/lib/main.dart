@@ -34,6 +34,7 @@ import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart' show baseName;
 import 'package:nushi/remote.dart';
+import 'package:nushi/remote_reset.dart';
 import 'package:nushi/removed_chats.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_modal.dart';
@@ -699,11 +700,15 @@ class _Shell extends StatelessWidget {
         );
       },
     );
-    // Settings opens over all of it (ADR 0087).
-    return SettingsModal(
-      daemon: daemon,
-      open: daemon.settingsOpen != null,
-      app: app,
+    // Settings opens over all of it (ADR 0087). A remote access reset is
+    // said once as a toast (RemoteResetToast).
+    return RemoteResetToast(
+      daemon,
+      child: SettingsModal(
+        daemon: daemon,
+        open: daemon.settingsOpen != null,
+        app: app,
+      ),
     );
   }
 }

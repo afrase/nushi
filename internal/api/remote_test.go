@@ -2,7 +2,9 @@ package api
 
 import (
 	"bytes"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -20,5 +22,19 @@ func TestRemoteSendsTheIDOnlyWhereNewPhonesRead(t *testing.T) {
 	}
 	if r.GetRendezvous() != "" {
 		t.Fatalf("rendezvous %q: an older phone would move there with its old key", r.GetRendezvous())
+	}
+}
+
+// A reset goes out in Remote.was_reset, with its time and the files set
+// aside; none, none.
+func TestRemoteSaysItWasReset(t *testing.T) {
+	if r := remoteProto(model.Remote{}); r.GetWasReset() != nil {
+		t.Fatalf("no reset sent %v", r.GetWasReset())
+	}
+	at := time.UnixMilli(1_790_000_000_000)
+	files := []string{"remote-key.json.unreadable-2026-11-22T10-00-00.000000"}
+	r := remoteProto(model.Remote{Reset: &model.RemoteReset{At: at, Files: files}}).GetWasReset()
+	if r.GetAt() != at.UnixMilli() || !slices.Equal(r.GetFiles(), files) {
+		t.Fatalf("reset %v", r)
 	}
 }

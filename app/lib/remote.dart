@@ -8,6 +8,7 @@ import 'package:nushi/commits.dart' show agoAt;
 import 'package:nushi/conventions.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/remote_reset.dart';
 import 'package:nushi/run_state.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
@@ -25,7 +26,8 @@ const _states = {
   'error': "Can't reach the relay",
 };
 
-/// Settings › Remote access: the switch and the relay's state, the relay,
+/// Settings › Remote access: that it was reset, if it was (RemoteResetLine),
+/// the switch and the relay's state, the relay,
 /// this computer's key, then the paired phones and Pair a phone.
 class RemoteSection extends StatefulWidget {
   const new(this.client, {super.key});
@@ -79,6 +81,7 @@ class _RemoteSectionState extends State<RemoteSection> {
           children: [
             SettingsGroup(
               children: [
+                if (r.hasWasReset()) RemoteResetLine(r.wasReset),
                 SettingsRow(
                   'Remote access',
                   description: [

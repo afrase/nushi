@@ -184,6 +184,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Pairing** | Adding a device: Pair a phone on the Mac shows a QR code (or Copy link); the phone shows a six-digit code; Allow on the Mac. | `StartPairing`, `ConfirmPairing`, `Pairing` | 0034, 0054 |
 | **Pairing link** | The QR code's link, which the phone pastes when it can't scan. | | 0054 |
 | **Device** | A paired client, listed on the Mac with Revoke and Send a test notification. | `Device`, `RevokeDevice` | 0034 |
+| **Remote access reset** | Remote access started over with a new key and no paired devices, because one of its key files couldn't be read; Settings › Remote access says so in red (and the Mac once in a toast) until a phone is paired again. | `RemoteReset`, `Remote.was_reset`, `startOver`, `RemoteResetLine` | 0034 |
 | **Forget this Mac** | On the phone: drop the pairing and the device's key. | `UnpairThisDevice` | |
 | **Notification** (phone) | A Web Push from the daemon, saying only what happened. | `internal/webpush`, `features/remote/push.go` | 0054 |
 | **Noise** | The end-to-end encryption between the phone and the daemon. | `noiseconn`, `packages/noise` | 0034 |

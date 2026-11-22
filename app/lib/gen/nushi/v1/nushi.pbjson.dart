@@ -5177,6 +5177,14 @@ const Remote$json = {
     {'1': 'rendezvous', '3': 7, '4': 1, '5': 9, '10': 'rendezvous'},
     {'1': 'key', '3': 8, '4': 1, '5': 12, '10': 'key'},
     {'1': 'id', '3': 9, '4': 1, '5': 9, '10': 'id'},
+    {
+      '1': 'was_reset',
+      '3': 10,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.RemoteReset',
+      '10': 'wasReset'
+    },
   ],
 };
 
@@ -5186,7 +5194,21 @@ final $typed_data.Uint8List remoteDescriptor = $convert.base64Decode(
     'gDIAEoCVIFc3RhdGUSFAoFZXJyb3IYBCABKAlSBWVycm9yEioKB2RldmljZXMYBSADKAsyEC5u'
     'dXNoaS52MS5EZXZpY2VSB2RldmljZXMSKwoHcGFpcmluZxgGIAEoCzIRLm51c2hpLnYxLlBhaX'
     'JpbmdSB3BhaXJpbmcSHgoKcmVuZGV6dm91cxgHIAEoCVIKcmVuZGV6dm91cxIQCgNrZXkYCCAB'
-    'KAxSA2tleRIOCgJpZBgJIAEoCVICaWQ=');
+    'KAxSA2tleRIOCgJpZBgJIAEoCVICaWQSMgoJd2FzX3Jlc2V0GAogASgLMhUubnVzaGkudjEuUm'
+    'Vtb3RlUmVzZXRSCHdhc1Jlc2V0');
+
+@$core.Deprecated('Use remoteResetDescriptor instead')
+const RemoteReset$json = {
+  '1': 'RemoteReset',
+  '2': [
+    {'1': 'at', '3': 1, '4': 1, '5': 3, '10': 'at'},
+    {'1': 'files', '3': 2, '4': 3, '5': 9, '10': 'files'},
+  ],
+};
+
+/// Descriptor for `RemoteReset`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List remoteResetDescriptor = $convert.base64Decode(
+    'CgtSZW1vdGVSZXNldBIOCgJhdBgBIAEoA1ICYXQSFAoFZmlsZXMYAiADKAlSBWZpbGVz');
 
 @$core.Deprecated('Use deviceDescriptor instead')
 const Device$json = {
@@ -9633,6 +9655,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.Remote': Remote$json,
   '.nushi.v1.Device': Device$json,
   '.nushi.v1.Pairing': Pairing$json,
+  '.nushi.v1.RemoteReset': RemoteReset$json,
   '.nushi.v1.SetRemoteRequest': SetRemoteRequest$json,
   '.nushi.v1.SetRemoteResponse': SetRemoteResponse$json,
   '.nushi.v1.StartPairingRequest': StartPairingRequest$json,
