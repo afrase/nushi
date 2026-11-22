@@ -79,9 +79,17 @@ func (c *chat) requestPermission(ctx context.Context, req *acp.RequestPermission
 		if empty(bytes.TrimSpace(input)) {
 			input = json.RawMessage(item.Input)
 		}
+		// A stop meanwhile cancelled what the agent waits on; this ask,
+		// not yet a card, is one of them (ACP's cancel).
+		drops := c.drops
 		c.mu.Unlock()
 		item.ServerCommand, askID = c.svc.serverCommand(chatID, entryName(string(input)))
 		c.mu.Lock()
+		if c.drops != drops {
+			c.mu.Unlock()
+			c.svc.serverAnswered(askID, false)
+			return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{Cancelled: true}}, nil
+		}
 	}
 	id := c.addLocked(item)
 	c.waiting[id] = answer
@@ -172,6 +180,7 @@ func (c *chat) waitsLocked() bool {
 // as ACP asks of a client that stops a turn: each request answers
 // "cancelled" and marks its item so once it has the lock.
 func (c *chat) dropPromptsLocked() {
+	c.drops++
 	if !c.waitsLocked() {
 		return
 	}

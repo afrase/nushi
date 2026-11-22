@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -26,9 +27,13 @@ type fakeServers struct {
 	commands map[string]string
 	askedBy  []string
 	answers  []string // each ask's id and whether it was allowed
+	during   func()   // when set, runs as Command is asked, before it answers
 }
 
 func (f *fakeServers) Command(chatID, name string) (string, string) {
+	if f.during != nil {
+		f.during()
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.askedBy = append(f.askedBy, chatID)
@@ -202,6 +207,33 @@ func TestAPreviewStartAnswerReachesTheServers(t *testing.T) {
 	defer servers.mu.Unlock()
 	if want := []string{"ask1 true", "ask2 false", "ask3 false", "ask4 false"}; !slices.Equal(servers.answers, want) {
 		t.Errorf("answers %q, want %q", servers.answers, want)
+	}
+}
+
+// A stop while the card's command is read (outside the chat's lock)
+// cancels the ask: no card is left pending that no stop will cancel.
+func TestAStopWhileAPreviewStartIsReadCancelsIt(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	servers := &fakeServers{commands: map[string]string{"web": "npm run dev"}}
+	servers.during = func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		c.dropPromptsLocked() // as a Stop's cancelLocked does
+	}
+	svc.UseServers(servers)
+	options := []acp.PermissionOption{{OptionID: "yes", Name: "Yes", Kind: "allow_once"}}
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	resp, err := c.RequestPermission(ctx, &acp.RequestPermissionRequest{SessionID: "s1", Options: options,
+		ToolCall: acp.ToolCallUpdate{ToolCallID: "x", Title: "mcp__nushi__preview_start", RawInput: json.RawMessage(`{"name":"web"}`)}})
+	testcheck.NoErr(t, err)
+	if !resp.Outcome.Cancelled || ctx.Err() != nil {
+		t.Errorf("answered %+v, the wait %v", resp.Outcome, ctx.Err())
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.waiting) != 0 || slices.ContainsFunc(c.items, asking) {
+		t.Errorf("left waiting %v, items %+v", c.waiting, c.items)
 	}
 }
 
