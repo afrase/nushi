@@ -28,6 +28,34 @@ import 'package:nushi/widgets.dart';
 /// The MCP server of Nushi's own tools (the daemon's `chats.ToolsServer`).
 const nushiServer = 'nushi';
 
+/// The input a call shows: an MCP call's arguments alone when its input
+/// wraps them with the call's own server and tool (Codex's `{server, tool,
+/// arguments}`), which its title already says, so every agent's reads the
+/// same; else the input as the daemon keeps it (one cut short too).
+String shownInput(Item it) => _shownInputs[it] ??= _unwrapped(it);
+
+final _shownInputs = Expando<String>();
+
+String _unwrapped(Item it) {
+  final mcp = mcpOf(it);
+  if (mcp == null || !it.input.startsWith('{')) return it.input;
+  try {
+    final input = jsonDecode(it.input);
+    return switch (input) {
+      {
+        'server': final String server,
+        'tool': final String tool,
+        'arguments': final Object args,
+      }
+          when (server, tool) == mcp && input.length == 3 =>
+        const JsonEncoder.withIndent('  ').convert(args),
+      _ => it.input,
+    };
+  } on FormatException {
+    return it.input;
+  }
+}
+
 /// Whether [it] is a call to Nushi's show tool (ADR 0068), or the ask to
 /// run one; the daemon's `isShow` goes by the same.
 bool isShow(Item it) => it.mcpServer == nushiServer && it.mcpTool == 'show';
@@ -123,7 +151,7 @@ String toolTitle(Item it) {
   final mcp = mcpOf(it);
   if (mcp == null) return it.title;
   final (server, tool) = mcp;
-  final inner = innerTool(it.input, own: tool);
+  final inner = innerTool(shownInput(it), own: tool);
   return [server, tool, ?inner].join(' · ');
 }
 

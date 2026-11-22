@@ -160,7 +160,7 @@ String callTitle(Item it) {
 /// doesn't look in.
 String callFolded(Item it) => _foldedTexts[it] ??= [
   if (it.text.trim().isNotEmpty) it.text,
-  if (showsInput(it)) it.input,
+  if (showsInput(it)) shownInput(it),
   if (showsRawOutput(it)) it.rawOutput,
 ].join('\n');
 
@@ -536,7 +536,7 @@ class ToolCallView extends StatelessWidget {
                         // The header cuts it to a line.
                         FullTitle('\$ ${it.title}', bare: true),
                       for (final d in it.diffs) DiffBox(d),
-                      if (input) ToolSection('Input', RawText(it.input)),
+                      if (input) ToolSection('Input', RawText(shownInput(it))),
                       if (output && input)
                         ToolSection('Output', AgentMarkdown(it.text))
                       else if (output && serverTool(it) != null)

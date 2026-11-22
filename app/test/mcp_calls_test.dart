@@ -113,6 +113,8 @@ void main() {
         expect(find.textContaining(r'$ mcp'), findsNothing);
         expect(find.text('Input'), findsOneWidget);
         expect(find.textContaining('is:open label:bug'), findsOneWidget);
+        // Its arguments alone, as the title says the server and tool.
+        expect(find.textContaining('"server"'), findsNothing);
         expect(find.text('Preview'), findsOneWidget);
         expect(find.text('Start web'), findsOneWidget);
         expect(find.text('PORT=5173 /opt/homebrew/bin/pnpm run dev'), findsOne);
