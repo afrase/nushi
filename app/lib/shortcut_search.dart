@@ -100,9 +100,12 @@ bool shortcutMatches(
 /// hint, and × to empty it once it holds text. Esc empties it too, and
 /// only in an empty field goes on to Settings (which closes).
 class ShortcutSearchField extends StatelessWidget {
-  const new({required this.controller, super.key});
+  const new({required this.controller, super.key, this.focusNode});
 
   final TextEditingController controller;
+
+  /// Its focus, for the page to move the keyboard to it.
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +123,7 @@ class ShortcutSearchField extends StatelessWidget {
           child: TextField(
             key: const ValueKey('shortcuts-search'),
             controller: controller,
+            focusNode: focusNode,
             style: theme.ui(t.text, size: 12),
             decoration: InputDecoration(
               isDense: true,

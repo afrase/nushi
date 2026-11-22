@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/key_choice.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shortcut_row.dart';
 import 'package:nushi/shortcut_search.dart';
@@ -202,6 +203,23 @@ void main() {
       expect(_rows(tester), ['Show or hide sidebar']);
       await _type(tester, r'cmd \ ');
       expect(_rows(tester), isEmpty);
+      d.dispose();
+    }, variant: onMac);
+
+    testWidgets('Reset all while the search shows only fixed keys adds no '
+        'row, and the search keeps the keyboard', (tester) async {
+      final d = await shortcutsPage(tester);
+      shortcutKeys.value = {'pin': 'Cmd+J'};
+      await _type(tester, 'esc');
+      expect(_rows(tester), ['Stop', 'Rewind']);
+      await tapIt(tester, find.byKey(const ValueKey('shortcuts-reset-all')));
+      await tapIt(tester, find.text('Reset all'));
+      expect(savedKeys(), isEmpty);
+      expect(_rows(tester), ['Stop', 'Rewind']);
+      expect(
+        FocusManager.instance.primaryFocus?.debugLabel,
+        'shortcuts-search',
+      );
       d.dispose();
     }, variant: onMac);
 

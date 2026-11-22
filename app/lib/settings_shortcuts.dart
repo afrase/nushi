@@ -49,6 +49,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
   final _caps = <String, GlobalKey<ShortcutFieldState>>{};
   final _cancel = FocusNode(debugLabel: 'shortcut-cancel');
   final _search = TextEditingController();
+  final _searchFocus = FocusNode(debugLabel: 'shortcuts-search');
   String _query = '';
 
   /// The row last worked on (listening, a key recorded, cleared or
@@ -71,6 +72,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
   @override
   void dispose() {
     _search.dispose();
+    _searchFocus.dispose();
     for (final f in _fields.values) {
       f.dispose();
     }
@@ -188,13 +190,19 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
     if (!yes || !mounted) return;
     resetAllKeys();
     // The button goes off, which would leave the keyboard nowhere: the
-    // first row's field gets it (the first a search shows).
+    // first row's field gets it (the first a search shows), or the search
+    // when it shows none that can change (no row joins the list).
     final rows = [
       for (final g in shortcutGroupsShown())
         for (final e in g.rows)
           if (e.binding case final b? when _shows(g, e)) b,
     ];
-    _done(rows.firstOrNull ?? shortcutGroups.first.$2.first);
+    if (rows.firstOrNull case final first?) return _done(first);
+    setState(() {
+      _pending = null;
+      _refused = null;
+    });
+    _searchFocus.requestFocus();
   }
 
   @override
@@ -222,7 +230,10 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
         ],
         head: Padding(
           padding: const EdgeInsets.only(bottom: 18),
-          child: ShortcutSearchField(controller: _search),
+          child: ShortcutSearchField(
+            controller: _search,
+            focusNode: _searchFocus,
+          ),
         ),
         children: [
           if (groups.isEmpty)
