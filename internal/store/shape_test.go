@@ -112,3 +112,16 @@ func TestChatRecordsOfAnotherShape(t *testing.T) {
 		t.Errorf("unreadable %q", u)
 	}
 }
+
+// An agents.json of null (valid JSON, no prefs) reads as no prefs, and a
+// pick is written over it, not a panic on a nil map.
+func TestAgentsOfNull(t *testing.T) {
+	dir := t.TempDir()
+	testcheck.Write(t, filepath.Join(dir, "agents.json"), `null`)
+	s := New(dir)
+	testcheck.NoErr(t, s.SetMode("claude", "plan"))
+	testcheck.NoErr(t, s.SetPick("claude", "model", "m"))
+	if s.Mode("claude") != "plan" || s.Picks("claude")["model"] != "m" {
+		t.Errorf("mode %q, picks %v", s.Mode("claude"), s.Picks("claude"))
+	}
+}

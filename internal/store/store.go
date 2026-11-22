@@ -104,9 +104,14 @@ func (s *Store) changeAgent(agent string, change func(*agentPrefs)) error {
 	return writeJSON(path, prefs)
 }
 
+// agents reads agents.json; never a nil map, so a change can be made in
+// it even when the file holds null.
 func (s *Store) agents() (map[string]agentPrefs, error) {
-	prefs := map[string]agentPrefs{}
+	var prefs map[string]agentPrefs
 	_, err := readJSON(filepath.Join(s.dir, "agents.json"), &prefs)
+	if prefs == nil {
+		prefs = map[string]agentPrefs{}
+	}
 	return prefs, err
 }
 
