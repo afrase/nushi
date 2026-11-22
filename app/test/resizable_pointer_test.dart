@@ -203,7 +203,7 @@ void main() {
       }
       expect(width(tester), 430);
       expect(told, [410, 420, 430, null]);
-      expect(log(), contains('pane=preview check="move without its button"'));
+      expect(log(), contains('check="move without its button" pane=preview'));
       await send(tester, mouse.up());
       expect(told, [410, 420, 430, null]);
       await settle(tester);
@@ -230,7 +230,7 @@ void main() {
       }
       expect(width(tester), 430);
       expect(told, [410, 420, 430, null]);
-      expect(log(), contains('pane=preview check=hover'));
+      expect(log(), contains('check=hover pane=preview'));
       await send(tester, mouse.up());
       await settle(tester);
     });
