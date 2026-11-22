@@ -250,17 +250,22 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
               ),
             ),
           for (final (:group, :rows) in groups)
-            SettingsGroup(
-              title: group.title,
-              about: group.about,
-              children: [
-                for (final e in rows)
-                  if (e.binding case final b?)
-                    _row(context, b)
-                  else
-                    FixedShortcutRow(label: e.label, keys: e.keys),
-              ],
-            ),
+            if (shortcutLane(context, group) case final lane)
+              SettingsGroup(
+                title: group.title,
+                about: group.about,
+                children: [
+                  for (final e in rows)
+                    if (e.binding case final b?)
+                      _row(context, b, lane)
+                    else
+                      FixedShortcutRow(
+                        label: e.label,
+                        keys: e.keys,
+                        lane: lane,
+                      ),
+                ],
+              ),
         ],
       );
     },
@@ -283,7 +288,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
     );
   }
 
-  Widget _row(BuildContext context, Cmd key) {
+  Widget _row(BuildContext context, Cmd key, double lane) {
     final t = NushiTheme.of(context).t;
     final id = key.id!;
     final r = resolved(id);
@@ -309,6 +314,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
     final row = ShortcutRow(
       key: ValueKey('shortcut-row-$id'),
       label: bindingName(key),
+      lane: lane,
       onTap: () => _cap(key).currentState?.listen(),
       // Gone once it stops working: the action has a chosen key, or
       // another holds it.

@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -93,16 +95,35 @@ List<(String, String, List<SingleActivator>)> _fixed() {
 /// on a quiet cap where a binding's would be, with no hover, hand or
 /// focus.
 class FixedShortcutRow extends StatelessWidget {
-  const new({required this.label, required this.keys, super.key});
+  const new({
+    required this.label,
+    required this.keys,
+    super.key,
+    this.lane = 0,
+  });
 
   final String label;
   final String keys;
+
+  /// The group's caps' room ([ShortcutRow.lane]).
+  final double lane;
 
   @override
   Widget build(BuildContext context) => ShortcutRow(
     key: ValueKey('shortcut-fixed-$label'),
     label: label,
     slots: false,
+    lane: lane,
     cap: KeyCapButton(keys),
   );
 }
+
+/// The room [g]'s caps take, its widest's ([ShortcutRow.lane]), measured
+/// in [context], whatever a search shows of it.
+double shortcutLane(BuildContext context, ShortcutGroup g) => [
+  for (final e in g.rows)
+    KeyCapButton.widthOf(context, switch (e.binding) {
+      final b? => keyLabel(b),
+      null => e.keys,
+    }),
+].fold(KeyCapButton.minWidth, max);

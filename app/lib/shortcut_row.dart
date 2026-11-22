@@ -31,6 +31,7 @@ class ShortcutRow extends StatefulWidget {
     this.lineEnd = const [],
     this.onTap,
     this.slots = true,
+    this.lane = 0,
   });
 
   final String label;
@@ -45,6 +46,12 @@ class ShortcutRow extends StatefulWidget {
 
   /// Whether the row keeps the buttons' slots (a fixed key's has none).
   final bool slots;
+
+  /// The least room the cap takes, its group's widest cap's, the cap at
+  /// its right end: the slots and the second key then line up down the
+  /// group however long each key is (Linux's words). A cap wider than it
+  /// (listening) grows to the left.
+  final double lane;
 
   /// The least height of a row of one line.
   static const height = 36.0;
@@ -97,7 +104,15 @@ class _ShortcutRowState extends State<ShortcutRow> {
           _slot(widget.clear, shown: _hover || _focus),
           const SizedBox(width: 6),
         ],
-        widget.cap,
+        ConstrainedBox(
+          constraints: BoxConstraints(minWidth: widget.lane),
+          child: Align(
+            alignment: Alignment.centerRight,
+            widthFactor: 1,
+            heightFactor: 1,
+            child: widget.cap,
+          ),
+        ),
       ],
     );
     final line = widget.line;

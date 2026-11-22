@@ -34,7 +34,9 @@ TextSpan _keySpan(String keys, TextStyle style) => TextSpan(
 
 /// The width [keys] take in [style] as [keyText] draws them, at the
 /// text's scale in [context].
-double keyTextWidth(BuildContext context, String keys, TextStyle style) {
+double keyTextWidth(BuildContext context, String keys, TextStyle base) {
+  // As a Text draws it: over the style round it (a letter spacing too).
+  final style = DefaultTextStyle.of(context).style.merge(base);
   final p = TextPainter(
     text: TextSpan(style: style, children: [_keySpan(keys, style)]),
     textDirection: TextDirection.ltr,

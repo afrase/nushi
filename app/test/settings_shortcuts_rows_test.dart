@@ -349,6 +349,22 @@ void main() {
       d.dispose();
     }, variant: onMac);
 
+    testWidgets("on Linux a group's buttons and second keys line up however "
+        'long each key is', (tester) async {
+      shortcutsOnLinux();
+      final d = await shortcutsPage(tester);
+      final ids = ['palette', 'reloadPage', 'find', 'previousTab', 'nextTab'];
+      final lefts = {for (final id in ids) tester.getTopLeft(clearOf(id)).dx};
+      expect(lefts, hasLength(1), reason: '$lefts');
+      final seconds = {
+        for (final id in ['palette', 'previousTab', 'nextTab'])
+          tester.getTopRight(find.byKey(ValueKey('shortcut-second-$id'))).dx,
+      };
+      expect(seconds, hasLength(1), reason: '$seconds');
+      expect(expectCapsAtEdge(tester), greaterThan(20));
+      d.dispose();
+    }, variant: onMac);
+
     testWidgets("a fixed key's row has no hover, hand or focus", (
       tester,
     ) async {
