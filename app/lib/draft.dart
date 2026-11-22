@@ -128,14 +128,16 @@ class Draft extends ChangeNotifier {
 
   /// Puts everything written in [from] in this draft, empty: the box's
   /// text where its cursor was, its cards, images, files, outputs, quote,
-  /// subagent and subagents' boxes (a side chat kept as a chat).
+  /// subagent and subagents' boxes (a side chat kept as a chat). A
+  /// command still running stays: its run fills its card in [from]'s
+  /// outputs, so a copy here would never see its end.
   void takeFrom(Draft from) {
     text.value = from.text.value;
     mentions.addAll(from.mentions);
     replies.value = from.replies.value;
     images.value = from.images.value;
     files.value = from.files.value;
-    outputs.value = from.outputs.value;
+    outputs.value = [...from.outputs.value.where(outputDone)];
     quote.value = from.quote.value;
     toSubagent.value = from.toSubagent.value;
     for (final MapEntry(:key, :value) in from._subagents.entries) {

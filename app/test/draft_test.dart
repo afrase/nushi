@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/attached_files.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/code_runs.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/draft.dart';
@@ -132,6 +133,24 @@ void main() {
       final sub = Draft()..subagentBox('call1').text = 'for it';
       expect(sub.hasMessage, isFalse);
       expect(sub.isEmpty, isFalse);
+    });
+
+    test('taken over, a command still running stays behind', () {
+      final running = CodeRun('!0')..state = RunState.running;
+      final from = Draft()
+        ..outputs.value = [
+          _output('k', 'x'),
+          (
+            key: '!0',
+            command: 'make test',
+            exit: 0,
+            lines: 0,
+            text: '',
+            run: running,
+          ),
+        ];
+      final kept = Draft()..takeFrom(from);
+      expect(kept.outputs.value, [_output('k', 'x')]);
     });
 
     test('taken, it is all of it, and the box is empty', () {
