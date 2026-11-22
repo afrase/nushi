@@ -37,8 +37,8 @@ class AppLog {
 
   // What the daemon keeps of an app's line (internal/api/logs.go), so a
   // line in app.log is no longer than the same line in nushid.log.
-  static const _maxMessage = 2 << 10;
-  static const _maxStack = 16 << 10;
+  static const int _maxMessage = 2 << 10;
+  static const int _maxStack = 16 << 10;
   static const _maxAttrs = 16;
   static const _maxAttr = 256;
 
