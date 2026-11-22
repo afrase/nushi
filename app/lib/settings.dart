@@ -866,6 +866,9 @@ File get _settings => File('$dataDir/app.json');
 Kept? _launch = _readLaunch();
 
 Kept? _readLaunch() {
+  // The phone keeps no file: none to read or set aside, and no data
+  // folder to name one in.
+  if (kIsWeb) return (json: <String, Object?>{}, setAside: false);
   try {
     return readKept(_settings);
   } on Object catch (e) {
