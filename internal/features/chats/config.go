@@ -94,7 +94,7 @@ const ultracodeID = "nushi:ultracode"
 func (c *chat) ultracodeOption() model.ConfigOption {
 	return model.ConfigOption{ID: ultracodeID, Name: "Ultracode", Category: "ultracode", Type: "boolean",
 		Current:     strconv.FormatBool(c.ultracode.Load()),
-		Description: "Standing multi-agent workflows on every task (Claude Code's ultracode); changing it restarts the chat's agent"}
+		Description: "Standing multi-agent workflows on every task; changing it restarts the chat's agent"}
 }
 
 // SetConfig sets one of a chat's options. When the user picks a mode the
