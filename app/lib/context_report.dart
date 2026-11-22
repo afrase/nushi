@@ -117,9 +117,11 @@ int? untilCompact(List<ContextCategory> cs) {
 /// said what fills it, [categories]) a row per kind, largest first, with its
 /// color, count and share in columns, the buffer and the free space last;
 /// the deferred ones dimmed with a dash; [lists], each a row that opens;
-/// and "N until auto-compact", with Compact (Claude's Compact session) when
-/// there's [onCompact]. Only the line and the bar for an agent that reports
-/// a total; nothing for one that reports neither.
+/// and "N until auto-compact" when the agent counts a buffer it compacts
+/// into. Compact (Claude's Compact session) ends the block whenever there's
+/// [onCompact], the agent's own compact command, with or without that line.
+/// Only the line and the bar (and Compact) for an agent that reports a
+/// total; nothing for one that reports neither.
 class ContextReport extends StatelessWidget {
   const new(
     this.usage, {
@@ -197,18 +199,20 @@ class ContextReport extends StatelessWidget {
         for (final c in later) _row(theme, c, dim: true),
         if (lists.isNotEmpty) const SizedBox(height: 8),
         for (final l in lists) _ListRow(l),
-        if (until != null) ...[
+        if (until != null || onCompact != null) ...[
           const SizedBox(height: 10),
           Row(
             spacing: 12,
             children: [
               Expanded(
-                child: Text(
-                  '${fineTokens(until)} until auto-compact',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.ui(t.textMuted),
-                ),
+                child: until == null
+                    ? const SizedBox.shrink()
+                    : Text(
+                        '${fineTokens(until)} until auto-compact',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.ui(t.textMuted),
+                      ),
               ),
               if (onCompact case final compact?)
                 Button(

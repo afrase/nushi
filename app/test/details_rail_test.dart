@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/artifacts_widget.dart';
 import 'package:nushi/background_tasks_widget.dart';
 import 'package:nushi/context_report.dart';
+import 'package:nushi/controls.dart' show Button;
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -120,15 +121,26 @@ void main() {
     await closeView(tester, d);
   }, variant: macOnly);
 
-  testWidgets('an agent that reports only a total: the line and the bar', (
-    tester,
-  ) async {
-    final (d, _) = await railApp(tester);
+  testWidgets('an agent that reports only a total: the line and the bar, '
+      'and Compact, since it has a compact command', (tester) async {
+    final (d, fake) = await railApp(tester);
     expect(inRail(find.text('55% used')), findsOne);
     expect(inRail(find.text('545.5k / 1M')), findsOne);
     expect(inRail(find.text('Messages')), findsNothing);
     expect(inRail(find.textContaining('until auto-compact')), findsNothing);
     expect(inRail(find.textContaining('fills it')), findsNothing);
+    // At the widget's right, as beside "until auto-compact".
+    final compact = inRail(find.text('Compact'));
+    expect(compact, findsOne);
+    expect(
+      tester
+          .getRect(find.ancestor(of: compact, matching: find.byType(Button)))
+          .right,
+      closeTo(1700 - NushiTheme.windowPad - 16, 1),
+    );
+    await tester.tap(compact);
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<SendPromptRequest>().single.text, '/compact');
     await closeView(tester, d);
   }, variant: macOnly);
 
@@ -244,6 +256,55 @@ void main() {
       await expectLater(
         railPanel,
         matchesGoldenFile('goldens/details_rail_$name.png'),
+      );
+      await closeView(tester, d);
+    }, variant: macOnly);
+  }
+
+  // The Context widget of an agent that has a compact command and reports
+  // only a total (no categories, so no "until auto-compact"), to look at.
+  // Under 1000 wide the details hide, so 1000 is the narrowest it shows.
+  for (final (name, brightness) in [
+    ('dark', Brightness.dark),
+    ('light', Brightness.light),
+  ]) {
+    for (final width in [1700.0, 1000.0]) {
+      testWidgets('render: Context, a total and a compact command, '
+          '${width.toInt()} wide, $name', (tester) async {
+        final (d, _) = await railApp(
+          tester,
+          size: Size(width, 1000),
+          brightness: brightness,
+        );
+        expectTextInside(tester, width);
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'context_total_${width.toInt()}_$name',
+        );
+        await closeView(tester, d);
+      }, variant: macOnly);
+    }
+  }
+
+  for (final (name, brightness) in [
+    ('dark', Brightness.dark),
+    ('light', Brightness.light),
+  ]) {
+    testWidgets('golden: Context, a total and Compact, $name', (tester) async {
+      final (d, _) = await railApp(
+        tester,
+        size: const Size(1400, 1000),
+        brightness: brightness,
+      );
+      await expectLater(
+        find
+            .ancestor(
+              of: inRail(find.text('55% used')),
+              matching: find.byType(PanelWidget),
+            )
+            .first,
+        matchesGoldenFile('goldens/context_total_$name.png'),
       );
       await closeView(tester, d);
     }, variant: macOnly);
