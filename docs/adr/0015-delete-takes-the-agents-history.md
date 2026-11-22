@@ -23,3 +23,6 @@ Claude Code deletes sessions older than `cleanupPeriodDays` (30 by default) when
 
 ## Amendment (2026-10-26, later): a chat with Nushi's copy stays
 A chat whose session its agent deleted stays when Nushi has a copy of its transcript ([ADR 0047](0047-nushis-copy-of-transcripts.md)): read-only, the copy its transcript, with Delete… and Start a new chat here. Clearing the copy lets it go as above. Delete removes the chat's copy with the rest.
+
+## Amendment (2026-11-22): an agent that won't start keeps its history, not the chat
+When the agent can't start to say whether it deletes (its quick ready check fails, or its start does), the plan says its history stays, as for an agent without `session/delete`, and Delete removes the rest: a chat of an uninstalled or broken agent can still be deleted. Nothing is remembered of a failed start, so the next dialog asks again. When the plan said the history goes but the agent won't start at Delete, the chat stays (the user was told its history goes) and the error says so; the next Delete plans again.

@@ -2,11 +2,13 @@ package chats
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
@@ -342,5 +344,84 @@ func TestAWorktreesRemovalOutlivesItsRequest(t *testing.T) {
 		if !slices.Equal(wts.removed, []string{w}) || !slices.Equal(wts.liveAtRm, []bool{true}) {
 			t.Errorf("delete %v: removed %q, its context live %v", viaDelete, wts.removed, wts.liveAtRm)
 		}
+	}
+}
+
+// A chat whose agent won't start (not installed, not set up, a broken
+// adapter) can still be deleted: the plan says its history stays, which
+// the dialog shows, and Delete removes the rest. Nothing is started when
+// the quick check already says it can't (ADR 0015).
+func TestAChatWhoseAgentWontStartCanBeDeleted(t *testing.T) {
+	for _, why := range []string{"ready", "launch"} {
+		t.Run(why, func(t *testing.T) {
+			ctx := context.Background()
+			agent := &fakeAgent{deletes: true}
+			testcheck.NoErr(t, json.Unmarshal([]byte(`{"sessionId":"s1"}`), &agent.session))
+			var notReady atomic.Bool
+			ready := func() error {
+				if notReady.Load() {
+					return errors.New("claude isn't installed")
+				}
+				return nil
+			}
+			svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch, Ready: ready}}, Options{})
+			t.Cleanup(svc.Close)
+			c := startChat(t, svc, t.TempDir())
+			agent.mu.Lock()
+			launches := agent.launches
+			if why == "ready" {
+				notReady.Store(true)
+			} else {
+				agent.launchErr = errors.New("exec: no such file")
+			}
+			agent.mu.Unlock()
+
+			p, err := svc.PlanDelete(ctx, c.id)
+			if err != nil || p.History {
+				t.Fatalf("PlanDelete = %+v, %v; want the history to stay", p, err)
+			}
+			testcheck.NoErr(t, svc.Delete(ctx, c.id, nil))
+			if _, err := svc.stored(c.id); err == nil {
+				t.Error("the chat stayed")
+			}
+			agent.mu.Lock()
+			defer agent.mu.Unlock()
+			if len(agent.deleted) != 0 {
+				t.Errorf("history deleted: %v", agent.deleted)
+			}
+			if why == "ready" && agent.launches != launches {
+				t.Errorf("%d agents started though it wasn't ready", agent.launches-launches)
+			}
+		})
+	}
+}
+
+// An agent that could delete its history but won't start when the chat is
+// deleted keeps the chat (the dialog said the history goes) and is asked
+// again: the next plan says the history stays, and that Delete goes.
+func TestAnAgentThatStopsStartingIsAskedAgain(t *testing.T) {
+	ctx := context.Background()
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.deletes = true
+	p, err := svc.PlanDelete(ctx, c.id)
+	if err != nil || !p.History {
+		t.Fatalf("PlanDelete = %+v, %v", p, err)
+	}
+	agent.mu.Lock()
+	agent.launchErr = errors.New("exec: no such file")
+	agent.mu.Unlock()
+	err = svc.Delete(ctx, c.id, nil)
+	if err == nil {
+		t.Fatal("deleted, though the history the dialog said goes stayed")
+	}
+	if _, err := svc.stored(c.id); err != nil {
+		t.Fatalf("the chat went: %v", err)
+	}
+	if p, err := svc.PlanDelete(ctx, c.id); err != nil || p.History {
+		t.Fatalf("the next PlanDelete = %+v, %v; want the history to stay", p, err)
+	}
+	testcheck.NoErr(t, svc.Delete(ctx, c.id, nil))
+	if _, err := svc.stored(c.id); err == nil {
+		t.Error("the chat stayed")
 	}
 }

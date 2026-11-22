@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -48,7 +49,7 @@ type WorktreeOptions struct {
 }
 
 // PlanDelete says what Delete would remove. The first time, it starts the
-// agent to learn whether it can delete its history.
+// agent to learn whether it can delete its history (probeDeletes).
 func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, error) {
 	c, err := s.listed(chatID)
 	if err != nil {
@@ -76,16 +77,27 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 	s.mu.Lock()
 	known := c.kind.deletes
 	s.mu.Unlock()
-	if known == nil {
-		agent, deletes, err := s.startDeleter(ctx, c)
-		if err != nil {
-			return DeletePlan{}, err
-		}
-		_ = agent.Close() // its process is gone either way
-		known = &deletes
-	}
-	p.History = *known
+	p.History = known != nil && *known || known == nil && s.probeDeletes(ctx, c)
 	return p, nil
+}
+
+// probeDeletes starts the chat's agent to learn whether it deletes its
+// history. One that can't start now (not installed, not set up, a broken
+// adapter) doesn't: its history stays, as the dialog then says, and the
+// chat can still be deleted. Nothing is remembered of a failed start, so
+// the next plan asks again.
+func (s *Service) probeDeletes(ctx context.Context, c *chat) bool {
+	if err := c.kind.ready(); err != nil {
+		c.log().Info("the agent can't start to delete its history; it stays", "err", err)
+		return false
+	}
+	agent, deletes, err := s.startDeleter(ctx, c)
+	if err != nil {
+		c.log().Warn("the agent didn't start to delete its history; it stays", "err", err)
+		return false
+	}
+	_ = agent.Close() // its process is gone either way
+	return deletes
 }
 
 // othersWorkIn says whether a chat but c, archived or not, has its folder
@@ -191,11 +203,17 @@ func othersInWorktrees(wts []WorktreePlan, opts DeleteOptions) error {
 	return nil
 }
 
-// deleteHistory has a new agent delete its history of sessions.
+// deleteHistory has a new agent delete its history of sessions. When it
+// won't start, what Nushi knew of its deleting is forgotten, so the next
+// plan asks again and, if it still won't start, says the history stays.
 func (s *Service) deleteHistory(ctx context.Context, c *chat, sessions []string) error {
 	agent, deletes, err := s.startDeleter(ctx, c)
 	if err != nil {
-		return err
+		s.mu.Lock()
+		c.kind.deletes = nil
+		s.mu.Unlock()
+		name := cmp.Or(c.kind.Title, c.kind.Name)
+		return fmt.Errorf("%s didn't start to delete its history, so the chat stays (Delete again deletes it, leaving the history if %s still won't start): %w", name, name, err)
 	}
 	defer agent.Close() //nolint:errcheck // a deleter, stopped when done
 	if !deletes {

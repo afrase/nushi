@@ -155,6 +155,7 @@ type fakeAgent struct {
 	turnErr     error              // a prompt's turn fails
 	lastWords   *acp.SessionUpdate // sent as it stops
 	launches    int
+	launchErr   error // a launch fails with it, as of an agent that won't start
 	closed      int
 	refuseSteer bool  // steering answers "no turn runs"
 	steerErr    error // steering fails
@@ -183,6 +184,9 @@ type proc struct {
 func (f *fakeAgent) launch(h acp.Client, _ *slog.Logger) (Agent, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.launchErr != nil {
+		return nil, f.launchErr
+	}
 	f.h = h
 	f.launches++
 	if f.cur != nil && !f.cur.ended() {
