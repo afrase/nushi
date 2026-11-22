@@ -101,9 +101,19 @@ func absolute(folder string) error {
 	return nil
 }
 
-// reader is agent's reader; "" is Claude's (an app before API 67).
+// named is the agent a request names: "" is the first agent listed (an
+// app before API 67 sent none, meaning Claude, which is first in the
+// table), and stays "" when none is, which no reader has.
+func (s *Service) named(agent string) string {
+	if agent == "" && len(s.order) > 0 {
+		return s.order[0]
+	}
+	return agent
+}
+
+// reader is agent's reader.
 func (s *Service) reader(agent string) (Reader, error) {
-	if r, ok := s.readers[cmp.Or(agent, "claude")]; ok {
+	if r, ok := s.readers[s.named(agent)]; ok {
 		return r, nil
 	}
 	return nil, fmt.Errorf("Nushi doesn't know %q's skills", agent)
@@ -118,6 +128,7 @@ func (s *Service) List(ctx context.Context, agent, folder string) (model.Skills,
 	if err := absolute(folder); err != nil {
 		return model.Skills{}, err
 	}
+	agent = s.named(agent)
 	r, err := s.reader(agent)
 	if err != nil {
 		return model.Skills{NoSkills: "Nushi doesn't know where this agent keeps skills."}, nil //nolint:nilerr // said in the list
@@ -128,7 +139,7 @@ func (s *Service) List(ctx context.Context, agent, folder string) (model.Skills,
 	}
 	_, out.HasBuiltIn = r.(BuiltIn)
 	_, out.HasPlugins = r.(Plugins)
-	shared := s.shared(ctx, folder, map[string]model.Skills{cmp.Or(agent, "claude"): out})
+	shared := s.shared(ctx, folder, map[string]model.Skills{agent: out})
 	vias := map[string]bool{}
 	for _, sk := range shared {
 		for _, a := range sk.Agents {

@@ -181,6 +181,27 @@ func TestSetSkillOnGoesBySource(t *testing.T) {
 	}
 }
 
+// An empty agent is the first agent listed, by place, not by name; with
+// none listed it is refused, not a panic.
+func TestAnEmptyAgentIsTheFirstListed(t *testing.T) {
+	svc, calls := fakes()
+	svc.order = []string{"codex", "claude"}
+	ctx := context.Background()
+	if err := svc.SetSkillOn(ctx, "", "/f", "user", "x", false); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"codex skill user x false"}; !reflect.DeepEqual(*calls, want) {
+		t.Errorf("calls = %q", *calls)
+	}
+	none := New(nil, svc.readers, svc.canTrash, svc.trash)
+	if err := none.SetSkillOn(ctx, "", "/f", "user", "x", false); err == nil {
+		t.Error("an empty agent with no agents listed: not refused")
+	}
+	if got, err := none.List(ctx, "", "/f"); err != nil || got.NoSkills == "" {
+		t.Errorf("List with no agents listed = %+v, %v", got, err)
+	}
+}
+
 // Deleting a shared skill takes the links to it too, then its folder;
 // an agent's own goes through its reader. Link only for a listed shared
 // skill and an agent that links.
