@@ -90,11 +90,16 @@ class Terminals extends ChangeNotifier {
   /// Opens a terminal for a chat (in [folder], or the chat's) and shows it.
   /// Without [show] it's only listed (a code block's run, which the panel
   /// shows when asked), its emulator attached at once to answer the
-  /// shell's queries: fish waits on them before its first prompt.
+  /// shell's queries: fish waits on them before its first prompt. With a
+  /// [command] (a daemon of `commandTerminalApi` or newer) the terminal is
+  /// the login shell running it, listed with it (`Terminal.command`), and
+  /// it ends when the command does: its session's stream says so, with
+  /// the exit code, in its last message.
   Future<pb.Terminal> open(
     String chatId, {
     String folder = '',
     bool show = true,
+    String command = '',
   }) async {
     final resp = await client.openTerminal(
       pb.OpenTerminalRequest(
@@ -102,6 +107,7 @@ class Terminals extends ChangeNotifier {
         folder: folder,
         cols: 80,
         rows: 24,
+        command: command,
       ),
     );
     final list = _lists[chatId] ?? [];

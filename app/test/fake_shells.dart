@@ -8,7 +8,9 @@ import 'fake_daemon.dart';
 /// A chat's terminals as the daemon keeps them, for code block runs and
 /// the terminal panel: what each one kept ([replay]), what its shell
 /// writes as it's attached ([onAttach]) and next ([write]), and what the
-/// app typed into each ([typed]; into any, in order, [typedAll]).
+/// app typed into each ([typed]; into any, in order, [typedAll]). A
+/// terminal opened with a command (API 143) plays what [commands] says it
+/// prints and exits with once attached, or runs until [ends].
 class FakeShells {
   new(this.fake, {List<Terminal>? terminals}) {
     list.addAll(terminals ?? const []);
@@ -32,6 +34,30 @@ class FakeShells {
   String newReplay = prompt;
   int _opened = 0;
 
+  /// What each command prints and the code it exits with, by its text:
+  /// its terminal plays them as it's attached, then ends. A command not
+  /// in it runs until [ends].
+  final commands = <String, ({String output, int exit})>{};
+
+  /// The commands opened, in order.
+  final opened = <String>[];
+
+  /// The command in terminal [id] ends with [exit]: its stream's last
+  /// message says so, and it's listed as exited.
+  void ends(String id, {int exit = 0}) {
+    _exit(id, exit);
+    _live[id]?.add(AttachTerminalResponse(exited: true, exitCode: exit));
+  }
+
+  void _exit(String id, int exit) {
+    final i = list.indexWhere((t) => t.id == id);
+    if (i >= 0) {
+      list[i] = list[i].deepCopy()
+        ..exited = true
+        ..exitCode = exit;
+    }
+  }
+
   /// The shell in terminal [id] writes [s].
   void write(String id, String s) =>
       _live[id]?.add(AttachTerminalResponse(data: utf8.encode(s)));
@@ -47,7 +73,10 @@ class FakeShells {
 
   Object? _answer(Object input) => switch (input) {
     ListTerminalsRequest() => ListTerminalsResponse(terminals: list),
-    OpenTerminalRequest(:final chatId) => _open(chatId),
+    OpenTerminalRequest(:final chatId, :final command) => _open(
+      chatId,
+      command,
+    ),
     WriteTerminalRequest(:final terminalId, :final data) => _typed(
       terminalId,
       utf8.decode(data),
@@ -55,15 +84,20 @@ class FakeShells {
     _ => null,
   };
 
-  OpenTerminalResponse _open(String chatId) {
+  OpenTerminalResponse _open(String chatId, String command) {
     final t = Terminal(
       id: 'new${_opened++}',
       chatId: chatId,
       folder: '/Users/me/nushi',
       shell: 'fish',
+      command: command,
     );
     list.add(t);
-    replay[t.id] = newReplay;
+    if (command.isEmpty) {
+      replay[t.id] = newReplay;
+    } else {
+      opened.add(command);
+    }
     return OpenTerminalResponse(terminal: t);
   }
 
@@ -80,12 +114,24 @@ class FakeShells {
     // ignore: close_sinks
     final live = _live[id] ??=
         StreamController<AttachTerminalResponse>.broadcast();
+    final command = list.where((t) => t.id == id).firstOrNull?.command;
+    final plays = commands[command];
     Stream<AttachTerminalResponse> attach() async* {
       yield AttachTerminalResponse(data: utf8.encode(replay[id] ?? ''));
+      if (plays != null) {
+        yield AttachTerminalResponse(data: utf8.encode(plays.output));
+        _exit(id, plays.exit);
+        yield AttachTerminalResponse(exited: true, exitCode: plays.exit);
+        return;
+      }
       if (onAttach[id] case final s?) {
         yield AttachTerminalResponse(data: utf8.encode(s));
       }
-      yield* live.stream;
+      // Its last message is its exit's, as the daemon's stream ends.
+      await for (final m in live.stream) {
+        yield m;
+        if (m.exited) return;
+      }
     }
 
     return attach();
