@@ -141,10 +141,14 @@ class MainFlutterWindow: NSWindow {
           return result(name.hasSuffix(".app") ? String(name.dropLast(4)) : name)
         }
         guard call.method == "open" else { return result(FlutterMethodNotImplemented) }
+        // Only http, https and file, whatever the Dart side passes: every
+        // link and page leaving the app comes here (web_views.dart).
         guard let text = call.arguments as? String, let url = URL(string: text),
-          ["http", "https", "file"].contains(url.scheme?.lowercased() ?? ""),
-          let browser = NSWorkspace.shared.urlForApplication(toOpen: URL(string: "https://example.com")!)
+          ["http", "https", "file"].contains(url.scheme?.lowercased() ?? "")
         else { return result(FlutterError(code: "refused", message: "Not an address to open", details: nil)) }
+        guard let browser = NSWorkspace.shared.urlForApplication(toOpen: URL(string: "https://example.com")!) else {
+          return result(FlutterError(code: "no-browser", message: "No app opens https", details: nil))
+        }
         NSWorkspace.shared.open([url], withApplicationAt: browser, configuration: NSWorkspace.OpenConfiguration()) { _, error in
           DispatchQueue.main.async {
             result(error.map { FlutterError(code: "failed", message: $0.localizedDescription, details: nil) })

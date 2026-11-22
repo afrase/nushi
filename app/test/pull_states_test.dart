@@ -114,7 +114,7 @@ void main() {
         reason: 'inside the bar',
       );
       final opened = <Uri>[];
-      fakeWebViews().link = (url) async => opened.add(url);
+      fakeWebViews().open = (url) async => opened.add(url);
       await tester.tap(chip);
       await tester.pumpAndSettle();
       expect(opened, [

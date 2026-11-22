@@ -142,16 +142,6 @@ mixin OutsideTabs implements WebViews {
   @override
   BrowserHost tab(BrowserTab tab) => OutsideTab(tab);
 
-  /// The browser that opens https, as [openWithBrowser], with its errors,
-  /// for http and https alone (never a file, whatever a caller passes).
-  @override
-  Future<void> openLink(Uri url) async {
-    if (url.scheme != 'http' && url.scheme != 'https') {
-      throw const BrowserError('Only a web link opens in the browser.');
-    }
-    await openWithBrowser(url);
-  }
-
   /// No web view takes presses.
   @override
   Future<Duration?> sincePress({bool pointerOnly = false}) async => null;

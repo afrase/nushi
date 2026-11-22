@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:nushi/clipboard_files_linux.dart';
 import 'package:nushi/desktop_linux.dart';
-import 'package:nushi/web_views.dart' show BrowserError;
+import 'package:nushi/web_views.dart' show BrowserError, openInDefaultBrowser;
 import 'package:nushi/web_views_linux.dart';
 import 'package:nushi/window_drag_linux.dart';
 
@@ -197,9 +197,11 @@ void main() {
         'variables', () async {
       final before = _launched('browser').length;
       const web = LinuxWebViews();
-      await web.openLink(Uri.parse('https://example.com/pull/7'));
+      // A link goes to the runner's browser; anything but a web one is
+      // refused before it reaches the runner.
+      await web.openWithBrowser(Uri.parse('https://example.com/pull/7'));
       await expectLater(
-        web.openLink(Uri.file('${work.path}/run me.sh')),
+        openInDefaultBrowser(Uri.file('${work.path}/run me.sh')),
         throwsA(isA<BrowserError>()),
       );
       await _until('the browser', () => _launched('browser').length > before);

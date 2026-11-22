@@ -8,16 +8,18 @@ import 'package:nushi/toast.dart';
 import 'package:nushi/web_page.dart' show openInBrowser, openLinkOrSay;
 import 'package:nushi/web_views.dart';
 import 'package:nushi/web_views_linux.dart';
+import 'package:nushi/web_views_macos.dart';
 
 import 'harness.dart';
 import 'outside_fixture.dart';
 
 // The links a click opens outside a chat's own pages (Jira's, GitHub's, a
 // terminal's, the update card's, the agents' and an account's page) and
-// mail: on the Mac through url_launcher, as always; on Linux through the
-// runner's nushi/browser, whose launch leaves Nushi's variables out of the
-// app it starts (ADR 0104). A click that opens nothing says why in a toast,
-// as a page's Open in browser does.
+// mail: through the platform's nushi/browser, the app that opens https,
+// never url_launcher (on Linux the runner's launch leaves Nushi's variables
+// out of the app it starts, ADR 0104), and only an http or https address.
+// A click that opens nothing says why in a toast, as a page's Open in
+// browser does.
 
 /// What url_launcher was asked to open while the test runs, answering
 /// [opens]: its default platform's channel, as a test host has it (no app
@@ -76,29 +78,73 @@ Future<void> _openEachWay(WidgetTester tester, String url) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('on the Mac a link opens with url_launcher, as it always did, '
-      'and the runner hears nothing', (tester) async {
+  testWidgets('on the Mac a link opens with the browser that opens https, '
+      'through the Swift side, never url_launcher', (tester) async {
     final launched = _launched();
     final runner = answerBrowser((_) => null);
     await _openEachWay(tester, 'https://github.com/afrase/nushi/pull/7');
-    expect(launched, List.filled(3, 'https://github.com/afrase/nushi/pull/7'));
-    expect(runner, isEmpty);
+    expect(launched, isEmpty);
+    expect([
+      for (final c in runner) (c.method, c.arguments),
+    ], List.filled(3, ('open', 'https://github.com/afrase/nushi/pull/7')));
     expect(_said(tester), isEmpty);
   });
 
-  testWidgets('on the Mac a link url_launcher couldn’t open says so, a '
-      'chat’s too', (tester) async {
-    _launched(opens: false);
+  testWidgets('on the Mac a link that opens nothing says why, a chat’s '
+      'too', (tester) async {
+    answerBrowser((_) => throw PlatformException(code: 'no-browser'));
+    const none =
+        'No default browser is set: choose one in your system’s settings.';
     final context = await _window(tester);
     await openLinkOrSay(context, Uri.parse('https://example.com'));
     await tester.pump();
-    expect(_said(tester), ['Couldn’t open your browser.']);
+    expect(_said(tester), [none]);
     Toasts.maybeOf(context)!.clear();
     await tester.pumpAndSettle();
     await openWebLink(context, Uri.parse('https://example.com'));
     await tester.pump();
-    expect(_said(tester), ['Couldn’t open your browser.']);
+    expect(_said(tester), [none]);
   });
+
+  for (final (platform, web) in [
+    ('the Mac', const MacWebViews()),
+    ('Linux', const LinuxWebViews()),
+  ]) {
+    test(
+      'on $platform only http and https open in the default browser',
+      () async {
+        native.web = web;
+        final launched = _launched();
+        final runner = answerBrowser((_) => null);
+        for (final url in [
+          'file:///Users/me/run.command',
+          'javascript:alert(1)',
+          'zoommtg://zoom.us/join?confno=1',
+          'mailto:me@example.com',
+        ]) {
+          await expectLater(
+            openInDefaultBrowser(Uri.parse(url)),
+            throwsA(
+              isA<BrowserError>().having(
+                (e) => e.message,
+                'message',
+                'Only a web link opens in the browser.',
+              ),
+            ),
+            reason: url,
+          );
+        }
+        expect(runner, isEmpty);
+        await openInDefaultBrowser(Uri.parse('http://example.com/a'));
+        await openInDefaultBrowser(Uri.parse('HTTPS://example.com/b'));
+        expect(
+          [for (final c in runner) c.arguments],
+          ['http://example.com/a', 'https://example.com/b'],
+        );
+        expect(launched, isEmpty);
+      },
+    );
+  }
 
   group('on Linux', () {
     setUp(() => native.web = const LinuxWebViews());

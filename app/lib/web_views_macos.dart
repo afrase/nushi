@@ -29,22 +29,25 @@ class MacWebViews implements WebViews {
   @override
   DiagramHost diagram() => WebKitDiagram();
 
-  /// The Swift side opens it with the app that opens https.
+  /// The Swift side opens it with the app that opens https, refusing any
+  /// scheme but http, https and file, and says why it couldn't:
+  /// `no-browser` when nothing opens https, `failed` (with macOS's reason)
+  /// or `refused` otherwise, as Linux's runner does.
   @override
-  Future<void> openWithBrowser(Uri url) =>
-      _browser.invokeMethod('open', '$url');
+  Future<void> openWithBrowser(Uri url) async {
+    try {
+      await _browser.invokeMethod<void>('open', '$url');
+    } on PlatformException catch (e) {
+      throw BrowserError(switch (e.code) {
+        'no-browser' =>
+          'No default browser is set: choose one in your system’s settings.',
+        _ => 'Couldn’t open your browser: ${e.message ?? e.code}',
+      });
+    }
+  }
 
   @override
   Future<void> openMail(Uri url) => launchUrl(url);
-
-  /// Launch Services' default app for the link, as the app always opened
-  /// links; url_launcher answers false when nothing opened it.
-  @override
-  Future<void> openLink(Uri url) async {
-    if (!await launchUrl(url)) {
-      throw const BrowserError('Couldn’t open your browser.');
-    }
-  }
 
   /// The Swift side's event monitor sees the presses (the plugin doesn't
   /// give WebKit's navigation type either).

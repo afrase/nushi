@@ -28,23 +28,16 @@ abstract interface class WebViews {
   /// to draw it in (Linux): the file shows its source.
   DiagramHost? diagram();
 
-  /// Opens [url], an http(s) or file address ([openInBrowser] lets no
-  /// other through), with the app that opens https, so a file is never
-  /// run by the app its type has. Throws when it can't (no default
-  /// browser), a [BrowserError] where the platform has words for why.
+  /// Opens [url], an http(s) or file address ([openInBrowser] and
+  /// [openInDefaultBrowser] let no other through, and each platform's
+  /// sink refuses any other too), with the app that opens https, so a file
+  /// is never run by the app its type has. Throws when it can't (no
+  /// default browser), a [BrowserError] where the platform has words for
+  /// why.
   Future<void> openWithBrowser(Uri url);
 
   /// Opens [url], a mailto: address, with the mail app.
   Future<void> openMail(Uri url);
-
-  /// Opens [url], a web link the user clicked (http or https, a
-  /// `webLink`), in the default browser as the platform opens links: on
-  /// the Mac through url_launcher (Launch Services), on Linux through the
-  /// runner, whose launch gives the browser none of Nushi's variables
-  /// (ADR 0104). Linux's opens nothing else. Throws when nothing opened, a
-  /// [BrowserError] where the platform has words for why, which the click
-  /// says in a toast (`openLinkOrSay`).
-  Future<void> openLink(Uri url);
 
   /// How long ago the user last pressed, let go, or hit Return, Enter or
   /// Space in a web view in the window, null if never or since the last
@@ -68,16 +61,23 @@ abstract interface class WebViews {
 bool get webEmbedded => !kIsWeb && native.web.embedded;
 
 /// Opens [url], a web link the user clicked (Jira's, GitHub's, a
-/// terminal's, the agents' or an account's page), in the default browser:
-/// the platform's [WebViews.openLink], or, in the phone's web app, which
-/// has no native edge, a new tab (url_launcher). Throws as
-/// [WebViews.openLink] does; a click goes through `openLinkOrSay`, which
-/// says why.
+/// terminal's, a chat's, the agents' or an account's page), in the
+/// default browser, the one way any link leaves the app: http and https
+/// only, whoever passed it (never a file, a `javascript:` or an app's own
+/// scheme); then the platform's [WebViews.openWithBrowser] (on Linux the
+/// runner's launch gives the browser none of Nushi's variables, ADR
+/// 0104), or, in the phone's web app, which has no native edge, a new tab
+/// (url_launcher). Throws a [BrowserError] when it refuses, and as
+/// [WebViews.openWithBrowser] does; a click goes through `openLinkOrSay`,
+/// which says why.
 Future<void> openInDefaultBrowser(Uri url) async {
+  if (url.scheme != 'http' && url.scheme != 'https') {
+    throw const BrowserError('Only a web link opens in the browser.');
+  }
   if (kIsWeb) {
     await launchUrl(url);
   } else {
-    await native.web.openLink(url);
+    await native.web.openWithBrowser(url);
   }
 }
 
