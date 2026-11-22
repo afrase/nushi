@@ -13,10 +13,12 @@ import 'package:nushi/browser_address.dart';
 /// Whether [host] (a URL's, IPv6 without its brackets) is this Mac or the
 /// local network: loopback (`localhost` and `*.localhost`, 127.0.0.0/8,
 /// `::1`), 0.0.0.0/8 and `::` (which reach this Mac), the private ranges
-/// 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16, link-local 169.254.0.0/16
-/// and fe80::/10, unique local fc00::/7, an IPv4 address in IPv6
-/// (`::ffff:…`), and a `.local` name. A trailing dot counts as none. A
-/// name that resolves there (DNS) isn't seen: only what the address says.
+/// 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16, carrier-grade NAT's
+/// 100.64.0.0/10 (where a VPN mesh such as Tailscale puts its devices),
+/// link-local 169.254.0.0/16 and fe80::/10, unique local fc00::/7, an
+/// IPv4 address in IPv6 (`::ffff:…`), and a `.local` name. A trailing
+/// dot counts as none. A name that resolves there (DNS) isn't seen: only
+/// what the address says.
 bool isLocalNetwork(String host) {
   var h = host.toLowerCase();
   if (h.startsWith('[') && h.endsWith(']')) h = h.substring(1, h.length - 1);
@@ -34,6 +36,7 @@ bool isLocalNetwork(String host) {
       a == 10 ||
       (a == 172 && b >= 16 && b <= 31) ||
       (a == 192 && b == 168) ||
+      (a == 100 && b >= 64 && b <= 127) ||
       (a == 169 && b == 254);
 }
 
@@ -87,6 +90,10 @@ const localNetworkPatterns = [
   '${_at}172\\.2[0-9]\\.$_n\\.$_n$_end',
   '${_at}172\\.3[01]\\.$_n\\.$_n$_end',
   '${_at}192\\.168\\.$_n\\.$_n$_end',
+  '${_at}100\\.6[4-9]\\.$_n\\.$_n$_end',
+  '${_at}100\\.[7-9][0-9]\\.$_n\\.$_n$_end',
+  '${_at}100\\.1[01][0-9]\\.$_n\\.$_n$_end',
+  '${_at}100\\.12[0-7]\\.$_n\\.$_n$_end',
   '${_at}169\\.254\\.$_n\\.$_n$_end',
   '$_at\\[::1\\]',
   '$_at\\[::\\]',
