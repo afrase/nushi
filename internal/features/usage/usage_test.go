@@ -50,6 +50,7 @@ type memStore struct {
 	began time.Time
 	mu    sync.Mutex
 	rows  []model.UsageRow
+	fail  int // AddUsage fails while above 0, counting down
 }
 
 func (m *memStore) Began() time.Time { return m.began }
@@ -57,6 +58,10 @@ func (m *memStore) Began() time.Time { return m.began }
 func (m *memStore) AddUsage(_ context.Context, rows []model.UsageRow) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.fail > 0 {
+		m.fail--
+		return errors.New("disk full")
+	}
 	m.rows = append(m.rows, rows...)
 	return nil
 }
@@ -126,6 +131,26 @@ func TestCostPerTurn(t *testing.T) {
 	s.Turn(costOf("c1", 0.05, 10)) // a new process
 	s.Turn(costOf("c1", 0.25, 10))
 	if got, want := costs(t, s), []float64{0.1, 0.2, 0.15, 0.05, 0.2}; !reflect.DeepEqual(got, want) {
+		t.Errorf("costs %v, want %v", got, want)
+	}
+}
+
+// A batch that couldn't be written doesn't move its sessions' totals on:
+// the next turn's cost is measured from the last total kept, so the lost
+// turn's cost comes back in it.
+func TestAFailedWriteKeepsTheTotal(t *testing.T) {
+	m := &memStore{}
+	s := memUsage(t, m)
+	s.Turn(costOf("c1", 0.1, 10))
+	testcheck.NoErr(t, s.sync(t.Context()))
+	m.mu.Lock()
+	m.fail = 1
+	m.mu.Unlock()
+	s.Turn(costOf("c1", 0.3, 10)) // lost
+	testcheck.NoErr(t, s.sync(t.Context()))
+	s.Turn(costOf("c1", 0.6, 10))
+	s.Turn(costOf("c1", 0.7, 10)) // in the same batch or the next, measured from the one before
+	if got, want := costs(t, s), []float64{0.1, 0.5, 0.1}; !reflect.DeepEqual(got, want) {
 		t.Errorf("costs %v, want %v", got, want)
 	}
 }

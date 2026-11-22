@@ -23,12 +23,15 @@ import (
 //     figure before: it is only the start.
 //
 // A turn that isn't one of the user's (the agent's own, a held prompt's
-// answer) and used nothing isn't kept.
-func (s *Service) row(ctx context.Context, t model.TurnUsage) (model.UsageRow, bool) {
+// answer) and used nothing isn't kept. The total measured goes in batch,
+// the batch's own, which writeBatch copies into s.totals only once its
+// rows are written: a batch that fails leaves the totals where the kept
+// rows have them, so the next turn's cost takes in the lost one's.
+func (s *Service) row(ctx context.Context, batch map[string]float64, t model.TurnUsage) (model.UsageRow, bool) {
 	r := model.UsageRow{At: t.At, Chat: t.Chat, Side: t.Side, Agent: t.Agent, Model: t.Model, Folder: t.Folder, End: t.End,
 		Input: t.Input, Output: t.Output, CacheRead: t.CacheRead, CacheWrite: t.CacheWrite, Currency: t.Currency, Costed: t.Costed}
 	if t.Costed {
-		last, known := s.total(ctx, t.Meter, t.Chat, t.From)
+		last, known := s.total(ctx, batch, t.Meter, t.Chat, t.From)
 		switch {
 		case !known && t.Began.Before(s.store.Began()):
 		case t.Total >= last:
@@ -37,21 +40,25 @@ func (s *Service) row(ctx context.Context, t model.TurnUsage) (model.UsageRow, b
 			r.Cost = t.Total
 		}
 		r.Total = t.Total
-		s.totals[t.Meter] = t.Total
+		batch[t.Meter] = t.Total
 	}
 	used := r.Input+r.Output+r.CacheRead+r.CacheWrite > 0 || r.Cost > 0
 	return r, used || t.End == model.UsageTurn || t.End == model.UsageReleased
 }
 
-// total is the last total measured for meter: its own, else (a fork's
-// first figure) from's, else, for a stored chat's own meter, its last
-// row's; known is false when there's none.
-func (s *Service) total(ctx context.Context, meter, chat, from string) (total float64, known bool) {
+// total is the last total measured for meter: its own, in batch (an
+// earlier turn of the same batch) or kept, else (a fork's first figure)
+// from's, else, for a stored chat's own meter, its last row's, which is
+// kept as read; known is false when there's none.
+func (s *Service) total(ctx context.Context, batch map[string]float64, meter, chat, from string) (total float64, known bool) {
+	if v, ok := batch[meter]; ok {
+		return v, true
+	}
 	if v, ok := s.totals[meter]; ok {
 		return v, true
 	}
 	if from != "" {
-		if v, ok := s.total(ctx, from, from, ""); ok {
+		if v, ok := s.total(ctx, batch, from, from, ""); ok {
 			return v, true
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"sync"
 	"time"
 
@@ -206,10 +207,11 @@ func (s *Service) write() {
 func (s *Service) writeBatch(ctx context.Context, batch []job) {
 	var rows []model.UsageRow
 	var limits []model.Limit
+	totals := map[string]float64{}
 	for _, j := range batch {
 		switch {
 		case j.turn != nil:
-			if r, ok := s.row(ctx, *j.turn); ok {
+			if r, ok := s.row(ctx, totals, *j.turn); ok {
 				rows = append(rows, r)
 			}
 		case j.limits != nil:
@@ -219,6 +221,9 @@ func (s *Service) writeBatch(ctx context.Context, batch []job) {
 	var err error
 	if len(rows) > 0 {
 		err = s.store.AddUsage(ctx, rows)
+	}
+	if err == nil { // the rows are kept, and with them their totals (row)
+		maps.Copy(s.totals, totals)
 	}
 	if len(limits) > 0 {
 		err = errors.Join(err, s.store.SetLimits(ctx, limits))
