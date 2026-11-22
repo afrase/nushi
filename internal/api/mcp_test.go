@@ -19,11 +19,15 @@ import (
 )
 
 // countedChecks is an agent's MCP config with one server, which counts
-// its checks: a check is the agent run in the folder.
+// its checks: a check is the agent run in the folder, or, with elsewhere,
+// in a folder of its own (Ante's `ante serve` in an empty temp folder).
 type countedChecks struct {
 	mcp.Config // nothing else is called
 	checks     atomic.Int32
+	elsewhere  bool
 }
+
+func (c *countedChecks) ChecksInFolder() bool { return !c.elsewhere }
 
 func (*countedChecks) Servers(string) ([]model.MCPServer, error) {
 	return []model.MCPServer{{Name: "s", Scope: "user", Config: `{"command":"s"}`}}, nil
@@ -67,5 +71,29 @@ func TestMcpHealthWaitsForTrust(t *testing.T) {
 	got = list(t.TempDir())
 	if cfg.checks.Load() != 1 || got.CheckError != "" || got.Servers[0].State != "connected" {
 		t.Fatalf("a folder that brings nothing: %d checks, %v", cfg.checks.Load(), got)
+	}
+}
+
+// Sceptic's review 2026-11-23: the trust gate also stopped Ante's health
+// check, which runs `ante serve` in an empty temp folder and never reads
+// the folder named. An agent that checks elsewhere is checked in a folder
+// nobody trusted; one that checks in the folder isn't.
+func TestMcpHealthOfAnAgentThatChecksElsewhere(t *testing.T) {
+	here, elsewhere := &countedChecks{}, &countedChecks{elsewhere: true}
+	st := store.New(t.TempDir())
+	svc := chats.New(t.Context(), []chats.Kind{{Harness: model.HarnessInfo{Name: "a", Title: "A"}}, {Harness: model.HarnessInfo{Name: "b", Title: "B"}}},
+		chats.Options{Remembered: st, Sessions: st, Scratch: t.TempDir()})
+	tr := trust.New(map[string]trust.Agent{"a": hookAgent{}, "b": hookAgent{}}, st)
+	c := client(t, New(Services{Chats: svc, Trust: tr,
+		MCP: map[string]*mcp.Service{"a": mcp.New("a", here, nil), "b": mcp.New("b", elsewhere, nil)}}))
+	brings := t.TempDir()
+	testcheck.NoErr(t, os.MkdirAll(filepath.Join(brings, ".claude"), 0o700))
+	testcheck.Write(t, filepath.Join(brings, ".claude", "settings.json"), `{"hooks":{}}`)
+	for _, agent := range []string{"a", "b"} {
+		_, err := c.ListMcpServers(t.Context(), connect.NewRequest(&nushiv1.ListMcpServersRequest{Folder: brings, CheckHealth: true, Agent: agent}))
+		testcheck.NoErr(t, err)
+	}
+	if here.checks.Load() != 0 || elsewhere.checks.Load() != 1 {
+		t.Fatalf("checks in a folder nobody trusted: in it %d (want 0), elsewhere %d (want 1)", here.checks.Load(), elsewhere.checks.Load())
 	}
 }

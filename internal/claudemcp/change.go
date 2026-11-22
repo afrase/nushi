@@ -79,6 +79,10 @@ func (Claude) Project(folder string) string { return Project(folder) }
 // UserOnly is false: Claude's is the whole model (mcp.Config).
 func (Claude) UserOnly() bool { return false }
 
+// ChecksInFolder is true: `claude mcp list` runs in the folder, reading
+// its settings and .mcp.json (mcp.Config).
+func (Claude) ChecksInFolder() bool { return true }
+
 func run(ctx context.Context, folder string, args ...string) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()

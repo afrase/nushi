@@ -41,6 +41,11 @@ type Config interface {
 	// refused here; this is what tells the app not to offer it. A sign-in
 	// isn't part of it: a server in state needs_auth has one to offer.
 	UserOnly() bool
+	// ChecksInFolder says Check runs the agent in folder, where it reads
+	// what the folder brings (Claude's `claude mcp list`), so the API
+	// checks only a folder nothing untrusted runs in. Ante's runs in an
+	// empty folder of its own and needs no such gate.
+	ChecksInFolder() bool
 }
 
 // Changed tells the chats that agent's servers changed for its chats in
@@ -60,6 +65,10 @@ func New(agent string, config Config, changed Changed) *Service {
 
 // UserOnly says the agent's servers are only the user's (Config.UserOnly).
 func (s *Service) UserOnly() bool { return s.config.UserOnly() }
+
+// ChecksInFolder says a check runs the agent in the folder
+// (Config.ChecksInFolder).
+func (s *Service) ChecksInFolder() bool { return s.config.ChecksInFolder() }
 
 // List returns folder's servers. With check, each gets its state, and a
 // server only the agent knows is added; when checking fails, the servers

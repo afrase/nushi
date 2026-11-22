@@ -29,9 +29,10 @@ func (s *server) ListMcpServers(ctx context.Context, req *connect.Request[nushiv
 		return nil, err
 	}
 	check, why := req.Msg.CheckHealth, ""
-	if check {
+	if check && m.ChecksInFolder() {
 		// The daemon decides, not the app: Settings may name a folder only
 		// another agent's card passed, and the phone any folder at all.
+		// An agent whose check runs elsewhere (Ante's) reads nothing here.
 		switch runs, _, err := s.Trust.Check(s.agent(req.Msg.Agent), req.Msg.Folder); {
 		case err != nil:
 			check, why = false, "Not checked: "+err.Error()

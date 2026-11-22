@@ -259,3 +259,7 @@ func (Ante) SetOn(context.Context, string, string, string, bool) error {
 // UserOnly is true: yours are all it reads, and it has no off switch
 // (mcp.Config).
 func (Ante) UserOnly() bool { return true }
+
+// ChecksInFolder is false: Check runs `ante serve` in an empty temp
+// folder (ante.CheckMCP), never in the folder named (mcp.Config).
+func (Ante) ChecksInFolder() bool { return false }
