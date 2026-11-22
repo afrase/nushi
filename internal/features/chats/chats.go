@@ -172,6 +172,7 @@ type chat struct {
 	following    map[string]*follow              // workflows followed, by their call (workflows.go)
 	busy         bool                            // running a turn, or reopening or moving the session
 	halting      bool                            // being deleted: never reopens
+	historyStays bool                            // the last PlanDelete said the agent's history stays (delete.go)
 	stopping     bool                            // its agent is being stopped: nothing more goes to it
 	removing     bool                            // its worktree is being removed (RemoveWorktree): it takes no prompts and doesn't reopen
 	held         bool                            // the last turn was stopped or failed: the queue waits for the next

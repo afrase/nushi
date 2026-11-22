@@ -49,12 +49,25 @@ type WorktreeOptions struct {
 }
 
 // PlanDelete says what Delete would remove. The first time, it starts the
-// agent to learn whether it can delete its history (probeDeletes).
+// agent to learn whether it can delete its history (probeDeletes). A plan
+// that says the history stays is remembered for the chat's Delete.
 func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, error) {
 	c, err := s.listed(chatID)
 	if err != nil {
 		return DeletePlan{}, err
 	}
+	p, err := s.plan(ctx, c, true)
+	if err == nil {
+		c.mu.Lock()
+		c.historyStays = !p.History
+		c.mu.Unlock()
+	}
+	return p, err
+}
+
+// plan says what deleting c removes; without probe, its history only goes
+// when the agent is known to delete it.
+func (s *Service) plan(ctx context.Context, c *chat, probe bool) (DeletePlan, error) {
 	c.mu.Lock()
 	sess := c.record
 	c.mu.Unlock()
@@ -77,7 +90,7 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 	s.mu.Lock()
 	known := c.kind.deletes
 	s.mu.Unlock()
-	p.History = known != nil && *known || known == nil && s.probeDeletes(ctx, c)
+	p.History = known != nil && *known || known == nil && probe && s.probeDeletes(ctx, c)
 	return p, nil
 }
 
@@ -128,21 +141,32 @@ func (s *Service) startDeleter(ctx context.Context, c *chat) (Agent, bool, error
 // it, then its transcript's copy. If the worktree, the agent's history or
 // the record can't go, the chat stays, its copy with it.
 // Removing a worktree another chat works in is refused. Once checked, it
-// goes on when the request is gone (detached).
+// goes on when the request is gone (detached). When the chat's last plan
+// said its history stays, the dialog told the user so, and it stays even if
+// the agent could start by now; a Delete with no plan before it probes.
 //
 //nolint:contextcheck // a deletion shouldn't stop halfway because the app went away
 func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions) error {
-	p, err := s.PlanDelete(ctx, chatID)
+	c, err := s.listed(chatID)
 	if err != nil {
 		return err
+	}
+	c.mu.Lock()
+	stays := c.historyStays
+	c.mu.Unlock()
+	p, err := s.plan(ctx, c, !stays)
+	if err != nil {
+		return err
+	}
+	if stays {
+		p.History = false
 	}
 	if err := othersInWorktrees(p.Worktrees, opts); err != nil {
 		return err
 	}
 	ctx, ended := detached(ctx)
 	defer ended("deleting a chat")
-	c, err := s.halt(chatID)
-	if err != nil {
+	if c, err = s.halt(chatID); err != nil {
 		return err
 	}
 	// The chat's terminals end before their folders go, not after.

@@ -478,3 +478,36 @@ func TestAFailedDeleteStoresWhatChangedMeanwhile(t *testing.T) {
 		t.Errorf("stored %+v", last)
 	}
 }
+
+// Delete honours the plan the user last saw: when its agent couldn't start
+// for the dialog, which then said the history stays, Delete leaves the
+// history even if the agent starts by then (ADR 0015).
+func TestDeleteKeepsTheHistoryThePlanSaidStays(t *testing.T) {
+	ctx := context.Background()
+	agent := &fakeAgent{deletes: true}
+	testcheck.NoErr(t, json.Unmarshal([]byte(`{"sessionId":"s1"}`), &agent.session))
+	var failOnce atomic.Bool
+	ready := func() error {
+		if failOnce.CompareAndSwap(true, false) {
+			return errors.New("the adapter timed out")
+		}
+		return nil
+	}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch, Ready: ready}}, Options{})
+	t.Cleanup(svc.Close)
+	c := startChat(t, svc, t.TempDir())
+	failOnce.Store(true)
+	p, err := svc.PlanDelete(ctx, c.id)
+	if err != nil || p.History {
+		t.Fatalf("PlanDelete = %+v, %v; want the history to stay", p, err)
+	}
+	testcheck.NoErr(t, svc.Delete(ctx, c.id, nil))
+	if _, err := svc.stored(c.id); err == nil {
+		t.Error("the chat stayed")
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if len(agent.deleted) != 0 {
+		t.Errorf("history deleted though the dialog said it stays: %v", agent.deleted)
+	}
+}
