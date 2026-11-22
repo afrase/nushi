@@ -64,7 +64,7 @@ func startRemote(t *testing.T, dir, relayURL string, tune ...func(*timing)) *Ser
 	// device's last-seen time as it does: wait for that (this runs after
 	// Close, registered below) before the test's folder goes.
 	t.Cleanup(func() {
-		waitFor(t, func() bool {
+		testcheck.Wait(t, "no device to show connected", func() bool {
 			return !slices.ContainsFunc(s.Get().Devices, func(d model.Device) bool { return d.Connected })
 		})
 	})
@@ -72,15 +72,8 @@ func startRemote(t *testing.T, dir, relayURL string, tune ...func(*timing)) *Ser
 	if err := s.Set(true, relayURL); err != nil {
 		t.Fatal(err)
 	}
-	waitFor(t, func() bool { return s.Get().State == "connected" })
+	testcheck.Wait(t, "the relay to connect", func() bool { return s.Get().State == "connected" })
 	return s
-}
-
-func waitFor(t *testing.T, ok func() bool) {
-	t.Helper()
-	if !testcheck.Eventually(ok) {
-		t.Fatal("timed out")
-	}
 }
 
 // offer is what a phone reads from the QR code.
@@ -193,7 +186,7 @@ func pairOne(t *testing.T, s *Service, key noise.DHKey) (offer, string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	waitFor(t, func() bool { p := s.Get().Pairing; return p != nil && p.Code == code })
+	testcheck.Wait(t, "the pairing to show its code", func() bool { p := s.Get().Pairing; return p != nil && p.Code == code })
 	if p := s.Get().Pairing; p.Name != "Test phone" {
 		t.Fatalf("the Mac shows %q", p.Name)
 	}
@@ -233,7 +226,7 @@ func TestPairThenConnect(t *testing.T) {
 	}
 	// The pairing ends as pair returns, a moment after the phone heard
 	// it was paired.
-	waitFor(t, func() bool { return s.Get().Pairing == nil })
+	testcheck.Wait(t, "the pairing to end", func() bool { return s.Get().Pairing == nil })
 	r := s.Get()
 	if len(r.Devices) != 1 || r.Devices[0].Name != "Test phone" || r.Pairing != nil {
 		t.Fatalf("after pairing: %+v", r)
@@ -243,7 +236,7 @@ func TestPairThenConnect(t *testing.T) {
 	if err != nil || !talks(conn) {
 		t.Fatal("a paired phone couldn't connect", err)
 	}
-	waitFor(t, func() bool { return s.Get().Devices[0].Connected })
+	testcheck.Wait(t, "the device to show connected", func() bool { return s.Get().Devices[0].Connected })
 	_ = conn.Close()
 
 	// The same QR code is used up.
@@ -283,13 +276,13 @@ func TestWrongSecretThenRightOne(t *testing.T) {
 	if p := s.Get().Pairing; p == nil || p.Code != "" {
 		t.Fatalf("pairing after a wrong secret: %+v", p)
 	}
-	waitFor(t, func() bool { return s.Get().State == "connected" })
+	testcheck.Wait(t, "the relay to connect", func() bool { return s.Get().State == "connected" })
 	conn, code, err := phonePair(t, o, newKey(t), o.psk)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	waitFor(t, func() bool { p := s.Get().Pairing; return p != nil && p.Code == code })
+	testcheck.Wait(t, "the pairing to show its code", func() bool { p := s.Get().Pairing; return p != nil && p.Code == code })
 }
 
 func TestDeny(t *testing.T) {
@@ -301,7 +294,7 @@ func TestDeny(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	waitFor(t, func() bool { p := s.Get().Pairing; return p != nil && p.Code == code })
+	testcheck.Wait(t, "the pairing to show its code", func() bool { p := s.Get().Pairing; return p != nil && p.Code == code })
 	if s.ConfirmPairing("000 000", true) == nil && code != "000 000" {
 		t.Fatal("confirmed another code")
 	}
@@ -320,7 +313,7 @@ func TestPairingExpires(t *testing.T) {
 	url := startRelay(t)
 	s := startRemote(t, t.TempDir(), url, func(tm *timing) { tm.pairing = 300 * time.Millisecond })
 	qr, _ := s.StartPairing()
-	waitFor(t, func() bool { return s.Get().Pairing == nil })
+	testcheck.Wait(t, "the expired pairing to end", func() bool { return s.Get().Pairing == nil })
 	o := parseQR(t, qr)
 	if !unanswered(o.relay, o.id, o.key, newKey(t), o.psk) {
 		t.Fatal("an expired QR code paired")
@@ -338,7 +331,7 @@ func TestUnknownAndRevoked(t *testing.T) {
 		t.Fatal("an unpaired key got an answer")
 	}
 
-	waitFor(t, func() bool { return s.Get().State == "connected" })
+	testcheck.Wait(t, "the relay to connect", func() bool { return s.Get().State == "connected" })
 	conn, err := phoneConnect(url, id, o.key, phone)
 	if err != nil || !talks(conn) {
 		t.Fatal(err)
@@ -349,7 +342,7 @@ func TestUnknownAndRevoked(t *testing.T) {
 	if talks(conn) {
 		t.Fatal("a revoked device's connection stayed")
 	}
-	waitFor(t, func() bool { return s.Get().State == "connected" })
+	testcheck.Wait(t, "the relay to connect", func() bool { return s.Get().State == "connected" })
 	if !unanswered(url, id, o.key, phone, nil) {
 		t.Fatal("a revoked device got an answer")
 	}
@@ -464,7 +457,7 @@ func TestWaitsAgain(t *testing.T) {
 	o, id := pairOne(t, s, phone)
 	// Several waits ended: the daemon came back for two more.
 	after := tl.accepted()
-	waitFor(t, func() bool { return tl.accepted() >= after+2 })
+	testcheck.Wait(t, "the daemon to come back for two more waits", func() bool { return tl.accepted() >= after+2 })
 	conn, err := phoneConnect(url, id, o.key, phone)
 	if err != nil || !talks(conn) {
 		t.Fatal("no connection after the relay ended waits", err)
@@ -491,12 +484,12 @@ func TestRelayRestart(t *testing.T) {
 	o, id := pairOne(t, s, phone)
 
 	tl.kill() // as the process going: every connection ends, and new ones too
-	waitFor(t, func() bool { st := s.Get().State; return st == "reconnecting" || st == "error" })
-	waitFor(t, func() bool { return s.Get().State == "error" }) // a try failed
+	testcheck.Wait(t, "the daemon to say it's reconnecting", func() bool { st := s.Get().State; return st == "reconnecting" || st == "error" })
+	testcheck.Wait(t, "a try to fail", func() bool { return s.Get().State == "error" }) // a try failed
 	refused := tl.refused()
-	waitFor(t, func() bool { return tl.refused() >= refused+3 }) // several, backing off
+	testcheck.Wait(t, "three more refused tries", func() bool { return tl.refused() >= refused+3 }) // several, backing off
 	tl.revive()
-	waitFor(t, func() bool { return s.Get().State == "connected" })
+	testcheck.Wait(t, "the relay to connect again", func() bool { return s.Get().State == "connected" })
 	conn, err := phoneConnect(url, id, o.key, phone)
 	if err != nil || !talks(conn) {
 		t.Fatal("no connection after the relay came back", err)
@@ -585,7 +578,7 @@ func TestOneHandshakePerPairing(t *testing.T) {
 	if err := conn.Close(); err != nil { // no name
 		t.Fatal(err)
 	}
-	waitFor(t, func() bool { return s.Get().Pairing == nil })
+	testcheck.Wait(t, "the pairing to end", func() bool { return s.Get().Pairing == nil })
 	if !unanswered(o.relay, o.id, o.key, newKey(t), o.psk) {
 		t.Fatal("a second handshake on one pairing")
 	}
@@ -623,7 +616,7 @@ func TestRevokeMovesTheID(t *testing.T) {
 	// and learns the new id and key.
 	s.Close()
 	s = startRemote(t, dir, url)
-	waitFor(t, func() bool {
+	testcheck.Wait(t, "b to reach the old id after the restart", func() bool {
 		c, err := phoneConnect(url, old, o.key, b)
 		return err == nil && talks(c) && c.Close() == nil
 	})
@@ -644,7 +637,7 @@ func TestRevokeMovesTheID(t *testing.T) {
 	}
 	_ = conn.Close()
 	// b has moved: nothing waits at the old id any more.
-	waitFor(t, func() bool { return unanswered(url, old, o.key, b, nil) })
+	testcheck.Wait(t, "the old id to stop answering", func() bool { return unanswered(url, old, o.key, b, nil) })
 	// A pairing after it gives the new key.
 	qr, err := s.StartPairing()
 	if err != nil || !bytes.Equal(parseQR(t, qr).key, key) {
@@ -665,7 +658,7 @@ func TestOldMovingKeepsItsKey(t *testing.T) {
 		Moving: []model.Moving{{Listen: oldListen, Devices: []string{"b"}, Since: time.Now()}}}))
 	testcheck.NoErr(t, st.SaveDevices([]model.Device{{ID: "b", Name: "b", Key: b.Public, Paired: time.Now()}}))
 	s := startRemote(t, dir, url)
-	waitFor(t, func() bool {
+	testcheck.Wait(t, "b to reach the oldest id with its key", func() bool {
 		c, err := phoneConnect(url, listenID(oldListen), k.Public, b)
 		return err == nil && talks(c) && c.Close() == nil
 	})
@@ -681,7 +674,7 @@ func TestOldMovingKeepsItsKey(t *testing.T) {
 		}
 	}
 	testcheck.NoErr(t, s.Revoke(cID))
-	waitFor(t, func() bool {
+	testcheck.Wait(t, "b to reach the oldest id after the key moved", func() bool {
 		c, err := phoneConnect(url, listenID(oldListen), k.Public, b)
 		return err == nil && talks(c) && c.Close() == nil
 	})
@@ -724,7 +717,7 @@ func TestRevokesInARowWaitOnlyWhereDevicesAre(t *testing.T) {
 	if n != 1 || lists != 1 {
 		t.Fatalf("%d ids waited at, %d device entries; want the first id alone", n, lists)
 	}
-	waitFor(t, func() bool {
+	testcheck.Wait(t, "away to reach the first id", func() bool {
 		c, err := phoneConnect(url, first, o.key, away)
 		return err == nil && talks(c) && c.Close() == nil
 	})

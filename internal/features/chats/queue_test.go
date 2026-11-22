@@ -18,13 +18,11 @@ import (
 // eventually waits for cond, checked under the chat's lock.
 func eventually(t *testing.T, c *chat, cond func() bool) {
 	t.Helper()
-	if !testcheck.Eventually(func() bool {
+	testcheck.Wait(t, "a condition under the chat's lock", func() bool {
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		return cond()
-	}) {
-		t.Fatal("timed out")
-	}
+	})
 }
 
 // idle waits until the chat's published status says its turn is over.

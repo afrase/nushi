@@ -87,7 +87,7 @@ func TestReplayedHandshakesAreCapped(t *testing.T) {
 	if err := s.Set(true, "ws"+strings.TrimPrefix(srv.URL, "http")); err != nil {
 		t.Fatal(err)
 	}
-	waitFor(t, func() bool { return total.Load() >= MaxConns })
+	testcheck.Wait(t, "MaxConns connections to the relay", func() bool { return total.Load() >= MaxConns })
 	time.Sleep(time.Second)
 	// MaxConns handshakes, and the next dialer waiting for a slot.
 	if n := total.Load(); n > MaxConns+1 {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/relay"
 )
 
@@ -29,7 +30,7 @@ func TestTheAPIKnowsWhichDevice(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { // as startRemote: the channels end, saving last-seen, before the folder goes
-		waitFor(t, func() bool {
+		testcheck.Wait(t, "no device to show connected", func() bool {
 			return !slices.ContainsFunc(s.Get().Devices, func(d model.Device) bool { return d.Connected })
 		})
 	})
@@ -37,7 +38,7 @@ func TestTheAPIKnowsWhichDevice(t *testing.T) {
 	if err := s.Set(true, url); err != nil {
 		t.Fatal(err)
 	}
-	waitFor(t, func() bool { return s.Get().State == "connected" })
+	testcheck.Wait(t, "the relay to connect", func() bool { return s.Get().State == "connected" })
 	phone := newKey(t)
 	o, id := pairOne(t, s, phone)
 	paired := s.Get().Devices[0].ID

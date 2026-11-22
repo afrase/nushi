@@ -1,7 +1,7 @@
 // Package testcheck is what Go tests share: failing on an error, JSON,
-// writing a file, waiting for a condition, running git without the owner's own
-// config, and a package's tests in a home folder of their own. Only tests
-// import it.
+// writing a file, waiting for a condition, running git without the owner's
+// own config, and a package's tests in a home and config folder of their
+// own. Only tests import it.
 package testcheck
 
 import (
@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -40,23 +41,56 @@ func Write(t *testing.T, path, text string) {
 	NoErr(t, os.WriteFile(path, []byte(text), 0o600))
 }
 
-// MainInHome is a package's TestMain for tests that read the home folder
-// (an agent's ~/.ante or ~/.claude): they run with HOME an empty temp
-// folder, never the user's, which goes once they end. A test that wants
-// a home with something in it sets its own. TestMain's return exits
-// with m.Run's code.
-func MainInHome(m *testing.M) {
-	home, err := os.MkdirTemp("", "nushi-test-home-")
+// Main is a package's TestMain: its tests run with HOME (USERPROFILE too
+// on Windows) and XDG_CONFIG_HOME empty temp folders, never the user's,
+// which go once they end, and git reads neither the global nor the system
+// config. A test that wants a home with something in it sets its own.
+// Go's own folders stay where they were, so a test that runs the
+// toolchain neither starts with a cold cache nor loses the user's go env
+// file. TestMain's return exits with m.Run's code.
+func Main(m *testing.M) {
+	dir, err := os.MkdirTemp("", "nushi-test-home-")
 	if err != nil {
 		panic(err) // no tests run
 	}
-	defer os.RemoveAll(home) //nolint:errcheck // a temp folder
+	defer os.RemoveAll(dir) //nolint:errcheck // a temp folder
+	keepGoFolders()
+	home, config := filepath.Join(dir, "home"), filepath.Join(dir, "config")
+	for _, d := range []string{home, config} {
+		if err := os.Mkdir(d, 0o700); err != nil {
+			panic(err) // no tests run
+		}
+	}
 	_ = os.Setenv("HOME", home)
+	if runtime.GOOS == "windows" {
+		_ = os.Setenv("USERPROFILE", home)
+	}
+	_ = os.Setenv("XDG_CONFIG_HOME", config)
+	_ = os.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	_ = os.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	m.Run()
 }
 
+// goFolders are the go command's settings whose defaults are under the
+// home folder.
+var goFolders = []string{"GOCACHE", "GOMODCACHE", "GOPATH", "GOENV"}
+
+// keepGoFolders sets each of goFolders to what go says it is now, before
+// the home folder moves; without a go command it leaves them.
+func keepGoFolders() {
+	out, err := exec.Command("go", append([]string{"env"}, goFolders...)...).Output()
+	if err != nil {
+		return
+	}
+	for i, v := range strings.Split(strings.TrimRight(string(out), "\r\n"), "\n") {
+		if v = strings.TrimSpace(v); i < len(goFolders) && v != "" {
+			_ = os.Setenv(goFolders[i], v)
+		}
+	}
+}
+
 // Eventually checks cond every 10 ms until it holds, for 5 s at most, and
-// says whether it did.
+// says whether it did. A test that fails when it doesn't calls Wait.
 func Eventually(cond func() bool) bool {
 	for end := time.Now().Add(5 * time.Second); !cond(); time.Sleep(10 * time.Millisecond) {
 		if time.Now().After(end) {
@@ -64,6 +98,15 @@ func Eventually(cond func() bool) bool {
 		}
 	}
 	return true
+}
+
+// Wait checks cond as Eventually does, and fails the test, naming what it
+// waited for, when cond never holds.
+func Wait(t *testing.T, what string, cond func() bool) {
+	t.Helper()
+	if !Eventually(cond) {
+		t.Fatalf("timed out waiting for %s", what)
+	}
 }
 
 // Git runs git in dir and returns its output, trimmed; it fails the test

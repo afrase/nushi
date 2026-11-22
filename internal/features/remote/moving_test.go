@@ -30,7 +30,7 @@ func dropConns(t *testing.T, s *Service) {
 		_ = c.Close()
 	}
 	s.mu.Unlock()
-	waitFor(t, func() bool { s.mu.Lock(); defer s.mu.Unlock(); return len(s.conns) == 0 })
+	testcheck.Wait(t, "the daemon to drop every connection", func() bool { s.mu.Lock(); defer s.mu.Unlock(); return len(s.conns) == 0 })
 }
 
 // A device that is told the daemon's new id and key (connected when it
@@ -51,7 +51,7 @@ func TestASecondRevokeWaitsWhereADeviceWasTold(t *testing.T) {
 			addRevoke(t, s, "c")
 			if !during {
 				// b opens once at id1 with the old key.
-				waitFor(t, func() bool {
+				testcheck.Wait(t, "b to reach id1 with the old key", func() bool {
 					c, err := phoneConnect(url, id1, o.key, b)
 					return err == nil && talks(c) && c.Close() == nil
 				})
@@ -63,17 +63,17 @@ func TestASecondRevokeWaitsWhereADeviceWasTold(t *testing.T) {
 			if s.Get().Rendezvous == id2 {
 				t.Fatal("the id stayed")
 			}
-			waitFor(t, func() bool {
+			testcheck.Wait(t, "b to reach id2 with its key", func() bool {
 				c, err := phoneConnect(url, id2, key2, b)
 				return err == nil && talks(c) && c.Close() == nil
 			})
 			// At the daemon's own id b has moved: the ids given up go.
 			got = s.Get()
-			waitFor(t, func() bool {
+			testcheck.Wait(t, "b to reach the daemon's own id", func() bool {
 				c, err := phoneConnect(url, got.Rendezvous, got.Key, b)
 				return err == nil && talks(c) && c.Close() == nil
 			})
-			waitFor(t, func() bool { s.mu.Lock(); defer s.mu.Unlock(); return len(s.moving) == 0 })
+			testcheck.Wait(t, "the given-up ids to go", func() bool { s.mu.Lock(); defer s.mu.Unlock(); return len(s.moving) == 0 })
 		})
 	}
 }

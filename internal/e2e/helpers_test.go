@@ -22,9 +22,7 @@ import (
 // until waits for ok, 5 s at most.
 func until(t *testing.T, what string, ok func() bool) {
 	t.Helper()
-	if !testcheck.Eventually(ok) {
-		t.Fatalf("timed out waiting for %s", what)
-	}
+	testcheck.Wait(t, what, ok)
 }
 
 // settled waits for chat id's turn to end, and returns the chat.

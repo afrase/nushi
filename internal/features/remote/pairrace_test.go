@@ -31,7 +31,7 @@ func TestAllowRacingARevokeLeavesNoGhost(t *testing.T) {
 		b := newKey(t)
 		conn, code, err := phonePair(t, o, b, o.psk)
 		testcheck.NoErr(t, err)
-		waitFor(t, func() bool { p := s.Get().Pairing; return p != nil && p.Code == code })
+		testcheck.Wait(t, "the pairing to show its code", func() bool { p := s.Get().Pairing; return p != nil && p.Code == code })
 		testcheck.NoErr(t, s.ConfirmPairing(code, true))
 		testcheck.NoErr(t, s.Revoke(other))
 		buf := make([]byte, 4096)
@@ -72,7 +72,7 @@ func TestUnpairDropsWhatTheDeviceOpened(t *testing.T) {
 	s.mu.Unlock()
 	testcheck.NoErr(t, err)
 	var conn *noiseconn.Conn
-	waitFor(t, func() bool {
+	testcheck.Wait(t, "b to reach the daemon", func() bool {
 		c, err := phoneConnect(url, daemon, key, b)
 		if err != nil || !talks(c) {
 			return false
