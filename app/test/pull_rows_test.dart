@@ -323,6 +323,52 @@ void main() {
     }, variant: onMac);
   }
 
+  testWidgets("GitHub's unstable (a check nothing requires failing) is "
+      'ready: the row says so, Merge… is on and folded says Ready', (
+    tester,
+  ) async {
+    final (d, _) = await _app(
+      tester,
+      numbers: [230],
+      items: {
+        230: _item(
+          230,
+          'Retry the feed on a timeout',
+          checks: (3, 1, 0, 0),
+          review: 'approved',
+          merge: 'unstable',
+        ),
+      },
+    );
+    final row = find.byType(PullRow);
+    expect(
+      find.descendant(
+        of: row,
+        matching: find.textContaining('Ready to merge', findRichText: true),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.descendant(of: row, matching: find.byTooltip('Pull request')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Asks you first'), findsOneWidget);
+    expect(find.byTooltip("GitHub won't merge it yet"), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    collapsedWidgets.value = {'Pull request'};
+    await tester.pumpAndSettle();
+    expect(find.text('Ready'), findsOneWidget);
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  test('blocked by its rules or a draft is not ready, unstable or not', () {
+    expect(itemReady(_item(1, 't', merge: 'blocked')), isFalse);
+    expect(itemReady(_item(1, 't', merge: 'unstable', draft: true)), isFalse);
+    expect(itemReady(_item(1, 't', merge: 'behind')), isFalse);
+    expect(itemReady(_item(1, 't', merge: 'unstable')), isTrue);
+  });
+
   testWidgets('Unlink from a row unlinks that one', (tester) async {
     final (d, fake) = await _app(tester, numbers: [221, 224, 215]);
     final row = find.byType(PullRow).last;

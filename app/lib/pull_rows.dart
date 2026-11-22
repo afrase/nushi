@@ -80,11 +80,16 @@ List<String> itemBlockers(GitHubItem it) => [
   if (it.mergeState == 'behind') 'behind',
 ];
 
-/// Whether GitHub says [it] can merge now.
+/// Whether GitHub says [it] can merge now, as the daemon's clearToMerge
+/// reads its merge state (internal/features/github/merge.go): "unstable"
+/// is checks not passing that nothing requires, so it's ready too.
 bool itemReady(GitHubItem it) =>
     it.state == 'open' &&
     !it.draft &&
-    (it.mergeState == 'clean' || it.mergeState == 'has_hooks');
+    switch (it.mergeState) {
+      'clean' || 'has_hooks' || 'unstable' => true,
+      _ => false,
+    };
 
 /// The row's one cue under its title (ADR 0117), the first that applies:
 /// merged (with Clean up… while offered), closed without merging, changes

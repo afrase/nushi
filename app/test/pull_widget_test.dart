@@ -360,7 +360,9 @@ void main() {
 
   testWidgets('open with a failing check: the row, its badge and one cue; '
       'collapsed, the one-line summary', (tester) async {
-    final (d, _) = await _app(tester, whole: pull());
+    // Blocked: the failing check is one its base requires ("unstable",
+    // one nothing requires, is ready).
+    final (d, _) = await _app(tester, whole: pull()..mergeState = 'blocked');
     expect(_inPull(find.text('Add Sub and Neg')), findsOneWidget);
     expect(_inPull(find.byType(ChecksBadge)), findsOneWidget);
     expect(_inPull(find.text('1/2')), findsOneWidget);

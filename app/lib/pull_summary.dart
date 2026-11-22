@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_lights.dart';
+import 'package:nushi/pull_rows.dart' show itemReady;
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/pull_widget_parts.dart';
 import 'package:nushi/theme/theme.dart';
@@ -52,8 +53,7 @@ Widget pullSummary(
         : p.reviewers.any((r) => r.state == 'requested');
     // As the Merge control says it, from a daemon that has it (API 96).
     final ready = switch (p) {
-      null =>
-        !it.draft && (it.mergeState == 'clean' || it.mergeState == 'has_hooks'),
+      null => itemReady(it),
       _ when p.hasMerge() => p.merge.blocks.isEmpty && !it.draft,
       _ => mergeStateReady(p),
     };
