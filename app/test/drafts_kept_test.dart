@@ -80,6 +80,29 @@ void main() {
     expect(image.existsSync(), isTrue);
   });
 
+  test('beside a set-aside drafts.json only the images older than it '
+      'stay: one made since is swept', () async {
+    final dir = _dir();
+    File('${dir.path}/drafts.json.unreadable-2020-01-01T00-00-00.000000')
+      ..writeAsStringSync('{"d": {"images": ["1-0.png"]')
+      ..setLastModifiedSync(DateTime(2020));
+    File image(DateTime made) =>
+        File('${dir.path}/drafts/${made.microsecondsSinceEpoch}-0.png')
+          ..createSync(recursive: true)
+          ..writeAsBytesSync([1]);
+    final older = image(DateTime(2019));
+    final newer = image(DateTime(2024));
+
+    final drafts = Drafts(DraftFiles(dir.path));
+    final c = ChatState('c', '/x');
+    drafts.attach(c);
+    await drafts.loaded;
+    c.draft.text.text = 'new';
+    await drafts.flush();
+    expect(older.existsSync(), isTrue);
+    expect(newer.existsSync(), isFalse);
+  });
+
   test('a load that fails saves nothing over the store until a load '
       'reads it', () async {
     final store = _Store();

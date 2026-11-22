@@ -9,8 +9,9 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show ImageData;
 /// whole or not at all, and each draft's images as files in `drafts/`
 /// beside it, removed once no draft has them; all only the user's (0600,
 /// the folder 0700). A `drafts.json` that doesn't parse is set aside
-/// ([readKept]), and while one set aside is beside it no image is removed,
-/// since nothing reads which it names.
+/// ([readKept]), and while one set aside is beside it no image older than
+/// it is removed, since nothing reads which it names; one made since
+/// (its name starts with when) can't be among them, and goes as before.
 final class DraftFiles implements DraftStore {
   new(this.dir);
 
@@ -23,20 +24,25 @@ final class DraftFiles implements DraftStore {
   final _names = Expando<String>();
   int _made = 0;
 
-  /// Whether a `drafts.json` set aside is beside it, as the load saw.
-  bool _asideThere = false;
+  /// When the newest `drafts.json` set aside beside it was last written,
+  /// in microseconds, as the load saw; null when there's none. No image
+  /// made before then is removed.
+  int? _heldUntil;
 
   @override
   bool get textOnly => false;
 
   @override
   Future<Map<String, Map<String, Object?>>> load() async {
-    final (json: j, :setAside) = readKept(_json);
-    _asideThere =
-        setAside ||
-        Directory(dir).listSync().any(
-          (f) => f.uri.pathSegments.last.startsWith('drafts.json.unreadable-'),
-        );
+    final j = readKept(_json).json;
+    _heldUntil = null;
+    for (final f in Directory(dir).listSync().whereType<File>()) {
+      if (!f.uri.pathSegments.last.startsWith('drafts.json.unreadable-')) {
+        continue;
+      }
+      final at = f.lastModifiedSync().microsecondsSinceEpoch;
+      if (_heldUntil == null || at > _heldUntil!) _heldUntil = at;
+    }
     return {
       for (final MapEntry(:key, :value) in j.entries)
         if (value is Map<String, Object?>) key: value,
@@ -51,14 +57,15 @@ final class DraftFiles implements DraftStore {
       writeWhole(_json, utf8.encode(jsonEncode(drafts)));
     }
     // The images no draft has any more (sent, removed, or the chat gone).
-    if (_asideThere || !_images.existsSync()) return;
+    if (!_images.existsSync()) return;
     final kept = {
       for (final d in drafts.values)
         if (d['images'] case final List<Object?> names)
           ...names.whereType<String>(),
     };
     for (final f in _images.listSync().whereType<File>()) {
-      if (!kept.contains(f.uri.pathSegments.last)) f.deleteSync();
+      final name = f.uri.pathSegments.last;
+      if (!kept.contains(name) && !_held(name)) f.deleteSync();
     }
     if (_images.listSync().isEmpty) _images.deleteSync();
   }
@@ -80,6 +87,16 @@ final class DraftFiles implements DraftStore {
     } on Object {
       return null; // the draft goes without it
     }
+  }
+
+  /// Whether the image file [name] is kept for a set-aside `drafts.json`
+  /// ([_heldUntil]): made before it was, or of a name [keepImage] doesn't
+  /// make, so when is unknown.
+  bool _held(String name) {
+    final until = _heldUntil;
+    if (until == null) return false;
+    if (!_name.hasMatch(name)) return true;
+    return int.parse(name.substring(0, name.indexOf('-'))) <= until;
   }
 
   /// A name [keepImage] makes: never a path out of the folder.
