@@ -10,7 +10,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
-import 'package:nushi/kept_trouble.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/native_macos.dart';
@@ -113,7 +112,6 @@ void startAfresh() {
   // views' places, theme files.
   forgetPulls();
   forgetReviews();
-  forgetKeptTroubles();
   forgetReviewDrafts();
   forgetJiraView();
   forgetGitHubView();

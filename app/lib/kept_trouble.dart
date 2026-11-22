@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:nushi/run_state.dart';
+
 /// What went wrong reading a file the app keeps (`readKept`,
 /// `file_mode.dart`): set aside whole (it didn't parse), copied aside
 /// (some of its records didn't read and were dropped), or can't be read
@@ -11,8 +13,9 @@ enum KeptTroubleKind { setAside, copiedAside, unread }
 typedef KeptTrouble = ({String file, KeptTroubleKind kind, String? aside});
 
 /// The troubles met in this run, one a file and kind, in the order they
-/// came: the Mac's and Linux's window says each once (`KeptNotices`).
-final keptTroubles = ValueNotifier<List<KeptTrouble>>(const []);
+/// came: the Mac's and Linux's window says each once (`KeptNotices`). A
+/// test starts with none (`runValue`).
+final ValueNotifier<List<KeptTrouble>> keptTroubles = runValue(const []);
 
 /// Notes [kind] of trouble with the kept file [file] (its name), unless
 /// it was noted already in this run.
@@ -50,7 +53,3 @@ String keptTroubleText(KeptTrouble t) {
           'saved until it can.',
   };
 }
-
-/// No trouble noted (tests: each starts with none).
-@visibleForTesting
-void forgetKeptTroubles() => keptTroubles.value = const [];
