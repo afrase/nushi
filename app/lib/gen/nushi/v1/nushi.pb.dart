@@ -3116,7 +3116,8 @@ class Agent extends $pb.GeneratedMessage {
   void clearAwake() => $_clearField(13);
 
   /// Its MCP servers are only yours, the user scope, with no off switch or
-  /// legacy SSE; others have Claude's scopes and those (API 97).
+  /// legacy SSE; the others have more scopes (Claude: user, project,
+  /// local, plugins', claude.ai's) and those (API 97).
   @$pb.TagNumber(15)
   $core.bool get mcpUserOnly => $_getBF(12);
   @$pb.TagNumber(15)
@@ -9923,8 +9924,8 @@ class ListMcpServersRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearCheckHealth() => $_clearField(2);
 
-  /// The agent whose servers these are ("claude" when empty; API 80:
-  /// "ante" too, user scope only).
+  /// The agent whose servers these are (the first agent ListAgents lists
+  /// when empty; API 80: "ante" too, user scope only).
   @$pb.TagNumber(3)
   $core.String get agent => $_getSZ(2);
   @$pb.TagNumber(3)
@@ -10274,8 +10275,8 @@ class AddMcpServerRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(4)
   void clearConfigJson() => $_clearField(4);
 
-  /// The agent whose servers these are ("claude" when empty; API 80:
-  /// "ante" too, user scope only).
+  /// The agent whose servers these are (the first agent ListAgents lists
+  /// when empty; API 80: "ante" too, user scope only).
   @$pb.TagNumber(5)
   $core.String get agent => $_getSZ(4);
   @$pb.TagNumber(5)
@@ -10424,8 +10425,8 @@ class EditMcpServerRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(4)
   void clearConfigJson() => $_clearField(4);
 
-  /// The agent whose servers these are ("claude" when empty; API 80:
-  /// "ante" too, user scope only).
+  /// The agent whose servers these are (the first agent ListAgents lists
+  /// when empty; API 80: "ante" too, user scope only).
   @$pb.TagNumber(5)
   $core.String get agent => $_getSZ(4);
   @$pb.TagNumber(5)
@@ -10564,8 +10565,8 @@ class RemoveMcpServerRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   void clearName() => $_clearField(3);
 
-  /// The agent whose servers these are ("claude" when empty; API 80:
-  /// "ante" too, user scope only).
+  /// The agent whose servers these are (the first agent ListAgents lists
+  /// when empty; API 80: "ante" too, user scope only).
   @$pb.TagNumber(4)
   $core.String get agent => $_getSZ(3);
   @$pb.TagNumber(4)
@@ -10717,8 +10718,8 @@ class SetMcpServerOnRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(4)
   void clearScope() => $_clearField(4);
 
-  /// The agent whose servers these are ("claude" when empty; API 80:
-  /// "ante" too, user scope only).
+  /// The agent whose servers these are (the first agent ListAgents lists
+  /// when empty; API 80: "ante" too, user scope only).
   @$pb.TagNumber(5)
   $core.String get agent => $_getSZ(4);
   @$pb.TagNumber(5)
@@ -10845,8 +10846,8 @@ class LoginMcpServerRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearName() => $_clearField(2);
 
-  /// The agent whose servers these are ("claude" when empty; API 80:
-  /// "ante" too, user scope only).
+  /// The agent whose servers these are (the first agent ListAgents lists
+  /// when empty; API 80: "ante" too, user scope only).
   @$pb.TagNumber(3)
   $core.String get agent => $_getSZ(2);
   @$pb.TagNumber(3)
@@ -10973,8 +10974,8 @@ class LogoutMcpServerRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearName() => $_clearField(2);
 
-  /// The agent whose servers these are ("claude" when empty; API 80:
-  /// "ante" too, user scope only).
+  /// The agent whose servers these are (the first agent ListAgents lists
+  /// when empty; API 80: "ante" too, user scope only).
   @$pb.TagNumber(3)
   $core.String get agent => $_getSZ(2);
   @$pb.TagNumber(3)
@@ -11087,7 +11088,8 @@ class ListSkillsRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearFolder() => $_clearField(1);
 
-  /// The agent whose skills these are ("claude" when empty).
+  /// The agent whose skills these are (the first agent ListAgents lists
+  /// when empty).
   @$pb.TagNumber(2)
   $core.String get agent => $_getSZ(1);
   @$pb.TagNumber(2)
@@ -11180,7 +11182,8 @@ class ListSkillsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   $pb.PbList<Plugin> get plugins => $_getList(1);
 
-  /// Why Claude couldn't list its plugins (their skills are then missing).
+  /// Why the agent couldn't list its plugins (Claude: `claude plugin
+  /// list`); their skills are then missing.
   @$pb.TagNumber(3)
   $core.String get pluginsError => $_getSZ(2);
   @$pb.TagNumber(3)
@@ -11190,8 +11193,9 @@ class ListSkillsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   void clearPluginsError() => $_clearField(3);
 
-  /// Claude's built-in skills are off; built_in_set_in names a settings
-  /// file that decides it other than yours.
+  /// The agent's built-in skills are off (Claude: disableBundledSkills);
+  /// built_in_set_in names a settings file that decides it other than
+  /// yours.
   @$pb.TagNumber(4)
   $core.bool get builtInOff => $_getBF(3);
   @$pb.TagNumber(4)
@@ -11346,7 +11350,8 @@ class Skill extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<Skill>(Skill.$_createMessage);
   static Skill? _defaultInstance;
 
-  /// As Claude lists it; a plugin's is "<plugin>:<skill>".
+  /// As the agent lists it; a plugin's is "<plugin>:<skill>" (as Claude
+  /// names them).
   @$pb.TagNumber(1)
   $core.String get name => $_getSZ(0);
   @$pb.TagNumber(1)
@@ -11869,7 +11874,7 @@ class SetSkillOnRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(4)
   void clearOn() => $_clearField(4);
 
-  /// The agent ("claude" when empty).
+  /// The agent (the first agent ListAgents lists when empty).
   @$pb.TagNumber(5)
   $core.String get agent => $_getSZ(4);
   @$pb.TagNumber(5)
@@ -36800,11 +36805,13 @@ class NushiServiceApi {
           'RemoveMcpServer', request, RemoveMcpServerResponse());
 
   /// Turns a server on or off for the folder's project (API 65: by scope).
-  /// A project's .mcp.json server: on approves it, off rejects it (Claude's
-  /// enabledMcpjsonServers and disabledMcpjsonServers in the project's
-  /// .claude/settings.local.json). A user or local server: as /mcp in a
-  /// terminal does, which Claude records in ~/.claude.json, asked of Claude
-  /// (ADR 0050). Refused for a plugin's server and a claude.ai connector.
+  /// A project server: on approves it, off rejects it (Claude: its
+  /// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
+  /// project's .claude/settings.local.json). A user or local server: as the
+  /// agent's own switch does, asked of the agent (Claude: /mcp in a
+  /// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
+  /// any other scope (Claude's plugins' servers and claude.ai connectors)
+  /// and by an agent with no off switch.
   $async.Future<SetMcpServerOnResponse> setMcpServerOn(
           $pb.ClientContext? ctx, SetMcpServerOnRequest request) =>
       _client.invoke<SetMcpServerOnResponse>(ctx, 'NushiService',
@@ -36834,24 +36841,27 @@ class NushiServiceApi {
 
   /// Turns a skill on or off: yours in your settings, a project's in the
   /// project's local settings (skillOverrides, only that key); "builtin"
-  /// turns Claude's built-in skills on or off together, in your settings
-  /// (disableBundledSkills). A plugin's skills go with their plugin.
+  /// turns the agent's built-in skills on or off together, in your
+  /// settings (Claude: disableBundledSkills). A plugin's skills go with
+  /// their plugin.
   $async.Future<SetSkillOnResponse> setSkillOn(
           $pb.ClientContext? ctx, SetSkillOnRequest request) =>
       _client.invoke<SetSkillOnResponse>(
           ctx, 'NushiService', 'SetSkillOn', request, SetSkillOnResponse());
 
   /// Turns an installed plugin on or off where Plugin.switch_scope says:
-  /// for you through `claude plugin enable`/`disable` (run in Claude's config
-  /// folder, never the project's), for the project by its enabledPlugins
-  /// entry in the project's local settings.
+  /// for you through the agent's own CLI (Claude: `claude plugin
+  /// enable`/`disable`, run in its config folder, never the project's), for
+  /// the project in the project's local settings (Claude: its
+  /// enabledPlugins entry).
   $async.Future<SetPluginOnResponse> setPluginOn(
           $pb.ClientContext? ctx, SetPluginOnRequest request) =>
       _client.invoke<SetPluginOnResponse>(
           ctx, 'NushiService', 'SetPluginOn', request, SetPluginOnResponse());
 
-  /// Uninstalls a plugin installed for you (`claude plugin uninstall`);
-  /// refused for one installed for a project.
+  /// Uninstalls a plugin installed for you, through the agent's own CLI
+  /// (Claude: `claude plugin uninstall`); refused for one installed for a
+  /// project.
   $async.Future<UninstallPluginResponse> uninstallPlugin(
           $pb.ClientContext? ctx, UninstallPluginRequest request) =>
       _client.invoke<UninstallPluginResponse>(ctx, 'NushiService',

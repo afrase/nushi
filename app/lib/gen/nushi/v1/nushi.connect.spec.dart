@@ -743,11 +743,13 @@ abstract final class NushiService {
   );
 
   /// Turns a server on or off for the folder's project (API 65: by scope).
-  /// A project's .mcp.json server: on approves it, off rejects it (Claude's
-  /// enabledMcpjsonServers and disabledMcpjsonServers in the project's
-  /// .claude/settings.local.json). A user or local server: as /mcp in a
-  /// terminal does, which Claude records in ~/.claude.json, asked of Claude
-  /// (ADR 0050). Refused for a plugin's server and a claude.ai connector.
+  /// A project server: on approves it, off rejects it (Claude: its
+  /// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
+  /// project's .claude/settings.local.json). A user or local server: as the
+  /// agent's own switch does, asked of the agent (Claude: /mcp in a
+  /// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
+  /// any other scope (Claude's plugins' servers and claude.ai connectors)
+  /// and by an agent with no off switch.
   static const setMcpServerOn = connect.Spec(
     '/$name/SetMcpServerOn',
     connect.StreamType.unary,
@@ -786,8 +788,9 @@ abstract final class NushiService {
 
   /// Turns a skill on or off: yours in your settings, a project's in the
   /// project's local settings (skillOverrides, only that key); "builtin"
-  /// turns Claude's built-in skills on or off together, in your settings
-  /// (disableBundledSkills). A plugin's skills go with their plugin.
+  /// turns the agent's built-in skills on or off together, in your
+  /// settings (Claude: disableBundledSkills). A plugin's skills go with
+  /// their plugin.
   static const setSkillOn = connect.Spec(
     '/$name/SetSkillOn',
     connect.StreamType.unary,
@@ -796,9 +799,10 @@ abstract final class NushiService {
   );
 
   /// Turns an installed plugin on or off where Plugin.switch_scope says:
-  /// for you through `claude plugin enable`/`disable` (run in Claude's config
-  /// folder, never the project's), for the project by its enabledPlugins
-  /// entry in the project's local settings.
+  /// for you through the agent's own CLI (Claude: `claude plugin
+  /// enable`/`disable`, run in its config folder, never the project's), for
+  /// the project in the project's local settings (Claude: its
+  /// enabledPlugins entry).
   static const setPluginOn = connect.Spec(
     '/$name/SetPluginOn',
     connect.StreamType.unary,
@@ -806,8 +810,9 @@ abstract final class NushiService {
     nushiv1nushi.SetPluginOnResponse.new,
   );
 
-  /// Uninstalls a plugin installed for you (`claude plugin uninstall`);
-  /// refused for one installed for a project.
+  /// Uninstalls a plugin installed for you, through the agent's own CLI
+  /// (Claude: `claude plugin uninstall`); refused for one installed for a
+  /// project.
   static const uninstallPlugin = connect.Spec(
     '/$name/UninstallPlugin',
     connect.StreamType.unary,

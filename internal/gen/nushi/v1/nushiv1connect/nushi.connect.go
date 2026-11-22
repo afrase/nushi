@@ -786,11 +786,13 @@ type NushiServiceClient interface {
 	EditMcpServer(context.Context, *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error)
 	RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error)
 	// Turns a server on or off for the folder's project (API 65: by scope).
-	// A project's .mcp.json server: on approves it, off rejects it (Claude's
-	// enabledMcpjsonServers and disabledMcpjsonServers in the project's
-	// .claude/settings.local.json). A user or local server: as /mcp in a
-	// terminal does, which Claude records in ~/.claude.json, asked of Claude
-	// (ADR 0050). Refused for a plugin's server and a claude.ai connector.
+	// A project server: on approves it, off rejects it (Claude: its
+	// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
+	// project's .claude/settings.local.json). A user or local server: as the
+	// agent's own switch does, asked of the agent (Claude: /mcp in a
+	// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
+	// any other scope (Claude's plugins' servers and claude.ai connectors)
+	// and by an agent with no off switch.
 	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
 	// Signs in to a server that needs OAuth: the agent opens the browser and
 	// the call returns once the sign-in is done there, or failed (a few
@@ -805,16 +807,19 @@ type NushiServiceClient interface {
 	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
 	// Turns a skill on or off: yours in your settings, a project's in the
 	// project's local settings (skillOverrides, only that key); "builtin"
-	// turns Claude's built-in skills on or off together, in your settings
-	// (disableBundledSkills). A plugin's skills go with their plugin.
+	// turns the agent's built-in skills on or off together, in your
+	// settings (Claude: disableBundledSkills). A plugin's skills go with
+	// their plugin.
 	SetSkillOn(context.Context, *connect.Request[v1.SetSkillOnRequest]) (*connect.Response[v1.SetSkillOnResponse], error)
 	// Turns an installed plugin on or off where Plugin.switch_scope says:
-	// for you through `claude plugin enable`/`disable` (run in Claude's config
-	// folder, never the project's), for the project by its enabledPlugins
-	// entry in the project's local settings.
+	// for you through the agent's own CLI (Claude: `claude plugin
+	// enable`/`disable`, run in its config folder, never the project's), for
+	// the project in the project's local settings (Claude: its
+	// enabledPlugins entry).
 	SetPluginOn(context.Context, *connect.Request[v1.SetPluginOnRequest]) (*connect.Response[v1.SetPluginOnResponse], error)
-	// Uninstalls a plugin installed for you (`claude plugin uninstall`);
-	// refused for one installed for a project.
+	// Uninstalls a plugin installed for you, through the agent's own CLI
+	// (Claude: `claude plugin uninstall`); refused for one installed for a
+	// project.
 	UninstallPlugin(context.Context, *connect.Request[v1.UninstallPluginRequest]) (*connect.Response[v1.UninstallPluginResponse], error)
 	// Moves a skill's folder (yours or the project's, as listed) to the
 	// Trash.
@@ -3319,11 +3324,13 @@ type NushiServiceHandler interface {
 	EditMcpServer(context.Context, *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error)
 	RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error)
 	// Turns a server on or off for the folder's project (API 65: by scope).
-	// A project's .mcp.json server: on approves it, off rejects it (Claude's
-	// enabledMcpjsonServers and disabledMcpjsonServers in the project's
-	// .claude/settings.local.json). A user or local server: as /mcp in a
-	// terminal does, which Claude records in ~/.claude.json, asked of Claude
-	// (ADR 0050). Refused for a plugin's server and a claude.ai connector.
+	// A project server: on approves it, off rejects it (Claude: its
+	// .mcp.json's, by enabledMcpjsonServers and disabledMcpjsonServers in the
+	// project's .claude/settings.local.json). A user or local server: as the
+	// agent's own switch does, asked of the agent (Claude: /mcp in a
+	// terminal, which it records in ~/.claude.json; ADR 0050). Refused for
+	// any other scope (Claude's plugins' servers and claude.ai connectors)
+	// and by an agent with no off switch.
 	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
 	// Signs in to a server that needs OAuth: the agent opens the browser and
 	// the call returns once the sign-in is done there, or failed (a few
@@ -3338,16 +3345,19 @@ type NushiServiceHandler interface {
 	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
 	// Turns a skill on or off: yours in your settings, a project's in the
 	// project's local settings (skillOverrides, only that key); "builtin"
-	// turns Claude's built-in skills on or off together, in your settings
-	// (disableBundledSkills). A plugin's skills go with their plugin.
+	// turns the agent's built-in skills on or off together, in your
+	// settings (Claude: disableBundledSkills). A plugin's skills go with
+	// their plugin.
 	SetSkillOn(context.Context, *connect.Request[v1.SetSkillOnRequest]) (*connect.Response[v1.SetSkillOnResponse], error)
 	// Turns an installed plugin on or off where Plugin.switch_scope says:
-	// for you through `claude plugin enable`/`disable` (run in Claude's config
-	// folder, never the project's), for the project by its enabledPlugins
-	// entry in the project's local settings.
+	// for you through the agent's own CLI (Claude: `claude plugin
+	// enable`/`disable`, run in its config folder, never the project's), for
+	// the project in the project's local settings (Claude: its
+	// enabledPlugins entry).
 	SetPluginOn(context.Context, *connect.Request[v1.SetPluginOnRequest]) (*connect.Response[v1.SetPluginOnResponse], error)
-	// Uninstalls a plugin installed for you (`claude plugin uninstall`);
-	// refused for one installed for a project.
+	// Uninstalls a plugin installed for you, through the agent's own CLI
+	// (Claude: `claude plugin uninstall`); refused for one installed for a
+	// project.
 	UninstallPlugin(context.Context, *connect.Request[v1.UninstallPluginRequest]) (*connect.Response[v1.UninstallPluginResponse], error)
 	// Moves a skill's folder (yours or the project's, as listed) to the
 	// Trash.

@@ -2541,7 +2541,8 @@ type Agent struct {
 	// Its chats whose agent runs (they sleep when the adapter changes).
 	Awake int32 `protobuf:"varint,13,opt,name=awake,proto3" json:"awake,omitempty"`
 	// Its MCP servers are only yours, the user scope, with no off switch or
-	// legacy SSE; others have Claude's scopes and those (API 97).
+	// legacy SSE; the others have more scopes (Claude: user, project,
+	// local, plugins', claude.ai's) and those (API 97).
 	McpUserOnly bool `protobuf:"varint,15,opt,name=mcp_user_only,json=mcpUserOnly,proto3" json:"mcp_user_only,omitempty"`
 	// Nushi's Go agent can run it in place of its adapter, as
 	// Settings.codex_go_agent picks: Settings › Agents shows that switch
@@ -7869,8 +7870,8 @@ type ListMcpServersRequest struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Folder      string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
 	CheckHealth bool                   `protobuf:"varint,2,opt,name=check_health,json=checkHealth,proto3" json:"check_health,omitempty"`
-	// The agent whose servers these are ("claude" when empty; API 80:
-	// "ante" too, user scope only).
+	// The agent whose servers these are (the first agent ListAgents lists
+	// when empty; API 80: "ante" too, user scope only).
 	Agent         string `protobuf:"bytes,3,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -8115,8 +8116,8 @@ type AddMcpServerRequest struct {
 	Scope      string                 `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
 	Name       string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	ConfigJson string                 `protobuf:"bytes,4,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"`
-	// The agent whose servers these are ("claude" when empty; API 80:
-	// "ante" too, user scope only).
+	// The agent whose servers these are (the first agent ListAgents lists
+	// when empty; API 80: "ante" too, user scope only).
 	Agent         string `protobuf:"bytes,5,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -8229,8 +8230,8 @@ type EditMcpServerRequest struct {
 	Scope      string                 `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
 	Name       string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	ConfigJson string                 `protobuf:"bytes,4,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"`
-	// The agent whose servers these are ("claude" when empty; API 80:
-	// "ante" too, user scope only).
+	// The agent whose servers these are (the first agent ListAgents lists
+	// when empty; API 80: "ante" too, user scope only).
 	Agent         string `protobuf:"bytes,5,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -8342,8 +8343,8 @@ type RemoveMcpServerRequest struct {
 	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
 	Scope  string                 `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
 	Name   string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	// The agent whose servers these are ("claude" when empty; API 80:
-	// "ante" too, user scope only).
+	// The agent whose servers these are (the first agent ListAgents lists
+	// when empty; API 80: "ante" too, user scope only).
 	Agent         string `protobuf:"bytes,4,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -8450,8 +8451,8 @@ type SetMcpServerOnRequest struct {
 	On     bool                   `protobuf:"varint,3,opt,name=on,proto3" json:"on,omitempty"`
 	// The server's scope: "project" (also when empty), "user" or "local".
 	Scope string `protobuf:"bytes,4,opt,name=scope,proto3" json:"scope,omitempty"`
-	// The agent whose servers these are ("claude" when empty; API 80:
-	// "ante" too, user scope only).
+	// The agent whose servers these are (the first agent ListAgents lists
+	// when empty; API 80: "ante" too, user scope only).
 	Agent         string `protobuf:"bytes,5,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -8562,8 +8563,8 @@ type LoginMcpServerRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
 	Name   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// The agent whose servers these are ("claude" when empty; API 80:
-	// "ante" too, user scope only).
+	// The agent whose servers these are (the first agent ListAgents lists
+	// when empty; API 80: "ante" too, user scope only).
 	Agent         string `protobuf:"bytes,3,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -8660,8 +8661,8 @@ type LogoutMcpServerRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
 	Name   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// The agent whose servers these are ("claude" when empty; API 80:
-	// "ante" too, user scope only).
+	// The agent whose servers these are (the first agent ListAgents lists
+	// when empty; API 80: "ante" too, user scope only).
 	Agent         string `protobuf:"bytes,3,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -8757,7 +8758,8 @@ func (*LogoutMcpServerResponse) Descriptor() ([]byte, []int) {
 type ListSkillsRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
-	// The agent whose skills these are ("claude" when empty).
+	// The agent whose skills these are (the first agent ListAgents lists
+	// when empty).
 	Agent         string `protobuf:"bytes,2,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -8811,10 +8813,12 @@ type ListSkillsResponse struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Skills  []*Skill               `protobuf:"bytes,1,rep,name=skills,proto3" json:"skills,omitempty"`
 	Plugins []*Plugin              `protobuf:"bytes,2,rep,name=plugins,proto3" json:"plugins,omitempty"`
-	// Why Claude couldn't list its plugins (their skills are then missing).
+	// Why the agent couldn't list its plugins (Claude: `claude plugin
+	// list`); their skills are then missing.
 	PluginsError string `protobuf:"bytes,3,opt,name=plugins_error,json=pluginsError,proto3" json:"plugins_error,omitempty"`
-	// Claude's built-in skills are off; built_in_set_in names a settings
-	// file that decides it other than yours.
+	// The agent's built-in skills are off (Claude: disableBundledSkills);
+	// built_in_set_in names a settings file that decides it other than
+	// yours.
 	BuiltInOff   bool   `protobuf:"varint,4,opt,name=built_in_off,json=builtInOff,proto3" json:"built_in_off,omitempty"`
 	BuiltInSetIn string `protobuf:"bytes,5,opt,name=built_in_set_in,json=builtInSetIn,proto3" json:"built_in_set_in,omitempty"`
 	// Why the agent has no skills to show, or no switches ("" when it has).
@@ -8933,7 +8937,8 @@ func (x *ListSkillsResponse) GetHasPlugins() bool {
 
 type Skill struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// As Claude lists it; a plugin's is "<plugin>:<skill>".
+	// As the agent lists it; a plugin's is "<plugin>:<skill>" (as Claude
+	// names them).
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// From its front matter, else its first line: its author's text.
 	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
@@ -9314,7 +9319,7 @@ type SetSkillOnRequest struct {
 	Source string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
 	Name   string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	On     bool   `protobuf:"varint,4,opt,name=on,proto3" json:"on,omitempty"`
-	// The agent ("claude" when empty).
+	// The agent (the first agent ListAgents lists when empty).
 	Agent         string `protobuf:"bytes,5,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
