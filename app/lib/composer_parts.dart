@@ -297,10 +297,10 @@ class _ToChip extends StatelessWidget {
 /// [written], Queue (⏎, or ⌘⏎ with "Enter starts a new line" on: it waits
 /// for the agent's next chance) and Stop and send (⌘⏎, or ⇧⌘⏎;
 /// [sendKeyLabel], [sendNowKeyLabel]), pills on the card with their
-/// [words] where the row has room, else round buttons with the same icons; Stop, the square in a circle it
-/// always was ([stopIcon]), while a turn runs; else Send, round on the
-/// accent's fill, once something is written. Those coming pop in once the
-/// box is there ([pop]).
+/// [words] where the row has room, else round buttons with the same icons;
+/// Stop, the square in a circle it always was ([stopIcon]), while a turn
+/// runs; else Send, round on the accent's fill, once something is written.
+/// Those coming pop in once the box is there ([pop]).
 class SendButtons extends StatelessWidget {
   const new(
     this.chat,
