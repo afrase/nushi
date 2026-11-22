@@ -161,7 +161,7 @@ func TestCodexFollowsItsGoAgentSetting(t *testing.T) {
 	t.Setenv("PATH", bin)
 	on := false
 	var found []agents.Agent
-	for _, a := range All("", func() bool { return on }) {
+	for _, a := range All("", func(name string) bool { return on && name == "codex" }) {
 		found = append(found, a.Agent)
 	}
 	svc := agents.New(found, func(context.Context, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})

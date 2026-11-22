@@ -24,26 +24,52 @@ func TestTranscriptSettings(t *testing.T) {
 	}
 }
 
-// Codex's Go agent is off until turned on, and kept in settings.json
-// (codexGoAgent) once set, on and off again.
-func TestCodexGoAgentSetting(t *testing.T) {
+// An agent's Go agent is off until turned on, and kept in settings.json
+// (goAgents, by name) once set, on and off again.
+func TestGoAgentSetting(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir)
-	if s.CodexGoAgent() {
+	if s.GoAgent("codex") {
 		t.Fatal("on by default")
 	}
-	testcheck.NoErr(t, s.SetCodexGoAgent(true))
+	testcheck.NoErr(t, s.SetGoAgent("codex", true))
 	b, err := os.ReadFile(filepath.Join(dir, "settings.json"))
 	testcheck.NoErr(t, err)
-	if !strings.Contains(string(b), `"codexGoAgent": true`) {
+	if !strings.Contains(string(b), `"goAgents": {`) || !strings.Contains(string(b), `"codex": true`) {
 		t.Errorf("written: %s", b)
 	}
-	if !New(dir).CodexGoAgent() {
+	if !New(dir).GoAgent("codex") || New(dir).GoAgent("other") {
+		t.Error("not kept by agent")
+	}
+	testcheck.NoErr(t, s.SetGoAgent("codex", false))
+	if New(dir).GoAgent("codex") {
+		t.Error("off not kept")
+	}
+}
+
+// A settings.json written before the setting was kept by agent, with
+// codexGoAgent on, reads as Codex's Go agent on; the old key is gone once
+// a change is written, Codex's kept under goAgents.
+func TestOldCodexGoAgentKeyReads(t *testing.T) {
+	dir := t.TempDir()
+	testcheck.Write(t, filepath.Join(dir, "settings.json"), `{"sleepAfterMinutes": 15, "codexGoAgent": true}`)
+	s := New(dir)
+	if !s.GoAgent("codex") || s.GoAgent("claude") || s.SleepAfter() != 15*time.Minute {
+		t.Fatalf("read: codex %v, claude %v, sleep %v", s.GoAgent("codex"), s.GoAgent("claude"), s.SleepAfter())
+	}
+	testcheck.NoErr(t, s.SetDebugLog(true))
+	b, err := os.ReadFile(filepath.Join(dir, "settings.json"))
+	testcheck.NoErr(t, err)
+	if strings.Contains(string(b), "codexGoAgent") || !strings.Contains(string(b), `"codex": true`) {
+		t.Errorf("written: %s", b)
+	}
+	if !New(dir).GoAgent("codex") {
 		t.Error("not kept")
 	}
-	testcheck.NoErr(t, s.SetCodexGoAgent(false))
-	if New(dir).CodexGoAgent() {
-		t.Error("off not kept")
+	// Turned off, it stays off: the old key isn't read again.
+	testcheck.NoErr(t, s.SetGoAgent("codex", false))
+	if New(dir).GoAgent("codex") {
+		t.Error("the old key came back")
 	}
 }
 

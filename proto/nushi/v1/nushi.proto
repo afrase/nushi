@@ -972,8 +972,9 @@ message Agent {
   // local, plugins', claude.ai's) and those (API 97).
   bool mcp_user_only = 15;
   // Nushi's Go agent can run it in place of its adapter, as
-  // Settings.codex_go_agent picks: Settings › Agents shows that switch
-  // under it (API 138, ADR 0142).
+  // Settings.go_agents picks by its name (Settings.codex_go_agent before
+  // API 142): Settings › Agents shows that switch under it (API 138, ADR
+  // 0142).
   bool go_agent_switch = 16;
   // What the user runs in a terminal to sign it in ("codex login"); empty
   // when Nushi doesn't know (API 139).
@@ -1474,8 +1475,16 @@ message Settings {
   // codex-acp adapter; off by default. A Codex chat's agent reads it each
   // time it starts (a new chat, a reopened or woken one), so chats already
   // running keep theirs until then. SetSettings leaves it as it is when not
-  // given (API 138).
+  // given (API 138). Since API 142 it is go_agents["codex"], kept for an
+  // older app: SetSettings takes whichever of the two differs from what
+  // is set, as an older app sends go_agents back as it got it.
   optional bool codex_go_agent = 7;
+  // The agents whose chats run through Nushi's Go agent instead of their
+  // adapter, by Agent.name: one entry for each agent with a
+  // go_agent_switch, off by default. An agent's chats read it each time
+  // their agent starts. SetSettings changes only the agents it names, and
+  // refuses one without the switch (API 142, ADR 0142).
+  map<string, bool> go_agents = 8;
 }
 
 message ListTranscriptsRequest {}

@@ -1974,7 +1974,16 @@ const Settings$json = {
       '10': 'codexGoAgent',
       '17': true
     },
+    {
+      '1': 'go_agents',
+      '3': 8,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Settings.GoAgentsEntry',
+      '10': 'goAgents'
+    },
   ],
+  '3': [Settings_GoAgentsEntry$json],
   '8': [
     {'1': '_keep_transcripts'},
     {'1': '_transcript_days'},
@@ -1987,15 +1996,27 @@ const Settings$json = {
   '10': ['claude_go_agent'],
 };
 
+@$core.Deprecated('Use settingsDescriptor instead')
+const Settings_GoAgentsEntry$json = {
+  '1': 'GoAgentsEntry',
+  '2': [
+    {'1': 'key', '3': 1, '4': 1, '5': 9, '10': 'key'},
+    {'1': 'value', '3': 2, '4': 1, '5': 8, '10': 'value'},
+  ],
+  '7': {'7': true},
+};
+
 /// Descriptor for `Settings`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List settingsDescriptor = $convert.base64Decode(
     'CghTZXR0aW5ncxIuChNzbGVlcF9hZnRlcl9taW51dGVzGAEgASgFUhFzbGVlcEFmdGVyTWludX'
     'RlcxIbCglkZWJ1Z19sb2cYAiABKAhSCGRlYnVnTG9nEi4KEGtlZXBfdHJhbnNjcmlwdHMYAyAB'
     'KAhIAFIPa2VlcFRyYW5zY3JpcHRziAEBEiwKD3RyYW5zY3JpcHRfZGF5cxgEIAEoBUgBUg50cm'
     'Fuc2NyaXB0RGF5c4gBARIoCg1jaGVja191cGRhdGVzGAUgASgISAJSDGNoZWNrVXBkYXRlc4gB'
-    'ARIpCg5jb2RleF9nb19hZ2VudBgHIAEoCEgDUgxjb2RleEdvQWdlbnSIAQFCEwoRX2tlZXBfdH'
-    'JhbnNjcmlwdHNCEgoQX3RyYW5zY3JpcHRfZGF5c0IQCg5fY2hlY2tfdXBkYXRlc0IRCg9fY29k'
-    'ZXhfZ29fYWdlbnRKBAgGEAdSD2NsYXVkZV9nb19hZ2VudA==');
+    'ARIpCg5jb2RleF9nb19hZ2VudBgHIAEoCEgDUgxjb2RleEdvQWdlbnSIAQESPQoJZ29fYWdlbn'
+    'RzGAggAygLMiAubnVzaGkudjEuU2V0dGluZ3MuR29BZ2VudHNFbnRyeVIIZ29BZ2VudHMaOwoN'
+    'R29BZ2VudHNFbnRyeRIQCgNrZXkYASABKAlSA2tleRIUCgV2YWx1ZRgCIAEoCFIFdmFsdWU6Aj'
+    'gBQhMKEV9rZWVwX3RyYW5zY3JpcHRzQhIKEF90cmFuc2NyaXB0X2RheXNCEAoOX2NoZWNrX3Vw'
+    'ZGF0ZXNCEQoPX2NvZGV4X2dvX2FnZW50SgQIBhAHUg9jbGF1ZGVfZ29fYWdlbnQ=');
 
 @$core.Deprecated('Use listTranscriptsRequestDescriptor instead')
 const ListTranscriptsRequest$json = {
@@ -9460,6 +9481,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.GetSettingsRequest': GetSettingsRequest$json,
   '.nushi.v1.GetSettingsResponse': GetSettingsResponse$json,
   '.nushi.v1.Settings': Settings$json,
+  '.nushi.v1.Settings.GoAgentsEntry': Settings_GoAgentsEntry$json,
   '.nushi.v1.SetSettingsRequest': SetSettingsRequest$json,
   '.nushi.v1.SetSettingsResponse': SetSettingsResponse$json,
   '.nushi.v1.ListTranscriptsRequest': ListTranscriptsRequest$json,

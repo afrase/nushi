@@ -265,7 +265,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 		lapsed.Store(!waiting)
 	}
 	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts,
-		Servers: srvs, Usage: meter, CodexGo: st}
+		Servers: srvs, Usage: meter, GoAgents: st}
 	socket, forDevices := api.Handlers(sv, toolSvc, "tok") // as main serves them
 	srv := httptest.NewServer(socket)
 	devices := httptest.NewServer(forDevices)

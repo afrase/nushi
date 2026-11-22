@@ -3128,8 +3128,9 @@ class Agent extends $pb.GeneratedMessage {
   void clearMcpUserOnly() => $_clearField(15);
 
   /// Nushi's Go agent can run it in place of its adapter, as
-  /// Settings.codex_go_agent picks: Settings › Agents shows that switch
-  /// under it (API 138, ADR 0142).
+  /// Settings.go_agents picks by its name (Settings.codex_go_agent before
+  /// API 142): Settings › Agents shows that switch under it (API 138, ADR
+  /// 0142).
   @$pb.TagNumber(16)
   $core.bool get goAgentSwitch => $_getBF(13);
   @$pb.TagNumber(16)
@@ -7973,6 +7974,7 @@ class Settings extends $pb.GeneratedMessage {
     $core.int? transcriptDays,
     $core.bool? checkUpdates,
     $core.bool? codexGoAgent,
+    $core.Iterable<$core.MapEntry<$core.String, $core.bool>>? goAgents,
   }) {
     final result = Settings._();
     if (sleepAfterMinutes != null) result.sleepAfterMinutes = sleepAfterMinutes;
@@ -7981,6 +7983,7 @@ class Settings extends $pb.GeneratedMessage {
     if (transcriptDays != null) result.transcriptDays = transcriptDays;
     if (checkUpdates != null) result.checkUpdates = checkUpdates;
     if (codexGoAgent != null) result.codexGoAgent = codexGoAgent;
+    if (goAgents != null) result.goAgents.addEntries(goAgents);
     return result;
   }
 
@@ -8003,6 +8006,11 @@ class Settings extends $pb.GeneratedMessage {
     ..aI(4, _omitFieldNames ? '' : 'transcriptDays')
     ..aOB(5, _omitFieldNames ? '' : 'checkUpdates')
     ..aOB(7, _omitFieldNames ? '' : 'codexGoAgent')
+    ..m<$core.String, $core.bool>(8, _omitFieldNames ? '' : 'goAgents',
+        entryClassName: 'Settings.GoAgentsEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.OB,
+        packageName: const $pb.PackageName('nushi.v1'))
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -8086,7 +8094,9 @@ class Settings extends $pb.GeneratedMessage {
   /// codex-acp adapter; off by default. A Codex chat's agent reads it each
   /// time it starts (a new chat, a reopened or woken one), so chats already
   /// running keep theirs until then. SetSettings leaves it as it is when not
-  /// given (API 138).
+  /// given (API 138). Since API 142 it is go_agents["codex"], kept for an
+  /// older app: SetSettings takes whichever of the two differs from what
+  /// is set, as an older app sends go_agents back as it got it.
   @$pb.TagNumber(7)
   $core.bool get codexGoAgent => $_getBF(5);
   @$pb.TagNumber(7)
@@ -8095,6 +8105,14 @@ class Settings extends $pb.GeneratedMessage {
   $core.bool hasCodexGoAgent() => $_has(5);
   @$pb.TagNumber(7)
   void clearCodexGoAgent() => $_clearField(7);
+
+  /// The agents whose chats run through Nushi's Go agent instead of their
+  /// adapter, by Agent.name: one entry for each agent with a
+  /// go_agent_switch, off by default. An agent's chats read it each time
+  /// their agent starts. SetSettings changes only the agents it names, and
+  /// refuses one without the switch (API 142, ADR 0142).
+  @$pb.TagNumber(8)
+  $pb.PbMap<$core.String, $core.bool> get goAgents => $_getMap(6);
 }
 
 class ListTranscriptsRequest extends $pb.GeneratedMessage {

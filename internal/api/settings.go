@@ -23,10 +23,7 @@ func (s *server) GetSettings(context.Context, *connect.Request[nushiv1.GetSettin
 		on := s.Updates.On()
 		set.CheckUpdates = &on
 	}
-	if s.CodexGo != nil {
-		on := s.CodexGo.CodexGoAgent()
-		set.CodexGoAgent = &on
-	}
+	s.goAgents(set)
 	return connect.NewResponse(&nushiv1.GetSettingsResponse{Settings: set}), nil
 }
 
@@ -47,8 +44,8 @@ func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.Set
 	if err := s.setCheckUpdates(req.Msg.GetSettings()); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	if err := s.setCodexGo(req.Msg.GetSettings()); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+	if err := s.setGoAgents(req.Msg.GetSettings()); err != nil {
+		return nil, err
 	}
 	return connect.NewResponse(&nushiv1.SetSettingsResponse{}), nil
 }

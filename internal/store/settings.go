@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"log/slog"
+	"maps"
 	"path/filepath"
 	"time"
 )
@@ -17,8 +18,17 @@ type settings struct {
 	KeepTranscripts   *bool `json:"keepTranscripts,omitempty"`
 	TranscriptDays    int   `json:"transcriptDays,omitempty"`
 	CheckUpdates      *bool `json:"checkUpdates,omitempty"`
-	CodexGoAgent      bool  `json:"codexGoAgent,omitempty"`
+	// GoAgents are the agents run through Nushi's Go agent, by name; one
+	// that's off isn't kept.
+	GoAgents map[string]bool `json:"goAgents,omitempty"`
+	// CodexGoAgent is goAgents' "codex" as written before it was kept by
+	// agent (ADR 0142): read into GoAgents, and gone once a change is
+	// written.
+	CodexGoAgent bool `json:"codexGoAgent,omitempty"`
 }
+
+// oldGoAgent is the agent settings.json's codexGoAgent was for.
+const oldGoAgent = "codex"
 
 // defaultSleepAfter is how long chats idle before they sleep, until the
 // user picks another time.
@@ -36,6 +46,15 @@ func (s *Store) settingsLocked() settings {
 	if _, err := readJSON(filepath.Join(s.dir, "settings.json"), &set); err != nil {
 		slog.Warn("reading settings.json", "err", err)
 		s.setErr = err
+	}
+	if set.CodexGoAgent {
+		if _, ok := set.GoAgents[oldGoAgent]; !ok {
+			if set.GoAgents == nil {
+				set.GoAgents = map[string]bool{}
+			}
+			set.GoAgents[oldGoAgent] = true
+		}
+		set.CodexGoAgent = false
 	}
 	s.set = &set
 	return set
@@ -136,15 +155,26 @@ func (s *Store) SetCheckUpdates(on bool) error {
 	return s.changeSettings(func(set *settings) { set.CheckUpdates = &on })
 }
 
-// CodexGoAgent says whether Codex's chats run through Nushi's Go agent
-// rather than the codex-acp adapter (ADR 0142); off until turned on.
-func (s *Store) CodexGoAgent() bool {
+// GoAgent says whether the agent named name runs through Nushi's Go agent
+// rather than its adapter (ADR 0142); off until turned on.
+func (s *Store) GoAgent(name string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.settingsLocked().CodexGoAgent
+	return s.settingsLocked().GoAgents[name]
 }
 
-// SetCodexGoAgent remembers whether Codex runs through the Go agent.
-func (s *Store) SetCodexGoAgent(on bool) error {
-	return s.changeSettings(func(set *settings) { set.CodexGoAgent = on })
+// SetGoAgent remembers whether the agent named name runs through the Go
+// agent.
+func (s *Store) SetGoAgent(name string, on bool) error {
+	return s.changeSettings(func(set *settings) {
+		set.GoAgents = maps.Clone(set.GoAgents)
+		if on {
+			if set.GoAgents == nil {
+				set.GoAgents = map[string]bool{}
+			}
+			set.GoAgents[name] = true
+		} else {
+			delete(set.GoAgents, name)
+		}
+	})
 }

@@ -42,8 +42,8 @@ type Agent struct {
 	// ACP that Nushi doesn't (chats' Kind.NoSignIn, ADR 0145).
 	NoSignIn []string
 	// Own says whether the agent runs, for now, through Nushi's own ACP
-	// agent rather than its Adapter: Codex through the Go agent, as the
-	// user's setting says (ADR 0142). It is asked each time, so a change
+	// agent rather than its Adapter, as the user's setting for the agent
+	// says (Codex's Go agent, ADR 0142). It is asked each time, so a change
 	// needs no restart; while it says so, the agent has no Adapter. nil:
 	// never.
 	Own func() bool
@@ -136,6 +136,18 @@ func (s *Service) agent(name string) (Agent, bool) {
 		return Agent{}, false
 	}
 	return now(s.agents[i]), true
+}
+
+// WithOwn are the agents that can run through Nushi's own agent (an Own),
+// by name, in the order they're listed.
+func (s *Service) WithOwn() []string {
+	var out []string
+	for _, a := range s.agents {
+		if a.Own != nil {
+			out = append(out, a.Name)
+		}
+	}
+	return out
 }
 
 // now is a as it runs now: through Nushi's own agent, with no adapter,

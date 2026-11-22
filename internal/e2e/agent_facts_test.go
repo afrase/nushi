@@ -59,7 +59,7 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	data := t.TempDir()
 	st := store.New(data)
-	all := knownagents.All("", st.CodexGoAgent)
+	all := knownagents.All("", st.GoAgent)
 	var kinds []chats.Kind
 	var found []agents.Agent
 	servers := map[string]*mcp.Service{}
@@ -94,7 +94,7 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 	}
 	// Codex's Go agent on (Settings, TestCodexGoAgentSetting): Codex is
 	// listed with no adapter, its switch still there.
-	testcheck.NoErr(t, st.SetCodexGoAgent(true))
+	testcheck.NoErr(t, st.SetGoAgent("codex", true))
 	for _, a := range must(c.ListAgents(ctx, connect.NewRequest(&nushiv1.ListAgentsRequest{}))).Agents {
 		if a.Name == "codex" && (a.Adapter != nil || !a.GoAgentSwitch) {
 			t.Errorf("codex with its Go agent on: %v", a)

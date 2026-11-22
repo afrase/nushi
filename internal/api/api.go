@@ -31,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 141
+const Version = 142
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -84,9 +84,9 @@ type Services struct {
 	Updates Updates
 	// Usage sums what the chats' turns used; nil: it isn't kept.
 	Usage Usage
-	// CodexGo keeps whether Codex runs through Nushi's Go agent; nil: not
+	// GoAgents keeps which agents run through Nushi's Go agent; nil: not
 	// kept.
-	CodexGo CodexGoPref
+	GoAgents GoAgentPref
 }
 
 // Restart stops the daemon for a newer build once nothing would be lost

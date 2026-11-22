@@ -161,7 +161,7 @@ func run() error {
 
 	hub := &events.Hub{}
 	st := store.New(dir)
-	known := knownagents.All(projects, st.CodexGoAgent)
+	known := knownagents.All(projects, st.GoAgent)
 	agentSvc := newAgents(dir, known)
 	copies, err := transcripts.Open(filepath.Join(dir, "transcripts"))
 	if err != nil {
@@ -202,7 +202,7 @@ func run() error {
 	sv.GitHub = newGitHub(st, dev)
 	chatSvc.UseGitHub(sv.GitHub)
 	sv.Updates = updateSvc
-	sv.CodexGo = st
+	sv.GoAgents = st
 	sv.Usage = usageSvc
 	if err := usePush(st, sv.Remote, chatSvc, kinds); err != nil {
 		return err
