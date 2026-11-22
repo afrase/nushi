@@ -97,6 +97,7 @@ func (c *chat) itemsBackLocked() {
 		c.logLocked().Warn("transcript copy not read", "err", err)
 	}
 	c.unread = err != nil
+	c.savedLocked(items)
 	changed := false
 	for i := range items {
 		changed = changed || underWay(items[i])
@@ -170,6 +171,7 @@ func (c *chat) wholeLocked(heads []model.Item) ([]model.Item, error) {
 	if err != nil {
 		return nil, err
 	}
+	c.savedLocked(found)
 	byID := make(map[string]model.Item, len(found))
 	for _, it := range found {
 		ended(&it)
@@ -193,6 +195,7 @@ func (c *chat) copyItemsLocked() ([]model.Item, error) {
 	if err != nil {
 		return nil, err
 	}
+	c.savedLocked(items)
 	for i := range items {
 		ended(&items[i])
 	}

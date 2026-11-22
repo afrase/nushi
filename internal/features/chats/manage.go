@@ -295,6 +295,7 @@ func (s *Service) Wrote(chatID, path string) bool {
 			c.logLocked().Warn("transcript copy not read", "err", err)
 			return false
 		}
+		c.savedLocked(calls)
 	}
 	path = filepath.Clean(path)
 	abs := func(p string) string {
@@ -304,7 +305,7 @@ func (s *Service) Wrote(chatID, path string) bool {
 		return filepath.Clean(p)
 	}
 	for _, it := range calls {
-		if it.Kind != model.ToolCall || isShow(it.Title) {
+		if it.Kind != model.ToolCall || isShow(it) {
 			continue
 		}
 		for _, p := range it.Paths {

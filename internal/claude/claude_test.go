@@ -221,3 +221,32 @@ func TestStopTask(t *testing.T) {
 }
 
 var harness Harness
+
+// An MCP tool's call has its server and tool, from the tool's name Claude
+// sends in _meta or, without it, the title, which is the same name; a tool
+// whose name only looks so in its title isn't one (docs/facts/claude.md).
+func TestMCPCall(t *testing.T) {
+	h := Harness{}
+	it := model.Item{Title: "mcp__github__search_issues"}
+	h.ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolName": "mcp__github__search_issues"}}, nil)
+	if it.MCPServer != "github" || it.MCPTool != "search_issues" {
+		t.Errorf("from the tool's name: %q, %q", it.MCPServer, it.MCPTool)
+	}
+	ask := model.Item{Title: "mcp__nushi__preview_start"}
+	h.ToolCall(&ask, nil, nil)
+	if ask.MCPServer != "nushi" || ask.MCPTool != "preview_start" {
+		t.Errorf("from the title: %q, %q", ask.MCPServer, ask.MCPTool)
+	}
+	cmd := model.Item{Title: "mcp__nushi__show"}
+	h.ToolCall(&cmd, map[string]any{"claudeCode": map[string]any{"toolName": "Bash"}}, nil)
+	if cmd.MCPServer != "" {
+		t.Errorf("a command titled like one: %q", cmd.MCPServer)
+	}
+	for name, want := range map[string][2]string{
+		"mcp__a__b__c": {"a", "b__c"}, "mcp__a__": {}, "mcp____b": {}, "Read": {}, "mcp_a__b": {},
+	} {
+		if s, tl := mcpName(name); s != want[0] || tl != want[1] {
+			t.Errorf("mcpName(%q) = %q, %q; want %q", name, s, tl, want)
+		}
+	}
+}

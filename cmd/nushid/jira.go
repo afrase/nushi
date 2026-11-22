@@ -56,7 +56,7 @@ func mcpTools(t *tools.Service, socket string) chats.Tools {
 		if !t.HasTools(g) {
 			return nil
 		}
-		return []acp.MCPServer{{Stdio: &acp.MCPServerStdio{Name: "nushi", Command: exe, Args: []string{mcpserver.Command},
+		return []acp.MCPServer{{Stdio: &acp.MCPServerStdio{Name: chats.ToolsServer, Command: exe, Args: []string{mcpserver.Command},
 			Env: []acp.EnvVariable{{Name: mcpserver.SocketEnv, Value: socket}, {Name: mcpserver.KeyEnv, Value: t.Key(g)}}}}}
 	}
 }

@@ -553,8 +553,8 @@ func TestWroteIsWhatTheChatsToolCallsWorkedOn(t *testing.T) {
 		{ID: "m", Kind: model.ToolCall, Parent: "a1", Diffs: []model.FileChange{{Path: "/home/me/.claude/memory/MEMORY.md"}}},
 		{ID: "u", Kind: model.UserMessage, Files: []string{"/etc/hosts"}},
 		// Naming a file to show can't be what allows showing it (ADR 0068).
-		{ID: "s", Kind: model.ToolCall, Title: "mcp__nushi__show", Paths: []string{"/home/me/secret.html"}},
-		{ID: "x", Kind: model.ToolCall, Title: "mcp.nushi.show", Paths: []string{"/home/me/secret.md"}},
+		{ID: "s", Kind: model.ToolCall, Title: "mcp__nushi__show", MCPServer: "nushi", MCPTool: "show", Paths: []string{"/home/me/secret.html"}},
+		{ID: "x", Kind: model.ToolCall, Title: "mcp.nushi.show", MCPServer: "nushi", MCPTool: "show", Paths: []string{"/home/me/secret.md"}},
 	}}}
 	for path, want := range map[string]bool{
 		"/work/app/docs/report.md":          true,

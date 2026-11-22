@@ -4032,6 +4032,8 @@ const Item$json = {
     },
     {'1': 'started', '3': 41, '4': 1, '5': 3, '10': 'started'},
     {'1': 'ended', '3': 42, '4': 1, '5': 3, '10': 'ended'},
+    {'1': 'mcp_server', '3': 43, '4': 1, '5': 9, '10': 'mcpServer'},
+    {'1': 'mcp_tool', '3': 44, '4': 1, '5': 9, '10': 'mcpTool'},
   ],
   '9': [
     {'1': 17, '2': 18},
@@ -4065,7 +4067,8 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'ZBglIAEoCFIHc3RlZXJlZBIUCgVmaWxlcxgmIAMoCVIFZmlsZXMSJQoOc2VydmVyX2NvbW1hbm'
     'QYJyABKAlSDXNlcnZlckNvbW1hbmQSLgoId29ya2Zsb3cYKCABKAsyEi5udXNoaS52MS5Xb3Jr'
     'Zmxvd1IId29ya2Zsb3cSGAoHc3RhcnRlZBgpIAEoA1IHc3RhcnRlZBIUCgVlbmRlZBgqIAEoA1'
-    'IFZW5kZWRKBAgREBJKBAgeEB9SB2ZvcmtfYXRSDHBhc3NlZF9vbl9ieQ==');
+    'IFZW5kZWQSHQoKbWNwX3NlcnZlchgrIAEoCVIJbWNwU2VydmVyEhkKCG1jcF90b29sGCwgASgJ'
+    'UgdtY3BUb29sSgQIERASSgQIHhAfUgdmb3JrX2F0UgxwYXNzZWRfb25fYnk=');
 
 @$core.Deprecated('Use workflowDescriptor instead')
 const Workflow$json = {

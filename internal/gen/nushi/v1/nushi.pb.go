@@ -13224,8 +13224,16 @@ type Item struct {
 	// the agent's history, one denied or waiting for permission, one whose
 	// end the daemon can't know). A call still running as
 	// its turn ends has that end until one of its own comes. API 124.
-	Started       int64 `protobuf:"varint,41,opt,name=started,proto3" json:"started,omitempty"`
-	Ended         int64 `protobuf:"varint,42,opt,name=ended,proto3" json:"ended,omitempty"`
+	Started int64 `protobuf:"varint,41,opt,name=started,proto3" json:"started,omitempty"`
+	Ended   int64 `protobuf:"varint,42,opt,name=ended,proto3" json:"ended,omitempty"`
+	// For a call to an MCP server's tool, or the ask to make one: the server
+	// and the tool as the agent's harness reads them from the agent's own
+	// naming (Claude's mcp__<server>__<tool>, Codex's mcp.<server>.<tool>);
+	// empty for any other call. Nushi's own tools are server "nushi" (show,
+	// preview_start…; ADR 0068, 0100). Empty from a daemon below API 140,
+	// where the app shows the call as any other (ADR 0068's amendment).
+	McpServer     string `protobuf:"bytes,43,opt,name=mcp_server,json=mcpServer,proto3" json:"mcp_server,omitempty"`
+	McpTool       string `protobuf:"bytes,44,opt,name=mcp_tool,json=mcpTool,proto3" json:"mcp_tool,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -13538,6 +13546,20 @@ func (x *Item) GetEnded() int64 {
 		return x.Ended
 	}
 	return 0
+}
+
+func (x *Item) GetMcpServer() string {
+	if x != nil {
+		return x.McpServer
+	}
+	return ""
+}
+
+func (x *Item) GetMcpTool() string {
+	if x != nil {
+		return x.McpTool
+	}
+	return ""
 }
 
 // A workflow: a run a tool call launched, a script of the agent's running
@@ -28709,7 +28731,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05group\x18\x04 \x01(\tR\x05group\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"\xa6\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\"\xe0\n" +
 	"\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
@@ -28756,7 +28778,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x0eserver_command\x18' \x01(\tR\rserverCommand\x12.\n" +
 	"\bworkflow\x18( \x01(\v2\x12.nushi.v1.WorkflowR\bworkflow\x12\x18\n" +
 	"\astarted\x18) \x01(\x03R\astarted\x12\x14\n" +
-	"\x05ended\x18* \x01(\x03R\x05endedJ\x04\b\x11\x10\x12J\x04\b\x1e\x10\x1fR\afork_atR\fpassed_on_by\"\xb0\x04\n" +
+	"\x05ended\x18* \x01(\x03R\x05ended\x12\x1d\n" +
+	"\n" +
+	"mcp_server\x18+ \x01(\tR\tmcpServer\x12\x19\n" +
+	"\bmcp_tool\x18, \x01(\tR\amcpToolJ\x04\b\x11\x10\x12J\x04\b\x1e\x10\x1fR\afork_atR\fpassed_on_by\"\xb0\x04\n" +
 	"\bWorkflow\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +

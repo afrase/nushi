@@ -110,6 +110,11 @@ type Item struct {
 	Files           []string // a user message's mentioned and attached files (Message.Files)
 	// Tool is a tool call's tool, when the agent names it ("Read").
 	Tool string
+	// MCPServer and MCPTool are, for a call to an MCP server's tool or the
+	// ask to make one, the server and the tool, as the agent's harness reads
+	// them from its own naming (chats' ToolReader); "" for any other call.
+	MCPServer string `json:",omitempty"`
+	MCPTool   string `json:",omitempty"`
 	// TaskID is the agent's id for the command a tool call left running in
 	// the background, when its result says (structured, not its text);
 	// InBackground says its input asked for that.

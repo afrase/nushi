@@ -2520,6 +2520,14 @@ message Item {
   // its turn ends has that end until one of its own comes. API 124.
   int64 started = 41;
   int64 ended = 42;
+  // For a call to an MCP server's tool, or the ask to make one: the server
+  // and the tool as the agent's harness reads them from the agent's own
+  // naming (Claude's mcp__<server>__<tool>, Codex's mcp.<server>.<tool>);
+  // empty for any other call. Nushi's own tools are server "nushi" (show,
+  // preview_start…; ADR 0068, 0100). Empty from a daemon below API 140,
+  // where the app shows the call as any other (ADR 0068's amendment).
+  string mcp_server = 43;
+  string mcp_tool = 44;
 }
 
 // A workflow: a run a tool call launched, a script of the agent's running

@@ -19,9 +19,9 @@ import (
 	"github.com/afrase/nushi/internal/regularfile"
 )
 
-// toolName is the tool as MCP lists it. Claude's agents title its calls
-// mcp__nushi__show and Codex's adapter mcp.nushi.show; the daemon and the
-// app know both (chats.isShow, showTitles in app/lib/tool_parts.dart).
+// toolName is the tool as MCP lists it. Each agent names its calls its own
+// way; its harness reads the server and tool (Item.MCPServer, MCPTool),
+// which chats' isShow and the app's isShow go by.
 const toolName = "show"
 
 // maxPath bounds the path an agent names, past what macOS would open.

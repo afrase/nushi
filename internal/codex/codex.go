@@ -139,10 +139,10 @@ func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[s
 // and how it ended, `_meta.terminal_exit`. The call's content is then only
 // a reference to a terminal: its text is the output in a fence, after
 // "Exit code N" when it failed. Only the output's last MiB is kept, said
-// so above it. A call without either is left as it is. An MCP call's kind
-// is made "other" (mcpKind).
+// so above it. A call without either is left as it is. An MCP call gets
+// its server and tool, and kind "other" (readMCP).
 func (Harness) ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
-	mcpKind(it, input)
+	readMCP(it, input)
 	out, _ := meta["terminal_output_delta"].(map[string]any)
 	exit, ok := meta["terminal_exit"].(map[string]any)
 	if out == nil && !ok {

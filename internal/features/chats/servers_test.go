@@ -118,7 +118,7 @@ func TestAPreviewStartPromptSaysWhatRuns(t *testing.T) {
 	servers := &fakeServers{commands: map[string]string{"web": "/usr/local/bin/npm run dev"}}
 	svc.UseServers(servers)
 	c.mu.Lock()
-	c.addLocked(model.Item{ID: "codex", Kind: model.ToolCall, Title: "mcp.nushi.preview_start", Input: `{"arguments":{"name":"web"}}`})
+	c.addLocked(model.Item{ID: "codex", Kind: model.ToolCall, Title: "mcp.nushi.preview_start", MCPServer: "nushi", MCPTool: "preview_start", Input: `{"arguments":{"name":"web"}}`})
 	c.mu.Unlock()
 	asked := func(call acp.ToolCallUpdate) model.Item {
 		t.Helper()

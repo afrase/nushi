@@ -13,16 +13,6 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// isShow says a call is Nushi's show tool, by the title Claude's agents
-// and Codex's adapter give it (docs/facts).
-func isShow(title string) bool { return title == "mcp__nushi__show" || title == "mcp.nushi.show" }
-
-// isPreviewStart says a call is Nushi's preview_start tool (ADR 0100), by
-// the same titles.
-func isPreviewStart(title string) bool {
-	return title == "mcp__nushi__preview_start" || title == "mcp.nushi.preview_start"
-}
-
 // entryName is the name a preview_start call's input gives: `name`,
 // inside `arguments` on Codex; "" when it gives none. The keys are read
 // as written, as the app's card reads them and the tool takes them
@@ -63,15 +53,18 @@ func (c *chat) requestPermission(ctx context.Context, req *acp.RequestPermission
 		if item.Text == "" && item.Diffs == nil {
 			item.Text, item.Diffs = call.Text, call.Diffs
 		}
+		item.MCPServer, item.MCPTool = call.MCPServer, call.MCPTool
 	}
-	if isShow(item.Title) || isPreviewStart(item.Title) { // the card says which file or server: what's being allowed (ADR 0068, 0100)
+	// An ask for a call not seen: its harness reads the request's.
+	c.mcpLocked(&item, req.ToolCall.Meta, req.ToolCall.RawInput)
+	if isShow(item) || isPreviewStart(item) { // the card says which file or server: what's being allowed (ADR 0068, 0100)
 		item.Input = inputText(req.ToolCall.RawInput)
 		if item.Input == "" && call != nil {
 			item.Input = call.Input
 		}
 	}
 	askID := ""
-	if isPreviewStart(item.Title) { // and the command it runs, read outside the lock (Servers.Command)
+	if isPreviewStart(item) { // and the command it runs, read outside the lock (Servers.Command)
 		chatID := c.id
 		if c.parent != nil {
 			chatID = c.parent.id // a side chat's tools are its chat's

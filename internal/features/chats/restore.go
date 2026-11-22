@@ -92,6 +92,7 @@ func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) 
 		if copied, err = c.copies.Read(c.id); err != nil {
 			c.logLocked().Warn("transcript copy not read", "err", err)
 		}
+		c.savedLocked(copied)
 		c.unread = err != nil // merged with the replay, the copy may be written again
 	}
 	date := func(it *model.Item) {

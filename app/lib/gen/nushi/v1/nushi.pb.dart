@@ -16910,6 +16910,8 @@ class Item extends $pb.GeneratedMessage {
     Workflow? workflow,
     $fixnum.Int64? started,
     $fixnum.Int64? ended,
+    $core.String? mcpServer,
+    $core.String? mcpTool,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -16952,6 +16954,8 @@ class Item extends $pb.GeneratedMessage {
     if (workflow != null) result.workflow = workflow;
     if (started != null) result.started = started;
     if (ended != null) result.ended = ended;
+    if (mcpServer != null) result.mcpServer = mcpServer;
+    if (mcpTool != null) result.mcpTool = mcpTool;
     return result;
   }
 
@@ -17018,6 +17022,8 @@ class Item extends $pb.GeneratedMessage {
         subBuilder: Workflow.$_createMessage)
     ..aInt64(41, _omitFieldNames ? '' : 'started')
     ..aInt64(42, _omitFieldNames ? '' : 'ended')
+    ..aOS(43, _omitFieldNames ? '' : 'mcpServer')
+    ..aOS(44, _omitFieldNames ? '' : 'mcpTool')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -17431,6 +17437,30 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasEnded() => $_has(39);
   @$pb.TagNumber(42)
   void clearEnded() => $_clearField(42);
+
+  /// For a call to an MCP server's tool, or the ask to make one: the server
+  /// and the tool as the agent's harness reads them from the agent's own
+  /// naming (Claude's mcp__<server>__<tool>, Codex's mcp.<server>.<tool>);
+  /// empty for any other call. Nushi's own tools are server "nushi" (show,
+  /// preview_start…; ADR 0068, 0100). Empty from a daemon below API 140,
+  /// where the app shows the call as any other (ADR 0068's amendment).
+  @$pb.TagNumber(43)
+  $core.String get mcpServer => $_getSZ(40);
+  @$pb.TagNumber(43)
+  set mcpServer($core.String value) => $_setString(40, value);
+  @$pb.TagNumber(43)
+  $core.bool hasMcpServer() => $_has(40);
+  @$pb.TagNumber(43)
+  void clearMcpServer() => $_clearField(43);
+
+  @$pb.TagNumber(44)
+  $core.String get mcpTool => $_getSZ(41);
+  @$pb.TagNumber(44)
+  set mcpTool($core.String value) => $_setString(41, value);
+  @$pb.TagNumber(44)
+  $core.bool hasMcpTool() => $_has(41);
+  @$pb.TagNumber(44)
+  void clearMcpTool() => $_clearField(44);
 }
 
 /// A workflow: a run a tool call launched, a script of the agent's running

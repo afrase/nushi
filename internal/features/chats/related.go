@@ -175,6 +175,7 @@ func (c *chat) relatedStepsLocked() []relatedStep {
 	if err != nil {
 		c.logLocked().Warn("transcript copy not read", "err", err)
 	}
+	c.savedLocked(calls) // an old Codex MCP call's input is no command
 	return relatedSteps(calls)
 }
 

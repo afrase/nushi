@@ -98,7 +98,7 @@ func TestAPromptInTheAgentsOwnTurn(t *testing.T) {
 func TestAShowPromptSaysWhichFile(t *testing.T) {
 	_, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	c.mu.Lock()
-	c.addLocked(model.Item{ID: "codex", Kind: model.ToolCall, Title: "mcp.nushi.show", Input: `{"arguments":{"path":"b.md"}}`})
+	c.addLocked(model.Item{ID: "codex", Kind: model.ToolCall, Title: "mcp.nushi.show", MCPServer: "nushi", MCPTool: "show", Input: `{"arguments":{"path":"b.md"}}`})
 	c.mu.Unlock()
 	asked := func(call acp.ToolCallUpdate) model.Item {
 		t.Helper()

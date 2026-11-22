@@ -200,9 +200,15 @@ func claudeCode(meta map[string]any, key string) string {
 // the report it hands back as its text (Report): true then, since the
 // call's own output is only an acknowledgement; for ReportFindings the
 // review's findings; for TaskStop the task it stops; for Workflow the run
-// it launched. Claude may send the input in a later update than the name.
+// it launched; for an MCP tool's call, its server and tool, from the
+// tool's name or, for a call that came without it (an ask, a copy saved
+// before Nushi read them), its title, which is the same name. Claude may
+// send the input in a later update than the name.
 func (h Harness) ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
 	it.Parent, it.Tool = cmp.Or(it.Parent, h.Parent(meta)), cmp.Or(claudeCode(meta, "toolName"), it.Tool)
+	if server, tool := mcpName(cmp.Or(it.Tool, it.Title)); server != "" {
+		it.MCPServer, it.MCPTool = server, tool
+	}
 	var in struct {
 		Type       string `json:"subagent_type"`
 		Prompt     string `json:"prompt"`
