@@ -150,23 +150,41 @@ const scopes = {
   'other': ('Other', 'From settings Nushi doesn’t read, such as managed ones.'),
 };
 
-/// A server's config, decoded.
-Map<String, dynamic> config(McpServer s) =>
-    (jsonDecode(s.configJson) as Map).cast<String, dynamic>();
+/// A server's config, decoded; empty when it isn't a JSON object. A
+/// repository's .mcp.json is anyone's, and the daemon passes its values
+/// through as written, so the readers below check each one's type.
+Map<String, dynamic> config(McpServer s) {
+  try {
+    return switch (jsonDecode(s.configJson)) {
+      final Map<String, dynamic> m => m,
+      _ => {},
+    };
+  } on FormatException {
+    return {};
+  }
+}
 
 /// "stdio", "http", "sse", ...: its "type", else stdio for a command and
 /// http for a URL. The daemon sends every agent's in this shape.
-String transport(Map<String, dynamic> c) =>
-    c['type'] as String? ?? (c['url'] == null ? 'stdio' : 'http');
+String transport(Map<String, dynamic> c) => switch (c['type']) {
+  final String t => t,
+  _ => c['url'] == null ? 'stdio' : 'http',
+};
 
-/// Its command line, or its URL.
-String target(Map<String, dynamic> c) =>
-    c['url'] as String? ?? [c['command'], ...?(c['args'] as List?)].join(' ');
+/// Its command line, or its URL, as text whatever their types.
+String target(Map<String, dynamic> c) => switch ((c['url'], c['args'])) {
+  (final Object url, _) => '$url',
+  (_, final List args) => [c['command'], ...args].join(' '),
+  (_, final Object args) => '${c['command']} $args',
+  _ => '${c['command']}',
+};
 
 /// Its env vars and headers, values masked as the daemon sends them.
 String secrets(Map<String, dynamic> c) => [
-  for (final k in (c['env'] as Map? ?? {}).keys) '$k=••••',
-  for (final k in (c['headers'] as Map? ?? {}).keys) '$k: ••••',
+  if (c['env'] case final Map env)
+    for (final k in env.keys) '$k=••••',
+  if (c['headers'] case final Map headers)
+    for (final k in headers.keys) '$k: ••••',
 ].join('  ');
 
 /// A server's state in words, and its color.

@@ -81,7 +81,17 @@ class _FormState extends State<_Form> {
         args.every(
           (a) => a is String && a.trim().isNotEmpty && !a.contains('\n'),
         );
-    if (!{'stdio', 'http', 'sse'}.contains(t) || !lines) return false;
+    // A value of another type would be changed by the form's fields.
+    final shaped =
+        [
+          c['type'],
+          c['command'],
+          c['url'],
+        ].every((v) => v == null || v is String) &&
+        [c['env'], c['headers']].every((v) => v == null || v is Map);
+    if (!{'stdio', 'http', 'sse'}.contains(t) || !lines || !shaped) {
+      return false;
+    }
     _transport = t;
     _command.text = '${c['command'] ?? ''}';
     _args.text = args.join('\n');

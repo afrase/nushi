@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp_form.dart';
 import 'package:nushi/mcp_servers.dart';
 import 'package:nushi/theme/theme.dart';
@@ -89,4 +90,57 @@ void main() {
       });
     }
   }
+
+  // A repository's .mcp.json is anyone's: a value of the wrong type is
+  // shown as what it is, never a cast that throws in a row's build.
+  test('a config of the wrong shape reads, never throws', () {
+    final c = config(
+      McpServer(
+        configJson: '{"type":1,"url":1,"args":"x","env":"y","headers":[1]}',
+      ),
+    );
+    expect(transport(c), 'http'); // it has a url
+    expect(target(c), '1');
+    expect(secrets(c), '');
+    final stdio = config(
+      McpServer(configJson: '{"command":["a"],"args":"--x"}'),
+    );
+    expect(transport(stdio), 'stdio');
+    expect(target(stdio), '[a] --x');
+    expect(config(McpServer(configJson: '[1]')), isEmpty);
+    expect(config(McpServer(configJson: 'not json')), isEmpty);
+  });
+
+  testWidgets('editing a server of the wrong shape opens its JSON', (
+    tester,
+  ) async {
+    viewport(tester, const Size(900, 900));
+    final d = await FakeDaemon([]).connect(tester);
+    final server = McpServer(
+      name: 'odd',
+      scope: 'project',
+      configJson: '{"url":1,"env":"x"}',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => mcpForm(
+              context,
+              McpServers.of(d, '/x', agent: 'claude'),
+              server: server,
+            ),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Edit in the form'), findsOneWidget); // the JSON view
+    expect(find.textContaining('"url": 1'), findsOneWidget);
+    d.dispose();
+  });
 }
