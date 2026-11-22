@@ -143,12 +143,12 @@ func TestARewindOutlivesTheApp(t *testing.T) {
 // given ends, and Close leaves no side chats' timer behind.
 func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
 	reads := make(chan struct{}, 1)
-	read := func(string, string) (string, string, error) {
+	read := func(string, string) (string, string, string, error) {
 		select {
 		case reads <- struct{}{}:
 		default:
 		}
-		return "still going", "", nil
+		return "still going", "", "", nil
 	}
 	agent := &fakeAgent{}
 	life, end := context.WithCancel(t.Context())

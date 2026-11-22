@@ -2,7 +2,6 @@ package chats
 
 import (
 	"cmp"
-	"strings"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -153,7 +152,7 @@ type commandFollower struct {
 // more to follow.
 func (f *commandFollower) step() bool {
 	c := f.c
-	out, end, err := c.kind.background.ReadBackgroundCommand(f.id, f.file)
+	out, end, state, err := c.kind.background.ReadBackgroundCommand(f.id, f.file)
 	if end != "" && f.agent != nil && f.endAt != nil && *f.endAt == out && !c.toldRunning(f.id, f.agent) && c.commandShellRuns(f.callID, f.agent) {
 		f.endAt = nil // the shell runs: the line was the command's own
 	}
@@ -167,7 +166,7 @@ func (f *commandFollower) step() bool {
 	if err == nil {
 		sh.Output = out
 	}
-	sh, over := f.nextLocked(sh, out, end, err == nil)
+	sh, over := f.nextLocked(sh, out, end, state, err == nil)
 	if sh != *it.BackgroundCommand {
 		it.BackgroundCommand = &sh
 		c.publishLocked(*it)
@@ -176,8 +175,8 @@ func (f *commandFollower) step() bool {
 }
 
 // nextLocked is the row sh after a read of the file (read: it was read,
-// as out and end), and whether following it is over.
-func (f *commandFollower) nextLocked(sh model.BackgroundCommand, out, end string, read bool) (model.BackgroundCommand, bool) {
+// as out, end and state), and whether following it is over.
+func (f *commandFollower) nextLocked(sh model.BackgroundCommand, out, end, state string, read bool) (model.BackgroundCommand, bool) {
 	c := f.c
 	task := c.tasks[f.id]
 	live := f.agent != nil && c.agent == f.agent
@@ -193,7 +192,10 @@ func (f *commandFollower) nextLocked(sh model.BackgroundCommand, out, end string
 		return sh, true
 	case task.state == "running" && task.agent == f.agent && live: // it runs, whatever the file says
 	case end != "" && (gone || f.endAt != nil && *f.endAt == out):
-		sh.State, sh.End = commandState(end, sh.Killed), end
+		sh.State, sh.End = cmp.Or(state, "failed"), end
+		if sh.Killed && sh.State == "failed" { // Nushi stopped it, though the agent saw an exit code (Claude: 144 for SIGTERM)
+			sh.State = "stopped"
+		}
 		if !sh.Started.IsZero() && sh.Ended.IsZero() {
 			sh.Ended = time.Now()
 		}
@@ -269,19 +271,6 @@ func commandShells(procs Processes, root int, tasks BackgroundTasks, call model.
 		}
 	}
 	return found, err
-}
-
-// commandState is a background command's state from how the agent says it
-// ended; one Nushi killed (model.BackgroundCommand's Killed) reads "stopped" though
-// Claude Code gives it an exit code (144 for SIGTERM).
-func commandState(end string, killed bool) string {
-	switch {
-	case strings.HasSuffix(end, " 0"):
-		return "done"
-	case end == "killed", killed:
-		return "stopped"
-	}
-	return "failed"
 }
 
 // Processes are the processes agents run (internal/proctree).

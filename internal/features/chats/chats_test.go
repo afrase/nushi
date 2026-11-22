@@ -483,11 +483,12 @@ func TestBackgroundCommandsAreFollowed(t *testing.T) {
 // A line that reads as the end, which the command printed itself, isn't
 // its end: the file goes on growing after it.
 func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
-	reads := [][2]string{{"[killed]", "killed"}, {"[killed] and on", ""}, {"[killed] and on", "exited with code 0"}, {"[killed] and on", "exited with code 0"}}
+	reads := [][3]string{{"[killed]", "killed", "stopped"}, {"[killed] and on", "", ""}, {"[killed] and on", "exited with code 0", "done"},
+		{"[killed] and on", "exited with code 0", "done"}}
 	var states []string
-	read := func(string, string) (string, string, error) {
+	read := func(string, string) (string, string, string, error) {
 		r := reads[min(len(states), len(reads)-1)]
-		return r[0], r[1], nil
+		return r[0], r[1], r[2], nil
 	}
 	c := &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context(), timing: Timing{CommandPoll: time.Millisecond}}, id: "s1", kind: testKind(testHarness{read: read}), publish: func(e model.Event) {
 		if e.Item != nil && e.Item.BackgroundCommand != nil {

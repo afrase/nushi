@@ -54,42 +54,42 @@ func TestBackgroundCommands(t *testing.T) {
 	// shutdown after Claude's "[killed]".
 	const served = "SIGTERM exit code: 0\ntime=12:51:34 level=INFO msg=\"serving http\" addr=:9030\n"
 	const shutdown = "time=12:54:20 level=INFO msg=\"shutting down server\"\ntime=12:54:20 level=INFO msg=\"server stopped\"\n"
-	for text, want := range map[string][2]string{
-		"":                               {"", ""},
-		"half\n":                         {"half\n", ""},
-		"done\n\n[exited with code 0]\n": {"done", "exited with code 0"},
-		"oops\n\n[exited with code 2]\n": {"oops", "exited with code 2"},
-		"\n[killed]\n":                   {"", "killed"},
-		"[killed]\n":                     {"[killed]\n", ""},
-		"x [exited with code 0]\n":       {"x [exited with code 0]\n", ""},
+	for text, want := range map[string][3]string{
+		"":                               {"", "", ""},
+		"half\n":                         {"half\n", "", ""},
+		"done\n\n[exited with code 0]\n": {"done", "exited with code 0", "done"},
+		"oops\n\n[exited with code 2]\n": {"oops", "exited with code 2", "failed"},
+		"\n[killed]\n":                   {"", "killed", "stopped"},
+		"[killed]\n":                     {"[killed]\n", "", ""},
+		"x [exited with code 0]\n":       {"x [exited with code 0]\n", "", ""},
 		// Output after the end line: the whole file shows.
-		"\n[killed]\nmore\n":                   {"\n[killed]\nmore\n", "killed"},
-		served + "\n[killed]\n" + shutdown:     {served + "\n[killed]\n" + shutdown, "killed"},
-		"a\n\n[exited with code 144]\nstray\n": {"a\n\n[exited with code 144]\nstray\n", "exited with code 144"},
+		"\n[killed]\nmore\n":                   {"\n[killed]\nmore\n", "killed", "stopped"},
+		served + "\n[killed]\n" + shutdown:     {served + "\n[killed]\n" + shutdown, "killed", "stopped"},
+		"a\n\n[exited with code 144]\nstray\n": {"a\n\n[exited with code 144]\nstray\n", "exited with code 144", "failed"},
 		// The last such line is taken: one the command printed comes before Claude's.
-		"[killed]\nb\n\n[killed] not alone\n\n[exited with code 0]\n": {"[killed]\nb\n\n[killed] not alone", "exited with code 0"},
-		"\n[exited with code 0]\nmid\n\n[killed]\n":                   {"\n[exited with code 0]\nmid", "killed"},
+		"[killed]\nb\n\n[killed] not alone\n\n[exited with code 0]\n": {"[killed]\nb\n\n[killed] not alone", "exited with code 0", "done"},
+		"\n[exited with code 0]\nmid\n\n[killed]\n":                   {"\n[exited with code 0]\nmid", "killed", "stopped"},
 	} {
 		testcheck.NoErr(t, os.WriteFile(file, []byte(text), 0o600))
-		if out, end, err := harness.ReadBackgroundCommand("b1", file); err != nil || out != want[0] || end != want[1] {
-			t.Errorf("harness.ReadBackgroundCommand(%q) = %q %q %v", text, out, end, err)
+		if out, end, state, err := harness.ReadBackgroundCommand("b1", file); err != nil || out != want[0] || end != want[1] || state != want[2] {
+			t.Errorf("harness.ReadBackgroundCommand(%q) = %q %q %q %v", text, out, end, state, err)
 		}
 	}
 	link := filepath.Join(dir, "b2.output")
 	testcheck.NoErr(t, os.Symlink(file, link))
-	if _, _, err := harness.ReadBackgroundCommand("b2", link); err == nil {
+	if _, _, _, err := harness.ReadBackgroundCommand("b2", link); err == nil {
 		t.Error("read through a link")
 	}
 	other := filepath.Join(t.TempDir(), "tasks")
 	testcheck.NoErr(t, os.Mkdir(other, 0o700))
 	testcheck.Write(t, filepath.Join(other, "b3.output"), "a project's file")
-	if _, _, err := harness.ReadBackgroundCommand("b3", filepath.Join(other, "b3.output")); err == nil {
+	if _, _, _, err := harness.ReadBackgroundCommand("b3", filepath.Join(other, "b3.output")); err == nil {
 		t.Error("read a task's file out of Claude's folder")
 	}
 	vendored := filepath.Join(t.TempDir(), "vendor", user, "p", "s", "tasks")
 	testcheck.NoErr(t, os.MkdirAll(vendored, 0o700))
 	testcheck.Write(t, filepath.Join(vendored, "b4.output"), "a project's file")
-	if _, _, err := harness.ReadBackgroundCommand("b4", filepath.Join(vendored, "b4.output")); err == nil {
+	if _, _, _, err := harness.ReadBackgroundCommand("b4", filepath.Join(vendored, "b4.output")); err == nil {
 		t.Error("read a claude-<uid> folder out of Claude's temp root")
 	}
 	t.Setenv("CLAUDE_CODE_TMPDIR", "")

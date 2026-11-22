@@ -293,8 +293,8 @@ func view(c *chat) parity {
 // claude's temp folder mustn't count.
 type noOutputFile struct{ BackgroundTasks }
 
-func (noOutputFile) ReadBackgroundCommand(string, string) (output, end string, err error) {
-	return "", "", fs.ErrNotExist
+func (noOutputFile) ReadBackgroundCommand(string, string) (output, end, state string, err error) {
+	return "", "", "", fs.ErrNotExist
 }
 
 // modelFallback is the label both agents give claude's notice that it

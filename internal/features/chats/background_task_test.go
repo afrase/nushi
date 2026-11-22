@@ -46,7 +46,7 @@ type countedReads struct {
 	n *atomic.Int32
 }
 
-func (r countedReads) ReadBackgroundCommand(id, file string) (output, end string, err error) {
+func (r countedReads) ReadBackgroundCommand(id, file string) (output, end, state string, err error) {
 	defer r.n.Add(1)
 	return r.BackgroundTasks.ReadBackgroundCommand(id, file)
 }

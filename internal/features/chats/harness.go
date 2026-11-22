@@ -133,11 +133,12 @@ type BackgroundTasks interface {
 	// BackgroundCommand says a tool call left its command running in the
 	// background: the task's id and the file its output goes to.
 	BackgroundCommand(it model.Item) (id, file string, ok bool)
-	// ReadBackgroundCommand reads that file: the output so far, and how the
-	// command ended ("" while it runs), as the file says; only a sign
-	// until its shell is gone, and only where the agent hasn't said
+	// ReadBackgroundCommand reads that file: the output so far, how the
+	// command ended ("" while it runs) and so its state ("done", "failed",
+	// "stopped"; "" while it runs), as the file says; only a sign until
+	// its shell is gone, and only where the agent hasn't said
 	// (followCommand).
-	ReadBackgroundCommand(id, file string) (output, end string, err error)
+	ReadBackgroundCommand(id, file string) (output, end, state string, err error)
 	// CommandTask reads the agent's own word on such a command, from an
 	// update of the call that started it (its _meta): the task's id, its
 	// state ("running", "done", "failed" or "stopped") and how it ended in

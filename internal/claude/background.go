@@ -88,34 +88,48 @@ var endLine = regexp.MustCompile(`\n+\[(exited with code -?\d+|killed)\]\n`)
 // line itself: chats' followCommand takes the end only once the command's
 // shell is gone. Only a regular file named for the task, in Claude's
 // folder for them (taskFile), is read.
-func (Harness) ReadBackgroundCommand(id, file string) (output, end string, err error) {
+func (Harness) ReadBackgroundCommand(id, file string) (output, end, state string, err error) {
 	if !taskFile(id, file) {
-		return "", "", errors.New("not the task's output file")
+		return "", "", "", errors.New("not the task's output file")
 	}
 	f, st, err := regularfile.Open(file, false)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	defer f.Close() //nolint:errcheck // read-only
 	if st.Size() > outputTail {
 		if _, err := f.Seek(st.Size()-outputTail, io.SeekStart); err != nil {
-			return "", "", err
+			return "", "", "", err
 		}
 	}
 	b, err := io.ReadAll(io.LimitReader(f, outputTail))
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	out := strings.ToValidUTF8(string(b), "�")
 	all := endLine.FindAllStringSubmatchIndex(out, -1)
 	if all == nil {
-		return out, "", nil
+		return out, "", "", nil
 	}
 	m := all[len(all)-1]
+	end = out[m[2]:m[3]]
 	if m[1] == len(out) {
-		return out[:m[0]], out[m[2]:m[3]], nil
+		return out[:m[0]], end, endState(end), nil
 	}
-	return out, out[m[2]:m[3]], nil
+	return out, end, endState(end), nil
+}
+
+// endState is a background command's state from its file's end line's
+// words: "exited with code 0" done, "killed" stopped, any other code
+// failed.
+func endState(end string) string {
+	switch {
+	case strings.HasSuffix(end, " 0"):
+		return "done"
+	case end == "killed":
+		return "stopped"
+	}
+	return "failed"
 }
 
 // taskSummary is the exit code in Claude's summary of a background

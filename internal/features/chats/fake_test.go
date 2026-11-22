@@ -39,7 +39,7 @@ type testHarness struct {
 	once                 bool          // it deletes a session once
 	gone                 bool          // Gone is Claude's, else it never says
 	// read reads a background command's output, in Claude's place.
-	read func(id, file string) (output, end string, err error)
+	read func(id, file string) (output, end, state string, err error)
 }
 
 func (h testHarness) Info() model.HarnessInfo {
@@ -54,7 +54,7 @@ func (h testHarness) Info() model.HarnessInfo {
 
 func (h testHarness) Gone(err error) bool { return h.gone && h.Harness.Gone(err) }
 
-func (h testHarness) ReadBackgroundCommand(id, file string) (output, end string, err error) {
+func (h testHarness) ReadBackgroundCommand(id, file string) (output, end, state string, err error) {
 	if h.read != nil {
 		return h.read(id, file)
 	}
