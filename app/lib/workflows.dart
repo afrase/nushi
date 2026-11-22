@@ -97,10 +97,10 @@ String _quiet(Workflow w) {
   return '${h < 1 ? 1 : h}h';
 }
 
-/// What it says when it ended otherwise than done: Claude's own word, or
-/// the reason a failed run gave.
-String workflowEndWords(Workflow w) => switch (w.state) {
-  'unknown' => w.end.isEmpty ? "Claude didn't say how it ended" : w.end,
+/// What it says when it ended otherwise than done: the agent's own word
+/// (the agent's title is [agent]), or the reason a failed run gave.
+String workflowEndWords(Workflow w, String agent) => switch (w.state) {
+  'unknown' => w.end.isEmpty ? "$agent didn't say how it ended" : w.end,
   'failed' when w.summary.isNotEmpty => w.summary,
   'stopped' when w.end.isNotEmpty && w.end != 'killed' => w.end,
   _ => '',

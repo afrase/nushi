@@ -131,10 +131,18 @@ void main() {
       'Review 4/7 · 61.2k tokens · 4m 12s',
       'Review 4/7 · 4m 12s',
     ]);
-    expect(workflowEndWords(workflowCall('unknown').workflow), 'paused');
     expect(
-      workflowEndWords(workflowCall('failed').workflow),
+      workflowEndWords(workflowCall('unknown').workflow, 'Claude'),
+      'paused',
+    );
+    expect(
+      workflowEndWords(workflowCall('failed').workflow, 'Claude'),
       'Error: the script threw',
+    );
+    // Without its word, the agent named is the chat's.
+    expect(
+      workflowEndWords(Workflow(state: 'unknown'), 'Kimi'),
+      "Kimi didn't say how it ended",
     );
   });
 

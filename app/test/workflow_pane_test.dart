@@ -99,8 +99,9 @@ final steps = [
   ),
 ];
 
-/// A chat with a workflow's call, loaded.
+/// A Claude chat with a workflow's call, loaded.
 ChatState workflowChat({String state = 'running'}) => ChatState('c', '/x')
+  ..agent = 'claude'
   ..loaded = true
   ..items.add(workflowCall(state));
 

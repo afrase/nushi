@@ -218,7 +218,8 @@ class _WorkflowPaneState extends State<WorkflowPane> {
             TaskMark(w.state),
           ],
         ),
-        if (workflowEndWords(w) case final words when words.isNotEmpty)
+        if (workflowEndWords(w, widget.chat.agentName) case final words
+            when words.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 2),
             child: Text(words, style: small),
@@ -229,7 +230,7 @@ class _WorkflowPaneState extends State<WorkflowPane> {
         else if (error != null && got == null)
           Text(
             error is ConnectException && error.code == Code.notFound
-                ? 'Claude no longer has this run’s files.'
+                ? '${widget.chat.agentName} no longer has this run’s files.'
                 : errorText(error),
             style: small,
           )
@@ -605,7 +606,8 @@ class _AgentStepsState extends State<_AgentSteps> {
               ? Center(
                   child: Text(
                     error is ConnectException && error.code == Code.notFound
-                        ? 'Claude no longer has this agent’s files.'
+                        ? '${widget.chat.agentName} no longer has this '
+                              'agent’s files.'
                         : errorText(error),
                     style: small,
                   ),

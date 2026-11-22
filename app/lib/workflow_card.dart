@@ -73,7 +73,7 @@ class _WorkflowCardState extends State<WorkflowCard> {
     final phone = daemon?.remote ?? false;
     final failed = w.state == 'failed';
     final live = workflowLive(w);
-    final ended = workflowEndWords(w);
+    final ended = workflowEndWords(w, chat.agentName);
     return Hover(
       builder: (context, {required hover}) => ValueListenableBuilder(
         valueListenable: chat.pane,
