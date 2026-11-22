@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +21,7 @@ import 'fake_daemon.dart';
 import 'fake_shells.dart';
 import 'harness.dart';
 import 'spell_harness.dart' show FakeSpeller, flagged;
+import 'theme_sets.dart';
 
 // Command mode (ADR 0148): a box whose text starts with "!" runs the rest
 // in a terminal of the chat's, its card over the box, rather than sending
@@ -79,6 +82,16 @@ bool _inCommandMode(WidgetTester tester) =>
 
 void main() {
   setUpAll(loadFonts);
+
+  test("command mode's ring keeps 3:1 on its fill in every set", () {
+    for (final (name, t) in everySet) {
+      final ring = commandBoxLook(t).ring as BoxDecoration;
+      final line = (ring.border! as Border).top.color;
+      final (a, b) = (line.computeLuminance(), t.codeBlock.computeLuminance());
+      final ratio = (max(a, b) + 0.05) / (min(a, b) + 0.05);
+      expect(ratio, greaterThanOrEqualTo(3), reason: name);
+    }
+  });
 
   testWidgets('a "!" first puts the box in command mode, its look over '
       'the same box, and taking it away leaves it', (tester) async {

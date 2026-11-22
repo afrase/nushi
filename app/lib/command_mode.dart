@@ -126,13 +126,14 @@ class CommandMark extends StatelessWidget {
 }
 
 /// The box's look in command mode, over its own: code's sunk fill and a
-/// ring in the accent all round, drawn inside its edge so nothing in it
-/// moves.
+/// ring all round in `focus` (the accent's ink: the accent itself is too
+/// dark for a line on a dark set's surfaces, under 3:1 on code's fill in
+/// Nord's and Solarized's), drawn inside its edge so nothing in it moves.
 ({Color fill, Decoration ring}) commandBoxLook(Tokens t) => (
   fill: t.codeBlock,
   ring: BoxDecoration(
     borderRadius: BorderRadius.circular(NushiTheme.panel),
-    border: Border.all(color: t.accent, width: 2),
+    border: Border.all(color: t.focus, width: 2),
   ),
 );
 
