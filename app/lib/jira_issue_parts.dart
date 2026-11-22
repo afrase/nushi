@@ -58,8 +58,10 @@ Widget Function(Uri, String?) jiraImages(
 };
 
 /// An attachment's image, [size] tall at most; it shows large when
-/// clicked.
-class AttachmentImage extends StatelessWidget {
+/// clicked. It holds its fetch while shown, so a rebuild (the pane's poll,
+/// a resize) never asks again, however many images the page has; the
+/// cache only keeps the last [_keep] once they're gone from the screen.
+class AttachmentImage extends StatefulWidget {
   const new(this.client, this.site, this.id, {required this.size, super.key});
 
   final NushiServiceClient client;
@@ -68,14 +70,38 @@ class AttachmentImage extends StatelessWidget {
   final double size;
 
   @override
+  State<AttachmentImage> createState() => _AttachmentImageState();
+}
+
+class _AttachmentImageState extends State<AttachmentImage> {
+  late Future<GetJiraAttachmentResponse> _image = _fetch(
+    widget.client,
+    widget.site,
+    widget.id,
+  );
+
+  @override
+  void didUpdateWidget(AttachmentImage old) {
+    super.didUpdateWidget(old);
+    if (old.site != widget.site ||
+        old.id != widget.id ||
+        old.client != widget.client) {
+      _image = _fetch(widget.client, widget.site, widget.id);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) => FutureBuilder(
-    future: _fetch(client, site, id),
+    future: _image,
     builder: (context, r) => switch (r) {
       AsyncSnapshot(:final data?) when data.mimeType.startsWith('image/') =>
-        ClickableImage(image: MemoryImage(bytesOf(data.data)), size: size),
+        ClickableImage(
+          image: MemoryImage(bytesOf(data.data)),
+          size: widget.size,
+        ),
       AsyncSnapshot(hasError: true) => const Icon(Icons.broken_image, size: 16),
       AsyncSnapshot(:final data?) => Text('[${data.mimeType}]'),
-      _ => SizedBox(height: size / 4, width: size / 4),
+      _ => SizedBox(height: widget.size / 4, width: widget.size / 4),
     },
   );
 }

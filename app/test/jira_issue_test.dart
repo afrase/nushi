@@ -234,6 +234,35 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('more images on screen than are kept are fetched once', (
+    tester,
+  ) async {
+    final asked = <String>[];
+    final fake = FakeDaemon([])
+      ..answer = (input) {
+        if (input is! GetJiraAttachmentRequest) return null;
+        asked.add(input.id);
+        return GetJiraAttachmentResponse();
+      };
+    final d = await fake.connect(tester);
+    // The pane's poll and a resize rebuild every image on the page.
+    for (var build = 0; build < 3; build++) {
+      await tester.pumpWidget(
+        themed(
+          Column(
+            children: [
+              for (var i = 1; i <= 9; i++)
+                AttachmentImage(d.client, 'many.example', '$i', size: 20),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+    expect(asked, [for (var i = 1; i <= 9; i++) '$i']);
+    d.dispose();
+  });
+
   testWidgets("an attachment's size in MB past a megabyte", (tester) async {
     final (_, d, _) = await _open(
       tester,
