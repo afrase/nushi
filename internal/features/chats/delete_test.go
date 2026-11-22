@@ -558,7 +558,10 @@ func TestADeletedChatsReopenWritesNoCopy(t *testing.T) {
 // A move's renaming of the copy's files waits while the chat is being
 // deleted: the copy is left as it is.
 func TestADeletedChatsMoveLeavesTheCopy(t *testing.T) {
-	_, _, c, store, _ := newCopyingChat(t)
+	svc, _, c, store, _ := newCopyingChat(t)
+	if svc.copies == nil {
+		t.Fatal("the service keeps no copies")
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.addLocked(model.Item{Kind: model.ToolCall, ID: "t1", Status: "completed", Paths: []string{"a.go"}})
