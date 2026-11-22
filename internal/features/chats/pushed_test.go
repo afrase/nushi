@@ -181,7 +181,8 @@ func TestFoundPullOthersStay(t *testing.T) {
 
 // opensPullRows are tool calls that open a pull request and some that
 // don't, in any case and spacing; the app's pull_live_card_test.dart
-// keeps the same rows for livePullOf.
+// and pull_link_test.dart keep the same rows for livePullOf and
+// pushedOrOpened.
 var opensPullRows = []struct {
 	title, input, tool string
 	opens              bool

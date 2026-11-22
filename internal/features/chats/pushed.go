@@ -31,7 +31,7 @@ func callText(it model.Item) string {
 
 // opensPull says a tool call's text (callText) opens a pull request: it
 // ran gh pr create, or was a create_pull_request tool (GitHub's MCP
-// server's). The app's livePullOf (pull_live_card.dart) reads it the same
+// server's). The app's opensPull (pull_link.dart) reads it the same
 // way.
 func opensPull(what string) bool {
 	return prCreateRE.MatchString(what) || strings.Contains(what, "create_pull_request")

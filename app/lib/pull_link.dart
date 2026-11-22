@@ -15,17 +15,28 @@ const chatPullApi = 81;
 /// rows' ask names the chat (GetGitHubItemsRequest.chat_id).
 const branchPullApi = 119;
 
+/// Whether a tool call's lowercased title, input and tool, [what], push a
+/// branch: `git push`, options between the two words allowed. The daemon's
+/// gitPushRE (internal/features/chats/pushed.go) reads the same.
+bool pushesBranch(String what) =>
+    RegExp(r'\bgit\b[^\n|;&]*\spush\b').hasMatch(what);
+
+/// Whether a tool call's lowercased title, input and tool, [what], open a
+/// pull request: `gh pr create` in any spacing, or a `create_pull_request`
+/// tool. The daemon's opensPull (internal/features/chats/pushed.go) links
+/// the same calls.
+bool opensPull(String what) =>
+    RegExp(r'\bgh\s+pr\s+create\b').hasMatch(what) ||
+    what.contains('create_pull_request');
+
 /// Whether a tool call may have pushed the chat's branch or opened its
-/// pull request: `git push`, `gh pr create`, or a GitHub MCP server's
-/// create_pull_request, once it completed.
+/// pull request ([pushesBranch], [opensPull]), once it completed.
 bool pushedOrOpened(Item it) {
   if (it.kind != ItemKind.ITEM_KIND_TOOL_CALL || it.status != 'completed') {
     return false;
   }
   final what = '${it.title}\n${it.input}\n${it.tool}'.toLowerCase();
-  return RegExp(r'\bgit\b[^\n|;&]*\spush\b').hasMatch(what) ||
-      RegExp(r'\bgh\s+pr\s+create\b').hasMatch(what) ||
-      what.contains('create_pull_request');
+  return pushesBranch(what) || opensPull(what);
 }
 
 /// [l] as the item store keys it.
