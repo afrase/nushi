@@ -379,8 +379,8 @@ func TestAChatWhoseAgentWontStartCanBeDeleted(t *testing.T) {
 			agent.mu.Unlock()
 
 			p, err := svc.PlanDelete(ctx, c.id)
-			if err != nil || p.History {
-				t.Fatalf("PlanDelete = %+v, %v; want the history to stay", p, err)
+			if err != nil || p.History || !p.CantStart {
+				t.Fatalf("PlanDelete = %+v, %v; want the history to stay as the agent can't start", p, err)
 			}
 			testcheck.NoErr(t, svc.Delete(ctx, c.id, nil))
 			if _, err := svc.stored(c.id); err == nil {
@@ -395,6 +395,17 @@ func TestAChatWhoseAgentWontStartCanBeDeleted(t *testing.T) {
 				t.Errorf("%d agents started though it wasn't ready", agent.launches-launches)
 			}
 		})
+	}
+}
+
+// An agent that starts but has no way to delete its history keeps it, and
+// the plan doesn't say it couldn't start: the dialog then says the resume
+// command still opens it.
+func TestAnAgentThatCantDeleteIsNotSaidToNotStart(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	p, err := svc.PlanDelete(context.Background(), c.id)
+	if err != nil || p.History || p.CantStart {
+		t.Fatalf("PlanDelete = %+v, %v; want the history to stay, the agent started", p, err)
 	}
 }
 

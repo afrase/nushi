@@ -18,8 +18,13 @@ const _wt = '$_repo/.worktrees/quiet-fox';
 
 /// What deleting the chat would remove: its worktree, which [others] work in
 /// too.
-PlanDeleteChatResponse _plan(List<String> others) => PlanDeleteChatResponse(
-  deletesHistory: true,
+PlanDeleteChatResponse _plan(
+  List<String> others, {
+  bool deletes = true,
+  bool cantStart = false,
+}) => PlanDeleteChatResponse(
+  deletesHistory: deletes,
+  agentCantStart: cantStart,
   sessions: [AgentSession(sessionId: '7f3c2a10-5d4e', folder: _wt)],
   worktrees: [
     WorktreePlan(
@@ -40,13 +45,15 @@ Future<(FakeDaemon, Daemon)> _open(
   WidgetTester tester,
   List<String> others, {
   Brightness brightness = Brightness.dark,
+  PlanDeleteChatResponse? plan,
 }) async {
   viewport(tester, const Size(900, 620), brightness: brightness);
   showDetails.value = false;
   final c = chat('c', 'claude', 'Tidy the note list', folder: _wt)
     ..worktree = Worktree(repo: _repo, path: _wt, branch: 'nushi/quiet-fox');
   final fake = FakeDaemon([c])
-    ..answer = (input) => input is PlanDeleteChatRequest ? _plan(others) : null;
+    ..answer = (input) =>
+        input is PlanDeleteChatRequest ? plan ?? _plan(others) : null;
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));
@@ -101,6 +108,34 @@ void main() {
     final remove = tester.widget<Checkbox>(find.byType(Checkbox).first);
     expect(remove.value, isTrue);
     expect(remove.onChanged, isNotNull);
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('an agent that starts but can’t delete its history says its '
+      'resume command still opens it', (tester) async {
+    final (_, d) = await _open(tester, [], plan: _plan([], deletes: false));
+    expect(
+      find.textContaining('can’t delete its history from here, so it stays'),
+      findsOne,
+    );
+    expect(find.textContaining('couldn’t start'), findsNothing);
+    expect(find.text('7f3c2a10-5d4e'), findsOne);
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('an agent that couldn’t start keeps its history, promising '
+      'no resume command', (tester) async {
+    final (_, d) = await _open(
+      tester,
+      [],
+      plan: _plan([], deletes: false, cantStart: true),
+    );
+    expect(
+      find.textContaining('couldn’t start, so its history stays:'),
+      findsOne,
+    );
+    expect(find.textContaining('still opens'), findsNothing);
+    expect(find.text('7f3c2a10-5d4e'), findsOne);
     await closeView(tester, d);
   }, variant: onMac);
 

@@ -2195,6 +2195,7 @@ const PlanDeleteChatResponse$json = {
       '6': '.nushi.v1.Terminal',
       '10': 'terminals'
     },
+    {'1': 'agent_cant_start', '3': 8, '4': 1, '5': 8, '10': 'agentCantStart'},
   ],
   '9': [
     {'1': 4, '2': 5},
@@ -2209,8 +2210,9 @@ final $typed_data.Uint8List planDeleteChatResponseDescriptor = $convert.base64De
     'dlbnRTZXNzaW9uUghzZXNzaW9ucxInCg9kZWxldGVzX2hpc3RvcnkYAiABKAhSDmRlbGV0ZXNI'
     'aXN0b3J5EiUKDnNjcmF0Y2hfZm9sZGVyGAMgASgJUg1zY3JhdGNoRm9sZGVyEjQKCXdvcmt0cm'
     'VlcxgGIAMoCzIWLm51c2hpLnYxLldvcmt0cmVlUGxhblIJd29ya3RyZWVzEjAKCXRlcm1pbmFs'
-    'cxgHIAMoCzISLm51c2hpLnYxLlRlcm1pbmFsUgl0ZXJtaW5hbHNKBAgEEAVKBAgFEAZSCHdvcm'
-    't0cmVlUg53b3JrdHJlZV9zdGF0ZQ==');
+    'cxgHIAMoCzISLm51c2hpLnYxLlRlcm1pbmFsUgl0ZXJtaW5hbHMSKAoQYWdlbnRfY2FudF9zdG'
+    'FydBgIIAEoCFIOYWdlbnRDYW50U3RhcnRKBAgEEAVKBAgFEAZSCHdvcmt0cmVlUg53b3JrdHJl'
+    'ZV9zdGF0ZQ==');
 
 @$core.Deprecated('Use worktreePlanDescriptor instead')
 const WorktreePlan$json = {

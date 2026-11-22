@@ -1563,6 +1563,9 @@ message PlanDeleteChatResponse {
   // The chat's terminals whose shell still runs; deleting closes them
   //.
   repeated Terminal terminals = 7;
+  // The history stays (deletes_history false) because the agent couldn't
+  // start to delete it, not because it has no way to. API 144.
+  bool agent_cant_start = 8;
 }
 
 message WorktreePlan {

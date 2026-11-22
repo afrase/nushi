@@ -19,7 +19,10 @@ import (
 type DeletePlan struct {
 	Sessions []model.AgentSession // the agent's sessions the chat had, oldest first
 	History  bool                 // the agent deletes its history of them (ACP session/delete)
-	Scratch  string               // the chat's scratch folder, if it still has one
+	// CantStart says the history stays because the agent couldn't start
+	// to delete it, not because it has no way to.
+	CantStart bool
+	Scratch   string // the chat's scratch folder, if it still has one
 	// Worktrees are the chat's worktree, if it has one, then those it moved
 	// out of.
 	Worktrees []WorktreePlan
@@ -90,7 +93,12 @@ func (s *Service) plan(ctx context.Context, c *chat, probe bool) (DeletePlan, er
 	s.mu.Lock()
 	known := c.kind.deletes
 	s.mu.Unlock()
-	p.History = known != nil && *known || known == nil && probe && s.probeDeletes(ctx, c)
+	switch {
+	case known != nil:
+		p.History = *known
+	case probe:
+		p.History, p.CantStart = s.probeDeletes(ctx, c)
+	}
 	return p, nil
 }
 
@@ -98,19 +106,19 @@ func (s *Service) plan(ctx context.Context, c *chat, probe bool) (DeletePlan, er
 // history. One that can't start now (not installed, not set up, a broken
 // adapter) doesn't: its history stays, as the dialog then says, and the
 // chat can still be deleted. Nothing is remembered of a failed start, so
-// the next plan asks again.
-func (s *Service) probeDeletes(ctx context.Context, c *chat) bool {
+// the next plan asks again. cantStart says it didn't start.
+func (s *Service) probeDeletes(ctx context.Context, c *chat) (deletes, cantStart bool) {
 	if err := c.kind.ready(); err != nil {
 		c.log().Info("the agent can't start to delete its history; it stays", "err", err)
-		return false
+		return false, true
 	}
 	agent, deletes, err := s.startDeleter(ctx, c)
 	if err != nil {
 		c.log().Warn("the agent didn't start to delete its history; it stays", "err", err)
-		return false
+		return false, true
 	}
 	_ = agent.Close() // its process is gone either way
-	return deletes
+	return deletes, false
 }
 
 // othersWorkIn says whether a chat but c, archived or not, has its folder

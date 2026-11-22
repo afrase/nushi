@@ -8727,6 +8727,7 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
     $core.String? scratchFolder,
     $core.Iterable<WorktreePlan>? worktrees,
     $core.Iterable<Terminal>? terminals,
+    $core.bool? agentCantStart,
   }) {
     final result = PlanDeleteChatResponse._();
     if (sessions != null) result.sessions.addAll(sessions);
@@ -8734,6 +8735,7 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
     if (scratchFolder != null) result.scratchFolder = scratchFolder;
     if (worktrees != null) result.worktrees.addAll(worktrees);
     if (terminals != null) result.terminals.addAll(terminals);
+    if (agentCantStart != null) result.agentCantStart = agentCantStart;
     return result;
   }
 
@@ -8758,6 +8760,7 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
         subBuilder: WorktreePlan.$_createMessage)
     ..pPM<Terminal>(7, _omitFieldNames ? '' : 'terminals',
         subBuilder: Terminal.$_createMessage)
+    ..aOB(8, _omitFieldNames ? '' : 'agentCantStart')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -8819,6 +8822,17 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
   /// .
   @$pb.TagNumber(7)
   $pb.PbList<Terminal> get terminals => $_getList(4);
+
+  /// The history stays (deletes_history false) because the agent couldn't
+  /// start to delete it, not because it has no way to. API 144.
+  @$pb.TagNumber(8)
+  $core.bool get agentCantStart => $_getBF(5);
+  @$pb.TagNumber(8)
+  set agentCantStart($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(8)
+  $core.bool hasAgentCantStart() => $_has(5);
+  @$pb.TagNumber(8)
+  void clearAgentCantStart() => $_clearField(8);
 }
 
 class WorktreePlan extends $pb.GeneratedMessage {

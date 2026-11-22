@@ -368,10 +368,14 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                   ),
                 ),
               ],
+              // An agent that couldn't start may be gone or broken, so
+              // its resume command isn't promised to open the history.
               if (!p.deletesHistory) ...[
                 line(
-                  '$name can’t delete its history from here, so it '
-                  'stays: $resume still opens',
+                  p.agentCantStart
+                      ? '$name couldn’t start, so its history stays:'
+                      : '$name can’t delete its history from here, so it '
+                            'stays: $resume still opens',
                 ),
                 ...sessions(p),
               ],

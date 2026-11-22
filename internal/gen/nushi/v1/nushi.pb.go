@@ -7009,9 +7009,12 @@ type PlanDeleteChatResponse struct {
 	Worktrees []*WorktreePlan `protobuf:"bytes,6,rep,name=worktrees,proto3" json:"worktrees,omitempty"`
 	// The chat's terminals whose shell still runs; deleting closes them
 	//.
-	Terminals     []*Terminal `protobuf:"bytes,7,rep,name=terminals,proto3" json:"terminals,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Terminals []*Terminal `protobuf:"bytes,7,rep,name=terminals,proto3" json:"terminals,omitempty"`
+	// The history stays (deletes_history false) because the agent couldn't
+	// start to delete it, not because it has no way to. API 144.
+	AgentCantStart bool `protobuf:"varint,8,opt,name=agent_cant_start,json=agentCantStart,proto3" json:"agent_cant_start,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *PlanDeleteChatResponse) Reset() {
@@ -7077,6 +7080,13 @@ func (x *PlanDeleteChatResponse) GetTerminals() []*Terminal {
 		return x.Terminals
 	}
 	return nil
+}
+
+func (x *PlanDeleteChatResponse) GetAgentCantStart() bool {
+	if x != nil {
+		return x.AgentCantStart
+	}
+	return false
 }
 
 type WorktreePlan struct {
@@ -28577,13 +28587,14 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\bsettings\x18\x01 \x01(\v2\x12.nushi.v1.SettingsR\bsettings\"\x15\n" +
 	"\x13SetSettingsResponse\"0\n" +
 	"\x15PlanDeleteChatRequest\x12\x17\n" +
-	"\achat_id\x18\x01 \x01(\tR\x06chatId\"\xaa\x02\n" +
+	"\achat_id\x18\x01 \x01(\tR\x06chatId\"\xd4\x02\n" +
 	"\x16PlanDeleteChatResponse\x122\n" +
 	"\bsessions\x18\x01 \x03(\v2\x16.nushi.v1.AgentSessionR\bsessions\x12'\n" +
 	"\x0fdeletes_history\x18\x02 \x01(\bR\x0edeletesHistory\x12%\n" +
 	"\x0escratch_folder\x18\x03 \x01(\tR\rscratchFolder\x124\n" +
 	"\tworktrees\x18\x06 \x03(\v2\x16.nushi.v1.WorktreePlanR\tworktrees\x120\n" +
-	"\tterminals\x18\a \x03(\v2\x12.nushi.v1.TerminalR\tterminalsJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\bworktreeR\x0eworktree_state\"\x85\x01\n" +
+	"\tterminals\x18\a \x03(\v2\x12.nushi.v1.TerminalR\tterminals\x12(\n" +
+	"\x10agent_cant_start\x18\b \x01(\bR\x0eagentCantStartJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\bworktreeR\x0eworktree_state\"\x85\x01\n" +
 	"\fWorktreePlan\x12.\n" +
 	"\bworktree\x18\x01 \x01(\v2\x12.nushi.v1.WorktreeR\bworktree\x12-\n" +
 	"\x05state\x18\x02 \x01(\v2\x17.nushi.v1.WorktreeStateR\x05state\x12\x16\n" +

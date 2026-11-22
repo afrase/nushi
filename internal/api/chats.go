@@ -293,7 +293,7 @@ func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv
 	if err != nil {
 		return nil, refused(err)
 	}
-	out := &nushiv1.PlanDeleteChatResponse{DeletesHistory: p.History, ScratchFolder: p.Scratch}
+	out := &nushiv1.PlanDeleteChatResponse{DeletesHistory: p.History, AgentCantStart: p.CantStart, ScratchFolder: p.Scratch}
 	for _, w := range p.Worktrees {
 		out.Worktrees = append(out.Worktrees, &nushiv1.WorktreePlan{Worktree: worktreeProto(&w.Worktree), State: worktreeStateProto(w.State, w.StateErr), Others: w.Others})
 	}
