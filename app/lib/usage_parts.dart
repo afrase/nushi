@@ -171,7 +171,8 @@ class UsageFootnote extends StatelessWidget {
         '${costs ? 'Spend is what the agent reports, which on a subscription '
                   'is what the API would charge. ' : ''}'
         'Usage is counted from $since, the first turn this version kept; '
-        "workflows' agents and /context aren't counted.",
+        'turns Nushi runs out of sight (a context check, a workflow’s '
+        'agents) aren’t counted.',
         key: const ValueKey('usage-footnote'),
         style: theme.ui(theme.t.textMuted, size: 12),
       ),
