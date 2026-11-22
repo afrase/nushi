@@ -45,9 +45,17 @@ func (s *Store) VAPIDKey() (model.VAPIDKey, bool, error) {
 
 func (s *Store) SaveVAPIDKey(k model.VAPIDKey) error { return s.write("vapid.json", k) }
 
+// refusesUnparsed are the files a parse failure still refuses, left in
+// place (readRefusing): the phones' keys and pairings and the Web Push
+// key, until the owner decides what a bad one should do.
+var refusesUnparsed = map[string]bool{"remote-key.json": true, "devices.json": true, "vapid.json": true}
+
 func (s *Store) read(name string, v any) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if refusesUnparsed[name] {
+		return readRefusing(filepath.Join(s.dir, name), v)
+	}
 	return readJSON(filepath.Join(s.dir, name), v)
 }
 

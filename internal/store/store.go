@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sync"
 
@@ -141,8 +143,36 @@ func writeJSON(path string, v any) error {
 
 // readJSON reads path into v; false when there's no file, which is no
 // error: a file not written yet is the empty state. A file that doesn't
-// parse is an *unparsed error, which clearForWrite sets aside.
+// parse is set aside (setAside) and reads as the empty state too, so a
+// later write replaces nothing unread; one whose only fault is a field of
+// another shape (a newer build's, read going back: ADR 0108) keeps its
+// other fields. A file that can't be read at all is an error.
 func readJSON(path string, v any) (bool, error) {
+	b, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	// Decoded into a fresh value, so a file set aside leaves v as it was.
+	fresh := reflect.New(reflect.TypeOf(v).Elem())
+	err = json.Unmarshal(b, fresh.Interface())
+	if shape := (*json.UnmarshalTypeError)(nil); err != nil && !errors.As(err, &shape) {
+		return false, setAside(path, err)
+	} else if err != nil {
+		slog.Warn("a field of another shape left out", "file", filepath.Base(path), "field", shape.Field, "want", shape.Type.String())
+	}
+	reflect.ValueOf(v).Elem().Set(fresh.Elem())
+	return true, nil
+}
+
+// readRefusing reads path into v as readJSON did before files that don't
+// parse were set aside: such a file is an *unparsed error, left in place.
+// Only the phones' keys and pairings and the Web Push key read so
+// (refusesUnparsed): the owner hasn't decided whether a fresh key, every
+// phone pairing again, beats a daemon that won't start.
+func readRefusing(path string, v any) (bool, error) {
 	b, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return false, nil

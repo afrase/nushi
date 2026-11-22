@@ -37,9 +37,9 @@ const oldGoAgent = "codex"
 const defaultSleepAfter = 30 * time.Minute
 
 // settingsLocked is settings.json, read once and then kept (a hand edit
-// while the daemon runs is seen at its next start); one that can't be
-// read is as if empty, and one that doesn't parse counts for what it
-// could read. Either way the read's error is kept for the next change.
+// while the daemon runs is seen at its next start); one that doesn't
+// parse is set aside and read as empty (readJSON), and one that can't be
+// read at all is as if empty, its error kept for the next change.
 func (s *Store) settingsLocked() settings {
 	if s.set != nil {
 		return *s.set

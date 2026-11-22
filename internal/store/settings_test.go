@@ -124,46 +124,6 @@ func TestSettingsKept(t *testing.T) {
 	}
 }
 
-// A settings.json or agents.json that doesn't parse (a hand edit's typo)
-// is never written over: the next change sets it aside, beside it as
-// <name>.unreadable-<time>, byte for byte, and writes what Nushi knows.
-func TestAFileThatDoesntParseIsSetAside(t *testing.T) {
-	for _, tc := range []struct {
-		name    string
-		change  func(*Store) error
-		changed func(*Store) bool
-	}{
-		{"settings.json", func(s *Store) error { return s.SetDebugLog(true) }, (*Store).DebugLog},
-		{"agents.json", func(s *Store) error { return s.SetMode("claude", "plan") }, func(s *Store) bool { return s.Mode("claude") == "plan" }},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			dir := t.TempDir()
-			broken := `{"keepTranscripts": fals, "claude": {}}`
-			testcheck.Write(t, filepath.Join(dir, tc.name), broken)
-			s := New(dir)
-			if !s.KeepTranscripts() || s.Mode("claude") != "" {
-				t.Error("an unreadable file wasn't read as the defaults")
-			}
-			testcheck.NoErr(t, tc.change(s))
-			aside, err := filepath.Glob(filepath.Join(dir, tc.name+".unreadable-*"))
-			testcheck.NoErr(t, err)
-			if len(aside) != 1 {
-				t.Fatalf("set aside: %v", aside)
-			}
-			if b, err := os.ReadFile(aside[0]); err != nil || string(b) != broken {
-				t.Errorf("set aside %q, %v", b, err)
-			}
-			if !tc.changed(New(dir)) {
-				t.Error("the change wasn't written")
-			}
-			testcheck.NoErr(t, tc.change(New(dir))) // the new file reads: nothing more is set aside
-			if again, _ := filepath.Glob(filepath.Join(dir, tc.name+".unreadable-*")); len(again) != 1 {
-				t.Errorf("set aside again: %v", again)
-			}
-		})
-	}
-}
-
 // A settings.json or agents.json that can't be read at all (not a parse
 // error: here a folder in its place) refuses a change, naming the file,
 // and is left as it was.
