@@ -96,9 +96,10 @@ func (s *Store) loadSessionsLocked() error {
 }
 
 // readSessions reads every session's file, by its name, and the ids of
-// those that couldn't be read or don't parse. A record whose only fault is
-// a field of another shape (a newer build's, read going back: ADR 0108)
-// keeps its other fields.
+// those that couldn't be read or don't parse (of another shape as a
+// whole included). A value of another shape inside a record (a newer
+// build's, read going back: ADR 0108) reads as not set, and the record's
+// other fields are kept (decodeKeeping).
 func (s *Store) readSessions() (map[string]model.ChatRecord, []string, error) {
 	entries, err := os.ReadDir(filepath.Join(s.dir, "sessions")) // not a glob: the folder may hold a pattern's characters
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -118,12 +119,14 @@ func (s *Store) readSessions() (map[string]model.ChatRecord, []string, error) {
 			HasMessages *bool `json:"HasMessages"`
 		}
 		b, err := os.ReadFile(f)
+		var dropped []string
 		if err == nil {
-			err = json.Unmarshal(b, &file)
+			dropped, err = decodeKeeping(b, &file)
 		}
-		if shape := (*json.UnmarshalTypeError)(nil); errors.As(err, &shape) {
-			slog.Warn("a chat file's field of another shape left out", "file", e.Name(), "field", shape.Field)
-		} else if err != nil { // one bad file doesn't hide the other chats, nor gets them forgotten
+		if len(dropped) > 0 {
+			slog.Warn("a chat file's values of another shape read as not set", "file", e.Name(), "fields", dropped)
+		}
+		if err != nil { // one bad file doesn't hide the other chats, nor gets them forgotten
 			slog.Warn("a chat file that doesn't read", "file", e.Name(), "err", readFault(err))
 			unreadable = append(unreadable, fileID(e.Name()))
 			continue

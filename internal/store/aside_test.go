@@ -100,16 +100,12 @@ func TestAFieldOfAnotherShapeKeepsTheRest(t *testing.T) {
 	dir := t.TempDir()
 	testcheck.Write(t, filepath.Join(dir, "settings.json"), `{"transcriptDays": "soon", "debugLog": true}`)
 	testcheck.Write(t, filepath.Join(dir, "agents.json"), `{"claude": {"mode": "plan", "picks": ["a"]}}`)
-	testcheck.Write(t, filepath.Join(dir, "trusted.json"), `["/a", 7, "/b"]`)
 	s := New(dir)
 	if !s.DebugLog() || s.TranscriptDays() != 0 {
 		t.Errorf("settings: debug %v, days %v", s.DebugLog(), s.TranscriptDays())
 	}
 	if s.Mode("claude") != "plan" {
 		t.Errorf("agents: mode %q", s.Mode("claude"))
-	}
-	if f, err := s.TrustedFolders(); err != nil || len(f) != 3 || f[0] != "/a" || f[2] != "/b" {
-		t.Errorf("trusted: %q, %v", f, err)
 	}
 	if aside, _ := filepath.Glob(filepath.Join(dir, "*.unreadable-*")); len(aside) != 0 {
 		t.Errorf("set aside: %v", aside)

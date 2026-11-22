@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"sync"
 
@@ -146,10 +145,11 @@ func writeJSON(path string, v any) error {
 
 // readJSON reads path into v; false when there's no file, which is no
 // error: a file not written yet is the empty state. A file that doesn't
-// parse is set aside (setAside) and reads as the empty state too, so a
-// later write replaces nothing unread; one whose only fault is a field of
-// another shape (a newer build's, read going back: ADR 0108) keeps its
-// other fields. A file that can't be read at all is an error.
+// parse, or whose whole value is of another shape, is set aside
+// (setAside) and reads as the empty state too, so a later write replaces
+// nothing unread; a value of another shape inside it (a newer build's,
+// read going back: ADR 0108) reads as not set, and the rest is kept
+// (decodeKeeping). A file that can't be read at all is an error.
 func readJSON(path string, v any) (bool, error) {
 	b, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -158,15 +158,13 @@ func readJSON(path string, v any) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	// Decoded into a fresh value, so a file set aside leaves v as it was.
-	fresh := reflect.New(reflect.TypeOf(v).Elem())
-	err = json.Unmarshal(b, fresh.Interface())
-	if shape := (*json.UnmarshalTypeError)(nil); err != nil && !errors.As(err, &shape) {
+	dropped, err := decodeKeeping(b, v) // v is left as it was when set aside
+	if err != nil {
 		return false, setAside(path, err)
-	} else if err != nil {
-		slog.Warn("a field of another shape left out", "file", filepath.Base(path), "field", shape.Field, "want", shape.Type.String())
 	}
-	reflect.ValueOf(v).Elem().Set(fresh.Elem())
+	if len(dropped) > 0 {
+		slog.Warn("values of another shape read as not set", "file", filepath.Base(path), "fields", dropped)
+	}
 	return true, nil
 }
 
