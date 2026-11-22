@@ -344,6 +344,28 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('it keeps the agent it opened on when the default moves', (
+    tester,
+  ) async {
+    final fake = FakeDaemon([chat('c', 'codex', 'Earlier')])
+      ..answer = (input) => input is ListSkillsRequest ? _skills() : null;
+    final d = await fake.connect(tester);
+    viewport(tester, const Size(1000, 860), ratio: 3);
+    Widget view() => themed(SkillsView(daemon: d, folder: '$_home/moves'));
+    await tester.pumpWidget(view());
+    await tester.pumpAndSettle();
+    d.cantStart['codex'] = 'gone'; // the default would now be another
+    await tester.pumpWidget(view());
+    await tester.pumpAndSettle();
+    expect(find.text('Codex'), findsOneWidget); // the picker
+    expect(find.text('release-notes'), findsOneWidget);
+    expect(
+      fake.calls.whereType<ListSkillsRequest>().map((r) => r.agent).toSet(),
+      {'codex'},
+    );
+    await closeView(tester, d);
+  });
+
   testWidgets('before the daemon lists its agents: Reading…, then the list', (
     tester,
   ) async {

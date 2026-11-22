@@ -38,15 +38,23 @@ class SkillsView extends StatefulWidget {
 class _SkillsViewState extends State<SkillsView> {
   final _search = TextEditingController();
 
+  /// The agent the view opened on when none was picked, kept once known:
+  /// [defaultAgent] moves with the newest chat and the agents' state, and
+  /// the list shown has to be the one asked for.
+  String? _opened;
+
   /// Whose skills show: the one picked, else the agent a new chat would
-  /// start with ([defaultAgent], the first listed when none was used);
-  /// null while the daemon hasn't listed its agents. Never an empty name,
-  /// which the daemon would read as its own default.
+  /// start with when the view opened ([defaultAgent], the first listed
+  /// when none was used); null while the daemon hasn't listed its agents.
+  /// Never an empty name, which the daemon would read as its own default.
   String? get _agent {
     final d = widget.daemon;
     if (d.skillsAgent case final picked?) return picked;
-    final first = defaultAgent(d, knownAgents.keys.toList());
-    return first.isEmpty ? null : first;
+    if (_opened == null) {
+      final first = defaultAgent(d, knownAgents.keys.toList());
+      if (first.isNotEmpty) _opened = first;
+    }
+    return _opened;
   }
 
   /// The list shown; only asked for once [_agent] is known.
