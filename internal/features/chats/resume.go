@@ -35,19 +35,30 @@ func (s *Service) lookup(id string) (*chat, error) {
 // read back, until something needs it whole.
 func (s *Service) find(id string) (*chat, error) {
 	s.mu.Lock()
+	c := s.chats[id]
+	s.mu.Unlock()
+	if c != nil {
+		return c, nil
+	}
+	// Whether the copy is there is asked without the service's lock: the
+	// copies store may be busy with another chat's long copy, and every
+	// call of the service would wait. The record is read under it, so a
+	// chat deleted meanwhile is no chat rather than one brought back.
+	copied := s.copies != nil && s.copiesOn() && s.copies.Has(id)
+	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c := s.chats[id]; c != nil {
+	if c := s.chats[id]; c != nil { // found by another lookup meanwhile
 		return c, nil
 	}
 	sess, k, err := s.storedSession(id)
 	if err != nil {
 		return nil, err
 	}
-	c := s.newChat(k)
+	c = s.newChat(k)
 	c.id, c.sid, c.record, c.issue = id, sess.SessionID, sess, sess.Issue
 	c.ultracode.Store(sess.Ultracode)
 	c.inCopy = c.copies != nil
-	if c.asleep = s.dormant(sess, k); c.asleep {
+	if c.asleep = s.dormant(sess, k, copied); c.asleep {
 		c.logLocked().Info("chat asleep", "why", "unused before the daemon started")
 	}
 	s.chats[id] = c
@@ -65,17 +76,16 @@ const wakeWindow = time.Hour
 // archived, last used (a message or a turn's end: Updated) longer before
 // the daemon started than wakeWindow, or than the time chats idle before
 // they sleep if that is shorter (it would have been asleep), and whose
-// transcript its copy holds, so it shows without its agent's replay. One
-// with no copy reopens when shown, as one of an agent that can't reopen
-// sessions does. The start, not now, is what it's measured from: a chat
+// transcript its copy holds (copied), so it shows without its agent's
+// replay. One with no copy reopens when shown, as one of an agent that
+// can't reopen sessions does. The start, not now, is what it's measured from: a chat
 // doesn't turn old because the user came back late.
-func (s *Service) dormant(sess model.ChatRecord, k *kind) bool {
+func (s *Service) dormant(sess model.ChatRecord, k *kind, copied bool) bool {
 	window := wakeWindow
 	if after := s.SleepAfter(); after > 0 {
 		window = min(window, after)
 	}
-	return !sess.Archived && !k.noLoad.Load() && sess.Updated.Before(s.begun.Add(-window)) &&
-		s.copies != nil && s.copiesOn() && s.copies.Has(sess.ID)
+	return !sess.Archived && !k.noLoad.Load() && sess.Updated.Before(s.begun.Add(-window)) && copied
 }
 
 // openChats is the chats open now, side chats among them.

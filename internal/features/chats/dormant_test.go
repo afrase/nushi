@@ -167,3 +167,64 @@ func TestAnOldChatWithoutACopyReopens(t *testing.T) {
 	c := svc.chats[id]
 	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
 }
+
+// blockingHas is a copies store whose Has waits at gate once it is set,
+// saying so on entered.
+type blockingHas struct {
+	Copies
+	gate    chan struct{}
+	entered chan struct{}
+}
+
+func (b *blockingHas) Has(chat string) bool {
+	if b.gate != nil {
+		b.entered <- struct{}{}
+		<-b.gate
+	}
+	return b.Copies.Has(chat)
+}
+
+// A stored chat's first lookup asks the copies store whether it has the
+// chat's copy without the service's lock: a slow store (a long copy read
+// or listed meanwhile) doesn't hold every other chat's call. Two lookups
+// at once get the same chat.
+func TestAFirstLookupDoesntHoldTheService(t *testing.T) {
+	agent := &fakeAgent{}
+	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
+	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
+	testcheck.NoErr(t, err)
+	copies := &blockingHas{Copies: store}
+	sessions := &memSessions{stored: []model.ChatRecord{{ID: "old", Agent: "claude", SessionID: "s1", Folder: t.TempDir()}}}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sessions: sessions, Copies: copies})
+	t.Cleanup(svc.Close)
+	copies.gate, copies.entered = make(chan struct{}), make(chan struct{}, 2)
+	released := false
+	release := func() {
+		if !released {
+			released = true
+			close(copies.gate)
+		}
+	}
+	t.Cleanup(release)
+	found := make(chan *chat, 2)
+	for range 2 {
+		go func() {
+			c, err := svc.find("old")
+			if err != nil {
+				t.Error(err)
+			}
+			found <- c
+		}()
+	}
+	<-copies.entered
+	var others atomic.Bool
+	go func() {
+		svc.openChats()
+		others.Store(true)
+	}()
+	testcheck.Wait(t, "another call while the copy is looked for", others.Load)
+	release()
+	if a, b := <-found, <-found; a == nil || a != b {
+		t.Errorf("two lookups found %p and %p", a, b)
+	}
+}
