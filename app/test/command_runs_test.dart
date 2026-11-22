@@ -188,6 +188,18 @@ void main() {
     expect(draft.outputs.value.single.run, slow);
   });
 
+  test("a code block's ▷ never types into a command's terminal", () async {
+    final (shells, terms, runs, draft) = _setup();
+    final ssh = await runs.command(terms, 'ssh prod');
+    await _settle();
+    expect(terms.active['c'], ssh.terminalId, reason: 'the only terminal');
+    final block = runs.of('rm -rf build');
+    await runs.start(terms, block, 'rm -rf build');
+    expect(block.terminalId, isNot(ssh.terminalId));
+    expect(shells.typed[ssh.terminalId], isNull);
+    expect(shells.typed[block.terminalId], ['rm -rf build\r']);
+  });
+
   test('closing the chat stops following', () async {
     final (shells, terms, runs, draft) = _setup();
     final run = await runs.command(terms, 'make');

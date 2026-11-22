@@ -180,8 +180,9 @@ class CodeRuns {
   }
 
   /// Types [script], [run]'s block, into a terminal of the chat: the one
-  /// it ran in last or the panel's tab when its shell is at a prompt,
-  /// else a new one in the chat's folder, not shown.
+  /// it ran in last or the panel's tab when its shell is at a prompt (a
+  /// shell's, never a command's), else a new one in the chat's folder,
+  /// not shown.
   Future<void> start(Terminals terms, CodeRun run, String script) async {
     if (run.busy(null)) return;
     _dropOutput(run.key);
@@ -252,7 +253,13 @@ class CodeRuns {
     if (terms.of(chatId) == null) await terms.load(chatId);
     final list = terms.of(chatId) ?? const <pb.Terminal>[];
     for (final id in {run.terminalId, ?terms.active[chatId]}) {
-      final t = list.where((t) => t.id == id && !t.exited).firstOrNull;
+      // Never a command's terminal: it has no prompt, and what runs there
+      // (ssh, a REPL, a dev server) shows no program while it does, as
+      // its shell has no job control; typed there, the block would go to
+      // that program.
+      final t = list
+          .where((t) => t.id == id && !t.exited && t.command.isEmpty)
+          .firstOrNull;
       if (t == null) continue;
       final f = await _follow(terms, t.id);
       if (!f.gone && !f.inCommand && t.program.isEmpty) return f;
