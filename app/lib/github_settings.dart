@@ -9,6 +9,7 @@ import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_asks_settings.dart';
 import 'package:nushi/github_findings_settings.dart';
+import 'package:nushi/github_items.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/settings_rows.dart';
@@ -99,27 +100,30 @@ class _GitHubPageState extends State<GitHubPage> {
     super.dispose();
   }
 
+  /// Lists the hosts through the daemon's one owner of them, so the GitHub
+  /// views know a host added, removed or allowed here at once.
   Future<void> _load() async {
     _again.cancel();
-    try {
-      final r = await widget.client.listGitHubHosts(ListGitHubHostsRequest());
-      keepGitHubLogins(r.hosts);
-      if (!mounted) return;
-      widget.onHosts?.call(r.hosts);
+    final owner = GitHubHosts.of(widget.daemon);
+    await owner.load();
+    final failed = owner.error;
+    if (failed == null) keepGitHubLogins(owner.hosts ?? const []);
+    if (!mounted) return;
+    if (failed case final e?) {
       setState(() {
-        _hosts = r.hosts;
-        _error = null;
-        _adding = _adding || r.hosts.isEmpty;
+        _hosts = const [];
+        _error = errorText(e);
       });
-    } on Object catch (e) {
-      if (mounted) {
-        setState(() {
-          _hosts = const [];
-          _error = errorText(e);
-        });
-        _again.failed(e);
-      }
+      _again.failed(e);
+      return;
     }
+    final hosts = owner.hosts ?? const <GitHubHost>[];
+    widget.onHosts?.call(hosts);
+    setState(() {
+      _hosts = hosts;
+      _error = null;
+      _adding = _adding || hosts.isEmpty;
+    });
   }
 
   Future<void> _remove(GitHubHost h) async {

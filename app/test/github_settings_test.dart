@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_items.dart';
 import 'package:nushi/github_settings.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
@@ -66,6 +69,10 @@ Future<(FakeDaemon, Daemon)> _open(
         GitHubHost(host: host, login: 'octo', source: 'token', pasted: true),
       ];
       return AddGitHubTokenResponse();
+    }(),
+    RemoveGitHubTokenRequest(:final host) => () {
+      list = [...list.where((h) => h.host != host)];
+      return RemoveGitHubTokenResponse();
     }(),
     _ => null,
   };
@@ -187,6 +194,59 @@ void main() {
     expect(add.host, 'git.corp.example');
     expect(find.text('git.corp.example'), findsOneWidget);
     expect(find.text('Add a token'), findsOneWidget);
+    d.dispose();
+  });
+
+  testWidgets('a token added in Settings is a host the GitHub views know '
+      'at once; a removed one is not', (tester) async {
+    final (fake, d) = await _open(tester, hosts: [_hosts().first]);
+    final items = GitHubItems.of(d);
+    expect(items.knows('git.corp.example'), isFalse);
+    await tester.pumpAndSettle();
+    expect(items.knows('github.com'), isTrue);
+    expect(items.knows('git.corp.example'), isFalse);
+    await tester.tap(find.text('Add a token'));
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'git.corp.example');
+    await tester.enterText(fields.at(1), 'ghp_good');
+    await tester.tap(find.text('Add'));
+    await tester.pumpAndSettle();
+    expect(items.knows('git.corp.example'), isTrue);
+    await tester.tap(
+      find.byKey(const ValueKey('account-more-git.corp.example')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove token…'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Button, 'Remove').last);
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<RemoveGitHubTokenRequest>(), hasLength(1));
+    expect(items.knows('git.corp.example'), isFalse);
+    d.dispose();
+  });
+
+  testWidgets('hosts asked for while a listing runs are listed again '
+      'after it', (tester) async {
+    final first = Completer<ListGitHubHostsResponse>();
+    var asked = 0;
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        ListGitHubHostsRequest() when ++asked == 1 => first.future,
+        ListGitHubHostsRequest() => ListGitHubHostsResponse(hosts: _hosts()),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    final hosts = GitHubHosts.of(d);
+    final a = hosts.load();
+    // A token added since the first was sent: the second waits, then
+    // lists again; a third meanwhile shares the second.
+    final b = hosts.load();
+    final c = hosts.load();
+    first.complete(ListGitHubHostsResponse(hosts: [_hosts().first]));
+    await tester.runAsync(() => Future.wait([a, b, c]));
+    expect(asked, 2);
+    expect(hosts.known, {'github.com', 'git.corp.example'});
     d.dispose();
   });
 

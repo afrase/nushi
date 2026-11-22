@@ -130,6 +130,63 @@ class GitHubLook {
   );
 }
 
+/// The hosts Nushi gives a token to (ListGitHubHosts), one owner a daemon:
+/// GitHubItems reads it for which links get chips and asks, and Settings ›
+/// GitHub lists again after it adds, removes or allows a token, so a host
+/// changed there shows in the GitHub views at once. It lists only when
+/// asked: a listing asks GitHub for each host's limits.
+class GitHubHosts extends ChangeNotifier {
+  /// The one of [daemon].
+  factory of(Daemon daemon) => _all[daemon] ??= GitHubHosts._(daemon);
+
+  new _(this.daemon);
+
+  static final _all = Expando<GitHubHosts>();
+
+  final Daemon daemon;
+
+  /// As the daemon listed them last; null before a listing answered.
+  List<GitHubHost>? hosts;
+
+  /// Why the last listing failed; null once one answered.
+  Object? error;
+
+  Future<void>? _listing;
+  Future<void>? _next;
+
+  /// github.com and each listed host.
+  Set<String> get known => {'github.com', ...?hosts?.map((h) => h.host)};
+
+  /// Lists the hosts unless listed or listing (a chip's first look; one
+  /// that failed is asked again by the next).
+  void want() {
+    if (hosts == null && _listing == null) unawaited(load());
+  }
+
+  /// Lists the hosts now. One asked while a listing runs waits for it and
+  /// lists again after, so it sees what changed since that one was sent.
+  Future<void> load() {
+    if (_listing case final now?) {
+      return _next ??= now.then((_) {
+        _next = null;
+        return load();
+      });
+    }
+    return _listing = _list().whenComplete(() => _listing = null);
+  }
+
+  Future<void> _list() async {
+    try {
+      final r = await daemon.client.listGitHubHosts(ListGitHubHostsRequest());
+      hosts = r.hosts;
+      error = null;
+      notifyListeners();
+    } on Object catch (e) {
+      error = e; // told to whoever awaited; listeners keep what they had
+    }
+  }
+}
+
 /// Pull requests and issues by number, for the app's session (never on
 /// disk; ADR 0117): a chip asks once when first built (quiet), gathered
 /// over 250 ms into one call a host; a hover asks again, not quiet, for
@@ -139,7 +196,9 @@ class GitHubItems extends ChangeNotifier {
   /// The one of [daemon].
   factory of(Daemon daemon) => _all[daemon] ??= GitHubItems._(daemon);
 
-  new _(this.daemon) {
+  new _(this.daemon) : _hosts = GitHubHosts.of(daemon) {
+    _known = _hosts.known;
+    _hosts.addListener(_hostsChanged);
     daemon.whenDisposed(() {
       for (final t in _timers.values) {
         t.cancel();
@@ -159,31 +218,24 @@ class GitHubItems extends ChangeNotifier {
   final _want = <String, Map<String, (GitHubAddress, bool quiet)>>{};
   final _timers = <String, Timer>{};
 
-  /// The hosts Nushi gives a token to, as Settings › GitHub lists them;
-  /// github.com until it answered.
-  Set<String> _hosts = const {'github.com'};
-  Future<void>? _listing;
+  /// The hosts Nushi gives a token to, as Settings › GitHub last listed
+  /// them; github.com until then.
+  final GitHubHosts _hosts;
+  late Set<String> _known;
 
-  /// Whether [host] is one Nushi gives a token to: a link to another gets
-  /// no chip and no request.
-  bool knows(String host) {
-    unawaited(_listHosts());
-    return _hosts.contains(host);
+  void _hostsChanged() {
+    final known = _hosts.known;
+    if (setEquals(known, _known)) return;
+    _known = known;
+    notifyListeners();
   }
 
-  Future<void> _listHosts() => _listing ??= () async {
-    if (daemon.daemonApi < githubItemsApi) return;
-    try {
-      final r = await daemon.client.listGitHubHosts(ListGitHubHostsRequest());
-      final hosts = {'github.com', for (final h in r.hosts) h.host};
-      if (!setEquals(hosts, _hosts)) {
-        _hosts = hosts;
-        notifyListeners();
-      }
-    } on Object {
-      _listing = null; // asked again by the next chip
-    }
-  }();
+  /// Whether [host] is one Nushi gives a token to: a link to another gets
+  /// no chip and no request. The first asks for the list.
+  bool knows(String host) {
+    _hosts.want();
+    return _known.contains(host);
+  }
 
   /// What's known of [a].
   GitHubLook look(GitHubAddress a) => _looks[a.key] ?? const GitHubLook();
@@ -198,7 +250,7 @@ class GitHubItems extends ChangeNotifier {
   /// Asks for [a] unless known within [fresh] (null: known at all): a
   /// chip's first build ([quiet]), a hover's (a minute, not quiet).
   void want(GitHubAddress a, {bool quiet = true, Duration? fresh}) {
-    if (daemon.daemonApi < githubItemsApi || !_hosts.contains(a.host)) return;
+    if (daemon.daemonApi < githubItemsApi || !_known.contains(a.host)) return;
     final l = look(a);
     if (l.asking) return;
     final at = l.at;
