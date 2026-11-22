@@ -6,6 +6,7 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shell_env_line.dart';
@@ -16,7 +17,7 @@ import 'package:nushi/widgets.dart';
 /// path, or "Not installed"), and for one that runs
 /// through an adapter (Codex), Set up, Update and Remove (ADR 0037); Claude
 /// runs through Nushi's Go agent, with nothing to set up (ADR 0066). Under
-/// the agent the daemon says has one (Codex), the setting that runs it
+/// each agent the daemon says has one (Codex), the setting that runs it
 /// through Nushi's Go agent instead of its adapter (ADR 0142), once
 /// [settings] came. The [marked] agent's row stands out: a chat that
 /// couldn't start it sent you here.
@@ -62,22 +63,24 @@ class _AgentsPageState extends State<AgentsPage> {
     if (mounted) setState(() => _removing.remove(a.name));
   }
 
-  /// Codex's switch between its adapter and Nushi's Go agent, set in line
+  /// [a]'s switch between its adapter and Nushi's Go agent, set in line
   /// with the agent's name; the agents are found again once it's set, as
-  /// Codex's needs changed. Null while the daemon's settings aren't known
-  /// (or it is too old to have the setting).
-  Widget? _goAgent() {
+  /// the agent's needs changed. Null while the daemon's settings aren't
+  /// known, or when it is too old to keep the setting by agent (API 142).
+  Widget? _goAgent(Agent a) {
     final (set, change) = (widget.settings, widget.onChange);
-    if (set == null || change == null || !set.hasCodexGoAgent()) return null;
+    if (set == null || change == null || !set.goAgents.containsKey(a.name)) {
+      return null;
+    }
     return Padding(
       padding: const EdgeInsets.only(left: agentTextIndent),
       child: SettingsRow(
-        goAgentLabel,
-        description: goAgentDescription,
+        goAgentLabel(a),
+        description: goAgentDescription(a),
         control: SettingsSwitch(
-          value: set.codexGoAgent,
+          value: set.goAgents[a.name]!,
           run: ({required on}) async {
-            await change((s) => s.codexGoAgent = on);
+            await change((s) => s.goAgents[a.name] = on);
             await listAgents(widget.client);
           },
         ),
@@ -104,7 +107,7 @@ class _AgentsPageState extends State<AgentsPage> {
                       ? null
                       : () => _remove(a),
                 ),
-                if (a.goAgentSwitch) ?_goAgent(),
+                if (a.goAgentSwitch) ?_goAgent(a),
               ],
             ],
           ),
@@ -114,11 +117,24 @@ class _AgentsPageState extends State<AgentsPage> {
   );
 }
 
-/// The switch for Codex's Go agent, and what it says under it.
-const goAgentLabel = 'Run Codex without Node';
-const goAgentDescription =
-    "New: Nushi's built-in agent instead of the codex-acp adapter. "
-    'Chats use it from their next start.';
+/// The switch for [a]'s Go agent: "Run Codex without Node".
+String goAgentLabel(Agent a) => 'Run ${a.title} without Node';
+
+/// What [a]'s Go agent switch says under it, naming the adapter it
+/// replaces as last listed, as the daemon lists none while it's on.
+String goAgentDescription(Agent a) {
+  if (a.hasAdapter()) _adapterNames[a.name] = a.adapter.package.split('/').last;
+  final replaced = switch (_adapterNames[a.name]) {
+    final name? => 'the $name adapter',
+    null => 'its adapter',
+  };
+  return "New: Nushi's built-in agent instead of $replaced. "
+      'Chats use it from their next start.';
+}
+
+/// Each agent's adapter, by the last part of its package ("codex-acp"),
+/// as last listed with one.
+final Map<String, String> _adapterNames = runMap();
 
 String _mb(int bytes) => '${(bytes / 1e6).round()} MB';
 

@@ -351,9 +351,10 @@ class FakeDaemon implements Transport {
     return items.isEmpty ? null : GetGitHubItemsResponse(items: items);
   }
 
-  /// [a] as the daemon lists it now: Codex through the Go agent needs no
-  /// adapter, so it's ready once found.
-  Agent _asRun(Agent a) => a.goAgentSwitch && settings.codexGoAgent
+  /// [a] as the daemon lists it now: an agent through its Go agent
+  /// (Settings.go_agents) needs no adapter, so it's ready once found.
+  Agent _asRun(Agent a) =>
+      a.goAgentSwitch && (settings.goAgents[a.name] ?? false)
       ? (a.deepCopy()
           ..clearAdapter()
           ..ready = a.path.isNotEmpty && a.problem.isEmpty)

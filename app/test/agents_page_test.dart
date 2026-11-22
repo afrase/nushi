@@ -71,8 +71,9 @@ Future<(FakeDaemon, Daemon)> _settings(
   String? agent,
   ShellEnvironment? environment,
   bool codexSetUp = true,
-  bool? goAgent = false, // null: a daemon without the setting
+  bool? goAgent = false, // null: a daemon without go_agents (API 142)
   Size size = const Size(1000, 760),
+  void Function(FakeDaemon)? daemon, // more of the daemon, before it connects
 }) async {
   final fake = FakeDaemon([])
     ..agents = [
@@ -86,7 +87,8 @@ Future<(FakeDaemon, Daemon)> _settings(
           a,
     ]
     ..environment = environment;
-  if (goAgent != null) fake.settings.codexGoAgent = goAgent;
+  if (goAgent != null) fake.settings.goAgents['codex'] = goAgent;
+  daemon?.call(fake);
   final d = await fake.connect(tester);
   await pumpSettings(
     tester,
@@ -99,10 +101,16 @@ Future<(FakeDaemon, Daemon)> _settings(
   return (fake, d);
 }
 
+/// The switch's words for Codex, as Settings › Agents has them.
+const _goLabel = 'Run Codex without Node';
+const _goDescription =
+    "New: Nushi's built-in agent instead of the codex-acp adapter. "
+    'Chats use it from their next start.';
+
 /// Settings › Agents' switch for Codex's Go agent.
 Finder get _goSwitch => find.descendant(
   of: find.ancestor(
-    of: find.text(goAgentLabel),
+    of: find.text(_goLabel),
     matching: find.byType(SettingsRow),
   ),
   matching: find.byType(SettingsSwitch),
@@ -168,18 +176,18 @@ void main() {
   testWidgets("Codex's Go agent: the switch sets it, and Codex then needs "
       'no adapter; off again, it does', (tester) async {
     final (fake, d) = await _settings(tester, codexSetUp: false);
-    expect(find.text(goAgentDescription), findsOneWidget);
+    expect(find.text(_goDescription), findsOneWidget);
     // In line with Codex's name, under Codex's row, above Ante's.
     expect(
-      tester.getRect(find.text(goAgentLabel)).left,
+      tester.getRect(find.text(_goLabel)).left,
       tester.getRect(find.text('Codex')).left,
     );
     expect(
-      tester.getRect(find.text(goAgentLabel)).top,
+      tester.getRect(find.text(_goLabel)).top,
       greaterThan(tester.getRect(find.byType(AgentRow).at(1)).bottom - 1),
     );
     expect(
-      tester.getRect(find.text(goAgentLabel)).bottom,
+      tester.getRect(find.text(_goLabel)).bottom,
       lessThan(tester.getRect(find.text('Ante')).top),
     );
     expect(tester.widget<SettingsSwitch>(_goSwitch).value, isFalse);
@@ -188,24 +196,68 @@ void main() {
     final listed = fake.calls.whereType<ListAgentsRequest>().length;
     await tester.tap(_goSwitch);
     await tester.pumpAndSettle();
-    expect(fake.setSettings.single.codexGoAgent, isTrue);
+    expect(fake.setSettings.single.goAgents['codex'], isTrue);
     expect(fake.setSettings.single.sleepAfterMinutes, 30); // the rest kept
     expect(fake.calls.whereType<ListAgentsRequest>().length, listed + 1);
     expect(tester.widget<SettingsSwitch>(_goSwitch).value, isTrue);
     expect(tester.getRect(_goSwitch), at); // the switch stays put
+    // Its words stay too, though Codex is now listed with no adapter.
+    expect(find.text(_goDescription), findsOneWidget);
     expect(find.text('Set up'), findsNothing);
     expect(find.text('Ready'), findsNWidgets(4)); // Claude, Codex, Ante, PiG
     await tester.tap(_goSwitch);
     await tester.pumpAndSettle();
-    expect(fake.setSettings.last.codexGoAgent, isFalse);
+    expect(fake.setSettings.last.goAgents['codex'], isFalse);
     expect(find.text('Set up'), findsOneWidget);
     d.dispose();
   });
 
-  testWidgets('no switch from a daemon without the setting', (tester) async {
-    final (_, d) = await _settings(tester, goAgent: null);
-    expect(find.text(goAgentLabel), findsNothing);
+  testWidgets('no switch from a daemon without go_agents', (tester) async {
+    // A daemon before API 142 keeps only Codex's, by its old field.
+    final (_, d) = await _settings(
+      tester,
+      goAgent: null,
+      daemon: (fake) => fake.settings.codexGoAgent = false,
+    );
+    expect(find.text(_goLabel), findsNothing);
     expect(find.text('Adapter 2.2.1'), findsOneWidget);
+    d.dispose();
+  });
+
+  testWidgets('each agent with the switch has its own, in its words', (
+    tester,
+  ) async {
+    final (fake, d) = await _settings(
+      tester,
+      daemon: (fake) => fake
+        ..agents = [
+          for (final a in fake.agents)
+            if (a.name == 'pig') a.deepCopy()..goAgentSwitch = true else a,
+        ]
+        ..settings.goAgents['pig'] = false,
+    );
+    expect(find.text(_goLabel), findsOneWidget);
+    // PiG was never listed with an adapter: the words name none.
+    expect(find.text('Run PiG without Node'), findsOneWidget);
+    expect(
+      find.text(
+        "New: Nushi's built-in agent instead of its adapter. "
+        'Chats use it from their next start.',
+      ),
+      findsOneWidget,
+    );
+    final pig = find.descendant(
+      of: find.ancestor(
+        of: find.text('Run PiG without Node'),
+        matching: find.byType(SettingsRow),
+      ),
+      matching: find.byType(SettingsSwitch),
+    );
+    await tester.tap(pig);
+    await tester.pumpAndSettle();
+    expect(fake.setSettings.single.goAgents, {'codex': false, 'pig': true});
+    expect(tester.widget<SettingsSwitch>(pig).value, isTrue);
+    expect(tester.widget<SettingsSwitch>(_goSwitch).value, isFalse);
     d.dispose();
   });
 
