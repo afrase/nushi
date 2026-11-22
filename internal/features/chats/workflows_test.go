@@ -764,6 +764,26 @@ func TestReadingAWorkflow(t *testing.T) {
 	}
 }
 
+// An agent's steps whose run can't be read say why, not that the agent is
+// gone; a run with no files is still no agent.
+func TestReadingAWorkflowAgentThatFails(t *testing.T) {
+	f := workflowChat(t, Timing{}, runningAs)
+	f.waitStatus(t, func(st model.Status) bool { return st.Workflows == 1 })
+	denied := errors.New("permission denied")
+	f.files.mu.Lock()
+	f.files.agentsErr = denied
+	f.files.mu.Unlock()
+	if _, _, _, err := f.svc.WorkflowAgent(f.c.id, wfCall, "a1", 400); !errors.Is(err, denied) || errors.Is(err, ErrNoWorkflow) {
+		t.Errorf("a read that failed: %v", err)
+	}
+	f.files.mu.Lock()
+	f.files.agentsErr = fs.ErrNotExist
+	f.files.mu.Unlock()
+	if _, _, _, err := f.svc.WorkflowAgent(f.c.id, wfCall, "a1", 400); !errors.Is(err, ErrNoWorkflow) {
+		t.Errorf("no files: %v", err)
+	}
+}
+
 // GetWorkflow lists a run's first maxWorkflowAgents agents, and says
 // there are more.
 func TestAWorkflowsAgentsAreCapped(t *testing.T) {

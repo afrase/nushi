@@ -283,7 +283,10 @@ func (s *Service) WorkflowAgent(chatID, callID, agentID string, limit int) ([]mo
 		return nil, 0, model.WorkflowAgent{}, err
 	}
 	sid, folder, w := c.sidFolder(call)
-	agents, _ := c.kind.workflows.WorkflowAgents(sid, folder, w)
+	agents, err := c.kind.workflows.WorkflowAgents(sid, folder, w)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) { // a read that failed isn't an agent gone
+		return nil, 0, model.WorkflowAgent{}, err
+	}
 	var agent model.WorkflowAgent
 	for _, a := range agents {
 		if a.ID == agentID {
