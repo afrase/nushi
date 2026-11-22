@@ -332,6 +332,23 @@ void main() {
       d.dispose();
     }, variant: onMac);
 
+    testWidgets('larger text makes the caps and the search taller, so the '
+        'words keep their room', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final d = await shortcutsPage(tester);
+      expect(tester.getSize(keyOf('find')).height, 28);
+      expect(
+        tester.getSize(find.byKey(const ValueKey('shortcuts-search'))).height,
+        30,
+      );
+      await tapIt(tester, keyOf('find'));
+      expect(tester.getSize(keyOf('find')).height, 28);
+      expect(tester.takeException(), isNull);
+      await pressKey(tester, LogicalKeyboardKey.escape);
+      d.dispose();
+    }, variant: onMac);
+
     testWidgets("a fixed key's row has no hover, hand or focus", (
       tester,
     ) async {

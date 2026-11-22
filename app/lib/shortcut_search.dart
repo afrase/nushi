@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -111,6 +113,8 @@ class ShortcutSearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    // Its height and icons grow with the text, as its hint does.
+    final scale = MediaQuery.textScalerOf(context);
     return ValueListenableBuilder(
       valueListenable: controller,
       builder: (context, value, _) => CallbackShortcuts(
@@ -119,7 +123,7 @@ class ShortcutSearchField extends StatelessWidget {
             const SingleActivator(LogicalKeyboardKey.escape): controller.clear,
         },
         child: SizedBox(
-          height: 26,
+          height: max(26, (scale.scale(12) + 14).roundToDouble()),
           child: TextField(
             key: const ValueKey('shortcuts-search'),
             controller: controller,
@@ -128,7 +132,11 @@ class ShortcutSearchField extends StatelessWidget {
             decoration: InputDecoration(
               isDense: true,
               hintText: 'Search actions and keys',
-              prefixIcon: Icon(Icons.search, size: 14, color: t.textMuted),
+              prefixIcon: Icon(
+                Icons.search,
+                size: scale.scale(14),
+                color: t.textMuted,
+              ),
               prefixIconConstraints: const BoxConstraints(minWidth: 26),
               suffixIcon: value.text.isEmpty
                   ? null
@@ -138,7 +146,7 @@ class ShortcutSearchField extends StatelessWidget {
                         Icons.close,
                         key: const ValueKey('shortcuts-search-clear'),
                         tooltip: 'Clear search',
-                        size: 14,
+                        size: scale.scale(14),
                         padding: 4,
                         onTap: controller.clear,
                       ),

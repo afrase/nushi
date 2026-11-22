@@ -91,7 +91,7 @@ enum KeyCapLook {
 
 /// A key's cap that is the control changing it (Settings › Keyboard
 /// shortcuts): [keys] in code type 12, [look] saying what it holds,
-/// [height] high, hugging its key and at least
+/// [height] high (more as the text grows), hugging its key and at least
 /// [minWidth] wide so a short key isn't a crumb. [ring] draws the 2-point
 /// focus ring (the keyboard's focus, or listening); [lit], the row it
 /// sits on is under the pointer, puts the row's tint on it too, so the
@@ -127,6 +127,13 @@ class KeyCapButton extends StatelessWidget {
   static const double radius = NushiTheme.control;
 
   static const _pad = 8.0;
+
+  /// Its height at the text's scale in [context]: the text keeps its room
+  /// inside the ring as it grows.
+  static double heightIn(BuildContext context) => max(
+    height,
+    (MediaQuery.textScalerOf(context).scale(12) + 12).roundToDouble(),
+  );
 
   /// The width of a cap holding [keys] in [context] ([minWidth] for none).
   static double widthOf(BuildContext context, String keys) {
@@ -170,7 +177,7 @@ class KeyCapButton extends StatelessWidget {
         ? Border.all(color: t.fieldBorder)
         : null;
     final box = Container(
-      height: height,
+      height: heightIn(context),
       constraints: const BoxConstraints(minWidth: minWidth),
       padding: const EdgeInsets.symmetric(horizontal: _pad),
       foregroundDecoration: border == null
