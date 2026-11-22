@@ -102,8 +102,8 @@ func (s *Store) readSessions() (map[string]model.ChatRecord, error) {
 		}
 		if file.HasMessages != nil {
 			sess.HasMessages = *file.HasMessages
-		} else { // stored before HasMessages was kept
-			sess.HasMessages = sess.Title != "" || s.HadMessages != nil && s.HadMessages(sess)
+		} else { // stored before HasMessages was kept: a title says it had one
+			sess.HasMessages = sess.Title != ""
 		}
 		// Pinned while the user's messages could be: only the agent's are
 		// (ADR 0085's amendment). Saved so with the record's next change.

@@ -39,7 +39,6 @@ import (
 	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/mcpserver"
-	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/pi"
 	"github.com/afrase/nushi/internal/proctree"
 	"github.com/afrase/nushi/internal/shellenv"
@@ -164,7 +163,6 @@ func run() error {
 	st := store.New(dir)
 	known := knownagents.All(projects, st.CodexGoAgent)
 	agentSvc := newAgents(dir, known)
-	st.HadMessages = func(s model.ChatRecord) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
 	copies, err := transcripts.Open(filepath.Join(dir, "transcripts"))
 	if err != nil {
 		return err

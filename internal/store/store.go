@@ -30,9 +30,6 @@ type Store struct {
 	// first time doesn't hold up the settings.
 	sessMu   sync.Mutex
 	sessions map[string]model.ChatRecord // by file name; nil until read
-	// HadMessages says whether the agent's history of a session stored
-	// before sessions said so has messages.
-	HadMessages func(model.ChatRecord) bool
 }
 
 func New(dir string) *Store { return &Store{dir: dir} }

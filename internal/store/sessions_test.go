@@ -61,7 +61,6 @@ func TestSessionsKept(t *testing.T) {
 func TestSessionsHasMessages(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir)
-	s.HadMessages = func(model.ChatRecord) bool { return true }
 	if err := os.MkdirAll(filepath.Join(dir, "sessions"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -141,13 +140,11 @@ func refs(t reflect.Type) bool {
 func TestOldAndBrokenSessionFiles(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir)
-	s.HadMessages = func(sess model.ChatRecord) bool { return sess.SessionID == "in-history" }
 	if err := s.SaveSession(model.ChatRecord{ID: "new", SessionID: "x"}); err != nil {
 		t.Fatal(err)
 	}
 	files := map[string]string{
 		"titled.json":     `{"ID":"titled","SessionID":"t","Title":"Fix it"}`, // before the flag
-		"image.json":      `{"ID":"image","SessionID":"in-history"}`,          // an image-only first message
 		"empty.json":      `{"ID":"empty","SessionID":"e"}`,
 		"broken.json":     `{"ID":`,
 		"unreadable.json": ``,
@@ -167,7 +164,7 @@ func TestOldAndBrokenSessionFiles(t *testing.T) {
 	for _, sess := range got {
 		has[sess.ID] = sess.HasMessages
 	}
-	if want := map[string]bool{"new": false, "titled": true, "image": true, "empty": false}; !reflect.DeepEqual(has, want) {
+	if want := map[string]bool{"new": false, "titled": true, "empty": false}; !reflect.DeepEqual(has, want) {
 		t.Errorf("has messages = %v, want %v", has, want)
 	}
 }

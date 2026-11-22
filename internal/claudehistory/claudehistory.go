@@ -48,13 +48,6 @@ func transcriptPath(projects, id, folder string) (string, error) {
 	return filepath.Join(historyDir(projects, folder), id+".jsonl"), nil
 }
 
-// Has reports whether Claude keeps session id's transcript in folder's
-// history (it writes one once the session has a message).
-func Has(projects, id, folder string) bool {
-	fi, err := os.Stat(filepath.Join(historyDir(projects, folder), id+".jsonl"))
-	return err == nil && fi.Size() > 0
-}
-
 // HistoryGone reports that Claude no longer keeps session id's transcript in
 // folder's history, for certain: the folder's history folder is there and
 // can be read, and the transcript isn't in it (Claude Code deletes those
