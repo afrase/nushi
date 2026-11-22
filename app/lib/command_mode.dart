@@ -21,6 +21,12 @@ bool commandsHere(BuildContext context) => !kIsWeb && !TouchTargets.of(context);
 /// character is `!` (a space before it makes it a message).
 bool isCommandText(String text) => text.startsWith('!');
 
+/// [text], a sent message's, as it goes back in a box with a command mode
+/// (Up, a message taken back): one starting with `!` went as a message (a
+/// space before it, trimmed as it was sent, or from the phone), so it gets
+/// a space first and stays one, never a command run by the send key.
+String asMessage(String text) => isCommandText(text) ? ' $text' : text;
+
 /// The command in [text], a box's in command mode: what follows the `!`,
 /// trimmed; empty for `!` alone or with spaces, which runs nothing.
 String commandIn(String text) => text.substring(1).trim();

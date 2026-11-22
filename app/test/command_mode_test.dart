@@ -233,6 +233,24 @@ void main() {
     await _end(tester, d);
   }, variant: onMac);
 
+  testWidgets('a message starting with "!" put back is still a message', (
+    tester,
+  ) async {
+    final (fake, shells, d, chat) = await _box(tester);
+    chat.takeBack.value = QueuedMessage(text: '!rm -rf build');
+    await tester.pumpAndSettle();
+    expect(chat.draft.text.text, ' !rm -rf build');
+    expect(_inCommandMode(tester), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await _settle(tester);
+    expect(shells.opened, isEmpty);
+    expect(
+      fake.calls.whereType<SendPromptRequest>().single.text,
+      '!rm -rf build',
+    );
+    await _end(tester, d);
+  }, variant: onMac);
+
   testWidgets("a side chat's box has no command mode", (tester) async {
     final (fake, shells, d, _) = await _box(tester, commands: false);
     await _type(tester, '!git status');

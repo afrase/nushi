@@ -313,7 +313,8 @@ class _ComposerState extends State<Composer> {
     _images.value = [..._images.value, ...images];
     final before = _text.text.trim();
     final all = [if (before.isNotEmpty) before, if (text.isNotEmpty) text];
-    _setText(all.join('\n\n'));
+    final back = all.join('\n\n');
+    _setText(_text.commands ? asMessage(back) : back);
   }
 
   void _takeBack() {
