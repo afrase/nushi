@@ -9,9 +9,8 @@ import (
 	"golang.org/x/net/http/httpproxy"
 )
 
-// envConfig is the environment's proxies: HTTPS_PROXY, HTTP_PROXY,
-// NO_PROXY.
-func envConfig() *httpproxy.Config { return httpproxy.FromEnvironment() }
+// envConfig is env's proxies: HTTPS_PROXY, HTTP_PROXY, NO_PROXY.
+func envConfig(env []string) *httpproxy.Config { return baseConfig(env) }
 
 // systemLookup reads no settings on this OS: a direct connection.
 func systemLookup(*url.URL, bool) ([]*url.URL, time.Duration) {

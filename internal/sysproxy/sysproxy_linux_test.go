@@ -89,3 +89,29 @@ func TestAllProxyFillsIn(t *testing.T) {
 		}
 	}
 }
+
+// On Linux ALL_PROXY too is read from Environ, not the daemon's own
+// environment.
+func TestAllProxyFromEnviron(t *testing.T) {
+	clearProxyEnv(t)
+	t.Setenv("ALL_PROXY", "socks5://daemons.corp:1080")
+	fakeEnviron(t, "all_proxy=socks5://shells.corp:1080", "NO_PROXY=printer")
+	for raw, want := range map[string]string{
+		"wss://relay.example.com/": "socks5://shells.corp:1080",
+		"http://jira.example.com/": "socks5://shells.corp:1080",
+		"wss://printer/":           "",
+	} {
+		u, _ := url.Parse(raw)
+		ps, _ := systemLookup(u, u.Scheme == "wss" || u.Scheme == "https")
+		if len(ps) != 1 {
+			t.Fatalf("%s: %v", raw, ps)
+		}
+		got := ""
+		if ps[0] != nil {
+			got = ps[0].String()
+		}
+		if got != want {
+			t.Errorf("%s: %q, want %q", raw, got, want)
+		}
+	}
+}

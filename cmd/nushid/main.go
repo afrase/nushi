@@ -162,7 +162,9 @@ func run() error {
 	hub := &events.Hub{}
 	st := store.New(dir)
 	known := knownagents.All(projects, st.GoAgent)
-	agentSvc := newAgents(dir, known)
+	shellEnv := newShellEnv()
+	sysproxy.Environ = shellEnv.Environ // before the relay, Jira, GitHub or Web Push asks
+	agentSvc := newAgents(dir, known, shellEnv)
 	copies, err := transcripts.Open(filepath.Join(dir, "transcripts"))
 	if err != nil {
 		return err

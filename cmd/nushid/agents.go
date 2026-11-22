@@ -16,19 +16,24 @@ import (
 	"github.com/afrase/nushi/internal/shellenv"
 )
 
-// newAgents is the agents feature: the agents Nushi knows, found on the
-// PATH of the environment they start with (ADR 0048), their adapters set
-// up in dir/agents.
-func newAgents(dir string, known []knownagents.Agent) *agents.Service {
-	// Agents start with the login shell's environment, read now and when
-	// Settings › Agents asks, whatever started the daemon (ADR 0048).
-	// NUSHI_SHELL_ENV=off keeps the daemon's own (tests set PATH to their
-	// fake agents; the shell's would replace it).
+// newShellEnv is the login shell's environment, started reading: agents
+// start with it, and the daemon's proxies come from it (sysproxy), read
+// now and when Settings › Agents asks, whatever started the daemon (ADR
+// 0048, 0101). NUSHI_SHELL_ENV=off keeps the daemon's own (tests set PATH
+// to their fake agents; the shell's would replace it).
+func newShellEnv() *shellenv.Env {
 	shellEnv := shellenv.New(knownShell(loginShell()), os.Environ())
 	if os.Getenv("NUSHI_SHELL_ENV") == "off" {
 		shellEnv = shellenv.Off(os.Environ())
 	}
 	shellEnv.Start()
+	return shellEnv
+}
+
+// newAgents is the agents feature: the agents Nushi knows, found on the
+// PATH of shellEnv, the environment they start with (ADR 0048), their
+// adapters set up in dir/agents.
+func newAgents(dir string, known []knownagents.Agent, shellEnv *shellenv.Env) *agents.Service {
 	var list []agents.Agent
 	for _, a := range known {
 		list = append(list, a.Agent)

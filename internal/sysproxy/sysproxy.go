@@ -1,15 +1,17 @@
 // Package sysproxy says which proxies to use for a URL, as the system
 // would, without cgo: the environment's (HTTPS_PROXY, HTTP_PROXY, NO_PROXY)
-// when it names any, else the system's own. On the Mac that is the network
+// when it names any, else the system's own. The environment is Environ:
+// the login shell's, as agents get it (main sets it; ADR 0048, 0101), not
+// only what started the daemon. On the Mac the system's is the network
 // settings `scutil --proxy` prints: a PAC file (evaluated by macOS's own
 // CFNetwork, through osascript), else the HTTPS, HTTP or SOCKS proxy with
 // the exceptions list (sysproxy_darwin.go, pac_darwin.go). On Linux it is
-// the environment alone, as the login shell gives it: ALL_PROXY also
-// serves a scheme whose own variable is unset, as curl's all_proxy does;
-// no gsettings or desktop settings (sysproxy_linux.go). Another OS goes
-// direct (sysproxy_other.go, ADR 0097). A proxy URL is http, https or
-// socks5 (socks5h is the same to Go: names resolved at the proxy); the
-// relay's websocket takes http, socks5 and socks5h, not https (relay.Dialer).
+// the environment alone: ALL_PROXY also serves a scheme whose own
+// variable is unset, as curl's all_proxy does; no gsettings or desktop
+// settings (sysproxy_linux.go). Another OS goes direct
+// (sysproxy_other.go, ADR 0097). A proxy URL is http, https or socks5
+// (socks5h is the same to Go: names resolved at the proxy); the relay's
+// websocket takes http, socks5 and socks5h, not https (relay.Dialer).
 //
 // Not supported: proxy auto-discovery (WPAD), proxies that want a password
 // from the settings (the Keychain's), NTLM and Kerberos. A password in an
@@ -22,7 +24,17 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"golang.org/x/net/http/httpproxy"
+
+	"github.com/afrase/nushi/internal/shellenv"
 )
+
+// Environ is the environment proxies are read from, afresh for each URL.
+// main sets it to the login shell's (shellenv.Env.Environ) before the
+// first request, so the daemon uses the proxies its agents see; it is
+// the daemon's own until then.
+var Environ = os.Environ
 
 // Proxy is the proxy for an HTTP request (an http.Transport's Proxy): the
 // first For names, nil for a direct connection.
@@ -40,8 +52,8 @@ func Proxy(r *http.Request) (*url.URL, error) {
 // a PAC file never sees its path (which holds the rendezvous id).
 func For(u *url.URL) ([]*url.URL, error) {
 	secure := u.Scheme == "wss" || u.Scheme == "https"
-	if envSet() {
-		p, err := fromEnvironment(u, secure)
+	if env := Environ(); envSet(env) {
+		p, err := fromEnvironment(env, u, secure)
 		return []*url.URL{p}, err
 	}
 	bare := &url.URL{Scheme: u.Scheme, Host: u.Host, Path: "/"}
@@ -89,22 +101,41 @@ type cached struct {
 	keep    time.Duration
 }
 
-// fromEnvironment is the environment's proxy for u, NO_PROXY's exceptions
-// counted (net/http's rules), or nil for a direct connection. Read afresh
-// each time, unlike http.ProxyFromEnvironment, which keeps its first.
-func fromEnvironment(u *url.URL, secure bool) (*url.URL, error) {
-	cfg := envConfig()
+// fromEnvironment is env's proxy for u, NO_PROXY's exceptions counted
+// (net/http's rules), or nil for a direct connection. Read afresh each
+// time, unlike http.ProxyFromEnvironment, which keeps its first.
+func fromEnvironment(env []string, u *url.URL, secure bool) (*url.URL, error) {
+	cfg := envConfig(env)
 	asked := &url.URL{Scheme: map[bool]string{true: "https", false: "http"}[secure], Host: u.Host}
 	return cfg.ProxyFunc()(asked)
 }
 
-// envSet says the environment names a proxy for a scheme of its own
-// (HTTPS_PROXY, HTTP_PROXY): For then reads only the environment.
-func envSet() bool {
-	for _, v := range []string{"HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"} {
-		if os.Getenv(v) != "" {
-			return true
+// baseConfig is env's proxies as httpproxy.FromEnvironment reads the
+// process's: HTTPS_PROXY, HTTP_PROXY, NO_PROXY, each name before its
+// lower-case one, and HTTP_PROXY ignored under CGI (REQUEST_METHOD).
+func baseConfig(env []string) *httpproxy.Config {
+	return &httpproxy.Config{
+		HTTPProxy:  getenv(env, "HTTP_PROXY", "http_proxy"),
+		HTTPSProxy: getenv(env, "HTTPS_PROXY", "https_proxy"),
+		NoProxy:    getenv(env, "NO_PROXY", "no_proxy"),
+		CGI:        getenv(env, "REQUEST_METHOD") != "",
+	}
+}
+
+// envSet says env names a proxy for a scheme of its own (HTTPS_PROXY,
+// HTTP_PROXY): For then reads only the environment.
+func envSet(env []string) bool {
+	return getenv(env, "HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy") != ""
+}
+
+// getenv is the value of the first of names set non-empty in env, "" when
+// none is: every proxy variable is read through it. A name is the same
+// one as the OS takes it (shellenv.Get: on Windows, whatever its case).
+func getenv(env []string, names ...string) string {
+	for _, n := range names {
+		if v := shellenv.Get(env, n); v != "" {
+			return v
 		}
 	}
-	return false
+	return ""
 }

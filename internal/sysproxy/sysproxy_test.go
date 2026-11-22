@@ -61,6 +61,62 @@ func TestLookupsDontWaitForEachOther(t *testing.T) {
 	}
 }
 
+// fakeEnviron makes env the environment proxies are read from, for the
+// test, as main makes it the login shell's.
+func fakeEnviron(t *testing.T, env ...string) {
+	t.Helper()
+	old := Environ
+	Environ = func() []string { return env }
+	t.Cleanup(func() { Environ = old })
+}
+
+// Proxies come from Environ (the login shell's, in the daemon), not from
+// what started the daemon: a proxy only the daemon's own environment
+// names isn't used, and one only Environ names is.
+func TestProxiesComeFromEnviron(t *testing.T) {
+	t.Setenv("HTTPS_PROXY", "http://daemons.corp:1")
+	t.Setenv("HTTP_PROXY", "http://daemons.corp:1")
+	cache.Lock()
+	cache.m = map[string]*cached{}
+	cache.Unlock()
+	old := lookup
+	lookup = func(*url.URL, bool) ([]*url.URL, time.Duration) { return []*url.URL{nil}, time.Minute }
+	t.Cleanup(func() { lookup = old })
+	proxyOf := func(raw string) string {
+		t.Helper()
+		u, _ := url.Parse(raw)
+		ps, err := For(u)
+		if err != nil || len(ps) != 1 {
+			t.Fatalf("%s: %v %v", raw, ps, err)
+		}
+		if ps[0] == nil {
+			return ""
+		}
+		return ps[0].String()
+	}
+
+	fakeEnviron(t, "PATH=/bin")
+	if got := proxyOf("wss://relay.example.com/"); got != "" {
+		t.Errorf("the daemon's own HTTPS_PROXY was used: %s", got)
+	}
+	fakeEnviron(t, "https_proxy=http://shells.corp:3128", "no_proxy=jira.internal.corp")
+	for raw, want := range map[string]string{
+		"wss://relay.example.com/":    "http://shells.corp:3128",
+		"https://api.github.com/":     "http://shells.corp:3128",
+		"https://jira.internal.corp/": "",
+		"ws://relay.example.com/":     "", // no http_proxy of its own (nor ALL_PROXY)
+	} {
+		if got := proxyOf(raw); got != want {
+			t.Errorf("%s: %q, want %q", raw, got, want)
+		}
+	}
+	// A name's capital one goes first, as httpproxy reads the process's.
+	fakeEnviron(t, "https_proxy=http://lower.corp:1", "HTTPS_PROXY=http://upper.corp:2")
+	if got := proxyOf("https://api.github.com/"); got != "http://upper.corp:2" {
+		t.Errorf("HTTPS_PROXY over https_proxy: %s", got)
+	}
+}
+
 // connectProxy is an HTTP CONNECT proxy that sends every host to
 // 127.0.0.1 (the port kept), wanting user:pass when auth is set.
 func connectProxy(t *testing.T, auth string) (string, func() []string) {
