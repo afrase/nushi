@@ -201,7 +201,8 @@ void main() {
     expect(find.text('SSE'), findsNothing);
     await tester.tap(find.text('HTTP'));
     await tester.pumpAndSettle();
-    expect(find.text('Ante sends headers from version 0.2.15 on.'), findsOne);
+    expect(find.text('Headers'), findsOne); // no note of one agent's versions
+    expect(find.textContaining('0.2.15'), findsNothing);
     await tester.tap(find.text('stdio'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), 'git');
@@ -285,4 +286,44 @@ void main() {
     expect(asked('/changed/a', 'ante'), anteBefore);
     await closeView(tester, d);
   });
+
+  // Ante's HTTP form to look at (`make renders`): URL and headers, no note
+  // of one agent's versions under them.
+  for (final tokens in [Tokens.dark, Tokens.light]) {
+    for (final width in [1700.0, 720.0]) {
+      final name = 'mcp_form_ante_${width.toInt()}_${tokens.brightness.name}';
+      testWidgets('Ante’s HTTP form, $name', (tester) async {
+        final (_, d) = await _daemon(tester);
+        viewport(tester, Size(width, 900));
+        await tester.pumpWidget(
+          MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: NushiTheme(tokens).toThemeData(),
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: TextButton(
+                    onPressed: () => mcpForm(
+                      context,
+                      McpServers.of(d, '/Users/me/form', agent: 'ante'),
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('HTTP'));
+        await tester.pumpAndSettle();
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pumpAndSettle();
+        expect(find.textContaining('0.2.15'), findsNothing);
+        await render(tester, find.byType(MaterialApp), name);
+        await closeView(tester, d);
+      });
+    }
+  }
 }

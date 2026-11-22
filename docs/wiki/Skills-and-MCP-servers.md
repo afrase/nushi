@@ -49,7 +49,7 @@ Each server shows its state, such as **Connected**, **Failed to connect**, **Nee
 
 1. Click **Add server**, then pick the agent: **For Claude…** or **For Ante…**.
 2. Enter a **Name**. For Claude, pick a **Scope**: **User**, **Project** or **Local**.
-3. Pick a **Transport**. For **stdio**, enter the **Command** and the **Arguments, one per line**. For **HTTP** or **SSE**, enter the **URL**. Ante doesn't offer SSE.
+3. Pick a **Transport**. For **stdio**, enter the **Command** and the **Arguments, one per line**. For **HTTP** or **SSE**, enter the **URL** and any **Headers**. Ante doesn't offer SSE, and sends headers only from version 0.2.15 on: on an older Ante, run `ante update` first.
 4. Click **Add**.
 
 Have a config to paste? Click **Edit as JSON**. To change a server later, use **⋯ › Edit…** or **⋯ › Remove…** on its row.

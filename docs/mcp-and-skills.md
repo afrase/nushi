@@ -15,7 +15,7 @@ A server that's off stays listed, dimmed. A running chat keeps its servers until
 **Ante's servers** are listed under Ante (Add server ▾ › For Ante…) ([ADR 0058](adr/0058-antes-mcp-servers-in-its-settings.md)):
 
 - Yours only, since Ante reads no project's. They're kept in `~/.ante/settings.json` (or `$ANTE_HOME`), which Nushi changes under Ante's own lock.
-- stdio or HTTP; Ante doesn't speak SSE.
+- stdio or HTTP; Ante doesn't speak SSE. An HTTP server's headers are sent from Ante 0.2.15 on; 0.2.14 saves them but doesn't send them.
 - No switch, since Ante has no off: remove one instead.
 - A server that asks for a sign-in (HTTP 401) shows "Needs login" with **Log in**, which runs Ante's own command and waits for the browser. Ante keeps the token. It takes Ante 0.2.15 or later; on an older one the row stays "Failed to connect": update Ante.
 - A change applies to new Ante sessions, or a running chat's Reload.

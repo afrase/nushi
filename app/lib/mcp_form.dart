@@ -315,15 +315,6 @@ class _FormState extends State<_Form> {
                 ),
                 label('Headers'),
                 PairRows(_headers, 'Header', () => setState(() {})),
-                // A fact of Ante's versions, not of having only yours.
-                if (widget.list.agent == 'ante')
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'Ante sends headers from version 0.2.15 on.',
-                      style: muted,
-                    ),
-                  ),
               ],
               if (_editing)
                 Padding(
