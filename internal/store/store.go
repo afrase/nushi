@@ -22,8 +22,8 @@ type Store struct {
 	dir string
 	mu  sync.Mutex
 	set *settings // settings.json as read or last written; nil until read
-	// setErr is why settings.json couldn't be read, until a change is
-	// written; set is then as much of it as could be.
+	// setErr is why settings.json last couldn't be read (EACCES, EIO),
+	// kept only so the log says it once; such a read is never kept in set.
 	setErr error
 	// cacheMu keeps the cache's files apart from mu: a cache file's rewrite
 	// doesn't hold up the settings, which chats read under their lock.
@@ -93,8 +93,8 @@ func (s *Store) changeAgent(agent string, change func(*agentPrefs)) error {
 	defer s.mu.Unlock()
 	path := filepath.Join(s.dir, "agents.json")
 	prefs, err := s.agents()
-	if err := clearForWrite(path, err); err != nil {
-		return err
+	if err != nil {
+		return fmt.Errorf("agents.json can't be read, so it isn't written over: %w", err)
 	}
 	p := prefs[agent]
 	change(&p)
@@ -181,7 +181,7 @@ func readRefusing(path string, v any) (bool, error) {
 		return false, err
 	}
 	if err := json.Unmarshal(b, v); err != nil {
-		return true, &unparsed{fmt.Errorf("%s: %w", filepath.Base(path), err)}
+		return true, fmt.Errorf("%s: %w", filepath.Base(path), err)
 	}
 	return true, nil
 }

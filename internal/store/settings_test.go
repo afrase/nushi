@@ -142,3 +142,27 @@ func TestAFileThatCantBeReadIsntWritten(t *testing.T) {
 		t.Errorf("set aside: %v", aside)
 	}
 }
+
+// A settings.json that can't be read for a while (here its mode) reads as
+// the defaults and refuses a change, but isn't kept so: once it reads, its
+// values are seen with no restart.
+func TestSettingsThatCantBeReadArentKept(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads a file whatever its mode")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	testcheck.Write(t, path, `{"debugLog": true, "transcriptDays": 9}`)
+	testcheck.NoErr(t, os.Chmod(path, 0))
+	s := New(dir)
+	if s.DebugLog() || s.TranscriptDays() != 0 {
+		t.Errorf("unreadable: debug %v, days %d", s.DebugLog(), s.TranscriptDays())
+	}
+	if err := s.SetTranscriptDays(3); err == nil || !strings.Contains(err.Error(), "settings.json") {
+		t.Errorf("a change over a file it can't read: %v", err)
+	}
+	testcheck.NoErr(t, os.Chmod(path, 0o600))
+	if !s.DebugLog() || s.TranscriptDays() != 9 {
+		t.Errorf("readable again: debug %v, days %d", s.DebugLog(), s.TranscriptDays())
+	}
+}

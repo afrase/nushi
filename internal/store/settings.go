@@ -1,7 +1,7 @@
 package store
 
 import (
-	"errors"
+	"fmt"
 	"log/slog"
 	"maps"
 	"path/filepath"
@@ -38,17 +38,30 @@ const defaultSleepAfter = 30 * time.Minute
 
 // settingsLocked is settings.json, read once and then kept (a hand edit
 // while the daemon runs is seen at its next start); one that doesn't
-// parse is set aside and read as empty (readJSON), and one that can't be
-// read at all is as if empty, its error kept for the next change.
+// parse is set aside and read as empty (readJSON). One that can't be read
+// at all reads as the defaults and isn't kept, so it's read again next
+// time (loadSettingsLocked).
 func (s *Store) settingsLocked() settings {
+	set, _ := s.loadSettingsLocked()
+	return set
+}
+
+// loadSettingsLocked is settingsLocked with the read's error: a read that
+// failed for any reason but no file or a parse error (EACCES, EIO) is
+// never kept, and is logged only when it changes.
+func (s *Store) loadSettingsLocked() (settings, error) {
 	if s.set != nil {
-		return *s.set
+		return *s.set, nil
 	}
 	var set settings
 	if _, err := readJSON(filepath.Join(s.dir, "settings.json"), &set); err != nil {
-		slog.Warn("reading settings.json", "err", err)
+		if s.setErr == nil || s.setErr.Error() != err.Error() {
+			slog.Warn("reading settings.json", "err", err)
+		}
 		s.setErr = err
+		return settings{}, err
 	}
+	s.setErr = nil
 	if set.CodexGoAgent { // the old key's read: delete after v0.54.0
 		if _, ok := set.GoAgents[oldGoAgent]; !ok {
 			if set.GoAgents == nil {
@@ -59,30 +72,24 @@ func (s *Store) settingsLocked() settings {
 		set.CodexGoAgent = false
 	}
 	s.set = &set
-	return set
+	return set, nil
 }
 
 // changeSettings applies change to settings.json, and keeps the result
-// once it's written. A file that couldn't be read is never written over
-// (clearForWrite): one that doesn't parse is set aside first, and one
-// that can't be read at all is tried again, refusing the change if it
-// still can't.
+// once it's written. A file that can't be read is never written over: the
+// change is refused, naming it.
 func (s *Store) changeSettings(change func(*settings)) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	path := filepath.Join(s.dir, "settings.json")
-	if u := (*unparsed)(nil); s.setErr != nil && !errors.As(s.setErr, &u) {
-		s.set, s.setErr = nil, nil
+	set, err := s.loadSettingsLocked()
+	if err != nil {
+		return fmt.Errorf("settings.json can't be read, so it isn't written over: %w", err)
 	}
-	set := s.settingsLocked()
-	if err := clearForWrite(path, s.setErr); err != nil {
-		return err
-	}
-	s.setErr = nil // set aside: the bytes are kept, and the write below replaces nothing unread
 	change(&set)
 	// v0.52.0 reads only codexGoAgent (ADR 0108's going back): delete
 	// after the v0.53.0 tag.
 	set.CodexGoAgent = set.GoAgents[oldGoAgent]
+	path := filepath.Join(s.dir, "settings.json")
 	if err := writeJSON(path, set); err != nil {
 		return err
 	}
