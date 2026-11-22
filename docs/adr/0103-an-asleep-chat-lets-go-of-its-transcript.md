@@ -22,3 +22,6 @@ Measured on that chat, through the API, on a dev daemon:
 ## Alternatives considered
 - Taking the chat out of the service: its event numbers, queue, picks and notices would go with it.
 - Keeping recent pages in memory: the app keeps what it shows; the daemon would hold it twice.
+
+## Amendment (2026-11-22): a cleared copy drops what it held
+Clearing the copy of a chat that let go, with no agent running and no client showing it, no longer reads the copy back to keep it in memory for good: the chat drops its items (clients are told to cut them) and is as one found with no copy, not asleep, so the next show reopens it from its agent's replay. A shown or running one reads its items back first, as before.

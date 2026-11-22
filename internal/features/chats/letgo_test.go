@@ -453,3 +453,60 @@ func TestUnreadCopyIsLeftAsItIs(t *testing.T) {
 		t.Errorf("copied after a reopen: %s", got)
 	}
 }
+
+// Clearing the copy of a chat that let go, with no agent and no client
+// showing it, drops its items rather than reading the copy back to hold
+// them for good: clients are told to cut, and the next show reopens it
+// from the agent's replay, as a chat found with no copy, with nothing
+// shown twice.
+func TestClearingALetGoChatsCopyDropsItsItems(t *testing.T) {
+	svc, agent, c, copies, f := lettingGo(t, &viewers{shown: map[string]bool{}}, Timing{})
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	turn(t, svc, c, "one")
+	first := look(t, svc, c.id, 10)
+	testcheck.NoErr(t, svc.Sleep(c.id))
+	reads := copies.reads.Load()
+	n, _, err := svc.ClearCopies(t.Context(), []string{c.id})
+	if err != nil || n != 1 {
+		t.Fatalf("ClearCopies = %d, %v", n, err)
+	}
+	c.mu.Lock()
+	held, inCopy, asleep := len(c.items)+len(c.aside), c.inCopy, c.asleep
+	c.mu.Unlock()
+	if got := copies.reads.Load() - reads; got != 0 || held != 0 || inCopy || asleep {
+		t.Fatalf("cleared: %d whole reads, %d items held, let go %v, asleep %v", got, held, inCopy, asleep)
+	}
+	if shows := f.follow(t, c.id, first.items(), first.Recent.Chat.Seq); len(shows) != 0 {
+		t.Errorf("a client still shows %s", describe(shows))
+	}
+
+	testcheck.NoErr(t, svc.Reopen(c.id))
+	idle(t, c)
+	now, err := svc.Get(c.id)
+	testcheck.NoErr(t, err)
+	if describe(now.Items) != "user:one agent:m1" {
+		t.Errorf("reopened, it shows %s", describe(now.Items))
+	}
+	shows := f.follow(t, c.id, first.items(), first.Recent.Chat.Seq)
+	if testcheck.JSON(t, shows) != testcheck.JSON(t, now.Items) {
+		t.Errorf("the follower shows\n%s\nthe chat\n%s", describe(shows), describe(now.Items))
+	}
+}
+
+// One a client shows keeps what it shows: its items come back before the
+// copy goes.
+func TestClearingAShownLetGoChatsCopyKeepsItsItems(t *testing.T) {
+	v := &viewers{shown: map[string]bool{}}
+	svc, agent, c, _, _ := lettingGo(t, v, Timing{})
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	turn(t, svc, c, "one")
+	v.show(c.id, true)
+	testcheck.NoErr(t, svc.Sleep(c.id))
+	_, _, err := svc.ClearCopies(t.Context(), []string{c.id})
+	testcheck.NoErr(t, err)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.inCopy || describe(c.items) != "user:one agent:m1" {
+		t.Errorf("cleared while shown: let go %v, it shows %s", c.inCopy, describe(c.items))
+	}
+}

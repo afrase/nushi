@@ -112,6 +112,28 @@ func (c *chat) itemsBackLocked() {
 	c.followWorkflowsLocked()
 }
 
+// dropLetGoLocked forgets the items of a chat that let go them, as its copy
+// is cleared with no agent running and no client showing it: reading the
+// copy back would hold the whole transcript for good, as a chat with no
+// copy can't let go again. Clients that kept its items are told to cut
+// them, and the chat is then as one found after a daemon start with no
+// copy (dormant): not asleep, and with nothing a replay would add to
+// (outlived), so the next show reopens it from its agent's replay. An archived chat, or one of an agent that can't reopen
+// sessions, shows empty until then, as after a restart.
+func (c *chat) dropLetGoLocked() {
+	if heads, err := c.headsLocked(); err != nil {
+		c.logLocked().Warn("transcript copy not read for its first item", "err", err)
+	} else if len(heads) > 0 {
+		c.emitLocked(model.Event{ChatID: c.id, Cut: heads[0].ID})
+	}
+	c.items, c.aside, c.inCopy, c.outlived = nil, nil, false, false
+	if c.asleep {
+		c.asleep = false
+		c.statusChangedLocked()
+	}
+	c.logLocked().Info("transcript dropped", "why", "its copy was cleared")
+}
+
 // splice puts the items set aside back among items, each after the item it
 // followed; one whose item is gone goes at the end.
 func splice(items []model.Item, aside []asideItem) []model.Item {

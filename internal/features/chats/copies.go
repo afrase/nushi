@@ -230,10 +230,14 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 		}
 		// An open chat shows on what it has, so items it let go come back
 		// before the copy goes, and the images it and its side chats' bases
-		// hold as references.
+		// hold as references; one nothing shows drops them (dropLetGoLocked).
 		ch.mu.Lock()
-		ch.itemsBackLocked()
-		ch.unrefLocked()
+		if ch.inCopy && ch.agent == nil && !ch.busy && (s.viewers == nil || !s.viewers.Shown(ch.id)) {
+			ch.dropLetGoLocked()
+		} else {
+			ch.itemsBackLocked()
+			ch.unrefLocked()
+		}
 		err := s.copies.Delete(c.Chat)
 		ch.mirrored, ch.unread = false, ch.unread && err != nil // a new copy starts empty
 		gone := ch.sessionGone
