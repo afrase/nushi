@@ -1,6 +1,7 @@
 package store
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -191,5 +192,55 @@ func TestUserMessagePinsDroppedOnLoad(t *testing.T) {
 	}
 	if !reflect.DeepEqual(pins, want) {
 		t.Errorf("pins %+v, want %+v", pins, want)
+	}
+}
+
+// A record whose only fault is a field of another shape (a newer build's,
+// read going back: ADR 0108) lists with its other fields. One that
+// doesn't parse, or can't be read at all, is left as it is and its chat's
+// id is Unreadable, so nothing forgets what's kept for it, until a save
+// or a delete of that id.
+func TestUnreadableSessionFiles(t *testing.T) {
+	dir := t.TempDir()
+	sessions := filepath.Join(dir, "sessions")
+	files := map[string]string{
+		"shape.json":                      `{"ID":"shape","SessionID":"s","Title":"Kept","Mode":["new"]}`,
+		"broken.json":                     `{"ID":`,
+		url.PathEscape("a/b c") + ".json": `nope`,
+		"locked.json":                     `{"ID":"locked"}`,
+	}
+	for name, body := range files {
+		testcheck.Write(t, filepath.Join(sessions, name), body)
+	}
+	if os.Geteuid() != 0 { // root reads a file whatever its mode
+		testcheck.NoErr(t, os.Chmod(filepath.Join(sessions, "locked.json"), 0))
+	}
+	s := New(dir)
+	got, err := s.Sessions()
+	testcheck.NoErr(t, err)
+	if len(got) != 1 || got[0].ID != "shape" || got[0].Title != "Kept" || got[0].SessionID != "s" {
+		t.Errorf("sessions: %+v", got)
+	}
+	want := []string{"a/b c", "broken", "locked"}
+	if os.Geteuid() == 0 {
+		want = []string{"a/b c", "broken"}
+	}
+	if u := s.Unreadable(); !slices.Equal(u, want) {
+		t.Errorf("unreadable %q, want %q", u, want)
+	}
+	if u := New(dir).Unreadable(); !slices.Equal(u, want) { // asked first, it reads them
+		t.Errorf("a new store's unreadable %q", u)
+	}
+	for name, body := range files {
+		if b, err := os.ReadFile(filepath.Join(sessions, name)); err == nil && string(b) != body {
+			t.Errorf("%s changed: %q", name, b)
+		}
+	}
+	if aside, _ := filepath.Glob(filepath.Join(sessions, "*.unreadable-*")); len(aside) != 0 {
+		t.Errorf("set aside: %v", aside)
+	}
+	testcheck.NoErr(t, s.DeleteSession("broken"))
+	if u := s.Unreadable(); slices.Contains(u, "broken") {
+		t.Errorf("deleted, still unreadable: %q", u)
 	}
 }

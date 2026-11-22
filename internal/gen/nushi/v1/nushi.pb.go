@@ -875,7 +875,12 @@ type ListChatsResponse struct {
 	// Chats the daemon removed since it started because their agent no
 	// longer has their sessions (Claude Code deletes old ones), until
 	// DismissRemovedChats; oldest first.
-	Removed       []*RemovedChat `protobuf:"bytes,2,rep,name=removed,proto3" json:"removed,omitempty"`
+	Removed []*RemovedChat `protobuf:"bytes,2,rep,name=removed,proto3" json:"removed,omitempty"`
+	// The ids of chats whose record the daemon couldn't read or parse
+	// (sessions/<id>.json), sorted. They aren't in chats, and aren't gone:
+	// a client keeps what it holds for them. API 144; an older daemon
+	// sends none.
+	Unreadable    []string `protobuf:"bytes,3,rep,name=unreadable,proto3" json:"unreadable,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -920,6 +925,13 @@ func (x *ListChatsResponse) GetChats() []*Chat {
 func (x *ListChatsResponse) GetRemoved() []*RemovedChat {
 	if x != nil {
 		return x.Removed
+	}
+	return nil
+}
+
+func (x *ListChatsResponse) GetUnreadable() []string {
+	if x != nil {
+		return x.Unreadable
 	}
 	return nil
 }
@@ -28090,10 +28102,13 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x10\n" +
 	"\x03why\x18\x02 \x01(\tR\x03why\x12\x1a\n" +
 	"\bterminal\x18\x03 \x01(\bR\bterminal\"\x12\n" +
-	"\x10ListChatsRequest\"j\n" +
+	"\x10ListChatsRequest\"\x8a\x01\n" +
 	"\x11ListChatsResponse\x12$\n" +
 	"\x05chats\x18\x01 \x03(\v2\x0e.nushi.v1.ChatR\x05chats\x12/\n" +
-	"\aremoved\x18\x02 \x03(\v2\x15.nushi.v1.RemovedChatR\aremoved\"x\n" +
+	"\aremoved\x18\x02 \x03(\v2\x15.nushi.v1.RemovedChatR\aremoved\x12\x1e\n" +
+	"\n" +
+	"unreadable\x18\x03 \x03(\tR\n" +
+	"unreadable\"x\n" +
 	"\vRemovedChat\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x14\n" +

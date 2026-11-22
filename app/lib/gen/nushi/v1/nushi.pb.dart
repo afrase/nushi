@@ -758,10 +758,12 @@ class ListChatsResponse extends $pb.GeneratedMessage {
   factory ListChatsResponse({
     $core.Iterable<Chat>? chats,
     $core.Iterable<RemovedChat>? removed,
+    $core.Iterable<$core.String>? unreadable,
   }) {
     final result = ListChatsResponse._();
     if (chats != null) result.chats.addAll(chats);
     if (removed != null) result.removed.addAll(removed);
+    if (unreadable != null) result.unreadable.addAll(unreadable);
     return result;
   }
 
@@ -782,6 +784,7 @@ class ListChatsResponse extends $pb.GeneratedMessage {
         subBuilder: Chat.$_createMessage)
     ..pPM<RemovedChat>(2, _omitFieldNames ? '' : 'removed',
         subBuilder: RemovedChat.$_createMessage)
+    ..pPS(3, _omitFieldNames ? '' : 'unreadable')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -814,6 +817,13 @@ class ListChatsResponse extends $pb.GeneratedMessage {
   /// DismissRemovedChats; oldest first.
   @$pb.TagNumber(2)
   $pb.PbList<RemovedChat> get removed => $_getList(1);
+
+  /// The ids of chats whose record the daemon couldn't read or parse
+  /// (sessions/<id>.json), sorted. They aren't in chats, and aren't gone:
+  /// a client keeps what it holds for them. API 144; an older daemon
+  /// sends none.
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get unreadable => $_getList(2);
 }
 
 /// A chat the daemon removed, its agent having deleted its session: what

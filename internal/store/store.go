@@ -32,6 +32,9 @@ type Store struct {
 	// first time doesn't hold up the settings.
 	sessMu   sync.Mutex
 	sessions map[string]model.ChatRecord // by file name; nil until read
+	// unreadable are the ids of the chats whose files didn't read, as the
+	// folder was read (Unreadable).
+	unreadable []string
 }
 
 func New(dir string) *Store { return &Store{dir: dir} }
@@ -168,7 +171,7 @@ func readJSON(path string, v any) (bool, error) {
 }
 
 // readRefusing reads path into v as readJSON did before files that don't
-// parse were set aside: such a file is an *unparsed error, left in place.
+// parse were set aside: such a file is an error, left in place.
 // Only the phones' keys and pairings and the Web Push key read so
 // (refusesUnparsed): the owner hasn't decided whether a fresh key, every
 // phone pairing again, beats a daemon that won't start.

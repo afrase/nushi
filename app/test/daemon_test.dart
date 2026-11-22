@@ -204,6 +204,41 @@ void main() {
     expect(rememberedContexts, isNot(contains('gone')));
   });
 
+  test("a chat whose record the daemon couldn't read: what's kept stays", () async {
+    ReviewComment comment(String chat) => ReviewComment(
+      id: chat,
+      where: 'branch',
+      path: 'main.go',
+      old: false,
+      start: 1,
+      end: 1,
+      quote: 'x',
+      text: 'why?',
+    );
+    changeScopes.value = {'a': 'branch', 'bad': 'branch', 'gone': 'branch'};
+    chatOpened.value = {'a': 1, 'bad': 2, 'gone': 3};
+    setComments('bad', [comment('bad')]);
+    setComments('gone', [comment('gone')]);
+    addTearDown(() => setComments('bad', []));
+    final fake = FakeDaemon([Chat(id: 'a', folder: '/x', agent: 'claude')])
+      ..answer = (input) => switch (input) {
+        // API 144: the daemon names "bad", whose file didn't read.
+        ListChatsRequest() => ListChatsResponse(
+          chats: [Chat(id: 'a', folder: '/x', agent: 'claude')],
+          unreadable: ['bad'],
+        ),
+        GetChatRequest() => GetChatResponse(seq: Int64(1)),
+        _ => null,
+      };
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    await pumpEventQueue(); // live: the chats are listed
+    expect(d.chats.keys, ['a']); // not a chat it can show
+    expect(changeScopes.value.keys, unorderedEquals(['a', 'bad']));
+    expect(chatOpened.value.keys, unorderedEquals(['a', 'bad']));
+    expect(reviews.value.keys, ['bad']);
+  });
+
   test('events while the list is on its way come after it', () async {
     final list = Completer<ListChatsResponse>();
     final fake = _fake(list: list);

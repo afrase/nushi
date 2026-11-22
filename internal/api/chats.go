@@ -21,6 +21,9 @@ func (s *server) ListChats(ctx context.Context, _ *connect.Request[nushiv1.ListC
 		return nil, refused(err)
 	}
 	resp := &nushiv1.ListChatsResponse{Removed: removedProto(s.Chats.Removed())}
+	if s.ChatFiles != nil {
+		resp.Unreadable = s.ChatFiles.Unreadable()
+	}
 	for _, sess := range sessions {
 		c := chatProto(sess)
 		c.Status = statusProto(s.Chats.Status(sess))

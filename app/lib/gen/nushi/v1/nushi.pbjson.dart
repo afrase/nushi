@@ -280,13 +280,15 @@ const ListChatsResponse$json = {
       '6': '.nushi.v1.RemovedChat',
       '10': 'removed'
     },
+    {'1': 'unreadable', '3': 3, '4': 3, '5': 9, '10': 'unreadable'},
   ],
 };
 
 /// Descriptor for `ListChatsResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List listChatsResponseDescriptor = $convert.base64Decode(
     'ChFMaXN0Q2hhdHNSZXNwb25zZRIkCgVjaGF0cxgBIAMoCzIOLm51c2hpLnYxLkNoYXRSBWNoYX'
-    'RzEi8KB3JlbW92ZWQYAiADKAsyFS5udXNoaS52MS5SZW1vdmVkQ2hhdFIHcmVtb3ZlZA==');
+    'RzEi8KB3JlbW92ZWQYAiADKAsyFS5udXNoaS52MS5SZW1vdmVkQ2hhdFIHcmVtb3ZlZBIeCgp1'
+    'bnJlYWRhYmxlGAMgAygJUgp1bnJlYWRhYmxl');
 
 @$core.Deprecated('Use removedChatDescriptor instead')
 const RemovedChat$json = {

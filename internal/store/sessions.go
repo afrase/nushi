@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"maps"
@@ -32,6 +33,7 @@ func (s *Store) SaveSession(sess model.ChatRecord) error {
 	if s.sessions != nil {
 		s.sessions[name] = clone(sess)
 	}
+	s.unreadable = slices.DeleteFunc(s.unreadable, func(id string) bool { return id == sess.ID })
 	return nil
 }
 
@@ -42,6 +44,7 @@ func (s *Store) DeleteSession(id string) error {
 	if err == nil || errors.Is(err, fs.ErrNotExist) {
 		s.sessMu.Lock()
 		delete(s.sessions, name)
+		s.unreadable = slices.DeleteFunc(s.unreadable, func(u string) bool { return u == id })
 		s.sessMu.Unlock()
 	}
 	return err
@@ -56,12 +59,8 @@ func sessionFile(id string) string { return url.PathEscape(id) + ".json" }
 func (s *Store) Sessions() ([]model.ChatRecord, error) {
 	s.sessMu.Lock()
 	defer s.sessMu.Unlock()
-	if s.sessions == nil {
-		read, err := s.readSessions()
-		if err != nil {
-			return nil, err
-		}
-		s.sessions = read
+	if err := s.loadSessionsLocked(); err != nil {
+		return nil, err
 	}
 	var out []model.ChatRecord
 	for _, name := range slices.Sorted(maps.Keys(s.sessions)) {
@@ -70,13 +69,43 @@ func (s *Store) Sessions() ([]model.ChatRecord, error) {
 	return out, nil
 }
 
-// readSessions reads every session's file, by its name.
-func (s *Store) readSessions() (map[string]model.ChatRecord, error) {
+// Unreadable returns the ids of the chats whose files couldn't be read or
+// don't parse, sorted. Their files are left as they are (nothing writes
+// over a chat it doesn't list), and the app keeps what it holds for them
+// (ListChatsResponse.unreadable) until the file reads again.
+func (s *Store) Unreadable() []string {
+	s.sessMu.Lock()
+	defer s.sessMu.Unlock()
+	if s.loadSessionsLocked() != nil {
+		return nil
+	}
+	return slices.Clone(s.unreadable)
+}
+
+// loadSessionsLocked reads the folder, the first time.
+func (s *Store) loadSessionsLocked() error {
+	if s.sessions != nil {
+		return nil
+	}
+	read, unreadable, err := s.readSessions()
+	if err != nil {
+		return err
+	}
+	s.sessions, s.unreadable = read, unreadable
+	return nil
+}
+
+// readSessions reads every session's file, by its name, and the ids of
+// those that couldn't be read or don't parse. A record whose only fault is
+// a field of another shape (a newer build's, read going back: ADR 0108)
+// keeps its other fields.
+func (s *Store) readSessions() (map[string]model.ChatRecord, []string, error) {
 	entries, err := os.ReadDir(filepath.Join(s.dir, "sessions")) // not a glob: the folder may hold a pattern's characters
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, err
+		return nil, nil, err
 	}
 	read := map[string]model.ChatRecord{}
+	var unreadable []string
 	for _, e := range entries {
 		if !strings.HasSuffix(e.Name(), ".json") {
 			continue
@@ -92,8 +121,11 @@ func (s *Store) readSessions() (map[string]model.ChatRecord, error) {
 		if err == nil {
 			err = json.Unmarshal(b, &file)
 		}
-		if err != nil { // one bad file doesn't hide the other chats
-			slog.Warn("skipping a chat file", "file", f, "err", err)
+		if shape := (*json.UnmarshalTypeError)(nil); errors.As(err, &shape) {
+			slog.Warn("a chat file's field of another shape left out", "file", e.Name(), "field", shape.Field)
+		} else if err != nil { // one bad file doesn't hide the other chats, nor gets them forgotten
+			slog.Warn("a chat file that doesn't read", "file", e.Name(), "err", readFault(err))
+			unreadable = append(unreadable, fileID(e.Name()))
 			continue
 		}
 		sess := file.ChatRecord
@@ -113,7 +145,29 @@ func (s *Store) readSessions() (map[string]model.ChatRecord, error) {
 		}
 		read[e.Name()] = sess
 	}
-	return read, nil
+	slices.Sort(unreadable)
+	return read, unreadable, nil
+}
+
+// fileID is the chat id a session's file is named for (sessionFile).
+func fileID(name string) string {
+	stem := strings.TrimSuffix(name, ".json")
+	if id, err := url.PathUnescape(stem); err == nil {
+		return id
+	}
+	return stem
+}
+
+// readFault is what the log says of a chat file that doesn't read: the
+// read's error, or only where a parse failed, never the file's bytes.
+func readFault(err error) any {
+	if syntax := (*json.SyntaxError)(nil); errors.As(err, &syntax) {
+		return fmt.Sprintf("doesn't parse at byte %d", syntax.Offset)
+	}
+	if path := (*fs.PathError)(nil); errors.As(err, &path) {
+		return err // the read's: its path and why, no bytes
+	}
+	return "doesn't parse"
 }
 
 // clone is sess sharing nothing with it: a session kept, or handed out,

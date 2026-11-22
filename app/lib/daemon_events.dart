@@ -97,8 +97,10 @@ extension DaemonEvents on Daemon {
       removedChats = resp.removed;
       final listed = resp.chats..forEach(_chat);
       // Chats deleted meanwhile go; side chats the daemon lost (it
-      // restarted) end, the others catch up.
-      final ids = {for (final c in listed) c.id};
+      // restarted) end, the others catch up. A chat whose record the
+      // daemon couldn't read isn't gone: what's kept for it stays (API
+      // 144; an older daemon names none).
+      final ids = {for (final c in listed) c.id, ...resp.unreadable};
       // And what's kept for chats deleted while the app was away: the
       // stores keep the chats of the app's whole life.
       final kept = {

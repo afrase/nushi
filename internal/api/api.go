@@ -31,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 143
+const Version = 144
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -87,6 +87,15 @@ type Services struct {
 	// GoAgents keeps which agents run through Nushi's Go agent; nil: not
 	// kept.
 	GoAgents GoAgentPref
+	// ChatFiles says which chats' records didn't read; nil: none are said.
+	ChatFiles ChatFiles
+}
+
+// ChatFiles is the chats' records on disk (internal/store): the ids of
+// those that couldn't be read or don't parse, which ListChats sends so a
+// client keeps what it holds for them.
+type ChatFiles interface {
+	Unreadable() []string
 }
 
 // Restart stops the daemon for a newer build once nothing would be lost

@@ -655,6 +655,11 @@ message ListChatsResponse {
   // longer has their sessions (Claude Code deletes old ones), until
   // DismissRemovedChats; oldest first.
   repeated RemovedChat removed = 2;
+  // The ids of chats whose record the daemon couldn't read or parse
+  // (sessions/<id>.json), sorted. They aren't in chats, and aren't gone:
+  // a client keeps what it holds for them. API 144; an older daemon
+  // sends none.
+  repeated string unreadable = 3;
 }
 
 // A chat the daemon removed, its agent having deleted its session: what
