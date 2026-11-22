@@ -37,7 +37,18 @@ func commandArgv(argv []string, command string) []string {
 		// /s takes the quotes Windows puts round the command off again.
 		return []string{argv[0], "/d", "/s", "/c", command}
 	case "bash", "sh", "zsh", "fish", "nu":
-		return slices.Concat(argv, []string{"-c", command})
+		return slices.Concat(argv, []string{"-c", notAnOption(command)})
 	}
 	return nil
+}
+
+// notAnOption is command as a Unix shell's -c takes it: one starting with
+// "-" gets a space first, or sh, bash and zsh would read it as more of
+// their own options (zsh -c --version prints zsh's version). The space
+// changes nothing of what the shell runs.
+func notAnOption(command string) string {
+	if strings.HasPrefix(command, "-") {
+		return " " + command
+	}
+	return command
 }

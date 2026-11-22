@@ -30,4 +30,7 @@ func TestCommandArgv(t *testing.T) {
 			t.Errorf("%s: %q, want %q", c.name, got, c.want)
 		}
 	}
+	if got := commandArgv([]string{"bash.exe"}, "-x foo"); !slices.Equal(got, []string{"bash.exe", "-c", " -x foo"}) {
+		t.Errorf("a command starting with a dash: %q", got)
+	}
 }

@@ -18,7 +18,7 @@ func shellArgv(path, command string) []string {
 	if command == "" {
 		return []string{path, "-l"}
 	}
-	return []string{path, "-l", "-c", command}
+	return []string{path, "-l", "-c", notAnOption(command)}
 }
 
 // terminalBase is the environment a terminal's starts from: the daemon's.

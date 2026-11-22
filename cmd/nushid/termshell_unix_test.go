@@ -17,6 +17,9 @@ func TestShellArgv(t *testing.T) {
 	if got := shellArgv("/opt/fish", "ls -la\necho $HOME"); !slices.Equal(got, []string{"/opt/fish", "-l", "-c", "ls -la\necho $HOME"}) {
 		t.Errorf("a command: %q", got)
 	}
+	if got := shellArgv("/bin/zsh", "--version"); !slices.Equal(got, []string{"/bin/zsh", "-l", "-c", " --version"}) {
+		t.Errorf("a command starting with a dash: %q", got)
+	}
 }
 
 type noEnviron struct{}
