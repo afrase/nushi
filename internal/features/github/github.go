@@ -197,7 +197,7 @@ func (s *Service) Hosts(ctx context.Context) ([]HostState, error) {
 		st := HostState{Host: name, Pasted: slices.Contains(pasted, name)}
 		h, err := s.host(ctx, name, false)
 		if err == nil {
-			err = s.check(ctx, name, h)
+			err = s.check(ctx, h)
 		}
 		if err != nil {
 			st.Problem, st.NeedsOK, st.Restart = err.Error(), errors.Is(err, ErrNeedsOK), s.Keys.Restart(err)
@@ -218,7 +218,7 @@ func (s *Service) Hosts(ctx context.Context) ([]HostState, error) {
 }
 
 // check asks who a host's token is, at most every ten minutes.
-func (s *Service) check(ctx context.Context, name string, h *host) error {
+func (s *Service) check(ctx context.Context, h *host) error {
 	s.mu.Lock()
 	fresh := time.Since(h.asked) < 10*time.Minute
 	s.mu.Unlock()
