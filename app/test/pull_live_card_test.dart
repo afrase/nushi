@@ -127,6 +127,38 @@ Future<void> _completes(
 void main() {
   setUpAll(loadFonts);
 
+  test('a tool call opens a pull request by the daemon\'s rows', () {
+    // The same rows as opensPullRows in internal/features/chats/pushed_test.go.
+    final rows = [
+      ('', '{"command": "gh pr create --fill"}', '', true),
+      ('', '{"command": "gh  pr create --fill"}', '', true),
+      ('GH PR CREATE --fill', '', '', true),
+      ('', '', 'mcp__github__create_pull_request', true),
+      ('Create_Pull_Request', '', '', true),
+      ('', '{"name": "create_pull_request"}', '', true),
+      ('', '{"command": "gh pr view 3"}', '', false),
+      ('', '{"command": "gh pr created"}', '', false),
+      ('', '{"command": "gh pr merge 3"}', '', false),
+      ('', '{"command": "echo gh pr"}', '', false),
+    ];
+    final c = ChatState('c', '/f');
+    for (final (title, input, tool, opens) in rows) {
+      final p = livePullOf(
+        Item(
+          kind: ItemKind.ITEM_KIND_TOOL_CALL,
+          status: 'completed',
+          title: title,
+          input: input,
+          tool: tool,
+          text: 'https://github.com/a/b/pull/7',
+        ),
+        c,
+        (h) => h == 'github.com',
+      );
+      expect(p != null && !p.merged, opens, reason: '$title $input $tool');
+    }
+  });
+
   test('what a tool call did to a pull request', () {
     final c = ChatState('c', '/f')
       ..linkPull(_link(221), all: [_link(215), _link(221)]);

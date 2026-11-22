@@ -79,7 +79,7 @@ The widget's title says when it last looked ("Checked 20 s ago · every minute")
 
 ### The Pull request widget
 
-A chat can hold up to 10 pull requests ([ADR 0117](adr/0117-github-links-as-chips-and-a-chats-pull-requests.md)): the one of a branch it pushed (found, and gone when the branch changes), each its own tool call opened (`gh pr create` or a `create_pull_request` tool, linked as the call completes; it stays when the branch changes), and those linked by hand (Link another pull request…, or a link chip's Link to this chat). Unlinking one keeps it from being found or linked again.
+A chat can hold up to 10 pull requests ([ADR 0117](adr/0117-github-links-as-chips-and-a-chats-pull-requests.md)): the one of a branch it pushed (found, and gone when the branch changes), each its own tool call opened (`gh pr create` in any case or spacing, or a `create_pull_request` tool, linked as the call completes; it stays when the branch changes), and those linked by hand (Link another pull request…, or a link chip's Link to this chat). Unlinking one keeps it from being found or linked again.
 
 The details panel's **Pull request** widget ("Pull requests" with two or more) is a row each, 44 tall, in the order linked except that a stack (one's base is another's head) lists its base first:
 

@@ -16,21 +16,35 @@ import (
 // doesn't take it (the owner, 2026-11-16: "When opening a new chat it
 // shouldn't include any PRs"; ADR 0059's amendment).
 
-// gitPushRE and prCreateRE are what a tool call that pushed ran, as the
-// app's pushedOrOpened reads it (pull_link.dart).
+// gitPushRE and prCreateRE are what a tool call that pushed or opened a
+// pull request ran, read from its lowercased text (callText).
 var (
 	gitPushRE  = regexp.MustCompile(`\bgit\b[^\n|;&]*\spush\b`)
 	prCreateRE = regexp.MustCompile(`\bgh\s+pr\s+create\b`)
 )
 
+// callText is a tool call's title, input and tool, lowercased: what
+// pushed and opensPull read.
+func callText(it model.Item) string {
+	return strings.ToLower(it.Title + "\n" + it.Input + "\n" + it.Tool)
+}
+
+// opensPull says a tool call's text (callText) opens a pull request: it
+// ran gh pr create, or was a create_pull_request tool (GitHub's MCP
+// server's). The app's livePullOf (pull_live_card.dart) reads it the same
+// way.
+func opensPull(what string) bool {
+	return prCreateRE.MatchString(what) || strings.Contains(what, "create_pull_request")
+}
+
 // pushed says a completed tool call may have pushed the folder's branch:
-// it ran git push or gh pr create, or was a create_pull_request tool.
+// it ran git push, or opened a pull request.
 func pushed(it model.Item) bool {
 	if it.Kind != model.ToolCall || it.Status != "completed" {
 		return false
 	}
-	what := strings.ToLower(it.Title + "\n" + it.Input + "\n" + it.Tool)
-	return gitPushRE.MatchString(what) || prCreateRE.MatchString(what) || strings.Contains(what, "create_pull_request")
+	what := callText(it)
+	return gitPushRE.MatchString(what) || opensPull(what)
 }
 
 // pushedLocked records the folder's branch as the chat's own once a tool

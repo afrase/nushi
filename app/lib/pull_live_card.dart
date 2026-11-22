@@ -24,6 +24,14 @@ final _pullAddress = RegExp(
   caseSensitive: false,
 );
 
+/// Whether a tool call's lowercased title, input and tool, [what], open a
+/// pull request: `gh pr create` in any spacing, or a `create_pull_request`
+/// tool. The daemon's opensPull (internal/features/chats/pushed.go) links
+/// the same calls.
+bool opensPull(String what) =>
+    RegExp(r'\bgh\s+pr\s+create\b').hasMatch(what) ||
+    what.contains('create_pull_request');
+
 /// What [it], a tool call just completed in [chat], did to a pull request:
 /// opened one (`gh pr create`, a `create_pull_request` tool: the first pull
 /// request address in its output on a host [knows] says), or merged one
@@ -39,9 +47,7 @@ LivePull? livePullOf(
     return null;
   }
   final what = '${it.title}\n${it.input}\n${it.tool}'.toLowerCase();
-  final opened =
-      RegExp(r'\bgh\s+pr\s+create\b').hasMatch(what) ||
-      what.contains('create_pull_request');
+  final opened = opensPull(what);
   final merged =
       RegExp(r'\bgh\s+pr\s+merge\b').hasMatch(what) ||
       what.contains('merge_pull_request');

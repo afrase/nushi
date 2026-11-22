@@ -178,3 +178,39 @@ func TestFoundPullOthersStay(t *testing.T) {
 		t.Fatalf("found again once unlinked: %v", numbers(s.AllPulls()))
 	}
 }
+
+// opensPullRows are tool calls that open a pull request and some that
+// don't, in any case and spacing; the app's pull_live_card_test.dart
+// keeps the same rows for livePullOf.
+var opensPullRows = []struct {
+	title, input, tool string
+	opens              bool
+}{
+	{"", `{"command": "gh pr create --fill"}`, "", true},
+	{"", `{"command": "gh  pr create --fill"}`, "", true},
+	{"GH PR CREATE --fill", "", "", true},
+	{"", "", "mcp__github__create_pull_request", true},
+	{"Create_Pull_Request", "", "", true},
+	{"", `{"name": "create_pull_request"}`, "", true},
+	{"", `{"command": "gh pr view 3"}`, "", false},
+	{"", `{"command": "gh pr created"}`, "", false},
+	{"", `{"command": "gh pr merge 3"}`, "", false},
+	{"", `{"command": "echo gh pr"}`, "", false},
+}
+
+// TestOpensPull: a completed tool call that opens a pull request, by the
+// rows above, links the address in its output and counts as a push; one
+// that doesn't, doesn't link.
+func TestOpensPull(t *testing.T) {
+	known := func(h string) bool { return h == "github.com" }
+	for _, r := range opensPullRows {
+		it := model.Item{Kind: model.ToolCall, Status: "completed", Title: r.title, Input: r.input, Tool: r.tool,
+			Text: "https://github.com/a/b/pull/7"}
+		if _, ok := openedPull(it, known); ok != r.opens {
+			t.Errorf("openedPull %+v: %v", r, ok)
+		}
+		if r.opens && !pushed(it) {
+			t.Errorf("not pushed: %+v", r)
+		}
+	}
+}

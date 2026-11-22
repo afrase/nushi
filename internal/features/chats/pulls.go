@@ -218,17 +218,15 @@ func (s *Service) UnlinkPull(chatID string, pull model.ChatGitHub) error {
 // repository's owner/name and the number.
 var pullAddressRE = regexp.MustCompile(`https://([A-Za-z0-9.-]+(?::\d{1,5})?)/([A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100})/pull/(\d{1,9})\b`)
 
-// openedPull is the pull request a completed tool call opened: one that
-// ran gh pr create, or a create_pull_request tool (GitHub's MCP server's),
-// and the first pull request's address in its output on a host known
-// says. A link merely mentioned elsewhere is never taken.
+// openedPull is the pull request a completed tool call opened: one whose
+// text opensPull says opens one, in any case or spacing, and the first
+// pull request's address in its output on a host known says. A link
+// merely mentioned elsewhere is never taken.
 func openedPull(it model.Item, known func(host string) bool) (model.ChatGitHub, bool) {
 	if it.Kind != model.ToolCall || it.Status != "completed" {
 		return model.ChatGitHub{}, false
 	}
-	ran := strings.Contains(it.Input, "gh pr create") || strings.Contains(it.Title, "gh pr create")
-	tool := strings.Contains(strings.ToLower(it.Tool+" "+it.Title), "create_pull_request")
-	if !ran && !tool {
+	if !opensPull(callText(it)) {
 		return model.ChatGitHub{}, false
 	}
 	for _, out := range []string{it.Text, it.RawOutput} {
