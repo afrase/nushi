@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:nushi/app_log.dart';
+import 'package:nushi/kept_trouble.dart';
 import 'package:nushi/native.dart';
 
 /// What makes the user's own files theirs only (ADR 0097): on the Mac,
@@ -38,11 +39,15 @@ typedef Kept = ({Map<String, Object?> json, bool setAside});
 /// that fails) is thrown, and the caller saves nothing over the file while
 /// it stands.
 Kept readKept(File file) {
+  final name = file.uri.pathSegments.last;
   final List<int> bytes;
   try {
     bytes = file.readAsBytesSync();
   } on PathNotFoundException {
     return (json: <String, Object?>{}, setAside: false);
+  } on Object {
+    noteKeptTrouble(name, KeptTroubleKind.unread);
+    rethrow;
   }
   try {
     if (jsonDecode(utf8.decode(bytes)) case final Map<String, Object?> j) {
@@ -51,7 +56,14 @@ Kept readKept(File file) {
   } on FormatException {
     // Set aside, below.
   }
-  file.renameSync(_asideName(file));
+  final aside = _asideName(file);
+  try {
+    file.renameSync(aside);
+  } on Object {
+    noteKeptTrouble(name, KeptTroubleKind.unread);
+    rethrow;
+  }
+  noteKeptTrouble(name, KeptTroubleKind.setAside, aside: _base(aside));
   return (json: <String, Object?>{}, setAside: true);
 }
 
@@ -63,7 +75,15 @@ void copyAside(File file) {
   final aside = _asideName(file);
   file.copySync(aside);
   setMode(aside, 0x180);
+  noteKeptTrouble(
+    _base(file.path),
+    KeptTroubleKind.copiedAside,
+    aside: _base(aside),
+  );
 }
+
+/// [path]'s last part.
+String _base(String path) => path.substring(path.lastIndexOf('/') + 1);
 
 /// A free name for [file] set aside, logged: its name, then
 /// `.unreadable-` and the local time to the microsecond, as the daemon's.
@@ -82,10 +102,9 @@ String _asideName(File file) {
   ) {
     aside = '${file.path}.unreadable-$at-$n';
   }
-  final name = file.uri.pathSegments.last;
   appLog.warn("set aside a file that doesn't read", {
-    'file': name,
-    'as': aside.substring(aside.lastIndexOf('/') + 1),
+    'file': _base(file.path),
+    'as': _base(aside),
   });
   return aside;
 }

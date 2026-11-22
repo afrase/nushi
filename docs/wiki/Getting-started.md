@@ -122,6 +122,15 @@ You can still type while the agent works. ⏎ queues your message until the agen
 - Some folders bring code that runs when an agent starts there, such as hooks, MCP servers (programs that give the agent extra tools) or extensions. Nushi lists that code on a trust card first. Click **Start anyway** only if you trust it.
 - Pi and PiG have no permission prompts. Their tools run without asking.
 
+## If Nushi can't read one of its files
+
+Nushi keeps your settings, drafts, review comments and comment drafts in files in its data folder (`~/Library/Application Support/Nushi`, on Linux `~/.local/share/nushi`). If one of them can't be read when Nushi starts, a red notice at the top of the window says so, once, and nothing in the file is lost.
+
+- **Nushi couldn't read its settings file, so settings are back to their defaults. The old file is kept as app.json.unreadable-…**: the file was damaged (cut short, or edited by hand). Nushi moved it aside and started fresh. The same for drafts (`drafts.json`), review comments (`reviews.json`) and comment drafts (`comment_drafts.json`). If only some review comments or comment drafts couldn't be read, the notice says some are missing, and a copy of the whole file is kept beside it.
+- **Nushi can't read its settings file, so changes to settings won't be saved until it can.**: the file is there but couldn't be opened (its permissions, a disk error). Nushi leaves it as it is, keeps your changes while it runs, and saves them once it can read the file again.
+
+To get something back from a kept copy, open it in a text editor. Delete it when you no longer need it. Close a notice with its ×.
+
 ## Where to go next
 
 - [Chats](Chats): the window, the sidebar, keys and the command palette.

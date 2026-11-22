@@ -23,6 +23,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/images.dart' show limitImageCache;
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/kept_notices.dart';
 import 'package:nushi/key_choice.dart' show shortcutRecording;
 import 'package:nushi/keys.dart' show menuShortcut;
 import 'package:nushi/native.dart';
@@ -467,7 +468,8 @@ class _NushiAppState extends State<NushiApp> {
       themeAnimationDuration: Duration.zero,
       scrollBehavior: const NativeScroll(),
       // The toasts, over every view, Settings and a dialog (ADR 0128).
-      builder: (context, child) => ToastHost(child: child!),
+      // A kept file that couldn't be read says so there, once.
+      builder: (context, child) => ToastHost(child: KeptNotices(child: child!)),
       // The menu's keys don't reach the menu while Flutter has the keys:
       // they're bound here too, and a terminal, which keeps ⌘ and ⌃ keys,
       // passes them on as the same intents.
