@@ -260,3 +260,21 @@ func TestReplayedStopsReadBack(t *testing.T) {
 		}
 	}
 }
+
+// A new agent starts with no word on background commands: an old agent's
+// "running" isn't held (with that agent) for the chat's life, and a replay
+// tells the ends again.
+func TestANewAgentForgetsTheOldOnesTasks(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	c.mu.Lock()
+	c.tasks = map[string]taskWord{"b1": {state: "running", agent: c.agent}}
+	c.mu.Unlock()
+	agent.quit()
+	eventually(t, c, func() bool { return c.agent == nil })
+	turn(t, svc, c, "again")
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.tasks) != 0 {
+		t.Errorf("the reopened chat holds %+v", c.tasks)
+	}
+}

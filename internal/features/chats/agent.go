@@ -73,6 +73,7 @@ type opened struct {
 func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool, at string) (opened, error) {
 	c.mu.Lock()
 	clear(c.children) // the last agent's: a replay announces them again
+	clear(c.tasks)    // and its word on background commands, which a replay tells again (ADR 0130)
 	c.opening = true
 	c.mu.Unlock()
 	// The agent's lines name the sessions it opens (see internal/agentproc).
