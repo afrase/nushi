@@ -88,6 +88,14 @@ void main() {
           'at': 1,
           'categories': [category('System prompt'), category('Messages')],
         },
+        // Saved from a daemon older than parts, by an app that knows them.
+        'empty': {
+          'at': 1,
+          'categories': [
+            category('System prompt', ''),
+            category('Messages', ''),
+          ],
+        },
       }),
     );
     expect(read.keys, ['new']);

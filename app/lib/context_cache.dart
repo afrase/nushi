@@ -14,9 +14,10 @@ import 'package:nushi/run_state.dart';
 /// it was asked, in `context.json` in the data folder, so the Context widget
 /// has it at once after the app restarts or while a turn runs. Only the
 /// categories' names, counts, kinds and parts are kept, never the agent's
-/// markdown; the [_keep] most recent chats. An entry saved before the
-/// categories had their part is dropped: it comes back the next time the
-/// context is asked.
+/// markdown; the [_keep] most recent chats. An entry none of whose
+/// categories has a part (saved by an older app, or from a daemon older
+/// than parts, API 141) is neither kept nor read back: it comes back the
+/// next time the context is asked.
 const _keep = 300;
 
 File get _file => File('$dataDir/context.json');
@@ -46,7 +47,7 @@ Map<String, (DateTime, GetContextUsageResponse)> readContexts(String text) {
 }
 
 /// The categories saved as [cs]; null when one isn't as this app writes
-/// it (one without its part, saved by an older app).
+/// it (one without its part, saved by an older app), or none has a part.
 List<ContextCategory>? _categories(List<Object?> cs) {
   final out = [
     for (final c in cs)
@@ -65,8 +66,13 @@ List<ContextCategory>? _categories(List<Object?> cs) {
           part: part,
         ),
   ];
-  return out.length == cs.length ? out : null;
+  return out.length == cs.length && _parted(out) ? out : null;
 }
+
+/// Whether some of [cs] says its part: every agent's harness that reads
+/// categories gives one at least the conversation's; none did before API
+/// 141, whose categories would read as if the agent had no buffer.
+bool _parted(List<ContextCategory> cs) => cs.any((c) => c.part.isNotEmpty);
 
 /// What each chat's context held when asked in this run, and when (a
 /// markdown-only answer too): the Details panel's, kept across panels so
@@ -98,9 +104,9 @@ void forgetContext(String chatId) {
 }
 
 /// Keeps [r] as what fills [chatId]'s context now (only when it has
-/// categories: a markdown-only answer isn't kept).
+/// categories with their parts: a markdown-only answer isn't kept).
 void rememberContext(String chatId, GetContextUsageResponse r) {
-  if (r.categories.isEmpty) return;
+  if (r.categories.isEmpty || !_parted(r.categories)) return;
   _known[chatId] = (
     DateTime.now(),
     GetContextUsageResponse(categories: r.categories),
