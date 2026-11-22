@@ -6,6 +6,8 @@ import (
 	"maps"
 	"path/filepath"
 	"time"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
 // settings are the daemon's own settings (settings.json). A key no field
@@ -97,6 +99,32 @@ func (s *Store) changeSettings(change func(*settings)) error {
 	return nil
 }
 
+// ChangeSettings makes change in one write of settings.json: all of it is
+// written, or, refused, none.
+func (s *Store) ChangeSettings(c model.SettingsChange) error {
+	return s.changeSettings(func(set *settings) {
+		if c.SleepAfter != nil {
+			m := int(*c.SleepAfter / time.Minute)
+			set.SleepAfterMinutes = &m
+		}
+		if c.DebugLog != nil {
+			set.DebugLog = *c.DebugLog
+		}
+		if c.KeepTranscripts != nil {
+			set.KeepTranscripts = new(*c.KeepTranscripts)
+		}
+		if c.TranscriptDays != nil {
+			set.TranscriptDays = *c.TranscriptDays
+		}
+		if c.CheckUpdates != nil {
+			set.CheckUpdates = new(*c.CheckUpdates)
+		}
+		for name, on := range c.GoAgents {
+			setGoAgent(set, name, on)
+		}
+	})
+}
+
 // SleepAfter returns how long a chat idles before its agent sleeps; 0:
 // never.
 func (s *Store) SleepAfter() time.Duration {
@@ -178,15 +206,19 @@ func (s *Store) GoAgent(name string) bool {
 // SetGoAgent remembers whether the agent named name runs through the Go
 // agent.
 func (s *Store) SetGoAgent(name string, on bool) error {
-	return s.changeSettings(func(set *settings) {
-		set.GoAgents = maps.Clone(set.GoAgents)
-		if on {
-			if set.GoAgents == nil {
-				set.GoAgents = map[string]bool{}
-			}
-			set.GoAgents[name] = true
-		} else {
-			delete(set.GoAgents, name)
+	return s.changeSettings(func(set *settings) { setGoAgent(set, name, on) })
+}
+
+// setGoAgent turns name's Go agent on or off in set, its map a copy: the
+// one kept is replaced only once the change is written.
+func setGoAgent(set *settings, name string, on bool) {
+	set.GoAgents = maps.Clone(set.GoAgents)
+	if on {
+		if set.GoAgents == nil {
+			set.GoAgents = map[string]bool{}
 		}
-	})
+		set.GoAgents[name] = true
+	} else {
+		delete(set.GoAgents, name)
+	}
 }

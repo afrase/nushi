@@ -122,7 +122,7 @@ func TestTheAppGetsNothingOfTheEnvironment(t *testing.T) {
 	st := store.New(data)
 	svc := chats.New(t.Context(), []chats.Kind{{Harness: model.HarnessInfo{Name: "fake", Title: "Fake"}}}, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(data, "scratch")})
 	agentSvc.UseChats(svc)
-	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, Transcripts: st})))
+	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, Settings: st})))
 	defer srv.Close()
 	c := nushiv1connect.NewNushiServiceClient(&http.Client{Transport: bearer{}}, srv.URL)
 	ctx := context.Background()

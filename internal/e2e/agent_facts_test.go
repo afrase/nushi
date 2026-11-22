@@ -75,7 +75,7 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 	agentSvc.UseChats(svc)
 	shown := skills.New([]string{"claude", "codex"}, map[string]skills.Reader{"claude": builtInPlugins{}, "codex": fileSkill{}},
 		func(_, _ []string, path string) error { return fmt.Errorf("%s is a file", path) }, nil)
-	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, MCP: servers, Skills: shown, Transcripts: st})))
+	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, MCP: servers, Skills: shown, Settings: st})))
 	defer srv.Close()
 	c := nushiv1connect.NewNushiServiceClient(&http.Client{Transport: bearer{}}, srv.URL)
 	ctx := context.Background()

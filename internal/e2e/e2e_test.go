@@ -264,8 +264,8 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 		looks.Add(1)
 		lapsed.Store(!waiting)
 	}
-	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts,
-		Servers: srvs, Usage: meter, GoAgents: st, ChatFiles: st}
+	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Settings: st, Restart: restarts,
+		Servers: srvs, Usage: meter, ChatFiles: st}
 	socket, forDevices := api.Handlers(sv, toolSvc, "tok") // as main serves them
 	srv := httptest.NewServer(socket)
 	devices := httptest.NewServer(forDevices)

@@ -40,7 +40,7 @@ func TestGoAgentsBothWays(t *testing.T) {
 	svc := chats.New(t.Context(), kinds, chats.Options{Remembered: st, Sessions: st, Sleep: st})
 	agentSvc := agents.New(found, func(context.Context, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})
 	agentSvc.UseChats(svc)
-	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, GoAgents: st})))
+	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, Settings: st})))
 	defer srv.Close()
 	c := nushiv1connect.NewNushiServiceClient(&http.Client{Transport: bearer{}}, srv.URL)
 	ctx := context.Background()

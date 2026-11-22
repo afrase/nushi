@@ -92,7 +92,7 @@ func TestNothingPrivateLogged(t *testing.T) {
 	svc.UseTerminals(terms)
 	srvs := newServers(svc, filepath.Join(data, "servers.json"), hub.Publish)
 	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil), Terms: terms, Hub: hub,
-		Memory: memory.New(svc), LogPrefs: st, Transcripts: st, Servers: srvs})))
+		Memory: memory.New(svc), Settings: st, Servers: srvs})))
 	follow, unfollow := context.WithCancel(context.Background())
 	followed := make(chan struct{})
 	go func() {

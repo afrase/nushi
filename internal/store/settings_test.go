@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -164,5 +165,20 @@ func TestSettingsThatCantBeReadArentKept(t *testing.T) {
 	testcheck.NoErr(t, os.Chmod(path, 0o600))
 	if !s.DebugLog() || s.TranscriptDays() != 9 {
 		t.Errorf("readable again: debug %v, days %d", s.DebugLog(), s.TranscriptDays())
+	}
+}
+
+// ChangeSettings writes every field it's given at once and leaves the
+// rest; the Go agents it doesn't name stay as they were.
+func TestChangeSettingsInOneWrite(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	testcheck.NoErr(t, s.SetGoAgent("a", true))
+	testcheck.NoErr(t, s.SetTranscriptDays(4))
+	sleep, debug, keep := 5*time.Minute, true, false
+	testcheck.NoErr(t, s.ChangeSettings(model.SettingsChange{SleepAfter: &sleep, DebugLog: &debug, KeepTranscripts: &keep, GoAgents: map[string]bool{"b": true}}))
+	s = New(dir)
+	if s.SleepAfter() != sleep || !s.DebugLog() || s.KeepTranscripts() || s.TranscriptDays() != 4 || !s.CheckUpdates() || !s.GoAgent("a") || !s.GoAgent("b") {
+		t.Errorf("sleep %v, debug %v, keep %v, days %d, updates %v, a %v, b %v", s.SleepAfter(), s.DebugLog(), s.KeepTranscripts(), s.TranscriptDays(), s.CheckUpdates(), s.GoAgent("a"), s.GoAgent("b"))
 	}
 }

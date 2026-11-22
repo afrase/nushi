@@ -20,7 +20,6 @@ import (
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/githubapi"
-	"github.com/afrase/nushi/internal/logs"
 )
 
 // SlowCall is how long a call takes before it is logged as slow.
@@ -105,24 +104,6 @@ func loggable(err error) any {
 		return "a dev server's start was refused: " + start.Kind
 	}
 	return err
-}
-
-// LogPrefs keeps the debug setting (internal/store).
-type LogPrefs interface {
-	DebugLog() bool
-	SetDebugLog(on bool) error
-}
-
-func (s *server) setDebugLog(on bool) error {
-	if s.LogPrefs == nil || s.LogPrefs.DebugLog() == on {
-		return nil
-	}
-	if err := s.LogPrefs.SetDebugLog(on); err != nil {
-		return err
-	}
-	logs.SetDebug(on)
-	slog.Info("debug lines", "on", on, "level", logs.Level.Level())
-	return nil
 }
 
 // Caps on what a client logs: a message, a stack, and its other attributes.

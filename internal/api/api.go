@@ -74,19 +74,14 @@ type Services struct {
 	GitHub *github.Service
 	// Servers runs the folders' dev servers; nil: none run.
 	Servers *servers.Service
-	// LogPrefs keeps the debug log setting; nil: not kept.
-	LogPrefs LogPrefs
-	// Transcripts keeps the transcripts' copies' settings; nil: not kept.
-	Transcripts TranscriptPrefs
+	// Settings keeps the daemon's own settings; nil: not kept.
+	Settings Settings
 	// Restart stops the daemon for a newer build; nil: it isn't offered.
 	Restart Restart
 	// Updates checks for a newer release; nil: it doesn't.
 	Updates Updates
 	// Usage sums what the chats' turns used; nil: it isn't kept.
 	Usage Usage
-	// GoAgents keeps which agents run through Nushi's Go agent; nil: not
-	// kept.
-	GoAgents GoAgentPref
 	// ChatFiles says which chats' records didn't read; nil: none are said.
 	ChatFiles ChatFiles
 }

@@ -10,15 +10,6 @@ import (
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
-// TranscriptPrefs keeps whether chats' transcripts are copied, and for how
-// long (internal/store).
-type TranscriptPrefs interface {
-	KeepTranscripts() bool
-	SetKeepTranscripts(on bool) error
-	TranscriptDays() int
-	SetTranscriptDays(days int) error
-}
-
 func (s *server) ListTranscripts(context.Context, *connect.Request[nushiv1.ListTranscriptsRequest]) (*connect.Response[nushiv1.ListTranscriptsResponse], error) {
 	list, err := s.Chats.ListCopies()
 	if err != nil {
@@ -53,24 +44,4 @@ func (s *server) ClearTranscripts(ctx context.Context, req *connect.Request[nush
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return connect.NewResponse(&nushiv1.ClearTranscriptsResponse{Cleared: int32(n), Bytes: bytes}), nil
-}
-
-// setTranscripts sets what SetSettings gives of the transcripts' settings.
-func (s *server) setTranscripts(set *nushiv1.Settings) error {
-	if s.Transcripts == nil {
-		return nil
-	}
-	if set.TranscriptDays != nil && *set.TranscriptDays < 0 {
-		return errors.New("transcript_days can't be negative")
-	}
-	if set.KeepTranscripts != nil && *set.KeepTranscripts != s.Transcripts.KeepTranscripts() {
-		if err := s.Transcripts.SetKeepTranscripts(*set.KeepTranscripts); err != nil {
-			return err
-		}
-		slog.Info("transcript copies", "keep", *set.KeepTranscripts)
-	}
-	if set.TranscriptDays != nil {
-		return s.Transcripts.SetTranscriptDays(int(*set.TranscriptDays))
-	}
-	return nil
 }

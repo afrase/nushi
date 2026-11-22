@@ -117,25 +117,30 @@ func (s *Service) Get() model.Update {
 	return s.found
 }
 
-// SetOn turns the checks on or off. Off forgets a newer release found;
-// on checks at once.
+// SetOn turns the checks on or off (Turned).
 func (s *Service) SetOn(on bool) error {
 	if err := s.prefs.SetCheckUpdates(on); err != nil {
 		return err
 	}
+	s.Turned(on)
+	return nil
+}
+
+// Turned does what the checks turned on or off call for, the setting
+// written already: on checks at once, off forgets a newer release found.
+func (s *Service) Turned(on bool) {
 	if on {
 		select {
 		case s.kick <- struct{}{}:
 		default: // one is due already
 		}
-		return nil
+		return
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.found.Version, s.found.URL = "", ""
 	found := s.found
 	s.publish(model.Event{Update: &found}) // under mu: a check ending now publishes before, or not at all
-	return nil
 }
 
 // Check asks GitHub now, whatever the setting, for its answer as it

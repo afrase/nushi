@@ -18,7 +18,10 @@ type Updates interface {
 	Get() model.Update
 	Check(ctx context.Context) (model.Update, error)
 	On() bool
-	SetOn(on bool) error
+	// Turned does what checks turned on or off call for, once the setting
+	// is written (SetSettings): on checks at once, off forgets a release
+	// found.
+	Turned(on bool)
 	// Install has Homebrew upgrade the cask that installed Nushi, and
 	// returns once it has started.
 	Install() error
@@ -62,12 +65,4 @@ func (s *server) update() *nushiv1.UpdateCheck {
 func updateProto(u model.Update) *nushiv1.UpdateCheck {
 	return &nushiv1.UpdateCheck{Version: u.Version, Url: u.URL, Latest: u.Latest, CheckedMs: unixMs(u.Checked),
 		Installing: u.Installing, InstallError: u.InstallError, Installed: u.Installed}
-}
-
-// setCheckUpdates turns the checks on or off, when given and changed.
-func (s *server) setCheckUpdates(set *nushiv1.Settings) error {
-	if s.Updates == nil || set.CheckUpdates == nil || *set.CheckUpdates == s.Updates.On() {
-		return nil
-	}
-	return s.Updates.SetOn(*set.CheckUpdates)
 }

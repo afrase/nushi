@@ -30,8 +30,8 @@ func (f *fakeUpdates) Check(context.Context) (model.Update, error) {
 	f.found.Checked = time.UnixMilli(2000)
 	return f.found, nil
 }
-func (f *fakeUpdates) On() bool         { return true }
-func (f *fakeUpdates) SetOn(bool) error { return nil }
+func (f *fakeUpdates) On() bool    { return true }
+func (f *fakeUpdates) Turned(bool) {}
 
 // Ping carries what the update check found; Check for updates asks now;
 // a device's channel can't.
