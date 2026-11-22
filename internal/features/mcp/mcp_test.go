@@ -49,7 +49,7 @@ func (f *fakeConfig) UserOnly() bool                               { return fals
 
 func TestListMergesTheCheck(t *testing.T) {
 	svc := New("claude", &fakeConfig{
-		files: []model.MCPServer{{Name: "a", Scope: "user", Config: `{"env":{"K":"secret"}}`}, {Name: "a", Scope: "local"},
+		files: []model.MCPServer{{Name: "a", Scope: "user", Config: `{"env":{"K":"secret"}}`, Shadowed: true}, {Name: "a", Scope: "local"},
 			{Name: "gone", Scope: "project"}},
 		checked: []model.MCPServer{{Name: "a", State: "connected"}, {Name: "plugin:x:y", Scope: "plugin", State: "failed"},
 			{Name: "managed", State: "connected"}},
@@ -207,20 +207,14 @@ func TestAnEditOutlivesTheApp(t *testing.T) {
 	}
 }
 
-// A repository's .mcp.json server that isn't approved, or is off, gives way
-// to the user's of the same name, which gets its state.
-func TestAnUnapprovedProjectServerGivesWay(t *testing.T) {
-	for _, project := range []model.MCPServer{{Name: "github", Scope: "project"}, {Name: "github", Scope: "project", Approved: true, Off: true}} {
-		svc := New("claude", &fakeConfig{files: []model.MCPServer{{Name: "github", Scope: "user"}, project},
-			checked: []model.MCPServer{{Name: "github", State: "connected"}}}, nil)
-		got, _, _ := svc.List(context.Background(), "/f", true)
-		if got[0].Shadowed || got[0].State != "connected" || !got[1].Shadowed || got[1].State == "connected" {
-			t.Errorf("%+v: user %+v, project %+v", project, got[0], got[1])
-		}
-	}
-	svc := New("claude", &fakeConfig{files: []model.MCPServer{{Name: "github", Scope: "user"}, {Name: "github", Scope: "project", Approved: true}}}, nil)
-	if got, _, _ := svc.List(context.Background(), "/f", false); !got[0].Shadowed || got[1].Shadowed {
-		t.Errorf("an approved project server: %+v", got)
+// The check's state goes to the server of its name the Config left
+// unshadowed, whatever its scope (the Config's rule picks it).
+func TestTheCheckGoesToTheUnshadowedServer(t *testing.T) {
+	svc := New("claude", &fakeConfig{files: []model.MCPServer{{Name: "github", Scope: "user"}, {Name: "github", Scope: "project", Shadowed: true}},
+		checked: []model.MCPServer{{Name: "github", State: "connected"}}}, nil)
+	got, _, _ := svc.List(context.Background(), "/f", true)
+	if got[0].Shadowed || got[0].State != "connected" || !got[1].Shadowed || got[1].State == "connected" {
+		t.Errorf("user %+v, project %+v", got[0], got[1])
 	}
 }
 

@@ -46,7 +46,8 @@ func Project(folder string) string {
 type servers map[string]json.RawMessage
 
 // Servers returns the servers Claude's files give folder: user, local and
-// project scope, each sorted by name, with their config as Claude has it.
+// project scope, each sorted by name, with their config as Claude has it
+// and Shadowed marked as Claude picks between servers of one name.
 // A .mcp.json that can't be read is left out (see Read).
 func (c Claude) Servers(folder string) ([]model.MCPServer, error) {
 	servers, unread, err := c.Read(folder)
@@ -62,7 +63,8 @@ type Unread struct {
 	Err  error
 }
 
-// Read is Servers, with the .mcp.json files it left out.
+// Read is Servers, with the .mcp.json files it left out. Each server
+// another of its name wins over is marked Shadowed (shadow).
 func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err error) {
 	var cfg struct {
 		MCPServers servers `json:"mcpServers"`
@@ -105,7 +107,7 @@ func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err e
 			out[i].Approved = slices.Contains(approved, out[i].Name)
 		}
 		if dir == filepath.Dir(dir) {
-			return out, unread, nil
+			return shadow(out), unread, nil
 		}
 	}
 }

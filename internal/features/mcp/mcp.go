@@ -2,9 +2,9 @@
 // folder, one Service per agent whose config Nushi knows (Claude's,
 // Ante's). The agent's own config is the source of truth: Nushi keeps no
 // copy of it (ADR 0021). The scopes (user, project, local, plugin,
-// claudeai), which one wins, and project approvals are Claude Code's
-// model; an agent with less (Ante: user scope only) refuses the rest in
-// its Config.
+// claudeai) and project approvals are Claude Code's model; which server
+// of a name wins is the agent's Config's to say, and an agent with less
+// (Ante: user scope only) refuses the rest in its Config.
 package mcp
 
 import (
@@ -16,7 +16,8 @@ import (
 // Config is the agent's MCP config (internal/claudemcp, internal/antemcp).
 type Config interface {
 	// Servers returns the servers the agent's config files give folder,
-	// with their config as stored (secrets in clear).
+	// with their config as stored (secrets in clear), each that another
+	// of its name wins over marked Shadowed by the agent's own rule.
 	Servers(folder string) ([]model.MCPServer, error)
 	// Check has the agent connect to every server it would use in folder
 	// and returns how each went, by name; one only the agent knows comes
@@ -60,20 +61,6 @@ func New(agent string, config Config, changed Changed) *Service {
 // UserOnly says the agent's servers are only the user's (Config.UserOnly).
 func (s *Service) UserOnly() bool { return s.config.UserOnly() }
 
-// rank orders scopes as the agent picks between servers of the same name:
-// local wins, then project, user, plugins and claude.ai.
-var rank = map[string]int{"local": 0, "project": 1, "user": 2, "plugin": 3, "claudeai": 4, "other": 5}
-
-// order is a server's place among those of its name: as its scope ranks,
-// except that a project server that is off or not approved gives way to a
-// local or user one (Claude Code 2.1.309 skips it then).
-func order(sv model.MCPServer) int {
-	if sv.Scope == "project" && (sv.Off || !sv.Approved) {
-		return 2*rank["user"] + 1
-	}
-	return 2 * rank[sv.Scope]
-}
-
 // List returns folder's servers. With check, each gets its state, and a
 // server only the agent knows is added; when checking fails, the servers
 // come back unchecked with checkErr saying why.
@@ -87,12 +74,9 @@ func (s *Service) List(ctx context.Context, folder string, check bool) (servers 
 	}
 	used := map[string]int{} // the server the agent uses, by name
 	for i, sv := range servers {
-		if j, ok := used[sv.Name]; !ok || order(sv) < order(servers[j]) {
+		if _, ok := used[sv.Name]; !ok && !sv.Shadowed {
 			used[sv.Name] = i
 		}
-	}
-	for i := range servers {
-		servers[i].Shadowed = used[servers[i].Name] != i
 	}
 	if !check {
 		return servers, nil, nil
