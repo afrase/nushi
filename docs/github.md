@@ -4,7 +4,7 @@
 
 If you're signed in to `gh` (`gh auth login`), GitHub works as is. The daemon reads gh's token for each host gh knows, as gh does (the environment's `GH_TOKEN`, gh's config, or `gh auth token`), in its own process.
 
-Settings › GitHub lists each host under Accounts: who its token is and where it's from, a Signed in pill once GitHub has answered, and what's left of GitHub's rate limits this hour (shared with your `gh` and agents that run it). Its ⋯ shows the token's kind and scopes, and Remove token… for one you pasted.
+Settings › GitHub lists each host under Accounts: who its token is and where it's from, a Signed in pill once GitHub has answered, and what's left of GitHub's rate limits this hour (shared with your `gh` and agents that run it). Its ⋯ shows the token's kind and scopes, and Remove token… for one you pasted (a token the keychain won't delete, after a dismissed prompt or with no keyring, stays there as "Nushi GitHub", for you to delete).
 
 For a host without gh, or instead of gh's login, add a token there:
 
