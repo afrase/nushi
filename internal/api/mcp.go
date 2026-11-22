@@ -33,9 +33,11 @@ func (s *server) ListMcpServers(ctx context.Context, req *connect.Request[nushiv
 		// The daemon decides, not the app: Settings may name a folder only
 		// another agent's card passed, and the phone any folder at all.
 		// An agent whose check runs elsewhere (Ante's) reads nothing here.
-		switch runs, _, err := s.Trust.Check(s.agent(req.Msg.Agent), req.Msg.Folder); {
+		switch runs, key, err := s.Trust.Check(s.agent(req.Msg.Agent), req.Msg.Folder); {
 		case err != nil:
 			check, why = false, "Not checked: "+err.Error()
+		case len(runs) > 0 && key == "":
+			check, why = false, notCheckedEveryStart
 		case len(runs) > 0:
 			check, why = false, notCheckedUntrusted
 		}
@@ -116,3 +118,8 @@ func (s *server) ReloadChat(_ context.Context, req *connect.Request[nushiv1.Relo
 // runs the agent there (`claude mcp list`), which would read that code
 // before the trust card showed it (ADR 0023).
 const notCheckedUntrusted = "Not checked: this folder brings code the agent would run, and nobody trusted it yet. Start a chat here and choose Start anyway to check its servers."
+
+// notCheckedEveryStart is why when that folder's "Start anyway" can't be
+// remembered (no key: settings Nushi couldn't read or vouch for), so a
+// chat started there never brings the check back.
+const notCheckedEveryStart = "Not checked: this folder brings code the agent would run, and Nushi asks about it on every start, so it doesn't check its servers here."

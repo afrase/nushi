@@ -97,3 +97,31 @@ func TestMcpHealthOfAnAgentThatChecksElsewhere(t *testing.T) {
 		t.Fatalf("checks in a folder nobody trusted: in it %d (want 0), elsewhere %d (want 1)", here.checks.Load(), elsewhere.checks.Load())
 	}
 }
+
+// keylessAgent says every folder runs a hook it can't vouch for: no key,
+// so "Start anyway" is never remembered (a settings file Nushi couldn't
+// read, a file with no hash).
+type keylessAgent struct{}
+
+func (keylessAgent) Runs(folder string) ([]model.FolderRun, string, error) {
+	return []model.FolderRun{{What: "A hook", Command: filepath.Join(folder, "hook.sh")}}, "", nil
+}
+func (keylessAgent) Key(string) string                      { return "" }
+func (keylessAgent) Trusted(string, []string) (bool, error) { return false, nil }
+
+// Sceptic's review 2026-11-23: a folder whose "Start anyway" is never
+// remembered was told to start a chat there and choose Start anyway, which
+// never brings the check back. Its servers say Nushi asks on every start.
+func TestMcpHealthNotCheckedWhereNothingIsRemembered(t *testing.T) {
+	cfg := &countedChecks{}
+	st := store.New(t.TempDir())
+	svc := chats.New(t.Context(), []chats.Kind{{Harness: model.HarnessInfo{Name: "a", Title: "A"}}},
+		chats.Options{Remembered: st, Sessions: st, Scratch: t.TempDir()})
+	tr := trust.New(map[string]trust.Agent{"a": keylessAgent{}}, st)
+	c := client(t, New(Services{Chats: svc, MCP: map[string]*mcp.Service{"a": mcp.New("a", cfg, nil)}, Trust: tr}))
+	resp, err := c.ListMcpServers(t.Context(), connect.NewRequest(&nushiv1.ListMcpServersRequest{Folder: t.TempDir(), CheckHealth: true, Agent: "a"}))
+	testcheck.NoErr(t, err)
+	if cfg.checks.Load() != 0 || resp.Msg.CheckError != notCheckedEveryStart {
+		t.Fatalf("%d checks, check error %q", cfg.checks.Load(), resp.Msg.CheckError)
+	}
+}
