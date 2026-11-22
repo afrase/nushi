@@ -33,6 +33,9 @@ List<Agent> readyAgents() => [
       mcpUserOnly: name == 'ante',
       goAgentSwitch: name == 'codex',
       signIn: name == 'codex' ? 'codex login' : '',
+      expires: name == 'claude'
+          ? 'Claude Code deletes sessions after 30 days by default'
+          : '',
     ),
 ];
 

@@ -856,6 +856,7 @@ const Agent$json = {
     {'1': 'mcp_user_only', '3': 15, '4': 1, '5': 8, '10': 'mcpUserOnly'},
     {'1': 'go_agent_switch', '3': 16, '4': 1, '5': 8, '10': 'goAgentSwitch'},
     {'1': 'sign_in', '3': 17, '4': 1, '5': 9, '10': 'signIn'},
+    {'1': 'expires', '3': 18, '4': 1, '5': 9, '10': 'expires'},
   ],
   '9': [
     {'1': 8, '2': 9},
@@ -873,8 +874,8 @@ final $typed_data.Uint8List agentDescriptor = $convert.base64Decode(
     'CVIIc2lnbmVkSW4SKwoHYWRhcHRlchgLIAEoCzIRLm51c2hpLnYxLkFkYXB0ZXJSB2FkYXB0ZX'
     'ISFAoFcmVhZHkYDCABKAhSBXJlYWR5EhQKBWF3YWtlGA0gASgFUgVhd2FrZRIiCg1tY3BfdXNl'
     'cl9vbmx5GA8gASgIUgttY3BVc2VyT25seRImCg9nb19hZ2VudF9zd2l0Y2gYECABKAhSDWdvQW'
-    'dlbnRTd2l0Y2gSFwoHc2lnbl9pbhgRIAEoCVIGc2lnbkluSgQICBAJSgQIDhAPUgRwYWdlUghn'
-    'b19hZ2VudA==');
+    'dlbnRTd2l0Y2gSFwoHc2lnbl9pbhgRIAEoCVIGc2lnbkluEhgKB2V4cGlyZXMYEiABKAlSB2V4'
+    'cGlyZXNKBAgIEAlKBAgOEA9SBHBhZ2VSCGdvX2FnZW50');
 
 @$core.Deprecated('Use adapterDescriptor instead')
 const Adapter$json = {

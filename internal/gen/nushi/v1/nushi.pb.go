@@ -2551,7 +2551,11 @@ type Agent struct {
 	GoAgentSwitch bool `protobuf:"varint,16,opt,name=go_agent_switch,json=goAgentSwitch,proto3" json:"go_agent_switch,omitempty"`
 	// What the user runs in a terminal to sign it in ("codex login"); empty
 	// when Nushi doesn't know (API 139).
-	SignIn        string `protobuf:"bytes,17,opt,name=sign_in,json=signIn,proto3" json:"sign_in,omitempty"`
+	SignIn string `protobuf:"bytes,17,opt,name=sign_in,json=signIn,proto3" json:"sign_in,omitempty"`
+	// What deletes its sessions on its own, in a few words ("Claude Code
+	// deletes sessions after 30 days by default"); empty when nothing does
+	// (API 142).
+	Expires       string `protobuf:"bytes,18,opt,name=expires,proto3" json:"expires,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2687,6 +2691,13 @@ func (x *Agent) GetGoAgentSwitch() bool {
 func (x *Agent) GetSignIn() string {
 	if x != nil {
 		return x.SignIn
+	}
+	return ""
+}
+
+func (x *Agent) GetExpires() string {
+	if x != nil {
+		return x.Expires
 	}
 	return ""
 }
@@ -28171,7 +28182,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05shell\x18\x01 \x01(\tR\x05shell\x12 \n" +
 	"\fread_unix_ms\x18\x02 \x01(\x03R\n" +
 	"readUnixMs\x12\x18\n" +
-	"\aproblem\x18\x03 \x01(\tR\aproblem\"\xc3\x03\n" +
+	"\aproblem\x18\x03 \x01(\tR\aproblem\"\xdd\x03\n" +
 	"\x05Agent\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x16\n" +
@@ -28188,7 +28199,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05awake\x18\r \x01(\x05R\x05awake\x12\"\n" +
 	"\rmcp_user_only\x18\x0f \x01(\bR\vmcpUserOnly\x12&\n" +
 	"\x0fgo_agent_switch\x18\x10 \x01(\bR\rgoAgentSwitch\x12\x17\n" +
-	"\asign_in\x18\x11 \x01(\tR\x06signInJ\x04\b\b\x10\tJ\x04\b\x0e\x10\x0fR\x04pageR\bgo_agent\"\xd3\x01\n" +
+	"\asign_in\x18\x11 \x01(\tR\x06signIn\x12\x18\n" +
+	"\aexpires\x18\x12 \x01(\tR\aexpiresJ\x04\b\b\x10\tJ\x04\b\x0e\x10\x0fR\x04pageR\bgo_agent\"\xd3\x01\n" +
 	"\aAdapter\x12\x18\n" +
 	"\apackage\x18\x01 \x01(\tR\apackage\x12\x16\n" +
 	"\x06pinned\x18\x02 \x01(\tR\x06pinned\x12\x1c\n" +

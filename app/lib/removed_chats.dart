@@ -8,11 +8,6 @@ import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// What deletes an agent's sessions on its own, by agent.
-const _expires = {
-  'claude': 'Claude Code deletes sessions after 30 days by default',
-};
-
 /// Says, once, which chats the daemon removed because their agent no longer
 /// had their sessions; OK dismisses it (ADR 0015).
 class RemovedChatsBar extends StatelessWidget {
@@ -26,9 +21,11 @@ class RemovedChatsBar extends StatelessWidget {
         '“${r.title.isEmpty ? 'Untitled chat' : r.title}”';
     final agents = {for (final r in removed) r.agent};
     final one = agents.length == 1 ? agents.first : null;
-    final why = switch (_expires[one]) {
-      final e? => ' ($e)',
-      null => '',
+    // What deletes the agent's sessions on its own, as the daemon says
+    // (API 142); left out when it doesn't.
+    final why = switch (knownAgents[one]?.expires ?? '') {
+      '' => '',
+      final e => ' ($e)',
     };
     if (removed.length == 1) {
       return 'Removed ${title(removed.first)}: '
@@ -58,11 +55,15 @@ class RemovedChatsBar extends StatelessWidget {
               context,
               [for (final r in removed) '${r.title} — ${tildePath(r.folder)}']
                   .join('\n'),
-              Text(
-                text(removed),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: theme.ui(t.textSecondary, size: 12),
+              // Again once the agents are listed: their titles and why.
+              ValueListenableBuilder(
+                valueListenable: agentList,
+                builder: (context, _, _) => Text(
+                  text(removed),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.ui(t.textSecondary, size: 12),
+                ),
               ),
             ),
           ),

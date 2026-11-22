@@ -2915,6 +2915,7 @@ class Agent extends $pb.GeneratedMessage {
     $core.bool? mcpUserOnly,
     $core.bool? goAgentSwitch,
     $core.String? signIn,
+    $core.String? expires,
   }) {
     final result = Agent._();
     if (name != null) result.name = name;
@@ -2932,6 +2933,7 @@ class Agent extends $pb.GeneratedMessage {
     if (mcpUserOnly != null) result.mcpUserOnly = mcpUserOnly;
     if (goAgentSwitch != null) result.goAgentSwitch = goAgentSwitch;
     if (signIn != null) result.signIn = signIn;
+    if (expires != null) result.expires = expires;
     return result;
   }
 
@@ -2964,6 +2966,7 @@ class Agent extends $pb.GeneratedMessage {
     ..aOB(15, _omitFieldNames ? '' : 'mcpUserOnly')
     ..aOB(16, _omitFieldNames ? '' : 'goAgentSwitch')
     ..aOS(17, _omitFieldNames ? '' : 'signIn')
+    ..aOS(18, _omitFieldNames ? '' : 'expires')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3150,6 +3153,18 @@ class Agent extends $pb.GeneratedMessage {
   $core.bool hasSignIn() => $_has(14);
   @$pb.TagNumber(17)
   void clearSignIn() => $_clearField(17);
+
+  /// What deletes its sessions on its own, in a few words ("Claude Code
+  /// deletes sessions after 30 days by default"); empty when nothing does
+  /// (API 142).
+  @$pb.TagNumber(18)
+  $core.String get expires => $_getSZ(15);
+  @$pb.TagNumber(18)
+  set expires($core.String value) => $_setString(15, value);
+  @$pb.TagNumber(18)
+  $core.bool hasExpires() => $_has(15);
+  @$pb.TagNumber(18)
+  void clearExpires() => $_clearField(18);
 }
 
 /// An agent's adapter.

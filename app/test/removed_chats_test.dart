@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/agents.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/removed_chats.dart';
@@ -20,6 +21,13 @@ void main() {
   setUpAll(loadFonts);
 
   test('the bar names the chats, and why when one agent deleted them', () {
+    // Before the agents are listed, or from a daemon before API 142,
+    // there's no why.
+    expect(
+      RemovedChatsBar.text([_three.first]),
+      'Removed “Fix the login redirect”: Claude no longer had its session.',
+    );
+    agentList.value = {for (final a in readyAgents()) a.name: a};
     expect(
       RemovedChatsBar.text([_three.first]),
       'Removed “Fix the login redirect”: Claude no longer had its session '

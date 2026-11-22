@@ -50,8 +50,8 @@ func (builtInPlugins) SetPluginOn(context.Context, string, string, bool) error {
 func (builtInPlugins) Uninstall(context.Context, string, string) error         { return nil }
 func (builtInPlugins) PluginScope(string, model.Plugin) string                 { return "" }
 
-// What the app asks of an agent instead of going by its name: the plain
-// MCP view, from the agents as main lists
+// What the app asks of an agent instead of going by its name: what
+// deletes its sessions (the removed chats' bar), the plain MCP view, from the agents as main lists
 // them, and what its skills view shows; and of a skill instead of going
 // by its path: that it is one file, and that Delete and Link would refuse
 // it. Nothing runs: the probe is fake.
@@ -84,7 +84,17 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 	if len(listed) != len(all) {
 		t.Fatalf("%d agents listed, want %d", len(listed), len(all))
 	}
+	expires := map[string]string{}
+	for _, a := range all {
+		expires[a.Agent.Name] = a.Harness.Info().Expires
+	}
+	if expires["claude"] == "" {
+		t.Error("Claude's harness says nothing deletes its sessions")
+	}
 	for _, a := range listed {
+		if a.Expires != expires[a.Name] {
+			t.Errorf("%s: expires %q, want %q", a.Name, a.Expires, expires[a.Name])
+		}
 		if want := a.Name == "ante"; a.McpUserOnly != want {
 			t.Errorf("%s: mcp_user_only %v, want %v", a.Name, a.McpUserOnly, want)
 		}

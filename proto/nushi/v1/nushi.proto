@@ -979,6 +979,10 @@ message Agent {
   // What the user runs in a terminal to sign it in ("codex login"); empty
   // when Nushi doesn't know (API 139).
   string sign_in = 17;
+  // What deletes its sessions on its own, in a few words ("Claude Code
+  // deletes sessions after 30 days by default"); empty when nothing does
+  // (API 142).
+  string expires = 18;
 }
 
 // An agent's adapter.
