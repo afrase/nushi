@@ -108,8 +108,9 @@ class FakeDaemon implements Transport {
   GetUsageResponse usage = GetUsageResponse();
 
   /// While set the daemon is gone: every call fails as the transport says
-  /// when none answers, pings too, and setting it drops every events
-  /// subscription with that error, as a daemon that stops ends them.
+  /// when none answers, pings too, and setting it drops every stream it
+  /// serves with that error (events subscriptions, watches, the [streams]
+  /// hook's), as a daemon that stops ends them all.
   bool get down => _down;
   set down(bool gone) {
     _down = gone;
@@ -119,6 +120,53 @@ class FakeDaemon implements Transport {
         ..addError(_unavailable())
         ..close().ignore();
     }
+    for (final drop in [..._served]) {
+      drop();
+    }
+    _served.clear();
+  }
+
+  /// How to drop each open stream the fake serves besides Events.
+  final _served = <void Function()>{};
+
+  /// [source] as the daemon serves it: until the app lets it go, or until
+  /// [down] ends it with the transport's error.
+  Stream<Object> _droppable(Stream<Object> source) {
+    StreamSubscription<Object>? sub;
+    late final StreamController<Object> out;
+    void drop() {
+      if (out.isClosed) return;
+      sub?.cancel().ignore();
+      sub = null;
+      out
+        ..addError(_unavailable())
+        ..close().ignore();
+    }
+
+    // Synchronous: each message reaches the app when the source's does,
+    // as if the source were served itself.
+    out = StreamController<Object>(
+      sync: true,
+      onListen: () => sub = source.listen(
+        out.add,
+        onError: out.addError,
+        onDone: () {
+          _served.remove(drop);
+          sub = null;
+          out.close().ignore();
+        },
+      ),
+      onPause: () => sub?.pause(),
+      onResume: () => sub?.resume(),
+      onCancel: () {
+        _served.remove(drop);
+        final s = sub;
+        sub = null;
+        return s?.cancel();
+      },
+    );
+    _served.add(drop);
+    return out.stream;
   }
 
   bool _down = false;
@@ -520,7 +568,7 @@ class FakeDaemon implements Transport {
 
   /// Answers a stream call (its request): its messages, or null for the
   /// fake's own answer (Events: a new [subscriptions] entry). Every
-  /// request it answers is in [calls].
+  /// request it answers is in [calls]; [down] ends its streams too.
   Stream<Object>? Function(Object input)? streams;
 
   /// The dev servers' output WatchServerLog sends (ADR 0100), by
@@ -548,7 +596,12 @@ class FakeDaemon implements Transport {
     final request = await input.first;
     if (streams?.call(request) case final s?) {
       calls.add(request);
-      return StreamResponse(spec, Headers(), s.cast<O>(), Headers());
+      return StreamResponse(
+        spec,
+        Headers(),
+        _droppable(s).cast<O>(),
+        Headers(),
+      );
     }
     if (request is EventsRequest) {
       final s = _subscribe(request);
@@ -560,13 +613,19 @@ class FakeDaemon implements Transport {
       );
     }
     // A folder the test doesn't list is empty, and stays watched while the
-    // test runs (the Files pane's tree, open with every file, ADR 0123).
+    // test runs, or until [down] (the Files pane's tree, open with every
+    // file, ADR 0123).
     if (request case WatchChatFolderRequest(:final path)) {
       calls.add(request);
       final watch = StreamController<WatchChatFolderResponse>()
         ..add(WatchChatFolderResponse(folders: [FolderListing(path: path)]));
       addTearDown(watch.close);
-      return StreamResponse(spec, Headers(), watch.stream.cast<O>(), Headers());
+      return StreamResponse(
+        spec,
+        Headers(),
+        _droppable(watch.stream).cast<O>(),
+        Headers(),
+      );
     }
     {
       if (request case WatchServerLogRequest(:final serverId)) {
@@ -579,14 +638,15 @@ class FakeDaemon implements Transport {
         return StreamResponse(
           spec,
           Headers(),
-          (live ??
-                  Stream<WatchServerLogResponse>.error(
-                    ConnectException(
-                      Code.notFound,
-                      'no such server’s output is kept in this chat’s folder',
-                    ),
-                  ))
-              .cast<O>(),
+          _droppable(
+            live ??
+                Stream<WatchServerLogResponse>.error(
+                  ConnectException(
+                    Code.notFound,
+                    'no such server’s output is kept in this chat’s folder',
+                  ),
+                ),
+          ).cast<O>(),
           Headers(),
         );
       }
@@ -600,7 +660,7 @@ class FakeDaemon implements Transport {
         return StreamResponse(
           spec,
           Headers(),
-          watch.stream.cast<O>(),
+          _droppable(watch.stream).cast<O>(),
           Headers(),
         );
       }

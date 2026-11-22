@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:connectrpc/connect.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -47,6 +50,56 @@ void main() {
     expect(fake.subscriptions, hasLength(2));
     expect(fake.subscriptions.last.live, isTrue);
     expect(d.chats.keys, ['a']); // listed again
+    d.dispose(); // its ping timer ends with the test
+  });
+
+  testWidgets('a daemon gone ends every stream it serves, not just events', (
+    tester,
+  ) async {
+    final fake = FakeDaemon([chat('a', 'claude', 'Fix the login')])
+      ..files['README.md'] = [104, 105];
+    final hooked = StreamController<Object>();
+    addTearDown(hooked.close);
+    fake.streams = (r) => r is WatchServerLogRequest ? hooked.stream : null;
+    final d = await fake.connect(tester);
+    final ends = <String, Object?>{};
+    void watch(String name, Stream<Object> s) => s.listen(
+      (_) {},
+      onError: (Object e) => ends[name] = e,
+      onDone: () => ends.putIfAbsent(name, () => 'done'),
+    );
+    watch(
+      'folder',
+      d.client.watchChatFolder(
+        WatchChatFolderRequest(chatId: 'a', path: '/Users/me/nushi'),
+      ),
+    );
+    watch(
+      'file',
+      d.client.watchChatFile(
+        WatchChatFileRequest(chatId: 'a', path: 'README.md'),
+      ),
+    );
+    watch(
+      'hooked',
+      d.client.watchServerLog(WatchServerLogRequest(chatId: 'a')),
+    );
+    await tester.pump();
+    expect(ends, isEmpty);
+
+    fake.down = true;
+    await tester.pump();
+    expect(ends.keys, unorderedEquals(['folder', 'file', 'hooked']));
+    for (final e in ends.values) {
+      expect(
+        e,
+        isA<ConnectException>().having((e) => e.code, 'code', Code.unavailable),
+      );
+    }
+    fake.putFile('README.md', [104]); // a watch the daemon dropped is gone
+    await tester.pump();
+    fake.down = false;
+    await tester.pump(const Duration(seconds: 2));
     d.dispose(); // its ping timer ends with the test
   });
 }
