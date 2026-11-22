@@ -15,6 +15,13 @@
               "committedDate": "2026-11-19T08:55:00Z", "author": { "name": "Mira", "user": { "login": "mira" } },
               "statusCheckRollup": { "state": "SUCCESS" } } }
           ]
+        },
+        "first": {
+          "nodes": [
+            { "commit": { "oid": "1a2b3c4d5e6f708192a3b4c5d6e7f80912345678", "messageHeadline": "Expire idle sessions",
+              "committedDate": "2026-11-18T09:00:00Z", "author": { "name": "Mira", "user": { "login": "mira" } },
+              "statusCheckRollup": { "state": "FAILURE" } } }
+          ]
         }
       }
     }

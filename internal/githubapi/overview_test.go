@@ -112,6 +112,23 @@ func TestCommits(t *testing.T) {
 	}
 }
 
+// TestCommitsPastTheNewest: a pull request with more commits than the
+// newest 100 has its first put before them, so the trail's oldest is its
+// first; one whose first is among them has it once.
+func TestCommitsPastTheNewest(t *testing.T) {
+	f := newFake(t)
+	f.route("graphql Commits", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"repository":{"pullRequest":{
+			"commits":{"totalCount":150,"nodes":[{"commit":{"oid":"51"}},{"commit":{"oid":"150"}}]},
+			"first":{"nodes":[{"commit":{"oid":"1","messageHeadline":"Start","author":{"name":"Ann"}}}]}}}}}`))
+	})
+	cs, total, err := f.client().Commits(t.Context(), "acme/lumen", 57)
+	if err != nil || total != 150 || len(cs) != 3 || cs[0].OID != "1" || cs[0].Headline != "Start" || cs[0].AuthorName != "Ann" ||
+		cs[1].OID != "51" || cs[2].OID != "150" {
+		t.Fatalf("%+v %d %v", cs, total, err)
+	}
+}
+
 // TestLabelsPlain: a label's name loses what could hide or reorder text
 // around it, and a color that isn't six hex digits goes.
 func TestLabelsPlain(t *testing.T) {
