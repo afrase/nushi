@@ -15279,7 +15279,8 @@ type Terminal struct {
 	// The foreground program's command line while it isn't the shell.
 	Program string `protobuf:"bytes,6,opt,name=program,proto3" json:"program,omitempty"`
 	Exited  bool   `protobuf:"varint,7,opt,name=exited,proto3" json:"exited,omitempty"`
-	// -1: killed by a signal.
+	// -1: killed by a signal; a command's terminal says 128 plus the signal,
+	// as a shell does (130 for ⌃C).
 	ExitCode int32 `protobuf:"varint,8,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
 	// The name the user gave it, if any.
 	Name string `protobuf:"bytes,9,opt,name=name,proto3" json:"name,omitempty"`

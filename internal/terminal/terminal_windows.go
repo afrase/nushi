@@ -265,13 +265,14 @@ func (t *Terminal) closeConsole() {
 
 // waitProgram waits for the program to exit, and says its exit code. The
 // pseudo-console is closed then: its output pipe doesn't end before.
-func (t *Terminal) waitProgram() int {
+// Windows has no signals: the second is always 0.
+func (t *Terminal) waitProgram() (int, int) {
 	code := -1
 	if st, err := t.proc.Wait(); err == nil && !t.killed.Load() {
 		code = st.ExitCode() // TerminateProcess's 1 for a program killed outright
 	}
 	t.closeConsole()
-	return code
+	return code, 0
 }
 
 // foreground returns the shell's newest child, or 0 while it has none:

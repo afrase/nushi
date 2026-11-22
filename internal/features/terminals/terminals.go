@@ -100,7 +100,7 @@ func (s *Service) Open(chatID, folder, command string, cols, rows int) (model.Te
 func (t *term) state() model.Terminal {
 	m := t.Terminal
 	m.Program = t.shell.Program()
-	m.Exited, m.ExitCode = t.shell.Exit()
+	m.Exited, m.ExitCode = exitOf(t.shell, t.Command)
 	return m
 }
 
@@ -180,7 +180,7 @@ func (s *Service) Attach(id string, stop <-chan struct{}, fn func([]byte) bool) 
 	if replaced {
 		return false, 0, nil
 	}
-	exited, code = sh.Exit()
+	exited, code = exitOf(sh, t.Command)
 	return exited, code, nil
 }
 

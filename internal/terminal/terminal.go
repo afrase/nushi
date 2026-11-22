@@ -38,6 +38,7 @@ type Terminal struct {
 	subs    map[*sub]struct{}
 	program string // the foreground program's command line, if not the shell
 	code    int    // the exit code, once done (-1: killed by a signal, or by Close on Windows)
+	signal  int    // the signal that killed it, once done; 0 for none (always on Windows)
 }
 
 type sub struct {
@@ -87,13 +88,14 @@ func (t *Terminal) emit(b []byte) {
 // wait records the exit once the program ends and its output has been read
 // (or, if something it started keeps the terminal open, soon after).
 func (t *Terminal) wait(read <-chan struct{}) {
-	code := t.waitProgram()
+	code, signal := t.waitProgram()
 	select {
 	case <-read:
 	case <-time.After(500 * time.Millisecond):
 	}
 	t.mu.Lock()
 	t.code = code
+	t.signal = signal
 	t.program = ""
 	t.mu.Unlock()
 	close(t.done)
@@ -209,6 +211,18 @@ func (t *Terminal) Exit() (exited bool, code int) {
 		return true, t.code
 	default:
 		return false, 0
+	}
+}
+
+// Signal says which signal killed the program, once it has exited: 0 when
+// it exited by itself, or hasn't yet (and always on Windows). A shell
+// reports such an exit as 128 plus the signal (130 for ⌃C).
+func (t *Terminal) Signal() int {
+	select {
+	case <-t.done:
+		return t.signal
+	default:
+		return 0
 	}
 }
 

@@ -146,3 +146,24 @@ func TestRestartRunsTheCommandAgain(t *testing.T) {
 		t.Errorf("started %q", started)
 	}
 }
+
+// ⌃C in a command's terminal kills the shell running it (it has no job
+// control), which a shell would report as 130: the terminal says that,
+// not -1, so the app sees the command stopped.
+func TestACommandStoppedByCtrlCEndsWith130(t *testing.T) {
+	s := New(shStart(), "sh", tempFolder{t.TempDir()}, func(model.Event) {})
+	t.Cleanup(s.CloseAll)
+	m, err := s.Open("c1", "", "sleep 30; echo after", 80, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Write(m.ID, []byte{3}); err != nil {
+		t.Fatal(err)
+	}
+	if _, exited, code := follow(t, s, m.ID); !exited || code != 130 {
+		t.Errorf("ended %v with %d, want exited with 130", exited, code)
+	}
+	if l := s.List("c1"); len(l) != 1 || l[0].ExitCode != 130 {
+		t.Errorf("listed as %+v", l)
+	}
+}

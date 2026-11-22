@@ -2877,7 +2877,8 @@ message Terminal {
   // The foreground program's command line while it isn't the shell.
   string program = 6;
   bool exited = 7;
-  // -1: killed by a signal.
+  // -1: killed by a signal; a command's terminal says 128 plus the signal,
+  // as a shell does (130 for ⌃C).
   int32 exit_code = 8;
   // The name the user gave it, if any.
   string name = 9;

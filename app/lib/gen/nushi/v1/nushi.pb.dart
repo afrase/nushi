@@ -19857,7 +19857,8 @@ class Terminal extends $pb.GeneratedMessage {
   @$pb.TagNumber(7)
   void clearExited() => $_clearField(7);
 
-  /// -1: killed by a signal.
+  /// -1: killed by a signal; a command's terminal says 128 plus the signal,
+  /// as a shell does (130 for ⌃C).
   @$pb.TagNumber(8)
   $core.int get exitCode => $_getIZ(6);
   @$pb.TagNumber(8)

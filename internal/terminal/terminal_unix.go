@@ -80,10 +80,13 @@ func open() (master, tty *os.File, err error) {
 }
 
 // waitProgram waits for the program to exit, and says its exit code (-1:
-// killed by a signal).
-func (t *Terminal) waitProgram() int {
+// killed by a signal) and the signal that killed it (0 for none).
+func (t *Terminal) waitProgram() (code, signal int) {
 	_ = t.cmd.Wait()
-	return t.cmd.ProcessState.ExitCode()
+	if ws, ok := t.cmd.ProcessState.Sys().(syscall.WaitStatus); ok && ws.Signaled() {
+		signal = int(ws.Signal())
+	}
+	return t.cmd.ProcessState.ExitCode(), signal
 }
 
 // foreground returns the terminal's foreground process group, or 0.
