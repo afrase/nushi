@@ -6,7 +6,6 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/run_state.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shell_env_line.dart';
@@ -120,21 +119,13 @@ class _AgentsPageState extends State<AgentsPage> {
 /// The switch for [a]'s Go agent: "Run Codex without Node".
 String goAgentLabel(Agent a) => 'Run ${a.title} without Node';
 
-/// What [a]'s Go agent switch says under it, naming the adapter it
-/// replaces as last listed, as the daemon lists none while it's on.
-String goAgentDescription(Agent a) {
-  if (a.hasAdapter()) _adapterNames[a.name] = a.adapter.package.split('/').last;
-  final replaced = switch (_adapterNames[a.name]) {
-    final name? => 'the $name adapter',
-    null => 'its adapter',
-  };
-  return "New: Nushi's built-in agent instead of $replaced. "
-      'Chats use it from their next start.';
-}
-
-/// Each agent's adapter, by the last part of its package ("codex-acp"),
-/// as last listed with one.
-final Map<String, String> _adapterNames = runMap();
+/// What [a]'s Go agent switch says under it. "Its adapter", not the
+/// adapter's name: the daemon lists the agent with none while the switch
+/// is on, and the words don't change with the switch or with what this
+/// run happened to list.
+String goAgentDescription(Agent a) =>
+    "New: Nushi's built-in agent instead of its adapter. "
+    'Chats use it from their next start.';
 
 String _mb(int bytes) => '${(bytes / 1e6).round()} MB';
 

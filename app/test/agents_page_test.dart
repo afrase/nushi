@@ -104,7 +104,7 @@ Future<(FakeDaemon, Daemon)> _settings(
 /// The switch's words for Codex, as Settings › Agents has them.
 const _goLabel = 'Run Codex without Node';
 const _goDescription =
-    "New: Nushi's built-in agent instead of the codex-acp adapter. "
+    "New: Nushi's built-in agent instead of its adapter. "
     'Chats use it from their next start.';
 
 /// Settings › Agents' switch for Codex's Go agent.
@@ -201,7 +201,7 @@ void main() {
     expect(fake.calls.whereType<ListAgentsRequest>().length, listed + 1);
     expect(tester.widget<SettingsSwitch>(_goSwitch).value, isTrue);
     expect(tester.getRect(_goSwitch), at); // the switch stays put
-    // Its words stay too, though Codex is now listed with no adapter.
+    // Its words stay too, as Codex is now listed with no adapter.
     expect(find.text(_goDescription), findsOneWidget);
     expect(find.text('Set up'), findsNothing);
     expect(find.text('Ready'), findsNWidgets(4)); // Claude, Codex, Ante, PiG
@@ -237,15 +237,8 @@ void main() {
         ..settings.goAgents['pig'] = false,
     );
     expect(find.text(_goLabel), findsOneWidget);
-    // PiG was never listed with an adapter: the words name none.
     expect(find.text('Run PiG without Node'), findsOneWidget);
-    expect(
-      find.text(
-        "New: Nushi's built-in agent instead of its adapter. "
-        'Chats use it from their next start.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text(_goDescription), findsNWidgets(2)); // Codex's and PiG's
     final pig = find.descendant(
       of: find.ancestor(
         of: find.text('Run PiG without Node'),
