@@ -326,7 +326,9 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
               onTap: () => _reset(key),
             )
           : null,
-      clear: r.key != null
+      // None while a clash is offered: beside Take it and Cancel it would
+      // read as a third way to dismiss it.
+      clear: r.key != null && pending == null
           ? IconTap(
               Icons.close,
               key: ValueKey('shortcut-clear-$id'),

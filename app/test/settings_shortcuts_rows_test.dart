@@ -151,6 +151,8 @@ void main() {
       );
       expect(take.top, greaterThan(line.bottom));
       expect(cancel.right, tester.getRect(keyOf('sidebar')).right);
+      // No key isn't there while the clash is offered, its room kept.
+      expect(clearOf('sidebar'), findsNothing);
       expect(tester.takeException(), isNull);
       // Wide, side by side.
       await tester.binding.setSurfaceSize(const Size(1000, 2600));
