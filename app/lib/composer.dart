@@ -539,8 +539,9 @@ class _ComposerState extends State<Composer> {
                               '$sendNowKeyLabel stops '
                               '${chat.agentName} and sends',
                     hintStyle: theme.ui(t.hintOn(t.raised), size: 14),
-                    // A phone's box is one row: a hint never makes it two.
-                    hintMaxLines: touch ? 1 : null,
+                    // The box is one row: a hint never makes it two, even
+                    // hidden under what's typed (a long one ends in "…").
+                    hintMaxLines: 1,
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 6,
