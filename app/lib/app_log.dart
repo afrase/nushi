@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -28,6 +29,18 @@ class AppLog {
   /// stay (as the daemon's `logs.MaxSize`, `logs.Keep`).
   int maxSize = 10 << 20;
   static const keep = 2;
+
+  /// The home folder, written `~` in app.log as the daemon writes it in
+  /// its own (`logs.tilde`).
+  String home =
+      Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '';
+
+  // What the daemon keeps of an app's line (internal/api/logs.go), so a
+  // line in app.log is no longer than the same line in nushid.log.
+  static const _maxMessage = 2 << 10;
+  static const _maxStack = 16 << 10;
+  static const _maxAttrs = 16;
+  static const _maxAttr = 256;
 
   // At most _burst lines, then one every _every: an error each frame
   // can't flood the log. What's dropped is counted on the next line.
@@ -90,19 +103,22 @@ class AppLog {
         // to the file
       }
     }
-    _toFile(now, level, message, {
-      'source': 'app',
-      ...all,
-      if (stack.isNotEmpty) 'stack': stack,
-    });
+    _toFile(now, level, message, all, stack);
   }
 
+  // The line as the daemon's Log and handler would write it: the message
+  // and values cut to its caps, the first attributes by name, then each
+  // value with the home folder as ~. No secret shapes: the app holds none
+  // but its client token, which goes only into a header (ADR 0038).
   void _toFile(
     DateTime t,
     String level,
     String message,
     Map<String, String> attrs,
+    String stack,
   ) {
+    String value(String s, int max) => quote(tilde(cut(s, max), home));
+    final names = attrs.keys.toList()..sort();
     try {
       final f = File(path)..parent.createSync(recursive: true);
       if (f.existsSync() && f.lengthSync() > maxSize) {
@@ -114,14 +130,40 @@ class AppLog {
       }
       final line = StringBuffer(
         'time=${timestamp(t)} level=${level.toUpperCase()} '
-        'msg=${quote(message)}',
+        'msg=${value(message, _maxMessage)} source=app',
       );
-      attrs.forEach((k, v) => line.write(' $k=${quote(v)}'));
+      for (final k in names.take(_maxAttrs)) {
+        line.write(' ${quote(cut(k, _maxAttr))}=${value(attrs[k]!, _maxAttr)}');
+      }
+      if (stack.isNotEmpty) line.write(' stack=${value(stack, _maxStack)}');
       f.writeAsStringSync('$line\n', mode: FileMode.append, flush: true);
     } on Object catch (e) {
       debugPrint('app.log: $e');
     }
   }
+}
+
+/// [s], at most [max] bytes of its UTF-8, cut where a character starts,
+/// and `…` after it when cut (the daemon's `cut`).
+String cut(String s, int max) {
+  final bytes = utf8.encode(s);
+  if (bytes.length <= max) return s;
+  var end = max;
+  while (end > 0 && bytes[end] & 0xc0 == 0x80) {
+    end--;
+  }
+  return '${utf8.decode(bytes.sublist(0, end))}…';
+}
+
+/// [s] with [home] written `~` wherever it's a whole folder's name, not
+/// the start of a longer one (`/Users/ann2`), as the daemon's
+/// `logs.tilde` does.
+String tilde(String s, String home) {
+  if (home.isEmpty || home == '/') return s;
+  return s.replaceAllMapped(
+    RegExp('${RegExp.escape(home)}(?![A-Za-z0-9._-])'),
+    (_) => '~',
+  );
 }
 
 /// [t] as Go's slog writes it: 2026-10-25T15:16:55.513+09:00.

@@ -35,6 +35,33 @@ void main() {
     expect(File('${dir.path}/app.log.3').existsSync(), isFalse);
   });
 
+  test("app.log takes the daemon's ~ and its caps on a line", () async {
+    final log = AppLog('${dir.path}/app.log')..home = '/Users/someone';
+    await log.write(
+      'error',
+      'no /Users/someone/x.json or /Users/someone2/y ${'m' * 3000}',
+      stack: 's' * 20000,
+      attrs: {
+        'a_path': '/Users/someone',
+        'a_long': 'é' * 300, // two bytes each: cut on a character's edge
+        for (var i = 0; i < 20; i++) 'k${i.toString().padLeft(2, '0')}': 'v',
+      },
+    );
+    final line = File('${dir.path}/app.log').readAsStringSync();
+    expect(line, contains('msg="no ~/x.json or /Users/someone2/y mmm'));
+    expect(line, contains(' a_path=~ '));
+    expect(line, isNot(contains('/Users/someone/')));
+    // 2 KB of the message as given, before ~ shortens it.
+    expect(line, contains('y ${'m' * (2048 - 46)}…"'));
+    expect(line, contains(' a_long=${'é' * 128}… '));
+    expect(line, contains('stack=${'s' * 16384}…'));
+    expect(line, isNot(contains('s' * 16385)));
+    // Sixteen attributes, by name, as the daemon keeps them.
+    expect(RegExp(r' k\d\d=v').allMatches(line), hasLength(14));
+    expect(line, contains('k13=v'));
+    expect(line, isNot(contains('k14=')));
+  });
+
   test("an error each frame can't flood the log", () async {
     final log = AppLog('${dir.path}/app.log');
     for (var i = 0; i < 50; i++) {
