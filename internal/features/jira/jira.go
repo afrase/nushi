@@ -293,6 +293,16 @@ func (s *Service) client(site model.JiraSite, prompt bool) (Client, error) {
 	if kept := s.clients[id]; kept != nil {
 		return kept, nil // another asked at once: its client, for one set of limits
 	}
+	// The site removed (or its account changed) while the keychain was
+	// read: change saves under s.mu, so the config read here is current,
+	// and no client is kept for a site that's gone.
+	sites, err := s.store.JiraSites()
+	if err != nil {
+		return nil, err
+	}
+	if !slices.ContainsFunc(sites, func(x model.JiraSite) bool { return SiteID(x) == id && account(x) == account(site) }) {
+		return nil, fmt.Errorf("no Jira site %q: add it in Settings › Jira", id)
+	}
 	s.clients[id] = c
 	return c, nil
 }

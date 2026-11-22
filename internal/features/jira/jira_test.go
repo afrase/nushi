@@ -400,6 +400,52 @@ func TestRemoveSiteWhenTheTokenStays(t *testing.T) {
 	}
 }
 
+// removingTokens removes a site while its token is being read: the
+// keychain answering after the site went.
+type removingTokens struct {
+	*keychaintest.Keychain
+	remove func()
+}
+
+func (r *removingTokens) Get(account string, prompt bool) ([]byte, error) {
+	token, err := r.Keychain.Get(account, prompt)
+	if r.remove != nil {
+		r.remove()
+		r.remove = nil
+	}
+	return token, err
+}
+
+// A site removed while its first client is being opened (the token read
+// from the keychain at that moment) gets no client and keeps nothing:
+// its list never reaches the cache after it went.
+func TestRemoveSiteWhileItsTokenIsRead(t *testing.T) {
+	s, tokens, _ := newService(t)
+	site, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := &removingTokens{Keychain: tokens}
+	s2 := New(s.sites, r, s.store, s.keys) // just started: no client yet
+	r.remove = func() {
+		if err := s2.RemoveSite("e.atlassian.net"); err != nil {
+			t.Errorf("remove: %v", err)
+		}
+	}
+	if _, err := s2.List(t.Context(), "e.atlassian.net", Mine, ""); err == nil {
+		t.Error("a removed site listed")
+	}
+	var kept json.RawMessage
+	if at, err := s2.store.Cached(cacheArea, "e.atlassian.net", listKey(site, Mine, ""), &kept); err != nil || !at.IsZero() {
+		t.Errorf("its list kept: %s %v %v", kept, at, err)
+	}
+	s2.mu.Lock()
+	defer s2.mu.Unlock()
+	if s2.clients["e.atlassian.net"] != nil {
+		t.Error("a client kept for the removed site")
+	}
+}
+
 // An answer to a token replaced or removed while Jira was asked isn't
 // kept: the next account on the site (the same host, another email)
 // would see the old one's list until a refresh.
