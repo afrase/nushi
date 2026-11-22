@@ -69,3 +69,42 @@ func TestEditingAnAnteServerRoundTrips(t *testing.T) {
 		t.Errorf("after a refused edit: api = %v, want %v", got, want)
 	}
 }
+
+// Ante rewrites the whole file with every key it knows, null when unset
+// (docs/facts/ante.md): a null "url" or "command" isn't one, so a stdio
+// server stays stdio and a URL server edited with its secret masked keeps
+// it.
+func TestAnteRewrittenServersReadAndEdit(t *testing.T) {
+	path := home(t, `{"mcp_servers": {
+		"fs": {"command": "npx", "args": ["srv"], "env": {}, "url": null, "transport": null, "headers": null, "enabled_tools": []},
+		"api": {"command": null, "args": [], "env": {}, "url": "https://api.example.com/mcp", "transport": null, "headers": {"Authorization": "Bearer s3cret"}, "enabled_tools": []}
+	}}`)
+	got, err := Ante{}.Servers("/any")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]map[string]any{
+		"api": {"type": "http", "url": "https://api.example.com/mcp", "headers": map[string]any{"Authorization": "Bearer s3cret"}, "enabled_tools": []any{}},
+		"fs":  {"command": "npx", "args": []any{"srv"}, "enabled_tools": []any{}},
+	}
+	for _, sv := range got {
+		var c map[string]any
+		if err := json.Unmarshal([]byte(sv.Config), &c); err != nil || !reflect.DeepEqual(c, want[sv.Name]) {
+			t.Errorf("%s = %s, want %v", sv.Name, sv.Config, want[sv.Name])
+		}
+	}
+	ctx := context.Background()
+	svc := mcp.New("ante", Ante{}, nil)
+	list, _, err := svc.List(ctx, "/f", false)
+	if err != nil || len(list) != 2 {
+		t.Fatalf("list = %+v, %v", list, err)
+	}
+	for _, sv := range list {
+		if err := svc.Edit(ctx, "/f", "user", sv.Name, sv.Config); err != nil {
+			t.Errorf("%s sent back as shown: %v", sv.Name, err)
+		}
+	}
+	if got := servers(t, path)["api"]["headers"]; !reflect.DeepEqual(got, map[string]any{"Authorization": "Bearer s3cret"}) {
+		t.Errorf("api's headers = %v", got)
+	}
+}

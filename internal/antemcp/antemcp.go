@@ -161,11 +161,17 @@ func change(edit func(map[string]json.RawMessage) error) error {
 
 // normalize is a server's config as Ante takes it: "type" (Nushi's and
 // Claude's word) dropped with "transport", so Ante infers it from the
-// command or URL; exactly one of them.
+// command or URL; exactly one of them. A null key is left out, as unset:
+// Ante writes null for every key it knows that a server hasn't.
 func normalize(config string) (json.RawMessage, error) {
 	var cfg map[string]any
 	if err := json.Unmarshal([]byte(config), &cfg); err != nil || cfg == nil {
 		return nil, errors.New("the config isn't a JSON object")
+	}
+	for k, v := range cfg {
+		if v == nil {
+			delete(cfg, k)
+		}
 	}
 	if t, ok := cfg["type"]; ok {
 		if t == "sse" {
@@ -188,11 +194,18 @@ func normalize(config string) (json.RawMessage, error) {
 // from the URL); a command's says none, as stdio. Any other transport
 // (one Ante refuses, such as "sse") stays as the type. Empty "args" and
 // "env", which Ante writes for every server, go as the form leaves them
-// out. What isn't an object is left as stored. normalize is the way back.
+// out, and so does a null key, which Ante writes for each one it knows
+// that a server hasn't (docs/facts/ante.md): a null "url" isn't a URL.
+// What isn't an object is left as stored. normalize is the way back.
 func shown(raw json.RawMessage) string {
 	var cfg map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &cfg); err != nil || cfg == nil {
 		return string(raw)
+	}
+	for k, v := range cfg {
+		if string(v) == "null" { // Unmarshal keeps a value's bytes as written: null is just that
+			delete(cfg, k)
+		}
 	}
 	for _, key := range []string{"args", "env"} {
 		if v, ok := cfg[key]; ok && jsonEmpty(v) {
