@@ -587,16 +587,61 @@ final Pref<Map<String, String>> shortcutKeys = Pref(
 /// that name, which replaces it for good (a later Reset is the default).
 Map<String, Object?> _otherShortcuts = const {};
 
-/// The prefs kept by chat, which [chatsKept] and [forgetChats] go through.
-/// Named here rather than found among those made: a pref is made when
-/// first read, and a chat gone is forgotten from those not read yet too.
-List<Pref<Object?>> get _chatPrefs => [
+/// Every pref, in the order they're declared: the one list of them, which
+/// the prefs kept by chat are found in and tests go through (a new pref
+/// goes here too; a test counts the declarations). Reading it makes every
+/// pref, so each is saved from then on, as one read is.
+@visibleForTesting
+List<Pref<Object?>> get allPrefs => [
+  showDetails,
+  collapsedWidgets,
+  widgetOrder,
   changeScopes,
+  changesFlat,
+  diffUnified,
   terminalChats,
   filesChats,
+  filesIgnored,
   fileTabsKept,
+  filesTree,
+  previewTabs,
+  indentGuides,
+  scrollPastEnd,
+  tabSize,
+  filesTreeSide,
+  lastJiraSite,
+  jiraGroupOrder,
+  jiraCollapsed,
+  jiraAssignee,
+  githubTeamReviews,
+  githubCardOrder,
+  githubCollapsed,
+  githubDays,
+  githubHidden,
+  githubOwners,
+  githubKnownRepos,
+  githubFindings,
+  githubFindingBots,
+  githubFindingHeadings,
+  cardAsks,
+  mergeMethods,
+  sidebarOrder,
+  sidebarCollapsed,
+  sidebarProjects,
+  projectRail,
+  sidebarProject,
+  projectTiles,
   sidebarChats,
+  sidebarHidden,
+  pinnedCollapsed,
+  pinnedEveryProject,
+  sidebarGroupBy,
+  sidebarSort,
+  sidebarAscending,
+  projectSorts,
+  sidebarShows,
   sidebarSections,
+  recentModels,
   chatOpened,
   pinnedFiles,
   pullSeen,
@@ -604,7 +649,36 @@ List<Pref<Object?>> get _chatPrefs => [
   checksSeen,
   pickedPulls,
   cleanUpLater,
+  paneWidths,
+  chatFullWidth,
+  terminalFont,
+  terminalFontSize,
+  appFont,
+  codeFont,
+  appearance,
+  colorTheme,
+  alertNeedsYou,
+  alertFinished,
+  alertFailed,
+  alertSound,
+  dockBadge,
+  checkSpelling,
+  enterStartsLine,
+  planCollapsed,
+  linksInBrowserTab,
+  localNetworkSites,
+  wrapLines,
+  showWhitespace,
+  usageRange,
+  dismissedUpdate,
+  shortcutKeys,
 ];
+
+/// The prefs kept by chat, which [chatsKept] and [forgetChats] go
+/// through: found among them all rather than those made, as a pref is made
+/// when first read, and a chat gone is forgotten from those not read yet
+/// too.
+Iterable<Pref<Object?>> get _chatPrefs => allPrefs.where((p) => p._keptByChat);
 
 /// The chats some pref keeps something for.
 Set<String> chatsKept() => {for (final p in _chatPrefs) ...p.chats};
@@ -651,6 +725,11 @@ final class Pref<T> extends ValueNotifier<T> {
   final Object? Function(T value)? _write;
   final Iterable<String> Function(T value)? _chats;
   final T Function(T value, Set<String> gone)? _without;
+
+  /// Whether it's kept by chat. (Asked of it, not read off its `_chats`:
+  /// a pref seen as a `Pref<Object?>` can't give a function of its own
+  /// type.)
+  bool get _keptByChat => _chats != null;
 
   /// The chats this keeps something for (none unless it's kept by chat).
   Iterable<String> get chats => _chats?.call(value) ?? const [];
