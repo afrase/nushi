@@ -157,14 +157,10 @@ const scopes = {
 Map<String, dynamic> config(McpServer s) =>
     (jsonDecode(s.configJson) as Map).cast<String, dynamic>();
 
-/// "stdio", "http", "sse", ... (Ante's "transport" too, its
-/// "streamable-http" as "http").
+/// "stdio", "http", "sse", ...: its "type", else stdio for a command and
+/// http for a URL. The daemon sends every agent's in this shape.
 String transport(Map<String, dynamic> c) =>
-    switch (c['type'] as String? ?? c['transport'] as String?) {
-      'streamable-http' => 'http',
-      final String t => t,
-      null => c['url'] == null ? 'stdio' : 'http',
-    };
+    c['type'] as String? ?? (c['url'] == null ? 'stdio' : 'http');
 
 /// Its command line, or its URL.
 String target(Map<String, dynamic> c) =>

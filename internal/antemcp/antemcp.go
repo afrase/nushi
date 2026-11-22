@@ -51,7 +51,8 @@ func read() (map[string]json.RawMessage, error) {
 }
 
 // Servers returns your servers, sorted by name, in user scope: Ante's
-// are the same in every folder.
+// are the same in every folder. Each config is in the shape Nushi's form
+// writes (shown), which Add turns back into Ante's.
 func (Ante) Servers(string) ([]model.MCPServer, error) {
 	servers, err := read()
 	if err != nil {
@@ -59,7 +60,7 @@ func (Ante) Servers(string) ([]model.MCPServer, error) {
 	}
 	out := make([]model.MCPServer, 0, len(servers))
 	for name, raw := range servers {
-		out = append(out, model.MCPServer{Name: name, Scope: "user", Source: ante.SettingsFile(), Config: string(raw)})
+		out = append(out, model.MCPServer{Name: name, Scope: "user", Source: ante.SettingsFile(), Config: shown(raw)})
 	}
 	slices.SortFunc(out, func(a, b model.MCPServer) int { return cmp.Compare(a.Name, b.Name) })
 	return out, nil
@@ -179,6 +180,49 @@ func normalize(config string) (json.RawMessage, error) {
 		return nil, errors.New("Ante needs a command or a URL, not both")
 	}
 	return json.Marshal(cfg)
+}
+
+// shown is a server's config in the shape Nushi's form writes, as Claude
+// says it: Ante's "transport" goes, and a URL's server says "type"
+// "http" (Ante's "streamable-http" or "http", or none, which Ante infers
+// from the URL); a command's says none, as stdio. Any other transport
+// (one Ante refuses, such as "sse") stays as the type. Empty "args" and
+// "env", which Ante writes for every server, go as the form leaves them
+// out. What isn't an object is left as stored. normalize is the way back.
+func shown(raw json.RawMessage) string {
+	var cfg map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &cfg); err != nil || cfg == nil {
+		return string(raw)
+	}
+	for _, key := range []string{"args", "env"} {
+		if v, ok := cfg[key]; ok && jsonEmpty(v) {
+			delete(cfg, key)
+		}
+	}
+	var transport string
+	_ = json.Unmarshal(cfg["transport"], &transport) // not text: inferred, as Ante does
+	delete(cfg, "transport")
+	switch _, url := cfg["url"]; {
+	case transport == "streamable-http" || transport == "http" || transport == "" && url:
+		cfg["type"] = json.RawMessage(`"http"`)
+	case transport != "" && transport != "stdio":
+		cfg["type"], _ = json.Marshal(transport) // a string encodes
+	}
+	b, err := json.Marshal(cfg)
+	if err != nil {
+		return string(raw)
+	}
+	return string(b)
+}
+
+// jsonEmpty says v is [] or {} (or null).
+func jsonEmpty(v json.RawMessage) bool {
+	var a []any
+	if json.Unmarshal(v, &a) == nil && len(a) == 0 {
+		return true
+	}
+	var m map[string]any
+	return json.Unmarshal(v, &m) == nil && len(m) == 0
 }
 
 // Project is folder: Ante's servers don't depend on it.
