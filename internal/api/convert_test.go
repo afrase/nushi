@@ -44,7 +44,7 @@ func TestQueueEventImagesGoAsReferences(t *testing.T) {
 			got[0].GetSha256(), len(got[0].GetData()), got[0].GetSize())
 	}
 	if !bytes.Equal(got[1].GetData(), small.Data) {
-		t.Errorf("small image with refs came without its bytes")
+		t.Error("small image with refs came without its bytes")
 	}
 	inline := toProto(event, false).GetQueue().GetMessages()[0].GetImages()
 	if !bytes.Equal(inline[0].GetData(), large.Data) {
