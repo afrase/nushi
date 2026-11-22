@@ -185,6 +185,20 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
+  for (final lines in [false, true]) {
+    testWidgets('the commands’ list takes the keypad’s Enter too '
+        '(Enter starts a new line: $lines)', (tester) async {
+      enterStartsLine.value = lines;
+      final (fake, d, _) = await _box(tester);
+      await _write(tester, '/pl');
+      await tester.sendKeyEvent(LogicalKeyboardKey.numpadEnter);
+      await tester.pump();
+      expect(_text(tester).text, '/plan ');
+      expect(_sent(fake), isEmpty);
+      d.dispose();
+    }, variant: onMac);
+  }
+
   spellTest('the spelling menu over the box still takes Enter', (tester) async {
     enterStartsLine.value = true;
     final (_, chat) = await spellBox(

@@ -127,10 +127,13 @@ class Completions extends ChangeNotifier {
     );
   }
 
-  /// Takes a key while choices show: arrows move, Enter or Tab picks,
-  /// Escape closes. True if it was taken.
+  /// Takes a key while choices show: arrows move, Enter (the keypad's
+  /// too) or Tab picks, Escape closes. True if it was taken.
   bool onKey(LogicalKeyboardKey key, {required bool shift}) {
     if (choices.isEmpty) return false;
+    final enter =
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter;
     if (key == LogicalKeyboardKey.arrowDown ||
         key == LogicalKeyboardKey.arrowUp) {
       final step = key == LogicalKeyboardKey.arrowDown ? 1 : -1;
@@ -139,7 +142,7 @@ class Completions extends ChangeNotifier {
       return true;
     }
     // ⌃Tab and ⌃⇧Tab are the chat's tabs (`chat_keys.dart`), not a pick.
-    if ((key == LogicalKeyboardKey.enter && !shift) ||
+    if ((enter && !shift) ||
         (key == LogicalKeyboardKey.tab &&
             !HardwareKeyboard.instance.isControlPressed)) {
       accept(choices[picked]);
