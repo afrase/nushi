@@ -57,14 +57,14 @@ func answered(t *testing.T, svc *Service, agent *fakeAgent, c *chat, text, reply
 	t.Helper()
 	agent.updates = []acp.SessionUpdate{chunk(reply, "ok")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 }
 
 func TestPinMessage(t *testing.T) {
 	svc, agent, c, _, _ := newCopyingChat(t)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "a"), toolCall("t1", "completed")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	turns(t, svc, agent, c, "t2")
 
 	pin := func(what string, on bool) {
@@ -146,7 +146,7 @@ func TestPinsFollowAReopenWithoutTheCopy(t *testing.T) {
 		t.Helper()
 		agent.updates = updates
 		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 	}
 	reply("t1", chunk("", "Same."))
 	reply("t2", chunk("m2", "Other."))

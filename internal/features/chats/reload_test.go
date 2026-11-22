@@ -77,7 +77,7 @@ func watchedChat(t *testing.T) (*Service, *fakeAgent, *chat, *watcher) {
 	}{{"one", []acp.SessionUpdate{chunk("m1", "a"), toolCall("t1", "completed")}}, {"two", []acp.SessionUpdate{chunk("m2", "b")}}} {
 		agent.updates = turn.updates
 		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: turn.text}, SendIdle))
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 	}
 	return svc, agent, c, w
 }

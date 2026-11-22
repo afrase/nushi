@@ -27,6 +27,12 @@ func eventually(t *testing.T, c *chat, cond func() bool) {
 	}
 }
 
+// idle waits until the chat's published status says its turn is over.
+func idle(t *testing.T, c *chat) {
+	t.Helper()
+	eventually(t, c, func() bool { return !c.statusLocked().Busy })
+}
+
 func (f *fakeAgent) texts() ([]string, []string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -58,7 +64,7 @@ func TestQueueGoesAfterTheTurnInOrder(t *testing.T) {
 	agent.release()
 	eventually(t, c, func() bool { return len(c.queue) == 0 && c.busy })
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got, _ := agent.texts(); !reflect.DeepEqual(got, []string{"one", "two", "four"}) {
 		t.Errorf("prompts = %q", got)
 	}
@@ -91,7 +97,7 @@ func TestUnqueueAsTheTurnEnds(t *testing.T) {
 		switch {
 		case err == nil && m.Text == text:
 			took = append(took, text)
-			eventually(t, c, func() bool { return !c.busy })
+			idle(t, c)
 			send(fmt.Sprintf("t%d", i), SendIdle)
 		case err != nil && strings.Contains(err.Error(), "has it already"):
 			sent = append(sent, text)
@@ -100,7 +106,7 @@ func TestUnqueueAsTheTurnEnds(t *testing.T) {
 		}
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	t.Logf("%d taken back, %d sent", len(took), len(sent))
 	prompts, _ := agent.texts()
 	for _, text := range sent {
@@ -128,7 +134,7 @@ func TestQueueSteersBetweenToolCalls(t *testing.T) {
 	eventually(t, c, func() bool { return len(c.items) == 3 && c.items[2].Text == "two" })
 	eventually(t, c, func() bool { _, steered := agent.texts(); return reflect.DeepEqual(steered, []string{"two"}) })
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 }
 
 func TestSendNowStopsTheTurn(t *testing.T) {
@@ -147,7 +153,7 @@ func TestSendNowStopsTheTurn(t *testing.T) {
 	eventually(t, c, func() bool { return len(c.queue) == 0 })
 	eventually(t, c, func() bool { got, _ := agent.texts(); return reflect.DeepEqual(got, []string{"one", "now", "held"}) })
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy }) // else Close's cancel could close the gate the release did
+	idle(t, c) // else Close's cancel could close the gate the release did
 }
 
 // A subagent's own step ending isn't the agent's chance: a message steered
@@ -176,7 +182,7 @@ func TestQueueWaitsOutASubagentsSteps(t *testing.T) {
 	call("t1", nil)
 	eventually(t, c, func() bool { _, steered := agent.texts(); return reflect.DeepEqual(steered, []string{"two"}) })
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 }
 
 // A stopped turn holds the queue: a tool call the stop fails, ending
@@ -198,7 +204,7 @@ func TestAToolEndAfterStopSteersNothing(t *testing.T) {
 		t.Errorf("steered %q into the stopped turn", steered)
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if !c.held || len(c.queue) != 1 || c.queue[0].Text != "two" {
@@ -227,7 +233,7 @@ func TestStopEndsTheSteering(t *testing.T) {
 		t.Errorf("steered %q", steered)
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if !c.held || len(c.queue) != 1 || c.queue[0].Text != "three" {
@@ -279,7 +285,7 @@ func TestQueuedImagesGoOnlyToAnAgentThatTakesThem(t *testing.T) {
 			}
 		}
 		agent.release()
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 		// The message as the transcript has it is what went: its blocks are made from it.
 		c.mu.Lock()
 		i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Text == "pic" })

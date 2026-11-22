@@ -118,7 +118,7 @@ func TestAnImageIsHeldAsAReferenceOnceItsCopyHasIt(t *testing.T) {
 		t.Fatal("an image the copy hasn't yet let go of its bytes")
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	agent.mu.Lock()
 	agent.gate = nil
 	agent.mu.Unlock()
@@ -192,7 +192,7 @@ func TestAMessageSentAgainHasItsImages(t *testing.T) {
 	hasBytes(t, "the rewound message", msg.Images, first)
 	agent.updates = []acp.SessionUpdate{chunk("m3", "ok")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, msg, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got := sentImages(t, agent); len(got) != 1 || !bytes.Equal(got[0], first) {
 		t.Errorf("the agent got %d images again", len(got))
 	}
@@ -260,7 +260,7 @@ func TestAQueuedMessageKeepsItsImages(t *testing.T) {
 	agent.release()
 	eventually(t, c, func() bool { return len(c.queue) == 0 }) // its turn runs
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got := sentImages(t, agent); len(got) != 1 || !bytes.Equal(got[0], shot) {
 		t.Errorf("the agent got %d images from the queue", len(got))
 	}

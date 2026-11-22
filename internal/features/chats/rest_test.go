@@ -22,7 +22,7 @@ func TestRestAndUnrest(t *testing.T) {
 		t.Errorf("Rest mid-turn = %v, %q", ok, holding)
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 
 	if ok, holding := svc.Rest(); !ok || holding != "" {
 		t.Fatalf("Rest when quiet = %v, %q", ok, holding)
@@ -43,7 +43,7 @@ func TestRestAndUnrest(t *testing.T) {
 	agent.updates = []acp.SessionUpdate{chunk("m2", "ok")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
 	agent.release() // each turn waits on a gate of its own
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got, _ := agent.texts(); !slices.Equal(got, []string{"one", "two"}) {
 		t.Errorf("after Unrest, the agent got %q", got)
 	}

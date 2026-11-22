@@ -99,7 +99,7 @@ func TestAStoppedTurnIsntDone(t *testing.T) {
 	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if isDone(c) {
 		t.Error("a stopped turn left it done")
 	}
@@ -156,7 +156,7 @@ func TestATurnUpdatesTheChat(t *testing.T) {
 	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if !updated(c).After(sent) {
 		t.Error("a stopped turn's end didn't update it")
 	}

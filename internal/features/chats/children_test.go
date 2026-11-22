@@ -183,7 +183,7 @@ func TestABackgroundCommandIsStoppedThroughClaude(t *testing.T) {
 		}
 	}
 	testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, sleeping))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if prompts, _ := agent.texts(); len(prompts) != 1 || prompts[0] != claudeHarness.StopTask("bgu2i75cc") {
 		t.Errorf("asked %q", prompts)
 	}

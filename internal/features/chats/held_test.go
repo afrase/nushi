@@ -99,7 +99,7 @@ func TestASteeredTurnEndsAtItsLastResult(t *testing.T) {
 		t.Fatal("the cut-short work's result ended the turn")
 	}
 	send(c, result())
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	agent.release()
 }
 
@@ -120,7 +120,7 @@ func TestAResultAloneDoesntEndTheTurn(t *testing.T) {
 		t.Error("ended before the prompt's answer")
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 }
 
 // Claude's sessions ask that a stop spare background subagents; a

@@ -143,7 +143,7 @@ func TestPinTitledByTheAgent(t *testing.T) {
 			eventually(t, c, func() bool { return c.busy }) // the turn runs on
 
 			close(agent.gate)
-			eventually(t, c, func() bool { return !c.busy })
+			idle(t, c)
 			if got := shown(c); got != "user:t1 agent:m1 user:t2 agent:m2" {
 				t.Errorf("shown %s", got)
 			}

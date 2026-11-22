@@ -19,7 +19,7 @@ import (
 // sent is the prompt the agent got last, once the chat's turn has ended.
 func sent(t *testing.T, c *chat, agent *fakeAgent) []acp.ContentBlock {
 	t.Helper()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
 	return agent.prompt
@@ -161,7 +161,7 @@ func TestARefusedMessageSavesNoUploads(t *testing.T) {
 		t.Fatal("a busy chat took a message without queueing it")
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	c.mu.Lock()
 	c.record.Archived = true
 	c.mu.Unlock()
@@ -204,7 +204,7 @@ func TestPruningLeavesTheQueuesUploads(t *testing.T) {
 		eventually(t, c, func() bool { prompts, _ := agent.texts(); return len(prompts) == n })
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 }
 
 // A terminal command's uploads go with the prompt after it, and none is
@@ -225,7 +225,7 @@ func TestACommandsUploads(t *testing.T) {
 		t.Errorf("a refused command left %d uploads", len(entries))
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, up("/plan"), SendIdle))
 	eventually(t, c, func() bool { prompts, _ := agent.texts(); return len(prompts) == 2 })
 	agent.release()

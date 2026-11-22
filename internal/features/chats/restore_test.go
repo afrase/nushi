@@ -67,7 +67,7 @@ func TestReopenShowsWhatBothHaveOnce(t *testing.T) {
 	turn := func(text string, updates ...acp.SessionUpdate) {
 		agent.updates = updates
 		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 	}
 	turn("one", chunk("m1", "a"), toolCall("t1", "completed"))
 	turn("two", chunk("m2", "b"))
@@ -104,7 +104,7 @@ func TestReopenDatesMessagesFromTheAgentsFiles(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "a")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	c.mu.Lock()
 	c.items[slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage })].Sent = time.Time{} // as from before Nushi kept times
 	c.unsaved[c.items[0].ID] = true
@@ -166,7 +166,7 @@ func TestReplayTellsWhenAMessageWasSent(t *testing.T) {
 	dated := chunk("m0", "older")
 	dated.AgentMessageChunk.Meta = map[string]any{model.SentMeta: "2026-10-25T01:02:03Z"}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 
 	agent.history = []acp.SessionUpdate{dated}
 	back := reopened(t, restarted(t, agent, c, store), c.id)
@@ -183,7 +183,7 @@ func TestReopenAfterACompaction(t *testing.T) {
 	turn := func(text string, updates ...acp.SessionUpdate) {
 		agent.updates = updates
 		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 	}
 	turn("one", chunk("m1", "a"))
 	turn("two", chunk("m2", "b"))
@@ -212,7 +212,7 @@ func TestArchivedChatShowsItsCopy(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "a")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	c.mu.Lock()
 	c.items[slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage })].Sent = time.Time{} // as from before Nushi kept times
 	c.unsaved[c.items[0].ID] = true

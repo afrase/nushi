@@ -149,7 +149,7 @@ func TestUltracode(t *testing.T) {
 		t.Errorf("during a turn: %v", err)
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 
 	// Asleep: kept, the agent left asleep until something needs it.
 	testcheck.NoErr(t, svc.Sleep(c.id))

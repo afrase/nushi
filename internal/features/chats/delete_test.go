@@ -182,7 +182,7 @@ func TestNothingReopensAChatBeingDeleted(t *testing.T) {
 	}
 	// A reopen Get or Prompt began is busy from then until its agent has
 	// started: waited out, its launch is counted.
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	agent.mu.Lock()
 	again := agent.launches
 	agent.mu.Unlock()

@@ -199,7 +199,7 @@ func TestABackgroundCommandIsStoppedByItsProcessGroup(t *testing.T) {
 	}
 
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "Carry on"}, SendQueue))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	agent.mu.Lock()
 	sent := agent.prompt
 	agent.mu.Unlock()
@@ -231,7 +231,7 @@ func TestABackgroundCommandFallsBackToTaskStop(t *testing.T) {
 			svc, agent, c, procs := f.svc, f.agent, f.c, f.procs
 			procs.err = tc.err
 			testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, waitCall))
-			eventually(t, c, func() bool { return !c.busy })
+			idle(t, c)
 			if prompts, _ := agent.texts(); len(prompts) != 1 || prompts[0] != claudeHarness.StopTask(waitTask) {
 				t.Errorf("asked %q", prompts)
 			}

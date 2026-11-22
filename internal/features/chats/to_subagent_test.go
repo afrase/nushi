@@ -22,7 +22,7 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "and README.md", To: "a1"}, SendQueue); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	got, _ := agent.texts()
 	if len(got) != 1 || got[0] != claudeHarness.ToSubagent("Explore", "ab59", "and README.md", nil) {
 		t.Errorf("prompts = %q", got)
@@ -52,7 +52,7 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "see these", To: "a1", Files: []string{"docs/a.md", "/x/b c.pdf"}}, SendQueue); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	agent.mu.Lock()
 	p := agent.prompt
 	agent.mu.Unlock()
@@ -107,7 +107,7 @@ func TestAMessageToASubagentFollowsTheAgentsCall(t *testing.T) {
 		if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "and README.md", To: "a1"}, SendIdle); err != nil {
 			t.Fatal(err)
 		}
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 		if it := last(); it.ToSubagentState != tc.want || it.PassedOnBy != tc.by {
 			t.Errorf("after %s: %s by %q", tc.calls[len(tc.calls)-1].SessionUpdate, it.ToSubagentState, it.PassedOnBy)
 		}

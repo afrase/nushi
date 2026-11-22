@@ -165,7 +165,7 @@ func TestTakingBackKeepsWhatAMessageHad(t *testing.T) {
 		t.Errorf("Unqueue of a side chat's = %+v, %v", m, err)
 	}
 	agent.release()
-	eventually(t, q, func() bool { return !q.busy })
+	idle(t, q)
 
 	agent.gate = make(chan struct{})
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "look at @a.go", Files: []string{"a.go"}}, SendIdle))
@@ -217,7 +217,7 @@ func TestReloadLeavesNothingOfTheOldAgent(t *testing.T) {
 	if resp := <-answer; !resp.Outcome.Cancelled {
 		t.Errorf("the prompt got %+v", resp.Outcome)
 	}
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got := texts(c); slices.Contains(got, "agent:last words") || svc.Status(model.ChatRecord{ID: c.id}).Waiting || svc.Status(model.ChatRecord{ID: c.id}).MCPChanged {
 		t.Errorf("after Reload: %q, %+v", got, svc.Status(model.ChatRecord{ID: c.id}))
 	}

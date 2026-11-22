@@ -34,7 +34,7 @@ func TestCloseStopsAnAgentStillOpening(t *testing.T) {
 	svc.Close()
 	_, closed, _ := agent.count()
 	close(agent.loadGate)
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got, _ := agent.texts(); !slices.Equal(got, []string{"one"}) || closed == 0 {
 		t.Errorf("prompts %q, closed %d times", got, closed)
 	}
@@ -55,7 +55,7 @@ func TestAFailedReopenIsntRetriedOnEveryCall(t *testing.T) {
 	before, _, _ := agent.count()
 	for range 3 {
 		_, _ = svc.Get(c.id) // the reopen it starts is what's tested
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 	}
 	launches, _, _ := agent.count()
 	if launches != before+1 {

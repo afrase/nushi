@@ -700,7 +700,7 @@ func TestStoppingAWorkflow(t *testing.T) {
 		f.c.itemLocked(wfCall).Workflow.Stalled = stalled
 		f.c.mu.Unlock()
 		testcheck.NoErr(t, f.svc.StopTask(t.Context(), f.c.id, wfCall))
-		eventually(t, f.c, func() bool { return !f.c.busy })
+		idle(t, f.c)
 		if prompts, _ := f.agent.texts(); len(prompts) != 1 || prompts[0] != claudeHarness.StopTask("w9u1xb6ik") {
 			t.Errorf("stalled %v: asked %q", stalled, prompts)
 		}

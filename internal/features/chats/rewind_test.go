@@ -24,7 +24,7 @@ func TestRewindForksBeforeTheMessage(t *testing.T) {
 		if err := svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle); err != nil {
 			t.Fatal(err)
 		}
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 	}
 	turn("one", "m1")
 	turn("two", "m2")
@@ -155,7 +155,7 @@ func TestStopTakesBackAnUnansweredMessage(t *testing.T) {
 	ctx := context.Background()
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 
 	agent.updates, agent.gate = nil, make(chan struct{})
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
@@ -171,7 +171,7 @@ func TestStopTakesBackAnUnansweredMessage(t *testing.T) {
 	if m, err := svc.Stop(ctx, c.id, true); m != nil || err != nil {
 		t.Errorf("Stop after an answer = %+v, %v", m, err)
 	}
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 
 	// Without rewinding, it stays, with a notice.
 	agent.updates, c.forkAt = nil, nil

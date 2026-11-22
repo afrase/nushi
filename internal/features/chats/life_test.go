@@ -29,7 +29,8 @@ func turn(t *testing.T, svc *Service, c *chat, text string) {
 	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 })
+	eventually(t, c, func() bool { return len(c.queue) == 0 })
+	idle(t, c)
 }
 
 // A chat whose agent quit keeps its transcript; moved, its new agent's
@@ -97,7 +98,7 @@ func TestTheModeSurvivesANewSession(t *testing.T) {
 	}
 	plan := func(when string) {
 		t.Helper()
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		if c.record.Mode != "plan" || current(c, "mode") != "plan" {

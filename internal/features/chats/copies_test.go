@@ -82,7 +82,7 @@ func TestCopyWrittenAsItemsSettle(t *testing.T) {
 		t.Fatalf("during the turn: %s", got)
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got := copied(t, store, c.id); got != "user:one agent:m1 tool:t1 tool:t2 agent:m2" {
 		t.Fatalf("after the turn: %s", got)
 	}
@@ -100,7 +100,7 @@ func TestCopyFollowsTheTranscript(t *testing.T) {
 	turn := func(text, reply string) {
 		agent.updates = []acp.SessionUpdate{chunk(reply, "ok")}
 		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 	}
 	turn("one", "m1")
 	turn("two", "m2")
@@ -128,7 +128,7 @@ func TestCopyFollowsTheTranscript(t *testing.T) {
 	testcheck.NoErr(t, err)
 	agent.updates = []acp.SessionUpdate{chunk("s1", "aside")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), side, model.Message{Text: "aside?"}, SendIdle))
-	eventually(t, svc.chats[side], func() bool { return !svc.chats[side].busy })
+	idle(t, svc.chats[side])
 	if store.Has(side) {
 		t.Error("a side chat has a copy")
 	}
@@ -146,14 +146,14 @@ func TestCopiesOff(t *testing.T) {
 	on.Store(false)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if store.Has(c.id) {
 		t.Fatal("written while off")
 	}
 	on.Store(true)
 	agent.updates = []acp.SessionUpdate{chunk("m2", "ok")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got := copied(t, store, c.id); got != "user:two agent:m2" {
 		t.Fatalf("on again: %s", got)
 	}
@@ -195,14 +195,14 @@ func TestFailedCopyWriteIsTriedAgain(t *testing.T) {
 	copies.failing.Store(true)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if store.Has(c.id) {
 		t.Fatal("written while failing")
 	}
 	copies.failing.Store(false)
 	agent.updates = []acp.SessionUpdate{chunk("m2", "ok")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got := copied(t, store, c.id); got != "user:one agent:m1 user:two agent:m2" {
 		t.Fatalf("after the failed write: %s", got)
 	}
@@ -254,7 +254,7 @@ func TestListAndClearCopies(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	agent.updates = []acp.SessionUpdate{chunk("m1", strings.Repeat("long ", 400))}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	testcheck.NoErr(t, store.Append("ORPHAN", []model.Item{{ID: "x", Kind: model.AgentMessage, Text: "left"}}, []string{""}))
 	c.mu.Lock()
 	sess := c.record
@@ -277,7 +277,7 @@ func TestListAndClearCopies(t *testing.T) {
 	}
 	agent.updates = []acp.SessionUpdate{chunk("m2", "ok")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got := copied(t, store, c.id); got != "user:two agent:m2" {
 		t.Errorf("copied after clearing: %s", got)
 	}

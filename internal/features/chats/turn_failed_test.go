@@ -142,7 +142,7 @@ func TestAFailedTurnsSteeredMessageIsMarked(t *testing.T) {
 	agent.failTurns(nil)
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "Continue."}, SendIdle))
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got, steered := agent.texts(); !slices.Equal(got, []string{"one", "Continue."}) || !slices.Equal(steered, []string{"two"}) {
 		t.Errorf("prompts %q, steered %q", got, steered)
 	}
@@ -159,7 +159,7 @@ func TestAMessageThatMissedTheSteerIsNotMarked(t *testing.T) {
 	ranTool(c, "t1")
 	eventually(t, c, func() bool { return len(c.queue) == 0 && c.steering }) // "two" is being handed over
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	agent.mu.Lock()
 	agent.refuseSteer = true
 	agent.mu.Unlock()
@@ -169,7 +169,7 @@ func TestAMessageThatMissedTheSteerIsNotMarked(t *testing.T) {
 		t.Errorf("steered %v: the next turn's prompt is marked", got)
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 }
 
 // In a chat put to sleep after a failed turn (credit topped up later), a

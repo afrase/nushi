@@ -30,7 +30,7 @@ func TestMoveKeepsTheQueueHeld(t *testing.T) {
 	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
 	testcheck.NoErr(t, svc.Move(context.Background(), c.id, t.TempDir(), false))
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if prompts, _ := agent.texts(); slices.Contains(prompts, "queued") {
 		t.Errorf("the held queue went out after the move: %q", prompts)
 	}
@@ -64,7 +64,7 @@ func TestMoveNamesTheItemsFilesFromTheNewFolder(t *testing.T) {
 		Locations: []acp.ToolCallLocation{{Path: notes}, {Path: main}},
 		Content:   []acp.ToolCallContent{{Type: "diff", Diff: &acp.Diff{Path: notes, NewText: "hi"}}}}}}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "write it", Files: []string{"spec.md"}}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	tool := func(items []model.Item) (model.Item, int) {
 		n, at := 0, -1
 		for i, it := range items {
@@ -132,7 +132,7 @@ func TestMoveNamesTheQueuedFilesFromTheNewFolder(t *testing.T) {
 	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
 	testcheck.NoErr(t, svc.Move(context.Background(), c.id, t.TempDir(), false))
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if len(c.queue) != 1 || !slices.Equal(c.queue[0].Files, []string{filepath.Join(from, "spec.md")}) {
@@ -161,7 +161,7 @@ func TestMoveKeepsTheUploadsAbsolute(t *testing.T) {
 	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
 	testcheck.NoErr(t, svc.Move(context.Background(), c.id, home, false))
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	saved := func(f []string) bool {

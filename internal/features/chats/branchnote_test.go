@@ -75,7 +75,7 @@ func TestBranchNoteChecksOutsideTheLock(t *testing.T) {
 	}
 	close(wts.held)
 	testcheck.NoErr(t, <-sent)
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	agent.mu.Lock()
 	prompt := agent.prompt
 	agent.mu.Unlock()

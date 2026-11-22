@@ -192,7 +192,7 @@ func TestReopenRefusedModeStillRuns(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := svc.chats["c"]
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	c.mu.Lock()
 	running, failed, mode := c.agent != nil, c.reopenFailed, c.record.Mode
 	c.mu.Unlock()

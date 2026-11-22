@@ -37,7 +37,7 @@ func TestForkAsChat(t *testing.T) {
 		// A tool call after the agent's text: a fork at the text drops it.
 		agent.updates = []acp.SessionUpdate{chunk(reply, "ok"), toolCall("t-"+reply, "completed")}
 		testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: text}, SendIdle))
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 	}
 	turn("one", "m1")
 	turn("two", "m2")
@@ -55,7 +55,7 @@ func TestForkAsChat(t *testing.T) {
 		t.Error("forked at a message still coming")
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 
 	before := describe(c.items)
 	launches := agent.launches
@@ -100,7 +100,7 @@ func TestForkRefusedWhenTheAgentCant(t *testing.T) {
 	}
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	c.mu.Lock()
 	c.forkAt = nil
 	c.mu.Unlock()
@@ -125,13 +125,13 @@ func TestKeepSideChat(t *testing.T) {
 	testcheck.NoErr(t, svc.Rename(c.id, "Plans"))
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	sideID, err := svc.Fork(ctx, c.id)
 	testcheck.NoErr(t, err)
 	side := svc.chats[sideID]
 	agent.updates = []acp.SessionUpdate{chunk("a1", "aside")}
 	testcheck.NoErr(t, svc.Prompt(ctx, sideID, model.Message{Text: "aside?"}, SendIdle))
-	eventually(t, side, func() bool { return !side.busy })
+	idle(t, side)
 
 	// Busy, it stays a side chat.
 	agent.updates, agent.gate = nil, make(chan struct{})
@@ -140,7 +140,7 @@ func TestKeepSideChat(t *testing.T) {
 		t.Error("kept a side chat mid-turn")
 	}
 	agent.release()
-	eventually(t, side, func() bool { return !side.busy })
+	idle(t, side)
 
 	id, err := svc.KeepSide(ctx, sideID)
 	testcheck.NoErr(t, err)
@@ -180,7 +180,7 @@ func TestAForkKeepsTheScratchFolder(t *testing.T) {
 	c := startChat(t, svc, "")
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	sessions.mu.Lock()
 	sessions.stored = []model.ChatRecord{c.record}
 	sessions.mu.Unlock()
@@ -209,7 +209,7 @@ func TestAForkOfAChatWithNoFolderHasNone(t *testing.T) {
 	c := startChat(t, svc, "")
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	fork, err := svc.ForkAsChat(ctx, c.id, "")
 	testcheck.NoErr(t, err)
 	f := svc.chats[fork]
@@ -240,7 +240,7 @@ func TestKeptSideChatIsFoundOnceStored(t *testing.T) {
 	ctx := context.Background()
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	sideID, err := svc.Fork(ctx, c.id)
 	testcheck.NoErr(t, err)
 	var known []bool // for each new chat's record, whether the service had it when stored
@@ -269,13 +269,13 @@ func TestForksKeepTheirUploads(t *testing.T) {
 	ctx := context.Background()
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: "see", Uploads: []model.Upload{{Name: "a.txt", Data: []byte("data")}}}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	sideID, err := svc.Fork(ctx, c.id)
 	testcheck.NoErr(t, err)
 	side := svc.chats[sideID]
 	agent.updates = []acp.SessionUpdate{chunk("a1", "aside")}
 	testcheck.NoErr(t, svc.Prompt(ctx, sideID, model.Message{Text: "and", Uploads: []model.Upload{{Name: "b.txt", Data: []byte("more")}}}, SendIdle))
-	eventually(t, side, func() bool { return !side.busy })
+	idle(t, side)
 	fork, err := svc.ForkAsChat(ctx, c.id, "")
 	testcheck.NoErr(t, err)
 	kept, err := svc.KeepSide(ctx, sideID)
@@ -341,7 +341,7 @@ func TestNewChatsAreFoundOnceStored(t *testing.T) {
 	c := startChat(t, svc, t.TempDir())
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	fork, err := svc.ForkAsChat(ctx, c.id, "")
 	testcheck.NoErr(t, err)
 	mu.Lock()

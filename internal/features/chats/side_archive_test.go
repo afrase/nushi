@@ -207,7 +207,7 @@ func TestUndoRefusedWhenItCantApply(t *testing.T) {
 		svc, _, _, id := archivedSide(t)
 		testcheck.NoErr(t, svc.Archive(id, false))
 		a := svc.chats[id]
-		eventually(t, a, func() bool { return !a.busy })
+		idle(t, a)
 		testcheck.NoErr(t, svc.Archive(id, true))
 		refused(t, svc, id, "isn't an archived side chat")
 	})

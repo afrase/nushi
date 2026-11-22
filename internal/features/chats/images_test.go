@@ -47,7 +47,7 @@ func TestAnImageIsHashedOnceAsItComesIn(t *testing.T) {
 		t.Helper()
 		agent.updates = updates
 		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text, Images: images}, SendIdle))
-		eventually(t, c, func() bool { return !c.busy })
+		idle(t, c)
 	}
 	has := func(hash string, want []byte) {
 		t.Helper()

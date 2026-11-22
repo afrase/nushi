@@ -23,7 +23,7 @@ func TestACancelNeverOvertakesItsPrompt(t *testing.T) {
 		t.Fatal(err)
 	}
 	close(agent.sendGate) // the prompt is written only now
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got := agent.wired(); !reflect.DeepEqual(got, []string{"prompt one", "cancel"}) {
 		t.Errorf("the agent got %q", got)
 	}
@@ -113,7 +113,7 @@ func TestOneSteeringWorkerThatRespectsAStop(t *testing.T) {
 	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	agent.mu.Lock()
 	agent.refuseSteer = true
 	agent.mu.Unlock()
@@ -146,11 +146,11 @@ func TestTheQueueGoesOnWhenATurnEndsMidSteer(t *testing.T) {
 	ranTool(c, "t1")
 	eventually(t, c, func() bool { return len(c.queue) == 1 }) // "two" is being handed over
 	agent.release()                                            // the turn ends meanwhile
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	close(agent.steerGate) // the agent takes "two"; "three" starts the next turn
 	eventually(t, c, func() bool { return len(c.queue) == 0 && c.busy && !c.steering })
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	prompts, steered := agent.texts()
 	if !reflect.DeepEqual(prompts, []string{"one", "three"}) || !reflect.DeepEqual(steered, []string{"two"}) {
 		t.Errorf("prompts = %q, steered %q", prompts, steered)
@@ -233,7 +233,7 @@ func TestSendNowGivesUpWithItsContext(t *testing.T) {
 	}
 	eventually(t, c, func() bool { return c.sendingNow == 0 })
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 	if got, _ := agent.texts(); !reflect.DeepEqual(got, []string{"one"}) {
 		t.Errorf("prompts = %q", got)
 	}
@@ -258,7 +258,7 @@ func TestTakeBackGivesUpWithItsContext(t *testing.T) {
 		t.Fatal("Stop waited past its context")
 	}
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 }
 
 // A stop that races the agent's own end is the user's (verdictLocked): the

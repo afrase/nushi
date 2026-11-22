@@ -55,7 +55,7 @@ func TestForkKeepsColor(t *testing.T) {
 	testcheck.NoErr(t, svc.SetColor(c.id, "rust"))
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy })
+	idle(t, c)
 
 	id, err := svc.ForkAsChat(ctx, c.id, "")
 	testcheck.NoErr(t, err)
