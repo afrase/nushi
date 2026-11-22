@@ -120,8 +120,8 @@ class CommentCard extends StatelessWidget {
   }
 }
 
-/// The box to write a comment in, under the lines it's on: Enter (or ⌘⏎)
-/// saves it, ⇧⏎ (⌥⏎, ⌃⏎) adds a line ([isSendKey]), Escape drops it.
+/// The box to write a comment in, under the lines it's on: the send key
+/// saves it, a line key adds a line ([isSendKey]), Escape drops it.
 class ReviewCommentBox extends StatefulWidget {
   const new({
     required this.lines,

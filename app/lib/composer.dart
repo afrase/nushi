@@ -25,6 +25,7 @@ import 'package:nushi/queue.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/run_text.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/spell_check.dart';
 import 'package:nushi/spell_menu.dart';
 import 'package:nushi/theme/theme.dart';
@@ -42,8 +43,9 @@ import 'package:nushi/worktree.dart';
 /// box, only a new chat's folder. A box too narrow for that row
 /// ([Composer.pickersFrom]: a phone's, a side chat's) is one row, the text
 /// between the + and what sends it, with the pickers under the box. Enter
-/// sends (⌘⏎ stops and sends while a turn runs), Shift-Enter starts a line
-/// ([isSendKey]); `/` completes the
+/// sends (⌘⏎ stops and sends while a turn runs), Shift-Enter starts a line,
+/// or with "Enter starts a new line" on, Enter starts one and ⌘⏎ sends
+/// (⇧⌘⏎ stops and sends; [isSendKey]); `/` completes the
 /// agent's commands and `@` the folder's files (sent as links); Up in an
 /// empty box brings back the last prompt; Esc Esc lists your messages to
 /// rewind to (on a Mac). While a message is on its way back to the box
@@ -105,6 +107,7 @@ class _ComposerState extends State<Composer> {
     _draft.put.addListener(_put);
     _put();
     widget.chat.rewinding.addListener(_rebuild);
+    enterStartsLine.addListener(_rebuild); // the keys the hint names
     widget.chat.takeBack.addListener(_takeBack);
     _takeBack(); // one taken back while the box wasn't there
     _pasted = pastedFiles.stream.listen(_paste);
@@ -162,6 +165,7 @@ class _ComposerState extends State<Composer> {
     _draft.quote.removeListener(_quote);
     _draft.put.removeListener(_put);
     widget.chat.rewinding.removeListener(_rebuild);
+    enterStartsLine.removeListener(_rebuild);
     widget.chat.takeBack.removeListener(_takeBack);
     _esc?.cancel();
     unawaited(_pasted.cancel());
@@ -216,7 +220,8 @@ class _ComposerState extends State<Composer> {
       return KeyEventResult.ignored; // and goes on: it stops a turn
     }
     final meta = cmdPressed();
-    final enter = enterKey(e, _text, () => unawaited(_send(now: meta)));
+    final now = sendNowHeld();
+    final enter = enterKey(e, _text, () => unawaited(_send(now: now)));
     if (enter == KeyEventResult.handled) return enter;
     if (attachKey.accepts(e, HardwareKeyboard.instance)) {
       unawaited(_attach());
@@ -530,8 +535,8 @@ class _ComposerState extends State<Composer> {
                         ? widget.hint
                         : touch
                         ? 'Queue it, or stop and send'
-                        : '$enterLabel queues it, '
-                              '$cmdEnterLabel stops '
+                        : '$sendKeyLabel queues it, '
+                              '$sendNowKeyLabel stops '
                               '${chat.agentName} and sends',
                     hintStyle: theme.ui(t.hintOn(t.raised), size: 14),
                     // A phone's box is one row: a hint never makes it two.

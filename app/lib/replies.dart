@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/composer_parts.dart';
-import 'package:nushi/keys.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -417,10 +417,14 @@ class _ReplyBoxState extends State<ReplyBox> {
                         ),
                       ),
                     ),
-                    IconTap(
-                      Icons.arrow_upward,
-                      tooltip: withKey('Add to the message', enterLabel),
-                      onTap: _send,
+                    // The key follows "Enter starts a new line".
+                    ValueListenableBuilder(
+                      valueListenable: enterStartsLine,
+                      builder: (context, _, _) => IconTap(
+                        Icons.arrow_upward,
+                        tooltip: withKey('Add to the message', sendKeyLabel),
+                        onTap: _send,
+                      ),
                     ),
                   ],
                 ),
@@ -434,8 +438,8 @@ class _ReplyBoxState extends State<ReplyBox> {
 }
 
 /// A reply's text field, in the reply box and the dialog that edits it:
-/// it wraps and grows from one line to [lines], then scrolls; Enter runs
-/// [onEnter] and Shift-Enter starts a line, as in the composer
+/// it wraps and grows from one line to [lines], then scrolls; the send
+/// key runs [onEnter] and a line key starts a line, as in the composer
 /// ([isSendKey]).
 class ReplyField extends StatelessWidget {
   const new(

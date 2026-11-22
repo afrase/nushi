@@ -294,9 +294,10 @@ class _ToChip extends StatelessWidget {
 }
 
 /// The end of the box's row (ADR 0111): while a turn runs and something is
-/// [written], Queue (⏎: it waits for the agent's next chance) and Stop and
-/// send (⌘⏎), pills on the card with their [words] where the row has room,
-/// else round buttons with the same icons; Stop, the square in a circle it
+/// [written], Queue (⏎, or ⌘⏎ with "Enter starts a new line" on: it waits
+/// for the agent's next chance) and Stop and send (⌘⏎, or ⇧⌘⏎;
+/// [sendKeyLabel], [sendNowKeyLabel]), pills on the card with their
+/// [words] where the row has room, else round buttons with the same icons; Stop, the square in a circle it
 /// always was ([stopIcon]), while a turn runs; else Send, round on the
 /// accent's fill, once something is written. Those coming pop in once the
 /// box is there ([pop]).
@@ -353,7 +354,7 @@ class SendButtons extends StatelessWidget {
           Enter.pop(
             key: const ValueKey('queue'),
             play: pop,
-            child: act('Queue', enterLabel, Icons.queue, onSend),
+            child: act('Queue', sendKeyLabel, Icons.queue, onSend),
           ),
           if (chat.started != null)
             Enter.pop(
@@ -361,7 +362,7 @@ class SendButtons extends StatelessWidget {
               play: pop,
               child: act(
                 'Stop and send',
-                cmdEnterLabel,
+                sendNowKeyLabel,
                 Icons.fast_forward,
                 () => onSend(now: true),
               ),
@@ -383,7 +384,7 @@ class SendButtons extends StatelessWidget {
             play: pop,
             child: RoundButton(
               kind: RoundKind.primary,
-              tooltip: withKey('Send', enterLabel),
+              tooltip: withKey('Send', sendKeyLabel),
               onPressed: onSend,
               glyph: (color) =>
                   Icon(Icons.arrow_upward, size: 17, color: color),
