@@ -673,6 +673,7 @@ List<Pref<Object?>> get allPrefs => [
   showWhitespace,
   usageRange,
   dismissedUpdate,
+  remoteResetToasted,
   shortcutKeys,
 ];
 
