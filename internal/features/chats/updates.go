@@ -124,16 +124,7 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		// ends it (Transcript.OwnTurnEnded); without a Transcript, any.
 		var ownEnded, released bool // the turn that ends here, for the meter once the cost is in
 		if ends := c.kind.transcript == nil || c.kind.transcript.OwnTurnEnded(u); ends {
-			own := c.ownTurn
-			ownEnded = own
-			if own {
-				c.lookRelatedLocked()
-			}
-			c.ownTurn, c.ownNoted = false, false
-			if own {
-				c.endCallsLocked()
-				defer c.statusChangedLocked() // once its usage is in
-			}
+			ownEnded, c.ownNoted = c.ownTurn, false // ended below, once its usage is in
 		}
 		if c.kind.transcript != nil && !c.started.IsZero() && !c.stopped && c.kind.transcript.TurnDone(u) {
 			switch {
@@ -158,6 +149,16 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 			c.meterLocked(model.UsageReleased, nil)
 		case ownEnded:
 			c.meterLocked(model.UsageOwn, nil)
+		}
+		if ownEnded {
+			// Only a harness that tells the end has a verdict to give:
+			// without one, any usage ends it, and a late update after a
+			// turn of Nushi's would notify "finished" a second time.
+			end := model.NotEnded
+			if c.kind.transcript != nil {
+				end = model.TurnDone
+			}
+			c.endOwnTurnLocked(end, "")
 		}
 	case "session_info_update":
 		var t string // a title cleared (null) is left as it was
@@ -427,4 +428,21 @@ func (c *chat) rel(path string) string {
 		return r
 	}
 	return path
+}
+
+// endOwnTurnLocked ends the agent's own turn, if one runs: with a verdict
+// (end, and failure with TurnFailed) as a turn of Nushi's ends, which
+// notifies and marks the chat done (turnEndedLocked; ADR 0141), or, with
+// NotEnded, only its flags, for a turn something else supersedes.
+func (c *chat) endOwnTurnLocked(end model.TurnEnd, failure string) {
+	if !c.ownTurn {
+		return
+	}
+	c.ownTurn, c.ownNoted = false, false
+	c.lookRelatedLocked()
+	if end == model.NotEnded {
+		c.statusChangedLocked()
+		return
+	}
+	c.turnEndedLocked(end, failure)
 }

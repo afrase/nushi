@@ -240,7 +240,8 @@ func InitializeRequest(info model.HarnessInfo) *acp.InitializeRequest {
 // What the agent sends from then on is live, not a replay (kept).
 func (s *Service) useLocked(c *chat, o opened) {
 	c.agent, c.canFork, c.steer, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.agent.CanSteer(), o.images, o.sid, o.config
-	c.forkAt, c.held, c.outlived, c.ownTurn, c.reopenFailed = o.forkAt, false, false, false, false
+	c.forkAt, c.held, c.outlived, c.reopenFailed = o.forkAt, false, false, false
+	c.endOwnTurnLocked(model.NotEnded, "")                  // the old agent's, which orphanLocked ended
 	c.canLoad, c.asleep, c.reapplying = o.load, false, true // until reapply
 	c.mcpChanged = false                                    // the new agent has the MCP servers as they are now
 	c.unsendLocked(c.failure)                               // it runs: why it couldn't is stale
@@ -282,7 +283,6 @@ func (s *Service) watch(c *chat, agent Agent) {
 // background, which are "stopped" when Nushi stopped the agent, and
 // prompts and questions no agent waits on, "cancelled".
 func (c *chat) orphanLocked(stopped bool) {
-	c.ownTurn = false
 	c.pokeWorkflowsLocked() // they went with the agent
 	for i, it := range c.items {
 		running := callRunning(it.Status) || it.Subagent != nil && it.Subagent.State == "running"
@@ -304,6 +304,11 @@ func (c *chat) orphanLocked(stopped bool) {
 		}
 	}
 	c.endPromptsLocked()
+	if stopped { // its own turn, if it ran one, ends as one of Nushi's would (run)
+		c.endOwnTurnLocked(model.TurnStopped, "")
+	} else {
+		c.endOwnTurnLocked(model.TurnFailed, "The agent quit mid-turn.")
+	}
 	c.copyLocked(true) // what the agent left is as it stays
 }
 

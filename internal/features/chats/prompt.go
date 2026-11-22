@@ -234,6 +234,7 @@ func (c *chat) startLocked(prompt []acp.ContentBlock) {
 	sent, done := make(chan struct{}), make(chan struct{})
 	c.busy, c.started, c.done, c.sent, c.held = true, time.Now(), done, sent, false
 	c.released, c.steered, c.turnFrom, c.stopped, c.steerFailed = false, 0, len(c.items), false, false
+	c.endOwnTurnLocked(model.NotEnded, "") // the prompt supersedes the agent's own turn
 	c.statusChangedLocked()
 	c.logLocked().Info("turn started", "queued", len(c.queue))
 	go c.run(c.agent, &acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt}, notes, sent, done)

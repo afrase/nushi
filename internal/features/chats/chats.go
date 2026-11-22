@@ -482,8 +482,11 @@ func (c *chat) cancelLocked() error {
 	c.dropPromptsLocked()
 	agent, cancel := c.agent, &acp.CancelNotification{SessionID: acp.SessionID(c.sid)}
 	if own {
-		c.ownTurn = false
-		c.statusChangedLocked()
+		if c.ownTurn {
+			c.endOwnTurnLocked(model.TurnStopped, "")
+		} else {
+			c.statusChangedLocked() // a prompt it waited on alone
+		}
 		return cancelTurn(agent, cancel, c.svc.timing.stopGrace())
 	}
 	select {
