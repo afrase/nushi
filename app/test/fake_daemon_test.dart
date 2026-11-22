@@ -23,4 +23,9 @@ void main() {
     expect(fake.subscriptions.last.live, isTrue);
     d.dispose(); // its ping timer ends with the test
   });
+
+  test('an event with nobody subscribed fails the test that sends it', () {
+    final fake = FakeDaemon([]);
+    expect(() => fake.emit(EventsResponse(chatId: 'a')), throwsStateError);
+  });
 }

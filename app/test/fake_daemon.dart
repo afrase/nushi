@@ -141,14 +141,20 @@ class FakeDaemon implements Transport {
   /// gives each its own stream: a second one is a reconnect.
   final subscriptions = <EventsSubscription>[];
 
-  /// What [emit] sent while no subscription was live, for the next one.
-  final _unsent = <EventsResponse>[];
-
-  /// Sends [e] down every live events subscription.
+  /// Sends [e] down every live events subscription. With none live it
+  /// throws, as an event the daemon sends then reaches nobody: a test
+  /// that emits before the app subscribes has a gap, not an event.
   void emit(EventsResponse e) {
-    final live = [...subscriptions.where((s) => s.live)];
-    if (live.isEmpty) _unsent.add(e);
-    for (final s in live) {
+    if (!subscriptions.any((s) => s.live)) {
+      throw StateError('FakeDaemon.emit with no live events subscription');
+    }
+    _send(e);
+  }
+
+  /// Sends [e] to whoever is subscribed, as the daemon's own changes (a
+  /// fork, a pin) go out whether or not anyone listens.
+  void _send(EventsResponse e) {
+    for (final s in subscriptions.where((s) => s.live)) {
       s._out.add(e);
     }
   }
@@ -158,9 +164,6 @@ class FakeDaemon implements Transport {
   EventsSubscription _subscribe(EventsRequest request) {
     final s = EventsSubscription._(request);
     s._out.add(EventsResponse());
-    _unsent
-      ..forEach(s._out.add)
-      ..clear();
     subscriptions.add(s);
     return s;
   }
@@ -333,7 +336,7 @@ class FakeDaemon implements Transport {
   void _delete(String id) {
     if (chats.any((c) => c.id == id)) {
       chats.removeWhere((c) => c.id == id);
-      emit(EventsResponse(chatId: id, removed: true));
+      _send(EventsResponse(chatId: id, removed: true));
     }
   }
 
@@ -351,7 +354,7 @@ class FakeDaemon implements Transport {
       color: c.color,
     );
     chats.add(fork);
-    emit(EventsResponse(chatId: id, chat: fork));
+    _send(EventsResponse(chatId: id, chat: fork));
   }
 
   /// GetGitHubItems answered as the daemon would from what [answer] says
@@ -396,7 +399,7 @@ class FakeDaemon implements Transport {
     ];
     for (final c in chats) {
       final pin = live.indexOf(c.id) + 1;
-      if (c.pin != pin) emit(EventsResponse(chatId: c.id, chat: c..pin = pin));
+      if (c.pin != pin) _send(EventsResponse(chatId: c.id, chat: c..pin = pin));
     }
   }
 
@@ -408,7 +411,7 @@ class FakeDaemon implements Transport {
     }
     final c = chats.firstWhere((c) => c.id == id);
     if (c.color != color) {
-      emit(EventsResponse(chatId: id, chat: c..color = color));
+      _send(EventsResponse(chatId: id, chat: c..color = color));
     }
   }
 
@@ -425,7 +428,7 @@ class FakeDaemon implements Transport {
         MessagePin(itemId: r.itemId, title: 'Pinned ${r.itemId}'),
       );
     }
-    emit(
+    _send(
       EventsResponse(
         chatId: r.chatId,
         chat: chats.firstWhere((c) => c.id == r.chatId),
