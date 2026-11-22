@@ -223,8 +223,8 @@ class ShortcutFieldState extends State<ShortcutField> {
 
 /// Whether the keyboard moved last (Tab, Enter, Space, an arrow), not the
 /// pointer (a click): a [ShortcutField]'s focus shows its ring only then.
-/// Typing a key to record doesn't count. Listens from when it's made until
-/// it's disposed.
+/// A key a field takes while it listens doesn't count, an arrow's either.
+/// Listens from when it's made until it's disposed.
 class KeyboardMovedLast extends ValueNotifier<bool> {
   new() : super(true) {
     GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
@@ -248,6 +248,8 @@ class KeyboardMovedLast extends ValueNotifier<bool> {
   }
 
   bool _onKey(KeyEvent e) {
+    // A key a field takes while it listens moves nothing.
+    if (shortcutRecording.value) return false;
     if (e is KeyDownEvent && _moves.contains(e.logicalKey)) value = true;
     return false;
   }

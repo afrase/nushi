@@ -99,6 +99,16 @@ void main() {
       await pressKey(tester, LogicalKeyboardKey.tab, [shiftKey]);
       expect(FocusManager.instance.primaryFocus?.debugLabel, 'shortcut-pin');
       expect(ringOf(tester, 'pin'), 2);
+      // A key taken that also moves the focus elsewhere (an arrow) is
+      // still the pointer's: no ring.
+      await tapIt(tester, keyOf('find'));
+      await pressKey(tester, LogicalKeyboardKey.arrowDown, [
+        metaKey,
+        altKey,
+        shiftKey,
+      ]);
+      expect(savedKeys()['find'], 'Alt+Shift+Cmd+Down');
+      expect(ringOf(tester, 'find'), 0);
       d.dispose();
     }, variant: onMac);
 
