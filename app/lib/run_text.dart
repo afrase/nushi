@@ -130,11 +130,14 @@ List<RunOutput> sentOutputs(List<SentCommand> commands) => [
 /// message without them comes back as it is, with none.
 (String, List<SentCommand>) splitCommands(String message) {
   final end = message.trimRight().length;
+  // What reads from each place (null: nothing does), found once: without
+  // it a message whose end doesn't read tries every split of its blocks.
+  final memo = <int, List<SentCommand>?>{};
   for (var i = 0; i < end; i++) {
     i = _nextStart(message, i);
     if (i < 0 || i >= end) break;
     if (i > 0 && (i < 2 || !message.startsWith('\n\n', i - 2))) continue;
-    final read = _blocks(message, i, end);
+    final read = _blocks(message, i, end, memo);
     if (read != null) return (message.substring(0, i).trimRight(), read);
   }
   return (message, const []);
@@ -151,14 +154,28 @@ int _nextStart(String s, int from) {
 }
 
 /// The commands from [p] to [end], each after a blank line, or null when
-/// that part doesn't read as commands to its end.
-List<SentCommand>? _blocks(String s, int p, int end) {
+/// that part doesn't read as commands to its end; [memo] holds what each
+/// place read before.
+List<SentCommand>? _blocks(
+  String s,
+  int p,
+  int end,
+  Map<int, List<SentCommand>?> memo,
+) {
+  if (memo.containsKey(p)) return memo[p];
+  List<SentCommand>? read;
   for (final (cmd, at) in _block(s, p, end)) {
-    if (at == end) return [cmd];
+    if (at == end) {
+      read = [cmd];
+      break;
+    }
     if (!s.startsWith('\n\n', at)) continue;
-    if (_blocks(s, at + 2, end) case final more?) return [cmd, ...more];
+    if (_blocks(s, at + 2, end, memo) case final more?) {
+      read = [cmd, ...more];
+      break;
+    }
   }
-  return null;
+  return memo[p] = read;
 }
 
 /// Each way a command can be read at [p], with where it ends, the

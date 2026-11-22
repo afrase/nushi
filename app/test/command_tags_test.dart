@@ -114,6 +114,18 @@ void main() {
     ]);
   });
 
+  test('many blocks with text after them read at once', () {
+    const block =
+        '<bash-stdout>a</bash-stdout><bash-stderr></bash-stderr>'
+        '<bash-exit-code>0</bash-exit-code>';
+    final message = 'Look\n\n${List.filled(40, block).join('\n\n')}\n\nwhy?';
+    final watch = Stopwatch()..start();
+    expect(_split(message), [message]);
+    // Every split of 40 blocks would take years; read once each, it is
+    // a few milliseconds.
+    expect(watch.elapsed, lessThan(const Duration(seconds: 2)));
+  });
+
   test("Claude Code's own two messages of a `!` each read back", () {
     expect(_split('<bash-input>git status</bash-input>'), [
       '',
