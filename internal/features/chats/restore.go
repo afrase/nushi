@@ -213,6 +213,13 @@ func (c *chat) saveCopyLocked(copied, shown []model.Item) {
 		return
 	}
 	want := slices.DeleteFunc(slices.Clone(shown), shownOnly)
+	if c.halting { // being deleted: a write would make the copy again; a failed delete writes these (unhaltLocked)
+		c.mirrored = false
+		for _, it := range want {
+			c.unsaved[it.ID] = true
+		}
+		return
+	}
 	n := len(copied)
 	var err error
 	from := 0 // the first of want this write is to save

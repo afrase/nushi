@@ -186,7 +186,11 @@ func (c *chat) movedLocked(from string) {
 	if queued {
 		c.queueChangedLocked()
 	}
-	if c.copies == nil {
+	switch {
+	case c.copies == nil:
+		return
+	case c.halting: // being deleted: a write would make the copy again
+		c.mirrored = false
 		return
 	}
 	items, err := c.copies.Read(c.id)

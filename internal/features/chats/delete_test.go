@@ -532,3 +532,45 @@ func TestAFailedDeleteWritesTheStoppedTurnsCopy(t *testing.T) {
 		t.Errorf("unsaved %d, copy %q; want the plan written", unsaved, got)
 	}
 }
+
+// A reopen's write of the copy waits while the chat is being deleted, as
+// the other writers do: it would make the copy again. Its items stay
+// unsaved, for a delete that fails to write then (unhaltLocked).
+func TestADeletedChatsReopenWritesNoCopy(t *testing.T) {
+	svc, agent, c, store, _ := newCopyingChat(t)
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	turn(t, svc, c, "one")
+	testcheck.NoErr(t, store.Delete(c.id))
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.halting = true
+	c.saveCopyLocked(nil, c.items)
+	if store.Has(c.id) || c.mirrored || len(c.unsaved) != 2 {
+		t.Fatalf("while halting: a copy %v, mirrored %v, unsaved %v", store.Has(c.id), c.mirrored, c.unsaved)
+	}
+	c.halting = false
+	c.copyLocked(true)
+	if got := copied(t, store, c.id); got != "user:one agent:m1" {
+		t.Errorf("after the failed delete: %q", got)
+	}
+}
+
+// A move's renaming of the copy's files waits while the chat is being
+// deleted: the copy is left as it is.
+func TestADeletedChatsMoveLeavesTheCopy(t *testing.T) {
+	_, _, c, store, _ := newCopyingChat(t)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.addLocked(model.Item{Kind: model.ToolCall, ID: "t1", Status: "completed", Paths: []string{"a.go"}})
+	c.copyLocked(true)
+	c.halting = true
+	c.movedLocked(t.TempDir())
+	items, err := store.Read(c.id)
+	testcheck.NoErr(t, err)
+	if len(items) != 1 || !slices.Equal(items[0].Paths, []string{"a.go"}) {
+		t.Errorf("the copy while halting: %+v", items)
+	}
+	if c.mirrored {
+		t.Error("mirrored, though the copy lacks the move")
+	}
+}
