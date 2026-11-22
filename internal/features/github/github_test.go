@@ -326,7 +326,7 @@ func newWorld(t *testing.T) *world {
 			}
 			return c
 		},
-		Keys: Keys{NeedsOK: func(err error) bool { return errors.Is(err, keychaintest.ErrLocked) }, Restart: func(error) bool { return false }, Missing: func(error) bool { return false }},
+		Keys: Keys{NeedsOK: func(err error) bool { return errors.Is(err, keychaintest.ErrNeedsOK) }, Restart: func(error) bool { return false }, Missing: func(error) bool { return false }},
 		Remotes: func(_ context.Context, folder string) (map[string]string, error) {
 			if folder == "lab" {
 				return map[string]string{"origin": "https://gitlab.com/me/lab"}, nil

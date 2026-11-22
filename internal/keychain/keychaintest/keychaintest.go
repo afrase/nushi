@@ -7,15 +7,17 @@ import (
 	"sync"
 )
 
-// The fake's errors, which a test's keychain kinds (a feature's Keys) name.
+// The fake's errors, which a test's keychain kinds (a feature's Keys)
+// name. ErrNeedsOK plays the real keychain.ErrNeedsOK: a read that needs
+// the user's OK.
 var (
-	ErrLocked  = errors.New("locked")
+	ErrNeedsOK = errors.New("needs the user's OK")
 	ErrMissing = errors.New("not in the keychain")
 )
 
 // Keychain keeps items in memory, by account. Locked makes reads without
-// a prompt fail with ErrLocked, as an earlier build's item does; Fail,
-// when set, is every read's error.
+// a prompt fail with ErrNeedsOK, as an earlier build's item does; Fail,
+// when set, is the error of every read, save and removal.
 type Keychain struct {
 	mu     sync.Mutex
 	Items  map[string]string
@@ -26,6 +28,9 @@ type Keychain struct {
 func (k *Keychain) Set(account, _ string, secret []byte) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
+	if k.Fail != nil {
+		return k.Fail
+	}
 	if k.Items == nil {
 		k.Items = map[string]string{}
 	}
@@ -37,7 +42,7 @@ func (k *Keychain) Get(account string, prompt bool) ([]byte, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if k.Locked && !prompt {
-		return nil, ErrLocked
+		return nil, ErrNeedsOK
 	}
 	if k.Fail != nil {
 		return nil, k.Fail
@@ -52,6 +57,9 @@ func (k *Keychain) Get(account string, prompt bool) ([]byte, error) {
 func (k *Keychain) Delete(account string) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
+	if k.Fail != nil {
+		return k.Fail
+	}
 	delete(k.Items, account)
 	return nil
 }

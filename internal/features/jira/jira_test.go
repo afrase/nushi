@@ -18,7 +18,7 @@ import (
 var errRestart = errors.New("Nushi's daemon can't reach your keychain: restart it")
 
 var testKeys = Keys{
-	NeedsOK: func(err error) bool { return errors.Is(err, keychaintest.ErrLocked) },
+	NeedsOK: func(err error) bool { return errors.Is(err, keychaintest.ErrNeedsOK) },
 	Restart: func(err error) bool { return errors.Is(err, errRestart) },
 	Missing: func(err error) bool { return errors.Is(err, keychaintest.ErrMissing) },
 }
@@ -357,6 +357,23 @@ func TestCache(t *testing.T) {
 		if strings.Contains(k, "e.atlassian.net") {
 			t.Errorf("kept after the site went: %s", k)
 		}
+	}
+}
+
+// A token the keychain won't delete keeps its site: removing it says why,
+// and nothing is forgotten that the token still opens.
+func TestRemoveSiteKeepsItWhenTheTokenStays(t *testing.T) {
+	s, tokens, _ := newService(t)
+	if _, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{}); err != nil {
+		t.Fatal(err)
+	}
+	tokens.Fail = errRestart
+	if err := s.RemoveSite("e.atlassian.net"); !errors.Is(err, errRestart) {
+		t.Errorf("remove: %v", err)
+	}
+	tokens.Fail = nil
+	if st, err := s.Sites(); err != nil || len(st) != 1 {
+		t.Errorf("after a failed remove: %+v, %v", st, err)
 	}
 }
 
