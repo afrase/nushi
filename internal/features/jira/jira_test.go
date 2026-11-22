@@ -54,7 +54,8 @@ type fakeClient struct {
 	jql     []string
 	moves   []map[string]string
 	comment string
-	sprint  int64 // the board's active sprint, 3 when 0
+	sprint  int64  // the board's active sprint, 3 when 0
+	asking  func() // called as Search or Issue is asked, when set
 }
 
 func (f *fakeClient) Myself(context.Context) (model.JiraUser, error) {
@@ -63,6 +64,9 @@ func (f *fakeClient) Myself(context.Context) (model.JiraUser, error) {
 
 func (f *fakeClient) Search(_ context.Context, jql string, _ int) ([]model.JiraIssue, error) {
 	f.jql = append(f.jql, jql)
+	if f.asking != nil {
+		f.asking()
+	}
 	return []model.JiraIssue{{Key: "A-1", Assignee: "Ann Lee", AssigneeID: "712020:ann"}}, nil
 }
 
@@ -85,6 +89,9 @@ func (f *fakeClient) Suggestions(context.Context, string, string) ([]model.JiraO
 }
 
 func (f *fakeClient) Issue(_ context.Context, key string) (model.JiraIssue, error) {
+	if f.asking != nil {
+		f.asking()
+	}
 	return model.JiraIssue{Key: key}, nil
 }
 
@@ -390,6 +397,40 @@ func TestRemoveSiteWhenTheTokenStays(t *testing.T) {
 	defer s.mu.Unlock()
 	if s.clients["e.atlassian.net"] != nil {
 		t.Error("its client kept")
+	}
+}
+
+// An answer to a token replaced or removed while Jira was asked isn't
+// kept: the next account on the site (the same host, another email)
+// would see the old one's list until a refresh.
+func TestOldTokensAnswerNotKept(t *testing.T) {
+	s, _, opened := newService(t)
+	site, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	(*opened)[0].asking = func() {
+		if _, err := s.AddSite(t.Context(), "https://e.atlassian.net", "you@e.com", "good", time.Time{}); err != nil {
+			t.Error(err)
+		}
+	}
+	if _, err := s.List(t.Context(), "e.atlassian.net", Mine, ""); err != nil {
+		t.Fatal(err)
+	}
+	var kept json.RawMessage
+	if at, err := s.store.Cached(cacheArea, "e.atlassian.net", listKey(site, Mine, ""), &kept); err != nil || !at.IsZero() {
+		t.Errorf("the old token's list kept: %s %v %v", kept, at, err)
+	}
+	(*opened)[1].asking = func() {
+		if err := s.RemoveSite("e.atlassian.net"); err != nil {
+			t.Error(err)
+		}
+	}
+	if _, err := s.Issue(t.Context(), "e.atlassian.net", "A-1"); err != nil {
+		t.Fatal(err)
+	}
+	if at, err := s.store.Cached(cacheArea, "e.atlassian.net", issueKey("A-1"), &kept); err != nil || !at.IsZero() {
+		t.Errorf("a removed site's issue kept: %s %v %v", kept, at, err)
 	}
 }
 

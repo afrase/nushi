@@ -26,8 +26,17 @@ func listKey(site model.JiraSite, list, jql string) string {
 
 func issueKey(key string) string { return "issue " + key }
 
-// keep caches v under key for the site with id, as it is now.
-func (s *Service) keep(id, key string, v any) {
+// keep caches v, c's answer, under key for the site with id, as it is
+// now; only while c is still the site's client, checked and written under
+// the lock: an answer to a token replaced or removed meanwhile (whose
+// forget has run or is about to) would show another account's issues.
+// GitHub's inbox keeps its answers the same way.
+func (s *Service) keep(id string, c Client, key string, v any) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.clients[id] != c {
+		return
+	}
 	if err := s.store.Cache(cacheArea, id, key, v); err != nil {
 		slog.Warn("keeping a jira answer", "site", id, "err", err)
 	}

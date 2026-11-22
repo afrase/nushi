@@ -57,7 +57,7 @@ func (s *Service) List(ctx context.Context, id, list, jql string) (List, error) 
 		out.Issues, err = c.Search(ctx, jql, listLimit)
 	}
 	if err == nil {
-		s.keep(id, key, out)
+		s.keep(id, c, key, out)
 	}
 	return out, err
 }
@@ -173,7 +173,7 @@ func (s *Service) Issue(ctx context.Context, id, key string) (model.JiraIssue, e
 	}
 	is, err := c.Issue(ctx, key)
 	if err == nil {
-		s.keep(id, issueKey(key), is)
+		s.keep(id, c, issueKey(key), is)
 	}
 	return is, err
 }
