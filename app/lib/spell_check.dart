@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/command_mode.dart';
 import 'package:nushi/composer_code.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show ItemKind;
 import 'package:nushi/motion.dart';
@@ -37,6 +38,14 @@ class ComposerText extends TextEditingController {
   /// The spell check of the box showing this, if one does.
   SpellCheck? spell;
 
+  /// Whether the box showing this has a command mode ([commandsHere]):
+  /// the desktop app's, set by the box as it builds.
+  bool commands = false;
+
+  /// Whether the box is in command mode now: it has one, and its text
+  /// starts with `!` (ADR 0148). No spelling marks then, nor completions.
+  bool get commandMode => commands && isCommandText(text);
+
   List<SpellWord> _marks = const [];
   String _markedText = '';
 
@@ -70,6 +79,7 @@ class ComposerText extends TextEditingController {
     required bool withComposing,
     TextStyle? style,
   }) {
+    if (commandMode) return commandSpan(context, text, style);
     if (marks.isEmpty && code.isEmpty) {
       return super.buildTextSpan(
         context: context,
@@ -149,7 +159,7 @@ class SpellCheck extends ChangeNotifier {
   bool _disposed = false;
 
   /// Whether spell check runs here now.
-  bool get on => speller != null && checkSpelling.value;
+  bool get on => speller != null && checkSpelling.value && !text.commandMode;
 
   /// Whether a flagged word may be fixed now: not while the box is locked
   /// for a message coming back ([ChatState.rewinding]).

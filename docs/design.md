@@ -28,7 +28,7 @@ Every colour is a token of `Tokens`; a theme changes values, never names. Read t
 | `hover`, `pressed` | the tint over anything under the pointer, and while it's pressed |
 | `quote` | quoted text's fill, in place of a bar down its side |
 
-**Lines**: `line` is a hairline, only a divider inside a pane (under a header, between rows) and around the composer; `floatLine` the edge of what floats. A border stays only on a text field (`fieldBorder`, `fieldBorderHover`; `focus` with the caret, `crashed` in error) and as the focus ring.
+**Lines**: `line` is a hairline, only a divider inside a pane (under a header, between rows) and around the composer; `floatLine` the edge of what floats. A border stays only on a text field (`fieldBorder`, `fieldBorderHover`; `focus` with the caret, `crashed` in error), as the focus ring, and as the composer's ring in `accent` in command mode, on `codeBlock`'s fill, drawn inside its edge so nothing moves (`command_mode.dart`, ADR [0148](adr/0148-a-message-starting-with-bang-runs-a-command.md)).
 
 **Text**, from strongest to faintest, three greys a clear step apart (at least 6 in L*, `tokens_test`; `textMuted` sits at AA on the fills it's on, `textSecondary` halfway to `text`). A named theme keeps its published colours, so four sets keep two greys nearly as one: Tokyo Night's (its own fg_dark and #9AA5CE; Day's text and AA floor sit together), Catppuccin Latte's (its Text, and Subtext1 and Subtext0 taken to AA land on it) and Solarized's dark set (its greys taken to AA land within 7 of each other).
 

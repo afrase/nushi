@@ -211,7 +211,9 @@ class EnterSends extends StatelessWidget {
 /// [words] where the row has room, else round buttons with the same icons;
 /// Stop, the square in a circle it always was ([stopIcon]), while a turn
 /// runs; else Send, round on the accent's fill, once something is written.
-/// Those coming pop in once the box is there ([pop]).
+/// Those coming pop in once the box is there ([pop]). In command mode
+/// ([run], ADR 0148) Run takes Send's place, Queue's and Stop and send's
+/// while a turn runs, Stop staying at the end.
 class SendButtons extends StatelessWidget {
   const new(
     this.chat,
@@ -220,8 +222,12 @@ class SendButtons extends StatelessWidget {
     required this.pop,
     required this.onSend,
     this.words = true,
+    this.run,
     super.key,
   });
+
+  /// The box's Run, in command mode; null otherwise.
+  final Widget? run;
 
   final ChatState chat;
   final Daemon daemon;
@@ -261,7 +267,9 @@ class SendButtons extends StatelessWidget {
         // Queue (after this turn) and Stop and send (stop it, and this goes
         // now): a phone's only way, the Mac's ⏎ and ⌘⏎ as buttons. One
         // coming pops in (Enter.pop).
-        if (written && chat.busy) ...[
+        if (run case final run?)
+          Enter.pop(key: const ValueKey('run'), play: pop, child: run)
+        else if (written && chat.busy) ...[
           Enter.pop(
             key: const ValueKey('queue'),
             play: pop,
@@ -289,7 +297,7 @@ class SendButtons extends StatelessWidget {
               stopIcon(NushiTheme.of(context).t.textSecondary),
             ),
           )
-        else if (written && !chat.busy)
+        else if (written && !chat.busy && run == null)
           Enter.pop(
             key: const ValueKey('send'),
             play: pop,

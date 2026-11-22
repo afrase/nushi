@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/attached_files.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
+import 'package:nushi/command_mode.dart';
 import 'package:nushi/completions.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/composer_plus.dart';
@@ -46,7 +47,8 @@ import 'package:nushi/worktree.dart';
 /// between the + and what sends it, with the pickers under the box. Enter
 /// sends (⌘⏎ stops and sends while a turn runs), Shift-Enter starts a line,
 /// or with "Enter starts a new line" on, Enter starts one and ⌘⏎ sends
-/// (⇧⌘⏎ stops and sends; [isSendKey]); `/` completes the
+/// (⇧⌘⏎ stops and sends; [isSendKey]); a `!` first runs the rest as a
+/// command (command mode, `command_mode.dart`); `/` completes the
 /// agent's commands and `@` the folder's files (sent as links); Up in an
 /// empty box brings back the last prompt; Esc Esc lists your messages to
 /// rewind to (on a Mac). While a message is on its way back to the box
@@ -88,7 +90,7 @@ class _ComposerState extends State<Composer> {
   // none, and typed keys went nowhere).
   final GlobalKey _field = GlobalKey(debugLabel: 'field');
   late final Draft _draft = widget.chat.draft;
-  late final TextEditingController _text = _draft.text;
+  late final ComposerText _text = _draft.text;
   late final _completions = Completions(widget.chat, widget.daemon);
   Set<String> get _mentions => _draft.mentions; // files picked with @
   late final Attachments _images = _draft.images;
@@ -382,6 +384,10 @@ class _ComposerState extends State<Composer> {
   /// chat's queue, or with [now] stops the turn and goes at once.
   Future<void> _send({bool now = false}) async {
     if (_locked) return;
+    if (_text.commandMode) {
+      await runBoxCommand(context, widget.chat, widget.daemon);
+      return;
+    }
     // Before any wait: a browser copies only straight from the tap.
     if (copyAsked(_text.text.trim()) case final n?) {
       _text.clear();
@@ -457,6 +463,8 @@ class _ComposerState extends State<Composer> {
     final pop = _built;
     _built = true;
     final written = !_locked && _draft.hasMessage;
+    _text.commands = commandsHere(context);
+    final command = !_locked && _text.commandMode;
     return ChatColumn(
       child: Padding(
         padding: touch
@@ -511,6 +519,13 @@ class _ComposerState extends State<Composer> {
               // room for them.
               words: room.maxWidth >= SendButtons.wordsFrom,
               onSend: _send,
+              run: command
+                  ? runButton(
+                      _text.text,
+                      widget.daemon,
+                      () => unawaited(_send()),
+                    )
+                  : null,
             );
             final field = SpellArea(
               _spell.menu,
@@ -593,7 +608,7 @@ class _ComposerState extends State<Composer> {
                 Container(
                   key: _box,
                   decoration: BoxDecoration(
-                    color: t.raised,
+                    color: command ? commandBoxLook(t).fill : t.raised,
                     borderRadius: BorderRadius.circular(NushiTheme.panel),
                     border: Border.all(color: t.line),
                     // Soft, and softer on a light theme, where a shadow shows
@@ -608,6 +623,7 @@ class _ComposerState extends State<Composer> {
                       ),
                     ],
                   ),
+                  foregroundDecoration: command ? commandBoxLook(t).ring : null,
                   // Roomy, 12 around the text and the row; narrow, the one
                   // row's buttons (28, a phone's 44) set its height.
                   padding: roomy
@@ -638,7 +654,11 @@ class _ComposerState extends State<Composer> {
                           children: [
                             plus,
                             const SizedBox(width: 6),
-                            Expanded(child: pickers),
+                            Expanded(
+                              child: command
+                                  ? CommandLine(chat, widget.daemon)
+                                  : pickers,
+                            ),
                             send,
                           ],
                         ),

@@ -8,6 +8,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/copy_command.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/spell_check.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -24,7 +25,7 @@ class Completions extends ChangeNotifier {
   final Daemon daemon;
 
   /// The draft's text, and the files its @ picked.
-  TextEditingController get text => chat.draft.text;
+  ComposerText get text => chat.draft.text;
   Set<String> get mentions => chat.draft.mentions;
   List<Choice> choices = [];
   int picked = 0;
@@ -82,7 +83,8 @@ class Completions extends ChangeNotifier {
       ];
       _token = (caret - m[2]!.length - 1, caret);
     }
-    if (text.text == _dismissed) found = [];
+    // A command's text is the shell's: nothing to complete (ADR 0148).
+    if (text.text == _dismissed || text.commandMode) found = [];
     choices = found.take(8).toList();
     picked = 0;
     notifyListeners();
