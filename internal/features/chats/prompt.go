@@ -120,7 +120,9 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 	if err := c.toSubagentOfLocked(&m); err != nil {
 		return err
 	}
-	queue := c.reopeningLocked() || c.busy && how == SendQueue
+	// A message out for steering as the turn ended starts the next turn
+	// (steerQueue): one sent meanwhile goes after it, however it's sent.
+	queue := c.reopeningLocked() || c.steering && !c.busy || c.busy && how == SendQueue
 	switch {
 	case len(m.Images) > 0 && !c.canImage && !c.reopeningLocked():
 		// Reopening, the agent's answer isn't known yet: the queue checks.

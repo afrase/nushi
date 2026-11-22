@@ -96,6 +96,10 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		}
 		c.queue = append([]model.Message{m}, c.queue...)
 		c.queueChangedLocked()
+		if err != nil && !c.busy { // the turn ended meanwhile: the queue, a message sent since among it, goes as the next prompt
+			c.steering = false
+			c.deliverLocked()
+		}
 		return
 	}
 	// The turn ended while a message was out: its end found this worker

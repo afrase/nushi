@@ -93,6 +93,40 @@ func TestAFailedSteerWaitsForTheNextTurn(t *testing.T) {
 	}
 }
 
+// A message sent while a queued one is out for steering, as the turn ends,
+// goes after it, not ahead: the agent gets them in the order sent, also
+// when the steer failed (they go as the next prompts).
+func TestAPromptWaitsForTheMessageOutForSteering(t *testing.T) {
+	for name, steerErr := range map[string]error{"refused": nil, "failed": errors.New("Session not found")} {
+		t.Run(name, func(t *testing.T) {
+			svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+			agent.steerable, c.steer = true, true
+			agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})
+			agent.refuseSteer, agent.steerErr = true, steerErr // the turn ended as it came, or it failed
+			prompts := func(want ...string) func() bool {
+				return func() bool {
+					agent.mu.Lock()
+					defer agent.mu.Unlock()
+					return slices.Equal(agent.prompts, want)
+				}
+			}
+			testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+			testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+			ranTool(c, "t1") // "two" goes out for steering, and waits there
+			eventually(t, c, func() bool { return c.steering && len(c.queue) == 0 })
+			agent.release()
+			eventually(t, c, func() bool { return !c.busy })
+			testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "three"}, SendIdle))
+			close(agent.steerGate)
+			testcheck.Wait(t, "two as the next prompt", prompts("one", "two"))
+			agent.release()
+			testcheck.Wait(t, "three after it", prompts("one", "two", "three"))
+			agent.release()
+			idle(t, c)
+		})
+	}
+}
+
 // A permission prompt in a turn the agent started itself: Stop cancels it,
 // and nothing rewinds past it meanwhile.
 func TestAPromptInTheAgentsOwnTurn(t *testing.T) {
