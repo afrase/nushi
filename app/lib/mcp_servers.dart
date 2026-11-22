@@ -19,7 +19,7 @@ import 'package:nushi/widgets.dart' show errorText;
 /// daemon is back after it was lost during a refresh (a restart into an
 /// update cuts a check short).
 class McpServers extends ChangeNotifier {
-  factory of(Daemon daemon, String folder, {String agent = 'claude'}) {
+  factory of(Daemon daemon, String folder, {required String agent}) {
     final list = _byFolder[(agent, folder)] ??= McpServers._(
       daemon,
       folder,
@@ -46,7 +46,7 @@ class McpServers extends ChangeNotifier {
   final Daemon daemon;
   final String folder;
 
-  /// Whose servers: "claude" or "ante".
+  /// Whose servers: an agent's name, as ListAgents gives it.
   final String agent;
 
   /// They are only yours, with no off switch or legacy SSE, as the daemon

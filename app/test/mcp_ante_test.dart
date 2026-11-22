@@ -280,9 +280,9 @@ void main() {
   testWidgets('a change in one folder asks for the agent’s others again, '
       'the same lists', (tester) async {
     final (fake, d) = await _daemon(tester);
-    final a = McpServers.of(d, '/changed/a');
-    final shown = McpServers.of(d, '/changed/shown');
-    final hidden = McpServers.of(d, '/changed/hidden');
+    final a = McpServers.of(d, '/changed/a', agent: 'claude');
+    final shown = McpServers.of(d, '/changed/shown', agent: 'claude');
+    final hidden = McpServers.of(d, '/changed/hidden', agent: 'claude');
     final ante = McpServers.of(d, '/changed/a', agent: 'ante');
     await tester.pumpAndSettle();
     var told = 0;
@@ -302,8 +302,8 @@ void main() {
     expect(asked('/changed/shown'), before.$1 + 2);
     expect(told, greaterThan(0));
     expect(asked('/changed/hidden'), before.$2);
-    expect(McpServers.of(d, '/changed/hidden'), same(hidden));
-    expect(McpServers.of(d, '/changed/shown'), same(shown));
+    expect(McpServers.of(d, '/changed/hidden', agent: 'claude'), same(hidden));
+    expect(McpServers.of(d, '/changed/shown', agent: 'claude'), same(shown));
     await tester.pumpAndSettle();
     expect(asked('/changed/hidden'), before.$2 + 2);
     expect(McpServers.of(d, '/changed/a', agent: 'ante'), same(ante));

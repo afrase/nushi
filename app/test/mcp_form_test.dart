@@ -21,7 +21,8 @@ void main() {
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Builder(
           builder: (context) => TextButton(
-            onPressed: () => mcpForm(context, McpServers.of(d, '/x')),
+            onPressed: () =>
+                mcpForm(context, McpServers.of(d, '/x', agent: 'claude')),
             child: const Text('open'),
           ),
         ),
@@ -66,7 +67,10 @@ void main() {
                 body: Center(
                   child: Button(
                     label: 'open',
-                    onPressed: () => mcpForm(context, McpServers.of(d, '/x')),
+                    onPressed: () => mcpForm(
+                      context,
+                      McpServers.of(d, '/x', agent: 'claude'),
+                    ),
                   ),
                 ),
               ),

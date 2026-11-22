@@ -1,6 +1,7 @@
 import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/agents.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart' show Toggle;
 import 'package:nushi/daemon.dart';
@@ -86,6 +87,32 @@ Future<(FakeDaemon, Daemon)> _view(
 
 void main() {
   setUpAll(loadFonts);
+
+  testWidgets('the page lists the agents the daemon says have MCP: Reading… '
+      'until it has listed them, a line when none has', (tester) async {
+    final (fake, d) = await _daemon(tester);
+    final agents = agentList.value;
+    agentList.value = {};
+    viewport(tester, const Size(1000, 640), ratio: 3);
+    await tester.pumpWidget(themed(McpView(daemon: d, folder: '/Users/me/m')));
+    await tester.pumpAndSettle();
+    expect(find.text('Reading…'), findsOneWidget);
+    expect(fake.calls.whereType<ListMcpServersRequest>(), isEmpty);
+    agentList.value = {
+      for (final a in agents.values) a.name: a.deepCopy()..mcp = false,
+    };
+    await tester.pumpAndSettle();
+    expect(find.text('No agent’s MCP servers are shown here'), findsOneWidget);
+    expect(fake.calls.whereType<ListMcpServersRequest>(), isEmpty);
+    agentList.value = agents;
+    await tester.pumpAndSettle();
+    expect(find.text('github'), findsOneWidget);
+    expect(
+      fake.calls.whereType<ListMcpServersRequest>().map((r) => r.agent).toSet(),
+      {'claude'},
+    );
+    await closeView(tester, d);
+  });
 
   testWidgets('a switch turns a user server on for the project; a plugin’s '
       'server and a connector say only /mcp can', (tester) async {

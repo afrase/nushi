@@ -333,7 +333,7 @@ void main() {
         unawaited(
           mcpForm(
             tester.state<NavigatorState>(find.byType(Navigator).first).context,
-            McpServers.of(d, demoTree),
+            McpServers.of(d, demoTree, agent: 'claude'),
           ),
         );
         await _pump(tester);

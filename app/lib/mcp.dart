@@ -14,9 +14,10 @@ import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// Settings › MCP servers: a folder picker, then each agent's servers
-/// (Claude's by scope, Ante's yours only), each with its state, transport
-/// and command or URL (secrets masked).
+/// Settings › MCP servers: a folder picker, then the servers of each agent
+/// the daemon says Nushi reads them for (Agent.mcp; Claude's by scope,
+/// Ante's yours only), each with its state, transport and command or URL
+/// (secrets masked). "Reading…" until the daemon has listed its agents.
 class McpView extends StatelessWidget {
   const new({required this.daemon, required this.folder, super.key});
 
@@ -31,14 +32,44 @@ class McpView extends StatelessWidget {
       '$title sessions.';
 
   @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: agentList,
+    builder: (context, known, _) {
+      final theme = NushiTheme.of(context);
+      final muted = theme.ui(theme.t.textMuted, size: 12);
+      final agents = [for (final a in mcpAgents) a.name];
+      if (agents.isEmpty) {
+        return SettingsPage(
+          title: 'MCP servers',
+          children: [
+            Text(
+              known.isEmpty
+                  ? 'Reading…'
+                  : 'No agent’s MCP servers are shown here',
+              style: muted,
+            ),
+          ],
+        );
+      }
+      return _Lists(daemon, folder, [
+        for (final a in agents) McpServers.of(daemon, folder, agent: a),
+      ]);
+    },
+  );
+}
+
+/// The page of [lists], one per agent with MCP.
+class _Lists extends StatelessWidget {
+  const new(this.daemon, this.folder, this.lists);
+
+  final Daemon daemon;
+  final String folder;
+  final List<McpServers> lists;
+
+  @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final agents = [for (final a in mcpAgents) a.name];
-    final lists = [
-      for (final a in agents.isEmpty ? ['claude'] : agents)
-        McpServers.of(daemon, folder, agent: a),
-    ];
     return ListenableBuilder(
       listenable: Listenable.merge(lists),
       builder: (context, _) {
@@ -111,7 +142,7 @@ class McpView extends StatelessWidget {
                   list,
                   'user',
                   'User',
-                  userOnlyAbout(agentTitle(list.agent)),
+                  McpView.userOnlyAbout(agentTitle(list.agent)),
                 )
               else
                 for (final MapEntry(key: scope, value: (title, about))

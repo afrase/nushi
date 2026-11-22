@@ -24,11 +24,7 @@ PanelWidget mcpWidget(ChatState chat, Daemon daemon) {
       note: "In ${chat.agentName}'s own config",
     );
   }
-  final list = McpServers.of(
-    daemon,
-    chat.folder,
-    agent: chat.agent.isEmpty ? 'claude' : chat.agent,
-  );
+  final list = McpServers.of(daemon, chat.folder, agent: chat.agent);
   return PanelWidget(
     title: 'MCP',
     summary: ListenableBuilder(
