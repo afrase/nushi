@@ -22,7 +22,7 @@ func TestAKeyFileThatDoesntParseStartsOver(t *testing.T) {
 			s := startRemote(t, dir, url)
 			phone := newKey(t)
 			o, oldID := pairOne(t, s, phone)
-			waitFor(t, func() bool { return s.Get().Pairing == nil })
+			testcheck.Wait(t, "the pairing to end", func() bool { return s.Get().Pairing == nil })
 			s.Close()
 			testcheck.Write(t, filepath.Join(dir, name), `{"private": fals`)
 
@@ -47,7 +47,7 @@ func TestAKeyFileThatDoesntParseStartsOver(t *testing.T) {
 			}
 
 			pairOne(t, s, newKey(t))
-			waitFor(t, func() bool { return s.Get().Reset == nil })
+			testcheck.Wait(t, "the reset to clear once a phone pairs", func() bool { return s.Get().Reset == nil })
 			s.Close()
 			if r := startRemote(t, dir, url).Get().Reset; r != nil {
 				t.Errorf("paired, then restarted: %+v", r)
