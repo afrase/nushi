@@ -171,9 +171,7 @@ void main() {
       SystemChannels.platform,
       (call) async {
         asked.add(call.method);
-        return call.method == 'Clipboard.getData'
-            ? {'text': 'hunter2'}
-            : null;
+        return call.method == 'Clipboard.getData' ? {'text': 'hunter2'} : null;
       },
     );
     final (fake, shells) = _daemon(live: '\x1b]52;c;?\x07');
