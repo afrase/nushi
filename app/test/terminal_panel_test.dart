@@ -5,6 +5,7 @@ import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/terminals.dart';
+import 'package:xterm2/xterm.dart' show TerminalView;
 
 import 'fake_daemon.dart' show FakeDaemon, loadFonts;
 import 'fake_shells.dart';
@@ -162,5 +163,25 @@ void main() {
     );
     await _panel(tester, Terminals(NushiServiceClient(fake)));
     expect(shells.typedAll.join(), isNot(contains('echo hi')));
+  });
+
+  testWidgets("output can't read the clipboard (OSC 52)", (tester) async {
+    final asked = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        asked.add(call.method);
+        return call.method == 'Clipboard.getData'
+            ? {'text': 'hunter2'}
+            : null;
+      },
+    );
+    final (fake, shells) = _daemon(live: '\x1b]52;c;?\x07');
+    await _panel(tester, Terminals(NushiServiceClient(fake)));
+    // Focused, as a terminal is when output reaches it while it's used.
+    await tester.tap(find.byType(TerminalView).last);
+    await tester.pumpAndSettle();
+    expect(shells.typedAll.join(), isNot(contains('52;')));
+    expect(asked, isNot(contains('Clipboard.getData')));
   });
 }

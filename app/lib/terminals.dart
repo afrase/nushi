@@ -243,6 +243,10 @@ class TermSession extends ChangeNotifier {
         _OptionAsMeta(),
         defaultInputHandler,
       ]),
+      // Output never reads the clipboard (OSC 52's query): an ssh host or
+      // a remote log shown here would get what you last copied. Writes
+      // stay, for tmux's and nvim's yank, and only while it's focused.
+      onClipboardQuery: (_) => null,
       // Not a title report (CSI 20/21 t): output could set the title and
       // have it typed at the prompt.
       onOutput: (s) =>
