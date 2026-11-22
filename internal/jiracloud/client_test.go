@@ -237,6 +237,43 @@ func TestWriteRetries(t *testing.T) {
 	}
 }
 
+// TestRedirectsOnlyToHTTPS: a redirect to plain http is refused before
+// it's followed, so the token never goes out in clear (Go keeps the
+// Authorization header on a redirect to the same host, whatever the
+// scheme); one to https is followed.
+func TestRedirectsOnlyToHTTPS(t *testing.T) {
+	f := newFake(t)
+	var reached sync.Mutex
+	got := ""
+	plain := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		reached.Lock()
+		defer reached.Unlock()
+		got = r.Header.Get("Authorization")
+	}))
+	t.Cleanup(plain.Close)
+	f.routes["GET /rest/api/3/myself"] = func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, plain.URL+"/rest/api/3/myself", http.StatusFound)
+	}
+	_, err := f.client().Myself(t.Context())
+	reached.Lock()
+	if got != "" {
+		t.Errorf("the token went over http: %q", got)
+	}
+	reached.Unlock()
+	if err == nil || !strings.Contains(err.Error(), "https") {
+		t.Fatalf("a redirect to http: %v", err)
+	}
+	f.routes["GET /rest/api/3/myself"] = func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, f.srv.URL+"/moved/myself", http.StatusFound)
+	}
+	f.routes["GET /moved/myself"] = func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"accountId":"acc","displayName":"Test User"}`))
+	}
+	if me, err := f.client().Myself(t.Context()); err != nil || me.Name != "Test User" {
+		t.Fatalf("a redirect to https: %+v %v", me, err)
+	}
+}
+
 func TestErrors(t *testing.T) {
 	f := newFake(t)
 	f.routes["POST /rest/api/3/search/jql"] = func(w http.ResponseWriter, _ *http.Request) {

@@ -55,10 +55,29 @@ func New(site, cloudID, email, token string, transport http.RoundTripper) *Clien
 		Site:    strings.TrimRight(site, "/"),
 		CloudID: cloudID,
 		auth:    "Basic " + base64.StdEncoding.EncodeToString([]byte(email+":"+token)),
-		http:    &http.Client{Transport: transport, Timeout: 30 * time.Second},
+		http:    &http.Client{Transport: transport, Timeout: 30 * time.Second, CheckRedirect: httpsOnly},
 		log:     slog.Default().With("site", strings.TrimPrefix(strings.TrimRight(site, "/"), "https://")),
 		wait:    sleep,
 	}
+}
+
+// errNotHTTPS is a redirect to anything but https, refused before it's
+// followed.
+var errNotHTTPS = errors.New("Jira redirected to an address that isn't https")
+
+// httpsOnly follows a redirect only to https, as many as Go's default
+// (10): Go keeps the Authorization header on a redirect to the same host
+// whatever the scheme, so one to http would send the token in clear. One
+// to another host (an attachment's media host) goes without the header,
+// Go's own rule.
+func httpsOnly(r *http.Request, via []*http.Request) error {
+	if r.URL.Scheme != "https" {
+		return errNotHTTPS
+	}
+	if len(via) >= 10 {
+		return errors.New("Jira redirected 10 times")
+	}
+	return nil
 }
 
 // Connect checks email's token on site: as a classic token on the site
