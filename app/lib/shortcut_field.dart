@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -44,6 +46,7 @@ class ShortcutField extends StatefulWidget {
     super.key,
     this.onStart,
     this.chosen = false,
+    this.keyboard,
   });
 
   final String label;
@@ -51,6 +54,12 @@ class ShortcutField extends StatefulWidget {
   final ValueChanged<SingleActivator> onKey;
   final VoidCallback? onStart;
   final bool chosen;
+
+  /// Whether the keyboard moved last, not the pointer: focused, the cap
+  /// wears its ring only then (as a browser's `:focus-visible`), so a
+  /// key just taken with a click doesn't look as if it still listened.
+  /// Always, without one.
+  final ValueListenable<bool>? keyboard;
 
   @override
   State<ShortcutField> createState() => ShortcutFieldState();
@@ -72,6 +81,11 @@ class ShortcutFieldState extends State<ShortcutField> {
   void initState() {
     super.initState();
     widget.focusNode.addListener(_onFocus);
+    widget.keyboard?.addListener(_onMoved);
+  }
+
+  void _onMoved() {
+    if (mounted && _focused) setState(() {});
   }
 
   @override
@@ -81,11 +95,16 @@ class ShortcutFieldState extends State<ShortcutField> {
       oldWidget.focusNode.removeListener(_onFocus);
       widget.focusNode.addListener(_onFocus);
     }
+    if (oldWidget.keyboard != widget.keyboard) {
+      oldWidget.keyboard?.removeListener(_onMoved);
+      widget.keyboard?.addListener(_onMoved);
+    }
   }
 
   @override
   void dispose() {
     widget.focusNode.removeListener(_onFocus);
+    widget.keyboard?.removeListener(_onMoved);
     _release();
     // Settings shut mid-record: the menu bar gets its keys back (main.dart
     // waits for the frame to end before it rebuilds).
@@ -192,10 +211,49 @@ class ShortcutFieldState extends State<ShortcutField> {
               ? KeyCapLook.chosen
               : KeyCapLook.key,
           // Listening, it's unmistakable: the accent's soft fill, its ring
-          // and words; focused, the ring alone.
-          ring: _recording || _focused,
+          // and words; focused from the keyboard, the ring alone.
+          ring: _recording || (_focused && (widget.keyboard?.value ?? true)),
         ),
       ),
     );
+  }
+}
+
+/// Whether the keyboard moved last (Tab, Enter, Space, an arrow), not the
+/// pointer (a click): a [ShortcutField]'s focus shows its ring only then.
+/// Typing a key to record doesn't count. Listens from when it's made until
+/// it's disposed.
+class KeyboardMovedLast extends ValueNotifier<bool> {
+  new() : super(true) {
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointer);
+    HardwareKeyboard.instance.addHandler(_onKey);
+  }
+
+  /// The keys that move the keyboard's focus or press what has it.
+  static final Set<LogicalKeyboardKey> _moves = {
+    LogicalKeyboardKey.tab,
+    LogicalKeyboardKey.enter,
+    LogicalKeyboardKey.numpadEnter,
+    LogicalKeyboardKey.space,
+    LogicalKeyboardKey.arrowUp,
+    LogicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight,
+  };
+
+  void _onPointer(PointerEvent e) {
+    if (e is PointerDownEvent) value = false;
+  }
+
+  bool _onKey(KeyEvent e) {
+    if (e is KeyDownEvent && _moves.contains(e.logicalKey)) value = true;
+    return false;
+  }
+
+  @override
+  void dispose() {
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_onPointer);
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
   }
 }

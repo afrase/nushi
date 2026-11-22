@@ -90,6 +90,14 @@ void main() {
       expect(savedKeys(), {'pin': 'Alt+Cmd+S'});
       expect(shortcutRecording.value, isFalse);
       expect(FocusManager.instance.primaryFocus?.debugLabel, 'shortcut-pin');
+      // Started with a click, the key taken shows no ring: only the
+      // chosen key's fill, not a cap that still listens.
+      expect(ringOf(tester, 'pin'), 0);
+      expect(isChosen(tester, 'pin'), isTrue);
+      // A Tab away and back, the keyboard's focus shows it.
+      await pressKey(tester, LogicalKeyboardKey.tab);
+      await pressKey(tester, LogicalKeyboardKey.tab, [shiftKey]);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'shortcut-pin');
       expect(ringOf(tester, 'pin'), 2);
       d.dispose();
     }, variant: onMac);

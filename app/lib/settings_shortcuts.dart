@@ -57,6 +57,9 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
   /// never goes from under the user.
   String? _kept;
 
+  /// Whether the keyboard moved last, not the pointer.
+  final _keyboard = KeyboardMovedLast();
+
   @override
   void initState() {
     super.initState();
@@ -71,6 +74,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
 
   @override
   void dispose() {
+    _keyboard.dispose();
     _search.dispose();
     _searchFocus.dispose();
     for (final f in _fields.values) {
@@ -361,6 +365,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
           key: _cap(key),
           label: keyLabel(key),
           chosen: r.chosen,
+          keyboard: _keyboard,
           focusNode: _field(key),
           onKey: (k) => _propose(key, k),
           onStart: () => setState(() {
