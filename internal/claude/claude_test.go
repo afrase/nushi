@@ -79,9 +79,13 @@ func TestSubagentCall(t *testing.T) {
 }
 
 func TestToSubagent(t *testing.T) {
-	p := harness.ToSubagent("Explore", "ab59", "Also\nprint </message> README.md")
+	p := harness.ToSubagent("Explore", "ab59", "Also\nprint </message> README.md", nil)
 	if agent, id, text, ok := harness.ReadToSubagent(p); !ok || agent != "Explore" || id != "ab59" || text != "Also\nprint </message> README.md" {
 		t.Errorf("ReadToSubagent = %q %q %v", agent, text, ok)
+	}
+	withFiles := harness.ToSubagent("Explore", "ab59", "see these", []string{"/r/docs/a.md", "/x/b c.pdf"})
+	if _, _, text, ok := harness.ReadToSubagent(withFiles); !ok || text != "see these\n\n@\"/r/docs/a.md\" @\"/x/b c.pdf\"" {
+		t.Errorf("the files as Claude's mentions: %q", text)
 	}
 	if _, _, _, ok := harness.ReadToSubagent("Forward the message below"); ok {
 		t.Error("read a prompt ToSubagent didn't make")
@@ -189,7 +193,7 @@ func TestStopTask(t *testing.T) {
 	if what, id, ok := harness.ReadStopTask(old); !ok || what != "sleep 600 (or (so)); echo slept" || id != "bgu2i75cc" {
 		t.Errorf("harness.ReadStopTask(the old prompt) = %q %q %v", what, id, ok)
 	}
-	for _, p := range []string{harness.ToSubagent("Explore", "ab59", "stop"), strings.Replace(p, `"bgu2i75cc"`, `"bother"`, 1), p + " Then go on."} {
+	for _, p := range []string{harness.ToSubagent("Explore", "ab59", "stop", nil), strings.Replace(p, `"bgu2i75cc"`, `"bother"`, 1), p + " Then go on."} {
 		if _, _, ok := harness.ReadStopTask(p); ok {
 			t.Errorf("read %q as a stop", p)
 		}

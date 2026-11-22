@@ -277,14 +277,11 @@ func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 		// The files go in the message the agent forwards, by their paths,
 		// not as links of the agent's own beside it: those it would be
 		// told not to act on, and the subagent never told of.
-		var b strings.Builder
-		b.WriteString(text)
-		sep := "\n\n"
-		for _, f := range files {
-			b.WriteString(sep + `@"` + c.filePath(f) + `"`)
-			sep = " "
+		paths := make([]string, len(files))
+		for i, f := range files {
+			paths[i] = c.filePath(f)
 		}
-		text, files = c.kind.toSubagents.ToSubagent(r.Agent, r.AgentID, b.String()), nil
+		text, files = c.kind.toSubagents.ToSubagent(r.Agent, r.AgentID, text, paths), nil
 	}
 	prompt := []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}
 	for _, f := range files {

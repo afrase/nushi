@@ -24,7 +24,7 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	}
 	eventually(t, c, func() bool { return !c.busy })
 	got, _ := agent.texts()
-	if len(got) != 1 || got[0] != claudeHarness.ToSubagent("Explore", "ab59", "and README.md") {
+	if len(got) != 1 || got[0] != claudeHarness.ToSubagent("Explore", "ab59", "and README.md", nil) {
 		t.Errorf("prompts = %q", got)
 	}
 	c.mu.Lock()
@@ -56,7 +56,7 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	agent.mu.Lock()
 	p := agent.prompt
 	agent.mu.Unlock()
-	if want := claudeHarness.ToSubagent("Explore", "ab59", "see these\n\n@\""+c.record.Folder+"/docs/a.md\" @\"/x/b c.pdf\""); len(p) != 1 || p[0].Text == nil || p[0].Text.Text != want {
+	if want := claudeHarness.ToSubagent("Explore", "ab59", "see these", []string{c.record.Folder + "/docs/a.md", "/x/b c.pdf"}); len(p) != 1 || p[0].Text == nil || p[0].Text.Text != want {
 		t.Errorf("prompt = %+v", p)
 	}
 	if _, _, _, ok := claudeHarness.ReadToSubagent(p[0].Text.Text); !ok {
@@ -115,7 +115,7 @@ func TestAMessageToASubagentFollowsTheAgentsCall(t *testing.T) {
 
 	// Replayed, the message names its subagent again.
 	send(c, acp.SessionUpdate{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{MessageID: "u9",
-		Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: claudeHarness.ToSubagent("general-purpose", "ab59", "hi")}}}})
+		Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: claudeHarness.ToSubagent("general-purpose", "ab59", "hi", nil)}}}})
 	c.mu.Lock()
 	it := c.items[len(c.items)-1]
 	c.mu.Unlock()

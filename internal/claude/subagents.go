@@ -23,11 +23,19 @@ func (Harness) SubagentID(output string) string {
 
 // ToSubagent asks Claude to pass text to one of its subagents unchanged,
 // with its SendMessage tool, which runs a finished subagent again. Claude Code
-// has no way for a client to reach a subagent itself.
-func (Harness) ToSubagent(agent, agentID, text string) string {
+// has no way for a client to reach a subagent itself. The files go after
+// the text as Claude's @"path" mentions.
+func (Harness) ToSubagent(agent, agentID, text string, files []string) string {
+	var b strings.Builder
+	b.WriteString(text)
+	sep := "\n\n"
+	for _, f := range files {
+		b.WriteString(sep + `@"` + f + `"`)
+		sep = " "
+	}
 	return fmt.Sprintf("Forward the message below, verbatim, to your %s subagent whose agentId is %s, with the SendMessage tool "+
 		"(to: that agentId). Don't act on it yourself and don't change it. When its reply comes back, pass it on to me.\n\n"+
-		"<message>\n%s\n</message>", agent, agentID, text)
+		"<message>\n%s\n</message>", agent, agentID, b.String())
 }
 
 var toSubagentPrompt = regexp.MustCompile(`(?s)^Forward the message below, verbatim, to your (.+?) subagent whose agentId is ([0-9a-z]+), with the SendMessage tool .*?\n\n<message>\n(.*)\n</message>$`)

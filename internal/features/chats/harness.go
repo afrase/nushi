@@ -116,9 +116,9 @@ type SubagentOutput interface {
 // An agent meets it only with a real way to reach a subagent (Claude's
 // SendMessage); without it a subagent has no message box.
 type SubagentMessages interface {
-	// ToSubagent wraps a message to a subagent into a prompt that asks the
-	// agent to pass it on unchanged.
-	ToSubagent(agent, agentID, text string) string
+	// ToSubagent wraps a message to a subagent, and the paths of the files
+	// it names, into a prompt that asks the agent to pass it on unchanged.
+	ToSubagent(agent, agentID, text string, files []string) string
 	// ReadToSubagent reads such a prompt back: the subagent's type and id,
 	// and the message.
 	ReadToSubagent(prompt string) (agent, agentID, text string, ok bool)
