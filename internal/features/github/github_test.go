@@ -445,6 +445,30 @@ func TestRefusedTokenReadAgain(t *testing.T) {
 	}
 }
 
+// Settings listing the hosts reads a refused token again at once, however
+// new its client: the user who just ran `gh auth login` sees the new
+// login, not the old refusal, without waiting out noTokenFor.
+func TestHostsReadRefusedTokenAgain(t *testing.T) {
+	w := newWorld(t)
+	w.ghToken = "gho_old"
+	_, err := w.s.host(t.Context(), "github.com", false)
+	testcheck.NoErr(t, err)
+	old := w.clients["gho_old"]
+	old.mu.Lock()
+	old.refused = true
+	old.mu.Unlock()
+	w.mu.Lock()
+	w.ghToken = "gho_new" // gh auth login again
+	w.mu.Unlock()
+	hosts, err := w.s.Hosts(t.Context())
+	testcheck.NoErr(t, err)
+	for _, h := range hosts {
+		if h.Host == "github.com" && (h.User.Login != "octo-gho_new" || h.Problem != "") {
+			t.Fatalf("the refused token still listed: %+v", h)
+		}
+	}
+}
+
 // A refused client is dropped only while it's still the one kept: a
 // token added meanwhile stays.
 func TestRefusedDropKeepsANewerToken(t *testing.T) {

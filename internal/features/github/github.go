@@ -195,6 +195,12 @@ func (s *Service) Hosts(ctx context.Context) ([]HostState, error) {
 	out := make([]HostState, 0, len(names))
 	for _, name := range names {
 		st := HostState{Host: name, Pasted: slices.Contains(pasted, name)}
+		s.mu.Lock()
+		kept := s.clients[name]
+		s.mu.Unlock()
+		if kept != nil && kept.c.Refused() {
+			s.drop(name, kept) // the user is looking: read the token again now, not after noTokenFor
+		}
 		h, err := s.host(ctx, name, false)
 		if err == nil {
 			err = s.check(ctx, h)
