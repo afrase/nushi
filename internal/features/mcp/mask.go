@@ -7,11 +7,13 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/afrase/nushi/internal/secrets"
 )
 
 // Mask stands in for the secrets in a server's config, which never leave
 // the daemon: env and header values, a headers helper, and what looks
-// secret in its URL, command and arguments.
+// secret in its URL, command and arguments (secrets' shapes too).
 const Mask = "••••"
 
 // masked is a server's config with its secrets replaced by Mask.
@@ -31,7 +33,7 @@ func masked(config string) string {
 		cfg["headersHelper"] = Mask
 	}
 	if u, ok := cfg["url"].(string); ok {
-		cfg["url"] = maskURL(u)
+		cfg["url"] = maskURL(secrets.Mask(u, Mask, nil))
 	}
 	if c, ok := cfg["command"].(string); ok && strings.Contains(c, " ") { // a whole command line
 		cfg["command"] = strings.Join(maskArgs(strings.Fields(c)), " ")
@@ -67,11 +69,17 @@ var (
 // named like a secret (--api-key x, --token=x) or of a header (-H x,
 // --header x), an Authorization or Bearer value anywhere, VAR=x when VAR
 // is named like a secret or follows -e/--env (docker run -e VAR=x), URLs'
-// secrets, and the same inside an argument of several words (sh -c '…').
+// secrets, what internal/secrets knows the shape of (a GitHub or vendor
+// token, a JWT, a PEM block) wherever it stands, and the same inside an
+// argument of several words (sh -c '…').
 // It's a display heuristic: what it doesn't recognize shows.
 func maskArgs(args []string) []string {
 	out := append([]string(nil), args...)
 	for i, a := range out {
+		// Secrets' shapes first, the whole argument at once: split into
+		// words, a PEM block's would be masked one by one and miss.
+		a = secrets.Mask(a, Mask, nil)
+		out[i] = a
 		name, _, eq := strings.Cut(a, "=")
 		flag := strings.HasPrefix(a, "-")
 		switch {

@@ -134,6 +134,11 @@ func TestSecretsAreMaskedWhereverTheyAre(t *testing.T) {
 		`{"command":"docker","args":["run","-e","LOG=1","--api-key","sk-1","--token=t","GH_TOKEN=g","--port","80","plain=1"]}`:                                                                   `{"args":["run","-e","LOG=••••","--api-key","••••","--token=••••","GH_TOKEN=••••","--port","80","plain=1"],"command":"docker"}`,
 		`{"command":"x","args":["-H","Authorization: Bearer t1","--header","X-Key: k2","Bearer t3","sh -c 'curl -H \"Authorization: Bearer t4\" --token t5 https://h.io/?aB3dE5fG7hJ9kL1mN3'"]}`: `{"args":["-H","Authorization: ••••","--header","X-Key: ••••","••••","sh -c 'curl -H \"Authorization: •••• Bearer •••• --token •••• https://h.io/?••••'"],"command":"x"}`,
 		`{"command":"npx srv --password pw https://h.io/?k=v"}`:                                                                                                                                  `{"command":"npx srv --password •••• https://h.io/?k=••••"}`,
+		// Secrets' shapes wherever they stand (tech debt review 2026-11-22):
+		// a positional token, one inside sh -c, a JWT in a URL's path.
+		`{"command":"npx","args":["-y","@modelcontextprotocol/server-github","ghp_aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3zA5"]}`: `{"args":["-y","@modelcontextprotocol/server-github","••••"],"command":"npx"}`,
+		`{"command":"sh","args":["-c","run --x sk-ant-api03-aB3dE5fG7hJ9kL1mN3pQ"]}`:                                       `{"args":["-c","run --x ••••"],"command":"sh"}`,
+		`{"url":"https://h.io/mcp/eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.aB3dE5fG7hJ9kL"}`:                       `{"url":"https://h.io/mcp/••••"}`,
 	} {
 		if got := masked(in); got != want {
 			t.Errorf("masked(%s)\n= %s\nwant %s", in, got, want)
