@@ -38,12 +38,12 @@ func TestCommandOutput(t *testing.T) {
 	}
 }
 
-// A command that prints for long keeps its output's last MiB, from a
+// A command that prints for long keeps its output's last 64 KiB, from a
 // line's start, said so above the fence.
 func TestLongOutput(t *testing.T) {
 	it := model.Item{}
 	line := strings.Repeat("é", 511) + "\n" // 1 KB
-	for i := range 2_000 {                  // 2 MB
+	for i := range 200 {                    // 200 KB
 		harness.ToolCall(&it, map[string]any{"terminal_output_delta": map[string]any{"data": fmt.Sprint(i, line)}}, nil)
 	}
 	harness.ToolCall(&it, map[string]any{"terminal_exit": map[string]any{"exit_code": 1.0}}, nil)
@@ -51,11 +51,29 @@ func TestLongOutput(t *testing.T) {
 		t.Fatalf("kept %d bytes of output, %d of text", len(it.Output), len(it.Text))
 	}
 	want := "Exit code 1\n\n" + notShown + "\n\n```\n"
-	if !strings.HasPrefix(it.Text, want) || !strings.HasSuffix(it.Text, "1999"+line+"```") {
+	if !strings.HasPrefix(it.Text, want) || !strings.HasSuffix(it.Text, "199"+line+"```") {
 		t.Fatalf("text starts %q, ends %q", it.Text[:60], it.Text[len(it.Text)-20:])
 	}
 	if first := strings.TrimPrefix(it.Text, want); !utf8.ValidString(first) || strings.HasPrefix(first, "é") {
 		t.Fatalf("not cut at a line's start: %q", first[:20])
+	}
+}
+
+// Output as long as the cut and its note is kept whole; a byte more and
+// it is cut to keptOutput at most.
+func TestKeepAtTheEdge(t *testing.T) {
+	edge := strings.Repeat("a\n", (keptOutput+len(notShown)+1)/2)
+	if len(edge) != keptOutput+len(notShown)+1 {
+		edge += "a"
+	}
+	if got := keep(edge); got != edge {
+		t.Fatalf("output of %d bytes, at the edge, was cut to %d", len(edge), len(got))
+	}
+	over := edge + "b"
+	got := keep(over)
+	body, ok := strings.CutPrefix(got, notShown+"\n")
+	if !ok || len(body) > keptOutput || !strings.HasSuffix(over, body) {
+		t.Fatalf("output of %d bytes kept %d, starting %q", len(over), len(got), got[:40])
 	}
 }
 

@@ -138,8 +138,8 @@ func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[s
 // without terminals (Nushi) in pieces, as `_meta.terminal_output_delta`,
 // and how it ended, `_meta.terminal_exit`. The call's content is then only
 // a reference to a terminal: its text is the output in a fence, after
-// "Exit code N" when it failed. Only the output's last MiB is kept, said
-// so above it. A call without either is left as it is. An MCP call gets
+// "Exit code N" when it failed. Only the output's last 64 KiB is kept,
+// said so above it. A call without either is left as it is. An MCP call gets
 // its server and tool, and kind "other" (readMCP).
 func (Harness) ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
 	readMCP(it, input)
@@ -166,8 +166,10 @@ func (Harness) ToolCall(it *model.Item, meta map[string]any, input json.RawMessa
 
 // keptOutput is how much of a command's output a call keeps: a build or
 // a test run can print for an hour, and each piece rewrites the call's
-// text (Claude's shells keep 64 KB).
-const keptOutput = 1 << 20
+// text and sends the whole call to every client again, so a MiB a piece
+// left a slow client (the phone, through the relay) behind the events
+// hub. 64 KiB is what Claude's background commands keep.
+const keptOutput = 64 << 10
 
 // notShown is the line output let go of starts with.
 const notShown = "… (earlier output not shown)"
