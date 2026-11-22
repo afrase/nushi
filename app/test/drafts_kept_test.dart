@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
@@ -125,5 +126,23 @@ void main() {
     expect(store.saves.last, {
       'e': {'text': 'kept'},
     });
+  });
+
+  test('an image a send dropped is written again when the draft takes it '
+      'back', () async {
+    final dir = _dir();
+    final files = DraftFiles(dir.path);
+    await files.load();
+    final image = ImageData(
+      mimeType: 'image/png',
+      data: Uint8List.fromList([4, 5]),
+    );
+    final first = files.keepImage(image)!;
+    await files.save({}); // the empty draft's save sweeps it
+    expect(File('${dir.path}/drafts/$first').existsSync(), isFalse);
+
+    final name = files.keepImage(image)!; // put back
+    expect(File('${dir.path}/drafts/$name').readAsBytesSync(), [4, 5]);
+    expect(files.image(name)?.data, [4, 5]);
   });
 }

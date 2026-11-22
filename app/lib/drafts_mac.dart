@@ -65,7 +65,12 @@ final class DraftFiles implements DraftStore {
 
   @override
   String? keepImage(ImageData image) {
-    if (_names[image] case final name?) return name;
+    // Its file is checked: a save may have swept it meanwhile (the draft
+    // emptied by a send that then failed, and put back).
+    if (_names[image] case final name?
+        when File('${_images.path}/$name').existsSync()) {
+      return name;
+    }
     try {
       privateDir(_images);
       final ext = image.mimeType.split('/').last;
