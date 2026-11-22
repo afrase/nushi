@@ -60,9 +60,9 @@ func startRemote(t *testing.T, dir, relayURL string, tune ...func(*timing)) *Ser
 	if err != nil {
 		t.Fatal(err)
 	}
-	// A device's channel ends after the Service closes, and saves the
-	// device's last-seen time as it does: wait for that (this runs after
-	// Close, registered below) before the test's folder goes.
+	// A device's channel ends after the Service closes (the API closes it):
+	// wait for that (this runs after Close, registered below), so no
+	// goroutine of this test outlives it.
 	t.Cleanup(func() {
 		testcheck.Wait(t, "no device to show connected", func() bool {
 			return !slices.ContainsFunc(s.Get().Devices, func(d model.Device) bool { return d.Connected })

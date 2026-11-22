@@ -310,9 +310,26 @@ func (s *Service) apply() {
 }
 
 // Close stops remote access for the daemon's end, leaving it on, and
-// returns once everything it started has stopped.
+// returns once everything it started has stopped. Nothing is written
+// after it: a device's channel ends later, when the API closes it, so the
+// devices connected now are saved as seen now ([Service.seen] saves no
+// more once closed).
 func (s *Service) Close() {
 	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		s.wg.Wait()
+		return
+	}
+	now, connected := time.Now(), false
+	for i, d := range s.devices {
+		if s.connectedLocked(d.ID) {
+			s.devices[i].LastSeen, connected = now, true
+		}
+	}
+	if connected {
+		_ = s.st.SaveDevices(s.devices) // the time is a convenience
+	}
 	s.closed = true
 	s.settings.On = false
 	s.apply()

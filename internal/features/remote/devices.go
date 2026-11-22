@@ -82,11 +82,14 @@ func (s *Service) run(conn *noiseconn.Conn, device, id string) {
 	s.serve(&served{Conn: conn, s: s, device: device})
 }
 
-// seen moves device i's last-seen time and tells the clients. Called with
-// s.mu.
+// seen moves device i's last-seen time and tells the clients; once the
+// Service is closed it saves nothing ([Service.Close] saved the time, and
+// the file may be the next daemon's by now). Called with s.mu.
 func (s *Service) seen(i int) {
 	s.devices[i].LastSeen = time.Now()
-	_ = s.st.SaveDevices(s.devices) // the time is a convenience
+	if !s.closed {
+		_ = s.st.SaveDevices(s.devices) // the time is a convenience
+	}
 	s.changed()
 }
 
