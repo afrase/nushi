@@ -20,7 +20,7 @@ import 'harness.dart';
 // nowhere when the start ended with another chat selected (ADR 0052).
 
 const _shared = 'Help me write a new skill shared by every agent';
-const _claudeOnly = 'Help me write a new Claude Code skill.';
+const _claudeOnly = 'Help me write a new Claude skill.';
 
 /// The whole app needs the Mac's menu bar.
 /// What the daemon does for [_app], whose Skills view is on [folder] (one
@@ -122,6 +122,24 @@ void main() {
       await closeView(tester, d);
     }, variant: onMac);
   }
+
+  testWidgets('the question and the request name no list of agents', (
+    tester,
+  ) async {
+    final fake = _fake('/Users/me/no-list');
+    final d = await _app(tester, fake, 'claude');
+    await tester.tap(find.text('New skill…'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('every agent that reads that folder'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('oh-my-pi'), findsNothing);
+    await tester.tap(find.text('In .agents/skills'));
+    await tester.pumpAndSettle();
+    expect(_box(tester), isNot(contains('oh-my-pi')));
+    await closeView(tester, d);
+  }, variant: onMac);
 
   testWidgets('the request stays when the snapshot comes late', (tester) async {
     final snapshot = Completer<GetChatResponse>();

@@ -24,8 +24,8 @@ Future<void> newSkill(BuildContext context, SkillsList list) async {
         Text(
           '$title doesn’t read .agents/skills yet: put it in .claude/skills '
           'instead, or link it there. A skill in .agents/skills is read by '
-          'Codex, Pi, PiG, oh-my-pi, Ante and OpenCode too; once it’s '
-          'written, “Link for $title…” in its menu gives it to $title.',
+          'every agent that reads that folder; once it’s written, “Link for '
+          '$title…” in its menu gives it to $title.',
         ),
         [
           Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
@@ -63,10 +63,10 @@ Future<void> newSkill(BuildContext context, SkillsList list) async {
             '.agents/skills/<name>/SKILL.md in this folder: a short '
             'lowercase name with hyphens, the folder named the same, and '
             'the file starting with front matter that has `name` and '
-            '`description` (what it does and when to use it), so Codex, '
-            'Claude, Pi, PiG, oh-my-pi, Ante and OpenCode can all use it. '
-            'Use the skill-creator skill if you have it.'
-      : 'Help me write a new Claude Code skill. First ask me what it '
+            '`description` (what it does and when to use it), so every agent '
+            'that reads .agents/skills can use it. Use the skill-creator '
+            'skill if you have it.'
+      : 'Help me write a new $title skill. First ask me what it '
             'should do and whether it is for this project (.claude/skills) '
             'or for me everywhere (~/.claude/skills), then write its '
             'SKILL.md. Use the skill-creator skill if you have it.';
