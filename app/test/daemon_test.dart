@@ -204,7 +204,8 @@ void main() {
     expect(rememberedContexts, isNot(contains('gone')));
   });
 
-  test("a chat whose record the daemon couldn't read: what's kept stays", () async {
+  test("a chat whose record the daemon couldn't read: what's kept "
+      'stays', () async {
     ReviewComment comment(String chat) => ReviewComment(
       id: chat,
       where: 'branch',
