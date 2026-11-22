@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"unicode"
 	"unicode/utf8"
 
@@ -56,7 +57,7 @@ func (s *Service) checkUploads(m model.Message) error {
 
 // UploadError is an upload refused as too large, or one that couldn't be
 // saved. Its text names the file, for the app; the daemon's log says only
-// what went wrong (api's loggable), as a name can say what the file holds.
+// what went wrong (Logged), as a name can say what the file holds.
 type UploadError struct {
 	Name  string // the file's name, as it would be saved
 	Large bool   // over MaxUpload; else saving it failed with Err
@@ -71,6 +72,18 @@ func (e *UploadError) Error() string {
 }
 
 func (e *UploadError) Unwrap() error { return e.Err }
+
+// Logged is the upload's failure as the daemon's log says it: without the
+// file's name (its path is in Err too), only the system's reason.
+func (e *UploadError) Logged() string {
+	if e.Large {
+		return "an upload was too large"
+	}
+	if errno, ok := errors.AsType[syscall.Errno](e.Err); ok {
+		return "an upload couldn't be saved: " + errno.Error()
+	}
+	return "an upload couldn't be saved"
+}
 
 // saveUploadsLocked writes m's uploads into the chat's uploads folder and
 // adds their paths to its files; when one can't be saved, none is. It runs

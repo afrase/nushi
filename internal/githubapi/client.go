@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -102,6 +103,10 @@ type APIError struct {
 }
 
 func (e *APIError) Error() string { return "GitHub: " + e.Message }
+
+// Logged is the refusal as the daemon's log says it: by its status, never
+// GitHub's words, which can quote what someone else wrote or what was sent.
+func (e *APIError) Logged() string { return "GitHub answered " + strconv.Itoa(e.Status) }
 
 // maxMessage is the most of GitHub's refusal that's kept: the app shows it.
 const maxMessage = 1 << 10

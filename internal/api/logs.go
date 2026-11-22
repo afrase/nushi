@@ -7,19 +7,13 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
-	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"connectrpc.com/connect"
 
-	"github.com/afrase/nushi/internal/features/chats"
-	"github.com/afrase/nushi/internal/features/servers"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
-	"github.com/afrase/nushi/internal/git"
-	"github.com/afrase/nushi/internal/githubapi"
 )
 
 // SlowCall is how long a call takes before it is logged as slow.
@@ -78,30 +72,21 @@ func (l logCalls) ended(procedure string, took time.Duration, err error) {
 	}
 }
 
-// loggable is err as the log says it: GitHub's refusal by its status, never
-// its words, which can quote what someone else wrote or what was sent; a
-// failed commit without what its hooks printed, which can quote the
-// message; an upload without its file's name (its path is in the error
-// too), only the system's reason; a dev server's start without the launch
-// file's words (its command, its problem), only the kind of refusal.
+// quiet is an error whose words the app may see but the log mustn't (they
+// can quote a file's name, what a hook printed, someone else's words):
+// Logged says it in fixed words instead. An error opts in where it is
+// defined (chats.UploadError, githubapi.APIError, git.CommitError,
+// servers.StartError); tools.Logged is the same method.
+type quiet interface {
+	error
+	Logged() string
+}
+
+// loggable is err as the log says it: its Logged words if any error in its
+// chain has them, else its text.
 func loggable(err error) any {
-	if up, ok := errors.AsType[*chats.UploadError](err); ok {
-		if up.Large {
-			return "an upload was too large"
-		}
-		if errno, ok := errors.AsType[syscall.Errno](up.Err); ok {
-			return "an upload couldn't be saved: " + errno.Error()
-		}
-		return "an upload couldn't be saved"
-	}
-	if api, ok := errors.AsType[*githubapi.APIError](err); ok {
-		return "GitHub answered " + strconv.Itoa(api.Status)
-	}
-	if _, ok := errors.AsType[*git.CommitError](err); ok {
-		return "git commit failed"
-	}
-	if start, ok := errors.AsType[*servers.StartError](err); ok {
-		return "a dev server's start was refused: " + start.Kind
+	if q, ok := errors.AsType[quiet](err); ok {
+		return q.Logged()
 	}
 	return err
 }

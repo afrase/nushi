@@ -151,7 +151,7 @@ func TestNothingPrivateLogged(t *testing.T) {
 	}
 	for _, want := range []string{`msg="agent started"`, `msg="turn ended"`, `msg="auth: using the key [redacted] from the environment"`, `source=agent`,
 		`msg="acp call" chat=` + chatID, `rpc=session/prompt`, `msg="api call" rpc=SendPrompt`, `msg="terminal opened"`, `msg="dev server started"`, `msg="dev server ended"`,
-		`err="a dev server's start was refused: its program isn't found"`, `msg="chat asleep"`,
+		`code=failed_precondition err="its program isn't found"`, `msg="chat asleep"`,
 		`level=ERROR msg="Bad state: xxx`, `x…" source=app from=zone stack="#0 main (app.dart:1)"`, `msg="transcript copies cleared" copies=1`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("no %s in the log:\n%s", want, got)

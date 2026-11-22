@@ -140,6 +140,10 @@ type CommitError struct{ Said string }
 
 func (e *CommitError) Error() string { return "git commit: " + e.Said }
 
+// Logged is the failure as the daemon's log says it: without what the
+// commit printed.
+func (e *CommitError) Logged() string { return "git commit failed" }
+
 // lastSaid is the end of a commit's output, which is where a hook's failure
 // is, as plain text.
 func lastSaid(b []byte) string {
