@@ -79,3 +79,49 @@ func TestTerminalOutlivesTheApp(t *testing.T) {
 		return e.GetTerminals() != nil && len(e.GetTerminals().GetTerminals()) == 0
 	})
 }
+
+// A terminal opened with a command runs it in the chat's folder and ends
+// with it, its exit code in the stream's last message; an empty command
+// and one too long are refused as wrong.
+func TestACommandsTerminal(t *testing.T) {
+	ctx := context.Background()
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	folder, _ := filepath.EvalSymlinks(t.TempDir())
+	a := open(t, d)
+	chatID := a.start(&nushiv1.StartChatRequest{Folder: folder})
+	const command = "pwd -P; echo made-$((40+2)); exit 5"
+	term := must(a.c.OpenTerminal(ctx, connect.NewRequest(&nushiv1.OpenTerminalRequest{ChatId: chatID, Command: command, Cols: 80, Rows: 24}))).Terminal
+	if term.Command != command || term.Folder != folder {
+		t.Fatalf("opened as %v", term)
+	}
+	actx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	stream, err := a.c.AttachTerminal(actx, connect.NewRequest(&nushiv1.AttachTerminalRequest{TerminalId: term.Id}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var b strings.Builder
+	var last *nushiv1.AttachTerminalResponse
+	for stream.Receive() {
+		b.Write(stream.Msg().Data)
+		last = stream.Msg()
+	}
+	out := b.String()
+	if last == nil || !last.Exited || last.ExitCode != 5 {
+		t.Fatalf("ended with %v (%v)", last, stream.Err())
+	}
+	if !strings.Contains(out, folder+"\r\n") || !strings.Contains(out, "made-42") {
+		t.Errorf("output %q", out)
+	}
+	a.waitFor("the command's terminal listed as exited", func(e *nushiv1.EventsResponse) bool {
+		ts := e.GetTerminals().GetTerminals()
+		return len(ts) == 1 && ts[0].Command == command && ts[0].Exited && ts[0].ExitCode == 5
+	})
+
+	for _, bad := range []string{"   ", strings.Repeat("x", 65537), "echo \x1b]0;t\x07"} {
+		_, err := a.c.OpenTerminal(ctx, connect.NewRequest(&nushiv1.OpenTerminalRequest{ChatId: chatID, Command: bad, Cols: 80, Rows: 24}))
+		if connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Errorf("%.20q: %v", bad, err)
+		}
+	}
+}

@@ -4,6 +4,7 @@ package terminals
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -30,9 +33,10 @@ type Shell interface {
 	Name() string
 }
 
-// Start starts a shell in folder; changed is called when its foreground
-// program changes or it exits.
-type Start func(folder string, cols, rows int, changed func()) (Shell, error)
+// Start starts a shell in folder, or, when command isn't "", the login
+// shell running command, which ends when it does; changed is called when
+// its foreground program changes or it exits.
+type Start func(folder, command string, cols, rows int, changed func()) (Shell, error)
 
 // Chats knows the chats' folders.
 type Chats interface {
@@ -59,8 +63,13 @@ func New(start Start, shell string, chats Chats, publish func(model.Event)) *Ser
 }
 
 // Open starts a terminal for a chat in folder, or in the chat's folder
-// (its worktree, for a worktree chat) when folder is "".
-func (s *Service) Open(chatID, folder string, cols, rows int) (model.Terminal, error) {
+// (its worktree, for a worktree chat) when folder is "". With a command it
+// runs that in the login shell in place of an interactive one, and ends
+// when the command does (checkCommand says which it refuses).
+func (s *Service) Open(chatID, folder, command string, cols, rows int) (model.Terminal, error) {
+	if err := checkCommand(command); err != nil {
+		return model.Terminal{}, err
+	}
 	chatFolder, err := s.chats.Folder(chatID)
 	if err != nil {
 		return model.Terminal{}, err
@@ -71,8 +80,8 @@ func (s *Service) Open(chatID, folder string, cols, rows int) (model.Terminal, e
 	if err := checkFolder(folder); err != nil {
 		return model.Terminal{}, err
 	}
-	t := &term{ID: rand.Text(), ChatID: chatID, Folder: folder, Shell: s.shell}
-	if t.shell, err = s.start(folder, cols, rows, func() { s.changed(chatID) }); err != nil {
+	t := &term{ID: rand.Text(), ChatID: chatID, Folder: folder, Shell: s.shell, Command: command}
+	if t.shell, err = s.start(folder, command, cols, rows, func() { s.changed(chatID) }); err != nil {
 		return model.Terminal{}, err
 	}
 	if name := t.shell.Name(); name != "" {
@@ -83,7 +92,8 @@ func (s *Service) Open(chatID, folder string, cols, rows int) (model.Terminal, e
 	m := t.state()
 	s.mu.Unlock()
 	s.changed(chatID)
-	slog.Info("terminal opened", "chat", chatID, "terminal", t.ID, "folder", folder, "shell", m.Shell)
+	// The command is the user's text: never logged.
+	slog.Info("terminal opened", "chat", chatID, "terminal", t.ID, "folder", folder, "shell", m.Shell, "command", command != "")
 	return m, nil
 }
 
@@ -212,13 +222,14 @@ func (s *Service) Arrange(chatID string, ids []string) {
 }
 
 // Restart starts a new shell in a terminal's folder in place of its old
-// one, which is closed if it still runs.
+// one, which is closed if it still runs; a command's terminal runs its
+// command again.
 func (s *Service) Restart(id string, cols, rows int) error {
 	t, err := s.get(id)
 	if err != nil {
 		return err
 	}
-	sh, err := s.start(t.Folder, cols, rows, func() { s.changed(t.ChatID) })
+	sh, err := s.start(t.Folder, t.Command, cols, rows, func() { s.changed(t.ChatID) })
 	if err != nil {
 		return err
 	}
@@ -281,13 +292,21 @@ func (s *Service) Busy() bool {
 }
 
 // Running says which terminals run a command now, for the restart's wait
-// to show: each one's chat and "running <program>".
+// to show: each one's chat and "running <program>". A command's terminal
+// runs one until it exits, whatever is in front: its shell may run the
+// command itself, or exec it.
 func (s *Service) Running() []model.Hold {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var out []model.Hold
 	for _, t := range s.terms {
-		if program := t.shell.Foreground(); program != "" {
+		program := t.shell.Foreground()
+		if program == "" && t.Command != "" {
+			if exited, _ := t.shell.Exit(); !exited {
+				program, _, _ = strings.Cut(strings.TrimSpace(t.Command), "\n")
+			}
+		}
+		if program != "" {
 			out = append(out, model.Hold{ChatID: t.ChatID, Why: "running " + program, Terminal: true})
 		}
 	}
@@ -332,6 +351,33 @@ func closeAll(shells []Shell) {
 		wg.Go(sh.Close)
 	}
 	wg.Wait()
+}
+
+// ErrBadCommand is a command a terminal won't run (checkCommand).
+var ErrBadCommand = errors.New("a command a terminal won't run")
+
+// maxCommand is the longest command a terminal runs, in bytes, as Claude
+// Code limits a "!" command.
+const maxCommand = 64 << 10
+
+// checkCommand refuses a command of only spaces, one over maxCommand
+// bytes, and one holding a control character other than tab and newline
+// (as Claude Code does for a "!" command): a carriage return or an escape
+// could hide what runs from what was shown. "" is no command: a shell.
+func checkCommand(command string) error {
+	switch {
+	case command == "":
+		return nil
+	case strings.TrimSpace(command) == "":
+		return fmt.Errorf("%w: it is empty", ErrBadCommand)
+	case len(command) > maxCommand:
+		return fmt.Errorf("%w: it is over %d bytes", ErrBadCommand, maxCommand)
+	case !utf8.ValidString(command):
+		return fmt.Errorf("%w: it isn't UTF-8 text", ErrBadCommand)
+	case strings.ContainsFunc(command, func(r rune) bool { return r != '\t' && r != '\n' && unicode.IsControl(r) }):
+		return fmt.Errorf("%w: it holds a control character other than tab and newline", ErrBadCommand)
+	}
+	return nil
 }
 
 // checkFolder refuses a folder that isn't an absolute path to an existing

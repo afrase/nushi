@@ -342,12 +342,13 @@ var loginShell = sync.OnceValue(func() string {
 })
 
 // shellStarter starts the user's shell in a terminal (terminalShell: the
-// login shell, or Windows Terminal's default profile's), with
-// terminalEnv's environment, built on terminalBase's.
+// login shell, or Windows Terminal's default profile's), or that shell
+// running a command, with terminalEnv's environment, built on
+// terminalBase's.
 func shellStarter(agents interface{ Environ() []string }) terminals.Start {
-	return func(folder string, cols, rows int, changed func()) (terminals.Shell, error) {
+	return func(folder, command string, cols, rows int, changed func()) (terminals.Shell, error) {
 		base := terminalBase(agents)
-		argv := terminalShell(base)
+		argv := terminalShell(base, command)
 		return terminal.Start(argv, folder, terminalEnv(base, argv[0]), cols, rows, changed)
 	}
 }

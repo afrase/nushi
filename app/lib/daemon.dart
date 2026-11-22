@@ -57,7 +57,7 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     : Platform.environment['NUSHI_DATA'] ?? native.install.dataFolder;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 142;
+const apiVersion = 143;
 
 /// The API from which GetDiff answers one file (GetDiffRequest.path), what
 /// a file preview's change marks are drawn from.
@@ -97,6 +97,10 @@ const installApi = 115;
 /// The API from which a daemon restarts itself once nothing runs, when
 /// asked (RestartWhenIdle).
 const restartWhenIdleApi = 77;
+
+/// The API from which the daemon opens a terminal that runs one command
+/// and ends with it (OpenTerminalRequest.command).
+const commandTerminalApi = 143;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon

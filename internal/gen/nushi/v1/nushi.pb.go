@@ -15282,7 +15282,10 @@ type Terminal struct {
 	// -1: killed by a signal.
 	ExitCode int32 `protobuf:"varint,8,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
 	// The name the user gave it, if any.
-	Name          string `protobuf:"bytes,9,opt,name=name,proto3" json:"name,omitempty"`
+	Name string `protobuf:"bytes,9,opt,name=name,proto3" json:"name,omitempty"`
+	// The command it runs, for one opened to run a command (API 143):
+	// it ends when the command does. Empty for a shell.
+	Command       string `protobuf:"bytes,10,opt,name=command,proto3" json:"command,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -15373,6 +15376,13 @@ func (x *Terminal) GetName() string {
 	return ""
 }
 
+func (x *Terminal) GetCommand() string {
+	if x != nil {
+		return x.Command
+	}
+	return ""
+}
+
 type ChatTerminals struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Terminals     []*Terminal            `protobuf:"bytes,1,rep,name=terminals,proto3" json:"terminals,omitempty"`
@@ -15421,9 +15431,16 @@ type OpenTerminalRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	ChatId string                 `protobuf:"bytes,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
 	// Empty: the chat's folder.
-	Folder        string `protobuf:"bytes,2,opt,name=folder,proto3" json:"folder,omitempty"`
-	Cols          int32  `protobuf:"varint,3,opt,name=cols,proto3" json:"cols,omitempty"`
-	Rows          int32  `protobuf:"varint,4,opt,name=rows,proto3" json:"rows,omitempty"`
+	Folder string `protobuf:"bytes,2,opt,name=folder,proto3" json:"folder,omitempty"`
+	Cols   int32  `protobuf:"varint,3,opt,name=cols,proto3" json:"cols,omitempty"`
+	Rows   int32  `protobuf:"varint,4,opt,name=rows,proto3" json:"rows,omitempty"`
+	// A command to run in place of an interactive shell (API 143): the
+	// login shell runs it ("<shell> -l -c <command>"; on Windows the
+	// profile's shell with its command flag) and the terminal ends when it
+	// does, AttachTerminal's last message carrying its exit code. Empty: a
+	// shell. Refused when it is only spaces, holds a control character
+	// other than tab and newline, or is over 65,536 bytes.
+	Command       string `protobuf:"bytes,5,opt,name=command,proto3" json:"command,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -15484,6 +15501,13 @@ func (x *OpenTerminalRequest) GetRows() int32 {
 		return x.Rows
 	}
 	return 0
+}
+
+func (x *OpenTerminalRequest) GetCommand() string {
+	if x != nil {
+		return x.Command
+	}
+	return ""
 }
 
 type OpenTerminalResponse struct {
@@ -29081,7 +29105,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05ended\x18\x10 \x01(\x0e2\x11.nushi.v1.TurnEndR\x05ended\x12\x18\n" +
 	"\afailure\x18\x11 \x01(\tR\afailure\x12\x1c\n" +
 	"\tworkflows\x18\x12 \x01(\x05R\tworkflows\x12\x19\n" +
-	"\bown_turn\x18\x13 \x01(\bR\aownTurnJ\x04\b\x02\x10\x03R\x05error\"\xc4\x01\n" +
+	"\bown_turn\x18\x13 \x01(\bR\aownTurnJ\x04\b\x02\x10\x03R\x05error\"\xde\x01\n" +
 	"\bTerminal\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\achat_id\x18\x02 \x01(\tR\x06chatId\x12\x16\n" +
@@ -29090,14 +29114,17 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\aprogram\x18\x06 \x01(\tR\aprogram\x12\x16\n" +
 	"\x06exited\x18\a \x01(\bR\x06exited\x12\x1b\n" +
 	"\texit_code\x18\b \x01(\x05R\bexitCode\x12\x12\n" +
-	"\x04name\x18\t \x01(\tR\x04name\"A\n" +
+	"\x04name\x18\t \x01(\tR\x04name\x12\x18\n" +
+	"\acommand\x18\n" +
+	" \x01(\tR\acommand\"A\n" +
 	"\rChatTerminals\x120\n" +
-	"\tterminals\x18\x01 \x03(\v2\x12.nushi.v1.TerminalR\tterminals\"n\n" +
+	"\tterminals\x18\x01 \x03(\v2\x12.nushi.v1.TerminalR\tterminals\"\x88\x01\n" +
 	"\x13OpenTerminalRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x16\n" +
 	"\x06folder\x18\x02 \x01(\tR\x06folder\x12\x12\n" +
 	"\x04cols\x18\x03 \x01(\x05R\x04cols\x12\x12\n" +
-	"\x04rows\x18\x04 \x01(\x05R\x04rows\"F\n" +
+	"\x04rows\x18\x04 \x01(\x05R\x04rows\x12\x18\n" +
+	"\acommand\x18\x05 \x01(\tR\acommand\"F\n" +
 	"\x14OpenTerminalResponse\x12.\n" +
 	"\bterminal\x18\x01 \x01(\v2\x12.nushi.v1.TerminalR\bterminal\"/\n" +
 	"\x14ListTerminalsRequest\x12\x17\n" +

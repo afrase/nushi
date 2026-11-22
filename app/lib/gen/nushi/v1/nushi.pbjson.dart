@@ -4561,6 +4561,7 @@ const Terminal$json = {
     {'1': 'exited', '3': 7, '4': 1, '5': 8, '10': 'exited'},
     {'1': 'exit_code', '3': 8, '4': 1, '5': 5, '10': 'exitCode'},
     {'1': 'name', '3': 9, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'command', '3': 10, '4': 1, '5': 9, '10': 'command'},
   ],
 };
 
@@ -4569,7 +4570,7 @@ final $typed_data.Uint8List terminalDescriptor = $convert.base64Decode(
     'CghUZXJtaW5hbBIOCgJpZBgBIAEoCVICaWQSFwoHY2hhdF9pZBgCIAEoCVIGY2hhdElkEhYKBm'
     'ZvbGRlchgDIAEoCVIGZm9sZGVyEhQKBXNoZWxsGAUgASgJUgVzaGVsbBIYCgdwcm9ncmFtGAYg'
     'ASgJUgdwcm9ncmFtEhYKBmV4aXRlZBgHIAEoCFIGZXhpdGVkEhsKCWV4aXRfY29kZRgIIAEoBV'
-    'IIZXhpdENvZGUSEgoEbmFtZRgJIAEoCVIEbmFtZQ==');
+    'IIZXhpdENvZGUSEgoEbmFtZRgJIAEoCVIEbmFtZRIYCgdjb21tYW5kGAogASgJUgdjb21tYW5k');
 
 @$core.Deprecated('Use chatTerminalsDescriptor instead')
 const ChatTerminals$json = {
@@ -4599,13 +4600,15 @@ const OpenTerminalRequest$json = {
     {'1': 'folder', '3': 2, '4': 1, '5': 9, '10': 'folder'},
     {'1': 'cols', '3': 3, '4': 1, '5': 5, '10': 'cols'},
     {'1': 'rows', '3': 4, '4': 1, '5': 5, '10': 'rows'},
+    {'1': 'command', '3': 5, '4': 1, '5': 9, '10': 'command'},
   ],
 };
 
 /// Descriptor for `OpenTerminalRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List openTerminalRequestDescriptor = $convert.base64Decode(
     'ChNPcGVuVGVybWluYWxSZXF1ZXN0EhcKB2NoYXRfaWQYASABKAlSBmNoYXRJZBIWCgZmb2xkZX'
-    'IYAiABKAlSBmZvbGRlchISCgRjb2xzGAMgASgFUgRjb2xzEhIKBHJvd3MYBCABKAVSBHJvd3M=');
+    'IYAiABKAlSBmZvbGRlchISCgRjb2xzGAMgASgFUgRjb2xzEhIKBHJvd3MYBCABKAVSBHJvd3MS'
+    'GAoHY29tbWFuZBgFIAEoCVIHY29tbWFuZA==');
 
 @$core.Deprecated('Use openTerminalResponseDescriptor instead')
 const OpenTerminalResponse$json = {

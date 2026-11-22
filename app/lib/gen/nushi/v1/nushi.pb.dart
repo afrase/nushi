@@ -19741,6 +19741,7 @@ class Terminal extends $pb.GeneratedMessage {
     $core.bool? exited,
     $core.int? exitCode,
     $core.String? name,
+    $core.String? command,
   }) {
     final result = Terminal._();
     if (id != null) result.id = id;
@@ -19751,6 +19752,7 @@ class Terminal extends $pb.GeneratedMessage {
     if (exited != null) result.exited = exited;
     if (exitCode != null) result.exitCode = exitCode;
     if (name != null) result.name = name;
+    if (command != null) result.command = command;
     return result;
   }
 
@@ -19775,6 +19777,7 @@ class Terminal extends $pb.GeneratedMessage {
     ..aOB(7, _omitFieldNames ? '' : 'exited')
     ..aI(8, _omitFieldNames ? '' : 'exitCode')
     ..aOS(9, _omitFieldNames ? '' : 'name')
+    ..aOS(10, _omitFieldNames ? '' : 'command')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -19873,6 +19876,17 @@ class Terminal extends $pb.GeneratedMessage {
   $core.bool hasName() => $_has(7);
   @$pb.TagNumber(9)
   void clearName() => $_clearField(9);
+
+  /// The command it runs, for one opened to run a command (API 143):
+  /// it ends when the command does. Empty for a shell.
+  @$pb.TagNumber(10)
+  $core.String get command => $_getSZ(8);
+  @$pb.TagNumber(10)
+  set command($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(10)
+  $core.bool hasCommand() => $_has(8);
+  @$pb.TagNumber(10)
+  void clearCommand() => $_clearField(10);
 }
 
 class ChatTerminals extends $pb.GeneratedMessage {
@@ -19933,12 +19947,14 @@ class OpenTerminalRequest extends $pb.GeneratedMessage {
     $core.String? folder,
     $core.int? cols,
     $core.int? rows,
+    $core.String? command,
   }) {
     final result = OpenTerminalRequest._();
     if (chatId != null) result.chatId = chatId;
     if (folder != null) result.folder = folder;
     if (cols != null) result.cols = cols;
     if (rows != null) result.rows = rows;
+    if (command != null) result.command = command;
     return result;
   }
 
@@ -19959,6 +19975,7 @@ class OpenTerminalRequest extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'folder')
     ..aI(3, _omitFieldNames ? '' : 'cols')
     ..aI(4, _omitFieldNames ? '' : 'rows')
+    ..aOS(5, _omitFieldNames ? '' : 'command')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -20020,6 +20037,21 @@ class OpenTerminalRequest extends $pb.GeneratedMessage {
   $core.bool hasRows() => $_has(3);
   @$pb.TagNumber(4)
   void clearRows() => $_clearField(4);
+
+  /// A command to run in place of an interactive shell (API 143): the
+  /// login shell runs it ("<shell> -l -c <command>"; on Windows the
+  /// profile's shell with its command flag) and the terminal ends when it
+  /// does, AttachTerminal's last message carrying its exit code. Empty: a
+  /// shell. Refused when it is only spaces, holds a control character
+  /// other than tab and newline, or is over 65,536 bytes.
+  @$pb.TagNumber(5)
+  $core.String get command => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set command($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCommand() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCommand() => $_clearField(5);
 }
 
 class OpenTerminalResponse extends $pb.GeneratedMessage {

@@ -2881,6 +2881,9 @@ message Terminal {
   int32 exit_code = 8;
   // The name the user gave it, if any.
   string name = 9;
+  // The command it runs, for one opened to run a command (API 143):
+  // it ends when the command does. Empty for a shell.
+  string command = 10;
 }
 
 message ChatTerminals {
@@ -2893,6 +2896,13 @@ message OpenTerminalRequest {
   string folder = 2;
   int32 cols = 3;
   int32 rows = 4;
+  // A command to run in place of an interactive shell (API 143): the
+  // login shell runs it ("<shell> -l -c <command>"; on Windows the
+  // profile's shell with its command flag) and the terminal ends when it
+  // does, AttachTerminal's last message carrying its exit code. Empty: a
+  // shell. Refused when it is only spaces, holds a control character
+  // other than tab and newline, or is over 65,536 bytes.
+  string command = 5;
 }
 
 message OpenTerminalResponse {

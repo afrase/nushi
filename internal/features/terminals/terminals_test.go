@@ -38,14 +38,14 @@ func ids(ts []model.Terminal) []string {
 
 func TestArrangeRenameAndDeleteChat(t *testing.T) {
 	var shells []*fakeShell
-	start := func(string, int, int, func()) (Shell, error) {
+	start := func(string, string, int, int, func()) (Shell, error) {
 		sh := &fakeShell{}
 		shells = append(shells, sh)
 		return sh, nil
 	}
 	s := New(start, "zsh", folders{}, func(model.Event) {})
 	open := func(chat string) string {
-		m, err := s.Open(chat, "", 80, 24)
+		m, err := s.Open(chat, "", "", 80, 24)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -73,7 +73,7 @@ func TestRestartRacingCloseLeaksNoShell(t *testing.T) {
 	var s *Service
 	var shells []*fakeShell
 	var closing string
-	s = New(func(string, int, int, func()) (Shell, error) {
+	s = New(func(string, string, int, int, func()) (Shell, error) {
 		if closing != "" {
 			_ = s.Close(closing) // Close runs while the new shell starts; what it finds is the test's point, below
 		}
@@ -81,7 +81,7 @@ func TestRestartRacingCloseLeaksNoShell(t *testing.T) {
 		shells = append(shells, sh)
 		return sh, nil
 	}, "zsh", folders{}, func(model.Event) {})
-	m, err := s.Open("c1", "", 80, 24)
+	m, err := s.Open("c1", "", "", 80, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,10 +126,10 @@ func (e *endingShell) Close() { close(e.done) }
 // Closing it still says it exited.
 func TestRestartDoesNotEndOtherClients(t *testing.T) {
 	attached := make(chan struct{}, 1)
-	s := New(func(string, int, int, func()) (Shell, error) {
+	s := New(func(string, string, int, int, func()) (Shell, error) {
 		return &endingShell{done: make(chan struct{}), attached: attached}, nil
 	}, "zsh", folders{}, func(model.Event) {})
-	m, err := s.Open("c1", "", 80, 24)
+	m, err := s.Open("c1", "", "", 80, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,11 +166,11 @@ func TestRestartDoesNotEndOtherClients(t *testing.T) {
 // that asks mustn't wait for the half-second watcher to see it, or it
 // kills the command (ADR 0056).
 func TestBusyAsSoonAsACommandRuns(t *testing.T) {
-	start := func(folder string, cols, rows int, changed func()) (Shell, error) {
+	start := func(folder, _ string, cols, rows int, changed func()) (Shell, error) {
 		return terminal.Start([]string{"/bin/sh"}, folder, []string{"PS1=$ ", "TERM=xterm-256color"}, cols, rows, changed)
 	}
 	s := New(start, "sh", tempFolder{t.TempDir()}, func(model.Event) {})
-	m, err := s.Open("c1", "", 80, 24)
+	m, err := s.Open("c1", "", "", 80, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,12 +214,12 @@ func (f tempFolder) Folder(string) (string, error) { return f.dir, nil }
 // one that doesn't say keeps the name it had.
 func TestRestartNamesTheNewShell(t *testing.T) {
 	names := []string{"pwsh", "bash", ""}
-	s := New(func(string, int, int, func()) (Shell, error) {
+	s := New(func(string, string, int, int, func()) (Shell, error) {
 		sh := &fakeShell{name: names[0]}
 		names = names[1:]
 		return sh, nil
 	}, "zsh", folders{}, func(model.Event) {})
-	m, err := s.Open("c1", "", 80, 24)
+	m, err := s.Open("c1", "", "", 80, 24)
 	if err != nil || m.Shell != "pwsh" {
 		t.Fatalf("opened as %q: %v", m.Shell, err)
 	}

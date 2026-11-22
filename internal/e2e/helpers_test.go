@@ -57,9 +57,13 @@ var handleInterrupt = sync.OnceFunc(func() {
 	}
 })
 
-func startSh(folder string, cols, rows int, changed func()) (terminals.Shell, error) {
+func startSh(folder, command string, cols, rows int, changed func()) (terminals.Shell, error) {
 	handleInterrupt()
-	return terminal.Start([]string{"/bin/sh"}, folder, []string{"PS1=$ ", "TERM=xterm-256color"}, cols, rows, changed)
+	argv := []string{"/bin/sh"}
+	if command != "" {
+		argv = append(argv, "-c", command)
+	}
+	return terminal.Start(argv, folder, []string{"PS1=$ ", "TERM=xterm-256color"}, cols, rows, changed)
 }
 func questionPending(e *nushiv1.EventsResponse) bool {
 	it := e.GetItem().GetItem()

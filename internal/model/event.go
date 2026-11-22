@@ -73,6 +73,9 @@ type Terminal struct {
 	Program  string
 	Exited   bool
 	ExitCode int // -1: killed by a signal
+	// Command is what it runs, for one opened to run a command: it ends
+	// when the command does. "" for a shell.
+	Command string
 }
 
 // Usage is what the agent last reported of a chat's usage; what it hasn't

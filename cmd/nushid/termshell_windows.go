@@ -22,13 +22,33 @@ const maxWTSettings = 4 << 20
 // Windows Terminal's default profile's (wtprofile.go, ADR 0132), else
 // PowerShell 7 where it's installed (on env's Path, the terminal's own),
 // else Windows PowerShell, which every Windows has. It is read again for
-// each terminal, so a change there counts from the next.
-func terminalShell(env []string) []string {
+// each terminal, so a change there counts from the next. With a command,
+// that shell runs it with its own flag (commandArgv), or PowerShell does
+// when the profile's shell has none Nushi knows.
+func terminalShell(env []string, command string) []string {
+	argv := profileShell(env)
+	if command == "" {
+		return argv
+	}
+	if withCommand := commandArgv(argv, command); withCommand != nil {
+		return withCommand
+	}
+	return commandArgv(powerShell(env), command)
+}
+
+// profileShell is the default profile's command line, else PowerShell's.
+func profileShell(env []string) []string {
 	if line := wtDefaultLine(wtSettings(), wtFragments()); line != "" {
 		if argv, err := windows.DecomposeCommandLine(expandEnv(line)); err == nil && len(argv) > 0 && argv[0] != "" {
 			return argv
 		}
 	}
+	return powerShell(env)
+}
+
+// powerShell is PowerShell 7 where it's installed, else Windows
+// PowerShell.
+func powerShell(env []string) []string {
 	if pwsh := shellenv.LookPath("pwsh.exe", env); pwsh != "" {
 		return []string{pwsh}
 	}

@@ -2,17 +2,22 @@ package api
 
 import (
 	"context"
+	"errors"
 
 	"connectrpc.com/connect"
 
+	"github.com/afrase/nushi/internal/features/terminals"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/model"
 )
 
 func (s *server) OpenTerminal(_ context.Context, req *connect.Request[nushiv1.OpenTerminalRequest]) (*connect.Response[nushiv1.OpenTerminalResponse], error) {
 	m := req.Msg
-	t, err := s.Terms.Open(m.ChatId, m.Folder, int(m.Cols), int(m.Rows))
-	if err != nil {
+	t, err := s.Terms.Open(m.ChatId, m.Folder, m.Command, int(m.Cols), int(m.Rows))
+	switch {
+	case errors.Is(err, terminals.ErrBadCommand):
+		return nil, invalid(err)
+	case err != nil:
 		return nil, refused(err)
 	}
 	return connect.NewResponse(&nushiv1.OpenTerminalResponse{Terminal: terminalProto(t)}), nil
@@ -66,7 +71,7 @@ func (s *server) CloseTerminal(_ context.Context, req *connect.Request[nushiv1.C
 
 func terminalProto(t model.Terminal) *nushiv1.Terminal {
 	return &nushiv1.Terminal{Id: t.ID, ChatId: t.ChatID, Folder: t.Folder, Name: t.Name, Shell: t.Shell,
-		Program: t.Program, Exited: t.Exited, ExitCode: int32(t.ExitCode)}
+		Program: t.Program, Exited: t.Exited, ExitCode: int32(t.ExitCode), Command: t.Command}
 }
 
 func terminalsProto(ts []model.Terminal) []*nushiv1.Terminal {
