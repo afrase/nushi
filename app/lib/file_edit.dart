@@ -402,9 +402,12 @@ const _noLigatures = [FontFeature.disable('liga'), FontFeature.disable('calt')];
 /// A version of the file on disk: its text, sum and codec.
 typedef FileVersion = ({String text, String sha, FileCodec codec});
 
-/// Why the watch's [f] can't be edited, or null when it can: a message
-/// from a daemon before API 108 can't, and says nothing.
+/// Why the watch's [f] can't be edited, or null when it can: one past
+/// what the watch sends (5 MiB, no data and no sum) is over the 1 MiB an
+/// edit may be (Go's `filesave.MaxSize`), as one between them is; a
+/// message from a daemon before API 108 can't, and says nothing.
 String? notEditable(WatchChatFileResponse f) {
+  if (f.tooLarge) return 'it’s over 1 MiB.';
   if (f.sha256.isEmpty) return '';
   if (!f.editable) {
     if (f.size > 1 << 20) return 'it’s over 1 MiB.';
