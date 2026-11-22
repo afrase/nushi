@@ -210,7 +210,7 @@ class _ComposerState extends State<Composer> {
     _esc?.cancel();
     _esc = null;
     // An Esc that closes the choices isn't the first of two.
-    if (_completions.onKey(key, shift: shift)) return KeyEventResult.handled;
+    if (_completions.onKey(e, shift: shift)) return KeyEventResult.handled;
     if (esc && !TouchTargets.of(context)) {
       if (second) {
         unawaited(pickRewind(context, widget.daemon, widget.chat));

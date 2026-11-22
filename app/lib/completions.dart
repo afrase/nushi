@@ -127,13 +127,21 @@ class Completions extends ChangeNotifier {
     );
   }
 
-  /// Takes a key while choices show: arrows move, Enter (the keypad's
-  /// too) or Tab picks, Escape closes. True if it was taken.
-  bool onKey(LogicalKeyboardKey key, {required bool shift}) {
-    if (choices.isEmpty) return false;
+  /// An Enter that picked, while it's held: its repeats are used too, or
+  /// they'd go on to the box and send or start lines once the list closed.
+  /// The next press clears it, so a lost key-up can't keep it.
+  bool _enterHeld = false;
+
+  /// Takes a key (down or repeat) while choices show: arrows move, Enter
+  /// (the keypad's too) or Tab picks, Escape closes. True if it was taken.
+  bool onKey(KeyEvent e, {required bool shift}) {
+    final key = e.logicalKey;
     final enter =
         key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter;
+    if (e is KeyDownEvent) _enterHeld = false;
+    if (_enterHeld && enter && e is KeyRepeatEvent) return true;
+    if (choices.isEmpty) return false;
     if (key == LogicalKeyboardKey.arrowDown ||
         key == LogicalKeyboardKey.arrowUp) {
       final step = key == LogicalKeyboardKey.arrowDown ? 1 : -1;
@@ -145,6 +153,7 @@ class Completions extends ChangeNotifier {
     if ((enter && !shift) ||
         (key == LogicalKeyboardKey.tab &&
             !HardwareKeyboard.instance.isControlPressed)) {
+      _enterHeld = enter;
       accept(choices[picked]);
       return true;
     }

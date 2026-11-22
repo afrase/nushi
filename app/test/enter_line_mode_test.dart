@@ -199,6 +199,28 @@ void main() {
     }, variant: onMac);
   }
 
+  for (final lines in [false, true]) {
+    testWidgets('an Enter held over the commands’ list picks once; its '
+        'repeats neither send nor start lines (Enter starts a new line: '
+        '$lines)', (tester) async {
+      enterStartsLine.value = lines;
+      final (fake, d, _) = await _box(tester);
+      await _write(tester, '/pl');
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(_text(tester).text, '/plan ');
+      expect(_sent(fake), isEmpty);
+      // The next press is the box's again.
+      await _enter(tester, lines ? _cmd : const []);
+      await tester.pumpAndSettle();
+      expect(_sent(fake).single.text, '/plan');
+      d.dispose();
+    }, variant: onMac);
+  }
+
   spellTest('the spelling menu over the box still takes Enter', (tester) async {
     enterStartsLine.value = true;
     final (_, chat) = await spellBox(
