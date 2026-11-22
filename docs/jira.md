@@ -25,7 +25,7 @@ Settings › Jira adds a Jira Cloud site: its address, your email, and an API to
 
 Start work shows on the row under the pointer and the selected one (⌘⏎), and in its right-click menu.
 
-**Details.** ⏎ or a click shows an issue's details in the list's place: description and comments, subtasks, parent, links, attachments, remote links, and a box to comment in (Markdown). Esc goes back, as do a swipe back and the mouse's back button ([GitHub](github.md#the-inbox)).
+**Details.** ⏎ or a click shows an issue's details in the list's place: description and comments, subtasks, parent, links, attachments, remote links, and a box to comment in (Markdown). A description or comment whose document Nushi can't read says so in its place, and the rest still shows. Esc goes back, as do a swipe back and the mouse's back button ([GitHub](github.md#the-inbox)).
 
 **Keys:** ↑↓ or j k pick, ⌘⏎ starts work, ⌘R refreshes, ⌥⌘1–9 (Alt+1–9 on Linux) switch lists, / goes to the JQL, Esc closes.
 

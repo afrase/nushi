@@ -103,11 +103,7 @@ func (c *Client) Issue(ctx context.Context, key string) (model.JiraIssue, error)
 	is.RemoteLinks = links
 	is.Comments = make([]model.JiraComment, 0, len(comments))
 	for _, r := range slices.Backward(comments) {
-		cm, err := r.comment(names)
-		if err != nil {
-			return is, err
-		}
-		is.Comments = append(is.Comments, cm)
+		is.Comments = append(is.Comments, r.comment(names))
 	}
 	return is, nil
 }
@@ -147,9 +143,7 @@ func (c *Client) fields(ctx context.Context, key string) (model.JiraIssue, map[s
 		names[a.ID] = a.Filename
 	}
 	media := mediaOf(names, string(raw.Rendered["description"]))
-	if is.Description, err = markdown(d.Description, media); err != nil {
-		return is, names, err
-	}
+	is.Description = readable(d.Description, media)
 	if accept != "" {
 		media := mediaOf(names, string(raw.Rendered[accept]))
 		is.AcceptanceCriteria, _ = markdown(all[accept], media) // a field of another kind than text is left out
@@ -170,6 +164,20 @@ func (c *Client) fields(ctx context.Context, key string) (model.JiraIssue, map[s
 		}
 	}
 	return is, names, nil
+}
+
+// unreadable stands for a description or a comment whose document Nushi
+// can't read (its JSON isn't ADF's shape), so the rest of the issue shows.
+const unreadable = "_Nushi can't read this text._"
+
+// readable is a description's or a comment's text as Markdown, or
+// unreadable: one odd document never fails the whole issue.
+func readable(raw json.RawMessage, media adf.Media) string {
+	md, err := markdown(raw, media)
+	if err != nil {
+		return unreadable
+	}
+	return md
 }
 
 // markdown renders an ADF field; a field that isn't ADF (a plain string)
@@ -195,9 +203,9 @@ type rawComment struct {
 	Updated  jiraTime        `json:"updated"`
 }
 
-func (r rawComment) comment(names map[string]string) (model.JiraComment, error) {
-	body, err := markdown(r.Body, mediaOf(names, r.Rendered))
-	return model.JiraComment{ID: r.ID, Author: r.Author.name(), Body: body, Created: time.Time(r.Created), Updated: time.Time(r.Updated)}, err
+func (r rawComment) comment(names map[string]string) model.JiraComment {
+	return model.JiraComment{ID: r.ID, Author: r.Author.name(), Body: readable(r.Body, mediaOf(names, r.Rendered)),
+		Created: time.Time(r.Created), Updated: time.Time(r.Updated)}
 }
 
 // comments are an issue's latest 100 comments, newest first, as Jira
@@ -218,7 +226,7 @@ func (c *Client) AddComment(ctx context.Context, key, markdown string) (model.Ji
 	if err := c.do(ctx, http.MethodPost, "/rest/api/3/issue/{}/comment", []string{key}, nil, body, &r); err != nil {
 		return model.JiraComment{}, err
 	}
-	return r.comment(nil)
+	return r.comment(nil), nil
 }
 
 func (c *Client) remoteLinks(ctx context.Context, key string) ([]model.JiraRemoteLink, error) {

@@ -79,6 +79,52 @@ func TestIssue(t *testing.T) {
 // comments and remote links answer 404 while the site's field list is
 // still on its way; their failure cancels that read, and the 404, not the
 // cancelled read, is the answer.
+// TestUnreadableTextShowsTheRest: a description or a comment whose
+// document Nushi can't read (its JSON isn't ADF's shape) reads as a fixed
+// note, and the rest of the issue still shows.
+func TestUnreadableTextShowsTheRest(t *testing.T) {
+	f := issueFake(t)
+	issue := f.routes["GET /rest/api/3/issue/SCRUM-5"]
+	f.routes["GET /rest/api/3/issue/SCRUM-5"] = func(w http.ResponseWriter, r *http.Request) {
+		var b bytes.Buffer
+		issue(&recorder{ResponseWriter: w, body: &b}, r)
+		var raw map[string]any
+		_ = json.Unmarshal(b.Bytes(), &raw)
+		raw["fields"].(map[string]any)["description"] = map[string]any{"type": "doc", "version": "one"}
+		_ = json.NewEncoder(w).Encode(raw)
+	}
+	b, err := os.ReadFile("testdata/comments.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var page map[string]any
+	if err := json.Unmarshal(b, &page); err != nil {
+		t.Fatal(err)
+	}
+	page["comments"].([]any)[0].(map[string]any)["body"] = map[string]any{"type": "doc", "content": map[string]any{}}
+	f.routes["GET /rest/api/3/issue/SCRUM-5/comment"] = func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(page)
+	}
+	is, err := f.client().Issue(t.Context(), "SCRUM-5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if is.Description != unreadable || is.Status != "To Do" || is.AcceptanceCriteria != "- It works" {
+		t.Errorf("issue: %+v", is)
+	}
+	if len(is.Comments) != 2 || is.Comments[1].Body != unreadable || is.Comments[0].Body == unreadable || is.Comments[0].Body == "" {
+		t.Errorf("comments: %+v", is.Comments)
+	}
+}
+
+// recorder keeps what a handler writes, for a test to change it.
+type recorder struct {
+	http.ResponseWriter
+	body *bytes.Buffer
+}
+
+func (r *recorder) Write(b []byte) (int, error) { return r.body.Write(b) }
+
 func TestIssueNotFound(t *testing.T) {
 	f := newFake(t)
 	f.routes["GET /rest/api/3/field"] = func(w http.ResponseWriter, r *http.Request) {
