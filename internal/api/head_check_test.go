@@ -71,6 +71,8 @@ func (hookAgent) Trusted(string, []string) (bool, error) { return false, nil }
 // forkPull is GitHub with one pull request, from a fork.
 type forkPull struct{ github.Client }
 
+func (forkPull) Refused() bool { return false }
+
 func (forkPull) Pull(context.Context, string, int) (model.GitHubPull, error) {
 	return model.GitHubPull{ID: "PR_9", Head: "fix", CrossRepo: true}, nil
 }
