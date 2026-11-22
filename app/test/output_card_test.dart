@@ -230,8 +230,15 @@ void main() {
         ),
       ];
       state.draft.text.text = 'Why does the lint fail?';
+      // The row the last card wraps to eases in: one frame starts it,
+      // the next ends it.
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(tester.takeException(), isNull);
+      expect(
+        tester.getRect(find.byType(OutputCard).last).bottom,
+        lessThanOrEqualTo(tester.getRect(find.byType(EditableText)).top),
+      );
       expectTextInside(tester, width);
       await render(
         tester,
