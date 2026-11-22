@@ -100,6 +100,9 @@ func (fakeHarness) Interrupted(string) bool        { return false }
 func (fakeHarness) Compacted(model.Item) bool      { return false }
 func (fakeHarness) ForkTitle(string, string) bool  { return false }
 
+// OwnTurnEnded is Claude's: the fake agent sends its usage as Claude's does.
+func (fakeHarness) OwnTurnEnded(u *acp.UsageUpdate) bool { return claude.Harness{}.OwnTurnEnded(u) }
+
 // claudeOnFake is Claude's harness on the fake agent, as "claude-fake":
 // the fake agent's subagents and worktrees read as Claude's, and its
 // workflows' files are read in the test daemon's own Claude config folder

@@ -158,6 +158,11 @@ func (Harness) TurnDone(u *acp.UsageUpdate) bool {
 	return u.Cost != nil && origin["kind"] == "human"
 }
 
+// OwnTurnEnded says a usage update ends Claude's own turn: its result's,
+// the one with the cost. Claude sends one without after each model call
+// in the turn too (claude-acp-go's contextUsed).
+func (Harness) OwnTurnEnded(u *acp.UsageUpdate) bool { return u.Cost != nil }
+
 // ForkAt says how to fork a session at a message, if the agent is Nushi's
 // Go agent. ACP's session/fork copies a whole conversation; the agent cuts
 // the copy after an agent message (its ACP messageId, the message included)

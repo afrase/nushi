@@ -55,6 +55,11 @@ type Transcript interface {
 	// running in the background (Claude) answers it only once they end,
 	// so the chat counts as idle from here while one runs.
 	TurnDone(*acp.UsageUpdate) bool
+	// OwnTurnEnded says a usage update ends the agent's own turn: one that
+	// sends usage after each model call in a turn ends it with only one of
+	// them (Claude: the result's, the one with the cost). An agent without
+	// a Transcript ends it with any.
+	OwnTurnEnded(*acp.UsageUpdate) bool
 	// Notice reads a message chunk that is a notice of the agent's own,
 	// not its model's words (Claude Code's, which it sends as agent text):
 	// it shows as a notice line, not in a message.

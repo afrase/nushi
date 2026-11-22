@@ -120,12 +120,10 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		}
 	case "usage_update":
 		u := u.UsageUpdate
-		// The agent's own turn ends with its result's usage_update, the one
-		// with the cost: Claude sends one without after each model call
-		// in the turn too (claude-acp-go's contextUsed). An agent without a
-		// Transcript ends it with any.
+		// The agent's own turn ends with the usage_update its harness says
+		// ends it (Transcript.OwnTurnEnded); without a Transcript, any.
 		var ownEnded, released bool // the turn that ends here, for the meter once the cost is in
-		if ends := c.kind.transcript == nil || u.Cost != nil; ends {
+		if ends := c.kind.transcript == nil || c.kind.transcript.OwnTurnEnded(u); ends {
 			own := c.ownTurn
 			ownEnded = own
 			if own {

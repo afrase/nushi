@@ -112,6 +112,17 @@ func TestSignedIn(t *testing.T) {
 	}
 }
 
+// Only the result's usage update, the one with the cost, ends Claude's own
+// turn; one after each model call doesn't.
+func TestOwnTurnEnded(t *testing.T) {
+	if !harness.OwnTurnEnded(&acp.UsageUpdate{Cost: &acp.Cost{Amount: 0.1, Currency: "USD"}}) {
+		t.Error("the result's usage: not the end")
+	}
+	if harness.OwnTurnEnded(&acp.UsageUpdate{Used: 10}) {
+		t.Error("a model call's usage: the end")
+	}
+}
+
 func TestTurnDone(t *testing.T) {
 	origin := func(kind string) map[string]any {
 		return map[string]any{"_claude/origin": map[string]any{"kind": kind}}
