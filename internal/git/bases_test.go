@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/afrase/nushi/internal/testcheck"
@@ -117,5 +118,27 @@ func TestBasesPairOnlyTheSameName(t *testing.T) {
 	}
 	if got := bases(ctx, repo, "a-agent"); len(got) != 2 || got[1] != "refs/remotes/origin/main" {
 		t.Errorf("a local branch's upstream: %q", got)
+	}
+}
+
+// The default branch's tips are origin/main's and main's, each once: an
+// agent's worktree can start from either. A repository with no default
+// branch has none.
+func TestDefaultTips(t *testing.T) {
+	ctx := context.Background()
+	repo, wt := rebasedOntoUpstream(t)
+	testcheck.Git(t, repo, "remote", "set-head", "origin", "main")
+	upstream, main := testcheck.Git(t, repo, "rev-parse", "origin/main"), testcheck.Git(t, repo, "rev-parse", "main")
+	if got := (Worktrees{}).DefaultTips(ctx, wt); !slices.Equal(got, []string{upstream, main}) {
+		t.Errorf("main behind origin/main: %q, want %q", got, []string{upstream, main})
+	}
+	testcheck.Git(t, repo, "pull", "-q", "--ff-only")
+	if got := (Worktrees{}).DefaultTips(ctx, wt); !slices.Equal(got, []string{upstream}) {
+		t.Errorf("main pulled: %q", got)
+	}
+	empty := t.TempDir()
+	testcheck.Git(t, empty, "init", "-q")
+	if got := (Worktrees{}).DefaultTips(ctx, empty); got != nil {
+		t.Errorf("no default branch: %q", got)
 	}
 }

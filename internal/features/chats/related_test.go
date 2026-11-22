@@ -1,7 +1,9 @@
 package chats
 
 import (
+	"cmp"
 	"context"
+	"crypto/sha1" //nolint:gosec // made-up commit ids, as git's
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,8 +21,11 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// These tests run the real git: what they hold is what git answers for
-// a list an agent has written to, which no fake of it would show.
+// These tests answer from fakeCheckouts, a repository canned as git
+// would list it: what git itself answers is internal/git's to test.
+// TestRelatedRefusesAForgedList is the one deliberate exception: it runs
+// the real git, since what it holds is what git lists from a gitdir an
+// agent rewrote, which no fake would show.
 
 // subagentWorktrees is the capability, for a test's harness.
 type subagentWorktrees func(sid, folder string) map[string]string
@@ -35,23 +40,154 @@ type givenHarness struct {
 	subagentWorktrees
 }
 
-// relatedRepo is a repository with one commit, by real path.
-func relatedRepo(t *testing.T) string {
-	t.Helper()
-	repo := git.RealPath(t.TempDir())
-	testcheck.Git(t, repo, "init", "-q")
-	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "start")
-	return repo
+// fakeCheckouts is a repository as git would answer for it: its list, the
+// default branch's tips, where each commit made in a worktree left the
+// branch it started on (MergeBase), and the heads on the branch (Merged).
+// Every path it lists is a work tree of it; it counts its lists, and
+// fails as git does outside a repository or once ctx ends.
+type fakeCheckouts struct {
+	stuckWorktrees
+	mu      sync.Mutex
+	entries []model.WorktreeEntry
+	tips    []string
+	bases   map[string]string
+	merged  []string
+	outside bool
+	lists   int
 }
 
-// relatedChat is a chat in folder, its service reading the real git.
-func relatedChat(t *testing.T, h Harness, folder string, stored *memSessions) (*Service, *chat) {
+// oid is a commit's id, made up from what it says.
+func oid(subject string) string {
+	return fmt.Sprintf("%x", sha1.Sum([]byte(subject))) //nolint:gosec // a made-up commit id, as git's
+}
+
+// fakeRepo is a repository by real path, its main branch at one commit
+// and checked out in it, with a fake of what git answers there.
+func fakeRepo(t *testing.T) (string, *fakeCheckouts) {
+	t.Helper()
+	repo := git.RealPath(t.TempDir())
+	start := oid("start")
+	return repo, &fakeCheckouts{entries: []model.WorktreeEntry{{Path: repo, Branch: "main", Head: start, Main: true, Current: true}},
+		tips: []string{start}, bases: map[string]string{}}
+}
+
+// with changes the repository as git would see it.
+func (f *fakeCheckouts) with(change func()) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	change()
+}
+
+// entry is the listed worktree at path; the test fails without one.
+func (f *fakeCheckouts) entry(t *testing.T, path string) *model.WorktreeEntry {
+	t.Helper()
+	i := slices.IndexFunc(f.entries, func(e model.WorktreeEntry) bool { return e.Path == path })
+	if i < 0 {
+		t.Fatalf("no worktree at %s", path)
+	}
+	return &f.entries[i]
+}
+
+// addWorktree makes a worktree of repo on a new branch at main's head, and
+// returns its path and head.
+func (f *fakeCheckouts) addWorktree(repo, name string) (path, head string) {
+	path = filepath.Join(repo, ".claude", "worktrees", name)
+	f.with(func() {
+		head = f.entries[0].Head
+		f.entries = append(f.entries, model.WorktreeEntry{Path: path, Branch: name, Head: head})
+	})
+	return path, head
+}
+
+// commit makes a commit in the worktree at path, and returns it.
+func (f *fakeCheckouts) commit(t *testing.T, path, subject string) string {
+	t.Helper()
+	head := oid(subject)
+	f.with(func() {
+		e := f.entry(t, path)
+		f.bases[head] = cmp.Or(f.bases[e.Head], e.Head)
+		e.Head = head
+	})
+	return head
+}
+
+// remove removes the worktree at path from git's list.
+func (f *fakeCheckouts) remove(path string) {
+	f.with(func() {
+		f.entries = slices.DeleteFunc(f.entries, func(e model.WorktreeEntry) bool { return e.Path == path })
+	})
+}
+
+func (f *fakeCheckouts) List(ctx context.Context, _ string) ([]model.WorktreeEntry, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.lists++
+	if err := f.fails(ctx); err != nil {
+		return nil, err
+	}
+	return slices.Clone(f.entries), nil
+}
+
+func (f *fakeCheckouts) Locate(ctx context.Context, folder string) (string, string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.fails(ctx); err != nil {
+		return "", "", err
+	}
+	return "/common", git.RealPath(folder), nil
+}
+
+func (f *fakeCheckouts) DefaultTips(context.Context, string) []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.tips)
+}
+
+// MergeBase is head when it is on one of from, else where it left the
+// branch it started on.
+func (f *fakeCheckouts) MergeBase(ctx context.Context, _, head string, from ...string) (string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.fails(ctx); err != nil {
+		return "", err
+	}
+	if slices.Contains(from, head) {
+		return head, nil
+	}
+	if base, ok := f.bases[head]; ok {
+		return base, nil
+	}
+	return "", fmt.Errorf("no merge base of %s", head)
+}
+
+func (f *fakeCheckouts) Merged(ctx context.Context, _, _ string, tips []string) ([]string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.fails(ctx); err != nil {
+		return nil, err
+	}
+	return slices.DeleteFunc(slices.Clone(tips), func(tip string) bool { return !slices.Contains(f.merged, tip) }), nil
+}
+
+// fails is git's error, if it would fail: ctx's, or outside a repository.
+func (f *fakeCheckouts) fails(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if f.outside {
+		return errors.New("not a git repository")
+	}
+	return nil
+}
+
+// relatedChat is a chat in folder, its service reading git through wt.
+func relatedChat(t *testing.T, h Harness, folder string, stored *memSessions, wt Worktrees) (*Service, *chat) {
 	t.Helper()
 	agent := &fakeAgent{}
 	if err := json.Unmarshal([]byte(claudeSession), &agent.session); err != nil {
 		t.Fatal(err)
 	}
-	svc := newService(t, []Kind{{Harness: h, Launch: agent.launch}}, Options{Sessions: stored, Worktrees: git.Worktrees{}})
+	svc := newService(t, []Kind{{Harness: h, Launch: agent.launch}}, Options{Sessions: stored, Worktrees: wt})
 	t.Cleanup(svc.Close)
 	return svc, startChat(t, svc, folder)
 }
@@ -94,15 +230,6 @@ func shell(t *testing.T, command string) string {
 	return `"kind":"execute","rawInput":{"command":` + string(b) + `}`
 }
 
-// addWorktree makes a worktree of repo on a new branch, and returns its
-// path and head.
-func addWorktree(t *testing.T, repo, name string) (path, head string) {
-	t.Helper()
-	path = filepath.Join(repo, ".claude", "worktrees", name)
-	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", name, path)
-	return path, testcheck.Git(t, path, "rev-parse", "HEAD")
-}
-
 // related looks and returns the chat's related worktrees.
 func related(t *testing.T, svc *Service, c *chat) []model.RelatedWorktree {
 	t.Helper()
@@ -143,15 +270,15 @@ func TestMentionsWholePaths(t *testing.T) {
 // subagent named isn't related, and neither is what the chat itself did
 // in one, nor the output of a command.
 func TestRelatedFoundFromSubagentSteps(t *testing.T) {
-	repo := relatedRepo(t)
-	byFile, head := addWorktree(t, repo, "by-file")
-	byDiff, _ := addWorktree(t, repo, "by-diff")
-	byRelative, _ := addWorktree(t, repo, "by-relative")
-	byAbsolute, _ := addWorktree(t, repo, "by-absolute")
-	untold, _ := addWorktree(t, repo, "untold")
-	byChat, _ := addWorktree(t, repo, "by-chat")
-	byOutput, _ := addWorktree(t, repo, "by-output")
-	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{})
+	repo, f := fakeRepo(t)
+	byFile, head := f.addWorktree(repo, "by-file")
+	byDiff, _ := f.addWorktree(repo, "by-diff")
+	byRelative, _ := f.addWorktree(repo, "by-relative")
+	byAbsolute, _ := f.addWorktree(repo, "by-absolute")
+	untold, _ := f.addWorktree(repo, "untold")
+	byChat, _ := f.addWorktree(repo, "by-chat")
+	byOutput, _ := f.addWorktree(repo, "by-output")
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{}, f)
 
 	startSubagent(t, c, "a1")
 	step(t, c, "a1", "s1", `"kind":"edit","locations":[{"path":"`+filepath.Join(byFile, "f.txt")+`"}]`)
@@ -188,20 +315,20 @@ func TestRelatedFoundFromSubagentSteps(t *testing.T) {
 // A worktree that is a chat's, this one's or another's, stays out however
 // a subagent names it.
 func TestRelatedLeavesOutChatsOwn(t *testing.T) {
-	repo := relatedRepo(t)
-	made, _ := addWorktree(t, repo, "made")
-	earlier, _ := addWorktree(t, repo, "earlier")
-	folder, _ := addWorktree(t, repo, "folder")
-	theirs, _ := addWorktree(t, repo, "theirs")
-	gone, _ := addWorktree(t, repo, "gone")
-	mine, _ := addWorktree(t, repo, "mine")
+	repo, f := fakeRepo(t)
+	made, _ := f.addWorktree(repo, "made")
+	earlier, _ := f.addWorktree(repo, "earlier")
+	folder, _ := f.addWorktree(repo, "folder")
+	theirs, _ := f.addWorktree(repo, "theirs")
+	gone, _ := f.addWorktree(repo, "gone")
+	mine, _ := f.addWorktree(repo, "mine")
 	stored := &memSessions{stored: []model.ChatRecord{
 		{ID: "other", Folder: repo, Worktree: &model.Worktree{Path: made}, EarlierWorktrees: []model.Worktree{{Path: earlier}}},
 		{ID: "another", Folder: filepath.Join(folder, "sub")},
 		{ID: "third", Folder: repo, RelatedWorktrees: []model.RelatedWorktree{
 			{Path: theirs, State: model.RelatedPresent}, {Path: gone, State: model.RelatedRemoved}}},
 	}}
-	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, stored)
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, stored, f)
 	stored.mu.Lock()
 	stored.stored = append(stored.stored, model.ChatRecord{ID: c.id, Folder: repo, Worktree: &model.Worktree{Path: mine}})
 	stored.mu.Unlock()
@@ -219,24 +346,23 @@ func TestRelatedLeavesOutChatsOwn(t *testing.T) {
 // worktree git no longer lists is removed, with its last head, and comes
 // back if it does.
 func TestRelatedHeadsAndRemoval(t *testing.T) {
-	repo := relatedRepo(t)
-	wt, base := addWorktree(t, repo, "w")
+	repo, f := fakeRepo(t)
+	wt, base := f.addWorktree(repo, "w")
 	stored := &memSessions{}
-	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, stored)
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, stored, f)
 	startSubagent(t, c, "a1")
 	step(t, c, "a1", "s1", shell(t, "ls "+wt))
 	if got := related(t, svc, c); len(got) != 1 || got[0].LastHead != base {
 		t.Fatalf("first look: %+v", got)
 	}
-	testcheck.Git(t, wt, "commit", "-q", "--allow-empty", "-m", "work")
-	head := testcheck.Git(t, wt, "rev-parse", "HEAD")
-	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "main moved")
+	head := f.commit(t, wt, "work")
+	moved := f.commit(t, repo, "main moved")
+	f.with(func() { f.tips = []string{moved} })
 	want := model.RelatedWorktree{Path: wt, Branch: "w", BaseCommit: base, LastHead: head, CallID: "a1", State: model.RelatedPresent}
 	if got := related(t, svc, c); !slices.Equal(got, []model.RelatedWorktree{want}) {
 		t.Fatalf("second look: %+v", got)
 	}
-	testcheck.Git(t, repo, "worktree", "remove", "--force", wt)
-	testcheck.Git(t, repo, "branch", "-D", "w")
+	f.remove(wt)
 	want.State = model.RelatedRemoved
 	if got := related(t, svc, c); !slices.Equal(got, []model.RelatedWorktree{want}) {
 		t.Fatalf("removed: %+v", got)
@@ -247,22 +373,23 @@ func TestRelatedHeadsAndRemoval(t *testing.T) {
 	if !slices.Equal(last.RelatedWorktrees, []model.RelatedWorktree{want}) {
 		t.Errorf("stored: %+v", last.RelatedWorktrees)
 	}
-	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "w2", wt, head)
+	f.with(func() { f.entries = append(f.entries, model.WorktreeEntry{Path: wt, Branch: "w2", Head: head}) })
 	want.State, want.Branch = model.RelatedPresent, "w2"
 	if got := related(t, svc, c); !slices.Equal(got, []model.RelatedWorktree{want}) {
 		t.Errorf("back: %+v", got)
 	}
 }
 
-// git says what's merged, only of what had commits of its own: a worktree
-// that made none has its head on the branch and merged nothing, and a
-// squash merge leaves nothing for git to see.
+// What git shows merged counts only for a worktree with commits of its
+// own: one that made none has its head on the branch and merged nothing.
+// A worktree stays merged once git no longer lists it.
 func TestRelatedMerged(t *testing.T) {
-	repo := relatedRepo(t)
-	idle, _ := addWorktree(t, repo, "idle")
-	merged, _ := addWorktree(t, repo, "merged")
-	squashed, _ := addWorktree(t, repo, "squashed")
-	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{})
+	repo, f := fakeRepo(t)
+	idle, start := f.addWorktree(repo, "idle")
+	merged, _ := f.addWorktree(repo, "merged")
+	squashed, _ := f.addWorktree(repo, "squashed")
+	f.with(func() { f.merged = []string{start} })
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{}, f)
 	startSubagent(t, c, "a1")
 	step(t, c, "a1", "s1", shell(t, "ls "+idle))
 	step(t, c, "a1", "s2", shell(t, "ls "+merged))
@@ -280,19 +407,12 @@ func TestRelatedMerged(t *testing.T) {
 		}
 	}
 	is(map[string]bool{"idle": false, "merged": false, "squashed": false})
-	testcheck.Write(t, filepath.Join(merged, "m.txt"), "m\n")
-	testcheck.Git(t, merged, "add", ".")
-	testcheck.Git(t, merged, "commit", "-q", "-m", "merged work")
-	testcheck.Write(t, filepath.Join(squashed, "s.txt"), "s\n")
-	testcheck.Git(t, squashed, "add", ".")
-	testcheck.Git(t, squashed, "commit", "-q", "-m", "squashed work")
+	work := f.commit(t, merged, "merged work")
+	f.commit(t, squashed, "squashed work")
 	is(map[string]bool{"idle": false, "merged": false, "squashed": false})
-	testcheck.Git(t, repo, "merge", "-q", "--no-ff", "-m", "merge", "merged")
-	testcheck.Git(t, repo, "merge", "-q", "--squash", "squashed")
-	testcheck.Git(t, repo, "commit", "-q", "-m", "squash")
+	f.with(func() { f.merged = append(f.merged, work) }) // a squash merge leaves nothing for git to see
 	is(map[string]bool{"idle": false, "merged": true, "squashed": false})
-	testcheck.Git(t, repo, "worktree", "remove", "--force", merged)
-	testcheck.Git(t, repo, "branch", "-q", "-D", "merged")
+	f.remove(merged)
 	is(map[string]bool{"idle": false, "merged": true, "squashed": false})
 }
 
@@ -330,12 +450,12 @@ func (f *fakeGitHub) askedOf() []string {
 // and asked again only when GitHub couldn't answer, once its back-off is
 // over (issue 83).
 func TestRelatedSquashMergedOnGitHub(t *testing.T) {
-	repo := relatedRepo(t)
-	idle, _ := addWorktree(t, repo, "idle")
-	merged, _ := addWorktree(t, repo, "merged")
-	squashed, _ := addWorktree(t, repo, "squashed")
-	open, _ := addWorktree(t, repo, "open")
-	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{})
+	repo, f := fakeRepo(t)
+	idle, _ := f.addWorktree(repo, "idle")
+	merged, _ := f.addWorktree(repo, "merged")
+	squashed, _ := f.addWorktree(repo, "squashed")
+	open, _ := f.addWorktree(repo, "open")
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{}, f)
 	gh := &fakeGitHub{merged: map[string]bool{"squashed": true}, down: true}
 	svc.UseGitHub(gh)
 	startSubagent(t, c, "a1")
@@ -343,18 +463,19 @@ func TestRelatedSquashMergedOnGitHub(t *testing.T) {
 		step(t, c, "a1", fmt.Sprint("s", i), shell(t, "ls "+wt))
 	}
 	related(t, svc, c)
+	var work string
 	for _, wt := range []string{merged, squashed, open} {
-		testcheck.Write(t, filepath.Join(wt, "w.txt"), wt+"\n")
-		testcheck.Git(t, wt, "add", ".")
-		testcheck.Git(t, wt, "commit", "-q", "-m", "work")
+		if head := f.commit(t, wt, "work in "+wt); wt == merged {
+			work = head
+		}
 	}
 	related(t, svc, c)
 	if got := gh.askedOf(); len(got) != 0 {
 		t.Fatalf("asked while present: %v", got)
 	}
-	testcheck.Git(t, repo, "merge", "-q", "--no-ff", "-m", "merge", "merged")
+	f.with(func() { f.merged = []string{work} })
 	for _, wt := range []string{idle, merged, squashed} {
-		testcheck.Git(t, repo, "worktree", "remove", "--force", wt)
+		f.remove(wt)
 	}
 	related(t, svc, c) // GitHub down: asked, nothing kept
 	if got := gh.askedOf(); !slices.Equal(got, []string{"squashed"}) {
@@ -399,16 +520,15 @@ func TestRelatedSquashMergedOnGitHub(t *testing.T) {
 // client asking: the head it left is on record before an orchestrator
 // removes the worktree.
 func TestRelatedLooksAtASubagentsEnd(t *testing.T) {
-	repo := relatedRepo(t)
-	wt, _ := addWorktree(t, repo, "w")
-	_, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{})
+	repo, f := fakeRepo(t)
+	wt, _ := f.addWorktree(repo, "w")
+	_, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{}, f)
 	startSubagent(t, c, "a1")
 	c.mu.Lock()
 	c.relatedAt = c.relatedAt.Add(relatedEvery) // the steps below don't look: only its end does
 	c.addLocked(model.Item{ID: "s1", Kind: model.ToolCall, ToolKind: "execute", Parent: "a1", Input: `{"command":"ls ` + wt + `"}`})
 	c.mu.Unlock()
-	testcheck.Git(t, wt, "commit", "-q", "--allow-empty", "-m", "work")
-	head := testcheck.Git(t, wt, "rev-parse", "HEAD")
+	head := f.commit(t, wt, "work")
 	endSubagent(t, c, "a1", `{"status":"completed"}`)
 	eventually(t, c, func() bool {
 		r := c.record.RelatedWorktrees
@@ -420,13 +540,13 @@ func TestRelatedLooksAtASubagentsEnd(t *testing.T) {
 // files, names a subagent that never named its worktree; a path git
 // doesn't list counts for nothing.
 func TestRelatedFromTheAgentsWord(t *testing.T) {
-	repo := relatedRepo(t)
-	result, _ := addWorktree(t, repo, "result")
-	files, _ := addWorktree(t, repo, "files")
+	repo, f := fakeRepo(t)
+	result, _ := f.addWorktree(repo, "result")
+	files, _ := f.addWorktree(repo, "files")
 	h := givenHarness{testHarness{Name: "claude"}, func(string, string) map[string]string {
 		return map[string]string{"a2": files, "a3": filepath.Join(repo, "nowhere")}
 	}}
-	svc, c := relatedChat(t, h, repo, &memSessions{})
+	svc, c := relatedChat(t, h, repo, &memSessions{}, f)
 	startSubagent(t, c, "a1")
 	endSubagent(t, c, "a1", `{"status":"completed","worktreePath":"`+result+`","worktreeBranch":"result"}`)
 	startSubagent(t, c, "a2")
@@ -445,12 +565,21 @@ func TestRelatedFromTheAgentsWord(t *testing.T) {
 // git's list is the agent's to write: .git/worktrees/*/gitdir repointed
 // at another repository lists that repository, which isn't taken for a
 // worktree of this one, and one that was goes as removed, its head kept.
+// It runs the real git on purpose: chats' one integration and security
+// check of what git lists (see the top of this file).
 func TestRelatedRefusesAForgedList(t *testing.T) {
-	repo := relatedRepo(t)
-	wt, head := addWorktree(t, repo, "w")
-	addWorktree(t, repo, "forged")
-	secret := relatedRepo(t)
-	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{})
+	gitRepo := func() string {
+		repo := git.RealPath(t.TempDir())
+		testcheck.Git(t, repo, "init", "-q")
+		testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "start")
+		return repo
+	}
+	repo, secret := gitRepo(), gitRepo()
+	wt := filepath.Join(repo, ".claude", "worktrees", "w")
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "w", wt)
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "forged", filepath.Join(repo, ".claude", "worktrees", "forged"))
+	head := testcheck.Git(t, wt, "rev-parse", "HEAD")
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{}, git.Worktrees{})
 	startSubagent(t, c, "a1")
 	step(t, c, "a1", "s1", shell(t, "ls "+wt))
 	if got := related(t, svc, c); len(got) != 1 {
@@ -482,12 +611,12 @@ func TestRelatedRefusesAForgedList(t *testing.T) {
 // record then stands, as removed.
 func TestRelatedLeavesOutWhatIsntUTF8(t *testing.T) {
 	const bad = "bad\xff-branch"
-	repo := relatedRepo(t)
-	fine, head := addWorktree(t, repo, "fine")
-	renamed, _ := addWorktree(t, repo, "renamed")
-	badPath, _ := addWorktree(t, repo, "other")
-	testcheck.PutBranch(t, repo, "other", bad)
-	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{})
+	repo, f := fakeRepo(t)
+	fine, head := f.addWorktree(repo, "fine")
+	renamed, _ := f.addWorktree(repo, "renamed")
+	badPath, _ := f.addWorktree(repo, "other")
+	f.with(func() { f.entry(t, badPath).Branch = bad })
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{}, f)
 	var sent []model.Event
 	c.mu.Lock()
 	publish := c.publish
@@ -527,7 +656,7 @@ func TestRelatedLeavesOutWhatIsntUTF8(t *testing.T) {
 		t.Fatalf("found %+v", got)
 	}
 	check(got)
-	testcheck.PutBranch(t, repo, "renamed", "worse\xfe")
+	f.with(func() { f.entry(t, renamed).Branch = "worse\xfe" })
 	got = related(t, svc, c)
 	check(got)
 	want := []model.RelatedWorktree{
@@ -548,14 +677,10 @@ func TestRelatedLeavesOutWhatIsntUTF8(t *testing.T) {
 // don't, and its list says what an agent wrote), and it stays out the
 // same way.
 func TestRelatedLeavesOutAPathThatIsntUTF8(t *testing.T) {
-	folder := t.TempDir()
+	folder, f := fakeRepo(t)
 	bad := folder + "/bad\xff"
-	lists := badList{entries: []model.WorktreeEntry{{Path: folder, Main: true, Current: true, Head: "aa"}, {Path: bad, Branch: "b"}}}
-	agent := &fakeAgent{}
-	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sessions: &memSessions{}, Worktrees: lists})
-	t.Cleanup(svc.Close)
-	c := startChat(t, svc, folder)
+	f.with(func() { f.entries = append(f.entries, model.WorktreeEntry{Path: bad, Branch: "b"}) })
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, folder, &memSessions{}, f)
 	startSubagent(t, c, "a1")
 	c.mu.Lock()
 	c.addLocked(model.Item{ID: "s1", Kind: model.ToolCall, ToolKind: "execute", Parent: "a1", Input: "ls " + bad})
@@ -565,29 +690,17 @@ func TestRelatedLeavesOutAPathThatIsntUTF8(t *testing.T) {
 	}
 }
 
-// badList is a repository whose list says what its entries say, each
-// a work tree of it.
-type badList struct {
-	stuckWorktrees
-	entries []model.WorktreeEntry
-}
-
-func (b badList) List(context.Context, string) ([]model.WorktreeEntry, error) { return b.entries, nil }
-func (badList) Locate(_ context.Context, folder string) (string, string, error) {
-	return "/common", git.RealPath(folder), nil
-}
-
 // A stored record from before the check can't reach a client either,
 // whichever way the chat is read.
 func TestRelatedDropsWhatWasStored(t *testing.T) {
-	repo := relatedRepo(t)
+	repo, f := fakeRepo(t)
 	good := model.RelatedWorktree{Path: filepath.Join(repo, "gone"), Branch: "ok", CallID: "a1", State: model.RelatedRemoved}
 	stored := &memSessions{stored: []model.ChatRecord{{ID: "old", Agent: "claude", Folder: repo, RelatedWorktrees: []model.RelatedWorktree{
 		{Path: filepath.Join(repo, "x"), Branch: "bad\xff", CallID: "a2", State: model.RelatedPresent},
 		{Path: repo + "/y\xff", Branch: "ok", CallID: "a3", State: model.RelatedPresent},
 		good,
 	}}}}
-	svc, _ := relatedChat(t, testHarness{Name: "claude"}, repo, stored)
+	svc, _ := relatedChat(t, testHarness{Name: "claude"}, repo, stored, f)
 	rec, err := svc.Session("old")
 	testcheck.NoErr(t, err)
 	if !slices.Equal(rec.RelatedWorktrees, []model.RelatedWorktree{good}) {
@@ -600,23 +713,12 @@ func TestRelatedDropsWhatWasStored(t *testing.T) {
 	}
 }
 
-// unlisted is a chat's worktrees that fail the test if git lists them.
-type unlisted struct {
-	Worktrees
-	t *testing.T
-}
-
-func (u unlisted) List(ctx context.Context, folder string) ([]model.WorktreeEntry, error) {
-	u.t.Error("git listed the worktrees of a chat with nothing to look at")
-	return u.Worktrees.List(ctx, folder)
-}
-
 // An error of git's isn't a removal, and a chat with nothing to look at
 // runs no git; a folder outside git has nothing to find.
 func TestRelatedKeepsWhatItCantRead(t *testing.T) {
-	repo := relatedRepo(t)
-	wt, _ := addWorktree(t, repo, "w")
-	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{})
+	repo, f := fakeRepo(t)
+	wt, _ := f.addWorktree(repo, "w")
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{}, f)
 	startSubagent(t, c, "a1")
 	step(t, c, "a1", "s1", shell(t, "ls "+wt))
 	want := related(t, svc, c)
@@ -627,19 +729,24 @@ func TestRelatedKeepsWhatItCantRead(t *testing.T) {
 	if len(want) != 1 || !slices.Equal(got, want) {
 		t.Errorf("a cut-short look: %+v", got)
 	}
-	svc2, c2 := relatedChat(t, testHarness{Name: "claude"}, t.TempDir(), &memSessions{})
+	outside, f2 := fakeRepo(t)
+	f2.outside = true
+	svc2, c2 := relatedChat(t, testHarness{Name: "claude"}, outside, &memSessions{}, f2)
 	startSubagent(t, c2, "a1")
 	step(t, c2, "a1", "s1", shell(t, "ls /tmp"))
 	if got := related(t, svc2, c2); len(got) != 0 {
 		t.Errorf("outside git: %+v", got)
 	}
-	svc3, c3 := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{})
-	c3.mu.Lock()
-	c3.worktrees = unlisted{c3.worktrees, t}
-	c3.mu.Unlock()
+	f3 := &fakeCheckouts{}
+	svc3, c3 := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{}, f3)
 	if got := related(t, svc3, c3); len(got) != 0 {
 		t.Errorf("nothing to look at: %+v", got)
 	}
+	f3.with(func() {
+		if f3.lists != 0 {
+			t.Errorf("git listed the worktrees of a chat with nothing to look at %d times", f3.lists)
+		}
+	})
 }
 
 // A chat's folder a recording ran in: what the real Claude's subagents
@@ -718,46 +825,23 @@ func worktreeIn(s, folder string) string {
 // the old branch the chat's folder has out (issue #16), and a record kept
 // with the old base is put right at the next look.
 func TestRelatedCountsFromTheDefaultBranch(t *testing.T) {
-	dir := git.RealPath(t.TempDir())
-	origin, repo, mate := filepath.Join(dir, "origin.git"), filepath.Join(dir, "repo"), filepath.Join(dir, "mate")
-	testcheck.Git(t, dir, "init", "-q", "--bare", "-b", "main", origin)
-	testcheck.Git(t, dir, "clone", "-q", origin, repo)
-	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "start")
-	testcheck.Git(t, repo, "push", "-q", "-u", "origin", "main")
-	testcheck.Git(t, repo, "remote", "set-head", "origin", "main")
-	testcheck.Git(t, repo, "switch", "-q", "-c", "old-feature")
-	oldFeature := testcheck.Git(t, repo, "rev-parse", "HEAD")
-	testcheck.Git(t, dir, "clone", "-q", origin, mate)
-	for i := range 5 {
-		testcheck.Git(t, mate, "commit", "-q", "--allow-empty", "-m", fmt.Sprintf("merged %d", i))
-	}
-	testcheck.Git(t, mate, "push", "-q")
-	testcheck.Git(t, repo, "fetch", "-q")
-	tip := testcheck.Git(t, repo, "rev-parse", "origin/main")
-	// Its branch tracks origin/main, as git sets it up, and sorts before
-	// main: it isn't main's other copy.
+	repo, f := fakeRepo(t)
+	oldFeature := oid("start")
+	tip := oid("merged 4") // origin/main, five commits on from main
+	f.with(func() {
+		f.entries[0].Branch = "old-feature"
+		f.tips = []string{oldFeature, tip}
+	})
 	wt := filepath.Join(repo, ".claude", "worktrees", "a-w")
-	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "a-w", wt, "origin/main")
-	if up := testcheck.Git(t, wt, "rev-parse", "--abbrev-ref", "@{upstream}"); up != "origin/main" {
-		t.Fatalf("the agent's branch tracks %q", up)
-	}
-	testcheck.Write(t, filepath.Join(wt, "agent.txt"), "the agent's\n")
-	testcheck.Git(t, wt, "add", ".")
-	testcheck.Git(t, wt, "commit", "-q", "-m", "the agent's")
-	head := testcheck.Git(t, wt, "rev-parse", "HEAD")
+	f.with(func() { f.entries = append(f.entries, model.WorktreeEntry{Path: wt, Branch: "a-w", Head: tip}) })
+	head := f.commit(t, wt, "the agent's")
 
 	stored := &memSessions{}
-	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, stored)
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, stored, f)
 	startSubagent(t, c, "a1")
 	step(t, c, "a1", "s1", shell(t, "ls "+wt))
 	if got := related(t, svc, c); len(got) != 1 || got[0].BaseCommit != tip || got[0].LastHead != head {
 		t.Fatalf("found: %+v (tip %s)", got, tip)
-	}
-	if n, err := git.Ahead(t.Context(), wt, "origin/main", ""); err != nil || n != 1 {
-		t.Errorf("ahead of origin/main: %d, %v", n, err)
-	}
-	if st, err := git.Status(t.Context(), wt, "origin/main"); err != nil || st.Files != 1 || st.Added != 1 {
-		t.Errorf("status against origin/main: %+v, %v", st, err)
 	}
 
 	// One whose first look found no base gets one.
@@ -777,11 +861,10 @@ func TestRelatedCountsFromTheDefaultBranch(t *testing.T) {
 	}
 
 	// Merged into main, it keeps its base: its work and "merged" stay.
-	testcheck.Git(t, mate, "pull", "-q")
-	testcheck.Git(t, mate, "fetch", "-q", repo, "a-w")
-	testcheck.Git(t, mate, "merge", "-q", "--ff-only", "FETCH_HEAD")
-	testcheck.Git(t, mate, "push", "-q")
-	testcheck.Git(t, repo, "fetch", "-q")
+	f.with(func() {
+		f.tips = []string{oldFeature, head}
+		f.merged = []string{head}
+	})
 	if got := related(t, svc, c); len(got) != 1 || got[0].BaseCommit != tip || !got[0].Merged {
 		t.Errorf("merged: %+v", got)
 	}
