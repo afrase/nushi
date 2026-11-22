@@ -28,11 +28,22 @@ func (s *server) ListMcpServers(ctx context.Context, req *connect.Request[nushiv
 	if err != nil {
 		return nil, err
 	}
-	servers, checkErr, err := m.List(ctx, req.Msg.Folder, req.Msg.CheckHealth)
+	check, why := req.Msg.CheckHealth, ""
+	if check {
+		// The daemon decides, not the app: Settings may name a folder only
+		// another agent's card passed, and the phone any folder at all.
+		switch runs, _, err := s.Trust.Check(s.agent(req.Msg.Agent), req.Msg.Folder); {
+		case err != nil:
+			check, why = false, "Not checked: "+err.Error()
+		case len(runs) > 0:
+			check, why = false, notCheckedUntrusted
+		}
+	}
+	servers, checkErr, err := m.List(ctx, req.Msg.Folder, check)
 	if err != nil {
 		return nil, refused(err)
 	}
-	resp := &nushiv1.ListMcpServersResponse{}
+	resp := &nushiv1.ListMcpServersResponse{CheckError: why}
 	if checkErr != nil {
 		resp.CheckError = checkErr.Error()
 	}
@@ -98,3 +109,9 @@ func (s *server) LogoutMcpServer(ctx context.Context, req *connect.Request[nushi
 func (s *server) ReloadChat(_ context.Context, req *connect.Request[nushiv1.ReloadChatRequest]) (*connect.Response[nushiv1.ReloadChatResponse], error) {
 	return done[nushiv1.ReloadChatResponse](s.Chats.Reload(req.Msg.ChatId), refused)
 }
+
+// notCheckedUntrusted is why a folder's servers come unchecked when the
+// folder brings code the agent would run that nobody trusted: checking
+// runs the agent there (`claude mcp list`), which would read that code
+// before the trust card showed it (ADR 0023).
+const notCheckedUntrusted = "Not checked: this folder brings code the agent would run, and nobody trusted it yet. Start a chat here and choose Start anyway to check its servers."

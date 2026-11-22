@@ -43,7 +43,7 @@ Click **New skill…**. Nushi opens a new chat with the picked agent and puts a 
 2. Next to **In**, pick the folder.
 3. Claude's servers are grouped by where they're saved: **User** (yours, every folder), **Project** (the repository's, shared with everyone on it), **Local** (yours, this project only), **Plugins** and **claude.ai**. Ante's servers have their own list.
 
-Each server shows its state, such as **Connected**, **Failed to connect**, **Needs login** or **Off**. **Check again** checks them all. For **Needs login**, click **Log in** and finish in your browser.
+Each server shows its state, such as **Connected**, **Failed to connect**, **Needs login** or **Off**. **Check again** checks them all. In a folder that brings code an agent would run and nobody trusted yet, the servers show **Not checked**: checking runs the agent there, so start a chat in the folder and choose **Start anyway** first. For **Needs login**, click **Log in** and finish in your browser.
 
 ## Add, edit or remove a server
 
