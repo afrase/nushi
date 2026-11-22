@@ -10,7 +10,7 @@ A **skill** is a short set of instructions an agent picks up when a task needs i
 ## See an agent's skills
 
 1. Go to **Settings › Skills**.
-2. Next to **For**, pick the agent. Next to **in**, pick the folder.
+2. Next to **For**, pick the agent. It starts on the chat's agent, or with no chat on the agent a new chat would use. Next to **in**, pick the folder.
 3. Skills are grouped: **Yours** (every folder), **This project**, **Shared**, and the agent's own. Claude also shows **Built in**, a group for each plugin, and **Plugins**.
 
 Each skill shows its description and roughly how many tokens it adds to every chat. Type in the search box to filter the list.

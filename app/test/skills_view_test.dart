@@ -1,6 +1,7 @@
 import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/agents.dart';
 import 'package:nushi/controls.dart' show Toggle;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -333,6 +334,90 @@ void main() {
     expect(opened.last, ['-t', '$path/SKILL.md']);
     await closeView(tester, d);
   });
+
+  testWidgets('opened with no chat, it shows the agent a new chat would '
+      'start with, never asking for an empty one', (tester) async {
+    final fake = FakeDaemon([chat('c', 'codex', 'Earlier')])
+      ..answer = (input) => input is ListSkillsRequest ? _skills() : null;
+    final d = await fake.connect(tester);
+    expect(d.skillsAgent, isNull);
+    viewport(tester, const Size(1000, 860), ratio: 3);
+    await tester.pumpWidget(
+      themed(SkillsView(daemon: d, folder: '$_home/default')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Codex'), findsOneWidget); // the picker
+    expect(
+      fake.calls.whereType<ListSkillsRequest>().map((r) => r.agent).toSet(),
+      {'codex'},
+    );
+    await closeView(tester, d);
+  });
+
+  testWidgets('before the daemon lists its agents: Reading…, then the list', (
+    tester,
+  ) async {
+    final fake = FakeDaemon([])
+      ..answer = (input) => input is ListSkillsRequest ? _skills() : null;
+    final d = await fake.connect(tester);
+    final agents = agentList.value;
+    agentList.value = {};
+    viewport(tester, const Size(1000, 860), ratio: 3);
+    await tester.pumpWidget(
+      themed(SkillsView(daemon: d, folder: '$_home/early')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Reading…'), findsOneWidget);
+    expect(fake.calls.whereType<ListSkillsRequest>(), isEmpty);
+    agentList.value = agents;
+    await tester.pumpAndSettle();
+    expect(find.text('release-notes'), findsOneWidget);
+    expect(fake.calls.whereType<ListSkillsRequest>().single.agent, 'claude');
+    await closeView(tester, d);
+  });
+
+  // Opened with no chat to go by, when the last chat was Codex's: to
+  // look at (`make renders`).
+  for (final tokens in [Tokens.dark, Tokens.light]) {
+    for (final width in [1700.0, 720.0]) {
+      final name =
+          'skills_last_codex_${width.toInt()}_${tokens.brightness.name}';
+      testWidgets('render: no chat, the last one Codex’s, $name', (
+        tester,
+      ) async {
+        final fake = FakeDaemon([chat('c', 'codex', 'Earlier')])
+          ..answer = (input) => switch (input) {
+            ListSkillsRequest(agent: 'codex') => ListSkillsResponse(
+              readsShared: true,
+              skills: [
+                Skill(
+                  name: 'notes',
+                  description: 'Keeps notes.',
+                  source: 'user',
+                  path: '$_home/.codex/skills/notes',
+                  state: 'on',
+                  tokens: 8,
+                ),
+              ],
+            ),
+            ListSkillsRequest() => _skills(),
+            _ => null,
+          };
+        final d = await fake.connect(tester);
+        viewport(tester, Size(width, 860));
+        await tester.pumpWidget(
+          themed(
+            SkillsView(daemon: d, folder: '$_home/last'),
+            tokens: tokens,
+            banner: false,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await render(tester, find.byType(MaterialApp), name);
+        await closeView(tester, d);
+      });
+    }
+  }
 
   for (final (name, tokens) in [
     ('dark', Tokens.dark),

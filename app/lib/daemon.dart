@@ -268,9 +268,10 @@ class Daemon extends ChangeNotifier {
   /// The folder whose skills Settings › Skills shows, as [mcpFolder].
   String? skillsFolder;
 
-  /// The agent whose skills show: Claude unless another was picked, or
-  /// the view was opened from another agent's chat.
-  String skillsAgent = 'claude';
+  /// The agent whose skills show, once one was picked or the view was
+  /// opened from a chat; null until then, when the view shows the agent a
+  /// new chat would start with.
+  String? skillsAgent;
 
   /// The chats' terminals.
   late final terminals = Terminals(client);

@@ -16,7 +16,8 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Settings › Skills, beside MCP servers and in its style (ADRs 0051,
-/// 0052): an agent picker (Claude unless another was picked), a
+/// 0052): an agent picker (until one is picked, the agent a new chat would
+/// start with, else the first the daemon lists; "Reading…" until it has), a
 /// folder picker and a search box, then the agent's skills by where they
 /// come from (yours, the project's, the shared .agents/skills with the
 /// agents that load each, the agent's own, Claude's plugins' and built-in
@@ -36,29 +37,54 @@ class SkillsView extends StatefulWidget {
 class _SkillsViewState extends State<SkillsView> {
   final _search = TextEditingController();
 
-  SkillsList get list =>
-      SkillsList.of(widget.daemon, widget.folder, widget.daemon.skillsAgent);
+  /// Whose skills show: the one picked, else the agent a new chat would
+  /// start with ([defaultAgent], the first listed when none was used);
+  /// null while the daemon hasn't listed its agents. Never an empty name,
+  /// which the daemon would read as its own default.
+  String? get _agent {
+    final d = widget.daemon;
+    if (d.skillsAgent case final picked?) return picked;
+    final first = defaultAgent(d, knownAgents.keys.toList());
+    return first.isEmpty ? null : first;
+  }
+
+  /// The list shown; only asked for once [_agent] is known.
+  SkillsList get list => SkillsList.of(widget.daemon, widget.folder, _agent!);
 
   void _pickAgent(String agent) {
     setState(() => widget.daemon.skillsAgent = agent);
     unawaited(list.refresh());
   }
 
+  /// The agents listed after the view opened: their list is read now.
+  void _agentsCame() {
+    if (_agent == null) return;
+    agentList.removeListener(_agentsCame);
+    if (mounted) setState(() => unawaited(list.refresh()));
+  }
+
   @override
   void initState() {
     super.initState();
-    unawaited(list.refresh());
+    if (_agent == null) {
+      agentList.addListener(_agentsCame);
+    } else {
+      unawaited(list.refresh());
+    }
     _search.addListener(() => setState(() {}));
   }
 
   @override
   void didUpdateWidget(SkillsView old) {
     super.didUpdateWidget(old);
-    if (old.folder != widget.folder) unawaited(list.refresh());
+    if (old.folder != widget.folder && _agent != null) {
+      unawaited(list.refresh());
+    }
   }
 
   @override
   void dispose() {
+    agentList.removeListener(_agentsCame);
     _search.dispose();
     super.dispose();
   }
@@ -69,6 +95,13 @@ class _SkillsViewState extends State<SkillsView> {
     final t = theme.t;
     final daemon = widget.daemon;
     final small = theme.ui(t.textSecondary, size: 12);
+    final agent = _agent;
+    if (agent == null) {
+      return SettingsPage(
+        title: 'Skills',
+        children: [Text('Reading…', style: theme.ui(t.textMuted, size: 12))],
+      );
+    }
     return ListenableBuilder(
       listenable: list,
       builder: (context, _) => SettingsPage(
@@ -99,12 +132,12 @@ class _SkillsViewState extends State<SkillsView> {
                       for (final a in knownAgents.values)
                         MenuEntry(
                           a.title,
-                          checked: a.name == daemon.skillsAgent,
+                          checked: a.name == agent,
                           onPick: () => _pickAgent(a.name),
                         ),
                     ],
                     label: Text(
-                      agentTitle(daemon.skillsAgent),
+                      agentTitle(agent),
                       style: theme.ui(t.text, size: 12),
                     ),
                   ),
