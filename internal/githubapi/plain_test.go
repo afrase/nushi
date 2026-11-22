@@ -13,13 +13,13 @@ import (
 // unseen is what a fork's workflow could put in a check's or an
 // annotation's text to hide words from the reader that an agent still
 // reads: a bidi override and a Unicode tag character.
-const unseen = "‮\U000E0041"
+const unseen = "\u202e\U000E0041"
 
 // TestTextDecodesPlain: every field of a check, a commit status, an
 // annotation, an issue's labels and a row's title loses what could hide
 // or reorder text, as it's decoded, while line breaks stay.
 func TestTextDecodesPlain(t *testing.T) {
-	q := func(s string) string { return strings.ReplaceAll(s, "H", `‮󠁁`) }
+	q := func(s string) string { return strings.ReplaceAll(s, "H", `\u202e\udb40\udc41`) }
 	var run checkNode
 	testcheck.NoErr(t, json.Unmarshal([]byte(q(`{"__typename":"CheckRun","name":"tHest","title":"tiHtle",
 		"checkSuite":{"app":{"name":"apHp"},"workflowRun":{"workflow":{"name":"wHf"}}},
