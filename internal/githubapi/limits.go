@@ -196,11 +196,15 @@ func sleep(ctx context.Context, d time.Duration) error {
 }
 
 // etags keeps REST answers by URL with their ETag, so the next read of
-// the same URL can be a free 304.
+// the same URL can be a free 304: at most keptEtagBytes of them (URLs,
+// tags and bodies), the oldest dropped first, as the feature's blob cache
+// does. Counted by bytes, not answers: a comparison's answer holds every
+// file's patch and can be MBs.
 type etags struct {
 	mu    sync.Mutex
 	m     map[string]etag
 	order []string // oldest first
+	size  int
 }
 
 type etag struct {
@@ -209,9 +213,12 @@ type etag struct {
 }
 
 const (
-	keptEtags   = 256
-	maxEtagBody = 2 << 20
+	keptEtagBytes = 16 << 20
+	maxEtagBody   = 2 << 20
 )
+
+// size is what an answer kept for u takes of keptEtagBytes.
+func (t etag) size(u string) int { return len(u) + len(t.tag) + len(t.body) }
 
 func newEtags() *etags { return &etags{m: map[string]etag{}} }
 
@@ -227,16 +234,20 @@ func (e *etags) get(u string) etag {
 func (e *etags) keep(u, tag string, body []byte) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if _, ok := e.m[u]; ok {
+	if old, ok := e.m[u]; ok {
 		e.order = slices.DeleteFunc(e.order, func(x string) bool { return x == u })
+		e.size -= old.size(u)
+		delete(e.m, u)
 	}
-	delete(e.m, u)
 	if tag == "" || len(body) > maxEtagBody {
 		return
 	}
-	e.m[u] = etag{tag: tag, body: body}
+	t := etag{tag: tag, body: body}
+	e.m[u] = t
 	e.order = append(e.order, u)
-	if len(e.order) > keptEtags {
+	e.size += t.size(u)
+	for e.size > keptEtagBytes && len(e.order) > 1 {
+		e.size -= e.m[e.order[0]].size(e.order[0])
 		delete(e.m, e.order[0])
 		e.order = e.order[1:]
 	}

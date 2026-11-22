@@ -376,3 +376,28 @@ func TestTokenKind(t *testing.T) {
 		}
 	}
 }
+
+// TestETagsBoundedByBytes: the answers kept for their ETags hold at most
+// keptEtagBytes, the oldest going first, however few they are.
+func TestETagsBoundedByBytes(t *testing.T) {
+	e := newEtags()
+	body := make([]byte, maxEtagBody)
+	for i := range 10 {
+		e.keep("https://api.example/"+strconv.Itoa(i), `"v"`, body)
+	}
+	kept := 0
+	for i := range 10 {
+		if e.get("https://api.example/"+strconv.Itoa(i)).tag != "" {
+			kept++
+		} else if kept > 0 {
+			t.Fatalf("%d went before an older one", i)
+		}
+	}
+	if kept*maxEtagBody > 16<<20 || e.get("https://api.example/9").tag == "" {
+		t.Fatalf("%d of 2 MiB kept", kept)
+	}
+	e.keep("https://api.example/9", `"v2"`, []byte("small")) // kept again, smaller
+	if got := e.get("https://api.example/9"); got.tag != `"v2"` || string(got.body) != "small" {
+		t.Fatalf("%+v", got)
+	}
+}
