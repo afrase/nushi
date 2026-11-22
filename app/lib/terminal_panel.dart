@@ -253,6 +253,8 @@ class _PanelState extends State<TerminalPanel> {
         final shown = list
             .where((x) => x.id == widget.terms.active[_chat])
             .firstOrNull;
+        // The panel is built only while open: its tab is seen.
+        if (shown != null) widget.terms.looked.add(shown.id);
         return ColoredBox(
           color: t.base,
           child: Column(

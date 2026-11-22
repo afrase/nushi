@@ -52,7 +52,7 @@ extension CommandRuns on CodeRuns {
   /// after a grace): what ignores ⌃C at a prompt (less, ssh, a REPL)
   /// would otherwise run on in a terminal nobody looks at, the card gone.
   Future<void> _stop(Terminals terms, CodeRun run) async {
-    if (run.shown) {
+    if (_seen(terms, run)) {
       await terms.client.writeTerminal(
         pb.WriteTerminalRequest(terminalId: run.terminalId, data: [3]),
       );
@@ -62,6 +62,11 @@ extension CommandRuns on CodeRuns {
     run._set(RunState.stopped);
     await terms.close(run.terminalId);
   }
+
+  /// Whether the user has seen [run]'s terminal: opened from its card, or
+  /// its tab shown in the open panel.
+  bool _seen(Terminals terms, CodeRun run) =>
+      run.shown || terms.looked.contains(run.terminalId);
 
   /// [run]'s card: running until it ends, when [_commandEnded] fills it.
   RunOutput _card(CodeRun run, {int exit = 0, List<String> lines = const []}) =>
@@ -100,7 +105,7 @@ extension CommandRuns on CodeRuns {
 
   /// [run] ended with [exit]: on its own, its card is filled with its
   /// output; stopped (its ✕, or ⌃C in its terminal: 130), it sends
-  /// nothing. Its terminal closes unless the user opened it.
+  /// nothing. Its terminal closes unless the user has seen it.
   void _commandEnded(Terminals terms, CodeRun run, int exit) {
     unawaited(_commands.remove(run)?.cancel());
     final stopped = run.stopAsked || exit == 130;
@@ -114,7 +119,7 @@ extension CommandRuns on CodeRuns {
           if (o.key == run.key) done else o,
       ];
     }
-    if (!run.shown) {
+    if (!_seen(terms, run)) {
       // Gone already is as good as closed.
       unawaited(terms.close(run.terminalId).then((_) {}, onError: (_) {}));
     }

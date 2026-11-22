@@ -54,6 +54,7 @@ void main() {
     await _panel(tester, terms, onHide: () => hidden = true);
     expect(find.text('zsh — veg'), findsNWidgets(2));
     expect(terms.active['chat'], 'b'); // the last one shows
+    expect(terms.looked, {'b'}, reason: 'seen in the open panel');
 
     await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);

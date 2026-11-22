@@ -165,6 +165,20 @@ void main() {
     expect(draft.outputs.value.single.exit, 0);
   });
 
+  test(
+    'a terminal the user looked at in the panel stays when it ends',
+    () async {
+      final (shells, terms, runs, draft) = _setup();
+      final run = await runs.command(terms, 'npm test');
+      await _settle();
+      terms.looked.add(run.terminalId); // the open panel showed its tab
+      shells.ends(run.terminalId);
+      await _settle();
+      expect(run.state, RunState.ended);
+      expect(shells.closed, isEmpty);
+    },
+  );
+
   test('its terminal gone before it ended: nothing to send', () async {
     final (shells, terms, runs, draft) = _setup();
     final run = await runs.command(terms, 'make');

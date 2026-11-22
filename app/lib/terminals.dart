@@ -26,6 +26,11 @@ class Terminals extends ChangeNotifier {
   /// The tab shown in each chat's panel, by chat.
   final active = <String, String>{};
 
+  /// The terminals the user has seen: picked ([show]) or shown in an open
+  /// panel. A command's terminal the user saw stays when its command ends
+  /// (CommandRuns), one they never did is closed.
+  final looked = <String>{};
+
   /// A terminal just opened or picked, which takes the keyboard focus.
   String? focusNext;
 
@@ -130,6 +135,7 @@ class Terminals extends ChangeNotifier {
   }
 
   void show(String chatId, String id) {
+    looked.add(id);
     active[chatId] = focusNext = id;
     notifyListeners();
   }
