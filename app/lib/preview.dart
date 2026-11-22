@@ -410,8 +410,12 @@ class PreviewBody extends StatelessWidget {
       listenable: watch,
       builder: (context, _) {
         final status = previewStatus(context, watch, onReveal: onReveal);
-        // Gone from disk with unsaved edits: the edits still show.
-        if (watch.file?.missing ?? false) {
+        // Gone from disk, or grown past what the watch sends, with unsaved
+        // edits: the edits still show, to be saved again (gone) or seen
+        // and copied, read only with the limit above them (too large).
+        if (watch.file
+            case WatchChatFileResponse(:final missing, :final tooLarge)
+            when missing || tooLarge) {
           if (editor case final editor?) {
             return ValueListenableBuilder(
               valueListenable: wrapLines,

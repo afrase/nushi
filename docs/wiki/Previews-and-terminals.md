@@ -79,6 +79,8 @@ A dot by the file's name means it has unsaved changes. With your next message, N
 
 If the agent changes the lines you're editing, you see **Changed on disk**, with **Compare**, **Overwrite with mine** and **Use theirs**.
 
+If the file grows past 1 MiB while you have unsaved changes, they can't be saved, but they stay on show under **Read-only: it’s over 1 MiB.** Select and copy them before you discard them.
+
 ## Right-click in a file
 
 Right-click in a file's text in the Files pane to get an editor's menu.
