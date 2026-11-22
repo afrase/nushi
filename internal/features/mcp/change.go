@@ -48,7 +48,7 @@ func check(folder, scope, name, config string) error {
 }
 
 // The changes below run to the end once begun, even if the app goes: a
-// CLI killed while it writes Claude's config could leave it half written,
+// CLI killed while it writes the agent's config could leave it half written,
 // and an edit stopped between its remove and its add would lose the server
 // (its secrets the app never had).
 
@@ -139,22 +139,18 @@ func (s *Service) notify(folder, scope string) {
 }
 
 // SetOn turns a server on or off for folder's project: a project server
-// (its .mcp.json; on approves it) or a user or local one. The agent's
-// config keeps no on/off of its own for a plugin's server or a claude.ai
-// connector that Nushi can change; only /mcp in a terminal does it. An
-// empty scope is project, as before scopes were asked.
+// (on approves it) or a user or local one. Any other scope is refused by
+// target; the agent's Config refuses what it can't turn off. An empty
+// scope is project, as before scopes were asked.
 func (s *Service) SetOn(ctx context.Context, folder, scope, name string, on bool) error {
 	ctx = context.WithoutCancel(ctx)
 	if scope == "" {
 		scope = "project"
 	}
-	if scope == "plugin" || scope == "claudeai" {
-		return fmt.Errorf("claude only lets you turn %s off with /mcp in a terminal", name)
-	}
 	if err := target(folder, scope, name); err != nil {
 		return err
 	}
-	if scope != "project" { // Claude toggles by name: only a server of the scope asked
+	if scope != "project" { // the server must be one of the scope asked
 		if _, err := s.stored(folder, scope, name); err != nil {
 			return err
 		}
