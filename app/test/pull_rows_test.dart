@@ -363,7 +363,7 @@ void main() {
   }, variant: onMac);
 
   test('blocked by its rules or a draft is not ready, unstable or not', () {
-    expect(itemReady(_item(1, 't', merge: 'blocked')), isFalse);
+    expect(itemReady(_item(1, 't')), isFalse); // blocked, the default
     expect(itemReady(_item(1, 't', merge: 'unstable', draft: true)), isFalse);
     expect(itemReady(_item(1, 't', merge: 'behind')), isFalse);
     expect(itemReady(_item(1, 't', merge: 'unstable')), isTrue);

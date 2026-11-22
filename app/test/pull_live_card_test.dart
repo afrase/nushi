@@ -127,7 +127,7 @@ Future<void> _completes(
 void main() {
   setUpAll(loadFonts);
 
-  test('a tool call opens a pull request by the daemon\'s rows', () {
+  test("a tool call opens a pull request by the daemon's rows", () {
     // The same rows as opensPullRows in internal/features/chats/pushed_test.go.
     final rows = [
       ('', '{"command": "gh pr create --fill"}', '', true),
