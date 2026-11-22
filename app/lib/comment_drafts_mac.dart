@@ -8,9 +8,11 @@ import 'package:nushi/file_mode.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show GitHubDraft;
 import 'package:nushi/github_review.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/pull_edit.dart';
 
 /// The Mac's GitHub and Jira drafts across a restart (ADR 0073): the
-/// comment boxes' text and each pull request's unsent inline comments, in
+/// comment boxes' text, each pull request's unsent inline comments and
+/// what each open title or description edit began from, in
 /// `comment_drafts.json` in the data folder, written whole (0600), gone
 /// once none is left. Read here at start, saved [delay] after they stop
 /// changing and on [flush] (the app going to the back or quitting). Read
@@ -42,21 +44,10 @@ final class CommentDraftFile {
       return;
     }
     var dropped = false;
-    final boxes = <String, String>{};
-    switch (j['boxes']) {
-      case null:
-        break;
-      case final Map<String, Object?> m:
-        for (final MapEntry(:key, :value) in m.entries) {
-          if (value is String) {
-            boxes[key] = value;
-          } else {
-            dropped = true;
-          }
-        }
-      default:
-        dropped = true;
-    }
+    void drop() => dropped = true;
+    final boxes = _strings(j['boxes'], drop);
+    // None in a file from before edits were kept.
+    final began = _strings(j['began'], drop);
     final reviews = <String, List<GitHubDraft>>{};
     switch (j['reviews']) {
       case null:
@@ -85,6 +76,25 @@ final class CommentDraftFile {
     }
     restoreCommentDrafts(boxes);
     restoreReviewDrafts(reviews);
+    restorePullEdits(began);
+  }
+
+  /// [j]'s text entries, if it's a map; [drop] hears of anything else.
+  static Map<String, String> _strings(Object? j, void Function() drop) {
+    if (j == null) return {};
+    if (j is! Map<String, Object?>) {
+      drop();
+      return {};
+    }
+    final strings = <String, String>{};
+    for (final MapEntry(:key, :value) in j.entries) {
+      if (value is String) {
+        strings[key] = value;
+      } else {
+        drop();
+      }
+    }
+    return strings;
   }
 
   /// A pull request's inline comment as kept, or null when it doesn't read.
@@ -113,10 +123,16 @@ final class CommentDraftFile {
         if (value.isNotEmpty) key: [for (final d in value) d.toProto3Json()],
     };
     try {
-      if (keptCommentDrafts.isEmpty && reviews.isEmpty) {
+      if (keptCommentDrafts.isEmpty &&
+          reviews.isEmpty &&
+          keptPullEdits.isEmpty) {
         if (_file.existsSync()) _file.deleteSync();
       } else {
-        final j = {'boxes': keptCommentDrafts, 'reviews': reviews};
+        final j = {
+          'boxes': keptCommentDrafts,
+          'reviews': reviews,
+          'began': keptPullEdits,
+        };
         writeWhole(_file, utf8.encode(jsonEncode(j)));
       }
     } on Object {

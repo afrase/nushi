@@ -7,6 +7,7 @@ ADR 0062 keeps a chat's draft across a crash or restart and left comment boxes o
 - The Mac keeps every comment box's text and each pull request's unsent inline comments in `comment_drafts.json` in the data folder (0600, written whole), read at start, saved 500 ms after they stop changing and when the app goes to the back or quits, and removed once none is left.
 - A draft goes as it did: posted, emptied or cancelled, an inline comment removed or sent with the review.
 - The phone keeps none: it has no such boxes.
+- Amended 2026-11-22: a pull request's title or description edit left open keeps, beside its text, what GitHub's text was when it began (`began`), so after a restart the editor comes back open with the text, and Save still refuses when GitHub's text changed since (API 128). A file without `began` (from before) reads as no edit open.
 
 ## Consequences
 - A draft for a pull request or issue you never go back to stays in the file; it's small, and it shows if you do go back.

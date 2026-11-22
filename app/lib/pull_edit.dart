@@ -23,6 +23,28 @@ import 'package:nushi/widgets.dart';
 /// changes neither (API 128's `was`).
 final Map<String, String> _began = runMap();
 
+/// Every open edit's start ([_began]), by its draft's key: on the Mac kept
+/// with the comment drafts (ADR 0073), so after a restart the edit comes
+/// back open with its text, and Save still sends what it began from.
+Map<String, String> get keptPullEdits => _began;
+
+/// Puts back the open edits read at start.
+void restorePullEdits(Map<String, String> began) => _began
+  ..clear()
+  ..addAll(began);
+
+/// Opens [key]'s edit from GitHub's [was], or ends it (null), and says so
+/// to the file that keeps it.
+void _begin(String key, String? was) {
+  if (_began[key] == was) return;
+  if (was == null) {
+    _began.remove(key);
+  } else {
+    _began[key] = was;
+  }
+  commentDraftsChanged.value++;
+}
+
 /// Whether the daemon refused [e] because GitHub changed the text since
 /// the edit began (`changed_since`).
 bool changedSince(Object e) =>
@@ -95,7 +117,7 @@ abstract class _PullEdit<T extends StatefulWidget> extends State<T> {
   }
 
   void start() {
-    _began[key] = now;
+    _begin(key, now);
     text.value = TextEditingValue(
       text: now,
       selection: TextSelection.collapsed(offset: now.length),
@@ -112,7 +134,7 @@ abstract class _PullEdit<T extends StatefulWidget> extends State<T> {
 
   void cancel() {
     if (saving) return;
-    _began.remove(key);
+    _begin(key, null);
     keepCommentDraft(key, '');
     setState(_reset);
   }
@@ -121,7 +143,7 @@ abstract class _PullEdit<T extends StatefulWidget> extends State<T> {
   /// place knowingly.
   void showTheirs() => setState(() {
     theirs = now;
-    _began[key] = now;
+    _begin(key, now);
   });
 
   Future<void> save() async {
@@ -146,7 +168,7 @@ abstract class _PullEdit<T extends StatefulWidget> extends State<T> {
           was: was,
         ),
       );
-      _began.remove(key);
+      _begin(key, null);
       keepCommentDraft(key, '');
       if (mounted) setState(() => saved = value);
       unawaited(onSaved());
