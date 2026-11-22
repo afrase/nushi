@@ -32,7 +32,7 @@ TextSpan _keySpan(String keys, TextStyle style) => TextSpan(
   ],
 );
 
-/// The width [keys] take in [style] as [keyText] draws them, at the
+/// The width [keys] take in [base] as [keyText] draws them, at the
 /// text's scale in [context].
 double keyTextWidth(BuildContext context, String keys, TextStyle base) {
   // As a Text draws it: over the style round it (a letter spacing too).
