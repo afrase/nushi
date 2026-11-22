@@ -88,7 +88,8 @@ String fineTokens(int n) {
       : '${tenth(n / 1000000)}M';
 }
 
-bool _buffer(ContextCategory c) => c.name == 'Autocompact buffer';
+/// The room the agent keeps to compact into, as its harness says.
+bool _buffer(ContextCategory c) => c.part == 'buffer';
 
 /// How far the context is from its compaction, by [cs]: the free space,
 /// when the agent counts a buffer it compacts into; null without one.
@@ -137,15 +138,16 @@ class ContextReport extends StatelessWidget {
   final VoidCallback? onCompact;
 
   /// The color of a kind, as Claude's rail gives its four largest kinds;
-  /// the rest grey, the buffer darker, the free space only a square.
+  /// the rest grey, the buffer darker, the free space only a square. The
+  /// conversation and the buffer go by their part, the rest by name.
   static Color colorOf(Tokens t, ContextCategory c) => switch (c.name) {
     _ when c.kind == 'free' => t.lifted,
     _ when c.kind == 'deferred' => t.faint,
-    'Messages' => t.accent,
+    _ when c.part == 'messages' => t.accent,
+    _ when c.part == 'buffer' => t.faint,
     'System tools' => t.claude,
     'Skills' => t.done,
     'System prompt' => t.gold,
-    'Autocompact buffer' => t.faint,
     _ => t.textMuted,
   };
 

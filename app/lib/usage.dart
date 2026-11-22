@@ -168,7 +168,7 @@ double? breakdownFill(List<ContextCategory> cs) {
   var size = 0;
   for (final c in cs.where((c) => c.kind != 'deferred')) {
     size += c.tokens.toInt();
-    if (c.kind == '' && c.name != 'Autocompact buffer') {
+    if (c.kind == '' && c.part != 'buffer') {
       used += c.tokens.toInt();
     }
   }

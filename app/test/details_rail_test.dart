@@ -287,6 +287,38 @@ void main() {
     }
   }
 
+  // The Context widget with what /context says: the categories, the
+  // buffer, and its lists opened, to look at. Under 1000 wide the details
+  // hide, so 1000 is the narrowest it shows.
+  for (final (name, brightness) in [
+    ('dark', Brightness.dark),
+    ('light', Brightness.light),
+  ]) {
+    for (final width in [1700.0, 1000.0]) {
+      testWidgets('render: Context, categories, a buffer and the lists, '
+          '${width.toInt()} wide, $name', (tester) async {
+        final (d, _) = await railApp(
+          tester,
+          size: Size(width, 1300),
+          brightness: brightness,
+          context: fullContext,
+        );
+        await tester.tap(inRail(find.text('MCP tools')));
+        await tester.pumpAndSettle();
+        await tester.tap(inRail(find.text('Custom agents')).last);
+        await tester.pumpAndSettle();
+        expect(inRail(find.text('explorer')), findsOne);
+        expectTextInside(tester, width);
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'context_lists_${width.toInt()}_$name',
+        );
+        await closeView(tester, d);
+      }, variant: macOnly);
+    }
+  }
+
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
     ('light', Brightness.light),

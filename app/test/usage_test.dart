@@ -16,14 +16,24 @@ void main() {
 
   test('what /context lists says how full it is, without the free space, '
       'the buffer or the deferred', () {
-    ContextCategory c(String name, int tokens, {String kind = ''}) =>
-        ContextCategory(name: name, tokens: Int64(tokens), kind: kind);
+    ContextCategory c(
+      String name,
+      int tokens, {
+      String kind = '',
+      String part = '',
+    }) => ContextCategory(
+      name: name,
+      tokens: Int64(tokens),
+      kind: kind,
+      part: part,
+    );
     expect(
       breakdownFill([
         c('System prompt', 5000),
-        c('Messages', 100000),
+        c('Messages', 100000, part: 'messages'),
         c('Tools', 327000, kind: 'deferred'),
-        c('Autocompact buffer', 45000),
+        // Named as no agent names it: its part says it's the buffer.
+        c('Reserve', 45000, part: 'buffer'),
         c('Free space', 850000, kind: 'free'),
       ]),
       closeTo(105000 / 1000000, 1e-9),

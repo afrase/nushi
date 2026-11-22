@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
@@ -12,46 +13,60 @@ import 'package:nushi/run_state.dart';
 /// What last filled each chat's context (its /context categories) and when
 /// it was asked, in `context.json` in the data folder, so the Context widget
 /// has it at once after the app restarts or while a turn runs. Only the
-/// categories' names and counts are kept, never the agent's markdown; the
-/// [_keep] most recent chats.
+/// categories' names, counts, kinds and parts are kept, never the agent's
+/// markdown; the [_keep] most recent chats. An entry saved before the
+/// categories had their part is dropped: it comes back the next time the
+/// context is asked.
 const _keep = 300;
 
 File get _file => File('$dataDir/context.json');
 
 final Map<String, (DateTime, GetContextUsageResponse)> _known = () {
   try {
-    final saved = jsonDecode(_file.readAsStringSync()) as Map<String, Object?>;
-    return {
-      for (final MapEntry(:key, :value) in saved.entries)
-        if (value case {
-          'at': final int at,
-          'categories': final List<Object?> cs,
-        })
-          key: (
-            DateTime.fromMillisecondsSinceEpoch(at),
-            GetContextUsageResponse(
-              categories: [
-                for (final c in cs)
-                  if (c case {
-                    'name': final String name,
-                    'tokens': final int n,
-                    'percent': final num percent,
-                    'kind': final String kind,
-                  })
-                    ContextCategory(
-                      name: name,
-                      tokens: Int64(n),
-                      percent: percent.toDouble(),
-                      kind: kind,
-                    ),
-              ],
-            ),
-          ),
-    };
+    return readContexts(_file.readAsStringSync());
   } on Object {
     return <String, (DateTime, GetContextUsageResponse)>{};
   }
 }();
+
+/// The contexts saved in `context.json` as [text]. Throws when it isn't
+/// JSON's object.
+@visibleForTesting
+Map<String, (DateTime, GetContextUsageResponse)> readContexts(String text) {
+  final saved = jsonDecode(text) as Map<String, Object?>;
+  return {
+    for (final MapEntry(:key, :value) in saved.entries)
+      if (value case {'at': final int at, 'categories': final List<Object?> cs})
+        if (_categories(cs) case final categories?)
+          key: (
+            DateTime.fromMillisecondsSinceEpoch(at),
+            GetContextUsageResponse(categories: categories),
+          ),
+  };
+}
+
+/// The categories saved as [cs]; null when one isn't as this app writes
+/// it (one without its part, saved by an older app).
+List<ContextCategory>? _categories(List<Object?> cs) {
+  final out = [
+    for (final c in cs)
+      if (c case {
+        'name': final String name,
+        'tokens': final int n,
+        'percent': final num percent,
+        'kind': final String kind,
+        'part': final String part,
+      })
+        ContextCategory(
+          name: name,
+          tokens: Int64(n),
+          percent: percent.toDouble(),
+          kind: kind,
+          part: part,
+        ),
+  ];
+  return out.length == cs.length ? out : null;
+}
 
 /// What each chat's context held when asked in this run, and when (a
 /// markdown-only answer too): the Details panel's, kept across panels so
@@ -114,6 +129,7 @@ void _write() {
                     'tokens': c.tokens.toInt(),
                     'percent': c.percent,
                     'kind': c.kind,
+                    'part': c.part,
                   },
               ],
             },
@@ -128,22 +144,21 @@ void _write() {
 /// [cs] (what /context said, maybe a turn ago) brought up to [u], the
 /// agent's latest usage: what the conversation adds goes to Messages and
 /// comes out of Free space, the rest (system prompt, tools, memory,
-/// skills) kept as it was. As it was when [u] says nothing or there's no
-/// Messages row.
+/// skills) kept as it was. As it was when [u] says nothing or no category
+/// is the conversation (its part "messages").
 List<ContextCategory> liveCategories(List<ContextCategory> cs, Usage u) {
   final size = u.contextSize.toInt();
   final used = u.contextUsed.toInt();
-  if (size == 0 || used == 0 || !cs.any((c) => c.name == 'Messages')) {
+  if (size == 0 || used == 0 || !cs.any((c) => c.part == 'messages')) {
     return cs;
   }
-  bool fixed(ContextCategory c) =>
-      c.kind == '' && c.name != 'Messages' && c.name != 'Autocompact buffer';
+  bool fixed(ContextCategory c) => c.kind == '' && c.part == '';
   final rest = cs.where(fixed).fold(0, (n, c) => n + c.tokens.toInt());
   final buffer = cs
-      .where((c) => c.name == 'Autocompact buffer')
+      .where((c) => c.part == 'buffer')
       .fold(0, (n, c) => n + c.tokens.toInt());
   int now(ContextCategory c) => switch (c) {
-    _ when c.name == 'Messages' => (used - rest).clamp(0, size),
+    _ when c.part == 'messages' => (used - rest).clamp(0, size),
     _ when c.kind == 'free' => (size - used - buffer).clamp(0, size),
     _ => c.tokens.toInt(),
   };
@@ -157,6 +172,7 @@ List<ContextCategory> liveCategories(List<ContextCategory> cs, Usage u) {
           tokens: Int64(now(c)),
           percent: now(c) / size * 100,
           kind: c.kind,
+          part: c.part,
         ),
   ];
 }

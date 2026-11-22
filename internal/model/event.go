@@ -101,7 +101,16 @@ type ContextCategory struct {
 	Tokens  int64
 	Percent float64
 	Kind    string // "free" for free space, "deferred" for what loads on demand, else ""
+	// Part is which part of the context it is, as the agent's harness
+	// reads it: PartMessages, PartBuffer or "".
+	Part string
 }
+
+// The parts of the context a category can be (ContextCategory.Part).
+const (
+	PartMessages = "messages" // the conversation
+	PartBuffer   = "buffer"   // the room the agent keeps to compact into
+)
 
 // Command is a slash command the agent offers.
 type Command struct {

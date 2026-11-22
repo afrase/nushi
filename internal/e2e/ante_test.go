@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/afrase/nushi/internal/acptest"
 	"github.com/afrase/nushi/internal/ante/antetest"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -59,6 +61,9 @@ func TestAnAnteChat(t *testing.T) {
 	use := must(a.c.GetContextUsage(ctx, connect.NewRequest(&nushiv1.GetContextUsageRequest{ChatId: id})))
 	if len(use.Categories) < 2 || use.Categories[0].Name != "System prompt" || use.Categories[0].Tokens != 100 {
 		t.Errorf("context = %v", use.Categories)
+	}
+	if i := slices.IndexFunc(use.Categories, func(c *nushiv1.ContextCategory) bool { return c.Part == model.PartMessages }); i < 0 || use.Categories[i].Name != "Messages" {
+		t.Errorf("no category is the conversation: %v", use.Categories)
 	}
 
 	// Rewind to the second message: a fork after the first turn.

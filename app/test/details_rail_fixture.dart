@@ -54,27 +54,33 @@ const reportMarkdown = '''
 | explorer | Project | ~134 |
 ''';
 
-ContextCategory _c(String name, int tokens, double pct, [String kind = '']) =>
-    ContextCategory(
-      name: name,
-      tokens: Int64(tokens),
-      percent: pct,
-      kind: kind,
-    );
+ContextCategory _c(
+  String name,
+  int tokens,
+  double pct, {
+  String kind = '',
+  String part = '',
+}) => ContextCategory(
+  name: name,
+  tokens: Int64(tokens),
+  percent: pct,
+  kind: kind,
+  part: part,
+);
 
 /// The categories the daemon reads from [reportMarkdown].
 final List<ContextCategory> reportCategories = [
   _c('System prompt', 4500, 0.4),
   _c('System tools', 20900, 2.1),
   _c('MCP server instructions', 1300, 0.1),
-  _c('MCP tools', 78200, 7.8, 'deferred'),
-  _c('System tools', 25700, 2.6, 'deferred'),
+  _c('MCP tools', 78200, 7.8, kind: 'deferred'),
+  _c('System tools', 25700, 2.6, kind: 'deferred'),
   _c('Custom agents', 314, 0),
   _c('Memory files', 2000, 0.2),
   _c('Skills', 6600, 0.7),
-  _c('Messages', 509900, 51),
-  _c('Free space', 421400, 42.1, 'free'),
-  _c('Autocompact buffer', 33000, 3.3),
+  _c('Messages', 509900, 51, part: 'messages'),
+  _c('Free space', 421400, 42.1, kind: 'free'),
+  _c('Autocompact buffer', 33000, 3.3, part: 'buffer'),
 ];
 
 Item _write(String id, String path) => Item(

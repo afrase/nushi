@@ -2948,13 +2948,15 @@ const ContextCategory$json = {
     {'1': 'tokens', '3': 2, '4': 1, '5': 3, '10': 'tokens'},
     {'1': 'percent', '3': 3, '4': 1, '5': 1, '10': 'percent'},
     {'1': 'kind', '3': 4, '4': 1, '5': 9, '10': 'kind'},
+    {'1': 'part', '3': 5, '4': 1, '5': 9, '10': 'part'},
   ],
 };
 
 /// Descriptor for `ContextCategory`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List contextCategoryDescriptor = $convert.base64Decode(
     'Cg9Db250ZXh0Q2F0ZWdvcnkSEgoEbmFtZRgBIAEoCVIEbmFtZRIWCgZ0b2tlbnMYAiABKANSBn'
-    'Rva2VucxIYCgdwZXJjZW50GAMgASgBUgdwZXJjZW50EhIKBGtpbmQYBCABKAlSBGtpbmQ=');
+    'Rva2VucxIYCgdwZXJjZW50GAMgASgBUgdwZXJjZW50EhIKBGtpbmQYBCABKAlSBGtpbmQSEgoE'
+    'cGFydBgFIAEoCVIEcGFydA==');
 
 @$core.Deprecated('Use getRelatedWorktreesRequestDescriptor instead')
 const GetRelatedWorktreesRequest$json = {

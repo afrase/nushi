@@ -9907,7 +9907,11 @@ type ContextCategory struct {
 	Percent float64                `protobuf:"fixed64,3,opt,name=percent,proto3" json:"percent,omitempty"`
 	// "free" for the free space, "deferred" for what is listed but loaded
 	// only on demand (outside the context), else "".
-	Kind          string `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
+	Kind string `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Which part of the context it is, as the agent's harness reads it
+	// (API 141): "messages" for the conversation, "buffer" for the room the
+	// agent keeps to compact into, else "". Empty from an older daemon.
+	Part          string `protobuf:"bytes,5,opt,name=part,proto3" json:"part,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9966,6 +9970,13 @@ func (x *ContextCategory) GetPercent() float64 {
 func (x *ContextCategory) GetKind() string {
 	if x != nil {
 		return x.Kind
+	}
+	return ""
+}
+
+func (x *ContextCategory) GetPart() string {
+	if x != nil {
+		return x.Part
 	}
 	return ""
 }
@@ -28512,12 +28523,13 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x11LinkSkillResponse\",\n" +
 	"\x11ReloadChatRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\"\x14\n" +
-	"\x12ReloadChatResponse\"k\n" +
+	"\x12ReloadChatResponse\"\x7f\n" +
 	"\x0fContextCategory\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06tokens\x18\x02 \x01(\x03R\x06tokens\x12\x18\n" +
 	"\apercent\x18\x03 \x01(\x01R\apercent\x12\x12\n" +
-	"\x04kind\x18\x04 \x01(\tR\x04kind\"5\n" +
+	"\x04kind\x18\x04 \x01(\tR\x04kind\x12\x12\n" +
+	"\x04part\x18\x05 \x01(\tR\x04part\"5\n" +
 	"\x1aGetRelatedWorktreesRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\"V\n" +
 	"\x1bGetRelatedWorktreesResponse\x127\n" +

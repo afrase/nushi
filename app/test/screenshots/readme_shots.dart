@@ -237,6 +237,7 @@ void main() {
               tokens: Int64(n),
               percent: n / 2000,
               kind: kind,
+              part: name == 'Messages' ? 'messages' : '',
             ),
         ],
       ),

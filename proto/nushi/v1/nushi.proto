@@ -1911,6 +1911,10 @@ message ContextCategory {
   // "free" for the free space, "deferred" for what is listed but loaded
   // only on demand (outside the context), else "".
   string kind = 4;
+  // Which part of the context it is, as the agent's harness reads it
+  // (API 141): "messages" for the conversation, "buffer" for the room the
+  // agent keeps to compact into, else "". Empty from an older daemon.
+  string part = 5;
 }
 
 message GetRelatedWorktreesRequest {

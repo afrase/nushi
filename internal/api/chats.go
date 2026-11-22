@@ -349,7 +349,7 @@ func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushi
 	}
 	out := &nushiv1.GetContextUsageResponse{Markdown: u.Markdown}
 	for _, c := range u.Categories {
-		out.Categories = append(out.Categories, &nushiv1.ContextCategory{Name: c.Name, Tokens: c.Tokens, Percent: c.Percent, Kind: c.Kind})
+		out.Categories = append(out.Categories, &nushiv1.ContextCategory{Name: c.Name, Tokens: c.Tokens, Percent: c.Percent, Kind: c.Kind, Part: c.Part})
 	}
 	return connect.NewResponse(out), nil
 }

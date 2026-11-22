@@ -1,18 +1,26 @@
+import 'dart:convert';
+
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
-ContextCategory _c(String name, int tokens, {String kind = ''}) =>
-    ContextCategory(name: name, tokens: Int64(tokens), kind: kind);
+ContextCategory _c(
+  String name,
+  int tokens, {
+  String kind = '',
+  String part = '',
+}) =>
+    ContextCategory(name: name, tokens: Int64(tokens), kind: kind, part: part);
 
 void main() {
   final asked = [
     _c('System prompt', 5000),
     _c('Tools', 15000),
     _c('Tools', 300000, kind: 'deferred'),
-    _c('Messages', 20000),
-    _c('Autocompact buffer', 45000),
+    _c('Messages', 20000, part: 'messages'),
+    // Named as no agent names it: its part says what it is.
+    _c('Reserve', 45000, part: 'buffer'),
     _c('Free space', 915000, kind: 'free'),
   ];
 
@@ -34,9 +42,10 @@ void main() {
     );
   });
 
-  test('as asked, without usage or a Messages row', () {
+  test('as asked, without usage or a category that is the conversation', () {
     expect(liveCategories(asked, Usage()), same(asked));
-    final noMessages = [_c('System prompt', 5000)];
+    // Named Messages, but no part: from a daemon older than parts.
+    final noMessages = [_c('System prompt', 5000), _c('Messages', 9000)];
     expect(
       liveCategories(
         noMessages,
@@ -56,6 +65,36 @@ void main() {
     final (_, r) = lastContext('b')!;
     expect(r.categories.length, asked.length);
     expect(r.markdown, isEmpty);
+  });
+
+  test('read back with their parts; an entry saved without them dropped', () {
+    Map<String, Object?> category(String name, [String? part]) => {
+      'name': name,
+      'tokens': 5,
+      'percent': 0.5,
+      'kind': '',
+      'part': ?part,
+    };
+    final read = readContexts(
+      jsonEncode({
+        'new': {
+          'at': 1,
+          'categories': [
+            category('System prompt', ''),
+            category('Messages', 'messages'),
+          ],
+        },
+        'old': {
+          'at': 1,
+          'categories': [category('System prompt'), category('Messages')],
+        },
+      }),
+    );
+    expect(read.keys, ['new']);
+    expect(
+      [for (final c in read['new']!.$2.categories) c.part],
+      ['', 'messages'],
+    );
   });
 
   test('asked in this run: a markdown-only answer too, until the chat is '

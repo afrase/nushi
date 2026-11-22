@@ -37,6 +37,10 @@ func Parse(markdown string) ([]model.ContextCategory, error) {
 		switch {
 		case name == "Free space":
 			c.Kind = "free"
+		case name == "Messages":
+			c.Part = model.PartMessages
+		case name == "Autocompact buffer":
+			c.Part = model.PartBuffer
 		case strings.HasSuffix(name, " (deferred)"): // listed, loaded on demand
 			c.Name, c.Kind = strings.TrimSuffix(name, " (deferred)"), "deferred"
 		}

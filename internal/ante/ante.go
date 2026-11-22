@@ -191,11 +191,11 @@ func (Harness) Context(ctx context.Context, call func(ctx context.Context, metho
 	}
 	cats := []model.ContextCategory{{Name: "System prompt", Tokens: r.SystemPrompt}, {Name: "System tools", Tokens: r.SystemTools},
 		{Name: "MCP tools", Tokens: r.MCPTools}, {Name: "Memory files", Tokens: r.Memory}, {Name: "Skills", Tokens: r.Skills},
-		{Name: "Messages", Tokens: r.Messages}}
+		{Name: "Messages", Tokens: r.Messages, Part: model.PartMessages}}
 	if r.Limit != nil && *r.Limit > 0 {
 		limit := *r.Limit
 		cats = append(cats, model.ContextCategory{Name: "Free space", Tokens: max(0, limit-r.Used-r.Buffer), Kind: "free"},
-			model.ContextCategory{Name: "Autocompact buffer", Tokens: r.Buffer})
+			model.ContextCategory{Name: "Autocompact buffer", Tokens: r.Buffer, Part: model.PartBuffer})
 		for i := range cats {
 			cats[i].Percent = float64(cats[i].Tokens) * 100 / float64(limit)
 		}

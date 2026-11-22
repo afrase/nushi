@@ -180,7 +180,9 @@ void main() {
     setComments('a', [comment('a')]);
     setComments('gone', [comment('gone')]);
     final context = GetContextUsageResponse(
-      categories: [ContextCategory(name: 'Messages', tokens: Int64(5))],
+      categories: [
+        ContextCategory(name: 'Messages', tokens: Int64(5), part: 'messages'),
+      ],
     );
     rememberContext('a', context);
     rememberContext('gone', context);

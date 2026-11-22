@@ -12537,12 +12537,14 @@ class ContextCategory extends $pb.GeneratedMessage {
     $fixnum.Int64? tokens,
     $core.double? percent,
     $core.String? kind,
+    $core.String? part,
   }) {
     final result = ContextCategory._();
     if (name != null) result.name = name;
     if (tokens != null) result.tokens = tokens;
     if (percent != null) result.percent = percent;
     if (kind != null) result.kind = kind;
+    if (part != null) result.part = part;
     return result;
   }
 
@@ -12563,6 +12565,7 @@ class ContextCategory extends $pb.GeneratedMessage {
     ..aInt64(2, _omitFieldNames ? '' : 'tokens')
     ..aD(3, _omitFieldNames ? '' : 'percent')
     ..aOS(4, _omitFieldNames ? '' : 'kind')
+    ..aOS(5, _omitFieldNames ? '' : 'part')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -12624,6 +12627,18 @@ class ContextCategory extends $pb.GeneratedMessage {
   $core.bool hasKind() => $_has(3);
   @$pb.TagNumber(4)
   void clearKind() => $_clearField(4);
+
+  /// Which part of the context it is, as the agent's harness reads it
+  /// (API 141): "messages" for the conversation, "buffer" for the room the
+  /// agent keeps to compact into, else "". Empty from an older daemon.
+  @$pb.TagNumber(5)
+  $core.String get part => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set part($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasPart() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearPart() => $_clearField(5);
 }
 
 class GetRelatedWorktreesRequest extends $pb.GeneratedMessage {
