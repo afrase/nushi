@@ -172,25 +172,51 @@ File get _file => File('$dataDir/reviews.json');
 
 /// Every chat's review comments, by chat id, kept in `reviews.json` in
 /// the data folder until sent and gone, or removed.
-final reviews = ValueNotifier<Map<String, List<ReviewComment>>>(() {
+final reviews = ValueNotifier<Map<String, List<ReviewComment>>>(_readReviews());
+
+/// `reviews.json` couldn't be read: nothing is saved over it.
+bool _reviewsUnread = false;
+
+/// `reviews.json` by [readKept]'s rule: a file that doesn't parse is set
+/// aside, one with a comment that doesn't read is copied aside and the
+/// rest kept, and one that can't be read at all is none, and isn't
+/// written over in this run.
+Map<String, List<ReviewComment>> _readReviews() {
+  final Map<String, Object?> j;
   try {
-    final j = jsonDecode(_file.readAsStringSync()) as Map<String, dynamic>;
-    return {
-      for (final MapEntry(:key, :value) in j.entries)
-        key: [
-          for (final c in value as List)
-            ReviewComment.fromJson(c as Map<String, dynamic>),
-        ],
-    };
+    j = readKept(_file).json;
   } on Object {
-    return <String, List<ReviewComment>>{};
+    _reviewsUnread = true;
+    return {};
   }
-}());
+  var dropped = false;
+  final all = <String, List<ReviewComment>>{};
+  for (final MapEntry(:key, :value) in j.entries) {
+    final comments = <ReviewComment>[];
+    for (final c in value is List ? value : [value]) {
+      try {
+        comments.add(ReviewComment.fromJson(c! as Map<String, dynamic>));
+      } on Object {
+        dropped = true; // a wrong type, or a field missing
+      }
+    }
+    if (comments.isNotEmpty) all[key] = comments;
+  }
+  if (dropped) {
+    try {
+      copyAside(_file);
+    } on Object {
+      _reviewsUnread = true; // not copied: not written over either
+    }
+  }
+  return all;
+}
 
 /// Replaces [chat]'s comments with [comments] and saves them.
 void setComments(String chat, List<ReviewComment> comments) {
   reviews.value = {...reviews.value, chat: comments}
     ..removeWhere((_, v) => v.isEmpty);
+  if (_reviewsUnread) return; // kept until the app quits
   try {
     writeWhole(_file, utf8.encode(jsonEncode(reviews.value)));
   } on Object {
@@ -198,10 +224,18 @@ void setComments(String chat, List<ReviewComment> comments) {
   }
 }
 
+/// `reviews.json` read again, as at launch (tests: a file each writes).
+@visibleForTesting
+void rereadReviews() {
+  _reviewsUnread = false;
+  reviews.value = _readReviews();
+}
+
 /// No chat's comments, in memory (tests: each starts with none).
 @visibleForTesting
 void forgetReviews() {
   reviews.value = {};
+  _reviewsUnread = false;
   _sentAs.clear();
 }
 

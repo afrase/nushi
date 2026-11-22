@@ -74,11 +74,72 @@ void main() {
     expect(file().existsSync(), isFalse);
   });
 
-  test('a file it cannot read starts empty', () {
+  List<File> aside() => [
+    for (final f in dir.listSync().whereType<File>())
+      if (f.uri.pathSegments.last.startsWith('comment_drafts.json.unreadable-'))
+        f,
+  ];
+
+  test('a file that doesn’t parse starts empty, set aside with its '
+      'bytes', () {
     file().writeAsStringSync('{not json');
     final kept = CommentDraftFile(dir.path);
     addTearDown(kept.close);
     expect(keptCommentDrafts, isEmpty);
     expect(keptReviewDrafts, isEmpty);
+    expect(file().existsSync(), isFalse);
+    expect(aside().single.readAsStringSync(), '{not json');
+  });
+
+  test('a draft that doesn’t read is dropped, the rest kept, and the file '
+      'copied aside before it is saved over', () {
+    final was = jsonEncode({
+      'boxes': {'k': 'text', 'n': 7},
+      'reviews': {
+        'github.com o/r 7': [
+          inline.toProto3Json(),
+          {'line': 'three'},
+        ],
+      },
+    });
+    file().writeAsStringSync(was);
+    final kept = CommentDraftFile(dir.path);
+    addTearDown(kept.close);
+    expect(keptCommentDrafts, {'k': 'text'});
+    expect(reviewDrafts(ref), [inline]);
+    expect(aside().single.readAsStringSync(), was);
+
+    keepCommentDraft('k', 'more');
+    kept.flush();
+    final j = jsonDecode(file().readAsStringSync()) as Map<String, dynamic>;
+    expect(j['boxes'], {'k': 'more'});
+    expect(aside().single.readAsStringSync(), was);
+  });
+
+  test('a file without boxes still gives its reviews', () {
+    file().writeAsStringSync(
+      jsonEncode({
+        'reviews': {
+          'github.com o/r 7': [inline.toProto3Json()],
+        },
+      }),
+    );
+    final kept = CommentDraftFile(dir.path);
+    addTearDown(kept.close);
+    expect(reviewDrafts(ref), [inline]);
+    expect(aside(), isEmpty);
+  });
+
+  test('a file that can’t be read is never written over', () {
+    file().writeAsStringSync('{"boxes": {"k": "text"}}');
+    Process.runSync('chmod', ['000', file().path]);
+    addTearDown(() => Process.runSync('chmod', ['600', file().path]));
+    final kept = CommentDraftFile(dir.path);
+    addTearDown(kept.close);
+    keepCommentDraft('j', 'new');
+    kept.flush();
+    Process.runSync('chmod', ['600', file().path]);
+    expect(file().readAsStringSync(), '{"boxes": {"k": "text"}}');
+    expect(commentDraft('j'), 'new'); // kept in memory
   });
 }

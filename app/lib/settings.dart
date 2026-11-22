@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 
+import 'package:nushi/app_log.dart';
 import 'package:nushi/arrangement.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
@@ -743,30 +744,33 @@ Map<String, List<String>> _byPlace(Object? saved) => _entries(saved, _strings);
 
 File get _settings => File('$dataDir/app.json');
 
-/// `app.json`'s text as it was at launch; null when there was none.
-final String? _launchText = _readText();
+/// `app.json` as it was at launch, read by [readKept] (one that didn't
+/// parse was set aside, and reads as none); null when it couldn't be read
+/// at all, and then nothing is saved over it in this run.
+final Kept? _launch = _readLaunch();
 
-/// `app.json` as it was at launch.
-final Map<String, Object?> _saved = _decode(_launchText);
-
-String? _readText() {
+Kept? _readLaunch() {
   try {
-    return _settings.readAsStringSync();
-  } on Object {
+    return readKept(_settings);
+  } on Object catch (e) {
+    appLog.warn("app.json can't be read, so it isn't written over", {
+      'err': '$e',
+    });
     return null;
   }
 }
 
-Map<String, Object?> _decode(String? text) {
+/// `app.json` as it was at launch.
+final Map<String, Object?> _saved = _launch?.json ?? {};
+
+/// `app.json` as it is on disk now; empty when it can't be read.
+Map<String, Object?> readSaved() {
   try {
-    return jsonDecode(text!) as Map<String, Object?>;
+    return jsonDecode(_settings.readAsStringSync()) as Map<String, Object?>;
   } on Object {
     return <String, Object?>{};
   }
 }
-
-/// `app.json` as it is on disk now; empty when it can't be read.
-Map<String, Object?> readSaved() => _decode(_readText());
 
 /// Keys an older app saved that mean nothing now, dropped by the next
 /// save: `worktrees` (new chats no longer remember one), `subagentWide`
@@ -788,8 +792,11 @@ void _saveSoon() {
 }
 
 /// Writes the prefs made over `app.json` as it was at launch: those not
-/// read in this run, and keys a newer app saved, stay as they were.
+/// read in this run, and keys a newer app saved, stay as they were. One
+/// that couldn't be read isn't written over: the prefs changed apply
+/// until the app quits.
 void _save() {
+  if (_launch == null) return;
   try {
     writeWhole(
       _settings,
@@ -817,8 +824,10 @@ void resetAppSettings() {
     p._reset();
   }
   try {
-    if (_launchText case final text?) {
-      writeWhole(_settings, utf8.encode(text));
+    if (_launch == null) {
+      // Left as it is: it couldn't be read.
+    } else if (_saved.isNotEmpty) {
+      writeWhole(_settings, utf8.encode(jsonEncode(_saved)));
     } else if (_settings.existsSync()) {
       _settings.deleteSync();
     }

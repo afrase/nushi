@@ -8,7 +8,9 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show ImageData;
 /// The Mac's drafts: `drafts.json` in [dir] (the data folder), written
 /// whole or not at all, and each draft's images as files in `drafts/`
 /// beside it, removed once no draft has them; all only the user's (0600,
-/// the folder 0700).
+/// the folder 0700). A `drafts.json` that doesn't parse is set aside
+/// ([readKept]), and while one set aside is beside it no image is removed,
+/// since nothing reads which it names.
 final class DraftFiles implements DraftStore {
   new(this.dir);
 
@@ -21,13 +23,20 @@ final class DraftFiles implements DraftStore {
   final _names = Expando<String>();
   int _made = 0;
 
+  /// Whether a `drafts.json` set aside is beside it, as the load saw.
+  bool _asideThere = false;
+
   @override
   bool get textOnly => false;
 
   @override
   Future<Map<String, Map<String, Object?>>> load() async {
-    if (!_json.existsSync()) return {};
-    final j = jsonDecode(_json.readAsStringSync()) as Map<String, Object?>;
+    final (json: j, :setAside) = readKept(_json);
+    _asideThere =
+        setAside ||
+        Directory(dir).listSync().any(
+          (f) => f.uri.pathSegments.last.startsWith('drafts.json.unreadable-'),
+        );
     return {
       for (final MapEntry(:key, :value) in j.entries)
         if (value is Map<String, Object?>) key: value,
@@ -42,7 +51,7 @@ final class DraftFiles implements DraftStore {
       writeWhole(_json, utf8.encode(jsonEncode(drafts)));
     }
     // The images no draft has any more (sent, removed, or the chat gone).
-    if (!_images.existsSync()) return;
+    if (_asideThere || !_images.existsSync()) return;
     final kept = {
       for (final d in drafts.values)
         if (d['images'] case final List<Object?> names)

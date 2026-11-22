@@ -41,8 +41,10 @@ final class Drafts {
   final _kept = <String, Map<String, Object?>>{};
   final _attached = <String, (ChatState, void Function())>{};
   final _dirty = <String>{};
-  final _touched = <String>{}; // written to or forgotten before the load
+  // Written to or forgotten before the load read what was kept.
+  final _touched = <String>{};
   bool _loaded = false;
+  bool _unread = false; // the load failed: no save until a load reads it
   bool _stale = false; // what's on disk has a draft gone since
   bool _restoring = false;
   Timer? _timer;
@@ -51,30 +53,44 @@ final class Drafts {
   /// write over drafts not loaded yet).
   late Future<void> _saving = loaded;
 
-  /// Done once what was kept is loaded (and put back in chats attached
-  /// meanwhile).
+  /// Done once what was kept is loaded, or its load failed (and put back
+  /// in chats attached meanwhile).
   Future<void> get loaded => _loadDone.future;
   final _loadDone = Completer<void>();
 
   Future<void> _load() async {
+    await _read();
+    _loadDone.complete();
+  }
+
+  /// Reads what was kept and puts it back in the chats attached. One that
+  /// can't be read (a disk's or the browser's error; drafts.json that
+  /// doesn't parse is set aside, and reads as none) leaves [_unread] set:
+  /// drafts are kept in memory and nothing is saved over the store, until
+  /// a save's read succeeds.
+  Future<void> _read() async {
+    final Map<String, Map<String, Object?>> kept;
     try {
-      final kept = await store.load();
-      // A chat written to or forgotten meanwhile wins.
-      for (final MapEntry(:key, :value) in kept.entries) {
-        if (_touched.contains(key)) {
-          _stale = true; // its kept draft is out of date
-        } else {
-          _kept[key] = value;
-        }
-      }
+      kept = await store.load();
     } on Object {
-      // Nothing kept, or it can't be read: drafts start empty.
+      _unread = true;
+      _loaded = true;
+      return;
     }
+    _unread = false;
+    // A chat written to or forgotten meanwhile wins.
+    for (final MapEntry(:key, :value) in kept.entries) {
+      if (_touched.contains(key)) {
+        _stale = true; // its kept draft is out of date
+      } else {
+        _kept[key] = value;
+      }
+    }
+    _touched.clear();
     _loaded = true;
     for (final (chat, _) in _attached.values) {
       _restore(chat);
     }
-    _loadDone.complete();
   }
 
   /// The chats with a draft kept.
@@ -109,7 +125,7 @@ final class Drafts {
   void _changed(ChatState chat) {
     if (_restoring) return;
     _dirty.add(chat.id);
-    if (!_loaded) _touched.add(chat.id);
+    if (!_loaded || _unread) _touched.add(chat.id);
     _timer?.cancel();
     // Sent or cleared: off the disk now, not after a crash.
     if (chat.draft.isEmpty && _kept.containsKey(chat.id)) {
@@ -128,16 +144,19 @@ final class Drafts {
     if (_kept.remove(id) != null) {
       _stale = true;
       unawaited(flush());
-    } else if (!_loaded) {
+    } else if (!_loaded || _unread) {
       _touched.add(id);
       unawaited(flush()); // after the load, should it have one
     }
   }
 
-  /// Saves the drafts changed since the last save, now (once loaded).
+  /// Saves the drafts changed since the last save, now (once loaded, and
+  /// read: one whose load failed reads again first).
   Future<void> flush() {
     _timer?.cancel();
     return _saving = _saving.then((_) async {
+      if (_unread) await _read();
+      if (_unread) return; // kept in memory; the next save tries again
       var changed = _stale;
       _stale = false;
       for (final id in _dirty) {
