@@ -112,10 +112,9 @@ Future<void> _frames(WidgetTester tester) async {
 }
 
 /// The phone on a [size] screen in chat c, whose agent message has
-/// [images]; GetChatImage answers as [image] does. It returns the events
-/// requests and the GetChatImage requests, each as it is made.
-Future<(Phone, FakeDaemon, List<EventsRequest>, List<GetChatImageRequest>)>
-_phone(
+/// [images]; GetChatImage answers as [image] does. It returns the
+/// GetChatImage requests, each as it is made.
+Future<(Phone, FakeDaemon, List<GetChatImageRequest>)> _phone(
   WidgetTester tester, {
   List<ImageData>? images,
   List<Item>? items,
@@ -128,7 +127,6 @@ _phone(
   tester.platformDispatcher.accessibilityFeaturesTestValue =
       const FakeAccessibilityFeatures(disableAnimations: true);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  final events = <EventsRequest>[];
   final asked = <GetChatImageRequest>[];
   Object? answer(Object input) => switch (input) {
     GetChatRequest() => GetChatResponse(
@@ -139,16 +137,11 @@ _phone(
     GetChatImageRequest() => image?.call((asked..add(input)).last),
     _ => otherwise?.call(input),
   };
-  final fake = FakeDaemon([_chat])
-    ..answer = answer
-    ..streams = (r) {
-      if (r is EventsRequest) events.add(r);
-      return null;
-    };
+  final fake = FakeDaemon([_chat])..answer = answer;
   final phone = await startPhone(tester, fake);
   await tester.tap(find.text('Fix the login redirect'));
   await _frames(tester);
-  return (phone, fake, events, asked);
+  return (phone, fake, asked);
 }
 
 void main() {
@@ -356,13 +349,13 @@ void main() {
 
   testWidgets('the phone asks for references, and shows a box of the '
       'image’s size with a spinner while it comes', (tester) async {
-    final (phone, fake, events, asked) = await _phone(
+    final (phone, fake, asked) = await _phone(
       tester,
       image: (_) => Completer<Object?>().future, // never comes
     );
     final get = fake.calls.whereType<GetChatRequest>().single;
     expect(get.imageRefs, isTrue);
-    expect(events.single.imageRefs, isTrue);
+    expect(fake.subscriptions.single.request.imageRefs, isTrue);
     expect(_loading, findsOneWidget);
     expect(asked, hasLength(1));
     final box = tester.getRect(
@@ -379,7 +372,7 @@ void main() {
   });
 
   testWidgets('a loading image on the larger phone', (tester) async {
-    final (phone, _, _, _) = await _phone(
+    final (phone, _, _) = await _phone(
       tester,
       size: const Size(430, 932),
       image: (_) => Completer<Object?>().future,
@@ -393,7 +386,7 @@ void main() {
   testWidgets('the image shows once it comes, and a small one inline at '
       'once', (tester) async {
     final small = ImageData(mimeType: 'image/png', data: _png);
-    final (phone, _, _, asked) = await _phone(
+    final (phone, _, asked) = await _phone(
       tester,
       images: [_ref(), small],
       image: (_) => GetChatImageResponse(data: _png),
@@ -414,7 +407,7 @@ void main() {
       status: 'completed',
       images: images,
     );
-    final (phone, _, _, asked) = await _phone(
+    final (phone, _, asked) = await _phone(
       tester,
       items: [
         Item(
@@ -442,7 +435,7 @@ void main() {
   testWidgets('a long chat’s images are fetched as it scrolls to them, '
       'not all as it opens', (tester) async {
     String sha(int i) => '$i'.padLeft(64, '0');
-    final (phone, _, _, asked) = await _phone(
+    final (phone, _, asked) = await _phone(
       tester,
       items: [
         for (var i = 0; i < 20; i++)
@@ -482,7 +475,7 @@ void main() {
     tester,
   ) async {
     var fail = true;
-    final (phone, _, _, asked) = await _phone(
+    final (phone, _, asked) = await _phone(
       tester,
       image: (_) => fail
           ? throw connect.ConnectException(connect.Code.unavailable, 'gone')
@@ -514,7 +507,7 @@ void main() {
     Future<(Phone, FakeDaemon, List<GetChatImageRequest>)> queue(
       WidgetTester tester,
     ) async {
-      final (phone, fake, _, asked) = await _phone(
+      final (phone, fake, asked) = await _phone(
         tester,
         items: [_items(const []).first],
         status: busy,
@@ -605,24 +598,19 @@ void main() {
   testWidgets('the Mac asks for references too, and shows a small image '
       'inline', (tester) async {
     viewport(tester, const Size(1700, 900));
-    final events = <EventsRequest>[];
     final fake = FakeDaemon([_chat])
       ..answer = ((input) => input is GetChatRequest
           ? GetChatResponse(
               chat: _chat,
               items: _items([ImageData(mimeType: 'image/png', data: _png)]),
             )
-          : null)
-      ..streams = (r) {
-        if (r is EventsRequest) events.add(r);
-        return null;
-      };
+          : null);
     final d = await fake.connect(tester)
       ..select('c');
     await tester.pumpWidget(NushiApp(daemon: d));
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<GetChatRequest>().single.imageRefs, isTrue);
-    expect(events.single.imageRefs, isTrue);
+    expect(fake.subscriptions.single.request.imageRefs, isTrue);
     expect(
       find.textContaining('after the first redirect', findRichText: true),
       findsOneWidget,

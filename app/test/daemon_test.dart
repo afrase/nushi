@@ -325,12 +325,7 @@ void main() {
   test('chats let go after a reconnect: still only the last six picked '
       'keep their items', () async {
     final ids = [for (var i = 0; i < 10; i++) String.fromCharCode(97 + i)];
-    // Each subscription is a daemon's events; closing it, the link lost.
-    late StreamController<EventsResponse> events;
     final fake = FakeDaemon([for (final id in ids) Chat(id: id, folder: '/x')])
-      ..streams = ((input) => input is EventsRequest
-          ? (events = StreamController()..add(EventsResponse())).stream
-          : null)
       ..answer = (input) => switch (input) {
         GetChatRequest(:final chatId) => GetChatResponse(
           items: [Item(id: '$chatId-1', text: 'hi')],
@@ -349,8 +344,9 @@ void main() {
     for (final id in ids.take(3)) {
       await pick(id);
     }
-    await events.close();
+    fake.down = true; // the link lost
     await pumpEventQueue();
+    fake.down = false;
     await d.ping(); // back: unloaded, and only "c" loads again
     await pumpEventQueue();
     expect(d.chats['a']!.loaded, isFalse);

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,9 +36,6 @@ void main() {
           null,
         ),
       );
-      // Each subscription is a daemon's events: the first message says it's
-      // live, and closing it is that daemon stopping.
-      late StreamController<EventsResponse> events;
       final chats = [
         chat(
           'a',
@@ -50,9 +45,6 @@ void main() {
         ),
       ];
       final fake = FakeDaemon(chats)
-        ..streams = ((input) => input is EventsRequest
-            ? (events = StreamController()..add(EventsResponse())).stream
-            : null)
         // Its snapshot, as the daemon has it.
         ..answer = ((input) => input is GetChatRequest
             ? GetChatResponse(chat: chats[0], status: chats[0].status)
@@ -63,7 +55,7 @@ void main() {
       await tester.pumpWidget(
         themed(SizedBox(width: 260, child: Sidebar(daemon: d)), still: true),
       );
-      events.add(
+      fake.emit(
         EventsResponse(
           chatId: 'a',
           item: ItemEvent(
@@ -88,10 +80,7 @@ void main() {
         'Fix the login redirect',
         status: ChatStatus(asleep: true),
       );
-      await events.close();
-      await tester.pump(const Duration(seconds: 2)); // the next ping
-      await tester.pump();
-      await tester.pump();
+      await fake.restart(tester);
 
       expect(d.chats['a']!.waiting, isFalse);
       expect(find.byTooltip('needs you'), findsNothing);

@@ -532,9 +532,6 @@ void main() {
   testWidgets('Back from a fork shows the chat under it, selected and '
       'viewed, and it stays live across a reconnect', (tester) async {
     final status = ChatStatus(canFork: true);
-    // Each subscription to the events gets a stream of its own, so the
-    // link can drop and subscribe again.
-    final subscriptions = <StreamController<EventsResponse>>[];
     final fake = FakeDaemon(_chats)
       ..answer = ((input) => switch (input) {
         GetChatRequest(chatId: 'c') => GetChatResponse(
@@ -542,31 +539,16 @@ void main() {
           status: status,
         ),
         _ => null,
-      })
-      ..streams = (r) {
-        if (r is! EventsRequest) return null;
-        final events = StreamController<EventsResponse>()
-          ..add(EventsResponse());
-        addTearDown(events.close);
-        subscriptions.add(events);
-        return events.stream;
-      };
+      });
     final (phone, _) = await _app(tester, fake);
     await tester.tap(find.text('Web Push from the daemon'));
     await tester.pumpAndSettle();
-    subscriptions.last.add(
-      EventsResponse(chatId: 'c', seq: Int64(9), status: status),
-    );
+    fake.emit(EventsResponse(chatId: 'c', seq: Int64(9), status: status));
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsLabel('Chat'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Fork'));
-    await tester.pumpAndSettle();
-    // The fake announces the fork on its own stream; this one is the app's.
-    subscriptions.last.add(
-      EventsResponse(chatId: 'fork', chat: fake.chats.last),
-    );
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(); // the fake announces the fork
     expect(find.text('Web Push from the daemon (fork)'), findsOne);
     expect(fake.calls.whereType<SetDeviceViewRequest>().last.chatId, 'fork');
 
@@ -582,13 +564,13 @@ void main() {
 
     // The link drops and comes back: the chat on screen loads again and
     // what the agent says next shows.
-    final before = subscriptions.length;
+    final before = fake.subscriptions.length;
     daemon.relink();
     await phone.link!.check();
     await tester.pumpAndSettle();
-    expect(subscriptions, hasLength(before + 1));
+    expect(fake.subscriptions, hasLength(before + 1));
     expect(daemon.chats['c']!.loaded, isTrue);
-    subscriptions.last.add(
+    fake.emit(
       EventsResponse(
         chatId: 'c',
         seq: Int64(20),
