@@ -101,12 +101,18 @@ type Restart interface {
 
 // New returns the whole API, unauthenticated: the local socket wraps it in
 // WithToken.
-func New(sv Services) http.Handler { return macSocket(serve(sv, "socket")) }
+func New(sv Services) http.Handler { return serve(sv, viaSocket) }
 
-// serve is the API for clients that come via, its calls logged.
-func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
+// viaSocket is how the local socket's clients come: this computer's app,
+// the only way in that may make macOnly's calls.
+const viaSocket = "socket"
+
+// serve is the API for clients that come via, its calls logged, and
+// macOnly's calls refused unless via is the socket: decided from how the
+// server is built, so any other way in fails closed.
+func serve(sv Services, via string) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{sv}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}, mended{}}, interceptors...)...),
+	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{sv}, connect.WithInterceptors(logCalls{via}, mended{}, localGuard{local: via == viaSocket}),
 		// Gzip only for a client that asks (the phone, over a slow link;
 		// never the Mac's socket), and only where it pays.
 		connect.WithCompressMinBytes(1024),
@@ -140,7 +146,7 @@ var macOnly = map[string]bool{
 	// The phone shows nothing of updates.
 	nushiv1connect.NushiServiceCheckForUpdatesProcedure: true,
 	// Homebrew replaces the app on the Mac, on the Mac's word only (ADR
-	// 0109); the call checks for the Mac's socket too (onMac).
+	// 0109).
 	nushiv1connect.NushiServiceInstallUpdateProcedure: true,
 	// The phone has no Changes view, and a commit's hooks run on the Mac.
 	nushiv1connect.NushiServiceStageFilesProcedure:         true,
@@ -149,64 +155,61 @@ var macOnly = map[string]bool{
 	// macOS's keychain prompt shows on the Mac's screen.
 	nushiv1connect.NushiServiceAllowJiraTokenProcedure:   true,
 	nushiv1connect.NushiServiceAllowGitHubTokenProcedure: true,
-	// The phone never edits a file (ADR 0096); WriteChatFile checks for
-	// the Mac's socket too (onMac).
+	// The phone never edits a file (ADR 0096).
 	nushiv1connect.NushiServiceWriteChatFileProcedure: true,
-	// Dev servers run on the Mac's word only (ADR 0098); each call checks
-	// for the Mac's socket too (onMac).
+	// Dev servers run on the Mac's word only (ADR 0098).
 	nushiv1connect.NushiServiceListServersProcedure:    true,
 	nushiv1connect.NushiServiceStartServerProcedure:    true,
 	nushiv1connect.NushiServiceStopServerProcedure:     true,
 	nushiv1connect.NushiServiceStopAllServersProcedure: true,
 	nushiv1connect.NushiServiceWatchServerLogProcedure: true,
 	// Only the Mac's sidebar has project tiles, and the icon is a file
-	// of the Mac's read for it; the call checks for the Mac's socket
-	// too (onMac).
+	// of the Mac's read for it.
 	nushiv1connect.NushiServiceGetProjectIconProcedure: true,
 	// The phone has no Workflow pane, and its reads of Claude's files stay
 	// off the relay (ADR 0127).
 	nushiv1connect.NushiServiceGetWorkflowProcedure:      true,
 	nushiv1connect.NushiServiceGetWorkflowAgentProcedure: true,
 	// The phone has no Usage page, and the page names project folders and
-	// chats' titles (ADR 0136); the call checks for the Mac's socket too
-	// (onMac).
+	// chats' titles (ADR 0136).
 	nushiv1connect.NushiServiceGetUsageProcedure: true,
 	// The phone has no find in a chat.
 	nushiv1connect.NushiServiceFindInChatProcedure: true,
 }
 
 // ForDevices is the API a paired device's channel gets, which the
-// handshake has authenticated: all of it but the Mac's own calls.
-func ForDevices(sv Services) http.Handler { return serve(sv, "device", deviceGuard{}) }
+// handshake has authenticated: all of it but this computer's own calls.
+func ForDevices(sv Services) http.Handler { return serve(sv, "device") }
 
-// deviceGuard refuses a device the Mac's own calls (macOnly), streaming
-// ones too.
-type deviceGuard struct{}
+// localGuard refuses macOnly's calls, streaming ones too, unless the
+// server is the local socket's. Its zero value refuses them.
+type localGuard struct{ local bool }
 
-// macs refuses a call of the Mac's.
-func (deviceGuard) macs(s connect.Spec) error {
-	if macOnly[s.Procedure] {
-		return connect.NewError(connect.CodePermissionDenied, errors.New("only the Mac can do this"))
+// refuse is the guard's answer to a call: nil when it may go on. The
+// words name no Mac: a phone paired with a Linux daemon reads them.
+func (g localGuard) refuse(s connect.Spec) error {
+	if macOnly[s.Procedure] && !g.local {
+		return connect.NewError(connect.CodePermissionDenied, errors.New("only this computer's app can do this"))
 	}
 	return nil
 }
 
-func (g deviceGuard) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
+func (g localGuard) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-		if err := g.macs(req.Spec()); err != nil {
+		if err := g.refuse(req.Spec()); err != nil {
 			return nil, err
 		}
 		return next(ctx, req)
 	}
 }
 
-func (deviceGuard) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
+func (localGuard) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
 	return next
 }
 
-func (g deviceGuard) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+func (g localGuard) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
-		if err := g.macs(conn.Spec()); err != nil {
+		if err := g.refuse(conn.Spec()); err != nil {
 			return err
 		}
 		return next(ctx, conn)

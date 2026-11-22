@@ -39,13 +39,10 @@ func (s *server) CheckForUpdates(ctx context.Context, _ *connect.Request[nushiv1
 }
 
 // InstallUpdate has the daemon upgrade Nushi with Homebrew (ADR 0109).
-// The request names nothing, and a paired device never asks: the call
-// must have come on the Mac's socket (onMac), whatever macOnly says.
-func (s *server) InstallUpdate(ctx context.Context, _ *connect.Request[nushiv1.InstallUpdateRequest]) (*connect.Response[nushiv1.InstallUpdateResponse], error) {
-	switch {
-	case !onMac(ctx):
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("only the Mac installs an update"))
-	case s.Updates == nil:
+// The request names nothing, and a paired device never asks: the call is
+// in macOnly.
+func (s *server) InstallUpdate(context.Context, *connect.Request[nushiv1.InstallUpdateRequest]) (*connect.Response[nushiv1.InstallUpdateResponse], error) {
+	if s.Updates == nil {
 		return nil, connect.NewError(connect.CodeUnimplemented, errNoUpdates)
 	}
 	if err := s.Updates.Install(); err != nil {

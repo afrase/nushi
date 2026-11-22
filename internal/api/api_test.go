@@ -171,16 +171,25 @@ func TestSignInDetail(t *testing.T) {
 	}
 }
 
-// A device can't make a streaming call of the Mac's either.
-func TestDeviceGuardStreams(t *testing.T) {
-	for proc, want := range map[string]bool{nushiv1connect.NushiServiceStartPairingProcedure: false, nushiv1connect.NushiServiceEventsProcedure: true} {
+// A device can't make a streaming call of this computer's either; the
+// socket's server can.
+func TestLocalGuardStreams(t *testing.T) {
+	for _, tc := range []struct {
+		guard localGuard
+		proc  string
+		want  bool
+	}{
+		{localGuard{}, nushiv1connect.NushiServiceStartPairingProcedure, false},
+		{localGuard{}, nushiv1connect.NushiServiceEventsProcedure, true},
+		{localGuard{local: true}, nushiv1connect.NushiServiceStartPairingProcedure, true},
+	} {
 		ran := false
-		err := deviceGuard{}.WrapStreamingHandler(func(context.Context, connect.StreamingHandlerConn) error {
+		err := tc.guard.WrapStreamingHandler(func(context.Context, connect.StreamingHandlerConn) error {
 			ran = true
 			return nil
-		})(context.Background(), specConn{spec: connect.Spec{Procedure: proc}})
-		if ran != want || (err == nil) != want {
-			t.Errorf("%s: ran %v, err %v", proc, ran, err)
+		})(context.Background(), specConn{spec: connect.Spec{Procedure: tc.proc}})
+		if ran != tc.want || (err == nil) != tc.want {
+			t.Errorf("%s, local %v: ran %v, err %v", tc.proc, tc.guard.local, ran, err)
 		}
 	}
 }

@@ -70,8 +70,7 @@ func TestOnlyTheMacInstallsAnUpdate(t *testing.T) {
 		c    nushiv1connect.NushiServiceClient
 		says string
 	}{
-		"a device":            {client(t, ForDevices(Services{Updates: u})), "only the Mac can do this"},
-		"a device, unguarded": {client(t, serve(Services{Updates: u}, "device")), "only the Mac installs an update"},
+		"a device": {client(t, ForDevices(Services{Updates: u})), "only this computer's app can do this"},
 	} {
 		_, err := tc.c.InstallUpdate(t.Context(), req)
 		if connect.CodeOf(err) != connect.CodePermissionDenied || !strings.Contains(err.Error(), tc.says) || u.installs != 1 {

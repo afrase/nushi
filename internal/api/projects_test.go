@@ -46,8 +46,7 @@ func TestGetProjectIcon(t *testing.T) {
 		c    nushiv1connect.NushiServiceClient
 		says string
 	}{
-		"a device":            {client(t, ForDevices(Services{})), "only the Mac can do this"},
-		"a device, unguarded": {client(t, serve(Services{}, "device")), "only the Mac shows project icons"},
+		"a device": {client(t, ForDevices(Services{})), "only this computer's app can do this"},
 	} {
 		if _, err := get(tc.c, with); connect.CodeOf(err) != connect.CodePermissionDenied || !strings.Contains(err.Error(), tc.says) {
 			t.Errorf("%s: %v", name, err)

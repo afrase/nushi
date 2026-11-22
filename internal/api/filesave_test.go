@@ -13,9 +13,8 @@ import (
 	"github.com/afrase/nushi/internal/store"
 )
 
-// Only the Mac's socket writes a file: a device's channel is refused by
-// its guard (macOnly), and, past it, by the handler's own check, so a way
-// in that forgets the guard still can't write.
+// Only the local socket writes a file: a device's channel is refused by
+// the guard (macOnly).
 func TestOnlyTheMacWritesFiles(t *testing.T) {
 	st := store.New(t.TempDir())
 	svc := chats.New(t.Context(), nil, chats.Options{Remembered: st, Sessions: st, Scratch: t.TempDir()})
@@ -26,9 +25,8 @@ func TestOnlyTheMacWritesFiles(t *testing.T) {
 		code connect.Code
 		says string
 	}{
-		"the Mac":             {client(t, New(Services{Chats: svc})), connect.CodeNotFound, ""},
-		"a device":            {client(t, ForDevices(Services{Chats: svc})), connect.CodePermissionDenied, "only the Mac can do this"},
-		"a device, unguarded": {client(t, serve(Services{Chats: svc}, "device")), connect.CodePermissionDenied, "only the Mac can edit files"},
+		"the Mac":  {client(t, New(Services{Chats: svc})), connect.CodeNotFound, ""},
+		"a device": {client(t, ForDevices(Services{Chats: svc})), connect.CodePermissionDenied, "only this computer's app can do this"},
 	} {
 		_, err := tc.c.WriteChatFile(context.Background(), req)
 		if connect.CodeOf(err) != tc.code || !strings.Contains(err.Error(), tc.says) {

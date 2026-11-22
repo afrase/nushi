@@ -9,14 +9,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
-	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/afrase/nushi/internal/features/remote"
-	"github.com/afrase/nushi/internal/features/servers"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/model"
@@ -125,13 +123,18 @@ var deviceMay = []string{
 	"DeleteGitHubBranch", "RestoreGitHubBranch", "FindChatPull", "LinkChatPull", "Events",
 }
 
-// Every call of the API is either the Mac's only or reviewed as one a
-// device may make, and a device's channel refuses each of the Mac's,
-// streaming ones too, before its handler runs.
+// Every call of the API is either this computer's only or reviewed as one
+// a device may make, and a device's channel refuses each of this
+// computer's, streaming ones too, before its handler runs; so does a
+// server built any other way than for the local socket (tech debt review
+// 2026-11-22: one guard, failing closed, replaced the handlers' own
+// checks).
 func TestEveryCallIsDecidedForDevices(t *testing.T) {
 	methods := nushiv1.File_nushi_v1_nushi_proto.Services().ByName("NushiService").Methods()
-	srv := httptest.NewServer(ForDevices(Services{}))
-	t.Cleanup(srv.Close)
+	devices := httptest.NewServer(ForDevices(Services{}))
+	t.Cleanup(devices.Close)
+	other := httptest.NewServer(serve(Services{}, "elsewhere"))
+	t.Cleanup(other.Close)
 	ctx := context.Background()
 	seen := map[string]bool{}
 	for i := range methods.Len() {
@@ -146,68 +149,30 @@ func TestEveryCallIsDecidedForDevices(t *testing.T) {
 		if !macOnly[proc] {
 			continue
 		}
-		c := connect.NewClient[emptypb.Empty, emptypb.Empty](http.DefaultClient, srv.URL+proc)
-		var err error
-		if m.IsStreamingServer() {
-			var s *connect.ServerStreamForClient[emptypb.Empty]
-			s, err = c.CallServerStream(ctx, connect.NewRequest(&emptypb.Empty{}))
-			if err == nil {
-				for s.Receive() {
+		for via, srv := range map[string]*httptest.Server{"a device": devices, "another way in": other} {
+			c := connect.NewClient[emptypb.Empty, emptypb.Empty](http.DefaultClient, srv.URL+proc)
+			var err error
+			if m.IsStreamingServer() {
+				var s *connect.ServerStreamForClient[emptypb.Empty]
+				s, err = c.CallServerStream(ctx, connect.NewRequest(&emptypb.Empty{}))
+				if err == nil {
+					for s.Receive() {
+					}
+					err = s.Err()
+					_ = s.Close()
 				}
-				err = s.Err()
-				_ = s.Close()
+			} else {
+				_, err = c.CallUnary(ctx, connect.NewRequest(&emptypb.Empty{}))
 			}
-		} else {
-			_, err = c.CallUnary(ctx, connect.NewRequest(&emptypb.Empty{}))
-		}
-		var ce *connect.Error
-		if !errors.As(err, &ce) || ce.Code() != connect.CodePermissionDenied || ce.Message() != "only the Mac can do this" {
-			t.Errorf("%s from a device: %v, want the guard's refusal", name, err)
+			var ce *connect.Error
+			if !errors.As(err, &ce) || ce.Code() != connect.CodePermissionDenied || ce.Message() != "only this computer's app can do this" {
+				t.Errorf("%s from %s: %v, want the guard's refusal", name, via, err)
+			}
 		}
 	}
 	for _, name := range deviceMay {
 		if !seen[name] {
 			t.Errorf("deviceMay names %s, which the API doesn't have", name)
-		}
-	}
-}
-
-// The dev servers run on the Mac's word only: past the devices' guard,
-// each call checks it came on the Mac's socket, so a way in that forgets
-// the guard still can't run a launch file's command.
-func TestOnlyTheMacRunsDevServers(t *testing.T) {
-	c := client(t, serve(Services{Servers: &servers.Service{}}, "device"))
-	ctx := context.Background()
-	for name, call := range map[string]func() error{
-		"ListServers": func() error {
-			_, err := c.ListServers(ctx, connect.NewRequest(&nushiv1.ListServersRequest{ChatId: "c"}))
-			return err
-		},
-		"StartServer": func() error {
-			_, err := c.StartServer(ctx, connect.NewRequest(&nushiv1.StartServerRequest{ChatId: "c"}))
-			return err
-		},
-		"StopServer": func() error {
-			_, err := c.StopServer(ctx, connect.NewRequest(&nushiv1.StopServerRequest{ChatId: "c"}))
-			return err
-		},
-		"StopAllServers": func() error {
-			_, err := c.StopAllServers(ctx, connect.NewRequest(&nushiv1.StopAllServersRequest{ChatId: "c"}))
-			return err
-		},
-		"WatchServerLog": func() error {
-			s, err := c.WatchServerLog(ctx, connect.NewRequest(&nushiv1.WatchServerLogRequest{ChatId: "c"}))
-			if err != nil {
-				return err
-			}
-			defer func() { _ = s.Close() }()
-			for s.Receive() {
-			}
-			return s.Err()
-		},
-	} {
-		if err := call(); connect.CodeOf(err) != connect.CodePermissionDenied || !strings.Contains(err.Error(), "only the Mac runs dev servers") {
-			t.Errorf("%s from a device, unguarded: %v", name, err)
 		}
 	}
 }

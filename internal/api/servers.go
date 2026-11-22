@@ -10,25 +10,20 @@ import (
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
-// The dev servers (ADR 0098) are the Mac's only: they're in macOnly, and
-// each call checks it came on the Mac's socket too (onMac), as
-// WriteChatFile does. No call takes a command: only a launch file's
-// entries run, picked by name or place and the hash of the entry as shown.
+// The dev servers (ADR 0098) are this computer's only: they're in
+// macOnly. No call takes a command: only a launch file's entries run,
+// picked by name or place and the hash of the entry as shown.
 
-// serversHere refuses a call that didn't come on the Mac's socket, or
-// when the daemon runs no servers.
-func (s *server) serversHere(ctx context.Context) error {
-	switch {
-	case !onMac(ctx):
-		return connect.NewError(connect.CodePermissionDenied, errors.New("only the Mac runs dev servers"))
-	case s.Servers == nil:
+// serversHere refuses a call when the daemon runs no servers.
+func (s *server) serversHere() error {
+	if s.Servers == nil {
 		return connect.NewError(connect.CodeUnimplemented, errors.New("this daemon runs no dev servers"))
 	}
 	return nil
 }
 
-func (s *server) ListServers(ctx context.Context, req *connect.Request[nushiv1.ListServersRequest]) (*connect.Response[nushiv1.ListServersResponse], error) {
-	if err := s.serversHere(ctx); err != nil {
+func (s *server) ListServers(_ context.Context, req *connect.Request[nushiv1.ListServersRequest]) (*connect.Response[nushiv1.ListServersResponse], error) {
+	if err := s.serversHere(); err != nil {
 		return nil, err
 	}
 	l, err := s.Servers.List(req.Msg.ChatId)
@@ -50,7 +45,7 @@ func (s *server) ListServers(ctx context.Context, req *connect.Request[nushiv1.L
 }
 
 func (s *server) StartServer(ctx context.Context, req *connect.Request[nushiv1.StartServerRequest]) (*connect.Response[nushiv1.StartServerResponse], error) {
-	if err := s.serversHere(ctx); err != nil {
+	if err := s.serversHere(); err != nil {
 		return nil, err
 	}
 	m := req.Msg
@@ -73,15 +68,15 @@ func (s *server) StartServer(ctx context.Context, req *connect.Request[nushiv1.S
 	return connect.NewResponse(&nushiv1.StartServerResponse{Server: devServerProto(r)}), nil
 }
 
-func (s *server) StopServer(ctx context.Context, req *connect.Request[nushiv1.StopServerRequest]) (*connect.Response[nushiv1.StopServerResponse], error) {
-	if err := s.serversHere(ctx); err != nil {
+func (s *server) StopServer(_ context.Context, req *connect.Request[nushiv1.StopServerRequest]) (*connect.Response[nushiv1.StopServerResponse], error) {
+	if err := s.serversHere(); err != nil {
 		return nil, err
 	}
 	return done[nushiv1.StopServerResponse](s.Servers.Stop(req.Msg.ChatId, req.Msg.ServerId), refused)
 }
 
-func (s *server) StopAllServers(ctx context.Context, req *connect.Request[nushiv1.StopAllServersRequest]) (*connect.Response[nushiv1.StopAllServersResponse], error) {
-	if err := s.serversHere(ctx); err != nil {
+func (s *server) StopAllServers(_ context.Context, req *connect.Request[nushiv1.StopAllServersRequest]) (*connect.Response[nushiv1.StopAllServersResponse], error) {
+	if err := s.serversHere(); err != nil {
 		return nil, err
 	}
 	return done[nushiv1.StopAllServersResponse](s.Servers.StopAll(req.Msg.ChatId), refused)
@@ -90,7 +85,7 @@ func (s *server) StopAllServers(ctx context.Context, req *connect.Request[nushiv
 // WatchServerLog sends a server's output for its logs drawer (ADR 0100):
 // its log, then what it writes, then ended once it has.
 func (s *server) WatchServerLog(ctx context.Context, req *connect.Request[nushiv1.WatchServerLogRequest], stream *connect.ServerStream[nushiv1.WatchServerLogResponse]) error {
-	if err := s.serversHere(ctx); err != nil {
+	if err := s.serversHere(); err != nil {
 		return err
 	}
 	var sendErr error

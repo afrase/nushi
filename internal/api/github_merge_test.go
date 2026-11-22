@@ -44,8 +44,8 @@ func TestLoggable(t *testing.T) {
 // ADR 0069: a phone may merge, as it may post a review. Should a review
 // become the Mac's alone, this says the merges go with it.
 func TestPhoneMergesAsItReviews(t *testing.T) {
-	guard := deviceGuard{}
-	review := guard.macs(connect.Spec{Procedure: nushiv1connect.NushiServiceSubmitGitHubReviewProcedure})
+	guard := localGuard{}
+	review := guard.refuse(connect.Spec{Procedure: nushiv1connect.NushiServiceSubmitGitHubReviewProcedure})
 	for _, proc := range []string{
 		nushiv1connect.NushiServiceGetGitHubMergeTextProcedure,
 		nushiv1connect.NushiServiceMergeGitHubPullProcedure,
@@ -54,7 +54,7 @@ func TestPhoneMergesAsItReviews(t *testing.T) {
 		nushiv1connect.NushiServiceEnqueueGitHubPullProcedure,
 		nushiv1connect.NushiServiceDequeueGitHubPullProcedure,
 	} {
-		if err := guard.macs(connect.Spec{Procedure: proc}); (err == nil) != (review == nil) {
+		if err := guard.refuse(connect.Spec{Procedure: proc}); (err == nil) != (review == nil) {
 			t.Errorf("%s: %v; a review: %v", proc, err, review)
 		}
 	}
@@ -78,9 +78,9 @@ func TestEditErr(t *testing.T) {
 
 // A phone may edit a pull request's text, as it may post a review.
 func TestPhoneEditsAsItReviews(t *testing.T) {
-	guard := deviceGuard{}
-	review := guard.macs(connect.Spec{Procedure: nushiv1connect.NushiServiceSubmitGitHubReviewProcedure})
-	edit := guard.macs(connect.Spec{Procedure: nushiv1connect.NushiServiceEditGitHubPullProcedure})
+	guard := localGuard{}
+	review := guard.refuse(connect.Spec{Procedure: nushiv1connect.NushiServiceSubmitGitHubReviewProcedure})
+	edit := guard.refuse(connect.Spec{Procedure: nushiv1connect.NushiServiceEditGitHubPullProcedure})
 	if (edit == nil) != (review == nil) {
 		t.Fatalf("an edit: %v; a review: %v", edit, review)
 	}

@@ -23,14 +23,11 @@ type Usage interface {
 
 var errNoUsage = errors.New("this daemon doesn't keep usage")
 
-// GetUsage is the Mac's only (macOnly, and onMac here too): the page
-// names project folders and chats' titles, and the phone has none.
+// GetUsage is this computer's only (macOnly): the page names project
+// folders and chats' titles, and the phone has none.
 func (s *server) GetUsage(ctx context.Context, req *connect.Request[nushiv1.GetUsageRequest]) (*connect.Response[nushiv1.GetUsageResponse], error) {
 	m := req.Msg
-	switch {
-	case !onMac(ctx):
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("only the Mac shows usage"))
-	case s.Usage == nil:
+	if s.Usage == nil {
 		return nil, connect.NewError(connect.CodeUnimplemented, errNoUsage)
 	}
 	if m.TimeZone != "" {
