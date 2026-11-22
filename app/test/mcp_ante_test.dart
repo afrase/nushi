@@ -144,6 +144,30 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('an Ante server with a URL has Log out, as any agent’s; one '
+      'run on a command has none', (tester) async {
+    final (fake, d) = await _daemon(tester);
+    viewport(tester, const Size(1000, 900), ratio: 3);
+    await tester.pumpWidget(
+      themed(McpView(daemon: d, folder: '/Users/me/logout')),
+    );
+    await tester.pumpAndSettle();
+    final more = find.byTooltip('More');
+    await tester.tap(more.at(1)); // fs, a command
+    await tester.pumpAndSettle();
+    expect(find.text('Edit…'), findsOneWidget);
+    expect(find.text('Log out'), findsNothing);
+    await tester.tapAt(Offset.zero);
+    await tester.pumpAndSettle();
+    await tester.tap(more.at(2)); // web, a URL
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Log out'));
+    await tester.pumpAndSettle();
+    final out = fake.calls.whereType<LogoutMcpServerRequest>().single;
+    expect((out.agent, out.name), ('ante', 'web'));
+    await closeView(tester, d);
+  });
+
   testWidgets('a daemon too old to say still has Ante’s as yours only, by '
       'its name', (tester) async {
     final (_, d) = await _daemon(tester, api: agentFactsApi - 1);
@@ -286,6 +310,29 @@ void main() {
     expect(asked('/changed/a', 'ante'), anteBefore);
     await closeView(tester, d);
   });
+
+  // An Ante remote server's row menu to look at (`make renders`).
+  for (final tokens in [Tokens.dark, Tokens.light]) {
+    for (final width in [1700.0, 720.0]) {
+      final name = 'mcp_ante_menu_${width.toInt()}_${tokens.brightness.name}';
+      testWidgets('an Ante remote server’s menu, $name', (tester) async {
+        final (_, d) = await _daemon(tester);
+        viewport(tester, Size(width, 900));
+        await tester.pumpWidget(
+          themed(
+            McpView(daemon: d, folder: '/Users/me/menu'),
+            tokens: tokens,
+            banner: false,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('More').last); // web's
+        await tester.pumpAndSettle();
+        await render(tester, find.byType(MaterialApp), name);
+        await closeView(tester, d);
+      });
+    }
+  }
 
   // Ante's HTTP form to look at (`make renders`): URL and headers, no note
   // of one agent's versions under them.

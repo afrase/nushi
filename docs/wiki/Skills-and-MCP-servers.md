@@ -74,6 +74,6 @@ A running chat keeps its servers until it restarts. After a change, the chat's *
 
 - Changed something in a terminal? Click **Refresh** on Skills or **Check again** on MCP servers.
 - A greyed-out switch is set in another file. Hover over it to see which one.
-- A Claude server with a URL has **⋯ › Log out**, which forgets its sign-in.
+- A server with a URL has **⋯ › Log out**, which forgets its sign-in. Ante needs 0.2.15 or later for it; an older one says to update.
 - Claude and Codex chats also get a few tools from Nushi itself, such as opening a file in the Files pane. They don't show in these lists.
 - To see which agents Nushi found, or to set up Codex, open **Settings › Agents**. [Getting started](Getting-started) walks through it.

@@ -13,9 +13,10 @@ import 'package:nushi/widgets.dart';
 /// What can be done to a server, on its row: its on/off switch for the
 /// project (a project server's Approve and Reject while it waits for
 /// approval), "Log in" when it needs a sign-in, and a menu with Edit…,
-/// Remove… and Log out. Ante's have "Log in" too, with Edit… and Remove…:
-/// it has no off switch, and only the daemon knows whether its version can
-/// sign in, which needs_auth says and a server signed in to doesn't.
+/// Remove… and, for a server with a URL, Log out. An agent whose servers
+/// are yours only has no switch. Whether the agent can sign in or out is
+/// the daemon's to say: needs_auth offers Log in, and a Log out it can't do
+/// fails with its error.
 class McpActions extends StatefulWidget {
   const new(this.list, this.server, {super.key});
 
@@ -75,7 +76,7 @@ class _McpActionsState extends State<McpActions> {
     final t = theme.t;
     final daemon = list.daemon;
     final project = server.scope == 'project';
-    final remote = config(server)['url'] != null && !list.userOnly;
+    final remote = config(server)['url'] != null;
     final menu = [
       if ({'user', 'project', 'local'}.contains(server.scope)) ...[
         MenuEntry(
