@@ -273,11 +273,13 @@ class _ChatDetailsState extends State<_ChatDetails> with FollowsChanges {
   bool get _canAsk => chat.canAskContext && !chat.busy && !chat.archived;
 
   /// Whether Compact session is offered: the agent lists a `compact`
-  /// command (Claude's), and the chat is idle.
-  bool get _canCompact =>
-      !chat.busy &&
-      !chat.archived &&
-      chat.commands.any((c) => c.name == 'compact');
+  /// command (Claude's) and the chat isn't archived. It works while the
+  /// chat is idle ([_canCompact]).
+  bool get _compactable =>
+      !chat.archived && chat.commands.any((c) => c.name == 'compact');
+
+  /// Whether Compact works now: it's offered and the chat is idle.
+  bool get _canCompact => _compactable && !chat.busy;
 
   /// Has the agent compact its context, as `/compact` typed would.
   void _compact() => unawaited(
@@ -525,6 +527,7 @@ class _ChatDetailsState extends State<_ChatDetails> with FollowsChanges {
                     // As last asked, brought up to the agent's latest count.
                     categories: liveCategories(_context?.categories ?? [], u),
                     lists: unread ? const [] : _context?.lists ?? const [],
+                    compactable: _compactable,
                     onCompact: _canCompact ? _compact : null,
                   ),
                 ),

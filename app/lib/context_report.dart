@@ -53,8 +53,10 @@ int? untilCompact(List<ContextCategory> cs) {
 /// the deferred ones dimmed with a dash; [lists] (the MCP tools, skills…
 /// the agent's harness read beside them), each a row that opens;
 /// and "N until auto-compact" when the agent counts a buffer it compacts
-/// into. Compact (Claude's Compact session) ends the block whenever there's
-/// [onCompact], the agent's own compact command, with or without that line.
+/// into. Compact (Claude's Compact session) ends the block whenever the
+/// agent has a compact command ([compactable]), with or without that line,
+/// sending [onCompact]: disabled while that is null (a busy chat), so
+/// neither the button nor the rows below move with each turn.
 /// Only the line and the bar (and Compact) for an agent that reports a
 /// total; nothing for one that reports neither.
 class ContextReport extends StatelessWidget {
@@ -63,12 +65,16 @@ class ContextReport extends StatelessWidget {
     super.key,
     this.categories = const [],
     this.lists = const [],
+    this.compactable = false,
     this.onCompact,
   });
 
   final Usage usage;
   final List<ContextCategory> categories;
   final List<ContextList> lists;
+
+  /// Whether the agent has a compact command, so Compact shows.
+  final bool compactable;
   final VoidCallback? onCompact;
 
   /// The color of a kind, as Claude's rail gives its four largest kinds;
@@ -135,7 +141,7 @@ class ContextReport extends StatelessWidget {
         for (final c in later) _row(theme, c, dim: true),
         if (lists.isNotEmpty) const SizedBox(height: 8),
         for (final l in lists) _ListRow(l),
-        if (until != null || onCompact != null) ...[
+        if (until != null || compactable) ...[
           const SizedBox(height: 10),
           Row(
             spacing: 12,
@@ -150,7 +156,7 @@ class ContextReport extends StatelessWidget {
                         style: theme.ui(t.textMuted),
                       ),
               ),
-              if (onCompact case final compact?)
+              if (compactable)
                 Button(
                   // "Compact session" in Claude's rail: too wide beside the
                   // line at Nushi's type (ADR 0092).
@@ -158,7 +164,7 @@ class ContextReport extends StatelessWidget {
                   tooltip:
                       'Compact the session: the agent summarizes the '
                       'conversation so far',
-                  onPressed: compact,
+                  onPressed: onCompact,
                 ),
             ],
           ),

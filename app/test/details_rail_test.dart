@@ -156,6 +156,17 @@ void main() {
     await closeView(tester, d);
   }, variant: macOnly);
 
+  testWidgets('a busy chat keeps Compact where it was, disabled', (
+    tester,
+  ) async {
+    final (d, _) = await railApp(tester, busy: true);
+    final compact = inRail(find.text('Compact'));
+    expect(compact, findsOne);
+    final button = find.ancestor(of: compact, matching: find.byType(Button));
+    expect(tester.widget<Button>(button).onPressed, isNull);
+    await closeView(tester, d);
+  }, variant: macOnly);
+
   testWidgets('nothing reported: one line', (tester) async {
     final (d, _) = await railApp(tester, usage: Usage());
     expect(inRail(find.text('Not reported yet')), findsOne);
@@ -274,25 +285,33 @@ void main() {
   }
 
   // The Context widget of an agent that has a compact command and reports
-  // only a total (no categories, so no "until auto-compact"), to look at.
-  // Under 1000 wide the details hide, so 1000 is the narrowest it shows.
+  // only a total (no categories, so no "until auto-compact"), idle and
+  // busy (Compact disabled), to look at. Under 1000 wide the details hide,
+  // so 1000 is the narrowest it shows.
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
     ('light', Brightness.light),
   ]) {
-    for (final width in [1700.0, 1000.0]) {
-      testWidgets('render: Context, a total and a compact command, '
+    for (final (width, busy) in [
+      (1700.0, false),
+      (1000.0, false),
+      (1700.0, true),
+      (1000.0, true),
+    ]) {
+      final state = busy ? '_busy' : '';
+      testWidgets('render: Context, a total and a compact command$state, '
           '${width.toInt()} wide, $name', (tester) async {
         final (d, _) = await railApp(
           tester,
           size: Size(width, 1000),
           brightness: brightness,
+          busy: busy,
         );
         expectTextInside(tester, width);
         await render(
           tester,
           find.byType(NushiApp),
-          'context_total_${width.toInt()}_$name',
+          'context_total${state}_${width.toInt()}_$name',
         );
         await closeView(tester, d);
       }, variant: macOnly);

@@ -158,7 +158,7 @@ List<Item> get busyItems => [
 /// The app at [size] on a busy chat whose agent reported [usage] and, asked,
 /// what fills its context ([context]; null: it can't be asked); [also]
 /// answers what it's asked first (a branch, a pull request, MCP servers,
-/// which Nushi reads with [mcp]).
+/// which Nushi reads with [mcp]); [busy] has the agent in a turn.
 Future<(Daemon, FakeDaemon)> railApp(
   WidgetTester tester, {
   Size size = const Size(1700, 1000),
@@ -168,6 +168,7 @@ Future<(Daemon, FakeDaemon)> railApp(
   List<Item>? items,
   Object? Function(Object input)? also,
   bool mcp = false,
+  bool busy = false,
 }) async {
   viewport(tester, size, brightness: brightness);
   forgetContext('c'); // another test's
@@ -179,7 +180,7 @@ Future<(Daemon, FakeDaemon)> railApp(
     'c',
     'claude',
     'Redesign the details rail',
-    status: ChatStatus(canAskContext: context != null),
+    status: ChatStatus(canAskContext: context != null, busy: busy),
   );
   final fake = FakeDaemon([c])
     ..answer = (input) =>
@@ -188,7 +189,7 @@ Future<(Daemon, FakeDaemon)> railApp(
           GetChatRequest() => GetChatResponse(
             chat: c,
             items: items ?? busyItems,
-            status: ChatStatus(canAskContext: context != null),
+            status: ChatStatus(canAskContext: context != null, busy: busy),
             commands: [Command(name: 'compact')],
             usage:
                 usage ??
