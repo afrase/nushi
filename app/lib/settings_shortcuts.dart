@@ -318,14 +318,10 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
       onTap: () => _cap(key).currentState?.listen(),
       // Gone once it stops working: the action has a chosen key, or
       // another holds it.
-      second: secondKeys.isEmpty
-          ? null
-          : tooltip(
-              context,
-              'Second key: works while ${bindingName(key)} keeps its '
-              'default key',
-              KeyCapButton(secondKeys, key: ValueKey('shortcut-second-$id')),
-            ),
+      second: secondKeys.isEmpty ? null : secondKeys,
+      secondKey: ValueKey('shortcut-second-$id'),
+      secondTooltip:
+          'Second key: works while ${bindingName(key)} keeps its default key',
       // Saved, or its default another binding's chosen key holds: Reset
       // offers to take it back.
       reset: r.stored != null || (!r.chosen && r.key == null)

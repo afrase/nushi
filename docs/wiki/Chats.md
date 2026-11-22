@@ -121,7 +121,7 @@ If another action has that key, the row says which: click **Take it** to move it
 
 A key you chose is tinted blue, with an arrow beside it that puts the action's own key back. Point at a row (or Tab to it) for the **×**, which leaves its action with no key: its key then reads **None**. **Reset all to defaults** puts every key back.
 
-Some actions have a second key, shown fainter in their row: ⇧⌘] and ⇧⌘[ for the next and previous tab, and ⇧⌘P for the command palette. You can't change them. Each works only while its action keeps its own key: give the action another key or none, or give the second key to another action, and it stops working and goes from the row. It comes back once that's undone.
+Some actions have a second key, shown in their row as **Also** and the key: ⇧⌘] and ⇧⌘[ for the next and previous tab, and ⇧⌘P for the command palette. You can't change them. Each works only while its action keeps its own key: give the action another key or none, or give the second key to another action, and it stops working and goes from the row. It comes back once that's undone.
 
 The keys at the bottom, under **Fixed**, can't be changed.
 

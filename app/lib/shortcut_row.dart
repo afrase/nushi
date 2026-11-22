@@ -6,11 +6,12 @@ import 'package:nushi/theme/theme.dart';
 
 /// A row of Settings › Keyboard shortcuts (ADR 0146), one line as the
 /// keymaps of desktop apps are: the action's [label] at the left, its key
-/// as a cap ([cap]) at the group's right edge, and left of it a [second]
-/// key's quieter cap (where the name leaves it room) and the row's
-/// buttons, each in a slot that keeps its
-/// room shown or not, so the cap never moves: [reset], always shown when
-/// given (it marks the row as changed), and [clear], shown only while the
+/// as a cap ([cap]) at the group's right edge in its group's [lane], and
+/// left of it a [second] key ("Also ⇧⌘P", under the name where they
+/// don't fit side by side) and the row's buttons, each in a slot that
+/// keeps its room shown or not, so the cap never moves: [reset], always
+/// shown when given (it marks the row as changed), and [clear], shown
+/// only while the
 /// row is under the pointer or holds the focus (it stays a Tab stop, and
 /// shows once it has the focus). A [line] (a clash, a refusal, why a key
 /// isn't used, a note) takes a second line under the label in
@@ -24,6 +25,8 @@ class ShortcutRow extends StatefulWidget {
     required this.cap,
     super.key,
     this.second,
+    this.secondTooltip = '',
+    this.secondKey,
     this.reset,
     this.clear,
     this.line,
@@ -36,7 +39,14 @@ class ShortcutRow extends StatefulWidget {
 
   final String label;
   final Widget cap;
-  final Widget? second;
+
+  /// An action's second key, "Also" and its keys in small muted code: at
+  /// the right end of the name's line where both fit, else on a line of
+  /// its own under the name; never left out while it works. Its
+  /// [secondTooltip] says what it is; [secondKey] finds it.
+  final String? second;
+  final String secondTooltip;
+  final Key? secondKey;
   final Widget? reset;
   final Widget? clear;
   final String? line;
@@ -87,15 +97,40 @@ class _ShortcutRowState extends State<ShortcutRow> {
       overflow: TextOverflow.ellipsis,
       style: theme.ui(t.text),
     );
-    final first = Row(
+    final second = switch (widget.second) {
+      final keys? => KeyedSubtree(
+        key: widget.secondKey,
+        child: tooltip(
+          context,
+          widget.secondTooltip,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_also, style: theme.ui(t.textMuted, size: 11)),
+              keyHint(context, keys),
+            ],
+          ),
+        ),
+      ),
+      null => null,
+    };
+    // What's right of the name: the gap, the slots and the cap's room.
+    final right =
+        12 +
+        (widget.slots ? 2 * ShortcutRow.slot + NushiTheme.iconGap + 6 : 0) +
+        widget.lane;
+    Widget first({required bool beside}) => Row(
       children: [
-        // The second key gives way where the name wouldn't fit on its line
-        // beside it: never a name broken mid-word.
         Expanded(
-          child: switch (widget.second) {
-            final s? => GivesWay(lead: name, extra: s, gap: 8, fill: true),
-            null => name,
-          },
+          child: second != null && beside
+              ? Row(
+                  children: [
+                    Expanded(child: name),
+                    const SizedBox(width: _secondGap),
+                    second,
+                  ],
+                )
+              : name,
         ),
         const SizedBox(width: 12),
         if (widget.slots) ...[
@@ -134,33 +169,79 @@ class _ShortcutRowState extends State<ShortcutRow> {
               constraints: const BoxConstraints(minHeight: ShortcutRow.height),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               alignment: Alignment.centerLeft,
-              child: line == null || line.isEmpty
-                  ? first
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        first,
-                        _Line(
-                          line,
-                          style: theme
-                              .ui(widget.lineColor ?? t.textMuted, size: 12)
-                              .copyWith(
-                                fontFamilyFallback: [
-                                  ...?theme.uiFallback,
-                                  NushiTheme.codeFont,
-                                ],
-                              ),
-                          end: widget.lineEnd,
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final beside =
+                      second == null || _fits(context, box.maxWidth - right);
+                  final lines = [
+                    if (second != null && !beside)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: second,
                         ),
-                      ],
-                    ),
+                      ),
+                    if (line != null && line.isNotEmpty)
+                      _Line(
+                        line,
+                        style: theme
+                            .ui(widget.lineColor ?? t.textMuted, size: 12)
+                            .copyWith(
+                              fontFamilyFallback: [
+                                ...?theme.uiFallback,
+                                NushiTheme.codeFont,
+                              ],
+                            ),
+                        end: widget.lineEnd,
+                      ),
+                  ];
+                  return lines.isEmpty
+                      ? first(beside: beside)
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            first(beside: beside),
+                            ...lines,
+                          ],
+                        );
+                },
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  /// Whether the name's one line and the second key fit in [room].
+  bool _fits(BuildContext context, double room) {
+    final theme = NushiTheme.of(context);
+    final style = DefaultTextStyle.of(context).style
+        .merge(theme.ui(theme.t.text));
+    final p = TextPainter(
+      text: TextSpan(text: widget.label, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final name = p.width;
+    p.dispose();
+    final keys =
+        keyTextWidth(context, _also, theme.ui(theme.t.textMuted, size: 11)) +
+        keyTextWidth(
+          context,
+          widget.second!,
+          theme.code(theme.t.textMuted, size: 11),
+        );
+    return name + _secondGap + keys <= room;
+  }
+
+  /// What leads a second key's keys.
+  static const _also = 'Also ';
+
+  static const _secondGap = 10.0;
 
   /// [button] in its slot, which keeps its room when it isn't [shown]:
   /// not painted and not hit, but still the keyboard's, so Tab reaches it

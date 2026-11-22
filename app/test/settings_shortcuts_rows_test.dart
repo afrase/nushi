@@ -365,6 +365,38 @@ void main() {
       d.dispose();
     }, variant: onMac);
 
+    testWidgets('narrow on Linux, a second key that has no room beside the '
+        "name goes under it, and isn't left out", (tester) async {
+      shortcutsOnLinux();
+      final d = await shortcutsPage(tester, size: const Size(560, 2600));
+      Finder second(String id) => find.byKey(ValueKey('shortcut-second-$id'));
+      for (final id in ['palette', 'previousTab', 'nextTab']) {
+        expect(second(id), findsOne, reason: id);
+        expect(
+          tester.getRect(second(id)).right,
+          lessThan(tester.getRect(clearOf(id)).left),
+          reason: id,
+        );
+      }
+      final name = tester.getRect(inRow('previousTab', 'Previous tab'));
+      expect(
+        tester.getRect(second('previousTab')).top,
+        greaterThanOrEqualTo(name.bottom - 1),
+      );
+      // Its key stays on the name's line.
+      expect(
+        tester.getRect(keyOf('previousTab')).center.dy,
+        moreOrLessEquals(name.center.dy, epsilon: 1),
+      );
+      // Under, it starts where the name does.
+      expect(
+        tester.getRect(second('previousTab')).left,
+        moreOrLessEquals(name.left, epsilon: 0.5),
+      );
+      expect(tester.takeException(), isNull);
+      d.dispose();
+    }, variant: onMac);
+
     testWidgets("a fixed key's row has no hover, hand or focus", (
       tester,
     ) async {
