@@ -16,6 +16,19 @@ type RemoteKey struct {
 	Public  []byte   `json:"public"`
 	Listen  []byte   `json:"listen"`
 	Moving  []Moving `json:"moving,omitempty"`
+	// Reset says remote access started over, kept with the key it started
+	// over with until a phone is next paired.
+	Reset *RemoteReset `json:"reset,omitempty"`
+}
+
+// RemoteReset says remote access started over because a file of it didn't
+// parse (ADR 0034's 2026-11-22 amendment): a fresh key and no paired
+// devices, so every phone pairs again.
+type RemoteReset struct {
+	At time.Time `json:"at"`
+	// Files are the files that didn't parse, each as it was set aside
+	// beside the others: "remote-key.json.unreadable-<time>".
+	Files []string `json:"files"`
 }
 
 // Moving is a rendezvous id the daemon gave up when it revoked a device,
@@ -71,6 +84,9 @@ type Remote struct {
 	Rendezvous string
 	// Key is the daemon's Noise public key, for its fingerprint.
 	Key []byte
+	// Reset is set while remote access has started over and no phone has
+	// been paired since.
+	Reset *RemoteReset
 }
 
 // Pairing is a phone being paired: once it has connected, its name and

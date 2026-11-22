@@ -65,31 +65,47 @@ func TestAFileThatDoesntParseIsSetAsideOnRead(t *testing.T) {
 	}
 }
 
-// The phones' keys and pairings, and the Web Push key, still refuse a
-// file that doesn't parse, as before the set-aside rule: the owner hasn't
-// decided whether a fresh key (every phone pairing again) is worth it.
-// The file is left as it was.
-func TestPhoneKeyFilesRefuseAFileThatDoesntParse(t *testing.T) {
-	for name, read := range map[string]func(*Store) error{
-		"remote-key.json": func(s *Store) error { _, _, err := s.RemoteKey(); return err },
-		"devices.json":    func(s *Store) error { _, err := s.Devices(); return err },
-		"vapid.json":      func(s *Store) error { _, _, err := s.VAPIDKey(); return err },
+// The phones' keys and pairings, and the Web Push key, are set aside like
+// the rest when they don't parse, and also when a value inside is of
+// another shape (a key missing a field would half work); SetAside names
+// what each was set aside as, so remote access can start over and say so.
+func TestPhoneKeyFilesAreSetAsideWhole(t *testing.T) {
+	for name, read := range map[string]func(*Store) (bool, error){
+		"remote-key.json": func(s *Store) (bool, error) { k, ok, err := s.RemoteKey(); return ok || k.Private != nil, err },
+		"devices.json":    func(s *Store) (bool, error) { d, err := s.Devices(); return d != nil, err },
+		"vapid.json":      func(s *Store) (bool, error) { k, ok, err := s.VAPIDKey(); return ok || k.Private != nil, err },
 	} {
-		t.Run(name, func(t *testing.T) {
-			dir := t.TempDir()
-			for _, body := range []string{broken, `{"private": 7}`, `[{"id": 7}]`} {
+		for _, body := range []string{broken, `{"private": 7, "public": "AAAA"}`, `[{"id": 7, "name": "phone"}]`} {
+			t.Run(name+" "+body, func(t *testing.T) {
+				dir := t.TempDir()
 				testcheck.Write(t, filepath.Join(dir, name), body)
-				if err := read(New(dir)); err == nil {
-					t.Errorf("%s read", body)
+				s := New(dir)
+				if got, err := read(s); err != nil || got {
+					t.Fatalf("read: %v, %v", got, err)
 				}
-				if b, err := os.ReadFile(filepath.Join(dir, name)); err != nil || string(b) != body {
-					t.Errorf("the file changed: %q, %v", b, err)
+				aside := asideOf(t, dir, name)
+				if len(aside) != 1 || s.SetAside(name) != filepath.Base(aside[0]) {
+					t.Fatalf("set aside %v, named %q", aside, s.SetAside(name))
 				}
-			}
-			if aside := asideOf(t, dir, name); len(aside) != 0 {
-				t.Errorf("set aside: %v", aside)
-			}
-		})
+				if b, err := os.ReadFile(aside[0]); err != nil || string(b) != body {
+					t.Errorf("set aside %q, %v", b, err)
+				}
+			})
+		}
+	}
+}
+
+// A phone key file that can't be read at all (here, a folder in its
+// place) still refuses, and stays: the fault may pass.
+func TestPhoneKeyFilesThatCantBeReadRefuse(t *testing.T) {
+	dir := t.TempDir()
+	testcheck.NoErr(t, os.Mkdir(filepath.Join(dir, "remote-key.json"), 0o700))
+	s := New(dir)
+	if _, _, err := s.RemoteKey(); err == nil {
+		t.Error("read")
+	}
+	if s.SetAside("remote-key.json") != "" || len(asideOf(t, dir, "remote-key.json")) != 0 {
+		t.Error("set aside")
 	}
 }
 

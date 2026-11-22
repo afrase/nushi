@@ -83,3 +83,4 @@ If a phone is lost or stolen, revoke it on your computer right away. A paired ph
 - Files the agent wrote open full screen from **Artifacts** at the top of the chat. More on these in [Previews and terminals](Previews-and-terminals).
 - The phone app also works in a desktop browser. Chrome on a Mac gets notifications too.
 - Closing a laptop's lid can still put it to sleep, even with remote access on.
+- If Nushi can't read the file that holds its remote access key, it starts remote access over with a new key, so every phone has to pair again. It keeps the old file beside the new one, with `.unreadable-` and the time added to its name.

@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sync"
 
@@ -34,6 +35,9 @@ type Store struct {
 	// unreadable are the ids of the chats whose files didn't read, as the
 	// folder was read (Unreadable).
 	unreadable []string
+	// asides are the remote access files set aside as they were read, by
+	// name, as the name each was set aside as (SetAside).
+	asides map[string]string
 }
 
 func New(dir string) *Store { return &Store{dir: dir} }
@@ -165,7 +169,8 @@ func readJSON(path string, v any) (bool, error) {
 	}
 	dropped, err := decodeKeeping(b, v) // v is left as it was when set aside
 	if err != nil {
-		return false, setAside(path, err)
+		_, err := setAside(path, err)
+		return false, err
 	}
 	if len(dropped) > 0 {
 		slog.Warn("values of another shape read as not set", "file", filepath.Base(path), "fields", dropped)
@@ -173,21 +178,28 @@ func readJSON(path string, v any) (bool, error) {
 	return true, nil
 }
 
-// readRefusing reads path into v as readJSON did before files that don't
-// parse were set aside: such a file is an error, left in place.
-// Only the phones' keys and pairings and the Web Push key read so
-// (refusesUnparsed): the owner hasn't decided whether a fresh key, every
-// phone pairing again, beats a daemon that won't start.
-func readRefusing(path string, v any) (bool, error) {
+// readWhole reads path into v as readJSON does, but a value of another
+// shape anywhere sets the file aside too: a key or a pairing missing a
+// field would half work. It returns the name the file was set aside as,
+// or "". A file that can't be read at all (permissions, I/O) is an error,
+// as in readJSON, and stays where it is: setting aside a file that may be
+// fine would cost every phone its pairing for a passing fault.
+func readWhole(path string, v any) (ok bool, aside string, err error) {
 	b, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return false, nil
+		return false, "", nil
 	}
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
-	if err := json.Unmarshal(b, v); err != nil {
-		return true, fmt.Errorf("%s: %w", filepath.Base(path), err)
+	dropped, err := decodeKeeping(b, v)
+	if err == nil && len(dropped) > 0 {
+		reflect.ValueOf(v).Elem().SetZero()
+		err = fmt.Errorf("values of another shape: %v", dropped)
 	}
-	return true, nil
+	if err != nil {
+		aside, err := setAside(path, err)
+		return false, aside, err
+	}
+	return true, "", nil
 }

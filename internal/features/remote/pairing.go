@@ -158,9 +158,28 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 			return
 		}
 		slog.Info("device paired", "device", id, "name", name)
+		s.paired()
 		s.wg.Go(func() { s.run(conn, id, daemon) }) // pair is one of wg's
 		return
 	}
+}
+
+// paired ends a reset (startOver) once a phone has been paired since: the
+// notice has done its work.
+func (s *Service) paired() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.reset == nil {
+		return
+	}
+	reset := s.reset
+	s.reset = nil
+	if err := s.saveKey(s.listen, s.moving); err != nil {
+		s.reset = reset // said again after a restart rather than lost
+		slog.Warn("remote access: the reset couldn't be cleared", "err", err)
+		return
+	}
+	s.changed()
 }
 
 // errEnded refuses an Allow that came as its pairing ended.

@@ -195,7 +195,7 @@ func (s *Service) relink() {
 	}
 }
 
-// saveKey keeps the keys on disk.
+// saveKey keeps the keys on disk, and the reset while it stands.
 func (s *Service) saveKey(listen []byte, moving []model.Moving) error {
-	return s.st.SaveRemoteKey(model.RemoteKey{Private: s.key.Private, Public: s.key.Public, Listen: listen, Moving: moving})
+	return s.st.SaveRemoteKey(model.RemoteKey{Private: s.key.Private, Public: s.key.Public, Listen: listen, Moving: moving, Reset: s.reset})
 }

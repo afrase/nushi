@@ -45,18 +45,35 @@ func (s *Store) VAPIDKey() (model.VAPIDKey, bool, error) {
 
 func (s *Store) SaveVAPIDKey(k model.VAPIDKey) error { return s.write("vapid.json", k) }
 
-// refusesUnparsed are the files a parse failure still refuses, left in
-// place (readRefusing): the phones' keys and pairings and the Web Push
-// key, until the owner decides what a bad one should do.
-var refusesUnparsed = map[string]bool{"remote-key.json": true, "devices.json": true, "vapid.json": true}
+// readWholly are the phones' key, their pairings and the Web Push key:
+// read whole (readWhole), and remembered when set aside, so remote access
+// can start over without them and say so (ADR 0034's 2026-11-22
+// amendment) rather than the daemon not starting.
+var readWholly = map[string]bool{"remote-key.json": true, "devices.json": true, "vapid.json": true}
 
 func (s *Store) read(name string, v any) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if refusesUnparsed[name] {
-		return readRefusing(filepath.Join(s.dir, name), v)
+	path := filepath.Join(s.dir, name)
+	if !readWholly[name] {
+		return readJSON(path, v)
 	}
-	return readJSON(filepath.Join(s.dir, name), v)
+	ok, aside, err := readWhole(path, v)
+	if aside != "" {
+		if s.asides == nil {
+			s.asides = map[string]string{}
+		}
+		s.asides[name] = aside
+	}
+	return ok, err
+}
+
+// SetAside is the name remote-key.json, devices.json or vapid.json was
+// set aside as since the store was made, as it didn't parse, or "".
+func (s *Store) SetAside(name string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.asides[name]
 }
 
 func (s *Store) write(name string, v any) error {

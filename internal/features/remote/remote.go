@@ -31,7 +31,15 @@ type Store interface {
 	SaveRemoteKey(model.RemoteKey) error
 	Devices() ([]model.Device, error)
 	SaveDevices([]model.Device) error
+	VAPIDKey() (model.VAPIDKey, bool, error)
+	// SetAside is the name a file was set aside as when it was read, as it
+	// didn't parse, or "".
+	SetAside(name string) string
 }
+
+// keyFiles are the files remote access starts over without when one
+// doesn't parse (startOver).
+var keyFiles = []string{"remote-key.json", "devices.json", "vapid.json"}
 
 // MaxConns caps the live connections, and apart from them the handshakes
 // not yet past their first transport message: a dishonest relay can hand
@@ -104,6 +112,9 @@ type Service struct {
 	// given up they may dial it. Kept in memory: after a start every
 	// device counts, as nothing says which weren't.
 	told map[string]bool
+	// reset is set while remote access has started over and no phone has
+	// been paired since (startOver); it's kept in remote-key.json.
+	reset *model.RemoteReset
 	// yield ends the waits at ids given up when the own id's fails
 	// (giveWay), and giveUp ends it.
 	yield  context.Context //nolint:containedctx // a signal the waits share, as long as the service
@@ -116,16 +127,33 @@ func New(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func() func
 }
 
 func newService(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func() func(), publish func(model.Event), tm timing) (*Service, error) {
+	// A file that can't be read at all (permissions, I/O) is an error, and
+	// the daemon doesn't start: it may be fine once the fault passes, and
+	// starting over would cost every phone its pairing. One that doesn't
+	// parse has been set aside, and reads as none (startOver).
 	k, ok, err := st.RemoteKey()
 	if err != nil {
 		return nil, err
+	}
+	devices, err := st.Devices()
+	if err != nil {
+		return nil, err
+	}
+	if _, _, err := st.VAPIDKey(); err != nil {
+		return nil, err
+	}
+	if reset := startOver(st); reset != nil {
+		k, ok, devices = model.RemoteKey{Reset: reset}, false, nil
+		if err := st.SaveDevices([]model.Device{}); err != nil {
+			return nil, err
+		}
 	}
 	if !ok {
 		key, err := noiseconn.NewKey()
 		if err != nil {
 			return nil, err
 		}
-		k = model.RemoteKey{Private: key.Private, Public: key.Public}
+		k.Private, k.Public = key.Private, key.Public
 	}
 	if len(k.Listen) != ed25519.PrivateKeySize { // new, or from before the listen key: its phones pair again
 		k.Listen = newListenKey()
@@ -149,14 +177,10 @@ func newService(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func
 	if err != nil {
 		return nil, err
 	}
-	devices, err := st.Devices()
-	if err != nil {
-		return nil, err
-	}
 	s := &Service{st: st, dialer: dialer, serve: serve, awake: awake, publish: publish, timing: tm,
 		key: noise.DHKey{Private: k.Private, Public: k.Public}, listen: k.Listen, id: listenID(k.Listen), moving: k.Moving,
 		settings: settings, state: "off", devices: devices, conns: map[*noiseconn.Conn]string{}, views: map[string]view{},
-		pending: make(chan struct{}, MaxConns), told: map[string]bool{}}
+		pending: make(chan struct{}, MaxConns), told: map[string]bool{}, reset: k.Reset}
 	for _, d := range devices {
 		s.told[d.ID] = true
 	}
@@ -165,6 +189,30 @@ func newService(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func
 	s.apply()
 	s.mu.Unlock()
 	return s, nil
+}
+
+// startOver says whether remote access starts over, as one of its files
+// didn't parse and was set aside. The daemon's key and its paired devices
+// go together: a phone knows the daemon only by its key and id, and the
+// daemon a phone only by its entry in the list, so either kept without
+// the other would list phones that can never connect, or wait at ids for
+// phones it no longer knows. So any one set aside starts both over: a
+// fresh key and id, no devices, every phone paired again. The Web Push key
+// is made anew only when it was the one set aside (usePush, which then
+// forgets the subscriptions); kept, it belongs to no phone once they're
+// all gone.
+func startOver(st Store) *model.RemoteReset {
+	var files []string
+	for _, name := range keyFiles {
+		if aside := st.SetAside(name); aside != "" {
+			files = append(files, aside)
+		}
+	}
+	if len(files) == 0 {
+		return nil
+	}
+	slog.Warn("remote access starts over: phones pair again", "set_aside", files)
+	return &model.RemoteReset{At: time.Now(), Files: files}
 }
 
 func newListenKey() ed25519.PrivateKey {
@@ -189,7 +237,7 @@ func (s *Service) Get() model.Remote {
 }
 
 func (s *Service) snapshot() model.Remote {
-	r := model.Remote{RemoteSettings: s.settings, State: s.state, Error: s.err, Rendezvous: s.id, Key: s.key.Public}
+	r := model.Remote{RemoteSettings: s.settings, State: s.state, Error: s.err, Rendezvous: s.id, Key: s.key.Public, Reset: s.reset}
 	for _, d := range s.devices {
 		for _, id := range s.conns {
 			d.Connected = d.Connected || id == d.ID
