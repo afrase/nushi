@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -114,6 +115,50 @@ func TestProxiesComeFromEnviron(t *testing.T) {
 	fakeEnviron(t, "https_proxy=http://lower.corp:1", "HTTPS_PROXY=http://upper.corp:2")
 	if got := proxyOf("https://api.github.com/"); got != "http://upper.corp:2" {
 		t.Errorf("HTTPS_PROXY over https_proxy: %s", got)
+	}
+}
+
+// Which environment wins over the system's settings is each OS's own:
+// on Linux the login shell's, given to UseShellEnviron, is the only
+// source; on the Mac and Windows the daemon's own environment, then the
+// system's (scutil or PAC; on Windows a direct connection), and a
+// variable only the login shell sets changes nothing (ADR 0101).
+func TestShellEnvironPerOS(t *testing.T) {
+	for _, v := range []string{"HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy", "NO_PROXY", "no_proxy"} {
+		t.Setenv(v, "")
+	}
+	oldEnviron, oldLookup := Environ, lookup
+	t.Cleanup(func() { Environ, lookup = oldEnviron, oldLookup })
+	system := "http://system.corp:8080"
+	lookup = func(*url.URL, bool) ([]*url.URL, time.Duration) {
+		u, _ := url.Parse(system)
+		return []*url.URL{u}, time.Minute
+	}
+	UseShellEnviron(func() []string {
+		return []string{"HTTPS_PROXY=http://shell.corp:1", "ALL_PROXY=socks5://shell.corp:2"}
+	})
+	proxyOf := func(raw string) string {
+		t.Helper()
+		cache.Lock()
+		cache.m = map[string]*cached{}
+		cache.Unlock()
+		u, _ := url.Parse(raw)
+		ps, err := For(u)
+		if err != nil || len(ps) != 1 || ps[0] == nil {
+			t.Fatalf("%s: %v %v", raw, ps, err)
+		}
+		return ps[0].String()
+	}
+
+	shellWins := runtime.GOOS == "linux"
+	want := map[bool]string{true: "http://shell.corp:1", false: system}[shellWins]
+	if got := proxyOf("wss://relay.example.com/"); got != want {
+		t.Errorf("%s, nothing in the daemon's environment: %q, want %q", runtime.GOOS, got, want)
+	}
+	t.Setenv("HTTPS_PROXY", "http://daemon.corp:3")
+	want = map[bool]string{true: "http://shell.corp:1", false: "http://daemon.corp:3"}[shellWins]
+	if got := proxyOf("wss://relay.example.com/"); got != want {
+		t.Errorf("%s, the daemon's own HTTPS_PROXY: %q, want %q", runtime.GOOS, got, want)
 	}
 }
 

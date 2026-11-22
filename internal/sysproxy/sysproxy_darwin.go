@@ -16,6 +16,12 @@ import (
 	"github.com/afrase/nushi/internal/procgroup"
 )
 
+// UseShellEnviron leaves the daemon's own environment in place on the
+// Mac: the daemon starts through the login shell (`-l -c`) anyway, and
+// what only the interactive shell sets (`-l -i`, which environ reads)
+// must not beat scutil's settings or the PAC file.
+func UseShellEnviron(func() []string) {}
+
 // envConfig is env's proxies: HTTPS_PROXY, HTTP_PROXY, NO_PROXY
 // (ALL_PROXY isn't read on the Mac: the settings are scutil's).
 func envConfig(env []string) *httpproxy.Config { return baseConfig(env) }

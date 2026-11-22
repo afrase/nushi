@@ -1,8 +1,10 @@
 // Package sysproxy says which proxies to use for a URL, as the system
 // would, without cgo: the environment's (HTTPS_PROXY, HTTP_PROXY, NO_PROXY)
 // when it names any, else the system's own. The environment is Environ:
-// the login shell's, as agents get it (main sets it; ADR 0048, 0101), not
-// only what started the daemon. On the Mac the system's is the network
+// on Linux the login shell's, as agents get it (main gives it to
+// UseShellEnviron; ADR 0048, 0101); on the Mac and Windows the daemon's
+// own, so a variable only the login shell sets never beats the system's
+// settings there. On the Mac the system's is the network
 // settings `scutil --proxy` prints: a PAC file (evaluated by macOS's own
 // CFNetwork, through osascript), else the HTTPS, HTTP or SOCKS proxy with
 // the exceptions list (sysproxy_darwin.go, pac_darwin.go). On Linux it is
@@ -30,10 +32,8 @@ import (
 	"github.com/afrase/nushi/internal/shellenv"
 )
 
-// Environ is the environment proxies are read from, afresh for each URL.
-// main sets it to the login shell's (shellenv.Env.Environ) before the
-// first request, so the daemon uses the proxies its agents see; it is
-// the daemon's own until then.
+// Environ is the environment proxies are read from, afresh for each URL:
+// the daemon's own, unless UseShellEnviron replaced it (on Linux only).
 var Environ = os.Environ
 
 // Proxy is the proxy for an HTTP request (an http.Transport's Proxy): the

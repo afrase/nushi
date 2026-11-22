@@ -9,6 +9,11 @@ import (
 	"golang.org/x/net/http/httpproxy"
 )
 
+// UseShellEnviron makes environ, the login shell's environment, the one
+// proxies are read from (ADR 0101): the desktop session that started the
+// daemon may lack a proxy the shell's config sets.
+func UseShellEnviron(environ func() []string) { Environ = environ }
+
 // envConfig is env's proxies with ALL_PROXY (or all_proxy) filling in
 // for HTTPS_PROXY or HTTP_PROXY when that one is unset, as curl's
 // all_proxy does.
