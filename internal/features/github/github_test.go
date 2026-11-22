@@ -13,7 +13,7 @@ import (
 	"github.com/afrase/nushi/internal/githubapi"
 	"github.com/afrase/nushi/internal/keychain/keychaintest"
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/store/storetest"
+	"github.com/afrase/nushi/internal/store"
 )
 
 // fakeClient is a host's client: its answers, and what it was asked.
@@ -259,8 +259,10 @@ func (f *fakeClient) Dequeue(context.Context, string) error {
 	return nil
 }
 
+// fakeStore is the real store in a temp folder for the cache, its token
+// hosts in memory.
 type fakeStore struct {
-	storetest.Answers
+	*store.Store
 	hosts []string
 }
 
@@ -283,7 +285,7 @@ type world struct {
 
 func newWorld(t *testing.T) *world {
 	t.Helper()
-	w := &world{tokens: &keychaintest.Keychain{Items: map[string]string{}}, store: &fakeStore{}, clients: map[string]*fakeClient{}, ghHosts: []string{"github.com"},
+	w := &world{tokens: &keychaintest.Keychain{Items: map[string]string{}}, store: &fakeStore{Store: store.New(t.TempDir())}, clients: map[string]*fakeClient{}, ghHosts: []string{"github.com"},
 		branch: map[string][2]string{}}
 	w.read = w.ghHosts
 	w.s = New(Deps{

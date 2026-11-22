@@ -3,6 +3,7 @@ package jira
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -12,7 +13,7 @@ import (
 
 	"github.com/afrase/nushi/internal/keychain/keychaintest"
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/store/storetest"
+	"github.com/afrase/nushi/internal/store"
 )
 
 var errRestart = errors.New("Nushi's daemon can't reach your keychain: restart it")
@@ -23,8 +24,10 @@ var testKeys = Keys{
 	Missing: func(err error) bool { return errors.Is(err, keychaintest.ErrMissing) },
 }
 
+// memStore is the real store in a temp folder for the cache, its sites
+// and writes in memory.
 type memStore struct {
-	storetest.Answers
+	*store.Store
 	sites  []model.JiraSite
 	writes []model.JiraWrite
 }
@@ -122,7 +125,7 @@ func newService(t *testing.T) (*Service, *keychaintest.Keychain, *[]*fakeClient)
 			return c
 		},
 	}
-	return New(sites, tokens, &memStore{}, testKeys), tokens, &opened
+	return New(sites, tokens, &memStore{Store: store.New(t.TempDir())}, testKeys), tokens, &opened
 }
 
 func TestSites(t *testing.T) {
@@ -353,10 +356,9 @@ func TestCache(t *testing.T) {
 	if _, _, err := s2.CachedList("e.atlassian.net", Mine, ""); err == nil {
 		t.Error("a removed site's list")
 	}
-	for k := range s.store.(*memStore).Kept {
-		if strings.Contains(k, "e.atlassian.net") {
-			t.Errorf("kept after the site went: %s", k)
-		}
+	var kept json.RawMessage
+	if at, err := s.store.Cached(cacheArea, "e.atlassian.net", issueKey("A-1"), &kept); err != nil || !at.IsZero() {
+		t.Errorf("kept after the site went: %s %v %v", kept, at, err)
 	}
 }
 
