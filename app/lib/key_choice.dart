@@ -413,7 +413,9 @@ Map<String, Resolved> _settle(Map<String, String> saved) {
         : (
             key: null,
             chosen: true,
-            issue: "${keyLabel(k)} is ${bindingName(holder.first)}'s",
+            issue:
+                'Not used: ${keyLabel(k)} is '
+                "${bindingName(holder.first)}'s",
             stored: text,
           );
     if (holder.isEmpty) used.add((b, k));
@@ -431,7 +433,9 @@ Map<String, Resolved> _settle(Map<String, String> saved) {
         : (
             key: null,
             chosen: false,
-            issue: "${keyLabel(b.standard)} is ${bindingName(holder.first)}'s",
+            issue:
+                'Not used: ${keyLabel(b.standard)} is '
+                "${bindingName(holder.first)}'s",
             stored: stored,
           );
   }

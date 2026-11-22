@@ -410,7 +410,10 @@ void main() {
       shortcutKeys.value = {'sidebar': 'Cmd+K'};
       expect(paletteKey.single, isNull);
       expect(keyLabel(sidebarKey), '⌘K');
-      expect(resolved('palette').issue, "⌘K is Show or hide sidebar's");
+      expect(
+        resolved('palette').issue,
+        "Not used: ⌘K is Show or hide sidebar's",
+      );
       expect(resolved('palette').chosen, isFalse);
     });
 
@@ -419,7 +422,7 @@ void main() {
       // Jira's default ⌘J goes too.
       expect(keyLabel(sidebarKey), '⌘J');
       expect(pinKey.single, isNull);
-      expect(resolved('pin').issue, "⌘J is Show or hide sidebar's");
+      expect(resolved('pin').issue, "Not used: ⌘J is Show or hide sidebar's");
       expect(jiraKey.single, isNull);
     });
 

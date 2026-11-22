@@ -553,7 +553,7 @@ void main() {
       final d = await shortcutsPage(tester);
       shortcutKeys.value = {'sidebar': 'Cmd+D'};
       await tester.pumpAndSettle();
-      expect(inRow('pin', "⌘D is Show or hide sidebar's"), findsOne);
+      expect(inRow('pin', "Not used: ⌘D is Show or hide sidebar's"), findsOne);
       await tapIt(tester, find.byKey(const ValueKey('shortcut-reset-pin')));
       expect(inRow('pin', 'Show or hide sidebar has ⌘D'), findsOne);
       await tapIt(tester, find.byKey(const ValueKey('shortcut-take-pin')));
@@ -571,7 +571,7 @@ void main() {
       expect(keyShows(tester, 'palette'), 'None');
       expect(resetOf('palette'), findsOne);
       expect(
-        inkOf(tester, 'palette', "⌘K is Show or hide sidebar's"),
+        inkOf(tester, 'palette', "Not used: ⌘K is Show or hide sidebar's"),
         Tokens.dark.needs,
       );
       expect(keyShows(tester, 'pin'), '⌘D');
