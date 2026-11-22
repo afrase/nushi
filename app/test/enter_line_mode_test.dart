@@ -147,6 +147,23 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
+  testWidgets('a turn running, on: ⌥⌘⏎ and ⌃⌘⏎ queue too, ⌥⇧⌘⏎ stops '
+      'and sends', (tester) async {
+    enterStartsLine.value = true;
+    final (fake, d, _) = await _box(tester, busy: true);
+    for (final held in [
+      [LogicalKeyboardKey.altLeft, LogicalKeyboardKey.metaLeft],
+      [LogicalKeyboardKey.controlLeft, LogicalKeyboardKey.metaLeft],
+      [LogicalKeyboardKey.altLeft, ..._shiftCmd],
+    ]) {
+      await _write(tester, 'x');
+      await _enter(tester, held);
+      await tester.pump();
+    }
+    expect([for (final s in _sent(fake)) s.now], [false, false, true]);
+    d.dispose();
+  }, variant: onMac);
+
   testWidgets('a turn running, off: Enter queues, ⌘⏎ stops and sends, '
       '⇧⌘⏎ starts a line, as before; the keys shown change with the '
       'setting', (tester) async {
