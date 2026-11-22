@@ -125,3 +125,22 @@ func TestAgentsOfNull(t *testing.T) {
 		t.Errorf("mode %q, picks %v", s.Mode("claude"), s.Picks("claude"))
 	}
 }
+
+// A chat's record without its own id (null, {}, or another chat's id) is
+// unreadable, not listed as a chat with an id nothing can reach.
+func TestChatRecordsWithoutTheirID(t *testing.T) {
+	dir := t.TempDir()
+	sessions := filepath.Join(dir, "sessions")
+	for name, body := range map[string]string{"n.json": `null`, "e.json": `{"Title": "x"}`, "o.json": `{"ID": "other"}`, "k.json": `{"ID": "k"}`} {
+		testcheck.Write(t, filepath.Join(sessions, name), body)
+	}
+	s := New(dir)
+	got, err := s.Sessions()
+	testcheck.NoErr(t, err)
+	if len(got) != 1 || got[0].ID != "k" {
+		t.Errorf("sessions: %+v", got)
+	}
+	if u := s.Unreadable(); !slices.Equal(u, []string{"e", "n", "o"}) {
+		t.Errorf("unreadable %q", u)
+	}
+}

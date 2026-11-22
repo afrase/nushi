@@ -97,7 +97,7 @@ func (s *Store) loadSessionsLocked() error {
 
 // readSessions reads every session's file, by its name, and the ids of
 // those that couldn't be read or don't parse (of another shape as a
-// whole included). A value of another shape inside a record (a newer
+// whole, or without the id the file is named for, included). A value of another shape inside a record (a newer
 // build's, read going back: ADR 0108) reads as not set, and the record's
 // other fields are kept (decodeKeeping).
 func (s *Store) readSessions() (map[string]model.ChatRecord, []string, error) {
@@ -126,6 +126,11 @@ func (s *Store) readSessions() (map[string]model.ChatRecord, []string, error) {
 		if len(dropped) > 0 {
 			slog.Warn("a chat file's values of another shape read as not set", "file", e.Name(), "fields", dropped)
 		}
+		if err == nil && file.ID != fileID(e.Name()) {
+			// null, {} or another chat's id: listed, it would be a chat
+			// whose saves and deletes go to another file.
+			err = errNotItsID
+		}
 		if err != nil { // one bad file doesn't hide the other chats, nor gets them forgotten
 			slog.Warn("a chat file that doesn't read", "file", e.Name(), "err", readFault(err))
 			unreadable = append(unreadable, fileID(e.Name()))
@@ -152,6 +157,10 @@ func (s *Store) readSessions() (map[string]model.ChatRecord, []string, error) {
 	return read, unreadable, nil
 }
 
+// errNotItsID is a chat's record that decodes but isn't the chat its
+// file is named for: null, {}, or another chat's id.
+var errNotItsID = errors.New("not the chat its file is named for")
+
 // fileID is the chat id a session's file is named for (sessionFile).
 func fileID(name string) string {
 	stem := strings.TrimSuffix(name, ".json")
@@ -164,6 +173,9 @@ func fileID(name string) string {
 // readFault is what the log says of a chat file that doesn't read: the
 // read's error, or only where a parse failed, never the file's bytes.
 func readFault(err error) any {
+	if errors.Is(err, errNotItsID) {
+		return err.Error()
+	}
 	if syntax := (*json.SyntaxError)(nil); errors.As(err, &syntax) {
 		return fmt.Sprintf("doesn't parse at byte %d", syntax.Offset)
 	}
