@@ -52,6 +52,11 @@ class ShortcutRow extends StatefulWidget {
   /// A button's slot: an `IconTap`'s size.
   static const slot = 26.0;
 
+  /// Whether the row round [context] is under the pointer, with its tint:
+  /// its cap takes the tint too, so it keeps its edge on the row.
+  static bool pointedAt(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_PointedAt>()?.on ?? false;
+
   @override
   State<ShortcutRow> createState() => _ShortcutRowState();
 }
@@ -107,32 +112,35 @@ class _ShortcutRowState extends State<ShortcutRow> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
-          child: Container(
-            color: _hover && tappable ? t.hover : null,
-            constraints: const BoxConstraints(minHeight: ShortcutRow.height),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-            alignment: Alignment.centerLeft,
-            child: line == null || line.isEmpty
-                ? first
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      first,
-                      _Line(
-                        line,
-                        style: theme
-                            .ui(widget.lineColor ?? t.textMuted, size: 12)
-                            .copyWith(
-                              fontFamilyFallback: [
-                                ...?theme.uiFallback,
-                                NushiTheme.codeFont,
-                              ],
-                            ),
-                        end: widget.lineEnd,
-                      ),
-                    ],
-                  ),
+          child: _PointedAt(
+            on: _hover && tappable,
+            child: Container(
+              color: _hover && tappable ? t.hover : null,
+              constraints: const BoxConstraints(minHeight: ShortcutRow.height),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              alignment: Alignment.centerLeft,
+              child: line == null || line.isEmpty
+                  ? first
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        first,
+                        _Line(
+                          line,
+                          style: theme
+                              .ui(widget.lineColor ?? t.textMuted, size: 12)
+                              .copyWith(
+                                fontFamilyFallback: [
+                                  ...?theme.uiFallback,
+                                  NushiTheme.codeFont,
+                                ],
+                              ),
+                          end: widget.lineEnd,
+                        ),
+                      ],
+                    ),
+            ),
           ),
         ),
       ),
@@ -155,6 +163,16 @@ class _ShortcutRowState extends State<ShortcutRow> {
             ),
           ),
   );
+}
+
+/// Says a row is under the pointer ([ShortcutRow.pointedAt]).
+class _PointedAt extends InheritedWidget {
+  const new({required this.on, required super.child});
+
+  final bool on;
+
+  @override
+  bool updateShouldNotify(_PointedAt old) => old.on != on;
 }
 
 /// A row's second line: [text] (two lines at most), and [end] at its

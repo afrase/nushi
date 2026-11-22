@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:nushi/key_choice.dart';
+import 'package:nushi/shortcut_row.dart';
 import 'package:nushi/widgets.dart';
 
 /// The keys that only modify another: pressed alone, the field waits.
@@ -213,6 +214,7 @@ class ShortcutFieldState extends State<ShortcutField> {
           // Listening, it's unmistakable: the accent's soft fill, its ring
           // and words; focused from the keyboard, the ring alone.
           ring: _recording || (_focused && (widget.keyboard?.value ?? true)),
+          lit: ShortcutRow.pointedAt(context),
         ),
       ),
     );

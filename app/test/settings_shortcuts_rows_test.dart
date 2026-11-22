@@ -311,6 +311,27 @@ void main() {
       d.dispose();
     }, variant: onMac);
 
+    testWidgets('a row under the pointer tints its cap too, so in light the '
+        'cap never turns paler than its row', (tester) async {
+      final d = await shortcutsPage(tester, tokens: Tokens.light);
+      Color? fill() => tester
+          .widget<Tap>(
+            find.descendant(of: keyOf('openFile'), matching: find.byType(Tap)),
+          )
+          .fill;
+      expect(fill(), Tokens.light.lifted);
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: tester.getTopLeft(rowOf('openFile')));
+      await mouse.moveTo(tester.getCenter(inRow('openFile', 'Open file')));
+      await tester.pumpAndSettle();
+      expect(fill(), Color.alphaBlend(Tokens.light.hover, Tokens.light.lifted));
+      await mouse.moveTo(Offset.zero);
+      await tester.pumpAndSettle();
+      expect(fill(), Tokens.light.lifted);
+      await mouse.removePointer();
+      d.dispose();
+    }, variant: onMac);
+
     testWidgets("a fixed key's row has no hover, hand or focus", (
       tester,
     ) async {
