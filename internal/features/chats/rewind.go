@@ -123,9 +123,19 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		}
 		c.sid, c.config, c.reapplying = next, config, true
 		c.emitLocked(model.Event{ChatID: c.id, Cut: c.items[i].ID})
-		cut := c.items[i].ID
+		// The copy is cut at the first item it holds: a mark that only
+		// shows (a compaction's, after the copy's earlier part) isn't in
+		// it, and a cut there would keep what's rewound. The rewound
+		// message is one it holds, so there's always one.
+		k := slices.IndexFunc(c.items[i:], func(it model.Item) bool { return !shownOnly(it) })
+		cut := ""
+		if k >= 0 {
+			cut = c.items[i+k].ID
+		}
 		c.items = c.items[:i]
-		c.cutCopyLocked(cut)
+		if cut != "" {
+			c.cutCopyLocked(cut)
+		}
 		c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(config)})
 		c.saveLocked(func(s *model.ChatRecord) {
 			s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})

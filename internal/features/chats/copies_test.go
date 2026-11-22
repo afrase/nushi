@@ -359,3 +359,33 @@ func TestCopiesClearThemselves(t *testing.T) {
 		t.Error("a new copy went")
 	}
 }
+
+// A rewind whose cut falls on a mark that only shows (here a compaction's,
+// which a reopen's merge puts after the copy's earlier part) cuts the copy
+// at the next item it holds: the rewound messages don't come back from the
+// copy at the next reopen.
+func TestARewindCutsTheCopyPastAMarkItLacks(t *testing.T) {
+	svc, agent, c, store, _ := newCopyingChat(t)
+	turn := func(text, reply string) {
+		agent.updates = []acp.SessionUpdate{chunk(reply, "ok")}
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
+		idle(t, c)
+	}
+	turn("one", "m1")
+	turn("two", "m2")
+	c.mu.Lock()
+	c.items = slices.Insert(c.items, 2, model.Item{ID: "mark", Kind: model.Notice, Status: compactedNotice})
+	two := c.items[3].ID
+	c.mu.Unlock()
+	if _, err := svc.Rewind(t.Context(), c.id, two); err != nil {
+		t.Fatal(err)
+	}
+	if got := copied(t, store, c.id); got != "user:one agent:m1" {
+		t.Fatalf("after the rewind the copy holds %s", got)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if got := describe(c.items); got != "user:one agent:m1" {
+		t.Errorf("after the rewind the chat shows %s", got)
+	}
+}
