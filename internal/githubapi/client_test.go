@@ -156,8 +156,8 @@ func TestViewerAndLog(t *testing.T) {
 		t.Fatalf("log: %s", log)
 	}
 	bad := New(c.Host, "ghp_wrong", f.srv.Client().Transport)
-	if _, err := bad.Viewer(t.Context()); !errors.Is(err, ErrUnauthorized) {
-		t.Fatalf("a wrong token: %v", err)
+	if _, err := bad.Viewer(t.Context()); !errors.Is(err, ErrUnauthorized) || !bad.Refused() || c.Refused() {
+		t.Fatalf("a wrong token: %v, refused %v, the good one's %v", err, bad.Refused(), c.Refused())
 	}
 }
 

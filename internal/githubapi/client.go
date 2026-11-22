@@ -63,7 +63,14 @@ type Client struct {
 	// noCounts says the host refused the checks' counts (refitems.go):
 	// an Enterprise server older than them.
 	noCounts atomic.Bool
+	// refused says GitHub refused the token (a 401): its user reads the
+	// token again for a new client.
+	refused atomic.Bool
 }
+
+// Refused says GitHub answered a request of this client's with a 401: the
+// token is wrong, revoked or expired, and stays so in this client.
+func (c *Client) Refused() bool { return c.refused.Load() }
 
 // New makes a client of host for token; transport may be nil.
 func New(host, token string, transport http.RoundTripper) *Client {
@@ -274,6 +281,7 @@ func (c *Client) failure(resp *http.Response, bucket string, body []byte) error 
 	_ = json.Unmarshal(body, &e) // a body that isn't GitHub's error says nothing
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
+		c.refused.Store(true)
 		return ErrUnauthorized
 	case http.StatusNotFound:
 		return ErrNotFound

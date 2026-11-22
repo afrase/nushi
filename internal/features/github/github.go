@@ -26,6 +26,7 @@ type Client interface { //nolint:interfacebloat // the GitHub calls the feature 
 	Viewer(ctx context.Context) (githubapi.User, error)
 	RateLimits(ctx context.Context) ([]githubapi.Bucket, error)
 	Budget() []githubapi.Bucket
+	Refused() bool
 	Inbox(ctx context.Context, f githubapi.InboxFilter) (githubapi.Inbox, error)
 	Status(ctx context.Context, ids []string) (map[string]model.GitHubItem, error)
 	Items(ctx context.Context, refs []model.GitHubRef) ([]model.GitHubItem, []model.GitHubRef, error)
@@ -139,6 +140,18 @@ type host struct {
 	user   githubapi.User
 	asked  time.Time // when user was asked for
 	err    error     // the last time the token was refused
+	opened time.Time // when the client was made
+}
+
+// drop forgets a host's client h and what its token was shown, only while
+// h is still the one kept: a token added or read again meanwhile stays.
+func (s *Service) drop(name string, h *host) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.clients[name] == h {
+		delete(s.clients, name)
+		s.forget(name)
+	}
 }
 
 // New makes the service.
@@ -218,10 +231,7 @@ func (s *Service) check(ctx context.Context, name string, h *host) error {
 	h.asked, h.err = time.Now(), err
 	if err == nil {
 		h.user = u
-	} else if errors.Is(err, githubapi.ErrUnauthorized) {
-		delete(s.clients, name) // read the token again next time: gh may have a new one
-		s.forget(name)
-	}
+	} // a refused token is read again by host (Client.Refused)
 	return err
 }
 
@@ -295,7 +305,7 @@ func (s *Service) AddToken(ctx context.Context, given, token string) (githubapi.
 		return u, err
 	}
 	s.mu.Lock()
-	s.clients[name] = &host{c: c, source: "token", kind: githubapi.TokenKind(token), user: u, asked: time.Now()}
+	s.clients[name] = &host{c: c, source: "token", kind: githubapi.TokenKind(token), user: u, asked: time.Now(), opened: time.Now()}
 	s.forget(name)
 	s.mu.Unlock()
 	slog.Info("github token added", "host", name, "kind", githubapi.TokenKind(token))
@@ -339,7 +349,9 @@ const noTokenFor = 30 * time.Second
 // host is a host's client: its pasted token's (read from the keychain the
 // first time, with macOS's prompt only when asked), else gh's login's.
 // The token stays in the client only. Two asking at once may both read
-// the token; both get the client kept first.
+// the token; both get the client kept first. A client GitHub refused the
+// token of is dropped and the token read again (gh may have a new one),
+// at most every noTokenFor, so a revoked token starts gh no more often.
 func (s *Service) host(ctx context.Context, name string, prompt bool) (*host, error) {
 	name, pasted, err := s.known(name)
 	if err != nil {
@@ -348,6 +360,10 @@ func (s *Service) host(ctx context.Context, name string, prompt bool) (*host, er
 	s.mu.Lock()
 	h, missed := s.clients[name], s.noToken[name]
 	s.mu.Unlock()
+	if h != nil && h.c.Refused() && time.Since(h.opened) >= noTokenFor {
+		s.drop(name, h)
+		h = nil
+	}
 	if h != nil {
 		return h, nil
 	}
@@ -384,7 +400,7 @@ func (s *Service) host(ctx context.Context, name string, prompt bool) (*host, er
 		}
 		token = []byte(t)
 	}
-	h = &host{c: s.Open(name, string(token)), source: source, kind: githubapi.TokenKind(string(token))}
+	h = &host{c: s.Open(name, string(token)), source: source, kind: githubapi.TokenKind(string(token)), opened: time.Now()}
 	clear(token)
 	s.mu.Lock()
 	defer s.mu.Unlock()

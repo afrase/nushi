@@ -14,6 +14,7 @@ import (
 	"github.com/afrase/nushi/internal/keychain/keychaintest"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // fakeClient is a host's client: its answers, and what it was asked.
@@ -37,6 +38,7 @@ type fakeClient struct {
 	mergeErr  error                  // what Merge answers
 	mergeText githubapi.MergeText
 	edits     []fakeEdit // EditPull's calls
+	refused   bool       // what Refused answers: GitHub said 401
 }
 
 // fakeEdit is one of EditPull's calls.
@@ -63,6 +65,11 @@ func (f *fakeClient) RateLimits(context.Context) ([]githubapi.Bucket, error) {
 	return []githubapi.Bucket{{Name: "graphql", Limit: 5000, Remaining: 4000}}, nil
 }
 func (f *fakeClient) Budget() []githubapi.Bucket { return nil }
+func (f *fakeClient) Refused() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.refused
+}
 func (f *fakeClient) Inbox(_ context.Context, in githubapi.InboxFilter) (githubapi.Inbox, error) {
 	f.note(fmt.Sprint("inbox ", in.Teams, " ", strings.Join(in.Repos, ",")))
 	if f.inboxing != nil {
@@ -276,6 +283,7 @@ type world struct {
 	ghHosts []string   // the hosts gh is signed in to
 	read    []string   // the hosts in gh's config as it was read last
 	asking  func()     // called as gh is asked for a token, when set
+	ghToken string     // gh's token for github.com ("gho_gh" when "")
 	fetched []string
 	tokens  *keychaintest.Keychain
 	store   *fakeStore
@@ -302,6 +310,11 @@ func newWorld(t *testing.T) *world {
 					return "", "gh", ctx.Err() // as ghToken: gh killed, so it didn't say
 				}
 				if host == "github.com" || host == "git.corp.example" {
+					w.mu.Lock()
+					defer w.mu.Unlock()
+					if w.ghToken != "" {
+						return w.ghToken, "gh", nil
+					}
 					return "gho_gh", "gh", nil
 				}
 				return "", "", nil
@@ -395,6 +408,60 @@ func TestHostsAndTokens(t *testing.T) {
 	}
 	if hosts, _ = w2.s.Hosts(ctx); hosts[0].NeedsOK || hosts[0].User.Login != "octo-ghp_ent" {
 		t.Fatalf("%+v", hosts)
+	}
+}
+
+// A token GitHub refused is read again by the next call, whichever it
+// is (no host listing needed), at most every noTokenFor, so a revoked
+// one doesn't start gh on every poll.
+func TestRefusedTokenReadAgain(t *testing.T) {
+	w := newWorld(t)
+	w.ghToken = "gho_old"
+	inbox := func() string {
+		t.Helper()
+		_, _ = w.s.Inbox(t.Context(), "github.com", githubapi.InboxFilter{}, false)
+		h, err := w.s.host(t.Context(), "github.com", false)
+		testcheck.NoErr(t, err)
+		return h.c.(*fakeClient).token
+	}
+	if got := inbox(); got != "gho_old" {
+		t.Fatal(got)
+	}
+	old := w.clients["gho_old"]
+	old.mu.Lock()
+	old.refused, old.fail = true, githubapi.ErrUnauthorized
+	old.mu.Unlock()
+	w.mu.Lock()
+	w.ghToken = "gho_new" // gh auth login again
+	w.mu.Unlock()
+	if got := inbox(); got != "gho_old" || len(w.asked) != 1 {
+		t.Fatalf("gh asked again within noTokenFor: %s %v", got, w.asked)
+	}
+	w.s.mu.Lock()
+	w.s.clients["github.com"].opened = time.Now().Add(-noTokenFor)
+	w.s.mu.Unlock()
+	if got := inbox(); got != "gho_new" || len(w.asked) != 2 {
+		t.Fatalf("a refused token kept: %s %v", got, w.asked)
+	}
+}
+
+// A refused client is dropped only while it's still the one kept: a
+// token added meanwhile stays.
+func TestRefusedDropKeepsANewerToken(t *testing.T) {
+	w := newWorld(t)
+	h, err := w.s.host(t.Context(), "github.com", false)
+	testcheck.NoErr(t, err)
+	if _, err := w.s.AddToken(t.Context(), "github.com", "ghp_mine"); err != nil {
+		t.Fatal(err)
+	}
+	w.s.mu.Lock()
+	kept := w.s.clients["github.com"]
+	w.s.mu.Unlock()
+	w.s.drop("github.com", h)
+	w.s.mu.Lock()
+	defer w.s.mu.Unlock()
+	if got := w.s.clients["github.com"]; got != kept {
+		t.Fatalf("the newer token's client was dropped: %+v", got)
 	}
 }
 
