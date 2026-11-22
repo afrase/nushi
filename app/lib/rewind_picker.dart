@@ -10,6 +10,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
+import 'package:nushi/run_text.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -51,10 +52,16 @@ List<Item> rewindChoices(ChatState chat, [List<Item> earlier = const []]) {
 }
 
 /// A message in one line: its first line of text (after any replies'
-/// quotes), else a reply's, else its images.
+/// quotes), else a reply's, else a command's it carried, else its images.
 String rewindLine(Item it) {
-  final (replies, text) = splitReplies(it.text);
-  for (final t in [text, for (final r in replies) r.text]) {
+  final (body, commands) = splitCommands(it.text);
+  final (replies, text) = splitReplies(body);
+  for (final t in [
+    text,
+    for (final r in replies) r.text,
+    for (final c in commands)
+      if (c.command.isEmpty) 'Output' else '! ${c.command}',
+  ]) {
     for (final l in t.split('\n')) {
       if (l.trim().isNotEmpty) return l.trim();
     }

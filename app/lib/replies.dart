@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/run_text.dart';
+import 'package:nushi/sent_commands.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -193,7 +195,7 @@ class ReplyNumber extends StatelessWidget {
 
 /// A user message: its replies, each a quote with the reply under it (and
 /// its number before them when there are two or more), then the rest of
-/// its text.
+/// its text, then the commands it carried, each a card ([SentCommandCard]).
 class UserMessageText extends StatelessWidget {
   const new(this.message, {super.key});
 
@@ -201,7 +203,8 @@ class UserMessageText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (replies, rest) = splitReplies(message);
+    final (body, commands) = splitCommands(message);
+    final (replies, rest) = splitReplies(body);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 8,
@@ -256,6 +259,7 @@ class UserMessageText extends StatelessWidget {
           ),
         if (rest.isNotEmpty)
           AgentMarkdown(rest, typed: true, transcript: true, chips: true),
+        for (final c in commands) SentCommandCard(c),
       ],
     );
   }

@@ -245,8 +245,9 @@ void main() {
       expect(
         fake.calls.whereType<SendPromptRequest>().single.text,
         'Why did it fail?\n\n'
-        'Output of `python3 -m tennis.server` (exit 1):\n\n'
-        '```\nthree\n```',
+        '<bash-input>python3 -m tennis.server</bash-input>\n'
+        '<bash-stdout>three</bash-stdout><bash-stderr></bash-stderr>'
+        '<bash-exit-code>1</bash-exit-code>',
       );
       expect(chat.draft.outputs.value, isEmpty);
       await tester.pumpAndSettle();

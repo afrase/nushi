@@ -60,6 +60,24 @@ void main() {
     await tester.pump(const Duration(seconds: 4)); // and the ping's timeout
   });
 
+  testWidgets('a message taken back gives back its commands as cards', (
+    tester,
+  ) async {
+    final daemon = Daemon();
+    final chat = ChatState('c', '/tmp')
+      ..takeBack.value = QueuedMessage(
+        text: withOutputs('Why?', [_output('git status', 'clean')]),
+      );
+    await tester.pumpWidget(themed(Composer(chat: chat, daemon: daemon)));
+    await tester.pump();
+    expect(chat.draft.text.text, 'Why?');
+    expect(chat.draft.outputs.value.single.command, 'ls');
+    expect(chat.draft.outputs.value.single.text, 'clean');
+    await tester.pumpWidget(const SizedBox());
+    daemon.dispose(); // its ping timer
+    await tester.pump(const Duration(seconds: 4)); // and the ping's timeout
+  });
+
   testWidgets('a message for a subagent taken back while the box was away '
       'lands in it with its note', (tester) async {
     final daemon = Daemon();

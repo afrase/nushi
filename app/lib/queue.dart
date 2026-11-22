@@ -4,6 +4,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/replies.dart';
+import 'package:nushi/run_text.dart';
 import 'package:nushi/stop_label.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -224,7 +225,8 @@ class _PillMotionState extends State<_PillMotion>
 
 /// A queued message in one line: its text, or what it holds.
 String _label(QueuedMessage m) {
-  final (replies, text) = splitReplies(m.text);
+  final (body, commands) = splitCommands(m.text);
+  final (replies, text) = splitReplies(body);
   final line = (text.isEmpty ? replies.firstOrNull?.text ?? '' : text)
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
@@ -232,5 +234,6 @@ String _label(QueuedMessage m) {
     return m.toSubagentName.isEmpty ? line : 'To ${m.toSubagentName}: $line';
   }
   if (replies.isNotEmpty) return 'Reply';
+  if (commands.firstOrNull case final c?) return '! ${c.command}';
   return m.images.length == 1 ? 'An image' : '${m.images.length} images';
 }

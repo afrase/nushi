@@ -282,12 +282,14 @@ class _ComposerState extends State<Composer> {
   /// The open panel is open ([_attach]).
   bool _picking = false;
 
-  /// Puts a message back in the box, after what is there: its replies as
-  /// cards, its text, its files (those its text mentions as @mentions, the
-  /// others as file cards) and images.
+  /// Puts a message back in the box, after what is there: its replies and
+  /// its commands' outputs as cards, its text, its files (those its text
+  /// mentions as @mentions, the others as file cards) and images.
   void _restore(String message, List<String> files, List<ImageData> images) {
-    final (replies, text) = splitReplies(message);
+    final (body, commands) = splitCommands(message);
+    final (replies, text) = splitReplies(body);
     _draft.replies.value = [..._draft.replies.value, ...replies];
+    _draft.outputs.value = [..._draft.outputs.value, ...sentOutputs(commands)];
     final folder = widget.chat.folder;
     for (final f in files) {
       if (mentionsPath(text, f)) {

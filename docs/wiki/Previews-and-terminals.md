@@ -139,6 +139,8 @@ Terminals keep running after you quit the app, because Nushi's background servic
 
 When the agent suggests a shell command in a code block, click **▷** next to the copy button. Nushi types it into one of the chat's terminals for you. When the command finishes, a card with its output appears in the message box. The card goes to the agent with your next message. To leave it out, point at the card and click its **✕**.
 
+In the chat, your message shows each command it carried as a card with its exit. Click the card to see the output.
+
 ## Good to know
 
 - ⌥⌘1 to ⌥⌘9 switch between terminals, and ⌘F searches a terminal's scrollback. On Linux, use Alt+1 to Alt+9 and Ctrl+Shift+F.

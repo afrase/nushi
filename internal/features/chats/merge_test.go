@@ -2,6 +2,7 @@ package chats
 
 import (
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -232,5 +233,42 @@ func TestUserTextTakesLinksWithBrackets(t *testing.T) {
 	replay := []model.Item{{ID: "u1", Kind: model.UserMessage, Text: "read this" + link("[DRAFT] spec.pdf")}, {ID: "m1", Kind: model.AgentMessage, Text: "ok"}}
 	if s := short(merge(copied, replay, claudeHarness)); s != "u:read_this m:m1" {
 		t.Errorf("merged %s", s)
+	}
+}
+
+// A message carrying commands and their output as tags (the app's `!` and
+// ▷ runs, Claude Code's own `!` from a terminal) is the copy's: the text is
+// the same both ways, only the app draws it as cards, so the replay
+// matches it and nothing shows twice.
+func TestMergeMessagesWithCommands(t *testing.T) {
+	tags := func(cmd, out string, exit int) string {
+		return "<bash-input>" + cmd + "</bash-input>\n<bash-stdout>" + out +
+			"</bash-stdout><bash-stderr></bash-stderr><bash-exit-code>" + strconv.Itoa(exit) + "</bash-exit-code>"
+	}
+	for name, msgs := range map[string][]string{
+		"with text":  {"why?\n\n" + tags("make check", "a\n\nb/c.go", 2)},
+		"alone":      {tags("ls", "docs/a.md", 0) + "\n\n" + tags("pwd", "/tmp", 0)},
+		"Claude's":   {"<bash-input>ls</bash-input>", "<bash-stdout>docs/a.md</bash-stdout><bash-stderr></bash-stderr>"},
+		"empty":      {tags("true", "", 0)},
+		"tags in it": {"see\n\n" + tags("cat x", tags("ls", "y", 0), 1)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var copied, replay []model.Item
+			for i, m := range msgs {
+				copied = append(copied, model.Item{ID: "item-" + strconv.Itoa(i), Kind: model.UserMessage, Text: m})
+				replay = append(replay, model.Item{ID: "r" + strconv.Itoa(i), Kind: model.UserMessage, Text: m})
+			}
+			copied = append(copied, items("m:m1:ok")...)
+			replay = append(replay, items("m:m1:ok U:r9:more")...)
+			got := merge(copied, replay, claudeHarness)
+			if len(got) != len(msgs)+2 {
+				t.Fatalf("got %d items, want %d: %s", len(got), len(msgs)+2, short(got))
+			}
+			for i, m := range msgs {
+				if got[i].Text != m || got[i].ID != "item-"+strconv.Itoa(i) {
+					t.Errorf("item %d: %+v", i, got[i])
+				}
+			}
+		})
 	}
 }

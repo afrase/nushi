@@ -113,17 +113,17 @@ void main() {
     ]);
   });
 
-  test('kept output: the last 400 lines, saying how many are left out', () {
+  test('kept output: the last 400 lines, 32 KB at most, no words added', () {
     final lines = [for (var i = 1; i <= 450; i++) 'line $i'];
     final kept = keptOutput(lines).split('\n');
-    expect(kept.first, '… 50 earlier lines left out');
-    expect(kept.length, 401);
+    expect(kept.first, 'line 51');
+    expect(kept.length, 400);
     expect(kept.last, 'line 450');
     final wide = [for (var i = 0; i < 100; i++) 'x' * 1000];
-    expect(keptOutput(wide).split('\n').first, '… 68 earlier lines left out');
+    expect(keptOutput(wide).split('\n').length, 32);
   });
 
-  test("outputs follow the message's text, fenced past their backticks", () {
+  test("outputs follow the message's text as bare tags", () {
     const o = (
       key: 'k',
       command: 'cat notes.md',
@@ -133,9 +133,13 @@ void main() {
     );
     expect(
       withOutputs('Why?', [o]),
-      'Why?\n\nOutput of `cat notes.md` (exit 1):\n\n````\n```\nquoted\n````',
+      'Why?\n\n<bash-input>cat notes.md</bash-input>\n'
+      // The tags meet with no space between.
+      // ignore: missing_whitespace_between_adjacent_strings
+      '<bash-stdout>```\nquoted</bash-stdout><bash-stderr></bash-stderr>'
+      '<bash-exit-code>1</bash-exit-code>',
     );
-    expect(withOutputs('', [o]), startsWith('Output of'));
+    expect(withOutputs('', [o]), startsWith('<bash-input>'));
   });
 
   test('a run in the tab at its prompt: typed there, its output between '

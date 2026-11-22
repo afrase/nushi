@@ -352,7 +352,7 @@ class CodeRuns {
       ...outputs.value,
       (
         key: run.key,
-        command: run.script.split('\n').first,
+        command: run.script,
         exit: exit,
         lines: lines.length,
         text: keptOutput(lines),

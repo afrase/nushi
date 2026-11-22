@@ -38,8 +38,8 @@ String? runnableScript(String language, String code) {
 }
 
 /// A run's output waiting in the composer, sent with the next message:
-/// the block it ran (`key`, its code), its command's first line, how it
-/// exited, how many lines it wrote, and the text sent ([keptOutput]).
+/// the block it ran (`key`, its code), its command (the whole script), how
+/// it exited, how many lines it wrote, and the text sent ([keptOutput]).
 typedef RunOutput = ({
   String key,
   String command,
@@ -51,8 +51,9 @@ typedef RunOutput = ({
 const _keptLines = 400;
 const int _keptBytes = 32 << 10;
 
-/// [lines] as a run's output is sent: the last 400 lines, 32 KB at most,
-/// after a line saying how many earlier ones are left out.
+/// [lines] as a run's output is sent: the last 400 lines, 32 KB at most.
+/// Nothing says how many were left out: the agent gets bare tags and what
+/// the command printed, no words of Nushi's; the card says it.
 String keptOutput(List<String> lines) {
   var bytes = 0;
   var from = lines.length;
@@ -61,41 +62,148 @@ String keptOutput(List<String> lines) {
     if (bytes > _keptBytes) break;
     from--;
   }
-  return [
-    if (from > 0) '… $from earlier lines left out',
-    ...lines.skip(from),
-  ].join('\n');
+  return lines.skip(from).join('\n');
 }
 
-/// [message] with [outputs] after it, each a line naming its command and
-/// exit, then a fenced block of its output.
+const _input = '<bash-input>';
+const _inputEnd = '</bash-input>';
+const _stdout = '<bash-stdout>';
+const _stdoutEnd = '</bash-stdout><bash-stderr>';
+const _stderrEnd = '</bash-stderr>';
+final _exitTag = RegExp(r'<bash-exit-code>(\d+)</bash-exit-code>');
+
+/// A command and its output as they go to the agent: the tags Claude Code
+/// writes for its own `!` command, and nothing else (no words of Nushi's;
+/// ADR 0084, amended). A terminal merges the two streams, so stderr's is
+/// empty.
+String commandTags(String command, String output, int exit) =>
+    '$_input$command$_inputEnd\n'
+    '$_stdout$output$_stdoutEnd$_stderrEnd'
+    '<bash-exit-code>$exit</bash-exit-code>';
+
+/// [message] with [outputs] after it, each a command's tags
+/// ([commandTags]), a blank line between.
 String withOutputs(String message, List<RunOutput> outputs) => [
   if (message.isNotEmpty) message,
-  for (final o in outputs)
-    [
-      _lead(o, _ticks(o.command, 1)),
-      '',
-      _ticks(o.text, 3),
-      o.text,
-      _ticks(o.text, 3),
-    ].join('\n'),
+  for (final o in outputs) commandTags(o.command, o.text, o.exit),
 ].join('\n\n');
 
-/// Backticks enough to fence [s]: one more than its longest run, and at
-/// least [least].
-String _ticks(String s, int least) {
-  final most = RegExp('`+')
-      .allMatches(s)
-      .fold(0, (n, m) => m[0]!.length > n ? m[0]!.length : n);
-  return '`' * (most + 1 > least ? most + 1 : least);
+/// A command read back from a sent message ([splitCommands]): its text
+/// ('' when the message held only its output, as Claude Code's second
+/// message of a `!` does), its output with its stderr after it (null when
+/// it held only the command, Claude's first), and its exit when written.
+typedef SentCommand = ({String command, String? output, int? exit});
+
+/// [commands], read back from a message taken back, as the cards they
+/// were, done, each named by its command.
+List<RunOutput> sentOutputs(List<SentCommand> commands) => [
+  for (final c in commands)
+    if (c.output case final text? when c.command.isNotEmpty)
+      (
+        key: c.command,
+        command: c.command,
+        exit: c.exit ?? 0,
+        lines: text.isEmpty ? 0 : '\n'.allMatches(text).length + 1,
+        text: text,
+      ),
+];
+
+/// The commands [message] ends with, and the text before them
+/// ([withOutputs] backwards; also Claude Code's own two messages of a `!`
+/// command, one holding `<bash-input>`, the next the output's tags). An
+/// output may hold the tags' own text (a `cat` of a transcript): of the
+/// ways to read the message, the one whose commands start first and whose
+/// outputs end first is taken, so what follows a tag inside an output
+/// stays in it unless the rest of the message reads as commands too. A
+/// message without them comes back as it is, with none.
+(String, List<SentCommand>) splitCommands(String message) {
+  final end = message.trimRight().length;
+  for (var i = 0; i < end; i++) {
+    i = _nextStart(message, i);
+    if (i < 0 || i >= end) break;
+    if (i > 0 && (i < 2 || !message.startsWith('\n\n', i - 2))) continue;
+    final read = _blocks(message, i, end);
+    if (read != null) return (message.substring(0, i).trimRight(), read);
+  }
+  return (message, const []);
 }
 
-/// The line over an output's block: its command as inline code between
-/// [ticks] (spaced when it starts or ends with a backtick), and its exit.
-String _lead(RunOutput o, String ticks) {
-  final c = o.command;
-  final code = c.startsWith('`') || c.endsWith('`')
-      ? '$ticks $c $ticks'
-      : '$ticks$c$ticks';
-  return 'Output of $code (exit ${o.exit}):';
+/// Where the next tag that can start a command is, from [from]; -1 for
+/// none.
+int _nextStart(String s, int from) {
+  final a = s.indexOf(_input, from);
+  final b = s.indexOf(_stdout, from);
+  if (a < 0) return b;
+  if (b < 0) return a;
+  return a < b ? a : b;
+}
+
+/// The commands from [p] to [end], each after a blank line, or null when
+/// that part doesn't read as commands to its end.
+List<SentCommand>? _blocks(String s, int p, int end) {
+  for (final (cmd, at) in _block(s, p, end)) {
+    if (at == end) return [cmd];
+    if (!s.startsWith('\n\n', at)) continue;
+    if (_blocks(s, at + 2, end) case final more?) return [cmd, ...more];
+  }
+  return null;
+}
+
+/// Each way a command can be read at [p], with where it ends, the
+/// shortest first.
+Iterable<(SentCommand, int)> _block(String s, int p, int end) sync* {
+  if (s.startsWith(_stdout, p)) {
+    for (final (out, exit, at) in _output(s, p + _stdout.length, end)) {
+      yield ((command: '', output: out, exit: exit), at);
+    }
+    return;
+  }
+  if (!s.startsWith(_input, p)) return;
+  final from = p + _input.length;
+  for (
+    var q = s.indexOf(_inputEnd, from);
+    q >= 0 && q < end;
+    q = s.indexOf(_inputEnd, q + 1)
+  ) {
+    final command = s.substring(from, q);
+    // A command never holds the tag that starts one: what has it is an
+    // output's text and the next command's start.
+    if (command.contains(_input)) break;
+    final after = q + _inputEnd.length;
+    if (s.startsWith('\n$_stdout', after)) {
+      final out = after + 1 + _stdout.length;
+      for (final (text, exit, at) in _output(s, out, end)) {
+        yield ((command: command, output: text, exit: exit), at);
+      }
+    }
+    yield ((command: command, output: null, exit: null), after);
+  }
+}
+
+/// Each way an output can be read from [p], just after its stdout tag:
+/// its text (stderr after stdout), its exit, and where it ends; the
+/// shortest first, and of those ending at one stderr tag the one with the
+/// shortest stderr (a terminal's is always empty).
+Iterable<(String, int?, int)> _output(String s, int p, int end) sync* {
+  for (
+    var m = s.indexOf(_stderrEnd, p);
+    m >= 0 && m < end;
+    m = s.indexOf(_stderrEnd, m + 1)
+  ) {
+    if (m - _stdoutEnd.length < p) continue;
+    final k = s.lastIndexOf(_stdoutEnd, m - _stdoutEnd.length);
+    if (k < p) continue;
+    final out = s.substring(p, k);
+    final err = s.substring(k + _stdoutEnd.length, m);
+    final text = err.isEmpty
+        ? out
+        : out.isEmpty
+        ? err
+        : '$out\n$err';
+    final after = m + _stderrEnd.length;
+    if (_exitTag.matchAsPrefix(s, after) case final x?) {
+      yield (text, int.parse(x[1]!), x.end);
+    }
+    yield (text, null, after);
+  }
 }
