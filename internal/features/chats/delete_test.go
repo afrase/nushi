@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -423,5 +425,56 @@ func TestAnAgentThatStopsStartingIsAskedAgain(t *testing.T) {
 	testcheck.NoErr(t, svc.Delete(ctx, c.id, nil))
 	if _, err := svc.stored(c.id); err == nil {
 		t.Error("the chat stayed")
+	}
+}
+
+// What still holds a deleted chat (a request that found it before, a
+// turn's end, a poll) writes neither its record nor its copy back: the
+// chat would come back at the next start, and its copy's folder too.
+func TestADeletedChatIsWrittenNoMore(t *testing.T) {
+	svc, agent, c, store, _ := newCopyingChat(t)
+	sessions := svc.sessions.(*memSessions)
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	turn(t, svc, c, "one")
+	testcheck.NoErr(t, svc.Delete(t.Context(), c.id, nil))
+	sessions.mu.Lock()
+	saves := len(sessions.saved)
+	sessions.mu.Unlock()
+	c.mu.Lock()
+	c.saveLocked(func(r *model.ChatRecord) { r.Title = "late" })
+	c.addLocked(model.Item{Kind: model.AgentMessage, ID: "m2", Text: "late"})
+	c.copyLocked(true)
+	c.mu.Unlock()
+	sessions.mu.Lock()
+	late := len(sessions.saved) - saves
+	sessions.mu.Unlock()
+	if late != 0 || store.Has(c.id) {
+		t.Errorf("after the delete: %d saves, a copy %v", late, store.Has(c.id))
+	}
+}
+
+// A delete that fails stores what changed while it ran: the chat stays,
+// as it is now.
+func TestAFailedDeleteStoresWhatChangedMeanwhile(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	sessions := svc.sessions.(*memSessions)
+	agent.deletes, agent.deleteErr = true, errors.New("busy")
+	agent.deleteGate, agent.entered = make(chan struct{}), make(chan string, 1)
+	done := make(chan error, 1)
+	go func() { done <- svc.Delete(t.Context(), c.id, nil) }()
+	if got := <-agent.entered; got != "delete" {
+		t.Fatalf("entered %s", got)
+	}
+	c.mu.Lock()
+	c.saveLocked(func(r *model.ChatRecord) { r.Name = "renamed meanwhile" })
+	c.mu.Unlock()
+	close(agent.deleteGate)
+	if err := <-done; err == nil {
+		t.Fatal("deleted")
+	}
+	sessions.mu.Lock()
+	defer sessions.mu.Unlock()
+	if last := sessions.saved[len(sessions.saved)-1]; last.Name != "renamed meanwhile" {
+		t.Errorf("stored %+v", last)
 	}
 }

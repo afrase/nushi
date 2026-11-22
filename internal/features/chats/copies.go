@@ -96,7 +96,7 @@ func settled(it *model.Item, last bool) bool {
 // copies are off, or the copy couldn't be read (unread), nothing is
 // written.
 func (c *chat) copyLocked(all bool) {
-	if c.copies == nil || len(c.unsaved) == 0 {
+	if c.copies == nil || len(c.unsaved) == 0 || c.halting { // being deleted: its items stay unsaved (unhaltLocked)
 		return
 	}
 	if !c.copiesOn() || c.unread {
@@ -147,7 +147,11 @@ func (c *chat) cutCopyLocked(item string) {
 			delete(c.unsaved, id)
 		}
 	}
-	if c.copies != nil {
+	switch {
+	case c.copies == nil:
+	case c.halting: // being deleted: a write would make the copy again
+		c.mirrored = false
+	default:
 		if err := c.copies.Cut(c.id, item); err != nil {
 			c.mirrored = false
 			c.logLocked().Warn("transcript copy not cut", "err", err)
@@ -160,6 +164,10 @@ func (c *chat) cutCopyLocked(item string) {
 func (c *chat) dropCopyLocked(it model.Item) {
 	if c.unsaved[it.ID] || shownOnly(it) || c.copies == nil {
 		delete(c.unsaved, it.ID)
+		return
+	}
+	if c.halting { // being deleted: a write would make the copy again
+		c.mirrored = false
 		return
 	}
 	if err := c.copies.Drop(c.id, it.ID); err != nil {

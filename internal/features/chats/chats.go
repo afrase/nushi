@@ -405,7 +405,14 @@ func (c *chat) saveLocked(change func(*model.ChatRecord)) {
 	}
 }
 
+// storeLocked stores the chat's record and tells the app, unless the chat
+// is being deleted (halting): once its file is gone a save would bring it
+// back at the next start, so nothing is written then, and a delete that
+// fails stores the record as it then is (unhaltLocked).
 func (c *chat) storeLocked() {
+	if c.halting {
+		return
+	}
 	if c.parent == nil { // side chats aren't stored
 		if err := c.svc.sessions.SaveSession(c.record); err != nil {
 			c.logLocked().Error("saving the chat", "err", err)
@@ -413,6 +420,14 @@ func (c *chat) storeLocked() {
 	}
 	sess := c.record
 	c.emitLocked(model.Event{ChatID: c.id, Record: &sess})
+}
+
+// unhaltLocked keeps a chat whose delete failed: what changed while it was
+// going (storeLocked, copyLocked) is written now.
+func (c *chat) unhaltLocked() {
+	c.halting = false
+	c.storeLocked()
+	c.copyLocked(false)
 }
 
 func (c *chat) usageChangedLocked() {

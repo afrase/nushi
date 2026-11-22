@@ -176,7 +176,7 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	}
 	if err != nil {
 		c.mu.Lock()
-		c.halting = false // it may reopen
+		c.unhaltLocked() // it may reopen
 		c.mu.Unlock()
 		return err
 	}

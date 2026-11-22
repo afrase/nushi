@@ -109,7 +109,7 @@ func (s *Service) expire(ctx context.Context, c *chat, why string) {
 	}
 	if err := s.forget(c); err != nil {
 		c.mu.Lock()
-		c.halting = false
+		c.unhaltLocked()
 		c.goneLocked("")
 		c.logLocked().Warn("chat's session gone; chat not removed", "why", why, "err", err)
 		c.mu.Unlock()

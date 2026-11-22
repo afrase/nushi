@@ -79,7 +79,7 @@ func (s *Service) RestoreSide(ctx context.Context, id string) (string, error) {
 	sideID, err := s.openSide(ctx, p, &sideSource{sid: rec.SessionID, base: items[:n], items: items[n:], mode: rec.Mode, picks: rec.Picks})
 	if err != nil {
 		a.mu.Lock()
-		a.halting = false
+		a.unhaltLocked()
 		a.mu.Unlock()
 		return "", err
 	}
