@@ -153,19 +153,28 @@ func (s *server) GetGitHubPull(ctx context.Context, req *connect.Request[nushiv1
 	return connect.NewResponse(&nushiv1.GetGitHubPullResponse{Pull: pullProto(p)}), nil
 }
 
-// GetGitHubCommits answers a pull request's newest 100 commits, asked when
-// they show rather than with each poll of the pull request.
+// GetGitHubCommits answers a pull request's newest 100 commits and its
+// first, asked when they show rather than with each poll of the pull
+// request.
 func (s *server) GetGitHubCommits(ctx context.Context, req *connect.Request[nushiv1.GetGitHubCommitsRequest]) (*connect.Response[nushiv1.GetGitHubCommitsResponse], error) {
-	cs, total, err := s.GitHub.Commits(ctx, ref(req.Msg.Ref), req.Msg.Quiet)
+	cs, err := s.GitHub.Commits(ctx, ref(req.Msg.Ref), req.Msg.Quiet)
 	if err != nil {
 		return nil, githubErr(err)
 	}
-	out := &nushiv1.GetGitHubCommitsResponse{Total: int32(total)}
-	for _, c := range cs {
-		out.Commits = append(out.Commits, &nushiv1.GitHubCommit{Oid: c.OID, Headline: c.Headline, Author: c.Author, AuthorName: c.AuthorName,
-			CommittedMs: unixMs(c.Committed), Checks: c.Checks})
+	out := &nushiv1.GetGitHubCommitsResponse{Total: int32(cs.Total)}
+	for _, c := range cs.Newest {
+		out.Commits = append(out.Commits, ghCommitProto(c))
+	}
+	if cs.First.OID != "" {
+		out.First = ghCommitProto(cs.First)
 	}
 	return connect.NewResponse(out), nil
+}
+
+// ghCommitProto is a pull request's commit as the API sends it.
+func ghCommitProto(c model.GitHubCommit) *nushiv1.GitHubCommit {
+	return &nushiv1.GitHubCommit{Oid: c.OID, Headline: c.Headline, Author: c.Author, AuthorName: c.AuthorName,
+		CommittedMs: unixMs(c.Committed), Checks: c.Checks}
 }
 
 func (s *server) GetGitHubIssue(ctx context.Context, req *connect.Request[nushiv1.GetGitHubIssueRequest]) (*connect.Response[nushiv1.GetGitHubIssueResponse], error) {

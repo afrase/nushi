@@ -281,3 +281,23 @@ GetGitHubCommitsResponse overviewCommits({int total = 3}) =>
         ),
       ],
     );
+
+/// A pull request of [total] commits, numbered from 1 (their headlines
+/// "Commit n"), as GetGitHubCommits answers it: the newest 100, oldest
+/// first, and with [withFirst] its first on its own (an older daemon
+/// sends none).
+GetGitHubCommitsResponse longCommits(int total, {bool withFirst = true}) {
+  GitHubCommit commit(int n) => GitHubCommit(
+    oid: n.toRadixString(16).padLeft(40, '0'),
+    headline: 'Commit $n',
+    author: n.isEven ? 'mira' : '',
+    authorName: n.isEven ? 'Mira' : 'Tomas',
+    committedMs: msAgo(Duration(minutes: total - n + 1)),
+  );
+  final from = total > 100 ? total - 99 : 1;
+  return GetGitHubCommitsResponse(
+    total: total,
+    commits: [for (var n = from; n <= total; n++) commit(n)],
+    first: withFirst ? commit(1) : null,
+  );
+}

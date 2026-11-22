@@ -57,13 +57,12 @@ func (n commitNode) commit() model.GitHubCommit {
 }
 
 // Commits are a pull request's newest 100 commits, oldest first (as
-// GitHub lists them), and how many it has. One with more has its first
-// commit put before them, so the oldest listed is always its first, as
-// the commit trail shows it (ADR 0137).
-func (c *Client) Commits(ctx context.Context, repo string, number int) ([]model.GitHubCommit, int, error) {
+// GitHub lists them), its first on its own, for the commit trail's
+// oldest (ADR 0137), and how many it has.
+func (c *Client) Commits(ctx context.Context, repo string, number int) (model.GitHubCommits, error) {
 	owner, name, err := SplitRepo(repo)
 	if err != nil {
-		return nil, 0, err
+		return model.GitHubCommits{}, err
 	}
 	var data struct {
 		Repository *struct {
@@ -80,19 +79,18 @@ func (c *Client) Commits(ctx context.Context, repo string, number int) ([]model.
 	}
 	vars := map[string]any{"owner": owner, "name": name, "number": number}
 	if _, err := c.graphql(ctx, commitsQuery, vars, &data); err != nil {
-		return nil, 0, err
+		return model.GitHubCommits{}, err
 	}
 	if data.Repository == nil || data.Repository.PullRequest == nil {
-		return nil, 0, ErrNotFound
+		return model.GitHubCommits{}, ErrNotFound
 	}
 	p := data.Repository.PullRequest
-	cs := p.Commits
-	out := make([]model.GitHubCommit, 0, len(cs.Nodes)+1)
-	if f := p.First.Nodes; cs.TotalCount > len(cs.Nodes) && len(f) > 0 && len(cs.Nodes) > 0 && f[0].Commit.OID != cs.Nodes[0].Commit.OID {
-		out = append(out, f[0].commit())
+	out := model.GitHubCommits{Total: p.Commits.TotalCount, Newest: make([]model.GitHubCommit, 0, len(p.Commits.Nodes))}
+	for _, n := range p.Commits.Nodes {
+		out.Newest = append(out.Newest, n.commit())
 	}
-	for _, n := range cs.Nodes {
-		out = append(out, n.commit())
+	if f := p.First.Nodes; len(f) > 0 {
+		out.First = f[0].commit()
 	}
-	return out, cs.TotalCount, nil
+	return out, nil
 }

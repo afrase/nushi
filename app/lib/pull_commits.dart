@@ -227,7 +227,8 @@ class CommitRow extends StatelessWidget {
 
 /// The Overview's commit trail, after the comments: the newest commit,
 /// "N additional commits by …" (opens the Commits tab, [onAll]), the
-/// oldest. Nothing until they've come.
+/// oldest: the pull request's first, which the daemon sends on its own
+/// (API 144), else the list's oldest. Nothing until they've come.
 class CommitTrail extends StatelessWidget {
   const new({required this.commits, required this.onAll, super.key});
 
@@ -244,10 +245,11 @@ class CommitTrail extends StatelessWidget {
       if (got == null || got.commits.isEmpty) return const SizedBox.shrink();
       final list = got.commits;
       final newest = list.last;
-      final oldest = list.first;
+      final oldest = got.hasFirst() ? got.first : list.first;
       final between = got.total - 2;
       final who = {
-        for (var i = 1; i < list.length - 1; i++) commitAuthor(list[i]),
+        for (final c in list.take(list.length - 1))
+          if (c.oid != oldest.oid) commitAuthor(c),
       }.where((s) => s.isNotEmpty).toList();
       return Column(
         key: const ValueKey('commit-trail'),
@@ -287,7 +289,7 @@ class CommitTrail extends StatelessWidget {
                 ],
               ),
             ),
-          if (list.length > 1) CommitRow(oldest),
+          if (oldest.oid != newest.oid) CommitRow(oldest),
         ],
       );
     },

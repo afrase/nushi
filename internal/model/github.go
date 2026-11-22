@@ -183,6 +183,16 @@ type GitHubCommit struct {
 	Checks                            string
 }
 
+// GitHubCommits are a pull request's newest 100 commits, oldest first
+// (as GitHub lists them), its first commit, which the newest 100 leave
+// out of a longer one (the zero value when GitHub sent none), and how
+// many it has (ADR 0137).
+type GitHubCommits struct {
+	Newest []GitHubCommit
+	First  GitHubCommit
+	Total  int
+}
+
 // GitHubMerge is what merging a pull request may do, as GitHub says for
 // the viewer (ADR 0069).
 type GitHubMerge struct {

@@ -32,8 +32,9 @@ void main() {
     Widget child, {
     Tokens tokens = Tokens.dark,
     double width = 700,
+    double height = 900,
   }) async {
-    viewport(tester, Size(width + 32, 900));
+    viewport(tester, Size(width + 32, height));
     await tester.pumpWidget(
       themed(
         tokens: tokens,
@@ -189,6 +190,70 @@ void main() {
     );
     await tester.tap(find.textContaining('additional', findRichText: true));
     expect(all, 1);
+    commits.dispose();
+    d.dispose();
+  });
+
+  testWidgets('the Commits tab of a long pull request: the newest 100, '
+      "newest first, said so; its first commit, sent on its own, isn't "
+      'among them', (tester) async {
+    final d = await daemon(
+      tester,
+      answer: (input) =>
+          input is GetGitHubCommitsRequest ? longCommits(250) : null,
+    );
+    final commits = PullCommits(d, ref)..want('h');
+    await show(tester, PullCommitsList(commits: commits), height: 6000);
+    expect(find.text('Showing the newest 100 of 250'), findsOneWidget);
+    final rows = find.byType(CommitRow);
+    expect(rows, findsNWidgets(100));
+    expect(
+      find.descendant(of: rows.first, matching: find.text('Commit 250')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: rows.last, matching: find.text('Commit 151')),
+      findsOneWidget,
+    );
+    expect(find.text('Commit 1'), findsNothing);
+    commits.dispose();
+    d.dispose();
+  });
+
+  testWidgets('the commit trail of a long pull request: its oldest is the '
+      "first commit when the daemon sends it, else the list's oldest", (
+    tester,
+  ) async {
+    var withFirst = true;
+    final d = await daemon(
+      tester,
+      answer: (input) => input is GetGitHubCommitsRequest
+          ? longCommits(250, withFirst: withFirst)
+          : null,
+    );
+    final commits = PullCommits(d, ref)..want('h 1');
+    await show(tester, CommitTrail(commits: commits, onAll: () {}));
+    Finder row(String headline) => find.descendant(
+      of: find.byType(CommitRow),
+      matching: find.textContaining(RegExp('^$headline ·'), findRichText: true),
+    );
+    expect(row('Commit 250'), findsOneWidget);
+    expect(row('Commit 1'), findsOneWidget);
+    expect(row('Commit 151'), findsNothing);
+    expect(
+      find.textContaining('248 additional commits by', findRichText: true),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(row('Commit 250')).dy,
+      lessThan(tester.getTopLeft(row('Commit 1')).dy),
+    );
+    // An older daemon sends no first: the list's oldest stands in.
+    withFirst = false;
+    commits.want('h 2');
+    await tester.pumpAndSettle();
+    expect(row('Commit 151'), findsOneWidget);
+    expect(row('Commit 1'), findsNothing);
     commits.dispose();
     d.dispose();
   });

@@ -32086,10 +32086,12 @@ class GetGitHubCommitsResponse extends $pb.GeneratedMessage {
   factory GetGitHubCommitsResponse({
     $core.Iterable<GitHubCommit>? commits,
     $core.int? total,
+    GitHubCommit? first,
   }) {
     final result = GetGitHubCommitsResponse._();
     if (commits != null) result.commits.addAll(commits);
     if (total != null) result.total = total;
+    if (first != null) result.first = first;
     return result;
   }
 
@@ -32109,6 +32111,8 @@ class GetGitHubCommitsResponse extends $pb.GeneratedMessage {
     ..pPM<GitHubCommit>(1, _omitFieldNames ? '' : 'commits',
         subBuilder: GitHubCommit.$_createMessage)
     ..aI(2, _omitFieldNames ? '' : 'total')
+    ..aOM<GitHubCommit>(3, _omitFieldNames ? '' : 'first',
+        subBuilder: GitHubCommit.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -32136,7 +32140,7 @@ class GetGitHubCommitsResponse extends $pb.GeneratedMessage {
           GetGitHubCommitsResponse.$_createMessage);
   static GetGitHubCommitsResponse? _defaultInstance;
 
-  /// The newest 100, oldest first.
+  /// The newest 100, oldest first: on one with more, not its first.
   @$pb.TagNumber(1)
   $pb.PbList<GitHubCommit> get commits => $_getList(0);
 
@@ -32149,6 +32153,20 @@ class GetGitHubCommitsResponse extends $pb.GeneratedMessage {
   $core.bool hasTotal() => $_has(1);
   @$pb.TagNumber(2)
   void clearTotal() => $_clearField(2);
+
+  /// Its first commit, for the commit trail's oldest, whether or not the
+  /// newest 100 hold it; unset from an older daemon, where the list's
+  /// oldest stands in. API 144, ADR 0137.
+  @$pb.TagNumber(3)
+  GitHubCommit get first => $_getN(2);
+  @$pb.TagNumber(3)
+  set first(GitHubCommit value) => $_setField(3, value);
+  @$pb.TagNumber(3)
+  $core.bool hasFirst() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearFirst() => $_clearField(3);
+  @$pb.TagNumber(3)
+  GitHubCommit ensureFirst() => $_ensure(2);
 }
 
 /// What merging an open pull request may do, as GitHub says for the viewer.

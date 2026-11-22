@@ -3,8 +3,10 @@ package githubapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -85,47 +87,71 @@ func TestPullOverview(t *testing.T) {
 }
 
 // TestCommits: a pull request's commits, oldest first, with their
-// authors (a login only when GitHub knows the account) and checks.
+// authors (a login only when GitHub knows the account) and checks, and
+// its first commit on its own.
 func TestCommits(t *testing.T) {
 	f := newFake(t)
 	f.file("graphql Commits", "graphql_Commits.json")
-	cs, total, err := f.client().Commits(t.Context(), "acme/lumen", 57)
-	if err != nil || total != 3 || len(cs) != 3 {
-		t.Fatalf("%+v %d %v", cs, total, err)
+	got, err := f.client().Commits(t.Context(), "acme/lumen", 57)
+	cs := got.Newest
+	if err != nil || got.Total != 3 || len(cs) != 3 {
+		t.Fatalf("%+v %v", got, err)
 	}
 	want := model.GitHubCommit{OID: "1a2b3c4d5e6f708192a3b4c5d6e7f80912345678", Headline: "Expire idle sessions", Author: "mira",
 		AuthorName: "Mira", Committed: time.Date(2026, 11, 18, 9, 0, 0, 0, time.UTC), Checks: "failure"}
-	if cs[0] != want {
-		t.Fatalf("first %+v", cs[0])
+	if cs[0] != want || got.First != want {
+		t.Fatalf("first %+v %+v", cs[0], got.First)
 	}
 	if cs[1].Author != "" || cs[1].AuthorName != "Tomas" || cs[1].Checks != "" || cs[2].Checks != "success" {
 		t.Fatalf("%+v", cs[1:])
 	}
-	if _, _, err := f.client().Commits(t.Context(), "not a repo", 1); err == nil {
+	if _, err := f.client().Commits(t.Context(), "not a repo", 1); err == nil {
 		t.Fatal("a bad repository's name")
 	}
 	f.route("graphql Commits", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"data":{"repository":{"pullRequest":null}}}`))
 	})
-	if _, _, err := f.client().Commits(t.Context(), "acme/lumen", 404); !errors.Is(err, ErrNotFound) {
+	if _, err := f.client().Commits(t.Context(), "acme/lumen", 404); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing: %v", err)
 	}
 }
 
-// TestCommitsPastTheNewest: a pull request with more commits than the
-// newest 100 has its first put before them, so the trail's oldest is its
-// first; one whose first is among them has it once.
+// commitsAnswer is GitHub's answer to commitsQuery for a pull request of
+// total commits, numbered from 1 as their ids: commits(last: 100) and
+// commits(first: 1), as the schema shapes them.
+func commitsAnswer(total int) string {
+	node := func(n int) string {
+		return fmt.Sprintf(`{"commit":{"oid":"%d","messageHeadline":"Commit %d","committedDate":"2026-11-18T09:00:00Z","author":{"name":"Ann","user":null},"statusCheckRollup":null}}`, n, n)
+	}
+	var newest []string
+	for n := max(1, total-99); n <= total; n++ {
+		newest = append(newest, node(n))
+	}
+	return fmt.Sprintf(`{"data":{"repository":{"pullRequest":{"commits":{"totalCount":%d,"nodes":[%s]},"first":{"nodes":[%s]}}}}}`,
+		total, strings.Join(newest, ","), node(1))
+}
+
+// TestCommitsPastTheNewest: the list is the newest 100 whatever the
+// total, and the first commit comes on its own, the newest 100's oldest
+// on a short pull request and before them on a long one.
 func TestCommitsPastTheNewest(t *testing.T) {
-	f := newFake(t)
-	f.route("graphql Commits", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"data":{"repository":{"pullRequest":{
-			"commits":{"totalCount":150,"nodes":[{"commit":{"oid":"51"}},{"commit":{"oid":"150"}}]},
-			"first":{"nodes":[{"commit":{"oid":"1","messageHeadline":"Start","author":{"name":"Ann"}}}]}}}}}`))
-	})
-	cs, total, err := f.client().Commits(t.Context(), "acme/lumen", 57)
-	if err != nil || total != 150 || len(cs) != 3 || cs[0].OID != "1" || cs[0].Headline != "Start" || cs[0].AuthorName != "Ann" ||
-		cs[1].OID != "51" || cs[2].OID != "150" {
-		t.Fatalf("%+v %d %v", cs, total, err)
+	for _, total := range []int{1, 100, 101, 250} {
+		t.Run(strconv.Itoa(total), func(t *testing.T) {
+			f := newFake(t)
+			body := commitsAnswer(total)
+			f.route("graphql Commits", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(body)) })
+			got, err := f.client().Commits(t.Context(), "acme/lumen", 57)
+			n := min(total, 100)
+			if err != nil || got.Total != total || len(got.Newest) != n {
+				t.Fatalf("%d listed of %d: %v", len(got.Newest), got.Total, err)
+			}
+			if oldest, newest := got.Newest[0].OID, got.Newest[n-1].OID; oldest != strconv.Itoa(total-n+1) || newest != strconv.Itoa(total) {
+				t.Fatalf("listed %s to %s", oldest, newest)
+			}
+			if got.First.OID != "1" || got.First.Headline != "Commit 1" || got.First.AuthorName != "Ann" {
+				t.Fatalf("first %+v", got.First)
+			}
+		})
 	}
 }
 

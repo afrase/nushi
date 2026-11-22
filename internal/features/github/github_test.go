@@ -128,9 +128,10 @@ func (f *fakeClient) Pull(_ context.Context, _ string, n int) (model.GitHubPull,
 	return model.GitHubPull{ID: "PR_1", Head: "subtract"}, nil
 }
 
-func (f *fakeClient) Commits(_ context.Context, repo string, n int) ([]model.GitHubCommit, int, error) {
+func (f *fakeClient) Commits(_ context.Context, repo string, n int) (model.GitHubCommits, error) {
 	f.note(fmt.Sprint("commits ", repo, "#", n))
-	return []model.GitHubCommit{{OID: strings.Repeat("c", 40), Headline: "Subtract", Author: "mira"}}, 1, f.fail
+	c := model.GitHubCommit{OID: strings.Repeat("c", 40), Headline: "Subtract", Author: "mira"}
+	return model.GitHubCommits{Newest: []model.GitHubCommit{c}, First: c, Total: 1}, f.fail
 }
 
 func (f *fakeClient) PullsByHead(_ context.Context, repo, head string) ([]githubapi.HeadPull, time.Duration, error) {
@@ -911,7 +912,7 @@ func TestUnknownHosts(t *testing.T) {
 		if _, err := w.s.Pull(ctx, model.GitHubRef{Host: h, Repo: "a/b", Number: 1}, false); err == nil {
 			t.Errorf("%q: asked", h)
 		}
-		if _, _, err := w.s.Commits(ctx, model.GitHubRef{Host: h, Repo: "a/b", Number: 1}, false); err == nil {
+		if _, err := w.s.Commits(ctx, model.GitHubRef{Host: h, Repo: "a/b", Number: 1}, false); err == nil {
 			t.Errorf("%q: asked", h)
 		}
 		w.s.States(ctx, []model.ChatGitHub{{Host: h, ID: "PR_1"}}, false)
@@ -963,8 +964,8 @@ func TestOnlyAskedWrites(t *testing.T) {
 	_, _ = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, true)
 	w.s.States(ctx, []model.ChatGitHub{{Host: "github.com", ID: "PR_1"}}, true)
 	_, _ = w.s.Pull(ctx, ref, true)
-	if cs, total, err := w.s.Commits(ctx, ref, true); err != nil || total != 1 || cs[0].Author != "mira" {
-		t.Fatalf("commits %+v %d %v", cs, total, err)
+	if cs, err := w.s.Commits(ctx, ref, true); err != nil || cs.Total != 1 || cs.Newest[0].Author != "mira" || cs.First.Author != "mira" {
+		t.Fatalf("commits %+v %v", cs, err)
 	}
 	_, _ = w.s.Issue(ctx, ref, true)
 	_, _ = w.s.Files(ctx, ref, strings.Repeat("a", 40), strings.Repeat("b", 40))

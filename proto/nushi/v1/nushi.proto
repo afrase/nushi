@@ -4085,10 +4085,14 @@ message GetGitHubCommitsRequest {
 }
 
 message GetGitHubCommitsResponse {
-  // The newest 100, oldest first.
+  // The newest 100, oldest first: on one with more, not its first.
   repeated GitHubCommit commits = 1;
   // How many it has (more than 100 aren't listed).
   int32 total = 2;
+  // Its first commit, for the commit trail's oldest, whether or not the
+  // newest 100 hold it; unset from an older daemon, where the list's
+  // oldest stands in. API 144, ADR 0137.
+  GitHubCommit first = 3;
 }
 
 // What merging an open pull request may do, as GitHub says for the viewer.

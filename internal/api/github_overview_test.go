@@ -86,7 +86,8 @@ func TestGitHubPullOverview(t *testing.T) {
 	}
 	m := cs.Msg
 	if m.Total != 3 || len(m.Commits) != 3 || m.Commits[0].Oid != "1a2b3c4d5e6f708192a3b4c5d6e7f80912345678" || m.Commits[0].Author != "mira" ||
-		m.Commits[0].Checks != "failure" || m.Commits[0].CommittedMs == 0 || m.Commits[1].AuthorName != "Tomas" {
+		m.Commits[0].Checks != "failure" || m.Commits[0].CommittedMs == 0 || m.Commits[1].AuthorName != "Tomas" ||
+		m.First.GetOid() != m.Commits[0].Oid || m.First.GetAuthor() != "mira" {
 		t.Fatalf("commits %v", m)
 	}
 	if _, err := c.GetGitHubCommits(ctx, connect.NewRequest(&nushiv1.GetGitHubCommitsRequest{Ref: &nushiv1.GitHubRef{Host: "evil.example", Repo: "a/b", Number: 1}})); err == nil {

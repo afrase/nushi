@@ -7431,14 +7431,22 @@ const GetGitHubCommitsResponse$json = {
       '10': 'commits'
     },
     {'1': 'total', '3': 2, '4': 1, '5': 5, '10': 'total'},
+    {
+      '1': 'first',
+      '3': 3,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubCommit',
+      '10': 'first'
+    },
   ],
 };
 
 /// Descriptor for `GetGitHubCommitsResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getGitHubCommitsResponseDescriptor =
-    $convert.base64Decode(
-        'ChhHZXRHaXRIdWJDb21taXRzUmVzcG9uc2USMAoHY29tbWl0cxgBIAMoCzIWLm51c2hpLnYxLk'
-        'dpdEh1YkNvbW1pdFIHY29tbWl0cxIUCgV0b3RhbBgCIAEoBVIFdG90YWw=');
+final $typed_data.Uint8List getGitHubCommitsResponseDescriptor = $convert.base64Decode(
+    'ChhHZXRHaXRIdWJDb21taXRzUmVzcG9uc2USMAoHY29tbWl0cxgBIAMoCzIWLm51c2hpLnYxLk'
+    'dpdEh1YkNvbW1pdFIHY29tbWl0cxIUCgV0b3RhbBgCIAEoBVIFdG90YWwSLAoFZmlyc3QYAyAB'
+    'KAsyFi5udXNoaS52MS5HaXRIdWJDb21taXRSBWZpcnN0');
 
 @$core.Deprecated('Use gitHubMergeDescriptor instead')
 const GitHubMerge$json = {
