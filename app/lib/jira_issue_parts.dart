@@ -11,10 +11,11 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Attachments fetched through the daemon (Jira's own, from the site
-/// added), by site and id: the last [_keep]. One that failed isn't kept:
+/// added), by site and id: the last [_keep], as each holds its file's
+/// bytes and the daemon allows 20 MB of them. One that failed isn't kept:
 /// shown again, it's asked for again (after Allow…, or the daemon back).
 final Map<String, Future<GetJiraAttachmentResponse>> _fetched = runMap();
-const _keep = 64;
+const _keep = 8;
 
 Future<GetJiraAttachmentResponse> _fetch(
   NushiServiceClient client,
@@ -27,10 +28,7 @@ Future<GetJiraAttachmentResponse> _fetch(
     GetJiraAttachmentRequest(site: site, id: id),
   );
   unawaited(_dropIfFailed(key, f));
-  if (_fetched.length > _keep) {
-    final old = _fetched.keys.take(_fetched.length - _keep).toSet();
-    _fetched.removeWhere((k, _) => old.contains(k));
-  }
+  if (_fetched.length > _keep) _fetched.remove(_fetched.keys.first);
   return f;
 }
 

@@ -206,6 +206,34 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('only the last 8 attachments fetched are kept', (tester) async {
+    final asked = <String>[];
+    final fake = FakeDaemon([])
+      ..answer = (input) {
+        if (input is! GetJiraAttachmentRequest) return null;
+        asked.add(input.id);
+        return GetJiraAttachmentResponse();
+      };
+    final d = await fake.connect(tester);
+    Future<void> show(String id) async {
+      await tester.pumpWidget(
+        themed(AttachmentImage(d.client, 'keep.example', id, size: 100)),
+      );
+      await tester.pump();
+    }
+
+    for (var i = 1; i <= 9; i++) {
+      await show('$i');
+    }
+    await show('9'); // kept
+    await show('2'); // kept, the oldest of the 8
+    expect(asked, [for (var i = 1; i <= 9; i++) '$i']);
+    await show('1'); // dropped when the ninth came
+    expect(asked.last, '1');
+    expect(asked, hasLength(10));
+    d.dispose();
+  });
+
   testWidgets("an attachment's size in MB past a megabyte", (tester) async {
     final (_, d, _) = await _open(
       tester,
