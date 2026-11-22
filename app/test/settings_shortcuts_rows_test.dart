@@ -275,24 +275,22 @@ void main() {
       );
       shortcutKeys.value = {'openFile': 'Alt+Cmd+O'};
       await tester.pumpAndSettle();
-      // From the Settings row's No key, a step back from its key; the
-      // nav's rows beside the page come between in reading order, so only
-      // the page's stops are kept.
-      focusOf(tester, 'settings').requestFocus();
+      // From the search field, every stop in the page's order: none of
+      // the nav's between them.
+      await tester.tap(find.byKey(const ValueKey('shortcuts-search')));
       await tester.pumpAndSettle();
-      await pressKey(tester, LogicalKeyboardKey.tab, [shiftKey]);
       final order = <String?>[focusedShortcut()];
-      for (var i = 0; i < 20 && order.length < 7; i++) {
+      for (var i = 0; i < 7; i++) {
         await pressKey(tester, LogicalKeyboardKey.tab);
         final k = focusedShortcut();
-        if (k == null) continue;
         order.add(k);
         // No key shows while it has the focus.
-        if (k.startsWith('shortcut-clear-')) {
+        if (k != null && k.startsWith('shortcut-clear-')) {
           expect(clearShown(tester, k.substring(15)), isTrue, reason: k);
         }
       }
       expect(order, [
+        'shortcuts-search',
         'shortcut-clear-settings',
         'shortcut-key-settings',
         'shortcut-clear-newChat',

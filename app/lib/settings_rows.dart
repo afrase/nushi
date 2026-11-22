@@ -108,28 +108,32 @@ class SettingsPage extends StatelessWidget {
                   children: [heading, head!],
                 ),
               );
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ?pinned,
-            Expanded(
-              child: CustomScrollView(
-                controller: controller,
-                slivers: [
-                  SliverPadding(
-                    padding: pad.copyWith(top: pinned == null ? 18 : 0),
-                    sliver: SliverList.list(
-                      children: [if (pinned == null) heading, ...children],
+        // Its own traversal group: Tab goes through the page in order,
+        // not to the nav beside it and back by where each stop sits.
+        return FocusTraversalGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ?pinned,
+              Expanded(
+                child: CustomScrollView(
+                  controller: controller,
+                  slivers: [
+                    SliverPadding(
+                      padding: pad.copyWith(top: pinned == null ? 18 : 0),
+                      sliver: SliverList.list(
+                        children: [if (pinned == null) heading, ...children],
+                      ),
                     ),
-                  ),
-                  for (final s in slivers)
-                    SliverPadding(padding: pad, sliver: s),
-                  const SliverToBoxAdapter(child: SizedBox(height: 28)),
-                ],
+                    for (final s in slivers)
+                      SliverPadding(padding: pad, sliver: s),
+                    const SliverToBoxAdapter(child: SizedBox(height: 28)),
+                  ],
+                ),
               ),
-            ),
-            if (bottom case final b?) Padding(padding: pad, child: b),
-          ],
+              if (bottom case final b?) Padding(padding: pad, child: b),
+            ],
+          ),
         );
       },
     );
