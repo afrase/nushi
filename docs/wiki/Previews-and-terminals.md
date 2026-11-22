@@ -135,7 +135,7 @@ Terminals keep running after you quit the app, because Nushi's background servic
 
 ![A terminal under a chat, showing a test run](https://raw.githubusercontent.com/afrase/nushi/main/docs/images/terminal.png)
 
-## Run a command from the chat
+## Run a code block from the chat
 
 When the agent suggests a shell command in a code block, click **▷** next to the copy button. Nushi types it into one of the chat's terminals for you. When the command finishes, a card with its output appears in the message box. Click the card to see the output. A command that failed shows its exit in red. The card goes to the agent with your next message. To leave it out, point at the card and click its **✕**.
 

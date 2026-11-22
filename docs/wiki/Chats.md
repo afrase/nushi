@@ -141,11 +141,11 @@ You don't have to click the box first. Start typing anywhere in the chat and the
 
 Start a message with **!** to run it as a command instead of sending it, as in Claude Code. Its output goes to the agent with your next message, so you can ask about it.
 
-1. Type `!` and the command, for example `!git status`. The box turns into a command box: a code-coloured fill, a ring in the accent colour, a terminal mark where the `!` is, and **Run** in place of Send.
+1. Type `!` and the command, for example `!git status`. The box is in command mode: a darker fill, a coloured ring all round, a terminal mark where the `!` is, and **Run** in place of Send.
 2. Press **⏎** (or click **Run**). The command runs in the chat's folder, in a terminal of its own, and a card with its output appears over the box.
 3. Write your message and send it. The card's command and output go with it. Click **✕** on the card to drop it instead.
 
-- **While it runs**, the card has a spinner. **Show** opens its terminal, to answer a question it asks; **✕** stops it, and then nothing is sent.
+- **While it runs**, the card has a spinner. Its terminal icon (**Show in the terminal**) opens its terminal, to answer a question it asks; **✕** stops it, and then nothing is sent.
 - **It runs right away**, even while the agent is working. Other cards and files in the box stay for your message.
 - **Your login shell runs it**, as a new terminal would, but not your interactive setup: aliases and functions you set up only in `.zshrc` or `.bashrc` aren't there.
 - **To send a message that starts with !**, put a space before it.
