@@ -149,7 +149,7 @@ Start a message with **!** to run it as a command instead of sending it, as in C
 - **It runs right away**, even while the agent is working. Other cards and files in the box stay for your message.
 - **Your login shell runs it**, as a new terminal would, but not your interactive setup: aliases and functions you set up only in `.zshrc` or `.bashrc` aren't there.
 - **To send a message that starts with !**, put a space before it.
-- Only in the desktop app. On the phone a message starting with `!` is sent as it is. With an older Nushi daemon the box says it can't run commands, and runs nothing.
+- Only in the desktop app, and only in the chat's own box. On the phone or in a side chat a message starting with `!` is sent as it is. With an older Nushi daemon the box says it can't run commands, and runs nothing.
 
 ## Send while the agent is working
 

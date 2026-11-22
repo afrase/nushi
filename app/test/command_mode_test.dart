@@ -27,8 +27,12 @@ import 'spell_harness.dart' show FakeSpeller, flagged;
 typedef _Box = (FakeDaemon, FakeShells, Daemon, ChatState);
 
 /// The composer of a chat in /Users/me/nushi, at the foot of the window;
-/// [phone] puts it on a touch screen.
-Future<_Box> _box(WidgetTester tester, {bool phone = false}) async {
+/// [phone] puts it on a touch screen; [commands] false is a side chat's.
+Future<_Box> _box(
+  WidgetTester tester, {
+  bool phone = false,
+  bool commands = true,
+}) async {
   final fake = FakeDaemon([]);
   final shells = FakeShells(fake)
     ..commands['git status'] = (output: 'clean\r\n', exit: 0);
@@ -44,7 +48,8 @@ Future<_Box> _box(WidgetTester tester, {bool phone = false}) async {
       const Spacer(),
       ListenableBuilder(
         listenable: chat,
-        builder: (context, _) => Composer(chat: chat, daemon: d),
+        builder: (context, _) =>
+            Composer(chat: chat, daemon: d, commands: commands),
       ),
     ],
   );
@@ -219,6 +224,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(_inCommandMode(tester), isFalse);
     await tester.tap(find.byIcon(Icons.arrow_upward));
+    await _settle(tester);
+    expect(shells.opened, isEmpty);
+    expect(
+      fake.calls.whereType<SendPromptRequest>().single.text,
+      '!git status',
+    );
+    await _end(tester, d);
+  }, variant: onMac);
+
+  testWidgets("a side chat's box has no command mode", (tester) async {
+    final (fake, shells, d, _) = await _box(tester, commands: false);
+    await _type(tester, '!git status');
+    await tester.pumpAndSettle();
+    expect(_inCommandMode(tester), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await _settle(tester);
     expect(shells.opened, isEmpty);
     expect(

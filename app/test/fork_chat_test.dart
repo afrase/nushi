@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/command_mode.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -232,6 +233,29 @@ void main() {
       }, variant: onMac);
     }
   }
+
+  testWidgets("a side chat's box has no command mode: its pane has no "
+      'terminal panel', (tester) async {
+    final (d, fake) = await _app(tester);
+    _side(d);
+    await tester.pumpAndSettle();
+    fake.emit(_sideStatus(1));
+    await tester.pumpAndSettle();
+    final box = find.descendant(
+      of: find.byType(SideChat),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(box, '!git log');
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(SideChat),
+        matching: find.byType(CommandMark),
+      ),
+      findsNothing,
+    );
+    await closeView(tester, d);
+  }, variant: onMac);
 
   testWidgets('Keep as chat keeps what was half written in the side box in '
       'the kept chat’s', (tester) async {

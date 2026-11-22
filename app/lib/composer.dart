@@ -60,6 +60,7 @@ class Composer extends StatefulWidget {
     super.key,
     this.hint = 'Type / for commands',
     this.folder = false,
+    this.commands = true,
   });
 
   /// The chat; what's written is its draft, which outlives the box.
@@ -69,6 +70,11 @@ class Composer extends StatefulWidget {
 
   /// Whether a chat without messages shows its folder under the box.
   final bool folder;
+
+  /// Whether `!` first puts it in command mode, where [commandsHere]
+  /// allows: not a side chat's, whose pane has no terminal panel to show a
+  /// command's terminal in.
+  final bool commands;
 
   /// The narrowest box whose row holds the agent's pickers: the chat's at
   /// the narrowest window with the sidebar shown, not a side chat's or a
@@ -463,7 +469,7 @@ class _ComposerState extends State<Composer> {
     final pop = _built;
     _built = true;
     final written = !_locked && _draft.hasMessage;
-    _text.commands = commandsHere(context);
+    _text.commands = widget.commands && commandsHere(context);
     final command = !_locked && _text.commandMode;
     return ChatColumn(
       child: Padding(

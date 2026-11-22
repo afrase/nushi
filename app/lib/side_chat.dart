@@ -89,6 +89,7 @@ class SideChat extends StatelessWidget {
                     chat: side,
                     daemon: daemon,
                     hint: 'Ask in the side chat',
+                    commands: false,
                   ),
                 ],
               ),
