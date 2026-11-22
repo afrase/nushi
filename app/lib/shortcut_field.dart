@@ -2,7 +2,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:nushi/key_choice.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The keys that only modify another: pressed alone, the field waits.
@@ -29,7 +28,7 @@ final _modifiers = <LogicalKeyboardKey>{
 
 /// A binding's key in Settings › Keyboard shortcuts, as a key's cap that
 /// is the control that changes it: [label] (its key, '' for none) on a
-/// cap [ShortcutCap.height] high that hugs it; a click (or Enter or Space)
+/// [KeyCapButton]; a click (or Enter or Space)
 /// makes it listen, "Press keys…", and the next key held with its
 /// modifiers goes to [onKey]. Esc stops it. While it listens it takes
 /// every key, so Settings' Esc, the app's keys and the menu bar's
@@ -173,95 +172,30 @@ class ShortcutFieldState extends State<ShortcutField> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
     final none = widget.label.isEmpty;
-    final words = _recording
-        ? Text(
-            'Press keys…',
-            maxLines: 1,
-            style: theme.ui(t.accentInk, size: 12, weight: FontWeight.w600),
-          )
-        : none
-        ? Text('None', maxLines: 1, style: theme.ui(t.textMuted, size: 12))
-        : keyText(
-            widget.label,
-            theme.code(widget.chosen ? t.accentInk : t.text, size: 12),
-          );
-    // Listening, it's unmistakable: the accent's soft fill, its ring and
-    // words; focused, the ring alone. No key, an outline round an empty
-    // place; a chosen key on the accent's soft fill; else a key's cap.
-    final ring = _recording || _focused;
     return Focus(
       canRequestFocus: false,
       skipTraversal: true,
       onKeyEvent: _onKey,
       child: TapRegion(
         onTapOutside: (_) => _stop(),
-        child: Tap(
+        child: KeyCapButton(
+          widget.label,
           focusNode: widget.focusNode,
           onTap: listen,
           tooltip: _recording ? '' : 'Click, then press the keys',
-          fill: _recording || (widget.chosen && !none)
-              ? t.accentSoft
+          look: _recording
+              ? KeyCapLook.listening
               : none
-              ? null
-              : t.lifted,
-          child: ShortcutCap.box(
-            words,
-            border: ring
-                ? Border.all(color: t.focus, width: 2)
-                : none
-                ? Border.all(color: t.fieldBorder)
-                : null,
-          ),
+              ? KeyCapLook.none
+              : widget.chosen
+              ? KeyCapLook.chosen
+              : KeyCapLook.key,
+          // Listening, it's unmistakable: the accent's soft fill, its ring
+          // and words; focused, the ring alone.
+          ring: _recording || _focused,
         ),
       ),
-    );
-  }
-}
-
-/// A key's cap on Settings › Keyboard shortcuts that can't be changed
-/// there (a fixed key, an action's second key): [keys] in code type on
-/// `lifted`, in `textSecondary`, the shape of a [ShortcutField]'s.
-class ShortcutCap extends StatelessWidget {
-  const new(this.keys, {super.key});
-
-  final String keys;
-
-  /// A cap's height.
-  static const height = 24.0;
-
-  /// A cap's least width, so a short key (⌘K) isn't a crumb.
-  static const minWidth = 46.0;
-
-  /// A cap's corners.
-  static const double radius = NushiTheme.control;
-
-  /// [child] centred in a cap's box, [border] drawn over it.
-  static Widget box(Widget child, {Border? border}) => Container(
-    height: height,
-    constraints: const BoxConstraints(minWidth: minWidth),
-    alignment: Alignment.center,
-    padding: const EdgeInsets.symmetric(horizontal: 8),
-    foregroundDecoration: border == null
-        ? null
-        : BoxDecoration(
-            border: border,
-            borderRadius: BorderRadius.circular(radius),
-          ),
-    child: child,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.t.lifted,
-        borderRadius: BorderRadius.circular(radius),
-      ),
-      child: box(keyText(keys, theme.code(theme.t.textSecondary, size: 12))),
     );
   }
 }

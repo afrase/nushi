@@ -13,6 +13,7 @@ export 'package:nushi/line_icons.dart';
 
 part 'controls_buttons.dart';
 part 'controls_gives_way.dart';
+part 'controls_keys.dart';
 part 'controls_menus.dart';
 part 'controls_pills.dart';
 part 'controls_press.dart';

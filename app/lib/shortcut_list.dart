@@ -3,9 +3,9 @@ import 'package:flutter/widgets.dart';
 
 import 'package:nushi/app_actions.dart' show paletteKeyToo, quitKey;
 import 'package:nushi/chat_keys.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/key_choice.dart';
 import 'package:nushi/keys.dart';
-import 'package:nushi/shortcut_field.dart';
 import 'package:nushi/shortcut_row.dart';
 
 // Settings › Keyboard shortcuts' list (ADR 0146): its groups and rows in
@@ -103,6 +103,6 @@ class FixedShortcutRow extends StatelessWidget {
     key: ValueKey('shortcut-fixed-$label'),
     label: label,
     slots: false,
-    cap: ShortcutCap(keys),
+    cap: KeyCapButton(keys),
   );
 }

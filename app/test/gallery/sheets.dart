@@ -336,6 +336,34 @@ Widget _small() => page('Icon buttons, links, rows', [
     ('keyHint', Builder(builder: (context) => keyHint(context, '⌘K'))),
     ('DragGrip', const DragGrip()),
   ]),
+  heading('KeyCapButton'),
+  stateRow(
+    'key',
+    ({required on}) => KeyCapButton('⌘K', onTap: on ? _tap : null),
+  ),
+  stateRow(
+    'chosen',
+    ({required on}) =>
+        KeyCapButton('⇧⌘N', look: KeyCapLook.chosen, onTap: on ? _tap : null),
+  ),
+  stateRow(
+    'none',
+    ({required on}) =>
+        KeyCapButton('', look: KeyCapLook.none, onTap: on ? _tap : null),
+  ),
+  stateRow(
+    'listening',
+    ({required on}) => KeyCapButton(
+      '',
+      look: KeyCapLook.listening,
+      ring: true,
+      onTap: on ? _tap : null,
+    ),
+  ),
+  stateRow(
+    'on its row, pointed at',
+    ({required on}) => KeyCapButton('⌘K', lit: true, onTap: on ? _tap : null),
+  ),
 ]);
 
 Widget _row({required bool on, bool selected = false, Color? fill}) => SizedBox(
@@ -842,7 +870,7 @@ Widget _phone() => page('The phone’s controls', [
 /// Every sheet, in the order the gallery shows them.
 final List<Sheet> sheets = [
   (name: 'buttons', size: const Size(1200, 1080), build: _buttons, open: null),
-  (name: 'small', size: const Size(1200, 820), build: _small, open: null),
+  (name: 'small', size: const Size(1200, 1060), build: _small, open: null),
   (name: 'fields', size: const Size(1200, 940), build: _fields, open: null),
   (name: 'pills', size: const Size(1200, 960), build: _pills, open: null),
   (name: 'settings', size: const Size(760, 540), build: _settings, open: null),

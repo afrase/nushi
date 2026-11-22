@@ -5,13 +5,12 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/controls.dart' show Tap;
+import 'package:nushi/controls.dart' show KeyCapButton, Tap;
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
-import 'package:nushi/shortcut_field.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/window_drag_linux.dart';
 
@@ -209,7 +208,7 @@ int expectCapsAtEdge(WidgetTester tester) {
     final cap = (e.widget.key! as ValueKey<String>).value.contains('-fixed-')
         ? find.descendant(
             of: find.byWidget(e.widget),
-            matching: find.byType(ShortcutCap),
+            matching: find.byType(KeyCapButton),
           )
         : find.byWidget(e.widget);
     expect(

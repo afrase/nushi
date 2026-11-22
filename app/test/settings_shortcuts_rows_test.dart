@@ -7,12 +7,11 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/controls.dart' show Tap;
+import 'package:nushi/controls.dart' show KeyCapButton, Tap;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/key_choice.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
-import 'package:nushi/shortcut_field.dart';
 import 'package:nushi/shortcut_row.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -66,9 +65,9 @@ void main() {
         'under its name', (tester) async {
       final d = await shortcutsPage(tester);
       expect(tester.getSize(rowOf('find')).height, 36);
-      expect(tester.getSize(keyOf('find')).height, ShortcutCap.height);
+      expect(tester.getSize(keyOf('find')).height, KeyCapButton.height);
       // A short key's cap isn't a crumb.
-      expect(tester.getSize(keyOf('find')).width, ShortcutCap.minWidth);
+      expect(tester.getSize(keyOf('find')).width, KeyCapButton.minWidth);
       // A line under the name makes it taller, and goes with it.
       await recordKey(tester, 'find', LogicalKeyboardKey.keyC, [metaKey]);
       expect(tester.getSize(rowOf('find')).height, greaterThan(36));

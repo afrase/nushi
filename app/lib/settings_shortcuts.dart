@@ -314,7 +314,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
               context,
               'Second key: works while ${bindingName(key)} keeps its '
               'default key',
-              ShortcutCap(secondKeys, key: ValueKey('shortcut-second-$id')),
+              KeyCapButton(secondKeys, key: ValueKey('shortcut-second-$id')),
             ),
       // Saved, or its default another binding's chosen key holds: Reset
       // offers to take it back.
