@@ -57,6 +57,42 @@ func TestAFailedSteerTakesTheMessageOut(t *testing.T) {
 	agent.release()
 }
 
+// A steer that fails isn't tried again at each tool end of that turn, a
+// notice each time: the message waits, and goes as the next prompt.
+func TestAFailedSteerWaitsForTheNextTurn(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.steerable, c.steer = true, true
+	agent.gate = make(chan struct{})
+	agent.steerErr = errors.New("Session not found")
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	notices := func() int {
+		n := 0
+		for _, s := range texts(c) {
+			if strings.HasPrefix(s, "notice:Couldn't hand your message") {
+				n++
+			}
+		}
+		return n
+	}
+	for _, id := range []string{"t1", "t2", "t3"} {
+		ranTool(c, id)
+		eventually(t, c, func() bool { return !c.steering && len(c.queue) == 1 })
+	}
+	if n := notices(); n != 1 {
+		t.Errorf("%d notices of a failed steer, want 1", n)
+	}
+	agent.release()
+	eventually(t, c, func() bool { return len(c.queue) == 0 })
+	agent.release() // "two"'s turn
+	idle(t, c)
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if !slices.Equal(agent.prompts, []string{"one", "two"}) {
+		t.Errorf("prompts %q", agent.prompts)
+	}
+}
+
 // A permission prompt in a turn the agent started itself: Stop cancels it,
 // and nothing rewinds past it meanwhile.
 func TestAPromptInTheAgentsOwnTurn(t *testing.T) {

@@ -23,7 +23,7 @@ func (c *chat) deliverLocked() {
 		c.queue = c.queue[1:]
 		c.queueChangedLocked()
 		c.sendLocked(c.imagesTakenLocked(m))
-	case c.steer && !c.started.IsZero() && !c.stopped:
+	case c.steer && !c.started.IsZero() && !c.stopped && !c.steerFailed:
 		c.steering = true
 		go c.steerQueue(c.agent, acp.SessionID(c.sid))
 	}
@@ -90,7 +90,8 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 			return
 		}
 		c.unsendLocked(id)
-		if err != nil {
+		if err != nil { // said once: the turn's later tool ends don't try again
+			c.steerFailed = true
 			c.noticeLocked("error", "Couldn't hand your message to the agent; it's back in the queue: "+err.Error())
 		}
 		c.queue = append([]model.Message{m}, c.queue...)

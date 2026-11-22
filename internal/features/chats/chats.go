@@ -176,6 +176,7 @@ type chat struct {
 	removing     bool                            // its worktree is being removed (RemoveWorktree): it takes no prompts and doesn't reopen
 	held         bool                            // the last turn was stopped or failed: the queue waits for the next
 	steering     bool                            // a steering worker hands the queue to the running turn
+	steerFailed  bool                            // a steer failed in the running turn: the rest waits for the next (queue.go)
 	sendingNow   int                             // SendNow prompts waiting on the turn they stop: the queue waits too
 	ownTurn      bool                            // the agent works on its own, outside a turn of Nushi's
 	ownNoted     bool                            // the transcript says so, since the last user message or usage report

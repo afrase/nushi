@@ -231,7 +231,7 @@ func (c *chat) startLocked(prompt []acp.ContentBlock) {
 	notes := c.notesLocked()
 	sent, done := make(chan struct{}), make(chan struct{})
 	c.busy, c.started, c.done, c.sent, c.held = true, time.Now(), done, sent, false
-	c.released, c.steered, c.turnFrom, c.stopped = false, 0, len(c.items), false
+	c.released, c.steered, c.turnFrom, c.stopped, c.steerFailed = false, 0, len(c.items), false, false
 	c.statusChangedLocked()
 	c.logLocked().Info("turn started", "queued", len(c.queue))
 	go c.run(c.agent, &acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt}, notes, sent, done)
