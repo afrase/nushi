@@ -189,9 +189,12 @@ func merged(a, b map[string]any) map[string]any {
 type Tools func(chat, agent string, issue *model.ChatIssue) []acp.MCPServer
 
 // mcpServers are the MCP servers of Nushi's own tools for the chat, if
-// any; the agent's own come from its config.
+// any; the agent's own come from its config. A harness that doesn't read
+// its tool calls (ToolReader) gets none: which call is Nushi's show is its
+// to say, and a show call nobody knew for one would count in Wrote, and so
+// allow the file it names (ADR 0068).
 func (c *chat) mcpServers() []acp.MCPServer {
-	if c.kind.tools == nil || !c.kind.ClientMCP {
+	if c.kind.tools == nil || !c.kind.ClientMCP || c.kind.toolReader == nil {
 		return nil
 	}
 	return c.kind.tools(c.id, c.kind.Name, c.issue)

@@ -2,6 +2,7 @@ package knownagents
 
 import (
 	"context"
+	"encoding/json"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -10,14 +11,78 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/skills"
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/testcheck"
 )
+
+// nushisCalls are a call of Nushi's own tool as each agent that is given
+// them sends it, in every shape chats hands its harness: the call with its
+// _meta and input, and with its title alone (a later update, an ask for a
+// call not seen, a copy saved before the server and tool were kept). %s is
+// the tool. An agent given Nushi's tools has its row here.
+var nushisCalls = map[string][]struct {
+	title string
+	meta  string // JSON, "" for none
+	input string // JSON, "" for none
+	kind  string
+}{
+	"claude": {
+		{title: "mcp__nushi__%s", meta: `{"claudeCode":{"toolName":"mcp__nushi__%s"}}`, input: `{"path":"a.html","name":"web"}`, kind: "other"},
+		{title: "mcp__nushi__%s"},
+	},
+	"codex": {
+		{title: "mcp.nushi.%s", meta: `{"is_mcp_tool_call":true}`, input: `{"server":"nushi","tool":"%s","arguments":{"path":"a.html","name":"web"}}`, kind: "execute"},
+		{title: "mcp.nushi.%s", kind: "execute"},
+		{title: "mcp.nushi.%s"},
+	},
+}
+
+// An agent that is given Nushi's tools reads its calls of them: chats knows
+// a show call, which must never count as the chat having written the file
+// it names (ADR 0068), and a dev server's start, only by the server and
+// tool the agent's harness reads (chats.ToolReader). So every agent with
+// ClientMCP proves here that it reads them, in each shape.
+func TestAnAgentGivenNushisToolsReadsItsCalls(t *testing.T) {
+	for _, a := range All(t.TempDir(), nil) {
+		n := a.Agent.Name
+		if !a.Harness.Info().ClientMCP {
+			continue
+		}
+		reader, ok := a.Harness.(chats.ToolReader)
+		calls := nushisCalls[n]
+		if !ok || len(calls) == 0 {
+			t.Errorf("%s is given Nushi's tools: it needs a ToolReader (%v) and its calls' shapes in nushisCalls (%d)", n, ok, len(calls))
+			continue
+		}
+		for _, tool := range []string{"show", "preview_start"} {
+			for i, c := range calls {
+				it := model.Item{Kind: model.ToolCall, Title: sprintf(c.title, tool), ToolKind: c.kind}
+				var meta map[string]any
+				if c.meta != "" {
+					testcheck.NoErr(t, json.Unmarshal([]byte(sprintf(c.meta, tool)), &meta))
+				}
+				var input json.RawMessage
+				if c.input != "" {
+					input = json.RawMessage(sprintf(c.input, tool))
+				}
+				reader.ToolCall(&it, meta, input)
+				if it.MCPServer != chats.ToolsServer || it.MCPTool != tool {
+					t.Errorf("%s, %s, shape %d: read as %q, %q", n, tool, i, it.MCPServer, it.MCPTool)
+				}
+			}
+		}
+	}
+}
+
+// sprintf puts tool in format's %s, if it has one.
+func sprintf(format, tool string) string { return strings.ReplaceAll(format, "%s", tool) }
 
 // Each agent is whole: named once, its setup named and titled as its
 // harness, with its skills and trust; Claude first.

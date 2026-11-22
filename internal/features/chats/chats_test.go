@@ -544,6 +544,22 @@ func TestNoToolsForAnAgentThatTakesNone(t *testing.T) {
 	}
 }
 
+// An agent that takes client MCP servers but whose harness doesn't read its
+// tool calls gets none of Nushi's either: nothing would know its show call
+// for one (ADR 0068).
+func TestNoToolsForAnAgentThatCantReadItsCalls(t *testing.T) {
+	agent := &fakeAgent{}
+	tools := func(string, string, *model.ChatIssue) []acp.MCPServer {
+		return []acp.MCPServer{{Stdio: &acp.MCPServerStdio{Name: ToolsServer, Command: "/bin/true"}}}
+	}
+	plain := model.HarnessInfo{Name: "plain", Title: "Plain", ClientMCP: true}
+	svc := newService(t, []Kind{{Harness: plain, Launch: agent.launch}}, Options{Tools: tools})
+	startChat(t, svc, t.TempDir())
+	if len(agent.mcp) != 0 {
+		t.Errorf("session/new got %v", agent.mcp)
+	}
+}
+
 // A file a chat's tool call worked on counts as the chat's, inside its
 // folder or not (an agent's notes in its own folder); others don't.
 func TestWroteIsWhatTheChatsToolCallsWorkedOn(t *testing.T) {
