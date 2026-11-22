@@ -23,6 +23,8 @@ func TestCommandArgv(t *testing.T) {
 		{"Git Bash", []string{`C:\Program Files\Git\bin\bash.exe`, "-i", "-l"},
 			[]string{`C:\Program Files\Git\bin\bash.exe`, "-i", "-l", "-c", cmd}},
 		{"fish", []string{`C:\tools\fish.exe`, "-l"}, []string{`C:\tools\fish.exe`, "-l", "-c", cmd}},
+		{"a Unix shell's profile that runs a command of its own", []string{"bash.exe", "-l", "-c", "tmux"}, nil},
+		{"a Unix shell's profile that runs a script", []string{"bash.exe", "start.sh"}, nil},
 		{"WSL: unknown, so PowerShell", []string{"wsl.exe", "--distribution-id", "{1234}"}, nil},
 		{"nothing", nil, nil},
 	} {

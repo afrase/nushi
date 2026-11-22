@@ -37,6 +37,13 @@ func commandArgv(argv []string, command string) []string {
 		// /s takes the quotes Windows puts round the command off again.
 		return []string{argv[0], "/d", "/s", "/c", command}
 	case "bash", "sh", "zsh", "fish", "nu":
+		// A profile that already runs something (its own -c, or a
+		// script) would run that, not the command.
+		for _, a := range args {
+			if !strings.HasPrefix(a, "-") || a == "-c" || a == "--command" {
+				return nil
+			}
+		}
 		return slices.Concat(argv, []string{"-c", notAnOption(command)})
 	}
 	return nil
