@@ -109,25 +109,39 @@ void main() {
   });
 
   test(
-    '✕ sends ⌃C and drops the card; what it printed is never sent',
+    '✕ closes a terminal never shown and drops the card; nothing is sent',
     () async {
       final (shells, terms, runs, draft) = _setup();
-      final run = await runs.command(terms, 'npm run dev');
+      final run = await runs.command(terms, 'git log');
       await _settle();
-      shells.write(run.terminalId, 'listening on 3000\r\n');
+      shells.write(run.terminalId, 'commit 1\r\n:');
       await _settle();
       await runs.stopCommand(terms, run);
-      expect(shells.typed[run.terminalId], ['\x03']);
-      expect(draft.outputs.value, isEmpty);
-      shells.ends(run.terminalId);
-      await _settle();
+      expect(shells.closed, [run.terminalId], reason: 'less ignores ⌃C');
+      expect(shells.typed[run.terminalId], isNull);
       expect(run.state, RunState.stopped);
       expect(draft.outputs.value, isEmpty);
-      expect(shells.closed, [run.terminalId]);
     },
   );
 
-  test('stopped before its terminal opened, ⌃C goes once it is', () async {
+  test('✕ sends ⌃C to a terminal the user opened, which stays', () async {
+    final (shells, terms, runs, draft) = _setup();
+    final run = await runs.command(terms, 'npm run dev');
+    run.shown = true;
+    await _settle();
+    shells.write(run.terminalId, 'listening on 3000\r\n');
+    await _settle();
+    await runs.stopCommand(terms, run);
+    expect(shells.typed[run.terminalId], ['\x03']);
+    expect(draft.outputs.value, isEmpty);
+    shells.ends(run.terminalId, exit: 130);
+    await _settle();
+    expect(run.state, RunState.stopped);
+    expect(draft.outputs.value, isEmpty);
+    expect(shells.closed, isEmpty);
+  });
+
+  test('stopped before its terminal opened, it is closed once open', () async {
     final (shells, terms, runs, draft) = _setup();
     final pending = runs.command(terms, 'yes');
     final run = draft.outputs.value.single.run!;
@@ -135,7 +149,8 @@ void main() {
     expect(draft.outputs.value, isEmpty);
     await pending;
     await _settle();
-    expect(shells.typed[run.terminalId], ['\x03']);
+    expect(shells.closed, [run.terminalId]);
+    expect(run.state, RunState.stopped);
   });
 
   test('a terminal the user opened stays when it ends', () async {

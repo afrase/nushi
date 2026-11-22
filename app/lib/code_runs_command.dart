@@ -28,15 +28,15 @@ extension CommandRuns on CodeRuns {
     }
     _followCommand(terms, run);
     if (run.stopAsked) {
-      await _interrupt(terms, run);
+      await _stop(terms, run);
     } else {
       run._set(RunState.running);
     }
     return run;
   }
 
-  /// Stops [run], a command: its card goes at once, and ⌃C goes to its
-  /// terminal (once it's open); what it printed is never sent.
+  /// Stops [run], a command: its card goes at once, and its terminal is
+  /// stopped once it's open ([_stop]); what it printed is never sent.
   Future<void> stopCommand(Terminals terms, CodeRun run) async {
     if (run.state != RunState.starting && run.state != RunState.running) {
       return;
@@ -44,13 +44,24 @@ extension CommandRuns on CodeRuns {
     run.stopAsked = true;
     _dropOutput(run.key);
     run._changed();
-    if (run.terminalId.isNotEmpty) await _interrupt(terms, run);
+    if (run.terminalId.isNotEmpty) await _stop(terms, run);
   }
 
-  Future<void> _interrupt(Terminals terms, CodeRun run) =>
-      terms.client.writeTerminal(
+  /// Stops [run]'s terminal. One the user opened gets ⌃C, as they would
+  /// type it, and stays. One they never saw is closed (hung up, killed
+  /// after a grace): what ignores ⌃C at a prompt (less, ssh, a REPL)
+  /// would otherwise run on in a terminal nobody looks at, the card gone.
+  Future<void> _stop(Terminals terms, CodeRun run) async {
+    if (run.shown) {
+      await terms.client.writeTerminal(
         pb.WriteTerminalRequest(terminalId: run.terminalId, data: [3]),
       );
+      return;
+    }
+    unawaited(_commands.remove(run)?.cancel());
+    run._set(RunState.stopped);
+    await terms.close(run.terminalId);
+  }
 
   /// [run]'s card: running until it ends, when [_commandEnded] fills it.
   RunOutput _card(CodeRun run, {int exit = 0, List<String> lines = const []}) =>
