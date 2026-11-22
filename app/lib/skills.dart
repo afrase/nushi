@@ -10,6 +10,7 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/skills_list.dart';
 import 'package:nushi/skills_new.dart';
+import 'package:nushi/skills_plugins.dart';
 import 'package:nushi/skills_rows.dart';
 import 'package:nushi/skills_shared.dart';
 import 'package:nushi/theme/theme.dart';
@@ -207,7 +208,10 @@ class _SkillsViewState extends State<SkillsView> {
     final builtIn =
         list.hasBuiltIn &&
         skillMatches(
-          Skill(name: 'built-in', description: 'Claude Code’s own skills'),
+          Skill(
+            name: 'built-in',
+            description: '${agentTitle(agent)}’s own skills',
+          ),
           query,
         );
     final any =

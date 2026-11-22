@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:nushi/agent_words.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -132,8 +133,8 @@ class _McpActionsState extends State<McpActions> {
             'Approve',
             () => _setOn(true),
             tip:
-                'Chats here use it either way; Claude in a terminal, once '
-                'you trust the folder there.',
+                'Chats here use it either way; ${agentTitle(list.agent)} in '
+                'a terminal, once you trust the folder there.',
           ),
           button('Reject', () => _setOn(false)),
         ] else
@@ -171,8 +172,10 @@ const switchable = {'project', 'user', 'local'};
 
 /// What turns a server on or off, and for where: a switch, "in this
 /// project" beside it ([label]), for the scopes Nushi can; otherwise a
-/// note that only /mcp in a terminal does; nothing for Ante's, which
-/// can't be turned off. A change reaches a chat when it restarts.
+/// note that only the agent in a terminal does (its own command, as
+/// [agentWords] names it); nothing for an agent whose servers are yours
+/// only, which can't be turned off. A change reaches a chat when it
+/// restarts.
 class McpSwitch extends StatelessWidget {
   const new(this.list, this.server, {super.key, this.label = true});
 
@@ -189,16 +192,21 @@ class McpSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final muted = theme.ui(theme.t.textMuted, size: 11);
+    final title = agentTitle(list.agent);
     if (list.userOnly) return const SizedBox.shrink(); // no off switch
     if (!switchable.contains(server.scope)) {
+      final command = agentWords(list.agent).mcpCommand;
+      final withIt = command == null ? '' : ' with $command';
       return tooltip(
         context,
-        'Claude only lets you turn this off with /mcp in a terminal'
+        '$title only lets you turn this off$withIt in a terminal'
         '${server.scope == 'plugin' ? ', or with its whole plugin' : ''}.',
         Padding(
           padding: const EdgeInsets.only(left: 6),
           child: Text(
-            label ? 'Off only with /mcp in a terminal' : '/mcp only',
+            label
+                ? 'Off only$withIt in a terminal'
+                : '${command ?? 'Terminal'} only',
             style: muted,
           ),
         ),
@@ -208,7 +216,7 @@ class McpSwitch extends StatelessWidget {
     final tip = elsewhere
         ? 'Turned off in ${tildePath(server.offBy)}; turn it on there.'
         : server.scope == 'project' && server.state == 'pending' && !server.off
-        ? 'Approved. Claude in a terminal uses it once you trust the folder '
+        ? 'Approved. $title in a terminal uses it once you trust the folder '
               'there.'
         : '${server.off ? 'Off' : 'On'} in this project. Chats pick up a '
               'change when they restart.';

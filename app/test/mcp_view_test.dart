@@ -7,6 +7,8 @@ import 'package:nushi/controls.dart' show Toggle;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp.dart';
+import 'package:nushi/mcp_actions.dart';
+import 'package:nushi/mcp_servers.dart';
 import 'package:nushi/mcp_widget.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/theme/theme.dart';
@@ -87,6 +89,36 @@ Future<(FakeDaemon, Daemon)> _view(
 
 void main() {
   setUpAll(loadFonts);
+
+  testWidgets('a server only the agent turns off names that agent, and its '
+      'command only where Nushi knows it', (tester) async {
+    final (_, d) = await _daemon(tester);
+    final plugin = McpServer(name: 'p', scope: 'plugin', state: 'connected');
+    for (final (agent, note, tip) in [
+      (
+        'claude',
+        'Off only with /mcp in a terminal',
+        'Claude only lets you turn this off with /mcp in a terminal, or '
+            'with its whole plugin.',
+      ),
+      (
+        'codex',
+        'Off only in a terminal',
+        'Codex only lets you turn this off in a terminal, or with its '
+            'whole plugin.',
+      ),
+    ]) {
+      await tester.pumpWidget(
+        themed(
+          McpSwitch(McpServers.of(d, '/Users/me/w', agent: agent), plugin),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(note), findsOneWidget);
+      expect(find.byTooltip(tip), findsOneWidget);
+    }
+    await closeView(tester, d);
+  });
 
   testWidgets('the page lists the agents the daemon says have MCP: Reading… '
       'until it has listed them, a line when none has', (tester) async {
