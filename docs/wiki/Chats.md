@@ -129,6 +129,8 @@ The keys at the bottom, under **Fixed**, can't be changed.
 
 Type in the box at the bottom and press **⏎** to send. **⇧⏎** starts a new line.
 
+Rather press Enter for new lines? Turn on **Enter starts a new line** in **Settings › General**. Then **⏎** starts a new line and **⌘⏎** (or the Send button) sends. This goes for every box that sends to the agent: a reply, a review comment and a subagent's box too. The phone always sends with Return.
+
 You don't have to click the box first. Start typing anywhere in the chat and the letters go into the box. (A menu, a dialog or another text field keeps what you type.)
 
 - **Attach files or images**: click the **+** in the box and pick **Add files or photos** (**⌘U**), drop files on the chat, or paste a picture.
@@ -141,6 +143,8 @@ You can send a message before the agent finishes. Type your message, then:
 
 - **⏎, or the Queue button,** puts it in line, as a pill over the box. If the agent takes input while it works, it gets the message right away. Otherwise the message goes when the current turn ends. You can edit or remove a pill, or send it now.
 - **⌘⏎, or the Stop and send button,** stops what the agent is doing and sends your message at once.
+
+With **Enter starts a new line** on, **⌘⏎** queues and **⇧⌘⏎** stops and sends. The box's hint and the buttons' tooltips show the keys.
 
 ## Stop the agent
 

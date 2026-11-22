@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/alerts_settings.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/login_item.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/native.dart';
@@ -31,7 +32,8 @@ const _sleepAfter = {
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
 /// Settings › General: the chats' group (when idle chats sleep, whether
-/// the composer checks spelling, where a chat's local links open), the
+/// the composer checks spelling, whether Enter starts a line or sends,
+/// where a chat's local links open), the
 /// notifications, then whether the daemon starts at login with the
 /// updates. [settings] is the daemon's, null until it said.
 class GeneralSection extends StatelessWidget {
@@ -81,7 +83,8 @@ class GeneralSection extends StatelessWidget {
 /// Settings › General's first group, one card of the chat's settings that
 /// were each a group of one row: when idle chats sleep (the daemon's, once
 /// it said), spelling (the app's own preference, where there's a checker;
-/// ADR 0083), local links in a browser tab beside the chat (ADR 0094;
+/// ADR 0083), whether Enter starts a line in the boxes that send (ADR
+/// 0147), local links in a browser tab beside the chat (ADR 0094;
 /// where there are web views).
 class _ChatsGroup extends StatelessWidget {
   const new({required this.settings, required this.onChange});
@@ -126,6 +129,17 @@ class _ChatsGroup extends StatelessWidget {
             ),
           ),
         ),
+      ValueListenableBuilder(
+        valueListenable: enterStartsLine,
+        builder: (context, on, _) => SettingsRow(
+          'Enter starts a new line',
+          description: 'Send with $cmdEnterLabel or the Send button.',
+          control: SettingsSwitch(
+            value: on,
+            onChanged: (v) => enterStartsLine.value = v,
+          ),
+        ),
+      ),
       if (webEmbedded)
         ValueListenableBuilder(
           valueListenable: linksInBrowserTab,

@@ -87,6 +87,34 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('General: "Enter starts a new line" is a switch, off at '
+      'first, that sets the pref and keeps it in app.json', (tester) async {
+    final d = await pumpSettingsApp(
+      tester,
+      settingsFake(),
+      SettingsSection.general,
+    );
+    final row = find.widgetWithText(SettingsRow, 'Enter starts a new line');
+    expect(
+      find.descendant(
+        of: row,
+        matching: find.text('Send with ⌘⏎ or the Send button.'),
+      ),
+      findsOne,
+    );
+    final toggle = find.descendant(
+      of: row,
+      matching: find.byType(SettingsSwitch),
+    );
+    expect(tester.widget<SettingsSwitch>(toggle).value, isFalse);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(enterStartsLine.value, isTrue);
+    expect(tester.widget<SettingsSwitch>(toggle).value, isTrue);
+    expect(readSaved()['enterStartsLine'], isTrue);
+    d.dispose();
+  }, variant: onMac);
+
   testWidgets('General: the chat rows are one group, not a group of one row '
       'each; Check now is a button that asks, and says the version', (
     tester,
@@ -111,6 +139,7 @@ void main() {
     );
     for (final row in [
       'Check spelling while typing',
+      'Enter starts a new line',
       'Open local links in built-in browser',
     ]) {
       expect(find.descendant(of: chats, matching: find.text(row)), findsOne);
