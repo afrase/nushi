@@ -16,10 +16,13 @@ import 'package:nushi/tool_parts.dart' show plainPath;
 // to write the launch file.
 
 /// What Add server puts in the chat's box, for the user to send.
+/// It spells out the file's shape (internal/launchfile reads it) rather
+/// than name one vendor's format the chat's model may not know.
 const addServerDraft =
-    "Detect this project's dev servers and write them to .agents/launch.json "
-    "in Claude's launch.json format (name, runtimeExecutable, runtimeArgs, "
-    "port). Don't start them.";
+    "Detect this project's dev servers and write them to .agents/launch.json: "
+    'a JSON object whose "configurations" list has one entry per server, '
+    'each with name, runtimeExecutable, runtimeArgs and port. '
+    "Don't start them.";
 
 /// What the menu says with no entries.
 const noServers = 'No servers in .agents/launch.json or .claude/launch.json';

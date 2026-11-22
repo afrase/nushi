@@ -414,6 +414,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.draft.put.value, addServerDraft);
     expect(addServerDraft, contains('.agents/launch.json'));
+    // The shape launchfile reads, not a vendor's name for it.
+    expect(addServerDraft, contains('"configurations" list'));
+    expect(addServerDraft, isNot(contains('Claude')));
     c.archived = true;
     await _openMenu(tester);
     await tester.tap(find.text('Add server'));
