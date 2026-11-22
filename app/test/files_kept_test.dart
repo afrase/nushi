@@ -1,8 +1,11 @@
+import 'dart:collection';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_tabs.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/files_top_row.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show EventsResponse;
 import 'package:nushi/main.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/settings.dart';
@@ -21,6 +24,29 @@ List<String> _tabs(Daemon d) => [
 ];
 
 String? _shown(Daemon d) => d.chats['c']!.files.shown.value?.path;
+
+/// The files still there, for a FindChatFiles that fails while [fails]
+/// (the connection lost as it's asked).
+final class _Flaky extends SetBase<String> {
+  bool fails = true;
+
+  @override
+  bool contains(Object? element) =>
+      fails ? throw StateError('lost') : _all.contains(element);
+
+  @override
+  bool add(String value) => throw UnsupportedError('read only');
+  @override
+  bool remove(Object? value) => throw UnsupportedError('read only');
+  @override
+  String? lookup(Object? element) => contains(element) ? '$element' : null;
+  @override
+  Iterator<String> get iterator => _all.iterator;
+  @override
+  int get length => _all.length;
+  @override
+  Set<String> toSet() => {..._all};
+}
 
 /// Quits [d] and launches again, the prefs read from `app.json` as a new
 /// launch reads them, with the files [found] still there.
@@ -83,6 +109,35 @@ void main() {
       await closeView(tester, d);
     }, variant: onMac);
   }
+
+  testWidgets('a restore that fails keeps the tabs for later, and the '
+      'next word of the chat tries again', (tester) async {
+    var (d, _) = await panesApp(tester, width: 1700);
+    ['PLAN.md', 'NOTES.md'].forEach(d.chats['c']!.openInFiles);
+    await tester.pumpAndSettle();
+
+    final found = _Flaky();
+    final FakeDaemon fake;
+    (d, fake) = await _relaunch(tester, d, found: found);
+    expect(_tabs(d), isEmpty);
+    // A tab opened meanwhile doesn't replace those kept…
+    d.chats['c']!.openInFiles('auth/redirect.go');
+    await tester.pumpAndSettle();
+    expect(fileTabsKept.value['c']!.tabs, ['PLAN.md', 'NOTES.md']);
+
+    // …and the chat's next event, the daemon back, restores them.
+    found.fails = false;
+    final c = fake.chats.firstWhere((c) => c.id == 'c');
+    fake.emit(EventsResponse(chatId: 'c', chat: c));
+    await tester.pumpAndSettle();
+    expect(_tabs(d), ['PLAN.md', 'NOTES.md', 'auth/redirect.go']);
+    expect(fileTabsKept.value['c']!.tabs, [
+      'PLAN.md',
+      'NOTES.md',
+      'auth/redirect.go',
+    ]);
+    await closeView(tester, d);
+  }, variant: onMac);
 
   testWidgets('a file gone since doesn’t come back; the next tab shows in '
       'the place of a gone one that showed', (tester) async {

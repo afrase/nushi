@@ -17,13 +17,18 @@ final _keeping = Expando<bool>();
 /// Keeps [chat]'s file tabs in [fileTabsKept] from now on, after putting
 /// back those kept from the last launch whose files are still there (the
 /// daemon finds them, as the Files pane would open them; a gone one doesn't
-/// come back). Once for each chat; the Mac's only.
+/// come back). Once for each chat; the Mac's only. Until the kept ones are
+/// back, a change of tabs saves nothing over them: a restore that fails
+/// leaves them as they were, and the chat's next event tries again.
 void keepFileTabs(Daemon daemon, ChatState chat) {
   if (_keeping[chat] ?? false) return;
   _keeping[chat] = true;
   final kept = fileTabsKept.value[chat.id];
-  chat.files.changes.addListener(() => _save(chat));
-  if (kept != null) unawaited(_restore(daemon, chat, kept));
+  if (kept == null) {
+    _follow(chat);
+  } else {
+    unawaited(_restore(daemon, chat, kept));
+  }
 }
 
 Future<void> _restore(Daemon daemon, ChatState chat, KeptTabs kept) async {
@@ -33,11 +38,18 @@ Future<void> _restore(Daemon daemon, ChatState chat, KeptTabs kept) async {
       FindChatFilesRequest(chatId: chat.id, paths: kept.tabs.take(200)),
     );
   } on Object {
-    return; // kept as they were, for the next launch
+    _keeping[chat] = null; // kept as they were; tried again
+    return;
   }
+  // A tab opened meanwhile is merged in, and saved with them.
   chat.files.restore(kept, found.found.toSet(), folder: chat.folder);
   _save(chat); // none back: none kept
+  _follow(chat);
 }
+
+/// Saves [chat]'s tabs whenever they change.
+void _follow(ChatState chat) =>
+    chat.files.changes.addListener(() => _save(chat));
 
 void _save(ChatState chat) {
   final kept = chat.files.kept(chat.folder);
