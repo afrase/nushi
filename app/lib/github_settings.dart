@@ -138,11 +138,13 @@ class _GitHubPageState extends State<GitHubPage> {
         !mounted) {
       return;
     }
+    final toasts = Toasts.maybeOf(context);
     await tryOrShow(context, () async {
-      await widget.client.removeGitHubToken(
+      final r = await widget.client.removeGitHubToken(
         RemoveGitHubTokenRequest(host: h.host),
       );
       await _load();
+      sayTokenKept(toasts, r.tokenKept);
     });
   }
 

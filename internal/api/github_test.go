@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -47,6 +48,34 @@ func (m memTokens) Get(account string, _ bool) ([]byte, error) { return m[accoun
 func (m memTokens) Delete(account string) error {
 	delete(m, account)
 	return nil
+}
+
+// stuckTokens is a keychain that won't delete (a locked keyring).
+type stuckTokens struct{ memTokens }
+
+func (stuckTokens) Delete(string) error { return errors.New("your keyring is locked") }
+
+// TestRemoveGitHubTokenKept: a token the keychain won't delete is named
+// in RemoveGitHubToken's answer; one it deletes isn't.
+func TestRemoveGitHubTokenKept(t *testing.T) {
+	for _, tc := range []struct {
+		tokens github.Tokens
+		want   string
+	}{{memTokens{}, ""}, {stuckTokens{memTokens{}}, "Nushi: GitHub token for git.example.com"}} {
+		svc := github.New(github.Deps{
+			Gh:     github.Gh{Token: func(context.Context, string) (string, string, error) { return "", "", nil }, Hosts: func() []string { return nil }, Reload: func() {}},
+			Tokens: tc.tokens, Store: &memHosts{Store: store.New(t.TempDir()), hosts: []string{"git.example.com"}},
+			Keys: github.Keys{NeedsOK: func(error) bool { return false }, Restart: func(error) bool { return false }, Missing: func(error) bool { return false }},
+		})
+		c := client(t, New(Services{GitHub: svc}))
+		r, err := c.RemoveGitHubToken(t.Context(), connect.NewRequest(&nushiv1.RemoveGitHubTokenRequest{Host: "git.example.com"}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Msg.TokenKept != tc.want {
+			t.Fatalf("kept %q, want %q", r.Msg.TokenKept, tc.want)
+		}
+	}
 }
 
 type memHosts struct {

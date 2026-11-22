@@ -46,8 +46,14 @@ func (s *server) AddJiraSite(ctx context.Context, req *connect.Request[nushiv1.A
 	return connect.NewResponse(&nushiv1.AddJiraSiteResponse{Site: jiraSiteProto(site)}), nil
 }
 
+// RemoveJiraSite forgets a site, naming its token's keychain item when
+// the keychain kept it.
 func (s *server) RemoveJiraSite(_ context.Context, req *connect.Request[nushiv1.RemoveJiraSiteRequest]) (*connect.Response[nushiv1.RemoveJiraSiteResponse], error) {
-	return done[nushiv1.RemoveJiraSiteResponse](s.Jira.RemoveSite(req.Msg.Site), refused)
+	kept, err := s.Jira.RemoveSite(req.Msg.Site)
+	if err != nil {
+		return nil, refused(err)
+	}
+	return connect.NewResponse(&nushiv1.RemoveJiraSiteResponse{TokenKept: kept}), nil
 }
 
 func (s *server) CheckJiraSite(ctx context.Context, req *connect.Request[nushiv1.CheckJiraSiteRequest]) (*connect.Response[nushiv1.CheckJiraSiteResponse], error) {

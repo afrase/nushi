@@ -175,8 +175,8 @@ func TestSites(t *testing.T) {
 		t.Errorf("opened with %q", c.token)
 	}
 
-	if err := s2.RemoveSite("e.atlassian.net"); err != nil {
-		t.Fatal(err)
+	if kept, err := s2.RemoveSite("e.atlassian.net"); err != nil || kept != "" {
+		t.Fatalf("remove: %q %v", kept, err)
 	}
 	if len(tokens.Items) != 0 {
 		t.Errorf("the token stayed: %v", tokens.Items)
@@ -357,7 +357,7 @@ func TestCache(t *testing.T) {
 	if _, _, err := s2.CachedIssue("e.atlassian.net", "../A-1"); err == nil {
 		t.Error("a key that isn't one")
 	}
-	if err := s2.RemoveSite("e.atlassian.net"); err != nil {
+	if _, err := s2.RemoveSite("e.atlassian.net"); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := s2.CachedList("e.atlassian.net", Mine, ""); err == nil {
@@ -371,7 +371,8 @@ func TestCache(t *testing.T) {
 
 // A token the keychain won't delete (no keyring, a dismissed prompt)
 // never keeps its site: the site and what it showed go first, and the
-// token is left in the keychain, never read again.
+// token is left in the keychain, never read again, its item named for the
+// user to delete.
 func TestRemoveSiteWhenTheTokenStays(t *testing.T) {
 	s, tokens, _ := newService(t)
 	site, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{})
@@ -382,8 +383,8 @@ func TestRemoveSiteWhenTheTokenStays(t *testing.T) {
 		t.Fatal(err)
 	}
 	tokens.Fail = errRestart
-	if err := s.RemoveSite("e.atlassian.net"); err != nil {
-		t.Errorf("remove: %v", err)
+	if kept, err := s.RemoveSite("e.atlassian.net"); err != nil || kept != "Nushi: Jira API token for e.atlassian.net" {
+		t.Errorf("remove: %q %v", kept, err)
 	}
 	tokens.Fail = nil
 	if st, err := s.Sites(); err != nil || len(st) != 0 {
@@ -428,7 +429,7 @@ func TestRemoveSiteWhileItsTokenIsRead(t *testing.T) {
 	r := &removingTokens{Keychain: tokens}
 	s2 := New(s.sites, r, s.store, s.keys) // just started: no client yet
 	r.remove = func() {
-		if err := s2.RemoveSite("e.atlassian.net"); err != nil {
+		if _, err := s2.RemoveSite("e.atlassian.net"); err != nil {
 			t.Errorf("remove: %v", err)
 		}
 	}
@@ -468,7 +469,7 @@ func TestOldTokensAnswerNotKept(t *testing.T) {
 		t.Errorf("the old token's list kept: %s %v %v", kept, at, err)
 	}
 	(*opened)[1].asking = func() {
-		if err := s.RemoveSite("e.atlassian.net"); err != nil {
+		if _, err := s.RemoveSite("e.atlassian.net"); err != nil {
 			t.Error(err)
 		}
 	}

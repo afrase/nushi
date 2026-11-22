@@ -19913,7 +19913,12 @@ func (x *RemoveJiraSiteRequest) GetSite() string {
 }
 
 type RemoveJiraSiteResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The site went, but the keychain wouldn't delete its token (a locked
+	// or missing keyring, a denied prompt): the item's name there, as the
+	// keychain's app lists it, for the user to delete. Empty when deleted.
+	// API 144.
+	TokenKept     string `protobuf:"bytes,1,opt,name=token_kept,json=tokenKept,proto3" json:"token_kept,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -19946,6 +19951,13 @@ func (x *RemoveJiraSiteResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use RemoveJiraSiteResponse.ProtoReflect.Descriptor instead.
 func (*RemoveJiraSiteResponse) Descriptor() ([]byte, []int) {
 	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{306}
+}
+
+func (x *RemoveJiraSiteResponse) GetTokenKept() string {
+	if x != nil {
+		return x.TokenKept
+	}
+	return ""
 }
 
 type CheckJiraSiteRequest struct {
@@ -21973,7 +21985,12 @@ func (x *RemoveGitHubTokenRequest) GetHost() string {
 }
 
 type RemoveGitHubTokenResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The host forgot the token, but the keychain wouldn't delete it (a
+	// locked or missing keyring, a denied prompt): the item's name there,
+	// as the keychain's app lists it, for the user to delete. Empty when
+	// deleted. API 144.
+	TokenKept     string `protobuf:"bytes,1,opt,name=token_kept,json=tokenKept,proto3" json:"token_kept,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -22006,6 +22023,13 @@ func (x *RemoveGitHubTokenResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use RemoveGitHubTokenResponse.ProtoReflect.Descriptor instead.
 func (*RemoveGitHubTokenResponse) Descriptor() ([]byte, []int) {
 	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{345}
+}
+
+func (x *RemoveGitHubTokenResponse) GetTokenKept() string {
+	if x != nil {
+		return x.TokenKept
+	}
+	return ""
 }
 
 type AllowGitHubTokenRequest struct {
@@ -29525,8 +29549,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x13AddJiraSiteResponse\x12&\n" +
 	"\x04site\x18\x01 \x01(\v2\x12.nushi.v1.JiraSiteR\x04site\"+\n" +
 	"\x15RemoveJiraSiteRequest\x12\x12\n" +
-	"\x04site\x18\x01 \x01(\tR\x04site\"\x18\n" +
-	"\x16RemoveJiraSiteResponse\"*\n" +
+	"\x04site\x18\x01 \x01(\tR\x04site\"7\n" +
+	"\x16RemoveJiraSiteResponse\x12\x1d\n" +
+	"\n" +
+	"token_kept\x18\x01 \x01(\tR\ttokenKept\"*\n" +
 	"\x14CheckJiraSiteRequest\x12\x12\n" +
 	"\x04site\x18\x01 \x01(\tR\x04site\"+\n" +
 	"\x15CheckJiraSiteResponse\x12\x12\n" +
@@ -29650,8 +29676,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05token\x18\x02 \x01(\tR\x05token\"%\n" +
 	"\x16AddGitHubTokenResponseJ\x04\b\x01\x10\x02R\x05login\".\n" +
 	"\x18RemoveGitHubTokenRequest\x12\x12\n" +
-	"\x04host\x18\x01 \x01(\tR\x04host\"\x1b\n" +
-	"\x19RemoveGitHubTokenResponse\"-\n" +
+	"\x04host\x18\x01 \x01(\tR\x04host\":\n" +
+	"\x19RemoveGitHubTokenResponse\x12\x1d\n" +
+	"\n" +
+	"token_kept\x18\x01 \x01(\tR\ttokenKept\"-\n" +
 	"\x17AllowGitHubTokenRequest\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\"\x1a\n" +
 	"\x18AllowGitHubTokenResponse\"N\n" +

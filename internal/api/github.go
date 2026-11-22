@@ -46,8 +46,14 @@ func (s *server) AddGitHubToken(ctx context.Context, req *connect.Request[nushiv
 	return connect.NewResponse(&nushiv1.AddGitHubTokenResponse{}), nil
 }
 
+// RemoveGitHubToken forgets a host's pasted token, naming its keychain
+// item when the keychain kept it.
 func (s *server) RemoveGitHubToken(_ context.Context, req *connect.Request[nushiv1.RemoveGitHubTokenRequest]) (*connect.Response[nushiv1.RemoveGitHubTokenResponse], error) {
-	return done[nushiv1.RemoveGitHubTokenResponse](s.GitHub.RemoveToken(req.Msg.Host), githubErr)
+	kept, err := s.GitHub.RemoveToken(req.Msg.Host)
+	if err != nil {
+		return nil, githubErr(err)
+	}
+	return connect.NewResponse(&nushiv1.RemoveGitHubTokenResponse{TokenKept: kept}), nil
 }
 
 func (s *server) AllowGitHubToken(ctx context.Context, req *connect.Request[nushiv1.AllowGitHubTokenRequest]) (*connect.Response[nushiv1.AllowGitHubTokenResponse], error) {

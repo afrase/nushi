@@ -17,6 +17,26 @@ String get needsOkStatus =>
     'This build of Nushi needs your OK to read the token: '
     '${conventions.system} asks for your password.';
 
+/// Says that a removed site's or host's token is still in the keychain as
+/// [kept], the item's name there (RemoveJiraSite's and RemoveGitHubToken's
+/// token_kept, API 144), for the user to delete it: the keychain refused
+/// (a locked or missing keyring, a denied prompt). A warning that stays
+/// 30 s or until dismissed; nothing when [kept] is empty (deleted, or an
+/// older daemon).
+void sayTokenKept(Toasts? toasts, String kept) {
+  if (kept.isEmpty) return;
+  showToast(
+    toasts,
+    'Removed. Its token is still in your ${conventions.keyring} as '
+    '“$kept”: delete it there.',
+    key: const ValueKey('token-kept'),
+    icon: Icons.warning_amber_rounded,
+    failed: true,
+    closable: true,
+    duration: const Duration(seconds: 30),
+  );
+}
+
 /// A Jira site's or a GitHub host's row, both alike: the integration's
 /// [icon] in a small tile, its [title] and [lines] (each its words and
 /// their color: who, or what's wrong), then its [state] in a pill

@@ -153,7 +153,7 @@ func (s *Service) AddSite(ctx context.Context, site, email, token string, expire
 	}
 	got.Email, got.Expires = email, expires
 	id := SiteID(got)
-	if err := s.tokens.Set(account(got), "Nushi: Jira API token for "+id, []byte(token)); err != nil {
+	if err := s.tokens.Set(account(got), tokenLabel(id), []byte(token)); err != nil {
 		return model.JiraSite{}, fmt.Errorf("keeping the token in the keychain: %w", err)
 	}
 	err = s.change(func(sites []model.JiraSite) []model.JiraSite {
@@ -182,17 +182,18 @@ func (s *Service) AddSite(ctx context.Context, site, email, token string, expire
 // RemoveSite forgets a site, then deletes its token from the keychain as
 // best it can: a keychain that can't (no keyring, a dismissed prompt)
 // never leaves a site that can't be removed; the token then stays in it,
-// logged, and is never read again.
-func (s *Service) RemoveSite(id string) error {
+// logged, never read again, and kept names its item (its label) so the
+// user can delete it there.
+func (s *Service) RemoveSite(id string) (kept string, err error) {
 	site, err := s.site(id)
 	if err != nil {
-		return err
+		return "", err
 	}
 	err = s.change(func(sites []model.JiraSite) []model.JiraSite {
 		return slices.DeleteFunc(sites, func(x model.JiraSite) bool { return SiteID(x) == id })
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
 	s.mu.Lock()
 	delete(s.clients, id)
@@ -200,11 +201,16 @@ func (s *Service) RemoveSite(id string) error {
 	s.mu.Unlock()
 	s.forget(id)
 	slog.Info("jira site removed", "site", id)
-	if err := s.tokens.Delete(account(site)); err != nil {
+	if err := s.tokens.Delete(account(site)); err != nil && !s.keys.Missing(err) {
 		slog.Warn("jira token left in the keychain", "site", id, "err", err)
+		return tokenLabel(id), nil
 	}
-	return nil
+	return "", nil
 }
+
+// tokenLabel is a site's token's name in the keychain: what Keychain
+// Access, or the keyring's app on Linux, lists it as.
+func tokenLabel(site string) string { return "Nushi: Jira API token for " + site }
 
 // AllowToken reads a site's token with macOS's prompt, which asks the
 // user to let this build of Nushi read it.

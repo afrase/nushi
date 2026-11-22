@@ -137,9 +137,13 @@ class _JiraPageState extends State<JiraPage> {
         !mounted) {
       return;
     }
+    final toasts = Toasts.maybeOf(context);
     await tryOrShow(context, () async {
-      await widget.client.removeJiraSite(RemoveJiraSiteRequest(site: s.id));
+      final r = await widget.client.removeJiraSite(
+        RemoveJiraSiteRequest(site: s.id),
+      );
       await _load();
+      sayTokenKept(toasts, r.tokenKept);
     });
   }
 

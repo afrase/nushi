@@ -3,9 +3,11 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_settings.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -43,6 +45,8 @@ Future<(FakeDaemon, Daemon)> _open(
   WidgetTester tester, {
   List<JiraSite>? sites,
   Tokens tokens = Tokens.dark,
+  String tokenKept = '',
+  Size size = const Size(1000, 760),
 }) async {
   final fake = FakeDaemon([]);
   var list = sites ?? _sites();
@@ -59,10 +63,20 @@ Future<(FakeDaemon, Daemon)> _open(
       list = [...list, s];
       return AddJiraSiteResponse(site: s);
     }(),
+    RemoveJiraSiteRequest(:final site) => () {
+      list = [...list.where((s) => s.id != site)];
+      return RemoveJiraSiteResponse(tokenKept: tokenKept);
+    }(),
     _ => null,
   };
   final d = await fake.connect(tester);
-  await pumpSettings(tester, d, SettingsSection.jira, tokens: tokens);
+  await pumpSettings(
+    tester,
+    d,
+    SettingsSection.jira,
+    tokens: tokens,
+    size: size,
+  );
   return (fake, d);
 }
 
@@ -119,6 +133,78 @@ void main() {
       fake.calls.whereType<RemoveJiraSiteRequest>().single.site,
       'acme.atlassian.net',
     );
+    d.dispose();
+  });
+
+  Future<void> removeAcme(WidgetTester tester) async {
+    await tester.tap(
+      find.byKey(const ValueKey('account-more-acme.atlassian.net')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove site…'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Button, 'Remove').last);
+    await tester.pumpAndSettle();
+  }
+
+  for (final width in [1700.0, 720.0]) {
+    testWidgets('a token the keychain kept is said, plainly, with its '
+        'item, ${width.toInt()} wide', (tester) async {
+      final (_, d) = await _open(
+        tester,
+        tokenKept: 'Nushi: Jira API token for acme.atlassian.net',
+        size: Size(width, 760),
+      );
+      await removeAcme(tester);
+      expect(find.text('acme.atlassian.net'), findsNothing);
+      final note = find.text(
+        'Removed. Its token is still in your keychain as '
+        '“Nushi: Jira API token for acme.atlassian.net”: delete it there.',
+      );
+      expect(note, findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('token-kept')),
+          matching: find.byIcon(Icons.warning_amber_rounded),
+        ),
+        findsOneWidget,
+      );
+      expectTextInside(tester, width);
+      await render(
+        tester,
+        find.byType(MaterialApp),
+        'jira_settings_token_kept_${width.toInt()}',
+      );
+      await tester.pump(const Duration(seconds: 10));
+      expect(note, findsOneWidget);
+      await tester.tap(find.byTooltip('Dismiss'));
+      await tester.pumpAndSettle();
+      d.dispose();
+    });
+  }
+
+  testWidgets('on Linux the note says keyring', (tester) async {
+    native.conventions = linuxConventions;
+    final (_, d) = await _open(
+      tester,
+      tokenKept: 'Nushi: Jira API token for acme.atlassian.net',
+    );
+    await removeAcme(tester);
+    expect(
+      find.textContaining('still in your keyring as', findRichText: true),
+      findsOneWidget,
+    );
+    await tester.tap(find.byTooltip('Dismiss'));
+    await tester.pumpAndSettle();
+    d.dispose();
+  });
+
+  testWidgets('a token the keychain deleted, or an older daemon, says '
+      'nothing more', (tester) async {
+    final (_, d) = await _open(tester);
+    await removeAcme(tester);
+    expect(find.text('acme.atlassian.net'), findsNothing);
+    expect(find.byKey(const ValueKey('token-kept')), findsNothing);
     d.dispose();
   });
 

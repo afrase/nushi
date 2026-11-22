@@ -5917,11 +5917,16 @@ final $typed_data.Uint8List removeJiraSiteRequestDescriptor =
 @$core.Deprecated('Use removeJiraSiteResponseDescriptor instead')
 const RemoveJiraSiteResponse$json = {
   '1': 'RemoveJiraSiteResponse',
+  '2': [
+    {'1': 'token_kept', '3': 1, '4': 1, '5': 9, '10': 'tokenKept'},
+  ],
 };
 
 /// Descriptor for `RemoveJiraSiteResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List removeJiraSiteResponseDescriptor =
-    $convert.base64Decode('ChZSZW1vdmVKaXJhU2l0ZVJlc3BvbnNl');
+    $convert.base64Decode(
+        'ChZSZW1vdmVKaXJhU2l0ZVJlc3BvbnNlEh0KCnRva2VuX2tlcHQYASABKAlSCXRva2VuS2VwdA'
+        '==');
 
 @$core.Deprecated('Use checkJiraSiteRequestDescriptor instead')
 const CheckJiraSiteRequest$json = {
@@ -6581,11 +6586,16 @@ final $typed_data.Uint8List removeGitHubTokenRequestDescriptor =
 @$core.Deprecated('Use removeGitHubTokenResponseDescriptor instead')
 const RemoveGitHubTokenResponse$json = {
   '1': 'RemoveGitHubTokenResponse',
+  '2': [
+    {'1': 'token_kept', '3': 1, '4': 1, '5': 9, '10': 'tokenKept'},
+  ],
 };
 
 /// Descriptor for `RemoveGitHubTokenResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List removeGitHubTokenResponseDescriptor =
-    $convert.base64Decode('ChlSZW1vdmVHaXRIdWJUb2tlblJlc3BvbnNl');
+    $convert.base64Decode(
+        'ChlSZW1vdmVHaXRIdWJUb2tlblJlc3BvbnNlEh0KCnRva2VuX2tlcHQYASABKAlSCXRva2VuS2'
+        'VwdA==');
 
 @$core.Deprecated('Use allowGitHubTokenRequestDescriptor instead')
 const AllowGitHubTokenRequest$json = {

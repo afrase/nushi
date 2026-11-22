@@ -25765,7 +25765,13 @@ class RemoveJiraSiteRequest extends $pb.GeneratedMessage {
 }
 
 class RemoveJiraSiteResponse extends $pb.GeneratedMessage {
-  factory RemoveJiraSiteResponse() => RemoveJiraSiteResponse._();
+  factory RemoveJiraSiteResponse({
+    $core.String? tokenKept,
+  }) {
+    final result = RemoveJiraSiteResponse._();
+    if (tokenKept != null) result.tokenKept = tokenKept;
+    return result;
+  }
 
   RemoveJiraSiteResponse._();
 
@@ -25780,6 +25786,7 @@ class RemoveJiraSiteResponse extends $pb.GeneratedMessage {
       _omitMessageNames ? '' : 'RemoveJiraSiteResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: RemoveJiraSiteResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'tokenKept')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -25805,6 +25812,19 @@ class RemoveJiraSiteResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<RemoveJiraSiteResponse>(
           RemoveJiraSiteResponse.$_createMessage);
   static RemoveJiraSiteResponse? _defaultInstance;
+
+  /// The site went, but the keychain wouldn't delete its token (a locked
+  /// or missing keyring, a denied prompt): the item's name there, as the
+  /// keychain's app lists it, for the user to delete. Empty when deleted.
+  /// API 144.
+  @$pb.TagNumber(1)
+  $core.String get tokenKept => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set tokenKept($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTokenKept() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTokenKept() => $_clearField(1);
 }
 
 class CheckJiraSiteRequest extends $pb.GeneratedMessage {
@@ -28469,7 +28489,13 @@ class RemoveGitHubTokenRequest extends $pb.GeneratedMessage {
 }
 
 class RemoveGitHubTokenResponse extends $pb.GeneratedMessage {
-  factory RemoveGitHubTokenResponse() => RemoveGitHubTokenResponse._();
+  factory RemoveGitHubTokenResponse({
+    $core.String? tokenKept,
+  }) {
+    final result = RemoveGitHubTokenResponse._();
+    if (tokenKept != null) result.tokenKept = tokenKept;
+    return result;
+  }
 
   RemoveGitHubTokenResponse._();
 
@@ -28484,6 +28510,7 @@ class RemoveGitHubTokenResponse extends $pb.GeneratedMessage {
       _omitMessageNames ? '' : 'RemoveGitHubTokenResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: RemoveGitHubTokenResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'tokenKept')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -28511,6 +28538,19 @@ class RemoveGitHubTokenResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<RemoveGitHubTokenResponse>(
           RemoveGitHubTokenResponse.$_createMessage);
   static RemoveGitHubTokenResponse? _defaultInstance;
+
+  /// The host forgot the token, but the keychain wouldn't delete it (a
+  /// locked or missing keyring, a denied prompt): the item's name there,
+  /// as the keychain's app lists it, for the user to delete. Empty when
+  /// deleted. API 144.
+  @$pb.TagNumber(1)
+  $core.String get tokenKept => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set tokenKept($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTokenKept() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTokenKept() => $_clearField(1);
 }
 
 class AllowGitHubTokenRequest extends $pb.GeneratedMessage {
@@ -37474,7 +37514,8 @@ class NushiServiceApi {
       _client.invoke<AddJiraSiteResponse>(
           ctx, 'NushiService', 'AddJiraSite', request, AddJiraSiteResponse());
 
-  /// Forgets a site and deletes its token from the keychain.
+  /// Forgets a site and deletes its token from the keychain, as best it
+  /// can: a token the keychain keeps is named in the answer.
   $async.Future<RemoveJiraSiteResponse> removeJiraSite(
           $pb.ClientContext? ctx, RemoveJiraSiteRequest request) =>
       _client.invoke<RemoveJiraSiteResponse>(ctx, 'NushiService',

@@ -1108,7 +1108,8 @@ abstract final class NushiService {
     nushiv1nushi.AddJiraSiteResponse.new,
   );
 
-  /// Forgets a site and deletes its token from the keychain.
+  /// Forgets a site and deletes its token from the keychain, as best it
+  /// can: a token the keychain keeps is named in the answer.
   static const removeJiraSite = connect.Spec(
     '/$name/RemoveJiraSite',
     connect.StreamType.unary,

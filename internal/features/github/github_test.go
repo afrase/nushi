@@ -391,8 +391,8 @@ func TestHostsAndTokens(t *testing.T) {
 	if len(hosts) != 2 || hosts[0].Host != "git.example.com" || hosts[1].Source != "token" || hosts[1].Kind != "classic" || !hosts[1].Pasted {
 		t.Fatalf("a pasted token goes before gh's: %+v", hosts)
 	}
-	if err := w.s.RemoveToken("github.com"); err != nil {
-		t.Fatal(err)
+	if kept, err := w.s.RemoveToken("github.com"); err != nil || kept != "" {
+		t.Fatalf("remove: %q %v", kept, err)
 	}
 	if hosts, _ = w.s.Hosts(ctx); hosts[1].Source != "gh" || w.tokens.Items["github.com"] != "" {
 		t.Fatalf("back to gh's: %+v", hosts)
@@ -491,15 +491,17 @@ func TestRefusedDropKeepsANewerToken(t *testing.T) {
 }
 
 // Removing a token forgets the host first: a keychain that can't delete
-// it (no keyring, a dismissed prompt) doesn't leave the host stuck.
+// it (no keyring, a dismissed prompt) doesn't leave the host stuck, and
+// the removal names the keychain item left behind, for the user to
+// delete.
 func TestRemoveTokenKeychainFails(t *testing.T) {
 	w := newWorld(t)
 	if _, err := w.s.AddToken(t.Context(), "git.example.com", "ghp_ent"); err != nil {
 		t.Fatal(err)
 	}
 	w.tokens.Fail = errors.New("your keyring is locked")
-	if err := w.s.RemoveToken("git.example.com"); err != nil {
-		t.Fatal(err)
+	if kept, err := w.s.RemoveToken("git.example.com"); err != nil || kept != "Nushi: GitHub token for git.example.com" {
+		t.Fatalf("remove: %q %v", kept, err)
 	}
 	if hosts, _ := w.s.Store.GitHubTokenHosts(); len(hosts) != 0 {
 		t.Fatalf("still given a token: %v", hosts)
@@ -640,7 +642,7 @@ func TestInboxCache(t *testing.T) {
 	if _, err := w.s.CachedInbox("evil.example", githubapi.InboxFilter{}); err == nil {
 		t.Error("a host never known")
 	}
-	if err := w.s.RemoveToken("github.com"); err != nil {
+	if _, err := w.s.RemoveToken("github.com"); err != nil {
 		t.Fatal(err)
 	}
 	if in, _ := w.s.CachedInbox("github.com", githubapi.InboxFilter{}); !in.At.IsZero() {

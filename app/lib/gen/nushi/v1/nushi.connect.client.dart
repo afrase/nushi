@@ -2216,7 +2216,8 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
-  /// Forgets a site and deletes its token from the keychain.
+  /// Forgets a site and deletes its token from the keychain, as best it
+  /// can: a token the keychain keeps is named in the answer.
   Future<nushiv1nushi.RemoveJiraSiteResponse> removeJiraSite(
     nushiv1nushi.RemoveJiraSiteRequest input, {
     connect.Headers? headers,

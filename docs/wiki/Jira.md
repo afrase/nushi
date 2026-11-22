@@ -81,7 +81,7 @@ On Linux, use Ctrl wherever the Mac uses ⌘. The one exception: ⌥⌘1–9 is 
 
 ## Good to know
 
-- Your token is kept in your Mac's keychain (the keyring on Linux), never in a file. **Remove site…** deletes it from there. If the keychain won't let it (a dismissed prompt, no keyring), the site still goes, and the token stays as "Nushi Jira" for you to delete there.
+- Your token is kept in your Mac's keychain (the keyring on Linux), never in a file. **Remove site…** deletes it from there. If the keychain won't let it (a dismissed prompt, no keyring), the site still goes, and the token stays there. Nushi says so in a note naming the item ("Nushi: Jira API token for" and the site) for you to delete there.
 - If Nushi says it needs your OK to read the token (for example, after an update), click **Allow…** and enter your password when asked. If it offers **Restart daemon** instead, click that. Restarting stops running turns and closes terminals.
 - The list refreshes every minute while it's open, showing the last results while new ones load.
 - A chat started on an issue gives the agent tools for that one issue: it can read it, comment on it, and move it. The agent's own permission mode decides whether it asks you first. The issue's details show which comments and moves came from an agent.

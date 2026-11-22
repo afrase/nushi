@@ -43,7 +43,7 @@ func TestTokenChangeDropsTheInbox(t *testing.T) {
 	b.fail = nil
 	b.inbox = gh.inbox
 	b.inboxing = func() {
-		if err := w.s.RemoveToken("github.com"); err != nil {
+		if _, err := w.s.RemoveToken("github.com"); err != nil {
 			t.Error(err)
 		}
 	}

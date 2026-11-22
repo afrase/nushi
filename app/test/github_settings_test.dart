@@ -53,6 +53,8 @@ Future<(FakeDaemon, Daemon)> _open(
   WidgetTester tester, {
   List<GitHubHost>? hosts,
   Tokens tokens = Tokens.dark,
+  String tokenKept = '',
+  Size size = const Size(1000, 760),
 }) async {
   final fake = FakeDaemon([]);
   var list = hosts ?? _hosts();
@@ -72,12 +74,18 @@ Future<(FakeDaemon, Daemon)> _open(
     }(),
     RemoveGitHubTokenRequest(:final host) => () {
       list = [...list.where((h) => h.host != host)];
-      return RemoveGitHubTokenResponse();
+      return RemoveGitHubTokenResponse(tokenKept: tokenKept);
     }(),
     _ => null,
   };
   final d = await fake.connect(tester);
-  await pumpSettings(tester, d, SettingsSection.github, tokens: tokens);
+  await pumpSettings(
+    tester,
+    d,
+    SettingsSection.github,
+    tokens: tokens,
+    size: size,
+  );
   return (fake, d);
 }
 
@@ -153,6 +161,67 @@ void main() {
       fake.calls.whereType<RemoveGitHubTokenRequest>().single.host,
       'git.corp.example',
     );
+    d.dispose();
+  });
+
+  Future<void> removePasted(WidgetTester tester) async {
+    await tester.tap(
+      find.byKey(const ValueKey('account-more-git.corp.example')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove token…'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Button, 'Remove').last);
+    await tester.pumpAndSettle();
+  }
+
+  for (final width in [1700.0, 720.0]) {
+    testWidgets('a token the keychain kept is said, plainly, with its '
+        'item, ${width.toInt()} wide', (tester) async {
+      final (_, d) = await _open(
+        tester,
+        tokenKept: 'Nushi: GitHub token for git.corp.example',
+        size: Size(width, 760),
+      );
+      await removePasted(tester);
+      // The list reloads as on any removal, and the note says where the
+      // token is left.
+      expect(find.text('git.corp.example'), findsNothing);
+      final note = find.text(
+        'Removed. Its token is still in your keychain as '
+        '“Nushi: GitHub token for git.corp.example”: delete it there.',
+      );
+      expect(note, findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('token-kept')),
+          matching: find.byIcon(Icons.warning_amber_rounded),
+        ),
+        findsOneWidget,
+      );
+      expectTextInside(tester, width);
+      await render(
+        tester,
+        find.byType(MaterialApp),
+        'github_settings_token_kept_${width.toInt()}',
+      );
+      // It stays 30 s, not the 4 s of a passing note, or until dismissed.
+      await tester.pump(const Duration(seconds: 10));
+      expect(note, findsOneWidget);
+      await tester.tap(find.byTooltip('Dismiss'));
+      await tester.pumpAndSettle();
+      expect(note, findsNothing);
+      d.dispose();
+    });
+  }
+
+  testWidgets('a token the keychain deleted, or an older daemon, says '
+      'nothing more', (tester) async {
+    final (_, d) = await _open(tester);
+    await removePasted(tester);
+    expect(find.text('git.corp.example'), findsNothing);
+    expect(find.byKey(const ValueKey('token-kept')), findsNothing);
+    expect(find.textContaining('still in your'), findsNothing);
     d.dispose();
   });
 

@@ -300,7 +300,7 @@ func (s *Service) AddToken(ctx context.Context, given, token string) (githubapi.
 	if err != nil {
 		return u, err
 	}
-	if err := s.Tokens.Set(name, "Nushi: GitHub token for "+name, []byte(token)); err != nil {
+	if err := s.Tokens.Set(name, tokenLabel(name), []byte(token)); err != nil {
 		return u, fmt.Errorf("keeping the token in the keychain: %w", err)
 	}
 	hosts, err := s.Store.GitHubTokenHosts()
@@ -322,29 +322,35 @@ func (s *Service) AddToken(ctx context.Context, given, token string) (githubapi.
 // login, if gh has one. The host forgets the token first, then the
 // keychain deletes it as best it can: a keychain that can't (no keyring,
 // a dismissed prompt) never leaves a host that can't be removed; the
-// token then stays in it, logged, and is never read again.
-func (s *Service) RemoveToken(name string) error {
+// token then stays in it, logged, never read again, and kept names its
+// item (its label) so the user can delete it there.
+func (s *Service) RemoveToken(name string) (kept string, err error) {
 	name, ok := normalHost(name)
 	if !ok {
-		return errors.New("not a host's name")
+		return "", errors.New("not a host's name")
 	}
 	hosts, err := s.Store.GitHubTokenHosts()
 	if err != nil {
-		return err
+		return "", err
 	}
 	if err := s.Store.SaveGitHubTokenHosts(slices.DeleteFunc(hosts, func(h string) bool { return h == name })); err != nil {
-		return err
+		return "", err
 	}
 	s.mu.Lock()
 	delete(s.clients, name)
 	s.forget(name)
 	s.mu.Unlock()
 	slog.Info("github token removed", "host", name)
-	if err := s.Tokens.Delete(name); err != nil {
+	if err := s.Tokens.Delete(name); err != nil && !s.Keys.Missing(err) {
 		slog.Warn("github token left in the keychain", "host", name, "err", err)
+		return tokenLabel(name), nil
 	}
-	return nil
+	return "", nil
 }
+
+// tokenLabel is a host's pasted token's name in the keychain: what
+// Keychain Access, or the keyring's app on Linux, lists it as.
+func tokenLabel(host string) string { return "Nushi: GitHub token for " + host }
 
 // AllowToken reads a host's pasted token with macOS's prompt, which asks
 // the user to let this build of Nushi read it.

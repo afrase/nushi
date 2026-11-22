@@ -917,7 +917,8 @@ type NushiServiceClient interface {
 	// Checks a token on a site (classic or scoped) and keeps it: the token
 	// in the keychain, the site in the list.
 	AddJiraSite(context.Context, *connect.Request[v1.AddJiraSiteRequest]) (*connect.Response[v1.AddJiraSiteResponse], error)
-	// Forgets a site and deletes its token from the keychain.
+	// Forgets a site and deletes its token from the keychain, as best it
+	// can: a token the keychain keeps is named in the answer.
 	RemoveJiraSite(context.Context, *connect.Request[v1.RemoveJiraSiteRequest]) (*connect.Response[v1.RemoveJiraSiteResponse], error)
 	// Asks Jira who a site's token is, to see it still works.
 	CheckJiraSite(context.Context, *connect.Request[v1.CheckJiraSiteRequest]) (*connect.Response[v1.CheckJiraSiteResponse], error)
@@ -3455,7 +3456,8 @@ type NushiServiceHandler interface {
 	// Checks a token on a site (classic or scoped) and keeps it: the token
 	// in the keychain, the site in the list.
 	AddJiraSite(context.Context, *connect.Request[v1.AddJiraSiteRequest]) (*connect.Response[v1.AddJiraSiteResponse], error)
-	// Forgets a site and deletes its token from the keychain.
+	// Forgets a site and deletes its token from the keychain, as best it
+	// can: a token the keychain keeps is named in the answer.
 	RemoveJiraSite(context.Context, *connect.Request[v1.RemoveJiraSiteRequest]) (*connect.Response[v1.RemoveJiraSiteResponse], error)
 	// Asks Jira who a site's token is, to see it still works.
 	CheckJiraSite(context.Context, *connect.Request[v1.CheckJiraSiteRequest]) (*connect.Response[v1.CheckJiraSiteResponse], error)
