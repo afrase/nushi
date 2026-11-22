@@ -108,3 +108,35 @@ func TestAPromptSupersedesTheAgentsOwnTurn(t *testing.T) {
 	agent.release()
 	idle(t, c)
 }
+
+// plainOwnTurnChat is ownTurnChat with an agent that has no Transcript: any
+// usage ends its own turn, and nothing tells that one runs but its updates.
+func plainOwnTurnChat(t *testing.T) (*Service, *fakeAgent, *chat, *follower) {
+	t.Helper()
+	agent, f := &fakeAgent{}, &follower{}
+	testcheck.NoErr(t, json.Unmarshal([]byte(`{"sessionId":"s1"}`), &agent.session))
+	svc := newService(t, []Kind{{Harness: model.HarnessInfo{Name: "plain"}, Launch: agent.launch}},
+		Options{Publish: f.event, Viewers: &viewers{shown: map[string]bool{}}})
+	t.Cleanup(svc.Close)
+	c := startChat(t, svc, t.TempDir())
+	turn(t, svc, c, "build it")
+	return svc, agent, c, f
+}
+
+// Without a Transcript, the usage that ends the agent's own turn stops its
+// running calls' clocks, as a turn's end does, though it gives no verdict.
+func TestAnOwnTurnsEndStopsItsCallsClocks(t *testing.T) {
+	_, _, c, f := plainOwnTurnChat(t)
+	send(c, toolCall("t9", "in_progress"))
+	n := f.count()
+	send(c, ownResult())
+	c.mu.Lock()
+	own, call := c.ownTurn, *c.itemLocked("t9")
+	c.mu.Unlock()
+	if own || call.Ended.IsZero() {
+		t.Errorf("own turn %v, its call ended at %v", own, call.Ended)
+	}
+	if got := f.ends(c.id, n); len(got) != 0 {
+		t.Errorf("verdicts %v, want none", got)
+	}
+}

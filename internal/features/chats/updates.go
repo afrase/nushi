@@ -153,10 +153,13 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		if ownEnded {
 			// Only a harness that tells the end has a verdict to give:
 			// without one, any usage ends it, and a late update after a
-			// turn of Nushi's would notify "finished" a second time.
+			// turn of Nushi's would notify "finished" a second time. Its
+			// calls' clocks stop either way, as at a turn's end.
 			end := model.NotEnded
 			if c.kind.transcript != nil {
 				end = model.TurnDone
+			} else if c.endCallsLocked() {
+				c.copyLocked(true)
 			}
 			c.endOwnTurnLocked(end, "")
 		}
