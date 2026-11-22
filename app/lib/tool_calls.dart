@@ -405,7 +405,7 @@ class ToolCallView extends StatelessWidget {
     // An MCP call's title is its server and tool; its raw name on hover.
     final rawName = show
         ? showPath(it) ?? showUrl(it)
-        : mcpName(it.title) == null
+        : mcpOf(it) == null
         ? null
         : it.title;
     final (added, removed) = LineCounts.of([it]);

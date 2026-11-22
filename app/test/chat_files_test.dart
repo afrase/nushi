@@ -44,6 +44,8 @@ Item _show(String id, String path) => Item(
   kind: ItemKind.ITEM_KIND_TOOL_CALL,
   toolKind: 'other',
   title: 'mcp__nushi__show',
+  mcpServer: 'nushi',
+  mcpTool: 'show',
   status: 'completed',
   input: jsonEncode({'path': path}),
 );

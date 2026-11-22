@@ -17,22 +17,20 @@ import 'package:nushi/web_page.dart' show openInBrowserOrSay;
 import 'package:nushi/web_views.dart' show webEmbedded;
 import 'package:nushi/widgets.dart';
 
-/// An MCP tool's name as Claude Code makes it, `mcp__<server>__<tool>`:
-/// the server up to the next `__`, the tool the rest.
-(String, String)? mcpName(String name) {
-  if (!name.startsWith('mcp__')) return null;
-  final rest = name.substring(5);
-  final sep = rest.indexOf('__');
-  if (sep <= 0 || sep + 2 >= rest.length) return null;
-  return (rest.substring(0, sep), rest.substring(sep + 2));
-}
+/// The MCP server and tool [it] calls, or asks to, as the daemon's harness
+/// read them from the agent's own naming (`Item.mcp_server`, `mcp_tool`);
+/// null for any other call. A daemon below API 140 sends neither, and its
+/// MCP calls show as any other call (ADR 0068's amendment).
+(String, String)? mcpOf(Item it) => it.mcpServer.isEmpty || it.mcpTool.isEmpty
+    ? null
+    : (it.mcpServer, it.mcpTool);
 
-/// Nushi's show tool (ADR 0068) as Claude's agents and Codex's adapter
-/// title its calls; the daemon's `isShow` knows them too.
-const showTitles = {'mcp__nushi__show', 'mcp.nushi.show'};
+/// The MCP server of Nushi's own tools (the daemon's `chats.ToolsServer`).
+const nushiServer = 'nushi';
 
-/// Whether [it] is a show call, or the ask to run one.
-bool isShow(Item it) => showTitles.contains(it.title);
+/// Whether [it] is a call to Nushi's show tool (ADR 0068), or the ask to
+/// run one; the daemon's `isShow` goes by the same.
+bool isShow(Item it) => it.mcpServer == nushiServer && it.mcpTool == 'show';
 
 /// The file a show call names, from its input: `path`, inside `arguments`
 /// on Codex. Null while its input hasn't come (Claude's comes just after
@@ -72,18 +70,12 @@ const serverVerbs = {
   ),
 };
 
-/// Which of Nushi's dev server tools [it] calls, or asks to ('preview_start'),
-/// titled as Claude's agents (`mcp__nushi__preview_start`) and Codex's
-/// adapter (`mcp.nushi.preview_start`) title them; null for any other.
-String? serverTool(Item it) {
-  final title = it.title;
-  final tool = title.startsWith('mcp__nushi__')
-      ? title.substring(12)
-      : title.startsWith('mcp.nushi.')
-      ? title.substring(10)
-      : null;
-  return serverVerbs.containsKey(tool) ? tool : null;
-}
+/// Which of Nushi's dev server tools [it] calls, or asks to ('preview_start');
+/// null for any other.
+String? serverTool(Item it) =>
+    it.mcpServer == nushiServer && serverVerbs.containsKey(it.mcpTool)
+    ? it.mcpTool
+    : null;
 
 /// What a call to a dev server tool did, does or failed to do, by its
 /// status ([serverVerbs]); null for another call.
@@ -119,19 +111,19 @@ final _unprintable = RegExp(
 /// checks whatever the app asks for.
 String plainPath(String path) => path.replaceAll(_unprintable, '�');
 
-/// A tool call's title: the agent's, but an MCP call titled with its raw
-/// name reads "server · tool", and "· inner" when its input names the tool
-/// it runs (a gateway's `tool`, `tool_name` or `name`).
+/// A tool call's title: the agent's, but an MCP call reads "server · tool",
+/// and "· inner" when its input names the tool it runs (a gateway's `tool`,
+/// `tool_name` or `name`).
 String toolTitle(Item it) {
   if (isShow(it)) return 'Showing a file';
   if (serverVerb(it) case final verb?) {
     // A name yet to come (or the list's, which names none).
     return serverTool(it) == 'preview_list' ? verb : '$verb a server';
   }
-  final mcp = mcpName(it.title);
+  final mcp = mcpOf(it);
   if (mcp == null) return it.title;
   final (server, tool) = mcp;
-  final inner = innerTool(it.input);
+  final inner = innerTool(it.input, own: tool);
   return [server, tool, ?inner].join(' · ');
 }
 
@@ -148,8 +140,10 @@ final _argsKey = RegExp(
 /// The tool an input names at its top level (`tool`, then `tool_name`, each
 /// a string; `name` only beside the call's `arguments`, as a gateway's, so
 /// that a tool's own `name` argument isn't taken for one), read from the
-/// indented JSON the daemon keeps, which may be cut short.
-String? innerTool(String input) {
+/// indented JSON the daemon keeps, which may be cut short. A name that is
+/// the call's [own] tool isn't another: an input that wraps the call's
+/// arguments names its own tool so (Codex's `{server, tool, arguments}`).
+String? innerTool(String input, {String? own}) {
   final found = {for (final m in _innerKey.allMatches(input)) m[1]!: m[2]!};
   final keys = ['tool', 'tool_name', if (_argsKey.hasMatch(input)) 'name'];
   for (final key in keys) {
@@ -157,7 +151,7 @@ String? innerTool(String input) {
     if (quoted == null) continue;
     try {
       final name = (jsonDecode(quoted) as String).trim();
-      if (name.isNotEmpty) return name;
+      if (name.isNotEmpty && name != own) return name;
     } on FormatException {
       continue;
     }

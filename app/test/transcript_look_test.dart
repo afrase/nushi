@@ -215,12 +215,14 @@ final _items = <Item>[
     text: 'Package url parses URLs and implements query escaping.',
   ),
   _tool(
-    'mcp',
-    'other',
-    'mcp__jira__search',
-    input: '{\n  "jql": "project = LUM AND text ~ feed"\n}',
-    text: 'LUM-142 Paginate the feed',
-  ),
+      'mcp',
+      'other',
+      'mcp__jira__search',
+      input: '{\n  "jql": "project = LUM AND text ~ feed"\n}',
+      text: 'LUM-142 Paginate the feed',
+    )
+    ..mcpServer = 'jira'
+    ..mcpTool = 'search',
   Item(
     id: 'err',
     kind: ItemKind.ITEM_KIND_NOTICE,

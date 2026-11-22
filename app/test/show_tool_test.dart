@@ -34,8 +34,10 @@ Item _show(
 }) => Item(
   id: id,
   kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: codex ? 'execute' : 'other',
+  toolKind: 'other',
   title: codex ? 'mcp.nushi.show' : 'mcp__nushi__show',
+  mcpServer: 'nushi',
+  mcpTool: 'show',
   status: status,
   text: text,
   input: codex
@@ -51,6 +53,8 @@ Item _ask(String title, String input) => Item(
   id: 'ask',
   kind: ItemKind.ITEM_KIND_PERMISSION,
   title: title,
+  mcpServer: 'nushi',
+  mcpTool: 'show',
   input: input,
   status: 'pending',
   options: [
@@ -145,8 +149,11 @@ void main() {
       expect(showPath(_show('a', 'r.html')..input = ''), isNull);
       expect(showPath(_show('a', 'r.html')..input = '{"path": "r.h'), isNull);
       expect(showPath(_show('a', 'r.html')..input = '{"path": 3}'), isNull);
-      // Another tool's input isn't a show's.
-      expect(showPath(_show('a', 'r.html')..title = 'Read'), isNull);
+      // Another tool's input isn't a show's, nor the call's of a daemon
+      // below API 140, which says no server and tool: its title is never
+      // read for them.
+      expect(showPath(_show('a', 'r.html')..mcpTool = 'read'), isNull);
+      expect(showPath(_show('a', 'r.html')..clearMcpServer()), isNull);
     });
 
     test('what could make a name read as another is marked', () {

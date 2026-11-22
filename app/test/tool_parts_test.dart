@@ -10,6 +10,8 @@ import 'harness.dart';
 
 const _gateway = 'mcp__litellm-mcp-gateway__invoke_tool';
 
+/// A call titled [title], with the MCP server and tool Claude's harness
+/// reads from a title of the form `mcp__<server>__<tool>`.
 Item _call(
   String id, {
   String title = _gateway,
@@ -20,6 +22,10 @@ Item _call(
   id: id,
   kind: ItemKind.ITEM_KIND_TOOL_CALL,
   title: title,
+  mcpServer: title.startsWith('mcp__') ? title.split('__')[1] : null,
+  mcpTool: title.startsWith('mcp__')
+      ? title.split('__').skip(2).join('__')
+      : null,
   toolKind: 'other',
   status: 'completed',
   input: input,
@@ -48,10 +54,12 @@ void main() {
   setUpAll(loadFonts);
 
   test("an MCP call's title is its server, tool and the tool it runs", () {
-    expect(mcpName(_gateway), ('litellm-mcp-gateway', 'invoke_tool'));
-    expect(mcpName('mcp__a__b__c'), ('a', 'b__c'));
-    expect(mcpName('mcp__a__'), isNull);
-    expect(mcpName('Read'), isNull);
+    expect(mcpOf(_call('1')), ('litellm-mcp-gateway', 'invoke_tool'));
+    expect(mcpOf(Item(mcpServer: 'a', mcpTool: 'b__c')), ('a', 'b__c'));
+    expect(mcpOf(Item(mcpServer: 'a')), isNull);
+    // A daemon below API 140 sends neither: the title is shown as it is.
+    expect(mcpOf(Item(title: _gateway)), isNull);
+    expect(toolTitle(Item(title: _gateway)), _gateway);
     expect(
       toolTitle(_call('1', input: _input)),
       'litellm-mcp-gateway · invoke_tool · jira_search',
@@ -73,6 +81,17 @@ void main() {
       'jira_get',
     );
     expect(innerTool('{\n  "tool_name": "x\\"y",\n  "q": "abc\n…'), 'x"y');
+    // An input that wraps the call's arguments names the call's own tool,
+    // which isn't another (Codex's).
+    final codex = Item(
+      title: 'mcp.github.search_issues',
+      mcpServer: 'github',
+      mcpTool: 'search_issues',
+      input:
+          '{\n  "server": "github",\n  "tool": "search_issues",\n'
+          '  "arguments": {\n    "query": "is:open"\n  }\n}',
+    );
+    expect(toolTitle(codex), 'github · search_issues');
     expect(toolTitle(_call('3', title: 'Read notes.md')), 'Read notes.md');
   });
 

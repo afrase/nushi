@@ -83,6 +83,8 @@ void main() {
               id: 'p',
               kind: ItemKind.ITEM_KIND_PERMISSION,
               title: 'mcp__nushi__show',
+              mcpServer: 'nushi',
+              mcpTool: 'show',
               input: jsonEncode({'path': 'site/index.html'}),
               status: 'pending',
               options: [Option(id: 'yes', name: 'Yes', kind: 'allow_once')],

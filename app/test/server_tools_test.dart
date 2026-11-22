@@ -31,8 +31,10 @@ Item _call(
 }) => Item(
   id: id,
   kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: codex ? 'execute' : 'other',
+  toolKind: 'other',
   title: codex ? 'mcp.nushi.$tool' : 'mcp__nushi__$tool',
+  mcpServer: 'nushi',
+  mcpTool: tool,
   status: status,
   text: text,
   input: codex
@@ -45,6 +47,8 @@ Item _ask(String title, String input, {String command = ''}) => Item(
   id: 'ask',
   kind: ItemKind.ITEM_KIND_PERMISSION,
   title: title,
+  mcpServer: 'nushi',
+  mcpTool: title.split(RegExp(r'__|\.')).last,
   input: input,
   status: 'pending',
   serverCommand: command,
@@ -144,8 +148,16 @@ void main() {
         'Used 2 server tools',
       );
       // Another server's tool of the same name isn't Nushi's.
-      expect(serverTool(Item(title: 'mcp__other__preview_start')), isNull);
-      expect(serverTool(Item(title: 'mcp__nushi__preview_open')), isNull);
+      expect(
+        serverTool(Item(mcpServer: 'other', mcpTool: 'preview_start')),
+        isNull,
+      );
+      expect(
+        serverTool(Item(mcpServer: 'nushi', mcpTool: 'preview_open')),
+        isNull,
+      );
+      // A daemon below API 140 says neither: no title is read for them.
+      expect(serverTool(Item(title: 'mcp__nushi__preview_start')), isNull);
     });
 
     test('a name that could read as another is marked', () {
