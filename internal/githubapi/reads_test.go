@@ -2,6 +2,7 @@ package githubapi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -222,6 +223,37 @@ func TestJobLog(t *testing.T) {
 	if !strings.HasSuffix(tail, "noise\nThe branch has a FAIL file:\n##[error]Process completed with exit code 1.") || len(tail) > 200 ||
 		!strings.HasPrefix(tail, "noise") {
 		t.Fatalf("%q", tail)
+	}
+}
+
+// TestRedirectsAreErrors: a REST answer that redirects is never read as
+// the answer: a moved repository's 301 on a job's log is an error naming
+// where it went, not its body as the log, and so is a branch's; only the
+// log's own 302 to https is followed.
+func TestRedirectsAreErrors(t *testing.T) {
+	f := newFake(t)
+	moved := func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Location", "https://api.example/repositories/1/actions/jobs/7/logs")
+		w.WriteHeader(http.StatusMovedPermanently)
+		_, _ = w.Write([]byte(`{"message":"Moved Permanently","url":"https://api.example/repositories/1"}`))
+	}
+	f.route("GET /repos/afrase/nushi-gh-test/actions/jobs/7/logs", moved)
+	log, err := f.client().JobLog(t.Context(), repo, 7)
+	var api *APIError
+	if !errors.As(err, &api) || api.Status != http.StatusMovedPermanently || !strings.Contains(api.Message, "repositories/1") {
+		t.Fatalf("job log: %q %v", log, err)
+	}
+	f.route("GET /repos/afrase/nushi-gh-test/git/ref/heads/main", moved)
+	if _, err := f.client().BranchHead(t.Context(), repo, "main"); !errors.As(err, &api) || errors.Is(err, ErrNotFound) {
+		t.Fatalf("branch: %v", err)
+	}
+	f.route("GET /repos/afrase/nushi-gh-test/actions/jobs/8/logs", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Location", "http://plain.example/log")
+		w.WriteHeader(http.StatusFound)
+		_, _ = w.Write([]byte("not the log"))
+	})
+	if log, err := f.client().JobLog(t.Context(), repo, 8); err == nil {
+		t.Fatalf("a log's link to http: %q", log)
 	}
 }
 

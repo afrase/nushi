@@ -108,21 +108,17 @@ func refusal(status int, message string) *APIError {
 // get is a REST GET of path, a template whose {} are filled with args
 // (escaped). It sends the ETag of the last answer and takes a 304 as that
 // answer again. It returns the answer's headers. A repository that moved
-// (a 301) is an error.
+// (a 301) is an error (send's).
 func (c *Client) get(ctx context.Context, path string, args []string, query url.Values, out any) (http.Header, error) {
 	u := c.rest + fill(path, args)
 	if len(query) > 0 {
 		u += "?" + query.Encode()
 	}
-	a, err := c.send(ctx, http.MethodGet, path, u, "core", nil, false)
+	a, err := c.send(ctx, http.MethodGet, path, u, "core", nil, false, false)
 	if err != nil {
 		return nil, err
 	}
-	switch {
-	case a.status == http.StatusNotModified: // send's body is the one kept
-	case a.status/100 == 3:
-		return nil, &APIError{Status: a.status, Message: "it moved to " + a.header.Get("Location")}
-	default:
+	if a.status != http.StatusNotModified { // else send's body is the one kept
 		c.etags.keep(u, a.header.Get("ETag"), a.body)
 	}
 	if out == nil {
@@ -154,7 +150,7 @@ func (c *Client) graphql(ctx context.Context, doc string, vars map[string]any, o
 	if err != nil {
 		return nil, err
 	}
-	a, err := c.send(ctx, http.MethodPost, m[2], c.gql, "graphql", payload, m[1] == "mutation")
+	a, err := c.send(ctx, http.MethodPost, m[2], c.gql, "graphql", payload, m[1] == "mutation", false)
 	if err != nil {
 		return nil, err
 	}
@@ -203,14 +199,16 @@ type answer struct {
 // call is a REST call of path (filled; what, its template) in the core
 // bucket; anything but a GET is a write, through the gate's write limits.
 func (c *Client) call(ctx context.Context, method, what, path string, payload []byte) (*answer, error) {
-	return c.send(ctx, method, what, c.rest+path, "core", payload, method != http.MethodGet)
+	return c.send(ctx, method, what, c.rest+path, "core", payload, method != http.MethodGet, false)
 }
 
-// send makes a request through the gate and returns a 2xx (or a 304)
-// answer, read whole while the request holds its place; any other is an
-// error. what is the path template or the operation, the only thing of
-// the request that's logged.
-func (c *Client) send(ctx context.Context, method, what, u, bucket string, payload []byte, write bool) (*answer, error) {
+// send makes a request through the gate and returns a 2xx (or a 304 to
+// the ETag it sent) answer, read whole while the request holds its place;
+// with link, a 302 too (a job log's link, JobLog). Any other is an error:
+// a redirect (a repository that moved) names where it goes and is never
+// read as the answer. what is the path template or the operation, the
+// only thing of the request that's logged.
+func (c *Client) send(ctx context.Context, method, what, u, bucket string, payload []byte, write, link bool) (*answer, error) {
 	release, err := c.lim.enter(ctx, bucket, write)
 	if err != nil {
 		return nil, err
@@ -251,8 +249,11 @@ func (c *Client) send(ctx context.Context, method, what, u, bucket string, paylo
 	if resp.StatusCode == http.StatusNotModified && kept.tag != "" {
 		return &answer{status: resp.StatusCode, header: resp.Header, body: kept.body}, nil
 	}
-	if resp.StatusCode/100 == 2 || resp.StatusCode/100 == 3 { // a log's link
+	if resp.StatusCode/100 == 2 || link && resp.StatusCode == http.StatusFound {
 		return &answer{status: resp.StatusCode, header: resp.Header, body: body}, nil
+	}
+	if resp.StatusCode/100 == 3 {
+		return nil, refusal(resp.StatusCode, "it moved to "+resp.Header.Get("Location"))
 	}
 	err = c.failure(resp, b.Name, body)
 	if resp.StatusCode >= 500 || errors.As(err, new(*RateLimitedError)) {

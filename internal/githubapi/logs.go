@@ -36,13 +36,16 @@ func (c *Client) JobLog(ctx context.Context, repo string, job int64) (string, er
 		return "", err
 	}
 	path := "/repos/{}/{}/actions/jobs/{}/logs"
-	a, err := c.call(ctx, http.MethodGet, path, fill(path, []string{owner, name, strconv.FormatInt(job, 10)}), nil)
+	a, err := c.send(ctx, http.MethodGet, path, c.rest+fill(path, []string{owner, name, strconv.FormatInt(job, 10)}), "core", nil, false, true)
 	if err != nil {
 		return "", err
 	}
-	loc, err := url.Parse(a.header.Get("Location"))
-	if a.status != http.StatusFound || err != nil || loc.Scheme != "https" {
+	if a.status != http.StatusFound {
 		return string(a.body), nil // an answer with the text itself
+	}
+	loc, err := url.Parse(a.header.Get("Location"))
+	if err != nil || loc.Scheme != "https" {
+		return "", errors.New("GitHub's link to the log isn't https")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, loc.String(), http.NoBody)
 	if err != nil {

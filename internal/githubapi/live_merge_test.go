@@ -38,7 +38,7 @@ func (l *lab) call(method, path string, in, out any) error {
 		}
 	}
 	u := l.c.rest + "/repos/" + testRepo + path
-	a, err := l.c.send(context.Background(), method, "lab", u, "core", payload, method != http.MethodGet)
+	a, err := l.c.send(context.Background(), method, "lab", u, "core", payload, method != http.MethodGet, false)
 	if err != nil || out == nil {
 		return err
 	}
