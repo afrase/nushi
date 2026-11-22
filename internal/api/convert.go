@@ -11,21 +11,32 @@ import (
 
 // Conversions between the features' model types and the API's.
 
+// messageProto is a message handed back to send again (Rewind, Unqueue,
+// a cancelled turn's take-back): its images always whole.
 func messageProto(m model.Message) *nushiv1.QueuedMessage {
+	return queuedProto(m, false)
+}
+
+// queuedProto is a message for the API; with refs, its larger images go
+// as references (imageProto), as an item's do.
+func queuedProto(m model.Message, refs bool) *nushiv1.QueuedMessage {
 	out := &nushiv1.QueuedMessage{Id: m.ID, Text: m.Text, Files: m.Files, ToSubagent: m.To}
 	if m.ToSubagent != nil {
 		out.ToSubagentName, out.ToSubagentStop = m.ToSubagent.Agent, m.ToSubagent.Stop
 	}
 	for _, img := range m.Images {
-		out.Images = append(out.Images, &nushiv1.ImageData{MimeType: img.MimeType, Data: img.Data})
+		out.Images = append(out.Images, imageProto(img, refs))
 	}
 	return out
 }
 
-func queueProto(q []model.Message) *nushiv1.ChatQueue {
+// queueProto is a chat's queue for the API. It goes to every client on
+// each change of the queue, and the app only counts its images, so with
+// refs a queued screenshot goes as its hash, not its bytes (ADR 0099).
+func queueProto(q []model.Message, refs bool) *nushiv1.ChatQueue {
 	out := &nushiv1.ChatQueue{}
 	for _, m := range q {
-		out.Messages = append(out.Messages, messageProto(m))
+		out.Messages = append(out.Messages, queuedProto(m, refs))
 	}
 	return out
 }
@@ -78,7 +89,7 @@ func toProto(e model.Event, refs bool) *nushiv1.EventsResponse {
 	case e.Servers != "":
 		out.Kind = &nushiv1.EventsResponse_ServersChanged{ServersChanged: e.Servers}
 	case e.Queue != nil:
-		out.Kind = &nushiv1.EventsResponse_Queue{Queue: queueProto(*e.Queue)}
+		out.Kind = &nushiv1.EventsResponse_Queue{Queue: queueProto(*e.Queue, refs)}
 	case e.Commands != nil:
 		out.Kind = &nushiv1.EventsResponse_Commands{Commands: &nushiv1.ChatCommands{Commands: commandsProto(e.Commands)}}
 	case e.Remote != nil:

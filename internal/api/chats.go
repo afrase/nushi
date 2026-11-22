@@ -46,7 +46,7 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 	c, start := part.Chat, part.Older
 	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Record), Config: configProto(c.Config),
 		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands), Usage: usageProto(c.Usage),
-		Queue: queueProto(c.Queue), Older: int32(start)}
+		Queue: queueProto(c.Queue, req.Msg.ImageRefs), Older: int32(start)}
 	resp.Items = s.itemsProto(req.Msg.ChatId, c.Items, req.Msg.ImageRefs)
 	resp.Running = s.itemsProto(req.Msg.ChatId, part.Running, req.Msg.ImageRefs)
 	return connect.NewResponse(resp), nil

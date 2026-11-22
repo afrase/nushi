@@ -4157,7 +4157,10 @@ func (x *FileUpload) GetData() []byte {
 	return nil
 }
 
-// A message the user sent, waiting in a chat's queue.
+// A message the user sent, waiting in a chat's queue. In a ChatQueue to a
+// client with image_refs, its images over 64 KB come as references, which
+// GetChatImage doesn't serve until the message runs; Unqueue, RewindChat
+// and CancelTurn's take_back return its images whole.
 type QueuedMessage struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Id     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`

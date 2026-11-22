@@ -1,6 +1,6 @@
 # 0099. The phone fetches a chat's images on their own
 
-Status: accepted, 2026-11-07. Amended 2026-11-09: the Mac asks for references too. A chat of 200 screenshots (270 KB each) held 51.5 MB in its items, a copy of each to show (51.5 MB more), and all 200 decoded at once (281 MB), since the transcript builds every row; a chat left for another kept its items and copies. Now the Mac fetches each as it comes near, keeps 32 MB by hash (the daemon is on the same machine, so a fetch again is cheap), and a row more than two screens off lets its image go in its place (the phone's rows hold theirs: a fetch again goes over the relay); its image cache keeps 64 MB of decoded pixels, not Flutter's 100. Scrolled through, the same chat holds 12 images in its rows, 64 MB decoded and 32 MB of bytes.
+Status: accepted, 2026-11-07. Amended 2026-11-09: the Mac asks for references too. A chat of 200 screenshots (270 KB each) held 51.5 MB in its items, a copy of each to show (51.5 MB more), and all 200 decoded at once (281 MB), since the transcript builds every row; a chat left for another kept its items and copies. Now the Mac fetches each as it comes near, keeps 32 MB by hash (the daemon is on the same machine, so a fetch again is cheap), and a row more than two screens off lets its image go in its place (the phone's rows hold theirs: a fetch again goes over the relay); its image cache keeps 64 MB of decoded pixels, not Flutter's 100. Scrolled through, the same chat holds 12 images in its rows, 64 MB decoded and 32 MB of bytes. Amended 2026-11-23: the queue's images come as references too, with `image_refs` (Consequences).
 
 ## Context
 The owner's phone sat on "Couldn't load it yet: trying again" for minutes. The chat's recent 80 items held four screenshots inline (2.5–3.4 MB each, about 12 MB): over a weak cell link and the relay (8 MB at once, then 1 MB/s) the snapshot outlived the phone's link checks (`app/lib/phone/link.dart`), the link dropped, and the load started over, four times in two minutes. Text loads in a fraction of that; images were the weight.
@@ -14,7 +14,7 @@ The owner's phone sat on "Couldn't load it yet: trying again" for minutes. The c
 ## Consequences
 - A chat of screenshots opens on the phone as fast as one without; each image then takes its own few seconds, and a dropped link costs one image, not the load.
 - Hashing: an image is hashed once, as it comes in (from the agent, from a prompt) or read from its transcript copy's file name, and keeps its hash beside its bytes (`model.Image.Hash`, not stored); references and `GetChatImage` only compare hashes, so a fetch doesn't read the chat's other images. The phone hashes each large image it queues, and again one it takes back out of the queue.
-- The queue's and a rewound message's images still come inline (a message being written, small and rare).
+- A rewound or unqueued message's images still come inline (a message being written, to send again). The queue's did too until 2026-11-23; now, with `image_refs`, its images over 64 KB come as references, which `GetChatImage` doesn't serve (the app only counts them): the whole queue goes to every client on each change, and three queued screenshots were about 11 MB each time.
 
 ## Alternatives considered
 - A smaller `recent` on the phone: still 12 MB whenever four screenshots are near the end.

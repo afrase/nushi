@@ -5076,7 +5076,10 @@ class FileUpload extends $pb.GeneratedMessage {
   void clearData() => $_clearField(2);
 }
 
-/// A message the user sent, waiting in a chat's queue.
+/// A message the user sent, waiting in a chat's queue. In a ChatQueue to a
+/// client with image_refs, its images over 64 KB come as references, which
+/// GetChatImage doesn't serve until the message runs; Unqueue, RewindChat
+/// and CancelTurn's take_back return its images whole.
 class QueuedMessage extends $pb.GeneratedMessage {
   factory QueuedMessage({
     $core.String? id,
