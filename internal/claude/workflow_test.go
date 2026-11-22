@@ -70,20 +70,25 @@ func TestNoWorkflowWithoutARun(t *testing.T) {
 
 // A replayed call has only its text: the ids come from its lines, in any
 // order, with CRLF and trailing spaces; text that isn't a launch, or with a
-// bad id, is none.
+// bad id, is none, and so is another tool's call whatever its output.
 func TestLaunchedWorkflowFromItsText(t *testing.T) {
-	w := harness.LaunchedWorkflow(launchText)
+	call := func(text string) model.Item { return model.Item{Kind: model.ToolCall, Tool: "Workflow", Text: text} }
+	w := harness.LaunchedWorkflow(call(launchText))
 	if w == nil || w.RunID != "wf_769a004c-2aa" || w.TaskID != "w9u1xb6ik" || w.Description != "Ask four helpers in two phases" {
 		t.Fatalf("got %+v", w)
 	}
 	crlf := "Workflow launched in background. Task ID: t1  \r\nRun ID: wf_x1  \r\nSummary: s\r\n"
-	if w := harness.LaunchedWorkflow(crlf); w == nil || w.RunID != "wf_x1" || w.TaskID != "t1" || w.Description != "s" {
+	if w := harness.LaunchedWorkflow(call(crlf)); w == nil || w.RunID != "wf_x1" || w.TaskID != "t1" || w.Description != "s" {
 		t.Errorf("CRLF: got %+v", w)
 	}
 	for _, text := range []string{"", "Async agent launched", strings.ReplaceAll(launchText, "wf_769a004c-2aa\nTo", "wf_../x\nTo"),
 		"Workflow launched in background. Task ID: t1\n"} {
-		if w := harness.LaunchedWorkflow(text); w != nil {
+		if w := harness.LaunchedWorkflow(call(text)); w != nil {
 			t.Errorf("%q: got %+v", text, w)
 		}
+	}
+	echoed := model.Item{Kind: model.ToolCall, Tool: "Bash", Text: launchText}
+	if w := harness.LaunchedWorkflow(echoed); w != nil {
+		t.Errorf("a Bash call that printed a launch's words: got %+v", w)
 	}
 }

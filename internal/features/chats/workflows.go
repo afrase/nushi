@@ -34,14 +34,15 @@ type follow struct {
 
 // workflowLocked notices a call that launched a workflow and follows it,
 // once the call completed: its run (model.Workflow) as the harness read
-// it from the call, or now from its output (a replay has no more).
+// it from the call, or now from the whole call (a replay has no more),
+// which the harness says is a launch or not.
 func (c *chat) workflowLocked(it *model.Item) {
 	r := c.kind.workflows
-	if r == nil || it.Kind != model.ToolCall || it.Tool != "Workflow" || it.Status != "completed" || it.Parent != "" || c.muted {
+	if r == nil || it.Kind != model.ToolCall || it.Status != "completed" || it.Parent != "" || c.muted {
 		return
 	}
 	if it.Workflow == nil {
-		if it.Workflow = r.LaunchedWorkflow(it.Text); it.Workflow == nil {
+		if it.Workflow = r.LaunchedWorkflow(*it); it.Workflow == nil {
 			return
 		}
 		it.TaskID = it.Workflow.TaskID
@@ -76,7 +77,7 @@ func (c *chat) workflowLocked(it *model.Item) {
 // may still run: after a reopen or a copy read back, none is followed.
 func (c *chat) followWorkflowsLocked() {
 	for i := range c.items {
-		if it := &c.items[i]; it.Tool == "Workflow" && !it.Workflow.Final() {
+		if it := &c.items[i]; it.Kind == model.ToolCall && !it.Workflow.Final() {
 			c.workflowLocked(it)
 		}
 	}
@@ -227,6 +228,9 @@ func (c *chat) setWorkflowLocked(it *model.Item, w *model.Workflow, ended bool) 
 	}
 	published := *it
 	c.emitLocked(model.Event{ChatID: c.id, Item: &published, WorkflowEnded: ended})
+	if w == nil && !c.muted { // the item no longer says it was a workflow's: count again
+		c.recountLocked()
+	}
 	if w == nil || w.Final() {
 		c.copyLocked(false)
 	}

@@ -306,8 +306,43 @@ func TestAWorkflowNeverFoundIsAPlainCall(t *testing.T) {
 	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow == nil && len(f.c.following) == 0 })
 	f.c.mu.Lock()
 	defer f.c.mu.Unlock()
-	if f.c.workflowsLocked() != 0 || f.c.itemLocked(wfCall).TaskID != "" {
+	if f.c.workflowsLocked() != 0 || f.c.workflows != 0 || f.c.itemLocked(wfCall).TaskID != "" {
 		t.Error("still counted")
+	}
+}
+
+// otherLauncher is an agent whose own tool "Run" launches its workflows.
+type otherLauncher struct{ workflowHarness }
+
+func (otherLauncher) LaunchedWorkflow(call model.Item) *model.Workflow {
+	if call.Tool != "Run" {
+		return nil
+	}
+	return &model.Workflow{RunID: "wf_1", TaskID: "t1"}
+}
+
+// A call launched a workflow when the agent's harness says so, whatever
+// the tool's name: not by Claude's tool name in shared code.
+func TestAWorkflowIsWhatTheHarnessSays(t *testing.T) {
+	agent := &fakeAgent{}
+	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
+	files := &fakeWorkflows{read: runningAs, reads: make(chan int, 1000)}
+	h := otherLauncher{workflowHarness{testHarness{Name: "claude"}, files}}
+	svc := newService(t, []Kind{{Harness: h, Launch: agent.launch}},
+		Options{Timing: Timing{WorkflowPoll: 5 * time.Millisecond, WorkflowQuiet: time.Hour}})
+	t.Cleanup(svc.Close)
+	c := startChat(t, svc, t.TempDir())
+	c.mu.Lock()
+	c.busy = true // reopening: the agent replays
+	c.restoreLocked([]model.Item{
+		{ID: "run", Kind: model.ToolCall, Tool: "Run", Status: "completed"},
+		{ID: "wf", Kind: model.ToolCall, Tool: "Workflow", Status: "completed", Text: launchText},
+	}, nil)
+	c.busy = false
+	run, wf := c.following["run"], c.following["wf"]
+	c.mu.Unlock()
+	if run == nil || wf != nil {
+		t.Errorf("followed: Run %v, Workflow %v", run != nil, wf != nil)
 	}
 }
 

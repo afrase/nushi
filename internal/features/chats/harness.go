@@ -259,13 +259,14 @@ type HistoryChecker interface {
 
 // WorkflowReader follows the runs the agent's tool calls launch, which go
 // on past the call (Claude's Workflow, ADR 0127), from the agent's own
-// files: LaunchedWorkflow reads a call's output when nothing else told of
-// its run (a replay); ReadWorkflow reads the run w names, of session sid of
+// files: LaunchedWorkflow says whether a completed call launched a run, and
+// reads it from the call when nothing else told of it (a replay); nil for
+// any other call; ReadWorkflow reads the run w names, of session sid of
 // folder (fs.ErrNotExist: none of its files is there yet); WorkflowAgents
 // lists its agents, and WorkflowAgentItems reads one's steps, the last
 // limit of them, and how many came before.
 type WorkflowReader interface {
-	LaunchedWorkflow(output string) *model.Workflow
+	LaunchedWorkflow(call model.Item) *model.Workflow
 	ReadWorkflow(sid, folder string, w model.Workflow) (model.Workflow, error)
 	WorkflowAgents(sid, folder string, w model.Workflow) ([]model.WorkflowAgent, error)
 	WorkflowAgentItems(sid, folder string, w model.Workflow, agentID string, limit int) ([]model.Item, int, error)

@@ -288,11 +288,17 @@ func (c *chat) emitLocked(e model.Event) {
 	c.publish(e)
 	// A subagent, background command or workflow started or ended: the
 	// status says how many run.
-	if e.Item != nil && (e.Item.BackgroundCommand != nil || e.Item.Subagent != nil || e.Item.Tool == "Workflow") {
-		if n, w := c.runningLocked(), c.workflowsLocked(); n != c.background || w != c.workflows {
-			c.background, c.workflows = n, w
-			c.statusChangedLocked()
-		}
+	if e.Item != nil && (e.Item.BackgroundCommand != nil || e.Item.Subagent != nil || e.Item.Workflow != nil) {
+		c.recountLocked()
+	}
+}
+
+// recountLocked tells the status when the number of subagents, background
+// commands or workflows that run changed.
+func (c *chat) recountLocked() {
+	if n, w := c.runningLocked(), c.workflowsLocked(); n != c.background || w != c.workflows {
+		c.background, c.workflows = n, w
+		c.statusChangedLocked()
 	}
 }
 

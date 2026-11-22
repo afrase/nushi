@@ -45,11 +45,17 @@ func launched(run, task, name, summary string) *model.Workflow {
 	return &model.Workflow{RunID: run, TaskID: task, Name: clip(secrets.MaskText(name), 200), Description: clip(secrets.MaskText(summary), model.WorkflowSummaryText)}
 }
 
-// LaunchedWorkflow reads a Workflow call's output when no toolResponse came
-// with it (a replay): "Workflow launched in background. Task ID: <id>",
-// "Summary: <line>" and "Run ID: <id>" on lines of their own. The name
-// isn't in it: the script's file says it, which isn't read here.
-func (Harness) LaunchedWorkflow(output string) *model.Workflow {
+// LaunchedWorkflow reads the run a Workflow call launched from its output
+// when no toolResponse came with it (a replay): "Workflow launched in
+// background. Task ID: <id>", "Summary: <line>" and "Run ID: <id>" on lines
+// of their own. Any other tool's call launched none, whatever its output
+// says. The name isn't in it: the script's file says it, which isn't read
+// here.
+func (Harness) LaunchedWorkflow(call model.Item) *model.Workflow {
+	if call.Tool != "Workflow" {
+		return nil
+	}
+	output := call.Text
 	if !strings.HasPrefix(strings.TrimSpace(output), "Workflow launched in background.") {
 		return nil
 	}
