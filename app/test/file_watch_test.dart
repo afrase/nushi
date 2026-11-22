@@ -18,7 +18,6 @@ void main() {
       ..streams = (input) {
         if (input is! WatchChatFileRequest) return null;
         // Closed by the test (lose).
-        // ignore: close_sinks
         final s = StreamController<WatchChatFileResponse>();
         watches.add(s);
         return s.stream;
