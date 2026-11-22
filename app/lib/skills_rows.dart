@@ -167,12 +167,8 @@ class _SkillRow extends StatelessWidget {
     final muted = theme.ui(theme.t.textMuted, size: 11);
     final plugin = skill.source == 'plugin';
     // The daemon says what its Trash would refuse (a file, one in a
-    // group, another agent's).
-    final deletable =
-        !plugin &&
-        skill.source != 'system' &&
-        !skill.noTrash &&
-        ownSkill(list.agent, skill.path);
+    // group, another agent's, the agent's own built-in ones).
+    final deletable = !plugin && skill.source != 'system' && !skill.noTrash;
     final word = _stateWord(skill.state);
     return Row(
       children: [

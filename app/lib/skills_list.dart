@@ -151,20 +151,3 @@ Future<void> setSkillOn(SkillsList list, Skill s, {required bool on}) async {
   );
   await list.changed();
 }
-
-/// Whether the skill at [path] is in one of [agent]'s own folders, which
-/// Nushi deletes from, rather than another agent's it also reads (omp,
-/// Ante and OpenCode read Claude's, omp Codex's and GitHub's). The agent's
-/// own built-in ones aren't deleted either (it puts them back). A daemon
-/// from API 114 says all of it, and more, as Skill.no_trash, which a row
-/// goes by as well; this stays for an older one still waiting to restart
-/// (ADR 0056), which doesn't.
-bool ownSkill(String agent, String path) {
-  final others = {
-    '/.claude/skills/': 'claude',
-    '/.codex/skills/': 'codex',
-    '/.github/skills/': '',
-    '/.agent/skills/': '',
-  };
-  return !others.entries.any((e) => path.contains(e.key) && e.value != agent);
-}
