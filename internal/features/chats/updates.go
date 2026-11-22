@@ -151,17 +151,7 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 			c.meterLocked(model.UsageOwn, nil)
 		}
 		if ownEnded {
-			// Only a harness that tells the end has a verdict to give:
-			// without one, any usage ends it, and a late update after a
-			// turn of Nushi's would notify "finished" a second time. Its
-			// calls' clocks stop either way, as at a turn's end.
-			end := model.NotEnded
-			if c.kind.transcript != nil {
-				end = model.TurnDone
-			} else if c.endCallsLocked() {
-				c.copyLocked(true)
-			}
-			c.endOwnTurnLocked(end, "")
+			c.endOwnTurnLocked(model.TurnDone, "")
 		}
 	case "session_info_update":
 		var t string // a title cleared (null) is left as it was
@@ -437,15 +427,27 @@ func (c *chat) rel(path string) string {
 // (end, and failure with TurnFailed) as a turn of Nushi's ends, which
 // notifies and marks the chat done (turnEndedLocked; ADR 0141), or, with
 // NotEnded, only its flags, for a turn something else supersedes.
+//
+// Only a harness that tells the end (a Transcript) has a verdict to give.
+// Without one, an own turn is only guessed from updates after Nushi's turn,
+// a late result among them, and any usage ends it: a verdict would notify
+// "finished" a second time, or "failed" when an idle agent quits. Its
+// calls' clocks stop, as at a turn's end, with no verdict.
 func (c *chat) endOwnTurnLocked(end model.TurnEnd, failure string) {
 	if !c.ownTurn {
 		return
 	}
 	c.ownTurn, c.ownNoted = false, false
 	c.lookRelatedLocked()
-	if end == model.NotEnded {
+	switch {
+	case end == model.NotEnded:
 		c.statusChangedLocked()
-		return
+	case c.kind.transcript == nil:
+		if c.endCallsLocked() {
+			c.copyLocked(true)
+		}
+		c.statusChangedLocked()
+	default:
+		c.turnEndedLocked(end, failure)
 	}
-	c.turnEndedLocked(end, failure)
 }

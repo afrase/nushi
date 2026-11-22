@@ -123,6 +123,34 @@ func plainOwnTurnChat(t *testing.T) (*Service, *fakeAgent, *chat, *follower) {
 	return svc, agent, c, f
 }
 
+// Without a Transcript, a late update after Nushi's turn looks like an own
+// turn that nothing ends: when the agent then quits, or is stopped, no turn
+// is said to have failed or stopped, as none was known to run.
+func TestAnOwnTurnWithoutATranscriptGetsNoVerdict(t *testing.T) {
+	for _, how := range []string{"quit", "stop"} {
+		t.Run(how, func(t *testing.T) {
+			svc, agent, c, f := plainOwnTurnChat(t)
+			n := f.count()
+			send(c, toolCall("t9", "in_progress"), toolDone("t9")) // a late result
+			if how == "quit" {
+				agent.quit()
+				eventually(t, c, func() bool { return c.agent == nil })
+			} else {
+				_, err := svc.Stop(t.Context(), c.id, false)
+				testcheck.NoErr(t, err)
+			}
+			if got := f.ends(c.id, n); len(got) != 0 {
+				t.Errorf("verdicts %v for a turn not known to run", got)
+			}
+			c.mu.Lock()
+			defer c.mu.Unlock()
+			if c.ownTurn {
+				t.Error("still working on its own")
+			}
+		})
+	}
+}
+
 // Without a Transcript, the usage that ends the agent's own turn stops its
 // running calls' clocks, as a turn's end does, though it gives no verdict.
 func TestAnOwnTurnsEndStopsItsCallsClocks(t *testing.T) {
