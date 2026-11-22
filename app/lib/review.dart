@@ -174,13 +174,14 @@ File get _file => File('$dataDir/reviews.json');
 /// the data folder until sent and gone, or removed.
 final reviews = ValueNotifier<Map<String, List<ReviewComment>>>(_readReviews());
 
-/// `reviews.json` couldn't be read: nothing is saved over it.
+/// `reviews.json` couldn't be read: nothing is saved over it until a
+/// save's read works ([_readReviewsAgain]).
 bool _reviewsUnread = false;
 
 /// `reviews.json` by [readKept]'s rule: a file that doesn't parse is set
 /// aside, one with a comment that doesn't read is copied aside and the
-/// rest kept and written back, and one that can't be read at all is none, and isn't
-/// written over in this run.
+/// rest kept and written back, and one that can't be read at all is
+/// none, and isn't written over until it reads.
 Map<String, List<ReviewComment>> _readReviews() {
   final Map<String, Object?> j;
   try {
@@ -219,8 +220,28 @@ Map<String, List<ReviewComment>> _readReviews() {
 void setComments(String chat, List<ReviewComment> comments) {
   reviews.value = {...reviews.value, chat: comments}
     ..removeWhere((_, v) => v.isEmpty);
-  if (_reviewsUnread) return; // kept until the app quits
+  // Kept in memory until a read works.
+  if (_reviewsUnread && !_readReviewsAgain()) return;
   _write(reviews.value);
+}
+
+/// Reads `reviews.json` again, for a save after a launch that couldn't:
+/// true once it reads, and then its comments are back beside those made
+/// since (none of its own could have been changed or removed, unseen).
+bool _readReviewsAgain() {
+  _reviewsUnread = false;
+  final kept = _readReviews();
+  if (_reviewsUnread) return false;
+  final mine = reviews.value;
+  reviews.value = {
+    for (final chat in {...kept.keys, ...mine.keys})
+      chat: [
+        for (final c in kept[chat] ?? const <ReviewComment>[])
+          if (!(mine[chat]?.any((m) => m.id == c.id) ?? false)) c,
+        ...?mine[chat],
+      ],
+  };
+  return true;
 }
 
 /// Writes [all] over `reviews.json`; on an error they're kept in memory

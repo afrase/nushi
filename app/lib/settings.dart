@@ -738,6 +738,9 @@ final class Pref<T> extends ValueNotifier<T> {
   /// Whether the value is no longer the one read at launch.
   bool _touched = false;
 
+  /// Taking what `app.json` holds, read late ([_readAgain]): not a change.
+  bool _quiet = false;
+
   final String key;
   final T Function(Object? saved) _read;
   final Object? Function(T value)? _write;
@@ -761,6 +764,7 @@ final class Pref<T> extends ValueNotifier<T> {
   }
 
   void _changed() {
+    if (_quiet) return;
     _touched = true;
     _saveSoon();
   }
@@ -772,6 +776,19 @@ final class Pref<T> extends ValueNotifier<T> {
     final write? => write(value),
     null => value,
   };
+
+  /// Takes what `app.json` holds now, read after a launch that couldn't
+  /// ([_readAgain]), unless it was changed meanwhile: not a change of its
+  /// own, so it's saved as it was.
+  void _readLate() {
+    if (_touched) return;
+    _quiet = true;
+    try {
+      value = _read(_saved[key]);
+    } finally {
+      _quiet = false;
+    }
+  }
 
   void _reset() {
     value = _read(_saved[key]);
@@ -844,8 +861,9 @@ File get _settings => File('$dataDir/app.json');
 
 /// `app.json` as it was at launch, read by [readKept] (one that didn't
 /// parse was set aside, and reads as none); null when it couldn't be read
-/// at all, and then nothing is saved over it in this run.
-final Kept? _launch = _readLaunch();
+/// at all, and then nothing is saved over it until a save's read works
+/// ([_readAgain]).
+Kept? _launch = _readLaunch();
 
 Kept? _readLaunch() {
   try {
@@ -858,8 +876,23 @@ Kept? _readLaunch() {
   }
 }
 
-/// `app.json` as it was at launch.
-final Map<String, Object?> _saved = _launch?.json ?? {};
+/// `app.json` as it was at launch (or as read late, [_readAgain]).
+Map<String, Object?> get _saved => _launch?.json ?? const {};
+
+/// Reads `app.json` again, for a save after a launch that couldn't: true
+/// once it reads, and then the prefs not changed since take what it
+/// holds, and what was changed is saved over it.
+bool _readAgain() {
+  try {
+    _launch = readKept(_settings);
+  } on Object {
+    return false; // still not: nothing saved, the changes kept in memory
+  }
+  for (final p in [..._made]) {
+    p._readLate();
+  }
+  return true;
+}
 
 /// `app.json` as it is on disk now; empty when it can't be read.
 Map<String, Object?> readSaved() {
@@ -891,10 +924,10 @@ void _saveSoon() {
 
 /// Writes the prefs made over `app.json` as it was at launch: those not
 /// read in this run, and keys a newer app saved, stay as they were. One
-/// that couldn't be read isn't written over: the prefs changed apply
-/// until the app quits.
+/// that couldn't be read isn't written over, but read again first: the
+/// prefs changed apply in memory until it reads.
 void _save() {
-  if (_launch == null) return;
+  if (_launch == null && !_readAgain()) return;
   try {
     writeWhole(
       _settings,

@@ -96,4 +96,26 @@ void main() {
     expect(_file.readAsStringSync(), was);
     expect(_aside(), isEmpty);
   });
+
+  test('once it reads, a save puts its comments back beside those made '
+      'since', () {
+    final was = jsonEncode({
+      'c': [_comment('1')],
+      'd': [_comment('2')],
+    });
+    _file.writeAsStringSync(was);
+    Process.runSync('chmod', ['000', _file.path]);
+    addTearDown(() => Process.runSync('chmod', ['600', _file.path]));
+    rereadReviews();
+    setComments('d', [ReviewComment.fromJson(_comment('3'))]);
+    Process.runSync('chmod', ['600', _file.path]);
+    expect(_file.readAsStringSync(), was);
+
+    setComments('e', [ReviewComment.fromJson(_comment('4'))]);
+    expect([for (final c in commentsOf('c')) c.id], ['1']);
+    expect([for (final c in commentsOf('d')) c.id], ['2', '3']);
+    final saved = jsonDecode(_file.readAsStringSync()) as Map<String, Object?>;
+    expect(saved.keys, unorderedEquals(['c', 'd', 'e']));
+    expect(_aside(), isEmpty);
+  });
 }

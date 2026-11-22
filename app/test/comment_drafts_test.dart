@@ -159,4 +159,31 @@ void main() {
     expect(file().readAsStringSync(), '{"boxes": {"k": "text"}}');
     expect(commentDraft('j'), 'new'); // kept in memory
   });
+
+  test('once it reads, a save puts its drafts back beside those made '
+      'since, which win', () {
+    file().writeAsStringSync(
+      jsonEncode({
+        'boxes': {'k': 'text', 'j': 'old'},
+        'reviews': {
+          'github.com o/r 7': [inline.toProto3Json()],
+        },
+      }),
+    );
+    Process.runSync('chmod', ['000', file().path]);
+    addTearDown(() => Process.runSync('chmod', ['600', file().path]));
+    final kept = CommentDraftFile(dir.path);
+    addTearDown(kept.close);
+    keepCommentDraft('j', 'new');
+    kept.flush();
+    Process.runSync('chmod', ['600', file().path]);
+
+    keepCommentDraft('m', 'more');
+    kept.flush();
+    expect(keptCommentDrafts, {'k': 'text', 'j': 'new', 'm': 'more'});
+    expect(reviewDrafts(ref), [inline]);
+    final j = jsonDecode(file().readAsStringSync()) as Map<String, dynamic>;
+    expect(j['boxes'], {'k': 'text', 'j': 'new', 'm': 'more'});
+    expect(aside(), isEmpty);
+  });
 }

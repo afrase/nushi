@@ -18,8 +18,8 @@ import 'package:nushi/pull_edit.dart';
 /// changing and on [flush] (the app going to the back or quitting). Read
 /// by [readKept]'s rule: a file that doesn't parse is set aside, one with
 /// a draft that doesn't read is copied aside and the rest saved over it
-/// at once, and one that can't be read at all isn't written over in this
-/// run.
+/// at once, and one that can't be read at all isn't written over until a
+/// save reads it.
 final class CommentDraftFile {
   new(String dir, {this.delay = Waits.save})
     : _file = File('$dir/comment_drafts.json') {
@@ -32,10 +32,13 @@ final class CommentDraftFile {
   final _changes = Listenable.merge([commentDraftsChanged, draftsChanged]);
   Timer? _timer;
 
-  /// The file couldn't be read: nothing is saved over it.
+  /// The file couldn't be read: nothing is saved over it until a save's
+  /// read works.
   bool _unread = false;
 
-  void _load() {
+  /// Reads the file and puts its drafts back; [again] after a launch
+  /// that couldn't, when the drafts made since win over its own.
+  void _load({bool again = false}) {
     final Map<String, Object?> j;
     try {
       j = readKept(_file).json;
@@ -43,6 +46,7 @@ final class CommentDraftFile {
       _unread = true;
       return;
     }
+    _unread = false;
     var dropped = false;
     void drop() => dropped = true;
     final boxes = _strings(j['boxes'], drop);
@@ -73,6 +77,14 @@ final class CommentDraftFile {
       } on Object {
         _unread = true; // not copied: not written over either
       }
+    }
+    if (again) {
+      boxes.addAll(keptCommentDrafts);
+      reviews.addAll({
+        for (final MapEntry(:key, :value) in keptReviewDrafts.entries)
+          if (value.isNotEmpty) key: value,
+      });
+      began.addAll(keptPullEdits);
     }
     restoreCommentDrafts(boxes);
     restoreReviewDrafts(reviews);
@@ -119,7 +131,8 @@ final class CommentDraftFile {
     if (waiting == null) return;
     waiting.cancel();
     _timer = null;
-    if (_unread) return; // kept in memory until the app quits
+    if (_unread) _load(again: true);
+    if (_unread) return; // kept in memory; the next save reads again
     _write();
   }
 
