@@ -2430,6 +2430,14 @@ const GetContextUsageResponse$json = {
       '10': 'categories'
     },
     {'1': 'markdown', '3': 2, '4': 1, '5': 9, '10': 'markdown'},
+    {
+      '1': 'lists',
+      '3': 3,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.ContextList',
+      '10': 'lists'
+    },
   ],
 };
 
@@ -2437,7 +2445,42 @@ const GetContextUsageResponse$json = {
 final $typed_data.Uint8List getContextUsageResponseDescriptor = $convert.base64Decode(
     'ChdHZXRDb250ZXh0VXNhZ2VSZXNwb25zZRI5CgpjYXRlZ29yaWVzGAEgAygLMhkubnVzaGkudj'
     'EuQ29udGV4dENhdGVnb3J5UgpjYXRlZ29yaWVzEhoKCG1hcmtkb3duGAIgASgJUghtYXJrZG93'
-    'bg==');
+    'bhIrCgVsaXN0cxgDIAMoCzIVLm51c2hpLnYxLkNvbnRleHRMaXN0UgVsaXN0cw==');
+
+@$core.Deprecated('Use contextListDescriptor instead')
+const ContextList$json = {
+  '1': 'ContextList',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {
+      '1': 'rows',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.ContextListRow',
+      '10': 'rows'
+    },
+  ],
+};
+
+/// Descriptor for `ContextList`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List contextListDescriptor = $convert.base64Decode(
+    'CgtDb250ZXh0TGlzdBISCgRuYW1lGAEgASgJUgRuYW1lEiwKBHJvd3MYAiADKAsyGC5udXNoaS'
+    '52MS5Db250ZXh0TGlzdFJvd1IEcm93cw==');
+
+@$core.Deprecated('Use contextListRowDescriptor instead')
+const ContextListRow$json = {
+  '1': 'ContextListRow',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'tokens', '3': 2, '4': 1, '5': 3, '10': 'tokens'},
+  ],
+};
+
+/// Descriptor for `ContextListRow`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List contextListRowDescriptor = $convert.base64Decode(
+    'Cg5Db250ZXh0TGlzdFJvdxISCgRuYW1lGAEgASgJUgRuYW1lEhYKBnRva2VucxgCIAEoA1IGdG'
+    '9rZW5z');
 
 @$core.Deprecated('Use listMcpServersRequestDescriptor instead')
 const ListMcpServersRequest$json = {
@@ -9488,6 +9531,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.GetContextUsageRequest': GetContextUsageRequest$json,
   '.nushi.v1.GetContextUsageResponse': GetContextUsageResponse$json,
   '.nushi.v1.ContextCategory': ContextCategory$json,
+  '.nushi.v1.ContextList': ContextList$json,
+  '.nushi.v1.ContextListRow': ContextListRow$json,
   '.nushi.v1.ListMcpServersRequest': ListMcpServersRequest$json,
   '.nushi.v1.ListMcpServersResponse': ListMcpServersResponse$json,
   '.nushi.v1.McpServer': McpServer$json,

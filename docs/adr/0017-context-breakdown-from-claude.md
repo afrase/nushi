@@ -13,7 +13,11 @@ call, no cost, left out of `session/load` replay) with markdown that has an
 
 The daemon sends `/context` on its own while the chat is idle and keeps its
 answer out of the transcript; `internal/claude` reads the table, and
-the API returns both the categories and the markdown. The app shows the
+the API returns both the categories and the markdown. Amended (API 141):
+it also reads the lists after the table (MCP tools, custom agents,
+skills, memory files) into `GetContextUsageResponse.lists`, and marks
+which category is the conversation and which the buffer
+(`ContextCategory.part`), so the app reads none of Claude's format. The app shows the
 markdown as it is when no categories could be read, rather than guessing.
 An agent without a `context` command gets the card as before.
 

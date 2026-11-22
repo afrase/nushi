@@ -209,9 +209,29 @@ Future<(Daemon, FakeDaemon)> railApp(
   return (d, fake);
 }
 
+/// The lists the daemon reads from [reportMarkdown].
+final List<ContextList> reportLists = [
+  ContextList(
+    name: 'MCP tools',
+    rows: [
+      ContextListRow(name: 'mcp__github__get_me', tokens: Int64(120)),
+      ContextListRow(name: 'mcp__github__list_issues', tokens: Int64(410)),
+      ContextListRow(name: 'mcp__docs__read', tokens: Int64(250)),
+    ],
+  ),
+  ContextList(
+    name: 'Custom agents',
+    rows: [
+      ContextListRow(name: 'reviewer', tokens: Int64(180)),
+      ContextListRow(name: 'explorer', tokens: Int64(134)),
+    ],
+  ),
+];
+
 final fullContext = GetContextUsageResponse(
   categories: reportCategories,
   markdown: reportMarkdown,
+  lists: reportLists,
 );
 
 Finder get railPanel => find.byType(DetailsPanel);

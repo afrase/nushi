@@ -1643,6 +1643,22 @@ message GetContextUsageResponse {
   repeated ContextCategory categories = 1;
   // The agent's answer as it gave it, markdown.
   string markdown = 2;
+  // What the agent lists beside its categories (the MCP tools, custom
+  // agents, skills and memory files it loaded), in its order, as its
+  // harness reads them (API 141); none from an older daemon.
+  repeated ContextList lists = 3;
+}
+
+// A list in an agent's context report: "MCP tools" and a row for each.
+message ContextList {
+  string name = 1;
+  repeated ContextListRow rows = 2;
+}
+
+// One thing in a ContextList: its name and its tokens.
+message ContextListRow {
+  string name = 1;
+  int64 tokens = 2;
 }
 
 message ListMcpServersRequest {

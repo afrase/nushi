@@ -524,7 +524,7 @@ class _ChatDetailsState extends State<_ChatDetails> with FollowsChanges {
                     u,
                     // As last asked, brought up to the agent's latest count.
                     categories: liveCategories(_context?.categories ?? [], u),
-                    lists: unread ? [] : contextLists(_context?.markdown ?? ''),
+                    lists: unread ? const [] : _context?.lists ?? const [],
                     onCompact: _canCompact ? _compact : null,
                   ),
                 ),

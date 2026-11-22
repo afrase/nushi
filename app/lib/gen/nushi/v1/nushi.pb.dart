@@ -9786,10 +9786,12 @@ class GetContextUsageResponse extends $pb.GeneratedMessage {
   factory GetContextUsageResponse({
     $core.Iterable<ContextCategory>? categories,
     $core.String? markdown,
+    $core.Iterable<ContextList>? lists,
   }) {
     final result = GetContextUsageResponse._();
     if (categories != null) result.categories.addAll(categories);
     if (markdown != null) result.markdown = markdown;
+    if (lists != null) result.lists.addAll(lists);
     return result;
   }
 
@@ -9809,6 +9811,8 @@ class GetContextUsageResponse extends $pb.GeneratedMessage {
     ..pPM<ContextCategory>(1, _omitFieldNames ? '' : 'categories',
         subBuilder: ContextCategory.$_createMessage)
     ..aOS(2, _omitFieldNames ? '' : 'markdown')
+    ..pPM<ContextList>(3, _omitFieldNames ? '' : 'lists',
+        subBuilder: ContextList.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -9849,6 +9853,147 @@ class GetContextUsageResponse extends $pb.GeneratedMessage {
   $core.bool hasMarkdown() => $_has(1);
   @$pb.TagNumber(2)
   void clearMarkdown() => $_clearField(2);
+
+  /// What the agent lists beside its categories (the MCP tools, custom
+  /// agents, skills and memory files it loaded), in its order, as its
+  /// harness reads them (API 141); none from an older daemon.
+  @$pb.TagNumber(3)
+  $pb.PbList<ContextList> get lists => $_getList(2);
+}
+
+/// A list in an agent's context report: "MCP tools" and a row for each.
+class ContextList extends $pb.GeneratedMessage {
+  factory ContextList({
+    $core.String? name,
+    $core.Iterable<ContextListRow>? rows,
+  }) {
+    final result = ContextList._();
+    if (name != null) result.name = name;
+    if (rows != null) result.rows.addAll(rows);
+    return result;
+  }
+
+  ContextList._();
+
+  factory ContextList.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ContextList()..mergeFromBuffer(data, registry);
+  factory ContextList.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ContextList()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ContextList',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ContextList.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..pPM<ContextListRow>(2, _omitFieldNames ? '' : 'rows',
+        subBuilder: ContextListRow.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContextList clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContextList copyWith(void Function(ContextList) updates) =>
+      super.copyWith((message) => updates(message as ContextList))
+          as ContextList;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ContextList() / ContextList.new instead')
+  static ContextList create() => ContextList._();
+  static $pb.GeneratedMessage $_createMessage() => ContextList._();
+  @$core.override
+  ContextList createEmptyInstance() => ContextList._();
+  @$core.pragma('dart2js:noInline')
+  static ContextList getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ContextList>(
+          ContextList.$_createMessage);
+  static ContextList? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<ContextListRow> get rows => $_getList(1);
+}
+
+/// One thing in a ContextList: its name and its tokens.
+class ContextListRow extends $pb.GeneratedMessage {
+  factory ContextListRow({
+    $core.String? name,
+    $fixnum.Int64? tokens,
+  }) {
+    final result = ContextListRow._();
+    if (name != null) result.name = name;
+    if (tokens != null) result.tokens = tokens;
+    return result;
+  }
+
+  ContextListRow._();
+
+  factory ContextListRow.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ContextListRow()..mergeFromBuffer(data, registry);
+  factory ContextListRow.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ContextListRow()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ContextListRow',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ContextListRow.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aInt64(2, _omitFieldNames ? '' : 'tokens')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContextListRow clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContextListRow copyWith(void Function(ContextListRow) updates) =>
+      super.copyWith((message) => updates(message as ContextListRow))
+          as ContextListRow;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ContextListRow() / ContextListRow.new instead')
+  static ContextListRow create() => ContextListRow._();
+  static $pb.GeneratedMessage $_createMessage() => ContextListRow._();
+  @$core.override
+  ContextListRow createEmptyInstance() => ContextListRow._();
+  @$core.pragma('dart2js:noInline')
+  static ContextListRow getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ContextListRow>(
+          ContextListRow.$_createMessage);
+  static ContextListRow? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get tokens => $_getI64(1);
+  @$pb.TagNumber(2)
+  set tokens($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTokens() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTokens() => $_clearField(2);
 }
 
 class ListMcpServersRequest extends $pb.GeneratedMessage {

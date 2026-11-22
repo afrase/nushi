@@ -6,73 +6,6 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/usage.dart';
 import 'package:nushi/widgets.dart';
 
-/// A list /context gives beside its categories (MCP tools, custom agents,
-/// skills, memory files…): its name as the rail words it and its rows,
-/// each a name and its tokens (0 when not said).
-typedef ContextList = ({String name, List<(String, int)> rows});
-
-/// The lists in /context's answer, [markdown], after its "Estimated usage
-/// by category" table: each `### Heading` over a table, in its order, its
-/// rows' first cell and last cell's count. Claude's private format, as the
-/// daemon reads the categories (ADR 0017); nothing when it isn't there.
-List<ContextList> contextLists(String markdown) {
-  final (_, sep, rest) = _cut(markdown, '### Estimated usage by category');
-  if (sep.isEmpty) return const [];
-  final out = <ContextList>[];
-  String? name;
-  var rows = <(String, int)>[];
-  void flush() {
-    if (name case final n? when rows.isNotEmpty) {
-      out.add((name: n, rows: rows));
-    }
-    rows = [];
-  }
-
-  for (final line in rest.split('\n').skip(1)) {
-    final l = line.trim();
-    if (l.startsWith('###')) {
-      flush();
-      name = _sentence(l.substring(3).trim());
-      continue;
-    }
-    if (name == null || !l.startsWith('|')) continue;
-    final cells = [
-      for (final c
-          in l.substring(1, l.endsWith('|') ? l.length - 1 : null).split('|'))
-        c.trim(),
-    ];
-    if (cells.length < 2 || cells.every((c) => c.startsWith('-'))) continue;
-    final n = _count(cells.last);
-    if (n == null) continue; // the header
-    rows.add((cells.first, n));
-  }
-  flush();
-  return out;
-}
-
-(String, String, String) _cut(String s, String sep) {
-  final i = s.indexOf(sep);
-  return i < 0 ? (s, '', '') : (s.substring(0, i), sep, s.substring(i));
-}
-
-/// "MCP Tools" as the rail words it: "MCP tools".
-String _sentence(String heading) {
-  String word(int i, String w) =>
-      i == 0 || w == w.toUpperCase() ? w : w.toLowerCase();
-  return [for (final (i, w) in heading.split(' ').indexed) word(i, w)]
-      .join(' ');
-}
-
-/// A count as Claude writes it in its lists: 153, ~480, 2.5k, 1.2m.
-int? _count(String s) {
-  var v = s.replaceAll('~', '').replaceAll(',', '').toLowerCase();
-  var mult = 1.0;
-  if (v.endsWith('k')) (mult, v) = (1e3, v.substring(0, v.length - 1));
-  if (v.endsWith('m')) (mult, v) = (1e6, v.substring(0, v.length - 1));
-  final n = double.tryParse(v);
-  return n == null ? null : (n * mult).round();
-}
-
 /// A token count as Claude's rail writes it, to a tenth however large:
 /// 314, 2k, 545.5k, 1M.
 String fineTokens(int n) {
@@ -117,7 +50,8 @@ int? untilCompact(List<ContextCategory> cs) {
 /// and "used / size" on a line, a bar split by kind, then (when the agent
 /// said what fills it, [categories]) a row per kind, largest first, with its
 /// color, count and share in columns, the buffer and the free space last;
-/// the deferred ones dimmed with a dash; [lists], each a row that opens;
+/// the deferred ones dimmed with a dash; [lists] (the MCP tools, skills…
+/// the agent's harness read beside them), each a row that opens;
 /// and "N until auto-compact" when the agent counts a buffer it compacts
 /// into. Compact (Claude's Compact session) ends the block whenever there's
 /// [onCompact], the agent's own compact command, with or without that line.
@@ -375,7 +309,7 @@ class _ListRowState extends State<_ListRow> {
           ),
         ),
         if (_open)
-          for (final (name, n) in l.rows)
+          for (final ContextListRow(:name, tokens: n) in l.rows)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 2, 0, 2),
               child: Row(
@@ -390,7 +324,7 @@ class _ListRowState extends State<_ListRow> {
                   ),
                   if (n > 0)
                     Text(
-                      tokens(n),
+                      tokens(n.toInt()),
                       style: theme.ui(t.textMuted, size: PanelType.detail),
                     ),
                 ],

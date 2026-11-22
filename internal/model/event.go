@@ -92,6 +92,22 @@ type Usage struct {
 type ContextUsage struct {
 	Markdown   string
 	Categories []ContextCategory
+	// Lists are what the agent lists beside its categories (the MCP tools,
+	// skills, memory files it loaded…), in its order.
+	Lists []ContextList
+}
+
+// ContextList is one of the lists beside the categories: "MCP tools" and
+// a row for each.
+type ContextList struct {
+	Name string
+	Rows []ContextRow
+}
+
+// ContextRow is one thing in a ContextList and its tokens.
+type ContextRow struct {
+	Name   string
+	Tokens int64
 }
 
 // ContextCategory is one kind of thing in the context: "Messages", 15,900

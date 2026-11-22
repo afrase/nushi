@@ -77,13 +77,8 @@ Rect _card(Element widget) {
 void main() {
   setUpAll(loadFonts);
 
-  test("the lists /context gives beside its categories, named as the rail's "
-      'rows', () {
-    final lists = contextLists(reportMarkdown);
-    expect([for (final l in lists) l.name], ['MCP tools', 'Custom agents']);
-    expect(lists.first.rows, hasLength(3));
-    expect(lists.last.rows.last, ('explorer', 134));
-    expect(contextLists('## Context Usage'), isEmpty);
+  test('how far from compacting: the free space, when a category is the '
+      'buffer', () {
     expect(untilCompact(reportCategories), 421400);
     expect(untilCompact(reportCategories.take(9).toList()), isNull);
   });
@@ -118,6 +113,23 @@ void main() {
     await tester.tap(inRail(find.text('Compact')));
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<SendPromptRequest>().single.text, '/compact');
+    await closeView(tester, d);
+  }, variant: macOnly);
+
+  testWidgets('the lists are what the daemon read, not parsed here: none '
+      'from a daemon older than them, though the markdown has them', (
+    tester,
+  ) async {
+    final (d, _) = await railApp(
+      tester,
+      context: GetContextUsageResponse(
+        categories: reportCategories,
+        markdown: reportMarkdown,
+      ),
+    );
+    expect(inRail(find.text('Messages')), findsOne);
+    expect(inRail(find.text('Custom agents')), findsOne); // the category
+    expect(inRail(find.text('MCP tools')), findsNothing);
     await closeView(tester, d);
   }, variant: macOnly);
 

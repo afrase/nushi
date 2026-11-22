@@ -1,6 +1,7 @@
 package claude
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -39,5 +40,42 @@ func TestParse(t *testing.T) {
 	}
 	if _, err := Parse("## Something else"); err == nil {
 		t.Error("parsed output without the table")
+	}
+}
+
+// The lists after the categories, as a long chat's /context gives them
+// (Claude Code's rail, 2026-11-05), named as the rail's rows.
+func TestLists(t *testing.T) {
+	md, err := os.ReadFile("testdata/context.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []model.ContextList{
+		{Name: "MCP tools", Rows: []model.ContextRow{{Name: "mcp__github__get_me", Tokens: 120}, {Name: "mcp__github__list_issues", Tokens: 410}, {Name: "mcp__docs__read", Tokens: 250}}},
+		{Name: "Custom agents", Rows: []model.ContextRow{{Name: "reviewer", Tokens: 180}, {Name: "explorer", Tokens: 134}}},
+	}
+	if got := Lists(string(md)); !reflect.DeepEqual(got, want) {
+		t.Errorf("Lists = %v; want %v", got, want)
+	}
+	cats, err := Parse(string(md))
+	if err != nil || len(cats) != 11 {
+		t.Errorf("Parse = %d categories, %v", len(cats), err)
+	}
+	for _, md := range []string{"## Context Usage", "### Estimated usage by category\n\n### Skills\n\n| Skill | Source | Tokens |\n|---|---|---|\n"} {
+		if got := Lists(md); len(got) != 0 {
+			t.Errorf("Lists(%q) = %v; want none", md, got)
+		}
+	}
+}
+
+// ReadContext gives the categories and the lists of the last message.
+func TestReadContextLists(t *testing.T) {
+	md, err := os.ReadFile("testdata/context.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	u := Harness{}.ReadContext([]string{"an earlier copy", string(md)})
+	if u.Markdown != string(md) || len(u.Categories) != 11 || len(u.Lists) != 2 || u.Lists[1].Rows[0] != (model.ContextRow{Name: "reviewer", Tokens: 180}) {
+		t.Errorf("ReadContext = %+v", u)
 	}
 }

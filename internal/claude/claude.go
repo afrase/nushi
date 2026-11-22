@@ -376,5 +376,5 @@ func (Harness) ContextCommand() string { return "context" }
 func (Harness) ReadContext(messages []string) model.ContextUsage {
 	md := messages[len(messages)-1]
 	cats, _ := Parse(md) // the app shows the markdown when there are none
-	return model.ContextUsage{Markdown: md, Categories: cats}
+	return model.ContextUsage{Markdown: md, Categories: cats, Lists: Lists(md)}
 }

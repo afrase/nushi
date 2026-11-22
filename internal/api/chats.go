@@ -351,5 +351,12 @@ func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushi
 	for _, c := range u.Categories {
 		out.Categories = append(out.Categories, &nushiv1.ContextCategory{Name: c.Name, Tokens: c.Tokens, Percent: c.Percent, Kind: c.Kind, Part: c.Part})
 	}
+	for _, l := range u.Lists {
+		list := &nushiv1.ContextList{Name: l.Name}
+		for _, r := range l.Rows {
+			list.Rows = append(list.Rows, &nushiv1.ContextListRow{Name: r.Name, Tokens: r.Tokens})
+		}
+		out.Lists = append(out.Lists, list)
+	}
 	return connect.NewResponse(out), nil
 }
