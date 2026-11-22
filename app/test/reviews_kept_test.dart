@@ -55,6 +55,25 @@ void main() {
     expect(_aside().single.readAsStringSync(), was);
   });
 
+  test('a comment that doesn’t read is copied aside once: the rest is '
+      'written back, so the next launch copies nothing', () {
+    _file.writeAsStringSync(
+      jsonEncode({
+        'c': [
+          _comment('1'),
+          {..._comment('2'), 'quote': 3},
+        ],
+      }),
+    );
+    rereadReviews();
+    final saved = jsonDecode(_file.readAsStringSync()) as Map<String, Object?>;
+    expect([for (final c in saved['c']! as List) (c as Map)['id']], ['1']);
+    rereadReviews();
+    rereadReviews();
+    expect(_aside(), hasLength(1));
+    expect([for (final c in commentsOf('c')) c.id], ['1']);
+  });
+
   test('a file that doesn’t parse is set aside, and a save writes anew', () {
     _file.writeAsStringSync('{"c": [');
     rereadReviews();

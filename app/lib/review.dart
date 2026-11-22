@@ -179,7 +179,7 @@ bool _reviewsUnread = false;
 
 /// `reviews.json` by [readKept]'s rule: a file that doesn't parse is set
 /// aside, one with a comment that doesn't read is copied aside and the
-/// rest kept, and one that can't be read at all is none, and isn't
+/// rest kept and written back, and one that can't be read at all is none, and isn't
 /// written over in this run.
 Map<String, List<ReviewComment>> _readReviews() {
   final Map<String, Object?> j;
@@ -207,7 +207,10 @@ Map<String, List<ReviewComment>> _readReviews() {
       copyAside(_file);
     } on Object {
       _reviewsUnread = true; // not copied: not written over either
+      return all;
     }
+    // The rest written back at once, so the next launch copies nothing.
+    _write(all);
   }
   return all;
 }
@@ -217,8 +220,14 @@ void setComments(String chat, List<ReviewComment> comments) {
   reviews.value = {...reviews.value, chat: comments}
     ..removeWhere((_, v) => v.isEmpty);
   if (_reviewsUnread) return; // kept until the app quits
+  _write(reviews.value);
+}
+
+/// Writes [all] over `reviews.json`; on an error they're kept in memory
+/// until the app quits.
+void _write(Map<String, List<ReviewComment>> all) {
   try {
-    writeWhole(_file, utf8.encode(jsonEncode(reviews.value)));
+    writeWhole(_file, utf8.encode(jsonEncode(all)));
   } on Object {
     // Kept until the app quits.
   }

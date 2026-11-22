@@ -17,8 +17,8 @@ import 'package:nushi/pull_edit.dart';
 /// once none is left. Read here at start, saved [delay] after they stop
 /// changing and on [flush] (the app going to the back or quitting). Read
 /// by [readKept]'s rule: a file that doesn't parse is set aside, one with
-/// a draft that doesn't read is copied aside before the rest is saved
-/// over it, and one that can't be read at all isn't written over in this
+/// a draft that doesn't read is copied aside and the rest saved over it
+/// at once, and one that can't be read at all isn't written over in this
 /// run.
 final class CommentDraftFile {
   new(String dir, {this.delay = Waits.save})
@@ -77,6 +77,8 @@ final class CommentDraftFile {
     restoreCommentDrafts(boxes);
     restoreReviewDrafts(reviews);
     restorePullEdits(began);
+    // The rest written back at once, so the next launch copies nothing.
+    if (dropped && !_unread) _write();
   }
 
   /// [j]'s text entries, if it's a map; [drop] hears of anything else.
@@ -118,6 +120,12 @@ final class CommentDraftFile {
     waiting.cancel();
     _timer = null;
     if (_unread) return; // kept in memory until the app quits
+    _write();
+  }
+
+  /// Writes the drafts kept now over the file, or removes it when there's
+  /// none.
+  void _write() {
     final reviews = {
       for (final MapEntry(:key, :value) in keptReviewDrafts.entries)
         if (value.isNotEmpty) key: [for (final d in value) d.toProto3Json()],

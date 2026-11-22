@@ -116,6 +116,23 @@ void main() {
     expect(aside().single.readAsStringSync(), was);
   });
 
+  test('a draft that doesn’t read is copied aside once: the rest is '
+      'written back, so the next launch copies nothing', () {
+    file().writeAsStringSync(
+      jsonEncode({
+        'boxes': {'k': 'text', 'n': 7},
+      }),
+    );
+    var kept = CommentDraftFile(dir.path);
+    final j = jsonDecode(file().readAsStringSync()) as Map<String, dynamic>;
+    expect(j['boxes'], {'k': 'text'});
+    kept = restart(kept);
+    kept = restart(kept);
+    addTearDown(kept.close);
+    expect(aside(), hasLength(1));
+    expect(keptCommentDrafts, {'k': 'text'});
+  });
+
   test('a file without boxes still gives its reviews', () {
     file().writeAsStringSync(
       jsonEncode({
