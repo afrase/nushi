@@ -28,7 +28,7 @@ Future<GetJiraAttachmentResponse> _fetch(
     GetJiraAttachmentRequest(site: site, id: id),
   );
   unawaited(_dropIfFailed(key, f));
-  if (_fetched.length > _keep) _fetched.remove(_fetched.keys.first);
+  if (_fetched.length > _keep) unawaited(_fetched.remove(_fetched.keys.first));
   return f;
 }
 
