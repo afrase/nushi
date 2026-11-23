@@ -91,6 +91,21 @@ func (b *bridge) forget(s *session) {
 	}
 }
 
+// gone ends the client's connection once a pi that died (its session not
+// stopped by the bridge) was the last: the client then sees the agent
+// quit and opens the chat again, through session/load, on a new bridge.
+// A bridge that lived on would refuse every later prompt as "no open
+// session". Serve stops what is left once the connection is done.
+func (b *bridge) gone() {
+	b.mu.Lock()
+	last := len(b.sessions) == 0
+	b.mu.Unlock()
+	if last {
+		warnf("the program stopped and no session is left, so the bridge ends")
+		_ = b.client.Close() // it says nothing that matters: the connection ends either way
+	}
+}
+
 func (b *bridge) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.InitializeResponse, error) {
 	if c := req.ClientCapabilities; c != nil && c.Elicitation != nil && c.Elicitation.Form != nil {
 		b.elicits.Store(true)

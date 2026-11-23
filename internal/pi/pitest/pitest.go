@@ -16,6 +16,8 @@
 //   - containing "garbage": a line that isn't JSON and an event nobody
 //     knows, then an answer;
 //   - containing "wait": nothing, until abort (or a steer, answered);
+//   - containing "deaf": nothing, and pi then answers no abort, until its
+//     input ends (as PiG 0.5.3 after /sprite, docs/facts/pig.md);
 //   - the command compact: a compaction entry ("Summary: <instructions>"),
 //     unless the session has nothing to compact; "slow" waits for abort;
 //   - anything else: "You said: <text>", as two deltas.
@@ -85,11 +87,15 @@ type Program struct {
 	answers  map[string]chan map[string]any
 
 	compacting chan struct{} // closed by abort
+	deaf       bool          // the run is a "deaf" one: an abort gets no answer
+	gone       chan struct{} // closed once pi's input has ended
 }
 
 // Serve runs a pi with args in cwd on r and w until r ends.
 func (st *Store) Serve(r io.Reader, w io.Writer, cwd string, args []string) {
-	p := &Program{st: st, w: w, cwd: cwd, model: "m1", level: "low", answers: map[string]chan map[string]any{}, leaf: nil}
+	p := &Program{st: st, w: w, cwd: cwd, model: "m1", level: "low", answers: map[string]chan map[string]any{}, leaf: nil,
+		gone: make(chan struct{})}
+	defer close(p.gone)
 	p.id = st.newID()
 	p.file = filepath.Join(st.Sessions, p.id+".jsonl")
 	for i, a := range args {
@@ -228,6 +234,7 @@ func (p *Program) command(cmd map[string]any) {
 			return
 		}
 		p.running, p.aborted, p.settled, p.steered = true, make(chan struct{}), make(chan struct{}), make(chan string, 4)
+		p.deaf = strings.Contains(text, "deaf")
 		if p.st.Starts != nil {
 			held := make(chan struct{})
 			p.mu.Unlock()
@@ -245,6 +252,9 @@ func (p *Program) command(cmd map[string]any) {
 		p.steered <- cmd["message"].(string)
 		p.respond(cmd, map[string]any{"disposition": "queued"}, "")
 	case "abort":
+		if p.running && p.deaf { // never answered
+			return
+		}
 		if p.compacting != nil {
 			close(p.compacting)
 			p.compacting = nil
@@ -410,6 +420,10 @@ func (p *Program) run(text string) {
 		p.wmu.Unlock()
 		p.emit(map[string]any{"type": "mystery"})
 		say(assistant(textBlock("Still here")))
+	case strings.Contains(text, "deaf"):
+		p.st.waiting(text)
+		<-p.gone
+		return
 	case strings.Contains(text, "wait"):
 		p.st.waiting(text)
 		select {

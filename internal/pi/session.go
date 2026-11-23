@@ -33,6 +33,9 @@ type session struct {
 	tools map[string]string
 	olds  map[string]toolcall.Old // what a write replaces, read before it runs
 	ended chan struct{}           // closed once pi is gone
+	// stopping says the bridge ends pi itself (stop): a pi gone without it
+	// died, which ends the bridge once no session is left (bridge.gone).
+	stopping atomic.Bool
 	// handled is how many of pi's events the pump has handled; caught
 	// (on mu) says when it grows.
 	handled int
@@ -83,6 +86,12 @@ type turn struct {
 // answered only once it ends (cancel).
 const takeWait = 2 * time.Second
 
+// abortWait is how long a Stop's abort waits for pi's answer before pi is
+// killed: pi answers once its run settled (docs/facts/pig.md), and one
+// that answers nothing (PiG 0.5.3 after /sprite) would keep the turn, and
+// the chat, busy for good. A variable only so a test can shorten it.
+var abortWait = 10 * time.Second
+
 // errCancelled is a prompt a session/cancel that came after it stopped
 // before its turn began.
 var errCancelled = errors.New("cancelled before it began")
@@ -118,6 +127,9 @@ func (s *session) pump() {
 	s.mu.Unlock()
 	close(s.ended)
 	s.b.forget(s)
+	if !s.stopping.Load() {
+		s.b.gone()
+	}
 }
 
 // message is one of Pi's agent messages (Pi's shape): the user's, the
@@ -437,9 +449,10 @@ func (s *session) nextTurn(ctx context.Context) (*turn, error) {
 // reads before its prompt, or handles while the prompt sets up, finds no
 // run, is answered at once, and the session would be let go while the
 // run starts after it. An extension's command is answered only once it
-// ends, so the abort waits for that at most takeWait. seq is where the
-// cancel came among the client's messages: a prompt from before it whose
-// turn hasn't begun is cancelled as it begins (nextTurn).
+// ends, so the abort waits for that at most takeWait. A pi that answers
+// no abort in abortWait is killed, as a Stop must end the turn. seq is
+// where the cancel came among the client's messages: a prompt from before
+// it whose turn hasn't begun is cancelled as it begins (nextTurn).
 //
 //nolint:contextcheck // the abort goes out on its own; Cancel is a notification
 func (s *session) cancel(seq uint64) {
@@ -461,6 +474,7 @@ func (s *session) cancel(seq uint64) {
 	}
 	s.unsent++
 	s.mu.Unlock()
+	wait := abortWait // read here: a handler's read ends before its connection does
 	go func() {
 		if sent != nil {
 			select {
@@ -478,7 +492,14 @@ func (s *session) cancel(seq uint64) {
 		if hold := beforeAbort.Load(); hold != nil {
 			(*hold)()
 		}
-		after, _ := s.p.callWritten(context.Background(), map[string]any{"type": "abort"}, nil, s.abortSent) // a dead pi has no run to abort
+		ctx, cancel := context.WithTimeout(context.Background(), wait)
+		after, err := s.p.callWritten(ctx, map[string]any{"type": "abort"}, nil, s.abortSent) // a dead pi has no run to abort
+		cancel()
+		if errors.Is(err, context.DeadlineExceeded) { // its pump ends the turn as pi goes
+			warnf("the program answered no Stop in %s, so it is killed", wait)
+			s.p.kill()
+			return
+		}
 		if !early {
 			return
 		}
@@ -544,6 +565,7 @@ var stopGrace = 3 * time.Second
 
 // stop ends pi, waiting until it has.
 func (s *session) stop() {
+	s.stopping.Store(true)
 	s.p.stop(stopGrace)
 	<-s.ended
 }
