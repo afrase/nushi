@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:connectrpc/connect.dart';
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -100,6 +101,97 @@ void main() {
     await tester.pump();
     fake.down = false;
     await tester.pump(const Duration(seconds: 2));
+    d.dispose(); // its ping timer ends with the test
+  });
+
+  testWidgets('GetChat answers a chat it has, with its status and the last '
+      'seq sent; any other is NotFound', (tester) async {
+    final fake = FakeDaemon([
+      chat('a', 'claude', 'Fix the login', status: ChatStatus(asleep: true)),
+    ]);
+    final d = await fake.connect(tester);
+    var got = await d.client.getChat(GetChatRequest(chatId: 'a'));
+    expect((got.chat.id, got.status.asleep, got.seq), ('a', true, Int64.ZERO));
+
+    fake.emit(EventsResponse(chatId: 'a', seq: Int64(4), status: ChatStatus()));
+    got = await d.client.getChat(GetChatRequest(chatId: 'a'));
+    expect((got.status.asleep, got.seq), (false, Int64(4)));
+
+    await expectLater(
+      d.client.getChat(GetChatRequest(chatId: 'gone')),
+      throwsA(
+        isA<ConnectException>().having((e) => e.code, 'code', Code.notFound),
+      ),
+    );
+    d.dispose(); // its ping timer ends with the test
+  });
+
+  testWidgets("KeepSideChat keeps the side chat asked for, its chat's "
+      'fork; one not open is refused', (tester) async {
+    final fake = FakeDaemon([
+      chat('a', 'claude', 'Fix the login'),
+      chat('b', 'codex', 'Bump the API'),
+    ]);
+    final d = await fake.connect(tester);
+    final side = await d.client.forkChat(ForkChatRequest(chatId: 'b'));
+    expect(fake.sides, {side.chatId: 'b'});
+    final kept = await d.client.keepSideChat(
+      KeepSideChatRequest(chatId: side.chatId),
+    );
+    final c = fake.chats.singleWhere((c) => c.id == kept.chatId);
+    expect(c.title, 'Bump the API (fork)');
+    expect(fake.sides, isEmpty);
+
+    await expectLater(
+      d.client.keepSideChat(KeepSideChatRequest(chatId: side.chatId)),
+      throwsA(
+        isA<ConnectException>().having(
+          (e) => e.code,
+          'code',
+          Code.failedPrecondition,
+        ),
+      ),
+    );
+    d.dispose(); // its ping timer ends with the test
+  });
+
+  testWidgets('a call in answersEmpty is answered empty', (tester) async {
+    final fake = FakeDaemon([chat('a', 'claude', 'Fix the login')]);
+    final d = await fake.connect(tester);
+    expect(answersEmpty, contains(ListTerminalsRequest));
+    final got = await d.client.listTerminals(ListTerminalsRequest(chatId: 'a'));
+    expect(got.terminals, isEmpty);
+    expect(fake.refused, isEmpty);
+    d.dispose(); // its ping timer ends with the test
+  });
+
+  testWidgets('a call outside it is refused as Unimplemented and fails the '
+      'test, though the app swallowed the error', (tester) async {
+    final fake = FakeDaemon([chat('a', 'claude', 'Fix the login')]);
+    final d = await fake.connect(tester);
+    expect(answersEmpty, isNot(contains(GetGitHubPullRequest)));
+    await expectLater(
+      d.client.getGitHubPull(GetGitHubPullRequest()),
+      throwsA(
+        isA<ConnectException>().having(
+          (e) => e.code,
+          'code',
+          Code.unimplemented,
+        ),
+      ),
+    );
+    expect(fake.refused, ['GetGitHubPullRequest']);
+    expect(
+      fake.checkRefused,
+      throwsA(
+        isA<TestFailure>().having(
+          (e) => e.message,
+          'message',
+          contains('FakeDaemon refused GetGitHubPullRequest'),
+        ),
+      ),
+    );
+    fake.refused.clear(); // what the test's end would fail on
     d.dispose(); // its ping timer ends with the test
   });
 }
