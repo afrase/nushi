@@ -246,14 +246,12 @@ lint-linux: $(GOLANGCI)
 # 0124): what it lacks answers errors.ErrUnsupported, code macOS and Linux
 # share is in a _unix.go file, and a test of Unix's behaviour in a
 # _unix_test.go one, so the _windows.go files and their tests are checked
-# anywhere. unused is off: what only Unix's files call (the terminal's
-# reading, which Windows's stand-in never starts) is unused there, and
-# lint-go and lint-linux run it. amd64 only: Windows's types don't differ
-# by architecture as Linux's do.
+# anywhere. amd64 only: Windows's types don't differ by architecture as
+# Linux's do.
 lint-windows: $(GOLANGCI)
 	GOOS=windows CGO_ENABLED=0 go build ./...
 	GOOS=windows CGO_ENABLED=0 go vet ./...
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 $(GOLANGCI) run --disable unused ./...
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 $(GOLANGCI) run ./...
 
 # The commit the protos are checked against for wire breaks (ADR 0004):
 # where this branch grew from main; CI passes its change's base.
