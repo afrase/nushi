@@ -5,8 +5,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/features/remote"
+	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/model"
 )
 

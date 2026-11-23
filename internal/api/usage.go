@@ -16,8 +16,8 @@ import (
 // Usage sums what the chats' turns used (internal/features/usage, ADR
 // 0136).
 type Usage interface {
-	// Report sums the turns that ended from from on (zero: all of them),
-	// days counted in the daemon's time zone.
+	// Report sums the turns that ended at from or later (zero: all of
+	// them), days counted in the daemon's time zone.
 	Report(ctx context.Context, from time.Time) (model.UsageReport, error)
 }
 

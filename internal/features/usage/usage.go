@@ -123,8 +123,8 @@ func (s *Service) Close() {
 	<-s.done
 }
 
-// Report sums what was used from from on (zero: all of it), days counted in
-// the daemon's time zone, the costliest chats named by their titles. Only the
+// Report sums what was used at from or later (zero: all of it), days counted
+// in the daemon's time zone, the costliest chats named by their titles. Only the
 // Mac asks, so its zone and the daemon's are one.
 func (s *Service) Report(ctx context.Context, from time.Time) (model.UsageReport, error) {
 	if s.store == nil {
@@ -133,7 +133,7 @@ func (s *Service) Report(ctx context.Context, from time.Time) (model.UsageReport
 	if err := s.sync(ctx); err != nil {
 		return model.UsageReport{}, err
 	}
-	r, err := s.store.Usage(ctx, from, time.Time{}, time.Local, Top)
+	r, err := s.store.Usage(ctx, from, time.Time{}, time.Local, Top) //nolint:gosmopolitan // days are the daemon's, the Mac's (ADR 0136)
 	if err != nil {
 		return r, err
 	}
