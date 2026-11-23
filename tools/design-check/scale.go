@@ -1,7 +1,9 @@
 package main
 
 import (
+	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -18,7 +20,7 @@ var (
 const offScale = "a size off the type scale (11, 11.5, 12, 13, 14, 15, 20; the phone's 16): the nearest step, docs/design.md's Type"
 
 // sizeArg finds a number given as size: inside a call's arguments.
-var sizeArg = regexp.MustCompile(`\bsize:\s*([0-9]+(?:\.[0-9]+)?)\s*(?:[,)]|$)`)
+var sizeArg = regexp.MustCompile(`\bsize:\s*(\d+(?:\.\d+)?)\s*(?:[,)]|$)`)
 
 // styleCall follows a call of ui( or code( across lines, for the sizes
 // it sets: depth is how many of its brackets are open, 0 outside one.
@@ -65,18 +67,7 @@ func onScale(size, path string) bool {
 	if err != nil {
 		return false
 	}
-	steps := scale
-	if strings.Contains(path, "/phone/") || strings.HasPrefix(path, "phone/") || strings.HasPrefix(baseName(path), "phone_") {
-		steps = append(append([]float64{}, scale...), phoneScale...)
-	}
-	for _, s := range steps {
-		if v == s {
-			return true
-		}
-	}
-	return false
-}
-
-func baseName(path string) string {
-	return path[strings.LastIndexAny(path, `/\`)+1:]
+	slashed := "/" + filepath.ToSlash(path)
+	phone := strings.Contains(slashed, "/phone/") || strings.HasPrefix(filepath.Base(path), "phone_")
+	return slices.Contains(scale, v) || phone && slices.Contains(phoneScale, v)
 }
