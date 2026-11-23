@@ -8,6 +8,10 @@ import (
 	"runtime"
 )
 
+// Word is what the user knows the place their passwords are kept as, for
+// the words Nushi shows; there is none here.
+const Word = "keychain"
+
 // noKeychain is ErrNoKeychain's text where there is no keychain.
 const noKeychain = "there is no keychain on this OS"
 

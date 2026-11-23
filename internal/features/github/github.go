@@ -7,6 +7,7 @@
 package github
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -87,15 +88,22 @@ type Store interface {
 }
 
 // ErrNeedsOK is a pasted token the keychain gives only once the user
-// allows it (a new build of Nushi): AllowToken asks.
-var ErrNeedsOK = errors.New("this build of Nushi needs your OK to read the GitHub token from the keychain: Settings › GitHub › Allow")
+// allows it (a new build of Nushi on the Mac, a locked keyring on Linux):
+// AllowToken asks.
+var ErrNeedsOK = errors.New("Nushi needs your OK to read the GitHub token: Settings › GitHub › Allow")
 
 // Keys says what a keychain error means (internal/keychain's kinds): the
 // user's OK is needed (AllowToken asks), the daemon must start again to
-// reach the keychain (its error says so), or the token is gone.
+// reach the keychain (its error says so), or the token is gone. Word is
+// what the user knows the keychain as (keychain.Word: "keyring" on Linux),
+// for the errors the user reads.
 type Keys struct {
 	NeedsOK, Restart, Missing func(error) bool
+	Word                      string
 }
+
+// word is k.Word, "keychain" when none was given.
+func (k Keys) word() string { return cmp.Or(k.Word, "keychain") }
 
 // Deps are what the feature takes from main: gh's login, the keychain,
 // the store, a client of a host for a token, what a keychain error
@@ -301,7 +309,7 @@ func (s *Service) AddToken(ctx context.Context, given, token string) (githubapi.
 		return u, err
 	}
 	if err := s.Tokens.Set(name, tokenLabel(name), []byte(token)); err != nil {
-		return u, fmt.Errorf("keeping the token in the keychain: %w", err)
+		return u, fmt.Errorf("keeping the token in the %s: %w", s.Keys.word(), err)
 	}
 	hosts, err := s.Store.GitHubTokenHosts()
 	if err == nil && !slices.Contains(hosts, name) {
@@ -397,9 +405,9 @@ func (s *Service) host(ctx context.Context, name string, prompt bool) (*host, er
 		case s.Keys.Restart(err):
 			return nil, err // says what to do
 		case s.Keys.Missing(err):
-			return nil, fmt.Errorf("the GitHub token for %s isn't in the keychain any more: add it again in Settings › GitHub", name)
+			return nil, fmt.Errorf("the GitHub token for %s isn't in the %s any more: add it again in Settings › GitHub", name, s.Keys.word())
 		default:
-			return nil, fmt.Errorf("reading the GitHub token from the keychain: %w", err)
+			return nil, fmt.Errorf("reading the GitHub token from the %s: %w", s.Keys.word(), err)
 		}
 	} else {
 		if time.Since(missed) < noTokenFor {

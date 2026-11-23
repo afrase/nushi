@@ -5,6 +5,7 @@
 package jira
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -53,14 +54,21 @@ type Tokens interface {
 
 // Keys says what a keychain error means (internal/keychain's kinds): the
 // user's OK is needed (AllowToken asks), the daemon must start again to
-// reach the keychain (its error says so), or the token is gone.
+// reach the keychain (its error says so), or the token is gone. Word is
+// what the user knows the keychain as (keychain.Word: "keyring" on Linux),
+// for the errors the user reads.
 type Keys struct {
 	NeedsOK, Restart, Missing func(error) bool
+	Word                      string
 }
 
+// word is k.Word, "keychain" when none was given.
+func (k Keys) word() string { return cmp.Or(k.Word, "keychain") }
+
 // ErrNeedsOK is a token the keychain gives only once the user allows it
-// (a new build of Nushi): AllowToken asks.
-var ErrNeedsOK = errors.New("this build of Nushi needs your OK to read the Jira token from the keychain: Settings › Jira › Allow")
+// (a new build of Nushi on the Mac, a locked keyring on Linux): AllowToken
+// asks.
+var ErrNeedsOK = errors.New("Nushi needs your OK to read the Jira token: Settings › Jira › Allow")
 
 // Store keeps the sites, the writes agents made, and what each list and
 // issue showed last (the cache: area "jira", a file a site).
@@ -154,7 +162,7 @@ func (s *Service) AddSite(ctx context.Context, site, email, token string, expire
 	got.Email, got.Expires = email, expires
 	id := SiteID(got)
 	if err := s.tokens.Set(account(got), tokenLabel(id), []byte(token)); err != nil {
-		return model.JiraSite{}, fmt.Errorf("keeping the token in the keychain: %w", err)
+		return model.JiraSite{}, fmt.Errorf("keeping the token in the %s: %w", s.keys.word(), err)
 	}
 	err = s.change(func(sites []model.JiraSite) []model.JiraSite {
 		i := slices.IndexFunc(sites, func(x model.JiraSite) bool { return SiteID(x) == id })
@@ -288,9 +296,9 @@ func (s *Service) client(site model.JiraSite, prompt bool) (Client, error) {
 	case s.keys.Restart(err):
 		return nil, err // says what to do
 	case s.keys.Missing(err):
-		return nil, fmt.Errorf("the Jira token for %s isn't in the keychain any more: add the site again in Settings › Jira", id)
+		return nil, fmt.Errorf("the Jira token for %s isn't in the %s any more: add the site again in Settings › Jira", id, s.keys.word())
 	default:
-		return nil, fmt.Errorf("reading the Jira token from the keychain: %w", err)
+		return nil, fmt.Errorf("reading the Jira token from the %s: %w", s.keys.word(), err)
 	}
 	c = s.sites.Open(site, string(token))
 	clear(token)

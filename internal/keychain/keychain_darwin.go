@@ -119,6 +119,10 @@ import (
 	"unsafe"
 )
 
+// Word is what the user knows the place their passwords are kept as, for
+// the words Nushi shows: the Mac's keychain.
+const Word = "keychain"
+
 // noKeychain is ErrNoKeychain's text on the Mac.
 const noKeychain = "macOS can't find your login keychain: check it in Keychain Access (File › Keychain List), then restart the daemon"
 

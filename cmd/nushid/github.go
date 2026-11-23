@@ -39,7 +39,7 @@ func newGitHub(st *store.Store, dev bool) *github.Service {
 		Tokens: keychain.Keychain{Service: service},
 		Store:  st,
 		Open:   func(host, token string) github.Client { return githubapi.New(host, token, transport) },
-		Keys:   github.Keys{NeedsOK: is(keychain.ErrNeedsOK), Restart: is(keychain.ErrRestart), Missing: is(keychain.ErrNotFound)},
+		Keys:   github.Keys{NeedsOK: is(keychain.ErrNeedsOK), Restart: is(keychain.ErrRestart), Missing: is(keychain.ErrNotFound), Word: keychain.Word},
 		Remotes: func(ctx context.Context, folder string) (map[string]string, error) {
 			rs, err := git.Remotes(ctx, folder)
 			out := map[string]string{}

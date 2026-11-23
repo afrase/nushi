@@ -8,6 +8,11 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
+// Word is what the user knows the place their passwords are kept as, for
+// the words Nushi shows: Linux's keyring (gnome-keyring, KeePassXC), whose
+// locked collection is what ErrNeedsOK means here (ADR 0104).
+const Word = "keyring"
+
 // noKeychain is ErrNoKeychain's text on Linux: the Secret Service runs but
 // names no default collection (KeePassXC with no group exposed to it, or a
 // keyring whose login collection was deleted).

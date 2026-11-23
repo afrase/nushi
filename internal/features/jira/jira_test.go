@@ -504,3 +504,21 @@ func TestTokenProblems(t *testing.T) {
 		t.Errorf("%+v", st[0])
 	}
 }
+
+// The errors the user reads name the keychain by the OS's word: Linux's
+// keyring (keychain.Word).
+func TestTokenErrorsSayTheKeyring(t *testing.T) {
+	s, tokens, _ := newService(t)
+	if _, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := tokens.Delete("me@e.com on e.atlassian.net"); err != nil {
+		t.Fatal(err)
+	}
+	keys := testKeys
+	keys.Word = "keyring"
+	s2 := New(s.sites, tokens, s.store, keys)
+	if _, err := s2.List(t.Context(), "e.atlassian.net", Mine, ""); err == nil || !strings.Contains(err.Error(), "isn't in the keyring any more") {
+		t.Errorf("a token gone: %v", err)
+	}
+}

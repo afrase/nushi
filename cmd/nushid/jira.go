@@ -40,7 +40,7 @@ func newJira(st *store.Store, dev bool) *jira.Service {
 			return jiracloud.New(site.URL, site.CloudID, site.Email, token, transport)
 		},
 	}
-	return jira.New(sites, keychain.Keychain{Service: service}, st, jira.Keys{NeedsOK: is(keychain.ErrNeedsOK), Restart: is(keychain.ErrRestart), Missing: is(keychain.ErrNotFound)})
+	return jira.New(sites, keychain.Keychain{Service: service}, st, jira.Keys{NeedsOK: is(keychain.ErrNeedsOK), Restart: is(keychain.ErrRestart), Missing: is(keychain.ErrNotFound), Word: keychain.Word})
 }
 
 // mcpTools gives a chat's sessions the MCP server of Nushi's tools for it
