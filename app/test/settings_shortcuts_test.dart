@@ -6,8 +6,6 @@
 // settings_shortcuts_renders_test.dart).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/app_actions.dart';
-import 'package:nushi/key_choice.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shortcut_row.dart';
@@ -112,16 +110,5 @@ void main() {
       findsOne,
     );
     d.dispose();
-  });
-
-  test('every action with a key has a name on the page, but Quit', () {
-    for (final a in Act.values) {
-      if ((a.key ?? a.shows) == null || a.keyText != null) continue;
-      expect(
-        shortcutName(a),
-        a == Act.quit ? isNull : isNotNull,
-        reason: a.name,
-      );
-    }
   });
 }

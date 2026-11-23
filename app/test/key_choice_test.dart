@@ -301,23 +301,20 @@ void main() {
     });
 
     test('every Act’s key is a Cmd named for it, but Quit’s; every one is '
-        'listed', () {
+        'listed, with a name on the page', () {
       final ids = <String>{};
       for (final a in Act.values) {
         final key = a.key ?? a.shows;
-        if (key == null) continue;
-        if (a == Act.quit) {
-          expect(key.id, isNull);
+        if (key == null || a == Act.quit) {
+          expect(key?.id, isNull, reason: a.name);
+          expect(a.keyName, isNull, reason: a.name);
           continue;
         }
         expect(key.id, a.name);
+        expect(a.keyName, isNotNull, reason: a.name);
         ids.add(a.name);
       }
-      expect({for (final k in rebindable) k.id}, {...ids, 'palette'});
-      expect(rebindable, hasLength(ids.length + 1));
-      for (final k in rebindable) {
-        expect(bindingName(k), isNotEmpty, reason: k.id);
-      }
+      expect([for (final k in rebindable) k.id], unorderedEquals(ids));
     });
 
     testWidgets('a chosen ⇧⌘] takes the key reported as `}` too; a chosen '

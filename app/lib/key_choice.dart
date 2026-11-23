@@ -2,19 +2,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:nushi/app_actions.dart';
-import 'package:nushi/chat_keys.dart';
 import 'package:nushi/conventions.dart';
-import 'package:nushi/github_view.dart';
-import 'package:nushi/jira_view.dart';
 import 'package:nushi/key_rules.dart';
 import 'package:nushi/keys.dart';
-import 'package:nushi/new_chat.dart';
-import 'package:nushi/open_file.dart';
-import 'package:nushi/preview_marks.dart';
 import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_view.dart';
-import 'package:nushi/terminal_panel.dart';
 
 // The keys the user chooses in Settings › Keyboard shortcuts (ADR 0146):
 // how one is written in `app.json`, which binding holds which key now
@@ -23,77 +15,33 @@ import 'package:nushi/terminal_panel.dart';
 
 /// The bindings the user may rebind, by the menus' groups, in the app's
 /// order: what Settings › Keyboard shortcuts lists, and the order in which
-/// two saved choices of one key are settled (the first keeps it).
-const shortcutGroups = <(String, List<Cmd>)>[
-  ('Nushi', [settingsKey]),
-  ('File', [newChatKey, openFileKey, closeTabKey, saveKey, addressKey]),
-  (
-    'View',
-    [
-      paletteKey,
-      reloadPageKey,
-      findKey,
-      chatTabKey,
-      changesTabKey,
-      pullTabKey,
-      previousTabKey,
-      nextTabKey,
-      sidebarKey,
-      filesKey,
-      fileTreeKey,
-      wrapKey,
-      jiraKey,
-      githubKey,
-      backKey,
-      forwardKey,
-      previousChatKey,
-      nextChatKey,
-    ],
-  ),
-  ('Chat', [sideChatKey, pinKey, nextTypoKey]),
-  ('Other', [toggleTerminalKey]),
+/// two saved choices of one key settle (the first keeps it). Each is an
+/// Act's with a [Act.keyName], listed in its [Act.keysIn] group, in the
+/// Acts' order.
+final List<(String, List<Cmd>)> shortcutGroups = [
+  for (final (title, group) in const [
+    ('Nushi', ActMenu.nushi),
+    ('File', ActMenu.file),
+    ('View', ActMenu.view),
+    ('Chat', ActMenu.chat),
+    ('Other', null),
+  ])
+    (
+      title,
+      [
+        for (final a in Act.values)
+          if (a.keyName != null && a.keysIn == group) ?(a.key ?? a.shows),
+      ],
+    ),
 ];
 
 /// [shortcutGroups]' bindings in one list.
 final List<Cmd> rebindable = [for (final (_, keys) in shortcutGroups) ...keys];
 
-/// What Settings › Keyboard shortcuts calls [a]'s binding; null for an
-/// action it doesn't list.
-String? shortcutName(Act a) => switch (a) {
-  Act.newChat => 'New chat',
-  Act.openFile => 'Open file',
-  Act.closeTab => 'Close tab',
-  Act.save => 'Save',
-  Act.address => 'Open location',
-  Act.reloadPage => 'Reload page',
-  Act.find => 'Find',
-  Act.chat => 'Chat tab',
-  Act.changes => 'Changes tab',
-  Act.pull => 'Pull request tab',
-  Act.previousTab => 'Previous tab',
-  Act.nextTab => 'Next tab',
-  Act.sidebar => 'Show or hide sidebar',
-  Act.back => 'Back',
-  Act.forward => 'Forward',
-  Act.files => 'Files pane',
-  Act.fileTree => 'File tree',
-  Act.wrap => 'Wrap lines',
-  Act.terminal => 'Terminal',
-  Act.sideChat => 'Side chat',
-  Act.pin => 'Pin chat',
-  Act.nextTypo => 'Next typo',
-  Act.settings => 'Settings',
-  Act.jira => 'Jira',
-  Act.github => 'GitHub',
-  Act.previousChat => 'Previous chat',
-  Act.nextChat => 'Next chat',
-  _ => null,
-};
-
-/// What [key]'s binding is called, as [shortcutName] names it.
+/// What Settings › Keyboard shortcuts calls [key]'s binding: its Act's
+/// [Act.keyName].
 String bindingName(Cmd key) => switch (key.id) {
-  'palette' => 'Command palette',
-  final id? => shortcutName(Act.values.byName(id)) ?? id,
+  final id? => Act.values.byName(id).keyName ?? id,
   null => '',
 };
 

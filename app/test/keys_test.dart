@@ -26,11 +26,7 @@ List<ShortcutActivator> get _appKeys => {
 }.toList();
 
 /// The app's keys a terminal is given to pass on or not.
-List<ShortcutActivator> get _toTerminal => [
-  ...actKeys.keys,
-  paletteKeyToo,
-  ...chatKeys.keys,
-];
+List<ShortcutActivator> get _toTerminal => appKeys.keys.toList();
 
 /// The terminal's own keys.
 const _terminalKeys = <ShortcutActivator>[
@@ -184,11 +180,12 @@ void main() {
     });
   }
 
-  test('a terminal on the Mac passes every ⌘ key on but ⌘F and ⌘W', () {
+  test('a terminal on the Mac passes every ⌘ key on but ⌘F, ⌘W and ⌘K, '
+      'its own', () {
     expect([
       for (final k in _toTerminal)
         if (!terminalPasses(k)) keyLabel(k),
-    ], unorderedEquals(['⌘F', '⌘W']));
+    ], unorderedEquals(['⌘F', '⌘W', '⌘K']));
   });
 
   test('a terminal on Linux passes on only Ctrl keys Ctrl and a letter '

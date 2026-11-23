@@ -110,35 +110,98 @@ const addressKey = Cmd(LogicalKeyboardKey.keyL, id: 'address');
 /// reload: their views bind it, under the app's keys.
 const reloadPageKey = Cmd(LogicalKeyboardKey.keyR, id: 'reloadPage');
 
-/// An action of the app, in the palette's order with an empty query.
+/// An action of the app. Settings › Keyboard shortcuts lists the keys
+/// the user may rebind (those with a [keyName]) in this order within each
+/// group, which is also the order two saved choices of one key settle in
+/// (ADR 0146); the palette lists them in [appActions]' order.
 enum Act {
-  newChat(key: newChatKey, menu: ActMenu.file, menuLabel: 'New Chat…'),
-  openFile(key: openFileKey, menu: ActMenu.file, menuLabel: 'Open File…'),
-  closeTab(key: closeTabKey, menu: ActMenu.file, menuLabel: 'Close Tab'),
-  save(key: saveKey, menu: ActMenu.file, menuLabel: 'Save'),
+  newChat(
+    key: newChatKey,
+    menu: ActMenu.file,
+    menuLabel: 'New Chat…',
+    keyName: 'New chat',
+  ),
+  openFile(
+    key: openFileKey,
+    menu: ActMenu.file,
+    menuLabel: 'Open File…',
+    keyName: 'Open file',
+  ),
+  closeTab(
+    key: closeTabKey,
+    menu: ActMenu.file,
+    menuLabel: 'Close Tab',
+    keyName: 'Close tab',
+  ),
+  save(key: saveKey, menu: ActMenu.file, menuLabel: 'Save', keyName: 'Save'),
   newBrowserTab(menu: ActMenu.file, menuLabel: 'New Browser Tab'),
-  address(key: addressKey, menu: ActMenu.file, menuLabel: 'Open Location…'),
-  reloadPage(key: reloadPageKey, menu: ActMenu.view, menuLabel: 'Reload Page'),
+  address(
+    key: addressKey,
+    menu: ActMenu.file,
+    menuLabel: 'Open Location…',
+    keyName: 'Open location',
+  ),
+  // No row of the palette itself; the menu bar's item is main.dart's.
+  palette(key: paletteKey, keysIn: ActMenu.view, keyName: 'Command palette'),
+  reloadPage(
+    key: reloadPageKey,
+    menu: ActMenu.view,
+    menuLabel: 'Reload Page',
+    keyName: 'Reload page',
+  ),
   artifacts,
-  find(key: findKey, menu: ActMenu.view, menuLabel: 'Find…'),
-  chat(key: chatTabKey, menu: ActMenu.view, menuLabel: 'Chat'),
-  changes(key: changesTabKey, menu: ActMenu.view, menuLabel: 'Changes'),
-  pull(key: pullTabKey, menu: ActMenu.view, menuLabel: 'Pull Request'),
+  find(key: findKey, menu: ActMenu.view, menuLabel: 'Find…', keyName: 'Find'),
+  chat(
+    key: chatTabKey,
+    menu: ActMenu.view,
+    menuLabel: 'Chat',
+    keyName: 'Chat tab',
+  ),
+  changes(
+    key: changesTabKey,
+    menu: ActMenu.view,
+    menuLabel: 'Changes',
+    keyName: 'Changes tab',
+  ),
+  pull(
+    key: pullTabKey,
+    menu: ActMenu.view,
+    menuLabel: 'Pull Request',
+    keyName: 'Pull request tab',
+  ),
   previousTab(
     key: previousTabKey,
     menu: ActMenu.view,
     menuLabel: 'Previous Tab',
+    keyName: 'Previous tab',
   ),
-  nextTab(key: nextTabKey, menu: ActMenu.view, menuLabel: 'Next Tab'),
-  sidebar(key: sidebarKey, menu: ActMenu.view, menuLabel: 'Hide Sidebar'),
-  // The menu bar's in View, by Previous and Next Chat (main.dart).
-  back(key: backKey),
-  forward(key: forwardKey),
+  nextTab(
+    key: nextTabKey,
+    menu: ActMenu.view,
+    menuLabel: 'Next Tab',
+    keyName: 'Next tab',
+  ),
+  sidebar(
+    key: sidebarKey,
+    menu: ActMenu.view,
+    menuLabel: 'Hide Sidebar',
+    keyName: 'Show or hide sidebar',
+  ),
   details,
-  files(key: filesKey, menu: ActMenu.view, menuLabel: 'Files'),
+  files(
+    key: filesKey,
+    menu: ActMenu.view,
+    menuLabel: 'Files',
+    keyName: 'Files pane',
+  ),
   // The Files pane's options, in its ⋯'s order (view_options.dart): their
   // View items' labels follow what each is now.
-  fileTree(key: fileTreeKey, menu: ActMenu.view, menuLabel: 'Show File Tree'),
+  fileTree(
+    key: fileTreeKey,
+    menu: ActMenu.view,
+    menuLabel: 'Show File Tree',
+    keyName: 'File tree',
+  ),
   // View › File Tree Position's submenu, its values' rows.
   treeAutomatic(menu: ActMenu.view, menuLabel: 'File Tree Position'),
   treeLeft,
@@ -146,7 +209,12 @@ enum Act {
   collapseFolders(menu: ActMenu.view, menuLabel: 'Collapse All Folders'),
   previewTabs(menu: ActMenu.view, menuLabel: 'Use Preview Tabs'),
   // The viewer's own key: elsewhere ⌥Z types a character.
-  wrap(shows: wrapKey, menu: ActMenu.view, menuLabel: 'Wrap Lines'),
+  wrap(
+    shows: wrapKey,
+    menu: ActMenu.view,
+    menuLabel: 'Wrap Lines',
+    keyName: 'Wrap lines',
+  ),
   indentGuides(menu: ActMenu.view, menuLabel: 'Show Indent Guides'),
   whitespace(menu: ActMenu.view, menuLabel: 'Show Whitespace'),
   scrollPastEnd(menu: ActMenu.view, menuLabel: 'Scroll Past End'),
@@ -156,17 +224,32 @@ enum Act {
   tabSize8,
   chatWidth,
   unifiedDiff(menu: ActMenu.view, menuLabel: 'Show Diffs Unified'),
-  terminal(key: toggleTerminalKey),
+  terminal(key: toggleTerminalKey, keyName: 'Terminal'),
   rewind(keyText: 'Esc Esc'), // the composer's
-  sideChat(key: sideChatKey, menu: ActMenu.chat, menuLabel: 'Side Chat'),
+  sideChat(
+    key: sideChatKey,
+    menu: ActMenu.chat,
+    menuLabel: 'Side Chat',
+    keyName: 'Side chat',
+  ),
   fork(menu: ActMenu.chat, menuLabel: 'Fork Chat'),
   sendComments(menu: ActMenu.chat, menuLabel: 'Send Review Comments to Agent'),
   stop(keyText: 'Esc', menu: ActMenu.chat, menuLabel: 'Stop'), // the chat's
   rename(menu: ActMenu.chat, menuLabel: 'Rename'),
-  pin(key: pinKey, menu: ActMenu.chat, menuLabel: 'Pin Chat'),
+  pin(
+    key: pinKey,
+    menu: ActMenu.chat,
+    menuLabel: 'Pin Chat',
+    keyName: 'Pin chat',
+  ),
   sleep(menu: ActMenu.chat, menuLabel: 'Sleep'),
   reload(menu: ActMenu.chat, menuLabel: 'Reload'),
-  nextTypo(key: nextTypoKey, menu: ActMenu.chat, menuLabel: 'Next Typo'),
+  nextTypo(
+    key: nextTypoKey,
+    menu: ActMenu.chat,
+    menuLabel: 'Next Typo',
+    keyName: 'Next typo',
+  ),
   linkPull(menu: ActMenu.chat, menuLabel: 'Link Pull Request…'),
   cleanUp(menu: ActMenu.chat, menuLabel: 'Clean Up…'),
   archive(menu: ActMenu.chat, menuLabel: 'Archive'),
@@ -174,19 +257,45 @@ enum Act {
   mcp(menu: ActMenu.chat, menuLabel: 'MCP Servers…'),
   skills(menu: ActMenu.chat, menuLabel: 'Skills…'),
   delete(menu: ActMenu.chat, menuLabel: 'Delete…'),
-  settings(key: settingsKey, menu: ActMenu.nushi, menuLabel: 'Settings…'),
+  settings(
+    key: settingsKey,
+    menu: ActMenu.nushi,
+    menuLabel: 'Settings…',
+    keyName: 'Settings',
+  ),
   appearance,
   shortcuts,
-  jira(key: jiraKey, menu: ActMenu.view, menuLabel: 'Jira'),
-  github(key: githubKey, menu: ActMenu.view, menuLabel: 'GitHub'),
+  jira(key: jiraKey, menu: ActMenu.view, menuLabel: 'Jira', keyName: 'Jira'),
+  github(
+    key: githubKey,
+    menu: ActMenu.view,
+    menuLabel: 'GitHub',
+    keyName: 'GitHub',
+  ),
   restart,
   checkUpdates(menu: ActMenu.nushi, menuLabel: 'Check for Updates…'),
-  // Where no menu bar has them (Linux): the Mac's View and Nushi menus'.
-  previousChat(shows: previousChatKey),
-  nextChat(shows: nextChatKey),
+  // The menu bar's in View, written there (main.dart); Linux's palette has
+  // Previous and Next chat, where no menu bar has them.
+  back(key: backKey, keysIn: ActMenu.view, keyName: 'Back'),
+  forward(key: forwardKey, keysIn: ActMenu.view, keyName: 'Forward'),
+  previousChat(
+    shows: previousChatKey,
+    keysIn: ActMenu.view,
+    keyName: 'Previous chat',
+  ),
+  nextChat(shows: nextChatKey, keysIn: ActMenu.view, keyName: 'Next chat'),
+  // The Mac's is its Nushi menu's.
   quit(shows: quitKey);
 
-  new({this.key, this.shows, this.keyText, this.menu, this.menuLabel});
+  new({
+    this.key,
+    this.shows,
+    this.keyText,
+    this.menu,
+    this.menuLabel,
+    this.keyName,
+    ActMenu? keysIn,
+  }) : keysIn = keysIn ?? menu;
 
   /// The key the app binds to it, wherever the focus is.
   final Cmd? key;
@@ -194,6 +303,14 @@ enum Act {
   final String? keyText; // the same, in words
   final ActMenu? menu;
   final String? menuLabel;
+
+  /// What Settings › Keyboard shortcuts calls its key, for one the user
+  /// may rebind (its key's `id` is the Act's name); null for the rest.
+  final String? keyName;
+
+  /// The group that page lists its key in: its menu's, unless given; null
+  /// for Other.
+  final ActMenu? keysIn;
 
   /// Its key as the palette and tooltips show it; null for none, a key
   /// the user cleared too.
@@ -237,13 +354,9 @@ class RunActIntent extends Intent {
 /// menu's. It asks the window to close, so unsaved edits still ask.
 const quitKey = Cmd(LogicalKeyboardKey.keyQ);
 
-/// Opens the palette.
-class OpenPaletteIntent extends Intent {
-  const new();
-}
-
-/// ⌘K opens the palette, and ⌘⇧P, which a terminal (where ⌘K clears)
-/// passes on too: the second only while the first is the default.
+/// ⌘K opens the palette ([Act.palette]), and ⌘⇧P, which a terminal (where
+/// ⌘K clears) passes on too: the second only while the first is the
+/// default.
 const paletteKey = Cmd(LogicalKeyboardKey.keyK, id: 'palette');
 const paletteKeyToo = Cmd(
   LogicalKeyboardKey.keyP,
@@ -277,6 +390,16 @@ final Map<ShortcutActivator, Intent> actKeys = {
   for (final a in Act.values) ?a.key: RunActIntent(a),
   for (final k in nextTabKeysToo) k: const RunActIntent(Act.nextTab),
   for (final k in previousTabKeysToo) k: const RunActIntent(Act.previousTab),
+};
+
+/// Every key the app binds wherever the focus is, as the intents they
+/// run: the actions', the palette's second key and the chats'. The window
+/// binds them (and Quit's where there's no menu bar), a focused terminal
+/// those it passes on, and Settings stops them (ADR 0087).
+final Map<ShortcutActivator, Intent> appKeys = {
+  ...actKeys,
+  paletteKeyToo: const RunActIntent(Act.palette),
+  ...chatKeys,
 };
 
 /// Every action, each as it is now (its title, whether it applies).
@@ -697,6 +820,9 @@ List<AppAction> chatActions(
 
 /// Runs [act] as it is now, if it applies.
 void runAct(BuildContext context, Daemon d, Act act) {
+  // The palette is no row of its own; its key never reaches here past
+  // Settings, so it shuts nothing.
+  if (act == Act.palette) return unawaited(showPalette(context, d));
   // Only the menu bar (and Linux's Quit) reaches here past Settings (it
   // stops the keys): what runs is elsewhere, so Settings shuts first (ADR
   // 0087).

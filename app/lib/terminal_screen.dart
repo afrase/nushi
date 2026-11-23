@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/app_actions.dart';
-import 'package:nushi/chat_keys.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
 import 'package:nushi/keys.dart';
@@ -60,12 +59,7 @@ class TerminalScreen extends StatelessWidget {
     // ⌃Tab and ⌃⇧Tab the chat's tabs, and a key chosen for one that
     // passes); ⌘K clears here, as in Terminal, ⌘F finds here and ⌘W
     // closes this terminal, not a preview tab.
-    for (final MapEntry(:key, :value) in {
-      ...actKeys,
-      paletteKey: const OpenPaletteIntent(),
-      paletteKeyToo: const OpenPaletteIntent(),
-      ...chatKeys,
-    }.entries)
+    for (final MapEntry(:key, :value) in appKeys.entries)
       if (terminalPasses(key)) key: value,
     terminalCopyKey: CopySelectionTextIntent.copy,
     terminalPasteKey: const PasteTextIntent(SelectionChangedCause.keyboard),

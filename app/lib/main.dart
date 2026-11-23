@@ -477,9 +477,6 @@ class _NushiAppState extends State<NushiApp> {
         builder: (context) => Actions(
           actions: {
             RunActIntent: _RunAct((act) => runAct(context, widget.daemon, act)),
-            OpenPaletteIntent: CallbackAction<OpenPaletteIntent>(
-              onInvoke: (_) => unawaited(showPalette(context, widget.daemon)),
-            ),
             OpenChatIntent: CallbackAction<OpenChatIntent>(
               onInvoke: (i) => openNthChat(widget.daemon, i.n),
             ),
@@ -491,10 +488,7 @@ class _NushiAppState extends State<NushiApp> {
           // wherever the focus is; and Quit's without a menu bar.
           child: Shortcuts(
             shortcuts: {
-              ...actKeys,
-              paletteKey: const OpenPaletteIntent(),
-              paletteKeyToo: const OpenPaletteIntent(),
-              ...chatKeys,
+              ...appKeys,
               if (!native.window.menuBar) quitKey: const RunActIntent(.quit),
             },
             // A scope under these keys: a text field a click outside lets

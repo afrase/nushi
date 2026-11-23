@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/app_actions.dart';
-import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/settings_view.dart';
@@ -12,12 +11,7 @@ import 'package:nushi/theme/theme.dart';
 /// behind it. A field in Settings still gets its own (they're handled
 /// before these).
 final Map<ShortcutActivator, Intent> _stopped = {
-  for (final k in [
-    ...actKeys.keys,
-    paletteKey,
-    paletteKeyToo,
-    ...chatKeys.keys,
-  ])
+  for (final k in appKeys.keys)
     if (k != settingsKey) k: const DoNothingAndStopPropagationIntent(),
 };
 
