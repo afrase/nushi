@@ -198,6 +198,9 @@ func TestIsOther(t *testing.T) {
 		{"_custom", model.Field{ID: "q1"}, q0, false},
 		{"_custom", model.Field{ID: "q1_custom"}, q0, false},
 		{"_note", model.Field{ID: "q0_note1"}, q0, true}, // Codex's, when a question is q0_note
+		{"_custom", model.Field{ID: "q0_customer_id"}, q0, false}, // an MCP form's own field
+		{"_note", model.Field{ID: "q0_notes"}, q0, false},
+		{"_note", model.Field{ID: "q0_note1x"}, q0, false},
 		{"_custom", model.Field{ID: "q0_custom", Options: q0.Options}, q0, false},
 		{"_custom", model.Field{ID: "q0_custom"}, model.Field{ID: "q0"}, false}, // after a field with no choices
 		{"", model.Field{ID: "q0"}, q0, false},

@@ -201,10 +201,15 @@ func formContent(fields []model.Field) (map[string]acp.ElicitationContentValue, 
 
 // isOther says field is the free-text "Other" answer of the question
 // before it, by the agent's suffix (HarnessInfo.OtherSuffix): named for
-// that question, which has choices, with none of its own. Its name starts
-// so: Codex's Go agent numbers a note whose name a question took
-// (`q0_note1`). Not any field after a question: an MCP server's form
+// that question, which has choices, with none of its own. Its name is
+// exactly that, or that and digits: Codex's Go agent numbers a note whose
+// name a question took (`q0_note1`). Not any field after a question, nor
+// one whose name only starts so (`plan_customer_id`): an MCP server's form
 // reaches the same path.
 func isOther(field, before model.Field, suffix string) bool {
-	return suffix != "" && len(field.Options) == 0 && len(before.Options) > 0 && strings.HasPrefix(field.ID, before.ID+suffix)
+	if suffix == "" || len(field.Options) > 0 || len(before.Options) == 0 {
+		return false
+	}
+	tail, ok := strings.CutPrefix(field.ID, before.ID+suffix)
+	return ok && strings.Trim(tail, "0123456789") == ""
 }
