@@ -47,7 +47,7 @@ MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 # start the daemon and the app on the real data folder. make run does.
 .DEFAULT_GOAL := help
 
-.PHONY: help run daemon stop app package package-linux install gen gen-tools test test-go test-packages test-app test-timings test-web lint lint-go lint-dart lint-linux lint-windows check golden-diff renders lines relay relay-web icons adapters web web-fonts web-cut mermaid screenshots gallery claude-record hooks
+.PHONY: help run daemon stop app package package-linux install gen gen-tools test-go test-packages test-app test-timings test-web lint lint-go lint-dart lint-linux lint-windows check golden-diff renders lines relay relay-web icons adapters web web-fonts web-cut mermaid screenshots gallery claude-record
 
 help:
 	@echo "make run starts the daemon and the app; make check runs every check. Targets:"
@@ -275,22 +275,17 @@ lint-dart:
 	@for d in $(DART_DIRS); do (cd $$d && find lib test bin -name '*.dart' ! -path 'lib/gen/*' 2>/dev/null | xargs dart format --output=none --set-exit-if-changed) || exit 1; done
 
 
-# On Linux, no Mac window to test, and the web's tests only with a Chrome.
-ifeq ($(OS),Linux)
-test: test-go test-packages test-app $(if $(CHROME),test-web)
-else
-test: test-go test-packages test-app test-web test-window
-endif
-
 # With the race detector: about twice the time, still under the app's
 # tests in CI, and a goroutine nothing waits for shows up here first.
 # GOTESTFLAGS adds flags (CI's -shuffle=on, which finds tests that pass
 # only in their file's order; go test prints the seed to run it again).
 # Git in the tests reads no config or ignore file of the user's: a global
 # excludes file (XDG_CONFIG_HOME's git/ignore) changed what git check-ignore
-# said in the tests' own repositories.
+# said in the tests' own repositories. A test that hangs (the tests wait
+# with plain receives, no deadlines of their own) ends at 3 minutes, not
+# go test's 10, with every goroutine's stack showing where it stuck.
 test-go:
-	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 XDG_CONFIG_HOME=$(CURDIR)/internal/testcheck/noconfig go test -race $(GOTESTFLAGS) ./...
+	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 XDG_CONFIG_HOME=$(CURDIR)/internal/testcheck/noconfig go test -race -timeout 3m $(GOTESTFLAGS) ./...
 
 # The packages run anywhere with Go (remote_transport's interop builds a
 # Go peer), and in Chrome where there's one.
@@ -350,27 +345,32 @@ test-window:
 	bin/enginemouse-test
 
 # The web app in Chrome with the real nushid and nushi-relay (macOS, or
-# Linux with a Chrome, as CI runs it).
+# Linux with a Chrome, as CI runs it). Without a Chrome it says so and
+# passes, but on CI, which must run it.
 test-web:
+ifeq ($(CHROME),)
+	@if [ -n "$$CI" ]; then echo "test-web: no Chrome on CI"; exit 1; fi; echo "test-web: no Chrome (CHROME_EXECUTABLE, or google-chrome on PATH), skipped"
+else
 	cd app && flutter test --platform chrome test/web
+endif
 
 # The README's screenshots (docs/images): the real app on a fake daemon with
 # made-up data, drawn by app/test/screenshots/readme_shots.dart. Not part of
-# make test (the file's name doesn't end in _test.dart).
+# make check (the file's name doesn't end in _test.dart).
 screenshots:
 	cd app && flutter test --update-goldens test/screenshots/readme_shots.dart
 
 # The component gallery (docs/design.md): every shared control in every
 # state, a sheet per group, dark and light, as PNGs in app/build/gallery
-# (app/test/screenshots/gallery.dart). Not part of make test;
+# (app/test/screenshots/gallery.dart). Not part of make check;
 # gallery_test.dart keeps a few sheets as goldens.
 GALLERY ?= $(CURDIR)/app/build/gallery
 gallery:
 	cd app && NUSHI_RENDERS='$(GALLERY)' flutter test test/screenshots/gallery.dart
 	@echo "gallery in $(GALLERY)"
 
-# The one check before a push (tools/check): everything make lint and make
-# test run, the app's suite once, then flutter build macos (on Linux,
+# The one check before a push (tools/check): make lint and every test
+# target (the app's suite once), then flutter build macos (on Linux,
 # flutter build linux; build only). The app's suite and the web's tests
 # run beside the lints and the other tests; a failure stops nothing. A line
 # per step, then what failed with the path of its full log, so its output
@@ -397,11 +397,6 @@ RENDERS ?= $(CURDIR)/app/build/renders
 renders:
 	cd app && NUSHI_RENDERS='$(RENDERS)' flutter test $(TEST)
 	@echo "renders in $(RENDERS)"
-
-# This clone's git hooks from .githooks: a push that make lint fails is
-# refused (git push --no-verify skips it).
-hooks:
-	git config core.hooksPath .githooks
 
 # Hand-written lines, without tests or generated code (the size limits).
 lines:

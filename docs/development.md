@@ -12,13 +12,12 @@ How to build, run and test Nushi from source. The rules for working in this repo
 ```sh
 make run         # starts nushid in the background (if it isn't running), then the app
 make stop        # stops nushid
-make test        # all tests (test-go, test-packages, test-app, test-web, test-window)
 make lint        # the linters and format checks, below (lint-go, lint-dart, lint-linux, lint-windows, ci-changes.sh's self-test)
-make check       # lint, test and the desktop build: the one check before a push
+make check       # lint, every test and the desktop build: the one check before a push
+make test-go     # Go's tests (also test-packages, test-app, test-web without Chrome a skip, test-window)
 make test-timings RUN=<id>  # app/test/timings.tsv from that CI run's app shards
 make gen         # regenerate the API code after editing proto/
 make lines       # hand-written line counts
-make hooks       # this clone's git hooks (.githooks): a push that make lint fails is refused
 make package     # a release "Nushi.app" with nushid inside (signed: Install, below, says with what)
 make install     # package, then copy it to ~/Applications (Linux: package-linux, then its install.sh)
 make package-linux  # Linux's package, app/build/linux/nushi (tools/package-linux.sh)
@@ -51,8 +50,6 @@ tools/linux-smoke.sh dist/nushi-1.2.0-linux-amd64.tar.gz  # install and start it
 - `tools/test-shards -check` (next): every app test file in exactly one shard of its set for any shard count, no file that builds Go or tests Linux in the macOS set (the files with goldens), and `app/test/timings.tsv` well formed; it notes how many files the table lacks;
 - `buf lint`, `buf breaking` (WIRE, ADR 0004: a field removed or renumbered without its number reserved fails) against the commit the branch grew from (`git merge-base HEAD origin/main`; `BREAKING_BASE=<ref>` for another, CI's change's base), and `buf format`;
 - `flutter analyze` and `dart format`, for the app and each package.
-
-`make hooks` sets this clone's `core.hooksPath` to `.githooks`, whose `pre-push` runs `make lint` and refuses the push when it fails (quiet when it passes); `git push --no-verify` skips it deliberately.
 
 `make check` runs it, the tests and the desktop app's build (`tools/check`): the app's suite (`--concurrency 3`) and then the web's tests in one lane, the lints and the other tests in another beside it, then `flutter build macos` (`linux` on Linux). A failure stops nothing, so one run shows every failure; each step's log is in `bin/check-logs`.
 
@@ -134,7 +131,7 @@ The app on Windows (ADR 0125) needs Flutter, Visual Studio's Build Tools with th
 
 ## Screenshots
 
-`make screenshots` draws the README's images (`docs/images/`) from the real app: `app/test/screenshots/readme_shots.dart` renders it on a fake daemon with made-up data (`demo.dart`), with the bundled fonts, at real window sizes, its shadows drawn as the app draws them (`withRealShadows`, as a render's). It isn't part of `make test`. Change the demo data there, never use real chats.
+`make screenshots` draws the README's images (`docs/images/`) from the real app: `app/test/screenshots/readme_shots.dart` renders it on a fake daemon with made-up data (`demo.dart`), with the bundled fonts, at real window sizes, its shadows drawn as the app draws them (`withRealShadows`, as a render's). It isn't part of `make check`. Change the demo data there, never use real chats.
 
 ## Dependencies
 

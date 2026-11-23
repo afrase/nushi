@@ -75,14 +75,12 @@ func steps(folder string) (lanes [][]step, after []step) {
 		flags = "--concurrency 3"
 	}
 	flags += " --file-reporter json:../" + logs + "/test-app.json"
+	// test-web skips itself where there's no Chrome.
 	app := []step{{
 		name:    "test-app",
 		cmd:     []string{"make", "test-app", "FLUTTER_TEST_FLAGS=" + flags},
 		results: filepath.Join(folder, "test-app.json"),
-	}}
-	if hasChrome() {
-		app = append(app, makeStep("test-web"))
-	}
+	}, makeStep("test-web")}
 	rest := []step{
 		makeStep("lint-dart"), makeStep("lint-go"), makeStep("lint-linux"), makeStep("lint-windows"),
 		{name: "ci-changes self-test", cmd: []string{"tools/ci-changes.sh", "--self-test"}},
@@ -97,19 +95,6 @@ func steps(folder string) (lanes [][]step, after []step) {
 
 func makeStep(target string) step {
 	return step{name: target, cmd: []string{"make", target}}
-}
-
-// hasChrome is whether the web app's tests can run here, as make test
-// decides: always on the Mac, on Linux with a Chrome.
-func hasChrome() bool {
-	if runtime.GOOS != "linux" {
-		return true
-	}
-	if os.Getenv("CHROME_EXECUTABLE") != "" {
-		return true
-	}
-	_, err := exec.LookPath("google-chrome")
-	return err == nil
 }
 
 // buildTarget is the desktop app flutter builds here: Linux's on Linux
