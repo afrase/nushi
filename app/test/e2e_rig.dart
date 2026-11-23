@@ -3,7 +3,9 @@
 // folder of their own in /tmp, the fake agent as oh-my-pi (built as the
 // `omp` on the daemon's PATH: omp is a plain program Nushi starts as it
 // is, with no adapter to set up and no version it needs), the relay and
-// the daemon started there. Each test makes its own client steps on it.
+// the daemon started there, each through startChild, so they end with the
+// test's process however it ends. Each test makes its own client steps on
+// it.
 //
 // dart:io only: web/mac_side.dart runs in a hybrid isolate, which resolves
 // no packages, and imports this file by its relative path.
@@ -26,6 +28,61 @@ Future<void> until(
     await Future<void>.delayed(const Duration(milliseconds: 50));
   }
 }
+
+/// Starts [executable] with [arguments] as the rig's child that ends with
+/// the test, however the test's process ends: on macOS and Linux it runs
+/// under a small shell that holds a pipe from this process (its stdin) and
+/// stops the child (SIGTERM) when that pipe closes, as it does when this
+/// process is killed, even by SIGKILL, which no handler here would see.
+/// The shell passes on a SIGTERM to the child and ends with it, with its
+/// exit code; the child's output is the shell's, so it reads as the
+/// child's own. On Windows, where the rig doesn't run, the child is
+/// started as it is.
+Future<Process> startChild(
+  String executable,
+  List<String> arguments, {
+  Map<String, String>? environment,
+  bool includeParentEnvironment = true,
+}) {
+  if (Platform.isWindows) {
+    return Process.start(
+      executable,
+      arguments,
+      environment: environment,
+      includeParentEnvironment: includeParentEnvironment,
+    );
+  }
+  return Process.start(
+    '/bin/sh',
+    ['-c', _supervised, 'sh', executable, ...arguments],
+    environment: environment,
+    includeParentEnvironment: includeParentEnvironment,
+  );
+}
+
+/// The shell [startChild] runs a child under: the child with no stdin, a
+/// watcher that reads the pipe from the test's process until it closes
+/// and then stops the child, a SIGTERM passed on, and the child's exit
+/// code its own once the child has ended (the wait again after a SIGTERM
+/// cut it short).
+const _supervised = r"""
+exec 3<&0
+"$@" 0</dev/null 3<&- &
+child=$!
+(while read -r _ <&3; do :; done; kill -TERM "$child" 2>/dev/null) \
+  0</dev/null 1>/dev/null 2>&1 &
+watch=$!
+exec 3<&-
+trap 'kill -TERM "$child" 2>/dev/null' TERM
+wait "$child"
+code=$?
+while kill -0 "$child" 2>/dev/null; do
+  wait "$child"
+  code=$?
+done
+kill "$watch" 2>/dev/null
+exit "$code"
+""";
 
 /// The binaries built and set up in [path] (bin, data, home, work): the
 /// relay and the daemon once started, and what a client needs of them.
@@ -87,7 +144,7 @@ class Rig {
   /// Starts a relay on [port] (0: any free one) with [args], once it
   /// listens; it becomes [relay].
   Future<void> startRelay({int port = 0, List<String> args = const []}) async {
-    relay = await Process.start('$path/bin/nushi-relay', [
+    relay = await startChild('$path/bin/nushi-relay', [
       '-addr',
       '127.0.0.1:$port',
       ...args,
@@ -114,7 +171,7 @@ class Rig {
   /// Starts nushid on the rig's data folder, its agents on the rig's PATH
   /// (not the login shell's), once its socket is there.
   Future<void> startDaemon() async {
-    final daemon = await Process.start(
+    final daemon = await startChild(
       '$path/bin/nushid',
       [],
       environment: {
