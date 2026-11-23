@@ -166,22 +166,3 @@ func TestForksAreMeteredFromTheirChat(t *testing.T) {
 		t.Errorf("the fork's turn: %s", testcheck.JSON(t, last))
 	}
 }
-
-// A worktree chat counts toward its repository's folder, as the sidebar
-// groups it.
-func TestProjectFolder(t *testing.T) {
-	wt := &model.Worktree{Repo: "/src/app", Path: "/wt/app-x"}
-	for _, tc := range []struct {
-		r    model.ChatRecord
-		want string
-	}{
-		{model.ChatRecord{Folder: "/src/app"}, "/src/app"},
-		{model.ChatRecord{Folder: "/wt/app-x", Worktree: wt}, "/src/app"},
-		{model.ChatRecord{Folder: "/wt/app-x/pkg/ui", Worktree: wt}, "/src/app/pkg/ui"},
-		{model.ChatRecord{Folder: "/elsewhere", Worktree: wt}, "/elsewhere"},
-	} {
-		if got := projectFolder(tc.r); got != tc.want {
-			t.Errorf("%+v: %q, want %q", tc.r, got, tc.want)
-		}
-	}
-}

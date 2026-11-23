@@ -149,7 +149,7 @@ var errOtherSide = errors.New("the chat has another side chat open")
 // fork of an archived side chat's, and returns its id.
 func (s *Service) openSide(ctx context.Context, p *chat, from *sideSource) (string, error) {
 	p.mu.Lock()
-	agent, sid, folder, project := p.agent, p.sid, p.record.Folder, projectFolder(p.record)
+	agent, sid, folder, project := p.agent, p.sid, p.record.Folder, p.record.ProjectFolder()
 	can := p.canFork && p.parent == nil
 	base, _ := p.finishedLocked() // the side chat forks the whole session
 	lastItem := p.lastItem        // the side chat's own items come after

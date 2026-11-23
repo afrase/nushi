@@ -2,6 +2,7 @@
 package model
 
 import (
+	"path/filepath"
 	"slices"
 	"time"
 )
@@ -111,6 +112,18 @@ type ChatRecord struct {
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`
+}
+
+// ProjectFolder is the folder the chat stands for: in a worktree, the same
+// folder in its repository (the main checkout), as the app's sidebar
+// groups chats; else Folder.
+func (s ChatRecord) ProjectFolder() string {
+	if wt := s.Worktree; wt != nil && wt.Repo != "" {
+		if rel, err := filepath.Rel(wt.Path, s.Folder); err == nil && filepath.IsLocal(rel) {
+			return filepath.Join(wt.Repo, rel)
+		}
+	}
+	return s.Folder
 }
 
 // MaxPulls is how many pull requests a chat holds at most (ADR 0117).

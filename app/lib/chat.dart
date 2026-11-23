@@ -572,9 +572,13 @@ class ChatState extends ChangeNotifier {
   String get resume => knownAgents[agent]?.resume ?? '';
 
   /// The folder the chat stands for: in a worktree, the same folder in its
-  /// repository; the sidebar groups chats by it.
+  /// repository (not a folder beside it whose name starts with its name);
+  /// the sidebar groups chats by it, as the daemon's
+  /// ChatRecord.ProjectFolder counts it.
   String get home => switch (worktree) {
-    final wt? when folder.startsWith(wt.path) =>
+    final wt?
+        when wt.repo.isNotEmpty &&
+            (folder == wt.path || folder.startsWith('${wt.path}/')) =>
       wt.repo + folder.substring(wt.path.length),
     _ => folder,
   };

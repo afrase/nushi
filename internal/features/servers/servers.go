@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -166,10 +165,8 @@ func (s *Service) place(chatID string) (folder, main string, err error) {
 	if sess.Archived {
 		return "", "", errors.New("the chat is archived")
 	}
-	if wt := sess.Worktree; wt != nil && wt.Repo != "" && wt.Repo != wt.Path {
-		if rel, err := filepath.Rel(wt.Path, sess.Folder); err == nil && filepath.IsLocal(rel) {
-			main = filepath.Join(wt.Repo, rel)
-		}
+	if p := sess.ProjectFolder(); p != sess.Folder {
+		main = p
 	}
 	return sess.Folder, main, nil
 }

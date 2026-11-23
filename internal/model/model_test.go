@@ -29,3 +29,24 @@ func TestRenamedFieldsKeepTheirJSONNames(t *testing.T) {
 		t.Errorf("Done written as %s", b)
 	}
 }
+
+// A worktree chat stands for the same folder in its repository, as the
+// sidebar groups it; a folder beside the worktree whose name starts with
+// its name isn't in it.
+func TestProjectFolder(t *testing.T) {
+	wt := &Worktree{Repo: "/src/app", Path: "/wt/app-x"}
+	for _, tc := range []struct {
+		r    ChatRecord
+		want string
+	}{
+		{ChatRecord{Folder: "/src/app"}, "/src/app"},
+		{ChatRecord{Folder: "/wt/app-x", Worktree: wt}, "/src/app"},
+		{ChatRecord{Folder: "/wt/app-x/pkg/ui", Worktree: wt}, "/src/app/pkg/ui"},
+		{ChatRecord{Folder: "/wt/app-x2", Worktree: wt}, "/wt/app-x2"},
+		{ChatRecord{Folder: "/elsewhere", Worktree: wt}, "/elsewhere"},
+	} {
+		if got := tc.r.ProjectFolder(); got != tc.want {
+			t.Errorf("%+v: %q, want %q", tc.r, got, tc.want)
+		}
+	}
+}

@@ -40,6 +40,27 @@ List<List<Object>> _groups(List<(String, List<String>)> want) => [
 ];
 
 void main() {
+  test(
+    "home: a worktree chat's folder in its repository, as the daemon "
+    'counts it; not a folder beside the worktree that starts with its name',
+    () {
+      final wt = Worktree(repo: '/src/app', path: '/wt/app-x');
+      for (final (folder, want) in [
+        ('/wt/app-x', '/src/app'),
+        ('/wt/app-x/pkg/ui', '/src/app/pkg/ui'),
+        ('/wt/app-x2', '/wt/app-x2'),
+        ('/elsewhere', '/elsewhere'),
+      ]) {
+        expect(
+          (ChatState('c', folder)..worktree = wt).home,
+          want,
+          reason: folder,
+        );
+      }
+      expect(ChatState('c', '/src/app').home, '/src/app');
+    },
+  );
+
   test('dateGroup: each boundary, the future, and past years', () {
     // fixtureNow is noon on Thursday 29 October 2026.
     for (final (at, key, label) in [

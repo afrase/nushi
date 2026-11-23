@@ -1,7 +1,6 @@
 package chats
 
 import (
-	"path/filepath"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -46,7 +45,7 @@ func (c *chat) meterLocked(end model.UsageEnd, u *acp.Usage) {
 		return
 	}
 	t := model.TurnUsage{At: time.Now(), Chat: c.id, Meter: c.id, From: c.costFrom, Began: c.record.Created, Agent: c.kind.Name,
-		Model: c.modelLocked(), Folder: projectFolder(c.record), End: end, Total: c.usage.Cost, Currency: c.usage.Currency, Costed: c.costed}
+		Model: c.modelLocked(), Folder: c.record.ProjectFolder(), End: end, Total: c.usage.Cost, Currency: c.usage.Currency, Costed: c.costed}
 	if c.parent != nil {
 		t.Chat, t.Side, t.Folder = c.parent.id, true, c.project
 	}
@@ -69,17 +68,6 @@ func (c *chat) modelLocked() string {
 		}
 	}
 	return ""
-}
-
-// projectFolder is the folder a chat counts toward: in a worktree, the
-// same folder in its repository, as the app's sidebar groups chats.
-func projectFolder(r model.ChatRecord) string {
-	if wt := r.Worktree; wt != nil && wt.Repo != "" {
-		if rel, err := filepath.Rel(wt.Path, r.Folder); err == nil && filepath.IsLocal(rel) {
-			return filepath.Join(wt.Repo, rel)
-		}
-	}
-	return r.Folder
 }
 
 // promptUsage is a turn's tokens from the prompt's answer; nil when it
