@@ -5,8 +5,8 @@
 # macOS's text rendering (on Linux a third of them differ by 1-4%), and those reading the Mac's own fonts; a fifth, the
 # Mac app packaged, only for a change to what it reads (macos-app). Linux for the
 # rest: the protos' and Dart's lint, the Dart packages' tests, the web app's end-to-end test (nushid with Chrome), and
-# the daemon on Linux (ADR 0101): every Go package's tests, and its lint, build and vet without cgo for Linux and
-# Windows; and the Linux app (ADR 0104): every other app test file, in three shards, and its package built on each
+# the daemon on Linux (ADR 0101): every Go package's tests, its lint without cgo for Linux (golangci-lint type-checks
+# and vets), and its build, vet and lint for Windows; and the Linux app (ADR 0104): every other app test file, in three shards, and its package built on each
 # architecture as the release builds it (tools/release.sh's linux part, on the oldest Ubuntu it supports, for the glibc
 # it needs), installed and started on a virtual display (tools/linux-smoke.sh), with the runner's channels tested for
 # real on amd64 (tools/linux-channels.sh); Windows for the daemon's Windows-only tests and the Windows app's build
