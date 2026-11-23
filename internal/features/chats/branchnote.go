@@ -3,7 +3,6 @@ package chats
 import (
 	"cmp"
 	"context"
-	"html"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -31,17 +30,21 @@ const toldSuffix = " ·\u00a0told\u00a0the\u00a0agent"
 // note is one of Nushi's notes to the agent: a bare tag,
 // <nushi-NAME k="v" .../>, with no words of Nushi's (the owner's rule,
 // ADR 0084's amendment of 2026-11-22). attrs are keys and values in turn;
-// each value is escaped as HTML, so no name or path can end the tag early
-// or forge another.
+// in each value & " < > are entities, so no name or path can end the tag
+// early or forge another, and the rest, an apostrophe too, is as written,
+// so the agent can use it as it reads it.
 func note(name string, attrs ...string) string {
 	var b strings.Builder
 	b.WriteString("<nushi-" + name)
 	for i := 0; i+1 < len(attrs); i += 2 {
-		b.WriteString(" " + attrs[i] + `="` + html.EscapeString(attrs[i+1]) + `"`)
+		b.WriteString(" " + attrs[i] + `="` + noteEscapes.Replace(attrs[i+1]) + `"`)
 	}
 	b.WriteString("/>")
 	return b.String()
 }
+
+// noteEscapes writes what could end or forge a note's tag as entities.
+var noteEscapes = strings.NewReplacer(`&`, "&amp;", `"`, "&quot;", `<`, "&lt;", `>`, "&gt;")
 
 // branchNote tells the agent its worktree's branch was renamed; the
 // branch names are checked by git first.

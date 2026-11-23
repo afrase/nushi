@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"context"
-	"html"
 	"os"
 	"path/filepath"
 	"slices"
@@ -149,7 +148,7 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	if wt := c.Worktree; c.Folder != try || wt == nil || !wt.Found || wt.Path != try || wt.Repo != repo || wt.Branch != "try-sqrly" {
 		t.Fatalf("moved: %s in %v", c.Folder, c.Worktree)
 	}
-	moved := `<nushi-moved folder="` + html.EscapeString(try) + `" branch="try-sqrly"/>`
+	moved := `<nushi-moved folder="` + try + `" branch="try-sqrly"/>`
 	if got := turn(one, "where"); !slices.Equal(got, []string{moved, "where"}) {
 		t.Errorf("the prompt after the move: %q", got)
 	}

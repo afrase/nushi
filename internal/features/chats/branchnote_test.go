@@ -43,8 +43,9 @@ func TestNotesAreBareTags(t *testing.T) {
 		{moveNote("/r/try", "try-sqrly"), `<nushi-moved folder="/r/try" branch="try-sqrly"/>`},
 		{stopNote("b1x_2"), `<nushi-command-stopped id="b1x_2"/>`},
 		{editNote("a.go"), `<nushi-edited path="a.go"/>`},
-		{editNote(`odd"/><x y="`), `<nushi-edited path="odd&#34;/&gt;&lt;x y=&#34;"/>`},
-		{editNote("a&b`c'.go"), `<nushi-edited path="a&amp;b` + "`" + `c&#39;.go"/>`},
+		{editNote(`odd"/><x y="`), `<nushi-edited path="odd&quot;/&gt;&lt;x y=&quot;"/>`},
+		{editNote("a&b`c'.go"), `<nushi-edited path="a&amp;b` + "`" + `c'.go"/>`},
+		{moveNote("/Users/me/Bob's app", ""), `<nushi-moved folder="/Users/me/Bob's app"/>`},
 	} {
 		if c.got != c.want {
 			t.Errorf("got %s, want %s", c.got, c.want)
