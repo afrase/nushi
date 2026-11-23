@@ -6,7 +6,7 @@ BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
 # can't run beside a go.work).
 GOLANGCI := bin/golangci-lint
 GOVULNCHECK := bin/govulncheck
-DART_DIRS := app packages/uds_transport packages/noise packages/remote_transport packages/markdown packages/svg_path
+DART_DIRS := app packages/uds_transport packages/noise packages/remote_transport packages/markdown
 # The machine make runs on: Darwin, or Linux (ADR 0101, 0104).
 OS := $(shell uname -s)
 # NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones;
@@ -297,7 +297,6 @@ test-packages:
 	cd packages/noise && dart test $(if $(CHROME),&& dart test -p chrome)
 	cd packages/remote_transport && dart test $(if $(CHROME),&& dart test -p chrome test/gzip_web_test.dart)
 	cd packages/markdown && flutter test
-	cd packages/svg_path && flutter test
 
 # The app's widget tests and goldens, the files tools/test-shards gives
 # (ADR 0129): SET=macos the files that need a Mac (goldens), SET=linux the

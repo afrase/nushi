@@ -9,7 +9,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
-import 'package:svg_path/svg_path.dart';
+import 'package:path_parsing/path_parsing.dart';
 
 /// An agent's mark, [size] square: the agent's own icon where Nushi
 /// bundles one, in the agent's own color ([agentColor]; oh-my-pi's plug in
@@ -100,6 +100,39 @@ class _Mark extends CustomPainter {
       old.box != box || !listEquals(old.layers, layers);
 }
 
+/// SVG path data (a path's `d`) as a [Path], read by path_parsing, the
+/// parser flutter_svg brings.
+Path _svgPath(String d) {
+  final writer = _PathWriter();
+  writeSvgPathDataToPath(d, writer);
+  return writer.path;
+}
+
+/// Writes path_parsing's segments (arcs and quadratics as cubics) into a
+/// [Path].
+class _PathWriter implements PathProxy {
+  final path = Path();
+
+  @override
+  void moveTo(double x, double y) => path.moveTo(x, y);
+
+  @override
+  void lineTo(double x, double y) => path.lineTo(x, y);
+
+  @override
+  void cubicTo(
+    double x1,
+    double y1,
+    double x2,
+    double y2,
+    double x3,
+    double y3,
+  ) => path.cubicTo(x1, y1, x2, y2, x3, y3);
+
+  @override
+  void close() => path.close();
+}
+
 /// The agents' own icons, each with the box it's drawn in: Claude's and
 /// Codex's from the ACP registry (`cdn.agentclientprotocol.com`, as
 /// `claude-acp.svg` and `codex-acp.svg`), Ante's from its docs' logo
@@ -109,13 +142,13 @@ class _Mark extends CustomPainter {
 /// in anomalyco/opencode), all in one color.
 /// docs/user/agent-marks.md has their terms.
 final Map<String, (Path, Rect)> _marks = {
-  'claude': (parseSvgPath(_claude), const Rect.fromLTWH(0, 0, 1200, 1200)),
-  'codex': (parseSvgPath(_codex), const Rect.fromLTWH(0, 0, 24, 24)),
+  'claude': (_svgPath(_claude), const Rect.fromLTWH(0, 0, 1200, 1200)),
+  'codex': (_svgPath(_codex), const Rect.fromLTWH(0, 0, 24, 24)),
   'ante': (_ante(), const Rect.fromLTRB(14, 32, 248, 235)),
   'omp': (_omp(), const Rect.fromLTRB(10, 8, 110, 82)),
-  'pi': (parseSvgPath(_pi), const Rect.fromLTRB(165, 165, 635, 635)),
+  'pi': (_svgPath(_pi), const Rect.fromLTRB(165, 165, 635, 635)),
   'pig': (_pig(), const Rect.fromLTRB(1, 0, 15, 12)),
-  'opencode': (parseSvgPath(_opencode), const Rect.fromLTRB(128, 96, 384, 416)),
+  'opencode': (_svgPath(_opencode), const Rect.fromLTRB(128, 96, 384, 416)),
 };
 
 /// Ante's pixel ghost, its pixels as runs of the 262×266 PNG.
@@ -220,7 +253,7 @@ const _opencode = 'M384 416H128V96H384V416ZM320 160H192V352H320V160Z';
 /// mark: here the frame's color, faint, as in its one-color logos
 /// (`opencode-logo-transparent-*.svg`: 0.2 on light, 0.28 on dark; the
 /// dark one's here in both themes, so it shows at a mark's size).
-final Path _opencodeBlock = parseSvgPath('M320 224V352H192V224H320Z');
+final Path _opencodeBlock = _svgPath('M320 224V352H192V224H320Z');
 const _opencodeBlockAlpha = 0.28;
 
 /// Pi's three pieces, in one color here.

@@ -390,7 +390,7 @@ packages:
     source: hosted
     version: "1.9.1"
   path_parsing:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: path_parsing
       sha256: "883402936929eac138ee0a45da5b0f2c80f89913e6dc3bf77eb65b84b409c6ca"
@@ -513,13 +513,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
-  svg_path:
-    dependency: "direct main"
-    description:
-      path: "../packages/svg_path"
-      relative: true
-    source: path
-    version: "0.1.0"
   sync_http:
     dependency: transitive
     description:
