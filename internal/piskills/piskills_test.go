@@ -122,7 +122,7 @@ func TestSetSkillOn(t *testing.T) {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(filepath.Join(deeper, ".pi", "settings.json"))
-	if want := "{\n  \"skills\": [\"-skills/release\"]\n}\n"; string(b) != want {
+	if want := "{\n  \"skills\": [\n    \"-skills/release\"\n  ]\n}\n"; string(b) != want {
 		t.Errorf("project settings:\n%s", b)
 	}
 	l, _ := skills.List(ctx, deeper)
@@ -154,7 +154,7 @@ func TestSetSkillOn(t *testing.T) {
 		t.Fatal(err)
 	}
 	b, _ = os.ReadFile(filepath.Join(deeper, ".pi", "settings.json"))
-	if string(b) != "{\"theme\": \"light\",\n  \"skills\": [\"-skills/release\"]}" || strings.Contains(string(b), top) {
+	if string(b) != "{\"theme\": \"light\", \"skills\": [\"-skills/release\"]}" || strings.Contains(string(b), top) {
 		t.Errorf("added:\n%s", b)
 	}
 	for _, bad := range []string{"{\"skills\": [], \"skills\": []}", "[1]", "{\"skills\": \"x\"}"} {

@@ -16,3 +16,4 @@ The owner asked for a skills manager. Claude Code (2.1.310) loads skills from yo
 
 ## Amendments
 - 2026-10-27: the page is every agent's, with the shared `.agents/skills` (ADR 0052); Claude's part is as above.
+- 2026-11-23: "the rest kept" is byte for byte: a JSON settings file is changed in its text, only the changed keys' values written (`jsonsettings`, the editor opencode's switch had), never written whole again (keys sorted, re-indented, `&` escaped, as before); a change it can't make that way is refused and the file left as it was.

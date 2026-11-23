@@ -1,4 +1,4 @@
-package opencodeskills
+package jsonsettings
 
 import (
 	"bytes"
@@ -7,14 +7,15 @@ import (
 	"github.com/tailscale/hujson"
 )
 
-// A config file is changed in its text, by the places hujson gives its
+// A settings file is changed in its text, by the places hujson gives its
 // values: an item is written in (with a comma), or its own bytes, one
 // comma and the blanks around it are cut. No other byte is written again,
-// and a comment is never cut.
+// and a comment is never cut. JSON and JSON with comments alike (opencode's
+// config, opencodeskills).
 
-// items are an object's members or a list's entries, by their places in
+// Items are an object's members or a list's entries, by their places in
 // the text.
-type items struct {
+type Items struct {
 	// starts and ends are each item's first byte and the one after its
 	// last; commas where its comma is, when one follows it.
 	starts, ends, commas []int
@@ -25,9 +26,10 @@ type items struct {
 	tail, shut int
 }
 
-func arrayItems(v *hujson.Value) items {
+// ArrayItems are the entries of the list v.
+func ArrayItems(v *hujson.Value) Items {
 	arr, _ := v.Value.(*hujson.Array)
-	l := items{shut: v.EndOffset - 1}
+	l := Items{shut: v.EndOffset - 1}
 	for _, e := range arr.Elements {
 		l.starts, l.ends, l.commas = append(l.starts, e.StartOffset), append(l.ends, e.EndOffset), append(l.commas, e.EndOffset+len(e.AfterExtra))
 		l.trailing = e.AfterExtra != nil
@@ -36,9 +38,9 @@ func arrayItems(v *hujson.Value) items {
 	return l
 }
 
-// objectItems are the members of top, which ends at end.
-func objectItems(top *hujson.Object, end int) items {
-	l := items{shut: end - 1}
+// ObjectItems are the members of top, which ends at end.
+func ObjectItems(top *hujson.Object, end int) Items {
+	l := Items{shut: end - 1}
 	for _, m := range top.Members {
 		l.starts, l.ends, l.commas = append(l.starts, m.Name.StartOffset), append(l.ends, m.Value.EndOffset), append(l.commas, m.Value.EndOffset+len(m.Value.AfterExtra))
 		l.trailing = m.Value.AfterExtra != nil
@@ -53,8 +55,8 @@ type cut struct {
 	ins     string
 }
 
-// apply makes the cuts in b, those at one place in the order given.
-func apply(b []byte, cuts ...cut) []byte {
+// splice makes the cuts in b, those at one place in the order given.
+func splice(b []byte, cuts ...cut) []byte {
 	slices.SortStableFunc(cuts, func(a, c cut) int { return a.at - c.at })
 	var out []byte
 	done := 0
@@ -71,17 +73,17 @@ func blank(b []byte) bool { return len(bytes.Trim(b, " \t\r")) == 0 }
 // lineStart is where the line holding b[at] starts.
 func lineStart(b []byte, at int) int { return bytes.LastIndexByte(b[:at], '\n') + 1 }
 
-// eol is the line break b's lines end with.
-func eol(b []byte) string {
+// EOL is the line break b's lines end with.
+func EOL(b []byte) string {
 	if bytes.Contains(b, []byte("\r\n")) {
 		return "\r\n"
 	}
 	return "\n"
 }
 
-// unit is a level of b's indentation: a tab where it has lines starting
+// Unit is a level of b's indentation: a tab where it has lines starting
 // with one, else two spaces.
-func unit(b []byte) string {
+func Unit(b []byte) string {
 	if bytes.Contains(b, []byte("\n\t")) {
 		return "\t"
 	}
@@ -90,7 +92,7 @@ func unit(b []byte) string {
 
 // ownLine is where the line break before the closing bracket starts when
 // that bracket has a line to itself, else -1.
-func (l items) ownLine(b []byte) int {
+func (l Items) ownLine(b []byte) int {
 	i := bytes.LastIndexByte(b[l.tail:l.shut], '\n')
 	if i < 0 || !blank(b[l.tail+i+1:l.shut]) {
 		return -1
@@ -103,19 +105,19 @@ func (l items) ownLine(b []byte) int {
 
 // indent is what a new item's line starts with: what the last item's
 // does when it starts its line, else a level more than the bracket's.
-func (l items) indent(b []byte) string {
+func (l Items) indent(b []byte) string {
 	if n := len(l.starts); n > 0 {
 		if lead := b[lineStart(b, l.starts[n-1]):l.starts[n-1]]; blank(lead) {
 			return string(lead)
 		}
 	}
-	return string(b[lineStart(b, l.shut):l.shut]) + unit(b)
+	return string(b[lineStart(b, l.shut):l.shut]) + Unit(b)
 }
 
-// add is b with a last item: on a line of its own before the closing
+// Add is b with a last item: on a line of its own before the closing
 // bracket when that has one (item is given the line's indentation), else
 // after the last item on its line. A trailing comma stays trailing.
-func (l items) add(b []byte, item func(indent string, lines bool) string) []byte {
+func (l Items) Add(b []byte, item func(indent string, lines bool) string) []byte {
 	n := len(l.starts)
 	var cuts []cut
 	if n > 0 && !l.trailing {
@@ -127,7 +129,7 @@ func (l items) add(b []byte, item func(indent string, lines bool) string) []byte
 	}
 	if at := l.ownLine(b); at >= 0 {
 		indent := l.indent(b)
-		return apply(b, append(cuts, cut{at: at, ins: eol(b) + indent + item(indent, true) + comma})...)
+		return splice(b, append(cuts, cut{at: at, ins: EOL(b) + indent + item(indent, true) + comma})...)
 	}
 	text := item("", false)
 	switch {
@@ -138,13 +140,13 @@ func (l items) add(b []byte, item func(indent string, lines bool) string) []byte
 	default:
 		cuts[0].ins = ", " + text
 	}
-	return apply(b, cuts...)
+	return splice(b, cuts...)
 }
 
-// drop is b without item i and its comma (the one before it, for a last
+// Drop is b without item i and its comma (the one before it, for a last
 // item with none after), and without its lines when nothing else is on
 // them; else without the blanks beside it.
-func (l items) drop(b []byte, i int) []byte {
+func (l Items) Drop(b []byte, i int) []byte {
 	n := len(l.starts)
 	start, end := l.starts[i], l.ends[i]
 	var cuts []cut
@@ -160,7 +162,7 @@ func (l items) drop(b []byte, i int) []byte {
 	}
 	from := lineStart(b, start)
 	if rest := bytes.IndexByte(b[end:], '\n'); rest >= 0 && blank(b[from:start]) && blank(b[end:end+rest]) {
-		return apply(b, append(cuts, cut{at: from, del: end + rest + 1 - from})...)
+		return splice(b, append(cuts, cut{at: from, del: end + rest + 1 - from})...)
 	}
 	leads := blank(b[from:start])
 	for !leads && (b[start-1] == ' ' || b[start-1] == '\t') {
@@ -169,5 +171,5 @@ func (l items) drop(b []byte, i int) []byte {
 	for start == l.starts[i] && (leads || end > l.ends[i]) && (b[end] == ' ' || b[end] == '\t') {
 		end++
 	}
-	return apply(b, append(cuts, cut{at: start, del: end - start})...)
+	return splice(b, append(cuts, cut{at: start, del: end - start})...)
 }

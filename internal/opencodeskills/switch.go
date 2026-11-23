@@ -25,9 +25,10 @@ import (
 // below as the last of "policies" in the first global file opencode
 // reads (opencode.json, else an opencode.jsonc that is there), where it
 // decides whatever else the files say; and on by taking its own entries
-// for the id out of both. The file's text is changed in place (edit.go):
-// nothing is written again but the entry, so comments, order and layout
-// stay, and turning a skill off and on leaves the file as it was.
+// for the id out of both. The file's text is changed in place
+// (jsonsettings' text editor): nothing is written again but the entry, so
+// comments, order and layout stay, and turning a skill off and on leaves
+// the file as it was.
 
 // entry is the policy that turns the skill id off, as Nushi writes it.
 func entry(id string) string {
@@ -152,17 +153,17 @@ func added(b []byte, top *hujson.Object, end int, item string) ([]byte, error) {
 	case n > 1:
 		return nil, errors.New(`it has "policies" twice`)
 	case n == 0:
-		return objectItems(top, end).add(b, func(indent string, lines bool) string {
+		return jsonsettings.ObjectItems(top, end).Add(b, func(indent string, lines bool) string {
 			if !lines {
 				return `"policies": [` + item + `]`
 			}
-			return `"policies": [` + eol(b) + indent + unit(b) + item + eol(b) + indent + `]`
+			return `"policies": [` + jsonsettings.EOL(b) + indent + jsonsettings.Unit(b) + item + jsonsettings.EOL(b) + indent + `]`
 		}), nil
 	}
 	if _, ok := v.Value.(*hujson.Array); !ok {
 		return nil, errors.New(`its "policies" isn't a list`)
 	}
-	return arrayItems(v).add(b, func(string, bool) string { return item }), nil
+	return jsonsettings.ArrayItems(v).Add(b, func(string, bool) string { return item }), nil
 }
 
 // dropped is b without the first of Nushi's entries for id in top's
@@ -189,9 +190,9 @@ func dropped(b []byte, top *hujson.Object, end int, id string) []byte {
 		arr.AfterExtra, arr.Elements[0].BeforeExtra, arr.Elements[0].AfterExtra, top.Members[i].Name.AfterExtra, v.BeforeExtra,
 	}, hasComment)
 	if alone {
-		return objectItems(top, end).drop(b, i)
+		return jsonsettings.ObjectItems(top, end).Drop(b, i)
 	}
-	return arrayItems(v).drop(b, at)
+	return jsonsettings.ArrayItems(v).Drop(b, at)
 }
 
 // only says after reads as before with the entry for id added to

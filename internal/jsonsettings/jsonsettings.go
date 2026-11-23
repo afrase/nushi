@@ -1,9 +1,10 @@
 // Package jsonsettings reads an agent's settings files, and changes a
-// JSON one a key at a time (ADR 0051's way): the rest kept, the file
-// replaced at once.
+// JSON one a key at a time (ADR 0051's way): every other byte kept
+// (change.go), the file replaced at once.
 package jsonsettings
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,7 +48,9 @@ func Read(path string, v any) error {
 
 // Edit reads the JSON settings file at path, changes it through change
 // (which gets its settings by key; none for a new file) and writes it
-// back through atomicfile.Rewrite: other keys kept, the file replaced at
+// back through atomicfile.Rewrite: only the keys change changed are
+// written, every other byte kept (a change the text can't take that way
+// is refused, the file left as it was), the file replaced at
 // once with its mode, a new one made private with its folder; a link
 // (your dotfiles') followed, to change the file it points at. created
 // says there was none.
@@ -56,8 +59,8 @@ func Edit(path string, change func(map[string]json.RawMessage) error) (created b
 	defer mu.Unlock()
 	b, err := ReadFile(path)
 	out, created, err := apply(path, b, err, change)
-	if err != nil {
-		return false, err
+	if err != nil || bytes.Equal(out, b) && !created {
+		return false, err // unchanged: not written
 	}
 	return created, atomicfile.Rewrite(path, out)
 }
@@ -76,15 +79,16 @@ func EditIn(base, name string, change func(map[string]json.RawMessage) error) (c
 	defer mu.Unlock()
 	b, err := regularfile.ReadIn(root, name, maxFile)
 	out, created, err := apply(filepath.Join(base, name), b, err, change)
-	if err != nil {
-		return false, err
+	if err != nil || bytes.Equal(out, b) && !created {
+		return false, err // unchanged: not written
 	}
 	return created, writeIn(root, name, out)
 }
 
 // apply changes the settings file at path, b as read (readErr: a missing
 // file has none), through change, and returns its new text; created says
-// it was missing.
+// it was missing. Only what change changed is written into b (changed);
+// a missing file, or one holding null, is written whole.
 func apply(path string, b []byte, readErr error, change func(map[string]json.RawMessage) error) (out []byte, created bool, err error) {
 	settings := map[string]json.RawMessage{}
 	created = os.IsNotExist(readErr)
@@ -95,17 +99,41 @@ func apply(path string, b []byte, readErr error, change func(map[string]json.Raw
 	if err != nil && !created {
 		return nil, false, fmt.Errorf("reading %s: %w", path, err)
 	}
-	if settings == nil { // the file holds null
+	whole := created || settings == nil // nothing to keep
+	if settings == nil {                // the file holds null
 		settings = map[string]json.RawMessage{}
 	}
 	if err := change(settings); err != nil {
 		return nil, false, fmt.Errorf("%s: %w", path, err)
 	}
-	out, err = json.MarshalIndent(settings, "", "  ")
-	if err != nil {
+	if !whole {
+		out, err := changed(b, settings)
+		if err != nil {
+			return nil, false, fmt.Errorf("%w: change it in %s", err, path)
+		}
+		return out, false, nil
+	}
+	var w bytes.Buffer
+	enc := json.NewEncoder(&w)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(settings); err != nil {
 		return nil, false, err
 	}
-	return append(out, '\n'), created, nil
+	return []byte(unescapeHTML(w.String())), created, nil
+}
+
+// SetKeyIn is EditIn for one top-level key: change gets its value (nil
+// when absent) and returns the new one. For a file the repository may
+// commit, where a rewrite of the rest would be a diff nobody asked for
+// (every edit keeps the rest's bytes now).
+func SetKeyIn(base, name, key string, change func(old json.RawMessage) (json.RawMessage, error)) error {
+	_, err := EditIn(base, name, func(m map[string]json.RawMessage) error {
+		v, err := change(m[key])
+		m[key] = v
+		return err
+	})
+	return err
 }
 
 // writeIn replaces name inside root with data at once

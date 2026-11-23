@@ -126,7 +126,7 @@ func TestSetOnKeepsOtherSettings(t *testing.T) {
 	if err := (Claude{}).SetOn(ctx, repo, "project", "web", false); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(path); !strings.Contains(string(b), `"enabledMcpjsonServers": []`) {
+	if b, _ := os.ReadFile(path); !strings.Contains(string(b), `"enabledMcpjsonServers":[]`) {
 		t.Errorf("settings = %s", b)
 	}
 	testcheck.Write(t, filepath.Join(repo, ".claude", "settings.json"), `{"disabledMcpjsonServers":"web"}`)

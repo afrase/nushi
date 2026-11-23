@@ -77,7 +77,7 @@ func TestListAndSwitch(t *testing.T) {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(filepath.Join(anteHome, "settings.json"))
-	if string(b) != "{\n  \"exclude_skills\": [\n    \"release\"\n  ],\n  \"model\": \"x\"\n}\n" {
+	if string(b) != `{"model": "x", "exclude_skills": ["release"]}` {
 		t.Errorf("settings: %s", b)
 	}
 	if l, _ := (Ante{}).List(ctx, folder); listed(sharedOf(l)) != "shared release off|shared everyday on" {
