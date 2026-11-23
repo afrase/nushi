@@ -165,6 +165,7 @@ func inFile(path string, controls bool) ([]dartcheck.Use, error) {
 		for _, s := range sizes {
 			if !onScale(s, path) {
 				uses = append(uses, dartcheck.Use{Path: path, Line: i + 1, What: offScale})
+				break // a line once
 			}
 		}
 	}

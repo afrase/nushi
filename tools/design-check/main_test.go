@@ -38,10 +38,14 @@ func TestCheck(t *testing.T) {
 			"BorderRadius.all(Radius.circular(4)).fromCircle(4)\nradius: 9, // design: a dot\n",
 		"controls_menus.dart": "borderRadius: BorderRadius.circular(6),\n",
 		// The type scale: a step passes, between steps fails, however the
-		// call is laid out; only ui() and code() are read.
+		// call is laid out; only ui() and code() are read, each branch of a
+		// ternary, and only the call's own size:, not a nested call's.
 		"scale.dart": "theme.ui(t.text, size: 12.5)\ntheme.code(t.text, size: 12)\ntheme.ui(\n  t.text,\n  size: 14.5,\n  weight: w,\n)\n" +
 			"Icon(i, size: 12.5)\ntheme.ui(t.text, size: base * 0.9)\ntheme.ui(f('(', 1), size: 18).copyWith(height: 1)\n" +
-			"theme.ui(t.text, size: 16)\n// design: the pairing code\ntheme.code(t.text, size: 40)\n",
+			"theme.ui(t.text, size: 16)\n// design: the pairing code\ntheme.code(t.text, size: 40)\n" +
+			"theme.ui(t.text, size: small ? 12.5 : 13)\ntheme.ui(colorOf(Icon(i, size: 18)), size: 13)\n" +
+			"theme.code(t.text, size: small ? 12 : 13)\ntheme.ui(t.text, size: a ? 12 : 13.5, weight: w)\n" +
+			"theme.ui(t.text, size: a ? 1.5 : 2.5)\n",
 		"phone/scale.dart":       "theme.ui(t.text, size: 16)\ntheme.ui(t.text, size: 17)\n",
 		"motion.dart":            "static const quick = Duration(milliseconds: 120);\n",
 		"toast.dart":             "messenger.showSnackBar(SnackBar(content: c));\n",
@@ -101,6 +105,9 @@ func TestCheck(t *testing.T) {
 		"say.dart:2: " + snack,
 		"scale.dart:10: " + offScale, // sorted as text
 		"scale.dart:11: " + offScale,
+		"scale.dart:14: " + offScale,
+		"scale.dart:17: " + offScale,
+		"scale.dart:18: " + offScale, // once, however many sizes are off
 		"scale.dart:1: " + offScale,
 		"scale.dart:5: " + offScale,
 		"size.dart:1: " + size,

@@ -19,8 +19,8 @@ var (
 // offScale is the type-scale rule's verdict.
 const offScale = "a size off the type scale (11, 11.5, 12, 13, 14, 15, 20; the phone's 16): the nearest step, docs/design.md's Type"
 
-// sizeArg finds a number given as size: inside a call's arguments.
-var sizeArg = regexp.MustCompile(`\bsize:\s*(\d+(?:\.\d+)?)\s*(?:[,)]|$)`)
+// number is a size written as a plain number.
+var number = regexp.MustCompile(`^\d+(?:\.\d+)?$`)
 
 // styleCall follows a call of ui( or code( across lines, for the sizes
 // it sets: depth is how many of its brackets are open, 0 outside one.
@@ -28,33 +28,57 @@ type styleCall struct{ depth int }
 
 // sizes lists the numbers given as size: to a ui( or code( call on one
 // line of code (its comment cut), the call carried over from the lines
-// before it.
+// before it: a plain number, or each branch of a ternary that is one. A
+// size: inside a nested call (an Icon's) isn't the call's own.
 func (c *styleCall) sizes(code string) []string {
 	masked := stringLiteral.ReplaceAllStringFunc(code, func(s string) string { return strings.Repeat(" ", len(s)) })
-	var args []string
-	start := 0
+	var found []string
+	var own strings.Builder // the call's own arguments, nested brackets left out
+	end := func() {
+		found = append(found, sizesIn(own.String())...)
+		own.Reset()
+	}
 	for i := range len(masked) {
+		ch := masked[i]
 		switch {
 		case c.depth == 0:
-			if masked[i] == '(' && (strings.HasSuffix(masked[:i], ".ui") || strings.HasSuffix(masked[:i], ".code")) {
-				c.depth, start = 1, i+1
+			if ch == '(' && (strings.HasSuffix(masked[:i], ".ui") || strings.HasSuffix(masked[:i], ".code")) {
+				c.depth = 1
 			}
-		case masked[i] == '(':
+		case ch == '(':
 			c.depth++
-		case masked[i] == ')':
+		case ch == ')':
 			c.depth--
 			if c.depth == 0 {
-				args = append(args, masked[start:i+1])
+				end()
 			}
+		case c.depth == 1:
+			own.WriteByte(ch)
 		}
 	}
 	if c.depth > 0 {
-		args = append(args, masked[start:])
+		end()
 	}
+	return found
+}
+
+// sizesIn lists the sizes given as size: in a call's own arguments.
+func sizesIn(args string) []string {
 	var found []string
-	for _, a := range args {
-		for _, m := range sizeArg.FindAllStringSubmatch(a, -1) {
-			found = append(found, m[1])
+	for arg := range strings.SplitSeq(args, ",") {
+		value, ok := strings.CutPrefix(strings.TrimSpace(arg), "size:")
+		if !ok {
+			continue
+		}
+		branches := []string{value}
+		if _, choice, ok := strings.Cut(value, "?"); ok {
+			yes, no, _ := strings.Cut(choice, ":")
+			branches = []string{yes, no}
+		}
+		for _, b := range branches {
+			if b = strings.TrimSpace(b); number.MatchString(b) {
+				found = append(found, b)
+			}
 		}
 	}
 	return found
