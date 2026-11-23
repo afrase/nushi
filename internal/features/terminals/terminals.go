@@ -121,29 +121,20 @@ func (s *Service) changed(chatID string) {
 	s.publish(model.Event{ChatID: chatID, Terminals: &list})
 }
 
-func (s *Service) get(id string) (*term, error) {
+// get returns a terminal and its shell as it is now (Restart replaces
+// it), in one look under the lock.
+func (s *Service) get(id string) (*term, Shell, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if i := slices.IndexFunc(s.terms, func(t *term) bool { return t.ID == id }); i >= 0 {
-		return s.terms[i], nil
+		return s.terms[i], s.terms[i].shell, nil
 	}
-	return nil, fmt.Errorf("no terminal %q", id)
-}
-
-// shellOf returns a terminal's shell.
-func (s *Service) shellOf(id string) (Shell, error) {
-	t, err := s.get(id)
-	if err != nil {
-		return nil, err
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return t.shell, nil
+	return nil, nil, fmt.Errorf("no terminal %q", id)
 }
 
 // Write sends input to a terminal.
 func (s *Service) Write(id string, data []byte) error {
-	sh, err := s.shellOf(id)
+	_, sh, err := s.get(id)
 	if err != nil {
 		return err
 	}
@@ -152,7 +143,7 @@ func (s *Service) Write(id string, data []byte) error {
 
 // Resize sets a terminal's size.
 func (s *Service) Resize(id string, cols, rows int) error {
-	sh, err := s.shellOf(id)
+	_, sh, err := s.get(id)
 	if err != nil {
 		return err
 	}
@@ -166,13 +157,10 @@ func (s *Service) Resize(id string, cols, rows int) error {
 // exiting: it says not exited, so the client attaches again, to the new
 // one.
 func (s *Service) Attach(id string, stop <-chan struct{}, fn func([]byte) bool) (exited bool, code int, err error) {
-	t, err := s.get(id)
+	t, sh, err := s.get(id)
 	if err != nil {
 		return false, 0, err
 	}
-	s.mu.Lock()
-	sh := t.shell
-	s.mu.Unlock()
 	kept := sh.Follow(stop, fn)
 	s.mu.Lock()
 	replaced := t.shell != sh
@@ -189,7 +177,7 @@ func (s *Service) Attach(id string, stop <-chan struct{}, fn func([]byte) bool) 
 
 // Rename names a terminal; "" goes back to the name it shows by itself.
 func (s *Service) Rename(id, name string) error {
-	t, err := s.get(id)
+	t, _, err := s.get(id)
 	if err != nil {
 		return err
 	}
@@ -229,7 +217,7 @@ func (s *Service) Arrange(chatID string, ids []string) {
 // shell too, not the command run again: its Restart says "shell", and
 // rerunning a command unseen (git clean, a deploy) could do harm.
 func (s *Service) Restart(id string, cols, rows int) error {
-	t, err := s.get(id)
+	t, _, err := s.get(id)
 	if err != nil {
 		return err
 	}
@@ -261,7 +249,7 @@ func (s *Service) Restart(id string, cols, rows int) error {
 // Close ends a terminal: it is no longer listed, and its shell is hung up,
 // then killed after a short grace.
 func (s *Service) Close(id string) error {
-	t, err := s.get(id)
+	t, _, err := s.get(id)
 	if err != nil {
 		return err
 	}
@@ -299,20 +287,31 @@ func (s *Service) Busy() bool {
 // Running says which terminals run a command now, for the restart's wait
 // to show: each one's chat and "running <program>". A command's terminal
 // runs one until it exits, whatever is in front: its shell may run the
-// command itself, or exec it.
+// command itself, or exec it. Each foreground program is looked up (a
+// process lookup, a whole process list on Windows) outside the lock that
+// every keystroke takes: the answer is advisory, and the restart's wait
+// asks again before it stops anything.
 func (s *Service) Running() []model.Hold {
+	type running struct {
+		chatID, command string
+		shell           Shell
+	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	terms := make([]running, len(s.terms))
+	for i, t := range s.terms {
+		terms[i] = running{t.ChatID, t.Command, t.shell}
+	}
+	s.mu.Unlock()
 	var out []model.Hold
-	for _, t := range s.terms {
+	for _, t := range terms {
 		program := t.shell.Foreground()
-		if program == "" && t.Command != "" {
+		if program == "" && t.command != "" {
 			if exited, _ := t.shell.Exit(); !exited {
-				program, _, _ = strings.Cut(strings.TrimSpace(t.Command), "\n")
+				program, _, _ = strings.Cut(strings.TrimSpace(t.command), "\n")
 			}
 		}
 		if program != "" {
-			out = append(out, model.Hold{ChatID: t.ChatID, Why: "running " + program, Terminal: true})
+			out = append(out, model.Hold{ChatID: t.chatID, Why: "running " + program, Terminal: true})
 		}
 	}
 	return out
