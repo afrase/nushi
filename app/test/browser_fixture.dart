@@ -175,8 +175,6 @@ Future<Daemon> browserApp(
           chat('c', 'claude', 'Build the tea shop'),
           chat('d', 'codex', 'Fix the cart', age: 5),
         ])
-        ..answer = ((input) =>
-            input is GetChatRequest ? GetChatResponse() : null)
         // A file's preview: its text, the stream open until the test ends.
         ..streams = (input) {
           if (input is! WatchChatFileRequest) return null;

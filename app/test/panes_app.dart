@@ -135,11 +135,6 @@ Future<(Daemon, FakeDaemon)> panesApp(
     }
   });
   Object? answer(Object input) => switch (input) {
-    GetChatRequest(:final chatId) when chatId == 'c' => GetChatResponse(
-      chat: c,
-      items: items ?? panesItems,
-    ),
-    GetChatRequest() => GetChatResponse(),
     FindChatFilesRequest(:final paths) => FindChatFilesResponse(
       found: paths.where(found.contains),
     ),
@@ -182,7 +177,9 @@ Future<(Daemon, FakeDaemon)> panesApp(
     return shellStreams?.call(input);
   }
 
+  // Chat c's transcript; GetChat answers it, and the fake's chats.
   fake
+    ..chatItems['c'] = items ?? panesItems
     ..on(answer)
     ..streams = streams;
   shells.replay['t'] = r'$ ';

@@ -73,7 +73,6 @@ class _Servers {
   final stops = <StopServerRequest>[];
 
   Object? answer(Object input) => switch (input) {
-    GetChatRequest() => GetChatResponse(),
     ListServersRequest() => ListServersResponse(
       folder: _folder,
       servers: rows,
