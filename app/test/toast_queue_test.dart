@@ -140,8 +140,8 @@ void main() {
     );
   });
 
-  testWidgets('runAndSay answers from the call\'s result; a quick answer '
-      'waits its turn, a slow one takes the spinner\'s place', (tester) async {
+  testWidgets('runAndSay answers from the call’s result; a quick answer '
+      'waits its turn, a slow one takes the spinner’s place', (tester) async {
     await start(tester);
     final here = tester.element(find.byKey(const ValueKey('here')));
     showToast(toasts, 'Committed 3f2a9c1');
