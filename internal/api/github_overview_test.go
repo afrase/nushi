@@ -1,59 +1,84 @@
 package api
 
 import (
-	"bytes"
 	"context"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/features/github"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/githubapi"
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
 )
 
+// overviewPull is GitHub with acme/lumen's pull request 57 as the Pull
+// request tab's overview reads it, and its commits; githubapi's
+// TestPullOverview and TestCommits read the same from GitHub's answers.
+type overviewPull struct{ github.Client }
+
+// overviewOpened is when the pull request was opened, and its first commit
+// made.
+var overviewOpened = time.Date(2026, 11, 18, 9, 0, 0, 0, time.UTC)
+
+func (overviewPull) Refused() bool { return false }
+
+func (overviewPull) Viewer(context.Context) (githubapi.User, error) {
+	return githubapi.User{Login: "mira"}, nil
+}
+
+func (overviewPull) Pull(_ context.Context, repo string, number int) (model.GitHubPull, error) {
+	if repo != "acme/lumen" || number != 57 {
+		return model.GitHubPull{}, githubapi.ErrNotFound
+	}
+	review := func(id, state, body string) model.GitHubComment {
+		return model.GitHubComment{ID: id, Author: "tomas", Review: state, Body: body, Created: overviewOpened}
+	}
+	return model.GitHubPull{
+		Repo: repo, Number: number, ID: "PR_57", Pull: true,
+		Title: "Expire idle sessions", State: "open", Author: "mira", Created: overviewOpened, Updated: overviewOpened,
+		Labels:    []model.GitHubLabel{{Name: "security", Color: "d73a4a"}, {Name: "needs-docs", Color: "0e8a16"}},
+		Assignees: []string{"mira", "iris"},
+		Reviews: []model.GitHubComment{review("PRR_tomas_1", "commented", ""), review("PRR_tomas_2", "changes_requested", "Not yet."),
+			review("PRR_iris_1", "approved", "")},
+		Threads: []model.GitHubThread{{ID: "PRRT_1", Path: "store.go", Side: "right", Line: 44,
+			Comments: []model.GitHubComment{{ID: "C_1", Author: "tomas", Body: "Why 30?", ReviewID: "PRR_tomas_1", Created: overviewOpened}},
+			DiffHunk: "@@ -40,6 +40,11 @@ func (s *Store) Touch"}},
+		Runs: []model.GitHubCheck{{ID: 7, Name: "test", State: "failure", Started: overviewOpened, Completed: overviewOpened.Add(2*time.Minute + 12*time.Second)}},
+	}, nil
+}
+
+func (overviewPull) Commits(_ context.Context, repo string, number int) (model.GitHubCommits, error) {
+	if repo != "acme/lumen" || number != 57 {
+		return model.GitHubCommits{}, githubapi.ErrNotFound
+	}
+	first := model.GitHubCommit{OID: "1a2b3c4d5e6f708192a3b4c5d6e7f80912345678", Headline: "Expire idle sessions", Author: "mira",
+		AuthorName: "Mira", Committed: overviewOpened, Checks: "failure"}
+	return model.GitHubCommits{Newest: []model.GitHubCommit{first,
+		{OID: "2222222222222222222222222222222222222222", Headline: "Say why", AuthorName: "Tomas", Committed: overviewOpened.Add(time.Hour)},
+		{OID: "3333333333333333333333333333333333333333", Headline: "Docs", Author: "mira", AuthorName: "Mira", Committed: overviewOpened.Add(2 * time.Hour), Checks: "success"},
+	}, First: first, Total: 3}, nil
+}
+
 // TestGitHubPullOverview: GetGitHubPull carries what the Pull request tab's
 // overview reads (labels, assignees, when it was opened, every review, a
-// thread comment's review and the thread's diff hunk), and
-// GetGitHubCommits a pull request's commits, from GitHub's recorded
-// answers.
+// thread comment's review and the thread's diff hunk, a check's times),
+// and GetGitHubCommits a pull request's commits, as the feature has them
+// from GitHub; the client is opened on the host with the token given, and
+// a host given none is never asked.
 func TestGitHubPullOverview(t *testing.T) {
-	const token = "ghp_overview0123456789"
-	answers := map[string]string{"query PullRequest": "graphql_PullRequest_overview.json", "query Commits": "graphql_Commits.json"}
-	gh := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		if r.Header.Get("Authorization") != "Bearer "+token {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		if r.URL.Path == "/api/v3/user" {
-			_, _ = w.Write([]byte(`{"login":"mira"}`))
-			return
-		}
-		for op, file := range answers {
-			if bytes.Contains(body, []byte(op)) {
-				b, err := os.ReadFile("../githubapi/testdata/" + file)
-				if err != nil {
-					t.Error(err)
-				}
-				_, _ = w.Write(b)
-				return
-			}
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer gh.Close()
-	host := strings.TrimPrefix(gh.URL, "https://")
+	const host, token = "ghe.example", "ghp_overview0123456789"
+	var opened []string
 	svc := github.New(github.Deps{
 		Gh:     github.Gh{Token: func(context.Context, string) (string, string, error) { return "", "", nil }, Hosts: func() []string { return nil }},
 		Tokens: memTokens{}, Store: &memHosts{Store: store.New(t.TempDir())},
-		Open: func(h, token string) github.Client { return githubapi.New(h, token, gh.Client().Transport) },
+		Open: func(h, tok string) github.Client {
+			opened = append(opened, h+" "+tok)
+			return overviewPull{}
+		},
 		Keys: github.Keys{NeedsOK: func(error) bool { return false }, Restart: func(error) bool { return false }, Missing: func(error) bool { return false }},
 	})
 	c := client(t, New(Services{GitHub: svc}))
@@ -67,7 +92,7 @@ func TestGitHubPullOverview(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := pr.Msg.Pull
-	if p.Item.CreatedMs == 0 || len(p.Labels) != 2 || p.Labels[0].Color != "d73a4a" || strings.Join(p.Assignees, ",") != "mira,iris" {
+	if p.Item.CreatedMs != overviewOpened.UnixMilli() || len(p.Labels) != 2 || p.Labels[0].Color != "d73a4a" || strings.Join(p.Assignees, ",") != "mira,iris" {
 		t.Fatalf("created %d, labels %v, assignees %v", p.Item.CreatedMs, p.Labels, p.Assignees)
 	}
 	if len(p.Reviews) != 3 || p.Reviews[0].Id != "PRR_tomas_1" || p.Reviews[0].Body != "" {
@@ -92,5 +117,13 @@ func TestGitHubPullOverview(t *testing.T) {
 	}
 	if _, err := c.GetGitHubCommits(ctx, connect.NewRequest(&nushiv1.GetGitHubCommitsRequest{Ref: &nushiv1.GitHubRef{Host: "evil.example", Repo: "a/b", Number: 1}})); err == nil {
 		t.Fatal("an unknown host was asked")
+	}
+	for _, o := range opened {
+		if o != host+" "+token {
+			t.Errorf("a client opened as %q, want only on %s with its token", o, host)
+		}
+	}
+	if len(opened) == 0 {
+		t.Error("no client opened")
 	}
 }

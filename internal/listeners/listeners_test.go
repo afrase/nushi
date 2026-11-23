@@ -30,22 +30,33 @@ var kinds = map[string][2]string{
 	"dual": {"tcp", ":0"},
 }
 
-// helperControl is what the helper sets on each socket before it binds:
+// helperControl is what listenFor sets on each socket before it binds:
 // nothing on the Mac, SO_REUSEPORT on Linux (listeners_linux_test.go),
 // where a second listener on a port beside another's binds only when both
 // set it.
 var helperControl func(network, address string, c syscall.RawConn) error
 
-// TestHelperProcess is the other process the tests listen from: it opens
-// a listener of each kind NUSHI_LISTENERS_KINDS names (comma-separated; a
+// kindsEnv makes this test binary, run again by listenElsewhere, the
+// other process the tests listen from (listenFor) instead of running
+// tests.
+const kindsEnv = "NUSHI_LISTENERS_KINDS"
+
+func TestMain(m *testing.M) {
+	if names := os.Getenv(kindsEnv); names != "" {
+		if err := listenFor(names); err != nil {
+			_, _ = os.Stderr.WriteString(err.Error() + "\n")
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+	m.Run()
+}
+
+// listenFor opens a listener of each kind names says (comma-separated; a
 // kind@port on that port, not a free one), writes their ports on a line,
 // answers each connection with its pid, and holds them until its input
 // closes.
-func TestHelperProcess(t *testing.T) {
-	names := os.Getenv("NUSHI_LISTENERS_KINDS")
-	if names == "" {
-		t.Skip("run by the other tests")
-	}
+func listenFor(names string) error {
 	var ports []string
 	for name := range strings.SplitSeq(names, ",") {
 		kind, port, _ := strings.Cut(name, "@")
@@ -53,17 +64,22 @@ func TestHelperProcess(t *testing.T) {
 		addr := k[1]
 		if port != "" {
 			host, _, err := net.SplitHostPort(addr)
-			testcheck.NoErr(t, err)
+			if err != nil {
+				return err
+			}
 			addr = net.JoinHostPort(host, port)
 		}
 		l, err := (&net.ListenConfig{Control: helperControl}).Listen(context.Background(), k[0], addr)
-		testcheck.NoErr(t, err)
+		if err != nil {
+			return err
+		}
 		defer func() { _ = l.Close() }()
 		go answerPid(l)
 		ports = append(ports, strconv.Itoa(l.Addr().(*net.TCPAddr).Port))
 	}
 	_, _ = os.Stdout.WriteString(strings.Join(ports, ",") + "\n")
 	_, _ = bufio.NewReader(os.Stdin).ReadString('\n')
+	return nil
 }
 
 // answerPid writes this process's pid to each connection l takes, until
@@ -83,9 +99,9 @@ func answerPid(l net.Listener) {
 // its pid and the ports in kinds' order; it ends with the test.
 func listenElsewhere(t *testing.T, kinds ...string) (int, []uint16) {
 	t.Helper()
-	cmd := exec.Command(os.Args[0], "-test.run=^TestHelperProcess$")
+	cmd := exec.Command(os.Args[0])
 	// GORACE: the race detector otherwise waits a second as it exits.
-	cmd.Env = append(os.Environ(), "NUSHI_LISTENERS_KINDS="+strings.Join(kinds, ","), "GORACE=atexit_sleep_ms=0")
+	cmd.Env = append(os.Environ(), kindsEnv+"="+strings.Join(kinds, ","), "GORACE=atexit_sleep_ms=0")
 	in, err := cmd.StdinPipe()
 	testcheck.NoErr(t, err)
 	out, err := cmd.StdoutPipe()
