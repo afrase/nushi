@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/controls.dart';
@@ -329,6 +330,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Show terminal', findRichText: true), findsOne);
     expect(find.text('Rename', findRichText: true), findsOne);
+    d.dispose();
+  });
+
+  testWidgets('folded into ⋯, the pane buttons are the palette’s actions '
+      'for the chat', (tester) async {
+    // A 720 window, a pane dragged wide beside the header.
+    viewport(tester, const Size(720, 480));
+    final d = await FakeDaemon([]).connect(tester);
+    final chat = ChatState('c', '/Users/me/repo')
+      ..agent = 'claude'
+      ..title = 'Fix the login redirect';
+    await tester.pumpWidget(
+      themed(
+        Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 280,
+            child: ChatHeader(
+              chat,
+              d,
+              tab: ChatTab.chat,
+              onTab: (_) {},
+              panel: false,
+              onPanel: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Chat menu'));
+    await tester.pumpAndSettle();
+    final panes = paneActions(tester.element(find.byType(ChatHeader)), d, chat);
+    for (final a in [panes.terminal, panes.files]) {
+      expect(a.enabled, isTrue, reason: a.title);
+      expect(
+        find.textContaining(a.title, findRichText: true),
+        findsOne,
+        reason: a.title,
+      );
+    }
+    expect(find.text('Show details', findRichText: true), findsOne);
+    await render(tester, find.byType(MaterialApp), 'header_menu_folded_720');
     d.dispose();
   });
 

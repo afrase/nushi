@@ -472,29 +472,7 @@ class ChatHeader extends StatelessWidget {
                               MenuEntry.divider,
                             ],
                           if (folds.buttons) ...[
-                            if (!chat.archived)
-                              MenuEntry(
-                                terminalChats.value.contains(chat.id)
-                                    ? 'Hide terminal'
-                                    : 'Show terminal',
-                                shortcut: keyLabel(toggleTerminalKey),
-                                line: LineIcon.terminal,
-                                onPick: () => toggleTerminal(chat.id),
-                              ),
-                            if (_files)
-                              MenuEntry(
-                                filesShown(chat) ? 'Hide files' : 'Show files',
-                                shortcut: keyLabel(filesKey),
-                                line: LineIcon.folder,
-                                onPick: () => showOrHideFiles(chat),
-                              ),
-                            _browserEntry,
-                            if (onPanel case final toggle?)
-                              MenuEntry(
-                                panel ? 'Hide details' : 'Show details',
-                                line: LineIcon.details,
-                                onPick: toggle,
-                              ),
+                            ..._paneEntries(context),
                             MenuEntry.divider,
                           ],
                           ...chatMenu(
@@ -558,6 +536,33 @@ class ChatHeader extends StatelessWidget {
       ),
   ];
 
+  /// The buttons beside the tabs as rows of ⋯, once they fold there: the
+  /// palette's terminal and Files actions for this chat ([paneActions]),
+  /// those that apply, and the browser's, which has none. The details'
+  /// row is the button's own: it toggles through [onPanel], which comes
+  /// only while the panel can show (on Chat, where the palette's applies
+  /// too, with room for it), and says what [panel] is.
+  List<MenuEntry> _paneEntries(BuildContext context) {
+    final panes = paneActions(context, daemon, chat);
+    MenuEntry entry(AppAction a, LineIcon line) => MenuEntry(
+      a.title,
+      shortcut: a.shortcut ?? '',
+      line: line,
+      onPick: a.run,
+    );
+    return [
+      if (panes.terminal.enabled) entry(panes.terminal, LineIcon.terminal),
+      if (panes.files.enabled) entry(panes.files, LineIcon.folder),
+      _browserEntry,
+      if (onPanel case final toggle?)
+        MenuEntry(
+          panel ? 'Hide details' : 'Show details',
+          line: LineIcon.details,
+          onPick: toggle,
+        ),
+    ];
+  }
+
   /// The browser's button as a row of ⋯, once the buttons fold there.
   MenuEntry get _browserEntry => MenuEntry(
     BrowserButton.tooltip(shown: chat.browserShown),
@@ -578,11 +583,18 @@ class ChatHeader extends StatelessWidget {
       ),
   ];
 
-  /// The chat's tabs and their names: Pull request only with a pull.
+  /// The chat's tabs ([ChatState.tabs]: Pull request only with a pull)
+  /// and their names.
   List<(ChatTab, String)> _tabs(ChatState chat) => [
-    (ChatTab.chat, 'Chat'),
-    (ChatTab.changes, 'Changes'),
-    if (chat.pull != null) (ChatTab.pull, 'Pull request'),
+    for (final tab in chat.tabs)
+      (
+        tab,
+        switch (tab) {
+          ChatTab.chat => 'Chat',
+          ChatTab.changes => 'Changes',
+          ChatTab.pull => 'Pull request',
+        },
+      ),
   ];
 }
 

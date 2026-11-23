@@ -413,8 +413,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
   final chat = d.selected;
   final shown = d.chatShows ? chat : null;
   void tab(ChatTab t) => shown?.tab.value = t;
-  final details = showDetails.value;
-  final terminal = shown != null && terminalChats.value.contains(shown.id);
+  final panes = paneActions(context, d, shown);
   // The browser tab in sight, under no dialog.
   final browser = switch (shown?.browser.shown.value) {
     final tab?
@@ -559,18 +558,8 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     ),
     AppAction(.back, 'Back', enabled: d.canGoBack, run: d.goBack),
     AppAction(.forward, 'Forward', enabled: d.canGoForward, run: d.goForward),
-    AppAction(
-      .details,
-      details ? 'Hide details' : 'Show details',
-      enabled: shown?.shownTab == ChatTab.chat,
-      run: () => showDetails.value = !details,
-    ),
-    AppAction(
-      .files,
-      shown != null && filesShown(shown) ? 'Hide files' : 'Show files',
-      enabled: shown != null && d.daemonApi >= filesApi,
-      run: () => showOrHideFiles(shown!),
-    ),
+    panes.details,
+    panes.files,
     ...viewActions(shown, d),
     AppAction(
       .chatWidth,
@@ -583,12 +572,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       // One choice for the app, as a pull request's Files follows it too.
       run: () => diffUnified.value = !diffUnified.value,
     ),
-    AppAction(
-      .terminal,
-      terminal ? 'Hide terminal' : 'Show terminal',
-      enabled: shown != null && !shown.archived,
-      run: () => toggleTerminal(shown!.id),
-    ),
+    panes.terminal,
     AppAction(
       .rewind,
       'Rewind…',
@@ -659,6 +643,40 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       AppAction(.quit, 'Quit Nushi', run: () => unawaited(_quit())),
     ],
   ];
+}
+
+/// The buttons beside [chat]'s tabs as actions (the shown chat's, from
+/// the palette; the header's own, folded into its ⋯): the terminal under
+/// it, the Files pane and the details panel, each as it is now. The
+/// header adds its own rule for the details (room for the panel).
+({AppAction terminal, AppAction files, AppAction details}) paneActions(
+  BuildContext context,
+  Daemon d,
+  ChatState? chat,
+) {
+  final details = showDetails.value;
+  return (
+    terminal: AppAction(
+      .terminal,
+      chat != null && terminalChats.value.contains(chat.id)
+          ? 'Hide terminal'
+          : 'Show terminal',
+      enabled: chat != null && !chat.archived,
+      run: () => toggleTerminal(chat!.id),
+    ),
+    files: AppAction(
+      .files,
+      chat != null && filesShown(chat) ? 'Hide files' : 'Show files',
+      enabled: chat != null && d.daemonApi >= filesApi,
+      run: () => showOrHideFiles(chat!),
+    ),
+    details: AppAction(
+      .details,
+      details ? 'Hide details' : 'Show details',
+      enabled: chat?.shownTab == ChatTab.chat,
+      run: () => showDetails.value = !details,
+    ),
+  );
 }
 
 /// Quits the app, where no menu bar's Quit does: what would be lost asks
