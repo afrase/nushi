@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -92,6 +93,10 @@ const takeWait = 2 * time.Second
 // the chat, busy for good. A variable only so a test can shorten it.
 var abortWait = 10 * time.Second
 
+// errNoTurn is a prompt whose pi went before its turn began: nothing of
+// it reached pi, so the bridge may run it on the session opened again.
+var errNoTurn = fmt.Errorf("%w before the turn began", errStopped)
+
 // errCancelled is a prompt a session/cancel that came after it stopped
 // before its turn began.
 var errCancelled = errors.New("cancelled before it began")
@@ -118,6 +123,12 @@ func (s *session) pump() {
 		s.mu.Unlock()
 	}
 	stopped := s.p.stopped() // waits for the exit: not under the lock
+	end := false
+	if s.stopping.Load() {
+		s.b.forget(s)
+	} else {
+		end = s.b.died(s) // before the turn ends: a prompt sent on its answer opens the session again
+	}
 	s.mu.Lock()
 	s.handled = math.MaxInt // none will come
 	s.caught.Broadcast()
@@ -126,9 +137,8 @@ func (s *session) pump() {
 	}
 	s.mu.Unlock()
 	close(s.ended)
-	s.b.forget(s)
-	if !s.stopping.Load() {
-		s.b.gone()
+	if end {
+		s.b.end()
 	}
 }
 
@@ -418,12 +428,15 @@ func (s *session) nextTurn(ctx context.Context) (*turn, error) {
 		case <-idle:
 		case <-s.ended:
 			s.mu.Lock()
-			return nil, errStopped
+			return nil, errNoTurn
 		case <-ctx.Done():
 			s.mu.Lock()
 			return nil, ctx.Err()
 		}
 		s.mu.Lock()
+	}
+	if s.handled == math.MaxInt { // pi went while it waited
+		return nil, errNoTurn
 	}
 	if seq, ok := acp.SequenceFromContext(ctx); ok && seq < s.cancelSeq {
 		return nil, errCancelled

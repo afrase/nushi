@@ -61,7 +61,7 @@ func TestFailedOpenReadsPiOut(t *testing.T) {
 	}, sessions: map[string]*session{}}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel() // get_state goes unanswered
-	if _, _, err := b.open(ctx, t.TempDir(), "", false); !errors.Is(err, context.Canceled) {
+	if _, _, err := b.open(ctx, t.TempDir(), "", fresh); !errors.Is(err, context.Canceled) {
 		t.Fatalf("open: %v", err)
 	}
 	select {

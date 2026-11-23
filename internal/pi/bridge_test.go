@@ -28,6 +28,9 @@ import (
 type peer struct {
 	*acp.AgentConn
 	*client
+	// killPi ends the nth pi the bridge started (0 the first) as its
+	// process dying would.
+	killPi func(n int)
 }
 
 // Steer hands prompt to the session's running turn (steering's
@@ -181,7 +184,12 @@ func startOn(t *testing.T, store *pitest.Store, log, wire io.Writer) (c *peer, d
 		_ = fromBridgeW.Close()
 		close(done)
 	}()
-	c = &peer{client: &client{}}
+	c = &peer{client: &client{}, killPi: func(n int) {
+		progsMu.Lock()
+		kill := progs[n]
+		progsMu.Unlock()
+		kill()
+	}}
 	c.AgentConn = acp.NewAgentConn(io.TeeReader(fromBridgeR, wire), toBridgeW, func(*acp.AgentConn) acp.Client { return c.client })
 	t.Cleanup(func() { _ = toBridgeW.Close(); <-done })
 	if _, err := c.Initialize(context.Background(), &acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion,

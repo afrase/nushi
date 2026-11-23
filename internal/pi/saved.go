@@ -381,5 +381,5 @@ func (b *bridge) forkOn(ctx context.Context, p *proc, cwd, after string) (*sessi
 	if r.Cancelled {
 		return nil, nil, errors.New("an extension cancelled the fork")
 	}
-	return b.start(ctx, p, cwd, false)
+	return b.start(ctx, p, cwd, fresh)
 }

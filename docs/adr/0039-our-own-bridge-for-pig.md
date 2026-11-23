@@ -20,6 +20,7 @@ The author's ACP adapter, `pig-acp` (MichaelKinsy/pigpen, `components/acp`, MIT,
 - PiG takes no lock on a session: a terminal's pig and Nushi's both append, each on its own branch, and a resume follows whichever wrote last. Nushi can't tell a session is open elsewhere.
 - The bridge follows RPC mode as PiG changes it; the version it was built against is pinned in `internal/pig`.
 - Amended (2026-11-23): a Stop's `abort` that pi hasn't answered in 10 s kills that pi (PiG 0.5.3 after `/sprite` answers nothing, `docs/facts/pig.md`), and a bridge whose last pi died, not stopped by it, ends its connection: the daemon sees the agent quit and the next message reopens the chat through `session/load`, where before every prompt failed as "no open session".
+- Amended (2026-11-23): a pi that dies while another session is open on the same bridge (a side chat) leaves the bridge running, and its session opens again on its file (`--session <file>`, no replay) at its next prompt; with nothing saved yet the bridge ends as above.
 
 ## Alternatives considered
 - `pig-acp`: npm and a Go toolchain on the user's Mac and a build step, one pig per connection, no fork, close or steering. Nothing in RPC mode is hidden from a bridge of ours, so it would only be worse.

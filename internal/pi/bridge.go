@@ -3,6 +3,7 @@ package pi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -29,6 +30,10 @@ type bridge struct {
 
 	mu       sync.Mutex
 	sessions map[string]*session
+	// dead holds each session whose pi died while the bridge lived on
+	// (another session still open): the client still has it, so its next
+	// prompt opens it again on its file (live).
+	dead map[string]*deadSession
 }
 
 // Config is what the bridge needs of Pi: how to start it, where its
@@ -46,7 +51,7 @@ type Config struct {
 // Serve runs the bridge on r and w (the client's) until the client goes,
 // then stops every pi.
 func Serve(r io.Reader, w io.Writer, cfg Config) {
-	b := &bridge{flavor: cfg.Flavor, spawn: cfg.Spawn, dirs: cfg.Dirs, version: cfg.Version, problem: cfg.Problem, sessions: map[string]*session{}}
+	b := &bridge{flavor: cfg.Flavor, spawn: cfg.Spawn, dirs: cfg.Dirs, version: cfg.Version, problem: cfg.Problem, sessions: map[string]*session{}, dead: map[string]*deadSession{}}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	b.ctx = ctx
@@ -91,21 +96,6 @@ func (b *bridge) forget(s *session) {
 	}
 }
 
-// gone ends the client's connection once a pi that died (its session not
-// stopped by the bridge) was the last: the client then sees the agent
-// quit and opens the chat again, through session/load, on a new bridge.
-// A bridge that lived on would refuse every later prompt as "no open
-// session". Serve stops what is left once the connection is done.
-func (b *bridge) gone() {
-	b.mu.Lock()
-	last := len(b.sessions) == 0
-	b.mu.Unlock()
-	if last {
-		warnf("the program stopped and no session is left, so the bridge ends")
-		_ = b.client.Close() // it says nothing that matters: the connection ends either way
-	}
-}
-
 func (b *bridge) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.InitializeResponse, error) {
 	if c := req.ClientCapabilities; c != nil && c.Elicitation != nil && c.Elicitation.Form != nil {
 		b.elicits.Store(true)
@@ -129,7 +119,7 @@ func (b *bridge) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp
 }
 
 func (b *bridge) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
-	s, opts, err := b.open(ctx, req.Cwd, "", false)
+	s, opts, err := b.open(ctx, req.Cwd, "", fresh)
 	if err != nil {
 		return nil, err
 	}
@@ -140,11 +130,12 @@ func (b *bridge) LoadSession(ctx context.Context, req *acp.LoadSessionRequest) (
 	if _, err := b.session(req.SessionID); err == nil {
 		return nil, fmt.Errorf("session %s is open already", req.SessionID)
 	}
+	b.bury(req.SessionID)
 	file, err := b.dirs.find(string(req.SessionID), req.Cwd)
 	if err != nil {
 		return nil, err
 	}
-	_, opts, err := b.open(ctx, req.Cwd, file, true)
+	_, opts, err := b.open(ctx, req.Cwd, file, loaded)
 	if err != nil {
 		return nil, err
 	}
@@ -163,6 +154,7 @@ func (b *bridge) ListSessions(_ context.Context, req *acp.ListSessionsRequest) (
 }
 
 func (b *bridge) CloseSession(_ context.Context, req *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
+	b.bury(req.SessionID)
 	if s, err := b.session(req.SessionID); err == nil {
 		s.stop()
 	}
@@ -170,18 +162,28 @@ func (b *bridge) CloseSession(_ context.Context, req *acp.CloseSessionRequest) (
 }
 
 func (b *bridge) DeleteSession(ctx context.Context, req *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
+	b.bury(req.SessionID)
 	if s, err := b.session(req.SessionID); err == nil {
 		s.stop()
 	}
 	return &acp.DeleteSessionResponse{}, b.dirs.remove(ctx, string(req.SessionID))
 }
 
+// Prompt runs a turn; a session whose pi died opens again first (live),
+// also when pi dies before the turn begins.
 func (b *bridge) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
-	s, err := b.session(req.SessionID)
+	s, err := b.live(ctx, req.SessionID)
 	if err != nil {
 		return nil, err
 	}
 	text, images := flatten(req.Prompt)
+	resp, err := s.prompt(ctx, text, images)
+	if !errors.Is(err, errNoTurn) {
+		return resp, err
+	}
+	if s, err = b.live(ctx, req.SessionID); err != nil {
+		return nil, err
+	}
 	return s.prompt(ctx, text, images)
 }
 
@@ -194,7 +196,7 @@ func (b *bridge) Cancel(ctx context.Context, n *acp.CancelNotification) error {
 }
 
 func (b *bridge) SetSessionConfigOption(ctx context.Context, req *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
-	s, err := b.session(req.SessionID)
+	s, err := b.live(ctx, req.SessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,6 +220,9 @@ func (b *bridge) ExtMethod(ctx context.Context, method string, params json.RawMe
 			return nil, &acp.Error{Code: acp.ErrorCodeInvalidParams, Message: err.Error()}
 		}
 		s, err := b.session(acp.SessionID(req.SessionID))
+		if err != nil && b.isDead(acp.SessionID(req.SessionID)) { // its prompt opens it again
+			return steering.Response{Outcome: steering.PromptRequired}, nil
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -245,12 +250,21 @@ func (b *bridge) ExtMethod(ctx context.Context, method string, params json.RawMe
 	return b.UnimplementedAgent.ExtMethod(ctx, method, params)
 }
 
+// opening is what a session's open is for: what the client has of it.
+type opening int
+
+const (
+	fresh    opening = iota // a new session, named in the answer
+	loaded                  // a saved one, replayed to the client
+	reopened                // one whose pi died, which the client still shows (live)
+)
+
 // openTimeout bounds pi's start and a session's replay.
 var openTimeout = time.Minute
 
 // open starts pi in cwd on a new session, or on the session in file,
-// whose conversation then goes to the client first (replay).
-func (b *bridge) open(ctx context.Context, cwd, file string, replay bool) (*session, []acp.SessionConfigOption, error) {
+// whose conversation then goes to the client first when loaded.
+func (b *bridge) open(ctx context.Context, cwd, file string, how opening) (*session, []acp.SessionConfigOption, error) {
 	var args []string
 	if file != "" {
 		args = []string{"--session", file}
@@ -261,7 +275,7 @@ func (b *bridge) open(ctx context.Context, cwd, file string, replay bool) (*sess
 	}
 	ctx, cancel := context.WithTimeout(ctx, openTimeout)
 	defer cancel()
-	s, opts, err := b.start(ctx, p, cwd, replay)
+	s, opts, err := b.start(ctx, p, cwd, how)
 	if err != nil {
 		p.abandon()
 		return nil, nil, err
@@ -270,11 +284,12 @@ func (b *bridge) open(ctx context.Context, cwd, file string, replay bool) (*sess
 }
 
 // start makes a session of the one pi holds: its options, and when
-// replay its conversation, before it hands the client pi's events. Its
+// loaded its conversation, before it hands the client pi's events. Its
 // commands and how full its context is follow: a new session's once the
 // answer that names it has gone (acp.AfterResponse), as the client drops
-// updates of a session it doesn't know.
-func (b *bridge) start(ctx context.Context, p *proc, cwd string, replay bool) (*session, []acp.SessionConfigOption, error) {
+// updates of a session it doesn't know; a reopened one's with its options,
+// as no answer carries them.
+func (b *bridge) start(ctx context.Context, p *proc, cwd string, how opening) (*session, []acp.SessionConfigOption, error) {
 	var st state
 	if err := p.call(ctx, map[string]any{"type": "get_state"}, &st); err != nil {
 		return nil, nil, err
@@ -284,7 +299,7 @@ func (b *bridge) start(ctx context.Context, p *proc, cwd string, replay bool) (*
 	if err != nil {
 		return nil, nil, err
 	}
-	if replay {
+	if how == loaded {
 		if err := s.replay(ctx); err != nil {
 			return nil, nil, err
 		}
@@ -296,8 +311,11 @@ func (b *bridge) start(ctx context.Context, p *proc, cwd string, replay bool) (*
 	first := func() {
 		b.usage(s)
 		b.commands(s)
+		if how == reopened {
+			b.optionsChanged(s)
+		}
 	}
-	if replay || !acp.AfterResponse(ctx, first) { // a loaded session's id is the client's already
+	if how != fresh || !acp.AfterResponse(ctx, first) { // a loaded session's id is the client's already
 		go first()
 	}
 	return s, opts, nil
