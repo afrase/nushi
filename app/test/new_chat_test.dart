@@ -2,6 +2,7 @@ import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -228,8 +229,8 @@ void main() {
       viewport(tester, Size(width, 900));
       final (fake, d) = await _sidebar(tester);
       fake.agents = _notAllReady();
-      d.cantStart['ante'] =
-          "it quit (exit 1: Error: Cannot find module 'ante-sdk')";
+      const why = "it quit (exit 1: Error: Cannot find module 'ante-sdk')";
+      d.cantStart['ante'] = why;
       await tester.tap(find.byTooltip('New chat here'));
       await tester.pumpAndSettle();
       expectTextInside(tester, width);
@@ -238,6 +239,15 @@ void main() {
         find.byType(MaterialApp),
         'new_chat_why_${width.round()}',
       );
+      // The whole why is readable: in the row, on a second line, and in
+      // the row's tooltip.
+      final shown = find.text(why);
+      expect(shown, findsOneWidget);
+      expect(
+        tester.renderObject<RenderParagraph>(shown).didExceedMaxLines,
+        isFalse,
+      );
+      expect(find.byTooltip(why), findsOneWidget);
       d.dispose();
     });
   }

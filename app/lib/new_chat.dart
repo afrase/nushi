@@ -312,7 +312,7 @@ class _NewChatState extends State<_NewChat> {
     return Tap(
       onTap: () => _start(i),
       selected: i == _at,
-      tooltip: failed ?? '',
+      tooltip: why ?? '', // the whole why, should two lines not hold it
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       child: Row(
         children: [
@@ -328,7 +328,7 @@ class _NewChatState extends State<_NewChat> {
           Expanded(
             child: Text(
               why ?? '',
-              maxLines: 1,
+              maxLines: 2, // a failed start's why is the user's to read
               overflow: TextOverflow.ellipsis,
               style: theme.ui(t.textMuted, size: 11.5),
             ),
