@@ -256,7 +256,7 @@ func TestInspectCountsACheckedOutSubmodule(t *testing.T) {
 }
 
 // A bare repository has no main worktree: List marks none of its linked
-// ones Main.
+// ones Main, and Add makes no worktree of it from one of them.
 func TestListOfABareRepository(t *testing.T) {
 	ctx := context.Background()
 	dir, _ := filepath.EvalSymlinks(t.TempDir())
@@ -271,5 +271,8 @@ func TestListOfABareRepository(t *testing.T) {
 	list, err := Worktrees{}.List(ctx, two)
 	if err != nil || len(list) != 2 || list[0].Path != one || list[0].Main || list[1].Main || !list[1].Current {
 		t.Errorf("List = %+v, %v", list, err)
+	}
+	if wt, _, err := (Worktrees{}).Add(ctx, two, "brave-otter", "", ""); err == nil || !strings.Contains(err.Error(), "bare") {
+		t.Errorf("Add in a bare repository's worktree: %+v, %v", wt, err)
 	}
 }

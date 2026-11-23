@@ -20,36 +20,61 @@ import (
 // those git would prune (their folders are gone) or a bare repository's
 // entry. The one folder is in is Current.
 func (Worktrees) List(ctx context.Context, folder string) ([]model.WorktreeEntry, error) {
+	all, err := worktreeEntries(ctx, folder)
+	if err != nil {
+		return nil, err
+	}
+	var list []model.WorktreeEntry
+	for i, e := range all { // git gives the main worktree first, a bare repository's entry in its place
+		if !e.bare && !e.prunable {
+			e.Main = i == 0
+			list = append(list, e.WorktreeEntry)
+		}
+	}
+	if top := checkout(list, folder); top >= 0 {
+		list[top].Current = true
+	}
+	return list, nil
+}
+
+// worktreeEntry is one of git's worktrees as it lists them, with what List
+// leaves out.
+type worktreeEntry struct {
+	model.WorktreeEntry
+	bare, prunable bool
+}
+
+// worktreeEntries is every worktree git lists for folder's repository
+// (git worktree list --porcelain -z), in its order: the main one, or a
+// bare repository's entry, first.
+func worktreeEntries(ctx context.Context, folder string) ([]worktreeEntry, error) {
 	out, err := run(ctx, folder, "worktree", "list", "--porcelain", "-z")
 	if err != nil {
 		return nil, fmt.Errorf("%s is %w", folder, ErrNotRepository)
 	}
-	var list []model.WorktreeEntry
-	var e model.WorktreeEntry
-	// git gives the main worktree first, a bare repository's entry in its place.
-	skip, first := false, true
+	var list []worktreeEntry
+	var e worktreeEntry
 	for _, field := range append(split(out), "") { // an empty field ends each entry
 		key, value, _ := strings.Cut(field, " ")
 		switch key {
 		case "worktree":
-			e, first = model.WorktreeEntry{Path: value, Main: first}, false
+			e.Path = value
 		case "HEAD":
 			e.Head = value
 		case "branch":
 			e.Branch = strings.TrimPrefix(value, "refs/heads/")
 		case "locked":
 			e.Locked = true
-		case "prunable", "bare":
-			skip = true
+		case "bare":
+			e.bare = true
+		case "prunable":
+			e.prunable = true
 		case "":
-			if e.Path != "" && !skip {
+			if e.Path != "" {
 				list = append(list, e)
 			}
-			e, skip = model.WorktreeEntry{}, false
+			e = worktreeEntry{}
 		}
-	}
-	if top := checkout(list, folder); top >= 0 {
-		list[top].Current = true
 	}
 	return list, nil
 }

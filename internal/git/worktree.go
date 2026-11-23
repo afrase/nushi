@@ -1,8 +1,6 @@
 package git
 
 import (
-	"bufio"
-	"bytes"
 	"cmp"
 	"context"
 	"errors"
@@ -177,17 +175,14 @@ func (Worktrees) DeleteBranch(ctx context.Context, wt model.Worktree) error {
 // refs and config, in two runs of git; it asks no remote.
 func (Worktrees) BranchUse(ctx context.Context, wt model.Worktree) (model.BranchUse, error) {
 	var u model.BranchUse
-	out, err := run(ctx, wt.Repo, "worktree", "list", "--porcelain", "-z")
+	list, err := worktreeEntries(ctx, wt.Repo)
 	if err != nil {
 		return u, err
 	}
 	here := RealPath(wt.Path)
-	var path string
-	for _, field := range split(out) { // entries end with an empty field
-		if p, ok := strings.CutPrefix(field, "worktree "); ok {
-			path = p
-		} else if field == "branch refs/heads/"+wt.Branch {
-			on := RealPath(path) == here
+	for _, e := range list {
+		if e.Branch == wt.Branch {
+			on := RealPath(e.Path) == here
 			u.OnIt, u.Elsewhere = u.OnIt || on, u.Elsewhere || !on
 		}
 	}
@@ -241,20 +236,14 @@ func (Worktrees) CheckBranch(ctx context.Context, repo, name string) error {
 // mainWorktree returns the folder of the main worktree of folder's
 // repository: the repository's own folder.
 func mainWorktree(ctx context.Context, folder string) (string, error) {
-	out, err := run(ctx, folder, "worktree", "list", "--porcelain")
-	if err != nil {
-		return "", fmt.Errorf("%s is %w", folder, ErrNotRepository)
+	list, err := worktreeEntries(ctx, folder)
+	switch {
+	case err != nil:
+		return "", err
+	case len(list) == 0 || list[0].bare: // the first entry is the main worktree
+		return "", errors.New("a bare repository has no main worktree")
 	}
-	sc := bufio.NewScanner(bytes.NewReader(out))
-	var repo string
-	for sc.Scan() && sc.Text() != "" { // the first entry is the main worktree
-		if path, ok := strings.CutPrefix(sc.Text(), "worktree "); ok {
-			repo = path
-		} else if sc.Text() == "bare" {
-			return "", errors.New("a bare repository has no main worktree")
-		}
-	}
-	return repo, nil
+	return list[0].Path, nil
 }
 
 // excludeMu keeps two Excludes from losing each other's line.
