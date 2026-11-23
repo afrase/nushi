@@ -21,13 +21,15 @@ const _desktop = MethodChannel('nushi/desktop');
 class LinuxDesktop implements Desktop {
   const new({this._bus});
 
-  /// The bus the file manager is on: the session bus notifications use too
+  /// The bus the file manager is on, once it has answered
+  /// ([reachable]): the session bus notifications use too
   /// (`session_bus_linux.dart`), unless a test gives one of its own.
-  final DBusClient? _bus;
+  final Future<DBusClient?>? _bus;
 
   @override
   Future<void> reveal(String path) async {
-    final bus = _bus ?? sessionBus;
+    // A bus that can't be reached opens the folder at once.
+    final bus = await (_bus ?? reachedSessionBus);
     if (bus == null) {
       await openFolder(File(path).parent.path);
       return;
@@ -48,10 +50,8 @@ class LinuxDesktop implements Desktop {
           )
           .timeout(const Duration(seconds: 10));
     } on Object {
-      // No file manager answers it (none that has it, or a bus that can't
-      // be reached: package:dbus throws strings for a bus it can't reach or
-      // sign in to, and leaves a client whose connection failed waiting for
-      // good after that): the folder shows, without the file selected.
+      // No file manager answers it in 10 s (none that has it, or one slow
+      // to start): the folder shows, without the file selected.
       await openFolder(File(path).parent.path);
     }
   }

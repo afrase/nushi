@@ -17,7 +17,7 @@ import 'package:nushi/window_drag_linux.dart';
 /// desktop's (enchant, whose dictionary in the user's language makes the
 /// speller, none without it).
 Native linuxNative() => Native(
-  alerts: LinuxAlertCenter(sessionBus, const LinuxWindow()),
+  alerts: LinuxAlertCenter(reachedSessionBus, const LinuxWindow()),
   clipboard: const LinuxClipboardFiles(),
   conventions: linuxConventions,
   desktop: const LinuxDesktop(),

@@ -123,7 +123,7 @@ Future<(LinuxAlertCenter, _Window, DBusClient)> _center(
   await host.registerObject(service);
   await host.requestName(_service);
   final window = _Window();
-  return (LinuxAlertCenter(_client(address), window), window, host);
+  return (LinuxAlertCenter(reachable(_client(address)), window), window, host);
 }
 
 Future<void> _post(
@@ -288,7 +288,7 @@ void main() {
     addTearDown(sub.cancel);
     // Its match is the bus's once the ping that follows it is answered.
     await dock.ping();
-    final center = LinuxAlertCenter(_client(address), _Window());
+    final center = LinuxAlertCenter(reachable(_client(address)), _Window());
     await center.badge('3');
     await center.badge('');
     await _until(() => updates.length == 2);
@@ -317,23 +317,26 @@ void main() {
     expect(await running.allowed(), NotifyPermission.allowed);
 
     final activating = LinuxAlertCenter(
-      _client(await _bus(_Activating())),
+      reachable(_client(await _bus(_Activating()))),
       _Window(),
     );
     expect(await activating.allowed(), NotifyPermission.allowed);
 
-    final none = LinuxAlertCenter(_client(await _bus(DBusServer())), _Window());
+    final none = LinuxAlertCenter(
+      reachable(_client(await _bus(DBusServer()))),
+      _Window(),
+    );
     expect(await none.allowed(), isNull);
 
     final gone = DBusServer();
     final address = await _bus(gone);
     await gone.close();
     expect(
-      await LinuxAlertCenter(_client(address), _Window()).allowed(),
+      await LinuxAlertCenter(reachable(_client(address)), _Window()).allowed(),
       isNull,
     );
 
-    final nothing = LinuxAlertCenter(null, _Window());
+    final nothing = LinuxAlertCenter(reachable(null), _Window());
     expect(await nothing.allowed(), isNull);
     await _post(nothing, 'a/ended');
     await nothing.clear('a');
@@ -345,7 +348,7 @@ void main() {
     final dir = Directory.systemTemp.createTempSync('nushi-bus-');
     addTearDown(() => dir.deleteSync(recursive: true));
     final center = LinuxAlertCenter(
-      _client(DBusAddress.unix(path: '${dir.path}/bus')),
+      reachable(_client(DBusAddress.unix(path: '${dir.path}/bus'))),
       _Window(),
     )..onOpen((_) {});
     const limit = Duration(seconds: 10);

@@ -55,3 +55,6 @@ The app's Back and Forward ([ADR 0119](0119-back-and-forward.md)) are Alt+Left a
 
 ## Amendment (2026-11-23)
 Linux has no diagrams at all (`Native.diagrams` is null) rather than a renderer that always answers "not drawn": a Mermaid block in Markdown showed Diagram and Source tabs that both showed its source. It now shows its source alone, as a code block, with no tabs.
+
+## Amendment (2026-11-23): the session bus is pinged once, for both
+The ping that guards the session bus (`dbus` leaves a client whose first connection failed waiting for good) is `session_bus_linux.dart`'s, run once and shared: notifications and Show in Folder both wait for it, and a bus that never answered opens the folder at once rather than after ShowItems' 10 s, which stays for a file manager slow to answer.

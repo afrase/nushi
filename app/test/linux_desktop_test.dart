@@ -3,14 +3,23 @@ import 'dart:io';
 import 'package:dbus/dbus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/alerts_linux.dart';
 import 'package:nushi/clipboard_files_linux.dart';
 import 'package:nushi/daemon.dart' show dataDir;
 import 'package:nushi/desktop_linux.dart';
+import 'package:nushi/session_bus_linux.dart';
+import 'package:nushi/window_drag.dart';
 
 // Linux's clipboard files and desktop over their channels and D-Bus, on any
 // host: the runner's side is answered here as `linux/runner` answers it
 // (integration_test/linux_channels_test.dart drives the real one), the
 // file manager by a fake on a bus of the test's own.
+
+/// A window that is never brought up: the alerts here post nothing.
+class _NoWindow implements AppWindow {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 /// The file manager's interface, saying what it was asked to show.
 class _FileManager extends DBusObject {
@@ -118,7 +127,8 @@ void main() {
     await service.requestName('org.freedesktop.FileManager1');
     await service.registerObject(manager);
     final opened = _answer('nushi/desktop', (_) => null);
-    await LinuxDesktop(bus: client()).reveal('/home/me/my notes/a#1.md');
+    await LinuxDesktop(bus: reachable(client()))
+        .reveal('/home/me/my notes/a#1.md');
     expect(manager.shown, [
       ['file:///home/me/my%20notes/a%231.md', ''],
     ]);
@@ -129,16 +139,37 @@ void main() {
       'instead', () async {
     final (_, client) = await _bus();
     final opened = _answer('nushi/desktop', (_) => null);
-    await LinuxDesktop(bus: client()).reveal('/home/me/a.txt');
+    await LinuxDesktop(bus: reachable(client())).reveal('/home/me/a.txt');
     final gone = DBusClient(
       DBusAddress.unix(path: '${Directory.systemTemp.path}/nushi-no-bus'),
       authClient: DBusAuthClient(uid: '0'),
     );
     addTearDown(gone.close);
-    await LinuxDesktop(bus: gone).reveal('/srv/x/b.txt');
+    await LinuxDesktop(bus: reachable(gone)).reveal('/srv/x/b.txt');
     expect(
       [for (final c in opened) (c.method, c.arguments)],
       [('openFolder', '/home/me'), ('openFolder', '/srv/x')],
+    );
+  });
+
+  test('a session bus the alerts found unreachable opens the folder at '
+      'once, not after a wait', () async {
+    final opened = _answer('nushi/desktop', (_) => null);
+    final dir = Directory.systemTemp.createTempSync('nushi-bus-');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final shared = DBusClient(
+      DBusAddress.unix(path: '${dir.path}/bus'),
+      authClient: DBusAuthClient(uid: '0'),
+    );
+    addTearDown(shared.close);
+    final reached = reachable(shared);
+    expect(await LinuxAlertCenter(reached, _NoWindow()).allowed(), isNull);
+    await LinuxDesktop(bus: reached)
+        .reveal('/srv/x/b.txt')
+        .timeout(const Duration(seconds: 5));
+    expect(
+      [for (final c in opened) (c.method, c.arguments)],
+      [('openFolder', '/srv/x')],
     );
   });
 

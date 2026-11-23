@@ -22,28 +22,13 @@ const _app = 'com.nushihq.Nushi';
 /// twice in a row is replaced, never shown twice. A bus that doesn't
 /// answer at first is as none, for the app's run.
 class LinuxAlertCenter implements AlertCenter {
-  /// Over the session bus given, none (nothing posted, no permission)
-  /// when null, bringing the window given to the front on a click.
-  new(this._bus, this._window);
+  /// Over the session bus given once it has answered (`reachable`), none
+  /// (nothing posted, no permission) when that's null, bringing the window
+  /// given to the front on a click.
+  new(this._reached, this._window);
 
-  final DBusClient? _bus;
+  final Future<DBusClient?> _reached;
   final AppWindow _window;
-
-  /// The bus once it has answered a ping, or null: package:dbus (0.7.15)
-  /// leaves a client whose first connection failed waiting for good on
-  /// every later call, and throws that failure where a signal stream
-  /// subscribes, so nothing else is asked of it before it answers.
-  late final Future<DBusClient?> _reached = () async {
-    final bus = _bus;
-    if (bus == null) return null;
-    try {
-      await bus.ping().timeout(const Duration(seconds: 5));
-      return bus;
-    } on Object {
-      bus.close().ignore();
-      return null;
-    }
-  }();
 
   final _numbers = <String, int>{}; // a name's number from the service
   final _names = <int, String>{}; // a number's name
