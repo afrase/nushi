@@ -83,7 +83,7 @@ func TestPagesReadLittle(t *testing.T) {
 	runtime.ReadMemStats(&after)
 	// About 6 MB a page (7 with -race): the page's 1.3 MB of text and
 	// every item's head handed out. Read allocates about 66 MB for the
-	// copy, and the index's pass about as much as Find's.
+	// copy, and the index's pass about as much as reading only its heads.
 	if alloc := (after.TotalAlloc - before.TotalAlloc) / 20; alloc > 12<<20 {
 		t.Errorf("a page allocated %d MB of a 30 MB copy", alloc>>20)
 	}

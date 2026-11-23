@@ -366,10 +366,32 @@ func TestNames(t *testing.T) {
 
 func pending(it model.Item) bool { return it.Kind == model.Permission && it.Status == "pending" }
 
-// Find gives the items it picks as the copy has them now, whole, with the
-// item before each; an item written again so it's no longer picked, or cut,
-// isn't found.
-func TestFind(t *testing.T) {
+// picked is what of chat's copy want picks from its heads, read whole with
+// Pick, each with the id of the item before it, as a chat that let its
+// items go reads its copy and writes it back.
+func picked(t *testing.T, s *Store, chat string, want func(model.Item) bool) (items []model.Item, after []string) {
+	t.Helper()
+	heads, err := s.Heads(chat)
+	testcheck.NoErr(t, err)
+	var pick, before []string
+	prev := ""
+	for _, h := range heads {
+		if want(h) {
+			pick, before = append(pick, h.ID), append(before, prev)
+		}
+		prev = h.ID
+	}
+	items, err = s.Pick(chat, pick)
+	testcheck.NoErr(t, err)
+	if len(items) != len(pick) {
+		t.Fatalf("picked %s of %v", ids(items), pick)
+	}
+	return items, before
+}
+
+// Heads and Pick give the items picked as the copy has them now, whole;
+// an item written again so it's no longer picked, or cut, isn't found.
+func TestPickFromHeads(t *testing.T) {
 	s, _ := open(t)
 	img := model.Image{MimeType: "image/png", Data: []byte("png bytes")}
 	ask := func(id, text string) model.Item {
@@ -381,25 +403,27 @@ func TestFind(t *testing.T) {
 	add(t, s, "C", "b", answered)
 	testcheck.NoErr(t, s.Cut("C", "p3"))
 	add(t, s, "C", "p2", ask("p4", "P4"))
-	items, after, err := s.Find("C", pending)
-	testcheck.NoErr(t, err)
+	items, after := picked(t, s, "C", pending)
 	if ids(items) != "p1=P1 p4=P4" || strings.Join(after, " ") != "a p2" {
 		t.Fatalf("found %s after %q", ids(items), after)
 	}
 	if len(items[1].Images) != 1 || string(items[1].Images[0].Data) != "png bytes" {
 		t.Errorf("images %+v", items[1].Images)
 	}
-	if items, _, err := s.Find("NONE", pending); items != nil || err != nil {
-		t.Errorf("a chat without a copy finds %v, %v", items, err)
+	if heads, err := s.Heads("NONE"); heads != nil || err != nil {
+		t.Errorf("a chat without a copy has heads %v, %v", heads, err)
+	}
+	if items, err := s.Pick("NONE", []string{"p1"}); items != nil || err != nil {
+		t.Errorf("a chat without a copy picks %v, %v", items, err)
 	}
 }
 
-// Find looks through a chat's copy for what it picks, and an append writes
-// it back changed: a long copy costs what Find picks of it, not its size.
-// Before Find, such a look read a 30 MB copy whole
-// and decoded all of it, about 110 MB allocated, and the write read it
-// whole again to check its end; all of it held until the next collection.
-func TestFindReadsLittle(t *testing.T) {
+// A look through a chat's copy for what it picks (its heads, then Pick)
+// and an append writing it back changed cost what is picked, not the
+// copy's size. Reading the copy for that once read a 30 MB copy whole and
+// decoded all of it, about 110 MB allocated, and the write read it whole
+// again to check its end; all of it held until the next collection.
+func TestPickAndWriteBackReadLittle(t *testing.T) {
 	s, dir := open(t)
 	text := strings.Repeat("output of a tool call\n", 300) // about 6.6 KB
 	var items []model.Item
@@ -417,20 +441,20 @@ func TestFindReadsLittle(t *testing.T) {
 	t.Cleanup(func() { _ = s2.Close() })
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
-	found, foundAfter, err := s2.Find("BIG", pending)
-	testcheck.NoErr(t, err)
+	found, foundAfter := picked(t, s2, "BIG", pending)
 	if len(found) != 1 || found[0].ID != "item-100" {
 		t.Fatalf("found %s", ids(found))
 	}
 	found[0].Status = "cancelled"
 	testcheck.NoErr(t, s2.Append("BIG", found, foundAfter))
 	runtime.ReadMemStats(&after)
-	// About 2 MB; 7 MB with -race, which empties sync.Pool's (json's state
-	// for each line made anew).
-	if alloc := after.TotalAlloc - before.TotalAlloc; alloc > 12<<20 {
-		t.Errorf("Find and Append allocated %d MB for a 30 MB copy", alloc>>20)
+	// About 6 MB, the index of the copy's heads made on the way; 12 MB
+	// with -race, which empties sync.Pool's (json's state for each line
+	// made anew).
+	if alloc := after.TotalAlloc - before.TotalAlloc; alloc > 20<<20 {
+		t.Errorf("the look and Append allocated %d MB for a 30 MB copy", alloc>>20)
 	}
-	if found, _, _ := s2.Find("BIG", pending); len(found) != 0 {
+	if found, _ := picked(t, s2, "BIG", pending); len(found) != 0 {
 		t.Errorf("still pending: %s", ids(found))
 	}
 }

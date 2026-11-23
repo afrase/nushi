@@ -52,9 +52,6 @@ func TestALargeImageReadsBackAsAReference(t *testing.T) {
 	picked, err := s.Pick("CHAT", []string{"t1"})
 	testcheck.NoErr(t, err)
 	check("Pick", picked[0])
-	found, _, err := s.Find("CHAT", func(model.Item) bool { return true })
-	testcheck.NoErr(t, err)
-	check("Find", found[0])
 
 	data, err := s.ImageData("CHAT", big.Hash, int64(len(big.Data)))
 	if err != nil || !bytes.Equal(data, big.Data) {

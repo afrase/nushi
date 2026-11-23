@@ -80,50 +80,6 @@ func (h *itemHead) item() model.Item {
 	return it
 }
 
-// Find returns the items of chat's copy, as it stands, that want picks,
-// their images as the chat holds them, each with the id of the item
-// before it ("" for the first). want sees an item as Heads has it, and only the items it
-// picks are read whole: a long copy costs what they hold and its
-// items' ids, not its size.
-func (s *Store) Find(chat string, want func(model.Item) bool) (items []model.Item, after []string, err error) {
-	if err := checkChat(chat); err != nil {
-		return nil, nil, err
-	}
-	held := s.lock(chat)
-	defer held.Unlock()
-	t, _, _, err := s.replayLocked(chat, func(line []byte, _ int64) (change, bool) {
-		var h head
-		if json.Unmarshal(line, &h) != nil {
-			return change{}, false
-		}
-		c := change{after: h.After, cut: h.Cut, drop: h.Drop}
-		if h.Item == nil {
-			return c, true
-		}
-		c.item = &entry{id: h.Item.ID}
-		if !want(h.Item.item()) {
-			return c, true
-		}
-		var r record
-		if json.Unmarshal(line, &r) != nil || r.Item == nil {
-			return change{}, false
-		}
-		c.item.item = r.Item
-		return c, true
-	})
-	if t == nil || err != nil {
-		return nil, nil, err
-	}
-	prev := ""
-	for _, e := range t.entries() {
-		if e.item != nil {
-			items, after = append(items, s.withImagesLocked(chat, e.item)), append(after, prev)
-		}
-		prev = e.id
-	}
-	return items, after, nil
-}
-
 // replayLocked replays chat's file into its transcript a line at a time,
 // each line (and where it starts in the file) made a change by decode
 // (false: a line that can't be read, skipped), so no more of the file is
