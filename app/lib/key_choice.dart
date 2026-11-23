@@ -348,7 +348,7 @@ Map<String, Resolved> _settle(Map<String, String> saved) {
       asDefault.add(id);
       continue;
     }
-    if (refusal(k, own: b) ?? fixedReason(k) case final why?) {
+    if (refusal(k, own: b) case final why?) {
       unused[id] = "Your ${keyLabel(k)} isn't used: $why";
       continue;
     }

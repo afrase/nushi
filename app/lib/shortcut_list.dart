@@ -1,12 +1,11 @@
 import 'dart:math' show max;
 
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import 'package:nushi/app_actions.dart' show paletteKeyToo, quitKey;
-import 'package:nushi/chat_keys.dart';
+import 'package:nushi/app_actions.dart' show secondKeys;
 import 'package:nushi/controls.dart';
 import 'package:nushi/key_choice.dart';
+import 'package:nushi/key_rules.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/shortcut_row.dart';
 
@@ -52,8 +51,8 @@ List<ShortcutGroup> shortcutGroupsShown() => [
     title: 'Fixed',
     about: "These keys can't be changed",
     rows: [
-      for (final (label, keys, match) in _fixed())
-        (label: label, binding: null, keys: keys, match: match),
+      for (final f in fixedKeys())
+        (label: f.label, binding: null, keys: f.shown, match: f.keys),
     ],
   ),
 ];
@@ -63,33 +62,8 @@ List<ShortcutGroup> shortcutGroupsShown() => [
 /// action gets a chosen key or another binding takes it (ADR 0146), and
 /// then reads '' and isn't shown. ⇧⌘} and ⇧⌘{ are the same keys as a
 /// keyboard may report them, so not shown apart.
-Cmd? secondKeyOf(Cmd key) => [
-  previousTabKeysToo.first,
-  nextTabKeysToo.first,
-  paletteKeyToo,
-].where((a) => a.aliasOf == key.id).firstOrNull;
-
-/// The keys the page shows but doesn't let change: Esc's, the chats' and
-/// terminals' numbers, Quit; each as shown and every key it stands for.
-List<(String, String, List<SingleActivator>)> _fixed() {
-  const esc = SingleActivator(LogicalKeyboardKey.escape);
-  final digits = [for (var n = 1; n <= 9; n++) n];
-  return [
-    ('Stop', 'Esc', [esc]),
-    ('Rewind', 'Esc Esc', [esc]),
-    (
-      'Open chat 1–9',
-      '${keyLabel(chatNumberKey(1))}–${keyLabel(chatNumberKey(9))}',
-      [for (final n in digits) ?chatNumberKey(n).single],
-    ),
-    (
-      'Terminal 1–9',
-      '${keyLabel(altDigitKey(1))}–${keyLabel(altDigitKey(9))}',
-      [for (final n in digits) ?altDigitKey(n).single],
-    ),
-    ('Quit', keyLabel(quitKey), [?quitKey.single]),
-  ];
-}
+Cmd? secondKeyOf(Cmd key) =>
+    secondKeys.where((a) => a.aliasOf == key.id).firstOrNull;
 
 /// A key the page lists but doesn't let change: its [label] and [keys]
 /// on a quiet cap where a binding's would be, with no hover, hand or

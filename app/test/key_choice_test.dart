@@ -818,10 +818,10 @@ void main() {
     });
 
     test('the fixed keys, and what a focused terminal does with a key', () {
-      expect(fixedReason(chatNumberKey(3).standard), '⌘3 opens a chat');
-      expect(fixedReason(altDigitKey(2).standard), '⌥⌘2 picks a terminal');
-      expect(fixedReason(quitKey.standard), 'It quits Nushi');
-      expect(fixedReason(findKey.standard), isNull);
+      expect(refusal(chatNumberKey(3).standard), '⌘3 opens a chat');
+      expect(refusal(altDigitKey(2).standard), '⌥⌘2 picks a terminal');
+      expect(refusal(quitKey.standard), 'macOS keeps it'); // said first
+      expect(refusal(findKey.standard), isNull);
       expect(
         note(_k(LogicalKeyboardKey.keyK, meta: true)),
         'A focused terminal keeps it',
@@ -832,6 +832,7 @@ void main() {
       );
       expect(note(_k(LogicalKeyboardKey.keyG, meta: true)), isNull);
       native.conventions = linuxConventions;
+      expect(refusal(quitKey.standard), 'It quits Nushi');
       expect(
         note(_k(LogicalKeyboardKey.keyR, control: true)),
         'A focused terminal keeps it for the shell',

@@ -156,9 +156,10 @@ bool _isLetter(LogicalKeyboardKey k) =>
     k.keyId >= LogicalKeyboardKey.keyA.keyId &&
     k.keyId <= LogicalKeyboardKey.keyZ.keyId;
 
-/// Why [k] can't be a binding's key; null when it can. [own]'s default is
-/// always allowed back on its own row (⌥Z is Wrap lines', which only the
-/// preview binds, though ⌥Z types Ω elsewhere).
+/// Why [k] can't be a binding's key, a fixed key's too ([fixedKeys]);
+/// null when it can. [own]'s default is always allowed back on its own
+/// row (⌥Z is Wrap lines', which only the preview binds, though ⌥Z types
+/// Ω elsewhere).
 String? refusal(SingleActivator k, {Cmd? own}) {
   if (own != null && sameKey(k, own.standard)) return null;
   if (shortcutText(k) == null) return "This key can't be used";
@@ -169,6 +170,9 @@ String? refusal(SingleActivator k, {Cmd? own}) {
   final why = mac ? _macRefusal(k) : _linuxRefusal(k);
   if (why != null) return why;
   if (k.trigger == LogicalKeyboardKey.enter) return 'The composer keeps it';
+  for (final f in fixedKeys()) {
+    if (f.why case final why? when _among(k, f.keys)) return why(keyLabel(k));
+  }
   return null;
 }
 
@@ -225,19 +229,45 @@ String? _linuxRefusal(SingleActivator k) {
   return null;
 }
 
-/// Why [k] is no binding's: a key the page lists as fixed (⌘1–9, ⌥⌘1–9,
-/// Quit); null for any other.
-String? fixedReason(SingleActivator k) {
-  for (var n = 1; n <= 9; n++) {
-    if (sameKey(k, chatNumberKey(n).standard)) {
-      return '${keyLabel(chatNumberKey(n))} opens a chat';
-    }
-    if (sameKey(k, altDigitKey(n).standard)) {
-      return '${keyLabel(altDigitKey(n))} picks a terminal';
-    }
-  }
-  if (sameKey(k, quitKey.standard)) return 'It quits Nushi';
-  return null;
+/// A key Settings › Keyboard shortcuts lists but won't let change (ADR
+/// 0146): its row's `label`, its keys as the row shows them (`shown`),
+/// every key it stands for, and why one of them is no binding's, given
+/// that key as written (`why`; none for Esc's, which [refusal] refuses as
+/// a key with no modifier).
+typedef FixedKey = ({
+  String label,
+  String shown,
+  List<SingleActivator> keys,
+  String Function(String key)? why,
+});
+
+/// The fixed keys, in the page's order: Esc's, the chats' and terminals'
+/// numbers, Quit (a menu item macOS provides, Ctrl+Q elsewhere).
+List<FixedKey> fixedKeys() {
+  const esc = SingleActivator(LogicalKeyboardKey.escape);
+  final digits = [for (var n = 1; n <= 9; n++) n];
+  return [
+    (label: 'Stop', shown: 'Esc', keys: [esc], why: null),
+    (label: 'Rewind', shown: 'Esc Esc', keys: [esc], why: null),
+    (
+      label: 'Open chat 1–9',
+      shown: '${keyLabel(chatNumberKey(1))}–${keyLabel(chatNumberKey(9))}',
+      keys: [for (final n in digits) chatNumberKey(n).standard],
+      why: (key) => '$key opens a chat',
+    ),
+    (
+      label: 'Terminal 1–9',
+      shown: '${keyLabel(altDigitKey(1))}–${keyLabel(altDigitKey(9))}',
+      keys: [for (final n in digits) altDigitKey(n).standard],
+      why: (key) => '$key picks a terminal',
+    ),
+    (
+      label: 'Quit',
+      shown: keyLabel(quitKey),
+      keys: [quitKey.standard],
+      why: (_) => 'It quits Nushi',
+    ),
+  ];
 }
 
 /// Whether [a] is one a shell reads where the command key is Control:

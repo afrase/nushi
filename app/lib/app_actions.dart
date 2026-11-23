@@ -385,22 +385,27 @@ const _fieldMoves = [
   SingleActivator(LogicalKeyboardKey.arrowRight, alt: true),
 ];
 
-/// The keys of the actions that have one, as the intents that run them.
+/// The second keys (ADR 0146): ⇧⌘] and ⇧⌘[ for the tabs, each also as
+/// the key ⇧ makes of it, and ⇧⌘P for the palette; each bound only while
+/// its action ([Cmd.aliasOf]) keeps its default.
+const secondKeys = <Cmd>[
+  ...nextTabKeysToo,
+  ...previousTabKeysToo,
+  paletteKeyToo,
+];
+
+/// The keys of the actions that have one, and their second keys, as the
+/// intents that run them.
 final Map<ShortcutActivator, Intent> actKeys = {
   for (final a in Act.values) ?a.key: RunActIntent(a),
-  for (final k in nextTabKeysToo) k: const RunActIntent(Act.nextTab),
-  for (final k in previousTabKeysToo) k: const RunActIntent(Act.previousTab),
+  for (final k in secondKeys) k: RunActIntent(Act.values.byName(k.aliasOf!)),
 };
 
 /// Every key the app binds wherever the focus is, as the intents they
-/// run: the actions', the palette's second key and the chats'. The window
-/// binds them (and Quit's where there's no menu bar), a focused terminal
-/// those it passes on, and Settings stops them (ADR 0087).
-final Map<ShortcutActivator, Intent> appKeys = {
-  ...actKeys,
-  paletteKeyToo: const RunActIntent(Act.palette),
-  ...chatKeys,
-};
+/// run: the actions' and the chats'. The window binds them (and Quit's
+/// where there's no menu bar), a focused terminal those it passes on, and
+/// Settings stops them (ADR 0087).
+final Map<ShortcutActivator, Intent> appKeys = {...actKeys, ...chatKeys};
 
 /// Every action, each as it is now (its title, whether it applies).
 /// [context] is where its dialogs open.

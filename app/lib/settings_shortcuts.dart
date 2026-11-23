@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:nushi/app_actions.dart' show paletteKeyToo;
-import 'package:nushi/chat_keys.dart';
+import 'package:nushi/app_actions.dart' show secondKeys;
 import 'package:nushi/key_choice.dart';
 import 'package:nushi/key_rules.dart';
 import 'package:nushi/keys.dart';
@@ -115,7 +114,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
 
   /// The binding other than [key] whose second key, bound now, is [k].
   Cmd? _aliasHolder(Cmd key, SingleActivator k) {
-    for (final a in [...nextTabKeysToo, ...previousTabKeysToo, paletteKeyToo]) {
+    for (final a in secondKeys) {
       if (a.aliasOf == key.id) continue; // its own: no clash
       if (a.single case final s? when oneKey(s, k)) {
         return rebindable.firstWhere((b) => b.id == a.aliasOf);
@@ -156,7 +155,6 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
     }
     if (refusal(k, own: key) case final why?) return _refuse(key, k, why);
     if (key.single case final now? when sameKey(now, k)) return;
-    if (fixedReason(k) case final why?) return _refuse(key, k, why);
     if (_holder(key, k) case final h?) return _pend(key, k, h, alias: false);
     if (_aliasHolder(key, k) case final h?) {
       return _pend(key, k, h, alias: true);
