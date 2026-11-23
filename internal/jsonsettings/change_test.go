@@ -103,6 +103,12 @@ func TestEditKeepsEveryOtherByte(t *testing.T) {
 			"{\n  \"list\": [\n    \"a\",\n    \"b&c\"\n  ],\n  \"k\": 1\n}",
 		},
 		{
+			"a value re-marshalled deep in objects: & < > as they are",
+			"{\n  \"p\": {\n    \"a\": 1\n  }\n}\n",
+			"p.url", `"https://example.com/mcp?a=1&b=<2>"`,
+			"{\n  \"p\": {\n    \"a\": 1,\n    \"url\": \"https://example.com/mcp?a=1&b=<2>\"\n  }\n}\n",
+		},
+		{
 			"an empty object",
 			"{}\n",
 			"a", `1`,
@@ -156,13 +162,25 @@ func TestEditRefusesAndLeavesTheFile(t *testing.T) {
 // escaped backslash before a u left alone.
 func TestUnescapeHTML(t *testing.T) {
 	for in, want := range map[string]string{
-		`"a&b<c>d"`: `"a&b<c>d"`,
-		`"\\u0026"`: `"\\u0026"`,
-		`"é\n"`:     `"é\n"`,
-		`"\\&"`:     `"\\&"`,
+		`"a\u0026b\u003cc\u003Ed"`: `"a&b<c>d"`,
+		`"\\u0026"`:                `"\\u0026"`,
+		`"é\n"`:                    `"é\n"`,
+		`"\\\u0026"`:               `"\\&"`,
 	} {
 		if got := unescapeHTML(in); got != want {
 			t.Errorf("unescapeHTML(%s) = %s, want %s", in, got, want)
 		}
+	}
+}
+
+// A new file's values keep & < > as they are, even when the change
+// marshalled them with encoding/json's escapes.
+func TestEditNewFileKeepsAmpersands(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if _, err := Edit(path, set("o", testcheck.JSON(t, "o&n <x>"))); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != "{\n  \"o\": \"o&n <x>\"\n}\n" {
+		t.Errorf("wrote %q", b)
 	}
 }

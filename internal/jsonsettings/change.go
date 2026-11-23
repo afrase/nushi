@@ -199,7 +199,7 @@ func written(value json.RawMessage, b []byte, indent string, lines bool) string 
 }
 
 // unescapeHTML is the JSON text s with encoding/json's escapes of & < >
-// (&, <, >) written as the characters; a backslash in
+// (\u0026, \u003c, \u003e) written as the characters; a backslash in
 // JSON only ever starts an escape, so each is read whole.
 func unescapeHTML(s string) string {
 	if !strings.Contains(s, `\u00`) {
@@ -212,8 +212,8 @@ func unescapeHTML(s string) string {
 			continue
 		}
 		switch esc := strings.ToLower(s[i:min(i+6, len(s))]); esc {
-		case `&`, `<`, `>`:
-			b.WriteString(map[string]string{`&`: "&", `<`: "<", `>`: ">"}[esc])
+		case `\u0026`, `\u003c`, `\u003e`:
+			b.WriteString(map[string]string{`\u0026`: "&", `\u003c`: "<", `\u003e`: ">"}[esc])
 			i += 5
 		default:
 			b.WriteString(s[i : i+2])
