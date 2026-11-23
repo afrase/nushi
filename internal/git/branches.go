@@ -311,10 +311,9 @@ func (Worktrees) Changed(ctx context.Context, folder string) (int, error) {
 }
 
 // Branch is the branch folder has checked out; "" when HEAD is detached
-// or it isn't in a repository.
+// or it isn't in a repository: one run of git, no remote looked up.
 func (Worktrees) Branch(ctx context.Context, folder string) string {
-	b, _ := Head(ctx, folder)
-	return b
+	return branchName(ctx, folder)
 }
 
 // Switch checks out branch in folder's checkout (git switch), or a new

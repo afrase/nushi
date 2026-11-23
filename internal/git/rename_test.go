@@ -24,13 +24,14 @@ func TestRenameBranch(t *testing.T) {
 		out, _ := exec.Command("git", "-C", dir, "symbolic-ref", "--short", "HEAD").Output()
 		return strings.TrimSpace(string(out))
 	}
-	use := func(wt model.Worktree) model.BranchUse {
+	type flags struct{ OnIt, Elsewhere, Upstream, Pushed bool } // BranchUse's, but for Taken's names, checked below
+	use := func(wt model.Worktree) flags {
 		t.Helper()
 		u, err := Worktrees{}.BranchUse(ctx, wt)
 		testcheck.NoErr(t, err)
-		return u
+		return flags{u.OnIt, u.Elsewhere, u.Upstream, u.Pushed}
 	}
-	if u := use(wt); u != (model.BranchUse{OnIt: true}) {
+	if u := use(wt); u != (flags{OnIt: true}) {
 		t.Errorf("a fresh worktree's branch: %+v", u)
 	}
 
@@ -40,7 +41,7 @@ func TestRenameBranch(t *testing.T) {
 		t.Fatalf("the worktree is on %q", got)
 	}
 	wt.Branch = "nushi/fix-the-login"
-	if u := use(wt); u != (model.BranchUse{OnIt: true}) {
+	if u := use(wt); u != (flags{OnIt: true}) {
 		t.Errorf("after the rename: %+v", u)
 	}
 
@@ -50,10 +51,15 @@ func TestRenameBranch(t *testing.T) {
 	testcheck.Git(t, bare, "init", "-q", "--bare")
 	testcheck.Git(t, repo, "remote", "add", "up/stream", bare) // a remote's name with a slash
 	testcheck.Git(t, repo, "push", "-q", "up/stream", "main:nushi/theirs")
-	for _, name := range []string{"nushi/taken", "nushi/theirs"} {
-		if err := (Worktrees{}).RenameBranch(ctx, wt, name); !errors.Is(err, fs.ErrExist) {
-			t.Errorf("%s: %v", name, err)
+	u, err := Worktrees{}.BranchUse(ctx, wt)
+	testcheck.NoErr(t, err)
+	for name, want := range map[string]bool{"nushi/taken": true, "nushi/theirs": true, "main": true, "nushi/free": false} {
+		if u.Taken(name) != want {
+			t.Errorf("%s taken: %v, want %v (%+v)", name, !want, want, u)
 		}
+	}
+	if err := (Worktrees{}).RenameBranch(ctx, wt, "nushi/taken"); !errors.Is(err, fs.ErrExist) {
+		t.Errorf("nushi/taken: %v", err)
 	}
 	for _, name := range []string{"-x", "a b", "a..b", "x.lock", "@{-1}", ""} {
 		if err := (Worktrees{}).RenameBranch(ctx, wt, name); err == nil || errors.Is(err, fs.ErrExist) {
@@ -70,7 +76,7 @@ func TestRenameBranch(t *testing.T) {
 
 	// Pushed, with its upstream set.
 	testcheck.Git(t, wt.Path, "push", "-q", "-u", "up/stream", "HEAD")
-	if u := use(wt); u != (model.BranchUse{OnIt: true, Upstream: true, Pushed: true}) {
+	if u := use(wt); u != (flags{OnIt: true, Upstream: true, Pushed: true}) {
 		t.Errorf("after a push: %+v", u)
 	}
 
@@ -80,7 +86,7 @@ func TestRenameBranch(t *testing.T) {
 	testcheck.NoErr(t, err)
 	testcheck.Git(t, other.Path, "switch", "-q", "-c", "elsewhere")
 	testcheck.Git(t, repo, "switch", "-q", other.Branch)
-	if u := use(other); u != (model.BranchUse{Elsewhere: true}) {
+	if u := use(other); u != (flags{Elsewhere: true}) {
 		t.Errorf("checked out elsewhere: %+v", u)
 	}
 }

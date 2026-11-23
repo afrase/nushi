@@ -29,10 +29,12 @@ type Worktrees interface {
 	// Remove removes a worktree; without force, only a clean one.
 	Remove(ctx context.Context, wt model.Worktree, force bool) error
 	DeleteBranch(ctx context.Context, wt model.Worktree) error
-	// BranchUse says who else has a worktree's branch.
+	// BranchUse says who else has a worktree's branch, and the names a
+	// rename can't take.
 	BranchUse(ctx context.Context, wt model.Worktree) (model.BranchUse, error)
-	// RenameBranch renames a worktree's branch, its folder staying; a name
-	// taken (a branch, or a remote's) fails with fs.ErrExist.
+	// RenameBranch renames a worktree's branch, its folder staying; a
+	// branch already named so fails with fs.ErrExist (a remote's is
+	// BranchUse's Taken).
 	RenameBranch(ctx context.Context, wt model.Worktree, to string) error
 	// CheckBranch refuses a name git wouldn't take for a branch in repo.
 	CheckBranch(ctx context.Context, repo, name string) error

@@ -27,7 +27,8 @@ const branchSlug = 40
 // The worktree's folder stays where it is (the agent and terminals are
 // in it). The transcript says so, and the agent is told with the next
 // prompt (branchnote.go). It runs git with the chat locked, once, so no
-// turn starts meanwhile.
+// turn starts meanwhile: three runs, whatever names are taken (the refs
+// are read once and the free name picked here).
 //
 //nolint:contextcheck // between turns, after the request that started the turn (or the agent's update) is gone
 func (c *chat) nameBranchLocked() {
@@ -46,7 +47,8 @@ func (c *chat) nameBranchLocked() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	log := c.logLocked().With("branch", wt.Branch)
-	if why, err := c.branchTakenLocked(ctx, *wt); err != nil {
+	use, why, err := c.branchTakenLocked(ctx, *wt)
+	if err != nil {
 		log.Warn("naming the branch after the chat", "err", err) // tried again after the next turn
 		return
 	} else if why != "" {
@@ -54,25 +56,38 @@ func (c *chat) nameBranchLocked() {
 		c.branchNamedLocked("")
 		return
 	}
-	name := "nushi/" + slug
-	for i := 2; name != wt.Branch; i++ {
-		err := c.worktrees.RenameBranch(ctx, *wt, name)
-		switch {
-		case err == nil:
-			log.Info("branch named after the chat") // not the name: it's the chat's title
-			c.branchNamedLocked(name)
-			c.noticeLocked("branch_renamed", "Branch renamed to "+name)
-			return
-		case !errors.Is(err, fs.ErrExist) || i > 20:
-			log.Warn("naming the branch after the chat", "err", err)
-			if i > 20 {
-				c.branchNamedLocked("")
-			}
-			return
-		}
-		name = "nushi/" + slug + "-" + strconv.Itoa(i)
+	name := freeBranch(use, wt.Branch, "nushi/"+slug)
+	if name == "" || name == wt.Branch {
+		c.branchNamedLocked("") // named so already, or every name is taken
+		return
 	}
-	c.branchNamedLocked("") // named so already
+	switch err := c.worktrees.RenameBranch(ctx, *wt, name); {
+	case err == nil:
+		log.Info("branch named after the chat") // not the name: it's the chat's title
+		c.branchNamedLocked(name)
+		c.noticeLocked("branch_renamed", "Branch renamed to "+name)
+	case errors.Is(err, fs.ErrExist): // one the read missed: another spelling of it, on a Mac's volume
+		log.Info("branch keeps its name", "why", err)
+		c.branchNamedLocked("")
+	default:
+		log.Warn("naming the branch after the chat", "err", err)
+	}
+}
+
+// freeBranch is the first of name, name-2 … name-21 that use doesn't have
+// taken: current when it comes first (the branch has that name already),
+// "" when all are.
+func freeBranch(use model.BranchUse, current, name string) string {
+	for i := 1; i <= 21; i++ {
+		try := name
+		if i > 1 {
+			try += "-" + strconv.Itoa(i)
+		}
+		if try == current || !use.Taken(try) {
+			return try
+		}
+	}
+	return ""
 }
 
 // branchNamedLocked records the worktree's branch as named for good: on
@@ -87,29 +102,29 @@ func (c *chat) branchNamedLocked(name string) {
 
 // branchTakenLocked says why a worktree's branch shouldn't be renamed
 // ("" when it can be): the worktree isn't on it any more, another
-// worktree or chat has it, or a remote has it.
-func (c *chat) branchTakenLocked(ctx context.Context, wt model.Worktree) (string, error) {
-	use, err := c.worktrees.BranchUse(ctx, wt)
+// worktree or chat has it, or a remote has it. use is what git said of it.
+func (c *chat) branchTakenLocked(ctx context.Context, wt model.Worktree) (use model.BranchUse, why string, err error) {
+	use, err = c.worktrees.BranchUse(ctx, wt)
 	switch {
 	case err != nil:
-		return "", err
+		return use, "", err
 	case !use.OnIt:
-		return "the worktree isn't on " + wt.Branch + " any more", nil
+		return use, "the worktree isn't on " + wt.Branch + " any more", nil
 	case use.Upstream || use.Pushed:
-		return "It's on the remote: rename it there too, or keep it", nil
+		return use, "It's on the remote: rename it there too, or keep it", nil
 	case use.Elsewhere:
-		return "another worktree has it checked out", nil
+		return use, "another worktree has it checked out", nil
 	}
 	sessions, err := c.svc.sessions.Sessions()
 	if err != nil {
-		return "", err
+		return use, "", err
 	}
 	for _, s := range sessions {
 		if s.ID != c.id && usesBranch(s, wt) {
-			return "another chat has it", nil
+			return use, "another chat has it", nil
 		}
 	}
-	return "", nil
+	return use, "", nil
 }
 
 // usesBranch says whether a chat has wt's branch: it runs in wt's folder,
@@ -152,11 +167,16 @@ func (s *Service) RenameBranch(ctx context.Context, chatID, name string) error {
 		c.branchNamedLocked("")
 		return nil
 	}
-	if why, err := c.branchTakenLocked(ctx, *wt); err != nil || why != "" {
+	use, why, err := c.branchTakenLocked(ctx, *wt)
+	if err != nil || why != "" {
 		return cmp.Or(err, errors.New(why))
 	}
+	taken := fmt.Errorf("%s is taken (a branch of the repository's, or a remote's)", name)
+	if use.Taken(name) {
+		return taken
+	}
 	if err := c.worktrees.RenameBranch(ctx, *wt, name); errors.Is(err, fs.ErrExist) {
-		return fmt.Errorf("%s is taken (a branch of the repository's, or a remote's)", name)
+		return taken
 	} else if err != nil {
 		return err
 	}

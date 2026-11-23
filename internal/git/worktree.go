@@ -172,8 +172,9 @@ func (Worktrees) DeleteBranch(ctx context.Context, wt model.Worktree) error {
 
 // BranchUse says who else has a worktree's branch: whether the worktree
 // still has it checked out, another worktree has, it tracks a remote's
-// branch, or a remote has one of its name (it was pushed). It reads only
-// the repository's own refs and config; it asks no remote.
+// branch, or a remote has one of its name (it was pushed), and the names a
+// branch can't be renamed to (Taken). It reads only the repository's own
+// refs and config, in two runs of git; it asks no remote.
 func (Worktrees) BranchUse(ctx context.Context, wt model.Worktree) (model.BranchUse, error) {
 	var u model.BranchUse
 	out, err := run(ctx, wt.Repo, "worktree", "list", "--porcelain", "-z")
@@ -190,43 +191,39 @@ func (Worktrees) BranchUse(ctx context.Context, wt model.Worktree) (model.Branch
 			u.OnIt, u.Elsewhere = u.OnIt || on, u.Elsewhere || !on
 		}
 	}
-	up, err := run(ctx, wt.Repo, "for-each-ref", "--format=%(upstream)", "refs/heads/"+wt.Branch)
+	refs, err := run(ctx, wt.Repo, "for-each-ref", "--format=%(refname)%00%(upstream)", "refs/heads", "refs/remotes")
 	if err != nil {
 		return u, err
 	}
-	u.Upstream = strings.TrimSpace(string(up)) != ""
-	u.Pushed, err = remoteHas(ctx, wt.Repo, wt.Branch)
-	return u, err
-}
-
-// remoteHas says whether a remote of repo has a branch named branch, as
-// last fetched or pushed.
-func remoteHas(ctx context.Context, repo, branch string) (bool, error) {
-	out, err := run(ctx, repo, "for-each-ref", "--format=%(refname)", "refs/remotes")
-	for ref := range strings.Lines(string(out)) {
-		if strings.HasSuffix(strings.TrimSpace(ref), "/"+branch) { // the remote's name may hold "/" too
-			return true, nil
+	for line := range strings.Lines(string(refs)) {
+		ref, upstream, _ := strings.Cut(strings.TrimSuffix(line, "\n"), "\x00")
+		if name, ok := strings.CutPrefix(ref, "refs/heads/"); ok {
+			u.Branches = append(u.Branches, name)
+			u.Upstream = u.Upstream || name == wt.Branch && upstream != ""
+		} else if name, ok := strings.CutPrefix(ref, "refs/remotes/"); ok {
+			u.Remotes = append(u.Remotes, name)
 		}
 	}
-	return false, err
+	u.Pushed = u.RemoteHas(wt.Branch)
+	return u, nil
 }
 
 // RenameBranch gives a worktree's branch the name to (git branch -m), which
 // the worktrees that have it checked out follow; their folders stay. A
-// name git doesn't take is refused, and one already taken (a branch of
-// the repository's, or a remote's) fails with fs.ErrExist.
-func (w Worktrees) RenameBranch(ctx context.Context, wt model.Worktree, to string) error {
-	if err := w.CheckBranch(ctx, wt.Repo, to); err != nil {
+// name git doesn't take is refused, and a branch of the repository's
+// already named so fails with fs.ErrExist. A remote's branch of that name
+// is the caller's to check (BranchUse's Taken): git doesn't refuse it.
+func (Worktrees) RenameBranch(ctx context.Context, wt model.Worktree, to string) error {
+	if err := CheckBranch(to); err != nil {
 		return err
 	}
-	if hasBranch(ctx, wt.Repo, to) {
-		return fmt.Errorf("a branch named %s: %w", to, fs.ErrExist)
+	if _, err := run(ctx, wt.Repo, "branch", "-m", "--", wt.Branch, to); err != nil {
+		if hasBranch(ctx, wt.Repo, to) { // git's refusal, in any language
+			return fmt.Errorf("a branch named %s: %w", to, fs.ErrExist)
+		}
+		return err
 	}
-	if has, err := remoteHas(ctx, wt.Repo, to); err != nil || has {
-		return cmp.Or(err, fmt.Errorf("a remote's branch named %s: %w", to, fs.ErrExist))
-	}
-	_, err := run(ctx, wt.Repo, "branch", "-m", "--", wt.Branch, to)
-	return err
+	return nil
 }
 
 // CheckBranch refuses a name git wouldn't take for a branch in repo:

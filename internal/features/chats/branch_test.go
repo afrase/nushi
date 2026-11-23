@@ -3,10 +3,12 @@ package chats
 import (
 	"context"
 	"slices"
+	"strconv"
 	"sync"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // usedWorktrees answers BranchUse with use, and records each rename.
@@ -72,5 +74,72 @@ func TestTheBranchIsNamedOnlyWhenItsTheChatsAlone(t *testing.T) {
 				t.Errorf("renamed %v; the worktree %+v, want %s", renames, wt, want)
 			}
 		})
+	}
+}
+
+// The branch takes the first of the chat's names no branch has, a local
+// one's or a remote's, read once: one rename, whatever is taken.
+func TestTheBranchTakesTheFirstFreeName(t *testing.T) {
+	const branch = "nushi/brave-otter"
+	for _, tc := range []struct {
+		name string
+		use  model.BranchUse
+		want string // "" keeps Nushi's name for good
+	}{
+		{name: "free", use: model.BranchUse{OnIt: true, Branches: []string{branch}}, want: "nushi/fix-the-login"},
+		{name: "a local branch has it", use: model.BranchUse{OnIt: true,
+			Branches: []string{branch, "nushi/fix-the-login", "nushi/fix-the-login-2"}}, want: "nushi/fix-the-login-3"},
+		{name: "a remote's has it", use: model.BranchUse{OnIt: true, Branches: []string{branch},
+			Remotes: []string{"up/stream/nushi/fix-the-login"}}, want: "nushi/fix-the-login-2"},
+		{name: "all taken", use: model.BranchUse{OnIt: true, Branches: append([]string{branch, "nushi/fix-the-login"}, func() []string {
+			var taken []string
+			for i := 2; i <= 21; i++ {
+				taken = append(taken, "nushi/fix-the-login-"+strconv.Itoa(i))
+			}
+			return taken
+		}()...)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+			wts := &usedWorktrees{use: tc.use}
+			c.mu.Lock()
+			c.worktrees = wts
+			c.record.Worktree = &model.Worktree{Repo: "/r", Path: "/r/.worktrees/brave-otter", Branch: branch, AutoName: true}
+			c.mu.Unlock()
+			turn(t, svc, c, "fix the login")
+			c.mu.Lock()
+			wt := *c.record.Worktree
+			c.mu.Unlock()
+			wts.mu.Lock()
+			renames := slices.Clone(wts.renames)
+			wts.mu.Unlock()
+			want := []string{tc.want}
+			if tc.want == "" {
+				want, tc.want = nil, branch
+			}
+			if !slices.Equal(renames, want) || wt.Branch != tc.want || wt.AutoName {
+				t.Errorf("renamed %v; the worktree %+v, want %s", renames, wt, tc.want)
+			}
+		})
+	}
+}
+
+// Renaming the branch as the user asked refuses a name a remote has: git
+// wouldn't.
+func TestRenamingTheBranchRefusesARemotesName(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	wts := &usedWorktrees{use: model.BranchUse{OnIt: true, Remotes: []string{"origin/nushi/theirs"}}}
+	c.mu.Lock()
+	c.worktrees = wts
+	c.record.Worktree = &model.Worktree{Repo: "/r", Path: "/r/.worktrees/brave-otter", Branch: "nushi/brave-otter"}
+	c.mu.Unlock()
+	if err := svc.RenameBranch(t.Context(), c.id, "nushi/theirs"); err == nil {
+		t.Error("renamed to a remote's branch")
+	}
+	testcheck.NoErr(t, svc.RenameBranch(t.Context(), c.id, "nushi/mine"))
+	wts.mu.Lock()
+	defer wts.mu.Unlock()
+	if !slices.Equal(wts.renames, []string{"nushi/mine"}) {
+		t.Errorf("renames: %v", wts.renames)
 	}
 }

@@ -1,5 +1,10 @@
 package model
 
+import (
+	"slices"
+	"strings"
+)
+
 // Worktree is a git worktree of a repository, on a branch of its own.
 type Worktree struct {
 	Repo   string // the repository's folder (its main worktree)
@@ -87,6 +92,22 @@ type BranchUse struct {
 	Elsewhere bool // another worktree has it checked out
 	Upstream  bool // it tracks a remote's branch
 	Pushed    bool // a remote has a branch of its name
+	// Branches are the repository's local branches, Remotes its remotes'
+	// (as "origin/main": a remote's name may hold "/" too), as read with
+	// the rest, for a new name to stay clear of.
+	Branches, Remotes []string
+}
+
+// RemoteHas says a remote has a branch named name, as last fetched or
+// pushed.
+func (u BranchUse) RemoteHas(name string) bool {
+	return slices.ContainsFunc(u.Remotes, func(r string) bool { return strings.HasSuffix(r, "/"+name) })
+}
+
+// Taken says a branch can't be renamed to name: a local branch has it, or
+// a remote's.
+func (u BranchUse) Taken(name string) bool {
+	return slices.Contains(u.Branches, name) || u.RemoteHas(name)
 }
 
 // WorktreeState is what removing a worktree and deleting its branch would

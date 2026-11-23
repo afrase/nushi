@@ -68,11 +68,10 @@ func HeadCommit(ctx context.Context, folder string) string {
 // upstream's remote (branch.<name>.pushRemote, then remote.pushDefault,
 // then branch.<name>.remote), "" when none is set.
 func Head(ctx context.Context, folder string) (branch, remote string) {
-	out, err := run(ctx, folder, "symbolic-ref", "--short", "-q", "HEAD")
-	if err != nil {
+	branch = branchName(ctx, folder)
+	if branch == "" {
 		return "", ""
 	}
-	branch = strings.TrimSpace(string(out))
 	for _, key := range []string{"branch." + branch + ".pushRemote", "remote.pushDefault", "branch." + branch + ".remote"} {
 		if out, err := run(ctx, folder, "config", "--get", key); err == nil {
 			if r := strings.TrimSpace(string(out)); r != "" && r != "." {
@@ -81,4 +80,14 @@ func Head(ctx context.Context, folder string) (branch, remote string) {
 		}
 	}
 	return branch, ""
+}
+
+// branchName is the branch folder has checked out, one run of git; ""
+// when HEAD is detached or it isn't in a repository.
+func branchName(ctx context.Context, folder string) string {
+	out, err := run(ctx, folder, "symbolic-ref", "--short", "-q", "HEAD")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
