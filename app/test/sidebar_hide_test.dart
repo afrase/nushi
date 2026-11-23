@@ -25,6 +25,7 @@ import 'package:nushi/trust_ask.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
+import 'header_checks.dart';
 
 const _hide = 'Hide the sidebar\u2002⌘\\';
 const _show = 'Show the sidebar\u2002⌘\\';
@@ -325,12 +326,13 @@ void main() {
               expect(bar.left, NushiTheme.windowPad);
               expect(bar.top, NushiTheme.windowPad);
               expect(bar.width, width - 2 * NushiTheme.windowPad);
-              final show = tester.getRect(find.byTooltip(_show));
-              // Its icon 5 past the lights' room, its box around it.
-              expect(
-                show.left,
-                NushiTheme.windowPad + lightsInset - SidebarButton.reach,
+              // Its icon 5 past the lights' room, its box around it; the
+              // chat's title after its colour.
+              expectHiddenHeaderStart(
+                tester,
+                title: name == 'chat' ? _title : null,
               );
+              final show = tester.getRect(find.byTooltip(_show));
               expect(
                 show.center.dx,
                 NushiTheme.windowPad +
@@ -340,14 +342,8 @@ void main() {
               );
               switch (name) {
                 case 'chat':
-                  // The title, after the chat's color.
-                  expect(
-                    tester.getTopLeft(find.text(_title).first).dx,
-                    NushiTheme.windowPad +
-                        hiddenHeaderStart +
-                        ColorChip.width +
-                        8,
-                  );
+                  // Its title: expectHiddenHeaderStart, above.
+                  break;
                 case 'jira':
                   cleared(tester, 'Jira');
                 case 'github':

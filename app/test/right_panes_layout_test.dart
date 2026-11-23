@@ -24,7 +24,6 @@ import 'package:nushi/main.dart';
 import 'package:nushi/pane_tabs.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/side_chat.dart';
-import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/slides.dart';
 import 'package:nushi/subagent_pane.dart';
 import 'package:nushi/terminal_panel.dart';
@@ -34,6 +33,7 @@ import 'package:nushi/transcript.dart';
 import 'browser_fixture.dart' show browserFakes;
 import 'fake_daemon.dart' show loadFonts;
 import 'harness.dart';
+import 'header_checks.dart';
 import 'right_panes_fixture.dart';
 
 // Where a chat's parts are with panes open (ADR 0123): the transcript, the
@@ -177,19 +177,11 @@ void main() {
               if (!sidebar) {
                 // The sidebar's button past the Mac's lights or at Linux's
                 // inset, and the title past the buttons.
-                expect(
-                  _rect(tester, find.byType(SidebarButton)).left,
-                  NushiTheme.windowPad + lightsInset - SidebarButton.reach,
-                );
-                final title = find.descendant(
-                  of: find.byType(ChatHeader),
-                  matching: find.text('Fix the login redirect'),
-                );
-                expect(
-                  _rect(tester, title).left,
-                  greaterThanOrEqualTo(
-                    NushiTheme.windowPad + hiddenHeaderStart,
-                  ),
+                // A chat with no colour: its title at the header's start.
+                expectHiddenHeaderStart(
+                  tester,
+                  title: 'Fix the login redirect',
+                  colored: false,
                 );
               }
               final first = panes.first;

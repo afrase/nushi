@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
@@ -18,6 +17,7 @@ import 'package:nushi/window_drag_macos.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
+import 'header_checks.dart';
 
 // Linux's window keeps the system's title bar (ADR 0104): the headers start
 // at its inset rather than past the Mac's lights, and neither they nor the
@@ -217,21 +217,11 @@ void main() {
               final show = tester.getRect(
                 find.byTooltip('Show the sidebar\u2002Ctrl+\\'),
               );
-              expect(
-                show.left,
-                NushiTheme.windowPad + lightsInset - SidebarButton.reach,
-              );
               expect(show.top, greaterThanOrEqualTo(0));
-              if (name == 'chat') {
-                // The title, after the chat's color.
-                expect(
-                  tester.getTopLeft(find.text(_title).first).dx,
-                  NushiTheme.windowPad +
-                      hiddenHeaderStart +
-                      ColorChip.width +
-                      8,
-                );
-              }
+              expectHiddenHeaderStart(
+                tester,
+                title: name == 'chat' ? _title : null,
+              );
             }
             expectTextInside(tester, width);
             await render(
