@@ -8,7 +8,6 @@ import 'package:nushi/attached_files.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/code_runs.dart';
 import 'package:nushi/composer.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/run_text.dart';
@@ -42,7 +41,7 @@ void main() {
   testWidgets('what is written outlives the box, and a take-back lands in it', (
     tester,
   ) async {
-    final daemon = Daemon();
+    final daemon = await FakeDaemon([]).connect(tester);
     final chat = ChatState('c', '/tmp');
     Future<void> show({required bool box}) => tester.pumpWidget(
       themed(
@@ -56,15 +55,13 @@ void main() {
     await show(box: true);
     expect(chat.draft.text.text, 'half a thought\n\ntaken back');
     expect(find.text('half a thought\n\ntaken back'), findsOneWidget);
-    await show(box: false);
-    daemon.dispose(); // its ping timer
-    await tester.pump(const Duration(seconds: 4)); // and the ping's timeout
+    await closeView(tester, daemon);
   });
 
   testWidgets('a message taken back gives back its commands as cards', (
     tester,
   ) async {
-    final daemon = Daemon();
+    final daemon = await FakeDaemon([]).connect(tester);
     final chat = ChatState('c', '/tmp')
       ..takeBack.value = QueuedMessage(
         text: withOutputs('Why?', [_output('git status', 'clean')]),
@@ -74,14 +71,12 @@ void main() {
     expect(chat.draft.text.text, 'Why?');
     expect(chat.draft.outputs.value.single.command, 'ls');
     expect(chat.draft.outputs.value.single.text, 'clean');
-    await tester.pumpWidget(const SizedBox());
-    daemon.dispose(); // its ping timer
-    await tester.pump(const Duration(seconds: 4)); // and the ping's timeout
+    await closeView(tester, daemon);
   });
 
   testWidgets('a message for a subagent taken back while the box was away '
       'lands in it with its note', (tester) async {
-    final daemon = Daemon();
+    final daemon = await FakeDaemon([]).connect(tester);
     // Stop took back a replayed message (which subagent isn't known) while
     // the user was on Changes: the box isn't built.
     final chat = ChatState('c', '/tmp')
@@ -97,9 +92,7 @@ void main() {
       find.text('This message was for Explore: send it from its pane.'),
       findsOneWidget,
     );
-    await tester.pumpWidget(const SizedBox());
-    daemon.dispose(); // its ping timer
-    await tester.pump(const Duration(seconds: 4)); // and the ping's timeout
+    await closeView(tester, daemon);
   });
 
   test(

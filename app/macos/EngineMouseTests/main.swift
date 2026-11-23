@@ -204,6 +204,53 @@ do {
   expect(m.owesEnd(.scroll), false, "owed nothing")
 }
 
+// The engine these mirror: EngineMouse.swift and NushiViewController.swift
+// copy FlutterViewController.mm's MouseState and its gesture phases as of
+// this revision, and nothing else would notice the engine changing them.
+// The repository names the engine it builds with in
+// tools/webbuild/fonts.lock (make web stops until make web-fonts writes the
+// new one after a Flutter upgrade), and so does the Flutter on PATH, when
+// there is one.
+let mirrors = "deb287481e3ce9468f3434937ced4240a70539ca"
+
+func engines() -> [(String, String)] {
+  var found: [(String, String)] = []
+  let repo = URL(fileURLWithPath: #filePath)
+    .deletingLastPathComponent().deletingLastPathComponent()
+    .deletingLastPathComponent().deletingLastPathComponent()
+  let lock = repo.appendingPathComponent("tools/webbuild/fonts.lock")
+  if let text = try? String(contentsOf: lock, encoding: .utf8) {
+    for line in text.split(separator: "\n") where line.hasPrefix("engine ") {
+      found.append((String(line.dropFirst("engine ".count)), lock.path))
+    }
+  } else {
+    failed += 1
+    print("FAIL: no \(lock.path) to read the engine's revision from")
+  }
+  for dir in (ProcessInfo.processInfo.environment["PATH"] ?? "").split(separator: ":") {
+    let flutter = URL(fileURLWithPath: String(dir)).appendingPathComponent("flutter")
+    guard FileManager.default.isExecutableFile(atPath: flutter.path) else { continue }
+    let stamp = flutter.resolvingSymlinksInPath().deletingLastPathComponent()
+      .appendingPathComponent("cache/engine.stamp")
+    if let rev = try? String(contentsOf: stamp, encoding: .utf8) {
+      found.append((rev.trimmingCharacters(in: .whitespacesAndNewlines), stamp.path))
+    }
+    break
+  }
+  return found
+}
+
+for (engine, from) in engines() where engine != mirrors {
+  failed += 1
+  print("""
+    FAIL: Flutter's engine is \(engine) (\(from)), but EngineMouse mirrors \(mirrors).
+      Re-read the new engine's FlutterViewController.mm (MouseState, how it
+      sends a press, a move and a release, and a trackpad gesture's phases)
+      against Runner/EngineMouse.swift and Runner/NushiViewController.swift,
+      fix what changed, then set `mirrors` in EngineMouseTests/main.swift.
+    """)
+}
+
 if failed > 0 {
   print("\(failed) engine mouse check(s) failed")
   exit(1)
