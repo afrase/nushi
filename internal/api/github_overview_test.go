@@ -51,7 +51,7 @@ func TestGitHubPullOverview(t *testing.T) {
 	defer gh.Close()
 	host := strings.TrimPrefix(gh.URL, "https://")
 	svc := github.New(github.Deps{
-		Gh:     github.Gh{Token: func(context.Context, string) (string, string, error) { return "", "", nil }, Hosts: func() []string { return nil }, Reload: func() {}},
+		Gh:     github.Gh{Token: func(context.Context, string) (string, string, error) { return "", "", nil }, Hosts: func() []string { return nil }},
 		Tokens: memTokens{}, Store: &memHosts{Store: store.New(t.TempDir())},
 		Open: func(h, token string) github.Client { return githubapi.New(h, token, gh.Client().Transport) },
 		Keys: github.Keys{NeedsOK: func(error) bool { return false }, Restart: func(error) bool { return false }, Missing: func(error) bool { return false }},

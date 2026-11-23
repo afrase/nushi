@@ -59,14 +59,13 @@ type Client interface { //nolint:interfacebloat // the GitHub calls the feature 
 	Dequeue(ctx context.Context, pull string) error
 }
 
-// Gh is the gh CLI's login, read in this process through go-gh: a host's
-// token and where it came from ("" when gh has none; an error when the
-// read was cut short, so gh didn't say), the hosts gh knows, and Reload,
-// which reads gh's config again (Hosts reads what was read last).
+// Gh is the gh CLI's login: a host's token and where it came from (""
+// when gh has none; an error when the read was cut short, so gh didn't
+// say, or when a token only gh reads can't be had), and the hosts gh
+// knows, read afresh each call so a `gh auth login` since shows.
 type Gh struct {
-	Token  func(ctx context.Context, host string) (token, source string, err error)
-	Hosts  func() []string
-	Reload func()
+	Token func(ctx context.Context, host string) (token, source string, err error)
+	Hosts func() []string
 }
 
 // Tokens keeps pasted tokens (internal/keychain), by host. A read without
@@ -193,7 +192,6 @@ func (s *Service) Hosts(ctx context.Context) ([]HostState, error) {
 		return nil, err
 	}
 	names := slices.Clone(pasted)
-	s.Gh.Reload() // a host signed in to since
 	for _, h := range s.Gh.Hosts() {
 		if !slices.Contains(names, h) {
 			names = append(names, h)
@@ -280,9 +278,7 @@ func (s *Service) known(name string) (string, []string, error) {
 		return "", nil, err
 	}
 	if h != "github.com" && !slices.Contains(pasted, h) && !slices.Contains(s.Gh.Hosts(), h) {
-		if s.Gh.Reload(); !slices.Contains(s.Gh.Hosts(), h) {
-			return "", nil, unknownHostError(h + " isn't a host gh is signed in to or one given a token in Settings › GitHub")
-		}
+		return "", nil, unknownHostError(h + " isn't a host gh is signed in to or one given a token in Settings › GitHub")
 	}
 	return h, pasted, nil
 }

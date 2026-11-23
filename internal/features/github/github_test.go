@@ -282,7 +282,6 @@ type world struct {
 	mu      sync.Mutex // asked, read and clients, for the tests that ask at once
 	asked   []string   // the hosts gh was asked a token for
 	ghHosts []string   // the hosts gh is signed in to
-	read    []string   // the hosts in gh's config as it was read last
 	asking  func()     // called as gh is asked for a token, when set
 	ghToken string     // gh's token for github.com ("gho_gh" when "")
 	fetched []string
@@ -296,7 +295,6 @@ func newWorld(t *testing.T) *world {
 	t.Helper()
 	w := &world{tokens: &keychaintest.Keychain{Items: map[string]string{}}, store: &fakeStore{Store: store.New(t.TempDir())}, clients: map[string]*fakeClient{}, ghHosts: []string{"github.com"},
 		branch: map[string][2]string{}}
-	w.read = w.ghHosts
 	w.s = New(Deps{
 		Gh: Gh{
 			Token: func(ctx context.Context, host string) (string, string, error) {
@@ -323,12 +321,7 @@ func newWorld(t *testing.T) *world {
 			Hosts: func() []string {
 				w.mu.Lock()
 				defer w.mu.Unlock()
-				return slices.Clone(w.read)
-			},
-			Reload: func() {
-				w.mu.Lock()
-				defer w.mu.Unlock()
-				w.read = slices.Clone(w.ghHosts)
+				return slices.Clone(w.ghHosts)
 			},
 		},
 		Tokens: w.tokens, Store: w.store,
@@ -545,8 +538,8 @@ func TestTokenReadCutShort(t *testing.T) {
 	}
 }
 
-// A host gh signed in to after the daemon started is known: gh's config
-// is read again when a host isn't in it.
+// A host gh signed in to after the daemon started is known: gh's hosts
+// are read afresh each time.
 func TestGhLoginSince(t *testing.T) {
 	w := newWorld(t)
 	if _, err := w.s.client(t.Context(), "git.corp.example"); err == nil {

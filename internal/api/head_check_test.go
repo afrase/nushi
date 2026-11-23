@@ -97,7 +97,7 @@ func TestStartChatChecksAPullRequestsHead(t *testing.T) {
 	svc := chats.New(t.Context(), []chats.Kind{{Harness: model.HarnessInfo{Name: "a", Title: "A"}, Launch: launch}},
 		chats.Options{Remembered: st, Sessions: st, Scratch: t.TempDir(), Worktrees: wts})
 	gh := github.New(github.Deps{
-		Gh:     github.Gh{Token: func(context.Context, string) (string, string, error) { return "tok", "gh", nil }, Hosts: func() []string { return nil }, Reload: func() {}},
+		Gh:     github.Gh{Token: func(context.Context, string) (string, string, error) { return "tok", "gh", nil }, Hosts: func() []string { return nil }},
 		Tokens: memTokens{},
 		Store:  &memHosts{Store: store.New(t.TempDir())},
 		Open:   func(string, string) github.Client { return forkPull{} },

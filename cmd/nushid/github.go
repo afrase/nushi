@@ -26,9 +26,8 @@ func newGitHub(st *store.Store, dev bool, shellEnv *shellenv.Env) *github.Servic
 	gh := ghLogin{env: os.Environ, lookPath: shellEnv.LookPath}
 	return github.New(github.Deps{
 		Gh: github.Gh{
-			Token:  gh.Token,
-			Hosts:  gh.Hosts,
-			Reload: func() {}, // Hosts reads gh's hosts.yml afresh each time
+			Token: gh.Token,
+			Hosts: gh.Hosts,
 		},
 		Tokens: keychain.Keychain{Service: service},
 		Store:  st,
