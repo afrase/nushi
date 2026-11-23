@@ -89,16 +89,16 @@ void main() {
 
     testWidgets('Esc while listening stops it, not Settings; a second Esc '
         'closes Settings', (tester) async {
-      final d = await shortcutsPage(tester);
+      final d = await shortcutsInApp(tester);
       final before = shortcutKeys.value;
       await tapIt(tester, keyOf('find'));
       await pressKey(tester, LogicalKeyboardKey.escape);
-      expect(find.text('closed'), findsNothing);
+      expect(d.settingsOpen, isNotNull);
       expect(shortcutKeys.value, same(before));
       expect(keyShows(tester, 'find'), '⌘F');
       expect(shortcutRecording.value, isFalse);
       await pressKey(tester, LogicalKeyboardKey.escape);
-      expect(find.text('closed'), findsOne);
+      expect(d.settingsOpen, isNull);
       d.dispose();
     }, variant: onMac);
 

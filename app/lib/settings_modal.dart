@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/daemon.dart';
@@ -9,7 +10,7 @@ import 'package:nushi/theme/theme.dart';
 /// The app's keys that stop at Settings (ADR 0087): every action's but
 /// ⌘,'s, which shuts it, the palette's and the chat's; none reaches what's
 /// behind it. A field in Settings still gets its own (they're handled
-/// before these).
+/// before these). Esc, which shuts it, joins them in the modal.
 final Map<ShortcutActivator, Intent> _stopped = {
   for (final k in appKeys.keys)
     if (k != settingsKey) k: const DoNothingAndStopPropagationIntent(),
@@ -48,17 +49,35 @@ class _SettingsModalState extends State<SettingsModal> {
   /// What had the focus as Settings opened, given it back as it shuts.
   FocusNode? _before;
 
+  /// Settings' own focus: taken as it opens, so Esc and the keys stopped
+  /// here reach it from wherever the focus was.
+  final _scope = FocusScopeNode(debugLabel: 'settings');
+
   @override
   void initState() {
     super.initState();
-    if (widget.open) _before = FocusManager.instance.primaryFocus;
+    if (widget.open) _opened();
+  }
+
+  @override
+  void dispose() {
+    _scope.dispose();
+    super.dispose();
+  }
+
+  /// Notes what had the focus, then takes it once Settings is built.
+  void _opened() {
+    _before = FocusManager.instance.primaryFocus;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.open && !_scope.hasFocus) _scope.requestFocus();
+    });
   }
 
   @override
   void didUpdateWidget(SettingsModal old) {
     super.didUpdateWidget(old);
     // Before the app below is shut out of the focus, which drops it.
-    if (widget.open && !old.open) _before = FocusManager.instance.primaryFocus;
+    if (widget.open && !old.open) _opened();
     if (!widget.open && old.open) {
       final back = _before;
       _before = null;
@@ -106,8 +125,13 @@ class _SettingsModalState extends State<SettingsModal> {
                 child: ConstrainedBox(
                   constraints: BoxConstraints.loose(SettingsModal.maxSize),
                   child: Shortcuts(
-                    shortcuts: _stopped,
+                    shortcuts: {
+                      ..._stopped,
+                      const SingleActivator(LogicalKeyboardKey.escape):
+                          VoidCallbackIntent(widget.daemon.closeSettings),
+                    },
                     child: FocusScope(
+                      node: _scope,
                       autofocus: true,
                       child: Container(
                         key: const ValueKey('settings-modal'),

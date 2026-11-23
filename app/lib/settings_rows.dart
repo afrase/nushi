@@ -26,7 +26,6 @@ class SettingsPage extends StatelessWidget {
     this.slivers = const [],
     this.head,
     this.bottom,
-    this.controller,
   });
 
   /// The content's widest.
@@ -50,7 +49,6 @@ class SettingsPage extends StatelessWidget {
   final List<Widget> slivers;
   final Widget? head;
   final Widget? bottom;
-  final ScrollController? controller;
 
   /// The right padding that keeps the column at most [maxWidth] wide in
   /// [width].
@@ -130,7 +128,6 @@ class SettingsPage extends StatelessWidget {
                 ?pinned,
                 Expanded(
                   child: CustomScrollView(
-                    controller: controller,
                     slivers: [
                       SliverPadding(
                         padding: pad.copyWith(top: pinned == null ? 18 : 0),

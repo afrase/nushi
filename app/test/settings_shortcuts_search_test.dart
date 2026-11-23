@@ -159,15 +159,15 @@ void main() {
 
     testWidgets('Esc in the field with text empties it and Settings stays; '
         'in an empty field it shuts Settings', (tester) async {
-      final d = await shortcutsPage(tester);
+      final d = await shortcutsInApp(tester);
       final all = _rows(tester).length;
       await _type(tester, 'tab');
       await pressKey(tester, LogicalKeyboardKey.escape);
-      expect(find.text('closed'), findsNothing);
+      expect(d.settingsOpen, isNotNull);
       expect(_rows(tester).length, all);
       expect(tester.widget<TextField>(_search).controller!.text, isEmpty);
       await pressKey(tester, LogicalKeyboardKey.escape);
-      expect(find.text('closed'), findsOne);
+      expect(d.settingsOpen, isNull);
       d.dispose();
     }, variant: onMac);
 

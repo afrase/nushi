@@ -40,7 +40,6 @@ class SettingsView extends StatefulWidget {
 }
 
 class _SettingsViewState extends State<SettingsView> {
-  final _focus = FocusNode(debugLabel: 'settings');
   Settings? _set; // the daemon's, once it said
   bool _asking = false;
 
@@ -76,10 +75,6 @@ class _SettingsViewState extends State<SettingsView> {
   @override
   void initState() {
     super.initState();
-    // Esc reaches the view from wherever the focus was.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_focus.hasFocus) _focus.requestFocus();
-    });
     _ask();
     _knownConnected();
   }
@@ -87,7 +82,6 @@ class _SettingsViewState extends State<SettingsView> {
   @override
   void dispose() {
     _again.cancel();
-    _focus.dispose();
     super.dispose();
   }
 
@@ -188,53 +182,38 @@ class _SettingsViewState extends State<SettingsView> {
   @override
   Widget build(BuildContext context) {
     final section = daemon.settingsOpen?.section ?? daemon.lastSettings;
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.escape): daemon.closeSettings,
-      },
-      child: Focus(
-        focusNode: _focus,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SettingsNav(
-                    section: section,
-                    connected: _connected,
-                    onPick: (s) => daemon.openSettings(section: s),
-                  ),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: KeyedSubtree(
-                            key: ValueKey(section),
-                            child: _page(section),
-                          ),
-                        ),
-                        // One title: Close sits in the page's corner, not
-                        // on a bar of its own over the page's title.
-                        Positioned(
-                          top: SettingsPage.closeInset,
-                          right: SettingsPage.closeInset,
-                          child: IconTap(
-                            Icons.close,
-                            tooltip: withKey('Close', 'Esc'),
-                            onTap: daemon.closeSettings,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SettingsNav(
+          section: section,
+          connected: _connected,
+          onPick: (s) => daemon.openSettings(section: s),
         ),
-      ),
+        Expanded(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: KeyedSubtree(
+                  key: ValueKey(section),
+                  child: _page(section),
+                ),
+              ),
+              // One title: Close sits in the page's corner, not on a bar of
+              // its own over the page's title.
+              Positioned(
+                top: SettingsPage.closeInset,
+                right: SettingsPage.closeInset,
+                child: IconTap(
+                  Icons.close,
+                  tooltip: withKey('Close', 'Esc'),
+                  onTap: daemon.closeSettings,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

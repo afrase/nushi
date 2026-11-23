@@ -30,16 +30,11 @@ Finder get _box => find.descendant(
   matching: find.byType(EditableText),
 );
 
-/// Whether the focus is inside Settings.
+/// Whether the focus is inside Settings: on the modal's scope or below it.
 bool _focusInside(WidgetTester tester) {
-  final at = FocusManager.instance.primaryFocus?.context;
-  if (at == null) return false;
-  var inside = false;
-  at.visitAncestorElements((e) {
-    if (e.widget is SettingsView) inside = true;
-    return !inside;
-  });
-  return inside;
+  final at = FocusManager.instance.primaryFocus;
+  final scope = FocusScope.of(tester.element(_modal));
+  return at != null && (at == scope || scope.descendants.contains(at));
 }
 
 void main() {

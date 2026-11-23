@@ -35,6 +35,16 @@ Future<Daemon> shortcutsPage(
   return d;
 }
 
+/// Settings at Keyboard shortcuts over the whole app, as it opens, tall
+/// enough that every row is built: where Esc reaches the modal that shuts
+/// it.
+Future<Daemon> shortcutsInApp(WidgetTester tester) => pumpSettingsApp(
+  tester,
+  FakeDaemon([]),
+  SettingsSection.shortcuts,
+  size: const Size(1700, 2600),
+);
+
 /// [id]'s key, the row's control.
 Finder keyOf(String id) => find.byKey(ValueKey('shortcut-key-$id'));
 
