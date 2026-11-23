@@ -70,6 +70,40 @@ String? _picked(WidgetTester tester) => tester
     .map((t) => t.tooltip.split('\n').first)
     .singleOrNull;
 
+/// A sidebar 260 wide in a 560 × 700 window, on a fake daemon of
+/// [arrangeChats], built only while the notifier returned is true, as the
+/// app hides it.
+Future<(Daemon, ValueNotifier<bool>)> _hideableSidebar(
+  WidgetTester tester,
+) async {
+  viewport(tester, const Size(560, 700));
+  final fake = FakeDaemon(arrangeChats());
+  final d = await fake.connect(tester);
+  final shown = ValueNotifier(true);
+  addTearDown(shown.dispose);
+  await tester.pumpWidget(
+    themed(
+      Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(
+          width: 260,
+          child: ValueListenableBuilder(
+            valueListenable: shown,
+            builder: (context, show, _) => show
+                ? ListenableBuilder(
+                    listenable: d,
+                    builder: (context, _) => Sidebar(daemon: d),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return (d, shown);
+}
+
 void main() {
   setUpAll(loadFonts);
   // The rail is off at first (Settings › Appearance): on, for its tests;
@@ -208,31 +242,7 @@ void main() {
   testWidgets('a chat of another project opened while the sidebar is '
       'hidden is followed once it shows', (tester) async {
     sidebarProject.value = cappy;
-    viewport(tester, const Size(560, 700));
-    final fake = FakeDaemon(arrangeChats());
-    final d = await fake.connect(tester);
-    final shown = ValueNotifier(true);
-    addTearDown(shown.dispose);
-    await tester.pumpWidget(
-      themed(
-        Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: 260,
-            child: ValueListenableBuilder(
-              valueListenable: shown,
-              builder: (context, show, _) => show
-                  ? ListenableBuilder(
-                      listenable: d,
-                      builder: (context, _) => Sidebar(daemon: d),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
+    final (d, shown) = await _hideableSidebar(tester);
     d.select('c'); // cappy's
     await tester.pumpAndSettle();
     expect(sidebarProject.value, cappy);
@@ -254,6 +264,39 @@ void main() {
     await tester.pumpAndSettle();
     expect(sidebarProject.value, garden);
     expect(_chats(tester), ['Plant the beds']);
+    d.dispose();
+  });
+
+  // Rail-owed-remount: the move owed while the rail was off was settled
+  // only by a change of chat or of the rail with the sidebar built, so
+  // the rail turned on while it was hidden came back narrowed away from
+  // the open chat, and a later rail change took a tile picked after it.
+  testWidgets('a chat opened with the rail off is followed when the rail '
+      'is turned on while the sidebar is hidden', (tester) async {
+    sidebarProject.value = cappy;
+    final (d, shown) = await _hideableSidebar(tester);
+    d.select('c'); // cappy's
+    await tester.pumpAndSettle();
+    projectRail.value = false;
+    await tester.pumpAndSettle();
+    d.select('d'); // garden's
+    await tester.pumpAndSettle();
+    expect(sidebarProject.value, cappy, reason: 'no rail, no pick moved');
+
+    shown.value = false;
+    await tester.pumpAndSettle();
+    projectRail.value = true;
+    shown.value = true;
+    await tester.pumpAndSettle();
+    expect(sidebarProject.value, garden);
+    expect(_chats(tester), ['Plant the beds']);
+
+    await _press(tester, 'notes');
+    sidebarGroupBy.value = GroupBy.date;
+    await tester.pumpAndSettle();
+    sidebarGroupBy.value = GroupBy.project;
+    await tester.pumpAndSettle();
+    expect(sidebarProject.value, notes, reason: 'nothing owed is left');
     d.dispose();
   });
 

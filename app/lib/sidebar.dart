@@ -135,12 +135,14 @@ class _SidebarState extends State<Sidebar> {
     super.initState();
     _pulls = PullStates.of(widget.daemon)..watch();
     // Shown again after it was hidden: a chat opened or started meanwhile
-    // is followed now, as it would have been.
+    // is followed now, as it would have been, and so is a move owed from
+    // before if the rail shows now (turned on meanwhile, say).
     final seen = _seen[widget.daemon];
     _opened = seen == null ? widget.daemon.selectedId : seen.opened;
     _started = seen == null ? widget.daemon.starting : seen.started;
     _owed = seen?.owed;
     if (seen != null) _follow();
+    _settle();
     widget.daemon.addListener(_follow);
     _railChanges.addListener(_settle);
     sidebarShows.addListener(_tick);
