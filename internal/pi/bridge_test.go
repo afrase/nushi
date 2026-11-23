@@ -614,7 +614,7 @@ func TestContext(t *testing.T) {
 	s := openNew(t, c, t.TempDir())
 	prompt(t, c, s.SessionID, "hello")
 	prompt(t, c, s.SessionID, "/compact")
-	u, err := harness.Context(context.Background(), c.Call, string(s.SessionID))
+	u, err := Harness{Pi}.Context(context.Background(), c.Call, string(s.SessionID)) // the bridge runs as Pi
 	want := "- Messages: 2 from you, 3 from Pi\n- Tool calls: 1\n- Tokens: 1.5k in · 250 out\n- Cache: 64 read\n- Compactions: 1\n"
 	if err != nil || u.Markdown != want || len(u.Categories) != 0 {
 		t.Errorf("context = %q, %v", u.Markdown, err)

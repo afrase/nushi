@@ -45,14 +45,14 @@ func (s *session) stats(ctx context.Context) (stats, error) {
 // Context asks the bridge what a session holds, for the Context widget:
 // Pi has no breakdown of its context, but counts the session's messages,
 // tool calls and tokens.
-func (Harness) Context(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error) {
+func (h Harness) Context(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error) {
 	var st stats
 	if err := call(ctx, ContextMethod, map[string]string{"sessionId": sessionID}, &st); err != nil {
 		return model.ContextUsage{}, err
 	}
 	t := st.Tokens
 	lines := []string{
-		fmt.Sprintf("Messages: %d from you, %d from Pi", st.UserMessages, st.AssistantMessages),
+		fmt.Sprintf("Messages: %d from you, %d from %s", st.UserMessages, st.AssistantMessages, h.Title),
 		fmt.Sprintf("Tool calls: %d", st.ToolCalls),
 		fmt.Sprintf("Tokens: %s in · %s out", short(t.Input), short(t.Output)),
 	}
