@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat_pull.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -103,6 +104,34 @@ void main() {
     final cp = ChatPull.of(d, d.chats['c']!);
     expect(cp.pull?.item.title, _title);
     expect(cp.keptAt, fixtureNow.subtract(const Duration(minutes: 2)));
+    d.dispose();
+  }, variant: onMac);
+
+  testWidgets('whole() never hands out the kept copy as current: a first '
+      'ask that failed leaves it, and the next one asks GitHub', (
+    tester,
+  ) async {
+    _kept(const Duration(minutes: 5)); // open, then
+    var offline = true;
+    final (d, _) = await openPullTab(
+      tester,
+      fixturePull(),
+      more: (input) => input is GetGitHubPullRequest
+          ? offline
+                ? Future<GetGitHubPullResponse>.error(StateError('offline'))
+                : GetGitHubPullResponse(
+                    pull: fixturePull()..item.state = 'merged',
+                  )
+          : null,
+    );
+    final cp = ChatPull.of(d, d.chats['c']!);
+    expect(cp.keptAt, isNotNull); // the tab's ask failed: the copy stays
+    offline = false;
+    final got = await cp.whole(
+      tester.element(find.text(_title).first),
+      cp.current!,
+    );
+    expect(got?.item.state, 'merged');
     d.dispose();
   }, variant: onMac);
 

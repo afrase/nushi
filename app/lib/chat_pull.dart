@@ -143,12 +143,16 @@ class ChatPull extends ChangeNotifier {
   }
 
   /// [link]'s pull request whole, for Fix checks, Merge…, Clean up…: the
-  /// tab's when it shows that one (read on its timer), else asked of
-  /// GitHub now; null, said under [context], when it can't be.
+  /// tab's when it shows that one read current (on its timer; never the
+  /// copy kept from before, [keptAt], which may be days old), else asked
+  /// of GitHub now; null, said under [context], when it can't be.
   Future<GitHubPull?> whole(BuildContext context, GitHubLink link) async {
     final l = current;
     if (pull case final p?
-        when _readsWhole && l != null && pullKey(l) == pullKey(link)) {
+        when _readsWhole &&
+            keptAt == null &&
+            l != null &&
+            pullKey(l) == pullKey(link)) {
       return p;
     }
     try {
