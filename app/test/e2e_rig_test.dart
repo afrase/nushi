@@ -15,6 +15,8 @@ import 'e2e_rig.dart';
 void main() {
   test('a child of the rig ends when its process is killed', () async {
     final helper = await Process.start('dart', ['test/e2e_rig_child.dart']);
+    // Killed however the test ends; its child then goes with it.
+    addTearDown(() => helper.kill(ProcessSignal.sigkill));
     unawaited(helper.stderr.drain<void>());
     final pid = int.parse(
       await helper.stdout
