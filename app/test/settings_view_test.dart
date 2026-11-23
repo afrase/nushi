@@ -374,7 +374,7 @@ void main() {
     expect(label.height, lessThan(20), reason: 'one line');
     expect(field.top, greaterThan(label.bottom));
     expect(field.left, closeTo(label.left, 1));
-    final words = tester.getRect(find.textContaining('notifications off'));
+    final words = tester.getRect(find.textContaining('Notifications off'));
     expect(words.height, lessThan(20), reason: 'one line');
     expect(tester.getRect(find.text('Revoke')).top, greaterThan(words.bottom));
     expectTextInside(tester, 720);
