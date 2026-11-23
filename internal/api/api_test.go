@@ -16,6 +16,7 @@ import (
 	"connectrpc.com/connect"
 	acp "github.com/afrase/acp-go/unstable"
 
+	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/remote"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
@@ -172,6 +173,12 @@ func TestStartWhy(t *testing.T) {
 		{start(&chats.QuitError{Why: "exit 1: Error: boom", Err: fmt.Errorf("initialize: %w", acp.ErrClosed)}), "it quit (exit 1: Error: boom)"},
 		{start(fmt.Errorf("session/new: %w", acp.ErrClosed)), "it quit before it answered"},
 		{start(errors.New("start agent: exec: \"ante\": executable file not found in $PATH")), `exec: "ante": executable file not found in $PATH`},
+		{start(&agents.UntestedError{Err: &chats.QuitError{Why: "exit 1: boom", Err: acp.ErrClosed}, Title: "Ante", Tested: []string{"0.2.14"}, Version: "0.3.0"}),
+			"it quit (exit 1: boom) (Nushi was tested with Ante 0.2.14; this is 0.3.0)"},
+		{start(&agents.UntestedError{Err: fmt.Errorf("initialize: %w", &acp.Error{Code: -32603, Message: "no"}), Title: "Ante", Tested: []string{"0.2.14"}, Version: "0.3.0"}),
+			"no (Nushi was tested with Ante 0.2.14; this is 0.3.0)"},
+		{start(&agents.UntestedError{Err: errors.New("start agent: odd"), Title: "Ante", Tested: []string{"0.2.14"}, Version: "0.3.0"}),
+			"odd (Nushi was tested with Ante 0.2.14; this is 0.3.0)"},
 	} {
 		if got := startWhy(tc.err); got != tc.want {
 			t.Errorf("%v: got %q, want %q", tc.err, got, tc.want)

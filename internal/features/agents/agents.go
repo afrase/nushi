@@ -286,6 +286,25 @@ func (s *Service) Explain(name string) func(error) error {
 		if v == "" || slices.Contains(a.Tested, v) {
 			return err
 		}
-		return fmt.Errorf("%w (Nushi was tested with %s %s; this is %s)", err, a.Title, strings.Join(a.Tested, " and "), v)
+		return &UntestedError{Err: err, Title: a.Title, Tested: a.Tested, Version: v}
 	}
 }
+
+// UntestedError is a failed start of an agent whose CLI is a version
+// Nushi wasn't tested with, as Explain marks it. It is typed so the API
+// can keep the hint beside the short why it gives the app.
+type UntestedError struct {
+	Err     error
+	Title   string   // the agent's: "Ante"
+	Tested  []string // the versions Nushi was tested with
+	Version string   // the CLI's own
+}
+
+// Note is the hint itself: which versions Nushi was tested with.
+func (e *UntestedError) Note() string {
+	return fmt.Sprintf("Nushi was tested with %s %s; this is %s", e.Title, strings.Join(e.Tested, " and "), e.Version)
+}
+
+func (e *UntestedError) Error() string { return e.Err.Error() + " (" + e.Note() + ")" }
+
+func (e *UntestedError) Unwrap() error { return e.Err }

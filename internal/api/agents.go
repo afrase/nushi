@@ -95,17 +95,37 @@ type joined interface {
 // error's type: the agent quit (chats.QuitError: its exit and stderr's
 // line), it answered with an ACP error (its message), its connection ended
 // with no word of why, or else the cause's own text past "couldn't start
-// <Agent>: " and chats' "start agent: ".
+// <Agent>: " and chats' "start agent: ". A CLI version Nushi wasn't tested
+// with (agents.UntestedError) keeps that hint after it, the likeliest
+// reason a newer CLI fails.
 func startWhy(err error) string {
+	why, typed := typedWhy(err)
+	if !typed {
+		return untypedWhy(err) // the cause's text already holds any hint
+	}
+	if u, ok := errors.AsType[*agents.UntestedError](err); ok {
+		why += " (" + u.Note() + ")"
+	}
+	return why
+}
+
+// typedWhy is startWhy's why for a cause of a type it knows, and whether
+// it was one.
+func typedWhy(err error) (string, bool) {
 	if q, ok := errors.AsType[*chats.QuitError](err); ok {
-		return "it quit (" + q.Why + ")"
+		return "it quit (" + q.Why + ")", true
 	}
 	if e, ok := errors.AsType[*acp.Error](err); ok {
-		return e.Message
+		return e.Message, true
 	}
 	if errors.Is(err, acp.ErrClosed) {
-		return "it quit before it answered"
+		return "it quit before it answered", true
 	}
+	return "", false
+}
+
+// untypedWhy is startWhy's why for any other cause: its own text.
+func untypedWhy(err error) string {
 	if j, ok := errors.AsType[joined](err); ok { // chats.StartOn's "%w <Agent>: %w"
 		for _, e := range j.Unwrap() {
 			if e != chats.ErrStart { //nolint:errorlint // the sentinel itself, beside the cause
