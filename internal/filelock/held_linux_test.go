@@ -24,7 +24,7 @@ func TestHeldEveryKind(t *testing.T) {
 		"flock elsewhere": func(t *testing.T, path string) {
 			t.Helper()
 			if _, err := exec.LookPath("flock"); err != nil {
-				t.Skip("no flock(1) to hold a lock from another process")
+				testcheck.Lacks(t, "no flock(1) to hold a lock from another process")
 			}
 			cmd := exec.CommandContext(t.Context(), "flock", path, "sleep", "30")
 			if err := cmd.Start(); err != nil {

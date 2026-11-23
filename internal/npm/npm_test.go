@@ -96,14 +96,12 @@ func registry(t *testing.T, marker string) (url string, lock fstest.MapFS, tampe
 
 // sandboxRuns skips the test where npm's sandbox doesn't run (Linux without
 // a bwrap that can make its namespaces, an OS with none), except in CI,
-// whose jobs set one up, so a skip there can't hide a broken sandbox.
+// whose jobs set one up, so a skip there can't hide a broken sandbox
+// (testcheck.Lacks).
 func sandboxRuns(t *testing.T) {
 	t.Helper()
 	if _, err := writingOnlyIn(context.Background(), os.Environ(), t.TempDir(), "true"); err != nil {
-		if os.Getenv("CI") != "" {
-			t.Fatalf("in CI: %v", err)
-		}
-		t.Skip(err)
+		testcheck.Lacks(t, err.Error())
 	}
 }
 
@@ -113,7 +111,7 @@ func sandboxRuns(t *testing.T) {
 // leaves the install before it; Remove.
 func TestInstall(t *testing.T) {
 	if _, err := exec.LookPath("npm"); err != nil {
-		t.Skip("no npm")
+		testcheck.Lacks(t, "no npm")
 	}
 	sandboxRuns(t)
 	tmp := t.TempDir()

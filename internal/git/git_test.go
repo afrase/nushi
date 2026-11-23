@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -451,7 +452,7 @@ func commitThere(t *testing.T, repo string, env []string) (string, error) {
 func TestCommitSignsWithGPG(t *testing.T) {
 	gpg, err := exec.LookPath("gpg")
 	if err != nil {
-		t.Skip("no gpg here")
+		testcheck.Lacks(t, "no gpg here")
 	}
 	// A short path: gpg-agent's socket has a length limit.
 	home, err := os.MkdirTemp("", "ngpg") //nolint:usetesting // t.TempDir's path is past that limit
@@ -465,7 +466,7 @@ func TestCommitSignsWithGPG(t *testing.T) {
 	cmd := exec.Command(gpg, "--batch", "--passphrase", "", "--quick-generate-key", "Test <test@example.com>", "ed25519", "sign", "never")
 	cmd.Env = env
 	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Skipf("gpg can't make a key here: %v: %s", err, out)
+		testcheck.Lacks(t, fmt.Sprintf("gpg can't make a key here: %v: %s", err, out))
 	}
 	repo := signedRepo(t)
 	testcheck.Git(t, repo, "config", "commit.gpgsign", "true")
@@ -486,7 +487,7 @@ func TestCommitSignsWithGPG(t *testing.T) {
 func TestCommitSignsWithSSH(t *testing.T) {
 	keygen, err := exec.LookPath("ssh-keygen")
 	if err != nil {
-		t.Skip("no ssh-keygen here")
+		testcheck.Lacks(t, "no ssh-keygen here")
 	}
 	key := filepath.Join(t.TempDir(), "key")
 	if out, err := exec.Command(keygen, "-q", "-t", "ed25519", "-N", "", "-f", key).CombinedOutput(); err != nil {

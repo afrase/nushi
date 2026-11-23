@@ -3,6 +3,7 @@ package claudemcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -172,7 +173,7 @@ func TestProjectOfARelativeWorktree(t *testing.T) {
 	testcheck.Git(t, main, "commit", "-q", "--allow-empty", "-m", "first")
 	testcheck.Git(t, main, "-c", "worktree.useRelativePaths=true", "worktree", "add", "-q", wt)
 	if b, _ := os.ReadFile(filepath.Join(main, ".git", "worktrees", "wt", "gitdir")); filepath.IsAbs(strings.TrimSpace(string(b))) {
-		t.Skipf("git wrote an absolute link back (%s): older than 2.48", b)
+		testcheck.Lacks(t, fmt.Sprintf("git wrote an absolute link back (%s): older than 2.48", b))
 	}
 	sub := filepath.Join(wt, "sub")
 	testcheck.NoErr(t, os.Mkdir(sub, 0o700))

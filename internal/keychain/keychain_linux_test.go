@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // A bus with no Secret Service on it, or no bus at all, is no keyring:
@@ -35,12 +37,12 @@ func TestNoKeyring(t *testing.T) {
 // privateBus starts a session bus of the test's own, with no services to
 // start on demand (a system's session config would start gnome-keyring),
 // and points DBUS_SESSION_BUS_ADDRESS at it. Without dbus-daemon the test
-// is skipped.
+// is skipped, or fails in CI (testcheck.Lacks).
 func privateBus(t *testing.T) string {
 	t.Helper()
 	daemon, err := exec.LookPath("dbus-daemon")
 	if err != nil {
-		t.Skip("dbus-daemon isn't on PATH")
+		testcheck.Lacks(t, "dbus-daemon isn't on PATH")
 	}
 	dir := t.TempDir()
 	config := filepath.Join(dir, "bus.conf")

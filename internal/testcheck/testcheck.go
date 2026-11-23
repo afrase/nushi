@@ -1,6 +1,6 @@
 // Package testcheck is what Go tests share: failing on an error, JSON,
 // writing a file, waiting for a condition, running git without the owner's
-// own config, and a package's tests in a home and config folder of their
+// own config, ending a test for want of a program, and a package's tests in a home and config folder of their
 // own. Only tests import it.
 package testcheck
 
@@ -39,6 +39,20 @@ func Write(t *testing.T, path, text string) {
 	t.Helper()
 	NoErr(t, os.MkdirAll(filepath.Dir(path), 0o700))
 	NoErr(t, os.WriteFile(path, []byte(text), 0o600))
+}
+
+// Lacks ends a test that can't run for want of what, a program or a
+// thing one can do that this machine lacks. In CI (CI set, as every CI
+// service sets it) it fails the test, since CI's jobs install what the
+// tests need and a skip there would hide a test nobody runs; elsewhere it
+// skips. A skip that is right in CI too (the platform, running as root, no
+// IPv6) stays a plain t.Skip.
+func Lacks(tb testing.TB, what string) {
+	tb.Helper()
+	if os.Getenv("CI") != "" {
+		tb.Fatalf("in CI, whose jobs should have it: %s", what)
+	}
+	tb.Skip(what)
 }
 
 // Main is a package's TestMain: its tests run with HOME (USERPROFILE too

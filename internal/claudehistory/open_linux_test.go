@@ -1,6 +1,7 @@
 package claudehistory
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -16,13 +17,13 @@ import (
 func TestStartedIsLstart(t *testing.T) {
 	ps, err := exec.LookPath("ps")
 	if err != nil {
-		t.Skip("no ps to compare with")
+		testcheck.Lacks(t, "no ps to compare with")
 	}
 	cmd := exec.Command(ps, "-o", "lstart=", "-p", strconv.Itoa(os.Getpid()))
 	cmd.Env = append(os.Environ(), "LC_ALL=C", "TZ=UTC")
 	out, err := cmd.Output()
 	if err != nil {
-		t.Skipf("ps doesn't give lstart (busybox's?): %v", err)
+		testcheck.Lacks(t, fmt.Sprintf("ps doesn't give lstart (busybox's?): %v", err))
 	}
 	want, err := time.ParseInLocation("Mon Jan 2 15:04:05 2006", strings.Join(strings.Fields(string(out)), " "), time.UTC)
 	testcheck.NoErr(t, err)

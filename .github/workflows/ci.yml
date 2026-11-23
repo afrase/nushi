@@ -313,7 +313,7 @@ jobs:
       # unprivileged user namespaces unless that rule is off.
       - run: |
           sudo apt-get update -q
-          sudo apt-get install -y --no-install-recommends bubblewrap
+          sudo apt-get install -y --no-install-recommends bubblewrap dbus-daemon libglib2.0-bin gnupg openssh-client procps util-linux
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - run: make test-go
       # go.mod and go.sum name what the code imports, no more and no less.

@@ -14,7 +14,7 @@ import (
 // XDG_DATA_HOME (here a temporary one).
 func TestTrashWithGio(t *testing.T) {
 	if _, err := exec.LookPath(TrashProgram[0]); err != nil {
-		t.Skip("no gio on PATH (glib's)")
+		testcheck.Lacks(t, "no gio on PATH (glib's)")
 	}
 	dir, _ := filepath.EvalSymlinks(t.TempDir())
 	t.Setenv("HOME", dir)
