@@ -453,9 +453,9 @@ void main() {
   // changed: the comment above the list, at full size.
   for (final (width, brightness) in [
     (1700.0, Brightness.dark),
-    (1700.0, Brightness.light),
+    if (rendering) (1700.0, Brightness.light),
     (720.0, Brightness.dark),
-    (720.0, Brightness.light),
+    if (rendering) (720.0, Brightness.light),
   ]) {
     testWidgets('renders: ${width.round()} ${brightness.name}', (tester) async {
       final (d, chat) = await open(

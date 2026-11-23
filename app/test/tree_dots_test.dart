@@ -262,9 +262,9 @@ void main() {
 
   for (final (width, brightness) in [
     (1700.0, Brightness.dark),
-    (1700.0, Brightness.light),
+    if (rendering) (1700.0, Brightness.light),
     (720.0, Brightness.dark),
-    (720.0, Brightness.light),
+    if (rendering) (720.0, Brightness.light),
   ]) {
     testWidgets('renders at $width, ${brightness.name}: a changed file open '
         'with its marks, its folders dotted', (tester) async {

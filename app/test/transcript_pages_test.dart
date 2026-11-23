@@ -600,7 +600,7 @@ void main() {
     }, variant: onMac);
   }
 
-  for (final b in Brightness.values) {
+  for (final b in renderThemes) {
     for (final width in [1700.0, 720.0]) {
       testWidgets('renders: the top with its spinner, mid-chat, the bottom '
           '(${b.name}, $width)', (tester) async {

@@ -93,63 +93,48 @@ void main() {
       for (final brightness in [Brightness.dark, Brightness.light]) {
         if (width == 720 && brightness == Brightness.light) continue;
         final b = brightness.name;
-        testWidgets(
-          '${width.round()} $name $b',
-          (tester) async {
-            await shot(
-              tester,
-              'rp_${width.round()}_hidden_${name}_$b',
-              width: width,
-              sidebar: false,
-              open: open,
-              brightness: brightness,
-            );
-          },
-          variant: onMac,
-          skip: rendersDir == null,
-        );
+        renderTest('${width.round()} $name $b', (tester) async {
+          await shot(
+            tester,
+            'rp_${width.round()}_hidden_${name}_$b',
+            width: width,
+            sidebar: false,
+            open: open,
+            brightness: brightness,
+          );
+        }, variant: onMac);
       }
     }
   }
 
   for (final (width, sidebar, name) in _notable) {
     final where = sidebar ? 'shown' : 'hidden';
-    testWidgets(
-      '${width.round()} $where $name',
-      (tester) async {
-        await shot(
-          tester,
-          'rp_notable_${width.round()}_${where}_$name',
-          width: width,
-          sidebar: sidebar,
-          open: _sets[name]!,
-          terminal: true,
-        );
-      },
-      variant: onMac,
-      skip: rendersDir == null,
-    );
+    renderTest('${width.round()} $where $name', (tester) async {
+      await shot(
+        tester,
+        'rp_notable_${width.round()}_${where}_$name',
+        width: width,
+        sidebar: sidebar,
+        open: _sets[name]!,
+        terminal: true,
+      );
+    }, variant: onMac);
   }
 
   for (final width in [1700.0, 720.0]) {
     for (final sidebar in [true, false]) {
       final where = sidebar ? 'shown' : 'hidden';
-      testWidgets(
-        'expanded ${width.round()} $where',
-        (tester) async {
-          await shot(
-            tester,
-            'rp_expanded_${width.round()}_$where',
-            width: width,
-            sidebar: sidebar,
-            open: _set(browser: 2),
-            terminal: true,
-            expand: true,
-          );
-        },
-        variant: onMac,
-        skip: rendersDir == null,
-      );
+      renderTest('expanded ${width.round()} $where', (tester) async {
+        await shot(
+          tester,
+          'rp_expanded_${width.round()}_$where',
+          width: width,
+          sidebar: sidebar,
+          open: _set(browser: 2),
+          terminal: true,
+          expand: true,
+        );
+      }, variant: onMac);
     }
   }
 }

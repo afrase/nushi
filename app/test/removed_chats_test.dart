@@ -51,7 +51,7 @@ void main() {
 
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     testWidgets('the window says once which chats went; OK dismisses '
         'it ($name)', (tester) async {

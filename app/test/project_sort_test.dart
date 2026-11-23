@@ -208,7 +208,7 @@ void main() {
 
   group('renders', () {
     for (final width in [1700.0, 720.0]) {
-      for (final b in Brightness.values) {
+      for (final b in renderThemes) {
         testWidgets('the window, a project’s Sort menu open, $width wide, '
             '${b.name}', (tester) async {
           viewport(tester, Size(width, 700), brightness: b);

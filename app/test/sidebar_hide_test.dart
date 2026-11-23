@@ -156,7 +156,7 @@ void main() {
     // icon, the same box around it, so the same fill under the pointer.
     for (final (hidden, brightness) in [
       for (final hidden in [true, false])
-        for (final b in Brightness.values) (hidden, b),
+        for (final b in renderThemes) (hidden, b),
     ]) {
       final state = hidden ? 'hidden' : 'shown';
       testWidgets('it’s the header’s icon button, as the ones at the '
@@ -313,63 +313,68 @@ void main() {
     for (final MapEntry(key: name, value: (header, go)) in views.entries) {
       for (final width in [1700.0, 720.0]) {
         for (final b in Brightness.values) {
-          testWidgets('$name, $width wide, ${b.name}: the button past the '
-              'lights', (tester) async {
-            final d = await _window(tester, width: width, brightness: b);
-            go(d);
-            await tester.pumpAndSettle();
-            expect(tester.takeException(), isNull);
-            // The main pane's top, the window's margin in on every side.
-            final bar = tester.getRect(header.first);
-            expect(bar.left, NushiTheme.windowPad);
-            expect(bar.top, NushiTheme.windowPad);
-            expect(bar.width, width - 2 * NushiTheme.windowPad);
-            final show = tester.getRect(find.byTooltip(_show));
-            // Its icon 5 past the lights' room, its box around it.
-            expect(
-              show.left,
-              NushiTheme.windowPad + lightsInset - SidebarButton.reach,
-            );
-            expect(
-              show.center.dx,
-              NushiTheme.windowPad + lightsInset + SidebarButton.iconInset + 8,
-            );
-            switch (name) {
-              case 'chat':
-                // The title, after the chat's color.
-                expect(
-                  tester.getTopLeft(find.text(_title).first).dx,
-                  NushiTheme.windowPad +
-                      hiddenHeaderStart +
-                      ColorChip.width +
-                      8,
-                );
-              case 'jira':
-                cleared(tester, 'Jira');
-              case 'github':
-                cleared(tester, 'GitHub');
-              case 'nothing' || 'trust':
-                // A plain header, with no title to clear.
-                expect(
-                  find.descendant(of: header, matching: find.byType(Text)),
-                  findsNothing,
-                );
-              default:
-                fail('no check for $name');
-            }
-            // The empty window, wide, is its window golden; the rest are
-            // renders.
-            final shot = 'sidebar_hidden_${name}_${width.toInt()}_${b.name}';
-            if (name == 'nothing' && width == 1700) {
-              await expectLater(
-                find.byType(NushiApp),
-                matchesGoldenFile('goldens/$shot.png'),
+          if ((name == 'nothing' && width == 1700) || !lightCopy(b)) {
+            testWidgets('$name, $width wide, ${b.name}: the button past the '
+                'lights', (tester) async {
+              final d = await _window(tester, width: width, brightness: b);
+              go(d);
+              await tester.pumpAndSettle();
+              expect(tester.takeException(), isNull);
+              // The main pane's top, the window's margin in on every side.
+              final bar = tester.getRect(header.first);
+              expect(bar.left, NushiTheme.windowPad);
+              expect(bar.top, NushiTheme.windowPad);
+              expect(bar.width, width - 2 * NushiTheme.windowPad);
+              final show = tester.getRect(find.byTooltip(_show));
+              // Its icon 5 past the lights' room, its box around it.
+              expect(
+                show.left,
+                NushiTheme.windowPad + lightsInset - SidebarButton.reach,
               );
-            } else {
-              await render(tester, find.byType(NushiApp), shot);
-            }
-            d.dispose();
-          }, variant: onMac);
+              expect(
+                show.center.dx,
+                NushiTheme.windowPad +
+                    lightsInset +
+                    SidebarButton.iconInset +
+                    8,
+              );
+              switch (name) {
+                case 'chat':
+                  // The title, after the chat's color.
+                  expect(
+                    tester.getTopLeft(find.text(_title).first).dx,
+                    NushiTheme.windowPad +
+                        hiddenHeaderStart +
+                        ColorChip.width +
+                        8,
+                  );
+                case 'jira':
+                  cleared(tester, 'Jira');
+                case 'github':
+                  cleared(tester, 'GitHub');
+                case 'nothing' || 'trust':
+                  // A plain header, with no title to clear.
+                  expect(
+                    find.descendant(of: header, matching: find.byType(Text)),
+                    findsNothing,
+                  );
+                default:
+                  fail('no check for $name');
+              }
+              // The empty window, wide, is its window golden; the rest are
+              // renders.
+              final shot = 'sidebar_hidden_${name}_${width.toInt()}_${b.name}';
+              if (name == 'nothing' && width == 1700) {
+                await expectLater(
+                  find.byType(NushiApp),
+                  matchesGoldenFile('goldens/$shot.png'),
+                );
+              } else {
+                await render(tester, find.byType(NushiApp), shot);
+              }
+              d.dispose();
+            }, variant: onMac);
+          }
         }
       }
     }
@@ -440,9 +445,9 @@ void main() {
 
     for (final (width, b) in [
       (1700.0, Brightness.dark),
-      (1700.0, Brightness.light),
+      if (rendering) (1700.0, Brightness.light),
       (720.0, Brightness.dark),
-      (720.0, Brightness.light),
+      if (rendering) (720.0, Brightness.light),
     ]) {
       testWidgets('the update’s, removed chats’ and a notice’s bars take a row '
           'under the header, $width wide, ${b.name}', (tester) async {

@@ -707,7 +707,7 @@ void main() {
 
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     testWidgets("the phone: Files in the chat's sheet, the same tree, a "
         'file full screen, $name', (tester) async {

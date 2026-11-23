@@ -381,7 +381,7 @@ void main() {
     ('wide', const Size(1700, 900)),
     ('narrow', const Size(720, 800)),
   ]) {
-    for (final b in Brightness.values) {
+    for (final b in renderThemes) {
       testWidgets('the window, $what (${b.name})', (tester) async {
         viewport(tester, size, brightness: b);
         final c = chat('c', 'codex', 'Fix the login redirect');

@@ -84,7 +84,7 @@ void main() {
   for (final kind in ['zip', ...toastStates.keys]) {
     for (final (name, brightness) in [
       ('dark', Brightness.dark),
-      ('light', Brightness.light),
+      if (rendering) ('light', Brightness.light),
     ]) {
       for (final width in [1700.0, 720.0]) {
         testWidgets('the toast ($kind), ${width.toInt()} wide ($name): at '

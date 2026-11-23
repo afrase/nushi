@@ -673,9 +673,9 @@ void main() {
 
   for (final (width, b) in [
     (1700.0, Brightness.dark),
-    (1700.0, Brightness.light),
+    if (rendering) (1700.0, Brightness.light),
     (720.0, Brightness.dark),
-    (720.0, Brightness.light),
+    if (rendering) (720.0, Brightness.light),
   ]) {
     testWidgets('the window, $width wide, ${b.name}: the rail at the top, '
         'the middle and the bottom, the menu open', (tester) async {

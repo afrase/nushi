@@ -240,6 +240,40 @@ final String? rendersDir = switch (Platform.environment['NUSHI_RENDERS']) {
   _ => null,
 };
 
+/// Whether this run writes renders (`make renders` sets NUSHI_RENDERS).
+bool get rendering => rendersDir != null;
+
+/// The themes a check runs in: dark, and light too only when [rendering].
+/// A theme changes colours, not layout, so a light copy of a check proves
+/// nothing the dark run didn't; only its picture differs. A test that
+/// asserts a theme's colours, or compares a golden in each, loops over
+/// `Brightness.values` itself.
+List<Brightness> get renderThemes =>
+    rendering ? Brightness.values : const [Brightness.dark];
+
+/// Whether a test in [b] is a light copy that only a render needs: true
+/// for light when not [rendering] (as [renderThemes]), for a loop that
+/// also takes goldens and can't drop light as a whole.
+bool lightCopy(Brightness b) => b == Brightness.light && !rendering;
+
+/// A test that only draws pictures ([render]) and checks nothing a test
+/// run without them doesn't: registered only when [rendering], so CI and
+/// `make check` don't build a window for nothing, and nothing shows as
+/// skipped. A check goes in an ordinary test.
+void renderTest(
+  String name,
+  WidgetTesterCallback body, {
+  TestVariant<Object?> variant = const DefaultTestVariant(),
+}) {
+  if (!rendering) {
+    // A file of only these still runs its setUpAll (loadFonts), which
+    // needs the binding a testWidgets would have made.
+    TestWidgetsFlutterBinding.ensureInitialized();
+    return;
+  }
+  testWidgets(name, body, variant: variant);
+}
+
 /// Writes what [of] shows (the window: `find.byType(NushiApp)`) as
 /// `<name>.png` to [rendersDir], to look at a view at full size; nothing
 /// without it. A render is never compared or committed: only the views

@@ -61,118 +61,106 @@ void main() {
     final theme = brightness.name;
     for (final width in [1700.0, 720.0]) {
       final w = width.toInt();
-      testWidgets(
-        'the panes and the menu, $w, $theme',
-        (tester) async {
-          final (d, _) = await panesApp(
-            tester,
-            width: width,
-            details: false,
-            brightness: brightness,
-            open: _files,
-          );
-          final c = d.chats['c']!
-            ..openInFiles('PLAN.md')
-            ..openInFiles('auth/redirect.go')
-            ..openInFiles('NOTES.md', keep: false);
-          await tester.pumpAndSettle();
-          final app = find.byType(NushiApp);
-          await render(tester, app, '${_at}_${w}_preview_tab_$theme');
+      renderTest('the panes and the menu, $w, $theme', (tester) async {
+        final (d, _) = await panesApp(
+          tester,
+          width: width,
+          details: false,
+          brightness: brightness,
+          open: _files,
+        );
+        final c = d.chats['c']!
+          ..openInFiles('PLAN.md')
+          ..openInFiles('auth/redirect.go')
+          ..openInFiles('NOTES.md', keep: false);
+        await tester.pumpAndSettle();
+        final app = find.byType(NushiApp);
+        await render(tester, app, '${_at}_${w}_preview_tab_$theme');
 
-          await tester.tap(_more);
-          await tester.pumpAndSettle();
-          await render(tester, app, '${_at}_${w}_menu_$theme');
-          await tester.tap(find.text('File tree position'));
-          await tester.pumpAndSettle();
-          await render(tester, app, '${_at}_${w}_menu_position_$theme');
-          await tester.tap(find.text('Left'));
-          await tester.pumpAndSettle();
-          await render(tester, app, '${_at}_${w}_tree_left_$theme');
+        await tester.tap(_more);
+        await tester.pumpAndSettle();
+        await render(tester, app, '${_at}_${w}_menu_$theme');
+        await tester.tap(find.text('File tree position'));
+        await tester.pumpAndSettle();
+        await render(tester, app, '${_at}_${w}_menu_position_$theme');
+        await tester.tap(find.text('Left'));
+        await tester.pumpAndSettle();
+        await render(tester, app, '${_at}_${w}_tree_left_$theme');
 
-          filesTreeSide.value = TreeSide.automatic;
-          filesTree.value = false;
-          await tester.pumpAndSettle();
-          await render(tester, app, '${_at}_${w}_tree_hidden_$theme');
-          filesTree.value = true;
-          c.files.tabs.value.toList().forEach(c.files.close);
-          await tester.pumpAndSettle();
-          await render(tester, app, '${_at}_${w}_blank_$theme');
+        filesTreeSide.value = TreeSide.automatic;
+        filesTree.value = false;
+        await tester.pumpAndSettle();
+        await render(tester, app, '${_at}_${w}_tree_hidden_$theme');
+        filesTree.value = true;
+        c.files.tabs.value.toList().forEach(c.files.close);
+        await tester.pumpAndSettle();
+        await render(tester, app, '${_at}_${w}_blank_$theme');
 
-          // The tree button's tooltip, the pointer on it.
-          final mouse = await tester.createGesture(
-            kind: PointerDeviceKind.mouse,
-          );
-          await mouse.addPointer(location: Offset.zero);
-          await mouse.moveTo(tester.getCenter(_treeButton));
-          await tester.pump(const Duration(seconds: 2));
-          await tester.pump(const Duration(milliseconds: 300));
-          expect(
-            find.textContaining('Hide file tree', findRichText: true),
-            findsOneWidget,
-          );
-          await render(tester, app, '${_at}_${w}_tooltip_$theme');
-          await mouse.removePointer();
+        // The tree button's tooltip, the pointer on it.
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(tester.getCenter(_treeButton));
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(
+          find.textContaining('Hide file tree', findRichText: true),
+          findsOneWidget,
+        );
+        await render(tester, app, '${_at}_${w}_tooltip_$theme');
+        await mouse.removePointer();
 
-          await tester.tap(_more);
-          await tester.pumpAndSettle();
-          await tester.tap(find.text('Tab size'));
-          await tester.pumpAndSettle();
-          await render(tester, app, '${_at}_${w}_menu_tab_size_$theme');
-          await closeView(tester, d);
-        },
-        variant: macAndLinux,
-        skip: rendersDir == null,
-      );
+        await tester.tap(_more);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Tab size'));
+        await tester.pumpAndSettle();
+        await render(tester, app, '${_at}_${w}_menu_tab_size_$theme');
+        await closeView(tester, d);
+      }, variant: macAndLinux);
 
-      testWidgets(
-        'a source: guides, whitespace, tab sizes, past its end, '
-        '$w, $theme',
-        (tester) async {
-          final (d, _) = await openEditor(
-            tester,
-            {'main.go': utf8.encode(_go)},
-            width: width,
-            brightness: brightness,
-            folder: [FolderEntry(name: 'main.go', kind: 'file')],
-          );
-          await tester.pump(const Duration(seconds: 1));
+      renderTest('a source: guides, whitespace, tab sizes, past its end, '
+          '$w, $theme', (tester) async {
+        final (d, _) = await openEditor(
+          tester,
+          {'main.go': utf8.encode(_go)},
+          width: width,
+          brightness: brightness,
+          folder: [FolderEntry(name: 'main.go', kind: 'file')],
+        );
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+        final app = find.byType(NushiApp);
+        await render(tester, app, 'fo_${w}_guides_$theme');
+        showWhitespace.value = true;
+        await tester.pumpAndSettle();
+        await render(tester, app, 'fo_${w}_whitespace_$theme');
+        showWhitespace.value = false;
+        for (final size in [2, 8]) {
+          tabSize.value = size;
           await tester.pumpAndSettle();
-          final app = find.byType(NushiApp);
-          await render(tester, app, 'fo_${w}_guides_$theme');
-          showWhitespace.value = true;
-          await tester.pumpAndSettle();
-          await render(tester, app, 'fo_${w}_whitespace_$theme');
-          showWhitespace.value = false;
-          for (final size in [2, 8]) {
-            tabSize.value = size;
-            await tester.pumpAndSettle();
-            await render(tester, app, 'fo_${w}_tab_size_${size}_$theme');
-          }
-          tabSize.value = 4;
-          scrollPastEnd.value = true;
-          await tester.pumpAndSettle();
-          final down = tester
-              .state<ScrollableState>(
-                find
-                    .descendant(
-                      of: find.byType(SourceEditor),
-                      matching: find.byWidgetPredicate(
-                        (w) =>
-                            w is Scrollable &&
-                            w.axisDirection == AxisDirection.down,
-                      ),
-                    )
-                    .first,
-              )
-              .position;
-          down.jumpTo(down.maxScrollExtent);
-          await tester.pumpAndSettle();
-          await render(tester, app, 'fo_${w}_past_end_$theme');
-          await endEditor(tester, d);
-        },
-        variant: onMac,
-        skip: rendersDir == null,
-      );
+          await render(tester, app, 'fo_${w}_tab_size_${size}_$theme');
+        }
+        tabSize.value = 4;
+        scrollPastEnd.value = true;
+        await tester.pumpAndSettle();
+        final down = tester
+            .state<ScrollableState>(
+              find
+                  .descendant(
+                    of: find.byType(SourceEditor),
+                    matching: find.byWidgetPredicate(
+                      (w) =>
+                          w is Scrollable &&
+                          w.axisDirection == AxisDirection.down,
+                    ),
+                  )
+                  .first,
+            )
+            .position;
+        down.jumpTo(down.maxScrollExtent);
+        await tester.pumpAndSettle();
+        await render(tester, app, 'fo_${w}_past_end_$theme');
+        await endEditor(tester, d);
+      }, variant: onMac);
     }
   }
 }

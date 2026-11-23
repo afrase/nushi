@@ -28,7 +28,7 @@ void main() {
     (const Size(1700, 1000), 'wide'),
     (const Size(720, 900), 'narrow'),
   ]) {
-    for (final b in Brightness.values) {
+    for (final b in renderThemes) {
       testWidgets('renders, $w, ${b.name}', (tester) async {
         final linux = defaultTargetPlatform == TargetPlatform.linux;
         if (linux) shortcutsOnLinux();

@@ -129,9 +129,9 @@ void main() {
 
   for (final (width, b) in [
     (1700.0, Brightness.dark),
-    (1700.0, Brightness.light),
+    if (rendering) (1700.0, Brightness.light),
     (720.0, Brightness.dark),
-    (720.0, Brightness.light),
+    if (rendering) (720.0, Brightness.light),
   ]) {
     for (final (where, caret) in [('outside', 33), ('inside', 13)]) {
       testWidgets('the window, $width wide, ${b.name}: caret $where the '

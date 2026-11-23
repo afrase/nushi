@@ -259,7 +259,7 @@ void main() {
     d.dispose();
   });
 
-  for (final brightness in Brightness.values) {
+  for (final brightness in renderThemes) {
     testWidgets('renders: a tab-indented file being edited with its '
         'whitespace shown, ${brightness.name}', (tester) async {
       showWhitespace.value = true;

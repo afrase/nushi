@@ -144,7 +144,7 @@ void main() {
   setUpAll(loadFonts);
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     testWidgets('the transcript as chapters ($name)', (tester) async {
       showDetails.value = false;

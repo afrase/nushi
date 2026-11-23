@@ -131,11 +131,12 @@ void main() {
     for (final b in Brightness.values) {
       final name = '${theme.id}_${b.name}';
       // The windows a theme lays out as Nushi's does: only to look at.
-      final sameLayout = theme != nushiTheme && rendersDir == null;
+      final sameLayout = theme != nushiTheme && !rendering;
 
-      testWidgets(
-        '${theme.name}, ${b.name}: the window mid-turn',
-        (tester) async {
+      if (!sameLayout) {
+        testWidgets('${theme.name}, ${b.name}: the window mid-turn', (
+          tester,
+        ) async {
           colorTheme.value = theme.id;
           Collapsible.opened.add('e2');
           addTearDown(Collapsible.opened.clear);
@@ -150,10 +151,8 @@ void main() {
           expectTextInside(tester, 1700);
           await render(tester, find.byType(NushiApp), 'theme_${name}_1700');
           await closeView(tester, d);
-        },
-        variant: onMac,
-        skip: sameLayout,
-      );
+        }, variant: onMac);
+      }
 
       testWidgets('${theme.name}, ${b.name}: the chat, code and a card', (
         tester,
@@ -171,9 +170,10 @@ void main() {
         await closeView(tester, d);
       }, variant: onMac);
 
-      testWidgets(
-        '${theme.name}, ${b.name}: Changes, a diff',
-        (tester) async {
+      if (!sameLayout) {
+        testWidgets('${theme.name}, ${b.name}: Changes, a diff', (
+          tester,
+        ) async {
           colorTheme.value = theme.id;
           showDetails.value = false;
           final d = await _window(tester, const Size(1400, 900), b);
@@ -186,14 +186,13 @@ void main() {
           expect(tester.takeException(), isNull);
           await render(tester, find.byType(NushiApp), 'theme_${name}_changes');
           await closeView(tester, d);
-        },
-        variant: onMac,
-        skip: sameLayout,
-      );
+        }, variant: onMac);
+      }
 
-      testWidgets(
-        '${theme.name}, ${b.name}: narrow, the terminal open',
-        (tester) async {
+      if (!sameLayout) {
+        testWidgets('${theme.name}, ${b.name}: narrow, the terminal open', (
+          tester,
+        ) async {
           colorTheme.value = theme.id;
           terminalChats.value = {heroChat.id};
           showDetails.value = false;
@@ -202,14 +201,13 @@ void main() {
           expectTextInside(tester, 720);
           await render(tester, find.byType(NushiApp), 'theme_${name}_720');
           await closeView(tester, d);
-        },
-        variant: onMac,
-        skip: sameLayout,
-      );
+        }, variant: onMac);
+      }
 
-      testWidgets(
-        '${theme.name}, ${b.name}: Settings › Appearance',
-        (tester) async {
+      if (!sameLayout) {
+        testWidgets('${theme.name}, ${b.name}: Settings › Appearance', (
+          tester,
+        ) async {
           colorTheme.value = theme.id;
           final d = await _window(tester, const Size(1200, 900), b);
           d.openSettings(section: SettingsSection.appearance);
@@ -217,30 +215,32 @@ void main() {
           expect(tester.takeException(), isNull);
           await render(tester, find.byType(NushiApp), 'theme_${name}_settings');
           await closeView(tester, d);
-        },
-        variant: onMac,
-        skip: sameLayout,
-      );
+        }, variant: onMac);
+      }
 
-      testWidgets('${theme.name}, ${b.name}: the phone’s chat', (tester) async {
-        viewport(tester, const Size(390, 844), ratio: 2, brightness: b);
-        clock = () => demoNow;
-        final fake = FakeDaemon(demoChats())..answer = _demo;
-        final phone = Phone(
-          PhonePlatform()
-            ..saved = pairedRecord()
-            ..theme = theme.id,
-          connectTo: (_) => Daemon(transport: fake, remote: true),
-        );
-        await tester.pumpWidget(PhoneApp(phone));
-        await phone.start();
-        await _pump(tester);
-        await tester.tap(find.text(heroChat.title));
-        await _pump(tester, 10);
-        expect(tester.takeException(), isNull);
-        await render(tester, find.byType(PhoneApp), 'theme_${name}_phone');
-        await endPhone(tester, phone);
-      }, skip: sameLayout);
+      if (!sameLayout) {
+        testWidgets('${theme.name}, ${b.name}: the phone’s chat', (
+          tester,
+        ) async {
+          viewport(tester, const Size(390, 844), ratio: 2, brightness: b);
+          clock = () => demoNow;
+          final fake = FakeDaemon(demoChats())..answer = _demo;
+          final phone = Phone(
+            PhonePlatform()
+              ..saved = pairedRecord()
+              ..theme = theme.id,
+            connectTo: (_) => Daemon(transport: fake, remote: true),
+          );
+          await tester.pumpWidget(PhoneApp(phone));
+          await phone.start();
+          await _pump(tester);
+          await tester.tap(find.text(heroChat.title));
+          await _pump(tester, 10);
+          expect(tester.takeException(), isNull);
+          await render(tester, find.byType(PhoneApp), 'theme_${name}_phone');
+          await endPhone(tester, phone);
+        });
+      }
     }
   }
 }

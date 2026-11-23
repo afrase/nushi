@@ -185,7 +185,7 @@ void main() {
 
   for (final (name, tokens) in [
     ('dark', Tokens.dark),
-    ('light', Tokens.light),
+    if (rendering) ('light', Tokens.light),
   ]) {
     for (final unified in [false, true]) {
       testWidgets('renders: the + hovered ($name, '

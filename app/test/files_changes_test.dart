@@ -429,65 +429,60 @@ void main() {
     final theme = brightness.name;
     for (final width in [1700.0, 720.0]) {
       final w = width.toInt();
-      testWidgets(
-        'renders: marks, a card, a new file, the menu, $w, $theme',
-        (tester) async {
-          final (d, _) = await _open(
-            tester,
-            width: width,
-            brightness: brightness,
-          );
-          await tester.pumpAndSettle();
-          final app = find.byType(NushiApp);
-          await render(tester, app, 'cl_${w}_marks_$theme');
+      renderTest('renders: marks, a card, a new file, the menu, $w, $theme', (
+        tester,
+      ) async {
+        final (d, _) = await _open(
+          tester,
+          width: width,
+          brightness: brightness,
+        );
+        await tester.pumpAndSettle();
+        final app = find.byType(NushiApp);
+        await render(tester, app, 'cl_${w}_marks_$theme');
 
-          // A changed run's card, and the removal's.
-          await tester.tap(find.byType(ChangeMark).first);
-          await tester.pumpAndSettle();
-          expect(find.byType(ChangeCard), findsOneWidget);
-          await render(tester, app, 'cl_${w}_card_changed_$theme');
-          // A second click hides it.
-          await tester.tap(find.byType(ChangeMark).first);
-          await tester.pumpAndSettle();
-          expect(find.byType(ChangeCard), findsNothing);
-          await tester.tap(find.byType(ChangeMark).at(3));
-          await tester.pumpAndSettle();
-          expect(find.text('2 lines removed'), findsOneWidget);
-          await render(tester, app, 'cl_${w}_card_removed_$theme');
-          await tester.tap(find.byType(ChangeMark).at(3));
-          await tester.pumpAndSettle();
+        // A changed run's card, and the removal's.
+        await tester.tap(find.byType(ChangeMark).first);
+        await tester.pumpAndSettle();
+        expect(find.byType(ChangeCard), findsOneWidget);
+        await render(tester, app, 'cl_${w}_card_changed_$theme');
+        // A second click hides it.
+        await tester.tap(find.byType(ChangeMark).first);
+        await tester.pumpAndSettle();
+        expect(find.byType(ChangeCard), findsNothing);
+        await tester.tap(find.byType(ChangeMark).at(3));
+        await tester.pumpAndSettle();
+        expect(find.text('2 lines removed'), findsOneWidget);
+        await render(tester, app, 'cl_${w}_card_removed_$theme');
+        await tester.tap(find.byType(ChangeMark).at(3));
+        await tester.pumpAndSettle();
 
-          // The pointer on an added line's mark.
-          final mouse = await tester.createGesture(
-            kind: PointerDeviceKind.mouse,
-          );
-          await mouse.addPointer(location: Offset.zero);
-          await mouse.moveTo(tester.getCenter(find.byType(ChangeMark).last));
-          await tester.pump(const Duration(milliseconds: 500));
-          expect(find.text('New lines'), findsOneWidget);
-          await render(tester, app, 'cl_${w}_card_added_$theme');
-          await mouse.moveTo(Offset.zero);
-          await tester.pumpAndSettle();
-          await mouse.removePointer();
+        // The pointer on an added line's mark.
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: Offset.zero);
+        await mouse.moveTo(tester.getCenter(find.byType(ChangeMark).last));
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.text('New lines'), findsOneWidget);
+        await render(tester, app, 'cl_${w}_card_added_$theme');
+        await mouse.moveTo(Offset.zero);
+        await tester.pumpAndSettle();
+        await mouse.removePointer();
 
-          // The written file's menu, if the tree shows.
-          if (_row('main.go').evaluate().isNotEmpty) {
-            await tester.tap(_row('main.go'), buttons: kSecondaryButton);
-            await tester.pumpAndSettle();
-            await render(tester, app, 'cl_${w}_menu_$theme');
-            await tester.tapAt(tester.getCenter(find.byType(PathLine)));
-            await tester.pumpAndSettle();
-          }
-
-          chatC(d).openInFiles('notes.md');
+        // The written file's menu, if the tree shows.
+        if (_row('main.go').evaluate().isNotEmpty) {
+          await tester.tap(_row('main.go'), buttons: kSecondaryButton);
           await tester.pumpAndSettle();
-          await render(tester, app, 'cl_${w}_new_file_$theme');
-          await endEditor(tester, d);
-        },
-        variant: onMac,
-        skip: rendersDir == null,
-      );
-      testWidgets(
+          await render(tester, app, 'cl_${w}_menu_$theme');
+          await tester.tapAt(tester.getCenter(find.byType(PathLine)));
+          await tester.pumpAndSettle();
+        }
+
+        chatC(d).openInFiles('notes.md');
+        await tester.pumpAndSettle();
+        await render(tester, app, 'cl_${w}_new_file_$theme');
+        await endEditor(tester, d);
+      }, variant: onMac);
+      renderTest(
         "renders: the path row's word on each kind of file, $w, $theme",
         (tester) async {
           final app = find.byType(NushiApp);
@@ -530,33 +525,23 @@ void main() {
           await endEditor(tester, d);
         },
         variant: onMac,
-        skip: rendersDir == null,
       );
-      testWidgets(
-        "renders: a long old line's card, $w, $theme",
-        (tester) async {
-          // The comment was 130 columns long before.
-          final long = '// greet says hello. ${'and more words ' * 7}end.';
-          final (d, _) = await _open(
-            tester,
-            width: width,
-            brightness: brightness,
-            base: changeBase.replaceFirst('// greet says hello.', long),
-          );
-          await tester.pumpAndSettle();
-          await tester.tap(find.byType(ChangeMark).first);
-          await tester.pumpAndSettle();
-          expectTextInside(tester, width);
-          await render(
-            tester,
-            find.byType(NushiApp),
-            'cl_${w}_card_long_$theme',
-          );
-          await endEditor(tester, d);
-        },
-        variant: onMac,
-        skip: rendersDir == null,
-      );
+      renderTest("renders: a long old line's card, $w, $theme", (tester) async {
+        // The comment was 130 columns long before.
+        final long = '// greet says hello. ${'and more words ' * 7}end.';
+        final (d, _) = await _open(
+          tester,
+          width: width,
+          brightness: brightness,
+          base: changeBase.replaceFirst('// greet says hello.', long),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(ChangeMark).first);
+        await tester.pumpAndSettle();
+        expectTextInside(tester, width);
+        await render(tester, find.byType(NushiApp), 'cl_${w}_card_long_$theme');
+        await endEditor(tester, d);
+      }, variant: onMac);
     }
   }
 }

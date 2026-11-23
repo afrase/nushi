@@ -248,23 +248,25 @@ void main() {
     ('light', Brightness.light),
   ]) {
     for (final width in [1700.0, 1180.0, 720.0]) {
-      testWidgets('render: a busy chat, ${width.toInt()} wide, $name', (
-        tester,
-      ) async {
-        final (d, _) = await railApp(
+      if (!lightCopy(brightness)) {
+        testWidgets('render: a busy chat, ${width.toInt()} wide, $name', (
           tester,
-          size: Size(width, 1000),
-          brightness: brightness,
-          context: fullContext,
-        );
-        expectTextInside(tester, width);
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'details_rail_${width.toInt()}_$name',
-        );
-        await closeView(tester, d);
-      }, variant: onMac);
+        ) async {
+          final (d, _) = await railApp(
+            tester,
+            size: Size(width, 1000),
+            brightness: brightness,
+            context: fullContext,
+          );
+          expectTextInside(tester, width);
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'details_rail_${width.toInt()}_$name',
+          );
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
     }
 
     testWidgets('golden: the panel, a busy chat, $name', (tester) async {
@@ -290,7 +292,7 @@ void main() {
   // so 1000 is the narrowest it shows.
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     for (final (width, busy) in [
       (1700.0, false),
@@ -323,7 +325,7 @@ void main() {
   // hide, so 1000 is the narrowest it shows.
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     for (final width in [1700.0, 1000.0]) {
       testWidgets('render: Context, categories, a buffer and the lists, '
@@ -379,7 +381,7 @@ void main() {
   // the column's sides and 8 apart.
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     for (final (w, size) in [
       ('1700', const Size(1700, 1000)),
@@ -464,22 +466,19 @@ void main() {
   // is above), to look at.
   for (final theme in builtInThemes) {
     for (final b in Brightness.values) {
-      testWidgets(
-        'render: the panel in ${theme.name}, ${b.name}',
-        (tester) async {
-          colorTheme.value = theme.id;
-          final (d, _) = await railApp(
-            tester,
-            size: const Size(1200, 1000),
-            brightness: b,
-            context: fullContext,
-          );
-          await render(tester, railPanel, 'details_rail_${theme.id}_${b.name}');
-          await closeView(tester, d);
-        },
-        variant: onMac,
-        skip: rendersDir == null,
-      );
+      renderTest('render: the panel in ${theme.name}, ${b.name}', (
+        tester,
+      ) async {
+        colorTheme.value = theme.id;
+        final (d, _) = await railApp(
+          tester,
+          size: const Size(1200, 1000),
+          brightness: b,
+          context: fullContext,
+        );
+        await render(tester, railPanel, 'details_rail_${theme.id}_${b.name}');
+        await closeView(tester, d);
+      }, variant: onMac);
     }
   }
 

@@ -144,39 +144,41 @@ void main() {
       }, variant: onMac);
 
       for (final width in [1700.0, 720.0]) {
-        testWidgets('renders: the bar in the window, ${width.toInt()} wide', (
-          tester,
-        ) async {
-          browserFakes();
-          final d = await browserApp(
+        if (!lightCopy(brightness)) {
+          testWidgets('renders: the bar in the window, ${width.toInt()} wide', (
             tester,
-            width: width,
-            brightness: brightness,
-          );
-          d.chats['c']!.openBrowserTab('https://example.com/docs/start');
-          await tester.pumpAndSettle();
-          expect(tester.takeException(), isNull);
-          expectTextInside(tester, width);
-          final pane = tester.getRect(find.byType(BrowserPane));
-          expect(tester.getRect(outside()).right, lessThan(pane.right));
-          await render(
-            tester,
-            find.byType(NushiApp),
-            'browser_bar_${width.toInt()}_$name',
-          );
-          // With the pointer on Open in, its tooltip.
-          final mouse = await tester.createGesture(kind: .mouse);
-          addTearDown(mouse.removePointer);
-          await mouse.addPointer(location: tester.getCenter(outside()));
-          await tester.pumpAndSettle(const Duration(seconds: 2));
-          expectTextInside(tester, width);
-          await render(
-            tester,
-            find.byType(NushiApp),
-            'browser_bar_tooltip_${width.toInt()}_$name',
-          );
-          await closeView(tester, d);
-        }, variant: onMac);
+          ) async {
+            browserFakes();
+            final d = await browserApp(
+              tester,
+              width: width,
+              brightness: brightness,
+            );
+            d.chats['c']!.openBrowserTab('https://example.com/docs/start');
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+            expectTextInside(tester, width);
+            final pane = tester.getRect(find.byType(BrowserPane));
+            expect(tester.getRect(outside()).right, lessThan(pane.right));
+            await render(
+              tester,
+              find.byType(NushiApp),
+              'browser_bar_${width.toInt()}_$name',
+            );
+            // With the pointer on Open in, its tooltip.
+            final mouse = await tester.createGesture(kind: .mouse);
+            addTearDown(mouse.removePointer);
+            await mouse.addPointer(location: tester.getCenter(outside()));
+            await tester.pumpAndSettle(const Duration(seconds: 2));
+            expectTextInside(tester, width);
+            await render(
+              tester,
+              find.byType(NushiApp),
+              'browser_bar_tooltip_${width.toInt()}_$name',
+            );
+            await closeView(tester, d);
+          }, variant: onMac);
+        }
       }
     });
   }

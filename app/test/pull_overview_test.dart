@@ -163,7 +163,7 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
-  for (final dark in [true, false]) {
+  for (final dark in [true, if (rendering) false]) {
     final name = dark ? 'dark' : 'light';
     for (final width in [1700.0, 720.0]) {
       for (final shot in ['blocked', 'ready']) {

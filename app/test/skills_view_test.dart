@@ -390,7 +390,7 @@ void main() {
 
   // Opened with no chat to go by, when the last chat was Codex's: to
   // look at (`make renders`).
-  for (final tokens in [Tokens.dark, Tokens.light]) {
+  for (final tokens in [Tokens.dark, if (rendering) Tokens.light]) {
     for (final width in [1700.0, 720.0]) {
       final name =
           'skills_last_codex_${width.toInt()}_${tokens.brightness.name}';

@@ -261,39 +261,43 @@ void main() {
       ('wide', const Size(1700, 900)),
       ('narrow', const Size(720, 800)),
     ]) {
-      testWidgets('the toast, $what ($name)', (tester) async {
-        final (d, _, _) = await _app(tester, size: size);
-        tester.platformDispatcher.platformBrightnessTestValue = brightness;
-        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-        await _close(tester);
-        expectTextInside(tester, size.width);
-        // Its card: the text first, the close button last, inside the
-        // window.
-        final text = tester.getRect(find.text('Archived side chat'));
-        final close = tester.getRect(
-          find.descendant(of: _toast, matching: find.byIcon(Icons.close)),
-        );
-        expect(text.left, greaterThanOrEqualTo(0));
-        expect(close.right, lessThanOrEqualTo(size.width));
-        expect(close.bottom, lessThanOrEqualTo(size.height));
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'side_chat_archived_${what}_$name',
-        );
-        // Undo refused: the toast says why.
-        final c = d.chats['c']!..archived = true;
-        await _undo(tester);
-        expect(_failed, findsOne);
-        expectTextInside(tester, size.width);
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'side_chat_undo_failed_${what}_$name',
-        );
-        c.archived = false;
-        await closeView(tester, d);
-      }, variant: onMac);
+      if (!lightCopy(brightness)) {
+        testWidgets('the toast, $what ($name)', (tester) async {
+          final (d, _, _) = await _app(tester, size: size);
+          tester.platformDispatcher.platformBrightnessTestValue = brightness;
+          addTearDown(
+            tester.platformDispatcher.clearPlatformBrightnessTestValue,
+          );
+          await _close(tester);
+          expectTextInside(tester, size.width);
+          // Its card: the text first, the close button last, inside the
+          // window.
+          final text = tester.getRect(find.text('Archived side chat'));
+          final close = tester.getRect(
+            find.descendant(of: _toast, matching: find.byIcon(Icons.close)),
+          );
+          expect(text.left, greaterThanOrEqualTo(0));
+          expect(close.right, lessThanOrEqualTo(size.width));
+          expect(close.bottom, lessThanOrEqualTo(size.height));
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'side_chat_archived_${what}_$name',
+          );
+          // Undo refused: the toast says why.
+          final c = d.chats['c']!..archived = true;
+          await _undo(tester);
+          expect(_failed, findsOne);
+          expectTextInside(tester, size.width);
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'side_chat_undo_failed_${what}_$name',
+          );
+          c.archived = false;
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
     }
   }
 }

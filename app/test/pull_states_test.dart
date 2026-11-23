@@ -126,7 +126,7 @@ void main() {
 
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     testWidgets("the phone's bar: the PR widget's one-line summary, $name", (
       tester,

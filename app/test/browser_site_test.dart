@@ -332,55 +332,57 @@ void main() {
       }, variant: onMac);
 
       for (final width in [1700.0, 720.0]) {
-        testWidgets('renders: a site in the window, ${width.toInt()} wide', (
-          tester,
-        ) async {
-          final fakes = browserFakes();
-          final d = await browserApp(
+        if (!lightCopy(brightness)) {
+          testWidgets('renders: a site in the window, ${width.toInt()} wide', (
             tester,
-            width: width,
-            brightness: brightness,
-          );
-          d.chats['c']!.openBrowserTab('http://neverssl.com/');
-          await tester.pumpAndSettle();
-          expect(tester.takeException(), isNull);
-          expectTextInside(tester, width);
-          await render(
-            tester,
-            find.byType(NushiApp),
-            'browser_not_secure_${width.toInt()}_$name',
-          );
-          // An https page whose certificate WebKit refused.
-          fakes.hosts.single
-            ..tab.address.value = 'https://self-signed.badssl.com/'
-            ..failure.value = (
-              kind: PageFailureKind.badCertificate,
-              reason: _untrusted,
-              url: 'https://self-signed.badssl.com/',
+          ) async {
+            final fakes = browserFakes();
+            final d = await browserApp(
+              tester,
+              width: width,
+              brightness: brightness,
             );
-          await tester.pumpAndSettle();
-          expectTextInside(tester, width);
-          await render(
-            tester,
-            find.byType(NushiApp),
-            'browser_certificate_${width.toInt()}_$name',
-          );
-          // A host made to read as another site's, longer than the field.
-          fakes.hosts.single
-            ..failure.value = null
-            ..committed(
-              'https://www.paypal.com.account-verify.secure-login'
-              '.support-centre.billing.evil.example/signin?next=%2Fhome',
+            d.chats['c']!.openBrowserTab('http://neverssl.com/');
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+            expectTextInside(tester, width);
+            await render(
+              tester,
+              find.byType(NushiApp),
+              'browser_not_secure_${width.toInt()}_$name',
             );
-          await tester.pumpAndSettle();
-          expectTextInside(tester, width);
-          await render(
-            tester,
-            find.byType(NushiApp),
-            'browser_long_host_${width.toInt()}_$name',
-          );
-          await closeView(tester, d);
-        }, variant: onMac);
+            // An https page whose certificate WebKit refused.
+            fakes.hosts.single
+              ..tab.address.value = 'https://self-signed.badssl.com/'
+              ..failure.value = (
+                kind: PageFailureKind.badCertificate,
+                reason: _untrusted,
+                url: 'https://self-signed.badssl.com/',
+              );
+            await tester.pumpAndSettle();
+            expectTextInside(tester, width);
+            await render(
+              tester,
+              find.byType(NushiApp),
+              'browser_certificate_${width.toInt()}_$name',
+            );
+            // A host made to read as another site's, longer than the field.
+            fakes.hosts.single
+              ..failure.value = null
+              ..committed(
+                'https://www.paypal.com.account-verify.secure-login'
+                '.support-centre.billing.evil.example/signin?next=%2Fhome',
+              );
+            await tester.pumpAndSettle();
+            expectTextInside(tester, width);
+            await render(
+              tester,
+              find.byType(NushiApp),
+              'browser_long_host_${width.toInt()}_$name',
+            );
+            await closeView(tester, d);
+          }, variant: onMac);
+        }
       }
     });
   }

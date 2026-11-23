@@ -885,7 +885,7 @@ void main() {
   group('the window', () {
     for (final (name, brightness) in [
       ('dark', Brightness.dark),
-      ('light', Brightness.light),
+      if (rendering) ('light', Brightness.light),
     ]) {
       for (final width in [1700.0, 720.0]) {
         for (final (count, files) in [

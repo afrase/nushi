@@ -63,7 +63,7 @@ void main() {
   for (final size in const [Size(390, 844), Size(430, 932), Size(844, 390)]) {
     for (final (name, brightness) in [
       ('dark', Brightness.dark),
-      ('light', Brightness.light),
+      if (rendering) ('light', Brightness.light),
     ]) {
       testWidgets("the chat's bar: the primary and +2; a tap, the rows; a "
           'chip, its card as a sheet '

@@ -260,7 +260,7 @@ void main() {
 
   group('renders', () {
     for (final width in [1700.0, 720.0]) {
-      for (final b in Brightness.values) {
+      for (final b in renderThemes) {
         testWidgets('peeking, $width wide, ${b.name}', (tester) async {
           final d = await _window(tester, width: width, brightness: b);
           final mouse = await _mouse(tester);

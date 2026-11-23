@@ -311,7 +311,7 @@ void main() {
     (const Size(1700, 1000), 1700),
     (const Size(720, 900), 720),
   ]) {
-    for (final b in Brightness.values) {
+    for (final b in renderThemes) {
       testWidgets('renders, $w, ${b.name}', (tester) async {
         _custom();
         final d = await _app(tester, size: size, b: b);

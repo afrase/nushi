@@ -564,42 +564,44 @@ void main() {
       }, variant: onMac);
 
       for (final width in [1700.0, 720.0]) {
-        testWidgets('renders: the window with a browser tab, '
-            '${width.toInt()} wide', (tester) async {
-          browserFakes();
-          final d = await browserApp(
-            tester,
-            width: width,
-            brightness: brightness,
-          );
-          d.chats['c']!
-            ..openInFiles('docs/plan.md')
-            ..openBrowserTab('http://localhost:3000');
-          await tester.pumpAndSettle();
-          expect(tester.takeException(), isNull);
-          expectTextInside(tester, width);
-          // The bar's field runs to the pane's edge, its buttons first.
-          final pane = tester.getRect(find.byType(BrowserPane));
-          final bar = tester.getRect(find.byType(BrowserBar));
-          expect((bar.left, bar.right), (pane.left, pane.right));
-          expect(
-            tester.getRect(addressBox).right,
-            closeTo(pane.right - BrowserBar.inset, 0.5),
-          );
-          await render(
-            tester,
-            find.byType(NushiApp),
-            'browser_tab_${width.toInt()}_$name',
-          );
-          d.chats['c']!.openBrowserTab();
-          await tester.pumpAndSettle();
-          await render(
-            tester,
-            find.byType(NushiApp),
-            'browser_new_tab_${width.toInt()}_$name',
-          );
-          await closeView(tester, d);
-        }, variant: onMac);
+        if (!lightCopy(brightness)) {
+          testWidgets('renders: the window with a browser tab, '
+              '${width.toInt()} wide', (tester) async {
+            browserFakes();
+            final d = await browserApp(
+              tester,
+              width: width,
+              brightness: brightness,
+            );
+            d.chats['c']!
+              ..openInFiles('docs/plan.md')
+              ..openBrowserTab('http://localhost:3000');
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+            expectTextInside(tester, width);
+            // The bar's field runs to the pane's edge, its buttons first.
+            final pane = tester.getRect(find.byType(BrowserPane));
+            final bar = tester.getRect(find.byType(BrowserBar));
+            expect((bar.left, bar.right), (pane.left, pane.right));
+            expect(
+              tester.getRect(addressBox).right,
+              closeTo(pane.right - BrowserBar.inset, 0.5),
+            );
+            await render(
+              tester,
+              find.byType(NushiApp),
+              'browser_tab_${width.toInt()}_$name',
+            );
+            d.chats['c']!.openBrowserTab();
+            await tester.pumpAndSettle();
+            await render(
+              tester,
+              find.byType(NushiApp),
+              'browser_new_tab_${width.toInt()}_$name',
+            );
+            await closeView(tester, d);
+          }, variant: onMac);
+        }
       }
     });
   }

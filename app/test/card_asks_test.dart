@@ -309,7 +309,7 @@ void main() {
   ]) {
     for (final (brightness, theme) in [
       (Brightness.dark, 'dark'),
-      (Brightness.light, 'light'),
+      if (rendering) (Brightness.light, 'light'),
     ]) {
       testWidgets('render: $name, $theme', (tester) async {
         cardAsks.value = {'check': 'Fix the cause here, and commit it.'};

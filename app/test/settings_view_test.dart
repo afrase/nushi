@@ -43,8 +43,9 @@ void main() {
       (Brightness.light, 'light'),
     ]) {
       for (final s in SettingsSection.values) {
+        final golden = sizeName == 'wide' && s == SettingsSection.general;
+        if (lightCopy(brightness) && !golden) continue;
         testWidgets('${s.name}, $sizeName, $theme', (tester) async {
-          final golden = sizeName == 'wide' && s == SettingsSection.general;
           if (golden) sidebarHidden.value = true;
           native.speller = FakeSpeller({}); // the Mac's: it has one
           final d = await pumpSettingsApp(

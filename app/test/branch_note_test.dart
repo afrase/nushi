@@ -104,7 +104,7 @@ void main() {
   // details panel at its usual and widest width, and at a narrow window.
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     for (final (size, width, details) in [
       ('usual', 1700.0, DetailsPanel.width),

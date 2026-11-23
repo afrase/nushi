@@ -279,7 +279,7 @@ void main() {
   }, variant: onMac);
 
   for (final (name, brightness) in [
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
     ('dark', Brightness.dark),
   ]) {
     for (final (size, width) in [('wide', 1700.0), ('narrow', 720.0)]) {

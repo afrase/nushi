@@ -108,7 +108,7 @@ void main() {
   setUpAll(loadFonts);
 
   for (final phone in _phones.keys) {
-    for (final b in Brightness.values) {
+    for (final b in renderThemes) {
       final name = '${phone}_${b.name}';
 
       testWidgets('the link down, then Try again ($name)', (tester) async {

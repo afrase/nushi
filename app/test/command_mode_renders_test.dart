@@ -23,7 +23,7 @@ void main() {
     (const Size(1700, 1000), 'wide'),
     (const Size(720, 900), 'narrow'),
   ]) {
-    for (final brightness in Brightness.values) {
+    for (final brightness in renderThemes) {
       for (final linux in [false, true]) {
         final os = linux ? 'linux' : 'mac';
         testWidgets('the box, $os, $sizeName, ${brightness.name}', (

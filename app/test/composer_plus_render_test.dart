@@ -87,7 +87,7 @@ Future<void> _attach(WidgetTester tester, Daemon d) async {
   draft.images.value = [ImageData(mimeType: 'image/png', data: photo)];
   await tester.pump();
   // The thumbnail decodes on the real clock: for the picture only.
-  if (rendersDir != null) {
+  if (rendering) {
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 300)),
     );
@@ -98,7 +98,7 @@ void main() {
   setUpAll(loadFonts);
 
   for (final width in [1700.0, 720.0]) {
-    for (final dark in [true, false]) {
+    for (final dark in [true, if (rendering) false]) {
       final name = '${width.round()}_${dark ? 'dark' : 'light'}';
       testWidgets('the window at $name: the menu open, then files attached', (
         tester,

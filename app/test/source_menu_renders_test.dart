@@ -37,7 +37,7 @@ int _spans(WidgetTester tester) {
 void main() {
   setUpAll(loadFonts);
 
-  for (final brightness in Brightness.values) {
+  for (final brightness in renderThemes) {
     final theme = brightness.name;
     for (final width in [1700.0, 720.0]) {
       final w = width.toInt();

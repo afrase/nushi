@@ -81,7 +81,7 @@ Future<Uint8List> _png(int w, int h, int rgba) async {
 void main() {
   setUpAll(loadFonts);
 
-  for (final brightness in Brightness.values) {
+  for (final brightness in renderThemes) {
     for (final width in [1700.0, 720.0]) {
       final w = width.toInt();
       testWidgets('renders: a README with HTML and SVG images, $w, '

@@ -339,7 +339,7 @@ void main() {
   ]) {
     for (final (mode, theme) in [
       (Brightness.dark, 'dark'),
-      (Brightness.light, 'light'),
+      if (rendering) (Brightness.light, 'light'),
     ]) {
       testWidgets('the marks in each kind of text, $name $theme', (
         tester,

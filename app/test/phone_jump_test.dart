@@ -38,7 +38,7 @@ void main() {
 
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     testWidgets('scrolled up, a round ↓ takes the chat back down, $name', (
       tester,

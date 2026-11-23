@@ -561,7 +561,7 @@ void main() {
   // The whole window, wide and narrow, with the menu open (renders only).
   for (final width in [1700.0, 720.0]) {
     for (final (theme, brightness) in [
-      ('light', Brightness.light),
+      if (rendering) ('light', Brightness.light),
       ('dark', Brightness.dark),
     ]) {
       testWidgets('renders at $width, $theme', (tester) async {

@@ -293,7 +293,7 @@ void main() {
 
   group('renders', () {
     for (final width in [1700.0, 720.0]) {
-      for (final b in Brightness.values) {
+      for (final b in renderThemes) {
         for (final hidden in [false, true]) {
           final state = hidden ? 'hidden' : 'shown';
           testWidgets('the title buttons, $width wide, ${b.name}, the '

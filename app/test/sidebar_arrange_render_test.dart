@@ -50,7 +50,7 @@ void main() {
   }
 
   for (final width in [1700.0, 720.0]) {
-    for (final brightness in Brightness.values) {
+    for (final brightness in renderThemes) {
       final name = '${width.toInt()}_${brightness.name}';
       for (final group in GroupBy.values) {
         testWidgets('the sidebar grouped by ${group.label}, $name', (

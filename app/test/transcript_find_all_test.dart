@@ -327,7 +327,7 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 
-  for (final brightness in Brightness.values) {
+  for (final brightness in renderThemes) {
     for (final width in [1700.0, 720.0]) {
       testWidgets('renders: the count of the whole chat, then a match '
           'loaded by a step (${brightness.name}, $width)', (tester) async {

@@ -125,7 +125,7 @@ void main() {
 
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     testWidgets('where a reopened chat’s history comes from changes '
         '($name)', (tester) async {

@@ -142,7 +142,7 @@ void main() {
 
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     testWidgets('deleting a chat whose worktree two others work in, '
         '$name', (tester) async {

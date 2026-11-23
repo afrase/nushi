@@ -239,7 +239,7 @@ void main() {
 
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     for (final (size, width) in [('wide', 1700.0), ('narrow', 720.0)]) {
       for (final open in [false, true]) {

@@ -19,27 +19,29 @@ void main() {
       ('dark', Brightness.dark),
       ('light', Brightness.light),
     ]) {
-      testWidgets('the tab at ${width.toInt()}, $name', (tester) async {
-        final golden = width == 1440;
-        if (golden) sidebarHidden.value = true;
-        final (d, _) = await openPullTab(
-          tester,
-          fixturePull(),
-          size: Size(width, 1000),
-          brightness: brightness,
-        );
-        expectTextInside(tester, width);
-        final shot = 'pull_tab_${width.toInt()}_$name';
-        if (golden) {
-          await expectLater(
-            find.byType(NushiApp),
-            matchesGoldenFile('goldens/$shot.png'),
+      if (width == 1440 || !lightCopy(brightness)) {
+        testWidgets('the tab at ${width.toInt()}, $name', (tester) async {
+          final golden = width == 1440;
+          if (golden) sidebarHidden.value = true;
+          final (d, _) = await openPullTab(
+            tester,
+            fixturePull(),
+            size: Size(width, 1000),
+            brightness: brightness,
           );
-        } else {
-          await render(tester, find.byType(NushiApp), shot);
-        }
-        d.dispose();
-      }, variant: onMac);
+          expectTextInside(tester, width);
+          final shot = 'pull_tab_${width.toInt()}_$name';
+          if (golden) {
+            await expectLater(
+              find.byType(NushiApp),
+              matchesGoldenFile('goldens/$shot.png'),
+            );
+          } else {
+            await render(tester, find.byType(NushiApp), shot);
+          }
+          d.dispose();
+        }, variant: onMac);
+      }
     }
   }
 
@@ -51,7 +53,7 @@ void main() {
   ]) {
     for (final (name, brightness) in [
       ('dark', Brightness.dark),
-      ('light', Brightness.light),
+      if (rendering) ('light', Brightness.light),
     ]) {
       final file = section.split(' ').first.toLowerCase();
       testWidgets('$file at 1440, $name', (tester) async {

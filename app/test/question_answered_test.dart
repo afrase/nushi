@@ -407,46 +407,48 @@ void main() {
     final brightness = name == 'dark' ? Brightness.dark : Brightness.light;
     for (final width in [1700.0, 720.0]) {
       final w = width.toInt();
-      testWidgets('renders at $w ($name)', (tester) async {
-        final (d, _) = await _app(
-          tester,
-          [_single(), _many(), _three(), _skipped()],
-          width: width,
-          height: 1100,
-          brightness: brightness,
-        );
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'question_closed_${w}_$name',
-        );
-        // Each opened alone, scrolled to.
-        for (final (what, title) in [
-          ('single', 'Where should the jobs live?'),
-          ('many', 'What should guard a push?'),
-          ('three', 'A few things before I start'),
-          ('skipped', 'Which database?'),
-        ]) {
-          final chevron = _chevronOf(title);
-          await tester.ensureVisible(chevron);
-          await tester.pumpAndSettle();
-          await tester.tap(chevron);
-          await tester.pumpAndSettle();
-          await tester.ensureVisible(
-            find.ancestor(of: chevron, matching: find.byType(QuestionCard)),
+      if (!lightCopy(tokens.brightness)) {
+        testWidgets('renders at $w ($name)', (tester) async {
+          final (d, _) = await _app(
+            tester,
+            [_single(), _many(), _three(), _skipped()],
+            width: width,
+            height: 1100,
+            brightness: brightness,
           );
-          await tester.pumpAndSettle();
-          expectTextInside(tester, width);
           await render(
             tester,
             find.byType(NushiApp),
-            'question_open_${what}_${w}_$name',
+            'question_closed_${w}_$name',
           );
-          await tester.tap(chevron);
-          await tester.pumpAndSettle();
-        }
-        await closeView(tester, d);
-      }, variant: onMac);
+          // Each opened alone, scrolled to.
+          for (final (what, title) in [
+            ('single', 'Where should the jobs live?'),
+            ('many', 'What should guard a push?'),
+            ('three', 'A few things before I start'),
+            ('skipped', 'Which database?'),
+          ]) {
+            final chevron = _chevronOf(title);
+            await tester.ensureVisible(chevron);
+            await tester.pumpAndSettle();
+            await tester.tap(chevron);
+            await tester.pumpAndSettle();
+            await tester.ensureVisible(
+              find.ancestor(of: chevron, matching: find.byType(QuestionCard)),
+            );
+            await tester.pumpAndSettle();
+            expectTextInside(tester, width);
+            await render(
+              tester,
+              find.byType(NushiApp),
+              'question_open_${what}_${w}_$name',
+            );
+            await tester.tap(chevron);
+            await tester.pumpAndSettle();
+          }
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
     }
   }
 

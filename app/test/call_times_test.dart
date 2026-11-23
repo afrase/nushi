@@ -349,7 +349,7 @@ void main() {
     (const Size(1700, 1000), 'wide'),
     (const Size(720, 1000), 'narrow'),
   ]) {
-    for (final brightness in Brightness.values) {
+    for (final brightness in renderThemes) {
       testWidgets('the times in a transcript, $label, ${brightness.name}', (
         tester,
       ) async {

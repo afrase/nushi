@@ -143,7 +143,7 @@ void main() {
   }, variant: onMac);
 
   for (final (name, brightness) in [
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
     ('dark', Brightness.dark),
   ]) {
     for (final width in [1700.0, 720.0]) {

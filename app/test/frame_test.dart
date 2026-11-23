@@ -189,7 +189,7 @@ void main() {
 
   for (final (theme, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     for (final width in [1700.0, 720.0]) {
       final w = width.toInt();
@@ -338,22 +338,19 @@ void main() {
     }
 
     // To look at only (`make renders`).
-    testWidgets(
-      'a terminal under the chat, in its pane, $theme',
-      (tester) async {
-        final d = await _window(
-          tester,
-          size: const Size(1700, 1000),
-          brightness: brightness,
-          details: true,
-          terminal: true,
-        );
-        await render(tester, find.byType(NushiApp), 'frame-terminal-$theme');
-        await closeView(tester, d);
-      },
-      variant: onMac,
-      skip: rendersDir == null,
-    );
+    renderTest('a terminal under the chat, in its pane, $theme', (
+      tester,
+    ) async {
+      final d = await _window(
+        tester,
+        size: const Size(1700, 1000),
+        brightness: brightness,
+        details: true,
+        terminal: true,
+      );
+      await render(tester, find.byType(NushiApp), 'frame-terminal-$theme');
+      await closeView(tester, d);
+    }, variant: onMac);
 
     testWidgets('the empty window, $theme', (tester) async {
       final d = await _window(
@@ -370,25 +367,20 @@ void main() {
     }, variant: onMac);
 
     // To look at only (`make renders`).
-    testWidgets(
-      'a menu over the new surfaces, $theme',
-      (tester) async {
-        final d = await _window(
-          tester,
-          size: const Size(1700, 1000),
-          brightness: brightness,
-          details: true,
-        );
-        await tester.tap(
-          find.text('Atom feed drops the summary'),
-          buttons: kSecondaryMouseButton,
-        );
-        await tester.pump(const Duration(milliseconds: 300));
-        await render(tester, find.byType(NushiApp), 'frame-menu-$theme');
-        await closeView(tester, d);
-      },
-      variant: onMac,
-      skip: rendersDir == null,
-    );
+    renderTest('a menu over the new surfaces, $theme', (tester) async {
+      final d = await _window(
+        tester,
+        size: const Size(1700, 1000),
+        brightness: brightness,
+        details: true,
+      );
+      await tester.tap(
+        find.text('Atom feed drops the summary'),
+        buttons: kSecondaryMouseButton,
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await render(tester, find.byType(NushiApp), 'frame-menu-$theme');
+      await closeView(tester, d);
+    }, variant: onMac);
   }
 }

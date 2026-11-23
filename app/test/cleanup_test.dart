@@ -232,7 +232,7 @@ void main() {
 
   // The dialog whole, to look at (`make renders`): a dirty worktree's
   // warning and the mid-turn choice over its rows.
-  for (final b in Brightness.values) {
+  for (final b in renderThemes) {
     testWidgets('the dialog, dirty and mid-turn, ${b.name}', (tester) async {
       final (d, _) = await _open(
         tester,

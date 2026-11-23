@@ -381,39 +381,35 @@ void main() {
     });
 
     // To look at only (`make renders`): the goldens above check it.
-    testWidgets(
-      'renders: Changes unified, 1700 and 720 wide ($name)',
-      (tester) async {
-        final fake = FakeDaemon([chat('c', 'claude', 'Calc')])
-          ..answer = _answers;
-        final d = await fake.connect(tester);
-        d.select('c');
-        d.chats['c']!.tab.value = ChatTab.changes;
-        for (final width in [1700.0, 720.0]) {
-          viewport(tester, Size(width, 760), brightness: brightness);
-          for (final unified in [false, true]) {
-            diffUnified.value = unified;
-            await tester.pumpWidget(NushiApp(daemon: d));
-            await tester.pumpAndSettle();
-            final w = width.toInt();
-            await render(
-              tester,
-              find.byType(NushiApp),
-              'changes_${unified ? 'unified' : 'split'}_${w}_$name',
-            );
-          }
-          await _pick(tester, 'neg.go');
+    renderTest('renders: Changes unified, 1700 and 720 wide ($name)', (
+      tester,
+    ) async {
+      final fake = FakeDaemon([chat('c', 'claude', 'Calc')])..answer = _answers;
+      final d = await fake.connect(tester);
+      d.select('c');
+      d.chats['c']!.tab.value = ChatTab.changes;
+      for (final width in [1700.0, 720.0]) {
+        viewport(tester, Size(width, 760), brightness: brightness);
+        for (final unified in [false, true]) {
+          diffUnified.value = unified;
+          await tester.pumpWidget(NushiApp(daemon: d));
+          await tester.pumpAndSettle();
+          final w = width.toInt();
           await render(
             tester,
             find.byType(NushiApp),
-            'changes_added_${width.toInt()}_$name',
+            'changes_${unified ? 'unified' : 'split'}_${w}_$name',
           );
-          await _pick(tester, 'calc.go');
         }
-        await closeView(tester, d);
-      },
-      variant: onMac,
-      skip: rendersDir == null,
-    );
+        await _pick(tester, 'neg.go');
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'changes_added_${width.toInt()}_$name',
+        );
+        await _pick(tester, 'calc.go');
+      }
+      await closeView(tester, d);
+    }, variant: onMac);
   }
 }

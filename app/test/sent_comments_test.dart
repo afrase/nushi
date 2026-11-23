@@ -329,50 +329,40 @@ void main() {
   // At full size: the pill, closed and open, and over a long first line.
   for (final (width, brightness) in [
     (1700.0, Brightness.dark),
-    (1700.0, Brightness.light),
+    if (rendering) (1700.0, Brightness.light),
     (720.0, Brightness.dark),
-    (720.0, Brightness.light),
+    if (rendering) (720.0, Brightness.light),
   ]) {
     final tag = '${width.round()}_${brightness.name}';
-    testWidgets(
-      'renders: $tag',
-      (tester) async {
-        final d = await open(
-          tester,
-          [for (final c in _sentGone) c(), _onLines()],
-          width: width,
-          brightness: brightness,
-        );
-        await colours(tester);
-        await render(tester, find.byType(NushiApp), 'sent_$tag');
-        await renderPane(tester, 'sent_${tag}_pane');
-        await tester.tap(pill());
-        await settle(tester);
-        await render(tester, find.byType(NushiApp), 'sent_open_$tag');
-        await renderPane(tester, 'sent_open_${tag}_pane');
-        d.dispose();
-      },
-      variant: onMac,
-      skip: rendersDir == null,
-    );
+    renderTest('renders: $tag', (tester) async {
+      final d = await open(
+        tester,
+        [for (final c in _sentGone) c(), _onLines()],
+        width: width,
+        brightness: brightness,
+      );
+      await colours(tester);
+      await render(tester, find.byType(NushiApp), 'sent_$tag');
+      await renderPane(tester, 'sent_${tag}_pane');
+      await tester.tap(pill());
+      await settle(tester);
+      await render(tester, find.byType(NushiApp), 'sent_open_$tag');
+      await renderPane(tester, 'sent_open_${tag}_pane');
+      d.dispose();
+    }, variant: onMac);
 
-    testWidgets(
-      'renders: a long first line, $tag',
-      (tester) async {
-        final d = await open(
-          tester,
-          [for (final c in _sentGone) c()],
-          width: width,
-          brightness: brightness,
-          newText: _long + _new,
-        );
-        await colours(tester);
-        await renderPane(tester, 'sent_long_${tag}_pane');
-        d.dispose();
-      },
-      variant: onMac,
-      skip: rendersDir == null,
-    );
+    renderTest('renders: a long first line, $tag', (tester) async {
+      final d = await open(
+        tester,
+        [for (final c in _sentGone) c()],
+        width: width,
+        brightness: brightness,
+        newText: _long + _new,
+      );
+      await colours(tester);
+      await renderPane(tester, 'sent_long_${tag}_pane');
+      d.dispose();
+    }, variant: onMac);
   }
 }
 

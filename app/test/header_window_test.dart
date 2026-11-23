@@ -31,7 +31,7 @@ void main() {
     for (final width in [720.0, 1700.0])
       for (final (name, brightness) in [
         ('dark', Brightness.dark),
-        ('light', Brightness.light),
+        if (rendering) ('light', Brightness.light),
       ])
         for (final preview in [false, true]) (width, name, brightness, preview),
   ];

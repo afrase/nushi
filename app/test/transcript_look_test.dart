@@ -364,88 +364,99 @@ void main() {
 
   for (final b in Brightness.values) {
     for (final (w, size) in _sizes) {
-      testWidgets('a long mixed transcript, ${b.name}, $w wide', (
-        tester,
-      ) async {
-        // The edits' run open, and its first file's diff.
-        final (d, _) = await _app(
+      if (!lightCopy(b)) {
+        testWidgets('a long mixed transcript, ${b.name}, $w wide', (
           tester,
-          size: Size(size.width, 2300),
-          brightness: b,
-          open: ['group e1', 'e1', 'x1'],
-        );
-        expectTextInside(tester, size.width);
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'look_transcript_${w}_${b.name}',
-        );
-        d.dispose();
-      }, variant: onMac);
+        ) async {
+          // The edits' run open, and its first file's diff.
+          final (d, _) = await _app(
+            tester,
+            size: Size(size.width, 2300),
+            brightness: b,
+            open: ['group e1', 'e1', 'x1'],
+          );
+          expectTextInside(tester, size.width);
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'look_transcript_${w}_${b.name}',
+          );
+          d.dispose();
+        }, variant: onMac);
+      }
 
-      testWidgets('its end at the window’s height, the agent working, '
-          '${b.name}, $w wide', (tester) async {
-        final (d, _) = await _app(tester, size: size, brightness: b);
-        await tester.enterText(
-          find.byType(TextField),
-          'Also keep the cursor in the URL, so a shared link opens the '
-          'same page.',
-        );
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 400));
-        // Queue and Stop and send keep their words at both widths, and
-        // the row is one line.
-        expect(find.text('Queue'), findsOneWidget);
-        expect(find.text('Stop and send'), findsOneWidget);
-        final stop = tester.getRect(find.byTooltip('Stop\u2002Esc'));
-        final plus = tester.getRect(find.byType(PlusButton));
-        expect(stop.center.dy, plus.center.dy);
-        expect(tester.getRect(find.byType(Pickers)).center.dy, plus.center.dy);
-        expectTextInside(tester, size.width);
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'look_working_${w}_${b.name}',
-        );
-        d.dispose();
-      }, variant: onMac);
+      if (!lightCopy(b)) {
+        testWidgets('its end at the window’s height, the agent working, '
+            '${b.name}, $w wide', (tester) async {
+          final (d, _) = await _app(tester, size: size, brightness: b);
+          await tester.enterText(
+            find.byType(TextField),
+            'Also keep the cursor in the URL, so a shared link opens the '
+            'same page.',
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
+          // Queue and Stop and send keep their words at both widths, and
+          // the row is one line.
+          expect(find.text('Queue'), findsOneWidget);
+          expect(find.text('Stop and send'), findsOneWidget);
+          final stop = tester.getRect(find.byTooltip('Stop\u2002Esc'));
+          final plus = tester.getRect(find.byType(PlusButton));
+          expect(stop.center.dy, plus.center.dy);
+          expect(
+            tester.getRect(find.byType(Pickers)).center.dy,
+            plus.center.dy,
+          );
+          expectTextInside(tester, size.width);
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'look_working_${w}_${b.name}',
+          );
+          d.dispose();
+        }, variant: onMac);
+      }
 
-      testWidgets('a permission and a question, ${b.name}, $w wide', (
-        tester,
-      ) async {
-        final (d, _) = await _app(
+      if (!lightCopy(b)) {
+        testWidgets('a permission and a question, ${b.name}, $w wide', (
           tester,
-          size: size,
-          brightness: b,
-          idle: true,
-          items: [
-            _items.first,
-            agentSays('m', 'Two things before I go on.'),
-            _permission(),
-            _question(),
-          ],
-        );
-        expectTextInside(tester, size.width);
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'look_cards_${w}_${b.name}',
-        );
-        d.dispose();
-      }, variant: onMac);
+        ) async {
+          final (d, _) = await _app(
+            tester,
+            size: size,
+            brightness: b,
+            idle: true,
+            items: [
+              _items.first,
+              agentSays('m', 'Two things before I go on.'),
+              _permission(),
+              _question(),
+            ],
+          );
+          expectTextInside(tester, size.width);
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'look_cards_${w}_${b.name}',
+          );
+          d.dispose();
+        }, variant: onMac);
+      }
 
-      testWidgets('the subagent’s pane, ${b.name}, $w wide', (tester) async {
-        final (d, _) = await _app(tester, size: size, brightness: b);
-        d.chats['c']!.pane.value = 'sa';
-        await tester.pumpAndSettle(const Duration(milliseconds: 50));
-        expect(find.byType(SubagentPane), findsOneWidget);
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'look_subagent_${w}_${b.name}',
-        );
-        d.dispose();
-      }, variant: onMac);
+      if (!lightCopy(b)) {
+        testWidgets('the subagent’s pane, ${b.name}, $w wide', (tester) async {
+          final (d, _) = await _app(tester, size: size, brightness: b);
+          d.chats['c']!.pane.value = 'sa';
+          await tester.pumpAndSettle(const Duration(milliseconds: 50));
+          expect(find.byType(SubagentPane), findsOneWidget);
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'look_subagent_${w}_${b.name}',
+          );
+          d.dispose();
+        }, variant: onMac);
+      }
     }
 
     // The composer's states, as the chat's view has it: 720 and 400 wide
@@ -626,74 +637,80 @@ void main() {
       );
     });
 
-    testWidgets('the phone: the transcript and the composer, ${b.name}', (
-      tester,
-    ) async {
-      viewport(tester, const Size(390, 844), ratio: 2, brightness: b);
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
-      final c = chat('c', 'claude', 'Paginate the feed');
-      final fake = FakeDaemon([c])
-        ..answer = ((input) => input is GetChatRequest
-            ? GetChatResponse(chat: c, items: _items)
-            : null);
-      final phone = await startPhone(tester, fake);
-      await tester.tap(find.text('Paginate the feed'));
-      await tester.pumpAndSettle();
-      fake.emit(_config);
-      await tester.pumpAndSettle();
-      // A phone's box is too narrow for the pickers: they're under it.
-      expect(
-        tester.getRect(find.text('Accept edits')).top,
-        greaterThan(tester.getRect(find.byType(PlusButton)).bottom),
-      );
-      // Every control of the box's row is a touch target.
-      for (final target in [
-        find.descendant(
-          of: find.byType(PlusButton),
-          matching: find.byType(Pressable),
-        ),
-        find
-            .ancestor(
-              of: find.text('Accept edits'),
-              matching: find.byType(Pressable),
-            )
-            .first,
-      ]) {
-        expect(
-          tester.getSize(target).height,
-          greaterThanOrEqualTo(TouchTargets.size),
-        );
-      }
-      await render(tester, find.byType(PhoneApp), 'look_phone_${b.name}');
-      final idle = tester.getSize(find.byType(TextField));
-      await tester.enterText(find.byType(TextField), 'Also the README');
-      await tester.pumpAndSettle();
-      await render(tester, find.byType(PhoneApp), 'look_phone_text_${b.name}');
-      // While a turn runs the hint says what a message does, still on one
-      // line: the box is no higher for it (it wrapped at 390, and the box
-      // grew 14 points).
-      await tester.enterText(find.byType(TextField), '');
-      fake.emit(
-        EventsResponse(
-          chatId: 'c',
-          seq: Int64(3),
-          status: ChatStatus(busy: true),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('Queue it, or stop and send'), findsOneWidget);
-      expect(tester.getSize(find.byType(TextField)).height, idle.height);
-      await render(
+    if (!lightCopy(b)) {
+      testWidgets('the phone: the transcript and the composer, ${b.name}', (
         tester,
-        find.byType(PhoneApp),
-        'look_phone_working_${b.name}',
-      );
-      await endPhone(tester, phone);
-    }, variant: onPhone);
+      ) async {
+        viewport(tester, const Size(390, 844), ratio: 2, brightness: b);
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(disableAnimations: true);
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        final c = chat('c', 'claude', 'Paginate the feed');
+        final fake = FakeDaemon([c])
+          ..answer = ((input) => input is GetChatRequest
+              ? GetChatResponse(chat: c, items: _items)
+              : null);
+        final phone = await startPhone(tester, fake);
+        await tester.tap(find.text('Paginate the feed'));
+        await tester.pumpAndSettle();
+        fake.emit(_config);
+        await tester.pumpAndSettle();
+        // A phone's box is too narrow for the pickers: they're under it.
+        expect(
+          tester.getRect(find.text('Accept edits')).top,
+          greaterThan(tester.getRect(find.byType(PlusButton)).bottom),
+        );
+        // Every control of the box's row is a touch target.
+        for (final target in [
+          find.descendant(
+            of: find.byType(PlusButton),
+            matching: find.byType(Pressable),
+          ),
+          find
+              .ancestor(
+                of: find.text('Accept edits'),
+                matching: find.byType(Pressable),
+              )
+              .first,
+        ]) {
+          expect(
+            tester.getSize(target).height,
+            greaterThanOrEqualTo(TouchTargets.size),
+          );
+        }
+        await render(tester, find.byType(PhoneApp), 'look_phone_${b.name}');
+        final idle = tester.getSize(find.byType(TextField));
+        await tester.enterText(find.byType(TextField), 'Also the README');
+        await tester.pumpAndSettle();
+        await render(
+          tester,
+          find.byType(PhoneApp),
+          'look_phone_text_${b.name}',
+        );
+        // While a turn runs the hint says what a message does, still on one
+        // line: the box is no higher for it (it wrapped at 390, and the box
+        // grew 14 points).
+        await tester.enterText(find.byType(TextField), '');
+        fake.emit(
+          EventsResponse(
+            chatId: 'c',
+            seq: Int64(3),
+            status: ChatStatus(busy: true),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text('Queue it, or stop and send'), findsOneWidget);
+        expect(tester.getSize(find.byType(TextField)).height, idle.height);
+        await render(
+          tester,
+          find.byType(PhoneApp),
+          'look_phone_working_${b.name}',
+        );
+        await endPhone(tester, phone);
+      }, variant: onPhone);
+    }
   }
 }

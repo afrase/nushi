@@ -463,7 +463,7 @@ void main() {
     (const Size(1700, 1000), 1700),
     (const Size(720, 900), 720),
   ]) {
-    for (final b in Brightness.values) {
+    for (final b in renderThemes) {
       testWidgets('renders, $w, ${b.name}', (tester) async {
         native.fonts = _Fonts(all: _many(300), system: '.AppleSystemUIFont');
         final d = await _settings(tester, size: size, b: b);

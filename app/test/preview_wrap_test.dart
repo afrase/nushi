@@ -371,51 +371,53 @@ void main() {
     ('light', Brightness.light),
   ]) {
     for (final size in [const Size(390, 844), const Size(844, 390)]) {
-      testWidgets('the phone: its own button turns wrapping over, '
-          '${size.width.toInt()}×${size.height.toInt()}, $name', (
-        tester,
-      ) async {
-        viewport(tester, size, ratio: 3, brightness: brightness);
-        tester.platformDispatcher.accessibilityFeaturesTestValue =
-            const FakeAccessibilityFeatures(disableAnimations: true);
-        addTearDown(tester.platformDispatcher.clearAllTestValues);
-        final fake = _fake();
-        final phone = Phone(
-          PhonePlatform()..saved = pairedRecord(),
-          connectTo: (_) => Daemon(transport: fake, remote: true),
-        );
-        await tester.pumpWidget(PhoneApp(phone));
-        await phone.start();
-        await frames(tester, 8);
-        await tester.tap(find.text('Brew the tea'));
-        await tester.pumpAndSettle();
-        PreviewScreen.open(
-          tester.element(find.byType(Navigator).first),
-          phone.daemon!,
-          phone.daemon!.chats['c']!,
-          'src/tea.go',
-        );
-        await tester.pumpAndSettle();
-        expect(find.bySemanticsLabel('Don’t wrap lines'), findsOneWidget);
-        expect(_across(tester), isNull);
-        await render(
+      if (!lightCopy(brightness)) {
+        testWidgets('the phone: its own button turns wrapping over, '
+            '${size.width.toInt()}×${size.height.toInt()}, $name', (
           tester,
-          find.byType(PhoneApp),
-          'preview_wrap_phone_${size.width.toInt()}_on_$name',
-        );
-        await tester.tap(find.byIcon(Icons.wrap_text));
-        await tester.pumpAndSettle();
-        expect(wrapLines.value, isFalse);
-        expect(find.bySemanticsLabel('Wrap lines'), findsOneWidget);
-        expect(_across(tester)!.maxScrollExtent, greaterThan(20000));
-        expect(tester.takeException(), isNull);
-        await render(
-          tester,
-          find.byType(PhoneApp),
-          'preview_wrap_phone_${size.width.toInt()}_off_$name',
-        );
-        await endPhone(tester, phone);
-      }, variant: onPhone);
+        ) async {
+          viewport(tester, size, ratio: 3, brightness: brightness);
+          tester.platformDispatcher.accessibilityFeaturesTestValue =
+              const FakeAccessibilityFeatures(disableAnimations: true);
+          addTearDown(tester.platformDispatcher.clearAllTestValues);
+          final fake = _fake();
+          final phone = Phone(
+            PhonePlatform()..saved = pairedRecord(),
+            connectTo: (_) => Daemon(transport: fake, remote: true),
+          );
+          await tester.pumpWidget(PhoneApp(phone));
+          await phone.start();
+          await frames(tester, 8);
+          await tester.tap(find.text('Brew the tea'));
+          await tester.pumpAndSettle();
+          PreviewScreen.open(
+            tester.element(find.byType(Navigator).first),
+            phone.daemon!,
+            phone.daemon!.chats['c']!,
+            'src/tea.go',
+          );
+          await tester.pumpAndSettle();
+          expect(find.bySemanticsLabel('Don’t wrap lines'), findsOneWidget);
+          expect(_across(tester), isNull);
+          await render(
+            tester,
+            find.byType(PhoneApp),
+            'preview_wrap_phone_${size.width.toInt()}_on_$name',
+          );
+          await tester.tap(find.byIcon(Icons.wrap_text));
+          await tester.pumpAndSettle();
+          expect(wrapLines.value, isFalse);
+          expect(find.bySemanticsLabel('Wrap lines'), findsOneWidget);
+          expect(_across(tester)!.maxScrollExtent, greaterThan(20000));
+          expect(tester.takeException(), isNull);
+          await render(
+            tester,
+            find.byType(PhoneApp),
+            'preview_wrap_phone_${size.width.toInt()}_off_$name',
+          );
+          await endPhone(tester, phone);
+        }, variant: onPhone);
+      }
     }
 
     testWidgets("the Files pane's top rows, its bar's buttons at the end, "
@@ -466,20 +468,22 @@ void main() {
 
     for (final width in [1700.0, 720.0]) {
       for (final wrap in [true, false]) {
-        testWidgets('renders: a source, ${width.toInt()} wide, wrap '
-            '${wrap ? 'on' : 'off'}, $name', (tester) async {
-          wrapLines.value = wrap;
-          final d = await _app(tester, width: width, brightness: brightness);
-          expect(tester.takeException(), isNull);
-          // Off, the long line runs past the edge, clipped.
-          if (wrap) expectTextInside(tester, width);
-          await render(
-            tester,
-            find.byType(NushiApp),
-            'preview_wrap_${width.toInt()}_${wrap ? 'on' : 'off'}_$name',
-          );
-          await closeView(tester, d);
-        }, variant: onMac);
+        if (!lightCopy(brightness)) {
+          testWidgets('renders: a source, ${width.toInt()} wide, wrap '
+              '${wrap ? 'on' : 'off'}, $name', (tester) async {
+            wrapLines.value = wrap;
+            final d = await _app(tester, width: width, brightness: brightness);
+            expect(tester.takeException(), isNull);
+            // Off, the long line runs past the edge, clipped.
+            if (wrap) expectTextInside(tester, width);
+            await render(
+              tester,
+              find.byType(NushiApp),
+              'preview_wrap_${width.toInt()}_${wrap ? 'on' : 'off'}_$name',
+            );
+            await closeView(tester, d);
+          }, variant: onMac);
+        }
       }
     }
   }

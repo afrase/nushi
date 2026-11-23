@@ -24,7 +24,7 @@ void main() {
     (const Size(1700, 1000), 'wide'),
     (const Size(720, 900), 'narrow'),
   ]) {
-    for (final brightness in Brightness.values) {
+    for (final brightness in renderThemes) {
       for (final (on, linux) in [
         (false, false),
         (true, false),

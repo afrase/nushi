@@ -744,27 +744,29 @@ void main() {
         await closeView(tester, d);
       }, variant: onMac);
 
-      testWidgets('the preview’s folded ⋯, at the narrowest pane, $name', (
-        tester,
-      ) async {
-        final d = await _app(
+      if (!lightCopy(brightness)) {
+        testWidgets('the preview’s folded ⋯, at the narrowest pane, $name', (
           tester,
-          width: 720,
-          height: 600,
-          brightness: brightness,
-          file: 'docs/login-report.md',
-        );
-        await _squeezed(tester, d, brightness);
-        await tester.tap(find.byTooltip('More'));
-        await tester.pumpAndSettle();
-        expect(find.text('Show in Finder', findRichText: true), findsOne);
-        await render(
-          tester,
-          find.byType(MaterialApp),
-          'preview_menu_squeezed_$name',
-        );
-        await closeView(tester, d);
-      }, variant: onMac);
+        ) async {
+          final d = await _app(
+            tester,
+            width: 720,
+            height: 600,
+            brightness: brightness,
+            file: 'docs/login-report.md',
+          );
+          await _squeezed(tester, d, brightness);
+          await tester.tap(find.byTooltip('More'));
+          await tester.pumpAndSettle();
+          expect(find.text('Show in Finder', findRichText: true), findsOne);
+          await render(
+            tester,
+            find.byType(MaterialApp),
+            'preview_menu_squeezed_$name',
+          );
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
     }
 
     // Linux's words (ADR 0104), in its window, on its platform.
@@ -821,23 +823,25 @@ void main() {
           d.dispose();
         }, variant: onMac);
       }
-      testWidgets('a turn beside the preview, $name', (tester) async {
-        final d = await _app(
-          tester,
-          width: 1700,
-          brightness: brightness,
-          file: 'docs/login-report.md',
-        );
-        // The column's composer clear of the preview beside it.
-        final preview = tester.getRect(find.byType(FileView));
-        expect(_box(tester).right, lessThan(preview.left));
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'spacing_preview_1700_$name',
-        );
-        d.dispose();
-      }, variant: onMac);
+      if (!lightCopy(brightness)) {
+        testWidgets('a turn beside the preview, $name', (tester) async {
+          final d = await _app(
+            tester,
+            width: 1700,
+            brightness: brightness,
+            file: 'docs/login-report.md',
+          );
+          // The column's composer clear of the preview beside it.
+          final preview = tester.getRect(find.byType(FileView));
+          expect(_box(tester).right, lessThan(preview.left));
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'spacing_preview_1700_$name',
+          );
+          d.dispose();
+        }, variant: onMac);
+      }
     }
   });
 }

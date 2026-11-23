@@ -183,7 +183,7 @@ void main() {
   }, variant: onMac);
 
   for (final width in [1700.0, 720.0]) {
-    for (final brightness in Brightness.values) {
+    for (final brightness in renderThemes) {
       final name = '${width.toInt()}_${brightness.name}';
       testWidgets('the window narrowed to a project, another’s pin in '
           'Pinned, $name', (tester) async {

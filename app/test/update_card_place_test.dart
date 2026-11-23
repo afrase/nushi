@@ -246,7 +246,7 @@ void main() {
   // Renders to look at: the card over a chat alone, beside the details
   // column and over a side chat, wide and narrow, in both themes.
   for (final width in [1700.0, 720.0]) {
-    for (final brightness in Brightness.values) {
+    for (final brightness in renderThemes) {
       for (final (scene, details, side) in [
         ('alone', false, false),
         ('details', true, false),

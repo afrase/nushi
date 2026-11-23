@@ -722,24 +722,26 @@ void main() {
     // The window at both widths, the list and then an issue's page, to
     // look at (`make renders`).
     for (final w in [1700.0, 720.0]) {
-      testWidgets('the list and an issue, ${w.round()} wide, $name', (
-        tester,
-      ) async {
-        final (_, d) = await openView(
+      if (!lightCopy(tokens.brightness)) {
+        testWidgets('the list and an issue, ${w.round()} wide, $name', (
           tester,
-          tokens: tokens,
-          size: Size(w, 900),
-          window: true,
-        );
-        final app = find.byType(NushiApp);
-        expectTextInside(tester, w);
-        await render(tester, app, 'jira_list_${w.round()}_$name');
-        await tester.tap(find.text('Log in with a passkey'));
-        await tester.pumpAndSettle();
-        expectTextInside(tester, w);
-        await render(tester, app, 'jira_issue_${w.round()}_$name');
-        await closeView(tester, d);
-      }, variant: onMac);
+        ) async {
+          final (_, d) = await openView(
+            tester,
+            tokens: tokens,
+            size: Size(w, 900),
+            window: true,
+          );
+          final app = find.byType(NushiApp);
+          expectTextInside(tester, w);
+          await render(tester, app, 'jira_list_${w.round()}_$name');
+          await tester.tap(find.text('Log in with a passkey'));
+          await tester.pumpAndSettle();
+          expectTextInside(tester, w);
+          await render(tester, app, 'jira_issue_${w.round()}_$name');
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
     }
   }
 }

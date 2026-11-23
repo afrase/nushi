@@ -165,7 +165,7 @@ void main() {
   for (final width in [1700.0, 720.0]) {
     for (final (name, brightness) in [
       ('dark', Brightness.dark),
-      ('light', Brightness.light),
+      if (rendering) ('light', Brightness.light),
     ]) {
       testWidgets('the window ${width.round()} wide, $name', (tester) async {
         final end = await _open(

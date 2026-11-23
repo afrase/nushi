@@ -218,7 +218,7 @@ void main() {
 
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     testWidgets('renders: the chat flagged, Ask to fix ($name)', (
       tester,

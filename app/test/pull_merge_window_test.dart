@@ -61,7 +61,7 @@ void main() {
 
   for (final (theme, brightness) in [
     ('dark', Brightness.dark),
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
   ]) {
     for (final state in ['ready', 'blocked', 'auto', 'queue']) {
       for (final width in [1700.0, 720.0]) {

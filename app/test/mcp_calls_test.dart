@@ -58,9 +58,9 @@ void main() {
   for (final agent in ['claude', 'codex']) {
     for (final (width, brightness) in [
       (1700.0, Brightness.dark),
-      (1700.0, Brightness.light),
+      if (rendering) (1700.0, Brightness.light),
       (720.0, Brightness.dark),
-      (720.0, Brightness.light),
+      if (rendering) (720.0, Brightness.light),
     ]) {
       testWidgets('a $agent chat’s MCP calls render, ${width.toInt()} '
           '${brightness.name}', (tester) async {

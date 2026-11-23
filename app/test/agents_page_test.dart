@@ -354,27 +354,29 @@ void main() {
       (const Size(1700, 900), 'wide'),
       (const Size(720, 760), 'narrow'),
     ]) {
-      testWidgets('the page, the Go agent on, $sizeName ($name)', (
-        tester,
-      ) async {
-        final (_, d) = await _settings(
+      if (!lightCopy(tokens.brightness)) {
+        testWidgets('the page, the Go agent on, $sizeName ($name)', (
           tester,
-          tokens: tokens,
-          goAgent: true,
-          size: size,
-        );
-        final row = tester.getRect(find.byType(SettingsRow).first);
-        expect(tester.getRect(_goSwitch).right, closeTo(row.right - 14, 1));
-        expect(tester.widget<SettingsSwitch>(_goSwitch).value, isTrue);
-        expect(find.text('Update to 2.2.2'), findsNothing);
-        expectTextInside(tester, size.width);
-        await render(
-          tester,
-          find.byType(SettingsView),
-          'agents_go_on_${sizeName}_$name',
-        );
-        d.dispose();
-      });
+        ) async {
+          final (_, d) = await _settings(
+            tester,
+            tokens: tokens,
+            goAgent: true,
+            size: size,
+          );
+          final row = tester.getRect(find.byType(SettingsRow).first);
+          expect(tester.getRect(_goSwitch).right, closeTo(row.right - 14, 1));
+          expect(tester.widget<SettingsSwitch>(_goSwitch).value, isTrue);
+          expect(find.text('Update to 2.2.2'), findsNothing);
+          expectTextInside(tester, size.width);
+          await render(
+            tester,
+            find.byType(SettingsView),
+            'agents_go_on_${sizeName}_$name',
+          );
+          d.dispose();
+        });
+      }
     }
 
     // A chat that couldn't start Codex sent you here: its row stands out.

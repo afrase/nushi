@@ -168,143 +168,160 @@ void main() {
       final w = width.toInt();
       Size size() => Size(width, 900);
 
-      testWidgets('the widget and the tags, $w wide, $theme', (tester) async {
-        final d = await _app(tester, size(), brightness);
-        final chat = d.chats['c']!;
-        expect(chat.related.list, hasLength(5));
-        // Every line's end at the line's edge, tagged or not.
-        final ends = {
-          for (final e in find.byIcon(paneIcon).evaluate())
-            if (e.findAncestorWidgetOfExactType<SubagentLine>() != null)
-              tester.getTopRight(find.byElementPredicate((x) => x == e)).dx,
-        };
-        expect(ends, hasLength(1));
-        await shot(tester, 'related_chat_$w');
-        await closeView(tester, d);
-      }, variant: onMac);
+      if (!lightCopy(brightness)) {
+        testWidgets('the widget and the tags, $w wide, $theme', (tester) async {
+          final d = await _app(tester, size(), brightness);
+          final chat = d.chats['c']!;
+          expect(chat.related.list, hasLength(5));
+          // Every line's end at the line's edge, tagged or not.
+          final ends = {
+            for (final e in find.byIcon(paneIcon).evaluate())
+              if (e.findAncestorWidgetOfExactType<SubagentLine>() != null)
+                tester.getTopRight(find.byElementPredicate((x) => x == e)).dx,
+          };
+          expect(ends, hasLength(1));
+          await shot(tester, 'related_chat_$w');
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
 
-      testWidgets('a worktree in Changes, $w wide, $theme', (tester) async {
-        if (width == 1700) sidebarHidden.value = true;
-        final d = await _app(tester, size(), brightness);
-        final chat = d.chats['c']!;
-        chat.tab.value = ChatTab.changes;
-        await tester.pumpAndSettle();
-        chat.related.pick(_worktrees.first.path);
-        await tester.pumpAndSettle();
-        await shot(tester, 'related_changes_$w');
-        await closeView(tester, d);
-      }, variant: onMac);
+      if (width == 1700 || !lightCopy(brightness)) {
+        testWidgets('a worktree in Changes, $w wide, $theme', (tester) async {
+          if (width == 1700) sidebarHidden.value = true;
+          final d = await _app(tester, size(), brightness);
+          final chat = d.chats['c']!;
+          chat.tab.value = ChatTab.changes;
+          await tester.pumpAndSettle();
+          chat.related.pick(_worktrees.first.path);
+          await tester.pumpAndSettle();
+          await shot(tester, 'related_changes_$w');
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
 
-      testWidgets('comments in a worktree, $w wide, $theme', (tester) async {
-        final d = await _app(tester, size(), brightness);
-        final chat = d.chats['c']!;
-        final path = _worktrees.first.path;
-        ReviewComment at(String id, String where, String text) => ReviewComment(
-          id: id,
-          where: where,
-          path: 'internal/parser/parse.go',
-          old: false,
-          start: 4,
-          end: 4,
-          quote: 'func Parse(line string) error {',
-          text: text,
-        );
-        addTearDown(() => setComments('c', []));
-        setComments('c', [
-          at('1', 'branch', 'Keep Parse taking no arguments here.'),
-          at(
-            '2',
-            whereIn('branch', worktree: path),
-            'Return the line number with the error.',
-          ),
-        ]);
-        chat.tab.value = ChatTab.changes;
-        await tester.pumpAndSettle();
-        chat.related.pick(path);
-        await tester.pumpAndSettle();
-        // A narrow bar's is short, beside the worktrees' menu.
-        expect(
-          find.text(width == 720 ? 'Send (2)' : 'Send to agent (2)'),
-          findsOne,
-        );
-        expect(find.text('Return the line number with the error.'), findsOne);
-        // The chat's own, above the list: not on the worktree's file.
-        expect(find.text('1 comment not on these files'), findsOne);
-        expectTextInside(tester, width);
-        await shot(tester, 'related_comments_$w');
-        await closeView(tester, d);
-      }, variant: onMac);
+      if (!lightCopy(brightness)) {
+        testWidgets('comments in a worktree, $w wide, $theme', (tester) async {
+          final d = await _app(tester, size(), brightness);
+          final chat = d.chats['c']!;
+          final path = _worktrees.first.path;
+          ReviewComment at(String id, String where, String text) =>
+              ReviewComment(
+                id: id,
+                where: where,
+                path: 'internal/parser/parse.go',
+                old: false,
+                start: 4,
+                end: 4,
+                quote: 'func Parse(line string) error {',
+                text: text,
+              );
+          addTearDown(() => setComments('c', []));
+          setComments('c', [
+            at('1', 'branch', 'Keep Parse taking no arguments here.'),
+            at(
+              '2',
+              whereIn('branch', worktree: path),
+              'Return the line number with the error.',
+            ),
+          ]);
+          chat.tab.value = ChatTab.changes;
+          await tester.pumpAndSettle();
+          chat.related.pick(path);
+          await tester.pumpAndSettle();
+          // A narrow bar's is short, beside the worktrees' menu.
+          expect(
+            find.text(width == 720 ? 'Send (2)' : 'Send to agent (2)'),
+            findsOne,
+          );
+          expect(find.text('Return the line number with the error.'), findsOne);
+          // The chat's own, above the list: not on the worktree's file.
+          expect(find.text('1 comment not on these files'), findsOne);
+          expectTextInside(tester, width);
+          await shot(tester, 'related_comments_$w');
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
 
-      testWidgets('a removed one, $w wide, $theme', (tester) async {
-        final d = await _app(tester, size(), brightness);
-        final chat = d.chats['c']!;
-        chat.tab.value = ChatTab.changes;
-        await tester.pumpAndSettle();
-        chat.related.pick(_worktrees[2].path);
-        await tester.pumpAndSettle();
-        await shot(tester, 'related_removed_$w');
-        await closeView(tester, d);
-      }, variant: onMac);
+      if (!lightCopy(brightness)) {
+        testWidgets('a removed one, $w wide, $theme', (tester) async {
+          final d = await _app(tester, size(), brightness);
+          final chat = d.chats['c']!;
+          chat.tab.value = ChatTab.changes;
+          await tester.pumpAndSettle();
+          chat.related.pick(_worktrees[2].path);
+          await tester.pumpAndSettle();
+          await shot(tester, 'related_removed_$w');
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
 
-      testWidgets('the menu open, $w wide, $theme', (tester) async {
-        final d = await _app(tester, size(), brightness);
-        d.chats['c']!.tab.value = ChatTab.changes;
-        await tester.pumpAndSettle();
-        await tester.tap(find.text("Chat's folder"));
-        await tester.pumpAndSettle();
-        await shot(tester, 'related_menu_$w');
-        await closeView(tester, d);
-      }, variant: onMac);
+      if (!lightCopy(brightness)) {
+        testWidgets('the menu open, $w wide, $theme', (tester) async {
+          final d = await _app(tester, size(), brightness);
+          d.chats['c']!.tab.value = ChatTab.changes;
+          await tester.pumpAndSettle();
+          await tester.tap(find.text("Chat's folder"));
+          await tester.pumpAndSettle();
+          await shot(tester, 'related_menu_$w');
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
 
-      testWidgets('back on the tab, unread, $w wide, $theme', (tester) async {
-        final d = await _app(tester, size(), brightness);
-        final chat = d.chats['c']!;
-        chat.related
-          ..pick(_worktrees.first.path)
-          ..takeAsked();
-        chat.tab.value = ChatTab.changes;
-        await tester.pumpAndSettle();
-        expect(find.text('Show its changes'), findsOne);
-        await shot(tester, 'related_unread_$w');
-        await closeView(tester, d);
-      }, variant: onMac);
+      if (!lightCopy(brightness)) {
+        testWidgets('back on the tab, unread, $w wide, $theme', (tester) async {
+          final d = await _app(tester, size(), brightness);
+          final chat = d.chats['c']!;
+          chat.related
+            ..pick(_worktrees.first.path)
+            ..takeAsked();
+          chat.tab.value = ChatTab.changes;
+          await tester.pumpAndSettle();
+          expect(find.text('Show its changes'), findsOne);
+          await shot(tester, 'related_unread_$w');
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
 
-      testWidgets('moved on since read, $w wide, $theme', (tester) async {
-        final d = await _app(tester, size(), brightness);
-        final chat = d.chats['c']!;
-        chat.tab.value = ChatTab.changes;
-        await tester.pumpAndSettle();
-        chat.related.pick(_worktrees.first.path);
-        await tester.pumpAndSettle();
-        chat.related.take([
-          _worktrees.first.deepCopy()..lastHead = 'd' * 40,
-          ..._worktrees.skip(1),
-        ]);
-        await tester.pumpAndSettle();
-        expect(
-          find.byTooltip('It changed since this was read: Reload shows it'),
-          findsOne,
-        );
-        await shot(tester, 'related_behind_$w');
-        await closeView(tester, d);
-      }, variant: onMac);
+      if (!lightCopy(brightness)) {
+        testWidgets('moved on since read, $w wide, $theme', (tester) async {
+          final d = await _app(tester, size(), brightness);
+          final chat = d.chats['c']!;
+          chat.tab.value = ChatTab.changes;
+          await tester.pumpAndSettle();
+          chat.related.pick(_worktrees.first.path);
+          await tester.pumpAndSettle();
+          chat.related.take([
+            _worktrees.first.deepCopy()..lastHead = 'd' * 40,
+            ..._worktrees.skip(1),
+          ]);
+          await tester.pumpAndSettle();
+          expect(
+            find.byTooltip('It changed since this was read: Reload shows it'),
+            findsOne,
+          );
+          await shot(tester, 'related_behind_$w');
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
 
-      testWidgets('commits gone, $w wide, $theme', (tester) async {
-        final d = await _app(tester, size(), brightness);
-        final chat = d.chats['c']!;
-        chat.tab.value = ChatTab.changes;
-        await tester.pumpAndSettle();
-        chat.related.pick(_worktrees.last.path);
-        await tester.pumpAndSettle();
-        expect(
-          find.text(
-            "This worktree's commits are gone: git no longer has them.",
-          ),
-          findsOne,
-        );
-        await shot(tester, 'related_gone_$w');
-        await closeView(tester, d);
-      }, variant: onMac);
+      if (!lightCopy(brightness)) {
+        testWidgets('commits gone, $w wide, $theme', (tester) async {
+          final d = await _app(tester, size(), brightness);
+          final chat = d.chats['c']!;
+          chat.tab.value = ChatTab.changes;
+          await tester.pumpAndSettle();
+          chat.related.pick(_worktrees.last.path);
+          await tester.pumpAndSettle();
+          expect(
+            find.text(
+              "This worktree's commits are gone: git no longer has them.",
+            ),
+            findsOne,
+          );
+          await shot(tester, 'related_gone_$w');
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
     }
   }
 }

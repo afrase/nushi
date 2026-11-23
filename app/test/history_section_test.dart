@@ -479,69 +479,73 @@ void main() {
       (Brightness.dark, 'dark'),
       (Brightness.light, 'light'),
     ]) {
-      testWidgets('200 copies scrolled, some picked, $sizeName, '
-          '$theme', (tester) async {
-        // The whole window, to look at.
-        final d = await open(
-          tester,
-          _fake(200),
-          size: size,
-          brightness: brightness,
-          sidebar: true,
-        );
-        await tester.drag(
-          _inSettings(find.byType(CustomScrollView)),
-          const Offset(0, -1200),
-        );
-        await tester.pumpAndSettle();
-        final shown = _rows(tester)
-            .where((r) => tester.getTopLeft(find.byWidget(r)).dy > 120)
-            .toList();
-        await _clickRow(tester, shown[2].row.id);
-        await _clickRow(
-          tester,
-          shown[5].row.id,
-          holding: LogicalKeyboardKey.shiftLeft,
-        );
-        await _clickRow(
-          tester,
-          shown[8].row.id,
-          holding: LogicalKeyboardKey.metaLeft,
-        );
-        expect(find.textContaining('5 selected'), findsOneWidget);
-        await render(
-          tester,
-          find.byType(MaterialApp),
-          'history_picked_${sizeName}_$theme',
-        );
-        d.dispose();
-      }, variant: onMac);
-
-      testWidgets('the search filtering, $sizeName, $theme', (tester) async {
-        // Wide, it's Chat history's window golden (the sidebar hidden: it
-        // has its own); small, a render.
-        final golden = sizeName == 'wide';
-        final d = await open(
-          tester,
-          _fake(200),
-          size: size,
-          brightness: brightness,
-          sidebar: !golden,
-        );
-        await tester.enterText(_inSettings(find.byType(TextField)), 'review');
-        await tester.pumpAndSettle();
-        expect(find.textContaining('review'), findsWidgets);
-        final shot = 'history_search_${sizeName}_$theme';
-        if (golden) {
-          await expectLater(
-            find.byType(MaterialApp),
-            matchesGoldenFile('goldens/$shot.png'),
+      if (!lightCopy(brightness)) {
+        testWidgets('200 copies scrolled, some picked, $sizeName, '
+            '$theme', (tester) async {
+          // The whole window, to look at.
+          final d = await open(
+            tester,
+            _fake(200),
+            size: size,
+            brightness: brightness,
+            sidebar: true,
           );
-        } else {
-          await render(tester, find.byType(MaterialApp), shot);
-        }
-        d.dispose();
-      }, variant: onMac);
+          await tester.drag(
+            _inSettings(find.byType(CustomScrollView)),
+            const Offset(0, -1200),
+          );
+          await tester.pumpAndSettle();
+          final shown = _rows(tester)
+              .where((r) => tester.getTopLeft(find.byWidget(r)).dy > 120)
+              .toList();
+          await _clickRow(tester, shown[2].row.id);
+          await _clickRow(
+            tester,
+            shown[5].row.id,
+            holding: LogicalKeyboardKey.shiftLeft,
+          );
+          await _clickRow(
+            tester,
+            shown[8].row.id,
+            holding: LogicalKeyboardKey.metaLeft,
+          );
+          expect(find.textContaining('5 selected'), findsOneWidget);
+          await render(
+            tester,
+            find.byType(MaterialApp),
+            'history_picked_${sizeName}_$theme',
+          );
+          d.dispose();
+        }, variant: onMac);
+      }
+
+      if (sizeName == 'wide' || !lightCopy(brightness)) {
+        testWidgets('the search filtering, $sizeName, $theme', (tester) async {
+          // Wide, it's Chat history's window golden (the sidebar hidden: it
+          // has its own); small, a render.
+          final golden = sizeName == 'wide';
+          final d = await open(
+            tester,
+            _fake(200),
+            size: size,
+            brightness: brightness,
+            sidebar: !golden,
+          );
+          await tester.enterText(_inSettings(find.byType(TextField)), 'review');
+          await tester.pumpAndSettle();
+          expect(find.textContaining('review'), findsWidgets);
+          final shot = 'history_search_${sizeName}_$theme';
+          if (golden) {
+            await expectLater(
+              find.byType(MaterialApp),
+              matchesGoldenFile('goldens/$shot.png'),
+            );
+          } else {
+            await render(tester, find.byType(MaterialApp), shot);
+          }
+          d.dispose();
+        }, variant: onMac);
+      }
     }
   }
 }

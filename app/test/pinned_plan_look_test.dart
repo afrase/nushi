@@ -57,7 +57,7 @@ const _sizes = [('1700', Size(1700, 1000)), ('720', Size(720, 900))];
 void main() {
   setUpAll(loadFonts);
 
-  for (final b in Brightness.values) {
+  for (final b in renderThemes) {
     for (final (w, size) in _sizes) {
       testWidgets('a running plan, ${b.name}, $w wide', (tester) async {
         final (d, _) = await _app(tester, size: size, brightness: b);

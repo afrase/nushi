@@ -225,7 +225,7 @@ void main() {
     (const Size(1700, 1000), 'wide'),
     (const Size(720, 1000), 'narrow'),
   ]) {
-    for (final brightness in Brightness.values) {
+    for (final brightness in renderThemes) {
       testWidgets('subagents and workflows, $label, ${brightness.name}', (
         tester,
       ) async {
@@ -243,7 +243,7 @@ void main() {
     (const Size(430, 932), 'phone-430'),
     (const Size(844, 390), 'phone-landscape'),
   ]) {
-    for (final brightness in Brightness.values) {
+    for (final brightness in renderThemes) {
       testWidgets('on the phone, $label, ${brightness.name}', (tester) async {
         await _phone(
           tester,

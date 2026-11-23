@@ -310,40 +310,43 @@ void main() {
       await closeView(tester, d);
     }, variant: onMac);
 
-    testWidgets('renders: find in Changes unified, 1700 and 720 wide '
-        '($name)', (tester) async {
-      final fake = FakeDaemon([chat('c', 'claude', 'Calc')])..answer = _answers;
-      final d = await fake.connect(tester);
-      d.select('c');
-      final c = d.chats['c']!..tab.value = ChatTab.changes;
-      diffUnified.value = true;
-      for (final width in [1700.0, 720.0]) {
-        viewport(tester, Size(width, 760), brightness: brightness);
-        await tester.pumpWidget(NushiApp(daemon: d));
-        await tester.pumpAndSettle();
-        if (c.changesFind.query == null) {
-          c.changesFind.open();
+    if (!lightCopy(brightness)) {
+      testWidgets('renders: find in Changes unified, 1700 and 720 wide '
+          '($name)', (tester) async {
+        final fake = FakeDaemon([chat('c', 'claude', 'Calc')])
+          ..answer = _answers;
+        final d = await fake.connect(tester);
+        d.select('c');
+        final c = d.chats['c']!..tab.value = ChatTab.changes;
+        diffUnified.value = true;
+        for (final width in [1700.0, 720.0]) {
+          viewport(tester, Size(width, 760), brightness: brightness);
+          await tester.pumpWidget(NushiApp(daemon: d));
           await tester.pumpAndSettle();
-          await tester.enterText(
-            find.descendant(
-              of: find.byType(FindBar),
-              matching: find.byType(EditableText),
-            ),
-            'errors',
+          if (c.changesFind.query == null) {
+            c.changesFind.open();
+            await tester.pumpAndSettle();
+            await tester.enterText(
+              find.descendant(
+                of: find.byType(FindBar),
+                matching: find.byType(EditableText),
+              ),
+              'errors',
+            );
+            await tester.pumpAndSettle();
+            c.changesFind.step(3);
+            await tester.pumpAndSettle();
+          }
+          expect(find.text('4 of 4'), findsOne);
+          expectTextInside(tester, width);
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'find_unified_${width.toInt()}_$name',
           );
-          await tester.pumpAndSettle();
-          c.changesFind.step(3);
-          await tester.pumpAndSettle();
         }
-        expect(find.text('4 of 4'), findsOne);
-        expectTextInside(tester, width);
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'find_unified_${width.toInt()}_$name',
-        );
-      }
-      await closeView(tester, d);
-    }, variant: onMac);
+        await closeView(tester, d);
+      }, variant: onMac);
+    }
   }
 }

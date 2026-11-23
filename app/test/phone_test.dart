@@ -189,45 +189,54 @@ void main() {
       await endPhone(tester, phone);
     });
 
-    testWidgets('pairing: the link, then the code ($name)', (tester) async {
-      final (phone, platform) = await _app(
-        tester,
-        FakeDaemon(_chats),
-        paired: false,
-        brightness: b,
-      );
-      platform
-        ..iPhone = true
-        ..installed = true;
-      await tester.pump();
-      expect(find.text('Pair with your computer'), findsOneWidget);
-      await render(tester, find.byType(PhoneApp), 'phone_pair_$name');
-      phone
-        ..pairing = '491 207'
-        ..notifyListeners();
-      await tester.pump();
-      expect(find.textContaining('491 207'), findsOneWidget);
-      await render(tester, find.byType(PhoneApp), 'phone_pair_code_$name');
-      await endPhone(tester, phone);
-    });
+    if (!lightCopy(b)) {
+      testWidgets('pairing: the link, then the code ($name)', (tester) async {
+        final (phone, platform) = await _app(
+          tester,
+          FakeDaemon(_chats),
+          paired: false,
+          brightness: b,
+        );
+        platform
+          ..iPhone = true
+          ..installed = true;
+        await tester.pump();
+        expect(find.text('Pair with your computer'), findsOneWidget);
+        await render(tester, find.byType(PhoneApp), 'phone_pair_$name');
+        phone
+          ..pairing = '491 207'
+          ..notifyListeners();
+        await tester.pump();
+        expect(find.textContaining('491 207'), findsOneWidget);
+        await render(tester, find.byType(PhoneApp), 'phone_pair_code_$name');
+        await endPhone(tester, phone);
+      });
+    }
 
-    testWidgets('Settings ($name)', (tester) async {
-      final fake = FakeDaemon(_chats)
-        ..answer = (input) =>
-            input is GetPushKeyRequest ? GetPushKeyResponse(key: _vapid) : null;
-      final (phone, _) = await _app(tester, fake, brightness: b);
-      await tester.tap(find.bySemanticsLabel('Settings'));
-      await tester.pumpAndSettle();
-      for (final words in ['Mac', 'Notifications']) {
-        expect(find.text(words), findsWidgets);
-      }
-      await render(tester, find.byType(PhoneApp), 'phone_settings_$name');
-      // The themes and Forget this Mac, under them.
-      await _toForget(tester);
-      await tester.pumpAndSettle();
-      await render(tester, find.byType(PhoneApp), 'phone_settings_${name}_end');
-      await endPhone(tester, phone);
-    });
+    if (!lightCopy(b)) {
+      testWidgets('Settings ($name)', (tester) async {
+        final fake = FakeDaemon(_chats)
+          ..answer = (input) => input is GetPushKeyRequest
+              ? GetPushKeyResponse(key: _vapid)
+              : null;
+        final (phone, _) = await _app(tester, fake, brightness: b);
+        await tester.tap(find.bySemanticsLabel('Settings'));
+        await tester.pumpAndSettle();
+        for (final words in ['Mac', 'Notifications']) {
+          expect(find.text(words), findsWidgets);
+        }
+        await render(tester, find.byType(PhoneApp), 'phone_settings_$name');
+        // The themes and Forget this Mac, under them.
+        await _toForget(tester);
+        await tester.pumpAndSettle();
+        await render(
+          tester,
+          find.byType(PhoneApp),
+          'phone_settings_${name}_end',
+        );
+        await endPhone(tester, phone);
+      });
+    }
   }
 
   // The screens at real sizes: iPhones (the safe area's height: 844 and 932
@@ -464,7 +473,7 @@ void main() {
     await endPhone(tester, phone);
   });
 
-  for (final b in Brightness.values) {
+  for (final b in renderThemes) {
     testWidgets("the chat's ⋯ forks it, and shows the fork (${b.name})", (
       tester,
     ) async {

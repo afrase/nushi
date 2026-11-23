@@ -602,7 +602,7 @@ void main() {
   });
 
   for (final (name, width) in [('wide', 1700.0), ('narrow', 720.0)]) {
-    for (final brightness in Brightness.values) {
+    for (final brightness in renderThemes) {
       testWidgets('the window, $name, ${brightness.name}', (tester) async {
         final (fake, d) = await _app(
           tester,

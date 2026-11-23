@@ -178,7 +178,7 @@ void main() {
     ('wide', const Size(1700, 900)),
     ('narrow', const Size(720, 800)),
   ]) {
-    for (final b in Brightness.values) {
+    for (final b in renderThemes) {
       testWidgets('the fork’s toast, $what, ${b.name}', (tester) async {
         final (d, _) = await _app(tester, size: size, brightness: b);
         await _fork(tester);

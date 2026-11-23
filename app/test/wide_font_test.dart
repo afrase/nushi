@@ -239,14 +239,11 @@ void main() {
 
   // What the pictures above compare with: the same window in the bundled
   // font. A render only.
-  testWidgets(
-    'the main window in the bundled font, for comparison',
-    (tester) async {
-      final d = await _window(tester, const Size(1700, 1000), font: null);
-      await render(tester, find.byType(NushiApp), 'wide_font_window_bundled');
-      await closeView(tester, d);
-    },
-    variant: onMac,
-    skip: rendersDir == null,
-  );
+  renderTest('the main window in the bundled font, for comparison', (
+    tester,
+  ) async {
+    final d = await _window(tester, const Size(1700, 1000), font: null);
+    await render(tester, find.byType(NushiApp), 'wide_font_window_bundled');
+    await closeView(tester, d);
+  }, variant: onMac);
 }

@@ -207,7 +207,7 @@ void main() {
     ('wide', const Size(1700, 900)),
     ('narrow', const Size(720, 800)),
   ]) {
-    for (final b in Brightness.values) {
+    for (final b in renderThemes) {
       testWidgets('the kept side chat’s toast, $what, ${b.name}', (
         tester,
       ) async {
@@ -279,7 +279,7 @@ void main() {
   }, variant: onMac);
 
   for (final (name, brightness) in [
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
     ('dark', Brightness.dark),
   ]) {
     for (final (what, size) in [

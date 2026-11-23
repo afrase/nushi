@@ -302,24 +302,28 @@ void main() {
       ('wide', const Size(1700, 900)),
       ('narrow', const Size(720, 800)),
     ]) {
-      testWidgets('an empty side chat, $what ($name)', (tester) async {
-        final (d, _, _) = await _app(
-          tester,
-          talked: false,
-          size: size,
-          folder: '/Users/me/shop',
-        );
-        tester.platformDispatcher.platformBrightnessTestValue = brightness;
-        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-        await tester.pumpAndSettle();
-        expectTextInside(tester, size.width);
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'side_chat_empty_${what}_$name',
-        );
-        await closeView(tester, d);
-      }, variant: onMac);
+      if (!lightCopy(brightness)) {
+        testWidgets('an empty side chat, $what ($name)', (tester) async {
+          final (d, _, _) = await _app(
+            tester,
+            talked: false,
+            size: size,
+            folder: '/Users/me/shop',
+          );
+          tester.platformDispatcher.platformBrightnessTestValue = brightness;
+          addTearDown(
+            tester.platformDispatcher.clearPlatformBrightnessTestValue,
+          );
+          await tester.pumpAndSettle();
+          expectTextInside(tester, size.width);
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'side_chat_empty_${what}_$name',
+          );
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
     }
   }
 
@@ -344,43 +348,47 @@ void main() {
       ('wide', const Size(1700, 900)),
       ('narrow', const Size(720, 800)),
     ]) {
-      testWidgets('the pickers, $what ($name)', (tester) async {
-        final (d, fake, _) = await _app(tester, size: size);
-        tester.platformDispatcher.platformBrightnessTestValue = brightness;
-        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-        fake.emit(_config);
-        await tester.pumpAndSettle();
-        expectTextInside(tester, size.width);
-        // A side chat's box is too narrow for them in its row (ADR
-        // 0111): under the box, inside the pane.
-        final pane = tester.getRect(find.byType(SideChat));
-        final effort = tester.getRect(
-          find.descendant(
-            of: find.byType(SideChat),
-            matching: find.textContaining('Sonnet', findRichText: true),
-          ),
-        );
-        final plus = tester.getRect(
-          find.descendant(
-            of: find.byType(SideChat),
-            matching: find.byType(PlusButton),
-          ),
-        );
-        expect(effort.right, lessThanOrEqualTo(pane.right));
-        expect(effort.left, greaterThan(pane.left));
-        expect(effort.top, greaterThan(plus.bottom));
-        await render(
-          tester,
-          find.byType(NushiApp),
-          'side_chat_pickers_${what}_$name',
-        );
-        await closeView(tester, d);
-      }, variant: onMac);
+      if (!lightCopy(brightness)) {
+        testWidgets('the pickers, $what ($name)', (tester) async {
+          final (d, fake, _) = await _app(tester, size: size);
+          tester.platformDispatcher.platformBrightnessTestValue = brightness;
+          addTearDown(
+            tester.platformDispatcher.clearPlatformBrightnessTestValue,
+          );
+          fake.emit(_config);
+          await tester.pumpAndSettle();
+          expectTextInside(tester, size.width);
+          // A side chat's box is too narrow for them in its row (ADR
+          // 0111): under the box, inside the pane.
+          final pane = tester.getRect(find.byType(SideChat));
+          final effort = tester.getRect(
+            find.descendant(
+              of: find.byType(SideChat),
+              matching: find.textContaining('Sonnet', findRichText: true),
+            ),
+          );
+          final plus = tester.getRect(
+            find.descendant(
+              of: find.byType(SideChat),
+              matching: find.byType(PlusButton),
+            ),
+          );
+          expect(effort.right, lessThanOrEqualTo(pane.right));
+          expect(effort.left, greaterThan(pane.left));
+          expect(effort.top, greaterThan(plus.bottom));
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'side_chat_pickers_${what}_$name',
+          );
+          await closeView(tester, d);
+        }, variant: onMac);
+      }
     }
   }
 
   for (final (name, brightness) in [
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
     ('dark', Brightness.dark),
   ]) {
     for (final (what, size) in [
@@ -409,7 +417,7 @@ void main() {
   }
 
   for (final (name, brightness) in [
-    ('light', Brightness.light),
+    if (rendering) ('light', Brightness.light),
     ('dark', Brightness.dark),
   ]) {
     for (final (what, size) in [

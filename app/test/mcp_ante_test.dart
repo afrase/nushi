@@ -299,7 +299,7 @@ void main() {
   });
 
   // An Ante remote server's row menu to look at (`make renders`).
-  for (final tokens in [Tokens.dark, Tokens.light]) {
+  for (final tokens in [Tokens.dark, if (rendering) Tokens.light]) {
     for (final width in [1700.0, 720.0]) {
       final name = 'mcp_ante_menu_${width.toInt()}_${tokens.brightness.name}';
       testWidgets('an Ante remote server’s menu, $name', (tester) async {
@@ -323,7 +323,7 @@ void main() {
 
   // Ante's HTTP form to look at (`make renders`): URL and headers, no note
   // of one agent's versions under them.
-  for (final tokens in [Tokens.dark, Tokens.light]) {
+  for (final tokens in [Tokens.dark, if (rendering) Tokens.light]) {
     for (final width in [1700.0, 720.0]) {
       final name = 'mcp_form_ante_${width.toInt()}_${tokens.brightness.name}';
       testWidgets('Ante’s HTTP form, $name', (tester) async {
