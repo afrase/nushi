@@ -87,7 +87,8 @@ void main() {
           showError(context, "Couldn't push: the remote refused it.");
           await shot('a_failure');
           under(toast(tester));
-          hide(context);
+          // A failure goes by its × (hide leaves it).
+          await tester.tap(find.byTooltip('Dismiss'));
           await tester.pumpAndSettle();
           say(
             context,
