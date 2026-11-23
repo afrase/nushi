@@ -88,16 +88,29 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
       # CI has usually checked this commit already; only a commit without a passing CI run of every job (one
       # cancelled by a newer push, or one whose change let CI skip jobs, ADR 0129) is checked here, by the ci job,
-      # which runs them all. Only a push's run counts: a pull request's run is listed under its head commit but tested
-      # the merge of it into the base. CI's Mac app build skipped doesn't count: the app job here is that build.
+      # which runs them all. A run of ci.yml that completed and succeeded, listed under this very commit: a push's, or
+      # a pull request's (a beta's, cut from its branch, ADR 0108). A pull request's run tested its head merged into
+      # the base as it then was, so it counts only for a pull request into main (not one stacked on another branch's)
+      # while main is an ancestor of the commit: then main then was too, and the merge's files are the commit's; any
+      # other runs the ci job. CI's Mac app build skipped doesn't count: the app job here is that build.
       - id: ci
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ steps.tag.outputs.sha }}
         run: |
-          for id in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --event push --commit "$SHA" --status success --json databaseId --jq '.[].databaseId'); do
+          behind=$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$SHA" --jq .behind_by) || behind=unknown
+          for run in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$SHA" --status success --json databaseId,event --jq '.[] | "\(.databaseId):\(.event)"'); do
+            id=${run%%:*} event=${run#*:}
+            if [ "$event" != push ]; then
+              if [ "$behind" != 0 ]; then
+                echo "CI run $id ($event) tested $SHA merged into a main it doesn't hold (main is $behind commits ahead)."; continue
+              fi
+              if [ "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id" --jq '[.pull_requests[].base.ref] | unique == ["main"]')" != true ]; then
+                echo "CI run $id ($event) isn't a pull request's into main."; continue
+              fi
+            fi
             skipped=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/jobs?per_page=100" --jq '[.jobs[] | select(.conclusion == "skipped" and .name != "App build (macOS)")] | length')
-            if [ "$skipped" = 0 ]; then echo "CI passed on $SHA, every job run ($id)."; echo "checked=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            if [ "$skipped" = 0 ]; then echo "CI passed on $SHA, every job run ($id, $event)."; echo "checked=true" >> "$GITHUB_OUTPUT"; exit 0; fi
             echo "CI run $id skipped $skipped jobs."
           done
           echo "No passing CI run of every job for $SHA; the ci job checks it."
