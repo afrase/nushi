@@ -9,8 +9,9 @@ name: Release
 # makes the release public and tap pushes them (security.md's Releases says what runs with which token). A published
 # release is a draft while it builds (draft makes it one at once, undraft public again once its files and casks are
 # there), so neither the update check nor the casks offer it without its files; one whose run fails stays a draft
-# (withdraw makes sure). CI builds, installs and starts the Linux
-# app with the same steps (tools/release.sh's linux part) on every push, since this can't run before a release. Actions are pinned by commit, as in CI.
+# (withdraw makes sure). CI builds, installs and starts the Linux app, and builds the relays with the web app, with
+# the same steps (tools/release.sh's linux and relay parts) on every push, since this can't run before a release.
+# Actions are pinned by commit, as in CI.
 # Each job that runs steps has a timeout, as CI's do: two to three times its longest recent run (2026-10-29), room
 # for a cold cache.
 on:
@@ -226,7 +227,8 @@ jobs:
           channel: stable
           flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
           cache: true
-      # make web's fallback fonts (21 MB from Google's font host, each checked against fonts.lock's sha256).
+      # make web's fallback fonts (21 MB from Google's font host, each checked against fonts.lock's sha256), under the
+      # key CI's web job uses, which fills it.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/nushi/fallback-fonts

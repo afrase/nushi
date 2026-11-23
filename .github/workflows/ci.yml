@@ -4,7 +4,8 @@
 # placement maths (swiftc); and the app's test files that need a Mac, in three shards: those with goldens, drawn with
 # macOS's text rendering (on Linux a third of them differ by 1-4%), and those reading the Mac's own fonts; a fifth, the
 # Mac app packaged, only for a change to what it reads (macos-app). Linux for the
-# rest: the protos' and Dart's lint, the Dart packages' tests, the web app's end-to-end test (nushid with Chrome), and
+# rest: the protos' and Dart's lint, the Dart packages' tests, the web app's end-to-end test (nushid with Chrome) and
+# the relays with the web app built in, as the release builds them (tools/release.sh's relay part), and
 # the daemon on Linux (ADR 0101): every Go package's tests, its lint without cgo for Linux (golangci-lint type-checks
 # and vets), and its build, vet and lint for Windows; and the Linux app (ADR 0104): every other app test file, in three shards, and its package built on each
 # architecture as the release builds it (tools/release.sh's linux part, on the oldest Ubuntu it supports, for the glibc
@@ -267,13 +268,17 @@ jobs:
             artifacts/engine/darwin-x64-release ios-sdk.stamp macos-sdk.stamp android-*.stamp
           du -sh "$FLUTTER_ROOT"
 
-  # On Linux: nushid runs there (ADR 0101) and the image has Chrome, which frees a macOS runner.
+  # On Linux: nushid runs there (ADR 0101) and the image has Chrome, which frees a macOS runner. Then the relays with
+  # the web app built in, as the release's relay job builds them (tools/release.sh's relay part, into dist/, published
+  # nowhere): make web stops on a Flutter whose engine fonts.lock doesn't name, on app/fonts changed without make
+  # web-cut, or on a moved placeholder in Flutter's files, which otherwise first shows on a public release. Unmeasured
+  # yet: 20, the tests' 15 with room for the build (the release's relay job allows 10).
   web:
     name: Web app in Chrome (Linux)
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -291,6 +296,15 @@ jobs:
           flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
           cache: true
       - run: make test-web
+      # make web's fallback fonts, under the release's relay job's key (21 MB from Google's font host, each checked
+      # against fonts.lock's sha256): main's runs fill what the release reads.
+      - if: ${{ !cancelled() }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/nushi/fallback-fonts
+          key: fallback-fonts-${{ runner.os }}-${{ hashFiles('tools/webbuild/fonts.lock') }}
+      - if: ${{ !cancelled() }}
+        run: tools/release.sh 0.0.0-ci relay
 
   linux:
     name: Go tests (Linux)
