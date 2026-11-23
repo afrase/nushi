@@ -42,7 +42,8 @@ class MacView {
   /// Tells the daemon what shows if that changed, or it's time to say it
   /// again.
   void tick() {
-    if (!daemon.connected || daemon.daemonApi < doneApi) return;
+    // Below the floor only the Restart screen shows: nothing to tell.
+    if (!daemon.connected || daemon.daemonApi < apiFloor) return;
     final id = showing;
     final now = DateTime.now();
     // Nothing shown is what a daemon that was told nothing knows.

@@ -7,8 +7,8 @@ import 'package:nushi/widgets.dart';
 
 /// Over the app while the daemon is older than the bundled one and
 /// restarts into it by itself once nothing runs (Daemon.updatesWhenIdle),
-/// with a way to restart now where the app can stop it. A daemon too old
-/// for that gets [OutdatedScreen].
+/// with a way to restart now where the app can stop it. A daemon below
+/// the app's floor ([apiFloor]) gets [OutdatedScreen] instead.
 class DaemonUpdateBar extends StatelessWidget {
   const new(this.daemon, {super.key});
 
@@ -93,9 +93,11 @@ class _Waiting extends StatelessWidget {
   }
 }
 
-/// Says the daemon is older than the app and doesn't restart by itself,
-/// with a way to restart it (where the app can't stop it, how to): the
-/// app shows nothing else until it has.
+/// Says the daemon is older than the app, with a way to restart it (where
+/// the app can't stop it, how to): the app shows nothing else until it
+/// has. For a daemon below [apiFloor] (asked meanwhile to restart once
+/// idle, so it clears by itself), or one with no bundled daemon to restart
+/// into.
 class OutdatedScreen extends StatelessWidget {
   const new(this.daemon, {super.key});
 

@@ -82,6 +82,8 @@ Upgrading quits the app and opens the new one. The daemon keeps running, and so 
 
 Until then, a bar under the header says "Nushi will update its daemon when the chats are idle". It lists what it's waiting for (each a link to its chat) and has **Restart now**. The bar has a row of its own, so it covers nothing. After the restart, chats pick up where they were on their next message. Terminals sitting at their prompt close.
 
+A daemon more than about a week of releases behind the app (below its API floor, [ADR 0004](adr/0004-connect-over-unix-socket.md)) gets no bar: the window shows only "The daemon is older than this app" and **Restart daemon** until it has restarted, which it still does by itself once nothing runs.
+
 To macOS, each release is a new program. So after an upgrade, a Jira token (and a GitHub token you pasted) needs your OK once more. Click **Allow…**, then **Always Allow** in macOS's prompt ([Jira](jira.md)). gh's own login isn't affected.
 
 ## Uninstalling

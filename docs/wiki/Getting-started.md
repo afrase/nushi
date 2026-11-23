@@ -47,6 +47,8 @@ If the card shows an error instead, click **Retry**. A new release can take a fe
 
 If macOS asks whether Nushi Daemon may update other apps, allow it. If the card says the new version is installed, quit Nushi and open it again.
 
+After an update, the daemon (what runs your chats) moves to the new version by itself once no chat is working. Meanwhile a bar says **Nushi will update its daemon when the chats are idle**, with **Restart now**. If the daemon is much older than the app, the window shows only **The daemon is older than this app** until it has moved over. Wait for your chats to finish, or click **Restart daemon**. Restarting stops running turns and closes terminals.
+
 You see **Update** only if you installed Nushi with Homebrew. Otherwise the card has **Download**. It opens the release's page. Install the new version the same way you installed Nushi.
 
 ## What you need

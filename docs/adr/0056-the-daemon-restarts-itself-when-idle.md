@@ -6,6 +6,8 @@ Amended by [0098](0098-the-daemon-runs-a-folders-dev-servers.md): a running dev 
 
 Amended by [0109](0109-update-runs-homebrew.md): an update's install holds the restart until Homebrew is through.
 
+Amended 2026-11-24 by [0004](0004-connect-over-unix-socket.md)'s API floor: the app works as usual while it waits only for a daemon at or above `apiFloor`; one below it gets the blocking screen, and the pings ask every older daemon to restart once idle, so the screen clears by itself (one older than API 77 refuses, and waits for Restart daemon).
+
 ## Context
 An upgrade (Homebrew's, or `make install`) leaves the running daemon and its chats alone (0055), and the app then asked the owner to click "Restart daemon" after every one: "Why is a daemon reset always required?" A restart stops agents mid-turn and ends terminals, so doing it blindly loses work; doing it when nothing runs loses nothing that a sleep wouldn't (chats reopen through `session/load` on their next message).
 

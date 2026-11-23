@@ -16,17 +16,20 @@ extension DaemonLink on Daemon {
   static int _builtAt(String build) =>
       buildTime(build)?.millisecondsSinceEpoch ?? 0;
 
-  /// Whether the daemon is older than the bundled one and restarts into it
-  /// by itself once nothing runs: the pings ask it to (an ask lapses unless
-  /// repeated, so an app that quit leaves it running), and the app starts
-  /// the new one when it has gone. Meanwhile the app works as usual, the
-  /// daemon behind or not (its API only grew), so what runs can be seen
-  /// and answered.
+  /// Whether the daemon is older than the app's floor ([apiFloor]): the
+  /// Mac shows only its Restart screen, the phone says to update it.
+  bool get belowFloor => daemonApi > 0 && daemonApi < apiFloor;
+
+  /// Whether the daemon is older than the bundled one and is asked to
+  /// restart into it once nothing runs: the pings ask it to (an ask lapses
+  /// unless repeated, so an app that quit leaves it running; a daemon too
+  /// old to know the call says so, and is left to the Restart screen), and
+  /// the app starts the new one when it has gone. Meanwhile, at or above
+  /// [apiFloor], the app works as usual, the daemon behind or not (its API
+  /// only grew), so what runs can be seen and answered; below it, the
+  /// Restart screen shows until the new one answers.
   bool get updatesWhenIdle =>
-      !remote &&
-      bundled != null &&
-      daemonApi >= restartWhenIdleApi &&
-      (outdated || replaced);
+      !remote && bundled != null && (outdated || replaced);
 
   void _sawUpdate(UpdateCheck u) {
     if (u == update) return;

@@ -36,14 +36,16 @@ FakeDaemon _daemon(PingResponse? Function() ping) =>
         _ => null,
       };
 
-/// The app on [fake], bundling a daemon built at time 2000.
+/// The app on [fake], bundling a daemon built at time 2000 ([bundled]:
+/// null when it bundles none).
 Future<Daemon> _open(
   WidgetTester tester,
   FakeDaemon fake, {
   double width = 900,
+  String? bundled = '7-2000',
 }) async {
   viewport(tester, Size(width, 500));
-  final d = Daemon(transport: fake)..bundled = '7-2000';
+  final d = Daemon(transport: fake)..bundled = bundled;
   await tester.pumpWidget(NushiApp(daemon: d));
   await tester.pumpAndSettle();
   return d;
@@ -121,15 +123,86 @@ void main() {
     }
   }
 
-  testWidgets('a daemon too old to restart itself keeps the Restart daemon '
-      'screen, unasked', (tester) async {
+  // ADR 0004: below the floor, the Restart screen alone; the pings still
+  // ask the daemon to restart once idle, so the screen clears by itself.
+  testWidgets('a daemon below the floor gets the Restart screen alone, '
+      'asked to restart when idle; the new one clears it', (tester) async {
+    var running = PingResponse(apiVersion: apiFloor - 1, build: '7-1000');
+    final fake = _daemon(() => running);
+    final d = await _open(tester, fake);
+    d.select('c');
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.byType(OutdatedScreen), findsOne);
+    expect(find.text('Restart daemon'), findsOneWidget);
+    expect(find.text(_bar), findsNothing);
+    expect(find.text('Fix the login redirect'), findsNothing);
+    final asked = _asks(fake);
+    expect(asked, greaterThan(0));
+    await tester.pump(const Duration(seconds: 4));
+    expect(_asks(fake), greaterThan(asked));
+    // Behind the screen the window shows nothing: the daemon isn't told.
+    expect(fake.calls.whereType<SetDeviceViewRequest>(), isEmpty);
+
+    // Idle, it restarts into the bundled one: the app comes back.
+    running = PingResponse(apiVersion: apiVersion, build: '7-2000');
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(find.byType(OutdatedScreen), findsNothing);
+    expect(find.text('Fix the login redirect'), findsWidgets);
+    final after = _asks(fake);
+    await tester.pump(const Duration(seconds: 4));
+    expect(_asks(fake), after);
+    d.dispose();
+  }, variant: onMac);
+
+  // From the floor up, the app works on while the daemon waits for idle.
+  for (final api in [apiFloor, apiFloor + 1]) {
+    testWidgets('a daemon at API $api, at or above the floor, keeps the app '
+        'with the bar, asked to restart when idle', (tester) async {
+      final fake = _daemon(
+        () => PingResponse(apiVersion: api, build: '7-1000'),
+      );
+      final d = await _open(tester, fake);
+      d.select('c');
+      await tester.pump(const Duration(seconds: 4));
+      expect(find.byType(OutdatedScreen), findsNothing);
+      expect(find.text(_bar), findsOneWidget);
+      expect(find.text('Fix the login redirect'), findsWidgets);
+      expect(_asks(fake), greaterThan(0));
+      expect(fake.calls.whereType<SetDeviceViewRequest>(), isNotEmpty);
+      d.dispose();
+    }, variant: onMac);
+  }
+
+  testWidgets('a daemon too old to know RestartWhenIdle keeps the Restart '
+      'screen, its refusal ignored', (tester) async {
     final fake = _daemon(
       () => PingResponse(apiVersion: restartWhenIdleApi - 1, build: '7-1000'),
     );
+    var refused = 0;
+    fake.on((input) {
+      if (input is! RestartWhenIdleRequest) return null;
+      refused++;
+      throw ConnectException(Code.unimplemented, 'unknown procedure');
+    });
     final d = await _open(tester, fake);
+    await tester.pump(const Duration(seconds: 4));
     expect(find.textContaining('The daemon is older than this app'), findsOne);
     expect(find.text('Restart daemon'), findsOneWidget);
     expect(find.text(_bar), findsNothing);
+    expect(refused, greaterThan(0));
+    expect(tester.takeException(), isNull);
+    d.dispose();
+  }, variant: onMac);
+
+  testWidgets('with no bundled daemon to restart into, an older daemon gets '
+      'the Restart screen, unasked', (tester) async {
+    final fake = _daemon(
+      () => PingResponse(apiVersion: apiFloor, build: '7-1000'),
+    );
+    final d = await _open(tester, fake, bundled: null);
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.byType(OutdatedScreen), findsOne);
     expect(_asks(fake), 0);
     d.dispose();
   }, variant: onMac);

@@ -60,6 +60,13 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
 /// The API version this app was built with (`internal/api.Version`).
 const apiVersion = 144;
 
+/// The oldest daemon API this app works with (ADR 0004): below it the Mac
+/// shows only its Restart screen (`OutdatedScreen`) until the daemon has
+/// restarted into the bundled one. The API of the newest stable release
+/// at least 7 days old, raised in the commit that cuts each stable
+/// release (`docs/development.md`'s Releases).
+const apiFloor = 120;
+
 /// The API from which GetDiff answers one file (GetDiffRequest.path), what
 /// a file preview's change marks are drawn from.
 const oneFileDiffApi = 121;

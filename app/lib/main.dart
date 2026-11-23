@@ -570,7 +570,10 @@ class _Shell extends StatelessWidget {
         ),
       );
     }
-    if (daemon.outdated && !daemon.updatesWhenIdle) {
+    // Below the floor, or with no way to restart by itself: nothing else
+    // until it has (ADR 0004). The pings keep asking it to restart once
+    // idle meanwhile, so the screen clears by itself.
+    if (daemon.outdated && (daemon.belowFloor || !daemon.updatesWhenIdle)) {
       return TitleBand(child: OutdatedScreen(daemon));
     }
     final chat = daemon.selected;
