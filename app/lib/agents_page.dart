@@ -160,10 +160,9 @@ class AgentRow extends StatelessWidget {
       if (a.version.isNotEmpty) a.version,
       tildePath(a.path),
     ].join(' · ');
-    final problem = switch (a.problem) {
-      'Not installed' => '',
-      final p => p,
-    };
+    // An agent that isn't installed says so on its own line, not again as
+    // its problem.
+    final problem = installed ? a.problem : '';
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
       color: marked ? t.accentSoft : null,
