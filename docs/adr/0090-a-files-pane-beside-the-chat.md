@@ -9,13 +9,13 @@ The roadmap's Files view wanted "a file tree of the chat's folder to open any fi
 - **A side pane of its own, left of the preview** (`files`, about 260 wide): tree, then the file it opened, as an IDE has them. ⇧⌘E, View › Files, the palette and the chat's ⋯ open and close it; it's remembered per chat (`filesChats`). Opening a file goes through `ChatState.openPreview`, so it's a preview tab like any other (ADR 0070), read-only (ADR 0019). A file the preview can't show (a zip, an unknown type) is dimmed and opens nothing.
 - **The daemon lists, a folder at a time** (`WatchChatFolder`, API 103): the folder's entries, folders first, then again on each change, polled each second as `WatchChatFile` is; git runs (`check-ignore`) only when something changed. The app holds one stream per folder in sight; a folder is listed when it opens.
 - **What's hidden**: `.git` always, by any name (a link to it too). What git ignores is left out unless the pane's eye shows it, dimmed (one app-wide switch, `filesIgnored`). A tracked file under an ignore pattern shows, as git sees it.
-- **The caps**: 500 entries a folder by default, 2,000 at most, the rest counted as "N more" (counted up to 50,000 read); three levels and 5,000 entries a call. The filter looks through git's list of the folder (`ListFiles`, 20,000 at most), so it finds what isn't listed past a cap, plus whatever is listed.
+- **The caps**: 500 entries a folder, the rest counted as "N more" (counted up to 50,000 read); one folder a call. The filter looks through git's list of the folder (`ListFiles`, 20,000 at most), so it finds what isn't listed past a cap, plus whatever is listed.
 - **The path is untrusted**: relative, no `..`, no empty part, no `.git`, 4096 bytes, read through `os.Root`; a link out, a loop or a dangling link is listed as a link and never followed. Refusals are fixed text, so a client's path stays out of the log.
 - **The phone** has the same tree as a screen (the chat's ⋯ › Files), each row a touch target; a file opens full screen.
 
 ## Consequences
 - The files the chat wrote are marked from its tool calls (`chatWrote`: every file it wrote or edited, code too), and the folders holding them; a file changed in a terminal isn't.
-- Watching costs a stat of each folder in sight and each entry it sent, each second, while the pane shows. A big open folder (node_modules, shown) costs up to 2,000 stats a second.
+- Watching costs a stat of each folder in sight and each entry it sent, each second, while the pane shows. A big open folder (node_modules, shown) costs up to 500 stats a second.
 - A changed nested `.gitignore` is seen when its folder or an entry changes, not on its own (only the top one is watched).
 - In a window too narrow for the panes beside the transcript, they lie over it, as before.
 
@@ -34,3 +34,4 @@ The roadmap's Files view wanted "a file tree of the chat's folder to open any fi
 
 **Amendment (2026-11-16): the tree hides, collapses and takes either side**, as Claude desktop's ([ADR 0123](0123-side-panes-right-of-the-rail.md)'s amendment): the pane's second row ends in Collapse all folders (every folder closed at once, their listings ended, the keys on the top folder that held them), the tree shown or hidden (⇧⌘Y, one choice for the app; hidden, the viewer takes its room) and ⋯, whose File tree position puts it on the right (Automatic, away from the transcript) or the left. A click on a file opens a provisional tab with Preview tabs on ([ADR 0070](0070-preview-tabs-are-the-panes-own.md)'s amendment); ⏎ keeps it.
 
+**Amendment (2026-11-23): one folder a call.** `WatchChatFolder`'s `depth` and `limit`, which no client ever sent, are reserved: a call lists its one folder, at most 500 entries, and the daemon keeps no lister of several levels.

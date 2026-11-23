@@ -26,18 +26,11 @@ import (
 
 // The bounds of a listing.
 const (
-	// DefaultLimit is the most entries a folder sends when the request
-	// names none; MaxLimit the most it may name. The rest is counted.
-	DefaultLimit = 500
-	MaxLimit     = 2000
-	// MaxDepth is the most levels one request lists.
-	MaxDepth = 3
+	// Limit is the most entries a folder sends; the rest is counted.
+	Limit = 500
 	// readCap is the most entries read of one folder: past it the rest
 	// isn't counted either, so a folder of millions stays fast.
 	readCap = 50_000
-	// maxEntries is the most entries one listing sends over all its
-	// folders: the folder that reaches it is cut there, and depth stops.
-	maxEntries = 5000
 	// maxPath bounds a path asked for, past what macOS would open.
 	maxPath = 4096
 )
@@ -72,7 +65,7 @@ type Entry struct {
 }
 
 // Listing is one folder's entries: folders first, then the rest, each by
-// name; at most the limit of them, More counting those left out.
+// name; at most Limit of them, More counting those left out.
 type Listing struct {
 	Path    string // relative to the chat's folder, "" for itself
 	Entries []Entry
@@ -82,20 +75,10 @@ type Listing struct {
 	at time.Time // the folder's own time before it was read
 }
 
-// Options are what a request asks for.
+// Options are what a request asks for. A folder at a time: the app opens
+// a stream per folder in sight (ADR 0090).
 type Options struct {
-	Depth   int  // levels: 1 (or 0) lists the folder; 2 its folders too
 	Ignored bool // what git ignores is listed, marked, not left out
-	Limit   int  // entries a folder sends; 0 for DefaultLimit
-}
-
-func (o Options) bounded() Options {
-	o.Depth = min(max(o.Depth, 1), MaxDepth)
-	if o.Limit <= 0 {
-		o.Limit = DefaultLimit
-	}
-	o.Limit = min(o.Limit, MaxLimit)
-	return o
 }
 
 // Clean checks a path a client asked for: "" or "." is the folder itself;
@@ -118,51 +101,16 @@ func Clean(rel string) (string, error) {
 	return rel, nil
 }
 
-// List lists rel (Clean's) inside root and, to o.Depth, the folders it
-// sends. A path that isn't a folder, or leads out of root, is ErrFolder;
-// one that isn't there is a Listing that says so.
-func List(ctx context.Context, root, rel string, o Options) ([]Listing, error) {
+// List lists rel (Clean's) inside root. A path that isn't a folder, or
+// leads out of root, is ErrFolder; one that isn't there is a Listing that
+// says so.
+func List(ctx context.Context, root, rel string, o Options) (Listing, error) {
 	r, err := os.OpenRoot(root)
 	if err != nil {
-		return nil, err
+		return Listing{}, err
 	}
 	defer r.Close() //nolint:errcheck // read-only
-	return list(ctx, r, root, rel, o.bounded())
-}
-
-func list(ctx context.Context, r *os.Root, root, rel string, o Options) ([]Listing, error) {
-	first, err := one(ctx, r, root, rel, o)
-	if err != nil {
-		return nil, err
-	}
-	out, level, sent := []Listing{first}, []Listing{first}, len(first.Entries)
-	for depth := 2; depth <= o.Depth && sent < maxEntries; depth++ {
-		var next []Listing
-		for _, l := range level {
-			for _, e := range l.Entries {
-				// A linked folder is listed when it's opened: a link back
-				// up would list the same folders again.
-				if e.Kind != Folder || e.Linked || sent >= maxEntries {
-					continue
-				}
-				sub, err := one(ctx, r, root, join(l.Path, e.Name), o)
-				if err != nil {
-					continue
-				}
-				// The folder that crosses the cap sends up to it and
-				// counts the rest.
-				if room := maxEntries - sent; len(sub.Entries) > room {
-					sub.More += len(sub.Entries) - room
-					sub.Entries = sub.Entries[:room]
-				}
-				sent += len(sub.Entries)
-				next = append(next, sub)
-			}
-		}
-		out = append(out, next...)
-		level = next
-	}
-	return out, nil
+	return one(ctx, r, root, rel, o)
 }
 
 // one lists one folder.
@@ -219,7 +167,7 @@ func one(ctx context.Context, r *os.Root, root, rel string, o Options) (Listing,
 		}
 	}
 	slices.SortFunc(kept, byKindThenName)
-	l.Entries = kept[:min(len(kept), o.Limit)]
+	l.Entries = kept[:min(len(kept), Limit)]
 	l.More = len(kept) - len(l.Entries)
 	return l, nil
 }

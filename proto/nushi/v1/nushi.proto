@@ -2188,17 +2188,15 @@ message WatchChatFolderRequest {
   string chat_id = 1;
   // Relative to the chat's folder, "/"-separated; "" for the folder.
   string path = 2;
-  // Levels listed: 1 (or 0) the folder's entries; 2 and 3 its folders'
-  // too, as many as fit 5,000 entries.
-  int32 depth = 3;
+  // Levels listed and the most entries a folder sends: no client sent
+  // them. A folder is listed alone, at most 500 entries (ADR 0090).
+  reserved 3, 5;
+  reserved "depth", "limit";
   // List what git ignores too, marked, rather than leave it out.
   bool ignored = 4;
-  // The most entries a folder sends: 0 for 500; 2,000 at most.
-  int32 limit = 5;
 }
 
-// The folder as it is now: its listing, then those of its folders, to
-// the depth asked.
+// The folder as it is now: its listing, the only one in folders.
 message WatchChatFolderResponse {
   repeated FolderListing folders = 1;
 }

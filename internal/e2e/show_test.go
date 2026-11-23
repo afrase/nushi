@@ -91,17 +91,22 @@ func TestWatchChatFolder(t *testing.T) {
 	testcheck.Write(t, filepath.Join(folder, "docs", "a.md"), "a")
 	testcheck.Write(t, filepath.Join(folder, "b.txt"), "b")
 	for _, a := range []*app{mac, phone} {
-		stream, err := a.c.WatchChatFolder(ctx, connect.NewRequest(&nushiv1.WatchChatFolderRequest{ChatId: id, Depth: 2}))
-		testcheck.NoErr(t, err)
-		if !stream.Receive() {
-			t.Fatalf("no listing: %v", stream.Err())
+		// A folder at a time, as the app opens one stream per folder.
+		listing := func(path string) []*nushiv1.FolderListing {
+			stream, err := a.c.WatchChatFolder(ctx, connect.NewRequest(&nushiv1.WatchChatFolderRequest{ChatId: id, Path: path}))
+			testcheck.NoErr(t, err)
+			defer stream.Close() //nolint:errcheck // a test's stream
+			if !stream.Receive() {
+				t.Fatalf("no listing of %q: %v", path, stream.Err())
+			}
+			return stream.Msg().Folders
 		}
-		fs := stream.Msg().Folders
-		if len(fs) != 2 || len(fs[0].Entries) != 2 || fs[0].Entries[0].Name != "docs" || fs[0].Entries[0].Kind != "folder" ||
-			fs[1].Path != "docs" || fs[1].Entries[0].Name != "a.md" || fs[1].Entries[0].Size != 1 {
+		if fs := listing(""); len(fs) != 1 || len(fs[0].Entries) != 2 || fs[0].Entries[0].Name != "docs" || fs[0].Entries[0].Kind != "folder" {
 			t.Errorf("listing %v", fs)
 		}
-		_ = stream.Close()
+		if fs := listing("docs"); len(fs) != 1 || fs[0].Path != "docs" || fs[0].Entries[0].Name != "a.md" || fs[0].Entries[0].Size != 1 {
+			t.Errorf("docs %v", fs)
+		}
 		for _, p := range []string{"..", "../", "/etc", "docs/../..", ".git"} {
 			stream, err := a.c.WatchChatFolder(ctx, connect.NewRequest(&nushiv1.WatchChatFolderRequest{ChatId: id, Path: p}))
 			testcheck.NoErr(t, err)

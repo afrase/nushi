@@ -14,28 +14,27 @@ import (
 // be listed (that error). A change is a folder's own time (an entry
 // added, removed or renamed), a sent entry's kind, size or time, or the
 // top .gitignore's: a stat each, and git runs only when one changed.
-func Watch(ctx context.Context, root, rel string, o Options, every time.Duration, send func([]Listing) error) error {
-	o = o.bounded()
+func Watch(ctx context.Context, root, rel string, o Options, every time.Duration, send func(Listing) error) error {
 	tick := time.NewTicker(every)
 	defer tick.Stop()
 	for {
 		ignores := ignoresStamp(root)
-		ls, err := List(ctx, root, rel, o)
+		l, err := List(ctx, root, rel, o)
 		if err != nil {
 			return err
 		}
-		if err := send(ls); err != nil {
+		if err := send(l); err != nil {
 			return err
 		}
 		// As read: a change since the read differs from it.
-		last := listed(ls, ignores)
+		last := listed(l, ignores)
 		for {
 			select {
 			case <-ctx.Done():
 				return nil
 			case <-tick.C:
 			}
-			if now(root, ls) != last {
+			if now(root, l) != last {
 				break
 			}
 		}
@@ -60,26 +59,24 @@ func putEntry(h hash.Hash64, e Entry) {
 	put(h, e.Size, e.Modified.UnixNano())
 }
 
-// listed is the stamp of ls as it was read, with the .gitignore's.
-func listed(ls []Listing, ignores int64) stamp {
+// listed is the stamp of l as it was read, with the .gitignore's.
+func listed(l Listing, ignores int64) stamp {
 	h := newHash()
 	put(h, ignores)
-	for _, l := range ls {
-		if l.Missing {
-			put(h, -1)
-			continue
-		}
-		put(h, l.at.UnixNano())
-		for _, e := range l.Entries {
-			putEntry(h, e)
-		}
+	if l.Missing {
+		put(h, -1)
+		return stamp(h.Sum64())
+	}
+	put(h, l.at.UnixNano())
+	for _, e := range l.Entries {
+		putEntry(h, e)
 	}
 	return stamp(h.Sum64())
 }
 
-// now is the stamp of the folders and entries of ls as they are now: the
-// same as listed's when nothing changed.
-func now(root string, ls []Listing) stamp {
+// now is the stamp of l's folder and entries as they are now: the same as
+// listed's when nothing changed.
+func now(root string, l Listing) stamp {
 	h := newHash()
 	put(h, ignoresStamp(root))
 	r, err := os.OpenRoot(root)
@@ -87,22 +84,20 @@ func now(root string, ls []Listing) stamp {
 		return stamp(h.Sum64())
 	}
 	defer r.Close() //nolint:errcheck // read-only
-	for _, l := range ls {
-		rel := l.Path
-		if rel == "" {
-			rel = "."
-		}
-		fi, err := r.Stat(rel)
-		if err != nil {
-			put(h, -1)
-			continue
-		}
-		put(h, fi.ModTime().UnixNano())
-		for _, e := range l.Entries {
-			p := join(l.Path, e.Name)
-			info, err := r.Lstat(p)
-			putEntry(h, entry(r, p, e.Name, info, err))
-		}
+	rel := l.Path
+	if rel == "" {
+		rel = "."
+	}
+	fi, err := r.Stat(rel)
+	if err != nil {
+		put(h, -1)
+		return stamp(h.Sum64())
+	}
+	put(h, fi.ModTime().UnixNano())
+	for _, e := range l.Entries {
+		p := join(l.Path, e.Name)
+		info, err := r.Lstat(p)
+		putEntry(h, entry(r, p, e.Name, info, err))
 	}
 	return stamp(h.Sum64())
 }

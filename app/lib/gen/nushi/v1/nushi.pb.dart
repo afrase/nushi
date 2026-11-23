@@ -14911,16 +14911,12 @@ class WatchChatFolderRequest extends $pb.GeneratedMessage {
   factory WatchChatFolderRequest({
     $core.String? chatId,
     $core.String? path,
-    $core.int? depth,
     $core.bool? ignored,
-    $core.int? limit,
   }) {
     final result = WatchChatFolderRequest._();
     if (chatId != null) result.chatId = chatId;
     if (path != null) result.path = path;
-    if (depth != null) result.depth = depth;
     if (ignored != null) result.ignored = ignored;
-    if (limit != null) result.limit = limit;
     return result;
   }
 
@@ -14939,9 +14935,7 @@ class WatchChatFolderRequest extends $pb.GeneratedMessage {
       createEmptyInstance: WatchChatFolderRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOS(2, _omitFieldNames ? '' : 'path')
-    ..aI(3, _omitFieldNames ? '' : 'depth')
     ..aOB(4, _omitFieldNames ? '' : 'ignored')
-    ..aI(5, _omitFieldNames ? '' : 'limit')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -14987,40 +14981,18 @@ class WatchChatFolderRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearPath() => $_clearField(2);
 
-  /// Levels listed: 1 (or 0) the folder's entries; 2 and 3 its folders'
-  /// too, as many as fit 5,000 entries.
-  @$pb.TagNumber(3)
-  $core.int get depth => $_getIZ(2);
-  @$pb.TagNumber(3)
-  set depth($core.int value) => $_setSignedInt32(2, value);
-  @$pb.TagNumber(3)
-  $core.bool hasDepth() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearDepth() => $_clearField(3);
-
   /// List what git ignores too, marked, rather than leave it out.
   @$pb.TagNumber(4)
-  $core.bool get ignored => $_getBF(3);
+  $core.bool get ignored => $_getBF(2);
   @$pb.TagNumber(4)
-  set ignored($core.bool value) => $_setBool(3, value);
+  set ignored($core.bool value) => $_setBool(2, value);
   @$pb.TagNumber(4)
-  $core.bool hasIgnored() => $_has(3);
+  $core.bool hasIgnored() => $_has(2);
   @$pb.TagNumber(4)
   void clearIgnored() => $_clearField(4);
-
-  /// The most entries a folder sends: 0 for 500; 2,000 at most.
-  @$pb.TagNumber(5)
-  $core.int get limit => $_getIZ(4);
-  @$pb.TagNumber(5)
-  set limit($core.int value) => $_setSignedInt32(4, value);
-  @$pb.TagNumber(5)
-  $core.bool hasLimit() => $_has(4);
-  @$pb.TagNumber(5)
-  void clearLimit() => $_clearField(5);
 }
 
-/// The folder as it is now: its listing, then those of its folders, to
-/// the depth asked.
+/// The folder as it is now: its listing, the only one in folders.
 class WatchChatFolderResponse extends $pb.GeneratedMessage {
   factory WatchChatFolderResponse({
     $core.Iterable<FolderListing>? folders,

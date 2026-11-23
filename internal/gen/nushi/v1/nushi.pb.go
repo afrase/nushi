@@ -11721,13 +11721,8 @@ type WatchChatFolderRequest struct {
 	ChatId string                 `protobuf:"bytes,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
 	// Relative to the chat's folder, "/"-separated; "" for the folder.
 	Path string `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
-	// Levels listed: 1 (or 0) the folder's entries; 2 and 3 its folders'
-	// too, as many as fit 5,000 entries.
-	Depth int32 `protobuf:"varint,3,opt,name=depth,proto3" json:"depth,omitempty"`
 	// List what git ignores too, marked, rather than leave it out.
-	Ignored bool `protobuf:"varint,4,opt,name=ignored,proto3" json:"ignored,omitempty"`
-	// The most entries a folder sends: 0 for 500; 2,000 at most.
-	Limit         int32 `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
+	Ignored       bool `protobuf:"varint,4,opt,name=ignored,proto3" json:"ignored,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11776,13 +11771,6 @@ func (x *WatchChatFolderRequest) GetPath() string {
 	return ""
 }
 
-func (x *WatchChatFolderRequest) GetDepth() int32 {
-	if x != nil {
-		return x.Depth
-	}
-	return 0
-}
-
 func (x *WatchChatFolderRequest) GetIgnored() bool {
 	if x != nil {
 		return x.Ignored
@@ -11790,15 +11778,7 @@ func (x *WatchChatFolderRequest) GetIgnored() bool {
 	return false
 }
 
-func (x *WatchChatFolderRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-// The folder as it is now: its listing, then those of its folders, to
-// the depth asked.
+// The folder as it is now: its listing, the only one in folders.
 type WatchChatFolderResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Folders       []*FolderListing       `protobuf:"bytes,1,rep,name=folders,proto3" json:"folders,omitempty"`
@@ -28957,13 +28937,11 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x14\n" +
 	"\x05paths\x18\x02 \x03(\tR\x05paths\"-\n" +
 	"\x15FindChatFilesResponse\x12\x14\n" +
-	"\x05found\x18\x01 \x03(\tR\x05found\"\x8b\x01\n" +
+	"\x05found\x18\x01 \x03(\tR\x05found\"y\n" +
 	"\x16WatchChatFolderRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x12\n" +
-	"\x04path\x18\x02 \x01(\tR\x04path\x12\x14\n" +
-	"\x05depth\x18\x03 \x01(\x05R\x05depth\x12\x18\n" +
-	"\aignored\x18\x04 \x01(\bR\aignored\x12\x14\n" +
-	"\x05limit\x18\x05 \x01(\x05R\x05limit\"L\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12\x18\n" +
+	"\aignored\x18\x04 \x01(\bR\aignoredJ\x04\b\x03\x10\x04J\x04\b\x05\x10\x06R\x05depthR\x05limit\"L\n" +
 	"\x17WatchChatFolderResponse\x121\n" +
 	"\afolders\x18\x01 \x03(\v2\x17.nushi.v1.FolderListingR\afolders\"\x82\x01\n" +
 	"\rFolderListing\x12\x12\n" +
