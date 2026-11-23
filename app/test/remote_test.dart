@@ -1,6 +1,7 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart' show Toggle;
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/remote.dart';
@@ -36,7 +37,7 @@ void main() {
         home: const Scaffold(),
       ),
     );
-    watchPairings(navigator, NushiServiceClient(daemon));
+    addTearDown(watchPairings(navigator, NushiServiceClient(daemon)));
 
     remoteState.value = Remote(on: true, pairing: Pairing());
     await tester.pumpAndSettle();
@@ -76,6 +77,29 @@ void main() {
       pairingLink('nushi://pair?r=ws%3A%2F%2F127.0.0.1%3A8099&i=a'),
       'http://127.0.0.1:8099/#pair?r=ws%3A%2F%2F127.0.0.1%3A8099&i=a',
     );
+  });
+
+  testWidgets('the relay field fills when the daemon first answers; turning '
+      'off sends the saved relay, not what the field holds', (tester) async {
+    final daemon = _daemon()
+      ..on((input) => input is SetRemoteRequest ? SetRemoteResponse() : null);
+    viewport(tester, const Size(720, 560));
+    await tester.pumpWidget(
+      themed(RemoteSection(NushiServiceClient(daemon)), banner: false),
+    );
+    remoteState.value = Remote(on: true, relay: 'wss://relay.example.com');
+    await tester.pumpAndSettle();
+    expect(find.text('wss://relay.example.com'), findsOneWidget);
+    // An edit never submitted is the user's still, not the daemon's.
+    await tester.enterText(find.byType(TextField), 'wss://half');
+    remoteState.value = Remote(on: true, relay: 'wss://relay.example.com');
+    await tester.pumpAndSettle();
+    expect(find.text('wss://half'), findsOneWidget);
+    await tester.tap(find.byType(Toggle));
+    await tester.pumpAndSettle();
+    final sent = daemon.calls.whereType<SetRemoteRequest>().single;
+    expect(sent.on, isFalse);
+    expect(sent.relay, 'wss://relay.example.com');
   });
 
   testWidgets('Pair a phone offers Copy link', (tester) async {

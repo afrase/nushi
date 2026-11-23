@@ -44,21 +44,33 @@ class _RemoteSectionState extends State<RemoteSection> {
   @override
   void initState() {
     super.initState();
-    _relay.text = remoteState.value?.relay ?? '';
+    remoteState.addListener(_seed);
+    _seed();
+  }
+
+  /// Fills the field with the saved relay once the daemon has said it,
+  /// and never again: what the user types is theirs until submitted.
+  void _seed() {
+    final r = remoteState.value;
+    if (r == null) return;
+    remoteState.removeListener(_seed);
+    _relay.text = r.relay;
   }
 
   @override
   void dispose() {
+    remoteState.removeListener(_seed);
     _relay.dispose();
     super.dispose();
   }
 
-  Future<void> _set(bool on) => tryOrShow(
-    context,
-    () => widget.client.setRemote(
-      SetRemoteRequest(on: on, relay: _relay.text.trim()),
-    ),
-  );
+  /// Turning on sends the field's relay (typed, then switched on);
+  /// turning off sends the [saved] one, so an edit never submitted, or a
+  /// cleared field, isn't saved by the switch.
+  Future<void> _set(bool on, String saved) async {
+    final relay = on ? _relay.text.trim() : saved;
+    await widget.client.setRemote(SetRemoteRequest(on: on, relay: relay));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +101,10 @@ class _RemoteSectionState extends State<RemoteSection> {
                     if (r.on) 'keeps the ${conventions.machine} awake',
                   ].join(' · '),
                   descriptionColor: r.state == 'error' ? t.crashed : null,
-                  control: SettingsSwitch(value: r.on, onChanged: _set),
+                  control: SettingsSwitch(
+                    value: r.on,
+                    run: ({required on}) => _set(on, r.relay),
+                  ),
                 ),
                 SettingsRow(
                   'Relay',
@@ -106,7 +121,9 @@ class _RemoteSectionState extends State<RemoteSection> {
                         hintText: 'For example wss://relay.example.com',
                         isDense: true,
                       ),
-                      onSubmitted: (_) => r.on ? _set(true) : null,
+                      onSubmitted: (_) => r.on
+                          ? tryOrShow(context, () => _set(true, r.relay))
+                          : null,
                     ),
                   ),
                 ),
@@ -278,19 +295,23 @@ Future<void> _show(
 
 /// Asks Allow or Deny whenever a pairing reaches its code, whoever started
 /// it, unless a pairing dialog is open already.
-void watchPairings(
+/// Returns what stops it watching.
+VoidCallback watchPairings(
   GlobalKey<NavigatorState> navigator,
   NushiServiceClient client,
 ) {
   var asked = '';
-  remoteState.addListener(() {
+  void changed() {
     final r = remoteState.value;
     final code = r != null && r.hasPairing() ? r.pairing.code : '';
     final context = navigator.currentContext;
     if (code.isEmpty || code == asked || _open.value || context == null) return;
     asked = code;
     unawaited(_show(context, client, ''));
-  });
+  }
+
+  remoteState.addListener(changed);
+  return () => remoteState.removeListener(changed);
 }
 
 class _Pairing extends StatelessWidget {
