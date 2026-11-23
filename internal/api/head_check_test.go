@@ -29,7 +29,7 @@ type headWorktrees struct {
 	removed         []string
 }
 
-func (w *headWorktrees) Add(_ context.Context, _, name, branch, from string) (model.Worktree, string, error) {
+func (w *headWorktrees) Add(_ context.Context, _, name, branch, from string, _ func(string) bool) (model.Worktree, string, error) {
 	path := filepath.Join(w.dir, name)
 	if err := os.MkdirAll(filepath.Join(path, ".claude"), 0o700); err != nil {
 		return model.Worktree{}, "", err

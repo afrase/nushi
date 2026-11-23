@@ -199,7 +199,7 @@ func TestARepositorysOwnConfigRunsNothing(t *testing.T) {
 	testcheck.Git(t, repo, "config", "gpg.program", gpg)
 	testcheck.Git(t, repo, "config", "log.showSignature", "true")
 	testcheck.Git(t, repo, "config", "core.fsmonitor", mark("fsmonitor")+"; true")
-	if _, _, err := (Worktrees{}).Add(ctx, repo, "wt", "", ""); err != nil {
+	if _, _, err := (Worktrees{}).Add(ctx, repo, "wt", "", "", nil); err != nil {
 		t.Fatal(err)
 	}
 	// A partial clone missing a blob: fetching it would run the transport

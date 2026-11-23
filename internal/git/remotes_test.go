@@ -46,7 +46,7 @@ func TestFetchAPullsHead(t *testing.T) {
 	testcheck.Git(t, filepath.Dir(clone), "clone", "-q", base, clone)
 
 	testcheck.NoErr(t, Fetch(ctx, clone, "origin", "+refs/heads/feature:refs/remotes/origin/feature"))
-	wt, in, err := Worktrees{}.Add(ctx, clone, "feature", "feature", "refs/remotes/origin/feature")
+	wt, in, err := Worktrees{}.Add(ctx, clone, "feature", "feature", "refs/remotes/origin/feature", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestFetchAPullsHead(t *testing.T) {
 	}
 
 	testcheck.NoErr(t, Fetch(ctx, clone, "origin", "+refs/pull/7/head:refs/nushi/pull/7"))
-	_, in, err = Worktrees{}.Add(ctx, clone, "pr-7", "pr-7-feature", "refs/nushi/pull/7")
+	_, in, err = Worktrees{}.Add(ctx, clone, "pr-7", "pr-7-feature", "refs/nushi/pull/7", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

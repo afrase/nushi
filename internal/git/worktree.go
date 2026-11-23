@@ -25,9 +25,11 @@ type Worktrees struct{}
 // from (a ref: a remote's branch, which the new branch then tracks, or
 // another), and keeps .worktrees/ out of git through the repository's
 // info/exclude. It returns the worktree and the folder in it that matches
-// folder (the same subfolder). A name already taken (folder or branch)
-// fails with fs.ErrExist.
-func (Worktrees) Add(ctx context.Context, folder, name, branch, from string) (model.Worktree, string, error) {
+// folder (the same subfolder). A name already taken (folder or branch, or
+// a path taken says is) fails with fs.ErrExist, and a folder the commit
+// doesn't have (one git doesn't track) with ErrNotCommitted, both before
+// anything is checked out.
+func (Worktrees) Add(ctx context.Context, folder, name, branch, from string, taken func(path string) bool) (model.Worktree, string, error) {
 	var wt model.Worktree
 	repo, err := mainWorktree(ctx, folder)
 	if err != nil {
@@ -46,7 +48,7 @@ func (Worktrees) Add(ctx context.Context, folder, name, branch, from string) (mo
 	if err := worktreesFolder(repo); err != nil {
 		return wt, "", err
 	}
-	if _, err := os.Lstat(wt.Path); err == nil {
+	if _, err := os.Lstat(wt.Path); err == nil || taken != nil && taken(wt.Path) {
 		return wt, "", fmt.Errorf("%s: %w", wt.Path, fs.ErrExist)
 	}
 	if hasBranch(ctx, folder, wt.Branch) {
@@ -79,6 +81,11 @@ func (Worktrees) Add(ctx context.Context, folder, name, branch, from string) (mo
 		}
 		add = append(add, "-b", wt.Branch, wt.Path, from)
 	}
+	if sub != "" { // a folder of the commit's (a submodule is a commit there, not a folder)
+		if out, err := run(ctx, folder, "cat-file", "-t", wt.BaseCommit+":"+sub); err != nil || strings.TrimSpace(string(out)) != "tree" {
+			return wt, "", fmt.Errorf("%s: %w", sub, ErrNotCommitted)
+		}
+	}
 	if err := Exclude(ctx, folder, "/.worktrees/"); err != nil {
 		return wt, "", err
 	}
@@ -87,6 +94,10 @@ func (Worktrees) Add(ctx context.Context, folder, name, branch, from string) (mo
 	}
 	return wt, filepath.Join(wt.Path, sub), nil
 }
+
+// ErrNotCommitted is a folder a commit doesn't have: one git doesn't track,
+// which a worktree made from the commit wouldn't have.
+var ErrNotCommitted = errors.New("the folder isn't in the commit")
 
 // worktreesFolder makes <repo>/.worktrees, or checks the one there is a
 // folder of the repository's own: a repository could bring a link there

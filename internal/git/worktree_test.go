@@ -27,7 +27,7 @@ func TestWorktrees(t *testing.T) {
 	testcheck.Git(t, repo, "add", ".")
 	testcheck.Git(t, repo, "commit", "-q", "-m", "init")
 
-	wt, folder, err := Worktrees{}.Add(ctx, filepath.Join(repo, "sub"), "brave-otter", "", "")
+	wt, folder, err := Worktrees{}.Add(ctx, filepath.Join(repo, "sub"), "brave-otter", "", "", nil)
 	want := model.Worktree{Repo: repo, Path: filepath.Join(repo, ".worktrees", "brave-otter"), Branch: "nushi/brave-otter", Base: "main"}
 	want.BaseCommit = wt.BaseCommit
 	if err != nil || len(wt.BaseCommit) != 40 || wt != want || folder != filepath.Join(want.Path, "sub") {
@@ -38,7 +38,7 @@ func TestWorktrees(t *testing.T) {
 	}
 	// From inside the worktree, the next one still goes beside it, and
 	// .worktrees/ is excluded once.
-	if _, _, err := (Worktrees{}).Add(ctx, folder, "brave-otter", "", ""); !errors.Is(err, fs.ErrExist) {
+	if _, _, err := (Worktrees{}).Add(ctx, folder, "brave-otter", "", "", nil); !errors.Is(err, fs.ErrExist) {
 		t.Errorf("a taken name: %v", err)
 	}
 	// A name is taken by its folder alone, or by its branch alone (a
@@ -46,17 +46,40 @@ func TestWorktrees(t *testing.T) {
 	testcheck.NoErr(t, os.MkdirAll(filepath.Join(repo, ".worktrees", "lone-folder"), 0o755))
 	testcheck.Git(t, repo, "branch", "nushi/lone-branch")
 	for _, name := range []string{"lone-folder", "lone-branch"} {
-		if _, _, err := (Worktrees{}).Add(ctx, repo, name, "", ""); !errors.Is(err, fs.ErrExist) {
+		if _, _, err := (Worktrees{}).Add(ctx, repo, name, "", "", nil); !errors.Is(err, fs.ErrExist) {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
+	// A path the caller has taken, or a folder the commit doesn't have, is
+	// refused before any checkout: no folder, no branch.
+	taken := func(path string) bool { return filepath.Base(path) == "on-record" }
+	testcheck.Write(t, filepath.Join(repo, "untracked", "b.txt"), "b\n")
+	for name, add := range map[string]func() error{
+		"on-record": func() error { _, _, err := (Worktrees{}).Add(ctx, repo, "on-record", "", "", taken); return err },
+		"untracked": func() error {
+			_, _, err := (Worktrees{}).Add(ctx, filepath.Join(repo, "untracked"), "untracked", "", "", nil)
+			if !errors.Is(err, ErrNotCommitted) {
+				return fmt.Errorf("not ErrNotCommitted: %w", err)
+			}
+			return fs.ErrExist
+		},
+	} {
+		if err := add(); !errors.Is(err, fs.ErrExist) {
+			t.Errorf("%s: %v", name, err)
+		}
+		_, statErr := os.Lstat(filepath.Join(repo, ".worktrees", name))
+		if statErr == nil || hasBranch(ctx, repo, "nushi/"+name) {
+			t.Errorf("%s: checked out", name)
+		}
+	}
+	testcheck.NoErr(t, os.RemoveAll(filepath.Join(repo, "untracked")))
 	// Through a link to the repository, the worktree keeps the link's spelling.
 	link := filepath.Join(t.TempDir(), "link")
 	testcheck.NoErr(t, os.Symlink(repo, link))
-	if via, in, err := (Worktrees{}).Add(ctx, filepath.Join(link, "sub"), "swift-yak", "", ""); err != nil || via.Repo != link || in != filepath.Join(link, ".worktrees", "swift-yak", "sub") {
+	if via, in, err := (Worktrees{}).Add(ctx, filepath.Join(link, "sub"), "swift-yak", "", "", nil); err != nil || via.Repo != link || in != filepath.Join(link, ".worktrees", "swift-yak", "sub") {
 		t.Errorf("Add through a link = %+v, %q, %v", via, in, err)
 	}
-	second, _, err := Worktrees{}.Add(ctx, folder, "calm-heron", "", "")
+	second, _, err := Worktrees{}.Add(ctx, folder, "calm-heron", "", "", nil)
 	if err != nil || second.Path != filepath.Join(repo, ".worktrees", "calm-heron") || second.Base != "nushi/brave-otter" || second.BaseCommit != wt.BaseCommit {
 		t.Fatalf("Add from the worktree = %+v, %v", second, err)
 	}
@@ -127,7 +150,7 @@ func TestNoWritesThroughARepositorysLinks(t *testing.T) {
 	testcheck.Git(t, repo, "add", ".")
 	testcheck.Git(t, repo, "commit", "-q", "-m", "init")
 	testcheck.NoErr(t, os.Symlink(elsewhere, filepath.Join(repo, ".worktrees")))
-	if _, _, err := (Worktrees{}).Add(ctx, repo, "brave-otter", "", ""); err == nil {
+	if _, _, err := (Worktrees{}).Add(ctx, repo, "brave-otter", "", "", nil); err == nil {
 		t.Error("made a worktree through a linked .worktrees")
 	}
 	if got, _ := os.ReadDir(elsewhere); len(got) > 0 {
@@ -213,7 +236,7 @@ func TestInspectCountsARenameOnce(t *testing.T) {
 	testcheck.Write(t, filepath.Join(repo, "a.txt"), "a\n")
 	testcheck.Git(t, repo, "add", ".")
 	testcheck.Git(t, repo, "commit", "-q", "-m", "init")
-	wt, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "")
+	wt, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "", nil)
 	testcheck.NoErr(t, err)
 	testcheck.Git(t, wt.Path, "mv", "a.txt", "b.txt")
 	changed, err := Worktrees{}.Changed(ctx, wt.Path)
@@ -241,7 +264,7 @@ func TestInspectCountsACheckedOutSubmodule(t *testing.T) {
 	}
 	testcheck.Git(t, repo, "-c", "protocol.file.allow=always", "submodule", "add", "-q", lib, "vendor/lib")
 	testcheck.Git(t, repo, "commit", "-q", "-m", "lib")
-	wt, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "")
+	wt, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "", nil)
 	testcheck.NoErr(t, err)
 	st, err := Worktrees{}.Inspect(ctx, wt)
 	if err != nil || st.Changed != 0 {
@@ -273,7 +296,7 @@ func TestListOfABareRepository(t *testing.T) {
 	if err != nil || len(list) != 2 || list[0].Path != one || list[0].Main || list[1].Main || !list[1].Current {
 		t.Errorf("List = %+v, %v", list, err)
 	}
-	if wt, _, err := (Worktrees{}).Add(ctx, two, "brave-otter", "", ""); err == nil || !strings.Contains(err.Error(), "bare") {
+	if wt, _, err := (Worktrees{}).Add(ctx, two, "brave-otter", "", "", nil); err == nil || !strings.Contains(err.Error(), "bare") {
 		t.Errorf("Add in a bare repository's worktree: %+v, %v", wt, err)
 	}
 }
@@ -286,7 +309,7 @@ func TestRemovingAGoneWorktreeInAnotherLanguage(t *testing.T) {
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
 	testcheck.Git(t, repo, "init", "-q", "-b", "main")
 	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
-	wt, _, err := Worktrees{}.Add(ctx, repo, "brave-otter", "", "")
+	wt, _, err := Worktrees{}.Add(ctx, repo, "brave-otter", "", "", nil)
 	testcheck.NoErr(t, err)
 	testcheck.NoErr(t, os.RemoveAll(wt.Path))
 	testcheck.Git(t, repo, "worktree", "prune")
@@ -308,7 +331,7 @@ func TestInspectNamesTheFirstChanges(t *testing.T) {
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
 	testcheck.Git(t, repo, "init", "-q", "-b", "main")
 	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
-	wt, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "")
+	wt, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "", nil)
 	testcheck.NoErr(t, err)
 	for i := range shownChanges + 3 {
 		testcheck.Write(t, filepath.Join(wt.Path, "f"+strconv.Itoa(i+10)+".txt"), "new\n")

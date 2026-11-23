@@ -7,13 +7,13 @@ import (
 	"io/fs"
 	"log/slog"
 	"math/rand/v2"
-	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -22,8 +22,10 @@ type Worktrees interface {
 	// Add makes a worktree of folder's repository named name, on branch
 	// (else one named after it), starting at from (else folder's HEAD), and
 	// returns it and the folder in it that matches folder. A name or
-	// branch already taken fails with fs.ErrExist.
-	Add(ctx context.Context, folder, name, branch, from string) (model.Worktree, string, error)
+	// branch already taken, or a path taken says is, fails with
+	// fs.ErrExist, and a folder the commit doesn't have with
+	// git.ErrNotCommitted, before anything is checked out.
+	Add(ctx context.Context, folder, name, branch, from string, taken func(path string) bool) (model.Worktree, string, error)
 	// Inspect says what removing a worktree and its branch would lose.
 	Inspect(ctx context.Context, wt model.Worktree) (model.WorktreeState, error)
 	// Remove removes a worktree; without force, only one with no changes
@@ -118,16 +120,11 @@ func (s *Service) addWorktree(ctx context.Context, folder, branch, from string) 
 			}
 			name = strings.ReplaceAll(named, "/", "-") // one folder, not one in another
 		}
-		wt, in, err := s.worktrees.Add(ctx, folder, name, named, from)
-		if err == nil && s.onRecord(wt.Path) {
-			s.dropWorktree(&wt)
-			continue
+		wt, in, err := s.worktrees.Add(ctx, folder, name, named, from, s.onRecord)
+		if errors.Is(err, git.ErrNotCommitted) {
+			return nil, "", fmt.Errorf("a worktree has only what is committed, and %s isn't: commit it, or use the repository's own folder", filepath.Base(folder))
 		}
 		if err == nil {
-			if _, err := os.Stat(in); err != nil { // a folder git doesn't track
-				s.dropWorktree(&wt)
-				return nil, "", fmt.Errorf("a worktree has only what is committed, and %s isn't: commit it, or use the repository's own folder", filepath.Base(folder))
-			}
 			wt.AutoName = branch == "" // named after the chat once it has a title (branch.go)
 			wt.Told = wt.Branch        // the agent's session starts on it (Claude's prompt has git's status)
 			return &wt, in, nil

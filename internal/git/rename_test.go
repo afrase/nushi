@@ -18,7 +18,7 @@ func TestRenameBranch(t *testing.T) {
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
 	testcheck.Git(t, repo, "init", "-q", "-b", "main")
 	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
-	wt, _, err := Worktrees{}.Add(ctx, repo, "brave-otter", "", "")
+	wt, _, err := Worktrees{}.Add(ctx, repo, "brave-otter", "", "", nil)
 	testcheck.NoErr(t, err)
 	head := func(dir string) string {
 		out, _ := exec.Command("git", "-C", dir, "symbolic-ref", "--short", "HEAD").Output()
@@ -82,7 +82,7 @@ func TestRenameBranch(t *testing.T) {
 
 	// Checked out elsewhere: the worktree moved to another branch, and the
 	// repository's folder took it.
-	other, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "")
+	other, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "", nil)
 	testcheck.NoErr(t, err)
 	testcheck.Git(t, other.Path, "switch", "-q", "-c", "elsewhere")
 	testcheck.Git(t, repo, "switch", "-q", other.Branch)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -20,7 +21,7 @@ import (
 // stuckWorktrees has a worktree with no work in it that won't go.
 type stuckWorktrees struct{}
 
-func (stuckWorktrees) Add(context.Context, string, string, string, string) (model.Worktree, string, error) {
+func (stuckWorktrees) Add(context.Context, string, string, string, string, func(string) bool) (model.Worktree, string, error) {
 	return model.Worktree{}, "", errors.New("no")
 }
 func (stuckWorktrees) Inspect(context.Context, model.Worktree) (model.WorktreeState, error) {
@@ -271,8 +272,11 @@ type namedWorktrees struct {
 	base string
 }
 
-func (w *namedWorktrees) Add(_ context.Context, _, name, _, _ string) (model.Worktree, string, error) {
+func (w *namedWorktrees) Add(_ context.Context, _, name, _, _ string, taken func(string) bool) (model.Worktree, string, error) {
 	path := filepath.Join(w.base, name)
+	if taken(path) {
+		return model.Worktree{}, "", fs.ErrExist
+	}
 	if err := os.Mkdir(path, 0o700); err != nil {
 		return model.Worktree{}, "", err
 	}
@@ -300,8 +304,8 @@ func TestANewWorktreeSkipsANameAChatHasOnRecord(t *testing.T) {
 	if want := filepath.Join(wts.base, "brave-owl"); wt.Path != want || in != want {
 		t.Errorf("the worktree is %q in %q, want %q", wt.Path, in, want)
 	}
-	if !slices.Equal(wts.removed, []string{old}) {
-		t.Errorf("removed %q, want the one made at the name on record", wts.removed)
+	if _, err := os.Stat(old); err == nil || len(wts.removed) > 0 {
+		t.Errorf("a worktree was made at the name on record, removed %q", wts.removed)
 	}
 }
 

@@ -19,7 +19,7 @@ type addingWorktrees struct {
 	dir string
 }
 
-func (w *addingWorktrees) Add(_ context.Context, _, name, branch, from string) (model.Worktree, string, error) {
+func (w *addingWorktrees) Add(_ context.Context, _, name, branch, from string, _ func(string) bool) (model.Worktree, string, error) {
 	path := filepath.Join(w.dir, name)
 	if err := os.Mkdir(path, 0o700); err != nil {
 		return model.Worktree{}, "", err
