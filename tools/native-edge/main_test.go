@@ -14,6 +14,7 @@ const (
 	ffi       = "dart:ffi outside a *_macos.dart or *_linux.dart or *_windows.dart file"
 	webKit    = "webview_flutter_wkwebview (macOS's WebKit) outside a *_macos.dart file"
 	dbus      = "dbus (Linux's D-Bus) outside a *_linux.dart file"
+	launcher  = "url_launcher outside a *_macos.dart file"
 	macFile   = "a Mac implementation's file "
 	linuxFile = "a Linux implementation's file "
 	winFile   = "a Windows implementation's file "
@@ -63,6 +64,13 @@ func TestCheck(t *testing.T) {
 		"file_mode_windows.dart": "import 'dart:ffi';\nimport 'package:dbus/dbus.dart';\n",
 		"native_windows.dart":    "import 'package:nushi/file_mode_windows.dart';\n",
 		"install.dart":           "import 'package:nushi/app_install_windows.dart';\n",
+		// url_launcher: the Mac's files and web_views.dart (the phone's
+		// web path), nowhere else, Linux's files least of all.
+		"web_views.dart":       "import 'package:url_launcher/url_launcher.dart';\n",
+		"links.dart":           "import 'package:url_launcher/url_launcher.dart';\n",
+		"links_linux.dart":     "import \"package:url_launcher/url_launcher.dart\";\n",
+		"open_macos.dart":      "import 'package:url_launcher/url_launcher.dart';\n",
+		"phone/web_views.dart": "import 'package:url_launcher/url_launcher.dart';\n",
 	}
 	for name, body := range files {
 		path := filepath.Join(root, name)
@@ -95,6 +103,8 @@ func TestCheck(t *testing.T) {
 		"file_mode_windows.dart: " + dbus,
 		"gen/sneaky.dart: " + channel,
 		"install.dart: " + winFile + "(package:nushi/app_install_windows.dart)",
+		"links.dart: " + launcher,
+		"links_linux.dart: " + launcher,
 		"main.dart: " + linuxFile + "(package:nushi/alerts_linux.dart)",
 		"main.dart: " + macFile + "(package:nushi/alerts_macos.dart)",
 		"messenger.dart: " + message,
@@ -102,6 +112,7 @@ func TestCheck(t *testing.T) {
 		"optional.dart: " + channel,
 		"page.dart: " + webKit,
 		"parts.dart: " + macFile + "(parts_macos.dart)",
+		"phone/web_views.dart: " + launcher,
 		"phone_main.dart: " + macFile + "(package:nushi/native_macos.dart)",
 		"settings_terminal.dart: " + macFile + "(package:nushi/fonts_macos.dart)",
 		"status.dart: " + linuxFile + "(package:nushi/alerts_linux.dart)",

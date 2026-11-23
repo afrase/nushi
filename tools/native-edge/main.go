@@ -39,19 +39,25 @@ var (
 // platforms are every platform with files of its own.
 var platforms = []platform{mac, linux, windows}
 
-// native is what only some platforms' files may use, what to call it, and
-// those platforms.
+// native is what only some platforms' files may use, what to call it,
+// those platforms, and the one shared file (relative to the root) that
+// may use it too, if any.
 var native = []struct {
 	pattern *regexp.Regexp
 	name    string
 	in      []platform
+	alsoIn  string
 }{
-	{regexp.MustCompile(`\b(Optional)?MethodChannel\b|\bEventChannel\b|\bBasicMessageChannel\b`), "a platform channel", platforms},
-	{regexp.MustCompile(`BinaryMessenger\b|\bMethodCall\b|MethodCodec\b|\bSystemChannels\b|\bsendPlatformMessage\b|\bchannelBuffers\b`), "a platform message", platforms},
-	{regexp.MustCompile(`['"]dart:ffi['"]`), "dart:ffi", platforms},
-	{regexp.MustCompile(`['"]package:ffi/`), "package:ffi", platforms},
-	{regexp.MustCompile(`['"]package:webview_flutter_wkwebview/`), "webview_flutter_wkwebview (macOS's WebKit)", []platform{mac}},
-	{regexp.MustCompile(`['"]package:dbus/`), "dbus (Linux's D-Bus)", []platform{linux}},
+	{regexp.MustCompile(`\b(Optional)?MethodChannel\b|\bEventChannel\b|\bBasicMessageChannel\b`), "a platform channel", platforms, ""},
+	{regexp.MustCompile(`BinaryMessenger\b|\bMethodCall\b|MethodCodec\b|\bSystemChannels\b|\bsendPlatformMessage\b|\bchannelBuffers\b`), "a platform message", platforms, ""},
+	{regexp.MustCompile(`['"]dart:ffi['"]`), "dart:ffi", platforms, ""},
+	{regexp.MustCompile(`['"]package:ffi/`), "package:ffi", platforms, ""},
+	{regexp.MustCompile(`['"]package:webview_flutter_wkwebview/`), "webview_flutter_wkwebview (macOS's WebKit)", []platform{mac}, ""},
+	{regexp.MustCompile(`['"]package:dbus/`), "dbus (Linux's D-Bus)", []platform{linux}, ""},
+	// Linux opens links through its runner, never url_launcher, whose launch
+	// would pass Nushi's variables on (ADR 0104); web_views.dart uses it
+	// only for the phone's web app (kIsWeb).
+	{regexp.MustCompile(`['"]package:url_launcher/`), "url_launcher", []platform{mac}, "web_views.dart"},
 }
 
 // platformFile is a URI of a platform's file, as an import, export or part
@@ -86,7 +92,7 @@ func check(root string) ([]dartcheck.Use, error) {
 			return err
 		}
 		own, ok := platformOf(path)
-		found, err := inFile(path, own, ok, rel == picksASet)
+		found, err := inFile(path, filepath.ToSlash(rel), own, ok)
 		uses = append(uses, found...)
 		return err
 	})
@@ -112,10 +118,11 @@ func where(in []platform) string {
 	return "outside a " + strings.Join(files, " or ") + " file"
 }
 
-// inFile lists the native code in one file, comments left out, that its
-// platform (own, when ok) doesn't allow; main is whether it's the app's
-// main.dart, which may name the sets.
-func inFile(path string, own platform, ok, main bool) ([]dartcheck.Use, error) {
+// inFile lists the native code in one file (rel, from the root), comments
+// left out, that its platform (own, when ok) doesn't allow; the app's
+// main.dart may name the sets.
+func inFile(path, rel string, own platform, ok bool) ([]dartcheck.Use, error) {
+	main := rel == picksASet
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -129,7 +136,7 @@ func inFile(path string, own platform, ok, main bool) ([]dartcheck.Use, error) {
 			continue
 		}
 		for _, k := range native {
-			allowed := ok && slices.Contains(k.in, own)
+			allowed := ok && slices.Contains(k.in, own) || k.alsoIn != "" && rel == k.alsoIn
 			if !allowed && k.pattern.MatchString(line) {
 				uses = append(uses, dartcheck.Use{Path: path, Line: n, What: k.name + " " + where(k.in)})
 			}
