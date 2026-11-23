@@ -250,17 +250,26 @@ lint-windows: $(GOLANGCI)
 	GOOS=windows CGO_ENABLED=0 go vet ./...
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 $(GOLANGCI) run --disable unused ./...
 
+# The commit the protos are checked against for wire breaks (ADR 0004):
+# where this branch grew from main; CI passes its change's base.
+BREAKING_BASE ?= $(shell git merge-base HEAD origin/main 2>/dev/null)
+
 # The protos' and Dart's, and the native code of the app and its Dart
 # packages only in a platform's *_macos.dart, *_linux.dart or
 # *_windows.dart files (tools/native-edge, ADR 0097, 0104, 0125), and the
 # app's views built from the shared controls and tokens
 # (tools/design-check, docs/design.md), and each app test file in one
 # shard of the set its host needs (tools/test-shards -check): anywhere.
+# buf breaking reads BREAKING_BASE's protos through git archive, which
+# works in a worktree (where .git is a file buf can't clone from).
 lint-dart:
 	go run ./tools/native-edge $(addsuffix /lib,$(DART_DIRS))
 	go run ./tools/design-check app/lib
 	go run ./tools/test-shards -check
 	$(BUF) lint
+	@if [ -z "$(BREAKING_BASE)" ]; then echo "buf breaking: no base (BREAKING_BASE), skipped"; \
+	else git cat-file -e "$(BREAKING_BASE)^{commit}" && echo "buf breaking against $(BREAKING_BASE)" && \
+	git archive --format=tar "$(BREAKING_BASE)" buf.yaml proto | $(BUF) breaking --against '-#format=tar'; fi
 	$(BUF) format --diff --exit-code
 	@for d in $(DART_DIRS); do echo "flutter analyze $$d"; (cd $$d && flutter analyze --fatal-infos) || exit 1; done
 	@for d in $(DART_DIRS); do (cd $$d && find lib test bin -name '*.dart' ! -path 'lib/gen/*' 2>/dev/null | xargs dart format --output=none --set-exit-if-changed) || exit 1; done

@@ -4,3 +4,9 @@ modules:
 lint:
   use:
     - STANDARD
+# The API is additive only (ADR 0004): make lint-dart compares the protos
+# with the commit the branch grew from. WIRE ignores names (a rename in
+# place is allowed) and lets a field go once its number is reserved.
+breaking:
+  use:
+    - WIRE

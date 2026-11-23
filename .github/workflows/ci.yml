@@ -163,7 +163,13 @@ jobs:
           channel: stable
           flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
           cache: true
-      - run: make lint-dart
+      # buf breaking compares the protos with the change's base (a pull request's base, a push's before), fetched
+      # alone; with none (the release's call, a new branch) it is skipped.
+      - env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          case $BASE in *[!0]*) git fetch --depth=1 --no-tags origin "$BASE" ;; *) BASE= ;; esac
+          make lint-dart BREAKING_BASE="$BASE"
       # What the changes job says a change can affect, against its table.
       - if: ${{ !cancelled() }}
         run: tools/ci-changes.sh --self-test
