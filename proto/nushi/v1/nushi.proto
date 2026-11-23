@@ -464,8 +464,8 @@ service NushiService {
   rpc FindJiraIssues(FindJiraIssuesRequest) returns (FindJiraIssuesResponse);
   // An attachment's file (20 MB at most).
   rpc GetJiraAttachment(GetJiraAttachmentRequest) returns (GetJiraAttachmentResponse);
-  // GitHub (ADR 0045): the hosts gh is signed in to (its token read by the
-  // daemon through go-gh) and those given a pasted token (the keychain).
+  // GitHub (ADR 0045): the hosts gh is signed in to (the daemon asks gh
+  // for each one's token) and those given a pasted token (the keychain).
   // Nothing reaches GitHub on its own: the app asks, and marks the asking
   // on its timers quiet, which a rate limit running low holds back.
   rpc ListGitHubHosts(ListGitHubHostsRequest) returns (ListGitHubHostsResponse);
@@ -3653,8 +3653,9 @@ message GitHubHost {
   // Who its token is.
   string login = 2;
   string name = 3;
-  // Where its token is from: "gh" (gh's login), "GH_TOKEN" (the
-  // environment, through gh's rules), "token" (pasted).
+  // Where its token is from: "gh" (what gh gives for the host: its login,
+  // or the environment's token by gh's rules) or "token" (pasted). A
+  // daemon before the 0.53 betas also said "GH_TOKEN".
   string source = 4;
   // "oauth" (gh's), "classic", "fine-grained", "app", or "".
   string kind = 5;

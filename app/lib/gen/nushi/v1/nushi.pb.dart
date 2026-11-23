@@ -28173,8 +28173,9 @@ class GitHubHost extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   void clearName() => $_clearField(3);
 
-  /// Where its token is from: "gh" (gh's login), "GH_TOKEN" (the
-  /// environment, through gh's rules), "token" (pasted).
+  /// Where its token is from: "gh" (what gh gives for the host: its login,
+  /// or the environment's token by gh's rules) or "token" (pasted). A
+  /// daemon before the 0.53 betas also said "GH_TOKEN".
   @$pb.TagNumber(4)
   $core.String get source => $_getSZ(3);
   @$pb.TagNumber(4)
@@ -37597,8 +37598,8 @@ class NushiServiceApi {
       _client.invoke<GetJiraAttachmentResponse>(ctx, 'NushiService',
           'GetJiraAttachment', request, GetJiraAttachmentResponse());
 
-  /// GitHub (ADR 0045): the hosts gh is signed in to (its token read by the
-  /// daemon through go-gh) and those given a pasted token (the keychain).
+  /// GitHub (ADR 0045): the hosts gh is signed in to (the daemon asks gh
+  /// for each one's token) and those given a pasted token (the keychain).
   /// Nothing reaches GitHub on its own: the app asks, and marks the asking
   /// on its timers quiet, which a rate limit running low holds back.
   $async.Future<ListGitHubHostsResponse> listGitHubHosts(

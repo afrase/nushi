@@ -21673,8 +21673,9 @@ type GitHubHost struct {
 	// Who its token is.
 	Login string `protobuf:"bytes,2,opt,name=login,proto3" json:"login,omitempty"`
 	Name  string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	// Where its token is from: "gh" (gh's login), "GH_TOKEN" (the
-	// environment, through gh's rules), "token" (pasted).
+	// Where its token is from: "gh" (what gh gives for the host: its login,
+	// or the environment's token by gh's rules) or "token" (pasted). A
+	// daemon before the 0.53 betas also said "GH_TOKEN".
 	Source string `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
 	// "oauth" (gh's), "classic", "fine-grained", "app", or "".
 	Kind string `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`

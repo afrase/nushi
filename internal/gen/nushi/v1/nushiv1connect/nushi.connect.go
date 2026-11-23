@@ -944,8 +944,8 @@ type NushiServiceClient interface {
 	FindJiraIssues(context.Context, *connect.Request[v1.FindJiraIssuesRequest]) (*connect.Response[v1.FindJiraIssuesResponse], error)
 	// An attachment's file (20 MB at most).
 	GetJiraAttachment(context.Context, *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error)
-	// GitHub (ADR 0045): the hosts gh is signed in to (its token read by the
-	// daemon through go-gh) and those given a pasted token (the keychain).
+	// GitHub (ADR 0045): the hosts gh is signed in to (the daemon asks gh
+	// for each one's token) and those given a pasted token (the keychain).
 	// Nothing reaches GitHub on its own: the app asks, and marks the asking
 	// on its timers quiet, which a rate limit running low holds back.
 	ListGitHubHosts(context.Context, *connect.Request[v1.ListGitHubHostsRequest]) (*connect.Response[v1.ListGitHubHostsResponse], error)
@@ -3483,8 +3483,8 @@ type NushiServiceHandler interface {
 	FindJiraIssues(context.Context, *connect.Request[v1.FindJiraIssuesRequest]) (*connect.Response[v1.FindJiraIssuesResponse], error)
 	// An attachment's file (20 MB at most).
 	GetJiraAttachment(context.Context, *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error)
-	// GitHub (ADR 0045): the hosts gh is signed in to (its token read by the
-	// daemon through go-gh) and those given a pasted token (the keychain).
+	// GitHub (ADR 0045): the hosts gh is signed in to (the daemon asks gh
+	// for each one's token) and those given a pasted token (the keychain).
 	// Nothing reaches GitHub on its own: the app asks, and marks the asking
 	// on its timers quiet, which a rate limit running low holds back.
 	ListGitHubHosts(context.Context, *connect.Request[v1.ListGitHubHostsRequest]) (*connect.Response[v1.ListGitHubHostsResponse], error)

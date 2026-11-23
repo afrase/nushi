@@ -1225,8 +1225,8 @@ abstract final class NushiService {
     nushiv1nushi.GetJiraAttachmentResponse.new,
   );
 
-  /// GitHub (ADR 0045): the hosts gh is signed in to (its token read by the
-  /// daemon through go-gh) and those given a pasted token (the keychain).
+  /// GitHub (ADR 0045): the hosts gh is signed in to (the daemon asks gh
+  /// for each one's token) and those given a pasted token (the keychain).
   /// Nothing reaches GitHub on its own: the app asks, and marks the asking
   /// on its timers quiet, which a rate limit running low holds back.
   static const listGitHubHosts = connect.Spec(
