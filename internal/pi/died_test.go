@@ -45,9 +45,11 @@ func TestPiDiesMidTurn(t *testing.T) {
 }
 
 // A pi that answers no Stop (PiG 0.5.3 after /sprite, docs/facts/pig.md)
-// is killed once its abort has waited abortWait: the turn ends and the
-// bridge, its last pi gone, ends its connection. Before, the turn ran on
-// for good and the chat stayed busy.
+// is killed once its abort has waited abortWait: the turn ends cancelled,
+// as the Stop asked, and the session opens again on its file at the next
+// prompt. Before the kill the turn ran on for good; before the reopen
+// the Stop failed the turn as "the agent has stopped" and ended the
+// bridge, which the daemon showed as a crash.
 func TestPiThatIgnoresAStopIsKilled(t *testing.T) {
 	was := abortWait
 	abortWait = 50 * time.Millisecond
@@ -65,10 +67,12 @@ func TestPiThatIgnoresAStopIsKilled(t *testing.T) {
 	if err := c.Cancel(ctx, &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
 		t.Fatal(err)
 	}
-	if r, err := w(ctx); err == nil && r.StopReason != "cancelled" || ctx.Err() != nil {
-		t.Errorf("the stopped turn: %+v, %v; want it ended", r, err)
+	if r, err := w(ctx); err != nil || r.StopReason != "cancelled" {
+		t.Errorf("the stopped turn: %+v, %v; want cancelled", r, err)
 	}
-	ended(ctx, t, c)
+	if r := prompt(t, c, s.SessionID, "hello"); r.StopReason != "end_turn" {
+		t.Errorf("the next prompt: %+v", r)
+	}
 }
 
 // ended waits for the bridge to end the client's connection.

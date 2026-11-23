@@ -20,8 +20,9 @@ type deadSession struct {
 // says whether the bridge ends with it. Another session still open keeps
 // the bridge for it, and this one opens again on its file at its next
 // prompt (live): the client still has it, and would otherwise get "no
-// open session" for good. With none left, or no file to open, the bridge
-// ends: the client then sees the agent quit and opens the chat again,
+// open session" for good. So does a pi a Stop killed (session.killed),
+// even the last: the user stopped the turn, which isn't a crash. With
+// none left otherwise, or no file to open, the bridge ends: the client then sees the agent quit and opens the chat again,
 // through session/load, on a new bridge. It runs before the session's
 // turn ends, so a prompt the client sends on that answer finds the
 // session to open again.
@@ -35,7 +36,7 @@ func (b *bridge) died(s *session) (end bool) {
 	if b.sessions[s.id] == s {
 		delete(b.sessions, s.id)
 	}
-	if len(b.sessions) == 0 || !saved {
+	if !saved || (len(b.sessions) == 0 && !s.killed.Load()) {
 		return true
 	}
 	b.dead[s.id] = &deadSession{cwd: s.cwd, file: file}

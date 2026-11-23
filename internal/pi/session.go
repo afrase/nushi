@@ -37,6 +37,9 @@ type session struct {
 	// stopping says the bridge ends pi itself (stop): a pi gone without it
 	// died, which ends the bridge once no session is left (bridge.gone).
 	stopping atomic.Bool
+	// killed says a Stop killed pi (abortWait): its turn ends cancelled,
+	// and the session opens again at its next prompt (bridge.died).
+	killed atomic.Bool
 	// handled is how many of pi's events the pump has handled; caught
 	// (on mu) says when it grows.
 	handled int
@@ -132,7 +135,9 @@ func (s *session) pump() {
 	s.mu.Lock()
 	s.handled = math.MaxInt // none will come
 	s.caught.Broadcast()
-	if t := s.turn; t != nil {
+	if t := s.turn; t != nil && s.killed.Load() {
+		s.endLocked(t, &acp.PromptResponse{StopReason: "cancelled", Usage: &t.usage}, nil)
+	} else if t != nil {
 		s.endLocked(t, nil, stopped)
 	}
 	s.mu.Unlock()
@@ -510,6 +515,7 @@ func (s *session) cancel(seq uint64) {
 		cancel()
 		if errors.Is(err, context.DeadlineExceeded) { // its pump ends the turn as pi goes
 			warnf("the program answered no Stop in %s, so it is killed", wait)
+			s.killed.Store(true)
 			s.p.kill()
 			return
 		}
