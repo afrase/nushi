@@ -89,7 +89,8 @@ class FakeDaemon implements Transport {
   /// model's, the empty one for a call in [answersEmpty], else
   /// Unimplemented, which fails the test ([checkRefused]); a thrown error
   /// fails the call. Every such call is in [calls]. GetGitHubItems it
-  /// leaves unanswered are its GetGitHubPull answers' rows.
+  /// leaves unanswered are its GetGitHubPull answers' rows, and
+  /// ListBranches follows its GetFolderStatus answers.
   Object? Function(Object input)? answer;
   final calls = <Object>[];
 
@@ -381,6 +382,9 @@ class FakeDaemon implements Transport {
     }
 
     calls.add(input);
+    if (other == null && input is ListBranchesRequest) {
+      other = await _branches(input.folder);
+    }
     if (input is DeleteChatRequest) _delete(input.chatId);
     if (other == null && input is KeepSideChatRequest) _keepSide(input.chatId);
     final out =
@@ -629,6 +633,35 @@ class FakeDaemon implements Transport {
       }
     }
     return items.isEmpty ? null : GetGitHubItemsResponse(items: items);
+  }
+
+  /// ListBranches answered as the daemon would for [folder], from what
+  /// GetFolderStatus says of it ([answer]'s, else the fake's: not git):
+  /// a repository's one worktree, the main one, on its branch; outside
+  /// git it's refused as internal/api/git.go refuses it.
+  Future<ListBranchesResponse> _branches(String folder) async {
+    Object? status;
+    try {
+      status = answer?.call(GetFolderStatusRequest(folder: folder));
+      if (status is Future) status = await status;
+    } on Object {
+      status = null; // the status fails: not known to be git
+    }
+    if (status is! GetFolderStatusResponse || !status.git) {
+      throw ConnectException(
+        Code.failedPrecondition,
+        '$folder is not a git repository',
+      );
+    }
+    final branch = status.branch;
+    return ListBranchesResponse(
+      branches: [
+        if (branch.isNotEmpty) GitBranch(name: branch, worktree: folder),
+      ],
+      worktrees: [
+        GitWorktree(path: folder, branch: branch, main: true, current: true),
+      ],
+    );
   }
 
   /// [a] as the daemon lists it now: an agent through its Go agent
@@ -947,12 +980,11 @@ const answersEmpty = <Type>{
   GetGitHubViewedRequest,
   RerunGitHubChecksRequest,
   SuggestJiraJqlRequest,
-  // No terminal, MCP server, commit, file or branch; no path found.
+  // No terminal, MCP server, commit or file; no path found.
   ListTerminalsRequest,
   ListMcpServersRequest,
   ListCommitsRequest,
   ListFilesRequest,
-  ListBranchesRequest,
   FindChatFilesRequest,
   // A folder outside git (internal/api/git.go answers it so), a diff
   // with no change, a folder that runs nothing to trust.
