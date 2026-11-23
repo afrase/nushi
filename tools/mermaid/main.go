@@ -153,11 +153,11 @@ var client = &http.Client{
 }
 
 func fetch(url string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, http.NoBody) //nolint:gosec // url is one of hosts, this file's own
 	if err != nil {
 		return nil, err
 	}
-	res, err := client.Do(req)
+	res, err := client.Do(req) //nolint:gosec // the same request
 	if err != nil {
 		return nil, err
 	}

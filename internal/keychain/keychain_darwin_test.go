@@ -53,7 +53,7 @@ func TestAnotherProgram(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, c := range []struct{ child, want string }{{"intact", "needs ok\n"}, {"removed", "restart\nrestart\n"}} {
+	for _, c := range []struct{ child, want string }{{"intact", "needs ok\n"}, {"removed", "restart\nrestart\n"}} { //nolint:dupword // the removed child says restart twice
 		copied := filepath.Join(t.TempDir(), "child")
 		if err := os.WriteFile(copied, b, 0o700); err != nil {
 			t.Fatal(err)

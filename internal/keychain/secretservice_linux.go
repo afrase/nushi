@@ -231,7 +231,7 @@ func kind(err error) error {
 
 // failed is a call's failure, logged with the error's words (never an
 // account or a secret).
-func (k Keychain) failed(call string, err error, kind error) error {
+func (k Keychain) failed(call string, err, kind error) error {
 	e := &Error{Call: call, Msg: err.Error(), Kind: kind}
 	level := slog.LevelWarn
 	switch {

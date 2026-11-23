@@ -71,7 +71,7 @@ func (Harness) PassesToSubagent(it model.Item) string {
 // short as Claude reads reliably: the id and the one reply wanted; what
 // the task is shows from the call it names.
 func (Harness) StopTask(taskID string) string {
-	return fmt.Sprintf(`Stop background task %s: call TaskStop with task_id "%s", then reply only "stopped" or "not running".`, taskID, taskID)
+	return fmt.Sprintf(`Stop background task %s: call TaskStop with task_id %q, then reply only "stopped" or "not running".`, taskID, taskID)
 }
 
 var (

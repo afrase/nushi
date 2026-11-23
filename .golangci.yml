@@ -64,7 +64,6 @@ linters:
         - importShadow # a local named after a package is fine where the package isn't used
         - initClause # `if n--; n == 0` keeps a counter's change beside its test
         - typeDefFirst # a helper method may sit beside its caller, above its type
-        - sprintfQuotedString # the "%s" it finds are SVG's quotes, where %q would be wrong
     gosec:
       excludes:
         - G104 # unchecked errors: errcheck reports them
@@ -157,8 +156,14 @@ linters:
         text: "^exported:"
       # cgo: the linters read the C preamble's NULLs and the "C" import's
       # generated aliases as Go (duplicate words, imports, expressions).
-      - path: ^internal/(keychain/|listeners/libproc_darwin\.go)
+      # Only these two files import "C".
+      - path: ^internal/(keychain/keychain_darwin|listeners/libproc_darwin)\.go$
         linters: [dupword, gocritic]
+      # icongen writes SVG, whose attributes' "%s" quotes %q would escape
+      # the Go way.
+      - path: ^tools/icongen/
+        linters: [gocritic]
+        text: "^sprintfQuotedString:"
       # gosec, where a whole package is about what it reports (each other
       # report is fixed or marked on its line):
       # tests read and write files in their own t.TempDir(), run the fakes
@@ -167,9 +172,12 @@ linters:
       - path: (_test\.go$|^internal/testcheck/)
         linters: [gosec]
         text: "^G(101|204|301|302|304|306|702|703|704):"
-      # the tools run by hand write the repository's own files;
+      # the tools run by hand read, walk and write the repository's own
+      # files (and their caches), run git and Flutter on them, and print
+      # paths to the terminal of whoever runs them;
       - path: ^tools/
         linters: [gosec]
+        text: "^G(122|204|301|304|306|703|706):"
       # the API copies counts, sizes and exit codes into proto's int32 and
       # int64, none near the limits;
       - path: ^internal/api/

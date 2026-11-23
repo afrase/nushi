@@ -261,9 +261,9 @@ func ico(sizes []int, images [][]byte) ([]byte, error) {
 	}
 	le := binary.LittleEndian
 	var head, body bytes.Buffer
-	head.Write(le.AppendUint16(nil, 0)) // reserved
-	head.Write(le.AppendUint16(nil, 1)) // an icon
-	head.Write(le.AppendUint16(nil, uint16(len(sizes))))
+	head.Write(le.AppendUint16(nil, 0))                  // reserved
+	head.Write(le.AppendUint16(nil, 1))                  // an icon
+	head.Write(le.AppendUint16(nil, uint16(len(sizes)))) //nolint:gosec // a handful of sizes, named in this file
 	offset := 6 + 16*len(sizes)
 	for i, px := range sizes {
 		if px < 1 || px > 256 {
@@ -271,10 +271,10 @@ func ico(sizes []int, images [][]byte) ([]byte, error) {
 		}
 		side := byte(px % 256) // 256 is written 0
 		head.Write([]byte{side, side, 0, 0})
-		head.Write(le.AppendUint16(nil, 1))  // planes
-		head.Write(le.AppendUint16(nil, 32)) // bits a pixel
-		head.Write(le.AppendUint32(nil, uint32(len(images[i]))))
-		head.Write(le.AppendUint32(nil, uint32(offset+body.Len())))
+		head.Write(le.AppendUint16(nil, 1))                         // planes
+		head.Write(le.AppendUint16(nil, 32))                        // bits a pixel
+		head.Write(le.AppendUint32(nil, uint32(len(images[i]))))    //nolint:gosec // an icon's PNG, far below 4 GB
+		head.Write(le.AppendUint32(nil, uint32(offset+body.Len()))) //nolint:gosec // the whole file, far below 4 GB
 		body.Write(images[i])
 	}
 	return append(head.Bytes(), body.Bytes()...), nil
