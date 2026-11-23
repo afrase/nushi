@@ -44,6 +44,12 @@ Object? _states(Object input) => switch (input) {
         if (refs.any((r) => r.number == it.ref.number)) it,
     ],
   ),
+  // Whole, for a chat that's opened: its row, no thread open.
+  GetGitHubPullRequest(:final ref) => GetGitHubPullResponse(
+    pull: pull()
+      ..item = _items.firstWhere((i) => i.ref.number == ref.number)
+      ..threads.clear(),
+  ),
   _ => null,
 };
 

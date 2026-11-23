@@ -24,6 +24,7 @@ import 'package:nushi/transcript_find.dart';
 
 import 'browser_fixture.dart' show addressField, browserFakes;
 import 'fake_daemon.dart' show FakeDaemon, loadFonts;
+import 'github_fixture.dart' show pullCommits, pullOf;
 import 'harness.dart';
 import 'right_panes_fixture.dart';
 
@@ -72,11 +73,13 @@ void main() {
 
   testWidgets('Hide details from the palette while tucked: only the choice '
       'changes, and nothing moves', (tester) async {
-    final (d, _) = await panesApp(
+    final (d, fake) = await panesApp(
       tester,
       width: windowFor(1100, sidebar: false),
       open: _open(previews: 1),
     );
+    // Pull request #1240, linked below: GitHub's answer for its tab.
+    fake.on(_pull1240);
     expect(_rail, findsNothing);
     final preview = _r(tester, find.byType(FileView));
     final header = _r(tester, find.byType(ChatHeader));
@@ -783,3 +786,20 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 }
+
+/// GitHub's answers for pull request #1240, which a test links its chat to.
+Object? _pull1240(Object input) => switch (input) {
+  GetGitHubPullRequest() => GetGitHubPullResponse(
+    pull: pullOf(
+      GitHubLink(
+        host: 'github.com',
+        repo: 'afrase/nushi',
+        number: 1240,
+        id: 'PR_1240',
+        pull: true,
+      ),
+    ),
+  ),
+  GetGitHubCommitsRequest() => pullCommits(),
+  _ => null,
+};

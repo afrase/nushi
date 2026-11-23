@@ -16,6 +16,7 @@ import 'package:nushi/settings.dart';
 import 'package:xterm2/xterm.dart' hide Terminal;
 
 import 'fake_daemon.dart';
+import 'github_fixture.dart' show pullCommits, pullOf;
 import 'harness.dart';
 
 /// Two chats in nushi, one in site; b has a pull request.
@@ -49,6 +50,8 @@ Future<(Daemon, FakeDaemon)> _app(
     FindChatPullRequest(:final chatId) => FindChatPullResponse(
       pull: chatId == 'b' ? _pull : null,
     ),
+    GetGitHubPullRequest() => GetGitHubPullResponse(pull: pullOf(_pull)),
+    GetGitHubCommitsRequest() => pullCommits(),
     _ => null,
   };
   // A live shell's stream: it stays open.

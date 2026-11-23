@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
@@ -498,6 +499,19 @@ void main() {
       tester,
       width: windowFor(1100, sidebar: false),
       open: _aFile,
+    );
+    fake.on(
+      (input) => input is GetContextUsageRequest
+          ? GetContextUsageResponse(
+              categories: [
+                ContextCategory(
+                  name: 'Messages',
+                  tokens: Int64(5),
+                  part: 'messages',
+                ),
+              ],
+            )
+          : null,
     );
     final c = d.chats['c']!
       // A turn under way: the status the chat list sends.

@@ -143,6 +143,27 @@ GitHubPull pull() => GitHubPull(
   ],
 );
 
+/// [pull] as the pull request [l] links to (its number, id and
+/// repository), for a test of a chat linked to one that isn't about the
+/// pull request itself.
+GitHubPull pullOf(GitHubLink l) =>
+    pull()..item = item(l.number, 'Add Sub and Neg', repo: l.repo);
+
+/// [pull]'s one commit, its head, as GetGitHubCommits answers it.
+GetGitHubCommitsResponse pullCommits() => GetGitHubCommitsResponse(
+  total: 1,
+  commits: [
+    GitHubCommit(
+      oid: 'b' * 40,
+      headline: 'Add Sub and Neg',
+      author: 'afrase',
+      authorName: 'afrase',
+      committedMs: msAgo(const Duration(hours: 2)),
+      checks: 'failure',
+    ),
+  ],
+);
+
 FileChange _sub() => FileChange(
   path: 'sub.go',
   status: 'added',
@@ -227,6 +248,7 @@ Future<(FakeDaemon, Daemon)> openView(
             atMs: msAgo(Duration.zero),
           ),
           GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
+          GetGitHubCommitsRequest() => pullCommits(),
           GetGitHubIssueRequest() => GetGitHubIssueResponse(
             issue: GitHubIssue(
               item: item(2, 'Add a Mul function', pull: false),

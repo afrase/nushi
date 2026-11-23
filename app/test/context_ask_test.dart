@@ -1,3 +1,4 @@
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
@@ -12,7 +13,20 @@ void main() {
   testWidgets('what fills the context is asked, the widget collapsed or not, '
       'once the chat can be asked', (tester) async {
     collapsedWidgets.value = {'Context'};
-    final fake = FakeDaemon([Chat(id: 'c', agent: 'claude', folder: '/x')]);
+    final fake = FakeDaemon([Chat(id: 'c', agent: 'claude', folder: '/x')])
+      ..on(
+        (input) => input is GetContextUsageRequest
+            ? GetContextUsageResponse(
+                categories: [
+                  ContextCategory(
+                    name: 'Messages',
+                    tokens: Int64(5),
+                    part: 'messages',
+                  ),
+                ],
+              )
+            : null,
+      );
     final d = await fake.connect(tester);
     final chat = ChatState('c', '/x')
       ..apply(

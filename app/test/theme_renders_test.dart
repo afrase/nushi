@@ -90,6 +90,8 @@ Object? _demo(Object input) => switch (input) {
       Terminal(id: 't1', chatId: heroChat.id, folder: demoTree, shell: 'zsh'),
     ],
   ),
+  // The hero's pull request, as the README's shots have it.
+  GetGitHubPullRequest() => GetGitHubPullResponse(pull: demoPull()),
   _ => null,
 };
 

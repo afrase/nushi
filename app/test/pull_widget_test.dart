@@ -21,7 +21,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'github_fixture.dart' show item, pull;
+import 'github_fixture.dart' show item, pull, pullCommits;
 import 'harness.dart';
 
 const _repo = 'afrase/nushi-gh-test';
@@ -67,6 +67,7 @@ Future<(Daemon, FakeDaemon)> _app(
               pull: whole == null ? null : _link,
             ),
       GetGitHubPullRequest() => GetGitHubPullResponse(pull: whole),
+      GetGitHubCommitsRequest() when whole != null => pullCommits(),
       _ => null,
     };
   final d = await openApp(tester, fake, size: size);
@@ -98,6 +99,7 @@ void _opened(FakeDaemon fake) => fake.answer = (input) => switch (input) {
     pull: (fake.chats.firstWhere((c) => c.id == chatId)..pull = _link).pull,
   ),
   GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
+  GetGitHubCommitsRequest() => pullCommits(),
   _ => null,
 };
 

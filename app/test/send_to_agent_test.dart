@@ -9,7 +9,7 @@ import 'package:nushi/reply_cards.dart';
 import 'package:nushi/send_to_agent.dart';
 
 import 'fake_daemon.dart';
-import 'github_fixture.dart' show pull;
+import 'github_fixture.dart' show pull, pullCommits;
 import 'harness.dart';
 
 const _repo = 'afrase/nushi-gh-test';
@@ -103,6 +103,7 @@ void main() {
           ),
         ),
         GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
+        GetGitHubCommitsRequest() => pullCommits(),
         GetGitHubJobLogRequest() => GetGitHubJobLogResponse(
           tail: 'go test ./...\n##[error]FAIL is here\nexit code 1',
         ),

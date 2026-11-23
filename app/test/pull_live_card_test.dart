@@ -83,6 +83,27 @@ Future<(Daemon, FakeDaemon)> _app(
         pulls: pulls,
       ),
       GetGitHubItemsRequest() => GetGitHubItemsResponse(items: [item()]),
+      // Whole, as the chat's linked one is read: its row's.
+      GetGitHubPullRequest() => GetGitHubPullResponse(
+        pull: GitHubPull(
+          item: item(),
+          base: 'main',
+          head: 'cursor-ties',
+          headOid: 'c' * 40,
+          commits: 1,
+        ),
+      ),
+      GetGitHubCommitsRequest() => GetGitHubCommitsResponse(
+        total: 1,
+        commits: [
+          GitHubCommit(
+            oid: 'c' * 40,
+            headline: 'Break cursor ties by post id',
+            author: 'mira-k',
+            committedMs: item().createdMs,
+          ),
+        ],
+      ),
       _ => null,
     };
   final d = await openApp(tester, fake, size: size, brightness: brightness);

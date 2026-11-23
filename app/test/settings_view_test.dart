@@ -154,7 +154,12 @@ void main() {
       'to it', (tester) async {
     final d = await pumpSettingsApp(
       tester,
-      settingsFake(),
+      // The GitHub view it opens over: an inbox with nothing in it.
+      settingsFake()..on(
+        (input) => input is ListGitHubInboxRequest
+            ? ListGitHubInboxResponse(atMs: msAgo(Duration.zero))
+            : null,
+      ),
       SettingsSection.general,
     );
     d.select('c'); // in /Users/me/site; picking a chat shuts Settings

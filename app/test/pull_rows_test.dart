@@ -135,6 +135,7 @@ Future<(Daemon, FakeDaemon)> _app(
       GetGitHubPullRequest(:final ref) => GetGitHubPullResponse(
         pull: fixturePull()..item = known[ref.number]!,
       ),
+      GetGitHubCommitsRequest() => fixtureCommits(),
       _ => null,
     };
   final d = await openApp(tester, fake, size: size, brightness: brightness);

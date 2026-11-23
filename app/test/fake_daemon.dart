@@ -42,7 +42,11 @@ List<Agent> readyAgents() => [
 /// A daemon with [chats] and [agents] for widget tests; it records the
 /// chats asked for in [started], and fails them with [startError] if set.
 class FakeDaemon implements Transport {
-  new(List<Chat> chats) : chats = [for (final c in chats) c.deepCopy()];
+  new(List<Chat> chats) : chats = [for (final c in chats) c.deepCopy()] {
+    // Last of the test's teardowns, so a call refused while the app
+    // closes counts too.
+    addTearDown(checkRefused);
+  }
 
   /// The daemon's chats: copies of its own, so one it adds (a fork, a new
   /// chat) or drops, or a chat it changes (a pin, a color), isn't in a
@@ -81,9 +85,11 @@ class FakeDaemon implements Transport {
   Completer<String?>? signInGate;
 
   /// Answers calls the fake doesn't know (Jira's, git's): an answer (or a
-  /// Future of one, to answer later), or null for the empty one; a thrown
-  /// error fails the call. Every such call is in [calls]. GetGitHubItems
-  /// it leaves unanswered are its GetGitHubPull answers' rows.
+  /// Future of one, to answer later), or null for the fake's own: its
+  /// model's, the empty one for a call in [answersEmpty], else
+  /// Unimplemented, which fails the test ([checkRefused]); a thrown error
+  /// fails the call. Every such call is in [calls]. GetGitHubItems it
+  /// leaves unanswered are its GetGitHubPull answers' rows.
   Object? Function(Object input)? answer;
   final calls = <Object>[];
 
@@ -137,6 +143,15 @@ class FakeDaemon implements Transport {
   /// What GetUsage answers (ADR 0136), whatever the range: nothing used
   /// until a test sets it.
   GetUsageResponse usage = GetUsageResponse();
+
+  /// What GetRemote answers: the phone off, as a daemon never paired.
+  Remote remote = Remote(state: 'off');
+
+  /// What GetPushKey answers: the daemon's VAPID public key, which it
+  /// always has (base64url, as internal/webpush sends it).
+  String pushKey =
+      'BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIg'
+      'Dll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8';
 
   /// While set the daemon is gone: every call fails as the transport says
   /// when none answers, pings too, and setting it drops every stream it
@@ -355,6 +370,7 @@ class FakeDaemon implements Transport {
     if (other == null && input is GetGitHubItemsRequest) {
       other = await _itemsFromWhole(input);
     }
+
     calls.add(input);
     if (input is DeleteChatRequest) _delete(input.chatId);
     if (other == null && input is KeepSideChatRequest) _keepSide(input.chatId);
@@ -419,9 +435,64 @@ class FakeDaemon implements Transport {
               null => GetProjectIconResponse(),
             },
           GetUsageRequest() => usage,
+          GetRemoteRequest() => GetRemoteResponse(remote: remote),
+          GetPushKeyRequest() => GetPushKeyResponse(key: pushKey),
+          // As a daemon on a system whose processes it doesn't read: the
+          // app stops asking (internal/api/memory.go).
+          GetMemoryRequest() => throw ConnectException(
+            Code.unimplemented,
+            'memory not read here',
+          ),
+          ForkChatRequest(:final chatId) => ForkChatResponse(
+            chatId: _openSide(chatId),
+          ),
+          GetChatItemsRequest(:final chatId) => () {
+            _snapshot(chatId); // NotFound for a chat it hasn't
+            return GetChatItemsResponse(); // nothing older
+          }(),
+          // A folder no GitHub repository is found for: the chat's own
+          // links only (internal/api/github_pull.go).
+          FindChatPullRequest(:final chatId) => () {
+            final c = _chat(chatId);
+            return FindChatPullResponse(
+              pull: c.hasPull() ? c.pull : null,
+              pulls: c.pulls,
+            );
+          }(),
+          // None looked at yet (internal/features/chats/related.go); a
+          // side chat has none.
+          GetRelatedWorktreesRequest(:final chatId) =>
+            chats.any((c) => c.id == chatId)
+                ? GetRelatedWorktreesResponse()
+                : throw ConnectException(
+                    Code.failedPrecondition,
+                    'no chat $chatId',
+                  ),
+          // A file of [files] as it is, unchanged (internal/git/read.go);
+          // any other can't be read.
+          GetFileRequest(:final path) => switch (files[path]) {
+            final data? => GetFileResponse(
+              file: FileChange(
+                path: path,
+                status: 'unchanged',
+                oldText: utf8.decode(data, allowMalformed: true),
+                newText: utf8.decode(data, allowMalformed: true),
+              ),
+            ),
+            null => throw ConnectException(
+              Code.failedPrecondition,
+              'open $path: no such file or directory',
+            ),
+          },
+          // Its folder, with no server or launch file in it.
+          ListServersRequest(:final chatId) => ListServersResponse(
+            folder: _chat(chatId).folder,
+          ),
           // Saved: the pull request is read again for what it says now.
           EditGitHubPullRequest() => EditGitHubPullResponse(),
-          _ => spec.outputFactory(),
+          _ when answersEmpty.contains(input.runtimeType) =>
+            spec.outputFactory(),
+          _ => _refuse(input),
         };
     return UnaryResponse(spec, Headers(), out as O, Headers());
   }
@@ -444,6 +515,21 @@ class FakeDaemon implements Transport {
     );
   }
 
+  /// Chat [id] of [chats], or NotFound.
+  Chat _chat(String id) =>
+      chats.where((c) => c.id == id).firstOrNull ??
+      (throw ConnectException(Code.notFound, 'no chat $id'));
+
+  /// Opens a side chat of chat [of] as ForkChat does: `side`, then side2…,
+  /// in [sides]; refused for a chat it hasn't.
+  String _openSide(String of) {
+    _chat(of);
+    final n = sides.length;
+    final id = n == 0 ? 'side' : 'side${n + 1}';
+    sides[id] = of;
+    return id;
+  }
+
   /// Keeps side chat [id] as the daemon does: a fork of the chat it came
   /// from, listed as `kept` and asleep, the side chat gone; refused for one
   /// it hasn't open.
@@ -454,6 +540,31 @@ class FakeDaemon implements Transport {
     }
     _send(EventsResponse(chatId: id, removed: true));
     _fork(of, 'kept');
+  }
+
+  /// The calls the fake refused, by request type: none it knows, nor the
+  /// test's [answer], nor one of [answersEmpty].
+  final refused = <String>[];
+
+  /// Refuses [input] as a daemon that lacks its call does, and keeps it in
+  /// [refused]: the app may swallow the error, the test's end won't.
+  Never _refuse(Object input) {
+    final what = '${input.runtimeType}';
+    refused.add(what);
+    throw ConnectException(Code.unimplemented, 'FakeDaemon has no $what');
+  }
+
+  /// Fails the test if the fake refused a call: a test whose app makes a
+  /// call needs an answer for it, [answer]'s or the fake's own, or the
+  /// call a place in [answersEmpty].
+  void checkRefused() {
+    if (refused.isEmpty) return;
+    fail(
+      'FakeDaemon refused ${{...refused}.join(', ')}: give the test an '
+      'answer for it (FakeDaemon.on), or the fake one, or, if an empty '
+      'message is what the daemon answers when it has nothing to say, a '
+      'place in answersEmpty',
+    );
   }
 
   /// The next fork's id: fork, then fork2, fork3…
@@ -743,6 +854,106 @@ class FakeDaemon implements Transport {
     );
   }
 }
+
+/// The calls whose empty message is what a daemon with nothing to say
+/// answers (a list with no entries, a get of something optional, a call
+/// that only acts), so [FakeDaemon] answers them so unless a test says
+/// otherwise. Any other call it doesn't know it refuses as Unimplemented
+/// and fails the test.
+const answersEmpty = <Type>{
+  // Calls that only act: on success the daemon's answer is empty (its
+  // handlers' `done`), and a test that cares looks at [FakeDaemon.calls].
+  // Chats.
+  AnswerQuestionRequest,
+  ArchiveChatRequest,
+  CloseSideChatRequest,
+  DeleteChatBranchRequest,
+  DeleteChatRequest,
+  DismissRemovedChatsRequest,
+  MoveChatRequest,
+  PinChatsRequest,
+  PinMessageRequest,
+  ReloadChatRequest,
+  RemoveChatWorktreeRequest,
+  RenameBranchRequest,
+  RenameChatRequest,
+  ReopenChatRequest,
+  SetChatColorRequest,
+  SetConfigOptionRequest,
+  SetDeviceViewRequest,
+  StopTaskRequest,
+  // Nothing taken back to edit, a message that ran no command.
+  CancelTurnRequest,
+  SendPromptRequest,
+  // Terminals, dev servers, the app's log, the daemon's own.
+  CloseTerminalRequest,
+  ResizeTerminalRequest,
+  StopAllServersRequest,
+  StopServerRequest,
+  LogRequest,
+  ClearTranscriptsRequest,
+  InstallUpdateRequest,
+  SetSettingsRequest,
+  // Agents, MCP servers, skills and trust.
+  AddMcpServerRequest,
+  LogoutMcpServerRequest,
+  RemoveAgentRequest,
+  SetMcpServerOnRequest,
+  SetPluginOnRequest,
+  SetSkillOnRequest,
+  SetUpAgentRequest,
+  LinkSkillRequest,
+  TrashSkillRequest,
+  TrustFolderRequest,
+  // The phone: pairing and push.
+  ConfirmPairingRequest,
+  SendTestPushRequest,
+  SetPushSubscriptionRequest,
+  UnpairThisDeviceRequest,
+  // GitHub and Jira.
+  AddGitHubCommentRequest,
+  AddJiraCommentRequest,
+  AllowGitHubTokenRequest,
+  AllowJiraTokenRequest,
+  DequeueGitHubPullRequest,
+  EnableGitHubAutoMergeRequest,
+  LinkChatPullRequest,
+  MergeGitHubPullRequest,
+  ReplyGitHubThreadRequest,
+  ResolveGitHubThreadRequest,
+  RestoreGitHubBranchRequest,
+  SetGitHubViewedRequest,
+  SetJiraSearchesRequest,
+  SubmitGitHubReviewRequest,
+  TransitionJiraIssueRequest,
+  // Nothing to say: a list with no entries, or nothing found.
+  // No GitHub host signed in, Jira site set up, repository known, pull
+  // request row or state known, file viewed, check rerun, value to
+  // suggest.
+  ListGitHubHostsRequest,
+  ListJiraSitesRequest,
+  ListGitHubReposRequest,
+  GetGitHubItemsRequest,
+  GetGitHubStatesRequest,
+  GetGitHubViewedRequest,
+  RerunGitHubChecksRequest,
+  SuggestJiraJqlRequest,
+  // No terminal, MCP server, commit, file or branch; no path found.
+  ListTerminalsRequest,
+  ListMcpServersRequest,
+  ListCommitsRequest,
+  ListFilesRequest,
+  ListBranchesRequest,
+  FindChatFilesRequest,
+  // A folder outside git (internal/api/git.go answers it so), a diff
+  // with no change, a folder that runs nothing to trust.
+  GetFolderStatusRequest,
+  GetDiffRequest,
+  CheckFolderRequest,
+  // A chat with nothing more to delete; no chat holding off a restart.
+  PlanDeleteChatRequest,
+  RestartWhenIdleRequest,
+};
 
 /// One events subscription on a [FakeDaemon]: what the app asked for, and
 /// whether its stream is still open (the app hasn't let it go and the

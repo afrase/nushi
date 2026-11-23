@@ -588,6 +588,10 @@ void main() {
         ListGitHubHostsRequest() => ListGitHubHostsResponse(
           hosts: [GitHubHost(host: 'github.com', login: 'me', source: 'gh')],
         ),
+        // The view the click opens: its inbox and the pull request.
+        ListGitHubInboxRequest() => inboxForTests(),
+        GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
+        GetGitHubCommitsRequest() => pullCommits(),
         _ => null,
       };
     final d = await fake.connect(tester);

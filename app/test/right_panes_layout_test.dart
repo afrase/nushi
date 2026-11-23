@@ -32,6 +32,7 @@ import 'package:nushi/transcript.dart';
 
 import 'browser_fixture.dart' show browserFakes;
 import 'fake_daemon.dart' show loadFonts;
+import 'github_fixture.dart' show pullCommits, pullOf;
 import 'harness.dart';
 import 'header_checks.dart';
 import 'right_panes_fixture.dart';
@@ -365,12 +366,14 @@ void main() {
     // The subagent's pane dragged as wide as it goes beside the
     // transcript, which keeps its least: the header is 360 wide.
     final width = windowFor(928, sidebar: false);
-    final (d, _) = await panesApp(
+    final (d, fake) = await panesApp(
       tester,
       width: width,
       open: _open(subagent: true),
       widths: {'subagent': 928 - 360},
     );
+    // Pull request #1240, linked below: GitHub's answer for its tab.
+    fake.on(_pull1240);
     d.chats['c']!
       ..title = 'A title long enough to want all of the room it can get'
       ..jiraKey = 'NUSHI-1234'
@@ -647,3 +650,20 @@ void main() {
     }
   }
 }
+
+/// GitHub's answers for pull request #1240, which a test links its chat to.
+Object? _pull1240(Object input) => switch (input) {
+  GetGitHubPullRequest() => GetGitHubPullResponse(
+    pull: pullOf(
+      GitHubLink(
+        host: 'github.com',
+        repo: 'afrase/nushi',
+        number: 1240,
+        id: 'PR_1240',
+        pull: true,
+      ),
+    ),
+  ),
+  GetGitHubCommitsRequest() => pullCommits(),
+  _ => null,
+};

@@ -215,6 +215,7 @@ void main() {
           'daemon unavailable',
         ),
         ListJiraSitesRequest() => ListJiraSitesResponse(sites: _sites()),
+        CheckJiraSiteRequest() => CheckJiraSiteResponse(name: 'Test User'),
         _ => null,
       };
     final d = await fake.connect(tester);
@@ -238,6 +239,7 @@ void main() {
           'daemon unavailable: connection lost',
         ),
         ListJiraSitesRequest() => ListJiraSitesResponse(sites: _sites()),
+        CheckJiraSiteRequest() => CheckJiraSiteResponse(name: 'Test User'),
         _ => null,
       };
     final d = await fake.connect(tester);

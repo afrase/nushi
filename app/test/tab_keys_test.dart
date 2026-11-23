@@ -13,6 +13,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
 
 import 'fake_daemon.dart';
+import 'github_fixture.dart' show pullCommits, pullOf;
 import 'harness.dart';
 
 // ⌃Tab and ⌃⇧Tab, the chat's tabs, wherever the focus is (`chat_keys.dart`),
@@ -35,9 +36,14 @@ Future<Daemon> _app(WidgetTester tester) async {
           chat('a', 'claude', 'Fix the login redirect', age: 2),
           chat('b', 'codex', 'Bump the API version', age: 1)..pull = _pull,
         ])
-        ..answer = (input) => input is FindChatPullRequest
-            ? FindChatPullResponse(pull: input.chatId == 'b' ? _pull : null)
-            : null;
+        ..answer = (input) => switch (input) {
+          FindChatPullRequest(:final chatId) => FindChatPullResponse(
+            pull: chatId == 'b' ? _pull : null,
+          ),
+          GetGitHubPullRequest() => GetGitHubPullResponse(pull: pullOf(_pull)),
+          GetGitHubCommitsRequest() => pullCommits(),
+          _ => null,
+        };
   final d = await fake.connect(tester);
   await tester.pumpWidget(NushiApp(daemon: d));
   await tester.pumpAndSettle();
