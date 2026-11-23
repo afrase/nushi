@@ -757,9 +757,10 @@ class ChatState extends ChangeNotifier {
   /// Lets go of what it owns, the chat gone (Daemon's _forget, after the
   /// frame that drops its views): a load on its way is dropped, the runs
   /// it follows stop, its find's timers end, and its notifiers and
-  /// controllers are disposed. Not [forking], [rewinding] or [takeBack]:
-  /// calls that may answer after the chat went set them, and nothing
-  /// listens to them by then.
+  /// controllers are disposed. Not [forking], [rewinding], [takeBack],
+  /// [side], [sideHidden] or [commitMessage]: calls that may answer after
+  /// the chat went set them (a side chat's fork, the agent's commit
+  /// message), and nothing listens to them by then.
   @override
   void dispose() {
     unload();
@@ -771,15 +772,12 @@ class ChatState extends ChangeNotifier {
     edits.clear();
     for (final n in <ChangeNotifier>[
       editsChanged,
-      side,
-      sideHidden,
       renaming,
       pane,
       filesOpened,
       tab,
       showAsked,
       serverLogs,
-      commitMessage,
     ]) {
       n.dispose();
     }

@@ -4,6 +4,7 @@ import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/code_runs.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/daemon.dart';
@@ -270,12 +271,19 @@ void main() {
     // Whole until the frame that drops its views has been drawn.
     expect(() => ChangeNotifier.debugAssertNotDisposed(chat), returnsNormally);
     await tester.pump();
-    for (final n in <ChangeNotifier>[chat, chat.pane, chat.commitMessage]) {
+    for (final n in <ChangeNotifier>[chat, chat.pane]) {
       expect(
         () => ChangeNotifier.debugAssertNotDisposed(n),
         throwsFlutterError,
       );
     }
+    // A side chat's fork and the agent's commit message may answer after
+    // the chat went (openSide, CommitBox): what they set takes it.
+    expect(() {
+      chat.sideHidden.value = false;
+      chat.side.value = ChatState('s', '/x');
+      chat.commitMessage.text = 'Late';
+    }, returnsNormally);
     d.dispose();
   });
 
