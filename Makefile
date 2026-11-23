@@ -191,9 +191,13 @@ claude-record:
 # The API's code from proto/, committed; CI checks it is what this makes.
 # Go's plugins are go.mod's tools; Dart's are pinned in gen-tools, and
 # connectrpc's output is formatted (it writes its own layout).
+# protoc-gen-dart's JSON descriptors and server stubs go: nothing imports
+# them (the app calls through Connect's client), and buf.gen.yaml's clean
+# makes them anew on each run, so no buf option can drop them.
 gen: gen-tools
 	$(BUF) lint
 	$(BUF) generate
+	rm -f app/lib/gen/nushi/v1/nushi.pbjson.dart app/lib/gen/nushi/v1/nushi.pbserver.dart
 	dart format app/lib/gen
 
 # Dart's protoc plugins at the versions gen is checked with, activated in
