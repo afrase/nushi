@@ -98,16 +98,21 @@ final class NushiViewController: FlutterViewController {
   /// takes the gesture's later events), the engine never has it, and its
   /// gesture goes on for good: a drag it fed stays alive, and every later
   /// gesture is sent as more of it. So once the event has been handled,
-  /// an end the engine didn't get is given to it.
+  /// an end the engine didn't get is given to it. The first block to run
+  /// takes every end seen, each by its own kind: a scroll's and a
+  /// magnify's ending in the same pass are both repaired, not only the
+  /// kind that queued the block.
   func gestureEnding(_ event: NSEvent) {
-    guard let kind = Self.kind(event), [.ended, .cancelled].contains(Self.phase(event)) else { return }
+    guard Self.kind(event) != nil, [.ended, .cancelled].contains(Self.phase(event)) else { return }
     endsSeen.append(event)
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       let seen = self.endsSeen
       self.endsSeen = []
-      for end in seen where self.mouse.owesEnd(kind) && Self.kind(end) == kind {
-        self.gesture(kind, end, check: "gesture end", self.engineGesture)
+      for end in seen {
+        if let kind = Self.kind(end), self.mouse.owesEnd(kind) {
+          self.gesture(kind, end, check: "gesture end", self.engineGesture)
+        }
       }
     }
   }
