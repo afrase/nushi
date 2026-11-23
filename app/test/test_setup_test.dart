@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/collapsible.dart';
+import 'package:nushi/daemon.dart' show dataDir;
 import 'package:nushi/gen/nushi/v1/nushi.connect.spec.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/native.dart';
@@ -11,6 +12,8 @@ import 'package:nushi/settings.dart';
 import 'fake_daemon.dart';
 import 'fake_desktop.dart';
 import 'flutter_test_config.dart';
+import 'harness.dart';
+import 'phone_native_fixture.dart';
 
 // What every test starts with (flutter_test_config.dart's setUp, which
 // runs startAfresh): each test here leaves something and starts afresh
@@ -42,6 +45,33 @@ void main() {
     expect(readSaved(), isNotEmpty);
     startAfresh();
     expect(readSaved(), isEmpty);
+  });
+
+  test('what one test leaves in the data folder the next doesn’t see, '
+      'but app.json as at launch', () {
+    File('$dataDir/left.txt').writeAsStringSync('mine');
+    Directory('$dataDir/left/deeper').createSync(recursive: true);
+    startAfresh();
+    final left = [
+      for (final e in Directory(dataDir).listSync()) e.uri.pathSegments,
+    ].map((p) => p.lastWhere((s) => s.isNotEmpty)).toSet();
+    expect(left.difference({'app.json', 'config'}), isEmpty);
+  });
+
+  testWidgets('a phone test that reaches the native edge fails, as in the '
+      'browser, where the phone has none', (tester) async {
+    final phone = await startPhone(tester, FakeDaemon([]));
+    expect(native, isA<PhoneNative>());
+    expect(() => native.desktop.reveal('/Users/me/nushi'), throwsStateError);
+    expect(() => native.alerts, throwsStateError);
+    expect(() => native.diagrams, throwsStateError);
+    expect(() => native.window.zoom(), throwsStateError);
+    expect(() => native.web.page(), throwsStateError);
+    // What the shared widgets read behind a kIsWeb guard answers as there.
+    expect(native.window.headersMoveWindow, isFalse);
+    expect(native.web.embedded, isFalse);
+    expect(native.speller, isNull);
+    await endPhone(tester, phone);
   });
 
   test('a chat the fake daemon changes isn’t the one its test built it '

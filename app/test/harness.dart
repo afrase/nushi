@@ -12,6 +12,7 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
@@ -19,6 +20,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/toast.dart';
 
 import 'fake_daemon.dart';
+import 'phone_native_fixture.dart';
 
 /// The time the app sees in every test ([clock], set before each by
 /// `flutter_test_config.dart`): fixed, so an age a golden shows never moves.
@@ -201,14 +203,16 @@ Future<void> endPhone(
 
 /// A phone on [platform] (paired, as [pairedRecord] has it, unless given)
 /// whose daemon answers through [fake], its app shown, started and pumped
-/// a few frames, its chats' drafts kept as the phone keeps them. The
-/// window's size and the accessibility features (Reduce Motion) stay the
-/// caller's to set.
+/// a few frames, its chats' drafts kept as the phone keeps them, and no
+/// native edge (`PhoneNative`: a native call fails the test, as it would
+/// in the browser). The window's size and the accessibility features
+/// (Reduce Motion) stay the caller's to set.
 Future<Phone> startPhone(
   WidgetTester tester,
   Transport fake, {
   PhonePlatform? platform,
 }) async {
+  native = PhoneNative();
   late final Phone phone;
   phone = Phone(
     platform ?? (PhonePlatform()..saved = pairedRecord()),

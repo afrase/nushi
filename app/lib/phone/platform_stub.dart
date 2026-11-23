@@ -108,11 +108,22 @@ final class PhonePlatform {
   /// What [onVisible] was given: the page shown or hidden.
   void Function({required bool visible})? visibilityChanged;
 
-  /// Calls [f] when the network comes back.
-  void onOnline(void Function() f) {}
+  /// Calls [f] when the network comes back; a test calls [networkBack].
+  // A method, as the browser's PhonePlatform has it.
+  // ignore: use_setters_to_change_properties
+  void onOnline(void Function() f) => networkBack = f;
 
-  /// Calls [f] when the page comes back from the back-forward cache.
-  void onResume(void Function() f) {}
+  /// What [onOnline] was given: the network back.
+  void Function()? networkBack;
+
+  /// Calls [f] when the page comes back from the back-forward cache; a
+  /// test calls [pageRestored].
+  // A method, as the browser's PhonePlatform has it.
+  // ignore: use_setters_to_change_properties
+  void onResume(void Function() f) => pageRestored = f;
+
+  /// What [onResume] was given: the page restored.
+  void Function()? pageRestored;
 
   /// The browser's history, as a test sees it: each entry's depth, the
   /// first the page's own (the root), and the one it's at.

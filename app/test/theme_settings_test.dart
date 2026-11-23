@@ -32,12 +32,10 @@ Future<void> _tap(WidgetTester tester, Finder f) async {
   await tester.tap(f);
 }
 
-/// Writes [text] as the theme file [name], and the folder's gone after.
+/// Writes [text] as the theme file [name] (the folder goes before the
+/// next test, with the rest of the data folder).
 File _file(String name, String text) {
   final dir = themeFiles.dir..createSync(recursive: true);
-  addTearDown(() {
-    if (dir.existsSync()) dir.deleteSync(recursive: true);
-  });
   return File('${dir.path}/$name')..writeAsStringSync(text);
 }
 
@@ -307,11 +305,6 @@ void main() {
   testWidgets('New from writes the current theme whole, picks it and shows '
       'it in Finder; Show folder opens the folder', (tester) async {
     final opened = fakeDesktop();
-    addTearDown(() {
-      if (themeFiles.dir.existsSync()) {
-        themeFiles.dir.deleteSync(recursive: true);
-      }
-    });
     colorTheme.value = 'catppuccin';
     final d = await _app(tester);
     await _tap(tester, find.text('New from Catppuccin'));

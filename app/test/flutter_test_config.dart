@@ -18,7 +18,6 @@ import 'package:nushi/review.dart';
 import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme_files.dart';
-import 'package:nushi/tile_images.dart';
 import 'package:nushi/tile_mark.dart';
 import 'package:re_editor/re_editor.dart' show kIsAndroid, kIsIOS, kIsMacOS;
 
@@ -41,7 +40,8 @@ import 'harness.dart';
 /// app's prefs as at launch (`app.json` too), nothing the app holds in
 /// memory while it runs (`run_state.dart`'s: agents, caches, drafts,
 /// groups opened…), no pull request read, review comments, clones or
-/// theme files known, no tile's image kept, no image decoded, the shared
+/// theme files known, no file in the data folder but app.json, no image
+/// decoded, the shared
 /// clock of what loops at its start; the Mac's native edge (on every
 /// host), no speller, a fake install, so nothing starts or stops a
 /// daemon, a fake file manager, so nothing opens on the desktop, and a
@@ -99,6 +99,21 @@ void startAfresh() {
     ..install = FakeAppInstall()
     ..desktop = FakeDesktop();
   phoneHost = macConventions;
+  // Nothing another test left in the process's data folder (pull
+  // requests read, tile images, theme files, the app's log, a file a test
+  // wrote…), so a new kind of file needs no line here: everything goes
+  // but app.json, which resetAppSettings next writes as at launch (and
+  // which a file's setUpAll may have written for the app to find, read
+  // and set aside at the first test's), and on Linux `config`, the
+  // process's XDG_CONFIG_HOME.
+  final data = Directory(dataDir);
+  if (data.existsSync()) {
+    for (final e in data.listSync()) {
+      final name = e.uri.pathSegments.lastWhere((s) => s.isNotEmpty);
+      if (name == 'app.json' || name == 'config') continue;
+      e.deleteSync(recursive: true);
+    }
+  }
   // The prefs as at launch, and `app.json` on disk as it was then.
   resetAppSettings();
   // What the app holds while it runs (caches, half-written comments,
@@ -116,9 +131,6 @@ void startAfresh() {
   forgetJiraView();
   forgetGitHubView();
   unawaited(themeFiles.forget());
-  // No tile's image another test kept: its copies are files in the
-  // process's data folder, which a test counts.
-  if (tileImagesDir.existsSync()) tileImagesDir.deleteSync(recursive: true);
   // What loops starts at its rest, not where the test before left the
   // shared clock.
   pulseClock.rewind();

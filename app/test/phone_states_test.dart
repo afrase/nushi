@@ -374,4 +374,40 @@ void main() {
     expect(link.failures, 0);
     await _end(tester, p);
   });
+
+  testWidgets('the network back, or the page restored, redials at once', (
+    tester,
+  ) async {
+    var down = false;
+    final fake = FakeDaemon(_chats)
+      ..answer = (input) {
+        if (input is PingRequest && down) {
+          throw connect.ConnectException(connect.Code.unavailable, 'gone');
+        }
+        return null;
+      };
+    final platform = PhonePlatform()..saved = pairedRecord();
+    final p = await _app(
+      tester,
+      fake,
+      '390',
+      Brightness.dark,
+      platform: platform,
+    );
+    final link = p.link!;
+    // What Phone.start gave the browser's online and pageshow events.
+    for (final back in [platform.networkBack!, platform.pageRestored!]) {
+      down = true;
+      await link.check();
+      await tester.pump();
+      expect(p.daemon!.connected, isFalse);
+      expect(link.failures, greaterThan(0));
+      down = false;
+      back();
+      await frames(tester, 5);
+      expect(p.daemon!.connected, isTrue);
+      expect(link.failures, 0);
+    }
+    await _end(tester, p);
+  });
 }
