@@ -12,10 +12,11 @@ import 'package:nushi/usage.dart';
 /// A dot of [color]; [ringing], a soft ring grows out of it and fades,
 /// again every 1.6 seconds, from the shared clock. Given [halo], the dot
 /// sits in a soft disc of it, half the dot wider all round (a plan's
-/// running step).
+/// running step). A ring repaints with what its widget's
+/// [loopRepaintOf] gives.
 class StatusMark extends CustomPainter {
-  new(this.color, {this.ringing = false, this.halo})
-    : super(repaint: ringing ? loopRepaint : null);
+  new(this.color, {this.ringing = false, this.halo, Listenable? repaint})
+    : super(repaint: ringing ? repaint : null);
 
   final Color color;
   final bool ringing;
@@ -53,8 +54,8 @@ class StatusMark extends CustomPainter {
 /// A ring of [color], its line fading in and out slowly ([pulsing]) every
 /// 2.4 seconds: work runs in the background, no turn.
 class _Ring extends CustomPainter {
-  new(this.color, {required this.pulsing})
-    : super(repaint: pulsing ? loopRepaint : null);
+  new(this.color, {required this.pulsing, Listenable? repaint})
+    : super(repaint: pulsing ? repaint : null);
 
   final Color color;
   final bool pulsing;
@@ -203,14 +204,22 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
       case .failed:
         return Icon(Icons.error_outline, size: size * 1.6, color: t.crashed);
       case .working:
-        final mark = _mark(StatusMark(t.running, ringing: !still));
+        final mark = _mark(
+          StatusMark(
+            t.running,
+            ringing: !still,
+            repaint: loopRepaintOf(context),
+          ),
+        );
         // A turn needs no words; work the user didn't start does.
         return chat.busy ? mark : tooltip(context, workingWords(chat), mark);
       case .background:
         return tooltip(
           context,
           backgroundWords(chat.background),
-          _mark(_Ring(t.running, pulsing: !still)),
+          _mark(
+            _Ring(t.running, pulsing: !still, repaint: loopRepaintOf(context)),
+          ),
         );
       case .archived || .waiting || .done || .fresh || .idle:
         break;
@@ -386,8 +395,20 @@ class PhaseDot extends StatelessWidget {
     final t = NushiTheme.of(context).t;
     final (word, color) = phaseWord(phase, t);
     return tooltip(context, word, switch (phase) {
-      .working => _mark(StatusMark(color, ringing: !reduceMotion(context))),
-      .background => _mark(_Ring(color, pulsing: !reduceMotion(context))),
+      .working => _mark(
+        StatusMark(
+          color,
+          ringing: !reduceMotion(context),
+          repaint: loopRepaintOf(context),
+        ),
+      ),
+      .background => _mark(
+        _Ring(
+          color,
+          pulsing: !reduceMotion(context),
+          repaint: loopRepaintOf(context),
+        ),
+      ),
       .waiting => _waitingDot(t),
       _ => _dot(fill: color),
     });

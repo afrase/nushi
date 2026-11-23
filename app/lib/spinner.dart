@@ -23,7 +23,8 @@ class Spinner extends StatelessWidget {
     painter: _Arc(
       color ?? Theme.of(context).colorScheme.primary,
       strokeWidth,
-      turning: !reduceMotion(context) && loopRepaint != null,
+      turning: !reduceMotion(context) && loopRepaintOf(context) != null,
+      repaint: loopRepaintOf(context),
     ),
   );
 }
@@ -31,8 +32,12 @@ class Spinner extends StatelessWidget {
 /// The spinner's arc: it goes round once every [turn] while its length
 /// grows and shrinks over [breath], as Material's does.
 class _Arc extends CustomPainter {
-  new(this.color, this.strokeWidth, {required this.turning})
-    : super(repaint: turning ? loopRepaint : null);
+  new(
+    this.color,
+    this.strokeWidth, {
+    required this.turning,
+    Listenable? repaint,
+  }) : super(repaint: turning ? repaint : null);
 
   final Color color;
   final double strokeWidth;

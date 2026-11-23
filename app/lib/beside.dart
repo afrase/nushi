@@ -250,12 +250,16 @@ class _BesideState extends State<Beside> {
         final cover = panes.any((p) => p.name == widget.cover)
             ? widget.cover
             : null;
-        // Under the pane over all: kept, but not drawn or reached.
+        // Under the pane over all: kept, but not drawn or reached, and its
+        // tickers and loops still.
         Widget under(Object slot, Widget child) => ExcludeFocus(
           excluding: cover != null && slot != cover,
           child: Offstage(
             offstage: cover != null && slot != cover,
-            child: child,
+            child: TickerMode(
+              enabled: cover == null || slot == cover,
+              child: child,
+            ),
           ),
         );
         Widget slide(String slot, Widget? child, {bool shown = true}) => under(

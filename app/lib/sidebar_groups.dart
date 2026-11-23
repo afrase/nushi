@@ -368,13 +368,15 @@ class StartingRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: Sidebar.rowPad),
         child: Row(
           children: [
-            // A working chat's ring, still in a still frame ([loopRepaint]):
+            // A working chat's ring, still in a still frame ([loopRepaintOf]):
             // a start may wait on a trust card for as long as it's up.
             CustomPaint(
               size: const Size.square(ChatDot.size * 1.6),
               painter: StatusMark(
                 t.running,
-                ringing: !reduceMotion(context) && loopRepaint != null,
+                ringing:
+                    !reduceMotion(context) && loopRepaintOf(context) != null,
+                repaint: loopRepaintOf(context),
               ),
             ),
             const SizedBox(width: 8),

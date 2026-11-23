@@ -366,11 +366,14 @@ class Shine extends StatelessWidget {
           child: child,
         );
     if (stopAt case final v?) return mask(v, child);
+    final ticks = loopRepaintOf(context);
     return ListenableBuilder(
-      listenable: pulseClock,
+      // Its tickers off (a tucked or covered pane), it hears nothing, so
+      // the clock needn't tick for it.
+      listenable: ticks ?? Listenable.merge(const []),
       // At rest ([loopMoving]) the mask lets the text through as it is,
       // and stays, so what's under it keeps its state.
-      builder: (context, child) => pulseClock.running
+      builder: (context, child) => ticks != null && pulseClock.running
           ? mask(pulseClock.phase(period), child!)
           : mask(0, child!, blend: BlendMode.dst),
       child: child,
@@ -390,9 +393,14 @@ double loopPhase(Duration period) => Shine.stopAt ?? pulseClock.phase(period);
 /// three parts drawn, a shine's text as it is).
 bool get loopMoving => Shine.stopAt != null || pulseClock.running;
 
-/// What a looping painter repaints with: [pulseClock], unless stopped for a
-/// still frame (see [loopPhase]).
-Listenable? get loopRepaint => Shine.stopAt == null ? pulseClock : null;
+/// What a looping painter under [context] repaints with: [pulseClock],
+/// unless stopped for a still frame (see [loopPhase]) or its tickers are
+/// off, as a tucked or covered pane's are (ADR 0123): what isn't shown
+/// keeps no clock ticking. The one gate every loop goes through.
+Listenable? loopRepaintOf(BuildContext context) =>
+    Shine.stopAt == null && TickerMode.valuesOf(context).enabled
+    ? pulseClock
+    : null;
 
 /// [child] easing to its new size as it changes, over [Motion.standard]
 /// from [alignment]; under Reduce Motion at once, with no AnimatedSize (one

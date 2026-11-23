@@ -21,3 +21,6 @@ What loops for as long as a state lasts (a working chat's ring, the slow pulse o
 - The display's rate while focused, still while hidden: keeps the half a core for as long as Nushi has the focus and anything loops.
 - Moving while visible but not focused: what's beside the editor is what the user glances at, but a background command can run for hours with Nushi on a second display, at the same cost.
 - Fewer ticks (10 a second): a shine's band would jump a tenth of the text's width each tick.
+
+## Amendment (2026-11-23): hidden loops don't keep the clock
+- A loop asks `loopRepaintOf(context)` for its clock, and gets none where its tickers are off: a tucked rail, the panes under a pane that covers them all (`Beside`), the phone's list under an open chat. A shine there keeps its resting mask, so its text keeps its state. Before, a hidden loop kept the clock ticking 20 times a second with nothing of it on screen.

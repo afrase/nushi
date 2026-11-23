@@ -4,6 +4,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/spinner.dart';
+import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 import 'package:nushi/transcript.dart';
@@ -132,6 +133,60 @@ void main() {
     pulseClock.removeListener(tick);
     await tester.pump(const Duration(seconds: 1));
     expect(ticks, 2 * pulseRate + 2);
+  });
+
+  testWidgets('loops whose tickers are off (a tucked pane) leave the clock '
+      'still, and tick again once they are on', (tester) async {
+    Shine.stopAt = null;
+    addTearDown(() => Shine.stopAt = 0);
+    final on = ValueNotifier(false);
+    addTearDown(on.dispose);
+    await tester.pumpWidget(
+      _app(
+        ValueListenableBuilder(
+          valueListenable: on,
+          builder: (context, ticks, _) => TickerMode(
+            enabled: ticks,
+            child: Column(
+              children: [
+                const Shine(child: Text('Thinking…')),
+                const SizedBox.square(dimension: 14, child: Spinner()),
+                // Its painter asks below the TickerMode, as a widget does.
+                Builder(
+                  builder: (context) => CustomPaint(
+                    size: const Size.square(12),
+                    painter: StatusMark(
+                      const Color(0xFF00FF00),
+                      ringing: true,
+                      repaint: loopRepaintOf(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    expect(pulseClock.running, isFalse);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    // The shine keeps its mask, at rest, so the text keeps its state.
+    expect(
+      tester.widget<ShaderMask>(find.byType(ShaderMask)).blendMode,
+      BlendMode.dst,
+    );
+    on.value = true;
+    await tester.pump(const Duration(milliseconds: 730));
+    expect(pulseClock.running, isTrue);
+    expect(
+      tester.widget<ShaderMask>(find.byType(ShaderMask)).blendMode,
+      BlendMode.srcIn,
+    );
+    on.value = false;
+    await tester.pump(const Duration(seconds: 1));
+    expect(pulseClock.running, isFalse);
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('while Nushi is not in front, a shine shows its text as it '

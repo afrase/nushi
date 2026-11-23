@@ -257,11 +257,12 @@ class _PlanStepState extends State<PlanStep> with ClockRun {
         1,
       ),
       // A working chat's ring while the agent works on it; in a still
-      // frame (a golden) its dot in its halo ([loopRepaint]).
+      // frame (a golden) its dot in its halo ([loopRepaintOf]).
       'in_progress' => StatusMark(
         t.running,
         halo: t.accentSoft,
-        ringing: widget.working && !still && loopRepaint != null,
+        ringing: widget.working && !still && loopRepaintOf(context) != null,
+        repaint: loopRepaintOf(context),
       ),
       _ => StepRing(t.textMuted),
     };

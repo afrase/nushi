@@ -316,6 +316,7 @@ class _PullDotState extends State<PullDot> with ClockRun {
               color.withValues(alpha: color.a * fade),
               ringing: checks == 'pending' && !still,
               scale: pop,
+              repaint: loopRepaintOf(context),
             ),
           ),
         ),
@@ -329,8 +330,8 @@ class _PullDotState extends State<PullDot> with ClockRun {
 /// ([loopPhase]). The dot and the ring are drawn from the same centre, the
 /// box's.
 class ChecksMark extends CustomPainter {
-  new(this.color, {required this.ringing, this.scale = 1})
-    : super(repaint: ringing ? loopRepaint : null);
+  new(this.color, {required this.ringing, this.scale = 1, Listenable? repaint})
+    : super(repaint: ringing ? repaint : null);
 
   final Color color;
   final bool ringing;

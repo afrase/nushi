@@ -268,7 +268,7 @@ class SoftCaret extends StatelessWidget {
         child: RepaintBoundary(
           child: CustomPaint(
             size: const Size(4, 13),
-            painter: _Caret(color, opacity),
+            painter: _Caret(color, opacity, loopRepaintOf(context)),
           ),
         ),
       ),
@@ -277,7 +277,7 @@ class SoftCaret extends StatelessWidget {
 }
 
 class _Caret extends CustomPainter {
-  new(this.color, this.opacity) : super(repaint: loopRepaint);
+  new(this.color, this.opacity, Listenable? repaint) : super(repaint: repaint);
 
   final Color color;
   final double opacity;
