@@ -137,9 +137,7 @@ void main() {
     ('720_light', 720.0, Tokens.light),
     ('1700_dark', 1700.0, Tokens.dark),
   ]) {
-    testWidgets('paired devices, kinds and notifications ($name)', (
-      tester,
-    ) async {
+    testWidgets('paired devices and notifications ($name)', (tester) async {
       viewport(tester, Size(width, 440));
       final daemon = _daemon();
       remoteState.value = Remote(
@@ -178,16 +176,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(
-        find.textContaining('Web · notifications on · connected'),
-        findsOneWidget,
-      );
+      expect(find.text('Notifications on · connected'), findsOneWidget);
       expect(
         find.textContaining(keyFingerprint(List.filled(32, 9))),
         findsOneWidget,
       );
       expect(
-        find.textContaining('iPhone app · notifications off'),
+        find.text('Notifications off · 3h ago'), // no kind, though it's ""
         findsOneWidget,
       );
       expect(find.text('Revoke'), findsNWidgets(2)); // a device's each
@@ -200,6 +195,7 @@ void main() {
           ), // the group's edge, a row's and the button's padding
         );
       }
+      await render(tester, find.byType(MaterialApp), 'remote_devices_$name');
       await expectLater(
         find.byType(MaterialApp),
         matchesGoldenFile('goldens/remote_devices_$name.png'),

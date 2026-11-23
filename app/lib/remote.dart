@@ -157,9 +157,9 @@ Widget? _phonesNote(Remote r) {
   return lines.isEmpty ? null : Text(lines.join(' '));
 }
 
-/// A paired device: its name, whether it's the web app or an app, whether
-/// it gets notifications, and when it was last seen; Send a test
-/// notification and Revoke.
+/// A paired device (always the web app, ADR 0054): its name, whether it
+/// gets notifications, and when it was last seen; Send a test notification
+/// and Revoke.
 class _DeviceRow extends StatelessWidget {
   const new(this.d, this.client);
 
@@ -193,8 +193,7 @@ class _DeviceRow extends StatelessWidget {
       // to three lines.
       stackBelow: 520,
       description:
-          '${d.kind == 'web' ? 'Web' : 'iPhone app'}'
-          ' · notifications ${d.push ? 'on' : 'off'}'
+          'Notifications ${d.push ? 'on' : 'off'}'
           '${seen.isEmpty ? '' : ' · $seen'}',
       control: Row(
         mainAxisSize: MainAxisSize.min,
