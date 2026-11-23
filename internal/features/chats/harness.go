@@ -37,12 +37,6 @@ type ToolReader interface {
 	ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool)
 }
 
-// OtherReader knows the agent's forms: Other says a form field is the
-// free-text "Other" answer of the field before it.
-type OtherReader interface {
-	Other(field, before model.Field) bool
-}
-
 // DefaultReader says a config value is the agent's "use the default" choice.
 type DefaultReader interface {
 	Default(model.ConfigOption, model.ConfigValue) bool

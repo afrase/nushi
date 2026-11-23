@@ -54,7 +54,8 @@ type Harness struct{}
 func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{Name: "claude", Title: "Claude", Resume: "claude --resume", ClientMCP: true,
 		Expires: "Claude Code deletes sessions after 30 days by default", NamesSessions: true, SubagentSessions: true, Redelete: 3 * time.Second, Moves: true,
-		InitMeta: map[string]any{"subagent-transcript": true},
+		OtherSuffix: "_custom", // AskUserQuestion's free text after a question
+		InitMeta:    map[string]any{"subagent-transcript": true},
 		SessionMeta: map[string]any{"claudeCode": map[string]any{"options": map[string]any{
 			"perTaskStopAffordance": true,
 			"env":                   map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
@@ -333,12 +334,6 @@ func (Harness) Background(output string) bool {
 // replay.
 func (Harness) ReportElsewhere(output string) bool {
 	return strings.HasPrefix(strings.TrimSpace(output), "This agent's report was delivered to you")
-}
-
-// Other says field is the free-text "Other" answer that Claude's
-// AskUserQuestion form puts after a question: `<id>_custom`.
-func (Harness) Other(field, before model.Field) bool {
-	return len(field.Options) == 0 && field.ID == before.ID+"_custom"
 }
 
 // Default says v is the model list's "Default (recommended)": Claude

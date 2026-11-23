@@ -77,13 +77,6 @@ func TestKeepAtTheEdge(t *testing.T) {
 	}
 }
 
-func TestOther(t *testing.T) {
-	q := model.Field{ID: "color", Options: []model.Option{{ID: "red"}}}
-	if !harness.Other(model.Field{ID: "color_note"}, q) || harness.Other(model.Field{ID: "size_note"}, q) {
-		t.Error("only color_note is color's note")
-	}
-}
-
 // Gone is codex-acp's answer for a session with no rollout (seen with
 // codex-acp 2.2.2 after `codex delete --force`), not for an archived one.
 func TestGone(t *testing.T) {

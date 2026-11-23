@@ -38,7 +38,8 @@ type Harness struct{}
 func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{
 		Name: "opencode", Title: "OpenCode", Resume: "opencode --session",
-		InitMeta: map[string]any{"opencode/child-session-updates": true},
+		InitMeta:    map[string]any{"opencode/child-session-updates": true},
+		OtherSuffix: "_custom", // "Type your own answer" after a question
 	}
 }
 
@@ -81,12 +82,6 @@ var Tested = []string{"2.2.6"}
 func ConfigDir(home string) string {
 	xdg := cmp.Or(os.Getenv("XDG_CONFIG_HOME"), filepath.Join(home, ".config"))
 	return cmp.Or(os.Getenv("OPENCODE_CONFIG_DIR"), filepath.Join(xdg, "opencode"))
-}
-
-// Other says field is the free-text answer opencode puts after a question
-// with choices: `<id>_custom`, "Type your own answer".
-func (Harness) Other(field, before model.Field) bool {
-	return len(field.Options) == 0 && field.ID == before.ID+"_custom"
 }
 
 // Gone says a session/load error means opencode has no such session:

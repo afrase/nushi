@@ -56,7 +56,7 @@ type Local struct{ Harness }
 
 // Info is what Harness is.
 func (Harness) Info() model.HarnessInfo {
-	return model.HarnessInfo{Name: "ante", Title: "Ante", Resume: "ante --resume"}
+	return model.HarnessInfo{Name: "ante", Title: "Ante", Resume: "ante --resume", OtherSuffix: "_other"} // the bridge's "Other" after a question (pauses.go)
 }
 
 // Start starts the bridge, as claude.Harness does Claude's Go agent: this
@@ -167,10 +167,6 @@ func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[s
 		return map[string]any{"ante": map[string]any{"afterMessage": messageID}}
 	}
 }
-
-// Other says field is the free-text "Other" the bridge puts after a
-// question with choices.
-func (Harness) Other(field, before model.Field) bool { return field.ID == before.ID+"_other" }
 
 // Context asks the bridge what fills a session's context (Ante's
 // ContextReport): no model call, nothing kept in the conversation.

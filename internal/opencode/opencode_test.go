@@ -23,29 +23,11 @@ import (
 func TestInfo(t *testing.T) {
 	want := model.HarnessInfo{
 		Name: "opencode", Title: "OpenCode", Resume: "opencode --session",
-		InitMeta: map[string]any{"opencode/child-session-updates": true},
+		InitMeta:    map[string]any{"opencode/child-session-updates": true},
+		OtherSuffix: "_custom",
 	}
 	if got := harness.Info(); !reflect.DeepEqual(got, want) {
 		t.Errorf("got %+v", got)
-	}
-}
-
-// The free-text field of a question is the one named for the choices
-// before it.
-func TestOther(t *testing.T) {
-	q0 := model.Field{ID: "q0", Options: []model.Option{{ID: "red", Name: "Red"}}}
-	for _, c := range []struct {
-		field, before model.Field
-		want          bool
-	}{
-		{model.Field{ID: "q0_custom"}, q0, true},
-		{model.Field{ID: "q1"}, q0, false},
-		{model.Field{ID: "q1_custom"}, q0, false},
-		{model.Field{ID: "q0_custom", Options: q0.Options}, q0, false},
-	} {
-		if got := harness.Other(c.field, c.before); got != c.want {
-			t.Errorf("Other(%s after %s) = %v", c.field.ID, c.before.ID, got)
-		}
 	}
 }
 

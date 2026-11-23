@@ -20,7 +20,6 @@ import (
 var (
 	_ chats.Forker           = claude.Harness{}
 	_ chats.ToolReader       = claude.Harness{}
-	_ chats.OtherReader      = claude.Harness{}
 	_ chats.DefaultReader    = claude.Harness{}
 	_ chats.Transcript       = claude.Harness{}
 	_ chats.Subagents        = claude.Harness{}
@@ -42,11 +41,10 @@ var (
 	_ chats.SessionSearcher = claudehistory.Local{}
 	_ chats.WorkflowReader  = claudehistory.Local{}
 
-	_ chats.Forker      = codex.Harness{}
-	_ chats.ReadOnly    = codex.Harness{}
-	_ chats.ToolReader  = codex.Harness{}
-	_ chats.OtherReader = codex.Harness{}
-	_ chats.GoneReader  = codex.Harness{}
+	_ chats.Forker     = codex.Harness{}
+	_ chats.ReadOnly   = codex.Harness{}
+	_ chats.ToolReader = codex.Harness{}
+	_ chats.GoneReader = codex.Harness{}
 
 	_ chats.OpenFinder      = codex.Local{}
 	_ chats.ForkFinder      = codex.Local{}
@@ -54,20 +52,17 @@ var (
 
 	_ chats.Forker       = ante.Harness{}
 	_ chats.ToolReader   = ante.Harness{}
-	_ chats.OtherReader  = ante.Harness{}
 	_ chats.Subagents    = ante.Harness{}
 	_ chats.ContextAsker = ante.Harness{}
 
 	_ chats.OpenFinder   = ante.Local{}
 	_ chats.MessageDater = ante.Local{}
 
-	_ chats.OtherReader = omp.Harness{}
-	_ chats.ToolReader  = omp.Harness{}
+	_ chats.ToolReader = omp.Harness{}
 
 	_ chats.OpenFinder = omp.Local{}
 	_ chats.ForkFinder = omp.Local{}
 
-	_ chats.OtherReader  = opencode.Harness{}
 	_ chats.GoneReader   = opencode.Harness{}
 	_ chats.CommandHider = opencode.Harness{}
 

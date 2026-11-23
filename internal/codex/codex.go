@@ -36,7 +36,8 @@ type Local struct{ Harness }
 // ($CODEX_HOME/archived_sessions); codex resume offers to unarchive it.
 // Codex finds a session by its id whatever the folder, so it Moves.
 func (Harness) Info() model.HarnessInfo {
-	return model.HarnessInfo{Name: "codex", Title: "Codex", Resume: "codex resume", ClientMCP: true, DeleteArchives: true, OneWriter: true, Moves: true}
+	return model.HarnessInfo{Name: "codex", Title: "Codex", Resume: "codex resume", ClientMCP: true, DeleteArchives: true, OneWriter: true, Moves: true,
+		OtherSuffix: "_note"} // "Additional answer or note" after a question
 }
 
 // Start starts the adapter, as claude.Harness does Claude's, running r's
@@ -190,10 +191,4 @@ func keep(output string) string {
 		}
 	}
 	return notShown + "\n" + s
-}
-
-// Other says field is the free-text note that the adapter puts after a
-// question with choices: `<id>_note`, "Additional answer or note".
-func (Harness) Other(field, before model.Field) bool {
-	return len(field.Options) == 0 && strings.HasPrefix(field.ID, before.ID+"_note")
 }

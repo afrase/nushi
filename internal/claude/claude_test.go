@@ -36,10 +36,6 @@ func TestTodoToolsOnUnlessTheUserSaysOtherwise(t *testing.T) {
 }
 
 func TestFormsAndModels(t *testing.T) {
-	color := model.Field{ID: "color", Options: []model.Option{{ID: "red"}}}
-	if !harness.Other(model.Field{ID: "color_custom"}, color) || harness.Other(model.Field{ID: "fruit"}, color) {
-		t.Error("Other pairs the wrong fields")
-	}
 	models := model.ConfigOption{Category: "model"}
 	if !harness.Default(models, model.ConfigValue{Name: "Default (recommended)"}) || harness.Default(models, model.ConfigValue{Name: "Opus"}) ||
 		harness.Default(model.ConfigOption{Category: "mode"}, model.ConfigValue{Name: "Default"}) {

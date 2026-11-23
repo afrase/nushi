@@ -25,7 +25,8 @@ type Local struct{ Harness }
 
 // Info is what Harness is.
 func (Harness) Info() model.HarnessInfo {
-	return model.HarnessInfo{Name: "omp", Title: "oh-my-pi", Resume: "omp --resume", OneWriter: true}
+	return model.HarnessInfo{Name: "omp", Title: "oh-my-pi", Resume: "omp --resume", OneWriter: true,
+		OtherSuffix: "__other"} // "Other (type your own)" after a question
 }
 
 // Start starts the user's omp (r's CLI) in its ACP mode, in dir (the
@@ -44,12 +45,6 @@ const CLI = "omp"
 
 // Tested are the omp versions Nushi was run with.
 var Tested = []string{"18.12.6"}
-
-// Other says field is the free-text answer omp puts after a question with
-// choices: `<id>__other`, "Other (type your own)".
-func (Harness) Other(field, before model.Field) bool {
-	return len(field.Options) == 0 && strings.HasPrefix(field.ID, before.ID+"__other")
-}
 
 // ToolCall drops the "$ " omp puts before a command's title: the app marks
 // commands itself.

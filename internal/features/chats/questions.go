@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -21,8 +22,8 @@ func (c *chat) createElicitation(ctx context.Context, req *acp.CreateElicitation
 	if err != nil {
 		return nil, err
 	}
-	for i := 1; i < len(fields) && c.kind.otherReader != nil; i++ {
-		if c.kind.otherReader.Other(fields[i], fields[i-1]) {
+	for i := 1; i < len(fields); i++ {
+		if isOther(fields[i], fields[i-1], c.kind.OtherSuffix) {
 			fields[i].OtherFor = fields[i-1].ID
 		}
 	}
@@ -196,4 +197,14 @@ func formContent(fields []model.Field) (map[string]acp.ElicitationContentValue, 
 		content[f.ID] = val
 	}
 	return content, nil
+}
+
+// isOther says field is the free-text "Other" answer of the question
+// before it, by the agent's suffix (HarnessInfo.OtherSuffix): named for
+// that question, which has choices, with none of its own. Its name starts
+// so: Codex's Go agent numbers a note whose name a question took
+// (`q0_note1`). Not any field after a question: an MCP server's form
+// reaches the same path.
+func isOther(field, before model.Field, suffix string) bool {
+	return suffix != "" && len(field.Options) == 0 && len(before.Options) > 0 && strings.HasPrefix(field.ID, before.ID+suffix)
 }

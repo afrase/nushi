@@ -119,7 +119,7 @@ func TestEveryAgentIsWhole(t *testing.T) {
 // capabilities are the harness interfaces, by name.
 var capabilities = map[string]func(chats.Harness) bool{
 	"Forker": has[chats.Forker], "ToolReader": has[chats.ToolReader],
-	"OtherReader": has[chats.OtherReader], "DefaultReader": has[chats.DefaultReader], "Transcript": has[chats.Transcript],
+	"DefaultReader": has[chats.DefaultReader], "Transcript": has[chats.Transcript],
 	"Subagents": has[chats.Subagents], "SubagentOutput": has[chats.SubagentOutput], "SubagentMessages": has[chats.SubagentMessages], "BackgroundTasks": has[chats.BackgroundTasks], "ContextCommander": has[chats.ContextCommander], "ReadOnly": has[chats.ReadOnly],
 	"ContextAsker": has[chats.ContextAsker], "GoneReader": has[chats.GoneReader],
 	"OpenFinder": has[chats.OpenFinder], "ForkFinder": has[chats.ForkFinder], "HistoryChecker": has[chats.HistoryChecker], "MessageDater": has[chats.MessageDater],
@@ -163,12 +163,12 @@ func listed(h chats.Harness) []string {
 // tests run Harness, so they can never read the owner's files.
 func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 	want := map[string]struct{ harness, local []string }{
-		"claude": {[]string{"BackgroundTasks", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "OtherReader", "ReadOnly", "SubagentMessages", "SubagentOutput", "Subagents", "TerminalCommands", "TitleMaker", "ToolReader", "Transcript", "UsageReader"},
+		"claude": {[]string{"BackgroundTasks", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "ReadOnly", "SubagentMessages", "SubagentOutput", "Subagents", "TerminalCommands", "TitleMaker", "ToolReader", "Transcript", "UsageReader"},
 			[]string{"ForkFinder", "HistoryChecker", "MessageDater", "OpenFinder", "SessionSearcher", "WorkflowReader", "WorktreeFinder"}},
-		"codex":    {[]string{"Forker", "GoneReader", "OtherReader", "ReadOnly", "ToolReader"}, []string{"ForkFinder", "OpenFinder", "SessionSearcher"}},
-		"ante":     {[]string{"ContextAsker", "Forker", "OtherReader", "Subagents", "ToolReader"}, []string{"MessageDater", "OpenFinder"}},
-		"omp":      {[]string{"OtherReader", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
-		"opencode": {[]string{"CommandHider", "GoneReader", "OtherReader"}, nil},
+		"codex":    {[]string{"Forker", "GoneReader", "ReadOnly", "ToolReader"}, []string{"ForkFinder", "OpenFinder", "SessionSearcher"}},
+		"ante":     {[]string{"ContextAsker", "Forker", "Subagents", "ToolReader"}, []string{"MessageDater", "OpenFinder"}},
+		"omp":      {[]string{"ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
+		"opencode": {[]string{"CommandHider", "GoneReader"}, nil},
 		"pi":       {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},
 		"pig":      {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},
 	}

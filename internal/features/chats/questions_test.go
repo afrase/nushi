@@ -180,3 +180,30 @@ func TestEmptyFormAnsweredIsAccepted(t *testing.T) {
 		t.Errorf("the card: %+v", it)
 	}
 }
+
+// A form's free-text "Other" is the field named for the question before
+// it by the agent's suffix, with no choices of its own after one that has
+// them: each agent's (docs/facts), and none for an agent without one.
+func TestIsOther(t *testing.T) {
+	q0 := model.Field{ID: "q0", Options: []model.Option{{ID: "red", Name: "Red"}}}
+	for _, c := range []struct {
+		suffix        string
+		field, before model.Field
+		want          bool
+	}{
+		{"_custom", model.Field{ID: "q0_custom"}, q0, true}, // Claude, opencode
+		{"_note", model.Field{ID: "q0_note"}, q0, true},     // Codex
+		{"__other", model.Field{ID: "q0__other"}, q0, true}, // omp
+		{"_other", model.Field{ID: "q0_other"}, q0, true},   // Ante's bridge
+		{"_custom", model.Field{ID: "q1"}, q0, false},
+		{"_custom", model.Field{ID: "q1_custom"}, q0, false},
+		{"_note", model.Field{ID: "q0_note1"}, q0, true}, // Codex's, when a question is q0_note
+		{"_custom", model.Field{ID: "q0_custom", Options: q0.Options}, q0, false},
+		{"_custom", model.Field{ID: "q0_custom"}, model.Field{ID: "q0"}, false}, // after a field with no choices
+		{"", model.Field{ID: "q0"}, q0, false},
+	} {
+		if got := isOther(c.field, c.before, c.suffix); got != c.want {
+			t.Errorf("isOther(%s after %s, %q) = %v", c.field.ID, c.before.ID, c.suffix, got)
+		}
+	}
+}

@@ -54,6 +54,11 @@ type HarnessInfo struct {
 	// wherever it is (Claude's Go agent in any folder's history, Codex by
 	// its id), so a moved chat forks it there (ADR 0014).
 	Moves bool
+	// OtherSuffix names the free-text "Other" answer the agent's forms put
+	// after a question with choices: the field `<question's id><suffix>`,
+	// with no choices of its own ("_custom": Claude's `color_custom`). ""
+	// when its forms have none.
+	OtherSuffix string
 }
 
 // Info is i itself, so a HarnessInfo is a harness.

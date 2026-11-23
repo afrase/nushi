@@ -16,9 +16,6 @@ func TestACommandsTitle(t *testing.T) {
 	if other.Title != "$ x" {
 		t.Errorf("a read's title changed: %q", other.Title)
 	}
-	if !harness.Other(model.Field{ID: "q0__other"}, model.Field{ID: "q0"}) || harness.Other(model.Field{ID: "q1"}, model.Field{ID: "q0"}) {
-		t.Error("Other")
-	}
 }
 
 var harness Harness
