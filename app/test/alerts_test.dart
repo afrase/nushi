@@ -277,6 +277,42 @@ void main() {
     d.dispose();
   });
 
+  testWidgets("a gone chat's notifications are cleared: deleted, or "
+      'deleted while the app was away', (tester) async {
+    final swift = _fake();
+    final (fake, d, alerts) = await _connect(tester);
+    List<Object?> cleared() => [
+      for (final c in swift.calls)
+        if (c.method == 'clear') c.arguments,
+    ];
+    for (final id in ['a', 'b']) {
+      fake
+        ..emit(_status(id, running: true))
+        ..emit(_ended(id, TurnEnd.TURN_END_DONE))
+        ..emit(_status(id));
+    }
+    await tester.pump(const Duration(seconds: 3));
+    expect(swift.posted(), ['Claude finished', 'Codex finished']);
+
+    fake
+      ..chats.removeWhere((c) => c.id == 'a')
+      ..emit(EventsResponse(chatId: 'a', removed: true));
+    await tester.pump();
+    expect(cleared(), ['a']);
+
+    // b goes while the link is down: the list after it has no b.
+    fake.down = true;
+    await tester.pump();
+    fake.chats.removeWhere((c) => c.id == 'b');
+    fake.down = false;
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(d.chats, isEmpty);
+    expect(cleared(), ['a', 'b']);
+    alerts.dispose();
+    d.dispose();
+  });
+
   testWidgets('each kind can be off, and the sound on', (tester) async {
     final swift = _fake();
     final (fake, d, alerts) = await _connect(tester);

@@ -384,7 +384,7 @@ Both the Mac and the phone go by the daemon's verdict on how the turn ended.
 The Dock icon counts the chats that need you.
 
 - A notification shows while Nushi isn't the app in front, or for a chat other than the one showing.
-- A click opens its chat, and showing the chat clears its notifications. A "needs you" goes once the chat no longer does.
+- A click opens its chat, and showing the chat clears its notifications. A "needs you" goes once the chat no longer does. A deleted chat's go with it, deleted while Nushi was away too.
 - A prompt or question ends "cancelled" when its agent stops (sleep, a crash, the daemon's restart): the agent can't take an answer then. It asks again, with a new card, if it still wants one.
 - macOS asks to allow them on the first one. Settings › General › Notifications turns each kind, the sound (off at first) and the badge on or off.
 

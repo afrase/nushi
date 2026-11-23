@@ -286,7 +286,7 @@ class ChatAlerts {
   }
 
   /// The daemon changed (a chat picked, listed, gone): the badge, and the
-  /// shown chat's notifications cleared.
+  /// shown chat's notifications cleared, and a gone chat's.
   void _changed() {
     if (_opening case final id? when daemon.chatsListed) {
       _opening = null;
@@ -294,6 +294,19 @@ class ChatAlerts {
     }
     _badge();
     _clearShown();
+    _clearGone();
+  }
+
+  /// Takes a gone chat's notifications off the Notification Center (a
+  /// click on one would open nothing): deleted here, or while the app was
+  /// away, which the list after it says without an event.
+  void _clearGone() {
+    if (!daemon.chatsListed) return;
+    for (final id in [..._posted]) {
+      if (daemon.chats.containsKey(id)) continue;
+      _posted.remove(id);
+      center.clear(id).ignore();
+    }
   }
 
   /// Takes the notifications of the chat Nushi shows in front off the
