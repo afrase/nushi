@@ -103,11 +103,7 @@ extension DaemonStart on Daemon {
           shown = resp.headRunsKey;
         }
       } on connect.ConnectException catch (e) {
-        if (refusedFor(
-          e,
-          'agent_start',
-          (m) => m.startsWith("couldn't start "),
-        )) {
+        if (refusedFor(e, 'agent_start')) {
           cantStart[agent] = _startWhy(e) ?? e.message;
         }
         rethrow;

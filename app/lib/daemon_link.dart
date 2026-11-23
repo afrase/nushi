@@ -260,8 +260,7 @@ extension SendPrompt on Daemon {
     try {
       return await client.sendPrompt(r);
     } on connect.ConnectException catch (e) {
-      if (e.code != connect.Code.unavailable ||
-          !refusedFor(e, 'restarting', (m) => m.contains('restarting'))) {
+      if (e.code != connect.Code.unavailable || !refusedFor(e, 'restarting')) {
         rethrow;
       }
       final before = daemonBuild;

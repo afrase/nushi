@@ -16,7 +16,7 @@ enum MergeAct { merge, auto, enqueue, whenReady }
 /// Whether the daemon refused [e] because the pull request isn't at the head
 /// the user was shown.
 bool headMoved(Object e) =>
-    e is ConnectException && refusedFor(e, 'head_moved', (_) => false);
+    e is ConnectException && refusedFor(e, 'head_moved');
 
 /// Asks before [act] on [pull], which can't be taken back and goes out to
 /// GitHub in the user's name, then does it at the head [pull] showed; then

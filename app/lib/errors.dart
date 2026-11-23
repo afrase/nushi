@@ -32,13 +32,7 @@ bool daemonGone(Object e) =>
     e is ConnectException && e.code == Code.unavailable;
 
 /// Whether the daemon refused a call for [reason], as its Nushi-Reason
-/// says ('restarting', 'agent_start'); a daemon older than reasons sends
-/// none, and [said] reads its message instead.
-bool refusedFor(
-  ConnectException e,
-  String reason,
-  bool Function(String message) said,
-) => switch (e.metadata['nushi-reason']) {
-  final r? => r == reason,
-  null => said(e.message),
-};
+/// says ('restarting', 'agent_start', 'changed_since', 'head_moved'):
+/// every daemon the app works with sends it (API 91; ADR 0004's floor).
+bool refusedFor(ConnectException e, String reason) =>
+    e.metadata['nushi-reason'] == reason;

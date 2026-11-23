@@ -216,56 +216,49 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
-  // The daemon's reason says so; an older daemon's message does.
-  for (final (message, reason) in [
-    ("the message goes once it's back", 'restarting'),
-    ('the daemon is restarting into a newer build', null),
-  ]) {
-    testWidgets('a prompt refused while the daemon restarts goes again to the '
-        'new one (${reason ?? 'its words'})', (tester) async {
-      var running = '7-1000';
-      var refused = 0;
-      final sent = <String>[];
-      final fake = FakeDaemon([])
-        ..answer = (input) => switch (input) {
-          PingRequest() when running.isEmpty => throw ConnectException(
+  // The daemon's reason says so (Nushi-Reason: restarting).
+  testWidgets('a prompt refused while the daemon restarts goes again to the '
+      'new one', (tester) async {
+    var running = '7-1000';
+    var refused = 0;
+    final sent = <String>[];
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        PingRequest() when running.isEmpty => throw ConnectException(
+          Code.unavailable,
+          'no daemon',
+        ),
+        PingRequest() => PingResponse(apiVersion: apiVersion, build: running),
+        SendPromptRequest() when running == '7-1000' => () {
+          refused++;
+          throw ConnectException(
             Code.unavailable,
-            'no daemon',
-          ),
-          PingRequest() => PingResponse(apiVersion: apiVersion, build: running),
-          SendPromptRequest() when running == '7-1000' => () {
-            refused++;
-            throw ConnectException(
-              Code.unavailable,
-              message,
-              metadata: reason == null
-                  ? null
-                  : (Headers()..add('nushi-reason', reason)),
-            );
-          }(),
-          SendPromptRequest(:final text) => () {
-            sent.add(text);
-            return SendPromptResponse();
-          }(),
-          _ => null,
-        };
-      final d = Daemon(transport: fake);
-      await tester.pump();
-      var done = false;
-      d.sendPrompt(SendPromptRequest(chatId: 'c', text: 'hi')).then((_) {
-        done = true;
-      }).ignore();
-      await tester.pump(const Duration(seconds: 1));
-      expect((refused, done), (1, false));
-      running = '';
-      await tester.pump(const Duration(seconds: 2));
-      running = '7-2000';
-      await tester.pump(const Duration(seconds: 3));
-      expect(done, isTrue);
-      expect(sent, ['hi']);
-      d.dispose();
-    });
-  }
+            "the message goes once it's back",
+            metadata: Headers()..add('nushi-reason', 'restarting'),
+          );
+        }(),
+        SendPromptRequest(:final text) => () {
+          sent.add(text);
+          return SendPromptResponse();
+        }(),
+        _ => null,
+      };
+    final d = Daemon(transport: fake);
+    await tester.pump();
+    var done = false;
+    d.sendPrompt(SendPromptRequest(chatId: 'c', text: 'hi')).then((_) {
+      done = true;
+    }).ignore();
+    await tester.pump(const Duration(seconds: 1));
+    expect((refused, done), (1, false));
+    running = '';
+    await tester.pump(const Duration(seconds: 2));
+    running = '7-2000';
+    await tester.pump(const Duration(seconds: 3));
+    expect(done, isTrue);
+    expect(sent, ['hi']);
+    d.dispose();
+  });
 
   testWidgets("another failure of a prompt is the caller's", (tester) async {
     for (final e in [

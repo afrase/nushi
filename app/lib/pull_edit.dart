@@ -48,8 +48,7 @@ void _begin(String key, String? was) {
 /// Whether the daemon refused [e] because GitHub changed the text since
 /// the edit began (`changed_since`).
 bool changedSince(Object e) =>
-    e is ConnectException &&
-    refusedFor(e, 'changed_since', (m) => m.contains('changed on GitHub'));
+    e is ConnectException && refusedFor(e, 'changed_since');
 
 /// What of a pull request an edit changes.
 enum PullPart { title, description }

@@ -270,8 +270,8 @@ void main() {
     d.dispose();
   });
 
-  testWidgets("a start that failed marks the agent by the daemon's reason, "
-      "or an older daemon's words", (tester) async {
+  testWidgets("a start that failed marks the agent by the daemon's reason "
+      'alone', (tester) async {
     final fake = FakeDaemon([]);
     final d = await fake.connect(tester);
     Future<String?> start(String message, [String? reason]) async {
@@ -293,7 +293,7 @@ void main() {
     }
 
     expect(await start('it quit', 'agent_start'), 'it quit');
-    expect(await start("couldn't start Codex: it quit"), isNotNull);
+    expect(await start("couldn't start Codex: it quit"), isNull);
     expect(await start('"x" is not an absolute path to a folder'), isNull);
     expect(await start("couldn't start Codex: it quit", 'other'), isNull);
     d.dispose();
