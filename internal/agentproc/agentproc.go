@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -35,10 +36,12 @@ type Agent struct {
 	*acp.AgentConn
 	cmd      *exec.Cmd
 	log      *slog.Logger
-	canFork  bool        // set by Initialize
-	canSteer bool        // the same
-	bySignal bool        // StopBySignal was called
-	stopped  atomic.Bool // Close or Stop was called: its end isn't a death
+	stderr   *stderrLines
+	ended    chan struct{} // closed once its exit is logged, its stderr read to the end
+	canFork  bool          // set by Initialize
+	canSteer bool          // the same
+	bySignal bool          // StopBySignal was called
+	stopped  atomic.Bool   // Close or Stop was called: its end isn't a death
 }
 
 // Start runs cmd, in its own process group, and speaks ACP over its stdin
@@ -64,11 +67,12 @@ func Start(cmd *exec.Cmd, client acp.Client, log *slog.Logger) (*Agent, error) {
 	calls.inner.Store(handlerOf(log))
 	log.Info("agent started", "cmd", strings.Join(cmd.Args, " "))
 	stderr.setLog(log) // what it wrote before this goes after "agent started"
-	a := &Agent{AgentConn: conn, cmd: cmd, log: log}
+	a := &Agent{AgentConn: conn, cmd: cmd, log: log, stderr: stderr, ended: make(chan struct{})}
 	go func() {
 		<-conn.Done() // its process has been waited for, and its stderr read
 		stderr.flush()
 		a.exited(time.Since(started))
+		close(a.ended)
 	}()
 	return a, nil
 }
@@ -238,6 +242,35 @@ func (a *Agent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*
 
 func (a *Agent) opened(method string, session acp.SessionID, start time.Time, args ...any) {
 	a.log.Info(method, append([]any{"session", string(session), "took", time.Since(start).Round(time.Millisecond)}, args...)...)
+}
+
+// whyWait is how long Why waits for the agent's process to end.
+const whyWait = 2 * time.Second
+
+// Why says how the agent's process ended and the line of its stderr that
+// says why ("exit 1: Error: Cannot find module 'x'", "SIGKILL"), for the
+// chat's notice: masked and cut (tail), never a bridge's DEBUG line or a
+// key. It waits up to whyWait for the end, as a call can fail on the
+// connection's end before the process has been waited for and its stderr
+// read; one still running by then gives the line alone. "" for an agent
+// Connect made.
+func (a *Agent) Why() string {
+	if a.cmd == nil {
+		return ""
+	}
+	select {
+	case <-a.ended:
+	case <-time.After(whyWait):
+		return a.stderr.tail.String()
+	}
+	how := "exit " + strconv.Itoa(a.cmd.ProcessState.ExitCode())
+	if sig, ok := killedBy(a.cmd.ProcessState); ok {
+		how = sig
+	}
+	if line := a.stderr.tail.String(); line != "" {
+		return how + ": " + line
+	}
+	return how
 }
 
 // exited logs the agent's process ending: its exit code or signal, how

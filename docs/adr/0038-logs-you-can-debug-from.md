@@ -21,6 +21,7 @@ The daemon logged about 30 lines through Go's `log`, nearly all errors, into one
 - An exception's own message can quote what it choked on; it reaches the log (an app error, an agent's error text). The redaction pass is a net, not a guarantee.
 - Agents' own diagnostics are kept at INFO (Claude's adapter writes about 20 timing lines a start); a noisy agent is capped, not silenced.
 - Amended 2026-11-23 (the tech debt review of 2026-11-22): `app.log` was written raw. It now takes what the daemon does to an app's line: the message cut at 2 KB, the stack at 16 KB, the first 16 attributes by name at 256 bytes each, and the home folder written `~` in every value. Not the redaction pass for secret shapes: the only secret the app holds is the client token, which goes into a header and nowhere else.
+- Amended 2026-11-23 (the tech debt review of 2026-11-22): an agent's stderr no longer reaches only the log. One line of it, the last error-like line among its last 50 (else its last), masked as the log masks it and cut at 300 bytes, goes with its exit code or signal into the notice of an agent that quit and the error of a start it quit during (`agentproc`'s `Why`), so the chat shows why. A key's lines and a bridge's DEBUG lines are never that line.
 - The relay keeps its own one-line log (`nushi-relay`, a separate binary); `log` remains only there, in the code generator and in a test peer.
 
 ## Alternatives considered

@@ -155,7 +155,9 @@ type fakeAgent struct {
 	turnErr     error              // a prompt's turn fails
 	lastWords   *acp.SessionUpdate // sent as it stops
 	launches    int
-	launchErr   error // a launch fails with it, as of an agent that won't start
+	launchErr   error  // a launch fails with it, as of an agent that won't start
+	initErr     error  // initialize fails with it
+	why         string // how its process ended, and why (Agent.Why)
 	closed      int
 	refuseSteer bool  // steering answers "no turn runs"
 	steerErr    error // steering fails
@@ -286,6 +288,9 @@ func (p *proc) DeleteSession(ctx context.Context, req *acp.DeleteSessionRequest)
 }
 
 func (f *fakeAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.InitializeResponse, error) {
+	if f.initErr != nil {
+		return nil, f.initErr
+	}
 	caps := &acp.AgentCapabilities{LoadSession: !f.noLoad, PromptCapabilities: &acp.PromptCapabilities{Image: true}}
 	caps.SessionCapabilities = &acp.SessionCapabilities{}
 	if f.deletes {
@@ -411,6 +416,12 @@ func (f *fakeAgent) Stop(time.Duration) error {
 func (f *fakeAgent) Done() <-chan struct{} { return nil } // used without launch: it never ends
 
 func (f *fakeAgent) Pid() int { return f.pid }
+
+func (f *fakeAgent) Why() string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.why
+}
 
 func (f *fakeAgent) Cancel(_ context.Context, n *acp.CancelNotification) error {
 	f.mu.Lock()

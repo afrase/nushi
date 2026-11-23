@@ -37,6 +37,10 @@ type Agent interface { //nolint:interfacebloat // the ACP calls a chat makes of 
 	Stop(grace time.Duration) error
 	Done() <-chan struct{} // closed when the agent's process ends
 	Pid() int              // its process, the root of the processes it runs; 0 when unknown
+	// Why says how its process ended and the line of its stderr that says
+	// why ("exit 1: Error: …"), masked; "" when nothing is known. It may
+	// wait a moment for the end.
+	Why() string
 	// Call sends a request for one of the agent's extensions.
 	Call(ctx context.Context, method string, params, result any) error
 }
@@ -113,6 +117,7 @@ func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool, a
 		}
 	}
 	if err != nil {
+		err = withWhy(agent, err)
 		_ = agent.Close() // its start failed; that error is the one to return
 		c.notOpeningLocked()
 		return opened{}, c.kind.explain(c.kind.signInError(init, err))
@@ -211,10 +216,35 @@ func initialize(ctx context.Context, k *kind, h acp.Client, log *slog.Logger) (A
 	}
 	init, err := agent.Initialize(ctx, InitializeRequest(k.HarnessInfo))
 	if err != nil {
+		err = withWhy(agent, err)
 		_ = agent.Close() // as above
 		return nil, nil, err
 	}
 	return agent, init, nil
+}
+
+// QuitError is a start that failed because the agent quit first: Why is
+// how it ended and the line of its stderr that says why (Agent.Why).
+type QuitError struct {
+	Why string
+	Err error // the call's, acp.ErrClosed
+}
+
+func (e *QuitError) Error() string { return e.Err.Error() + " (" + e.Why + ")" }
+
+func (e *QuitError) Unwrap() error { return e.Err }
+
+// withWhy is err, a call of a start that failed, with why the agent quit
+// when it did (the connection ended: acp.ErrClosed). Not when Nushi ended
+// it on a timeout or a refusal: its stderr then would mislead.
+func withWhy(agent Agent, err error) error {
+	if !errors.Is(err, acp.ErrClosed) {
+		return err
+	}
+	if why := agent.Why(); why != "" {
+		return &QuitError{Why: why, Err: err}
+	}
+	return err
 }
 
 // InitializeRequest is what Nushi first sends an agent of info's: forms
@@ -262,6 +292,7 @@ func (s *Service) useLocked(c *chat, o opened) {
 // replaced is no longer the chat's by then.
 func (s *Service) watch(c *chat, agent Agent) {
 	<-agent.Done()
+	why := agent.Why() // not under the lock: it can wait for the stderr's end
 	c.mu.Lock()
 	if c.agent != agent {
 		c.mu.Unlock()
@@ -271,7 +302,11 @@ func (s *Service) watch(c *chat, agent Agent) {
 	c.logLocked().Error("the chat's agent quit unexpectedly", "pid", agent.Pid())
 	c.dropPromptsLocked()
 	c.orphanLocked(false)
-	c.noticeLocked("error", "The agent quit unexpectedly. Your next message reopens the chat.")
+	quit := "The agent quit unexpectedly."
+	if why != "" {
+		quit = "The agent quit unexpectedly (" + why + ")."
+	}
+	c.noticeLocked("error", quit+" Your next message reopens the chat.")
 	c.statusChangedLocked()
 	c.mu.Unlock()
 	s.discard(c, s.dropSides(c))

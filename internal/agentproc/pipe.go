@@ -4,7 +4,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 	"time"
 
@@ -43,7 +42,7 @@ type Piped struct {
 	Pid int
 
 	group  *procgroup.Group
-	said   lastLine
+	said   tail
 	exited chan struct{}
 	err    error // how it exited; set before exited closes
 }
@@ -125,9 +124,9 @@ func (p *Piped) Wait() error {
 	return p.err
 }
 
-// Said is the start of the last line it wrote to stderr that has anything
-// in it ("Error: Failed to load extension …"), past a "Hint:" after it:
-// what says why it stopped, when it did. It waits for the exit first (up
+// Said is the line of its stderr that says why it stopped, when it did
+// ("Error: Failed to load extension …"): the last error-like line among
+// its last lines, else its last, masked and cut (tail). It waits for the exit first (up
 // to twice waitDelay), as a stopped program's stdout can end before the
 // copy has its stderr's last line.
 func (p *Piped) Said() string {
@@ -136,34 +135,4 @@ func (p *Piped) Said() string {
 	case <-time.After(2 * waitDelay):
 	}
 	return p.said.String()
-}
-
-// lastLine keeps Said's line.
-type lastLine struct {
-	mu   sync.Mutex
-	line []byte
-	last string
-}
-
-func (l *lastLine) Write(b []byte) (int, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	for _, c := range b {
-		switch {
-		case c == '\n':
-			if s := strings.TrimSpace(string(l.line)); s != "" && !strings.HasPrefix(s, "Hint:") {
-				l.last = s
-			}
-			l.line = l.line[:0]
-		case len(l.line) < 500:
-			l.line = append(l.line, c)
-		}
-	}
-	return len(b), nil
-}
-
-func (l *lastLine) String() string {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.last
 }

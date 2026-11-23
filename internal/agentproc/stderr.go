@@ -46,7 +46,8 @@ type stderrLines struct {
 	tokens  float64
 	last    time.Time
 	dropped int
-	inKey   int // a private key's lines still to leave out
+	keys    keyBlock
+	tail    tail // the line that says why it stopped (Agent.Why)
 }
 
 // heldLine is a record of a line the agent wrote before its pid was known.
@@ -95,15 +96,9 @@ func (s *stderrLines) emit() {
 	if strings.TrimSpace(line) == "" {
 		return
 	}
-	if s.inKey > 0 {
-		s.inKey--
-		if strings.Contains(line, "-----END ") {
-			s.inKey = 0
-		}
+	s.tail.add(line)
+	if s.keys.skip(line) {
 		return
-	}
-	if keyBegin.MatchString(line) && !strings.Contains(line, "-----END ") {
-		s.inKey = maxKeyLines
 	}
 	level := slog.LevelInfo
 	if rest, ok := strings.CutPrefix(line, DebugPrefix); ok { // a bridge of Nushi's own (internal/pi)
