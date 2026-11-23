@@ -306,16 +306,22 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
-  // The page at full size, a theme of the user's among the cards.
+  // The page at full size, a theme of the user's among the cards. Both
+  // themes run its checks: a card names its set by the look (Tokyo Night
+  // Day only in light, ThemeCard.setName), so light lays out other text.
   for (final (size, w) in [
     (const Size(1700, 1000), 1700),
     (const Size(720, 900), 720),
   ]) {
-    for (final b in renderThemes) {
+    for (final b in Brightness.values) {
       testWidgets('renders, $w, ${b.name}', (tester) async {
         _custom();
         final d = await _app(tester, size: size, b: b);
         expect(tester.takeException(), isNull);
+        expect(
+          find.text('Tokyo Night Day'),
+          b == Brightness.light ? findsOne : findsNothing,
+        );
         expectTextInside(tester, size.width);
         await render(
           tester,
