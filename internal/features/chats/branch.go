@@ -28,8 +28,9 @@ const branchSlug = 40
 // The worktree's folder stays where it is (the agent and terminals are
 // in it). The transcript says so, and the agent is told with the next
 // prompt (branchnote.go). It runs git with the chat locked, once, so no
-// turn starts meanwhile: three runs, whatever names are taken (the refs
-// are read once and the free name picked here).
+// turn starts meanwhile: three runs, whatever names the refs have taken
+// (they are read once and the free name picked here), and one more for
+// each name git refuses that the read missed.
 //
 //nolint:contextcheck // between turns, after the request that started the turn (or the agent's update) is gone
 func (c *chat) nameBranchLocked() {
@@ -57,21 +58,27 @@ func (c *chat) nameBranchLocked() {
 		c.branchNamedLocked("")
 		return
 	}
-	name := freeBranch(use, wt.Branch, "nushi/"+slug)
-	if name == "" || name == wt.Branch {
-		c.branchNamedLocked("") // named so already, or every name is taken
-		return
-	}
-	switch err := c.worktrees.RenameBranch(ctx, *wt, name); {
-	case err == nil:
-		log.Info("branch named after the chat") // not the name: it's the chat's title
-		c.branchNamedLocked(name)
-		c.noticeLocked("branch_renamed", "Branch renamed to "+name)
-	case errors.Is(err, fs.ErrExist): // one the read missed: another spelling of it, on a Mac's volume
-		log.Info("branch keeps its name", "why", err)
-		c.branchNamedLocked("")
-	default:
-		log.Warn("naming the branch after the chat", "err", err)
+	for {
+		name := freeBranch(use, wt.Branch, "nushi/"+slug)
+		if name == "" || name == wt.Branch {
+			c.branchNamedLocked("") // named so already, or every name is taken
+			return
+		}
+		switch err := c.worktrees.RenameBranch(ctx, *wt, name); {
+		case err == nil:
+			log.Info("branch named after the chat") // not the name: it's the chat's title
+			c.branchNamedLocked(name)
+			c.noticeLocked("branch_renamed", "Branch renamed to "+name)
+			return
+		case errors.Is(err, fs.ErrExist):
+			// One the read missed: another case of it, on a Mac's volume
+			// that ignores case, which the refs list as spelled. The next
+			// free name, as when the read has it.
+			use.Branches = append(use.Branches, name)
+		default:
+			log.Warn("naming the branch after the chat", "err", err)
+			return
+		}
 	}
 }
 

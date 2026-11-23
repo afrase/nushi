@@ -2,6 +2,8 @@ package chats
 
 import (
 	"context"
+	"fmt"
+	"io/fs"
 	"slices"
 	"strconv"
 	"sync"
@@ -11,10 +13,12 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// usedWorktrees answers BranchUse with use, and records each rename.
+// usedWorktrees answers BranchUse with use, and records each rename,
+// refusing those named in exists as git does a name its read missed.
 type usedWorktrees struct {
 	stuckWorktrees
 	use     model.BranchUse
+	exists  []string
 	mu      sync.Mutex
 	renames []string
 }
@@ -27,6 +31,9 @@ func (w *usedWorktrees) RenameBranch(_ context.Context, _ model.Worktree, name s
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.renames = append(w.renames, name)
+	if slices.Contains(w.exists, name) {
+		return fmt.Errorf("a branch named %s: %w", name, fs.ErrExist)
+	}
 	return nil
 }
 
@@ -121,6 +128,29 @@ func TestTheBranchTakesTheFirstFreeName(t *testing.T) {
 				t.Errorf("renamed %v; the worktree %+v, want %s", renames, wt, tc.want)
 			}
 		})
+	}
+}
+
+// A name git refuses as taken though the read had no such branch (one in
+// another case, on a Mac's volume that ignores case) passes to the next
+// free one rather than keep Nushi's name for good.
+func TestTheBranchPassesANameTheReadMissed(t *testing.T) {
+	const branch = "nushi/brave-otter"
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	wts := &usedWorktrees{use: model.BranchUse{OnIt: true, Branches: []string{branch, "Nushi/Fix-The-Login"}}, exists: []string{"nushi/fix-the-login"}}
+	c.mu.Lock()
+	c.worktrees = wts
+	c.record.Worktree = &model.Worktree{Repo: "/r", Path: "/r/.worktrees/brave-otter", Branch: branch, AutoName: true}
+	c.mu.Unlock()
+	turn(t, svc, c, "fix the login")
+	c.mu.Lock()
+	wt := *c.record.Worktree
+	c.mu.Unlock()
+	wts.mu.Lock()
+	renames := slices.Clone(wts.renames)
+	wts.mu.Unlock()
+	if want := "nushi/fix-the-login-2"; !slices.Equal(renames, []string{"nushi/fix-the-login", want}) || wt.Branch != want || wt.AutoName {
+		t.Errorf("renamed %v; the worktree %+v, want %s", renames, wt, want)
 	}
 }
 
