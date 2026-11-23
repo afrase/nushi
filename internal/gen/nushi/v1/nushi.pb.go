@@ -27595,13 +27595,10 @@ func (*SubmitGitHubReviewResponse) Descriptor() ([]byte, []int) {
 
 type GetUsageRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The turns that ended from from (ms since the epoch, included) to to
-	// (excluded); 0 leaves that side open.
-	From int64 `protobuf:"varint,1,opt,name=from,proto3" json:"from,omitempty"`
-	To   int64 `protobuf:"varint,2,opt,name=to,proto3" json:"to,omitempty"`
-	// The time zone days are counted in (a time zone database name, such as
-	// "Europe/Paris"); "" is the daemon's.
-	TimeZone      string `protobuf:"bytes,3,opt,name=time_zone,json=timeZone,proto3" json:"time_zone,omitempty"`
+	// The turns that ended from from (ms since the epoch, included) on; 0
+	// is all of them. Days are counted in the daemon's time zone, which is
+	// the Mac's: only the Mac makes the call.
+	From          int64 `protobuf:"varint,1,opt,name=from,proto3" json:"from,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -27643,24 +27640,10 @@ func (x *GetUsageRequest) GetFrom() int64 {
 	return 0
 }
 
-func (x *GetUsageRequest) GetTo() int64 {
-	if x != nil {
-		return x.To
-	}
-	return 0
-}
-
-func (x *GetUsageRequest) GetTimeZone() string {
-	if x != nil {
-		return x.TimeZone
-	}
-	return ""
-}
-
 type GetUsageResponse struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Totals *UsageTotals           `protobuf:"bytes,1,opt,name=totals,proto3" json:"totals,omitempty"`
-	// By day (date "YYYY-MM-DD" in the time zone), agent (its name, as
+	// By day (date "YYYY-MM-DD" in the daemon's time zone), agent (its name, as
 	// Agent.name), model (the agent's name for it; "" when it named none)
 	// and project folder (a worktree chat's repository's), each in the
 	// order of its key.
@@ -30143,11 +30126,9 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05event\x18\x05 \x01(\tR\x05event\x12\x12\n" +
 	"\x04body\x18\x06 \x01(\tR\x04body\x12-\n" +
 	"\x06drafts\x18\a \x03(\v2\x15.nushi.v1.GitHubDraftR\x06drafts\"\x1c\n" +
-	"\x1aSubmitGitHubReviewResponse\"R\n" +
+	"\x1aSubmitGitHubReviewResponse\"@\n" +
 	"\x0fGetUsageRequest\x12\x12\n" +
-	"\x04from\x18\x01 \x01(\x03R\x04from\x12\x0e\n" +
-	"\x02to\x18\x02 \x01(\x03R\x02to\x12\x1b\n" +
-	"\ttime_zone\x18\x03 \x01(\tR\btimeZone\"\x85\x03\n" +
+	"\x04from\x18\x01 \x01(\x03R\x04fromJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\x02toR\ttime_zone\"\x85\x03\n" +
 	"\x10GetUsageResponse\x12-\n" +
 	"\x06totals\x18\x01 \x01(\v2\x15.nushi.v1.UsageTotalsR\x06totals\x12(\n" +
 	"\x04days\x18\x02 \x03(\v2\x14.nushi.v1.UsageGroupR\x04days\x12,\n" +

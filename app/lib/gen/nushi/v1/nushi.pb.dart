@@ -36026,13 +36026,9 @@ class SubmitGitHubReviewResponse extends $pb.GeneratedMessage {
 class GetUsageRequest extends $pb.GeneratedMessage {
   factory GetUsageRequest({
     $fixnum.Int64? from,
-    $fixnum.Int64? to,
-    $core.String? timeZone,
   }) {
     final result = GetUsageRequest._();
     if (from != null) result.from = from;
-    if (to != null) result.to = to;
-    if (timeZone != null) result.timeZone = timeZone;
     return result;
   }
 
@@ -36050,8 +36046,6 @@ class GetUsageRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: GetUsageRequest.$_createMessage)
     ..aInt64(1, _omitFieldNames ? '' : 'from')
-    ..aInt64(2, _omitFieldNames ? '' : 'to')
-    ..aOS(3, _omitFieldNames ? '' : 'timeZone')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -36076,8 +36070,9 @@ class GetUsageRequest extends $pb.GeneratedMessage {
           GetUsageRequest.$_createMessage);
   static GetUsageRequest? _defaultInstance;
 
-  /// The turns that ended from from (ms since the epoch, included) to to
-  /// (excluded); 0 leaves that side open.
+  /// The turns that ended from from (ms since the epoch, included) on; 0
+  /// is all of them. Days are counted in the daemon's time zone, which is
+  /// the Mac's: only the Mac makes the call.
   @$pb.TagNumber(1)
   $fixnum.Int64 get from => $_getI64(0);
   @$pb.TagNumber(1)
@@ -36086,26 +36081,6 @@ class GetUsageRequest extends $pb.GeneratedMessage {
   $core.bool hasFrom() => $_has(0);
   @$pb.TagNumber(1)
   void clearFrom() => $_clearField(1);
-
-  @$pb.TagNumber(2)
-  $fixnum.Int64 get to => $_getI64(1);
-  @$pb.TagNumber(2)
-  set to($fixnum.Int64 value) => $_setInt64(1, value);
-  @$pb.TagNumber(2)
-  $core.bool hasTo() => $_has(1);
-  @$pb.TagNumber(2)
-  void clearTo() => $_clearField(2);
-
-  /// The time zone days are counted in (a time zone database name, such as
-  /// "Europe/Paris"); "" is the daemon's.
-  @$pb.TagNumber(3)
-  $core.String get timeZone => $_getSZ(2);
-  @$pb.TagNumber(3)
-  set timeZone($core.String value) => $_setString(2, value);
-  @$pb.TagNumber(3)
-  $core.bool hasTimeZone() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearTimeZone() => $_clearField(3);
 }
 
 class GetUsageResponse extends $pb.GeneratedMessage {
@@ -36197,7 +36172,7 @@ class GetUsageResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   UsageTotals ensureTotals() => $_ensure(0);
 
-  /// By day (date "YYYY-MM-DD" in the time zone), agent (its name, as
+  /// By day (date "YYYY-MM-DD" in the daemon's time zone), agent (its name, as
   /// Agent.name), model (the agent's name for it; "" when it named none)
   /// and project folder (a worktree chat's repository's), each in the
   /// order of its key.

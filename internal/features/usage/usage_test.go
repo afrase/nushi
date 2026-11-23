@@ -210,7 +210,7 @@ func TestReport(t *testing.T) {
 	s.Turn(codex)
 	s.Turn(costOf("gone", 0.25, 1))
 	s.Limits("claude", []model.Limit{{Kind: "five_hour", Status: "allowed", Seen: time.UnixMilli(1000)}})
-	r, err := s.Report(t.Context(), time.Time{}, time.Time{}, "Pacific/Auckland")
+	r, err := s.Report(t.Context(), time.Time{})
 	testcheck.NoErr(t, err)
 	if r.Totals.Turns != 3 || r.Totals.Cost["USD"] != 0.75 || r.Totals.Input != 111 {
 		t.Errorf("totals %+v", r.Totals)
@@ -227,9 +227,6 @@ func TestReport(t *testing.T) {
 	}
 	if len(r.Limits) != 1 || r.Limits[0].Agent != "claude" {
 		t.Errorf("limits %+v", r.Limits)
-	}
-	if _, err := s.Report(t.Context(), time.Time{}, time.Time{}, "Nowhere/Else"); err == nil {
-		t.Error("a zone that isn't one")
 	}
 }
 
@@ -261,7 +258,7 @@ func TestWithoutADatabase(t *testing.T) {
 	s := New(nil, nil)
 	s.Turn(costOf("c1", 1, 1))
 	s.Limits("claude", nil)
-	if _, err := s.Report(t.Context(), time.Time{}, time.Time{}, ""); !errors.Is(err, ErrOff) {
+	if _, err := s.Report(t.Context(), time.Time{}); !errors.Is(err, ErrOff) {
 		t.Errorf("err %v", err)
 	}
 	s.Close()

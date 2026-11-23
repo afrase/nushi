@@ -28,13 +28,13 @@ func TestUsage(t *testing.T) {
 		a.waitFor("the turn to end", turnEnded(id))
 	}
 	before := time.Now()
-	u := must(a.c.GetUsage(ctx, connect.NewRequest(&nushiv1.GetUsageRequest{TimeZone: "UTC"})))
+	u := must(a.c.GetUsage(ctx, connect.NewRequest(&nushiv1.GetUsageRequest{})))
 	totals := u.GetTotals()
 	if totals.GetTurns() != 2 || len(totals.GetCost()) != 1 || totals.GetCost()[0].GetAmount() != 0.5 || totals.GetCost()[0].GetCurrency() != "USD" ||
 		totals.GetInputTokens() != 20 || totals.GetOutputTokens() != 40 || totals.GetCacheReadTokens() != 60 || totals.GetCacheWriteTokens() != 80 {
 		t.Errorf("totals %s", testcheck.JSON(t, totals))
 	}
-	if len(u.GetDays()) != 1 || u.GetDays()[0].GetKey() != time.Now().UTC().Format(time.DateOnly) {
+	if len(u.GetDays()) != 1 || u.GetDays()[0].GetKey() != time.Now().Format(time.DateOnly) {
 		t.Errorf("days %s", testcheck.JSON(t, u.GetDays()))
 	}
 	key := func(gs []*nushiv1.UsageGroup) string {
@@ -70,9 +70,6 @@ func TestUsage(t *testing.T) {
 		t.Errorf("after a restart: %s", testcheck.JSON(t, u.GetTotals()))
 	}
 
-	if _, err := a.c.GetUsage(ctx, connect.NewRequest(&nushiv1.GetUsageRequest{TimeZone: "Nowhere/Else"})); connect.CodeOf(err) != connect.CodeInvalidArgument {
-		t.Errorf("a zone that isn't one: %v", err)
-	}
 	phone := openAt(t, d.devices)
 	_, err := phone.c.GetUsage(ctx, connect.NewRequest(&nushiv1.GetUsageRequest{}))
 	if ce := new(connect.Error); !errors.As(err, &ce) || ce.Code() != connect.CodePermissionDenied {

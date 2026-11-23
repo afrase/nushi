@@ -97,7 +97,7 @@ func TestOnlyTheMacInstallsAnUpdate(t *testing.T) {
 // failingUsage is a usage report that fails, as one with no database.
 type failingUsage struct{ err error }
 
-func (f failingUsage) Report(context.Context, time.Time, time.Time, string) (model.UsageReport, error) {
+func (f failingUsage) Report(context.Context, time.Time) (model.UsageReport, error) {
 	return model.UsageReport{}, f.err
 }
 

@@ -16,9 +16,9 @@ import (
 // Usage sums what the chats' turns used (internal/features/usage, ADR
 // 0136).
 type Usage interface {
-	// Report sums the turns that ended between from and to (zero: open),
-	// days counted in zone ("" the daemon's own).
-	Report(ctx context.Context, from, to time.Time, zone string) (model.UsageReport, error)
+	// Report sums the turns that ended from from on (zero: all of them),
+	// days counted in the daemon's time zone.
+	Report(ctx context.Context, from time.Time) (model.UsageReport, error)
 }
 
 var errNoUsage = errors.New("this daemon doesn't keep usage")
@@ -30,12 +30,7 @@ func (s *server) GetUsage(ctx context.Context, req *connect.Request[nushiv1.GetU
 	if s.Usage == nil {
 		return nil, connect.NewError(connect.CodeUnimplemented, errNoUsage)
 	}
-	if m.TimeZone != "" {
-		if _, err := time.LoadLocation(m.TimeZone); err != nil {
-			return nil, invalid(err)
-		}
-	}
-	r, err := s.Usage.Report(ctx, msTime(m.From), msTime(m.To), m.TimeZone)
+	r, err := s.Usage.Report(ctx, msTime(m.From))
 	if err != nil {
 		return nil, refused(err) // not Unavailable: the app takes that for the daemon gone
 	}

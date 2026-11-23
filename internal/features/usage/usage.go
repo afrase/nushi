@@ -9,7 +9,6 @@ import (
 	"cmp"
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"maps"
 	"sync"
@@ -124,20 +123,17 @@ func (s *Service) Close() {
 	<-s.done
 }
 
-// Report sums what was used between from and to (zero: open) by zone ("" the
-// daemon's own), the costliest chats named by their titles.
-func (s *Service) Report(ctx context.Context, from, to time.Time, zone string) (model.UsageReport, error) {
+// Report sums what was used from from on (zero: all of it), days counted in
+// the daemon's time zone, the costliest chats named by their titles. Only the
+// Mac asks, so its zone and the daemon's are one.
+func (s *Service) Report(ctx context.Context, from time.Time) (model.UsageReport, error) {
 	if s.store == nil {
 		return model.UsageReport{}, ErrOff
-	}
-	loc, err := time.LoadLocation(cmp.Or(zone, "Local"))
-	if err != nil {
-		return model.UsageReport{}, fmt.Errorf("no time zone %q: %w", zone, err)
 	}
 	if err := s.sync(ctx); err != nil {
 		return model.UsageReport{}, err
 	}
-	r, err := s.store.Usage(ctx, from, to, loc, Top)
+	r, err := s.store.Usage(ctx, from, time.Time{}, time.Local, Top)
 	if err != nil {
 		return r, err
 	}

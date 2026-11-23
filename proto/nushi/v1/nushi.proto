@@ -4436,18 +4436,19 @@ message SubmitGitHubReviewRequest {
 message SubmitGitHubReviewResponse {}
 
 message GetUsageRequest {
-  // The turns that ended from from (ms since the epoch, included) to to
-  // (excluded); 0 leaves that side open.
+  // The turns that ended from from (ms since the epoch, included) on; 0
+  // is all of them. Days are counted in the daemon's time zone, which is
+  // the Mac's: only the Mac makes the call.
   int64 from = 1;
-  int64 to = 2;
-  // The time zone days are counted in (a time zone database name, such as
-  // "Europe/Paris"); "" is the daemon's.
-  string time_zone = 3;
+  // Where the range ended and the zone days were counted in: no client
+  // sent them.
+  reserved 2, 3;
+  reserved "to", "time_zone";
 }
 
 message GetUsageResponse {
   UsageTotals totals = 1;
-  // By day (date "YYYY-MM-DD" in the time zone), agent (its name, as
+  // By day (date "YYYY-MM-DD" in the daemon's time zone), agent (its name, as
   // Agent.name), model (the agent's name for it; "" when it named none)
   // and project folder (a worktree chat's repository's), each in the
   // order of its key.
