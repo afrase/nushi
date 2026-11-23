@@ -151,6 +151,12 @@ jobs:
           channel: stable
           flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
           cache: true
+      # make mermaid's mermaid.min.js (5.4 MB from a CDN, checked against mermaid.lock), kept per lock, as CI's
+      # macos-app keeps it.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/nushi/mermaid
+          key: mermaid-${{ runner.os }}-${{ hashFiles('tools/mermaid/mermaid.lock') }}
       - run: tools/release.sh "$VERSION" app
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -246,6 +252,12 @@ jobs:
         with:
           path: ~/.cache/nushi/fallback-fonts
           key: fallback-fonts-${{ runner.os }}-${{ hashFiles('tools/webbuild/fonts.lock') }}
+      # make mermaid's mermaid.min.js (5.4 MB from a CDN, checked against mermaid.lock), kept per lock, as CI's web
+      # job keeps it.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/nushi/mermaid
+          key: mermaid-${{ runner.os }}-${{ hashFiles('tools/mermaid/mermaid.lock') }}
       - run: tools/release.sh "$VERSION" relay
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

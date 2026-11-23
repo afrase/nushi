@@ -192,10 +192,12 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-      # remote_transport's interop test builds a Go peer.
+      # remote_transport's interop test builds a Go peer, one small program: no cache, so this short job never saves
+      # the Linux key the web and app jobs share with its few packages in it.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+          cache: false
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
@@ -303,6 +305,12 @@ jobs:
         with:
           path: ~/.cache/nushi/fallback-fonts
           key: fallback-fonts-${{ runner.os }}-${{ hashFiles('tools/webbuild/fonts.lock') }}
+      # make mermaid's mermaid.min.js (5.4 MB from a CDN, checked against mermaid.lock), kept per lock.
+      - if: ${{ !cancelled() }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/nushi/mermaid
+          key: mermaid-${{ runner.os }}-${{ hashFiles('tools/mermaid/mermaid.lock') }}
       - if: ${{ !cancelled() }}
         run: tools/release.sh 0.0.0-ci relay
 
@@ -320,9 +328,14 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
+      # A cache key of its own (go.mod beside go.sum, which no other job keys on): its -race build of every package
+      # isn't what the web and app jobs build, and whichever job saves a shared key first decides what it holds.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            go.mod
       # npm's install runs under bubblewrap on Linux (internal/npm's tests run it); Ubuntu's AppArmor denies it
       # unprivileged user namespaces unless that rule is off.
       - run: |
@@ -459,6 +472,11 @@ jobs:
           channel: stable
           flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
           cache: true
+      # make mermaid's mermaid.min.js (5.4 MB from a CDN, checked against mermaid.lock), kept per lock.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/nushi/mermaid
+          key: mermaid-${{ runner.os }}-${{ hashFiles('tools/mermaid/mermaid.lock') }}
       - run: tools/release.sh 0.0.0-ci app
 
   linux-app:
