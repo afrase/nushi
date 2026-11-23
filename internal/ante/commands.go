@@ -124,7 +124,7 @@ func (s *session) opOf(text string) any {
 // one: with no argument it says the current value, else it changes it
 // (UpdateSession, from the next turn on) and says the new one.
 func (s *session) setting(ctx context.Context, name, arg string) (*acp.PromptResponse, error) {
-	t, err := s.next(ctx)
+	t, err := s.next(ctx, true)
 	if errors.Is(err, errCancelled) {
 		return &acp.PromptResponse{StopReason: "cancelled"}, nil
 	}

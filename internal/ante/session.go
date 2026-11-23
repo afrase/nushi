@@ -71,6 +71,13 @@ type turn struct {
 	done    bool // ended: result has its answer
 	result  chan turnResult
 	usage   acp.Usage
+	// seq is where its prompt came among the client's messages
+	// (acp.SequenceFromContext); 0 for a turn Ante began itself. A Stop
+	// that came before it isn't its Stop.
+	seq uint64
+	// noSteer marks a turn no model runs in (/model, /effort, /compact):
+	// nothing would take a steer.
+	noSteer bool
 	// sent is closed (by wrote, once) when the turn's op has gone to the
 	// host, so a Stop's Interrupt comes after it; nil for a turn Ante
 	// began itself.
@@ -357,7 +364,8 @@ func (s *session) prompt(ctx context.Context, text string) (*acp.PromptResponse,
 		return s.setting(ctx, name, arg)
 	}
 	op := s.opOf(text)
-	t, err := s.next(ctx)
+	name, _, ok := slash(text)
+	t, err := s.next(ctx, ok && name == "compact")
 	if errors.Is(err, errCancelled) {
 		return &acp.PromptResponse{StopReason: "cancelled"}, nil
 	}
@@ -380,7 +388,7 @@ func (s *session) prompt(ctx context.Context, text string) (*acp.PromptResponse,
 // after the request ctx is for: acp-go starts a request's handler before
 // it reads on, but a cancel's runs beside it, and may have found no turn
 // to stop.
-func (s *session) next(ctx context.Context) (*turn, error) {
+func (s *session) next(ctx context.Context, noSteer bool) (*turn, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for s.turn != nil {
@@ -397,42 +405,53 @@ func (s *session) next(ctx context.Context) (*turn, error) {
 		}
 		s.mu.Lock()
 	}
-	if seq, ok := acp.SequenceFromContext(ctx); ok && seq < s.cancelSeq {
+	seq, ok := acp.SequenceFromContext(ctx)
+	if ok && seq < s.cancelSeq {
 		return nil, errCancelled
 	}
 	sent := make(chan struct{})
-	t := &turn{id: opID(), result: make(chan turnResult, 1), sent: sent, wrote: sync.OnceFunc(func() { close(sent) })}
+	t := &turn{id: opID(), result: make(chan turnResult, 1), seq: seq, noSteer: noSteer, sent: sent, wrote: sync.OnceFunc(func() { close(sent) })}
 	s.beginLocked(t)
 	return t, nil
 }
 
 // cancel stops the running turn: Ante's Interrupt, once the turn's op has
 // gone to the host (an Interrupt before it stops nothing, and the op then
-// runs). seq is where the cancel came among the client's messages: a
-// prompt from before it whose turn hasn't begun is cancelled as it begins
-// (next).
+// runs), and only while that turn still runs. An Interrupt with nothing
+// to stop, or meant for a turn that has ended, could reach Ante after the
+// next prompt's input and stop that turn; Pi's bridge refuses the same for
+// the same reason (internal/pi's cancel). A turn whose prompt came after
+// the cancel isn't its to stop. seq is where the cancel came among the
+// client's messages: a prompt from before it whose turn hasn't begun is
+// cancelled as it begins (next).
 func (s *session) cancel(seq uint64) {
 	s.mu.Lock()
 	s.cancelSeq = max(s.cancelSeq, seq)
-	var sent chan struct{}
-	if s.turn != nil {
-		sent = s.turn.sent
-	}
+	t := s.turn
 	s.mu.Unlock()
-	if sent != nil {
+	if t == nil || t.seq > seq { // nothing to stop, or a later prompt's turn
+		return
+	}
+	if t.sent != nil {
 		select {
-		case <-sent:
+		case <-t.sent:
 		case <-s.ended:
 		}
 	}
-	_ = s.h.send("Interrupt") // a dead host has no turn to stop
+	s.mu.Lock()
+	running := s.turn == t
+	s.mu.Unlock()
+	if running { // the send stays outside the lock, which event reading takes
+		_ = s.h.send("Interrupt") // a dead host has no turn to stop
+	}
 }
 
 // steer hands text to the running turn, which takes it at its next step;
-// false when no turn runs.
+// false when no turn runs, or one no model runs in (noSteer): the client
+// then sends it as the next prompt.
 func (s *session) steer(text string) (bool, error) {
 	s.mu.Lock()
-	running := s.turn != nil
+	running := s.turn != nil && !s.turn.noSteer
 	s.mu.Unlock()
 	if !running {
 		return false, nil

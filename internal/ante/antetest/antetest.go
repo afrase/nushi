@@ -28,7 +28,8 @@
 // runs a skill as a turn without echoing an input, its text the skill's
 // instructions ("<skill>\n<name>review</name>\n\nReview <args>\n</skill>"),
 // and any other name as the input "/name args". Compact compacts, its
-// summary "the summary", in an info block as Ante's.
+// summary "the summary", in an info block as Ante's; with the
+// instructions "wait" it waits (Waiting) until an Interrupt first.
 //
 // A session's context limit is 1000 tokens, 1,048,576 on the model
 // "big": ContextReport and each turn's UsageUpdate say so.
@@ -60,9 +61,17 @@ type Store struct {
 	// test reads each, or gives the channel room.
 	Waiting chan string
 
-	mu       sync.Mutex
-	sessions map[string]*saved
-	n        int
+	mu         sync.Mutex
+	sessions   map[string]*saved
+	n          int
+	interrupts int
+}
+
+// Interrupts is how many Interrupt ops the hosts have read.
+func (st *Store) Interrupts() int {
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	return st.interrupts
 }
 
 type saved struct {
@@ -87,6 +96,8 @@ type Host struct {
 	turn    string
 	paused  chan json.RawMessage // the answer to the running turn's pause
 	steered chan string
+	// compacting, closed by an Interrupt, holds a Compact that waits.
+	compacting chan struct{}
 }
 
 // Serve runs a host on r and w until r ends or Shutdown.
@@ -196,7 +207,7 @@ func (h *Host) input(id, text string, echo bool) {
 	go h.run(id, text)
 }
 
-func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocognit // one case per op the fake takes
+func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocognit,gocyclo // one case per op the fake takes
 	name, p := variant(raw)
 	switch name {
 	case "StartSession":
@@ -248,11 +259,7 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 			h.input(id, strings.TrimSpace("/"+req.Name+" "+req.Args), true)
 		}
 	case "Compact":
-		block := "compact-" + id
-		h.emit(id, map[string]any{"InfoBlockStart": map[string]any{"id": block, "header": "Compacting conversation history", "loading": true}}, true)
-		h.emit(id, "CompactStart", true)
-		h.emit(id, map[string]any{"CompactEnd": map[string]any{"summary": "the summary"}}, true)
-		h.emit(id, map[string]any{"InfoBlockAppend": map[string]any{"id": block, "detail": "Compaction complete"}}, true)
+		h.compact(id, p)
 	case "Steer":
 		var text string
 		_ = json.Unmarshal(p, &text)
@@ -272,7 +279,14 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 		}
 		h.mu.Unlock()
 	case "Interrupt":
+		h.store.mu.Lock()
+		h.store.interrupts++
+		h.store.mu.Unlock()
 		h.mu.Lock()
+		if h.compacting != nil {
+			close(h.compacting)
+			h.compacting = nil
+		}
 		if h.paused != nil {
 			select {
 			case h.paused <- nil:
@@ -331,6 +345,35 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 		h.emit(id, map[string]any{"Error": "Invalid OpMsg JSON: unknown variant `" + name + "`"}, false)
 	}
 	return false
+}
+
+// compact compacts the session, its summary "the summary"; with the
+// instructions "wait" it waits for an Interrupt first.
+func (h *Host) compact(id string, p json.RawMessage) {
+	var req struct{ Instructions string }
+	_ = json.Unmarshal(p, &req)
+	block := "compact-" + id
+	h.emit(id, map[string]any{"InfoBlockStart": map[string]any{"id": block, "header": "Compacting conversation history", "loading": true}}, true)
+	h.emit(id, "CompactStart", true)
+	end := func() {
+		h.emit(id, map[string]any{"CompactEnd": map[string]any{"summary": "the summary"}}, true)
+		h.emit(id, map[string]any{"InfoBlockAppend": map[string]any{"id": block, "detail": "Compaction complete"}}, true)
+	}
+	if req.Instructions != "wait" {
+		end()
+		return
+	}
+	stop := make(chan struct{})
+	h.mu.Lock()
+	h.compacting = stop
+	h.mu.Unlock()
+	go func() { // ops are read on meanwhile
+		if h.store.Waiting != nil {
+			h.store.Waiting <- "/compact wait"
+		}
+		<-stop
+		end()
+	}()
 }
 
 func (s *saved) logOrNil() []string {
