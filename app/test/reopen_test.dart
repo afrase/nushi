@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -269,4 +271,51 @@ void main() {
       d.dispose();
     });
   }
+
+  testWidgets("a failed reopen's notice above a later line follows the "
+      "chat's busy: Try again is off while a reopen runs, on after", (
+    tester,
+  ) async {
+    final chat = _chat()
+      ..load(
+        GetChatResponse(
+          items: [
+            _notices[2],
+            Item(
+              id: 'b',
+              kind: ItemKind.ITEM_KIND_NOTICE,
+              status: 'branch_switched',
+              text: 'Switched to branch main',
+            ),
+          ],
+          seq: Int64(1),
+        ),
+      );
+    final d = await _show(
+      tester,
+      FakeDaemon([]),
+      (d) => ListenableBuilder(
+        listenable: chat,
+        builder: (context, _) =>
+            Transcript(chat: chat, daemon: d, onReply: null),
+      ),
+    );
+    VoidCallback? tryAgain() => tester
+        .widget<Button>(
+          find.ancestor(
+            of: find.text('Try again'),
+            matching: find.byType(Button),
+          ),
+        )
+        .onPressed;
+    expect(tryAgain(), isNotNull);
+    for (final busy in [true, false]) {
+      chat
+        ..busy = busy
+        ..notifyListeners();
+      await tester.pumpAndSettle();
+      expect(tryAgain() == null, busy);
+    }
+    await closeView(tester, d);
+  });
 }

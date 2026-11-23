@@ -339,7 +339,9 @@ class _TranscriptState extends State<Transcript> {
   /// An entry's widget, the one built before if its items are the same:
   /// only its place (its insets, which follow the window's width, and the
   /// gap above it) is new, so a sidebar's slide moves the rows and
-  /// rebuilds none of them.
+  /// rebuilds none of them. Every chat field a cached view reads goes in
+  /// its inputs here (`from`), or the view keeps the value it was built
+  /// with.
   Widget _entry(
     Map<String, (List<Object>, Widget)> before,
     Object e, {
@@ -370,10 +372,15 @@ class _TranscriptState extends State<Transcript> {
         e is Item &&
         canPinMessage(widget.daemon, widget.chat, e, live: live);
     final flash = e is Item && e.id == _flash;
+    // A notice's fix button (Try again, Set up…) and the sign-in card
+    // under it are off while the chat is busy.
+    final busy =
+        e is Item && e.kind == ItemKind.ITEM_KIND_NOTICE && widget.chat.busy;
     final from = [
       sending,
       live,
       still,
+      busy,
       rewindable,
       forkable,
       again,
