@@ -292,9 +292,6 @@ class Daemon extends ChangeNotifier {
   /// Whether the last [restartDaemon] failed (its caller shows why).
   bool restartFailed = false;
 
-  /// Events that came while the chat list was on its way.
-  List<EventsResponse>? _held;
-
   /// Sees each event before it's applied (the Mac's notifications).
   void Function(EventsResponse)? onEvent;
 

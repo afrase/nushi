@@ -322,6 +322,68 @@ void main() {
     expect(d.chats['a']!.busy, isFalse);
   });
 
+  for (final staleFirst in [true, false]) {
+    test('a list from a dropped subscription does nothing: a chat started '
+        'meanwhile stays (stale list answers '
+        '${staleFirst ? 'first' : 'last'})', () async {
+      final a = Chat(id: 'a', folder: '/x', agent: 'claude');
+      final lists = <Completer<ListChatsResponse>>[];
+      final fake = FakeDaemon([a])
+        ..answer = (input) => switch (input) {
+          ListChatsRequest() => (lists..add(Completer())).last.future,
+          GetChatRequest() => GetChatResponse(seq: Int64(1)),
+          _ => null,
+        };
+      final d = Daemon(transport: fake);
+      addTearDown(d.dispose);
+      await pumpEventQueue(); // live: the first list is on its way
+      fake.down = true; // its stream drops meanwhile
+      await pumpEventQueue();
+      fake.down = false;
+      await d.ping(); // subscribes again: a second list
+      await pumpEventQueue();
+      expect(lists, hasLength(2));
+      // A chat starts after both lists were read.
+      fake.emit(
+        EventsResponse(
+          chatId: 'b',
+          chat: Chat(id: 'b', folder: '/y'),
+        ),
+      );
+      await pumpEventQueue();
+      final order = staleFirst ? [0, 1] : [1, 0];
+      for (final i in order) {
+        lists[i].complete(ListChatsResponse(chats: [a]));
+        await pumpEventQueue();
+      }
+      expect(d.chats.keys.toSet(), {'a', 'b'});
+      expect(fake.subscriptions.last.live, isTrue);
+    });
+  }
+
+  test('a chat started while the list is on its way stays', () async {
+    final list = Completer<ListChatsResponse>();
+    final start = Completer<StartChatResponse>();
+    final d = Daemon(
+      transport: _fake(list: list, start: start),
+    );
+    addTearDown(d.dispose);
+    await pumpEventQueue(); // live: the list is on its way
+    final started = d.startChat('/z', 'claude');
+    await pumpEventQueue();
+    start.complete(StartChatResponse(chatId: 'new'));
+    expect(await started, 'new');
+    // The list was read before the chat started.
+    list.complete(
+      ListChatsResponse(
+        chats: [Chat(id: 'a', folder: '/x')],
+      ),
+    );
+    await pumpEventQueue();
+    expect(d.chats.keys.toSet(), {'a', 'new'});
+    expect(d.selectedId, 'new');
+  });
+
   test('chats let go after a reconnect: still only the last six picked '
       'keep their items', () async {
     final ids = [for (var i = 0; i < 10; i++) String.fromCharCode(97 + i)];
