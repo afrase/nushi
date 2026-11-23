@@ -72,21 +72,13 @@ func (s *session) commandsLocked() acp.SessionUpdate {
 	return acp.SessionUpdate{SessionUpdate: "available_commands_update", AvailableCommandsUpdate: &acp.AvailableCommandsUpdate{AvailableCommands: cmds}}
 }
 
-// commands tells the client the session's slash commands once it knows
-// the session: a new one's id comes in the answer, a moment later.
-func (b *bridge) commands(s *session, known bool) {
-	if !known {
-		time.Sleep(afterAnswer)
-	}
+// commands tells the client the session's slash commands.
+func (b *bridge) commands(s *session) {
 	s.mu.Lock()
 	u := s.commandsLocked()
 	s.mu.Unlock()
 	b.update(s.id, u)
 }
-
-// afterAnswer is about how long the client takes to know a session it got
-// in an answer, so it doesn't drop the session's first updates.
-const afterAnswer = 200 * time.Millisecond
 
 // refreshedLocked takes the skills an ExtensionRefreshed lists.
 func (s *session) refreshedLocked(ev event) {

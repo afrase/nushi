@@ -37,7 +37,12 @@ func (b *bridge) open(ctx context.Context, cwd string, op any, replay bool) (*ac
 		h.abandon()
 		return nil, err
 	}
-	go b.commands(s, replay)
+	// A new session's commands go once the answer that names it has gone
+	// (acp.AfterResponse): the client drops updates of a session it
+	// doesn't know. A resumed one's id is the client's already.
+	if replay || !acp.AfterResponse(ctx, func() { b.commands(s) }) {
+		go b.commands(s)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id), Modes: modes(s.info.PermissionMode), ConfigOptions: b.options(s.info)}, nil

@@ -139,6 +139,13 @@ func start(t *testing.T, store *pitest.Store, log io.Writer) *peer {
 // processes dying would: their output ends, their input goes nowhere.
 func startDying(t *testing.T, store *pitest.Store, log io.Writer) (c *peer, die func()) {
 	t.Helper()
+	return startOn(t, store, log, io.Discard)
+}
+
+// startOn is startDying, and what the bridge writes the client goes to
+// wire too.
+func startOn(t *testing.T, store *pitest.Store, log, wire io.Writer) (c *peer, die func()) {
+	t.Helper()
 	logMu.Lock()
 	logTo = log
 	logMu.Unlock()
@@ -175,7 +182,7 @@ func startDying(t *testing.T, store *pitest.Store, log io.Writer) (c *peer, die 
 		close(done)
 	}()
 	c = &peer{client: &client{}}
-	c.AgentConn = acp.NewAgentConn(fromBridgeR, toBridgeW, func(*acp.AgentConn) acp.Client { return c.client })
+	c.AgentConn = acp.NewAgentConn(io.TeeReader(fromBridgeR, wire), toBridgeW, func(*acp.AgentConn) acp.Client { return c.client })
 	t.Cleanup(func() { _ = toBridgeW.Close(); <-done })
 	if _, err := c.Initialize(context.Background(), &acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion,
 		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}}); err != nil {

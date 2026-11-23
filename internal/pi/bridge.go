@@ -248,10 +248,6 @@ func (b *bridge) ExtMethod(ctx context.Context, method string, params json.RawMe
 // openTimeout bounds pi's start and a session's replay.
 var openTimeout = time.Minute
 
-// afterAnswer is about how long the client takes to know a session it got
-// in an answer, so it doesn't drop the session's first updates.
-const afterAnswer = 200 * time.Millisecond
-
 // open starts pi in cwd on a new session, or on the session in file,
 // whose conversation then goes to the client first (replay).
 func (b *bridge) open(ctx context.Context, cwd, file string, replay bool) (*session, []acp.SessionConfigOption, error) {
@@ -275,7 +271,9 @@ func (b *bridge) open(ctx context.Context, cwd, file string, replay bool) (*sess
 
 // start makes a session of the one pi holds: its options, and when
 // replay its conversation, before it hands the client pi's events. Its
-// commands and how full its context is follow.
+// commands and how full its context is follow: a new session's once the
+// answer that names it has gone (acp.AfterResponse), as the client drops
+// updates of a session it doesn't know.
 func (b *bridge) start(ctx context.Context, p *proc, cwd string, replay bool) (*session, []acp.SessionConfigOption, error) {
 	var st state
 	if err := p.call(ctx, map[string]any{"type": "get_state"}, &st); err != nil {
@@ -295,12 +293,12 @@ func (b *bridge) start(ctx context.Context, p *proc, cwd string, replay bool) (*
 	b.sessions[s.id] = s
 	b.mu.Unlock()
 	go s.pump()
-	go func() {
-		if !replay { // the client learns a new session's id from the answer
-			time.Sleep(afterAnswer)
-		}
+	first := func() {
 		b.usage(s)
 		b.commands(s)
-	}()
+	}
+	if replay || !acp.AfterResponse(ctx, first) { // a loaded session's id is the client's already
+		go first()
+	}
 	return s, opts, nil
 }

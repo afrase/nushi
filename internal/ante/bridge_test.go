@@ -123,6 +123,13 @@ func start(t *testing.T, store *antetest.Store) *peer {
 // nowhere.
 func startDying(t *testing.T, store *antetest.Store) (c *peer, die func()) {
 	t.Helper()
+	return startOn(t, store, io.Discard)
+}
+
+// startOn is startDying, and what the bridge writes the client goes to
+// wire too.
+func startOn(t *testing.T, store *antetest.Store, wire io.Writer) (c *peer, die func()) {
+	t.Helper()
 	toBridgeR, toBridgeW := io.Pipe()
 	fromBridgeR, fromBridgeW := io.Pipe()
 	var hostsMu sync.Mutex
@@ -159,7 +166,7 @@ func startDying(t *testing.T, store *antetest.Store) (c *peer, die func()) {
 		close(done)
 	}()
 	c = &peer{client: &client{}}
-	c.AgentConn = acp.NewAgentConn(fromBridgeR, toBridgeW, func(*acp.AgentConn) acp.Client { return c.client })
+	c.AgentConn = acp.NewAgentConn(io.TeeReader(fromBridgeR, wire), toBridgeW, func(*acp.AgentConn) acp.Client { return c.client })
 	t.Cleanup(func() { _ = toBridgeW.Close(); <-done })
 	init, err := c.Initialize(context.Background(), &acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion,
 		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}})

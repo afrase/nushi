@@ -1,9 +1,11 @@
 package ante
 
 import (
+	"bytes"
 	"context"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -108,6 +110,48 @@ func TestSkillRunTitle(t *testing.T) {
 	} {
 		if got := skillRun(in); got != want {
 			t.Errorf("skillRun(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// wire keeps what the bridge wrote the client, line by line.
+type wire struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (w *wire) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.b.Write(p)
+}
+
+// first is the first line that has s.
+func (w *wire) first(s string) string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for line := range strings.Lines(w.b.String()) {
+		if strings.Contains(line, s) {
+			return line
+		}
+	}
+	return ""
+}
+
+// A new session's commands go out after the answer that names it, which
+// the client needs to route them: acp.AfterResponse orders them, where a
+// 200 ms sleep guessed.
+func TestNewSessionsCommandsFollowItsAnswer(t *testing.T) {
+	w := &wire{}
+	c, _ := startOn(t, &antetest.Store{Home: t.TempDir()}, w)
+	for range 3 {
+		s, err := c.NewSession(context.Background(), &acp.NewSessionRequest{Cwd: "/work"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.waitCommands(t, s.SessionID, []string{"model:model id", "effort:level", "compact:what to keep", "review:<path>"})
+		if line := w.first(string(s.SessionID)); !strings.Contains(line, `"result"`) {
+			t.Errorf("the first line naming the session isn't the answer: %s", line)
 		}
 	}
 }
