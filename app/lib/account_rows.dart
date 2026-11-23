@@ -10,11 +10,12 @@ import 'package:nushi/widgets.dart';
 // Settings › Jira's sites and Settings › GitHub's hosts: each one's row,
 // and the form that adds a token.
 
-/// What a site's or host's row says while this build of Nushi needs the
-/// user's OK to read its token from the keychain (on Linux, while the
-/// keyring is locked).
+/// What a site's or host's row says while Nushi needs the user's OK to
+/// read its token: from the keychain for a new build on the Mac, from a
+/// locked keyring on Linux, each in its own word (ADR 0104), as the
+/// daemon's errors say it.
 String get needsOkStatus =>
-    'This build of Nushi needs your OK to read the token: '
+    'Nushi needs your OK to read the token from the ${conventions.keyring}: '
     '${conventions.system} asks for your password.';
 
 /// Says that a removed site's or host's token is still in the keychain as
