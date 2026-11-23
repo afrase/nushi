@@ -1,128 +1,18 @@
 part of '../noise.dart';
 
-// The fundamental patterns (spec section 7): pre-messages from the
-// initiator and the responder, then the messages.
-const _patterns = <String, (List<String>, List<String>, List<List<String>>)>{
-  'N': (
-    [],
-    ['s'],
-    [
-      ['e', 'es'],
-    ],
-  ),
-  'K': (
-    ['s'],
-    ['s'],
-    [
-      ['e', 'es', 'ss'],
-    ],
-  ),
-  'X': (
-    [],
-    ['s'],
-    [
-      ['e', 'es', 's', 'ss'],
-    ],
-  ),
-  'NN': (
-    [],
-    [],
-    [
-      ['e'],
-      ['e', 'ee'],
-    ],
-  ),
-  'NK': (
-    [],
-    ['s'],
-    [
-      ['e', 'es'],
-      ['e', 'ee'],
-    ],
-  ),
-  'NX': (
-    [],
-    [],
-    [
-      ['e'],
-      ['e', 'ee', 's', 'es'],
-    ],
-  ),
-  'KN': (
-    ['s'],
-    [],
-    [
-      ['e'],
-      ['e', 'ee', 'se'],
-    ],
-  ),
-  'KK': (
-    ['s'],
-    ['s'],
-    [
-      ['e', 'es', 'ss'],
-      ['e', 'ee', 'se'],
-    ],
-  ),
-  'KX': (
-    ['s'],
-    [],
-    [
-      ['e'],
-      ['e', 'ee', 'se', 's', 'es'],
-    ],
-  ),
-  'XN': (
-    [],
-    [],
-    [
-      ['e'],
-      ['e', 'ee'],
-      ['s', 'se'],
-    ],
-  ),
-  'XK': (
-    [],
-    ['s'],
-    [
-      ['e', 'es'],
-      ['e', 'ee'],
-      ['s', 'se'],
-    ],
-  ),
-  'XX': (
-    [],
-    [],
-    [
-      ['e'],
-      ['e', 'ee', 's', 'es'],
-      ['s', 'se'],
-    ],
-  ),
-  'IN': (
-    [],
-    [],
-    [
-      ['e', 's'],
-      ['e', 'ee', 'se'],
-    ],
-  ),
-  'IK': (
-    [],
-    ['s'],
-    [
-      ['e', 'es', 's', 'ss'],
-      ['e', 'ee', 'se'],
-    ],
-  ),
-  'IX': (
-    [],
-    [],
-    [
-      ['e', 's'],
-      ['e', 'ee', 'se', 's', 'es'],
-    ],
-  ),
+// The two handshakes Nushi uses (ADR 0034), each its messages' tokens
+// (spec section 7): IK, whose responder's static key the initiator knows
+// beforehand (its one pre-message), and IKpsk1, the same with the
+// pre-shared key mixed at the end of the first message.
+const _protocols = <String, List<List<String>>>{
+  'IK': [
+    ['e', 'es', 's', 'ss'],
+    ['e', 'ee', 'se'],
+  ],
+  'IKpsk1': [
+    ['e', 'es', 's', 'ss', 'psk'],
+    ['e', 'ee', 'se'],
+  ],
 };
 
 /// One side of a handshake.
@@ -153,11 +43,12 @@ final class HandshakeState {
   CipherState? _send;
   late CipherState _receive;
 
-  /// Starts a handshake for [protocol], such as
+  /// Starts a handshake for [protocol]:
+  /// `Noise_IK_25519_ChaChaPoly_BLAKE2s` or
   /// `Noise_IKpsk1_25519_ChaChaPoly_BLAKE2s`. [s] is this side's static
-  /// key, [rs] the other's when the pattern says it's known beforehand,
-  /// [psks] the pre-shared keys (32 bytes each) in the order the pattern
-  /// uses them. [e] fixes the ephemeral key, for test vectors only.
+  /// key, [rs] the responder's for the initiator, [psks] IKpsk1's one
+  /// pre-shared key (32 bytes). [e] fixes the ephemeral key, for test
+  /// vectors only.
   static Future<HandshakeState> start(
     String protocol, {
     required bool initiator,
@@ -173,28 +64,13 @@ final class HandshakeState {
         parts.sublist(2).join('_') != _suite) {
       throw ArgumentError.value(protocol, 'protocol', 'not Noise_*_$_suite');
     }
-    final m = RegExp(r'^([NKXI]{1,2})((?:psk\d)(?:\+psk\d)*)?$')
-        .firstMatch(parts[1]);
-    final base = m == null ? null : _patterns[m[1]];
-    if (m == null || base == null) {
-      throw ArgumentError.value(protocol, 'protocol', 'unknown pattern');
+    final messages = _protocols[parts[1]];
+    if (messages == null) {
+      throw ArgumentError.value(protocol, 'protocol', 'not IK or IKpsk1');
     }
-    final messages = [
-      for (final msg in base.$3) [...msg],
-    ];
-    final mods = m[2] == null ? <String>[] : m[2]!.split('+');
-    for (final mod in mods) {
-      final i = int.parse(mod.substring(3));
-      if (i == 0) {
-        messages[0].insert(0, 'psk');
-      } else if (i <= messages.length) {
-        messages[i - 1].add('psk');
-      } else {
-        throw ArgumentError.value(protocol, 'protocol', 'bad $mod');
-      }
-    }
-    if (psks.length != mods.length || psks.any((k) => k.length != 32)) {
-      throw ArgumentError('the pattern takes ${mods.length} 32-byte keys');
+    final psk = parts[1].endsWith('psk1');
+    if (psks.length != (psk ? 1 : 0) || psks.any((k) => k.length != 32)) {
+      throw ArgumentError('the pattern takes ${psk ? 1 : 0} 32-byte keys');
     }
     final ss = await _SymmetricState.start(protocol);
     await ss.mixHash(prologue);
@@ -206,20 +82,14 @@ final class HandshakeState {
       rs == null ? null : Uint8List.fromList(rs),
       psks,
       e,
-      mods.isNotEmpty,
+      psk,
     );
-    for (final (pre, mine) in [(base.$1, initiator), (base.$2, !initiator)]) {
-      for (final token in pre) {
-        if (token != 's') continue;
-        final key = mine ? s?.public : hs._rs;
-        if (key == null) {
-          throw ArgumentError(
-            'the pattern needs a static key known beforehand',
-          );
-        }
-        await ss.mixHash(key);
-      }
+    // The pre-message: the responder's static key.
+    final pre = initiator ? hs._rs : s?.public;
+    if (pre == null) {
+      throw ArgumentError('the pattern needs a static key known beforehand');
     }
+    await ss.mixHash(pre);
     return hs;
   }
 

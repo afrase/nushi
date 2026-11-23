@@ -15,12 +15,13 @@ import (
 	"github.com/flynn/noise"
 )
 
-// The standard vectors (cacophony's and snow's, cut to
-// 25519_ChaChaPoly_BLAKE2s) for the two patterns, run through state: the
-// suite, the pattern and where the pre-shared key goes are this package's.
+// The standard vectors (cacophony's and snow's, cut to the two patterns in
+// 25519_ChaChaPoly_BLAKE2s; packages/noise reads the same file), run
+// through state: the suite, the pattern and where the pre-shared key goes
+// are this package's.
 func TestVectors(t *testing.T) {
 	ran := 0
-	for _, file := range []string{"testdata/cacophony.json", "testdata/snow.json"} {
+	for _, file := range []string{"testdata/vectors.json"} {
 		b, err := os.ReadFile(file)
 		if err != nil {
 			t.Fatal(err)

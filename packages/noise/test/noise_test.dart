@@ -12,25 +12,31 @@ Uint8List _hex(String s) => Uint8List.fromList([
 String _toHex(List<int> b) =>
     [for (final x in b) x.toRadixString(16).padLeft(2, '0')].join();
 
-final _deferred = RegExp('^Noise_[NKXI]1|^Noise_[NKXI]{1,2}1');
-
 void main() {
-  // cacophony's and snow's vectors, cut to 25519_ChaChaPoly_BLAKE2s: every
-  // fundamental pattern and psk modifier in them (deferred ones aren't
-  // implemented). Read by a hybrid isolate on the VM, so the same test runs
-  // in a browser (dart test -p chrome).
-  for (final file in ['cacophony', 'snow']) {
-    test('$file vectors', () async {
-      final vectors = (jsonDecode(await _read(file)) as Map)['vectors'] as List;
-      final run = vectors.cast<Map<String, dynamic>>().where(
-        (v) => !_deferred.hasMatch(v['protocol_name'] as String),
+  // cacophony's and snow's vectors of IK and IKpsk1, the two patterns
+  // there are, in noiseconn's testdata, which Go's test reads too. Read by
+  // a hybrid isolate on the VM, so the same test runs in a browser (dart
+  // test -p chrome).
+  test('the vectors', () async {
+    final vectors = (jsonDecode(await _read()) as Map)['vectors'] as List;
+    expect(vectors, hasLength(3)); // cacophony's IK and IKpsk1, snow's IK
+    for (final v in vectors.cast<Map<String, dynamic>>()) {
+      await _vector(v);
+    }
+  });
+
+  test('only IK and IKpsk1 start', () async {
+    for (final name in ['XX', 'IKpsk2', 'NK', 'IK+psk1']) {
+      expect(
+        HandshakeState.start(
+          'Noise_${name}_25519_ChaChaPoly_BLAKE2s',
+          initiator: true,
+        ),
+        throwsArgumentError,
+        reason: name,
       );
-      expect(run.length, greaterThan(20));
-      for (final v in run) {
-        await _vector(v);
-      }
-    });
-  }
+    }
+  });
 
   test('a changed message fails, and so does a replayed one', () async {
     final mac = await KeyPair.make();
@@ -97,12 +103,12 @@ void main() {
   });
 }
 
-Future<String> _read(String file) async =>
+Future<String> _read() async =>
     await spawnHybridCode('''
 import 'dart:io';
 import 'package:stream_channel/stream_channel.dart';
 void hybridMain(StreamChannel<Object?> channel) {
-  channel.sink.add(File('test/vectors/$file.json').readAsStringSync());
+  channel.sink.add(File('../../noiseconn/testdata/vectors.json').readAsStringSync());
 }
 ''').stream.first
         as String;
@@ -136,12 +142,11 @@ Future<void> _vector(Map<String, dynamic> v) async {
     psks: psks('resp_psks'),
     e: await key('resp_ephemeral'),
   );
-  final oneWay = RegExp('^Noise_[NKX](psk|_)').hasMatch(name);
   final messages = (v['messages'] as List).cast<Map<String, dynamic>>();
   for (var n = 0; n < messages.length; n++) {
     final payload = _hex(messages[n]['payload'] as String);
     final want = messages[n]['ciphertext'] as String;
-    final fromInit = oneWay || n.isEven;
+    final fromInit = n.isEven;
     final (from, to) = fromInit ? (init, resp) : (resp, init);
     Uint8List ct;
     Uint8List pt;

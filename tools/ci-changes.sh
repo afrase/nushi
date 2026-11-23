@@ -14,8 +14,9 @@
 #
 # Docs (docs/, the root's Markdown, LICENSE) and the promo site (site/,
 # which only site.yml copies) are read by no build or test;
-# a Markdown file anywhere else counts by its folder. Go's folders mark go,
-# the app's and the Dart packages' app (app/windows too, which only the
+# a Markdown file anywhere else counts by its folder. Go's folders mark go
+# (noiseconn/testdata app too: packages/noise reads its vectors), the
+# app's and the Dart packages' app (app/windows too, which only the
 # Windows app's build reads); app/macos marks both, because the window's
 # Swift tests run in Go's macOS lint job. Anything else (CI, the
 # Makefile, tools, protos, packaging, a path not named here) marks both.
@@ -38,6 +39,7 @@ kinds() {
 		esac
 		case $path in
 		cmd/*) go=true mac=true ;;
+		noiseconn/testdata/*) go=true app=true ;;
 		internal/* | relay/* | noiseconn/* | go.mod | go.sum | .golangci.yml) go=true ;;
 		app/macos/*) go=true app=true mac=true ;;
 		app/pubspec.yaml | app/pubspec.lock) app=true mac=true ;;
@@ -89,6 +91,8 @@ LICENSE"
 	check "true false false" "go.sum"
 	check "true false false" "relay/relay.go
 docs/remote.md"
+	check "true false false" "noiseconn/noiseconn.go"
+	check "true true false" "noiseconn/testdata/vectors.json"
 	check "false true false" "app/lib/chat_view.dart"
 	check "false true false" "app/test/timings.tsv"
 	check "false true true" "app/pubspec.yaml"
