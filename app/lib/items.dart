@@ -105,7 +105,12 @@ class ItemView extends StatelessWidget {
         return QuestionCard(
           item,
           agent: chat.agentName,
-          draft: chat.answers.putIfAbsent(item.id, QuestionDraft.new),
+          // The chat keeps what's written in one that waits; a settled
+          // one (answered, cancelled, ended with its turn) shows no draft,
+          // and what was kept for it goes here, where it would be made.
+          draft: item.status == 'pending'
+              ? chat.answers.putIfAbsent(item.id, QuestionDraft.new)
+              : chat.answers.remove(item.id) ?? QuestionDraft(),
           onAnswer: (answer) async {
             await daemon.client.answerQuestion(
               AnswerQuestionRequest(

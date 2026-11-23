@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/disclosure.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/phone/phone_app.dart';
@@ -476,5 +478,34 @@ void main() {
     await render(tester, find.byType(PhoneApp), 'question_phone_open');
     expect(fake.calls.whereType<AnswerQuestionRequest>(), isEmpty);
     await endPhone(tester, phone);
+  });
+
+  testWidgets('a question keeps a draft in its chat only while it waits', (
+    tester,
+  ) async {
+    final d = await FakeDaemon([]).connect(tester);
+    final chat = ChatState('c', '/x')..agent = 'claude';
+    Item asked(String status) => Item(
+      id: 'q',
+      kind: ItemKind.ITEM_KIND_QUESTION,
+      status: status,
+      fields: [
+        if (status == 'pending') _database(values: const []) else _database(),
+      ],
+    );
+    Future<void> show(String status) async {
+      await tester.pumpWidget(
+        themed(ItemView(asked(status), chat, d, live: false, still: true)),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await show('answered'); // from the chat's history
+    expect(chat.answers, isEmpty);
+    await show('pending');
+    expect(chat.answers.keys, ['q']);
+    await show('cancelled'); // ended with its turn: nothing to keep
+    expect(chat.answers, isEmpty);
+    await closeView(tester, d);
   });
 }
