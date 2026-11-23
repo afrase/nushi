@@ -494,6 +494,27 @@ GitHubPull demoPull({bool running = true}) => GitHubPull(
   ],
 );
 
+/// The three commits of #218 as GetGitHubCommits answers them, oldest
+/// first, the last its head: the branch's commits as Changes lists them.
+GetGitHubCommitsResponse demoPullCommits() => GetGitHubCommitsResponse(
+  total: 3,
+  commits: [
+    for (final (oid, headline, age, checks) in [
+      ('41e2c90${'1' * 33}', 'Keyset cursor in store.ListPosts', 50, 'success'),
+      ('8b07d4e${'2' * 33}', 'Page the feed handler', 30, 'success'),
+      ('b' * 40, 'Older posts link in the default theme', 8, 'failure'),
+    ])
+      GitHubCommit(
+        oid: oid,
+        headline: headline,
+        author: 'maya-chen',
+        authorName: 'Maya Chen',
+        committedMs: msAgo(Duration(minutes: age)),
+        checks: checks,
+      ),
+  ],
+);
+
 /// The files of #218, for the Pull request tab's Files.
 List<FileChange> demoPullFiles() => [
   FileChange(

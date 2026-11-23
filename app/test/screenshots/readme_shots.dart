@@ -122,6 +122,7 @@ Object? _demo(Object input) => switch (input) {
     pull: demoLink,
   ),
   GetGitHubPullRequest() => GetGitHubPullResponse(pull: demoPull()),
+  GetGitHubCommitsRequest() => demoPullCommits(),
   GetGitHubFilesRequest() => GetGitHubFilesResponse(files: demoPullFiles()),
   ListGitHubHostsRequest() => ListGitHubHostsResponse(
     hosts: [GitHubHost(host: 'github.com', login: 'maya-chen', source: 'gh')],
