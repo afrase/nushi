@@ -17970,11 +17970,12 @@ func (*StartPairingRequest) Descriptor() ([]byte, []int) {
 type StartPairingResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// nushi://pair?r=<relay>&i=<one-time id>&k=<daemon's key>&s=<secret>,
-	// which an app before link builds its link from.
+	// which an app builds the link from when link is empty.
 	Qr string `protobuf:"bytes,1,opt,name=qr,proto3" json:"qr,omitempty"`
 	// The same as the link the QR code shows and Copy link copies:
 	// https://<relay's host>/#pair?r=…, the parameters in the fragment
-	// (http for a ws:// relay). API 144.
+	// (http for a ws:// relay). API 144, but empty from v0.53.0-beta.7, an
+	// API 144 daemon before it: an app reads it only when it's set.
 	Link          string `protobuf:"bytes,3,opt,name=link,proto3" json:"link,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

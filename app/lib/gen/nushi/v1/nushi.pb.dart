@@ -23265,7 +23265,7 @@ class StartPairingResponse extends $pb.GeneratedMessage {
   static StartPairingResponse? _defaultInstance;
 
   /// nushi://pair?r=<relay>&i=<one-time id>&k=<daemon's key>&s=<secret>,
-  /// which an app before link builds its link from.
+  /// which an app builds the link from when link is empty.
   @$pb.TagNumber(1)
   $core.String get qr => $_getSZ(0);
   @$pb.TagNumber(1)
@@ -23277,7 +23277,8 @@ class StartPairingResponse extends $pb.GeneratedMessage {
 
   /// The same as the link the QR code shows and Copy link copies:
   /// https://<relay's host>/#pair?r=…, the parameters in the fragment
-  /// (http for a ws:// relay). API 144.
+  /// (http for a ws:// relay). API 144, but empty from v0.53.0-beta.7, an
+  /// API 144 daemon before it: an app reads it only when it's set.
   @$pb.TagNumber(3)
   $core.String get link => $_getSZ(1);
   @$pb.TagNumber(3)
