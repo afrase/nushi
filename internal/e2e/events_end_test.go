@@ -1,7 +1,10 @@
 package e2e
 
 import (
+	"errors"
 	"testing"
+
+	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/acptest"
 	"github.com/afrase/nushi/internal/testcheck"
@@ -28,7 +31,9 @@ func TestAnAppsEventsEndWithTheirStream(t *testing.T) {
 			return false
 		}
 	})
-	if a.ended == nil {
-		t.Error("the events ended without the stream's error")
+	// The stream's own error, a Connect error (the daemon gone mid-stream),
+	// not the reader's fallback for a stream that ended without one.
+	if ce := new(connect.Error); !errors.As(a.ended, &ce) {
+		t.Errorf("the events ended with %v, not the stream's error", a.ended)
 	}
 }
