@@ -47,7 +47,7 @@ void main() {
         "refused with why; a fixed key too; a row's own default isn't", (
       tester,
     ) async {
-      final d = await shortcutsPage(tester);
+      final d = await shortcutsInApp(tester);
       for (final (key, holding, why) in [
         (LogicalKeyboardKey.keyQ, [metaKey], '⌘Q: macOS keeps it'),
         (LogicalKeyboardKey.digit4, [shiftKey, metaKey], '⇧⌘4: macOS keeps it'),
@@ -83,7 +83,7 @@ void main() {
         inRow('sidebar', '⌥Z: ⌥ and a key types a character'),
         findsNothing,
       );
-      expect(find.text('closed'), findsNothing);
+      expect(d.settingsOpen, isNotNull);
       d.dispose();
     }, variant: onMac);
   });
@@ -91,7 +91,7 @@ void main() {
   group('clashes', () {
     testWidgets("another binding's key is offered to take: Cancel changes "
         'nothing, Take it leaves the other with none', (tester) async {
-      final d = await shortcutsPage(tester);
+      final d = await shortcutsInApp(tester);
       await recordKey(tester, 'sidebar', LogicalKeyboardKey.keyD, [metaKey]);
       expect(inRow('sidebar', 'Pin chat has ⌘D'), findsOne);
       expect(takeOf('sidebar'), findsOne);
@@ -106,7 +106,7 @@ void main() {
       await recordKey(tester, 'sidebar', LogicalKeyboardKey.keyD, [metaKey]);
       await pressKey(tester, LogicalKeyboardKey.escape);
       expect(takeOf('sidebar'), findsNothing);
-      expect(find.text('closed'), findsNothing);
+      expect(d.settingsOpen, isNotNull);
       expect(savedKeys(), isEmpty);
       await recordKey(tester, 'sidebar', LogicalKeyboardKey.keyD, [metaKey]);
       await tapIt(tester, find.byKey(const ValueKey('shortcut-take-sidebar')));
