@@ -171,19 +171,7 @@ Future<void> _squeezed(
 }
 
 /// The composer's box.
-Rect _box(WidgetTester tester) => tester.getRect(
-  find
-      .ancestor(
-        of: find.byType(TextField),
-        matching: find.byWidgetPredicate(
-          (w) =>
-              w is Container &&
-              w.decoration is BoxDecoration &&
-              (w.decoration! as BoxDecoration).borderRadius != null,
-        ),
-      )
-      .first,
-);
+Rect _box(WidgetTester tester) => tester.getRect(composerBox);
 
 Rect _text(WidgetTester tester, String words) =>
     tester.getRect(find.textContaining(words, findRichText: true).first);
@@ -428,24 +416,7 @@ void main() {
         final box = _box(tester);
         final t = NushiTheme.of(tester.element(find.byType(Composer))).t;
         final look =
-            tester
-                    .widget<Container>(
-                      find
-                          .ancestor(
-                            of: find.byType(TextField),
-                            matching: find.byWidgetPredicate(
-                              (w) =>
-                                  w is Container &&
-                                  w.decoration is BoxDecoration &&
-                                  (w.decoration! as BoxDecoration)
-                                          .borderRadius !=
-                                      null,
-                            ),
-                          )
-                          .first,
-                    )
-                    .decoration!
-                as BoxDecoration;
+            tester.widget<Container>(composerBox).decoration! as BoxDecoration;
         expect(look.color, t.raised);
         expect((look.border! as Border).top.color, t.line);
         expect(look.boxShadow, isNotEmpty);

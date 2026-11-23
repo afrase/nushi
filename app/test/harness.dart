@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/composer.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
@@ -415,6 +416,25 @@ int _treeShape(WidgetTester tester) {
   tester.binding.rootElement!.visitChildren(visit);
   return hash;
 }
+
+/// The composer's box, the card around its text and its row of controls:
+/// the nearest box around [Composer]'s text field with corners and a
+/// border. One finder, so every test means the same box.
+Finder get composerBox => find
+    .ancestor(
+      of: find.descendant(
+        of: find.byType(Composer),
+        matching: find.byType(TextField),
+      ),
+      matching: find.byWidgetPredicate(
+        (w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration! as BoxDecoration).borderRadius != null &&
+            (w.decoration! as BoxDecoration).border != null,
+      ),
+    )
+    .first;
 
 /// A chat's file tabs, as each names its file, and its browser tabs, by
 /// address.

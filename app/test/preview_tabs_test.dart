@@ -15,6 +15,7 @@ import 'package:nushi/chat_header.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/edit_bars.dart' show EditedMark;
 import 'package:nushi/file_view.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/files_top_row.dart';
@@ -165,9 +166,7 @@ Future<Daemon> _app(
 
 Finder _tab(String label) => find.ancestor(
   of: find.descendant(of: find.byType(PaneTabs), matching: find.text(label)),
-  matching: find.byWidgetPredicate(
-    (w) => w is SizedBox && w.key is ValueKey<String>,
-  ),
+  matching: find.byType(TabFace),
 );
 
 Finder _closeOf(String label) =>
@@ -485,17 +484,16 @@ void main() {
         expect(row.top, header.top);
         expect(row.bottom, header.bottom);
         expect(header.right, tester.getRect(find.byType(FilesPane)).left);
-        final lines = find.descendant(
-          of: find.byType(TabFace),
-          matching: find.byType(Positioned),
-        );
-        // With three open, the file showing; the header's switch is a
-        // segmented control, with no line (ADR 0111).
+        // With three open, the file showing has the line along its tab's
+        // bottom edge; the header's switch is a segmented control, with no
+        // line (ADR 0111).
+        final lines = find.byWidgetPredicate((w) => w is TabFace && w.showing);
         expect(lines, findsNWidgets(count == 1 ? 0 : 1));
         for (final line in lines.evaluate()) {
-          final box = line.renderObject! as RenderBox;
-          final bottom = box.localToGlobal(box.size.bottomLeft(Offset.zero)).dy;
-          expect(bottom, row.bottom - 1);
+          expect(
+            tester.getRect(find.byWidget(line.widget)).bottom,
+            row.bottom - 1,
+          );
         }
         d.dispose();
       }, variant: onMac);
@@ -537,20 +535,20 @@ void main() {
       tester,
     ) async {
       final d = await _app(tester, files: _three);
-      double close(String label) => tester
-          .widget<Opacity>(
-            find.descendant(of: _tab(label), matching: find.byType(Opacity)),
+      bool close(String label) => tester
+          .widget<EditedMark>(
+            find.descendant(of: _tab(label), matching: find.byType(EditedMark)),
           )
-          .opacity;
-      expect(close('report.md'), 1);
-      expect(close('plan.md'), 0);
+          .shown;
+      expect(close('report.md'), isTrue);
+      expect(close('plan.md'), isFalse);
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       addTearDown(mouse.removePointer);
       await mouse.addPointer(location: Offset.zero);
       await mouse.moveTo(tester.getCenter(_tab('plan.md')));
       await tester.pump();
-      expect(close('plan.md'), 1);
-      expect(close('notes.md'), 0);
+      expect(close('plan.md'), isTrue);
+      expect(close('notes.md'), isFalse);
       d.dispose();
     }, variant: onMac);
 

@@ -7,6 +7,7 @@ import 'package:nushi/changes_view.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/commit_box.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/file_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -246,6 +247,64 @@ void main() {
     d.dispose();
   });
 
+  // The box under the staged files' checks, as Uncommitted's side shows
+  // them: a component golden. The view at the window's sizes is a render
+  // (docs/development.md's Goldens and renders: Changes' window golden is
+  // related_worktrees_golden's).
+  for (final (tokens, theme) in [
+    (Tokens.dark, 'dark'),
+    (Tokens.light, 'light'),
+  ]) {
+    testWidgets('stage and commit: the box under the files staged, $theme', (
+      tester,
+    ) async {
+      viewport(tester, const Size(300, 420));
+      final chat = ChatState('c', '/x')
+        ..canWriteCommit = true
+        ..commitMessage.text = 'Shorten the relay wait';
+      final files = _changes();
+      void stage(List<FileChange> _, {required bool on}) {}
+      await tester.pumpWidget(
+        themed(
+          RepaintBoundary(
+            key: const Key('side'),
+            child: SizedBox(
+              width: 260,
+              height: 400,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: FileList(
+                      files: files,
+                      selected: 'app/lib/relay.dart',
+                      onSelect: (_) {},
+                      onStage: stage,
+                    ),
+                  ),
+                  CommitBox(
+                    chat: chat,
+                    files: files,
+                    onStage: stage,
+                    onCommit: (_) async {},
+                    onWrite: () async => '',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          tokens: tokens,
+          banner: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('2 of 3 staged'), findsOne);
+      await expectLater(
+        find.byKey(const Key('side')),
+        matchesGoldenFile('goldens/commit_box_$theme.png'),
+      );
+    });
+  }
+
   for (final (size, name) in [
     (const Size(1700, 900), '1700'),
     (const Size(720, 700), '720'),
@@ -254,28 +313,27 @@ void main() {
       (Brightness.dark, 'dark'),
       (Brightness.light, 'light'),
     ]) {
-      testWidgets('stage and commit at $name, $theme', (tester) async {
-        final (d, state, _) = await _view(
-          tester,
-          _changes(),
-          size: size,
-          brightness: mode,
-        );
-        state
-          ..canWriteCommit = true
-          ..commitMessage.text = 'Shorten the relay wait';
-        await tester.pumpAndSettle();
-        await expectLater(
-          find.byType(ChangesView),
-          matchesGoldenFile('goldens/stage_commit_${name}_$theme.png'),
-        );
-        await render(
-          tester,
-          find.byType(ChangesView),
-          'changes_commit_${name}_$theme',
-        );
-        d.dispose();
-      });
+      if (!lightCopy(mode)) {
+        testWidgets('stage and commit at $name, $theme', (tester) async {
+          final (d, state, _) = await _view(
+            tester,
+            _changes(),
+            size: size,
+            brightness: mode,
+          );
+          state
+            ..canWriteCommit = true
+            ..commitMessage.text = 'Shorten the relay wait';
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          await render(
+            tester,
+            find.byType(ChangesView),
+            'changes_commit_${name}_$theme',
+          );
+          d.dispose();
+        });
+      }
 
       testWidgets('nothing changed, at $name, $theme', (tester) async {
         final (d, _, _) = await _view(
