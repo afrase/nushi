@@ -1,0 +1,65 @@
+[
+  {
+    "name": "claude",
+    "title": "Claude",
+    "mcpUserOnly": false,
+    "goAgentSwitch": false,
+    "signIn": "",
+    "expires": "Claude Code deletes sessions after 30 days by default",
+    "adapter": ""
+  },
+  {
+    "name": "codex",
+    "title": "Codex",
+    "mcpUserOnly": false,
+    "goAgentSwitch": true,
+    "signIn": "codex login",
+    "expires": "",
+    "adapter": "@agentclientprotocol/codex-acp"
+  },
+  {
+    "name": "ante",
+    "title": "Ante",
+    "mcpUserOnly": true,
+    "goAgentSwitch": false,
+    "signIn": "",
+    "expires": "",
+    "adapter": ""
+  },
+  {
+    "name": "omp",
+    "title": "oh-my-pi",
+    "mcpUserOnly": false,
+    "goAgentSwitch": false,
+    "signIn": "",
+    "expires": "",
+    "adapter": ""
+  },
+  {
+    "name": "opencode",
+    "title": "OpenCode",
+    "mcpUserOnly": false,
+    "goAgentSwitch": false,
+    "signIn": "",
+    "expires": "",
+    "adapter": ""
+  },
+  {
+    "name": "pi",
+    "title": "Pi",
+    "mcpUserOnly": false,
+    "goAgentSwitch": false,
+    "signIn": "",
+    "expires": "",
+    "adapter": ""
+  },
+  {
+    "name": "pig",
+    "title": "PiG",
+    "mcpUserOnly": false,
+    "goAgentSwitch": false,
+    "signIn": "",
+    "expires": "",
+    "adapter": ""
+  }
+]

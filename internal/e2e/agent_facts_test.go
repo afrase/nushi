@@ -2,11 +2,13 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -49,6 +51,18 @@ func (builtInPlugins) SetBuiltInOn(context.Context, string, bool) error        {
 func (builtInPlugins) SetPluginOn(context.Context, string, string, bool) error { return nil }
 func (builtInPlugins) Uninstall(context.Context, string, string) error         { return nil }
 func (builtInPlugins) PluginScope(string, model.Plugin) string                 { return "" }
+
+// agentFacts is what testdata/agents.json says of each agent, in the order
+// ListAgents lists them: the facts the app's FakeDaemon lists them with.
+type agentFacts struct {
+	Name          string `json:"name"`
+	Title         string `json:"title"`
+	McpUserOnly   bool   `json:"mcpUserOnly"`
+	GoAgentSwitch bool   `json:"goAgentSwitch"`
+	SignIn        string `json:"signIn"`
+	Expires       string `json:"expires"`
+	Adapter       string `json:"adapter"` // its package; "" for none
+}
 
 // What the app asks of an agent instead of going by its name: what
 // deletes its sessions (the removed chats' bar), the plain MCP view, from the agents as main lists
@@ -101,6 +115,20 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 		if want := a.Name == "codex"; a.GoAgentSwitch != want || (want && a.Adapter == nil) {
 			t.Errorf("%s: go_agent_switch %v, want %v; adapter %v", a.Name, a.GoAgentSwitch, want, a.Adapter)
 		}
+	}
+	// The app's FakeDaemon lists the agents from the same facts
+	// (app/test/fake_daemon.dart's readyAgents), so they can't drift.
+	b, err := os.ReadFile(filepath.Join("testdata", "agents.json"))
+	testcheck.NoErr(t, err)
+	var facts []agentFacts
+	testcheck.NoErr(t, json.Unmarshal(b, &facts))
+	var got []agentFacts
+	for _, a := range listed {
+		got = append(got, agentFacts{Name: a.Name, Title: a.Title, McpUserOnly: a.McpUserOnly, GoAgentSwitch: a.GoAgentSwitch,
+			SignIn: a.SignIn, Expires: a.Expires, Adapter: a.GetAdapter().GetPackage()})
+	}
+	if !slices.Equal(got, facts) {
+		t.Errorf("listed agents' facts\n%v\nwant testdata/agents.json's\n%v", got, facts)
 	}
 	// Codex's Go agent on (Settings, TestCodexGoAgentSetting): Codex is
 	// listed with no adapter, its switch still there.

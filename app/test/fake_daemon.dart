@@ -14,28 +14,27 @@ import 'package:nushi/drafts.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_link.dart' show rowItem;
 
-/// The seven agents, as the daemon lists them: installed, ready.
+import 'agent_facts_fixture.dart';
+
+/// The agents as the daemon lists them, installed and ready: each one's
+/// facts (its title, sign-in, what deletes its sessions, its adapter…)
+/// from internal/e2e/testdata/agents.json, which a Go test checks against
+/// the daemon's own list; none in the browser, which can't read it.
 List<Agent> readyAgents() => [
-  for (final (name, title) in [
-    ('claude', 'Claude'),
-    ('codex', 'Codex'),
-    ('ante', 'Ante'),
-    ('omp', 'oh-my-pi'),
-    ('opencode', 'OpenCode'),
-    ('pi', 'Pi'),
-    ('pig', 'PiG'),
-  ])
+  for (final a in agentFacts())
     Agent(
-      name: name,
-      title: title,
-      path: '/bin/$name',
+      name: a['name']! as String,
+      title: a['title']! as String,
+      path: '/bin/${a['name']}',
       ready: true,
-      mcpUserOnly: name == 'ante',
-      goAgentSwitch: name == 'codex',
-      signIn: name == 'codex' ? 'codex login' : '',
-      expires: name == 'claude'
-          ? 'Claude Code deletes sessions after 30 days by default'
-          : '',
+      mcpUserOnly: a['mcpUserOnly']! as bool,
+      goAgentSwitch: a['goAgentSwitch']! as bool,
+      signIn: a['signIn']! as String,
+      expires: a['expires']! as String,
+      adapter: switch (a['adapter']! as String) {
+        '' => null,
+        final package => Adapter(package: package),
+      },
     ),
 ];
 
