@@ -46,9 +46,6 @@ class TurnStatus extends StatefulWidget {
 
 class _TurnStatusState extends State<TurnStatus> with ClockRun {
   late bool _busy = widget.chat.busy;
-  DateTime? _since; // when the running turn started, as last known
-  late bool _ran = widget.chat.started != null; // a turn ran, not a reopen
-  bool _stopped = false; // someone stopped it
   String? _receipt; // "Done in 2m 30s", while it shows
   String _last = ''; // what the line said last, folding away
   bool _growing = false; // the run is the line growing in
@@ -70,7 +67,6 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
     old.chat.removeListener(_changed);
     widget.chat.addListener(_changed);
     _busy = widget.chat.busy;
-    _ran = widget.chat.started != null;
     _receipt = null;
     stopRun();
   }
@@ -90,8 +86,6 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
     final c = widget.chat;
     if (c.busy) {
       if (!_busy) {
-        _stopped = false;
-        _ran = false;
         _receipt = null;
         // From what shows of a line still folding, if one is.
         _growFrom = running ? _shows : 0;
@@ -99,28 +93,23 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
         _growing = !reduceMotion(context) && _growFrom < 1;
         if (_growing) runFor(TurnStatus.foldFor);
       }
-      _since = c.started ?? _since ?? clock();
-      _ran |= c.started != null;
-      _stopped |= c.stopping;
     } else if (_busy) {
       _ended();
     }
     if (_busy != c.busy) setState(() => _busy = c.busy);
   }
 
-  /// The turn ended: a receipt if it's one to see, then the line folds.
+  /// The turn ended: a receipt if it's one to see (done, as the daemon
+  /// judged it), then the line folds.
   void _ended() {
     final c = widget.chat;
-    final lasted = clock().difference(_since ?? clock());
+    final lasted = c.lastTurn ?? Duration.zero;
     final still = reduceMotion(context);
     _growing = false;
     _receipt =
-        turnEnd(c, stopped: _stopped, ran: _ran) == TurnEnd.TURN_END_DONE &&
-            !c.waiting &&
-            sparksFor(lasted)
+        c.ended == TurnEnd.TURN_END_DONE && !c.waiting && sparksFor(lasted)
         ? 'Done in ${elapsed(lasted)}'
         : null;
-    _since = null;
     if (_receipt == null && still) return;
     runFor(
       _receipt == null

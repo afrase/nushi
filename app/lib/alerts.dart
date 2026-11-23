@@ -46,11 +46,6 @@ abstract interface class AlertCenter {
 /// the first notification.
 enum NotifyPermission { allowed, denied, notAsked }
 
-/// The API from which the daemon says how each turn ended
-/// (ChatStatus.ended, failure). While an older daemon waits to restart (ADR
-/// 0056) the alerts still guess it from the turn's notices.
-const turnEndApi = 107;
-
 /// What a Mac notification says happened, in the phone's pushes' words.
 enum AlertKind {
   permission(' needs you'),
@@ -141,11 +136,6 @@ class ChatAlerts {
     _clearShown();
   }
 
-  final _running = <String>{}; // chats whose turn runs, as events said
-  // An older daemon's turns, judged from their notices: whose running turn
-  // someone stopped, and whose had an error.
-  final _stopped = <String>{};
-  final _failed = <String>{};
   final _asked = <String, Set<String>>{}; // prompts already notified
   final _finishing = <String, Timer>{};
   final _posted = <String>{}; // chats with notifications posted
@@ -174,9 +164,6 @@ class ChatAlerts {
     final id = e.chatId;
     if (id.isEmpty || daemon.sideOf(id) != null) return;
     if (e.removed) {
-      _running.remove(id);
-      _stopped.remove(id);
-      _failed.remove(id);
       _asked.remove(id);
       _finishing.remove(id)?.cancel();
       return;
@@ -184,11 +171,9 @@ class ChatAlerts {
     if (e.hasStatus()) {
       final s = e.status;
       if (s.started != 0) {
-        _running.add(id);
         _finishing.remove(id)?.cancel(); // the agent went on
-      } else if (_judged) {
+      } else {
         if (s.ended != TurnEnd.TURN_END_UNSPECIFIED) {
-          _running.remove(id);
           _asked.remove(id);
           _finishing.remove(id)?.cancel();
         }
@@ -197,13 +182,6 @@ class ChatAlerts {
           _finish(id, AlertKind.finished);
         } else if (s.ended == TurnEnd.TURN_END_FAILED) {
           _finish(id, AlertKind.failed, s.failure);
-        }
-      } else if (_running.remove(id) || daemon.chats[id]?.started != null) {
-        final stopped = _stopped.remove(id);
-        final failed = _failed.remove(id);
-        _asked.remove(id);
-        if (!stopped) {
-          _finish(id, failed ? AlertKind.failed : AlertKind.finished);
         }
       }
       scheduleMicrotask(_badge); // once the daemon applied it
@@ -220,17 +198,10 @@ class ChatAlerts {
       );
     } else if (e.hasItem()) {
       final it = e.item.item;
-      final running =
-          _running.contains(id) || daemon.chats[id]?.started != null;
       final prompt =
           it.kind == ItemKind.ITEM_KIND_PERMISSION ||
           it.kind == ItemKind.ITEM_KIND_QUESTION;
-      if (it.kind == ItemKind.ITEM_KIND_NOTICE && running && !_judged) {
-        if (it.status == 'cancelled') _stopped.add(id);
-        if (it.status == 'error' || it.status == 'turn_failed') _failed.add(id);
-      } else if (prompt &&
-          it.status == 'pending' &&
-          (_asked[id] ??= {}).add(it.id)) {
+      if (prompt && it.status == 'pending' && (_asked[id] ??= {}).add(it.id)) {
         _post(
           id,
           it.kind == ItemKind.ITEM_KIND_PERMISSION
@@ -240,9 +211,6 @@ class ChatAlerts {
       }
     }
   }
-
-  /// Whether the daemon judges each turn's end (from [turnEndApi]).
-  bool get _judged => daemon.daemonApi >= turnEndApi;
 
   /// Posts a turn's end [finishedWait] from now, unless the agent goes on
   /// first; [detail] is what ended a failed one.

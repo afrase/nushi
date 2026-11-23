@@ -127,15 +127,23 @@ void main() {
     await tester.pumpWidget(_app(Sidebar(daemon: d)));
     await tester.pump();
     expect(_dot(tester, _row('A')), 'ring');
-    // The daemon marks it before the status says the turn ended.
+    // The daemon marks it before the status says the turn ended (a chat
+    // event carries no status: only the list does).
     fake
       ..emit(
         EventsResponse(
           chatId: 'a',
-          chat: chat('a', 'claude', 'A')..done = true,
+          chat: chat('a', 'claude', 'A')
+            ..done = true
+            ..clearStatus(),
         ),
       )
-      ..emit(EventsResponse(chatId: 'a', status: ChatStatus()));
+      ..emit(
+        EventsResponse(
+          chatId: 'a',
+          status: ChatStatus(ended: TurnEnd.TURN_END_DONE),
+        ),
+      );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
     // The check draws, the green dot under it not yet in.

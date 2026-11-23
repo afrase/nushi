@@ -314,9 +314,14 @@ class ChatState extends ChangeNotifier {
   bool ownTurn = false;
   DateTime? started; // when the running turn started
   bool stopping = false; // the app asked the turn to stop
-  // How the last turn ended, as the daemon judged it (API 107); unspecified
-  // while one runs, before any ended, or from an older daemon.
+  // How the last turn ended, as the daemon judged it; unspecified while one
+  // runs, before any ended, or after a reopen, which is no turn.
   TurnEnd ended = TurnEnd.TURN_END_UNSPECIFIED;
+
+  /// How long the last turn ran, from its start to the status that ended
+  /// it: what a receipt and a check's sparks are judged by. Null while one
+  /// runs, or when the chat was busy with no turn's start (a reopen).
+  Duration? lastTurn;
 
   /// Why the last snapshot didn't load, while the load tries again ('' once
   /// one loads).
@@ -821,9 +826,14 @@ class ChatState extends ChangeNotifier {
 
   void status(ChatStatus? s) {
     if (s == null) return;
-    if (busy && !s.busy) related.turnEnded();
+    if (busy && !s.busy) {
+      related.turnEnded();
+      final from = started;
+      lastTurn = from == null ? null : clock().difference(from);
+    }
     if (s.busy) {
       ended = TurnEnd.TURN_END_UNSPECIFIED;
+      lastTurn = null;
     } else if (s.ended != TurnEnd.TURN_END_UNSPECIFIED) {
       ended = s.ended;
     }

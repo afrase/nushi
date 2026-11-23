@@ -26,7 +26,6 @@ const _toGo = {
   'filesApi',
   'pinTitlesApi',
   'attachApi',
-  'turnEndApi',
   'editApi',
   'serversApi',
   'searchSessionsApi',

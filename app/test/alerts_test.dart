@@ -71,20 +71,12 @@ EventsResponse _item(String id, ItemKind kind, String status, [String? item]) =>
       ),
     );
 
-/// The alerts on a daemon with chats a (Claude's) and b (Codex's); with
-/// [api], a daemon of that API version.
-Future<(FakeDaemon, Daemon, ChatAlerts)> _connect(
-  WidgetTester tester, {
-  int? api,
-}) async {
+/// The alerts on a daemon with chats a (Claude's) and b (Codex's).
+Future<(FakeDaemon, Daemon, ChatAlerts)> _connect(WidgetTester tester) async {
   final fake = FakeDaemon([
     chat('a', 'claude', 'Fix the login'),
     chat('b', 'codex', 'Tidy the docs', age: 1),
   ]);
-  if (api != null) {
-    fake.answer = (input) =>
-        input is PingRequest ? PingResponse(apiVersion: api) : null;
-  }
   final d = await fake.connect(tester);
   return (fake, d, ChatAlerts(d));
 }
@@ -210,41 +202,6 @@ void main() {
       "Claude's workflow finished",
       "Claude's workflow failed",
     ]);
-    alerts.dispose();
-    d.dispose();
-  });
-
-  testWidgets("an older daemon's turn ends are still judged from their "
-      'notices: an error makes it a failure, a cancel a stop', (tester) async {
-    final swift = _fake();
-    final (fake, d, alerts) = await _connect(tester, api: turnEndApi - 1);
-    fake
-      ..emit(_status('a', running: true))
-      ..emit(_status('a'));
-    await tester.pump(const Duration(seconds: 1));
-    expect(swift.posted(), isEmpty);
-    await tester.pump(const Duration(seconds: 1));
-    expect(swift.posted(), ['Claude finished']);
-
-    // Went straight on: nothing.
-    fake
-      ..emit(_status('a', running: true))
-      ..emit(_status('a'))
-      ..emit(_status('a', running: true));
-    await tester.pump(const Duration(seconds: 3));
-    // Stopped by someone: nothing.
-    fake
-      ..emit(_item('a', ItemKind.ITEM_KIND_NOTICE, 'cancelled'))
-      ..emit(_status('a'));
-    await tester.pump(const Duration(seconds: 3));
-    expect(swift.posted(), ['Claude finished']);
-
-    fake
-      ..emit(_status('b', running: true))
-      ..emit(_item('b', ItemKind.ITEM_KIND_NOTICE, 'turn_failed'))
-      ..emit(_status('b'));
-    await tester.pump(const Duration(seconds: 3));
-    expect(swift.posted(), ['Claude finished', "Codex's turn failed"]);
     alerts.dispose();
     d.dispose();
   });

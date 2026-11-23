@@ -38,19 +38,12 @@ ChatState _working(Duration ran) {
 /// before, so a slow machine's wall clock doesn't add a second.
 final _ran = Expando<Duration>();
 
-void _end(ChatState chat, {bool stopped = false}) {
-  chat
-    ..started = clock().subtract(_ran[chat]!)
-    ..stopping = stopped
-    ..notifyListeners()
-    ..busy = false
-    ..started = null
-    ..stopping = false
-    ..notifyListeners();
-}
+/// Ends chat's turn as the daemon does: its status says how it judged it
+/// (a stop from anywhere is one), and the app's own stop
+/// (ChatState.stopping) isn't seen.
+void _end(ChatState chat, {bool stopped = false}) =>
+    _judged(chat, stopped ? TurnEnd.TURN_END_STOPPED : TurnEnd.TURN_END_DONE);
 
-/// Ends chat's turn as a daemon from API 107 does: its status says how it
-/// judged it, and the app's own stop (ChatState.stopping) isn't seen.
 void _judged(ChatState chat, TurnEnd end) {
   chat
     ..started = clock().subtract(_ran[chat]!)
@@ -131,7 +124,7 @@ void main() {
     expect(tester.getSize(find.byType(TurnStatus)).height, 0);
   });
 
-  testWidgets('a short, stopped or failed turn, or one ending unseen, gets '
+  testWidgets('a short or stopped turn, or one ending unseen, gets '
       'no receipt: the line just fades, its room kept', (tester) async {
     Future<void> noReceipt(ChatState chat, {bool stopped = false}) async {
       await tester.pumpWidget(_app(TurnStatus(chat)));
@@ -149,14 +142,6 @@ void main() {
 
     await noReceipt(_working(const Duration(seconds: 4)));
     await noReceipt(_working(const Duration(seconds: 30)), stopped: true);
-    for (final status in ['error', 'turn_failed']) {
-      await noReceipt(
-        _working(const Duration(seconds: 30))
-          ..items.add(
-            Item(id: 'e', kind: ItemKind.ITEM_KIND_NOTICE, status: status),
-          ),
-      );
-    }
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     addTearDown(
       () => tester.binding.handleAppLifecycleStateChanged(

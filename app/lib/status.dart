@@ -109,12 +109,9 @@ class ChatDot extends StatefulWidget {
 class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
   late bool _busy = widget.chat.busy;
   late bool _waiting = widget.chat.needsYou;
-  late bool _stopped = widget.chat.stopping; // the user stopped the turn
   late ChatPhase _phase = widget.chat.phase;
   AnimationController? _hop; // once, as the chat starts waiting
   AnimationController? _check; // drawn, held, then the ring again
-  DateTime? _since; // when the running turn started, as last known
-  late bool _ran = widget.chat.started != null; // a turn ran, not a reopen
   bool _sparks = false; // the check's sparks fly
 
   // design: how long a state shows, not motion
@@ -135,7 +132,6 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     _busy = widget.chat.busy;
     _waiting = widget.chat.needsYou;
     _phase = widget.chat.phase;
-    _ran = widget.chat.started != null;
     _hop?.value = 1;
     _check?.value = 1;
   }
@@ -155,28 +151,17 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
 
   void _changed() {
     final c = widget.chat;
-    if (c.busy && !_busy) {
-      _stopped = false;
-      _ran = false;
-      _check?.value = 1; // a new turn: the check goes
-    }
-    if (c.busy) _since = c.started ?? _since ?? clock();
-    if (c.busy && c.started != null) _ran = true;
-    if (c.stopping) _stopped = true;
+    if (c.busy && !_busy) _check?.value = 1; // a new turn: the check goes
     if (c.needsYou && !_waiting && !reduceMotion(context)) {
       (_hop ??= _once(hopFor)).forward(from: 0).ignore();
     }
-    final end = _busy && !c.busy
-        ? turnEnd(c, stopped: _stopped, ran: _ran)
-        : null;
-    // A done turn's check only: a check reads as success, wrong for a
-    // failure (its alert and notice say so) and a stop.
-    if (end == TurnEnd.TURN_END_DONE && !c.needsYou) {
-      final lasted = clock().difference(_since ?? clock());
-      _sparks = widget.sparks && sparksFor(lasted);
+    // A done turn's check only, as the daemon judged it: a check reads as
+    // success, wrong for a failure (its alert and notice say so) and a
+    // stop.
+    if (_busy && !c.busy && c.ended == .TURN_END_DONE && !c.needsYou) {
+      _sparks = widget.sparks && sparksFor(c.lastTurn ?? Duration.zero);
       (_check ??= _once(_checkFor)).forward(from: 0).ignore();
     }
-    if (!c.busy) _since = null;
     // Every streamed chunk notifies: only a change of state rebuilds.
     if (c.busy == _busy && c.needsYou == _waiting && c.phase == _phase) {
       return;
@@ -343,32 +328,6 @@ Widget _waitingDot(Tokens t) => Padding(
     child: const SizedBox.square(dimension: ChatDot.size + 1),
   ),
 );
-
-/// How the turn that just ended ended, for what marks it (a receipt, a
-/// check, sparks): as the daemon judged it ([ChatState.ended], API 107),
-/// which knows of a stop from anywhere. Unspecified when no turn [ran]:
-/// the chat was busy with no turn's start ([reopening]). Else, from an
-/// older daemon, a guess: [stopped] when the app stopped it, failed on an
-/// error notice in it.
-TurnEnd turnEnd(ChatState c, {required bool stopped, required bool ran}) =>
-    c.ended != TurnEnd.TURN_END_UNSPECIFIED
-    ? c.ended
-    : !ran
-    ? TurnEnd.TURN_END_UNSPECIFIED
-    : stopped
-    ? TurnEnd.TURN_END_STOPPED
-    : turnFailed(c.items)
-    ? TurnEnd.TURN_END_FAILED
-    : TurnEnd.TURN_END_DONE;
-
-/// Whether the turn that just ended failed: an error notice in it.
-bool turnFailed(List<Item> items) => items.reversed
-    .takeWhile((it) => it.kind != ItemKind.ITEM_KIND_USER_MESSAGE)
-    .any(
-      (it) =>
-          it.kind == ItemKind.ITEM_KIND_NOTICE &&
-          (it.status == 'error' || it.status == 'turn_failed'),
-    );
 
 /// The most urgent state among [chats], as a collapsed group shows it:
 /// waiting on the user, then working, then working in the background,
