@@ -547,6 +547,12 @@ func TestRelatedSquashMergedOnGitHub(t *testing.T) {
 	gh.mu.Lock()
 	gh.open, gh.merged["open"] = nil, true
 	gh.mu.Unlock()
+	if r := pull(); r.PullAsked { // still within its wait
+		t.Errorf("asked again at once: %+v", r)
+	}
+	c.looking.Lock()
+	pullsWaited(c)
+	c.looking.Unlock()
 	if r := pull(); !r.PullAsked || !r.PullMerged {
 		t.Errorf("once its pull request merged: %+v", r)
 	}
@@ -983,5 +989,57 @@ func TestRelatedOpenPullsDontTakeEveryAsk(t *testing.T) {
 	late := list[len(list)-1]
 	if !late.PullAsked || !late.PullMerged || slices.ContainsFunc(list[:len(list)-1], func(k model.RelatedWorktree) bool { return k.PullAsked }) {
 		t.Errorf("asked %v; the late one %+v", gh.askedOf(), late)
+	}
+}
+
+// A worktree whose pull request is open waits before it's asked again,
+// longer each time, rather than at every look; and once their waits are
+// over, those asked longest ago go first, so more than eight left open all
+// get their turn.
+func TestRelatedOpenPullsWaitTheirTurn(t *testing.T) {
+	repo, f := fakeRepo(t)
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{}, f)
+	gh := &fakeGitHub{open: map[string]bool{}}
+	svc.UseGitHub(gh)
+	var list []model.RelatedWorktree
+	for i := range maxPullAsks + 1 {
+		b := fmt.Sprint("open-", i)
+		gh.open[b] = true
+		list = append(list, model.RelatedWorktree{Path: filepath.Join(repo, b), Branch: b, BaseCommit: oid("start"), LastHead: oid(b), State: model.RelatedRemoved})
+	}
+	c.looking.Lock()
+	defer c.looking.Unlock()
+	ask := func() { c.askPulls(t.Context(), repo, time.Time{}, list) }
+	ask()
+	ask() // only the one not yet asked
+	ask() // none: each waits
+	if got := gh.askedOf(); len(got) != len(list) {
+		t.Fatalf("asked %d times before any wait was over: %v", len(got), got)
+	}
+	first := c.pullsOpen[list[0].Path].wait
+	for range 3 {
+		pullsWaited(c)
+		ask()
+	}
+	times := map[string]int{}
+	for _, b := range gh.askedOf() {
+		times[b]++
+	}
+	for _, k := range list {
+		if times[k.Branch] < 2 {
+			t.Errorf("%s asked %d times: %v", k.Branch, times[k.Branch], gh.askedOf())
+		}
+	}
+	if again := c.pullsOpen[list[0].Path].wait; again <= first {
+		t.Errorf("waits %v, then %v: no longer", first, again)
+	}
+}
+
+// pullsWaited puts every open pull request's next ask in the past, as if
+// its wait were over, keeping their order. It runs under c.looking.
+func pullsWaited(c *chat) {
+	for path, o := range c.pullsOpen {
+		o.next = o.next.Add(-pullsOpenMax)
+		c.pullsOpen[path] = o
 	}
 }

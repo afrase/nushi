@@ -256,14 +256,15 @@ type chat struct {
 	// when one last started; pullsAfter is when a look may next ask GitHub
 	// after it failed, lookedTips the default branch's commits the last look
 	// saw, and pullsOpen the related worktrees (by path) whose pull request
-	// GitHub said was open (all held by looking).
+	// GitHub said was open, with when each is asked again (all held by
+	// looking).
 	looking     sync.Mutex
 	relating    bool
 	relateAgain bool
 	relatedAt   time.Time
 	pullsAfter  time.Time
 	lookedTips  []string
-	pullsOpen   map[string]bool
+	pullsOpen   map[string]pullOpen
 	// titled says the agent titled the session while the daemon ran, and
 	// waitedTitle that a turn ended without that title, for naming the
 	// chat's branch (branch.go).

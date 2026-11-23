@@ -277,33 +277,54 @@ const (
 	// pullsBackoff is how long looks leave GitHub alone after it failed
 	// (no network, a rate limit), rather than ask at every look.
 	pullsBackoff = 5 * time.Minute
+	// pullsOpenFirst is how long a worktree whose pull request is open
+	// waits before it's asked again; each wait after is twice the last, up
+	// to pullsOpenMax. A pull request can wait days for review, and looks
+	// come every few seconds while subagents work: asking at each would use
+	// up the sign-in's hourly limit, which the chats' pull request cards
+	// share.
+	pullsOpenFirst = 5 * time.Minute
+	pullsOpenMax   = time.Hour
 )
+
+// pullOpen is a related worktree whose pull request GitHub said was open:
+// when it may be asked again, and how long it waited last.
+type pullOpen struct {
+	next time.Time
+	wait time.Duration
+}
 
 // askPulls asks GitHub whether the worktrees of list that went away with
 // commits of their own that git doesn't show merged had their branch
 // merged by a pull request opened since the chat began (a squash merge;
 // issue 83). The answer is kept, but for a pull request still open, which
-// is asked again at the next look, after those not yet asked: open ones
-// can't take every ask. One GitHub couldn't give is asked again at a later
-// look, after [pullsBackoff]. Without GitHub nothing is asked. It runs
-// under c.looking.
+// is asked again once its wait ([pullOpen]) is over, after those not yet
+// asked and those waiting longest first: open ones can't take every ask,
+// nor some of them every turn. One GitHub couldn't give is asked again at
+// a later look, after [pullsBackoff]. Without GitHub nothing is asked. It
+// runs under c.looking.
 func (c *chat) askPulls(ctx context.Context, folder string, since time.Time, list []model.RelatedWorktree) {
-	if c.svc.gitHub == nil || time.Now().Before(c.pullsAfter) {
+	now := time.Now()
+	if c.svc.gitHub == nil || now.Before(c.pullsAfter) {
 		return
 	}
 	var ask, open []*model.RelatedWorktree
 	for i := range list {
 		k := &list[i]
+		o, waits := c.pullsOpen[k.Path]
 		switch {
 		case k.State != model.RelatedRemoved || k.Merged || k.PullAsked || k.Branch == "" || k.BaseCommit == "" || k.LastHead == k.BaseCommit:
-		case c.pullsOpen[k.Path]:
-			open = append(open, k)
-		default:
+		case !waits:
 			ask = append(ask, k)
+		case !now.Before(o.next):
+			open = append(open, k)
 		}
 	}
+	slices.SortStableFunc(open, func(a, b *model.RelatedWorktree) int {
+		return c.pullsOpen[a.Path].next.Compare(c.pullsOpen[b.Path].next)
+	})
 	if c.pullsOpen == nil {
-		c.pullsOpen = map[string]bool{}
+		c.pullsOpen = map[string]pullOpen{}
 	}
 	ask = append(ask, open...)
 	for _, k := range ask[:min(maxPullAsks, len(ask))] {
@@ -313,9 +334,15 @@ func (c *chat) askPulls(ctx context.Context, folder string, since time.Time, lis
 			c.pullsAfter = time.Now().Add(pullsBackoff)
 			return
 		}
-		if c.pullsOpen[k.Path] = state == "open"; !c.pullsOpen[k.Path] {
-			k.PullAsked, k.PullMerged = true, state == "merged"
+		if state == "open" {
+			o := c.pullsOpen[k.Path]
+			o.wait = min(max(2*o.wait, pullsOpenFirst), pullsOpenMax)
+			o.next = now.Add(o.wait)
+			c.pullsOpen[k.Path] = o
+			continue
 		}
+		delete(c.pullsOpen, k.Path)
+		k.PullAsked, k.PullMerged = true, state == "merged"
 	}
 }
 
