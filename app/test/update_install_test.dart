@@ -4,7 +4,6 @@ import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
@@ -190,28 +189,6 @@ void main() {
     expect(find.text("Homebrew didn't install this Nushi"), findsOneWidget);
     expect(toastButtons(tester), ['Update', 'Release notes']);
     d.dispose();
-  }, variant: onMac);
-
-  testWidgets('a daemon from before it installs: Copy and Release notes, '
-      'whatever it says', (tester) async {
-    viewport(tester, const Size(360, 200));
-    brewCask = 'nushi';
-    final d = await updateDaemon(
-      () => newerUpdate(
-        '0.1.17',
-        installing: true,
-        error: 'x',
-        installed: '0.1.17',
-      ),
-      api: installApi - 1,
-    ).connect(tester);
-    await tester.pumpWidget(themed(Center(child: UpdateToast(d))));
-    await tester.pumpAndSettle();
-    expect(find.text('Nushi 0.1.17 is available.'), findsOneWidget);
-    expect(toastButtons(tester), ['Copy', 'Release notes']);
-    expect(find.byType(Spinner), findsNothing);
-    expect(find.text('x'), findsNothing);
-    await closeView(tester, d);
   }, variant: onMac);
 
   testWidgets('after a failure, Copy puts the Homebrew command on the '

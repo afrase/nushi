@@ -4,7 +4,6 @@ import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/new_chat.dart';
@@ -98,52 +97,6 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
     expect(fake.cancelledSearches, ['flaky']);
-    d.dispose();
-  });
-
-  testWidgets('an older daemon, until it restarts, filters titles only and '
-      'is never asked', (tester) async {
-    viewport(tester, const Size(720, 900), brightness: Brightness.dark);
-    final (fake, d, _, _) = await pumpSessionList(
-      tester,
-      api: searchSessionsApi - 1,
-    );
-    expect(find.text('Filter by title'), findsOne);
-    await typeIn(tester, 'relay');
-    await tester.pump(SessionSearch.pause);
-    await press(tester, LogicalKeyboardKey.enter);
-    expect(fake.searched, isEmpty);
-    expect(find.text('Rename the relay flags'), findsOne);
-    expect(
-      find.text(
-        'Searching what was said comes once the daemon restarts: only '
-        'titles are filtered until then.',
-      ),
-      findsOne,
-    );
-    expectTextInside(tester, 720);
-    await render(tester, find.byType(Dialog), 'session_search_old_daemon');
-    d.dispose();
-  });
-
-  testWidgets('text typed for an older daemon is searched once it '
-      'restarts into one that searches', (tester) async {
-    final (fake, d, _, _) = await pumpSessionList(
-      tester,
-      api: searchSessionsApi - 1,
-    );
-    fake
-      ..searches = sessionHits
-      ..answer = null;
-    await typeIn(tester, 'flaky');
-    expect(fake.searched, isEmpty);
-    await d.ping(); // the daemon restarted
-    await tester.pump();
-    expect(find.text('What was said'), findsNothing);
-    await tester.pump(SessionSearch.pause);
-    await tester.pumpAndSettle();
-    expect(fake.searched.single.text, 'flaky');
-    expect(find.text('Old relay work'), findsOne);
     d.dispose();
   });
 

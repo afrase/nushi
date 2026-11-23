@@ -127,9 +127,8 @@ bool isBeta(String version) => version.split('+').first.contains('-');
 /// Release notes opens the release's page):
 /// the card says "Updating…" until Homebrew quits the app and opens the
 /// new one, or why it failed, with Retry and Copy (Homebrew's upgrade on
-/// the clipboard, all a daemon older than [installApi] offers). Without a
-/// cask, Download opens the release's page. × dismisses it until a newer
-/// one.
+/// the clipboard). Without a cask, Download opens the release's page. ×
+/// dismisses it until a newer one.
 class UpdateToast extends StatefulWidget {
   const new(this.daemon, {super.key});
 
@@ -198,7 +197,7 @@ class _UpdateToastState extends State<UpdateToast> {
     final u = d.update;
     final cask = caskWith(version);
     // What the daemon's own install says, when it has one to offer.
-    final installs = cask != null && d.daemonApi >= installApi;
+    final installs = cask != null;
     final installing = installs && u.installing;
     final installed = installs && !installing && u.installed == version;
     final error = installs && !installing && !installed ? u.installError : '';
@@ -302,10 +301,7 @@ class _UpdateToastState extends State<UpdateToast> {
                   tooltip: "Open the release's page",
                   onPressed: () => openRelease(context, d),
                 )
-              else if (!installs) ...[
-                copy(cask),
-                notes,
-              ] else if (error.isNotEmpty) ...[
+              else if (error.isNotEmpty) ...[
                 copy(cask),
                 update(cask, again: true),
                 notes,

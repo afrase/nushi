@@ -3,9 +3,6 @@ import 'package:nushi/errors.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
-/// The API from which the daemon runs dev servers (ADR 0098).
-const serversApi = 109;
-
 /// A chat's folder's dev servers as the daemon lists them (ADR 0098): the
 /// launch files' entries with their servers' states, read when the
 /// Servers menu shows and again on each of the daemon's word that the

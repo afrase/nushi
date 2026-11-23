@@ -6,17 +6,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 
-/// The gates at or below the floor still to go, swept right after the
-/// floor landed. This list must be empty once that sweep is done; from
-/// then on, raising the floor makes this test name each gate it passes.
-const _toGo = {
-  'restartWhenIdleApi',
-  'updatesApi',
-  'serversApi',
-  'searchSessionsApi',
-  'installApi',
-};
-
 void main() {
   test('no API gate is at or below the floor', () {
     final gate = RegExp(r'const (\w+Api) = (\d+);');
@@ -26,7 +15,7 @@ void main() {
       if (f.path.startsWith('lib/gen/')) continue;
       for (final m in gate.allMatches(f.readAsStringSync())) {
         final (name, api) = (m[1]!, int.parse(m[2]!));
-        if (api <= apiFloor && !_toGo.contains(name)) {
+        if (api <= apiFloor) {
           expired.add('$name = $api (${f.path})');
         }
       }

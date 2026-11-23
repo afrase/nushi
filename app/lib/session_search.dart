@@ -11,11 +11,6 @@ import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The API from which the daemon searches what was said in an agent's
-/// sessions (SearchAgentSessions). While an older daemon waits to restart
-/// (ADR 0056) the field filters titles only.
-const searchSessionsApi = 113;
-
 /// The agents found to have no search of what was said in their sessions,
 /// while the app runs: their field filters titles only.
 final Set<String> cantSearchSessions = runSet();
@@ -26,9 +21,7 @@ final Set<String> cantSearchSessions = runSet();
 /// left when the field is cleared or the dialog closes, is cancelled,
 /// which ends the daemon's read of the transcripts; its answer is dropped.
 class SessionSearch extends ChangeNotifier {
-  new(this.daemon, this.agent, this.folder) {
-    if (daemonOld) daemon.addListener(_restarted);
-  }
+  new(this.daemon, this.agent, this.folder);
 
   final Daemon daemon;
   final String agent;
@@ -52,12 +45,8 @@ class SessionSearch extends ChangeNotifier {
   SearchAgentSessionsResponse? found;
   String? error;
 
-  /// Whether the daemon is too old to search; it will search once it has
-  /// restarted.
-  bool get daemonOld => daemon.daemonApi < searchSessionsApi;
-
   /// Whether the agent's sessions can be searched, as far as is known.
-  bool get searches => !daemonOld && !cantSearchSessions.contains(agent);
+  bool get searches => !cantSearchSessions.contains(agent);
 
   /// The search shows: the field says something and the agent searches.
   bool get shown => text.isNotEmpty && searches;
@@ -81,16 +70,6 @@ class SessionSearch extends ChangeNotifier {
       _asking = null;
       asked = null; // the same text typed again is asked again
     }
-    notifyListeners();
-  }
-
-  /// An older daemon restarted: once it searches, what the field says is
-  /// asked about after the pause, as if just typed.
-  void _restarted() {
-    if (daemonOld) return;
-    daemon.removeListener(_restarted);
-    _wait?.cancel();
-    if (pending) _wait = Timer(pause, now);
     notifyListeners();
   }
 
@@ -132,7 +111,6 @@ class SessionSearch extends ChangeNotifier {
   @override
   void dispose() {
     _gone = true;
-    daemon.removeListener(_restarted);
     _wait?.cancel();
     _asking?.cancel();
     super.dispose();
@@ -210,11 +188,6 @@ class SearchState extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
       child: switch (()) {
-        _ when search.daemonOld => Text(
-          'Searching what was said comes once the daemon restarts: only '
-          'titles are filtered until then.',
-          style: style,
-        ),
         _ when !search.searches => Text(
           "${agentTitle(search.agent)}'s sessions can't be searched for "
           'what was said: only titles are.',

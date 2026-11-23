@@ -56,8 +56,7 @@ class ServersButton extends StatefulWidget {
 class _ServersButtonState extends State<ServersButton> {
   DevServers get _servers => widget.daemon.devServers;
 
-  bool get _here =>
-      !widget.daemon.remote && widget.daemon.daemonApi >= serversApi;
+  bool get _here => !widget.daemon.remote;
 
   @override
   void initState() {

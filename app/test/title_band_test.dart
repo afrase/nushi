@@ -124,7 +124,7 @@ void main() {
     final calls = _windowCalls();
     final d = await _open(
       tester,
-      () => PingResponse(apiVersion: restartWhenIdleApi - 1, build: '7-1000'),
+      () => PingResponse(apiVersion: 76, build: '7-1000'),
     );
     expect(find.byType(OutdatedScreen), findsOne);
     await _drag(tester, const Offset(600, 20));

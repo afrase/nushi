@@ -176,9 +176,7 @@ void main() {
 
   testWidgets('a daemon too old to know RestartWhenIdle keeps the Restart '
       'screen, its refusal ignored', (tester) async {
-    final fake = _daemon(
-      () => PingResponse(apiVersion: restartWhenIdleApi - 1, build: '7-1000'),
-    );
+    final fake = _daemon(() => PingResponse(apiVersion: 76, build: '7-1000'));
     var refused = 0;
     fake.on((input) {
       if (input is! RestartWhenIdleRequest) return null;

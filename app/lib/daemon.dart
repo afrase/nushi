@@ -78,18 +78,6 @@ const oneFileDiffApi = 121;
 /// (GetDiffRequest.names), what the Files tree's dots come from.
 const namesDiffApi = 123;
 
-/// The API from which the daemon checks for a newer release of Nushi
-/// (Ping's update, CheckForUpdates, Settings.check_updates).
-const updatesApi = 86;
-
-/// The API from which the daemon installs a newer version with Homebrew
-/// (InstallUpdate, UpdateCheck.installing; ADR 0109).
-const installApi = 115;
-
-/// The API from which a daemon restarts itself once nothing runs, when
-/// asked (RestartWhenIdle).
-const restartWhenIdleApi = 77;
-
 /// The API from which the daemon opens a terminal that runs one command
 /// and ends with it (OpenTerminalRequest.command).
 const commandTerminalApi = 143;

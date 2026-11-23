@@ -258,7 +258,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     AppAction(
       .checkUpdates,
       'Check for updates',
-      enabled: d.connected && d.daemonApi >= updatesApi,
+      enabled: d.connected,
       run: () => unawaited(checkForUpdates(context, d)),
     ),
     if (!native.window.menuBar) ...[

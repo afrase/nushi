@@ -32,25 +32,22 @@ UpdateCheck newerUpdate(
   installed: installed,
 );
 
-/// A daemon (0.1.16, of API [api]) whose check found [found]; Check for
-/// updates finds [checks] (else what it found).
-FakeDaemon updateDaemon(
-  UpdateCheck Function() found, {
-  UpdateCheck? checks,
-  int api = apiVersion,
-}) => FakeDaemon([chat('c', 'claude', 'Fix the login redirect')])
-  ..settings = Settings(sleepAfterMinutes: 30, checkUpdates: true)
-  ..answer = (input) => switch (input) {
-    PingRequest() => PingResponse(
-      apiVersion: api,
-      version: '0.1.16',
-      update: found(),
-    ),
-    CheckForUpdatesRequest() => CheckForUpdatesResponse(
-      update: checks ?? found(),
-    ),
-    _ => null,
-  };
+/// A daemon (0.1.16) whose check found [found]; Check for updates finds
+/// [checks] (else what it found).
+FakeDaemon updateDaemon(UpdateCheck Function() found, {UpdateCheck? checks}) =>
+    FakeDaemon([chat('c', 'claude', 'Fix the login redirect')])
+      ..settings = Settings(sleepAfterMinutes: 30, checkUpdates: true)
+      ..answer = (input) => switch (input) {
+        PingRequest() => PingResponse(
+          apiVersion: apiVersion,
+          version: '0.1.16',
+          update: found(),
+        ),
+        CheckForUpdatesRequest() => CheckForUpdatesResponse(
+          update: checks ?? found(),
+        ),
+        _ => null,
+      };
 
 /// The card's states with Homebrew's cask: what the daemon says in each,
 /// and the buttons it then has, in order.
