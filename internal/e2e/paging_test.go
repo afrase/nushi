@@ -110,7 +110,10 @@ func TestAnAsleepChatPagesTheSame(t *testing.T) {
 	items, last := snap.Items, snap.Seq
 	for done := false; !done; {
 		select {
-		case e := <-follower.events:
+		case e, ok := <-follower.events:
+			if !ok {
+				t.Fatalf("the follower's events ended: %v", follower.ended)
+			}
 			if e.ChatId != id || e.Seq == 0 {
 				continue
 			}

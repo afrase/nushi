@@ -2,7 +2,9 @@
 package e2e
 
 import (
+	"cmp"
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -334,6 +336,8 @@ type app struct {
 	c      nushiv1connect.NushiServiceClient
 	events chan *nushiv1.EventsResponse
 	quit   context.CancelFunc
+	// ended is why the stream ended, set before events is closed.
+	ended error
 }
 
 func open(t *testing.T, d *daemon) *app {
@@ -356,21 +360,34 @@ func openAt(t *testing.T, url string) *app {
 	if !stream.Receive() { // the empty first message: subscribed
 		t.Fatalf("no first event: %v", stream.Err())
 	}
+	// The reader ends with the stream, saying why (ended), and with the
+	// test, even when nothing reads what it holds.
 	go func() {
+		defer close(a.events)
 		for stream.Receive() {
-			a.events <- stream.Msg()
+			select {
+			case a.events <- stream.Msg():
+			case <-ctx.Done():
+				a.ended = ctx.Err()
+				return
+			}
 		}
+		a.ended = cmp.Or(stream.Err(), errors.New("the stream ended"))
 	}()
 	return a
 }
 
-// waitFor returns the first event that matches, failing after a while.
+// waitFor returns the first event that matches, failing after a while,
+// or at once, saying why, when the events end first.
 func (a *app) waitFor(what string, match func(*nushiv1.EventsResponse) bool) *nushiv1.EventsResponse {
 	a.t.Helper()
 	timeout := time.After(5 * time.Second)
 	for {
 		select {
-		case e := <-a.events:
+		case e, ok := <-a.events:
+			if !ok {
+				a.t.Fatalf("the events ended before %s: %v", what, a.ended)
+			}
 			if match(e) {
 				return e
 			}
