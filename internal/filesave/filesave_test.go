@@ -9,6 +9,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/afrase/nushi/internal/regularfile"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -111,9 +112,9 @@ func TestSaveRefuses(t *testing.T) {
 		{"out.md", []byte("x"), ErrOutside},
 		{"rel.md", []byte("x"), ErrOutside},
 		{"up/secret.md", []byte("x"), ErrOutside},
-		{"dangling.md", []byte("x"), ErrNotRegular},
-		{"sub", []byte("x"), ErrNotRegular},
-		{"fifo", []byte("x"), ErrNotRegular},
+		{"dangling.md", []byte("x"), regularfile.ErrNotRegular},
+		{"sub", []byte("x"), regularfile.ErrNotRegular},
+		{"fifo", []byte("x"), regularfile.ErrNotRegular},
 		{"two.txt", []byte("x"), ErrLinked},
 		{"big.txt", []byte("x"), ErrTooLarge},
 		{"locked.txt", []byte("x"), ErrReadOnly},

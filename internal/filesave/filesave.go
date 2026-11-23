@@ -23,10 +23,9 @@ import (
 // MaxSize is the largest file edited, before and after.
 const MaxSize = 1 << 20
 
+// A folder, a fifo, a device or a link that leads nowhere is
+// regularfile.ErrNotRegular.
 var (
-	// ErrNotRegular is a folder, a fifo, a device, or a link that leads
-	// nowhere.
-	ErrNotRegular = errors.New("not a regular file")
 	// ErrLinked is a file with more than one hard link: a new file renamed
 	// over it would part it from the others.
 	ErrLinked = errors.New("the file has other hard links")
@@ -117,22 +116,12 @@ func (s *Saver) Save(root, rel string, data []byte, base string, mustNotExist bo
 
 // current reads name inside r: nil when it isn't there, with the mode a
 // new file takes, or its bytes and its mode. A folder, a fifo or a device
-// is ErrNotRegular, a file with other hard links ErrLinked, one not
-// Writable ErrReadOnly.
+// is regularfile.ErrNotRegular, a file with other hard links ErrLinked,
+// one not Writable ErrReadOnly.
 func current(r *os.Root, name string) ([]byte, os.FileMode, error) {
-	fi, err := r.Lstat(name)
+	f, fi, err := regularfile.OpenIn(r, name, false)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, 0o644, nil
-	}
-	if err != nil {
-		return nil, 0, err
-	}
-	if !fi.Mode().IsRegular() {
-		return nil, 0, ErrNotRegular
-	}
-	f, fi, err := regularfile.OpenIn(r, name, false)
-	if errors.Is(err, regularfile.ErrNotRegular) {
-		return nil, 0, ErrNotRegular
 	}
 	if err != nil {
 		return nil, 0, err
@@ -161,7 +150,7 @@ func current(r *os.Root, name string) ([]byte, os.FileMode, error) {
 // resolve finds the file rel inside root names, every link followed: its
 // folder's real path and its name there, which must be inside root's real
 // path. A file that isn't there is named in its folder, which must be. A
-// link that leads nowhere is ErrNotRegular.
+// link that leads nowhere is regularfile.ErrNotRegular.
 func resolve(root, rel string) (folder, name string, err error) {
 	folder, err = filepath.EvalSymlinks(root)
 	if err != nil {
@@ -171,7 +160,7 @@ func resolve(root, rel string) (folder, name string, err error) {
 	target, err := filepath.EvalSymlinks(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		if fi, lerr := os.Lstat(path); lerr == nil && fi.Mode()&fs.ModeSymlink != 0 {
-			return "", "", ErrNotRegular
+			return "", "", regularfile.ErrNotRegular
 		}
 		dir, derr := filepath.EvalSymlinks(filepath.Dir(path))
 		if derr != nil {
