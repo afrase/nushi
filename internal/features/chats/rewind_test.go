@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -182,4 +183,73 @@ func TestStopTakesBackAnUnansweredMessage(t *testing.T) {
 	if last := c.items[len(c.items)-1]; last.Status != "taken_back" || c.items[len(c.items)-3].Text != "four" {
 		t.Errorf("items = %+v", c.items)
 	}
+}
+
+// stopTurn starts a turn the agent holds until it's cancelled (or, with
+// ignore, until the test lets it go), and returns the chat once it runs.
+func stopTurn(t *testing.T, grace time.Duration, ignore bool) (*Service, *fakeAgent, *chat) {
+	t.Helper()
+	svc, agent, c := newTimedChat(t, `{"sessionId":"s1"}`, &memModes{}, Timing{StopGrace: grace})
+	agent.mu.Lock()
+	agent.gate, agent.ignoreCancel = make(chan struct{}), ignore
+	agent.mu.Unlock()
+	t.Cleanup(agent.release) // before the service closes: a failed test's turn ends
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	eventually(t, c, func() bool { return !c.started.IsZero() })
+	return svc, agent, c
+}
+
+// stillRuns says the chat's turn hasn't ended.
+func stillRuns(c *chat) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.busy || !c.started.IsZero()
+}
+
+// Stop returns once the stopped turn ended, when the agent obeys at once.
+func TestStopWaitsForTheTurnsEnd(t *testing.T) {
+	svc, _, c := stopTurn(t, time.Minute, false)
+	if _, err := svc.Stop(t.Context(), c.id, false); err != nil {
+		t.Fatal(err)
+	}
+	if stillRuns(c) {
+		t.Error("Stop returned before the turn ended")
+	}
+}
+
+// An agent that takes a while to obey: Stop waits for it, within the
+// grace.
+func TestStopWaitsForASlowAgent(t *testing.T) {
+	svc, agent, c := stopTurn(t, time.Minute, true)
+	stopped := make(chan error, 1)
+	go func() { _, err := svc.Stop(t.Context(), c.id, false); stopped <- err }()
+	testcheck.Wait(t, "the cancel", func() bool {
+		agent.mu.Lock()
+		defer agent.mu.Unlock()
+		return slices.Contains(agent.wire, "cancel")
+	})
+	select {
+	case err := <-stopped:
+		t.Fatalf("Stop returned while the turn ran: %v", err)
+	default:
+	}
+	agent.release()
+	testcheck.NoErr(t, <-stopped)
+	if stillRuns(c) {
+		t.Error("Stop returned before the turn ended")
+	}
+}
+
+// An agent that ignores the stop: Stop returns once the grace is over, as
+// before, the turn still running; it ends when the agent ends it.
+func TestStopGivesUpOnAnAgentThatIgnoresIt(t *testing.T) {
+	svc, agent, c := stopTurn(t, 20*time.Millisecond, true)
+	if _, err := svc.Stop(t.Context(), c.id, false); err != nil {
+		t.Fatal(err)
+	}
+	if !stillRuns(c) {
+		t.Error("the turn ended while the agent held it")
+	}
+	agent.release()
+	idle(t, c)
 }

@@ -16,7 +16,7 @@ import (
 )
 
 func TestACancelNeverOvertakesItsPrompt(t *testing.T) {
-	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	svc, agent, c := newTimedChat(t, `{"sessionId":"s1"}`, &memModes{}, Timing{StopGrace: 20 * time.Millisecond}) // Stop gives up on the held turn at once
 	agent.gate, agent.sendGate = make(chan struct{}), make(chan struct{})
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
@@ -265,7 +265,7 @@ func TestTakeBackGivesUpWithItsContext(t *testing.T) {
 // turn is stopped, so the queue waits, as after any stopped turn, rather
 // than starting a turn the user just stopped.
 func TestAStopRacingTheAgentsEndHoldsTheQueue(t *testing.T) {
-	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	svc, agent, c := newTimedChat(t, `{"sessionId":"s1"}`, &memModes{}, Timing{StopGrace: 20 * time.Millisecond}) // Stop gives up on the held turn at once
 	agent.gate, agent.ignoreCancel = make(chan struct{}), true
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -186,7 +187,7 @@ func TestQueueWaitsOutASubagentsSteps(t *testing.T) {
 // A stopped turn holds the queue: a tool call the stop fails, ending
 // before the agent's answer, is no chance to steer the next message in.
 func TestAToolEndAfterStopSteersNothing(t *testing.T) {
-	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	svc, agent, c := newTimedChat(t, `{"sessionId":"s1"}`, &memModes{}, Timing{StopGrace: 20 * time.Millisecond}) // Stop gives up on the held turn at once
 	agent.steerable, c.steer = true, true
 	agent.ignoreCancel = true
 	agent.gate = make(chan struct{})
@@ -213,7 +214,7 @@ func TestAToolEndAfterStopSteersNothing(t *testing.T) {
 // A Stop while a steered message is out ends the hand-off: the agent may
 // take that one, the rest stays in the queue, held.
 func TestStopEndsTheSteering(t *testing.T) {
-	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	svc, agent, c := newTimedChat(t, `{"sessionId":"s1"}`, &memModes{}, Timing{StopGrace: 20 * time.Millisecond}) // Stop gives up on the held turn at once
 	agent.steerable, c.steer = true, true
 	agent.ignoreCancel = true
 	agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})

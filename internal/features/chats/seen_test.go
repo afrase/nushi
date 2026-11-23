@@ -219,6 +219,7 @@ func TestATurnsEndSaysHowItEnded(t *testing.T) {
 			agent := &fakeAgent{}
 			testcheck.NoErr(t, json.Unmarshal([]byte(`{"sessionId":"s1"}`), &agent.session))
 			svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sessions: &memSessions{},
+				Timing:  Timing{StopGrace: 20 * time.Millisecond}, // a stop the agent ignores gives up at once
 				Viewers: &viewers{shown: map[string]bool{}}, Publish: func(e model.Event) {
 					if e.Status != nil && e.Status.Ended != model.NotEnded {
 						mu.Lock()

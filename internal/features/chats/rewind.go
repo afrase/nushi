@@ -181,11 +181,15 @@ func (c *chat) indexLocked(id string) int {
 	return -1
 }
 
-// Stop stops the chat's running turn. With takeBack, if the agent hasn't
-// answered the last user message with any text or tool call yet, that
-// message is taken back too and returned: the chat is rewound to just
-// before it, or, when it can't be, it stays in the transcript and the
-// agent's history, with a notice saying so. Otherwise it returns nothing.
+// Stop stops the chat's running turn and waits for the turn to end, up
+// to stopGrace (or ctx), so the caller knows whether the agent obeyed: an
+// agent that ignores the cancel still runs its turn when Stop returns.
+// With takeBack, if the agent hasn't answered the last user message with
+// any text or tool call yet, that message is taken back too and returned
+// (waiting for the turn's end until ctx alone): the chat is rewound to
+// just before it, or, when it can't be, it stays in the transcript and
+// the agent's history, with a notice saying so. Otherwise it returns
+// nothing.
 func (s *Service) Stop(ctx context.Context, chatID string, takeBack bool) (*model.Message, error) {
 	c, err := s.chat(chatID)
 	if err != nil {
@@ -194,6 +198,7 @@ func (s *Service) Stop(ctx context.Context, chatID string, takeBack bool) (*mode
 	var id string
 	var msg model.Message
 	var done chan struct{}
+	var running bool
 	err = func() error {
 		c.mu.Lock()
 		defer c.mu.Unlock()
@@ -204,7 +209,7 @@ func (s *Service) Stop(ctx context.Context, chatID string, takeBack bool) (*mode
 		answered := i < 0 || slices.ContainsFunc(c.items[i+1:], func(it model.Item) bool {
 			return it.Kind == model.AgentMessage || it.Kind == model.ToolCall
 		})
-		running := !c.started.IsZero()
+		running = !c.started.IsZero()
 		done = c.done
 		if err := c.cancelLocked(); err != nil || !takeBack || answered || !running {
 			return err
@@ -216,8 +221,18 @@ func (s *Service) Stop(ctx context.Context, chatID string, takeBack bool) (*mode
 		}
 		return nil
 	}()
-	if err != nil || id == "" {
+	if err != nil {
 		return nil, err
+	}
+	if id == "" {
+		if running {
+			select {
+			case <-done:
+			case <-ctx.Done():
+			case <-time.After(s.timing.stopGrace()):
+			}
+		}
+		return nil, nil //nolint:nilnil // nothing taken back; the stop went either way
 	}
 	select {
 	case <-done:
