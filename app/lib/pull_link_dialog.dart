@@ -66,9 +66,7 @@ class _LinkPullState extends State<_LinkPull> {
 
   /// The chat has one: this one joins it (ADR 0117), and the list leaves
   /// out those linked.
-  bool get _another =>
-      widget.cp.links.isNotEmpty &&
-      widget.cp.daemon.daemonApi >= githubItemsApi;
+  bool get _another => widget.cp.links.isNotEmpty;
   String get _repo => widget.cp.found?.repo ?? widget.cp.current?.repo ?? '';
 
   @override
@@ -82,7 +80,6 @@ class _LinkPullState extends State<_LinkPull> {
   /// (FindChatPull's suggest), and GitHub for its row.
   Future<void> _suggest() async {
     final cp = widget.cp;
-    if (cp.daemon.daemonApi < branchPullApi) return;
     try {
       final f = await cp.daemon.client.findChatPull(
         FindChatPullRequest(chatId: cp.chat.id, suggest: true),

@@ -396,13 +396,6 @@ final Pref<Map<String, int>> chatOpened = _byChat(
 /// in the order pinned.
 final Pref<Map<String, List<String>>> pinnedFiles = _byChat('pins', _strings);
 
-/// The newest comment seen of each chat's pull request (ms since the
-/// epoch), by chat id: newer ones are unread.
-final Pref<Map<String, int>> pullSeen = _byChat(
-  'pullSeen',
-  (v) => v is num ? v.toInt() : null,
-);
-
 /// How many comments each chat's pull requests had when last seen, by chat
 /// id and then by pull request's node id (ADR 0140): the PR widget counts
 /// more since as new, from the rows' items rather than the pull request
@@ -642,7 +635,6 @@ List<Pref<Object?>> get allPrefs => [
   recentModels,
   chatOpened,
   pinnedFiles,
-  pullSeen,
   pullSeenComments,
   checksSeen,
   pickedPulls,
@@ -687,7 +679,6 @@ List<Pref<Object?>> get chatPrefs => [
   sidebarSections,
   chatOpened,
   pinnedFiles,
-  pullSeen,
   pullSeenComments,
   checksSeen,
   pickedPulls,
@@ -905,10 +896,18 @@ Map<String, Object?> readSaved() {
 /// Keys an older app saved that mean nothing now, dropped by the next
 /// save: `worktrees` (new chats no longer remember one), `subagentWide`
 /// (a subagent's pane is dragged as wide as it's wanted), `projectRail`
-/// (a beta's, true for everyone; [projectRail] is `projectRailOn`) and
+/// (a beta's, true for everyone; [projectRail] is `projectRailOn`),
 /// `cleanUpLater` (the chats whose Clean up… offer Not now hid, a link
-/// since gone).
-const _dropped = {'worktrees', 'subagentWide', 'projectRail', 'cleanUpLater'};
+/// since gone) and `pullSeen` (the newest comment seen of each chat's
+/// pull request, kept for a daemon before the rows' items, now below the
+/// floor; [pullSeenComments] counts them).
+const _dropped = {
+  'worktrees',
+  'subagentWide',
+  'projectRail',
+  'cleanUpLater',
+  'pullSeen',
+};
 
 var _saveDue = false;
 

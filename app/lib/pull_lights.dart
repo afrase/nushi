@@ -74,8 +74,3 @@ const IconData closedIcon = Icons.do_not_disturb_on_outlined;
 
 /// What an "unstable" merge state says beside Ready to merge.
 const unstableWords = 'Checks not passing (not required)';
-
-/// Whether the pull request conflicts with its base: GitHub says so in
-/// either of two fields, and may say it in one before the other.
-bool hasConflicts(GitHubPull p) =>
-    p.mergeable == 'conflicting' || p.mergeState == 'dirty';

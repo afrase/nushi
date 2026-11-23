@@ -6,10 +6,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/errors.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
-/// The first daemon that answers pull requests and issues by number
-/// (GetGitHubItems, `Chat.pulls`; ADR 0117).
-const githubItemsApi = 118;
-
 /// A pull request's or an issue's address on GitHub, as a message links
 /// it: `https://<host>/<owner>/<repo>/pull/<n>` or `/issues/<n>`, a
 /// sub-path or a fragment after it allowed.
@@ -250,7 +246,7 @@ class GitHubItems extends ChangeNotifier {
   /// Asks for [a] unless known within [fresh] (null: known at all): a
   /// chip's first build ([quiet]), a hover's (a minute, not quiet).
   void want(GitHubAddress a, {bool quiet = true, Duration? fresh}) {
-    if (daemon.daemonApi < githubItemsApi || !_known.contains(a.host)) return;
+    if (!_known.contains(a.host)) return;
     final l = look(a);
     if (l.asking) return;
     final at = l.at;
@@ -297,7 +293,7 @@ class GitHubItems extends ChangeNotifier {
     required bool quiet,
     String chat = '',
   }) async {
-    if (list.isEmpty || daemon.daemonApi < githubItemsApi) return;
+    if (list.isEmpty) return;
     for (final a in list) {
       _looks[a.key] = look(a).copyWith(asking: true);
     }

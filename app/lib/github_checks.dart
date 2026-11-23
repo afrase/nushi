@@ -110,7 +110,7 @@ class _GitHubChecksState extends State<GitHubChecks> {
                   ),
                 ),
               ),
-              if (jobs.isNotEmpty && widget.daemon.daemonApi >= rerunApi) ...[
+              if (jobs.isNotEmpty) ...[
                 Button(
                   label: _rerunning ? 'Re-running…' : 'Re-run failed',
                   icon: Icons.sync,

@@ -227,14 +227,8 @@ extension DaemonEvents on Daemon {
       ..jiraSite = c.jiraSite
       ..jiraKey = c.jiraKey
       ..github = c.hasGithub() ? c.github : null
-      ..pull = c.hasPull()
-          ? c.pull
-          : c.github.pull
-          ? c.github
-          : null
-      ..pulls = c.pulls.isNotEmpty
-          ? c.pulls
-          : [if (c.hasPull()) c.pull else if (c.github.pull) c.github]
+      ..pull = c.hasPull() ? c.pull : null
+      ..pulls = c.pulls
       ..title = c.title
       ..archived = c.archived
       ..archivedAt = c.archivedUnixMs == 0

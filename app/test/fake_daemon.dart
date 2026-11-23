@@ -12,7 +12,6 @@ import 'package:nushi/chat_colors.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/drafts.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/pull_link.dart' show rowItem;
 
 import 'agent_facts_fixture.dart';
 import 'fake_refusals.dart';
@@ -274,9 +273,12 @@ class FakeDaemon with Refusals implements Transport {
     _send(e);
   }
 
-  /// Sends [e] to whoever is subscribed, as the daemon's own changes (a
+  /// Sends [event] to whoever is subscribed, as the daemon's own changes (a
   /// fork, a pin) go out whether or not anyone listens.
-  void _send(EventsResponse e) {
+  void _send(EventsResponse event) {
+    final e = event.hasChat()
+        ? (event.deepCopy()..chat = sentChat(event.chat))
+        : event;
     if (e.chatId.isNotEmpty) {
       if (e.seq > (_seqs[e.chatId] ?? Int64.ZERO)) _seqs[e.chatId] = e.seq;
       if (e.hasStatus()) _statuses[e.chatId] = e.status;
@@ -385,6 +387,13 @@ class FakeDaemon with Refusals implements Transport {
     if (other == null && input is GetGitHubItemsRequest) {
       other = await _itemsFromWhole(input);
     }
+    // The daemon lists the chat's pull requests with its primary, which a
+    // test's answer may name alone.
+    if (other is FindChatPullResponse &&
+        other.hasPull() &&
+        other.pulls.isEmpty) {
+      other = other.deepCopy()..pulls.add(other.pull);
+    }
 
     calls.add(input);
     if (other == null && input is ListBranchesRequest) {
@@ -396,7 +405,9 @@ class FakeDaemon with Refusals implements Transport {
         other ??
         switch (input) {
           PingRequest() => PingResponse(apiVersion: apiVersion),
-          ListChatsRequest() => ListChatsResponse(chats: chats),
+          ListChatsRequest() => ListChatsResponse(
+            chats: [for (final c in chats) sentChat(c)],
+          ),
           ListAgentsRequest(
             :final refreshEnvironment,
             :final reloadEnvironment,
@@ -1059,3 +1070,55 @@ ConnectException changedSinceRefusal() => ConnectException(
   'it changed on GitHub since you opened it, so nothing was saved',
   metadata: Headers()..add('nushi-reason', 'changed_since'),
 );
+
+/// A pull request read whole as the daemon's GetGitHubItems has it as a
+/// row's item: its size, base and head, and its checks counted.
+GitHubItem rowItem(GitHubPull p) {
+  var passed = 0;
+  var failed = 0;
+  var running = 0;
+  var skipped = 0;
+  for (final c in p.checks) {
+    switch (c.state) {
+      case 'success' || 'neutral':
+        passed++;
+      case 'pending':
+        running++;
+      case 'skipped' || 'stale':
+        skipped++;
+      default:
+        failed++;
+    }
+  }
+  return p.item.deepCopy()
+    ..pull = true
+    ..additions = p.additions
+    ..deletions = p.deletions
+    ..changedFiles = p.changedFiles
+    ..mergeState = p.mergeState
+    ..unresolved = p.threads.where((x) => !x.resolved).length
+    ..base = p.base
+    ..head = p.head
+    ..checkCounts = GitHubCheckCounts(
+      passed: passed,
+      failed: failed,
+      running: running,
+      skipped: skipped,
+    );
+}
+
+/// [c] as the daemon sends it (internal/api's chatProto): a test's chat
+/// that names only its pull request (`pull`) or the one it was started
+/// from (`github`) lists it in `pulls` too, and the started-from one is
+/// its `pull` when it names none.
+Chat sentChat(Chat c) {
+  if (c.pulls.isNotEmpty || !(c.hasPull() || c.github.pull)) return c;
+  final pull = c.hasPull() ? c.pull : c.github;
+  return c.deepCopy()
+    ..pull = pull
+    ..pulls.addAll([
+      if (c.github.pull) c.github,
+      if (c.hasPull() && !(c.github.pull && c.github.number == c.pull.number))
+        c.pull,
+    ]);
+}

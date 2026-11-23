@@ -202,7 +202,8 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// [pulls] with [link] first, for a daemon that says only the primary.
+  /// [pulls] with [link] first: one linked here, ahead of the chat's
+  /// event.
   List<GitHubLink> _withPrimary(GitHubLink link) => [
     link,
     for (final p in pulls)

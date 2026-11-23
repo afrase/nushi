@@ -122,7 +122,7 @@ class _CheckLineState extends State<_CheckLine> {
     final c = widget.check;
     final (icon, ink) = checkIcon(t, c);
     final name = c.workflow.isEmpty ? c.name : '${c.workflow} / ${c.name}';
-    final rerun = c.failed && c.id != 0 && widget.daemon.daemonApi >= rerunApi;
+    final rerun = c.failed && c.id != 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

@@ -84,7 +84,7 @@ final _saved = <String, Object?>{
 };
 
 /// The older app's keys in [_saved], which the next save drops.
-const _dropped = {'worktrees', 'subagentWide', 'cleanUpLater'};
+const _dropped = {'worktrees', 'subagentWide', 'cleanUpLater', 'pullSeen'};
 
 /// Every pref, so each is read (made) before a save.
 List<ValueNotifier<Object?>> get _all => [
@@ -115,7 +115,6 @@ List<ValueNotifier<Object?>> get _all => [
   recentModels,
   chatOpened,
   pinnedFiles,
-  pullSeen,
   paneWidths,
   terminalFont,
   terminalFontSize,
@@ -167,7 +166,7 @@ void main() {
     // text is dropped (ADR 0146).
     expect(shortcutKeys.value, {'nextTab': 'Shift+Cmd+]', 'x': 'bogus'});
     expect(keyLabel(nextTabKey), '⇧⌘]');
-    expect(_all.map((p) => p.value), hasLength(47)); // each made
+    expect(_all.map((p) => p.value), hasLength(46)); // each made
     showDetails.value = true;
     await pumpEventQueue();
     // A pref this file's other tests read that wasn't in the file (the
@@ -205,7 +204,9 @@ void main() {
     expect(sidebarChats.value, {
       '/a': ['y'],
     });
-    expect(pullSeen.value, {'y': 4000});
+    expect(pinnedFiles.value, {
+      'y': ['plan.md'],
+    });
     forgetChats({'y', 'z'});
     expect(chatsKept(), isEmpty);
   });

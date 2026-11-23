@@ -107,7 +107,7 @@ Future<Daemon> _app(
   paneWidths.value = {};
   collapsedWidgets.value = {};
   widgetOrder.value = [];
-  pullSeen.value = {};
+  pullSeenComments.value = {};
   final fake = FakeDaemon(demoChats())..answer = _demo;
   final d = await fake.connect(tester);
   d.select(select);
@@ -186,7 +186,7 @@ Future<Daemon> _pulls(WidgetTester tester, Size size, Brightness b) async {
   showDetails.value = true;
   collapsedWidgets.value = {};
   widgetOrder.value = ['Pull request'];
-  pullSeen.value = {};
+  pullSeenComments.value = {};
   final c = chat('c', 'claude', 'Paginate the feed')
     ..pull = _link(221)
     ..pulls.addAll([

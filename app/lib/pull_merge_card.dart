@@ -60,7 +60,9 @@ MergeHead mergeHead(GitHubPull p) {
     return say('Closed', 'Without merging.', Mood.quiet, closedIcon);
   }
   final view = mergeView(p);
-  if (view == null) return _fromState(p);
+  if (view == null) {
+    return say('Checking whether it can merge', '', Mood.quiet, Icons.schedule);
+  }
   final m = p.merge;
   switch (view.step) {
     case MergeStep.inQueue:
@@ -92,49 +94,6 @@ MergeHead mergeHead(GitHubPull p) {
         Icons.block,
       );
   }
-}
-
-/// What the card says of an open pull request from a daemon before the
-/// merge control (API 96): from GitHub's merge state and what fails.
-MergeHead _fromState(GitHubPull p) {
-  MergeHead say(String h, String l, Mood m, IconData i) =>
-      (heading: h, line: l, mood: m, icon: i);
-  final why = <String>[
-    if (p.checks.any((c) => c.required && c.failed)) 'checks_failing',
-    if (p.item.review == 'changes_requested') 'changes_requested',
-    if (p.item.review == 'review_required') 'review_required',
-  ];
-  return switch (p.mergeState) {
-    'clean' || 'has_hooks' => say(
-      'Ready to merge',
-      'All requirements are met.',
-      Mood.ok,
-      Icons.check,
-    ),
-    'unstable' => say(
-      'Ready to merge',
-      '$unstableWords.',
-      Mood.ok,
-      Icons.check,
-    ),
-    'dirty' => say(
-      'Merging is blocked',
-      _sentence([_blockShort(p, 'conflicts')]),
-      Mood.bad,
-      Icons.block,
-    ),
-    'behind' || 'blocked' => say(
-      'Merging is blocked',
-      _sentence([
-        if (p.mergeState == 'behind') _blockShort(p, 'behind'),
-        for (final b in why) _blockShort(p, b),
-        if (why.isEmpty && p.mergeState == 'blocked') _blockShort(p, 'rules'),
-      ]),
-      why.contains('checks_failing') ? Mood.bad : Mood.warn,
-      Icons.block,
-    ),
-    _ => say('Checking whether it can merge', '', Mood.quiet, Icons.schedule),
-  };
 }
 
 /// The merge status card, first on the Overview: its state's icon,

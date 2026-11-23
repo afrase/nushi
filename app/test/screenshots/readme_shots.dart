@@ -162,7 +162,7 @@ Future<(Daemon, FakeDaemon)> _app(
   paneWidths.value = {};
   collapsedWidgets.value = {};
   widgetOrder.value = [];
-  pullSeen.value = {};
+  pullSeenComments.value = {};
   final open = <StreamController<Object>>[];
   addTearDown(() {
     for (final s in open) {

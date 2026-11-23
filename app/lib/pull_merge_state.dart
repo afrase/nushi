@@ -98,10 +98,10 @@ String _queueState(GitHubQueueEntry e) => switch (e.state) {
 String _eta(int seconds) =>
     seconds <= 0 ? '' : ' About ${(seconds / 60).ceil()} min left.';
 
-/// What the Merge control shows of [p]; null when it has none: merged,
-/// closed, or from a daemon before the control.
+/// What the Merge control shows of [p]; null when it has none: merged or
+/// closed.
 MergeView? mergeView(GitHubPull p) {
-  if (p.item.state != 'open' || !p.hasMerge()) return null;
+  if (p.item.state != 'open') return null;
   final m = p.merge;
   MergeView say(
     MergeStep step,

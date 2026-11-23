@@ -220,6 +220,12 @@ GitHubPull fixturePull() => GitHubPull(
   headOid: 'b' * 40,
   mergeable: 'mergeable',
   mergeState: 'blocked',
+  // As the daemon says it (API 96): blocked by the failing required checks
+  // and the changes asked for; no auto-merge here.
+  merge: GitHubMerge(
+    canMerge: true,
+    blocks: ['checks_failing', 'changes_requested'],
+  ),
   additions: 69,
   deletions: 5,
   changedFiles: 12,
@@ -429,7 +435,7 @@ Future<(Daemon, FakeDaemon)> openPullTab(
   showDetails.value = details;
   collapsedWidgets.value = {};
   widgetOrder.value = ['Pull request'];
-  pullSeen.value = {};
+  pullSeenComments.value = {};
   final c = chat(
     'c',
     'claude',

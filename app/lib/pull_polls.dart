@@ -49,32 +49,6 @@ String checkedWords(DateTime? checked, Duration every, DateTime now) {
   return 'Checked $when ago · $often';
 }
 
-/// The times of a pull request's comments: its conversation's and its
-/// review threads'.
-Iterable<int> commentTimes(GitHubPull p) => [
-  for (final c in p.conversation) c.createdMs.toInt(),
-  for (final x in p.threads)
-    for (final c in x.comments) c.createdMs.toInt(),
-];
-
-/// The comments of [chat]'s pull request newer than those seen (when its
-/// tab last showed, or when the widget first saw it): the phone's chip,
-/// which reads the pull request whole.
-int unreadComments(String chat, GitHubPull p) {
-  final times = commentTimes(p);
-  final seen = pullSeen.value[chat];
-  return seen == null ? 0 : times.where((ms) => ms > seen).length;
-}
-
-/// Marks [p]'s comments seen in [chat]: by their times ([pullSeen]) and
-/// their count ([pullSeenComments]).
-void markPullSeen(String chat, GitHubPull p) {
-  seenComments(chat, p.item, always: true);
-  final newest = commentTimes(p).fold(0, (a, b) => a > b ? a : b);
-  if ((pullSeen.value[chat] ?? -1) >= newest) return;
-  pullSeen.value = {...pullSeen.value, chat: newest};
-}
-
 /// The comments [it] (a row's item, which counts them) has that [chat]
 /// hasn't seen: those since its tab last showed it, or since the chat
 /// first knew it (ADR 0140: the widget doesn't read the pull request

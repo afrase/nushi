@@ -70,6 +70,9 @@ GitHubPull pull() => GitHubPull(
   headOid: 'b' * 40,
   mergeable: 'mergeable',
   mergeState: 'unstable',
+  // As the daemon says it (API 96): nothing blocks, and no merge method to
+  // offer here.
+  merge: GitHubMerge(canMerge: true),
   additions: 18,
   changedFiles: 3,
   reviewers: [

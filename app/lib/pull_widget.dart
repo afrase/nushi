@@ -51,10 +51,8 @@ PanelWidget? pullWidget(ChatPull cp, {VoidCallback? onShow}) {
 }
 
 /// [child] built again when comments are seen.
-Widget _seen(Widget Function() child) => ListenableBuilder(
-  listenable: Listenable.merge([pullSeen, pullSeenComments]),
-  builder: (_, _) => child(),
-);
+Widget _seen(Widget Function() child) =>
+    ListenableBuilder(listenable: pullSeenComments, builder: (_, _) => child());
 
 class _Summary extends StatelessWidget {
   const new(this.cp);

@@ -8,12 +8,6 @@ import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The daemon removes a chat's worktree and deletes its branch, and a pull
-/// request's branch on GitHub, and makes that again (GetCleanUp,
-/// RemoveChatWorktree, DeleteChatBranch, DeleteGitHubBranch,
-/// RestoreGitHubBranch).
-const cleanUpApi = 89;
-
 /// What the clean-up does, as its dialog picked: each only when ticked;
 /// `force` removes a worktree with uncommitted changes (the dialog named
 /// them), `forceBranch` deletes a branch with commits its base lacks; mid-

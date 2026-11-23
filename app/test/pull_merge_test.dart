@@ -47,8 +47,7 @@ void main() {
       return '${v.lead} ${v.rest}'.trim();
     }
 
-    test('nothing for a daemon before it, or once merged or closed', () {
-      expect(mergeView(fixturePull()), isNull);
+    test('nothing once merged or closed', () {
       expect(mergeView(mergePull('ready')..item.state = 'merged'), isNull);
       expect(mergeView(mergePull('ready')..item.state = 'closed'), isNull);
     });

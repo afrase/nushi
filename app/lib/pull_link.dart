@@ -4,17 +4,6 @@ import 'package:nushi/github_items.dart';
 export 'package:nushi/chat_pull.dart';
 export 'package:nushi/pull_polls.dart';
 
-/// The daemon finds and links a chat's pull request (FindChatPull,
-/// LinkChatPull, Chat.pull).
-const chatPullApi = 81;
-
-/// The daemon links a pull request found by the branch's head only for a
-/// branch the chat pushed and one opened in the chat's life, nothing new
-/// for an archived chat, and says the branch's otherwise when asked
-/// (FindChatPullRequest.suggest, FindChatPullResponse.branch_pull); the
-/// rows' ask names the chat (GetGitHubItemsRequest.chat_id).
-const branchPullApi = 119;
-
 /// Whether a tool call's lowercased title, input and tool, [what], push a
 /// branch: `git push`, options between the two words allowed. The daemon's
 /// gitPushRE (internal/features/chats/pushed.go) reads the same.
@@ -45,42 +34,6 @@ GitHubAddress addressOf(GitHubLink l) =>
 
 /// What tells two links apart: host, repository (any case) and number.
 String pullKey(GitHubLink l) => addressOf(l).key;
-
-/// A pull request read whole as a row's item, for a daemon before
-/// GetGitHubItems: its size, base and head, and its checks counted.
-GitHubItem rowItem(GitHubPull p) {
-  var passed = 0;
-  var failed = 0;
-  var running = 0;
-  var skipped = 0;
-  for (final c in p.checks) {
-    switch (c.state) {
-      case 'success' || 'neutral':
-        passed++;
-      case 'pending':
-        running++;
-      case 'skipped' || 'stale':
-        skipped++;
-      default:
-        failed++;
-    }
-  }
-  return p.item.deepCopy()
-    ..pull = true
-    ..additions = p.additions
-    ..deletions = p.deletions
-    ..changedFiles = p.changedFiles
-    ..mergeState = p.mergeState
-    ..unresolved = p.threads.where((x) => !x.resolved).length
-    ..base = p.base
-    ..head = p.head
-    ..checkCounts = GitHubCheckCounts(
-      passed: passed,
-      failed: failed,
-      running: running,
-      skipped: skipped,
-    );
-}
 
 /// [links] in the widget's order (ADR 0117): as linked, except that a
 /// stack (one's base is another's head, in one repository) lists its base

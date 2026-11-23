@@ -90,10 +90,9 @@ bool itemReady(GitHubItem it) =>
       _ => false,
     };
 
-/// Whether a merged pull request of [cp]'s offers Clean up… (ADR 0063): a
-/// daemon that can, and no clean-up already started.
-bool offersCleanUp(ChatPull cp) =>
-    cp.daemon.daemonApi >= cleanUpApi && !CleanUpJob.of(cp.chat).started;
+/// Whether a merged pull request of [cp]'s offers Clean up… (ADR 0063):
+/// no clean-up already started.
+bool offersCleanUp(ChatPull cp) => !CleanUpJob.of(cp.chat).started;
 
 /// The row's one cue under its title (ADR 0117), the first that applies:
 /// merged (with Clean up… while offered), closed without merging, changes
@@ -240,7 +239,7 @@ List<MenuEntry> pullRowMenu(
         'Ready for review on GitHub',
         onPick: () => openWeb(context, url),
       ),
-    if (done && cp.daemon.daemonApi >= cleanUpApi)
+    if (done)
       MenuEntry(
         'Clean up…',
         onPick: CleanUpJob.of(cp.chat).running

@@ -161,7 +161,7 @@ class PullStates extends ChangeNotifier {
   Iterable<GitHubLink> get _links => [
     for (final ChatState c in daemon.chats.values)
       if (!c.archived)
-        for (final l in c.pulls.isEmpty ? [?c.pull] : c.pulls)
+        for (final l in c.pulls)
           if (l.id.isNotEmpty) l,
   ];
 
@@ -208,7 +208,7 @@ class PullStates extends ChangeNotifier {
   void _seenFirst() {
     for (final c in daemon.chats.values) {
       if (c.archived) continue;
-      for (final l in c.pulls.isEmpty ? [?c.pull] : c.pulls) {
+      for (final l in c.pulls) {
         if (_items[l.id] case final it?) seenComments(c.id, it);
       }
     }

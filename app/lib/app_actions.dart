@@ -421,7 +421,7 @@ List<AppAction> chatActions(
     AppAction(
       .linkPull,
       chat?.pull == null ? 'Link pull request…' : 'Link another pull request…',
-      enabled: live && d.daemonApi >= chatPullApi,
+      enabled: live,
       run: () => unawaited(linkPull(context, ChatPull.of(d, chat!))),
     ),
     AppAction(
@@ -429,10 +429,7 @@ List<AppAction> chatActions(
       'Clean up the worktree…',
       short: 'Clean up…',
       enabled:
-          chat != null &&
-          chat.worktree != null &&
-          d.daemonApi >= cleanUpApi &&
-          !CleanUpJob.of(chat).running,
+          chat != null && chat.worktree != null && !CleanUpJob.of(chat).running,
       run: () => unawaited(_cleanUp(context, d, chat!)),
     ),
     AppAction(

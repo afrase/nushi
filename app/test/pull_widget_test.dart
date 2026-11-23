@@ -48,7 +48,7 @@ Future<(Daemon, FakeDaemon)> _app(
   showDetails.value = details;
   collapsedWidgets.value = {};
   widgetOrder.value = ['Pull request'];
-  pullSeen.value = {};
+  pullSeenComments.value = {};
   final c = chat('c', 'claude', 'Add Sub and Neg');
   if (archived) {
     c

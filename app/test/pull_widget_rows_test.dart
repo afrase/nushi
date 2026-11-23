@@ -38,7 +38,8 @@ Map<String, GitHubPull Function()> states = {
       GitHubReviewer(login: 'notes-reviewers', state: 'approved', team: true),
     ])
     ..threads.removeWhere((x) => !x.resolved)
-    ..mergeState = 'clean',
+    ..mergeState = 'clean'
+    ..merge.blocks.clear(),
   // GitHub's "unstable": a check its base doesn't require didn't pass.
   'unstable': () => states['ready']!()
     ..mergeState = 'unstable'

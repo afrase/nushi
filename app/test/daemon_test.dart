@@ -89,7 +89,9 @@ void main() {
     expect(d.chats['b']!.scratch, isTrue);
 
     changeScopes.value = {'a': 'branch'};
-    pullSeen.value = {'a': 1};
+    pullSeenComments.value = {
+      'a': {'p': 1},
+    };
     await send(EventsResponse(chatId: 'a', removed: true));
     expect(d.chats.keys, ['b']);
     expect(d.selectedId, isNull);
@@ -309,7 +311,10 @@ void main() {
       'a': ['notes.md'],
       'gone': ['notes.md'],
     };
-    pullSeen.value = {'a': 1, 'gone': 2};
+    pullSeenComments.value = {
+      'a': {'p': 1},
+      'gone': {'p': 2},
+    };
     setComments('a', [comment('a')]);
     setComments('gone', [comment('gone')]);
     final context = GetContextUsageResponse(

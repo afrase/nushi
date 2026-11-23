@@ -13,11 +13,8 @@ const _toGo = {
   'previewApi',
   'doneApi',
   'restartWhenIdleApi',
-  'chatPullApi',
   'findFilesApi',
   'updatesApi',
-  'rerunApi',
-  'cleanUpApi',
   'pinApi',
   'forkApi',
   'chatColorApi',
@@ -31,8 +28,6 @@ const _toGo = {
   'searchSessionsApi',
   'installApi',
   'archiveSideApi',
-  'githubItemsApi',
-  'branchPullApi',
   'workflowApi',
 };
 

@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,7 +5,6 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/pull_header.dart' show pullNarrow, pullPad;
-import 'package:nushi/pull_link.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -109,7 +107,7 @@ void main() {
       find.textContaining('One more thing.', findRichText: true),
       findsOneWidget,
     );
-    expect(pullSeen.value['c'], commentTimes(whole).reduce(max));
+    expect(pullSeenComments.value['c']?[whole.item.id], whole.item.comments);
     d.dispose();
   }, variant: onMac);
 

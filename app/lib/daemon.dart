@@ -93,10 +93,6 @@ const messagePinApi = 102;
 /// (Chat.pin, PinChats).
 const pinApi = 90;
 
-/// The API from which the daemon re-runs a pull request's failed jobs
-/// (RerunGitHubChecks).
-const rerunApi = 88;
-
 /// The API from which the daemon checks for a newer release of Nushi
 /// (Ping's update, CheckForUpdates, Settings.check_updates).
 const updatesApi = 86;

@@ -4,7 +4,6 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_rows.dart' show itemReady;
 import 'package:nushi/pull_states.dart';
-import 'package:nushi/pull_widget_parts.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// A pull request on one line, as the collapsed PR widget (and the
@@ -51,12 +50,10 @@ Widget pullSummary(
     final waiting = p == null
         ? it.review == 'review_required'
         : p.reviewers.any((r) => r.state == 'requested');
-    // As the Merge control says it, from a daemon that has it (API 96).
-    final ready = switch (p) {
-      null => itemReady(it),
-      _ when p.hasMerge() => p.merge.blocks.isEmpty && !it.draft,
-      _ => mergeStateReady(p),
-    };
+    // As the Merge control says it.
+    final ready = p == null
+        ? itemReady(it)
+        : p.merge.blocks.isEmpty && !it.draft;
     switch (it.state) {
       case 'merged' || 'closed':
         parts.add(
