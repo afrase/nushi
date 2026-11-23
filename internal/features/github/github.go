@@ -142,7 +142,7 @@ type Service struct {
 // host is a host's client and what Nushi learned of its token.
 type host struct {
 	c      Client
-	source string // "gh", "GH_TOKEN", "token" (pasted)…
+	source string // "gh" (its login) or "token" (pasted)
 	kind   string // githubapi.TokenKind
 	user   githubapi.User
 	asked  time.Time // when user was asked for
@@ -170,7 +170,7 @@ func New(d Deps) *Service {
 // HostState is a host as Settings › GitHub shows it.
 type HostState struct {
 	Host   string
-	Source string // where its token is from: "gh" (its login), "GH_TOKEN", "token" (pasted)
+	Source string // where its token is from: "gh" (its login) or "token" (pasted)
 	Kind   string // the token's kind ("oauth" for gh's, "classic", "fine-grained")
 	User   githubapi.User
 	Budget []githubapi.Bucket
