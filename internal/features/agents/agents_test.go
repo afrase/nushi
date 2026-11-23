@@ -71,17 +71,6 @@ func TestList(t *testing.T) {
 	}
 }
 
-func TestOlder(t *testing.T) {
-	for _, c := range []struct {
-		a, b string
-		want bool
-	}{{"0.2.9", "0.2.14", true}, {"0.2.14", "0.2.14", false}, {"1.0", "0.9.9", false}, {"0.2.14-rc1", "0.2.15", true}, {"2.1", "2.1.1", true}} {
-		if older(c.a, c.b) != c.want {
-			t.Errorf("older(%s, %s) isn't %v", c.a, c.b, c.want)
-		}
-	}
-}
-
 // newService finds agents with Run, on the test's own PATH (made after
 // its t.Setenv).
 func newService(agents []Agent, dir string, in Installer, chats Chats) *Service {

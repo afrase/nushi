@@ -15,11 +15,11 @@ import (
 	"os/exec"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
 )
@@ -208,8 +208,9 @@ func (s *Service) find(ctx context.Context, a Agent) (st Status) {
 	if out, err := s.probe(ctx, st.Path, "--version"); err == nil {
 		st.Version = versionIn(string(out))
 	}
+	old, _ := agentproc.Older(st.Version, a.Min) // false when either is none
 	switch {
-	case a.Min != "" && st.Version != "" && older(st.Version, a.Min):
+	case a.Min != "" && st.Version != "" && old:
 		st.Problem = fmt.Sprintf("Needs %s or newer", a.Min)
 	case a.Adapter != nil && s.lookPath("node", nil) == "":
 		st.Problem = "Needs Node"
@@ -242,23 +243,6 @@ var versionRE = regexp.MustCompile(`\d+\.\d+(\.\d+)?(-[0-9A-Za-z.-]+)?`)
 func versionIn(out string) string {
 	line, _, _ := strings.Cut(strings.TrimSpace(out), "\n")
 	return versionRE.FindString(line)
-}
-
-// older says version a comes before b, by their first three numbers.
-func older(a, b string) bool {
-	x, y := numbers(a), numbers(b)
-	return slices.Compare(x[:], y[:]) < 0
-}
-
-func numbers(v string) [3]int {
-	if i := strings.IndexAny(v, "-+"); i >= 0 {
-		v = v[:i]
-	}
-	var out [3]int
-	for i, p := range strings.SplitN(v, ".", 3) {
-		out[i], _ = strconv.Atoi(p)
-	}
-	return out
 }
 
 // Run finds what starting the agent named name takes, or says why it
