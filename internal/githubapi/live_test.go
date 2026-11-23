@@ -37,7 +37,8 @@ func liveToken(t *testing.T) string {
 // TestLive runs against testRepo with the gh login's token, read here
 // as the daemon reads it (liveToken) and never printed: only with NUSHI_GITHUB_LIVE=1 (never
 // on CI). With NUSHI_GITHUB_RECORD=1 it also writes GitHub's answers to
-// testdata, for the tests that run without GitHub.
+// testdata, for the tests that run without GitHub, each GraphQL answer
+// with the query it answered (recorder).
 func TestLive(t *testing.T) {
 	if os.Getenv("NUSHI_GITHUB_LIVE") != "1" {
 		t.Skip("NUSHI_GITHUB_LIVE=1 runs it against " + testRepo)
@@ -111,14 +112,17 @@ func TestLive(t *testing.T) {
 }
 
 // recorder writes each answer's body to testdata, named after the
-// request (a GraphQL operation, or the REST path's last part). Request
-// headers (the token) are never written.
+// request (a GraphQL operation, or the REST path's last part), and a
+// GraphQL answer's query beside it (graphql_X.graphql), which the tests'
+// fake checks a request against (fake.file). Request headers (the token)
+// are never written.
 type recorder struct{ t *testing.T }
 
 var nameRE = regexp.MustCompile(`[^A-Za-z0-9]+`)
 
 func (r recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	name := nameRE.ReplaceAllString(req.URL.Path[strings.LastIndex(req.URL.Path, "/")+1:], "_")
+	var query string // a GraphQL request's
 	if strings.Contains(req.URL.Path, "/compare/") {
 		name = "compare"
 	}
@@ -126,10 +130,11 @@ func (r recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 		b, _ := io.ReadAll(req.Body)
 		req.Body = io.NopCloser(bytes.NewReader(b))
 		var q struct {
-			Op string `json:"operationName"`
+			Op    string `json:"operationName"`
+			Query string `json:"query"`
 		}
 		_ = json.Unmarshal(b, &q)
-		name = "graphql_" + q.Op
+		name, query = "graphql_"+q.Op, q.Query
 	}
 	resp, err := http.DefaultTransport.RoundTrip(req)
 	// Not /user: it says more of the account (its plan, its private
@@ -147,6 +152,11 @@ func (r recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	if json.Indent(&pretty, b, "", "  ") == nil {
 		if err := os.WriteFile("testdata/"+name+".json", append(pretty.Bytes(), '\n'), 0o600); err != nil {
 			r.t.Error(err)
+		}
+		if query != "" {
+			if err := os.WriteFile("testdata/"+name+".graphql", []byte(query+"\n"), 0o600); err != nil {
+				r.t.Error(err)
+			}
 		}
 	}
 	return resp, nil

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -81,13 +82,37 @@ func (f *fake) route(route string, h http.HandlerFunc) {
 	f.routes[route] = h
 }
 
-// file answers route with a testdata file.
+// file answers route with a testdata file. A recorded GraphQL answer
+// has beside it the query it answered (graphql_X.graphql for
+// graphql_X.json, written by TestLive's recorder): a request whose query
+// isn't that one fails the test, since the answer can lack what the query
+// selects now, and decoding passes over a missing key. A hand-written
+// answer has no such file.
 func (f *fake) file(route, name string) {
 	b, err := os.ReadFile("testdata/" + name)
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	f.route(route, func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write(b) })
+	asked, err := os.ReadFile("testdata/" + strings.TrimSuffix(name, ".json") + ".graphql")
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		f.t.Fatal(err)
+	}
+	f.route(route, func(w http.ResponseWriter, r *http.Request) {
+		if asked != nil {
+			var q struct {
+				Query string `json:"query"`
+			}
+			body, _ := io.ReadAll(r.Body)
+			if json.Unmarshal(body, &q) != nil || q.Query != strings.TrimSuffix(string(asked), "\n") {
+				f.t.Errorf("%s isn't the query testdata/%s answered: record its answer again with TestLive's recorder "+
+					"(NUSHI_GITHUB_LIVE=1 NUSHI_GITHUB_RECORD=1), or make it a hand-written answer by deleting its .graphql", route, name)
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"message":"not the recorded query"}`))
+				return
+			}
+		}
+		_, _ = w.Write(b)
+	})
 }
 
 func (f *fake) count(route string) int {

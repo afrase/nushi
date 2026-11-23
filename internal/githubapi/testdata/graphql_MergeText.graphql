@@ -1,0 +1,10 @@
+query MergeText($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      mergeTitle: viewerMergeHeadlineText(mergeType: MERGE)
+      mergeBody: viewerMergeBodyText(mergeType: MERGE)
+      squashTitle: viewerMergeHeadlineText(mergeType: SQUASH)
+      squashBody: viewerMergeBodyText(mergeType: SQUASH)
+    }
+  }
+}
