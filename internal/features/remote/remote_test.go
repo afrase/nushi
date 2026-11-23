@@ -180,6 +180,9 @@ func pairOne(t *testing.T, s *Service, key noise.DHKey) (offer, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if link, err := PairingLink(qr); err != nil || !strings.HasSuffix(link, "/#pair?"+strings.TrimPrefix(qr, "nushi://pair?")) {
+		t.Errorf("the link %q, %v, of %q", link, err, qr)
+	}
 	o := parseQR(t, qr)
 	conn, code, err := phonePair(t, o, key, o.psk)
 	if err != nil {

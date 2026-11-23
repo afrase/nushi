@@ -23216,9 +23216,11 @@ class StartPairingRequest extends $pb.GeneratedMessage {
 class StartPairingResponse extends $pb.GeneratedMessage {
   factory StartPairingResponse({
     $core.String? qr,
+    $core.String? link,
   }) {
     final result = StartPairingResponse._();
     if (qr != null) result.qr = qr;
+    if (link != null) result.link = link;
     return result;
   }
 
@@ -23236,6 +23238,7 @@ class StartPairingResponse extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: StartPairingResponse.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'qr')
+    ..aOS(3, _omitFieldNames ? '' : 'link')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -23261,7 +23264,8 @@ class StartPairingResponse extends $pb.GeneratedMessage {
           StartPairingResponse.$_createMessage);
   static StartPairingResponse? _defaultInstance;
 
-  /// nushi://pair?r=<relay>&i=<one-time id>&k=<daemon's key>&s=<secret>
+  /// nushi://pair?r=<relay>&i=<one-time id>&k=<daemon's key>&s=<secret>,
+  /// which an app before link builds its link from.
   @$pb.TagNumber(1)
   $core.String get qr => $_getSZ(0);
   @$pb.TagNumber(1)
@@ -23270,6 +23274,18 @@ class StartPairingResponse extends $pb.GeneratedMessage {
   $core.bool hasQr() => $_has(0);
   @$pb.TagNumber(1)
   void clearQr() => $_clearField(1);
+
+  /// The same as the link the QR code shows and Copy link copies:
+  /// https://<relay's host>/#pair?r=…, the parameters in the fragment
+  /// (http for a ws:// relay). API 144.
+  @$pb.TagNumber(3)
+  $core.String get link => $_getSZ(1);
+  @$pb.TagNumber(3)
+  set link($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(3)
+  $core.bool hasLink() => $_has(1);
+  @$pb.TagNumber(3)
+  void clearLink() => $_clearField(3);
 }
 
 class ConfirmPairingRequest extends $pb.GeneratedMessage {

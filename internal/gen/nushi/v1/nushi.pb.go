@@ -17969,8 +17969,13 @@ func (*StartPairingRequest) Descriptor() ([]byte, []int) {
 
 type StartPairingResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// nushi://pair?r=<relay>&i=<one-time id>&k=<daemon's key>&s=<secret>
-	Qr            string `protobuf:"bytes,1,opt,name=qr,proto3" json:"qr,omitempty"`
+	// nushi://pair?r=<relay>&i=<one-time id>&k=<daemon's key>&s=<secret>,
+	// which an app before link builds its link from.
+	Qr string `protobuf:"bytes,1,opt,name=qr,proto3" json:"qr,omitempty"`
+	// The same as the link the QR code shows and Copy link copies:
+	// https://<relay's host>/#pair?r=…, the parameters in the fragment
+	// (http for a ws:// relay). API 144.
+	Link          string `protobuf:"bytes,3,opt,name=link,proto3" json:"link,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -18008,6 +18013,13 @@ func (*StartPairingResponse) Descriptor() ([]byte, []int) {
 func (x *StartPairingResponse) GetQr() string {
 	if x != nil {
 		return x.Qr
+	}
+	return ""
+}
+
+func (x *StartPairingResponse) GetLink() string {
+	if x != nil {
+		return x.Link
 	}
 	return ""
 }
@@ -29411,9 +29423,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x02on\x18\x01 \x01(\bR\x02on\x12\x14\n" +
 	"\x05relay\x18\x02 \x01(\tR\x05relay\"\x13\n" +
 	"\x11SetRemoteResponse\"\x15\n" +
-	"\x13StartPairingRequest\"5\n" +
+	"\x13StartPairingRequest\"I\n" +
 	"\x14StartPairingResponse\x12\x0e\n" +
-	"\x02qr\x18\x01 \x01(\tR\x02qrJ\x04\b\x02\x10\x03R\aexpires\"A\n" +
+	"\x02qr\x18\x01 \x01(\tR\x02qr\x12\x12\n" +
+	"\x04link\x18\x03 \x01(\tR\x04linkJ\x04\b\x02\x10\x03R\aexpires\"A\n" +
 	"\x15ConfirmPairingRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x14\n" +
 	"\x05allow\x18\x02 \x01(\bR\x05allow\"\x18\n" +

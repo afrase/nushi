@@ -6,6 +6,7 @@ import (
 	"connectrpc.com/connect"
 
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -22,7 +23,11 @@ func (s *server) StartPairing(context.Context, *connect.Request[nushiv1.StartPai
 	if err != nil {
 		return nil, refused(err)
 	}
-	return connect.NewResponse(&nushiv1.StartPairingResponse{Qr: qr}), nil
+	link, err := remote.PairingLink(qr)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&nushiv1.StartPairingResponse{Qr: qr, Link: link}), nil
 }
 
 func (s *server) ConfirmPairing(_ context.Context, req *connect.Request[nushiv1.ConfirmPairingRequest]) (*connect.Response[nushiv1.ConfirmPairingResponse], error) {

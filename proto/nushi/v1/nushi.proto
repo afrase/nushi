@@ -3237,11 +3237,16 @@ message SetRemoteResponse {}
 message StartPairingRequest {}
 
 message StartPairingResponse {
-  // nushi://pair?r=<relay>&i=<one-time id>&k=<daemon's key>&s=<secret>
+  // nushi://pair?r=<relay>&i=<one-time id>&k=<daemon's key>&s=<secret>,
+  // which an app before link builds its link from.
   string qr = 1;
   // When it stops being good: never read.
   reserved 2;
   reserved "expires";
+  // The same as the link the QR code shows and Copy link copies:
+  // https://<relay's host>/#pair?r=…, the parameters in the fragment
+  // (http for a ws:// relay). API 144.
+  string link = 3;
 }
 
 message ConfirmPairingRequest {

@@ -62,6 +62,26 @@ func (s *Service) StartPairing() (string, error) {
 
 func b64(b []byte) string { return base64.RawURLEncoding.EncodeToString(b) }
 
+// PairingLink is a QR code's pairing (StartPairing's) as a link to the
+// relay's web app, which iOS's Camera opens (ADR 0054): the same
+// parameters, in the fragment, so they never reach a server. A ws:// relay
+// (one run locally) serves it over http.
+func PairingLink(qr string) (string, error) {
+	q, err := url.Parse(qr)
+	if err != nil || q.Scheme != "nushi" || q.Host != "pair" {
+		return "", errors.New("not a pairing code")
+	}
+	relay, err := url.Parse(q.Query().Get("r"))
+	if err != nil || relay.Host == "" {
+		return "", errors.New("the pairing code names no relay")
+	}
+	web := url.URL{Scheme: "https", Host: relay.Host, Path: "/"}
+	if relay.Scheme == "ws" {
+		web.Scheme = "http"
+	}
+	return web.String() + "#pair?" + q.RawQuery, nil // the query as escaped
+}
+
 // ConfirmPairing answers the phone that connected, whose code is code.
 func (s *Service) ConfirmPairing(code string, allow bool) error {
 	s.mu.Lock()
