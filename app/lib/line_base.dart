@@ -160,10 +160,6 @@ class LineBase extends ChangeNotifier implements ValueListenable<String?> {
     final slash = abs.lastIndexOf('/');
     if (slash < 0) return await _land(asked, none: NoMarks.failed);
     final inChat = abs.startsWith('${chat.folder}/');
-    final found = inChat
-        ? await marksBaseOf(chat).find(daemon)
-        : lastCommitBase;
-    if (_disposed || asked != _asked) return;
     Future<GetDiffResponse> diff(String base) => daemon.client.getDiff(
       GetDiffRequest(
         folder: slash == 0 ? '/' : abs.substring(0, slash),
@@ -171,9 +167,13 @@ class LineBase extends ChangeNotifier implements ValueListenable<String?> {
         base: base,
       ),
     );
-    var against = found;
+    var against = lastCommitBase;
     GetDiffResponse r;
     try {
+      // A base that couldn't be found is a failure, as GetDiff's is: not
+      // the last commit, which would count from somewhere else unsaid.
+      if (inChat) against = await marksBaseOf(chat).find(daemon);
+      if (_disposed || asked != _asked) return;
       try {
         r = await diff(against.base);
       } on Object {

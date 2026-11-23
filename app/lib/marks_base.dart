@@ -68,26 +68,32 @@ final class ChatMarksBase extends ChangeNotifier {
     }
   }
 
-  /// The base, as last found or found now.
+  /// The base, as last found or found now. A lookup that fails throws
+  /// (the marks say they couldn't compare, ADR 0131) and is forgotten, so
+  /// the next ask looks again; a newer lookup already under way stays.
   Future<MarksBase> find(Daemon daemon) {
     _check();
-    return _found ??= _find(daemon);
+    if (_found case final found?) return found;
+    final finding = _found = _find(daemon);
+    unawaited(
+      finding.then<void>(
+        (_) {},
+        onError: (Object _) {
+          if (identical(_found, finding)) _found = null;
+        },
+      ),
+    );
+    return finding;
   }
 
   /// The branch the Branch view counts from, or on that branch itself
-  /// from before the chat's commits ([_chatStart]). A failure is found
-  /// again next time.
+  /// from before the chat's commits ([_chatStart]).
   Future<MarksBase> _find(Daemon daemon) async {
-    try {
-      final b = await ChangeSpan.branchBase(daemon, chat);
-      if (!b.status.git) return lastCommitBase;
-      final span = ChangeSpan(chat.folder, Scope.branch, b.base, b.status);
-      if (!span.onBase) return (base: b.base, from: MarksFrom.branch);
-      return await _chatStart(daemon);
-    } on Object {
-      _found = null;
-      return lastCommitBase;
-    }
+    final b = await ChangeSpan.branchBase(daemon, chat);
+    if (!b.status.git) return lastCommitBase;
+    final span = ChangeSpan(chat.folder, Scope.branch, b.base, b.status);
+    if (!span.onBase) return (base: b.base, from: MarksFrom.branch);
+    return await _chatStart(daemon);
   }
 
   /// On the branch it counts from (the default branch): from the parent

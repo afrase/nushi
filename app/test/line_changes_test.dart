@@ -8,6 +8,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/line_base.dart';
 import 'package:nushi/line_changes.dart';
+import 'package:nushi/marks_base.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/preview.dart';
 
@@ -579,6 +580,27 @@ void main() {
           expect(lines.from, MarksFrom.chat);
           expect(lines.since, 'since this chat began');
           expect(lines.value, 'x\n');
+          await end(tester);
+        });
+
+        testWidgets("the chat's commits not listed: a failure, not the last "
+            'commit; asked again, the base is found', (tester) async {
+          final main = onMain([at('c2', 60)]);
+          var refuse = true;
+          await start(
+            tester,
+            path: 'a.go',
+            answer: (input) => input is ListCommitsRequest && refuse
+                ? throw ConnectException(Code.unavailable, 'daemon away')
+                : main(input),
+          );
+          expect(_asked(fake), isEmpty);
+          expect(lines.none, NoMarks.failed);
+          expect(lines.error, contains('daemon away'));
+          refuse = false;
+          final again = marksBaseOf(c).find(d);
+          await tester.pumpAndSettle();
+          expect(await again, (base: 'c2^', from: MarksFrom.chat));
           await end(tester);
         });
 
