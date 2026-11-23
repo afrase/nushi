@@ -891,9 +891,11 @@ class _TranscriptState extends State<Transcript> {
   @override
   Widget build(BuildContext context) {
     final chat = widget.chat;
-    // What this app sent shows at once, after the items, until its echo.
+    // A prompt waiting from before the recent part shows at the foot; what
+    // this app sent shows at once, after the items, until its echo.
     final entries = transcriptEntries(
-      widget.items ?? [...chat.items, ...chat.outbox.sending],
+      widget.items ??
+          [...chat.items, ...chat.asksBefore, ...chat.outbox.sending],
     );
     final query = widget.items == null ? chat.find.query ?? '' : '';
     final header =

@@ -176,8 +176,8 @@ void main() {
     expect(chat.items.where((it) => it.id == 'dev').length, 1);
   });
 
-  test('trimmed, a permission or question still waiting stays, with what '
-      'came after it; one answered goes', () {
+  test('trimmed, a permission or question still waiting is kept beside '
+      'the recent part, as the daemon sends it; one answered goes', () {
     Item prompt(String id, ItemKind kind, String status) =>
         Item(id: id, kind: kind, status: status);
     ChatState loaded(Item asks) => ChatState('c', '/f')
@@ -198,17 +198,17 @@ void main() {
     ]) {
       final waiting = loaded(prompt('p', kind, 'pending'));
       expect(waiting.trim(2), isTrue);
-      expect(waiting.items.first.id, 'p');
-      expect(waiting.items.length, 16);
-      expect(waiting.older, 10);
+      expect(waiting.items.map((i) => i.id), ['i18', 'i19']);
+      expect(waiting.older, 24);
+      expect(waiting.asksBefore.map((i) => i.id), ['p']);
       final answered = loaded(prompt('p', kind, 'allowed'));
       expect(answered.trim(2), isTrue);
       expect(answered.items.map((i) => i.id), ['i18', 'i19']);
     }
   });
 
-  test("trimmed back to a waiting prompt or the pane's call, a subagent "
-      'step kept there keeps its call', () {
+  test("trimmed back to the pane's call, a subagent step kept there keeps "
+      'its call; a waiting prompt above the last ones goes beside them', () {
     // y runs a subagent; s, its step, comes after the prompt p (or the
     // call x the pane shows), all above the last 3.
     ChatState loaded(Item mid) => ChatState('c', '/f')
@@ -232,8 +232,8 @@ void main() {
       Item(id: 'p', kind: ItemKind.ITEM_KIND_PERMISSION, status: 'pending'),
     );
     expect(waiting.trim(3), isTrue);
-    expect(waiting.items.first.id, 'y');
-    expect(waiting.runningBefore, isEmpty);
+    expect(waiting.items.map((i) => i.id), ['i3', 'i4', 'i5']);
+    expect(waiting.runningBefore.map((i) => i.id), ['y', 'p']);
     final shown = loaded(Item(id: 'x', kind: ItemKind.ITEM_KIND_TOOL_CALL))
       ..pane.value = 'x';
     expect(shown.trim(3), isTrue);

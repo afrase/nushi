@@ -599,14 +599,26 @@ class ChatState extends ChangeNotifier {
   /// part, GetChatRequest.recent); 0 when it has them all.
   int older = 0;
 
-  /// The items before [items] whose subagent or background command runs
-  /// (GetChatResponse.running), kept up by their events: its background
-  /// tasks show and stop before their page is loaded.
+  /// The items before [items] whose subagent or background command runs,
+  /// or that wait for an answer (GetChatResponse.running), kept up by their
+  /// events: its background tasks show and stop, and its prompts are
+  /// answered, before their page is loaded.
   final runningBefore = <Item>[];
 
   /// [runningBefore] and [items]: what its background tasks are found in.
   List<Item> get withRunning =>
       runningBefore.isEmpty ? items : [...runningBefore, ...items];
+
+  /// The permissions and questions in [runningBefore]: the transcript
+  /// shows them at its foot, where a waiting card belongs, until their page
+  /// is loaded. By kind, not by status, so one answered there shows as
+  /// answered rather than vanishing as it's clicked.
+  List<Item> get asksBefore => [
+    for (final it in runningBefore)
+      if (it.kind == ItemKind.ITEM_KIND_PERMISSION ||
+          it.kind == ItemKind.ITEM_KIND_QUESTION)
+        it,
+  ];
 
   /// The older pages on their way (Daemon.loadOlder), if any.
   Future<void>? get olderLoad => _olderLoad;
@@ -701,10 +713,11 @@ class ChatState extends ChangeNotifier {
   }
 
   /// Lets go of all but its last [n] items, reaching back to the call of a
-  /// subagent whose steps are among them and to a prompt still waiting as
-  /// the daemon's pages do, and to the call its [pane] shows: a long chat
-  /// left at its bottom goes back to its recent part. Not while a find
-  /// looks in what it has. Whether any went.
+  /// subagent whose steps are among them as the daemon's pages do, and to
+  /// the call its [pane] shows: a long chat left at its bottom goes back to
+  /// its recent part. A task that runs, or a prompt still waiting, above
+  /// them is kept beside them in [runningBefore], as the daemon sends it.
+  /// Not while a find looks in what it has. Whether any went.
   bool trim(int n) {
     if (!loaded || outbox.sending.isNotEmpty) return false;
     if (find.looking) return false;
@@ -714,8 +727,10 @@ class ChatState extends ChangeNotifier {
       if (i >= 0 && i < start) start = _withCalls(items, i, items.length);
     }
     if (start == 0) return false;
-    // A task that runs among them stays listed.
-    runningBefore.addAll(items.take(start).where(_runs));
+    // A task that runs among them stays listed, a waiting prompt shown.
+    runningBefore.addAll(
+      items.take(start).where((it) => _runs(it) || _waits(it)),
+    );
     items.removeRange(0, start);
     older += start;
     olderFailed = false;
@@ -892,14 +907,11 @@ bool workflowRuns(Item it) =>
 
 /// Where the last [n] of [items] before [end] start: [n] back, and further
 /// back to the call that started a subagent whose steps are among them, so
-/// the subagent shows whole, and to a permission or question still waiting
-/// (a background subagent's, as the chat goes on), so its card is there to
-/// answer (internal/api's pageStart).
-int recentStart(List<Item> items, int end, int n) {
-  final start = max(0, end - n);
-  final waits = items.take(start).toList().indexWhere(_waits);
-  return _withCalls(items, waits < 0 ? start : waits, end);
-}
+/// the subagent shows whole (internal/features/chats/pages.go's
+/// pageStart). A permission or question still waiting above them isn't
+/// reached back to: it goes beside them ([ChatState.runningBefore]).
+int recentStart(List<Item> items, int end, int n) =>
+    _withCalls(items, max(0, end - n), end);
 
 /// [from], or further back to the call of a subagent whose steps are
 /// among [items] from it to [end]: a step kept always keeps its call.

@@ -157,6 +157,43 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('a waiting prompt from before the recent part, sent beside '
+      'it, shows its card at the foot of the transcript', (tester) async {
+    final d = await FakeDaemon([]).connect(tester);
+    final chat = ChatState('c', '/x')
+      ..load(
+        GetChatResponse(
+          items: [
+            for (var i = 0; i < 3; i++)
+              Item(
+                id: 'm$i',
+                kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+                text: 'Line $i',
+              ),
+          ],
+          older: 400,
+          // A background subagent's, far above the recent part.
+          running: [_ask()],
+        ),
+      );
+    await tester.pumpWidget(
+      _app(
+        ListenableBuilder(
+          listenable: chat,
+          builder: (context, _) =>
+              Transcript(chat: chat, daemon: d, onReply: null),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(PermissionCard), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byType(PermissionCard)).dy,
+      greaterThan(tester.getTopLeft(find.text('Line 2')).dy),
+    );
+    await closeView(tester, d);
+  });
+
   testWidgets('with Reduce Motion the chip turns amber without the hop', (
     tester,
   ) async {
