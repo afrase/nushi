@@ -82,14 +82,16 @@ func (s *Service) run(conn *noiseconn.Conn, device, id string) {
 	s.serve(&served{Conn: conn, s: s, device: device})
 }
 
-// seen moves device i's last-seen time and tells the clients; once the
-// Service is closed it saves nothing ([Service.Close] saved the time, and
-// the file may be the next daemon's by now). Called with s.mu.
+// seen moves device i's last-seen time and tells the clients. It writes
+// nothing: the time is a convenience, kept in memory until the next write
+// of the devices or [Service.Close], so a phone connecting holds s.mu,
+// which chats wait on at each turn's end, across no fsync, and a channel
+// that ends after Close writes nothing (the file may be the next daemon's
+// by then). A crash loses only the times since the last write. Called
+// with s.mu.
 func (s *Service) seen(i int) {
 	s.devices[i].LastSeen = time.Now()
-	if !s.closed {
-		_ = s.st.SaveDevices(s.devices) // the time is a convenience
-	}
+	s.seenMoved = true
 	s.changed()
 }
 

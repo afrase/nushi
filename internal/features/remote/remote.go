@@ -90,8 +90,11 @@ type Service struct {
 	// for one before it answers a dialer and listens again.
 	pending chan struct{}
 
-	mu        sync.Mutex
-	closed    bool               // Close was called: nothing more starts
+	mu     sync.Mutex
+	closed bool // Close was called: nothing more starts
+	// seenMoved says a device's last-seen time moved since the service
+	// started: seen keeps it in memory, and Close writes it.
+	seenMoved bool
 	key       noise.DHKey        // the daemon's Noise key at id (each id given up keeps its own)
 	listen    ed25519.PrivateKey // proves to the relay the daemon may listen at id
 	id        string
@@ -310,10 +313,10 @@ func (s *Service) apply() {
 }
 
 // Close stops remote access for the daemon's end, leaving it on, and
-// returns once everything it started has stopped. Nothing is written
-// after it: a device's channel ends later, when the API closes it, so the
-// devices connected now are saved as seen now ([Service.seen] saves no
-// more once closed).
+// returns once everything it started has stopped. It writes the devices'
+// last-seen times, which [Service.seen] keeps only in memory, the
+// devices connected now as seen now; nothing is written after it, as a
+// device's channel ends later, when the API closes it.
 func (s *Service) Close() {
 	s.mu.Lock()
 	if s.closed {
@@ -327,7 +330,7 @@ func (s *Service) Close() {
 			s.devices[i].LastSeen, connected = now, true
 		}
 	}
-	if connected {
+	if connected || s.seenMoved {
 		_ = s.st.SaveDevices(s.devices) // the time is a convenience
 	}
 	s.closed = true

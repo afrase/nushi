@@ -29,7 +29,7 @@ func TestTheAPIKnowsWhichDevice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { // as startRemote: the channels end, saving last-seen, before the folder goes
+	t.Cleanup(func() { // as startRemote: the channels end before the test does
 		testcheck.Wait(t, "no device to show connected", func() bool {
 			return !slices.ContainsFunc(s.Get().Devices, func(d model.Device) bool { return d.Connected })
 		})
