@@ -46,13 +46,12 @@ func (f *follower) event(e model.Event) {
 }
 
 // follow is what a client shows of chat: items, as of a snapshot's seq,
-// brought up to date with the events since, as the app takes them. It
-// fails on a gap in the events' numbers.
+// brought up to date with the events since, as the app takes them
+// (applyEvent). It fails on a gap in the events' numbers.
 func (f *follower) follow(t *testing.T, chat string, items []model.Item, seq int64) []model.Item {
 	t.Helper()
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	items = slices.Clone(items)
 	last := int64(0)
 	for _, e := range f.events {
 		if e.ChatID != chat || e.Seq == 0 {
@@ -65,21 +64,7 @@ func (f *follower) follow(t *testing.T, chat string, items []model.Item, seq int
 		if e.Seq <= seq {
 			continue
 		}
-		i := slices.IndexFunc(items, func(it model.Item) bool { return e.Item != nil && it.ID == e.Item.ID })
-		switch {
-		case e.Item != nil && e.Append && i >= 0:
-			items[i].Text += e.Item.Text
-		case e.Item != nil && i >= 0:
-			items[i] = *e.Item
-		case e.Item != nil:
-			items = slices.Insert(items, min(e.Index, len(items)), *e.Item)
-		case e.Cut != "":
-			if i := slices.IndexFunc(items, func(it model.Item) bool { return it.ID == e.Cut }); i >= 0 {
-				items = items[:i]
-			}
-		case e.Dropped != "":
-			items = slices.DeleteFunc(items, func(it model.Item) bool { return it.ID == e.Dropped })
-		}
+		items = applyEvent(items, e)
 	}
 	return items
 }

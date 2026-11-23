@@ -120,7 +120,7 @@ func TestAnAsleepChatPagesTheSame(t *testing.T) {
 			if e.Seq != last+1 {
 				t.Fatalf("event %d after %d", e.Seq, last)
 			}
-			items, last = apply(items, e), e.Seq
+			items, last = apply(items, snap.Older, e), e.Seq
 			done = e.GetStatus().GetEnded() != nushiv1.TurnEnd_TURN_END_UNSPECIFIED
 		case <-time.After(5 * time.Second):
 			t.Fatal("timed out following the chat")

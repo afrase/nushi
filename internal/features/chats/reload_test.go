@@ -16,7 +16,8 @@ import (
 )
 
 // watcher is a client of a chat's events: what it shows, applied as the
-// app's ChatState applies them, and each state it passed through.
+// app's ChatState applies them (applyEvent), and each state it passed
+// through.
 type watcher struct {
 	mu     sync.Mutex
 	items  []model.Item
@@ -27,27 +28,13 @@ type watcher struct {
 func (w *watcher) event(e model.Event) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	switch {
-	case e.Cut != "":
-		w.cuts++
-		if i := slices.IndexFunc(w.items, func(it model.Item) bool { return it.ID == e.Cut }); i >= 0 {
-			w.items = w.items[:i]
-		}
-	case e.Item != nil:
-		i := slices.IndexFunc(w.items, func(it model.Item) bool { return it.ID == e.Item.ID })
-		switch {
-		case i >= 0 && e.Append:
-			w.items[i].Text += e.Item.Text
-		case i >= 0:
-			w.items[i] = *e.Item
-		case !e.Append && e.Index >= 0 && e.Index < len(w.items):
-			w.items = slices.Insert(w.items, e.Index, *e.Item)
-		default:
-			w.items = append(w.items, *e.Item)
-		}
-	default:
+	if e.Item == nil && e.Cut == "" && e.Dropped == "" {
 		return
 	}
+	if e.Cut != "" {
+		w.cuts++
+	}
+	w.items = applyEvent(w.items, e)
 	w.states = append(w.states, describe(w.items))
 }
 

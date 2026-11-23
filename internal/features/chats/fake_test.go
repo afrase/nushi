@@ -670,3 +670,37 @@ func startChat(t *testing.T, svc *Service, folder string) *chat {
 func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool) (string, error) {
 	return s.StartOn(ctx, agent, folder, StartOptions{Worktree: worktree})
 }
+
+// applyEvent is items with e applied as the app applies a chat's event:
+// app/lib/chat.dart's ChatState._apply and _applyItem (about lines
+// 851-879, and the item rule after them), for a client that has the whole
+// transcript (no older page). An item it has is replaced, or its text
+// continued on an append; a new item goes at its index when that's inside
+// what it has and it isn't an append (an append carries no index), else
+// at the end. A cut drops its item and everything after it, a cut naming
+// an item it lacks nothing; dropped drops its one item. Other events leave
+// items. It never changes the items it's given.
+func applyEvent(items []model.Item, e model.Event) []model.Item {
+	items = slices.Clone(items)
+	switch {
+	case e.Item != nil:
+		i := slices.IndexFunc(items, func(it model.Item) bool { return it.ID == e.Item.ID })
+		switch {
+		case i >= 0 && e.Append:
+			items[i].Text += e.Item.Text
+		case i >= 0:
+			items[i] = *e.Item
+		case !e.Append && e.Index >= 0 && e.Index < len(items):
+			items = slices.Insert(items, e.Index, *e.Item)
+		default:
+			items = append(items, *e.Item)
+		}
+	case e.Cut != "":
+		if i := slices.IndexFunc(items, func(it model.Item) bool { return it.ID == e.Cut }); i >= 0 {
+			items = items[:i]
+		}
+	case e.Dropped != "":
+		items = slices.DeleteFunc(items, func(it model.Item) bool { return it.ID == e.Dropped })
+	}
+	return items
+}

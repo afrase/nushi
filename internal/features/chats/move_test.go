@@ -99,13 +99,7 @@ func TestMoveNamesTheItemsFilesFromTheNewFolder(t *testing.T) {
 	mu.Lock()
 	var sent []model.Item
 	for _, e := range events {
-		if e.Item != nil {
-			if i := slices.IndexFunc(sent, func(it model.Item) bool { return it.ID == e.Item.ID }); i >= 0 {
-				sent[i] = *e.Item
-			} else {
-				sent = append(sent, *e.Item)
-			}
-		}
+		sent = applyEvent(sent, e)
 	}
 	mu.Unlock()
 	check("the events", sent)

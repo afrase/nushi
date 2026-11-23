@@ -434,18 +434,37 @@ func turnEnded(id string) func(*nushiv1.EventsResponse) bool {
 	}
 }
 
-// apply builds a transcript as the app does: a snapshot, then the chat's
-// later events.
-func apply(items []*nushiv1.Item, e *nushiv1.EventsResponse) []*nushiv1.Item {
-	if cut := e.GetCut(); cut != "" {
-		return items[:slices.IndexFunc(items, func(it *nushiv1.Item) bool { return it.Id == cut })]
-	}
-	ie := e.GetItem()
-	if ie == nil {
+// apply builds a transcript as the app does: a snapshot whose first older
+// items were left out (GetChatResponse.older), then the chat's later
+// events, each taken as app/lib/chat.dart's ChatState._apply and
+// _applyItem take it. A new item goes at its index, less older, when
+// that's inside what shows and it isn't an append; else at the end, or
+// nowhere when it's before the recent part (the app keeps such an item
+// only for a task running there, which no test here follows). A cut that
+// names no item it has leaves it, as does the app (refetching a snapshot
+// only when it has older items).
+func apply(items []*nushiv1.Item, older int32, e *nushiv1.EventsResponse) []*nushiv1.Item {
+	var ie *nushiv1.ItemEvent
+	switch k := e.GetKind().(type) {
+	case *nushiv1.EventsResponse_Cut:
+		if i := slices.IndexFunc(items, func(it *nushiv1.Item) bool { return it.Id == k.Cut }); i >= 0 {
+			return items[:i]
+		}
+		return items
+	case *nushiv1.EventsResponse_Dropped:
+		return slices.DeleteFunc(items, func(it *nushiv1.Item) bool { return it.Id == k.Dropped })
+	case *nushiv1.EventsResponse_Item:
+		ie = k.Item
+	default:
 		return items
 	}
 	i := slices.IndexFunc(items, func(it *nushiv1.Item) bool { return it.Id == ie.Item.Id })
+	at := int(ie.Index - older)
 	switch {
+	case i < 0 && older > 0 && (ie.Append || at < 0):
+		return items
+	case i < 0 && !ie.Append && at >= 0 && at < len(items):
+		return slices.Insert(items, at, ie.Item)
 	case i < 0:
 		return append(items, ie.Item)
 	case ie.Append:
@@ -515,7 +534,7 @@ func (a *app) follow(chatID string, snap *nushiv1.GetChatResponse) []*nushiv1.It
 	for done := false; !done; {
 		e := a.waitFor("the chat to be idle", func(e *nushiv1.EventsResponse) bool { return e.ChatId == chatID })
 		if e.Seq > snap.Seq { // one from before the snapshot, still in the stream, says nothing of now
-			items = apply(items, e)
+			items = apply(items, snap.Older, e)
 			done = idle(e)
 		}
 	}
