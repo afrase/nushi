@@ -75,7 +75,7 @@ func steps(folder string) (lanes [][]step, after []step) {
 		flags = "--concurrency 3"
 	}
 	flags += " --file-reporter json:../" + logs + "/test-app.json"
-	// test-web skips itself where there's no Chrome.
+	// test-web skips itself where there's no Chrome, and says so.
 	app := []step{{
 		name:    "test-app",
 		cmd:     []string{"make", "test-app", "FLUTTER_TEST_FLAGS=" + flags},
@@ -174,6 +174,10 @@ func (s step) run(folder string) outcome {
 	start := time.Now()
 	o.code, o.err = s.exec(o.log)
 	if o.code == 0 {
+		if why, ok := skipped(s.name, o.log); ok {
+			o.ok = "skipped (" + why + ")"
+			return o
+		}
 		note := ""
 		if r := readResults(s.results); r.passed > 0 {
 			note = fmt.Sprintf(", %d tests", r.passed)
@@ -181,6 +185,19 @@ func (s step) run(folder string) outcome {
 		o.ok = fmt.Sprintf("ok%s (%s)", note, time.Since(start).Round(time.Second))
 	}
 	return o
+}
+
+// skipped is why a step that passed ran nothing, when its log's last line
+// says so as "<name>: skipped: <why>" (make test-web without a Chrome), so
+// the report doesn't call it ok.
+func skipped(name, file string) (string, bool) {
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return "", false
+	}
+	text := string(bytes.TrimSpace(data))
+	last := text[strings.LastIndex(text, "\n")+1:]
+	return strings.CutPrefix(last, name+": skipped: ")
 }
 
 // report is the step's line as it ends.

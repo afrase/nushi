@@ -155,3 +155,19 @@ func TestKeyLines(t *testing.T) {
 		t.Errorf("clip %q", got)
 	}
 }
+
+// A step that ran nothing says so in its last line (make test-web without
+// a Chrome), and its line says skipped, not ok.
+func TestSkippedStepSaysSo(t *testing.T) {
+	s := step{name: "web", cmd: []string{"sh", "-c", "echo setting up; echo 'web: skipped: no Chrome'"}}
+	var out strings.Builder
+	if code := run(log.New(&out, "", 0), t.TempDir(), [][]step{{s}}, nil); code != 0 {
+		t.Errorf("exit %d", code)
+	}
+	if !strings.Contains(out.String(), "web: skipped (no Chrome)\n") || strings.Contains(out.String(), "web: ok") {
+		t.Errorf("a skip reads as a pass:\n%s", out.String())
+	}
+	if !strings.Contains(out.String(), "check: ok (") {
+		t.Errorf("a skip isn't a failure:\n%s", out.String())
+	}
+}

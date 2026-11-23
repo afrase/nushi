@@ -352,7 +352,7 @@ test-window:
 # passes, but on CI, which must run it.
 test-web:
 ifeq ($(CHROME),)
-	@if [ -n "$$CI" ]; then echo "test-web: no Chrome on CI"; exit 1; fi; echo "test-web: no Chrome (CHROME_EXECUTABLE, or google-chrome on PATH), skipped"
+	@if [ -n "$$CI" ]; then echo "test-web: no Chrome on CI"; exit 1; fi; echo "test-web: skipped: no Chrome (CHROME_EXECUTABLE, or google-chrome on PATH)"
 else
 	cd app && flutter test --platform chrome test/web
 endif
