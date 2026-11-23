@@ -77,3 +77,25 @@ func TestCacheDropsOldest(t *testing.T) {
 		}
 	}
 }
+
+// A cache file is replaced through a file beside it, never written
+// through a link at its path, and leaves no other file behind.
+func TestCacheReplacesALink(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	elsewhere := filepath.Join(t.TempDir(), "elsewhere")
+	testcheck.Write(t, elsewhere, "mine")
+	folder := filepath.Join(dir, "cache", "github")
+	testcheck.NoErr(t, os.MkdirAll(folder, 0o700))
+	testcheck.NoErr(t, os.Symlink(elsewhere, filepath.Join(folder, "github.com.json")))
+	testcheck.NoErr(t, s.Cache("github", "github.com", "inbox", 1))
+	if b, _ := os.ReadFile(elsewhere); string(b) != "mine" {
+		t.Errorf("the link's file was written: %q", b)
+	}
+	if fi, err := os.Lstat(filepath.Join(folder, "github.com.json")); err != nil || !fi.Mode().IsRegular() || fi.Mode().Perm() != 0o600 {
+		t.Errorf("the cache file: %v, %v", fi, err)
+	}
+	if entries, _ := os.ReadDir(folder); len(entries) != 1 {
+		t.Errorf("left beside it: %v", entries)
+	}
+}

@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"slices"
 	"time"
-
-	"github.com/afrase/nushi/internal/atomicfile"
 )
 
 // cacheKeys is how many answers a cache file keeps; the oldest go first.
@@ -70,7 +68,7 @@ func (s *Store) Cached(area, name, key string, v any) (time.Time, error) {
 }
 
 // Cache keeps v, as JSON, under key in area's file for name, as it is
-// now, the file replaced at once (atomicfile).
+// now, the file replaced at once (replaceCache).
 func (s *Store) Cache(area, name, key string, v any) error {
 	path, err := s.cachePath(area, name)
 	if err != nil {
@@ -99,7 +97,31 @@ func (s *Store) Cache(area, name, key string, v any) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	return atomicfile.Replace(path, b, 0o600)
+	return replaceCache(path, b)
+}
+
+// replaceCache puts b in place of the cache file at path through a new
+// file beside it, renamed over it (a link at path is replaced, not
+// followed), but with no fsync: a cache can be rebuilt from the next
+// answer, and a file a crash left empty or torn reads as an empty cache
+// (cacheFile). The fsyncs (F_FULLFSYNC on macOS) were most of the cost of
+// a poll's write, which GitHub makes under its service's lock.
+func replaceCache(path string, b []byte) error {
+	f, err := os.CreateTemp(filepath.Dir(path), ".nushi-*") // 0600
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(b)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Rename(f.Name(), path)
+	}
+	if err != nil {
+		_ = os.Remove(f.Name()) // the write's error is the one to return
+	}
+	return err
 }
 
 // ForgetCache removes area's file for name.
