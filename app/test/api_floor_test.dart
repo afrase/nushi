@@ -10,20 +10,11 @@ import 'package:nushi/daemon.dart';
 /// floor landed. This list must be empty once that sweep is done; from
 /// then on, raising the floor makes this test name each gate it passes.
 const _toGo = {
-  'doneApi',
   'restartWhenIdleApi',
   'updatesApi',
-  'pinApi',
-  'forkApi',
-  'chatColorApi',
-  'relatedApi',
-  'messagePinApi',
-  'pinTitlesApi',
   'serversApi',
   'searchSessionsApi',
   'installApi',
-  'archiveSideApi',
-  'workflowApi',
 };
 
 void main() {

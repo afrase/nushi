@@ -18,9 +18,6 @@ import 'package:nushi/widgets.dart';
 import 'package:nushi/workflow_card.dart';
 import 'package:nushi/workflows.dart';
 
-/// The daemon's API that has GetWorkflow and GetWorkflowAgent (ADR 0127).
-const workflowApi = 120;
-
 /// A workflow beside the chat (ADR 0127): its head (what it does, its
 /// state and totals), then its phases, each a fold of its agents with
 /// their state and time. A click on an agent shows its steps in the pane,
@@ -65,8 +62,6 @@ class _WorkflowPaneState extends State<WorkflowPane> {
   Item? get _call =>
       widget.chat.withRunning.where((it) => it.id == widget.id).firstOrNull;
 
-  bool get _api => widget.daemon.daemonApi >= workflowApi;
-
   @override
   void initState() {
     super.initState();
@@ -93,7 +88,6 @@ class _WorkflowPaneState extends State<WorkflowPane> {
   }
 
   Future<void> _fetch() async {
-    if (!_api) return;
     try {
       final got = await widget.daemon.client.getWorkflow(
         GetWorkflowRequest(chatId: widget.chat.id, callId: widget.id),
@@ -225,9 +219,7 @@ class _WorkflowPaneState extends State<WorkflowPane> {
             child: Text(words, style: small),
           ),
         const SizedBox(height: 12),
-        if (!_api)
-          Text('Its agents show with a newer Nushi.', style: small)
-        else if (error != null && got == null)
+        if (error != null && got == null)
           Text(
             error is ConnectException && error.code == Code.notFound
                 ? '${widget.chat.agentName} no longer has this run’s files.'

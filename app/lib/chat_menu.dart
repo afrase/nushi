@@ -41,7 +41,7 @@ List<MenuEntry> chatMenu(
   ]..sort((a, b) => _group(a.act).compareTo(_group(b.act)));
   // The last of the conversation's and the chat's own groups.
   final chatEnd = shown.lastIndexWhere((a) => _group(a.act) <= 1);
-  final color = daemon.daemonApi >= chatColorApi ? chatEnd : -1;
+  final color = chatEnd;
   return [
     for (final (i, a) in shown.indexed) ...[
       if (i > 0 && _group(a.act) != _group(shown[i - 1].act)) MenuEntry.divider,

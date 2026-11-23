@@ -138,18 +138,14 @@ Future<void> toggleSide(
 /// Shows [chat]'s side chat if hidden; what ended while it was is seen.
 void showSide(ChatState chat) {
   chat.sideHidden.value = false;
-  chat.side.value?.done = null;
+  chat.side.value?.done = false;
 }
-
-/// The API that archives a side chat its × ends (ADR 0115).
-const archiveSideApi = 117;
 
 /// Ends [chat]'s side chat: its ×, the one way the user ends one. It goes
 /// at once; the daemon archives one with messages ([DaemonSides.archiveSide])
-/// and a toast says so, with Undo ([showArchivedSide]). A daemon older
-/// than [archiveSideApi], or one that can't archive it (its agent can't
-/// reopen sessions), deletes it instead ([DaemonSides.closeSide]), so one
-/// with anything in it asks first.
+/// and a toast says so, with Undo ([showArchivedSide]). One the daemon
+/// can't archive (its agent can't reopen sessions) is deleted instead
+/// ([DaemonSides.closeSide]), asking first.
 Future<void> endSide(
   BuildContext context,
   Daemon daemon,
@@ -157,31 +153,26 @@ Future<void> endSide(
 ) async {
   final side = chat.side.value;
   if (side == null) return;
-  String? why; // why it couldn't be archived
-  if (daemon.daemonApi >= archiveSideApi) {
-    final toast = Toasts.maybeOf(context);
-    try {
-      final archived = await daemon.archiveSide(chat);
-      if (archived.isNotEmpty && toast != null) {
-        showArchivedSide(toast, daemon, chat, archived, was: side);
-      }
-      return;
-    } on Object catch (e) {
-      why = errorText(e);
+  final String why; // why it couldn't be archived
+  final toast = Toasts.maybeOf(context);
+  try {
+    final archived = await daemon.archiveSide(chat);
+    if (archived.isNotEmpty && toast != null) {
+      showArchivedSide(toast, daemon, chat, archived, was: side);
     }
-    if (!context.mounted || chat.side.value != side) return;
+    return;
+  } on Object catch (e) {
+    why = errorText(e);
   }
-  if ((side.items.isNotEmpty || why != null) &&
-      !await confirm(
-        context,
-        'End the side chat?',
-        [
-          if (why != null) "It can't be archived: $why.",
-          'Its conversation is deleted; nothing from it is added to the chat.',
-        ].join(' '),
-        'End',
-        destructive: true,
-      )) {
+  if (!context.mounted || chat.side.value != side) return;
+  if (!await confirm(
+    context,
+    'End the side chat?',
+    "It can't be archived: $why. Its conversation is deleted; nothing "
+        'from it is added to the chat.',
+    'End',
+    destructive: true,
+  )) {
     return;
   }
   // It may have ended meanwhile (the daemon's doing) or been replaced.
@@ -310,14 +301,14 @@ class _Row extends StatelessWidget {
                 ),
               ),
             ),
-            if (daemon.daemonApi >= forkApi && words)
+            if (words)
               Tap(
                 tooltip: keep,
                 onTap: can ? onKeep : null,
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 child: Text('Keep as chat', style: keepStyle),
               )
-            else if (daemon.daemonApi >= forkApi && room >= 2 * _button)
+            else if (room >= 2 * _button)
               IconTap(
                 Icons.open_in_new,
                 tooltip: keep,

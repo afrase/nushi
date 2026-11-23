@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/errors.dart' show updateOnMac;
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/message_pins.dart';
@@ -306,8 +307,6 @@ void main() {
     expect(canPinMessage(d, chat, step, live: false), isFalse); // a subagent's
     // The one still being written: its title would be its first words.
     expect(canPinMessage(d, chat, _items[1], live: true), isFalse);
-    d.daemonApi = messagePinApi - 1;
-    expect(canPinMessage(d, chat, _items[1], live: false), isFalse);
     d.dispose();
   });
 
@@ -764,8 +763,11 @@ void main() {
     });
   }
 
-  testWidgets('the phone on a daemon without pin titles takes the pages its '
-      'pins are on before the menu opens', (tester) async {
+  // The phone is never blocked (ADR 0004): a daemon below the floor may
+  // send no pin titles; the menu opens at once all the same, a pin on a
+  // page not loaded as "Pinned message", and a pick takes its page.
+  testWidgets('the phone on a daemon below the floor, without pin titles, '
+      'opens the menu at once', (tester) async {
     viewport(tester, const Size(390, 844), ratio: 2);
     final c = _chat(['a1', 'a3', 'a2'])..messagePins.clear();
     final pages = <String>[];
@@ -773,7 +775,7 @@ void main() {
       ..answer = (input) {
         if (input is GetChatItemsRequest) pages.add(input.before);
         return switch (input) {
-          PingRequest() => PingResponse(apiVersion: pinTitlesApi - 1),
+          PingRequest() => PingResponse(apiVersion: apiFloor - 1),
           GetChatRequest() => GetChatResponse(
             chat: c,
             items: _items.sublist(3),
@@ -790,9 +792,9 @@ void main() {
     await frames(tester, 10, const Duration(milliseconds: 50));
     await tester.tap(_railDashes.first);
     await frames(tester, 10, const Duration(milliseconds: 50));
-    // Listed by its first line, from the page it's on.
-    expect(pages, ['u2']);
-    expect(_row('The plan'), findsOneWidget);
+    expect(pages, isEmpty);
+    expect(_row('Pinned message'), findsWidgets);
+    expect(find.text(updateOnMac), findsOne); // the bar
     await endPhone(tester, phone);
   });
 }

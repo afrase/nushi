@@ -162,15 +162,16 @@ void main() {
     d.dispose();
   });
 
-  testWidgets('an older daemon: no mark, and no view told', (tester) async {
-    final fake = FakeDaemon([chat('a', 'claude', 'A')..done = true])
+  // Below the floor only the Restart screen shows (ADR 0004): there is
+  // no view to tell, and a ping's tick asks nothing.
+  testWidgets('a daemon below the floor is told no view', (tester) async {
+    final fake = FakeDaemon([chat('a', 'claude', 'A')])
       ..answer = (input) =>
-          input is PingRequest ? PingResponse(apiVersion: 75) : null;
+          input is PingRequest ? PingResponse(apiVersion: apiFloor - 1) : null;
     final d = await fake.connect(tester);
-    await tester.pumpWidget(_app(Sidebar(daemon: d)));
+    d.select('a');
     await tester.pump();
-    expect(d.chats['a']!.done, isNull);
-    expect(_dot(tester, _row('A')), _t.idle);
+    d.macView.tick();
     expect(fake.calls.whereType<SetDeviceViewRequest>(), isEmpty);
     d.dispose();
   });

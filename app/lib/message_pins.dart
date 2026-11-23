@@ -20,12 +20,10 @@ bool _pinnable(Item item) =>
     item.parent.isEmpty && item.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE;
 
 /// Whether [item] can be pinned or unpinned in [chat]: one of the agent's
-/// messages the daemon shows, on a daemon that keeps pins, and not the one
-/// still being written ([live]), whose title would be made from its first
-/// words. Not in a side chat, which isn't one of the daemon's chats and
-/// keeps none.
+/// messages the daemon shows, and not the one still being written
+/// ([live]), whose title would be made from its first words. Not in a
+/// side chat, which isn't one of the daemon's chats and keeps none.
 bool canPinMessage(Daemon d, ChatState chat, Item item, {required bool live}) =>
-    d.daemonApi >= messagePinApi &&
     identical(d.chats[chat.id], chat) &&
     _pinnable(item) &&
     !live &&
@@ -33,13 +31,6 @@ bool canPinMessage(Daemon d, ChatState chat, Item item, {required bool live}) =>
 
 /// The session's start, the pins rail's first entry.
 const sessionStart = RailEntry('', 'Session start');
-
-/// The first daemon that sends each pin's title with its chat
-/// (`Chat.message_pins`). Against an older one the phone takes the pages
-/// its pins are on before the rail's menu opens, to list them by their
-/// first lines; against this one the menu opens at once, and a pick takes
-/// the page it goes to.
-const pinTitlesApi = 104;
 
 /// [chat]'s pins as the rail lists them, in the transcript's order: those
 /// on pages not loaded yet first (which are older), then those
@@ -85,14 +76,8 @@ Future<void> toggleMessagePin(Daemon d, ChatState chat, Item item) async {
   }
 }
 
-/// Takes the pages of [chat]'s items its pins are on, or with [all] every
-/// page: the phone's rail has them laid out before its menu opens.
-Future<void> loadPinned(Daemon d, ChatState chat, {bool all = false}) =>
-    d.loadOlder(chat, through: chat.pinnedMessages, all: all);
-
-/// A message's first line, as a pin without a title (an older daemon's)
-/// is listed: without the Markdown that opens a heading, a quote or a
-/// list's item.
+/// A message's first line, as a pin without a title is listed: without
+/// the Markdown that opens a heading, a quote or a list's item.
 String firstLine(Item item) {
   final line = item.text
       .split('\n')

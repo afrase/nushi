@@ -104,11 +104,11 @@ ChatState workflowChat({String state = 'running'}) => ChatState('c', '/x')
   ..loaded = true
   ..items.add(workflowCall(state));
 
-/// A fake that answers the workflow's calls; [old] is an API 119 daemon.
-FakeDaemon workflowFake({bool old = false, bool gone = false}) =>
+/// A fake that answers the workflow's calls; [gone], refusing the run as
+/// one whose files are gone.
+FakeDaemon workflowFake({bool gone = false}) =>
     FakeDaemon([chat('c', 'claude', 'Review')])
       ..answer = (input) => switch (input) {
-        PingRequest() when old => PingResponse(apiVersion: 119),
         GetWorkflowRequest() when gone => throw ConnectException(
           Code.notFound,
           'no such workflow',
@@ -340,16 +340,10 @@ void main() {
     await closeView(tester, d);
   });
 
-  testWidgets('a run whose files are gone says so; an older daemon is '
-      'asked nothing', (tester) async {
+  testWidgets('a run whose files are gone says so', (tester) async {
     final gone = workflowFake(gone: true);
-    var d = await _pane(tester, gone, workflowChat());
+    final d = await _pane(tester, gone, workflowChat());
     expect(find.text('Claude no longer has this run’s files.'), findsOne);
-    await closeView(tester, d);
-    final old = workflowFake(old: true);
-    d = await _pane(tester, old, workflowChat());
-    expect(find.text('Its agents show with a newer Nushi.'), findsOne);
-    expect(_asked<GetWorkflowRequest>(old), 0);
     await closeView(tester, d);
   });
 

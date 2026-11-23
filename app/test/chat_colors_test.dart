@@ -6,11 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_colors.dart';
-import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
-import 'package:nushi/menu.dart';
 import 'package:nushi/phone/chats_screen.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/sidebar.dart';
@@ -347,32 +345,6 @@ void main() {
       expect(d.chats['plain']!.color, isNull);
       await closeView(tester, d);
     }, variant: onMac);
-
-    testWidgets('an older daemon: no Color', (tester) async {
-      final d = await FakeDaemon(_chats()).connect(tester);
-      late BuildContext context;
-      await tester.pumpWidget(
-        Builder(
-          builder: (c) {
-            context = c;
-            return const SizedBox();
-          },
-        ),
-      );
-      List<MenuEntry> rows() => [
-        for (final e in chatMenu(
-          context,
-          d.chats['plain']!,
-          d,
-          onRename: () {},
-        ))
-          if (e.controls != null) e,
-      ];
-      expect(rows(), hasLength(1));
-      d.daemonApi = chatColorApi - 1;
-      expect(rows(), isEmpty);
-      await closeView(tester, d);
-    });
   });
 
   for (final (width, b) in [

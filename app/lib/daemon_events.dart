@@ -234,7 +234,7 @@ extension DaemonEvents on Daemon {
       ..archivedAt = c.archivedUnixMs == 0
           ? null
           : DateTime.fromMillisecondsSinceEpoch(c.archivedUnixMs.toInt())
-      ..done = daemonApi >= doneApi ? c.done : null
+      ..done = c.done
       ..pin = c.pin
       ..color = ChatColor.named(c.color)
       ..pinnedMessages = c.pinnedMessages

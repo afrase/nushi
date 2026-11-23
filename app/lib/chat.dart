@@ -223,10 +223,10 @@ class ChatState extends ChangeNotifier {
   String get shownTitle => title.isEmpty ? 'New chat' : title;
 
   /// A turn ended while no client showed the chat, until one does (the
-  /// daemon keeps it); null from a daemon older than API 76.
-  bool? get done => _done;
-  bool? _done;
-  set done(bool? v) {
+  /// daemon keeps it).
+  bool get done => _done;
+  bool _done = false;
+  set done(bool v) {
     if (v == _done) return;
     _done = v;
     notifyListeners();
@@ -344,7 +344,7 @@ class ChatState extends ChangeNotifier {
       ? .expired
       : reopenFailed
       ? .failed
-      : done ?? false
+      : done
       ? .done
       : asleep
       ? .asleep

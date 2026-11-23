@@ -3,6 +3,7 @@
 // and a call the old daemon lacks failing with those words, at iPhone
 // sizes upright and on its side.
 import 'package:connectrpc/connect.dart' as connect;
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -122,6 +123,52 @@ void main() {
       );
       await tester.pump();
       expect(find.text(says), findsWidgets);
+      await tester.pump(const Duration(seconds: 10)); // the toast goes
+      await endPhone(tester, p);
+    }, variant: onPhone);
+  }
+
+  // The phone's own pin and fork, as a daemon from before them (PinChats,
+  // API 90; ForkAsChat, API 94) answers them: refused as Unimplemented,
+  // each says to update it, and the phone works on.
+  for (final (action, lacks) in [('Pin', 'PinChats'), ('Fork', 'ForkAsChat')]) {
+    testWidgets('$action on a daemon below the floor that lacks it says to '
+        'update the daemon', (tester) async {
+      final asked = <String>[];
+      final fake = _daemon(apiFloor - 1)
+        ..on((input) {
+          final name = input.runtimeType.toString();
+          if (input is! PinChatsRequest && input is! ForkAsChatRequest) {
+            return null;
+          }
+          asked.add(name);
+          throw connect.ConnectException(
+            connect.Code.unimplemented,
+            'nushi.v1.NushiService/$lacks is not implemented',
+          );
+        });
+      final p = await _app(tester, fake);
+      await tester.tap(find.text('Fix the flaky relay test'));
+      await tester.pumpAndSettle();
+      // The agent can fork it, as its status says.
+      fake.emit(
+        EventsResponse(
+          chatId: 'a',
+          seq: Int64(9),
+          status: ChatStatus(canFork: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Chat'));
+      await tester.pumpAndSettle();
+      // The bar says it already; the refusal says it again.
+      final bars = tester.widgetList(find.textContaining(_words)).length;
+      await tester.tap(find.text(action));
+      await tester.pumpAndSettle();
+      expect(asked, ['${lacks}Request']);
+      expect(find.textContaining(_words), findsNWidgets(bars + 1));
+      expect(find.textContaining('not implemented'), findsNothing);
+      expect(tester.takeException(), isNull);
       await tester.pump(const Duration(seconds: 10)); // the toast goes
       await endPhone(tester, p);
     }, variant: onPhone);

@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,13 +15,14 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 /// The app at [size] on chat c, with a side chat open: [talked], one with
-/// a question and its answer in it; else an empty one. With [old], on a
-/// daemon older than [archiveSideApi], whose × deletes a side chat (the
-/// archive and its toast: side_archive_test.dart).
+/// a question and its answer in it; else an empty one. With [refused],
+/// the daemon can't archive it (its agent can't reopen sessions), so its
+/// × asks, then deletes it (the archive and its toast:
+/// side_archive_test.dart).
 Future<(Daemon, FakeDaemon, ChatState)> _app(
   WidgetTester tester, {
   bool talked = true,
-  bool old = false,
+  bool refused = false,
   Size size = const Size(1400, 800),
   String folder = '/Users/me/nushi',
 }) async {
@@ -56,7 +58,17 @@ Future<(Daemon, FakeDaemon, ChatState)> _app(
   d.chats['c']!.side.value = side;
   await tester.pumpAndSettle();
   // Only what the × does depends on it.
-  if (old) d.daemonApi = archiveSideApi - 1;
+  if (refused) {
+    fake.on(
+      (input) => input is ArchiveSideChatRequest
+          ? throw ConnectException(
+              Code.failedPrecondition,
+              "the agent can't reopen sessions, so the side chat can't be "
+              'kept',
+            )
+          : null,
+    );
+  }
   return (d, fake, side);
 }
 
@@ -100,23 +112,13 @@ void _ended(Daemon d, FakeDaemon fake) {
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('an older daemon: an empty side chat ends at once by its ×', (
-    tester,
-  ) async {
-    final (d, fake, _) = await _app(tester, talked: false, old: true);
-    await _close(tester);
-    expect(_dialog, findsNothing);
-    _ended(d, fake);
-    await closeView(tester, d);
-  }, variant: onMac);
-
-  testWidgets('an older daemon: one with messages asks first; Cancel, Esc '
-      'and ⏎ keep it', (tester) async {
-    final (d, fake, side) = await _app(tester, old: true);
+  testWidgets("one the daemon can't archive asks first; Cancel, Esc and ⏎ "
+      'keep it', (tester) async {
+    final (d, fake, side) = await _app(tester, refused: true);
     await _close(tester);
     expect(_dialog, findsOne);
     expect(
-      find.text(
+      find.textContaining(
         'Its conversation is deleted; nothing from it is added to the chat.',
       ),
       findsOne,
@@ -143,8 +145,8 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 
-  testWidgets('an older daemon: End ends it', (tester) async {
-    final (d, fake, side) = await _app(tester, old: true);
+  testWidgets("one the daemon can't archive: End ends it", (tester) async {
+    final (d, fake, side) = await _app(tester, refused: true);
     await _close(tester);
     expect(_dialog, findsOne);
     _open(d, fake, side);
@@ -207,7 +209,7 @@ void main() {
     expect(dot(), findsOne);
 
     await _tapChip(tester); // seen
-    expect(side.done, isNull);
+    expect(side.done, isFalse);
     await _hide(tester);
     expect(dot(), findsNothing);
 
@@ -217,7 +219,7 @@ void main() {
       ..emit(_status(3, busy: true))
       ..emit(_status(4));
     await tester.pump(const Duration(seconds: 3));
-    expect(side.done, isNull);
+    expect(side.done, isFalse);
 
     await _hide(tester);
     fake.emit(EventsResponse(chatId: 's', removed: true));
@@ -395,10 +397,10 @@ void main() {
       ('wide', const Size(1700, 900)),
       ('narrow', const Size(720, 800)),
     ]) {
-      testWidgets('the dialog of an older daemon, $what ($name)', (
+      testWidgets("the dialog of one the daemon can't archive, $what ($name)", (
         tester,
       ) async {
-        final (d, _, _) = await _app(tester, size: size, old: true);
+        final (d, _, _) = await _app(tester, size: size, refused: true);
         tester.platformDispatcher.platformBrightnessTestValue = brightness;
         addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
         await _close(tester);

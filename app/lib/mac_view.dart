@@ -3,10 +3,6 @@ import 'dart:async';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
-/// The daemon API that keeps each chat's unseen turn's end (Chat.done)
-/// and takes the Mac's view (SetDeviceView on the socket).
-const doneApi = 76;
-
 /// Tells the daemon which chat the Mac's window shows, as the phone does
 /// (the daemon's ViewLease): the selected chat while the window is focused
 /// or visible and nothing (the trust card, Settings, Jira, GitHub) is in

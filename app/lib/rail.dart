@@ -46,8 +46,7 @@ class RailEntry {
 
 /// The rail: [entries], in the text's order, as dashes, [current]'s long
 /// and bright. Its menu lists them; [onPick] goes to the one picked (its
-/// id). [before] runs as it opens, the menu showing once it's done
-/// (`pinTitlesApi`). [fit] is where the dashes stand from its left edge,
+/// id). [fit] is where the dashes stand from its left edge,
 /// which is the text's, and how long they are. An [outline]'s (a Markdown
 /// preview's headings) draws the current dash in the accent, each other one
 /// by its entry's depth, and its menu lines the titles up, indented by it.
@@ -59,7 +58,6 @@ class Rail extends StatefulWidget {
     required this.fit,
     required this.label,
     super.key,
-    this.before,
     this.outline = false,
   });
 
@@ -69,7 +67,6 @@ class Rail extends StatefulWidget {
   final ValueListenable<int> current;
   final void Function(String id) onPick;
   final RailFit fit;
-  final Future<void> Function()? before;
   final bool outline;
 
   /// How long the menu stays once the pointer has left it and the rail.
@@ -116,8 +113,6 @@ class _RailState extends State<Rail> {
 
   Future<void> _open({bool keys = false}) async {
     if (_menu.isShowing) return;
-    await widget.before?.call();
-    if (!mounted || _menu.isShowing) return;
     _lit.value = keys ? widget.current.value : null;
     _pointed = _overRail || _overMenu;
     setState(_menu.show);

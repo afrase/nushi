@@ -10,7 +10,7 @@ extension DaemonOpen on Daemon {
       ..loading = true
       ..stale = () => _reload(chat);
     final load = ++chat.loads;
-    if (!remote && daemonApi >= relatedApi) {
+    if (!remote) {
       chat.related.client = client;
       unawaited(chat.related.read());
     }

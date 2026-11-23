@@ -11,14 +11,9 @@ import 'package:nushi/widgets.dart';
 // messages (Fork from here, on the message), going on separately; and a
 // side chat kept as such a chat (Keep as chat, in its header).
 
-/// The API from which the daemon forks a chat into a new one and keeps
-/// side chats (ForkAsChat, KeepSideChat, Item.forkable).
-const forkApi = 94;
-
 /// Whether [chat] can be forked into a new chat now: its agent can fork it.
 bool canForkChat(Daemon d, ChatState? chat) =>
     chat != null &&
-    d.daemonApi >= forkApi &&
     chat.canFork &&
     !chat.archived &&
     !chat.sessionGone &&
@@ -70,8 +65,7 @@ Future<ChatState?> forkChat(
 }
 
 /// Whether [side], a side chat, can be kept as a chat now: between turns.
-bool canKeepSide(Daemon d, ChatState side) =>
-    d.daemonApi >= forkApi && !side.busy && !side.waiting;
+bool canKeepSide(Daemon d, ChatState side) => !side.busy && !side.waiting;
 
 /// Keep as chat: [chat]'s side chat becomes a chat of its own in the
 /// sidebar, with what was written in its box. The side pane closes and

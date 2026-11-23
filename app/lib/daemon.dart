@@ -78,21 +78,6 @@ const oneFileDiffApi = 121;
 /// (GetDiffRequest.names), what the Files tree's dots come from.
 const namesDiffApi = 123;
 
-/// The API from which the daemon keeps a chat's color (Chat.color,
-/// SetChatColor).
-const chatColorApi = 100;
-
-/// The API from which a chat's related worktrees can be read (ADR 0081).
-const relatedApi = 101;
-
-/// The API from which the daemon keeps a chat's pinned messages
-/// (Chat.pinned_messages, PinMessage; ADR 0085).
-const messagePinApi = 102;
-
-/// The API from which the daemon keeps which chats are pinned, in order
-/// (Chat.pin, PinChats).
-const pinApi = 90;
-
 /// The API from which the daemon checks for a newer release of Nushi
 /// (Ping's update, CheckForUpdates, Settings.check_updates).
 const updatesApi = 86;

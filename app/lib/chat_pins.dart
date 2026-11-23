@@ -6,10 +6,8 @@ import 'package:nushi/sidebar_view.dart';
 // Pinned chats: the daemon keeps which and in what order (PinChats), so
 // the phone shows them too; the app sends the whole order each time.
 
-/// Whether [chat] can be pinned or unpinned: not archived, on a daemon
-/// that keeps pins.
-bool canPinChat(Daemon d, ChatState? chat) =>
-    chat != null && !chat.archived && d.daemonApi >= pinApi;
+/// Whether [chat] can be pinned or unpinned: not archived.
+bool canPinChat(Daemon d, ChatState? chat) => chat != null && !chat.archived;
 
 /// Pins [chat] at the bottom of Pinned, or unpins it, which puts it back
 /// in its project where it was (or at the top).

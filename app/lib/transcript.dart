@@ -1074,11 +1074,6 @@ class _TranscriptState extends State<Transcript> {
                   current: _pinAt,
                   fit: RailFit.of(sides.left),
                   onPick: (id) => unawaited(_pick(id)),
-                  before:
-                      widget.daemon.remote &&
-                          widget.daemon.daemonApi < pinTitlesApi
-                      ? () => loadPinned(widget.daemon, chat)
-                      : null,
                 ),
               ),
             Positioned(
