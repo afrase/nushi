@@ -183,8 +183,9 @@ func change(edit func(map[string]json.RawMessage) error) error {
 // Claude's word) dropped with "transport", so Ante infers it from the
 // command or URL; exactly one of them. A type that is the config's own
 // "transport" (one shown kept, such as "sse") stays as Ante stored it,
-// so what Servers lists always goes back, as Edit's put-back needs; a new
-// SSE server is refused. A null key is left out, as unset:
+// so what Servers lists always goes back as stored, as an edit needs
+// (Replace takes the shown config back through here); a new SSE server
+// is refused. A null key is left out, as unset:
 // Ante writes null for every key it knows that a server hasn't.
 func normalize(config string) (json.RawMessage, error) {
 	var cfg map[string]any
