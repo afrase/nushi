@@ -273,6 +273,7 @@ class FileEdit extends ChangeNotifier {
   Future<bool> _writeNow(String base, FileCodec codec, bool gone) async {
     final mine = text;
     final heard = _heard;
+    final (baseBefore, theirsBefore) = (_baseSha, theirs);
     final WriteChatFileResponse r;
     try {
       r = await daemon.client.writeChatFile(
@@ -295,6 +296,13 @@ class FileEdit extends ChangeNotifier {
       // watch has told of a newer version already (the save's own).
       final told = _heard != heard && _heardSum != base;
       if (!gone && !told) _ignore = base;
+      // The watch told of a newer version while the save was on its way
+      // (an agent writing just after it) and made it the base, a merge or
+      // a conflict: that is the disk now, and it stands.
+      final moved =
+          _baseSha != r.saved.sha256 &&
+          (_baseSha != baseBefore || !identical(theirs, theirsBefore));
+      if (moved) return false;
       deleted = false;
       merged = false;
       _setBase(mine, r.saved.sha256, codec);

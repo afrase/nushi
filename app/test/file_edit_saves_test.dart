@@ -54,6 +54,61 @@ void main() {
     await endEditor(tester, d);
   }, variant: onMac);
 
+  testWidgets('a conflict the watch tells of while a save is on its way '
+      'stays once the save is answered', (tester) async {
+    final (d, fake) = await openEditor(tester, {
+      'main.go': utf8.encode(goSource),
+    });
+    final e = editOf(d);
+    await typeIn(tester, e, '// mine\n');
+    final held = fake.replyHeld = Completer<void>();
+    final saved = e.save();
+    await tester.pump();
+    expect(fake.writes, hasLength(1));
+    // The agent writes over the saved version before the reply comes:
+    // the watch tells of a third version, which overlaps the edits.
+    const agents = '// theirs\n$goSource';
+    fake.putFile('main.go', utf8.encode(agents));
+    await tester.pump();
+    expect(e.theirs?.text, agents);
+    held.complete();
+    fake.replyHeld = null;
+    expect(await saved, isFalse);
+    await tester.pumpAndSettle();
+    expect(e.theirs?.text, agents);
+    expect(e.unsaved, isTrue);
+    expect(find.text('Changed on disk'), findsOneWidget);
+    await endEditor(tester, d);
+  }, variant: onMac);
+
+  testWidgets('a merge the watch makes while a save is on its way stays '
+      'once the save is answered', (tester) async {
+    final (d, fake) = await openEditor(tester, {
+      'main.go': utf8.encode(goSource),
+    });
+    final e = editOf(d);
+    await typeIn(tester, e, '// mine\n');
+    final held = fake.replyHeld = Completer<void>();
+    final saved = e.save();
+    await tester.pump();
+    // The agent adds a line at the end of the saved version.
+    const agents = '$_mine// end\n';
+    fake.putFile('main.go', utf8.encode(agents));
+    await tester.pump();
+    held.complete();
+    fake.replyHeld = null;
+    await saved;
+    await tester.pumpAndSettle();
+    // The editor holds the disk's text, and knows it does.
+    expect(e.text, agents);
+    expect(e.unsaved, isFalse);
+    expect(e.theirs, isNull);
+    await typeIn(tester, e, 'x');
+    expect(await e.save(), isTrue);
+    expect(fake.writes.last.baseSha256, sumOf(utf8.encode(agents)));
+    await endEditor(tester, d);
+  }, variant: onMac);
+
   testWidgets('a Stale reply that overlaps the edits is a conflict', (
     tester,
   ) async {

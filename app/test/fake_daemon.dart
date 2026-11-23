@@ -376,7 +376,9 @@ class FakeDaemon with Refusals implements Transport {
     }
     if (input is WriteChatFileRequest && files.containsKey(input.path)) {
       calls.add(input);
-      return UnaryResponse(spec, Headers(), _write(input) as O, Headers());
+      final written = _write(input);
+      if (replyHeld case final held?) await held.future;
+      return UnaryResponse(spec, Headers(), written as O, Headers());
     }
     var other = answer?.call(input);
     if (other is Future) other = await other;
@@ -769,6 +771,10 @@ class FakeDaemon with Refusals implements Transport {
   /// read-only.
   final readOnlyFiles = <String>{};
   final writes = <WriteChatFileRequest>[];
+
+  /// While set, a WriteChatFile is written at once but its reply waits
+  /// for this: what the watch says meanwhile reaches the app first.
+  Completer<void>? replyHeld;
   final _watches = <String, List<StreamController<WatchChatFileResponse>>>{};
 
   /// [path] as its watch sends it now.
