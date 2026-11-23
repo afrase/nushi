@@ -15,7 +15,9 @@
 # Docs (docs/, the root's Markdown, LICENSE) and the promo site (site/,
 # which only site.yml copies) are read by no build or test;
 # a Markdown file anywhere else counts by its folder. Go's folders mark go
-# (noiseconn/testdata app too: packages/noise reads its vectors), the
+# (a Go file the app's tests read marks app too: packages/noise reads
+# noiseconn/testdata's vectors, FakeDaemon e2e's agents.json, show_tool_test
+# filewatch's artifacts.json), the
 # app's and the Dart packages' app (app/windows too, which only the
 # Windows app's build reads); app/macos marks both, because the window's
 # Swift tests run in Go's macOS lint job. Anything else (CI, the
@@ -39,7 +41,7 @@ kinds() {
 		esac
 		case $path in
 		cmd/*) go=true mac=true ;;
-		noiseconn/testdata/*) go=true app=true ;;
+		noiseconn/testdata/* | internal/e2e/testdata/agents.json | internal/filewatch/testdata/artifacts.json) go=true app=true ;;
 		internal/* | relay/* | noiseconn/* | go.mod | go.sum | .golangci.yml) go=true ;;
 		app/macos/*) go=true app=true mac=true ;;
 		app/pubspec.yaml | app/pubspec.lock) app=true mac=true ;;
@@ -93,6 +95,11 @@ LICENSE"
 docs/remote.md"
 	check "true false false" "noiseconn/noiseconn.go"
 	check "true true false" "noiseconn/testdata/vectors.json"
+	check "true true false" "internal/e2e/testdata/agents.json"
+	check "true true false" "internal/e2e/testdata/agents.json
+internal/knownagents/knownagents.go"
+	check "true true false" "internal/filewatch/testdata/artifacts.json"
+	check "true false false" "internal/e2e/testdata/other.json"
 	check "false true false" "app/lib/chat_view.dart"
 	check "false true false" "app/test/timings.tsv"
 	check "false true true" "app/pubspec.yaml"
