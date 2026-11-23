@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:connectrpc/connect.dart' as connect;
+import 'package:daemon_transport/remote_transport.dart' show Unreachable;
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -19,7 +20,6 @@ import 'package:nushi/phone/settings_screen.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/remote.dart' show keyFingerprint, remoteState;
-import 'package:remote_transport/remote_transport.dart' show Unreachable;
 
 import 'fake_daemon.dart';
 import 'harness.dart';

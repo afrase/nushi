@@ -1,5 +1,5 @@
 // Command noisepeer is the daemon's side of a Noise channel for the Dart
-// interop tests (packages/remote_transport): it runs a relay on localhost,
+// interop tests (packages/daemon_transport): it runs a relay on localhost,
 // waits on it as the responder, and echoes what comes. It prints the relay,
 // the id, its key and the secret as one JSON line.
 //

@@ -1,10 +1,10 @@
 import 'dart:async';
 
+import 'package:daemon_transport/remote_transport.dart' show PairingOffer;
 import 'package:flutter/material.dart';
 import 'package:nushi/phone/scanner.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:remote_transport/remote_transport.dart' show PairingOffer;
 
 /// Scanning the Mac's QR code: the back camera, asked for only now (a tap
 /// brought this screen), and closed with it. A Nushi pairing code closes

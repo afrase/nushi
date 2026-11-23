@@ -5,6 +5,7 @@ import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/http2.dart';
 import 'package:connectrpc/protobuf.dart';
 import 'package:connectrpc/protocol/connect.dart' as protocol;
+import 'package:daemon_transport/remote_transport.dart' as rt;
 import 'package:flutter/foundation.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
@@ -17,7 +18,6 @@ import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/theme/themes.dart';
 import 'package:nushi/widgets.dart' show errorText;
-import 'package:remote_transport/remote_transport.dart' as rt;
 
 /// The phone (ADR 0054): its key and the Mac it's paired with, kept in the
 /// browser's storage, and while paired, the [Daemon] it reaches through

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:daemon_transport/remote_transport.dart' show Unreachable;
 import 'package:flutter/material.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/conventions.dart';
@@ -10,7 +11,6 @@ import 'package:nushi/phone/ui.dart';
 import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
-import 'package:remote_transport/remote_transport.dart' show Unreachable;
 
 /// How the link to the Mac stands, while it's down: a quiet
 /// "Reconnecting…" at first; after two failed tries, why it can't reach

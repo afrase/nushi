@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/http2.dart';
-import 'package:remote_transport/remote_transport.dart';
+import 'package:daemon_transport/remote_transport.dart';
 import 'package:test/test.dart';
 
 late String _peerBin;

@@ -10,13 +10,13 @@ import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/http2.dart';
 import 'package:connectrpc/protobuf.dart';
 import 'package:connectrpc/protocol/connect.dart' as protocol;
+import 'package:daemon_transport/remote_transport.dart';
+import 'package:daemon_transport/uds_transport.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/link.dart';
-import 'package:remote_transport/remote_transport.dart';
-import 'package:remote_transport/uds_transport.dart';
 
 import 'e2e_rig.dart';
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:daemon_transport/remote_transport.dart' show PairingRefused;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/phone/connection_bar.dart';
@@ -7,7 +8,6 @@ import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/scan_screen.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:remote_transport/remote_transport.dart' show PairingRefused;
 
 /// Pairing with a Mac (ADR 0054): Scan its QR code with the camera, or
 /// paste the link its Pair dialog copies; then the code both screens show.

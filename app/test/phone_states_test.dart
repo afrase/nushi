@@ -6,6 +6,7 @@
 import 'dart:async';
 
 import 'package:connectrpc/connect.dart' as connect;
+import 'package:daemon_transport/remote_transport.dart' show Unreachable;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -17,7 +18,6 @@ import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/spinner.dart';
-import 'package:remote_transport/remote_transport.dart' show Unreachable;
 
 import 'fake_daemon.dart';
 import 'harness.dart';

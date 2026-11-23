@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:connectrpc/connect.dart' as connect;
+import 'package:daemon_transport/remote_transport.dart' show Unreachable;
 import 'package:flutter/foundation.dart';
 import 'package:nushi/daemon.dart';
-import 'package:remote_transport/remote_transport.dart' show Unreachable;
 
 /// Keeps the phone's link to the Mac up (ADR 0054). While it answers, a
 /// ping every 15 s (which also keeps the relay's connection alive: a

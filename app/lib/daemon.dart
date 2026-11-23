@@ -6,6 +6,7 @@ import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/http2.dart';
 import 'package:connectrpc/protobuf.dart';
 import 'package:connectrpc/protocol/connect.dart' as protocol;
+import 'package:daemon_transport/uds_transport.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:nushi/agents.dart';
@@ -33,7 +34,6 @@ import 'package:nushi/sign_in_run.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/trust_ask.dart';
 import 'package:nushi/visits.dart';
-import 'package:remote_transport/uds_transport.dart';
 
 export 'package:nushi/issue_chat.dart';
 export 'package:nushi/place.dart';

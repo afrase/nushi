@@ -7,7 +7,7 @@ import 'dart:js_interop';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:remote_transport/src/gzip.dart';
+import 'package:daemon_transport/src/gzip.dart';
 import 'package:test/test.dart';
 import 'package:web/web.dart' as web;
 

@@ -1,4 +1,4 @@
-name: remote_transport
+name: daemon_transport
 description: Connect RPC to a Nushi daemon, through a relay end-to-end encrypted with Noise (ADR 0034), or over its Unix socket.
 publish_to: none
 version: 0.1.0

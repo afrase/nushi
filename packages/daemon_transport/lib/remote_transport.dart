@@ -9,11 +9,11 @@ import 'dart:typed_data';
 
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/http2.dart';
+import 'package:daemon_transport/src/channel.dart';
+import 'package:daemon_transport/src/connection.dart';
+import 'package:daemon_transport/src/websocket.dart';
 import 'package:http2/transport.dart' as http2;
 import 'package:noise/noise.dart';
-import 'package:remote_transport/src/channel.dart';
-import 'package:remote_transport/src/connection.dart';
-import 'package:remote_transport/src/websocket.dart';
 
 export 'package:noise/noise.dart' show KeyPair;
 

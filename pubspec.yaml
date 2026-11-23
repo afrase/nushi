@@ -11,4 +11,4 @@ workspace:
   - app
   - packages/markdown
   - packages/noise
-  - packages/remote_transport
+  - packages/daemon_transport

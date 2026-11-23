@@ -3,9 +3,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:daemon_transport/src/websocket.dart' show RelaySocket;
 import 'package:noise/noise.dart';
-
-import 'package:remote_transport/src/websocket.dart' show RelaySocket;
 
 /// The most bytes one transport message carries.
 const int maxPlaintext = maxMessage - 16;

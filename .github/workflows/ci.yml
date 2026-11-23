@@ -192,7 +192,7 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-      # remote_transport's interop test builds a Go peer, one small program: no cache, so this short job never saves
+      # daemon_transport's interop test builds a Go peer, one small program: no cache, so this short job never saves
       # the Linux key the web and app jobs share with its few packages in it.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:

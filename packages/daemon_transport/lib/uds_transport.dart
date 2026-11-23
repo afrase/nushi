@@ -8,8 +8,8 @@ import 'dart:io';
 
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/http2.dart';
+import 'package:daemon_transport/src/connection.dart';
 import 'package:http2/transport.dart' as http2;
-import 'package:remote_transport/src/connection.dart';
 
 /// An [Http2ClientTransport] that dials [socketPath].
 ///

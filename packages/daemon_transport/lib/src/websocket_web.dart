@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
 
-import 'package:remote_transport/src/limits.dart';
+import 'package:daemon_transport/src/limits.dart';
 import 'package:web/web.dart' as web;
 
 /// A relay's WebSocket in a browser: binary messages only, at most

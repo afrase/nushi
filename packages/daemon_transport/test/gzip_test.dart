@@ -5,7 +5,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:remote_transport/src/gzip.dart';
+import 'package:daemon_transport/src/gzip.dart';
 import 'package:test/test.dart';
 
 /// Text shaped like a transcript: words, numbers, code, repeated a lot.

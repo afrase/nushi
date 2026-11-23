@@ -5,9 +5,9 @@ import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/http2.dart';
 import 'package:connectrpc/protobuf.dart';
 import 'package:connectrpc/protocol/connect.dart' as protocol;
+import 'package:daemon_transport/uds_transport.dart';
 import 'package:http2/transport.dart' as http2;
 import 'package:protobuf/well_known_types/google/protobuf/empty.pb.dart';
-import 'package:remote_transport/uds_transport.dart';
 import 'package:test/test.dart';
 
 const _spec = connect.Spec<Empty, Empty>(

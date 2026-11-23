@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:remote_transport/remote_transport.dart';
+import 'package:daemon_transport/remote_transport.dart';
 import 'package:test/test.dart';
 
 /// A relay stand-in: dart:io's WebSocket server, sending [script]'s

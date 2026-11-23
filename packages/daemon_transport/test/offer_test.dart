@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:remote_transport/remote_transport.dart';
+import 'package:daemon_transport/remote_transport.dart';
 import 'package:test/test.dart';
 
 void main() {

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:remote_transport/src/limits.dart';
+import 'package:daemon_transport/src/limits.dart';
 
 /// A relay's WebSocket on dart:io (the tests that run the phone's code):
 /// binary messages only, at most [maxMessage] bytes each. Its failures are

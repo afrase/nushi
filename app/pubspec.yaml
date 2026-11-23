@@ -10,6 +10,8 @@ resolution: workspace
 dependencies:
   connectrpc: ^2.0.1
   crypto: ^3.0.8
+  daemon_transport:
+    path: ../packages/daemon_transport
   dbus: ^0.7.15
   desktop_drop: ^0.8.4
   diff_view: ^0.2.0
@@ -27,8 +29,6 @@ dependencies:
   qr: ^4.0.0
   re_editor: ^0.10.0
   re_highlight: ^0.0.3
-  remote_transport:
-    path: ../packages/remote_transport
   url_launcher: ^6.3.3
   web: ^1.1.1
   webview_flutter_platform_interface: ^2.15.1

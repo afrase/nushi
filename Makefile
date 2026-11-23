@@ -8,7 +8,7 @@ GOLANGCI := bin/golangci-lint
 GOVULNCHECK := bin/govulncheck
 # The pub workspace's members (the root pubspec.yaml), with one
 # pubspec.lock at the root.
-DART_DIRS := app packages/noise packages/remote_transport packages/markdown
+DART_DIRS := app packages/noise packages/daemon_transport packages/markdown
 # The machine make runs on: Darwin, or Linux (ADR 0101, 0104).
 OS := $(shell uname -s)
 # NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones;
@@ -294,14 +294,14 @@ lint-dart:
 test-go:
 	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 XDG_CONFIG_HOME=$(CURDIR)/internal/testcheck/noconfig go test -race -timeout 3m $(GOTESTFLAGS) ./...
 
-# The packages run anywhere with Go (remote_transport's interop builds a
+# The packages run anywhere with Go (daemon_transport's interop builds a
 # Go peer), and in Chrome where there's one. One flutter pub get resolves
 # the whole workspace first, so each package's dart test finds it current
 # and runs no pub get of its own.
 test-packages:
 	flutter pub get
 	cd packages/noise && dart test $(if $(CHROME),&& dart test -p chrome)
-	cd packages/remote_transport && dart test $(if $(CHROME),&& dart test -p chrome test/gzip_web_test.dart)
+	cd packages/daemon_transport && dart test $(if $(CHROME),&& dart test -p chrome test/gzip_web_test.dart)
 	cd packages/markdown && flutter test --no-pub
 
 # The app's widget tests and goldens, the files tools/test-shards gives
