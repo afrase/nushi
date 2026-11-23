@@ -12,7 +12,6 @@ import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/files_pane.dart';
-import 'package:nushi/folder_tree.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_view.dart' show showItem;
 import 'package:nushi/jira_view.dart';
@@ -74,8 +73,6 @@ class ChatHeader extends StatelessWidget {
   // and the Chat menu's, through the chat).
   bool get _renaming => chat.renaming.value;
 
-  /// The daemon lists folders, so the Files pane can show.
-  bool get _files => daemon.daemonApi >= filesApi;
   set _renaming(bool v) => chat.renaming.value = v;
 
   @override
@@ -181,7 +178,7 @@ class ChatHeader extends StatelessWidget {
             name: name,
             pull: chat.pull != null,
             panel: onPanel != null,
-            files: _files,
+            files: true,
             model: modelName != null,
             comments: comments,
             side: side,
@@ -424,10 +421,8 @@ class ChatHeader extends StatelessWidget {
                       if (!folds.buttons) ...[
                         TerminalButton(chat: chat, daemon: daemon),
                         if (roomy) const SizedBox(width: NushiTheme.iconGap),
-                        if (_files) ...[
-                          FilesButton(chat: chat),
-                          if (roomy) const SizedBox(width: NushiTheme.iconGap),
-                        ],
+                        FilesButton(chat: chat),
+                        if (roomy) const SizedBox(width: NushiTheme.iconGap),
                         BrowserButton(chat: chat),
                         if (roomy) const SizedBox(width: NushiTheme.iconGap),
                       ],

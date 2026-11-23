@@ -74,7 +74,7 @@ final class ShownFile {
   /// can't be edited now.
   void _fileCame() {
     final f = watch.file;
-    if (f == null || daemon.daemonApi < editApi) return;
+    if (f == null) return;
     final first = !_heard;
     _heard = true;
     if (edit case final edit?) {
@@ -95,7 +95,6 @@ final class ShownFile {
   String? readOnly() {
     final f = watch.file;
     if (f == null || f.missing || edit != null || watch.notText) return null;
-    if (daemon.daemonApi < editApi) return null;
     return notEditable(f);
   }
 

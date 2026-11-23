@@ -56,7 +56,7 @@ class ChatScreen extends StatelessWidget {
                 ),
               ),
             ),
-          if (daemon.daemonApi >= previewApi && chatFilesOf(chat).isNotEmpty)
+          if (chatFilesOf(chat).isNotEmpty)
             ListenableBuilder(
               listenable: chat.opened,
               builder: (context, _) => ArtifactsAction(
@@ -86,10 +86,8 @@ class ChatScreen extends StatelessWidget {
               child: !chat.loaded && chat.items.isEmpty
                   ? TranscriptSkeleton(chat)
                   : Previews(
-                      open: daemon.daemonApi >= previewApi
-                          ? (path) =>
-                                PreviewScreen.open(context, daemon, chat, path)
-                          : null,
+                      open: (path) =>
+                          PreviewScreen.open(context, daemon, chat, path),
                       // Link chips, a tap their card as a sheet; no linking
                       // on the phone (ADR 0117).
                       child: GitHubLinks(

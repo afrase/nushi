@@ -13,9 +13,6 @@ import 'package:nushi/markdown.dart';
 import 'package:nushi/paced.dart';
 import 'package:nushi/preview.dart';
 
-/// The first daemon that says which files are there (FindChatFiles).
-const findFilesApi = 82;
-
 /// A path as an agent writes one in plain text (`lib/a.dart`,
 /// `./notes.md`, `/tmp/x.html`, `README.md`, with `:12` or `:12:3` after
 /// it): an extension that starts with a letter (not `1.2.3`), and nothing
@@ -167,9 +164,7 @@ class _LinkedMarkdownState extends State<LinkedMarkdown> {
 
   void _look() {
     final w = widget;
-    _named = w.live || w.daemon.daemonApi < findFilesApi
-        ? const {}
-        : namedFiles(w.text);
+    _named = w.live ? const {} : namedFiles(w.text);
     if (_named.isNotEmpty) {
       unawaited(w.chat.fileLinks.look(w.daemon, w.chat.id, _named.values));
     }

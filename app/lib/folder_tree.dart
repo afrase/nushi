@@ -10,9 +10,6 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/tree_rows.dart';
 
-/// The daemon's API that has WatchChatFolder.
-const filesApi = 103;
-
 /// A chat's folder as the Files pane shows it: the folders open, each one's
 /// entries as the daemon last listed them (WatchChatFolder, one stream for
 /// each folder in sight, kept while the pane is), and the row the keys are

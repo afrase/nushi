@@ -193,10 +193,10 @@ void toggleFileTree(ChatState chat) {
   filesTree.value = true;
 }
 
-/// Whether [chat]'s Files pane shows its tree: the pane shows, the user
-/// has it on, and the daemon lists folders.
+/// Whether [chat]'s Files pane shows its tree: the pane shows and the user
+/// has it on.
 bool fileTreeShown(ChatState chat, Daemon daemon) =>
-    filesShown(chat) && filesTree.value && daemon.daemonApi >= filesApi;
+    filesShown(chat) && filesTree.value;
 
 /// Whether Collapse all folders has something to do in [chat]: its tree
 /// shows with a folder open.
@@ -224,7 +224,7 @@ List<AppAction> viewActions(ChatState? shown, Daemon d) => [
     shown != null && fileTreeShown(shown, d)
         ? 'Hide the file tree'
         : 'Show the file tree',
-    enabled: shown != null && d.daemonApi >= filesApi,
+    enabled: shown != null,
     run: () => toggleFileTree(shown!),
   ),
   // Each value but the one now, where a chat shows; the tree's only where
@@ -234,10 +234,7 @@ List<AppAction> viewActions(ChatState? shown, Daemon d) => [
       AppAction(
         act,
         title,
-        enabled:
-            c.pref.value != value &&
-            shown != null &&
-            (c != treeSideChoice || d.daemonApi >= filesApi),
+        enabled: c.pref.value != value && shown != null,
         run: () => c.pref.value = value,
       ),
   AppAction(

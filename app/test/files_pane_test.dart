@@ -314,13 +314,12 @@ void main() {
     }, variant: onMac);
   });
 
-  testWidgets('a daemon older than the tree: the viewer alone, saying how '
-      'to go to a file', (tester) async {
+  testWidgets('the tree hidden: the viewer alone, saying how to go to a '
+      'file', (tester) async {
     viewport(tester, const Size(1700, 900));
     showDetails.value = false;
-    final fake = FakeDaemon([chat('c', 'claude', 'Fix it')])
-      ..answer = (input) =>
-          input is PingRequest ? PingResponse(apiVersion: filesApi - 1) : null;
+    filesTree.value = false;
+    final fake = FakeDaemon([chat('c', 'claude', 'Fix it')]);
     final d = await fake.connect(tester);
     // The pane as the chat's area places it, at its width.
     await tester.pumpWidget(

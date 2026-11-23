@@ -18,9 +18,6 @@ import 'package:nushi/tab_indent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:re_editor/re_editor.dart';
 
-/// The daemon's API that has WriteChatFile, and the watch's sums.
-const editApi = 108;
-
 /// A file's text being edited in the preview (ADR 0096): the editor's
 /// buffer, and the version on disk it was read from (its base), as the
 /// daemon's watch and saves tell of it. It outlives the file's view (a
@@ -415,8 +412,8 @@ typedef FileVersion = ({String text, String sha, FileCodec codec});
 
 /// Why the watch's [f] can't be edited, or null when it can: one past
 /// what the watch sends (5 MiB, no data and no sum) is over the 1 MiB an
-/// edit may be (Go's `filesave.MaxSize`), as one between them is; a
-/// message from a daemon before API 108 can't, and says nothing.
+/// edit may be (Go's `filesave.MaxSize`), as one between them is; one
+/// with no sum (the daemon sent no data) can't, and says nothing.
 String? notEditable(WatchChatFileResponse f) {
   if (f.tooLarge) return 'it’s over 1 MiB.';
   if (f.sha256.isEmpty) return '';

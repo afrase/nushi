@@ -31,8 +31,7 @@ export 'package:nushi/files_open.dart';
 /// the chat's folder at the pane's right ([FilesTree]), its edge dragged.
 /// Opening a file never moves the tree. The viewer gives its width first
 /// as the pane narrows, then the tree ([treeWidth]); squeezed narrower
-/// still, the tree gives on, the viewer keeping its least. With a daemon
-/// older than the tree (`filesApi`) the viewer is alone.
+/// still, the tree gives on, the viewer keeping its least.
 class FilesPane extends StatefulWidget {
   const new({
     required this.chat,
@@ -129,12 +128,11 @@ class _FilesPaneState extends State<FilesPane> with FileTabsFocus {
       bindings: {const SingleActivator(LogicalKeyboardKey.escape): ?expand},
       child: Focus(
         focusNode: _pane,
-        // The tree hidden (⇧⌘Y), or a daemon older than it: the viewer
-        // takes its room, and the pane keeps its width.
+        // The tree hidden (⇧⌘Y): the viewer takes its room, and the pane
+        // keeps its width.
         child: ValueListenableBuilder(
           valueListenable: filesTree,
-          builder: (context, on, _) =>
-              _panes(shown, t, tree: on && widget.daemon.daemonApi >= filesApi),
+          builder: (context, on, _) => _panes(shown, t, tree: on),
         ),
       ),
     );
@@ -248,9 +246,8 @@ class _FilesPaneState extends State<FilesPane> with FileTabsFocus {
 }
 
 /// The viewer with no file open, as Claude desktop's: a folder, "Open
-/// files appear here" and how to open one; without the [tree] (a daemon
-/// older than it, or one squeezed out), the way that's there, Go to file's
-/// key.
+/// files appear here" and how to open one; without the [tree] (hidden, or
+/// squeezed out), the way that's there, Go to file's key.
 class FilesBlank extends StatelessWidget {
   const new({required this.tree, super.key});
 
@@ -307,10 +304,8 @@ class FilesBlank extends StatelessWidget {
 }
 
 /// [path] (as the preview names it) as [chat]'s Files pane does, relative
-/// to the chat's folder; null for a file outside it, or a daemon without
-/// the pane.
+/// to the chat's folder; null for a file outside it.
 String? inFiles(Daemon daemon, ChatState chat, String path) {
-  if (daemon.daemonApi < filesApi) return null;
   final folder = '${chat.folder}/';
   final inside = path.startsWith('/')
       ? (path.startsWith(folder) ? path.substring(folder.length) : null)

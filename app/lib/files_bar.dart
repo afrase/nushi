@@ -227,7 +227,6 @@ class FilesBar extends StatelessWidget {
     required int buttons,
     required List<MenuEntry> folded,
   }) {
-    final tree = daemon.daemonApi >= filesApi;
     final on = treeShows;
     const pad = (PaneEndButtons.box - _icon) / 2;
     return Row(
@@ -255,7 +254,7 @@ class FilesBar extends StatelessWidget {
             padding: pad,
             color: t.text,
             lit: on,
-            onTap: tree && !treeOut ? () => toggleFileTree(chat) : null,
+            onTap: !treeOut ? () => toggleFileTree(chat) : null,
           ),
         // Under it, ending under its right edge, as Claude's does.
         TrailingMenus(

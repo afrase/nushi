@@ -26,7 +26,6 @@ List<MenuEntry> filesMenu(
   bool treeOut = false,
   List<MenuEntry> folded = const [],
 }) {
-  final tree = daemon.daemonApi >= filesApi;
   return [
     MenuEntry(
       'Go to file or search',
@@ -38,9 +37,9 @@ List<MenuEntry> filesMenu(
       'Show file tree',
       checked: treeShows,
       shortcut: keyLabel(fileTreeKey),
-      onPick: tree && !treeOut ? () => toggleFileTree(chat) : null,
+      onPick: !treeOut ? () => toggleFileTree(chat) : null,
     ),
-    _choice(treeSideChoice, on: tree),
+    _choice(treeSideChoice),
     MenuEntry.divider,
     MenuEntry(
       'Collapse all folders',
@@ -62,18 +61,16 @@ MenuEntry _toggle(ViewToggle option) =>
     MenuEntry(option.label, checked: option.pref.value, onPick: option.toggle);
 
 /// [choice]'s row: its value now at the right, its values in a submenu,
-/// the one now checked; unavailable unless [on].
-MenuEntry _choice<T>(ViewChoice<T> choice, {bool on = true}) => MenuEntry(
+/// the one now checked.
+MenuEntry _choice<T>(ViewChoice<T> choice) => MenuEntry(
   choice.label,
   detail: choice.current,
-  submenu: on
-      ? [
-          for (final (value, name, _, _) in choice.values)
-            MenuEntry(
-              name,
-              checked: choice.pref.value == value,
-              onPick: () => choice.pref.value = value,
-            ),
-        ]
-      : const [],
+  submenu: [
+    for (final (value, name, _, _) in choice.values)
+      MenuEntry(
+        name,
+        checked: choice.pref.value == value,
+        onPick: () => choice.pref.value = value,
+      ),
+  ],
 );

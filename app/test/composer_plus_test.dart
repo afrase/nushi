@@ -17,6 +17,7 @@ import 'package:nushi/clipboard_files.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_plus.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/errors.dart' show updateOnMac;
 import 'package:nushi/file_cards.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart' show maxImageBytes;
@@ -35,21 +36,17 @@ Daemon? _daemon;
 void _end() => _daemon?.dispose();
 
 /// A box on a chat whose folder is a new temp folder, [images] whether its
-/// agent takes images, [api] the daemon's.
+/// agent takes images.
 Future<(FakeDaemon, Daemon, ChatState)> _box(
   WidgetTester tester, {
   bool images = true,
-  int? api,
   bool dark = true,
   Size size = const Size(640, 260),
 }) async {
   viewport(tester, size);
   final folder = Directory.systemTemp.createTempSync('plus').path;
   addTearDown(() => Directory(folder).deleteSync(recursive: true));
-  final fake = FakeDaemon([])
-    ..answer = (input) => input is PingRequest && api != null
-        ? PingResponse(apiVersion: api)
-        : null;
+  final fake = FakeDaemon([]);
   final d = await fake.connect(tester);
   final chat = ChatState('c', folder)
     ..agent = 'claude'
@@ -133,26 +130,6 @@ SendPromptRequest _sent(FakeDaemon fake) =>
 void main() {
   setUpAll(loadFonts);
   setUp(_restoreFakes);
-
-  test('attachApi is the API that brought the fields it gates', () {
-    // An older daemon drops an upload as an unknown field, or takes an
-    // absolute path as one inside the folder: the gate is the API the
-    // proto names for SendPromptRequest's files and uploads.
-    final proto = File('../proto/nushi/v1/nushi.proto').readAsStringSync();
-    for (final field in [
-      'repeated string files = 3;',
-      'repeated FileUpload uploads = 8;',
-    ]) {
-      // The field's comment: the lines of // right above it.
-      final lines = proto.substring(0, proto.indexOf(field)).split('\n')
-        ..removeLast();
-      final comment = lines.reversed
-          .takeWhile((l) => l.trim().startsWith('//'))
-          .join(' ');
-      final api = RegExp(r'\(API (\d+)\)').firstMatch(comment)?.group(1);
-      expect(api, '$attachApi', reason: field);
-    }
-  });
 
   for (final dark in [true, false]) {
     testWidgets(
@@ -401,10 +378,7 @@ void main() {
       'big.mov is over 8 MB',
     );
     expect([for (final f in chat.draft.files.value) f.name], ['notes.txt']);
-    expect(
-      await attachFiles(chat, [small], api: attachApi - 1),
-      contains('photos only'),
-    );
+    expect(await attachFiles(chat, [small], api: apiFloor - 1), updateOnMac);
     final seven = [
       for (final n in ['a', 'b', 'c'])
         XFile.fromData(Uint8List(7 << 20), name: '$n.mov', path: '$n.mov'),
@@ -481,21 +455,6 @@ void main() {
       'the picture pasted: a message sends 20 MB at most',
     );
     expect(chat.draft.images.value, hasLength(5));
-    _end();
-  }, variant: onMac);
-
-  testWidgets('a file outside the folder waits for a daemon that takes it', (
-    tester,
-  ) async {
-    final (_, _, chat) = await _box(tester, api: attachApi - 1);
-    final elsewhere = Directory.systemTemp.createTempSync('plus').path;
-    addTearDown(() => Directory(elsewhere).deleteSync(recursive: true));
-    final refused = await attachFiles(chat, [
-      XFile(_file(elsewhere, 'a.pdf')),
-      XFile(_file(chat.folder, 'b.pdf')),
-    ], api: attachApi - 1);
-    expect(refused, contains('outside the chat’s folder'));
-    expect([for (final f in chat.draft.files.value) f.name], ['b.pdf']);
     _end();
   }, variant: onMac);
 
@@ -591,25 +550,6 @@ void main() {
     await tester.pump();
     expect(find.text('report\ufffdfdp.sh'), findsOne);
     expect(find.textContaining('\u202e'), findsNothing);
-    _end();
-  }, variant: onMac);
-
-  testWidgets('on the phone against an older daemon: photos only, or none', (
-    tester,
-  ) async {
-    sendWhole = true;
-    final (_, _, chat) = await _box(tester, images: false, api: attachApi - 1);
-    await _openMenu(tester);
-    expect(find.text('Add photos'), findsOne);
-    final row = tester.widget<MenuItemButton>(
-      find.ancestor(
-        of: find.text('Add photos'),
-        matching: find.byType(MenuItemButton),
-      ),
-    );
-    expect(row.onPressed, isNull);
-    expect(find.byTooltip(RegExp('doesn’t take images')), findsOne);
-    expect(chat.canImages, isFalse);
     _end();
   }, variant: onMac);
 

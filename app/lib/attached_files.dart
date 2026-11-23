@@ -5,7 +5,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show immutable, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/conventions.dart';
+import 'package:nushi/daemon.dart' show apiFloor;
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show FileUpload;
 import 'package:nushi/images.dart';
@@ -13,10 +13,6 @@ import 'package:nushi/native.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/widgets.dart';
-
-/// The first daemon that takes a file outside the chat's folder by its
-/// absolute path, and a device's files whole (ADR 0091).
-const attachApi = 106;
 
 /// The most files one message attaches (the daemon's `chats.MaxUploads`).
 const maxAttachedFiles = 10;
@@ -188,7 +184,7 @@ Future<String> attachFiles(
       }
       final file = sendWhole
           ? await _upload(f, name, draft, api: api, refused: refused)
-          : _onMac(f.path, chat.folder, api: api, refused: refused);
+          : _onMac(f.path, refused: refused);
       if (file != null && !draft.files.value.contains(file)) {
         draft.files.value = [...draft.files.value, file];
       }
@@ -220,7 +216,9 @@ int _sent(Draft draft) =>
 
 /// A file of the phone's, its bytes read; null, with why in [refused],
 /// when the daemon can't take it, or it or the [draft]'s files and photos
-/// with it are too large.
+/// with it are too large. A daemon below the floor ([apiFloor]) may be
+/// older than a device's files (API 106, ADR 0091) and would drop them
+/// unsaid, so the phone, never blocked, says to update it instead.
 Future<AttachedFile?> _upload(
   XFile f,
   String name,
@@ -228,10 +226,8 @@ Future<AttachedFile?> _upload(
   required int api,
   required List<String> refused,
 }) async {
-  if (api < attachApi) {
-    refused.add(
-      'the ${conventions.machine}’s Nushi takes photos only until it’s updated',
-    );
+  if (api < apiFloor) {
+    refused.add(updateOnMac);
     return null;
   }
   final size = await f.length();
@@ -247,14 +243,8 @@ Future<AttachedFile?> _upload(
 }
 
 /// A file on the Mac by its path; null, with why in [refused], for a
-/// folder, what isn't a file, one too large, or one outside the chat's
-/// folder when the daemon doesn't take those.
-AttachedFile? _onMac(
-  String path,
-  String folder, {
-  required int api,
-  required List<String> refused,
-}) {
+/// folder, what isn't a file, or one too large.
+AttachedFile? _onMac(String path, {required List<String> refused}) {
   final name = plainPath(baseName(path));
   final stat = File(path).statSync();
   if (stat.type == FileSystemEntityType.directory) {
@@ -267,10 +257,6 @@ AttachedFile? _onMac(
   }
   if (stat.size > maxLinkedFileBytes) {
     refused.add('$name is over ${maxLinkedFileBytes >> 20} MB');
-    return null;
-  }
-  if (api < attachApi && insideFolder(path, folder) == null) {
-    refused.add('$name is outside the chat’s folder: update Nushi to send it');
     return null;
   }
   return AttachedFile(name: baseName(path), size: stat.size, path: path);

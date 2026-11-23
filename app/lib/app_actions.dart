@@ -17,7 +17,6 @@ import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/edit_bars.dart';
 import 'package:nushi/files_pane.dart';
-import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/new_chat.dart';
@@ -302,7 +301,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     files: AppAction(
       .files,
       chat != null && filesShown(chat) ? 'Hide files' : 'Show files',
-      enabled: chat != null && d.daemonApi >= filesApi,
+      enabled: chat != null,
       run: () => showOrHideFiles(chat!),
     ),
     details: AppAction(

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:nushi/attached_files.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/conventions.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/widgets.dart';
@@ -21,7 +19,6 @@ const attachKey = Cmd(LogicalKeyboardKey.keyU, includeRepeats: false);
 class PlusMenu extends StatelessWidget {
   const new({
     required this.chat,
-    required this.api,
     required this.onAttach,
     required this.onMention,
     required this.onSlash,
@@ -32,8 +29,6 @@ class PlusMenu extends StatelessWidget {
 
   final ChatState chat;
 
-  /// The daemon's API version: a phone's files need [attachApi].
-  final int api;
   final VoidCallback onAttach;
   final VoidCallback onMention;
   final VoidCallback onSlash;
@@ -45,10 +40,6 @@ class PlusMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final touch = TouchTargets.of(context);
-    // The phone's files go whole, which an older daemon doesn't take: then
-    // only photos, and only for an agent that takes images.
-    final photosOnly = sendWhole && api < attachApi;
-    final attach = !photosOnly || chat.canImages;
     return Menu(
       above: true,
       aboveOf: box,
@@ -56,18 +47,13 @@ class PlusMenu extends StatelessWidget {
       filter: false,
       entries: [
         MenuEntry(
-          photosOnly ? 'Add photos' : 'Add files or photos',
+          'Add files or photos',
           line: LineIcon.paperclip,
           shortcut: touch ? '' : keyLabel(attachKey),
-          onPick: attach ? onAttach : null,
+          onPick: onAttach,
           // The phone's picker is the browser's, which opens only from
           // inside the tap.
           inTap: true,
-          tooltip: attach
-              ? ''
-              : '${chat.agentName} doesn’t take images in this chat, and '
-                    'the ${conventions.machine}’s Nushi takes other files once '
-                    'it’s updated',
         ),
         MenuEntry('Mention a file', line: LineIcon.at, onPick: onMention),
         MenuEntry('Slash commands', line: LineIcon.slashBox, onPick: onSlash),

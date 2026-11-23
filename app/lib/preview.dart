@@ -25,9 +25,6 @@ import 'package:nushi/syntax_languages.dart' show codeNames;
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The daemon's API that has WatchChatFile.
-const previewApi = 75;
-
 /// What a preview shows a file as.
 enum PreviewKind {
   markdown,
@@ -148,7 +145,7 @@ String baseName(String path) {
 
 /// Opens a file's preview from the tool rows below it, the one open
 /// ([current]) marked, and a web link in a browser tab ([browse]). With no
-/// [open] (an older daemon) there's no Preview button.
+/// [open] there's no Preview button.
 class Previews extends InheritedWidget {
   const new({
     required this.open,
@@ -225,8 +222,9 @@ class FileWatch extends ChangeNotifier {
           },
           onError: (Object e) {
             live = false;
-            // Refused: it stays so. Anything else (the daemon went away):
-            // watch again.
+            // Refused (on the phone, a daemon below the floor lacks the
+            // call: errorText says to update it): it stays so. Anything
+            // else (the daemon went away): watch again.
             if (e is ConnectException &&
                 const [
                   Code.permissionDenied,
@@ -234,7 +232,7 @@ class FileWatch extends ChangeNotifier {
                   Code.notFound,
                   Code.unimplemented,
                 ].contains(e.code)) {
-              error = e.message;
+              error = errorText(e);
             } else {
               _again();
             }

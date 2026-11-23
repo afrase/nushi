@@ -9,7 +9,6 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/files_pane.dart';
-import 'package:nushi/folder_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/key_choice.dart';
 import 'package:nushi/keys.dart';
@@ -340,9 +339,9 @@ void main() {
       'sentence whole', (tester) async {
     viewport(tester, const Size(1700, 900));
     shortcutKeys.value = {'openFile': ''};
-    final fake = FakeDaemon([chat('c', 'claude', 'Fix it')])
-      ..answer = (input) =>
-          input is PingRequest ? PingResponse(apiVersion: filesApi - 1) : null;
+    // The tree hidden: the empty viewer says how to go to a file.
+    filesTree.value = false;
+    final fake = FakeDaemon([chat('c', 'claude', 'Fix it')]);
     final d = await fake.connect(tester);
     await tester.pumpWidget(
       themed(

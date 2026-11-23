@@ -503,7 +503,6 @@ class _ComposerState extends State<Composer> {
             final plus = PlusMenu(
               box: _box,
               chat: chat,
-              api: _api,
               locked: _locked,
               onAttach: () => unawaited(_attach()),
               onMention: () {

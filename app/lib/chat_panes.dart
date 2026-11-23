@@ -10,9 +10,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/edit_bars.dart';
 import 'package:nushi/files_pane.dart';
-import 'package:nushi/folder_tree.dart' show filesApi;
 import 'package:nushi/fork_chat.dart';
-import 'package:nushi/preview.dart' show previewApi;
 import 'package:nushi/settings.dart' show filesTree;
 import 'package:nushi/side_chat.dart';
 import 'package:nushi/task_pane.dart';
@@ -97,15 +95,11 @@ List<PaneSpec> openPanes(
 }) {
   final id = chat.pane.value;
   final pane = id != null;
-  final api = daemon.daemonApi;
   return [
     if (chat.side.value != null && !chat.archived && !chat.sideHidden.value)
       ChatPanes.side,
-    if ((files || filesOpen(chat)) && api >= previewApi)
-      if (api >= filesApi && filesTree.value)
-        ChatPanes.files
-      else
-        ChatPanes.filesNoTree,
+    if (files || filesOpen(chat))
+      if (filesTree.value) ChatPanes.files else ChatPanes.filesNoTree,
     if (pane && !browser)
       if (workflowPaneOpen(chat, id))
         ChatPanes.workflow

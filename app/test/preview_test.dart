@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/errors.dart' show updateOnMac;
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -151,10 +153,12 @@ Future<Daemon> _app(
   return d;
 }
 
-/// The phone in that chat, its Mac's daemon at [api].
+/// The phone in that chat, its Mac's daemon at [api]; [watch] in place
+/// of the fake's file watches when given.
 Future<(Phone, PhonePlatform)> _phone(
   WidgetTester tester, {
   int api = apiVersion,
+  Stream<Object>? Function(Object input)? watch,
 }) async {
   viewport(tester, const Size(390, 844), ratio: 3);
   tester.platformDispatcher.accessibilityFeaturesTestValue =
@@ -162,6 +166,7 @@ Future<(Phone, PhonePlatform)> _phone(
   addTearDown(tester.platformDispatcher.clearAllTestValues);
   final platform = PhonePlatform()..saved = pairedRecord();
   final fake = _fake(api: api);
+  if (watch != null) fake.streams = watch;
   final phone = await startPhone(tester, fake, platform: platform);
   await tester.tap(find.text('Write the release report'));
   await tester.pumpAndSettle();
@@ -244,13 +249,26 @@ void main() {
     await endPhone(tester, phone);
   }, variant: onPhone);
 
-  testWidgets('no Preview with an older daemon (the phone)', (tester) async {
-    final (phone, _) = await _phone(tester, api: 74);
-    expect(
-      find.textContaining('release-report.md', findRichText: true),
-      findsWidgets,
+  // The phone is never blocked (ADR 0004): a daemon below the floor may
+  // lack the watch, and its preview then says how to update it.
+  testWidgets('on a daemon below the floor that lacks the watch, the '
+      "phone's preview says to update it on the Mac", (tester) async {
+    final (phone, _) = await _phone(
+      tester,
+      api: apiFloor - 1,
+      // The call fails as it starts, as Connect's does for a procedure
+      // the daemon doesn't serve.
+      watch: (input) => input is WatchChatFileRequest
+          ? throw ConnectException(Code.unimplemented, 'no such call')
+          : null,
     );
-    expect(_buttons, findsNothing);
+    await tester.tap(
+      find.descendant(of: _previewOf('w'), matching: find.text('Preview')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(PreviewScreen), findsOneWidget);
+    expect(find.text(updateOnMac), findsWidgets);
+    expect(find.textContaining('no such call'), findsNothing);
     await endPhone(tester, phone);
   }, variant: onPhone);
 
