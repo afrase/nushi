@@ -45,7 +45,7 @@ func (b *bridge) open(ctx context.Context, cwd string, op any, replay bool) (*ac
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id), Modes: modes(s.info.PermissionMode), ConfigOptions: b.options(s.info)}, nil
+	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id), ConfigOptions: b.options(s.info)}, nil
 }
 
 // start sends op to h and waits for the session it starts, then for the
@@ -206,7 +206,7 @@ func (b *bridge) fork(ctx context.Context, from acp.SessionID, cwd, after string
 	if err != nil {
 		return nil, err
 	}
-	return &acp.ForkSessionResponse{SessionID: acp.SessionID(forked.ID), Modes: n.Modes, ConfigOptions: n.ConfigOptions}, nil
+	return &acp.ForkSessionResponse{SessionID: acp.SessionID(forked.ID), ConfigOptions: n.ConfigOptions}, nil
 }
 
 // list reads Ante's saved sessions (it has no op for them): each one's

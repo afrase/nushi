@@ -225,7 +225,11 @@ func TestASessionThroughTheBridge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.Modes.CurrentModeID != "strict" || len(s.Modes.AvailableModes) != 3 || len(s.ConfigOptions) != 2 || s.ConfigOptions[1].Category != "thought_level" {
+	// The mode is a config option, as other agents give it, not ACP's
+	// legacy modes.
+	if s.Modes != nil || len(s.ConfigOptions) != 3 || s.ConfigOptions[1].Category != "thought_level" ||
+		s.ConfigOptions[2].ID != "mode" || s.ConfigOptions[2].Category != "mode" || s.ConfigOptions[2].Select.CurrentValue != "strict" ||
+		len(s.ConfigOptions[2].Select.Options.Ungrouped) != 3 {
 		t.Errorf("modes %+v, options %+v", s.Modes, s.ConfigOptions)
 	}
 	sid := s.SessionID
@@ -238,8 +242,20 @@ func TestASessionThroughTheBridge(t *testing.T) {
 	if len(c.asked) != 1 || !strings.Contains(strings.ReplaceAll(c.kinds(sid), "available_commands_update ", ""), "tool_call tool_call_update") {
 		t.Errorf("asked %v, updates %s", c.asked, c.kinds(sid))
 	}
-	if _, err := c.SetSessionMode(ctx, &acp.SetSessionModeRequest{SessionID: sid, ModeID: "auto"}); err != nil {
+	set, err := c.SetSessionConfigOption(ctx, &acp.SetSessionConfigOptionRequest{SessionID: sid, ConfigID: "mode",
+		ValueID: &acp.SetSessionConfigOptionRequestValueID{Value: "auto"}})
+	if err != nil {
 		t.Fatal(err)
+	}
+	if o := set.ConfigOptions; len(o) != 3 || o[2].Select.CurrentValue != "auto" {
+		t.Errorf("options after the mode's change: %+v", o)
+	}
+	testcheck.Wait(t, "the mode's config_option_update", func() bool {
+		o := c.lastOptions(sid)
+		return len(o) == 3 && o[2].Select.CurrentValue == "auto"
+	})
+	if strings.Contains(c.kinds(sid), "current_mode_update") {
+		t.Error("a legacy mode update came")
 	}
 	prompt(t, c, sid, "ask me")
 	if len(c.forms) != 1 || c.forms[0].Form == nil || !strings.Contains(testcheck.JSON(t, c.forms[0].Form.RequestedSchema.Properties), `"q0_other"`) {

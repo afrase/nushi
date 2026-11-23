@@ -32,7 +32,7 @@ func TestAnAnteChat(t *testing.T) {
 	for _, o := range a.get(id).Config {
 		ids = append(ids, o.Id+"/"+o.Category+"="+o.Current)
 	}
-	if got := strings.Join(ids, " "); got != "model/model=m1 effort/thought_level=low legacy:mode/mode=strict" {
+	if got := strings.Join(ids, " "); got != "model/model=m1 effort/thought_level=low mode/mode=strict" {
 		t.Errorf("options = %s", got)
 	}
 	a.say(id, "hello")

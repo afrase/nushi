@@ -159,7 +159,7 @@ func (b *bridge) LoadSession(ctx context.Context, req *acp.LoadSessionRequest) (
 	if err != nil {
 		return nil, err
 	}
-	return &acp.LoadSessionResponse{Modes: n.Modes, ConfigOptions: n.ConfigOptions}, nil
+	return &acp.LoadSessionResponse{ConfigOptions: n.ConfigOptions}, nil
 }
 
 func (b *bridge) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
@@ -227,14 +227,6 @@ func (b *bridge) Cancel(ctx context.Context, n *acp.CancelNotification) error {
 		s.cancel(seq)
 	}
 	return nil
-}
-
-func (b *bridge) SetSessionMode(ctx context.Context, req *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
-	s, err := b.session(req.SessionID)
-	if err != nil {
-		return nil, err
-	}
-	return &acp.SetSessionModeResponse{}, s.setMode(ctx, string(req.ModeID))
 }
 
 func (b *bridge) SetSessionConfigOption(ctx context.Context, req *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {

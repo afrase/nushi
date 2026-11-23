@@ -25,26 +25,26 @@ type provider struct {
 // (Ante rounds down to what the model has) unless it names its own.
 var ladder = []string{"min", "low", "medium", "high", "xhigh", "max"}
 
-var modeNames = map[string][2]string{
-	"strict": {"Strict", "Asks before a tool call unless it's provably safe"},
-	"auto":   {"Auto", "Runs a tool call unless it's provably dangerous"},
-	"yolo":   {"Yolo", "Never asks, deny rules included"},
-}
+// permissionMode is one of Ante's permission modes: its id, its name and
+// what it does.
+type permissionMode struct{ id, name, about string }
 
-func modes(current string) *acp.SessionModeState {
-	m := &acp.SessionModeState{CurrentModeID: acp.SessionModeID(current)}
-	for _, id := range []string{"strict", "auto", "yolo"} {
-		m.AvailableModes = append(m.AvailableModes, acp.SessionMode{ID: acp.SessionModeID(id), Name: modeNames[id][0], Description: modeNames[id][1]})
-	}
-	return m
+// modeNames are Ante's permission modes, in order.
+var modeNames = []permissionMode{
+	{"strict", "Strict", "Asks before a tool call unless it's provably safe"},
+	{"auto", "Auto", "Runs a tool call unless it's provably dangerous"},
+	{"yolo", "Yolo", "Never asks, deny rules included"},
 }
 
 // options are the session's model (the provider's models, from Ante's
-// catalog) and, when the model reasons, its effort.
+// catalog), when the model reasons its effort, and its permission mode:
+// a config option of category mode, as other agents give theirs (ADR
+// 0030), not ACP's legacy modes.
 func (b *bridge) options(in info) []acp.SessionConfigOption {
 	type value struct {
 		Value string `json:"value"`
 		Name  string `json:"name"`
+		About string `json:"description"`
 	}
 	var models []value
 	for _, p := range b.catalog() {
@@ -52,17 +52,17 @@ func (b *bridge) options(in info) []acp.SessionConfigOption {
 			continue
 		}
 		for _, m := range p.Models {
-			models = append(models, value{m.ID, cmp.Or(m.Description, m.ID)})
+			models = append(models, value{m.ID, cmp.Or(m.Description, m.ID), ""})
 		}
 	}
 	if !slices.ContainsFunc(models, func(v value) bool { return v.Value == in.Model.ID }) {
-		models = append([]value{{in.Model.ID, in.Model.ID}}, models...)
+		models = append([]value{{in.Model.ID, in.Model.ID, ""}}, models...)
 	}
 	efforts := b.efforts(in)
 	option := func(id, name, category, current string, values []value) acp.SessionConfigOption {
 		var opts []acp.SessionConfigSelectOption
 		for _, v := range values {
-			opts = append(opts, acp.SessionConfigSelectOption{Value: acp.SessionConfigValueID(v.Value), Name: v.Name})
+			opts = append(opts, acp.SessionConfigSelectOption{Value: acp.SessionConfigValueID(v.Value), Name: v.Name, Description: v.About})
 		}
 		return acp.SessionConfigOption{ID: acp.SessionConfigID(id), Name: name, Category: acp.SessionConfigOptionCategory(category),
 			Select: &acp.SessionConfigSelect{CurrentValue: acp.SessionConfigValueID(current), Options: acp.SessionConfigSelectOptions{Ungrouped: opts}}}
@@ -71,11 +71,15 @@ func (b *bridge) options(in info) []acp.SessionConfigOption {
 	if len(efforts) > 0 {
 		var values []value
 		for _, e := range efforts {
-			values = append(values, value{e, e})
+			values = append(values, value{e, e, ""})
 		}
 		out = append(out, option("effort", "Effort", "thought_level", in.Model.Effort, values))
 	}
-	return out
+	var modes []value
+	for _, m := range modeNames {
+		modes = append(modes, value{m.id, m.name, m.about})
+	}
+	return append(out, option("mode", "Mode", "mode", in.PermissionMode, modes))
 }
 
 // efforts are the session's model's effort levels: its own, else its
@@ -95,30 +99,33 @@ func (b *bridge) efforts(in info) []string {
 	return efforts
 }
 
-// configUpdates tell the client the session's mode and options as Ante
-// now has them.
+// configUpdates tell the client the session's options, its mode among
+// them, as Ante now has them.
 func (b *bridge) configUpdates(in info) []acp.SessionUpdate {
-	return []acp.SessionUpdate{
-		{SessionUpdate: "current_mode_update", CurrentModeUpdate: &acp.CurrentModeUpdate{CurrentModeID: acp.SessionModeID(in.PermissionMode)}},
-		{SessionUpdate: "config_option_update", ConfigOptionUpdate: &acp.ConfigOptionUpdate{ConfigOptions: b.options(in)}},
-	}
+	return []acp.SessionUpdate{{SessionUpdate: "config_option_update", ConfigOptionUpdate: &acp.ConfigOptionUpdate{ConfigOptions: b.options(in)}}}
 }
 
-// setOption changes the model (at its catalog effort) or the effort; Ante
-// takes either from the next turn on, without writing its settings.
+// setOption changes the model (at its catalog effort) or the effort, which
+// Ante takes from the next turn on, or the mode, at once; none writes
+// Ante's settings.
 func (s *session) setOption(ctx context.Context, id, value string) ([]acp.SessionConfigOption, error) {
 	s.mu.Lock()
 	model := map[string]any{"id": s.info.Model.ID}
 	s.mu.Unlock()
+	var err error
 	switch id {
 	case "model":
 		model["id"] = value
+		_, err = s.updateModel(ctx, model)
 	case "effort":
 		model["effort"] = value
+		_, err = s.updateModel(ctx, model)
+	case "mode":
+		err = s.setMode(ctx, value)
 	default:
 		return nil, fmt.Errorf("no option %q", id)
 	}
-	if _, err := s.updateModel(ctx, model); err != nil {
+	if err != nil {
 		return nil, err
 	}
 	s.mu.Lock()
@@ -141,7 +148,7 @@ func (s *session) updateModel(ctx context.Context, model map[string]any) (event,
 
 // setMode changes the permission mode, at once.
 func (s *session) setMode(ctx context.Context, mode string) error {
-	if _, ok := modeNames[mode]; !ok {
+	if !slices.ContainsFunc(modeNames, func(m permissionMode) bool { return m.id == mode }) {
 		return fmt.Errorf("no mode %q", mode)
 	}
 	_, err := s.await(ctx, map[string]any{"UpdateSession": map[string]any{"permission_mode": mode}}, "SessionUpdated")
