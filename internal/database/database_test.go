@@ -119,6 +119,27 @@ func TestUsageSums(t *testing.T) {
 	}
 }
 
+// Chats with no cost rank by input and output, as the page counts tokens
+// (ADR 0136): a chat whose tokens are mostly the cache's reads ranks below
+// one that read and wrote more, and is the one the top cuts.
+func TestCostliestCountsInputAndOutput(t *testing.T) {
+	d, _ := open(t)
+	at := time.Date(2026, 11, 1, 10, 0, 0, 0, time.UTC)
+	cached := row(at, "cached", "codex", 0, 10)
+	cached.CacheRead = 100_000
+	testcheck.NoErr(t, d.AddUsage(t.Context(), []model.UsageRow{cached, row(at, "wrote", "codex", 0, 100)}))
+	r, err := d.Usage(t.Context(), time.Time{}, time.Time{}, time.UTC, 2)
+	testcheck.NoErr(t, err)
+	if len(r.Chats) != 2 || r.Chats[0].ID != "wrote" || r.Chats[1].ID != "cached" {
+		t.Errorf("chats %+v", r.Chats)
+	}
+	top, err := d.Usage(t.Context(), time.Time{}, time.Time{}, time.UTC, 1)
+	testcheck.NoErr(t, err)
+	if len(top.Chats) != 1 || top.Chats[0].ID != "wrote" {
+		t.Errorf("top 1: %+v", top.Chats)
+	}
+}
+
 // Days are the zone's: the same turns fall on other days elsewhere.
 func TestUsageDaysByZone(t *testing.T) {
 	d, _ := open(t)

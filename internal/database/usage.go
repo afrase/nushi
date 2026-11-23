@@ -160,11 +160,11 @@ func (d *DB) groups(ctx context.Context, key string, fromMs, toMs int64, keyArgs
 }
 
 // costliest sums the top chats in [from, to) that cost most (then used the
-// most tokens), most first.
+// most tokens, input and output), most first.
 func (d *DB) costliest(ctx context.Context, fromMs, toMs int64, top int) ([]model.UsageChat, error) {
 	rows, err := d.db.QueryContext(ctx, `WITH top AS (
 			SELECT chat FROM turns WHERE at >= ? AND at < ? GROUP BY chat
-			ORDER BY SUM(cost) DESC, SUM(input + output + cache_read + cache_write) DESC, chat LIMIT ?)
+			ORDER BY SUM(cost) DESC, SUM(input + output) DESC, chat LIMIT ?)
 		SELECT chat, MAX(agent), `+sums+` FROM turns WHERE at >= ? AND at < ? AND chat IN top GROUP BY chat, currency ORDER BY chat`,
 		fromMs, toMs, top, fromMs, toMs)
 	if err != nil {
@@ -286,7 +286,9 @@ func costOf(t model.UsageTotals) float64 {
 	return sum
 }
 
-func tokensOf(t model.UsageTotals) int64 { return t.Input + t.Output + t.CacheRead + t.CacheWrite }
+// tokensOf is a group's tokens as the page counts them: input and output,
+// the cache's apart (ADR 0136).
+func tokensOf(t model.UsageTotals) int64 { return t.Input + t.Output }
 
 // zones are the time zones nushi_day has loaded, by name.
 var zones sync.Map

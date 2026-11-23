@@ -27668,7 +27668,8 @@ type GetUsageResponse struct {
 	Agents  []*UsageGroup `protobuf:"bytes,3,rep,name=agents,proto3" json:"agents,omitempty"`
 	Models  []*UsageGroup `protobuf:"bytes,4,rep,name=models,proto3" json:"models,omitempty"`
 	Folders []*UsageGroup `protobuf:"bytes,5,rep,name=folders,proto3" json:"folders,omitempty"`
-	// The costliest chats, most first (then the most tokens): 20 at most.
+	// The costliest chats, most first (then the most input and output
+	// tokens): 20 at most.
 	Chats []*UsageChat `protobuf:"bytes,6,rep,name=chats,proto3" json:"chats,omitempty"`
 	// The agents whose turns in the range reported no cost (Codex, Ante):
 	// their cost isn't zero, it isn't known.

@@ -36213,7 +36213,8 @@ class GetUsageResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   $pb.PbList<UsageGroup> get folders => $_getList(4);
 
-  /// The costliest chats, most first (then the most tokens): 20 at most.
+  /// The costliest chats, most first (then the most input and output
+  /// tokens): 20 at most.
   @$pb.TagNumber(6)
   $pb.PbList<UsageChat> get chats => $_getList(5);
 
