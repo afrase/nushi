@@ -2,8 +2,9 @@
 // (app/assets/mermaid/, not committed), which the Mac app and the phone's
 // web app carry for drawing diagrams; nothing comes from a CDN at runtime.
 // make mermaid runs it before each build: the file comes once over https
-// from jsDelivr (npm's package as published) into a cache outside the
-// repository and is checked against mermaid.lock's sha256 and size.
+// from jsDelivr (npm's package as published), or unpkg when jsDelivr
+// fails, into a cache outside the repository, checked against
+// mermaid.lock's sha256 and size either way.
 //
 // With -lock <version> it writes mermaid.lock anew for that release,
 // taking the file from jsDelivr and unpkg and refusing it unless both
@@ -38,8 +39,9 @@ const (
 	maxSize  = 32 << 20
 )
 
-// The places a release's file is fetched from: the first when building,
-// both when locking.
+// The places a release's file is fetched from: in order when building,
+// until one gives the locked file (the lock's check makes either as safe),
+// and both when locking.
 var hosts = []string{
 	"https://cdn.jsdelivr.net/npm/mermaid@%s/dist/mermaid.min.js",
 	"https://unpkg.com/mermaid@%s/dist/mermaid.min.js",
@@ -75,18 +77,35 @@ func install() {
 	}
 	cache, err := os.UserCacheDir()
 	check(err)
-	cached := filepath.Join(cache, "nushi", "mermaid", p.version, "mermaid.min.js")
-	body, err := os.ReadFile(cached)
-	if err != nil || sumOf(body) != p.sum {
-		body, err = fetch(fmt.Sprintf(hosts[0], p.version))
-		check(err)
-		if sumOf(body) != p.sum || len(body) != p.size {
-			fatalf("mermaid %s isn't the file %s locks (sha256 %s, %d bytes): refusing it", p.version, lockPath, sumOf(body), len(body))
-		}
-		check(writeAtomic(cached, body))
-	}
+	body, err := locked(p, filepath.Join(cache, "nushi", "mermaid"), fetch)
+	check(err)
 	check(writeAtomic(outPath, body))
 	log.Printf("mermaid %s: %s, %d KB", p.version, outPath, len(body)>>10)
+}
+
+// locked is p's file: from the cache folder when it holds it, else from
+// the first of hosts that gives it, kept in the cache for the next build.
+// A host that fails or gives other bytes is passed over, named in the
+// error when none gives it.
+func locked(p pin, cache string, get func(url string) ([]byte, error)) ([]byte, error) {
+	cached := filepath.Join(cache, p.version, "mermaid.min.js")
+	if body, err := os.ReadFile(cached); err == nil && sumOf(body) == p.sum {
+		return body, nil
+	}
+	var errs []error
+	for _, h := range hosts {
+		url := fmt.Sprintf(h, p.version)
+		body, err := get(url)
+		switch {
+		case err != nil:
+			errs = append(errs, err)
+		case sumOf(body) != p.sum || len(body) != p.size:
+			errs = append(errs, fmt.Errorf("%s isn't the file %s locks (sha256 %s, %d bytes): refused", url, lockPath, sumOf(body), len(body)))
+		default:
+			return body, writeAtomic(cached, body)
+		}
+	}
+	return nil, fmt.Errorf("mermaid %s: %w", p.version, errors.Join(errs...))
 }
 
 // lock writes mermaid.lock for version.
