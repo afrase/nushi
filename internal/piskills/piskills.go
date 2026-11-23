@@ -35,10 +35,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/pi"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/skillfile"
 )
 
@@ -59,7 +59,7 @@ func (k Skills) roots(folder string) []root {
 	if !skillfile.Linked(folder, k.Folder+"/skills") {
 		out = append(out, root{path: filepath.Join(folder, k.Folder, "skills"), source: "project", project: true})
 	}
-	top := skillfile.Top(git.RealPath(folder))
+	top := skillfile.Top(realpath.Of(folder))
 	for _, r := range skillfile.Roots(folder, walkTop(folder, top), ".agents/skills") {
 		if filepath.Dir(filepath.Dir(r)) != home { // your own, read as yours below
 			out = append(out, root{path: r, source: "shared", project: true})
@@ -77,7 +77,7 @@ func walkTop(folder, top string) string {
 		return ""
 	}
 	for dir := folder; ; dir = filepath.Dir(dir) {
-		if git.RealPath(dir) == top {
+		if realpath.Of(dir) == top {
 			return dir
 		}
 		if dir == filepath.Dir(dir) {
@@ -111,7 +111,7 @@ func readSettings(file string) (settings, error) {
 func (k Skills) trusted(folder string, user settings) bool {
 	var decisions map[string]bool
 	_ = jsonsettings.Read(filepath.Join(k.AgentDir(), "trust.json"), &decisions) // unreadable: no decisions
-	for dir := git.RealPath(folder); ; dir = filepath.Dir(dir) {
+	for dir := realpath.Of(folder); ; dir = filepath.Dir(dir) {
 		if v, ok := decisions[dir]; ok {
 			return v
 		}

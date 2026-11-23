@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -17,7 +17,7 @@ func TestTheAgentHearsOfAFileTheUserEdited(t *testing.T) {
 	c.mu.Lock()
 	folder := c.record.Folder
 	c.mu.Unlock()
-	svc.UserEdited(c.id, filepath.Join(git.RealPath(folder), "a.go"))
+	svc.UserEdited(c.id, filepath.Join(realpath.Of(folder), "a.go"))
 	svc.UserEdited(c.id, filepath.Join(folder, "docs", "b.md"))
 	svc.UserEdited("another", filepath.Join(folder, "a.go"))
 	svc.UserEdited("another", "/elsewhere/c.md")                                     // not in its folder, nor its save

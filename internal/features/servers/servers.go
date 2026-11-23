@@ -20,6 +20,7 @@ import (
 	"github.com/afrase/nushi/internal/launchfile"
 	"github.com/afrase/nushi/internal/listeners"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Chats are the chats (internal/features/chats): whose folder a server
@@ -329,25 +330,27 @@ func (s *Service) stopWhere(which func(*server) bool, by string) {
 	wg.Wait()
 }
 
-// Within says whether a server lives in dir or a folder in it: a worktree
-// with one isn't removed by a move (chats' inUse).
+// Within says whether a server lives in dir or a folder in it, by either
+// spelling (realpath.Within): a worktree with one isn't removed by a move
+// (chats' inUse). The folders are compared after the lock: that reads
+// the file system.
 func (s *Service) Within(dir string) bool {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return slices.ContainsFunc(s.alive, func(sv *server) bool { return within(sv.folder, dir) })
+	alive := slices.Clone(s.alive)
+	s.mu.Unlock()
+	return slices.ContainsFunc(alive, func(sv *server) bool { return realpath.Within(sv.folder, dir) })
 }
 
-// StopWithin stops the servers in dir or a folder in it, before dir is
-// removed, and drops their ended ones.
+// StopWithin stops the servers in dir or a folder in it, by either
+// spelling, before dir is removed, and drops their ended ones.
 func (s *Service) StopWithin(dir string) {
-	in := func(sv *server) bool { return within(sv.folder, dir) }
+	s.mu.Lock()
+	all := append(slices.Clone(s.alive), s.ended...)
+	s.mu.Unlock()
+	all = slices.DeleteFunc(all, func(sv *server) bool { return !realpath.Within(sv.folder, dir) })
+	in := func(sv *server) bool { return slices.Contains(all, sv) }
 	s.stopWhere(in, ByNushi)
 	s.dropEnded(in)
-}
-
-func within(folder, dir string) bool {
-	rel, err := filepath.Rel(dir, folder)
-	return err == nil && filepath.IsLocal(rel)
 }
 
 // Follow takes every event: a chat archived, moved or deleted may leave a

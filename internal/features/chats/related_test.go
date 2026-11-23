@@ -18,6 +18,7 @@ import (
 
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/transcripts"
 )
@@ -67,7 +68,7 @@ func oid(subject string) string {
 // and checked out in it, with a fake of what git answers there.
 func fakeRepo(t *testing.T) (string, *fakeCheckouts) {
 	t.Helper()
-	repo := git.RealPath(t.TempDir())
+	repo := realpath.Of(t.TempDir())
 	start := oid("start")
 	return repo, &fakeCheckouts{entries: []model.WorktreeEntry{{Path: repo, Branch: "main", Head: start, Main: true, Current: true}},
 		tips: []string{start}, bases: map[string]string{}}
@@ -136,7 +137,7 @@ func (f *fakeCheckouts) Locate(ctx context.Context, folder string) (string, stri
 	if err := f.fails(ctx); err != nil {
 		return "", "", err
 	}
-	return "/common", git.RealPath(folder), nil
+	return "/common", realpath.Of(folder), nil
 }
 
 func (f *fakeCheckouts) DefaultTips(context.Context, string) []string {
@@ -604,7 +605,7 @@ func TestRelatedFromTheAgentsWord(t *testing.T) {
 // check of what git lists (see the top of this file).
 func TestRelatedRefusesAForgedList(t *testing.T) {
 	gitRepo := func() string {
-		repo := git.RealPath(t.TempDir())
+		repo := realpath.Of(t.TempDir())
 		testcheck.Git(t, repo, "init", "-q")
 		testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "start")
 		return repo

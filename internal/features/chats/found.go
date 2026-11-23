@@ -12,7 +12,7 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
-	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Found is one of an agent's sessions that isn't a chat: started in a
@@ -79,7 +79,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	if err != nil {
 		return FoundPage{}, err
 	}
-	resolved := git.RealPath(folder)
+	resolved := realpath.Of(folder)
 	paths := map[string]string{} // a cwd's real path, once looked up
 	page := FoundPage{CanList: true, SeesOpen: k.openFinder != nil, OneWriter: k.OneWriter}
 	for calls := 1; ; calls++ {
@@ -90,7 +90,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 		for _, info := range resp.Sessions {
 			id := string(info.SessionID)
 			if _, ok := paths[info.Cwd]; !ok {
-				paths[info.Cwd] = git.RealPath(info.Cwd)
+				paths[info.Cwd] = realpath.Of(info.Cwd)
 			}
 			if ours[id] || id == "" || folder != "" && paths[info.Cwd] != resolved {
 				continue

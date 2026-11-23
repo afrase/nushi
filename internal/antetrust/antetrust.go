@@ -16,8 +16,8 @@ import (
 
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/folderfiles"
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Trust reads a folder's settings for Ante.
@@ -44,10 +44,10 @@ func (Trust) Runs(folder string) ([]model.FolderRun, string, error) {
 // a link counts, as Ante follows it), not the user's own in Ante's home.
 func files(folder string) []folderfiles.File {
 	home, _ := os.UserHomeDir()
-	own := []string{git.RealPath(ante.Home()), git.RealPath(filepath.Join(home, ".ante"))}
-	for dir := git.RealPath(folder); ; dir = filepath.Dir(dir) {
+	own := []string{realpath.Of(ante.Home()), realpath.Of(filepath.Join(home, ".ante"))}
+	for dir := realpath.Of(folder); ; dir = filepath.Dir(dir) {
 		root := filepath.Join(dir, ".ante")
-		if !slices.Contains(own, git.RealPath(root)) {
+		if !slices.Contains(own, realpath.Of(root)) {
 			if fi, err := os.Lstat(root); err == nil && fi.Mode()&fs.ModeSymlink != 0 {
 				return folderfiles.Walk([]string{root}, "Ante")
 			}

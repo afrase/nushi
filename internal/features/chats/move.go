@@ -9,6 +9,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Move moves a chat to another folder, or with worktree to a new git
@@ -62,7 +63,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	switch {
 	case worktree:
 		wt, folder, err = s.addWorktree(ctx, folder, "", "")
-	case oldWT != nil && within(folder, oldWT.Path):
+	case oldWT != nil && realpath.Within(folder, oldWT.Path):
 		wt = oldWT // still in its worktree
 	default:
 		wt = s.foundWorktree(ctx, c, folder)
@@ -270,7 +271,7 @@ func (s *Service) foundWorktree(ctx context.Context, c *chat, folder string) *mo
 	earlier := slices.Clone(c.record.EarlierWorktrees)
 	c.mu.Unlock()
 	for _, wt := range earlier {
-		if within(folder, wt.Path) {
+		if realpath.Within(folder, wt.Path) {
 			return &wt
 		}
 	}
@@ -278,12 +279,6 @@ func (s *Service) foundWorktree(ctx context.Context, c *chat, folder string) *mo
 		return nil
 	}
 	return s.worktrees.Found(ctx, folder)
-}
-
-// within says whether folder is dir or a folder in it.
-func within(folder, dir string) bool {
-	rel, err := filepath.Rel(dir, folder)
-	return err == nil && filepath.IsLocal(rel)
 }
 
 // fork starts an agent with a fork of session sid in folder to, which the

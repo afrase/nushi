@@ -14,6 +14,7 @@ import (
 
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // A chat's related worktrees (ADR 0081) are the worktrees its subagents
@@ -363,7 +364,7 @@ func (c *chat) related(ctx context.Context, folder string, known []model.Related
 		return nil, err
 	}
 	for i, o := range owned {
-		owned[i] = git.RealPath(o) // once a look, not once for each worktree git lists
+		owned[i] = realpath.Of(o) // once a look, not once for each worktree git lists
 	}
 	for _, e := range list {
 		if len(next) >= maxRelated {
@@ -398,7 +399,7 @@ func (r relatedLook) verified(ctx context.Context, path string) (bool, error) {
 	if ctxErr := ctx.Err(); ctxErr != nil {
 		return false, ctxErr
 	}
-	return err == nil && common == r.common && top == git.RealPath(path), nil
+	return err == nil && common == r.common && top == realpath.Of(path), nil
 }
 
 // refresh brings a known worktree up to date: removed unless git lists it
@@ -467,18 +468,18 @@ func (r relatedLook) found(ctx context.Context, e model.WorktreeEntry, call stri
 // isOwned says path is one of owned (real paths), or holds one: a chat
 // that works in a folder of the worktree has it.
 func isOwned(path string, owned []string) bool {
-	path = git.RealPath(path)
-	return slices.ContainsFunc(owned, func(o string) bool { return within(o, path) })
+	path = realpath.Of(path)
+	return slices.ContainsFunc(owned, func(o string) bool { return realpath.Within(o, path) })
 }
 
 // whose is the tool call of the subagent the worktree at path is for, ""
 // when none shows: the agent's word first, then the first of the steps to
 // name it, in any of the ways a step can.
 func whose(path, folder string, steps []relatedStep, given map[string]string) string {
-	here := git.RealPath(path)
+	here := realpath.Of(path)
 	var calls []string
 	for call, p := range given {
-		if git.RealPath(p) == here {
+		if realpath.Of(p) == here {
 			calls = append(calls, call)
 		}
 	}
@@ -500,8 +501,8 @@ func whose(path, folder string, steps []relatedStep, given map[string]string) st
 // it, and relative to that folder, as Paths are inside it and as a
 // command in it would say it.
 func spellings(path, folder string) []string {
-	names := []string{path, git.RealPath(path)}
-	if rel, err := filepath.Rel(git.RealPath(folder), git.RealPath(path)); err == nil {
+	names := []string{path, realpath.Of(path)}
+	if rel, err := filepath.Rel(realpath.Of(folder), realpath.Of(path)); err == nil {
 		names = append(names, filepath.Join(folder, rel), rel)
 	}
 	slices.Sort(names)

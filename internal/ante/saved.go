@@ -14,7 +14,7 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
-	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 func resume(id acp.SessionID) map[string]any {
@@ -215,7 +215,7 @@ func (b *bridge) fork(ctx context.Context, from acp.SessionID, cwd, after string
 // messages each has.
 func (b *bridge) list(cwd string) acp.ListSessionsResponse {
 	out := acp.ListSessionsResponse{Sessions: []acp.SessionInfo{}}
-	cwd = git.RealPath(cwd)
+	cwd = realpath.Of(cwd)
 	dirs, _ := os.ReadDir(filepath.Join(b.home, "sessions"))
 	for _, d := range dirs {
 		raw, err := os.ReadFile(filepath.Join(b.home, "sessions", d.Name(), "meta.json"))
@@ -225,7 +225,7 @@ func (b *bridge) list(cwd string) acp.ListSessionsResponse {
 			Messages       int    `json:"message_count"`
 			Active         string `json:"last_active_time"`
 		}
-		if err != nil || json.Unmarshal(raw, &m) != nil || !isSessionID(m.ID) || cwd != "" && git.RealPath(m.Dir) != cwd {
+		if err != nil || json.Unmarshal(raw, &m) != nil || !isSessionID(m.ID) || cwd != "" && realpath.Of(m.Dir) != cwd {
 			continue
 		}
 		info := acp.SessionInfo{SessionID: acp.SessionID(m.ID), Cwd: m.Dir, Title: cmp.Or(m.Title, firstLine(skillRun(m.First))), UpdatedAt: m.Active}

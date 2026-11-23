@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/pi"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -185,7 +185,7 @@ func TestSetSkillOn(t *testing.T) {
 
 // PiG reads the same rules from its own folders and variable.
 func TestPiGHasItsOwnFolders(t *testing.T) {
-	agent, home, repo := t.TempDir(), t.TempDir(), git.RealPath(t.TempDir())
+	agent, home, repo := t.TempDir(), t.TempDir(), realpath.Of(t.TempDir())
 	t.Setenv("PIG_CODING_AGENT_DIR", agent)
 	t.Setenv("HOME", home)
 	skill(t, filepath.Join(agent, "skills"), "mine")

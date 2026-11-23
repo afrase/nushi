@@ -10,22 +10,9 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/procgroup"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/regularfile"
 )
-
-// RealPath returns path with its symlinks resolved (macOS's /tmp is
-// /private/tmp), as git reports worktrees and agents keep a session's
-// cwd; path cleaned when it can't be resolved (a folder that's gone), so
-// two spellings of it still compare equal; "" for "".
-func RealPath(path string) string {
-	if path == "" {
-		return ""
-	}
-	if r, err := filepath.EvalSymlinks(path); err == nil {
-		return r
-	}
-	return filepath.Clean(path)
-}
 
 // TrustRoot returns the root of folder's work tree ("" outside git) and
 // the folder an agent keys its trust on: its repository's main checkout,
@@ -65,7 +52,7 @@ func TrustRoot(folder string) (top, key string) {
 	if !filepath.IsAbs(gitdir) {
 		gitdir = filepath.Join(top, gitdir)
 	}
-	gitdir = RealPath(gitdir)
+	gitdir = realpath.Of(gitdir)
 	b, err = regularfile.Read(filepath.Join(gitdir, "gitdir"), gitfileLimit)
 	if err != nil {
 		return top, folder
@@ -75,7 +62,7 @@ func TrustRoot(folder string) (top, key string) {
 		back = filepath.Join(gitdir, back)
 	}
 	common := filepath.Dir(filepath.Dir(gitdir)) // <common>/worktrees/<name>
-	if RealPath(back) != RealPath(dotgit) || filepath.Base(filepath.Dir(gitdir)) != "worktrees" ||
+	if realpath.Of(back) != realpath.Of(dotgit) || filepath.Base(filepath.Dir(gitdir)) != "worktrees" ||
 		filepath.Base(common) != ".git" || worktreeSet(filepath.Join(common, "config")) {
 		return top, folder
 	}

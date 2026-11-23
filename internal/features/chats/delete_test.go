@@ -653,3 +653,36 @@ type pathStates struct {
 func (w *pathStates) Inspect(_ context.Context, wt model.Worktree) (model.WorktreeState, error) {
 	return w.state[wt.Path], nil
 }
+
+// A chat without messages moved into another spelling of its own
+// worktree (through a link) stays in it, and the worktree stays: it was
+// taken for one the chat left, and removed under the chat's new session.
+// A chat recorded under the other spelling keeps it too.
+func TestAMoveThroughALinkKeepsTheChatsWorktree(t *testing.T) {
+	for _, other := range []bool{false, true} {
+		svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+		wts := &removingWorktrees{}
+		svc.worktrees = wts
+		root := t.TempDir()
+		w := filepath.Join(root, "repo", ".worktrees", "brave-otter")
+		testcheck.NoErr(t, os.MkdirAll(filepath.Join(w, "sub"), 0o700))
+		link := filepath.Join(root, "link")
+		testcheck.NoErr(t, os.Symlink(filepath.Join(root, "repo"), link))
+		own := &model.Worktree{Repo: filepath.Join(root, "repo"), Path: w, Branch: "nushi/brave-otter"}
+		c.mu.Lock()
+		c.record.Worktree = own
+		c.mu.Unlock()
+		to := filepath.Join(link, ".worktrees", "brave-otter", "sub")
+		if other { // the chat itself moves elsewhere; another works in the worktree by the link
+			svc.sessions.(*memSessions).stored = []model.ChatRecord{{ID: "other", Folder: to}}
+			to = t.TempDir()
+		}
+		testcheck.NoErr(t, svc.Move(context.Background(), c.id, to, false))
+		c.mu.Lock()
+		wt := c.record.Worktree
+		c.mu.Unlock()
+		if len(wts.removed) > 0 || !other && (wt == nil || wt.Path != w) {
+			t.Errorf("another chat there %v: removed %q, the chat's worktree %+v", other, wts.removed, wt)
+		}
+	}
+}

@@ -21,6 +21,7 @@ import (
 	"github.com/afrase/nushi/internal/folderfiles"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Trust reads what a folder has omp run.
@@ -46,7 +47,7 @@ func (Trust) Runs(folder string) ([]model.FolderRun, string, error) {
 var lsp = []string{"lsp.json", "lsp.yaml", "lsp.yml", ".lsp.json", ".lsp.yaml", ".lsp.yml"}
 
 func files(folder string) []folderfiles.File {
-	resolved := git.RealPath(folder)
+	resolved := realpath.Of(folder)
 	top, _ := git.TrustRoot(resolved)
 	dirs := []string{resolved}
 	for dir := resolved; top != "" && dir != top && dir != filepath.Dir(dir); {
@@ -54,7 +55,7 @@ func files(folder string) []folderfiles.File {
 		dirs = append([]string{dir}, dirs...)
 	}
 	home, _ := os.UserHomeDir()
-	home = git.RealPath(home)
+	home = realpath.Of(home)
 	var roots []string
 	var bad []folderfiles.File // folders that couldn't be read: nothing to vouch for
 	add := func(dir string, names ...string) {

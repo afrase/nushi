@@ -15,8 +15,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Reader is one agent's skills.
@@ -167,7 +167,7 @@ func (s *Service) shared(ctx context.Context, folder string, lists map[string]mo
 	var out []model.Skill
 	for _, name := range s.order {
 		for _, sk := range s.sharedOf(ctx, name, folder, lists) {
-			sk.Path = filepath.Join(git.RealPath(filepath.Dir(sk.Path)), filepath.Base(sk.Path))
+			sk.Path = filepath.Join(realpath.Of(filepath.Dir(sk.Path)), filepath.Base(sk.Path))
 			i := slices.IndexFunc(out, func(o model.Skill) bool { return o.Path == sk.Path })
 			if i < 0 {
 				i = len(out)

@@ -18,9 +18,9 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
@@ -109,7 +109,7 @@ func (d Dirs) find(id, cwd string) (string, error) {
 		if s.ID != id {
 			continue
 		}
-		if cwd != "" && git.RealPath(s.Cwd) != git.RealPath(cwd) {
+		if cwd != "" && realpath.Of(s.Cwd) != realpath.Of(cwd) {
 			return "", fmt.Errorf("session %s is in %s, not %s", id, s.Cwd, cwd)
 		}
 		return s.file, nil
@@ -142,10 +142,10 @@ const pageSize = 50
 // list answers session/list: the sessions in folder cwd (every folder's
 // when ""), newest first, without forks; the cursor is an offset.
 func (d Dirs) list(cwd, cursor string) acp.ListSessionsResponse {
-	resolved := git.RealPath(cwd)
+	resolved := realpath.Of(cwd)
 	var found []saved
 	for _, s := range d.all() {
-		if s.Parent == "" && (cwd == "" || git.RealPath(s.Cwd) == resolved) {
+		if s.Parent == "" && (cwd == "" || realpath.Of(s.Cwd) == resolved) {
 			found = append(found, s)
 		}
 	}

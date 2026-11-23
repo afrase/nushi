@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -178,7 +179,7 @@ func TestNoWritesThroughARepositorysLinks(t *testing.T) {
 // Excludes at once each add their line once: one line asked for by many,
 // and each of many lines, are all there, none twice (excludeMu).
 func TestExcludesAtOnce(t *testing.T) {
-	repo := RealPath(t.TempDir())
+	repo := realpath.Of(t.TempDir())
 	testcheck.Git(t, repo, "init", "-q", "-b", "main")
 	var wg sync.WaitGroup
 	errs := make(chan error, 40)

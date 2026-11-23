@@ -19,9 +19,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/openflag"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/regularfile"
 )
 
@@ -243,7 +243,7 @@ func Key(agent, folder string, files []File) string {
 		}
 		_, _ = fmt.Fprintf(h, "%s\x00%x\x00", f.Path, f.Sum) // a hash doesn't fail
 	}
-	return fmt.Sprintf("%s:%s#%x", agent, git.RealPath(folder), h.Sum(nil))
+	return fmt.Sprintf("%s:%s#%x", agent, realpath.Of(folder), h.Sum(nil))
 }
 
 // Run is how the card shows a file: whole, under what (such as "Read by

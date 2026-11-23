@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -116,7 +117,7 @@ func TestWorktreeListBranchesAndSwitch(t *testing.T) {
 // was (Switch never forces).
 func TestSwitchKeepsAnUntrackedFileTheBranchTracks(t *testing.T) {
 	ctx := t.Context()
-	repo := RealPath(t.TempDir())
+	repo := realpath.Of(t.TempDir())
 	testcheck.Git(t, repo, "init", "-q", "-b", "main")
 	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
 	testcheck.Git(t, repo, "switch", "-q", "-c", "b")
@@ -144,7 +145,7 @@ func TestSwitchKeepsAnUntrackedFileTheBranchTracks(t *testing.T) {
 // a folder of another repository answers for that one.
 func TestLocate(t *testing.T) {
 	ctx := t.Context()
-	base := RealPath(t.TempDir())
+	base := realpath.Of(t.TempDir())
 	repo := filepath.Join(base, "repo")
 	testcheck.Git(t, base, "init", "-q", "-b", "main", repo)
 	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "one")

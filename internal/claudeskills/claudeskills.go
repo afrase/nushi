@@ -28,9 +28,9 @@ import (
 	"slices"
 
 	"github.com/afrase/nushi/internal/claude"
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/skillfile"
 )
 
@@ -47,7 +47,7 @@ func userRoot() string { return filepath.Join(claude.ConfigDir(), "skills") }
 // (skillfile.Roots): a repository's link could point the listing, and
 // Trash, anywhere. Your home folder's .claude is never the project's.
 func projectRoots(folder string) []string {
-	folder = git.RealPath(folder)
+	folder = realpath.Of(folder)
 	home, _ := os.UserHomeDir()
 	return slices.DeleteFunc(skillfile.Roots(folder, skillfile.Top(folder), ".claude/skills"), func(root string) bool {
 		return root == filepath.Join(home, ".claude", "skills")

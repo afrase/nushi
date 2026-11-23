@@ -18,8 +18,8 @@ import (
 
 	"github.com/afrase/nushi/internal/atomicfile"
 	"github.com/afrase/nushi/internal/codex"
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Codex's switch for a skill is a [[skills.config]] entry in its
@@ -73,7 +73,7 @@ func enabled(entries []entry, file, name string) bool {
 		if e.Path != nil && e.Name != nil {
 			continue
 		}
-		if e.Path != nil && git.RealPath(*e.Path) == file || e.Name != nil && *e.Name == name {
+		if e.Path != nil && realpath.Of(*e.Path) == file || e.Name != nil && *e.Name == name {
 			on = e.Enabled == nil || *e.Enabled
 		}
 	}
@@ -114,7 +114,7 @@ func blocks(lines []string) []block {
 			case m[2] == "path":
 				var v struct{ Path string }
 				if _, err := toml.Decode(strings.TrimSpace(line), &v); err == nil {
-					b.path, b.pathLine = git.RealPath(v.Path), b.end
+					b.path, b.pathLine = realpath.Of(v.Path), b.end
 				} else {
 					b.simple = false
 				}
@@ -254,7 +254,7 @@ func only(before, after map[string]any, file, name string, on bool) bool {
 			}
 		}
 		for _, e := range list(m) {
-			if p, ok := e["path"].(string); ok && git.RealPath(p) == file {
+			if p, ok := e["path"].(string); ok && realpath.Of(p) == file {
 				ours = append(ours, e)
 			} else {
 				others = append(others, e)

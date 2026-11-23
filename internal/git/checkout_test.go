@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -41,7 +42,7 @@ func TestTrustRootOnGitFilesThatAreNotFiles(t *testing.T) {
 		}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			dir := RealPath(t.TempDir())
+			dir := realpath.Of(t.TempDir())
 			c.make(t, dir)
 			type root struct{ top, key string }
 			done := make(chan root, 1)

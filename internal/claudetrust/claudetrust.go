@@ -34,6 +34,7 @@ import (
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Trust reads Claude Code's trust and settings files.
@@ -60,7 +61,7 @@ func (Trust) Trusted(folder string, also []string) (bool, error) {
 		return false, err
 	}
 	ok := func(dir string) bool { return cfg.Projects[dir].Accepted || slices.Contains(also, dir) }
-	folder = git.RealPath(folder)
+	folder = realpath.Of(folder)
 	top, key := git.TrustRoot(folder)
 	if ok(key) {
 		return true, nil
@@ -71,7 +72,7 @@ func (Trust) Trusted(folder string, also []string) (bool, error) {
 	// Outside git, a folder above counts too, but never the home folder or
 	// /: trusting your home would trust every download under it (Claude
 	// keeps home trust for one session only).
-	home := git.RealPath(homeDir())
+	home := realpath.Of(homeDir())
 	for dir := filepath.Dir(folder); dir != home && dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
 		if ok(dir) {
 			return true, nil
@@ -115,12 +116,12 @@ func runs(folder string) ([]model.FolderRun, error) {
 		}
 	}
 	dirs := []string{folder}
-	if top, _ := git.TrustRoot(git.RealPath(folder)); top != "" && top != git.RealPath(folder) {
+	if top, _ := git.TrustRoot(realpath.Of(folder)); top != "" && top != realpath.Of(folder) {
 		dirs = append(dirs, top)
 	}
-	home := git.RealPath(homeDir())
+	home := realpath.Of(homeDir())
 	for _, dir := range dirs {
-		if git.RealPath(dir) == home {
+		if realpath.Of(dir) == home {
 			continue // ~/.claude is the user's own config, not the folder's
 		}
 		for _, name := range []string{"settings.json", "settings.local.json"} {

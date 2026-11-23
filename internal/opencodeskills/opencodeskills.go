@@ -33,9 +33,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/opencode"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/skillfile"
 )
 
@@ -98,7 +98,7 @@ func roots(folder string) []root {
 // List returns opencode's skills in folder, the shared ones among them.
 func (OpenCode) List(_ context.Context, folder string) (model.Skills, error) {
 	out := model.Skills{ReadsShared: true}
-	folder = git.RealPath(folder)
+	folder = realpath.Of(folder)
 	docs, err := readGlobal()
 	if err != nil {
 		out.NoSwitch = err.Error()
@@ -145,7 +145,7 @@ func isPlace(places []root, dir string) bool {
 // Own are the places opencode's own skill folders are in: each
 // .opencode/skills (or skill) opencode reads here, and your config's.
 func (OpenCode) Own(folder string) (project, yours []string) {
-	for _, r := range roots(git.RealPath(folder)) {
+	for _, r := range roots(realpath.Of(folder)) {
 		switch {
 		case r.project && r.source == "project" && filepath.Base(filepath.Dir(r.path)) == ".opencode":
 			project = append(project, r.path)

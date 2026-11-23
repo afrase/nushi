@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // The agent hears of the files the user edited in Nushi's preview (ADR
@@ -56,7 +56,7 @@ func (s *Service) UserEdited(chatID, path string) {
 // alone.
 func (c *chat) holdsLocked(path string) (string, bool) {
 	for i, r := range c.rootsLocked() {
-		for _, r := range []string{r, git.RealPath(r)} {
+		for _, r := range []string{r, realpath.Of(r)} {
 			if rel, err := filepath.Rel(r, path); err == nil && filepath.IsLocal(rel) {
 				if i > 0 {
 					return path, true

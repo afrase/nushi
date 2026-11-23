@@ -14,6 +14,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -49,14 +50,14 @@ func (f *fakeServers) Answered(askID string, allowed bool) {
 func (f *fakeServers) Within(dir string) bool {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return slices.ContainsFunc(f.in, func(folder string) bool { return within(folder, dir) })
+	return slices.ContainsFunc(f.in, func(folder string) bool { return realpath.Within(folder, dir) })
 }
 
 func (f *fakeServers) StopWithin(dir string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.stopped = append(f.stopped, dir)
-	f.in = slices.DeleteFunc(f.in, func(folder string) bool { return within(folder, dir) })
+	f.in = slices.DeleteFunc(f.in, func(folder string) bool { return realpath.Within(folder, dir) })
 }
 
 // A chat without messages that moves out of its worktree leaves it while

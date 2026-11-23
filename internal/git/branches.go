@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // List lists folder's repository's worktrees, the main one first, without
@@ -83,19 +84,13 @@ func worktreeEntries(ctx context.Context, folder string) ([]worktreeEntry, error
 // deepest that holds it (a worktree inside the repository's folder is
 // its own checkout), or -1.
 func checkout(list []model.WorktreeEntry, folder string) int {
-	here, at := RealPath(folder), -1
+	here, at := realpath.Of(folder), -1
 	for i, e := range list {
-		if within(here, RealPath(e.Path)) && (at < 0 || len(e.Path) > len(list[at].Path)) {
+		if realpath.Within(here, realpath.Of(e.Path)) && (at < 0 || len(e.Path) > len(list[at].Path)) {
 			at = i
 		}
 	}
 	return at
-}
-
-// within says whether folder is dir or a folder in it.
-func within(folder, dir string) bool {
-	rel, err := filepath.Rel(dir, folder)
-	return err == nil && filepath.IsLocal(rel)
 }
 
 // Same says whether two folders are in the same checkout of a repository:
@@ -120,7 +115,7 @@ func (w Worktrees) Found(ctx context.Context, folder string) *model.Worktree {
 	}
 	e := list[i]
 	path := e.Path // git's, links resolved; the folder's spelling if it has the same end
-	if rel, err := filepath.Rel(e.Path, RealPath(folder)); err == nil {
+	if rel, err := filepath.Rel(e.Path, realpath.Of(folder)); err == nil {
 		top := filepath.Clean(folder)
 		if rel == "." {
 			path = top
@@ -152,7 +147,7 @@ func (Worktrees) Locate(ctx context.Context, folder string) (common, top string,
 	if len(lines) != 2 { // a path with a newline in it: not one to read on
 		return "", "", fmt.Errorf("%s: can't read where git says it is", folder)
 	}
-	return RealPath(lines[0]), RealPath(lines[1]), nil
+	return realpath.Of(lines[0]), realpath.Of(lines[1]), nil
 }
 
 // MergeBase is the latest commit where head left any of from, in folder's

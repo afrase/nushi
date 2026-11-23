@@ -9,6 +9,7 @@ import (
 
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Claude's settings files, as its MCP servers, skills and trust card read
@@ -21,7 +22,7 @@ import (
 //
 //nolint:contextcheck // TrustRoot's one quick git config, bounded by its own 5 s; also for callers with no request (the MCP list's scopes)
 func Project(folder string) string {
-	_, key := git.TrustRoot(git.RealPath(folder))
+	_, key := git.TrustRoot(realpath.Of(folder))
 	return key
 }
 
@@ -40,7 +41,7 @@ func LocalSettings(key string) string {
 // main checkout's), yours.
 func SettingsFiles(folder, key string) []string {
 	files := []string{LocalSettings(key)}
-	if git.RealPath(folder) != key {
+	if realpath.Of(folder) != key {
 		files = append(files, filepath.Join(folder, ".claude", "settings.local.json"))
 	}
 	return append(files, filepath.Join(folder, ".claude", "settings.json"), UserSettings())

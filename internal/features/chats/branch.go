@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // branchSlug is how much of a chat's title its branch takes, as a Jira
@@ -130,7 +131,7 @@ func (c *chat) branchTakenLocked(ctx context.Context, wt model.Worktree) (use mo
 // usesBranch says whether a chat has wt's branch: it runs in wt's folder,
 // or has (or had) a worktree on that branch.
 func usesBranch(s model.ChatRecord, wt model.Worktree) bool {
-	if within(s.Folder, wt.Path) {
+	if realpath.Within(s.Folder, wt.Path) {
 		return true
 	}
 	wts := s.EarlierWorktrees

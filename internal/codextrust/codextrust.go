@@ -26,6 +26,7 @@ import (
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Trust reads Codex's trust record and a folder's .codex files.
@@ -57,7 +58,7 @@ func (Trust) Trusted(folder string, _ []string) (bool, error) {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return false, fmt.Errorf("reading Codex's config: %w", err)
 	}
-	resolved := git.RealPath(folder)
+	resolved := realpath.Of(folder)
 	top, key := git.TrustRoot(resolved)
 	for _, dir := range []string{resolved, folder, top, key} {
 		if dir != "" && cfg.Projects[dir].TrustLevel == "trusted" {
@@ -89,7 +90,7 @@ func (Trust) Runs(folder string) ([]model.FolderRun, string, error) {
 // in folder (see Runs), empty ones left out. Links aren't followed: a link
 // is a file without a sum, as is anything but a regular file.
 func files(folder string) []folderfiles.File {
-	resolved := git.RealPath(folder)
+	resolved := realpath.Of(folder)
 	top, main := git.TrustRoot(resolved)
 	dirs := []string{resolved}
 	for dir := resolved; top != "" && dir != top && dir != filepath.Dir(dir); {
@@ -103,10 +104,10 @@ func files(folder string) []folderfiles.File {
 			}
 		}
 	}
-	home := git.RealPath(filepath.Dir(configFile()))
+	home := realpath.Of(filepath.Dir(configFile()))
 	var roots []string
 	for _, dir := range dirs {
-		if root := filepath.Join(dir, ".codex"); git.RealPath(root) != home { // Codex's own config isn't the folder's
+		if root := filepath.Join(dir, ".codex"); realpath.Of(root) != home { // Codex's own config isn't the folder's
 			roots = append(roots, root)
 		}
 	}

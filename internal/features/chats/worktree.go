@@ -15,6 +15,7 @@ import (
 
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Worktrees makes and removes the git worktrees chats run in.
@@ -89,15 +90,15 @@ func (s *Service) worktreeName() string {
 }
 
 // onRecord says whether a chat's record has a worktree at path, or a
-// folder in it. Chats that can't be read take no names.
+// folder in it, by either spelling. Chats that can't be read take no names.
 func (s *Service) onRecord(path string) bool {
 	stored, err := s.sessions.Sessions()
 	if err != nil {
 		return false
 	}
 	return slices.ContainsFunc(stored, func(r model.ChatRecord) bool {
-		at := func(wt model.Worktree) bool { return wt.Path == path }
-		return within(r.Folder, path) || (r.Worktree != nil && at(*r.Worktree)) || slices.ContainsFunc(r.EarlierWorktrees, at)
+		at := func(wt model.Worktree) bool { return wt.Path == path || realpath.Of(wt.Path) == realpath.Of(path) }
+		return realpath.Within(r.Folder, path) || (r.Worktree != nil && at(*r.Worktree)) || slices.ContainsFunc(r.EarlierWorktrees, at)
 	})
 }
 

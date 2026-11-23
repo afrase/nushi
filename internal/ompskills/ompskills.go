@@ -27,9 +27,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/omp"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/skillfile"
 )
 
@@ -99,7 +99,7 @@ func roots(folder string, cfg config) []root {
 // List returns omp's skills in folder, the shared ones among them.
 func (OMP) List(_ context.Context, folder string) (model.Skills, error) {
 	out := model.Skills{ReadsShared: true}
-	folder = git.RealPath(folder)
+	folder = realpath.Of(folder)
 	cfg, err := readConfig(folder)
 	if err != nil {
 		out.NoSwitch = err.Error()
@@ -141,7 +141,7 @@ func (o OMP) SetSkillOn(ctx context.Context, folder, source, name string, on boo
 // Own are the places omp's own skill folders are in: each .omp/skills
 // omp reads here and your skills folder.
 func (OMP) Own(folder string) (project, yours []string) {
-	for _, d := range walk(git.RealPath(folder)) {
+	for _, d := range walk(realpath.Of(folder)) {
 		if !skillfile.Linked(d, ".omp/skills") {
 			project = append(project, filepath.Join(d, ".omp", "skills"))
 		}

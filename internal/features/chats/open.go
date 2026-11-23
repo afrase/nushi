@@ -8,8 +8,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Open makes one of the agent's sessions (Find's) a chat in folder: the
@@ -38,7 +38,7 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	// The folder as the chats already there spell it (/tmp, not the
 	// agent's /private/tmp), so the chat joins them.
 	if i := slices.IndexFunc(stored, func(sess model.ChatRecord) bool {
-		return sess.Folder != folder && git.RealPath(sess.Folder) == git.RealPath(folder)
+		return sess.Folder != folder && realpath.Of(sess.Folder) == realpath.Of(folder)
 	}); i >= 0 {
 		folder = stored[i].Folder
 	}

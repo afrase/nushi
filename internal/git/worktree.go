@@ -15,6 +15,7 @@ import (
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/openflag"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Worktrees makes and removes git worktrees.
@@ -195,10 +196,10 @@ func (Worktrees) BranchUse(ctx context.Context, wt model.Worktree) (model.Branch
 	if err != nil {
 		return u, err
 	}
-	here := RealPath(wt.Path)
+	here := realpath.Of(wt.Path)
 	for _, e := range list {
 		if e.Branch == wt.Branch {
-			on := RealPath(e.Path) == here
+			on := realpath.Of(e.Path) == here
 			u.OnIt, u.Elsewhere = u.OnIt || on, u.Elsewhere || !on
 		}
 	}

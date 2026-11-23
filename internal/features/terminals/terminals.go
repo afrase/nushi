@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Shell is a shell running in a terminal (an *terminal.Terminal).
@@ -267,14 +268,16 @@ func (s *Service) Follow(e model.Event) {
 }
 
 // Within says whether a terminal (running or not: it can restart) is in
-// dir or a folder in it.
+// dir or a folder in it, by either spelling (realpath.Within). The folders
+// are compared after the lock: that reads the file system.
 func (s *Service) Within(dir string) bool {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return slices.ContainsFunc(s.terms, func(t *term) bool {
-		rel, err := filepath.Rel(dir, t.Folder)
-		return err == nil && filepath.IsLocal(rel)
-	})
+	folders := make([]string, 0, len(s.terms))
+	for _, t := range s.terms {
+		folders = append(folders, t.Folder)
+	}
+	s.mu.Unlock()
+	return slices.ContainsFunc(folders, func(f string) bool { return realpath.Within(f, dir) })
 }
 
 // Busy says whether a terminal runs a command: a program other than its

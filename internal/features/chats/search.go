@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // FoundText is a session Search found: as Find lists it, with where its
@@ -63,7 +63,7 @@ func (s *Service) Search(ctx context.Context, agent, folder, text string) (Found
 	if err != nil {
 		return FoundTexts{}, err
 	}
-	resolved := git.RealPath(folder)
+	resolved := realpath.Of(folder)
 	var mu sync.Mutex
 	paths := map[string]string{} // a cwd's real path, once looked up
 	inFolder := func(cwd string) bool {
@@ -73,7 +73,7 @@ func (s *Service) Search(ctx context.Context, agent, folder, text string) (Found
 		mu.Lock()
 		defer mu.Unlock()
 		if _, ok := paths[cwd]; !ok {
-			paths[cwd] = git.RealPath(cwd)
+			paths[cwd] = realpath.Of(cwd)
 		}
 		return paths[cwd] == resolved
 	}

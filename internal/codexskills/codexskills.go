@@ -30,8 +30,8 @@ import (
 	"slices"
 
 	"github.com/afrase/nushi/internal/codex"
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 	"github.com/afrase/nushi/internal/skillfile"
 )
 
@@ -53,7 +53,7 @@ func roots(folder string) []root {
 		{path: filepath.Join(codex.Home(), "skills", ".system"), source: "system"},
 		{path: filepath.Join(userHome, ".agents", "skills"), source: "shared", everywhere: true},
 	}
-	folder = git.RealPath(folder)
+	folder = realpath.Of(folder)
 	top := cmp.Or(skillfile.Top(folder), folder)
 	for _, kind := range []struct{ rel, source string }{{".codex/skills", "project"}, {".agents/skills", "shared"}} {
 		for _, r := range skillfile.Roots(folder, top, kind.rel) {
@@ -93,7 +93,7 @@ func (Codex) List(_ context.Context, folder string) (model.Skills, error) {
 }
 
 // skillFile is a skill's SKILL.md as Codex names it: links resolved.
-func skillFile(dir string) string { return git.RealPath(filepath.Join(dir, "SKILL.md")) }
+func skillFile(dir string) string { return realpath.Of(filepath.Join(dir, "SKILL.md")) }
 
 // find is folder's skill of source and name, as listed.
 func (c Codex) find(ctx context.Context, folder, source, name string) (model.Skill, error) {

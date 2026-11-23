@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Cleaning up after a chat's pull request merged or closed: its worktree
@@ -61,7 +62,7 @@ func (s *Service) othersIn(c *chat, folder string) ([]string, error) {
 	}
 	var titles []string
 	for _, sess := range stored {
-		if sess.ID == c.id || sess.Archived || !within(sess.Folder, folder) {
+		if sess.ID == c.id || sess.Archived || !realpath.Within(sess.Folder, folder) {
 			continue
 		}
 		titles = append(titles, cmp.Or(sess.Name, sess.Title, "a chat without a title"))

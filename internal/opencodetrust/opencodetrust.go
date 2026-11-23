@@ -33,9 +33,9 @@ import (
 	"strings"
 
 	"github.com/afrase/nushi/internal/folderfiles"
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/opencode"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // Trust reads what a folder has opencode run.
@@ -88,16 +88,16 @@ var inConfigFolder = []string{
 // under its own path as a skill's file.
 func files(folder string) []folderfiles.File {
 	home, _ := os.UserHomeDir()
-	home = git.RealPath(home)
+	home = realpath.Of(home)
 	// opencode walks no folders for a chat in its own config folder.
-	own := git.RealPath(opencode.ConfigDir(home))
+	own := realpath.Of(opencode.ConfigDir(home))
 	var roots, places []string
 	// opencode walks up from the folder as the chat names it: where a link
 	// in that path makes those other folders than the real path's, both
 	// count.
-	dirs := upToRoot(git.RealPath(folder))
+	dirs := upToRoot(realpath.Of(folder))
 	for _, dir := range upToRoot(filepath.Clean(folder)) {
-		if dir = git.RealPath(dir); !slices.Contains(dirs, dir) {
+		if dir = realpath.Of(dir); !slices.Contains(dirs, dir) {
 			dirs = append(dirs, dir)
 		}
 	}

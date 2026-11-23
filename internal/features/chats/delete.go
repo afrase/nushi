@@ -13,6 +13,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/realpath"
 )
 
 // DeletePlan is what deleting a chat removes, besides Nushi's record of it.
@@ -125,7 +126,7 @@ func (s *Service) probeDeletes(ctx context.Context, c *chat) (deletes, cantStart
 // in dir; when the chats can't be read, that one might.
 func (s *Service) othersWorkIn(c *chat, dir string) bool {
 	stored, err := s.sessions.Sessions()
-	return err != nil || slices.ContainsFunc(stored, func(sess model.ChatRecord) bool { return sess.ID != c.id && within(sess.Folder, dir) })
+	return err != nil || slices.ContainsFunc(stored, func(sess model.ChatRecord) bool { return sess.ID != c.id && realpath.Within(sess.Folder, dir) })
 }
 
 // startDeleter starts the chat's agent with no session, to delete sessions
