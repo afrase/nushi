@@ -12,7 +12,8 @@
 # everything: another event (the release's call, a run by hand), a push
 # that made its branch or rewrote it, no change at all, or any error.
 #
-# Docs (docs/, the root's Markdown, LICENSE) are read by no build or test;
+# Docs (docs/, the root's Markdown, LICENSE) and the promo site (site/,
+# which only site.yml copies) are read by no build or test;
 # a Markdown file anywhere else counts by its folder. Go's folders mark go,
 # the app's and the Dart packages' app (app/windows too, which only the
 # Windows app's build reads); app/macos marks both, because the window's
@@ -31,7 +32,7 @@ kinds() {
 	mac=false
 	while IFS= read -r path; do
 		case $path in
-		"" | docs/* | LICENSE) continue ;;
+		"" | docs/* | site/* | LICENSE) continue ;;
 		*/*) ;;
 		*.md) continue ;;
 		esac
@@ -73,6 +74,12 @@ self_test() {
 	}
 	check "false false false" "docs/adr/0129-x.md"
 	check "false false false" "README.md"
+	check "false false false" "site/index.html"
+	check "false false false" "site/style.css
+docs/images/chat.png"
+	check "true true true" "site/index.html
+Makefile"
+	check "true true true" "sites/x"
 	check "false false false" "AGENTS.md
 CLAUDE.md
 LICENSE"
