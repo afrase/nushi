@@ -185,3 +185,45 @@ func TestReleaseWithdrawLeavesALiveReleasePublic(t *testing.T) {
 		t.Errorf("a failed rebuild of a live release: %q, want it left public", run.calls)
 	}
 }
+
+// A release that is a draft already when draft runs (Re-run all jobs, or
+// re-running a draft job that failed) is in neither GitHub's latest nor
+// its list without drafts, so draft places it as publishing it will: the
+// latest if it is a release newer than the latest, the newest beta if it
+// is a pre-release newer than the newest beta.
+func TestReleaseDraftPlacesADraftAsPublishingWill(t *testing.T) {
+	script := releaseStep(t, "draft", "draft")
+	for _, tc := range []struct {
+		name, tag  string
+		pre        bool
+		latest     string
+		list       []listed
+		wantLatest string
+		wantBeta   string
+	}{
+		{"a newer release", "v0.54.0", false, "v0.53.2",
+			[]listed{{Tag: "v0.54.0", Draft: true}, {Tag: "v0.54.0-beta.2", Pre: true}, {Tag: "v0.53.2"}},
+			"v0.54.0", "v0.54.0-beta.2"},
+		{"an older release", "v0.53.3", false, "v0.54.0",
+			[]listed{{Tag: "v0.53.3", Draft: true}, {Tag: "v0.54.0"}, {Tag: "v0.54.0-beta.2", Pre: true}},
+			"v0.54.0", "v0.54.0-beta.2"},
+		{"a newer beta", "v0.55.0-beta.10", true, "v0.54.0",
+			[]listed{{Tag: "v0.55.0-beta.10", Pre: true, Draft: true}, {Tag: "v0.55.0-beta.9", Pre: true}, {Tag: "v0.54.0"}},
+			"v0.54.0", "v0.55.0-beta.10"},
+		{"the first beta", "v0.55.0-beta.1", true, "v0.54.0",
+			[]listed{{Tag: "v0.55.0-beta.1", Pre: true, Draft: true}, {Tag: "v0.54.0"}},
+			"v0.54.0", "v0.55.0-beta.1"},
+		{"an older beta", "v0.54.0-beta.3", true, "v0.54.0",
+			[]listed{{Tag: "v0.54.0-beta.3", Pre: true, Draft: true}, {Tag: "v0.55.0-beta.1", Pre: true}, {Tag: "v0.54.0"}},
+			"v0.54.0", "v0.55.0-beta.1"},
+	} {
+		gh := fakeGH{release: release(t, tc.tag, true, tc.pre, "Nushi-"+tc.tag[1:]+".zip"), latest: tc.latest, list: tc.list}
+		run := runStep(t, script, gh, map[string]string{"TAG": tc.tag, "ID": "7"})
+		if run.outputs["latest"] != tc.wantLatest || run.outputs["beta"] != tc.wantBeta {
+			t.Errorf("%s: latest %q, beta %q; want %q, %q", tc.name, run.outputs["latest"], run.outputs["beta"], tc.wantLatest, tc.wantBeta)
+		}
+		if run.outputs["live"] == "true" {
+			t.Errorf("%s: a draft found live", tc.name)
+		}
+	}
+}

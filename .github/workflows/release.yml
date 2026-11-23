@@ -41,7 +41,10 @@ jobs:
   # event gives: a draft is found by its tag only through a list. On a published release's run only: a run by hand
   # rebuilds a release as it is. So does a run on a release that is public with its app's zip attached already (Re-run
   # all jobs on a green run, or a run queued behind one after publishing the draft by hand): the tap names it, so it
-  # stays public, and live tells withdraw so. It checks nothing out: its one step is this file's.
+  # stays public, and live tells withdraw so. A release that is a draft already (Re-run all jobs, or re-running a
+  # failed draft job) is in neither, so it is placed as publishing it will place it: the latest if it is a release
+  # newer than the latest, the newest beta if a pre-release newer than the newest beta. It checks nothing out: its one
+  # step is this file's.
   draft:
     name: Make the release a draft while it builds
     if: github.event_name == 'release'
@@ -59,11 +62,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ID: ${{ github.event.release.id }}
         run: |
-          read -r draft files <<< "$(ZIP="Nushi-${TAG#v}.zip" gh api "repos/$GITHUB_REPOSITORY/releases/$ID" \
-            --jq '"\(.draft) \(any(.assets[]; .name == env.ZIP))"')"
+          newer() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | tail -1)" = "$1" ]; }
+          read -r draft pre files <<< "$(ZIP="Nushi-${TAG#v}.zip" gh api "repos/$GITHUB_REPOSITORY/releases/$ID" \
+            --jq '"\(.draft) \(.prerelease) \(any(.assets[]; .name == env.ZIP))"')"
           latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
           beta=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 30 --json tagName,isPrerelease \
             --jq '[.[] | select(.isPrerelease)][0].tagName // ""')
+          if [ "$draft" = true ] && [ "$pre" = true ]; then
+            if newer "$TAG" "$beta"; then beta=$TAG; fi
+          elif [ "$draft" = true ] && newer "$TAG" "$latest"; then
+            latest=$TAG
+          fi
           echo "latest=$latest" >> "$GITHUB_OUTPUT"
           echo "beta=$beta" >> "$GITHUB_OUTPUT"
           if [ "$draft" = false ] && [ "$files" = true ]; then
