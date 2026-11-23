@@ -33,18 +33,23 @@ final class Scanner {
   /// The camera's picture, filling its box.
   Widget view() => HtmlElementView.fromTagName(
     tagName: 'video',
-    onElementCreated: (o) {
-      final v = _video = o as web.HTMLVideoElement
-        ..autoplay = true
-        ..muted = true
-        ..setAttribute('playsinline', '');
-      v.style
-        ..width = '100%'
-        ..height = '100%'
-        ..objectFit = 'cover';
-      _show();
-    },
+    onElementCreated: (o) => show(o as web.HTMLVideoElement),
   );
+
+  /// Shows the camera's picture in [video] and reads its frames: [view]'s
+  /// element, or a test's (a widget test builds no platform view).
+  @visibleForTesting
+  void show(web.HTMLVideoElement video) {
+    _video = video
+      ..autoplay = true
+      ..muted = true
+      ..setAttribute('playsinline', '');
+    video.style
+      ..width = '100%'
+      ..height = '100%'
+      ..objectFit = 'cover';
+    _show();
+  }
 
   /// Asks for the camera (the browser asks the user the first time) and
   /// starts reading: null once it runs, else why it can't, in a sentence.
@@ -149,20 +154,26 @@ final class Scanner {
     final scale = min(1, 800 / max(w, h));
     final cw = (w * scale).round();
     final ch = (h * scale).round();
-    _canvas
-      ..width = cw
-      ..height = ch;
-    final ctx =
-        _canvas.getContext('2d', {'willReadFrequently': true}.jsify())!
-              as web.CanvasRenderingContext2D
-          ..drawImage(v, 0, 0, cw, ch);
-    final pixels = ctx.getImageData(0, 0, cw, ch).data.toDart.buffer.toJS;
-    final frame = JSObject()
-      ..['data'] = pixels
-      ..['width'] = cw.toJS
-      ..['height'] = ch.toJS;
-    // The pixels move to the worker, not copied.
-    _worker?.postMessage(frame, [pixels].toJS);
+    try {
+      _canvas
+        ..width = cw
+        ..height = ch;
+      final ctx =
+          _canvas.getContext('2d', {'willReadFrequently': true}.jsify())!
+                as web.CanvasRenderingContext2D
+            ..drawImage(v, 0, 0, cw, ch);
+      final pixels = ctx.getImageData(0, 0, cw, ch).data.toDart.buffer.toJS;
+      final frame = JSObject()
+        ..['data'] = pixels
+        ..['width'] = cw.toJS
+        ..['height'] = ch.toJS;
+      // The pixels move to the worker, not copied.
+      _worker!.postMessage(frame, [pixels].toJS);
+    } on Object {
+      // A frame it couldn't read or send: the next one, as the worker
+      // answers none for it.
+      _busy = false;
+    }
   }
 
   void _found(String text) {
