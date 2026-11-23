@@ -45,16 +45,16 @@ func Numbers(v string) []int {
 	return out
 }
 
-// Older says version v comes before min, by their first three numbers: a
+// Older says version v comes before least, by their first three numbers: a
 // part left out counts as 0 ("2.1" is 2.1.0), and a pre-release's tag or
 // build metadata is left out ("0.3.0-rc.1" is 0.3.0, so it meets a
 // minimum of 0.3.0). A version that isn't one, or a minimum, is an error.
-func Older(v, min string) (bool, error) {
+func Older(v, least string) (bool, error) {
 	got, err := triple(v)
 	if err != nil {
 		return false, err
 	}
-	want, err := triple(min)
+	want, err := triple(least)
 	if err != nil {
 		return false, err
 	}
