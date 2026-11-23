@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -134,5 +135,29 @@ func TestBranchNoteChecksOutsideTheLock(t *testing.T) {
 	defer c.mu.Unlock()
 	if it := c.itemLocked(line); it == nil || !strings.HasSuffix(it.Text, toldSuffix) || c.record.Worktree.Told != "nushi/new" {
 		t.Errorf("line %+v, told %q", it, c.record.Worktree.Told)
+	}
+}
+
+// A move is told for any folder but one with a line break, which would
+// split the note: a folder's name may hold a zero-width joiner (an emoji
+// sequence), a soft hyphen or a tab, as it could before the notes were
+// tags; the tag's quoting keeps each inside it.
+func TestMoveToldForAnyFolderButALineBreak(t *testing.T) {
+	for folder, told := range map[string]bool{
+		"/Users/me/👩\u200d💻 work":    true,
+		"/Users/me/soft\u00adhyphen": true,
+		"/Users/me/a\tb":             true,
+		"/Users/me/it's & `x`":       true,
+		"/Users/me/a\nb":             false,
+		"/Users/me/a\rb":             false,
+	} {
+		n := &notes{sess: model.ChatRecord{Folder: folder, Moved: true}, git: stuckWorktrees{}, log: slog.New(slog.DiscardHandler)}
+		block, _, pending := n.place()
+		if !pending || (block != nil) != told {
+			t.Errorf("%q: note %v, pending %v; want told %v", folder, block, pending, told)
+		}
+		if block != nil && block.Text.Text != moveNote(folder, "") {
+			t.Errorf("%q: note %s", folder, block.Text.Text)
+		}
 	}
 }

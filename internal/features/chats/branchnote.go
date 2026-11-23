@@ -55,7 +55,7 @@ func switchNote(from, to string) string {
 	return note("branch-switched", "from", from, "to", to)
 }
 
-// moveNote tells the agent its chat moved to folder (noteName checked it),
+// moveNote tells the agent its chat moved to folder (place checked it),
 // on branch if it's on one (checked by git first).
 func moveNote(folder, branch string) string {
 	if branch == "" {

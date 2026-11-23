@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"slices"
+	"strings"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -158,7 +159,7 @@ func (n *notes) place() (*acp.ContentBlock, []string, bool) {
 	}
 	var text string
 	switch {
-	case sess.Moved && !noteName(sess.Folder):
+	case sess.Moved && (sess.Folder == "" || strings.ContainsAny(sess.Folder, "\r\n")): // a line break would split the note; the rest is escaped in it
 		n.log.Warn("the agent isn't told where the chat moved: a folder name it can't be told")
 		return nil, nil, true
 	case sess.Moved:
