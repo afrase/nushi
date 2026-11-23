@@ -200,4 +200,35 @@ void main() {
     toasts.clear();
     await tester.pump();
   });
+
+  testWidgets('a failure never waits behind a plain toast, and nothing '
+      'plain knocks it out', (tester) async {
+    await start(tester);
+    final here = tester.element(find.byKey(const ValueKey('here')));
+    showToast(toasts, 'Clearing…', duration: const Duration(minutes: 5));
+    showToast(toasts, 'Copied');
+    await tester.pumpAndSettle();
+    // tryOrShow's, showError's: no replace, yet it shows at once.
+    showError(here, 'fork refused');
+    await tester.pump();
+    expect(shown(), 'fork refused');
+    // A second failure waits its turn, ahead of the plain one waiting.
+    showError(here, 'reload refused');
+    // A slow call's spinner, its answer and its hide leave it.
+    showToast(toasts, 'Reloading…', replace: true);
+    toasts.hide();
+    await tester.pump(const Duration(seconds: 7));
+    expect(shown(), 'fork refused');
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(shown(), 'reload refused');
+    await tester.pump(failureFor);
+    await tester.pumpAndSettle();
+    expect(shown(), 'Copied');
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(shown(), 'Reloading…');
+    toasts.clear();
+    await tester.pump();
+  });
 }

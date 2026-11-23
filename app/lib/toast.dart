@@ -17,7 +17,8 @@ typedef ToastAction = ({String label, VoidCallback onPressed});
 /// [text], after [leading] or [icon] when given, then [action] as a
 /// compact button and, when [closable], a × (docs/design.md's Toasts). It
 /// stays [duration]; with [replace], it takes the place of the one
-/// showing, else it waits its turn. A failure goes through [showFailure].
+/// showing (never a failure's), else it waits its turn. A failure goes
+/// through [showFailure].
 void showToast(
   Toasts? toasts,
   String text, {
@@ -46,8 +47,9 @@ const failureFor = Duration(seconds: 8);
 
 /// Shows [text] as a failure, the one look every error has: the toast on
 /// the failure's soft fill (`crashedSoft`) with [icon] in its ink and a ×,
-/// staying [duration] (docs/design.md's Toasts). [replace] and [action]
-/// as [showToast]'s.
+/// staying [duration] (docs/design.md's Toasts). It takes a plain
+/// toast's place at once, [replace] or not ([Toasts.show]); [replace]
+/// lets it take a failure's too. [action] as [showToast]'s.
 void showFailure(
   Toasts? toasts,
   String text, {
@@ -175,7 +177,11 @@ class Toasts extends State<ToastHost> with SingleTickerProviderStateMixin {
   /// goes after [duration], unless it [holds] an action and VoiceOver is
   /// on (as Material's snack bar does). With [replace] it takes the place
   /// of the one showing at once; else it waits its turn. A [failed] one
-  /// sits on the failure's soft fill ([showFailure]).
+  /// sits on the failure's soft fill ([showFailure]), and is never unseen
+  /// behind a plain one: it takes a plain one's place at once (that one
+  /// is gone; a slow call's spinner can stay minutes), and waits only for
+  /// a failure, ahead of the plain ones waiting. A plain one never takes
+  /// a failure's place, [replace] or not: it waits its turn.
   void show(
     Widget Function(VoidCallback close) line, {
     Duration duration = const Duration(seconds: 4),
@@ -187,16 +193,27 @@ class Toasts extends State<ToastHost> with SingleTickerProviderStateMixin {
     if (!mounted) return;
     final toast = _Toast(key, duration, holds: holds, failed: failed);
     toast.line = line(() => _close(toast));
-    if (replace && _showing != null) {
+    final showing = _showing;
+    final now = switch (showing) {
+      null => false,
+      _Toast(failed: true) => failed && replace,
+      _ => failed || replace,
+    };
+    if (now) {
       _put(toast);
     } else {
-      _queue.add(toast);
-      if (_showing == null) _next();
+      final plain = _queue.indexWhere((t) => !t.failed);
+      _queue.insert(failed && plain >= 0 ? plain : _queue.length, toast);
+      if (showing == null) _next();
     }
   }
 
-  /// Takes the showing toast away; the next waiting comes once it's gone.
-  void hide() => _close(_showing);
+  /// Takes the showing toast away, unless it's a failure (it goes on its
+  /// own or by its ×); the next waiting comes once it's gone.
+  void hide() {
+    if (_showing?.failed ?? true) return;
+    _close(_showing);
+  }
 
   void _close(_Toast? toast) {
     if (toast == null || _going || toast != _showing) return;
