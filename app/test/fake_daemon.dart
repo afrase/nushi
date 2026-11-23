@@ -97,9 +97,22 @@ class FakeDaemon implements Transport {
   }
 
   /// What GetChat answers for a chat by its id, with the chat itself:
-  /// its transcript's items. A chat not in it answers the empty response.
-  /// [answer] goes first.
+  /// its transcript's items. GetChat for a chat in [chats] answers the
+  /// chat, its status and the last seq sent for it, with these items if
+  /// any (internal/api/chats.go); for any other id it's NotFound, as the
+  /// daemon's. [answer] goes first.
   final chatItems = <String, List<Item>>{};
+
+  /// The side chats the daemon has open (ForkChat, RestoreSideChat), by
+  /// id: the id of the chat each came from. GetChat answers them too;
+  /// KeepSideChat keeps one of these and refuses any other, as the daemon
+  /// does.
+  final sides = <String, String>{};
+
+  /// The last seq sent for each chat (internal/api/chats.go's GetChat
+  /// answers it), and the status its events last said.
+  final _seqs = <String, Int64>{};
+  final _statuses = <String, ChatStatus>{};
 
   /// What GetDiff with a path (a file preview's question, API 121) answers,
   /// by the file's absolute path (folder and path joined): its one change,
@@ -236,6 +249,11 @@ class FakeDaemon implements Transport {
   /// Sends [e] to whoever is subscribed, as the daemon's own changes (a
   /// fork, a pin) go out whether or not anyone listens.
   void _send(EventsResponse e) {
+    if (e.chatId.isNotEmpty) {
+      if (e.seq > (_seqs[e.chatId] ?? Int64.ZERO)) _seqs[e.chatId] = e.seq;
+      if (e.hasStatus()) _statuses[e.chatId] = e.status;
+      if (e.removed) _statuses.remove(e.chatId);
+    }
     for (final s in subscriptions.where((s) => s.live)) {
       s._out.add(e);
     }
@@ -289,7 +307,6 @@ class FakeDaemon implements Transport {
     if (input is SetChatColorRequest) _color(input.chatId, input.color);
     if (input is PinMessageRequest) _pinMessage(input);
     if (input is ForkAsChatRequest) _fork(input.chatId, _nextFork());
-    if (input is KeepSideChatRequest) _fork(chats.first.id, 'kept');
     if (input is StartChatRequest) {
       started.add(input);
       if (startError case final e?) {
@@ -340,6 +357,7 @@ class FakeDaemon implements Transport {
     }
     calls.add(input);
     if (input is DeleteChatRequest) _delete(input.chatId);
+    if (other == null && input is KeepSideChatRequest) _keepSide(input.chatId);
     final out =
         other ??
         switch (input) {
@@ -356,11 +374,7 @@ class FakeDaemon implements Transport {
                   : null,
             ),
           GetSettingsRequest() => GetSettingsResponse(settings: settings),
-          GetChatRequest(:final chatId) when chatItems.containsKey(chatId) =>
-            GetChatResponse(
-              chat: chats.where((c) => c.id == chatId).firstOrNull,
-              items: chatItems[chatId],
-            ),
+          GetChatRequest(:final chatId) => _snapshot(chatId),
           GetDiffRequest(:final folder, names: true) =>
             repositories.contains(folder)
                 ? GetDiffResponse(
@@ -410,6 +424,36 @@ class FakeDaemon implements Transport {
           _ => spec.outputFactory(),
         };
     return UnaryResponse(spec, Headers(), out as O, Headers());
+  }
+
+  /// Chat [id] as GetChat answers it: the chat, its status now, the last
+  /// seq sent for it and its [chatItems]; NotFound for a chat it hasn't.
+  GetChatResponse _snapshot(String id) {
+    final c =
+        chats.where((c) => c.id == id).firstOrNull ??
+        // A side chat: its chat's agent and folder, unlisted (ForkChat).
+        switch (chats.where((c) => c.id == sides[id]).firstOrNull) {
+          final of? => Chat(id: id, agent: of.agent, folder: of.folder),
+          null => throw ConnectException(Code.notFound, 'no chat $id'),
+        };
+    return GetChatResponse(
+      chat: c,
+      status: _statuses[id] ?? c.status,
+      seq: _seqs[id],
+      items: chatItems[id],
+    );
+  }
+
+  /// Keeps side chat [id] as the daemon does: a fork of the chat it came
+  /// from, listed as `kept` and asleep, the side chat gone; refused for one
+  /// it hasn't open.
+  void _keepSide(String id) {
+    final of = sides.remove(id);
+    if (of == null) {
+      throw ConnectException(Code.failedPrecondition, 'no side chat "$id"');
+    }
+    _send(EventsResponse(chatId: id, removed: true));
+    _fork(of, 'kept');
   }
 
   /// The next fork's id: fork, then fork2, fork3…

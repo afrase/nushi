@@ -22,18 +22,20 @@ Future<(Daemon, FakeDaemon, ChatState)> _app(
   bool talked = true,
   Size size = const Size(1400, 800),
 }) async {
-  final fake =
-      FakeDaemon([
-          chat('c', 'claude', 'Fix the login redirect'),
-          chat('o', 'claude', 'Another chat'),
-        ])
-        ..answer = (input) => switch (input) {
-          ArchiveSideChatRequest() => ArchiveSideChatResponse(
-            chatId: talked ? 'a' : '',
-          ),
-          RestoreSideChatRequest() => RestoreSideChatResponse(chatId: 's2'),
-          _ => null,
-        };
+  final fake = FakeDaemon([
+    chat('c', 'claude', 'Fix the login redirect'),
+    chat('o', 'claude', 'Another chat'),
+  ])..sides['s'] = 'c';
+  fake.answer = (input) => switch (input) {
+    ArchiveSideChatRequest() => ArchiveSideChatResponse(
+      chatId: talked ? 'a' : '',
+    ),
+    RestoreSideChatRequest() => () {
+      fake.sides['s2'] = 'c'; // the daemon has it again, as a side chat
+      return RestoreSideChatResponse(chatId: 's2');
+    }(),
+    _ => null,
+  };
   final d = await openApp(tester, fake, size: size);
   fake.emit(
     EventsResponse(

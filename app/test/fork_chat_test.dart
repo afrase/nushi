@@ -166,7 +166,7 @@ void main() {
   testWidgets('Keep as chat: the side pane closes, the chat stays, a toast '
       'goes to the kept chat', (tester) async {
     final (d, fake) = await _app(tester);
-    _side(d);
+    _side(d, fake);
     await tester.pumpAndSettle();
     // In the header, before its − and ×, at the pane's edge.
     final keep = tester.getRect(find.text('Keep as chat'));
@@ -212,7 +212,7 @@ void main() {
         tester,
       ) async {
         final (d, fake) = await _app(tester, size: size, brightness: b);
-        _side(d);
+        _side(d, fake);
         await tester.pumpAndSettle();
         fake.emit(_sideStatus(1));
         await tester.pumpAndSettle();
@@ -233,7 +233,7 @@ void main() {
   testWidgets("a side chat's box has no command mode: its pane has no "
       'terminal panel', (tester) async {
     final (d, fake) = await _app(tester);
-    _side(d);
+    _side(d, fake);
     await tester.pumpAndSettle();
     fake.emit(_sideStatus(1));
     await tester.pumpAndSettle();
@@ -256,7 +256,7 @@ void main() {
   testWidgets('Keep as chat keeps what was half written in the side box in '
       'the kept chat’s', (tester) async {
     final (d, fake) = await _app(tester);
-    _side(d);
+    _side(d, fake);
     await tester.pumpAndSettle();
     fake.emit(_sideStatus(1));
     await tester.pumpAndSettle();
@@ -316,8 +316,12 @@ void main() {
       }, variant: onMac);
 
       testWidgets('the side chat header, $what ($name)', (tester) async {
-        final (d, _) = await _app(tester, size: size, brightness: brightness);
-        _side(d);
+        final (d, fake) = await _app(
+          tester,
+          size: size,
+          brightness: brightness,
+        );
+        _side(d, fake);
         await tester.pumpAndSettle();
         _inside(tester, find.text('Keep as chat'), size);
         await render(
@@ -339,8 +343,10 @@ void _inside(WidgetTester tester, Finder f, Size size) {
   expect(r.bottom, lessThanOrEqualTo(size.height));
 }
 
-/// Opens a side chat s on chat c, with a question and its answer in it.
-ChatState _side(Daemon d) {
+/// Opens a side chat s on chat c, with a question and its answer in it,
+/// on [fake] too.
+ChatState _side(Daemon d, FakeDaemon fake) {
+  fake.sides['s'] = 'c';
   final side = ChatState('s', '/Users/me/nushi')
     ..agent = 'claude'
     ..loaded = true;
