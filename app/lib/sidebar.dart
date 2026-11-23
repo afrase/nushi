@@ -139,8 +139,10 @@ class _SidebarState extends State<Sidebar> {
     final seen = _seen[widget.daemon];
     _opened = seen == null ? widget.daemon.selectedId : seen.opened;
     _started = seen == null ? widget.daemon.starting : seen.started;
+    _owed = seen?.owed;
     if (seen != null) _follow();
     widget.daemon.addListener(_follow);
+    _railChanges.addListener(_settle);
     sidebarShows.addListener(_tick);
     sidebarGroupBy.addListener(_tick);
     _tick();
@@ -151,7 +153,8 @@ class _SidebarState extends State<Sidebar> {
     sidebarShows.removeListener(_tick);
     sidebarGroupBy.removeListener(_tick);
     widget.daemon.removeListener(_follow);
-    _seen[widget.daemon] = (opened: _opened, started: _started);
+    _railChanges.removeListener(_settle);
+    _seen[widget.daemon] = (opened: _opened, started: _started, owed: _owed);
     _ticks?.cancel();
     _minute.dispose();
     _hold.dispose();
@@ -181,9 +184,22 @@ class _SidebarState extends State<Sidebar> {
   String? _opened;
   String? _started;
 
+  /// The project [_follow] would have gone to while the rail was hidden
+  /// (grouped otherwise, too narrow, or off), which it goes to once the
+  /// rail shows ([_settle]); '' for all of them.
+  String? _owed;
+
   /// What [_follow] last saw, by daemon, kept while the sidebar is hidden
   /// (it isn't built then), so it follows what changed meanwhile.
-  static final _seen = Expando<({String? opened, String? started})>();
+  static final _seen =
+      Expando<({String? opened, String? started, String? owed})>();
+
+  /// What shows or hides the rail ([railShows]).
+  final _railChanges = Listenable.merge([
+    sidebarGroupBy,
+    projectRail,
+    railFits,
+  ]);
 
   /// Narrowed to a project, the sidebar goes to another's as a chat of
   /// that one opens or starts (from the palette, a notification, New
@@ -209,7 +225,19 @@ class _SidebarState extends State<Sidebar> {
     };
     _opened = opened;
     _started = started;
-    if (to == null || shownProject == null || to == shownProject) return;
+    if (to == null) return;
+    _owed = to;
+    _settle();
+  }
+
+  /// Goes to the project [_follow] owes, once the rail shows narrowed to
+  /// another: a pick kept while the rail was hidden doesn't leave out the
+  /// chat opened meanwhile.
+  void _settle() {
+    final to = _owed;
+    if (to == null || !railShows) return;
+    _owed = null;
+    if (shownProject == null || to == shownProject) return;
     sidebarProject.value = to.isEmpty ? null : to;
   }
 

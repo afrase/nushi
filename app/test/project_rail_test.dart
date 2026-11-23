@@ -257,6 +257,39 @@ void main() {
     d.dispose();
   });
 
+  // Review 2026-11-22, F274: the rule tested the pick shown, which is none
+  // while the rail is hidden, so the stored pick came back narrowed away
+  // from the chat opened meanwhile.
+  testWidgets('a chat of another project opened while the rail is hidden '
+      '(grouped by Date, or turned off) is followed once it shows', (
+    tester,
+  ) async {
+    sidebarProject.value = cappy;
+    final (d, _) = await arrangedSidebar(tester);
+    expect(_chats(tester), ['Cap the rates']);
+    sidebarGroupBy.value = GroupBy.date;
+    await tester.pumpAndSettle();
+    expect(find.byType(ProjectRail), findsNothing);
+    d.select('d'); // garden's
+    await tester.pumpAndSettle();
+    expect(sidebarProject.value, cappy, reason: 'no rail, no pick moved');
+    sidebarGroupBy.value = GroupBy.project;
+    await tester.pumpAndSettle();
+    expect(sidebarProject.value, garden);
+    expect(_chats(tester), ['Plant the beds']);
+
+    projectRail.value = false;
+    await tester.pumpAndSettle();
+    d.select('c'); // cappy's
+    await tester.pumpAndSettle();
+    expect(sidebarProject.value, garden);
+    projectRail.value = true;
+    await tester.pumpAndSettle();
+    expect(sidebarProject.value, cappy);
+    expect(_chats(tester), ['Cap the rates']);
+    d.dispose();
+  });
+
   testWidgets('a tile counts its project’s chats that need you, pinned '
       'ones too', (tester) async {
     final (d, fake) = await arrangedSidebar(tester);
