@@ -81,6 +81,7 @@ class ChatScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ConnectionBar(phone),
+            OldDaemonBar(phone),
             Expanded(
               child: !chat.loaded && chat.items.isEmpty
                   ? TranscriptSkeleton(chat)

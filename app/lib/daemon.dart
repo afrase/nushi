@@ -62,7 +62,10 @@ const apiVersion = 144;
 
 /// The oldest daemon API this app works with (ADR 0004): below it the Mac
 /// shows only its Restart screen (`OutdatedScreen`) until the daemon has
-/// restarted into the bundled one. The API of the newest stable release
+/// restarted into the bundled one; the phone, never blocked, says to open
+/// Nushi on the Mac (`OldDaemonBar`). The phone's is built into the
+/// relay's web app (ADR 0113), so it moves when the relay is updated. The
+/// API of the newest stable release
 /// at least 7 days old, raised in the commit that cuts each stable
 /// release (`docs/development.md`'s Releases).
 const apiFloor = 120;

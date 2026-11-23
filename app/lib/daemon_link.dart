@@ -17,7 +17,8 @@ extension DaemonLink on Daemon {
       buildTime(build)?.millisecondsSinceEpoch ?? 0;
 
   /// Whether the daemon is older than the app's floor ([apiFloor]): the
-  /// Mac shows only its Restart screen, the phone says to update it.
+  /// Mac shows only its Restart screen, the phone a bar saying to update
+  /// it there.
   bool get belowFloor => daemonApi > 0 && daemonApi < apiFloor;
 
   /// Whether the daemon is older than the bundled one and is asked to
@@ -118,6 +119,7 @@ extension DaemonLink on Daemon {
         appLog.info('connected to the daemon', {'api': '$api', 'build': build});
       }
     }
+    if (ok && remote) phoneDaemonBehind.value = outdated;
     if (ok && !remote) macView.tick(); // said again within the lease
     if (ok && updating) {
       unawaited(

@@ -4,6 +4,7 @@ import 'package:daemon_transport/remote_transport.dart' show Unreachable;
 import 'package:flutter/material.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/conventions.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/phone/link.dart';
 import 'package:nushi/phone/phone.dart';
@@ -158,6 +159,56 @@ String seenAt(DateTime s, {DateTime? now}) {
     return 'last seen $time';
   }
   return 'last seen ${months[s.month - 1].substring(0, 3)} ${s.day}, $time';
+}
+
+/// The daemon is below the app's floor (ADR 0004): the phone keeps
+/// working, and says that only the computer's app updates it. Its own row
+/// under the connection's bar, sliding in; no action, as there is none to
+/// take here.
+class OldDaemonBar extends StatelessWidget {
+  const new(this.phone, {super.key});
+
+  final Phone phone;
+
+  @override
+  Widget build(BuildContext context) {
+    final daemon = phone.daemon;
+    if (daemon == null) return const BarSlide(child: null);
+    return ListenableBuilder(
+      listenable: daemon,
+      builder: (context, _) =>
+          BarSlide(child: daemon.belowFloor ? _bar(context) : null),
+    );
+  }
+
+  Widget _bar(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return Semantics(
+      liveRegion: true,
+      child: ColoredBox(
+        color: t.needsSoft,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            children: [
+              Icon(Icons.system_update_alt, size: 20, color: t.needs),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  updateOnMac,
+                  style: phoneText(
+                    context,
+                    size: 14,
+                  ).copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(height: touch),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// A newer version of the app is installed and waits: Reload brings it in
