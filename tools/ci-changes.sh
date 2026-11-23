@@ -24,7 +24,8 @@
 # Makefile, tools, protos, packaging, a path not named here) marks both.
 # The Mac app's build is marked by what a release's build reads beyond the
 # Dart and Go the other jobs compile: app/macos, the app's plugins
-# (app/pubspec.*), cmd/ (the daemon packaged), and everything that marks
+# (the pub workspace's pubspecs and its one pubspec.lock, at the root),
+# cmd/ (the daemon packaged), and everything that marks
 # both (the Makefile, tools/, packaging/).
 set -u
 
@@ -44,7 +45,7 @@ kinds() {
 		noiseconn/testdata/* | internal/e2e/testdata/agents.json | internal/filewatch/testdata/artifacts.json) go=true app=true ;;
 		internal/* | relay/* | noiseconn/* | go.mod | go.sum | .golangci.yml) go=true ;;
 		app/macos/*) go=true app=true mac=true ;;
-		app/pubspec.yaml | app/pubspec.lock) app=true mac=true ;;
+		pubspec.yaml | pubspec.lock | app/pubspec.yaml | packages/*/pubspec.yaml) app=true mac=true ;;
 		app/* | packages/* | analysis_options.yaml) app=true ;;
 		*) go=true app=true mac=true ;;
 		esac
@@ -103,7 +104,9 @@ internal/knownagents/knownagents.go"
 	check "false true false" "app/lib/chat_view.dart"
 	check "false true false" "app/test/timings.tsv"
 	check "false true true" "app/pubspec.yaml"
-	check "false true true" "app/pubspec.lock"
+	check "false true true" "pubspec.lock"
+	check "false true true" "pubspec.yaml"
+	check "false true true" "packages/markdown/pubspec.yaml"
 	check "false true false" "packages/noise/lib/noise.dart"
 	check "false true false" "app/windows/runner/web_views.cpp"
 	check "false true false" "app/windows/runner/CMakeLists.txt"

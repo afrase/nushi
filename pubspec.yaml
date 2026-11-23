@@ -1,0 +1,14 @@
+# The pub workspace: the app and its Dart packages resolved together, so
+# one pubspec.lock (this folder's) holds every version they build and test
+# with. `flutter pub get` here, or in any member, resolves them all.
+name: nushi_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.13.5
+
+workspace:
+  - app
+  - packages/markdown
+  - packages/noise
+  - packages/remote_transport

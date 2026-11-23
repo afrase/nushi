@@ -6,6 +6,8 @@ BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
 # can't run beside a go.work).
 GOLANGCI := bin/golangci-lint
 GOVULNCHECK := bin/govulncheck
+# The pub workspace's members (the root pubspec.yaml), with one
+# pubspec.lock at the root.
 DART_DIRS := app packages/noise packages/remote_transport packages/markdown
 # The machine make runs on: Darwin, or Linux (ADR 0101, 0104).
 OS := $(shell uname -s)
@@ -264,7 +266,9 @@ BREAKING_BASE ?= $(shell git merge-base HEAD origin/main 2>/dev/null)
 # (tools/design-check, docs/design.md), and each app test file in one
 # shard of the set its host needs (tools/test-shards -check): anywhere.
 # buf breaking reads BREAKING_BASE's protos through git archive, which
-# works in a worktree (where .git is a file buf can't clone from).
+# works in a worktree (where .git is a file buf can't clone from). One
+# analyzer and one formatter run over every member of the workspace; each
+# file still takes its own folder's analysis_options.yaml.
 lint-dart:
 	go run ./tools/native-edge $(addsuffix /lib,$(DART_DIRS))
 	go run ./tools/design-check app/lib
@@ -274,8 +278,8 @@ lint-dart:
 	else git cat-file -e "$(BREAKING_BASE)^{commit}" && echo "buf breaking against $(BREAKING_BASE)" && \
 	git archive --format=tar "$(BREAKING_BASE)" buf.yaml proto | $(BUF) breaking --against '-#format=tar'; fi
 	$(BUF) format --diff --exit-code
-	@for d in $(DART_DIRS); do echo "flutter analyze $$d"; (cd $$d && flutter analyze --fatal-infos) || exit 1; done
-	@for d in $(DART_DIRS); do (cd $$d && find lib test bin -name '*.dart' ! -path 'lib/gen/*' 2>/dev/null | xargs dart format --output=none --set-exit-if-changed) || exit 1; done
+	flutter analyze --fatal-infos $(DART_DIRS)
+	@find $(wildcard $(foreach d,$(DART_DIRS),$(d)/lib $(d)/test $(d)/bin)) -name '*.dart' ! -path 'app/lib/gen/*' | xargs dart format --output=none --set-exit-if-changed
 
 
 # With the race detector: about twice the time, still under the app's
@@ -291,11 +295,14 @@ test-go:
 	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 XDG_CONFIG_HOME=$(CURDIR)/internal/testcheck/noconfig go test -race -timeout 3m $(GOTESTFLAGS) ./...
 
 # The packages run anywhere with Go (remote_transport's interop builds a
-# Go peer), and in Chrome where there's one.
+# Go peer), and in Chrome where there's one. One flutter pub get resolves
+# the whole workspace first, so each package's dart test finds it current
+# and runs no pub get of its own.
 test-packages:
+	flutter pub get
 	cd packages/noise && dart test $(if $(CHROME),&& dart test -p chrome)
 	cd packages/remote_transport && dart test $(if $(CHROME),&& dart test -p chrome test/gzip_web_test.dart)
-	cd packages/markdown && flutter test
+	cd packages/markdown && flutter test --no-pub
 
 # The app's widget tests and goldens, the files tools/test-shards gives
 # (ADR 0129): SET=macos the files that need a Mac (goldens), SET=linux the

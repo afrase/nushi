@@ -5,6 +5,7 @@ version: 0.1.0+1
 
 environment:
   sdk: ^3.13.5
+resolution: workspace
 
 dependencies:
   connectrpc: ^2.0.1
