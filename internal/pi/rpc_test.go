@@ -37,8 +37,6 @@ func TestReadLimit(t *testing.T) {
 	<-killed
 }
 
-var harness Harness
-
 // endOf is pi's output that says when its reader has come to its end.
 type endOf struct {
 	io.Reader

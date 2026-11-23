@@ -10,7 +10,7 @@ import (
 // as they share Pi's bridge (ADR 0078).
 func TestContextNamesTheFlavor(t *testing.T) {
 	call := func(_ context.Context, _ string, _, result any) error {
-		result.(*stats).AssistantMessages = 3 //nolint:forcetypeassert // Context asks for its stats
+		result.(*stats).AssistantMessages = 3 // Context asks for its stats
 		return nil
 	}
 	for _, f := range []Flavor{Pi, PiG} {
