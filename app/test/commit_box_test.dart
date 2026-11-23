@@ -269,27 +269,32 @@ void main() {
         themed(
           RepaintBoundary(
             key: const Key('side'),
-            child: SizedBox(
-              width: 260,
-              height: 400,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: FileList(
-                      files: files,
-                      selected: 'app/lib/relay.dart',
-                      onSelect: (_) {},
-                      onStage: stage,
+            // On the pane's fill, as the Changes view backs it: without it
+            // the PNG is transparent and its light text reads as faint.
+            child: ColoredBox(
+              color: tokens.base,
+              child: SizedBox(
+                width: 260,
+                height: 400,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: FileList(
+                        files: files,
+                        selected: 'app/lib/relay.dart',
+                        onSelect: (_) {},
+                        onStage: stage,
+                      ),
                     ),
-                  ),
-                  CommitBox(
-                    chat: chat,
-                    files: files,
-                    onStage: stage,
-                    onCommit: (_) async {},
-                    onWrite: () async => '',
-                  ),
-                ],
+                    CommitBox(
+                      chat: chat,
+                      files: files,
+                      onStage: stage,
+                      onCommit: (_) async {},
+                      onWrite: () async => '',
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
