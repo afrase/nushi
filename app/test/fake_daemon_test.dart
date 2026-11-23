@@ -194,6 +194,7 @@ void main() {
     fake.refused.clear(); // what the test's end would fail on
     d.dispose(); // its ping timer ends with the test
   });
+
   testWidgets("GetMemory answers a Mac's footprint; unset, it's refused as "
       "by a daemon that can't read processes", (tester) async {
     final fake = FakeDaemon([chat('a', 'claude', 'Fix the login')]);
@@ -215,6 +216,7 @@ void main() {
     expect(fake.refused, isEmpty); // the daemon's own answer, not a gap
     d.dispose(); // its ping timer ends with the test
   });
+
   testWidgets('ListBranches answers the one worktree of a folder '
       "GetFolderStatus calls git's; any other folder isn't a repository", (
     tester,
@@ -251,7 +253,8 @@ void main() {
     expect(fake.refused, isEmpty);
     d.dispose(); // its ping timer ends with the test
   });
-  testWidgets("PlanDeleteChat, RerunGitHubChecks, the uncommitted GetDiff "
+
+  testWidgets('PlanDeleteChat, RerunGitHubChecks, the uncommitted GetDiff '
       "and a worktree's GetFolderStatus answer as the daemon's", (
     tester,
   ) async {
@@ -302,6 +305,34 @@ void main() {
     );
     expect(outside.git, isFalse);
     expect(fake.refused, isEmpty);
+    d.dispose(); // its ping timer ends with the test
+  });
+
+  testWidgets('a stream nobody answers is refused and fails the test; a '
+      'file not in files is watched as missing', (tester) async {
+    final fake = FakeDaemon([chat('a', 'claude', 'Fix the login')]);
+    final d = await fake.connect(tester);
+    final sent = <WatchChatFileResponse>[];
+    final watch = d.client
+        .watchChatFile(WatchChatFileRequest(chatId: 'a', path: 'NOTES.md'))
+        .listen(sent.add);
+    await tester.pump();
+    expect([for (final m in sent) m.missing], [true]);
+    unawaited(watch.cancel());
+    await tester.pump();
+    expect(fake.refused, isEmpty);
+
+    Object? failed;
+    d.client
+        .attachTerminal(AttachTerminalRequest())
+        .listen((_) {}, onError: (Object e) => failed = e);
+    await tester.pump();
+    expect(
+      failed,
+      isA<ConnectException>().having((e) => e.code, 'code', Code.unimplemented),
+    );
+    expect(fake.refused, ['AttachTerminalRequest']);
+    fake.refused.clear(); // what the test's end would fail on
     d.dispose(); // its ping timer ends with the test
   });
 }

@@ -589,7 +589,8 @@ class FakeDaemon implements Transport {
   }
 
   /// The calls the fake refused, by request type: none it knows, nor the
-  /// test's [answer], nor one of [answersEmpty].
+  /// test's [answer], nor one of [answersEmpty]; and the streams none
+  /// answered, the fake's own nor [streams].
   final refused = <String>[];
 
   /// Refuses [input] as a daemon that lacks its call does, and keeps it in
@@ -937,8 +938,9 @@ class FakeDaemon implements Transport {
           Headers(),
         );
       }
-      if (request case WatchChatFileRequest(:final path)
-          when files.containsKey(path)) {
+      // A file not in [files] is watched as missing, as the daemon's
+      // watch of a path with nothing there sends it.
+      if (request case WatchChatFileRequest(:final path)) {
         calls.add(request);
         final watch = StreamController<WatchChatFileResponse>();
         (_watches[path] ??= []).add(watch);
@@ -952,10 +954,7 @@ class FakeDaemon implements Transport {
         );
       }
     }
-    throw ConnectException(
-      Code.unimplemented,
-      'FakeDaemon has no stream for ${request.runtimeType}',
-    );
+    _refuse(request);
   }
 }
 
