@@ -276,3 +276,26 @@ func TestListOfABareRepository(t *testing.T) {
 		t.Errorf("Add in a bare repository's worktree: %+v, %v", wt, err)
 	}
 }
+
+// A worktree whose folder went outside Nushi is removed in any language:
+// git speaks C to Nushi, whose own runs read its messages, whatever the
+// user's locale.
+func TestRemovingAGoneWorktreeInAnotherLanguage(t *testing.T) {
+	ctx := context.Background()
+	repo, _ := filepath.EvalSymlinks(t.TempDir())
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
+	wt, _, err := Worktrees{}.Add(ctx, repo, "brave-otter", "", "")
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, os.RemoveAll(wt.Path))
+	testcheck.Git(t, repo, "worktree", "prune")
+	for _, lang := range []string{"de_DE.UTF-8", "fr_FR.UTF-8"} {
+		t.Setenv("LANG", lang)
+		t.Setenv("LC_ALL", lang)
+		t.Setenv("LANGUAGE", "de:fr")
+		t.Setenv("LC_MESSAGES", lang)
+		if err := (Worktrees{}).Remove(ctx, wt, false); err != nil {
+			t.Errorf("%s: %v", lang, err)
+		}
+	}
+}
