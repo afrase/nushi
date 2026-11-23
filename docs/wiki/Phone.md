@@ -78,6 +78,7 @@ If a phone is lost or stolen, revoke it on your computer right away. A paired ph
 
 - If your computer is asleep, offline, or has remote access turned off, the phone first shows **Reconnecting…** with a spinner. Then it shows **Can't reach your Mac** (or **computer**) and why. It keeps trying on its own. To retry now, tap **Try again**.
 - When the phone app has a new version, it shows **Nushi was updated**. Tap **Reload**.
+- If the browser won't open the phone app's storage, it shows **Couldn’t open this app’s storage**. Tap **Reload**. Don't pair again: that replaces this phone's key, and the pairing is likely still there.
 - A chat's **⋯** menu shows its folder, branch, model and agent, with actions such as **Rename…**, **Files**, **Fork**, **Pin**, **Sleep** and **Archive**.
 - A chat's pull request shows at the top of the chat, with `+2` when it has more. Tap it to open it on GitHub. If the chat has several, tapping lists them all. A pull request or issue link in a message is a chip. Tap it to see its state and title, then tap **Open on GitHub**.
 - Files the agent wrote open full screen from **Artifacts** at the top of the chat. More on these in [Previews and terminals](Previews-and-terminals).

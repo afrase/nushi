@@ -12,6 +12,7 @@ import 'package:nushi/phone/keyboard.dart';
 import 'package:nushi/phone/pair_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/touch_outside.dart';
+import 'package:nushi/phone/ui.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/toast.dart';
 
@@ -159,6 +160,7 @@ class _RootState extends State<_Root> {
     builder: (context, _) {
       final phone = widget.phone;
       if (!phone.loaded) return const SizedBox.shrink();
+      if (phone.storageFailed) return _StorageFailed(phone);
       final paired = phone.daemon != null;
       if (_paired != null && _paired != paired) {
         // Paired or forgotten: what was on top of the root goes.
@@ -170,6 +172,42 @@ class _RootState extends State<_Root> {
       return paired ? ChatsScreen(phone) : PairScreen(phone);
     },
   );
+}
+
+/// The browser's storage threw as the pairing was read
+/// ([Phone.storageFailed]): what happened and Reload, never the pairing
+/// screen, whose new key would be kept over a pairing that may still be
+/// there.
+class _StorageFailed extends StatelessWidget {
+  const new(this.phone);
+
+  final Phone phone;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return PhoneScreen(
+      title: 'Nushi',
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        children: [
+          Text(
+            'Couldn’t open this app’s storage',
+            style: phoneText(context, weight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'The browser refused to read where Nushi keeps its pairing with '
+            'your computer. Reload to try again: pairing again would replace '
+            'this device’s key.',
+            style: phoneText(context, color: t.textSecondary, size: 15),
+          ),
+          const SizedBox(height: 20),
+          PhoneButton('Reload', primary: true, onTap: phone.reload),
+        ],
+      ),
+    );
+  }
 }
 
 /// Material's touch sizes for a phone, over the Mac's theme.

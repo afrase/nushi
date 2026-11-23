@@ -43,6 +43,14 @@ class Phone extends ChangeNotifier {
   /// Whether the stored pairing has been read.
   bool loaded = false;
 
+  /// Whether the browser's storage threw as the pairing was read: the app
+  /// then offers Reload, not pairing, since what it couldn't read may be a
+  /// pairing, and pairing again would keep a new key over it.
+  bool storageFailed = false;
+
+  /// Loads the page again (after [storageFailed]).
+  void reload() => platform.reload();
+
   /// This device's key: made once, kept in the browser's storage.
   rt.KeyPair? _key;
 
@@ -107,8 +115,13 @@ class Phone extends ChangeNotifier {
       })
       ..onOnline(() => link?.online())
       ..onResume(() => link?.resume());
+    Map<String, Object?>? r;
     try {
-      final r = await platform.load();
+      r = await platform.load();
+    } on Object {
+      storageFailed = true;
+    }
+    try {
       if (r != null) {
         if (r['key'] case final Uint8List k when k.length == 32) {
           _key = await rt.KeyPair.make(k);
@@ -128,7 +141,7 @@ class Phone extends ChangeNotifier {
         }
       }
     } on Object {
-      // Nothing usable kept: pair again.
+      // Read, but nothing usable kept: pair again.
     }
     try {
       if (await platform.loadTheme() case final id?) {

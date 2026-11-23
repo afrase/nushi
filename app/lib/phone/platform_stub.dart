@@ -29,7 +29,19 @@ final class PhonePlatform {
   /// The chat a notification asked to open.
   void Function(String chat)? onOpenChat;
 
-  Future<Map<String, Object?>?> load() async => saved;
+  Future<Map<String, Object?>?> load() async {
+    if (loadFails case final e?) throw e;
+    return saved;
+  }
+
+  /// What [load] throws (a test sets it): the browser's storage failing.
+  Error? loadFails;
+
+  /// How many times [reload] was asked.
+  int reloads = 0;
+
+  /// Loads the page again.
+  void reload() => reloads++;
   Future<void> save(Map<String, Object?> record) async => saved = record;
   Future<void> clear() async {
     if (clearFails case final e?) throw e;

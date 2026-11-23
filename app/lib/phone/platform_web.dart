@@ -261,6 +261,9 @@ final class PhonePlatform {
     }
   }
 
+  /// Loads the page again.
+  void reload() => web.window.location.reload();
+
   /// Reloads into the version that waits.
   void applyUpdate() {
     final waiting = _reg?.waiting;

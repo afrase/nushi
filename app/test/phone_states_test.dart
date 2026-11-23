@@ -190,6 +190,29 @@ void main() {
         await _end(tester, p);
       });
 
+      testWidgets('storage that throws offers Reload, never pairing '
+          '($name)', (tester) async {
+        final platform = PhonePlatform()
+          ..saved = pairedRecord()
+          ..loadFails = StateError('IndexedDB: the open failed');
+        final p = await _app(
+          tester,
+          FakeDaemon(_chats),
+          phone,
+          b,
+          platform: platform,
+        );
+        expect(find.text('Scan QR code'), findsNothing);
+        expect(find.text('Couldn’t open this app’s storage'), findsOneWidget);
+        _inside(tester, find.text('Reload'), phone);
+        await render(tester, find.byType(PhoneApp), 'phone_storage_$name');
+        await tester.tap(find.text('Reload'));
+        expect(platform.reloads, 1);
+        // Nothing was written over the pairing it couldn't read.
+        expect(platform.saved, pairedRecord());
+        await _end(tester, p);
+      });
+
       testWidgets('the Mac’s QR code opened in Safari ($name)', (tester) async {
         final p = await _app(
           tester,
