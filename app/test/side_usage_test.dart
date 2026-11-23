@@ -44,7 +44,6 @@ Future<(Daemon, FakeDaemon, ChatState)> _app(
   final side = ChatState('s', '/Users/me/nushi')
     ..agent = 'claude'
     ..loaded = true;
-  d.sides['s'] = side;
   d.chats['c']!
     ..sideHidden.value = hidden
     ..side.value = side;

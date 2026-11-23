@@ -9,8 +9,7 @@ extension DaemonSides on Daemon {
     chat.forking.value = true;
     try {
       final resp = await client.forkChat(ForkChatRequest(chatId: chat.id));
-      final side = sides[resp.chatId] = ChatState(resp.chatId, chat.folder)
-        ..agent = chat.agent;
+      final side = ChatState(resp.chatId, chat.folder)..agent = chat.agent;
       unawaited(_load(side));
       chat.sideHidden.value = false;
       chat.side.value = side;
@@ -24,7 +23,6 @@ extension DaemonSides on Daemon {
     final side = chat.side.value;
     if (side == null) return;
     chat.side.value = null;
-    sides.remove(side.id);
     client.closeSideChat(CloseSideChatRequest(chatId: side.id)).ignore();
   }
 
@@ -38,7 +36,6 @@ extension DaemonSides on Daemon {
       ArchiveSideChatRequest(chatId: side.id),
     );
     if (chat.side.value == side) chat.side.value = null;
-    sides.remove(side.id);
     _changed();
     return r.chatId;
   }
@@ -54,8 +51,7 @@ extension DaemonSides on Daemon {
     final r = await client.restoreSideChat(
       RestoreSideChatRequest(chatId: archived),
     );
-    final side = sides[r.chatId] = ChatState(r.chatId, chat.folder)
-      ..agent = chat.agent;
+    final side = ChatState(r.chatId, chat.folder)..agent = chat.agent;
     if (was != null) side.draft.takeFrom(was.draft);
     unawaited(_load(side));
     chat.sideHidden.value = false;
@@ -78,7 +74,6 @@ extension DaemonSides on Daemon {
   /// A side chat the daemon ended (its chat reloaded, moved or archived,
   /// or its agent quit).
   void _sideGone(ChatState side) {
-    sides.remove(side.id);
     for (final chat in chats.values) {
       if (chat.side.value == side) chat.side.value = null;
     }

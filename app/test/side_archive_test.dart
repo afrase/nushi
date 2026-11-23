@@ -64,9 +64,7 @@ Future<(Daemon, FakeDaemon, ChatState)> _app(
     ]);
   }
   side.draft.text.text = 'And the fragment?';
-  d
-    ..sides['s'] = side
-    ..chats['c']!.side.value = side;
+  d.chats['c']!.side.value = side;
   await tester.pumpAndSettle();
   return (d, fake, side);
 }
@@ -136,9 +134,7 @@ void main() {
 
     // Opened again and closed: × dismisses it.
     final side = ChatState('s', '/Users/me')..loaded = true;
-    d
-      ..sides['s'] = side
-      ..chats['c']!.side.value = side;
+    d.chats['c']!.side.value = side;
     await tester.pumpAndSettle();
     await _close(tester);
     await tester.tap(
@@ -161,7 +157,7 @@ void main() {
     expect(d.selectedId, 'c');
     final back = c.side.value!;
     expect(back.id, 's2');
-    expect(d.sides['s2'], back);
+    expect(d.sideOf('s2'), back);
     expect(c.sideHidden.value, isFalse);
     expect(find.byType(SideChat), findsOne);
     expect(back.draft.text.text, 'And the fragment?');
@@ -191,18 +187,14 @@ void main() {
 
     Future<void> closeAgain() async {
       final side = ChatState('s', '/Users/me')..loaded = true;
-      d
-        ..sides['s'] = side
-        ..chats['c']!.side.value = side;
+      d.chats['c']!.side.value = side;
       await tester.pumpAndSettle();
       await _close(tester);
     }
 
     await _close(tester);
     final other = ChatState('s3', '/Users/me')..loaded = true;
-    d
-      ..sides['s3'] = other
-      ..chats['c']!.side.value = other;
+    d.chats['c']!.side.value = other;
     await tester.pumpAndSettle();
     await undoFails('the chat has another side chat open');
     expect(c.side.value, other);

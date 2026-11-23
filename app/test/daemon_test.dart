@@ -1,8 +1,8 @@
 import 'dart:async';
 
+import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/chat.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -133,13 +133,14 @@ void main() {
     final fake = _fake();
     final d = Daemon(transport: fake);
     addTearDown(d.dispose);
-    final chat = ChatState('a', '/x')..agent = 'claude';
+    await pumpEventQueue(); // live: the chats are listed
+    final chat = d.chats['a']!;
     // The second while the first forks: no second fork.
     await Future.wait([d.openSide(chat), d.openSide(chat)]);
     expect(fake.calls.whereType<ForkChatRequest>(), hasLength(1));
     final side = chat.side.value!;
     expect((side.id, side.agent), ('side', 'claude'));
-    expect(d.sides.keys, ['side']);
+    expect(d.sides, [side]);
     await d.openSide(chat); // it has one
     expect(fake.calls.whereType<ForkChatRequest>(), hasLength(1));
 
@@ -151,6 +152,47 @@ void main() {
     await pumpEventQueue();
     expect(fake.calls.whereType<CloseSideChatRequest>().single.chatId, 'side');
   });
+
+  for (final (code, ends) in [
+    (Code.notFound, true),
+    (Code.unavailable, false),
+  ]) {
+    test('a side chat reloaded after a reconnect ends only when the daemon '
+        'has no such chat (${code.name})', () async {
+      ConnectException? sideFails;
+      final fake = FakeDaemon([Chat(id: 'a', folder: '/x', agent: 'claude')])
+        ..answer = (input) => switch (input) {
+          GetChatRequest(chatId: 'side') when sideFails != null =>
+            throw sideFails,
+          GetChatRequest() => GetChatResponse(seq: Int64(1)),
+          ForkChatRequest() => ForkChatResponse(chatId: 'side'),
+          _ => null,
+        };
+      final d = Daemon(transport: fake);
+      addTearDown(d.dispose);
+      await pumpEventQueue(); // live: the chats are listed
+      final chat = d.chats['a']!;
+      await d.openSide(chat);
+      await pumpEventQueue();
+      final side = chat.side.value!;
+      side.draft.text.text = 'And the fragment?';
+      sideFails = ConnectException(code, 'it failed');
+      fake.down = true; // the link lost
+      await pumpEventQueue();
+      fake.down = false;
+      await d.ping(); // back: the side chat loads again, and fails
+      await pumpEventQueue();
+      if (ends) {
+        expect(chat.side.value, isNull);
+        expect(d.sides, isEmpty);
+      } else {
+        expect(chat.side.value, side);
+        expect(d.sides, [side]);
+        expect(side.error, isNotEmpty);
+        expect(side.draft.text.text, 'And the fragment?');
+      }
+    });
+  }
 
   test('a chat deleted while the app was away: what was kept goes', () async {
     // Kept from an earlier run for "a", listed, and "gone", deleted since.

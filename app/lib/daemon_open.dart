@@ -38,6 +38,13 @@ extension DaemonOpen on Daemon {
     } on Object catch (e) {
       if (load != chat.loads) return; // a newer load has it now
       chat.unload();
+      // A side chat the daemon has no more (it restarted) ends; any other
+      // failure leaves it open, its draft with it.
+      if (e is connect.ConnectException &&
+          e.code == connect.Code.notFound &&
+          sideOf(chat.id) == chat) {
+        return _sideGone(chat);
+      }
       if (remote) {
         // The phone: no raw error, but tries again (and again once the link
         // is back); details show why.

@@ -85,7 +85,7 @@ extension DaemonEvents on Daemon {
     } else if (e.hasShowUrl()) {
       // A page on the Mac's loopback (ADR 0100): nothing the phone opens.
       if (!remote) chats[e.chatId]?.showAsked.value = ShowPage(e.showUrl);
-    } else if (sides[e.chatId] case final side?) {
+    } else if (sideOf(e.chatId) case final side?) {
       e.removed ? _sideGone(side) : _applySide(side, e);
     } else if (e.hasChat()) {
       _chat(e.chat);
@@ -116,7 +116,7 @@ extension DaemonEvents on Daemon {
     StreamSubscription<EventsResponse> sub,
     VoidCallback release,
   ) async {
-    for (final c in [...chats.values, ...sides.values]) {
+    for (final c in [...chats.values, ...sides]) {
       c.unload(); // events may have been missed while disconnected
     }
     terminals.stale();
@@ -142,14 +142,11 @@ extension DaemonEvents on Daemon {
       // daemon couldn't read isn't gone: what's kept for it stays (API
       // 144; an older daemon names none).
       final ids = {for (final c in listed) c.id, ...resp.unreadable};
-      _forget(kept.difference(ids).difference(sides.keys.toSet()));
+      _forget(kept.difference(ids).difference({for (final s in sides) s.id}));
       // An unreadable chat already listed (its record stopped reading
       // across a restart) leaves the list: the daemon has no such chat.
       for (final id in resp.unreadable) {
         if (!listed.any((c) => c.id == id)) chats.remove(id);
-      }
-      for (final side in sides.values) {
-        side.loading = true; // its events wait for its snapshot
       }
       chatsListed = true;
     } on Object {
@@ -161,20 +158,10 @@ extension DaemonEvents on Daemon {
     }
     if (!identical(_events, sub)) return;
     if (!chats.containsKey(selectedId)) selectedId = null;
-    for (final chat in [...chats.values]) {
-      if (chat.side.value case final side?) {
-        try {
-          side.load(
-            await client.getChat(
-              GetChatRequest(chatId: side.id, imageRefs: true),
-            ),
-          );
-        } on Object {
-          if (!identical(_events, sub)) return;
-          chat.side.value = null;
-          sides.remove(side.id);
-        }
-      }
+    // Side chats load as an opened one does: one the daemon lost (it
+    // restarted) ends there, any other failure shows in its box.
+    for (final side in [...sides]) {
+      unawaited(_load(side));
     }
     if (selected != null) unawaited(_load(selected!));
     _changed();

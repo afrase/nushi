@@ -352,9 +352,7 @@ ChatState _side(Daemon d) {
     Item(id: 'su', kind: _user, text: 'Does the logout page need it?'),
     Item(id: 'sm', kind: _agent, text: 'No: it never redirects back.'),
   ]);
-  d
-    ..sides['s'] = side
-    ..chats['c']!.side.value = side;
+  d.chats['c']!.side.value = side;
   return side;
 }
 

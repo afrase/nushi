@@ -57,9 +57,7 @@ Future<(Daemon, FakeDaemon, ChatState)> _app(
       ),
     ]);
   }
-  d
-    ..sides['s'] = side
-    ..chats['c']!.side.value = side;
+  d.chats['c']!.side.value = side;
   await tester.pumpAndSettle();
   // Only what the × does depends on it.
   if (old) d.daemonApi = archiveSideApi - 1;

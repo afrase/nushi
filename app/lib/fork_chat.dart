@@ -22,7 +22,7 @@ bool canForkChat(Daemon d, ChatState? chat) =>
     chat.canFork &&
     !chat.archived &&
     !chat.sessionGone &&
-    !d.sides.containsKey(chat.id); // a side chat is kept instead
+    d.sideOf(chat.id) == null; // a side chat is kept instead
 
 /// Whether [chat] can be forked at [item], one of the agent's messages, as
 /// the daemon says; not the newest one while it's still coming ([live]).
@@ -83,7 +83,6 @@ Future<void> keepSide(BuildContext context, Daemon d, ChatState chat) async {
   await tryOrShow(context, () async {
     final r = await d.client.keepSideChat(KeepSideChatRequest(chatId: side.id));
     if (chat.side.value == side) chat.side.value = null;
-    d.sides.remove(side.id);
     final kept = d.chats[r.chatId] ??= ChatState(r.chatId, chat.folder)
       ..scratch = chat.scratch;
     // What was half written in the side box goes on in the kept chat's,

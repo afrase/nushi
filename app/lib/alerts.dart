@@ -172,7 +172,7 @@ class ChatAlerts {
   /// Sees an event before the daemon applies it.
   void follow(EventsResponse e) {
     final id = e.chatId;
-    if (id.isEmpty || daemon.sides.containsKey(id)) return;
+    if (id.isEmpty || daemon.sideOf(id) != null) return;
     if (e.removed) {
       _running.remove(id);
       _stopped.remove(id);

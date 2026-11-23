@@ -222,8 +222,19 @@ class Daemon extends ChangeNotifier {
   /// What the Mac's window shows, told to the daemon (not the phone's).
   late final macView = MacView(this);
 
-  /// The open side chats, by id: not stored, not listed.
-  final sides = <String, ChatState>{};
+  /// The open side chats: not stored, not listed. Each is its chat's
+  /// [ChatState.side], the one place the link is kept.
+  Iterable<ChatState> get sides =>
+      chats.values.map((c) => c.side.value).nonNulls;
+
+  /// The open side chat [id], if one is.
+  ChatState? sideOf(String id) {
+    for (final s in sides) {
+      if (s.id == id) return s;
+    }
+    return null;
+  }
+
   String? selectedId;
   ChatState? get selected => chats[selectedId];
 
