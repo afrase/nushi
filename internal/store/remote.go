@@ -34,7 +34,21 @@ func (s *Store) Devices() ([]model.Device, error) {
 	return d, err
 }
 
-func (s *Store) SaveDevices(d []model.Device) error { return s.write("devices.json", d) }
+// SaveDevices writes the devices, each with "kind": "web", which nothing
+// here reads: a daemon before v0.53, run after a downgrade, sends the kind
+// it reads, and its app labels a device without one "iPhone app" (ADR
+// 0054's 2026-11-23 note).
+func (s *Store) SaveDevices(d []model.Device) error {
+	type withKind struct {
+		model.Device
+		Kind string `json:"kind"`
+	}
+	out := make([]withKind, len(d))
+	for i, dev := range d {
+		out[i] = withKind{dev, "web"}
+	}
+	return s.write("devices.json", out)
+}
 
 // VAPIDKey returns the daemon's Web Push key, or false when it has none yet.
 func (s *Store) VAPIDKey() (model.VAPIDKey, bool, error) {
