@@ -29,6 +29,28 @@ void main() {
     await helper.exitCode;
     await until(() async => !await _alive(pid));
   });
+
+  test('the process startChild returns is the child itself', () async {
+    // A test that kills a child (the relay, to restart it) and awaits its
+    // exit code relies on the child being gone by then.
+    final child = await startChild('/bin/sh', [
+      '-c',
+      r'echo $$; exec sleep 600',
+    ]);
+    addTearDown(() => child.kill(ProcessSignal.sigkill));
+    unawaited(child.stderr.drain<void>());
+    final pid = int.parse(
+      await child.stdout
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .first,
+    );
+    expect(pid, child.pid, reason: "the returned process is the child's");
+
+    child.kill(ProcessSignal.sigkill);
+    await child.exitCode;
+    expect(await _alive(pid), isFalse, reason: 'gone once its exit is seen');
+  });
 }
 
 /// Whether a process [pid] is there (kill -0, which signals nothing).
