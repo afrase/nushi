@@ -36,40 +36,59 @@ Future<void> tryOrShow(
   }
 }
 
+/// What a call run by [runAndSay] answers with: its words and an icon of
+/// their own (a check, an info mark), never the spinner's place holder.
+typedef CallAnswer = ({String text, Widget icon});
+
 /// Runs a call that shows nothing of its own while it runs, saying so in
-/// a toast: [running] with a spinner (when it takes longer than a moment),
-/// then [done] with a check, or its error; without [done] (what it made
-/// shows) the toast just goes. The two never look alike (ADR 0128).
-Future<void> runAndSay(
+/// a toast: [running] with a spinner (when it takes longer than a
+/// moment), then its answer, or its error ([showFailure]). The answer is
+/// [done] with a check, or what [answer] makes of the call's result (it
+/// may act on it first: Check for updates forgets a dismissed release);
+/// with neither, or [answer] giving null (what it made shows), the toast
+/// just goes. The two never look alike (ADR 0128). The answer and the
+/// error take the spinner's place when it showed, else wait their turn,
+/// so a quick call never knocks out a toast that was showing.
+Future<void> runAndSay<T>(
   BuildContext context,
-  Future<void> Function() call, {
+  Future<T> Function() call, {
   required String running,
   String? done,
+  CallAnswer? Function(T result)? answer,
 }) async {
+  assert(done == null || answer == null, 'done or answer, not both');
   final toasts = Toasts.maybeOf(context);
   final t = NushiTheme.of(context).t;
-  void say(
-    String text, {
-    Widget? leading,
-    Duration lasts = const Duration(seconds: 4),
-  }) =>
-      showToast(toasts, text, leading: leading, replace: true, duration: lasts);
-  // Said only past a moment: a quick call goes straight to [done].
+  // Said only past a moment: a quick call goes straight to its answer.
   var shown = false;
   final slow = Timer(Waits.slow, () {
     shown = true;
-    say(running, leading: const Spinner(), lasts: const Duration(minutes: 5));
+    showToast(
+      toasts,
+      running,
+      leading: const Spinner(),
+      replace: true,
+      duration: const Duration(minutes: 5),
+    );
   });
+  final T result;
   try {
-    await call();
+    result = await call();
   } on Object catch (e) {
-    showFailure(toasts, errorText(e), replace: true);
+    showFailure(toasts, errorText(e), replace: shown);
     return;
   } finally {
     slow.cancel();
   }
-  if (done != null) {
-    say(done, leading: Icon(Icons.check_circle, size: 16, color: t.done));
+  final said = switch (done) {
+    final done? => (
+      text: done,
+      icon: Icon(Icons.check_circle, size: 16, color: t.done),
+    ),
+    null => answer?.call(result),
+  };
+  if (said != null) {
+    showToast(toasts, said.text, leading: said.icon, replace: shown);
   } else if (shown) {
     toasts?.hide();
   }

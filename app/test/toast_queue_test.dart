@@ -1,9 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/toast.dart';
-import 'package:nushi/widgets.dart' show showError;
+import 'package:nushi/widgets.dart' show runAndSay, showError;
 
 import 'harness.dart';
 
@@ -136,5 +138,40 @@ void main() {
           .color,
       t.lifted,
     );
+  });
+
+  testWidgets('runAndSay answers from the call\'s result; a quick answer '
+      'waits its turn, a slow one takes the spinner\'s place', (tester) async {
+    await start(tester);
+    final here = tester.element(find.byKey(const ValueKey('here')));
+    showToast(toasts, 'Committed 3f2a9c1');
+    await tester.pumpAndSettle();
+    await runAndSay(
+      here,
+      () async => 3,
+      running: 'Counting…',
+      answer: (n) => (text: 'Found $n', icon: const Icon(Icons.info_outline)),
+    );
+    await tester.pump();
+    expect(shown(), 'Committed 3f2a9c1');
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(shown(), 'Found 3');
+    toasts.clear();
+    await tester.pump();
+    // Slow: the spinner shows, and the answer, null here, takes it away.
+    final call = Completer<int>();
+    final ran = runAndSay(
+      here,
+      () => call.future,
+      running: 'Counting…',
+      answer: (_) => null,
+    );
+    await tester.pump(const Duration(seconds: 1));
+    expect(shown(), 'Counting…');
+    call.complete(0);
+    await ran;
+    await tester.pumpAndSettle();
+    expect(shown(), isNull);
   });
 }
