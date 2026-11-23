@@ -227,3 +227,62 @@ func TestReleaseDraftPlacesADraftAsPublishingWill(t *testing.T) {
 		}
 	}
 }
+
+// casks takes draft's answer for this release, which is a draft by then and
+// in neither, unless a newer release or beta went public while it built (two
+// runs overlapping): then that one's, so the older run moves no cask and
+// undraft doesn't make it the latest. On a run by hand draft gave nothing:
+// GitHub's own.
+func TestReleaseCasksYieldToANewerOne(t *testing.T) {
+	script := releaseStep(t, "casks", "releases")
+	for _, tc := range []struct {
+		name, tag, draftLatest, draftBeta string
+		latest                            string
+		list                              []listed
+		wantLatest, wantBeta              string
+	}{
+		{"the latest", "v0.54.0", "v0.54.0", "v0.54.0-beta.2", "v0.53.2",
+			[]listed{{Tag: "v0.54.0", Draft: true}, {Tag: "v0.54.0-beta.2", Pre: true}, {Tag: "v0.53.2"}},
+			"v0.54.0", "v0.54.0-beta.2"},
+		{"a newer release out", "v0.54.0", "v0.54.0", "", "v0.55.0",
+			[]listed{{Tag: "v0.55.0"}, {Tag: "v0.54.0", Draft: true}},
+			"v0.55.0", ""},
+		{"the newest beta", "v0.55.0-beta.1", "v0.54.0", "v0.55.0-beta.1", "v0.54.0",
+			[]listed{{Tag: "v0.55.0-beta.1", Pre: true, Draft: true}, {Tag: "v0.54.0"}},
+			"v0.54.0", "v0.55.0-beta.1"},
+		{"a newer beta out", "v0.55.0-beta.1", "v0.54.0", "v0.55.0-beta.1", "v0.54.0",
+			[]listed{{Tag: "v0.55.0-beta.2", Pre: true}, {Tag: "v0.55.0-beta.1", Pre: true, Draft: true}, {Tag: "v0.54.0"}},
+			"v0.54.0", "v0.55.0-beta.2"},
+		{"by hand", "v0.53.2", "", "", "v0.54.0",
+			[]listed{{Tag: "v0.54.0"}, {Tag: "v0.54.0-beta.2", Pre: true}, {Tag: "v0.53.2"}},
+			"v0.54.0", "v0.54.0-beta.2"},
+	} {
+		gh := fakeGH{latest: tc.latest, list: tc.list}
+		run := runStep(t, script, gh, map[string]string{"TAG": tc.tag, "DRAFT_LATEST": tc.draftLatest, "DRAFT_BETA": tc.draftBeta})
+		if run.outputs["latest"] != tc.wantLatest || run.outputs["beta"] != tc.wantBeta {
+			t.Errorf("%s: latest %q, beta %q; want %q, %q", tc.name, run.outputs["latest"], run.outputs["beta"], tc.wantLatest, tc.wantBeta)
+		}
+	}
+}
+
+// undraft makes the release the latest by what casks found at the end of the
+// run, not by what draft found at its start.
+func TestReleaseUndraftTakesCasksLatest(t *testing.T) {
+	data, err := os.ReadFile("../../.github/workflows/release.yml")
+	testcheck.NoErr(t, err)
+	var wf struct {
+		Jobs map[string]struct {
+			Outputs map[string]string `yaml:"outputs"`
+			Steps   []struct {
+				Env map[string]string `yaml:"env"`
+			} `yaml:"steps"`
+		} `yaml:"jobs"`
+	}
+	testcheck.NoErr(t, yaml.Unmarshal(data, &wf))
+	if got := wf.Jobs["undraft"].Steps[0].Env["LATEST"]; got != "${{ needs.casks.outputs.latest }}" {
+		t.Errorf("undraft's LATEST is %q", got)
+	}
+	if got := wf.Jobs["casks"].Outputs["latest"]; got != "${{ steps.releases.outputs.latest }}" {
+		t.Errorf("casks' latest output is %q", got)
+	}
+}

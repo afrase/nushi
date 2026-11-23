@@ -364,23 +364,24 @@ jobs:
       VERSION: ${{ needs.tag.outputs.version }}
     outputs:
       casks: ${{ steps.write.outputs.casks }}
+      latest: ${{ steps.releases.outputs.latest }}
     steps:
-      # On a published release's run, as draft read them before this release became a draft; a run by hand reads them.
+      # As they are now. On a published release's run this release is a draft, in neither: it is the latest or the
+      # newest beta if draft found it so, unless a newer one went public while it built (an overlapping run's), which
+      # then moves the casks and stays the latest. On a run by hand, draft found nothing.
       - name: Read the latest release and the newest beta
         id: releases
         env:
           GH_TOKEN: ${{ github.token }}
-          EVENT: ${{ github.event_name }}
           DRAFT_LATEST: ${{ needs.draft.outputs.latest }}
           DRAFT_BETA: ${{ needs.draft.outputs.beta }}
         run: |
-          if [ "$EVENT" = release ]; then
-            latest=$DRAFT_LATEST beta=$DRAFT_BETA
-          else
-            latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
-            beta=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 30 --json tagName,isPrerelease \
-              --jq '[.[] | select(.isPrerelease)][0].tagName // ""')
-          fi
+          newer() { [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | tail -1)" = "$1" ]; }
+          latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          beta=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 30 --json tagName,isPrerelease \
+            --jq '[.[] | select(.isPrerelease)][0].tagName // ""')
+          if [ "$DRAFT_LATEST" = "$TAG" ] && ! newer "$latest" "$TAG"; then latest=$TAG; fi
+          if [ "$DRAFT_BETA" = "$TAG" ] && ! newer "$beta" "$TAG"; then beta=$TAG; fi
           echo "latest=$latest" >> "$GITHUB_OUTPUT"
           echo "beta=$beta" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -421,9 +422,9 @@ jobs:
           retention-days: 1
 
   # The release made public again, last: its files are attached and its casks written. A pre-release stays one (only
-  # draft and make_latest are sent), and it is the latest again only if it was when the run began. With this run's own
-  # token, never the tap's: an event that token makes starts no workflow, so publishing doesn't run this file again.
-  # Before tap, since a cask's download from a draft finds nothing.
+  # draft and make_latest are sent), and it is the latest only if casks found it so, at the end of the run. With this
+  # run's own token, never the tap's: an event that token makes starts no workflow, so publishing doesn't run this
+  # file again. Before tap, since a cask's download from a draft finds nothing.
   undraft:
     name: Make the release public
     needs: [draft, casks]
@@ -437,7 +438,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ID: ${{ github.event.release.id }}
-          LATEST: ${{ needs.draft.outputs.latest }}
+          LATEST: ${{ needs.casks.outputs.latest }}
         run: |
           if [ "$(gh api "repos/$GITHUB_REPOSITORY/releases/$ID" --jq .draft)" != true ]; then
             echo "$TAG is public already."; exit 0
