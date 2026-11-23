@@ -51,7 +51,7 @@ func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]mod
 	files := transcripts(dirs, s.Skip)
 	return textfind.Each(ctx, len(files), s.Max, func(ctx context.Context, i int) (model.SessionHit, bool) {
 		f := files[i]
-		n, ex := scan(ctx, f.path, q)
+		n, ex := scan(ctx, f.path, q, s.Unnoted)
 		if n == 0 {
 			return model.SessionHit{}, false
 		}
@@ -59,7 +59,11 @@ func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]mod
 		if err != nil || info.Cwd == "" || s.InFolder != nil && !s.InFolder(info.Cwd) {
 			return model.SessionHit{}, false
 		}
-		return model.SessionHit{SessionID: f.id, Folder: info.Cwd, Title: listTitle(info.Summary),
+		title := info.Summary
+		if s.Unnoted != nil {
+			title = s.Unnoted(title) // the first prompt's first text block may be a note
+		}
+		return model.SessionHit{SessionID: f.id, Folder: info.Cwd, Title: listTitle(title),
 			Updated: f.modified, Count: n, Before: ex.Before, Match: ex.Match, After: ex.After}, true
 	})
 }
@@ -136,8 +140,9 @@ type entry struct {
 }
 
 // scan counts the hits in a transcript's messages and makes the first's
-// excerpt; 0 for a fork, or a file that can't be read.
-func scan(ctx context.Context, path string, q textfind.Query) (int, textfind.Excerpt) {
+// excerpt; 0 for a fork, or a file that can't be read. unnoted (nil: none)
+// takes Nushi's notes off each text of the user's.
+func scan(ctx context.Context, path string, q textfind.Query, unnoted func(string) string) (int, textfind.Excerpt) {
 	f, err := os.Open(path)
 	if err != nil {
 		return 0, textfind.Excerpt{}
@@ -156,7 +161,7 @@ func scan(ctx context.Context, path string, q textfind.Query) (int, textfind.Exc
 		if json.Unmarshal(line, &r) != nil || r.Message == nil || r.IsMeta || r.IsCompactSummary {
 			return true
 		}
-		for _, text := range said(r.Type, r.Message.Content) {
+		for _, text := range said(r.Type, r.Message.Content, unnoted) {
 			k, ex := q.Find(text)
 			if n == 0 && k > 0 {
 				first = ex
@@ -194,10 +199,10 @@ func has(line []byte, key, value string) bool {
 // said is the text of a message the user or Claude said: a user's
 // string or text blocks, cleaned of what claude adds (userText), or
 // Claude's text blocks. Nothing for any other record.
-func said(typ string, content json.RawMessage) []string {
+func said(typ string, content json.RawMessage, unnoted func(string) string) []string {
 	var s string
 	if typ == "user" && json.Unmarshal(content, &s) == nil {
-		return cleaned(s)
+		return cleaned(s, unnoted)
 	}
 	var blocks []struct {
 		Type string `json:"type"`
@@ -213,7 +218,7 @@ func said(typ string, content json.RawMessage) []string {
 		}
 		switch typ {
 		case "user":
-			out = append(out, cleaned(b.Text)...)
+			out = append(out, cleaned(b.Text, unnoted)...)
 		case "assistant":
 			out = append(out, b.Text)
 		}
@@ -221,11 +226,15 @@ func said(typ string, content json.RawMessage) []string {
 	return out
 }
 
-// cleaned is a user's text as userText has it, nothing for what isn't the
-// user's (claude's mark where a turn was stopped among it).
-func cleaned(text string) []string {
+// cleaned is a user's text as userText has it, without Nushi's notes
+// (unnoted, when not nil), nothing for what isn't the user's (claude's
+// mark where a turn was stopped among it).
+func cleaned(text string, unnoted func(string) string) []string {
 	if claude.InterruptMark(text) {
 		return nil
+	}
+	if unnoted != nil {
+		text = unnoted(text)
 	}
 	if t, ok := userText(text); ok {
 		return []string{t}

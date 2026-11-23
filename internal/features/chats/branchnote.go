@@ -110,6 +110,14 @@ func unnoted(text string) (string, bool) {
 	return text, noted
 }
 
+// unnotedText is text without the notes that went before it, as unnoted
+// has it: what a session's title or a search reads of a user's text that
+// an agent keeps with Nushi's notes in it.
+func unnotedText(text string) string {
+	text, _ = unnoted(text)
+	return text
+}
+
 // told is what a prompt tells the agent of its branch: the name it then
 // has, and the notices of the renames its note told of.
 type told struct {

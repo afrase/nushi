@@ -19,6 +19,11 @@ type SessionSearch struct {
 	Folder string
 	// Max is how many sessions to find at most, the newest first.
 	Max int
+	// Unnoted is a text of the user's without the notes Nushi sent before
+	// it, which the agent keeps as part of the user's message: the reader
+	// searches, and names a session by, what it returns ("" for a text
+	// that was only notes). nil: each text as written.
+	Unnoted func(text string) string
 }
 
 // SessionHit is a session whose messages say a search's text: the first

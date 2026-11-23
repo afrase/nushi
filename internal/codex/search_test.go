@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -137,5 +138,27 @@ func TestSearchABigRollout(t *testing.T) {
 	t.Logf("read 63 MB in %v", time.Since(began))
 	if len(hits) != 1 || hits[0].Count != 1 || hits[0].Match != "NEEDLE" || hits[0].Title != "Where is the NEEDLE?" {
 		t.Errorf("found %+v", hits)
+	}
+}
+
+// A user's text is searched, and names the thread, as Unnoted leaves it:
+// Nushi's notes, which Codex keeps as the user's first input texts, are
+// neither found nor the title.
+func TestSearchWithoutNushisNotes(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "sessions")
+	note := `<nushi-moved folder=\"/work/wombat\"/>`
+	testcheck.Write(t, filepath.Join(dir, "2026", "11", "01", "rollout-2026-11-01T10-00-00-019a4b1c-0000-7000-8000-000000000009.jsonl"),
+		`{"type":"session_meta","payload":{"cwd":"/work/app","source":"cli"}}`+"\n"+
+			`{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"`+note+`"},{"type":"input_text","text":"Where is the numbat?"}]}}`+"\n")
+	unnoted := func(text string) string { return regexp.MustCompile(`^<nushi-[^>]*/>\s*`).ReplaceAllString(text, "") }
+	if hits := find(t, dir, model.SessionSearch{Query: "wombat"}); len(hits) != 1 {
+		t.Fatalf("without Unnoted the note is the user's text: %+v", hits)
+	}
+	if hits := find(t, dir, model.SessionSearch{Query: "wombat", Unnoted: unnoted}); len(hits) != 0 {
+		t.Errorf("found in a note: %+v", hits)
+	}
+	hits := find(t, dir, model.SessionSearch{Query: "numbat", Unnoted: unnoted})
+	if len(hits) != 1 || hits[0].Title != "Where is the numbat?" || hits[0].Before != "Where is the " {
+		t.Errorf("numbat: %+v", hits)
 	}
 }

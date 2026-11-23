@@ -34,7 +34,7 @@ func search(ctx context.Context, dir string, s model.SessionSearch) ([]model.Ses
 	}
 	files := rollouts(dir, s.Skip)
 	return textfind.Each(ctx, len(files), s.Max, func(ctx context.Context, i int) (model.SessionHit, bool) {
-		h, ok := scan(ctx, files[i].path, q, s.InFolder)
+		h, ok := scan(ctx, files[i].path, q, s.InFolder, s.Unnoted)
 		h.SessionID, h.Updated = files[i].id, files[i].modified
 		return h, ok
 	})
@@ -105,8 +105,9 @@ func listed(source json.RawMessage) bool {
 // scan reads a rollout: its session_meta first (a fork, a subagent's
 // thread or one of another folder is passed over), then its messages'
 // text, for the hits, the first's excerpt and its title (the first
-// prompt, as Codex's list names it).
-func scan(ctx context.Context, path string, q textfind.Query, inFolder func(string) bool) (model.SessionHit, bool) {
+// prompt, as Codex's list names it). unnoted (nil: none) takes Nushi's
+// notes off each text of the user's first (said).
+func scan(ctx context.Context, path string, q textfind.Query, inFolder func(string) bool, unnoted func(string) string) (model.SessionHit, bool) {
 	f, err := os.Open(path) //nolint:gosec // a rollout in Codex's sessions folder
 	if err != nil {
 		return model.SessionHit{}, false
@@ -139,7 +140,7 @@ func scan(ctx context.Context, path string, q textfind.Query, inFolder func(stri
 		if json.Unmarshal(raw, &r) != nil || r.Type != "response_item" || r.Payload.Type != "message" {
 			return true
 		}
-		for _, text := range said(r) {
+		for _, text := range said(r, unnoted) {
 			if title && r.Payload.Role == "user" && h.Title == "" {
 				h.Title = strings.Join(strings.Fields(text), " ")
 			}
@@ -155,13 +156,21 @@ func scan(ctx context.Context, path string, q textfind.Query, inFolder func(stri
 }
 
 // said is a message's text the user or Codex said: a user's input_text
-// that isn't context Codex added, Codex's output_text.
-func said(r line) []string {
+// that isn't context Codex added, without Nushi's notes (unnoted, when
+// not nil; nothing when it was only notes), Codex's output_text.
+func said(r line, unnoted func(string) string) []string {
 	var out []string
 	for _, c := range r.Payload.Content {
 		switch {
-		case r.Payload.Role == "user" && c.Type == "input_text" && !added(c.Text),
-			r.Payload.Role == "assistant" && c.Type == "output_text":
+		case r.Payload.Role == "user" && c.Type == "input_text" && !added(c.Text):
+			text := c.Text
+			if unnoted != nil {
+				text = unnoted(text)
+			}
+			if text != "" {
+				out = append(out, text)
+			}
+		case r.Payload.Role == "assistant" && c.Type == "output_text":
 			out = append(out, c.Text)
 		}
 	}

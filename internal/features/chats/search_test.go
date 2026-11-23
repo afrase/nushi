@@ -116,3 +116,34 @@ func TestSearchOutOfTime(t *testing.T) {
 		t.Errorf("cancelled: %v", err)
 	}
 }
+
+// A search hit's title loses Nushi's notes as Find's does, and the reader
+// is given the transcript's unnoting for each text of the user's, so a
+// note is neither searched nor shown in an excerpt.
+func TestSearchWithoutNotes(t *testing.T) {
+	var asked model.SessionSearch
+	k := Kind{Launch: (&fakeAgent{}).launch, Harness: struct {
+		model.HarnessInfo
+		searcher
+	}{model.HarnessInfo{Name: "a"}, func(_ context.Context, s model.SessionSearch) ([]model.SessionHit, bool, error) {
+		asked = s
+		return []model.SessionHit{{SessionID: "t1", Title: branchNote("a", "b") + "Flaky", Count: 1, Match: "flaky"}}, false, nil
+	}}}
+	svc := newService(t, []Kind{k}, Options{})
+	found, err := svc.Search(t.Context(), "a", "", "flaky")
+	if err != nil || len(found.Sessions) != 1 || found.Sessions[0].Title != "Flaky" {
+		t.Fatalf("found %+v, %v", found, err)
+	}
+	if asked.Unnoted == nil {
+		t.Fatal("the reader isn't given the unnoting")
+	}
+	for in, want := range map[string]string{
+		stopNote("b1") + "\n\n" + "the flaky test":                                                     "the flaky test",
+		"[Nushi] The user edited `a.go` in Nushi since your last turn; re-read it before changing it.": "",
+		"plain " + stopNote("b1"):                                                                      "plain " + stopNote("b1"),
+	} {
+		if got := asked.Unnoted(in); got != want {
+			t.Errorf("Unnoted(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

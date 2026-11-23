@@ -121,9 +121,10 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	return page, nil
 }
 
-// found reads what the agent tells of a session.
+// found reads what the agent tells of a session; its title without
+// Nushi's notes, which an agent may name a session by (its first prompt).
 func found(info acp.SessionInfo) Found {
-	f := Found{SessionID: string(info.SessionID), Title: info.Title, Folder: info.Cwd}
+	f := Found{SessionID: string(info.SessionID), Title: unnotedText(info.Title), Folder: info.Cwd}
 	f.Updated, _ = time.Parse(time.RFC3339, info.UpdatedAt)
 	if n, ok := info.Meta["messageCount"].(float64); ok && n > 0 {
 		f.Messages = int(n)

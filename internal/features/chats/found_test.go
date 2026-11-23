@@ -140,3 +140,26 @@ func TestOpenRefuses(t *testing.T) {
 		t.Error("opened a session in a folder that doesn't exist")
 	}
 }
+
+// A session's title as the agent lists it loses Nushi's notes that went
+// before its prompt, the tags and the old sentences alike, as the
+// transcript does; a title that was only a note is none.
+func TestFindTitlesWithoutNotes(t *testing.T) {
+	dir := t.TempDir()
+	resolved, _ := filepath.EvalSymlinks(dir)
+	f := &fakeAgent{lists: true, listed: []acp.SessionInfo{
+		{SessionID: "tag", Cwd: resolved, Title: moveNote("/r/a", "b") + " go on", UpdatedAt: "2026-10-03T10:00:00Z"},
+		{SessionID: "old", Cwd: resolved, Title: "[Nushi] This chat moved to `/r/a`. Work there from now on. fix it", UpdatedAt: "2026-10-02T10:00:00Z"},
+		{SessionID: "only", Cwd: resolved, Title: editNote("a.go"), UpdatedAt: "2026-10-01T10:00:00Z"},
+	}}
+	svc := newService(t, []Kind{{Harness: model.HarnessInfo{Name: "a"}, Launch: f.launch}}, Options{})
+	page, err := svc.Find(t.Context(), "a", dir, "")
+	if err != nil || len(page.Sessions) != 3 {
+		t.Fatalf("page %+v, %v", page, err)
+	}
+	for i, want := range []string{"go on", "fix it", ""} {
+		if got := page.Sessions[i].Title; got != want {
+			t.Errorf("%s: title %q, want %q", page.Sessions[i].SessionID, got, want)
+		}
+	}
+}

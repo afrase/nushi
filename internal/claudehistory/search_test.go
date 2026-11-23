@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -237,5 +238,30 @@ func TestSearchABigTranscript(t *testing.T) {
 	t.Logf("read 76 MB in %v", time.Since(began))
 	if len(hits) != 1 || hits[0].Count != 1 || hits[0].Before != "Where is the " || hits[0].Match != "NEEDLE" {
 		t.Errorf("found %+v", hits)
+	}
+}
+
+// A user's text is searched as Unnoted leaves it: Nushi's notes, which
+// claude keeps as the user's message's first text blocks (or run into its
+// text), are neither found nor in an excerpt.
+func TestSearchWithoutNushisNotes(t *testing.T) {
+	projects := filepath.Join(t.TempDir(), "projects")
+	note := `<nushi-moved folder=\"/work/wombat\"/>`
+	testcheck.Write(t, filepath.Join(projects, "-work-app", sessA+".jsonl"),
+		`{"type":"user","cwd":"/work/app","message":{"role":"user","content":[{"type":"text","text":"`+note+`"},{"type":"text","text":"Where is the numbat?"}]}}`+"\n"+
+			`{"type":"user","cwd":"/work/app","message":{"role":"user","content":"`+note+`\n\nAnd the bilby?"}}`+"\n")
+	l := Local{Projects: projects}
+	unnoted := func(text string) string { return regexp.MustCompile(`^<nushi-[^>]*/>\s*`).ReplaceAllString(text, "") }
+	if hits := search(t, l, model.SessionSearch{Query: "wombat"}); len(hits) != 1 {
+		t.Fatalf("without Unnoted the note is the user's text: %+v", hits)
+	}
+	for _, q := range []string{"wombat", "nushi-moved"} {
+		if hits := search(t, l, model.SessionSearch{Query: q, Unnoted: unnoted}); len(hits) != 0 {
+			t.Errorf("%s found in a note: %+v", q, hits)
+		}
+	}
+	hits := search(t, l, model.SessionSearch{Query: "bilby", Unnoted: unnoted})
+	if len(hits) != 1 || hits[0].Before != "And the " || hits[0].Title != "" { // the list's title was the note alone
+		t.Errorf("bilby: %+v", hits)
 	}
 }

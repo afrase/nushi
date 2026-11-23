@@ -81,7 +81,7 @@ func (s *Service) Search(ctx context.Context, agent, folder, text string) (Found
 	defer cancel()
 	began := time.Now()
 	hits, more, err := k.searcher.SearchSessions(reading, model.SessionSearch{Query: text, Folder: resolved, Max: searchMax,
-		Skip: func(id string) bool { return ours[id] }, InFolder: inFolder})
+		Skip: func(id string) bool { return ours[id] }, InFolder: inFolder, Unnoted: unnotedText})
 	if err != nil {
 		if ctx.Err() != nil || !errors.Is(err, context.DeadlineExceeded) {
 			return FoundTexts{}, err
@@ -94,7 +94,7 @@ func (s *Service) Search(ctx context.Context, agent, folder, text string) (Found
 	ids := make([]string, len(hits))
 	for i, h := range hits {
 		ids[i] = h.SessionID
-		f := FoundText{SessionID: h.SessionID, Title: h.Title, Folder: h.Folder, Updated: h.Updated,
+		f := FoundText{SessionID: h.SessionID, Title: unnotedText(h.Title), Folder: h.Folder, Updated: h.Updated,
 			Count: h.Count, Before: h.Before, Match: h.Match, After: h.After}
 		if h.Folder != "" {
 			_, err := os.Stat(h.Folder)
