@@ -47,8 +47,13 @@ class Terminals extends ChangeNotifier {
 
   /// Takes a chat's whole list of terminals (an event or a listing).
   void apply(String chatId, List<pb.Terminal> list) {
-    _lists[chatId] = list;
     final ids = {for (final t in list) t.id};
+    // One no longer listed was seen for the last time.
+    looked.removeAll([
+      for (final t in _lists[chatId] ?? const <pb.Terminal>[])
+        if (!ids.contains(t.id)) t.id,
+    ]);
+    _lists[chatId] = list;
     _sessions.removeWhere((id, s) {
       final gone = s.chatId == chatId && !ids.contains(id);
       if (gone) s.dispose();
@@ -72,6 +77,9 @@ class Terminals extends ChangeNotifier {
 
   /// Forgets a chat's terminals and their emulators (the chat is gone).
   void forget(String chatId) {
+    looked.removeAll([
+      for (final t in _lists[chatId] ?? const <pb.Terminal>[]) t.id,
+    ]);
     _lists.remove(chatId);
     active.remove(chatId);
     _sessions.removeWhere((_, s) {
@@ -119,9 +127,13 @@ class Terminals extends ChangeNotifier {
     if (!list.any((t) => t.id == resp.terminal.id)) {
       _lists[chatId] = [...list, resp.terminal];
     }
-    _opened.add(resp.terminal.id);
-    // Its session may be made already, from the list's event.
-    _sessions[resp.terminal.id]?.fresh = true;
+    // Its session may be made already, from the list's event: then it's
+    // fresh, and nothing waits to be made.
+    if (_sessions[resp.terminal.id] case final s?) {
+      s.fresh = true;
+    } else {
+      _opened.add(resp.terminal.id);
+    }
     if (show) {
       active[chatId] = focusNext = resp.terminal.id;
     } else {

@@ -122,6 +122,34 @@ void main() {
     expect(streams, hasLength(2));
     await tester.pump(TermSession.resizeEvery); // its resize's spell ends
   });
+
+  test("a terminal's ids go with it: one opened after its list event made "
+      'its session, and one the user saw', () async {
+    final opened = Completer<OpenTerminalResponse>();
+    final fake = FakeDaemon([])
+      ..answer = (input) => input is OpenTerminalRequest ? opened.future : null;
+    final terms = Terminals(NushiServiceClient(fake));
+    addTearDown(() => terms.forget('c'));
+    final t = Terminal(id: 't', chatId: 'c');
+    final open = terms.open('c');
+    await pumpEventQueue();
+    terms.apply('c', [t]); // its list's event comes first
+    final first = terms.session(t);
+    opened.complete(OpenTerminalResponse(terminal: t));
+    await open;
+    expect(first.fresh, isTrue);
+    terms.show('c', 't');
+    expect(terms.looked, {'t'});
+    terms.apply('c', []); // closed
+    expect(terms.looked, isEmpty);
+    // Listed again (as from another app's restore): not opened here.
+    terms.apply('c', [t]);
+    expect(terms.session(t).fresh, isFalse);
+    terms
+      ..show('c', 't')
+      ..forget('c');
+    expect(terms.looked, isEmpty);
+  });
 }
 
 /// A daemon whose attaches are the streams returned, each starting with a
