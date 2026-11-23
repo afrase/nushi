@@ -64,10 +64,10 @@ const apiVersion = 144;
 /// shows only its Restart screen (`OutdatedScreen`) until the daemon has
 /// restarted into the bundled one; the phone, never blocked, says to open
 /// Nushi on the Mac (`OldDaemonBar`). The phone's is built into the
-/// relay's web app (ADR 0113), so it moves when the relay is updated. The
-/// API of the newest stable release
-/// at least 7 days old, raised in the commit that cuts each stable
-/// release (`docs/development.md`'s Releases).
+/// relay's web app (ADR 0113), so it moves when the relay is updated.
+/// The API of the newest stable release at least 7 days old, raised in
+/// the commit that cuts each stable release (`docs/development.md`'s
+/// Releases); a gate at or below it goes (`api_floor_test.dart`).
 const apiFloor = 120;
 
 /// The API from which GetDiff answers one file (GetDiffRequest.path), what
