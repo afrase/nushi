@@ -45,14 +45,10 @@ extension DaemonOpen on Daemon {
           sideOf(chat.id) == chat) {
         return _sideGone(chat);
       }
-      if (remote) {
-        // The phone: no raw error, but tries again (and again once the link
-        // is back); details show why.
-        chat.loadError = errorText(e);
-        _retryLoad(chat, tries);
-      } else {
-        chat.error = errorText(e);
-      }
+      // Tried again, and again once the link is back; the Mac's box says
+      // why meanwhile, the phone says it's trying again.
+      chat.loadError = errorText(e);
+      _retryLoad(chat, tries);
       _changed();
     }
   }
@@ -65,15 +61,19 @@ extension DaemonOpen on Daemon {
     unawaited(_load(chat));
   }
 
-  /// Tries a failed load again while the chat shows and the daemon
-  /// answers: 2 s, then twice as long each time, up to 30 s.
+  /// Tries a failed load again while the chat shows (the chat picked, or
+  /// an open side chat) and the daemon answers: 2 s, then twice as long
+  /// each time, up to 30 s. Each chat has its own wait, so a side chat's
+  /// doesn't put off its chat's.
   void _retryLoad(ChatState chat, [int tries = 0]) {
     final wait = Duration(seconds: [2, 4, 8, 16, 30][min(tries, 4)]);
-    _loadRetry?.cancel();
-    _loadRetry = Timer(wait, () {
-      if (chat.loaded || chat.id != selectedId || !chats.containsKey(chat.id)) {
-        return;
-      }
+    _loadRetries[chat.id]?.cancel();
+    _loadRetries[chat.id] = Timer(wait, () {
+      _loadRetries.remove(chat.id);
+      final shows =
+          chats[chat.id] == chat && chat.id == selectedId ||
+          sideOf(chat.id) == chat;
+      if (chat.loaded || !shows) return;
       if (!connected) return _retryLoad(chat, tries + 1); // relinking
       unawaited(_load(chat, tries + 1)); // which comes back here if it fails
     });

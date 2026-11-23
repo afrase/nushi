@@ -100,23 +100,29 @@ void main() {
     chat
       ..busy = true
       ..started = clock()
-      ..error = 'The agent stopped.'
+      ..loadError = 'The agent stopped.'
       ..queue = [QueuedMessage(id: 'q1', text: 'Then docs')]
       ..notifyListeners();
     await tester.pump();
     expect(_height(tester, find.byType(TurnStatus)), greaterThan(15));
-    expect(find.text('The agent stopped.'), findsOneWidget);
+    expect(
+      find.text("Couldn't load the chat, trying again: The agent stopped."),
+      findsOneWidget,
+    );
     expect(find.text('Then docs'), findsOneWidget);
     final shown = _lines(tester);
     await tester.pump(Motion.standard);
     expect(_lines(tester), shown); // nothing moved after
     // And they go at once.
     chat
-      ..error = ''
+      ..loadError = ''
       ..queue = []
       ..notifyListeners();
     await tester.pump();
-    expect(find.text('The agent stopped.'), findsNothing);
+    expect(
+      find.text("Couldn't load the chat, trying again: The agent stopped."),
+      findsNothing,
+    );
     expect(find.text('Then docs'), findsNothing);
     chat
       ..busy = false
@@ -132,7 +138,7 @@ void main() {
     final before = _lines(tester);
     expect(before.every((h) => h == 0), isTrue);
     chat
-      ..error = 'The agent stopped.'
+      ..loadError = 'The agent stopped.'
       ..notifyListeners();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 80));
@@ -146,18 +152,23 @@ void main() {
     expect(growing, inExclusiveRange(0, full));
 
     chat
-      ..error = ''
+      ..loadError = ''
       ..notifyListeners();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 60));
     // Still folding, its text there, and no click lands on it.
-    expect(find.text('The agent stopped.'), findsOneWidget);
+    expect(
+      find.text("Couldn't load the chat, trying again: The agent stopped."),
+      findsOneWidget,
+    );
     final folding = _lines(tester).reduce((a, b) => a + b);
     expect(folding, inExclusiveRange(0, full));
     expect(
       find
           .ancestor(
-            of: find.text('The agent stopped.'),
+            of: find.text(
+              "Couldn't load the chat, trying again: The agent stopped.",
+            ),
             matching: find.byWidgetPredicate(
               (w) => w is IgnorePointer && w.ignoring,
             ),
@@ -166,7 +177,10 @@ void main() {
       isNotEmpty,
     );
     await tester.pump(Motion.exit);
-    expect(find.text('The agent stopped.'), findsNothing);
+    expect(
+      find.text("Couldn't load the chat, trying again: The agent stopped."),
+      findsNothing,
+    );
     await closeView(tester, d);
   });
 

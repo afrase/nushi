@@ -188,11 +188,52 @@ void main() {
       } else {
         expect(chat.side.value, side);
         expect(d.sides, [side]);
-        expect(side.error, isNotEmpty);
+        expect(side.loadError, isNotEmpty);
         expect(side.draft.text.text, 'And the fragment?');
       }
     });
   }
+
+  testWidgets('a load that fails while connected tries again by itself: '
+      'the chat shown, and an open side chat', (tester) async {
+    var fails = true;
+    final fake = FakeDaemon([Chat(id: 'a', folder: '/x', agent: 'claude')])
+      ..answer = (input) => switch (input) {
+        GetChatRequest() when fails => throw ConnectException(
+          Code.deadlineExceeded,
+          'took too long',
+        ),
+        GetChatRequest(:final chatId) => GetChatResponse(
+          seq: Int64(1),
+          items: [agentSays('$chatId-1', 'hi')],
+        ),
+        ForkChatRequest() => ForkChatResponse(chatId: 'side'),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    final chat = d.chats['a']!;
+    d.select('a');
+    await tester.pump();
+    expect(chat.loadError, contains('took too long'));
+    expect(chat.loaded, isFalse);
+    fails = false;
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(chat.loaded, isTrue);
+    expect(chat.loadError, isEmpty);
+
+    fails = true;
+    await d.openSide(chat);
+    await tester.pump();
+    final side = chat.side.value!;
+    expect(side.loadError, contains('took too long'));
+    fails = false;
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+    expect(side.loaded, isTrue);
+    expect(side.loadError, isEmpty);
+    d.dispose(); // its pings' timer
+  });
 
   test('a chat deleted while the app was away: what was kept goes', () async {
     // Kept from an earlier run for "a", listed, and "gone", deleted since.

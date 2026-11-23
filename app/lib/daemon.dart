@@ -315,7 +315,8 @@ class Daemon extends ChangeNotifier {
   /// over a few frames keeps a fast scroll up going ([DaemonPages]).
   static const macRecentItems = 200;
 
-  Timer? _loadRetry;
+  /// Each chat's wait before its failed load tries again ([DaemonOpen]).
+  final _loadRetries = <String, Timer>{};
 
   /// The chats' list changed here ahead of the daemon's events (pins):
   /// whatever shows it builds again.
@@ -372,7 +373,9 @@ class Daemon extends ChangeNotifier {
       f();
     }
     _timer?.cancel();
-    _loadRetry?.cancel();
+    for (final t in _loadRetries.values) {
+      t.cancel();
+    }
     _unsubscribe();
     if (!remote) unawaited(_transport.close());
     super.dispose();

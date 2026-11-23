@@ -317,8 +317,10 @@ class ChatState extends ChangeNotifier {
   // How the last turn ended, as the daemon judged it (API 107); unspecified
   // while one runs, before any ended, or from an older daemon.
   TurnEnd ended = TurnEnd.TURN_END_UNSPECIFIED;
-  String error = ''; // why the snapshot didn't load
-  String loadError = ''; // the same on the phone, which tries again
+
+  /// Why the last snapshot didn't load, while the load tries again ('' once
+  /// one loads).
+  String loadError = '';
 
   /// Its state in a word: the one reading of the flags above.
   ChatPhase get phase => archived
@@ -656,7 +658,7 @@ class ChatState extends ChangeNotifier {
     usage = s.usage;
     queue = s.queue.messages;
     status(s.status);
-    error = loadError = '';
+    loadError = '';
     olderFailed = false;
     _seq = s.seq.toInt();
     loaded = true;
