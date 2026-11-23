@@ -52,7 +52,7 @@ void main() {
       'https://example.com/docs/start?x=1',
     );
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Open in names the default browser and opens the tab’s page '
       'there', (tester) async {
@@ -74,7 +74,7 @@ void main() {
     expect(fakes.opened, [Uri.parse('http://localhost:3000/menu')]);
     expect(fakes.hosts.single.opened, hasLength(1));
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('with no name from the Mac it says your browser', (tester) async {
     browserFakes();
@@ -87,7 +87,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byTooltip('Open in your browser'), findsOneWidget);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a new tab and a blank page have no Open in', (tester) async {
     browserFakes();
@@ -102,7 +102,7 @@ void main() {
     await tester.pump();
     expect(outside(), findsOneWidget);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   for (final (name, tokens, brightness) in [
     ('light', Tokens.light, Brightness.light),
@@ -141,7 +141,7 @@ void main() {
           find.byKey(const ValueKey('pane')),
           matchesGoldenFile('goldens/browser_bar_$name.png'),
         );
-      }, variant: macOnly);
+      }, variant: onMac);
 
       for (final width in [1700.0, 720.0]) {
         testWidgets('renders: the bar in the window, ${width.toInt()} wide', (
@@ -176,7 +176,7 @@ void main() {
             'browser_bar_tooltip_${width.toInt()}_$name',
           );
           await closeView(tester, d);
-        }, variant: macOnly);
+        }, variant: onMac);
       }
     });
   }

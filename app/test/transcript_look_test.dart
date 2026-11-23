@@ -698,6 +698,6 @@ void main() {
         'look_phone_working_${b.name}',
       );
       await endPhone(tester, phone);
-    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+    }, variant: onPhone);
   }
 }

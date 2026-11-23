@@ -16,8 +16,6 @@ import 'settings_harness.dart';
 // Settings in Linux's words and with its fonts (ADR 0104), as a Linux
 // machine shows them: its conventions, window and platform together.
 
-final _linux = TargetPlatformVariant.only(TargetPlatform.linux);
-
 void _onLinux() => native
   ..conventions = linuxConventions
   ..window = const LinuxWindow()
@@ -62,7 +60,7 @@ void main() {
         'linux_settings_notifications_${width.toInt()}',
       );
       d.dispose();
-    }, variant: _linux);
+    }, variant: onLinux);
 
     testWidgets('Terminal offers fontconfig’s monospaced families, '
         '${width.toInt()} wide', (tester) async {
@@ -86,6 +84,6 @@ void main() {
         'linux_settings_terminal_${width.toInt()}',
       );
       d.dispose();
-    }, variant: _linux);
+    }, variant: onLinux);
   }
 }

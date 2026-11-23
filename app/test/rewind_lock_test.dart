@@ -136,7 +136,7 @@ Future<void> _paste(WidgetTester tester, String text) async {
     SystemChannels.platform,
     (call) async => call.method == 'Clipboard.getData' ? {'text': text} : null,
   );
-  await cmdKey(tester, LogicalKeyboardKey.keyV);
+  await press(tester, LogicalKeyboardKey.keyV, cmd: true);
 }
 
 void main() {

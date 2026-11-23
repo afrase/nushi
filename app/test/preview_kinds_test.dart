@@ -527,8 +527,6 @@ void main() {
       await endPhone(tester, p);
     }
 
-    final ios = TargetPlatformVariant.only(TargetPlatform.iOS);
-
     testWidgets('HTML in a frame, saying its files don’t load', (tester) async {
       final p = await phone(tester);
       await _dark(tester);
@@ -544,7 +542,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('<h1>The Still Kettle</h1>'), findsOneWidget);
       await end(tester, p);
-    }, variant: ios);
+    }, variant: onPhone);
 
     testWidgets('Mermaid in a frame of the app’s page; its source', (
       tester,
@@ -565,7 +563,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('Plan --> Build'), findsOneWidget);
       await end(tester, p);
-    }, variant: ios);
+    }, variant: onPhone);
 
     testWidgets('a PDF only on the Mac; a CSV as a table', (tester) async {
       final p = await phone(tester);
@@ -579,6 +577,6 @@ void main() {
       expect(find.text('The first 500 rows of 600.'), findsOneWidget);
       await render(tester, find.byType(PhoneApp), 'preview_phone_csv_dark');
       await end(tester, p);
-    }, variant: ios);
+    }, variant: onPhone);
   });
 }

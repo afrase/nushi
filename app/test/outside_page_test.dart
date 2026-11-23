@@ -110,7 +110,7 @@ void main() {
           find.byKey(const ValueKey('page')),
           matchesGoldenFile('goldens/outside_page_$name.png'),
         );
-      }, variant: linuxOnly);
+      }, variant: onLinux);
 
       testWidgets('a browser tab: no Back, Forward, Reload or ⋯, the '
           'placeholder', (tester) async {
@@ -144,7 +144,7 @@ void main() {
           find.byKey(const ValueKey('pane')),
           matchesGoldenFile('goldens/outside_tab_$name.png'),
         );
-      }, variant: linuxOnly);
+      }, variant: onLinux);
     });
   }
 }

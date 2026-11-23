@@ -56,7 +56,7 @@ void main() {
     // Its width as dragged is kept.
     expect(paneWidths.value, isNot(contains('browser')));
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Esc collapses it', (tester) async {
     browserFakes();
@@ -79,7 +79,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(_expand, findsOneWidget);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Esc collapses it after another browser tab is picked', (
     tester,
@@ -102,7 +102,7 @@ void main() {
     expect(_expand, findsOneWidget);
     expect(find.byType(Composer), findsOneWidget);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('the browser hidden, a file’s tab or another chat collapse it', (
     tester,
@@ -140,7 +140,7 @@ void main() {
     expect(_expand, findsOneWidget);
     expect(find.byType(Composer), findsOneWidget);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   for (final (name, brightness) in [
     ('light', Brightness.light),
@@ -207,7 +207,7 @@ void main() {
           'browser_file_chip_${width.toInt()}_$name',
         );
         await closeView(tester, d);
-      }, variant: macOnly);
+      }, variant: onMac);
     }
   }
 }

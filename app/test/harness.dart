@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
@@ -22,6 +23,12 @@ final fixtureNow = DateTime(2026, 10, 29, 12);
 
 /// A test run on the Mac only.
 final onMac = TargetPlatformVariant.only(TargetPlatform.macOS);
+
+/// A test run on Linux only.
+final onLinux = TargetPlatformVariant.only(TargetPlatform.linux);
+
+/// A test run as on a phone (iOS): touch, a phone's text selection.
+final onPhone = TargetPlatformVariant.only(TargetPlatform.iOS);
 
 /// A test run on the Mac and again on Linux.
 const macAndLinux = TargetPlatformVariant({
@@ -81,16 +88,36 @@ Future<void> frames(WidgetTester tester, int count, [Duration? step]) async {
   }
 }
 
-/// [key] pressed with ⌘ held, then settled, or one frame when not
-/// [settle] (what never settles: a turn's clock, a terminal).
-Future<void> cmdKey(
+/// [key] pressed with modifiers held, then settled, or one frame when
+/// not [settle] (what never settles: a turn's clock, a terminal). [cmd]
+/// is the app's command key as `conventions` has it (⌘ on the Mac,
+/// Control on Linux); [ctrl] is Control itself, [alt] Option (Alt).
+Future<void> press(
   WidgetTester tester,
   LogicalKeyboardKey key, {
+  bool cmd = false,
+  bool shift = false,
+  bool alt = false,
+  bool ctrl = false,
   bool settle = true,
 }) async {
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+  final held = {
+    if (ctrl) LogicalKeyboardKey.controlLeft,
+    if (cmd)
+      switch (conventions.commandKey) {
+        CommandKey.meta => LogicalKeyboardKey.metaLeft,
+        CommandKey.control => LogicalKeyboardKey.controlLeft,
+      },
+    if (shift) LogicalKeyboardKey.shiftLeft,
+    if (alt) LogicalKeyboardKey.altLeft,
+  };
+  for (final k in held) {
+    await tester.sendKeyDownEvent(k);
+  }
   await tester.sendKeyEvent(key);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+  for (final k in held.toList().reversed) {
+    await tester.sendKeyUpEvent(k);
+  }
   if (settle) {
     await tester.pumpAndSettle();
   } else {

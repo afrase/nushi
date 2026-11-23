@@ -101,7 +101,7 @@ void main() {
     expect(tops, [...tops]..sort());
     expect(find.text('Import cookies…'), findsNothing);
     expect(find.byType(Divider), findsNWidgets(2));
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Save screenshot saves the page in sight as a PNG', (
     tester,
@@ -128,7 +128,7 @@ void main() {
     expect(asked, startsWith('Screenshot '));
     expect(fakes.hosts.single.snapshots, 1);
     expect(file.readAsBytesSync(), fakePng);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a save that fails says so and writes nothing', (tester) async {
     browserFakes();
@@ -145,7 +145,7 @@ void main() {
     await untilReal(tester, () => find.byType(ToastLine).evaluate().isNotEmpty);
     expect(find.textContaining('Couldn’t save the screenshot'), findsOneWidget);
     expect(dir.listSync(recursive: true), isEmpty);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a cancelled save writes nothing; a new tab has none', (
     tester,
@@ -171,7 +171,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(_enabled(tester, 'Save screenshot'), isFalse);
     expect(fakes.hosts.single.snapshots, 1);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets(
     'Open local links in built-in browser shows the setting and turns it '
@@ -195,7 +195,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(linksInBrowserTab.value, isTrue);
     },
-    variant: macOnly,
+    variant: onMac,
   );
 
   group('Local network access', () {
@@ -229,7 +229,7 @@ void main() {
       await tester.tap(find.text('Blocked'));
       await tester.pumpAndSettle();
       expect(localNetworkSites.value, isEmpty);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('a local page: Allowed, and it can’t be changed', (
       tester,
@@ -239,7 +239,7 @@ void main() {
       await _open(tester, c, 'http://localhost:3000');
       expect(_access('Allowed'), findsOneWidget);
       expect(_enabled(tester, 'Local network access'), isFalse);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('a new tab has none', (tester) async {
       browserFakes();
@@ -250,7 +250,7 @@ void main() {
         find.textContaining('Local network access', findRichText: true),
         findsNothing,
       );
-    }, variant: macOnly);
+    }, variant: onMac);
   });
 
   testWidgets('Manage allowed sites… opens Allowed sites over the sites let '
@@ -268,7 +268,7 @@ void main() {
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(find.byType(AllowedSites), findsNothing);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Clear browsing data asks first, then clears WebKit’s store '
       'and reloads the page', (tester) async {
@@ -292,7 +292,7 @@ void main() {
     expect(cleared, 1);
     expect(fakes.hosts.single.reloads, 1);
     expect(find.text('Browsing data cleared'), findsOneWidget);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('the keyboard reaches it: Tab to ⋯, Space, the arrows', (
     tester,
@@ -323,7 +323,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(linksInBrowserTab.value, isFalse);
     expect(find.text('Save screenshot'), findsNothing);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   for (final (name, tokens, brightness) in [
     ('light', Tokens.light, Brightness.light),
@@ -340,6 +340,6 @@ void main() {
         find.byType(MaterialApp),
         matchesGoldenFile('goldens/browser_menu_$name.png'),
       );
-    }, variant: macOnly);
+    }, variant: onMac);
   }
 }

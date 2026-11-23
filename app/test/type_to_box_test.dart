@@ -106,7 +106,6 @@ Future<void> _type(WidgetTester tester, LogicalKeyboardKey key) async {
 
 void main() {
   setUpAll(loadFonts);
-  final mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
   testWidgets('a letter typed on the transcript lands at the box’s end, '
       'the focus with it; / opens the commands as if typed there', (
@@ -128,7 +127,7 @@ void main() {
     expect(_boxText(tester), '/');
     expect(_boxFocused(tester), isTrue);
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('keys with ⌘, Control or Option, Esc, arrows, Tab, Enter and '
       'Space keep their meaning', (tester) async {
@@ -158,7 +157,7 @@ void main() {
     await _type(tester, LogicalKeyboardKey.tab);
     expect(_boxText(tester), '');
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('on Windows AltGr, Control and right Alt there, types its '
       'character; Control or Alt alone keeps its meaning', (tester) async {
@@ -202,12 +201,12 @@ void main() {
     expect(find.byType(ReplyBox), findsOneWidget);
     expect(_boxText(tester), '');
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('a letter in a text field stays there', (tester) async {
     final d = await _open(tester);
     // The find bar's field.
-    await cmdKey(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     final focus = FocusManager.instance.primaryFocus;
     expect(
       focus?.context?.findAncestorStateOfType<EditableTextState>(),
@@ -217,7 +216,7 @@ void main() {
     expect(_boxText(tester), '');
     expect(FocusManager.instance.primaryFocus, focus);
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('a letter in a dialog doesn’t reach the box', (tester) async {
     final d = await _open(tester);
@@ -231,7 +230,7 @@ void main() {
     await tester.pumpAndSettle();
     await asked;
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('a letter while a menu is open doesn’t reach the box', (
     tester,
@@ -243,5 +242,5 @@ void main() {
     await _type(tester, LogicalKeyboardKey.keyQ);
     expect(_boxText(tester), '');
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 }

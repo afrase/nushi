@@ -49,34 +49,13 @@ final Finder _rail = find.byType(DetailsPanel);
 
 bool get _linux => defaultTargetPlatform == TargetPlatform.linux;
 
-/// The app's command key with [key]: ⌘ on the Mac, Control on Linux.
-Future<void> _cmd(
-  WidgetTester tester,
-  LogicalKeyboardKey key, {
-  bool shift = false,
-}) async {
-  final mod = _linux
-      ? LogicalKeyboardKey.controlLeft
-      : LogicalKeyboardKey.metaLeft;
-  await tester.sendKeyDownEvent(mod);
-  if (shift) await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyEvent(key);
-  if (shift) await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyUpEvent(mod);
-  await tester.pumpAndSettle();
-}
-
 /// ⌃`, the terminal's key on both.
-Future<void> _terminalKey(WidgetTester tester) async {
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-  await tester.sendKeyEvent(LogicalKeyboardKey.backquote);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-  await tester.pumpAndSettle();
-}
+Future<void> _terminalKey(WidgetTester tester) =>
+    press(tester, LogicalKeyboardKey.backquote, ctrl: true);
 
 /// The palette, [query] typed, its first row run.
 Future<void> _palette(WidgetTester tester, String query) async {
-  await _cmd(tester, LogicalKeyboardKey.keyK);
+  await press(tester, LogicalKeyboardKey.keyK, cmd: true);
   await tester.enterText(
     find.descendant(of: find.byType(Palette), matching: find.byType(TextField)),
     query,
@@ -143,7 +122,7 @@ void main() {
     );
     final menu = _r(tester, find.byTooltip('Chat menu'));
     final area = _r(tester, find.byType(Pane));
-    await _cmd(tester, LogicalKeyboardKey.keyE, shift: true);
+    await press(tester, LogicalKeyboardKey.keyE, cmd: true, shift: true);
     final files = _r(tester, find.byType(FilesPane));
     expect(files.left, _r(tester, _rail).right);
     expect(files.right, area.right);
@@ -161,7 +140,7 @@ void main() {
           .lit,
       isTrue,
     );
-    await _cmd(tester, LogicalKeyboardKey.keyE, shift: true);
+    await press(tester, LogicalKeyboardKey.keyE, cmd: true, shift: true);
     expect(find.byType(FilesPane), findsNothing);
     expect(_r(tester, find.byTooltip('Chat menu')), menu);
     await closeView(tester, d);
@@ -176,10 +155,10 @@ void main() {
       open: _open(side: true),
     );
     expect(_rail, findsNothing);
-    await _cmd(tester, LogicalKeyboardKey.keyB, shift: true);
+    await press(tester, LogicalKeyboardKey.keyB, cmd: true, shift: true);
     expect(find.byType(SideChat), findsNothing);
     expect(_rail, findsOneWidget);
-    await _cmd(tester, LogicalKeyboardKey.keyB, shift: true);
+    await press(tester, LogicalKeyboardKey.keyB, cmd: true, shift: true);
     expect(find.byType(SideChat), findsOneWidget);
     expect(_rail, findsNothing);
     await closeView(tester, d);
@@ -195,7 +174,7 @@ void main() {
     await _palette(tester, 'new browser tab');
     final browser = _r(tester, find.byType(BrowserPane));
     expect(browser.left, _r(tester, _rail).right);
-    await _cmd(tester, LogicalKeyboardKey.keyL);
+    await press(tester, LogicalKeyboardKey.keyL, cmd: true);
     expect(
       tester
           .widget<EditableText>(
@@ -213,10 +192,10 @@ void main() {
     await _palette(tester, 'new browser tab');
     final c = d.chats['c']!;
     expect(c.browser.tabs.value, hasLength(2));
-    await _cmd(tester, LogicalKeyboardKey.keyW);
+    await press(tester, LogicalKeyboardKey.keyW, cmd: true);
     expect(c.browser.tabs.value, hasLength(1));
     expect(_r(tester, find.byType(BrowserPane)), browser);
-    await _cmd(tester, LogicalKeyboardKey.keyW);
+    await press(tester, LogicalKeyboardKey.keyW, cmd: true);
     expect(find.byType(BrowserPane), findsNothing);
     expect(_r(tester, _rail).right, _r(tester, find.byType(Pane)).right);
     await closeView(tester, d);
@@ -241,25 +220,25 @@ void main() {
     final browser = _r(tester, find.byType(BrowserPane));
     final header = _r(tester, find.byType(ChatHeader));
     // ⌘R (Control+R on Linux): the page again, nothing moved.
-    await _cmd(tester, LogicalKeyboardKey.keyR);
+    await press(tester, LogicalKeyboardKey.keyR, cmd: true);
     expect(fakes.hosts.single.reloads, 1);
     expect(_r(tester, find.byType(BrowserPane)), browser);
     // Back and Forward: ⌘[ and ⌘] on the Mac, Alt+Left and Alt+Right on
     // Linux.
     Future<void> step({required bool back}) async {
       if (_linux) {
-        await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
-        await tester.sendKeyEvent(
+        await press(
+          tester,
           back ? LogicalKeyboardKey.arrowLeft : LogicalKeyboardKey.arrowRight,
+          alt: true,
         );
-        await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
-        await tester.pumpAndSettle();
       } else {
-        await _cmd(
+        await press(
           tester,
           back
               ? LogicalKeyboardKey.bracketLeft
               : LogicalKeyboardKey.bracketRight,
+          cmd: true,
         );
       }
     }
@@ -274,7 +253,7 @@ void main() {
     expect(_r(tester, find.byType(BrowserPane)), browser);
     expect(_r(tester, find.byType(ChatHeader)), header);
     // ⌘W on its only tab: closed, the rail back.
-    await _cmd(tester, LogicalKeyboardKey.keyW);
+    await press(tester, LogicalKeyboardKey.keyW, cmd: true);
     expect(c.browser.shown.value, isNull);
     expect(find.byType(BrowserPane), findsNothing);
     expect(_rail, findsOneWidget);
@@ -329,7 +308,7 @@ void main() {
       open: _open(previews: 1),
     );
     expect(_rail, findsNothing);
-    await _cmd(tester, LogicalKeyboardKey.backslash);
+    await press(tester, LogicalKeyboardKey.backslash, cmd: true);
     expect(sidebarHidden.value, isTrue);
     expect(_rail, findsOneWidget);
     await closeView(tester, d);
@@ -343,7 +322,7 @@ void main() {
       width: windowFor(1600, sidebar: false),
       open: _open(previews: 1),
     );
-    await _cmd(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     expect(
       _r(tester, find.byType(FindBar)).right,
       lessThanOrEqualTo(_r(tester, _rail).left),

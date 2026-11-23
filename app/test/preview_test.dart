@@ -172,8 +172,6 @@ Future<(Phone, PhonePlatform)> _phone(
   return (phone, platform);
 }
 
-final _ios = TargetPlatformVariant.only(TargetPlatform.iOS);
-
 Finder _previewOf(String id) => find.descendant(
   of: find.byWidgetPredicate((w) => w is ToolCallView && w.item.id == id),
   matching: find.byType(PreviewButton),
@@ -248,7 +246,7 @@ void main() {
     expect(screen, findsNothing);
     expect(find.text('Write the release report'), findsOneWidget);
     await endPhone(tester, phone);
-  }, variant: _ios);
+  }, variant: onPhone);
 
   testWidgets('no Preview with an older daemon (the phone)', (tester) async {
     final (phone, _) = await _phone(tester, api: 74);
@@ -258,7 +256,7 @@ void main() {
     );
     expect(_buttons, findsNothing);
     await endPhone(tester, phone);
-  }, variant: _ios);
+  }, variant: onPhone);
 
   testWidgets('the pane: rendered, its source, another file, closed', (
     tester,

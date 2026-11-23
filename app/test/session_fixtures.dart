@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -90,11 +89,6 @@ Future<(FakeDaemon, Daemon, List<FoundSession>, List<bool>)> pumpSessionList(
 
 Future<void> typeIn(WidgetTester tester, String text) async {
   await tester.enterText(find.byType(TextField), text);
-  await tester.pumpAndSettle();
-}
-
-Future<void> press(WidgetTester tester, LogicalKeyboardKey key) async {
-  await tester.sendKeyEvent(key);
   await tester.pumpAndSettle();
 }
 

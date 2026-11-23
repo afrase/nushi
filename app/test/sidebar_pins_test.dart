@@ -113,7 +113,6 @@ Finder _inSidebar(String title) =>
     find.descendant(of: find.byType(Sidebar), matching: find.text(title));
 
 void main() {
-  final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
   setUpAll(loadFonts);
 
   testWidgets('a double click opens a chat; only its menu renames it', (
@@ -256,7 +255,7 @@ void main() {
 
     d.select('c');
     await tester.pumpAndSettle();
-    await cmdKey(tester, LogicalKeyboardKey.keyD);
+    await press(tester, LogicalKeyboardKey.keyD, cmd: true);
     expect(pinned(), ['a', 'c']);
     expect(_ys(tester, 'Cap the rates'), lessThan(_ys(tester, 'Seed data')));
 
@@ -264,7 +263,7 @@ void main() {
     d.select('d');
     await tester.pumpAndSettle();
     chatOpened.value = {...chatOpened.value, 'e': clockMs() + 1000};
-    await cmdKey(tester, LogicalKeyboardKey.keyK);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     final rows = find.descendant(
       of: find.byType(ListView).last,
       matching: find.byType(Text),
@@ -292,7 +291,7 @@ void main() {
 
     d.select('c');
     await tester.pumpAndSettle();
-    await cmdKey(tester, LogicalKeyboardKey.keyK);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     await tester.enterText(
       find.descendant(
         of: find.byType(Palette),
@@ -323,7 +322,7 @@ void main() {
     expect(find.text('Pinned'), findsNothing);
     expect(pinnedChats(d), isEmpty);
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('golden: two pinned chats and a reordered project (dark)', (
     tester,

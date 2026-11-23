@@ -98,7 +98,7 @@ void main() {
         );
       }
       await closeView(tester, d);
-    }, variant: macOSOnly);
+    }, variant: onMac);
   }
 
   testWidgets('Update has the daemon install it, once: Updating… until '
@@ -140,7 +140,7 @@ void main() {
     await tester.pump();
     expect(fake.calls.whereType<InstallUpdateRequest>(), hasLength(1));
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 
   testWidgets('a failed install says why, with Copy, Retry and Release '
       'notes; Retry installs again', (tester) async {
@@ -161,7 +161,7 @@ void main() {
     expect(find.text(notYet), findsNothing);
     expect(toastButtons(tester), ['Updating…', 'Release notes']);
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 
   testWidgets('installed with this app still running: it says to quit and '
       'open it again', (tester) async {
@@ -174,7 +174,7 @@ void main() {
     expect(find.text('Quit Nushi and open it again.'), findsOneWidget);
     expect(toastButtons(tester), ['Release notes']);
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 
   testWidgets('an install the daemon refuses says why', (tester) async {
     brewCask = 'nushi';
@@ -194,7 +194,7 @@ void main() {
     expect(find.text("Homebrew didn't install this Nushi"), findsOneWidget);
     expect(toastButtons(tester), ['Update', 'Release notes']);
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 
   testWidgets('a daemon from before it installs: Copy and Release notes, '
       'whatever it says', (tester) async {
@@ -216,7 +216,7 @@ void main() {
     expect(find.byType(Spinner), findsNothing);
     expect(find.text('x'), findsNothing);
     await closeView(tester, d);
-  }, variant: macOSOnly);
+  }, variant: onMac);
 
   testWidgets('after a failure, Copy puts the Homebrew command on the '
       'clipboard', (tester) async {
@@ -248,5 +248,5 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     expect(find.text('Copy'), findsOneWidget);
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 }

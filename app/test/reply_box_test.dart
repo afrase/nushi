@@ -110,10 +110,7 @@ Finder get _field => find.descendant(
 /// and nothing is sent.
 Future<void> _shiftEnter(WidgetTester tester) async {
   final was = tester.widget<TextField>(_field).controller!.text;
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.pump();
+  await press(tester, LogicalKeyboardKey.enter, shift: true, settle: false);
   expect(find.byType(ReplyBox), findsOneWidget, reason: 'not sent');
   expect(tester.widget<TextField>(_field).controller!.text, '$was\n');
 }
@@ -157,10 +154,7 @@ void main() {
     expect(find.byType(ReplyBox), findsNothing);
     expect(box(), 'r');
     await _reply(tester, open: false);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.keyR, shift: true);
     expect(find.byType(ReplyBox), findsNothing);
     // The test's key carries no shifted character.
     expect(box().toLowerCase(), 'rr');
@@ -343,10 +337,7 @@ void main() {
       matching: find.byType(TextField),
     );
     final one = tester.getSize(field).height;
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.pump();
+    await press(tester, LogicalKeyboardKey.enter, shift: true, settle: false);
     expect(find.byType(AlertDialog), findsOneWidget, reason: 'not saved');
     await tester.enterText(field, _lines.join('\n'));
     await tester.pump();

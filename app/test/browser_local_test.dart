@@ -450,5 +450,5 @@ void main() {
       findsOneWidget,
     );
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 }

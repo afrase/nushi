@@ -8,10 +8,7 @@ import 'fake_web_views.dart';
 
 // Pages without the app's own web views (Linux, ADR 0104), as the tests of
 // `outside_page.dart` have them. They pair Linux's window and conventions
-// with its platform ([linuxOnly]), as a Linux machine runs them.
-
-/// Runs a test as on Linux.
-final linuxOnly = TargetPlatformVariant.only(TargetPlatform.linux);
+// with its platform (`onLinux`), as a Linux machine runs them.
 
 /// The addresses the default browser was sent while the test runs, on
 /// Linux's window and conventions without web views or diagrams, the

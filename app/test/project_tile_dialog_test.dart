@@ -124,10 +124,7 @@ void main() {
         null,
       ),
     );
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyV);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pump();
+    await press(tester, LogicalKeyboardKey.keyV, ctrl: true, settle: false);
     expect(field.text, '🦊');
     await tester.enterText(find.byType(TextField), '🌱x');
     await tester.tap(find.byTooltip('Violet'));

@@ -177,7 +177,7 @@ void main() {
     await _rightClick(tester, _inEditor(tester));
     expect(_row('Copy'), findsOneWidget);
     expect(FocusManager.instance.primaryFocus?.debugLabel, 'editor');
-    await cmd(tester, LogicalKeyboardKey.keyC);
+    await press(tester, LogicalKeyboardKey.keyC, cmd: true);
     expect(copied, [_selected]);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();

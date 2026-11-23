@@ -10,7 +10,6 @@ import 'harness.dart';
 /// a list of 200 rows of 40, so the thumb is 600 × 600/8000 tall at the
 /// right edge.
 void main() {
-  final mac = TargetPlatformVariant.only(TargetPlatform.macOS);
   String? selected;
 
   Future<(ScrollController, TestGesture)> list(
@@ -81,7 +80,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
     expect(painter.fadeoutOpacityAnimation.value, 0);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('in a rounded container, the thumb keeps off the corners', (
     tester,
@@ -112,7 +111,7 @@ void main() {
     // Half the corner: where its curve has come within the thumb's margin
     // of the side.
     expect(await endsOf(rounded: true), NushiTheme.panel / 2);
-  }, variant: mac);
+  }, variant: onMac);
 
   for (final selectable in [false, true]) {
     testWidgets('the mouse drags the thumb, and the list scrolls'
@@ -136,7 +135,7 @@ void main() {
         moreOrLessEquals(c.position.maxScrollExtent / 2, epsilon: 40),
       );
       expect(selected, isNull); // the drag selected no text
-    }, variant: mac);
+    }, variant: onMac);
   }
 
   testWidgets('a click on the track pages towards it', (tester) async {
@@ -148,7 +147,7 @@ void main() {
     // A page is most of the window; the thumb doesn't jump to the click.
     expect(c.offset, greaterThan(400));
     expect(c.offset, lessThan(700));
-  }, variant: mac);
+  }, variant: onMac);
 
   setUpAll(loadFonts);
   for (final (name, tokens) in [
@@ -158,7 +157,7 @@ void main() {
     testWidgets(
       'thin while scrolling, wide on its track when near ($name)',
       (tester) => _looks(tester, tokens, name),
-      variant: mac,
+      variant: onMac,
     );
   }
 }

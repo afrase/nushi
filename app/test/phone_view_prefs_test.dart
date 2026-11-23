@@ -145,7 +145,7 @@ void main() {
     final set = await _preview(tester, d);
     expect(set, plain);
     await endPhone(tester, phone);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+  }, variant: onPhone);
 
   test("the phone's files import none of the desktop's Files pane", () {
     const desktop = [

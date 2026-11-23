@@ -65,7 +65,6 @@ Future<Daemon> _open(WidgetTester tester, PingResponse? Function() ping) async {
 
 void main() {
   setUpAll(loadFonts);
-  final mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
   // AppKit's title bar no longer takes the window's top strip (ADR 0080),
   // so what covers the headers has a band of its own to move the window.
@@ -99,7 +98,7 @@ void main() {
     expect(d.settingsOpen, isNull);
     expect(find.byType(SettingsView), findsNothing);
     d.dispose();
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('with no daemon yet, the top of the window moves and zooms it', (
     tester,
@@ -117,7 +116,7 @@ void main() {
     await _drag(tester, const Offset(600, 300));
     expect(calls, ['arm', 'arm', 'arm', 'zoom']);
     d.dispose();
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets("the outdated daemon's screen moves the window from its top", (
     tester,
@@ -131,5 +130,5 @@ void main() {
     await _drag(tester, const Offset(600, 20));
     expect(calls, ['arm']);
     d.dispose();
-  }, variant: mac);
+  }, variant: onMac);
 }

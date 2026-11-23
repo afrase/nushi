@@ -42,7 +42,7 @@ void main() {
     // Nothing goes to the default browser.
     expect(fakes.opened, isEmpty);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a word, a file or a script loads nothing, and the field '
       'says why', (tester) async {
@@ -60,7 +60,7 @@ void main() {
     expect(fakes.opened, isEmpty);
     expect(find.text(browserHint), findsOneWidget);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a typed file address, or a path from /, opens the file’s '
       'preview, the browser tab kept', (tester) async {
@@ -81,7 +81,7 @@ void main() {
     expect(c.shownFile, '/Users/me/nushi/README.md');
     expect(fakes.opened, isEmpty);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('"Not secure" marks plain http from another machine, the '
       'page’s address, not the field’s', (tester) async {
@@ -110,7 +110,7 @@ void main() {
     expect(mark, findsNothing);
     expect(tab.address.value, 'https://example.com/');
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a certificate WebKit refused says so, over the page', (
     tester,
@@ -135,7 +135,7 @@ void main() {
     await tester.pump();
     expect(find.textContaining('certificate'), findsNothing);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   // Fix review 2026-11-06: the bar followed WebKit's URL, which is a
   // navigation's as soon as it starts. A page could start one to a site
@@ -171,7 +171,7 @@ void main() {
     expect(field(), 'https://www.mybank.com/');
     expect(mark, findsNothing);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   // Fix review 2026-11-06: a page could send the tab to
   // https://www.paypal.com@evil.example/, and the bar and a failure's
@@ -240,7 +240,7 @@ void main() {
     await tester.pump();
     expect(find.text('Can’t reach evil.example:8443'), findsOneWidget);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   // Fix review 2026-11-06: a provisional load that fails puts WebKit's URL
   // back on the page shown, and the heading named that page.
@@ -264,7 +264,7 @@ void main() {
     );
     expect(host.tab.address.value, 'https://good.example/');
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   for (final (name, tokens, brightness) in [
     ('light', Tokens.light, Brightness.light),
@@ -311,7 +311,7 @@ void main() {
           find.byKey(const ValueKey('pane')),
           matchesGoldenFile('goldens/browser_not_secure_$name.png'),
         );
-      }, variant: macOnly);
+      }, variant: onMac);
 
       testWidgets('a certificate refused', (tester) async {
         final host = await pane(
@@ -329,7 +329,7 @@ void main() {
           find.byKey(const ValueKey('pane')),
           matchesGoldenFile('goldens/browser_certificate_$name.png'),
         );
-      }, variant: macOnly);
+      }, variant: onMac);
 
       for (final width in [1700.0, 720.0]) {
         testWidgets('renders: a site in the window, ${width.toInt()} wide', (
@@ -380,7 +380,7 @@ void main() {
             'browser_long_host_${width.toInt()}_$name',
           );
           await closeView(tester, d);
-        }, variant: macOnly);
+        }, variant: onMac);
       }
     });
   }

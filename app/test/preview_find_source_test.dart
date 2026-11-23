@@ -52,7 +52,7 @@ Finder _line(String text) =>
 Future<void> _openFind(WidgetTester tester) async {
   await tester.tap(_line('line 10: hay'));
   await tester.pumpAndSettle();
-  await cmd(tester, LogicalKeyboardKey.keyF);
+  await press(tester, LogicalKeyboardKey.keyF, cmd: true);
 }
 
 void main() {

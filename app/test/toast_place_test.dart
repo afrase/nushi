@@ -181,7 +181,7 @@ void main() {
           expectTextInside(tester, width);
           toggleFiles(d.chats['c']!);
           await closeView(tester, d);
-        }, variant: macOSOnly);
+        }, variant: onMac);
       }
     }
   }
@@ -230,7 +230,7 @@ void main() {
       );
       toggleFiles(d.chats['c']!);
       await closeView(tester, d);
-    }, variant: macOSOnly);
+    }, variant: onMac);
   }
 
   testWidgets('the phone: a toast at the bottom', (tester) async {

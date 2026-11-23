@@ -47,9 +47,6 @@ final String roadmap = [
 /// A note with one heading: no outline.
 const flatNote = '# Notes\n\nNo other heading here, so no outline.\n';
 
-/// The Mac.
-final mac = TargetPlatformVariant.only(TargetPlatform.macOS);
-
 /// The daemon: a chat whose folder holds `docs/roadmap.md` and
 /// `docs/notes.md`; any other file is the notes' text.
 FakeDaemon outlineDaemon() {

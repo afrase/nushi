@@ -16,7 +16,6 @@ import 'sidebar_fixture.dart';
 // the switch seemed to do nothing.
 
 void main() {
-  final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
   setUpAll(loadFonts);
 
   Future<Daemon> open(WidgetTester tester, double width) async {
@@ -54,7 +53,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(sidebar(tester), Sidebar.minWidth);
     await closeView(tester, d);
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('a window with no room for it keeps its width for the chats', (
     tester,
@@ -64,5 +63,5 @@ void main() {
     expect(sidebar(tester), Sidebar.minWidth);
     expect(find.byType(ProjectRail), findsNothing);
     await closeView(tester, d);
-  }, variant: macOS);
+  }, variant: onMac);
 }

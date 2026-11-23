@@ -341,7 +341,7 @@ void main() {
       expect(_styleAt(tester, 4)?.fontFamily, isNot(NushiTheme.codeFont));
       expect(_styleAt(tester, 4)?.fontSize, isNot(0));
       // Undone, it's back, and hidden again.
-      await cmdKey(tester, LogicalKeyboardKey.keyZ, settle: false);
+      await press(tester, LogicalKeyboardKey.keyZ, cmd: true, settle: false);
       expect(chat.draft.text.text, 'run `make` now');
       expect(_shown(tester, 9), isFalse, reason: 'the caret is after it');
     });

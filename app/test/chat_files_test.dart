@@ -258,7 +258,7 @@ void main() {
 
   /// ⌘K, then Artifacts… picked by typing.
   Future<void> paletteArtifacts(WidgetTester tester) async {
-    await cmdKey(tester, LogicalKeyboardKey.keyK);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     await tester.enterText(
       find.descendant(
         of: find.byType(Palette),
@@ -325,7 +325,7 @@ void main() {
   ) async {
     final d = await _app(tester);
     final keys = FocusManager.instance.primaryFocus;
-    await cmdKey(tester, LogicalKeyboardKey.keyP);
+    await press(tester, LogicalKeyboardKey.keyP, cmd: true);
     final box = find.byType(OpenFileBox);
     expect(box, findsOneWidget);
     Finder inBox(Finder f) => find.descendant(of: box, matching: f);
@@ -366,14 +366,14 @@ void main() {
     // The keys are back where they were: Files, opening, took none.
     expect(FocusManager.instance.primaryFocus, same(keys));
     // Code isn't an artifact, but ⌘P opens it.
-    await cmdKey(tester, LogicalKeyboardKey.keyP);
+    await press(tester, LogicalKeyboardKey.keyP, cmd: true);
     await tester.enterText(inBox(find.byType(TextField)), 'api.go');
     await tester.pumpAndSettle();
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(_inPane(find.text('api.go')), findsOneWidget);
     // A script with no extension: listed, and it opens.
-    await cmdKey(tester, LogicalKeyboardKey.keyP);
+    await press(tester, LogicalKeyboardKey.keyP, cmd: true);
     await tester.enterText(inBox(find.byType(TextField)), 'deploy');
     await tester.pumpAndSettle();
     expect(
@@ -420,5 +420,5 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PreviewScreen), findsOneWidget);
     await endPhone(tester, phone);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+  }, variant: onPhone);
 }

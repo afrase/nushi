@@ -115,11 +115,11 @@ void main() {
     expect(d.settingsOpen, isNull);
     expect(d.place, const ChatPlace());
     expect(find.byType(SettingsView), findsNothing);
-    await cmdKey(tester, LogicalKeyboardKey.comma);
+    await press(tester, LogicalKeyboardKey.comma, cmd: true);
     expect(d.settingsOpen, const SettingsAt(SettingsSection.jira));
-    await cmdKey(tester, LogicalKeyboardKey.comma);
+    await press(tester, LogicalKeyboardKey.comma, cmd: true);
     expect(find.byType(SettingsView), findsNothing);
-    await cmdKey(tester, LogicalKeyboardKey.comma);
+    await press(tester, LogicalKeyboardKey.comma, cmd: true);
     await tester.tap(find.byTooltip('Close\u2002Esc'));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsView), findsNothing);

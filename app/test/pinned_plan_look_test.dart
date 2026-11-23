@@ -218,6 +218,6 @@ void main() {
       await tester.pumpAndSettle();
       await render(tester, find.byType(PhoneApp), 'plan_phone_open_${b.name}');
       await endPhone(tester, phone);
-    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+    }, variant: onPhone);
   }
 }

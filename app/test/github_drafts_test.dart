@@ -74,7 +74,7 @@ String _draft(String id) => commentDraft(
 );
 
 Future<void> _post(WidgetTester tester) async {
-  await cmdKey(tester, LogicalKeyboardKey.enter);
+  await press(tester, LogicalKeyboardKey.enter, cmd: true);
 }
 
 void main() {

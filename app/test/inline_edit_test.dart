@@ -51,10 +51,12 @@ void main() {
     await tester.pump();
     expect(text.selection.baseOffset, 5);
 
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.pump();
+    await press(
+      tester,
+      LogicalKeyboardKey.arrowLeft,
+      shift: true,
+      settle: false,
+    );
     expect(text.selection.isCollapsed, isFalse);
     await closeView(tester, d);
   }, variant: onMac);

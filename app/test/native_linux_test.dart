@@ -15,8 +15,7 @@ import 'package:nushi/window_drag_linux.dart';
 import 'package:nushi/window_drag_macos.dart';
 
 import 'fake_daemon.dart';
-
-final _linux = TargetPlatformVariant.only(TargetPlatform.linux);
+import 'harness.dart';
 
 int _mode(String path) => FileStat.statSync(path).mode & 0x1ff;
 
@@ -65,7 +64,7 @@ void main() {
     expect(find.text('Fix the login redirect'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     d.dispose();
-  }, variant: _linux);
+  }, variant: onLinux);
 
   test("Linux's chmod sets a file's and a folder's modes", () {
     native.fileModes = const LinuxFileModes();

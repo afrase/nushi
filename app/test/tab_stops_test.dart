@@ -66,7 +66,7 @@ CodeLineRenderParagraph _editorLine(WidgetTester tester, int index) => tester
     .firstWhere((p) => p.index == index);
 
 Future<void> _copy(WidgetTester tester) async {
-  await cmdKey(tester, LogicalKeyboardKey.keyC, settle: false);
+  await press(tester, LogicalKeyboardKey.keyC, cmd: true, settle: false);
 }
 
 void main() {
@@ -443,7 +443,7 @@ void main() {
       offset: 1,
     );
     await typeIn(tester, e, 'q := 0\n\t');
-    await cmd(tester, LogicalKeyboardKey.keyS);
+    await press(tester, LogicalKeyboardKey.keyS, cmd: true);
     expect(
       utf8.decode(fake.writes.single.data),
       tabbed.replaceFirst('\tp :=', '\tq := 0\n\tp :='),

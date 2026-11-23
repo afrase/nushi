@@ -228,7 +228,7 @@ void main() {
       find.byType(TextField).first,
       'Fixed in the next commit.',
     );
-    await cmdKey(tester, LogicalKeyboardKey.enter);
+    await press(tester, LogicalKeyboardKey.enter, cmd: true);
     final reply = fake.calls.whereType<ReplyGitHubThreadRequest>().single;
     expect((reply.thread, reply.body), ('T1', 'Fixed in the next commit.'));
     await tester.tap(find.text('Resolve').first);
@@ -508,7 +508,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.getRect(last).top, greaterThan(view.bottom));
-    await cmdKey(tester, LogicalKeyboardKey.enter);
+    await press(tester, LogicalKeyboardKey.enter, cmd: true);
     await tester.tap(_clone.first);
     await tester.pumpAndSettle();
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
@@ -533,12 +533,7 @@ void main() {
               .focusNode!
           ..requestFocus();
     await tester.pump();
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.keyJ, ctrl: true, alt: true);
     expect(find.byType(Palette), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
@@ -547,7 +542,13 @@ void main() {
     await tester.pumpAndSettle();
     list.requestFocus();
     await tester.pump();
-    await _heldArrowDown(tester);
+    await press(
+      tester,
+      LogicalKeyboardKey.arrowDown,
+      cmd: true,
+      shift: true,
+      alt: true,
+    );
     expect(find.byType(Palette), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await closeView(tester, d);
@@ -563,7 +564,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
     await tester.pumpAndSettle();
     expect(find.byTooltip('Start work\u2002⌘⏎'), findsOneWidget);
-    await cmdKey(tester, LogicalKeyboardKey.enter);
+    await press(tester, LogicalKeyboardKey.enter, cmd: true);
     await tester.tap(_clone.first);
     await tester.pumpAndSettle();
     expect(find.text("the pull request's head"), findsOneWidget);
@@ -825,21 +826,4 @@ void main() {
       }, variant: onMac);
     }
   }
-}
-
-/// ⇧⌥⌘↓, pressed and let go.
-Future<void> _heldArrowDown(WidgetTester tester) async {
-  const held = [
-    LogicalKeyboardKey.shiftLeft,
-    LogicalKeyboardKey.altLeft,
-    LogicalKeyboardKey.metaLeft,
-  ];
-  for (final m in held) {
-    await tester.sendKeyDownEvent(m);
-  }
-  await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-  for (final m in held.reversed) {
-    await tester.sendKeyUpEvent(m);
-  }
-  await tester.pumpAndSettle();
 }

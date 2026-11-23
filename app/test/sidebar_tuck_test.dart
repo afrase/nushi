@@ -87,7 +87,7 @@ void main() {
     expect(sidebarHidden.value, isFalse);
     await render(tester, find.byType(NushiApp), 'sidebar_tucked_peek_480');
 
-    await cmdKey(tester, LogicalKeyboardKey.backslash);
+    await press(tester, LogicalKeyboardKey.backslash, cmd: true);
     expect(find.byType(Sidebar), findsNothing);
     expect(sidebarHidden.value, isFalse);
     await closeView(tester, d);

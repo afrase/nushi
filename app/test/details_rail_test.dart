@@ -114,7 +114,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<SendPromptRequest>().single.text, '/compact');
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('the lists are what the daemon read, not parsed here: none '
       'from a daemon older than them, though the markdown has them', (
@@ -131,7 +131,7 @@ void main() {
     expect(inRail(find.text('Custom agents')), findsOne); // the category
     expect(inRail(find.text('MCP tools')), findsNothing);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('an agent that reports only a total: the line and the bar, '
       'and Compact, since it has a compact command', (tester) async {
@@ -154,7 +154,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<SendPromptRequest>().single.text, '/compact');
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a busy chat keeps Compact where it was, disabled', (
     tester,
@@ -165,14 +165,14 @@ void main() {
     final button = find.ancestor(of: compact, matching: find.byType(Button));
     expect(tester.widget<Button>(button).onPressed, isNull);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('nothing reported: one line', (tester) async {
     final (d, _) = await railApp(tester, usage: Usage());
     expect(inRail(find.text('Not reported yet')), findsOne);
     expect(inRail(find.byType(ContextReport)), findsNothing);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('background tasks: the running ones, the finished folded', (
     tester,
@@ -191,7 +191,7 @@ void main() {
     expect(inRail(find.text('make golden-diff')), findsOne);
     expect(inRail(find.text('1m 00s')), findsOne); // s3's
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('artifacts: five, their kind on the right, then Show more', (
     tester,
@@ -214,7 +214,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(inRows(find.text('0092-the-details-rail.md')), findsNothing);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('one width at every size it shows at, and no edge to drag', (
     tester,
@@ -234,14 +234,14 @@ void main() {
       expect(tester.getRect(railPanel).left, left);
       await closeView(tester, d);
     }
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets("an older app's dragged width is dropped", (tester) async {
     paneWidths.value = {'details': 400, 'preview': 600};
     final (d, _) = await railApp(tester);
     expect(tester.getRect(railPanel).width, DetailsPanel.width);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
@@ -264,7 +264,7 @@ void main() {
           'details_rail_${width.toInt()}_$name',
         );
         await closeView(tester, d);
-      }, variant: macOnly);
+      }, variant: onMac);
     }
 
     testWidgets('golden: the panel, a busy chat, $name', (tester) async {
@@ -281,7 +281,7 @@ void main() {
         matchesGoldenFile('goldens/details_rail_$name.png'),
       );
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
   }
 
   // The Context widget of an agent that has a compact command and reports
@@ -314,7 +314,7 @@ void main() {
           'context_total${state}_${width.toInt()}_$name',
         );
         await closeView(tester, d);
-      }, variant: macOnly);
+      }, variant: onMac);
     }
   }
 
@@ -346,7 +346,7 @@ void main() {
           'context_lists_${width.toInt()}_$name',
         );
         await closeView(tester, d);
-      }, variant: macOnly);
+      }, variant: onMac);
     }
   }
 
@@ -370,7 +370,7 @@ void main() {
         matchesGoldenFile('goldens/context_total_$name.png'),
       );
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
   }
 
   // Every widget with something in it (a branch with changes, a pull
@@ -456,7 +456,7 @@ void main() {
           );
         }
         await closeView(tester, d);
-      }, variant: macOnly);
+      }, variant: onMac);
     }
   }
 
@@ -477,7 +477,7 @@ void main() {
           await render(tester, railPanel, 'details_rail_${theme.id}_${b.name}');
           await closeView(tester, d);
         },
-        variant: macOnly,
+        variant: onMac,
         skip: rendersDir == null,
       );
     }

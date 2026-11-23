@@ -79,7 +79,7 @@ void main() {
         find.byKey(const ValueKey(#host)),
         matchesGoldenFile('goldens/markdown_outline_menu_$name.png'),
       );
-    }, variant: mac);
+    }, variant: onMac);
 
     for (final width in [1700.0, 720.0]) {
       testWidgets('renders: the outline, ${width.toInt()} wide, $name', (
@@ -104,7 +104,7 @@ void main() {
           'outline_${width.toInt()}_menu_$name',
         );
         await closeView(tester, d);
-      }, variant: mac);
+      }, variant: onMac);
     }
 
     testWidgets('the phone: the path line, and a tap on the rail lists the '
@@ -145,6 +145,6 @@ void main() {
       expect(find.byType(RailMenu), findsNothing);
       expect(tester.widget<Rail>(find.byType(Rail)).current.value, 6);
       await endPhone(tester, phone);
-    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+    }, variant: onPhone);
   }
 }

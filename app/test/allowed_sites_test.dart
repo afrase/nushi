@@ -5,7 +5,6 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-import 'browser_fixture.dart' show macOnly;
 import 'fake_daemon.dart' show loadFonts;
 import 'harness.dart';
 
@@ -133,7 +132,7 @@ void main() {
     expect(find.text('tools.example'), findsOneWidget);
     expect(find.textContaining('address'), findsNothing);
     expect(find.textContaining('reaches it'), findsNothing);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a row’s bin takes its site off', (tester) async {
     localNetworkSites.value = {'router.example', 'nas.example'};
@@ -153,7 +152,7 @@ void main() {
     await tester.tap(find.byTooltip('Remove'));
     await tester.pumpAndSettle();
     expect(find.text('No sites allowed'), findsOneWidget);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Clear all asks first, and is off with nothing to clear', (
     tester,
@@ -176,7 +175,7 @@ void main() {
     expect(find.text('Allowed sites'), findsOneWidget);
     expect(find.text('No sites allowed'), findsOneWidget);
     expect(_enabled(tester, 'Clear all'), isFalse);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Done and × close it', (tester) async {
     await _open(tester);
@@ -188,7 +187,7 @@ void main() {
     await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
     expect(find.text('Allowed sites'), findsNothing);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   for (final (name, tokens) in [
     ('light', Tokens.light),
@@ -205,7 +204,7 @@ void main() {
         find.byType(AlertDialog),
         matchesGoldenFile('goldens/allowed_sites_$name.png'),
       );
-    }, variant: macOnly);
+    }, variant: onMac);
   }
 
   for (final width in [1700.0, 720.0]) {
@@ -228,7 +227,7 @@ void main() {
           'allowed_sites_${width.round()}_empty',
         );
       },
-      variant: macOnly,
+      variant: onMac,
       skip: rendersDir == null,
     );
   }

@@ -137,7 +137,7 @@ void main() {
     );
     expect(_in<FilesPane>(find.byType(SourceView)), findsOneWidget);
     await closeView(tester, d);
-  }, variant: linuxOnly);
+  }, variant: onLinux);
 
   testWidgets('beside the details rail, right of it, the placeholder keeps '
       'its button in the pane, under its top row', (tester) async {
@@ -170,7 +170,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(opened, [Uri.file('/Users/me/nushi/site/index.html')]);
     await closeView(tester, d);
-  }, variant: linuxOnly);
+  }, variant: onLinux);
 
   testWidgets('narrow, the placeholder over the chat keeps its button whole', (
     tester,
@@ -188,7 +188,7 @@ void main() {
     );
     expectTextInside(tester, 720);
     await closeView(tester, d);
-  }, variant: linuxOnly);
+  }, variant: onLinux);
 
   testWidgets('a browser that won’t open says so: the runner not answering '
       'yet, and no default browser', (tester) async {
@@ -217,7 +217,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('No default browser is set'), findsOneWidget);
     await closeView(tester, d);
-  }, variant: linuxOnly);
+  }, variant: onLinux);
 
   testWidgets('a PDF’s preview is the placeholder too, not the phone’s '
       'note', (tester) async {
@@ -231,7 +231,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(opened, [Uri.file('/Users/me/nushi/docs/menu.pdf')]);
     await closeView(tester, d);
-  }, variant: linuxOnly);
+  }, variant: onLinux);
 
   testWidgets('a Mermaid file shows its source, with no Preview to switch '
       'to', (tester) async {
@@ -243,7 +243,7 @@ void main() {
     expect(_in<FilesPane>(find.textContaining('Plan --> Build')), findsOne);
     expect(_in<FilesPane>(find.byTooltip('Open in browser')), findsNothing);
     await closeView(tester, d);
-  }, variant: linuxOnly);
+  }, variant: onLinux);
 
   // Review 2026-11-22, F222: Linux's Diagram tab showed the source, as
   // Source did, and a line saying it isn't drawn.
@@ -264,7 +264,7 @@ void main() {
       expect(_in<FilesPane>(find.text('Diagram')), findsNothing);
       expect(_in<FilesPane>(find.text('Source')), findsNothing);
       await closeView(tester, d);
-    }, variant: linuxOnly);
+    }, variant: onLinux);
   }
 
   testWidgets('the agent’s page opens a placeholder tab, never the browser; '
@@ -298,7 +298,7 @@ void main() {
     expect(opened.last, Uri.parse('http://localhost:3000/cart'));
     expect(_in<BrowserPane>(find.text('localhost:3000')), findsWidgets);
     await closeView(tester, d);
-  }, variant: linuxOnly);
+  }, variant: onLinux);
 
   testWidgets('narrow, the tab’s placeholder over the chat', (tester) async {
     pagesOutside();
@@ -309,7 +309,7 @@ void main() {
     expect(find.byType(BrowserPane), findsOneWidget);
     expectTextInside(tester, 720);
     await closeView(tester, d);
-  }, variant: linuxOnly);
+  }, variant: onLinux);
 
   testWidgets('a chat’s link and the show row’s Open go straight to the '
       'browser; Settings has no built-in browser row', (tester) async {
@@ -334,7 +334,7 @@ void main() {
     expect(find.text('Notifications'), findsWidgets); // the page shows
     expect(find.text('Open links in built-in browser'), findsNothing);
     await closeView(tester, d);
-  }, variant: linuxOnly);
+  }, variant: onLinux);
 
   testWidgets('a chat’s link with no default browser says so', (tester) async {
     pagesOutside(
@@ -350,7 +350,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('No default browser is set'), findsOneWidget);
     await closeView(tester, d);
-  }, variant: linuxOnly);
+  }, variant: onLinux);
 
   testWidgets('a show row has no Open for what a tab wouldn’t show; its '
       'card doesn’t say a page runs as it opens', (tester) async {
@@ -382,5 +382,5 @@ void main() {
     expect(find.text('Show site/index.html'), findsOneWidget);
     expect(find.textContaining('A page runs'), findsNothing);
     await closeView(tester, d);
-  }, variant: linuxOnly);
+  }, variant: onLinux);
 }

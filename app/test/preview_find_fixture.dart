@@ -64,13 +64,13 @@ Future<void> expectRouting(
   await tester.tap(inPreview);
   await tester.pumpAndSettle();
   final before = FocusManager.instance.primaryFocus;
-  await cmd(tester, LogicalKeyboardKey.keyF);
+  await press(tester, LogicalKeyboardKey.keyF, cmd: true);
   expect(paneBar, findsOne);
   expect(find.text('Find in the file'), findsOne);
   expect(chatC(d).find.query, isNull);
   expect(FocusManager.instance.primaryFocus?.debugLabel, 'find');
   // ⌘F again, from the bar, stays there.
-  await cmd(tester, LogicalKeyboardKey.keyF);
+  await press(tester, LogicalKeyboardKey.keyF, cmd: true);
   expect(paneBar, findsOne);
   expect(chatC(d).find.query, isNull);
   await tester.sendKeyEvent(LogicalKeyboardKey.escape);
@@ -85,7 +85,7 @@ Future<void> expectRouting(
     ),
   );
   await tester.pumpAndSettle();
-  await cmd(tester, LogicalKeyboardKey.keyF);
+  await press(tester, LogicalKeyboardKey.keyF, cmd: true);
   expect(chatC(d).find.query, '');
   expect(find.text('Find in the chat'), findsOne);
   expect(paneBar, findsNothing);
@@ -94,7 +94,7 @@ Future<void> expectRouting(
   await tester.pumpAndSettle();
   await tester.tap(inPreview);
   await tester.pumpAndSettle();
-  await cmd(tester, LogicalKeyboardKey.keyF);
+  await press(tester, LogicalKeyboardKey.keyF, cmd: true);
   expect(paneBar, findsOne);
   expect(chatC(d).find.query, isNull);
 }

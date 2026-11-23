@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_daemon.dart' show loadFonts;
+import 'harness.dart';
 import 'session_fixtures.dart';
 
 void main() {

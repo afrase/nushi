@@ -93,7 +93,7 @@ void main() {
 
     d.closeSettings();
     await tester.pumpAndSettle();
-    await cmdKey(tester, LogicalKeyboardKey.keyK);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     await tester.enterText(find.byType(TextField).last, 'theme');
     await tester.pumpAndSettle();
     expect(find.text('Appearance and themes'), findsOne);

@@ -55,7 +55,7 @@ Future<Daemon> _app(
 }
 
 Future<void> _find(WidgetTester tester, String query) async {
-  await cmdKey(tester, LogicalKeyboardKey.keyF);
+  await press(tester, LogicalKeyboardKey.keyF, cmd: true);
   await tester.enterText(
     find.descendant(
       of: find.byType(FindBar),
@@ -234,7 +234,7 @@ void main() {
     );
     await tester.pump();
     expect(_marks(tester), hasLength(2), reason: 'still marked');
-    await cmdKey(tester, LogicalKeyboardKey.keyC, settle: false);
+    await press(tester, LogicalKeyboardKey.keyC, cmd: true, settle: false);
     expect(
       copied.lastOrNull,
       'One relay here.\n\nAnd relay there.\n\nLast words',

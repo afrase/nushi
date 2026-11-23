@@ -30,8 +30,6 @@ import 'harness.dart';
 // and Quit, which no menu bar has, in the palette. Tests pair Linux's
 // conventions and window with its platform, as a Linux machine runs them.
 
-final _linux = TargetPlatformVariant.only(TargetPlatform.linux);
-
 void _onLinux() => native
   ..conventions = linuxConventions
   ..window = const LinuxWindow();
@@ -120,7 +118,7 @@ void main() {
     ]);
     expect(d.selectedId, order[2]);
     await closeView(tester, d);
-  }, variant: _linux);
+  }, variant: onLinux);
 
   testWidgets('the keys’ words say Ctrl: the New chat button, the numbers '
       'held Ctrl shows, and the header’s tooltips', (tester) async {
@@ -169,7 +167,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await closeView(tester, d);
     }
-  }, variant: _linux);
+  }, variant: onLinux);
 
   testWidgets('Ctrl+Enter stops the turn and sends; Control starts no line '
       'here, Shift still does', (tester) async {
@@ -207,7 +205,7 @@ void main() {
     expect(c.text, isEmpty);
     a.busy = false;
     await closeView(tester, d);
-  }, variant: _linux);
+  }, variant: onLinux);
 
   testWidgets(r'in a terminal Ctrl and a letter is the shell’s, Ctrl+\ '
       'too, and Ctrl+C with a selection, and F7; Ctrl+Shift+C copies, '
@@ -294,7 +292,7 @@ void main() {
     expect(find.byType(Palette), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await closeView(tester, d);
-  }, variant: _linux);
+  }, variant: onLinux);
 
   testWidgets('without a menu bar, Quit and Previous and Next chat are '
       'palette rows', (tester) async {
@@ -315,7 +313,7 @@ void main() {
     expect(find.byType(Palette), findsNothing);
     expect(d.selectedId, order[(order.indexOf('a') - 1) % order.length]);
     await closeView(tester, d);
-  }, variant: _linux);
+  }, variant: onLinux);
 
   testWidgets('Ctrl+Q asks before it quits, as the window’s close does: '
       'edits that can’t be saved ask, and Cancel stays', (tester) async {
@@ -338,7 +336,7 @@ void main() {
     expect(find.text('Quit without your changes to main.go?'), findsNothing);
     expect(chatC(d).edits['main.go'], same(e));
     await endEditor(tester, d);
-  }, variant: _linux);
+  }, variant: onLinux);
 
   testWidgets('on the Mac, Quit is its menu’s: ⌘Q is no key of the app’s '
       'and the palette has no Quit row', (tester) async {

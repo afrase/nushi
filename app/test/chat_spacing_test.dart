@@ -793,7 +793,7 @@ void main() {
           'linux_preview_menu_${width.toInt()}',
         );
         await closeView(tester, d);
-      }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+      }, variant: onLinux);
     }
   });
 

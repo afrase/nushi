@@ -79,16 +79,6 @@ bool _lit(WidgetTester tester) => tester
     )
     .lit;
 
-/// ⇧⌘E, as pressed.
-Future<void> _shiftCmdE(WidgetTester tester) async {
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
-  await tester.pumpAndSettle();
-}
-
 /// Picks View › Files in the menu bar.
 Future<void> _viewFiles(WidgetTester tester) async {
   viewItems(tester).firstWhere((m) => m.label == 'Files').onSelected!();
@@ -135,7 +125,7 @@ void main() {
   testWidgets('⇧⌘E and View › Files light and unlight it as the button '
       'would', (tester) async {
     final d = await _app(tester);
-    await _shiftCmdE(tester);
+    await press(tester, LogicalKeyboardKey.keyE, cmd: true, shift: true);
     expect(find.byType(FilesPane), findsOne);
     expect(find.byTooltip('Hide files\u2002⇧⌘E'), findsOne);
     expect(_lit(tester), isTrue);
@@ -146,7 +136,7 @@ void main() {
     await _viewFiles(tester);
     expect(find.byType(FilesPane), findsOne);
     expect(_lit(tester), isTrue);
-    await _shiftCmdE(tester);
+    await press(tester, LogicalKeyboardKey.keyE, cmd: true, shift: true);
     expect(find.byType(FilesPane), findsNothing);
     expect(_lit(tester), isFalse);
     await closeView(tester, d);
@@ -156,7 +146,10 @@ void main() {
       'with the pane, not close it', (tester) async {
     final d = await _app(tester, open: true);
     final c = d.chats['c']!;
-    for (final pick in [() => _shiftCmdE(tester), () => _viewFiles(tester)]) {
+    for (final pick in [
+      () => press(tester, LogicalKeyboardKey.keyE, cmd: true, shift: true),
+      () => _viewFiles(tester),
+    ]) {
       c.tab.value = ChatTab.changes;
       await tester.pumpAndSettle();
       expect(_lit(tester), isFalse);

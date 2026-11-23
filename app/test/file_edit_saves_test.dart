@@ -197,8 +197,8 @@ void main() {
       index: 1,
       offset: 0,
     );
-    await cmd(tester, LogicalKeyboardKey.keyV);
-    await cmd(tester, LogicalKeyboardKey.keyS);
+    await press(tester, LogicalKeyboardKey.keyV, cmd: true);
+    await press(tester, LogicalKeyboardKey.keyS, cmd: true);
     expect(utf8.decode(fake.writes.single.data), 'top\na\nb\nc');
     await endEditor(tester, d);
   }, variant: onMac);
@@ -219,10 +219,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.pump();
     expect(e.text.split('\n')[4], '\t\t');
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.pump();
+    await press(tester, LogicalKeyboardKey.tab, shift: true, settle: false);
     expect(e.text.split('\n')[4], '\t');
     // Between braces: the closing one on a line of its own, a line a tab
     // further in between.

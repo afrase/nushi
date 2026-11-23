@@ -99,7 +99,6 @@ Finder _segment(String label) => find.descendant(
 
 void main() {
   setUpAll(loadFonts);
-  final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
 
   testWidgets("⇧⌘] and ⇧⌘[ step the tabs too, as Chrome's, with the "
       'box focused, and ⌘[ alone stays Back', (tester) async {
@@ -118,7 +117,7 @@ void main() {
     expect(b.shownTab, ChatTab.chat);
     expect((actKeys[backKey]! as RunActIntent).act, Act.back);
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('after a click outside the box (a header tab), ⌃⇧Tab and '
       '⌃Tab still step', (tester) async {
@@ -146,7 +145,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<EditableText>(_box).controller.text, 'x');
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('⌃Tab from the box, then ⌃⇧Tab back: the box goes with the '
       'Chat tab, and the focus stays under the window’s keys', (tester) async {
@@ -166,7 +165,7 @@ void main() {
     await _tab(tester, back: true);
     expect(b.shownTab, ChatTab.chat);
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('with the box’s choices showing, ⌃Tab and ⌃⇧Tab step the tabs '
       'and pick none', (tester) async {
@@ -182,7 +181,7 @@ void main() {
     expect(b.shownTab, ChatTab.chat);
     expect(tester.widget<EditableText>(_box).controller.text, '/co');
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('a header tab’s tooltip names its own key, the folded tabs’ '
       'the next tab’s', (tester) async {
@@ -218,7 +217,7 @@ void main() {
     expect(find.byType(MenuField), findsOneWidget);
     expect(find.byTooltip('Next tab\u2002⌃⇥'), findsOneWidget);
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('View › Previous Tab and Next Tab, and the palette’s rows, '
       'show the keys and step', (tester) async {
@@ -244,7 +243,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(b.shownTab, ChatTab.chat);
 
-    await cmdKey(tester, LogicalKeyboardKey.keyK);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     await tester.enterText(
       find.descendant(
         of: find.byType(Palette),
@@ -261,5 +260,5 @@ void main() {
       expect(inPalette(text), findsOneWidget, reason: text);
     }
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 }

@@ -222,10 +222,7 @@ void main() {
     expect(_shown(c, _row(c, 0)), isTrue);
     expect(c.unifiedScroll.position.pixels, 0);
     // ⇧⏎ back to the unchanged line's hit, at the end.
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.enter, shift: true);
     expect(find.text('4 of 4'), findsOne);
     expect(_shown(c, _row(c, 3)), isTrue);
     _expectMarked(c, 3);

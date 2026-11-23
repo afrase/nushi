@@ -470,7 +470,7 @@ void main() {
       expect(find.byType(Palette), findsOne);
       expect(shells.typedAll.join(), '\x12');
       await closeView(tester, d);
-    }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+    }, variant: onLinux);
   });
 
   Finder box() => find.descendant(
@@ -498,7 +498,7 @@ void main() {
     ]);
     expect(d.selectedId, 'a');
     await closeView(tester, d);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+  }, variant: onLinux);
 
   testWidgets('⌥⌘↑ in an empty box reaches Previous chat; Up alone still '
       'is the box’s', (tester) async {

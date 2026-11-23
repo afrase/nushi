@@ -88,7 +88,6 @@ MenuItemButton _entry(WidgetTester tester, String label) => tester.widget(
 );
 
 void main() {
-  final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
   setUpAll(loadFonts);
 
   testWidgets('a folder joins the projects with an unarchived chat, and '
@@ -385,7 +384,7 @@ void main() {
         matchesGoldenFile('goldens/sidebar_project_menu_$name.png'),
       );
       d.dispose();
-    }, variant: macOS);
+    }, variant: onMac);
   }
 
   // The whole window, to look at: an empty project among the others (a
@@ -418,7 +417,7 @@ void main() {
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.pump(const Duration(milliseconds: 300));
         await closeView(tester, d);
-      }, variant: macOS);
+      }, variant: onMac);
     }
   }
 }

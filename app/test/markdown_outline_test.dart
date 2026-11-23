@@ -52,7 +52,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(rail, findsOneWidget);
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('the rail: a dash per heading, the current one following '
       'the scroll', (tester) async {
@@ -88,7 +88,7 @@ void main() {
     final text = tester.getRect(inPane(_title('Roadmap')));
     expect(dash.right, lessThan(text.left - RailFit.gap + 0.5));
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('the text stands where it stays from its first frame, the '
       'rail beside it', (tester) async {
@@ -122,9 +122,9 @@ void main() {
     await drag.up();
     await tester.pump();
     final copied = clipboardCopies(tester);
-    await cmdKey(tester, LogicalKeyboardKey.keyC, settle: false);
+    await press(tester, LogicalKeyboardKey.keyC, cmd: true, settle: false);
     expect(copied.lastOrNull, contains('No other heading'));
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('hovering the rail lists the headings; a click scrolls there '
       'and leaving closes it', (tester) async {
@@ -166,7 +166,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RailMenu), findsNothing);
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('a long outline opens its menu at the current heading, and '
       'the keys keep their row in sight', (tester) async {
@@ -229,7 +229,7 @@ void main() {
       await tester.pumpAndSettle();
     }
     inSight('Heading 38');
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('under Reduce Motion a pick goes there at once', (tester) async {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
@@ -250,7 +250,7 @@ void main() {
     // The last heading, though it can't reach the top.
     expect(railCurrent(tester), 6);
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('no rail with fewer than two headings', (tester) async {
     final d = await outlineApp(tester, file: 'docs/notes.md');
@@ -260,7 +260,7 @@ void main() {
     );
     expect(rail, findsNothing);
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('narrow, the rail keeps the text its room', (tester) async {
     final d = await outlineApp(tester);
@@ -274,5 +274,5 @@ void main() {
     expect(dash.right, lessThanOrEqualTo(text.left - RailFit.gap + 0.5));
     expect(tester.takeException(), isNull);
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 }

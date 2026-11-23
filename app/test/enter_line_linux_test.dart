@@ -17,8 +17,6 @@ import 'harness.dart';
 // the keys that send, queue, stop and send or start a line, held keys,
 // a locked box, and the box kept one row whatever its hint says.
 
-final _onLinux = TargetPlatformVariant.only(TargetPlatform.linux);
-
 /// The composer of a chat [width] wide, idle or with a turn running.
 Future<(FakeDaemon, Daemon, ChatState)> _box(
   WidgetTester tester, {
@@ -113,7 +111,7 @@ void main() {
     );
     expect(_sent(fake).first.queue, isTrue);
     d.dispose();
-  }, variant: _onLinux);
+  }, variant: onLinux);
 
   testWidgets('a long busy hint keeps the box one row: typed in, it is as '
       'tall as when idle', (tester) async {
@@ -128,7 +126,7 @@ void main() {
     }
 
     expect(await height(busy: true), await height(busy: false));
-  }, variant: _onLinux);
+  }, variant: onLinux);
 
   testWidgets('locked, on: no Enter does a thing', (tester) async {
     enterStartsLine.value = true;
@@ -147,7 +145,7 @@ void main() {
     expect(_sent(fake), isEmpty);
     chat.rewinding.value = false;
     d.dispose();
-  }, variant: _onLinux);
+  }, variant: onLinux);
 
   testWidgets('on: Ctrl+Enter held sends once; Enter held starts a line '
       'per repeat', (tester) async {
@@ -167,5 +165,5 @@ void main() {
     await tester.pumpAndSettle();
     expect(_sent(fake).length, 1);
     d.dispose();
-  }, variant: _onLinux);
+  }, variant: onLinux);
 }

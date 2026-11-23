@@ -142,7 +142,7 @@ void main() {
             'update_toast_${kind}_${width.toInt()}_$name',
           );
           d.dispose();
-        }, variant: macOSOnly);
+        }, variant: onMac);
       }
     }
   }
@@ -177,7 +177,7 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     expect(find.text('Nushi 0.1.18 is available.'), findsOneWidget);
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 
   testWidgets('an app already at or past the release found (just upgraded '
       'by brew, its daemon not restarted yet) shows no toast', (tester) async {
@@ -198,7 +198,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(updateToast, findsOneWidget);
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 
   for (final width in [720.0, 900.0]) {
     testWidgets('Files lying over the transcript, ${width.toInt()} wide: the '
@@ -236,7 +236,7 @@ void main() {
       expect(find.text('Download').hitTestable(), findsOneWidget);
       expect(tester.getRect(updateToast).right, card.right);
       d.dispose();
-    }, variant: macOSOnly);
+    }, variant: onMac);
   }
 
   testWidgets('the card stands above the composer as it grows, and stays '
@@ -264,7 +264,7 @@ void main() {
     // Its buttons are where it's drawn.
     expect(find.text('Download').hitTestable(), findsOneWidget);
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 
   testWidgets('a release arrives as an event; nothing found, no toast', (
     tester,
@@ -285,7 +285,7 @@ void main() {
     final rest = tester.getRect(updateToast).bottom;
     expect(rising - rest, inExclusiveRange(0, 8));
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 
   testWidgets('Settings › General: the switch turns the checks off, and the '
       'toast goes when the daemon forgets the release', (tester) async {
@@ -316,7 +316,7 @@ void main() {
     await tester.pumpAndSettle(); // it fades out
     expect(updateToast, findsNothing);
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 
   testWidgets('the palette checks now: a newer one dismissed before shows '
       'again; none, a note says so', (tester) async {
@@ -364,7 +364,7 @@ void main() {
     expect(tester.getSize(note.first).width, 420);
     await render(tester, find.byType(MaterialApp), 'up_to_date_dark');
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 
   testWidgets('a failed check says why', (tester) async {
     final fake = updateDaemon(UpdateCheck.new)
@@ -385,7 +385,7 @@ void main() {
     await tester.pump();
     expect(find.textContaining("can't reach GitHub"), findsOneWidget);
     d.dispose();
-  }, variant: macOSOnly);
+  }, variant: onMac);
 }
 
 /// The foot of the chat's transcript: its turn status and composer.

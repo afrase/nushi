@@ -273,7 +273,7 @@ void main() {
           await _card(tester, d, fake);
           await render(tester, find.byType(NushiApp), name);
           await closeView(tester, d);
-        }, variant: macOSOnly);
+        }, variant: onMac);
       }
     }
   }
@@ -317,7 +317,7 @@ void main() {
             expect(tester.getRect(updateToast).left, greaterThan(field.right));
           }
           await closeView(tester, d);
-        }, variant: macOSOnly);
+        }, variant: onMac);
       }
 
       testWidgets('the details rail', (tester) async {
@@ -332,7 +332,7 @@ void main() {
           expect(card.left, greaterThanOrEqualTo(tester.getRect(rail).left));
         }
         await closeView(tester, d);
-      }, variant: macOSOnly);
+      }, variant: onMac);
 
       // Over the terminal's text at the corner: it has no controls at its
       // foot, and the composer is above it.
@@ -340,7 +340,7 @@ void main() {
         final (d, _) = await open(tester, terminal: true);
         await _placed(tester, 'terminal_$w', width, lifted: false);
         await closeView(tester, d);
-      }, variant: macOSOnly);
+      }, variant: onMac);
 
       // Each pane, beside the transcript where it's wide enough and over
       // it where it isn't, has the corner: a side chat lifts the card above
@@ -390,7 +390,7 @@ void main() {
             final card = tester.getRect(updateToast);
             expect(tester.getRect(paneOf).contains(card.center), isTrue);
             await closeView(tester, d);
-          }, variant: macOSOnly);
+          }, variant: onMac);
         }
       }
 
@@ -413,7 +413,7 @@ void main() {
         await tester.pumpAndSettle();
         await _placed(tester, 'expanded_$w', width, lifted: false);
         await closeView(tester, d);
-      }, variant: macOSOnly);
+      }, variant: onMac);
 
       // Under Settings, which opens over all, where it was. Narrower than
       // 600 Settings' rows overflow, the card aside.
@@ -427,7 +427,7 @@ void main() {
         _cornered(tester, width, 'settings_$w');
         d.closeSettings();
         await closeView(tester, d);
-      }, variant: macOSOnly);
+      }, variant: onMac);
 
       testWidgets('the Changes tab, a long diff', (tester) async {
         final (d, fake) = await open(tester, at: 1700);
@@ -440,7 +440,7 @@ void main() {
         );
         await _placed(tester, 'changes_$w', width);
         await closeView(tester, d);
-      }, variant: macOSOnly);
+      }, variant: onMac);
 
       // At 400 a to-do row's buttons overflow, the card aside.
       testWidgets('the Pull request tab, cards waiting', skip: width < 480, (
@@ -461,7 +461,7 @@ void main() {
         await _placed(tester, 'pull_$w', width);
         d.chats['c']!.draft.replies.value = const [];
         await closeView(tester, d);
-      }, variant: macOSOnly);
+      }, variant: onMac);
 
       for (final (view, go) in <(String, void Function(Daemon))>[
         (
@@ -488,7 +488,7 @@ void main() {
           await tester.pumpAndSettle();
           await _placed(tester, '${view}_$w', width);
           await closeView(tester, d);
-        }, variant: macOSOnly);
+        }, variant: onMac);
       }
 
       // Their lists, then an item open. Narrower than 600 their headers
@@ -509,7 +509,7 @@ void main() {
           await tester.pumpAndSettle();
           await _placed(tester, '${view}_item_$w', width);
           await closeView(tester, d);
-        }, variant: macOSOnly);
+        }, variant: onMac);
       }
     });
   }

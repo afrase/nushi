@@ -24,8 +24,6 @@ import 'harness.dart';
 // band over Settings move or zoom the window. Tests pair Linux's window and
 // conventions with its platform, as a real Linux machine runs them.
 
-final _linux = TargetPlatformVariant.only(TargetPlatform.linux);
-
 const _title = 'Fix the login redirect after it expires';
 
 /// Linux's window, saying what the headers asked of it.
@@ -154,7 +152,7 @@ void main() {
     expect(d.settingsOpen, isNull);
     expect(window.calls, isEmpty);
     d.dispose();
-  }, variant: _linux);
+  }, variant: onLinux);
 
   testWidgets('the notices float under the header with the sidebar hidden', (
     tester,
@@ -193,7 +191,7 @@ void main() {
     );
     await render(tester, find.byType(NushiApp), 'linux_bars_720_hidden');
     d.dispose();
-  }, variant: _linux);
+  }, variant: onLinux);
 
   group('renders', () {
     final views = <String, void Function(Daemon)>{
@@ -242,7 +240,7 @@ void main() {
               'linux_${name}_${width.toInt()}_$shown',
             );
             d.dispose();
-          }, variant: _linux);
+          }, variant: onLinux);
         }
       }
     }

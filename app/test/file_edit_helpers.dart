@@ -132,10 +132,5 @@ Future<void> typeIn(WidgetTester tester, FileEdit e, String text) async {
   await tester.pump();
 }
 
-/// Presses ⌘ and [key].
-Future<void> cmd(WidgetTester tester, LogicalKeyboardKey key) async {
-  await cmdKey(tester, key);
-}
-
 /// A tab's unsaved dot.
 Finder get unsavedDot => find.byType(UnsavedDot);

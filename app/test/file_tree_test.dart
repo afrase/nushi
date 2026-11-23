@@ -47,8 +47,6 @@ main.go +2''');
     ]);
   });
 
-  final mac = TargetPlatformVariant.only(TargetPlatform.macOS);
-
   testWidgets('a long name scrolls sideways, never cut', (tester) async {
     await _pane(tester);
     final sideways = tester
@@ -77,7 +75,7 @@ main.go +2''');
     );
     await tester.pump();
     expect(sideways.offset, 80);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('the selected row is highlighted across the whole width', (
     tester,
@@ -125,7 +123,7 @@ main.go +2''');
         find.byType(Scaffold),
         matchesGoldenFile('goldens/file_tree_$name.png'),
       );
-    }, variant: mac);
+    }, variant: onMac);
   }
 }
 

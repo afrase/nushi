@@ -44,10 +44,7 @@ String _line(String before) {
 }
 
 Future<void> _shiftEnter(WidgetTester tester) async {
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.pump();
+  await press(tester, LogicalKeyboardKey.enter, shift: true, settle: false);
 }
 
 void main() {
@@ -140,7 +137,7 @@ void main() {
       await _shiftEnter(tester);
       await tester.pump(const Duration(seconds: 1));
       expect(_marked(c.value), '- one\n- |');
-      await cmdKey(tester, LogicalKeyboardKey.keyZ, settle: false);
+      await press(tester, LogicalKeyboardKey.keyZ, cmd: true, settle: false);
       expect(_marked(c.value), '- one|');
       await close();
     }, variant: onMac);

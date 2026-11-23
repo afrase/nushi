@@ -44,7 +44,7 @@ Future<void> _tap(WidgetTester tester, Finder f) async {
 
 /// ⌘W.
 Future<void> _close(WidgetTester tester) async {
-  await cmdKey(tester, LogicalKeyboardKey.keyW);
+  await press(tester, LogicalKeyboardKey.keyW, cmd: true);
 }
 
 Future<void> _esc(WidgetTester tester) async {
@@ -85,7 +85,7 @@ void main() {
     expect(find.byType(Composer), findsOneWidget);
     expect(paneWidths.value, isNot(contains('filesPane')));
     await endEditor(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Esc: the filter clears first, then the pane collapses; from '
       'the editor it collapses', (tester) async {
@@ -116,7 +116,7 @@ void main() {
     await _esc(tester);
     expect(_expand, findsOneWidget);
     await endEditor(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a browser tab shown, the pane hidden or Changes put it '
       'back; a file shown while the browser covers puts that back', (
@@ -168,7 +168,7 @@ void main() {
       findsNothing,
     );
     await endEditor(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('expanded with the sidebar hidden, Files starts past the '
       'title buttons', (tester) async {
@@ -235,7 +235,7 @@ void main() {
     expect(c.browser.tabs.value, tabs);
     expect(_collapse, findsOneWidget);
     await endEditor(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a browser tab closing while Files covers leaves it expanded', (
     tester,
@@ -258,7 +258,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(_expand, findsOneWidget);
     await endEditor(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('covering, it stays over a subagent’s pane opening, the tree '
       'moving sides or hiding, and goes with another chat; each way back '
@@ -315,7 +315,7 @@ void main() {
     expect(tester.getRect(pane), beside);
     expect(tester.getRect(find.byType(FilesTree)), tree);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Esc in the editor’s find bar closes the bar, not the cover; '
       'the next collapses it', (tester) async {
@@ -325,7 +325,7 @@ void main() {
     final beside = tester.getRect(find.byType(FilesPane));
     await _tap(tester, _expand);
     await _tap(tester, find.byType(SourceEditor));
-    await cmdKey(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     expect(find.byType(EditorFindBar), findsOneWidget);
     final bar = find.descendant(
       of: find.byType(EditorFindBar),
@@ -342,7 +342,7 @@ void main() {
     expect(_expand, findsOneWidget);
     expect(tester.getRect(find.byType(FilesPane)), beside);
     await endEditor(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('⌘F under an expanded pane leaves the hidden transcript’s '
       'find shut; collapsed, it opens', (tester) async {
@@ -360,7 +360,7 @@ void main() {
     );
     final c = d.chats['c']!;
     Future<void> find0() async {
-      await cmdKey(tester, LogicalKeyboardKey.keyF);
+      await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     }
 
     await _tap(tester, _expand);
@@ -374,5 +374,5 @@ void main() {
     await find0();
     expect(c.find.query, '');
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 }

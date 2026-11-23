@@ -13,7 +13,6 @@ import 'harness.dart';
 // and where the card sits; update_install_test.dart, its Update button):
 // a daemon that found a newer version, the app open on it, the card.
 
-final macOSOnly = TargetPlatformVariant.only(TargetPlatform.macOS);
 const _url = 'https://github.com/afrase/nushi/releases/tag/v0.1.17';
 
 /// The daemon found [v]; its install of it is running ([installing]),

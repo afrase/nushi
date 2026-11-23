@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,7 +11,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
 import 'package:nushi/source_editor.dart';
 
-import 'browser_fixture.dart' show browserFakes, macOnly;
+import 'browser_fixture.dart' show browserFakes;
 import 'file_edit_helpers.dart';
 import 'harness.dart';
 import 'right_panes_fixture.dart';
@@ -21,27 +20,9 @@ import 'right_panes_fixture.dart';
 // wherever the keys are (ADR 0123): no field, list or editor keeps it,
 // and it does nothing while the palette or a dialog is open.
 
-bool get _linux => defaultTargetPlatform == TargetPlatform.linux;
-
-LogicalKeyboardKey get _mod =>
-    _linux ? LogicalKeyboardKey.controlLeft : LogicalKeyboardKey.metaLeft;
-
-/// The app's modifier and [key], with Shift if [shift].
-Future<void> _keys(
-  WidgetTester tester,
-  LogicalKeyboardKey key, {
-  bool shift = false,
-}) async {
-  await tester.sendKeyDownEvent(_mod);
-  if (shift) await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyEvent(key);
-  if (shift) await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyUpEvent(_mod);
-  await tester.pumpAndSettle();
-}
-
+/// ⇧⌘Y (Ctrl+Shift+Y on Linux).
 Future<void> _treeKeys(WidgetTester tester) =>
-    _keys(tester, LogicalKeyboardKey.keyY, shift: true);
+    press(tester, LogicalKeyboardKey.keyY, cmd: true, shift: true);
 
 /// The text field in [of].
 Finder _field(Type of) => find
@@ -95,7 +76,7 @@ void main() {
   testWidgets('⇧⌘Y does nothing while the palette is open', (tester) async {
     browserFakes();
     final (d, _) = await panesApp(tester, width: 2400, open: _open);
-    await _keys(tester, LogicalKeyboardKey.keyK);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     expect(find.byType(Palette), findsOneWidget);
     await _treeKeys(tester);
     expect(filesTree.value, isTrue);
@@ -119,7 +100,7 @@ void main() {
     // Its find bar: the tree hides and shows, the bar stays open.
     await tester.tap(find.byType(SourceEditor));
     await tester.pumpAndSettle();
-    await _keys(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     final find0 = FocusManager.instance.primaryFocus;
     expect(
       find0?.context?.findAncestorWidgetOfExactType<SourceEditor>(),
@@ -127,7 +108,7 @@ void main() {
     );
     await _flips(tester, 'the editor’s find bar');
     // Go to file's box (⌘P), a dialog: nothing.
-    await _keys(tester, LogicalKeyboardKey.keyP);
+    await press(tester, LogicalKeyboardKey.keyP, cmd: true);
     expect(find.byType(OpenFileBox), findsOneWidget);
     await _treeKeys(tester);
     expect(filesTree.value, isTrue);
@@ -135,5 +116,5 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(OpenFileBox), findsNothing);
     await endEditor(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 }

@@ -156,7 +156,7 @@ void main() {
       );
       expect(fakes.opened, isEmpty);
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets("Files' and the browser's Close sit at the same "
         "offsets from each pane's right; a file's address opens Files beside "
@@ -180,7 +180,7 @@ void main() {
 
       expect(at(FilesPane, 'Close'), at(BrowserPane, 'Close'));
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('+ shows after the chips, and the browser holds no file', (
       tester,
@@ -216,7 +216,7 @@ void main() {
       expect(find.byType(FileView), findsOneWidget);
       expect(c.shownFile, 'docs/a.md');
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('the header’s globe shows a browser tab, lit, and hides it; '
         'the palette’s New browser tab adds one', (tester) async {
@@ -252,7 +252,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(c.browser.tabs.value, hasLength(2));
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     // Fix review 2026-11-06: on Changes the pane isn't there, so a new tab
     // was made unseen, a second press did nothing, and the globe was lit.
@@ -295,7 +295,7 @@ void main() {
       expect(c.browser.tabs.value, hasLength(2));
       expect(find.text(browserHint), findsOneWidget);
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('⌘R reloads the page, ⌘L takes the focus to its address; '
         '⌘W closes the tab', (tester) async {
@@ -305,9 +305,9 @@ void main() {
       await tester.pumpAndSettle();
       final host = fakes.hosts.single;
       expect(addressEditable(tester).widget.focusNode.hasFocus, isFalse);
-      await cmdKey(tester, LogicalKeyboardKey.keyR);
+      await press(tester, LogicalKeyboardKey.keyR, cmd: true);
       expect(host.reloads, 1);
-      await cmdKey(tester, LogicalKeyboardKey.keyL);
+      await press(tester, LogicalKeyboardKey.keyL, cmd: true);
       final field = addressEditable(tester).widget;
       expect(field.focusNode.hasFocus, isTrue);
       expect(
@@ -317,7 +317,7 @@ void main() {
           extentOffset: 'http://localhost:3000'.length,
         ),
       );
-      await cmdKey(tester, LogicalKeyboardKey.keyW);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       expect(c.browser.shown.value, isNull);
       // With no browser tab they do nothing.
       final acts = appActions(tester.element(find.byType(Scaffold).first), d);
@@ -325,7 +325,7 @@ void main() {
         expect(acts.firstWhere((e) => e.act == a).enabled, isFalse);
       }
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     // Deep review 2026-11-10, 3: a tab at a server that wasn't up showed
     // "Can't reach"; once the server started, the Servers menu and the
@@ -355,7 +355,7 @@ void main() {
       expect(page.reloads, 1);
       expect(fakes.hosts, hasLength(2));
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     // Fix review 2026-11-06: asked for the focus it had, the field took
     // nothing back, so with WebKit holding the keys ⌘L only selected.
@@ -370,7 +370,7 @@ void main() {
       final field = addressEditable(tester).widget;
       expect(field.focusNode.hasFocus, isTrue);
       tester.testTextInput.log.clear();
-      await cmdKey(tester, LogicalKeyboardKey.keyL);
+      await press(tester, LogicalKeyboardKey.keyL, cmd: true);
       expect(field.focusNode.hasFocus, isTrue);
       final calls = tester.testTextInput.log.map((c) => c.method);
       expect(calls, containsAllInOrder(['TextInput.setClient']));
@@ -382,7 +382,7 @@ void main() {
         ),
       );
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('GitHub keeps its ⌘R: the page’s act doesn’t apply there', (
       tester,
@@ -405,11 +405,11 @@ void main() {
       Focus.of(tester.element(inView)).requestFocus();
       await tester.pump();
       _reloadOff(tester, d, inView);
-      await cmdKey(tester, LogicalKeyboardKey.keyR);
+      await press(tester, LogicalKeyboardKey.keyR, cmd: true);
       expect(asked(), before + 1);
       expect(fakes.hosts, isEmpty);
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('Jira keeps its ⌘R too', (tester) async {
       final fakes = browserFakes();
@@ -430,11 +430,11 @@ void main() {
       tester.widget<Focus>(inView).focusNode!.requestFocus();
       await tester.pump();
       _reloadOff(tester, d, inView);
-      await cmdKey(tester, LogicalKeyboardKey.keyR);
+      await press(tester, LogicalKeyboardKey.keyR, cmd: true);
       expect(asked(), greaterThan(before));
       expect(fakes.hosts, isEmpty);
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('⌘[ and ⌘] are the app’s Back and Forward from the address '
         'field too (ADR 0119)', (tester) async {
@@ -447,12 +447,12 @@ void main() {
       d.chats['c']!.openBrowserTab();
       await tester.pumpAndSettle();
       expect(addressEditable(tester).widget.focusNode.hasFocus, isTrue);
-      await cmdKey(tester, LogicalKeyboardKey.bracketLeft);
+      await press(tester, LogicalKeyboardKey.bracketLeft, cmd: true);
       expect(d.selectedId, 'd');
-      await cmdKey(tester, LogicalKeyboardKey.bracketRight);
+      await press(tester, LogicalKeyboardKey.bracketRight, cmd: true);
       expect(d.selectedId, 'c');
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
   });
 
   for (final (name, tokens, brightness) in [
@@ -502,7 +502,7 @@ void main() {
           find.byKey(const ValueKey('pane')),
           matchesGoldenFile('goldens/browser_new_tab_$name.png'),
         );
-      }, variant: macOnly);
+      }, variant: onMac);
 
       testWidgets('tabs, with +; the bar on a page', (tester) async {
         final fakes = browserFakes();
@@ -518,7 +518,7 @@ void main() {
           find.byKey(const ValueKey('pane')),
           matchesGoldenFile('goldens/browser_tabs_$name.png'),
         );
-      }, variant: macOnly);
+      }, variant: onMac);
 
       testWidgets('the browser’s icons, 2×', (tester) async {
         viewport(tester, const Size(200, 44), ratio: 2);
@@ -561,7 +561,7 @@ void main() {
           find.byKey(const ValueKey('icons')),
           matchesGoldenFile('goldens/browser_icons_$name.png'),
         );
-      }, variant: macOnly);
+      }, variant: onMac);
 
       for (final width in [1700.0, 720.0]) {
         testWidgets('renders: the window with a browser tab, '
@@ -599,7 +599,7 @@ void main() {
             'browser_new_tab_${width.toInt()}_$name',
           );
           await closeView(tester, d);
-        }, variant: macOnly);
+        }, variant: onMac);
       }
     });
   }

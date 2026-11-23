@@ -135,7 +135,7 @@ void main() {
         await tester.pump();
         expect(shells.opened, isEmpty, reason: 'Enter starts a line');
         expect(chat.draft.text.text, '!git status\n');
-        await cmdKey(tester, LogicalKeyboardKey.enter, settle: false);
+        await press(tester, LogicalKeyboardKey.enter, cmd: true, settle: false);
       } else {
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       }

@@ -28,24 +28,10 @@ Future<Daemon> _app(WidgetTester tester) async {
   return d;
 }
 
-Future<void> _press(
-  WidgetTester tester,
-  LogicalKeyboardKey key, {
-  bool alt = false,
-}) async {
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
-  if (alt) await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
-  await tester.sendKeyEvent(key);
-  if (alt) await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
-  await tester.pumpAndSettle();
-}
-
 void main() {
   // The real fonts, as the header's fold is measured for: the test font's
   // square letters are half again as wide.
   setUpAll(loadFonts);
-  final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
 
   testWidgets('holding ⌘ alone numbers the chats, the archived left out', (
     tester,
@@ -72,7 +58,7 @@ void main() {
     await tester.pump();
     expect(find.text('⌘1'), findsNothing);
     tester.daemonOf().dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('a quick shortcut doesn’t show the numbers', (tester) async {
     await _app(tester);
@@ -83,26 +69,40 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
     await tester.pump();
     tester.daemonOf().dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('⌘1–⌘9 open a chat; ⌥⌘↑ and ⌥⌘↓ step through them, wrapping', (
     tester,
   ) async {
     final d = await _app(tester);
-    await _press(tester, LogicalKeyboardKey.digit2);
+    await press(tester, LogicalKeyboardKey.digit2, cmd: true);
     expect(d.selectedId, 'a');
-    await _press(tester, LogicalKeyboardKey.digit9); // no ninth: stays
+    await press(
+      tester,
+      LogicalKeyboardKey.digit9,
+      cmd: true,
+    ); // no ninth: stays
     expect(d.selectedId, 'a');
-    await _press(tester, LogicalKeyboardKey.arrowDown, alt: true);
+    await press(tester, LogicalKeyboardKey.arrowDown, cmd: true, alt: true);
     expect(d.selectedId, 'c');
-    await _press(tester, LogicalKeyboardKey.arrowDown, alt: true); // wraps
+    await press(
+      tester,
+      LogicalKeyboardKey.arrowDown,
+      cmd: true,
+      alt: true,
+    ); // wraps
     expect(d.selectedId, 'b');
-    await _press(tester, LogicalKeyboardKey.arrowUp, alt: true); // and back
+    await press(
+      tester,
+      LogicalKeyboardKey.arrowUp,
+      cmd: true,
+      alt: true,
+    ); // and back
     expect(d.selectedId, 'c');
-    await _press(tester, LogicalKeyboardKey.digit1);
+    await press(tester, LogicalKeyboardKey.digit1, cmd: true);
     expect(d.selectedId, 'b');
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('from the Jira view too, which takes ⌥⌘ for its lists', (
     tester,
@@ -110,11 +110,11 @@ void main() {
     final d = await _app(tester);
     d.go(const JiraPlace());
     await tester.pumpAndSettle();
-    await _press(tester, LogicalKeyboardKey.digit3);
+    await press(tester, LogicalKeyboardKey.digit3, cmd: true);
     expect(d.selectedId, 'c');
     expect(d.place, const ChatPlace());
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   // Under None, the one group is headed "Chats" only below Pinned or a
   // section; without its header it can't be collapsed, so a collapse kept
@@ -138,7 +138,7 @@ void main() {
     expect(find.text('Release notes'), findsOneWidget);
     expect(chatOrder(d).map((c) => c.id), ['b', 'a', 'c']);
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 }
 
 extension on WidgetTester {

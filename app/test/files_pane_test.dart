@@ -363,12 +363,7 @@ void main() {
       'until the eye shows it, dimmed', (tester) async {
     final (d, folder) = await _app(tester, open: false);
     expect(_pane, findsNothing);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
-    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.keyE, cmd: true, shift: true);
     expect(_pane, findsOneWidget);
     expect(filesChats.value, {'c'});
     expect(_names(tester), [
@@ -768,7 +763,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(PreviewScreen), findsOneWidget);
       await endPhone(tester, phone);
-    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+    }, variant: onPhone);
 
     for (final (size, width) in [('wide', 1700.0), ('narrow', 720.0)]) {
       testWidgets('renders: the tree right of the open file, $size, $name', (

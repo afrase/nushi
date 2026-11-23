@@ -140,7 +140,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
     expect(edits(fake), isEmpty);
-    await cmdKey(tester, LogicalKeyboardKey.enter);
+    await press(tester, LogicalKeyboardKey.enter, cmd: true);
     expect(edits(fake).single.body, startsWith('Kept\n\nwith a line'));
     d.dispose();
   }, variant: onMac);

@@ -48,7 +48,7 @@ Future<void> _openFind(WidgetTester tester, Daemon d) async {
     index: 0,
     offset: 0,
   );
-  await cmd(tester, LogicalKeyboardKey.keyF);
+  await press(tester, LogicalKeyboardKey.keyF, cmd: true);
 }
 
 /// Types [q] in the bar and waits for re_editor's isolate to find it.
@@ -65,10 +65,7 @@ Future<void> _look(WidgetTester tester, String q, String count) async {
 }
 
 Future<void> _shiftEnter(WidgetTester tester) async {
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.pumpAndSettle();
+  await press(tester, LogicalKeyboardKey.enter, shift: true);
 }
 
 void main() {
@@ -87,7 +84,7 @@ void main() {
     expect(chatC(d).find.query, isNull);
     expect(FocusManager.instance.primaryFocus?.debugLabel, 'find');
     // ⌘F again, from the bar, stays there.
-    await cmd(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     expect(_bar, findsOne);
     expect(chatC(d).find.query, isNull);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
@@ -97,7 +94,7 @@ void main() {
     // The prompt box: the chat's find, the file's stays shut.
     await tester.tap(find.byType(EditableText).first);
     await tester.pumpAndSettle();
-    await cmd(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     expect(chatC(d).find.query, '');
     expect(find.text('Find in the chat'), findsOne);
     expect(find.text('Find in the file'), findsNothing);
@@ -149,7 +146,7 @@ void main() {
     );
     await typeIn(tester, e, '// ');
     expect(e.unsaved, isTrue);
-    await cmd(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     await _look(tester, 'main', '1 of 2');
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
@@ -244,14 +241,11 @@ void main() {
     final (d, _) = await openEditor(tester, {'main.go': utf8.encode(_source)});
     await tester.tap(find.byType(CodeEditor));
     await tester.pump();
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.keyF, ctrl: true);
     expect(find.text('Find in the file'), findsOne);
     expect(chatC(d).find.query, isNull);
     await endEditor(tester, d);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+  }, variant: onLinux);
 
   testWidgets('a match under the bar at the top: the text starts below it', (
     tester,

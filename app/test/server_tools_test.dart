@@ -186,7 +186,7 @@ void main() {
       expect(find.textContaining('nushi ·'), findsNothing);
       expect(find.textContaining(r'$ mcp'), findsNothing);
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     test('its output is as written, out of a failure’s fence', () {
       expect(serverOutput('web (running)\n# a'), 'web (running)\n# a');
@@ -242,7 +242,7 @@ void main() {
           'server-tool-output-$width',
         );
         await closeView(tester, d);
-      }, variant: macOnly);
+      }, variant: onMac);
     }
   });
 
@@ -282,7 +282,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(_page(d), 'http://localhost:5173/about');
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
   });
 
   group('the permission card', () {
@@ -304,7 +304,7 @@ void main() {
         findsOneWidget,
       );
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('Codex’s too; with no command, that the start will be '
         'refused; what could read as another marked', (tester) async {
@@ -333,7 +333,7 @@ void main() {
       );
       expect(find.text('pnpm "run�dev"'), findsOneWidget);
       await closeView(tester, d2);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('of show’s url and the other tools say what they ask', (
       tester,
@@ -350,7 +350,7 @@ void main() {
       );
       expect(find.text('Read the logs of web'), findsOneWidget);
       await closeView(tester, d2);
-    }, variant: macOnly);
+    }, variant: onMac);
   });
 
   // preview_start's card, in both themes.
@@ -385,7 +385,7 @@ void main() {
         find.byType(Scaffold),
         matchesGoldenFile('goldens/preview_start_card_$theme.png'),
       );
-    }, variant: macOnly);
+    }, variant: onMac);
   }
 
   group('the show_url event', () {
@@ -405,7 +405,7 @@ void main() {
       await _showsUrl(tester, fake, 'http://localhost:5173/');
       expect(d.chats['c']!.browser.tabs.value, hasLength(2));
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('waits while another chat or Changes shows; never moves '
         'the user', (tester) async {
@@ -426,7 +426,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(_page(d), 'http://localhost:8080');
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
 
     testWidgets('a narrow window keeps the transcript', (tester) async {
       final (fake, d) = await _app(tester, size: const Size(720, 900));
@@ -434,6 +434,6 @@ void main() {
       expect(_page(d), isNull);
       expect(d.chats['c']!.showAsked.value, isNull);
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
   });
 }

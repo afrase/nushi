@@ -65,7 +65,7 @@ void main() {
         image.dispose();
       });
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
   }
 
   testWidgets("an answer the daemon can't read kinds from keeps the line and "
@@ -84,7 +84,7 @@ void main() {
       greaterThan(tester.getBottomLeft(inRail(find.text('55% used'))).dy),
     );
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   // The panel hides when the window narrows as it did at 264 points wide:
   // the transcript gives up some of its least width to keep it.
@@ -104,7 +104,7 @@ void main() {
         await render(tester, find.byType(NushiApp), 'details_rail_1080_sb');
       }
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
   }
 
   // A side chat goes right of the details (ADR 0123): both beside the
@@ -135,7 +135,7 @@ void main() {
         expect(showDetails.value, isTrue);
       }
       await closeView(tester, d);
-    }, variant: macOnly);
+    }, variant: onMac);
   }
 
   testWidgets('an opened "n finished" stays open as a task finishes', (
@@ -173,7 +173,7 @@ void main() {
     expect(inRail(find.text('4 finished')), findsOne);
     expect(inRail(find.text('Find every PanelWidget')), findsOne);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('every task row, running or finished, on one pitch; four '
       'running, then Show more', (tester) async {
@@ -226,7 +226,7 @@ void main() {
     expect(y(finished[0]) - y('3 finished'), closeTo(pitch, 0.5));
     expect(y(finished[1]) - y(finished[0]), closeTo(pitch, 0.5));
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   // Claude's rail colors System tools orange and the System prompt gold;
   // a light theme darkens both its orange and its amber to brown to read

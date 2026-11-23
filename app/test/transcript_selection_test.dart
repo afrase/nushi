@@ -85,7 +85,6 @@ Future<String> _quoted(WidgetTester tester) async {
 
 void main() {
   setUpAll(loadFonts);
-  final mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
   testWidgets('a selection made as a chat fills in is what was dragged over', (
     tester,
@@ -102,7 +101,7 @@ void main() {
     expect(await _quoted(tester), 'last words');
     await tester.pumpAndSettle();
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('selections one after another each quote only themselves, '
       'with a wide code block above them', (tester) async {
@@ -126,7 +125,7 @@ void main() {
       }
     }
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('a drag starting left of an old code block leaves it out, '
       'wherever the block is', (tester) async {
@@ -142,7 +141,7 @@ void main() {
     await _drag(tester, from - const Offset(8, 0), to);
     expect(await _quoted(tester), 'First pick');
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('a selection keeps its lines', (tester) async {
     final copied = clipboardCopies(tester);
@@ -172,10 +171,10 @@ void main() {
       _ends(tester, 'Para one').$1,
       _ends(tester, 'Para two').$2,
     );
-    await cmdKey(tester, LogicalKeyboardKey.keyC, settle: false);
+    await press(tester, LogicalKeyboardKey.keyC, cmd: true, settle: false);
     expect(copied.lastOrNull, 'Para one.\n\nPara two');
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('no text in the transcript sits under a scroll of its own', (
     tester,
@@ -196,7 +195,7 @@ void main() {
       );
     }
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('a drag through a code block takes its text', (tester) async {
     final d = await _app(tester, {
@@ -210,7 +209,7 @@ void main() {
     expect(quote, contains('the code'));
     expect(quote, contains('after'));
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('a file named in a line is quoted and copied in its place', (
     tester,
@@ -265,10 +264,10 @@ void main() {
       _ends(tester, 'pin it').$1,
       _ends(tester, 'golangci').$2,
     );
-    await cmdKey(tester, LogicalKeyboardKey.keyC, settle: false);
+    await press(tester, LogicalKeyboardKey.keyC, cmd: true, settle: false);
     expect(copied.lastOrNull, 'pin it in mise.toml like golangci');
     await closeView(tester, d);
-  }, variant: mac);
+  }, variant: onMac);
 
   testWidgets('a reply to a line with a file link is sent in its order', (
     tester,
@@ -313,5 +312,5 @@ void main() {
     await render(tester, find.byType(NushiApp), 'sent-reply-file-link');
     await closeView(tester, sent);
     expect(quote, 'pin it in mise.toml like golangci-lint.');
-  }, variant: mac);
+  }, variant: onMac);
 }

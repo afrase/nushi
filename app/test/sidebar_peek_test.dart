@@ -256,7 +256,7 @@ void main() {
     expectTextInside(tester, 720);
     await render(tester, find.byType(NushiApp), 'linux_peek_720');
     d.dispose();
-  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+  }, variant: onLinux);
 
   group('renders', () {
     for (final width in [1700.0, 720.0]) {

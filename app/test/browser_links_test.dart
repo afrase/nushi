@@ -120,7 +120,7 @@ void main() {
     expect(browser, isEmpty);
     expect(fakes.opened, isEmpty);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a site’s link, here in a tool call’s output, opens in the '
       'default browser', (tester) async {
@@ -135,7 +135,7 @@ void main() {
     expect([for (final t in tabs) t.address.value], ['http://localhost:5173/']);
     expect(browser, [Uri.parse('https://tea.example/list')]);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('with the setting off, the default browser', (tester) async {
     browserFakes();
@@ -146,7 +146,7 @@ void main() {
     expect(browser, [Uri.parse('http://localhost:5173/')]);
     expect(d.chats['c']!.browser.shown.value, isNull);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('in a window too narrow for the pane, the default browser', (
     tester,
@@ -159,7 +159,7 @@ void main() {
     expect(browser, [Uri.parse('http://localhost:5173/')]);
     expect(d.chats['c']!.browser.shown.value, isNull);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('with the Files pane and a side chat opened since, the default '
       'browser', (tester) async {
@@ -178,7 +178,7 @@ void main() {
     expect(browser, [Uri.parse('http://localhost:5173/')]);
     expect(c.browser.shown.value, isNull);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('outside a chat (Jira, GitHub, the phone), the default browser', (
     tester,

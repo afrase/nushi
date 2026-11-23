@@ -71,28 +71,6 @@ Future<(Daemon, FakeDaemon)> _app(
   return (d, fake);
 }
 
-Future<void> _keys(
-  WidgetTester tester,
-  LogicalKeyboardKey key, {
-  bool meta = false,
-  bool control = false,
-  bool shift = false,
-}) async {
-  final mods = [
-    if (control) LogicalKeyboardKey.controlLeft,
-    if (shift) LogicalKeyboardKey.shiftLeft,
-    if (meta) LogicalKeyboardKey.metaLeft,
-  ];
-  for (final m in mods) {
-    await tester.sendKeyDownEvent(m);
-  }
-  await tester.sendKeyEvent(key);
-  for (final m in mods.reversed) {
-    await tester.sendKeyUpEvent(m);
-  }
-  await tester.pumpAndSettle();
-}
-
 /// [text] in the palette.
 Finder _p(String text) =>
     find.descendant(of: find.byType(Palette), matching: find.text(text));
@@ -109,15 +87,13 @@ Future<void> _type(WidgetTester tester, String text) async {
 void main() {
   setUpAll(loadFonts);
 
-  final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
-
   testWidgets('⌃Tab and ⌃⇧Tab cycle the tabs, Pull request only with one', (
     tester,
   ) async {
     final (d, _) = await _app(tester, select: 'a');
     final a = d.chats['a']!;
     Future<void> next({bool back = false}) =>
-        _keys(tester, LogicalKeyboardKey.tab, control: true, shift: back);
+        press(tester, LogicalKeyboardKey.tab, ctrl: true, shift: back);
     await next();
     expect(a.shownTab, ChatTab.changes);
     await next();
@@ -137,7 +113,7 @@ void main() {
     await next(back: true);
     expect(b.shownTab, ChatTab.pull);
     tester.daemonOf().dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('⌃⌘2 shows Changes with the focus in the terminal; there ⌘K '
       'clears it and ⌘⇧P opens the palette', (tester) async {
@@ -150,19 +126,19 @@ void main() {
     final term = tester.widget<TerminalView>(view).terminal;
     expect(term.buffer.getText(), contains('old output'));
 
-    await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     expect(find.byType(Palette), findsNothing);
     expect(term.buffer.getText(), isNot(contains('old output')));
 
-    await _keys(tester, LogicalKeyboardKey.digit2, meta: true, control: true);
+    await press(tester, LogicalKeyboardKey.digit2, cmd: true, ctrl: true);
     expect(d.chats['a']!.shownTab, ChatTab.changes);
 
     await tester.tap(find.byType(TerminalView));
     await tester.pumpAndSettle();
-    await _keys(tester, LogicalKeyboardKey.keyP, meta: true, shift: true);
+    await press(tester, LogicalKeyboardKey.keyP, cmd: true, shift: true);
     expect(find.byType(Palette), findsOneWidget);
     tester.daemonOf().dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets(r'⌘\ with the focus in the terminal hides the sidebar', (
     tester,
@@ -171,20 +147,20 @@ void main() {
     await _app(tester, select: 'a');
     await tester.tap(find.byType(TerminalView));
     await tester.pumpAndSettle();
-    await _keys(tester, LogicalKeyboardKey.backslash, meta: true);
+    await press(tester, LogicalKeyboardKey.backslash, cmd: true);
     expect(sidebarHidden.value, isTrue);
     await tester.tap(find.byType(TerminalView));
     await tester.pumpAndSettle();
-    await _keys(tester, LogicalKeyboardKey.backslash, meta: true);
+    await press(tester, LogicalKeyboardKey.backslash, cmd: true);
     expect(sidebarHidden.value, isFalse);
     tester.daemonOf().dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('⌘K opens the palette; typing filters, Enter runs', (
     tester,
   ) async {
     final (d, _) = await _app(tester, select: 'a');
-    await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     expect(find.byType(Palette), findsOneWidget);
     expect(_p('Release notes'), findsOneWidget);
     expect(_p('⌘N'), findsOneWidget); // New chat's key
@@ -200,7 +176,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // What ran comes first next time.
-    await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     final rows = find.descendant(
       of: find.byType(ListView).last,
       matching: find.byType(Text),
@@ -210,7 +186,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(Palette), findsNothing);
     tester.daemonOf().dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('a chat’s row opens the chat; the last opened first', (
     tester,
@@ -219,7 +195,7 @@ void main() {
     // c (site) was opened after b (nushi): it comes first, whatever the
     // project; a, the one showing, isn't offered.
     chatOpened.value = {...chatOpened.value, 'b': 1000, 'c': 2000};
-    await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     double y(String text) => tester.getCenter(_p(text)).dy;
     expect(y('Release notes'), lessThan(y('Bump the API version')));
     expect(_p('Fix the login redirect'), findsNothing);
@@ -228,12 +204,12 @@ void main() {
     expect(d.selectedId, 'c');
     expect(chatOpened.value['c'], greaterThan(2000), reason: 'opened now');
     tester.daemonOf().dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('actions that don’t apply are left out', (tester) async {
     final (d, _) = await _app(tester);
     expect(d.selected, isNull);
-    await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     expect(_p('New chat'), findsOneWidget);
     expect(_p('Settings'), findsOneWidget);
     for (final t in ['Show changes', 'Archive chat', 'Open file…']) {
@@ -244,7 +220,7 @@ void main() {
 
     d.select('a'); // no pull request
     await tester.pumpAndSettle();
-    await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     await _type(tester, 'show');
     expect(_p('Show changes'), findsOneWidget);
     expect(_p('Show pull request'), findsNothing);
@@ -253,7 +229,7 @@ void main() {
 
     d.go(const JiraPlace()); // no chat shows: its tabs don't apply
     await tester.pumpAndSettle();
-    await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     await _type(tester, 'show');
     expect(_p('Show changes'), findsNothing);
     // The app's own choices still apply.
@@ -261,7 +237,7 @@ void main() {
     await _type(tester, 'close');
     expect(_p('Close Jira'), findsOneWidget);
     tester.daemonOf().dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   // UX review, findings 9 and 12: the chat's actions are one list, read
   // by the palette, the Chat menu and ⋯.
@@ -278,7 +254,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     Future<void> pick(String query, String row) async {
-      await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+      await press(tester, LogicalKeyboardKey.keyK, cmd: true);
       await _type(tester, query);
       await tester.tap(
         find.descendant(of: find.byType(Palette), matching: find.text(row)),
@@ -298,14 +274,14 @@ void main() {
     // ⇧⌘B, wherever the focus is.
     d.closeSide(d.chats['a']!);
     await tester.pumpAndSettle();
-    await _keys(tester, LogicalKeyboardKey.keyB, meta: true, shift: true);
+    await press(tester, LogicalKeyboardKey.keyB, cmd: true, shift: true);
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<ForkChatRequest>(), hasLength(2));
 
     await pick('reload', 'Reload chat');
     expect(fake.calls.whereType<ReloadChatRequest>().single.chatId, 'a');
 
-    await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     // The archived chat after every other row, before any query sorts.
     final rows = tester.widget<Palette>(find.byType(Palette)).rows;
     expect(rows.map((r) => r.id), contains('chat:b'));
@@ -325,7 +301,7 @@ void main() {
     expect(find.textContaining('Delete'), findsWidgets); // its dialog
     expect(fake.calls.whereType<PlanDeleteChatRequest>(), isNotEmpty);
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets("⋯ lists the chat's actions that apply, with their keys", (
     tester,
@@ -358,7 +334,7 @@ void main() {
     expect(find.text('Unarchive', findRichText: true), findsNothing);
     expect(find.textContaining('Stop', findRichText: true), findsNothing);
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   test('every action of the Chat menu has its label there', () {
     for (final a in Act.values.where((a) => a.menu == ActMenu.chat)) {
@@ -384,13 +360,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(d.chats['a']!.tab.value, ChatTab.chat);
     d.dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('the palette with a few matches, dark', (tester) async {
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
     await _app(tester, select: 'b');
-    await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     await _type(tester, 's');
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
@@ -401,7 +377,7 @@ void main() {
     );
     await render(tester, find.byType(NushiApp), 'palette_dark');
     tester.daemonOf().dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 
   testWidgets('⌃` shows and hides the terminal with the focus outside the '
       'chat (after a click on the sidebar)', (tester) async {
@@ -409,15 +385,15 @@ void main() {
     await tester.tap(find.text('Fix the login redirect').first);
     await tester.pumpAndSettle();
     expect(find.byType(TerminalView), findsNothing);
-    await _keys(tester, LogicalKeyboardKey.backquote, control: true);
+    await press(tester, LogicalKeyboardKey.backquote, ctrl: true);
     expect(terminalChats.value, contains('a'));
     expect(find.byType(TerminalView), findsOneWidget);
     await tester.tap(find.text('Fix the login redirect').first);
     await tester.pumpAndSettle();
-    await _keys(tester, LogicalKeyboardKey.backquote, control: true);
+    await press(tester, LogicalKeyboardKey.backquote, ctrl: true);
     expect(terminalChats.value, isNot(contains('a')));
     tester.daemonOf().dispose();
-  }, variant: macOS);
+  }, variant: onMac);
 }
 
 extension on WidgetTester {

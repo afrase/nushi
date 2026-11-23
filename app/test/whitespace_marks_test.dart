@@ -122,7 +122,7 @@ void main() {
       offset: 9,
     );
     await typeIn(tester, e, '\t// one');
-    await cmd(tester, LogicalKeyboardKey.keyS);
+    await press(tester, LogicalKeyboardKey.keyS, cmd: true);
     expect(
       utf8.decode(fake.writes.single.data),
       'package main\n\nfunc main() {\n\tx := 1  \t// one\n}\n',

@@ -48,7 +48,7 @@ Finder get _cell => find.text('Tea 10');
 Future<void> _openFind(WidgetTester tester) async {
   await tester.tap(_cell);
   await tester.pumpAndSettle();
-  await cmd(tester, LogicalKeyboardKey.keyF);
+  await press(tester, LogicalKeyboardKey.keyF, cmd: true);
 }
 
 void main() {

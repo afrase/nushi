@@ -140,7 +140,7 @@ void main() {
         );
         await tester.pumpAndSettle();
       },
-      '⌘,': () => cmdKey(tester, LogicalKeyboardKey.comma),
+      '⌘,': () => press(tester, LogicalKeyboardKey.comma, cmd: true),
       'the dim': () async {
         await tester.tapAt(const Offset(20, 500));
         await tester.pumpAndSettle();
@@ -150,7 +150,7 @@ void main() {
       await tester.tap(_box);
       await tester.pumpAndSettle();
       final box = FocusManager.instance.primaryFocus;
-      await cmdKey(tester, LogicalKeyboardKey.comma);
+      await press(tester, LogicalKeyboardKey.comma, cmd: true);
       expect(d.settingsOpen, isNotNull, reason: how);
       expect(_focusInside(tester), isTrue, reason: how);
       await close();
@@ -180,11 +180,11 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.keyX);
     await tester.pumpAndSettle();
     expect(d.chats['a']!.draft.text.text, isEmpty);
-    await cmdKey(tester, LogicalKeyboardKey.keyN);
+    await press(tester, LogicalKeyboardKey.keyN, cmd: true);
     expect(find.byType(Dialog), findsNothing, reason: 'no New chat');
-    await cmdKey(tester, LogicalKeyboardKey.keyK);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     expect(find.byType(Palette), findsNothing);
-    await cmdKey(tester, LogicalKeyboardKey.digit2);
+    await press(tester, LogicalKeyboardKey.digit2, cmd: true);
     expect(d.selectedId, 'a');
     expect(d.settingsOpen, isNotNull);
     d.dispose();

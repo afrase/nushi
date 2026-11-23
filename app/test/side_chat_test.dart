@@ -83,14 +83,9 @@ Future<void> _tapChip(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _shiftCmdB(WidgetTester tester) async {
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
-  await tester.sendKeyEvent(LogicalKeyboardKey.keyB);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.pumpAndSettle();
-}
+/// ⇧⌘B.
+Future<void> _shiftCmdB(WidgetTester tester) =>
+    press(tester, LogicalKeyboardKey.keyB, cmd: true, shift: true);
 
 /// Whether the side chat is still open, and the daemon wasn't told to end it.
 void _open(Daemon d, FakeDaemon fake, ChatState side) {
@@ -195,7 +190,7 @@ void main() {
     d.closeSide(d.chats['c']!);
     await tester.pumpAndSettle();
     fake.calls.clear();
-    await _shiftCmdB(tester);
+    await press(tester, LogicalKeyboardKey.keyB, cmd: true, shift: true);
     expect(fake.calls.whereType<ForkChatRequest>().single.chatId, 'c');
     await closeView(tester, d);
   }, variant: onMac);
@@ -221,7 +216,7 @@ void main() {
     expect(dot(), findsNothing);
 
     // A turn that ends while it shows isn't unseen.
-    await _shiftCmdB(tester);
+    await press(tester, LogicalKeyboardKey.keyB, cmd: true, shift: true);
     fake
       ..emit(_status(3, busy: true))
       ..emit(_status(4));

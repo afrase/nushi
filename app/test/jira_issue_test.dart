@@ -375,7 +375,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Yes, **Safari** first.');
     await tester.pump();
     // ⌘⏎ posts it, as the button does.
-    await cmdKey(tester, LogicalKeyboardKey.enter);
+    await press(tester, LogicalKeyboardKey.enter, cmd: true);
     final c = fake.calls.whereType<AddJiraCommentRequest>().single;
     expect((c.key, c.markdown), ('ACME-12', 'Yes, **Safari** first.'));
     await closeView(tester, d);

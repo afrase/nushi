@@ -32,7 +32,7 @@ void main() {
     Button reply() =>
         tester.widget<Button>(find.widgetWithText(Button, 'Reply'));
     Future<void> commandEnter() async {
-      await cmdKey(tester, LogicalKeyboardKey.enter);
+      await press(tester, LogicalKeyboardKey.enter, cmd: true);
     }
 
     expect(reply().onPressed, isNull);

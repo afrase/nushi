@@ -464,7 +464,7 @@ void main() {
     await _key(tester, LogicalKeyboardKey.enter);
     expect(chat.draft.text.text, 'please check this ');
     await tester.pump(const Duration(seconds: 1));
-    await cmdKey(tester, LogicalKeyboardKey.keyZ);
+    await press(tester, LogicalKeyboardKey.keyZ, cmd: true);
     expect(chat.draft.text.text, 'please chekc this ');
   });
 
@@ -561,7 +561,7 @@ void main() {
     }
 
     Future<void> command(WidgetTester tester, LogicalKeyboardKey key) async {
-      await cmdKey(tester, key);
+      await press(tester, key, cmd: true);
     }
 
     spellTestApp('the real ⌘; reaches Next Typo from the box', (tester) async {

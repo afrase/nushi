@@ -332,7 +332,7 @@ void main() {
     await tester.pumpWidget(themed(DiffBox(_addedFile, fit: false)));
     await tester.pumpAndSettle();
     await _dragRows(tester, 2, 4);
-    await cmdKey(tester, LogicalKeyboardKey.keyC, settle: false);
+    await press(tester, LogicalKeyboardKey.keyC, cmd: true, settle: false);
     expect(
       copied.single,
       '// Neg returns minus a.\nfunc Neg(a int) int {\n'

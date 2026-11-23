@@ -511,7 +511,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(PreviewScreen), findsOneWidget);
       await endPhone(tester, phone);
-    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+    }, variant: onPhone);
   });
 
   for (final (name, width) in [('wide', 1700.0), ('narrow', 720.0)]) {

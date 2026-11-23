@@ -43,7 +43,7 @@ Future<Daemon> _app(
 }
 
 Future<void> _type(WidgetTester tester, String query) async {
-  await cmdKey(tester, LogicalKeyboardKey.keyF, settle: false);
+  await press(tester, LogicalKeyboardKey.keyF, cmd: true, settle: false);
   await tester.pump();
   await tester.enterText(
     find.descendant(
@@ -213,10 +213,7 @@ void main() {
     ]);
     await _type(tester, 'needle');
     _inView(tester, 'needle');
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.enter, shift: true);
     expect(find.text('2 of 2'), findsOne);
     _inView(tester, 'needle at the end');
     await closeView(tester, d);

@@ -63,7 +63,7 @@ void _visualViewport(PhonePlatform p, double height, double visible) =>
     );
 
 /// The Mac's platform, standing in for a phone's browser (see `typing`).
-final _browser = TargetPlatformVariant.only(TargetPlatform.macOS);
+final TargetPlatformVariant _browser = onMac;
 
 bool _focused(WidgetTester tester, Finder field) => tester
     .widget<EditableText>(

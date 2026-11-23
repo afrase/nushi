@@ -182,7 +182,7 @@ void main() {
     expect(find.text('Add server'), findsOneWidget);
     expect(find.text('Stop all servers'), findsNothing);
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Run starts the entry by its place, and its page opens '
       'beside the chat once it answers', (tester) async {
@@ -215,7 +215,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(s.stops.single.serverId, 'srv1');
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   // Deep review 2026-11-10, 9: Dart's Uri.origin throws for about:blank,
   // so with a tab there a started server's page never opened, and the
@@ -246,7 +246,7 @@ void main() {
       'http://localhost:3000',
     ]);
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a page that can’t open is no error of the listing, and the '
       'next server’s still opens', (tester) async {
@@ -266,7 +266,7 @@ void main() {
     expect(opened, ['http://localhost:3000']);
     expect(servers.errorOf('c'), isNull);
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a start that fails opens nothing', (tester) async {
     final s = _Servers()..rows = [_server('web')];
@@ -283,7 +283,7 @@ void main() {
     await _changed(tester, d);
     expect(c.browser.tabs.value, hasLength(1));
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a start refused outright says why on its row', (tester) async {
     final s = _Servers()
@@ -303,7 +303,7 @@ void main() {
       findsNothing,
     );
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a start of an entry changed since it was listed says so above '
       'the rows, until the menu opens again', (tester) async {
@@ -323,7 +323,7 @@ void main() {
     await _openMenu(tester);
     expect(find.text(why), findsNothing);
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   // Deep review 2026-11-13, 19: the proto said such a row shows marked,
   // and nothing read name_ok.
@@ -353,7 +353,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(s.starts.single.index, 1);
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a failed row’s tooltip has the end of its output', (
     tester,
@@ -376,7 +376,7 @@ void main() {
     expect(tip.split('\n'), hasLength(18));
     expect(tip, startsWith('line 103\n'));
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Stop all servers shows with more than one running', (
     tester,
@@ -402,7 +402,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(s.stopAlls.single.chatId, 'c');
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Add server puts the request in the box, unsent; an archived '
       'chat can’t take it', (tester) async {
@@ -423,7 +423,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byTooltip('The chat is archived'), findsOneWidget);
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a chat in a scratch folder has no folder to add a server to', (
     tester,
@@ -436,7 +436,7 @@ void main() {
     expect(c.draft.put.value, isNull);
     expect(find.byTooltip('This chat has no folder'), findsOneWidget);
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Add server collapses the expanded tab, so the box shows', (
     tester,
@@ -454,7 +454,7 @@ void main() {
     expect(collapsed, 1);
     expect(c.draft.put.value, addServerDraft);
     await _close(tester);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('the composer takes Add server’s text and the focus', (
     tester,
@@ -466,7 +466,7 @@ void main() {
     expect(c.draft.text.text, 'First this.\n\n$addServerDraft');
     expect(c.draft.put.value, isNull);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   // The menu in each state, in both themes.
   final states = <String, List<DevServer> Function()>{
@@ -554,7 +554,7 @@ void main() {
           matchesGoldenFile('goldens/servers_menu_${state}_$theme.png'),
         );
         await _close(tester);
-      }, variant: macOnly);
+      }, variant: onMac);
     }
   }
 
@@ -590,7 +590,7 @@ void main() {
           'servers_menu_${width.toInt()}_$theme',
         );
         await closeView(tester, d);
-      }, variant: macOnly);
+      }, variant: onMac);
     }
   }
 }

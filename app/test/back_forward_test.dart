@@ -159,9 +159,9 @@ void main() {
     // The composer has the focus.
     await tester.tap(find.byType(EditableText).first);
     await tester.pump();
-    await cmdKey(tester, LogicalKeyboardKey.bracketLeft);
+    await press(tester, LogicalKeyboardKey.bracketLeft, cmd: true);
     expect(d.selectedId, 'c');
-    await cmdKey(tester, LogicalKeyboardKey.bracketRight);
+    await press(tester, LogicalKeyboardKey.bracketRight, cmd: true);
     expect(d.selectedId, 'a');
     // The sidebar's order: b, a (nushi's, the newest first), then c.
     expect(chatOrder(d).map((c) => c.id), ['a', 'b', 'c']);
@@ -254,7 +254,7 @@ void main() {
     await alt(LogicalKeyboardKey.arrowLeft);
     expect(d.selectedId, 'a');
     d.dispose();
-  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+  }, variant: onLinux);
 
   for (final (name, tokens) in [
     ('dark', Tokens.dark),

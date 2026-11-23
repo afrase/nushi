@@ -214,7 +214,7 @@ void main() {
     expect(_shown(tester), contains('➜  Local:   http://localhost:5173/'));
     expect(_shown(tester), isNot(contains('�')));
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('Stop is solid red while it runs; Close shuts the drawer', (
     tester,
@@ -247,7 +247,7 @@ void main() {
     expect(find.byType(ServerLogs), findsNothing);
     expect(c.serverLogs.value, isNull);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('keeps to the bottom as output comes, and stays where the user '
       'scrolled up to', (tester) async {
@@ -275,7 +275,7 @@ void main() {
     expect(scroll.offset, up);
     expect(scroll.position.maxScrollExtent, greaterThan(up));
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a run that follows shows in the open drawer', (tester) async {
     final s = _Servers()
@@ -305,7 +305,7 @@ void main() {
       ['a', 'b'],
     );
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('its bytes act on nothing: no clipboard, no title, no answer', (
     tester,
@@ -359,7 +359,7 @@ void main() {
     expect(answers, isEmpty);
     term.onOutput = null;
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a stream that closes before the end watches again; output '
       'that’s gone says so', (tester) async {
@@ -379,7 +379,7 @@ void main() {
       findsOneWidget,
     );
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   testWidgets('a failed row’s tooltip ends by pointing to Logs', (
     tester,
@@ -406,7 +406,7 @@ void main() {
       'Error: Cannot find module vite\n\nThe whole output is in Logs.',
     );
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 
   // The drawer in each state, in both themes.
   final states = <String, DevServer>{
@@ -446,7 +446,7 @@ void main() {
           matchesGoldenFile('goldens/server_logs_${state}_$theme.png'),
         );
         await closeView(tester, d);
-      }, variant: macOnly);
+      }, variant: onMac);
     }
   }
 
@@ -481,7 +481,7 @@ void main() {
           'server_logs_${width.toInt()}_$theme',
         );
         await closeView(tester, d);
-      }, variant: macOnly);
+      }, variant: onMac);
     }
   }
 }

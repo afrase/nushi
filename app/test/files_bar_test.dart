@@ -53,17 +53,8 @@ IconTap _button(WidgetTester tester, Finder f) => tester.widget<IconTap>(f);
 String get _treeKey => _linux ? 'Ctrl+Shift+Y' : '⇧⌘Y';
 
 /// ⇧⌘Y (Ctrl+Shift+Y on Linux).
-Future<void> _treeKeys(WidgetTester tester) async {
-  final mod = _linux
-      ? LogicalKeyboardKey.controlLeft
-      : LogicalKeyboardKey.metaLeft;
-  await tester.sendKeyDownEvent(mod);
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyEvent(LogicalKeyboardKey.keyY);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-  await tester.sendKeyUpEvent(mod);
-  await tester.pumpAndSettle();
-}
+Future<void> _treeKeys(WidgetTester tester) =>
+    press(tester, LogicalKeyboardKey.keyY, cmd: true, shift: true);
 
 /// The View menu's items, flattened; picks the one called [pick].
 List<String> _viewMenu(WidgetTester tester, {String? pick}) {

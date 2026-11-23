@@ -563,12 +563,12 @@ void main() {
       expect(_viewMenu(tester), isNot(contains('Show Sidebar')));
       await tester.tap(find.byType(TextField).first);
       await tester.pumpAndSettle();
-      await cmdKey(tester, LogicalKeyboardKey.backslash);
+      await press(tester, LogicalKeyboardKey.backslash, cmd: true);
       expect(sidebarHidden.value, isTrue);
       expect(find.byType(Sidebar), findsNothing);
       expect(_viewMenu(tester), contains('Show Sidebar'));
       expect(_viewMenu(tester), isNot(contains('Hide Sidebar')));
-      await cmdKey(tester, LogicalKeyboardKey.backslash);
+      await press(tester, LogicalKeyboardKey.backslash, cmd: true);
       expect(sidebarHidden.value, isFalse);
       d.dispose();
     }, variant: onMac);
@@ -591,7 +591,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
       expect(sidebarHidden.value, isTrue);
-      await cmdKey(tester, LogicalKeyboardKey.backslash);
+      await press(tester, LogicalKeyboardKey.backslash, cmd: true);
       expect(sidebarHidden.value, isFalse);
       d.dispose();
     }, variant: onMac);
@@ -601,7 +601,7 @@ void main() {
     ) async {
       final d = await _window(tester);
       Future<void> run(String query, String row) async {
-        await cmdKey(tester, LogicalKeyboardKey.keyK);
+        await press(tester, LogicalKeyboardKey.keyK, cmd: true);
         final palette = find.byType(Palette);
         expect(palette, findsOneWidget);
         await tester.enterText(
@@ -654,7 +654,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SidebarButton), findsNothing);
     expect(find.byType(TitleButtons), findsNothing);
-    await cmdKey(tester, LogicalKeyboardKey.backslash);
+    await press(tester, LogicalKeyboardKey.backslash, cmd: true);
     expect(sidebarHidden.value, isTrue);
     await endPhone(tester, phone);
   });

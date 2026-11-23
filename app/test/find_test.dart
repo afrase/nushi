@@ -67,10 +67,6 @@ Future<Daemon> _app(WidgetTester tester) async {
   return d;
 }
 
-Future<void> _cmdF(WidgetTester tester) async {
-  await cmdKey(tester, LogicalKeyboardKey.keyF);
-}
-
 /// The marks of the find on the transcript.
 List<TextMark> _marks(WidgetTester tester) {
   final scope = tester.widget<TextMarksScope>(find.byType(TextMarksScope));
@@ -84,7 +80,7 @@ void main() {
       'Esc closes', (tester) async {
     final d = await _app(tester);
     final chat = d.chats['c']!;
-    await _cmdF(tester);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     expect(find.byType(FindBar), findsOne);
     await tester.enterText(
       find.descendant(
@@ -110,10 +106,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('2 of 2'), findsOne);
     expect(chat.find.current, 'a2 0');
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.enter, shift: true);
     expect(chat.find.current, 'u1 0');
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
@@ -128,7 +121,7 @@ void main() {
     final d = await _app(tester);
     final chat = d.chats['c']!..tab.value = ChatTab.changes;
     await tester.pumpAndSettle();
-    await _cmdF(tester);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     expect(find.byType(FindBar), findsOne);
     await tester.enterText(
       find.descendant(
@@ -155,7 +148,7 @@ void main() {
     final d = await _app(tester);
     final chat = d.chats['c']!..tab.value = ChatTab.changes;
     await tester.pumpAndSettle();
-    await _cmdF(tester);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     await tester.enterText(
       find.descendant(
         of: find.byType(FindBar),
@@ -187,10 +180,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find_.files, (1, 2));
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.enter, shift: true);
     expect(find_.files, (2, 2));
     d.dispose();
   }, variant: onMac);

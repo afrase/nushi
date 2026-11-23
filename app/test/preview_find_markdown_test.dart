@@ -57,7 +57,7 @@ void main() {
     final d = await _open(tester);
     await tester.tap(_text);
     await tester.pumpAndSettle();
-    await cmd(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     await look(tester, 'teapot');
     expect(find.text('1 of 4'), findsOne);
     expect(barFind(tester).hits, hasLength(4));
@@ -86,7 +86,7 @@ void main() {
     final d = await _open(tester, width: 720);
     await tester.tap(_text);
     await tester.pumpAndSettle();
-    await cmd(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     await look(tester, 'tea notes');
     expect(find.text('1 of 1'), findsOne);
     final title = find.textContaining('Tea notes', findRichText: true).first;
@@ -102,7 +102,7 @@ void main() {
       final d = await _open(tester, width: w, brightness: b);
       await tester.tap(_text);
       await tester.pumpAndSettle();
-      await cmd(tester, LogicalKeyboardKey.keyF);
+      await press(tester, LogicalKeyboardKey.keyF, cmd: true);
       await look(tester, 'teapot');
       return d;
     });
@@ -110,7 +110,7 @@ void main() {
       final d = await _open(tester, brightness: b);
       await tester.tap(_text);
       await tester.pumpAndSettle();
-      await cmd(tester, LogicalKeyboardKey.keyF);
+      await press(tester, LogicalKeyboardKey.keyF, cmd: true);
       await look(tester, 'teapot');
       await stepFind(tester);
       await expectLater(

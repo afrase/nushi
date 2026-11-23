@@ -52,7 +52,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Write the release notes'), findsOneWidget);
     // ⌘⏎: the selected row's Start work, its folders.
-    await cmdKey(tester, LogicalKeyboardKey.enter);
+    await press(tester, LogicalKeyboardKey.enter, cmd: true);
     expect(
       find.textContaining('Choose folder', findRichText: true),
       findsOneWidget,
@@ -74,12 +74,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
     shortcutKeys.value = {'palette': 'Ctrl+Alt+K'};
     await tester.pumpAndSettle();
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.keyK, ctrl: true, alt: true);
     expect(find.byType(Palette), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
@@ -88,7 +83,7 @@ void main() {
     await tester.pumpAndSettle();
     list.focusNode!.requestFocus();
     await tester.pump();
-    await cmdKey(tester, LogicalKeyboardKey.slash);
+    await press(tester, LogicalKeyboardKey.slash, cmd: true);
     expect(find.byType(Palette), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget); // the palette's, no JQL
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
@@ -98,7 +93,13 @@ void main() {
     await tester.pumpAndSettle();
     list.focusNode!.requestFocus();
     await tester.pump();
-    await _heldArrowDown(tester);
+    await press(
+      tester,
+      LogicalKeyboardKey.arrowDown,
+      cmd: true,
+      shift: true,
+      alt: true,
+    );
     expect(find.byType(Palette), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await closeView(tester, d);
@@ -160,7 +161,7 @@ void main() {
       isTrue,
       reason: 'out of view',
     );
-    await cmdKey(tester, LogicalKeyboardKey.enter);
+    await press(tester, LogicalKeyboardKey.enter, cmd: true);
     await tester.tap(find.textContaining('nushi', findRichText: true).last);
     await tester.pumpAndSettle();
     expect(find.text('Chat on ACME-40 in nushi'), findsOneWidget);
@@ -741,21 +742,4 @@ void main() {
       }, variant: onMac);
     }
   }
-}
-
-/// ⇧⌥⌘↓, pressed and let go.
-Future<void> _heldArrowDown(WidgetTester tester) async {
-  const held = [
-    LogicalKeyboardKey.shiftLeft,
-    LogicalKeyboardKey.altLeft,
-    LogicalKeyboardKey.metaLeft,
-  ];
-  for (final m in held) {
-    await tester.sendKeyDownEvent(m);
-  }
-  await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-  for (final m in held.reversed) {
-    await tester.sendKeyUpEvent(m);
-  }
-  await tester.pumpAndSettle();
 }

@@ -23,9 +23,6 @@ import 'harness.dart';
 // The browser tab's tests' fakes and helpers (ADR 0094): a page host that
 // loads nothing, the app with a chat to open tabs in, and the address field.
 
-/// The tests' platform: browser tabs are the Mac's.
-final macOnly = TargetPlatformVariant.only(TargetPlatform.macOS);
-
 /// A page host that loads nothing: it says what it was asked and plays a
 /// page's part (its address, a title, Back once it moved). What WebKit says
 /// as a page moves goes through the app's own [PageAddress], as

@@ -123,7 +123,7 @@ void main() {
       final d = await open(tester, finder);
       await _focusPrompt(tester);
       finder.hasKeys = true;
-      await cmd(tester, LogicalKeyboardKey.keyF);
+      await press(tester, LogicalKeyboardKey.keyF, cmd: true);
       expect(findBar, findsOne);
       expect(find.text('Find in the page'), findsOne);
       expect(chatC(d).find.query, isNull);
@@ -138,7 +138,7 @@ void main() {
       // The web view without the keys: the chat's.
       finder.hasKeys = false;
       await _focusPrompt(tester);
-      await cmd(tester, LogicalKeyboardKey.keyF);
+      await press(tester, LogicalKeyboardKey.keyF, cmd: true);
       expect(chatC(d).find.query, '');
       expect(find.text('Find in the page'), findsNothing);
       await endEditor(tester, d);
@@ -151,7 +151,7 @@ void main() {
       final finder = FakePageFinder(_page)..hasKeys = true;
       final d = await open(tester, finder);
       await _focusPrompt(tester);
-      await cmd(tester, LogicalKeyboardKey.keyF);
+      await press(tester, LogicalKeyboardKey.keyF, cmd: true);
       await look(tester, 'teapot');
       expect(find.text('1 of 3'), findsOne);
       await stepFind(tester);
@@ -182,7 +182,7 @@ void main() {
     final d = await _tab(tester, finder);
     await tester.tap(addressField);
     await tester.pumpAndSettle();
-    await cmd(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     expect(find.text('Find in the page'), findsOne);
     expect(chatC(d).find.query, isNull);
     await look(tester, 'teapot');
@@ -203,7 +203,7 @@ void main() {
     await _focusPrompt(tester);
     final prompt = FocusManager.instance.primaryFocus!;
     finder.hasKeys = true;
-    await cmd(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     await look(tester, 'teapot');
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
@@ -217,7 +217,7 @@ void main() {
     final d = await _html(tester, null);
     expect(pageFinds, isEmpty);
     await _focusPrompt(tester);
-    await cmd(tester, LogicalKeyboardKey.keyF);
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
     expect(
       find.descendant(of: find.byType(FilesPane), matching: findBar),
       findsNothing,

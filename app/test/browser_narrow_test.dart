@@ -4,7 +4,7 @@ import 'package:nushi/browser_pane.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/pane_tabs.dart';
 
-import 'browser_fixture.dart' show browserFakes, macOnly;
+import 'browser_fixture.dart' show browserFakes;
 import 'harness.dart';
 import 'panes_app.dart';
 
@@ -81,5 +81,5 @@ void main() {
     FlutterError.onError = was;
     expect(errors, isEmpty);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 }

@@ -124,7 +124,7 @@ void main() {
           'mcp-calls-$agent-${width.toInt()}-${brightness.name}',
         );
         await closeView(tester, d);
-      }, variant: macOnly);
+      }, variant: onMac);
     }
   }
 
@@ -156,5 +156,5 @@ void main() {
     expect(find.text('mcp__nushi__show'), findsOneWidget);
     expect(find.text('Preview'), findsNothing);
     await closeView(tester, d);
-  }, variant: macOnly);
+  }, variant: onMac);
 }

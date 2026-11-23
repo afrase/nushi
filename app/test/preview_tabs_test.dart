@@ -186,17 +186,6 @@ Future<void> _tap(WidgetTester tester, Finder f) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _key(
-  WidgetTester tester,
-  LogicalKeyboardKey key, {
-  bool meta = false,
-}) async {
-  if (meta) await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
-  await tester.sendKeyEvent(key);
-  if (meta) await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
-  await tester.pumpAndSettle();
-}
-
 ScrollPosition _row(WidgetTester tester) => tester
     .state<ScrollableState>(
       find.descendant(
@@ -688,13 +677,13 @@ void main() {
         'the pane open', (tester) async {
       final d = await _app(tester, files: _three.take(2).toList());
       final c = d.chats['c']!;
-      await _key(tester, LogicalKeyboardKey.keyW, meta: true);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       expect(c.fileNames, ['docs/plan.md']);
-      await _key(tester, LogicalKeyboardKey.keyW, meta: true);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       expect(find.byType(FileView), findsNothing);
       expect(find.byType(FilesBlank), findsOneWidget);
       expect(filesChats.value, {'c'});
-      await _key(tester, LogicalKeyboardKey.keyW, meta: true);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       expect(c.files.shown.value, isNull);
       expect(find.byType(FilesPane), findsOneWidget);
       d.dispose();
@@ -712,11 +701,11 @@ void main() {
       );
       // The focus in the box: the kind shown last.
       await _tap(tester, box);
-      await _key(tester, LogicalKeyboardKey.keyW, meta: true);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       expect(c.browser.shown.value, isNull);
       expect(c.fileNames, hasLength(1));
       await _tap(tester, box);
-      await _key(tester, LogicalKeyboardKey.keyW, meta: true);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       expect(c.files.shown.value, isNull);
       // The focus in the file's view: its file, though a page showed last.
       c
@@ -725,7 +714,7 @@ void main() {
       await tester.pumpAndSettle();
       Focus.of(tester.element(find.byType(PreviewBody))).requestFocus();
       await tester.pumpAndSettle();
-      await _key(tester, LogicalKeyboardKey.keyW, meta: true);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       expect(c.files.shown.value, isNull);
       expect(c.browser.shown.value, isNotNull);
       d.dispose();
@@ -737,7 +726,7 @@ void main() {
       showOrHideFiles(c);
       await tester.pumpAndSettle();
       expect(find.byType(FilesPane), findsNothing);
-      await _key(tester, LogicalKeyboardKey.keyW, meta: true);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       expect(c.fileNames, hasLength(2));
       d.dispose();
     }, variant: onMac);
@@ -746,7 +735,7 @@ void main() {
       final d = await _app(tester, files: _three.take(2).toList());
       final c = d.chats['c']!..tab.value = ChatTab.changes;
       await tester.pumpAndSettle();
-      await _key(tester, LogicalKeyboardKey.keyW, meta: true);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       expect(c.fileNames, hasLength(2));
       d.dispose();
     }, variant: onMac);
@@ -755,7 +744,7 @@ void main() {
       terminalChats.value = {'c'};
       final d = await _app(tester, files: _three.take(2).toList());
       await _tap(tester, find.byType(TerminalView));
-      await _key(tester, LogicalKeyboardKey.keyW, meta: true);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       expect(d.chats['c']!.fileNames, hasLength(2));
       d.dispose();
     }, variant: onMac);
@@ -765,16 +754,16 @@ void main() {
     ) async {
       final d = await _app(tester, files: _three.take(2).toList());
       final c = d.chats['c']!;
-      await _key(tester, LogicalKeyboardKey.keyK, meta: true);
+      await press(tester, LogicalKeyboardKey.keyK, cmd: true);
       expect(find.byType(Palette), findsOneWidget);
-      await _key(tester, LogicalKeyboardKey.keyW, meta: true);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       expect(c.fileNames, hasLength(2));
       // File › Close Tab, where a ⌘W no widget takes goes (a web page's).
       final navigator = tester.element(find.byType(Navigator).first);
       runAct(navigator, d, Act.closeTab);
       await tester.pumpAndSettle();
       expect(c.fileNames, hasLength(2));
-      await _key(tester, LogicalKeyboardKey.escape);
+      await press(tester, LogicalKeyboardKey.escape);
       runAct(navigator, d, Act.closeTab);
       await tester.pumpAndSettle();
       expect(c.fileNames, ['docs/plan.md']);

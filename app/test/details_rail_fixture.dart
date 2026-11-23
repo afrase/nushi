@@ -238,5 +238,3 @@ final fullContext = GetContextUsageResponse(
 Finder get railPanel => find.byType(DetailsPanel);
 
 Finder inRail(Finder f) => find.descendant(of: railPanel, matching: f);
-
-final macOnly = TargetPlatformVariant.only(TargetPlatform.macOS);

@@ -161,10 +161,7 @@ Finder get _longLine => find.descendant(
 );
 
 Future<void> _altZ(WidgetTester tester) async {
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
-  await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
-  await tester.pumpAndSettle();
+  await press(tester, LogicalKeyboardKey.keyZ, alt: true);
 }
 
 void main() {
@@ -427,7 +424,7 @@ void main() {
           'preview_wrap_phone_${size.width.toInt()}_off_$name',
         );
         await endPhone(tester, phone);
-      }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+      }, variant: onPhone);
     }
 
     testWidgets("the Files pane's top rows, its bar's buttons at the end, "

@@ -28,7 +28,6 @@ import 'sidebar_fixture.dart';
 // `make renders TEST=test/project_rail_window_test.dart`.
 
 void main() {
-  final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
   setUpAll(loadFonts);
 
   for (final width in [1700.0, 720.0]) {
@@ -209,7 +208,7 @@ void main() {
         await tester.tap(find.widgetWithText(Button, 'Cancel'));
         await frames(tester, 4, const Duration(milliseconds: 300));
         await closeView(tester, d);
-      }, variant: macOS);
+      }, variant: onMac);
 
       testWidgets('the window with the project rail, $name', (tester) async {
         viewport(tester, Size(width, 900), brightness: brightness);
@@ -325,7 +324,7 @@ void main() {
         await tester.tap(find.widgetWithText(Button, 'Save'));
         await frames(tester, 4, const Duration(milliseconds: 300));
         await closeView(tester, d);
-      }, variant: macOS);
+      }, variant: onMac);
     }
   }
 }

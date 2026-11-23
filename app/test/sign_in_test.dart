@@ -419,7 +419,7 @@ void main() {
         fake
           ..startError = _refused
           ..startSignIn = _signIn;
-        await cmdKey(tester, LogicalKeyboardKey.keyN, settle: false);
+        await press(tester, LogicalKeyboardKey.keyN, cmd: true, settle: false);
         await frames(tester, 4, const Duration(milliseconds: 100));
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await frames(tester, 6, const Duration(milliseconds: 100));

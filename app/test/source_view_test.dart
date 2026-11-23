@@ -80,7 +80,7 @@ void main() {
       // A selection made after it copies only what it holds.
       await tester.tap(find.textContaining('line 3', findRichText: true).first);
       await tester.pump();
-      await cmdKey(tester, LogicalKeyboardKey.keyC, settle: false);
+      await press(tester, LogicalKeyboardKey.keyC, cmd: true, settle: false);
       expect(copied.last, isNot(text));
     }, variant: onMac);
   }
@@ -108,7 +108,7 @@ void main() {
     await tester.pump();
     await drag.up();
     await tester.pump();
-    await cmdKey(tester, LogicalKeyboardKey.keyC, settle: false);
+    await press(tester, LogicalKeyboardKey.keyC, cmd: true, settle: false);
     expect(copied.last, '$long\n');
   }, variant: onMac);
 
@@ -147,7 +147,7 @@ void main() {
         await drag.up();
         await tester.pump();
         final copied = clipboardCopies(tester);
-        await cmdKey(tester, LogicalKeyboardKey.keyC, settle: false);
+        await press(tester, LogicalKeyboardKey.keyC, cmd: true, settle: false);
         expect(copied.last, isNotEmpty, reason: 'something was selected');
         if (change == 'read') {
           await tester.pumpWidget(
@@ -172,7 +172,7 @@ void main() {
         await tester.pump();
         expect(tester.takeException(), isNull);
         // What it held is gone from sight, and from a copy.
-        await cmdKey(tester, LogicalKeyboardKey.keyC, settle: false);
+        await press(tester, LogicalKeyboardKey.keyC, cmd: true, settle: false);
         expect(copied.length, 1);
       }, variant: onMac);
     }

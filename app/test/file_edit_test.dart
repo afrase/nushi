@@ -42,7 +42,7 @@ void main() {
     await typeIn(tester, e, '2');
     expect(e.unsaved, isTrue);
     expect(unsavedDot, findsOneWidget);
-    await cmd(tester, LogicalKeyboardKey.keyS);
+    await press(tester, LogicalKeyboardKey.keyS, cmd: true);
     expect(fake.writes, hasLength(1));
     expect(fake.writes.single.baseSha256, sumOf(bytes));
     expect(fake.writes.single.data, [
@@ -63,21 +63,19 @@ void main() {
     await tester.pump();
     expect(FocusManager.instance.primaryFocus?.debugLabel, 'editor');
     final before = wrapLines.value;
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
-    await tester.pump();
+    await press(tester, LogicalKeyboardKey.keyZ, alt: true, settle: false);
     expect(wrapLines.value, before);
     // A chosen key types nothing, so the editor's focus doesn't hold it
     // back (ADR 0146).
     shortcutKeys.value = {'wrap': 'Shift+Cmd+L'};
     await tester.pump();
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyL);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
-    await tester.pump();
+    await press(
+      tester,
+      LogicalKeyboardKey.keyL,
+      cmd: true,
+      shift: true,
+      settle: false,
+    );
     expect(FocusManager.instance.primaryFocus?.debugLabel, 'editor');
     expect(wrapLines.value, !before);
     await endEditor(tester, d);
@@ -244,7 +242,7 @@ void main() {
 
     await conflict('fmt.Println');
     // Nothing saves meanwhile.
-    await cmd(tester, LogicalKeyboardKey.keyS);
+    await press(tester, LogicalKeyboardKey.keyS, cmd: true);
     expect(fake.writes, isEmpty);
     // Compare: the disk against the edits, in a dialog.
     await tester.tap(find.text('Compare'));
@@ -358,14 +356,14 @@ void main() {
     expect(unsavedDot, findsOneWidget);
     expect(e.theirs, isNotNull);
     // ⌘W asks; Cancel keeps the tab and the text.
-    await cmd(tester, LogicalKeyboardKey.keyW);
+    await press(tester, LogicalKeyboardKey.keyW, cmd: true);
     expect(find.text('Discard your changes to main.go?'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(chatC(d).fileNames, ['main.go', 'b.go']);
     expect(chatC(d).edits['main.go'], same(e));
     // Asked again, Discard closes the tab.
-    await cmd(tester, LogicalKeyboardKey.keyW);
+    await press(tester, LogicalKeyboardKey.keyW, cmd: true);
     expect(find.text('Discard your changes to main.go?'), findsOneWidget);
     await tester.tap(find.text('Discard'));
     await tester.pumpAndSettle();
@@ -385,7 +383,7 @@ void main() {
       final e = editOf(d);
       await typeIn(tester, e, '// mine\n');
       fake.down = true;
-      await cmd(tester, LogicalKeyboardKey.keyS);
+      await press(tester, LogicalKeyboardKey.keyS, cmd: true);
       expect(find.textContaining('Couldn’t save'), findsOneWidget);
       // Its tab's ✕ is a dot until hovered: ⌘W.
       expect(find.byTooltip('Unsaved'), findsOneWidget);
@@ -404,7 +402,7 @@ void main() {
       expect(find.byTooltip('Unsaved'), findsNothing);
       await mouse.moveTo(Offset.zero);
       await tester.pumpAndSettle();
-      await cmd(tester, LogicalKeyboardKey.keyW);
+      await press(tester, LogicalKeyboardKey.keyW, cmd: true);
       await tester.tap(find.text('Discard'));
       await tester.pumpAndSettle();
       fake.down = false;

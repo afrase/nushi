@@ -142,7 +142,7 @@ void main() {
       ]);
       expect(tester.takeException(), isNull);
       await endPhone(tester, phone);
-    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+    }, variant: onPhone);
   }
 
   testWidgets('Copy puts the selection on the clipboard', (tester) async {
@@ -169,7 +169,7 @@ void main() {
     expect(copied, 'reconnect');
     expect(find.byType(ReplyBox), findsNothing);
     await endPhone(tester, phone);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+  }, variant: onPhone);
 
   testWidgets('Android: the same menu, Material', (tester) async {
     final (phone, _) = await _chatOpen(tester);
