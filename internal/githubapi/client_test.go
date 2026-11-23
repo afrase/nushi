@@ -87,7 +87,9 @@ func (f *fake) route(route string, h http.HandlerFunc) {
 // graphql_X.json, written by TestLive's recorder): a request whose query
 // isn't that one fails the test, since the answer can lack what the query
 // selects now, and decoding passes over a missing key. A hand-written
-// answer has no such file.
+// answer has no such file. An answer TestLive doesn't ask (MergeText's,
+// recorded once and since edited by hand) keeps its .graphql too, kept by
+// hand: a changed query then means looking at the answer again.
 func (f *fake) file(route, name string) {
 	b, err := os.ReadFile("testdata/" + name)
 	if err != nil {
@@ -104,8 +106,9 @@ func (f *fake) file(route, name string) {
 			}
 			body, _ := io.ReadAll(r.Body)
 			if json.Unmarshal(body, &q) != nil || q.Query != strings.TrimSuffix(string(asked), "\n") {
-				f.t.Errorf("%s isn't the query testdata/%s answered: record its answer again with TestLive's recorder "+
-					"(NUSHI_GITHUB_LIVE=1 NUSHI_GITHUB_RECORD=1), or make it a hand-written answer by deleting its .graphql", route, name)
+				f.t.Errorf("%s isn't the query testdata/%s answered: if TestLive asks it, record its answer again with TestLive's "+
+					"recorder (NUSHI_GITHUB_LIVE=1 NUSHI_GITHUB_RECORD=1); if not, bring the answer up to the new query by hand and "+
+					"copy the query into its .graphql", route, name)
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write([]byte(`{"message":"not the recorded query"}`))
 				return
