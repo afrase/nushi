@@ -1,10 +1,66 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:markdown_view/markdown_view.dart';
 import 'package:markdown_view/src/blocks.dart';
 
-import 'stream_bench_test.dart' show chunkEnds, reply;
+/// A reply of about 3,000 words as agents write them: headings, paragraphs
+/// with inline code and bold, lists, code blocks and a table.
+String reply() {
+  final out = StringBuffer();
+  final words =
+      'the shard runner splits every second test file so both halves '
+              'finish in about the same time and the goldens stay with their '
+              'tests while the cache keeps the build warm between runs'
+          .split(' ');
+  final r = Random(7);
+  String sentence() {
+    final n = 10 + r.nextInt(14);
+    final s = [for (var i = 0; i < n; i++) words[r.nextInt(words.length)]];
+    if (r.nextBool()) s[r.nextInt(n)] = '`${s[r.nextInt(n)]}`';
+    if (r.nextInt(3) == 0) s[r.nextInt(n)] = '**${s[r.nextInt(n)]}**';
+    return '${s.join(' ')}.';
+  }
+
+  var section = 0;
+  while (out.toString().split(RegExp(r'\s+')).length < 3000) {
+    section++;
+    out.write('## Part $section\n\n');
+    for (var p = 0; p < 2; p++) {
+      out.write('${[for (var i = 0; i < 4; i++) sentence()].join(' ')}\n\n');
+    }
+    out.write('- ${sentence()}\n- ${sentence()}\n- ${sentence()}\n\n');
+    if (section.isEven) {
+      out.write(
+        '```dart\nvoid main() {\n  for (var i = 0; i < $section; i++) {\n'
+        "    print('shard \$i');\n  }\n}\n```\n\n",
+      );
+    }
+    if (section % 3 == 0) {
+      out
+        ..write('| Job | Before | After |\n|---|---|---|\n')
+        ..write('| test-app | 12:57 | 3:13 |\n| release | 19:30 | 5:21 |\n\n');
+    }
+  }
+  return out.toString();
+}
+
+/// Its chunks as they stream: mostly 5 to 40 characters, some of 90 to 180.
+List<int> chunkEnds(int length) {
+  final r = Random(3);
+  final ends = <int>[];
+  var at = 0;
+  while (at < length) {
+    at = min(
+      length,
+      at + (r.nextInt(7) == 0 ? 90 + r.nextInt(90) : 5 + r.nextInt(36)),
+    );
+    ends.add(at);
+  }
+  return ends;
+}
 
 const _style = MarkdownStyle(
   body: TextStyle(fontSize: 13.5, height: 1.5),
