@@ -1,7 +1,6 @@
 package opencodetrust
 
 import (
-	"encoding/json"
 	"maps"
 	"net/url"
 	"os"
@@ -10,9 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/tailscale/hujson"
-
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/opencode"
 )
 
 // object is a JSON object of a config. A config is read as open JSON, not
@@ -65,11 +63,7 @@ func configRuns(path string, text []byte) []model.FolderRun {
 			out = append(out, model.FolderRun{File: path, What: what, Command: strings.Join(lines, "\n")})
 		}
 	}
-	var c object
-	std, err := hujson.Standardize(slices.Clone(text))
-	if err == nil {
-		err = json.Unmarshal(std, &c)
-	}
+	c, err := opencode.ParseConfig(text)
 	switch {
 	case err != nil: // fixed words: the parser's own quote the file
 		add("Settings Nushi couldn't read", "not a JSON object with comments: opencode may make more of it")

@@ -18,6 +18,7 @@ import (
 
 	"github.com/afrase/nushi/internal/atomicfile"
 	"github.com/afrase/nushi/internal/jsonsettings"
+	"github.com/afrase/nushi/internal/opencode"
 )
 
 // opencode's one switch for a skill is a policy in the global config
@@ -222,12 +223,9 @@ func only(before, after []byte, id string, add bool) bool {
 	return reflect.DeepEqual(a, want)
 }
 
-// decoded is a config file's text as plain JSON reads.
+// decoded is a config file's text as plain JSON reads it
+// (opencode.ParseConfig).
 func decoded(text []byte) (map[string]any, bool) {
-	m := map[string]any{}
-	if len(bytes.TrimSpace(text)) == 0 {
-		return m, true
-	}
-	std, err := hujson.Standardize(append(slices.Clip(text), '\n')) // a copy, and parse's line break
-	return m, err == nil && json.Unmarshal(std, &m) == nil
+	m, err := opencode.ParseConfig(text)
+	return m, err == nil
 }

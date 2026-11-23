@@ -226,6 +226,26 @@ func TestWhatAConfigRuns(t *testing.T) {
 	}
 }
 
+// A config is read as opencode's skills page reads it (opencode.ParseConfig):
+// a comment on its last line with no line break after it, and an empty
+// file, read; the card doesn't call either unreadable.
+func TestAConfigReadsAsTheSkillsPageReadsIt(t *testing.T) {
+	base, _ := folders(t)
+	config := filepath.Join(base, "project", "opencode.json")
+	body := `{"plugins": ["./p.ts"]} // mine`
+	testcheck.Write(t, config, body)
+	want := []string{"Plugin, imported at once: ./p.ts", "Loaded by opencode: " + body}
+	if got := rows(t, config); !slices.Equal(got, want) {
+		t.Errorf("rows of a config ending in a comment:\n%s", strings.Join(got, "\n"))
+	}
+	testcheck.Write(t, config, " \n")
+	for _, row := range rows(t, config) {
+		if strings.HasPrefix(row, "Settings Nushi couldn't read") {
+			t.Errorf("an empty config: %s", row)
+		}
+	}
+}
+
 // A config can't keep what it runs out of its summary by spelling a key
 // as opencode doesn't read it, or by copying a key, an effect or a
 // command in from a file.
