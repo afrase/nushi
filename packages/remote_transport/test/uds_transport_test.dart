@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:connectrpc/connect.dart' as connect;
@@ -6,8 +7,8 @@ import 'package:connectrpc/protobuf.dart';
 import 'package:connectrpc/protocol/connect.dart' as protocol;
 import 'package:http2/transport.dart' as http2;
 import 'package:protobuf/well_known_types/google/protobuf/empty.pb.dart';
+import 'package:remote_transport/uds_transport.dart';
 import 'package:test/test.dart';
-import 'package:uds_transport/uds_transport.dart';
 
 const _spec = connect.Spec<Empty, Empty>(
   '/test.v1.TestService/Call',
@@ -64,12 +65,33 @@ void main() {
   });
 }
 
+// A daemon that answers every call with an empty message, and counts the
+// connections it got and those its client still holds open.
 class _Server {
   new(this._socket) {
     _socket.listen((s) {
       connections++;
-      final conn = http2.ServerTransportConnection.viaSocket(s);
-      _open.add(conn);
+      open++;
+      // The test reads the socket itself, so it sees the client close its
+      // end after the HTTP/2 server has stopped reading: then the client's
+      // connection is over, and its next call dials again.
+      final incoming = StreamController<List<int>>();
+      s.listen(
+        incoming.add,
+        onError: incoming.addError,
+        onDone: () {
+          unawaited(incoming.close());
+          final waiting = _allClosed;
+          if (--open == 0 && waiting != null && !waiting.isCompleted) {
+            waiting.complete();
+          }
+        },
+      );
+      final conn = http2.ServerTransportConnection.viaStreams(
+        incoming.stream,
+        s,
+      );
+      _conns.add(conn);
       conn.incomingStreams.listen((stream) async {
         await stream.incomingMessages.drain<void>();
         stream
@@ -83,15 +105,26 @@ class _Server {
   }
 
   final ServerSocket _socket;
-  final _open = <http2.ServerTransportConnection>[];
+  final _conns = <http2.ServerTransportConnection>[];
+  Completer<void>? _allClosed;
+
+  /// Every connection the server took.
   int connections = 0;
 
+  /// The connections whose client hasn't closed its end yet.
+  int open = 0;
+
+  /// Ends every connection, and returns once each client has closed its
+  /// end.
   Future<void> dropConnections() async {
-    for (final c in _open) {
+    final closed = _allClosed = Completer<void>();
+    if (open == 0) closed.complete();
+    for (final c in _conns) {
       await c.finish();
     }
-    _open.clear();
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    _conns.clear();
+    await closed.future;
+    _allClosed = null;
   }
 
   Future<void> close() async {

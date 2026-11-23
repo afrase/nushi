@@ -545,13 +545,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
-  uds_transport:
-    dependency: "direct main"
-    description:
-      path: "../packages/uds_transport"
-      relative: true
-    source: path
-    version: "0.1.0"
   universal_platform:
     dependency: transitive
     description:

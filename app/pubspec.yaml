@@ -28,8 +28,6 @@ dependencies:
   re_highlight: ^0.0.3
   remote_transport:
     path: ../packages/remote_transport
-  uds_transport:
-    path: ../packages/uds_transport
   url_launcher: ^6.3.3
   web: ^1.1.1
   webview_flutter_platform_interface: ^2.15.1

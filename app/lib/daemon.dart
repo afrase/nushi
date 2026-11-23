@@ -33,7 +33,7 @@ import 'package:nushi/sign_in_run.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/trust_ask.dart';
 import 'package:nushi/visits.dart';
-import 'package:uds_transport/uds_transport.dart';
+import 'package:remote_transport/uds_transport.dart';
 
 export 'package:nushi/issue_chat.dart';
 export 'package:nushi/place.dart';

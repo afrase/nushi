@@ -16,7 +16,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:remote_transport/remote_transport.dart';
-import 'package:uds_transport/uds_transport.dart';
+import 'package:remote_transport/uds_transport.dart';
 
 import 'e2e_rig.dart';
 

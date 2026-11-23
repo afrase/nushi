@@ -6,7 +6,7 @@ BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
 # can't run beside a go.work).
 GOLANGCI := bin/golangci-lint
 GOVULNCHECK := bin/govulncheck
-DART_DIRS := app packages/uds_transport packages/noise packages/remote_transport packages/markdown
+DART_DIRS := app packages/noise packages/remote_transport packages/markdown
 # The machine make runs on: Darwin, or Linux (ADR 0101, 0104).
 OS := $(shell uname -s)
 # NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones;
@@ -293,7 +293,6 @@ test-go:
 # The packages run anywhere with Go (remote_transport's interop builds a
 # Go peer), and in Chrome where there's one.
 test-packages:
-	cd packages/uds_transport && dart test
 	cd packages/noise && dart test $(if $(CHROME),&& dart test -p chrome)
 	cd packages/remote_transport && dart test $(if $(CHROME),&& dart test -p chrome test/gzip_web_test.dart)
 	cd packages/markdown && flutter test

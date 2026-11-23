@@ -12,6 +12,7 @@ import 'package:connectrpc/http2.dart';
 import 'package:http2/transport.dart' as http2;
 import 'package:noise/noise.dart';
 import 'package:remote_transport/src/channel.dart';
+import 'package:remote_transport/src/connection.dart';
 import 'package:remote_transport/src/websocket.dart';
 
 export 'package:noise/noise.dart' show KeyPair;
@@ -180,8 +181,8 @@ final class RelayTransport implements Http2ClientTransport {
   /// The phone's own key.
   final KeyPair device;
 
-  http2.ClientTransportConnection? _live;
-  Channel? _channel; // _live's
+  final _conn = SharedConnection();
+  Channel? _channel; // _conn.current's
   Future<http2.ClientTransportConnection>? _dialing;
   int _generation = 0; // a reset starts another: a dial from before is dropped
   bool _closed = false;
@@ -190,24 +191,24 @@ final class RelayTransport implements Http2ClientTransport {
   Future<http2.ClientTransportStream> makeRequest(
     Uri uri,
     List<http2.Header> headers,
-  ) async {
-    for (var attempt = 0; ; attempt++) {
+  ) => _conn.request(
+    () async {
       if (_closed) throw _unavailable('closed', null);
-      final conn = _live ?? await (_dialing ??= _dialOnce());
-      if (conn.isOpen) return _MappedStream(conn.makeRequest(headers));
-      _drop(conn);
-      if (attempt == 1) throw _unavailable('connection closing', null);
-    }
-  }
+      return _conn.current ?? await (_dialing ??= _dialOnce());
+    },
+    headers,
+    mapError: _map,
+    closing: () => _unavailable('connection closing', null),
+  );
 
   /// Whether a channel is up (it may still turn out dead: a phone that
   /// was asleep holds sockets the network dropped).
-  bool get live => _live?.isOpen ?? false;
+  bool get live => _conn.current?.isOpen ?? false;
 
   /// The bytes the live channel has moved either way ([Channel.moved]), 0
   /// with none: a ping late behind an upload is told from a dead link by
   /// this growing meanwhile.
-  int get moved => _live == null ? 0 : _channel?.moved ?? 0;
+  int get moved => _conn.current == null ? 0 : _channel?.moved ?? 0;
 
   /// Closes the channel for good: calls still open on it fail, and no
   /// call dials again.
@@ -221,8 +222,8 @@ final class RelayTransport implements Http2ClientTransport {
   Future<void> reset() async {
     _generation++;
     _dialing = null;
-    final conn = _live;
-    _live = null;
+    final conn = _conn.current;
+    _conn.current = null;
     await conn?.terminate();
   }
 
@@ -267,18 +268,12 @@ final class RelayTransport implements Http2ClientTransport {
       ch.incoming,
       ch.outgoing,
     );
-    _live = conn;
+    _conn.current = conn;
     _channel = ch;
     conn.onActiveStateChanged = (_) {
-      if (!conn.isOpen) _drop(conn);
+      if (!conn.isOpen) _conn.drop(conn);
     };
     return conn;
-  }
-
-  void _drop(http2.ClientTransportConnection conn) {
-    if (!identical(_live, conn)) return;
-    _live = null;
-    unawaited(conn.finish().catchError((_) {}));
   }
 }
 
@@ -292,46 +287,10 @@ connect.ConnectException _unavailable(
   cause: why ?? cause,
 );
 
-/// A stream whose transport errors surface as `unavailable`, as
-/// uds_transport's do (connectrpc reports them as `unknown`, which nothing
-/// reloads on).
-final class _MappedStream implements http2.ClientTransportStream {
-  new(this._inner);
-
-  final http2.ClientTransportStream _inner;
-
-  @override
-  int get id => _inner.id;
-
-  @override
-  late final Stream<http2.StreamMessage> incomingMessages = _inner
-      .incomingMessages
-      .handleError(
-        (Object e, StackTrace s) => Error.throwWithStackTrace(switch (e) {
-          http2.TransportException() || http2.StreamTransportException() =>
-            _unavailable('connection lost', e),
-          _ => e,
-        }, s),
-      );
-
-  @override
-  StreamSink<http2.StreamMessage> get outgoingMessages =>
-      _inner.outgoingMessages;
-
-  @override
-  Stream<http2.TransportStreamPush> get peerPushes => _inner.peerPushes;
-
-  @override
-  set onTerminated(void Function(int?) value) => _inner.onTerminated = value;
-
-  @override
-  void terminate() => _inner.terminate();
-
-  @override
-  void sendHeaders(List<http2.Header> headers, {bool endStream = false}) =>
-      _inner.sendHeaders(headers, endStream: endStream);
-
-  @override
-  void sendData(List<int> bytes, {bool endStream = false}) =>
-      _inner.sendData(bytes, endStream: endStream);
-}
+/// A lost channel's errors as `unavailable`. HTTP/2 runs over the Noise
+/// channel's streams here, so no socket error reaches this layer.
+Object _map(Object e) => switch (e) {
+  http2.TransportException() ||
+  http2.StreamTransportException() => _unavailable('connection lost', e),
+  _ => e,
+};
