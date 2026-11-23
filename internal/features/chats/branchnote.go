@@ -3,6 +3,7 @@ package chats
 import (
 	"cmp"
 	"context"
+	"html"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -27,47 +28,69 @@ import (
 // no-break spaces keep it whole where the line wraps.
 const toldSuffix = " ·\u00a0told\u00a0the\u00a0agent"
 
-// branchNote is the note's text; the branch names are its only variable
-// part, checked by git first.
+// note is one of Nushi's notes to the agent: a bare tag,
+// <nushi-NAME k="v" .../>, with no words of Nushi's (the owner's rule,
+// ADR 0084's amendment of 2026-11-22). attrs are keys and values in turn;
+// each value is escaped as HTML, so no name or path can end the tag early
+// or forge another.
+func note(name string, attrs ...string) string {
+	var b strings.Builder
+	b.WriteString("<nushi-" + name)
+	for i := 0; i+1 < len(attrs); i += 2 {
+		b.WriteString(" " + attrs[i] + `="` + html.EscapeString(attrs[i+1]) + `"`)
+	}
+	b.WriteString("/>")
+	return b.String()
+}
+
+// branchNote tells the agent its worktree's branch was renamed; the
+// branch names are checked by git first.
 func branchNote(from, to string) string {
-	return "[Nushi] This worktree's branch was renamed from " + from + " to " + to + ". Use the new name."
+	return note("branch-renamed", "from", from, "to", to)
 }
 
 // switchNote tells the agent its folder's branch was switched
-// (SwitchBranch); the names are checked by git first. Its fixed end
-// keeps a name with dots apart from the user's text run into it.
+// (SwitchBranch); the names are checked by git first.
 func switchNote(from, to string) string {
-	return "[Nushi] This folder's branch changed from " + from + " to " + to + ". Work on " + to + " from now on."
+	return note("branch-switched", "from", from, "to", to)
 }
 
-// moveNote tells the agent its chat moved to folder (no backquote or line
-// break in it), on branch if it's on one (checked by git first).
+// moveNote tells the agent its chat moved to folder (noteName checked it),
+// on branch if it's on one (checked by git first).
 func moveNote(folder, branch string) string {
 	if branch == "" {
-		return "[Nushi] This chat moved to `" + folder + "`. Work there from now on."
+		return note("moved", "folder", folder)
 	}
-	return "[Nushi] This chat moved to `" + folder + "`, on branch " + branch + ". Work there from now on."
+	return note("moved", "folder", folder, "branch", branch)
 }
 
 // stopNote tells the agent the user stopped its background command id
 // (stopCommand): the agent heard only that it failed, with an exit code
 // (docs/facts/claude.md). Only an id of noteID's shape is told.
 func stopNote(id string) string {
-	return "[Nushi] The user stopped your background command " + id + "; its exit code was that stop, not a failure."
+	return note("command-stopped", "id", id)
 }
 
-// noteID is a task id a note may name: the replay finds the note again.
+// noteID is a task id a note may name.
 var noteID = regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
 
-// noteTexts match the notes at the start of a user's message as the agent
+// noteTag matches a note at the start of a user's message as the agent
 // replays it (its own text block, or run into the user's text).
-var noteTexts = []*regexp.Regexp{
+var noteTag = regexp.MustCompile(`^<nushi-[a-z-]+(?: [a-z]+="[^"]*")*/>\s*`)
+
+// oldNoteTexts match the sentences Nushi sent as notes until 2026-11-23,
+// before they became tags. Kept for good: a session holding one stays
+// resumable, and its replay still leaves them out.
+var oldNoteTexts = []*regexp.Regexp{
 	regexp.MustCompile(`^\[Nushi\] The user stopped your background command [0-9A-Za-z_-]+; its exit code was that stop, not a failure\.\s*`),
 	regexp.MustCompile(`^\[Nushi\] This worktree's branch was renamed from \S+ to \S+\. Use the new name\.\s*`),
 	regexp.MustCompile(`^\[Nushi\] This folder's branch changed from \S+ to \S+\. Work on \S+ from now on\.\s*`),
 	regexp.MustCompile("^\\[Nushi\\] This chat moved to `[^`\n]*`(?:, on branch \\S+)?\\. Work there from now on\\.\\s*"),
 	regexp.MustCompile("^\\[Nushi\\] The user edited `[^`\n]*`(?:, `[^`\n]*`)* in Nushi since your last turn; re-read (?:it|them) before changing (?:it|them)\\.\\s*"),
 }
+
+// noteTexts are what unnoted takes off a message's start.
+var noteTexts = append([]*regexp.Regexp{noteTag}, oldNoteTexts...)
 
 // unnoted is a replayed user message's text without the notes that went
 // before it, and whether it had one.
@@ -136,8 +159,8 @@ func (n *notes) blocks() ([]acp.ContentBlock, *told) {
 	for _, id := range n.stopped {
 		blocks = append(blocks, acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: stopNote(id)}})
 	}
-	if len(n.edited) > 0 {
-		blocks = append(blocks, acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: editNote(n.edited)}})
+	for _, p := range n.edited {
+		blocks = append(blocks, acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: editNote(p)}})
 	}
 	place, placedNotices, placed := n.place()
 	if place != nil {

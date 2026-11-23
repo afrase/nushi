@@ -87,7 +87,7 @@ func TestTheMacEditsAFile(t *testing.T) {
 	mac.send(id, "carry on")
 	mac.settled(id)
 	p := history.Prompts(mac.get(id).Chat.SessionId)
-	want := "[Nushi] The user edited `main.go` in Nushi since your last turn; re-read it before changing it."
+	want := `<nushi-edited path="main.go"/>`
 	if len(p) == 0 || !slices.Contains(p[len(p)-1], want) {
 		t.Errorf("prompts %q", p)
 	}

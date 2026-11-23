@@ -192,8 +192,8 @@ func relatedChat(t *testing.T, h Harness, folder string, stored *memSessions, wt
 	return svc, startChat(t, svc, folder)
 }
 
-// note is an update of the chat's session.
-func note(t *testing.T, update string) acp.SessionNotification {
+// updateOf is an update of the chat's session.
+func updateOf(t *testing.T, update string) acp.SessionNotification {
 	t.Helper()
 	var n acp.SessionNotification
 	testcheck.NoErr(t, json.Unmarshal([]byte(`{"sessionId":"s1","update":`+update+`}`), &n))
@@ -203,7 +203,7 @@ func note(t *testing.T, update string) acp.SessionNotification {
 // startSubagent feeds the call that starts subagent call.
 func startSubagent(t *testing.T, c *chat, call string) {
 	t.Helper()
-	feed(c, []acp.SessionNotification{note(t, `{"sessionUpdate":"tool_call","toolCallId":"`+call+`","title":"Agent","kind":"think","status":"in_progress",
+	feed(c, []acp.SessionNotification{updateOf(t, `{"sessionUpdate":"tool_call","toolCallId":"`+call+`","title":"Agent","kind":"think","status":"in_progress",
 		"_meta":{"claudeCode":{"toolName":"Agent"}},"rawInput":{"subagent_type":"general-purpose","prompt":"go"}}`)})
 }
 
@@ -211,14 +211,14 @@ func startSubagent(t *testing.T, c *chat, call string) {
 // fields that say what it did.
 func step(t *testing.T, c *chat, call, id, rest string) {
 	t.Helper()
-	feed(c, []acp.SessionNotification{note(t, `{"sessionUpdate":"tool_call","toolCallId":"`+id+`","title":"step","status":"completed",
+	feed(c, []acp.SessionNotification{updateOf(t, `{"sessionUpdate":"tool_call","toolCallId":"`+id+`","title":"step","status":"completed",
 		"_meta":{"claudeCode":{"toolName":"Step","parentToolUseId":"`+call+`"}},`+rest+`}`)})
 }
 
 // endSubagent feeds call's end, with what it responded.
 func endSubagent(t *testing.T, c *chat, call, response string) {
 	t.Helper()
-	feed(c, []acp.SessionNotification{note(t, `{"sessionUpdate":"tool_call_update","toolCallId":"`+call+`","status":"completed",
+	feed(c, []acp.SessionNotification{updateOf(t, `{"sessionUpdate":"tool_call_update","toolCallId":"`+call+`","status":"completed",
 		"_meta":{"claudeCode":{"toolName":"Agent","toolResponse":`+response+`}}}`)})
 }
 
@@ -290,7 +290,7 @@ func TestRelatedFoundFromSubagentSteps(t *testing.T) {
 	output, err := json.Marshal(byOutput + " abc123 [by-output]")
 	testcheck.NoErr(t, err)
 	step(t, c, "a2", "s6", shell(t, "git worktree list")+`,"content":[{"type":"content","content":{"type":"text","text":`+string(output)+`}}]`)
-	feed(c, []acp.SessionNotification{note(t, `{"sessionUpdate":"tool_call","toolCallId":"own","title":"x","kind":"execute","status":"completed",
+	feed(c, []acp.SessionNotification{updateOf(t, `{"sessionUpdate":"tool_call","toolCallId":"own","title":"x","kind":"execute","status":"completed",
 		"_meta":{"claudeCode":{"toolName":"Bash"}},"rawInput":{"command":"ls `+byChat+`"}}`)})
 
 	got := related(t, svc, c)

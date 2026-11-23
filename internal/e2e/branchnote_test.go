@@ -56,7 +56,7 @@ func TestAgentToldOfBranchRename(t *testing.T) {
 	}
 	const told = " ·\u00a0told\u00a0the\u00a0agent" // kept whole where the line wraps
 	note := func(from, to string) string {
-		return "[Nushi] This worktree's branch was renamed from " + from + " to " + to + ". Use the new name."
+		return `<nushi-branch-renamed from="` + from + `" to="` + to + `"/>`
 	}
 
 	// Nushi's rename after the title: told with the next prompt, once.
@@ -131,7 +131,7 @@ func TestAgentToldOfBranchRename(t *testing.T) {
 	a = open(t, d)
 	r := a.follow(idMany, a.get(idMany))
 	for _, it := range r {
-		if it.Kind == nushiv1.ItemKind_ITEM_KIND_USER_MESSAGE && strings.Contains(it.Text, "[Nushi]") {
+		if it.Kind == nushiv1.ItemKind_ITEM_KIND_USER_MESSAGE && strings.Contains(it.Text, "<nushi-") {
 			t.Errorf("a replayed message with the note: %q", it.Text)
 		}
 	}

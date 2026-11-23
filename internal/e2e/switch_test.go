@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"html"
 	"os"
 	"path/filepath"
 	"slices"
@@ -111,7 +112,7 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	}
 
 	// Both agents are told with their next prompt, once; the lines say so.
-	note := "[Nushi] This folder's branch changed from main to other. Work on other from now on."
+	note := `<nushi-branch-switched from="main" to="other"/>`
 	for _, id := range []string{one, two} {
 		if got := turn(id, "next"); !slices.Equal(got, []string{note, "next"}) {
 			t.Errorf("the prompt after the switch: %q", got)
@@ -148,7 +149,7 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	if wt := c.Worktree; c.Folder != try || wt == nil || !wt.Found || wt.Path != try || wt.Repo != repo || wt.Branch != "try-sqrly" {
 		t.Fatalf("moved: %s in %v", c.Folder, c.Worktree)
 	}
-	moved := "[Nushi] This chat moved to `" + try + "`, on branch try-sqrly. Work there from now on."
+	moved := `<nushi-moved folder="` + html.EscapeString(try) + `" branch="try-sqrly"/>`
 	if got := turn(one, "where"); !slices.Equal(got, []string{moved, "where"}) {
 		t.Errorf("the prompt after the move: %q", got)
 	}

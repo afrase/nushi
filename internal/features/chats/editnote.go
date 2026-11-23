@@ -11,31 +11,22 @@ import (
 
 // The agent hears of the files the user edited in Nushi's preview (ADR
 // 0096): a file saved there goes, by its path, with each chat's next
-// prompt as a note of its own, once, so the agent reads it again before it
+// prompt as a note of its own (a tag), once, so the agent reads it again before it
 // changes it. Kept in memory, as the commands Nushi stopped are: a daemon
 // restart forgets what wasn't told yet.
 
-// editNote is the note for the files at paths (relative to the chat's
-// folder, or absolute): noteName checked each.
-func editNote(paths []string) string {
-	names := make([]string, len(paths))
-	for i, p := range paths {
-		names[i] = "`" + p + "`"
-	}
-	it := "it"
-	if len(paths) > 1 {
-		it = "them"
-	}
-	return "[Nushi] The user edited " + strings.Join(names, ", ") + " in Nushi since your last turn; re-read " + it + " before changing " + it + "."
+// editNote is the note for the file at path (relative to the chat's
+// folder, or absolute; noteName checked it): one tag a file.
+func editNote(path string) string {
+	return note("edited", "path", path)
 }
 
-// noteName says a path can go in a note: no backquote, no line break or
-// other control character, and no bidi or other format mark, so the note
-// reads as one line, as written, and the replay finds it again
-// (noteTexts).
+// noteName says a path can go in a note: no line break or other control
+// character, and no bidi or other format mark, so the note reads as one
+// line, as written (note escapes the rest).
 func noteName(p string) bool {
 	return p != "" && !strings.ContainsFunc(p, func(r rune) bool {
-		return r == '`' || unicode.IsControl(r) || unicode.Is(unicode.Cf, r)
+		return unicode.IsControl(r) || unicode.Is(unicode.Cf, r)
 	})
 }
 

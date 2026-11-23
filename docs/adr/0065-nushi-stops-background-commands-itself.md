@@ -12,6 +12,7 @@ Stop on a background command asked Claude, in a prompt, to call its `TaskStop`: 
 ## Consequences
 - Claude still answers the failure notification with a short turn of its own, which Nushi can't prevent; it costs one model call instead of three or four.
 - Codex, Ante and omp have background commands too, but Nushi shows no row or Stop for them (docs/facts).
+- Amended 2026-11-23: the `[Nushi]` note is now a bare tag, `<nushi-command-stopped id="…"/>` (ADR 0084's second amendment).
 
 ## Alternatives considered
 - Only a shorter prompt: still a turn and still waits behind a running one.
