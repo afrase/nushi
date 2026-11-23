@@ -179,10 +179,12 @@ void main() {
     await tester.tap(find.text('go'));
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Forking Fix the login…'), findsOneWidget);
-    forked.complete(ForkAsChatResponse(chatId: 'f'));
+    // The chat the fake made for the fork (FakeDaemon's ForkAsChat).
+    forked.complete(ForkAsChatResponse(chatId: 'fork'));
     await tester.pumpAndSettle();
     expect(find.text('Forking Fix the login…'), findsNothing);
-    expect(d.selectedId, 'f');
+    expect(d.selectedId, 'fork');
+    expect(d.chats['fork']?.title, 'Fix the login (fork)');
     await closeView(tester, d);
   });
 }
