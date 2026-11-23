@@ -153,7 +153,7 @@ Afterwards the view shows it merged. Nothing is deleted: the repository's own au
 
 ### Cleaning up
 
-Once the pull request merged, the widget offers **Clean up…** ([ADR 0063](adr/0063-clean-up-after-a-pull-request.md)). Not now hides the offer; its ⋯ and the chat's ⋯ keep it (the chat's for any worktree chat).
+Once the pull request merged, the widget offers **Clean up…** ([ADR 0063](adr/0063-clean-up-after-a-pull-request.md)). Its ⋯ and the chat's ⋯ have it too (the chat's for any worktree chat).
 
 A dialog ticks what loses nothing, and says what each costs:
 

@@ -90,7 +90,6 @@ void main() {
 
     changeScopes.value = {'a': 'branch'};
     pullSeen.value = {'a': 1};
-    cleanUpLater.value = {'a'};
     await send(EventsResponse(chatId: 'a', removed: true));
     expect(d.chats.keys, ['b']);
     expect(d.selectedId, isNull);
@@ -311,7 +310,6 @@ void main() {
       'gone': ['notes.md'],
     };
     pullSeen.value = {'a': 1, 'gone': 2};
-    cleanUpLater.value = {'a', 'gone'};
     setComments('a', [comment('a')]);
     setComments('gone', [comment('gone')]);
     final context = GetContextUsageResponse(

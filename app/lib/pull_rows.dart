@@ -13,7 +13,6 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_merge_dialog.dart';
 import 'package:nushi/pull_merge_state.dart';
-import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -91,6 +90,11 @@ bool itemReady(GitHubItem it) =>
       _ => false,
     };
 
+/// Whether a merged pull request of [cp]'s offers Clean up… (ADR 0063): a
+/// daemon that can, and no clean-up already started.
+bool offersCleanUp(ChatPull cp) =>
+    cp.daemon.daemonApi >= cleanUpApi && !CleanUpJob.of(cp.chat).started;
+
 /// The row's one cue under its title (ADR 0117), the first that applies:
 /// merged (with Clean up… while offered), closed without merging, changes
 /// requested, open threads, new comments, ready to merge.
@@ -103,14 +107,12 @@ bool itemReady(GitHubItem it) =>
   final t = NushiTheme.of(context).t;
   switch (it.state) {
     case 'merged':
-      final offer =
-          cp.daemon.daemonApi >= cleanUpApi &&
-          !cleanUpLater.value.contains(cp.chat.id) &&
-          !CleanUpJob.of(cp.chat).started;
       return (
         words: it.base.isEmpty ? 'Merged' : 'Merged into ${it.base}',
         color: t.textMuted,
-        cleanUp: offer ? () => cleanUpPull(context, cp, link) : null,
+        cleanUp: offersCleanUp(cp)
+            ? () => cleanUpPull(context, cp, link)
+            : null,
       );
     case 'closed':
       return (

@@ -12,7 +12,8 @@ import 'package:nushi/settings.dart';
 File get _appJson => File('$dataDir/app.json');
 
 /// An `app.json` with every key the app saves, none at its default, a key
-/// from a newer app and an older app's `worktrees` and `subagentWide`.
+/// from a newer app and an older app's `worktrees`, `subagentWide` and
+/// `cleanUpLater`.
 final _saved = <String, Object?>{
   'details': false,
   'collapsed': ['Context'],
@@ -83,7 +84,7 @@ final _saved = <String, Object?>{
 };
 
 /// The older app's keys in [_saved], which the next save drops.
-const _dropped = {'worktrees', 'subagentWide'};
+const _dropped = {'worktrees', 'subagentWide', 'cleanUpLater'};
 
 /// Every pref, so each is read (made) before a save.
 List<ValueNotifier<Object?>> get _all => [
@@ -115,7 +116,6 @@ List<ValueNotifier<Object?>> get _all => [
   chatOpened,
   pinnedFiles,
   pullSeen,
-  cleanUpLater,
   paneWidths,
   terminalFont,
   terminalFontSize,
@@ -167,7 +167,7 @@ void main() {
     // text is dropped (ADR 0146).
     expect(shortcutKeys.value, {'nextTab': 'Shift+Cmd+]', 'x': 'bogus'});
     expect(keyLabel(nextTabKey), '⇧⌘]');
-    expect(_all.map((p) => p.value), hasLength(48)); // each made
+    expect(_all.map((p) => p.value), hasLength(47)); // each made
     showDetails.value = true;
     await pumpEventQueue();
     // A pref this file's other tests read that wasn't in the file (the
@@ -175,9 +175,7 @@ void main() {
     // default: what's compared is every key that was there.
     final saved = readSaved();
     final expected = {
-      ...(Map.of(_saved)
-        ..remove('worktrees')
-        ..remove('subagentWide')),
+      ...(Map.of(_saved)..removeWhere((key, _) => _dropped.contains(key))),
       'details': true,
       'panes': {'browser': 600.0},
     };

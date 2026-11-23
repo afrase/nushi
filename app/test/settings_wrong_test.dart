@@ -64,7 +64,6 @@ void main() {
     expect(chatOpened.value, isEmpty);
     expect(pinnedFiles.value, isEmpty);
     expect(pullSeen.value, isEmpty);
-    expect(cleanUpLater.value, isEmpty);
     expect(paneWidths.value, isEmpty);
     expect(terminalFont.value, isNull);
     expect(terminalFontSize.value, 12.5);

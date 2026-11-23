@@ -434,10 +434,6 @@ final Pref<Map<String, String>> pickedPulls = _byChat(
   (v) => v is String ? v : null,
 );
 
-/// The chats whose PR widget no longer offers Clean up… (Not now); its
-/// menu still has it.
-final Pref<Set<String>> cleanUpLater = _set('cleanUpLater', chats: true);
-
 /// The widths panes were dragged to, by pane (see `Resizable`). Not the
 /// details panel's, which is fixed (ADR 0092): an older `details` width is
 /// ignored, and dropped by the next save. The preview's, from when files
@@ -650,7 +646,6 @@ List<Pref<Object?>> get allPrefs => [
   pullSeenComments,
   checksSeen,
   pickedPulls,
-  cleanUpLater,
   paneWidths,
   chatFullWidth,
   terminalFont,
@@ -696,7 +691,6 @@ List<Pref<Object?>> get chatPrefs => [
   pullSeenComments,
   checksSeen,
   pickedPulls,
-  cleanUpLater,
 ];
 
 /// The chats some pref keeps something for.
@@ -910,9 +904,11 @@ Map<String, Object?> readSaved() {
 
 /// Keys an older app saved that mean nothing now, dropped by the next
 /// save: `worktrees` (new chats no longer remember one), `subagentWide`
-/// (a subagent's pane is dragged as wide as it's wanted) and `projectRail`
-/// (a beta's, true for everyone; [projectRail] is `projectRailOn`).
-const _dropped = {'worktrees', 'subagentWide', 'projectRail'};
+/// (a subagent's pane is dragged as wide as it's wanted), `projectRail`
+/// (a beta's, true for everyone; [projectRail] is `projectRailOn`) and
+/// `cleanUpLater` (the chats whose Clean up… offer Not now hid, a link
+/// since gone).
+const _dropped = {'worktrees', 'subagentWide', 'projectRail', 'cleanUpLater'};
 
 var _saveDue = false;
 

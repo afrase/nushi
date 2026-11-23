@@ -33,7 +33,6 @@ PanelWidget? pullWidget(ChatPull cp, {VoidCallback? onShow}) {
     summary: ListenableBuilder(
       listenable: Listenable.merge([
         CleanUpJob.of(cp.chat),
-        cleanUpLater,
         GitHubItems.of(cp.daemon),
       ]),
       builder: (_, _) => _seen(() => _Summary(cp)),
@@ -77,11 +76,7 @@ class _Summary extends StatelessWidget {
     // before them.
     final l = links.single;
     final it = cp.itemOf(l);
-    final offer =
-        it?.state == 'merged' &&
-        cp.daemon.daemonApi >= cleanUpApi &&
-        !cleanUpLater.value.contains(cp.chat.id) &&
-        !CleanUpJob.of(cp.chat).started;
+    final offer = it?.state == 'merged' && offersCleanUp(cp);
     return pullSummary(
       context,
       theme,

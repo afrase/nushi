@@ -170,7 +170,7 @@ extension DaemonEvents on Daemon {
   /// Forgets the chats [ids], gone (deleted here, or while the app was
   /// away), and everything kept for them: the prefs kept by chat (their
   /// Changes scope, terminals panel, place in their project's order, when
-  /// opened, pins, pull request's comments seen and Clean up's Not now),
+  /// opened, pins, pull request's comments seen),
   /// review comments, context breakdown, terminals, the runs it follows,
   /// its dev servers' listing and draft. (A pin goes with its chat: the
   /// daemon's.)
