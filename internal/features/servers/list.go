@@ -73,11 +73,11 @@ func (s *Service) List(chatID string) (Listing, error) {
 	}
 	env := s.Env.Environ()
 	out := Listing{Folder: folder, Files: l.Files}
+	var entries []launchfile.Entry // each row's, for its program, found once the lock is let go
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	seen := map[*server]bool{}
 	for i, e := range l.Entries {
-		r := entryRow(e, i, env)
+		r := entryRow(e, i)
 		k := key(folder, e)
 		if j := slices.IndexFunc(s.alive, func(sv *server) bool { return sv.key == k }); j >= 0 {
 			sv := s.alive[j]
@@ -94,14 +94,24 @@ func (s *Service) List(chatID string) (Listing, error) {
 			}
 		}
 		out.Rows = append(out.Rows, r)
+		entries = append(entries, e)
 	}
 	for _, sv := range s.alive {
-		if sv.folder == folder && !seen[sv] {
-			r := entryRow(sv.entry, -1, env)
-			sv.into(&r)
-			r.Changed = true
-			out.Rows = append(out.Rows, r)
+		if sv.folder != folder || seen[sv] {
+			continue
 		}
+		r := entryRow(sv.entry, -1)
+		sv.into(&r)
+		r.Changed = true
+		out.Rows = append(out.Rows, r)
+		entries = append(entries, sv.entry)
+	}
+	s.mu.Unlock()
+	// A program is found along PATH, a stat for each folder, any of them
+	// slow (a network one): never under the lock the servers' state
+	// changes take.
+	for i, e := range entries {
+		program(&out.Rows[i], e, env)
 	}
 	return out, nil
 }
@@ -124,21 +134,29 @@ func resolve(e launchfile.Entry, base []string) (program string, env []string) {
 	if strings.Contains(command, "/") && !filepath.IsAbs(command) {
 		command = filepath.Join(e.Cwd, command)
 	}
-	return shellenv.LookPath(command, env), env
+	return lookPath(command, env), env
 }
 
-// entryRow is an entry's row, its server not running.
-func entryRow(e launchfile.Entry, index int, env []string) Row {
+// lookPath is shellenv.LookPath; a test's in its place waits.
+var lookPath = shellenv.LookPath
+
+// entryRow is an entry's row, its server not running, without its
+// program (program finds it).
+func entryRow(e launchfile.Entry, index int) Row {
 	r := Row{Name: e.Name, NameOK: launchfile.ValidName(e.Name), Index: index, Source: e.Source, Command: e.Command,
 		Args: e.Args, Cwd: e.Cwd, Env: e.Env, Flagged: flagged(e.Env), URL: e.URL, Port: e.Port,
 		Attach: e.Problem == "" && e.Command == "", Problem: e.Problem, Hash: e.Hash, State: Stopped}
-	if e.Command != "" {
-		r.Program, _ = resolve(e, env)
-	}
 	if r.URL == "" && e.Command != "" && e.Port > 0 {
 		r.URL = "http://localhost:" + strconv.Itoa(e.Port)
 	}
 	return r
+}
+
+// program sets r's Program: the program e's command names on env (resolve).
+func program(r *Row, e launchfile.Entry, env []string) {
+	if e.Command != "" {
+		r.Program, _ = resolve(e, env)
+	}
 }
 
 // into sets a live server's part of its row; under the service's lock.
@@ -155,7 +173,8 @@ func (sv *server) into(r *Row) {
 // row is a live server's row alone, Start's answer; under the service's
 // lock.
 func (sv *server) row() Row {
-	r := entryRow(sv.entry, -1, nil)
+	r := entryRow(sv.entry, -1)
+	program(&r, sv.entry, nil)
 	sv.into(&r)
 	return r
 }

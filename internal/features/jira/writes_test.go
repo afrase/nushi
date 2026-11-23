@@ -16,7 +16,7 @@ func TestAWriteBeingKeptHoldsUpNoList(t *testing.T) {
 	if _, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{}); err != nil {
 		t.Fatal(err)
 	}
-	m := s.store.(*memStore) //nolint:forcetypeassert // newService's
+	m := s.store.(*memStore)
 	adding, hold := make(chan struct{}), make(chan struct{})
 	m.adding = func() {
 		close(adding)
