@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"slices"
 	"sync"
+	"sync/atomic"
 
 	"github.com/afrase/nushi/internal/atomicfile"
 	"github.com/afrase/nushi/internal/model"
@@ -21,7 +22,10 @@ import (
 type Store struct {
 	dir string
 	mu  sync.Mutex
-	set *settings // settings.json as read or last written; nil until read
+	// set is settings.json as read or last written, nil until read: the
+	// getters load it without mu, so they never wait on a file's write
+	// (chats call them under their own lock). Replaced, never changed.
+	set atomic.Pointer[settings]
 	// setErr is why settings.json last couldn't be read (EACCES, EIO),
 	// kept only so the log says it once; such a read is never kept in set.
 	setErr error

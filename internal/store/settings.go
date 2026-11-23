@@ -38,22 +38,27 @@ const oldGoAgent = "codex"
 // user picks another time.
 const defaultSleepAfter = 30 * time.Minute
 
-// settingsLocked is settings.json, read once and then kept (a hand edit
-// while the daemon runs is seen at its next start); one that doesn't
-// parse is set aside and read as empty (readJSON). One that can't be read
-// at all reads as the defaults and isn't kept, so it's read again next
-// time (loadSettingsLocked).
-func (s *Store) settingsLocked() settings {
+// current is settings.json, read once and then kept (a hand edit while
+// the daemon runs is seen at its next start); one that doesn't parse is
+// set aside and read as empty (readJSON). One that can't be read at all
+// reads as the defaults and isn't kept, so it's read again next time
+// (loadSettingsLocked). Once read, it takes no lock.
+func (s *Store) current() settings {
+	if set := s.set.Load(); set != nil {
+		return *set
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	set, _ := s.loadSettingsLocked()
 	return set
 }
 
-// loadSettingsLocked is settingsLocked with the read's error: a read that
+// loadSettingsLocked is current, under mu, with the read's error: a read that
 // failed for any reason but no file or a parse error (EACCES, EIO) is
 // never kept, and is logged only when it changes.
 func (s *Store) loadSettingsLocked() (settings, error) {
-	if s.set != nil {
-		return *s.set, nil
+	if set := s.set.Load(); set != nil {
+		return *set, nil
 	}
 	var set settings
 	if _, err := readJSON(filepath.Join(s.dir, "settings.json"), &set); err != nil {
@@ -73,7 +78,7 @@ func (s *Store) loadSettingsLocked() (settings, error) {
 		}
 		set.CodexGoAgent = false
 	}
-	s.set = &set
+	s.set.Store(&set)
 	return set, nil
 }
 
@@ -95,7 +100,7 @@ func (s *Store) changeSettings(change func(*settings)) error {
 	if err := writeJSON(path, set); err != nil {
 		return err
 	}
-	s.set = &set
+	s.set.Store(&set)
 	return nil
 }
 
@@ -128,9 +133,7 @@ func (s *Store) ChangeSettings(c model.SettingsChange) error {
 // SleepAfter returns how long a chat idles before its agent sleeps; 0:
 // never.
 func (s *Store) SleepAfter() time.Duration {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if m := s.settingsLocked().SleepAfterMinutes; m != nil {
+	if m := s.current().SleepAfterMinutes; m != nil {
 		return time.Duration(*m) * time.Minute
 	}
 	return defaultSleepAfter
@@ -138,9 +141,7 @@ func (s *Store) SleepAfter() time.Duration {
 
 // DebugLog says whether the log has DEBUG lines (ADR 0038).
 func (s *Store) DebugLog() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.settingsLocked().DebugLog
+	return s.current().DebugLog
 }
 
 // SetDebugLog remembers whether the log has DEBUG lines.
@@ -151,9 +152,7 @@ func (s *Store) SetDebugLog(on bool) error {
 // KeepTranscripts says whether Nushi keeps its own copy of chats'
 // transcripts (ADR 0047); on until turned off.
 func (s *Store) KeepTranscripts() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	keep := s.settingsLocked().KeepTranscripts
+	keep := s.current().KeepTranscripts
 	return keep == nil || *keep
 }
 
@@ -165,9 +164,7 @@ func (s *Store) SetKeepTranscripts(on bool) error {
 // TranscriptDays is how many days a transcript's copy is kept after it
 // was last written; 0: for good.
 func (s *Store) TranscriptDays() int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.settingsLocked().TranscriptDays
+	return s.current().TranscriptDays
 }
 
 // SetTranscriptDays remembers how many days copies are kept; 0: for good.
@@ -178,9 +175,7 @@ func (s *Store) SetTranscriptDays(days int) error {
 // CheckUpdates says whether the daemon asks GitHub for a newer release;
 // on until turned off.
 func (s *Store) CheckUpdates() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	on := s.settingsLocked().CheckUpdates
+	on := s.current().CheckUpdates
 	return on == nil || *on
 }
 
@@ -192,9 +187,7 @@ func (s *Store) SetCheckUpdates(on bool) error {
 // GoAgent says whether the agent named name runs through Nushi's Go agent
 // rather than its adapter (ADR 0142); off until turned on.
 func (s *Store) GoAgent(name string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.settingsLocked().GoAgents[name]
+	return s.current().GoAgents[name]
 }
 
 // SetGoAgent remembers whether the agent named name runs through the Go
