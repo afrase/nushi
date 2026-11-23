@@ -19,6 +19,7 @@ import (
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
+	"github.com/afrase/nushi/internal/transcripts"
 )
 
 // These tests answer from fakeCheckouts, a repository canned as git
@@ -43,17 +44,18 @@ type givenHarness struct {
 // fakeCheckouts is a repository as git would answer for it: its list, the
 // default branch's tips, where each commit made in a worktree left the
 // branch it started on (MergeBase), and the heads on the branch (Merged).
-// Every path it lists is a work tree of it; it counts its lists, and
-// fails as git does outside a repository or once ctx ends.
+// Every path it lists is a work tree of it; it counts its lists and
+// merge-bases, and fails as git does outside a repository or once ctx ends.
 type fakeCheckouts struct {
 	stuckWorktrees
-	mu      sync.Mutex
-	entries []model.WorktreeEntry
-	tips    []string
-	bases   map[string]string
-	merged  []string
-	outside bool
-	lists   int
+	mu         sync.Mutex
+	entries    []model.WorktreeEntry
+	tips       []string
+	bases      map[string]string
+	merged     []string
+	outside    bool
+	lists      int
+	mergeBases int // MergeBase's runs
 }
 
 // oid is a commit's id, made up from what it says.
@@ -148,6 +150,7 @@ func (f *fakeCheckouts) DefaultTips(context.Context, string) []string {
 func (f *fakeCheckouts) MergeBase(ctx context.Context, _, head string, from ...string) (string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.mergeBases++
 	if err := f.fails(ctx); err != nil {
 		return "", err
 	}
@@ -852,10 +855,25 @@ func TestRelatedCountsFromTheDefaultBranch(t *testing.T) {
 		t.Errorf("no base: %+v", got)
 	}
 
-	// A record from before, based on old-feature, moves on to origin/main.
+	// A look with the head and the default branch where they were runs no
+	// merge-base: it would find the base it found.
+	var runs int
+	f.with(func() { runs = f.mergeBases })
+	related(t, svc, c)
+	f.with(func() {
+		if f.mergeBases != runs {
+			t.Errorf("an unchanged head ran merge-base %d times", f.mergeBases-runs)
+		}
+	})
+
+	// A record from before the daemon started, based on old-feature, moves
+	// on to origin/main.
 	c.mu.Lock()
 	c.record.RelatedWorktrees[0].BaseCommit = oldFeature
 	c.mu.Unlock()
+	c.looking.Lock()
+	c.lookedTips = nil // the daemon's start
+	c.looking.Unlock()
 	if got := related(t, svc, c); len(got) != 1 || got[0].BaseCommit != tip {
 		t.Errorf("kept from before: %+v", got)
 	}
@@ -867,5 +885,45 @@ func TestRelatedCountsFromTheDefaultBranch(t *testing.T) {
 	})
 	if got := related(t, svc, c); len(got) != 1 || got[0].BaseCommit != tip || !got[0].Merged {
 		t.Errorf("merged: %+v", got)
+	}
+}
+
+// A chat whose items were let go finds its subagents' worktrees in its
+// copy, picked from the copy's heads: the copy isn't read whole for it.
+func TestRelatedReadsALetGoChatsCopy(t *testing.T) {
+	repo, f := fakeRepo(t)
+	wt := filepath.Join(repo, ".worktrees", "a-w")
+	f.with(func() {
+		f.entries = append(f.entries, model.WorktreeEntry{Path: wt, Branch: "a-w", Head: oid("start")})
+	})
+	agent := &fakeAgent{}
+	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
+	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
+	testcheck.NoErr(t, err)
+	copies := &readCounter{Copies: store}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}},
+		Options{Scratch: t.TempDir(), Copies: copies, Worktrees: f})
+	t.Cleanup(svc.Close)
+	c := startChat(t, svc, repo)
+	agent.updates = []acp.SessionUpdate{
+		updateOf(t, `{"sessionUpdate":"tool_call","toolCallId":"a1","title":"Agent","kind":"think","status":"completed",
+			"_meta":{"claudeCode":{"toolName":"Agent"}},"rawInput":{"subagent_type":"general-purpose","prompt":"go"}}`).Update,
+		updateOf(t, `{"sessionUpdate":"tool_call","toolCallId":"s1","title":"step","status":"completed",
+			"_meta":{"claudeCode":{"toolName":"Step","parentToolUseId":"a1"}},`+shell(t, "ls "+wt)+`}`).Update,
+	}
+	turn(t, svc, c, "go")
+	testcheck.NoErr(t, svc.Sleep(c.id))
+	c.mu.Lock()
+	let := c.inCopy && c.items == nil
+	c.mu.Unlock()
+	if !let {
+		t.Fatal("not let go")
+	}
+	reads := copies.reads.Load()
+	if got := related(t, svc, c); len(got) != 1 || got[0].Path != wt || got[0].CallID != "a1" {
+		t.Errorf("related: %+v", got)
+	}
+	if n := copies.reads.Load() - reads; n != 0 {
+		t.Errorf("%d whole reads of the copy", n)
 	}
 }

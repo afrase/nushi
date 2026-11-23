@@ -179,6 +179,17 @@ func (c *chat) headsLocked() ([]model.Item, error) {
 	return splice(heads, c.aside), nil
 }
 
+// copiedLocked is those items of a chat whose items were let go that want
+// picks, whole: want sees each as headsLocked has it, so only those are
+// read from the copy, and the copy's heads come from its kept index.
+func (c *chat) copiedLocked(want func(model.Item) bool) ([]model.Item, error) {
+	heads, err := c.headsLocked()
+	if err != nil {
+		return nil, err
+	}
+	return c.wholeLocked(slices.DeleteFunc(heads, func(it model.Item) bool { return !want(it) }))
+}
+
 // wholeLocked is heads (headsLocked's) whole: the copy's items read back
 // (only those), ended, and the items set aside as they are.
 func (c *chat) wholeLocked(heads []model.Item) ([]model.Item, error) {

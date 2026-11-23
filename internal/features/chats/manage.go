@@ -291,11 +291,10 @@ func (s *Service) Wrote(chatID, path string) bool {
 	defer c.mu.Unlock()
 	calls := c.items
 	if c.inCopy {
-		if calls, _, err = c.copies.Find(c.id, func(it model.Item) bool { return it.Kind == model.ToolCall }); err != nil {
+		if calls, err = c.copiedLocked(func(it model.Item) bool { return it.Kind == model.ToolCall }); err != nil {
 			c.logLocked().Warn("transcript copy not read", "err", err)
 			return false
 		}
-		c.savedLocked(calls)
 	}
 	path = filepath.Clean(path)
 	abs := func(p string) string {

@@ -164,18 +164,17 @@ type relatedStep struct {
 
 // relatedStepsLocked is what the chat's subagents' tool calls name, in the
 // order they came; of a chat whose items were let go, only those calls are
-// read from the copy.
+// read from the copy, picked from its heads (which opening it read).
 func (c *chat) relatedStepsLocked() []relatedStep {
 	if !c.inCopy {
 		return relatedSteps(c.items)
 	}
-	calls, _, err := c.copies.Find(c.id, func(it model.Item) bool {
+	calls, err := c.copiedLocked(func(it model.Item) bool {
 		return it.Kind == model.ToolCall && (it.WorktreePath != "" || it.Parent != "")
 	})
 	if err != nil {
 		c.logLocked().Warn("transcript copy not read", "err", err)
 	}
-	c.savedLocked(calls) // an old Codex MCP call's input is no command
 	return relatedSteps(calls)
 }
 
@@ -316,6 +315,7 @@ type relatedLook struct {
 	common string                         // the repository's common folder
 	head   string                         // the commit folder has out
 	tips   []string                       // the default branch's commits (DefaultTips)
+	moved  bool                           // tips aren't the last look's
 	listed map[string]model.WorktreeEntry // git's worktrees, by path
 }
 
@@ -332,6 +332,7 @@ func (c *chat) related(ctx context.Context, folder string, known []model.Related
 		return nil, err
 	}
 	r := relatedLook{c: c, folder: folder, common: common, tips: c.worktrees.DefaultTips(ctx, folder), listed: map[string]model.WorktreeEntry{}}
+	r.moved = !slices.Equal(r.tips, c.lookedTips)
 	for _, e := range list {
 		r.listed[e.Path] = e
 		if e.Current {
@@ -343,11 +344,16 @@ func (c *chat) related(ctx context.Context, folder string, known []model.Related
 		if err := r.refresh(ctx, &next[i]); err != nil {
 			return nil, err
 		}
-		r.moveBase(ctx, &next[i])
+		if r.moved || next[i].LastHead != known[i].LastHead || !git.ObjectID(next[i].BaseCommit) {
+			r.moveBase(ctx, &next[i]) // else it would find the base it found last time
+		}
 	}
 	owned, err := c.svc.ownedWorktrees(c.id)
 	if err != nil {
 		return nil, err
+	}
+	for i, o := range owned {
+		owned[i] = git.RealPath(o) // once a look, not once for each worktree git lists
 	}
 	for _, e := range list {
 		if len(next) >= maxRelated {
@@ -370,6 +376,7 @@ func (c *chat) related(ctx context.Context, folder string, known []model.Related
 			next = append(next, r.found(ctx, e, call))
 		}
 	}
+	c.lookedTips = r.tips // the bases are moved on to them
 	return next, nil
 }
 
@@ -447,11 +454,11 @@ func (r relatedLook) found(ctx context.Context, e model.WorktreeEntry, call stri
 	return k
 }
 
-// isOwned says path is one of owned, or holds one: a chat that works in a
-// folder of the worktree has it.
+// isOwned says path is one of owned (real paths), or holds one: a chat
+// that works in a folder of the worktree has it.
 func isOwned(path string, owned []string) bool {
 	path = git.RealPath(path)
-	return slices.ContainsFunc(owned, func(o string) bool { return within(git.RealPath(o), path) })
+	return slices.ContainsFunc(owned, func(o string) bool { return within(o, path) })
 }
 
 // whose is the tool call of the subagent the worktree at path is for, ""
