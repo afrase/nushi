@@ -212,7 +212,7 @@ func TestCheckBranch(t *testing.T) {
 	for _, name := range []string{
 		"SCRUM-5-fix-the-login", "feature/SCRUM-5", "a.b", "ünïcode", "x@y", "v1.0",
 		"", "a b", "a..b", "a//b", "/a", "a/", "a.", "a/.b", ".a", "a.lock", "a/b.lock/c", "a@{1}",
-		"a~1", "a^", "a:b", "a?", "a*", "a[b", `a\b`, "a\tb", "a\x7fb",
+		"a~1", "a^", "a:b", "a?", "a*", "a[b", `a\b`, "a\tb", "a\x7fb", "HEAD",
 	} {
 		// git's verdict (git check-ref-format --branch), against ours.
 		gitOK := exec.Command("git", "check-ref-format", "--branch", name).Run() == nil

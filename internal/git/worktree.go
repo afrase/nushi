@@ -316,7 +316,7 @@ func Exclude(ctx context.Context, folder, line string) error {
 // CheckBranch refuses a name git wouldn't take for a new branch (git
 // check-ref-format's rules), or one that reads as an option.
 func CheckBranch(name string) error {
-	bad := name == "" || name == "@" || len(name) > 200 || strings.HasPrefix(name, "-") ||
+	bad := name == "" || name == "@" || name == "HEAD" || len(name) > 200 || strings.HasPrefix(name, "-") ||
 		strings.HasPrefix(name, "/") || strings.HasSuffix(name, "/") || strings.HasSuffix(name, ".") ||
 		strings.Contains(name, "..") || strings.Contains(name, "//") || strings.Contains(name, "@{") ||
 		strings.ContainsAny(name, " ~^:?*[\\\x7f")
