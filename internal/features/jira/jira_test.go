@@ -29,13 +29,26 @@ var testKeys = Keys{
 type memStore struct {
 	*store.Store
 	sites  []model.JiraSite
+	mu     sync.Mutex // writes, which the service reads and adds to without its own lock
 	writes []model.JiraWrite
+	// adding, when set, is called as a write is added, before it is.
+	adding func()
 }
 
-func (m *memStore) JiraWrites() ([]model.JiraWrite, error) { return m.writes, nil }
+func (m *memStore) JiraWrites() ([]model.JiraWrite, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]model.JiraWrite(nil), m.writes...), nil
+}
 
-func (m *memStore) SaveJiraWrites(w []model.JiraWrite) error {
-	m.writes = w
+func (m *memStore) AppendJiraWrite(w model.JiraWrite, keep int) error {
+	if m.adding != nil {
+		m.adding()
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.writes = append(m.writes, w)
+	m.writes = m.writes[max(0, len(m.writes)-keep):]
 	return nil
 }
 

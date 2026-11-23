@@ -36,3 +36,14 @@ func TestSettingsAnswerWhileAnotherFileIsRead(t *testing.T) {
 	answers(t, "SleepAfter", func() { _ = s.SleepAfter() })
 	release("{}")
 }
+
+// jira-writes.json has a lock of its own: reading or rewriting it holds up
+// no other file's caller.
+func TestJiraWritesHoldUpNoOtherFile(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	release := held(t, filepath.Join(dir, "jira-writes.json"), func() { _, _ = s.JiraWrites() })
+	answers(t, "JiraSites", func() { _, _ = s.JiraSites() })
+	answers(t, "Mode", func() { _ = s.Mode("claude") })
+	release("[]")
+}

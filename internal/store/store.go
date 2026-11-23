@@ -32,6 +32,9 @@ type Store struct {
 	// cacheMu keeps the cache's files apart from mu: a cache file's rewrite
 	// doesn't hold up the settings, which chats read under their lock.
 	cacheMu sync.Mutex
+	// jiraWritesMu keeps jira-writes.json apart from mu: its rewrite of up
+	// to a few thousand writes holds up no other file's caller.
+	jiraWritesMu sync.Mutex
 	// sessMu keeps the sessions apart from mu too: reading them all the
 	// first time doesn't hold up the settings.
 	sessMu   sync.Mutex

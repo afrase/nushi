@@ -76,7 +76,8 @@ type Store interface {
 	JiraSites() ([]model.JiraSite, error)
 	SaveJiraSites([]model.JiraSite) error
 	JiraWrites() ([]model.JiraWrite, error)
-	SaveJiraWrites([]model.JiraWrite) error
+	// AppendJiraWrite adds a write, keeping the latest keep, in one step.
+	AppendJiraWrite(w model.JiraWrite, keep int) error
 	Cached(area, name, key string, v any) (time.Time, error)
 	Cache(area, name, key string, v any) error
 	ForgetCache(area, name string) error

@@ -34,7 +34,7 @@ func TestAFileThatDoesntParseIsSetAsideOnRead(t *testing.T) {
 		{"trusted.json", func(s *Store) (bool, error) { f, err := s.TrustedFolders(); return f == nil, err }, func(s *Store) error { return s.TrustFolder("/x") }},
 		{"github.json", func(s *Store) (bool, error) { h, err := s.GitHubTokenHosts(); return h == nil, err }, func(s *Store) error { return s.SaveGitHubTokenHosts([]string{"github.com"}) }},
 		{"jira.json", func(s *Store) (bool, error) { j, err := s.JiraSites(); return j == nil, err }, func(s *Store) error { return s.SaveJiraSites([]model.JiraSite{{URL: "https://a"}}) }},
-		{"jira-writes.json", func(s *Store) (bool, error) { w, err := s.JiraWrites(); return w == nil, err }, func(s *Store) error { return s.SaveJiraWrites([]model.JiraWrite{{Key: "A-1"}}) }},
+		{"jira-writes.json", func(s *Store) (bool, error) { w, err := s.JiraWrites(); return w == nil, err }, func(s *Store) error { return s.AppendJiraWrite(model.JiraWrite{Key: "A-1"}, 10) }},
 		{"remote.json", func(s *Store) (bool, error) { r, err := s.Remote(); return r == model.RemoteSettings{}, err }, func(s *Store) error { return s.SaveRemote(model.RemoteSettings{On: true}) }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
