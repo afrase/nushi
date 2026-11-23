@@ -229,15 +229,14 @@ lint-go: $(GOLANGCI) $(GOVULNCHECK)
 	$(GOVULNCHECK) ./...
 	GOWORK=off $(GOVULNCHECK) -C tools/lint github.com/golangci/golangci-lint/v2/cmd/golangci-lint golang.org/x/vuln/cmd/govulncheck
 
-# The daemon and the tools built, vetted and linted for Linux without
-# cgo, so macOS-only code (cgo, sysctl, the Mac's commands) outside a
+# The daemon and the tools linted for Linux without cgo (golangci-lint
+# type-checks every package, tests included, and its govet is a superset
+# of go vet's), so macOS-only code (cgo, sysctl, the Mac's commands) outside a
 # _darwin.go file fails here (ADR 0097), and the _linux.go files, which
 # lint-go never sees, are linted, for both architectures (syscall's types
 # differ: a conversion one needs, the other's unconvert reports): anywhere.
 # On Linux, make test-go runs the daemon's tests (ADR 0101).
 lint-linux: $(GOLANGCI)
-	GOOS=linux CGO_ENABLED=0 go build ./...
-	GOOS=linux CGO_ENABLED=0 go vet ./...
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 $(GOLANGCI) run ./...
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GOLANGCI) run ./...
 
