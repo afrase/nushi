@@ -6,10 +6,6 @@ import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The daemon reads and sets which of a pull request's files the user
-/// marked viewed (GetGitHubViewed, SetGitHubViewed).
-const viewedApi = 130;
-
 /// Which of a pull request's files the user marked viewed, as GitHub keeps
 /// it for them (their Files changed's Viewed checkboxes): read when the
 /// Files tab shows and when the head moves (a push makes some "changed

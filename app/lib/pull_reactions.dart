@@ -9,11 +9,6 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tile_mark.dart' show emojiFonts;
 import 'package:nushi/widgets.dart';
 
-/// The daemon says a comment's, a review's and a description's reactions
-/// and adds or takes away the user's (GitHubComment.reactions,
-/// ReactGitHub).
-const reactionsApi = 131;
-
 /// GitHub's eight reactions, in its picker's order: the daemon's name
 /// for each, its emoji and its words.
 const reactionKinds = <(String, String, String)>[

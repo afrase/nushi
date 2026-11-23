@@ -203,4 +203,31 @@ void main() {
       );
     }
   }
+
+  // Gates above the floor keep one test of the daemon below them (ADR
+  // 0004): before reactions (API 131), none shows, and no picker.
+  testWidgets('a daemon older than reactions shows none', (tester) async {
+    final fake = FakeDaemon([])
+      ..answer = (input) => input is PingRequest
+          ? PingResponse(apiVersion: reactionsApi - 1)
+          : null;
+    final d = await fake.connect(tester);
+    Widget reactions() => themed(
+      Reactions(
+        'IC_mira',
+        [_r('thumbs_up', 3, mine: true)],
+        reacting: (daemon: d, host: 'github.com', onChanged: () async {}),
+      ),
+    );
+    await tester.pumpWidget(reactions());
+    expect(find.byTooltip('Add reaction'), findsNothing);
+    expect(find.byTooltip('You and 2 others reacted with +1'), findsNothing);
+    // From reactions on, the same shows them.
+    d.daemonApi = reactionsApi;
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(reactions());
+    expect(find.byTooltip('Add reaction'), findsOne);
+    expect(find.byTooltip('You and 2 others reacted with +1'), findsOne);
+    d.dispose();
+  });
 }

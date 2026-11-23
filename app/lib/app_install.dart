@@ -34,8 +34,10 @@ abstract interface class AppInstall {
 
   /// Stops the daemon listening in [dataDir], if one is; it doesn't wait
   /// for it to go. [pid] is the daemon's own, as its Ping said (API 122; 0
-  /// before): Windows stops it by the stop event that pid names (ADR
-  /// 0134), where the Mac and Linux find it by its socket.
+  /// before, above the floor until it reaches 122: the Mac's and Linux's
+  /// stop by the socket goes with the floor then): Windows stops it by the
+  /// stop event that pid names (ADR 0134), where the Mac and Linux find it
+  /// by its socket.
   Future<void> stop(String dataDir, {int pid = 0});
 }
 

@@ -144,4 +144,22 @@ void main() {
       }, variant: onMac);
     }
   }
+
+  // Gates above the floor keep one test of the daemon below them (ADR
+  // 0004): before the viewed marks (API 130), none is asked for, and the
+  // files show unticked.
+  testWidgets('a daemon older than the viewed marks is asked nothing', (
+    tester,
+  ) async {
+    final fake = FakeDaemon([])
+      ..answer = (input) =>
+          input is PingRequest ? PingResponse(apiVersion: viewedApi - 1) : null;
+    final d = await fake.connect(tester);
+    final viewed = PullViewed(d, overviewPull());
+    await viewed.load();
+    expect(viewed.viewed, isNull);
+    expect(fake.calls.whereType<GetGitHubViewedRequest>(), isEmpty);
+    viewed.dispose();
+    d.dispose();
+  });
 }

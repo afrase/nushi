@@ -70,16 +70,48 @@ const apiVersion = 144;
 /// Releases); a gate at or below it goes (`api_floor_test.dart`).
 const apiFloor = 120;
 
+// The gates above the floor (ADR 0004), oldest first: each guards a call
+// or a request field a daemon between the floor and the app's API lacks
+// (a field an older daemon would drop unsaid most of all), and each goes
+// with the floor once the floor reaches it (`api_floor_test.dart`).
+
 /// The API from which GetDiff answers one file (GetDiffRequest.path), what
-/// a file preview's change marks are drawn from.
+/// a file preview's change marks are drawn from. Goes with the floor.
 const oneFileDiffApi = 121;
 
 /// The API from which GetDiff lists a base's changes by name alone
-/// (GetDiffRequest.names), what the Files tree's dots come from.
+/// (GetDiffRequest.names), what the Files tree's dots come from. Goes with
+/// the floor.
 const namesDiffApi = 123;
 
+/// The API that answers GetUsage (ADR 0136). Goes with the floor.
+const usageApi = 126;
+
+/// The API from which the daemon reads and sets which of a pull request's
+/// files the user marked viewed (GetGitHubViewed, SetGitHubViewed). Goes
+/// with the floor.
+const viewedApi = 130;
+
+/// The API from which the daemon says a comment's, a review's and a
+/// description's reactions and adds or takes away the user's
+/// (GitHubComment.reactions, ReactGitHub). Goes with the floor.
+const reactionsApi = 131;
+
+/// The API from which GetGitHubItems' items say their checks' commit
+/// (`checks_oid`), so the chats' states are asked as the rows' items.
+/// Goes with the floor.
+const statesFromItemsApi = 133;
+
+/// The API that finds in a chat's whole history (FindInChat). Goes with
+/// the floor.
+const findInChatApi = 136;
+
+/// The API whose GetChatItems reaches back to an item (`through`). Goes
+/// with the floor.
+const pageThroughApi = 137;
+
 /// The API from which the daemon opens a terminal that runs one command
-/// and ends with it (OpenTerminalRequest.command).
+/// and ends with it (OpenTerminalRequest.command). Goes with the floor.
 const commandTerminalApi = 143;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;

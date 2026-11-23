@@ -345,4 +345,32 @@ void main() {
       }, variant: onMac);
     }
   }
+
+  // Gates above the floor keep one test of the daemon below them (ADR
+  // 0004): before GetChatItems reached back to an item (API 137), a step
+  // to a match above pages up to it without `through`, and still lands.
+  testWidgets('a daemon older than paging through to an item pages up to a '
+      'match above, and lands on it', (tester) async {
+    final (d, paged, fake) = await _window(tester);
+    fake.on(
+      (input) => input is PingRequest
+          ? PingResponse(apiVersion: pageThroughApi - 1)
+          : null,
+    );
+    // As if it had answered so from the start: a ping that changed it
+    // would take the chat again.
+    d.daemonApi = pageThroughApi - 1;
+    final c = _chat(d);
+    c.find
+      ..open()
+      ..query = 'needle';
+    await tester.pumpAndSettle();
+    c.find.step(1); // past the last: round to the first, far above
+    await tester.pumpAndSettle();
+    expect(paged.pages, isNotEmpty);
+    expect([for (final p in paged.pages) p.through], everyElement(isEmpty));
+    expect(c.items.any((it) => it.id == 'c-a5'), isTrue);
+    expect(_shows(tester, 'Turn 5 left a needle'), isTrue);
+    await closeView(tester, d);
+  }, variant: onMac);
 }

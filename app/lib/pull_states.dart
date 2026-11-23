@@ -46,10 +46,6 @@ String itemState(GitHubItem it) => switch (it.state) {
   _ => null,
 };
 
-/// The daemon's GetGitHubItems' items say their checks' commit
-/// (`checks_oid`), so the chats' states are asked as the rows' items.
-const statesFromItemsApi = 133;
-
 /// The chats' pull requests as lists show them (their state and checks):
 /// asked of the daemon in one call while something watches, at once, when
 /// a chat gets a pull request, and on a timer quietly ([every]: each

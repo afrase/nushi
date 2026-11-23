@@ -21,9 +21,6 @@ import 'package:nushi/usage_range.dart';
 import 'package:nushi/usage_rows.dart';
 import 'package:nushi/widgets.dart';
 
-/// The API that answers GetUsage (ADR 0136).
-const usageApi = 126;
-
 /// Settings › Usage (ADR 0136): what the agents' turns used over a span
 /// of days ([usageRange]), as the daemon summed it: the totals, the
 /// account limits an agent reported (only when one did), a chart by day,

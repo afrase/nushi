@@ -11,7 +11,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/chat_find.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';

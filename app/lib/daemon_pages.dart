@@ -1,8 +1,5 @@
 part of 'daemon.dart';
 
-/// The daemon's API whose GetChatItems reaches back to an item (`through`).
-const pageThroughApi = 137;
-
 /// How many items above a match a page that reaches back to it holds.
 const _aboveMatch = 24;
 

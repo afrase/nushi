@@ -10,11 +10,8 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/transcript_find.dart';
 
-/// The daemon's API that finds in a chat's whole history (FindInChat).
-const findInChatApi = 136;
-
 /// Asks the daemon for a find's matches in a chat's items before one; null
-/// when it can't (older than [findInChatApi]).
+/// when it can't (older than `findInChatApi`).
 typedef AskAbove = Future<FindInChatResponse?> Function(
   FindInChatRequest request,
   CancelableSignal signal,

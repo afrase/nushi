@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/phone/phone_app.dart';
@@ -209,4 +210,25 @@ void main() {
       await closeView(tester, d);
     });
   }
+
+  // Gates above the floor keep one test of the daemon below them (ADR
+  // 0004): before the rows said their checks' commit (API 133), the
+  // chats' states come from GetGitHubStates.
+  testWidgets("a daemon older than the rows' checks commit is asked for the "
+      'states whole', (tester) async {
+    final fake = FakeDaemon(_chats())
+      ..answer = (input) => switch (input) {
+        PingRequest() => PingResponse(apiVersion: statesFromItemsApi - 1),
+        GetGitHubStatesRequest() => GetGitHubStatesResponse(items: _items),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    final states = PullStates.of(d);
+    fake.calls.clear();
+    await states.refresh();
+    final asked = fake.calls.whereType<GetGitHubStatesRequest>().single;
+    expect(asked.items.map((l) => l.number), [1, 2, 3]);
+    expect(fake.calls.whereType<GetGitHubItemsRequest>(), isEmpty);
+    d.dispose();
+  });
 }
