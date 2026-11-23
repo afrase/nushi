@@ -6828,8 +6828,6 @@ func (x *ClearTranscriptsRequest) GetAll() bool {
 
 type ClearTranscriptsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Cleared       int32                  `protobuf:"varint,1,opt,name=cleared,proto3" json:"cleared,omitempty"`
-	Bytes         int64                  `protobuf:"varint,2,opt,name=bytes,proto3" json:"bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6862,20 +6860,6 @@ func (x *ClearTranscriptsResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ClearTranscriptsResponse.ProtoReflect.Descriptor instead.
 func (*ClearTranscriptsResponse) Descriptor() ([]byte, []int) {
 	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{110}
-}
-
-func (x *ClearTranscriptsResponse) GetCleared() int32 {
-	if x != nil {
-		return x.Cleared
-	}
-	return 0
-}
-
-func (x *ClearTranscriptsResponse) GetBytes() int64 {
-	if x != nil {
-		return x.Bytes
-	}
-	return 0
 }
 
 type GetSettingsResponse struct {
@@ -28650,10 +28634,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x0flast_written_ms\x18\x05 \x01(\x03R\rlastWrittenMs\"]\n" +
 	"\x17ClearTranscriptsRequest\x12\x19\n" +
 	"\bchat_ids\x18\x01 \x03(\tR\achatIds\x12\x10\n" +
-	"\x03all\x18\x02 \x01(\bR\x03allJ\x04\b\x03\x10\x04R\x0folder_than_days\"J\n" +
-	"\x18ClearTranscriptsResponse\x12\x18\n" +
-	"\acleared\x18\x01 \x01(\x05R\acleared\x12\x14\n" +
-	"\x05bytes\x18\x02 \x01(\x03R\x05bytes\"E\n" +
+	"\x03all\x18\x02 \x01(\bR\x03allJ\x04\b\x03\x10\x04R\x0folder_than_days\"6\n" +
+	"\x18ClearTranscriptsResponseJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\aclearedR\x05bytes\"E\n" +
 	"\x13GetSettingsResponse\x12.\n" +
 	"\bsettings\x18\x01 \x01(\v2\x12.nushi.v1.SettingsR\bsettings\"D\n" +
 	"\x12SetSettingsRequest\x12.\n" +

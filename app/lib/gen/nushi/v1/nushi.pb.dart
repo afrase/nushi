@@ -8492,15 +8492,7 @@ class ClearTranscriptsRequest extends $pb.GeneratedMessage {
 }
 
 class ClearTranscriptsResponse extends $pb.GeneratedMessage {
-  factory ClearTranscriptsResponse({
-    $core.int? cleared,
-    $fixnum.Int64? bytes,
-  }) {
-    final result = ClearTranscriptsResponse._();
-    if (cleared != null) result.cleared = cleared;
-    if (bytes != null) result.bytes = bytes;
-    return result;
-  }
+  factory ClearTranscriptsResponse() => ClearTranscriptsResponse._();
 
   ClearTranscriptsResponse._();
 
@@ -8515,8 +8507,6 @@ class ClearTranscriptsResponse extends $pb.GeneratedMessage {
       _omitMessageNames ? '' : 'ClearTranscriptsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: ClearTranscriptsResponse.$_createMessage)
-    ..aI(1, _omitFieldNames ? '' : 'cleared')
-    ..aInt64(2, _omitFieldNames ? '' : 'bytes')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -8543,24 +8533,6 @@ class ClearTranscriptsResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<ClearTranscriptsResponse>(
           ClearTranscriptsResponse.$_createMessage);
   static ClearTranscriptsResponse? _defaultInstance;
-
-  @$pb.TagNumber(1)
-  $core.int get cleared => $_getIZ(0);
-  @$pb.TagNumber(1)
-  set cleared($core.int value) => $_setSignedInt32(0, value);
-  @$pb.TagNumber(1)
-  $core.bool hasCleared() => $_has(0);
-  @$pb.TagNumber(1)
-  void clearCleared() => $_clearField(1);
-
-  @$pb.TagNumber(2)
-  $fixnum.Int64 get bytes => $_getI64(1);
-  @$pb.TagNumber(2)
-  set bytes($fixnum.Int64 value) => $_setInt64(1, value);
-  @$pb.TagNumber(2)
-  $core.bool hasBytes() => $_has(1);
-  @$pb.TagNumber(2)
-  void clearBytes() => $_clearField(2);
 }
 
 class GetSettingsResponse extends $pb.GeneratedMessage {

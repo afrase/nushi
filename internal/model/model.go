@@ -285,7 +285,6 @@ type TranscriptCopy struct {
 // session (Claude Code deletes old ones): what Nushi kept of it.
 type RemovedChat struct {
 	ID, Agent, Title, Folder string
-	At                       time.Time
 }
 
 // FolderRun is something a folder has the agent run on its own: an MCP

@@ -43,5 +43,5 @@ func (s *server) ClearTranscripts(ctx context.Context, req *connect.Request[nush
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	return connect.NewResponse(&nushiv1.ClearTranscriptsResponse{Cleared: int32(n), Bytes: bytes}), nil
+	return connect.NewResponse(&nushiv1.ClearTranscriptsResponse{}), nil
 }

@@ -36,9 +36,9 @@ func TestTranscriptCopies(t *testing.T) {
 	}
 
 	// Cleared, the chat's history after a restart is the agent's alone.
-	all := must(a.c.ClearTranscripts(ctx, connect.NewRequest(&nushiv1.ClearTranscriptsRequest{All: true})))
-	if all.Cleared != 1 || all.Bytes != list.TotalBytes {
-		t.Errorf("cleared %v", all)
+	must(a.c.ClearTranscripts(ctx, connect.NewRequest(&nushiv1.ClearTranscriptsRequest{All: true})))
+	if left := must(a.c.ListTranscripts(ctx, connect.NewRequest(&nushiv1.ListTranscriptsRequest{}))); len(left.Copies) != 0 || left.TotalBytes != 0 {
+		t.Errorf("left after clearing %v", left)
 	}
 	if _, err := a.c.ClearTranscripts(ctx, connect.NewRequest(&nushiv1.ClearTranscriptsRequest{})); connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("clearing nothing named: %v", err)

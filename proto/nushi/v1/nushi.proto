@@ -1541,8 +1541,10 @@ message ClearTranscriptsRequest {
 }
 
 message ClearTranscriptsResponse {
-  int32 cleared = 1;
-  int64 bytes = 2;
+  // How many copies were cleared, and their bytes: never read (the app
+  // lists the copies again).
+  reserved 1, 2;
+  reserved "cleared", "bytes";
 }
 
 message GetSettingsResponse {
