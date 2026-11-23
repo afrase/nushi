@@ -88,7 +88,8 @@ func Ahead(ctx context.Context, folder, base, head string) (int, error) {
 
 // Commits lists the commits of head ("" for HEAD) that base doesn't have,
 // newest first, or without a base its last limit commits; the lines they
-// changed are counted in the folder only.
+// changed are counted in the folder only. Before the first commit, with
+// no head named, there are none.
 func Commits(ctx context.Context, folder, base, head string, limit int) ([]Commit, error) {
 	if strings.HasPrefix(base, "-") {
 		return nil, fmt.Errorf("%q is not a branch", base)
@@ -107,6 +108,9 @@ func Commits(ctx context.Context, folder, base, head string, limit int) ([]Commi
 		"--format=%x1e%H%x1f%h%x1f%ct%x1f%s"}
 	out, err := run(ctx, folder, append(append(args, revs...), "--")...)
 	if err != nil {
+		if head == "" && unborn(ctx, folder) {
+			return nil, nil // before the first commit there are none
+		}
 		return nil, err
 	}
 	var commits []Commit
@@ -132,4 +136,14 @@ func Commits(ctx context.Context, folder, base, head string, limit int) ([]Commi
 		c.Added, c.Removed = c.Added+n, c.Removed+m
 	}
 	return commits, nil
+}
+
+// unborn says folder's HEAD names a branch with no commit yet: a
+// repository before its first commit, where git log refuses HEAD.
+func unborn(ctx context.Context, folder string) bool {
+	if _, err := run(ctx, folder, "symbolic-ref", "-q", "HEAD"); err != nil {
+		return false
+	}
+	_, err := verify(ctx, folder, "HEAD")
+	return err != nil
 }

@@ -27,6 +27,14 @@ func TestChanges(t *testing.T) {
 	if got, err := Changes(ctx, repo, Span{}); err != nil || len(got) != 1 || got[0].Status != "added" {
 		t.Errorf("before the first commit: %+v, %v", got, err) // no HEAD yet
 	}
+	// Before the first commit there are none to list, which isn't a failure
+	// (a chat's marks count from the last commit then, ADR 0131).
+	if got, err := Commits(ctx, repo, "", "", 50); err != nil || len(got) != 0 {
+		t.Errorf("commits before the first = %+v, %v", got, err)
+	}
+	if _, err := Commits(ctx, t.TempDir(), "", "", 50); err == nil {
+		t.Error("a folder outside git listed commits")
+	}
 	testcheck.Write(t, filepath.Join(repo, "sub", "gone.txt"), "bye\n")
 	testcheck.Write(t, filepath.Join(repo, "sub", "bin"), "a\x00b")
 	testcheck.Write(t, filepath.Join(repo, "top.txt"), "top\n")
