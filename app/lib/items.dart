@@ -220,19 +220,10 @@ class ItemView extends StatelessWidget {
       // a protobuf enum, so a switch on it can't be exhaustive.
       // ignore: no_default_cases
       default:
-        // A review's findings written as JSON show as their card, unless
-        // a card above showed them already in this turn (Claude reported
-        // them, then printed them too): then only what's around them, and
-        // the JSON folded.
+        // A review's findings written as JSON (Claude's /code-review run
+        // in a terminal, without ReportFindings: ADR 0035) show as their
+        // card.
         final found = findingsInText(item.text);
-        final again =
-            found != null &&
-            findingIds(found.findings.items)
-                .toSet()
-                .difference(
-                  findingsShownBefore(chat.items, chat.items.indexOf(item)),
-                )
-                .isEmpty;
         final message = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 4,
@@ -242,18 +233,15 @@ class ItemView extends StatelessWidget {
             else ...[
               if (found.before.isNotEmpty)
                 LinkedMarkdown(found.before, chat, daemon, live: false),
-              if (again)
-                FindingsAgain(found.json)
-              else
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: FindingsCard(
-                    found.findings,
-                    chat,
-                    json: found.json,
-                    key: const ValueKey('findings'),
-                  ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: FindingsCard(
+                  found.findings,
+                  chat,
+                  json: found.json,
+                  key: const ValueKey('findings'),
                 ),
+              ),
               if (found.after.isNotEmpty)
                 LinkedMarkdown(found.after, chat, daemon, live: live),
             ],
