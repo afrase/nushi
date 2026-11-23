@@ -851,6 +851,37 @@ void main() {
       );
     });
 
+    test('the note under a chosen key says what a terminal does with it', () {
+      for (final (conventions, keys) in [
+        (
+          macConventions,
+          [
+            _k(LogicalKeyboardKey.keyG, meta: true),
+            _k(LogicalKeyboardKey.keyO, meta: true, shift: true),
+            _k(LogicalKeyboardKey.keyK, control: true, alt: true),
+            _k(LogicalKeyboardKey.keyT, meta: true, shift: true),
+          ],
+        ),
+        (
+          linuxConventions,
+          [
+            _k(LogicalKeyboardKey.keyO, control: true, shift: true),
+            _k(LogicalKeyboardKey.keyR, control: true),
+            _k(LogicalKeyboardKey.keyR, control: true, alt: true),
+            _k(LogicalKeyboardKey.keyT, control: true, shift: true),
+            _k(LogicalKeyboardKey.f5),
+          ],
+        ),
+      ]) {
+        native.conventions = conventions;
+        for (final k in keys) {
+          chooseKey(pinKey, k);
+          expect(pinKey.chosen, isTrue, reason: keyLabel(k));
+          expect(terminalPasses(pinKey), note(k) == null, reason: keyLabel(k));
+        }
+      }
+    });
+
     test('on Linux a chosen key without Ctrl notes the shell keeps it', () {
       // A focused terminal passes a chosen key only when it holds Ctrl
       // (terminalPasses), so F5 or Alt+P stays the shell's there.

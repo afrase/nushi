@@ -312,15 +312,15 @@ final List<ShortcutActivator> _linuxTerminalPasses = [
 /// default, and a chosen key held with ⌘ (a chosen ⌃ or ⌥ key is the
 /// shell's); where the command key is Control, of the defaults only
 /// [_linuxTerminalPasses], and a chosen key held with Ctrl that no shell
-/// reads as a control character (ADR 0146, amending 0104).
+/// reads as a control character: [chosenPasses], which Settings' note
+/// under a chosen key reads too (ADR 0146, amending 0104).
 bool terminalPasses(ShortcutActivator key) {
   final a = key is Cmd ? key.single : key as SingleActivator?;
   if (a == null || terminalOwns(a)) return false;
-  final chosen = key is Cmd && key.chosen;
+  if (key is Cmd && key.chosen) return chosenPasses(a);
   return switch (commandKey) {
-    CommandKey.meta => !chosen || a.meta,
-    CommandKey.control =>
-      chosen ? a.control && !shellKey(a) : _linuxTerminalPasses.contains(key),
+    CommandKey.meta => true,
+    CommandKey.control => _linuxTerminalPasses.contains(key),
   };
 }
 

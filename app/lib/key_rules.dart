@@ -298,15 +298,19 @@ bool terminalOwns(SingleActivator a) => [
   for (var n = 1; n <= 9; n++) altDigitKey(n),
 ].any((t) => sameKey(a, t.standard));
 
+/// Whether a focused terminal passes a chosen [a] on to the app (ADR
+/// 0146, amending 0104): never one of its own keys; on the Mac one held
+/// with ⌘ (a ⌃ or ⌥ key is the shell's); where the command key is
+/// Control, one held with Ctrl that no shell reads as a control character.
+bool chosenPasses(SingleActivator a) =>
+    !terminalOwns(a) &&
+    (commandKey == CommandKey.meta ? a.meta : a.control && !shellKey(a));
+
 /// What to know of a chosen [k]: a focused terminal keeps it, for itself
-/// or its shell; null when it passes it on. The same test as
-/// terminalPasses: a chosen key passes only with the command key held, and
-/// where that is Control, not as a shell's control character.
+/// or its shell; null when it passes it on ([chosenPasses], what
+/// `terminalPasses` asks of a chosen key).
 String? note(SingleActivator k) {
   if (terminalOwns(k)) return 'A focused terminal keeps it';
-  final mac = commandKey == CommandKey.meta;
-  if (mac ? !k.meta : !k.control || shellKey(k)) {
-    return 'A focused terminal keeps it for the shell';
-  }
+  if (!chosenPasses(k)) return 'A focused terminal keeps it for the shell';
   return null;
 }
