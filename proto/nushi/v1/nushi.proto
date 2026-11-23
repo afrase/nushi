@@ -1036,6 +1036,15 @@ message AgentSignIn {
   repeated Option methods = 2;
 }
 
+// Why a new chat's agent didn't start, in plain words: the agent's own
+// error ("Ante isn't installed: …"), or that it quit, with its exit and
+// the line of its stderr that says why ("it quit (exit 1: Error: …)").
+// StartChat's agent_start error carries it as a detail, beside the whole
+// message, which an app that doesn't know it shows instead (API 144).
+message AgentStartError {
+  string why = 1;
+}
+
 message RemoveAgentRequest {
   string agent = 1;
 }

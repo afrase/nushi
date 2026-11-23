@@ -108,7 +108,7 @@ extension DaemonStart on Daemon {
           'agent_start',
           (m) => m.startsWith("couldn't start "),
         )) {
-          cantStart[agent] = e.message;
+          cantStart[agent] = _startWhy(e) ?? e.message;
         }
         rethrow;
       }
@@ -176,4 +176,22 @@ extension DaemonStart on Daemon {
     );
     return true;
   }
+}
+
+/// Why [e], a start whose agent didn't start, failed in plain words: the
+/// AgentStartError it carries (API 144); null from an older daemon, whose
+/// whole message is shown instead.
+String? _startWhy(connect.ConnectException e) {
+  final name = AgentStartError().info_.qualifiedMessageName;
+  for (final d in e.details) {
+    if (d.type == name || d.type.endsWith('/$name')) {
+      try {
+        final why = AgentStartError.fromBuffer(d.value).why;
+        if (why.isNotEmpty) return why;
+      } on Object {
+        return null; // not one this app reads
+      }
+    }
+  }
+  return null;
 }

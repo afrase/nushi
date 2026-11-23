@@ -307,11 +307,7 @@ class _NewChatState extends State<_NewChat> {
     final a = knownAgents[name]!;
     final failed = widget.daemon.cantStart[name];
     final setUp = !a.ready && a.problem.isEmpty;
-    final why = !a.ready
-        ? a.problem
-        : failed == null
-        ? null
-        : _reason(failed, a.title);
+    final why = !a.ready ? a.problem : failed;
     final color = why == null ? t.text : t.textMuted;
     return Tap(
       onTap: () => _start(i),
@@ -337,6 +333,7 @@ class _NewChatState extends State<_NewChat> {
               style: theme.ui(t.textMuted, size: 11.5),
             ),
           ),
+          const SizedBox(width: 8), // a cut why clear of what follows
           if (setUp) ...[
             Text('Set up', style: theme.ui(t.link, size: 11.5)),
             const SizedBox(width: 10),
@@ -361,20 +358,6 @@ class _NewChatState extends State<_NewChat> {
     );
   }
 }
-
-/// The daemon's "couldn't start Ante: initialize: acp error -32603: Ante
-/// isn't installed: there's no ante …" in a few words: "Ante isn't
-/// installed". The daemon's own steps ("start agent", "initialize", an
-/// ACP error's code) are left out.
-String _reason(String error, String title) => error
-    .replaceFirst("couldn't start $title: ", '')
-    .split(': ')
-    .firstWhere(
-      (clause) => !_step.hasMatch(clause),
-      orElse: () => "couldn't start",
-    );
-
-final _step = RegExp(r'^(start agent|initialize|session/\w+|acp error -?\d+)$');
 
 /// "[before]Settings › Agents" with the second part a link, for when no
 /// agent can start yet.

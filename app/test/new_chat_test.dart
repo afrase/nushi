@@ -195,16 +195,20 @@ void main() {
     tester,
   ) async {
     final (fake, d) = await _sidebar(tester);
-    fake.startError =
-        "couldn't start Codex: initialize: acp error -32603: the app-server "
-        'quit: exit status 1';
+    fake
+      ..startError =
+          "couldn't start Codex: initialize: acp: the app-server quit: exit "
+          'status 1 (-32603)'
+      ..startWhy = 'the app-server quit: exit status 1';
     await _open(tester);
     await _key(tester, LogicalKeyboardKey.enter); // codex fails
     expect(find.textContaining("couldn't start Codex"), findsOneWidget);
 
-    fake.startError = null;
+    fake
+      ..startError = null
+      ..startWhy = null;
     await _open(tester);
-    expect(find.text('the app-server quit'), findsOneWidget);
+    expect(find.text('the app-server quit: exit status 1'), findsOneWidget);
     // Not picked any more: Enter starts the first that didn't fail.
     await _key(tester, LogicalKeyboardKey.enter);
     expect(fake.started.last.agent, 'claude');
@@ -214,7 +218,45 @@ void main() {
     await _key(tester, LogicalKeyboardKey.digit2);
     expect(fake.started.last.agent, 'codex');
     await _open(tester);
-    expect(find.text('the app-server quit'), findsNothing);
+    expect(find.text('the app-server quit: exit status 1'), findsNothing);
+    d.dispose();
+  });
+
+  // The row of an agent that didn't start, looked at full size.
+  for (final width in [1700.0, 720.0]) {
+    testWidgets('a failed start’s why, ${width.round()} wide', (tester) async {
+      viewport(tester, Size(width, 900));
+      final (fake, d) = await _sidebar(tester);
+      fake.agents = _notAllReady();
+      d.cantStart['ante'] =
+          "it quit (exit 1: Error: Cannot find module 'ante-sdk')";
+      await tester.tap(find.byTooltip('New chat here'));
+      await tester.pumpAndSettle();
+      expectTextInside(tester, width);
+      await render(
+        tester,
+        find.byType(MaterialApp),
+        'new_chat_why_${width.round()}',
+      );
+      d.dispose();
+    });
+  }
+
+  testWidgets('an older daemon’s failed start shows its whole message', (
+    tester,
+  ) async {
+    final (fake, d) = await _sidebar(tester);
+    const said = "couldn't start Codex: initialize: acp: it broke (-32603)";
+    fake.startError = said;
+    await _open(tester);
+    await _key(tester, LogicalKeyboardKey.enter); // codex fails
+    fake.startError = null;
+    await _open(tester);
+    expect(d.cantStart['codex'], said);
+    expect(
+      find.descendant(of: find.byType(Dialog), matching: find.text(said)),
+      findsOneWidget,
+    );
     d.dispose();
   });
 
@@ -453,9 +495,7 @@ void main() {
       final (fake, d) = await _sidebar(tester, tokens: tokens);
       fake.agents = _notAllReady();
       d.cantStart['ante'] =
-          "couldn't start Ante: initialize: acp error -32603: Ante isn't "
-          "installed: there's no ante on "
-          'PATH or in ~/.ante/bin';
+          "Ante isn't installed: there's no ante on PATH or in ~/.ante/bin";
       await tester.tap(find.byTooltip('New chat here'));
       await tester.pumpAndSettle();
       await expectLater(

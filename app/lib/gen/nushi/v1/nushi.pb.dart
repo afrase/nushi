@@ -3594,6 +3594,68 @@ class AgentSignIn extends $pb.GeneratedMessage {
   $pb.PbList<Option> get methods => $_getList(1);
 }
 
+/// Why a new chat's agent didn't start, in plain words: the agent's own
+/// error ("Ante isn't installed: …"), or that it quit, with its exit and
+/// the line of its stderr that says why ("it quit (exit 1: Error: …)").
+/// StartChat's agent_start error carries it as a detail, beside the whole
+/// message, which an app that doesn't know it shows instead (API 144).
+class AgentStartError extends $pb.GeneratedMessage {
+  factory AgentStartError({
+    $core.String? why,
+  }) {
+    final result = AgentStartError._();
+    if (why != null) result.why = why;
+    return result;
+  }
+
+  AgentStartError._();
+
+  factory AgentStartError.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AgentStartError()..mergeFromBuffer(data, registry);
+  factory AgentStartError.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AgentStartError()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AgentStartError',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AgentStartError.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'why')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AgentStartError clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AgentStartError copyWith(void Function(AgentStartError) updates) =>
+      super.copyWith((message) => updates(message as AgentStartError))
+          as AgentStartError;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use AgentStartError() / AgentStartError.new instead')
+  static AgentStartError create() => AgentStartError._();
+  static $pb.GeneratedMessage $_createMessage() => AgentStartError._();
+  @$core.override
+  AgentStartError createEmptyInstance() => AgentStartError._();
+  @$core.pragma('dart2js:noInline')
+  static AgentStartError getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<AgentStartError>(
+          AgentStartError.$_createMessage);
+  static AgentStartError? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get why => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set why($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasWhy() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearWhy() => $_clearField(1);
+}
+
 class RemoveAgentRequest extends $pb.GeneratedMessage {
   factory RemoveAgentRequest({
     $core.String? agent,

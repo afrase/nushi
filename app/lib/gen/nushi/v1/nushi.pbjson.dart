@@ -965,6 +965,18 @@ final $typed_data.Uint8List agentSignInDescriptor = $convert.base64Decode(
     'CgtBZ2VudFNpZ25JbhIUCgVhZ2VudBgBIAEoCVIFYWdlbnQSKgoHbWV0aG9kcxgCIAMoCzIQLm'
     '51c2hpLnYxLk9wdGlvblIHbWV0aG9kcw==');
 
+@$core.Deprecated('Use agentStartErrorDescriptor instead')
+const AgentStartError$json = {
+  '1': 'AgentStartError',
+  '2': [
+    {'1': 'why', '3': 1, '4': 1, '5': 9, '10': 'why'},
+  ],
+};
+
+/// Descriptor for `AgentStartError`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List agentStartErrorDescriptor =
+    $convert.base64Decode('Cg9BZ2VudFN0YXJ0RXJyb3ISEAoDd2h5GAEgASgJUgN3aHk=');
+
 @$core.Deprecated('Use removeAgentRequestDescriptor instead')
 const RemoveAgentRequest$json = {
   '1': 'RemoveAgentRequest',

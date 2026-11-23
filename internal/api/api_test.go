@@ -150,6 +150,39 @@ func TestStartFailureReason(t *testing.T) {
 			ce.Meta().Get(ReasonHeader) != tc.reason {
 			t.Errorf("start in %q: %v (reason %q), want %q", tc.folder, err, ce.Meta().Get(ReasonHeader), tc.reason)
 		}
+		if tc.reason == ReasonAgentStart {
+			if d := ce.Details(); len(d) != 1 {
+				t.Errorf("%d details", len(d))
+			} else if v, _ := d[0].Value(); v.(*nushiv1.AgentStartError).GetWhy() != "it quit" {
+				t.Errorf("why %v", v)
+			}
+		}
+	}
+}
+
+// A start that failed says why in plain words, by the error's type, in an
+// AgentStartError the agent_start refusal carries.
+func TestStartWhy(t *testing.T) {
+	start := func(err error) error { return fmt.Errorf("%w A: %w", chats.ErrStart, err) }
+	for _, tc := range []struct {
+		err  error
+		want string
+	}{
+		{start(fmt.Errorf("initialize: %w", &acp.Error{Code: -32603, Message: "Ante isn't installed: there's no ante on PATH"})), "Ante isn't installed: there's no ante on PATH"},
+		{start(&chats.QuitError{Why: "exit 1: Error: boom", Err: fmt.Errorf("initialize: %w", acp.ErrClosed)}), "it quit (exit 1: Error: boom)"},
+		{start(fmt.Errorf("session/new: %w", acp.ErrClosed)), "it quit before it answered"},
+		{start(errors.New("start agent: exec: \"ante\": executable file not found in $PATH")), `exec: "ante": executable file not found in $PATH`},
+	} {
+		if got := startWhy(tc.err); got != tc.want {
+			t.Errorf("%v: got %q, want %q", tc.err, got, tc.want)
+		}
+	}
+	d := startDetail(connect.NewError(connect.CodeFailedPrecondition, errors.New("x")), start(errors.New("no"))).Details()
+	if len(d) != 1 {
+		t.Fatalf("%d details", len(d))
+	}
+	if v, err := d[0].Value(); err != nil || v.(*nushiv1.AgentStartError).GetWhy() != "no" {
+		t.Errorf("detail %v (%v)", v, err)
 	}
 }
 

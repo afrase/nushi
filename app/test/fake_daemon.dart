@@ -66,6 +66,10 @@ class FakeDaemon implements Transport {
   final setSettings = <Settings>[];
   String? startError;
 
+  /// The plain why a [startError] carries (AgentStartError, API 144); null
+  /// as from an older daemon.
+  String? startWhy;
+
   /// The ways to sign in a [startError] carries, as a start the agent
   /// refused for want of a sign-in does (API 139).
   AgentSignIn? startSignIn;
@@ -282,6 +286,11 @@ class FakeDaemon implements Transport {
           details: [
             if (startSignIn case final s?)
               ErrorDetail(s.info_.qualifiedMessageName, s.writeToBuffer()),
+            if (startWhy case final w?)
+              ErrorDetail(
+                AgentStartError().info_.qualifiedMessageName,
+                AgentStartError(why: w).writeToBuffer(),
+              ),
           ],
         );
       }

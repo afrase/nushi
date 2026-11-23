@@ -4,9 +4,11 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
+	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
@@ -71,6 +73,47 @@ func signInDetail(cerr *connect.Error, cause error) *connect.Error {
 		cerr.AddDetail(d)
 	}
 	return cerr
+}
+
+// startDetail is cerr, StartChat's agent_start refusal of cause,
+// carrying an AgentStartError: why the agent didn't start in plain words,
+// for the app's New chat row, so the app reads no wording of acp-go's.
+func startDetail(cerr *connect.Error, cause error) *connect.Error {
+	if d, err := connect.NewErrorDetail(&nushiv1.AgentStartError{Why: startWhy(cause)}); err == nil {
+		cerr.AddDetail(d)
+	}
+	return cerr
+}
+
+// joined is an error that wraps several, as fmt.Errorf with two %w.
+type joined interface {
+	error
+	Unwrap() []error
+}
+
+// startWhy is why a start (chats.ErrStart) failed, decided by the
+// error's type: the agent quit (chats.QuitError: its exit and stderr's
+// line), it answered with an ACP error (its message), its connection ended
+// with no word of why, or else the cause's own text past "couldn't start
+// <Agent>: " and chats' "start agent: ".
+func startWhy(err error) string {
+	if q, ok := errors.AsType[*chats.QuitError](err); ok {
+		return "it quit (" + q.Why + ")"
+	}
+	if e, ok := errors.AsType[*acp.Error](err); ok {
+		return e.Message
+	}
+	if errors.Is(err, acp.ErrClosed) {
+		return "it quit before it answered"
+	}
+	if j, ok := errors.AsType[joined](err); ok { // chats.StartOn's "%w <Agent>: %w"
+		for _, e := range j.Unwrap() {
+			if e != chats.ErrStart { //nolint:errorlint // the sentinel itself, beside the cause
+				err = e
+			}
+		}
+	}
+	return strings.TrimPrefix(err.Error(), "start agent: ")
 }
 
 func (s *server) RemoveAgent(_ context.Context, req *connect.Request[nushiv1.RemoveAgentRequest]) (*connect.Response[nushiv1.RemoveAgentResponse], error) {

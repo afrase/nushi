@@ -333,8 +333,9 @@ class Daemon extends ChangeNotifier {
   String? startingAgent;
 
   /// Why each agent whose last start failed in this run didn't start, as
-  /// the daemon said ("couldn't start Ante: …"); a start that works clears
-  /// it.
+  /// the daemon said: its plain why ("Ante isn't installed: …"), or an
+  /// older daemon's whole message ("couldn't start Ante: …"); a start that
+  /// works clears it.
   final cantStart = <String, String>{};
 
   /// Each agent's sign-in through its own login, by name, once one began
