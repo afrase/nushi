@@ -174,4 +174,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(shown(), isNull);
   });
+
+  testWidgets('runAndSay’s error takes the place of another call’s '
+      'spinner, never waits minutes behind it', (tester) async {
+    await start(tester);
+    final here = tester.element(find.byKey(const ValueKey('here')));
+    final slow = Completer<void>();
+    final clearing = runAndSay(
+      here,
+      () => slow.future,
+      running: 'Clearing…',
+      done: 'Cleared',
+    );
+    await tester.pump(const Duration(seconds: 1));
+    expect(shown(), 'Clearing…');
+    await runAndSay<void>(
+      here,
+      () async => throw StateError('fork refused'),
+      running: 'Forking…',
+    );
+    await tester.pump();
+    expect(shown(), contains('fork refused'));
+    slow.complete();
+    await clearing;
+    toasts.clear();
+    await tester.pump();
+  });
 }

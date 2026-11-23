@@ -46,9 +46,11 @@ typedef CallAnswer = ({String text, Widget icon});
 /// [done] with a check, or what [answer] makes of the call's result (it
 /// may act on it first: Check for updates forgets a dismissed release);
 /// with neither, or [answer] giving null (what it made shows), the toast
-/// just goes. The two never look alike (ADR 0128). The answer and the
-/// error take the spinner's place when it showed, else wait their turn,
-/// so a quick call never knocks out a toast that was showing.
+/// just goes. The two never look alike (ADR 0128). The answer takes the
+/// spinner's place when it showed, else waits its turn, so a quick call
+/// never knocks out a toast that was showing; the error always takes the
+/// showing toast's place, so it never waits unseen behind another call's
+/// spinner (which stays minutes).
 Future<void> runAndSay<T>(
   BuildContext context,
   Future<T> Function() call, {
@@ -75,7 +77,7 @@ Future<void> runAndSay<T>(
   try {
     result = await call();
   } on Object catch (e) {
-    showFailure(toasts, errorText(e), replace: shown);
+    showFailure(toasts, errorText(e), replace: true);
     return;
   } finally {
     slow.cancel();
