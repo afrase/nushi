@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/account_rows.dart';
 import 'package:nushi/conventions.dart';
