@@ -354,12 +354,11 @@ class _BrowserPaneState extends State<BrowserPane>
     builder: (context, box) => ValueListenableBuilder(
       valueListenable: widget.chat.browser.tabs,
       builder: (context, open, _) {
-        final tabs = PaneTabs(
+        final tabs = PaneTabs.browser(
           key: widget.tabsKey,
           chat: widget.chat,
           tabs: open.isEmpty ? [_tab] : open,
           current: _tab,
-          chips: true,
         );
         if (box.maxWidth < previewChipLeast) {
           return UnconstrainedBox(

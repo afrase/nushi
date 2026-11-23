@@ -17,10 +17,9 @@ import 'package:nushi/widgets.dart';
 
 // A pane's tabs (ADR 0070): a file view's, in its title row in place of the
 // file name when more than one file is open, as plain names (ADR 0071), each
-// led by its kind's icon; the
-// browser pane's (ADR 0094), named for their pages, as chips, as Claude
-// desktop's browser draws its tabs. What each says, how wide it is, and the
-// row.
+// led by its kind's icon; the browser pane's (ADR 0094), named for their
+// pages, as chips, as Claude desktop's browser draws its tabs. The two kinds
+// never share a row (ADR 0071). What each says, how wide it is, and the row.
 
 /// What the tab of [file] says: its name, with as much of its folder as
 /// tells it from the others of that name in [files] ("plan.md · docs"),
@@ -92,8 +91,8 @@ const double previewChipLeast =
     _chipEnd +
     _chipGap;
 
-/// The + after a row of chips, which opens a new browser tab: Claude's is
-/// always there, after a file's chip too.
+/// The + after the browser's chips, which opens a new browser tab: Claude's
+/// is always there.
 class NewBrowserTab extends StatelessWidget {
   const new({required this.chat, super.key});
 
@@ -132,29 +131,40 @@ List<double> fitTabs(List<double> widths, double room, {double least = 0}) {
   return [for (final w in widths) min(w, most)];
 }
 
-/// The tabs of [tabs], [current] the one showing: plain names that fill the
-/// slot the file name had, so the title row keeps its height and its
-/// controls, or the browser's [chips]. Past the room they shrink, then
-/// scroll, the showing one brought into view. Its state outlives each tab's
-/// view (`FileView.tabsKey`), so picking a tab doesn't lose the row's
-/// place. A file's tab says its name in the code face, a browser tab its
-/// page's title in the interface's.
+/// The tabs of [tabs], [current] the one showing: a file view's plain names
+/// ([PaneTabs.files]) that fill the slot the file name had, so the title row
+/// keeps its height and its controls, or the browser's chips
+/// ([PaneTabs.browser]). Past the room they shrink, then scroll, the showing
+/// one brought into view. Its state outlives each tab's view
+/// (`FileView.tabsKey`), so picking a tab doesn't lose the row's place. A
+/// file's tab says its name in the code face, a browser tab its page's title
+/// in the interface's.
 class PaneTabs extends StatefulWidget {
-  const new({
+  /// A file view's tabs: plain names (ADR 0071), each after its kind's icon.
+  const new files({
     required this.chat,
-    required this.tabs,
-    required this.current,
-    required this.chips,
+    required List<PreviewFile> this.tabs,
+    required PreviewFile this.current,
     super.key,
-  });
+  }) : chips = false;
+
+  /// The browser's tabs, drawn as Claude desktop's browser draws its tabs (a
+  /// rounded fill, a globe, the name, a ✕; ADR 0094).
+  const new browser({
+    required this.chat,
+    required List<BrowserTab> this.tabs,
+    required BrowserTab this.current,
+    super.key,
+  }) : chips = true;
 
   final ChatState chat;
+
+  /// Every one a [PreviewFile] for [PaneTabs.files], a [BrowserTab] for
+  /// [PaneTabs.browser].
   final List<PreviewEntry> tabs;
   final PreviewEntry current;
 
-  /// Drawn as Claude desktop's browser draws its tabs (a rounded fill, an
-  /// icon, the name, a ✕): the browser's (ADR 0094); a file's are plain
-  /// names (ADR 0071), each after its kind's icon.
+  /// Whether these are the browser's chips.
   final bool chips;
 
   @override
@@ -180,13 +190,8 @@ class _PaneTabsState extends State<PaneTabs> {
   /// A tab's width with all its name showing: measured as a [Text] draws it,
   /// over the [DefaultTextStyle] (its letter spacing widens a name). A
   /// [chip]'s takes its icon and the gap after it too, its name at most
-  /// [_chipNameMost]; a plain one with an [icon] (a file's) its kind's.
-  double _fullWidth(
-    String label,
-    TextStyle face, {
-    required bool chip,
-    required bool icon,
-  }) {
+  /// [_chipNameMost]; a plain one (a file's) its kind's icon.
+  double _fullWidth(String label, TextStyle face, {required bool chip}) {
     final style = DefaultTextStyle.of(context).style.merge(face);
     final text = TextPainter(
       text: TextSpan(text: label, style: style),
@@ -196,7 +201,8 @@ class _PaneTabsState extends State<PaneTabs> {
     final width = text.width.ceilToDouble();
     text.dispose();
     if (!chip) {
-      return (icon ? previewKindIcon + previewKindGap : 0) +
+      return previewKindIcon +
+          previewKindGap +
           width +
           previewNameInset +
           _closeRoom;
@@ -257,20 +263,15 @@ class _PaneTabsState extends State<PaneTabs> {
     final chips = widget.chips;
     // A provisional file's name in italics, measured so too.
     final provisional = widget.chat.files.provisional.value;
-    TextStyle face(PreviewEntry e, Color color) => e is BrowserTab
-        ? theme.ui(color, size: chips ? 14 : 12)
+    TextStyle face(PreviewEntry e, Color color) => chips
+        ? theme.ui(color, size: 14)
         : theme
-              .code(color, size: chips ? 13 : 12)
+              .code(color, size: 12)
               .copyWith(fontStyle: e == provisional ? FontStyle.italic : null);
     final widths = fitTabs(
       [
         for (final (i, e) in tabs.indexed)
-          _fullWidth(
-            labels[i],
-            face(e, theme.t.text),
-            chip: chips,
-            icon: e is PreviewFile,
-          ),
+          _fullWidth(labels[i], face(e, theme.t.text), chip: chips),
       ],
       box.maxWidth,
       least: chips ? previewChipLeast : previewFileTabLeast,
@@ -334,7 +335,7 @@ class _PaneTabsState extends State<PaneTabs> {
 /// the one showing, on the others under the pointer. Neither a box nor a
 /// tint: the one showing is the primary text with a line under it (its icon
 /// secondary, as the one file's is), the rest muted. A [chip] is Claude
-/// desktop's browser's tab instead ([_Chip]).
+/// desktop's browser's tab instead ([_Chip]): a [PaneTabs.browser] tab.
 class _Tab extends StatelessWidget {
   const new({
     required this.chat,
@@ -362,7 +363,8 @@ class _Tab extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     if (chip) return _Chip(this);
-    final tab = this.tab;
+    // Not a chip: a [PaneTabs.files] tab.
+    final tab = this.tab as PreviewFile;
     return Hover(
       builder: (context, {required hover}) => TabFace(
         showing: showing,
@@ -372,8 +374,7 @@ class _Tab extends StatelessWidget {
             Expanded(
               child: Listener(
                 onPointerDown: (e) {
-                  if (tab is PreviewFile &&
-                      (clicks?.down(tab, e.position) ?? false)) {
+                  if (clicks?.down(tab, e.position) ?? false) {
                     chat.files.keep(tab);
                   }
                 },
@@ -387,14 +388,12 @@ class _Tab extends StatelessWidget {
                       foregroundDecoration: focusRing(t, look),
                       child: Row(
                         children: [
-                          if (tab case PreviewFile(:final path)) ...[
-                            Icon(
-                              (previewKind(path) ?? PreviewKind.code).icon,
-                              size: previewKindIcon,
-                              color: showing ? t.textSecondary : ink,
-                            ),
-                            const SizedBox(width: previewKindGap),
-                          ],
+                          Icon(
+                            (previewKind(tab.path) ?? PreviewKind.code).icon,
+                            size: previewKindIcon,
+                            color: showing ? t.textSecondary : ink,
+                          ),
+                          const SizedBox(width: previewKindGap),
                           Flexible(
                             child: Padding(
                               padding: const EdgeInsets.only(
@@ -420,7 +419,7 @@ class _Tab extends StatelessWidget {
               width: _closeRoom,
               child: EditedMark(
                 chat: chat,
-                path: _pathOf(tab),
+                path: tab.path,
                 shown: hover || showing,
                 hover: hover,
                 close: IconTap.line(
@@ -440,9 +439,8 @@ class _Tab extends StatelessWidget {
 }
 
 /// A tab as Claude desktop's browser draws one: a rounded chip, filled on
-/// the one showing and tinted under the pointer, its kind's icon (a globe,
-/// a file's), its name, and a ✕, always on the one showing, on the others
-/// under the pointer.
+/// the one showing and tinted under the pointer, a globe, its page's name,
+/// and a ✕, always on the one showing, on the others under the pointer.
 class _Chip extends StatelessWidget {
   const new(this.tab);
 
@@ -481,17 +479,7 @@ class _Chip extends StatelessWidget {
                         child: Row(
                           spacing: _chipIconGap,
                           children: [
-                            switch (tab.tab) {
-                              BrowserTab() => LineIcon.globe.view(
-                                size: _chipIcon,
-                                color: ink,
-                              ),
-                              PreviewFile(:final path) => Icon(
-                                (previewKind(path) ?? PreviewKind.code).icon,
-                                size: _chipIcon,
-                                color: ink,
-                              ),
-                            },
+                            LineIcon.globe.view(size: _chipIcon, color: ink),
                             Flexible(
                               child: Text(
                                 tab.label,
@@ -510,13 +498,9 @@ class _Chip extends StatelessWidget {
                     padding: const EdgeInsets.only(right: _chipEnd),
                     child: SizedBox(
                       width: _chipCloseRoom,
-                      child: EditedMark(
-                        chat: tab.chat,
-                        path: _pathOf(tab.tab),
-                        shown: hover || showing,
-                        hover: hover,
-                        color: ink,
-                        close: Center(
+                      child: Opacity(
+                        opacity: hover || showing ? 1 : 0,
+                        child: Center(
                           child: IconTap.line(
                             // IconTap's 16: an ✕ as tall as the name's caps.
                             LineIcon.close,
@@ -540,9 +524,3 @@ class _Chip extends StatelessWidget {
     );
   }
 }
-
-/// The file [tab] shows, as its tab names it; null for a browser tab.
-String? _pathOf(PreviewEntry tab) => switch (tab) {
-  PreviewFile(:final path) => path,
-  BrowserTab() => null,
-};

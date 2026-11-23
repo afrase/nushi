@@ -375,14 +375,13 @@ void main() {
             child: Row(
               children: [
                 Expanded(
-                  child: PaneTabs(
+                  child: PaneTabs.files(
                     chat: chat,
                     tabs: const [
                       PreviewFile('docs/a.md'),
                       PreviewFile('docs/b.md'),
                     ],
                     current: const PreviewFile('docs/a.md'),
-                    chips: false,
                   ),
                 ),
                 IconTap(Icons.close, tooltip: 'Close', onTap: () {}),

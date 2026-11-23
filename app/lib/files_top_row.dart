@@ -143,12 +143,11 @@ class FilesTopRow extends StatelessWidget {
                   child: switch (shown) {
                     null => const SizedBox.shrink(),
                     _ when !fold.name => const SizedBox.shrink(),
-                    final shown when open.length > 1 => PaneTabs(
+                    final shown when open.length > 1 => PaneTabs.files(
                       key: tabsKey,
                       chat: chat,
                       tabs: open,
                       current: PreviewFile(shown.path),
-                      chips: false,
                     ),
                     final shown => Align(
                       alignment: Alignment.centerLeft,

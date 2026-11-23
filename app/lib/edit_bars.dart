@@ -282,7 +282,7 @@ class EditedMark extends StatelessWidget {
   });
 
   final ChatState chat;
-  final String? path; // null: not a file's tab
+  final String path;
   final Widget close;
   final bool shown;
   final bool hover;
@@ -291,8 +291,6 @@ class EditedMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget plain() => Opacity(opacity: shown ? 1 : 0, child: close);
-    final path = this.path;
-    if (path == null) return plain();
     return ListenableBuilder(
       listenable: chat.editsChanged,
       builder: (context, _) => switch (chat.edits[path]) {
