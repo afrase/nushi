@@ -249,8 +249,9 @@ void main() {
 
   // The box under the staged files' checks, as Uncommitted's side shows
   // them: a component golden. The view at the window's sizes is a render
-  // (docs/development.md's Goldens and renders: Changes' window golden is
-  // related_worktrees_golden's).
+  // with its layout asserted below (docs/development.md's Goldens and
+  // renders: Changes' window golden is related_worktrees_golden's, on
+  // Branch, which has no box).
   for (final (tokens, theme) in [
     (Tokens.dark, 'dark'),
     (Tokens.light, 'light'),
@@ -326,6 +327,36 @@ void main() {
             ..commitMessage.text = 'Shorten the relay wait';
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
+          // The view's own layout at the window's size, which the
+          // component golden above builds a copy of: Uncommitted's bar
+          // above, and the box at the foot of the files' column, as wide
+          // as it, under the last file.
+          final view = tester.getRect(find.byType(ChangesView));
+          for (final label in ['Uncommitted', '3 files']) {
+            final r = tester.getRect(find.text(label));
+            expect(r.bottom, lessThan(view.top + 44), reason: label);
+          }
+          final files = tester.getRect(find.byType(FileList));
+          final box = tester.getRect(find.byType(CommitBox));
+          expect(files.left, view.left);
+          expect(files.width, 240);
+          expect(box.left, files.left);
+          expect(box.width, files.width);
+          expect(box.top, greaterThanOrEqualTo(files.bottom));
+          expect(
+            box.top,
+            greaterThan(
+              tester
+                  .getRect(find.textContaining('notes.md', findRichText: true))
+                  .bottom,
+            ),
+          );
+          expect(box.bottom, lessThanOrEqualTo(view.bottom));
+          expect(box.bottom, greaterThan(view.bottom - 16));
+          expect(
+            tester.getRect(find.text('Commit 2 files')).bottom,
+            lessThan(box.bottom),
+          );
           await render(
             tester,
             find.byType(ChangesView),
