@@ -1,7 +1,7 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
-import '../harness.dart';
+import '../fixture_now.dart';
 
 /// Made-up demo data for the README's screenshots: Lumen, an imaginary
 /// open-source static site generator, its people and its tracker. Nothing

@@ -2,12 +2,10 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:connectrpc/connect.dart' show Transport;
-import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/conventions.dart';
@@ -23,9 +21,7 @@ import 'package:nushi/toast.dart';
 import 'fake_daemon.dart';
 import 'phone_native_fixture.dart';
 
-/// The time the app sees in every test ([clock], set before each by
-/// `flutter_test_config.dart`): fixed, so an age a golden shows never moves.
-final fixtureNow = DateTime(2026, 10, 29, 12);
+export 'fixture_now.dart';
 
 /// A test run on the Mac only.
 final onMac = TargetPlatformVariant.only(TargetPlatform.macOS);
@@ -164,9 +160,6 @@ List<PlatformMenuItem> viewItems(WidgetTester tester) {
   };
   return view.menus.expand(items).toList();
 }
-
-/// [fixtureNow] less [d], as the daemon sends a time.
-Int64 msAgo(Duration d) => Int64(fixtureNow.subtract(d).millisecondsSinceEpoch);
 
 /// The app on [fake]'s chat `c`, connected, in a window of [size] in
 /// [brightness] (the system's unless given), settled: the way most tests

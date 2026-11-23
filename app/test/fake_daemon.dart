@@ -15,7 +15,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_link.dart' show rowItem;
 
 import 'agent_facts_fixture.dart';
-import 'harness.dart' show fixtureNow, msAgo;
+import 'fixture_now.dart';
 
 /// The agents as the daemon lists them, installed and ready: each one's
 /// facts (its title, sign-in, what deletes its sessions, its adapter…)
