@@ -27,7 +27,8 @@
 // 2026-11-17 (Windows 11 23H2, an i9-9900K, 455 processes, 132 listening
 // sockets), a List took 0.18–0.20 ms. The table lists a dual-stack socket
 // in both and tells no IPV6_V6ONLY, so a process's [::]:p beside its own
-// 0.0.0.0:p is taken for one. Another OS lists none (listeners_other.go).
+// 0.0.0.0:p is taken for one. The package builds for macOS, Linux and
+// Windows only (ADR 0124).
 //
 // A free port is told by dialing it, not by listening on it: Go's
 // net.Listen sets SO_REUSEADDR, and macOS then lets it bind beside another

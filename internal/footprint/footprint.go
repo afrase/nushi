@@ -6,8 +6,8 @@
 // size and swapped-out share, from /proc/<pid>/smaps_rollup, and the
 // process list is /proc's stat files (footprint_linux.go). On Windows it
 // is each process's private bytes (GetProcessMemoryInfo), and the process
-// list is Toolhelp's snapshot (footprint_windows.go, ADR 0133). Another OS
-// reads nothing (footprint_other.go, ADR 0097).
+// list is Toolhelp's snapshot (footprint_windows.go, ADR 0133). It builds
+// for those three only (ADR 0124).
 package footprint
 
 // Processes is a snapshot of which process started which.
