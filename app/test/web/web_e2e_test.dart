@@ -98,7 +98,8 @@ void main() {
     await daemon.client.setDeviceView(SetDeviceViewRequest(chatId: chat.id));
     mac.sink.add({'do': 'devices'});
     final devices = await next();
-    expect(devices['file'], contains('"kind": "web"'));
+    // The daemon keeps no kind: every device is the web app, as it says.
+    expect(devices['remote'], contains('"kind":"web"'));
     expect(devices['file'], contains('web.push.apple.com'));
     expect(devices['remote'], contains('"push":true'));
 
