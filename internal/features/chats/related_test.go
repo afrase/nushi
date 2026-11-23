@@ -419,11 +419,12 @@ func TestRelatedMerged(t *testing.T) {
 	is(map[string]bool{"idle": false, "merged": true, "squashed": false})
 }
 
-// fakeGitHub answers BranchMerged from merged, by branch, failing while
+// fakeGitHub answers BranchPull from merged and open, by branch, failing while
 // down; it records each branch asked.
 type fakeGitHub struct {
 	mu     sync.Mutex
 	merged map[string]bool
+	open   map[string]bool // a branch whose pull request is open
 	down   bool
 	asked  []string
 	since  time.Time
@@ -431,15 +432,20 @@ type fakeGitHub struct {
 
 func (f *fakeGitHub) Known(string) bool { return false }
 
-func (f *fakeGitHub) BranchMerged(_ context.Context, _, branch string, since time.Time) (bool, error) {
+func (f *fakeGitHub) BranchPull(_ context.Context, _, branch string, since time.Time) (string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.asked = append(f.asked, branch)
 	f.since = since
-	if f.down {
-		return false, errors.New("down")
+	switch {
+	case f.down:
+		return "", errors.New("down")
+	case f.merged[branch]:
+		return "merged", nil
+	case f.open[branch]:
+		return "open", nil
 	}
-	return f.merged[branch], nil
+	return "", nil
 }
 
 func (f *fakeGitHub) askedOf() []string {
@@ -516,6 +522,32 @@ func TestRelatedSquashMergedOnGitHub(t *testing.T) {
 	gh.mu.Unlock()
 	if since.IsZero() || !since.Equal(created) {
 		t.Errorf("since %v, the chat began %v", since, created)
+	}
+
+	// One removed while its pull request is open isn't taken for unmerged:
+	// it's asked again until the pull request merges.
+	f.remove(open)
+	gh.mu.Lock()
+	gh.open = map[string]bool{"open": true}
+	gh.mu.Unlock()
+	pull := func() model.RelatedWorktree {
+		t.Helper()
+		for _, r := range related(t, svc, c) {
+			if r.Branch == "open" {
+				return r
+			}
+		}
+		t.Fatal("open's worktree gone from the list")
+		return model.RelatedWorktree{}
+	}
+	if r := pull(); r.PullAsked || r.PullMerged {
+		t.Errorf("while its pull request is open: %+v", r)
+	}
+	gh.mu.Lock()
+	gh.open, gh.merged["open"] = nil, true
+	gh.mu.Unlock()
+	if r := pull(); !r.PullAsked || !r.PullMerged {
+		t.Errorf("once its pull request merged: %+v", r)
 	}
 }
 
@@ -925,5 +957,30 @@ func TestRelatedReadsALetGoChatsCopy(t *testing.T) {
 	}
 	if n := copies.reads.Load() - reads; n != 0 {
 		t.Errorf("%d whole reads of the copy", n)
+	}
+}
+
+// Worktrees whose pull requests stay open can't take every ask of GitHub:
+// those not yet asked go first.
+func TestRelatedOpenPullsDontTakeEveryAsk(t *testing.T) {
+	repo, f := fakeRepo(t)
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{}, f)
+	gh := &fakeGitHub{merged: map[string]bool{"late": true}, open: map[string]bool{}}
+	svc.UseGitHub(gh)
+	var list []model.RelatedWorktree
+	for i := range maxPullAsks + 1 {
+		b := fmt.Sprint("open-", i)
+		gh.open[b] = true
+		list = append(list, model.RelatedWorktree{Path: filepath.Join(repo, b), Branch: b, BaseCommit: oid("start"), LastHead: oid(b), State: model.RelatedRemoved})
+	}
+	list = append(list, model.RelatedWorktree{Path: filepath.Join(repo, "late"), Branch: "late", BaseCommit: oid("start"), LastHead: oid("late"), State: model.RelatedRemoved})
+	c.looking.Lock()
+	defer c.looking.Unlock()
+	for range 2 {
+		c.askPulls(t.Context(), repo, time.Time{}, list)
+	}
+	late := list[len(list)-1]
+	if !late.PullAsked || !late.PullMerged || slices.ContainsFunc(list[:len(list)-1], func(k model.RelatedWorktree) bool { return k.PullAsked }) {
+		t.Errorf("asked %v; the late one %+v", gh.askedOf(), late)
 	}
 }

@@ -75,32 +75,42 @@ func (s *Service) FindPull(ctx context.Context, folder string, poll bool, look f
 	return out, errors.Join(errs...)
 }
 
-// BranchMerged says whether a pull request whose head is branch, opened
-// at or after since, was merged on GitHub: for what git can't see, a
-// squash merge (issue 83). It's asked of folder's GitHub repositories as
-// FindPull asks, with the head owned by the one folder pushes to, else
-// origin's: the branch needn't be checked out, nor be the default
-// branch's. A folder with no repository on a GitHub host Nushi knows says
-// false without asking; one whose remotes couldn't be read, or whose
-// GitHub hosts couldn't be asked (no token yet, the keychain waiting for
-// an OK), says why, so the question is asked again later.
-func (s *Service) BranchMerged(ctx context.Context, folder, branch string, since time.Time) (bool, error) {
+// BranchPull says what became of a pull request whose head is branch,
+// opened at or after since, on GitHub: "merged" when one was merged (for
+// what git can't see, a squash merge; issue 83), else "open" while one is
+// open, else "". It's asked of folder's GitHub repositories as FindPull
+// asks, with the head owned by the one folder pushes to, else origin's:
+// the branch needn't be checked out, nor be the default branch's. A folder
+// with no repository on a GitHub host Nushi knows says "" without asking;
+// one whose remotes couldn't be read, or whose GitHub hosts couldn't be
+// asked (no token yet, the keychain waiting for an OK), says why, so the
+// question is asked again later.
+func (s *Service) BranchPull(ctx context.Context, folder, branch string, since time.Time) (string, error) {
 	if branch == "" {
-		return false, nil
+		return "", nil
 	}
 	_, pushed := s.Head(ctx, folder)
 	var errs []error
 	repos := s.branchRepos(ctx, folder, pushed, &errs)
 	if len(repos) == 0 && len(errs) > 0 {
-		return false, errors.Join(errs...)
+		return "", errors.Join(errs...)
 	}
 	errs = nil
+	state := ""
 	for _, pulls := range s.branchHeads(ctx, repos, branch, false, &errs) {
-		if slices.ContainsFunc(pulls, func(p githubapi.HeadPull) bool { return p.State == "merged" && !p.Created.Before(since) }) {
-			return true, nil
+		for _, p := range pulls {
+			if p.Created.Before(since) {
+				continue
+			}
+			switch p.State {
+			case "merged":
+				return "merged", nil
+			case "open":
+				state = "open"
+			}
 		}
 	}
-	return false, errors.Join(errs...)
+	return state, errors.Join(errs...)
 }
 
 // headRepo is one of a folder's GitHub repositories.

@@ -50,8 +50,9 @@ type RelatedWorktree struct {
 	Merged bool `json:",omitempty"`
 	// PullMerged says GitHub has a merged pull request with Branch as its
 	// head, opened in the chat's life: a squash merge, which git can't see.
-	// PullAsked says GitHub was asked, once, after the worktree went away
-	// (issue 83); its answer stays.
+	// PullAsked says GitHub answered, after the worktree went away (issue
+	// 83), with its pull request merged or none open; its answer stays.
+	// One still open is asked again at later looks.
 	PullMerged bool `json:",omitempty"`
 	PullAsked  bool `json:",omitempty"`
 }

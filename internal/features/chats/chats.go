@@ -118,12 +118,13 @@ func (s *Service) UseServers(sv Servers) { s.servers = sv }
 
 // GitHub is what the chats ask of GitHub (internal/features/github): the
 // hosts Nushi gives a token to, as a pull request a chat's tool call
-// opened on one is linked to the chat (ADR 0117); and whether a related
-// worktree's branch was merged by a pull request opened at or after since,
-// which a squash merge leaves git unable to see (issue 83).
+// opened on one is linked to the chat (ADR 0117); and what became of a
+// pull request opened at or after since with a related worktree's branch
+// as head: "merged", which a squash merge leaves git unable to see (issue
+// 83), "open", or "".
 type GitHub interface {
 	Known(host string) bool
-	BranchMerged(ctx context.Context, folder, branch string, since time.Time) (bool, error)
+	BranchPull(ctx context.Context, folder, branch string, since time.Time) (string, error)
 }
 
 // UseGitHub tells the chats about GitHub.
@@ -253,14 +254,16 @@ type chat struct {
 	// holds it across git's runs; relating says a look of the chat's own
 	// runs, relateAgain that another was asked for since, and relatedAt is
 	// when one last started; pullsAfter is when a look may next ask GitHub
-	// after it failed, and lookedTips the default branch's commits the last
-	// look saw (both held by looking).
+	// after it failed, lookedTips the default branch's commits the last look
+	// saw, and pullsOpen the related worktrees (by path) whose pull request
+	// GitHub said was open (all held by looking).
 	looking     sync.Mutex
 	relating    bool
 	relateAgain bool
 	relatedAt   time.Time
 	pullsAfter  time.Time
 	lookedTips  []string
+	pullsOpen   map[string]bool
 	// titled says the agent titled the session while the daemon ran, and
 	// waitedTitle that a turn ended without that title, for naming the
 	// chat's branch (branch.go).

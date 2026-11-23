@@ -98,11 +98,11 @@ func TestFindPullNoneNotKept(t *testing.T) {
 	}
 }
 
-// TestBranchMerged: a branch other than the one checked out was merged
+// TestBranchPull: a branch other than the one checked out was merged
 // when a pull request with it as head, opened at or after since, was
-// merged; a closed one or one opened before since isn't. A folder on a
-// host without a sign-in isn't asked.
-func TestBranchMerged(t *testing.T) {
+// merged; a closed one or one opened before since isn't, and an open one
+// is open. A folder on a host without a sign-in isn't asked.
+func TestBranchPull(t *testing.T) {
 	w := newWorld(t)
 	ctx := t.Context()
 	w.branch["nushi"] = [2]string{"main", "origin"}
@@ -114,17 +114,20 @@ func TestBranchMerged(t *testing.T) {
 	c.heads = map[string][]githubapi.HeadPull{
 		"afrase/nushi afrase:squashed": {{Number: 5, State: "merged", Created: time.Unix(100, 0)}},
 		"afrase/nushi afrase:closed":   {{Number: 6, State: "closed", Created: time.Unix(100, 0)}},
+		"afrase/nushi afrase:open":     {{Number: 7, State: "open", Created: time.Unix(100, 0)}},
 	}
-	for branch, want := range map[string]bool{"squashed": true, "closed": false, "none": false, "": false} {
-		if got, err := w.s.BranchMerged(ctx, "nushi", branch, time.Unix(100, 0)); err != nil || got != want {
-			t.Errorf("%q: %v %v", branch, got, err)
+	for branch, want := range map[string]string{"squashed": "merged", "closed": "", "open": "open", "none": "", "": ""} {
+		if got, err := w.s.BranchPull(ctx, "nushi", branch, time.Unix(100, 0)); err != nil || got != want {
+			t.Errorf("%q: %q %v", branch, got, err)
 		}
 	}
-	if got, _ := w.s.BranchMerged(ctx, "nushi", "squashed", time.Unix(101, 0)); got {
-		t.Error("opened before the chat began")
+	for _, branch := range []string{"squashed", "open"} {
+		if got, _ := w.s.BranchPull(ctx, "nushi", branch, time.Unix(101, 0)); got != "" {
+			t.Errorf("%s: opened before the chat began, yet %q", branch, got)
+		}
 	}
 	asked := len(c.asked)
-	if got, err := w.s.BranchMerged(ctx, "lab", "squashed", time.Time{}); err != nil || got || len(c.asked) != asked {
+	if got, err := w.s.BranchPull(ctx, "lab", "squashed", time.Time{}); err != nil || got != "" || len(c.asked) != asked {
 		t.Errorf("not a host with a sign-in: %v %v %v", got, err, c.asked[asked:])
 	}
 }
@@ -132,16 +135,16 @@ func TestBranchMerged(t *testing.T) {
 // A folder whose GitHub host couldn't be asked (the keychain waiting for
 // an OK) gets an error, not "not merged", so the question is asked again
 // later; one whose remotes couldn't be read too.
-func TestBranchMergedUnasked(t *testing.T) {
+func TestBranchPullUnasked(t *testing.T) {
 	w := newWorld(t)
 	w.store.hosts = []string{"github.com"}
 	w.tokens.Items["github.com"] = "ghp_pasted"
 	w.tokens.Locked = true
-	if got, err := w.s.BranchMerged(t.Context(), "nushi", "squashed", time.Time{}); err == nil || got {
+	if got, err := w.s.BranchPull(t.Context(), "nushi", "squashed", time.Time{}); err == nil || got != "" {
 		t.Errorf("a host that couldn't be asked: %v %v", got, err)
 	}
 	w.s.Remotes = func(context.Context, string) (map[string]string, error) { return nil, errors.New("git failed") }
-	if got, err := w.s.BranchMerged(t.Context(), "nushi", "squashed", time.Time{}); err == nil || got {
+	if got, err := w.s.BranchPull(t.Context(), "nushi", "squashed", time.Time{}); err == nil || got != "" {
 		t.Errorf("remotes unread: %v %v", got, err)
 	}
 }

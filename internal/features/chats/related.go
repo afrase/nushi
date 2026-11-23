@@ -278,33 +278,43 @@ const (
 	pullsBackoff = 5 * time.Minute
 )
 
-// askPulls asks GitHub, once for each, whether the worktrees of list that
-// went away with commits of their own that git doesn't show merged had
-// their branch merged by a pull request opened since the chat began (a
-// squash merge; issue 83). The answer is kept; one GitHub couldn't give
-// is asked again at a later look, after [pullsBackoff]. Without GitHub
-// nothing is asked. It runs under c.looking.
+// askPulls asks GitHub whether the worktrees of list that went away with
+// commits of their own that git doesn't show merged had their branch
+// merged by a pull request opened since the chat began (a squash merge;
+// issue 83). The answer is kept, but for a pull request still open, which
+// is asked again at the next look, after those not yet asked: open ones
+// can't take every ask. One GitHub couldn't give is asked again at a later
+// look, after [pullsBackoff]. Without GitHub nothing is asked. It runs
+// under c.looking.
 func (c *chat) askPulls(ctx context.Context, folder string, since time.Time, list []model.RelatedWorktree) {
 	if c.svc.gitHub == nil || time.Now().Before(c.pullsAfter) {
 		return
 	}
-	asked := 0
+	var ask, open []*model.RelatedWorktree
 	for i := range list {
 		k := &list[i]
-		if k.State != model.RelatedRemoved || k.Merged || k.PullAsked || k.Branch == "" || k.BaseCommit == "" || k.LastHead == k.BaseCommit {
-			continue
+		switch {
+		case k.State != model.RelatedRemoved || k.Merged || k.PullAsked || k.Branch == "" || k.BaseCommit == "" || k.LastHead == k.BaseCommit:
+		case c.pullsOpen[k.Path]:
+			open = append(open, k)
+		default:
+			ask = append(ask, k)
 		}
-		if asked == maxPullAsks {
-			return
-		}
-		asked++
-		merged, err := c.svc.gitHub.BranchMerged(ctx, folder, k.Branch, since)
+	}
+	if c.pullsOpen == nil {
+		c.pullsOpen = map[string]bool{}
+	}
+	ask = append(ask, open...)
+	for _, k := range ask[:min(maxPullAsks, len(ask))] {
+		state, err := c.svc.gitHub.BranchPull(ctx, folder, k.Branch, since)
 		if err != nil {
 			c.log().Debug("asking GitHub about a related worktree's branch", "err", err)
 			c.pullsAfter = time.Now().Add(pullsBackoff)
 			return
 		}
-		k.PullAsked, k.PullMerged = true, merged
+		if c.pullsOpen[k.Path] = state == "open"; !c.pullsOpen[k.Path] {
+			k.PullAsked, k.PullMerged = true, state == "merged"
+		}
 	}
 }
 
