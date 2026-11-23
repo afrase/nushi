@@ -24,7 +24,7 @@ It was built whole and tried as v0.30.0-beta.1, the rail on at first. The owner,
 
 ## Consequences
 - A project's header is as high as it was; its name starts 26 further in, after the tile. "No chats" starts where the tile does.
-- A daemon older than API 116 answers no icon; tiles show initials until it's replaced, and the app asks again once it's back.
+- A daemon older than API 116 answers no icon; tiles show initials until it's replaced, and the app asks again once it's back (amended 2026-11-24: such a daemon is now below the app's floor, [0004](0004-connect-over-unix-socket.md), so the Mac shows only its Restart screen until then).
 - A tile's image is the one thing the app reads from a place the user picked, and keeps a copy of (`docs/security.md`). A copy whose `app.json` entry is lost stays in `tiles/` until removed by hand; nothing sweeps them.
 - The framing is an optional key the current app adds: v0.30, which reads only `mark`, `color` and `image` of an entry, shows such a tile's middle, and drops `crop` the next time it saves `app.json`. Coming back to a newer app, the tile is then unframed, not lost.
 - A trim is an optional key too: v0.30 plays the whole image and drops the key on its next save. A trimmed tile's start, and each loop, decodes the frames before it again; a long GIF trimmed near its end makes a hover's start, and each loop, wait for them.
