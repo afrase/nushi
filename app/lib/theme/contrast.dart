@@ -12,9 +12,10 @@ double contrast(Color a, Color b) {
 }
 
 /// The pairs of [t] that read under what the built-in themes are held to
-/// (`tokens_test`, `chat_colors_test`, `code_ink_test`): text AA (4.5:1)
-/// on every fill it sits on, a mark 3:1. Each a line naming the pair, for
-/// a custom theme's warning in Settings; the worst first.
+/// (`themes_test` checks none of theirs is here): text AA (4.5:1) on every
+/// fill it sits on, a mark 3:1. The one list of those floors: each a line
+/// naming the pair, for a custom theme's warning in Settings; the worst
+/// first.
 ///
 /// Not among them (ADR 0086): code's colors (`syntax.*`), the terminal's
 /// sixteen and its text (`terminal.*`), a diff's (`diff.*`) and the
@@ -83,6 +84,7 @@ List<String> contrastWarnings(Tokens t) {
     ('subagentAccent', t.subagentAccent, 'subagentTint', t.subagentTint, 4.5),
     ('findingsAccent', t.findingsAccent, 'raised', t.raised, 4.5),
     ('toolAccent', t.toolAccent, 'raised', t.raised, 3),
+    ('toolAccent', t.toolAccent, 'a hovered row', on(t.hover, t.raised), 3),
     ('toolAccent', t.toolAccent, 'codeBlock', t.codeBlock, 3),
     for (final (ink, c) in [
       ('text', t.text),
@@ -92,7 +94,12 @@ List<String> contrastWarnings(Tokens t) {
       ('crashed', t.crashed),
     ])
       (ink, c, 'codeBlock', t.codeBlock, 4.5),
-    ('textMuted', t.textMuted, 'a quote on base', on(t.quote, t.base), 4.5),
+    for (final (f, b) in [
+      ('base', t.base),
+      ('raised', t.raised),
+      ('codeBlock', t.codeBlock),
+    ])
+      ('textMuted', t.textMuted, 'a quote on $f', on(t.quote, b), 4.5),
     (
       'userBandMuted',
       t.userBandMuted,
@@ -103,9 +110,12 @@ List<String> contrastWarnings(Tokens t) {
     ('text', t.text, 'lifted', t.lifted, 4.5),
     ('textSecondary', t.textSecondary, 'lifted', t.lifted, 4.5),
     ('textMuted', t.textMuted, 'lifted', t.lifted, 4.5),
+    ('text', t.text, 'lifted, hovered', on(t.hover, t.lifted), 4.5),
     ('crashed', t.crashed, 'lifted', t.lifted, 4.5),
     ('subagentAccent', t.subagentAccent, 'accentSoft', t.accentSoft, 4.5),
+    ('subagentAccent', t.subagentAccent, 'crashedSoft', t.crashedSoft, 4.5),
     ('onAccent', t.onAccent, 'accent', t.accent, 4.5),
+    ('onAccent', t.onAccent, 'accentPressed', t.accentPressed, 4.5),
     for (final (i, c) in t.avatars.indexed)
       for (final MapEntry(key: f, value: b) in {...rows, ...sidebar}.entries)
         ('avatars.${avatarNames[i]}', c, f, b, 3),

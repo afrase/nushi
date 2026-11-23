@@ -2,14 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/theme/contrast.dart';
 
 import 'theme_sets.dart';
-
-/// The WCAG contrast of [a] and [b].
-double _contrast(Color a, Color b) {
-  final (x, y) = (a.computeLuminance(), b.computeLuminance());
-  return (max(x, y) + 0.05) / (min(x, y) + 0.05);
-}
 
 /// [c]'s CIE lightness, L*, from 0 (black) to 100 (white): how light it
 /// looks, in even steps.
@@ -101,104 +96,15 @@ void main() {
   for (final (name, t) in everySet) {
     Color on(Color tint, Color surface) => Color.alphaBlend(tint, surface);
 
-    // What a row can be (as in chat_colors_test), and the tints text sits
-    // on in the transcript and the cards.
-    final rows = {
-      'raised': t.raised,
-      'hovered': on(t.hover, t.raised),
-      'selected': t.selected,
-      'accentSoft': t.accentSoft,
-      'base': t.base,
-      'hovered on base': on(t.hover, t.base),
-    };
-    // The sidebar's rows, on the window itself (ADR 0111): their text, and
-    // their marks (a state's dot, a chat's color). A state's word there is
-    // a pill on its own soft fill.
-    final sidebar = {
-      'window': t.window,
-      'hovered on window': on(t.hover, t.window),
-    };
+    // The tints text sits on in the transcript and the cards. Which inks
+    // read on which fills is contrastWarnings' (themes_test checks every
+    // set has none); this file holds what isn't a pair's floor.
     final tints = {
       'subagentTint': t.subagentTint,
       'needsSoft': t.needsSoft,
       'doneSoft': t.doneSoft,
       'crashedSoft': t.crashedSoft,
     };
-
-    test('text is AA on every fill it sits on ($name)', () {
-      final inks = {
-        'text': t.text,
-        'secondary': t.textSecondary,
-        'muted': t.textMuted,
-      };
-      _atLeast(
-        {
-          for (final MapEntry(key: ink, value: c) in inks.entries)
-            for (final MapEntry(key: fill, value: f) in {
-              ...rows,
-              ...sidebar,
-              ...tints,
-            }.entries)
-              '$ink on $fill': (c, f),
-          // A status word, a link or the accent's text in a row, hovered too
-          // (a menu's Delete…).
-          for (final MapEntry(key: ink, value: c) in {
-            'needs': t.needs,
-            'done': t.done,
-            'running': t.running,
-            'crashed': t.crashed,
-            'link': t.link,
-            'accentInk': t.accentInk,
-          }.entries)
-            for (final MapEntry(key: row, value: f) in rows.entries)
-              '$ink on $row': (c, f),
-          'needs on needsSoft': (t.needs, t.needsSoft),
-          'done on doneSoft': (t.done, t.doneSoft),
-          'crashed on crashedSoft': (t.crashed, t.crashedSoft),
-          'userBandText on userBand': (t.userBandText, t.userBand),
-          'userBandMuted on userBand': (t.userBandMuted, t.userBand),
-          'subagentAccent on subagentTint': (t.subagentAccent, t.subagentTint),
-          // A finding's file and line, and the card's mark, on its card.
-          'findingsAccent on raised': (t.findingsAccent, t.raised),
-          'onAccent on accent': (t.onAccent, t.accent),
-          'onAccent on accentPressed': (t.onAccent, t.accentPressed),
-          // The transcript's fills (ADR 0111): code's surface under a tool
-          // call's output, an open file's row and its counts; a pill
-          // button on a card; a subagent's row while its pane is open.
-          for (final MapEntry(key: ink, value: c) in {
-            ...inks,
-            'done': t.done,
-            'crashed': t.crashed,
-          }.entries)
-            '$ink on codeBlock': (c, t.codeBlock),
-          // A quote's soft fill, wherever quoted text sits.
-          for (final MapEntry(key: fill, value: f) in {
-            'base': t.base,
-            'raised': t.raised,
-            'codeBlock': t.codeBlock,
-          }.entries)
-            'muted on a quote on $fill': (t.textMuted, on(t.quote, f)),
-          'userBandMuted on a quote in the bubble': (
-            t.userBandMuted,
-            on(t.quote, t.userBand),
-          ),
-          'text on lifted': (t.text, t.lifted),
-          'secondary on lifted': (t.textSecondary, t.lifted),
-          'text on lifted, hovered': (t.text, on(t.hover, t.lifted)),
-          // A button is the lifted fill everywhere (ADR 0111): its key
-          // hint, and a destructive one's red (under the pointer it is on
-          // crashedSoft, above).
-          'muted on lifted': (t.textMuted, t.lifted),
-          'crashed on lifted': (t.crashed, t.lifted),
-          // A review comment's state chip, and a pull request's tiles'.
-          'running on accentSoft': (t.running, t.accentSoft),
-          'subagentAccent on accentSoft': (t.subagentAccent, t.accentSoft),
-          'subagentAccent on crashedSoft': (t.subagentAccent, t.crashedSoft),
-        },
-        4.5,
-        _contrast,
-      );
-    });
 
     test('text, textSecondary and textMuted are three steps ($name)', () {
       final (text, secondary, muted) = (
@@ -219,48 +125,17 @@ void main() {
 
     test('a field’s hint stands clearly under a typed value and muted '
         'text, and still reads ($name)', () {
-      final hint = _contrast(t.hint, t.fieldFill);
+      final hint = contrast(t.hint, t.fieldFill);
       expect(hint, greaterThanOrEqualTo(3), reason: 'hint on fieldFill');
       expect(
-        _contrast(t.text, t.fieldFill) / hint,
+        contrast(t.text, t.fieldFill) / hint,
         greaterThanOrEqualTo(1.5),
         reason: 'text over hint',
       );
       expect(
         hint,
-        lessThanOrEqualTo(_contrast(t.textMuted, t.fieldFill)),
+        lessThanOrEqualTo(contrast(t.textMuted, t.fieldFill)),
         reason: 'hint under muted',
-      );
-    });
-
-    test('a status mark reads 3:1 on every row, a tint’s mark on it '
-        '($name)', () {
-      _atLeast(
-        {
-          for (final MapEntry(key: ink, value: c) in {
-            'running': t.running,
-            'needs': t.needs,
-            'done': t.done,
-            'crashed': t.crashed,
-            'idle': t.idle,
-          }.entries)
-            for (final MapEntry(key: row, value: f) in {
-              ...rows,
-              ...sidebar,
-            }.entries)
-              '$ink on $row': (c, f),
-          'needs on its halo': (t.needs, t.needsSoft),
-          // A tool call's icon on its row, a card, hovered too, and on an
-          // open file's row in a run.
-          'toolAccent on raised': (t.toolAccent, t.raised),
-          'toolAccent on raised, hovered': (
-            t.toolAccent,
-            on(t.hover, t.raised),
-          ),
-          'toolAccent on codeBlock': (t.toolAccent, t.codeBlock),
-        },
-        3,
-        _contrast,
       );
     });
 
