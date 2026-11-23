@@ -50,28 +50,62 @@ func (d Dirs) all() []saved {
 	var out []saved
 	_ = filepath.WalkDir(d.Sessions, func(path string, e fs.DirEntry, err error) error {
 		if err != nil || !e.Type().IsRegular() || !strings.HasSuffix(path, ".jsonl") {
-			return nil
+			return nil //nolint:nilerr // what can't be read is passed over: the rest still lists
 		}
-		f, err := os.Open(path) //nolint:gosec // a session file in Pi's sessions folder, read only
-		if err != nil {
-			return nil
+		if s, ok := read(path); ok {
+			out = append(out, s)
 		}
-		defer f.Close() //nolint:errcheck // read-only
-		line, _ := bufio.NewReader(io.LimitReader(f, 64<<10)).ReadBytes('\n')
-		var h header
-		if json.Unmarshal(line, &h) != nil || h.Type != "session" || h.ID == "" {
-			return nil
-		}
-		fi, _ := f.Stat()
-		out = append(out, saved{header: h, file: path, updated: fi.ModTime()})
 		return nil
 	})
 	return out
 }
 
-// find is the file of the session id, which must be in folder cwd.
+// read reads a session file's header.
+func read(path string) (saved, bool) {
+	f, err := os.Open(path) //nolint:gosec // a session file in Pi's sessions folder, read only
+	if err != nil {
+		return saved{}, false
+	}
+	defer f.Close() //nolint:errcheck // read-only
+	fi, err := f.Stat()
+	if err != nil || !fi.Mode().IsRegular() {
+		return saved{}, false
+	}
+	line, _ := bufio.NewReader(io.LimitReader(f, 64<<10)).ReadBytes('\n')
+	var h header
+	if json.Unmarshal(line, &h) != nil || h.Type != "session" || h.ID == "" {
+		return saved{}, false
+	}
+	return saved{header: h, file: path, updated: fi.ModTime()}, true
+}
+
+// named is the session id's file as Pi names it,
+// `<folder>/<time>_<id>.jsonl` (docs/facts/pig.md), if one is there: its
+// header alone is read, not every session's. An id that isn't a plain
+// name isn't looked for so.
+func (d Dirs) named(id string) []saved {
+	if id == "" || strings.ContainsAny(id, `/\*?[]`) || id == "." || id == ".." {
+		return nil
+	}
+	files, _ := filepath.Glob(filepath.Join(d.Sessions, "*", "*_"+id+".jsonl"))
+	var out []saved
+	for _, f := range files {
+		if s, ok := read(f); ok && s.ID == id {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// find is the file of the session id, which must be in folder cwd: the
+// file Pi named for it, else the one whose header says so (a file renamed,
+// or Pi's names changed).
 func (d Dirs) find(id, cwd string) (string, error) {
-	for _, s := range d.all() {
+	found := d.named(id)
+	if len(found) == 0 {
+		found = d.all()
+	}
+	for _, s := range found {
 		if s.ID != id {
 			continue
 		}
