@@ -1,6 +1,6 @@
 // The Mac's side of web_e2e_test.dart, in the VM (a hybrid isolate): the
 // real nushid and nushi-relay (serving a web app, so it takes the test
-// page's origin), the fake agent as Codex, and the Mac's calls on the
+// page's origin), the fake agent as oh-my-pi, and the Mac's calls on the
 // daemon's socket.
 import 'dart:async';
 import 'dart:convert';

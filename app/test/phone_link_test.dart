@@ -1,5 +1,5 @@
 // The phone's link to the Mac when its channel drops (ADR 0054): the real
-// nushid and nushi-relay on localhost, the fake agent as Codex, and the
+// nushid and nushi-relay on localhost, the fake agent as oh-my-pi, and the
 // phone's Daemon and Link on the relay transport. A drop mid-stream,
 // mid-call, while hidden, and the relay restarting: the phone reconnects,
 // subscribes again and fetches what shows, with no raw error left.

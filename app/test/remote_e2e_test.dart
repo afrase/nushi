@@ -1,5 +1,5 @@
 // End to end through the relay (ADR 0034): the real nushid and
-// nushi-relay on localhost, the fake agent as Codex, and the app's
+// nushi-relay on localhost, the fake agent as oh-my-pi, and the app's
 // generated client on the phone's transport. A phone pairs, lists chats,
 // starts one, prompts it, answers its permission card, gets the streamed
 // events, and is revoked.

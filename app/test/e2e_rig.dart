@@ -1,9 +1,9 @@
 // The end-to-end tests' rig (remote_e2e_test, phone_link_test and the web
 // test's web/mac_side.dart): the real nushid and nushi-relay built into a
-// folder of their own in /tmp, the fake agent as Codex (its adapter run by
-// a fake "node"; Claude runs through Nushi's Go agent, which has no adapter
-// to stand in for), the relay and the daemon started there. Each test
-// makes its own client steps on it.
+// folder of their own in /tmp, the fake agent as oh-my-pi (built as the
+// `omp` on the daemon's PATH: omp is a plain program Nushi starts as it
+// is, with no adapter to set up and no version it needs), the relay and
+// the daemon started there. Each test makes its own client steps on it.
 //
 // dart:io only: web/mac_side.dart runs in a hybrid isolate, which resolves
 // no packages, and imports this file by its relative path.
@@ -11,14 +11,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-/// The agent the rig's chats run: the fake agent, as Codex.
-const rigAgent = 'codex';
-
-/// The version the fake `codex` CLI says it is.
-const codexVersion = 'codex-cli 0.163.0';
-
-/// The version of Codex's adapter, as installed in the data folder.
-const adapterVersion = '2.2.2';
+/// The agent the rig's chats run: the fake agent, as oh-my-pi.
+const rigAgent = 'omp';
 
 /// Waits until [ok] says yes, asking every 50 ms; a [TimeoutException]
 /// after [within].
@@ -57,9 +51,8 @@ class Rig {
   String get work => '$path/work';
 
   /// Builds nushid, nushi-relay and the fake agent into a new folder in
-  /// /tmp whose name starts with [name], and sets Codex up there: its CLI
-  /// on the daemon's PATH, its adapter in the data folder, run by a "node"
-  /// that runs the fake agent instead.
+  /// /tmp whose name starts with [name], the fake agent as the `omp` on
+  /// the daemon's PATH.
   static Future<Rig> build(String name) async {
     final rig = Rig._((await Directory('/tmp').createTemp(name)).path);
     try {
@@ -79,7 +72,7 @@ class Rig {
     for (final (out, pkg) in [
       ('nushid', './cmd/nushid'),
       ('nushi-relay', './cmd/nushi-relay'),
-      ('fakeagent', './internal/acptest/fakeagent'),
+      ('omp', './internal/acptest/fakeagent'),
     ]) {
       final r = await Process.run('go', [
         'build',
@@ -89,21 +82,6 @@ class Rig {
       ], workingDirectory: root);
       if (r.exitCode != 0) throw StateError('building $pkg: ${r.stderr}');
     }
-    for (final (name, body) in [
-      ('node', 'exec $path/bin/fakeagent'),
-      ('codex', 'echo $codexVersion'),
-    ]) {
-      final f = File('$path/bin/$name');
-      await f.writeAsString('#!/bin/sh\n$body\n');
-      await Process.run('chmod', ['+x', f.path]);
-    }
-    final adapter = Directory(
-      '$path/data/agents/codex/node_modules/@agentclientprotocol/codex-acp',
-    );
-    await adapter.create(recursive: true);
-    await File('${adapter.path}/package.json').writeAsString(
-      '{"version": "$adapterVersion", "bin": {"codex-acp": "dist/index.js"}}',
-    );
   }
 
   /// Starts a relay on [port] (0: any free one) with [args], once it
