@@ -179,25 +179,14 @@ const (
 )
 
 // Find counts the hits in text and makes an excerpt around the first;
-// 0 and no excerpt when there are none.
+// 0 and no excerpt when there are none. The text is always squashed, a
+// Literal query's too, so the excerpt stays on one line.
 func (q Query) Find(text string) (int, Excerpt) {
-	if q.Empty() {
+	if q.Empty() || !q.mayHoldText(text) {
 		return 0, Excerpt{}
 	}
 	s := squash(text)
-	n, first, end := 0, -1, 0
-	for i := 0; i < len(s); {
-		if j, ok := q.prefixOf(s[i:]); ok {
-			if n == 0 {
-				first, end = i, i+j
-			}
-			n++
-			i += j
-			continue
-		}
-		_, size := utf8.DecodeRuneInString(s[i:])
-		i += size
-	}
+	n, first, end := q.walk(s)
 	if n == 0 {
 		return 0, Excerpt{}
 	}
@@ -214,17 +203,26 @@ func (q Query) Count(text string) int {
 	if !q.literal {
 		text = squash(text)
 	}
-	n := 0
-	for i := 0; i < len(text); {
-		if j, ok := q.prefixOf(text[i:]); ok {
+	n, _, _ := q.walk(text)
+	return n
+}
+
+// walk counts the query's hits in s, prepared (squashed or not), each
+// after the one before it ends, and says where the first starts and ends.
+func (q Query) walk(s string) (n, first, end int) {
+	for i := 0; i < len(s); {
+		if j, ok := q.prefixOf(s[i:]); ok {
+			if n == 0 {
+				first, end = i, i+j
+			}
 			n++
 			i += j
 			continue
 		}
-		_, size := utf8.DecodeRuneInString(text[i:])
+		_, size := utf8.DecodeRuneInString(s[i:])
 		i += size
 	}
-	return n
+	return n, first, end
 }
 
 // prefixOf says whether s starts with the query, case aside, and how many
