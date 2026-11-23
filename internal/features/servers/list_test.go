@@ -2,6 +2,7 @@ package servers
 
 import (
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -67,5 +68,43 @@ func TestListLooksUpProgramsOutsideTheLock(t *testing.T) {
 		if r.Program != fakeServer {
 			t.Errorf("%s's program is %q, want %q", r.Name, r.Program, fakeServer)
 		}
+	}
+}
+
+// pathEnv is a login shell's environment whose PATH is dir.
+type pathEnv string
+
+func (p pathEnv) Environ() []string { return []string{"PATH=" + string(p)} }
+
+// Start's answer shows the program its launch found on the login shell's
+// PATH, a bare command's too, and a start of a running server answers
+// with it as well: neither looks along PATH again, which the service's
+// lock would be held over.
+func TestStartShowsTheProgramItsLaunchFound(t *testing.T) {
+	bare := `{"name": "web", "runtimeExecutable": "fakeserver", "port": ` + strconv.Itoa(freePort(t)) + `}`
+	s, _, _ := setup(t, bare)
+	s.Env = pathEnv(filepath.Dir(fakeServer))
+	var mu sync.Mutex
+	looks := 0
+	was := lookPath
+	lookPath = func(command string, env []string) string {
+		mu.Lock()
+		looks++
+		mu.Unlock()
+		return was(command, env)
+	}
+	t.Cleanup(func() { lookPath = was })
+
+	for range 2 {
+		r, err := s.Start(t.Context(), "c", Pick{Name: "web"})
+		testcheck.NoErr(t, err)
+		if r.Program != fakeServer {
+			t.Errorf("Start's program is %q, want %q", r.Program, fakeServer)
+		}
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if looks != 1 {
+		t.Errorf("%d looks along PATH, want the launch's one", looks)
 	}
 }

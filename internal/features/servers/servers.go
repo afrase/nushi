@@ -130,6 +130,7 @@ type server struct {
 	chatID          string  // the chat it was started from
 	proc            Process // its terminal, from its program's start until it ended (under the lock; reap reads its own)
 	leader          model.Process
+	program         string        // what its launch found its command names (resolve), under the lock
 	ended           chan struct{} // closed once it ended and is listed so
 
 	// Under the service's lock.
@@ -264,6 +265,9 @@ func (s *Service) Start(ctx context.Context, chatID string, pick Pick) (Row, err
 			o.showTo = chatID // shown once it answers, if it hasn't yet
 		}
 		s.mu.Unlock()
+		if row.Program == "" { // still starting, its program not found yet
+			program(&row, o.entry, s.Env.Environ())
+		}
 		row.Index = i
 		if pick.Agent && row.State == Running {
 			s.showAsked(chatID, row.URL)

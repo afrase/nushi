@@ -55,7 +55,7 @@ func (s *Service) launch(ctx context.Context, sv *server) error {
 		scheme = "https"
 	}
 	s.mu.Lock()
-	sv.proc, sv.leader, sv.port = proc, leader, port
+	sv.proc, sv.leader, sv.port, sv.program = proc, leader, port, program
 	sv.url = scheme + "://localhost:" + strconv.Itoa(port)
 	sv.tree = []model.Process{leader}
 	stopping := sv.stopping != "" // stopped while it started

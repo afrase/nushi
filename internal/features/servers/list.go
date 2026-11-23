@@ -170,11 +170,12 @@ func (sv *server) into(r *Row) {
 	}
 }
 
-// row is a live server's row alone, Start's answer; under the service's
-// lock.
+// row is a live server's row alone, Start's answer, its program the one
+// its launch found (none yet while it starts); under the service's lock,
+// so it looks along no PATH.
 func (sv *server) row() Row {
 	r := entryRow(sv.entry, -1)
-	program(&r, sv.entry, nil)
+	r.Program = sv.program
 	sv.into(&r)
 	return r
 }
