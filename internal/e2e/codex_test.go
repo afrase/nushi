@@ -11,10 +11,10 @@ import (
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
-// A Codex chat: its features follow what the agent reports (no rewind
-// without a cut, no /context), model and effort are two options, its mode
-// is remembered for Codex only, a command's output shows, and it all comes
-// back after a daemon restart; Delete deletes its history.
+// A Codex chat: its features follow what the agent reports (fork, no
+// /context), model and effort are two options, its mode is remembered for
+// Codex only, a command's output shows, and it all comes back after a
+// daemon restart; Delete deletes its history.
 func TestACodexChat(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
@@ -37,8 +37,8 @@ func TestACodexChat(t *testing.T) {
 		t.Errorf("options = %s, want one mode, the model and the effort", got)
 	}
 	snap := a.get(first.ChatId)
-	if st := snap.Status; !st.CanFork || st.CanRewind || st.CanAskContext {
-		t.Errorf("status = %v, want fork but no rewind or context", st)
+	if st := snap.Status; !st.CanFork || st.CanAskContext {
+		t.Errorf("status = %v, want fork but no context", st)
 	}
 	must(a.c.SetConfigOption(ctx, connect.NewRequest(&nushiv1.SetConfigOptionRequest{ChatId: first.ChatId, ConfigId: "mode", Value: "workspace-write"})))
 	if mode := modeOf(a.get(start("codex").ChatId).Config); mode != "workspace-write" {

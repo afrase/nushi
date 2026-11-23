@@ -14,8 +14,9 @@
 //   - containing "many": 150 messages, each after a tool call, quickly;
 //   - containing "pwd": "cwd: <the session's cwd>";
 //   - containing "wait": nothing, until the turn is cancelled (10 s at most);
-//   - containing "subagent": a subagent, as claude-agent-acp showed one
-//     without its own session, that runs the prompt as a command and ends;
+//   - containing "subagent": Claude's subagent: an Agent call whose step
+//     (the prompt run as a command) comes on the parent session, tagged
+//     with its parentToolUseId, then the call ends;
 //   - containing "workflow": a Workflow call that launches a run in the
 //     background, as Claude Code 2.1.325 sent it (the "workflow" parity
 //     recording: run wf_769a004c-2aa, task w9u1xb6ik), then a message; the
@@ -176,13 +177,14 @@ func (a *Agent) fail(f frame, msg string) {
 }
 
 // noSession is the error for a session/load of a session the history
-// doesn't have: opencode's is invalid params with the id, not ACP's
-// resource not found (docs/facts/opencode.md).
+// doesn't have: ACP's resource not found with the id, as Claude's agent
+// answers (docs/facts/claude.md); opencode's is invalid params with the
+// id (docs/facts/opencode.md).
 func (a *Agent) noSession(id string) *rpcError {
 	if a.Opencode {
 		return &rpcError{Code: -32602, Message: "Invalid params: session not found: " + id, Data: map[string]any{"sessionId": id}}
 	}
-	return &rpcError{Message: "no such session"}
+	return &rpcError{Code: -32002, Message: "Resource not found: " + id, Data: map[string]any{"uri": id}}
 }
 
 func (a *Agent) send(f frame) {
@@ -235,7 +237,7 @@ func (a *Agent) answer(f frame) {
 	_, open := a.cwds[p.SessionID]
 	a.mu.Unlock()
 	switch f.Method {
-	case "session/prompt", "session/set_config_option", "session/set_mode", "_session/steering":
+	case "session/prompt", "session/set_config_option", "session/set_mode":
 		if !open {
 			a.fail(f, "Session not found")
 			return

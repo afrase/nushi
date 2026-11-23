@@ -38,7 +38,9 @@ type codexes struct {
 	mu      sync.Mutex
 	fakes   []*appservertest.Fake
 	items   map[string][]map[string]any // thread/items/list's entries by thread
+	running map[string]string           // each thread's turn being started, by thread
 	threads atomic.Int64                // thread ids, unique across agents
+	turns   atomic.Int64                // turn (and its items') numbers, unique across agents
 }
 
 // codexFakes are the fake Codexes' threads by data folder, under fakesMu.
@@ -49,7 +51,7 @@ func codexStores(dataDir string) *codexes {
 	fakesMu.Lock()
 	defer fakesMu.Unlock()
 	if codexFakes[dataDir] == nil {
-		codexFakes[dataDir] = &codexes{items: map[string][]map[string]any{}}
+		codexFakes[dataDir] = &codexes{items: map[string][]map[string]any{}, running: map[string]string{}}
 	}
 	return codexFakes[dataDir]
 }
@@ -63,9 +65,39 @@ func (c *codexes) keep(thread, turn string, items ...map[string]any) {
 	}
 }
 
-// history scripts f's thread/resume and thread/items/list from the
-// threads kept.
+// history scripts f's thread/resume, thread/read, thread/items/list and
+// thread/fork from the threads kept; a fork with a last turn keeps the
+// items up to that turn's last, as Codex cuts one.
 func (c *codexes) history(f *appservertest.Fake) {
+	f.On("thread/read", func(params json.RawMessage) (any, error) {
+		var p struct {
+			ThreadID string `json:"threadId"`
+		}
+		_ = json.Unmarshal(params, &p)
+		return map[string]any{"thread": appservertest.Thread(p.ThreadID, "")}, nil
+	})
+	f.On("thread/fork", func(params json.RawMessage) (any, error) {
+		var p struct {
+			ThreadID   string `json:"threadId"`
+			LastTurnID string `json:"lastTurnId"`
+			Cwd        string `json:"cwd"`
+		}
+		_ = json.Unmarshal(params, &p)
+		id := "thr_" + strconv.FormatInt(c.threads.Add(1), 10)
+		c.mu.Lock()
+		var kept []map[string]any
+		seen := false
+		for _, e := range c.items[p.ThreadID] {
+			if p.LastTurnID != "" && seen && e["turnId"] != p.LastTurnID {
+				break
+			}
+			seen = seen || e["turnId"] == p.LastTurnID
+			kept = append(kept, e)
+		}
+		c.items[id] = kept
+		c.mu.Unlock()
+		return appservertest.Opened(appservertest.Thread(id, p.Cwd)), nil
+	})
 	f.On("thread/resume", func(params json.RawMessage) (any, error) {
 		var p struct {
 			ThreadID string `json:"threadId"`
@@ -104,29 +136,43 @@ func (c *codexes) serve(r io.Reader, w io.Writer) {
 		_ = json.Unmarshal(params, &p)
 		return appservertest.Opened(appservertest.Thread("thr_"+strconv.FormatInt(c.threads.Add(1), 10), p.Cwd)), nil
 	})
-	f.On("turn/start", appservertest.Reply(map[string]any{"turn": appservertest.TurnOf("turn_1", "inProgress")}))
+	f.On("turn/start", func(params json.RawMessage) (any, error) {
+		var p struct {
+			ThreadID string `json:"threadId"`
+		}
+		_ = json.Unmarshal(params, &p)
+		n := strconv.FormatInt(c.turns.Add(1), 10)
+		c.mu.Lock()
+		c.running[p.ThreadID] = n
+		c.mu.Unlock()
+		return map[string]any{"turn": appservertest.TurnOf("turn_"+n, "inProgress")}, nil
+	})
 	f.Then("turn/start", func(params json.RawMessage) {
 		var p struct {
 			ThreadID string          `json:"threadId"`
 			Input    json.RawMessage `json:"input"`
 		}
 		_ = json.Unmarshal(params, &p)
+		c.mu.Lock()
+		n := c.running[p.ThreadID]
+		c.mu.Unlock()
+		turn, call, msg := "turn_"+n, "call_"+n, "msg_"+n
 		command := func(status string, output, exit any) map[string]any {
-			return map[string]any{"type": "commandExecution", "id": "call_1",
+			return map[string]any{"type": "commandExecution", "id": call,
 				"command": "/bin/zsh -lc 'echo hi'", "cwd": "/w", "processId": nil, "source": "agent", "status": status,
 				"commandActions": []any{map[string]any{"type": "unknown", "command": "echo hi"}}, "aggregatedOutput": output, "exitCode": exit, "durationMs": nil}
 		}
 		item := func(status string, output, exit any) map[string]any {
-			return map[string]any{"threadId": p.ThreadID, "turnId": "turn_1", "item": command(status, output, exit)}
+			return map[string]any{"threadId": p.ThreadID, "turnId": turn, "item": command(status, output, exit)}
 		}
-		c.keep(p.ThreadID, "turn_1", map[string]any{"type": "userMessage", "id": "u_1", "clientId": nil, "content": p.Input},
-			command("completed", "hi\n", 0), map[string]any{"type": "agentMessage", "id": "msg_1", "text": "Ran it."})
-		f.Notify("turn/started", map[string]any{"threadId": p.ThreadID, "turn": appservertest.TurnOf("turn_1", "inProgress")})
+		c.keep(p.ThreadID, turn, map[string]any{"type": "userMessage", "id": "u_" + n, "clientId": nil, "content": p.Input},
+			command("completed", "hi\n", 0), map[string]any{"type": "agentMessage", "id": msg, "text": "Ran it."})
+		f.Notify("turn/started", map[string]any{"threadId": p.ThreadID, "turn": appservertest.TurnOf(turn, "inProgress")})
 		f.Notify("item/started", item("inProgress", nil, nil))
-		f.Notify("item/commandExecution/outputDelta", map[string]any{"threadId": p.ThreadID, "turnId": "turn_1", "itemId": "call_1", "delta": "hi\n"})
+		f.Notify("item/commandExecution/outputDelta", map[string]any{"threadId": p.ThreadID, "turnId": turn, "itemId": call, "delta": "hi\n"})
 		f.Notify("item/completed", item("completed", "hi\n", 0))
-		f.Notify("item/agentMessage/delta", map[string]any{"threadId": p.ThreadID, "turnId": "turn_1", "itemId": "msg_1", "delta": "Ran it."})
-		f.Notify("turn/completed", map[string]any{"threadId": p.ThreadID, "turn": appservertest.TurnOf("turn_1", "completed")})
+		f.Notify("item/agentMessage/delta", map[string]any{"threadId": p.ThreadID, "turnId": turn, "itemId": msg, "delta": "Ran it."})
+		f.Notify("turn/completed", map[string]any{"threadId": p.ThreadID, "turn": appservertest.TurnOf(turn, "completed")})
 	})
 	c.history(f)
 	f.On("thread/archive", appservertest.Reply(map[string]any{}))
@@ -140,8 +186,9 @@ func (c *codexes) serve(r io.Reader, w io.Writer) {
 // Node and no adapter, reads as one through codex-acp (TestACodexChat):
 // the mode, model and effort options (and Codex's collaboration mode), a
 // mode picked kept for the next chat, a command's output, the turn's end;
-// it all comes back after a daemon restart, through session/load, and
-// Delete archives the thread; the daemon's stop ends Codex.
+// a rewind forks the thread at a message, cut by Codex; it all comes back
+// after a daemon restart, through session/load, and Delete archives the
+// thread and its fork; the daemon's stop ends Codex.
 func TestACodexChatThroughTheGoAgent(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
@@ -173,6 +220,25 @@ func TestACodexChatThroughTheGoAgent(t *testing.T) {
 		!strings.Contains(string(turn[0]), `"approvalsReviewer":"user"`) {
 		t.Errorf("turn/start %s, want the workspace-write mode's", turn)
 	}
+	// A rewind to a second message forks at the first turn's reply: the Go
+	// agent asks Codex for the thread up to that reply's turn, and the
+	// replay below is the cut thread's.
+	a.send(first, "run it again")
+	a.waitFor("the second turn to end", turnEnded(first))
+	var second string
+	for _, it := range a.get(first).Items {
+		if it.Kind == nushiv1.ItemKind_ITEM_KIND_USER_MESSAGE && it.Text == "run it again" {
+			second = it.Id
+		}
+	}
+	must(a.c.RewindChat(ctx, connect.NewRequest(&nushiv1.RewindChatRequest{ChatId: first, ItemId: second})))
+	a.waitFor("the rewind", idle)
+	if got := transcript(a.get(first).Items); got != want {
+		t.Errorf("rewound:\n%s\nwant:\n%s", got, want)
+	}
+	if fork := fakes[0].Calls("thread/fork"); len(fork) != 1 || !strings.Contains(string(fork[0]), `"lastTurnId":"turn_`) {
+		t.Errorf("thread/fork %s, want one cut at a turn", fork)
+	}
 
 	a = d.reopen(t)
 	snap := a.get(first)
@@ -198,7 +264,7 @@ func TestACodexChatThroughTheGoAgent(t *testing.T) {
 	if resumed == 0 {
 		t.Error("the chat came back without session/load")
 	}
-	if !plan.DeletesHistory || archived != 1 {
+	if !plan.DeletesHistory || archived != 2 { // the thread and its fork
 		t.Errorf("Delete archived %d threads (plan %v)", archived, plan)
 	}
 }
