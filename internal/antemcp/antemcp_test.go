@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -143,6 +144,38 @@ func TestAddAndRemove(t *testing.T) {
 	}
 	if err := (Ante{}).Remove(ctx, "/f", "user", "nope"); err == nil {
 		t.Error("removed a server that isn't there")
+	}
+}
+
+// An edit is one change: the server's config replaced in place, the rest
+// of the file kept; a config Ante can't take, a server that isn't there or
+// another scope is refused before anything is written.
+func TestReplace(t *testing.T) {
+	path := home(t, settings)
+	ctx := context.Background()
+	if err := (Ante{}).Replace(ctx, "/f", "user", "fs", `{"command":"fs-mcp","args":["--root","/tmp"]}`); err != nil {
+		t.Fatal(err)
+	}
+	if want := map[string]any{"command": "fs-mcp", "args": []any{"--root", "/tmp"}}; !reflect.DeepEqual(servers(t, path)["fs"], want) {
+		t.Errorf("fs = %v, want %v", servers(t, path)["fs"], want)
+	}
+	b, _ := os.ReadFile(path)
+	if want := strings.Replace(settings, `{"command": "fs-mcp", "args": ["--root", "/"], "env": {"TOKEN": "s3cret"}, "enabled_tools": ["read"]}`,
+		`{"command": "fs-mcp", "args": ["--root","/tmp"]}`, 1); string(b) != want {
+		t.Errorf("the file:\n%s\nwant only fs changed:\n%s", b, want)
+	}
+	for _, c := range []struct{ scope, name, config, why string }{
+		{"user", "web", `{"type":"sse","url":"https://x/sse"}`, "SSE"},
+		{"user", "web", `{"command":"x","url":"https://x"}`, "a command and a URL"},
+		{"user", "nope", `{"command":"x"}`, "no such server"},
+		{"project", "web", `{"command":"x"}`, "a project's servers"},
+	} {
+		if err := (Ante{}).Replace(ctx, "/f", c.scope, c.name, c.config); err == nil {
+			t.Errorf("%s: replaced", c.why)
+		}
+	}
+	if after, _ := os.ReadFile(path); !bytes.Equal(after, b) {
+		t.Errorf("a refused edit wrote the file:\n%s", after)
 	}
 }
 

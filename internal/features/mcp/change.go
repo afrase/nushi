@@ -66,9 +66,17 @@ func (s *Service) Add(ctx context.Context, folder, scope, name, config string) e
 	return nil
 }
 
+// replacer is a Config that replaces a server's config in one write
+// (Ante's: one change of its settings file, under its lock), so nothing
+// between a remove and an add can lose the server.
+type replacer interface {
+	Replace(ctx context.Context, folder, scope, name, config string) error
+}
+
 // Edit replaces a server's config, keeping its name and scope. An env or
-// header value left as Mask keeps the value it had. It is a remove and an
-// add; when the add fails, the old config is put back.
+// header value left as Mask keeps the value it had. Where the Config can
+// (replacer) it is one write; else (Claude's CLI has no edit) a remove
+// and an add, and when the add fails, the old config is put back.
 func (s *Service) Edit(ctx context.Context, folder, scope, name, config string) error {
 	ctx = context.WithoutCancel(ctx)
 	if err := check(folder, scope, name, config); err != nil {
@@ -80,6 +88,13 @@ func (s *Service) Edit(ctx context.Context, folder, scope, name, config string) 
 	}
 	if config, err = unmasked(config, old); err != nil {
 		return err
+	}
+	if r, ok := s.config.(replacer); ok {
+		if err := r.Replace(ctx, folder, scope, name, config); err != nil {
+			return err
+		}
+		s.notify(folder, scope)
+		return nil
 	}
 	if err := s.config.Remove(ctx, folder, scope, name); err != nil {
 		return err

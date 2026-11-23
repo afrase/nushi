@@ -108,6 +108,36 @@ func TestEditKeepsMaskedValuesAndPutsTheOldOneBack(t *testing.T) {
 	}
 }
 
+// replacingConfig is a Config that changes a server in one write.
+type replacingConfig struct{ fakeConfig }
+
+func (f *replacingConfig) Replace(_ context.Context, _, _, name, config string) error {
+	f.calls = append(f.calls, "replace "+name+" "+config)
+	if strings.Contains(config, "bad") {
+		return errors.New("refused")
+	}
+	return nil
+}
+
+// An agent whose config can change a server in one write (Ante's) gets
+// the edit as that one write, never a remove then an add: nothing can
+// come between them and lose the server.
+func TestEditIsOneChangeWhereTheAgentCan(t *testing.T) {
+	cfg := &replacingConfig{fakeConfig{files: []model.MCPServer{{Name: "s", Scope: "user", Config: `{"command":"x","env":{"K":"secret"}}`}}}}
+	svc := New("ante", cfg, nil)
+	ctx := context.Background()
+	if err := svc.Edit(ctx, "/repo", "user", "s", `{"command":"x","env":{"K":"••••"}}`); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Edit(ctx, "/repo", "user", "s", `{"command":"bad"}`); err == nil {
+		t.Fatal("a refused config should fail the edit")
+	}
+	want := []string{`replace s {"command":"x","env":{"K":"secret"}}`, `replace s {"command":"bad"}`}
+	if strings.Join(cfg.calls, "\n") != strings.Join(want, "\n") {
+		t.Errorf("calls:\n%s\nwant:\n%s", strings.Join(cfg.calls, "\n"), strings.Join(want, "\n"))
+	}
+}
+
 func TestRemoveRefusesWhatIsntAServer(t *testing.T) {
 	cfg := &fakeConfig{}
 	svc := New("claude", cfg, nil)

@@ -141,6 +141,26 @@ func (Ante) Remove(_ context.Context, _, scope, name string) error {
 	})
 }
 
+// Replace changes a server's config in your settings in one change, so
+// no lock wait or stop between a remove and an add can lose it: the new
+// config is checked (normalize) before anything is written.
+func (Ante) Replace(_ context.Context, _, scope, name, config string) error {
+	if scope != "user" {
+		return errScope
+	}
+	raw, err := normalize(config)
+	if err != nil {
+		return err
+	}
+	return change(func(servers map[string]json.RawMessage) error {
+		if _, ok := servers[name]; !ok {
+			return fmt.Errorf("Ante has no server named %s", name)
+		}
+		servers[name] = raw
+		return nil
+	})
+}
+
 // change changes mcp_servers alone, under Ante's lock (ante.EditSettings).
 func change(edit func(map[string]json.RawMessage) error) error {
 	return ante.EditSettings(func(m map[string]json.RawMessage) error {
