@@ -37,7 +37,7 @@ func (s *server) GetUsage(ctx context.Context, req *connect.Request[nushiv1.GetU
 	}
 	r, err := s.Usage.Report(ctx, msTime(m.From), msTime(m.To), m.TimeZone)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeUnavailable, err)
+		return nil, refused(err) // not Unavailable: the app takes that for the daemon gone
 	}
 	return connect.NewResponse(reportProto(r)), nil
 }

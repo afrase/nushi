@@ -374,7 +374,7 @@ void main() {
           version: '0.1.16',
         ),
         CheckForUpdatesRequest() => throw ConnectException(
-          Code.unavailable,
+          Code.failedPrecondition,
           "can't reach GitHub: no route to host",
         ),
         _ => null,

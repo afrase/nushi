@@ -33,7 +33,7 @@ func (s *server) CheckForUpdates(ctx context.Context, _ *connect.Request[nushiv1
 	}
 	u, err := s.Updates.Check(ctx)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeUnavailable, err)
+		return nil, githubErr(err) // the release check is GitHub's; not Unavailable, the daemon gone to the app
 	}
 	return connect.NewResponse(&nushiv1.CheckForUpdatesResponse{Update: updateProto(u)}), nil
 }

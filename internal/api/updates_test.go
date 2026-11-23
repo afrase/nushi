@@ -18,6 +18,7 @@ type fakeUpdates struct {
 	found    model.Update
 	installs int
 	refuses  error
+	checkErr error // Check fails with it
 }
 
 func (f *fakeUpdates) Install() error {
@@ -27,6 +28,9 @@ func (f *fakeUpdates) Install() error {
 
 func (f *fakeUpdates) Get() model.Update { return f.found }
 func (f *fakeUpdates) Check(context.Context) (model.Update, error) {
+	if f.checkErr != nil {
+		return model.Update{}, f.checkErr
+	}
 	f.found.Checked = time.UnixMilli(2000)
 	return f.found, nil
 }
@@ -87,5 +91,26 @@ func TestOnlyTheMacInstallsAnUpdate(t *testing.T) {
 	r, err := mac.Ping(t.Context(), connect.NewRequest(&nushiv1.PingRequest{}))
 	if got := r.Msg.GetUpdate(); err != nil || !got.GetInstalling() || got.GetInstallError() != "why" || got.GetInstalled() != "0.28.1" {
 		t.Fatalf("ping: %v %v", got, err)
+	}
+}
+
+// failingUsage is a usage report that fails, as one with no database.
+type failingUsage struct{ err error }
+
+func (f failingUsage) Report(context.Context, time.Time, time.Time, string) (model.UsageReport, error) {
+	return model.UsageReport{}, f.err
+}
+
+// A check or a report that fails is refused, not Unavailable, which the
+// app reads as the daemon gone (errors.dart's daemonGone).
+func TestOwnFailuresArentUnavailable(t *testing.T) {
+	u := &fakeUpdates{checkErr: errors.New("GitHub answered 502")}
+	_, err := client(t, New(Services{Updates: u})).CheckForUpdates(t.Context(), connect.NewRequest(&nushiv1.CheckForUpdatesRequest{}))
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition || !strings.Contains(err.Error(), "502") {
+		t.Errorf("a failed check: %v", err)
+	}
+	_, err = client(t, New(Services{Usage: failingUsage{errors.New("the daemon couldn't open its database")}})).GetUsage(t.Context(), connect.NewRequest(&nushiv1.GetUsageRequest{}))
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition || !strings.Contains(err.Error(), "database") {
+		t.Errorf("a failed report: %v", err)
 	}
 }

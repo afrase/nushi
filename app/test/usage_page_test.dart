@@ -295,7 +295,10 @@ void main() {
     final inner = fake.answer!;
     var fail = true;
     fake.answer = (input) => input is GetUsageRequest && fail
-        ? throw ConnectException(Code.unavailable, 'the database is locked')
+        ? throw ConnectException(
+            Code.failedPrecondition,
+            'the database is locked',
+          )
         : inner(input);
     final d = await fake.connect(tester);
     await pumpSettings(tester, d, SettingsSection.usage);
