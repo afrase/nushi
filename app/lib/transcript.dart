@@ -961,6 +961,11 @@ class _TranscriptState extends State<Transcript> {
     });
     final arrived = _arrived(entries);
     final live = widget.items == null ? chat.busy : widget.live;
+    // What streams is the last of the items, not a prompt from above or a
+    // message on its way shown after them.
+    final liveAt = widget.items == null
+        ? liveEntry(entries, chat.items)
+        : entries.length - 1;
     _follower.stick();
     _restoreAfterLayout();
     final colors = findColors(NushiTheme.of(context).t);
@@ -1034,7 +1039,7 @@ class _TranscriptState extends State<Transcript> {
                                   _entry(
                                     before,
                                     e,
-                                    live: live && i == entries.length - 1,
+                                    live: live && i == liveAt,
                                     still: chat.waiting,
                                     top: entryGap(
                                       entries,

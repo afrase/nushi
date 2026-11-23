@@ -39,6 +39,17 @@ List<Object> transcriptEntries(List<Item> items) {
   return out;
 }
 
+/// Which of [entries] streams while the chat is busy: the one holding the
+/// last of [items], not a prompt from before the recent part or a message
+/// on its way shown after them; -1 when none does.
+int liveEntry(List<Object> entries, List<Item> items) {
+  final last = items.lastOrNull;
+  if (last == null) return -1;
+  return entries.lastIndexWhere(
+    (e) => entryItems(e).any((it) => identical(it, last)),
+  );
+}
+
 /// An entry's items: a run's calls, a subagent's call and steps, or one.
 List<Item> entryItems(Object e) => switch (e) {
   final List<Item> run => run,

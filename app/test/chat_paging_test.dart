@@ -4,6 +4,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/transcript_entries.dart';
 
 Item _msg(int i) =>
     Item(id: 'i$i', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'm$i');
@@ -238,5 +239,46 @@ void main() {
       ..pane.value = 'x';
     expect(shown.trim(3), isTrue);
     expect(shown.items.first.id, 'y');
+  });
+
+  test('a prompt from before the recent part, answered, stays at the foot '
+      'only until something newer comes; the last item stays the live one', () {
+    final ask = Item(
+      id: 'p',
+      kind: ItemKind.ITEM_KIND_PERMISSION,
+      status: 'pending',
+    );
+    final chat = ChatState('c', '/f')
+      ..load(
+        GetChatResponse(
+          items: [for (var i = 0; i < 4; i++) _msg(i)],
+          older: 400,
+          running: [ask],
+          seq: Int64(5),
+        ),
+      );
+    List<Item> shown() => [...chat.items, ...chat.asksBefore];
+    expect(liveEntry(transcriptEntries(shown()), chat.items), 3);
+
+    chat.apply(_item(6, ask.deepCopy()..status = 'allowed', index: 10));
+    expect(shown().map((i) => i.id), ['i0', 'i1', 'i2', 'i3', 'p']);
+    expect(chat.asksBefore.single.status, 'allowed');
+
+    chat.apply(_item(7, _msg(4), index: 404));
+    expect(shown().map((i) => i.id), ['i0', 'i1', 'i2', 'i3', 'i4']);
+    expect(liveEntry(transcriptEntries(shown()), chat.items), 4);
+  });
+
+  test('the live entry is the last of the items, not a prompt from above '
+      'shown after them', () {
+    final ask = Item(
+      id: 'p',
+      kind: ItemKind.ITEM_KIND_QUESTION,
+      status: 'pending',
+    );
+    final items = [_msg(0), _msg(1)];
+    expect(liveEntry(transcriptEntries([...items, ask]), items), 1);
+    expect(liveEntry(transcriptEntries(items), items), 1);
+    expect(liveEntry(transcriptEntries([ask]), const []), -1);
   });
 }

@@ -612,13 +612,9 @@ class ChatState extends ChangeNotifier {
   /// The permissions and questions in [runningBefore]: the transcript
   /// shows them at its foot, where a waiting card belongs, until their page
   /// is loaded. By kind, not by status, so one answered there shows as
-  /// answered rather than vanishing as it's clicked.
-  List<Item> get asksBefore => [
-    for (final it in runningBefore)
-      if (it.kind == ItemKind.ITEM_KIND_PERMISSION ||
-          it.kind == ItemKind.ITEM_KIND_QUESTION)
-        it,
-  ];
+  /// answered rather than vanishing as it's clicked; it goes once a newer
+  /// item comes (_applyItem), so it never sits below what came after it.
+  List<Item> get asksBefore => [...runningBefore.where(_asks)];
 
   /// The older pages on their way (Daemon.loadOlder), if any.
   Future<void>? get olderLoad => _olderLoad;
@@ -913,6 +909,8 @@ class ChatState extends ChangeNotifier {
       return;
     } else if (i < 0) {
       outbox.adopt(e.item);
+      // A prompt from above answered at the foot goes as the chat moves on.
+      runningBefore.removeWhere((it) => _asks(it) && !_waits(it));
       // An append carries no index; any other new item its place, 0 too.
       final at = e.index - older;
       if (!e.append && at >= 0 && at < items.length) {
@@ -956,8 +954,10 @@ int _withCalls(List<Item> items, int from, int end) {
   return start;
 }
 
+/// Whether [it] is a permission or a question.
+bool _asks(Item it) =>
+    it.kind == ItemKind.ITEM_KIND_PERMISSION ||
+    it.kind == ItemKind.ITEM_KIND_QUESTION;
+
 /// Whether [it] is a permission or a question still waiting for its answer.
-bool _waits(Item it) =>
-    (it.kind == ItemKind.ITEM_KIND_PERMISSION ||
-        it.kind == ItemKind.ITEM_KIND_QUESTION) &&
-    it.status == 'pending';
+bool _waits(Item it) => _asks(it) && it.status == 'pending';
