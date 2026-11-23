@@ -65,19 +65,33 @@ func (s *Store) SaveVAPIDKey(k model.VAPIDKey) error { return s.write("vapid.jso
 // amendment) rather than the daemon not starting.
 var readWholly = map[string]bool{"remote-key.json": true, "devices.json": true, "vapid.json": true}
 
+// owned are the files one service writes, under its own lock, and reads
+// only as it starts: remote access's (its Service.mu), and vapid.json,
+// which main reads and makes before remote access starts and the service
+// only reads at its own start. The store adds no lock to them, so a
+// phone's devices.json write holds up no other file's caller. The rest
+// (jira.json, github.json) are read by callers that don't hold their
+// writer's lock, and on Windows a rename over a file another handle has
+// open fails, so their reads and writes take mu.
+var owned = map[string]bool{"remote.json": true, "remote-key.json": true, "devices.json": true, "vapid.json": true}
+
 func (s *Store) read(name string, v any) (bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	if !owned[name] {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+	}
 	path := filepath.Join(s.dir, name)
 	if !readWholly[name] {
 		return readJSON(path, v)
 	}
 	ok, aside, err := readWhole(path, v)
-	if aside != "" {
+	if aside != "" { // every readWholly file is owned: mu isn't held here
+		s.mu.Lock()
 		if s.asides == nil {
 			s.asides = map[string]string{}
 		}
 		s.asides[name] = aside
+		s.mu.Unlock()
 	}
 	return ok, err
 }
@@ -91,7 +105,9 @@ func (s *Store) SetAside(name string) string {
 }
 
 func (s *Store) write(name string, v any) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	if !owned[name] {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+	}
 	return writeJSON(filepath.Join(s.dir, name), v)
 }
