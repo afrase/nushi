@@ -35,7 +35,8 @@ const findLimit = 20
 const recentJQL = "issue in issueHistory() ORDER BY lastViewed DESC"
 
 // Find is what text names: an issue's link (matched to the connected site
-// at its host: AddSite keeps one a host), an issue's key
+// at its host, case and a default port aside: AddSite keeps one a host),
+// an issue's key
 // (on site, the one used last, else the first), or words of issues on
 // every site (their summary, description or comments); nothing typed is
 // the issues looked at last.
@@ -49,7 +50,7 @@ func (s *Service) Find(ctx context.Context, text, site string) (Finding, error) 
 	}
 	text = strings.TrimSpace(text)
 	if host, key, ok := parseLink(text); ok {
-		i := slices.IndexFunc(sites, func(x model.JiraSite) bool { return SiteID(x) == host })
+		i := siteAt(sites, host)
 		if i < 0 {
 			// An address, as every app reads it (the host of a URL).
 			return Finding{UnknownSite: "https://" + host}, nil
@@ -148,11 +149,27 @@ func parseLink(text string) (host, key string, ok bool) {
 	if CheckKey(key) != nil {
 		return "", "", false
 	}
-	host = strings.ToLower(u.Hostname())
+	return hostOf(u), key, true
+}
+
+// hostOf is an address's host as links and sites are matched by it:
+// lowercase, with a port only when it isn't the scheme's default.
+func hostOf(u *url.URL) string {
+	host := strings.ToLower(u.Hostname())
 	if p := u.Port(); p != "" && p != map[string]string{"https": "443", "http": "80"}[u.Scheme] {
 		host += ":" + p
 	}
-	return host, key, true
+	return host
+}
+
+// siteAt is the index of the site at a link's host (parseLink's), or -1.
+// A site's address is kept as it was typed, its host's case and an
+// explicit :443 too (jiracloud.Connect), so it's read the same way.
+func siteAt(sites []model.JiraSite, host string) int {
+	return slices.IndexFunc(sites, func(x model.JiraSite) bool {
+		u, err := url.Parse(x.URL)
+		return err == nil && hostOf(u) == host
+	})
 }
 
 // Branch is a branch's name for work on an issue: its key, uppercase so

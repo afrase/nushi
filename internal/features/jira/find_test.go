@@ -185,6 +185,30 @@ func (s *Service) mustFind(t *testing.T, text string) Finding {
 	return f
 }
 
+// A site is stored as its address was typed (jiracloud.Connect keeps the
+// host's case and port), and a link's host is lowercase without the
+// default port, as a browser copies it: both are read the same.
+func TestLinkFindsItsSiteAsTyped(t *testing.T) {
+	sites := []model.JiraSite{{URL: "https://ACME.atlassian.net"}, {URL: "https://b.atlassian.net:443"}, {URL: "https://c.example:8443"}}
+	for _, c := range []struct {
+		link string
+		want int
+	}{
+		{"https://acme.atlassian.net/browse/A-1", 0},
+		{"https://b.atlassian.net/browse/A-1", 1},
+		{"https://C.example:8443/browse/A-1", 2},
+		{"https://c.example/browse/A-1", -1},
+	} {
+		host, _, ok := parseLink(c.link)
+		if !ok {
+			t.Fatalf("%s isn't a link", c.link)
+		}
+		if got := siteAt(sites, host); got != c.want {
+			t.Errorf("%s: site %d, want %d", c.link, got, c.want)
+		}
+	}
+}
+
 func TestFindNoSite(t *testing.T) {
 	s, _, _ := newService(t)
 	if _, err := s.Find(t.Context(), "login", ""); err == nil {
