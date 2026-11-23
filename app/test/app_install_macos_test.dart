@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/app_install_macos.dart';
+import 'package:nushi/daemon.dart';
 
 void main() {
   test('the daemon is opened as the helper app, through the login shell', () {
@@ -39,4 +40,44 @@ void main() {
       returnsNormally,
     );
   });
+
+  // Launch Services can refuse the helper (damaged, quarantined): the
+  // daemon never ran, so app.log is where that shows.
+  test(
+    'an open that fails is logged with its exit and stderr, not thrown',
+    () async {
+      final app = Directory.systemTemp.createTempSync('nushi-app-');
+      addTearDown(() => app.deleteSync(recursive: true));
+      Directory(helperIn(app.path)).createSync(recursive: true);
+      final opened = <List<String>>[];
+      final mac = MacAppInstall(
+        executable: '${app.path}/Contents/MacOS/Nushi',
+        run: (program, args) async {
+          opened.add([program, ...args]);
+          return ProcessResult(
+            1,
+            1,
+            '',
+            'LSOpenURLsWithRole() failed: -10810\n',
+          );
+        },
+      );
+      await mac.launch('/tmp/nd');
+      expect(opened.single.first, '/usr/bin/open');
+      final log = File('$dataDir/app.log').readAsStringSync();
+      expect(log, contains("the bundled daemon didn't start"));
+      expect(log, contains('exit=1'));
+      expect(log, contains('-10810'));
+
+      await expectLater(
+        MacAppInstall(
+          executable: '${app.path}/Contents/MacOS/Nushi',
+          run: (_, _) =>
+              throw const ProcessException('/usr/bin/open', [], 'no open'),
+        ).launch('/tmp/nd'),
+        completes,
+      );
+      expect(File('$dataDir/app.log').readAsStringSync(), contains('no open'));
+    },
+  );
 }

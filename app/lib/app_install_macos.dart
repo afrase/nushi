@@ -25,12 +25,19 @@ List<String> openHelper(String helper, String? nushiData) => [
 /// `/usr/bin/open`, the version from its Info.plist, the data folder in
 /// Application Support.
 class MacAppInstall implements AppInstall {
-  static final String? _home = Platform.environment['HOME'];
+  /// A test passes the [executable] the app runs as, [home], and what
+  /// [run]s `/usr/bin/open`.
+  new({String? executable, String? home, this.run = Process.run})
+    : _contents = File(executable ?? Platform.resolvedExecutable).parent.parent,
+      _home = home ?? Platform.environment['HOME'];
+
+  final String? _home;
 
   /// The app's `Contents` folder, if it runs from a bundle.
-  static final Directory _contents = File(Platform.resolvedExecutable)
-      .parent
-      .parent;
+  final Directory _contents;
+
+  /// What runs `open`, and says how it ended.
+  final Future<ProcessResult> Function(String program, List<String> args) run;
 
   @override
   String get dataFolder => '$_home/Library/Application Support/Nushi';
@@ -70,13 +77,28 @@ class MacAppInstall implements AppInstall {
 
   /// Launch Services opens the helper; the helper's daemon keeps the
   /// default data folder unless the app has `NUSHI_DATA`, which it passes.
+  /// An `open` that fails (Launch Services refused, the helper damaged or
+  /// quarantined) is logged with its exit code and stderr: the daemon
+  /// never ran, so its own log has nothing.
   @override
   Future<void> launch(String dataDir) async {
-    if (daemon case final helper?) {
-      Process.run(
+    final helper = daemon;
+    if (helper == null) return;
+    final ProcessResult opened;
+    try {
+      opened = await run(
         '/usr/bin/open',
         openHelper(helper, Platform.environment['NUSHI_DATA']),
-      ).ignore();
+      );
+    } on ProcessException catch (e) {
+      appLog.warn("the bundled daemon didn't start", {'error': e.message});
+      return;
+    }
+    if (opened.exitCode != 0) {
+      appLog.warn("the bundled daemon didn't start", {
+        'exit': '${opened.exitCode}',
+        'stderr': '${opened.stderr}'.trim(),
+      });
     }
   }
 
@@ -103,7 +125,17 @@ void stopByLsof(String dir, {String lsof = 'lsof'}) {
     });
     return;
   }
+  // lsof exits 1, saying nothing, when nothing listens there.
+  final said = '${found.stderr}'.trim();
+  if (found.exitCode != 0 && said.isNotEmpty) {
+    appLog.warn("lsof didn't find the daemon, so none stopped", {
+      'exit': '${found.exitCode}',
+      'stderr': said,
+    });
+  }
   for (final pid in '${found.stdout}'.split('\n')) {
-    if (int.tryParse(pid) case final pid?) Process.killPid(pid);
+    if (int.tryParse(pid) case final pid? when !Process.killPid(pid)) {
+      appLog.warn("the daemon couldn't be stopped", {'pid': '$pid'});
+    }
   }
 }

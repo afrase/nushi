@@ -118,7 +118,9 @@ class LinuxAppInstall implements AppInstall {
       );
       return;
     }
-    kill(peer);
+    if (!kill(peer)) {
+      appLog.warn("the daemon couldn't be stopped", {'pid': '$peer'});
+    }
   }
 }
 

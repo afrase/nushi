@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/app_install_linux.dart';
+import 'package:nushi/daemon.dart';
 
 /// A package laid out as the Linux build makes it, in a temp folder:
 /// `nushi`, `lib/nushid` and Flutter's version.json.
@@ -156,6 +157,15 @@ void main() {
       comm('nushid');
       await install().stop(dir.path);
       expect(killed, [pid]);
+    });
+
+    test("a nushid that can't be signalled is logged", () async {
+      comm('nushid');
+      await LinuxAppInstall(kill: (_) => false, proc: proc.path).stop(dir.path);
+      expect(
+        File('$dataDir/app.log').readAsStringSync(),
+        contains("the daemon couldn't be stopped"),
+      );
     });
 
     test("leaves another program's socket, and a gone one, alone", () async {

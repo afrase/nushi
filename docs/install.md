@@ -113,7 +113,7 @@ Nushi is two programs: a background service (the daemon, `nushid`, written in Go
 The daemon keeps its socket, token and log in `~/Library/Application Support/Nushi/` (on Linux `~/.local/share/nushi/`, or `$XDG_DATA_HOME/nushi`):
 
 - `nushid.log`, rotated at 10 MB, with two older copies;
-- `app.log`, for what the app logged while the daemon didn't answer.
+- `app.log`, for what the app logged while the daemon didn't answer: a daemon that didn't start or stop says why there (on the Mac, `open`'s exit code and what it printed), since it never wrote a log of its own.
 
 Settings › Logs & advanced reveals them, and turns on debug lines (or set `NUSHI_LOG=debug`). One chat's lines are `grep 'chat=<id>' nushid.log`. [ADR 0038](adr/0038-logs-you-can-debug-from.md) says what is logged and what never is.
 
