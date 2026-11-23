@@ -18,8 +18,8 @@ class DevServers extends ChangeNotifier {
   final _errors = <String, String>{}; // by chat: why it couldn't be listed
 
   /// What runs once a server this app started answers, by its id: its tab
-  /// opens.
-  final _onReady = <String, void Function(String url)>{};
+  /// opens. With the chat that started it, so [forget] lets it go.
+  final _onReady = <String, ({String chatId, void Function(String) ready})>{};
 
   /// Why a start the daemon refused outright (no failed run to list: five
   /// running already, the entry changed since it was listed) didn't go, by
@@ -67,6 +67,16 @@ class DevServers extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Forgets chat [chatId] (it's gone): what was listed for it, why it
+  /// couldn't be, its refusals and the pages its starts would open. A
+  /// reconnect then lists it no more.
+  void forget(String chatId) {
+    _lists.remove(chatId);
+    _errors.remove(chatId);
+    _refused.remove(chatId);
+    _onReady.removeWhere((_, r) => r.chatId == chatId);
+  }
+
   /// Lists each chat's servers listed so far again (after reconnecting).
   void reload() {
     for (final chat in [..._lists.keys]) {
@@ -90,7 +100,7 @@ class DevServers extends ChangeNotifier {
   void _take(String chatId, ListServersResponse list) {
     _lists[chatId] = list;
     for (final s in list.servers) {
-      final ready = _onReady[s.serverId];
+      final ready = _onReady[s.serverId]?.ready;
       if (ready == null) continue;
       if (s.state == DevServerState.DEV_SERVER_STATE_RUNNING) {
         _onReady.remove(s.serverId);
@@ -126,7 +136,7 @@ class DevServers extends ChangeNotifier {
       if (r.server.state == DevServerState.DEV_SERVER_STATE_RUNNING) {
         onReady(r.server.url); // it ran already
       } else {
-        _onReady[r.server.serverId] = onReady;
+        _onReady[r.server.serverId] = (chatId: chatId, ready: onReady);
       }
     } on Object catch (e) {
       // The row says why: the daemon lists a run that failed, and this

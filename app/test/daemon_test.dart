@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/code_runs.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -10,6 +11,7 @@ import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
+import 'fake_shells.dart';
 
 /// A daemon with chat "a"; the chat list and StartChat answer once [list]
 /// and [start] complete, when given.
@@ -233,6 +235,27 @@ void main() {
     expect(side.loaded, isTrue);
     expect(side.loadError, isEmpty);
     d.dispose(); // its pings' timer
+  });
+
+  test("a deleted chat's owners let go: its commands' terminals unfollowed, "
+      'its dev servers no longer listed', () async {
+    final fake = FakeDaemon([Chat(id: 'a', folder: '/x', agent: 'claude')]);
+    final shells = FakeShells(fake);
+    addTearDown(shells.close);
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    await pumpEventQueue(); // live: the chats are listed
+    final chat = d.chats['a']!;
+    final run = await chat.runs.command(d.terminals, 'npm run dev');
+    await d.devServers.load('a');
+    await pumpEventQueue();
+    expect(shells.attached(run.terminalId), isTrue);
+    expect(d.devServers.of('a'), isNotNull);
+    fake.emit(EventsResponse(chatId: 'a', removed: true));
+    await pumpEventQueue();
+    expect(d.chats, isEmpty);
+    expect(shells.attached(run.terminalId), isFalse);
+    expect(d.devServers.of('a'), isNull);
   });
 
   test('a chat deleted while the app was away: what was kept goes', () async {

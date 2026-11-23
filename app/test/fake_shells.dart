@@ -144,8 +144,34 @@ class FakeShells {
       }
     }
 
-    return attach();
+    // Counted while the app listens, which an async* generator, parked in
+    // its await for, would only notice at its next message.
+    StreamSubscription<AttachTerminalResponse>? sub;
+    late final StreamController<AttachTerminalResponse> out;
+    void left() => _attaches[id] = (_attaches[id] ?? 1) - 1;
+    out = StreamController(
+      onListen: () {
+        _attaches[id] = (_attaches[id] ?? 0) + 1;
+        sub = attach().listen(
+          out.add,
+          onError: out.addError,
+          onDone: () {
+            left();
+            out.close().ignore();
+          },
+        );
+      },
+      onCancel: () {
+        left();
+        sub?.cancel().ignore();
+      },
+    );
+    return out.stream;
   }
+
+  /// Whether the app still follows terminal [id] (an attach is open).
+  bool attached(String id) => (_attaches[id] ?? 0) > 0;
+  final _attaches = <String, int>{};
 
   /// Ends every stream.
   Future<void> close() async {

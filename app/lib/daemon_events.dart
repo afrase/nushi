@@ -171,15 +171,17 @@ extension DaemonEvents on Daemon {
   /// away), and everything kept for them: the prefs kept by chat (their
   /// Changes scope, terminals panel, place in their project's order, when
   /// opened, pins, pull request's comments seen and Clean up's Not now),
-  /// review comments, context breakdown, terminals and draft. (A pin goes
-  /// with its chat: the daemon's.)
+  /// review comments, context breakdown, terminals, the runs it follows,
+  /// its dev servers' listing and draft. (A pin goes with its chat: the
+  /// daemon's.)
   void _forget(Set<String> ids) {
     for (final id in ids) {
-      chats.remove(id);
+      chats.remove(id)?.runs.close();
       drafts?.forget(id);
       if (commentsOf(id).isNotEmpty) setComments(id, []);
       if (!remote) forgetContext(id);
       terminals.forget(id);
+      devServers.forget(id);
     }
     forgetChats(ids);
     if (ids.contains(selectedId)) selectedId = null;
