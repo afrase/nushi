@@ -434,8 +434,12 @@ class ChatHeader extends StatelessWidget {
                       if (!folds.buttons && !folds.panel) ...[
                         IconTap.line(
                           LineIcon.details,
+                          // Off on Changes and Pull request, or with no
+                          // room for it: it says which.
                           tooltip: onPanel == null
-                              ? 'The window is too narrow'
+                              ? tab != ChatTab.chat
+                                    ? 'Details show on the Chat tab'
+                                    : 'The window is too narrow'
                               : !panel
                               ? 'Show details'
                               : Beside.railHeldOf(context)

@@ -77,7 +77,8 @@ Finder get _button => find.descendant(
         w is Tooltip &&
         ((w.message ?? '').endsWith('details') ||
             (w.message ?? '').startsWith('Hide details') ||
-            w.message == 'The window is too narrow'),
+            w.message == 'The window is too narrow' ||
+            w.message == 'Details show on the Chat tab'),
   ),
 );
 
@@ -611,6 +612,8 @@ void main() {
       findsNothing,
       reason: 'no details on Changes',
     );
+    // The button says why it's off: the tab, not the window.
+    expect(_tip(tester), 'Details show on the Chat tab');
     expect(
       tester.getRect(find.byType(ChatHeader)).width,
       tester.getRect(find.byType(Pane)).width,
