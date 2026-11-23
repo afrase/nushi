@@ -1,6 +1,6 @@
 //go:build !darwin && !linux
 
-package claudemcp
+package tty
 
 import (
 	"context"

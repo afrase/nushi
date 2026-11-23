@@ -11,7 +11,7 @@
 //     each is on here, then each plugin's skills/, commands/ and agents/
 //     folders;
 //   - whether a skill is listed: "skillOverrides" in the settings files
-//     (claudemcp.SettingsFiles: the project's local settings, the
+//     (claude.SettingsFiles: the project's local settings, the
 //     folder's own local and project settings, yours, the first
 //     winning), else the skill's own disable-model-invocation.
 //
@@ -28,7 +28,6 @@ import (
 	"slices"
 
 	"github.com/afrase/nushi/internal/claude"
-	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
@@ -57,7 +56,7 @@ func projectRoots(folder string) []string {
 
 // List returns folder's skills and plugins.
 func (c Claude) List(ctx context.Context, folder string) (model.Skills, error) {
-	return c.list(ctx, folder, claudemcp.Project(folder), true)
+	return c.list(ctx, folder, claude.Project(folder), true)
 }
 
 // list returns folder's skills, whose project is key, and with plugins
@@ -121,12 +120,12 @@ type settings struct {
 }
 
 // settingsFiles are the settings files Claude reads in folder, whose
-// project is key, the one that wins first (claudemcp.SettingsFiles): the
+// project is key, the one that wins first (claude.SettingsFiles): the
 // project's local settings first, yours last. One that can't be read
 // counts as empty.
 func settingsFiles(folder, key string) []settings {
 	var out []settings
-	for _, path := range claudemcp.SettingsFiles(folder, key) {
+	for _, path := range claude.SettingsFiles(folder, key) {
 		s := settings{path: path}
 		_ = jsonsettings.Read(path, &s) // unreadable, or a key of another shape: unset
 		out = append(out, s)

@@ -3,12 +3,12 @@ package claudemcp
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -163,27 +163,6 @@ func TestSetOnRefusesSymlinks(t *testing.T) {
 	}
 }
 
-// A worktree made with worktree.useRelativePaths (git 2.48) links back to
-// itself with a relative path; its project is still the main checkout.
-func TestProjectOfARelativeWorktree(t *testing.T) {
-	base, _ := filepath.EvalSymlinks(t.TempDir())
-	main, wt := filepath.Join(base, "main"), filepath.Join(base, "wt")
-	testcheck.NoErr(t, os.Mkdir(main, 0o700))
-	testcheck.Git(t, main, "init", "-q")
-	testcheck.Git(t, main, "commit", "-q", "--allow-empty", "-m", "first")
-	testcheck.Git(t, main, "-c", "worktree.useRelativePaths=true", "worktree", "add", "-q", wt)
-	if b, _ := os.ReadFile(filepath.Join(main, ".git", "worktrees", "wt", "gitdir")); filepath.IsAbs(strings.TrimSpace(string(b))) {
-		testcheck.Lacks(t, fmt.Sprintf("git wrote an absolute link back (%s): older than 2.48", b))
-	}
-	sub := filepath.Join(wt, "sub")
-	testcheck.NoErr(t, os.Mkdir(sub, 0o700))
-	for _, folder := range []string{wt, sub} {
-		if got := Project(folder); got != main {
-			t.Errorf("Project(%s) = %s, want the main checkout %s", folder, got, main)
-		}
-	}
-}
-
 // In a worktree Claude reads the main checkout's local settings, then the
 // worktree's own local settings and settings.json, then yours; not the
 // main checkout's settings.json (docs/facts/claude.md). A real worktree.
@@ -197,15 +176,15 @@ func TestSettingsFilesInAWorktree(t *testing.T) {
 	testcheck.Git(t, main, "add", ".mcp.json")
 	testcheck.Git(t, main, "commit", "-qm", "servers")
 	testcheck.Git(t, main, "worktree", "add", "-q", wt)
-	if got := Project(wt); got != main {
+	if got := claude.Project(wt); got != main {
 		t.Fatalf("a worktree's project is %s, want the main checkout %s", got, main)
 	}
 	want := []string{filepath.Join(main, ".claude", "settings.local.json"), filepath.Join(wt, ".claude", "settings.local.json"),
 		filepath.Join(wt, ".claude", "settings.json"), filepath.Join(cfg, "settings.json")}
-	if got := SettingsFiles(wt, main); strings.Join(got, "|") != strings.Join(want, "|") {
+	if got := claude.SettingsFiles(wt, main); strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Errorf("a worktree's settings files:\n%q\nwant\n%q", got, want)
 	}
-	if got := SettingsFiles(main, main); len(got) != 3 {
+	if got := claude.SettingsFiles(main, main); len(got) != 3 {
 		t.Errorf("the main checkout's settings files: %q", got)
 	}
 

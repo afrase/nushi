@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"slices"
 	"strings"
 	"time"
 
-	"github.com/afrase/nushi/internal/ansi"
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/procgroup"
+	"github.com/afrase/nushi/internal/tty"
 )
 
 // Nushi changes Claude's MCP config through Claude's own CLI, run in the
@@ -31,7 +31,7 @@ func (Claude) Remove(ctx context.Context, folder, scope, name string) error {
 // Login signs in to a server that needs OAuth (`claude mcp login`): it
 // opens the browser and waits, a few minutes at most, for the sign-in to
 // finish there. The CLI refuses to run without a terminal, so it runs
-// under script(1), which gives it one (Terminal). script, or on Linux the
+// under script(1), which gives it one (tty.Terminal). script, or on Linux the
 // shell it runs, looks a bare name up itself, in the folder for a relative
 // PATH entry (node_modules/.bin), so it gets the path Go's lookup found,
 // which refuses those as every other claude Nushi runs does.
@@ -42,7 +42,7 @@ func (Claude) Login(ctx context.Context, folder, name string) error {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	cmd, err := Terminal(ctx, nil, claude, "mcp", "login", "--", name)
+	cmd, err := tty.Terminal(ctx, nil, claude, "mcp", "login", "--", name)
 	if err != nil {
 		return fmt.Errorf("signing in to %s: %w", name, err)
 	}
@@ -50,7 +50,7 @@ func (Claude) Login(ctx context.Context, folder, name string) error {
 	procgroup.Bound(cmd)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("signing in to %s didn't finish: %s", name, LastLine(string(out)))
+		return fmt.Errorf("signing in to %s didn't finish: %s", name, tty.LastLine(string(out)))
 	}
 	return nil
 }
@@ -60,21 +60,8 @@ func (Claude) Logout(ctx context.Context, folder, name string) error {
 	return run(ctx, folder, "logout", "--", name)
 }
 
-// LastLine is the last line of a terminal's output with text, without its
-// escape sequences.
-func LastLine(out string) string {
-	out = ansi.Strip(out)
-	lines := strings.FieldsFunc(out, func(r rune) bool { return r == '\n' || r == '\r' })
-	for _, line := range slices.Backward(lines) {
-		if l := strings.TrimSpace(line); l != "" {
-			return l
-		}
-	}
-	return "no output"
-}
-
 // Project is the folder Claude files folder's local servers under.
-func (Claude) Project(folder string) string { return Project(folder) }
+func (Claude) Project(folder string) string { return claude.Project(folder) }
 
 // UserOnly is false: Claude's is the whole model (mcp.Config).
 func (Claude) UserOnly() bool { return false }

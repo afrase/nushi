@@ -9,14 +9,14 @@ import (
 	"regexp"
 	"slices"
 
-	"github.com/afrase/nushi/internal/claudemcp"
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 )
 
 // Nushi turns skills on and off with Claude's documented skillOverrides
 // setting (absent is on), in the file Claude's own advice names: your
 // settings for your skill, the project's local settings for a project's.
-// Only that key changes (claudemcp.EditUser, EditLocal). Built-in skills
+// Only that key changes (claude.EditUser, EditLocal). Built-in skills
 // go on and off together (disableBundledSkills, in your settings), a
 // plugin's skills with their plugin, through `claude plugin`. A skill is
 // deleted by moving its folder to the Trash (ADR 0051).
@@ -30,7 +30,7 @@ func errSetIn(what, file string) error {
 // off. Off is "off"; on drops the skill's override, or says "on" when a
 // file below the one changed would keep it off.
 func (c Claude) SetSkillOn(ctx context.Context, folder, source, name string, on bool) error {
-	key := claudemcp.Project(folder)
+	key := claude.Project(folder)
 	if source == "shared" { // a shared skill Claude has through a link of its own: that skill
 		shared := c.shared(ctx, folder, key)
 		i := slices.IndexFunc(shared, func(s model.Skill) bool { return s.Name == name })
@@ -82,18 +82,18 @@ func (c Claude) SetSkillOn(ctx context.Context, folder, source, name string, on 
 		return err
 	}
 	if t == 0 {
-		return claudemcp.EditLocal(ctx, key, change)
+		return claude.EditLocal(ctx, key, change)
 	}
-	return claudemcp.EditUser(change)
+	return claude.EditUser(change)
 }
 
 // SetBuiltInOn turns Claude's built-in skills on or off, everywhere
 // (disableBundledSkills in your settings).
 func (Claude) SetBuiltInOn(_ context.Context, folder string, on bool) error {
-	if _, setIn := builtInOff(settingsFiles(folder, claudemcp.Project(folder))); setIn != "" {
+	if _, setIn := builtInOff(settingsFiles(folder, claude.Project(folder))); setIn != "" {
 		return errSetIn("Whether built-in skills are on", setIn)
 	}
-	return claudemcp.EditUser(func(settings map[string]json.RawMessage) error {
+	return claude.EditUser(func(settings map[string]json.RawMessage) error {
 		delete(settings, "disableBundledSkills")
 		if !on {
 			settings["disableBundledSkills"] = json.RawMessage("true")
@@ -128,7 +128,7 @@ func installed(ctx context.Context, folder, key, id string) (plugin, error) {
 // else the project's local settings ("local"), which win over the shared
 // ones (Claude's own `--scope` guess changed a shared file, seen).
 func (Claude) PluginScope(folder string, p model.Plugin) string {
-	return pluginScope(settingsFiles(folder, claudemcp.Project(folder)), p)
+	return pluginScope(settingsFiles(folder, claude.Project(folder)), p)
 }
 
 // pluginScope is PluginScope, from the folder's settings files.
@@ -150,13 +150,13 @@ func pluginScope(files []settings, p model.Plugin) string {
 // enabledPlugins entry in the project's local settings, the key Claude's
 // own advice names (only that entry changes).
 func (Claude) SetPluginOn(ctx context.Context, folder, id string, on bool) error {
-	key := claudemcp.Project(folder)
+	key := claude.Project(folder)
 	p, err := installed(ctx, folder, key, id)
 	if err != nil {
 		return err
 	}
 	if pluginScope(settingsFiles(folder, key), p.Plugin) == "local" {
-		return claudemcp.EditLocal(ctx, key, func(settings map[string]json.RawMessage) error {
+		return claude.EditLocal(ctx, key, func(settings map[string]json.RawMessage) error {
 			enabled := map[string]json.RawMessage{}
 			if raw, ok := settings["enabledPlugins"]; ok && string(raw) != "null" && json.Unmarshal(raw, &enabled) != nil {
 				return errors.New("enabledPlugins isn't a map")
@@ -183,7 +183,7 @@ func (Claude) SetPluginOn(ctx context.Context, folder, id string, on bool) error
 // project is uninstalled there, with /plugin in a terminal: Claude would
 // have to run in the folder.
 func (Claude) Uninstall(ctx context.Context, folder, id string) error {
-	p, err := installed(ctx, folder, claudemcp.Project(folder), id)
+	p, err := installed(ctx, folder, claude.Project(folder), id)
 	if err != nil {
 		return err
 	}

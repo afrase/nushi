@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/ante"
-	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
+	"github.com/afrase/nushi/internal/tty"
 )
 
 // Ante's sign-in to an MCP server is its own command, and it has moved:
@@ -81,9 +81,9 @@ func (a Ante) account(ctx context.Context, name string) (model.AgentRun, string,
 // Ante's own folder, whatever folder was asked: Ante's servers don't
 // depend on one. Ante's sign-in was made for a terminal and offers to
 // take a pasted URL while it waits, so it gets one (script(1), as
-// Claude's, claudemcp.Terminal) with a stdin that stays open and silent: a user who types
-// nothing, not an input that ended. 0.2.15 needs --force, or it finds the
-// token the server just refused, says it is signed in and opens no
+// Claude's, tty.Terminal) with a stdin that stays open and silent: a user
+// who types nothing, not an input that ended. 0.2.15 needs --force, or it
+// finds the token the server just refused, says it is signed in and opens no
 // browser; from 0.3.0 login always signs in again and the flag is gone.
 func (a Ante) Login(ctx context.Context, _, name string) error {
 	r, group, err := a.account(ctx, name)
@@ -96,7 +96,7 @@ func (a Ante) Login(ctx context.Context, _, name string) error {
 	}
 	ctx, cancel := context.WithTimeout(ctx, signInFor)
 	defer cancel()
-	cmd, err := claudemcp.Terminal(ctx, r.Env, append(args, "--", name)...) // the server name after --
+	cmd, err := tty.Terminal(ctx, r.Env, append(args, "--", name)...) // the server name after --
 	if err != nil {
 		return fmt.Errorf("signing in to %s: %w", name, err)
 	}
@@ -112,7 +112,7 @@ func (a Ante) Login(ctx context.Context, _, name string) error {
 	case ctx.Err() != nil:
 		return fmt.Errorf("signing in to %s wasn't finished in time", name)
 	}
-	return fmt.Errorf("signing in to %s didn't finish: %s", name, claudemcp.LastLine(string(out)))
+	return fmt.Errorf("signing in to %s didn't finish: %s", name, tty.LastLine(string(out)))
 }
 
 // Logout forgets a server's sign-in (`ante auth logout`, or 0.2.15's
@@ -128,7 +128,7 @@ func (a Ante) Logout(ctx context.Context, _, name string) error {
 	cmd.Dir, cmd.Env = ante.Home(), r.Env
 	procgroup.Bound(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("signing out of %s failed: %s", name, claudemcp.LastLine(string(out)))
+		return fmt.Errorf("signing out of %s failed: %s", name, tty.LastLine(string(out)))
 	}
 	return nil
 }

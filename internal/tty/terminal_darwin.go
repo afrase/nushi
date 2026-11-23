@@ -1,4 +1,4 @@
-package claudemcp
+package tty
 
 import (
 	"context"

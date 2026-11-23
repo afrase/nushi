@@ -122,5 +122,5 @@ func projectDisabled(folder string) ([]string, error) {
 		} `json:"projects"`
 	}
 	err := jsonsettings.Read(claude.ConfigFile(), &cfg)
-	return cfg.Projects[Project(folder)].Disabled, err
+	return cfg.Projects[claude.Project(folder)].Disabled, err
 }

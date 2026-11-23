@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/claude"
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
@@ -31,17 +30,6 @@ import (
 
 // Claude reads Claude Code's MCP config.
 type Claude struct{}
-
-// Project is the folder Claude files folder's local servers and settings
-// under, and keys its trust on: its repository's main checkout, or the
-// folder itself outside git (a real path; git.TrustRoot, as the trust
-// card has it). Work it out once a call: it reads the repository's files.
-//
-//nolint:contextcheck // TrustRoot's one quick git config, bounded by its own 5 s; also for callers with no request (the MCP list's scopes)
-func Project(folder string) string {
-	_, key := git.TrustRoot(git.RealPath(folder))
-	return key
-}
 
 type servers map[string]json.RawMessage
 
@@ -79,7 +67,7 @@ func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err e
 		return nil, nil, err
 	}
 	out = add(nil, cfg.MCPServers, "user", file)
-	key := Project(folder)
+	key := claude.Project(folder)
 	out = add(out, cfg.Projects[key].MCPServers, "local", key)
 	for i := range out {
 		out[i].Off = slices.Contains(cfg.Projects[key].TurnedOff, out[i].Name)
@@ -103,7 +91,7 @@ func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err e
 		start := len(out)
 		out = add(out, mcp.MCPServers, "project", path)
 		for i := start; i < len(out); i++ {
-			out[i].Off, out[i].OffBy = offBy(off[out[i].Name], localSettings(key))
+			out[i].Off, out[i].OffBy = offBy(off[out[i].Name], claude.LocalSettings(key))
 			out[i].Approved = slices.Contains(approved, out[i].Name)
 		}
 		if dir == filepath.Dir(dir) {

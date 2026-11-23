@@ -5,7 +5,7 @@
 // claude-acp`, ADR 0066), which keeps the wire shape of claude-agent-acp,
 // the Node adapter Claude ran through until 2026-11-04. Claude's files are
 // read in claudehistory (whose Local is this Harness with them), claudemcp
-// and claudetrust.
+// and claudetrust; its settings files' layer is here (settings.go).
 package claude
 
 import (
