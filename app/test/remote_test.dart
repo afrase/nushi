@@ -101,6 +101,35 @@ void main() {
     expect(find.text('Copied'), findsOneWidget);
   });
 
+  testWidgets("Copy link copies the daemon's link, built from the QR only "
+      'for an older daemon', (tester) async {
+    final copied = clipboardCopies(tester);
+    const link = 'https://relay.example.com/#pair?from=daemon';
+    for (final (answer, want) in [
+      (StartPairingResponse(qr: _qr, link: link), link),
+      (StartPairingResponse(qr: _qr), pairingLink(_qr)), // v0.53.0-beta.7
+    ]) {
+      remoteState.value = Remote(
+        on: true,
+        relay: 'wss://relay.example.com',
+        pairing: Pairing(),
+      );
+      final daemon = FakeDaemon([])
+        ..answer = (input) => input is StartPairingRequest ? answer : null;
+      await tester.pumpWidget(
+        themed(RemoteSection(NushiServiceClient(daemon)), banner: false),
+      );
+      await tester.tap(find.text('Pair a phone'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Copy link'));
+      await tester.pumpAndSettle();
+      expect(copied.last, want);
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 5));
+    }
+  });
+
   // The section at a narrow and a wide Settings: each device's buttons at
   // the right edge, whatever the width.
   for (final (name, width, tokens) in [

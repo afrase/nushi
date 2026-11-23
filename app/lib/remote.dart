@@ -228,7 +228,9 @@ String keyFingerprint(List<int> key) {
 }
 
 /// The QR code's pairing as a link to the relay's web app (ADR 0054): the
-/// same parameters, in the fragment, so they never reach a server.
+/// same parameters, in the fragment, so they never reach a server. The
+/// daemon sends it as StartPairingResponse.link; this builds it for one
+/// that doesn't (an older daemon, until it restarts for this app's).
 String pairingLink(String qr) {
   final q = Uri.parse(qr);
   final relay = Uri.parse(q.queryParameters['r'] ?? '');
@@ -252,7 +254,8 @@ Future<void> _pair(BuildContext context, NushiServiceClient client) async {
     return;
   }
   if (!context.mounted) return;
-  await _show(context, client, start.qr);
+  final link = start.link.isNotEmpty ? start.link : pairingLink(start.qr);
+  await _show(context, client, link);
 }
 
 /// Whether a pairing dialog is open.
@@ -261,13 +264,13 @@ final ValueNotifier<bool> _open = runValue(false);
 Future<void> _show(
   BuildContext context,
   NushiServiceClient client,
-  String qr,
+  String link,
 ) async {
   _open.value = true;
   try {
     await showDialog<void>(
       context: context,
-      builder: (_) => _Pairing(client, qr),
+      builder: (_) => _Pairing(client, link),
     );
   } finally {
     _open.value = false;
@@ -292,10 +295,10 @@ void watchPairings(
 }
 
 class _Pairing extends StatelessWidget {
-  const new(this.client, this.qr);
+  const new(this.client, this.link);
 
   final NushiServiceClient client;
-  final String qr; // empty when another client started the pairing
+  final String link; // empty when another client started the pairing
 
   @override
   Widget build(BuildContext context) {
@@ -319,7 +322,7 @@ class _Pairing extends StatelessWidget {
           label: 'Close',
           onPressed: () => Navigator.pop(context),
         );
-        if (p == null || p.code.isEmpty && qr.isEmpty) {
+        if (p == null || p.code.isEmpty && link.isEmpty) {
           return nushiDialog(
             'Pair a phone',
             Text(
@@ -353,7 +356,7 @@ class _Pairing extends StatelessWidget {
                     dimension: 220,
                     // The web app's link (parameters in the fragment): the
                     // iPhone's Camera opens it, and Nushi's Scan reads it.
-                    child: CustomPaint(painter: _QrPainter(pairingLink(qr))),
+                    child: CustomPaint(painter: _QrPainter(link)),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -365,7 +368,7 @@ class _Pairing extends StatelessWidget {
                 ),
               ],
             ),
-            [_CopyLink(pairingLink(qr)), close],
+            [_CopyLink(link), close],
           );
         }
         return nushiDialog(
