@@ -39,7 +39,9 @@ jobs:
   # once its files and casks are there. It first reads the latest release and the newest beta, as casks would: once a
   # draft, this release is in neither, and the token casks has can't see a draft. By the release's id, which the
   # event gives: a draft is found by its tag only through a list. On a published release's run only: a run by hand
-  # rebuilds a release as it is. It checks nothing out: its one step is this file's.
+  # rebuilds a release as it is. So does a run on a release that is public with its app's zip attached already (Re-run
+  # all jobs on a green run, or a run queued behind one after publishing the draft by hand): the tap names it, so it
+  # stays public, and live tells withdraw so. It checks nothing out: its one step is this file's.
   draft:
     name: Make the release a draft while it builds
     if: github.event_name == 'release'
@@ -50,17 +52,24 @@ jobs:
     outputs:
       latest: ${{ steps.draft.outputs.latest }}
       beta: ${{ steps.draft.outputs.beta }}
+      live: ${{ steps.draft.outputs.live }}
     steps:
       - id: draft
         env:
           GH_TOKEN: ${{ github.token }}
           ID: ${{ github.event.release.id }}
         run: |
+          read -r draft files <<< "$(ZIP="Nushi-${TAG#v}.zip" gh api "repos/$GITHUB_REPOSITORY/releases/$ID" \
+            --jq '"\(.draft) \(any(.assets[]; .name == env.ZIP))"')"
           latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
           beta=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 30 --json tagName,isPrerelease \
             --jq '[.[] | select(.isPrerelease)][0].tagName // ""')
           echo "latest=$latest" >> "$GITHUB_OUTPUT"
           echo "beta=$beta" >> "$GITHUB_OUTPUT"
+          if [ "$draft" = false ] && [ "$files" = true ]; then
+            echo "live=true" >> "$GITHUB_OUTPUT"
+            echo "$TAG is public with its files already: this run rebuilds them and leaves it public."; exit 0
+          fi
           gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=true --silent
           echo "$TAG is a draft until it is built (the latest release is $latest, the newest beta ${beta:-none})."
 
@@ -298,7 +307,8 @@ jobs:
   # A published release whose run failed or was cancelled before undraft made it public stays a draft: draft made it
   # one, and this job makes sure, for when draft itself failed. Re-running the failed jobs finishes it (undraft makes
   # it public); publishing the draft again builds it all again. A run by hand rebuilds a release as it is, so it leaves
-  # it alone. The job checks nothing out: its one step is this file's.
+  # it alone, as it leaves one draft found live (public with its files, which the tap names). The job checks nothing
+  # out: its one step is this file's.
   withdraw:
     name: Keep the release a draft
     needs: [draft, tag, ci, app, linux, relay, publish, casks, undraft]
@@ -312,10 +322,15 @@ jobs:
       contents: write
     steps:
       - name: Make the release a draft
+        id: withdraw
         env:
           GH_TOKEN: ${{ github.token }}
           ID: ${{ github.event.release.id }}
+          LIVE: ${{ needs.draft.outputs.live }}
         run: |
+          if [ "$LIVE" = true ]; then
+            echo "::error::$TAG was public with its files when this run began, so it stays public with them: re-run the failed jobs once what failed is fixed."; exit 0
+          fi
           gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=true --silent
           echo "::error::$TAG wasn't built, attached and its casks written, so it stays a draft: re-run the failed jobs once what failed is fixed (a fix in the code needs a new tag)."
 
