@@ -144,6 +144,15 @@ class FakeDaemon implements Transport {
   /// until a test sets it.
   GetUsageResponse usage = GetUsageResponse();
 
+  /// What GetMemory answers: a footprint as a Mac's or Linux's daemon
+  /// reads it, every time (internal/api/memory.go). Null: refused as
+  /// Unimplemented, as by a daemon on a system whose processes it
+  /// doesn't read, and the app stops asking.
+  GetMemoryResponse? memory = GetMemoryResponse(
+    daemon: Int64(48 << 20),
+    app: Int64(390 << 20),
+  );
+
   /// What GetRemote answers: the phone off, as a daemon never paired.
   Remote remote = Remote(state: 'off');
 
@@ -437,12 +446,12 @@ class FakeDaemon implements Transport {
           GetUsageRequest() => usage,
           GetRemoteRequest() => GetRemoteResponse(remote: remote),
           GetPushKeyRequest() => GetPushKeyResponse(key: pushKey),
-          // As a daemon on a system whose processes it doesn't read: the
-          // app stops asking (internal/api/memory.go).
-          GetMemoryRequest() => throw ConnectException(
-            Code.unimplemented,
-            'memory not read here',
-          ),
+          GetMemoryRequest() =>
+            memory ??
+                (throw ConnectException(
+                  Code.unimplemented,
+                  "reading processes' memory: unsupported operation",
+                )),
           ForkChatRequest(:final chatId) => ForkChatResponse(
             chatId: _openSide(chatId),
           ),

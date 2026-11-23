@@ -194,4 +194,25 @@ void main() {
     fake.refused.clear(); // what the test's end would fail on
     d.dispose(); // its ping timer ends with the test
   });
+  testWidgets("GetMemory answers a Mac's footprint; unset, it's refused as "
+      "by a daemon that can't read processes", (tester) async {
+    final fake = FakeDaemon([chat('a', 'claude', 'Fix the login')]);
+    final d = await fake.connect(tester);
+    final got = await d.client.getMemory(GetMemoryRequest());
+    expect((got.daemon > 0, got.app > 0), (true, true));
+
+    fake.memory = null;
+    await expectLater(
+      d.client.getMemory(GetMemoryRequest()),
+      throwsA(
+        isA<ConnectException>().having(
+          (e) => e.code,
+          'code',
+          Code.unimplemented,
+        ),
+      ),
+    );
+    expect(fake.refused, isEmpty); // the daemon's own answer, not a gap
+    d.dispose(); // its ping timer ends with the test
+  });
 }
