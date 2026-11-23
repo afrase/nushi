@@ -298,14 +298,17 @@ class FileEdit extends ChangeNotifier {
       if (!gone && !told) _ignore = base;
       // The watch told of a newer version while the save was on its way
       // (an agent writing just after it) and made it the base, a merge or
-      // a conflict: that is the disk now, and it stands.
+      // a conflict: that is the disk now, and it stands. A conflict with
+      // the save's own version (typing went on meanwhile) is none.
+      final saved = r.saved.sha256;
       final moved =
-          _baseSha != r.saved.sha256 &&
-          (_baseSha != baseBefore || !identical(theirs, theirsBefore));
+          _baseSha != saved &&
+          (_baseSha != baseBefore ||
+              (!identical(theirs, theirsBefore) && theirs?.sha != saved));
       if (moved) return false;
       deleted = false;
       merged = false;
-      _setBase(mine, r.saved.sha256, codec);
+      _setBase(mine, saved, codec);
       _unsaved = text != mine;
       notifyListeners();
       return !_unsaved;

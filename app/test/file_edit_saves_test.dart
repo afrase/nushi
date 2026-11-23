@@ -81,6 +81,37 @@ void main() {
     await endEditor(tester, d);
   }, variant: onMac);
 
+  testWidgets("the save's own version, told by the watch before its reply "
+      'while typing goes on on the saved line, is no conflict', (tester) async {
+    final (d, fake) = await openEditor(tester, {
+      'main.go': utf8.encode(goSource),
+    });
+    final e = editOf(d);
+    await typeIn(tester, e, '// mine\n');
+    final held = fake.replyHeld = Completer<void>();
+    final saved = e.save();
+    await tester.pump();
+    // Typing goes on at the end of the line just saved, and the watch
+    // tells of the saved version itself before the save's reply.
+    e.controller.selection = const CodeLineSelection.collapsed(
+      index: 0,
+      offset: 7,
+    );
+    await typeIn(tester, e, ' more');
+    fake.putFile('main.go', utf8.encode(_mine));
+    await tester.pump();
+    held.complete();
+    fake.replyHeld = null;
+    expect(await saved, isFalse);
+    await tester.pumpAndSettle();
+    expect(e.theirs, isNull);
+    expect(e.unsaved, isTrue);
+    expect(find.text('Changed on disk'), findsNothing);
+    expect(await e.save(), isTrue);
+    expect(fake.writes.last.baseSha256, sumOf(utf8.encode(_mine)));
+    await endEditor(tester, d);
+  }, variant: onMac);
+
   testWidgets('a merge the watch makes while a save is on its way stays '
       'once the save is answered', (tester) async {
     final (d, fake) = await openEditor(tester, {
