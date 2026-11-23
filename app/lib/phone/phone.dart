@@ -35,10 +35,10 @@ class Phone extends ChangeNotifier {
   /// work here (the CSP) and would pair in the wrong place.
   final bool sameRelay;
 
-  /// Whether the page shows, and the timer that keeps telling the daemon
-  /// which chat does (its word lapses, ViewLease in the daemon).
+  /// Whether the page shows: while it does, each answered ping tells the
+  /// daemon again which chat does (its word lapses, ViewLease in the
+  /// daemon).
   bool _visible = true;
-  Timer? _viewing;
 
   /// Whether the stored pairing has been read.
   bool loaded = false;
@@ -250,6 +250,9 @@ class Phone extends ChangeNotifier {
         // Kept once a minute at most: it's for "last seen" after a relaunch.
         final was = _seen;
         _seen = seen;
+        // The view's lease, said again with each ping (Link pings only
+        // while the page shows).
+        if (_visible && d.selectedId != null) unawaited(view(d.selectedId));
         if (was == null || seen.difference(was).inMinutes >= 1) {
           unawaited(_save().catchError((Object _) {}));
         }
@@ -257,10 +260,6 @@ class Phone extends ChangeNotifier {
     )..start();
     remoteState.addListener(_remoteChanged);
     platform.onOpenChat = (chat) => opening.value = chat;
-    _viewing?.cancel();
-    _viewing = Timer.periodic(const Duration(seconds: 15), (_) {
-      if (_visible && d.selectedId != null) unawaited(view(d.selectedId));
-    });
     if (platform.takeOpenChat() case final chat?) opening.value = chat;
   }
 
@@ -409,8 +408,6 @@ class Phone extends ChangeNotifier {
 
   /// Ends the link to the Mac (the page goes), keeping the pairing.
   Future<void> close() async {
-    _viewing?.cancel();
-    _viewing = null;
     _wasConnected = false; // the next Daemon's connection is a new one
     link?.dispose();
     link = null;

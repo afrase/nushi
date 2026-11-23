@@ -762,6 +762,24 @@ void main() {
     await endPhone(tester, again);
   });
 
+  // The daemon's view lease runs out (internal/features/remote/remote.go's
+  // viewLease) unless the phone says it again: with each answered ping,
+  // while it shows.
+  testWidgets('each answered ping says again which chat shows', (tester) async {
+    final fake = FakeDaemon(_chats);
+    final (phone, _) = await _app(tester, fake);
+    await tester.tap(find.text('Review the Noise channel'));
+    await tester.pumpAndSettle();
+    Iterable<SetDeviceViewRequest> views() =>
+        fake.calls.whereType<SetDeviceViewRequest>();
+    final before = views().length;
+    expect(await phone.link!.check(), isTrue);
+    await tester.pump();
+    expect(views().length, before + 1);
+    expect(views().last.chatId, 'b');
+    await endPhone(tester, phone);
+  });
+
   testWidgets('Forget this Mac that fails on the way keeps the pairing', (
     tester,
   ) async {
