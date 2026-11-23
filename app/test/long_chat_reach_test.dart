@@ -17,10 +17,6 @@ import 'harness.dart';
 import 'long_chat.dart';
 import 'paged_chat.dart';
 
-Future<void> _settle(WidgetTester tester) async {
-  await frames(tester, 40, const Duration(milliseconds: 16));
-}
-
 /// The window on chat c, [items] paged, with another chat s to switch to.
 Future<(Daemon, PagedChat)> _open(
   WidgetTester tester,
@@ -42,7 +38,7 @@ Future<(Daemon, PagedChat)> _open(
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));
-  await _settle(tester);
+  await tester.pumpAndSettle();
   return (d, paged);
 }
 
@@ -54,14 +50,14 @@ void main() {
     final (d, _) = await _open(tester, longChat('c', turns: 100));
     final c = d.chats['c']!;
     await d.loadOlder(c, all: true);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     c.pane.value = 'c-sa3'; // opened from its row
-    await _settle(tester);
+    await tester.pumpAndSettle();
     // Still at its bottom: away and back, which lets go of what's above.
     d.select('s');
-    await _settle(tester);
+    await tester.pumpAndSettle();
     d.select('c');
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.older, greaterThan(0), reason: 'back to its recent part');
     expect(c.pane.value, 'c-sa3');
     expect(c.items.any((it) => it.id == 'c-sa3'), isTrue);
@@ -90,10 +86,10 @@ void main() {
     final d = await fake.connect(tester);
     d.select('c');
     await tester.pumpWidget(NushiApp(daemon: d));
-    await _settle(tester);
+    await tester.pumpAndSettle();
     final cs = d.chats['c']!;
     await d.loadOlder(cs, all: true);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     ScrollPosition scroll() => tester
         .state<ScrollableState>(
           find
@@ -105,15 +101,14 @@ void main() {
         )
         .position;
     scroll().jumpTo(0); // reading its start
-    await _settle(tester);
+    await tester.pumpAndSettle();
     for (final o in others) {
       d.select(o.id);
-      await _settle(tester);
+      await tester.pumpAndSettle();
     }
     expect(cs.items, isEmpty, reason: 'let go');
     d.select('c');
-    await _settle(tester);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(cs.older, 0);
     expect(scroll().pixels, lessThan(1));
     final list = tester.getRect(find.byType(SelectionArea));
@@ -159,7 +154,7 @@ void main() {
     await tester.tap(box);
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(
       tester.widget<TextField>(box).controller!.text,
       'refactor the whole thing',
@@ -207,7 +202,7 @@ void main() {
         ),
       ),
     );
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.runningBefore.single.backgroundCommand.state, 'completed');
     expect(find.byTooltip('Stop'), findsNothing);
     await closeView(tester, d);

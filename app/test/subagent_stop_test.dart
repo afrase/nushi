@@ -120,8 +120,7 @@ Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, double width) async {
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));
-  // Spinners never settle: pump a while instead.
-  await tester.pump(const Duration(milliseconds: 500));
+  await tester.pumpAndSettle();
   return (d, fake);
 }
 

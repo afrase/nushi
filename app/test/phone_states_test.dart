@@ -87,11 +87,6 @@ Future<Phone> _app(
 Future<void> _end(WidgetTester tester, Phone phone) =>
     endPhone(tester, phone, wait: const Duration(seconds: 40));
 
-/// Lets a fling end while a spinner turns.
-Future<void> _settle(WidgetTester tester) async {
-  await frames(tester, 40, const Duration(milliseconds: 100));
-}
-
 /// Nothing of [f] under the status bar or the home indicator.
 void _inside(WidgetTester tester, Finder f, String phone) {
   final (size, top, bottom) = _phones[phone]!;
@@ -304,7 +299,7 @@ void main() {
         // comes, what shows stays where it was.
         final scroll = find.byType(Scrollable).first;
         await tester.fling(scroll, const Offset(0, 6000), 6000);
-        await _settle(tester); // a spinner turns while the page comes
+        await tester.pumpAndSettle(); // the fling, and the page it asks for
         expect(pages, ['i160']);
         final seen = find.text('Step 162: look at the relay again');
         final before = tester.getTopLeft(seen);
@@ -313,7 +308,7 @@ void main() {
         expect(tester.getTopLeft(seen).dy, closeTo(before.dy, 1));
         // Further up: the page before that is on its way.
         await tester.fling(scroll, const Offset(0, 8000), 8000);
-        await _settle(tester);
+        await tester.pumpAndSettle();
         expect(find.byType(Earlier), findsOneWidget);
         expect(
           find.text('Step 81: look at the relay again').hitTestable(),

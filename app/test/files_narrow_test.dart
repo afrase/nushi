@@ -68,9 +68,9 @@ const _trees = <(bool, TreeSide)>[
   (false, TreeSide.automatic),
 ];
 
-/// Steps the pane from 500 down to 100 in each case, and gives the errors
-/// that name [file] (all of them without it).
-Future<List<String>> _sweep(WidgetTester tester, {String? file}) async {
+/// Steps the pane from 500 down to 100 in each case, and gives the errors,
+/// each with where it happened.
+Future<List<String>> _sweep(WidgetTester tester) async {
   final (d, _) = await panesApp(tester, width: 1700);
   viewport(tester, const Size(600, 600));
   final c = d.chats['c']!;
@@ -84,10 +84,7 @@ Future<List<String>> _sweep(WidgetTester tester, {String? file}) async {
       for (var w = 500.0; w >= 100; w -= 10) {
         final errors = await _errors(() => _pane(tester, d, w));
         final at = 'tree $shown ${side.name}, ${open.length} open, $w';
-        found.addAll([
-          for (final e in errors)
-            if (file == null || e.contains(file)) '$at: ${_what(e)}',
-        ]);
+        found.addAll([for (final e in errors) '$at: ${_what(e)}']);
       }
     }
   }
@@ -96,17 +93,11 @@ Future<List<String>> _sweep(WidgetTester tester, {String? file}) async {
 }
 
 void main() {
-  testWidgets('the top row folds, and never overflows', (tester) async {
-    expect(await _sweep(tester, file: 'files_top_row.dart'), isEmpty);
-  }, variant: macAndLinux);
-
-  testWidgets('the second row folds, and never overflows', (tester) async {
-    expect(await _sweep(tester, file: 'files_bar.dart'), isEmpty);
-  }, variant: macAndLinux);
-
-  testWidgets('nothing in the pane overflows, the tree’s rows too', (
-    tester,
-  ) async {
+  // The top row and the second (files_top_row.dart, files_bar.dart) fold
+  // with the rest: an overflow in either is one of this sweep's errors,
+  // named by its file.
+  testWidgets('nothing in the pane overflows: the top row, the second, '
+      'the tree’s rows', (tester) async {
     expect(await _sweep(tester), isEmpty);
   }, variant: macAndLinux);
 

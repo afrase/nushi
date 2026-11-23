@@ -85,8 +85,10 @@ Widget themed(
   );
 }
 
-/// [count] frames, each [step] after the one before (none: at once), for
-/// what never settles (a spinner, a turn's shine) or a path frame by frame.
+/// [count] frames, each [step] after the one before (none: at once): a
+/// path frame by frame, or what never settles (a loop a test turns on,
+/// `Shine.stopAt` null). A spinner and a turn's shine stand still in
+/// tests (`flutter_test_config.dart`), so a view with one settles.
 Future<void> frames(WidgetTester tester, int count, [Duration? step]) async {
   for (var i = 0; i < count; i++) {
     await tester.pump(step);
@@ -94,7 +96,8 @@ Future<void> frames(WidgetTester tester, int count, [Duration? step]) async {
 }
 
 /// [key] pressed with modifiers held, then settled, or one frame when
-/// not [settle] (what never settles: a turn's clock, a terminal). [cmd]
+/// not [settle] (a test that looks at what the key did before it
+/// settles, or pumps on its own). [cmd]
 /// is the app's command key as `conventions` has it (⌘ on the Mac,
 /// Control on Linux); [ctrl] is Control itself, [alt] Option (Alt).
 Future<void> press(

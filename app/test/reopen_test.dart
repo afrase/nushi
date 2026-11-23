@@ -210,7 +210,7 @@ void main() {
           status: ChatStatus(busy: true),
         ),
       );
-    await tester.pump(); // busy breathes: it never settles
+    await tester.pump(); // the busy status, then the reopen it asks for
     await tester.pump();
     expect(_reopens(fake), ['c', 'c', 'c']);
     d.dispose();

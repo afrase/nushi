@@ -84,10 +84,8 @@ Future<(Daemon, FakeDaemon)> _open(
   return r;
 }
 
-/// A while of frames: a turn running never settles (its shine moves).
-Future<void> _pump(WidgetTester tester) async {
-  await frames(tester, 6, const Duration(milliseconds: 100));
-}
+/// The view settled.
+Future<void> _pump(WidgetTester tester) => tester.pumpAndSettle();
 
 void main() {
   setUpAll(loadFonts);

@@ -117,12 +117,7 @@ Future<(Daemon, FakeDaemon)> _window(
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));
-  if (busy) {
-    // A running turn's spinner never settles.
-    await frames(tester, 40, const Duration(milliseconds: 50));
-  } else {
-    await tester.pumpAndSettle();
-  }
+  await tester.pumpAndSettle();
   return (d, fake);
 }
 

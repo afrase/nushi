@@ -366,9 +366,8 @@ void main() {
   }
 }
 
-/// Lets the view take what changed: a busy chat's spinner never settles.
-Future<void> settle(WidgetTester tester) =>
-    frames(tester, 6, const Duration(milliseconds: 200));
+/// Lets the view take what changed.
+Future<void> settle(WidgetTester tester) => tester.pumpAndSettle();
 
 /// The code's colours, which come from an isolate (`highlightSides`), for
 /// a render: a moment on the real clock, never a check's wait.

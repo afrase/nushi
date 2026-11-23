@@ -44,23 +44,10 @@ void main() {
     final (d, _) = await panesApp(tester, width: 1700);
     viewport(tester, const Size(600, 400));
     d.chats['c']!.openBrowserTab('http://localhost:3000');
-    final errors = <String>[];
-    final was = FlutterError.onError;
-    FlutterError.onError = (e) => errors.add(
-      e
-          .toString()
-          .split('\n')
-          .where((l) => l.contains('overflowed') || l.contains('.dart:'))
-          .take(2)
-          .join(' '),
-    );
-    addTearDown(() => FlutterError.onError = was);
+    // An overflow at any width fails the test as the binding reports it,
+    // with the widget and its constraints.
     for (var w = 320.0; w >= 100; w -= 5) {
-      final before = errors.length;
       await _pane(tester, d, w);
-      for (var i = before; i < errors.length; i++) {
-        errors[i] = '$w: ${errors[i]}';
-      }
       final row = tester.getRect(find.byType(PaneTabs));
       final close = tester.getRect(
         find.descendant(
@@ -78,8 +65,6 @@ void main() {
         expect(row.width, greaterThanOrEqualTo(previewTabLeast), reason: '$w');
       }
     }
-    FlutterError.onError = was;
-    expect(errors, isEmpty);
     await closeView(tester, d);
   }, variant: onMac);
 }

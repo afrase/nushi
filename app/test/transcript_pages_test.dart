@@ -24,6 +24,7 @@ import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/scrollbar.dart';
+import 'package:nushi/transcript.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/transcript_pages.dart';
 import 'package:nushi/turn_status.dart';
@@ -56,16 +57,11 @@ Future<(Daemon, PagedChat)> _window(
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));
-  await _settle(tester);
+  await tester.pumpAndSettle();
   return (d, paged);
 }
 
 final _fakes = Expando<FakeDaemon>();
-
-/// Frames until nothing moves; a spinner that turns doesn't settle.
-Future<void> _settle(WidgetTester tester) async {
-  await frames(tester, 40, const Duration(milliseconds: 16));
-}
 
 /// How many entries are built.
 int _built() => find.byType(PinFlash).evaluate().length;
@@ -196,7 +192,7 @@ void main() {
     final (d, paged) = await _window(tester, turns: 60);
     for (var i = 0; i < 10 && _chat(d).older > 0; i++) {
       await _toTop(tester);
-      await _settle(tester);
+      await tester.pumpAndSettle();
     }
     expect(_chat(d).older, 0);
     expect(_chat(d).items.length, paged.items.length);
@@ -214,18 +210,18 @@ void main() {
     final (d, paged) = await _window(tester);
     paged.fail = true;
     await _toTop(tester);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(find.text('Couldn’t load earlier messages · '), findsOneWidget);
     expect(_chat(d).olderFailed, isTrue);
     final asked = paged.pages.length;
     await _wheel(tester, 200);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(paged.pages.length, asked, reason: 'not again on its own');
     paged.fail = false;
     _scroll(tester).jumpTo(0);
     await tester.pump();
     await tester.tap(find.text('Try again'));
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(paged.pages.length, asked + 1);
     expect(find.text('Couldn’t load earlier messages · '), findsNothing);
     expect(_chat(d).olderFailed, isFalse);
@@ -243,11 +239,11 @@ void main() {
     // A reload meanwhile (a cut before the loaded part, a reconnect), then
     // the old page fails: its item is gone, the daemon's ErrNoItem.
     c.stale!();
-    await _settle(tester);
+    await tester.pumpAndSettle();
     paged.fail = true;
     paged.hold!.complete();
     paged.hold = null;
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.olderFailed, isFalse);
     expect(find.text('Couldn’t load earlier messages · '), findsNothing);
     await closeView(tester, d);
@@ -269,7 +265,7 @@ void main() {
             .first,
       ),
     );
-    await _settle(tester);
+    await tester.pumpAndSettle();
     final before = _built();
     await tester.tap(
       find.descendant(of: find.byType(Rail), matching: find.text('Pin c-a2')),
@@ -278,7 +274,11 @@ void main() {
     expect(c.items.any((it) => it.id == 'c-a2'), isTrue);
     expect(c.items.length, paged.items.length - c.older);
     expect(_built(), greaterThan(before + 300));
-    expect(most, lessThanOrEqualTo(4 * 24 + 4), reason: 'never all at once');
+    expect(
+      most,
+      lessThanOrEqualTo(4 * Transcript.moreEntries + 4),
+      reason: 'never all at once',
+    );
     expect(
       paged.pages.where((p) => p.limit == 500),
       isNotEmpty,
@@ -327,7 +327,7 @@ void main() {
     c.find
       ..open()
       ..query = 'Turn 3:';
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(find.text('Searching loaded messages · '), findsOneWidget);
     expect(c.find.count, 'None');
     expect(paged.asked.whereType<FindInChatRequest>(), isEmpty);
@@ -340,7 +340,11 @@ void main() {
     await tester.tap(find.text('Load all'));
     final most = await _mostAFrame(tester);
     expect(c.older, 0);
-    expect(most, lessThanOrEqualTo(4 * 24 + 4), reason: 'never all at once');
+    expect(
+      most,
+      lessThanOrEqualTo(4 * Transcript.moreEntries + 4),
+      reason: 'never all at once',
+    );
     expect(find.text('Searching loaded messages · '), findsNothing);
     expect(c.find.count, '1 of 1');
     final list = tester.getRect(find.byType(SelectionArea));
@@ -411,7 +415,7 @@ void main() {
     }
     final older = c.older;
     unawaited(pickRewind(tester.element(find.byType(ChatView)), d, c));
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.older, older, reason: 'the transcript lays out none of them');
     expect(paged.pages, isNotEmpty);
     final rows = find.descendant(
@@ -425,7 +429,7 @@ void main() {
       reason: 'the oldest last',
     );
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -447,26 +451,26 @@ void main() {
     final d = await fake.connect(tester);
     d.select('c');
     await tester.pumpWidget(NushiApp(daemon: d));
-    await _settle(tester);
+    await tester.pumpAndSettle();
     final c = _chat(d);
     final recent = c.items.length;
     await d.loadOlder(c);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.items.length, greaterThan(recent));
     // At its bottom, following it: let go of all but the recent part.
     d.select('s');
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.items.length, recent);
     expect(c.older, paged.items.length - recent);
     // Scrolled up: kept, and it opens where it was.
     d.select('c');
-    await _settle(tester);
+    await tester.pumpAndSettle();
     await _toTop(tester);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     final had = c.items.length;
     expect(had, greaterThan(recent));
     d.select('s');
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.items.length, had);
     expect(c.kept, isNotNull);
     await closeView(tester, d);
@@ -477,12 +481,12 @@ void main() {
     final (d, paged) = await _window(tester);
     final c = _chat(d)..keptItems = 500;
     c.stale!();
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(paged.asked.whereType<GetChatRequest>().last.recent, 500);
     expect(c.keptItems, 0);
     final had = c.items.length;
     c.stale!();
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(paged.asked.whereType<GetChatRequest>().last.recent, had);
     await closeView(tester, d);
   }, variant: onMac);
@@ -515,12 +519,12 @@ void main() {
     final (d, paged) = await _window(tester);
     final c = _chat(d);
     await d.loadOlder(c);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     final had = c.items.length;
     // As the events' stream starting again does (Daemon._listChats), or an
     // event past what it has: unloaded, and loaded again.
     c.stale!();
-    await _settle(tester);
+    await tester.pumpAndSettle();
     final again = paged.asked.whereType<GetChatRequest>().last;
     expect(paged.asked.whereType<GetChatRequest>().length, 2);
     expect(again.recent, had);
@@ -647,7 +651,7 @@ void main() {
         paged.fail = true;
         paged.hold!.complete();
         paged.hold = null;
-        await _settle(tester);
+        await tester.pumpAndSettle();
         _scroll(tester).jumpTo(0);
         await tester.pump();
         expect(find.text('Try again'), findsOneWidget);

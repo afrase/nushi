@@ -43,12 +43,8 @@ Future<(Daemon, PagedChat, FakeDaemon)> _window(
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));
-  await _settle(tester);
+  await tester.pumpAndSettle();
   return (d, paged, fake);
-}
-
-Future<void> _settle(WidgetTester tester) async {
-  await frames(tester, 40, const Duration(milliseconds: 16));
 }
 
 ChatState _chat(Daemon d) => d.chats['c']!;
@@ -75,7 +71,7 @@ void main() {
     c.find
       ..open()
       ..query = 'needle';
-    await _settle(tester);
+    await tester.pumpAndSettle();
     final asked = paged.asked.whereType<FindInChatRequest>().single;
     expect(asked.text, 'needle');
     expect(asked.before, c.items.first.id, reason: 'the rest it finds');
@@ -96,7 +92,7 @@ void main() {
     c.find
       ..open()
       ..query = 'needle';
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.find.count, '2 of 2');
     // Each key typed while the daemon is asked: no line, no Load all.
     final hold = paged.holdFind = Completer<void>();
@@ -111,7 +107,7 @@ void main() {
     expect(c.find.searching, isTrue);
     expect(c.find.count, '', reason: 'nothing loaded matches; asking');
     hold.complete();
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.find.searching, isFalse);
     expect(c.find.count, 'None');
     expect(find.text('None'), findsOneWidget);
@@ -127,7 +123,7 @@ void main() {
     c.find
       ..open()
       ..query = 'needle';
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.find.whole, isFalse);
     expect(c.find.count, '1 of 1');
     expect(find.text('Searching loaded messages · '), findsOneWidget);
@@ -135,7 +131,7 @@ void main() {
     c.find.query = 'needles';
     await tester.pump(ChatFind.pause ~/ 2);
     expect(find.text('Load all'), findsOneWidget);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.find.count, 'None');
     expect(find.text('Load all'), findsOneWidget);
     expect(paged.asked.whereType<FindInChatRequest>(), isEmpty);
@@ -149,11 +145,10 @@ void main() {
     c.find
       ..open()
       ..query = 'needle';
-    await _settle(tester);
+    await tester.pumpAndSettle();
     c.find.step(1); // past the last: round to the first, far above
     expect(ChatFind.farItem(c.find.current), 'c-a5');
-    await _settle(tester);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     final page = paged.pages.first;
     expect(page.through, 'c-a5', reason: 'one page reaching back to it');
     expect(c.items.any((it) => it.id == 'c-a5'), isTrue);
@@ -161,7 +156,7 @@ void main() {
     expect(ChatFind.farItem(c.find.current), isNull);
     expect(_shows(tester, 'Turn 5 left a needle'), isTrue);
     c.find.step(1);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.find.count, '2 of 2');
     expect(_shows(tester, 'Turn 98 left a needle'), isTrue);
     await closeView(tester, d);
@@ -177,12 +172,11 @@ void main() {
       c.find
         ..open()
         ..query = 'needle';
-      await _settle(tester);
+      await tester.pumpAndSettle();
       expect(c.find.count, '2 of 2');
       c.find.step(1);
       expect(ChatFind.farItem(c.find.current), 'c-a$turn');
-      await _settle(tester);
-      await _settle(tester);
+      await tester.pumpAndSettle();
       expect(c.find.count, '1 of 2');
       expect(c.find.current, startsWith('c-a$turn '));
       expect(_shows(tester, 'Turn $turn left a needle'), isTrue);
@@ -200,7 +194,7 @@ void main() {
     c.find
       ..open()
       ..query = first.text.trim().split('\n').first;
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.find.hits, isNotEmpty);
     final p = tester.state<ScrollableState>(
       find
@@ -215,7 +209,7 @@ void main() {
     final at = tester.getCenter(find.byType(SelectionArea));
     final wheel = TestPointer(1, PointerDeviceKind.mouse)..hover(at);
     await tester.sendEventToBinding(wheel.scroll(const Offset(0, -120)));
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(paged.pages, isNotEmpty);
     expect(c.older, lessThan(older));
     await closeView(tester, d);
@@ -231,7 +225,7 @@ void main() {
       c.find
         ..open()
         ..query = q;
-      await _settle(tester);
+      await tester.pumpAndSettle();
       expect(c.find.hits, isNotEmpty);
       expect(paged.pages, isEmpty, reason: 'typing "$q" loaded a page');
       expect(c.older, older);
@@ -250,7 +244,7 @@ void main() {
       reason: 'the first match loaded is at the top of what is loaded',
     );
     p.position.jumpTo(p.position.pixels - 1); // the user scrolls up
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(paged.pages, isNotEmpty);
     expect(c.older, lessThan(older));
     await closeView(tester, d);
@@ -263,10 +257,10 @@ void main() {
     c.find
       ..open()
       ..query = 'needle';
-    await _settle(tester);
+    await tester.pumpAndSettle();
     final current = c.find.current;
     await d.loadOlder(c);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.find.count, '2 of 2');
     expect(c.find.current, current);
     await closeView(tester, d);
@@ -288,7 +282,7 @@ void main() {
       'needl',
     ]);
     hold.complete();
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.find.count, '1 of 1');
     expect(ChatFind.farItem(c.find.current), 'c-a5');
     await closeView(tester, d);
@@ -301,7 +295,7 @@ void main() {
     c.find
       ..open()
       ..query = 'needle';
-    await _settle(tester);
+    await tester.pumpAndSettle();
     final current = c.find.current;
     final it = Item(
       id: 'c-new',
@@ -316,7 +310,7 @@ void main() {
       ),
     );
     paged.items.add(it);
-    await _settle(tester);
+    await tester.pumpAndSettle();
     expect(c.find.count, '2 of 3');
     expect(c.find.current, current);
     expect(
@@ -340,12 +334,11 @@ void main() {
         c.find
           ..open()
           ..query = 'needle';
-        await _settle(tester);
+        await tester.pumpAndSettle();
         final name = 'find-all-${brightness.name}-${width.toInt()}';
         await render(tester, find.byType(NushiApp), '$name-count');
         c.find.step(1);
-        await _settle(tester);
-        await _settle(tester);
+        await tester.pumpAndSettle();
         expect(_shows(tester, 'Turn 5 left a needle'), isTrue);
         await render(tester, find.byType(NushiApp), '$name-stepped');
         await closeView(tester, d);
