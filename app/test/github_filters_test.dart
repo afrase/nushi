@@ -1,4 +1,3 @@
-import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,7 +7,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'github_fixture.dart' show inboxForTests, item, openView, testNow;
+import 'github_fixture.dart' show inboxForTests, item, openView;
 import 'harness.dart';
 
 /// The asks that reach GitHub, not those for what the daemon kept.
@@ -31,7 +30,7 @@ ListGitHubInboxResponse _answer(ListGitHubInboxRequest r) =>
       mineTotal: 1,
       reviewOlder: r.updatedDays > 0 && !r.wide.contains('review') ? 1 : 0,
       assignedOlder: r.updatedDays > 0 && !r.wide.contains('assigned') ? 3 : 0,
-      atMs: Int64(testNow.millisecondsSinceEpoch),
+      atMs: msAgo(Duration.zero),
     );
 
 Future<void> _pick(WidgetTester tester, String menu, Pattern entry) async {

@@ -93,7 +93,6 @@ void main() {
   setUpAll(loadFonts);
 
   test('the budget line', () {
-    final now = DateTime(2026, 10, 26, 12);
     final h = GitHubHost(
       budget: [
         GitHubBucket(name: 'core', limit: 5000, remaining: 10),
@@ -102,17 +101,17 @@ void main() {
           limit: 5000,
           remaining: 4000,
           resetMs: Int64(
-            now.add(const Duration(minutes: 5)).millisecondsSinceEpoch,
+            fixtureNow.add(const Duration(minutes: 5)).millisecondsSinceEpoch,
           ),
         ),
       ],
     );
     expect(
-      budgetLine(h, now),
+      budgetLine(h, fixtureNow),
       'Left this hour: REST 10 of 5000 · GraphQL 4000 of 5000 '
       '(GraphQL resets in 5m)',
     );
-    expect(budgetLine(GitHubHost(), now), '');
+    expect(budgetLine(GitHubHost(), fixtureNow), '');
   });
 
   testWidgets('each host with who its token is, where it is from, and '

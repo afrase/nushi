@@ -17,7 +17,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
-import 'github_fixture.dart' show inboxForTests, item, openView, testNow;
+import 'github_fixture.dart' show inboxForTests, item, openView;
 import 'harness.dart';
 
 final List<Chat> _chats = [
@@ -99,7 +99,7 @@ void main() {
     final tip = tester.widget<Tooltip>(
       find.ancestor(of: find.text('12d'), matching: find.byType(Tooltip)),
     );
-    final when = testNow.subtract(const Duration(days: 12));
+    final when = fixtureNow.subtract(const Duration(days: 12));
     expect(tip.message, 'Updated ${dateTime(when)}');
     await closeView(tester, d);
   });
@@ -137,7 +137,7 @@ void main() {
             mine: [if (kept) item(7, 'As it was')],
             atMs: kept
                 ? Int64(
-                    testNow
+                    fixtureNow
                         .subtract(const Duration(minutes: 5))
                         .millisecondsSinceEpoch,
                   )
@@ -157,7 +157,7 @@ void main() {
       fresh.complete(
         ListGitHubInboxResponse(
           mine: [item(8, 'As it is')],
-          atMs: Int64(testNow.millisecondsSinceEpoch),
+          atMs: msAgo(Duration.zero),
         ),
       );
       await tester.pumpAndSettle();

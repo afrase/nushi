@@ -112,7 +112,7 @@ Finder get _tab => find.descendant(
 
 /// The time the app sees ([clock]), moved by hand ([_later]); each test
 /// starts at [_start].
-final _start = DateTime(2026, 10, 29, 12);
+final DateTime _start = fixtureNow;
 DateTime _now = _start;
 
 /// [d] later, on the clock and the timers.

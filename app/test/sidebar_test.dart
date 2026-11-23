@@ -115,9 +115,8 @@ void main() {
     tester,
   ) async {
     viewport(tester, const Size(1200, 700));
-    // The fake's chats count from noon on the 25th.
-    final noon = DateTime(2026, 10, 25, 12);
-    clock = () => noon;
+    // The fake's chats count from fixtureNow, noon on the 29th.
+    final noon = fixtureNow;
     sidebarShows.value = {...defaultRowParts, RowPart.time};
     final d = await FakeDaemon([
       chat('a', 'claude', 'Fix the login redirect', age: 2),
@@ -133,7 +132,7 @@ void main() {
     sidebarGroupBy.value = GroupBy.date;
     await tester.pumpAndSettle();
     expect(find.text('Today'), findsOneWidget);
-    clock = () => DateTime(2026, 10, 26, 0, 30);
+    clock = () => DateTime(2026, 10, 30, 0, 30);
     await tester.pump(const Duration(minutes: 1));
     await tester.pumpAndSettle();
     expect(find.text('Today'), findsNothing);

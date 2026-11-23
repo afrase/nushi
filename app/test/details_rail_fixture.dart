@@ -3,7 +3,6 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
@@ -82,9 +81,6 @@ final List<ContextCategory> reportCategories = [
   _c('Autocompact buffer', 33000, 3.3, part: 'buffer'),
 ];
 
-int _ago(int minutes) =>
-    clock().subtract(Duration(minutes: minutes)).millisecondsSinceEpoch;
-
 Item _subagent(String id, String title, String state, {int ran = 3}) => Item(
   id: id,
   kind: ItemKind.ITEM_KIND_TOOL_CALL,
@@ -94,8 +90,8 @@ Item _subagent(String id, String title, String state, {int ran = 3}) => Item(
   agentId: 'agent-$id',
   subagent: Subagent(
     state: state,
-    started: Int64(_ago(ran + 4)),
-    ended: Int64(state == 'running' ? 0 : _ago(4)),
+    started: msAgo(Duration(minutes: ran + 4)),
+    ended: state == 'running' ? Int64.ZERO : msAgo(const Duration(minutes: 4)),
   ),
 );
 
@@ -108,8 +104,8 @@ Item _command(String id, String command, String state) => Item(
   backgroundCommand: BackgroundCommand(
     id: id,
     state: state,
-    started: Int64(_ago(5)),
-    ended: Int64(state == 'running' ? 0 : _ago(1)),
+    started: msAgo(const Duration(minutes: 5)),
+    ended: state == 'running' ? Int64.ZERO : msAgo(const Duration(minutes: 1)),
     output: 'ok  nushi/app 12.3s\n',
     end: state == 'running' ? '' : 'exited with code 0',
   ),

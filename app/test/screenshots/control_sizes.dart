@@ -8,7 +8,6 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/cleanup_dialog.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/collapsible.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -104,7 +103,6 @@ Future<Daemon> _app(
   bool details = false,
 }) async {
   viewport(tester, size, brightness: brightness);
-  clock = () => demoNow;
   showDetails.value = details;
   paneWidths.value = {};
   collapsedWidgets.value = {};

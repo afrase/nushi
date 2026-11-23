@@ -11,7 +11,7 @@ import 'harness.dart';
 import 'jira_fixture.dart' show issue, openView;
 
 /// Five minutes before the view's now.
-final _kept = Int64(DateTime(2026, 10, 25, 11, 55).millisecondsSinceEpoch);
+final Int64 _kept = msAgo(const Duration(minutes: 5));
 
 void main() {
   setUpAll(loadFonts);
@@ -34,7 +34,7 @@ void main() {
     fresh.complete(
       ListJiraIssuesResponse(
         issues: [issue('ACME-8', 'As it is', 'To Do', 'new')],
-        atMs: Int64(DateTime(2026, 10, 25, 12).millisecondsSinceEpoch),
+        atMs: msAgo(Duration.zero),
       ),
     );
     await tester.pumpAndSettle();

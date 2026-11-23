@@ -49,9 +49,7 @@ final List<Chat> _chats = [
   ),
 ];
 
-final Int64 _started = Int64(
-  DateTime(2026, 10, 25, 11, 58).millisecondsSinceEpoch,
-);
+final Int64 _started = msAgo(const Duration(minutes: 2));
 
 /// RFC 8291's application server key, as a daemon's VAPID key.
 const _vapid =

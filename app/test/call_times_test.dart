@@ -19,11 +19,7 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 /// [fixtureNow] less [s] seconds, as the daemon sends a time.
-Int64 _ago(num s) => Int64(
-  fixtureNow
-      .subtract(Duration(milliseconds: (s * 1000).round()))
-      .millisecondsSinceEpoch,
-);
+Int64 _ago(num s) => msAgo(Duration(milliseconds: (s * 1000).round()));
 
 /// A command run [from] seconds ago that ended [to] seconds ago (running
 /// while [to] is null).

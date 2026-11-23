@@ -1,7 +1,6 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_view.dart';
@@ -12,13 +11,8 @@ import 'package:nushi/theme/theme.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-/// The time the tests' ages count from.
-final testNow = DateTime(2026, 10, 26, 12);
-
 /// The repository the tests' items are of.
 const testRepo = 'afrase/nushi-gh-test';
-
-Int64 _ago(Duration d) => Int64(testNow.subtract(d).millisecondsSinceEpoch);
 
 GitHubRef ref(int n, {String repo = testRepo}) =>
     GitHubRef(host: 'github.com', repo: repo, number: n);
@@ -43,7 +37,7 @@ GitHubItem item(
   state: state,
   draft: draft,
   author: 'afrase',
-  updatedMs: _ago(age),
+  updatedMs: msAgo(age),
   checks: checks,
   review: review,
   unresolved: unresolved,
@@ -61,7 +55,7 @@ GitHubComment comment(
   outside: outside,
   body: body,
   url: 'https://github.com/$testRepo/pull/1#c',
-  createdMs: _ago(age),
+  createdMs: msAgo(age),
   review: review,
 );
 
@@ -230,7 +224,7 @@ Future<(FakeDaemon, Daemon)> openView(
             reviewTotal: 1,
             mineTotal: 2,
             assignedTotal: 1,
-            atMs: Int64(testNow.millisecondsSinceEpoch),
+            atMs: msAgo(Duration.zero),
           ),
           GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
           GetGitHubIssueRequest() => GetGitHubIssueResponse(
@@ -276,7 +270,6 @@ Future<(FakeDaemon, Daemon)> openView(
     d.go(const GitHubPlace());
     await tester.pumpWidget(NushiApp(daemon: d));
   } else {
-    clock = () => testNow;
     await tester.pumpWidget(
       themed(GitHubView(d), tokens: tokens, banner: false),
     );
@@ -331,5 +324,5 @@ ListGitHubInboxResponse inboxForTests() => ListGitHubInboxResponse(
   reviewTotal: 3,
   mineTotal: 2,
   assignedTotal: 2,
-  atMs: Int64(testNow.millisecondsSinceEpoch),
+  atMs: msAgo(Duration.zero),
 );

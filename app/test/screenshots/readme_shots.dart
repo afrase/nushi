@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/collapsible.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/daemon.dart';
@@ -158,7 +157,6 @@ Future<(Daemon, FakeDaemon)> _app(
   addTearDown(tester.view.reset);
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-  clock = () => demoNow;
   showDetails.value = details;
   paneWidths.value = {};
   collapsedWidgets.value = {};
@@ -334,7 +332,6 @@ void main() {
       );
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearAllTestValues);
-    clock = () => demoNow;
     final fake = FakeDaemon(demoChats())..answer = _demo;
     final platform = PhonePlatform()
       ..saved = {

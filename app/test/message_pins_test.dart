@@ -2,7 +2,6 @@
 // (none on the user's), the rail at the transcript's top left, its current
 // entry following the scroll, its menu opened by the pointer, a click or
 // the keyboard, a pick going there; the phone's, its pins on older pages.
-import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,9 +22,6 @@ import 'package:nushi/theme/theme.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-Int64 _ago(int minutes) =>
-    Int64(fixtureNow.millisecondsSinceEpoch - minutes * 60000);
-
 String _long(String what) =>
     [for (var i = 0; i < 40; i++) '$what, line $i of the reasoning.']
         .join('\n\n');
@@ -35,13 +31,13 @@ final List<Item> _items = [
     id: 'u1',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
     text: 'Make the relay restart cleanly',
-    sent: _ago(190),
+    sent: msAgo(const Duration(minutes: 190)),
   ),
   Item(
     id: 'a1',
     kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
     text: '## The plan\n\n${_long('The relay')}',
-    sent: _ago(188),
+    sent: msAgo(const Duration(minutes: 188)),
   ),
   Item(
     id: 't1',
@@ -54,25 +50,25 @@ final List<Item> _items = [
     id: 'u2',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
     text: 'Now the tests',
-    sent: _ago(120),
+    sent: msAgo(const Duration(minutes: 120)),
   ),
   Item(
     id: 'a2',
     kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
     text: _long('The tests'),
-    sent: _ago(118),
+    sent: msAgo(const Duration(minutes: 118)),
   ),
   Item(
     id: 'u3',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
     text: 'Ship it',
-    sent: _ago(4),
+    sent: msAgo(const Duration(minutes: 4)),
   ),
   Item(
     id: 'a3',
     kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
     text: 'Done: the relay restarts without dropping a phone.',
-    sent: _ago(3),
+    sent: msAgo(const Duration(minutes: 3)),
   ),
 ];
 

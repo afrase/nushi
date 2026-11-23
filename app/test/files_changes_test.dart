@@ -238,7 +238,7 @@ void main() {
   }, variant: onMac);
 
   group('a chat on main itself', () {
-    final began = DateTime(2026, 10, 25, 12).millisecondsSinceEpoch ~/ 1000;
+    final began = fixtureNow.millisecondsSinceEpoch ~/ 1000;
     Object? Function(Object) onMain(List<Commit> commits) =>
         (input) => switch (input) {
           ListCommitsRequest() => ListCommitsResponse(commits: commits),

@@ -5,7 +5,6 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -15,9 +14,6 @@ import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
-
-final _now = DateTime(2026, 10, 25, 12);
-Int64 _ago(Duration d) => Int64(_now.subtract(d).millisecondsSinceEpoch);
 
 // A red 8×8 PNG.
 final Uint8List _png = base64Decode(
@@ -34,8 +30,8 @@ JiraIssue _issue() => JiraIssue(
   priority: 'High',
   assignee: 'Test User',
   reporter: 'Ann Lee',
-  created: _ago(const Duration(days: 3)),
-  updated: _ago(const Duration(hours: 2)),
+  created: msAgo(const Duration(days: 3)),
+  updated: msAgo(const Duration(hours: 2)),
   labels: ['auth'],
   url: 'https://acme.atlassian.net/browse/ACME-12',
   description:
@@ -67,13 +63,13 @@ JiraIssue _issue() => JiraIssue(
     JiraComment(
       author: 'Ann Lee',
       body: 'Can we do **Safari** first?',
-      created: _ago(const Duration(hours: 5)),
+      created: msAgo(const Duration(hours: 5)),
     ),
     JiraComment(
       id: 'k1',
       author: 'Test User',
       body: 'Safari works; Chrome next.',
-      created: _ago(const Duration(minutes: 30)),
+      created: msAgo(const Duration(minutes: 30)),
     ),
   ],
 );
@@ -101,7 +97,7 @@ Future<(FakeDaemon, Daemon, List<String>)> _open(
                     to: 'In Progress',
                     chat: 'c1',
                     agent: 'claude',
-                    at: _ago(const Duration(hours: 1)),
+                    at: msAgo(const Duration(hours: 1)),
                   ),
                   JiraWrite(
                     kind: 'comment',
@@ -156,7 +152,6 @@ Future<(FakeDaemon, Daemon, List<String>)> _open(
             };
   final d = await fake.connect(tester);
   viewport(tester, const Size(700, 1100), ratio: 3);
-  clock = () => _now;
   await tester.pumpWidget(
     themed(
       JiraIssuePane(

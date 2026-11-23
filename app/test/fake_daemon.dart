@@ -15,6 +15,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_link.dart' show rowItem;
 
 import 'agent_facts_fixture.dart';
+import 'harness.dart' show fixtureNow, msAgo;
 
 /// The agents as the daemon lists them, installed and ready: each one's
 /// facts (its title, sign-in, what deletes its sessions, its adapter…)
@@ -718,7 +719,7 @@ class EventsSubscription {
   );
 }
 
-/// A chat for [FakeDaemon], [age] minutes old.
+/// A chat for [FakeDaemon], made [age] minutes before [fixtureNow].
 Chat chat(
   String id,
   String agent,
@@ -731,9 +732,7 @@ Chat chat(
   agent: agent,
   title: title,
   folder: folder,
-  createdUnixMs: Int64(
-    DateTime(2026, 10, 25, 12).millisecondsSinceEpoch - age * 60000,
-  ),
+  createdUnixMs: msAgo(Duration(minutes: age)),
   status: status ?? ChatStatus(),
 );
 

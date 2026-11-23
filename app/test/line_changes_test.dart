@@ -541,7 +541,7 @@ void main() {
       });
 
       group('on the default branch itself, from before the chat', () {
-        final began = DateTime(2026, 10, 25, 12).millisecondsSinceEpoch ~/ 1000;
+        final began = fixtureNow.millisecondsSinceEpoch ~/ 1000;
         Commit at(String hash, int secs) =>
             Commit(hash: hash, unixSeconds: Int64(began + secs));
         Object? Function(Object) onMain(List<Commit> commits) =>

@@ -15,7 +15,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/collapsible.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -101,7 +100,6 @@ Future<void> _pump(WidgetTester tester, [int times = 8]) async {
 /// The Mac app at [size] in [b], on the demo's chats, the hero's open.
 Future<Daemon> _window(WidgetTester tester, Size size, Brightness b) async {
   viewport(tester, size, brightness: b);
-  clock = () => demoNow;
   final open = <StreamController<Object>>[];
   addTearDown(() {
     for (final s in open) {
@@ -223,7 +221,6 @@ void main() {
           tester,
         ) async {
           viewport(tester, const Size(390, 844), ratio: 2, brightness: b);
-          clock = () => demoNow;
           final fake = FakeDaemon(demoChats())..answer = _demo;
           final phone = Phone(
             PhonePlatform()

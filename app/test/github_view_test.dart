@@ -74,7 +74,7 @@ void main() {
     final (_, d) = await openView(
       tester,
       more: (input) => input is ListGitHubInboxRequest && dropped
-          ? ListGitHubInboxResponse(atMs: Int64(testNow.millisecondsSinceEpoch))
+          ? ListGitHubInboxResponse(atMs: msAgo(Duration.zero))
           : null,
     );
     await tester.tap(find.text('Add Sub and Neg'));
@@ -440,7 +440,7 @@ void main() {
       inbox: ListGitHubInboxResponse(
         mine: [for (var n = 1; n <= 60; n++) item(n, 'Pull request $n')],
         mineTotal: 60,
-        atMs: Int64(testNow.millisecondsSinceEpoch),
+        atMs: msAgo(Duration.zero),
       ),
     );
     final view = tester.getRect(find.byType(GitHubView));
@@ -488,7 +488,7 @@ void main() {
       inbox: ListGitHubInboxResponse(
         mine: [for (var n = 1; n <= 40; n++) item(n, 'Pull request $n')],
         mineTotal: 40,
-        atMs: Int64(testNow.millisecondsSinceEpoch),
+        atMs: msAgo(Duration.zero),
       ),
     );
     final view = tester.getRect(find.byType(GitHubView));
@@ -678,7 +678,7 @@ void main() {
           ? hold.future.then(
               (_) => ListGitHubInboxResponse(
                 mine: [item(9, 'From github.com')],
-                atMs: Int64(testNow.millisecondsSinceEpoch),
+                atMs: msAgo(Duration.zero),
               ),
             )
           : null,

@@ -6,6 +6,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'sidebar_fixture.dart';
 
 // The Archived section's order (issue #48): under the default sort the
@@ -13,19 +14,17 @@ import 'sidebar_fixture.dart';
 // after them as before (the newest made first); a sort the user picked
 // wins there too.
 
-final _noon = DateTime(2026, 10, 25, 12);
-
 /// An archived chat made [made] minutes before noon and archived [archived]
 /// minutes before it (null: before the daemon kept the time).
 ChatState _archived(String id, {required int made, int? archived}) =>
     ChatState(id, '/Users/me/nushi')
       ..title = id
       ..archived = true
-      ..created = _noon.subtract(Duration(minutes: made))
-      ..updated = _noon.subtract(Duration(minutes: made))
+      ..created = fixtureNow.subtract(Duration(minutes: made))
+      ..updated = fixtureNow.subtract(Duration(minutes: made))
       ..archivedAt = archived == null
           ? null
-          : _noon.subtract(Duration(minutes: archived));
+          : fixtureNow.subtract(Duration(minutes: archived));
 
 List<String> _ids(List<ChatState> chats) => [for (final c in chats) c.id];
 
@@ -36,7 +35,7 @@ Chat _chat(String title, {required int made, int? archived}) =>
       ..archivedUnixMs = archived == null
           ? Int64()
           : Int64(
-              _noon
+              fixtureNow
                   .subtract(Duration(minutes: archived))
                   .millisecondsSinceEpoch,
             );

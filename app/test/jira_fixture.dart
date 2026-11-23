@@ -1,7 +1,6 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
@@ -121,7 +120,6 @@ Future<(FakeDaemon, Daemon)> openView(
     d.go(const JiraPlace());
     await tester.pumpWidget(NushiApp(daemon: d));
   } else {
-    clock = () => DateTime(2026, 10, 25, 12);
     await tester.pumpWidget(themed(JiraView(d), tokens: tokens, banner: false));
   }
   await tester.pumpAndSettle();

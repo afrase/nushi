@@ -1,14 +1,12 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
+import '../harness.dart';
+
 /// Made-up demo data for the README's screenshots: Lumen, an imaginary
 /// open-source static site generator, its people and its tracker. Nothing
-/// here is a real project, person or token.
-
-/// The time every age counts from.
-final demoNow = DateTime.now();
-
-Int64 ago(Duration d) => Int64(demoNow.subtract(d).millisecondsSinceEpoch);
+/// here is a real project, person or token. Its ages count from
+/// [fixtureNow], the app's clock in every test.
 
 const demoRepo = 'lumen-dev/lumen';
 const demoHome = '/Users/me/src/lumen';
@@ -34,7 +32,7 @@ Chat demoChat(
   agent: agent,
   title: title,
   folder: folder,
-  createdUnixMs: ago(Duration(minutes: age)),
+  createdUnixMs: msAgo(Duration(minutes: age)),
   status: status ?? ChatStatus(canFork: true, canRewind: true),
   pin: pin,
   done: done,
@@ -71,7 +69,7 @@ final Chat heroChat = demoChat(
   jiraKey: 'LUM-142',
   status: ChatStatus(
     busy: true,
-    started: ago(const Duration(minutes: 3, seconds: 12)),
+    started: msAgo(const Duration(minutes: 3, seconds: 12)),
     canFork: true,
     canRewind: true,
     canAskContext: true,
@@ -230,7 +228,7 @@ final heroItems = <Item>[
     agentId: 'a51c0e9f2b7d4e18',
     subagent: Subagent(
       state: 'running',
-      started: ago(const Duration(minutes: 1, seconds: 48)),
+      started: msAgo(const Duration(minutes: 1, seconds: 48)),
       session: 'a51c0e9f2b7d4e18',
     ),
   ),
@@ -362,7 +360,7 @@ GitHubCheck _check(String name, String state, {bool required = true}) =>
       failed: state == 'failure',
       required: required,
       url: 'https://github.com/$demoRepo/actions/runs/1/job/1',
-      startedMs: ago(const Duration(minutes: 2)),
+      startedMs: msAgo(const Duration(minutes: 2)),
     );
 
 GitHubComment _said(
@@ -375,7 +373,7 @@ GitHubComment _said(
   author: author,
   body: body,
   url: 'https://github.com/$demoRepo/pull/218',
-  createdMs: ago(age),
+  createdMs: msAgo(age),
   review: review,
 );
 
@@ -405,7 +403,7 @@ GitHubPull demoPull({bool running = true}) => GitHubPull(
     url: 'https://github.com/$demoRepo/pull/218',
     state: 'open',
     author: 'maya-chen',
-    updatedMs: ago(const Duration(minutes: 4)),
+    updatedMs: msAgo(const Duration(minutes: 4)),
     checks: 'failure',
     review: 'changes_requested',
     unresolved: 2,

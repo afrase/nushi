@@ -5,7 +5,6 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/comment_box.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
@@ -16,14 +15,13 @@ import 'package:nushi/github_view.dart';
 import 'package:nushi/send_to_agent.dart';
 
 import 'fake_daemon.dart';
-import 'github_fixture.dart' show openView, pull, testNow;
+import 'github_fixture.dart' show openView, pull;
 import 'harness.dart';
 
 /// The GitHub view in the chat's place as the app has it (main.dart's
 /// main area): gone while a chat shows, back when GitHub is.
 Future<void> _inPlace(WidgetTester tester, Daemon d) async {
   d.go(const GitHubPlace());
-  clock = () => testNow;
   await tester.pumpWidget(
     themed(
       ListenableBuilder(

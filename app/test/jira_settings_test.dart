@@ -14,8 +14,6 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 import 'settings_harness.dart';
 
-final _now = DateTime(2026, 10, 25, 12);
-
 List<JiraSite> _sites() => [
   JiraSite(
     id: 'acme.atlassian.net',
@@ -85,13 +83,13 @@ void main() {
 
   test('a token close to its end is warned about', () {
     JiraSite inDays(int d) => JiraSite(
-      expires: Int64(_now.add(Duration(days: d)).millisecondsSinceEpoch),
+      expires: Int64(fixtureNow.add(Duration(days: d)).millisecondsSinceEpoch),
     );
-    expect(expiryWarning(JiraSite(), _now), isNull);
-    expect(expiryWarning(inDays(30), _now), isNull);
-    expect(expiryWarning(inDays(5), _now), 'The token expires in 5 days');
-    expect(expiryWarning(inDays(1), _now), 'The token expires in 1 day');
-    expect(expiryWarning(inDays(-1), _now), 'The token has expired');
+    expect(expiryWarning(JiraSite(), fixtureNow), isNull);
+    expect(expiryWarning(inDays(30), fixtureNow), isNull);
+    expect(expiryWarning(inDays(5), fixtureNow), 'The token expires in 5 days');
+    expect(expiryWarning(inDays(1), fixtureNow), 'The token expires in 1 day');
+    expect(expiryWarning(inDays(-1), fixtureNow), 'The token has expired');
   });
 
   testWidgets('each site with who its token is, or what is wrong', (

@@ -6,7 +6,6 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/collapsible.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/fonts.dart';
@@ -377,7 +376,6 @@ void main() {
     tester,
   ) async {
     viewport(tester, const Size(1700, 1000), brightness: Brightness.dark);
-    clock = () => demoNow;
     Collapsible.opened.add('e2');
     final fake = FakeDaemon(demoChats())
       ..answer = (input) => switch (input) {
