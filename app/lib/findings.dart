@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:nushi/fnv.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/run_state.dart';
@@ -155,23 +156,26 @@ List<String>? _segments(String path) {
 final Map<String, String?> _real = runMap();
 
 /// [folder] with its links resolved (`/tmp` is `/private/tmp` on macOS),
-/// as the agent may write it; null if it can't be.
+/// as the agent may write it; null if it can't be, whatever the reason:
+/// it runs in a card's build, which must not throw.
 String? _realFolder(String folder) => _real.putIfAbsent(folder, () {
   try {
     return Directory(folder).resolveSymbolicLinksSync();
-  } on FileSystemException {
+  } on Object {
     return null;
   }
 });
 
 /// A finding's [file] relative to the chat's [folder], to open there: a
 /// relative path, or an absolute one inside the folder (or its real path).
-/// Null for anything outside it, a `..` climbing out included.
+/// Null for anything outside it, a `..` climbing out included. On the
+/// phone the folder is the Mac's, matched only as written: the phone has
+/// no such path to resolve, and dart:io throws on the web.
 String? findingPath(String folder, String file) {
   final parts = _segments(file);
   if (parts == null || parts.isEmpty) return null;
   if (!file.startsWith('/')) return parts.join('/');
-  for (final root in {folder, ?_realFolder(folder)}) {
+  for (final root in {folder, if (!kIsWeb) ?_realFolder(folder)}) {
     final r = _segments(root);
     if (r == null || r.length >= parts.length) continue;
     if (Iterable<int>.generate(r.length).every((i) => r[i] == parts[i])) {
