@@ -271,6 +271,15 @@ void renderTest(
   testWidgets(name, body, variant: variant);
 }
 
+/// For a file of only [renderTest]s: when not [rendering], one skipped
+/// test that says how to run them, so `flutter test <file>` passes rather
+/// than ending in "No tests ran".
+void rendersOnly() {
+  if (!rendering) {
+    test('renders', () {}, skip: 'only drawn: run make renders');
+  }
+}
+
 /// Writes what [of] shows (the window: `find.byType(NushiApp)`) as
 /// `<name>.png` to [rendersDir], to look at a view at full size; nothing
 /// without it. A render is never compared or committed: only the views

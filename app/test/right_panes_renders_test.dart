@@ -57,6 +57,7 @@ final _notable = <(double, bool, String)>[
 ];
 
 void main() {
+  rendersOnly();
   setUpAll(loadFonts);
 
   Future<void> shot(

@@ -55,6 +55,7 @@ Finder get _treeButton => find.descendant(
 );
 
 void main() {
+  rendersOnly();
   setUpAll(loadFonts);
 
   for (final brightness in Brightness.values) {
