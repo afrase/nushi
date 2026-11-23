@@ -347,7 +347,7 @@ Future<void> checkForUpdates(BuildContext context, Daemon d) async {
   try {
     u = await d.checkForUpdates();
   } on Object catch (e) {
-    showToast(toasts, errorText(e), replace: asking);
+    showFailure(toasts, errorText(e), replace: asking);
     return;
   } finally {
     slow.cancel();

@@ -188,7 +188,7 @@ class _CommentBoxState extends State<CommentBox> {
         setState(() => _error = why);
       } else if (toasts != null && toasts.mounted) {
         // Its box is gone, and with it the line that would say so.
-        showToast(
+        showFailure(
           toasts,
           key == null
               ? "A comment wasn't posted: $why"

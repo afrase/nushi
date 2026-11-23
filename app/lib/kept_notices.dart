@@ -56,12 +56,9 @@ class _KeptNoticesState extends State<KeptNotices> {
     if (all.length < _said) _said = 0; // forgotten (a test's)
     final toasts = Toasts.maybeOf(context);
     for (final t in all.skip(_said)) {
-      showToast(
+      showFailure(
         toasts,
         keptTroubleText(t),
-        icon: Icons.error_outline,
-        failed: true,
-        closable: true,
         duration: keptNoticeFor,
         key: ValueKey('kept ${t.file} ${t.kind.name}'),
       );

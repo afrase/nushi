@@ -84,6 +84,12 @@ void main() {
           under(toast(tester));
           hide(context);
           await tester.pumpAndSettle();
+          // A failure, where every other toast shows.
+          showError(context, "Couldn't push: the remote refused it.");
+          await shot('a_failure');
+          under(toast(tester));
+          hide(context);
+          await tester.pumpAndSettle();
           say(
             context,
             'Archived side chat',

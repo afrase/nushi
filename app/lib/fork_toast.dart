@@ -67,13 +67,10 @@ Future<void> _undo(
   try {
     await daemon.client.deleteChat(DeleteChatRequest(chatId: fork.id));
   } on Object catch (e) {
-    showToast(
+    showFailure(
       toasts,
       "Couldn't delete the fork: ${errorText(e)}",
       key: const ValueKey('fork-undo-failed'),
-      icon: Icons.error_outline,
-      failed: true,
-      closable: true,
       replace: true,
     );
   }

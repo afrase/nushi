@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/slides.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/toast.dart';
+import 'package:nushi/widgets.dart' show showError;
 
 import 'harness.dart';
 
@@ -88,5 +90,51 @@ void main() {
     toasts.hide();
     await tester.pump();
     expect(shown(), isNull);
+  });
+
+  testWidgets('every failure has one look: the failure fill, its icon in '
+      'the failure ink, a ×, for 8 s', (tester) async {
+    await start(tester);
+    final here = tester.element(find.byKey(const ValueKey('here')));
+    final t = NushiTheme.of(here).t;
+    showError(here, 'nope');
+    await tester.pumpAndSettle();
+    expect(shown(), 'nope');
+    final icon = tester.widget<Icon>(
+      find
+          .descendant(of: find.byType(ToastLine), matching: find.byType(Icon))
+          .first,
+    );
+    expect(icon.icon, Icons.error_outline);
+    expect(icon.color, t.crashed);
+    expect(find.byTooltip('Dismiss'), findsOneWidget);
+    final fill = tester.widget<Material>(
+      find
+          .ancestor(of: find.byType(ToastLine), matching: find.byType(Material))
+          .first,
+    );
+    expect(fill.color, t.crashedSoft);
+    // Past a plain toast's 4 s it stays; at 8 s it goes.
+    await tester.pump(const Duration(seconds: 5));
+    expect(shown(), 'nope');
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(shown(), isNull);
+    // A plain one keeps the lifted fill.
+    showToast(toasts, 'fine');
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<Material>(
+            find
+                .ancestor(
+                  of: find.byType(ToastLine),
+                  matching: find.byType(Material),
+                )
+                .first,
+          )
+          .color,
+      t.lifted,
+    );
   });
 }

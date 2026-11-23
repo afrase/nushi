@@ -115,13 +115,10 @@ class _RemoteResetToastState extends State<RemoteResetToast> {
     // After the frame: a remote event can come as the tree builds.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      showToast(
+      showFailure(
         Toasts.maybeOf(context),
         'Remote access was reset. Pair your phones again.',
         key: const ValueKey('remote-reset'),
-        icon: Icons.error_outline,
-        failed: true,
-        closable: true,
         duration: const Duration(seconds: 10),
         action: (
           label: 'Settings',

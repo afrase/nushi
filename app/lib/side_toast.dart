@@ -57,13 +57,10 @@ Future<void> _undo(
     await daemon.restoreSide(chat, archived, was: was);
     if (daemon.selectedId != chat.id) daemon.select(chat.id);
   } on Object catch (e) {
-    showToast(
+    showFailure(
       toast,
       "Couldn't undo: ${e is StateError ? e.message : errorText(e)}",
       key: const ValueKey('archived-side-undo-failed'),
-      icon: Icons.error_outline,
-      failed: true,
-      closable: true,
       replace: true,
     );
   }

@@ -15,9 +15,9 @@ export 'package:nushi/controls.dart';
 export 'package:nushi/errors.dart';
 export 'package:nushi/toast.dart';
 
-/// Shows [message] in a toast.
+/// Shows [message] in a toast, as a failure ([showFailure]).
 void showError(BuildContext context, Object message) =>
-    showToast(Toasts.maybeOf(context), errorText(message));
+    showFailure(Toasts.maybeOf(context), errorText(message));
 
 /// Runs a call, showing its error, if any, in a toast: the app's, also
 /// once the widget that asked is gone (a trust card replaced it).
@@ -29,11 +29,10 @@ Future<void> tryOrShow(
   try {
     await call();
   } on Object catch (e) {
-    if (context.mounted) {
-      showError(context, e);
-    } else {
-      showToast(toasts, errorText(e));
-    }
+    showFailure(
+      context.mounted ? Toasts.maybeOf(context) : toasts,
+      errorText(e),
+    );
   }
 }
 
@@ -64,7 +63,7 @@ Future<void> runAndSay(
   try {
     await call();
   } on Object catch (e) {
-    say(errorText(e));
+    showFailure(toasts, errorText(e), replace: true);
     return;
   } finally {
     slow.cancel();

@@ -62,7 +62,7 @@ Future<void> openOrSay(
   try {
     await open();
   } on Object catch (e) {
-    showToast(toasts, _browserFailure(e), replace: true);
+    showFailure(toasts, _browserFailure(e), replace: true);
   }
 }
 

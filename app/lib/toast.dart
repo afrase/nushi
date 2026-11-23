@@ -14,21 +14,70 @@ import 'package:nushi/theme/theme.dart';
 typedef ToastAction = ({String label, VoidCallback onPressed});
 
 /// Shows the app's one toast in [toasts] (`Toasts.maybeOf(context)`):
-/// [text], after [leading] or [icon] when given (the icon in the failure's
-/// color when [failed]), then [action] as a compact button and, when
-/// [closable], a × (docs/design.md's Toasts). It stays [duration]; with
-/// [replace], it takes the place of the one showing, else it waits its
-/// turn.
+/// [text], after [leading] or [icon] when given, then [action] as a
+/// compact button and, when [closable], a × (docs/design.md's Toasts). It
+/// stays [duration]; with [replace], it takes the place of the one
+/// showing, else it waits its turn. A failure goes through [showFailure].
 void showToast(
   Toasts? toasts,
   String text, {
   IconData? icon,
   Widget? leading,
-  bool failed = false,
   ToastAction? action,
   bool closable = false,
   bool replace = false,
   Duration duration = const Duration(seconds: 4),
+  Key? key,
+}) => _show(
+  toasts,
+  text,
+  icon: icon,
+  leading: leading,
+  action: action,
+  closable: closable,
+  replace: replace,
+  duration: duration,
+  key: key,
+);
+
+/// How long a failure stays: twice a plain toast's, so an error that
+/// comes while the user looks elsewhere is still there to read.
+const failureFor = Duration(seconds: 8);
+
+/// Shows [text] as a failure, the one look every error has: the toast on
+/// the failure's soft fill (`crashedSoft`) with [icon] in its ink and a ×,
+/// staying [duration] (docs/design.md's Toasts). [replace] and [action]
+/// as [showToast]'s.
+void showFailure(
+  Toasts? toasts,
+  String text, {
+  IconData icon = Icons.error_outline,
+  ToastAction? action,
+  bool replace = false,
+  Duration duration = failureFor,
+  Key? key,
+}) => _show(
+  toasts,
+  text,
+  icon: icon,
+  failed: true,
+  action: action,
+  closable: true,
+  replace: replace,
+  duration: duration,
+  key: key,
+);
+
+void _show(
+  Toasts? toasts,
+  String text, {
+  required bool closable,
+  required bool replace,
+  required Duration duration,
+  IconData? icon,
+  Widget? leading,
+  bool failed = false,
+  ToastAction? action,
   Key? key,
 }) => toasts?.show(
   (close) => ToastLine(
@@ -51,6 +100,7 @@ void showToast(
   duration: duration,
   replace: replace,
   holds: action != null,
+  failed: failed,
 );
 
 /// Where the window's toasts show and their queue ([Toasts]), over
@@ -124,16 +174,18 @@ class Toasts extends State<ToastHost> with SingleTickerProviderStateMixin {
   /// Shows a toast whose line [line] builds, given what closes it; it
   /// goes after [duration], unless it [holds] an action and VoiceOver is
   /// on (as Material's snack bar does). With [replace] it takes the place
-  /// of the one showing at once; else it waits its turn.
+  /// of the one showing at once; else it waits its turn. A [failed] one
+  /// sits on the failure's soft fill ([showFailure]).
   void show(
     Widget Function(VoidCallback close) line, {
     Duration duration = const Duration(seconds: 4),
     bool replace = false,
     bool holds = false,
+    bool failed = false,
     Key? key,
   }) {
     if (!mounted) return;
-    final toast = _Toast(key, duration, holds: holds);
+    final toast = _Toast(key, duration, holds: holds, failed: failed);
     toast.line = line(() => _close(toast));
     if (replace && _showing != null) {
       _put(toast);
@@ -241,7 +293,11 @@ class Toasts extends State<ToastHost> with SingleTickerProviderStateMixin {
       ),
       child: IgnorePointer(
         ignoring: _going,
-        child: _ToastCard(key: toast.key, child: toast.line),
+        child: _ToastCard(
+          key: toast.key,
+          failed: toast.failed,
+          child: toast.line,
+        ),
       ),
     );
     return LayoutBuilder(
@@ -357,20 +413,23 @@ class _RenderWidths extends RenderBox {
 }
 
 class _Toast {
-  new(this.key, this.duration, {required this.holds});
+  new(this.key, this.duration, {required this.holds, required this.failed});
 
   final Key? key;
   final Duration duration;
   final bool holds;
+  final bool failed;
   late final Widget line;
 }
 
-/// A toast's card: the lifted fill, a hairline and the float's shadow,
-/// the app's text, said to VoiceOver as it comes.
+/// A toast's card: the lifted fill (the failure's soft fill when
+/// [failed]), a hairline and the float's shadow, the app's text, said to
+/// VoiceOver as it comes.
 class _ToastCard extends StatelessWidget {
-  const new({required this.child, super.key});
+  const new({required this.child, required this.failed, super.key});
 
   final Widget child;
+  final bool failed;
 
   @override
   Widget build(BuildContext context) {
@@ -389,7 +448,7 @@ class _ToastCard extends StatelessWidget {
             boxShadow: floatShadows(t),
           ),
           child: Material(
-            color: t.lifted,
+            color: failed ? t.crashedSoft : t.lifted,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(NushiTheme.card),
               side: BorderSide(color: t.line),

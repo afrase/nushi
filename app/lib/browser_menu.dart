@@ -156,7 +156,7 @@ Future<void> saveScreenshot(BuildContext context, BrowserHost host) async {
     if (path == null) return;
     await File(path).writeAsBytes(png, flush: true);
   } on Object catch (e) {
-    showToast(
+    showFailure(
       toasts,
       'Couldn’t save the screenshot: ${errorText(e)}',
       replace: true,

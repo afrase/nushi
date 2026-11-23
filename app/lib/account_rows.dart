@@ -25,14 +25,12 @@ String get needsOkStatus =>
 /// older daemon).
 void sayTokenKept(Toasts? toasts, String kept) {
   if (kept.isEmpty) return;
-  showToast(
+  showFailure(
     toasts,
     'Removed. Its token is still in your ${conventions.keyring} as '
     '“$kept”: delete it there.',
     key: const ValueKey('token-kept'),
     icon: Icons.warning_amber_rounded,
-    failed: true,
-    closable: true,
     duration: const Duration(seconds: 30),
   );
 }
