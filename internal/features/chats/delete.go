@@ -177,13 +177,21 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	if c, err = s.halt(chatID); err != nil {
 		return err
 	}
+	// Every worktree is checked, its agent stopped, before any goes: a
+	// refusal leaves them all.
+	states := make([]model.WorktreeState, len(p.Worktrees))
+	for i, wt := range p.Worktrees {
+		if err == nil {
+			states[i], err = s.checkRemoval(ctx, wt.Worktree, opts[wt.Worktree.Path])
+		}
+	}
 	// The chat's terminals end before their folders go, not after.
-	if s.terminals != nil && slices.ContainsFunc(p.Worktrees, func(w WorktreePlan) bool { return opts[w.Worktree.Path].RemoveWorktree }) {
+	if err == nil && s.terminals != nil && slices.ContainsFunc(p.Worktrees, func(w WorktreePlan) bool { return opts[w.Worktree.Path].RemoveWorktree }) {
 		s.terminals.CloseChat(chatID)
 	}
-	for _, wt := range p.Worktrees {
+	for i, wt := range p.Worktrees {
 		if err == nil {
-			err = s.deleteWorktree(ctx, &wt.Worktree, opts[wt.Worktree.Path])
+			err = s.deleteWorktree(ctx, wt.Worktree, states[i], opts[wt.Worktree.Path])
 		}
 	}
 	if err == nil && p.History {

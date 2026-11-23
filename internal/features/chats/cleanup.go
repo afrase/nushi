@@ -119,11 +119,8 @@ func (s *Service) RemoveWorktree(ctx context.Context, chatID string, force bool)
 	if err != nil {
 		return err
 	}
-	switch { // Delete's rule (deleteWorktree): ignored files are lost as surely as changes
-	case st.Changed > 0 && !force:
-		return fmt.Errorf("the worktree has %d uncommitted changes", st.Changed)
-	case st.Ignored > 0 && !force:
-		return fmt.Errorf("the worktree has %d ignored files or folders", st.Ignored)
+	if err := removalGuard(st, model.BranchUse{}, *wt, WorktreeOptions{RemoveWorktree: true, ForceWorktree: force}); err != nil {
+		return err
 	}
 	ctx, ended := detached(ctx)
 	defer ended("removing a chat's worktree")
@@ -146,7 +143,7 @@ func (s *Service) RemoveWorktree(ctx context.Context, chatID string, force bool)
 	if s.servers != nil {
 		s.servers.StopWithin(wt.Path)
 	}
-	if err := s.worktrees.Remove(ctx, *wt, st.Changed > 0 || st.Ignored > 0); err != nil {
+	if err := s.worktrees.Remove(ctx, *wt, st.Changed > 0); err != nil {
 		return err
 	}
 	c.log().Info("worktree removed", "worktree", wt.Path, "changes lost", st.Changed, "ignored", st.Ignored)
@@ -179,13 +176,8 @@ func (s *Service) DeleteBranch(ctx context.Context, chatID string, force bool) e
 	if err != nil {
 		return err
 	}
-	switch {
-	case u.OnIt:
-		return fmt.Errorf("its worktree still has %s checked out: remove the worktree first", wt.Branch)
-	case u.Elsewhere:
-		return fmt.Errorf("another worktree has %s checked out", wt.Branch)
-	case st.Commits > 0 && !force:
-		return fmt.Errorf("%s has %d commits that %s doesn't have", wt.Branch, st.Commits, wt.Base)
+	if err := removalGuard(st, u, *wt, WorktreeOptions{DeleteBranch: true, ForceBranch: force}); err != nil {
+		return err
 	}
 	if err := s.worktrees.DeleteBranch(ctx, *wt); err != nil {
 		return err

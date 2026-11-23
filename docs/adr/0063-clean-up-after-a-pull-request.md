@@ -17,3 +17,6 @@ A chat's pull request merges (or closes) and leaves its worktree, its local bran
 
 ## Amendment (2026-11-13): ignored files need force, as in Delete
 `RemoveChatWorktree` removed a worktree holding ignored files (`.env`, `build/`, local secrets) without force, while Delete refused the same worktree (`git worktree remove` deletes ignored files without asking, and `git status` does not count them). It now follows Delete: ignored files, as `GetCleanUp`'s `ignored` counts them, are refused unless forced, so nothing goes without the same confirmation Delete asks for. The dialog is to start its worktree row unticked when there are any and send force for them, as it does for uncommitted changes.
+
+## Amendment (2026-11-23): one guard, checked before anything goes
+Delete removed a worktree and only then found its branch checked out in another worktree (`git branch -D` refused), leaving the chat with its folder gone; with two worktrees, the second's work could stop it after the first was removed. Delete, `RemoveChatWorktree`, `DeleteChatBranch` and the removal of a worktree a chat leaves now share one guard (`removalGuard`), and Delete checks every worktree it was asked to remove, and every branch's use, before removing any: a branch another worktree has is refused there as `DeleteChatBranch` refuses it.

@@ -26,7 +26,8 @@ type Worktrees interface {
 	Add(ctx context.Context, folder, name, branch, from string) (model.Worktree, string, error)
 	// Inspect says what removing a worktree and its branch would lose.
 	Inspect(ctx context.Context, wt model.Worktree) (model.WorktreeState, error)
-	// Remove removes a worktree; without force, only a clean one.
+	// Remove removes a worktree; without force, only one with no changes
+	// (git deletes ignored files either way: removalGuard's).
 	Remove(ctx context.Context, wt model.Worktree, force bool) error
 	DeleteBranch(ctx context.Context, wt model.Worktree) error
 	// BranchUse says who else has a worktree's branch, and the names a
@@ -158,11 +159,10 @@ func (s *Service) dropWorktree(wt *model.Worktree) bool {
 	}
 	ctx := context.Background()
 	st, err := s.worktrees.Inspect(ctx, *wt)
-	switch {
-	case err != nil:
-	case st.Changed > 0 || st.Ignored > 0 || st.Commits > 0:
-		err = errors.New("it has work in it")
-	default:
+	if err == nil { // none forced: no work of any kind goes
+		err = removalGuard(st, model.BranchUse{}, *wt, WorktreeOptions{RemoveWorktree: true, DeleteBranch: true})
+	}
+	if err == nil {
 		if err = s.worktrees.Remove(ctx, *wt, false); err == nil {
 			err = s.worktrees.DeleteBranch(ctx, *wt)
 		}
@@ -193,35 +193,63 @@ func detached(ctx context.Context) (dctx context.Context, ended func(what string
 	}
 }
 
-// deleteWorktree removes a deleted chat's worktree and deletes its branch,
-// as the user chose. Forcing is needed to lose changes or commits.
-func (s *Service) deleteWorktree(ctx context.Context, wt *model.Worktree, opts WorktreeOptions) error {
-	if wt == nil || !opts.RemoveWorktree && !opts.DeleteBranch {
-		return nil
-	}
-	st, err := s.worktrees.Inspect(ctx, *wt)
-	if err != nil {
-		return err
-	}
+// removalGuard refuses removing a worktree and deleting its branch, as
+// opts ask, where that would lose what opts don't force: uncommitted
+// changes or ignored files (which git's remove deletes without asking),
+// or commits the branch's base doesn't have. A branch another worktree has
+// checked out can't go, nor one its own worktree has while it stays. st
+// and use are what git said of wt (use only matters for its branch). The
+// one rule for Delete, RemoveWorktree, DeleteBranch and dropWorktree,
+// checked before anything is removed.
+func removalGuard(st model.WorktreeState, use model.BranchUse, wt model.Worktree, opts WorktreeOptions) error {
 	branch := opts.DeleteBranch && !st.BranchGone
 	switch {
 	case opts.RemoveWorktree && st.Changed > 0 && !opts.ForceWorktree:
-		return fmt.Errorf("the worktree has %d changed files", st.Changed)
+		return fmt.Errorf("the worktree has %d uncommitted changes", st.Changed)
 	case opts.RemoveWorktree && st.Ignored > 0 && !opts.ForceWorktree:
 		return fmt.Errorf("the worktree has %d ignored files or folders", st.Ignored)
+	case branch && use.Elsewhere:
+		return fmt.Errorf("another worktree has %s checked out", wt.Branch)
+	case branch && use.OnIt && !opts.RemoveWorktree:
+		return fmt.Errorf("its worktree still has %s checked out: remove the worktree first", wt.Branch)
 	case branch && st.Commits > 0 && !opts.ForceBranch:
-		return fmt.Errorf("the branch has %d commits that %s doesn't have", st.Commits, wt.Base)
+		return fmt.Errorf("%s has %d commits that %s doesn't have", wt.Branch, st.Commits, wt.Base)
 	}
+	return nil
+}
+
+// checkRemoval says what removing a deleted chat's worktree and deleting
+// its branch, as opts ask, would lose, refused by removalGuard.
+func (s *Service) checkRemoval(ctx context.Context, wt model.Worktree, opts WorktreeOptions) (model.WorktreeState, error) {
+	if !opts.RemoveWorktree && !opts.DeleteBranch {
+		return model.WorktreeState{}, nil
+	}
+	st, err := s.worktrees.Inspect(ctx, wt)
+	if err != nil {
+		return st, err
+	}
+	var use model.BranchUse
+	if opts.DeleteBranch && !st.BranchGone {
+		if use, err = s.worktrees.BranchUse(ctx, wt); err != nil {
+			return st, err
+		}
+	}
+	return st, removalGuard(st, use, wt, opts)
+}
+
+// deleteWorktree removes a deleted chat's worktree and deletes its branch,
+// as the user chose, once checkRemoval passed them (st is what it saw).
+func (s *Service) deleteWorktree(ctx context.Context, wt model.Worktree, st model.WorktreeState, opts WorktreeOptions) error {
 	if opts.RemoveWorktree {
 		if s.servers != nil { // they end before their folder goes
 			s.servers.StopWithin(wt.Path)
 		}
-		if err := s.worktrees.Remove(ctx, *wt, st.Changed > 0); err != nil {
+		if err := s.worktrees.Remove(ctx, wt, st.Changed > 0); err != nil {
 			return err
 		}
 	}
-	if branch {
-		return s.worktrees.DeleteBranch(ctx, *wt)
+	if opts.DeleteBranch && !st.BranchGone {
+		return s.worktrees.DeleteBranch(ctx, wt)
 	}
 	return nil
 }

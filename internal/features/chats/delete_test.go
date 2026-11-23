@@ -587,3 +587,65 @@ func TestADeletedChatsMoveLeavesTheCopy(t *testing.T) {
 		t.Error("mirrored, though the copy lacks the move")
 	}
 }
+
+// elsewhereWorktrees removes every worktree it's asked to, while another
+// worktree has each one's branch checked out: git branch -D would fail.
+type elsewhereWorktrees struct{ removingWorktrees }
+
+func (w *elsewhereWorktrees) BranchUse(context.Context, model.Worktree) (model.BranchUse, error) {
+	return model.BranchUse{Elsewhere: true}, nil
+}
+
+func (w *elsewhereWorktrees) DeleteBranch(context.Context, model.Worktree) error {
+	return errors.New("checked out at another worktree")
+}
+
+// Deleting a chat with its worktree and branch, while another worktree
+// has the branch checked out, is refused before anything goes: the
+// worktree stays, and the chat with it. Its branch is checked before the
+// worktree is removed, not after.
+func TestDeleteRefusesABranchCheckedOutElsewhereFirst(t *testing.T) {
+	ctx := context.Background()
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	wts := &elsewhereWorktrees{}
+	svc.worktrees = wts
+	w := t.TempDir()
+	c.mu.Lock()
+	c.record.Worktree = &model.Worktree{Path: w, Branch: "nushi/brave-otter"}
+	c.mu.Unlock()
+	err := svc.Delete(ctx, c.id, DeleteOptions{w: {RemoveWorktree: true, DeleteBranch: true}})
+	c.mu.Lock()
+	halting := c.halting
+	c.mu.Unlock()
+	if err == nil || !strings.Contains(err.Error(), "another worktree has nushi/brave-otter checked out") || len(wts.removed) > 0 || halting {
+		t.Errorf("Delete = %v; removed %q, halting %v", err, wts.removed, halting)
+	}
+}
+
+// Of a chat's two worktrees, the second's work stops Delete before the
+// first is removed.
+func TestDeleteChecksEveryWorktreeFirst(t *testing.T) {
+	ctx := context.Background()
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	first, second := t.TempDir(), t.TempDir()
+	wts := &pathStates{state: map[string]model.WorktreeState{second: {Changed: 2}}}
+	svc.worktrees = wts
+	c.mu.Lock()
+	c.record.Worktree = &model.Worktree{Path: first, Branch: "nushi/one"}
+	c.record.EarlierWorktrees = []model.Worktree{{Path: second, Branch: "nushi/two"}}
+	c.mu.Unlock()
+	err := svc.Delete(ctx, c.id, DeleteOptions{first: {RemoveWorktree: true}, second: {RemoveWorktree: true}})
+	if err == nil || len(wts.removed) > 0 {
+		t.Errorf("Delete = %v; removed %q", err, wts.removed)
+	}
+}
+
+// pathStates is removingWorktrees with each worktree's state by its path.
+type pathStates struct {
+	removingWorktrees
+	state map[string]model.WorktreeState
+}
+
+func (w *pathStates) Inspect(_ context.Context, wt model.Worktree) (model.WorktreeState, error) {
+	return w.state[wt.Path], nil
+}
