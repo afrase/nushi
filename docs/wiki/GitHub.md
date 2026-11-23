@@ -6,7 +6,7 @@ On Linux, use Ctrl wherever this page says ⌘.
 
 ## Connect GitHub
 
-If you already use the `gh` command-line tool and are signed in (`gh auth login`), you're done. Nushi uses the same login. It asks `gh` for it, so `gh` must stay installed, even if your token is in `GH_TOKEN`; without it, Settings › GitHub says why and you can paste a token instead.
+If you already use the `gh` command-line tool and are signed in (`gh auth login`), you're done. Nushi uses the same login. It asks `gh` for it, so `gh` must stay installed and up to date, even if your token is in `GH_TOKEN`; without it, or if it fails, Settings › GitHub says why and you can paste a token instead.
 
 To check, or to use a token instead:
 

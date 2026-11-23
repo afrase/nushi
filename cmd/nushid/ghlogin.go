@@ -38,8 +38,8 @@ type ghLogin struct {
 // Token is host's token from gh and where it came from ("gh"), "" when gh
 // has none or isn't installed. A `gh auth token` the request or ghWait cut
 // short is an error, not gh having no token; so is a token in the
-// environment or gh's config that only gh would have read, gh being gone,
-// so Settings › GitHub says why the host isn't signed in. gh's output is
+// environment or gh's config that only gh would have read, gh being gone
+// or failing, so Settings › GitHub says why the host isn't signed in. gh's output is
 // never logged: its stdout is the token, its stderr dropped.
 func (g ghLogin) Token(ctx context.Context, host string) (string, string, error) {
 	env := shellenv.Merge(g.env(), nil) // without Nushi's own variables
@@ -63,7 +63,13 @@ func (g ghLogin) Token(ctx context.Context, host string) (string, string, error)
 		return "", "gh", fmt.Errorf("asking gh for %s's token: %w", host, ctx.Err())
 	}
 	if err != nil {
-		return "", "gh", nil // gh has no token for host; what it said may name it, so it isn't kept
+		// gh has no token for host, or gh can't give one (older than `gh
+		// auth token`, or unable to run here); a token only gh would read
+		// says which. What gh said may name the token, so it isn't kept.
+		if why := unread(env, host); why != "" {
+			return "", "gh", fmt.Errorf("%s, but `gh auth token` failed for %s: update gh (or check it runs outside your shell), or add a token in Settings › GitHub", why, host)
+		}
+		return "", "gh", nil
 	}
 	return strings.TrimSpace(string(out)), "gh", nil
 }
@@ -145,7 +151,7 @@ func ghConfigDir(env []string) string {
 }
 
 // unread names a token for host that gh would have given but no one reads
-// with gh gone: the environment's (GH_TOKEN or GITHUB_TOKEN for
+// with gh gone or failing: the environment's (GH_TOKEN or GITHUB_TOKEN for
 // github.com, a *.ghe.com host or github.localhost; GH_ENTERPRISE_TOKEN or
 // GITHUB_ENTERPRISE_TOKEN for any other, as gh's rules go), else one in
 // gh's hosts.yml; "" when there's neither.

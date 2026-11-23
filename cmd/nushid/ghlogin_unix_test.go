@@ -7,6 +7,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/afrase/nushi/internal/testcheck"
@@ -84,5 +86,46 @@ func TestGhTokenCutShort(t *testing.T) {
 	r := <-done
 	if r.token != "" || !errors.Is(r.err, context.Canceled) {
 		t.Fatalf("%q %v", r.token, r.err)
+	}
+}
+
+// oldGh is a gh older than `gh auth token` (added in gh 2.17), or one
+// that can't run in the daemon's environment: it fails whatever it's asked.
+const oldGh = `#!/bin/sh
+echo "unknown command \"token\" for \"gh auth\"" >&2
+exit 1
+`
+
+// A gh that fails while a token only gh would read is there (the
+// environment's, or one in its hosts.yml) is an error that says so, as
+// with gh gone, never a quiet "no token"; with no such token, gh failing
+// is still no token. gh's own words aren't in it.
+func TestGhTokenGhFails(t *testing.T) {
+	dir := t.TempDir()
+	testcheck.Write(t, filepath.Join(dir, "hosts.yml"), hostsYML)
+	bin := filepath.Join(t.TempDir(), "bin")
+	testcheck.Write(t, filepath.Join(bin, "gh"), oldGh)
+	testcheck.NoErr(t, os.Chmod(filepath.Join(bin, "gh"), 0o700))
+	base := []string{"PATH=" + bin, "GH_CONFIG_DIR=" + dir}
+	for _, tc := range []struct {
+		env  []string
+		host string
+		why  string // in the error; "" for none
+	}{
+		{nil, "github.com", ""},
+		{[]string{"GH_TOKEN=x"}, "github.com", "GH_TOKEN is set"},
+		{[]string{"GH_ENTERPRISE_TOKEN=x"}, "ghe.example", "GH_ENTERPRISE_TOKEN is set"},
+		{nil, "git.corp.example", "gh's config has a token for git.corp.example"},
+	} {
+		token, source, err := testLogin(append(slices.Clone(base), tc.env...)...).Token(t.Context(), tc.host)
+		if token != "" || source != "gh" {
+			t.Errorf("%q %s: %q %q", tc.env, tc.host, token, source)
+		}
+		switch {
+		case tc.why == "" && err != nil:
+			t.Errorf("%q %s: %v", tc.env, tc.host, err)
+		case tc.why != "" && (err == nil || !strings.Contains(err.Error(), tc.why) || !strings.Contains(err.Error(), "update gh") || strings.Contains(err.Error(), "unknown command")):
+			t.Errorf("%q %s: %v, want it to say %q and not gh's words", tc.env, tc.host, err, tc.why)
+		}
 	}
 }

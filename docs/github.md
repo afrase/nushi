@@ -2,7 +2,7 @@
 
 ## Signing in
 
-If you're signed in to `gh` (`gh auth login`), GitHub works as is. The daemon asks gh for each host's token (`gh auth token`), so gh picks it as it does for itself (the environment's `GH_TOKEN`, gh's config, or the keychain). gh must be installed for that, even for a `GH_TOKEN`: without it Settings › GitHub says why the host isn't signed in, and a pasted token works instead.
+If you're signed in to `gh` (`gh auth login`), GitHub works as is. The daemon asks gh for each host's token (`gh auth token`), so gh picks it as it does for itself (the environment's `GH_TOKEN`, gh's config, or the keychain). gh must be installed for that, even for a `GH_TOKEN`, and new enough to have `gh auth token` (2.17): without it, or when it fails, Settings › GitHub says why the host isn't signed in, and a pasted token works instead.
 
 Settings › GitHub lists each host under Accounts: who its token is and where it's from, a Signed in pill once GitHub has answered, and what's left of GitHub's rate limits this hour (shared with your `gh` and agents that run it). Its ⋯ shows the token's kind and scopes, and Remove token… for one you pasted (a token the keychain won't delete, after a dismissed prompt or with no keyring, stays there as "Nushi GitHub", for you to delete).
 
