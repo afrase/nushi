@@ -118,6 +118,10 @@ type WorktreeState struct {
 	Ignored    int  // files and folders git ignores, which removing it deletes too
 	Commits    int  // commits on its branch that its base doesn't have
 	BranchGone bool // its branch was deleted outside Nushi
+	// Changes are the first of the uncommitted changes Changed counts, as
+	// git status says each ("M a.go", "?? b.txt"), for the clean-up
+	// dialog: a few, not thousands of untracked files.
+	Changes []string
 }
 
 // FileChange is one file's uncommitted change: its text at HEAD and now.

@@ -111,7 +111,11 @@ func worktreesFolder(repo string) error {
 	return nil
 }
 
-// Inspect says what removing a worktree and deleting its branch would lose.
+// shownChanges is how many of a worktree's changes Inspect keeps by name.
+const shownChanges = 8
+
+// Inspect says what removing a worktree and deleting its branch would lose:
+// how much, and the first few changes by name.
 func (Worktrees) Inspect(ctx context.Context, wt model.Worktree) (model.WorktreeState, error) {
 	var st model.WorktreeState
 	if _, err := os.Stat(wt.Path); errors.Is(err, fs.ErrNotExist) {
@@ -122,6 +126,7 @@ func (Worktrees) Inspect(ctx context.Context, wt model.Worktree) (model.Worktree
 		return st, err
 	} else {
 		st.Changed, st.Ignored = len(changes), len(split(ignored))
+		st.Changes = changes[:min(shownChanges, len(changes))]
 	}
 	if !hasBranch(ctx, wt.Repo, wt.Branch) {
 		st.BranchGone = true

@@ -287,13 +287,6 @@ func statusEntries(ctx context.Context, folder string, untracked bool) ([]string
 	return list, nil
 }
 
-// Changes lists the first n of what removing the worktree at folder would
-// lose (removalEntries).
-func (Worktrees) Changes(ctx context.Context, folder string, n int) ([]string, error) {
-	list, err := removalEntries(ctx, folder)
-	return list[:min(n, len(list))], err
-}
-
 // removalEntries are what removing the worktree at folder would lose: its
 // uncommitted changes, untracked files included, as git status --short
 // says each ("M a.go", "?? b.txt"), and each checked-out submodule

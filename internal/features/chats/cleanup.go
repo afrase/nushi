@@ -44,9 +44,7 @@ func (s *Service) CleanUpOf(ctx context.Context, chatID string) (CleanUp, error)
 	}
 	out.Worktree = wt
 	out.State, out.StateErr = s.worktrees.Inspect(ctx, *wt)
-	if out.StateErr == nil && out.State.Changed > 0 {
-		out.Changes, _ = s.worktrees.Changes(ctx, wt.Path, 8)
-	}
+	out.Changes = out.State.Changes
 	if u, err := s.worktrees.BranchUse(ctx, *wt); err == nil {
 		out.Elsewhere = u.Elsewhere
 	}

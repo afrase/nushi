@@ -8,6 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -74,7 +77,8 @@ func TestWorktrees(t *testing.T) {
 	testcheck.Write(t, filepath.Join(second.Path, ".gitignore"), ".env\nbuild/\n")
 	testcheck.Write(t, filepath.Join(second.Path, ".env"), "SECRET=1\n")
 	testcheck.Write(t, filepath.Join(second.Path, "build", "out.o"), "o")
-	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || st != (model.WorktreeState{Changed: 3, Ignored: 2, Commits: 1}) {
+	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || !reflect.DeepEqual(st, model.WorktreeState{Changed: 3, Ignored: 2, Commits: 1,
+		Changes: []string{"M sub/a.txt", "?? .gitignore", "?? new.txt"}}) {
 		t.Errorf("Inspect = %+v, %v", st, err)
 	}
 	// Its base branch deleted (merged, say): counted from where it started.
@@ -88,13 +92,13 @@ func TestWorktrees(t *testing.T) {
 	if err := (Worktrees{}).Remove(ctx, second, true); err != nil {
 		t.Fatal(err)
 	}
-	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || st != (model.WorktreeState{Gone: true, Commits: 1}) {
+	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || !reflect.DeepEqual(st, model.WorktreeState{Gone: true, Commits: 1}) {
 		t.Errorf("Inspect after removing = %+v, %v", st, err)
 	}
 	if err := (Worktrees{}).DeleteBranch(ctx, second); err != nil {
 		t.Fatal(err)
 	}
-	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || st != (model.WorktreeState{Gone: true, BranchGone: true}) {
+	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || !reflect.DeepEqual(st, model.WorktreeState{Gone: true, BranchGone: true}) {
 		t.Errorf("Inspect after deleting the branch = %+v, %v", st, err)
 	}
 	// A worktree whose folder went outside git: removing clears git's record
@@ -200,7 +204,7 @@ func TestCheckBranch(t *testing.T) {
 	}
 }
 
-// A rename is one change to Inspect, as to Changes and Changed: git
+// A rename is one change to Inspect, as to Changed: git
 // status gives its old path as a field of its own.
 func TestInspectCountsARenameOnce(t *testing.T) {
 	ctx := context.Background()
@@ -212,19 +216,17 @@ func TestInspectCountsARenameOnce(t *testing.T) {
 	wt, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "")
 	testcheck.NoErr(t, err)
 	testcheck.Git(t, wt.Path, "mv", "a.txt", "b.txt")
-	changes, err := Worktrees{}.Changes(ctx, wt.Path, 10)
-	testcheck.NoErr(t, err)
 	changed, err := Worktrees{}.Changed(ctx, wt.Path)
 	testcheck.NoErr(t, err)
 	st, err := Worktrees{}.Inspect(ctx, wt)
-	if err != nil || len(changes) != 1 || changes[0] != "R b.txt" || changed != 1 || st.Changed != 1 {
-		t.Errorf("Changes %q, Changed %d, Inspect %+v %v", changes, changed, st, err)
+	if err != nil || !slices.Equal(st.Changes, []string{"R b.txt"}) || changed != 1 || st.Changed != 1 {
+		t.Errorf("Changed %d, Inspect %+v %v", changed, st, err)
 	}
 }
 
 // Inspect's status stays out of submodules (ADR 0023), so it can't see
-// what changed in one; a checked-out submodule is a change to Inspect and
-// to Changes, as to git worktree remove, so removing the worktree asks for
+// what changed in one; a checked-out submodule is a change to Inspect,
+// named among its Changes, as to git worktree remove, so removing the worktree asks for
 // force rather than losing its work for an ignored file's force.
 func TestInspectCountsACheckedOutSubmodule(t *testing.T) {
 	ctx := context.Background()
@@ -249,9 +251,8 @@ func TestInspectCountsACheckedOutSubmodule(t *testing.T) {
 	testcheck.Write(t, filepath.Join(wt.Path, "vendor", "lib", "a.txt"), "edited\n")
 	testcheck.Write(t, filepath.Join(wt.Path, "out", "bin"), "built\n")
 	st, err = Worktrees{}.Inspect(ctx, wt)
-	changes, cerr := Worktrees{}.Changes(ctx, wt.Path, 10)
-	if err != nil || cerr != nil || st.Changed != 1 || st.Ignored != 1 || len(changes) != 1 || changes[0] != "submodule vendor/lib" {
-		t.Errorf("Inspect = %+v, %v; Changes = %q, %v", st, err, changes, cerr)
+	if err != nil || st.Changed != 1 || st.Ignored != 1 || !slices.Equal(st.Changes, []string{"submodule vendor/lib"}) {
+		t.Errorf("Inspect = %+v, %v", st, err)
 	}
 }
 
@@ -297,5 +298,23 @@ func TestRemovingAGoneWorktreeInAnotherLanguage(t *testing.T) {
 		if err := (Worktrees{}).Remove(ctx, wt, false); err != nil {
 			t.Errorf("%s: %v", lang, err)
 		}
+	}
+}
+
+// Inspect counts every change but names only the first few: the clean-up
+// dialog shows those, and a worktree can hold thousands of new files.
+func TestInspectNamesTheFirstChanges(t *testing.T) {
+	ctx := context.Background()
+	repo, _ := filepath.EvalSymlinks(t.TempDir())
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
+	wt, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "")
+	testcheck.NoErr(t, err)
+	for i := range shownChanges + 3 {
+		testcheck.Write(t, filepath.Join(wt.Path, "f"+strconv.Itoa(i+10)+".txt"), "new\n")
+	}
+	st, err := Worktrees{}.Inspect(ctx, wt)
+	if err != nil || st.Changed != shownChanges+3 || len(st.Changes) != shownChanges || st.Changes[0] != "?? f10.txt" {
+		t.Errorf("Inspect = %+v, %v", st, err)
 	}
 }
