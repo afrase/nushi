@@ -5,9 +5,11 @@ name: Release
 # .sha256 for each to the release, and updates the casks in afrase/homebrew-tap (ADR 0055). A draft triggers nothing
 # until it is published. Run it by hand to rebuild an existing release's files. The app (macOS), the Linux app (on each
 # architecture: Flutter doesn't cross-build), the relays (Linux, with the web app) build in parallel jobs, beside the
-# check; publish attaches them once all are built and the commit is checked, then casks writes the casks and tap
-# pushes them (security.md's Releases says what runs with which token). A published release whose check, build or
-# attaching fails is made a draft again (withdraw). CI builds, installs and starts the Linux
+# check; publish attaches them once all are built and the commit is checked, then casks writes the casks, undraft
+# makes the release public and tap pushes them (security.md's Releases says what runs with which token). A published
+# release is a draft while it builds (draft makes it one at once, undraft public again once its files and casks are
+# there), so neither the update check nor the casks offer it without its files; one whose run fails stays a draft
+# (withdraw makes sure). CI builds, installs and starts the Linux
 # app with the same steps (tools/release.sh's linux part) on every push, since this can't run before a release. Actions are pinned by commit, as in CI.
 # Each job that runs steps has a timeout, as CI's do: two to three times its longest recent run (2026-10-29), room
 # for a cold cache.
@@ -31,6 +33,36 @@ env:
   NUSHI_FLUTTER_VERSION: 3.47.7
 
 jobs:
+  # A public release is offered as an update at once (internal/features/updates reads tags, not files), so this run's
+  # first job makes it a draft, which neither the update check nor the casks see, and undraft makes it public again
+  # once its files and casks are there. It first reads the latest release and the newest beta, as casks would: once a
+  # draft, this release is in neither, and the token casks has can't see a draft. By the release's id, which the
+  # event gives: a draft is found by its tag only through a list. On a published release's run only: a run by hand
+  # rebuilds a release as it is. It checks nothing out: its one step is this file's.
+  draft:
+    name: Make the release a draft while it builds
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      latest: ${{ steps.draft.outputs.latest }}
+      beta: ${{ steps.draft.outputs.beta }}
+    steps:
+      - id: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ID: ${{ github.event.release.id }}
+        run: |
+          latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          beta=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 30 --json tagName,isPrerelease \
+            --jq '[.[] | select(.isPrerelease)][0].tagName // ""')
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "beta=$beta" >> "$GITHUB_OUTPUT"
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=true --silent
+          echo "$TAG is a draft until it is built (the latest release is $latest, the newest beta ${beta:-none})."
+
   tag:
     name: Check the tag and CI
     runs-on: ubuntu-latest
@@ -207,8 +239,9 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # Attaches the builds' files. One of two jobs with contents: write on this repository (withdraw is the other), it
-  # checks nothing out and runs no code of the tag's but this file: its steps are this file's and pinned actions.
+  # Attaches the builds' files, to the draft on a published release's run (gh finds a draft by its tag). One of the
+  # jobs with contents: write on this repository (with draft, undraft and withdraw), it checks nothing out and runs no
+  # code of the tag's but this file: its steps are this file's and pinned actions.
   publish:
     name: Attach the files
     needs: [tag, ci, app, linux, relay]
@@ -235,13 +268,13 @@ jobs:
           ls -l dist
           gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
 
-  # A published release is offered as an update as soon as it is published (internal/features/updates reads tags,
-  # not files), so one whose check, build or attaching failed or was cancelled goes back to a draft, which neither
-  # the update check nor the casks see. Publishing the draft again builds it again. A run by hand rebuilds a release
-  # that was already out, so it leaves it as it is. The job checks nothing out: its one step is this file's.
+  # A published release whose run failed or was cancelled before undraft made it public stays a draft: draft made it
+  # one, and this job makes sure, for when draft itself failed. Re-running the failed jobs finishes it (undraft makes
+  # it public); publishing the draft again builds it all again. A run by hand rebuilds a release as it is, so it leaves
+  # it alone. The job checks nothing out: its one step is this file's.
   withdraw:
-    name: Withdraw the release to a draft
-    needs: [tag, ci, app, linux, relay, publish]
+    name: Keep the release a draft
+    needs: [draft, tag, ci, app, linux, relay, publish, casks, undraft]
     # A job GitHub itself cancels (no runner in time) fails nothing and cancels no run: its result says so.
     if: >-
       always() && github.event_name == 'release' &&
@@ -254,9 +287,10 @@ jobs:
       - name: Make the release a draft
         env:
           GH_TOKEN: ${{ github.token }}
+          ID: ${{ github.event.release.id }}
         run: |
-          gh release edit "$TAG" --draft=true --repo "$GITHUB_REPOSITORY"
-          echo "::error::$TAG wasn't built and attached, so it is a draft again: fix what failed, then publish it again."
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=true --silent
+          echo "::error::$TAG wasn't built, attached and its casks written, so it stays a draft: re-run the failed jobs once what failed is fixed (a fix in the code needs a new tag)."
 
   # The latest release updates nushi, and nushi@beta with it; the newest beta (a pre-release of a later version)
   # nushi@beta alone (ADR 0108); an older one built again by hand neither. The tag's tools/cask.sh says which and
@@ -265,9 +299,11 @@ jobs:
   # can outlast its step on the runner (which has sudo) and read a later step's environment.
   casks:
     name: Write the Homebrew casks
-    needs: [tag, publish]
-    # Said outright: the ci job skipped further up would skip this job too by default.
-    if: "!cancelled() && needs.publish.result == 'success'"
+    needs: [draft, tag, publish]
+    # Said outright: the ci job (or draft, on a run by hand) skipped further up would skip this job too by default.
+    if: >-
+      !cancelled() && needs.publish.result == 'success' &&
+      (needs.draft.result == 'success' || needs.draft.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -278,14 +314,22 @@ jobs:
     outputs:
       casks: ${{ steps.write.outputs.casks }}
     steps:
+      # On a published release's run, as draft read them before this release became a draft; a run by hand reads them.
       - name: Read the latest release and the newest beta
         id: releases
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          DRAFT_LATEST: ${{ needs.draft.outputs.latest }}
+          DRAFT_BETA: ${{ needs.draft.outputs.beta }}
         run: |
-          latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
-          beta=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 30 --json tagName,isPrerelease \
-            --jq '[.[] | select(.isPrerelease)][0].tagName // ""')
+          if [ "$EVENT" = release ]; then
+            latest=$DRAFT_LATEST beta=$DRAFT_BETA
+          else
+            latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+            beta=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 30 --json tagName,isPrerelease \
+              --jq '[.[] | select(.isPrerelease)][0].tagName // ""')
+          fi
           echo "latest=$latest" >> "$GITHUB_OUTPUT"
           echo "beta=$beta" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -325,13 +369,42 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # The release made public again, last: its files are attached and its casks written. A pre-release stays one (only
+  # draft and make_latest are sent), and it is the latest again only if it was when the run began. With this run's own
+  # token, never the tap's: an event that token makes starts no workflow, so publishing doesn't run this file again.
+  # Before tap, since a cask's download from a draft finds nothing.
+  undraft:
+    name: Make the release public
+    needs: [draft, casks]
+    if: "!cancelled() && needs.draft.result == 'success' && needs.casks.result == 'success'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ID: ${{ github.event.release.id }}
+          LATEST: ${{ needs.draft.outputs.latest }}
+        run: |
+          if [ "$(gh api "repos/$GITHUB_REPOSITORY/releases/$ID" --jq .draft)" != true ]; then
+            echo "$TAG is public already."; exit 0
+          fi
+          if [ "$LATEST" = "$TAG" ]; then latest=true; else latest=false; fi
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=false -f make_latest="$latest" --silent
+          echo "$TAG is public (the latest release: $latest)."
+
   # Needs the HOMEBREW_TAP_TOKEN secret: a fine-grained token with Contents read and write on afrase/homebrew-tap
   # only; without it the casks are left alone. It runs no code of the tag's but this file: it checks nothing out, and
   # takes the casks job's names and files as data, only nushi and nushi@beta, each a plain file.
   tap:
     name: Update the Homebrew tap
-    needs: [tag, casks]
-    if: "!cancelled() && needs.casks.result == 'success' && needs.casks.outputs.casks != ''"
+    needs: [tag, casks, undraft]
+    # undraft is skipped on a run by hand, whose release is as it was.
+    if: >-
+      !cancelled() && needs.casks.result == 'success' && needs.casks.outputs.casks != '' &&
+      (needs.undraft.result == 'success' || needs.undraft.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
