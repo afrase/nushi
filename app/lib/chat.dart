@@ -758,6 +758,38 @@ class ChatState extends ChangeNotifier {
     revision++;
   }
 
+  /// Lets go of what it owns, the chat gone (Daemon's _forget, after the
+  /// frame that drops its views): a load on its way is dropped, the runs
+  /// it follows stop, its find's timers end, and its notifiers and
+  /// controllers are disposed. Not [forking], [rewinding] or [takeBack]:
+  /// calls that may answer after the chat went set them, and nothing
+  /// listens to them by then.
+  @override
+  void dispose() {
+    unload();
+    runs.close();
+    find.dispose();
+    for (final e in edits.values) {
+      e.dispose();
+    }
+    edits.clear();
+    for (final n in <ChangeNotifier>[
+      editsChanged,
+      side,
+      sideHidden,
+      renaming,
+      pane,
+      filesOpened,
+      tab,
+      showAsked,
+      serverLogs,
+      commitMessage,
+    ]) {
+      n.dispose();
+    }
+    super.dispose();
+  }
+
   /// Forgets the snapshot (the connection was lost): the next one replaces it.
   void unload() {
     loads++;

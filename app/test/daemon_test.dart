@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/code_runs.dart';
 import 'package:nushi/context_cache.dart';
@@ -256,6 +257,26 @@ void main() {
     expect(d.chats, isEmpty);
     expect(shells.attached(run.terminalId), isFalse);
     expect(d.devServers.of('a'), isNull);
+  });
+
+  testWidgets("a deleted chat's state is disposed after the frame that "
+      'drops it', (tester) async {
+    final fake = FakeDaemon([Chat(id: 'a', folder: '/x', agent: 'claude')]);
+    final d = await fake.connect(tester);
+    final chat = d.chats['a']!;
+    fake.emit(EventsResponse(chatId: 'a', removed: true));
+    await tester.pump(); // the event comes
+    expect(d.chats, isEmpty);
+    // Whole until the frame that drops its views has been drawn.
+    expect(() => ChangeNotifier.debugAssertNotDisposed(chat), returnsNormally);
+    await tester.pump();
+    for (final n in <ChangeNotifier>[chat, chat.pane, chat.commitMessage]) {
+      expect(
+        () => ChangeNotifier.debugAssertNotDisposed(n),
+        throwsFlutterError,
+      );
+    }
+    d.dispose();
   });
 
   test('a chat deleted while the app was away: what was kept goes', () async {

@@ -176,7 +176,13 @@ extension DaemonEvents on Daemon {
   /// daemon's.)
   void _forget(Set<String> ids) {
     for (final id in ids) {
-      chats.remove(id)?.runs.close();
+      if (chats.remove(id) case final chat?) {
+        chat.runs.close();
+        // Its views go with this frame; then what it owns.
+        WidgetsBinding.instance
+          ..addPostFrameCallback((_) => chat.dispose())
+          ..ensureVisualUpdate();
+      }
       drafts?.forget(id);
       if (commentsOf(id).isNotEmpty) setComments(id, []);
       if (!remote) forgetContext(id);
