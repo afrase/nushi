@@ -6,7 +6,6 @@ import 'package:nushi/desktop_linux.dart';
 import 'package:nushi/file_mode_linux.dart';
 import 'package:nushi/fonts_linux.dart';
 import 'package:nushi/login_item_linux.dart';
-import 'package:nushi/mermaid_linux.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/session_bus_linux.dart';
 import 'package:nushi/speller_linux.dart';
@@ -22,7 +21,6 @@ Native linuxNative() => Native(
   clipboard: const LinuxClipboardFiles(),
   conventions: linuxConventions,
   desktop: const LinuxDesktop(),
-  diagrams: const LinuxDiagrams(),
   fileModes: const LinuxFileModes(),
   fonts: const LinuxFonts(),
   install: LinuxAppInstall(),

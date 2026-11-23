@@ -14,12 +14,14 @@ import 'fake_web_views.dart';
 final linuxOnly = TargetPlatformVariant.only(TargetPlatform.linux);
 
 /// The addresses the default browser was sent while the test runs, on
-/// Linux's window and conventions without web views, the browser named
-/// Firefox; [open] in the fake's place says what opening does.
+/// Linux's window and conventions without web views or diagrams, the
+/// browser named Firefox; [open] in the fake's place says what opening
+/// does.
 List<Uri> pagesOutside({Future<void> Function(Uri url)? open}) {
   native
     ..window = const LinuxWindow()
-    ..conventions = linuxConventions;
+    ..conventions = linuxConventions
+    ..diagrams = null;
   final opened = <Uri>[];
   fakeWebViews()
     ..embedded = false

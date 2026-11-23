@@ -79,7 +79,8 @@ Future<DrawnDiagram> _drawnOnce(
   final key = (source, dark, background);
   if (_drawn.remove(key) case final f?) return _drawn[key] = f; // newest
   if (_drawn.length >= 100) _drawn.remove(_drawn.keys.first)?.ignore();
-  final drawn = native.diagrams.draw(
+  // Only a block with a renderer to draw it gets here ([MermaidBlock]).
+  final drawn = native.diagrams!.draw(
     source,
     dark: dark,
     width: width,
@@ -107,7 +108,8 @@ void Function(BuildContext context, String source)? showDiagram;
 /// diagram. Once whole, on the Mac, the diagram as a picture
 /// ([Native.diagrams]) with Diagram and Source in its bar, and its source with
 /// the error under it when it doesn't parse; on the phone, its source and
-/// Show diagram ([showDiagram]), full screen in a frame.
+/// Show diagram ([showDiagram]), full screen in a frame; where nothing draws
+/// diagrams (Linux), its source alone.
 class MermaidBlock extends StatefulWidget {
   const new(this.code, {required this.style, required this.open, super.key});
 
@@ -138,6 +140,9 @@ class _MermaidBlockState extends State<MermaidBlock> {
           LinkText('Show diagram', size: 12, onTap: () => show(context, code)),
         ],
       );
+    }
+    if (native.diagrams == null) {
+      return CodeBlockView(language: 'mermaid', code: code, style: style);
     }
     return CodeBlockView(
       language: 'mermaid',

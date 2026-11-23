@@ -52,3 +52,6 @@ The daemon runs on Linux (ADR 0101); the app was the Mac's only. ADR 0097 made t
 
 ## Amendment (2026-11-14)
 The app's Back and Forward ([ADR 0119](0119-back-and-forward.md)) are Alt+Left and Alt+Right: a focused text field keeps them for its line, and a terminal for its shell. Ctrl+Page Up and Down stay the chat before and after.
+
+## Amendment (2026-11-23)
+Linux has no diagrams at all (`Native.diagrams` is null) rather than a renderer that always answers "not drawn": a Mermaid block in Markdown showed Diagram and Source tabs that both showed its source. It now shows its source alone, as a code block, with no tabs.

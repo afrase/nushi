@@ -28,13 +28,13 @@ class Native {
     required this.clipboard,
     required this.conventions,
     required this.desktop,
-    required this.diagrams,
     required this.fileModes,
     required this.fonts,
     required this.install,
     required this.loginItem,
     required this.web,
     required this.window,
+    this.diagrams,
     this.speller,
     this.swipes,
   });
@@ -52,8 +52,9 @@ class Native {
   /// The file manager and default apps.
   Desktop desktop;
 
-  /// Mermaid diagrams drawn as pictures.
-  Diagrams diagrams;
+  /// Mermaid diagrams drawn as pictures; null where nothing draws them
+  /// (Linux, ADR 0104), and a diagram shows its source alone.
+  Diagrams? diagrams;
 
   /// The user's files made theirs only.
   FileModes fileModes;

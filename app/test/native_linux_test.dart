@@ -31,14 +31,7 @@ void main() {
     expect(set.loginItem, isA<LinuxLoginItem>());
     expect(await set.web.sincePress(), isNull);
     expect(set.web.embedded, isFalse); // outside_page_test has the rest
-    final d = await set.diagrams.draw(
-      'graph TD; a-->b',
-      dark: false,
-      width: 400,
-      background: const Color(0xFFFFFFFF),
-      foreground: const Color(0xFF000000),
-    );
-    expect((d.png, d.error), (null, 'Diagrams aren’t drawn on Linux yet'));
+    expect(set.diagrams, isNull);
   });
 
   test('widgets read the native set’s conventions', () {

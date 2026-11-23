@@ -37,6 +37,7 @@ import 'outside_fixture.dart';
 
 const _html = '<!doctype html>\n<h1>The Still Kettle</h1>\n';
 const _flow = 'graph LR\n  Plan --> Build --> Ship\n';
+const _plan = '# The plan\n\n```mermaid\n$_flow```\n';
 
 Item _show(String id, String url) => Item(
   id: id,
@@ -78,7 +79,11 @@ Future<(FakeDaemon, Daemon)> _app(
         : null)
     ..streams = (input) {
       if (input is! WatchChatFileRequest) return null;
-      final text = input.path.endsWith('.mmd') ? _flow : _html;
+      final text = switch (input.path) {
+        final p when p.endsWith('.mmd') => _flow,
+        final p when p.endsWith('.md') => _plan,
+        _ => _html,
+      };
       final s = StreamController<WatchChatFileResponse>()
         ..add(
           WatchChatFileResponse(
@@ -239,6 +244,28 @@ void main() {
     expect(_in<FilesPane>(find.byTooltip('Open in browser')), findsNothing);
     await closeView(tester, d);
   }, variant: linuxOnly);
+
+  // Review 2026-11-22, F222: Linux's Diagram tab showed the source, as
+  // Source did, and a line saying it isn't drawn.
+  for (final width in [1700.0, 720.0]) {
+    testWidgets('${width.toInt()}: a Markdown file’s Mermaid block shows '
+        'its source, with no Diagram and Source tabs', (tester) async {
+      pagesOutside();
+      final (_, d) = await _app(tester, width: width);
+      d.chats['c']!.openInFiles('docs/plan.md');
+      await tester.pumpAndSettle();
+      await render(
+        tester,
+        find.byType(NushiApp),
+        'outside_mermaid_${width.toInt()}',
+      );
+      expect(_in<FilesPane>(find.textContaining('Plan --> Build')), findsOne);
+      expect(_in<FilesPane>(find.text('Mermaid')), findsOne);
+      expect(_in<FilesPane>(find.text('Diagram')), findsNothing);
+      expect(_in<FilesPane>(find.text('Source')), findsNothing);
+      await closeView(tester, d);
+    }, variant: linuxOnly);
+  }
 
   testWidgets('the agent’s page opens a placeholder tab, never the browser; '
       'no Back, Forward, Reload or ⋯; its button and Return open it', (
