@@ -127,6 +127,10 @@ type Deps struct {
 type Service struct {
 	Deps
 
+	// tokensMu orders AddToken's and RemoveToken's read-modify-writes of
+	// github.json, so two changes at once can't lose one; taken before mu,
+	// never inside it, so the write's fsync holds up no other call.
+	tokensMu sync.Mutex
 	mu       sync.Mutex
 	clients  map[string]*host     // by host, once its token was read
 	noToken  map[string]time.Time // by host: when gh last had no token for it
@@ -307,11 +311,12 @@ func (s *Service) AddToken(ctx context.Context, given, token string) (githubapi.
 	if err := s.Tokens.Set(name, tokenLabel(name), []byte(token)); err != nil {
 		return u, fmt.Errorf("keeping the token in the %s: %w", s.Keys.word(), err)
 	}
-	hosts, err := s.Store.GitHubTokenHosts()
-	if err == nil && !slices.Contains(hosts, name) {
-		err = s.Store.SaveGitHubTokenHosts(append(hosts, name))
-	}
-	if err != nil {
+	if err := s.changeTokenHosts(func(hosts []string) []string {
+		if slices.Contains(hosts, name) {
+			return nil
+		}
+		return append(hosts, name)
+	}); err != nil {
 		return u, err
 	}
 	s.mu.Lock()
@@ -333,11 +338,9 @@ func (s *Service) RemoveToken(name string) (kept string, err error) {
 	if !ok {
 		return "", errors.New("not a host's name")
 	}
-	hosts, err := s.Store.GitHubTokenHosts()
-	if err != nil {
-		return "", err
-	}
-	if err := s.Store.SaveGitHubTokenHosts(slices.DeleteFunc(hosts, func(h string) bool { return h == name })); err != nil {
+	if err := s.changeTokenHosts(func(hosts []string) []string {
+		return slices.DeleteFunc(hosts, func(h string) bool { return h == name })
+	}); err != nil {
 		return "", err
 	}
 	s.mu.Lock()
@@ -350,6 +353,21 @@ func (s *Service) RemoveToken(name string) (kept string, err error) {
 		return tokenLabel(name), nil
 	}
 	return "", nil
+}
+
+// changeTokenHosts reads github.json, changes it and writes it back in
+// one step (tokensMu); a nil change writes nothing.
+func (s *Service) changeTokenHosts(change func([]string) []string) error {
+	s.tokensMu.Lock()
+	defer s.tokensMu.Unlock()
+	hosts, err := s.Store.GitHubTokenHosts()
+	if err != nil {
+		return err
+	}
+	if hosts = change(hosts); hosts == nil {
+		return nil
+	}
+	return s.Store.SaveGitHubTokenHosts(hosts)
 }
 
 // tokenLabel is a host's pasted token's name in the keychain: what
