@@ -251,4 +251,57 @@ void main() {
     expect(fake.refused, isEmpty);
     d.dispose(); // its ping timer ends with the test
   });
+  testWidgets("PlanDeleteChat, RerunGitHubChecks, the uncommitted GetDiff "
+      "and a worktree's GetFolderStatus answer as the daemon's", (
+    tester,
+  ) async {
+    const wt = '/Users/me/src/lumen/.worktrees/quiet-heron';
+    final fake = FakeDaemon([
+      chat('a', 'claude', 'Fix the login')..sessionId = 's-a',
+      chat('w', 'claude', 'Quiet heron', folder: wt)
+        ..worktree = Worktree(
+          repo: '/Users/me/src/lumen',
+          path: wt,
+          branch: 'nushi/quiet-heron',
+          base: 'main',
+        ),
+    ]);
+    final d = await fake.connect(tester);
+
+    // The chat's own session is always in its plan
+    // (internal/features/chats/delete.go); a chat it hasn't is refused.
+    final plan = await d.client.planDeleteChat(
+      PlanDeleteChatRequest(chatId: 'a'),
+    );
+    expect(
+      [for (final s in plan.sessions) (s.sessionId, s.folder)],
+      [('s-a', '/Users/me/nushi')],
+    );
+    await expectLater(
+      d.client.planDeleteChat(PlanDeleteChatRequest(chatId: 'gone')),
+      throwsA(isA<ConnectException>()),
+    );
+
+    // A failed job re-runs its workflow run (internal/githubapi/actions.go).
+    final rerun = await d.client.rerunGitHubChecks(
+      RerunGitHubChecksRequest(jobs: [Int64(7)]),
+    );
+    expect(rerun.runs, 1);
+
+    // The uncommitted changes come with the index's state, 32 hex digits.
+    final diff = await d.client.getDiff(GetDiffRequest(folder: wt));
+    expect(diff.index, matches(RegExp(r'^[0-9a-f]{32}$')));
+
+    // A worktree chat's folder is in git, on its branch.
+    final status = await d.client.getFolderStatus(
+      GetFolderStatusRequest(folder: wt),
+    );
+    expect((status.git, status.branch), (true, 'nushi/quiet-heron'));
+    final outside = await d.client.getFolderStatus(
+      GetFolderStatusRequest(folder: '/Users/me/nushi'),
+    );
+    expect(outside.git, isFalse);
+    expect(fake.refused, isEmpty);
+    d.dispose(); // its ping timer ends with the test
+  });
 }

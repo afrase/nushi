@@ -423,6 +423,13 @@ class FakeDaemon implements Transport {
                     Code.failedPrecondition,
                     '$folder is not in a git repository',
                   ),
+          // The uncommitted changes: none, with the index's state, which
+          // the daemon always sends with them (internal/git/staging.go).
+          GetDiffRequest(:final base, :final commit, :final since, :final after)
+              when !input.names &&
+                  input.path.isEmpty &&
+                  '$base$commit$since$after'.isEmpty =>
+            GetDiffResponse(index: '5d41402abc4b2a76b9719d911017c592'),
           GetDiffRequest(:final folder, :final path) when path.isNotEmpty =>
             switch (fileDiffs['$folder/$path']) {
               final FileChange f => GetDiffResponse(files: [f]),
@@ -450,6 +457,32 @@ class FakeDaemon implements Transport {
           GetUsageRequest() => usage,
           GetRemoteRequest() => GetRemoteResponse(remote: remote),
           GetPushKeyRequest() => GetPushKeyResponse(key: pushKey),
+          // A worktree chat's folder is in git, on its branch; any other
+          // folder the test doesn't answer is outside git.
+          GetFolderStatusRequest(:final folder) => _folderStatus(folder),
+          // The chat's own session, always (internal/features/chats/
+          // delete.go), its history staying; a chat it hasn't is refused.
+          PlanDeleteChatRequest(:final chatId) => () {
+            final c =
+                chats.where((c) => c.id == chatId).firstOrNull ??
+                (throw ConnectException(
+                  Code.failedPrecondition,
+                  'no chat $chatId',
+                ));
+            return PlanDeleteChatResponse(
+              sessions: [
+                AgentSession(sessionId: c.sessionId, folder: c.folder),
+              ],
+            );
+          }(),
+          // Each failed job's workflow run, one a job
+          // (internal/githubapi/actions.go).
+          RerunGitHubChecksRequest(:final jobs) => RerunGitHubChecksResponse(
+            runs: {
+              for (final j in jobs)
+                if (j > 0) j,
+            }.length,
+          ),
           GetMemoryRequest() =>
             memory ??
                 (throw ConnectException(
@@ -647,6 +680,7 @@ class FakeDaemon implements Transport {
     } on Object {
       status = null; // the status fails: not known to be git
     }
+    status ??= _folderStatus(folder);
     if (status is! GetFolderStatusResponse || !status.git) {
       throw ConnectException(
         Code.failedPrecondition,
@@ -654,6 +688,19 @@ class FakeDaemon implements Transport {
       );
     }
     final branch = status.branch;
+    if (_worktreeAt(folder) case final w?) {
+      // The repository's main worktree on the chat's base, and the chat's.
+      return ListBranchesResponse(
+        branches: [
+          GitBranch(name: w.branch, worktree: w.path),
+          if (w.base.isNotEmpty) GitBranch(name: w.base, worktree: w.repo),
+        ],
+        worktrees: [
+          GitWorktree(path: w.repo, branch: w.base, main: true),
+          GitWorktree(path: w.path, branch: w.branch, current: true),
+        ],
+      );
+    }
     return ListBranchesResponse(
       branches: [
         if (branch.isNotEmpty) GitBranch(name: branch, worktree: folder),
@@ -663,6 +710,21 @@ class FakeDaemon implements Transport {
       ],
     );
   }
+
+  /// The worktree of the chat working in [folder], if it has one.
+  Worktree? _worktreeAt(String folder) => chats
+      .where((c) => c.hasWorktree() && c.folder == folder)
+      .firstOrNull
+      ?.worktree;
+
+  /// GetFolderStatus as the fake answers it: a worktree chat's folder is
+  /// in git, on the worktree's branch, with nothing changed; any other is
+  /// outside git (internal/api/git.go's answer for one).
+  GetFolderStatusResponse _folderStatus(String folder) =>
+      switch (_worktreeAt(folder)) {
+        final w? => GetFolderStatusResponse(git: true, branch: w.branch),
+        null => GetFolderStatusResponse(),
+      };
 
   /// [a] as the daemon lists it now: an agent through its Go agent
   /// (Settings.go_agents) needs no adapter, so it's ready once found.
@@ -970,15 +1032,13 @@ const answersEmpty = <Type>{
   TransitionJiraIssueRequest,
   // Nothing to say: a list with no entries, or nothing found.
   // No GitHub host signed in, Jira site set up, repository known, pull
-  // request row or state known, file viewed, check rerun, value to
-  // suggest.
+  // request row or state known, file viewed, value to suggest.
   ListGitHubHostsRequest,
   ListJiraSitesRequest,
   ListGitHubReposRequest,
   GetGitHubItemsRequest,
   GetGitHubStatesRequest,
   GetGitHubViewedRequest,
-  RerunGitHubChecksRequest,
   SuggestJiraJqlRequest,
   // No terminal, MCP server, commit or file; no path found.
   ListTerminalsRequest,
@@ -986,13 +1046,10 @@ const answersEmpty = <Type>{
   ListCommitsRequest,
   ListFilesRequest,
   FindChatFilesRequest,
-  // A folder outside git (internal/api/git.go answers it so), a diff
-  // with no change, a folder that runs nothing to trust.
-  GetFolderStatusRequest,
+  // A diff of a span with no change, a folder that runs nothing to
+  // trust; no chat holding off a restart.
   GetDiffRequest,
   CheckFolderRequest,
-  // A chat with nothing more to delete; no chat holding off a restart.
-  PlanDeleteChatRequest,
   RestartWhenIdleRequest,
 };
 
