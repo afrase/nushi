@@ -23,7 +23,7 @@ final Uri githubTokensPage = Uri.parse('https://github.com/settings/tokens');
 String tokenSource(GitHubHost h) => switch (h.source) {
   'gh' => "gh's login",
   'token' => 'a pasted token',
-  final s => s, // GH_TOKEN and the like, from the environment
+  final s => s, // what an older daemon named (an environment variable's name)
 };
 
 /// A token's kind, as Settings says it.

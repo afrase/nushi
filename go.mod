@@ -9,7 +9,6 @@ require (
 	github.com/afrase/claude-acp-go v0.7.0
 	github.com/afrase/codex-acp-go v0.3.4
 	github.com/andybalholm/brotli v1.2.0
-	github.com/cli/go-gh/v2 v2.17.0
 	github.com/creack/pty v1.1.24
 	github.com/flynn/noise v1.1.0
 	github.com/godbus/dbus/v5 v5.2.4
@@ -26,7 +25,6 @@ require (
 )
 
 require (
-	github.com/cli/safeexec v1.0.1 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
