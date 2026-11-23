@@ -20,27 +20,6 @@ import 'package:nushi/widgets.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-Item _write(String id, String path) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'edit',
-  title: 'Write',
-  status: 'completed',
-  paths: [path],
-);
-
-/// A show call that ran, naming [path] as the agent did.
-Item _show(String id, String path) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'other',
-  title: 'mcp__nushi__show',
-  mcpServer: 'nushi',
-  mcpTool: 'show',
-  status: 'completed',
-  input: jsonEncode({'path': path}),
-);
-
 Item get _user => userSays('u', 'Write the report and a chart for it.');
 
 /// Two turns: six files in the first, two in the last.
@@ -54,18 +33,18 @@ final List<Item> _turns = [
     'docs/img/map.svg',
     'docs/notes.md',
   ])
-    _write('w-$f', f),
+    wrote('w-$f', f),
   userSays('u2', 'Now the report and its chart.'),
-  _write('w-r', 'docs/report.md'),
-  _write('w-c', 'docs/img/chart.png'),
+  wrote('w-r', 'docs/report.md'),
+  wrote('w-c', 'docs/img/chart.png'),
 ];
 
 /// Three files: the report, its chart and a note (the note last).
 final List<Item> _three = [
   _user,
-  _write('w1', 'docs/report.md'),
-  _write('w2', 'docs/img/chart.png'),
-  _write('w3', 'notes.md'),
+  wrote('w1', 'docs/report.md'),
+  wrote('w2', 'docs/img/chart.png'),
+  wrote('w3', 'notes.md'),
 ];
 
 /// Each file changed this many minutes ago (by name).
@@ -196,7 +175,7 @@ void main() {
       EventsResponse(
         chatId: 'c',
         seq: Int64(1),
-        item: ItemEvent(item: _write('w4', 'plan.md'), index: 4),
+        item: ItemEvent(item: wrote('w4', 'plan.md'), index: 4),
       ),
     );
     await tester.pumpAndSettle();
@@ -212,9 +191,9 @@ void main() {
     const page = '/Users/me/nushi/mock/page.md';
     final (d, fake) = await _app(tester, [
       ..._three,
-      _write('w4', 'mock/page.md'),
-      _show('s', page),
-      _show('s2', './notes.md'),
+      wrote('w4', 'mock/page.md'),
+      mcpCall('s', 'nushi', 'show', {'path': page}),
+      mcpCall('s2', 'nushi', 'show', {'path': './notes.md'}),
     ]);
     expect(_names(tester), ['notes.md', 'page.md', 'chart.png', 'report.md']);
     fake.emit(EventsResponse(chatId: 'c', show: page));

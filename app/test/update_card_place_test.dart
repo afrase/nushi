@@ -44,15 +44,15 @@ const double _inset = NushiTheme.windowPad + TopNotices.cardInset;
 
 /// The card's answer to a ping, on [fake], and the ping that brings it.
 Future<void> _card(WidgetTester tester, Daemon d, FakeDaemon fake) async {
-  final before = fake.answer;
-  fake.answer = (input) => switch (input) {
-    PingRequest() => PingResponse(
-      apiVersion: apiVersion,
-      version: '0.1.16',
-      update: newerUpdate('0.1.17'),
-    ),
-    _ => before?.call(input),
-  };
+  fake.on(
+    (input) => input is PingRequest
+        ? PingResponse(
+            apiVersion: apiVersion,
+            version: '0.1.16',
+            update: newerUpdate('0.1.17'),
+          )
+        : null,
+  );
   await d.ping();
   await tester.pumpAndSettle();
 }
@@ -431,8 +431,7 @@ void main() {
 
       testWidgets('the Changes tab, a long diff', (tester) async {
         final (d, fake) = await open(tester, at: 1700);
-        final before = fake.answer;
-        fake.answer = (input) => _changes(input) ?? before?.call(input);
+        fake.on(_changes);
         await _tab(tester, 'Changes', width);
         expect(
           find.textContaining('redirect.go', findRichText: true),

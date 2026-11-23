@@ -25,30 +25,6 @@ import 'harness.dart';
 
 const _doc = '# The release report\n\nCI runs as parallel jobs now.\n';
 
-Item _show(
-  String id,
-  String path, {
-  String status = 'completed',
-  bool codex = false,
-  String text = '',
-}) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'other',
-  title: codex ? 'mcp.nushi.show' : 'mcp__nushi__show',
-  mcpServer: 'nushi',
-  mcpTool: 'show',
-  status: status,
-  text: text,
-  input: codex
-      ? jsonEncode({
-          'server': 'nushi',
-          'tool': 'show',
-          'arguments': {'path': path},
-        })
-      : '{\n  "path": ${jsonEncode(path)}\n}',
-);
-
 Item _ask(String title, String input) => Item(
   id: 'ask',
   kind: ItemKind.ITEM_KIND_PERMISSION,
@@ -143,56 +119,140 @@ void main() {
 
   group('a show call', () {
     test('its path: Claude’s input and Codex’s', () {
-      expect(showPath(_show('a', 'r.html')), 'r.html');
-      expect(showPath(_show('a', 'r.html', codex: true)), 'r.html');
+      expect(
+        showPath(mcpCall('a', 'nushi', 'show', {'path': 'r.html'})),
+        'r.html',
+      );
+      expect(
+        showPath(
+          mcpCall('a', 'nushi', 'show', {'path': 'r.html'}, codex: true),
+        ),
+        'r.html',
+      );
       // Input yet to come, cut short, or not what it should be.
-      expect(showPath(_show('a', 'r.html')..input = ''), isNull);
-      expect(showPath(_show('a', 'r.html')..input = '{"path": "r.h'), isNull);
-      expect(showPath(_show('a', 'r.html')..input = '{"path": 3}'), isNull);
+      expect(
+        showPath(mcpCall('a', 'nushi', 'show', {'path': 'r.html'})..input = ''),
+        isNull,
+      );
+      expect(
+        showPath(
+          mcpCall('a', 'nushi', 'show', {'path': 'r.html'})
+            ..input = '{"path": "r.h',
+        ),
+        isNull,
+      );
+      expect(
+        showPath(
+          mcpCall('a', 'nushi', 'show', {'path': 'r.html'})
+            ..input = '{"path": 3}',
+        ),
+        isNull,
+      );
       // Another tool's input isn't a show's, nor the call's of a daemon
       // below API 140, which says no server and tool: its title is never
       // read for them.
-      expect(showPath(_show('a', 'r.html')..mcpTool = 'read'), isNull);
-      expect(showPath(_show('a', 'r.html')..clearMcpServer()), isNull);
+      expect(
+        showPath(
+          mcpCall('a', 'nushi', 'show', {'path': 'r.html'})..mcpTool = 'read',
+        ),
+        isNull,
+      );
+      expect(
+        showPath(
+          mcpCall('a', 'nushi', 'show', {'path': 'r.html'})..clearMcpServer(),
+        ),
+        isNull,
+      );
     });
 
     test('what could make a name read as another is marked', () {
       expect(
-        showPath(_show('a', 'safe.md\nreport.exe\u202Elmth.md')),
+        showPath(
+          mcpCall('a', 'nushi', 'show', {
+            'path': 'safe.md\nreport.exe\u202Elmth.md',
+          }),
+        ),
         'safe.md�report.exe�lmth.md',
       );
     });
 
     test('Preview only once it ran, and only for an artifact', () {
-      expect(previewPath(_show('a', 'docs/r.html')), 'docs/r.html');
-      expect(previewPath(_show('a', 'r.pdf', codex: true)), 'r.pdf');
+      expect(
+        previewPath(mcpCall('a', 'nushi', 'show', {'path': 'docs/r.html'})),
+        'docs/r.html',
+      );
+      expect(
+        previewPath(
+          mcpCall('a', 'nushi', 'show', {'path': 'r.pdf'}, codex: true),
+        ),
+        'r.pdf',
+      );
       for (final status in ['pending', 'in_progress', 'failed']) {
-        expect(previewPath(_show('a', 'r.html', status: status)), isNull);
+        expect(
+          previewPath(
+            mcpCall('a', 'nushi', 'show', {'path': 'r.html'}, status: status),
+          ),
+          isNull,
+        );
       }
-      expect(previewPath(_show('a', 'main.go')), isNull);
+      expect(
+        previewPath(mcpCall('a', 'nushi', 'show', {'path': 'main.go'})),
+        isNull,
+      );
     });
 
     test('its file is among the chat’s, once it ran', () {
-      expect(chatFiles([_show('a', 'r.html')]), ['r.html']);
-      expect(chatFiles([_show('a', 'r.html', status: 'failed')]), isEmpty);
+      expect(
+        chatFiles([
+          mcpCall('a', 'nushi', 'show', {'path': 'r.html'}),
+        ]),
+        ['r.html'],
+      );
+      expect(
+        chatFiles([
+          mcpCall('a', 'nushi', 'show', {'path': 'r.html'}, status: 'failed'),
+        ]),
+        isEmpty,
+      );
     });
 
     test('a run’s line says what it did', () {
-      expect(groupLabel([_show('a', 'r.html')]), 'Showed 1 file');
-      expect(doingOf(_show('a', 'd/r.html', codex: true)), 'Showing r.html');
+      expect(
+        groupLabel([
+          mcpCall('a', 'nushi', 'show', {'path': 'r.html'}),
+        ]),
+        'Showed 1 file',
+      );
+      expect(
+        doingOf(
+          mcpCall('a', 'nushi', 'show', {'path': 'd/r.html'}, codex: true),
+        ),
+        'Showing r.html',
+      );
     });
 
     testWidgets('its row reads as a preview, not an MCP call', (tester) async {
       final (_, d) = await _app(
         tester,
         items: [
-          _show('a', 'docs/report.html'),
+          mcpCall('a', 'nushi', 'show', {'path': 'docs/report.html'}),
           agentSays('m', 'And now.'),
-          _show('b', 'docs/report.html', codex: true),
+          mcpCall('b', 'nushi', 'show', {
+            'path': 'docs/report.html',
+          }, codex: true),
           agentSays('n', 'And then.'),
-          _show('f', 'main.go', status: 'failed', text: 'not a type'),
+          mcpCall(
+            'f',
+            'nushi',
+            'show',
+            {'path': 'main.go'},
+            status: 'failed',
+            text: 'not a type',
+          ),
           agentSays('p', 'And last.'),
-          _show('r', 'docs/live.html', status: 'in_progress'),
+          mcpCall('r', 'nushi', 'show', {
+            'path': 'docs/live.html',
+          }, status: 'in_progress'),
         ],
       );
       expect(find.textContaining('Showed report.html'), findsNWidgets(2));
@@ -263,7 +323,11 @@ void main() {
       final (fake, d) = await _app(
         tester,
         size: const Size(720, 900),
-        items: [_show('a', 'docs/report.md', text: 'Shown.')],
+        items: [
+          mcpCall('a', 'nushi', 'show', {
+            'path': 'docs/report.md',
+          }, text: 'Shown.'),
+        ],
       );
       await _shows(tester, fake, 'docs/report.md');
       expect(find.byType(FileView), findsNothing);
@@ -288,7 +352,11 @@ void main() {
       final (fake, d) = await _app(
         tester,
         size: const Size(1368, 1000),
-        items: [_show('a', 'docs/report.md', text: 'Shown.')],
+        items: [
+          mcpCall('a', 'nushi', 'show', {
+            'path': 'docs/report.md',
+          }, text: 'Shown.'),
+        ],
       );
       showDetails.value = true;
       await tester.pumpAndSettle();
@@ -330,7 +398,11 @@ void main() {
         final (fake, d) = await _app(
           tester,
           size: Size(area + 16, 1000),
-          items: [_show('a', 'docs/report.md', text: 'Shown.')],
+          items: [
+            mcpCall('a', 'nushi', 'show', {
+              'path': 'docs/report.md',
+            }, text: 'Shown.'),
+          ],
         );
         sidebarHidden.value = true;
         await tester.pumpAndSettle();
@@ -346,7 +418,11 @@ void main() {
       final (fake, d) = await _app(
         tester,
         size: const Size(720, 900),
-        items: [_show('a', 'docs/report.md', text: 'Shown.')],
+        items: [
+          mcpCall('a', 'nushi', 'show', {
+            'path': 'docs/report.md',
+          }, text: 'Shown.'),
+        ],
       );
       filesChats.value = {'c'};
       await tester.pumpAndSettle();
@@ -384,7 +460,14 @@ void main() {
     testWidgets('a rewind past the call forgets the ask', (tester) async {
       final (fake, d) = await _app(tester, chat: 'o');
       await _shows(tester, fake, 'docs/report.md');
-      _chat(d).load(GetChatResponse(chat: _c, items: [_show('a', 'x.md')]));
+      _chat(d).load(
+        GetChatResponse(
+          chat: _c,
+          items: [
+            mcpCall('a', 'nushi', 'show', {'path': 'x.md'}),
+          ],
+        ),
+      );
       fake.emit(EventsResponse(chatId: 'c', seq: Int64(1), cut: 'a'));
       await tester.pumpAndSettle();
       d.select('c');
@@ -459,7 +542,11 @@ void main() {
     ) async {
       final (_, d) = await _app(
         tester,
-        items: [_show('a', '/Users/me/nushi/docs/report.md', text: 'Shown.')],
+        items: [
+          mcpCall('a', 'nushi', 'show', {
+            'path': '/Users/me/nushi/docs/report.md',
+          }, text: 'Shown.'),
+        ],
       );
       final button = find.byType(PreviewButton);
       bool lit() {
@@ -496,7 +583,7 @@ void main() {
       final fake = _fake(
         items: [
           agentSays('m', 'The report is written.'),
-          _show('a', 'docs/report.md'),
+          mcpCall('a', 'nushi', 'show', {'path': 'docs/report.md'}),
           agentSays('n', 'And the page.'),
           _ask('mcp__nushi__show', '{\n  "path": "docs/report.html"\n}'),
         ],
@@ -527,15 +614,15 @@ void main() {
               text: 'Write the release report and show it to me.',
             ),
             agentSays('m', 'The report is written.'),
-            _show(
-              'a',
-              'docs/report.md',
-              text: 'The preview pane beside the chat has the file.',
-            ),
+            mcpCall('a', 'nushi', 'show', {
+              'path': 'docs/report.md',
+            }, text: 'The preview pane beside the chat has the file.'),
             agentSays('n', 'Now the numbers, as a page.'),
-            _show(
+            mcpCall(
               'f',
-              'internal/api/api.go',
+              'nushi',
+              'show',
+              {'path': 'internal/api/api.go'},
               status: 'failed',
               text: 'the preview doesn’t open this type of file',
             ),

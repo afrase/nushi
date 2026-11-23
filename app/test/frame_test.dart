@@ -107,28 +107,29 @@ Future<Daemon> _window(
     );
     terminalChats.value = {'c'};
   }
-  final shells = fake.answer;
-  fake.answer = (input) => switch (input) {
-    GetChatRequest(:final chatId) => GetChatResponse(
-      chat: chats.firstWhere((c) => c.id == chatId),
-      items: _items,
-      status: chats.firstWhere((c) => c.id == chatId).status,
-      config: [
-        ConfigOption(
-          id: 'model',
-          category: 'model',
-          current: 'opus',
-          values: [ConfigValue(value: 'opus', name: 'Opus')],
-        ),
-      ],
-    ),
-    GetMemoryRequest() => GetMemoryResponse(
-      chats: [MapEntry('c', Int64(210 << 20))],
-      daemon: Int64(48 << 20),
-      app: Int64(390 << 20),
-    ),
-    _ => shells?.call(input),
-  };
+  fake.on(
+    (input) => switch (input) {
+      GetChatRequest(:final chatId) => GetChatResponse(
+        chat: chats.firstWhere((c) => c.id == chatId),
+        items: _items,
+        status: chats.firstWhere((c) => c.id == chatId).status,
+        config: [
+          ConfigOption(
+            id: 'model',
+            category: 'model',
+            current: 'opus',
+            values: [ConfigValue(value: 'opus', name: 'Opus')],
+          ),
+        ],
+      ),
+      GetMemoryRequest() => GetMemoryResponse(
+        chats: [MapEntry('c', Int64(210 << 20))],
+        daemon: Int64(48 << 20),
+        app: Int64(390 << 20),
+      ),
+      _ => null,
+    },
+  );
   final d = await fake.connect(tester);
   if (open != null) d.select(open);
   await tester.pumpWidget(NushiApp(daemon: d));

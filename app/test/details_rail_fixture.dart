@@ -83,15 +83,6 @@ final List<ContextCategory> reportCategories = [
   _c('Autocompact buffer', 33000, 3.3, part: 'buffer'),
 ];
 
-Item _write(String id, String path) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'edit',
-  title: 'Write',
-  status: 'completed',
-  paths: [path],
-);
-
 int _ago(int minutes) =>
     clock().subtract(Duration(minutes: minutes)).millisecondsSinceEpoch;
 
@@ -142,7 +133,7 @@ List<Item> get busyItems => [
     'docs/flows.mmd',
     'docs/sizes.csv',
   ].indexed)
-    _write('w$i', f),
+    wrote('w$i', f),
   _subagent('s1', 'Review the rail against the screenshot', 'running'),
   _command('b1', 'make check-app', 'running'),
   _subagent('s2', 'Find every PanelWidget', 'done'),

@@ -121,17 +121,14 @@ void main() {
   ) async {
     native.speller = FakeSpeller({});
     final fake = settingsFake();
-    final inner = fake.answer!;
     var asked = 0;
-    fake.answer = (input) => switch (input) {
-      CheckForUpdatesRequest() => () {
-        asked++;
-        return CheckForUpdatesResponse(
-          update: UpdateCheck(latest: '1.2.0', checkedMs: Int64(1)),
-        );
-      }(),
-      _ => inner(input),
-    };
+    fake.on((input) {
+      if (input is! CheckForUpdatesRequest) return null;
+      asked++;
+      return CheckForUpdatesResponse(
+        update: UpdateCheck(latest: '1.2.0', checkedMs: Int64(1)),
+      );
+    });
     final d = await pumpSettingsApp(tester, fake, SettingsSection.general);
     final chats = find.ancestor(
       of: find.text('Sleep idle chats'),

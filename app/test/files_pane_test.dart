@@ -71,23 +71,14 @@ const _gitFiles = [
   'docs/report.md',
 ];
 
-Item _write(String id, String path) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'edit',
-  title: 'Write',
-  status: 'completed',
-  paths: [path],
-);
-
 final List<Item> _items = [
   Item(
     id: 'u',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
     text: 'Write the report.',
   ),
-  _write('w1', 'docs/report.md'),
-  _write('w2', 'app/lib/main.dart'),
+  wrote('w1', 'docs/report.md'),
+  wrote('w2', 'app/lib/main.dart'),
 ];
 
 /// The fake daemon's side: the folder, each listing stream open by

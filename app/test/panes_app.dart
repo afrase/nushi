@@ -129,7 +129,6 @@ Future<(Daemon, FakeDaemon)> panesApp(
       Terminal(id: 't', chatId: 'c', folder: '/Users/me/nushi', shell: 'fish'),
     ],
   );
-  final shellAnswer = fake.answer;
   final shellStreams = fake.streams;
   final opened = <StreamController<Object?>>[];
   addTearDown(() {
@@ -146,7 +145,7 @@ Future<(Daemon, FakeDaemon)> panesApp(
     FindChatFilesRequest(:final paths) => FindChatFilesResponse(
       found: paths.where(found.contains),
     ),
-    _ => shellAnswer?.call(input),
+    _ => null,
   };
   Stream<Object>? streams(Object input) {
     switch (input) {
@@ -186,7 +185,7 @@ Future<(Daemon, FakeDaemon)> panesApp(
   }
 
   fake
-    ..answer = answer
+    ..on(answer)
     ..streams = streams;
   shells.replay['t'] = r'$ ';
   final d = await fake.connect(tester);

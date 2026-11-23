@@ -60,24 +60,15 @@ const _many = [
   'docs/eight.md',
 ];
 
-Item _wrote(String id, String path) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'edit',
-  title: 'Write',
-  status: 'completed',
-  paths: [path],
-);
-
 final _items = <Item>[
   Item(
     id: 'u',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
     text: 'Write the report and the plan.',
   ),
-  _wrote('r', 'docs/report.md'),
+  wrote('r', 'docs/report.md'),
   Item(id: 'm1', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'Wrote it.'),
-  _wrote('p', 'docs/plan.md'),
+  wrote('p', 'docs/plan.md'),
   Item(id: 'm2', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'Both done.'),
 ];
 

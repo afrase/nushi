@@ -292,14 +292,15 @@ void main() {
 
   testWidgets('a failed ask says why and tries again', (tester) async {
     final fake = settingsFake()..usage = busyUsage();
-    final inner = fake.answer!;
     var fail = true;
-    fake.answer = (input) => input is GetUsageRequest && fail
-        ? throw ConnectException(
-            Code.failedPrecondition,
-            'the database is locked',
-          )
-        : inner(input);
+    fake.on(
+      (input) => input is GetUsageRequest && fail
+          ? throw ConnectException(
+              Code.failedPrecondition,
+              'the database is locked',
+            )
+          : null,
+    );
     final d = await fake.connect(tester);
     await pumpSettings(tester, d, SettingsSection.usage);
     expect(find.text("Couldn't read usage"), findsOneWidget);

@@ -74,7 +74,6 @@ FakeDaemon _fake(
 }) {
   final (chats, copies) = _many(n);
   final fake = settingsFake(copies: copies);
-  final base = fake.answer!;
   final total = copies.fold(0, (s, c) => s + c.bytes.toInt());
   final list = ListTranscriptsResponse(
     totalBytes: Int64(total),
@@ -82,10 +81,11 @@ FakeDaemon _fake(
   );
   return FakeDaemon([...settingsChats, ...chats])
     ..settings = fake.settings
-    ..answer = (input) => switch (input) {
-      ListTranscriptsRequest() => answer?.call(list) ?? list,
-      _ => base(input),
-    };
+    ..answer = fake.answer
+    ..on(
+      (input) =>
+          input is ListTranscriptsRequest ? answer?.call(list) ?? list : null,
+    );
 }
 
 /// The rows as built, top to bottom.

@@ -35,14 +35,15 @@ Future<void> _bars(
   FakeDaemon fake, {
   bool notice = false,
 }) async {
-  final before = fake.answer;
-  fake.answer = (input) => switch (input) {
-    PingRequest() => PingResponse(apiVersion: apiVersion, build: '7-1000'),
-    RestartWhenIdleRequest() => RestartWhenIdleResponse(
-      holds: [RestartHold(chatId: 'c', why: 'in background')],
-    ),
-    _ => before?.call(input),
-  };
+  fake.on(
+    (input) => switch (input) {
+      PingRequest() => PingResponse(apiVersion: apiVersion, build: '7-1000'),
+      RestartWhenIdleRequest() => RestartWhenIdleResponse(
+        holds: [RestartHold(chatId: 'c', why: 'in background')],
+      ),
+      _ => null,
+    },
+  );
   d.bundled = '7-2000';
   await d.ping();
   if (notice) d.notice = _notice;

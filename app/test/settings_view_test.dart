@@ -228,10 +228,10 @@ void main() {
   ) async {
     final fake = settingsFake();
     final held = Completer<SetSettingsResponse>();
-    final inner = fake.answer!;
-    fake.answer = (input) => input is SetSettingsRequest && !held.isCompleted
-        ? held.future
-        : inner(input);
+    fake.on(
+      (input) =>
+          input is SetSettingsRequest && !held.isCompleted ? held.future : null,
+    );
     final d = await fake.connect(tester);
     await pumpSettings(tester, d, SettingsSection.general);
     final change = tester
@@ -252,18 +252,17 @@ void main() {
   testWidgets('settings not read while the daemon was away are asked for '
       'once it is back', (tester) async {
     final fake = settingsFake();
-    final inner = fake.answer!;
     var down = false;
     var asked = 0;
-    fake.answer = (input) {
+    fake.on((input) {
       if (input is GetSettingsRequest && asked++ == 0) {
         throw ConnectException(Code.unavailable, 'no daemon');
       }
       if (input is PingRequest && down) {
         throw ConnectException(Code.unavailable, 'no daemon');
       }
-      return inner(input);
-    };
+      return null;
+    });
     final d = await fake.connect(tester);
     await pumpSettings(tester, d, SettingsSection.general);
     expect(find.text('Sleep idle chats'), findsNothing); // needs the settings
@@ -418,16 +417,15 @@ void main() {
   testWidgets('opening Settings asks GitHub and Jira nothing: their pages '
       'do, as they show', (tester) async {
     final fake = settingsFake();
-    final inner = fake.answer!;
     final asked = <String>[];
-    fake.answer = (input) {
+    fake.on((input) {
       if (input is ListGitHubHostsRequest ||
           input is ListJiraSitesRequest ||
           input is CheckJiraSiteRequest) {
         asked.add(input.runtimeType.toString());
       }
-      return inner(input);
-    };
+      return null;
+    });
     final d = await pumpSettingsApp(tester, fake, SettingsSection.appearance);
     expect(asked, isEmpty);
     await closeView(tester, d);
@@ -436,15 +434,15 @@ void main() {
   testWidgets('a Jira site whose token Jira turns down has no dot, though '
       'listed without a problem', (tester) async {
     final fake = settingsFake();
-    final inner = fake.answer!;
     var works = true;
-    fake.answer = (input) => switch (input) {
-      CheckJiraSiteRequest() when !works => throw ConnectException(
-        Code.unauthenticated,
-        'Jira turned the token down',
-      ),
-      _ => inner(input),
-    };
+    fake.on(
+      (input) => input is CheckJiraSiteRequest && !works
+          ? throw ConnectException(
+              Code.unauthenticated,
+              'Jira turned the token down',
+            )
+          : null,
+    );
     final d = await pumpSettingsApp(tester, fake, SettingsSection.jira);
     expect(find.byKey(const ValueKey('settings-nav-dot-jira')), findsOne);
     // The token revoked: the next check takes the dot away.
@@ -461,15 +459,16 @@ void main() {
   testWidgets('no dot on an integration without a working account, and one '
       'once its page finds it', (tester) async {
     final fake = settingsFake();
-    final inner = fake.answer!;
     var hosts = <GitHubHost>[];
-    fake.answer = (input) => switch (input) {
-      ListGitHubHostsRequest() => ListGitHubHostsResponse(hosts: hosts),
-      ListJiraSitesRequest() => ListJiraSitesResponse(
-        sites: [JiraSite(id: 'acme.atlassian.net', problem: 'Token expired')],
-      ),
-      _ => inner(input),
-    };
+    fake.on(
+      (input) => switch (input) {
+        ListGitHubHostsRequest() => ListGitHubHostsResponse(hosts: hosts),
+        ListJiraSitesRequest() => ListJiraSitesResponse(
+          sites: [JiraSite(id: 'acme.atlassian.net', problem: 'Token expired')],
+        ),
+        _ => null,
+      },
+    );
     final d = await pumpSettingsApp(tester, fake, SettingsSection.general);
     expect(find.byKey(const ValueKey('settings-nav-dot-github')), findsNothing);
     expect(find.byKey(const ValueKey('settings-nav-dot-jira')), findsNothing);

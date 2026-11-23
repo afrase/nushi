@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/cards.dart';
@@ -18,29 +16,6 @@ import 'harness.dart';
 
 // The agent's dev server tools and show's url (ADR 0100): their rows, their
 // permission card, and the page that opens beside the chat.
-
-/// A call to one of Nushi's tools, as Claude's agents or Codex's adapter
-/// sends it.
-Item _call(
-  String id,
-  String tool,
-  Map<String, Object> args, {
-  String status = 'completed',
-  bool codex = false,
-  String text = '',
-}) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'other',
-  title: codex ? 'mcp.nushi.$tool' : 'mcp__nushi__$tool',
-  mcpServer: 'nushi',
-  mcpTool: tool,
-  status: status,
-  text: text,
-  input: codex
-      ? jsonEncode({'server': 'nushi', 'tool': tool, 'arguments': args})
-      : const JsonEncoder.withIndent('  ').convert(args),
-);
 
 /// The ask to run [title]'s tool, with the command the daemon resolved.
 Item _ask(String title, String input, {String command = ''}) => Item(
@@ -105,46 +80,62 @@ void main() {
 
   group('a dev server tool’s row', () {
     test('its name and title, Claude’s and Codex’s, by its status', () {
-      final start = _call('a', 'preview_start', {'name': 'web'});
+      final start = mcpCall('a', 'nushi', 'preview_start', {'name': 'web'});
       expect(serverTool(start), 'preview_start');
       expect(serverName(start), 'web');
       expect(callTitle(start), 'Started web');
       expect(
-        callTitle(_call('a', 'preview_start', {'name': 'web'}, codex: true)),
+        callTitle(
+          mcpCall('a', 'nushi', 'preview_start', {'name': 'web'}, codex: true),
+        ),
         'Started web',
       );
       expect(
         doingOf(
-          _call('a', 'preview_start', {'name': 'web'}, status: 'pending'),
+          mcpCall('a', 'nushi', 'preview_start', {
+            'name': 'web',
+          }, status: 'pending'),
         ),
         'Starting web',
       );
       expect(
         callTitle(
-          _call('a', 'preview_start', {'name': 'web'}, status: 'failed'),
+          mcpCall('a', 'nushi', 'preview_start', {
+            'name': 'web',
+          }, status: 'failed'),
         ),
         'Start web',
       );
       expect(
-        callTitle(_call('a', 'preview_stop', {'name': 'api'})),
+        callTitle(mcpCall('a', 'nushi', 'preview_stop', {'name': 'api'})),
         'Stopped api',
       );
       expect(
-        callTitle(_call('a', 'preview_logs', {'name': 'web', 'lines': 50})),
+        callTitle(
+          mcpCall('a', 'nushi', 'preview_logs', {'name': 'web', 'lines': 50}),
+        ),
         'Read the logs of web',
       );
-      expect(callTitle(_call('a', 'preview_list', {})), 'Listed servers');
       expect(
-        doingOf(_call('a', 'preview_list', {}, status: 'in_progress')),
+        callTitle(mcpCall('a', 'nushi', 'preview_list', {})),
+        'Listed servers',
+      );
+      expect(
+        doingOf(
+          mcpCall('a', 'nushi', 'preview_list', {}, status: 'in_progress'),
+        ),
         'Listing servers',
       );
       // Its input yet to come.
       expect(
-        doingOf(_call('a', 'preview_start', {}, status: 'pending')..input = ''),
+        doingOf(
+          mcpCall('a', 'nushi', 'preview_start', {}, status: 'pending')
+            ..input = '',
+        ),
         'Starting a server',
       );
       expect(
-        groupLabel([start, _call('b', 'preview_list', {})]),
+        groupLabel([start, mcpCall('b', 'nushi', 'preview_list', {})]),
         'Used 2 server tools',
       );
       // Another server's tool of the same name isn't Nushi's.
@@ -162,7 +153,9 @@ void main() {
 
     test('a name that could read as another is marked', () {
       expect(
-        serverName(_call('a', 'preview_start', {'name': 'web\napi\u202E'})),
+        serverName(
+          mcpCall('a', 'nushi', 'preview_start', {'name': 'web\napi\u202E'}),
+        ),
         'web�api�',
       );
     });
@@ -173,11 +166,13 @@ void main() {
       final (_, d) = await _app(
         tester,
         items: [
-          _call('a', 'preview_list', {}, text: '[{"name": "web"}]'),
+          mcpCall('a', 'nushi', 'preview_list', {}, text: '[{"name": "web"}]'),
           agentSays('m', 'Starting it.'),
-          _call('b', 'preview_start', {'name': 'web'}, codex: true),
+          mcpCall('b', 'nushi', 'preview_start', {'name': 'web'}, codex: true),
           agentSays('n', 'And its logs.'),
-          _call('c', 'preview_logs', {'name': 'web'}, text: 'VITE ready'),
+          mcpCall('c', 'nushi', 'preview_logs', {
+            'name': 'web',
+          }, text: 'VITE ready'),
         ],
       );
       expect(find.textContaining('Listed servers'), findsOneWidget);
@@ -208,10 +203,11 @@ void main() {
           tester,
           size: Size(width, 900),
           items: [
-            _call('c', 'preview_logs', {'name': 'web'}, text: logs),
+            mcpCall('c', 'nushi', 'preview_logs', {'name': 'web'}, text: logs),
             agentSays('m', 'Then it failed.'),
-            _call(
+            mcpCall(
               'f',
+              'nushi',
               'preview_start',
               {'name': 'web'},
               status: 'failed',
@@ -248,14 +244,16 @@ void main() {
 
   group('show of a page', () {
     test('its url, Claude’s and Codex’s; a path isn’t one', () {
-      final claude = _call('a', 'show', {'url': 'http://localhost:5173/about'});
-      final codex = _call('a', 'show', {
+      final claude = mcpCall('a', 'nushi', 'show', {
+        'url': 'http://localhost:5173/about',
+      });
+      final codex = mcpCall('a', 'nushi', 'show', {
         'url': 'http://localhost:5173',
       }, codex: true);
       expect(showUrl(claude), 'http://localhost:5173/about');
       expect(showUrl(codex), 'http://localhost:5173');
       expect(showPath(claude), isNull);
-      expect(showUrl(_call('a', 'show', {'path': 'r.md'})), isNull);
+      expect(showUrl(mcpCall('a', 'nushi', 'show', {'path': 'r.md'})), isNull);
       expect(previewPath(claude), isNull);
       expect(groupLabel([claude]), 'Showed 1 page');
     });
@@ -266,9 +264,11 @@ void main() {
       final (_, d) = await _app(
         tester,
         items: [
-          _call('a', 'show', {'url': 'http://localhost:5173/about'}),
+          mcpCall('a', 'nushi', 'show', {'url': 'http://localhost:5173/about'}),
           agentSays('m', 'And then.'),
-          _call('b', 'show', {'url': 'http://localhost:9'}, status: 'failed'),
+          mcpCall('b', 'nushi', 'show', {
+            'url': 'http://localhost:9',
+          }, status: 'failed'),
         ],
       );
       expect(

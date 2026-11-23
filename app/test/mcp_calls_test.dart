@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -15,33 +13,6 @@ import 'harness.dart';
 // tool, with its input, never as a command; Nushi's show and dev server
 // calls as what they did. The daemon says which server and tool a call is
 // for (Item.mcp_server, mcp_tool); the titles are each agent's own.
-
-/// A call to [server]'s [tool], as the daemon sends a Codex or a Claude
-/// chat's: the agent's own title and input, and the server and tool its
-/// harness read (none from a daemon [old] below API 140, which sent
-/// Codex's with its kind `execute`).
-Item _mcp(
-  String id,
-  String server,
-  String tool,
-  Map<String, Object> args, {
-  required bool codex,
-  bool old = false,
-  String status = 'completed',
-  String text = '',
-}) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: codex && old ? 'execute' : 'other',
-  title: codex ? 'mcp.$server.$tool' : 'mcp__${server}__$tool',
-  mcpServer: old ? null : server,
-  mcpTool: old ? null : tool,
-  status: status,
-  text: text,
-  input: const JsonEncoder.withIndent(
-    '  ',
-  ).convert(codex ? {'server': server, 'tool': tool, 'arguments': args} : args),
-);
 
 /// The ask to start the dev server "web".
 Item _ask({required bool codex}) => Item(
@@ -66,7 +37,7 @@ Item _ask({required bool codex}) => Item(
 /// the ask to start it again.
 List<Item> _items({required bool codex}) => [
   userSays('u', 'Find the open bugs, then show the report and run the site.'),
-  _mcp(
+  mcpCall(
     'a',
     'github',
     'search_issues',
@@ -75,9 +46,9 @@ List<Item> _items({required bool codex}) => [
     text: 'Found 2 issues: #12 Cart empties on reload, #15 Menu overlaps.',
   ),
   agentSays('m1', 'Two open bugs. The report is ready.'),
-  _mcp('b', 'nushi', 'show', {'path': 'report.html'}, codex: codex),
+  mcpCall('b', 'nushi', 'show', {'path': 'report.html'}, codex: codex),
   agentSays('m2', 'Starting the site.'),
-  _mcp('c', 'nushi', 'preview_start', {'name': 'web'}, codex: codex),
+  mcpCall('c', 'nushi', 'preview_start', {'name': 'web'}, codex: codex),
   agentSays('m3', 'It stopped; starting it again.'),
   _ask(codex: codex),
 ];
@@ -139,9 +110,9 @@ void main() {
     showDetails.value = false;
     final c = chat('c', 'codex', 'Fix the tea shop');
     final items = [
-      _mcp('a', 'github', 'search_issues', {}, codex: true, old: true),
+      mcpCall('a', 'github', 'search_issues', {}, codex: true, old: true),
       agentSays('m', 'And the report.'),
-      _mcp('b', 'nushi', 'show', {'path': 'r.html'}, codex: false, old: true),
+      mcpCall('b', 'nushi', 'show', {'path': 'r.html'}, old: true),
     ];
     final fake = FakeDaemon([c])
       ..answer = ((input) => switch (input) {

@@ -465,11 +465,12 @@ void main() {
     expect(find.byType(GitHubChecks), findsOneWidget);
     expect(fake.calls.whereType<GetGitHubPullRequest>().last.ref.number, 1);
     // Unlinked: the tab goes, and the chat shows.
-    final was = fake.answer!;
     fake
-      ..answer = ((input) => input is FindChatPullRequest
-          ? FindChatPullResponse(host: 'github.com', repo: _repo, branch: 'x')
-          : was(input))
+      ..on(
+        (input) => input is FindChatPullRequest
+            ? FindChatPullResponse(host: 'github.com', repo: _repo, branch: 'x')
+            : null,
+      )
       ..emit(
         EventsResponse(
           chatId: 'c',

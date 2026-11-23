@@ -62,23 +62,14 @@ const Map<String, String> _files = {
   'report.pdf': '%PDF-1.7 …',
 };
 
-Item _write(String id, String path) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'edit',
-  title: 'Write',
-  status: 'completed',
-  paths: [path],
-);
-
 final _items = <Item>[
   Item(
     id: 'u',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
     text: 'Make the landing page, its picture, the config and the data.',
   ),
-  for (final (i, p) in [..._files.keys, 'data.csv'].indexed) _write('w$i', p),
-  _write('z', 'dist/app.zip'),
+  for (final (i, p) in [..._files.keys, 'data.csv'].indexed) wrote('w$i', p),
+  wrote('z', 'dist/app.zip'),
 ];
 
 final Chat _chat = chat('c', 'claude', 'The landing page');

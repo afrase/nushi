@@ -96,10 +96,11 @@ Future<(Daemon, FakeDaemon)> _app(
     () => update ? newerUpdate('0.1.17') : UpdateCheck(),
   );
   final c = fake.chats.single;
-  final answer = fake.answer!;
-  fake.answer = (input) => input is GetChatRequest
-      ? GetChatResponse(chat: c, items: _items)
-      : answer(input);
+  fake.on(
+    (input) => input is GetChatRequest
+        ? GetChatResponse(chat: c, items: _items)
+        : null,
+  );
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));

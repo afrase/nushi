@@ -39,17 +39,6 @@ const _html = '<!doctype html>\n<h1>The Still Kettle</h1>\n';
 const _flow = 'graph LR\n  Plan --> Build --> Ship\n';
 const _plan = '# The plan\n\n```mermaid\n$_flow```\n';
 
-Item _show(String id, String url) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'other',
-  title: 'mcp__nushi__show',
-  mcpServer: 'nushi',
-  mcpTool: 'show',
-  status: 'completed',
-  input: jsonEncode({'url': url}),
-);
-
 /// The app at [width] on chat c, whose files answer as the daemon would,
 /// in /Users/me/nushi; the agent showed a page and linked one, then did
 /// [more].
@@ -67,7 +56,9 @@ Future<(FakeDaemon, Daemon)> _app(
         ? GetChatResponse(
             chat: c,
             items: [
-              _show('s', 'http://localhost:5173/menu'),
+              mcpCall('s', 'nushi', 'show', {
+                'url': 'http://localhost:5173/menu',
+              }),
               Item(
                 id: 'm',
                 kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
@@ -358,8 +349,12 @@ void main() {
     final (_, d) = await _app(
       tester,
       more: [
-        _show('f', 'file:///Users/me/nushi/evil.html'),
-        _show('u', 'http://bank.example@localhost:3000/'),
+        mcpCall('f', 'nushi', 'show', {
+          'url': 'file:///Users/me/nushi/evil.html',
+        }),
+        mcpCall('u', 'nushi', 'show', {
+          'url': 'http://bank.example@localhost:3000/',
+        }),
         Item(
           id: 'p',
           kind: ItemKind.ITEM_KIND_PERMISSION,

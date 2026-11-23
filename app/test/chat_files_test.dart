@@ -39,17 +39,6 @@ Item _call(
   parent: parent,
 );
 
-Item _show(String id, String path) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'other',
-  title: 'mcp__nushi__show',
-  mcpServer: 'nushi',
-  mcpTool: 'show',
-  status: 'completed',
-  input: jsonEncode({'path': path}),
-);
-
 final _items = <Item>[
   Item(
     id: 'u',
@@ -187,8 +176,8 @@ void main() {
     final items = [
       _call('w', 'page.html'),
       _call('o', 'docs/other.md'),
-      _show('s', '/Users/me/nushi/page.html'),
-      _show('s2', '/Users/me/elsewhere/out.html'),
+      mcpCall('s', 'nushi', 'show', {'path': '/Users/me/nushi/page.html'}),
+      mcpCall('s2', 'nushi', 'show', {'path': '/Users/me/elsewhere/out.html'}),
     ];
     expect(chatFiles(items, folder: '/Users/me/nushi'), [
       '/Users/me/elsewhere/out.html',
@@ -204,7 +193,13 @@ void main() {
     );
     // Moved, the chat's files are named again against its new folder.
     final chat = ChatState('c', '/Users/me/old')
-      ..load(GetChatResponse(items: [_show('s', '/Users/me/new/a.html')]));
+      ..load(
+        GetChatResponse(
+          items: [
+            mcpCall('s', 'nushi', 'show', {'path': '/Users/me/new/a.html'}),
+          ],
+        ),
+      );
     expect(chatFilesOf(chat), ['/Users/me/new/a.html']);
     chat.folder = '/Users/me/new';
     expect(chatFilesOf(chat), ['a.html']);
@@ -217,8 +212,10 @@ void main() {
           items: [
             _call('w', 'page.html'),
             _call('n', 'main.go'),
-            _show('s', '/Users/me/nushi/docs/readme.html'),
-            _show('s2', 'notes.md'),
+            mcpCall('s', 'nushi', 'show', {
+              'path': '/Users/me/nushi/docs/readme.html',
+            }),
+            mcpCall('s2', 'nushi', 'show', {'path': 'notes.md'}),
           ],
         ),
       );

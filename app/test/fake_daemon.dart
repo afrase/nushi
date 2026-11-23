@@ -87,6 +87,15 @@ class FakeDaemon implements Transport {
   Object? Function(Object input)? answer;
   final calls = <Object>[];
 
+  /// Puts [fn] in front of [answer]: what it answers wins, and a call it
+  /// answers null goes on to the answer before it (the fake's own when
+  /// none). So it can't force the empty answer over an earlier one, and a
+  /// Future it returns wins even if it ends in null.
+  void on(Object? Function(Object input) fn) {
+    final before = answer;
+    answer = (input) => fn(input) ?? before?.call(input);
+  }
+
   /// What GetDiff with a path (a file preview's question, API 121) answers,
   /// by the file's absolute path (folder and path joined): its one change,
   /// or an exception to throw. A file not in it answers no change, as a
@@ -726,6 +735,45 @@ Item agentSays(String id, String text) =>
 /// The user's message [text], item [id] of a transcript.
 Item userSays(String id, String text) =>
     Item(id: id, kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: text);
+
+/// A Write the agent ran on [path], item [id] of a transcript.
+Item wrote(String id, String path) => Item(
+  id: id,
+  kind: ItemKind.ITEM_KIND_TOOL_CALL,
+  toolKind: 'edit',
+  title: 'Write',
+  status: 'completed',
+  paths: [path],
+);
+
+/// An MCP tool call, item [id] of a transcript: [server]'s [tool] with
+/// [args], titled and its input written as Claude sends one
+/// (`mcp__server__tool`, the arguments as indented JSON) or, with
+/// [codex], as Codex does (`mcp.server.tool`, the arguments inside its
+/// server and tool). An [old] one is from a daemon before it named the
+/// server and tool, Codex's then an execute call.
+Item mcpCall(
+  String id,
+  String server,
+  String tool,
+  Map<String, Object> args, {
+  bool codex = false,
+  bool old = false,
+  String status = 'completed',
+  String text = '',
+}) => Item(
+  id: id,
+  kind: ItemKind.ITEM_KIND_TOOL_CALL,
+  toolKind: codex && old ? 'execute' : 'other',
+  title: codex ? 'mcp.$server.$tool' : 'mcp__${server}__$tool',
+  mcpServer: old ? null : server,
+  mcpTool: old ? null : tool,
+  status: status,
+  text: text,
+  input: const JsonEncoder.withIndent(
+    '  ',
+  ).convert(codex ? {'server': server, 'tool': tool, 'arguments': args} : args),
+);
 
 /// Loads the app's fonts (the bundled ones and Material's icons), so
 /// goldens show text rather than boxes.

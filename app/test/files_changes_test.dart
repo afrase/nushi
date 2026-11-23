@@ -19,7 +19,7 @@ import 'package:nushi/preview_path.dart';
 import 'package:nushi/source_editor.dart';
 
 import 'change_marks_test.dart' show changeBase, changeShown;
-import 'fake_daemon.dart' show FakeDaemon, loadFonts;
+import 'fake_daemon.dart' show FakeDaemon, loadFonts, wrote;
 import 'file_edit_helpers.dart';
 import 'harness.dart';
 
@@ -27,24 +27,15 @@ import 'harness.dart';
 // right-click Show changes, a new file's note, and full windows of the
 // marks and their card to look at (written only with NUSHI_RENDERS set).
 
-Item _write(String id, String path) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'edit',
-  title: 'Write',
-  status: 'completed',
-  paths: [path],
-);
-
 /// The chat wrote main.go, notes.md (new), new.go (new), same.go (written
 /// back as it was) and plan.md (changed); README.md it didn't.
 final List<Item> _items = [
   ...editItems,
-  _write('w1', 'main.go'),
-  _write('w2', 'notes.md'),
-  _write('w3', 'new.go'),
-  _write('w4', 'same.go'),
-  _write('w5', 'plan.md'),
+  wrote('w1', 'main.go'),
+  wrote('w2', 'notes.md'),
+  wrote('w3', 'new.go'),
+  wrote('w4', 'same.go'),
+  wrote('w5', 'plan.md'),
 ];
 
 final _folder = [

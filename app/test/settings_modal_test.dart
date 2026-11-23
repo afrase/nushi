@@ -224,14 +224,15 @@ void main() {
   testWidgets('a trust card asking shuts it: the card is in the window', (
     tester,
   ) async {
-    final fake = settingsFake();
-    final inner = fake.answer!;
-    fake.answer = (input) => input is CheckFolderRequest
-        ? CheckFolderResponse(
-            key: 'k',
-            runs: [FolderRun(file: '/x/.mcp.json', what: 'x')],
-          )
-        : inner(input);
+    final fake = settingsFake()
+      ..on(
+        (input) => input is CheckFolderRequest
+            ? CheckFolderResponse(
+                key: 'k',
+                runs: [FolderRun(file: '/x/.mcp.json', what: 'x')],
+              )
+            : null,
+      );
     final d = await pumpSettingsApp(tester, fake, SettingsSection.skills);
     final started = d.startChat('/x', 'claude');
     await tester.pumpAndSettle();

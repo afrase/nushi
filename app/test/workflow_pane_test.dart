@@ -156,17 +156,22 @@ Future<(FakeDaemon, Daemon)> _app(
   viewport(tester, const Size(1700, 900));
   showDetails.value = false;
   paneWidths.value = widths;
-  final fake = workflowFake();
-  final answer = fake.answer;
-  fake.answer = (input) => input is GetChatRequest
-      ? GetChatResponse(
-          chat: chat('c', 'claude', 'Review'),
-          items: [
-            Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: 'Go'),
-            workflowCall('running'),
-          ],
-        )
-      : answer?.call(input);
+  final fake = workflowFake()
+    ..on(
+      (input) => input is GetChatRequest
+          ? GetChatResponse(
+              chat: chat('c', 'claude', 'Review'),
+              items: [
+                Item(
+                  id: 'u',
+                  kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+                  text: 'Go',
+                ),
+                workflowCall('running'),
+              ],
+            )
+          : null,
+    );
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));

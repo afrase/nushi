@@ -66,10 +66,8 @@ Future<Daemon> _open(
 }
 
 /// [fake] answering [over] first, the rest as before.
-FakeDaemon _with(FakeDaemon fake, Object? Function(Object input) over) {
-  final inner = fake.answer!;
-  return fake..answer = (input) => over(input) ?? inner(input);
-}
+FakeDaemon _with(FakeDaemon fake, Object? Function(Object input) over) =>
+    fake..on(over);
 
 /// The states the plain data doesn't show: each one's section, its fake,
 /// and what's done before the shot (a menu opened).

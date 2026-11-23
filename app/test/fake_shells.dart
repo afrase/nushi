@@ -15,7 +15,7 @@ class FakeShells {
   new(this.fake, {List<Terminal>? terminals}) {
     list.addAll(terminals ?? const []);
     fake
-      ..answer = _answer
+      ..on(_answer)
       ..streams = _stream;
   }
 

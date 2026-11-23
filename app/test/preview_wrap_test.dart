@@ -40,15 +40,6 @@ final String _code = [
   for (var i = 4; i <= 200; i++) 'line $i of the kettle',
 ].join('\n');
 
-Item _wrote(String id, String path) => Item(
-  id: id,
-  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-  toolKind: 'edit',
-  title: 'Write',
-  status: 'completed',
-  paths: [path],
-);
-
 /// The daemon: a chat that wrote `src/tea.go` and `docs/notes.md`.
 FakeDaemon _fake() {
   final open = <StreamController<WatchChatFileResponse>>[];
@@ -64,8 +55,8 @@ FakeDaemon _fake() {
         chat: c,
         items: [
           Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: 'Brew.'),
-          _wrote('w1', 'src/tea.go'),
-          _wrote('w2', 'docs/notes.md'),
+          wrote('w1', 'src/tea.go'),
+          wrote('w2', 'docs/notes.md'),
         ],
       ),
       _ => null,

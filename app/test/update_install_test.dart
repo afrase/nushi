@@ -108,11 +108,7 @@ void main() {
     final fake = updateDaemon(() => found);
     // The daemon answers once Homebrew has started, the event before it.
     final started = Completer<InstallUpdateResponse>();
-    final answer = fake.answer!;
-    fake.answer = (input) => switch (input) {
-      InstallUpdateRequest() => started.future,
-      _ => answer(input),
-    };
+    fake.on((input) => input is InstallUpdateRequest ? started.future : null);
     final d = await openWithUpdate(tester, fake);
     expect(
       find.byTooltip('Runs “brew update && brew upgrade --cask nushi”'),
@@ -178,15 +174,15 @@ void main() {
 
   testWidgets('an install the daemon refuses says why', (tester) async {
     brewCask = 'nushi';
-    final fake = updateDaemon(() => newerUpdate('0.1.17'));
-    final answer = fake.answer!;
-    fake.answer = (input) => switch (input) {
-      InstallUpdateRequest() => throw ConnectException(
-        Code.failedPrecondition,
-        "Homebrew didn't install this Nushi",
-      ),
-      _ => answer(input),
-    };
+    final fake = updateDaemon(() => newerUpdate('0.1.17'))
+      ..on(
+        (input) => input is InstallUpdateRequest
+            ? throw ConnectException(
+                Code.failedPrecondition,
+                "Homebrew didn't install this Nushi",
+              )
+            : null,
+      );
     final d = await openWithUpdate(tester, fake);
     await tester.tap(find.text('Update'));
     await tester.pump();
