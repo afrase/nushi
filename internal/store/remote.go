@@ -67,8 +67,10 @@ var readWholly = map[string]bool{"remote-key.json": true, "devices.json": true, 
 
 // owned are the files one service writes, under its own lock, and reads
 // only as it starts: remote access's (its Service.mu), and vapid.json,
-// which main reads and makes before remote access starts and the service
-// only reads at its own start. The store adds no lock to them, so a
+// which remote access only reads in New, and main (usePush) reads and
+// makes after New returned, the relay link maybe up by then: nothing
+// reads it after, so the two never overlap. A later read of it while
+// remote access runs needs mu back. The store adds no lock to them, so a
 // phone's devices.json write holds up no other file's caller. The rest
 // (jira.json, github.json) are read by callers that don't hold their
 // writer's lock, and on Windows a rename over a file another handle has
