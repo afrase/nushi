@@ -9,7 +9,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/panes.dart';
-import 'package:nushi/phone/ui.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/spinner.dart';
 import 'package:nushi/top_notices.dart';
@@ -240,7 +239,10 @@ void main() {
       FakeDaemon([chat('a', 'claude', 'Fix the login redirect')]),
     );
     await tester.pumpAndSettle();
-    phoneSay(tester.element(find.text('Fix the login redirect')), 'Copied');
+    showToast(
+      Toasts.maybeOf(tester.element(find.text('Fix the login redirect'))),
+      'Copied',
+    );
     await tester.pumpAndSettle();
     await render(tester, find.byType(MaterialApp), 'g_phone');
     // At the bottom, near the thumb, the screen's width but its margins.

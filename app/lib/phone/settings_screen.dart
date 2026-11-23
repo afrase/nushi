@@ -19,7 +19,9 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _push(BuildContext context, {required bool on}) async {
     final why = await phone.setPush(on: on);
-    if (why != null && context.mounted) phoneSay(context, why);
+    if (why != null && context.mounted) {
+      showFailure(Toasts.maybeOf(context), why, replace: true);
+    }
   }
 
   Future<void> _forget(BuildContext context) async {

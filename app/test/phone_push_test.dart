@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/subscription.dart';
+import 'package:nushi/widgets.dart' show ToastLine, Toggle;
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -51,6 +52,29 @@ void main() {
     expect(await phone.setPush(on: true), isNull);
     expect(phone.push, PushState.on);
     await endPhone(tester, phone);
+  });
+
+  testWidgets('a switch that could not turn on says why as a failure', (
+    tester,
+  ) async {
+    final platform = PhonePlatform()
+      ..saved = pairedRecord()
+      ..sub = _sub;
+    final phone = await startPhone(
+      tester,
+      _fake(() => true),
+      platform: platform,
+    );
+    await tester.tap(find.bySemanticsLabel('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(Toggle));
+    await tester.pump();
+    final line = tester.widget<ToastLine>(find.byType(ToastLine));
+    expect(line.text, contains('the link dropped'));
+    // The failure's look (a ×, 8 s), never a plain toast's 4 s.
+    expect(line.failed, isTrue);
+    expect(line.onClose, isNotNull);
+    await endPhone(tester, phone, wait: const Duration(seconds: 9));
   });
 
   testWidgets('turned off, it reads Off though the daemon was not told', (
