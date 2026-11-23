@@ -85,7 +85,6 @@ test/context_cache_test.dart	1.3
 test/controls_test.dart	7.9
 test/conventions_test.dart	1.2
 test/copy_command_test.dart	4.1
-test/corners_test.dart	1.7
 test/daemon_banner_test.dart	2.4
 test/daemon_test.dart	1.6
 test/daemon_update_test.dart	7.1
