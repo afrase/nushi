@@ -26,3 +26,6 @@ Nushi had one palette, `Tokens.light` and `Tokens.dark`, picked by Appearance. T
 - The picked theme shows once: its card, ringed in `accentInk` with a check. The large picture of its dark and light sets above the cards, and the cards' own Dark and Light tabs (a look that left the appearance alone, beside the real setting), are gone: two light/dark controls that did different things. The cards draw the set the app shows; Mode shows the other.
 - A card says the shown set's own name where its palette names it apart from the theme (Catppuccin Mocha and Latte, Tokyo Night Day), as the picked one's large pictures did. A built-in card is its name alone; a user's still says Yours and its file.
 
+
+## Amendment (2026-11-23): a broken save keeps the last good read
+- A file that read as a theme and then reads as none (a save that isn't JSON, a file caught half written) keeps the theme it last read, with the new read's note on its card: the window no longer drops to Nushi's palette while the user fixes the file. A file read broken from the start is still a note and no theme. A watch that ends or fails is started again by New from and Show folder, and either button that can't make the folder or the file says so in a toast.

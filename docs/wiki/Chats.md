@@ -94,7 +94,7 @@ Nushi comes in a few color themes, each with a dark and a light look. Settings s
 2. Under **Theme**, pick **System**, **Light** or **Dark** beside **Mode**. **System** follows your computer.
 3. Click a theme's card. The picked one has a ring and a check.
 
-To make your own, click **New from** and the theme's name: Nushi writes a JSON file of its colors to the themes folder, which **Show folder** opens. Change the colors in the file; Nushi reads it again as you save it.
+To make your own, click **New from** and the theme's name: Nushi writes a JSON file of its colors to the themes folder, which **Show folder** opens. Change the colors in the file; Nushi reads it again as you save it. If a save breaks the file, Nushi keeps its last good colors and says what's wrong on its card.
 
 ## Change the fonts
 

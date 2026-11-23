@@ -272,6 +272,93 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 
+  testWidgets('a picked theme saved broken keeps its last good colors, and '
+      'its card says why', (tester) async {
+    final f = _file('Half.json', '{"dark": {"base": "#101820"}}');
+    themeFiles.load();
+    colorTheme.value = 'custom:Half';
+    final d = await _app(tester, size: const Size(1700, 1100));
+    f.writeAsStringSync('{"dark": {');
+    themeFiles.load();
+    await tester.pumpAndSettle();
+    expect(
+      _painted(tester, find.byType(SettingsView)).base,
+      const Color(0xFF101820),
+    );
+    final card = find.ancestor(
+      of: find.text('Half'),
+      matching: find.byType(ThemeCard),
+    );
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.text('Isn’t JSON: Unexpected end of input.'),
+      ),
+      findsOne,
+    );
+    await render(tester, find.byType(NushiApp), 'theme_kept_1700_dark');
+    if (rendering) {
+      viewport(tester, const Size(720, 900), brightness: Brightness.dark);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(card);
+      await tester.pumpAndSettle();
+      await render(tester, find.byType(NushiApp), 'theme_kept_720_dark');
+    }
+    // Saved good again, it reads as written, with no note left.
+    f.writeAsStringSync('{"dark": {"base": "#203040"}}');
+    themeFiles.load();
+    await tester.pumpAndSettle();
+    expect(
+      _painted(tester, find.byType(SettingsView)).base,
+      const Color(0xFF203040),
+    );
+    expect(find.textContaining('Isn’t JSON'), findsNothing);
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('the watch starts again when New from makes the folder it '
+      'lost', (tester) async {
+    fakeDesktop();
+    final d = await _app(tester);
+    // A watch at launch that found no folder to watch: the folder's
+    // place is a file.
+    themeFiles.dir.parent.createSync(recursive: true);
+    final blocker = File(themeFiles.dir.path)..writeAsStringSync('');
+    await tester.runAsync(() async => themeFiles.watch());
+    addTearDown(themeFiles.stop);
+    blocker.deleteSync();
+    await _tap(tester, find.text('New from Nushi'));
+    await tester.pumpAndSettle();
+    final made = File('${themeFiles.dir.path}/Nushi.json');
+    expect(made.existsSync(), isTrue);
+    await tester.runAsync(
+      () => made.writeAsString('{"dark": {"base": "#203040"}}'),
+    );
+    // The watch began under the tap, on the test's clock: its settling
+    // timer runs as that clock moves.
+    bool reloaded() => pickedTheme().dark.base == const Color(0xFF203040);
+    for (var i = 0; i < 1000 && !reloaded(); i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(reloaded(), isTrue);
+    await tester.runAsync(themeFiles.stop);
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('New from that can’t write says so', (tester) async {
+    fakeDesktop();
+    final d = await _app(tester);
+    themeFiles.dir.parent.createSync(recursive: true);
+    File(themeFiles.dir.path).writeAsStringSync('');
+    await _tap(tester, find.text('New from Nushi'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Couldn't make"), findsWidgets);
+    await closeView(tester, d);
+  }, variant: onMac);
+
   testWidgets('editing a theme file reloads it, and the app repaints', (
     tester,
   ) async {

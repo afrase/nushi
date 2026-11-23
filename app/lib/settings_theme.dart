@@ -11,6 +11,7 @@ import 'package:nushi/theme/contrast.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/theme_files.dart';
 import 'package:nushi/theme_preview.dart';
+import 'package:nushi/widgets.dart' show tryOrShow;
 
 /// Settings › Appearance's Theme (ADR 0086): Mode (System, Light, Dark)
 /// first, then a card for each theme, the built-ins then the user's, each
@@ -282,7 +283,8 @@ class _Name extends StatelessWidget {
             key: ValueKey('theme-reveal-$f'),
             tooltip: conventions.reveal,
             size: 15,
-            onTap: () => unawaited(themeFiles.revealFile(f)),
+            onTap: () =>
+                unawaited(tryOrShow(context, () => themeFiles.revealFile(f))),
           ),
       ],
     );
@@ -308,11 +310,12 @@ class _Actions extends StatelessWidget {
         Button(
           label: 'New from ${picked.name}',
           tooltip: 'Writes a theme file with every color of this one',
-          onPressed: () => unawaited(themeFiles.make(picked)),
+          onPressed: () =>
+              unawaited(tryOrShow(context, () => themeFiles.make(picked))),
         ),
         Button(
           label: 'Show folder',
-          onPressed: () => unawaited(themeFiles.reveal()),
+          onPressed: () => unawaited(tryOrShow(context, themeFiles.reveal)),
         ),
       ],
     );

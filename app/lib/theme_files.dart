@@ -48,13 +48,23 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
   /// rebuilds the app's theme).
   List<(String, String)> _readAs = const [];
 
-  /// Reads them all again.
+  /// Reads them all again. A file that read as a theme and now reads as
+  /// none (a save that broke it, one caught half written) keeps its last
+  /// good theme, with the new read's notes on its card: the window keeps
+  /// its colors while the file is fixed.
   void load() {
     final read = _read();
     final as = [for (final (f, text) in read) (f.file, text)];
     if (listEquals(as, _readAs)) return;
     _readAs = as;
-    value = [for (final (f, _) in read) f];
+    final good = {for (final f in value) f.file: ?f.theme};
+    value = [
+      for (final (f, _) in read)
+        if ((f.theme, good[f.file]) case (null, final kept?))
+          ThemeFile(file: f.file, notes: f.notes, theme: kept)
+        else
+          f,
+    ];
   }
 
   /// Each file read, and its text.
@@ -108,19 +118,29 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
 
   /// Reads them again whenever one changes, comes or goes (a moment after,
   /// so an editor's save is read once, whole); the folder is made if it
-  /// isn't there.
+  /// isn't there. A watch that ends or fails is let go, so the next
+  /// [make] or [reveal] starts another.
   void watch() {
     if (_watching != null) return;
     try {
       privateDir(dir);
-      _watching = dir.watch().listen((_) {
-        _soon?.cancel();
-        // design: a file watch's settling, not motion
-        _soon = Timer(const Duration(milliseconds: 150), load);
-      }, onError: (Object _) {});
+      _watching = dir.watch().listen(
+        (_) {
+          _soon?.cancel();
+          // design: a file watch's settling, not motion
+          _soon = Timer(const Duration(milliseconds: 150), load);
+        },
+        onError: (Object _) => _lost(),
+        onDone: _lost,
+      );
     } on FileSystemException {
       // No folder to watch: the themes read at launch stay.
     }
+  }
+
+  void _lost() {
+    unawaited(_watching?.cancel());
+    _watching = null;
   }
 
   /// Stops [watch]ing.
@@ -132,9 +152,9 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
 
   /// Writes a new theme file with every token of [from], named after it
   /// ("Nord 2"), picks it (it looks the same) and shows it in Finder, to
-  /// be edited.
+  /// be edited. Throws a [ThemeFilesError] when it can't.
   Future<void> make(ColorTheme from) async {
-    privateDir(dir);
+    _folder();
     final taken = {for (final f in value) f.file.toLowerCase()};
     final stem = from.name.replaceAll(RegExp('[^A-Za-z0-9 _-]'), '').trim();
     final base = stem.isEmpty ? 'Theme' : stem;
@@ -148,16 +168,32 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
       name = '$base $n';
     }
     final file = File('${dir.path}/$name.json');
-    writeWhole(file, utf8.encode(writeThemeFile(from, name)));
+    try {
+      writeWhole(file, utf8.encode(writeThemeFile(from, name)));
+    } on FileSystemException catch (e) {
+      throw ThemeFilesError("Couldn't make $name.json", e);
+    }
     load();
     colorTheme.value = '${ColorTheme.customPrefix}$name';
     await native.desktop.reveal(file.path);
   }
 
-  /// Opens the folder in Finder, made first if it isn't there.
+  /// Opens the folder in Finder, made first if it isn't there. Throws a
+  /// [ThemeFilesError] when it can't be made.
   Future<void> reveal() async {
-    privateDir(dir);
+    _folder();
     await native.desktop.openFolder(dir.path);
+  }
+
+  /// Makes the folder if it isn't there and watches it again if the watch
+  /// was lost: what the user is about to edit reloads.
+  void _folder() {
+    try {
+      privateDir(dir);
+    } on FileSystemException catch (e) {
+      throw ThemeFilesError("Couldn't make the themes folder", e);
+    }
+    watch();
   }
 
   /// Shows the theme file [file] (a name [value] lists) in Finder.
@@ -172,4 +208,16 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
     _readAs = const [];
     value = const [];
   }
+}
+
+/// Why a theme file or the themes folder couldn't be written, in words a
+/// toast shows.
+class ThemeFilesError implements Exception {
+  const new(this.what, this.cause);
+
+  final String what;
+  final FileSystemException cause;
+
+  @override
+  String toString() => '$what: ${cause.osError?.message ?? cause.message}.';
 }
