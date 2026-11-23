@@ -365,6 +365,7 @@ class _ShortcutsSectionState extends State<ShortcutsSection> {
           key: _cap(key),
           label: keyLabel(key),
           chosen: r.chosen,
+          hint: pending == null && refused == null,
           keyboard: _keyboard,
           focusNode: _field(key),
           onKey: (k) => _propose(key, k),

@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -89,6 +90,33 @@ void main() {
   });
 
   group('clashes', () {
+    testWidgets('a row asking or refusing has no tooltip on its cap: the '
+        'pointer still rests there, over Take it', (tester) async {
+      final d = await shortcutsInApp(tester);
+      String tip() => tester
+          .widget<KeyCapButton>(
+            find.descendant(
+              of: keyOf('sidebar'),
+              matching: find.byType(KeyCapButton),
+            ),
+          )
+          .tooltip;
+      expect(tip(), 'Click, then press the keys');
+      await recordKey(tester, 'sidebar', LogicalKeyboardKey.keyD, [metaKey]);
+      expect(takeOf('sidebar'), findsOne);
+      expect(tip(), isEmpty);
+      await tapIt(
+        tester,
+        find.byKey(const ValueKey('shortcut-cancel-sidebar')),
+      );
+      expect(tip(), 'Click, then press the keys');
+      // A refusal's reason is under the cap too.
+      await recordKey(tester, 'sidebar', LogicalKeyboardKey.keyQ, [metaKey]);
+      expect(takeOf('sidebar'), findsNothing);
+      expect(tip(), isEmpty);
+      d.dispose();
+    }, variant: onMac);
+
     testWidgets("another binding's key is offered to take: Cancel changes "
         'nothing, Take it leaves the other with none', (tester) async {
       final d = await shortcutsInApp(tester);

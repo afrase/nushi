@@ -38,7 +38,9 @@ final _modifiers = <LogicalKeyboardKey>{
 /// (`shortcutRecording`) never see one; it stops when it loses the focus
 /// or a click lands elsewhere. [onStart] says it began; its state's
 /// `listen` starts it from elsewhere (a click on its row). [chosen]: a
-/// key the user chose, on the accent's soft fill.
+/// key the user chose, on the accent's soft fill. [hint]: whether it has
+/// its tooltip; a row asking or refusing under it has none, since the
+/// pointer still rests on the cap and the tooltip would cover the answer.
 class ShortcutField extends StatefulWidget {
   const new({
     required this.label,
@@ -47,6 +49,7 @@ class ShortcutField extends StatefulWidget {
     super.key,
     this.onStart,
     this.chosen = false,
+    this.hint = true,
     this.keyboard,
   });
 
@@ -55,6 +58,7 @@ class ShortcutField extends StatefulWidget {
   final ValueChanged<SingleActivator> onKey;
   final VoidCallback? onStart;
   final bool chosen;
+  final bool hint;
 
   /// Whether the keyboard moved last, not the pointer: focused, the cap
   /// wears its ring only then (as a browser's `:focus-visible`), so a
@@ -203,7 +207,9 @@ class ShortcutFieldState extends State<ShortcutField> {
           widget.label,
           focusNode: widget.focusNode,
           onTap: listen,
-          tooltip: _recording ? '' : 'Click, then press the keys',
+          tooltip: _recording || !widget.hint
+              ? ''
+              : 'Click, then press the keys',
           look: _recording
               ? KeyCapLook.listening
               : none
