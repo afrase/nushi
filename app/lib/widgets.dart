@@ -407,20 +407,29 @@ String? updatedLine(DateTime? updated, {required bool loading}) {
   return 'Updated $when${loading ? ' · refreshing' : ''}';
 }
 
-/// A line above the list: a problem, or what shows is old.
+/// A line above the list: a problem, or what shows is old. [margin] sets
+/// it in from what it sits in (a pane's edges by default; the composer's
+/// box lines it up with its own).
 class Notice extends StatelessWidget {
-  const new(this.text, {super.key, this.action, this.onAction});
+  const new(
+    this.text, {
+    super.key,
+    this.action,
+    this.onAction,
+    this.margin = const EdgeInsets.fromLTRB(10, 8, 10, 0),
+  });
 
   final String text;
   final String? action;
   final VoidCallback? onAction;
+  final EdgeInsets margin;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return Container(
-      margin: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+      margin: margin,
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
         color: t.needsSoft,

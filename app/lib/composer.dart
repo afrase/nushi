@@ -592,18 +592,16 @@ class _ComposerState extends State<Composer> {
                           onSendNow: _unlocked(_sendNow),
                         ),
                 ),
-                // The phone says it's trying again where the transcript
-                // would be (phone/chat_screen.dart).
+                // A problem's card, as wide as the box (docs/design.md's
+                // Notice). The phone says it's trying again where the
+                // transcript would be (phone/chat_screen.dart).
                 GrowLine(
                   child: chat.loadError.isEmpty || widget.daemon.remote
                       ? null
-                      : Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Text(
-                            "Couldn't load the chat, trying again: "
-                            '${chat.loadError}',
-                            style: theme.ui(t.crashed, size: 12),
-                          ),
+                      : Notice(
+                          "Couldn't load the chat, trying again: "
+                          '${chat.loadError}',
+                          margin: const EdgeInsets.only(bottom: 6),
                         ),
                 ),
                 GrowLine(
