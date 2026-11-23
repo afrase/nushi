@@ -139,7 +139,6 @@ class TaskList extends StatelessWidget {
     return CardList(
       keepScrollAs: 'jira tasks',
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      buildAll: true,
       onReorder: (from, to) => jiraGroupOrder.value = {
         ...jiraGroupOrder.value,
         place: reordered(

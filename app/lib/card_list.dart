@@ -8,13 +8,16 @@ import 'package:nushi/widgets.dart';
 /// Cards ([CardShell]s, or the details panel's widgets, each keyed and
 /// told its index) in a list, each moved by dragging its title row,
 /// without a lifted look; the one dragged is under a [DraggedCard].
+///
+/// Every card is built, not only those near the screen: a list whose keys
+/// move a selection through its rows needs each row there, to scroll to it
+/// and to act on it (⌘⏎). Cards are few, rows a few hundred at most.
 class CardList extends StatelessWidget {
   const new({
     required this.children,
     required this.onReorder,
     super.key,
     this.padding = const EdgeInsets.all(12),
-    this.buildAll = false,
     this.keepScrollAs,
   });
 
@@ -24,12 +27,6 @@ class CardList extends StatelessWidget {
   final String? keepScrollAs;
 
   final List<Widget> children;
-
-  /// Whether every card is built, not only those near the screen: a list
-  /// whose keys move a selection through its rows needs each row there, to
-  /// scroll to it and to act on it (⌘⏎). Cards are few, rows a few hundred
-  /// at most.
-  final bool buildAll;
 
   /// The card at `from` dropped at `to` (of the list without it).
   final void Function(int from, int to) onReorder;
@@ -43,7 +40,7 @@ class CardList extends StatelessWidget {
     // The card being dragged keeps its grip and the closed hand.
     proxyDecorator: (child, _, _) => DraggedCard(child: child),
     onReorderItem: onReorder,
-    scrollCacheExtent: buildAll ? const ScrollCacheExtent.pixels(1e6) : null,
+    scrollCacheExtent: const ScrollCacheExtent.pixels(1e6),
     children: children,
   );
 }

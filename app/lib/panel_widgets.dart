@@ -57,7 +57,6 @@ class PanelWidgets extends StatelessWidget {
           // Each card brings the gap under it.
           padding: const EdgeInsets.only(top: PanelType.inset),
           // A widget asked for is there to scroll to.
-          buildAll: true,
           onReorder: (from, to) =>
               widgetOrder.value = reordered(saved, titles, from, to),
           children: [
