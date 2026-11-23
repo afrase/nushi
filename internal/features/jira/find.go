@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"unicode"
@@ -33,8 +34,8 @@ const findLimit = 20
 // recentJQL is the issues the user looked at last, for an empty search.
 const recentJQL = "issue in issueHistory() ORDER BY lastViewed DESC"
 
-// Find is what text names: an issue's link (matched to a connected site
-// by its address; one issue from each site that matches), an issue's key
+// Find is what text names: an issue's link (matched to the connected site
+// at its host: AddSite keeps one a host), an issue's key
 // (on site, the one used last, else the first), or words of issues on
 // every site (their summary, description or comments); nothing typed is
 // the issues looked at last.
@@ -47,12 +48,13 @@ func (s *Service) Find(ctx context.Context, text, site string) (Finding, error) 
 		return Finding{}, errors.New("no Jira site: add one in Settings › Jira")
 	}
 	text = strings.TrimSpace(text)
-	if origin, path, key, ok := parseLink(text); ok {
-		matched := matchSites(sites, origin, path)
-		if len(matched) == 0 {
-			return Finding{UnknownSite: origin}, nil
+	if host, key, ok := parseLink(text); ok {
+		i := slices.IndexFunc(sites, func(x model.JiraSite) bool { return SiteID(x) == host })
+		if i < 0 {
+			// An address, as every app reads it (the host of a URL).
+			return Finding{UnknownSite: "https://" + host}, nil
 		}
-		found, err := s.search(ctx, matched, "key = "+key, 1)
+		found, err := s.search(ctx, sites[i:i+1], "key = "+key, 1)
 		return Finding{Issues: found}, err
 	}
 	if key := strings.ToUpper(text); CheckKey(key) == nil {
@@ -123,14 +125,16 @@ func textJQL(text string) string {
 	return strings.Join(clauses, " AND ") + " ORDER BY updated DESC"
 }
 
-// parseLink reads an issue's link: its site's address (scheme and host),
-// its path, and the issue's key, from /browse/KEY or /issues/KEY anywhere
-// in the path (after a path prefix of the site's), or a board's
-// ?selectedIssue=KEY.
-func parseLink(text string) (origin, path, key string, ok bool) {
+// parseLink reads an issue's link: its site's host, lowercase (a port
+// kept unless it's the scheme's default, so it matches no Cloud site), and
+// the issue's key, from /browse/KEY or /issues/KEY anywhere in the path,
+// or a board's ?selectedIssue=KEY. An http link is read too: a site is
+// always https (jiracloud.Connect), and the request goes to the stored
+// site, not to the link.
+func parseLink(text string) (host, key string, ok bool) {
 	u, err := url.Parse(text)
 	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
-		return "", "", "", false
+		return "", "", false
 	}
 	segs := strings.Split(u.Path, "/")
 	for i, seg := range segs[:len(segs)-1] {
@@ -142,36 +146,13 @@ func parseLink(text string) (origin, path, key string, ok bool) {
 		key = strings.ToUpper(u.Query().Get("selectedIssue"))
 	}
 	if CheckKey(key) != nil {
-		return "", "", "", false
+		return "", "", false
 	}
-	return originOf(u), u.Path, key, true
-}
-
-// originOf is a URL's scheme and host, lowercase, without a default port.
-func originOf(u *url.URL) string {
-	scheme, host := strings.ToLower(u.Scheme), strings.ToLower(u.Hostname())
-	defaultPort := map[string]string{"https": "443", "http": "80"}[scheme]
-	if p := u.Port(); p != "" && p != defaultPort {
+	host = strings.ToLower(u.Hostname())
+	if p := u.Port(); p != "" && p != map[string]string{"https": "443", "http": "80"}[u.Scheme] {
 		host += ":" + p
 	}
-	return scheme + "://" + host
-}
-
-// matchSites are the sites at origin whose own path (a Data Center site
-// may have one, such as /jira) starts path.
-func matchSites(sites []model.JiraSite, origin, path string) []model.JiraSite {
-	var out []model.JiraSite
-	for _, site := range sites {
-		u, err := url.Parse(site.URL)
-		if err != nil || originOf(u) != origin {
-			continue
-		}
-		prefix := strings.TrimRight(u.Path, "/")
-		if path == prefix || strings.HasPrefix(path, prefix+"/") {
-			out = append(out, site)
-		}
-	}
-	return out
+	return host, key, true
 }
 
 // Branch is a branch's name for work on an issue: its key, uppercase so

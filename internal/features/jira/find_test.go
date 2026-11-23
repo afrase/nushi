@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -16,17 +15,17 @@ import (
 )
 
 func TestParseLink(t *testing.T) {
-	for _, c := range []struct{ text, origin, path, key string }{
-		{"https://acme.atlassian.net/browse/ABC-123", "https://acme.atlassian.net", "/browse/ABC-123", "ABC-123"},
-		{"https://ACME.atlassian.net:443/browse/abc-123?focusedCommentId=1#c", "https://acme.atlassian.net", "/browse/abc-123", "ABC-123"},
-		{"https://acme.atlassian.net/jira/software/projects/ABC/boards/1?selectedIssue=ABC-7", "https://acme.atlassian.net", "/jira/software/projects/ABC/boards/1", "ABC-7"},
-		{"https://acme.atlassian.net/jira/software/c/projects/ABC/issues/ABC-9?jql=x", "https://acme.atlassian.net", "/jira/software/c/projects/ABC/issues/ABC-9", "ABC-9"},
-		{"https://jira.corp.example:8443/jira/browse/OPS-1/", "https://jira.corp.example:8443", "/jira/browse/OPS-1/", "OPS-1"},
-		{"http://jira.local/browse/X_Y-2", "http://jira.local", "/browse/X_Y-2", "X_Y-2"},
+	for _, c := range []struct{ text, host, key string }{
+		{"https://acme.atlassian.net/browse/ABC-123", "acme.atlassian.net", "ABC-123"},
+		{"https://ACME.atlassian.net:443/browse/abc-123?focusedCommentId=1#c", "acme.atlassian.net", "ABC-123"},
+		{"https://acme.atlassian.net/jira/software/projects/ABC/boards/1?selectedIssue=ABC-7", "acme.atlassian.net", "ABC-7"},
+		{"https://acme.atlassian.net/jira/software/c/projects/ABC/issues/ABC-9?jql=x", "acme.atlassian.net", "ABC-9"},
+		{"https://jira.corp.example:8443/jira/browse/OPS-1/", "jira.corp.example:8443", "OPS-1"},
+		{"http://acme.atlassian.net/browse/X_Y-2", "acme.atlassian.net", "X_Y-2"},
 	} {
-		origin, path, key, ok := parseLink(c.text)
-		if !ok || origin != c.origin || path != c.path || key != c.key {
-			t.Errorf("parseLink(%q) = %q, %q, %q, %v", c.text, origin, path, key, ok)
+		host, key, ok := parseLink(c.text)
+		if !ok || host != c.host || key != c.key {
+			t.Errorf("parseLink(%q) = %q, %q, %v", c.text, host, key, ok)
 		}
 	}
 	for _, text := range []string{
@@ -34,47 +33,8 @@ func TestParseLink(t *testing.T) {
 		"https://acme.atlassian.net/jira/software/projects/ABC/boards/1", "ftp://acme.atlassian.net/browse/ABC-1",
 		"https:///browse/ABC-1", "https://acme.atlassian.net/browse/ABC-0", "https://acme.atlassian.net/x?selectedIssue=a b",
 	} {
-		if _, _, key, ok := parseLink(text); ok {
+		if _, key, ok := parseLink(text); ok {
 			t.Errorf("parseLink(%q) took %q", text, key)
-		}
-	}
-}
-
-func TestMatchSites(t *testing.T) {
-	sites := []model.JiraSite{
-		{URL: "https://acme.atlassian.net"},
-		{URL: "https://other.atlassian.net/"},
-		{URL: "https://jira.corp.example/jira"},
-		{URL: "https://jira.corp.example/jira2"},
-		{URL: "https://jira.corp.example/"},
-	}
-	ids := func(ss []model.JiraSite) []string {
-		var out []string
-		for _, s := range ss {
-			out = append(out, s.URL)
-		}
-		return out
-	}
-	for _, c := range []struct {
-		link string
-		want []string
-	}{
-		{"https://acme.atlassian.net/browse/A-1", []string{"https://acme.atlassian.net"}},
-		{"https://acme.atlassian.net/browse/A-1?x=1", []string{"https://acme.atlassian.net"}},
-		{"https://evil.example/browse/A-1", nil},
-		{"https://acme.atlassian.net.evil.example/browse/A-1", nil},
-		{"http://acme.atlassian.net/browse/A-1", nil}, // another origin
-		// A path prefix: the site at /jira, and the one at the root.
-		{"https://jira.corp.example/jira/browse/OPS-1", []string{"https://jira.corp.example/jira", "https://jira.corp.example/"}},
-		{"https://jira.corp.example/jira2/browse/OPS-1", []string{"https://jira.corp.example/jira2", "https://jira.corp.example/"}},
-		{"https://jira.corp.example/browse/OPS-1", []string{"https://jira.corp.example/"}},
-	} {
-		origin, path, _, ok := parseLink(c.link)
-		if !ok {
-			t.Fatalf("%q isn't a link", c.link)
-		}
-		if got := ids(matchSites(sites, origin, path)); !slices.Equal(got, c.want) {
-			t.Errorf("%s: matched %q, want %q", c.link, got, c.want)
 		}
 	}
 }
@@ -182,9 +142,13 @@ func TestFind(t *testing.T) {
 		{"a-1", idB, "b A-1 To Do A-1-another-site-s-a-1"},
 		{"A-1", "", "a A-1 To Do A-1-log-in"},
 		{"A-1", "gone.atlassian.net", "a A-1 To Do A-1-log-in"},
-		// A link: its site by its address, query string and all.
+		// A link: its site by its host, query string and all; an http
+		// link the same (the request goes to the stored https site).
 		{b.srv.URL + "/browse/A-1?focusedCommentId=3", "", "b A-1 To Do A-1-another-site-s-a-1"},
+		{"http://" + idB + "/browse/A-1", "", "b A-1 To Do A-1-another-site-s-a-1"},
 		{"https://acme.atlassian.net/browse/A-1", "", "https://acme.atlassian.net"},
+		{"http://ACME.atlassian.net/browse/A-1", "", "https://acme.atlassian.net"},
+		{"https://127.0.0.1/browse/A-1", "", "https://127.0.0.1"}, // the host on another port
 		// Nothing typed: the issues looked at last.
 		{"", "", "a A-3 To Do A-3-looked-at"},
 	} {

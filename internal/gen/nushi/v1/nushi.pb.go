@@ -21468,9 +21468,10 @@ func (x *FindJiraIssuesRequest) GetSite() string {
 
 type FindJiraIssuesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// A link matching several sites has one issue from each.
+	// A link has its site's one issue: a site is matched by its host, and
+	// there is one site a host.
 	Issues []*FoundJiraIssue `protobuf:"bytes,1,rep,name=issues,proto3" json:"issues,omitempty"`
-	// A link to a site that isn't added: its address.
+	// A link to a site that isn't added: its address, https://<host>.
 	UnknownSite   string `protobuf:"bytes,2,opt,name=unknown_site,json=unknownSite,proto3" json:"unknown_site,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

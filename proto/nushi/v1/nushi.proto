@@ -3617,9 +3617,10 @@ message FindJiraIssuesRequest {
 }
 
 message FindJiraIssuesResponse {
-  // A link matching several sites has one issue from each.
+  // A link has its site's one issue: a site is matched by its host, and
+  // there is one site a host.
   repeated FoundJiraIssue issues = 1;
-  // A link to a site that isn't added: its address.
+  // A link to a site that isn't added: its address, https://<host>.
   string unknown_site = 2;
 }
 

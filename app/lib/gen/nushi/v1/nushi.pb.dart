@@ -27854,11 +27854,12 @@ class FindJiraIssuesResponse extends $pb.GeneratedMessage {
           FindJiraIssuesResponse.$_createMessage);
   static FindJiraIssuesResponse? _defaultInstance;
 
-  /// A link matching several sites has one issue from each.
+  /// A link has its site's one issue: a site is matched by its host, and
+  /// there is one site a host.
   @$pb.TagNumber(1)
   $pb.PbList<FoundJiraIssue> get issues => $_getList(0);
 
-  /// A link to a site that isn't added: its address.
+  /// A link to a site that isn't added: its address, https://<host>.
   @$pb.TagNumber(2)
   $core.String get unknownSite => $_getSZ(1);
   @$pb.TagNumber(2)
