@@ -99,6 +99,7 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
                       ),
                     ],
                   ),
+                  // design: off the type scale, to move to a step
                   style: theme.ui(t.text, size: 16, weight: FontWeight.w600),
                 ),
               ),

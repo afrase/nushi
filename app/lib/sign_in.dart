@@ -189,6 +189,7 @@ class SignInLines extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    // design: off the type scale, to move to a step
     final body = theme.ui(t.textSecondary, size: 12.5);
     final command = knownAgents[run.agent]?.signIn ?? '';
     return Column(
@@ -248,6 +249,7 @@ class SignInStatus extends StatelessWidget {
           Expanded(
             child: Text(
               'Waiting for you to finish in the browser…',
+              // design: off the type scale, to move to a step
               style: theme.ui(t.text, size: 12.5, weight: FontWeight.w500),
             ),
           ),
@@ -261,6 +263,7 @@ class SignInStatus extends StatelessWidget {
             padding: const EdgeInsets.only(top: 1),
             child: Icon(Icons.error_outline, size: 14, color: t.crashed),
           ),
+          // design: off the type scale, to move to a step
           Expanded(child: Text(why, style: theme.ui(t.crashed, size: 12.5))),
         ],
       ),

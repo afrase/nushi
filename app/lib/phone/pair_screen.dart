@@ -150,6 +150,7 @@ class _PairScreenState extends State<PairScreen> {
                   code,
                   textAlign: TextAlign.center,
                   style: NushiTheme.of(context)
+                      // design: the pairing code, large to read off
                       .code(t.text, size: 40)
                       .copyWith(letterSpacing: 4),
                 ),

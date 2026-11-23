@@ -26,7 +26,9 @@ class _SentCommandCardState extends State<SentCommandCard> {
     final t = theme.t;
     final c = widget.command;
     final output = c.output;
+    // design: off the type scale, to move to a step
     final code = theme.code(t.userBandText, size: 12.5);
+    // design: off the type scale, to move to a step
     final muted = theme.code(t.userBandMuted, size: 12.5);
     final lines = c.command.split('\n');
     final head = Row(
@@ -40,6 +42,7 @@ class _SentCommandCardState extends State<SentCommandCard> {
             color: t.userBandMuted,
           ),
         if (c.command.isEmpty)
+          // design: off the type scale, to move to a step
           Text('Output', style: theme.ui(t.userBandMuted, size: 12.5))
         else
           Flexible(

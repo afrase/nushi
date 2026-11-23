@@ -5,7 +5,7 @@ The one page to read before any work on the app's UI: what to draw a view with, 
 Three things hold it:
 
 - **`tools/design-check`** (in `make lint-dart`) fails on code that goes around the shared pieces: a raw `Tooltip(`, a Material button, an `AlertDialog(` outside `nushiDialog`, a tooltip's shortcut in brackets or after spaces, a `Color(0x…)` or `Colors.<name>` (not `transparent`), a `fontSize:` number, a `Duration(milliseconds: …)` (`Motion` or `Waits` instead; in the controls' files too), a `SnackBar(` or `SnackBarAction(` (`showToast` instead). A deliberate use takes `// design: <why>` on its line or alone on the line above.
-- **`corners_test.dart`** fails on a corner that isn't a radius token (ADR [0110](adr/0110-corners-come-from-the-theme.md)); **`tokens_test.dart`** holds every theme's text to AA on its fills, and a field's hint to 3:1 and a clear step under its value.
+- **`tools/design-check`** fails on a corner that isn't a radius token (ADR [0110](adr/0110-corners-come-from-the-theme.md)) and on a size off the type scale; **`tokens_test.dart`** holds every theme's text to AA on its fills, and a field's hint to 3:1 and a clear step under its value.
 - **The gallery**: `make gallery` draws every shared control in every state, one sheet per group, dark and light, to `app/build/gallery/` (`app/test/gallery/sheets.dart`); `gallery_test.dart` keeps the buttons', the small controls' and the fields' sheets as goldens, so a change to a component shows in review. A sheet forces each state with `ShowLook`. Add a new shared piece to a sheet.
 
 ## Tokens

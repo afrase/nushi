@@ -188,6 +188,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
           const SizedBox(height: 6),
           Text(
             i.summary,
+            // design: off the type scale, to move to a step
             style: theme.ui(t.text, size: 18, weight: FontWeight.w600),
           ),
           const SizedBox(height: 4),

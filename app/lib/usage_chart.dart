@@ -265,6 +265,7 @@ class UsageDayCard extends StatelessWidget {
         children: [
           Text(
             '${_weekdays[day.weekday - 1]}, ${_short(day)}',
+            // design: off the type scale, to move to a step
             style: theme.ui(t.text, size: 12.5, weight: FontWeight.w600),
           ),
           if (none)

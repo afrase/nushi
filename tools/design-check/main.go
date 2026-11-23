@@ -4,19 +4,22 @@
 // LinkText…), an AlertDialog outside nushiDialog, a tooltip's shortcut in
 // brackets or after spaces (withKey instead), a raw Color(0x…) or a
 // Colors.<name> other than transparent (a token instead), a fontSize
-// literal (NushiTheme's ui() or code() at a size instead), and a
-// Duration(milliseconds: …) literal (Motion's or Waits' instead), and a
-// raw SnackBar (showToast instead, toast.dart's). The
-// controls' and the theme's own files make the pieces, so they're left
-// out, the controls' files but for durations, and so are motion.dart for
-// durations, toast.dart for the snack bar it makes, and generated code. A deliberate use stays with a marker on its line or
-// alone on the line above: `// design: <why>`. It prints each use and
+// literal (NushiTheme's ui() or code() at a size instead), a size given
+// to ui() or code() off the type scale, a Duration(milliseconds: …)
+// literal (Motion's or Waits' instead), a raw SnackBar (showToast
+// instead, toast.dart's), and a corner as a number (a radius token
+// instead, ADR 0110). The controls' and the theme's own files make the
+// pieces, so they're left out, the controls' files but for durations,
+// corners and the type scale, and so are motion.dart for durations,
+// toast.dart for the snack bar it makes, and generated code. A deliberate
+// use stays with a marker on its line or alone on the line above:
+// `// design: <why>` (or `// not a corner: <why>` for a corner's rule
+// alone). It prints each use and
 // exits 1. make lint-dart runs it from the repository root over app/lib
 // (or the folders it's given).
 package main
 
 import (
-	"bufio"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -39,6 +42,8 @@ type rule struct {
 	// notIn is a file the rule leaves out (motion.dart, which names the
 	// durations).
 	notIn string
+	// skip finds a line the rule passes (a circle's corners).
+	skip *regexp.Regexp
 }
 
 // stringLiteral finds a Dart string literal on one line, for the rules
@@ -56,17 +61,24 @@ var (
 // rules are checked on every line of code but comments, outside the
 // controls' and the theme's files.
 var rules = []rule{
-	{regexp.MustCompile(`\bTooltip\(`), "a raw Tooltip: Pressable's or Tap's tooltip, or tooltip()", "", false, ""},
-	{regexp.MustCompile(`\b(?:ElevatedButton|TextButton|OutlinedButton|IconButton|FilledButton)\b`), "a Material button: Button, IconTap, LinkText or another of controls.dart's", "", false, ""},
-	{regexp.MustCompile(`\bAlertDialog\(`), "an AlertDialog: nushiDialog or confirm", "", false, ""},
-	{regexp.MustCompile(`\bColor\(0x`), "a raw color: a token of theme/tokens.dart", "", false, ""},
-	{regexp.MustCompile(`\bColors\.[a-z]\w*`), "a Material color: a token of theme/tokens.dart", "Colors.transparent", false, ""},
-	{regexp.MustCompile(`\bfontSize:\s*\d`), "a font size: NushiTheme's ui() or code() at a size", "", false, ""},
-	{regexp.MustCompile(`\bSnackBar(?:Action)?\(`), "a raw snack bar: showToast", "", false, "toast.dart"},
+	{regexp.MustCompile(`\bTooltip\(`), "a raw Tooltip: Pressable's or Tap's tooltip, or tooltip()", "", false, "", nil},
+	{regexp.MustCompile(`\b(?:ElevatedButton|TextButton|OutlinedButton|IconButton|FilledButton)\b`), "a Material button: Button, IconTap, LinkText or another of controls.dart's", "", false, "", nil},
+	{regexp.MustCompile(`\bAlertDialog\(`), "an AlertDialog: nushiDialog or confirm", "", false, "", nil},
+	{regexp.MustCompile(`\bColor\(0x`), "a raw color: a token of theme/tokens.dart", "", false, "", nil},
+	{regexp.MustCompile(`\bColors\.[a-z]\w*`), "a Material color: a token of theme/tokens.dart", "Colors.transparent", false, "", nil},
+	{regexp.MustCompile(`\bfontSize:\s*\d`), "a font size: NushiTheme's ui() or code() at a size", "", false, "", nil},
+	{regexp.MustCompile(`\bSnackBar(?:Action)?\(`), "a raw snack bar: showToast", "", false, "toast.dart", nil},
 	{
 		regexp.MustCompile(`\bDuration\(\s*milliseconds:`),
 		"a duration in milliseconds: one of motion.dart's Motion or Waits",
-		"", true, "motion.dart",
+		"", true, "motion.dart", nil,
+	},
+	// A corner written as a number (Radius.circular(6), so
+	// BorderRadius.circular(6) too, or radius: 6); radius: 0 is a square
+	// corner, no radius at all, and a circle's size isn't a corner.
+	{
+		regexp.MustCompile(`Radius\.circular\(\s*[0-9.]+\s*\)|\bradius:\s*(?:0[0-9.]+|[1-9.][0-9.]*)\s*(?:[,)]|$)`),
+		corner, "", true, "", regexp.MustCompile(`fromCircle\(`),
 	},
 }
 
@@ -74,8 +86,16 @@ var rules = []rule{
 // written with withKey, never "(⌘K)" or "Close  ⌘W".
 const keyInString = "a shortcut in brackets or after spaces: withKey(label, key)"
 
-// marker on a line, or alone on the line above, keeps a deliberate use.
-const marker = "// design:"
+// marker on a line, or alone on the line above, keeps a deliberate use;
+// cornerMarker does for the corner rule only (ADR 0110 named it first).
+const (
+	marker       = "// design:"
+	cornerMarker = "// not a corner: "
+)
+
+// corner is the corner rule's verdict (ADR 0110).
+const corner = "a corner as a number: NushiTheme.tag, control, card, panel or pill, or NushiTheme.inner of one " +
+	"(a size that isn't a corner takes // not a corner: <why>)"
 
 func main() {
 	os.Exit(dartcheck.Run("design-check", "Use the shared piece (docs/design.md), or keep a deliberate use with `// design: <why>` "+
@@ -115,40 +135,50 @@ func controls(path string) bool {
 // inFile lists one file's uses, comments and marked lines left out; in
 // the controls' files ([controls]), only the rules that hold there.
 func inFile(path string, controls bool) ([]dartcheck.Use, error) {
-	f, err := os.Open(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close() //nolint:errcheck // read only
 	var uses []dartcheck.Use
-	marked := false // the line above is the marker alone
-	sc := bufio.NewScanner(f)
-	for n := 1; sc.Scan(); n++ {
-		line := sc.Text()
+	var call styleCall
+	marked, cornerMarked := false, false // the line above is a marker alone
+	for i, line := range strings.Split(string(b), "\n") {
 		trimmed := strings.TrimSpace(line)
-		above := marked
+		above, cornerAbove := marked, cornerMarked
 		marked = strings.HasPrefix(trimmed, marker)
-		if above || strings.HasPrefix(trimmed, "//") || strings.Contains(line, marker) {
+		cornerMarked = strings.HasPrefix(trimmed, cornerMarker)
+		if strings.HasPrefix(trimmed, "//") {
 			continue
 		}
 		code := line
 		if at := strings.Index(code, " // "); at >= 0 && !inString(code, at) {
 			code = code[:at]
 		}
-		for _, what := range onLine(code, filepath.Base(path), controls) {
-			uses = append(uses, dartcheck.Use{Path: path, Line: n, What: what})
+		sizes := call.sizes(code) // a marked line's brackets still count
+		if above || strings.Contains(line, marker) {
+			continue
+		}
+		cornerOK := cornerAbove || strings.Contains(line, cornerMarker)
+		for _, what := range onLine(code, filepath.Base(path), controls, cornerOK) {
+			uses = append(uses, dartcheck.Use{Path: path, Line: i + 1, What: what})
+		}
+		for _, s := range sizes {
+			if !onScale(s, path) {
+				uses = append(uses, dartcheck.Use{Path: path, Line: i + 1, What: offScale})
+			}
 		}
 	}
-	return uses, sc.Err()
+	return uses, nil
 }
 
 // onLine lists what one line of code (its comment cut) goes around, in
 // the file named base; in the controls' files, only the rules that hold
-// there.
-func onLine(code, base string, controls bool) []string {
+// there; cornerOK when the line is marked as not a corner.
+func onLine(code, base string, controls, cornerOK bool) []string {
 	var found []string
 	for _, r := range rules {
-		if controls && !r.inControls || r.notIn == base {
+		if controls && !r.inControls || r.notIn == base || cornerOK && r.what == corner ||
+			r.skip != nil && r.skip.MatchString(code) {
 			continue
 		}
 		for _, m := range r.pattern.FindAllString(code, -1) {

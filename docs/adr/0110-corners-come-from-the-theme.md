@@ -16,7 +16,7 @@ The owner finds the app's look dated, above all its harsh, square corners (2026-
 - **A row one line high is never a card**: at 28 high a card's 12 makes a lozenge, so a tool call's row takes `control`, open or closed.
 - **What isn't a corner keeps its size**: a circle (a dot, an avatar), a scrollbar's thumb, a drawn icon's own geometry, a splash's reach. Such a number takes `// not a corner: <why>`.
 - **A list that scrolls to a rounded container's corners** says so with `RoundedScroll(corner:)`: its scrollbar's ends keep half the corner off the list's ends, where the curve would cut the thumb.
-- **A test holds it** (`app/test/corners_test.dart`): a `Radius.circular(<number>)` or `radius: <number>` outside `app/lib/theme/` fails. The Markdown package can't see the theme, so its code block's corners are its style's (`MarkdownStyle.codeRadius`).
+- **A check holds it** (`tools/design-check`, in `make lint-dart`; amended 2026-11-23, it was `app/test/corners_test.dart`): a `Radius.circular(<number>)` or `radius: <number>` outside `app/lib/theme/` fails. The Markdown package can't see the theme, so its code block's corners are its style's (`MarkdownStyle.codeRadius`).
 
 ## Consequences
 - A rounder or squarer app is a change to four numbers, then a look at what clips: text or an icon at a corner, a list's first and last rows, a focus ring, a hover fill, a scrollbar.

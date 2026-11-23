@@ -217,6 +217,7 @@ class ChecksFailedBar extends StatelessWidget {
                       text: 'Checks failed',
                       style: theme.ui(
                         t.text,
+                        // design: off the type scale, to move to a step
                         size: 12.5,
                         weight: FontWeight.w600,
                       ),
@@ -226,6 +227,7 @@ class ChecksFailedBar extends StatelessWidget {
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                // design: off the type scale, to move to a step
                 style: theme.ui(t.text, size: 12.5),
               ),
             ),

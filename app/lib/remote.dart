@@ -375,6 +375,7 @@ class _Pairing extends StatelessWidget {
             children: [
               Text(
                 p.code,
+                // design: the pairing code, large to read off
                 style: theme.code(t.text, size: 32).copyWith(letterSpacing: 4),
               ),
               const SizedBox(height: 8),

@@ -94,6 +94,7 @@ class _Row extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.ui(
                       t.text,
+                      // design: off the type scale, to move to a step
                       size: 14.5,
                       weight: FontWeight.w500,
                     ),

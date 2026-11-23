@@ -30,6 +30,19 @@ func TestCheck(t *testing.T) {
 			"// design: a QR code is dark on white\ncolor: Colors.white,\nwithKey('Close', '⌘W');\n" +
 			"label: 'Send (3)',\ntooltip: 'Run tests',\nfinal c = t.text; // Colors.red was too loud\n" +
 			"const Duration(seconds: 10);\nduration: Motion.quick,\n// design: a debounce, not motion\nTimer(const Duration(milliseconds: 250), f);\n",
+		// Corners (ADR 0110): numbers flagged, the controls' too; tokens,
+		// a square corner, a circle and a marked size pass.
+		"corner.dart": "borderRadius: BorderRadius.circular(6),\nconst Radius.circular(2.5)\nradius: 14,\nbox(t.border, radius: 8)\n" +
+			"radius: 0,\nradius: NushiTheme.control,\nBorderRadius.circular(NushiTheme.pill)\nBoxShadow(color: t.shadow, blurRadius: 12)\n" +
+			"Radius.circular(thickness / 2)\nradius: 9, // not a corner: the circle\n  // not a corner: its splash\nradius: 9,\n" +
+			"BorderRadius.all(Radius.circular(4)).fromCircle(4)\nradius: 9, // design: a dot\n",
+		"controls_menus.dart": "borderRadius: BorderRadius.circular(6),\n",
+		// The type scale: a step passes, between steps fails, however the
+		// call is laid out; only ui() and code() are read.
+		"scale.dart": "theme.ui(t.text, size: 12.5)\ntheme.code(t.text, size: 12)\ntheme.ui(\n  t.text,\n  size: 14.5,\n  weight: w,\n)\n" +
+			"Icon(i, size: 12.5)\ntheme.ui(t.text, size: base * 0.9)\ntheme.ui(f('(', 1), size: 18).copyWith(height: 1)\n" +
+			"theme.ui(t.text, size: 16)\n// design: the pairing code\ntheme.code(t.text, size: 40)\n",
+		"phone/scale.dart":       "theme.ui(t.text, size: 16)\ntheme.ui(t.text, size: 17)\n",
 		"motion.dart":            "static const quick = Duration(milliseconds: 120);\n",
 		"toast.dart":             "messenger.showSnackBar(SnackBar(content: c));\n",
 		"controls.dart":          "return Tooltip(message: m, child: c);\n",
@@ -68,20 +81,28 @@ func TestCheck(t *testing.T) {
 		ms     = "a duration in milliseconds: one of motion.dart's Motion or Waits"
 		snack  = "a raw snack bar: showToast"
 	)
+	cornerAt := func(at string) string { return at + ": " + corner }
 	want := []string{
 		"button.dart:1: " + button,
 		"button.dart:2: " + button,
 		"color.dart:1: " + raw,
 		"color.dart:2: " + named,
+		"controls_menus.dart:1: " + corner,
 		"controls_small.dart:1: " + ms,
+		cornerAt("corner.dart:1"), cornerAt("corner.dart:2"), cornerAt("corner.dart:3"), cornerAt("corner.dart:4"),
 		"dialog.dart:1: " + dialog,
 		"keys.dart:1: " + keyInString,
 		"keys.dart:2: " + keyInString,
 		"keys.dart:3: " + keyInString,
 		"keys.dart:4: " + keyInString,
+		"phone/scale.dart:2: " + offScale,
 		"phone/x.dart:1: " + button,
 		"say.dart:1: " + snack,
 		"say.dart:2: " + snack,
+		"scale.dart:10: " + offScale, // sorted as text
+		"scale.dart:11: " + offScale,
+		"scale.dart:1: " + offScale,
+		"scale.dart:5: " + offScale,
 		"size.dart:1: " + size,
 		"tip.dart:1: " + tip,
 		"wait.dart:1: " + ms,
