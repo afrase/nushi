@@ -10,10 +10,14 @@ import 'package:flutter/foundation.dart';
 
 final _forgets = <void Function()>[];
 
-/// A map kept while the app runs.
-Map<K, V> runMap<K, V>() {
+/// A map kept while the app runs; [onForget] lets go of what its values
+/// hold outside it (a listener on another run value) before it's emptied.
+Map<K, V> runMap<K, V>({void Function(V value)? onForget}) {
   final m = <K, V>{};
-  _forgets.add(m.clear);
+  _forgets.add(() {
+    if (onForget != null) m.values.forEach(onForget);
+    m.clear();
+  });
   return m;
 }
 

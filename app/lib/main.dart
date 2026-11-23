@@ -93,11 +93,12 @@ class _NushiAppState extends State<NushiApp> {
   final _navigator = GlobalKey<NavigatorState>();
   late final AppLifecycleListener _lifecycle;
   late final ChatAlerts _alerts;
+  late final VoidCallback _unwatchPairings;
 
   @override
   void initState() {
     super.initState();
-    watchPairings(_navigator, widget.daemon.client);
+    _unwatchPairings = watchPairings(_navigator, widget.daemon.client);
     _alerts = ChatAlerts(widget.daemon);
     // A chat whose pull request's checks newly fail needs you (ADR 0138).
     ChecksWatch.of(widget.daemon).start();
@@ -255,6 +256,7 @@ class _NushiAppState extends State<NushiApp> {
     shortcutRecording.removeListener(_recordingChanged);
     widget.daemon.removeListener(_pinChanged);
     _tabOf?.tab.removeListener(_pinChanged);
+    _unwatchPairings();
     _alerts.dispose();
     ChecksWatch.of(widget.daemon).stop();
     _lifecycle.dispose();

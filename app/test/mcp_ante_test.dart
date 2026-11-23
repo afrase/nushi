@@ -10,6 +10,7 @@ import 'package:nushi/mcp_form.dart';
 import 'package:nushi/mcp_servers.dart';
 import 'package:nushi/mcp_widget.dart';
 import 'package:nushi/panel_widgets.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -261,6 +262,23 @@ void main() {
     agentList.value = {'ante': Agent(name: 'ante', mcpUserOnly: true)};
     expect(told, 1);
     expect(list.userOnly, isTrue);
+    await closeView(tester, d);
+  });
+
+  testWidgets('a list forgotten with the run state stops hearing the agents', (
+    tester,
+  ) async {
+    final (_, d) = await _daemon(tester);
+    final list = McpServers.of(d, '/forgotten', agent: 'ante');
+    await tester.pumpAndSettle();
+    var told = 0;
+    list.addListener(() => told++);
+    forgetRunState();
+    told = 0; // agentList put back may have told it as it went
+    agentList.value = {'ante': Agent(name: 'ante', mcpUserOnly: true)};
+    expect(told, 0);
+    expect(McpServers.of(d, '/forgotten', agent: 'ante'), isNot(same(list)));
+    await tester.pumpAndSettle();
     await closeView(tester, d);
   });
 

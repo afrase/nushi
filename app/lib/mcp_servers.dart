@@ -38,7 +38,16 @@ class McpServers extends ChangeNotifier {
     unawaited(refresh());
   }
 
-  static final Map<(String, String), McpServers> _byFolder = runMap();
+  static final Map<(String, String), McpServers> _byFolder = runMap(
+    onForget: (l) => l._forget(),
+  );
+
+  /// Stops hearing the agents and the daemon's return: the list is no
+  /// longer the folder's (tests start afresh).
+  void _forget() {
+    agentList.removeListener(notifyListeners);
+    _back.cancel();
+  }
 
   /// How long a list is taken as current.
   static const fresh = Duration(minutes: 5);
