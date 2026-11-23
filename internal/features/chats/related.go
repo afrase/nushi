@@ -496,7 +496,7 @@ func (r relatedLook) found(ctx context.Context, e model.WorktreeEntry, call stri
 // that works in a folder of the worktree has it.
 func isOwned(path string, owned []string) bool {
 	path = realpath.Of(path)
-	return slices.ContainsFunc(owned, func(o string) bool { return realpath.Within(o, path) })
+	return slices.ContainsFunc(owned, func(o string) bool { return realpath.Under(o, path) })
 }
 
 // whose is the tool call of the subagent the worktree at path is for, ""

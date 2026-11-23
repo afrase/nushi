@@ -28,14 +28,16 @@ func Of(path string) string {
 // a spelling in another case isn't in it, even on a volume that ignores
 // case.
 func Within(path, dir string) bool {
-	if under(path, dir) {
+	if Under(path, dir) {
 		return true
 	}
-	return under(Of(path), Of(dir))
+	return Under(Of(path), Of(dir))
 }
 
-// under says whether path is dir or in it, by name.
-func under(path, dir string) bool {
+// Under says whether path is dir or in it, by name alone: for two paths
+// already resolved (Of), where Within would resolve both again, a walk of
+// the file system each, for every pair a look compares.
+func Under(path, dir string) bool {
 	if path == "" || dir == "" {
 		return false
 	}

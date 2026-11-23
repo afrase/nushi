@@ -86,7 +86,7 @@ func worktreeEntries(ctx context.Context, folder string) ([]worktreeEntry, error
 func checkout(list []model.WorktreeEntry, folder string) int {
 	here, at := realpath.Of(folder), -1
 	for i, e := range list {
-		if realpath.Within(here, realpath.Of(e.Path)) && (at < 0 || len(e.Path) > len(list[at].Path)) {
+		if realpath.Under(here, realpath.Of(e.Path)) && (at < 0 || len(e.Path) > len(list[at].Path)) {
 			at = i
 		}
 	}

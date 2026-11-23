@@ -67,3 +67,29 @@ func TestOf(t *testing.T) {
 		t.Error(`Of("")`)
 	}
 }
+
+// Under compares names only: a link to dir isn't in it by Under, which is
+// for paths already resolved.
+func TestUnder(t *testing.T) {
+	root := t.TempDir()
+	app := filepath.Join(root, "app")
+	testcheck.NoErr(t, os.Mkdir(app, 0o700))
+	link := filepath.Join(root, "link")
+	testcheck.NoErr(t, os.Symlink(app, link))
+	for _, tc := range []struct {
+		path, dir string
+		want      bool
+	}{
+		{app, app, true},
+		{filepath.Join(app, "sub"), app, true},
+		{filepath.Join(link, "sub"), app, false},
+		{filepath.Join(root, "app-x"), app, false},
+		{filepath.Join(app, "..", "x"), app, false},
+		{"", app, false},
+		{app, "", false},
+	} {
+		if got := Under(tc.path, tc.dir); got != tc.want {
+			t.Errorf("Under(%q, %q) = %v, want %v", tc.path, tc.dir, got, tc.want)
+		}
+	}
+}
