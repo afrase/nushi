@@ -899,6 +899,7 @@ bool _readAgain() {
 }
 
 /// `app.json` as it is on disk now; empty when it can't be read.
+@visibleForTesting
 Map<String, Object?> readSaved() {
   try {
     return jsonDecode(_settings.readAsStringSync()) as Map<String, Object?>;

@@ -163,15 +163,3 @@ List<GitHubComment> changesRequested(GitHubPull p) => [
             GitHubComment(author: r.login, review: 'changes_requested'),
       ),
 ];
-
-/// How many findings from each review (by its id) [items] have, on
-/// threads too.
-Map<String, int> findingCounts(List<TodoItem> items) {
-  final out = <String, int>{};
-  for (final i in items) {
-    for (final f in i.findings) {
-      out.update(f.from.id, (n) => n + 1, ifAbsent: () => 1);
-    }
-  }
-  return out;
-}

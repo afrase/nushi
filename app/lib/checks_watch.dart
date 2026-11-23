@@ -11,11 +11,6 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The daemon says which commit a pull request's checks are of
-/// (GitHubItem.checks_oid), so a chat can be flagged on a new failure
-/// (ADR 0138).
-const checksOidApi = 129;
-
 /// [it]'s failure as the user acts on it, `<node id>@<commit>`, while its
 /// checks fail on an open pull request; null otherwise, and from a daemon
 /// that doesn't say the commit.
