@@ -102,10 +102,7 @@ void main() {
       showDetails.value = false;
       paneWidths.value = {'subagent': width};
       final c = chat('c', 'claude', 'Callers of store.Get');
-      final fake = FakeDaemon([c])
-        ..answer = (input) => input is GetChatRequest
-            ? GetChatResponse(chat: c, items: _items())
-            : null;
+      final fake = FakeDaemon([c])..chatItems['c'] = _items();
       final d = await fake.connect(tester);
       d.select('c');
       await tester.pumpWidget(NushiApp(daemon: d));
@@ -196,10 +193,7 @@ void main() {
         const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     final c = chat('c', 'claude', 'Callers of store.Get');
-    final fake = FakeDaemon([c])
-      ..answer = (input) => input is GetChatRequest
-          ? GetChatResponse(chat: c, items: _items())
-          : null;
+    final fake = FakeDaemon([c])..chatItems['c'] = _items();
     final phone = await startPhone(tester, fake);
     await tester.tap(find.text('Callers of store.Get'));
     await _pump(tester);

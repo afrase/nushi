@@ -3,9 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/composer.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -99,7 +97,6 @@ Future<(FakeDaemon, Future<void> Function())> _open(
   Brightness brightness = Brightness.dark,
   bool gone = false,
 }) async {
-  viewport(tester, Size(900, gone ? 520 : 900), brightness: brightness);
   showDetails.value = false;
   final status = ChatStatus(reopenFailed: gone, sessionGone: gone);
   final c = chat('c', 'claude', 'Move the session store', status: status);
@@ -107,10 +104,12 @@ Future<(FakeDaemon, Future<void> Function())> _open(
     ..answer = (input) => input is GetChatRequest
         ? GetChatResponse(chat: c, items: items, status: status)
         : null;
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(
+    tester,
+    fake,
+    size: Size(900, gone ? 520 : 900),
+    brightness: brightness,
+  );
   FocusManager.instance.primaryFocus?.unfocus(); // no caret blinking
   await tester.pumpAndSettle();
   return (

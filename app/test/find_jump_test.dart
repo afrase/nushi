@@ -27,9 +27,7 @@ Future<Daemon> _app(
   viewport(tester, const Size(1400, 900));
   showDetails.value = false;
   final c = chat('c', 'claude', 'Long');
-  final fake = FakeDaemon([c])
-    ..answer = (input) =>
-        input is GetChatRequest ? GetChatResponse(chat: c, items: items) : null;
+  final fake = FakeDaemon([c])..chatItems['c'] = items;
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));

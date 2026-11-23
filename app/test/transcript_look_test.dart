@@ -333,7 +333,6 @@ Future<(Daemon, FakeDaemon)> _app(
   bool idle = false,
   List<String> open = const [],
 }) async {
-  viewport(tester, size, brightness: brightness);
   showDetails.value = false;
   sidebarHidden.value = true;
   Collapsible.opened
@@ -345,10 +344,7 @@ Future<(Daemon, FakeDaemon)> _app(
     ..answer = ((input) => input is GetChatRequest
         ? GetChatResponse(chat: c, items: items ?? _items)
         : null);
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   fake.emit(_config);
   if (!idle) {
     d.chats['c']!

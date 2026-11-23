@@ -82,16 +82,12 @@ Future<(FakeDaemon, Daemon)> _window(
   Size size = const Size(1700, 900),
   Brightness brightness = Brightness.dark,
 }) async {
-  viewport(tester, size, brightness: brightness);
   final c = chat('c', 'claude', 'Wrap the events');
   final fake = FakeDaemon([c])
     ..answer = ((input) => input is GetChatRequest
         ? GetChatResponse(chat: c, items: items)
         : null);
-  final d = await fake.connect(tester)
-    ..select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   return (fake, d);
 }
 

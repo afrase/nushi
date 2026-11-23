@@ -21,12 +21,8 @@ Future<(Daemon, FakeDaemon, ChatState)> _app(
   Size size = const Size(1700, 760),
   Brightness brightness = Brightness.dark,
 }) async {
-  viewport(tester, size, brightness: brightness);
   final fake = FakeDaemon([chat('c', 'claude', 'Fix the login redirect')]);
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   fake.emit(
     EventsResponse(
       chatId: 'c',

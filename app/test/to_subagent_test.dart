@@ -2,9 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/subagent_pane.dart';
 
@@ -62,17 +60,10 @@ void main() {
 
   testWidgets('a message for a subagent shows in its pane, with how the '
       'agent passed it on', (tester) async {
-    viewport(tester, const Size(1400, 700));
     showDetails.value = false;
     final c = chat('c', 'claude', 'Fix the login redirect');
-    final fake = FakeDaemon([c])
-      ..answer = (input) => input is GetChatRequest
-          ? GetChatResponse(chat: c, items: _items)
-          : null;
-    final d = await fake.connect(tester);
-    d.select('c');
-    await tester.pumpWidget(NushiApp(daemon: d));
-    await tester.pumpAndSettle();
+    final fake = FakeDaemon([c])..chatItems['c'] = _items;
+    final d = await openApp(tester, fake, size: const Size(1400, 700));
     expect(find.byType(SubagentPane), findsNothing);
 
     // The message's line in the chat opens the subagent's pane.
@@ -99,20 +90,16 @@ void main() {
 
   testWidgets('what is typed while a message to a subagent sends stays, '
       'and a failed one comes back before it', (tester) async {
-    viewport(tester, const Size(1400, 700));
     showDetails.value = false;
     final c = chat('c', 'claude', 'Fix the login redirect');
     var sent = Completer<SendPromptResponse>();
     final fake = FakeDaemon([c])
+      ..chatItems['c'] = _items
       ..answer = (input) => switch (input) {
-        GetChatRequest() => GetChatResponse(chat: c, items: _items),
         SendPromptRequest() => sent.future,
         _ => null,
       };
-    final d = await fake.connect(tester);
-    d.select('c');
-    await tester.pumpWidget(NushiApp(daemon: d));
-    await tester.pumpAndSettle();
+    final d = await openApp(tester, fake, size: const Size(1400, 700));
     await tester.tap(
       find.textContaining('→ Explore', findRichText: true).first,
     );

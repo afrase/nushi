@@ -94,7 +94,6 @@ Future<Daemon> _app(
   Size size,
   Brightness brightness,
 ) async {
-  viewport(tester, size, brightness: brightness);
   final fake =
       FakeDaemon([chat('c', 'claude', 'Rewrite the parser', folder: _repo)])
         ..answer = (input) => switch (input) {
@@ -134,10 +133,7 @@ Future<Daemon> _app(
           GetDiffRequest() => _diff,
           _ => null,
         };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   return d;
 }
 

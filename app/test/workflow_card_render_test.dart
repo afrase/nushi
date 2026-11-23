@@ -147,10 +147,7 @@ Future<void> _window(
   viewport(tester, size, brightness: brightness);
   showDetails.value = false;
   final c = chat('c', 'claude', 'Tidy the guides');
-  final fake = FakeDaemon([c])
-    ..answer = (input) => input is GetChatRequest
-        ? GetChatResponse(chat: c, items: _items())
-        : null;
+  final fake = FakeDaemon([c])..chatItems['c'] = _items();
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));
@@ -192,10 +189,7 @@ Future<void> _phone(
 ) async {
   viewport(tester, size, ratio: 3, brightness: brightness);
   final c = chat('c', 'claude', 'Tidy the guides');
-  final fake = FakeDaemon([c])
-    ..answer = (input) => input is GetChatRequest
-        ? GetChatResponse(chat: c, items: _items())
-        : null;
+  final fake = FakeDaemon([c])..chatItems['c'] = _items();
   final phone = await startPhone(tester, fake);
   await tester.tap(find.text('Tidy the guides'));
   await frames(tester, 10, const Duration(milliseconds: 100));

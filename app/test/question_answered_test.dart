@@ -160,27 +160,23 @@ Future<(Daemon, FakeDaemon)> _app(
   double height = 1000,
   Brightness brightness = Brightness.dark,
 }) async {
-  viewport(tester, Size(width, height), brightness: brightness);
   showDetails.value = false;
   final c = chat('c', 'claude', 'Set up the job runner');
   final fake = FakeDaemon([c])
-    ..answer = (input) => input is GetChatRequest
-        ? GetChatResponse(
-            chat: c,
-            items: [
-              Item(
-                id: 'u',
-                kind: ItemKind.ITEM_KIND_USER_MESSAGE,
-                text: 'Set up the job runner, and ask me what you need',
-              ),
-              ...items,
-            ],
-          )
-        : null;
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+    ..chatItems['c'] = [
+      Item(
+        id: 'u',
+        kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+        text: 'Set up the job runner, and ask me what you need',
+      ),
+      ...items,
+    ];
+  final d = await openApp(
+    tester,
+    fake,
+    size: Size(width, height),
+    brightness: brightness,
+  );
   return (d, fake);
 }
 
@@ -459,10 +455,7 @@ void main() {
   ) async {
     viewport(tester, const Size(390, 844), ratio: 2);
     final c = chat('c', 'claude', 'Set up the job runner');
-    final fake = FakeDaemon([c])
-      ..answer = (input) => input is GetChatRequest
-          ? GetChatResponse(chat: c, items: [_three()])
-          : null;
+    final fake = FakeDaemon([c])..chatItems['c'] = [_three()];
     final phone = await startPhone(tester, fake);
     await tester.tap(find.text('Set up the job runner'));
     await tester.pumpAndSettle();

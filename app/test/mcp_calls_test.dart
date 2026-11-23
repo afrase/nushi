@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
@@ -66,7 +65,6 @@ void main() {
       testWidgets('a $agent chat’s MCP calls render, ${width.toInt()} '
           '${brightness.name}', (tester) async {
         browserFakes();
-        viewport(tester, Size(width, 900), brightness: brightness);
         showDetails.value = false;
         final c = chat('c', agent, 'Fix the tea shop');
         final items = _items(codex: agent == 'codex');
@@ -75,10 +73,12 @@ void main() {
             GetChatRequest() => GetChatResponse(chat: c, items: items),
             _ => null,
           });
-        final d = await fake.connect(tester);
-        d.select('c');
-        await tester.pumpWidget(NushiApp(daemon: d));
-        await tester.pumpAndSettle();
+        final d = await openApp(
+          tester,
+          fake,
+          size: Size(width, 900),
+          brightness: brightness,
+        );
         await tester.tap(find.text('github · search_issues'));
         await tester.pumpAndSettle();
         expect(find.textContaining(r'$ mcp'), findsNothing);
@@ -106,7 +106,6 @@ void main() {
     tester,
   ) async {
     browserFakes();
-    viewport(tester, const Size(1700, 900));
     showDetails.value = false;
     final c = chat('c', 'codex', 'Fix the tea shop');
     final items = [
@@ -119,10 +118,7 @@ void main() {
         GetChatRequest() => GetChatResponse(chat: c, items: items),
         _ => null,
       });
-    final d = await fake.connect(tester);
-    d.select('c');
-    await tester.pumpWidget(NushiApp(daemon: d));
-    await tester.pumpAndSettle();
+    final d = await openApp(tester, fake);
     expect(find.text(r'$ mcp.github.search_issues'), findsOneWidget);
     expect(find.text('mcp__nushi__show'), findsOneWidget);
     expect(find.text('Preview'), findsNothing);

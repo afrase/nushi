@@ -8,7 +8,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/replies.dart';
@@ -126,17 +125,18 @@ void main() {
     (720.0, Brightness.light),
   ]) {
     testWidgets('the window, $width wide, ${b.name}', (tester) async {
-      viewport(tester, Size(width, 900), brightness: b);
       showDetails.value = false;
       final c = chat('c', 'claude', 'Why the check fails');
       final fake = FakeDaemon([c])
         ..answer = ((input) => input is GetChatRequest
             ? GetChatResponse(chat: c, items: _items)
             : null);
-      final d = await fake.connect(tester);
-      d.select('c');
-      await tester.pumpWidget(NushiApp(daemon: d));
-      await tester.pumpAndSettle();
+      final d = await openApp(
+        tester,
+        fake,
+        size: Size(width, 900),
+        brightness: b,
+      );
       expect(tester.takeException(), isNull);
       final name = 'sent_commands_${width.toInt()}_${b.name}';
       await render(tester, find.byType(NushiApp), name);

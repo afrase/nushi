@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_menu.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -17,16 +15,12 @@ void main() {
   testWidgets('the arrow keys move the caret when renaming from the sidebar', (
     tester,
   ) async {
-    viewport(tester, const Size(1400, 900));
     showDetails.value = false;
     final c = chat('c', 'claude', 'Pick me');
     final fake = FakeDaemon([c])
       ..answer = (input) =>
           input is GetChatRequest ? GetChatResponse(chat: c) : null;
-    final d = await fake.connect(tester);
-    d.select('c');
-    await tester.pumpWidget(NushiApp(daemon: d));
-    await tester.pumpAndSettle();
+    final d = await openApp(tester, fake, size: const Size(1400, 900));
     await tester.tapAt(
       tester.getCenter(find.text('Pick me').first),
       buttons: kSecondaryButton,

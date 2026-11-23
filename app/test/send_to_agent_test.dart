@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_header.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_thread.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
@@ -89,7 +87,6 @@ void main() {
 
   testWidgets("send to agent: a comment and a failed check go to the chat's "
       'box as reply cards, together', (tester) async {
-    viewport(tester, const Size(1500, 900));
     final c = chat('c', 'claude', 'Add Sub and Neg');
     final fake = FakeDaemon([c])
       ..answer = (input) => switch (input) {
@@ -115,10 +112,7 @@ void main() {
         ),
         _ => null,
       };
-    final d = await fake.connect(tester);
-    d.select('c');
-    await tester.pumpWidget(NushiApp(daemon: d));
-    await tester.pumpAndSettle();
+    final d = await openApp(tester, fake, size: const Size(1500, 900));
     expect(_send, findsNothing); // only in the tab
     await tester.tap(
       find.descendant(

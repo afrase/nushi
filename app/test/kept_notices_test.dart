@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
 import 'package:nushi/kept_notices.dart';
 import 'package:nushi/kept_trouble.dart';
@@ -78,18 +77,17 @@ void main() {
     testWidgets('each is said once, closable, at ${width.toInt()}', (
       tester,
     ) async {
-      viewport(tester, Size(width, 900));
       showDetails.value = false;
       noteKeptTrouble(
         'app.json',
         KeptTroubleKind.setAside,
         aside: 'app.json.unreadable-2026-11-22T10-00-00.000000',
       );
-      final d = await FakeDaemon([chat('c', 'claude', 'Fix the parser')])
-          .connect(tester);
-      d.select('c');
-      await tester.pumpWidget(NushiApp(daemon: d));
-      await tester.pumpAndSettle();
+      final d = await openApp(
+        tester,
+        FakeDaemon([chat('c', 'claude', 'Fix the parser')]),
+        size: Size(width, 900),
+      );
       final setAside = find.textContaining('settings are back to their');
       expect(setAside, findsOneWidget);
       expectTextInside(tester, width);

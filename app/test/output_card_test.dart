@@ -193,7 +193,6 @@ void main() {
     (720.0, Brightness.light),
   ]) {
     testWidgets('the window, $width wide, ${b.name}', (tester) async {
-      viewport(tester, Size(width, 900), brightness: b);
       showDetails.value = false;
       final c = chat('c', 'claude', 'Why the check fails');
       final fake = FakeDaemon([c]);
@@ -204,10 +203,12 @@ void main() {
         )
         ..commands['make lint-dart'] = (output: '1 issue\r\n', exit: 2);
       addTearDown(shells.close);
-      final d = await fake.connect(tester);
-      d.select('c');
-      await tester.pumpWidget(NushiApp(daemon: d));
-      await tester.pumpAndSettle();
+      final d = await openApp(
+        tester,
+        fake,
+        size: Size(width, 900),
+        brightness: b,
+      );
       final state = d.chats['c']!;
       for (final cmd in [
         'npm run dev',

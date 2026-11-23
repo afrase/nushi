@@ -566,7 +566,6 @@ void main() {
     ]) {
       testWidgets('renders at $width, $theme', (tester) async {
         browserFakes();
-        viewport(tester, Size(width, 900), brightness: brightness);
         showDetails.value = false;
         final s = _Servers()
           ..rows = [
@@ -575,10 +574,12 @@ void main() {
           ];
         final fake = FakeDaemon([chat('c', 'claude', 'Build the tea shop')])
           ..answer = s.answer;
-        final d = await fake.connect(tester);
-        d.select('c');
-        await tester.pumpWidget(NushiApp(daemon: d));
-        await tester.pumpAndSettle();
+        final d = await openApp(
+          tester,
+          fake,
+          size: Size(width, 900),
+          brightness: brightness,
+        );
         d.chats['c']!.openBrowserTab('http://localhost:8080');
         await tester.pumpAndSettle();
         await _openMenu(tester);

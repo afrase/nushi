@@ -597,7 +597,6 @@ void main() {
 
   testWidgets('the Mac asks for references too, and shows a small image '
       'inline', (tester) async {
-    viewport(tester, const Size(1700, 900));
     final fake = FakeDaemon([_chat])
       ..answer = ((input) => input is GetChatRequest
           ? GetChatResponse(
@@ -605,10 +604,7 @@ void main() {
               items: _items([ImageData(mimeType: 'image/png', data: _png)]),
             )
           : null);
-    final d = await fake.connect(tester)
-      ..select('c');
-    await tester.pumpWidget(NushiApp(daemon: d));
-    await tester.pumpAndSettle();
+    final d = await openApp(tester, fake);
     expect(fake.calls.whereType<GetChatRequest>().single.imageRefs, isTrue);
     expect(fake.subscriptions.single.request.imageRefs, isTrue);
     expect(

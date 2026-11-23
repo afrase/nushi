@@ -68,7 +68,6 @@ Future<(Daemon, FakeDaemon)> _app(
   Brightness brightness = Brightness.dark,
   List<GitHubLink> pulls = const [],
 }) async {
-  viewport(tester, size, brightness: brightness);
   showDetails.value = false;
   final c = chat('c', 'claude', 'Paginate the feed')
     ..pulls.addAll(pulls)
@@ -86,10 +85,7 @@ Future<(Daemon, FakeDaemon)> _app(
       GetGitHubItemsRequest() => GetGitHubItemsResponse(items: [item()]),
       _ => null,
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   return (d, fake);
 }
 

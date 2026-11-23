@@ -128,7 +128,6 @@ void main() {
     Brightness brightness = Brightness.dark,
     String newText = _new,
   }) async {
-    viewport(tester, Size(width, 820), brightness: brightness);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('nushi/fonts'),
@@ -148,10 +147,12 @@ void main() {
         GetDiffRequest() => GetDiffResponse(files: files),
         _ => null,
       };
-    final d = await fake.connect(tester)
-      ..select('c');
-    await tester.pumpWidget(NushiApp(daemon: d));
-    await tester.pumpAndSettle();
+    final d = await openApp(
+      tester,
+      fake,
+      size: Size(width, 820),
+      brightness: brightness,
+    );
     setComments('c', comments);
     d.chats['c']!
       ..status(ChatStatus(busy: true))

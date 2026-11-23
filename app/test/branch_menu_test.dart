@@ -10,7 +10,6 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/worktree.dart';
@@ -163,7 +162,6 @@ void main() {
   // right edge.
   for (final width in [1700.0, 1140.0]) {
     testWidgets('the Branch menu in a ${width.round()} window', (tester) async {
-      viewport(tester, Size(width, 620));
       final c = Chat(
         id: 'c',
         agent: 'claude',
@@ -190,10 +188,7 @@ void main() {
           ListBranchesRequest() => _list(),
           _ => null,
         };
-      final d = await fake.connect(tester);
-      d.select('c');
-      await tester.pumpWidget(NushiApp(daemon: d));
-      await tester.pumpAndSettle();
+      final d = await openApp(tester, fake, size: Size(width, 620));
       final panel = tester.getRect(find.byType(DetailsPanel));
       final box = tester.getRect(
         find.widgetWithText(PanelWidget, 'Environment'),

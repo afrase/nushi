@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
@@ -42,7 +41,6 @@ Future<(Daemon, FakeDaemon)> _app(
   bool still = false,
   double width = 1700,
 }) async {
-  viewport(tester, Size(width, 700));
   if (still) {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(reduceMotion: true);
@@ -65,10 +63,7 @@ Future<(Daemon, FakeDaemon)> _app(
                 ..add(AttachTerminalResponse(data: utf8.encode(r'$ '))))
               .stream
         : null;
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: Size(width, 700));
   return (d, fake);
 }
 

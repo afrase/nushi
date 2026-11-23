@@ -27,7 +27,6 @@ Future<(Daemon, FakeDaemon)> _app(
   bool idle = false,
   bool update = false,
 }) async {
-  viewport(tester, size, brightness: brightness);
   showDetails.value = false;
   sidebarHidden.value = true;
   final c = chat('c', 'claude', 'Paginate the feed');
@@ -41,10 +40,7 @@ Future<(Daemon, FakeDaemon)> _app(
       ),
       _ => null,
     });
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   if (!idle) {
     d.chats['c']!
       ..busy = true

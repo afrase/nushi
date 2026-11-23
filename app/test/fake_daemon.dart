@@ -96,6 +96,11 @@ class FakeDaemon implements Transport {
     answer = (input) => fn(input) ?? before?.call(input);
   }
 
+  /// What GetChat answers for a chat by its id, with the chat itself:
+  /// its transcript's items. A chat not in it answers the empty response.
+  /// [answer] goes first.
+  final chatItems = <String, List<Item>>{};
+
   /// What GetDiff with a path (a file preview's question, API 121) answers,
   /// by the file's absolute path (folder and path joined): its one change,
   /// or an exception to throw. A file not in it answers no change, as a
@@ -351,6 +356,11 @@ class FakeDaemon implements Transport {
                   : null,
             ),
           GetSettingsRequest() => GetSettingsResponse(settings: settings),
+          GetChatRequest(:final chatId) when chatItems.containsKey(chatId) =>
+            GetChatResponse(
+              chat: chats.where((c) => c.id == chatId).firstOrNull,
+              items: chatItems[chatId],
+            ),
           GetDiffRequest(:final folder, names: true) =>
             repositories.contains(folder)
                 ? GetDiffResponse(

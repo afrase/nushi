@@ -4,9 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_view.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
@@ -149,7 +147,6 @@ void main() {
     ('light', Brightness.light),
   ]) {
     testWidgets('the transcript as chapters ($name)', (tester) async {
-      viewport(tester, const Size(1000, 1080), brightness: brightness);
       showDetails.value = false;
       final c = chat('c', 'claude', 'Fix the login redirect');
       final fake = FakeDaemon([c])
@@ -164,10 +161,12 @@ void main() {
                 ),
               )
             : null;
-      final d = await fake.connect(tester);
-      d.select('c');
-      await tester.pumpWidget(NushiApp(daemon: d));
-      await tester.pumpAndSettle();
+      final d = await openApp(
+        tester,
+        fake,
+        size: const Size(1000, 1080),
+        brightness: brightness,
+      );
       // The image decodes outside the test's fake clock.
       await tester.runAsync(() async {
         for (final e in find.byType(Image).evaluate()) {
@@ -195,17 +194,10 @@ void main() {
 
   testWidgets('a band goes edge to edge; the agent’s text keeps its '
       'margins', (tester) async {
-    viewport(tester, const Size(1000, 860));
     showDetails.value = false;
     final c = chat('c', 'claude', 'Fix the login redirect');
-    final fake = FakeDaemon([c])
-      ..answer = (input) => input is GetChatRequest
-          ? GetChatResponse(chat: c, items: _items)
-          : null;
-    final d = await fake.connect(tester);
-    d.select('c');
-    await tester.pumpWidget(NushiApp(daemon: d));
-    await tester.pumpAndSettle();
+    final fake = FakeDaemon([c])..chatItems['c'] = _items;
+    final d = await openApp(tester, fake, size: const Size(1000, 860));
     final view = tester.getRect(find.byType(ChatView));
     final band = tester.getRect(
       find

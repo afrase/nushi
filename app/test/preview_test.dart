@@ -146,12 +146,8 @@ Future<Daemon> _app(
   double width = 1700,
   List<String>? asked,
 }) async {
-  viewport(tester, Size(width, 900));
   showDetails.value = false;
-  final d = await _fake(asked: asked).connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, _fake(asked: asked), size: Size(width, 900));
   return d;
 }
 

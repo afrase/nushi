@@ -24,14 +24,10 @@ Future<(Daemon, FakeDaemon, ChatState)> _app(
   Size size = const Size(1400, 800),
   String folder = '/Users/me/nushi',
 }) async {
-  viewport(tester, size);
   final fake = FakeDaemon([
     chat('c', 'claude', 'Fix the login redirect', folder: folder),
   ]);
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size);
   // It can fork, so ⇧⌘B applies.
   fake.emit(
     EventsResponse(

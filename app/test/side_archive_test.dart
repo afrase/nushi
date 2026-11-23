@@ -22,7 +22,6 @@ Future<(Daemon, FakeDaemon, ChatState)> _app(
   bool talked = true,
   Size size = const Size(1400, 800),
 }) async {
-  viewport(tester, size);
   final fake =
       FakeDaemon([
           chat('c', 'claude', 'Fix the login redirect'),
@@ -35,10 +34,7 @@ Future<(Daemon, FakeDaemon, ChatState)> _app(
           RestoreSideChatRequest() => RestoreSideChatResponse(chatId: 's2'),
           _ => null,
         };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size);
   fake.emit(
     EventsResponse(
       chatId: 'c',

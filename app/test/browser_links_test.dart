@@ -7,7 +7,6 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart' show Toggle;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/settings.dart';
@@ -65,38 +64,29 @@ void main() {
     double width = 1700,
     bool listing = false,
   }) async {
-    viewport(tester, Size(width, 900));
     showDetails.value = false;
     final c = chat('c', 'claude', 'Build the tea shop');
     final fake = FakeDaemon([c])
-      ..answer = (input) => input is GetChatRequest
-          ? GetChatResponse(
-              chat: c,
-              items: [
-                Item(
-                  id: 't',
-                  kind: ItemKind.ITEM_KIND_TOOL_CALL,
-                  title: 'Fetch the tea list',
-                  status: 'completed',
-                  text: 'Found [the list](https://tea.example/list).',
-                ),
-                Item(
-                  id: 'm',
-                  kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
-                  text: 'It runs at [the dev server](http://localhost:5173/).',
-                ),
-              ],
-            )
-          : null;
+      ..chatItems['c'] = [
+        Item(
+          id: 't',
+          kind: ItemKind.ITEM_KIND_TOOL_CALL,
+          title: 'Fetch the tea list',
+          status: 'completed',
+          text: 'Found [the list](https://tea.example/list).',
+        ),
+        Item(
+          id: 'm',
+          kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+          text: 'It runs at [the dev server](http://localhost:5173/).',
+        ),
+      ];
     if (listing) {
       final files = StreamController<WatchChatFolderResponse>();
       addTearDown(files.close);
       fake.streams = (i) => i is WatchChatFolderRequest ? files.stream : null;
     }
-    final d = await fake.connect(tester);
-    d.select('c');
-    await tester.pumpWidget(NushiApp(daemon: d));
-    await tester.pumpAndSettle();
+    final d = await openApp(tester, fake, size: Size(width, 900));
     return d;
   }
 

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/menu.dart';
@@ -216,7 +215,6 @@ void main() {
     testWidgets('More models beside its row at the window’s bottom, '
         '$width wide', (tester) async {
       final window = Size(width, 760);
-      viewport(tester, window);
       final fake = FakeDaemon([chat('c', 'claude', 'Plant the beds')])
         ..answer = ((input) => switch (input) {
           GetChatRequest() => GetChatResponse(
@@ -245,10 +243,7 @@ void main() {
           ),
           _ => null,
         });
-      final d = await fake.connect(tester);
-      d.select('c');
-      await tester.pumpWidget(NushiApp(daemon: d));
-      await tester.pumpAndSettle();
+      final d = await openApp(tester, fake, size: window);
       await tester.tap(find.byTooltip('Model, Effort'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('More models'));

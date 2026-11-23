@@ -115,7 +115,6 @@ Future<(Daemon, FakeDaemon)> _app(
   Brightness brightness = Brightness.dark,
   Map<int, GitHubItem>? items,
 }) async {
-  viewport(tester, size, brightness: brightness);
   widgetOrder.value = ['Pull request'];
   final known = items ?? _stack;
   final c = chat('c', 'claude', 'Paginate the feed')
@@ -138,10 +137,7 @@ Future<(Daemon, FakeDaemon)> _app(
       ),
       _ => null,
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   return (d, fake);
 }
 

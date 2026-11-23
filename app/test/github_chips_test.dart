@@ -89,25 +89,21 @@ Future<(Daemon, FakeDaemon)> _app(
   required Size size,
   Brightness brightness = Brightness.dark,
 }) async {
-  viewport(tester, size, brightness: brightness);
   showDetails.value = false;
   final c = chat('c', 'claude', 'Paginate the feed');
   final fake = FakeDaemon([c])
-    ..answer = (input) => switch (input) {
-      GetChatRequest() => GetChatResponse(
-        chat: c,
-        items: [
-          Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: _user),
-          Item(
-            id: 't',
-            kind: ItemKind.ITEM_KIND_TOOL_CALL,
-            title: 'gh pr view 221',
-            status: 'completed',
-            text: 'https://github.com/lumen-dev/lumen/pull/221',
-          ),
-          Item(id: 'm', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: _agent),
-        ],
+    ..chatItems['c'] = [
+      Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: _user),
+      Item(
+        id: 't',
+        kind: ItemKind.ITEM_KIND_TOOL_CALL,
+        title: 'gh pr view 221',
+        status: 'completed',
+        text: 'https://github.com/lumen-dev/lumen/pull/221',
       ),
+      Item(id: 'm', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: _agent),
+    ]
+    ..answer = (input) => switch (input) {
       GetGitHubItemsRequest(:final refs) => GetGitHubItemsResponse(
         items: [
           for (final r in refs)
@@ -122,10 +118,7 @@ Future<(Daemon, FakeDaemon)> _app(
       ),
       _ => null,
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   // The chips' asks, gathered.
   await tester.pump(GitHubItems.gather);
   await tester.pumpAndSettle();

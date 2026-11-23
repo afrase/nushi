@@ -52,18 +52,11 @@ Future<Daemon> _app(
   double width = 1400,
   bool details = true,
 }) async {
-  viewport(tester, Size(width, 560));
   showDetails.value = details;
   paneWidths.value = {};
   final c = chat('c', 'claude', 'Fix the login redirect');
-  final fake = FakeDaemon([c])
-    ..answer = (input) => input is GetChatRequest
-        ? GetChatResponse(chat: c, items: _items)
-        : null;
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final fake = FakeDaemon([c])..chatItems['c'] = _items;
+  final d = await openApp(tester, fake, size: Size(width, 560));
   return d;
 }
 

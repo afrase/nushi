@@ -32,7 +32,6 @@ Future<(Daemon, FakeDaemon)> _open(
   Brightness brightness = Brightness.dark,
   bool linked = true,
 }) async {
-  viewport(tester, size, brightness: brightness);
   showDetails.value = false;
   final whole = fixturePull()..item.author = 'robin';
   final c = chat(
@@ -67,10 +66,7 @@ Future<(Daemon, FakeDaemon)> _open(
       ),
       _ => null,
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   return (d, fake);
 }
 

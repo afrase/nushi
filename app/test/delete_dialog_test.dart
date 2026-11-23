@@ -47,17 +47,18 @@ Future<(FakeDaemon, Daemon)> _open(
   Brightness brightness = Brightness.dark,
   PlanDeleteChatResponse? plan,
 }) async {
-  viewport(tester, const Size(900, 620), brightness: brightness);
   showDetails.value = false;
   final c = chat('c', 'claude', 'Tidy the note list', folder: _wt)
     ..worktree = Worktree(repo: _repo, path: _wt, branch: 'nushi/quiet-fox');
   final fake = FakeDaemon([c])
     ..answer = (input) =>
         input is PlanDeleteChatRequest ? plan ?? _plan(others) : null;
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(
+    tester,
+    fake,
+    size: const Size(900, 620),
+    brightness: brightness,
+  );
   FocusManager.instance.primaryFocus?.unfocus(); // no caret blinking
   unawaited(
     showDeleteChat(tester.element(find.byType(ChatView)), d.chats['c']!, d),

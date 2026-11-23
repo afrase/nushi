@@ -62,7 +62,6 @@ const _minutes = {
 /// The app on a chat with [items], the details panel shown, and the fake
 /// daemon behind it.
 Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, List<Item> items) async {
-  viewport(tester, const Size(2400, 900));
   showDetails.value = true;
   paneWidths.value = {};
   collapsedWidgets.value = {};
@@ -98,10 +97,7 @@ Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, List<Item> items) async {
       );
       return s.stream;
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: const Size(2400, 900));
   return (d, fake);
 }
 

@@ -148,13 +148,14 @@ Future<Daemon> _app(
   bool last = false,
   bool details = false,
 }) async {
-  viewport(tester, Size(width, 900), brightness: brightness);
   showDetails.value = details;
   paneWidths.value = {};
-  final d = await _fake().connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(
+    tester,
+    _fake(),
+    size: Size(width, 900),
+    brightness: brightness,
+  );
   final c = d.chats['c']!;
   files.forEach(c.openInFiles);
   if (files.isNotEmpty && !last) c.openInFiles(files.first);

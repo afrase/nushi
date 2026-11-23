@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/conventions.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
@@ -37,13 +36,14 @@ void main() {
             'Enter starts a new line ${on ? 'on' : 'off'}', (tester) async {
           enterStartsLine.value = on;
           if (linux) native.conventions = linuxConventions;
-          viewport(tester, size, brightness: brightness);
           showDetails.value = false;
           final fake = FakeDaemon([chat('c', 'claude', 'Send keys')]);
-          final d = await fake.connect(tester);
-          d.select('c');
-          await tester.pumpWidget(NushiApp(daemon: d));
-          await tester.pumpAndSettle();
+          final d = await openApp(
+            tester,
+            fake,
+            size: size,
+            brightness: brightness,
+          );
           final field = find.descendant(
             of: find.byType(Composer),
             matching: find.byType(TextField),

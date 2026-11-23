@@ -31,7 +31,6 @@ Future<(Daemon, FakeDaemon)> _app(
   Size size = const Size(1400, 800),
   Brightness? brightness,
 }) async {
-  viewport(tester, size, brightness: brightness);
   paneWidths.value = {};
   showDetails.value = false;
   final c = chat('c', 'claude', 'Fix the login redirect');
@@ -55,10 +54,7 @@ Future<(Daemon, FakeDaemon)> _app(
       ),
       _ => null,
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   // The list carries no status: the chat's event does.
   fake.emit(EventsResponse(chatId: 'c', seq: Int64(9), status: status));
   await tester.pumpAndSettle();

@@ -12,7 +12,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/edit_bars.dart';
 import 'package:nushi/file_edit.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -74,7 +73,6 @@ Future<(Daemon, FakeDaemon)> openEditor(
   Object? Function(Object input)? answer,
   Set<String> readOnly = const {},
 }) async {
-  viewport(tester, Size(width, 900), brightness: brightness);
   showDetails.value = false;
   final fake = FakeDaemon([editChat, ...more])
     ..answer = ((input) =>
@@ -105,10 +103,12 @@ Future<(Daemon, FakeDaemon)> openEditor(
   fake.files.addAll(files);
   fake.readOnlyFiles.addAll(readOnly);
   fake.fileDiffs.addAll(fileDiffs);
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(
+    tester,
+    fake,
+    size: Size(width, 900),
+    brightness: brightness,
+  );
   open.forEach(d.chats['c']!.openInFiles);
   await tester.pumpAndSettle();
   return (d, fake);

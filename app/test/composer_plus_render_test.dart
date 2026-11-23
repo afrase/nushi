@@ -103,16 +103,13 @@ void main() {
       testWidgets('the window at $name: the menu open, then files attached', (
         tester,
       ) async {
-        viewport(
+        sidebarHidden.value = true;
+        final d = await openApp(
           tester,
-          Size(width, 900),
+          _fake(),
+          size: Size(width, 900),
           brightness: dark ? Brightness.dark : Brightness.light,
         );
-        sidebarHidden.value = true;
-        final d = await _fake().connect(tester);
-        d.select('c');
-        await tester.pumpWidget(NushiApp(daemon: d));
-        await tester.pumpAndSettle();
         await tester.tap(find.byTooltip(plusTooltip));
         await tester.pump();
         expect(find.text('Add files or photos'), findsOne);

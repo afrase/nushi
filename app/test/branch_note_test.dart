@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_view.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -59,7 +58,6 @@ Future<Future<void> Function()> _open(
   required double details,
   Brightness brightness = Brightness.dark,
 }) async {
-  viewport(tester, Size(width, 620), brightness: brightness);
   paneWidths.value = {'details': details};
   final c =
       chat(
@@ -86,10 +84,12 @@ Future<Future<void> Function()> _open(
       ),
       _ => null,
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(
+    tester,
+    fake,
+    size: Size(width, 620),
+    brightness: brightness,
+  );
   FocusManager.instance.primaryFocus?.unfocus(); // no caret blinking
   await tester.pumpAndSettle();
   return () async {

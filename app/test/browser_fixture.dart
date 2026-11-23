@@ -11,7 +11,6 @@ import 'package:nushi/browser_bar.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/web_find.dart';
@@ -170,7 +169,6 @@ Future<Daemon> browserApp(
   double width = 1700,
   Brightness? brightness,
 }) async {
-  viewport(tester, Size(width, 900), brightness: brightness);
   showDetails.value = false;
   final fake =
       FakeDaemon([
@@ -194,10 +192,12 @@ Future<Daemon> browserApp(
           addTearDown(s.close);
           return s.stream;
         };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(
+    tester,
+    fake,
+    size: Size(width, 900),
+    brightness: brightness,
+  );
   return d;
 }
 

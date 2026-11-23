@@ -88,7 +88,6 @@ Future<(Daemon, FakeDaemon)> _app(
   required Brightness brightness,
   bool update = false,
 }) async {
-  viewport(tester, size, brightness: brightness);
   showDetails.value = false;
   sidebarHidden.value = true;
   brewCask = 'nushi';
@@ -101,10 +100,7 @@ Future<(Daemon, FakeDaemon)> _app(
         ? GetChatResponse(chat: c, items: _items)
         : null,
   );
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   fake.emit(_config);
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));

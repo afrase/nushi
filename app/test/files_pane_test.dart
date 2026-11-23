@@ -132,7 +132,6 @@ Future<(Daemon, _Folder)> _app(
   bool open = true,
   List<String> git = _gitFiles,
 }) async {
-  viewport(tester, size, brightness: brightness);
   showDetails.value = false;
   filesChats.value = open ? {'c'} : {};
   final folder = _Folder();
@@ -143,10 +142,12 @@ Future<(Daemon, _Folder)> _app(
       unawaited(s.close());
     }
   });
-  final d = await _fake(folder, previews, git: git).connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(
+    tester,
+    _fake(folder, previews, git: git),
+    size: size,
+    brightness: brightness,
+  );
   return (d, folder);
 }
 

@@ -25,22 +25,18 @@ Item _msg(String id, ItemKind kind, String text) =>
 /// The app on chat c, its transcript four messages, two naming the relay;
 /// its Changes two files, one with Sub in it.
 Future<Daemon> _app(WidgetTester tester) async {
-  viewport(tester, const Size(1700, 700), brightness: Brightness.dark);
   showDetails.value = false;
   const user = ItemKind.ITEM_KIND_USER_MESSAGE;
   const agent = ItemKind.ITEM_KIND_AGENT_MESSAGE;
   final c = chat('c', 'claude', 'Flaky relay');
   final fake = FakeDaemon([c])
+    ..chatItems['c'] = [
+      _msg('u1', user, 'Why does the relay test fail?'),
+      _msg('a1', agent, 'It waits on a fixed sleep.'),
+      _msg('u2', user, 'Use a fake clock.'),
+      _msg('a2', agent, 'Done: the relay test uses the fake clock now.'),
+    ]
     ..answer = (input) => switch (input) {
-      GetChatRequest() => GetChatResponse(
-        chat: c,
-        items: [
-          _msg('u1', user, 'Why does the relay test fail?'),
-          _msg('a1', agent, 'It waits on a fixed sleep.'),
-          _msg('u2', user, 'Use a fake clock.'),
-          _msg('a2', agent, 'Done: the relay test uses the fake clock now.'),
-        ],
-      ),
       GetFolderStatusRequest() => GetFolderStatusResponse(
         git: true,
         branch: 'fix',
@@ -60,10 +56,12 @@ Future<Daemon> _app(WidgetTester tester) async {
       ),
       _ => null,
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(
+    tester,
+    fake,
+    size: const Size(1700, 700),
+    brightness: Brightness.dark,
+  );
   return d;
 }
 

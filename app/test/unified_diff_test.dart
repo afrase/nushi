@@ -227,12 +227,8 @@ void main() {
   });
 
   testWidgets('View menu and palette switch it', (tester) async {
-    viewport(tester, const Size(1700, 700));
     final fake = FakeDaemon([chat('c', 'claude', 'Calc')])..answer = _answers;
-    final d = await fake.connect(tester);
-    d.select('c');
-    await tester.pumpWidget(NushiApp(daemon: d));
-    await tester.pumpAndSettle();
+    final d = await openApp(tester, fake, size: const Size(1700, 700));
     List<String> viewMenu({String? pick}) {
       final all = viewItems(tester);
       if (pick != null) all.firstWhere((m) => m.label == pick).onSelected!();

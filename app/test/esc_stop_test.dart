@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -17,7 +16,6 @@ import 'harness.dart';
 /// The app on chat c, its turn running, the box focused; claude's
 /// /compact among its commands.
 Future<(Daemon, FakeDaemon)> _app(WidgetTester tester) async {
-  viewport(tester, const Size(1400, 800));
   final c = chat('c', 'claude', 'Fix the login redirect');
   final status = ChatStatus(
     busy: true,
@@ -28,10 +26,7 @@ Future<(Daemon, FakeDaemon)> _app(WidgetTester tester) async {
       GetChatRequest(chatId: 'c') => GetChatResponse(chat: c, status: status),
       _ => null,
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: const Size(1400, 800));
   fake.emit(EventsResponse(chatId: 'c', seq: Int64(9), status: status));
   await tester.pump();
   d.chats['c']!.commands = [Command(name: 'compact', description: 'Compact')];

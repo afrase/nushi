@@ -20,7 +20,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/file_cards.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart' show maxImageBytes;
-import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/pasted_files.dart';
@@ -776,15 +775,11 @@ void main() {
   }, variant: onMac);
 
   testWidgets('files dropped on the chat take the same way', (tester) async {
-    viewport(tester, const Size(1200, 700));
     final folder = Directory.systemTemp.createTempSync('plus').path;
     addTearDown(() => Directory(folder).deleteSync(recursive: true));
     final c = chat('c', 'claude', 'Drop here', folder: folder);
     final fake = FakeDaemon([c]);
-    final d = await fake.connect(tester);
-    d.select('c');
-    await tester.pumpWidget(NushiApp(daemon: d));
-    await tester.pumpAndSettle();
+    final d = await openApp(tester, fake, size: const Size(1200, 700));
     final drop = tester.widget<DropTarget>(find.byType(DropTarget).first);
     drop.onDragDone!(
       DropDoneDetails(

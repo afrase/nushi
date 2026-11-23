@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
-import 'package:nushi/daemon.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/settings.dart';
 
@@ -98,13 +96,9 @@ void main() {
     Future<(TextEditingController, Future<void> Function())> composer(
       WidgetTester tester,
     ) async {
-      viewport(tester, const Size(1200, 700));
       showDetails.value = false;
       final fake = FakeDaemon([chat('c', 'claude', 'Lists')]);
-      final d = await fake.connect(tester);
-      d.select('c');
-      await tester.pumpWidget(NushiApp(daemon: d));
-      await tester.pumpAndSettle();
+      final d = await openApp(tester, fake, size: const Size(1200, 700));
       final field = find.descendant(
         of: find.byType(Composer),
         matching: find.byType(TextField),

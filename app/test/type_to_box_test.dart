@@ -7,7 +7,6 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/settings.dart';
@@ -25,28 +24,18 @@ const _answer =
     'DateTime, so sorting compares instants rather than strings.';
 
 Future<Daemon> _open(WidgetTester tester) async {
-  viewport(tester, const Size(1400, 700));
   showDetails.value = false;
   final c = chat('c', 'claude', 'Timestamps in the sidebar');
   final fake = FakeDaemon([c])
-    ..answer = (input) => switch (input) {
-      GetChatRequest() => GetChatResponse(
-        chat: c,
-        items: [
-          Item(
-            id: 'u1',
-            kind: ItemKind.ITEM_KIND_USER_MESSAGE,
-            text: 'Why sort by time?',
-          ),
-          Item(id: 'm1', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: _answer),
-        ],
+    ..chatItems['c'] = [
+      Item(
+        id: 'u1',
+        kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+        text: 'Why sort by time?',
       ),
-      _ => null,
-    };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+      Item(id: 'm1', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: _answer),
+    ];
+  final d = await openApp(tester, fake, size: const Size(1400, 700));
   return d;
 }
 

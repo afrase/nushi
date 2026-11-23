@@ -4,7 +4,6 @@
 // every fill its chip can sit on.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/markdown.dart';
@@ -137,17 +136,18 @@ void main() {
     for (final (where, caret) in [('outside', 33), ('inside', 13)]) {
       testWidgets('the window, $width wide, ${b.name}: caret $where the '
           "composer's code", (tester) async {
-        viewport(tester, Size(width, 900), brightness: b);
         showDetails.value = false;
         final c = chat('c', 'claude', 'Why make check vets twice');
         final fake = FakeDaemon([c])
           ..answer = ((input) => input is GetChatRequest
               ? GetChatResponse(chat: c, items: _items)
               : null);
-        final d = await fake.connect(tester);
-        d.select('c');
-        await tester.pumpWidget(NushiApp(daemon: d));
-        await tester.pumpAndSettle();
+        final d = await openApp(
+          tester,
+          fake,
+          size: Size(width, 900),
+          brightness: b,
+        );
         d.chats['c']!.draft.text.value = TextEditingValue(
           text: 'Then make `check` run `vet` once.',
           selection: TextSelection.collapsed(offset: caret),

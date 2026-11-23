@@ -53,7 +53,6 @@ Future<(Daemon, FakeDaemon)> _app(
   WidgetTester tester, {
   required String state221,
 }) async {
-  viewport(tester, const Size(1700, 900));
   widgetOrder.value = ['Pull request'];
   final items = {
     215: _item(215, 'merged', 'feed-cursor'),
@@ -91,10 +90,7 @@ Future<(Daemon, FakeDaemon)> _app(
       DeleteGitHubBranchRequest() => DeleteGitHubBranchResponse(deleted: true),
       _ => null,
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake);
   return (d, fake);
 }
 

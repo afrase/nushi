@@ -46,7 +46,6 @@ final _items = [
 ];
 
 Future<Daemon> _app(WidgetTester tester, double width) async {
-  viewport(tester, Size(width, 800));
   showDetails.value = false;
   final c = chat('c', 'claude', 'Fix the login redirect');
   final fake = FakeDaemon([c])
@@ -63,10 +62,7 @@ Future<Daemon> _app(WidgetTester tester, double width) async {
       addTearDown(s.close);
       return s.stream;
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: Size(width, 800));
   return d;
 }
 

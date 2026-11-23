@@ -12,7 +12,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/open_file.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/phone/artifacts_screen.dart';
@@ -110,7 +109,6 @@ FakeDaemon _fake() {
 const _minutes = {'report.md': 2, 'chart.png': 15, 'sub.md': 125};
 
 Future<Daemon> _app(WidgetTester tester) async {
-  viewport(tester, const Size(1700, 900));
   showDetails.value = false;
   final was = fileChanged;
   fileChanged = (p) => switch (_minutes[p.split('/').last]) {
@@ -118,10 +116,7 @@ Future<Daemon> _app(WidgetTester tester) async {
     null => null,
   };
   addTearDown(() => fileChanged = was);
-  final d = await _fake().connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, _fake());
   return d;
 }
 

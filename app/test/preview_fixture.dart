@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/files_pane.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -21,12 +20,8 @@ Future<Daemon> previewApp(
   Brightness? brightness,
   String? file,
 }) async {
-  viewport(tester, size, brightness: brightness);
   showDetails.value = false;
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   if (file == null) return d;
   d.chats['c']!.openInFiles(file);
   await tester.pumpAndSettle();

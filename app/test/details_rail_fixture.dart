@@ -8,7 +8,6 @@ import 'package:nushi/context_cache.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -161,7 +160,6 @@ Future<(Daemon, FakeDaemon)> railApp(
   bool mcp = false,
   bool busy = false,
 }) async {
-  viewport(tester, size, brightness: brightness);
   forgetContext('c'); // another test's
   showDetails.value = true;
   sidebarHidden.value = true;
@@ -190,10 +188,7 @@ Future<(Daemon, FakeDaemon)> railApp(
           _ => null,
         };
   if (mcp) fake.agents.first.mcp = true; // Claude's, read by Nushi
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   await tester.pump(const Duration(seconds: 2)); // the panel asks
   await tester.pumpAndSettle();
   FocusManager.instance.primaryFocus?.unfocus(); // no caret blinking

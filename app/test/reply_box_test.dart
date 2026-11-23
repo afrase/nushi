@@ -4,9 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/composer.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
 import 'package:nushi/settings.dart';
@@ -30,35 +28,25 @@ Future<(FakeDaemon, Future<void> Function())> _open(
   Brightness brightness = Brightness.dark,
   bool low = false,
 }) async {
-  viewport(tester, size, brightness: brightness);
   showDetails.value = false;
   final c = chat('c', 'claude', 'Timestamps in the sidebar');
   final fake = FakeDaemon([c])
-    ..answer = (input) => switch (input) {
-      GetChatRequest() => GetChatResponse(
-        chat: c,
-        items: [
-          Item(
-            id: 'u1',
-            kind: ItemKind.ITEM_KIND_USER_MESSAGE,
-            text: 'Why does the sidebar sort chats by their time?',
-          ),
-          if (low)
-            for (var i = 0; i < 6; i++)
-              Item(
-                id: 'f$i',
-                kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
-                text: 'Looking at `sidebar.dart` and `chat.dart`, part $i.',
-              ),
-          Item(id: 'm1', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: _answer),
-        ],
+    ..chatItems['c'] = [
+      Item(
+        id: 'u1',
+        kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+        text: 'Why does the sidebar sort chats by their time?',
       ),
-      _ => null,
-    };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+      if (low)
+        for (var i = 0; i < 6; i++)
+          Item(
+            id: 'f$i',
+            kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+            text: 'Looking at `sidebar.dart` and `chat.dart`, part $i.',
+          ),
+      Item(id: 'm1', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: _answer),
+    ];
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   return (
     fake,
     () async {

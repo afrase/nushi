@@ -9,7 +9,6 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/window_drag_linux.dart';
@@ -114,7 +113,6 @@ Future<(Daemon, FakeDaemon)> panesApp(
       ..window = const LinuxWindow()
       ..conventions = linuxConventions;
   }
-  viewport(tester, Size(width, height), brightness: brightness);
   showDetails.value = details;
   sidebarHidden.value = !sidebar;
   paneWidths.value = widths;
@@ -188,10 +186,12 @@ Future<(Daemon, FakeDaemon)> panesApp(
     ..on(answer)
     ..streams = streams;
   shells.replay['t'] = r'$ ';
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(
+    tester,
+    fake,
+    size: Size(width, height),
+    brightness: brightness,
+  );
   await openPanesIn(tester, d, open);
   return (d, fake);
 }

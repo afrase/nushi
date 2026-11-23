@@ -13,7 +13,6 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -97,16 +96,12 @@ Future<(FakeDaemon, Daemon)> _window(
   List<Item> items, {
   Size size = const Size(1700, 900),
 }) async {
-  viewport(tester, size);
   final c = chat('c', 'claude', 'Fix the login redirect');
   final fake = FakeDaemon([c])
     ..answer = ((input) => input is GetChatRequest
         ? GetChatResponse(chat: c, items: items)
         : null);
-  final d = await fake.connect(tester)
-    ..select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size);
   return (fake, d);
 }
 

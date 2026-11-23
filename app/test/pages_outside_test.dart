@@ -48,7 +48,6 @@ Future<(FakeDaemon, Daemon)> _app(
   Brightness? brightness,
   List<Item> more = const [],
 }) async {
-  viewport(tester, Size(width, 900), brightness: brightness);
   showDetails.value = false;
   final c = chat('c', 'claude', 'Build the tea shop');
   final fake = FakeDaemon([c])
@@ -86,10 +85,12 @@ Future<(FakeDaemon, Daemon)> _app(
       addTearDown(s.close);
       return s.stream;
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(
+    tester,
+    fake,
+    size: Size(width, 900),
+    brightness: brightness,
+  );
   return (fake, d);
 }
 

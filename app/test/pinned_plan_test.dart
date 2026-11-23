@@ -13,7 +13,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jump_chip.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/pinned_plan.dart';
 import 'package:nushi/settings.dart';
@@ -35,7 +34,6 @@ Future<(Daemon, FakeDaemon)> _app(
   bool still = false,
   bool update = false,
 }) async {
-  viewport(tester, size);
   if (still) {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
@@ -60,10 +58,7 @@ Future<(Daemon, FakeDaemon)> _app(
       ),
       _ => null,
     });
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size);
   if (!idle) {
     d.chats['c']!
       ..busy = true

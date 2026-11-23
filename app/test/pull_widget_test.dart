@@ -45,7 +45,6 @@ Future<(Daemon, FakeDaemon)> _app(
   bool details = true,
   bool archived = false,
 }) async {
-  viewport(tester, size);
   showDetails.value = details;
   collapsedWidgets.value = {};
   widgetOrder.value = ['Pull request'];
@@ -70,10 +69,7 @@ Future<(Daemon, FakeDaemon)> _app(
       GetGitHubPullRequest() => GetGitHubPullResponse(pull: whole),
       _ => null,
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size);
   return (d, fake);
 }
 

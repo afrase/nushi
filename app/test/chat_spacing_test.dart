@@ -115,7 +115,6 @@ Future<Daemon> _app(
   double height = 1000,
   String? file,
 }) async {
-  viewport(tester, Size(width, height), brightness: brightness);
   showDetails.value = false;
   final c = chat('c', 'claude', 'Fix the login redirect after it expires');
   final fake = FakeDaemon([c])
@@ -136,10 +135,12 @@ Future<Daemon> _app(
       );
       return s.stream;
     };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(
+    tester,
+    fake,
+    size: Size(width, height),
+    brightness: brightness,
+  );
   if (file != null) {
     d.chats['c']!.openInFiles(file);
     await tester.pumpAndSettle();

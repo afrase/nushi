@@ -30,7 +30,6 @@ void main() {
           tester,
         ) async {
           if (linux) native.conventions = linuxConventions;
-          viewport(tester, size, brightness: brightness);
           showDetails.value = false;
           final fake = FakeDaemon([chat('c', 'claude', 'Commands')]);
           final shells = FakeShells(fake)
@@ -39,10 +38,12 @@ void main() {
               exit: 0,
             );
           addTearDown(shells.close);
-          final d = await fake.connect(tester);
-          d.select('c');
-          await tester.pumpWidget(NushiApp(daemon: d));
-          await tester.pumpAndSettle();
+          final d = await openApp(
+            tester,
+            fake,
+            size: size,
+            brightness: brightness,
+          );
           final field = find.descendant(
             of: find.byType(Composer),
             matching: find.byType(TextField),

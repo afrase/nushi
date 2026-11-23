@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -427,7 +426,6 @@ Future<(Daemon, FakeDaemon)> openPullTab(
   bool busy = false,
   GetGitHubCommitsResponse? commits,
 }) async {
-  viewport(tester, size, brightness: brightness);
   showDetails.value = details;
   collapsedWidgets.value = {};
   widgetOrder.value = ['Pull request'];
@@ -504,10 +502,7 @@ Future<(Daemon, FakeDaemon)> openPullTab(
           ),
           _ => null,
         };
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   if (open) {
     await tester.tap(
       find.descendant(

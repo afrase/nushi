@@ -8,7 +8,6 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/controls.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/file_view.dart';
 import 'package:nushi/files_pane.dart';
@@ -40,7 +39,6 @@ void main() {
     final pane = preview ? ', the preview open' : '';
     testWidgets('the whole window, $width wide, $name$pane: ⋯ at the '
         'header’s end', (tester) async {
-      viewport(tester, Size(width, 600), brightness: brightness);
       final link = GitHubLink(
         host: 'github.com',
         repo: 'afrase/nushi',
@@ -85,10 +83,12 @@ void main() {
               );
               return s.stream;
             };
-      final d = await fake.connect(tester);
-      d.select('c');
-      await tester.pumpWidget(NushiApp(daemon: d));
-      await tester.pumpAndSettle();
+      final d = await openApp(
+        tester,
+        fake,
+        size: Size(width, 600),
+        brightness: brightness,
+      );
       if (preview) {
         d.chats['c']!.openInFiles('docs/plan.md');
         await tester.pumpAndSettle();

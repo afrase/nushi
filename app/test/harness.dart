@@ -11,11 +11,14 @@ import 'package:nushi/clock.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/main.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/toast.dart';
+
+import 'fake_daemon.dart';
 
 /// The time the app sees in every test ([clock], set before each by
 /// `flutter_test_config.dart`): fixed, so an age a golden shows never moves.
@@ -158,6 +161,25 @@ List<PlatformMenuItem> viewItems(WidgetTester tester) {
 
 /// [fixtureNow] less [d], as the daemon sends a time.
 Int64 msAgo(Duration d) => Int64(fixtureNow.subtract(d).millisecondsSinceEpoch);
+
+/// The app on [fake]'s chat `c`, connected, in a window of [size] in
+/// [brightness] (the system's unless given), settled: the way most tests
+/// open it. Prefs (details shown, the sidebar) stay the caller's to set,
+/// since every test starts with them as at launch; a test that opens
+/// another chat, or none, or doesn't settle, opens the app itself.
+Future<Daemon> openApp(
+  WidgetTester tester,
+  FakeDaemon fake, {
+  Size size = const Size(1700, 900),
+  Brightness? brightness,
+}) async {
+  viewport(tester, size, brightness: brightness);
+  final d = await fake.connect(tester);
+  d.select('c');
+  await tester.pumpWidget(NushiApp(daemon: d));
+  await tester.pumpAndSettle();
+  return d;
+}
 
 /// Takes the app away and disposes [d], so its timers end with the test.
 Future<void> closeView(WidgetTester tester, Daemon d) async {

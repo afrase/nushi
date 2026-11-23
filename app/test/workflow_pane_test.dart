@@ -6,7 +6,6 @@ import 'package:nushi/background_commands.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/subagent_pane.dart';
@@ -153,7 +152,6 @@ Future<(FakeDaemon, Daemon)> _app(
   WidgetTester tester, {
   Map<String, double> widths = const {},
 }) async {
-  viewport(tester, const Size(1700, 900));
   showDetails.value = false;
   paneWidths.value = widths;
   final fake = workflowFake()
@@ -172,10 +170,7 @@ Future<(FakeDaemon, Daemon)> _app(
             )
           : null,
     );
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  final d = await openApp(tester, fake);
   d.chats['c']!.pane.value = 'wf';
   await tester.pumpAndSettle();
   return (fake, d);

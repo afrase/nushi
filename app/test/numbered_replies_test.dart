@@ -46,26 +46,20 @@ Future<Future<void> Function()> _open(
   showDetails.value = false;
   final c = chat('c', 'claude', 'Tracer setup');
   final fake = FakeDaemon([c])
-    ..answer = (input) => switch (input) {
-      GetChatRequest() => GetChatResponse(
-        chat: c,
-        items: [
-          Item(
-            id: 'u1',
-            kind: ItemKind.ITEM_KIND_USER_MESSAGE,
-            text: withReplies(_cards, 'Anything else you would change?'),
-          ),
-          Item(
-            id: 'm1',
-            kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
-            text:
-                '#1: yes, renamed.\n\n#2: it returns the error now.\n\n'
-                '#3: parsing once keeps sorting cheap.',
-          ),
-        ],
+    ..chatItems['c'] = [
+      Item(
+        id: 'u1',
+        kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+        text: withReplies(_cards, 'Anything else you would change?'),
       ),
-      _ => null,
-    };
+      Item(
+        id: 'm1',
+        kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+        text:
+            '#1: yes, renamed.\n\n#2: it returns the error now.\n\n'
+            '#3: parsing once keeps sorting cheap.',
+      ),
+    ];
   final d = await fake.connect(tester);
   d.select('c');
   _cards.forEach(d.chats['c']!.draft.addReply);
