@@ -22898,7 +22898,8 @@ class Device extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   void clearConnected() => $_clearField(5);
 
-  /// "web" for the web app, "" for an app.
+  /// Always "web": every device is the web app (ADR 0054). An older app
+  /// labels a device by it.
   @$pb.TagNumber(6)
   $core.String get kind => $_getSZ(5);
   @$pb.TagNumber(6)

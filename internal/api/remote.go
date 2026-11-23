@@ -33,6 +33,10 @@ func (s *server) RevokeDevice(_ context.Context, req *connect.Request[nushiv1.Re
 	return done[nushiv1.RevokeDeviceResponse](s.Remote.Revoke(req.Msg.Id), notFound)
 }
 
+// webKind is every device's Device.kind: each is the web app (ADR 0054).
+// The app (v0.52.0 and since) labels a device by it, "" as an iPhone app.
+const webKind = "web"
+
 // remoteProto is r for the API. The id goes in Remote.id, not
 // Remote.rendezvous: a phone from before the Noise key moved on a revoke
 // moves to rendezvous with the key it pinned, which the new id doesn't
@@ -41,7 +45,7 @@ func remoteProto(r model.Remote) *nushiv1.Remote {
 	out := &nushiv1.Remote{On: r.On, Relay: r.Relay, State: r.State, Error: r.Error, Id: r.Rendezvous, Key: r.Key}
 	for _, d := range r.Devices {
 		out.Devices = append(out.Devices, &nushiv1.Device{Id: d.ID, Name: d.Name, Paired: d.Paired.UnixMilli(),
-			LastSeen: unixMs(d.LastSeen), Connected: d.Connected, Kind: d.Kind, Push: d.Push != nil})
+			LastSeen: unixMs(d.LastSeen), Connected: d.Connected, Kind: webKind, Push: d.Push != nil})
 	}
 	if p := r.Pairing; p != nil {
 		out.Pairing = &nushiv1.Pairing{Name: p.Name, Code: p.Code}

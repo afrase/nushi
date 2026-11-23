@@ -98,7 +98,7 @@ func pushing(t *testing.T, tune ...func(*timing)) (*Service, *pushes, string, st
 	dir := t.TempDir()
 	st := store.New(dir)
 	testcheck.NoErr(t, st.SaveRemote(model.RemoteSettings{Relay: "ws://relay.test"}))
-	testcheck.NoErr(t, st.SaveDevices([]model.Device{{ID: "d1", Name: "Test phone", Kind: "web", Key: newKey(t).Public, Paired: time.Now()}}))
+	testcheck.NoErr(t, st.SaveDevices([]model.Device{{ID: "d1", Name: "Test phone", Key: newKey(t).Public, Paired: time.Now()}}))
 	tm := defaultTiming()
 	tm.finished = 20 * time.Millisecond
 	for _, f := range tune {

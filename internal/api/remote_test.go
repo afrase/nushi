@@ -38,3 +38,17 @@ func TestRemoteSaysItWasReset(t *testing.T) {
 		t.Fatalf("reset %v", r)
 	}
 }
+
+// Every device goes out as the web app, which an older app labels it by,
+// whatever devices.json kept.
+func TestEveryDeviceIsTheWebApp(t *testing.T) {
+	r := remoteProto(model.Remote{Devices: []model.Device{{ID: "d1"}, {ID: "d2"}}})
+	for _, d := range r.GetDevices() {
+		if d.GetKind() != "web" {
+			t.Errorf("%s: kind %q", d.GetId(), d.GetKind())
+		}
+	}
+	if len(r.GetDevices()) != 2 {
+		t.Errorf("devices %v", r.GetDevices())
+	}
+}

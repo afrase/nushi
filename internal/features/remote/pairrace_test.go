@@ -22,7 +22,7 @@ func TestAllowRacingARevokeLeavesNoGhost(t *testing.T) {
 	s := startRemote(t, t.TempDir(), url)
 	for range 5 {
 		s.mu.Lock()
-		other, err := s.add("other", "web", newKey(t).Public)
+		other, err := s.add("other", newKey(t).Public)
 		s.mu.Unlock()
 		testcheck.NoErr(t, err)
 		qr, err := s.StartPairing()
@@ -67,7 +67,7 @@ func TestUnpairDropsWhatTheDeviceOpened(t *testing.T) {
 	s := startRemote(t, t.TempDir(), url)
 	b := newKey(t)
 	s.mu.Lock()
-	id, err := s.add("b", "app", b.Public)
+	id, err := s.add("b", b.Public)
 	daemon, key := s.id, s.key.Public
 	s.mu.Unlock()
 	testcheck.NoErr(t, err)

@@ -49,8 +49,6 @@ type Device struct {
 	Key      []byte    `json:"key"` // its static public key
 	Paired   time.Time `json:"paired"`
 	LastSeen time.Time `json:"last_seen,omitzero"`
-	// Kind is "web" for the web app, "" for an app.
-	Kind string `json:"kind,omitempty"`
 	// Push is its Web Push subscription, when notifications are on.
 	Push *Push `json:"push,omitempty"`
 	// Connected says it has a connection open now.

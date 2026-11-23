@@ -17642,7 +17642,8 @@ type Device struct {
 	Paired    int64 `protobuf:"varint,3,opt,name=paired,proto3" json:"paired,omitempty"`
 	LastSeen  int64 `protobuf:"varint,4,opt,name=last_seen,json=lastSeen,proto3" json:"last_seen,omitempty"`
 	Connected bool  `protobuf:"varint,5,opt,name=connected,proto3" json:"connected,omitempty"`
-	// "web" for the web app, "" for an app.
+	// Always "web": every device is the web app (ADR 0054). An older app
+	// labels a device by it.
 	Kind string `protobuf:"bytes,6,opt,name=kind,proto3" json:"kind,omitempty"`
 	// It has a push subscription: notifications are on.
 	Push          bool `protobuf:"varint,7,opt,name=push,proto3" json:"push,omitempty"`

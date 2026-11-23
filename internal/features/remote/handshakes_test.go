@@ -33,7 +33,7 @@ func TestReplayedHandshakesAreCapped(t *testing.T) {
 	}
 	phone := newKey(t)
 	s0.mu.Lock()
-	_, err = s0.add("p", "web", phone.Public)
+	_, err = s0.add("p", phone.Public)
 	id, daemonPub := s0.id, s0.key.Public
 	s0.mu.Unlock()
 	s0.Close()

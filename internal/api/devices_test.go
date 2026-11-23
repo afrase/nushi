@@ -61,7 +61,7 @@ func asDevice(t *testing.T, h http.Handler, device string) nushiv1connect.NushiS
 // on no other: one phone can't unpair another or take its notifications.
 func TestADevicesCallsAreItsOwn(t *testing.T) {
 	st := store.New(t.TempDir())
-	testcheck.NoErr(t, st.SaveDevices([]model.Device{{ID: "d1", Name: "one", Kind: "web"}, {ID: "d2", Name: "two", Kind: "web"}}))
+	testcheck.NoErr(t, st.SaveDevices([]model.Device{{ID: "d1", Name: "one"}, {ID: "d2", Name: "two"}}))
 	rs, err := remote.New(st, &relay.Dialer{}, func(net.Conn) {}, func() func() { return func() {} }, func(model.Event) {})
 	testcheck.NoErr(t, err)
 	t.Cleanup(rs.Close)

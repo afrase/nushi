@@ -3207,7 +3207,8 @@ message Device {
   int64 paired = 3;
   int64 last_seen = 4;
   bool connected = 5;
-  // "web" for the web app, "" for an app.
+  // Always "web": every device is the web app (ADR 0054). An older app
+  // labels a device by it.
   string kind = 6;
   // It has a push subscription: notifications are on.
   bool push = 7;

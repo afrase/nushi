@@ -16,7 +16,7 @@ import (
 func addRevoke(t *testing.T, s *Service, name string) {
 	t.Helper()
 	s.mu.Lock()
-	id, err := s.add(name, "web", newKey(t).Public)
+	id, err := s.add(name, newKey(t).Public)
 	s.mu.Unlock()
 	testcheck.NoErr(t, err)
 	testcheck.NoErr(t, s.Revoke(id))
@@ -85,7 +85,7 @@ func TestUndonePairingWhileOffStaysOff(t *testing.T) {
 	url := startRelay(t)
 	s := startRemote(t, t.TempDir(), url)
 	s.mu.Lock()
-	ghost, err := s.add("ghost", "web", newKey(t).Public)
+	ghost, err := s.add("ghost", newKey(t).Public)
 	s.mu.Unlock()
 	testcheck.NoErr(t, err)
 	addRevoke(t, s, "other") // ghost now waits at the id given up

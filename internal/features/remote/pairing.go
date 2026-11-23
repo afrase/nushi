@@ -31,7 +31,6 @@ type pairing struct {
 	cancel  context.CancelFunc
 	// Once a phone holding the secret has connected:
 	name, code string
-	kind       string // "web", or "" for an app
 	answer     chan bool
 }
 
@@ -114,7 +113,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 		defer stop() //nolint:gocritic,revive // every path from here returns: it runs once
 		code, name := codeOf(conn.Hash()), cleanName(hello.Name)
 		s.mu.Lock()
-		p.name, p.code, p.kind = name, code, cleanKind(hello.Kind)
+		p.name, p.code = name, code
 		s.changed()
 		s.mu.Unlock()
 		slog.Info("pairing: a phone waits for Allow", "name", name)
@@ -135,7 +134,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 			if s.pairing != p {
 				err = errEnded
 			} else {
-				id, err = s.add(name, p.kind, conn.Peer())
+				id, err = s.add(name, conn.Peer())
 			}
 		}
 		daemon := s.id
@@ -185,9 +184,10 @@ func (s *Service) paired() {
 // errEnded refuses an Allow that came as its pairing ended.
 var errEnded = errors.New("the pairing ended")
 
-// hello is a phone's first message when pairing: its name, and "web" for
-// the web app.
-type hello struct{ Name, Kind string }
+// hello is a phone's first message when pairing: its name. The web app
+// also sends "kind": "web", from when a native app was planned; every
+// device is the web app (ADR 0054), so it isn't read.
+type hello struct{ Name string }
 
 // meet waits for one phone on p's id and runs the handshake. It returns
 // the channel and the phone's hello, or nil; used says the handshake
@@ -219,14 +219,6 @@ func (s *Service) meet(ctx context.Context, p *pairing, relayURL string) (conn *
 		return nil, h, true
 	}
 	return conn, h, true
-}
-
-// cleanKind keeps a device's kind to those Nushi knows.
-func cleanKind(kind string) string {
-	if kind == "web" {
-		return kind
-	}
-	return ""
 }
 
 // codeOf is the six digits both screens show, from the handshake hash.

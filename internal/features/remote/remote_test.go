@@ -664,7 +664,7 @@ func TestOldMovingKeepsItsKey(t *testing.T) {
 	})
 	// Revoking another device moves the key; the oldest id keeps its own.
 	s.mu.Lock()
-	_, err := s.add("c", "web", newKey(t).Public)
+	_, err := s.add("c", newKey(t).Public)
 	s.mu.Unlock()
 	testcheck.NoErr(t, err)
 	var cID string
@@ -696,7 +696,7 @@ func TestRevokesInARowWaitOnlyWhereDevicesAre(t *testing.T) {
 	dropConns(t, s)
 	for i := range maxMoving + 4 {
 		s.mu.Lock()
-		_, err := s.add(fmt.Sprintf("p%d", i), "web", newKey(t).Public)
+		_, err := s.add(fmt.Sprintf("p%d", i), newKey(t).Public)
 		s.mu.Unlock()
 		testcheck.NoErr(t, err)
 		var id string
