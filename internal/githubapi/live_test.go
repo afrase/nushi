@@ -6,12 +6,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/cli/go-gh/v2/pkg/auth"
 )
 
 // testRepo is the owner's throwaway repository for these tests: public,
@@ -21,18 +20,29 @@ import (
 // other repository is read or written through the owner's token.
 const testRepo = "afrase/nushi-gh-test"
 
+// liveToken is the gh login's token for github.com, read as the daemon
+// reads it (cmd/nushid's ghLogin): what `gh auth token --hostname` prints,
+// gh resolving the environment's, its config's or the keychain's. The
+// test is skipped without one; the token is never printed.
+func liveToken(t *testing.T) string {
+	t.Helper()
+	out, err := exec.CommandContext(t.Context(), "gh", "auth", "token", "--hostname", "github.com").Output()
+	token := strings.TrimSpace(string(out))
+	if err != nil || token == "" {
+		t.Skip("no gh login for github.com")
+	}
+	return token
+}
+
 // TestLive runs against testRepo with the gh login's token, read here
-// through go-gh and never printed: only with NUSHI_GITHUB_LIVE=1 (never
+// as the daemon reads it (liveToken) and never printed: only with NUSHI_GITHUB_LIVE=1 (never
 // on CI). With NUSHI_GITHUB_RECORD=1 it also writes GitHub's answers to
 // testdata, for the tests that run without GitHub.
 func TestLive(t *testing.T) {
 	if os.Getenv("NUSHI_GITHUB_LIVE") != "1" {
 		t.Skip("NUSHI_GITHUB_LIVE=1 runs it against " + testRepo)
 	}
-	token, _ := auth.TokenForHost("github.com")
-	if token == "" {
-		t.Skip("no gh login for github.com")
-	}
+	token := liveToken(t)
 	transport := http.DefaultTransport
 	if os.Getenv("NUSHI_GITHUB_RECORD") == "1" {
 		transport = recorder{t}
@@ -150,11 +160,7 @@ func TestLiveWrites(t *testing.T) {
 	if os.Getenv("NUSHI_GITHUB_LIVE") != "1" {
 		t.Skip("NUSHI_GITHUB_LIVE=1 runs it against " + testRepo)
 	}
-	token, _ := auth.TokenForHost("github.com")
-	if token == "" {
-		t.Skip("no gh login for github.com")
-	}
-	c := New("github.com", token, nil)
+	c := New("github.com", liveToken(t), nil)
 	ctx := t.Context()
 	p, err := c.Pull(ctx, testRepo, 1)
 	if err != nil || len(p.Threads) == 0 {
@@ -196,11 +202,7 @@ func TestLiveInboxFilters(t *testing.T) {
 	if os.Getenv("NUSHI_GITHUB_LIVE") != "1" {
 		t.Skip("NUSHI_GITHUB_LIVE=1 runs it against " + testRepo)
 	}
-	token, _ := auth.TokenForHost("github.com")
-	if token == "" {
-		t.Skip("no gh login for github.com")
-	}
-	c := New("github.com", token, http.DefaultTransport)
+	c := New("github.com", liveToken(t), http.DefaultTransport)
 	ctx := t.Context()
 	all, err := c.Inbox(ctx, InboxFilter{Repos: []string{testRepo}})
 	if err != nil {

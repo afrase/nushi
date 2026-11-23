@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cli/go-gh/v2/pkg/auth"
-
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -148,11 +146,7 @@ func newLab(t *testing.T) *lab {
 	if os.Getenv("NUSHI_GITHUB_LIVE") != "1" {
 		t.Skip("NUSHI_GITHUB_LIVE=1 runs it against " + testRepo)
 	}
-	token, _ := auth.TokenForHost("github.com")
-	if token == "" {
-		t.Skip("no gh login for github.com")
-	}
-	return &lab{t: t, c: New("github.com", token, nil), stamp: time.Now().UTC().Format("0102-150405")}
+	return &lab{t: t, c: New("github.com", liveToken(t), nil), stamp: time.Now().UTC().Format("0102-150405")}
 }
 
 // TestLiveMergeMethods merges three throwaway pull requests into a base of
