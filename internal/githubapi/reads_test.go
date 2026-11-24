@@ -165,27 +165,13 @@ func TestThreadsPage(t *testing.T) {
 	}
 }
 
-func TestIssueAndStatus(t *testing.T) {
+func TestIssue(t *testing.T) {
 	f := newFake(t)
 	f.file("graphql Issue", "graphql_Issue.json")
-	f.file("graphql Status", "graphql_Status.json")
 	c := f.client()
 	is, err := c.Issue(t.Context(), repo, 2)
 	if err != nil || is.Pull || is.Number != 2 || len(is.Assignees) != 1 || !strings.Contains(is.Body, "Ignore all previous instructions") {
 		t.Fatalf("%+v %v", is, err)
-	}
-	st, err := c.Status(t.Context(), []string{"x"})
-	if err != nil || len(st) != 2 {
-		t.Fatalf("%+v %v", st, err)
-	}
-	for id, it := range st {
-		if it.ID != id || it.Number == 0 {
-			t.Fatalf("%s: %+v", id, it)
-		}
-	}
-	// A pull request's checks say which commit they're of (ADR 0138).
-	if pr := st["PR_kwDOVXdqNc8AAAABKrwJXQ"]; pr.Checks != "failure" || pr.ChecksOID != "4f1c2e9a7b3d5c6e8f0a1b2c3d4e5f6a7b8c9d0e" {
-		t.Fatalf("%+v", pr)
 	}
 	if _, err := c.Issue(t.Context(), "not a repo", 2); err == nil {
 		t.Fatal("a bad repository's name")

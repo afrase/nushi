@@ -94,7 +94,7 @@ func TestItemsWithoutCounts(t *testing.T) {
 	}
 }
 
-// TestEveryReadCleansTitles: the inbox, Status, Pull and Issue show a
+// TestEveryReadCleansTitles: the inbox, Pull and Issue show a
 // title as one line of plain text and an author only as a login, as
 // Items does (ADR 0117): no line break, bidi mark or zero-width character
 // of someone else's reaches a row.
@@ -105,9 +105,6 @@ func TestEveryReadCleansTitles(t *testing.T) {
 	f.route("graphql Inbox", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"data":{"review":{"issueCount":0,"nodes":[]},"mine":{"issueCount":1,"nodes":[{"__typename":"PullRequest",` + node + `}]},` +
 			`"assigned":{"issueCount":1,"nodes":[{"__typename":"Issue",` + node + `}]}}}`))
-	})
-	f.route("graphql Status", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"data":{"nodes":[{"__typename":"PullRequest",` + node + `}]}}`))
 	})
 	f.route("graphql PullRequest", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(`{"data":{"repository":{"pullRequest":{"__typename":"PullRequest",` + node + `}}}}`))
@@ -120,10 +117,6 @@ func TestEveryReadCleansTitles(t *testing.T) {
 	if err != nil || len(in.Mine) != 1 || len(in.Assigned) != 1 {
 		t.Fatalf("inbox %+v %v", in, err)
 	}
-	st, err := c.Status(t.Context(), []string{"N_1"})
-	if err != nil {
-		t.Fatal(err)
-	}
 	p, err := c.Pull(t.Context(), "a/b", 1)
 	if err != nil {
 		t.Fatal(err)
@@ -132,7 +125,7 @@ func TestEveryReadCleansTitles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, it := range map[string]model.GitHubItem{"inbox's pull": in.Mine[0], "inbox's issue": in.Assigned[0], "status": st["N_1"],
+	for name, it := range map[string]model.GitHubItem{"inbox's pull": in.Mine[0], "inbox's issue": in.Assigned[0],
 		"pull": p.GitHubItem, "issue": is.GitHubItem} {
 		if it.Title != "Fix the thing" || it.Author != "someone" {
 			t.Errorf("%s: title %q, author %q", name, it.Title, it.Author)
@@ -219,7 +212,7 @@ func TestIssueSaysWhyItClosed(t *testing.T) {
 // (GitHub refuses one it doesn't use), and only Items counts the checks:
 // the inbox costs what it did (ADR 0117), and Pull counts its own runs.
 func TestItemFragments(t *testing.T) {
-	for name, q := range map[string]string{"inbox": inboxQuery, "dated inbox": inboxDatedQuery, "status": statusQuery, "pull": pullQuery,
+	for name, q := range map[string]string{"inbox": inboxQuery, "dated inbox": inboxDatedQuery, "pull": pullQuery,
 		"issue": issueQuery} {
 		if strings.Contains(q, "CountsByState") || strings.Contains(q, "COUNTS") {
 			t.Errorf("%s counts the checks", name)

@@ -93,10 +93,6 @@ func TestLive(t *testing.T) {
 	if err != nil || !strings.Contains(Tail(log, TailSize), "FAIL") {
 		t.Fatalf("job log: %v\n%s", err, Tail(log, 2000))
 	}
-	st, err := c.Status(ctx, []string{p.ID, in.Assigned[0].ID})
-	if err != nil || st[p.ID].Number != 1 || st[in.Assigned[0].ID].Pull {
-		t.Fatalf("status: %+v %v", st, err)
-	}
 	base, files, err := c.Compare(ctx, testRepo, p.BaseOID, p.HeadOID)
 	if err != nil || base == "" || len(files) == 0 {
 		t.Fatalf("compare: %s %+v %v", base, files, err)

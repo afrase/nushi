@@ -267,32 +267,6 @@ func (c *Client) Inbox(ctx context.Context, f InboxFilter) (Inbox, error) {
 		AssignedOlder: older(data.Assigned, data.AssignedAll)}, nil
 }
 
-var statusQuery = withItems(`query Status($ids: [ID!]!) {
-  nodes(ids: $ids) { __typename ...ItemPull ...ItemIssue }
-}`, false)
-
-// Status is how pull requests and issues are now, by their node ids, in
-// one query (at most 100). One GitHub can't find (deleted, or no longer
-// visible) is left out.
-func (c *Client) Status(ctx context.Context, ids []string) (map[string]model.GitHubItem, error) {
-	if len(ids) > 100 {
-		return nil, errors.New("at most 100 at a time")
-	}
-	var data struct {
-		Nodes []*itemNode `json:"nodes"`
-	}
-	if _, err := c.graphql(ctx, statusQuery, map[string]any{"ids": ids}, &data); err != nil {
-		return nil, err
-	}
-	out := map[string]model.GitHubItem{}
-	for _, n := range data.Nodes {
-		if n != nil && n.ID != "" {
-			out[n.ID] = n.item(c.Host, n.Repository.NameWithOwner)
-		}
-	}
-	return out, nil
-}
-
 // repoRE is a repository's owner/name, as GitHub allows them.
 var repoRE = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/[A-Za-z0-9._-]{1,100}$`)
 
