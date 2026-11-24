@@ -283,7 +283,7 @@ A match further up than what's loaded takes a moment: Nushi loads that part of t
 
 ## Find an old chat
 
-- **⌘K** finds any chat by title.
+- **⌘K** finds any chat by title. Press it again to close the palette; ⌘P there opens a file instead.
 - **Settings › Chat history** lists past chats, searchable by title and folder. Click a title to open it.
 - For a session you started in a terminal, press **⌘N**, highlight the agent and click **Sessions** (or →).
 

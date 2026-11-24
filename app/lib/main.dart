@@ -364,8 +364,8 @@ class _NushiAppState extends State<NushiApp> {
 
   void _run(Act act) => runAct(_navigator.currentContext!, widget.daemon, act);
 
-  /// Runs [change], a menu bar item's that isn't an [Act], when actions
-  /// run now ([actsNow]: not over a dialog).
+  /// Runs [change], a menu bar item's or a key's that isn't an [Act], when
+  /// actions run now ([actsNow]: not over a dialog or a picker).
   void _gated(VoidCallback change) {
     if (actsNow(_navigator.currentContext!)) change();
   }
@@ -506,58 +506,70 @@ class _NushiAppState extends State<NushiApp> {
       themeAnimationDuration: Duration.zero,
       scrollBehavior: const NativeScroll(),
       // The toasts, over every view, Settings and a dialog (ADR 0128).
-      // A kept file that couldn't be read says so there, once.
-      builder: (context, child) => ToastHost(child: KeptNotices(child: child!)),
-      // The menu's keys don't reach the menu while Flutter has the keys:
-      // they're bound here too, and a terminal, which keeps ⌘ and ⌃ keys,
-      // passes them on as the same intents.
-      home: Builder(
-        builder: (context) => Actions(
-          actions: {
-            RunActIntent: _RunAct((act) => runAct(context, widget.daemon, act)),
-            OpenChatIntent: CallbackAction<OpenChatIntent>(
-              onInvoke: (i) => openNthChat(widget.daemon, i.n),
-            ),
-            StepChatIntent: CallbackAction<StepChatIntent>(
-              onInvoke: (i) => stepChat(widget.daemon, i.step),
-            ),
-          },
-          // The actions' keys, ⌘K, ⌘1–⌘9, ⌥⌘↑ and ⌥⌘↓, ⌃Tab and ⌃⇧Tab:
-          // wherever the focus is; and Quit's without a menu bar.
-          child: Shortcuts(
-            shortcuts: {
-              ...appKeys,
-              if (!native.window.menuBar) quitKey: const RunActIntent(.quit),
-            },
-            // A scope under these keys: a text field a click outside lets
-            // go of (the framework's unfocus on the desktop) gives the focus
-            // to its scope, and the route's, above them, heard none of them.
-            // A character typed with the focus on it, or on the Focus in it,
-            // or on the transcript, goes into the chat's box (ADR 0121).
-            child: FocusScope(
-              onKeyEvent: (node, e) => typeIntoBox(widget.daemon, node, e),
-              // Focused when nothing in the window is, so the keys still
-              // come here (an empty pane, after a click on the sidebar).
-              child: Focus(
-                autofocus: true,
-                onKeyEvent: (node, e) => typeIntoBox(widget.daemon, node, e),
-                child: Scaffold(
-                  // The Scaffold's text style blends to a new theme's over
-                  // 200 ms, rebuilding every text below on each frame;
-                  // this one switches at once, with the theme.
-                  body: Material(
-                    type: MaterialType.transparency,
-                    animationDuration: Duration.zero,
-                    child: _Shell(widget.daemon),
-                  ),
-                ),
-              ),
+      // A kept file that couldn't be read says so there, once. The app's
+      // keys, above the Navigator, so a dialog's and a picker's focus
+      // reaches them too.
+      builder: (context, child) =>
+          ToastHost(child: KeptNotices(child: _keys(child!))),
+      // A scope on the first route: a text field a click outside lets go
+      // of (the framework's unfocus on the desktop) gives the focus to its
+      // scope, which keeps it in the window's views. A character typed with
+      // the focus on it, or on the Focus in it, or on the transcript, goes
+      // into the chat's box (ADR 0121).
+      home: FocusScope(
+        onKeyEvent: (node, e) => typeIntoBox(widget.daemon, node, e),
+        // Focused when nothing in the window is, so the keys still come
+        // here (an empty pane, after a click on the sidebar).
+        child: Focus(
+          autofocus: true,
+          onKeyEvent: (node, e) => typeIntoBox(widget.daemon, node, e),
+          child: Scaffold(
+            // The Scaffold's text style blends to a new theme's over 200 ms,
+            // rebuilding every text below on each frame; this one switches
+            // at once, with the theme.
+            body: Material(
+              type: MaterialType.transparency,
+              animationDuration: Duration.zero,
+              child: _Shell(widget.daemon),
             ),
           ),
         ),
       ),
     ),
   );
+
+  /// [navigator] under the app's keys (the actions', ⌘K, ⌘1–⌘9, ⌥⌘↑ and
+  /// ⌥⌘↓, ⌃Tab and ⌃⇧Tab; Quit's without a menu bar), wherever the focus
+  /// is: a view, a dialog or a picker, where [actsNow] decides (docs/design.md's Dialogs). The menu bar's keys don't reach
+  /// the menu while Flutter has the keys, so they're bound here too, and a
+  /// terminal, which keeps ⌘ and ⌃ keys, passes them on as the same
+  /// intents. Each runs in the Navigator's context, as the menu bar's.
+  Widget _keys(Widget navigator) {
+    BuildContext nav() => _navigator.currentContext!;
+    return Actions(
+      actions: {
+        RunActIntent: _RunAct(
+          (act) => actsNow(nav(), act),
+          (act) => runAct(nav(), widget.daemon, act),
+        ),
+        OpenChatIntent: _Gated<OpenChatIntent>(
+          () => actsNow(nav()),
+          (i) => openNthChat(widget.daemon, i.n),
+        ),
+        StepChatIntent: _Gated<StepChatIntent>(
+          () => actsNow(nav()),
+          (i) => stepChat(widget.daemon, i.step),
+        ),
+      },
+      child: Shortcuts(
+        shortcuts: {
+          ...appKeys,
+          if (!native.window.menuBar) quitKey: const RunActIntent(.quit),
+        },
+        child: navigator,
+      ),
+    );
+  }
 }
 
 /// The window (ADR 0111): its own background, the sidebar straight on it
@@ -751,18 +763,39 @@ class _Shell extends StatelessWidget {
 }
 
 /// Runs an action from its key, unless the key is a text field's own
-/// there ([actKeyTaken]): then it isn't handled, and goes on to the field.
+/// there ([actKeyTaken]) or the action doesn't run now ([actsNow]: over a
+/// dialog): then it isn't handled, and goes on to the field or the dialog.
 class _RunAct extends Action<RunActIntent> {
-  new(this._run);
+  new(this._runs, this._run);
 
+  final bool Function(Act act) _runs;
   final void Function(Act act) _run;
 
   @override
-  bool isEnabled(RunActIntent intent) => !actKeyTaken(intent.act);
+  bool isEnabled(RunActIntent intent) =>
+      !actKeyTaken(intent.act) && _runs(intent.act);
 
   @override
   Object? invoke(RunActIntent intent) {
     _run(intent.act);
+    return null;
+  }
+}
+
+/// A key's action that isn't an [Act] (a chat's number), enabled while
+/// actions run now ([actsNow]), so over a dialog its key goes on.
+class _Gated<T extends Intent> extends Action<T> {
+  new(this._runs, this._run);
+
+  final bool Function() _runs;
+  final void Function(T intent) _run;
+
+  @override
+  bool isEnabled(T intent) => _runs();
+
+  @override
+  Object? invoke(T intent) {
+    _run(intent);
     return null;
   }
 }

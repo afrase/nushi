@@ -10,6 +10,7 @@ import 'package:nushi/chat_files.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/panel_widgets.dart';
+import 'package:nushi/picker.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
@@ -94,6 +95,7 @@ Future<void> showPalette(BuildContext context, Daemon d) async {
   ];
   final picked = await showDialog<PaletteRow>(
     context: context,
+    routeSettings: Picker.palette.settings,
     builder: (_) => Palette(rows: rows),
   );
   if (picked == null) return;
@@ -119,6 +121,7 @@ Future<void> showArtifacts(BuildContext context, ChatState chat) async {
   );
   final picked = await showDialog<PaletteRow>(
     context: context,
+    routeSettings: Picker.artifacts.settings,
     builder: (_) => Palette(
       rows: [
         for (final f in [...a.pinned, ...a.recent, ...a.older]) row(f),

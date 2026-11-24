@@ -8,6 +8,7 @@ import 'package:nushi/completions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_filter.dart';
 import 'package:nushi/keys.dart';
+import 'package:nushi/picker.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -22,6 +23,7 @@ Future<void> openFile(BuildContext context, Daemon daemon) async {
   if (chat == null || !daemon.chatShows) return;
   final path = await showDialog<String>(
     context: context,
+    routeSettings: Picker.openFile.settings,
     builder: (_) => OpenFileBox(
       daemon: daemon,
       folder: chat.folder,

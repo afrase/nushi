@@ -22,6 +22,7 @@ import 'package:nushi/native.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/open_file.dart';
 import 'package:nushi/palette.dart';
+import 'package:nushi/picker.dart';
 import 'package:nushi/preview_find.dart' show focusedPreviewFind;
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
@@ -492,20 +493,47 @@ Route<Object?>? routeOver(BuildContext context) {
 }
 
 /// Whether an action from a key or the menu bar ([act]; none for one that
-/// isn't an [Act], as a chat's number) runs now: never over a dialog,
-/// which asks something and may name what the action would change (a
-/// confirm, a form), but Quit (docs/design.md's Dialogs). The dialog's own
-/// keys are its own, nearer the focus; the system's menu items (Hide,
-/// Quit on the Mac) never come here.
-bool actsNow(BuildContext context, [Act? act]) =>
-    act == Act.quit || routeOver(context) == null;
+/// isn't an [Act], as a chat's number) runs now: always over the main
+/// views; over a dialog, which asks something and may name what the
+/// action would change (a confirm, a form), only Quit; over a picker
+/// Quit and the pickers' own actions too, which [clearFor] lets take its
+/// place (docs/design.md's Dialogs). The dialog's own keys are its own,
+/// nearer the focus; the system's menu items (Hide, Quit on the Mac) never
+/// come here.
+bool actsNow(BuildContext context, [Act? act]) {
+  final over = routeOver(context);
+  return over == null ||
+      act == Act.quit ||
+      pickerOf(over) != null && _pickerOf(act) != null;
+}
+
+/// The picker [act] opens, if it opens one.
+Picker? _pickerOf(Act? act) => switch (act) {
+  Act.palette => Picker.palette,
+  Act.artifacts => Picker.artifacts,
+  Act.openFile => Picker.openFile,
+  _ => null,
+};
+
+/// Clears the way for [act] (as [actsNow]) and says whether it runs: a
+/// picker on top closes first, so one shows at a time, and when it's the
+/// one [act] opens, closing it is all [act] does (its key toggles it).
+/// Quit leaves it open.
+bool clearFor(BuildContext context, [Act? act]) {
+  if (!actsNow(context, act)) return false;
+  final over = routeOver(context);
+  final picker = pickerOf(over);
+  if (picker == null || _pickerOf(act) == null) return true;
+  over!.navigator!.pop();
+  return picker != _pickerOf(act);
+}
 
 /// Runs [act] as it is now, if it applies.
 void runAct(BuildContext context, Daemon d, Act act) {
   // Behind the Restart screen only Restart daemon and Quit apply: the
   // rest would act on a chat or a view no one can see.
   if (d.blocked && act != Act.restart && act != Act.quit) return;
-  if (!actsNow(context, act)) return;
+  if (!clearFor(context, act)) return;
   // The palette is no row of its own; its key never reaches here past
   // Settings, so it shuts nothing.
   if (act == Act.palette) return unawaited(showPalette(context, d));
