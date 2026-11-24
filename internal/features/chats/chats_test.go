@@ -97,31 +97,33 @@ func TestPromptStreamsTheReply(t *testing.T) {
 }
 
 func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
-	text := func(s string) []acp.ToolCallContent {
-		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
-	}
-	at := time.Date(2026, 11, 19, 9, 0, 0, 0, time.UTC)
-	c := &chat{svc: &Service{remembered: &memModes{}, timing: Timing{Now: func() time.Time { return at }}}, id: "s1", sid: "s1", kind: &kind{},
-		publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
-	send(c, []acp.SessionUpdate{
-		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "Terminal", Kind: "execute", Status: "pending"}},
-		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Title: "ls -la", Content: text("List files")}},
-		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed", Content: text("a.txt")}},
-		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t2", Title: "Edit", Kind: "edit", Content: []acp.ToolCallContent{
-			{Type: "diff", Diff: &acp.Diff{Path: "/w/a.txt", OldText: new("one\ntwo\n"), NewText: "three"}},
-			{Type: "diff", Diff: &acp.Diff{Path: "/w/new.txt", NewText: "made"}},                  // no old text: a new file
-			{Type: "diff", Diff: &acp.Diff{Path: "/w/empty.txt", OldText: new(""), NewText: "x"}}, // "": an empty one
-		}, Locations: []acp.ToolCallLocation{{Path: "/w/a.txt"}, {Path: "/elsewhere/b.txt"}}}},
-	}...)
-	want := []model.Item{
-		{ID: "t1", Kind: model.ToolCall, Title: "ls -la", ToolKind: "execute", Status: "completed", Text: "a.txt", Started: at, Ended: at},
-		{ID: "t2", Kind: model.ToolCall, Title: "Edit", ToolKind: "edit", Started: at, Paths: []string{"a.txt", "/elsewhere/b.txt"},
-			Diffs: []model.FileChange{{Path: "a.txt", Status: "modified", Old: "one\ntwo\n", New: "three"},
-				{Path: "new.txt", Status: "added", New: "made"}, {Path: "empty.txt", Status: "modified", New: "x"}}},
-	}
-	if !reflect.DeepEqual(c.items, want) {
-		t.Errorf("items = %+v\nwant %+v", c.items, want)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		text := func(s string) []acp.ToolCallContent {
+			return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
+		}
+		at := time.Now() // the bubble's, which stands still
+		c := &chat{svc: &Service{remembered: &memModes{}}, id: "s1", sid: "s1", kind: &kind{},
+			publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
+		send(c, []acp.SessionUpdate{
+			{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "Terminal", Kind: "execute", Status: "pending"}},
+			{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Title: "ls -la", Content: text("List files")}},
+			{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed", Content: text("a.txt")}},
+			{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t2", Title: "Edit", Kind: "edit", Content: []acp.ToolCallContent{
+				{Type: "diff", Diff: &acp.Diff{Path: "/w/a.txt", OldText: new("one\ntwo\n"), NewText: "three"}},
+				{Type: "diff", Diff: &acp.Diff{Path: "/w/new.txt", NewText: "made"}},                  // no old text: a new file
+				{Type: "diff", Diff: &acp.Diff{Path: "/w/empty.txt", OldText: new(""), NewText: "x"}}, // "": an empty one
+			}, Locations: []acp.ToolCallLocation{{Path: "/w/a.txt"}, {Path: "/elsewhere/b.txt"}}}},
+		}...)
+		want := []model.Item{
+			{ID: "t1", Kind: model.ToolCall, Title: "ls -la", ToolKind: "execute", Status: "completed", Text: "a.txt", Started: at, Ended: at},
+			{ID: "t2", Kind: model.ToolCall, Title: "Edit", ToolKind: "edit", Started: at, Paths: []string{"a.txt", "/elsewhere/b.txt"},
+				Diffs: []model.FileChange{{Path: "a.txt", Status: "modified", Old: "one\ntwo\n", New: "three"},
+					{Path: "new.txt", Status: "added", New: "made"}, {Path: "empty.txt", Status: "modified", New: "x"}}},
+		}
+		if !reflect.DeepEqual(c.items, want) {
+			t.Errorf("items = %+v\nwant %+v", c.items, want)
+		}
+	})
 }
 
 func TestToolCallKeepsItsRawInputAndOutput(t *testing.T) {

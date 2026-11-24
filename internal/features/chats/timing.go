@@ -26,18 +26,6 @@ type Timing struct {
 	// see a grace begin and end it itself, not by a clock.
 	SidesGrace time.Duration
 	SidesAfter func(time.Duration, func()) *time.Timer
-	// Now is the time a tool call's or a subagent's start and end are
-	// stamped with (time.Now); a test's clock stands still until it moves
-	// it.
-	Now func() time.Time
-}
-
-// now is the time now, by Now.
-func (t Timing) now() time.Time {
-	if t.Now != nil {
-		return t.Now()
-	}
-	return time.Now()
 }
 
 // sidesAfter starts the side chats' grace, f once it has passed.
