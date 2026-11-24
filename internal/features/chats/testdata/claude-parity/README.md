@@ -37,7 +37,7 @@ The replay's client goes only once the Go agent has sent what the recording's cl
 
 ## The scenarios
 
-Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent-acp 0.94.0, `make claude-record`; the two `subagent-worktree` ones 2026-11-02, 2.1.314, `plan` 2026-11-03, 2.1.314), and the Go agent matches the adapter on each (`go test -race -run 'ClaudeParity|ClaudeMerge' ./internal/features/chats`, green at `-count=20`). What the recordings showed is in `docs/facts/claude.md` (its Go-agent section). Scenarios that don't ask about a tool allow it in claude's session settings (`meta`), so only the scenarios about asking ask. `tools/claude-record`'s tests load every scenario, and play those a fake claude can take.
+Every scenario is recorded (2026-11-25, Claude Code 2.1.331 through the Go agent, claudeacp 0.8.0, `make claude-record`; until then 2026-10-30, 2.1.312, through claude-agent-acp 0.94.0, whose `load` is kept in `../claude-adapter-load`), and the Go agent matches the recording on each (`go test -race -run 'ClaudeParity|ClaudeMerge' ./internal/features/chats`, green at `-count=20`). What the recordings showed is in `docs/facts/claude.md` (its Go-agent section). Scenarios that don't ask about a tool allow it in claude's session settings (`meta`), so only the scenarios about asking ask. `tools/claude-record`'s tests load every scenario, and play those a fake claude can take.
 
 | Scenario | What it does | Also showed |
 |---|---|---|
@@ -56,6 +56,8 @@ Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent
 | `bash-background` | a background command that ends; claude's turn on its own after | |
 | `bash-background-killed` | a background command whose process group Nushi stops (`kill`) | |
 | `bash-background-taskstop` | a background command stopped by Claude's `TaskStop` | |
+| `bash-background-stoptask` | a background command stopped by `_session/stopTask` with claude idle, a prompt after; the stop again, and of an unknown id | the frames, no turn, the model told at the next prompt; `{}` for an ended or unknown id |
+| `bash-background-stoptask-turn` | a background command stopped by `_session/stopTask` while a turn waits on a foreground command, a prompt after | the same frames mid-turn; the model told in that turn; the process gone; a foreground command's task |
 | `subagent-foreground` | a foreground subagent | |
 | `subagent-background` | a background subagent that ends; the held turn | `session_state_changed: idle` only once no subagent runs |
 | `subagent-nested` | a background subagent that starts another, whose end reaches it mid-turn | where a nested subagent's notification is kept |
@@ -66,13 +68,15 @@ Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent
 | `subagent-worktree-bash` | a subagent that runs `git worktree add` itself, and writes there by absolute path | its transcript's `cwd` stays the chat's folder |
 | `sendmessage` | a message to a finished background subagent, which runs again | |
 | `compaction` | `/compact`, then a prompt | |
-| `context` | `/context` in a throwaway fork, deleted after, as Nushi asks it | |
+| `context` | a throwaway fork, a command (`/context`) run in it, deleted after, as Nushi's commit message forks one | |
+| `context-usage` | `_session/contextUsage` full, summary and without a detail: idle, mid-command, in a second session, before and after a `CLAUDE.md`, an agent and an MCP server | `get_context_usage`'s answer (`docs/facts/claude.md`) |
 | `safeguards` | a refusal: the notice, then claude's retry | |
 | `refusal` | a refusal of the retry too: the turn ends `refusal` | |
 | `findings` | a `ReportFindings` call | |
 | `plan` | three `TaskCreate`s, then `TaskUpdate`s through the steps; `session/close`, `session/load`, a prompt after | the `plan` updates (`docs/facts/claude.md`) |
-| `workflow` | a Workflow call (two phases, four agents, one with a schema) that ends; claude's turn on its own after (2026-11-16, 2.1.325, through the Go agent) | the call's `toolResponse`, the run's files, the prompt answered while the run goes |
+| `workflow` | a Workflow call (two phases, four agents, one with a schema) that ends; claude's turn on its own after | the call's `toolResponse`, the run's files, the prompt answered while the run goes |
 | `workflow-stop` | a running workflow stopped by `TaskStop` with its task id | the `killed` snapshot |
+| `workflow-stoptask` | a running workflow stopped by `_session/stopTask`, a prompt after, the stop again | a workflow's task frames; the `killed` snapshot |
 | `ultracode` | ultracode on, then an effort change | |
 | `models` | `availableModels` in the session's settings | `initialize`'s models are already filtered |
 | `mcp` | a tool of a stdio MCP server (`mcp-echo`), asked about | |
