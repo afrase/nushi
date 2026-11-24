@@ -176,16 +176,20 @@ func (t itemText) count(q textfind.Query) int {
 
 // findText is what the app's find looks in of an item, as the transcript
 // shows it: a message's, thought's, notice's or question's text, a tool
-// call's or permission's title, and a call's output, or its input and raw
-// output when its content says nothing (the app's showsInput and
-// showsRawOutput, near enough). Not a call's diffs, a plan, a question's
-// form, a message's files or images, which the find doesn't look in.
+// call's or permission's title, and a call's output, and its input and raw
+// output where the app shows them (showsInput, showsRawOutput). Not a
+// call's diffs, a plan, a question's form, a message's files or images,
+// which the find doesn't look in. A title is the agent's, not the row's as
+// the app writes it, as ADR 0144 accepts.
 func findText(it model.Item) []string {
 	switch it.Kind {
 	case model.ToolCall, model.Permission:
 		out := []string{it.Title, it.Text}
-		if it.Kind == model.ToolCall && strings.TrimSpace(it.Text) == "" && len(it.Diffs) == 0 {
-			out = append(out, it.Input, it.RawOutput)
+		if it.Kind == model.ToolCall && showsInput(it) {
+			out = append(out, it.Input)
+		}
+		if it.Kind == model.ToolCall && showsRawOutput(it) {
+			out = append(out, it.RawOutput)
 		}
 		return slices.DeleteFunc(out, func(s string) bool { return s == "" })
 	case model.Plan:
@@ -193,4 +197,29 @@ func findText(it model.Item) []string {
 	default:
 		return []string{it.Text}
 	}
+}
+
+// The app's rules for what of a call's body shows (app/lib/tool_parts.dart's
+// isCommand, showsInput and showsRawOutput), copied so find counts what
+// shows: a change to one side goes to the other.
+
+// isCommand says a call is a command the app shows as one (its title the
+// command line): not Nushi's show or dev server tools, whose titles say
+// their input.
+func isCommand(it model.Item) bool {
+	return it.ToolKind == "execute" && it.Title != "" && !isShow(it) && !isServerTool(it)
+}
+
+// showsInput says a call's input shows: it has one and no diff or command
+// says what it did, and either nothing else shows or it's a tool ACP has
+// no kind for (an MCP tool's), whose content is only its result.
+func showsInput(it model.Item) bool {
+	return it.Input != "" && !isShow(it) && !isServerTool(it) && len(it.Diffs) == 0 && !isCommand(it) &&
+		(strings.TrimSpace(it.Text) == "" || it.ToolKind == "other" || it.ToolKind == "")
+}
+
+// showsRawOutput says a call's raw output shows: the agent's content
+// showed nothing.
+func showsRawOutput(it model.Item) bool {
+	return it.RawOutput != "" && strings.TrimSpace(it.Text) == "" && len(it.Diffs) == 0 && !isCommand(it)
 }

@@ -197,7 +197,9 @@ bool isCommand(Item it) =>
 /// Whether a call's input shows: it has one and no diff or command says
 /// what it did, and either nothing else shows or it's a tool ACP has no kind
 /// for (an MCP tool's), whose content is only its result. A show call's
-/// title says its input, as a dev server tool's does.
+/// title says its input, as a dev server tool's does. The daemon's find
+/// counts with a Go copy of this, [showsRawOutput] and [isCommand]
+/// (internal/features/chats/text_find.go's findText): change both.
 bool showsInput(Item it) =>
     it.input.isNotEmpty &&
     !isShow(it) &&
@@ -207,6 +209,7 @@ bool showsInput(Item it) =>
     (it.text.trim().isEmpty || it.toolKind == 'other' || it.toolKind.isEmpty);
 
 /// Whether a call's raw output shows: the agent's content showed nothing.
+/// Copied in the daemon's findText, as [showsInput] says.
 bool showsRawOutput(Item it) =>
     it.rawOutput.isNotEmpty &&
     it.text.trim().isEmpty &&

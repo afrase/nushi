@@ -20,6 +20,19 @@ func isPreviewStart(it model.Item) bool {
 	return it.MCPServer == ToolsServer && it.MCPTool == "preview_start"
 }
 
+// isServerTool says a call is one of Nushi's dev server tools (ADR 0100;
+// the app's serverTool), the same way.
+func isServerTool(it model.Item) bool {
+	if it.MCPServer != ToolsServer {
+		return false
+	}
+	switch it.MCPTool {
+	case "preview_list", "preview_start", "preview_stop", "preview_logs":
+		return true
+	}
+	return false
+}
+
 // mcpLocked has the harness read the MCP server and tool of an item that
 // didn't pass through its ToolReader as a call: an ask for a call not
 // seen, from the request's meta and input, or a call or an ask from a copy

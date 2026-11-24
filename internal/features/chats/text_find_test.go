@@ -29,14 +29,18 @@ func TestFindTextCountsWhatShows(t *testing.T) {
 		{ID: "u", Kind: model.UserMessage, Text: "Rename the Widget, widget!"},
 		{ID: "t", Kind: model.ToolCall, Title: "Read widget.go", Text: "func widget()"},
 		{ID: "raw", Kind: model.ToolCall, Title: "mcp tool", Input: `{"name":"widget"}`, RawOutput: "widget"},
-		{ID: "hidden", Kind: model.ToolCall, Title: "run", Text: "ok", Input: "widget"}, // its input doesn't show
+		{ID: "hidden", Kind: model.ToolCall, ToolKind: "read", Title: "run", Text: "ok", Input: "widget"}, // its input doesn't show
 		{ID: "diff", Kind: model.ToolCall, Title: "Edit", Diffs: []model.FileChange{{Path: "a", New: "widget"}}},
 		{ID: "plan", Kind: model.Plan, Plan: []model.PlanEntry{{Content: "widget"}}},
+		// A command shows neither its input nor its raw output, its text blank or not.
+		{ID: "cmd", Kind: model.ToolCall, ToolKind: "execute", Title: "ls", Input: `{"command":"ls widget"}`, RawOutput: "widget"},
+		// An MCP tool's input shows beside its text, its content only its result.
+		{ID: "mcp", Kind: model.ToolCall, ToolKind: "other", Title: "lookup", Text: "found", Input: `{"q":"widget"}`},
 		{ID: "a", Kind: model.AgentMessage, Text: "No widgets here? widgets."},
 	})
 	got, more, err := svc.FindText(t.Context(), c.id, "WIDGET", "")
 	testcheck.NoErr(t, err)
-	want := []TextMatch{{"u", 2}, {"t", 2}, {"raw", 2}, {"a", 2}}
+	want := []TextMatch{{"u", 2}, {"t", 2}, {"raw", 2}, {"mcp", 1}, {"a", 2}}
 	if more || !slices.Equal(got, want) {
 		t.Errorf("found %v (more %v), want %v", got, more, want)
 	}
