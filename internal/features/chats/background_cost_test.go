@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"sync"
@@ -62,6 +63,7 @@ type costFixture struct {
 	file   string
 	reads  *atomic.Int32
 	copies *rowCopies
+	stop   context.CancelFunc // the service closes
 	mu     sync.Mutex
 	rows   []model.BackgroundCommand
 }
@@ -70,7 +72,9 @@ func costChat(t *testing.T, text string) *costFixture {
 	t.Helper()
 	f := &costFixture{file: filepath.Join(taskDir(t), waitTask+".output"), reads: &atomic.Int32{}, copies: &rowCopies{}}
 	testcheck.NoErr(t, os.WriteFile(f.file, []byte(text), 0o600))
-	f.c = &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context()}, id: "s1", sid: "s1", agent: &fakeAgent{},
+	ctx, stop := context.WithCancel(t.Context())
+	f.stop = stop
+	f.c = &chat{svc: &Service{remembered: &memModes{}, ctx: ctx}, id: "s1", sid: "s1", agent: &fakeAgent{},
 		kind: testKind(countedFile{testHarness{}, f.reads}), copies: f.copies, copiesOn: func() bool { return true }, unsaved: map[string]bool{},
 		items: []model.Item{{ID: waitCall, Kind: model.ToolCall, Tool: "Bash", Status: "completed",
 			BackgroundCommand: &model.BackgroundCommand{ID: waitTask, State: model.RunRunning, Started: time.Now()}}},
@@ -206,6 +210,41 @@ func TestAChattyCommandDoesntGrowTheCopy(t *testing.T) {
 		}
 		if last := rows[len(rows)-1]; last.State != model.RunDone || last.Output != string(want) {
 			t.Errorf("the copy's row: %+v, want done with %q", last, want)
+		}
+	})
+}
+
+// A daemon that closes mid-command (an update, a logout) stops following
+// it before its agent ends; the copy then still takes the row with the
+// output last sent, which the file may no longer give after a reboot.
+func TestTheCopyHasTheLastTailWhenTheDaemonCloses(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		f := costChat(t, "boot\n")
+		f.tell(taskRunning)
+		for i := range 10 {
+			f.add(t, "line "+string(rune('a'+i))+"\n")
+			pass(commandPoll)
+			f.c.mu.Lock()
+			f.c.copyLocked(false) // a model call's end
+			f.c.mu.Unlock()
+		}
+		f.add(t, "last before stop\n")
+		pass(commandTail)
+		sent := f.published()
+		f.stop() // Close cancels the service first
+		synctest.Wait()
+		f.c.mu.Lock()
+		f.c.copyLocked(true) // the agent's end (orphanLocked)
+		f.c.mu.Unlock()
+		rows := f.copies.copied()
+		if len(rows) == 0 {
+			t.Fatal("the copy never took the row")
+		}
+		if last, want := rows[len(rows)-1], sent[len(sent)-1]; last.Output != want.Output {
+			t.Errorf("the copy's row has %q, want the last sent %q", last.Output, want.Output)
+		}
+		if len(rows) > 2 {
+			t.Errorf("the copy took the row %d times", len(rows))
 		}
 	})
 }

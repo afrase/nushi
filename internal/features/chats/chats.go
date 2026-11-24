@@ -230,6 +230,7 @@ type chat struct {
 	woke       chan struct{}    // closed when the reopen or reload under way ends (endOpLocked)
 	active     time.Time        // its last event
 	unsaved    map[string]bool  // items changed since the copy of the transcript last had them (copies.go)
+	tails      map[string]bool  // rows whose running command's output alone changed since: only a turn's or the agent's end writes them (copies.go)
 	titling    map[string]bool  // pins whose title the agent is making, by item (pin_titles.go)
 	titleSlots chan struct{}    // and how many it makes at once
 	replaying  bool             // a session/load's replay goes to replay, not the transcript (restore.go)

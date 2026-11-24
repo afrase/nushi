@@ -214,9 +214,14 @@ func (f *commandFollower) step() bool {
 		c.publishLocked(*it)
 		f.sentAt = time.Now()
 		if saved && !over && sh.State == model.RunRunning && withOutput(was, sh.Output) == sh {
-			// The tail alone leaves the copy as it was (ADR 0130's
-			// amendment): a running command's file gives it again.
+			// The tail alone waits for a turn's or the agent's end
+			// (copyLocked(true)), not each model call (ADR 0130's
+			// amendment).
 			delete(c.unsaved, it.ID)
+			if c.tails == nil {
+				c.tails = map[string]bool{}
+			}
+			c.tails[it.ID] = true
 		}
 	}
 	following := !over && sh.State == model.RunRunning

@@ -86,15 +86,17 @@ func settled(it *model.Item, last bool) bool {
 
 // copyLocked writes the items that changed since the copy last had them
 // and have settled, or with all every one of them (a turn ended, the agent
-// stopped), then holds their images as references (images.go). While
+// stopped), then holds their images as references (images.go); a row
+// whose running command's output alone changed (tails) waits for all. While
 // copies are off, or the copy couldn't be read (unread), nothing is
 // written.
 func (c *chat) copyLocked(all bool) {
-	if c.copies == nil || len(c.unsaved) == 0 || c.halting { // being deleted: its items stay unsaved (unhaltLocked)
+	if c.copies == nil || len(c.unsaved) == 0 && (!all || len(c.tails) == 0) || c.halting { // being deleted: its items stay unsaved (unhaltLocked)
 		return
 	}
 	if !c.copiesOn() || c.unread {
 		clear(c.unsaved)
+		clear(c.tails)
 		c.mirrored = false
 		return
 	}
@@ -108,7 +110,7 @@ func (c *chat) copyLocked(all bool) {
 			delete(c.unsaved, it.ID)
 			continue
 		}
-		if c.unsaved[it.ID] && (all || settled(it, i == len(c.items)-1)) {
+		if c.unsaved[it.ID] && (all || settled(it, i == len(c.items)-1)) || all && c.tails[it.ID] {
 			items, after, written = append(items, *it), append(after, prev), append(written, i)
 		}
 		prev = it.ID
@@ -123,9 +125,11 @@ func (c *chat) copyLocked(all bool) {
 	}
 	if all {
 		clear(c.unsaved) // items gone meanwhile too
+		clear(c.tails)
 	}
 	for _, it := range items {
 		delete(c.unsaved, it.ID)
+		delete(c.tails, it.ID)
 	}
 	for _, i := range written {
 		c.byRefLocked(i)
@@ -139,6 +143,11 @@ func (c *chat) cutCopyLocked(item string) {
 	for id := range c.unsaved {
 		if c.indexLocked(id) < 0 {
 			delete(c.unsaved, id)
+		}
+	}
+	for id := range c.tails {
+		if c.indexLocked(id) < 0 {
+			delete(c.tails, id)
 		}
 	}
 	switch {
@@ -156,6 +165,7 @@ func (c *chat) cutCopyLocked(item string) {
 // dropCopyLocked takes an item that's gone from the transcript out of the
 // copy, if it may be in it.
 func (c *chat) dropCopyLocked(it model.Item) {
+	delete(c.tails, it.ID)
 	if c.unsaved[it.ID] || shownOnly(it) || c.copies == nil {
 		delete(c.unsaved, it.ID)
 		return
