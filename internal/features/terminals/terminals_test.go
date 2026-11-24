@@ -283,3 +283,27 @@ func TestOpenAfterCloseAllIsRefused(t *testing.T) {
 		t.Errorf("listed %v", l)
 	}
 }
+
+// A terminal whose chat closes while its shell starts (the chat deleted
+// or archived) is refused, and the shell it started is closed: CloseChat
+// found nothing to close, and nothing else would.
+func TestOpenRacingCloseChatIsRefused(t *testing.T) {
+	var s *Service
+	var shells []*fakeShell
+	start := func(string, string, int, int, func()) (Shell, error) {
+		s.CloseChat("one") // the chat's delete lands while its shell starts
+		sh := &fakeShell{}
+		shells = append(shells, sh)
+		return sh, nil
+	}
+	s = New(start, "zsh", folders{}, func(model.Event) {})
+	if _, err := s.Open("one", "", "", 80, 24); err == nil {
+		t.Error("opened a terminal for a closed chat")
+	}
+	if !shells[0].closed {
+		t.Error("left its shell running")
+	}
+	if l := s.List("one"); len(l) != 0 {
+		t.Errorf("listed %v", l)
+	}
+}

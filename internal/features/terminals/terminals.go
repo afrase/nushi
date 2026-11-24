@@ -51,8 +51,9 @@ type Service struct {
 	publish func(model.Event)
 
 	mu     sync.Mutex
-	terms  []*term // every chat's, in each chat's order
-	closed bool    // the daemon stops: no more terminals
+	terms  []*term        // every chat's, in each chat's order
+	closed bool           // the daemon stops: no more terminals
+	gen    map[string]int // each chat's count of CloseChat, so an Open it raced is refused
 }
 
 type term struct {
@@ -72,6 +73,9 @@ func (s *Service) Open(chatID, folder, command string, cols, rows int) (model.Te
 	if err := checkCommand(command); err != nil {
 		return model.Terminal{}, err
 	}
+	s.mu.Lock()
+	gen := s.gen[chatID]
+	s.mu.Unlock()
 	chatFolder, err := s.chats.Folder(chatID)
 	if err != nil {
 		return model.Terminal{}, err
@@ -94,6 +98,11 @@ func (s *Service) Open(chatID, folder, command string, cols, rows int) (model.Te
 		s.mu.Unlock()
 		t.shell.Close()
 		return model.Terminal{}, errors.New("the daemon is stopping")
+	}
+	if s.gen[chatID] != gen { // CloseChat ran while it started (the chat deleted or archived)
+		s.mu.Unlock()
+		t.shell.Close()
+		return model.Terminal{}, errors.New("the chat closed")
 	}
 	s.terms = append(s.terms, t)
 	m := t.state()
@@ -327,8 +336,15 @@ func (s *Service) Running() []model.Hold {
 	return out
 }
 
-// CloseChat ends a chat's terminals.
+// CloseChat ends a chat's terminals, and refuses an Open whose shell
+// was starting meanwhile: nothing would close that one.
 func (s *Service) CloseChat(chatID string) {
+	s.mu.Lock()
+	if s.gen == nil {
+		s.gen = map[string]int{}
+	}
+	s.gen[chatID]++
+	s.mu.Unlock()
 	gone := s.unlist(func(t *term) bool { return t.ChatID == chatID })
 	if len(gone) > 0 {
 		s.changed(chatID)
