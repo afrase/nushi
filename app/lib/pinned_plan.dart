@@ -80,8 +80,8 @@ class _PinnedPlanState extends State<PinnedPlan> {
     super.dispose();
   }
 
-  // Every streamed chunk notifies: the items are looked at again only once
-  // they changed.
+  // Usage, config and status notify too: the items are looked at again only
+  // once they changed.
   void _changed() {
     final chat = widget.chat;
     var shown = _shown;

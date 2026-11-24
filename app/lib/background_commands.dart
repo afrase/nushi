@@ -81,7 +81,8 @@ class BackgroundCommandPane extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return ListenableBuilder(
-      listenable: chat,
+      // Its output streams in on ChatState.streamed.
+      listenable: Listenable.merge([chat, chat.streamed]),
       builder: (context, _) {
         final it = backgroundCommandsOf(chat.withRunning)
             .where((it) => it.id == id)

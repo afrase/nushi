@@ -329,7 +329,7 @@ class _SidebarState extends State<Sidebar> {
                         railFits,
                         _minute,
                         // Grouped by state, a chat regroups as its state
-                        // changes, not at each streamed chunk.
+                        // changes, not at each item or usage it hears.
                         if (group == GroupBy.status)
                           for (final c in daemon.chats.values) c.look,
                       ]),

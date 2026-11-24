@@ -580,6 +580,7 @@ class _TranscriptState extends State<Transcript> {
       _tail = Transcript.firstEntries;
     }
     if (widget.items == null) _attachFind(widget.chat);
+    widget.chat.streamed.addListener(_streamed);
     _follower.scroll.addListener(_findPinAt);
     _marks.onFound = (marks) {
       final find = widget.chat.find;
@@ -604,9 +605,17 @@ class _TranscriptState extends State<Transcript> {
     }
   }
 
+  /// Text streamed into an item: the chat doesn't notify for that, so the
+  /// list follows it itself (ChatState.streamed).
+  void _streamed() => setState(() {});
+
   @override
   void didUpdateWidget(Transcript old) {
     super.didUpdateWidget(old);
+    if (old.chat != widget.chat) {
+      old.chat.streamed.removeListener(_streamed);
+      widget.chat.streamed.addListener(_streamed);
+    }
     if (old.chat == widget.chat &&
         (old.items == null) == (widget.items == null)) {
       return;
@@ -657,6 +666,7 @@ class _TranscriptState extends State<Transcript> {
     _follower.scroll.removeListener(_findPinAt);
     _pinAt.dispose();
     widget.chat.find.removeListener(_findChanged);
+    widget.chat.streamed.removeListener(_streamed);
     _marks.dispose();
     _follower.dispose();
     super.dispose();

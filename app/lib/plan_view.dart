@@ -68,7 +68,7 @@ class _PlanViewState extends State<PlanView> {
     super.dispose();
   }
 
-  // Every streamed chunk notifies: only a change of working or of the
+  // Usage, config and status notify too: only a change of working or of the
   // pinned plan rebuilds, and the pinned one is looked for again only once
   // the items changed.
   void _changed() {

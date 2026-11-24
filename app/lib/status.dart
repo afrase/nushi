@@ -162,7 +162,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
       _sparks = widget.sparks && sparksFor(c.lastTurn ?? Duration.zero);
       (_check ??= _once(_checkFor)).forward(from: 0).ignore();
     }
-    // Every streamed chunk notifies: only a change of state rebuilds.
+    // Usage, config and items notify too: only a change of state rebuilds.
     if (c.busy == _busy && c.needsYou == _waiting && c.phase == _phase) {
       return;
     }

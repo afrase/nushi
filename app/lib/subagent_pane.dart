@@ -35,7 +35,8 @@ class SubagentPane extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return ListenableBuilder(
-      listenable: chat,
+      // Its steps' text streams in on ChatState.streamed.
+      listenable: Listenable.merge([chat, chat.streamed]),
       builder: (context, _) {
         final s = subagentsOf(chat.withRunning)
             .where((s) => s.call.id == id)

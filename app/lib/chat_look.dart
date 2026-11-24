@@ -6,9 +6,9 @@ import 'package:nushi/chat.dart';
 /// the phone's row, a collapsed group's dot, the sidebar's grouping and
 /// sort, the status bar's counts): its state, title, pin, color, times,
 /// folder, branch and links, and what its menu offers. It tells its
-/// listeners only when one of those changes, never as text streams into
-/// the transcript, which notifies the chat at every chunk; what lists the
-/// chat listens to this rather than to the chat.
+/// listeners only when one of those changes, not at each item, usage or
+/// config event the chat notifies for; what lists the chat listens to this
+/// rather than to the chat.
 class ChatLook extends ChangeNotifier {
   new(this.chat) : _was = _of(chat) {
     chat.addListener(_changed);

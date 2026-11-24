@@ -286,6 +286,12 @@ class ChatState extends ChangeNotifier {
   /// is worked out from the items but their text (the artifacts,
   /// `chatFilesOf`) is worked out again only then, not per chunk.
   int revision = 0;
+
+  /// Goes up when text streams into an item it has (an append), which
+  /// tells only what shows item content: the transcript, a subagent's or a
+  /// task's pane. The chat itself notifies for everything else, so its
+  /// header, details panel and Files tree don't rebuild per chunk.
+  final streamed = ValueNotifier<int>(0);
   List<ConfigOption> config = [];
 
   /// Its config option of [category] ('model', 'mode', 'thought_level'),
@@ -782,6 +788,7 @@ class ChatState extends ChangeNotifier {
     }
     edits.clear();
     for (final n in <ChangeNotifier>[
+      streamed,
       editsChanged,
       renaming,
       pane,
@@ -805,8 +812,11 @@ class ChatState extends ChangeNotifier {
 
   void apply(EventsResponse e) {
     if (loaded) {
-      _apply(e);
-      notifyListeners();
+      if (_apply(e)) {
+        streamed.value++;
+      } else {
+        notifyListeners();
+      }
     } else if (loading) {
       _early.add(e);
     } else if (e.hasStatus()) {
@@ -895,12 +905,14 @@ class ChatState extends ChangeNotifier {
         : DateTime.fromMillisecondsSinceEpoch(s.started.toInt());
   }
 
-  void _apply(EventsResponse e) {
-    if (e.seq <= _seq) return; // the snapshot has it
+  /// Applies [e]; whether all it did was stream text into an item
+  /// ([streamed]).
+  bool _apply(EventsResponse e) {
+    if (e.seq <= _seq) return false; // the snapshot has it
     _seq = e.seq.toInt();
     switch (e.whichKind()) {
       case EventsResponse_Kind.item:
-        _applyItem(e.item);
+        return _applyItem(e.item);
       case EventsResponse_Kind.config:
         config = e.config.options;
       case EventsResponse_Kind.commands:
@@ -939,24 +951,29 @@ class ChatState extends ChangeNotifier {
           EventsResponse_Kind.relatedWorktrees ||
           EventsResponse_Kind.serversChanged ||
           EventsResponse_Kind.notSet:
-        return; // the daemon keeps a chat's title and folder
+        return false; // the daemon keeps a chat's title and folder
     }
+    return false;
   }
 
-  void _applyItem(ItemEvent e) {
+  /// Applies an item's event; whether it only streamed text into one it
+  /// has, which leaves [revision] as it was.
+  bool _applyItem(ItemEvent e) {
     final i = items.indexWhere((it) => it.id == e.item.id);
     if (i < 0 && older > 0 && (e.append || e.index < older)) {
       // An item before the recent part: its page will have it; a task
       // running there is kept up.
       final j = runningBefore.indexWhere((it) => it.id == e.item.id);
-      if (j < 0) return;
-      runningBefore[j] = e.append
-          ? (runningBefore[j].deepCopy()
-              ..text = runningBefore[j].text + e.item.text)
-          : e.item;
+      if (j < 0) return false;
+      if (e.append) {
+        runningBefore[j] = runningBefore[j].deepCopy()
+          ..text = runningBefore[j].text + e.item.text;
+        return true;
+      }
+      runningBefore[j] = e.item;
     } else if (i >= 0 && e.append) {
       items[i] = items[i].deepCopy()..text = items[i].text + e.item.text;
-      return;
+      return true;
     } else if (i < 0) {
       outbox.adopt(e.item);
       // A prompt from above answered at the foot goes as the chat moves on.
@@ -972,6 +989,7 @@ class ChatState extends ChangeNotifier {
       items[i] = e.item;
     }
     revision++;
+    return false;
   }
 }
 

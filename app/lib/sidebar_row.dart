@@ -88,7 +88,7 @@ class _SidebarRowState extends State<SidebarRow> {
     // Asleep, it recedes further than an archived one: no dot, its mark
     // and title faint, the title italic; open, it reads as the open chat.
     final quiet = recedes(chat) && !shown;
-    // Not the chat itself, which notifies at every streamed chunk.
+    // Not the chat itself, which notifies at every item, usage or config.
     return ListenableBuilder(
       listenable: chat.look,
       builder: (context, _) => movable(
