@@ -422,6 +422,7 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           go test ./internal/procgroup ./internal/filelock ./internal/logs ./internal/shellenv ./internal/batchfile ./internal/terminal ./internal/proctree ./internal/footprint
+          go test -run '^TestPipe' ./internal/agentproc
           go test -run 'TestAlive|TestOpenWindows' ./internal/claudehistory
           go test -run 'TestOwnDataFolder|TestWTDefaultLine|TestMachineFragment|TestStopEvent' ./cmd/nushid
 
