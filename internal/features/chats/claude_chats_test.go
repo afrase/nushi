@@ -217,13 +217,14 @@ func (r *pending) answer(t *testing.T, result json.RawMessage) {
 }
 
 // parity is what Nushi makes of a session's events: a chat's items,
-// usage and status, without the times of this run.
+// usage, status and model option, without the times of this run.
 type parity struct {
 	Session           string
 	Items             []model.Item
 	Usage             model.Usage
 	Busy, Waiting     bool
 	BackgroundRunning int
+	Model             string // the model option's value: after a refusal's fallback, one claude's list doesn't name
 }
 
 // views are the chats Nushi makes of an agent's events, in the order
@@ -268,6 +269,9 @@ func view(c *chat) parity {
 	defer c.mu.Unlock()
 	st := c.statusLocked()
 	p := parity{Usage: c.usage, Busy: st.Busy, Waiting: st.Waiting, BackgroundRunning: st.Background}
+	if i := configIndex(c.config, "model"); i >= 0 {
+		p.Model = c.config[i].Current
+	}
 	for _, it := range c.items {
 		it = timeless(it)
 		// A model fallback's notice is worded by each agent: the Go
