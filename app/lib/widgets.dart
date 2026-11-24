@@ -431,29 +431,44 @@ String? updatedLine(
   if (updated == null) return loading ? 'Loading…' : null;
   final when = ago(clock().difference(updated), updated);
   if (failed && !loading) return "Couldn't refresh · as of $when";
-  return 'Updated $when${loading ? ' · refreshing' : ''}';
+  return 'Updated $when${loading ? refreshingWords : ''}';
 }
+
+/// What [updatedLine] adds while it's asked again.
+const refreshingWords = ' · refreshing';
 
 /// [updatedLine]'s [line] as it shows (the bars', an issue's or a pull
 /// request's page): muted, or once a quiet poll [failed] in the failure's
 /// ink after its mark, so "Couldn't refresh" never reads as a plain time
 /// (docs/design.md: a state cue is unmistakable); [short] (a narrow bar)
-/// says only that, the whole line on hover.
+/// says only that, the whole line on hover. [busy] puts a spinner before
+/// it while it's asked again (a page's own line, where a Refresh is
+/// pressed).
 Widget updatedText(
   BuildContext context,
   String line, {
   required bool failed,
   bool short = false,
+  bool busy = false,
   double size = 12,
   Key? key,
 }) {
   final theme = NushiTheme.of(context);
   final t = theme.t;
   if (!failed) {
-    return Text(
-      line,
+    final style = theme.ui(t.textMuted, size: size);
+    if (!busy) return Text(line, key: key, style: style);
+    return Row(
       key: key,
-      style: theme.ui(t.textMuted, size: size),
+      mainAxisSize: MainAxisSize.min,
+      spacing: 6,
+      children: [
+        SizedBox.square(
+          dimension: size,
+          child: Spinner(color: t.textMuted),
+        ),
+        Text(line, style: style),
+      ],
     );
   }
   final shown = Row(

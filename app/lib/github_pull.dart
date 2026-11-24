@@ -133,6 +133,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       }),
     );
     _redraw.addListener(_changed);
+    minuteClock.addListener(_changed); // "Updated 2m ago" moves on
   }
 
   void _changed() => setState(() {});
@@ -150,6 +151,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       ?..removeListener(_sourceChanged)
       ..hideTab();
     _redraw.removeListener(_changed);
+    minuteClock.removeListener(_changed);
     _poll?.cancel();
     _scroll.dispose();
     _commits.dispose();
@@ -170,6 +172,8 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
 
   Future<void> _load({bool quiet = false}) async {
     final n = ++_asked;
+    // Its line says so ("· refreshing"); true already as it opens.
+    if (!_asking) setState(() => _asking = true);
     try {
       final r = await widget.daemon.client.getGitHubPull(
         GetGitHubPullRequest(ref: widget.ref, quiet: quiet),
@@ -191,7 +195,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
         setState(() {
           _keptAt ??= _okAt;
           _failed = _keptAt != null;
-          if (!_failed) _error = errorText(e);
+          _error = errorText(e); // the failure line's tooltip, else shown
         });
       } else if (mounted && n == _asked) {
         setState(() => _error = errorText(e));
@@ -268,9 +272,16 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final (pull, keptAt, asking, error, pollFailed) = switch (widget.source) {
-      final s? => (s.pull, s.keptAt, s.asking, s.error, false),
-      null => (_pull, _keptAt, _asking, _error, _failed),
+    final (
+      pull,
+      keptAt,
+      readAt,
+      asking,
+      error,
+      failed,
+    ) = switch (widget.source) {
+      final s? => (s.pull, s.keptAt, s.readAt, s.asking, s.error, s.failed),
+      null => (_pull, _keptAt, _keptAt ?? _okAt, _asking, _error, _failed),
     };
     final p = pull;
     if (p == null) {
@@ -281,7 +292,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     if (_tab == PullSection.overview || _tab == PullSection.commits) {
       _commits.want(p.headOid);
     }
-    final failed = p.checks.where((c) => c.kind == CheckKind.failed).length;
+    final failing = p.checks.where((c) => c.kind == CheckKind.failed).length;
     final todo = todoOf(p);
     final open = p.item.state == 'open';
     return LayoutBuilder(
@@ -307,17 +318,15 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
               child: CustomScrollView(
                 controller: _scroll,
                 slivers: [
-                  if (keptAt case final at?)
+                  // How fresh it is, always (docs/design.md's state cues):
+                  // "Updated 2m ago", "· refreshing" while it's asked, the
+                  // failure's line once an ask failed.
+                  if (updatedLine(readAt, loading: asking, failed: failed)
+                      case final line?)
                     column(
                       Align(
                         alignment: Alignment.centerRight,
-                        child: updatedText(
-                          context,
-                          updatedLine(at, loading: asking, failed: pollFailed)!,
-                          failed: pollFailed && !asking,
-                          size: 11.5,
-                          key: const ValueKey('pull-kept'),
-                        ),
+                        child: _fresh(context, line, failed && !asking, error),
                       ),
                       top: 8,
                     ),
@@ -329,9 +338,9 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                       titleKey: _title,
                       actions: actions(),
                     ),
-                    top: keptAt == null ? 24 : 4,
+                    top: readAt == null ? 24 : 4,
                   ),
-                  if (error case final e?)
+                  if (error case final e? when !failed)
                     column(
                       Text(
                         'Not current: $e',
@@ -355,8 +364,8 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                                 (PullSection.commits, 'Commits  ${p.commits}'),
                                 (
                                   PullSection.checks,
-                                  failed > 0
-                                      ? 'Checks  $failed failing'
+                                  failing > 0
+                                      ? 'Checks  $failing failing'
                                       : 'Checks  ${p.checks.length}',
                                 ),
                                 (
@@ -441,6 +450,20 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
         );
       },
     );
+  }
+
+  /// The page's line ([updatedLine]), spinning while it's asked; a failed
+  /// one says why on hover.
+  Widget _fresh(BuildContext context, String line, bool failed, String? why) {
+    final text = updatedText(
+      context,
+      line,
+      failed: failed,
+      busy: line.endsWith(refreshingWords),
+      size: 11.5,
+      key: const ValueKey('pull-kept'),
+    );
+    return failed && why != null ? tooltip(context, why, text) : text;
   }
 
   /// The bar's buttons: Start work (the GitHub view), Submit review.

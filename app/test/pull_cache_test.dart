@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_pull.dart';
 import 'package:nushi/clock.dart';
@@ -45,7 +44,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PullSkeleton), findsNothing);
     expect(find.text(_title), findsOneWidget); // the head's
-    expect(find.byKey(const ValueKey('pull-kept')), findsNothing);
+    expect(find.text('Updated just now'), findsOneWidget);
     d.dispose();
   }, variant: onMac);
 
@@ -67,14 +66,15 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Renamed'), findsOneWidget);
-    expect(find.byKey(const ValueKey('pull-kept')), findsNothing);
+    expect(find.text('Updated just now'), findsOneWidget);
     // And it's what shows next time.
     expect(cachedPull(_ref)!.$2.item.title, 'Renamed');
     d.dispose();
   }, variant: onMac);
 
   testWidgets('after a restart (nothing in memory) it comes from the data '
-      "folder; a failed ask keeps it and says when it's from", (tester) async {
+      "folder; a failed ask keeps it and says it couldn't refresh, and when "
+      "it's from", (tester) async {
     _kept(const Duration(minutes: 5));
     forgetPulls(disk: false);
     final (d, _) = await openPullTab(
@@ -85,7 +85,7 @@ void main() {
           : null,
     );
     expect(find.text(_title), findsOneWidget); // the head's
-    expect(find.text('Updated 5m ago'), findsOneWidget);
+    expect(find.text("Couldn't refresh · as of 5m ago"), findsOneWidget);
     d.dispose();
   }, variant: onMac);
 

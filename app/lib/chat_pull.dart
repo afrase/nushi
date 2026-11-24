@@ -55,6 +55,15 @@ class ChatPull extends ChangeNotifier {
   /// Whether it's being asked for now.
   bool get asking => _asking != null;
 
+  /// When the pull request showing was read: the copy kept from before
+  /// ([keptAt]) or GitHub's last answer; null with none. The tab says it
+  /// ("Updated 2m ago").
+  DateTime? get readAt => keptAt ?? _wholeAt;
+
+  /// The last ask for the tab's pull request failed: what shows is from
+  /// [readAt] ("Couldn't refresh · as of 2m ago"), [error] says why.
+  bool failed = false;
+
   /// What was read last of the linked pull request, until it's asked.
   void _seed() {
     final l = current;
@@ -111,11 +120,19 @@ class ChatPull extends ChangeNotifier {
     final was = current;
     if (was != null && pullKey(was) == pullKey(link)) return;
     pickedPulls.value = {...pickedPulls.value, chat.id: pullKey(link)};
-    pull = null;
-    keptAt = null;
+    _forgetWhole();
     _seed();
     notifyListeners();
     unawaited(refresh());
+  }
+
+  /// Another pull request shows: nothing of the one before (its read,
+  /// its time, its failure) is its.
+  void _forgetWhole() {
+    pull = null;
+    keptAt = null;
+    _wholeAt = null;
+    failed = false;
   }
 
   /// [link]'s pull request as a row shows it (GetGitHubItems').
@@ -240,6 +257,7 @@ class ChatPull extends ChangeNotifier {
         await _readWhole(false);
       } on Object catch (e) {
         error = errorText(e);
+        failed = true;
         _back.failed(e);
       }
     }();
@@ -372,6 +390,9 @@ class ChatPull extends ChangeNotifier {
 
   Future<void> _ask(bool quiet, {bool polled = false}) async {
     _back.cancel();
+    // What failed before says nothing once this ask answers: an ask that
+    // skips FindChatPull (the timer's, below) would leave it.
+    error = null;
     try {
       // An archived chat finds nothing new (ADR 0059's amendment): its
       // rows are asked all the same. The timer looks for the branch's
@@ -397,6 +418,8 @@ class ChatPull extends ChangeNotifier {
       _seenFirst();
     } on Object catch (e) {
       error = errorText(e);
+      // What the tab shows wasn't read again.
+      if (_readsWhole) failed = true;
       _back.failed(e);
     }
   }
@@ -412,6 +435,7 @@ class ChatPull extends ChangeNotifier {
     pull = r.pull;
     keptAt = null;
     _wholeAt = clock();
+    failed = false;
     keepPull(ref, r.pull);
     PullStates.of(daemon).put(r.pull);
     _recheck(r.pull);
@@ -479,8 +503,7 @@ class ChatPull extends ChangeNotifier {
       LinkChatPullRequest(chatId: chat.id, pull: link),
     );
     chat.linkPull(link);
-    pull = null;
-    keptAt = null;
+    _forgetWhole();
     _seed();
     notifyListeners();
     await refresh();
