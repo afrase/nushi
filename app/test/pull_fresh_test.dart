@@ -10,6 +10,7 @@ import 'package:nushi/conventions.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_bar.dart';
 import 'package:nushi/github_view.dart' show githubPoll;
+import 'package:nushi/motion.dart';
 import 'package:nushi/pull_polls.dart';
 
 import 'browser_fixture.dart';
@@ -127,6 +128,7 @@ void main() {
     hang.complete(GetGitHubPullResponse(pull: fixturePull()));
     hang = null;
     await tester.pumpAndSettle();
+    await tester.pump(Waits.refreshShown); // the Refresh's busy cue
     expect(_says('Updated just now'), findsOneWidget);
     expect(asked, hasLength(1));
     await closeView(tester, d);
@@ -147,6 +149,7 @@ void main() {
     failing = true;
     await tester.tap(_refresh);
     await tester.pumpAndSettle();
+    await tester.pump(Waits.refreshShown); // the Refresh's busy cue
     expect(_says("Couldn't refresh · as of 3m ago"), findsOneWidget);
     expect(find.text(_title), findsOneWidget);
     expect(_refresh, findsOneWidget); // to try again
@@ -168,6 +171,7 @@ void main() {
     await tester.pump(const Duration(seconds: 20));
     asked.clear();
     await press(tester, LogicalKeyboardKey.keyR, cmd: true);
+    await tester.pump(Waits.refreshShown); // the Refresh's busy cue
     expect(asked, hasLength(1));
     expect(asked.single.quiet, isFalse);
     expect(_says('Updated just now'), findsOneWidget);
@@ -236,6 +240,7 @@ void main() {
       } else {
         await press(tester, LogicalKeyboardKey.keyR, cmd: true);
       }
+      await tester.pump(Waits.refreshShown); // the Refresh's busy cue
       final pulls = fake.calls.whereType<GetGitHubPullRequest>().toList();
       expect(pulls, hasLength(1), reason: how);
       expect(pulls.single.quiet, isFalse, reason: how);
@@ -266,6 +271,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.pump(Waits.refreshShown); // the Refresh's busy cue
     expect(_says("Couldn't refresh · as of 3m ago"), findsOneWidget);
     expect(find.textContaining('Not current'), findsNothing);
     expect(find.text('Add Sub and Neg'), findsWidgets); // the page stays
@@ -295,6 +301,7 @@ void main() {
     hang.complete(GetGitHubPullResponse(pull: gh.pull()));
     hang = null;
     await tester.pumpAndSettle();
+    await tester.pump(Waits.refreshShown); // the Refresh's busy cue
     expect(fake.calls.whereType<GetGitHubPullRequest>(), hasLength(1));
     expect(_says('Updated just now'), findsOneWidget);
     await closeView(tester, g);

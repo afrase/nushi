@@ -66,6 +66,12 @@ abstract final class Waits {
   /// has.
   static const handover = Duration(milliseconds: 600);
 
+  /// A refresh the user asked for (a Refresh, ⌘R) says it's working at
+  /// least this long: a quick answer that changed nothing would otherwise
+  /// flicker past in a few frames and the page look as if nothing
+  /// happened. The answer shows as it comes; only the cue stays.
+  static const refreshShown = Duration(milliseconds: 600);
+
   /// A draft's change is written this long after the last.
   static const save = Duration(milliseconds: 500);
 

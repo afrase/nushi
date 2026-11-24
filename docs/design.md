@@ -120,7 +120,7 @@ A control's size comes from where it sits, never from the call: a `ControlScale`
 | `size` | curve | heights and widths |
 | `leave` | curve | leaving |
 
-What waits, where several places wait alike, is `Waits.` (`motion.dart`; not motion, so Reduce Motion leaves it): `loading` 150 ms before a load's loading look shows, `typing` 250 ms of a pause in typing before it's acted on, `slow` 300 ms before a call that shows nothing says it's running, `handover` 600 ms at most that what shows stays while what replaces it loads unseen, `save` 500 ms before a draft is written.
+What waits, where several places wait alike, is `Waits.` (`motion.dart`; not motion, so Reduce Motion leaves it): `loading` 150 ms before a load's loading look shows, `typing` 250 ms of a pause in typing before it's acted on, `slow` 300 ms before a call that shows nothing says it's running, `handover` 600 ms at most that what shows stays while what replaces it loads unseen, `refreshShown` 600 ms at least that a refresh the user asked for (a Refresh, ⌘R) says it's working, so one that changed nothing still shows it ran, `save` 500 ms before a draft is written.
 
 No view writes `Duration(milliseconds: …)`: `tools/design-check` flags it outside `motion.dart` and the theme's files, the controls' included. A duration that is no step of either, its own thing (a loop's beat on `pulseClock`, how long a state shows, a one-off flourish such as a check drawing itself, a hover's grace, a poll), keeps its number with `// design: <why>`.
 

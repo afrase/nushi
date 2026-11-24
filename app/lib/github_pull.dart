@@ -153,7 +153,18 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   /// joins it, as the chat's tab's does, rather than asking again.
   Future<void>? _refreshing;
 
+  /// The bar's Refresh still shown working: the line is busy for
+  /// [Waits.refreshShown] at least, as the chat's tab's is; another press
+  /// in that time changes nothing.
+  Timer? _shown;
+
   void _refreshed() {
+    if (_shown != null) return;
+    setState(
+      () => _shown = Timer(Waits.refreshShown, () {
+        setState(() => _shown = null);
+      }),
+    );
     if (_refreshing != null) return;
     _refreshing = _load().whenComplete(() => _refreshing = null);
   }
@@ -175,6 +186,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     _redraw.removeListener(_changed);
     minuteClock.removeListener(_changed);
     widget.refreshes?.removeListener(_refreshed);
+    _shown?.cancel();
     _poll?.cancel();
     _scroll.dispose();
     _commits.dispose();
@@ -304,8 +316,15 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       error,
       failed,
     ) = switch (widget.source) {
-      final s? => (s.pull, s.keptAt, s.readAt, s.asking, s.error, s.failed),
-      null => (_pull, _keptAt, _keptAt ?? _okAt, _asking, _error, _failed),
+      final s? => (s.pull, s.keptAt, s.readAt, s.busy, s.error, s.failed),
+      null => (
+        _pull,
+        _keptAt,
+        _keptAt ?? _okAt,
+        _asking || _shown != null,
+        _error,
+        _failed,
+      ),
     };
     final p = pull;
     if (p == null) {
@@ -507,7 +526,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     Icons.refresh,
     key: const ValueKey('pull-refresh'),
     tooltip: withKey('Refresh', cmdLabel(LogicalKeyboardKey.keyR)),
-    onTap: () => unawaited(s.refresh()),
+    onTap: s.refreshAsked,
   );
 
   /// The page's line ([updatedLine]), spinning while it's asked; a failed

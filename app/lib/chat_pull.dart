@@ -7,6 +7,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_items.dart';
 import 'package:nushi/github_pull.dart' show openPullAt;
+import 'package:nushi/motion.dart';
 import 'package:nushi/pull_cache.dart';
 import 'package:nushi/pull_lights.dart' show PullSection;
 import 'package:nushi/pull_link.dart';
@@ -54,6 +55,27 @@ class ChatPull extends ChangeNotifier {
 
   /// Whether it's being asked for now.
   bool get asking => _asking != null;
+
+  /// Whether the tab's line says it's refreshing: while it's asked, and
+  /// for [Waits.refreshShown] at least after a Refresh the user asked for
+  /// ([refreshAsked]).
+  bool get busy => asking || _shown != null;
+
+  /// A Refresh the user asked for, while it's still shown working.
+  Timer? _shown;
+
+  /// The tab's Refresh and ⌘R: asked now (or the ask under way joined),
+  /// its line busy for [Waits.refreshShown] at least. Another press in
+  /// that time changes nothing.
+  void refreshAsked() {
+    if (_shown != null) return;
+    _shown = Timer(Waits.refreshShown, () {
+      _shown = null;
+      notifyListeners();
+    });
+    notifyListeners();
+    unawaited(refresh());
+  }
 
   /// When the pull request showing was read: the copy kept from before
   /// ([keptAt]) or GitHub's last answer; null with none. The tab says it
@@ -303,6 +325,8 @@ class ChatPull extends ChangeNotifier {
     _front = null;
     _soon?.cancel();
     _timer?.cancel();
+    _shown?.cancel();
+    _shown = null;
     _back.cancel();
   }
 

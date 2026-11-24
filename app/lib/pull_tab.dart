@@ -87,7 +87,7 @@ class _PullTabState extends State<PullTab> {
         !actsNow(context)) {
       return KeyEventResult.ignored;
     }
-    unawaited(ChatPull.of(daemon, chat).refresh());
+    ChatPull.of(daemon, chat).refreshAsked();
     return KeyEventResult.handled;
   }
 
