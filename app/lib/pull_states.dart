@@ -134,7 +134,7 @@ class PullStates extends ChangeNotifier {
   /// as a row's is, so the two don't take turns.
   void _take(GitHubItem said) {
     final title = said.title.trim().split(_spaces).join(' ');
-    final kept = _items.look(GitHubAddress.of(said.ref, pull: true)).item;
+    final kept = _items.look(GitHubAddress.of(said.ref, pull: said.pull)).item;
     if (kept == null) return _items.put(said.deepCopy()..title = title);
     final it = kept.deepCopy()
       ..title = title
@@ -230,27 +230,29 @@ class PullStates extends ChangeNotifier {
   Future<void> refresh({bool quiet = false}) async {
     _timer?.cancel();
     final links = _links.toList();
+    // The chats' issues ride on it too (their header chip, ADR 0117): the
+    // same query a host, no poll of their own.
+    final issues = _issues.toList();
     _asked = {for (final l in links) l.id};
-    if (links.isEmpty) return; // asked again once a chat gets one
+    // Asked again once a chat gets one.
+    if (links.isEmpty && issues.isEmpty) return;
     try {
       if (daemon.daemonApi >= statesFromItemsApi) {
-        // The chats' issues ride on it too (their header chip, ADR 0117):
-        // the same query a host, no poll of their own.
         await _items.ask([
           for (final l in links) addressOf(l),
-          ..._issues.map(addressOf),
+          ...issues.map(addressOf),
         ], quiet: quiet);
       } else {
+        final all = [...links, ...issues];
         final r = await daemon.client.getGitHubStates(
-          GetGitHubStatesRequest(items: links, quiet: quiet),
+          GetGitHubStatesRequest(items: all, quiet: quiet),
         );
-        // By node id: each its link's pull request, as GitHubItems keeps
-        // it.
+        // By node id: each its link's item, as GitHubItems keeps it.
         for (final it in r.items) {
-          final l = links.where((l) => l.id == it.id).firstOrNull;
+          final l = all.where((l) => l.id == it.id).firstOrNull;
           if (l == null) continue;
           if (!it.hasRef()) it.ref = l.asRef;
-          _take(it..pull = true); // over the row ChatPull asked for
+          _take(it..pull = l.pull); // over the row ChatPull asked for
         }
       }
       _seenFirst();

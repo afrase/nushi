@@ -239,6 +239,47 @@ void main() {
     d.dispose();
   });
 
+  testWidgets("a chat's linked issue is asked for with no chat on a pull "
+      'request, and from an older daemon too', (tester) async {
+    final issue = GitHubLink(
+      host: 'github.com',
+      repo: 'afrase/nushi-gh-test',
+      number: 7,
+      id: 'I_7',
+    );
+    var api = apiVersion;
+    final fake =
+        FakeDaemon([
+            chat('e', 'claude', 'From an issue', age: 20)..github = issue,
+          ])
+          ..answer = (input) => switch (input) {
+            PingRequest() => PingResponse(apiVersion: api),
+            GetGitHubItemsRequest() => GetGitHubItemsResponse(
+              items: [item(7, 'Crash on start', pull: false)],
+            ),
+            GetGitHubStatesRequest() => GetGitHubStatesResponse(
+              items: [item(7, 'Crash on start', pull: false, state: 'closed')],
+            ),
+            _ => null,
+          };
+    var d = await fake.connect(tester);
+    fake.calls.clear();
+    await PullStates.of(d).refresh();
+    final asked = fake.calls.whereType<GetGitHubItemsRequest>().single;
+    expect(asked.refs.map((r) => r.number), [7]);
+    d.dispose();
+    // Before API 133 the issue rides on GetGitHubStates, kept as an issue.
+    api = statesFromItemsApi - 1;
+    d = await fake.connect(tester);
+    fake.calls.clear();
+    await PullStates.of(d).refresh();
+    final states = fake.calls.whereType<GetGitHubStatesRequest>().single;
+    expect(states.items.map((l) => l.number), [7]);
+    final it = GitHubItems.of(d).look(addressOf(issue)).item;
+    expect((it?.state, it?.pull), ('closed', false));
+    d.dispose();
+  });
+
   // Gates above the floor keep one test of the daemon below them (ADR
   // 0004): before the rows said their checks' commit (API 133), the
   // chats' states come from GetGitHubStates.
