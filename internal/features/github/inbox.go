@@ -106,6 +106,7 @@ func (s *Service) forget(name string) {
 			delete(s.items, k)
 		}
 	}
+	delete(s.unknown, name) // a token added for it makes it known at once
 }
 
 // CachedInbox is the host's inbox (f says which) as GitHub gave it last,

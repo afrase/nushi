@@ -896,6 +896,49 @@ func TestUnknownHosts(t *testing.T) {
 	}
 }
 
+// TestUnknownHostRemembered: a host found unknown (a GitLab remote, a
+// link in a transcript) is believed for unknownFor, gh's config not read
+// again for it meanwhile; a gh login to it shows once that's past, and a
+// token added or removed for a host counts at once.
+func TestUnknownHostRemembered(t *testing.T) {
+	w := newWorld(t)
+	now := time.Date(2026, 11, 24, 9, 0, 0, 0, time.UTC)
+	w.s.now = func() time.Time { return now }
+	read := 0
+	hosts := w.s.Gh.Hosts
+	w.s.Gh.Hosts = func() []string { read++; return hosts() }
+	if w.s.Known("gitlab.com") || w.s.Known("GitLab.com") || read != 1 {
+		t.Fatalf("known, or gh's hosts read %d times", read)
+	}
+	w.mu.Lock()
+	w.ghHosts = append(w.ghHosts, "gitlab.com") // gh auth login, say
+	w.mu.Unlock()
+	now = now.Add(unknownFor - time.Second)
+	if w.s.Known("gitlab.com") || read != 1 {
+		t.Fatalf("not believed for %v: read %d", unknownFor, read)
+	}
+	now = now.Add(time.Second)
+	if !w.s.Known("gitlab.com") || read != 2 {
+		t.Fatalf("gh's login not seen once past it: read %d", read)
+	}
+	// A token added makes a host known at once; removed, unknown at once.
+	if w.s.Known("ghe.example") {
+		t.Fatal("never given a token")
+	}
+	if _, err := w.s.AddToken(t.Context(), "ghe.example", "ghp_e"); err != nil {
+		t.Fatal(err)
+	}
+	if !w.s.Known("ghe.example") {
+		t.Fatal("unknown after its token was added")
+	}
+	if _, err := w.s.RemoveToken("ghe.example"); err != nil {
+		t.Fatal(err)
+	}
+	if w.s.Known("ghe.example") {
+		t.Fatal("known after its token was removed")
+	}
+}
+
 func TestCheckOut(t *testing.T) {
 	w := newWorld(t)
 	ctx := t.Context()

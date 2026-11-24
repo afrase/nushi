@@ -133,6 +133,8 @@ type Service struct {
 	mu       sync.Mutex
 	clients  map[string]*host     // by host, once its token was read
 	noToken  map[string]time.Time // by host: when gh last had no token for it
+	unknown  map[string]time.Time // by host: when known last found it unknown (unknownFor)
+	now      func() time.Time     // the unknown hosts' clock (tests set it)
 	inboxes  map[string]inboxCache
 	items    map[string]itemCache // by refKey (refitems.go)
 	logs     map[string]string    // finished jobs' log tails, by host, repository and job
@@ -165,8 +167,9 @@ func (s *Service) drop(name string, h *host) {
 
 // New makes the service.
 func New(d Deps) *Service {
-	return &Service{Deps: d, clients: map[string]*host{}, noToken: map[string]time.Time{}, inboxes: map[string]inboxCache{},
-		items: map[string]itemCache{}, logs: map[string]string{}, blobs: newBlobCache(), repos: map[string]repoCache{}, branches: map[string]headsCache{}}
+	return &Service{Deps: d, clients: map[string]*host{}, noToken: map[string]time.Time{}, unknown: map[string]time.Time{}, now: time.Now,
+		inboxes: map[string]inboxCache{},
+		items:   map[string]itemCache{}, logs: map[string]string{}, blobs: newBlobCache(), repos: map[string]repoCache{}, branches: map[string]headsCache{}}
 }
 
 // HostState is a host as Settings › GitHub shows it.
@@ -269,21 +272,44 @@ func normalHost(name string) (string, bool) {
 // Any other (a host named by a link in someone's text, say) is refused
 // before a token is read, so no token ever goes to a server someone else
 // picked: gh's GH_ENTERPRISE_TOKEN would be given for any. A host gh
-// doesn't know has gh's config read again first, for a login since.
+// doesn't know has gh's config read again first, for a login since; one
+// found unknown is believed for unknownFor (a GitLab remote's every
+// poll, a link in a transcript), until a token is added or removed.
 func (s *Service) known(name string) (string, []string, error) {
 	h, ok := normalHost(name)
 	if !ok {
 		return "", nil, unknownHostError(fmt.Sprintf("%q isn't a host's name", name))
+	}
+	unknown := unknownHostError(h + " isn't a host gh is signed in to or one given a token in Settings › GitHub")
+	s.mu.Lock()
+	at, missed := s.unknown[h]
+	now := s.now()
+	s.mu.Unlock()
+	if missed && now.Sub(at) < unknownFor {
+		return "", nil, unknown
 	}
 	pasted, err := s.Store.GitHubTokenHosts()
 	if err != nil {
 		return "", nil, err
 	}
 	if h != "github.com" && !slices.Contains(pasted, h) && !slices.Contains(s.Gh.Hosts(), h) {
-		return "", nil, unknownHostError(h + " isn't a host gh is signed in to or one given a token in Settings › GitHub")
+		s.mu.Lock()
+		for k, at := range s.unknown { // what's past believing goes, so it stays small
+			if now.Sub(at) >= unknownFor {
+				delete(s.unknown, k)
+			}
+		}
+		s.unknown[h] = now
+		s.mu.Unlock()
+		return "", nil, unknown
 	}
 	return h, pasted, nil
 }
+
+// unknownFor is how long a host found unknown is believed: gh's config
+// and github.json aren't read again for it meanwhile, so a gh login to it
+// shows within this.
+const unknownFor = 30 * time.Second
 
 // unknownHostError is known's error for a name that isn't a GitHub host Nushi
 // knows (gh's, or one given a token), not a failure to ask.
