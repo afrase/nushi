@@ -67,18 +67,6 @@ String checksSentence(({int passed, int total, int failed, int running}) n) {
   return '${n.passed} of ${n.total} checks passed';
 }
 
-/// What keeps [it] from merging, as the row's Merge… says it, in a word
-/// each; empty when it can merge as GitHub says.
-List<String> itemBlockers(GitHubItem it) => [
-  if (it.draft) 'draft',
-  if (it.checkCounts.failed > 0 || it.checkCounts.running > 0) 'checks',
-  if (it.review == 'changes_requested' || it.review == 'review_required')
-    'review',
-  if (it.unresolved > 0) 'threads',
-  if (it.mergeState == 'dirty') 'conflicts',
-  if (it.mergeState == 'behind') 'behind',
-];
-
 /// Whether GitHub says [it] can merge now, as the daemon's clearToMerge
 /// reads its merge state (internal/features/github/merge.go): "unstable"
 /// is checks not passing that nothing requires, so it's ready too.
@@ -89,6 +77,28 @@ bool itemReady(GitHubItem it) =>
       'clean' || 'has_hooks' || 'unstable' => true,
       _ => false,
     };
+
+/// What keeps open [it] from merging, as a row's Merge… says it while off
+/// (ADR 0117): a block of [blockWords], from its draft flag and GitHub's
+/// merge state alone, since a row's item has nothing more (which checks
+/// are required, the base's rules); null once [itemReady].
+String? itemBlock(GitHubItem it) => itemReady(it)
+    ? null
+    : it.draft
+    ? 'draft'
+    : switch (it.mergeState) {
+        'dirty' => 'conflicts',
+        'behind' => 'behind',
+        'blocked' => 'rules',
+        _ => 'unknown',
+      };
+
+/// [block] of [itemBlock] in a word, for Merge…'s detail.
+String _blockWord(String block) => switch (block) {
+  'rules' => 'blocked',
+  'unknown' => 'checking',
+  _ => block,
+};
 
 /// Whether a merged pull request of [cp]'s offers Clean up… (ADR 0063):
 /// no clean-up already started.
@@ -194,7 +204,7 @@ List<MenuEntry> pullRowMenu(
   required VoidCallback onShow,
 }) {
   final url = it?.url ?? '';
-  final blockers = it == null ? const <String>[] : itemBlockers(it);
+  final block = it == null ? null : itemBlock(it);
   final open = it?.state == 'open';
   final done = it?.state == 'merged' || it?.state == 'closed';
   return [
@@ -223,9 +233,11 @@ List<MenuEntry> pullRowMenu(
     if (open && it != null)
       MenuEntry(
         'Merge…',
-        detail: itemReady(it) ? '' : blockers.join(', '),
-        tooltip: itemReady(it) ? 'Asks you first' : "GitHub won't merge it yet",
-        onPick: itemReady(it)
+        detail: block == null ? '' : _blockWord(block),
+        tooltip: block == null
+            ? 'Asks you first'
+            : blockSentence([blockWords(block, base: it.base)]),
+        onPick: block == null
             ? () => unawaited(_merge(context, cp, link))
             : null,
       ),

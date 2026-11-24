@@ -359,6 +359,51 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 
+  testWidgets("not ready, Merge… is off and says why from GitHub's merge "
+      'state alone, in the merge card\'s words', (tester) async {
+    final (d, _) = await _app(
+      tester,
+      numbers: [230, 231],
+      items: {
+        // Blocked by its base's rules; its failing check and threads are
+        // only counts on an item, not what blocks it.
+        230: _item(
+          230,
+          'Retry the feed on a timeout',
+          checks: (3, 1, 0, 0),
+          threads: 2,
+          review: 'review_required',
+        ),
+        231: _item(231, 'Cache the feed', merge: 'dirty'),
+      },
+    );
+    Future<void> menuOf(int i) async {
+      await tester.tap(
+        find.descendant(
+          of: find.byType(PullRow).at(i),
+          matching: find.byTooltip('Pull request'),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await menuOf(0);
+    expect(find.byTooltip("A rule of main's isn't met."), findsOneWidget);
+    expect(find.textContaining('blocked', findRichText: true), findsOneWidget);
+    expect(find.textContaining('checks', findRichText: true), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    await menuOf(1);
+    expect(find.byTooltip('Conflicts with main.'), findsOneWidget);
+    expect(
+      find.textContaining('conflicts', findRichText: true),
+      findsOneWidget,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    await closeView(tester, d);
+  }, variant: onMac);
+
   test('blocked by its rules or a draft is not ready, unstable or not', () {
     expect(itemReady(_item(1, 't')), isFalse); // blocked, the default
     expect(itemReady(_item(1, 't', merge: 'unstable', draft: true)), isFalse);
