@@ -35,7 +35,11 @@ type Process interface {
 	Exit() (exited bool, code int)
 	// Terminate sends SIGTERM to the terminal's foreground group.
 	Terminate() error
-	Attach(stop <-chan struct{}, fn func([]byte) bool)
+	// Output is what it wrote so far, as its terminal keeps it.
+	Output() []byte
+	// Follow gives fn that, then what it writes as it comes (terminal's
+	// Follow), saying false when fn fell too far behind and was dropped.
+	Follow(stop <-chan struct{}, fn func([]byte) bool) (kept bool)
 	// Close hangs the terminal up, and kills what's left on it.
 	Close()
 }

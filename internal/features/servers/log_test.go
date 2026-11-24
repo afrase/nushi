@@ -126,3 +126,35 @@ func TestLogTail(t *testing.T) {
 		t.Errorf("logTail(nil) = %v", got)
 	}
 }
+
+// droppedProc is a server's terminal that dropped its follower for
+// falling behind just as the program ended.
+type droppedProc struct{ done chan struct{} }
+
+func (p droppedProc) Pid() int              { return 1 }
+func (p droppedProc) Done() <-chan struct{} { return p.done }
+func (p droppedProc) Exit() (bool, int)     { return true, 0 }
+func (p droppedProc) Terminate() error      { return nil }
+func (p droppedProc) Output() []byte        { return []byte{} }
+func (p droppedProc) Close()                {}
+func (p droppedProc) Follow(_ <-chan struct{}, fn func([]byte) bool) bool {
+	fn([]byte("the start"))
+	return false
+}
+
+// A watcher the terminal dropped for falling behind as the server ended
+// never had the tail, so it isn't told the server ended, as a terminal's
+// client isn't.
+func TestADroppedWatcherHearsNoEnd(t *testing.T) {
+	folder := t.TempDir()
+	chats := &fakeChats{chats: map[string]model.ChatRecord{"c": {ID: "c", Folder: folder}}}
+	s := New(Options{Chats: chats})
+	done := make(chan struct{})
+	close(done)
+	s.alive = []*server{{id: "x", folder: folder, proc: droppedProc{done: done}, ended: make(chan struct{})}}
+	ended, err := s.Watch("c", "x", nil, func([]byte) bool { return true })
+	testcheck.NoErr(t, err)
+	if ended {
+		t.Error("a dropped watcher was told the server ended")
+	}
+}

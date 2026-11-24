@@ -63,7 +63,7 @@ func shell(t *testing.T) (*Terminal, *output) {
 		t.Fatal(err)
 	}
 	t.Cleanup(term.Close)
-	go term.Attach(nil, func(b []byte) bool { out.add(b); return true })
+	go term.Follow(nil, func(b []byte) bool { out.add(b); return true })
 	return term, out
 }
 
@@ -92,7 +92,7 @@ func TestExitCodeAndReplay(t *testing.T) {
 		t.Fatalf("exit %v %d, want true 3", exited, code)
 	}
 	again := &output{}
-	term.Attach(nil, func(b []byte) bool { again.add(b); return true })
+	term.Follow(nil, func(b []byte) bool { again.add(b); return true })
 	again.wait(t, `before-exit\r\n`)
 }
 
@@ -156,7 +156,7 @@ func TestBatchFileProgram(t *testing.T) {
 	term, err := Start([]string{bat, "world"}, dir, os.Environ(), 80, 24, func() {})
 	testcheck.NoErr(t, err)
 	t.Cleanup(term.Close)
-	go term.Attach(nil, func(b []byte) bool { out.add(b); return true })
+	go term.Follow(nil, func(b []byte) bool { out.add(b); return true })
 	out.wait(t, `hello-world`)
 	select {
 	case <-term.Done():
@@ -274,7 +274,7 @@ func TestCloseKillsWhatIgnoresIt(t *testing.T) {
 	term, err := Start([]string{exe}, t.TempDir(), append(os.Environ(), ignoreCloseEnv+"=1"), 80, 24, func() {})
 	testcheck.NoErr(t, err)
 	t.Cleanup(term.Close)
-	go term.Attach(nil, func(b []byte) bool { out.add(b); return true })
+	go term.Follow(nil, func(b []byte) bool { out.add(b); return true })
 	out.wait(t, `ignoring-close`)
 	term.Close()
 	if exited, code := term.Exit(); !exited || code != -1 {

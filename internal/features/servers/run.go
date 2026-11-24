@@ -247,7 +247,7 @@ func (s *Service) reap(sv *server) {
 	s.mu.Unlock()
 	s.Procs.Stop(tree)
 	_, code := sv.proc.Exit()
-	raw := written(sv.proc)
+	raw := sv.proc.Output()
 	s.mu.Lock()
 	why, by := sv.err, sv.stopping
 	switch {
@@ -318,16 +318,6 @@ const (
 	keptLines = 200
 	keptBytes = 32 << 10
 )
-
-// written is what a program wrote so far, as its terminal keeps it;
-// never nil.
-func written(p Process) []byte {
-	raw := []byte{}
-	done := make(chan struct{})
-	close(done)
-	p.Attach(done, func(b []byte) bool { raw = append(raw, b...); return false })
-	return raw
-}
 
 // lastLines is the last of a program's output as plain text: at most so
 // many lines and size bytes, the line that size cuts left out.

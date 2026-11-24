@@ -89,7 +89,7 @@ func setup(t *testing.T, configurations ...string) (*Service, *fakeChats, string
 	s := New(Options{Chats: chats, Procs: proctree.Tree{}, Env: plainEnv{},
 		Record: &fakeRecord{owned: map[string][]model.Process{}},
 		Spawn: func(argv []string, dir string, env []string) (Process, error) {
-			return terminal.Start(argv, dir, env, 100, 30, func() {})
+			return terminal.Start(argv, dir, env, 100, 30, nil)
 		}})
 	s.ReadyWithin = 5 * time.Second
 	t.Cleanup(s.CloseAll)
@@ -142,7 +142,7 @@ func output(s *Service) string {
 	s.mu.Lock()
 	proc := s.alive[0].proc
 	s.mu.Unlock()
-	return lastLines(written(proc), keptLines, keptBytes)
+	return lastLines(proc.Output(), keptLines, keptBytes)
 }
 
 // row waits for the row named name to be in state, and returns it.

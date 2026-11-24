@@ -23,7 +23,8 @@ type sys struct {
 }
 
 // Start runs argv in dir with env, in a terminal of cols × rows. changed is
-// called when the foreground program changes and when the program exits.
+// called when the foreground program changes and when the program exits;
+// nil, nothing follows the foreground (a dev server's, which reads none).
 func Start(argv []string, dir string, env []string, cols, rows int, changed func()) (*Terminal, error) {
 	master, tty, err := open()
 	if err != nil {
@@ -53,7 +54,9 @@ func Start(argv []string, dir string, env []string, cols, rows int, changed func
 	read := make(chan struct{})
 	go t.read(read)
 	go t.wait(read)
-	go t.watch()
+	if changed != nil {
+		go t.watch()
+	}
 	return t, nil
 }
 

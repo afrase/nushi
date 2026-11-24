@@ -73,6 +73,6 @@ func newServers(chats servers.Chats, record string, publish func(model.Event)) *
 	return servers.New(servers.Options{Chats: chats, Procs: proctree.Tree{}, Env: shellenv.Off(os.Environ()), Publish: publish,
 		Record: proctree.NewRecord(record),
 		Spawn: func(argv []string, dir string, env []string) (servers.Process, error) {
-			return terminal.Start(argv, dir, env, 100, 30, func() {})
+			return terminal.Start(argv, dir, env, 100, 30, nil)
 		}})
 }

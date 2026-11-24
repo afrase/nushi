@@ -74,7 +74,7 @@ func (s *Service) Watch(chatID, serverID string, stop <-chan struct{}, fn func([
 		return false, errNoLog
 	}
 	first, more := true, true
-	proc.Attach(stop, func(b []byte) bool {
+	kept := proc.Follow(stop, func(b []byte) bool {
 		if first {
 			first, b = false, logTail(b)
 		}
@@ -83,7 +83,7 @@ func (s *Service) Watch(chatID, serverID string, stop <-chan struct{}, fn func([
 	})
 	select {
 	case <-proc.Done():
-		return more, nil
+		return kept && more, nil // dropped: it never had the tail, so it hears no end
 	default:
 		return false, nil
 	}
@@ -96,7 +96,7 @@ func (s *Service) tail(sv *server, lines, size int) string {
 	log, proc := sv.log, sv.proc
 	s.mu.Unlock()
 	if log == nil && proc != nil {
-		log = logTail(written(proc))
+		log = logTail(proc.Output())
 	}
 	return lastLines(log, lines, size)
 }

@@ -29,7 +29,8 @@ func newServers(record servers.Record, chats servers.Chats, env servers.Env, pub
 		Record: record, Spawn: startServer})
 }
 
-// startServer starts a dev server's program on a terminal.
+// startServer starts a dev server's program on a terminal, whose
+// foreground nothing follows.
 func startServer(argv []string, dir string, env []string) (servers.Process, error) {
-	return terminal.Start(argv, dir, env, 120, 40, func() {})
+	return terminal.Start(argv, dir, env, 120, 40, nil)
 }

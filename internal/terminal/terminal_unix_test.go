@@ -23,7 +23,7 @@ func shell(t *testing.T) (*Terminal, *output) {
 		t.Fatal(err)
 	}
 	t.Cleanup(term.Close)
-	go term.Attach(nil, func(b []byte) bool { out.add(b); return true })
+	go term.Follow(nil, func(b []byte) bool { out.add(b); return true })
 	return term, out
 }
 
@@ -54,7 +54,7 @@ func TestExitCodeAndReplay(t *testing.T) {
 	}
 	// A client attaching now gets what was printed, then the attach ends.
 	again := &output{}
-	term.Attach(nil, func(b []byte) bool { again.add(b); return true })
+	term.Follow(nil, func(b []byte) bool { again.add(b); return true })
 	again.wait(t, `before-exit\r\n`)
 }
 
@@ -124,5 +124,23 @@ func TestCommandLineWithAnEmptyFirstArgument(t *testing.T) {
 		if !ok {
 			t.Errorf("commandLine of %q = %q, want %q", args, got, want)
 		}
+	}
+}
+
+// A terminal started with no changed (a dev server's) follows no
+// foreground, and its program's end calls nothing; what it wrote is its
+// Output, a copy.
+func TestATerminalWithoutChanged(t *testing.T) {
+	term, err := Start([]string{"/bin/sh", "-c", "echo said-$((40+2))"}, t.TempDir(), []string{"TERM=xterm-256color"}, 80, 24, nil)
+	testcheck.NoErr(t, err)
+	t.Cleanup(term.Close)
+	<-term.Done()
+	out := term.Output()
+	if !strings.Contains(string(out), "said-42") {
+		t.Fatalf("output %q", out)
+	}
+	out[0] = 0
+	if again := term.Output(); again[0] == 0 {
+		t.Error("Output isn't a copy")
 	}
 }
