@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -76,7 +77,7 @@ func followedCommand(t *testing.T, text string, below ...model.Process) *followe
 		}
 		publish(e)
 	}
-	go c.followCommand(waitCall, waitTask, f.file, c.agent)
+	go c.followCommand(waitCall, waitTask, f.file, c.agent, 5*time.Millisecond)
 	c.mu.Unlock()
 	return f
 }
@@ -265,7 +266,7 @@ func TestTaskStopsEndStandsWhateverTheFileSays(t *testing.T) {
 			c.commandStoppedLocked(waitTask, true)
 			agent := c.agent
 			c.mu.Unlock()
-			c.followCommand(waitCall, waitTask, f.file+".gone", agent) // one read, which fails
+			c.followCommand(waitCall, waitTask, f.file+".gone", agent, commandPoll) // one read, which fails
 			if sh := commandOf(c); sh.State != "stopped" || sh.End != "killed" {
 				t.Errorf("the row reads %+v", sh)
 			}

@@ -133,7 +133,7 @@ func commandChat(t *testing.T, follow bool, below ...model.Process) commandFixtu
 	agent := &fakeAgent{pid: agentPid}
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
 	procs := &fakeProcesses{below: map[int][]model.Process{agentPid: below}}
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Processes: procs, Timing: Timing{CommandPoll: 5 * time.Millisecond}})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Processes: procs})
 	t.Cleanup(svc.Close)
 	c := startChat(t, svc, t.TempDir())
 	file := filepath.Join(taskDir(t), waitTask+".output")
@@ -144,7 +144,7 @@ func commandChat(t *testing.T, follow bool, below ...model.Process) commandFixtu
 	c.addLocked(model.Item{ID: waitCall, Kind: model.ToolCall, Tool: "Bash", Title: waitLoop, Status: "completed", Input: string(in),
 		BackgroundCommand: &model.BackgroundCommand{ID: waitTask, State: "running", Started: time.Now()}})
 	if follow {
-		go c.followCommand(waitCall, waitTask, file, c.agent)
+		go c.followCommand(waitCall, waitTask, file, c.agent, 5*time.Millisecond)
 	}
 	c.mu.Unlock()
 	return commandFixture{svc, agent, c, procs, file}

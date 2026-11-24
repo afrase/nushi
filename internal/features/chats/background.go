@@ -111,7 +111,7 @@ func (c *chat) backgroundCommandLocked(it *model.Item) {
 	}
 	sh = c.heardLocked(sh) // its end can come first
 	it.BackgroundCommand = &sh
-	go c.followCommand(it.ID, id, file, agent)
+	go c.followCommand(it.ID, id, file, agent, commandPoll)
 }
 
 // followCommand reads the command's output file for its output until it
@@ -125,17 +125,21 @@ func (c *chat) backgroundCommandLocked(it *model.Item) {
 // no longer runs, where Nushi can look (commandShellRuns); the file gives
 // how it ended. With its agent gone there's nothing more to wait for: the
 // file's end, else "started" (its end unknown). Claude's TaskStop of the
-// task ends it too (stoppedLocked).
-func (c *chat) followCommand(callID, id, file string, agent Agent) {
+// task ends it too (stoppedLocked). The file is read every poll
+// (commandPoll; a test's own).
+func (c *chat) followCommand(callID, id, file string, agent Agent, poll time.Duration) {
 	f := commandFollower{c: c, callID: callID, id: id, file: file, agent: agent}
 	for f.step() {
 		select {
-		case <-time.After(c.svc.timing.commandPoll()):
+		case <-time.After(poll):
 		case <-c.svc.ctx.Done():
 			return // the service closed: its agents end, and nobody is left to tell
 		}
 	}
 }
+
+// commandPoll is how often a running background command's output is read.
+const commandPoll = time.Second
 
 // commandFollower follows one background command (followCommand): its
 // call, its task's id and output file, and the agent that runs it (nil:

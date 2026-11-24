@@ -152,14 +152,14 @@ func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
 	}
 	agent := &fakeAgent{}
 	life, end := context.WithCancel(t.Context())
-	svc := New(life, []Kind{{Harness: testHarness{Name: "fake", read: read}, Launch: agent.launch}}, Options{Remembered: &memModes{}, Sessions: &memSessions{}, Timing: Timing{CommandPoll: time.Millisecond}})
+	svc := New(life, []Kind{{Harness: testHarness{Name: "fake", read: read}, Launch: agent.launch}}, Options{Remembered: &memModes{}, Sessions: &memSessions{}})
 	c := startChat(t, svc, t.TempDir())
 	c.mu.Lock()
 	c.items = append(c.items, model.Item{ID: "t1", BackgroundCommand: &model.BackgroundCommand{State: "running"}})
 	running := c.agent
 	c.mu.Unlock()
 	followed := make(chan struct{})
-	go func() { c.followCommand("t1", "b1", "f", running); close(followed) }()
+	go func() { c.followCommand("t1", "b1", "f", running, time.Millisecond); close(followed) }()
 	<-reads
 	end()
 	select {

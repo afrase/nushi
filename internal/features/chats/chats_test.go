@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 	"unicode/utf8"
 
@@ -419,65 +420,67 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 }
 
 func TestBackgroundCommandsAreFollowed(t *testing.T) {
-	file := filepath.Join(taskDir(t), "b1.output")
-	testcheck.NoErr(t, os.WriteFile(file, []byte("half"), 0o600))
-	events := make(chan model.Event, 100)
-	var counts []int // how many run in the background, as each status said (under c.mu)
-	c := &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context(), timing: Timing{CommandPoll: 10 * time.Millisecond}}, id: "s1", sid: "s1", kind: testKind(testHarness{}), agent: &fakeAgent{}, record: model.ChatRecord{Folder: "/w"},
-		publish: func(e model.Event) {
-			if e.Status != nil {
-				counts = append(counts, e.Status.Background)
-			}
-			events <- e
-		}}
-	text := func(s string) []acp.ToolCallContent {
-		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
-	}
-	send(c, []acp.SessionUpdate{
-		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "sleep 9", Kind: "execute", Status: "pending",
-			Meta: map[string]any{"claudeCode": map[string]any{"toolName": "Bash"}}}},
-		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed",
-			Content: text("Command running in background with ID: b1. Output is being written to: " + file + ". You will be notified."),
-			Meta:    map[string]any{"claudeCode": map[string]any{"toolName": "Bash", "toolResponse": map[string]any{"backgroundTaskId": "b1"}}}}},
-	}...)
-	shell := func(want model.RunState) model.BackgroundCommand {
-		t.Helper()
-		for { // every change comes with an event; a state never reached hangs the test
-			c.mu.Lock()
-			sh := *c.items[0].BackgroundCommand
-			c.mu.Unlock()
-			if sh.State == want && sh.Output != "" {
-				return sh
-			}
-			<-events
+	synctest.Test(t, func(t *testing.T) { // the file is read each commandPoll, a second of the bubble's clock
+		file := filepath.Join(taskDir(t), "b1.output")
+		testcheck.NoErr(t, os.WriteFile(file, []byte("half"), 0o600))
+		events := make(chan model.Event, 100)
+		var counts []int // how many run in the background, as each status said (under c.mu)
+		c := &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context()}, id: "s1", sid: "s1", kind: testKind(testHarness{}), agent: &fakeAgent{}, record: model.ChatRecord{Folder: "/w"},
+			publish: func(e model.Event) {
+				if e.Status != nil {
+					counts = append(counts, e.Status.Background)
+				}
+				events <- e
+			}}
+		text := func(s string) []acp.ToolCallContent {
+			return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
 		}
-	}
-	if sh := shell("running"); sh.Output != "half" || sh.Started.IsZero() {
-		t.Errorf("running: %+v", sh)
-	}
-	testcheck.NoErr(t, os.WriteFile(file, []byte("all\n\n[exited with code 0]\n"), 0o600))
-	if sh := shell("done"); sh.Output != "all" || sh.End != "exited with code 0" || sh.Ended.IsZero() {
-		t.Errorf("done: %+v", sh)
-	}
-	c.mu.Lock()
-	said := slices.Compact(slices.Clone(counts))
-	c.mu.Unlock()
-	if !slices.Equal(said, []int{0, 1, 0}) { // the call came outside a turn: the own turn's status first
-		t.Errorf("the status said %v running in the background, want 0 (its own turn), 1, then 0", said)
-	}
+		send(c, []acp.SessionUpdate{
+			{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "sleep 9", Kind: "execute", Status: "pending",
+				Meta: map[string]any{"claudeCode": map[string]any{"toolName": "Bash"}}}},
+			{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed",
+				Content: text("Command running in background with ID: b1. Output is being written to: " + file + ". You will be notified."),
+				Meta:    map[string]any{"claudeCode": map[string]any{"toolName": "Bash", "toolResponse": map[string]any{"backgroundTaskId": "b1"}}}}},
+		}...)
+		shell := func(want model.RunState) model.BackgroundCommand {
+			t.Helper()
+			for { // every change comes with an event; a state never reached hangs the test
+				c.mu.Lock()
+				sh := *c.items[0].BackgroundCommand
+				c.mu.Unlock()
+				if sh.State == want && sh.Output != "" {
+					return sh
+				}
+				<-events
+			}
+		}
+		if sh := shell("running"); sh.Output != "half" || sh.Started.IsZero() {
+			t.Errorf("running: %+v", sh)
+		}
+		testcheck.NoErr(t, os.WriteFile(file, []byte("all\n\n[exited with code 0]\n"), 0o600))
+		if sh := shell("done"); sh.Output != "all" || sh.End != "exited with code 0" || sh.Ended.IsZero() {
+			t.Errorf("done: %+v", sh)
+		}
+		c.mu.Lock()
+		said := slices.Compact(slices.Clone(counts))
+		c.mu.Unlock()
+		if !slices.Equal(said, []int{0, 1, 0}) { // the call came outside a turn: the own turn's status first
+			t.Errorf("the status said %v running in the background, want 0 (its own turn), 1, then 0", said)
+		}
 
-	// Its agent gone without a word of its end: only that it started.
-	testcheck.NoErr(t, os.WriteFile(file, []byte("again"), 0o600))
-	c.mu.Lock()
-	c.items[0].BackgroundCommand = nil
-	c.mu.Unlock()
-	send(c, acp.SessionUpdate{SessionUpdate: "tool_call_update",
-		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}})
-	shell("running")
-	c.mu.Lock()
-	c.agent = nil
-	c.mu.Unlock()
-	shell("started")
+		// Its agent gone without a word of its end: only that it started.
+		testcheck.NoErr(t, os.WriteFile(file, []byte("again"), 0o600))
+		c.mu.Lock()
+		c.items[0].BackgroundCommand = nil
+		c.mu.Unlock()
+		send(c, acp.SessionUpdate{SessionUpdate: "tool_call_update",
+			ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}})
+		shell("running")
+		c.mu.Lock()
+		c.agent = nil
+		c.mu.Unlock()
+		shell("started")
+	})
 }
 
 // A line that reads as the end, which the command printed itself, isn't
@@ -490,12 +493,12 @@ func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
 		r := reads[min(len(states), len(reads)-1)]
 		return r[0], r[1], r[2], nil
 	}
-	c := &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context(), timing: Timing{CommandPoll: time.Millisecond}}, id: "s1", kind: testKind(testHarness{read: read}), publish: func(e model.Event) {
+	c := &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context()}, id: "s1", kind: testKind(testHarness{read: read}), publish: func(e model.Event) {
 		if e.Item != nil && e.Item.BackgroundCommand != nil {
 			states = append(states, e.Item.BackgroundCommand.State)
 		}
 	}, agent: &fakeAgent{}, items: []model.Item{{ID: "t1", BackgroundCommand: &model.BackgroundCommand{State: "running"}}}}
-	c.followCommand("t1", "b1", "f", c.agent)
+	c.followCommand("t1", "b1", "f", c.agent, time.Millisecond)
 	if c.items[0].BackgroundCommand.State != "done" || slices.Contains(states, "stopped") {
 		t.Errorf("states %q, the end %+v", states, c.items[0].BackgroundCommand)
 	}
