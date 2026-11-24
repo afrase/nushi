@@ -117,3 +117,23 @@ func TestFindTextInALetGoChat(t *testing.T) {
 		t.Errorf("found %v in the copy, %v held", got, held)
 	}
 }
+
+// A copy saved before Nushi kept an MCP call's server and tool is read as
+// the pages read it (savedLocked) before it's searched: an old show call's
+// input doesn't show, so find doesn't count it.
+func TestFindTextInAnOldCopy(t *testing.T) {
+	svc, agent, c, copies, _ := lettingGo(t, nil, Timing{})
+	agent.updates = []acp.SessionUpdate{chunk("m1", "the first widget")}
+	turn(t, svc, c, "one")
+	testcheck.NoErr(t, svc.Sleep(c.id))
+	heads, err := copies.Heads(c.id)
+	testcheck.NoErr(t, err)
+	show := model.Item{ID: "show", Kind: model.ToolCall, Status: "completed", Title: "mcp__nushi__show", ToolKind: "other",
+		Text: "The preview pane beside the chat has the file.", Input: `{"path":"/p/widget.md"}`}
+	testcheck.NoErr(t, copies.Append(c.id, []model.Item{show}, []string{heads[len(heads)-1].ID}))
+	got, _, err := svc.FindText(t.Context(), c.id, "widget", "")
+	testcheck.NoErr(t, err)
+	if want := []TextMatch{{"m1", 1}}; !slices.Equal(got, want) {
+		t.Errorf("found %v, want %v", got, want)
+	}
+}

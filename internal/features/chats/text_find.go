@@ -104,8 +104,9 @@ func (b *backwards) done(more bool) ([]TextMatch, bool, error) {
 }
 
 // findInCopy is FindText for a chat whose items were let go: its copy's
-// items read whole copyChunk at a time (only those), the items set aside
-// as heads has them.
+// items read whole copyChunk at a time (only those), and their MCP calls
+// as the pages read them (savedLocked, under the lock a moment), the items
+// set aside as heads has them.
 func findInCopy(ctx context.Context, q textfind.Query, c *chat, heads []model.Item, before string) ([]TextMatch, bool, error) {
 	end, err := endBefore(len(heads), before, func(i int) string { return heads[i].ID })
 	if err != nil {
@@ -127,6 +128,9 @@ func findInCopy(ctx context.Context, q textfind.Query, c *chat, heads []model.It
 		if err != nil {
 			return nil, false, err
 		}
+		c.mu.Lock()
+		c.savedLocked(read) // an old copy's MCP calls, read as its pages read them
+		c.mu.Unlock()
 		whole := make(map[string]*model.Item, len(read))
 		for i := range read {
 			whole[read[i].ID] = &read[i]
