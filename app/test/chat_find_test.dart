@@ -8,14 +8,13 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 /// A chat whose loaded part is items l1 and l2, with 100 items above, and
 /// its find, whose daemon answers [far], and the entries laid out (an
-/// item's id to its entry's key).
+/// item's id to its entry's key), which go with what's found.
 (ChatFind, Map<String, String>) _find(List<ChatMatch> far) {
   final chat = ChatState('c', '/x')
     ..older = 100
     ..items.addAll([Item(id: 'l1'), Item(id: 'l2')]);
   final laid = <String, String>{'l1': 'l1', 'l2': 'l2'};
   final f = chat.find
-    ..entryOf = ((id) => laid[id])
     ..ask = (r, signal) async => FindInChatResponse(matches: far);
   return (f, laid);
 }
@@ -37,7 +36,7 @@ void main() {
       ChatMatch(itemId: 'c2', count: 1),
     ]);
     await _type(tester, f, 'needle');
-    f.found(['l1 0']);
+    f.found(['l1 0'], laid: {...laid});
     expect(f.hits, ['far c1 0', 'far c2 0', 'l1 0']);
     expect(f.current, 'l1 0');
     f.step(-1);
@@ -45,7 +44,7 @@ void main() {
     // Its page comes: c1 and c2 are one run of calls, keyed by c1, its
     // marks c1's then c2's.
     laid.addAll({'c1': 'c1', 'c2': 'c1'});
-    f.found(['c1 0', 'c1 1', 'l1 0']);
+    f.found(['c1 0', 'c1 1', 'l1 0'], laid: {...laid});
     expect(f.current, 'c1 1');
     f.step(-1);
     expect(f.current, 'c1 0', reason: 'c1’s match, not skipped');
@@ -59,12 +58,35 @@ void main() {
     ]);
     await _type(tester, f, 'needle');
     f
-      ..found(['l1 0'])
+      ..found(['l1 0'], laid: {...laid})
       ..step(-1);
     expect(f.pending, 'far step 0');
     laid.addAll({'call': 'agent call', 'step': 'agent call'});
-    f.found(['agent call 0', 'agent call 1', 'agent call 2', 'l1 0']);
+    f.found([
+      'agent call 0',
+      'agent call 1',
+      'agent call 2',
+      'l1 0',
+    ], laid: {...laid});
     expect(f.current, 'agent call 2');
+  });
+
+  testWidgets('it keeps the entries laid out as they were given, and '
+      'forgets them once closed', (tester) async {
+    final (f, laid) = _find([ChatMatch(itemId: 'c1', count: 1)]);
+    laid['c1'] = 'c1';
+    await _type(tester, f, 'needle');
+    f.found(['c1 0', 'l1 0'], laid: {...laid});
+    expect(f.hits, ['c1 0', 'l1 0'], reason: 'c1 is laid out: not far');
+    // What the transcript lays out next isn't read until it's given.
+    laid.remove('c1');
+    f.reloaded();
+    await tester.pump(ChatFind.pause);
+    await tester.pump();
+    expect(f.hits, ['c1 0', 'l1 0']);
+    f.close();
+    await _type(tester, f, 'needle');
+    expect(f.hits, ['far c1 0'], reason: 'nothing laid out since it closed');
   });
 
   for (final by in [1, -1]) {

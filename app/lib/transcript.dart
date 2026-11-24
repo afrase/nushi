@@ -590,7 +590,7 @@ class _TranscriptState extends State<Transcript> {
           widget.chat.older < _findOlder) {
         _shownAsk = -1;
       }
-      find.found([for (final m in marks) m.key]);
+      find.found([for (final m in marks) m.key], laid: _entryOf);
       _showCurrent();
     };
   }
@@ -639,12 +639,11 @@ class _TranscriptState extends State<Transcript> {
   }
 
   /// Follows [chat]'s find, and gives it the daemon's search of what isn't
-  /// loaded and the entries laid out (ChatFind).
+  /// loaded (ChatFind); the entries laid out go with what it found.
   void _attachFind(ChatState chat) {
     final daemon = widget.daemon;
     chat.find
       ..addListener(_findChanged)
-      ..entryOf = ((id) => _entryOf[id])
       ..ask = (r, signal) async => daemon.daemonApi >= findInChatApi
           ? await daemon.client.findInChat(r, signal: signal)
           : null;

@@ -30,10 +30,14 @@ class ChatFind extends Find {
 
   final ChatState _chat;
 
-  /// Set by the chat's transcript: the daemon's search, and the key of
-  /// an item's entry (Marks.entry) once it's laid out, else null.
+  /// Set by the chat's transcript: the daemon's search.
   AskAbove? ask;
-  String? Function(String item)? entryOf;
+
+  /// The key of each item's entry (Marks.entry) as the transcript last
+  /// laid them out, given with its matches ([found]); none once closed.
+  /// A copy, not the transcript's own: a find left open as the chat goes
+  /// keeps no view of it.
+  Map<String, String> _laid = const {};
 
   /// How long typing pauses before what is typed is looked for.
   static const Duration pause = Waits.typing;
@@ -121,6 +125,7 @@ class ChatFind extends Find {
     _near = const [];
     _more = false;
     _pending = null;
+    _laid = const {};
     super.close();
   }
 
@@ -188,9 +193,12 @@ class ChatFind extends Find {
     notifyListeners();
   }
 
+  /// The transcript found [hits] in what it laid out, each item's entry
+  /// in it by its key in [laid].
   @override
-  void found(List<String> hits) {
+  void found(List<String> hits, {Map<String, String> laid = const {}}) {
     _near = hits;
+    _laid = laid;
     _merge();
   }
 
@@ -223,7 +231,7 @@ class ChatFind extends Find {
   void _merge() {
     final all = _Hits([
       for (final m in _far)
-        if (entryOf?.call(m.itemId) == null) m,
+        if (_laid[m.itemId] == null) m,
     ], _near);
     final far = all.far;
     if (_pending case final p? when !all.contains(p)) {
@@ -258,7 +266,7 @@ class ChatFind extends Find {
   int? _landing(String key, _Hits all) {
     final parts = key.split(' ');
     final item = parts[1];
-    final entry = entryOf?.call(item);
+    final entry = _laid[item];
     if (entry == null) return null;
     final mine = [
       for (final (i, k) in all.near.indexed)
@@ -268,7 +276,7 @@ class ChatFind extends Find {
     var k = int.parse(parts[2]);
     for (final m in _far) {
       if (m.itemId == item) break;
-      if (entryOf?.call(m.itemId) == entry) k += m.count;
+      if (_laid[m.itemId] == entry) k += m.count;
     }
     return mine[min(k, mine.length - 1)];
   }
