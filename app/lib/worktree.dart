@@ -3,6 +3,7 @@ import 'package:nushi/branch_dialogs.dart';
 import 'package:nushi/branch_menu.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/cleanup_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -260,11 +261,7 @@ class WorktreeChoices extends StatelessWidget {
   /// The choices that start on for [plan]: (remove, branch).
   static (bool, bool) defaults(WorktreePlan plan) {
     final st = plan.state;
-    final remove =
-        plan.others.isEmpty &&
-        st.error.isEmpty &&
-        st.changed == 0 &&
-        st.ignored == 0;
+    final remove = plan.others.isEmpty && st.error.isEmpty && !st.needsForce;
     return (remove, remove && st.commits == 0 && !st.branchGone);
   }
 
@@ -276,7 +273,7 @@ class WorktreeChoices extends StatelessWidget {
   }) => WorktreeChoice(
     path: plan.worktree.path,
     removeWorktree: remove,
-    forceWorktree: remove && (plan.state.changed > 0 || plan.state.ignored > 0),
+    forceWorktree: remove && plan.state.needsForce,
     deleteBranch: remove && branch,
     forceBranch: remove && branch && plan.state.commits > 0,
   );
@@ -326,9 +323,6 @@ class WorktreeChoices extends StatelessWidget {
       );
     }
     final changes = st.changed == 1 ? '1 file' : '${st.changed} files';
-    final ignored = st.ignored == 1
-        ? '1 ignored file or folder'
-        : '${st.ignored} ignored files or folders';
     final commits = st.commits == 1 ? '1 commit' : '${st.commits} commits';
     final others = plan.others;
     return Column(
@@ -356,7 +350,10 @@ class WorktreeChoices extends StatelessWidget {
               warn: true,
             ),
           if (st.ignored > 0)
-            note('$ignored (.env, build output…) would be lost.', warn: true),
+            note(
+              '${st.ignoredFiles} (.env, build output…) would be lost.',
+              warn: true,
+            ),
         ],
         if (st.branchGone)
           note('Its branch ${wt.branch} was already deleted.')

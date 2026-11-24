@@ -93,8 +93,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
             _local &&
             u.hasWorktree() &&
             !st.gone &&
-            st.changed == 0 &&
-            st.ignored == 0 &&
+            !st.needsForce &&
             st.error.isEmpty &&
             u.others.isEmpty &&
             !u.worktree.found;
@@ -209,9 +208,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
                   )
                 : st.ignored > 0 && !st.gone
                 ? Text(
-                    st.ignored == 1
-                        ? '1 ignored file or folder goes with it.'
-                        : '${st.ignored} ignored files or folders go with it.',
+                    '${st.ignoredFiles} would be lost.',
                     style: theme.ui(t.textMuted, size: 12),
                   )
                 : null,
@@ -310,9 +307,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
             : () => Navigator.pop<CleanUpPicks>(context, (
                 archive: _archive && !chat.archived,
                 worktree: _worktree,
-                force:
-                    _worktree &&
-                    ((st?.changed ?? 0) > 0 || (st?.ignored ?? 0) > 0),
+                force: _worktree && (st?.needsForce ?? false),
                 branch: _branch && _canBranch,
                 forceBranch: _branch && _canBranch && (st?.commits ?? 0) > 0,
                 remote: _remote && _hasRemote,

@@ -3,6 +3,20 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
+/// What deleting a worktree would lose, as the Delete dialog and Clean up…
+/// both ask it: one rule for when the daemon must be told to force, and one
+/// way to say it ("… would be lost", docs/glossary.md's Worktree).
+extension WorktreeLoss on WorktreeState {
+  /// Deleting the worktree loses files: changed or untracked ones, or
+  /// ignored ones (.env, build output), so the request forces it.
+  bool get needsForce => changed > 0 || ignored > 0;
+
+  /// "1 ignored file or folder", "3 ignored files or folders".
+  String get ignoredFiles => ignored == 1
+      ? '1 ignored file or folder'
+      : '$ignored ignored files or folders';
+}
+
 /// A row to tick: what, its name in code, why it is as it is.
 class CleanUpChoice extends StatelessWidget {
   const new({

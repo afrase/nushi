@@ -46,6 +46,7 @@ Future<(FakeDaemon, Daemon)> _open(
   List<String> others, {
   Brightness brightness = Brightness.dark,
   PlanDeleteChatResponse? plan,
+  Size size = const Size(900, 620),
 }) async {
   showDetails.value = false;
   final c = chat('c', 'claude', 'Tidy the note list', folder: _wt)
@@ -53,12 +54,7 @@ Future<(FakeDaemon, Daemon)> _open(
   final fake = FakeDaemon([c])
     ..answer = (input) =>
         input is PlanDeleteChatRequest ? plan ?? _plan(others) : null;
-  final d = await openApp(
-    tester,
-    fake,
-    size: const Size(900, 620),
-    brightness: brightness,
-  );
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   FocusManager.instance.primaryFocus?.unfocus(); // no caret blinking
   unawaited(
     showDeleteChat(tester.element(find.byType(ChatView)), d.chats['c']!, d),
@@ -156,5 +152,33 @@ void main() {
       await render(tester, find.byType(NushiApp), 'delete_others_$name');
       await closeView(tester, d);
     }, variant: onMac);
+  }
+
+  // The loss words beside Clean up…'s, to look at (`make renders`).
+  for (final b in Brightness.values) {
+    for (final width in [1700.0, 720.0]) {
+      renderTest('a worktree that would lose files, ${width.round()} '
+          'wide, ${b.name}', (tester) async {
+        final plan = _plan([])
+          ..worktrees.first.state = WorktreeState(
+            changed: 2,
+            ignored: 3,
+            commits: 1,
+          );
+        final (_, d) = await _open(
+          tester,
+          [],
+          plan: plan,
+          brightness: b,
+          size: Size(width, 760),
+        );
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'delete_loss_${width.round()}_${b.name}',
+        );
+        await closeView(tester, d);
+      }, variant: onMac);
+    }
   }
 }

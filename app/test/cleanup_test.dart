@@ -214,7 +214,10 @@ void main() {
     final (d, fake) = await _open(tester, u: _clean(ignored: 3));
     await tester.tap(_inPull(find.text('Clean up…')));
     await tester.pumpAndSettle();
-    expect(find.text('3 ignored files or folders go with it.'), findsOneWidget);
+    expect(
+      find.text('3 ignored files or folders would be lost.'),
+      findsOneWidget,
+    );
     final boxes = tester.widgetList<Checkbox>(find.byType(Checkbox)).toList();
     expect(boxes.first.value, isFalse);
     await tester.tap(find.byType(Checkbox).first);
@@ -249,6 +252,33 @@ void main() {
       );
       d.dispose();
     }, variant: onMac);
+  }
+
+  // Ignored files ticked away, beside the Delete dialog's words.
+  for (final b in Brightness.values) {
+    for (final width in [1700.0, 720.0]) {
+      renderTest('the dialog losing ignored files, ${width.round()} wide, '
+          '${b.name}', (tester) async {
+        final (d, _) = await _open(
+          tester,
+          u: _clean(ignored: 3),
+          brightness: b,
+        );
+        await tester.tap(_inPull(find.text('Clean up…')));
+        await _pump(tester);
+        await tester.tap(find.byType(Checkbox).first);
+        // The window then narrowed or widened under the open dialog: the
+        // pull request's pane, which opens it, needs room of its own.
+        viewport(tester, Size(width, 760), brightness: b);
+        await _pump(tester);
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'cleanup_loss_${width.round()}_${b.name}',
+        );
+        d.dispose();
+      }, variant: onMac);
+    }
   }
 
   testWidgets('mid-turn: it waits for the turn to end, then cleans up', (
