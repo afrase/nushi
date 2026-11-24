@@ -4,11 +4,13 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"slices"
 	"sync"
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/acptest"
@@ -22,6 +24,8 @@ import (
 	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/updates"
+	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/proctree"
@@ -97,7 +101,11 @@ func (r recorder) Shell(a *agents.Service) (terminals.Start, string) {
 }
 
 func (r recorder) Debug(on bool) {
-	r.steps.add("debug")
+	if on {
+		r.steps.add("debug on")
+	} else {
+		r.steps.add("debug")
+	}
 	r.Leaves.Debug(on)
 }
 
@@ -198,5 +206,32 @@ func TestCloseOrder(t *testing.T) {
 				t.Errorf("stopped %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// bearer sends the client token the daemon was started with.
+type bearer struct{}
+
+func (bearer) RoundTrip(r *http.Request) (*http.Response, error) {
+	r.Header.Set("Authorization", "Bearer tok")
+	return http.DefaultTransport.RoundTrip(r)
+}
+
+// The app turning the debug log sets the log's level through the leaf
+// that set it at startup, so it is set in one place; a change that
+// leaves the debug log as it was sets nothing.
+func TestDebugLogSetsTheLevel(t *testing.T) {
+	s := &steps{}
+	d := started(t, s)
+	srv := httptest.NewServer(d.Socket)
+	t.Cleanup(srv.Close)
+	c := nushiv1connect.NewNushiServiceClient(&http.Client{Transport: bearer{}}, srv.URL)
+	start := len(s.list())
+	for _, on := range []bool{true, true, false} {
+		_, err := c.SetSettings(t.Context(), connect.NewRequest(&nushiv1.SetSettingsRequest{Settings: &nushiv1.Settings{DebugLog: on}}))
+		testcheck.NoErr(t, err)
+	}
+	if got, want := s.list()[start:], []string{"debug on", "debug"}; !slices.Equal(got, want) {
+		t.Errorf("set the level %q, want %q", got, want)
 	}
 }

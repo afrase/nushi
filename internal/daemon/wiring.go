@@ -40,6 +40,27 @@ func MCPTools(t *tools.Service, exe, socket string) chats.Tools {
 	}
 }
 
+// settings are the store's settings, with the log's level following a
+// change that turns the debug log: through Leaves.Debug, which sets it at
+// startup too, so the level is set in one place.
+type settings struct {
+	*store.Store
+	debug func(on bool)
+}
+
+// ChangeSettings makes the change, then sets the log's level if it turned
+// the debug log.
+func (s settings) ChangeSettings(c model.SettingsChange) error {
+	was := s.DebugLog()
+	if err := s.Store.ChangeSettings(c); err != nil {
+		return err
+	}
+	if c.DebugLog != nil && *c.DebugLog != was {
+		s.debug(*c.DebugLog)
+	}
+	return nil
+}
+
 // newMCP is the MCP servers of each agent whose config Nushi knows
 // (knownagents.Agent.MCP), each checked by running the agent as a chat's
 // would be.

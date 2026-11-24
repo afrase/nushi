@@ -60,7 +60,8 @@ type Leaves interface { //nolint:interfacebloat // every part that reaches outsi
 	// Shell starts a terminal's shell, and names it ("": each terminal
 	// names its own).
 	Shell(agents *agents.Service) (start terminals.Start, name string)
-	// Debug sets the log's level from the setting.
+	// Debug sets the log's level from the debug setting, at startup and
+	// when a change turns it.
 	Debug(on bool)
 	// Updates checks for a newer release of Nushi.
 	Updates(st *store.Store, publish func(model.Event), environ func() []string) *updates.Service
@@ -150,7 +151,7 @@ func Start(ctx context.Context, dir, token string, l Leaves) (*Daemon, error) {
 	l.Debug(st.DebugLog())
 	updateSvc := l.Updates(st, hub.Publish, agentSvc.Environ)
 	restarts := restart.New(chatSvc, restart.Together{termSvc, srvSvc, updateSvc})
-	sv := api.Services{Settings: st, ChatFiles: st, Chats: chatSvc, Agents: agentSvc, MCP: newMCP(known, agentSvc, chatSvc.MCPChanged),
+	sv := api.Services{Settings: settings{st, l.Debug}, ChatFiles: st, Chats: chatSvc, Agents: agentSvc, MCP: newMCP(known, agentSvc, chatSvc.MCPChanged),
 		Skills: newSkills(known), Terms: termSvc, Trust: newTrust(known, st), Hub: hub, Memory: memory.New(chatSvc), Restart: restarts,
 		Jira: jiraSvc, Remote: remoteSvc, Servers: srvSvc}
 	sv.GitHub = l.GitHub(st)

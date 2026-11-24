@@ -11,7 +11,6 @@ import (
 	"connectrpc.com/connect"
 
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
-	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -19,7 +18,8 @@ import (
 // the debug log, transcripts' copies and, by agent, whether its chats run
 // through Nushi's Go agent (ADR 0142; the agents feature reads it each
 // time an agent's chat starts it, so a change needs no restart). A change
-// is one write, so a request is applied whole or not at all.
+// is one write, so a request is applied whole or not at all; one that
+// turns the debug log also sets the log's level.
 type Settings interface {
 	DebugLog() bool
 	KeepTranscripts() bool
@@ -70,8 +70,7 @@ func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.Set
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	if debug != debugWas {
-		logs.SetDebug(debug)
-		slog.Info("debug lines", "on", debug, "level", logs.Level.Level())
+		slog.Info("debug lines", "on", debug)
 	}
 	if keep := set.KeepTranscripts; keep != nil && *keep != keepWas {
 		slog.Info("transcript copies", "keep", *keep)
