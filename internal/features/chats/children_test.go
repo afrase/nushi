@@ -215,8 +215,9 @@ func TestTaskStopEndsABackgroundCommand(t *testing.T) {
 				Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "<tool_use_error>" + text + "</tool_use_error>"}}}}}}}})
 	}
 	for name, tc := range map[string]struct {
-		notes      []acp.SessionNotification
-		state, end string
+		notes []acp.SessionNotification
+		state model.RunState
+		end   string
 	}{
 		"stopped":       {stop, "stopped", "killed"},
 		"no task found": {failed("No task found with ID: bgu2i75cc"), "stopped", ""},
@@ -277,7 +278,7 @@ func TestSubagentsEndOnReopenAfterTheDaemonWent(t *testing.T) {
 	testcheck.NoErr(t, svc.Reopen(c.id))
 	c = svc.chats[c.id]
 	eventually(t, c, func() bool { return c.agent != nil && !c.reopeningLocked() })
-	want := map[string]string{countSlowly: "stopped", countSlowlyV2: "done", counterA: "stopped", counterB: "stopped",
+	want := map[string]model.RunState{countSlowly: "stopped", countSlowlyV2: "done", counterA: "stopped", counterB: "stopped",
 		counterC: "stopped", counterD: "stopped"}
 	for call, state := range want {
 		if sa := subagentOf(t, c, call); sa.State != state {

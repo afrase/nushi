@@ -47,7 +47,7 @@ func (c *chat) workflowLocked(it *model.Item) {
 		}
 		it.TaskID = it.Workflow.TaskID
 	}
-	if it.Workflow.Final() || c.following[it.ID] != nil {
+	if it.Workflow.State.Ended() || c.following[it.ID] != nil {
 		return
 	}
 	if it.Workflow.Session == "" { // where its files are, from now on
@@ -77,7 +77,7 @@ func (c *chat) workflowLocked(it *model.Item) {
 // may still run: after a reopen or a copy read back, none is followed.
 func (c *chat) followWorkflowsLocked() {
 	for i := range c.items {
-		if it := &c.items[i]; it.Kind == model.ToolCall && !it.Workflow.Final() {
+		if it := &c.items[i]; it.Kind == model.ToolCall && (it.Workflow == nil || !it.Workflow.State.Ended()) {
 			c.workflowLocked(it)
 		}
 	}
@@ -87,7 +87,7 @@ func (c *chat) followWorkflowsLocked() {
 // or stalled (nothing says it ended). A Move or a rewind would stop the
 // claude that runs it (another session), so neither starts while one is.
 func (c *chat) workflowLiveLocked() bool {
-	return slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Workflow != nil && it.Workflow.State == "running" })
+	return slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Workflow != nil && it.Workflow.State == model.RunRunning })
 }
 
 // pokeWorkflowsLocked has each workflow followed read its files now:
@@ -135,9 +135,9 @@ func (c *chat) followWorkflow(callID string, f *follow) {
 		next, wait := c.judgeWorkflow(*it.Workflow, got, err, f, gone, time.Now())
 		// Its end, seen now, of a run this daemon's agent ran: said once
 		// (ADR 0141). A run found ended on a reopen or a replay isn't one.
-		ended := f.owner != nil && next != nil && next.Final() && !it.Workflow.Final()
+		ended := f.owner != nil && next != nil && next.State.Ended() && !it.Workflow.State.Ended()
 		c.setWorkflowLocked(it, next, ended)
-		final := next == nil || next.Final()
+		final := next == nil || next.State.Ended()
 		c.mu.Unlock()
 		if final {
 			return
@@ -175,7 +175,7 @@ func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone
 		}
 	default:
 		f.found, f.missing = true, time.Time{}
-		if got.Final() {
+		if got.State.Ended() {
 			return &got, 0
 		}
 	}
@@ -187,7 +187,7 @@ func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone
 	case f.owner != nil && gone:
 		return quit(got, now, c.kind.Title), 0
 	case !f.missing.IsZero() && now.Sub(f.missing) >= c.svc.timing.workflowFind():
-		got.State, got.End, got.Ended, got.Running, got.RunningCount = "unknown", "its files are gone", now, nil, 0
+		got.State, got.End, got.Ended, got.Running, got.RunningCount = model.RunUnknown, "its files are gone", now, nil, 0
 		return &got, 0 // Claude's files of the run went (a Move, the session deleted)
 	case f.owner == nil && now.Sub(got.Active) >= c.svc.timing.workflowQuiet():
 		return quit(got, now, c.kind.Title), 0 // no agent of this daemon's runs it, and its files are still
@@ -202,7 +202,7 @@ func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone
 // agent's name: a run lives in the agent's process, and Claude itself
 // calls a run it left so stopped.
 func quit(w model.Workflow, now time.Time, title string) *model.Workflow {
-	w.State, w.End, w.Ended, w.Running, w.RunningCount = "stopped", title+" quit while it ran", now, nil, 0
+	w.State, w.End, w.Ended, w.Running, w.RunningCount = model.RunStopped, title+" quit while it ran", now, nil, 0
 	return &w
 }
 
@@ -232,7 +232,7 @@ func (c *chat) setWorkflowLocked(it *model.Item, w *model.Workflow, ended bool) 
 	if w == nil && !c.muted { // the item no longer says it was a workflow's: count again
 		c.recountLocked()
 	}
-	if w == nil || w.Final() {
+	if w == nil || w.State.Ended() {
 		c.copyLocked(false)
 	}
 }
@@ -264,7 +264,7 @@ func (s *Service) Workflow(chatID, callID string) (w model.Workflow, agents []mo
 	}
 	agents, err = c.kind.workflows.WorkflowAgents(c.sidFolder(call))
 	switch {
-	case errors.Is(err, fs.ErrNotExist) && call.Workflow.Final():
+	case errors.Is(err, fs.ErrNotExist) && call.Workflow.State.Ended():
 		return model.Workflow{}, nil, false, fmt.Errorf("the run's files: %w", ErrNoWorkflow)
 	case err != nil && !errors.Is(err, fs.ErrNotExist):
 		return model.Workflow{}, nil, false, err

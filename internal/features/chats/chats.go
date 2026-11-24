@@ -482,7 +482,7 @@ func (c *chat) workflowsLocked() int {
 // running says whether it is a subagent, background command or workflow
 // that runs (a stalled workflow doesn't).
 func running(it model.Item) bool {
-	return it.BackgroundCommand != nil && it.BackgroundCommand.State == "running" || it.Subagent != nil && it.Subagent.State == "running" ||
+	return it.BackgroundCommand != nil && it.BackgroundCommand.State == model.RunRunning || it.Subagent != nil && it.Subagent.State == model.RunRunning ||
 		it.Workflow.Runs()
 }
 

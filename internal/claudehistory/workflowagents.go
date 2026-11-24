@@ -39,9 +39,9 @@ func (r *run) agents() []model.WorkflowAgent {
 		return out
 	}
 	for _, row := range r.j.rows {
-		state := row.State
-		if (r.snap != nil || r.noted() != nil) && state == "running" {
-			state = "stopped" // the run ended without it
+		state := model.RunState(row.State)
+		if (r.snap != nil || r.noted() != nil) && state == model.RunRunning {
+			state = model.RunStopped // the run ended without it
 		}
 		wa := model.WorkflowAgent{ID: row.AgentID, Label: label(row.Label, row.AgentID), Phase: label(row.Phase, ""), State: state}
 		if a := r.tokens[row.AgentID]; a != nil {

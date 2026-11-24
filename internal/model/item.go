@@ -219,7 +219,8 @@ type Item struct {
 // says Nushi stopped it itself, at the user's Stop: an end other than
 // success then reads "stopped", whatever exit code the agent gives it.
 type BackgroundCommand struct {
-	ID, State      string
+	ID             string
+	State          RunState
 	Started, Ended time.Time
 	Output, End    string
 	Killed         bool `json:",omitzero"`
@@ -269,10 +270,11 @@ type Finding struct {
 // when not known; Reported says those totals were taken (once: they are
 // its first run's).
 type Subagent struct {
-	State          string
+	State          RunState
 	Started, Ended time.Time
 	Result         string
-	Said, Session  string
+	Said           RunState
+	Session        string
 	Worked         time.Duration `json:",omitzero"`
 	Working        time.Time     `json:",omitzero"`
 	Tokens         int64         `json:",omitzero"`

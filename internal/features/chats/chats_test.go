@@ -440,7 +440,7 @@ func TestBackgroundCommandsAreFollowed(t *testing.T) {
 			Content: text("Command running in background with ID: b1. Output is being written to: " + file + ". You will be notified."),
 			Meta:    map[string]any{"claudeCode": map[string]any{"toolName": "Bash", "toolResponse": map[string]any{"backgroundTaskId": "b1"}}}}},
 	}...)
-	shell := func(want string) model.BackgroundCommand {
+	shell := func(want model.RunState) model.BackgroundCommand {
 		t.Helper()
 		for { // every change comes with an event; a state never reached hangs the test
 			c.mu.Lock()
@@ -485,7 +485,7 @@ func TestBackgroundCommandsAreFollowed(t *testing.T) {
 func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
 	reads := [][3]string{{"[killed]", "killed", "stopped"}, {"[killed] and on", "", ""}, {"[killed] and on", "exited with code 0", "done"},
 		{"[killed] and on", "exited with code 0", "done"}}
-	var states []string
+	var states []model.RunState
 	read := func(string, string) (string, string, string, error) {
 		r := reads[min(len(states), len(reads)-1)]
 		return r[0], r[1], r[2], nil

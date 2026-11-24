@@ -29,8 +29,8 @@ var stepKinds = []string{"agent_message_chunk", "agent_thought_chunk", "tool_cal
 func underWay(it model.Item) bool {
 	return it.Kind == model.ToolCall && callRunning(it.Status) ||
 		(it.Kind == model.Permission || it.Kind == model.Question) && it.Status == "pending" ||
-		it.Subagent != nil && it.Subagent.State == "running" ||
-		it.BackgroundCommand != nil && it.BackgroundCommand.State == "running"
+		it.Subagent != nil && it.Subagent.State == model.RunRunning ||
+		it.BackgroundCommand != nil && it.BackgroundCommand.State == model.RunRunning
 }
 
 // ended marks what an item had under way as over, as a chat's copy read
@@ -47,14 +47,14 @@ func ended(it *model.Item) {
 	case (it.Kind == model.Permission || it.Kind == model.Question) && it.Status == "pending":
 		it.Status = "cancelled"
 	}
-	if it.Subagent != nil && it.Subagent.State == "running" {
+	if it.Subagent != nil && it.Subagent.State == model.RunRunning {
 		sa := *it.Subagent
-		sa.State, sa.Said = "failed", ""
+		sa.State, sa.Said = model.RunFailed, ""
 		it.Subagent = &sa
 	}
-	if it.BackgroundCommand != nil && it.BackgroundCommand.State == "running" {
+	if it.BackgroundCommand != nil && it.BackgroundCommand.State == model.RunRunning {
 		sh := *it.BackgroundCommand
-		sh.State = "started"
+		sh.State = model.RunStarted
 		it.BackgroundCommand = &sh
 	}
 }

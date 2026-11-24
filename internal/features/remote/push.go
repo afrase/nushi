@@ -338,13 +338,13 @@ func (n *notifier) unfinishLocked(chatID string) {
 // workflowEnd is the push for a workflow that ended in state: its kind
 // (a turn's end's, "finished" or "failed", which the phone's service
 // worker knows) and the words after the agent's name.
-func workflowEnd(state string) (kind, words string) {
+func workflowEnd(state model.RunState) (kind, words string) {
 	switch state {
-	case "done":
+	case model.RunDone:
 		return "finished", "'s workflow finished"
-	case "failed":
+	case model.RunFailed:
 		return "failed", "'s workflow failed"
-	case "stopped":
+	case model.RunStopped:
 		return "failed", "'s workflow stopped"
 	}
 	return "failed", "'s workflow ended"

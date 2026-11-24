@@ -96,7 +96,7 @@ func (f *followed) ends() []model.BackgroundCommand {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var out []model.BackgroundCommand
-	state := "running"
+	state := model.RunRunning
 	for _, sh := range f.rows {
 		if sh.State != state {
 			out = append(out, sh)
@@ -217,7 +217,7 @@ func TestARunningTaskOfAClaudeGoneIsUnknown(t *testing.T) {
 func TestAReplayedTaskEndsTheCopysCommand(t *testing.T) {
 	for name, tc := range map[string]struct {
 		replayed map[string]any
-		want     string
+		want     model.RunState
 	}{
 		"stopped":   {taskStopped[1], "stopped"},
 		"completed": {taskCompleted[1], "done"},
@@ -253,8 +253,8 @@ func TestAReplayedTaskEndsTheCopysCommand(t *testing.T) {
 // one step, whichever comes first (the bash-background-taskstop flake,
 // "started" with the end "killed").
 func TestTaskStopsEndStandsWhateverTheFileSays(t *testing.T) {
-	for _, from := range []string{"running", "started"} {
-		t.Run(from, func(t *testing.T) {
+	for _, from := range []model.RunState{model.RunRunning, model.RunStarted} {
+		t.Run(string(from), func(t *testing.T) {
 			f := commandChat(t, false)
 			c := f.c
 			c.mu.Lock()

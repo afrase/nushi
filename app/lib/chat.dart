@@ -23,6 +23,7 @@ import 'package:nushi/preview_entry.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/transcript_find.dart';
+import 'package:nushi/workflows.dart';
 
 export 'package:nushi/chat_paths.dart';
 
@@ -938,15 +939,12 @@ class ChatState extends ChangeNotifier {
   }
 }
 
-/// Whether [it] is a subagent, background command or workflow that runs.
+/// Whether [it] is a subagent, background command or workflow that runs: a
+/// stalled workflow doesn't count (ADR 0127).
 bool _runs(Item it) =>
     it.backgroundCommand.state == 'running' ||
     it.subagent.state == 'running' ||
-    workflowRuns(it);
-
-/// Whether [it] launched a workflow that runs and isn't stalled (ADR 0127).
-bool workflowRuns(Item it) =>
-    it.workflow.state == 'running' && !it.workflow.stalled;
+    workflowLive(it.workflow) && !it.workflow.stalled;
 
 /// Where the last [n] of [items] before [end] start: [n] back, and further
 /// back to the call that started a subagent whose steps are among them, so

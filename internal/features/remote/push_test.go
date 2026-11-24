@@ -463,7 +463,7 @@ func TestCloseEndsTheFinishedWait(t *testing.T) {
 func TestAWorkflowsEndPushesOnce(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		s, p, _, _ := pushing(t)
-		call := func(state string) *model.Item {
+		call := func(state model.RunState) *model.Item {
 			return &model.Item{ID: "w", Kind: model.ToolCall, Tool: "Workflow", Workflow: &model.Workflow{RunID: "wf_1", Name: "SECRET name", State: state}}
 		}
 		s.Follow(model.Event{ChatID: "c1", Item: call("running")})
@@ -473,7 +473,7 @@ func TestAWorkflowsEndPushesOnce(t *testing.T) {
 		if want := (payload{Title: "Claude's workflow finished", Kind: "finished", Agent: "Claude", Chat: "c1"}); len(got) != 1 || got[0] != want {
 			t.Fatalf("pushed %+v, want %+v", got, want)
 		}
-		for state, title := range map[string]string{"failed": "Claude's workflow failed", "stopped": "Claude's workflow stopped", "unknown": "Claude's workflow ended"} {
+		for state, title := range map[model.RunState]string{"failed": "Claude's workflow failed", "stopped": "Claude's workflow stopped", "unknown": "Claude's workflow ended"} {
 			s.Follow(model.Event{ChatID: "c1", Item: call(state), WorkflowEnded: true})
 			if got := p.settle(); len(got) != 1 || got[0].Title != title || got[0].Kind != "failed" {
 				t.Errorf("%s: pushed %+v", state, got)

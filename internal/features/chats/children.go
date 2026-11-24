@@ -25,7 +25,7 @@ import (
 type child struct {
 	owner  *chat
 	launch string
-	said   string
+	said   model.RunState
 }
 
 // childUpdate takes an update about a child session: its announcement or
@@ -70,30 +70,27 @@ func (c *chat) childUpdate(n *acp.SessionNotification) bool {
 	return true
 }
 
-// saidEnd says a child's state is an end.
-func saidEnd(said string) bool { return said != "" && said != "running" }
-
 // saidOf reads a child's state: "running" while it works or waits on the
 // user, its end once idle ("done", "stopped" when cancelled, "failed"; an
 // end the agent can't explain, as when its process went, is "stopped").
 // An unknown or cleared state says nothing.
-func saidOf(st acp.Nullable[acp.StateUpdate]) (string, bool) {
+func saidOf(st acp.Nullable[acp.StateUpdate]) (model.RunState, bool) {
 	s := st.Value
 	switch {
 	case s == nil:
 		return "", false
 	case s.Running != nil, s.RequiresAction != nil:
-		return "running", true
+		return model.RunRunning, true
 	case s.Idle == nil:
 		return "", false
 	}
 	switch s.Idle.StopReason {
 	case "end_turn":
-		return "done", true
+		return model.RunDone, true
 	case "cancelled", "":
-		return "stopped", true
+		return model.RunStopped, true
 	}
-	return "failed", true
+	return model.RunFailed, true
 }
 
 // subagentCallLocked is the subagent call a child session works for: the
@@ -129,7 +126,7 @@ func (c *chat) childSaidLocked(ch child, sid string) {
 		sa = *call.Subagent
 	}
 	said := ch.said
-	if saidEnd(sa.Said) && saidEnd(said) {
+	if sa.Said.Ended() && said.Ended() {
 		said = sa.Said // as first said: a replay may tell a stop otherwise
 	}
 	if sa.Said == said && sa.Session == sid {
@@ -185,7 +182,7 @@ func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
 	case call == nil:
 		c.mu.Unlock()
 		return errors.New("that task is no longer in the chat")
-	case !running(*call) && (call.Workflow == nil || call.Workflow.State != "running"): // a stalled workflow may still run
+	case !running(*call) && (call.Workflow == nil || call.Workflow.State != model.RunRunning): // a stalled workflow may still run
 		c.mu.Unlock()
 		return errors.New("that task isn't running")
 	}
@@ -248,11 +245,11 @@ func (c *chat) stoppedLocked(call model.Item) {
 		c.pokeWorkflowsLocked() // its snapshot is written as it stops
 	}
 	i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Agent != "" && it.AgentID == id })
-	if id == "" || i < 0 || c.items[i].Subagent == nil || c.items[i].Subagent.State != "running" {
+	if id == "" || i < 0 || c.items[i].Subagent == nil || c.items[i].Subagent.State != model.RunRunning {
 		return
 	}
 	sa := *c.items[i].Subagent
-	sa.Said = "stopped"
+	sa.Said = model.RunStopped
 	c.items[i].Subagent = &sa
 	c.subagentLocked(&c.items[i])
 	c.publishLocked(c.items[i])

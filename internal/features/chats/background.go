@@ -21,12 +21,10 @@ import (
 // its state and how it ended, as CommandTask reads them, and the agent
 // that said "running", which counts only while that agent runs.
 type taskWord struct {
-	state, end string
-	agent      Agent
+	state model.RunState
+	end   string
+	agent Agent
 }
-
-// ended says the task is over, by the agent's word.
-func (t taskWord) ended() bool { return t.state != "" && t.state != "running" }
 
 // commandTaskLocked takes an update that is the agent's word on a
 // background command's task, and ends its row when the word is an end:
@@ -40,16 +38,17 @@ func (c *chat) commandTaskLocked(u acp.SessionUpdate) (only bool) {
 	if c.kind.background == nil || u.SessionUpdate != "tool_call_update" || t == nil {
 		return false
 	}
-	id, state, end, ok := c.kind.background.CommandTask(t.Meta)
+	id, word, end, ok := c.kind.background.CommandTask(t.Meta)
 	if !ok {
 		return false
 	}
+	state := model.RunState(word)
 	was := c.tasks[id]
 	switch {
-	case was.ended() && state == "running": // late, or replayed after its end
-	case was.ended():
+	case was.state.Ended() && state == model.RunRunning: // late, or replayed after its end
+	case was.state.Ended():
 		was.end = cmp.Or(was.end, end)
-	case state == "running":
+	case state == model.RunRunning:
 		was = taskWord{state: state, agent: c.agent}
 	default:
 		was = taskWord{state: state, end: end}
@@ -74,15 +73,15 @@ func (c *chat) commandTaskLocked(u acp.SessionUpdate) (only bool) {
 // it has (the file's end line), else takes the agent's.
 func (c *chat) heardLocked(sh model.BackgroundCommand) model.BackgroundCommand {
 	t := c.tasks[sh.ID]
-	if !t.ended() {
+	if !t.state.Ended() {
 		return sh
 	}
 	state := t.state
-	if state == "failed" && sh.Killed {
-		state = "stopped"
+	if state == model.RunFailed && sh.Killed {
+		state = model.RunStopped
 	}
 	if sh.State != state {
-		if sh.State != "running" && sh.State != "started" {
+		if sh.State != model.RunRunning && sh.State != model.RunStarted {
 			sh.End = "" // the fallback's guess, overruled
 		}
 		sh.State = state
@@ -105,10 +104,10 @@ func (c *chat) backgroundCommandLocked(it *model.Item) {
 	if !ok {
 		return
 	}
-	sh := model.BackgroundCommand{ID: id, State: "started"}
+	sh := model.BackgroundCommand{ID: id, State: model.RunStarted}
 	var agent Agent // none: the end is read once
 	if !c.reopeningLocked() {
-		sh.State, sh.Started, agent = "running", time.Now(), c.agent
+		sh.State, sh.Started, agent = model.RunRunning, time.Now(), c.agent
 	}
 	sh = c.heardLocked(sh) // its end can come first
 	it.BackgroundCommand = &sh
@@ -171,7 +170,7 @@ func (f *commandFollower) step() bool {
 		it.BackgroundCommand = &sh
 		c.publishLocked(*it)
 	}
-	return !over && sh.State == "running"
+	return !over && sh.State == model.RunRunning
 }
 
 // nextLocked is the row sh after a read of the file (read: it was read,
@@ -182,19 +181,19 @@ func (f *commandFollower) nextLocked(sh model.BackgroundCommand, out, end, state
 	live := f.agent != nil && c.agent == f.agent
 	gone := !live || !read
 	switch {
-	case task.ended(): // the agent's word: the file adds its end line's words
+	case task.state.Ended(): // the agent's word: the file adds its end line's words
 		sh = c.heardLocked(sh)
 		if end != "" && read {
 			sh.End = end
 		}
 		return sh, true
-	case sh.State != "running" && sh.State != "started": // its TaskStop ended it
+	case sh.State != model.RunRunning && sh.State != model.RunStarted: // its TaskStop ended it
 		return sh, true
-	case task.state == "running" && task.agent == f.agent && live: // it runs, whatever the file says
+	case task.state == model.RunRunning && task.agent == f.agent && live: // it runs, whatever the file says
 	case end != "" && (gone || f.endAt != nil && *f.endAt == out):
-		sh.State, sh.End = cmp.Or(state, "failed"), end
-		if sh.Killed && sh.State == "failed" { // Nushi stopped it, though the agent saw an exit code (Claude: 144 for SIGTERM)
-			sh.State = "stopped"
+		sh.State, sh.End = cmp.Or(model.RunState(state), model.RunFailed), end
+		if sh.Killed && sh.State == model.RunFailed { // Nushi stopped it, though the agent saw an exit code (Claude: 144 for SIGTERM)
+			sh.State = model.RunStopped
 		}
 		if !sh.Started.IsZero() && sh.Ended.IsZero() {
 			sh.Ended = time.Now()
@@ -202,7 +201,7 @@ func (f *commandFollower) nextLocked(sh model.BackgroundCommand, out, end, state
 	case end != "":
 		f.endAt = &out
 	case gone:
-		sh.State = "started" // no word of its end, and nothing says it still runs
+		sh.State = model.RunStarted // no word of its end, and nothing says it still runs
 	}
 	return sh, false
 }
@@ -213,7 +212,7 @@ func (c *chat) toldRunning(id string, agent Agent) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	t := c.tasks[id]
-	return t.state == "running" && t.agent == agent && c.agent == agent
+	return t.state == model.RunRunning && t.agent == agent && c.agent == agent
 }
 
 // commandStoppedLocked ends the background command of task id, if the chat
@@ -225,11 +224,11 @@ func (c *chat) toldRunning(id string, agent Agent) bool {
 func (c *chat) commandStoppedLocked(id string, stopped bool) {
 	for i := range c.items {
 		it := &c.items[i]
-		if it.BackgroundCommand == nil || it.BackgroundCommand.ID != id || it.BackgroundCommand.State != "running" && it.BackgroundCommand.State != "started" {
+		if it.BackgroundCommand == nil || it.BackgroundCommand.ID != id || it.BackgroundCommand.State != model.RunRunning && it.BackgroundCommand.State != model.RunStarted {
 			continue
 		}
 		sh := *it.BackgroundCommand
-		sh.State = "stopped"
+		sh.State = model.RunStopped
 		if !sh.Started.IsZero() {
 			sh.Ended = time.Now()
 		}
@@ -330,7 +329,7 @@ func (c *chat) markKilled(callID string, agent Agent, killed bool) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	it := c.itemLocked(callID)
-	if it == nil || it.BackgroundCommand == nil || it.BackgroundCommand.State != "running" || c.agent != agent {
+	if it == nil || it.BackgroundCommand == nil || it.BackgroundCommand.State != model.RunRunning || c.agent != agent {
 		return false
 	}
 	sh := *it.BackgroundCommand

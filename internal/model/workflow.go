@@ -35,7 +35,8 @@ import "time"
 type Workflow struct {
 	RunID, TaskID, Name, Description string
 	Session, Folder                  string `json:",omitzero"`
-	State, End                       string
+	State                            RunState
+	End                              string
 	Started                          time.Time `json:",omitzero"`
 	Ended                            time.Time `json:",omitzero"`
 	Active                           time.Time `json:",omitzero"`
@@ -62,10 +63,11 @@ type WorkflowPhase struct {
 // "stopped". Prompt and Result are the starts of its task and its answer,
 // as the agent kept them.
 type WorkflowAgent struct {
-	ID, Label, Phase, State, Model string
-	Prompt, Result                 string
-	Started, Ended                 time.Time
-	Tokens, ToolCalls              int
+	ID, Label, Phase, Model string
+	State                   RunState
+	Prompt, Result          string
+	Started, Ended          time.Time
+	Tokens, ToolCalls       int
 }
 
 // Limits of a workflow's summary on its item, so a run of a thousand agents
@@ -77,13 +79,8 @@ const (
 	WorkflowSummaryText = 2048 // bytes
 )
 
-// Final says the workflow's state is final.
-func (w *Workflow) Final() bool {
-	return w != nil && (w.State == "done" || w.State == "failed" || w.State == "stopped" || w.State == "unknown")
-}
-
 // Runs says the workflow runs and counts as the chat's work: running and
 // not stalled.
 func (w *Workflow) Runs() bool {
-	return w != nil && w.State == "running" && !w.Stalled
+	return w != nil && w.State == RunRunning && !w.Stalled
 }

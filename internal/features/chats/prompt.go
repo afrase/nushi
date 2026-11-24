@@ -266,7 +266,7 @@ func (c *chat) releaseLocked() {
 // backgroundLocked says a subagent the agent started (since item from)
 // runs on in the background.
 func (c *chat) backgroundLocked(from int) bool {
-	return slices.ContainsFunc(c.items[min(from, len(c.items)):], func(it model.Item) bool { return it.Subagent != nil && it.Subagent.State == "running" })
+	return slices.ContainsFunc(c.items[min(from, len(c.items)):], func(it model.Item) bool { return it.Subagent != nil && it.Subagent.State == model.RunRunning })
 }
 
 // blocks makes a message the agent's content: the text, links to the files

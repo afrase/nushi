@@ -17,7 +17,9 @@ bool isWorkflow(Item it) =>
 /// The workflows among [items], in order.
 List<Item> workflowsOf(List<Item> items) => items.where(isWorkflow).toList();
 
-/// Whether the workflow runs, stalled or not: it can be stopped.
+/// Whether the workflow runs, stalled or not: it can be stopped. Whether
+/// it counts as the chat's work adds that it isn't stalled (the daemon's
+/// Workflow.Runs).
 bool workflowLive(Workflow w) => w.state == 'running';
 
 /// The phase it's in now: the last one reached that hasn't ended, else

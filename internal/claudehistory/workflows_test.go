@@ -233,7 +233,8 @@ func TestWorkflowSnapshots(t *testing.T) {
 		name, snap string
 		w          model.Workflow
 		old        bool
-		want, end  string
+		want       model.RunState
+		end        string
 	}{
 		{"its task", `{"status":"completed","taskId":"t1"}`, model.Workflow{TaskID: "t1"}, false, "done", "completed"},
 		{"another task", `{"status":"completed","taskId":"t2"}`, model.Workflow{TaskID: "t1"}, false, "running", ""},

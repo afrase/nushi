@@ -46,43 +46,43 @@ func (c *chat) subagentLocked(call *model.Item) bool { //nolint:gocyclo // one t
 	case sa.Said != "": // the agent said, of its session (children.go)
 		sa.State = sa.Said
 	case callRunning(call.Status):
-		sa.State = "running"
+		sa.State = model.RunRunning
 	case call.Status == "failed":
-		sa.State = "failed"
+		sa.State = model.RunFailed
 	case background && r < 0 && !sa.Started.IsZero():
-		sa.State = "running"
+		sa.State = model.RunRunning
 	// Steps after its last report (never replayed, so seen live): a
 	// message ran it again. A call that reports apart from its output
 	// may not have its report any more (replayed).
 	case last > r && (r >= 0 || background || elsewhere):
-		sa.State = "running"
+		sa.State = model.RunRunning
 	default:
-		sa.State = "done"
+		sa.State = model.RunDone
 	}
 	now := c.svc.timing.now()
 	switch {
-	case sa.State == "running" && sa.Started.IsZero() && !c.reopeningLocked():
+	case sa.State == model.RunRunning && sa.Started.IsZero() && !c.reopeningLocked():
 		sa.Started = now
-	case sa.State != "running" && !sa.Started.IsZero() && sa.Ended.IsZero():
+	case sa.State != model.RunRunning && !sa.Started.IsZero() && sa.Ended.IsZero():
 		sa.Ended = now
-	case sa.State == "running":
+	case sa.State == model.RunRunning:
 		sa.Ended = time.Time{}
 	}
 	work(&sa, old, call.Totals, now)
 	switch {
-	case sa.State == "running":
+	case sa.State == model.RunRunning:
 		sa.Result = ""
 	case r >= 0:
 		sa.Result = c.items[r].Text
 	case said >= 0 && sa.Said != "": // it ended without a report: its last words
 		sa.Result = c.items[said].Text
-	case sa.Said == "stopped": // its call says only that it was
+	case sa.Said == model.RunStopped: // its call says only that it was
 		sa.Result = ""
 	case !background && !elsewhere:
 		sa.Result = call.Text
 	}
 	call.Subagent = &sa
-	if old.State == "running" && sa.State != "running" { // its own moment: the turn may be long over (ADR 0044)
+	if old.State == model.RunRunning && sa.State != model.RunRunning { // its own moment: the turn may be long over (ADR 0044)
 		c.lookRelatedLocked()
 	}
 	return sa != old

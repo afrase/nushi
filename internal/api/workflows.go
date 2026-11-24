@@ -53,7 +53,7 @@ func workflowErr(err error) error {
 }
 
 func workflowProto(w model.Workflow) *nushiv1.Workflow {
-	out := &nushiv1.Workflow{RunId: w.RunID, Name: w.Name, Description: w.Description, State: w.State, End: w.End,
+	out := &nushiv1.Workflow{RunId: w.RunID, Name: w.Name, Description: w.Description, State: string(w.State), End: w.End,
 		Started: unixMs(w.Started), Ended: unixMs(w.Ended), Active: unixMs(w.Active), Agents: int32(w.Agents), Done: int32(w.Done),
 		Failed: int32(w.Failed), Running: w.Running, RunningCount: int32(w.RunningCount), Summary: w.Summary, Stalled: w.Stalled, Tokens: w.Tokens}
 	for _, i := range w.RunningPhases {
@@ -69,6 +69,6 @@ func workflowProto(w model.Workflow) *nushiv1.Workflow {
 }
 
 func workflowAgentProto(a model.WorkflowAgent) *nushiv1.WorkflowAgent {
-	return &nushiv1.WorkflowAgent{Id: a.ID, Label: a.Label, Phase: a.Phase, State: a.State, Model: a.Model, Started: unixMs(a.Started),
+	return &nushiv1.WorkflowAgent{Id: a.ID, Label: a.Label, Phase: a.Phase, State: string(a.State), Model: a.Model, Started: unixMs(a.Started),
 		Ended: unixMs(a.Ended), Tokens: int32(min(a.Tokens, 1<<31-1)), ToolCalls: int32(min(a.ToolCalls, 1<<31-1)), Prompt: a.Prompt, Result: a.Result}
 }

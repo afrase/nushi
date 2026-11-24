@@ -102,10 +102,10 @@ func untimed(it *model.Item) {
 // later run counts on from them, without their tokens, which no longer
 // cover all it did.
 func work(sa *model.Subagent, old model.Subagent, totals *model.Totals, now time.Time) {
-	running := sa.State == "running"
+	running := sa.State == model.RunRunning
 	switch {
 	case running && sa.Working.IsZero() && !sa.Started.IsZero():
-		if old.State != "running" && sa.Reported {
+		if old.State != model.RunRunning && sa.Reported {
 			sa.Tokens = 0 // a run its totals don't cover
 		}
 		sa.Working = now

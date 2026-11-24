@@ -320,20 +320,20 @@ func (s *Service) watch(c *chat, agent Agent) {
 func (c *chat) orphanLocked(stopped bool) {
 	c.pokeWorkflowsLocked() // they went with the agent
 	for i, it := range c.items {
-		running := callRunning(it.Status) || it.Subagent != nil && it.Subagent.State == "running"
+		running := callRunning(it.Status) || it.Subagent != nil && it.Subagent.State == model.RunRunning
 		if it.Kind == model.ToolCall && running {
 			c.items[i].Status = "failed"
 			if it.Ended.IsZero() { // else its turn's end ended it
 				c.timeCallLocked(&c.items[i], it.Status)
 			}
-			if sa := c.items[i].Subagent; sa != nil && sa.Said == "running" {
+			if sa := c.items[i].Subagent; sa != nil && sa.Said == model.RunRunning {
 				ended := *sa
 				ended.Said = "" // its session went with the agent
 				c.items[i].Subagent = &ended
 			}
 			c.subagentLocked(&c.items[i])
 			if sa := c.items[i].Subagent; sa != nil && stopped {
-				sa.State = "stopped"
+				sa.State = model.RunStopped
 			}
 			c.publishLocked(c.items[i])
 		}

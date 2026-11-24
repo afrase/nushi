@@ -379,28 +379,28 @@ func (r *run) ended(w model.Workflow, s snapshot) model.Workflow {
 // words seen are completed, failed and killed; stopped and cancelled are
 // its words for a stopped task elsewhere; anything else (paused) ended
 // in a way Nushi can't name.
-func endState(status string) string {
+func endState(status string) model.RunState {
 	switch status {
 	case "completed":
-		return "done"
+		return model.RunDone
 	case "failed":
-		return "failed"
+		return model.RunFailed
 	case "killed", "stopped", "cancelled":
-		return "stopped"
+		return model.RunStopped
 	}
-	return "unknown"
+	return model.RunUnknown
 }
 
 // agentState is an agent's state from the snapshot's row: one that
 // hadn't ended when the run did was stopped with it.
-func agentState(s string) string {
+func agentState(s string) model.RunState {
 	switch s {
 	case "done":
-		return "done"
+		return model.RunDone
 	case "error", "failed":
-		return "failed"
+		return model.RunFailed
 	}
-	return "stopped"
+	return model.RunStopped
 }
 
 // phaseOf is the index of the phase titled title in w, added when new

@@ -99,7 +99,7 @@ func runningAs(w model.Workflow) (model.Workflow, error) {
 	return w, nil
 }
 
-func endedAs(state, end string) func(model.Workflow) (model.Workflow, error) {
+func endedAs(state model.RunState, end string) func(model.Workflow) (model.Workflow, error) {
 	return func(w model.Workflow) (model.Workflow, error) {
 		w.State, w.End, w.Ended, w.Agents, w.Done = state, end, time.Now(), 2, 2
 		return w, nil
@@ -172,6 +172,9 @@ func launchAs(c *chat, callID acp.ToolCallID, task, run string) {
 		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: acp.SessionID(c.sid), Update: u})
 	}
 }
+
+// workflowEnded says w is a workflow's run that ended.
+func workflowEnded(w *model.Workflow) bool { return w != nil && w.State.Ended() }
 
 func workflowOf(c *chat) *model.Workflow {
 	c.mu.Lock()
@@ -385,7 +388,7 @@ func TestAWorkflowWhoseFilesGo(t *testing.T) {
 			}
 			f.c.pokeWorkflowsLocked()
 			f.c.mu.Unlock()
-			eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.Final() && len(f.c.following) == 0 })
+			eventually(t, f.c, func() bool { return workflowEnded(f.c.itemLocked(wfCall).Workflow) && len(f.c.following) == 0 })
 			w := workflowOf(f.c)
 			switch {
 			case agentGoes && (w.State != "stopped" || w.End != "Claude quit while it ran"):
@@ -419,7 +422,7 @@ func TestAWorkflowStaysWithItsSession(t *testing.T) {
 	f.files.mu.Unlock()
 	f.c.pokeWorkflowsLocked()
 	f.c.mu.Unlock()
-	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.Final() })
+	eventually(t, f.c, func() bool { return workflowEnded(f.c.itemLocked(wfCall).Workflow) })
 	if w := workflowOf(f.c); w.State != "stopped" || w.Session != launched {
 		t.Errorf("after the move: %+v", w)
 	}
@@ -450,7 +453,7 @@ func TestNoMoveOrRewindWhileAWorkflowRuns(t *testing.T) {
 		}
 	}
 	f.files.set(endedAs("done", "completed"))
-	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.Final() })
+	eventually(t, f.c, func() bool { return workflowEnded(f.c.itemLocked(wfCall).Workflow) })
 	if _, err := f.svc.Rewind(t.Context(), f.c.id, "x"); err == nil || strings.Contains(err.Error(), "workflow") {
 		t.Errorf("once it ended: %v", err)
 	}
@@ -458,7 +461,7 @@ func TestNoMoveOrRewindWhileAWorkflowRuns(t *testing.T) {
 
 // Each end the snapshot says is the run's.
 func TestWorkflowEnds(t *testing.T) {
-	for _, state := range []string{"done", "failed", "stopped", "unknown"} {
+	for _, state := range []model.RunState{model.RunDone, model.RunFailed, model.RunStopped, model.RunUnknown} {
 		f := workflowChat(t, Timing{}, endedAs(state, "x"))
 		eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == state && len(f.c.following) == 0 })
 	}
@@ -489,7 +492,7 @@ func TestAWorkflowEndsWithItsAgent(t *testing.T) {
 			f.c.mu.Lock()
 			f.c.pokeWorkflowsLocked() // the grace's end
 			f.c.mu.Unlock()
-			eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.Final() })
+			eventually(t, f.c, func() bool { return workflowEnded(f.c.itemLocked(wfCall).Workflow) })
 			w := workflowOf(f.c)
 			switch {
 			case snapshot && w.State != "done":
@@ -514,7 +517,7 @@ const launchText = "Workflow launched in background. Task ID: w9u1xb6ik\nSummary
 // while its files change, ends stopped once they are still, or done by
 // its snapshot.
 func TestAWorkflowAfterAReopen(t *testing.T) {
-	for name, end := range map[string]string{"its files still": "stopped", "a snapshot": "done"} {
+	for name, end := range map[string]model.RunState{"its files still": model.RunStopped, "a snapshot": model.RunDone} {
 		t.Run(name, func(t *testing.T) {
 			var mu sync.Mutex
 			active := time.Now()
@@ -620,7 +623,7 @@ func TestAWorkflowStalls(t *testing.T) {
 	quiet, n := f.c.quietLocked(), f.c.workflowsLocked()
 	st := f.c.statusLocked()
 	f.c.mu.Unlock()
-	if !quiet || n != 0 || st.Background != 0 || workflowOf(f.c).Final() {
+	if !quiet || n != 0 || st.Background != 0 || workflowEnded(workflowOf(f.c)) {
 		t.Errorf("stalled: quiet %v, %d running, %+v", quiet, n, st)
 	}
 	mu.Lock()
@@ -814,7 +817,7 @@ func TestAWorkflowWithoutFiles(t *testing.T) {
 		t.Errorf("running: %v, %v", agents, err)
 	}
 	f.files.set(endedAs("done", "completed"))
-	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.Final() })
+	eventually(t, f.c, func() bool { return workflowEnded(f.c.itemLocked(wfCall).Workflow) })
 	if _, _, _, err := f.svc.Workflow(f.c.id, wfCall); !errors.Is(err, ErrNoWorkflow) {
 		t.Errorf("ended: %v", err)
 	}
