@@ -29,7 +29,6 @@ They stay two: the first is about the Go agent's state (what it has read of clau
 The replay to the Go agent is strict and in order, so what the adapter wrote claude that the Go agent doesn't (or not at a fixed point) goes from the cassette, with claude's answers (`forGoAgent` in `../../claude_replay_test.go`):
 
 - `generate_session_title`: the Go agent asks on a goroutine of its own, answered whenever it comes;
-- calls of the hooks the Go agent doesn't register (PostCompact, TaskCreated…); a PostToolUse call takes the Go agent's id;
 - the `interrupt` the adapter sends as it closes a session with claude idle (when its client goes), and what claude wrote after it: the Go agent interrupts only a running turn, else it just ends claude's stdin. An interrupt with a turn running, or one followed by more writes to claude (a cancel), stays;
 - a second `interrupt` sent before claude answered the first, with its answer: the adapter sends two as its client goes mid-turn, the Go agent one.
 
