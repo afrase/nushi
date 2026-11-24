@@ -77,3 +77,26 @@ func TestTheRecordHoldsWhatAStopWouldEnd(t *testing.T) {
 	agent.quit()
 	testcheck.Wait(t, "the ended agent's processes dropped", func() bool { return rec.pids(owner) == nil })
 }
+
+// An agent is recorded as it starts, not first at the next minute's tick:
+// a daemon that crashes before then leaves it to the next one's sweep too.
+func TestAnAgentIsRecordedAsItStarts(t *testing.T) {
+	agent := &fakeAgent{pid: agentPid}
+	procs := &fakeProcesses{below: map[int][]model.Process{}}
+	rec := &memRecord{owned: map[string][]model.Process{}}
+	launch := func(h acp.Client, log *slog.Logger) (Agent, error) {
+		a, err := agent.launch(h, log)
+		if err != nil {
+			return nil, err
+		}
+		return groupAgent{a}, nil
+	}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: launch}},
+		Options{Processes: procs, Record: rec, Timing: Timing{SleepCheck: time.Hour}})
+	t.Cleanup(svc.Close)
+	startChat(t, svc, t.TempDir())
+	owner := agentOwner(agentPid)
+	testcheck.Wait(t, "the agent recorded before any tick", func() bool { return slices.Equal(rec.pids(owner), []int{agentPid}) })
+	agent.quit()
+	testcheck.Wait(t, "the ended agent dropped", func() bool { return rec.pids(owner) == nil })
+}

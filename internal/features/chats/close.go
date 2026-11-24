@@ -71,12 +71,13 @@ func (s *Service) started(launch Launch) Launch {
 			return nil, err
 		}
 		s.mu.Lock()
-		defer s.mu.Unlock()
 		if s.closing {
+			s.mu.Unlock()
 			_ = agent.Close() // its process is gone either way
 			return nil, errClosing
 		}
 		s.live[agent] = true
+		s.mu.Unlock()
 		go func() {
 			<-agent.Done()
 			s.mu.Lock()
@@ -84,6 +85,7 @@ func (s *Service) started(launch Launch) Launch {
 			s.mu.Unlock()
 			s.dropAgent(agent)
 		}()
+		s.recordAgent(agent) // a process listing and a file write: outside the lock
 		return agent, nil
 	}
 }

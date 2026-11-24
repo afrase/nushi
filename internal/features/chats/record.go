@@ -10,12 +10,13 @@ import (
 
 // A daemon that crashes leaves its agents to end on their input's end,
 // which can leave what a clean stop would have ended: opencode's shells
-// (docs/facts/opencode.md), a hung agent's group. Each minute the chats
-// record what a clean stop of each live agent would end, for the next
-// daemon to stop (proctree.Record), and drop it once the agent ends. What
-// outlives a clean stop isn't recorded, so a crash ends no more than a
-// stop does: Claude's and Ante's background commands each lead a group of
-// their own, and outlive their agent (ADR 0032, 0130).
+// (docs/facts/opencode.md), a hung agent's group. As each agent starts,
+// and each minute after, the chats record what a clean stop of it would
+// end, for the next daemon to stop (proctree.Record), and drop it once
+// the agent ends. What outlives a clean stop isn't recorded, so a crash
+// ends no more than a stop does: Claude's and Ante's background commands
+// each lead a group of their own, and outlive their agent (ADR 0032,
+// 0130).
 
 // Record keeps the processes the daemon owns, by owner, for the next
 // daemon to stop after a crash (proctree.Record).
@@ -40,31 +41,38 @@ func (s *Service) recordAgents() {
 	live := slices.Collect(maps.Keys(s.live))
 	s.mu.Unlock()
 	for _, agent := range live {
-		ender, ok := agent.(stopEnder)
-		pid := agent.Pid()
-		if !ok || pid <= 0 {
-			continue
+		s.recordAgent(agent)
+	}
+}
+
+// recordAgent puts in the record what a clean stop of agent would end, as
+// it is now: on each tick, and as it starts (started), so one a crash
+// takes before the next tick is swept too.
+func (s *Service) recordAgent(agent Agent) {
+	ender, ok := agent.(stopEnder)
+	pid := agent.Pid()
+	if s.record == nil || s.procs == nil || !ok || pid <= 0 {
+		return
+	}
+	self, err := s.procs.Get(pid)
+	if err != nil {
+		return // it ended: dropAgent drops it
+	}
+	below, err := s.procs.Under(pid)
+	if err != nil {
+		return
+	}
+	var ends []model.Process
+	for _, p := range append([]model.Process{self}, below...) {
+		if ender.StopEnds(p) {
+			ends = append(ends, p)
 		}
-		self, err := s.procs.Get(pid)
-		if err != nil {
-			continue // it ended: dropAgent drops it
-		}
-		below, err := s.procs.Under(pid)
-		if err != nil {
-			continue
-		}
-		var ends []model.Process
-		for _, p := range append([]model.Process{self}, below...) {
-			if ender.StopEnds(p) {
-				ends = append(ends, p)
-			}
-		}
-		s.record.Put(agentOwner(pid), ends)
-		select {
-		case <-agent.Done(): // it ended as it was read: dropAgent may have run first
-			s.record.Drop(agentOwner(pid))
-		default:
-		}
+	}
+	s.record.Put(agentOwner(pid), ends)
+	select {
+	case <-agent.Done(): // it ended as it was read: dropAgent may have run first
+		s.record.Drop(agentOwner(pid))
+	default:
 	}
 }
 
