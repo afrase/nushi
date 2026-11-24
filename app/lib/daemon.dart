@@ -48,9 +48,25 @@ part 'daemon_start.dart';
 /// one per test process, as test files run side by side and a shared
 /// app.json would let one file's settings overwrite another's; new, so a
 /// reused pid starts from no one's prefs. flutter_test_config deletes it.
-final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
-    ? Directory.systemTemp.createTempSync('nushi-test-').path
-    : Platform.environment['NUSHI_DATA'] ?? native.install.dataFolder;
+/// On the web (the phone) there is none: it throws each time it's read,
+/// and counts it ([dataDirOnWeb]).
+final String dataDir = _dataDir();
+
+String _dataDir() {
+  if (kIsWeb) {
+    dataDirOnWeb++;
+    throw UnsupportedError('No data folder on the web');
+  }
+  return Platform.environment.containsKey('FLUTTER_TEST')
+      ? Directory.systemTemp.createTempSync('nushi-test-').path
+      : Platform.environment['NUSHI_DATA'] ?? native.install.dataFolder;
+}
+
+/// How often [dataDir] was read on the web, where it throws: so a test
+/// sees a store reach it though a catch swallowed the error. The phone's
+/// code never should.
+@visibleForTesting
+int dataDirOnWeb = 0;
 
 /// The folder the app's own stores keep their files in (`app.json`,
 /// `reviews.json`, `pulls/`, `context.json`): [dataDir], or null on the

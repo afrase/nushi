@@ -1,6 +1,8 @@
 // The app's own stores on the phone, in a real browser: there is no data
 // folder there ([dataDir] throws), so each store checks [appFiles] and
-// keeps what it's given in memory, never reaching a file or a catch.
+// keeps what it's given in memory, never reaching a file or a catch:
+// each case fails if it reached [dataDir] at all ([dataDirOnWeb]), which
+// a store's catch would otherwise swallow.
 // Run with: flutter test --platform chrome test/web
 @TestOn('browser')
 library;
@@ -15,9 +17,19 @@ import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 
 void main() {
-  test('the phone has no app folder, and the data folder would throw', () {
+  // What a case may not do: reach the data folder, caught or not.
+  late int reached;
+  setUp(() => reached = dataDirOnWeb);
+  void reachedNone() =>
+      expect(dataDirOnWeb, reached, reason: 'the data folder was reached');
+
+  test('the phone has no app folder, and the data folder would throw, '
+      'each time it is reached', () {
     expect(appFiles, isNull);
+    reachedNone();
     expect(() => dataDir, throwsUnsupportedError);
+    expect(() => dataDir, throwsUnsupportedError);
+    expect(dataDirOnWeb, reached + 2);
   });
 
   test('a pref the phone changes holds, saved nowhere', () async {
@@ -26,6 +38,7 @@ void main() {
     wrapLines.value = !was;
     await Future<void>.delayed(Duration.zero); // the save's microtask
     expect(wrapLines.value, !was);
+    reachedNone();
   });
 
   test('a review comment is kept in memory', () {
@@ -44,6 +57,7 @@ void main() {
     expect(commentsOf('a'), [c]);
     rereadReviews(); // no file to read: none
     expect(commentsOf('a'), isEmpty);
+    reachedNone();
   });
 
   test('a pull request read whole is kept in memory', () {
@@ -55,6 +69,8 @@ void main() {
     expect(cachedPull(ref)?.$2, p);
     keepPull(ref, p); // the same again: only its time
     expect(cachedPull(ref)?.$2, p);
+    forgetPulls();
+    reachedNone();
   });
 
   test("a chat's context is remembered in memory", () {
@@ -71,5 +87,6 @@ void main() {
     askedContext('c', r);
     expect(rememberedContexts, contains('c'));
     expect(lastContext('c')?.$2.categories.single.name, 'Messages');
+    reachedNone();
   });
 }
