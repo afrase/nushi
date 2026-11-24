@@ -74,24 +74,15 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
 			item.Subagent, item.BackgroundCommand = it.Subagent, it.BackgroundCommand
 			item.Started, item.Ended, item.Totals = it.Started, it.Ended, cmp.Or(item.Totals, it.Totals)
-			c.timeCallLocked(&item, cmp.Or(it.Status, "pending"))
 			if it.Workflow != nil {
 				item.Workflow, item.TaskID = it.Workflow, it.TaskID
 			}
+			was := it.Status
 			*it = item
-			c.subagentLocked(it)
-			c.backgroundCommandLocked(it)
-			c.workflowLocked(it)
-			c.publishLocked(*it)
+			c.callChangedLocked(it, was, false)
 		} else {
-			c.timeCallLocked(&item, "")
-			c.subagentLocked(&item)
-			c.backgroundCommandLocked(&item)
-			c.workflowLocked(&item)
-			c.addLocked(item)
+			c.callChangedLocked(&item, "", true)
 		}
-		c.reportedLocked(item)
-		c.passedOnLocked(item)
 	case "available_commands_update":
 		listed := []model.Command{}
 		for _, a := range u.AvailableCommandsUpdate.AvailableCommands {
@@ -187,25 +178,46 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 			c.setOutput(it, t.Content)
 		}
 		keepRaw(it, t.RawInput, t.RawOutput)
-		c.timeCallLocked(it, cmp.Or(was, "pending"))
-		c.subagentLocked(it)
-		c.backgroundCommandLocked(it)
-		c.workflowLocked(it)
+		c.callChangedLocked(it, was, false)
+	}
+}
+
+// callChangedLocked runs what follows a tool call's change, from a
+// tool_call (a new call, add, or one repeated) or a tool_call_update: was
+// is its status before ("" for a new call). Its times, subagent,
+// background command and workflow are read from it, it is shown, and when
+// it has just ended (not on each update that says it has) what its end
+// tells is taken: a pull request opened, a push, a stop, its related
+// worktrees, and, between the agent's own tool calls, the queue's chance.
+func (c *chat) callChangedLocked(it *model.Item, was string, add bool) {
+	from := ""
+	if !add {
+		from = cmp.Or(was, "pending")
+	}
+	c.timeCallLocked(it, from)
+	c.subagentLocked(it)
+	c.backgroundCommandLocked(it)
+	c.workflowLocked(it)
+	if add {
+		c.addLocked(*it)
+		it = &c.items[len(c.items)-1]
+	} else {
 		c.publishLocked(*it)
-		c.reportedLocked(*it)
-		c.passedOnLocked(*it)
-		if callEnded(string(t.Status)) {
-			c.openedPullLocked(*it)
-			c.pushedLocked(*it)
-			c.stoppedLocked(*it)
-			c.copyLocked(false)
-			if it.Parent != "" {
-				c.relatedStepLocked()
-			}
-		}
-		if callEnded(string(t.Status)) && it.Parent == "" && !c.started.IsZero() {
-			c.deliverLocked() // between tool calls: the agent's chance to take queued messages
-		}
+	}
+	c.reportedLocked(*it)
+	c.passedOnLocked(*it)
+	if !callEnded(it.Status) || callEnded(was) {
+		return
+	}
+	c.openedPullLocked(*it)
+	c.pushedLocked(*it)
+	c.stoppedLocked(*it)
+	c.copyLocked(false)
+	if it.Parent != "" {
+		c.relatedStepLocked()
+	}
+	if it.Parent == "" && !c.started.IsZero() {
+		c.deliverLocked() // between tool calls: the agent's chance to take queued messages
 	}
 }
 

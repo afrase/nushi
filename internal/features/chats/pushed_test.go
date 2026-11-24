@@ -215,3 +215,20 @@ func TestOpensPull(t *testing.T) {
 		}
 	}
 }
+
+// A tool call that arrives completed (as Codex's image views do, and as
+// ACP allows any call) ends there: a push in it counts, as one ended by
+// an update does.
+func TestACallThatArrivesCompletedPushed(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	c.mu.Lock()
+	c.worktrees = &branchWorktrees{branch: "sub"}
+	c.mu.Unlock()
+	testcheck.NoErr(t, c.SessionUpdate(t.Context(), &acp.SessionNotification{SessionID: acp.SessionID(c.sid), Update: acp.SessionUpdate{SessionUpdate: "tool_call",
+		ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "git push -u origin sub", Kind: "execute", Status: "completed"}}}))
+	s, err := svc.Session(c.id)
+	testcheck.NoErr(t, err)
+	if got := fmt.Sprint(branches(s.Pushed)); got != "[sub]" {
+		t.Errorf("pushed %s", got)
+	}
+}
