@@ -128,21 +128,35 @@ type recorder struct{ t *testing.T }
 
 var nameRE = regexp.MustCompile(`[^A-Za-z0-9]+`)
 
-// emailRE is a JSON escape (kept whole, so an address isn't read from
-// the middle of one: "\nme@x.io") or an email address.
-var emailRE = regexp.MustCompile(`\\(?:u[0-9A-Fa-f]{4}|.)|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}`)
+// stringRE is a JSON string literal, its escapes and all.
+var stringRE = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
+
+// emailRE is an email address in a decoded string: a local part of any
+// characters but space and those that end one in text (quotes, brackets,
+// a comma, a colon, a slash), so "josé@" and "o'neil@" are taken whole,
+// and a domain of letters, digits, dots and hyphens.
+var emailRE = regexp.MustCompile(`[^\s"\\<>@()\[\],;:/]+@[\p{L}\p{N}.-]+\.\p{L}{2,}`)
 
 // maskedEmail is what every email address in a recorded answer becomes.
 const maskedEmail = "someone@example.com"
 
 // masked is a JSON answer with each email address in it replaced by
-// maskedEmail and every other byte as it was.
+// maskedEmail. Each string is decoded before it is searched, so an escape
+// in or before an address hides none of it; a string holding one is
+// written again, and every other byte stays as it was.
 func masked(b []byte) []byte {
-	return emailRE.ReplaceAllFunc(b, func(m []byte) []byte {
-		if m[0] == '\\' {
-			return m
+	return stringRE.ReplaceAllFunc(b, func(lit []byte) []byte {
+		var s string
+		if json.Unmarshal(lit, &s) != nil || !emailRE.MatchString(s) {
+			return lit
 		}
-		return []byte(maskedEmail)
+		var out bytes.Buffer
+		enc := json.NewEncoder(&out)
+		enc.SetEscapeHTML(false)
+		if enc.Encode(emailRE.ReplaceAllString(s, maskedEmail)) != nil {
+			return lit
+		}
+		return bytes.TrimSuffix(out.Bytes(), []byte("\n"))
 	})
 }
 
@@ -278,7 +292,13 @@ func TestRecorderMasksEmails(t *testing.T) {
 		t.Fatal("not JSON")
 	}
 	edge := `{"a":"\nme@x.io","b":"\u0041b@c.io"}`
-	if got := string(masked([]byte(edge))); got != `{"a":"\nsomeone@example.com","b":"\u0041someone@example.com"}` {
-		t.Fatalf("after an escape: %s", got)
+	if got := string(masked([]byte(edge))); got != `{"a":"\nsomeone@example.com","b":"someone@example.com"}` {
+		t.Fatalf("an escape before or in an address: %s", got)
+	}
+	// A local part may hold any letter and an apostrophe; none of it stays.
+	for _, address := range []string{"josé@example.com", "日本@example.jp", "o'neil@example.com", "名前@例え.jp"} { //nolint:gosmopolitan // addresses in other scripts are what is checked
+		if got := string(masked([]byte(`{"email":"` + address + `"}`))); got != `{"email":"someone@example.com"}` {
+			t.Errorf("%s: %s", address, got)
+		}
 	}
 }
