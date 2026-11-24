@@ -58,6 +58,7 @@ const answersEmpty = <Type>{
   RenameBranchRequest,
   RenameChatRequest,
   ReopenChatRequest,
+  WakeChatRequest,
   SetChatColorRequest,
   SetConfigOptionRequest,
   SetDeviceViewRequest,

@@ -44,7 +44,8 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Pinned message** | One of the agent's messages marked with a pin (Pin, Unpin among its actions), listed by its title in the rail's menu, which goes to it; the daemon keeps them and their titles, so the phone lists them too. Not a pinned chat. | `Chat.pinned_messages`, `Chat.message_pins`, `ChatRecord.Pins`, `MessagePin`, `PinMessage`, `message_pins.dart` | 0085 |
 | **Pins rail** | The dashes in the transcript's left margin at its top while a chat has pinned messages: Session start and each pin, the current one long and bright; pointing at it opens its menu. | `Rail` (`rail.dart`, `rail_dashes.dart`, `rail_menu.dart`), `message_pins.dart` | 0085 |
 | **Rewind** | Go back to just before one of your messages: the session forks there and the message returns to the box. Files aren't rewound. Esc Esc lists them. | `RewindChat`, `Item.ForkAt`, `Rewindable` | 0020 |
-| **Sleep** | An idle chat's agent stops; the chat stays and the next message wakes it. On its own after 30 idle minutes. The chat is then asleep. | `SleepChat`, `ChatStatus.asleep` | 0032 |
+| **Sleep** | An idle chat's agent stops; the chat stays and the next message, or Wake, wakes it. On its own after 30 idle minutes. The chat is then asleep. | `SleepChat`, `ChatStatus.asleep` | 0032 |
+| **Wake** | A sleeping chat's agent started again without a message: its session reopens, nothing is sent. In Sleep's place in the chat's menu. | `WakeChat` | 0032 |
 | **Archive** | Put a chat away: its agent stops, it's read-only and listed last. Unarchive reopens it. | `ArchiveChat`, `ChatRecord.Archived` | |
 | **Reload** | Restart the chat's agent on its session, to pick up changed MCP servers. | `ReloadChat` | |
 | **Move** | The chat goes on in another folder or worktree; its session forks there. | `MoveChat` | 0014 |

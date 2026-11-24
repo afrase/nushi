@@ -209,6 +209,7 @@ enum Act {
     keyName: 'Pin chat',
   ),
   sleep(menu: ActMenu.chat, menuLabel: 'Sleep'),
+  wake(menu: ActMenu.chat, menuLabel: 'Wake'),
   reload(menu: ActMenu.chat, menuLabel: 'Reload'),
   nextTypo(
     key: nextTypoKey,

@@ -21,13 +21,14 @@ import 'package:nushi/worktree.dart';
 
 /// The chat's menu (its ⋯, its sidebar row's right-click): the menu bar's
 /// Chat menu, the actions that apply to it now ([chatActions]: Side
-/// question, Fork, Send review comments, Stop, Rename, Sleep, Reload, Link
-/// pull request…, Archive or Unarchive, MCP servers…, Skills…, Delete…), each
-/// with its icon, in groups ([_group]) with a line between them; Delete in
-/// red. The chat's own group ends with its Color, which isn't an action of
-/// the palette or the menu bar: it's the row of swatches, not one choice;
-/// then [more], what only the asker offers (a sidebar row's Move to
-/// section).
+/// question, Fork, Send review comments, Stop, Rename, Pin, Sleep or Wake
+/// (one in the same place, as the chat is awake or asleep, so the menu
+/// doesn't jump), Reload, Link pull request…, Clean up…, MCP servers…,
+/// Skills…, Archive or Unarchive, Delete…), each with its icon, in groups
+/// ([_group]) with a line between them; Delete in red. The chat's own
+/// group ends with its Color, which isn't an action of the palette or the
+/// menu bar: it's the row of swatches, not one choice; then [more], what
+/// only the asker offers (a sidebar row's Move to section).
 List<MenuEntry> chatMenu(
   BuildContext context,
   ChatState chat,
@@ -92,6 +93,7 @@ IconData? _icon(Act act) => switch (act) {
   Act.rename => Icons.edit_outlined,
   Act.pin => Icons.push_pin_outlined,
   Act.sleep => Icons.bedtime_outlined,
+  Act.wake => Icons.wb_sunny_outlined,
   Act.reload => Icons.refresh,
   Act.linkPull => Icons.link,
   Act.cleanUp => Icons.cleaning_services_outlined,
@@ -131,6 +133,15 @@ Future<void> sleepChat(
     () => daemon.client.sleepChat(SleepChatRequest(chatId: chat.id)),
   );
 }
+
+/// Wakes a sleeping chat without a message: its session reopens, and the
+/// chat shows it opening as any reopen does (its status), and the reopen's
+/// notice with Try again if it fails.
+Future<void> wakeChat(BuildContext context, ChatState chat, Daemon daemon) =>
+    tryOrShow(
+      context,
+      () => daemon.client.wakeChat(WakeChatRequest(chatId: chat.id)),
+    );
 
 /// Asks [title] before stopping [chat]'s agent while background tasks it
 /// started run, since they stop with it; true when none runs or [action] is
