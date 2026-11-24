@@ -378,7 +378,12 @@ void main() {
       'big.mov is over 8 MB',
     );
     expect([for (final f in chat.draft.files.value) f.name], ['notes.txt']);
-    expect(await attachFiles(chat, [small], api: apiFloor - 1), updateOnMac);
+    // A device's files came at API 106 (ADR 0091): a daemon below the
+    // floor but past it takes them; one older would drop them unsaid.
+    expect(await attachFiles(chat, [small], api: 105), updateOnMac);
+    chat.draft.files.value = [];
+    expect(await attachFiles(chat, [small], api: apiFloor - 1), '');
+    expect([for (final f in chat.draft.files.value) f.name], ['notes.txt']);
     final seven = [
       for (final n in ['a', 'b', 'c'])
         XFile.fromData(Uint8List(7 << 20), name: '$n.mov', path: '$n.mov'),

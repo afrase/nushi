@@ -5,7 +5,6 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show immutable, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/daemon.dart' show apiFloor;
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show FileUpload;
 import 'package:nushi/images.dart';
@@ -216,9 +215,10 @@ int _sent(Draft draft) =>
 
 /// A file of the phone's, its bytes read; null, with why in [refused],
 /// when the daemon can't take it, or it or the [draft]'s files and photos
-/// with it are too large. A daemon below the floor ([apiFloor]) may be
-/// older than a device's files (API 106, ADR 0091) and would drop them
-/// unsaid, so the phone, never blocked, says to update it instead.
+/// with it are too large. A daemon older than a device's files (API 106,
+/// ADR 0091) would drop them unsaid, so the phone, never blocked below
+/// the floor, says to update it instead. The API the files came at, not
+/// the floor: a daemon past it takes them, wherever the floor stands.
 Future<AttachedFile?> _upload(
   XFile f,
   String name,
@@ -226,7 +226,7 @@ Future<AttachedFile?> _upload(
   required int api,
   required List<String> refused,
 }) async {
-  if (api < apiFloor) {
+  if (api < 106) {
     refused.add(updateOnMac);
     return null;
   }
