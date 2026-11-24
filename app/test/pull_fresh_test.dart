@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_bar.dart';
 import 'package:nushi/github_view.dart' show githubPoll;
@@ -296,5 +297,33 @@ void main() {
     expect(fake.calls.whereType<GetGitHubPullRequest>(), hasLength(1));
     expect(_says('Updated just now'), findsOneWidget);
     await closeView(tester, g);
+  }, variant: onMac);
+
+  testWidgets('holding ⌘R on the tab asks once, not once a repeat', (
+    tester,
+  ) async {
+    final asked = <GetGitHubPullRequest>[];
+    final (d, _) = await openPullTab(
+      tester,
+      fixturePull(),
+      more: _counted(asked),
+    );
+    await tester.pump(const Duration(seconds: 20));
+    asked.clear();
+    final cmd = switch (conventions.commandKey) {
+      CommandKey.meta => LogicalKeyboardKey.metaLeft,
+      CommandKey.control => LogicalKeyboardKey.controlLeft,
+    };
+    await tester.sendKeyDownEvent(cmd);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.keyR);
+    for (var i = 0; i < 10; i++) {
+      await tester.pumpAndSettle();
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyR);
+    }
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.keyR);
+    await tester.sendKeyUpEvent(cmd);
+    await tester.pumpAndSettle();
+    expect(asked, hasLength(1));
+    await closeView(tester, d);
   }, variant: onMac);
 }

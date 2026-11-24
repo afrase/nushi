@@ -150,8 +150,9 @@ class _PullTabState extends State<PullTab> {
   }
 }
 
-/// The tab's Refresh key, the GitHub view's (⌘R).
-const _refreshKey = Cmd(LogicalKeyboardKey.keyR);
+/// The tab's Refresh key, the GitHub view's (⌘R). A held key asks once:
+/// each repeat would start another whole read as the last one ends.
+const _refreshKey = Cmd(LogicalKeyboardKey.keyR, includeRepeats: false);
 
 /// With several pull requests (ADR 0117), the tab's head starts with a
 /// menu field of their rows; the one picked is remembered for the chat.
