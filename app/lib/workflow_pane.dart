@@ -503,6 +503,8 @@ class _AgentStepsState extends State<_AgentSteps> {
   GetWorkflowAgentResponse? _got;
   Object? _error;
   Timer? _tick;
+  // The agent's files are gone (NotFound): nothing reads them again.
+  bool _gone = false;
 
   WorkflowAgent? get _agent => _got?.agent ?? widget.agent;
 
@@ -527,9 +529,10 @@ class _AgentStepsState extends State<_AgentSteps> {
   }
 
   /// Reads again every few seconds only while the agent runs and the pane
-  /// shows (a tucked pane's TickerMode is off).
+  /// shows (a tucked pane's TickerMode is off), and its files are there: a
+  /// failed read is tried again on the next tick.
   void _sync() {
-    if (_runs && TickerMode.valuesOf(context).enabled) {
+    if (!_gone && _runs && TickerMode.valuesOf(context).enabled) {
       _tick ??= Timer.periodic(_stepsEvery, (_) => unawaited(_fetch()));
     } else {
       _tick?.cancel();
@@ -547,16 +550,26 @@ class _AgentStepsState extends State<_AgentSteps> {
         ),
       );
       if (!mounted) return;
-      setState(() {
-        _got = got;
-        _error = null;
-      });
+      // An agent that wrote nothing since builds nothing (protobuf's ==
+      // compares the whole answer).
+      if (got != _got || _error != null) {
+        setState(() {
+          _got = got;
+          _error = null;
+        });
+      }
       _sync();
     } on Object catch (e) {
       if (!mounted) return;
-      setState(() => _error = e);
-      _tick?.cancel();
-      _tick = null;
+      final gone = e is ConnectException && e.code == Code.notFound;
+      setState(() {
+        _error = e;
+        if (gone) {
+          _gone = true;
+          _got = null; // what showed is gone with its files
+        }
+      });
+      _sync();
     }
   }
 
@@ -593,6 +606,18 @@ class _AgentStepsState extends State<_AgentSteps> {
             ],
           ),
         ),
+        // A read again that failed, over the steps it last read; the next
+        // good read takes it away.
+        if (error != null && _got != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+            child: Text(
+              errorText(error),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: small,
+            ),
+          ),
         Expanded(
           child: error != null && _got == null
               ? Center(
@@ -611,7 +636,8 @@ class _AgentStepsState extends State<_AgentSteps> {
                   daemon: widget.daemon,
                   onReply: null,
                   items: _got!.items,
-                  live: _runs,
+                  // Steps that failed to read again aren't shown as live.
+                  live: _runs && error == null,
                   header: _AgentHead(a, earlier: _got!.earlier),
                 ),
         ),

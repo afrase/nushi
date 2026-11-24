@@ -11,6 +11,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/subagent_pane.dart';
 import 'package:nushi/task_pane.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcript.dart';
 import 'package:nushi/workflow_pane.dart';
 import 'package:nushi/workflows.dart';
 
@@ -337,6 +338,86 @@ void main() {
     expect(find.text(' 4/7'), findsOne);
     await tester.pump(const Duration(seconds: 6));
     expect(_asked<GetWorkflowAgentRequest>(fake), 2);
+    await closeView(tester, d);
+  });
+
+  /// [workflowFake] whose GetWorkflowAgent answers [reads] in turn, the
+  /// last again after (an Exception in it is thrown), and how many times
+  /// it was asked (the fake records only the calls it answers).
+  (FakeDaemon, int Function()) readsInTurn(List<Object> reads) {
+    var n = 0;
+    final fake = workflowFake()
+      ..on((input) {
+        if (input is! GetWorkflowAgentRequest) return null;
+        final r = reads[n < reads.length ? n : reads.length - 1];
+        n++;
+        if (r is Exception) throw r;
+        return r;
+      });
+    return (fake, () => n);
+  }
+
+  GetWorkflowAgentResponse stepsUpTo(int n) =>
+      GetWorkflowAgentResponse(items: steps.take(n), agent: agents[3]);
+
+  testWidgets("an agent's steps keep being read after a failed read, whose "
+      'error goes with the next good one', (tester) async {
+    final (fake, asked) = readsInTurn([
+      stepsUpTo(2),
+      ConnectException(Code.unavailable, 'the daemon is busy'),
+      stepsUpTo(3),
+    ]);
+    final d = await _pane(tester, fake, workflowChat());
+    await tester.tap(find.text('review:ui'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Looking at the changed views first.'), findsOne);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    expect(find.textContaining('the daemon is busy'), findsOne);
+    expect(find.text('Looking at the changed views first.'), findsOne);
+    expect(find.textContaining('searching', findRichText: true), findsNothing);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    expect(asked(), 3);
+    expect(find.textContaining('the daemon is busy'), findsNothing);
+    // The new search joins the read's group.
+    expect(find.textContaining('searching', findRichText: true), findsOne);
+    await closeView(tester, d);
+  });
+
+  testWidgets("an agent's files gone stops its reads and says so", (
+    tester,
+  ) async {
+    final (fake, asked) = readsInTurn([
+      stepsUpTo(2),
+      ConnectException(Code.notFound, 'no such agent'),
+    ]);
+    final d = await _pane(tester, fake, workflowChat());
+    await tester.tap(find.text('review:ui'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    expect(find.text('Claude no longer has this agent’s files.'), findsOne);
+    await tester.pump(const Duration(seconds: 9));
+    expect(asked(), 2);
+    await closeView(tester, d);
+  });
+
+  testWidgets("an agent's steps read again the same build nothing", (
+    tester,
+  ) async {
+    final (fake, asked) = readsInTurn([stepsUpTo(3)]);
+    final d = await _pane(tester, fake, workflowChat());
+    await tester.tap(find.text('review:ui'));
+    await tester.pump();
+    await tester.pump();
+    final shown = tester.widget(find.byType(Transcript));
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    expect(asked(), 2);
+    expect(tester.widget(find.byType(Transcript)), same(shown));
     await closeView(tester, d);
   });
 
