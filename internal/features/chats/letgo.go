@@ -29,10 +29,13 @@ type asideItem struct {
 	after string
 }
 
-// letGoUnseen lets go of the items of the chats no client shows, now and
-// then, until the service's life ends.
+// letGoCheck is how often the chats no client shows are looked at.
+const letGoCheck = time.Minute
+
+// letGoUnseen lets go of the items of the chats no client shows, each
+// letGoCheck, until the service's life ends.
 func (s *Service) letGoUnseen() {
-	tick := time.NewTicker(s.timing.letGoCheck())
+	tick := time.NewTicker(letGoCheck)
 	defer tick.Stop()
 	for {
 		select {

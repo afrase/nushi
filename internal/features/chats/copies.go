@@ -270,10 +270,13 @@ func (s *Service) Older(age time.Duration) ([]string, error) {
 	return ids, err
 }
 
+// copiesCheck is how often copies past their days are looked for.
+const copiesCheck = time.Hour
+
 // autoClearCopies deletes the copies last written more than days() ago
-// (0: none), now and each hour, until the service's life ends.
+// (0: none), now and each copiesCheck, until the service's life ends.
 func (s *Service) autoClearCopies(days func() int) {
-	tick := time.NewTicker(s.timing.copiesCheck())
+	tick := time.NewTicker(copiesCheck)
 	defer tick.Stop()
 	for {
 		if d := days(); d > 0 {
