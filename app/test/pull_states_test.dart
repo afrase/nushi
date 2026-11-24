@@ -259,6 +259,38 @@ void main() {
     d.dispose();
   });
 
+  // Below API 133 the rows come from ChatPull's own ask and the states
+  // from GetGitHubStates: a state is put over its row, never in its place.
+  testWidgets("an older daemon's state keeps what only its row says", (
+    tester,
+  ) async {
+    final fake = FakeDaemon(_chats())
+      ..answer = (input) => switch (input) {
+        PingRequest() => PingResponse(apiVersion: statesFromItemsApi - 1),
+        GetGitHubStatesRequest() => GetGitHubStatesResponse(
+          items: [item(1, 'Add  Sub ', checks: 'pending', unresolved: 1)],
+        ),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    final items = GitHubItems.of(d);
+    items.put(
+      item(1, 'Add Sub', checks: 'pending')
+        ..additions = 12
+        ..mergeState = 'blocked'
+        ..head = 'feature'
+        ..checkCounts = GitHubCheckCounts(running: 2),
+    );
+    await PullStates.of(d).refresh();
+    final it = items.look(addressOf(_link(1))).item!;
+    expect(
+      (it.title, it.unresolved, it.additions, it.mergeState, it.head),
+      ('Add Sub', 1, 12, 'blocked', 'feature'),
+    );
+    expect(it.checkCounts.running, 2);
+    d.dispose();
+  });
+
   testWidgets('a pull request read whole is put over its row: what only the '
       "row says stays, its checks' counts go once its checks changed", (
     tester,

@@ -55,10 +55,10 @@ String itemState(GitHubItem it) => switch (it.state) {
 /// rows' items (GetGitHubItems: one query a host for every chat, whose
 /// rows then need no ask of their own; the chats' linked issues ride on
 /// it, for the header's chip), before it GetGitHubStates (one query a
-/// host, kept 30 s there, its answers put there too); a chat's widget
-/// puts what it read whole. What it knows is GitHubItems' (one store of
-/// the rows): it tells its listeners only when one of the chats' pull
-/// requests changed there. Archived chats and chats without a pull
+/// host, kept 30 s there, its answers put over the rows there); a chat's
+/// widget puts what it read whole. What it knows is GitHubItems' (one
+/// store of the rows): it tells its listeners only when one of the chats'
+/// pull requests changed there. Archived chats and chats without a pull
 /// request aren't asked for.
 class PullStates extends ChangeNotifier {
   /// The one of [daemon].
@@ -125,27 +125,37 @@ class PullStates extends ChangeNotifier {
   /// a row says: its checks' counts, merge state, size, branches) as
   /// current in GitHubItems, over the row kept there; the counts go when
   /// its checks changed, until the next row says them.
-  void put(GitHubItem whole) {
-    final kept = _items.look(GitHubAddress.of(whole.ref, pull: true)).item;
-    if (kept == null) return _items.put(whole);
+  void put(GitHubItem whole) => _take(whole);
+
+  /// Takes [said] (a whole read's item, or an older daemon's state) over
+  /// the row GitHubItems keeps of it: what both say from [said], what only
+  /// a row says (merge state, size, branches, when made) kept, and its
+  /// checks' counts while its checks are the same. Its title on one line,
+  /// as a row's is, so the two don't take turns.
+  void _take(GitHubItem said) {
+    final title = said.title.trim().split(_spaces).join(' ');
+    final kept = _items.look(GitHubAddress.of(said.ref, pull: true)).item;
+    if (kept == null) return _items.put(said.deepCopy()..title = title);
     final it = kept.deepCopy()
-      ..title = whole.title
-      ..url = whole.url
-      ..state = whole.state
-      ..draft = whole.draft
-      ..author = whole.author
-      ..updatedMs = whole.updatedMs
-      ..review = whole.review
-      ..unresolved = whole.unresolved
-      ..comments = whole.comments;
-    if (whole.checks != kept.checks || whole.checksOid != kept.checksOid) {
+      ..title = title
+      ..url = said.url
+      ..state = said.state
+      ..draft = said.draft
+      ..author = said.author
+      ..updatedMs = said.updatedMs
+      ..review = said.review
+      ..unresolved = said.unresolved
+      ..comments = said.comments;
+    if (said.checks != kept.checks || said.checksOid != kept.checksOid) {
       it
-        ..checks = whole.checks
-        ..checksOid = whole.checksOid
+        ..checks = said.checks
+        ..checksOid = said.checksOid
         ..clearCheckCounts();
     }
     if (it != kept) _items.put(it);
   }
+
+  static final _spaces = RegExp(r'\s+');
 
   /// GitHubItems changed: told on only if one of the chats' pull requests
   /// did.
@@ -240,7 +250,7 @@ class PullStates extends ChangeNotifier {
           final l = links.where((l) => l.id == it.id).firstOrNull;
           if (l == null) continue;
           if (!it.hasRef()) it.ref = l.asRef;
-          _items.put(it..pull = true);
+          _take(it..pull = true); // over the row ChatPull asked for
         }
       }
       _seenFirst();
