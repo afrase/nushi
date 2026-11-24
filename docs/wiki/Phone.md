@@ -8,7 +8,7 @@ The phone app keeps an agent going while you're away from your desk. From your p
 
 The phone reaches your computer through a **relay**: a small server program that passes messages between the two. The messages are end-to-end encrypted, so the relay can't read them. It keeps nothing.
 
-Nushi doesn't run a relay for you. You or your team run one on a server that your phone and your computer can both reach, with an address like `wss://relay.example.com`. The same server also hosts the phone app. To set one up, see the [relay setup guide](https://github.com/afrase/nushi/blob/main/docs/remote.md#the-relay).
+Nushi doesn't run a relay for you. You or your team run one on a server that your phone and your computer can both reach, with an address like `wss://relay.example.com`. The same server also hosts the phone app. To set one up, see the [relay setup guide](https://github.com/afrase/nushi/blob/main/docs/remote.md#the-relay). To update it, run `sudo nushi-relay -update -restart-unit nushi-relay` on the server ([details](https://github.com/afrase/nushi/blob/main/docs/remote.md#updating-a-relay-from-a-release)).
 
 ## Turn on remote access
 

@@ -43,3 +43,24 @@ func TestTrustedProxies(t *testing.T) {
 		}
 	}
 }
+
+// -restart-unit needs -update and a unit's name; -update alone is fine.
+func TestUpdateFlags(t *testing.T) {
+	for _, c := range []struct {
+		update bool
+		unit   string
+		ok     bool
+	}{
+		{true, "", true},
+		{true, "nushi-relay", true},
+		{true, "nushi-relay@main.service", true},
+		{false, "nushi-relay", false},
+		{true, "nushi relay", false},
+		{true, "--now", false},
+		{true, "relay;reboot", false},
+	} {
+		if err := checkUpdateFlags(c.update, c.unit); (err == nil) != c.ok {
+			t.Errorf("-update=%v -restart-unit %q: %v", c.update, c.unit, err)
+		}
+	}
+}

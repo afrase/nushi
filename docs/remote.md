@@ -56,7 +56,7 @@ Revoke it on the Mac (Settings › Remote access). The daemon moves to a new id 
 
 Whoever serves the web app (the relay's host, a proxy that terminates TLS such as Cloudflare) can serve code that takes the device's key. If that may have happened:
 
-1. Reinstall `nushi-relay` from the release's tarball, checked against its `.sha256` from the release ([Updating a relay from a release](#updating-a-relay-from-a-release)), and restart it; the app is inside the binary, so that puts it back. A relay still run with `-web <folder>` serves that folder instead: take `-web` out of its service (keep `-origin`) and delete the folder.
+1. Reinstall `nushi-relay` by hand from the release's tarball, checked against its `.sha256` from the release (the manual steps in [Updating a relay from a release](#updating-a-relay-from-a-release)), and restart it. Not with `nushi-relay -update`: a binary that may have been changed can't be trusted to replace itself; the app is inside the binary, so that puts it back. A relay still run with `-web <folder>` serves that folder instead: take `-web` out of its service (keep `-origin`) and delete the folder.
 2. Purge the proxy's cache (Cloudflare keeps the app's hashed files at its edge for a year).
 3. Cut a new release if the files themselves were wrong.
 4. Revoke every phone on the Mac.
@@ -105,7 +105,7 @@ The Mac's relay is then `wss://nushi.example.com`.
 
 ### On a VPS
 
-On any small Linux box: install a release's relay as in [Updating a relay from a release](#updating-a-relay-from-a-release) (or build one with the app inside, `GOOS=linux GOARCH=amd64 make relay-web`, and copy it there), point a DNS name at the box, and run it as a service with port 443 open:
+On any small Linux box: install a release's relay once by hand, with the manual steps in [Updating a relay from a release](#updating-a-relay-from-a-release) (or build one with the app inside, `GOOS=linux GOARCH=amd64 make relay-web`, and copy it there), point a DNS name at the box, and run it as a service with port 443 open:
 
 ```ini
 # /etc/systemd/system/nushi-relay.service
@@ -119,7 +119,7 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-The certificate cache is the only thing it writes. Without `-cert-cache`, each start asks Let's Encrypt for a new certificate, and frequent restarts run into its rate limits.
+The certificate cache is the only thing it writes. Without `-cert-cache`, each start asks Let's Encrypt for a new certificate, and frequent restarts run into its rate limits. Later releases: `sudo nushi-relay -update -restart-unit nushi-relay` ([Updating a relay from a release](#updating-a-relay-from-a-release)).
 
 ### On Fly.io
 
@@ -159,7 +159,42 @@ app = "my-nushi-relay"
 
 ### Updating a relay from a release
 
-Each release has `nushi-relay-X.Y.Z-linux-arm64.tar.gz` (and `linux-amd64`): one static binary with that release's web app built in. Update it along with the Mac:
+Each release has `nushi-relay-X.Y.Z-linux-arm64.tar.gz` (and `linux-amd64`): one static binary with that release's web app built in ([ADR 0113](adr/0113-the-relay-has-the-web-app-built-in.md)). Update it along with the Mac, with one command on the relay's machine ([ADR 0149](adr/0149-the-relay-updates-itself-when-asked.md)):
+
+```sh
+sudo nushi-relay -update -restart-unit nushi-relay
+```
+
+- It asks GitHub for the latest stable release of `afrase/nushi` and, if it is newer, downloads this machine's tarball and its `.sha256`, checks one against the other, runs the new binary once with `-version`, puts it in place of the one you ran (its mode and owner kept) and restarts the service. The same version or an older one: it says so and does nothing.
+- Without `-restart-unit` it installs and tells you to restart the service yourself. It exits 1 on any failure, with the installed relay untouched.
+- It needs root because the binary is root's (`/usr/local/bin`); run without it, it says so before downloading anything.
+- A relay you built yourself (`make relay-web`) has no release's version and refuses: it has nothing to compare.
+- What it trusts: GitHub's answer for `afrase/nushi`, over TLS. The `.sha256` comes from the same release, so it checks the download, not who made it: releases aren't signed. Whoever can publish a release there can change every relay that runs this command, and the relay serves the phone's app, which holds the phone's key ([ADR 0054](adr/0054-the-phone-is-a-web-app-with-web-push.md)).
+
+**A timer, if you want it.** The relay never updates by itself. To have it check weekly, add these two units and run `sudo systemctl enable --now nushi-relay-update.timer`. Only do it if you accept the sentence above for every release, unattended: a release published to `afrase/nushi` then reaches your relay, and your phone, within a week, with no one looking.
+
+```ini
+# /etc/systemd/system/nushi-relay-update.service
+[Unit]
+Description=Update nushi-relay to the latest release
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nushi-relay -update -restart-unit nushi-relay
+```
+
+```ini
+# /etc/systemd/system/nushi-relay-update.timer
+[Timer]
+OnCalendar=weekly
+RandomizedDelaySec=1h
+Persistent=true
+[Install]
+WantedBy=timers.target
+```
+
+`journalctl -u nushi-relay-update` shows what each run did.
+
+**By hand**, for a first install, a relay from before the command (it answers `flag provided but not defined: -update`), or when the command can't run:
 
 ```sh
 sha256sum -c nushi-relay-X.Y.Z-linux-arm64.tar.gz.sha256   # its .sha256, from the same release

@@ -7,15 +7,20 @@ package main
 import (
 	"cmp"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"net/netip"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"golang.org/x/crypto/acme/autocert"
 
+	"github.com/afrase/nushi/internal/relayupdate"
 	"github.com/afrase/nushi/relay"
 )
 
@@ -25,6 +30,8 @@ var version = "dev"
 
 func main() {
 	showVersion := flag.Bool("version", false, "print the relay's version and exit")
+	update := flag.Bool("update", false, "install the newest stable release's relay in this one's place if it is newer, then exit (ADR 0149); never serves")
+	unit := flag.String("restart-unit", "", "with -update: the systemd unit to restart once a new relay is installed (e.g. nushi-relay)")
 	addr := flag.String("addr", "", "address to listen on (default :8080, or :443 with -host)")
 	host := flag.String("host", "", "serve TLS for this host name, with a Let's Encrypt certificate")
 	cache := flag.String("cert-cache", "", "folder to keep the certificate in (default: memory only, so each start asks for a new one)")
@@ -54,6 +61,13 @@ func main() {
 	flag.Parse()
 	if *showVersion {
 		fmt.Println("nushi-relay", version) //nolint:forbidigo // -version's answer
+		return
+	}
+	if *update || *unit != "" {
+		if err := selfUpdate(*update, *unit); err != nil {
+			fmt.Fprintln(os.Stderr, "nushi-relay -update:", err)
+			os.Exit(1)
+		}
 		return
 	}
 
@@ -90,6 +104,31 @@ func main() {
 	}
 	log.Printf("nushi-relay listening on %s, TLS for %s", ln.Addr(), *host)
 	log.Fatal(srv.ServeTLS(ln, "", ""))
+}
+
+// selfUpdate is -update: the relay replaces itself with the latest stable
+// release's when that is newer (internal/relayupdate), and restarts unit
+// after an install when it is given. -restart-unit without -update is a
+// mistake, not a relay to start.
+func selfUpdate(update bool, unit string) error {
+	if err := checkUpdateFlags(update, unit); err != nil {
+		return err
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return relayupdate.New(version, unit, os.Stdout).Run(ctx)
+}
+
+// checkUpdateFlags refuses -restart-unit without -update, or with a name
+// that isn't a unit's.
+func checkUpdateFlags(update bool, unit string) error {
+	if !update {
+		return errors.New("-restart-unit goes with -update")
+	}
+	if unit != "" {
+		return relayupdate.CheckUnit(unit)
+	}
+	return nil
 }
 
 // trustedProxies parses -trusted-proxy: comma-separated addresses (each a
