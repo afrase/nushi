@@ -9,6 +9,40 @@ import 'package:nushi/terminals.dart';
 import 'fake_daemon.dart';
 
 void main() {
+  // Terminals lives as long as its Daemon (the phone's re-pair makes a new
+  // one; tests make one each): the sessions it made end with it, their
+  // streams cancelled and no retry left to attach again.
+  testWidgets("a daemon's dispose ends its terminals' sessions", (
+    tester,
+  ) async {
+    final streams = <StreamController<AttachTerminalResponse>>[];
+    final fake = FakeDaemon([])
+      ..streams = (input) {
+        if (input is! AttachTerminalRequest) return null;
+        final s = StreamController<AttachTerminalResponse>();
+        streams.add(s);
+        return s.stream;
+      };
+    addTearDown(() {
+      for (final s in streams) {
+        unawaited(s.close());
+      }
+    });
+    final d = await fake.connect(tester);
+    d.terminals
+        .session(Terminal(id: 't1', chatId: 'c1'))
+        .terminal
+        .resize(80, 24); // its view laid out: it attaches
+    await tester.pump();
+    expect([for (final s in streams) s.hasListener], [true]);
+
+    d.dispose();
+    await tester.pump();
+    expect([for (final s in streams) s.hasListener], [false]);
+    await tester.pump(const Duration(seconds: 2)); // past a retry's wait
+    expect(streams, hasLength(1));
+  });
+
   // A restart here: the old shell's stream ends (as the daemon ends it,
   // just before the restart's answer), then the session attaches anew.
   // The old stream's retry mustn't attach once more and replay the

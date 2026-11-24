@@ -289,8 +289,12 @@ class Daemon extends ChangeNotifier {
   /// new chat would start with.
   String? skillsAgent;
 
-  /// The chats' terminals.
-  late final terminals = Terminals(client);
+  /// The chats' terminals, whose sessions end with the daemon.
+  late final Terminals terminals = () {
+    final t = Terminals(client);
+    whenDisposed(t.dispose);
+    return t;
+  }();
 
   /// The chats' folders' dev servers (ADR 0098), the Mac's only.
   late final devServers = DevServers(client);
@@ -361,7 +365,7 @@ class Daemon extends ChangeNotifier {
   final _disposers = <VoidCallback>[];
 
   /// Runs [f] as the daemon is disposed: a store of its own ends its
-  /// timers (`GitHubItems`'s).
+  /// timers (`GitHubItems`'s), `terminals` its sessions.
   void whenDisposed(VoidCallback f) => _disposers.add(f);
 
   /// Ends the events subscription: the next ping that answers subscribes

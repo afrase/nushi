@@ -191,6 +191,27 @@ class Terminals extends ChangeNotifier {
       ?..fresh = true
       ..attach();
   }
+
+  bool _disposed = false;
+
+  // An answer that lands after the Daemon is gone (a listing, an open)
+  // changes nothing anyone shows.
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  /// Ends every emulator's stream and retry, with the Daemon that made it
+  /// (`Daemon.terminals`).
+  @override
+  void dispose() {
+    _disposed = true;
+    for (final s in _sessions.values) {
+      s.dispose();
+    }
+    _sessions.clear();
+    super.dispose();
+  }
 }
 
 /// What a terminal tab shows: the name given to it, the program in front,
