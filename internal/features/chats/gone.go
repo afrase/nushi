@@ -154,7 +154,7 @@ func (s *Service) keeps(ctx context.Context, sess model.ChatRecord) string {
 
 // sweepEvery is how often listing the chats looks for sessions their agents
 // deleted.
-var sweepEvery = time.Hour
+const sweepEvery = time.Hour
 
 // Sweep forgets the chats whose sessions their agent deleted, found from
 // the agent's files alone (HistoryChecker), at most once in sweepEvery;

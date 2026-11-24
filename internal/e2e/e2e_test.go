@@ -126,7 +126,10 @@ func (p pipeAgent) Stop(time.Duration) error {
 	return err
 }
 
-func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon {
+// startDaemon starts the daemon on dataDir, the fake agent's sessions in
+// history; each of timing changes the chats' Timing for this daemon
+// (shortSidesGrace, graces.hold).
+func startDaemon(t *testing.T, dataDir string, history *acptest.History, timing ...func(*chats.Timing)) *daemon {
 	t.Helper()
 	var mu sync.Mutex
 	var kill func()
@@ -224,9 +227,13 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 	// The daemon as main builds it (daemon.Start), on fakes of what
 	// reaches outside it. A workflow's files are read often, so a test
 	// sees its end at once.
+	chatTiming := chats.Timing{WorkflowPoll: 20 * time.Millisecond}
+	for _, f := range timing {
+		f(&chatTiming)
+	}
 	var devices string
 	d, err := nushid.Start(t.Context(), dataDir, "tok", &daemontest.Leaves{Dir: dataDir, ChatKinds: kinds, Terminal: startSh, ShellName: "sh",
-		ChatTiming: chats.Timing{WorkflowPoll: 20 * time.Millisecond}, OnDevices: func(url string) { devices = url }})
+		ChatTiming: chatTiming, OnDevices: func(url string) { devices = url }})
 	if err != nil {
 		t.Fatal(err)
 	}

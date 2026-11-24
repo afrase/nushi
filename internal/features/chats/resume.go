@@ -175,7 +175,7 @@ func (s *Service) chat(id string) (*chat, error) {
 
 // reopenTimeout bounds a reopen: an agent that never answers (a stalled
 // npx, an MCP server that hangs) mustn't leave the chat reopening for good.
-var reopenTimeout = 2 * time.Minute
+const reopenTimeout = 2 * time.Minute
 
 //nolint:contextcheck // a reopen runs on its own: every request waiting on the chat waits for it
 func (s *Service) resume(c *chat) {

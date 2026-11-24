@@ -100,10 +100,10 @@ func TestForkFromAMessage(t *testing.T) {
 // is no longer thrown away when the app goes, and reopens on its own agent
 // with the chat's conversation and its own.
 func TestKeepASideChat(t *testing.T) {
-	g := holdGraces(t)
+	g := &graces{}
 	ctx := context.Background()
 	history := &acptest.History{}
-	d := startDaemon(t, t.TempDir(), history)
+	d := startDaemon(t, t.TempDir(), history, g.hold)
 	a := open(t, d)
 	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	a.send(id, "hello")

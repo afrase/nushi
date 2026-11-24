@@ -79,7 +79,7 @@ type Service struct {
 	swept     time.Time           // the last Sweep
 	sweeping  bool
 	following int         // apps following the events (Following)
-	idle      *time.Timer // closes the side chats once none has for SidesGrace
+	idle      *time.Timer // closes the side chats once none has for Timing.SidesGrace
 }
 
 // Terminals are the shells beside chats (internal/features/terminals).
