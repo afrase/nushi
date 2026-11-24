@@ -19,7 +19,8 @@ import 'package:nushi/worktree.dart';
 /// picking one switches the folder to it (SwitchBranch), saying plainly
 /// why when it can't. In a worktree: the repository's worktrees by
 /// branch, the current one checked; picking one moves the chat there.
-/// [list] is what ListBranches last said (null while it's asked);
+/// [list] is what ListBranches last said (null while it's asked), [error]
+/// why its last ask failed, said in one row in the list's place;
 /// [onOpen] asks again as the menu opens. [onSwitched] after a switch,
 /// [onChanges] shows the Changes view.
 class BranchMenu extends StatelessWidget {
@@ -29,6 +30,7 @@ class BranchMenu extends StatelessWidget {
     required this.branch,
     required this.list,
     super.key,
+    this.error,
     this.onOpen,
     this.onSwitched,
     this.onChanges,
@@ -38,6 +40,7 @@ class BranchMenu extends StatelessWidget {
   final Daemon daemon;
   final String branch;
   final ListBranchesResponse? list;
+  final String? error;
   final VoidCallback? onOpen;
   final VoidCallback? onSwitched;
   final VoidCallback? onChanges;
@@ -88,6 +91,7 @@ class BranchMenu extends StatelessWidget {
   /// The menu's rows.
   List<MenuEntry> branchEntries(BuildContext context) {
     final list = this.list;
+    if (error case final e?) return [MenuEntry(e)];
     if (list == null) return const [MenuEntry('Loading…')];
     // Mid-turn: the rows show, unavailable, under why.
     final working = chat.busy || chat.waiting || chat.archived;
@@ -278,13 +282,15 @@ Future<void> openWorktree(
 /// divider, then the repository's other worktrees by branch; picking one
 /// moves the chat there. Mid-turn, as the Branch row: the value shows and
 /// the rows are unavailable, under why. [list] is what ListBranches last
-/// said; [onOpen] asks again.
+/// said, [error] why its last ask failed (one row in their place);
+/// [onOpen] asks again.
 class WorktreeMenu extends StatelessWidget {
   const new({
     required this.chat,
     required this.daemon,
     required this.list,
     super.key,
+    this.error,
     this.onNew,
     this.onOpen,
   });
@@ -292,6 +298,7 @@ class WorktreeMenu extends StatelessWidget {
   final ChatState chat;
   final Daemon daemon;
   final ListBranchesResponse? list;
+  final String? error;
   final VoidCallback? onNew;
   final VoidCallback? onOpen;
 
@@ -329,9 +336,12 @@ class WorktreeMenu extends StatelessWidget {
         ),
       if (onNew case final add?) ...[
         MenuEntry('New worktree…', onPick: working ? null : add),
-        if (list == null || others.isNotEmpty) MenuEntry.divider,
+        if (list == null || error != null || others.isNotEmpty)
+          MenuEntry.divider,
       ],
-      if (list == null)
+      if (error case final e?)
+        MenuEntry(e)
+      else if (list == null)
         const MenuEntry('Loading…')
       else
         for (final w in others)

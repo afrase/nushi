@@ -212,6 +212,41 @@ void main() {
     }, variant: onMac);
   }
 
+  // The Branch menu with its listing failed, to look at (`make renders`):
+  // wide, and as narrow as shows the panel.
+  for (final width in [1700.0, 1140.0]) {
+    for (final b in renderThemes) {
+      renderTest('the Branch menu failing, ${width.round()}, ${b.name}', (
+        tester,
+      ) async {
+        final c = Chat(id: 'c', agent: 'claude', title: 'Try', folder: _repo);
+        final fake = _fake()
+          ..chats.add(c)
+          ..on(
+            (input) => input is ListBranchesRequest
+                ? throw ConnectException(
+                    Code.internal,
+                    'git: Unable to create .git/index.lock: File exists',
+                  )
+                : null,
+          );
+        final d = await openApp(
+          tester,
+          fake,
+          size: Size(width, 620),
+          brightness: b,
+        );
+        await _open(tester, 'main');
+        await render(
+          tester,
+          find.byType(MaterialApp),
+          'branch_menu_failing_${width.round()}_${b.name}',
+        );
+        await closeView(tester, d);
+      }, variant: onMac);
+    }
+  }
+
   for (final (name, tokens) in [
     ('dark', Tokens.dark),
     ('light', Tokens.light),
@@ -492,6 +527,40 @@ void main() {
       final glyph = tester.getRect(find.byWidget(c.widget)).right - 3.5;
       expect(glyph, closeTo(edge, 2));
     }
+    d.dispose();
+  });
+
+  testWidgets('branches that fail to list: each menu says why in one '
+      'row, not Loading…, and lists them once they answer', (tester) async {
+    var fails = true;
+    final fake = _fake()
+      ..on(
+        (input) => input is ListBranchesRequest && fails
+            ? throw ConnectException(Code.internal, 'git: index.lock exists')
+            : null,
+      );
+    final d = await _panel(tester, fake, _chat());
+    await _open(tester, 'main');
+    expect(find.text('Loading…'), findsNothing);
+    expect(_row('git: index.lock exists'), findsOneWidget);
+    expect(
+      tester.widget<MenuItemButton>(_row('git: index.lock exists')).onPressed,
+      isNull,
+    );
+    await tester.tapAt(Offset.zero);
+    await tester.pumpAndSettle();
+    await _open(tester, 'None');
+    expect(find.text('Loading…'), findsNothing);
+    expect(_row('git: index.lock exists'), findsOneWidget);
+    await tester.tapAt(Offset.zero);
+    await tester.pumpAndSettle();
+    fails = false;
+    await _open(tester, 'main');
+    await tester.tapAt(Offset.zero);
+    await tester.pumpAndSettle();
+    await _open(tester, 'main');
+    expect(_row('git: index.lock exists'), findsNothing);
+    expect(_row('fix/login-redirect'), findsOneWidget);
     d.dispose();
   });
 

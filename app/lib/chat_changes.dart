@@ -46,6 +46,12 @@ final class ChatChanges extends ChangeNotifier {
   ListBranchesResponse? get branches => _branches;
   ListBranchesResponse? _branches;
 
+  /// Why the last listing of [branches] failed, in words (a git error: a
+  /// lock, a broken ref); null once one answers. The menus say it in
+  /// place of the list.
+  String? get branchesError => _branchesError;
+  String? _branchesError;
+
   /// Why the last read failed, in words; null once one answers.
   String? get error => _error;
   String? _error;
@@ -172,16 +178,20 @@ final class ChatChanges extends ChangeNotifier {
 
   /// Lists the folder's branches and worktrees: with each read while
   /// something shows it (the change marks alone don't need them), and
-  /// again as the Branch row's menu opens. Outside git, or gone, they stay as
-  /// they were (the menu says Loading… until listed).
+  /// again as the Branch row's menu opens. A failed listing keeps what
+  /// was listed and says why ([branchesError]); the daemon gone, it lists
+  /// them again once it's back.
   Future<void> listBranches() async {
     try {
       _branches = await daemon.client.listBranches(
         ListBranchesRequest(folder: chat.folder),
       );
+      _branchesError = null;
       notifyListeners();
     } on Object catch (e) {
+      _branchesError = errorText(e);
       _again.failed(e);
+      notifyListeners();
     }
   }
 }

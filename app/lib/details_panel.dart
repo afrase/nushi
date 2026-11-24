@@ -442,6 +442,7 @@ class _ChatDetailsState extends State<_ChatDetails> {
                 daemon,
                 status.branch,
                 list: _changes.branches,
+                error: _changes.branchesError,
                 onOpen: () => unawaited(_changes.listBranches()),
                 onChanged: () => _changes.reload().ignore(),
                 onChanges: widget.onChanges,

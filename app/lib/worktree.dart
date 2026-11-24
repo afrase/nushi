@@ -25,14 +25,16 @@ const IconData worktreeIcon = Icons.account_tree_outlined;
 /// chat without messages, which has the switch) and the repository's
 /// other worktrees. [branch] is the branch checked out in
 /// the chat's folder, [list] what ListBranches said of it, asked again
-/// by [onOpen]; [onChanged] once Rename branch… renamed it or a switch
-/// switched it, [onChanges] shows the Changes view.
+/// by [onOpen], [error] why its last ask failed; [onChanged] once Rename
+/// branch… renamed it or a switch switched it, [onChanges] shows the
+/// Changes view.
 List<(String?, Widget)> worktreeRows(
   BuildContext context,
   ChatState chat,
   Daemon daemon,
   String branch, {
   ListBranchesResponse? list,
+  String? error,
   VoidCallback? onOpen,
   VoidCallback? onChanged,
   VoidCallback? onChanges,
@@ -45,6 +47,7 @@ List<(String?, Widget)> worktreeRows(
           chat: chat,
           daemon: daemon,
           list: list,
+          error: error,
           onOpen: onOpen,
           onNew: chat.fresh ? null : () => _confirmMove(context, chat, daemon),
         )
@@ -61,6 +64,7 @@ List<(String?, Widget)> worktreeRows(
               daemon: daemon,
               branch: branch,
               list: list,
+              error: error,
               onOpen: onOpen,
               onSwitched: onChanged,
               onChanges: onChanges,
