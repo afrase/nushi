@@ -181,15 +181,16 @@ func run() error {
 	}
 	kinds := chatKinds(dir, known, agentSvc)
 	usageSvc, closeUsage := openUsage(filepath.Join(dir, "nushi.db"), st)
+	record := newRecord(dir)
 	chatSvc := chats.New(context.Background(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{},
 		Scratch: filepath.Join(dir, "scratch"), Uploads: filepath.Join(dir, "uploads"), Publish: hub.Publish, Tools: mcpTools(toolSvc, filepath.Join(dir, "nushid.sock")),
-		Viewers: remoteSvc, Processes: proctree.Tree{}, Copies: copies, CopiesOn: st.KeepTranscripts, CopyDays: st.TranscriptDays, Sleep: st, Meter: usageSvc})
+		Viewers: remoteSvc, Processes: proctree.Tree{}, Record: record, Copies: copies, CopiesOn: st.KeepTranscripts, CopyDays: st.TranscriptDays, Sleep: st, Meter: usageSvc})
 	shows.UseChats(chatSvc)
 	// Each terminal names its own shell (terminal.Terminal's Name).
 	termSvc := terminals.New(shellStarter(agentSvc), "", chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
 	go hub.Follow(context.Background(), termSvc.Follow)
-	srvSvc := newServers(dir, chatSvc, agentSvc, hub.Publish)
+	srvSvc := newServers(record, chatSvc, agentSvc, hub.Publish)
 	chatSvc.UseServers(srvSvc)
 	serverTools.Use(srvSvc)
 	go hub.Follow(context.Background(), srvSvc.Follow)

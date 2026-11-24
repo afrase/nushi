@@ -69,9 +69,9 @@ type Options struct {
 	// answers errors.ErrUnsupported skips the check that the port is the
 	// server's own.
 	Listeners func() ([]listeners.Listener, error)
-	// Record is the file where running servers' processes are kept, for
-	// the next daemon to stop after a crash (Sweep).
-	Record string
+	// Record keeps running servers' processes, for the next daemon to
+	// stop after a crash; nil: none kept.
+	Record Record
 }
 
 // State is where a server is.
@@ -107,7 +107,7 @@ type Service struct {
 	// preview_start waits for it to answer or fail before it answers.
 	ReadyWithin, StopGrace, StartWait time.Duration
 
-	recordMu sync.Mutex // one write of the record at a time
+	recordMu sync.Mutex // a server's record written in the order it changed
 	mu       sync.Mutex
 	alive    []*server
 	ended    []*server // the last PerFolder of each folder

@@ -72,7 +72,7 @@ func questionPending(e *nushiv1.EventsResponse) bool {
 // environment (not the login shell's), its record at record.
 func newServers(chats servers.Chats, record string, publish func(model.Event)) *servers.Service {
 	return servers.New(servers.Options{Chats: chats, Procs: proctree.Tree{}, Env: shellenv.Off(os.Environ()), Publish: publish,
-		Listeners: listeners.List, Record: record,
+		Listeners: listeners.List, Record: proctree.NewRecord(record),
 		Spawn: func(argv []string, dir string, env []string) (servers.Process, error) {
 			return terminal.Start(argv, dir, env, 100, 30, func() {})
 		}})

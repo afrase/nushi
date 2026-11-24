@@ -57,7 +57,8 @@ type SleepPrefs interface {
 }
 
 // autoSleep puts chats to sleep once they have idled as long as the
-// service's prefs say, until the service's life ends.
+// service's prefs say, and records what their agents run (record.go),
+// until the service's life ends.
 func (s *Service) autoSleep() {
 	tick := time.NewTicker(s.timing.sleepCheck())
 	defer tick.Stop()
@@ -67,8 +68,9 @@ func (s *Service) autoSleep() {
 		case <-s.ctx.Done():
 			return
 		}
+		s.recordAgents()
 		open := s.openChats()
-		if after := s.prefs.SleepAfter(); after > 0 {
+		if after := s.SleepAfter(); after > 0 {
 			for _, c := range open {
 				s.doze(c, after)
 			}

@@ -113,6 +113,10 @@ type Options struct {
 	Tools      Tools             // Nushi's own tools for chats' sessions
 	Viewers    Viewers           // who shows chats, for chats done while nobody looked (seen.go)
 	Processes  Processes         // nil: background commands are stopped only by asking the agent (background.go)
+	// Record keeps what a clean stop of each agent would end, for the
+	// next daemon to stop after a crash (record.go); nil, or no
+	// Processes: nothing kept.
+	Record Record
 	// Copies keeps copies of chats' transcripts while CopiesOn says so
 	// (nil: always); CopyDays says after how many days unwritten one is
 	// deleted (0: never), looked at now and each hour (copies.go).
@@ -134,7 +138,7 @@ type Options struct {
 // commands followed) runs until Close or until ctx ends.
 func New(ctx context.Context, agents []Kind, o Options) *Service {
 	s := &Service{remembered: o.Remembered, sessions: o.Sessions, worktrees: o.Worktrees,
-		scratch: o.Scratch, uploads: o.Uploads, publish: o.Publish, viewers: o.Viewers, procs: o.Processes, prefs: o.Sleep, copies: o.Copies, copiesOn: o.CopiesOn,
+		scratch: o.Scratch, uploads: o.Uploads, publish: o.Publish, viewers: o.Viewers, procs: o.Processes, record: o.Record, prefs: o.Sleep, copies: o.Copies, copiesOn: o.CopiesOn,
 		timing: o.Timing, meter: o.Meter, begun: time.Now(), chats: map[string]*chat{}, live: map[Agent]bool{}, opening: map[string]bool{}}
 	s.ctx, s.cancel = context.WithCancel(ctx)
 	if s.publish == nil {
@@ -148,7 +152,7 @@ func New(ctx context.Context, agents []Kind, o Options) *Service {
 		kn.launch, kn.tools = s.started(k.Launch), o.Tools
 		s.kinds = append(s.kinds, kn)
 	}
-	if o.Sleep != nil {
+	if o.Sleep != nil || o.Record != nil {
 		s.loops.Go(s.autoSleep)
 	}
 	if o.Copies != nil && o.CopyDays != nil {

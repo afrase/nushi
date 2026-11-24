@@ -88,7 +88,7 @@ func setup(t *testing.T, configurations ...string) (*Service, *fakeChats, string
 	testcheck.Write(t, filepath.Join(folder, ".agents", "launch.json"), file)
 	chats := &fakeChats{chats: map[string]model.ChatRecord{"c": {ID: "c", Folder: folder}}}
 	s := New(Options{Chats: chats, Procs: proctree.Tree{}, Env: plainEnv{}, Listeners: listeners.List,
-		Record: filepath.Join(t.TempDir(), "servers.json"),
+		Record: &fakeRecord{owned: map[string][]model.Process{}},
 		Spawn: func(argv []string, dir string, env []string) (Process, error) {
 			return terminal.Start(argv, dir, env, 100, 30, func() {})
 		}})
@@ -309,21 +309,44 @@ func TestStartsOfOneEntryMerge(t *testing.T) {
 	}
 }
 
-// A running server is in the record, which goes once none runs.
+// fakeRecord is a Record kept in memory.
+type fakeRecord struct {
+	mu    sync.Mutex
+	owned map[string][]model.Process
+}
+
+func (f *fakeRecord) Put(owner string, ps []model.Process) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.owned[owner] = ps
+}
+
+func (f *fakeRecord) Drop(owner string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.owned, owner)
+}
+
+// of is owner's processes in the record.
+func (f *fakeRecord) of(owner string) []model.Process {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.owned[owner]
+}
+
+// A running server's processes are in the record, and go once it ended.
 func TestTheRecordFollowsTheServers(t *testing.T) {
 	s, _, _ := setup(t, entry("web", freePort(t)))
 	r, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 	testcheck.NoErr(t, err)
 	row(t, s, "web", Running)
-	b, err := os.ReadFile(s.Record)
-	testcheck.NoErr(t, err)
-	var all map[string]recorded
-	testcheck.NoErr(t, json.Unmarshal(b, &all))
-	if len(all[r.ServerID].Procs) == 0 {
-		t.Errorf("record %s", b)
+	rec, _ := s.Record.(*fakeRecord)
+	owner := "server " + r.ServerID
+	if len(rec.of(owner)) == 0 {
+		t.Errorf("record %+v", rec.owned)
 	}
 	testcheck.NoErr(t, s.Stop("c", r.ServerID))
-	if _, err := os.Stat(s.Record); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("the record is still there: %v", err)
+	if ps := rec.of(owner); ps != nil {
+		t.Errorf("the server's processes are still recorded: %+v", ps)
 	}
 }

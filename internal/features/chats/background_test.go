@@ -26,6 +26,11 @@ type fakeProcesses struct {
 	looked  int             // Under's calls
 }
 
+// Get is pid leading its group, as an agent's process does.
+func (f *fakeProcesses) Get(pid int) (model.Process, error) {
+	return model.Process{Pid: pid, Pgid: pid}, nil
+}
+
 func (f *fakeProcesses) Under(root int) ([]model.Process, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

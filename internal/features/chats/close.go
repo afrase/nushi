@@ -82,6 +82,7 @@ func (s *Service) started(launch Launch) Launch {
 			s.mu.Lock()
 			delete(s.live, agent)
 			s.mu.Unlock()
+			s.dropAgent(agent)
 		}()
 		return agent, nil
 	}

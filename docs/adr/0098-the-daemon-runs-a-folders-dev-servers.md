@@ -4,6 +4,8 @@ Status: accepted, 2026-11-07. Amends [0056](0056-the-daemon-restarts-itself-when
 
 Amended by [0100](0100-agents-run-dev-servers-and-their-logs-show.md): a chat's agent lists, starts, stops and reads its folder's servers by name through Nushi's tools (never by command), the harness's card showing the command the entry runs; a server's output streams to a logs drawer; the phone gets neither.
 
+Amended 2026-11-24: the record of running servers' processes is `proctree.Record`, in `processes.json`, which also holds what a clean stop of each chat's agent would end (its process group; everything below an agent stopped by signal), so the next daemon stops a crash's leftovers of both; a `servers.json` an older daemon left is swept too. The rest holds.
+
 ## Context
 The owner asked for Claude desktop's Servers button: the dev servers a project configures (its launch files, ADR 0095) listed beside the browser tab (ADR 0094), each run and stopped from its row, its page opening beside the chat. Claude desktop runs them in its app and gives its agent `preview_*` tools; Nushi's app comes and goes while the daemon keeps chats and terminals, and six agents run there, four without MCP. Design and review: the browser design's D7 and D10 (docs/facts/claude.md has what Claude does).
 

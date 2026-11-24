@@ -1,7 +1,8 @@
 // Package proctree reads the processes under one, with their command
 // lines, and ends a process group among them: an agent's own background
 // command, which Nushi stops without asking the agent
-// (docs/facts/claude.md). On macOS who started whom is sysctl's
+// (docs/facts/claude.md); and it keeps the record of what the daemon runs
+// that the next daemon stops after a crash (record.go). On macOS who started whom is sysctl's
 // kern.proc.all and a command line is kern.procargs2, readable for the
 // user's own processes (proctree_darwin.go); on Linux both come from
 // /proc, each process's stat and cmdline (proctree_linux.go, through

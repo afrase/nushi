@@ -21,6 +21,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/batchfile"
+	"github.com/afrase/nushi/internal/model"
 )
 
 // NotFound says an agent's error is ACP's "Resource not found" (-32002),
@@ -137,6 +138,20 @@ func (a *Agent) Close() error {
 // input stays open meanwhile so that its closing can't be what the agent
 // acts on.
 func (a *Agent) StopBySignal() { a.bySignal = true }
+
+// StopEnds says whether a clean stop of the agent (Stop, Close) ends p,
+// its own process or one below it, as it is now: one in its process
+// group, which the stop kills, or any for an agent stopped by signal,
+// whose SIGTERM takes what it runs (docs/facts/opencode.md). One that
+// leads a group of its own below another agent outlives the stop, as
+// Claude's and Ante's background commands do (ADR 0032, 0130). False for
+// an agent Connect made.
+func (a *Agent) StopEnds(p model.Process) bool {
+	if a.cmd == nil {
+		return false
+	}
+	return a.bySignal || p.Pgid == a.cmd.Process.Pid
+}
 
 // Stop ends the agent gently: its input closes, which an agent takes as
 // the end of the connection (claudeacp closes its sessions, their turns

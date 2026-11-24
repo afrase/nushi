@@ -60,7 +60,7 @@ func (s *Service) launch(ctx context.Context, sv *server) error {
 	sv.tree = []model.Process{leader}
 	stopping := sv.stopping != "" // stopped while it started
 	s.mu.Unlock()
-	s.keep()
+	s.record(sv)
 	go s.reap(sv)
 	if stopping {
 		go s.halt(sv)
@@ -237,7 +237,7 @@ func (s *Service) look(sv *server) {
 	}
 	s.mu.Unlock()
 	if !same {
-		s.keep()
+		s.record(sv)
 	}
 }
 
@@ -353,7 +353,7 @@ func (s *Service) end(sv *server, why string, raw []byte, code int) {
 		s.ended = slices.Delete(s.ended, i, i+1)
 	}
 	s.mu.Unlock()
-	s.keep()
+	s.record(sv)
 	close(sv.ended)
 	slog.Info("dev server ended", "server", sv.id, "by", sv.by, "failed", why != "", "exit", code)
 	s.changed(sv.folder)

@@ -274,6 +274,8 @@ func commandShells(procs Processes, root int, tasks BackgroundTasks, call model.
 
 // Processes are the processes agents run (internal/proctree).
 type Processes interface {
+	// Get is process pid as it is now, without its command line.
+	Get(pid int) (model.Process, error)
 	// Under lists the processes below root, root not included, with their
 	// command lines.
 	Under(root int) ([]model.Process, error)

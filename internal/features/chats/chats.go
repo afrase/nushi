@@ -41,6 +41,7 @@ type Service struct {
 	gitHub    GitHub      // set once at startup
 	viewers   Viewers     // Options', for chats done while nobody looked (seen.go)
 	procs     Processes   // Options', for stopping background commands
+	record    Record      // Options', if agents' processes are recorded (record.go)
 	prefs     SleepPrefs  // Options', if chats sleep
 	copies    Copies      // Options', if chats keep copies of their transcripts
 	copiesOn  func() bool // whether they write them now
