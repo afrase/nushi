@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -146,26 +147,51 @@ func (s *Service) inCheckout(c *chat, list []model.WorktreeEntry, folder string)
 
 // holdFolder holds chats' folder for a git step that changes it (why: what
 // it does, as closedLocked says it): from check (under each chat's lock)
-// until release, none takes a prompt, reopens or lets go. A chat held
-// already, or that check refuses, leaves none held and is the error.
+// until release, none takes a prompt, reopens or lets go. Their side chats
+// work in the same folder on the same agent, so each is held too, and
+// checked as its chat is; one opened meanwhile is held from its start
+// (openSide). A chat held already, or that check refuses, leaves none
+// held and is the error.
 func holdFolder(why string, check func(*chat) error, chats ...*chat) (release func(), err error) {
 	var held []*chat
 	release = func() {
+		var opened []*chat // side chats opened while their chat was held
 		for _, c := range held {
 			c.mu.Lock()
 			c.folder = ""
+			for _, side := range c.sides {
+				opened = append(opened, side)
+			}
 			c.mu.Unlock()
 		}
+		for _, side := range opened {
+			side.mu.Lock()
+			if side.folder == why {
+				side.folder = ""
+			}
+			side.mu.Unlock()
+		}
+	}
+	hold := func(c *chat) (sides []*chat, err error) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if c.folder != "" {
+			return nil, errors.New("the chat's " + c.folder)
+		}
+		if err := check(c); err != nil {
+			return nil, err
+		}
+		c.folder = why
+		held = append(held, c)
+		return slices.Collect(maps.Values(c.sides)), nil
 	}
 	for _, c := range chats {
-		c.mu.Lock()
-		if c.folder != "" {
-			err = errors.New("the chat's " + c.folder)
-		} else if err = check(c); err == nil {
-			c.folder = why
-			held = append(held, c)
+		sides, err := hold(c)
+		for _, side := range sides {
+			if err == nil {
+				_, err = hold(side)
+			}
 		}
-		c.mu.Unlock()
 		if err != nil {
 			release()
 			return func() {}, err

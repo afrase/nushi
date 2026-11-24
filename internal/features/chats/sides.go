@@ -223,6 +223,7 @@ func (s *Service) openSide(ctx context.Context, p *chat, from *sideSource) (stri
 	if from != nil {
 		mode, picks = from.mode, maps.Clone(from.picks)
 	}
+	side.folder = p.folder // held with its chat (holdFolder), as one open before
 	p.sides[side.id] = side
 	side.commands = slices.Clone(p.commands) // the agent's, which it told only the chat
 	p.mu.Unlock()
