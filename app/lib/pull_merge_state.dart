@@ -204,8 +204,8 @@ MergeView? mergeView(GitHubPull p) {
           b,
           base: p.base,
           required: switch (b) {
-            'checks_failing' => required((c) => c.failed),
-            'checks_running' => required((c) => c.state == 'pending'),
+            'checks_failing' => required((c) => c.kind == CheckKind.failed),
+            'checks_running' => required((c) => c.kind == CheckKind.running),
             _ => 0,
           },
         ),

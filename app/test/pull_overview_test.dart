@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_agent.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/pull_check_lines.dart';
 import 'package:nushi/pull_commits.dart';
 import 'package:nushi/pull_merge_card.dart';
 import 'package:nushi/pull_thread_card.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -210,6 +213,54 @@ void main() {
       }
     }
   }
+
+  // One rule for a check's kind: the list, the Checks tab's label, a line's
+  // Send to agent and Re-run, and Fix checks all count a cancelled check
+  // as failing by checkKind, whatever GitHubCheck.failed a daemon sends.
+  testWidgets('a cancelled check is failing everywhere, from a daemon that '
+      'says it is not', (tester) async {
+    final p = overviewPull()
+      ..checks.clear()
+      ..checks.addAll([
+        // A daemon before cancelled was failed sends failed: false.
+        check('deploy', state: 'cancelled', id: 51)..failed = false,
+        check('test', state: 'failure', id: 54),
+        check('lint', id: 52),
+      ]);
+    final (d, _) = await openPullTab(
+      tester,
+      p,
+      size: const Size(1700, 1100),
+      commits: overviewCommits(),
+      more: (input) => input is GetGitHubJobLogRequest
+          ? GetGitHubJobLogResponse(tail: 'job ${input.job}')
+          : null,
+    );
+    expect(find.text('Checks  2 failing'), findsOneWidget);
+    await tester.tap(_segment('checks'));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(ChecksList),
+        matching: find.widgetWithText(Button, 'Send to agent'),
+      ),
+      findsNWidgets(2),
+    );
+    // Its words in the failing colour, as the failed check's.
+    final deploy = find.byWidgetPredicate(
+      (w) =>
+          w is Text &&
+          (w.textSpan?.toPlainText().contains('Cancelled') ?? false),
+    );
+    final words = tester.widget<Text>(deploy).textSpan! as TextSpan;
+    expect(
+      words.children!.last.style!.color,
+      NushiTheme.of(tester.element(deploy)).t.crashed,
+    );
+    final fix = await checkReplies(d, p.item.ref, p);
+    expect(fix, hasLength(2));
+    d.dispose();
+  }, variant: onMac);
 
   // Each kind of check (githubapi.KindOf, checkKind): cancelled and failed
   // as failing, neutral as passed (its icon muted), skipped, running; in

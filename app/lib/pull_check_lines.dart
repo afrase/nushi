@@ -24,7 +24,8 @@ String checkWords(GitHubCheck c) {
     'neutral' => 'Neutral',
     'stale' => 'Stale',
     'timed_out' => took.isEmpty ? 'Timed out' : 'Timed out after $took',
-    _ when c.failed => took.isEmpty ? 'Failing' : 'Failing after $took',
+    _ when c.kind == CheckKind.failed =>
+      took.isEmpty ? 'Failing' : 'Failing after $took',
     final s => s,
   };
 }
@@ -122,7 +123,8 @@ class _CheckLineState extends State<_CheckLine> {
     final c = widget.check;
     final (icon, ink) = checkIcon(t, c);
     final name = c.workflow.isEmpty ? c.name : '${c.workflow} / ${c.name}';
-    final rerun = c.failed && c.id != 0;
+    final failed = c.kind == CheckKind.failed;
+    final rerun = failed && c.id != 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -147,7 +149,7 @@ class _CheckLineState extends State<_CheckLine> {
                               '  ${checkWords(c)}'
                               '${c.required ? ' · Required' : ''}',
                           style: theme.ui(
-                            c.failed ? t.crashed : t.textMuted,
+                            failed ? t.crashed : t.textMuted,
                             size: 12,
                           ),
                         ),
@@ -157,7 +159,7 @@ class _CheckLineState extends State<_CheckLine> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (c.failed)
+                if (failed)
                   ControlScale.compact(
                     child: quietSend(
                       context,
@@ -221,7 +223,7 @@ class _CheckLineState extends State<_CheckLine> {
                   ref: widget.pull.item.ref,
                   check: c,
                   maxHeight: 260,
-                  failing: c.failed,
+                  failing: failed,
                 ),
               ],
             ),

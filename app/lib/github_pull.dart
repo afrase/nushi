@@ -262,7 +262,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     if (_tab == PullSection.overview || _tab == PullSection.commits) {
       _commits.want(p.headOid);
     }
-    final failed = p.checks.where((c) => c.failed).length;
+    final failed = p.checks.where((c) => c.kind == CheckKind.failed).length;
     final todo = todoOf(p);
     final open = p.item.state == 'open';
     return LayoutBuilder(

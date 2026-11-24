@@ -5,6 +5,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
+import 'package:nushi/pull_lights.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
@@ -111,7 +112,7 @@ Future<int> putReplies(
 /// failing part of its job's log.
 Future<List<Reply>> checkReplies(Daemon daemon, GitHubRef ref, GitHubPull p) =>
     Future.wait([
-      for (final c in p.checks.where((c) => c.failed).take(5))
+      for (final c in p.checks.where((c) => c.kind == CheckKind.failed).take(5))
         checkReply(daemon, ref, c),
     ]);
 

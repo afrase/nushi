@@ -59,8 +59,9 @@ class _CheckRowState extends State<CheckRow> {
     final t = theme.t;
     final c = widget.check;
     final (icon, color) = checkIcon(t, c);
+    final failed = c.kind == CheckKind.failed;
     final more =
-        c.failed &&
+        failed &&
         (c.id != 0 || c.annotations.isNotEmpty || c.summary.isNotEmpty);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -120,7 +121,7 @@ class _CheckRowState extends State<CheckRow> {
                 padding: const EdgeInsets.only(left: 8),
                 child: Text(c.state, style: theme.ui(color, size: 11.5)),
               ),
-              if (c.failed)
+              if (failed)
                 SendIcon(
                   () => checkReply(widget.daemon, widget.ref, c),
                   what: c.workflow.isEmpty

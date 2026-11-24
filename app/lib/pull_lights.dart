@@ -46,6 +46,14 @@ CheckKind checkKind(String state) => switch (state) {
   _ => CheckKind.running,
 };
 
+/// A check's kind by [checkKind], the one rule the app reads: never the
+/// daemon's GitHubCheck.failed, which a daemon before API 145 sends false
+/// for a cancelled check.
+extension CheckKindOf on GitHubCheck {
+  /// What this check's state counts as.
+  CheckKind get kind => checkKind(state);
+}
+
 /// A pull request's checks, each in one group by [checkKind]: failed (the
 /// required first), running, passed, and the rest (skipped).
 ({
