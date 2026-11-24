@@ -151,6 +151,10 @@ func (c *chat) followWorkflow(callID string, f *follow) {
 	}
 }
 
+// workflowStall is how long a run's files stay still, its agent alive,
+// before it shows as stalled (ADR 0127).
+const workflowStall = time.Hour
+
 // judgeWorkflow is what a read of a run (got, err) makes of it (cur), and
 // how long to wait for the next read; nil when it is no workflow to show
 // after all (its files never came: the call shows as a plain one). Once
@@ -191,7 +195,7 @@ func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone
 		return &got, 0 // Claude's files of the run went (a Move, the session deleted)
 	case f.owner == nil && now.Sub(got.Active) >= c.svc.timing.workflowQuiet():
 		return quit(got, now, c.kind.Title), 0 // no agent of this daemon's runs it, and its files are still
-	case f.owner != nil && now.Sub(got.Active) >= c.svc.timing.workflowStall():
+	case f.owner != nil && now.Sub(got.Active) >= workflowStall:
 		got.Stalled = true
 		return &got, c.svc.timing.workflowStalledPoll()
 	}

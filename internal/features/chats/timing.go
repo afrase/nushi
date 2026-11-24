@@ -26,8 +26,8 @@ type Timing struct {
 	// read comes after WorkflowGrace (2 s); a run no agent of this
 	// daemon's runs ends once its files are still for WorkflowQuiet (two
 	// minutes), and one whose agent lives stalls once they are still for
-	// WorkflowStall (an hour). ADR 0127.
-	WorkflowPoll, WorkflowStalledPoll, WorkflowFind, WorkflowGrace, WorkflowQuiet, WorkflowStall time.Duration
+	// workflowStall. ADR 0127.
+	WorkflowPoll, WorkflowStalledPoll, WorkflowFind, WorkflowGrace, WorkflowQuiet time.Duration
 	// SidesGrace is how long side chats outlive the last app following:
 	// one that reconnects within it still has them (two minutes).
 	// SidesAfter starts that grace (time.AfterFunc); a test replaces it to
@@ -69,4 +69,3 @@ func (t Timing) workflowStalledPoll() time.Duration {
 func (t Timing) workflowFind() time.Duration  { return cmp.Or(t.WorkflowFind, 30*time.Second) }
 func (t Timing) workflowGrace() time.Duration { return cmp.Or(t.WorkflowGrace, 2*time.Second) }
 func (t Timing) workflowQuiet() time.Duration { return cmp.Or(t.WorkflowQuiet, 2*time.Minute) }
-func (t Timing) workflowStall() time.Duration { return cmp.Or(t.WorkflowStall, time.Hour) }
