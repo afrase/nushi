@@ -480,6 +480,7 @@ void main() {
             ..mergeState = 'clean',
         );
         expect(find.textContaining(said), findsOneWidget);
+        await render(tester, find.byType(NushiApp), 'pull_rows_merge_$state');
         expect(find.textContaining("It can't merge now"), findsNothing);
         expect(find.byType(AlertDialog), findsNothing);
         expect(fake.calls.whereType<MergeGitHubPullRequest>(), isEmpty);
