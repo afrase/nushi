@@ -847,8 +847,12 @@ func TestSlowHeadersFloodDoesntStarve(t *testing.T) {
 	}
 	go func() { _ = srv.Serve(ln) }()
 	defer func() { _ = srv.Close() }()
+	// Twice Total, and under the listen backlog (macOS's somaxconn is 128):
+	// a connect the backlog has no room for is reset by the kernel before
+	// the relay sees it, and the pair's dials come after the flood's.
+	const flood = 100
 	var slow []net.Conn
-	for range 200 {
+	for range flood {
 		c, err := net.Dial("tcp", ln.Addr().String())
 		if err != nil {
 			t.Fatal(err)
