@@ -274,7 +274,10 @@ func TestLiveInboxFilters(t *testing.T) {
 // TestRecorderMasksEmails: an answer's email addresses (a commit's
 // author's, one in a nested object, GitHub's noreply one, one right after
 // an escape) are masked before it is written, and nothing else changes:
-// not the JSON's escapes, logins, URLs or an @mention.
+// not the escapes of a string without one, logins, URLs, an @mention or a
+// pinned version. Whatever reads as an address is masked too, on purpose:
+// a URL's user and password with its host, an SSH remote's user and host,
+// and a scoped package at a pre-release with a word in its last part.
 func TestRecorderMasksEmails(t *testing.T) {
 	answer := `{"commits":[{"sha":"465b7a4b","commit":{"author":{"name":"Octo Cat","email":"octo.cat+gh@mail.example.org","date":"2026-11-24T12:00:00Z"},` +
 		`"committer":{"name":"GitHub","email":"noreply@github.com"}},"author":{"login":"octo","html_url":"https://github.com/octo"}}],` +
@@ -299,6 +302,17 @@ func TestRecorderMasksEmails(t *testing.T) {
 	for _, address := range []string{"josé@example.com", "日本@example.jp", "o'neil@example.com", "名前@例え.jp"} { //nolint:gosmopolitan // addresses in other scripts are what is checked
 		if got := string(masked([]byte(`{"email":"` + address + `"}`))); got != `{"email":"someone@example.com"}` {
 			t.Errorf("%s: %s", address, got)
+		}
+	}
+	for text, want := range map[string]string{
+		"https://github.com/octo/x?a=b@c":          "https://github.com/octo/x?a=b@c",
+		"actions/checkout@v4, react@18.3.1, @octo": "actions/checkout@v4, react@18.3.1, @octo",
+		"https://user:pw@host.example.com/x":       "https://user:someone@example.com/x",
+		"git@github.com:afrase/nushi-gh-test.git":  "someone@example.com:afrase/nushi-gh-test.git",
+		"@scope/pkg@1.0.0-rc.alpha":                "@scope/someone@example.com",
+	} {
+		if got := string(masked([]byte(`"` + text + `"`))); got != `"`+want+`"` {
+			t.Errorf("%s: %s", text, got)
 		}
 	}
 }
