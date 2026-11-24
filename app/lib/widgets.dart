@@ -434,6 +434,47 @@ String? updatedLine(
   return 'Updated $when${loading ? ' · refreshing' : ''}';
 }
 
+/// [updatedLine]'s [line] as it shows (the bars', an issue's or a pull
+/// request's page): muted, or once a quiet poll [failed] in the failure's
+/// ink after its mark, so "Couldn't refresh" never reads as a plain time
+/// (docs/design.md: a state cue is unmistakable); [short] (a narrow bar)
+/// says only that, the whole line on hover.
+Widget updatedText(
+  BuildContext context,
+  String line, {
+  required bool failed,
+  bool short = false,
+  double size = 12,
+  Key? key,
+}) {
+  final theme = NushiTheme.of(context);
+  final t = theme.t;
+  if (!failed) {
+    return Text(
+      line,
+      key: key,
+      style: theme.ui(t.textMuted, size: size),
+    );
+  }
+  final shown = Row(
+    key: key,
+    mainAxisSize: MainAxisSize.min,
+    spacing: 4,
+    children: [
+      Icon(Icons.sync_problem, size: size + 2, color: t.crashed),
+      Flexible(
+        child: Text(
+          short ? line.split(' · ').first : line,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.ui(t.crashed, size: size),
+        ),
+      ),
+    ],
+  );
+  return short ? tooltip(context, line, shown) : shown;
+}
+
 /// A line above the list: a problem, or what shows is old. [margin] sets
 /// it in from what it sits in (a pane's edges by default; the composer's
 /// box lines it up with its own).

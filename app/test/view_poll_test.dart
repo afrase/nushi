@@ -6,8 +6,11 @@ import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_issue.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/jira_view_parts.dart';
+import 'package:nushi/main.dart';
 import 'package:nushi/pull_polls.dart';
+import 'package:nushi/theme/theme.dart';
 
+import 'fake_daemon.dart' show loadFonts;
 import 'github_fixture.dart' as gh;
 import 'harness.dart';
 import 'jira_fixture.dart' as jira;
@@ -27,6 +30,8 @@ void _toFront(WidgetTester tester) =>
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
 
 void main() {
+  setUpAll(loadFonts);
+
   testWidgets('a view poll asks each wait while seen; in the back or '
       'covered, never; back in front, once', (tester) async {
     var asks = 0;
@@ -170,7 +175,9 @@ void main() {
     final (_, g) = await gh.openView(
       tester,
       more: (input) =>
-          failing && input is ListGitHubInboxRequest && !input.cached
+          failing &&
+              (input is ListGitHubInboxRequest && !input.cached ||
+                  input is GetGitHubPullRequest && input.quiet)
           ? fail()
           : null,
     );
@@ -179,10 +186,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Add Sub and Neg'), findsOneWidget);
     expect(find.textContaining("Couldn't refresh · as of"), findsOneWidget);
+    // A pull request's page: the same line over it, not an error's.
+    await tester.tap(find.text('Add Sub and Neg'));
+    await tester.pumpAndSettle();
+    await tester.pump(pullWidgetPoll);
+    await tester.pumpAndSettle();
+    final kept = find.byKey(const ValueKey('pull-kept'));
+    expect(
+      find.descendant(
+        of: kept,
+        matching: find.text("Couldn't refresh · as of just now"),
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Not current'), findsNothing);
     await closeView(tester, g);
   });
 
-  testWidgets("a failed quiet poll after a switch to a list that never came "
+  testWidgets('a failed quiet poll after a switch to a list that never came '
       "says nothing of the last one's time: the GitHub inbox, Jira's list", (
     tester,
   ) async {
@@ -220,4 +241,62 @@ void main() {
     expect(find.textContaining("Couldn't refresh"), findsNothing);
     await closeView(tester, d);
   });
+
+  // The failed quiet poll's line, looked at (docs/design.md: a state cue
+  // is unmistakable): the Jira list, the GitHub inbox and a pull request
+  // on its own page, wide and narrow, in both themes.
+  for (final width in const [1700.0, 720.0]) {
+    for (final b in Brightness.values) {
+      renderTest('a failed quiet poll, drawn (${width.toInt()}, ${b.name})', (
+        tester,
+      ) async {
+        final tokens = b == Brightness.dark ? Tokens.dark : Tokens.light;
+        final size = Size(width, 900);
+        final tag = '${width.toInt()}_${b.name}';
+        var failing = false;
+        Never fail() => throw Exception('no network');
+        final (_, d) = await jira.openView(
+          tester,
+          size: size,
+          tokens: tokens,
+          window: true,
+          more: (input) =>
+              failing && input is ListJiraIssuesRequest && !input.cached
+              ? fail()
+              : null,
+        );
+        failing = true;
+        await tester.pump(jiraPoll);
+        await tester.pumpAndSettle();
+        expect(find.textContaining("Couldn't refresh"), findsOneWidget);
+        await render(tester, find.byType(NushiApp), 'poll_failed_jira_$tag');
+        await closeView(tester, d);
+
+        failing = false;
+        final (_, g) = await gh.openView(
+          tester,
+          size: size,
+          tokens: tokens,
+          window: true,
+          more: (input) =>
+              failing &&
+                  (input is ListGitHubInboxRequest && !input.cached ||
+                      input is GetGitHubPullRequest && input.quiet)
+              ? fail()
+              : null,
+        );
+        failing = true;
+        await tester.pump(githubPoll);
+        await tester.pumpAndSettle();
+        expect(find.textContaining("Couldn't refresh"), findsOneWidget);
+        await render(tester, find.byType(NushiApp), 'poll_failed_inbox_$tag');
+        await tester.tap(find.text('Add Sub and Neg'));
+        await tester.pumpAndSettle();
+        await tester.pump(pullWidgetPoll);
+        await tester.pumpAndSettle();
+        await render(tester, find.byType(NushiApp), 'poll_failed_pull_$tag');
+        await closeView(tester, g);
+      }, variant: onMac);
+    }
+  }
 }

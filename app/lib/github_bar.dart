@@ -153,7 +153,13 @@ class GitHubBar extends StatelessWidget {
               case final line?)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Text(line, style: theme.ui(t.textMuted, size: 12)),
+              child: updatedText(
+                context,
+                line,
+                failed: failed && !loading,
+                // Narrow, the filters keep their room.
+                short: MediaQuery.sizeOf(context).width < 1000,
+              ),
             ),
           IconTap(
             Icons.refresh,

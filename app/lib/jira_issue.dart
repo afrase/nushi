@@ -189,13 +189,19 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
           if (_cachedAt != null && kept != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                [kept, ?_error].join(' · '),
-                style: theme.ui(
-                  _error == null ? t.textMuted : t.crashed,
-                  size: 12,
-                ),
-              ),
+              child: _error == null
+                  ? Align(
+                      alignment: Alignment.centerLeft,
+                      child: updatedText(
+                        context,
+                        kept,
+                        failed: _failed && !_refreshing,
+                      ),
+                    )
+                  : Text(
+                      [kept, ?_error].join(' · '),
+                      style: theme.ui(t.crashed, size: 12),
+                    ),
             ),
           _header(theme, i),
           const SizedBox(height: 6),

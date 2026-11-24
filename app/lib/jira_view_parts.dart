@@ -186,7 +186,7 @@ class JiraBar extends StatelessWidget {
               case final line?)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Text(line, style: theme.ui(t.textMuted, size: 12)),
+              child: updatedText(context, line, failed: failed && !loading),
             ),
           IconTap(
             Icons.refresh,

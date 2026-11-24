@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_checks.dart';
@@ -80,6 +81,11 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   bool _asking = true;
   String? _error;
   ViewPoll? _poll;
+
+  /// When GitHub last answered, and whether the quiet poll after it
+  /// failed: what shows is then that answer, "as of" its time (ADR 0046).
+  DateTime? _okAt;
+  bool _failed = false;
   late PullSection _tab = _tabLeft[_refKey] ?? PullSection.overview;
   String get _refKey =>
       '${widget.ref.host} ${widget.ref.repo} ${widget.ref.number}';
@@ -174,12 +180,22 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
         setState(() {
           _pull = r.pull;
           _keptAt = null;
+          _okAt = clock();
+          _failed = false;
           _error = null;
         });
       }
     } on Object catch (e) {
-      // A failed poll keeps what shows, and says why.
-      if (mounted && n == _asked) setState(() => _error = errorText(e));
+      if (mounted && n == _asked && quiet && _pull != null) {
+        // A failed poll keeps what shows, saying it's from then.
+        setState(() {
+          _keptAt ??= _okAt;
+          _failed = _keptAt != null;
+          if (!_failed) _error = errorText(e);
+        });
+      } else if (mounted && n == _asked) {
+        setState(() => _error = errorText(e));
+      }
     } finally {
       if (mounted && n == _asked && _asking) {
         setState(() => _asking = false);
@@ -252,9 +268,9 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final (pull, keptAt, asking, error) = switch (widget.source) {
-      final s? => (s.pull, s.keptAt, s.asking, s.error),
-      null => (_pull, _keptAt, _asking, _error),
+    final (pull, keptAt, asking, error, pollFailed) = switch (widget.source) {
+      final s? => (s.pull, s.keptAt, s.asking, s.error, false),
+      null => (_pull, _keptAt, _asking, _error, _failed),
     };
     final p = pull;
     if (p == null) {
@@ -293,11 +309,15 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                 slivers: [
                   if (keptAt case final at?)
                     column(
-                      Text(
-                        updatedLine(at, loading: asking)!,
-                        key: const ValueKey('pull-kept'),
-                        textAlign: TextAlign.right,
-                        style: theme.ui(t.textMuted, size: 11.5),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: updatedText(
+                          context,
+                          updatedLine(at, loading: asking, failed: pollFailed)!,
+                          failed: pollFailed && !asking,
+                          size: 11.5,
+                          key: const ValueKey('pull-kept'),
+                        ),
                       ),
                       top: 8,
                     ),
