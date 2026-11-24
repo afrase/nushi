@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/comment_box.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_bar.dart';
@@ -323,6 +324,46 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.keyR);
     await tester.sendKeyUpEvent(cmd);
     await tester.pumpAndSettle();
+    expect(asked, hasLength(1));
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('⌘R still refreshes the tab after a click into a field of '
+      'the tab and back out of it', (tester) async {
+    final asked = <GetGitHubPullRequest>[];
+    final (d, _) = await openPullTab(
+      tester,
+      fixturePull(),
+      size: const Size(1700, 900),
+      more: _counted(asked),
+    );
+    // Mid-page: at the top it would lie under the slim bar.
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Leave a comment')),
+      alignment: 0.5,
+    );
+    await tester.pumpAndSettle();
+    // The hint lies under the field's text, which takes the tap.
+    await tester.tapAt(tester.getCenter(find.text('Leave a comment')));
+    await tester.pumpAndSettle();
+    final field = FocusManager.instance.primaryFocus;
+    expect(
+      field?.context?.findAncestorWidgetOfExactType<EditableText>(),
+      isNotNull,
+    );
+    // The box's note: plain text, outside the field.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(CommentBox),
+        matching: find.textContaining('Markdown'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus, isNot(field));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 20));
+    asked.clear();
+    await press(tester, LogicalKeyboardKey.keyR, cmd: true);
     expect(asked, hasLength(1));
     await closeView(tester, d);
   }, variant: onMac);

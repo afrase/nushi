@@ -47,10 +47,11 @@ class PullTab extends StatefulWidget {
 }
 
 class _PullTabState extends State<PullTab> {
-  /// The tab's keys' focus: it takes the focus as the tab shows when
-  /// nothing below the window's own has it (a tab's click leaves it at
-  /// the window, above the tab), so ⌘R comes here; a field or a terminal
-  /// with the focus keeps it.
+  /// The tab's keys' focus: it takes the focus whenever nothing below the
+  /// window's own has it while the tab shows (a tab's click, or a click
+  /// out of one of the tab's fields, leaves it at the window, above the
+  /// tab), so ⌘R comes here; a field or a terminal with the focus keeps
+  /// it.
   final _keys = FocusNode(debugLabel: 'pull tab', skipTraversal: true);
 
   ChatState get chat => widget.chat;
@@ -60,16 +61,21 @@ class _PullTabState extends State<PullTab> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final now = FocusManager.instance.primaryFocus;
-      if (mounted && (now == null || _keys.ancestors.contains(now))) {
-        _keys.requestFocus();
-      }
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _takeFocus());
+    FocusManager.instance.addListener(_takeFocus);
+  }
+
+  /// Takes the focus when it's left above the tab (null, the window's).
+  void _takeFocus() {
+    final now = FocusManager.instance.primaryFocus;
+    if (mounted && (now == null || _keys.ancestors.contains(now))) {
+      _keys.requestFocus();
+    }
   }
 
   @override
   void dispose() {
+    FocusManager.instance.removeListener(_takeFocus);
     _keys.dispose();
     super.dispose();
   }
