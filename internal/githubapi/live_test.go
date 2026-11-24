@@ -112,10 +112,33 @@ func TestLive(t *testing.T) {
 // request (a GraphQL operation, or the REST path's last part), and a
 // GraphQL answer's query beside it (graphql_X.graphql), which the tests'
 // fake checks a request against (fake.file). Request headers (the token)
-// are never written.
+// are never written, and every email address in an answer is masked
+// (masked): a compare answer carries each commit's author's and
+// committer's, GitHub's own @users.noreply.github.com ones holding an
+// account's id and login, and none may be committed. So compare.json,
+// trimmed by hand to its files and holding no commit, stays as it is,
+// and a re-record writes it masked.
 type recorder struct{ t *testing.T }
 
 var nameRE = regexp.MustCompile(`[^A-Za-z0-9]+`)
+
+// emailRE is a JSON escape (kept whole, so an address isn't read from
+// the middle of one: "\nme@x.io") or an email address.
+var emailRE = regexp.MustCompile(`\\(?:u[0-9A-Fa-f]{4}|.)|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}`)
+
+// maskedEmail is what every email address in a recorded answer becomes.
+const maskedEmail = "someone@example.com"
+
+// masked is a JSON answer with each email address in it replaced by
+// maskedEmail and every other byte as it was.
+func masked(b []byte) []byte {
+	return emailRE.ReplaceAllFunc(b, func(m []byte) []byte {
+		if m[0] == '\\' {
+			return m
+		}
+		return []byte(maskedEmail)
+	})
+}
 
 func (r recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	name := nameRE.ReplaceAllString(req.URL.Path[strings.LastIndex(req.URL.Path, "/")+1:], "_")
@@ -146,7 +169,7 @@ func (r recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	resp.Body = io.NopCloser(bytes.NewReader(b))
 	var pretty bytes.Buffer
-	if json.Indent(&pretty, b, "", "  ") == nil {
+	if json.Indent(&pretty, masked(b), "", "  ") == nil {
 		if err := os.WriteFile("testdata/"+name+".json", append(pretty.Bytes(), '\n'), 0o600); err != nil {
 			r.t.Error(err)
 		}
@@ -225,5 +248,31 @@ func TestLiveInboxFilters(t *testing.T) {
 	hidden, err := c.Inbox(ctx, InboxFilter{Repos: []string{testRepo}, Hide: []string{testRepo}})
 	if err != nil || hidden.MineTotal != 0 || hidden.AssignedTotal != 0 {
 		t.Fatalf("hidden: %+v %v", hidden, err)
+	}
+}
+
+// TestRecorderMasksEmails: an answer's email addresses (a commit's
+// author's, one in a nested object, GitHub's noreply one, one right after
+// an escape) are masked before it is written, and nothing else changes:
+// not the JSON's escapes, logins, URLs or an @mention.
+func TestRecorderMasksEmails(t *testing.T) {
+	answer := `{"commits":[{"sha":"465b7a4b","commit":{"author":{"name":"Octo Cat","email":"octo.cat+gh@mail.example.org","date":"2026-11-24T12:00:00Z"},` +
+		`"committer":{"name":"GitHub","email":"noreply@github.com"}},"author":{"login":"octo","html_url":"https://github.com/octo"}}],` +
+		`"files":[{"patch":"@@ -1 +1 @@\n-a\n+b"}],"pr":{"review":{"author":{"emails":{"primary":"1234+octo@users.noreply.github.com"}}}},` +
+		`"body":"Thanks @octo!\nmail me at x_y@host.io, or \"quoted\" \\back"}`
+	want := `{"commits":[{"sha":"465b7a4b","commit":{"author":{"name":"Octo Cat","email":"someone@example.com","date":"2026-11-24T12:00:00Z"},` +
+		`"committer":{"name":"GitHub","email":"someone@example.com"}},"author":{"login":"octo","html_url":"https://github.com/octo"}}],` +
+		`"files":[{"patch":"@@ -1 +1 @@\n-a\n+b"}],"pr":{"review":{"author":{"emails":{"primary":"someone@example.com"}}}},` +
+		`"body":"Thanks @octo!\nmail me at someone@example.com, or \"quoted\" \\back"}`
+	got := masked([]byte(answer))
+	if string(got) != want {
+		t.Fatalf("masked:\n%s\nwant:\n%s", got, want)
+	}
+	if !json.Valid(got) {
+		t.Fatal("not JSON")
+	}
+	edge := `{"a":"\nme@x.io","b":"\u0041b@c.io"}`
+	if got := string(masked([]byte(edge))); got != `{"a":"\nsomeone@example.com","b":"\u0041someone@example.com"}` {
+		t.Fatalf("after an escape: %s", got)
 	}
 }
