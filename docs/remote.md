@@ -166,7 +166,7 @@ sudo nushi-relay -update -restart-unit nushi-relay
 ```
 
 - It asks GitHub for the latest stable release of `afrase/nushi` and, if it is newer, downloads this machine's tarball and its `.sha256`, checks one against the other, runs the new binary once with `-version`, puts it in place of the one you ran (its mode and owner kept) and restarts the service. The same version or an older one: it says so and does nothing.
-- Without `-restart-unit` it installs and tells you to restart the service yourself. It exits 1 on any failure, with the installed relay untouched.
+- Without `-restart-unit` it installs and tells you to restart the service yourself. It exits 1 on any failure, with the installed relay untouched, but for a failed restart: then the new relay is already in place (the message says so), and running the command again won't restart it, so restart the service yourself.
 - It needs root because the binary is root's (`/usr/local/bin`); run without it, it says so before downloading anything.
 - A relay you built yourself (`make relay-web`) has no release's version and refuses: it has nothing to compare.
 - What it trusts: GitHub's answer for `afrase/nushi`, over TLS. The `.sha256` comes from the same release, so it checks the download, not who made it: releases aren't signed. Whoever can publish a release there gets their code run as root on the relay's machine, not only in the relay: the command runs as root and runs the new binary once with `-version` before it installs it. The relay also serves the phone's app, which holds the phone's key ([ADR 0054](adr/0054-the-phone-is-a-web-app-with-web-push.md)).

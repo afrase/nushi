@@ -71,7 +71,8 @@ func New(version, unit string, out io.Writer) *Updater {
 
 // Run updates this binary to the latest stable release if that is newer,
 // and says what it did. An error means nothing was installed, but for a
-// failed restart, which comes after.
+// failed restart, which comes after: its error says the new relay is in
+// place.
 func (u *Updater) Run(ctx context.Context) error {
 	current, err := u.preflight()
 	if err != nil {
@@ -102,7 +103,9 @@ func (u *Updater) Run(ctx context.Context) error {
 		return nil
 	}
 	if err := u.Restart(ctx, u.Unit); err != nil {
-		return fmt.Errorf("installed %s, but its restart failed: %w", latest, err)
+		// Run again, -update would find this version the latest and not
+		// restart: say what to do instead.
+		return fmt.Errorf("installed %s, but its restart failed: %w; the new relay is in place, so restart it yourself: sudo systemctl restart %s", latest, err, u.Unit)
 	}
 	u.sayf("Restarted %s", u.Unit)
 	return nil

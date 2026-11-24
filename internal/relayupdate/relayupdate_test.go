@@ -84,7 +84,10 @@ func TestRestartsOnlyAfterAnInstall(t *testing.T) {
 		return errors.New("exit status 5: unit nushi-relay.service not found")
 	}
 	err := r.u.Run(t.Context())
-	if err == nil || !strings.Contains(err.Error(), "installed 1.3.0, but its restart failed: exit status 5: unit nushi-relay.service not found") {
+	// The new relay is in place, so -update run again would say it is the
+	// latest and not restart: the error says to restart it by hand.
+	if err == nil || !strings.Contains(err.Error(), "installed 1.3.0, but its restart failed: exit status 5: unit nushi-relay.service not found") ||
+		!strings.HasSuffix(err.Error(), "; the new relay is in place, so restart it yourself: sudo systemctl restart nushi-relay") {
 		t.Errorf("a failed restart: %v", err)
 	}
 	if b, _ := os.ReadFile(r.exe); string(b) != "new relay" {
