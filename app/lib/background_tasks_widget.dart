@@ -131,9 +131,8 @@ Widget _time(
 }) {
   final theme = NushiTheme.of(context);
   final t = theme.t;
-  String text() => !runs && state != 'done' && state != 'completed'
-      ? state
-      : ranFor(started, ended, runs: runs);
+  String text() =>
+      !runs && state != 'done' ? state : ranFor(started, ended, runs: runs);
 
   return LiveText(
     text,
