@@ -134,7 +134,7 @@ class _NewChatState extends State<_NewChat> {
 
   void _picked(FoundJiraIssue? f) {
     setState(() {
-      if (f != null) _issue = IssueChat.found(f);
+      if (f != null) _issue = IssueChat.jira(f.site, f.issue);
       _picking = null;
     });
     _focus.requestFocus();

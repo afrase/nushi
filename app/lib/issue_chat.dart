@@ -20,7 +20,7 @@ class IssueChat {
         site: '',
         key: '${it.ref.repo}#${it.ref.number}',
         summary: it.title,
-        branch: it.pull ? '' : githubBranch(it.ref.number, it.title),
+        branch: it.pull ? '' : issueBranch('${it.ref.number}', it.title),
         github: GitHubLink(
           host: it.ref.host,
           id: it.id,
@@ -30,13 +30,13 @@ class IssueChat {
         ),
       );
 
-  /// An issue FindJiraIssues found.
-  new found(FoundJiraIssue f)
+  /// Jira issue [i] of [site], on a branch named from it.
+  new jira(String site, JiraIssue i)
     : this(
-        site: f.site,
-        key: f.issue.key,
-        summary: f.issue.summary,
-        branch: f.branch,
+        site: site,
+        key: i.key,
+        summary: i.summary,
+        branch: issueBranch(i.key, i.summary),
       );
 
   final String site;
@@ -49,10 +49,12 @@ class IssueChat {
   final GitHubLink? github;
 }
 
-/// The branch for a chat on GitHub issue [n]:
-/// its number, then its title's letters and digits, lowercase, words
-/// joined by "-", 40 characters of title at most, cut between words.
-String githubBranch(int n, String title) {
+/// The branch for a chat on an issue: [prefix] (a Jira key, uppercase so
+/// Jira links it, or a GitHub issue's number), then [title]'s ASCII
+/// letters and digits, lowercase, words joined by "-", 40 characters of
+/// title at most, cut between words; [prefix] alone when it has none. The
+/// daemon's model.Slug is the same rule, for the branches it names.
+String issueBranch(String prefix, String title) {
   final words = title
       .toLowerCase()
       .split(RegExp('[^a-z0-9]+'))
@@ -63,5 +65,5 @@ String githubBranch(int n, String title) {
     out = out.isEmpty ? w : '$out-$w';
   }
   if (out.length > 40) out = out.substring(0, 40);
-  return out.isEmpty ? '$n' : '$n-$out';
+  return out.isEmpty ? prefix : '$prefix-$out';
 }

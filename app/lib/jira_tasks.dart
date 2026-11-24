@@ -262,7 +262,7 @@ class _TaskRowState extends State<TaskRow> {
       context,
       widget.daemon,
       widget.task.site,
-      widget.task.issue.key,
+      widget.task.issue,
       f,
     ),
   );

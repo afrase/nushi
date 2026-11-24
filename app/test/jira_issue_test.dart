@@ -111,20 +111,6 @@ Future<(FakeDaemon, Daemon, List<String>)> _open(
                 data: id == '10000' ? _png : [],
                 mimeType: 'image/png',
               ),
-              FindJiraIssuesRequest(:final text, :final site)
-                  when text == 'ACME-12' && site == 'acme.atlassian.net' =>
-                FindJiraIssuesResponse(
-                  issues: [
-                    FoundJiraIssue(
-                      site: 'acme.atlassian.net',
-                      issue: JiraIssue(
-                        key: 'ACME-12',
-                        summary: 'Log in with a passkey',
-                      ),
-                      branch: 'ACME-12-log-in-with-a-passkey',
-                    ),
-                  ],
-                ),
               ListJiraTransitionsRequest() => ListJiraTransitionsResponse(
                 transitions: [
                   JiraTransition(

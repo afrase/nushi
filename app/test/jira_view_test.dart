@@ -124,15 +124,6 @@ void main() {
         ListJiraIssuesRequest(list: 'mine') => ListJiraIssuesResponse(
           issues: many,
         ),
-        FindJiraIssuesRequest(:final text) => FindJiraIssuesResponse(
-          issues: [
-            FoundJiraIssue(
-              site: testSite.id,
-              issue: issue(text, 'Issue', 'To Do', 'new'),
-              branch: text,
-            ),
-          ],
-        ),
         _ => null,
       },
     );
@@ -235,15 +226,6 @@ void main() {
         ListJiraTransitionsRequest() => ListJiraTransitionsResponse(
           transitions: [JiraTransition(id: '31', name: 'Done', to: 'Done')],
         ),
-        FindJiraIssuesRequest(:final text) => FindJiraIssuesResponse(
-          issues: [
-            FoundJiraIssue(
-              site: testSite.id,
-              issue: issue(text, 'Log in with a passkey', 'To Do', 'new'),
-              branch: '$text-log-in-with-a-passkey',
-            ),
-          ],
-        ),
         _ => null,
       },
     );
@@ -267,20 +249,25 @@ void main() {
     final moved = fake.calls.whereType<TransitionJiraIssueRequest>().single;
     expect((moved.key, moved.transition), ('ACME-12', '31'));
     // Start work (the selected row's): a folder, then the New chat
-    // dialog with the issue.
+    // dialog with the issue the row holds, its branch named from it (no
+    // search of Jira for it).
     await tester.tap(find.byTooltip('Start work\u2002⌘⏎'));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('nushi', findRichText: true).last);
     await tester.pumpAndSettle();
     expect(find.text('Chat on ACME-9 in nushi'), findsOneWidget);
-    expect(find.text('ACME-9-log-in-with-a-passkey'), findsOneWidget);
+    expect(
+      find.text('ACME-9-the-sidebar-flickers-when-a-chat-starts'),
+      findsOneWidget,
+    );
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     final s = fake.started.single;
     expect(
       (s.jiraKey, s.worktree, s.branch),
-      ('ACME-9', true, 'ACME-9-log-in-with-a-passkey'),
+      ('ACME-9', true, 'ACME-9-the-sidebar-flickers-when-a-chat-starts'),
     );
+    expect(fake.calls.whereType<FindJiraIssuesRequest>(), isEmpty);
     await closeView(tester, d);
   });
 

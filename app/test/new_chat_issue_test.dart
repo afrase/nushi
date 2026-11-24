@@ -27,7 +27,6 @@ FoundJiraIssue _found(String site, String key, String summary) =>
         status: 'To Do',
         statusCategory: 'new',
       ),
-      branch: '$key-${summary.toLowerCase().replaceAll(' ', '-')}',
     );
 
 /// Two sites; what FindJiraIssues finds for each text.

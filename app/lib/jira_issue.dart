@@ -390,8 +390,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
           label: 'Start work',
           entries: folderEntries(
             widget.daemon,
-            onPick: (f) =>
-                startWork(context, widget.daemon, widget.site, i.key, f),
+            onPick: (f) => startWork(context, widget.daemon, widget.site, i, f),
           ),
         ),
         const SizedBox(width: 6),

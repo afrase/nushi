@@ -19,25 +19,19 @@ List<ChatState> chatsOn(Daemon daemon, String site, String key) =>
         .toList()
       ..sort((a, b) => b.created.compareTo(a.created));
 
-/// Starts work on issue [key] of [site] in [folder] (one to choose, when
+/// Starts work on [issue] of [site] in [folder] (one to choose, when
 /// null): the New chat dialog with the issue picked, a worktree on its
 /// branch.
 Future<void> startWork(
   BuildContext context,
   Daemon daemon,
   String site,
-  String key,
+  JiraIssue issue,
   String? folder,
 ) async {
   final f = folder ?? await getDirectoryPath(confirmButtonText: 'Choose');
   if (f == null || !context.mounted) return;
-  await tryOrShow(context, () async {
-    final r = await daemon.client.findJiraIssues(
-      FindJiraIssuesRequest(text: key, site: site),
-    );
-    if (!context.mounted || r.issues.isEmpty) return;
-    await newChat(context, daemon, f, issue: IssueChat.found(r.issues.first));
-  });
+  await newChat(context, daemon, f, issue: IssueChat.jira(site, issue));
 }
 
 /// The moves [issue]'s workflow allows now, asked of Jira, each moving it
