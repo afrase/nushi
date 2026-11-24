@@ -29,6 +29,7 @@ type Env struct {
 
 	mu      sync.Mutex
 	vars    []string  // the last reading that worked; nil before one has
+	limits  Limits    // what that reading's shell had
 	read    time.Time // when the last reading ended, worked or not
 	problem string    // why it didn't, "" when it did
 }
@@ -83,27 +84,28 @@ func (e *Env) Refresh(ctx context.Context, maxAge time.Duration) {
 		return
 	}
 	start := time.Now()
-	vars, err := Read(context.WithoutCancel(ctx), e.shell, e.base, Timeout) // a client gone mid-way doesn't make it a failure
+	vars, limits, err := Read(context.WithoutCancel(ctx), e.shell, e.base, Timeout) // a client gone mid-way doesn't make it a failure
 	log := slog.With("shell", e.shell, "took", time.Since(start).Round(time.Millisecond))
 	e.mu.Lock()
 	first := e.vars == nil
 	e.mu.Unlock()
 	var login []string
+	var loginLimits Limits
 	loginWorked := false
 	if err != nil && first {
-		login, loginWorked = e.readLogin(ctx)
+		login, loginLimits, loginWorked = e.readLogin(ctx)
 	}
 	e.mu.Lock()
 	e.read = time.Now()
 	switch {
 	case err == nil:
-		e.vars, e.problem = vars, ""
+		e.vars, e.limits, e.problem = vars, limits, ""
 		log.Info("shell environment read", "vars", len(vars))
 		if slog.Default().Enabled(ctx, slog.LevelDebug) {
 			log.Debug("shell environment adds", "names", strings.Join(added(e.base, vars), " ")) // names only, never values
 		}
 	case loginWorked:
-		e.vars, e.problem = login, err.Error()
+		e.vars, e.limits, e.problem = login, loginLimits, err.Error()
 		log.Warn("shell environment read without its interactive config", "why", err) // never what it printed
 	default:
 		e.problem = err.Error()
@@ -122,12 +124,12 @@ func (e *Env) Refresh(ctx context.Context, maxAge time.Duration) {
 // did when the daemon started through that shell (ADR 0036). Without it
 // a config that hangs or ends only when interactive (one that runs tmux)
 // would leave launchd's bare PATH.
-func (e *Env) readLogin(ctx context.Context) ([]string, bool) {
-	vars, err := ReadLogin(context.WithoutCancel(ctx), e.shell, e.base, Timeout)
+func (e *Env) readLogin(ctx context.Context) ([]string, Limits, bool) {
+	vars, limits, err := ReadLogin(context.WithoutCancel(ctx), e.shell, e.base, Timeout)
 	if err != nil && !errors.Is(err, errors.ErrUnsupported) {
 		slog.Warn("shell environment not read as a plain login shell either", "shell", e.shell, "why", err)
 	}
-	return vars, err == nil
+	return vars, limits, err == nil
 }
 
 // added are the names of over's variables base doesn't have.
@@ -168,6 +170,16 @@ func (e *Env) environ() []string {
 		return Merge(e.base, nil)
 	}
 	return Merge(kept(e.base, e.vars), e.vars)
+}
+
+// Limits are the umask and open-files limit of the shell whose reading
+// Environ has (empty before one has worked, and when never read). It
+// waits for the first reading, as Environ does.
+func (e *Env) Limits() Limits {
+	e.wait()
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.limits
 }
 
 // LookPath finds name on the PATH agents get; "" when it isn't there.

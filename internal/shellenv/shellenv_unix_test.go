@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -37,7 +38,7 @@ exec /bin/sh -c "$4"
 
 func TestReadSkipsWhatTheConfigPrints(t *testing.T) {
 	for _, name := range []string{"fish", "zsh"} {
-		vars, err := Read(context.Background(), fakeShell(t, name, ""), []string{"PATH=/usr/bin:/bin", "BASE=1", "NUSHI_DATA=/d"}, 5*time.Second)
+		vars, _, err := Read(context.Background(), fakeShell(t, name, ""), []string{"PATH=/usr/bin:/bin", "BASE=1", "NUSHI_DATA=/d"}, 5*time.Second)
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -66,6 +67,31 @@ func TestParse(t *testing.T) {
 	}
 }
 
+// The umask and open-files limit come only from between the last end
+// mark and the done mark after it, a line each; one missing is "".
+func TestParseLimits(t *testing.T) {
+	for out, want := range map[string]Limits{
+		"nushi-env-end-x\numask=0077\nnofile=4096\nnushi-env-done-x":                        {"0077", "4096"},
+		"umask=1\nnushi-env-end-x\numask=022\nnofile=unlimited\nnushi-env-done-x\nnofile=9": {"022", "unlimited"},
+		"nushi-env-end-x\numask=\nnofile=256\nnushi-env-done-x":                             {"", "256"},
+		"nushi-env-end-x\numask=0077\nnofile=4096\n":                                        {},
+		"umask=0077\nnofile=4096\nnushi-env-done-x":                                         {},
+		"nushi-env-end-x\nnushi-env-done-x\numask=0077\n":                                   {},
+	} {
+		if got := parseLimits([]byte(out), "nushi-env-end-x", "nushi-env-done-x"); got != want {
+			t.Errorf("%q: %+v, want %+v", out, got, want)
+		}
+	}
+}
+
+// A real reading has the umask and open-files limit its shell had.
+func TestReadHasLimits(t *testing.T) {
+	_, l, err := Read(context.Background(), fakeShell(t, "zsh", "umask 077"), []string{"PATH=/usr/bin:/bin"}, time.Minute)
+	if err != nil || l.Umask != "0077" || l.OpenFiles == "" {
+		t.Errorf("%+v, %v", l, err)
+	}
+}
+
 // Only the shell that hangs is given a time it can run out of: the others
 // end by themselves, and a loaded machine may take a while to start one.
 func TestReadFails(t *testing.T) {
@@ -80,7 +106,7 @@ func TestReadFails(t *testing.T) {
 		{"echo all is well; exit 0", time.Hour, "zsh: no environment in what it printed"},
 	} {
 		start := time.Now()
-		_, err := Read(context.Background(), fakeShell(t, "zsh", c.body), base, c.timeout)
+		_, _, err := Read(context.Background(), fakeShell(t, "zsh", c.body), base, c.timeout)
 		if err == nil || err.Error() != c.want {
 			t.Errorf("%q: %v", c.body, err)
 		}
@@ -88,7 +114,7 @@ func TestReadFails(t *testing.T) {
 			t.Errorf("%q took %s", c.body, time.Since(start))
 		}
 	}
-	if _, err := Read(context.Background(), "/no/such/shell", base, time.Hour); err == nil || !strings.Contains(err.Error(), "couldn't start") {
+	if _, _, err := Read(context.Background(), "/no/such/shell", base, time.Hour); err == nil || !strings.Contains(err.Error(), "couldn't start") {
 		t.Errorf("a missing shell: %v", err)
 	}
 }
@@ -121,9 +147,12 @@ func TestRealShells(t *testing.T) {
 			t.Logf("no %s here", name)
 			continue
 		}
-		vars, err := Read(context.Background(), shell, base, 10*time.Second)
+		vars, l, err := Read(context.Background(), shell, base, 10*time.Second)
 		if err != nil || Get(vars, "ONLY_IN_SHELL") != name || Get(vars, "HOME") != home {
 			t.Errorf("%s: %v, ONLY_IN_SHELL=%q", name, err, Get(vars, "ONLY_IN_SHELL"))
+		}
+		if _, err := strconv.ParseUint(l.Umask, 8, 32); err != nil || l.OpenFiles == "" {
+			t.Errorf("%s: umask and open files %+v", name, l)
 		}
 	}
 }

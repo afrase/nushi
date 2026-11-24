@@ -18,6 +18,16 @@ import (
 // config can skip what only a terminal wants (starting tmux, a greeting).
 const Resolving = "NUSHI_RESOLVING_ENVIRONMENT"
 
+// Limits are what the shell had besides its environment once its config
+// ran, as it printed them: its umask ("0077") and its soft open-files
+// limit ("4096", "unlimited"); "" for one it didn't print. The daemon
+// applies them to itself, so its agents inherit them (cmd/nushid). On
+// Windows there are none.
+type Limits struct {
+	Umask     string
+	OpenFiles string
+}
+
 // Own says the variable named name is Nushi's: the daemon's settings
 // (NUSHI_DATA, NUSHI_LOG), what its launcher sets (NUSHID_DATA), a chat's
 // tools server's (NUSHI_SOCKET, NUSHI_TOOLS_KEY).

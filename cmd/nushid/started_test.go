@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
+	"runtime"
 	"testing"
 	"time"
 
@@ -35,6 +37,9 @@ type started struct {
 	Agent    []string
 	Projects string
 	Problem  string
+	// AgentLimits is what an agent's process has: its umask and soft
+	// open-files limit, one a line as sh prints them (not on Windows).
+	AgentLimits string
 }
 
 // reportStarted does what -login and run do to the daemon's environment
@@ -56,6 +61,15 @@ func reportStarted(path string) {
 	r.Projects = projects
 	r.Agent = env.Environ()
 	r.Daemon, r.Problem = os.Environ(), env.Status().Problem
+	if runtime.GOOS != "windows" {
+		cmd := exec.Command("/bin/sh", "-c", "umask; ulimit -S -n") // started as an agent is
+		cmd.Env = r.Agent
+		out, err := cmd.Output()
+		if err != nil {
+			return // no report: the test says it never started
+		}
+		r.AgentLimits = string(out)
+	}
 	b, err := json.Marshal(r)
 	if err != nil {
 		panic(err) // no report: the test says it never started

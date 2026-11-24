@@ -25,21 +25,22 @@ const (
 // daemon started is in it, as in a terminal opened then. Nothing runs, so
 // shell and timeout don't apply. The user's key may be missing; the
 // system's must be there.
-func Read(_ context.Context, _ string, env []string, _ time.Duration) ([]string, error) {
+// Windows has no umask or open-files limit: Limits is always empty.
+func Read(_ context.Context, _ string, env []string, _ time.Duration) ([]string, Limits, error) {
 	system, err := registryVars(registry.LOCAL_MACHINE, systemEnvKey)
 	if err != nil {
-		return nil, fmt.Errorf("the system's variables couldn't be read (%w)", err)
+		return nil, Limits{}, fmt.Errorf("the system's variables couldn't be read (%w)", err)
 	}
 	user, err := registryVars(registry.CURRENT_USER, userEnvKey)
 	if err != nil && !errors.Is(err, registry.ErrNotExist) {
-		return nil, fmt.Errorf("your variables couldn't be read (%w)", err)
+		return nil, Limits{}, fmt.Errorf("your variables couldn't be read (%w)", err)
 	}
-	return combine(system, user, env), nil
+	return combine(system, user, env), Limits{}, nil
 }
 
 // ReadLogin has nothing to fall back on: Read runs no shell.
-func ReadLogin(context.Context, string, []string, time.Duration) ([]string, error) {
-	return nil, errors.ErrUnsupported
+func ReadLogin(context.Context, string, []string, time.Duration) ([]string, Limits, error) {
+	return nil, Limits{}, errors.ErrUnsupported
 }
 
 // kept is base: the registry's environment is laid over the daemon's,

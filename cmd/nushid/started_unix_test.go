@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -251,6 +252,75 @@ func TestAVariableTheShellUnsetsIsGone(t *testing.T) {
 			}
 			if shellenv.Get(s.Daemon, "HOME") == "" || shellenv.Get(s.Agent, "PWD") != shellenv.Get(s.Daemon, "PWD") {
 				t.Errorf("the daemon's own HOME or PWD went: %q", s.Daemon)
+			}
+		})
+	}
+}
+
+// limitsShell writes a fake login shell whose profile runs in the shell
+// that then runs the reading's line (so a function it defines stands in
+// for umask or ulimit, as a user's own may).
+func limitsShell(t *testing.T, profile string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "bash")
+	testcheck.Write(t, path, `#!/bin/sh
+if [ "$1 $2 $3" = "-l -i -c" ]; then line=$4
+elif [ "$1 $2" = "-l -c" ]; then line=$3
+else echo "wrong flags: $*" >&2; exit 64
+fi
+`+profile+`
+eval "$line"
+`)
+	testcheck.NoErr(t, os.Chmod(path, 0o700))
+	return path
+}
+
+// launched is the umask and soft open-files limit a process this test
+// starts has (Go gives a child the limit it was itself started with).
+func launched(t *testing.T) (umask string, openFiles int) {
+	t.Helper()
+	out, err := exec.CommandContext(t.Context(), "/bin/sh", "-c", "umask; ulimit -S -n").Output()
+	testcheck.NoErr(t, err)
+	lines := strings.Fields(string(out))
+	if len(lines) != 2 {
+		t.Fatalf("sh printed %q", out)
+	}
+	n, err := strconv.Atoi(lines[1])
+	if err != nil {
+		n = -1 // unlimited
+	}
+	return lines[0], n
+}
+
+// A umask and an open-files limit the user's profile sets reach every
+// agent, as when the daemon started through the login shell (on Mac and
+// Linux; Windows has neither). No setting, or one the daemon can't read,
+// leaves both as the daemon was launched with.
+func TestAgentsGetTheShellsUmaskAndOpenFiles(t *testing.T) {
+	umask, openFiles := launched(t)
+	want := 4096
+	if openFiles == want {
+		want = 4000
+	}
+	limits := func(umask string, openFiles int) string {
+		if openFiles < 0 {
+			return umask + "\nunlimited\n"
+		}
+		return umask + "\n" + strconv.Itoa(openFiles) + "\n"
+	}
+	for name, c := range map[string]struct{ profile, want string }{
+		"set":     {"umask 077; ulimit -S -n " + strconv.Itoa(want), limits("0077", want)},
+		"not set": {"", limits(umask, openFiles)},
+		"garbage": {"umask() { echo 0x9z; }; ulimit() { echo lots; }", limits(umask, openFiles)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			launcher := []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir()}
+			s, ok := startDaemon(t, limitsShell(t, c.profile), launcher, time.Minute, time.Minute)
+			if !ok {
+				t.Fatal("it didn't start")
+			}
+			if s.AgentLimits != c.want || s.Problem != "" {
+				t.Errorf("an agent has umask and open files %q, want %q (problem %q)", s.AgentLimits, c.want, s.Problem)
 			}
 		})
 	}

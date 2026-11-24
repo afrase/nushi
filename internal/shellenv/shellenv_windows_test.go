@@ -53,7 +53,7 @@ func TestGetAndMergeIgnoreCase(t *testing.T) {
 }
 
 func TestReadWindows(t *testing.T) {
-	vars, err := Read(t.Context(), "", os.Environ(), 0)
+	vars, _, err := Read(t.Context(), "", os.Environ(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}

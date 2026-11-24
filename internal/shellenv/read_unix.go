@@ -26,28 +26,32 @@ func source(shell string) string { return shell }
 // Read runs shell as a login, interactive shell (stdin /dev/null, a session
 // of its own, killed with what it started after timeout) and returns the
 // environment it printed, without the variables a shell sets for itself
-// and Nushi's own (Own). env is the shell's environment; what the shell
-// writes to stderr is dropped unread.
-func Read(ctx context.Context, shell string, env []string, timeout time.Duration) ([]string, error) {
+// and Nushi's own (Own), and the umask and open-files limit it then had.
+// env is the shell's environment; what the shell writes to stderr is
+// dropped unread.
+func Read(ctx context.Context, shell string, env []string, timeout time.Duration) ([]string, Limits, error) {
 	return read(ctx, shell, "-l -i", env, timeout)
 }
 
 // ReadLogin is Read of a login shell that isn't interactive (-l -c):
 // zsh's .zshrc, bash's .bashrc and fish's `status is-interactive` blocks
 // don't run.
-func ReadLogin(ctx context.Context, shell string, env []string, timeout time.Duration) ([]string, error) {
+func ReadLogin(ctx context.Context, shell string, env []string, timeout time.Duration) ([]string, Limits, error) {
 	return read(ctx, shell, "-l", env, timeout)
 }
 
 // read is Read with flags, "-l -i" or "-l", before the -c.
-func read(ctx context.Context, shell, flags string, env []string, timeout time.Duration) ([]string, error) {
+func read(ctx context.Context, shell, flags string, env []string, timeout time.Duration) ([]string, Limits, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	mark := make([]byte, 12)
 	_, _ = rand.Read(mark)
-	start, end := "nushi-env-start-"+hex.EncodeToString(mark), "nushi-env-end-"+hex.EncodeToString(mark)
-	// The same line in fish, zsh, bash, sh, dash and ksh.
-	line := fmt.Sprintf("printf '%%s' %s; /usr/bin/env -0; printf '%%s' %s", start, end)
+	start, end, done := "nushi-env-start-"+hex.EncodeToString(mark), "nushi-env-end-"+hex.EncodeToString(mark), "nushi-env-done-"+hex.EncodeToString(mark)
+	// The same line in fish, zsh, bash, sh, dash and ksh: the environment
+	// between two marks, then the umask and the soft open-files limit, a
+	// line each, before a third (parseLimits).
+	line := fmt.Sprintf("printf '%%s' %s; /usr/bin/env -0; printf '%%s' %s; printf '\\n%s'; umask; printf '\\n%s'; ulimit -S -n; printf '%%s' %s",
+		start, end, umaskKey, openFilesKey, done)
 	args := append(strings.Fields(flags), "-c", line)
 	cmd := exec.CommandContext(ctx, shell, args...) //nolint:gosec // the user's login shell, the line above
 	cmd.Env = append(slices.Clone(env), Resolving+"=1")
@@ -62,15 +66,48 @@ func read(ctx context.Context, shell, flags string, env []string, timeout time.D
 	vars, perr := parse(out.Bytes(), start, end)
 	switch {
 	case perr == nil:
-		return vars, nil // the end mark came: a config's exit status, or a hang after, doesn't matter
+		return vars, parseLimits(out.Bytes(), end, done), nil // the end mark came: a config's exit status, or a hang after, doesn't matter
 	case ctx.Err() != nil:
-		return nil, fmt.Errorf("%s took over %s", filepath.Base(shell), timeout)
+		return nil, Limits{}, fmt.Errorf("%s took over %s", filepath.Base(shell), timeout)
 	case err != nil:
-		return nil, fmt.Errorf("%s %s before printing its environment", filepath.Base(shell), ended(err))
+		return nil, Limits{}, fmt.Errorf("%s %s before printing its environment", filepath.Base(shell), ended(err))
 	case out.over:
-		return nil, fmt.Errorf("%s printed over %d MB", filepath.Base(shell), maxOutput>>20)
+		return nil, Limits{}, fmt.Errorf("%s printed over %d MB", filepath.Base(shell), maxOutput>>20)
 	}
-	return nil, fmt.Errorf("%s: %w", filepath.Base(shell), perr)
+	return nil, Limits{}, fmt.Errorf("%s: %w", filepath.Base(shell), perr)
+}
+
+// The keys of parseLimits' lines.
+const (
+	umaskKey     = "umask="
+	openFilesKey = "nofile="
+)
+
+// parseLimits takes the umask and the soft open-files limit from between
+// the end mark (the last, which parse took) and the done mark after it,
+// as the shell printed them; "" for one that isn't there. Nothing but the
+// line runs between the marks, so a config's output can't stand in for
+// them.
+func parseLimits(out []byte, end, done string) Limits {
+	e := bytes.LastIndex(out, []byte(end))
+	if e < 0 {
+		return Limits{}
+	}
+	tail := out[e+len(end):]
+	d := bytes.Index(tail, []byte(done))
+	if d < 0 {
+		return Limits{}
+	}
+	var l Limits
+	for line := range strings.Lines(string(tail[:d])) {
+		line = strings.TrimSpace(line)
+		if v, ok := strings.CutPrefix(line, umaskKey); ok {
+			l.Umask = v
+		} else if v, ok := strings.CutPrefix(line, openFilesKey); ok {
+			l.OpenFiles = v
+		}
+	}
+	return l
 }
 
 // maxOutput bounds what the shell may print (its environment and anything

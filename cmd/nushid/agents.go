@@ -39,12 +39,13 @@ func newShellEnv(shell string) *shellenv.Env {
 }
 
 // fromLoginShell reads the login shell's environment and applies it to
-// the daemon (newShellEnv), then reads what that environment decides:
-// Claude's projects folder (CLAUDE_CONFIG_DIR, which a profile or rc may
-// export), so the daemon reads Claude's history where its agents write
-// it.
+// the daemon (newShellEnv), with the umask and open-files limit the shell
+// had (applyLimits), then reads what that environment decides: Claude's
+// projects folder (CLAUDE_CONFIG_DIR, which a profile or rc may export),
+// so the daemon reads Claude's history where its agents write it.
 func fromLoginShell(shell string) (shellEnv *shellenv.Env, projects string, err error) {
 	shellEnv = newShellEnv(shell)
+	applyLimits(shellEnv.Limits())
 	projects, err = claudehistory.Projects()
 	return shellEnv, projects, err
 }
