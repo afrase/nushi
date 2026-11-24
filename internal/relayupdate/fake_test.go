@@ -29,6 +29,7 @@ type fakeGitHub struct {
 	status   int               // the API's status, 0: 200
 	served   map[string][]byte // the download host's files by name
 	lies     map[string]int    // a Content-Length to claim instead, by name
+	endless  map[string]bool   // sent chunked, with no Content-Length, and never ending, by name
 	redirect map[string]string // a download's address to send to instead of the host's, by name
 	requests []string          // every request's path, both hosts
 	agents   []string          // every request's User-Agent
@@ -36,7 +37,7 @@ type fakeGitHub struct {
 
 func newFakeGitHub(t *testing.T) *fakeGitHub {
 	t.Helper()
-	f := &fakeGitHub{served: map[string][]byte{}, lies: map[string]int{}, redirect: map[string]string{}}
+	f := &fakeGitHub{served: map[string][]byte{}, lies: map[string]int{}, endless: map[string]bool{}, redirect: map[string]string{}}
 	f.api = httptest.NewTLSServer(http.HandlerFunc(f.serveAPI))
 	t.Cleanup(f.api.Close)
 	f.files = httptest.NewTLSServer(http.HandlerFunc(f.serveFile))
@@ -80,6 +81,7 @@ func (f *fakeGitHub) serveFile(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimPrefix(r.URL.Path, "/files/")
 	body, ok := f.served[name]
 	lie, lies := f.lies[name]
+	endless := f.endless[name]
 	f.mu.Unlock()
 	if !ok {
 		http.NotFound(w, r)
@@ -89,6 +91,19 @@ func (f *fakeGitHub) serveFile(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", strconv.Itoa(lie))
 	}
 	_, _ = w.Write(body)
+	if endless {
+		// Flushed before the end, the body goes chunked, with no
+		// Content-Length for the client to refuse early, and it never
+		// ends: only the client's read cap stops it, closing the
+		// connection, which ends this loop.
+		rc := http.NewResponseController(w)
+		more := make([]byte, 4096)
+		for rc.Flush() == nil {
+			if _, err := w.Write(more); err != nil {
+				return
+			}
+		}
+	}
 }
 
 // publish makes tag the latest release, with these files attached (the

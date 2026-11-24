@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -205,6 +206,18 @@ func TestRefusalsLeaveTheRelay(t *testing.T) {
 			f.served[name+".sha256"] = append(sumOf(good), strings.Repeat(" ", 600)...)
 		}, "more than 512"},
 		{"oversized JSON", func(_ *fakeGitHub, r *run) { r.u.limits.json = 10 }, "more than 10"},
+		// Under an asset size that looks right and with no Content-Length,
+		// only the read cap stops a body that doesn't end (without it the
+		// read would run to the deadline, set short here to fail fast).
+		{"an endless .sha256", func(f *fakeGitHub, r *run) {
+			f.endless[name+".sha256"] = true
+			r.u.Timeout = 30 * time.Second
+		}, "the answer is more than 512 bytes"},
+		{"an endless tarball", func(f *fakeGitHub, r *run) {
+			f.endless[name] = true
+			r.u.limits.tarball = int64(len(good))
+			r.u.Timeout = 30 * time.Second
+		}, fmt.Sprintf("the answer is more than %d bytes", len(good))},
 		{"a second entry", withTarball(tarball(t, entry{name: "nushi-relay", body: "new relay"}, entry{name: "extra", body: "x"})), `holds "extra" too`},
 		{"a link", withTarball(tarball(t, entry{name: "nushi-relay", kind: tar.TypeSymlink, link: "/bin/sh"})), "isn't a regular file"},
 		{"a folder", withTarball(tarball(t, entry{name: "nushi-relay", kind: tar.TypeDir})), "isn't a regular file"},
