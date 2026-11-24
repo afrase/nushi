@@ -1,5 +1,7 @@
 package chats
 
+import "fmt"
+
 // chatOp is what a chat is busy with: a turn, or one of the steps on its
 // session (a reopen, a reload, an open, a start, a fork, a move or a
 // rewind). They exclude each other: each begins only on a chat busy with
@@ -50,4 +52,42 @@ func (c *chat) endOpLocked() {
 	}
 	c.statusChangedLocked()
 	c.deliverLocked()
+}
+
+// doing is what a chat busy with o is doing, as its refusals say it.
+func (o chatOp) doing() string {
+	switch o {
+	case opNone:
+		return "idle"
+	case opTurn:
+		return "working on a turn"
+	case opReopen:
+		return "reopening"
+	case opReload:
+		return "reloading"
+	case opOpen:
+		return "opening"
+	case opStart, opFork: // a new chat put on its picks
+		return "starting"
+	case opMove:
+		return "moving"
+	case opRewind:
+		return "rewinding"
+	}
+	return "busy"
+}
+
+// stillLocked says what the busy chat is still doing, for a refusal: the
+// agent's turn, or the step on its session by name.
+func (c *chat) stillLocked() string {
+	if c.op == opTurn {
+		return "the agent is still working on the last prompt"
+	}
+	return "the chat is still " + c.op.doing()
+}
+
+// sessionOpErrLocked refuses what must wait for the chat's step on its
+// session (sessionOpLocked) to end, naming it.
+func (c *chat) sessionOpErrLocked() error {
+	return fmt.Errorf("%s; try again in a moment", c.stillLocked())
 }

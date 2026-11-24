@@ -89,7 +89,7 @@ func (c *chat) forkLocked(at string) ([]model.Item, string, error) {
 	case c.agent == nil || !c.canFork || c.parent != nil:
 		return nil, "", errors.New("the agent can't fork this chat")
 	case c.sessionOpLocked():
-		return nil, "", errors.New("the chat is reopening, moving or rewinding; fork it once that's done")
+		return nil, "", fmt.Errorf("%s; fork it once that's done", c.stillLocked())
 	case !c.record.HasMessages:
 		return nil, "", errors.New("the chat has no messages to fork")
 	}

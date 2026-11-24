@@ -16,8 +16,8 @@ import (
 	"github.com/afrase/nushi/internal/transcripts"
 )
 
-// What waits for a move to end says the chat is moving, not that it is
-// still reopening: Archive and Sleep while its fork is being made.
+// What waits for a move to end says the chat is still moving, not that it
+// is reopening: Archive and Sleep while its fork is being made.
 func TestWhatWaitsForAMoveSaysSo(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	c.kind.Moves = true
@@ -28,14 +28,28 @@ func TestWhatWaitsForAMoveSaysSo(t *testing.T) {
 	moved := make(chan error, 1)
 	go func() { moved <- svc.Move(context.Background(), c.id, t.TempDir(), false) }()
 	<-agent.entered
-	if err := svc.Archive(c.id, true); err == nil || !strings.Contains(err.Error(), "moving") {
+	if err := svc.Archive(c.id, true); err == nil || !strings.HasPrefix(err.Error(), "the chat is still moving;") {
 		t.Errorf("archive mid-move: %v", err)
 	}
-	if err := svc.Sleep(c.id); err == nil || !strings.Contains(err.Error(), "moving") {
+	if err := svc.Sleep(c.id); err == nil || !strings.HasPrefix(err.Error(), "the chat is still moving;") {
 		t.Errorf("sleep mid-move: %v", err)
 	}
 	close(agent.forkGate)
 	testcheck.NoErr(t, <-moved)
+}
+
+// And what waits for a rewind says the chat is still rewinding.
+func TestWhatWaitsForARewindSaysSo(t *testing.T) {
+	svc, agent, c := newChat(t, claudeSession, &memModes{})
+	for _, text := range []string{"one", "two"} { // a message to rewind to: forked at the agent's answer before it
+		agent.updates = []acp.SessionUpdate{chunk("m-"+text, "ok")}
+		turn(t, svc, c, text)
+	}
+	release := rewinding(t, svc, agent, c, lastAsked(c))
+	if err := svc.Archive(c.id, true); err == nil || !strings.HasPrefix(err.Error(), "the chat is still rewinding;") {
+		t.Errorf("archive mid-rewind: %v", err)
+	}
+	testcheck.NoErr(t, release())
 }
 
 // A queue held after a stopped turn stays held when the chat moves: the

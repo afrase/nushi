@@ -74,8 +74,9 @@ func (s *Service) Archive(chatID string, archived bool) error {
 	}
 	c.mu.Lock()
 	if archived && c.sessionOpLocked() {
+		err := c.sessionOpErrLocked()
 		c.mu.Unlock()
-		return errSessionOp
+		return err
 	}
 	if !archived && c.record.Archived {
 		c.outlived, c.reopenFailed, c.asleep, c.sessionGone = false, false, false, false // it reopens (its replay merged with the copy), and says again
@@ -111,8 +112,9 @@ func (s *Service) halt(chatID string) (*chat, error) {
 	c.mu.Lock()
 	switch {
 	case c.sessionOpLocked():
+		err := c.sessionOpErrLocked()
 		c.mu.Unlock()
-		return nil, errSessionOp
+		return nil, err
 	case c.halting: // a delete, or an archived side chat brought back
 		c.mu.Unlock()
 		return nil, errors.New("the chat is already going")
@@ -137,10 +139,6 @@ func (s *Service) forget(c *chat) error {
 	c.emitLocked(model.Event{ChatID: c.id, Removed: true})
 	return nil
 }
-
-// errSessionOp refuses what must wait for the chat's session to settle
-// (sessionOpLocked).
-var errSessionOp = errors.New("the chat is reopening, moving or rewinding; try again in a moment")
 
 // sessionOpLocked says the chat is busy with its session, not a turn: it
 // reopens, reloads, opens, starts, forks, moves or rewinds. A message

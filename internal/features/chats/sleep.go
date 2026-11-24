@@ -46,7 +46,7 @@ func (c *chat) canSleepLocked() error {
 	case !c.canLoad:
 		return errors.New("the agent can't reopen its sessions, so it can't sleep")
 	case c.sessionOpLocked():
-		return errSessionOp
+		return c.sessionOpErrLocked()
 	}
 	return c.closedLocked()
 }
@@ -134,8 +134,10 @@ func (c *chat) quietLocked() bool {
 // per cause, each saying when verb can go ahead.
 func (c *chat) workingLocked(verb string) error {
 	switch {
-	case c.busyLocked():
+	case c.op == opTurn:
 		return fmt.Errorf("the chat is busy; %s once the turn has ended", verb)
+	case c.busyLocked():
+		return fmt.Errorf("%s; %s once that's done", c.stillLocked(), verb)
 	case c.ownTurn || c.waitsLocked():
 		return fmt.Errorf("the agent is working on its own (a background task ended); stop it, or %s once it's done", verb)
 	case c.backgroundLocked(0):

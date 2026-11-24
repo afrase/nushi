@@ -1,6 +1,6 @@
 package chats
 
-import "errors"
+import "fmt"
 
 // MCPChanged marks agent's running chats whose folder affected says yes
 // to: their agent keeps the MCP servers it started with until the chat is
@@ -31,8 +31,9 @@ func (s *Service) Reload(chatID string) error {
 	}
 	c.mu.Lock()
 	if c.busyLocked() {
+		err := fmt.Errorf("%s; reload it once that's done", c.stillLocked())
 		c.mu.Unlock()
-		return errors.New("the chat is busy; reload it once the agent is done")
+		return err
 	}
 	c.beginOpLocked(opReload)
 	c.mcpChanged, c.reopenFailed = false, false
