@@ -150,10 +150,10 @@ func (s *Service) open(id string) (*chat, error) {
 // the last try failed, or the agent quit), unless it is archived, going or
 // asleep.
 func (s *Service) reopenLocked(c *chat) {
-	if c.agent == nil && !c.busy && !c.record.Archived && !c.halting && !c.removing && c.parent == nil && !c.reopenFailed && !c.asleep && !c.sessionGone {
+	if c.agent == nil && !c.busy && !c.record.Archived && !c.halting && !c.removing && c.parent == nil && !c.reopenFailed && !c.asleep && !c.sessionGone &&
+		s.later(func() { s.resume(c) }) { // it waits for this lock, so busy is set first
 		c.busy, c.woke = true, make(chan struct{})
 		c.statusChangedLocked()
-		go s.resume(c)
 	}
 }
 
@@ -177,9 +177,13 @@ func (s *Service) chat(id string) (*chat, error) {
 // npx, an MCP server that hangs) mustn't leave the chat reopening for good.
 const reopenTimeout = 2 * time.Minute
 
-//nolint:contextcheck // a reopen runs on its own: every request waiting on the chat waits for it
+// resume reopens the chat (load) on its own, as work Close waits for
+// (later): every request waiting on the chat waits for it. It ends with
+// the service's life, at once, and says nothing then (ending).
+//
+//nolint:contextcheck // a reopen runs on the service's life, not a request's: every request waiting on the chat waits for it
 func (s *Service) resume(c *chat) {
-	ctx, cancel := context.WithTimeout(context.Background(), reopenTimeout)
+	ctx, cancel := context.WithTimeout(s.ctx, reopenTimeout)
 	defer cancel()
 	start := time.Now()
 	err := s.load(ctx, c)
@@ -197,9 +201,10 @@ func (s *Service) resume(c *chat) {
 		c.woke = nil
 	}
 	switch {
+	case err != nil && s.ending():
 	case gone:
 		c.goneLocked("")
-		s.expires.Go(func() { s.expire(context.WithoutCancel(ctx), c, "the agent says so") })
+		s.later(func() { s.expire(s.ctx, c, "the agent says so") })
 	case err != nil:
 		c.failedLocked(err)
 	}

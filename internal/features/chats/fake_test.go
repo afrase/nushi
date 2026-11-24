@@ -356,7 +356,11 @@ func (f *fakeAgent) ListSessions(_ context.Context, req *acp.ListSessionsRequest
 func (f *fakeAgent) LoadSession(ctx context.Context, req *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
 	if f.loadGate != nil {
 		f.enter("load")
-		<-f.loadGate
+		select {
+		case <-f.loadGate:
+		case <-ctx.Done(): // as a real agent's call ends with its context
+			return nil, ctx.Err()
+		}
 	}
 	if f.loadErr != nil {
 		return nil, f.loadErr
