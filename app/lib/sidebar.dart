@@ -7,6 +7,7 @@ import 'package:nushi/app_actions.dart';
 import 'package:nushi/arrangement.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/list_motion.dart';
 import 'package:nushi/new_chat.dart';
@@ -128,7 +129,10 @@ class _SidebarState extends State<Sidebar> {
   /// the Date groups), so an idle app's ages go on and a chat leaves Today
   /// at midnight; nothing else would build it again.
   final _minute = ValueNotifier<int>(0);
-  Timer? _ticks;
+
+  /// Whether it follows [minuteClock]: by hand, not in the list's merge,
+  /// which is made anew each build and would start the minute over.
+  bool _ticks = false;
 
   @override
   void initState() {
@@ -157,7 +161,7 @@ class _SidebarState extends State<Sidebar> {
     widget.daemon.removeListener(_follow);
     _railChanges.removeListener(_settle);
     _seen[widget.daemon] = (opened: _opened, started: _started, owed: _owed);
-    _ticks?.cancel();
+    if (_ticks) minuteClock.removeListener(_aMinute);
     _minute.dispose();
     _hold.dispose();
     _hover.dispose();
@@ -170,16 +174,16 @@ class _SidebarState extends State<Sidebar> {
     final reads =
         sidebarShows.value.contains(RowPart.time) ||
         sidebarGroupBy.value == GroupBy.date;
-    if (!reads) {
-      _ticks?.cancel();
-      _ticks = null;
+    if (reads == _ticks) return;
+    _ticks = reads;
+    if (reads) {
+      minuteClock.addListener(_aMinute);
     } else {
-      _ticks ??= Timer.periodic(
-        const Duration(minutes: 1),
-        (_) => _minute.value++,
-      );
+      minuteClock.removeListener(_aMinute);
     }
   }
+
+  void _aMinute() => _minute.value++;
 
   /// The chat open and the folder one starts in, as [_follow] last saw
   /// them.

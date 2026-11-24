@@ -1,4 +1,3 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
@@ -58,7 +57,6 @@ const _inset = 6.0;
 class _FileRowsState extends State<FileRows> {
   bool _more = false;
 
-  late final Timer _tick;
 
   /// When each row's file last changed: read again on the minute's tick
   /// and when the chat's items or folder change, not as text streams in.
@@ -83,15 +81,14 @@ class _FileRowsState extends State<FileRows> {
     super.initState();
     // "2m ago" goes on aging while nothing else changes, and a file opened
     // an hour ago leaves the recent.
-    _tick = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => setState(_changed.clear),
-    );
+    minuteClock.addListener(_aged);
   }
+
+  void _aged() => setState(_changed.clear);
 
   @override
   void dispose() {
-    _tick.cancel();
+    minuteClock.removeListener(_aged);
     super.dispose();
   }
 

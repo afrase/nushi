@@ -41,21 +41,19 @@ class UpdatesGroup extends StatefulWidget {
 }
 
 class _UpdatesGroupState extends State<UpdatesGroup> {
-  late final Timer _minute; // "12m ago" moves on while the page shows
   final _checking = Runner();
 
   @override
   void initState() {
     super.initState();
-    _minute = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => setState(() {}),
-    );
+    minuteClock.addListener(_aged); // "12m ago" moves on while it shows
   }
+
+  void _aged() => setState(() {});
 
   @override
   void dispose() {
-    _minute.cancel();
+    minuteClock.removeListener(_aged);
     _checking.dispose();
     super.dispose();
   }

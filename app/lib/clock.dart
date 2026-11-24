@@ -31,9 +31,18 @@ DateTime Function() clock = DateTime.now;
 /// turn's status): it tells its listeners once a second while any
 /// listens, and stops as the last leaves, so no row keeps a timer of its
 /// own.
-final secondClock = _Seconds();
+final secondClock = _Ticker(const Duration(seconds: 1));
 
-class _Seconds extends ChangeNotifier {
+/// The one clock what shows an age ticks on ("2m ago": the sidebar's rows
+/// and Date groups, the artifacts, Settings › Updates): once a minute
+/// while any listens, as [secondClock].
+final minuteClock = _Ticker(const Duration(minutes: 1));
+
+class _Ticker extends ChangeNotifier {
+  new(this.every);
+
+  /// How often it tells its listeners.
+  final Duration every;
   Timer? _timer;
 
   /// Whether it ticks: something listens.
@@ -43,10 +52,7 @@ class _Seconds extends ChangeNotifier {
   @override
   void addListener(VoidCallback listener) {
     super.addListener(listener);
-    _timer ??= Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => notifyListeners(),
-    );
+    _timer ??= Timer.periodic(every, (_) => notifyListeners());
   }
 
   @override

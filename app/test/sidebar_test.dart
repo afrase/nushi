@@ -125,7 +125,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('2m'), findsOneWidget);
     clock = () => noon.add(const Duration(hours: 3));
-    await tester.pump(const Duration(minutes: 1));
+    // The list built again within the minute (the chats changed): the
+    // minute isn't started over, so the ages still move on it.
+    await tester.pump(const Duration(seconds: 40));
+    d.listChanged();
+    await tester.pump(const Duration(seconds: 20));
     expect(find.text('3h'), findsOneWidget);
 
     sidebarShows.value = defaultRowParts;
