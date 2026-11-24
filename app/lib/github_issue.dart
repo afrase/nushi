@@ -158,9 +158,10 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
               outside: i.outside,
               body: i.body,
               // When it was opened; a daemon that doesn't say has only
-              // when it last changed.
+              // when it last changed, and the line says so.
               createdMs: it.createdMs > 0 ? it.createdMs : it.updatedMs,
             ),
+            updated: it.createdMs == 0,
           ),
           if (i.body.isEmpty)
             Text('No description', style: theme.ui(t.textMuted, size: 12)),

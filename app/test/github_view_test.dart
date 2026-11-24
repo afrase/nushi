@@ -114,6 +114,38 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('the issue pane, from a daemon that sends no opened date, '
+      'says its date is the last update', (tester) async {
+    final (_, d) = await openView(
+      tester,
+      more: (input) => input is GetGitHubIssueRequest
+          ? GetGitHubIssueResponse(
+              issue: GitHubIssue(
+                item: item(
+                  2,
+                  'Add a Mul function',
+                  pull: false,
+                  age: const Duration(hours: 1),
+                ),
+                body: 'We need `Mul(a, b int) int` beside `Add`.',
+              ),
+            )
+          : null,
+    );
+    await tester.tap(find.text('Add a Mul function'));
+    await tester.pumpAndSettle();
+    final pane = find.byType(GitHubIssuePane);
+    final updated = msAgo(const Duration(hours: 1));
+    expect(
+      find.descendant(
+        of: pane,
+        matching: find.text('  updated ${agoAt(updated.toInt(), clock())}'),
+      ),
+      findsOneWidget,
+    );
+    await closeView(tester, d);
+  });
+
   testWidgets('a pull request the inbox no longer holds stays a pull '
       'request', (tester) async {
     var dropped = false;

@@ -21,10 +21,21 @@ export 'package:nushi/github_text.dart';
 /// In a chat's tab it can be sent to the agent ([SendToAgent]), unless
 /// it's part of a thread ([sendable] false: the thread is sent whole).
 class CommentEntry extends StatefulWidget {
-  const new(this.comment, {super.key, this.sendable = true, this.mark = true});
+  const new(
+    this.comment, {
+    super.key,
+    this.sendable = true,
+    this.mark = true,
+    this.updated = false,
+  });
 
   final GitHubComment comment;
   final bool sendable;
+
+  /// Its time is when its issue last changed, not when it was written
+  /// (an issue's description from a daemon that sends no opened date):
+  /// it reads "updated 1h ago".
+  final bool updated;
 
   /// A bot's mark before its name (none where an avatar shows it).
   final bool mark;
@@ -77,7 +88,8 @@ class _CommentEntryState extends State<CommentEntry> {
             ),
           ),
         Text(
-          '  ${agoAt(c.createdMs.toInt(), clock())}',
+          '  ${widget.updated ? 'updated ' : ''}'
+          '${agoAt(c.createdMs.toInt(), clock())}',
           style: theme.ui(t.textMuted, size: 11.5),
         ),
         if (!folds || _open) const Spacer(),
