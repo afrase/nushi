@@ -8,6 +8,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/pull_rows.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -82,6 +83,30 @@ Future<(Daemon, FakeDaemon)> _open(
     await _pump(tester);
   }
   return r;
+}
+
+/// [text] is drawn in the theme's warning ink, as the Delete dialog's
+/// losses are: a loss must be unmistakable in both.
+void _inWarning(WidgetTester tester, String text) {
+  final f = find.text(text);
+  final t = NushiTheme.of(tester.element(f)).t;
+  expect(tester.widget<Text>(f).style?.color, t.crashed);
+}
+
+/// Opens Clean up… from the pull request row's ⋯, as for one that
+/// closed unmerged, whose row has no cue for it.
+Future<void> _openFromMenu(WidgetTester tester) async {
+  await tester.tap(
+    _inPull(
+      find.descendant(
+        of: find.byType(PullRow),
+        matching: find.byTooltip('Pull request'),
+      ),
+    ),
+  );
+  await _pump(tester);
+  await tester.tap(find.text('Clean up…').last);
+  await _pump(tester);
 }
 
 /// The view settled.
@@ -218,6 +243,7 @@ void main() {
       find.text('3 ignored files or folders would be lost.'),
       findsOneWidget,
     );
+    _inWarning(tester, '3 ignored files or folders would be lost.');
     final boxes = tester.widgetList<Checkbox>(find.byType(Checkbox)).toList();
     expect(boxes.first.value, isFalse);
     await tester.tap(find.byType(Checkbox).first);
@@ -238,21 +264,12 @@ void main() {
       pull: fixturePull()..item.state = 'closed',
       u: _clean(commits: 2),
     );
-    await tester.tap(
-      _inPull(
-        find.descendant(
-          of: find.byType(PullRow),
-          matching: find.byTooltip('Pull request'),
-        ),
-      ),
-    );
-    await _pump(tester);
-    await tester.tap(find.text('Clean up…').last);
-    await _pump(tester);
+    await _openFromMenu(tester);
     expect(
       find.text("2 commits that main doesn't have would be lost."),
       findsOneWidget,
     );
+    _inWarning(tester, "2 commits that main doesn't have would be lost.");
     d.dispose();
   }, variant: onMac);
 
@@ -279,18 +296,19 @@ void main() {
     }, variant: onMac);
   }
 
-  // Ignored files ticked away, beside the Delete dialog's words.
+  // Ignored files and unmerged commits ticked away, beside the Delete
+  // dialog's words and warning ink.
   for (final b in Brightness.values) {
     for (final width in [1700.0, 720.0]) {
-      renderTest('the dialog losing ignored files, ${width.round()} wide, '
-          '${b.name}', (tester) async {
+      renderTest('the dialog losing ignored files and commits, '
+          '${width.round()} wide, ${b.name}', (tester) async {
         final (d, _) = await _open(
           tester,
-          u: _clean(ignored: 3),
+          pull: fixturePull()..item.state = 'closed',
+          u: _clean(ignored: 3, commits: 2),
           brightness: b,
         );
-        await tester.tap(_inPull(find.text('Clean up…')));
-        await _pump(tester);
+        await _openFromMenu(tester);
         await tester.tap(find.byType(Checkbox).first);
         // The window then narrowed or widened under the open dialog: the
         // pull request's pane, which opens it, needs room of its own.

@@ -209,7 +209,7 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
                 : st.ignored > 0 && !st.gone
                 ? Text(
                     '${st.ignoredFiles} would be lost.',
-                    style: theme.ui(t.textMuted, size: 12),
+                    style: theme.ui(t.crashed, size: 12),
                   )
                 : null,
           ),
@@ -219,6 +219,8 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
             code: wt.branch,
             value: _branch && _canBranch,
             onChanged: _canBranch ? (v) => setState(() => _branch = v) : null,
+            lost:
+                !u.branchElsewhere && _canBranch && st.commits > 0 && !_merged,
             what: u.branchElsewhere
                 ? 'Another worktree has it checked out.'
                 : !_canBranch

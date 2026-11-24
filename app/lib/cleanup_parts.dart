@@ -26,6 +26,7 @@ class CleanUpChoice extends StatelessWidget {
     super.key,
     this.code,
     this.what,
+    this.lost = false,
     this.note,
     this.extra,
   });
@@ -35,6 +36,10 @@ class CleanUpChoice extends StatelessWidget {
   final ValueChanged<bool>? onChanged;
   final String? code;
   final String? what;
+
+  /// [what] says what ticking it would lose, so it's in the warning ink
+  /// the Delete dialog's losses are in.
+  final bool lost;
   final String? note;
   final Widget? extra;
 
@@ -73,7 +78,13 @@ class CleanUpChoice extends StatelessWidget {
                 if (code case final c?)
                   Text(c, style: theme.code(t.textMuted, size: 11.5)),
                 if (what case final w?)
-                  Text(w, style: theme.ui(t.textSecondary, size: 12)),
+                  Text(
+                    w,
+                    style: theme.ui(
+                      lost ? t.crashed : t.textSecondary,
+                      size: 12,
+                    ),
+                  ),
                 if (note case final n?)
                   Text(n, style: theme.ui(t.needs, size: 12)),
                 if (extra case final e?)
