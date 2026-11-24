@@ -264,9 +264,10 @@ class Palette extends StatelessWidget {
 /// The pickers' one box: the palette's, Artifacts…'s, Open file…'s and
 /// the rewind list's. A field (its [icon], [hint] and [suffix]), and under
 /// it the [rows] that [rank] keeps for what's typed, each drawn by [row]
-/// in a lazy list [rowHeight] high a row, [shownRows] showing before it
-/// scrolls. ↑↓ move the selection, kept in view; ⏎ or a click picks (the
-/// dialog pops with the row); Esc closes. [status], given, shows in the
+/// in a lazy list [rowHeight] high a row (taller with larger text, as
+/// the text scale grows it), [shownRows] showing before it scrolls. ↑↓
+/// move the selection, kept in view; ⏎ or a click picks (the dialog pops
+/// with the row); Esc closes. [status], given, shows in the
 /// rows' place (a turn to stop first), [empty] when none match, and
 /// [footer] under it all.
 class PickBox<T extends Object> extends StatefulWidget {
@@ -334,9 +335,13 @@ class _PickBoxState<T extends Object> extends State<PickBox<T>> {
     return shown;
   }
 
+  /// A row's height: [PickBox.rowHeight] at the text's scale, so a line
+  /// of larger text (Linux's Large Text) isn't cut.
+  double get _row => MediaQuery.textScalerOf(context).scale(widget.rowHeight);
+
   void _move(int at, [int _ = 0]) {
     setState(() => _at = at);
-    revealRowAt(_scroll, at, widget.rowHeight);
+    revealRowAt(_scroll, at, _row);
   }
 
   @override
@@ -391,12 +396,10 @@ class _PickBoxState<T extends Object> extends State<PickBox<T>> {
                 )
               else if (shown.isNotEmpty)
                 SizedBox(
-                  height:
-                      widget.rowHeight *
-                      shown.length.clamp(1, PickBox.shownRows),
+                  height: _row * shown.length.clamp(1, PickBox.shownRows),
                   child: ListView.builder(
                     controller: _scroll,
-                    itemExtent: widget.rowHeight,
+                    itemExtent: _row,
                     itemCount: shown.length,
                     itemBuilder: (context, i) => Tap(
                       onTap: () => Navigator.pop(context, shown[i]),
