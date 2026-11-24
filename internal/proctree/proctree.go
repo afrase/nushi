@@ -70,6 +70,36 @@ func (Tree) Under(root int) ([]model.Process, error) {
 	return out, nil
 }
 
+// Tracked is a tree followed over time, from one listing: the processes
+// below root, then those of was still running as the same processes (pid
+// and start time) wherever they are now (a setsid child whose parent
+// ended), each once and without its command line. One of was that ended,
+// or whose pid is now another process's, is dropped, so the list doesn't
+// grow with each short-lived child. A dev server's look every 5 s
+// (ADR 0098).
+func (Tree) Tracked(root int, was []model.Process) ([]model.Process, error) {
+	ps, err := all()
+	if err != nil {
+		return nil, err
+	}
+	return tracked(ps, root, was), nil
+}
+
+// tracked is Tracked over the listing ps.
+func tracked(ps []proc, root int, was []model.Process) []model.Process {
+	out := under(ps, root)
+	for _, p := range was {
+		in := func(q model.Process) bool { return q.Pid == p.Pid && q.Started.Equal(p.Started) }
+		if slices.ContainsFunc(out, in) {
+			continue
+		}
+		if i := slices.IndexFunc(ps, func(q proc) bool { return in(q.Process) }); i >= 0 {
+			out = append(out, ps[i].Process)
+		}
+	}
+	return out
+}
+
 // Children lists the processes root started, without their command
 // lines: cheaper than Under, for a terminal's look at what runs on it
 // every half second.

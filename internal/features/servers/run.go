@@ -179,20 +179,16 @@ func dials(ctx context.Context, addr string) bool {
 }
 
 // look notes the server's processes as they are now, for its stop and
-// the record (a child that left its terminal is still among them).
+// the record: those below its leader, and those seen before that still
+// run (a child that setsid out of its terminal is still among them).
 func (s *Service) look(sv *server) {
-	below, err := s.Procs.Under(sv.leader.Pid)
-	if err != nil {
-		return
-	}
-	tree := append([]model.Process{sv.leader}, below...)
-	for i := range tree {
-		tree[i].Args = nil
-	}
 	s.mu.Lock()
 	was := slices.Clone(sv.tree)
 	s.mu.Unlock()
-	tree = s.mergeTree(was, tree) // reads the processes: not under the lock
+	tree, err := s.Procs.Tracked(sv.leader.Pid, was) // lists the processes: not under the lock
+	if err != nil {
+		return
+	}
 	s.mu.Lock()
 	same := slices.EqualFunc(tree, sv.tree, func(a, b model.Process) bool { return a.Pid == b.Pid && a.Started.Equal(b.Started) })
 	if !same {
@@ -202,23 +198,6 @@ func (s *Service) look(sv *server) {
 	if !same {
 		s.record(sv)
 	}
-}
-
-// mergeTree is the processes of was and now, each once: one seen before
-// that has since left the tree (a setsid child whose parent ended) is
-// still the server's while it runs; one that ended is dropped, so the list
-// doesn't grow with each short-lived child.
-func (s *Service) mergeTree(was, now []model.Process) []model.Process {
-	out := slices.Clone(now)
-	for _, p := range was {
-		if slices.ContainsFunc(out, func(q model.Process) bool { return q.Pid == p.Pid && q.Started.Equal(p.Started) }) {
-			continue
-		}
-		if q, err := s.Procs.Get(p.Pid); err == nil && q.Started.Equal(p.Started) {
-			out = append(out, p)
-		}
-	}
-	return out
 }
 
 // stop ends a server, by who: SIGTERM to its terminal's foreground group,

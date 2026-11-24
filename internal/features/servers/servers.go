@@ -47,8 +47,7 @@ type Spawn func(argv []string, dir string, env []string) (Process, error)
 // Procs reads and stops processes (proctree.Tree).
 type Procs interface {
 	Get(pid int) (model.Process, error)
-	Under(root int) ([]model.Process, error)
-	Args(pid int) []string
+	Tracked(root int, was []model.Process) ([]model.Process, error)
 	Stop(ps []model.Process)
 }
 

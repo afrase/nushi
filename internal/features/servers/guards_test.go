@@ -5,16 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/proctree"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -86,22 +82,5 @@ func TestTheHoldNamesAChatInTheFolder(t *testing.T) {
 	chats.mu.Unlock()
 	if h := s.Running(); len(h) != 1 || h[0].ChatID != "d" {
 		t.Errorf("holds %+v, want d's", h)
-	}
-}
-
-// The server's processes as kept drop one that ended (or whose pid is now
-// another process's), and keep one that left the tree but runs.
-func TestTheTreeForgetsEndedProcesses(t *testing.T) {
-	s, _, _ := setup(t)
-	cmd := exec.Command("/usr/bin/true")
-	testcheck.NoErr(t, cmd.Run())
-	me, err := proctree.Tree{}.Get(os.Getpid())
-	testcheck.NoErr(t, err)
-	ended := model.Process{Pid: cmd.Process.Pid, Pgid: cmd.Process.Pid, Started: time.Now()}
-	reused := me
-	reused.Started = me.Started.Add(-time.Hour)
-	got := s.mergeTree([]model.Process{ended, reused, me}, nil)
-	if len(got) != 1 || got[0].Pid != me.Pid {
-		t.Errorf("kept %+v, want this process alone", got)
 	}
 }
