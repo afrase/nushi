@@ -10,12 +10,14 @@ import 'package:nushi/settings.dart';
 /// no admin bypass (ADR 0069).
 enum MergeStep { words, merge, auto, addToQueue, whenReady, autoOn, inQueue }
 
-/// The Merge control's state: what it offers and what it says first, and
-/// whether that is that it can merge (ready: nothing blocks it).
+/// The Merge control's state: what it offers, the merge status card's
+/// heading and the one sentence under it (why: what blocks it, or what
+/// GitHub lets past), its mood and icon, and whether it can merge (ready:
+/// nothing blocks it). A row's Merge… says why too, when it can't go on.
 typedef MergeView = ({
   MergeStep step,
-  String lead,
-  String rest,
+  String heading,
+  String why,
   Mood mood,
   IconData icon,
   bool ready,
@@ -61,28 +63,34 @@ String pickedMethod(GitHubPull p) {
   return can.firstOrNull ?? '';
 }
 
-/// [p]'s required checks that [test] says of, in words: "1 required check
-/// is failing", "2 required checks are running".
-String _required(GitHubPull p, bool Function(GitHubCheck) test, String doing) {
-  final n = p.checks.where((c) => c.required && test(c)).length;
-  return n == 1
-      ? '1 required check is $doing.'
-      : '$n required checks are $doing.';
+/// [b], a block (GitHubMerge.blocks), in a few words: the one table the
+/// merge status card's line and a row's Merge… say a block from. [base] is
+/// the base branch; [required] the required checks [b] counts (failing or
+/// running), 0 when not known (a row's item doesn't say).
+String blockWords(String b, {required String base, int required = 0}) {
+  final name = plainName(base);
+  String checks(String doing) => required == 0
+      ? 'checks $doing'
+      : '$required required check${required == 1 ? '' : 's'} $doing';
+  return switch (b) {
+    'draft' => "it's a draft",
+    'conflicts' => 'conflicts with $name',
+    'checks_failing' => checks('failing'),
+    'checks_running' => checks('running'),
+    'changes_requested' => 'changes requested',
+    'review_required' => 'an approving review required',
+    'threads' => 'unresolved conversations',
+    'behind' => 'the branch is behind $name',
+    'rules' => "a rule of $name's isn't met",
+    _ => 'GitHub is still working it out',
+  };
 }
 
-/// What a block (GitHubMerge.blocks) says.
-String _blockWords(GitHubPull p, String block) => switch (block) {
-  'draft' => "It's a draft.",
-  'conflicts' => 'It conflicts with ${plainName(p.base)}.',
-  'checks_failing' => _required(p, (c) => c.failed, 'failing'),
-  'checks_running' => _required(p, (c) => c.state == 'pending', 'running'),
-  'changes_requested' => 'Changes were requested.',
-  'review_required' => 'It needs an approving review.',
-  'threads' => "Review threads aren't resolved.",
-  'behind' => 'The branch is behind ${plainName(p.base)}.',
-  'rules' => "A rule of ${plainName(p.base)}'s isn't met.",
-  _ => 'GitHub is working out whether it can merge.',
-};
+/// Phrases as one sentence: the first capitalised, a full stop at the end.
+String blockSentence(List<String> parts) {
+  final s = parts.join(', ');
+  return s.isEmpty ? '' : '${s[0].toUpperCase()}${s.substring(1)}.';
+}
 
 /// A place in the queue's state, in words.
 String _queueState(GitHubQueueEntry e) => switch (e.state) {
@@ -105,14 +113,14 @@ MergeView? mergeView(GitHubPull p) {
   final m = p.merge;
   MergeView say(
     MergeStep step,
-    String lead,
+    String heading,
+    String why,
     Mood mood,
-    IconData icon, [
-    String rest = '',
-  ]) => (
+    IconData icon,
+  ) => (
     step: step,
-    lead: lead,
-    rest: rest,
+    heading: heading,
+    why: why,
     mood: mood,
     icon: icon,
     ready: false,
@@ -121,19 +129,19 @@ MergeView? mergeView(GitHubPull p) {
     final e = m.entry;
     return say(
       MergeStep.inQueue,
-      'In the merge queue.',
+      'In the merge queue',
+      'Position ${e.position}, ${_queueState(e)}.${_eta(e.etaSeconds)}',
       e.state == 'unmergeable' ? Mood.bad : Mood.quiet,
       Icons.playlist_add_check,
-      'Position ${e.position}, ${_queueState(e)}.${_eta(e.etaSeconds)}',
     );
   }
   if (m.hasAuto()) {
     return say(
       MergeStep.autoOn,
-      'Auto-merge is on.',
+      'Auto-merge is on',
+      'With ${methodWords(m.auto.method)}, turned on by ${m.auto.by}.',
       Mood.ok,
       Icons.bolt,
-      'With ${methodWords(m.auto.method)}, turned on by ${m.auto.by}.',
     );
   }
   final blocks = m.blocks;
@@ -154,20 +162,20 @@ MergeView? mergeView(GitHubPull p) {
         : MergeStep.merge;
     return (
       step: step,
-      lead: 'Ready to merge.',
-      rest: note,
+      heading: 'Ready to merge',
+      why: note.isEmpty ? 'All requirements are met.' : note,
       mood: Mood.ok,
-      icon: Icons.check_circle_outline,
+      icon: Icons.check,
       ready: true,
     );
   }
   if (blocks.length == 1 && blocks.first == 'unknown') {
     return say(
       MergeStep.words,
-      'Unknown, still checking.',
+      'Checking whether it can merge',
+      blockSentence([blockWords('unknown', base: p.base)]),
       Mood.quiet,
       Icons.schedule,
-      _blockWords(p, 'unknown'),
     );
   }
   final canWait =
@@ -182,17 +190,27 @@ MergeView? mergeView(GitHubPull p) {
       : m.autoAllowed && mergeMethodsOf(p).isNotEmpty
       ? MergeStep.auto
       : MergeStep.words;
-  final why = [
-    for (final b in blocks) _blockWords(p, b),
-    if (!m.canMerge) 'Merging here takes write access.',
-  ].join(' ');
+  int required(bool Function(GitHubCheck) test) =>
+      p.checks.where((c) => c.required && test(c)).length;
   return say(
     step,
-    "Can't merge yet.",
+    'Merging is blocked',
+    blockSentence([
+      for (final b in blocks)
+        blockWords(
+          b,
+          base: p.base,
+          required: switch (b) {
+            'checks_failing' => required((c) => c.failed),
+            'checks_running' => required((c) => c.state == 'pending'),
+            _ => 0,
+          },
+        ),
+      if (!m.canMerge) 'merging here takes write access',
+    ]),
     blocks.contains('conflicts') || blocks.contains('checks_failing')
         ? Mood.bad
         : Mood.warn,
-    Icons.lock_outline,
-    why,
+    Icons.block,
   );
 }

@@ -42,10 +42,8 @@ void main() {
   setUpAll(loadFonts);
 
   group('what the control says', () {
-    String words(GitHubPull p) {
-      final v = mergeView(p)!;
-      return '${v.lead} ${v.rest}'.trim();
-    }
+    // The merge status card's line under its heading, as it renders.
+    String words(GitHubPull p) => mergeHead(p).line;
 
     test('nothing once merged or closed', () {
       expect(mergeView(mergePull('ready')..item.state = 'merged'), isNull);
@@ -54,7 +52,7 @@ void main() {
 
     test('ready, with what GitHub lets past said', () {
       expect(mergeView(mergePull('ready'))!.step, MergeStep.merge);
-      expect(words(mergePull('ready')), 'Ready to merge.');
+      expect(words(mergePull('ready')), 'All requirements are met.');
       expect(
         words(mergePull('ready')..mergeState = 'unstable'),
         contains(unstableWords),
@@ -73,15 +71,19 @@ void main() {
         return words(p);
       }
 
-      expect(says(['draft']), "Can't merge yet. It's a draft.");
-      expect(says(['conflicts']), "Can't merge yet. It conflicts with main.");
+      expect(says(['draft']), "It's a draft.");
+      expect(says(['conflicts']), 'Conflicts with main.');
       // Two of the fixture's failing checks are required.
-      expect(says(['checks_failing']), contains('2 required checks are'));
-      expect(says(['changes_requested']), contains('Changes were requested.'));
-      expect(says(['review_required']), contains('an approving review'));
-      expect(says(['threads']), contains("threads aren't resolved"));
-      expect(says(['behind']), contains('The branch is behind main.'));
-      expect(says(['rules']), contains("A rule of main's isn't met."));
+      expect(says(['checks_failing']), '2 required checks failing.');
+      expect(says(['changes_requested']), 'Changes requested.');
+      expect(says(['review_required']), 'An approving review required.');
+      expect(says(['threads']), 'Unresolved conversations.');
+      expect(says(['behind']), 'The branch is behind main.');
+      expect(says(['rules']), "A rule of main's isn't met.");
+      expect(
+        says(['draft', 'behind']),
+        "It's a draft, the branch is behind main.",
+      );
     });
 
     test("a branch's name can't reorder what's around it", () {
@@ -89,7 +91,7 @@ void main() {
         ..base = 'ma\u202ein'
         ..merge.blocks.clear()
         ..merge.blocks.add('behind');
-      expect(words(p), "Can't merge yet. The branch is behind main.");
+      expect(words(p), 'The branch is behind main.');
     });
 
     test('unknown says so, and offers nothing', () {
@@ -97,7 +99,8 @@ void main() {
         ..mergeState = 'unknown'
         ..merge.canEnableAuto = true
         ..merge.blocks.add('unknown');
-      expect(words(p), startsWith('Unknown, still checking.'));
+      expect(mergeHead(p).heading, 'Checking whether it can merge');
+      expect(words(p), 'GitHub is still working it out.');
       expect(mergeView(p)!.step, MergeStep.words);
     });
 

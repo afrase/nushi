@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
-import 'package:nushi/plain_text.dart';
 import 'package:nushi/pull_check_lines.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_merge.dart';
@@ -16,39 +15,9 @@ import 'package:nushi/theme/theme.dart';
 /// its mood and icon.
 typedef MergeHead = ({String heading, String line, Mood mood, IconData icon});
 
-/// [b], a block (GitHubMerge.blocks), in a few words for the card's line.
-String _blockShort(GitHubPull p, String b) {
-  final base = plainName(p.base);
-  String required(bool Function(GitHubCheck) test, String doing) {
-    final n = p.checks.where((c) => c.required && test(c)).length;
-    return n == 0
-        ? 'checks $doing'
-        : '$n required check${n == 1 ? '' : 's'} $doing';
-  }
-
-  return switch (b) {
-    'draft' => "it's a draft",
-    'conflicts' => 'conflicts with $base',
-    'checks_failing' => required((c) => c.failed, 'failing'),
-    'checks_running' => required((c) => c.state == 'pending', 'running'),
-    'changes_requested' => 'changes requested',
-    'review_required' => 'an approving review required',
-    'threads' => 'unresolved conversations',
-    'behind' => 'the branch is behind $base',
-    'rules' => "a rule of $base's isn't met",
-    _ => 'GitHub is still working it out',
-  };
-}
-
-/// Phrases as one line: the first capitalised, a full stop at the end.
-String _sentence(List<String> parts) {
-  final s = parts.join(', ');
-  return s.isEmpty ? '' : '${s[0].toUpperCase()}${s.substring(1)}.';
-}
-
-/// What the card says of [p], from [mergeView]: merged or closed; in the
-/// queue; auto-merge on; ready; still being worked out; or blocked, and
-/// by what.
+/// What the card says of [p]: merged or closed, else [mergeView]'s
+/// heading and sentence (in the queue; auto-merge on; ready; still being
+/// worked out; or blocked, and by what).
 MergeHead mergeHead(GitHubPull p) {
   MergeHead say(String h, String l, Mood m, IconData i) =>
       (heading: h, line: l, mood: m, icon: i);
@@ -63,37 +32,7 @@ MergeHead mergeHead(GitHubPull p) {
   if (view == null) {
     return say('Checking whether it can merge', '', Mood.quiet, Icons.schedule);
   }
-  final m = p.merge;
-  switch (view.step) {
-    case MergeStep.inQueue:
-      return say('In the merge queue', view.rest, view.mood, view.icon);
-    case MergeStep.autoOn:
-      return say('Auto-merge is on', view.rest, view.mood, view.icon);
-    case _ when view.ready:
-      return say(
-        'Ready to merge',
-        view.rest.isEmpty ? 'All requirements are met.' : view.rest,
-        Mood.ok,
-        Icons.check,
-      );
-    case _ when m.blocks.length == 1 && m.blocks.first == 'unknown':
-      return say(
-        'Checking whether it can merge',
-        'GitHub is still working it out.',
-        Mood.quiet,
-        Icons.schedule,
-      );
-    case _:
-      return say(
-        'Merging is blocked',
-        _sentence([
-          for (final b in m.blocks) _blockShort(p, b),
-          if (!m.canMerge) 'merging here takes write access',
-        ]),
-        view.mood,
-        Icons.block,
-      );
-  }
+  return say(view.heading, view.why, view.mood, view.icon);
 }
 
 /// The merge status card, first on the Overview: its state's icon,

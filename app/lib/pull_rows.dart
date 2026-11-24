@@ -263,7 +263,7 @@ Future<void> _merge(BuildContext context, ChatPull cp, GitHubLink link) async {
   if (view == null || view.step != MergeStep.merge) {
     showError(
       context,
-      "It can't merge now${view == null ? '' : ': ${view.lead}'}",
+      "It can't merge now${view == null ? '' : ': ${view.heading}'}",
     );
     return;
   }
