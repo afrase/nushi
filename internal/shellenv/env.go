@@ -83,17 +83,36 @@ func (e *Env) Refresh(ctx context.Context, maxAge time.Duration) {
 	if fresh {
 		return
 	}
-	start := time.Now()
-	vars, limits, err := Read(context.WithoutCancel(ctx), e.shell, e.base, Timeout) // a client gone mid-way doesn't make it a failure
-	log := slog.With("shell", e.shell, "took", time.Since(start).Round(time.Millisecond))
 	e.mu.Lock()
 	first := e.vars == nil
 	e.mu.Unlock()
+	// Until a reading has worked, a plain login shell's is read alongside
+	// (readLogin), to stand in should this one fail: one Timeout at most
+	// before the daemon starts, not two.
+	var fallback chan loginReading
+	loginCtx, stopLogin := context.WithCancel(context.WithoutCancel(ctx))
+	defer stopLogin()
+	if first {
+		fallback = make(chan loginReading, 1)
+		go func() { fallback <- e.readLogin(loginCtx) }()
+	}
+	start := time.Now()
+	vars, limits, err := Read(context.WithoutCancel(ctx), e.shell, e.base, Timeout) // a client gone mid-way doesn't make it a failure
+	log := slog.With("shell", e.shell, "took", time.Since(start).Round(time.Millisecond))
 	var login []string
 	var loginLimits Limits
 	loginWorked := false
-	if err != nil && first {
-		login, loginLimits, loginWorked = e.readLogin(ctx)
+	if fallback != nil {
+		if err == nil {
+			stopLogin() // not needed: it's stopped, not waited for
+		}
+		l := <-fallback // ended: nothing of it is left running
+		if err != nil {
+			if l.err != nil && !errors.Is(l.err, errors.ErrUnsupported) {
+				slog.Warn("shell environment not read as a plain login shell either", "shell", e.shell, "why", l.err)
+			}
+			login, loginLimits, loginWorked = l.vars, l.limits, l.err == nil
+		}
 	}
 	e.mu.Lock()
 	e.read = time.Now()
@@ -119,17 +138,21 @@ func (e *Env) Refresh(ctx context.Context, maxAge time.Duration) {
 }
 
 // readLogin is the shell's environment as a login shell that isn't
-// interactive gives it (-l -c), and whether that worked: what agents and
-// the daemon start with when no interactive reading has worked, as they
-// did when the daemon started through that shell (ADR 0036). Without it
-// a config that hangs or ends only when interactive (one that runs tmux)
-// would leave launchd's bare PATH.
-func (e *Env) readLogin(ctx context.Context) ([]string, Limits, bool) {
-	vars, limits, err := ReadLogin(context.WithoutCancel(ctx), e.shell, e.base, Timeout)
-	if err != nil && !errors.Is(err, errors.ErrUnsupported) {
-		slog.Warn("shell environment not read as a plain login shell either", "shell", e.shell, "why", err)
-	}
-	return vars, limits, err == nil
+// interactive gives it (-l -c): what agents and the daemon start with
+// when no interactive reading has worked, as they did when the daemon
+// started through that shell (ADR 0036). Without it a config that hangs
+// or ends only when interactive (one that runs tmux) would leave
+// launchd's bare PATH.
+func (e *Env) readLogin(ctx context.Context) loginReading {
+	vars, limits, err := ReadLogin(ctx, e.shell, e.base, Timeout)
+	return loginReading{vars, limits, err}
+}
+
+// loginReading is what readLogin read, or why it couldn't.
+type loginReading struct {
+	vars   []string
+	limits Limits
+	err    error
 }
 
 // added are the names of over's variables base doesn't have.

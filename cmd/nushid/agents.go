@@ -19,8 +19,8 @@ import (
 )
 
 // newShellEnv is the environment of shell, the login shell, read once
-// before it returns (shellenv.Timeout at most, and as long again for a
-// plain login shell's when that fails) and again when Settings › Agents
+// before it returns (shellenv.Timeout at most, a plain login shell's read
+// alongside standing in when that fails) and again when Settings › Agents
 // asks, whatever started the daemon (ADR 0048, 0101): agents start with
 // it, and each reading that works is applied to the daemon's own
 // environment, so what the daemon runs itself (claude mcp, gh, the trash)

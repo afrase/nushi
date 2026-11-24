@@ -236,6 +236,35 @@ func TestEnvFallsBack(t *testing.T) {
 	}
 }
 
+// The first reading runs the plain login shell alongside the
+// interactive one, not after it: a config that hangs costs one Timeout
+// before the daemon starts, not two (the app starts a second daemon after
+// 10 s). Here the interactive shell can print only once the plain one
+// has started: run one after the other, the interactive reading times
+// out and the plain one stands in.
+func TestEnvReadsTheLoginShellAlongside(t *testing.T) {
+	Timeout = 3 * time.Second
+	t.Cleanup(func() { Timeout = 5 * time.Second })
+	fifo := filepath.Join(t.TempDir(), "started")
+	if err := exec.CommandContext(t.Context(), "mkfifo", fifo).Run(); err != nil {
+		t.Fatal(err)
+	}
+	shell := filepath.Join(t.TempDir(), "zsh")
+	if err := os.WriteFile(shell, []byte(`#!/bin/sh
+if [ "$2" = -i ]; then read started < "$FIFO"; export FROM=interactive; exec /bin/sh -c "$4"; fi
+echo started > "$FIFO"
+export FROM=login
+exec /bin/sh -c "$3"
+`), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	e := New(shell, []string{"PATH=/usr/bin:/bin", "FIFO=" + fifo})
+	e.Start()
+	if env := e.Environ(); Get(env, "FROM") != "interactive" || e.Status().Problem != "" {
+		t.Errorf("FROM=%q, %+v", Get(env, "FROM"), e.Status())
+	}
+}
+
 // A shell whose interactive config hangs or fails gives its plain login
 // shell's environment (-l -c), still saying what went wrong; what Use was
 // given is that environment. Only the hang is given a time to run out of.
