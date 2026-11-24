@@ -36,8 +36,9 @@ func waitErr(ctx context.Context, err error) error {
 	return refused(err)
 }
 
-// ReasonHeader is the metadata a refusal the app acts on carries, so the
-// app needn't read its message (which an older daemon's it still reads):
+// ReasonHeader is the metadata a refusal the app acts on carries: the app
+// reads it alone, never the message (every daemon at or above its API
+// floor sends it, ADR 0004):
 // ReasonRestarting, ReasonAgentStart, ReasonHeadMoved or
 // ReasonChangedSince.
 const ReasonHeader = "Nushi-Reason"
