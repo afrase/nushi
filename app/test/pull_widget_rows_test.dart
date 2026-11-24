@@ -72,6 +72,49 @@ Widget _summary(GitHubPull p, {Tokens tokens = Tokens.dark}) => themed(
 void main() {
   setUpAll(loadFonts);
 
+  // An older daemon's state (before API 133) has no checks' counts: the
+  // summary still says its checks fail or run, without a number.
+  for (final (checks, icon, tip) in [
+    ('failure', Icons.cancel_outlined, 'Checks failing'),
+    ('pending', Icons.schedule, 'Checks running'),
+  ]) {
+    testWidgets('an item without counts says its checks: $checks', (
+      tester,
+    ) async {
+      final it = GitHubItem(pull: true, state: 'open', checks: checks);
+      await tester.pumpWidget(
+        themed(
+          Builder(
+            builder: (context) => pullSummary(
+              context,
+              NushiTheme.of(context),
+              number: 412,
+              pull: null,
+              item: it,
+            ),
+          ),
+        ),
+      );
+      expect(find.byIcon(icon), findsOneWidget);
+      expect(find.byTooltip(tip), findsOneWidget);
+      // With counts, the count says it.
+      await tester.pumpWidget(
+        themed(
+          Builder(
+            builder: (context) => pullSummary(
+              context,
+              NushiTheme.of(context),
+              number: 412,
+              pull: null,
+              item: it.deepCopy()..checkCounts = GitHubCheckCounts(passed: 3),
+            ),
+          ),
+        ),
+      );
+      expect(find.byIcon(icon), findsNothing);
+    });
+  }
+
   testWidgets("Fix checks (the badge's) and Send open threads to agent (the "
       "row's ⋯) put cards in this chat's box", (tester) async {
     final (d, _) = await openPullTab(

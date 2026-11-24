@@ -13,7 +13,8 @@ import 'package:nushi/theme/theme.dart';
 /// or "Ready" once it can merge; "Draft", "Merged", "Closed" else. From
 /// the pull request whole, else from its row's [item] (ADR 0140: the
 /// widget doesn't read it whole), where a reviewer waited on is a review
-/// still required.
+/// still required, and checks with no counts (an older daemon's state)
+/// show without a number.
 Widget pullSummary(
   BuildContext context,
   NushiTheme theme, {
@@ -44,6 +45,9 @@ Widget pullSummary(
     final counted = p == null ? null : countChecks(p);
     final failing = counted?.failing ?? it.checkCounts.failed;
     final running = counted?.running ?? it.checkCounts.running;
+    // A state with no counts (an older daemon's, before API 133): its
+    // checks' state alone, with no number.
+    final uncounted = counted == null && !it.hasCheckCounts();
     final open = p == null
         ? it.unresolved
         : p.threads.where((x) => !x.resolved).length;
@@ -64,7 +68,13 @@ Widget pullSummary(
       case _ when ready:
         parts.add(count(Icons.merge_type, t.done, 'Ready', 'Ready to merge'));
       default:
-        if (failing > 0) {
+        if (uncounted && (it.checks == 'failure' || it.checks == 'error')) {
+          parts.add(
+            count(Icons.cancel_outlined, t.crashed, '', 'Checks failing'),
+          );
+        } else if (uncounted && it.checks == 'pending') {
+          parts.add(count(Icons.schedule, t.needs, '', 'Checks running'));
+        } else if (failing > 0) {
           parts.add(
             count(
               Icons.cancel_outlined,

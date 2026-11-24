@@ -121,6 +121,13 @@ void main() {
         lessThanOrEqualTo(size.width),
         reason: 'inside the bar',
       );
+      // Its row has no checks' counts (as an older daemon's state): the
+      // failing checks' mark without a number.
+      await render(
+        tester,
+        find.byType(PhoneApp),
+        'pull_phone_uncounted_${size.width.toInt()}x${size.height.toInt()}',
+      );
       final opened = <Uri>[];
       fakeWebViews().open = (url) async => opened.add(url);
       await tester.tap(chip);
