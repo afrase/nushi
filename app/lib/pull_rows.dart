@@ -268,7 +268,8 @@ List<MenuEntry> pullRowMenu(
 
 /// Merge…: the pull request read whole, then the merge card's own step
 /// for it ([mergeView]): its merge, with the method picked last, or Add to
-/// queue, each through ADR 0069's dialog as the card's button does; any
+/// queue, each through ADR 0069's dialog as the card's button does; in the
+/// merge queue or with auto-merge on, the card's heading and line; any
 /// other step says why it can't, as the card does.
 Future<void> _merge(BuildContext context, ChatPull cp, GitHubLink link) async {
   final p = await cp.whole(context, link);
@@ -279,6 +280,16 @@ Future<void> _merge(BuildContext context, ChatPull cp, GitHubLink link) async {
     MergeStep.addToQueue => (MergeAct.enqueue, ''),
     _ => (null, ''),
   };
+  if (view != null &&
+      (view.step == MergeStep.inQueue || view.step == MergeStep.autoOn)) {
+    // On its way already: what the card says, not that it can't merge.
+    showToast(
+      Toasts.maybeOf(context),
+      '${view.heading}. ${view.why}',
+      icon: view.icon,
+    );
+    return;
+  }
   if (act == null) {
     showError(
       context,

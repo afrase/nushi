@@ -466,6 +466,27 @@ void main() {
       await closeView(tester, d);
     }, variant: onMac);
 
+    // On its way already: what the card says, its heading and its line,
+    // not "It can't merge now", which is untrue there.
+    for (final (state, said) in [
+      ('queue', 'In the merge queue. Position 3, waiting for checks.'),
+      ('auto', 'Auto-merge is on. With squash, turned on by mona.'),
+    ]) {
+      testWidgets('on its way ($state): what the card says', (tester) async {
+        final (d, fake) = await mergeFromRow(
+          tester,
+          () => mergePull(state)
+            ..merge.blocks.clear()
+            ..mergeState = 'clean',
+        );
+        expect(find.textContaining(said), findsOneWidget);
+        expect(find.textContaining("It can't merge now"), findsNothing);
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(fake.calls.whereType<MergeGitHubPullRequest>(), isEmpty);
+        await closeView(tester, d);
+      }, variant: onMac);
+    }
+
     testWidgets('blocked since the row was asked: what blocks it', (
       tester,
     ) async {
