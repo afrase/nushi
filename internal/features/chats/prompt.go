@@ -14,7 +14,6 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
-	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -69,8 +68,8 @@ func (s *Service) uploadThenCommand(ctx context.Context, c *chat, m model.Messag
 
 // prompt is Prompt's, for a message that goes to the agent as it is.
 func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, how Send) error {
-	if n := size(m); n > agentproc.MaxMessage-64<<10 {
-		return fmt.Errorf("the message is too large to send: %d MB with its images, and the agent takes about %d MB", n>>20, agentproc.MaxMessage>>20)
+	if n := size(m); n > model.MaxAgentMessage-64<<10 {
+		return fmt.Errorf("the message is too large to send: %d MB with its images, and the agent takes about %d MB", n>>20, model.MaxAgentMessage>>20)
 	}
 	c, err := s.chat(chatID)
 	if err != nil {

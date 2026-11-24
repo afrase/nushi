@@ -10,7 +10,6 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
-	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -172,7 +171,7 @@ func TestCloseEndsTheTurnFirst(t *testing.T) {
 
 func TestAMessageTooLargeIsRefused(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	big := model.Image{MimeType: "image/png", Data: make([]byte, agentproc.MaxMessage*3/4)}
+	big := model.Image{MimeType: "image/png", Data: make([]byte, model.MaxAgentMessage*3/4)}
 	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "look", Images: []model.Image{big}}, SendIdle); err == nil {
 		t.Error("a message past what the agent takes was sent")
 	}

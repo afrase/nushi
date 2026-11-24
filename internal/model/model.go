@@ -129,6 +129,13 @@ func (s ChatRecord) ProjectFolder() string {
 // MaxPulls is how many pull requests a chat holds at most (ADR 0117).
 const MaxPulls = 10
 
+// MaxAgentMessage is the largest message written to an agent, kept below
+// what agents read in one line: the ACP SDK's Node agents (codex-acp) end
+// the connection past 32 MiB, the tightest of them (claudeacp reads 64
+// MiB). agentproc holds its connections to it; chats refuses a prompt
+// that wouldn't fit.
+const MaxAgentMessage = 30 << 20
+
 // PullLink is the chat's primary pull request (ADR 0117): the one it was
 // started from, else the first still open (as GitHub last said; one never
 // asked about counts as open), else its first; nil when it has none.

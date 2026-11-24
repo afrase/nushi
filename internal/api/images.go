@@ -19,7 +19,7 @@ import (
 const refAbove = model.SmallImage
 
 // maxChatImage is the largest image GetChatImage sends: more than any an
-// agent takes (agentproc.MaxMessage), so it only stops a runaway.
+// agent takes (model.MaxAgentMessage), so it only stops a runaway.
 const maxChatImage = 32 << 20
 
 // imageProto is an image for the API: inline, or with refs and past

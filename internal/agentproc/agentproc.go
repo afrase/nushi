@@ -59,7 +59,7 @@ func Start(cmd *exec.Cmd, client acp.Client, log *slog.Logger) (*Agent, error) {
 	calls := &callLog{}
 	calls.inner.Store(handlerOf(log))
 	started := time.Now()
-	conn, err := acp.Start(cmd, func(*acp.AgentConn) acp.Client { return client }, acp.WithLogger(slog.New(calls)), acp.WithWriteLimit(MaxMessage), acp.WithReadLimit(MaxRead))
+	conn, err := acp.Start(cmd, func(*acp.AgentConn) acp.Client { return client }, acp.WithLogger(slog.New(calls)), acp.WithWriteLimit(model.MaxAgentMessage), acp.WithReadLimit(MaxRead))
 	if err != nil {
 		stderr.setLog(log) // what it wrote, if it ran at all
 		return nil, err
@@ -99,11 +99,6 @@ func Connect(conn *acp.AgentConn, log *slog.Logger) *Agent {
 	}
 	return &Agent{AgentConn: conn, log: log}
 }
-
-// MaxMessage is the largest message written to an agent, kept below what
-// agents read in one line: the ACP SDK's Node agents (codex-acp) end the
-// connection past 32 MiB, the tightest of them (claudeacp reads 64 MiB).
-const MaxMessage = 30 << 20
 
 // MaxRead is the largest message read from an agent, generous: a longer
 // line is read to its end and skipped, rather than the daemon growing

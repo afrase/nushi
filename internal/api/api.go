@@ -122,7 +122,7 @@ func serve(sv Services, via string) http.Handler {
 }
 
 // MaxRequest is the largest request read, unzipped: a prompt as large as
-// an agent takes (agentproc.MaxMessage, its images too) fits; a larger one
+// an agent takes (model.MaxAgentMessage, its images too) fits; a larger one
 // is refused with ResourceExhausted before it is decoded. A variable only
 // so a test can lower it, read as a handler is made.
 var MaxRequest = 32 << 20
