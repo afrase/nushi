@@ -185,9 +185,11 @@ final pulseClock = _Pulse();
 /// drawing, sparks) on the State's own ticker, which it makes as its first
 /// run starts: the state rebuilds on each tick until it has run
 /// [runFor]'s length, and nothing ticks at rest. As any ticker, it's
-/// muted where tickers are off (`TickerMode`: a tucked rail), its time
-/// going on meanwhile, so a run hidden past its end ends as it shows. Its
-/// State mixes in a ticker provider before it
+/// muted where tickers are off (`TickerMode`: a tucked rail). A run
+/// hidden partway goes on counting, so one hidden past its end ends as it
+/// shows; a run started while hidden counts from its first tick, so it
+/// plays its whole length once it shows. Its State mixes in a ticker
+/// provider before it
 /// (`with SingleTickerProviderStateMixin, ClockRun`).
 mixin ClockRun<T extends StatefulWidget> on State<T>, TickerProvider {
   Ticker? _ticker;
