@@ -151,7 +151,10 @@ MergeView? mergeView(GitHubPull p) {
       if (p.mergeState == 'unstable') '$unstableWords.',
       if (p.item.review == 'changes_requested')
         "Changes were requested, but no rule of $base's enforces it.",
-      if (!m.canMerge) 'Merging here takes write access.',
+      if (!m.canMerge)
+        'Merging here takes write access.'
+      else if (!m.queue && mergeMethodsOf(p).isEmpty)
+        "None of the repository's merge methods can merge it now.",
     ].join(' ');
     final step = !m.canMerge
         ? MergeStep.words

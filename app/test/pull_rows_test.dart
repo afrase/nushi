@@ -1,5 +1,6 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_header.dart';
@@ -114,6 +115,7 @@ Future<(Daemon, FakeDaemon)> _app(
   Size size = const Size(1700, 1000),
   Brightness brightness = Brightness.dark,
   Map<int, GitHubItem>? items,
+  GitHubPull Function(GitHubItem item)? whole,
 }) async {
   widgetOrder.value = ['Pull request'];
   final known = items ?? _stack;
@@ -133,9 +135,11 @@ Future<(Daemon, FakeDaemon)> _app(
         items: [for (final r in refs) ?known[r.number]],
       ),
       GetGitHubPullRequest(:final ref) => GetGitHubPullResponse(
-        pull: fixturePull()..item = known[ref.number]!,
+        pull: (whole ?? (_) => fixturePull())(known[ref.number]!)
+          ..item = known[ref.number]!,
       ),
       GetGitHubCommitsRequest() => fixtureCommits(),
+      EnqueueGitHubPullRequest() => EnqueueGitHubPullResponse(),
       _ => null,
     };
   final d = await openApp(tester, fake, size: size, brightness: brightness);
@@ -403,6 +407,83 @@ void main() {
     await tester.pumpAndSettle();
     await closeView(tester, d);
   }, variant: onMac);
+
+  group("Merge… from a row takes the merge card's step", () {
+    final ready = _item(230, 'Retry the feed on a timeout', merge: 'clean');
+    Future<(Daemon, FakeDaemon)> mergeFromRow(
+      WidgetTester tester,
+      GitHubPull Function() whole,
+    ) async {
+      final (d, fake) = await _app(
+        tester,
+        numbers: [230],
+        items: {230: ready},
+        whole: (_) => whole(),
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(PullRow),
+          matching: find.byTooltip('Pull request'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Merge…', findRichText: true));
+      await tester.pumpAndSettle();
+      return (d, fake);
+    }
+
+    testWidgets('a merge queue: Add to queue, through its confirmation', (
+      tester,
+    ) async {
+      final (d, fake) = await mergeFromRow(
+        tester,
+        () => mergePull('ready')..merge.queue = true,
+      );
+      expect(find.text('Add to the merge queue?'), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Add to queue'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(fake.calls.whereType<EnqueueGitHubPullRequest>(), hasLength(1));
+      expect(fake.calls.whereType<MergeGitHubPullRequest>(), isEmpty);
+      await closeView(tester, d);
+    }, variant: onMac);
+
+    testWidgets('no write access: why, as the card says it', (tester) async {
+      final (d, fake) = await mergeFromRow(
+        tester,
+        () => mergePull('ready')..merge.canMerge = false,
+      );
+      expect(
+        find.text("It can't merge now: Merging here takes write access."),
+        findsOneWidget,
+      );
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(fake.calls.whereType<MergeGitHubPullRequest>(), isEmpty);
+      await closeView(tester, d);
+    }, variant: onMac);
+
+    testWidgets('blocked since the row was asked: what blocks it', (
+      tester,
+    ) async {
+      final (d, _) = await mergeFromRow(
+        tester,
+        () => mergePull('blocked')
+          ..merge.blocks.clear()
+          ..merge.blocks.add('behind')
+          ..merge.canEnableAuto = false,
+      );
+      expect(
+        find.text("It can't merge now: The branch is behind main."),
+        findsOneWidget,
+      );
+      expect(find.byType(AlertDialog), findsNothing);
+      await closeView(tester, d);
+    }, variant: onMac);
+  });
 
   test('blocked by its rules or a draft is not ready, unstable or not', () {
     expect(itemReady(_item(1, 't')), isFalse); // blocked, the default

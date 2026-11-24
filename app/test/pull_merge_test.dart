@@ -108,6 +108,12 @@ void main() {
       final ready = mergePull('ready')..merge.canMerge = false;
       expect(mergeView(ready)!.step, MergeStep.words);
       expect(words(ready), contains('takes write access'));
+      final noMethod = mergePull('ready')
+        ..merge.methods.clear()
+        ..merge.methods.add('rebase')
+        ..merge.canRebase = false;
+      expect(mergeView(noMethod)!.step, MergeStep.words);
+      expect(words(noMethod), contains("None of the repository's merge"));
       final blocked = mergePull('blocked')..merge.canMerge = false;
       expect(mergeView(blocked)!.step, MergeStep.words);
     });

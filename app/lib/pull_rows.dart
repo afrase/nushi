@@ -266,16 +266,23 @@ List<MenuEntry> pullRowMenu(
   ];
 }
 
-/// Merge…: the pull request read whole, then ADR 0069's dialog for the
-/// method picked last.
+/// Merge…: the pull request read whole, then the merge card's own step
+/// for it ([mergeView]): its merge, with the method picked last, or Add to
+/// queue, each through ADR 0069's dialog as the card's button does; any
+/// other step says why it can't, as the card does.
 Future<void> _merge(BuildContext context, ChatPull cp, GitHubLink link) async {
   final p = await cp.whole(context, link);
   if (p == null || !context.mounted) return;
   final view = mergeView(p);
-  if (view == null || view.step != MergeStep.merge) {
+  final (act, method) = switch (view?.step) {
+    MergeStep.merge => (MergeAct.merge, pickedMethod(p)),
+    MergeStep.addToQueue => (MergeAct.enqueue, ''),
+    _ => (null, ''),
+  };
+  if (act == null) {
     showError(
       context,
-      "It can't merge now${view == null ? '' : ': ${view.heading}'}",
+      "It can't merge now${view == null ? '' : ': ${view.why}'}",
     );
     return;
   }
@@ -283,8 +290,8 @@ Future<void> _merge(BuildContext context, ChatPull cp, GitHubLink link) async {
     context,
     cp.daemon,
     p,
-    MergeAct.merge,
-    method: pickedMethod(p),
+    act,
+    method: method,
     onDone: cp.again,
   );
 }
