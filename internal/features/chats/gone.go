@@ -152,32 +152,19 @@ func (s *Service) keeps(ctx context.Context, sess model.ChatRecord) string {
 	return ""
 }
 
-// sweepEvery is how often listing the chats looks for sessions their agents
-// deleted.
-const sweepEvery = time.Hour
-
-// Sweep forgets the chats whose sessions their agent deleted, found from
-// the agent's files alone (HistoryChecker), at most once in sweepEvery;
-// no agent starts. A chat whose agent runs, or whose folder is gone, is
-// left as it is.
-func (s *Service) Sweep(ctx context.Context) {
-	s.mu.Lock()
-	if s.sweeping || time.Since(s.swept) < sweepEvery {
-		s.mu.Unlock()
-		return
-	}
-	s.sweeping, s.swept = true, time.Now()
-	s.mu.Unlock()
-	defer func() {
-		s.mu.Lock()
-		s.sweeping = false
-		s.mu.Unlock()
-	}()
+// sweep forgets the chats whose sessions their agent deleted, found from
+// the agent's files alone (HistoryChecker); no agent starts. A chat whose
+// agent runs, or whose folder is gone, is left as it is. It runs each hour
+// (eachHour), until ctx ends.
+func (s *Service) sweep(ctx context.Context) {
 	stored, err := s.sessions.Sessions()
 	if err != nil {
 		return
 	}
 	for _, sess := range stored {
+		if ctx.Err() != nil {
+			return
+		}
 		k, err := s.kindOf(sess.Agent)
 		if err != nil || k.historyChecker == nil || !sess.HasMessages || sess.SessionID == "" || folderGone(sess) != nil {
 			continue

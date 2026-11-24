@@ -65,7 +65,7 @@ func TestTheRecordHoldsWhatAStopWouldEnd(t *testing.T) {
 		}
 		return groupAgent{a}, nil
 	}
-	synctest.Test(t, func(t *testing.T) { // the record is looked at each sleepCheck: a minute of the bubble's clock
+	synctest.Test(t, func(t *testing.T) { // the record is looked at each minute of the bubble's clock
 		svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: launch}}, Options{Processes: procs, Record: rec})
 		t.Cleanup(svc.Close)
 		startChat(t, svc, t.TempDir())

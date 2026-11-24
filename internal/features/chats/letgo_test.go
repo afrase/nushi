@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"testing/synctest"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -194,7 +195,7 @@ func TestAsleepLetsGoAndComesBackTheSame(t *testing.T) {
 
 // A chat whose agent doesn't run lets go once no client shows it, and not
 // while one does, unless it's asleep. In a bubble: the loop looks each
-// letGoCheck of its clock.
+// minute of its clock.
 func TestUnseenLetsGo(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		v := &viewers{shown: map[string]bool{}}
@@ -204,7 +205,7 @@ func TestUnseenLetsGo(t *testing.T) {
 		v.show(c.id, true)
 		testcheck.NoErr(t, svc.Archive(c.id, true)) // its agent stops; it isn't asleep
 		from := v.askedFor(c.id)
-		pass(letGoCheck) // the loop asks for the chat's view as it would let go of it
+		pass(time.Minute) // the loop asks for the chat's view as it would let go of it
 		c.mu.Lock()
 		held := !c.inCopy && len(c.items) == 2
 		c.mu.Unlock()
@@ -212,7 +213,7 @@ func TestUnseenLetsGo(t *testing.T) {
 			t.Fatalf("let go while shown (held %v), or not looked at (asked %d times)", held, v.askedFor(c.id)-from)
 		}
 		v.show(c.id, false)
-		pass(letGoCheck)
+		pass(time.Minute)
 		c.mu.Lock()
 		inCopy := c.inCopy
 		c.mu.Unlock()

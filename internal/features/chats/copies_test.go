@@ -325,7 +325,7 @@ func TestListCopiesAtScale(t *testing.T) {
 }
 
 // The service clears copies on its own, as it starts and then each
-// copiesCheck: those last written more than the setting's days ago go,
+// hour: those last written more than the setting's days ago go,
 // the newer stay, and 0 days keeps them all. The setting is read again at
 // each look, so a change needs no restart. In a bubble, whose clock is
 // years behind the copies' files but OLD's, set back from it.
@@ -346,12 +346,12 @@ func TestCopiesClearThemselves(t *testing.T) {
 		if n := looks.Load(); n != 1 {
 			t.Fatalf("%d looks as it started", n)
 		}
-		pass(copiesCheck)
+		pass(time.Hour)
 		if n := looks.Load(); n != 2 || !store.Has("OLD") || !store.Has("NEW") {
 			t.Fatalf("%d looks; 0 days cleared a copy", n)
 		}
 		days.Store(2)
-		pass(copiesCheck)
+		pass(time.Hour)
 		if store.Has("OLD") {
 			t.Fatal("a copy 3 days old outlived 2 days")
 		}

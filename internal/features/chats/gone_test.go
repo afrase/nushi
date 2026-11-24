@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -202,43 +203,55 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 	}
 }
 
-// Listing the chats finds those whose sessions their agent's files no
-// longer have, starting no agent, at most once in sweepEvery; one whose
-// folder can't be reached, that never had a message, or whose files can't
-// tell, stays.
+// The hourly sweep finds the chats whose sessions their agent's files no
+// longer have, starting no agent; one whose folder can't be reached, that
+// never had a message, or whose files can't tell, stays. In a bubble: the
+// loop sweeps each hour of its clock, and not as the service starts.
 func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
-	agent := &fakeAgent{}
-	gone := map[string]bool{"s-gone": true, "s-unreachable": true, "s-fresh": true}
-	sessions := &memSessions{stored: []model.ChatRecord{
-		{ID: "gone", SessionID: "s-gone", Agent: "fake", Folder: t.TempDir(), HasMessages: true, Archived: true},
-		{ID: "here", SessionID: "s-here", Agent: "fake", Folder: t.TempDir(), HasMessages: true},
-		{ID: "unreachable", SessionID: "s-unreachable", Agent: "fake", Folder: "/Volumes/not-mounted/x", HasMessages: true},
-		{ID: "fresh", SessionID: "s-fresh", Agent: "fake", Folder: t.TempDir()},
-		{ID: "untold", SessionID: "s-untold", Agent: "other", Folder: t.TempDir(), HasMessages: true},
-	}}
-	ev := &events{}
-	svc := newService(t, []Kind{
-		{Launch: agent.launch, Harness: struct {
-			testHarness
-			historyGone
-		}{testHarness{Name: "fake", Title: "Fake", gone: true}, func(sid, _ string) bool { return gone[sid] }}},
-		{Harness: testHarness{Name: "other", Title: "Other", gone: true}, Launch: agent.launch},
-	}, Options{Sessions: sessions, Worktrees: stateWorktrees{}, Scratch: t.TempDir(), Publish: ev.publish})
-	svc.Sweep(context.Background())
-	if !slices.Equal(sessions.deleted, []string{"gone"}) {
-		t.Errorf("deleted %v", sessions.deleted)
-	}
-	if launches, _, _ := agent.count(); launches != 0 {
-		t.Errorf("%d agents started", launches)
-	}
-	gone["s-here"] = true
-	svc.Sweep(context.Background()) // too soon
-	if len(sessions.deleted) != 1 {
-		t.Errorf("swept again at once: %v", sessions.deleted)
-	}
-	svc.swept = time.Time{}
-	svc.Sweep(context.Background())
-	if !slices.Equal(sessions.deleted, []string{"gone", "here"}) {
-		t.Errorf("deleted %v", sessions.deleted)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		agent := &fakeAgent{}
+		var mu sync.Mutex
+		gone := map[string]bool{"s-gone": true, "s-unreachable": true, "s-fresh": true}
+		sessions := &memSessions{stored: []model.ChatRecord{
+			{ID: "gone", SessionID: "s-gone", Agent: "fake", Folder: t.TempDir(), HasMessages: true, Archived: true},
+			{ID: "here", SessionID: "s-here", Agent: "fake", Folder: t.TempDir(), HasMessages: true},
+			{ID: "unreachable", SessionID: "s-unreachable", Agent: "fake", Folder: "/Volumes/not-mounted/x", HasMessages: true},
+			{ID: "fresh", SessionID: "s-fresh", Agent: "fake", Folder: t.TempDir()},
+			{ID: "untold", SessionID: "s-untold", Agent: "other", Folder: t.TempDir(), HasMessages: true},
+		}}
+		ev := &events{}
+		svc := newService(t, []Kind{
+			{Launch: agent.launch, Harness: struct {
+				testHarness
+				historyGone
+			}{testHarness{Name: "fake", Title: "Fake", gone: true}, func(sid, _ string) bool { mu.Lock(); defer mu.Unlock(); return gone[sid] }}},
+			{Harness: testHarness{Name: "other", Title: "Other", gone: true}, Launch: agent.launch},
+		}, Options{Sessions: sessions, Worktrees: stateWorktrees{}, Scratch: t.TempDir(), Publish: ev.publish})
+		defer svc.Close()
+		synctest.Wait()
+		if deleted := sessions.removedIDs(); len(deleted) != 0 {
+			t.Fatalf("swept as it started: deleted %v", deleted)
+		}
+		pass(time.Hour)
+		if deleted := sessions.removedIDs(); !slices.Equal(deleted, []string{"gone"}) {
+			t.Errorf("deleted %v", deleted)
+		}
+		if launches, _, _ := agent.count(); launches != 0 {
+			t.Errorf("%d agents started", launches)
+		}
+		mu.Lock()
+		gone["s-here"] = true
+		mu.Unlock()
+		pass(time.Hour)
+		if deleted := sessions.removedIDs(); !slices.Equal(deleted, []string{"gone", "here"}) {
+			t.Errorf("deleted %v", deleted)
+		}
+	})
+}
+
+// removedIDs are the chats whose records were deleted, in order.
+func (m *memSessions) removedIDs() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return slices.Clone(m.deleted)
 }

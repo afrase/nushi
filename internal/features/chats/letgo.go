@@ -2,7 +2,6 @@ package chats
 
 import (
 	"slices"
-	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -27,28 +26,6 @@ import (
 type asideItem struct {
 	item  model.Item
 	after string
-}
-
-// letGoCheck is how often the chats no client shows are looked at.
-const letGoCheck = time.Minute
-
-// letGoUnseen lets go of the items of the chats no client shows, each
-// letGoCheck, until the service's life ends.
-func (s *Service) letGoUnseen() {
-	tick := time.NewTicker(letGoCheck)
-	defer tick.Stop()
-	for {
-		select {
-		case <-tick.C:
-		case <-s.ctx.Done():
-			return
-		}
-		for _, c := range s.openChats() {
-			c.mu.Lock()
-			c.letGoLocked()
-			c.mu.Unlock()
-		}
-	}
 }
 
 // letGoLocked lets go of the chat's items if its copy holds them all and

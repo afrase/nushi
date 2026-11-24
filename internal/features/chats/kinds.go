@@ -152,15 +152,10 @@ func New(ctx context.Context, agents []Kind, o Options) *Service {
 		kn.launch, kn.tools = s.started(k.Launch), o.Tools
 		s.kinds = append(s.kinds, kn)
 	}
-	if o.Sleep != nil || o.Record != nil {
-		s.loops.Go(s.autoSleep)
+	if o.Sleep != nil || o.Record != nil || o.Copies != nil {
+		s.loops.Go(s.eachMinute)
 	}
-	if o.Copies != nil && o.CopyDays != nil {
-		s.loops.Go(func() { s.autoClearCopies(o.CopyDays) })
-	}
-	if o.Copies != nil {
-		s.loops.Go(s.letGoUnseen)
-	}
+	s.loops.Go(func() { s.eachHour(o.CopyDays) })
 	return s
 }
 

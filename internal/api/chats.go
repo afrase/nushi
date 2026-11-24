@@ -14,8 +14,7 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-func (s *server) ListChats(ctx context.Context, _ *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {
-	s.Chats.Sweep(ctx)
+func (s *server) ListChats(_ context.Context, _ *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {
 	sessions, err := s.Chats.List()
 	if err != nil {
 		return nil, refused(err)

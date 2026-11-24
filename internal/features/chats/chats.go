@@ -74,10 +74,8 @@ type Service struct {
 	opening   map[string]bool     // sessions Open is making chats of
 	signingIn map[string]*signIn  // the sign-in SignIn runs of each agent, by name
 	removed   []model.RemovedChat // removed because their agent no longer had their sessions (gone.go)
-	swept     time.Time           // the last Sweep
-	sweeping  bool
-	following int         // apps following the events (Following)
-	idle      *time.Timer // closes the side chats once none has for Timing.SidesGrace
+	following int                 // apps following the events (Following)
+	idle      *time.Timer         // closes the side chats once none has for Timing.SidesGrace
 }
 
 // Terminals are the shells beside chats (internal/features/terminals).
