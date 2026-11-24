@@ -61,6 +61,15 @@ func (h testHarness) ReadBackgroundCommand(id, file string) (output, end, state 
 	return h.Harness.ReadBackgroundCommand(id, file)
 }
 
+// StatBackgroundCommand fails where read stands for the file: each step
+// then reads.
+func (h testHarness) StatBackgroundCommand(id, file string) (int64, time.Time, error) {
+	if h.read != nil {
+		return 0, time.Time{}, errors.ErrUnsupported
+	}
+	return h.Harness.StatBackgroundCommand(id, file)
+}
+
 // Fakes of a capability each, to embed in a test's harness: a double with
 // every method would have every capability.
 type (

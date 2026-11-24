@@ -125,8 +125,10 @@ func (c *chat) backgroundCommandLocked(it *model.Item) {
 // no longer runs, where Nushi can look (commandShellRuns); the file gives
 // how it ended. With its agent gone there's nothing more to wait for: the
 // file's end, else "started" (its end unknown). Claude's TaskStop of the
-// task ends it too (stoppedLocked). The file is read every poll
-// (commandPoll; a test's own).
+// task ends it too (stoppedLocked). The file is looked at every poll
+// (commandPoll; a test's own), and read again only once its size or time
+// changed: what its last read gave stands meanwhile, and each step judges
+// it again, as the end's rules need a step to see the same output twice.
 func (c *chat) followCommand(callID, id, file string, agent Agent, poll time.Duration) {
 	f := commandFollower{c: c, callID: callID, id: id, file: file, agent: agent}
 	for f.step() {
@@ -148,14 +150,39 @@ type commandFollower struct {
 	c                *chat
 	callID, id, file string
 	agent            Agent
-	endAt            *string // the output an end was first seen after
+	endAt            *string   // the output an end was first seen after
+	last             *fileRead // what the file gave when last read, nil to read it
 }
 
-// step reads the file once and updates the row; false once there's no
-// more to follow.
+// fileRead is what a read of a command's output file gave, and the file's
+// size and time just before it.
+type fileRead struct {
+	size            int64
+	modified        time.Time
+	out, end, state string
+}
+
+// read reads the command's output file, unless its size and time
+// are as at the last read, which then stands.
+func (f *commandFollower) read() (out, end, state string, err error) {
+	tasks := f.c.kind.background
+	size, modified, serr := tasks.StatBackgroundCommand(f.id, f.file)
+	if l := f.last; serr == nil && l != nil && l.size == size && l.modified.Equal(modified) {
+		return l.out, l.end, l.state, nil
+	}
+	f.last = nil
+	out, end, state, err = tasks.ReadBackgroundCommand(f.id, f.file)
+	if err == nil && serr == nil { // a change after the stat is seen at the next step
+		f.last = &fileRead{size: size, modified: modified, out: out, end: end, state: state}
+	}
+	return out, end, state, err
+}
+
+// step reads the file once, if it changed, and updates the row; false
+// once there's no more to follow.
 func (f *commandFollower) step() bool {
 	c := f.c
-	out, end, state, err := c.kind.background.ReadBackgroundCommand(f.id, f.file)
+	out, end, state, err := f.read()
 	if end != "" && f.agent != nil && f.endAt != nil && *f.endAt == out && !c.toldRunning(f.id, f.agent) && c.commandShellRuns(f.callID, f.agent) {
 		f.endAt = nil // the shell runs: the line was the command's own
 	}

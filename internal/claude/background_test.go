@@ -75,16 +75,26 @@ func TestBackgroundCommands(t *testing.T) {
 			t.Errorf("harness.ReadBackgroundCommand(%q) = %q %q %q %v", text, out, end, state, err)
 		}
 	}
+	testcheck.NoErr(t, os.WriteFile(file, []byte("half\n"), 0o600))
+	if size, modified, err := harness.StatBackgroundCommand("b1", file); err != nil || size != 5 || modified.IsZero() {
+		t.Errorf("harness.StatBackgroundCommand = %d %v %v", size, modified, err)
+	}
 	link := filepath.Join(dir, "b2.output")
 	testcheck.NoErr(t, os.Symlink(file, link))
 	if _, _, _, err := harness.ReadBackgroundCommand("b2", link); err == nil {
 		t.Error("read through a link")
+	}
+	if _, _, err := harness.StatBackgroundCommand("b2", link); err == nil {
+		t.Error("stat through a link")
 	}
 	other := filepath.Join(t.TempDir(), "tasks")
 	testcheck.NoErr(t, os.Mkdir(other, 0o700))
 	testcheck.Write(t, filepath.Join(other, "b3.output"), "a project's file")
 	if _, _, _, err := harness.ReadBackgroundCommand("b3", filepath.Join(other, "b3.output")); err == nil {
 		t.Error("read a task's file out of Claude's folder")
+	}
+	if _, _, err := harness.StatBackgroundCommand("b3", filepath.Join(other, "b3.output")); err == nil {
+		t.Error("stat a task's file out of Claude's folder")
 	}
 	vendored := filepath.Join(t.TempDir(), "vendor", user, "p", "s", "tasks")
 	testcheck.NoErr(t, os.MkdirAll(vendored, 0o700))

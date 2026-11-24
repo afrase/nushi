@@ -133,6 +133,10 @@ type BackgroundTasks interface {
 	// its shell is gone, and only where the agent hasn't said
 	// (followCommand).
 	ReadBackgroundCommand(id, file string) (output, end, state string, err error)
+	// StatBackgroundCommand is that file's size and when it last changed,
+	// without opening it, by the same rules: a file whose both are as
+	// at its last read isn't read again (followCommand).
+	StatBackgroundCommand(id, file string) (size int64, modified time.Time, err error)
 	// CommandTask reads the agent's own word on such a command, from an
 	// update of the call that started it (its _meta): the task's id, its
 	// state ("running", "done", "failed" or "stopped") and how it ended in

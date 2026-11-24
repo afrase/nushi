@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/regularfile"
@@ -117,6 +118,24 @@ func (Harness) ReadBackgroundCommand(id, file string) (output, end, state string
 		return out[:m[0]], end, endState(end), nil
 	}
 	return out, end, endState(end), nil
+}
+
+// StatBackgroundCommand is the size of a background command's output file
+// and when it last changed, without opening it, by ReadBackgroundCommand's
+// rules (the task's file in Claude's folder for them, a regular file): its
+// follower reads the file again only once either changed.
+func (Harness) StatBackgroundCommand(id, file string) (size int64, modified time.Time, err error) {
+	if !taskFile(id, file) {
+		return 0, time.Time{}, errors.New("not the task's output file")
+	}
+	st, err := os.Lstat(file)
+	if err != nil {
+		return 0, time.Time{}, err
+	}
+	if !st.Mode().IsRegular() {
+		return 0, time.Time{}, errors.New("not a regular file")
+	}
+	return st.Size(), st.ModTime(), nil
 }
 
 // endState is a background command's state from its file's end line's

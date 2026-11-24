@@ -19,3 +19,7 @@ Nushi guessed when a Claude background command (`run_in_background`) ended: from
 ## Alternatives considered
 - Keeping the file as the source and the task as a hint: the guesses above stay.
 - Dropping the fallback: other agents and older chats would lose their ends.
+
+## Amendment (2026-11-25): following a command costs little while it runs
+A command can run for hours (a dev server), so following it must cost little while it does.
+- **The file is read only once it changed**: each poll (a second) looks at its size and time (an `lstat` by the same path rules, in `internal/claude`), and reads it again only when either differs from its last read; meanwhile that read's output and end stand, and each poll still judges them, so the fallback's "stopped growing after the end line" and an end Claude told of still end the row.
