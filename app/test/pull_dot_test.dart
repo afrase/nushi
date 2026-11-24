@@ -62,7 +62,7 @@ void main() {
         .connect(tester);
     final c = d.chats['c']!;
     final states = PullStates.of(d)
-      ..put(item(412, 'Speed up CI', checks: checks));
+      ..put(GitHubPull(item: item(412, 'Speed up CI', checks: checks)));
     await tester.pumpWidget(_app(PullDot(c, states), still: still));
     return (states, d.dispose);
   }
@@ -74,7 +74,7 @@ void main() {
     expect(_mark(tester)!.ringing, isTrue);
     expect(_mark(tester)!.color, t.needs);
 
-    states.put(item(412, 'Speed up CI', checks: 'success'));
+    states.put(GitHubPull(item: item(412, 'Speed up CI', checks: 'success')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 16));
     await tester.pump(const Duration(milliseconds: 100));
@@ -96,7 +96,7 @@ void main() {
 
   testWidgets('failing: it pops red, hops once and stays', (tester) async {
     final (states, done) = await open(tester, 'pending');
-    states.put(item(412, 'Speed up CI', checks: 'failure'));
+    states.put(GitHubPull(item: item(412, 'Speed up CI', checks: 'failure')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 16));
     await tester.pump(const Duration(milliseconds: 100));
@@ -122,7 +122,7 @@ void main() {
 
     (states, done) = await open(tester, 'pending', still: true);
     expect(_mark(tester)!.ringing, isFalse);
-    states.put(item(412, 'Speed up CI', checks: 'success'));
+    states.put(GitHubPull(item: item(412, 'Speed up CI', checks: 'success')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect((_mark(tester)!.color, _mark(tester)!.scale), (Tokens.dark.done, 1));
@@ -179,7 +179,7 @@ void main() {
           .connect(tester);
       final c = d.chats['c']!;
       final states = PullStates.of(d)
-        ..put(item(412, 'Speed up CI', checks: 'pending'));
+        ..put(GitHubPull(item: item(412, 'Speed up CI', checks: 'pending')));
       final theme = NushiTheme(tokens);
       await tester.pumpWidget(
         _app(

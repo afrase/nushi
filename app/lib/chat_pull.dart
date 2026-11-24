@@ -413,7 +413,7 @@ class ChatPull extends ChangeNotifier {
     keptAt = null;
     _wholeAt = clock();
     keepPull(ref, r.pull);
-    PullStates.of(daemon).put(r.pull.item);
+    PullStates.of(daemon).put(r.pull);
     _recheck(r.pull);
     // The comments there when the chat first saw it aren't new.
     seenComments(chat.id, r.pull.item);

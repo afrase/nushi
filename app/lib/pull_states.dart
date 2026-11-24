@@ -9,6 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_items.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_summary.dart';
 import 'package:nushi/theme/theme.dart';
@@ -122,20 +123,39 @@ class PullStates extends ChangeNotifier {
   }
 
   /// Takes [whole] (a pull request read whole, whose item lacks what only
-  /// a row says: its checks' counts, merge state, size, branches) as
-  /// current in GitHubItems, over the row kept there; the counts go when
-  /// its checks changed, until the next row says them.
-  void put(GitHubItem whole) => _take(whole);
+  /// a row says: merge state, size, branches) as current in GitHubItems,
+  /// over the row kept there; its checks' counts are its runs', counted
+  /// by the app's one rule ([checkKind]), so none goes when they change.
+  void put(GitHubPull whole) {
+    final n = countChecks(whole);
+    // Zeros left unset, as a row's come from the daemon, so the two
+    // compare equal.
+    int? some(int c) => c == 0 ? null : c;
+    _take(
+      whole.item,
+      counts: GitHubCheckCounts(
+        failed: some(n.failing),
+        running: some(n.running),
+        passed: some(n.passed),
+        skipped: some(n.other),
+      ),
+    );
+  }
 
   /// Takes [said] (a whole read's item, or an older daemon's state) over
   /// the row GitHubItems keeps of it: what both say from [said], what only
-  /// a row says (merge state, size, branches, when made) kept, and its
-  /// checks' counts while its checks are the same. Its title on one line,
-  /// as a row's is, so the two don't take turns.
-  void _take(GitHubItem said) {
+  /// a row says (merge state, size, branches, when made) kept; its
+  /// checks' [counts] when known, else the kept ones while its checks are
+  /// the same. Its title on one line, as a row's is, so the two don't take
+  /// turns.
+  void _take(GitHubItem said, {GitHubCheckCounts? counts}) {
     final title = said.title.trim().split(_spaces).join(' ');
     final kept = _items.look(GitHubAddress.of(said.ref, pull: said.pull)).item;
-    if (kept == null) return _items.put(said.deepCopy()..title = title);
+    if (kept == null) {
+      final it = said.deepCopy()..title = title;
+      if (counts != null) it.checkCounts = counts;
+      return _items.put(it);
+    }
     final it = kept.deepCopy()
       ..title = title
       ..url = said.url
@@ -152,6 +172,7 @@ class PullStates extends ChangeNotifier {
         ..checksOid = said.checksOid
         ..clearCheckCounts();
     }
+    if (counts != null) it.checkCounts = counts;
     if (it != kept) _items.put(it);
   }
 

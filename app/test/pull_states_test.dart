@@ -321,14 +321,14 @@ void main() {
         _ => null,
       };
     final d = await fake.connect(tester);
-    final items = GitHubItems.of(d);
-    items.put(
-      item(1, 'Add Sub', checks: 'pending')
-        ..additions = 12
-        ..mergeState = 'blocked'
-        ..head = 'feature'
-        ..checkCounts = GitHubCheckCounts(running: 2),
-    );
+    final items = GitHubItems.of(d)
+      ..put(
+        item(1, 'Add Sub', checks: 'pending')
+          ..additions = 12
+          ..mergeState = 'blocked'
+          ..head = 'feature'
+          ..checkCounts = GitHubCheckCounts(running: 2),
+      );
     await PullStates.of(d).refresh();
     final it = items.look(addressOf(_link(1))).item!;
     expect(
@@ -340,9 +340,7 @@ void main() {
   });
 
   testWidgets('a pull request read whole is put over its row: what only the '
-      "row says stays, its checks' counts go once its checks changed", (
-    tester,
-  ) async {
+      "row says stays, its checks' counts are its runs'", (tester) async {
     final fake = FakeDaemon(_chats())..answer = _states;
     final d = await fake.connect(tester);
     final items = GitHubItems.of(d);
@@ -353,22 +351,28 @@ void main() {
         ..mergeState = 'blocked'
         ..checkCounts = GitHubCheckCounts(running: 2),
     );
+    GitHubPull whole(String checks, List<String> runs) => GitHubPull(
+      item: item(1, 'Add Sub and  Mul', checks: checks, unresolved: 1),
+      checks: [for (final r in runs) GitHubCheck(name: r, state: r)],
+    );
     var told = 0;
     states
       ..addListener(() => told++)
-      ..put(item(1, 'Add Sub and Mul', checks: 'pending', unresolved: 1));
+      ..put(whole('pending', ['in_progress', 'queued']));
     var it = states.item(_link(1))!;
     expect(
       (it.title, it.unresolved, it.additions, it.mergeState),
       ('Add Sub and Mul', 1, 12, 'blocked'),
     );
-    expect(it.checkCounts.running, 2);
-    states.put(item(1, 'Add Sub and Mul', checks: 'failure', unresolved: 1));
-    it = states.item(_link(1))!;
-    expect(
-      (it.checks, it.hasCheckCounts(), it.additions),
-      ('failure', false, 12),
+    expect(it.checkCounts, GitHubCheckCounts(running: 2));
+    // Its runs differ from the row's: the row has their counts at once,
+    // by the app's one rule (checkKind).
+    states.put(
+      whole('failure', ['failure', 'cancelled', 'success', 'skipped']),
     );
+    it = states.item(_link(1))!;
+    expect((it.checks, it.additions), ('failure', 12));
+    expect(it.checkCounts, GitHubCheckCounts(failed: 2, passed: 1, skipped: 1));
     expect(told, 2);
     // A change to an item no chat has tells the states' listeners nothing.
     items.put(item(9, 'Elsewhere'));
