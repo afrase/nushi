@@ -237,6 +237,41 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1500));
   });
 
+  // The app's list can lag: a program that took the foreground silently
+  // isn't in it. A run asks the daemon afresh (ListTerminals reads the
+  // foreground live) before it picks a terminal to type into.
+  testWidgets("a tab the app thinks idle but the daemon's fresh answer has "
+      'a program running is not typed into', (tester) async {
+    final (shells, terms, runs) = _setup(replay: r'$ ');
+    await terms.load('c');
+    terms.active['c'] = 'a';
+    expect(terms.of('c')!.single.program, isEmpty);
+    shells.list[0] = shells.list[0].deepCopy()..program = 'quiet-server';
+    shells.newReplay = '% ';
+    final run = runs.of('ls');
+    await _start(tester, runs.start(terms, run, 'ls'));
+    expect(run.terminalId, 'new0');
+    expect(shells.typed['a'], isNull);
+    await tester.pump(const Duration(milliseconds: 1500));
+  });
+
+  testWidgets("a tab the daemon's fresh answer agrees is idle is typed into, "
+      'after one more listing', (tester) async {
+    final (shells, terms, runs) = _setup(replay: r'$ ');
+    await terms.load('c');
+    terms.active['c'] = 'a';
+    final listed = shells.fake.calls.whereType<ListTerminalsRequest>().length;
+    final run = runs.of('ls');
+    await _start(tester, runs.start(terms, run, 'ls'));
+    expect(run.terminalId, 'a');
+    expect(shells.typed['a'], ['ls\r']);
+    expect(
+      shells.fake.calls.whereType<ListTerminalsRequest>().length,
+      listed + 1,
+    );
+    await tester.pump(const Duration(milliseconds: 1500));
+  });
+
   testWidgets('a shell without marks: output after the typed line, no end', (
     tester,
   ) async {

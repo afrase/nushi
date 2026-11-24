@@ -45,6 +45,20 @@ class Terminals extends ChangeNotifier {
     apply(chatId, resp.terminals);
   }
 
+  /// Lists a chat's terminals afresh before the app decides on what runs
+  /// in them (closing one, typing a run into one): the daemon reads each
+  /// foreground program as it is now, where the list it sends as events
+  /// may lag (ADR 0132). Says whether the daemon answered; when it didn't,
+  /// the list stays as the app knew it.
+  Future<bool> refresh(String chatId) async {
+    try {
+      await load(chatId);
+      return true;
+    } on Object {
+      return false;
+    }
+  }
+
   /// Takes a chat's whole list of terminals (an event or a listing).
   void apply(String chatId, List<pb.Terminal> list) {
     final ids = {for (final t in list) t.id};

@@ -251,7 +251,14 @@ class CodeRuns {
       : '\x1b[200~$script\x1b[201~\r';
 
   Future<_Follow> _terminal(Terminals terms, CodeRun run) async {
-    if (terms.of(chatId) == null) await terms.load(chatId);
+    // Afresh: the list the events keep can lag on a program that took the
+    // foreground silently, and a run typed there would go to it; when the
+    // daemon can't be asked, what the app knows, if it knows any.
+    try {
+      await terms.load(chatId);
+    } on Object {
+      if (terms.of(chatId) == null) rethrow;
+    }
     final list = terms.of(chatId) ?? const <pb.Terminal>[];
     for (final id in {run.terminalId, ?terms.active[chatId]}) {
       // Never a command's terminal: it has no prompt, and what runs there

@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -130,6 +131,58 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.keyL); // the shell's again
     await tester.pumpAndSettle();
     expect(shells.typedAll.join(), 'l');
+  });
+
+  // A terminal's program as the app last heard it can lag: one that took
+  // the foreground silently isn't in it. Closing asks the daemon afresh
+  // (ListTerminals reads the foreground live) and decides on its answer.
+  testWidgets('closing a terminal the app thinks idle asks first when the '
+      "daemon's fresh answer has a program running", (tester) async {
+    final (fake, shells) = _daemon();
+    final terms = Terminals(NushiServiceClient(fake));
+    await _panel(tester, terms);
+    expect(terms.of('chat')!.last.program, isEmpty);
+    shells.list[1] = shells.list[1].deepCopy()..program = 'quiet-server';
+    await press(tester, LogicalKeyboardKey.keyW, cmd: true);
+    expect(find.text('Close this terminal?'), findsOne);
+    expect(
+      find.text(
+        '“quiet-server” is still running in it. Closing the terminal ends it.',
+      ),
+      findsOne,
+    );
+    expect(shells.closed, isEmpty);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(shells.closed, isEmpty);
+  });
+
+  testWidgets("closing a terminal the daemon's fresh answer agrees is idle "
+      'asks it once more and closes it unasked', (tester) async {
+    final (fake, shells) = _daemon();
+    final terms = Terminals(NushiServiceClient(fake));
+    await _panel(tester, terms);
+    final listed = fake.calls.whereType<ListTerminalsRequest>().length;
+    await press(tester, LogicalKeyboardKey.keyW, cmd: true);
+    expect(find.text('Close this terminal?'), findsNothing);
+    expect(shells.closed, ['b']);
+    expect(fake.calls.whereType<ListTerminalsRequest>().length, listed + 1);
+  });
+
+  testWidgets("closing a terminal when the daemon can't be asked goes on "
+      'from what the app knew, saying nothing new', (tester) async {
+    final (fake, shells) = _daemon();
+    final terms = Terminals(NushiServiceClient(fake));
+    await _panel(tester, terms);
+    fake.on(
+      (input) => input is ListTerminalsRequest
+          ? throw ConnectException(Code.unavailable, 'gone')
+          : null,
+    );
+    await press(tester, LogicalKeyboardKey.keyW, cmd: true);
+    expect(find.text('Close this terminal?'), findsNothing);
+    expect(find.textContaining('gone'), findsNothing);
+    expect(shells.closed, ['b']);
   });
 
   // fish waits 10 seconds for an answer to the query it starts with.

@@ -11,12 +11,18 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Closes a terminal, asking first when a program other than the shell
-/// runs in it.
+/// runs in it, as the daemon says when asked now ([Terminals.refresh]), or
+/// as the app knew it when it can't be asked.
 Future<void> closeTerminal(
   BuildContext context,
   Terminals terms,
-  pb.Terminal t,
+  pb.Terminal known,
 ) async {
+  await terms.refresh(known.chatId);
+  if (!context.mounted) return;
+  final t =
+      terms.of(known.chatId)?.where((x) => x.id == known.id).firstOrNull ??
+      known;
   if (t.program.isNotEmpty &&
       !t.exited &&
       !await confirm(
