@@ -606,16 +606,16 @@ class _AgentStepsState extends State<_AgentSteps> {
             ],
           ),
         ),
-        // A read again that failed, over the steps it last read; the next
-        // good read takes it away.
+        // A read again that failed, over the steps it last read, drawn as a
+        // bar's failed refresh is (docs/design.md: a state cue is
+        // unmistakable); the next good read takes it away.
         if (error != null && _got != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-            child: Text(
-              errorText(error),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: small,
+            child: updatedText(
+              context,
+              "Couldn't refresh · ${errorText(error)}",
+              failed: true,
             ),
           ),
         Expanded(

@@ -6,6 +6,7 @@ import 'package:nushi/background_commands.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/subagent_pane.dart';
@@ -152,6 +153,8 @@ int _asked<T>(FakeDaemon fake) => fake.calls.whereType<T>().length;
 Future<(FakeDaemon, Daemon)> _app(
   WidgetTester tester, {
   Map<String, double> widths = const {},
+  Size size = const Size(1700, 900),
+  Brightness? brightness,
 }) async {
   showDetails.value = false;
   paneWidths.value = widths;
@@ -171,7 +174,7 @@ Future<(FakeDaemon, Daemon)> _app(
             )
           : null,
     );
-  final d = await openApp(tester, fake);
+  final d = await openApp(tester, fake, size: size, brightness: brightness);
   d.chats['c']!.pane.value = 'wf';
   await tester.pumpAndSettle();
   return (fake, d);
@@ -375,6 +378,19 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pump();
     expect(find.textContaining('the daemon is busy'), findsOne);
+    // Unmistakable, as a bar's failed refresh is: its mark, in crashed.
+    expect(
+      find.textContaining("Couldn't refresh · the daemon is busy"),
+      findsOne,
+    );
+    expect(find.byIcon(Icons.sync_problem), findsOne);
+    expect(
+      tester
+          .widget<Text>(find.textContaining('the daemon is busy'))
+          .style
+          ?.color,
+      Tokens.dark.crashed,
+    );
     expect(find.text('Looking at the changed views first.'), findsOne);
     expect(find.textContaining('searching', findRichText: true), findsNothing);
     await tester.pump(const Duration(seconds: 3));
@@ -385,6 +401,40 @@ void main() {
     expect(find.textContaining('searching', findRichText: true), findsOne);
     await closeView(tester, d);
   });
+
+  // An agent's steps whose read again failed, to look at (`make renders`).
+  for (final width in [1700.0, 720.0]) {
+    for (final b in renderThemes) {
+      renderTest("an agent's steps failing to refresh, ${width.round()}, "
+          '${b.name}', (tester) async {
+        final (fake, d) = await _app(
+          tester,
+          size: Size(width, 900),
+          brightness: b,
+        );
+        var n = 0;
+        fake.on(
+          (input) => input is GetWorkflowAgentRequest && n++ > 0
+              ? throw ConnectException(Code.unavailable, 'the daemon is busy')
+              : null,
+        );
+        await tester.tap(find.text('review:ui'));
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 3));
+        await tester.pump();
+        expect(find.textContaining("Couldn't refresh"), findsOne);
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'workflow_steps_failing_${width.round()}_${b.name}',
+        );
+        await closeView(tester, d);
+        paneWidths.value = {};
+        showDetails.value = true;
+      }, variant: onMac);
+    }
+  }
 
   testWidgets("an agent's files gone stops its reads and says so", (
     tester,
