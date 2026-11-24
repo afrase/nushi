@@ -174,6 +174,34 @@ void main() {
     }, variant: onPhone);
   }
 
+  // Files is offered whatever the daemon: one before WatchChatFolder (API
+  // 103) refuses it, and the tree says so in the same words.
+  testWidgets('Files on a daemon that lacks WatchChatFolder says to update '
+      'the daemon', (tester) async {
+    final fake = _daemon(apiFloor - 1)
+      ..streams = (input) => input is WatchChatFolderRequest
+          ? Stream<WatchChatFolderResponse>.error(
+              connect.ConnectException(
+                connect.Code.unimplemented,
+                'nushi.v1.NushiService/WatchChatFolder is not implemented',
+              ),
+            )
+          : null;
+    final p = await _app(tester, fake);
+    await tester.tap(find.text('Fix the flaky relay test'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Chat'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Files'));
+    await tester.pumpAndSettle();
+    // A refused stream reaches a listener that cancels on error only on
+    // the real clock.
+    await untilReal(tester, () => find.text('…').evaluate().isEmpty);
+    expect(find.textContaining('not implemented'), findsNothing);
+    expect(find.text(_words), findsOne);
+    await endPhone(tester, p);
+  }, variant: onPhone);
+
   testWidgets('the Mac never says it: its daemon updates with the app', (
     tester,
   ) async {

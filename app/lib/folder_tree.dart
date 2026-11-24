@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/errors.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/tree_rows.dart';
@@ -220,10 +221,11 @@ class FolderTree extends ChangeNotifier {
           },
           onError: (Object e) {
             _subs.remove(folder);
-            // Refused: it stays so until it's opened again. Anything else
-            // (the daemon went away): list again.
+            // Refused: it stays so until it's opened again, saying why as
+            // every refusal does (a phone's older daemon: to update it).
+            // Anything else (the daemon went away): list again.
             if (e is ConnectException && e.code != Code.unavailable) {
-              _refused[folder] = e.message;
+              _refused[folder] = errorText(e);
               _sync();
               notifyListeners();
             } else {
