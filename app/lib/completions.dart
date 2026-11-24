@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -7,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/copy_command.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/file_filter.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/spell_check.dart';
 import 'package:nushi/theme/theme.dart';
@@ -29,12 +29,9 @@ class Completions extends ChangeNotifier {
   Set<String> get mentions => chat.draft.mentions;
   List<Choice> choices = [];
   int picked = 0;
-  List<String>? _files; // the folder's, fetched at the first @
-  String _filesOf = ''; // the folder they are of
-  DateTime _filesAt = DateTime(0); // when they were asked for
+  GitFiles? _git; // the folder's files, followed from the first @
   (int, int)? _token; // where the text being completed starts and ends
   String _dismissed = ''; // the text Escape closed the choices for
-  bool _disposed = false;
   List<Command> _commands; // the chat's commands, as last offered
 
   /// The agent's commands came: `/` typed before them offers them now.
@@ -60,25 +57,16 @@ class Completions extends ChangeNotifier {
       ];
       _token = (0, caret);
     } else if (RegExp(r'(^|\s)@(\S*)$').firstMatch(before) case final m?) {
-      final folder = chat.folder;
-      final files = _filesOf == folder ? _files : null;
+      final git = gitFilesOf(chat.folder);
+      if (!identical(git, _git)) {
+        _git?.removeListener(_update);
+        _git = git..addListener(_update);
+      }
       // Asked again for each mention, after a few seconds: the agent adds
       // files. The list it had shows meanwhile.
-      final stale = DateTime.now().difference(_filesAt).inSeconds > 5;
-      if (files == null || stale && m[2]!.isEmpty) {
-        _files = files ?? const [];
-        _filesOf = folder;
-        _filesAt = DateTime.now();
-        unawaited(
-          daemon.client.listFiles(ListFilesRequest(folder: folder)).then((r) {
-            if (_filesOf != folder) return; // another folder's, asked since
-            _files = r.paths;
-            if (!_disposed) _update();
-          }, onError: (_) => _files = null),
-        );
-      }
+      if (!git.listed || m[2]!.isEmpty) git.ask(daemon);
       found = [
-        for (final f in rankChoices(files ?? const [], m[2]!))
+        for (final f in rankChoices(git.paths, m[2]!))
           (label: f, detail: '', insert: '@$f '),
       ];
       _token = (caret - m[2]!.length - 1, caret);
@@ -170,9 +158,9 @@ class Completions extends ChangeNotifier {
 
   @override
   void dispose() {
-    _disposed = true;
     text.removeListener(_update);
     chat.removeListener(_chatChanged);
+    _git?.removeListener(_update);
     super.dispose();
   }
 }

@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/errors.dart';
 import 'package:nushi/folder_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/tree_rows.dart';
 
 // The Files pane's filter: any file of the folder by name, as a tree.
@@ -116,32 +119,53 @@ class _Dir {
   final files = <String>[];
 }
 
-/// A folder's files as git lists them (ListFiles: what it doesn't
-/// ignore), for a filter: asked when one starts, and again once they're
-/// a few seconds old, so files the agent adds come in; at once for another
-/// folder (the chat moved), whose answer is the only one taken then.
-class GitFiles extends ChangeNotifier {
-  List<String> paths = const [];
-  DateTime? _at;
-  String? _folder; // the one last asked about
+/// Each folder's [GitFiles], while the app runs.
+final Map<String, GitFiles> _gitFiles = runMap();
 
-  /// Asks [daemon] for [folder]'s files, unless it did a moment ago.
-  void ask(Daemon daemon, String folder) {
+/// [folder]'s one [GitFiles]: the Files pane's filter, the phone's, `@`
+/// and ⌘P read the same list.
+GitFiles gitFilesOf(String folder) =>
+    _gitFiles[folder] ??= GitFiles._(folder);
+
+/// A folder's files as git lists them (ListFiles: what it doesn't
+/// ignore), for a filter, `@` or ⌘P: asked when one starts, and again
+/// once they're a few seconds old, so files the agent adds come in. A
+/// listing that fails keeps the last list and says why ([error]).
+class GitFiles extends ChangeNotifier {
+  new _(this.folder);
+
+  final String folder;
+  List<String> paths = const [];
+
+  /// Why the last listing failed, in words; '' once one answers.
+  String error = '';
+
+  /// Whether a listing answered or failed yet.
+  bool listed = false;
+
+  DateTime? _at;
+
+  /// Asks [daemon] for the folder's files, unless it did a moment ago (by
+  /// the app's [clock], which a test moves).
+  void ask(Daemon daemon) {
     final at = _at;
-    final now = DateTime.now();
-    if (folder != _folder) {
-      _folder = folder;
-      paths = const []; // the caller builds again
-    } else if (at != null && now.difference(at).inSeconds <= 5) {
-      return;
-    }
+    final now = clock();
+    if (at != null && now.difference(at).inSeconds <= 5) return;
     _at = now;
     unawaited(
-      daemon.client.listFiles(ListFilesRequest(folder: folder)).then((r) {
-        if (folder != _folder) return;
-        paths = r.paths;
-        notifyListeners();
-      }, onError: (_) {}), // the tree's own listings are still looked through
+      daemon.client.listFiles(ListFilesRequest(folder: folder)).then(
+        (r) {
+          paths = r.paths;
+          error = '';
+          listed = true;
+          notifyListeners();
+        },
+        onError: (Object e) {
+          error = errorText(e);
+          listed = true;
+          notifyListeners();
+        },
+      ),
     );
   }
 }

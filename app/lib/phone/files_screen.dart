@@ -29,7 +29,7 @@ class _FilesScreenState extends State<FilesScreen> {
   late final FolderTree _tree = folderTreeOf(widget.chat);
   late final TreeDots _dots = treeDotsOf(widget.chat);
   final _query = TextEditingController();
-  final _git = GitFiles();
+  GitFiles get _git => gitFilesOf(widget.chat.folder);
   final _filter = FilterMemo();
 
   @override
@@ -39,7 +39,7 @@ class _FilesScreenState extends State<FilesScreen> {
     _dots.attach(widget.daemon);
     _query.addListener(() {
       if (_query.text.trim().isNotEmpty) {
-        _git.ask(widget.daemon, widget.chat.folder);
+        _git.ask(widget.daemon);
       }
       setState(() {});
     });
@@ -50,7 +50,6 @@ class _FilesScreenState extends State<FilesScreen> {
     _tree.detach();
     _dots.detach();
     _query.dispose();
-    _git.dispose();
     super.dispose();
   }
 

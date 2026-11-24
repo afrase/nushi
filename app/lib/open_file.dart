@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/completions.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/file_filter.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
@@ -53,40 +53,36 @@ class OpenFileBox extends StatefulWidget {
 
 class _OpenFileBoxState extends State<OpenFileBox> {
   final _text = TextEditingController();
-  // The chat's files, then the folder's once listed: once each.
-  late List<String> _all = widget.chat.toSet().toList();
+  // The folder's files, as last listed: shown at once, and listed again.
+  late final GitFiles _git = gitFilesOf(widget.folder);
   List<String> _shown = const []; // as last built: what the keys move in
-  bool _listed = false; // the daemon answered
-  String _error = '';
   int _at = 0;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_list());
+    _git
+      ..addListener(_listed)
+      ..ask(widget.daemon);
   }
 
-  Future<void> _list() async {
-    try {
-      final r = await widget.daemon.client.listFiles(
-        ListFilesRequest(folder: widget.folder),
-      );
-      _all = {
-        ...widget.chat,
-        for (final p in r.paths)
-          if (opensInPreview(p)) p,
-      }.toList();
-    } on Object catch (e) {
-      _error = errorText(e);
-    }
-    if (mounted) setState(() => _listed = true);
+  void _listed() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _git.removeListener(_listed);
     _text.dispose();
     super.dispose();
   }
+
+  /// The chat's files, then the folder's that a preview shows: once each.
+  List<String> get _all => {
+    ...widget.chat,
+    for (final p in _git.paths)
+      if (opensInPreview(p)) p,
+  }.toList();
 
   /// What shows for what's typed: ranked once a build.
   List<String> _rank() {
@@ -171,12 +167,12 @@ class _OpenFileBoxState extends State<OpenFileBox> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              if (shown.isEmpty && _listed)
+              if (shown.isEmpty && _git.listed)
                 Padding(
                   padding: const EdgeInsets.all(8),
                   child: Text(
-                    _error.isNotEmpty
-                        ? 'Couldn’t list the folder: $_error'
+                    _git.error.isNotEmpty
+                        ? 'Couldn’t list the folder: ${_git.error}'
                         : 'No file to preview matches',
                     style: theme.ui(t.textMuted),
                   ),

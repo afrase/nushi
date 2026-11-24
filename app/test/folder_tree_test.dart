@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/file_filter.dart';
 import 'package:nushi/folder_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -50,7 +51,8 @@ void main() {
     await closeView(tester, d);
   });
 
-  testWidgets("git's list follows a moved chat to its new folder", (
+  testWidgets("git's list is one per folder: a moved chat's is asked at "
+      "once, and the old folder's late answer stays the old folder's", (
     tester,
   ) async {
     final old = Completer<ListFilesResponse>();
@@ -64,19 +66,51 @@ void main() {
             : ListFilesResponse(paths: ['new.dart']);
       };
     final d = await fake.connect(tester);
-    final git = GitFiles();
-    addTearDown(git.dispose);
-    git
-      ..ask(d, '/old')
-      // Moved a moment later: asked at once, not after the 5 seconds.
-      ..ask(d, '/new');
+    expect(gitFilesOf('/old'), same(gitFilesOf('/old')));
+    gitFilesOf('/old').ask(d);
+    // Moved a moment later: asked at once, not after the 5 seconds.
+    gitFilesOf('/new').ask(d);
     await tester.pump();
     expect(asked, ['/old', '/new']);
-    expect(git.paths, ['new.dart']);
-    // The old folder's answer, late, is let go.
+    expect(gitFilesOf('/new').paths, ['new.dart']);
     old.complete(ListFilesResponse(paths: ['old.dart']));
     await tester.pump();
-    expect(git.paths, ['new.dart']);
+    expect(gitFilesOf('/new').paths, ['new.dart']);
+    expect(gitFilesOf('/old').paths, ['old.dart']);
+    // Asked again within a few seconds: what it has, no listing.
+    gitFilesOf('/new').ask(d);
+    await tester.pump();
+    expect(asked, ['/old', '/new']);
+    await closeView(tester, d);
+  });
+
+  testWidgets("a listing that fails keeps git's last list and says why; the "
+      'next that answers clears it', (tester) async {
+    var fail = false;
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        ListFilesRequest() when fail => throw Exception('folder gone'),
+        ListFilesRequest() => ListFilesResponse(paths: ['a.dart']),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    final git = gitFilesOf('/x');
+    expect(git.listed, isFalse);
+    git.ask(d);
+    await tester.pump();
+    expect(git.paths, ['a.dart']);
+    expect((git.error, git.listed), ('', true));
+    fail = true;
+    clock = () => fixtureNow.add(const Duration(seconds: 6));
+    git.ask(d);
+    await tester.pump();
+    expect(git.paths, ['a.dart']);
+    expect(git.error, contains('folder gone'));
+    fail = false;
+    clock = () => fixtureNow.add(const Duration(seconds: 12));
+    git.ask(d);
+    await tester.pump();
+    expect(git.error, isEmpty);
     await closeView(tester, d);
   });
 
