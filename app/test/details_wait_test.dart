@@ -250,6 +250,8 @@ void _switchRenders() {
         d.select('c');
         await tester.pump();
         await render(tester, find.byType(NushiApp), '${name}_3_seen_at_once');
+        // It reads its folder again meanwhile: that read's answer.
+        await tester.pump(const Duration(milliseconds: 400));
         await tester.pumpAndSettle();
         await closeView(tester, d);
       }, variant: onMac);
