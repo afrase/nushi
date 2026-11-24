@@ -355,12 +355,13 @@ func (r *run) ended(w model.Workflow, s snapshot) model.Workflow {
 		i := phaseOf(&w, at, a.Phase, "")
 		count(&w, i, func(p *model.WorkflowPhase) { p.Started++ })
 		switch agentState(a.State) {
-		case "done":
+		case model.RunDone:
 			w.Done++
 			count(&w, i, func(p *model.WorkflowPhase) { p.Done++ })
-		case "failed":
+		case model.RunFailed:
 			w.Failed++
 			count(&w, i, func(p *model.WorkflowPhase) { p.Failed++ })
+		default: // stopped: neither
 		}
 	}
 	r.plan(&w, at) // what the snapshot doesn't list

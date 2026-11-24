@@ -346,8 +346,9 @@ func workflowEnd(state model.RunState) (kind, words string) {
 		return "failed", "'s workflow failed"
 	case model.RunStopped:
 		return "failed", "'s workflow stopped"
+	default:
+		return "failed", "'s workflow ended"
 	}
-	return "failed", "'s workflow ended"
 }
 
 // notify pushes what happened in chatID to every device with notifications

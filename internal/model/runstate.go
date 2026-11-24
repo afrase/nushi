@@ -30,6 +30,7 @@ func (s RunState) Ended() bool {
 	switch s {
 	case RunDone, RunFailed, RunStopped, RunUnknown:
 		return true
+	default:
+		return false
 	}
-	return false
 }

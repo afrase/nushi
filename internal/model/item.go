@@ -34,40 +34,42 @@ const StoppedBySafeguards = "stopped_by_safeguards"
 // app matches them, so one is never renamed (ADR 0004). Untyped on
 // purpose: Item.Status holds tool calls', prompts' and messages' statuses
 // too, and a named type would still take a bare literal.
+//
+// How a turn ended when it didn't end normally: ACP's stop reasons,
+// NoticeTurnFailed the agent answering the prompt with an error, and
+// NoticeError anything else that went wrong. A failed reopen's reasons
+// (one notice, which goes once the chat runs): NoticeReopenFailed,
+// NoticeNotReady, NoticeFolderGone, NoticeSessionGone, and the legacy
+// NoticeSignIn. The marks a merge of the transcript's copy and the agent's
+// replay draws: NoticeCompacted, NoticeHistoryDiffers. Then the agent
+// working on its own after a background task, the chat's branch named or
+// switched, a command the daemon ran in the agent's place, a message the
+// user sent taken back to edit, and the agent's own notice and warning
+// (AgentNotice).
 const (
-	// How a turn ended when it didn't end normally (ACP's stop reasons),
-	// "turn_failed" the agent answering the prompt with an error, and
-	// "error" anything else that went wrong.
 	NoticeCancelled       = "cancelled"
 	NoticeRefusal         = "refusal"
 	NoticeMaxTokens       = "max_tokens"
 	NoticeMaxTurnRequests = "max_turn_requests"
 	NoticeTurnFailed      = "turn_failed"
 	NoticeError           = "error"
-	// A failed reopen's reasons (one notice, which goes once the chat runs).
-	NoticeReopenFailed = "reopen_failed"
-	NoticeNotReady     = "not_ready"
-	NoticeFolderGone   = "folder_gone"
-	NoticeSessionGone  = "session_gone"
+	NoticeReopenFailed    = "reopen_failed"
+	NoticeNotReady        = "not_ready"
+	NoticeFolderGone      = "folder_gone"
+	NoticeSessionGone     = "session_gone"
 	// NoticeSignIn is what 0.52's betas gave a reopen refused for want of a
 	// sign-in, before it was a reopen_failed with options: none is written
 	// now, and a copy of theirs may still hold one (drop it after 0.54).
-	NoticeSignIn = "sign_in"
-	// The marks a merge of the transcript's copy and the agent's replay
-	// draws: compacted here, or the agent's history differs from here.
+	NoticeSignIn         = "sign_in"
 	NoticeCompacted      = "compacted"
 	NoticeHistoryDiffers = "history_differs"
-	// The agent working on its own after a background task, the chat's
-	// branch named or switched, a command the daemon ran in the agent's
-	// place, and a message the user sent taken back to edit.
 	NoticeOwnTurn        = "own_turn"
 	NoticeBranchRenamed  = "branch_renamed"
 	NoticeBranchSwitched = "branch_switched"
 	NoticeCommand        = "command"
 	NoticeTakenBack      = "taken_back"
-	// The agent's own notice and warning (AgentNotice).
-	NoticeAgent        = "agent_notice"
-	NoticeAgentWarning = "agent_warning"
+	NoticeAgent          = "agent_notice"
+	NoticeAgentWarning   = "agent_warning"
 )
 
 // SentMeta is the _meta key of a replayed message's first chunk that says
