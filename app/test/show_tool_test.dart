@@ -516,7 +516,6 @@ void main() {
       expect(c.fileNames, ['docs/first.md']);
       c.tab.value = ChatTab.chat;
       await tester.pumpAndSettle();
-      expect(c.filesFit(), isFalse);
       expect(c.showAsked.value, isNull, reason: 'the ask is spent');
       expect(c.fileNames, ['docs/first.md']);
       d.dispose();

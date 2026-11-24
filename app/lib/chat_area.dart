@@ -123,12 +123,6 @@ class _ChatAreaState extends State<ChatArea> {
     _tab.removeListener(_collapse);
     terminalChats.removeListener(_terminalShown);
     // Gone, it has no room to say; the chat shows nowhere until it's back.
-    if (widget.chat.filesFit == _filesFit) {
-      widget.chat.filesFit = ChatState.fitsAlways;
-    }
-    if (widget.chat.browserFits == _browserFits) {
-      widget.chat.browserFits = ChatState.fitsAlways;
-    }
     if (widget.chat.panelFits == _panelFits) {
       widget.chat.panelFits = ChatState.fitsAlways;
     }
@@ -296,10 +290,7 @@ class _ChatAreaState extends State<ChatArea> {
               // its button with it; beside panes that need its room it's
               // tucked away, still wanted (ADR 0123).
               final fits = box.maxWidth >= _railFrom;
-              chat
-                ..panelFits = _panelFits
-                ..filesFit = _filesFit
-                ..browserFits = _browserFits;
+              chat.panelFits = _panelFits;
               // The pull request's tab goes with its link.
               final tab = chat.shownTab;
               final onChat = tab == ChatTab.chat;
@@ -358,7 +349,7 @@ class _ChatAreaState extends State<ChatArea> {
                 // Only the transcript's rows open a preview or a tab.
                 open: onChat ? chat.openInFiles : null,
                 browse: onChat ? (url) => chat.openBrowserTab('$url') : null,
-                browseFits: () => chat.browserFits(),
+                browseFits: _browserFits,
                 current: _inFiles,
                 name: (path) => relativeIn(chat.folder, path),
                 child: ListenableBuilder(

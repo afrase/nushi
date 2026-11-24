@@ -144,10 +144,21 @@ void main() {
     browserFakes();
     final browser = outside();
     final d = await app(tester, width: 720);
-    expect(d.chats['c']!.browserFits(), isFalse);
     await tapLink(tester, 'the dev server');
     expect(browser, [Uri.parse('http://localhost:5173/')]);
     expect(d.chats['c']!.browser.shown.value, isNull);
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('in a window of 1200, a browser tab beside the chat', (
+    tester,
+  ) async {
+    browserFakes();
+    final browser = outside();
+    final d = await app(tester, width: 1200);
+    await tapLink(tester, 'the dev server');
+    expect(d.chats['c']!.browser.shown.value, isA<BrowserTab>());
+    expect(browser, isEmpty);
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -157,13 +168,11 @@ void main() {
     final browser = outside();
     final d = await app(tester, width: 1200, listing: true);
     final c = d.chats['c']!;
-    expect(c.browserFits(), isTrue);
     // Neither lays the chat area out again: the room is worked out as the
     // link is clicked.
     filesChats.value = {'c'};
     c.side.value = ChatState('s', '/Users/me')..title = 'Side';
     await tester.pumpAndSettle();
-    expect(c.browserFits(), isFalse);
     await tapLink(tester, 'the dev server');
     expect(browser, [Uri.parse('http://localhost:5173/')]);
     expect(c.browser.shown.value, isNull);

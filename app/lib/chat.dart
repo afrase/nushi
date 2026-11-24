@@ -458,17 +458,7 @@ class ChatState extends ChangeNotifier {
   /// it).
   bool Function() panelFits = fitsAlways;
 
-  /// Whether its pane has room for the Files pane beside the transcript, or
-  /// it's open, worked out when asked (its chat area's, which sets it): a
-  /// side chat opens without laying the area out again.
-  bool Function() filesFit = fitsAlways;
-
-  /// Whether its pane has room for the browser beside the transcript, as
-  /// [filesFit].
-  bool Function() browserFits = fitsAlways;
-
-  /// [filesFit], [browserFits] and [panelFits] before a chat area works
-  /// them out.
+  /// [panelFits] before a chat area works it out.
   static bool fitsAlways() => true;
 
   /// The tabs it has: Pull request only while it has one.
