@@ -80,9 +80,9 @@ grep -qx "Exec=\"$opt/nushi\"" "$home/.local/share/applications/$id.desktop" ||
 
 "$@" NUSHI_SMOKE_HOME="$home" SHOT="${SHOT:-}" dbus-run-session -- \
   xvfb-run -a -s '-screen 0 1700x1100x24' "$0"
-# -login's shell replaced itself with the daemon, its command line the
-# package's nushid alone.
-pgrep -fx "$opt/lib/nushid" >/dev/null || fail "the app's daemon isn't the package's lib/nushid"
+# The daemon is the package's nushid as the app started it: -login sets
+# itself up and stays, no shell replaces it (ADR 0036's amendment).
+pgrep -fx "$opt/lib/nushid -login" >/dev/null || fail "the app's daemon isn't the package's lib/nushid"
 if grep 'level=ERROR' "$data/app.log" 2>/dev/null ||
   grep 'level=ERROR.*source=app' "$data/nushid.log"; then
   fail "the app logged an error"
