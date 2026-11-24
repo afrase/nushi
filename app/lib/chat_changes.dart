@@ -19,7 +19,8 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 /// it moved, its worktree's base or its scope changed, a commit was made in
 /// it, or the daemon is back after a read it was gone for. Only while
 /// something shows it ([follow]): with nothing following it remembers the
-/// read is behind, and reads again when next followed, showing what it had
+/// read is behind. It reads again each time it is shown again, as a chat's
+/// own triggers miss changes made outside it, showing what it had
 /// meanwhile. Each such change bumps [moved], for what reads more than the
 /// span (the Changes view's files, the change marks' base).
 final class ChatChanges extends ChangeNotifier {
@@ -73,10 +74,12 @@ final class ChatChanges extends ChangeNotifier {
   static (String, String, String?, int) _keyOf(ChatState c) =>
       (c.folder, c.worktree?.base ?? '', c.scope, c.commits);
 
-  /// Something shows it: it reads now if what it has is behind.
+  /// Something shows it: what it has shows at once, and the first to show
+  /// it reads again, as what it has may be behind though nothing here
+  /// marked it (another chat in the folder, an editor or a terminal
+  /// changed it); a later one reads only if it is behind.
   void follow() {
-    _followers++;
-    if (_behind) read().ignore();
+    if (_followers++ == 0 || _behind) read().ignore();
   }
 
   /// What showed it went.

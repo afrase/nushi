@@ -16,7 +16,7 @@ import 'panes_app.dart';
 // and "…" for a frame or two, its rows folding and growing again as the
 // numbers come. It waits for the chat's snapshot and its folder's status,
 // Waits.slow at most, its rows unseen meanwhile. A chat seen before shows
-// at once, as its folder last stood (ChatChanges).
+// at once, as its folder last stood (ChatChanges), and reads it again.
 
 /// How much of each chat's rows shows, the last chat's first: the
 /// opacities over its cards, multiplied.
@@ -162,7 +162,7 @@ void main() {
   });
 
   testWidgets('a chat seen before shows at once, as its folder last stood, '
-      'and reads it again only once it changed', (tester) async {
+      'and reads it again', (tester) async {
     final fake =
         FakeDaemon([
             Chat(id: 'a', agent: 'claude', folder: '/a'),
@@ -193,13 +193,15 @@ void main() {
     expect(find.text('dark-mode'), findsOneWidget);
     expect(statuses('/a'), 1);
 
-    // Back to a: its rows at once, alone, its branch as it was.
+    // Back to a: its rows at once, alone, its branch as it was; and read
+    // again, as another chat in its folder or a terminal may have changed
+    // it.
     picked.value = a;
     await tester.pump();
     expect(_layers(tester), [1]);
     expect(find.text('login-fix'), findsOneWidget);
     await tester.pumpAndSettle();
-    expect(statuses('/a'), 1, reason: 'nothing changed it');
+    expect(statuses('/a'), 2);
 
     // A turn of b's ended while a showed: b is read again once picked,
     // what it had showing meanwhile.

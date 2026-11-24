@@ -76,6 +76,39 @@ void main() {
     changes.unfollow();
   });
 
+  test('shown again, it shows what it had at once and reads again: a '
+      'sibling chat or a terminal may have changed the folder', () async {
+    var files = 3;
+    final fake = FakeDaemon([Chat(id: 'c', agent: 'claude', folder: '/x')])
+      ..answer = (input) => switch (input) {
+        GetFolderStatusRequest() => GetFolderStatusResponse(
+          git: true,
+          branch: 'fix',
+          files: files,
+        ),
+        ListBranchesRequest() => ListBranchesResponse(),
+        _ => null,
+      };
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    await pumpEventQueue();
+    int statuses() => fake.calls.whereType<GetFolderStatusRequest>().length;
+    final chat = ChatState('c', '/x');
+    final changes = ChatChanges.of(d, chat)..follow();
+    await pumpEventQueue();
+    expect(changes.span?.status.files, 3);
+    changes.unfollow();
+
+    // Another chat in /x, or an editor, changed it meanwhile.
+    files = 7;
+    changes.follow();
+    expect(changes.span?.status.files, 3, reason: 'what it had, at once');
+    await pumpEventQueue();
+    expect(statuses(), 2);
+    expect(changes.span?.status.files, 7);
+    changes.unfollow();
+  });
+
   test('a read that fails says why, and the next that answers clears it; '
       'the newest read asked for is what shows', () async {
     var fail = true;

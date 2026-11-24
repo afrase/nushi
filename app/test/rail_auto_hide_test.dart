@@ -469,9 +469,8 @@ void main() {
     await tester.tapAt(Offset.zero);
     await tester.pumpAndSettle();
     // Back and forth across 804, the pane still open: made (tucked, as
-    // the pane needs its room) at each crossing up. Only the first asks the
-    // daemon for the folder; after it, nothing changed it, so it shows what
-    // the chat's changes have (ChatChanges).
+    // the pane needs its room) at each crossing up, showing what the chat's
+    // changes have (ChatChanges) and asking the daemon for the folder again.
     int asks() =>
         fake.calls.whereType<GetFolderStatusRequest>().length +
         fake.calls.whereType<ListBranchesRequest>().length;
@@ -481,7 +480,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(DetailsPanel, skipOffstage: false), findsOneWidget);
       expect(_rail(), false);
-      expect(asks() - asked, i == 0 ? 2 : 0);
+      expect(asks() - asked, 2);
       asked = asks();
       viewport(tester, Size(windowFor(803, sidebar: false), 900));
       await tester.pumpAndSettle();
