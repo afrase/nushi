@@ -48,6 +48,12 @@ func (r *rowCopies) Append(_ string, items []model.Item, _ []string) error {
 	return nil
 }
 
+func (r *rowCopies) copied() []model.BackgroundCommand {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]model.BackgroundCommand(nil), r.rows...)
+}
+
 // costFixture is a chat of Claude's, in a synctest bubble, whose
 // waitCall left its command running, followed each commandPoll: its
 // file's reads counted, the rows its events carried and the copy's.
@@ -167,6 +173,39 @@ func TestAChattyCommandsTailIsSentEveryFewSeconds(t *testing.T) {
 		rows := f.published()
 		if last := rows[len(rows)-1]; last.State != model.RunDone || last.Output != string(want) {
 			t.Errorf("the last event: %+v, want done with %q", last, want)
+		}
+	})
+}
+
+// A command that writes all through a turn of many model calls adds its
+// row to the copy a bounded number of times; the copy has its end, with
+// all it wrote, once it ended.
+func TestAChattyCommandDoesntGrowTheCopy(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		f := costChat(t, "line 0\n")
+		f.tell(taskRunning)
+		for i := range 30 {
+			f.add(t, "line "+string(rune('a'+i%26))+"\n")
+			pass(commandPoll)
+			f.c.mu.Lock()
+			f.c.copyLocked(false) // a model call's end
+			f.c.mu.Unlock()
+		}
+		if rows := f.copies.copied(); len(rows) > 2 {
+			t.Errorf("the copy took the row %d times in 30 model calls", len(rows))
+		}
+		f.add(t, "last\n")
+		f.tell(taskCompleted[0])
+		f.tell(taskCompleted[1])
+		pass(commandPoll)
+		want, err := os.ReadFile(f.file)
+		testcheck.NoErr(t, err)
+		rows := f.copies.copied()
+		if len(rows) == 0 {
+			t.Fatal("the copy never took the row")
+		}
+		if last := rows[len(rows)-1]; last.State != model.RunDone || last.Output != string(want) {
+			t.Errorf("the copy's row: %+v, want done with %q", last, want)
 		}
 	})
 }

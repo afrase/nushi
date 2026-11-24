@@ -188,7 +188,9 @@ func (f *commandFollower) read() (out, end, state string, err error) {
 }
 
 // step reads the file once, if it changed, and updates the row; false
-// once there's no more to follow.
+// once there's no more to follow. A change to a running command's output
+// alone is sent at most every commandTail and isn't for the copy; its end
+// is sent, and written to the copy, at once.
 func (f *commandFollower) step() bool {
 	c := f.c
 	out, end, state, err := f.read()
@@ -206,20 +208,35 @@ func (f *commandFollower) step() bool {
 		sh.Output = out
 	}
 	sh, over := f.nextLocked(sh, out, end, state, err == nil)
-	if sh != *it.BackgroundCommand && (over || !f.holdsTail(*it.BackgroundCommand, sh)) {
+	if was := *it.BackgroundCommand; sh != was && (over || !f.holdsTail(was, sh)) {
 		it.BackgroundCommand = &sh
+		saved := !c.unsaved[it.ID]
 		c.publishLocked(*it)
 		f.sentAt = time.Now()
+		if saved && !over && sh.State == model.RunRunning && withOutput(was, sh.Output) == sh {
+			// The tail alone leaves the copy as it was (ADR 0130's
+			// amendment): a running command's file gives it again.
+			delete(c.unsaved, it.ID)
+		}
 	}
-	return !over && sh.State == model.RunRunning
+	following := !over && sh.State == model.RunRunning
+	if !following && c.unsaved[it.ID] {
+		c.copyLocked(false) // the copy has the command's end, with its last output
+	}
+	return following
+}
+
+// withOutput is sh with out for its output.
+func withOutput(sh model.BackgroundCommand, out string) model.BackgroundCommand {
+	sh.Output = out
+	return sh
 }
 
 // holdsTail says the row went from was to sh by a change to a running
 // command's output alone, sent less than commandTail ago: it waits, the
 // file holding it, for a step commandTail after (ADR 0130's amendment).
 func (f *commandFollower) holdsTail(was, sh model.BackgroundCommand) bool {
-	was.Output = sh.Output
-	return was == sh && sh.State == model.RunRunning && time.Since(f.sentAt) < commandTail
+	return withOutput(was, sh.Output) == sh && sh.State == model.RunRunning && time.Since(f.sentAt) < commandTail
 }
 
 // nextLocked is the row sh after a read of the file (read: it was read,
