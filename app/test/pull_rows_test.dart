@@ -364,7 +364,7 @@ void main() {
   }, variant: onMac);
 
   testWidgets("not ready, Merge… is off and says why from GitHub's merge "
-      'state alone, in the merge card\'s words', (tester) async {
+      "state alone, in the merge card's words", (tester) async {
     final (d, _) = await _app(
       tester,
       numbers: [230, 231],
