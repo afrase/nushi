@@ -229,7 +229,7 @@ func (c *chat) sendLocked(m model.Message) {
 // it (see cancelLocked).
 func (c *chat) startLocked(prompt []acp.ContentBlock) {
 	if c.agent == nil {
-		c.noticeLocked("error", "The agent isn't running; send the message again to reopen the chat.")
+		c.noticeLocked(model.NoticeError, "The agent isn't running; send the message again to reopen the chat.")
 		return
 	}
 	notes := c.notesLocked()
@@ -381,16 +381,16 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	c.nameBranchLocked()
 	switch {
 	case err != nil && !quit:
-		c.noticeLocked("turn_failed", "The turn failed: "+err.Error())
+		c.noticeLocked(model.NoticeTurnFailed, "The turn failed: "+err.Error())
 	case err != nil:
 	case resp.StopReason == "cancelled":
-		c.noticeLocked("cancelled", "Stopped")
+		c.noticeLocked(model.NoticeCancelled, "Stopped")
 	case resp.StopReason == "refusal":
-		c.noticeLocked("refusal", "The agent refused to go on")
+		c.noticeLocked(model.NoticeRefusal, "The agent refused to go on")
 	case resp.StopReason == "max_tokens":
-		c.noticeLocked("max_tokens", "The agent stopped: it reached its token limit")
+		c.noticeLocked(model.NoticeMaxTokens, "The agent stopped: it reached its token limit")
 	case resp.StopReason == "max_turn_requests":
-		c.noticeLocked("max_turn_requests", "The agent stopped: it reached its limit of requests in one turn")
+		c.noticeLocked(model.NoticeMaxTurnRequests, "The agent stopped: it reached its limit of requests in one turn")
 	}
 	c.lookRelatedLocked()
 	end, failure := c.verdictLocked(resp, err, quit)

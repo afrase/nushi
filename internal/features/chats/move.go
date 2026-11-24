@@ -128,7 +128,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	defer c.mu.Unlock()
 	c.busy = false
 	if err != nil {
-		c.noticeLocked("error", "Couldn't move the chat to "+folder+": "+err.Error())
+		c.noticeLocked(model.NoticeError, "Couldn't move the chat to "+folder+": "+err.Error())
 		c.logLocked().Warn("chat not moved", "to", folder, "err", err)
 	} else {
 		c.logLocked().Info("chat moved", "from", from, "old", sid, "worktree", wt != nil)

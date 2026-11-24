@@ -374,7 +374,7 @@ func TestARewindCutsTheCopyPastAMarkItLacks(t *testing.T) {
 	turn("one", "m1")
 	turn("two", "m2")
 	c.mu.Lock()
-	c.items = slices.Insert(c.items, 2, model.Item{ID: "mark", Kind: model.Notice, Status: compactedNotice})
+	c.items = slices.Insert(c.items, 2, model.Item{ID: "mark", Kind: model.Notice, Status: model.NoticeCompacted})
 	two := c.items[3].ID
 	c.mu.Unlock()
 	if _, err := svc.Rewind(t.Context(), c.id, two); err != nil {
@@ -387,5 +387,47 @@ func TestARewindCutsTheCopyPastAMarkItLacks(t *testing.T) {
 	defer c.mu.Unlock()
 	if got := describe(c.items); got != "user:one agent:m1" {
 		t.Errorf("after the rewind the chat shows %s", got)
+	}
+}
+
+// TestShownOnlyNotices pins the notice statuses as written on the wire, and
+// which of them are the chat's state that its copy never keeps: the lists
+// shownOnly reads are built from model's names, so a renamed constant or a
+// reason missing from them fails here.
+func TestShownOnlyNotices(t *testing.T) {
+	for _, tc := range []struct {
+		name, status string
+		shownOnly    bool
+	}{
+		{model.NoticeReopenFailed, "reopen_failed", true},
+		{model.NoticeNotReady, "not_ready", true},
+		{model.NoticeFolderGone, "folder_gone", true},
+		{model.NoticeSignIn, "sign_in", true},
+		{model.NoticeSessionGone, "session_gone", true},
+		{model.NoticeCompacted, "compacted", true},
+		{model.NoticeHistoryDiffers, "history_differs", true},
+		{model.NoticeCancelled, "cancelled", false},
+		{model.NoticeRefusal, "refusal", false},
+		{model.NoticeMaxTokens, "max_tokens", false},
+		{model.NoticeMaxTurnRequests, "max_turn_requests", false},
+		{model.NoticeTurnFailed, "turn_failed", false},
+		{model.NoticeError, "error", false},
+		{model.NoticeOwnTurn, "own_turn", false},
+		{model.NoticeBranchRenamed, "branch_renamed", false},
+		{model.NoticeBranchSwitched, "branch_switched", false},
+		{model.NoticeCommand, "command", false},
+		{model.NoticeTakenBack, "taken_back", false},
+		{model.NoticeAgent, "agent_notice", false},
+		{model.NoticeAgentWarning, "agent_warning", false},
+	} {
+		if tc.name != tc.status {
+			t.Errorf("notice status %q is written %q", tc.status, tc.name)
+		}
+		if got := shownOnly(model.Item{Kind: model.Notice, Status: tc.status}); got != tc.shownOnly {
+			t.Errorf("shownOnly(%q) = %v, want %v", tc.status, got, tc.shownOnly)
+		}
+		if shownOnly(model.Item{Kind: model.AgentMessage, Status: tc.status}) {
+			t.Errorf("an agent message of status %q is shown only", tc.status)
+		}
 	}
 }

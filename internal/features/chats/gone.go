@@ -76,7 +76,7 @@ func (c *chat) goneLocked(kept string) {
 		return
 	}
 	c.unsendLocked(c.failure)
-	c.failure = c.addLocked(model.Item{Kind: model.Notice, Status: "session_gone", Text: text})
+	c.failure = c.addLocked(model.Item{Kind: model.Notice, Status: model.NoticeSessionGone, Text: text})
 	c.statusChangedLocked()
 }
 

@@ -39,9 +39,9 @@ func merge(copied, replay []model.Item, t Transcript) []model.Item {
 	}
 	mark := func(differs bool) model.Item {
 		if !differs && summary != nil {
-			return model.Item{Kind: model.Notice, Status: compactedNotice, Text: summary.Text}
+			return model.Item{Kind: model.Notice, Status: model.NoticeCompacted, Text: summary.Text}
 		}
-		return model.Item{Kind: model.Notice, Status: differsNotice}
+		return model.Item{Kind: model.Notice, Status: model.NoticeHistoryDiffers}
 	}
 	substantive := func(items []model.Item) int {
 		return slices.IndexFunc(items, func(it model.Item) bool { return conversation(it, t) })

@@ -217,12 +217,12 @@ func (s *Service) resume(c *chat) {
 // doesn't know them still offers Try again.
 func (c *chat) failedLocked(err error) {
 	c.reopenFailed = true
-	reason := "reopen_failed"
+	reason := model.NoticeReopenFailed
 	var options []model.Option
 	if gone := folderGone(c.record); gone != nil {
-		reason, err = "folder_gone", gone
+		reason, err = model.NoticeFolderGone, gone
 	} else if ready := c.kind.ready(); ready != nil {
-		reason, err = "not_ready", ready
+		reason, err = model.NoticeNotReady, ready
 	} else if in, ok := errors.AsType[*SignInError](err); ok {
 		options = in.Methods
 	}
@@ -266,7 +266,7 @@ func (s *Service) AgentReady(agent string) {
 	open := s.openChats()
 	for _, c := range open {
 		c.mu.Lock()
-		if f := c.failureLocked(); c.kind.Name == agent && c.reopenFailed && f != nil && f.Status == "not_ready" {
+		if f := c.failureLocked(); c.kind.Name == agent && c.reopenFailed && f != nil && f.Status == model.NoticeNotReady {
 			c.reopenFailed = false
 			c.statusChangedLocked()
 			c.logLocked().Info("chat may reopen", "why", "agent ready")

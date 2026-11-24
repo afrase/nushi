@@ -112,7 +112,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 			if next != "" { // made, then not used: Delete deletes it, or the next reopen
 				c.throwawayLocked([]string{next}, false)
 			}
-			c.noticeLocked("error", "Couldn't rewind the chat: "+err.Error())
+			c.noticeLocked(model.NoticeError, "Couldn't rewind the chat: "+err.Error())
 			return "", nil, err
 		}
 		first := !slices.ContainsFunc(c.items[:i], func(it model.Item) bool { return it.Kind == model.UserMessage })
@@ -248,7 +248,7 @@ func (s *Service) Stop(ctx context.Context, chatID string, takeBack bool) (*mode
 		}
 		can := c.rewindableLocked(i)
 		if !can {
-			c.noticeLocked("taken_back", "Your message is back in the box to edit; the agent still has it in its history.")
+			c.noticeLocked(model.NoticeTakenBack, "Your message is back in the box to edit; the agent still has it in its history.")
 		}
 		return can, false
 	}()

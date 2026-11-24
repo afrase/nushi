@@ -47,7 +47,7 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		if !c.ownNoted && n.Update.SessionUpdate != "tool_call_update" &&
 			slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage }) {
 			c.ownNoted = true
-			c.noticeLocked("own_turn", "On its own, after a background task")
+			c.noticeLocked(model.NoticeOwnTurn, "On its own, after a background task")
 		}
 		if !c.ownTurn {
 			c.ownTurn = true // until the usage_update that ends the turn
@@ -323,7 +323,11 @@ func (c *chat) agentNoticeLocked(n model.AgentNotice) {
 			c.publishLocked(*it)
 		}
 	}
-	c.noticeLocked(map[bool]string{false: "agent_notice", true: "agent_warning"}[n.Warning], n.Text)
+	reason := model.NoticeAgent
+	if n.Warning {
+		reason = model.NoticeAgentWarning
+	}
+	c.noticeLocked(reason, n.Text)
 }
 
 // toolCallLocked adds what the agent tells of a tool call beyond ACP (see

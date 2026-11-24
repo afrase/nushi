@@ -69,7 +69,7 @@ func TestAnAdapterChatResumesOnTheGoAgent(t *testing.T) {
 		t.Errorf("the Go agent's replay:\n%s\nthe adapter's:\n%s", short(replay), short(adapterReplay))
 	}
 	merged := merge(copyOf(t, adapter, id), replay, claudeHarness)
-	if slices.ContainsFunc(merged, func(it model.Item) bool { return it.Kind == model.Notice && it.Status == differsNotice }) {
+	if slices.ContainsFunc(merged, func(it model.Item) bool { return it.Kind == model.Notice && it.Status == model.NoticeHistoryDiffers }) {
 		t.Errorf("Nushi's copy and the Go agent's replay merge with a divider: %s", short(merged))
 	}
 	if w, g := views(t, want), views(t, got); !reflect.DeepEqual(g, w) {

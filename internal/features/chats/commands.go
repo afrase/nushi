@@ -86,7 +86,7 @@ func (s *Service) terminalCommand(ctx context.Context, c *chat, m model.Message,
 	}
 	already := i >= 0 && opt.Current == cmd.Value
 	if already && !sends {
-		c.noticeLocked("command", cmd.Already)
+		c.noticeLocked(model.NoticeCommand, cmd.Already)
 	}
 	c.mu.Unlock()
 	switch {
@@ -97,7 +97,7 @@ func (s *Service) terminalCommand(ctx context.Context, c *chat, m model.Message,
 			return err
 		}
 		c.mu.Lock()
-		c.noticeLocked("command", cmd.Set)
+		c.noticeLocked(model.NoticeCommand, cmd.Set)
 		c.mu.Unlock()
 	}
 	if !sends {

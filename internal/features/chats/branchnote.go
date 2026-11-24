@@ -152,10 +152,10 @@ func (c *chat) notesLocked() *notes {
 	n := &notes{sess: sess, git: c.worktrees, log: c.logLocked(), stopped: c.killed, edited: c.edited}
 	c.killed, c.edited = nil, nil
 	if wt := sess.Worktree; wt != nil && wt.Told != "" && wt.Told != wt.Branch {
-		n.renamed = c.untoldLocked("branch_renamed")
+		n.renamed = c.untoldLocked(model.NoticeBranchRenamed)
 	}
 	if sess.Moved || sess.BranchFrom != "" {
-		n.switched = c.untoldLocked("branch_switched")
+		n.switched = c.untoldLocked(model.NoticeBranchSwitched)
 	}
 	return n
 }

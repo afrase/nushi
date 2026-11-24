@@ -19,12 +19,6 @@ import (
 // stream. Side chats have none (Fork leaves their copies nil): nobody sees
 // them again.
 
-// The notices a merge of a copy and the agent's replay draws.
-const (
-	compactedNotice = "compacted"       // the agent compacted the conversation here: before it, the copy alone
-	differsNotice   = "history_differs" // the agent's history differs from the copy from here
-)
-
 // Copies keeps the copies (internal/transcripts).
 //
 //nolint:interfacebloat // the one store of the copies, as chats use it: written as items settle, read whole, or read by heads and picks without a whole read (letgo.go)
@@ -54,17 +48,21 @@ type Copies interface {
 	List() ([]model.TranscriptCopy, error)
 }
 
-// reopenNotices are the statuses of a failed reopen's notice, each of
-// failedLocked's reasons, and "sign_in", which 0.52's betas gave a reopen
-// refused for want of a sign-in (a copy of theirs may hold one).
-var reopenNotices = []string{"reopen_failed", "not_ready", "folder_gone", "sign_in"}
+// reopenNotices are the statuses of a failed reopen's notice: each of
+// failedLocked's reasons, and the legacy NoticeSignIn (a copy of 0.52's
+// betas may hold one; it goes after 0.54).
+var reopenNotices = []string{model.NoticeReopenFailed, model.NoticeNotReady, model.NoticeFolderGone, model.NoticeSignIn}
+
+// stateNotices are the statuses of the other notices that are the chat's
+// state: its session gone, and the marks the merge of a copy and the
+// agent's replay draws.
+var stateNotices = []string{model.NoticeSessionGone, model.NoticeCompacted, model.NoticeHistoryDiffers}
 
 // shownOnly says an item is the chat's state rather than its history:
 // notices of how its reopen went, and those the merge of a copy and the
 // agent's replay draws. The copy never has them.
 func shownOnly(it model.Item) bool {
-	return it.Kind == model.Notice && (slices.Contains(reopenNotices, it.Status) ||
-		slices.Contains([]string{"session_gone", compactedNotice, differsNotice}, it.Status))
+	return it.Kind == model.Notice && (slices.Contains(reopenNotices, it.Status) || slices.Contains(stateNotices, it.Status))
 }
 
 // settled says an item is as it will stay, as far as the transcript can

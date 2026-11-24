@@ -119,9 +119,9 @@ func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) 
 		c.lastItem++
 		it.ID = "item-" + strconv.Itoa(c.lastItem)
 		switch it.Status {
-		case compactedNotice:
+		case model.NoticeCompacted:
 			it.Title, compacted = "Compacted here", true
-		case differsNotice:
+		case model.NoticeHistoryDiffers:
 			it.Text, differs = c.kind.Title+"'s history differs from Nushi's copy from here on", true
 		}
 	}

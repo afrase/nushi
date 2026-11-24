@@ -306,7 +306,7 @@ func (s *Service) watch(c *chat, agent Agent) {
 	if why != "" {
 		quit = "The agent quit unexpectedly (" + why + ")."
 	}
-	c.noticeLocked("error", quit+" Your next message reopens the chat.")
+	c.noticeLocked(model.NoticeError, quit+" Your next message reopens the chat.")
 	c.statusChangedLocked()
 	c.mu.Unlock()
 	s.discard(c, s.dropSides(c))

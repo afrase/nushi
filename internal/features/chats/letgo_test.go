@@ -137,7 +137,7 @@ func TestAsleepLetsGoAndComesBackTheSame(t *testing.T) {
 	agent.updates = []acp.SessionUpdate{chunk("m2", "two"), wrote, toolDone("t2")}
 	turn(t, svc, c, "two")
 	c.mu.Lock()
-	c.addLocked(model.Item{Kind: model.Notice, Status: differsNotice, Text: "only shows"}) // the copy never has it
+	c.addLocked(model.Item{Kind: model.Notice, Status: model.NoticeHistoryDiffers, Text: "only shows"}) // the copy never has it
 	c.mu.Unlock()
 	agent.updates = []acp.SessionUpdate{chunk("m3", "three")}
 	turn(t, svc, c, "three")

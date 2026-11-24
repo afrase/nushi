@@ -208,7 +208,7 @@ func signInFailed(ctx context.Context, title string, err error) error {
 // sign-in: a "reopen_failed" one with the ways to sign in as its options
 // (failedLocked).
 func wantsSignIn(it model.Item) bool {
-	return it.Kind == model.Notice && it.Status == "reopen_failed" && len(it.Options) > 0
+	return it.Kind == model.Notice && it.Status == model.NoticeReopenFailed && len(it.Options) > 0
 }
 
 // minutes is d in words: "10 minutes", or as Go writes it when under one.

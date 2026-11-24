@@ -68,7 +68,7 @@ func (c *chat) nameBranchLocked() {
 		case err == nil:
 			log.Info("branch named after the chat") // not the name: it's the chat's title
 			c.branchNamedLocked(name)
-			c.noticeLocked("branch_renamed", "Branch renamed to "+name)
+			c.noticeLocked(model.NoticeBranchRenamed, "Branch renamed to "+name)
 			return
 		case errors.Is(err, fs.ErrExist):
 			// One the read missed: another case of it, on a Mac's volume
@@ -190,6 +190,6 @@ func (s *Service) RenameBranch(ctx context.Context, chatID, name string) error {
 	}
 	c.logLocked().Info("branch renamed", "from", wt.Branch, "to", name)
 	c.branchNamedLocked(name)
-	c.noticeLocked("branch_renamed", "Branch renamed to "+name)
+	c.noticeLocked(model.NoticeBranchRenamed, "Branch renamed to "+name)
 	return nil
 }

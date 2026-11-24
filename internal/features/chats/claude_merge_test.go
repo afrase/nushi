@@ -57,7 +57,7 @@ func TestClaudeMerge(t *testing.T) {
 							t.Errorf("%s replay of %s is empty", rname, sid)
 						}
 						merged := merge(c, r, claudeHarness)
-						if slices.ContainsFunc(merged, func(it model.Item) bool { return it.Kind == model.Notice && it.Status == differsNotice }) {
+						if slices.ContainsFunc(merged, func(it model.Item) bool { return it.Kind == model.Notice && it.Status == model.NoticeHistoryDiffers }) {
 							t.Errorf("%s copy and %s replay of %s merge with a divider:\ncopy:   %s\nreplay: %s\nmerged: %s",
 								cname, rname, sid, short(c), short(r), short(merged))
 						}

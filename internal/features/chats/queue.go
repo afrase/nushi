@@ -37,7 +37,7 @@ func (c *chat) imagesTakenLocked(m model.Message) model.Message {
 	if len(m.Images) == 0 || c.canImage {
 		return m
 	}
-	c.noticeLocked("error", "The agent doesn't take images: your queued message went without them.")
+	c.noticeLocked(model.NoticeError, "The agent doesn't take images: your queued message went without them.")
 	m.Images = nil
 	return m
 }
@@ -92,7 +92,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		c.unsendLocked(id)
 		if err != nil { // said once: the turn's later tool ends don't try again
 			c.steerFailed = true
-			c.noticeLocked("error", "Couldn't hand your message to the agent; it's back in the queue: "+err.Error())
+			c.noticeLocked(model.NoticeError, "Couldn't hand your message to the agent; it's back in the queue: "+err.Error())
 		}
 		c.queue = append([]model.Message{m}, c.queue...)
 		c.queueChangedLocked()

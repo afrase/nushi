@@ -53,9 +53,9 @@ func short(items []model.Item) string {
 		switch {
 		case it.Kind == model.UserMessage:
 			out = append(out, "u:"+strings.ReplaceAll(it.Text, " ", "_"))
-		case it.Kind == model.Notice && it.Status == compactedNotice:
+		case it.Kind == model.Notice && it.Status == model.NoticeCompacted:
 			out = append(out, "C")
-		case it.Kind == model.Notice && it.Status == differsNotice:
+		case it.Kind == model.Notice && it.Status == model.NoticeHistoryDiffers:
 			out = append(out, "D")
 		case it.Kind == model.Notice:
 			out = append(out, "n:"+it.Status)
@@ -153,7 +153,7 @@ func TestMerge(t *testing.T) {
 // The compaction's mark holds the summary.
 func TestMergeKeepsTheSummary(t *testing.T) {
 	got := merge(items("u:one m:m1:a"), items("S m:m1:a"), claudeHarness)
-	if got[1].Status != compactedNotice || !strings.HasPrefix(got[1].Text, "This session is being continued") {
+	if got[1].Status != model.NoticeCompacted || !strings.HasPrefix(got[1].Text, "This session is being continued") {
 		t.Fatalf("%+v", got)
 	}
 }

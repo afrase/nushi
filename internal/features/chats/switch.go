@@ -130,7 +130,7 @@ func (s *Service) inCheckout(c *chat, list []model.WorktreeEntry, folder string)
 // (from the branch it last had, which several switches keep).
 func (c *chat) switchedLocked(from, to string) {
 	c.saveLocked(func(s *model.ChatRecord) { s.BranchFrom = cmp.Or(s.BranchFrom, from) })
-	c.noticeLocked("branch_switched", "Switched to branch "+to)
+	c.noticeLocked(model.NoticeBranchSwitched, "Switched to branch "+to)
 	c.copyLocked(false)
 }
 

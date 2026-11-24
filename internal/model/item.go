@@ -20,8 +20,7 @@ const (
 	// Plan is the agent's plan as a checklist (Plan), updated in place.
 	Plan
 	// Notice says how a turn ended when it didn't end normally, or an error.
-	// Status is the reason ("cancelled", "refusal", "turn_failed", "error", ...);
-	// "agent_notice" and "agent_warning" are the agent's own (AgentNotice).
+	// Status is the reason, one of the Notice* statuses below.
 	Notice
 )
 
@@ -29,6 +28,47 @@ const (
 // the model's safeguards stopped (AgentNotice.Stopped): what streamed of
 // it before, which the agent drops from its history.
 const StoppedBySafeguards = "stopped_by_safeguards"
+
+// The statuses of a Notice, the one list of them (the proto's
+// ITEM_KIND_NOTICE comment lists the same). They are wire values: an
+// app matches them, so one is never renamed (ADR 0004). Untyped on
+// purpose: Item.Status holds tool calls', prompts' and messages' statuses
+// too, and a named type would still take a bare literal.
+const (
+	// How a turn ended when it didn't end normally (ACP's stop reasons),
+	// "turn_failed" the agent answering the prompt with an error, and
+	// "error" anything else that went wrong.
+	NoticeCancelled       = "cancelled"
+	NoticeRefusal         = "refusal"
+	NoticeMaxTokens       = "max_tokens"
+	NoticeMaxTurnRequests = "max_turn_requests"
+	NoticeTurnFailed      = "turn_failed"
+	NoticeError           = "error"
+	// A failed reopen's reasons (one notice, which goes once the chat runs).
+	NoticeReopenFailed = "reopen_failed"
+	NoticeNotReady     = "not_ready"
+	NoticeFolderGone   = "folder_gone"
+	NoticeSessionGone  = "session_gone"
+	// NoticeSignIn is what 0.52's betas gave a reopen refused for want of a
+	// sign-in, before it was a reopen_failed with options: none is written
+	// now, and a copy of theirs may still hold one (drop it after 0.54).
+	NoticeSignIn = "sign_in"
+	// The marks a merge of the transcript's copy and the agent's replay
+	// draws: compacted here, or the agent's history differs from here.
+	NoticeCompacted      = "compacted"
+	NoticeHistoryDiffers = "history_differs"
+	// The agent working on its own after a background task, the chat's
+	// branch named or switched, a command the daemon ran in the agent's
+	// place, and a message the user sent taken back to edit.
+	NoticeOwnTurn        = "own_turn"
+	NoticeBranchRenamed  = "branch_renamed"
+	NoticeBranchSwitched = "branch_switched"
+	NoticeCommand        = "command"
+	NoticeTakenBack      = "taken_back"
+	// The agent's own notice and warning (AgentNotice).
+	NoticeAgent        = "agent_notice"
+	NoticeAgentWarning = "agent_warning"
+)
 
 // SentMeta is the _meta key of a replayed message's first chunk that says
 // when it was sent (RFC 3339), from a bridge of Nushi's that can tell.
