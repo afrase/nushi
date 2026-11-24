@@ -374,12 +374,10 @@ func TestAWorkflowIsWhatTheHarnessSays(t *testing.T) {
 	t.Cleanup(svc.Close)
 	c := startChat(t, svc, t.TempDir())
 	c.mu.Lock()
-	c.busy = true // reopening: the agent replays
-	c.restoreLocked([]model.Item{
+	c.restoreLocked([]model.Item{ // as a reopen's replay restores them
 		{ID: "run", Kind: model.ToolCall, Tool: "Run", Status: "completed"},
 		{ID: "wf", Kind: model.ToolCall, Tool: "Workflow", Status: "completed", Text: launchText},
 	}, nil)
-	c.busy = false
 	run, wf := c.following["run"], c.following["wf"]
 	c.mu.Unlock()
 	if run == nil || wf != nil {
@@ -627,16 +625,21 @@ func TestAWorkflowAfterAReopen(t *testing.T) {
 					w.Active = active
 					return w, nil
 				})
+				// Its reopen (a reload) replays the call: text alone.
+				turn(t, f.svc, f.c, "one")
+				f.agent.mu.Lock()
+				f.agent.history = append(f.agent.history, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: wfCall, Title: "Workflow", Kind: "other", Status: "completed",
+					Meta:    map[string]any{"claudeCode": map[string]any{"toolName": "Workflow"}},
+					Content: []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: launchText}}}}}}})
+				f.agent.mu.Unlock()
+				testcheck.NoErr(t, f.svc.Reload(f.c.id))
+				synctest.Wait()
 				f.c.mu.Lock()
-				f.c.busy = true // reopening: the agent replays
-				f.c.restoreLocked([]model.Item{{ID: wfCall, Kind: model.ToolCall, Tool: "Workflow", Status: "completed", Text: launchText}}, nil)
 				fl := f.c.following[wfCall]
-				f.c.busy = false
 				f.c.mu.Unlock()
 				if fl == nil || fl.owner != nil {
 					t.Fatalf("followed %+v", fl)
 				}
-				synctest.Wait()
 				if w := workflowOf(f.c); f.status().Workflows != 1 || w.State != "running" || w.RunID != "wf_769a004c-2aa" || w.TaskID != "w9u1xb6ik" {
 					t.Fatalf("its files fresh: %+v", w)
 				}

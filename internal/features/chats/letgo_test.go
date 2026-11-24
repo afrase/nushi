@@ -78,7 +78,7 @@ func lettingGo(t *testing.T, v Viewers) (*Service, *fakeAgent, *chat, *readCount
 	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
 	testcheck.NoErr(t, err)
 	copies, f := &readCounter{Copies: store}, &follower{}
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}},
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch, Ready: agent.ready}},
 		Options{Scratch: t.TempDir(), Copies: copies, Publish: f.event, Viewers: v})
 	t.Cleanup(svc.Close)
 	return svc, agent, startChat(t, svc, t.TempDir()), copies, f
@@ -297,6 +297,22 @@ func TestLetGoOnlyWhatTheCopyHolds(t *testing.T) {
 	svc, agent, c, _, _ := lettingGo(t, nil)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")
+	// A reopen under way (Wake's, held in its session/load) keeps them.
+	testcheck.NoErr(t, svc.Sleep(c.id))
+	agent.mu.Lock()
+	agent.loadGate, agent.entered = make(chan struct{}), make(chan string, 1)
+	agent.mu.Unlock()
+	testcheck.NoErr(t, svc.Wake(c.id))
+	<-agent.entered
+	c.mu.Lock()
+	c.letGoLocked()
+	held := !c.inCopy
+	c.mu.Unlock()
+	if !held {
+		t.Fatal("let go with a reopen under way")
+	}
+	close(agent.loadGate)
+	idle(t, c)
 	testcheck.NoErr(t, svc.Sleep(c.id))
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -313,7 +329,6 @@ func TestLetGoOnlyWhatTheCopyHolds(t *testing.T) {
 			return func() { c.items[1].Kind, c.items[1].Status = model.AgentMessage, "" }
 		},
 		"a queued message": func() func() { c.queue = []model.Message{{Text: "later"}}; return func() { c.queue = nil } },
-		"a reopen":         func() func() { c.busy = true; return func() { c.busy = false } },
 	}
 	for name, block := range cases {
 		undo := block()
@@ -335,16 +350,24 @@ func TestAgentReadyWhileLetGo(t *testing.T) {
 	svc, agent, c, _, _ := lettingGo(t, nil)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")
-	testcheck.NoErr(t, svc.Archive(c.id, true))
+	testcheck.NoErr(t, svc.Archive(c.id, true)) // its agent stops
+	agent.mu.Lock()
+	agent.launchErr, agent.notReady = errors.New("claude: not found"), errors.New("Claude isn't set up")
+	agent.mu.Unlock()
+	testcheck.NoErr(t, svc.Archive(c.id, false)) // and its reopen fails
+	idle(t, c)
 	c.mu.Lock()
-	c.reopenFailed = true
-	c.failure = c.addLocked(model.Item{Kind: model.Notice, Status: "not_ready", Text: "Couldn't reopen the chat"})
+	f := c.failureLocked()
+	failed := c.reopenFailed && f != nil && f.Status == model.NoticeNotReady
 	c.letGoLocked()
 	let := c.inCopy && len(c.aside) == 1
 	c.mu.Unlock()
-	if !let {
-		t.Fatal("not let go")
+	if !failed || !let {
+		t.Fatalf("reopen failed for want of the agent %v, let go %v", failed, let)
 	}
+	agent.mu.Lock()
+	agent.launchErr, agent.notReady = nil, nil
+	agent.mu.Unlock()
 	svc.AgentReady("claude")
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -360,15 +383,21 @@ func TestSignedInWhileLetGo(t *testing.T) {
 	svc, agent, c, copies, _ := lettingGo(t, nil)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")
-	testcheck.NoErr(t, svc.Archive(c.id, true))
+	testcheck.NoErr(t, svc.Archive(c.id, true)) // its agent stops
+	agent.mu.Lock()
+	agent.authMethods = codexMethods(t)
+	agent.loadErr = &acp.Error{Code: acp.ErrorCodeAuthenticationRequired, Message: "Authentication required"}
+	agent.mu.Unlock()
+	testcheck.NoErr(t, svc.Archive(c.id, false)) // and its reopen is refused
+	idle(t, c)
 	c.mu.Lock()
-	c.reopenFailed = true
-	c.failure = c.addLocked(model.Item{Kind: model.Notice, Status: "reopen_failed", Text: "Couldn't reopen the chat", Options: []model.Option{{ID: "chat-gpt"}}})
+	f := c.failureLocked()
+	failed := c.reopenFailed && f != nil && wantsSignIn(*f)
 	c.letGoLocked()
 	let := c.inCopy && len(c.aside) == 1
 	c.mu.Unlock()
-	if !let {
-		t.Fatal("not let go")
+	if !failed || !let {
+		t.Fatalf("reopen failed for want of a sign-in %v, let go %v", failed, let)
 	}
 	saved, err := copies.Read(c.id)
 	testcheck.NoErr(t, err)
@@ -433,11 +462,8 @@ func TestUnreadCopyIsLeftAsItIs(t *testing.T) {
 		t.Errorf("unread %v, let go %v", unread, let)
 	}
 
-	agent.quit()
-	eventually(t, c, func() bool { return c.agent == nil })
-	c.mu.Lock()
-	c.outlived = false // a reopen replays the session into the copy
-	c.mu.Unlock()
+	testcheck.NoErr(t, svc.Reload(c.id)) // a reopen that replays the session into the copy
+	idle(t, c)
 	agent.updates = []acp.SessionUpdate{chunk("m3", "ok")}
 	turn(t, svc, c, "three")
 	if got := copied(t, store, c.id); got != "user:one agent:m1 user:two agent:m2 user:three agent:m3" {

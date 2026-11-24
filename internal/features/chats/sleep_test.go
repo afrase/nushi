@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -95,7 +96,6 @@ func TestAutoSleep(t *testing.T) {
 		blockers := map[string]func(c *chat) (undo func()){
 			"a turn":               func(c *chat) func() { c.started = time.Now(); return func() { c.started = time.Time{} } },
 			"the agent's own turn": func(c *chat) func() { c.ownTurn = true; return func() { c.ownTurn = false } },
-			"a move or rewind":     func(c *chat) func() { c.busy = true; return func() { c.busy = false } },
 			"a queued message": func(c *chat) func() {
 				c.queue = []model.Message{{Text: "later"}}
 				return func() { c.queue = nil }
@@ -138,6 +138,24 @@ func TestAutoSleep(t *testing.T) {
 			if !awake() {
 				t.Fatalf("slept during %s", name)
 			}
+		}
+		// A rewind under way, held as its fork is made (one that then fails).
+		agent.mu.Lock()
+		agent.forkErr = errors.New("no fork")
+		agent.mu.Unlock()
+		for _, text := range []string{"two", "three"} { // a message to rewind to: forked at the agent's answer before it
+			agent.updates = []acp.SessionUpdate{chunk("m-"+text, "ok")}
+			turn(t, svc, c, text)
+		}
+		release := rewinding(t, svc, agent, c, lastAsked(c))
+		c.mu.Lock()
+		c.active = time.Time{}
+		c.mu.Unlock()
+		if svc.doze(c, after); !awake() {
+			t.Fatal("slept during a rewind")
+		}
+		if err := release(); err == nil {
+			t.Fatal("rewound")
 		}
 		// An event puts it off.
 		c.mu.Lock()

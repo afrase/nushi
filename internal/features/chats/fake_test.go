@@ -119,7 +119,11 @@ type fakeAgent struct {
 	deletes   bool
 	deleteErr error
 	noLoad    bool // it can't reopen sessions
-	pid       int  // its process, for the processes below it (fakeProcesses); 0: unknown
+	// notReady is why it can't start now (Kind.Ready, by ready); nil: it can.
+	notReady error
+	// authMethods are the ways to sign it in that initialize advertises.
+	authMethods []acp.AuthMethod
+	pid         int // its process, for the processes below it (fakeProcesses); 0: unknown
 	// lists makes it able to list sessions: listed, listPage at a time
 	// (all at once for 0), the cursor being the next one's index.
 	lists    bool
@@ -299,8 +303,18 @@ func (f *fakeAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.In
 	if f.lists {
 		caps.SessionCapabilities.List = &acp.SessionListCapabilities{}
 	}
+	f.mu.Lock()
+	methods := slices.Clone(f.authMethods)
+	f.mu.Unlock()
 	return &acp.InitializeResponse{ProtocolVersion: acp.LatestProtocolVersion, AgentInfo: &acp.Implementation{Name: claudeacp.Name}, // as Claude's agent, which forks at a message
-		AgentCapabilities: caps}, nil
+		AgentCapabilities: caps, AuthMethods: methods}, nil
+}
+
+// ready is the fake's Kind.Ready: notReady.
+func (f *fakeAgent) ready() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.notReady
 }
 
 func (f *fakeAgent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {

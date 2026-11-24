@@ -3,7 +3,9 @@ package chats
 import (
 	"context"
 	"errors"
+	"os"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -53,14 +55,26 @@ func TestMoveAfterTheAgentQuit(t *testing.T) {
 }
 
 // A chat whose reopen failed has an empty transcript: moved, it is replayed.
+// Its reopen fails as after a daemon restart, its folder gone.
 func TestMoveAChatThatNeverReopened(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	c.kind.Moves = true
 	agent.updates = []acp.SessionUpdate{chunk("m1", "first")}
 	turn(t, svc, c, "one")
-	c.mu.Lock() // as after a daemon restart, when its folder was gone
-	c.agent, c.items, c.outlived = nil, nil, false
+	c.mu.Lock()
+	sess := c.record
 	c.mu.Unlock()
+	svc.Close()
+	testcheck.NoErr(t, os.RemoveAll(sess.Folder))
+	svc = newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sessions: &memSessions{stored: []model.ChatRecord{sess}}})
+	t.Cleanup(svc.Close)
+	_, err := svc.Get(sess.ID)
+	testcheck.NoErr(t, err)
+	c = svc.chats[sess.ID]
+	eventually(t, c, func() bool { return c.reopenFailed && !c.busy })
+	if got := texts(c); len(got) != 1 || !strings.HasPrefix(got[0], "notice:") {
+		t.Fatalf("its reopen failed, it holds %q", got)
+	}
+	c.kind.Moves = true
 	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err != nil {
 		t.Fatal(err)
 	}
@@ -129,15 +143,12 @@ func TestNoMoveWhileTheChatGoesOrTheAgentWorks(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	c.kind.Moves = true
 	turn(t, svc, c, "one")
-	c.mu.Lock()
-	c.halting = true
-	c.mu.Unlock()
+	release := deleting(t, svc, agent, c)
 	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err == nil {
 		t.Error("moved a chat being deleted")
 	}
-	c.mu.Lock()
-	c.halting = false
-	c.mu.Unlock()
+	release()
+	turn(t, svc, c, "two") // the delete stopped its agent: a message reopens it
 	// The agent's own turn (a background command ended), until its usage.
 	send(c, chunk("own", "tests passed"))
 	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err == nil {
@@ -148,7 +159,6 @@ func TestNoMoveWhileTheChatGoesOrTheAgentWorks(t *testing.T) {
 	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err != nil {
 		t.Error(err)
 	}
-	_ = agent
 }
 
 // What its agent ran ends with it: a call without a result (replayed after

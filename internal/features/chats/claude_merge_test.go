@@ -156,6 +156,9 @@ func replayOf(t *testing.T, events []event, sid string) []model.Item {
 		return nil
 	}
 	_, _, c := newChat(t, claudeSession, &memModes{})
+	// Set by hand, not through a reopen: what's fed is a recorded load's
+	// replay, to a chat with no agent; a real reopen would need an agent
+	// that replays the recording, which this fixture has none of.
 	c.mu.Lock()
 	c.busy, c.replaying = true, true
 	c.mu.Unlock()

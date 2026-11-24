@@ -70,6 +70,10 @@ func (p *player) play(e event) {
 		feed(c, []acp.SessionNotification{n})
 	case e.method == "session/prompt" && p.prompts:
 		_, c, _ := p.chatOf(e.session)
+		// The turn's fields are set by hand, not through a prompt: the
+		// player feeds a recorded session's wire to a chat with no agent,
+		// and a turn begins and ends where the recording says, among its
+		// updates, which no fake agent's prompt can place.
 		c.mu.Lock()
 		if e.done {
 			c.busy, c.started = false, time.Time{}

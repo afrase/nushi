@@ -71,11 +71,25 @@ func TestRewindFailures(t *testing.T) {
 	two := c.items[2].ID
 	conversation := describe(c.items)
 
+	// A turn under way, held by the agent.
+	agent.mu.Lock()
+	agent.gate, agent.updates = make(chan struct{}), []acp.SessionUpdate{chunk("m-three", "ok")}
+	gate := agent.gate
+	agent.mu.Unlock()
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "three"}, SendIdle))
+	if _, err := svc.Rewind(t.Context(), c.id, two); err == nil || !strings.Contains(err.Error(), "busy") {
+		t.Errorf("during a turn: %v, want busy", err)
+	}
+	close(gate)
+	idle(t, c)
+	agent.mu.Lock()
+	agent.gate = nil // the turn left a new one
+	agent.mu.Unlock()
+
 	for _, r := range []struct {
 		name, says string
 		block      func(c *chat) (undo func())
 	}{
-		{"busy", "busy", func(c *chat) func() { c.busy = true; return func() { c.busy = false } }},
 		{"the agent's own turn", "on its own", func(c *chat) func() { c.ownTurn = true; return func() { c.ownTurn = false } }},
 		{"a background subagent", "in the background", func(c *chat) func() {
 			c.items = append(c.items, model.Item{ID: "sa", Subagent: &model.Subagent{State: "running"}})
@@ -252,4 +266,42 @@ func TestStopGivesUpOnAnAgentThatIgnoresIt(t *testing.T) {
 	}
 	agent.release()
 	idle(t, c)
+}
+
+// lastAsked is the id of the chat's last user message.
+func lastAsked(c *chat) string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, it := range slices.Backward(c.items) {
+		if it.Kind == model.UserMessage {
+			return it.ID
+		}
+	}
+	return ""
+}
+
+// rewinding begins a Rewind of c to message at that waits as its fork is
+// made until the release it returns, which waits for its end: meanwhile
+// the chat is busy rewinding, its agent running.
+func rewinding(t *testing.T, svc *Service, agent *fakeAgent, c *chat, at string) (release func() error) {
+	t.Helper()
+	gate := make(chan struct{})
+	agent.mu.Lock()
+	agent.forkGate, agent.entered = gate, make(chan string, 1)
+	agent.mu.Unlock()
+	done := make(chan error, 1)
+	go func() { _, err := svc.Rewind(context.Background(), c.id, at); done <- err }()
+	select {
+	case got := <-agent.entered:
+		if got != "fork" {
+			t.Fatalf("the rewind waits at %s", got)
+		}
+	case err := <-done:
+		close(gate)
+		t.Fatalf("the rewind ended before its fork: %v", err)
+	}
+	return func() error {
+		close(gate)
+		return <-done
+	}
 }
