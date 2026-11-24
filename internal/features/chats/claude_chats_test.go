@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"regexp"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -274,13 +273,6 @@ func view(c *chat) parity {
 	}
 	for _, it := range c.items {
 		it = timeless(it)
-		// A model fallback's notice is worded by each agent: the Go
-		// agent passes on claude's own text (model_refusal_fallback's
-		// content, what claude's terminal shows), the adapter writes a
-		// summary of its own; the label stays compared.
-		if before, _, ok := strings.Cut(it.Text, modelFallback); ok {
-			it.Text = before + modelFallback
-		}
 		if it.Kind == model.Permission {
 			opts := make([]model.Option, 0, len(it.Options))
 			for _, o := range it.Options {
@@ -306,10 +298,6 @@ type noOutputFile struct{ BackgroundTasks }
 func (noOutputFile) ReadBackgroundCommand(string, string) (output, end, state string, err error) {
 	return "", "", "", fs.ErrNotExist
 }
-
-// modelFallback is the label both agents give claude's notice that it
-// answered on another model after a refusal (docs/facts/claude.md).
-const modelFallback = "**Model fallback:** "
 
 // timeless is an item without the times of this run.
 func timeless(it model.Item) model.Item {
