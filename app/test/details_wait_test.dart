@@ -228,11 +228,7 @@ void _switchRenders() {
     for (final b in Brightness.values) {
       renderTest('render: a switch to a new chat and back, '
           '${width.toInt()} ${b.name}', (tester) async {
-        final (d, fake) = await panesApp(
-          tester,
-          width: width,
-          brightness: b,
-        );
+        final (d, fake) = await panesApp(tester, width: width, brightness: b);
         fake.on(
           (input) => input is GetFolderStatusRequest
               ? Future.delayed(

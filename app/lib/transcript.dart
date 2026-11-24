@@ -417,39 +417,42 @@ class _TranscriptState extends State<Transcript> {
       return calls.isEmpty
           ? entry
           : Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              entry,
-              LivePullCards(ChatPull.of(widget.daemon, widget.chat), calls),
-            ],
-          );
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                entry,
+                LivePullCards(ChatPull.of(widget.daemon, widget.chat), calls),
+              ],
+            );
     }
+
     final view = same
         ? was.$2
         // New while the chat is open, it rises in, once.
-        : withCards(Enter.rise(
-            play: rise,
-            child: RepaintBoundary(
-              // Always there, as Marks is: a pick in the pins'
-              // list tints the message for a moment.
-              child: PinFlash(
-                on: flash,
-                // Always there, so that a find coming and going
-                // leaves the entry's state alone.
-                child: Marks(
-                  entry: key,
-                  // A call's title types out as it comes, or as it
-                  // joins a run; not what the chat opened with.
-                  child: Arriving(
-                    play: rise || was != null,
-                    child: isBand(e)
-                        ? SendingEntry(state: sending, child: item())
-                        : item(),
+        : withCards(
+            Enter.rise(
+              play: rise,
+              child: RepaintBoundary(
+                // Always there, as Marks is: a pick in the pins'
+                // list tints the message for a moment.
+                child: PinFlash(
+                  on: flash,
+                  // Always there, so that a find coming and going
+                  // leaves the entry's state alone.
+                  child: Marks(
+                    entry: key,
+                    // A call's title types out as it comes, or as it
+                    // joins a run; not what the chat opened with.
+                    child: Arriving(
+                      play: rise || was != null,
+                      child: isBand(e)
+                          ? SendingEntry(state: sending, child: item())
+                          : item(),
+                    ),
                   ),
                 ),
               ),
             ),
-          ));
+          );
     _built[key] = (from, view);
     // Keyed, the item's state follows it as items arrive.
     return Padding(

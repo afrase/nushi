@@ -124,8 +124,7 @@ final Map<String, GitFiles> _gitFiles = runMap();
 
 /// [folder]'s one [GitFiles]: the Files pane's filter, the phone's, `@`
 /// and ⌘P read the same list.
-GitFiles gitFilesOf(String folder) =>
-    _gitFiles[folder] ??= GitFiles._(folder);
+GitFiles gitFilesOf(String folder) => _gitFiles[folder] ??= GitFiles._(folder);
 
 /// A folder's files as git lists them (ListFiles: what it doesn't
 /// ignore), for a filter, `@` or ⌘P: asked when one starts, and again
@@ -153,19 +152,21 @@ class GitFiles extends ChangeNotifier {
     if (at != null && now.difference(at).inSeconds <= 5) return;
     _at = now;
     unawaited(
-      daemon.client.listFiles(ListFilesRequest(folder: folder)).then(
-        (r) {
-          paths = r.paths;
-          error = '';
-          listed = true;
-          notifyListeners();
-        },
-        onError: (Object e) {
-          error = errorText(e);
-          listed = true;
-          notifyListeners();
-        },
-      ),
+      daemon.client
+          .listFiles(ListFilesRequest(folder: folder))
+          .then(
+            (r) {
+              paths = r.paths;
+              error = '';
+              listed = true;
+              notifyListeners();
+            },
+            onError: (Object e) {
+              error = errorText(e);
+              listed = true;
+              notifyListeners();
+            },
+          ),
     );
   }
 }

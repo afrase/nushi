@@ -62,12 +62,10 @@ void main() {
       ..step(-1);
     expect(f.pending, 'far step 0');
     laid.addAll({'call': 'agent call', 'step': 'agent call'});
-    f.found([
-      'agent call 0',
-      'agent call 1',
-      'agent call 2',
-      'l1 0',
-    ], laid: {...laid});
+    f.found(
+      ['agent call 0', 'agent call 1', 'agent call 2', 'l1 0'],
+      laid: {...laid},
+    );
     expect(f.current, 'agent call 2');
   });
 

@@ -403,10 +403,7 @@ class _ChatDetailsState extends State<_ChatDetails> {
       null => false,
     };
     final (added, removed) = commits
-        ? spanCommits.fold(
-            (0, 0),
-            (n, c) => (n.$1 + c.added, n.$2 + c.removed),
-          )
+        ? spanCommits.fold((0, 0), (n, c) => (n.$1 + c.added, n.$2 + c.removed))
         : (status?.added ?? 0, status?.removed ?? 0);
     final lines = status == null || !status.git
         ? null
@@ -424,138 +421,138 @@ class _ChatDetailsState extends State<_ChatDetails> {
     // The cards lie on the pane's own fill (ADR 0111), which hides the
     // last chat's rows once these show.
     return ColoredBox(
-        color: t.base,
-        child: PanelWidgets([
-          PanelWidget(
-            title: 'Environment',
-            summary: Text(
-              folderParts(chat.home, scratch: chat.scratch).$1,
-              style: muted,
-              overflow: TextOverflow.ellipsis,
+      color: t.base,
+      child: PanelWidgets([
+        PanelWidget(
+          title: 'Environment',
+          summary: Text(
+            folderParts(chat.home, scratch: chat.scratch).$1,
+            style: muted,
+            overflow: TextOverflow.ellipsis,
+          ),
+          rows: [
+            (
+              chat.worktree == null ? 'Folder' : 'Repository',
+              FolderButton(chat: chat, daemon: daemon, stacked: true),
             ),
-            rows: [
-              (
-                chat.worktree == null ? 'Folder' : 'Repository',
-                FolderButton(chat: chat, daemon: daemon, stacked: true),
+            if (status != null && status.git)
+              ...worktreeRows(
+                context,
+                chat,
+                daemon,
+                status.branch,
+                list: _changes.branches,
+                onOpen: () => unawaited(_changes.listBranches()),
+                onChanged: () => _changes.reload().ignore(),
+                onChanges: widget.onChanges,
               ),
-              if (status != null && status.git)
-                ...worktreeRows(
+            if (status != null && status.gone)
+              (
+                null,
+                Text(
+                  chat.worktree == null
+                      ? 'The folder is gone.'
+                      : 'Its worktree was removed. Delete the chat to clean '
+                            'up its branch ${chat.worktree!.branch}.',
+                  style: theme.ui(t.crashed, size: 12),
+                ),
+              ),
+          ],
+        ),
+        PanelWidget(
+          title: 'Context',
+          // Nothing to show yet: one line.
+          note:
+              side == null &&
+                  u.contextSize == 0 &&
+                  cost(u).isEmpty &&
+                  lastTurn(u).isEmpty &&
+                  _context == null &&
+                  !_asking
+              ? 'Not reported yet'
+              : null,
+          summary: ContextMeter(u, breakdown: _context),
+          rows: [
+            if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
+              (null, 'Not reported yet'),
+            // As Claude's rail: the line, the bar, what fills it.
+            if (u.contextSize > 0 || _context != null)
+              (
+                null,
+                ContextReport(
+                  u,
+                  // As last asked, brought up to the agent's latest count.
+                  categories: liveCategories(_context?.categories ?? [], u),
+                  lists: unread ? const [] : _context?.lists ?? const [],
+                  compactable: _compactable,
+                  onCompact: _canCompact ? _compact : null,
+                ),
+              ),
+            // An answer the daemon couldn't read kinds from: as the agent
+            // wrote it, under the line and the bar.
+            if (unread) (null, AgentMarkdown(_context!.markdown)),
+            // Why there's no breakdown yet, for an agent that can say.
+            if (_context == null &&
+                (_asking || u.contextSize > 0 && chat.canAskContext))
+              (
+                null,
+                _asking
+                    ? 'Asking what fills it…'
+                    : chat.asleep
+                    ? 'What fills it, once the chat is awake'
+                    : chat.busy
+                    ? 'What fills it, after this turn'
+                    : 'What fills it, in a moment',
+              ),
+            if (lastTurn(u).isNotEmpty)
+              (
+                'Last turn',
+                tooltip(
                   context,
-                  chat,
-                  daemon,
-                  status.branch,
-                  list: _changes.branches,
-                  onOpen: () => unawaited(_changes.listBranches()),
-                  onChanged: () => _changes.reload().ignore(),
-                  onChanges: widget.onChanges,
+                  cacheUse(u).isEmpty ? '' : 'Cache: ${cacheUse(u)}',
+                  Text(lastTurn(u), style: theme.ui(t.text, size: 12)),
                 ),
-              if (status != null && status.gone)
+              ),
+            if (cost(u).isNotEmpty)
+              ('Cost', Text(cost(u), style: theme.ui(t.text, size: 12))),
+            if (side != null) _sideRow(side),
+          ],
+        ),
+        PanelWidget(
+          title: 'Changes',
+          note: error == null && status != null && !status.git
+              ? (status.gone ? 'The folder is gone' : 'Not a git repository')
+              : null,
+          summary: lines,
+          onTap: status != null && status.git ? widget.onChanges : null,
+          rows: [
+            if (error != null)
+              (null, error)
+            else if (status == null)
+              (null, '…')
+            else if (!status.git)
+              (
+                null,
+                status.gone ? 'The folder is gone' : 'Not a git repository',
+              )
+            else ...[
+              (scope.label, lines!),
+              if (commits)
                 (
-                  null,
-                  Text(
-                    chat.worktree == null
-                        ? 'The folder is gone.'
-                        : 'Its worktree was removed. Delete the chat to clean '
-                              'up its branch ${chat.worktree!.branch}.',
-                    style: theme.ui(t.crashed, size: 12),
-                  ),
-                ),
-            ],
-          ),
-          PanelWidget(
-            title: 'Context',
-            // Nothing to show yet: one line.
-            note:
-                side == null &&
-                    u.contextSize == 0 &&
-                    cost(u).isEmpty &&
-                    lastTurn(u).isEmpty &&
-                    _context == null &&
-                    !_asking
-                ? 'Not reported yet'
-                : null,
-            summary: ContextMeter(u, breakdown: _context),
-            rows: [
-              if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
-                (null, 'Not reported yet'),
-              // As Claude's rail: the line, the bar, what fills it.
-              if (u.contextSize > 0 || _context != null)
-                (
-                  null,
-                  ContextReport(
-                    u,
-                    // As last asked, brought up to the agent's latest count.
-                    categories: liveCategories(_context?.categories ?? [], u),
-                    lists: unread ? const [] : _context?.lists ?? const [],
-                    compactable: _compactable,
-                    onCompact: _canCompact ? _compact : null,
-                  ),
-                ),
-              // An answer the daemon couldn't read kinds from: as the agent
-              // wrote it, under the line and the bar.
-              if (unread) (null, AgentMarkdown(_context!.markdown)),
-              // Why there's no breakdown yet, for an agent that can say.
-              if (_context == null &&
-                  (_asking || u.contextSize > 0 && chat.canAskContext))
-                (
-                  null,
-                  _asking
-                      ? 'Asking what fills it…'
-                      : chat.asleep
-                      ? 'What fills it, once the chat is awake'
-                      : chat.busy
-                      ? 'What fills it, after this turn'
-                      : 'What fills it, in a moment',
-                ),
-              if (lastTurn(u).isNotEmpty)
-                (
-                  'Last turn',
-                  tooltip(
-                    context,
-                    cacheUse(u).isEmpty ? '' : 'Cache: ${cacheUse(u)}',
-                    Text(lastTurn(u), style: theme.ui(t.text, size: 12)),
-                  ),
-                ),
-              if (cost(u).isNotEmpty)
-                ('Cost', Text(cost(u), style: theme.ui(t.text, size: 12))),
-              if (side != null) _sideRow(side),
-            ],
-          ),
-          PanelWidget(
-            title: 'Changes',
-            note: error == null && status != null && !status.git
-                ? (status.gone ? 'The folder is gone' : 'Not a git repository')
-                : null,
-            summary: lines,
-            onTap: status != null && status.git ? widget.onChanges : null,
-            rows: [
-              if (error != null)
-                (null, error)
-              else if (status == null)
-                (null, '…')
-              else if (!status.git)
-                (
-                  null,
-                  status.gone ? 'The folder is gone' : 'Not a git repository',
+                  'Number',
+                  spanCommits.isEmpty ? 'None' : '${spanCommits.length}',
                 )
-              else ...[
-                (scope.label, lines!),
-                if (commits)
-                  (
-                    'Number',
-                    spanCommits.isEmpty ? 'None' : '${spanCommits.length}',
-                  )
-                else
-                  ('Files', status.files == 0 ? 'None' : '${status.files}'),
-              ],
+              else
+                ('Files', status.files == 0 ? 'None' : '${status.files}'),
             ],
-          ),
-          ?pullWidget(_pull, onShow: widget.onPull),
-          ?worktreesWidget(chat, onChanges: widget.onChanges),
-          ?backgroundTasksWidget(chat, daemon),
-          mcpWidget(chat, daemon),
-          ?artifactsWidget(chat),
-        ]),
+          ],
+        ),
+        ?pullWidget(_pull, onShow: widget.onPull),
+        ?worktreesWidget(chat, onChanges: widget.onChanges),
+        ?backgroundTasksWidget(chat, daemon),
+        mcpWidget(chat, daemon),
+        ?artifactsWidget(chat),
+      ]),
     );
   }
 }

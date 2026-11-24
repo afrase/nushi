@@ -108,11 +108,7 @@ class _WorkflowPaneState extends State<WorkflowPane> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return ListenableBuilder(
-      listenable: Listenable.merge([
-        widget.chat,
-        widget.chat.streamed,
-        _agent,
-      ]),
+      listenable: Listenable.merge([widget.chat, widget.chat.streamed, _agent]),
       builder: (context, _) {
         final call = _call;
         final w = call?.workflow;

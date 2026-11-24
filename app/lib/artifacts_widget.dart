@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
 
@@ -56,7 +55,6 @@ const _inset = 6.0;
 
 class _FileRowsState extends State<FileRows> {
   bool _more = false;
-
 
   /// When each row's file last changed: read again on the minute's tick
   /// and when the chat's items or folder change, not as text streams in.

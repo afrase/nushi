@@ -130,23 +130,25 @@ final class ChatChanges extends ChangeNotifier {
     final asked = ++_asked;
     unawaited(listBranches());
     final reading = _reading = ChangeSpan.of(daemon, chat);
-    reading.then(
-      (s) {
-        if (identical(_reading, reading)) _reading = null;
-        if (asked != _asked) return;
-        _span = s;
-        _error = null;
-        if (gen == _gen) _behind = false;
-        notifyListeners();
-      },
-      onError: (Object e) {
-        if (identical(_reading, reading)) _reading = null;
-        if (asked != _asked) return;
-        _error = errorText(e);
-        _again.failed(e);
-        notifyListeners();
-      },
-    ).ignore();
+    reading
+        .then(
+          (s) {
+            if (identical(_reading, reading)) _reading = null;
+            if (asked != _asked) return;
+            _span = s;
+            _error = null;
+            if (gen == _gen) _behind = false;
+            notifyListeners();
+          },
+          onError: (Object e) {
+            if (identical(_reading, reading)) _reading = null;
+            if (asked != _asked) return;
+            _error = errorText(e);
+            _again.failed(e);
+            notifyListeners();
+          },
+        )
+        .ignore();
     return reading;
   }
 

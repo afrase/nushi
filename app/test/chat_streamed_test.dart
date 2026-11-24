@@ -128,7 +128,8 @@ void main() {
       ),
     );
     final cmd = panesItems.firstWhere((it) => it.id == 'cmd').deepCopy()
-      ..backgroundCommand.output = 'ready on http://localhost:3000\n'
+      ..backgroundCommand.output =
+          'ready on http://localhost:3000\n'
           'compiled in 412ms\n';
     fake.emit(
       EventsResponse(
