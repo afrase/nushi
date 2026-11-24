@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"slices"
 	"sync"
@@ -415,5 +416,25 @@ func TestKeepingASideChatAsItCloses(t *testing.T) {
 		if slices.Contains(deleted, acp.SessionID(side)) {
 			t.Errorf("kept %s, deleted", side)
 		}
+	}
+}
+
+// A fork whose agent refuses the chat's mode runs on the agent's own, and
+// its record keeps the chat's, as a reopen's does: what the user picked
+// isn't overwritten by a refusal.
+func TestARefusedModeLeavesTheForksRecord(t *testing.T) {
+	svc, agent, c := newChat(t, claudeSession, &memModes{})
+	testcheck.NoErr(t, svc.SetConfig(t.Context(), c.id, "mode", "plan"))
+	turn(t, svc, c, "one")
+	agent.mu.Lock()
+	agent.setErr = errors.New("no")
+	agent.mu.Unlock()
+	id, err := svc.ForkAsChat(t.Context(), c.id, "")
+	testcheck.NoErr(t, err)
+	fork := svc.chats[id]
+	fork.mu.Lock()
+	defer fork.mu.Unlock()
+	if fork.record.Mode != "plan" {
+		t.Errorf("the fork's record is on %q, want plan", fork.record.Mode)
 	}
 }

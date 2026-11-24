@@ -76,21 +76,26 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 	c.busy = true // until reapply: no prompt before its picks are on it
 	c.mu.Unlock()
 	s.register(c)
-	if err := c.reapply(ctx, o.agent, o.sid, s.remembered.Mode(k.Name), s.remembered.Picks(k.Name)); err != nil {
-		c.log().Warn("starting mode", "err", err) // the chat keeps the agent's default
+	mode := c.reapply(ctx, o.agent, o.sid, s.remembered.Mode(k.Name), s.remembered.Picks(k.Name))
+	if mode != nil {
+		c.log().Warn("starting mode", "err", mode) // the chat keeps the agent's default
 	}
-	c.settled()
+	c.settled(mode)
 	c.log().Info("chat created", "scratch", scratch, "worktree", wt != nil)
 	return c.id, nil
 }
 
-// settled ends a new chat's reapply: it stores the mode its session is
-// on, and takes prompts.
-func (c *chat) settled() {
+// settled ends a new chat's reapply (mode, its error): it stores the mode
+// its session is on, when reapply put it there or the chat had none yet
+// (a refused one leaves the record's, as a reopen does), and takes
+// prompts, a queued one first.
+func (c *chat) settled(mode error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.busy = false
-	c.saveLocked(c.modeLocked)
+	if mode == nil || c.record.Mode == "" {
+		c.saveLocked(c.modeLocked)
+	}
 	c.statusChangedLocked()
 	c.deliverLocked()
 }

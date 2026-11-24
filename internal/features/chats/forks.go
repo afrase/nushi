@@ -68,10 +68,11 @@ func (s *Service) ForkAsChat(ctx context.Context, chatID, at string) (string, er
 	c.busy = true // until reapply: no prompt before the chat's picks are on it
 	c.mu.Unlock()
 	s.register(c)
-	if err := c.reapply(ctx, o.agent, o.sid, of.Mode, of.Picks); err != nil {
-		c.log().Warn("mode after forking", "err", err)
+	mode := c.reapply(ctx, o.agent, o.sid, of.Mode, of.Picks)
+	if mode != nil {
+		c.log().Warn("mode after forking", "err", mode)
 	}
-	c.settled()
+	c.settled(mode)
 	c.log().Info("chat forked", "from", p.id, "at_message", at != "")
 	return c.id, nil
 }

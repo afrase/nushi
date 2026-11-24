@@ -186,7 +186,7 @@ func (s *Service) resume(c *chat) {
 	ctx, cancel := context.WithTimeout(s.ctx, reopenTimeout)
 	defer cancel()
 	start := time.Now()
-	err := s.load(ctx, c)
+	_, err := s.load(ctx, c) // a mode refused is logged: the chat runs
 	gone := err != nil && c.isGone(err)
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -283,10 +283,10 @@ func (s *Service) AgentReady(agent string) {
 // load starts the chat's agent and has it replay the session, then puts the
 // session back on the chat's picks and in the mode it was last in (an agent
 // may reopen a session on its defaults: Claude does); one it refuses is
-// logged, since the chat runs. A chat that never had
+// logged, since the chat runs, and returned as mode. A chat that never had
 // a message may have nothing to replay (Claude keeps a session only once it
 // has one): it gets a new session instead.
-func (s *Service) load(ctx context.Context, c *chat) error {
+func (s *Service) load(ctx context.Context, c *chat) (mode, err error) {
 	c.mu.Lock()
 	c.itemsBackLocked()
 	sid, folder, fresh, gone := c.sid, c.record.Folder, !c.record.HasMessages, folderGone(c.record)
@@ -300,10 +300,10 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	}
 	c.mu.Unlock()
 	if gone != nil {
-		return gone
+		return nil, gone
 	}
 	var o opened
-	err := c.retire(ctx, old)
+	err = c.retire(ctx, old)
 	if err == nil {
 		o, err = c.openSession(ctx, sid, folder, false, "")
 		if err != nil && fresh {
@@ -315,7 +315,7 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	c.replaying, c.replay = false, nil
 	c.mu.Unlock()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var times map[string]time.Time
 	if replay {
@@ -333,16 +333,16 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	if o.sid != sid {
 		c.saveLocked(func(s *model.ChatRecord) { s.SessionID = o.sid })
 	}
-	mode, picks, throwaway := c.record.Mode, c.record.Picks, slices.Clone(c.record.Throwaway)
+	remembered, picks, throwaway := c.record.Mode, c.record.Picks, slices.Clone(c.record.Throwaway)
 	c.mu.Unlock()
 	s.later(func() { s.discard(c, throwaway) }) // outlives the request; left by an agent that stopped before it could
 	// The agent runs the session now: a mode or pick it refuses leaves
 	// the chat on its own, as for a start, a fork or an open, and the
 	// chat's record keeps the remembered one for the next reopen.
-	if err := c.reapply(ctx, o.agent, o.sid, mode, picks); err != nil {
-		c.log().Warn("mode after reopening", "err", err)
+	if mode = c.reapply(ctx, o.agent, o.sid, remembered, picks); mode != nil {
+		c.log().Warn("mode after reopening", "err", mode)
 	}
-	return nil
+	return mode, nil
 }
 
 // folderGone says why a chat can't run when its folder no longer exists
