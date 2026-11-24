@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/afrase/claude-acp-go/claudeagent/sessions"
 
@@ -63,7 +62,7 @@ func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]mod
 		if s.Unnoted != nil {
 			title = s.Unnoted(title) // the first prompt's first text block may be a note
 		}
-		return model.SessionHit{SessionID: f.id, Folder: info.Cwd, Title: listTitle(title),
+		return model.SessionHit{SessionID: f.id, Folder: info.Cwd, Title: sessions.ListTitle(title),
 			Updated: f.modified, Count: n, Before: ex.Before, Match: ex.Match, After: ex.After}, true
 	})
 }
@@ -72,21 +71,6 @@ func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]mod
 type transcript struct {
 	id, path string
 	modified time.Time
-}
-
-// maxTitle is the most characters of a found session's title, as
-// claudeacp lists one.
-const maxTitle = 256
-
-// listTitle is a session's summary on one line, cut to maxTitle
-// characters, as claudeacp's list has it (its listTitle, which it doesn't
-// export): the title a chat opened from the search takes.
-func listTitle(s string) string {
-	s = strings.Join(strings.Fields(s), " ")
-	if utf8.RuneCountInString(s) <= maxTitle {
-		return s
-	}
-	return string([]rune(s)[:maxTitle-1]) + "…"
 }
 
 // transcripts lists the transcripts in dirs, the newest first, but those
@@ -173,7 +157,7 @@ func scan(ctx context.Context, path string, q textfind.Query, unnoted func(strin
 	return n, first
 }
 
-// typed says a record may hold a command the user typed, which userText
+// typed says a record may hold a command the user typed, which cleaned
 // writes with a `!` or `/` the line may not have ("!git" for
 // <bash-input>git status</bash-input>): the query's anchor can't rule it
 // out, so it is decoded.
@@ -197,7 +181,7 @@ func has(line []byte, key, value string) bool {
 }
 
 // said is the text of a message the user or Claude said: a user's
-// string or text blocks, cleaned of what claude adds (userText), or
+// string or text blocks, cleaned of what claude adds (cleaned), or
 // Claude's text blocks. Nothing for any other record.
 func said(typ string, content json.RawMessage, unnoted func(string) string) []string {
 	var s string
@@ -226,8 +210,9 @@ func said(typ string, content json.RawMessage, unnoted func(string) string) []st
 	return out
 }
 
-// cleaned is a user's text as userText has it, without Nushi's notes
-// (unnoted, when not nil), nothing for what isn't the user's (claude's
+// cleaned is a user's text as a replay shows it (sessions.UserText),
+// without Nushi's notes (unnoted, when not nil), with a `!` command as
+// the app shows it (bashText); nothing for what isn't the user's (claude's
 // mark where a turn was stopped among it).
 func cleaned(text string, unnoted func(string) string) []string {
 	if claude.InterruptMark(text) {
@@ -236,39 +221,28 @@ func cleaned(text string, unnoted func(string) string) []string {
 	if unnoted != nil {
 		text = unnoted(text)
 	}
-	if t, ok := userText(text); ok {
+	if t, ok := sessions.UserText(bashText(text)); ok {
 		return []string{t}
 	}
 	return nil
 }
 
-// What claude writes into a user message besides what the user typed, as
-// claude-acp-go's claudeacp cleans a replayed one (its userText, which it
-// doesn't export): context it adds and a `!` command's output, removed
-// whole, and a slash command or a `!` command as tags, which read as the
-// command typed (docs/facts/claude.md).
+// A `!` command's tags, which sessions.UserText leaves in on purpose: the
+// app shows them as a run (app/lib/run_text.dart), the command as typed
+// after a `!` and its output in the run's card, not as the user's words,
+// so search matches the command as `!X` and passes over the output. Each
+// runs to the nearest closing tag of its own name; one with none after it
+// is the user's text, as UserText has a marker.
 var (
-	injected = regexp.MustCompile(`(?s)<(system-reminder|task-notification|local-command-stdout|local-command-stderr|local-command-caveat|command-message|bash-stdout|bash-stderr|bash-exit-code)>.*?</(?:system-reminder|task-notification|local-command-stdout|local-command-stderr|local-command-caveat|command-message|bash-stdout|bash-stderr|bash-exit-code)>`)
-
-	commandName = regexp.MustCompile(`(?s)<command-name>(.*?)</command-name>`)
-	commandArgs = regexp.MustCompile(`(?s)<command-args>(.*?)</command-args>`)
-	bashInput   = regexp.MustCompile(`(?s)<bash-input>(.*?)</bash-input>`)
+	bashInput  = regexp.MustCompile(`(?s)<bash-input>(.*?)</bash-input>`)
+	bashOutput = regexp.MustCompile(`(?s)<bash-stdout>.*?</bash-stdout>|<bash-stderr>.*?</bash-stderr>|<bash-exit-code>.*?</bash-exit-code>`)
 )
 
-// userText is a user message's text as the user wrote it; false when
-// nothing of it is the user's.
-func userText(text string) (string, bool) {
-	if m := commandName.FindStringSubmatch(text); m != nil {
-		name := "/" + strings.TrimPrefix(strings.TrimSpace(m[1]), "/")
-		if a := commandArgs.FindStringSubmatch(text); len(a) > 1 && strings.TrimSpace(a[1]) != "" {
-			name += " " + strings.TrimSpace(a[1])
-		}
-		return name, true
+// bashText is text with a `!` command as the app shows it: the command
+// as typed, "!" and all, and its output left out.
+func bashText(text string) string {
+	if !strings.Contains(text, "<bash-") {
+		return text
 	}
-	if strings.Contains(text, "<") {
-		text = injected.ReplaceAllString(text, "")
-		text = bashInput.ReplaceAllString(text, "!$1")
-	}
-	text = strings.TrimSpace(text)
-	return text, text != ""
+	return bashInput.ReplaceAllString(bashOutput.ReplaceAllString(text, ""), "!$1")
 }

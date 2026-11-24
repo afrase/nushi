@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -92,16 +93,17 @@ func TestSearchSessions(t *testing.T) {
 	if hits := search(t, l, model.SessionSearch{Query: "wombat"}); ids(hits) != "a" || hits[0].Count != 2 {
 		t.Errorf("wombat: %+v", hits)
 	}
-	// A command reads as typed, a `!` one too, though the transcript has
-	// no `!` (the query's longest word is "!ls" there).
-	for _, q := range []string{"/compact", "!ls burrow", "!ls"} {
+	// A `!` command reads as typed, though the transcript has no `!` (the
+	// query's longest word is "!ls" there).
+	for _, q := range []string{"!ls burrow", "!ls"} {
 		if got := ids(search(t, l, model.SessionSearch{Query: q})); got != "a" {
 			t.Errorf("%s: %s", q, got)
 		}
 	}
-	// What claude writes where the user stopped a turn, and a `!`
-	// command's tags, aren't the user's words.
-	for _, q := range []string{"interrupted", "request", "bash"} {
+	// What claude writes where the user stopped a turn, a `!` command's
+	// tags, and a command the replay leaves out (/compact) aren't the
+	// user's words.
+	for _, q := range []string{"interrupted", "request", "bash", "/compact"} {
 		if hits := search(t, l, model.SessionSearch{Query: q}); len(hits) != 0 {
 			t.Errorf("%s: %v, want nothing", q, ids(hits))
 		}
@@ -165,15 +167,48 @@ func TestSearchSessionsAsListed(t *testing.T) {
 	}
 }
 
-// A command whose name claude wrote without its slash reads as typed
-// too, though the transcript has no "/fix".
-func TestSearchACommandWithoutItsSlash(t *testing.T) {
+// A user's text is matched as the replay shows it (sessions.UserText),
+// with a `!` command as the app shows it: a command the replay leaves out
+// isn't found, nor one named without its slash; prose beside a command's
+// tags is found, the command not; a `!` command reads as typed and its
+// output isn't the user's; a marker runs to its own closing tag, so no
+// excerpt shows a tag, and an opening tag with no closing one is the
+// user's text.
+func TestSearchAsTheReplayShows(t *testing.T) {
 	projects := filepath.Join(t.TempDir(), "projects")
-	testcheck.Write(t, filepath.Join(projects, "-work-app", sessA+".jsonl"),
-		`{"type":"user","cwd":"/work/app","message":{"role":"user","content":"<command-name>fix</command-name>\n<command-args>the relay</command-args>"}}`+"\n")
-	for _, q := range []string{"/fix", "/fix the relay", "fix"} {
-		if hits := search(t, Local{Projects: projects}, model.SessionSearch{Query: q}); len(hits) != 1 || hits[0].Match != q {
-			t.Errorf("%s: %+v", q, hits)
+	// Quoted as claude writes it, "<" as it is (json.Marshal would escape
+	// it): these texts are ASCII, which Go quotes as JSON does.
+	prompt := func(text string) string {
+		return `{"type":"user","cwd":"/work/app","message":{"role":"user","content":` + strconv.Quote(text) + `}}` + "\n"
+	}
+	testcheck.Write(t, filepath.Join(projects, "-work-app", sessA+".jsonl"), prompt("Look at the relay")+
+		prompt("<command-name>/compact</command-name>\n<command-message>compact</command-message>\n<command-args></command-args>")+
+		prompt("<command-message>review</command-message>\n<command-name>/review</command-name>\n<command-args>the relay</command-args>")+
+		prompt("<command-name>fix</command-name>\n<command-args>the burrow</command-args>")+
+		prompt("<command-name>/wombat</command-name>Where is the numbat?")+
+		prompt("<bash-input>git status</bash-input>")+
+		prompt("<bash-stdout>On branch quokka</bash-stdout><bash-stderr></bash-stderr>")+
+		prompt("And the bilby?\n\n<bash-input>make lint</bash-input>\n<bash-stdout>quokka ok</bash-stdout><bash-stderr></bash-stderr><bash-exit-code>0</bash-exit-code>")+
+		prompt("<system-reminder>a</command-message> echidna</system-reminder>The platypus")+
+		prompt("<command-name>/dingo and the potoroo"))
+	l := Local{Projects: projects}
+	for _, c := range []struct{ q, before, after string }{
+		{"/review the relay", "", ""},
+		{"numbat", "Where is the ", "?"},
+		{"!git status", "", ""},
+		{"bilby", "And the ", "? !make lint"},
+		{"!make lint", "And the bilby? ", ""},
+		{"platypus", "The ", ""},
+		{"potoroo", "<command-name>/dingo and the ", ""},
+	} {
+		hits := search(t, l, model.SessionSearch{Query: c.q})
+		if len(hits) != 1 || hits[0].Count != 1 || hits[0].Before != c.before || hits[0].After != c.after {
+			t.Errorf("%s: %+v", c.q, hits)
+		}
+	}
+	for _, q := range []string{"/compact", "/fix", "fix the burrow", "/wombat", "quokka", "echidna", "bash", "exit-code"} {
+		if hits := search(t, l, model.SessionSearch{Query: q}); len(hits) != 0 {
+			t.Errorf("%s: %+v, want nothing", q, hits)
 		}
 	}
 }
