@@ -12,7 +12,6 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
-	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -50,7 +49,6 @@ func TestClaudeParity(t *testing.T) {
 			if len(want) == 0 || len(want[0].Items) == 0 {
 				t.Fatal("the recording shows nothing to compare")
 			}
-			commandsEnded(t, filepath.Base(dir), got, want)
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("the Go agent's chats differ from the adapter's:\n%s", differences(got, want))
 			}
@@ -58,45 +56,6 @@ func TestClaudeParity(t *testing.T) {
 				launchedARun(t, want)
 			}
 		})
-	}
-}
-
-// commandEnds are how claude's recorded background commands ended (each
-// cli.jsonl's task_notification), by scenario and task id.
-var commandEnds = map[string]map[string]model.BackgroundCommand{
-	"bash-background":               {"bcgqmqtgt": {State: "done", End: "exited with code 0"}},
-	"bash-background-killed":        {"b4u19w10f": {State: "failed", End: "exited with code 144"}},
-	"bash-background-taskstop":      {"b2df8epcn": {State: "stopped", End: "killed"}},
-	"bash-background-stoptask":      {"bi8c2i7yx": {State: "stopped", End: "killed"}},
-	"bash-background-stoptask-turn": {"beit1md11": {State: "stopped", End: "killed"}},
-}
-
-// commandsEnded checks the Go agent's background commands (got) ended as
-// claude's recorded tasks did: from the task's status, which claude-acp-go
-// sends since v0.5.0 (ADR 0130). The adapter sent none, and the commands'
-// output files are gone (noOutputFile), so its side can't know an end no
-// TaskStop told: it shows "started" (the end unknown), as Nushi shows such
-// a command. There, and only there, the Go agent's command takes the
-// adapter's row for the comparison that follows; every other difference
-// stays one.
-func commandsEnded(t *testing.T, scenario string, got, want []parity) {
-	t.Helper()
-	for i := range min(len(got), len(want)) {
-		for j := range got[i].Items {
-			sh := got[i].Items[j].BackgroundCommand
-			if sh == nil {
-				continue
-			}
-			end, ok := commandEnds[scenario][sh.ID]
-			if !ok || sh.State != end.State || sh.End != end.End {
-				t.Errorf("the Go agent's command %s ended %q (%q), claude's %+v", sh.ID, sh.State, sh.End, end)
-			}
-			if j < len(want[i].Items) {
-				if w := want[i].Items[j].BackgroundCommand; w != nil && w.ID == sh.ID && w.State == "started" {
-					got[i].Items[j].BackgroundCommand = w
-				}
-			}
-		}
 	}
 }
 

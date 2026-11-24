@@ -79,8 +79,6 @@ Every scenario is recorded (2026-11-25, Claude Code 2.1.331 through the Go agent
 | `models` | `availableModels` in the session's settings | `initialize`'s models are already filtered |
 | `mcp` | a tool of a stdio MCP server (`mcp-echo`), asked about | |
 
-The three `bash-background` scenarios' commands end, on the Go agent's side, by claude's task status (claude-acp-go v0.5.0 on, ADR 0130), which the adapter never sent: the test checks each against how claude's recorded task ended (`commandEnds`), and where the adapter's side can only show the end unknown (its file is gone), compares the rest of the call without it.
-
 `stop_task` on a background command isn't among them: the adapter never sent it, so the recordings through it couldn't show it.
 
 ## Recording
