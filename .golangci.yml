@@ -50,7 +50,11 @@ linters:
     # The layering as practised (AGENTS.md's Layering): two narrow rules,
     # tests left out (a feature's tests use a real agent's package on
     # purpose, ADR 0077, and a package's tests may build a feature).
-    # depguard matches a package and every package under its path.
+    # A deny entry is a plain prefix of the import path, not a path
+    # element: internal/pi denies piskills too, and would deny an
+    # unrelated internal/pidfile (as internal/features would an
+    # internal/featureflags). On purpose, so an agent's new package is
+    # caught; a plumbing package takes a name no entry starts it with.
     depguard:
       rules:
         # chats names no agent (ADR 0077): a feature meets an agent through
