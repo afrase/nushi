@@ -156,6 +156,18 @@ func endState(end string) string {
 // 0)` or `… failed with exit code 144` (docs/facts/claude.md).
 var taskSummary = regexp.MustCompile(`" (?:completed \(exit code (-?\d+)\)|failed with exit code (-?\d+))$`)
 
+// TaskWord says meta has Claude's word on one of its tasks: the
+// _meta.claudeCode.task claude-acp-go sends on the call that started it,
+// a background command's (CommandTask), a foreground command's that ran
+// for more than a few seconds, or (v0.8.0 on) a workflow's
+// (docs/facts/claude.md).
+func (Harness) TaskWord(meta map[string]any) bool {
+	cc, _ := meta["claudeCode"].(map[string]any)
+	task, _ := cc["task"].(map[string]any)
+	id, _ := task["id"].(string)
+	return id != ""
+}
+
 // CommandTask reads Claude's own word on a background command's task, the
 // _meta.claudeCode.task that claude-acp-go (v0.5.0 on) sends as an update
 // of the Bash call that started it: running, then how it ended

@@ -32,15 +32,19 @@ type taskWord struct {
 // "stopped" after "killed") only adds how, so the row changes once and
 // its detail at most once more. It says whether the update said nothing
 // else, so it is no step of the agent's work (no turn of its own, no
-// change to the call).
+// change to the call): that goes too for the agent's word on a task
+// Nushi doesn't read (TaskWord), such as Claude's workflow's, which
+// otherwise started a turn of the agent's own when it came with the
+// chat idle, and kept it when no turn followed.
 func (c *chat) commandTaskLocked(u acp.SessionUpdate) (only bool) {
 	t := u.ToolCallUpdate
 	if c.kind.background == nil || u.SessionUpdate != "tool_call_update" || t == nil {
 		return false
 	}
+	only = t.Status == "" && t.Title == "" && t.Kind == "" && t.Content == nil && t.Locations == nil && t.RawInput == nil && t.RawOutput == nil
 	id, word, end, ok := c.kind.background.CommandTask(t.Meta)
 	if !ok {
-		return false
+		return only && c.kind.background.TaskWord(t.Meta)
 	}
 	state := model.RunState(word)
 	was := c.tasks[id]
@@ -63,7 +67,7 @@ func (c *chat) commandTaskLocked(u acp.SessionUpdate) (only bool) {
 			c.publishLocked(*it)
 		}
 	}
-	return t.Status == "" && t.Title == "" && t.Kind == "" && t.Content == nil && t.Locations == nil && t.RawInput == nil && t.RawOutput == nil
+	return only
 }
 
 // heardLocked is sh as the agent's word on its task has it: ended, if

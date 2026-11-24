@@ -144,6 +144,12 @@ type BackgroundTasks interface {
 	// false for an update that says nothing of one. Once heard, it is the
 	// source of truth for whether the command runs (ADR 0130).
 	CommandTask(meta map[string]any) (id, state, end string, ok bool)
+	// TaskWord says an update's _meta is the agent's word on one of its
+	// tasks of any kind, a command's or not (Claude's foreground command
+	// and workflow are tasks too): an update of a call that carries only
+	// that is no step of the agent's work, whether Nushi reads the word
+	// (CommandTask) or passes over it.
+	TaskWord(meta map[string]any) bool
 	// RunsBackgroundCommand says a process the agent runs (its command
 	// line) is the shell running the command of call, a tool call that left
 	// it running in the background: Nushi then stops the command itself, by

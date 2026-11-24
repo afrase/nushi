@@ -142,3 +142,21 @@ func TestCommandTask(t *testing.T) {
 		}
 	}
 }
+
+// Any task of Claude's is its word on a task, a command's or not.
+func TestTaskWord(t *testing.T) {
+	for _, tc := range []struct {
+		meta map[string]any
+		want bool
+	}{
+		{map[string]any{"claudeCode": map[string]any{"task": map[string]any{"id": "b1", "type": "local_bash", "status": "running"}}}, true},
+		{map[string]any{"claudeCode": map[string]any{"toolName": "Workflow", "task": map[string]any{"id": "w1", "type": "local_workflow", "status": "killed"}}}, true},
+		{map[string]any{"claudeCode": map[string]any{"task": map[string]any{"type": "local_workflow"}}}, false},
+		{map[string]any{"claudeCode": map[string]any{"toolName": "Workflow"}}, false},
+		{nil, false},
+	} {
+		if got := (Harness{}).TaskWord(tc.meta); got != tc.want {
+			t.Errorf("%v: %v", tc.meta, got)
+		}
+	}
+}
