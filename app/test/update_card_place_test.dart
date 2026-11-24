@@ -471,7 +471,7 @@ void main() {
           (d) => d
             ..trustAsk = TrustAsk(
               '/Users/me/site',
-              'Start Claude',
+              TrustFor.start,
               const [],
               'claude',
             )

@@ -16,7 +16,7 @@ void main() {
   testWidgets('the card shows what runs, by file, and waits for a word', (
     tester,
   ) async {
-    final ask = TrustAsk('/src/repo', 'Start a chat', [
+    final ask = TrustAsk('/src/repo', TrustFor.start, [
       FolderRun(
         file: '/src/repo/.mcp.json',
         what: 'MCP server echo',
@@ -75,9 +75,9 @@ void main() {
 
   test('what each unanswered card says', () {
     for (final (action, said) in [
-      ('Start a chat', "Didn't start Codex in site"),
-      ('Open the session', "Didn't open the session in site"),
-      ('Move the chat', "Didn't move the chat to site"),
+      (TrustFor.start, "Didn't start Codex in site"),
+      (TrustFor.open, "Didn't open the session in site"),
+      (TrustFor.move, "Didn't move the chat to site"),
     ]) {
       expect(
         TrustAsk('/Users/me/site', action, [], 'codex').left,

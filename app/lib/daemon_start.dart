@@ -10,7 +10,7 @@ extension DaemonStart on Daemon {
   /// [action]): when the folder brings code for it to run that nobody trusted,
   /// [trustAsk] shows it and this waits for "Start anyway", which the
   /// daemon remembers, or Cancel.
-  Future<bool> _mayRun(String folder, String action, String agent) async {
+  Future<bool> _mayRun(String folder, TrustFor action, String agent) async {
     if (folder.isEmpty) return true;
     while (true) {
       final check = await client.checkFolder(
@@ -66,7 +66,7 @@ extension DaemonStart on Daemon {
     startingAgent = agent;
     _changed();
     try {
-      if (!await _mayRun(folder, 'Start a chat', agent)) return null;
+      if (!await _mayRun(folder, TrustFor.start, agent)) return null;
       final before = _place;
       StartChatResponse resp;
       try {
@@ -94,7 +94,7 @@ extension DaemonStart on Daemon {
           final pull = issue?.github;
           final ask = TrustAsk(
             resp.headFolder,
-            'Start a chat',
+            TrustFor.start,
             resp.headRuns,
             agent,
             shownAs: pull == null ? null : 'Pull request #${pull.number}',
@@ -138,7 +138,7 @@ extension DaemonStart on Daemon {
     startingAgent = agent;
     _changed();
     try {
-      if (!await _mayRun(folder, 'Open the session', agent)) return;
+      if (!await _mayRun(folder, TrustFor.open, agent)) return;
       final before = _place;
       final resp = await client.openAgentSession(
         OpenAgentSessionRequest(
@@ -166,7 +166,7 @@ extension DaemonStart on Daemon {
     String folder, {
     bool worktree = false,
   }) async {
-    if (!await _mayRun(folder, 'Move the chat', chat.agent)) return false;
+    if (!await _mayRun(folder, TrustFor.move, chat.agent)) return false;
     await client.moveChat(
       MoveChatRequest(chatId: chat.id, folder: folder, worktree: worktree),
     );

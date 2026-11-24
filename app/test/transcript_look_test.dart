@@ -613,7 +613,7 @@ void main() {
     testWidgets('the trust card, ${b.name}', (tester) async {
       viewport(tester, const Size(720, 420), brightness: b);
       final tokens = b == Brightness.dark ? Tokens.dark : Tokens.light;
-      final ask = TrustAsk('/Users/me/lumen', 'Start a chat', [
+      final ask = TrustAsk('/Users/me/lumen', TrustFor.start, [
         FolderRun(
           file: '/Users/me/lumen/.mcp.json',
           what: 'MCP server docs',

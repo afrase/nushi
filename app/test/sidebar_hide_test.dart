@@ -307,7 +307,7 @@ void main() {
       'trust': (
         find.byType(PaneHeader),
         (d) => d
-          ..trustAsk = TrustAsk('/Users/me/site', 'Start Claude', [], 'claude')
+          ..trustAsk = TrustAsk('/Users/me/site', TrustFor.start, [], 'claude')
           ..listChanged(),
       ),
     };
