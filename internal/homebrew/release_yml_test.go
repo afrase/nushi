@@ -148,7 +148,12 @@ func release(t *testing.T, tag string, draft, pre bool, files ...string) string 
 	}{tag, draft, pre, assets})
 }
 
-const patchDraft = "api -X PATCH repos/afrase/nushi/releases/7 -F draft=true --silent"
+// patchDraft is the one call that makes a release a draft. It names the
+// tag: GitHub renames a draft's tag to "untagged-…" when a PATCH marks it
+// a draft again without one (seen on v0.54.0-beta.2's run: draft made it
+// a draft, a later job failed, withdraw marked it again, and re-running
+// the failed jobs then found no release by its tag).
+const patchDraft = "api -X PATCH repos/afrase/nushi/releases/7 -F draft=true -f tag_name=v0.54.0 --silent"
 
 // A release just published, without its files, is made a draft; one that is
 // public with its files already (Re-run all jobs on a green run, or a second

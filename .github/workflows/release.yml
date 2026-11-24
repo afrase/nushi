@@ -79,7 +79,9 @@ jobs:
             echo "live=true" >> "$GITHUB_OUTPUT"
             echo "$TAG is public with its files already: this run rebuilds them and leaves it public."; exit 0
           fi
-          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=true --silent
+          # The tag is named: marking a release a draft again without it (a re-run, or withdraw after draft) makes
+          # GitHub rename its tag to "untagged-…", and the next job then finds no release by its tag.
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=true -f tag_name="$TAG" --silent
           echo "$TAG is a draft until it is built (the latest release is $latest, the newest beta ${beta:-none})."
 
   tag:
@@ -340,7 +342,9 @@ jobs:
           if [ "$LIVE" = true ]; then
             echo "::error::$TAG was public with its files when this run began, so it stays public with them: re-run the failed jobs once what failed is fixed."; exit 0
           fi
-          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=true --silent
+          # The tag is named: marking a release a draft again without it (a re-run, or withdraw after draft) makes
+          # GitHub rename its tag to "untagged-…", and the next job then finds no release by its tag.
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=true -f tag_name="$TAG" --silent
           echo "::error::$TAG wasn't built, attached and its casks written, so it stays a draft: re-run the failed jobs once what failed is fixed (a fix in the code needs a new tag)."
 
   # The latest release updates nushi, and nushi@beta with it; the newest beta (a pre-release of a later version)
