@@ -80,6 +80,13 @@ func costChat(t *testing.T, text string) *costFixture {
 	return f
 }
 
+// published is the rows the command's events carried.
+func (f *costFixture) published() []model.BackgroundCommand {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]model.BackgroundCommand(nil), f.rows...)
+}
+
 // add appends s to the command's output file.
 func (f *costFixture) add(t *testing.T, s string) {
 	t.Helper()
@@ -133,5 +140,33 @@ func TestAnUnchangedBackgroundCommandFileIsNotReadAgain(t *testing.T) {
 				t.Errorf("an unchanged file read %d times", n)
 			}
 		})
+	})
+}
+
+// A command that writes on every poll has its tail sent at most every
+// commandTail; its end comes at once, with all it wrote.
+func TestAChattyCommandsTailIsSentEveryFewSeconds(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		f := costChat(t, "line 0\n")
+		f.tell(taskRunning)
+		const polls = 30
+		for i := range polls {
+			f.add(t, "line "+string(rune('a'+i%26))+"\n")
+			pass(commandPoll)
+		}
+		running := len(f.published())
+		if most := int(polls*commandPoll/commandTail) + 2; running > most {
+			t.Errorf("%d events in %d polls, want at most %d", running, polls, most)
+		}
+		f.add(t, "last\n")
+		f.tell(taskCompleted[0])
+		f.tell(taskCompleted[1])
+		pass(commandPoll)
+		want, err := os.ReadFile(f.file)
+		testcheck.NoErr(t, err)
+		rows := f.published()
+		if last := rows[len(rows)-1]; last.State != model.RunDone || last.Output != string(want) {
+			t.Errorf("the last event: %+v, want done with %q", last, want)
+		}
 	})
 }

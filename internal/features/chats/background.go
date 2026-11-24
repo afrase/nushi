@@ -140,8 +140,16 @@ func (c *chat) followCommand(callID, id, file string, agent Agent, poll time.Dur
 	}
 }
 
-// commandPoll is how often a running background command's output is read.
-const commandPoll = time.Second
+// commandPoll is how often a running background command's output file is
+// looked at; commandTail is how often at most a change to its output alone
+// is sent, the row's other changes (its state, its end) going at once.
+// A second is as often as the file is looked at; two seconds is a tail a
+// person watching it still reads as live, at half the events of a command
+// that writes all the time (a dev server's log).
+const (
+	commandPoll = time.Second
+	commandTail = 2 * time.Second
+)
 
 // commandFollower follows one background command (followCommand): its
 // call, its task's id and output file, and the agent that runs it (nil:
@@ -152,6 +160,7 @@ type commandFollower struct {
 	agent            Agent
 	endAt            *string   // the output an end was first seen after
 	last             *fileRead // what the file gave when last read, nil to read it
+	sentAt           time.Time // when the row was last sent
 }
 
 // fileRead is what a read of a command's output file gave, and the file's
@@ -197,11 +206,20 @@ func (f *commandFollower) step() bool {
 		sh.Output = out
 	}
 	sh, over := f.nextLocked(sh, out, end, state, err == nil)
-	if sh != *it.BackgroundCommand {
+	if sh != *it.BackgroundCommand && (over || !f.holdsTail(*it.BackgroundCommand, sh)) {
 		it.BackgroundCommand = &sh
 		c.publishLocked(*it)
+		f.sentAt = time.Now()
 	}
 	return !over && sh.State == model.RunRunning
+}
+
+// holdsTail says the row went from was to sh by a change to a running
+// command's output alone, sent less than commandTail ago: it waits, the
+// file holding it, for a step commandTail after (ADR 0130's amendment).
+func (f *commandFollower) holdsTail(was, sh model.BackgroundCommand) bool {
+	was.Output = sh.Output
+	return was == sh && sh.State == model.RunRunning && time.Since(f.sentAt) < commandTail
 }
 
 // nextLocked is the row sh after a read of the file (read: it was read,

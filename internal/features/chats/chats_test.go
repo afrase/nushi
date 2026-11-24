@@ -489,22 +489,24 @@ func TestBackgroundCommandsAreFollowed(t *testing.T) {
 // A line that reads as the end, which the command printed itself, isn't
 // its end: the file goes on growing after it.
 func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
-	reads := [][3]string{{"[killed]", "killed", "stopped"}, {"[killed] and on", "", ""}, {"[killed] and on", "exited with code 0", "done"},
-		{"[killed] and on", "exited with code 0", "done"}}
-	var states []model.RunState
-	read := func(string, string) (string, string, string, error) {
-		r := reads[min(len(states), len(reads)-1)]
-		return r[0], r[1], r[2], nil
-	}
-	c := &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context()}, id: "s1", kind: testKind(testHarness{read: read}), publish: func(e model.Event) {
-		if e.Item != nil && e.Item.BackgroundCommand != nil {
-			states = append(states, e.Item.BackgroundCommand.State)
+	synctest.Test(t, func(t *testing.T) { // a tail held for commandTail passes on the bubble's clock
+		reads := [][3]string{{"[killed]", "killed", "stopped"}, {"[killed] and on", "", ""}, {"[killed] and on", "exited with code 0", "done"},
+			{"[killed] and on", "exited with code 0", "done"}}
+		var states []model.RunState
+		read := func(string, string) (string, string, string, error) {
+			r := reads[min(len(states), len(reads)-1)]
+			return r[0], r[1], r[2], nil
 		}
-	}, agent: &fakeAgent{}, items: []model.Item{{ID: "t1", BackgroundCommand: &model.BackgroundCommand{State: "running"}}}}
-	c.followCommand("t1", "b1", "f", c.agent, time.Millisecond)
-	if c.items[0].BackgroundCommand.State != "done" || slices.Contains(states, "stopped") {
-		t.Errorf("states %q, the end %+v", states, c.items[0].BackgroundCommand)
-	}
+		c := &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context()}, id: "s1", kind: testKind(testHarness{read: read}), publish: func(e model.Event) {
+			if e.Item != nil && e.Item.BackgroundCommand != nil {
+				states = append(states, e.Item.BackgroundCommand.State)
+			}
+		}, agent: &fakeAgent{}, items: []model.Item{{ID: "t1", BackgroundCommand: &model.BackgroundCommand{State: "running"}}}}
+		c.followCommand("t1", "b1", "f", c.agent, time.Millisecond)
+		if c.items[0].BackgroundCommand.State != "done" || slices.Contains(states, "stopped") {
+			t.Errorf("states %q, the end %+v", states, c.items[0].BackgroundCommand)
+		}
+	})
 }
 
 // A chat on an issue gives its sessions Nushi's tools, for the chat and
