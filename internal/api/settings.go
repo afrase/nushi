@@ -30,11 +30,9 @@ type Settings interface {
 
 func (s *server) GetSettings(context.Context, *connect.Request[nushiv1.GetSettingsRequest]) (*connect.Response[nushiv1.GetSettingsResponse], error) {
 	set := &nushiv1.Settings{SleepAfterMinutes: int32(s.Chats.SleepAfter() / time.Minute)}
-	if s.Settings != nil {
-		set.DebugLog = s.Settings.DebugLog()
-		keep, days := s.Settings.KeepTranscripts(), int32(s.Settings.TranscriptDays())
-		set.KeepTranscripts, set.TranscriptDays = &keep, &days
-	}
+	set.DebugLog = s.Settings.DebugLog()
+	keep, days := s.Settings.KeepTranscripts(), int32(s.Settings.TranscriptDays())
+	set.KeepTranscripts, set.TranscriptDays = &keep, &days
 	if s.Updates != nil {
 		on := s.Updates.On()
 		set.CheckUpdates = &on
@@ -50,8 +48,6 @@ func (s *server) GetSettings(context.Context, *connect.Request[nushiv1.GetSettin
 func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.SetSettingsRequest]) (*connect.Response[nushiv1.SetSettingsResponse], error) {
 	set := req.Msg.GetSettings()
 	switch {
-	case s.Settings == nil:
-		return nil, connect.NewError(connect.CodeUnimplemented, errors.New("this daemon keeps no settings"))
 	case set.GetSleepAfterMinutes() < 0:
 		return nil, invalid(errors.New("sleep_after_minutes can't be negative"))
 	case set.TranscriptDays != nil && *set.TranscriptDays < 0:

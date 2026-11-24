@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"maps"
 	"slices"
 	"time"
@@ -21,15 +20,10 @@ type Usage interface {
 	Report(ctx context.Context, from time.Time) (model.UsageReport, error)
 }
 
-var errNoUsage = errors.New("this daemon doesn't keep usage")
-
 // GetUsage is this computer's only (macOnly): the page names project
 // folders and chats' titles, and the phone has none.
 func (s *server) GetUsage(ctx context.Context, req *connect.Request[nushiv1.GetUsageRequest]) (*connect.Response[nushiv1.GetUsageResponse], error) {
 	m := req.Msg
-	if s.Usage == nil {
-		return nil, connect.NewError(connect.CodeUnimplemented, errNoUsage)
-	}
 	r, err := s.Usage.Report(ctx, msTime(m.From))
 	if err != nil {
 		return nil, refused(err) // not Unavailable: the app takes that for the daemon gone

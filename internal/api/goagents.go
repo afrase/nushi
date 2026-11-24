@@ -16,14 +16,8 @@ const oldGoAgent = "codex"
 // goAgents fills set with each agent's Go agent: go_agents for each agent
 // that has the switch, and codex_go_agent for an older app.
 func (s *server) goAgents(set *nushiv1.Settings) {
-	if s.Settings == nil {
-		return
-	}
 	on := s.Settings.GoAgent(oldGoAgent)
 	set.CodexGoAgent = &on
-	if s.Agents == nil {
-		return
-	}
 	for _, name := range s.Agents.WithOwn() {
 		if set.GoAgents == nil {
 			set.GoAgents = map[string]bool{}
@@ -57,9 +51,6 @@ func (s *server) goAgentsChange(set *nushiv1.Settings) map[string]bool {
 // without the switch. SetSettings asks it before setting anything, so a
 // refused request changes nothing.
 func (s *server) checkGoAgents(set *nushiv1.Settings) error {
-	if s.Settings == nil || s.Agents == nil {
-		return nil
-	}
 	for name := range set.GetGoAgents() {
 		if !slices.Contains(s.Agents.WithOwn(), name) {
 			return invalid(fmt.Errorf("%s has no Go agent to switch to", name))

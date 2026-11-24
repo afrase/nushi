@@ -72,17 +72,18 @@ type Services struct {
 	Remote *remote.Service
 	Jira   *jira.Service
 	GitHub *github.Service
-	// Servers runs the folders' dev servers; nil: none run.
+	// Servers runs the folders' dev servers.
 	Servers *servers.Service
-	// Settings keeps the daemon's own settings; nil: not kept.
+	// Settings keeps the daemon's own settings.
 	Settings Settings
-	// Restart stops the daemon for a newer build; nil: it isn't offered.
+	// Restart stops the daemon for a newer build.
 	Restart Restart
-	// Updates checks for a newer release; nil: it doesn't.
+	// Updates checks for a newer release; nil: it doesn't (internal/api's
+	// own tests).
 	Updates Updates
-	// Usage sums what the chats' turns used; nil: it isn't kept.
+	// Usage sums what the chats' turns used.
 	Usage Usage
-	// ChatFiles says which chats' records didn't read; nil: none are said.
+	// ChatFiles says which chats' records didn't read.
 	ChatFiles ChatFiles
 }
 
@@ -241,9 +242,6 @@ func (s *server) Ping(ctx context.Context, _ *connect.Request[nushiv1.PingReques
 }
 
 func (s *server) RestartWhenIdle(context.Context, *connect.Request[nushiv1.RestartWhenIdleRequest]) (*connect.Response[nushiv1.RestartWhenIdleResponse], error) {
-	if s.Restart == nil {
-		return nil, connect.NewError(connect.CodeUnimplemented, errors.New("this daemon doesn't restart itself"))
-	}
 	out := &nushiv1.RestartWhenIdleResponse{}
 	for _, h := range s.Restart.WhenIdle() {
 		out.Holds = append(out.Holds, &nushiv1.RestartHold{ChatId: h.ChatID, Why: h.Why, Terminal: h.Terminal})

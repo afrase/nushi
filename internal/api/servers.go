@@ -14,18 +14,7 @@ import (
 // macOnly. No call takes a command: only a launch file's entries run,
 // picked by name or place and the hash of the entry as shown.
 
-// serversHere refuses a call when the daemon runs no servers.
-func (s *server) serversHere() error {
-	if s.Servers == nil {
-		return connect.NewError(connect.CodeUnimplemented, errors.New("this daemon runs no dev servers"))
-	}
-	return nil
-}
-
 func (s *server) ListServers(_ context.Context, req *connect.Request[nushiv1.ListServersRequest]) (*connect.Response[nushiv1.ListServersResponse], error) {
-	if err := s.serversHere(); err != nil {
-		return nil, err
-	}
 	l, err := s.Servers.List(req.Msg.ChatId)
 	if err != nil {
 		return nil, refused(err)
@@ -45,9 +34,6 @@ func (s *server) ListServers(_ context.Context, req *connect.Request[nushiv1.Lis
 }
 
 func (s *server) StartServer(ctx context.Context, req *connect.Request[nushiv1.StartServerRequest]) (*connect.Response[nushiv1.StartServerResponse], error) {
-	if err := s.serversHere(); err != nil {
-		return nil, err
-	}
 	m := req.Msg
 	if m.Hash == "" {
 		return nil, invalid(errors.New("no hash of the entry as shown"))
@@ -69,25 +55,16 @@ func (s *server) StartServer(ctx context.Context, req *connect.Request[nushiv1.S
 }
 
 func (s *server) StopServer(_ context.Context, req *connect.Request[nushiv1.StopServerRequest]) (*connect.Response[nushiv1.StopServerResponse], error) {
-	if err := s.serversHere(); err != nil {
-		return nil, err
-	}
 	return done[nushiv1.StopServerResponse](s.Servers.Stop(req.Msg.ChatId, req.Msg.ServerId), refused)
 }
 
 func (s *server) StopAllServers(_ context.Context, req *connect.Request[nushiv1.StopAllServersRequest]) (*connect.Response[nushiv1.StopAllServersResponse], error) {
-	if err := s.serversHere(); err != nil {
-		return nil, err
-	}
 	return done[nushiv1.StopAllServersResponse](s.Servers.StopAll(req.Msg.ChatId), refused)
 }
 
 // WatchServerLog sends a server's output for its logs drawer (ADR 0100):
 // its log, then what it writes, then ended once it has.
 func (s *server) WatchServerLog(ctx context.Context, req *connect.Request[nushiv1.WatchServerLogRequest], stream *connect.ServerStream[nushiv1.WatchServerLogResponse]) error {
-	if err := s.serversHere(); err != nil {
-		return err
-	}
 	var sendErr error
 	ended, err := s.Servers.Watch(req.Msg.ChatId, req.Msg.ServerId, ctx.Done(), func(b []byte) bool {
 		sendErr = stream.Send(&nushiv1.WatchServerLogResponse{Data: b})
