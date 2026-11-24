@@ -48,24 +48,6 @@ func TestBound(t *testing.T) {
 	}
 }
 
-// Kill ends what the command left running though the command has exited:
-// a ping its cmd.exe started in the background, which taskkill's tree no
-// longer finds from cmd.exe once it has gone.
-func TestStartKillsWhatTheCommandLeft(t *testing.T) {
-	cmd := exec.Command("cmd.exe", "/c", "start /b ping -n 100 127.0.0.1 >NUL")
-	g, err := Start(cmd)
-	testcheck.NoErr(t, err)
-	ping := pings(t, cmd.Process.Pid, 1)[0]
-	testcheck.NoErr(t, cmd.Wait()) // cmd.exe is gone; its ping isn't
-	if gone(ping, 0) {
-		t.Fatal("the ping ended by itself")
-	}
-	testcheck.NoErr(t, g.Kill())
-	if !gone(ping, 5*time.Second) {
-		t.Error("the ping outlived the kill")
-	}
-}
-
 // pings are the n ping.exe processes parent started, once there are n, as
 // handles that keep their pids theirs; closed when t ends.
 func pings(t *testing.T, parent, n int) []windows.Handle {

@@ -27,15 +27,6 @@ func bind(cmd *exec.Cmd) func() error {
 	return func() error { return Kill(cmd.Process) }
 }
 
-// Group is the process group a command Start started leads.
-type Group struct{ p *os.Process }
-
-func hold(p *os.Process) *Group { return &Group{p} }
-
-// Kill kills the group (Kill): what is left of it once its leader has
-// exited too.
-func (g *Group) Kill() error { return Kill(g.p) }
-
 // Session has cmd start in a session of its own, with no terminal to take
 // or wait on; its group is then its own too, which Own keeps.
 func Session(cmd *exec.Cmd) {

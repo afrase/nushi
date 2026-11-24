@@ -17,13 +17,3 @@ func Bound(cmd *exec.Cmd) {
 	cmd.Cancel = bind(cmd)
 	cmd.WaitDelay = time.Second
 }
-
-// Start starts cmd in a group of its own (Own) and holds that group, so
-// that the Group's Kill ends what cmd started too.
-func Start(cmd *exec.Cmd) (*Group, error) {
-	Own(cmd)
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return hold(cmd.Process), nil
-}

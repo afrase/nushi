@@ -4,6 +4,7 @@ package agentproc
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"strconv"
 	"strings"
@@ -103,5 +104,41 @@ func TestOutEndsPastAnEscapedChild(t *testing.T) {
 	case <-ended:
 	case <-time.After(10 * time.Second):
 		t.Fatal("stdout is still read past the exit")
+	}
+}
+
+// What the program left running in its group ends as it exits, not at a
+// later Kill: by then its group's id, the program's pid, may name another
+// group, which that Kill would end.
+func TestTheExitEndsWhatTheProgramLeft(t *testing.T) {
+	p, err := Pipe("/bin/sh", []string{"-c", `sleep 100 >/dev/null 2>&1 & echo $!`}, t.TempDir(), nil, nil)
+	testcheck.NoErr(t, err)
+	line, _ := bufio.NewReader(p.Out).ReadString('\n')
+	child, err := strconv.Atoi(strings.TrimSpace(line))
+	testcheck.NoErr(t, err)
+	t.Cleanup(func() { // a failed test's child, still running (a passed one's pid may be another's by now)
+		if t.Failed() {
+			_ = syscall.Kill(child, syscall.SIGKILL)
+		}
+	})
+	testcheck.NoErr(t, p.Wait())
+	testcheck.Wait(t, "the child the program left to end", func() bool { return errors.Is(syscall.Kill(child, 0), syscall.ESRCH) })
+}
+
+// A reader that comes to the program's output late, once the program has
+// exited and the wait for it is over, still reads all of it: only a read
+// waiting idle is given up on.
+func TestOutWaitsForALateReader(t *testing.T) {
+	ticks := make(chan time.Time)
+	drainAfter = func(time.Duration) <-chan time.Time { return ticks }
+	t.Cleanup(func() { drainAfter = nil })
+	p, err := Pipe("/bin/sh", []string{"-c", `echo one; echo two`}, t.TempDir(), nil, nil)
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, p.Wait())
+	ticks <- time.Time{} // the wait is over, nothing read yet
+	out, err := io.ReadAll(p.Out)
+	testcheck.NoErr(t, err)
+	if string(out) != "one\ntwo\n" {
+		t.Errorf("read %q", out)
 	}
 }

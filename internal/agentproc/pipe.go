@@ -2,17 +2,19 @@ package agentproc
 
 import (
 	"io"
-	"os"
 	"os/exec"
 	"sync"
 	"time"
 
-	"github.com/afrase/nushi/internal/procgroup"
+	"github.com/afrase/acp-go/process"
+
+	"github.com/afrase/nushi/internal/batchfile"
 )
 
 // waitDelay is how long Pipe's program's stderr is read after it exits,
-// and how long its stdout is left to its reader after that. Both are read
-// to EOF: a child that left the group (an MCP server Ante started that
+// and how long a read of its stdout may then wait with nothing to read
+// (a reader still handling what it read isn't cut off). Both are read to
+// EOF: a child that left the group (an MCP server Ante started that
 // daemonized) holds them open, and without the cut Kill and Wait would
 // wait for that child too, and the reader would never end.
 const waitDelay = time.Second
@@ -34,23 +36,29 @@ func (p *Piped) Program() Program {
 }
 
 // Piped is a program started by Pipe, which a bridge talks to over its
-// stdin and stdout in the program's own protocol: its process group lives
-// until Kill.
+// stdin and stdout in the program's own protocol, in a group of its own
+// (acp-go's process.Group: a process group on Unix, a job object on
+// Windows), as an agent runs: what it left in its group ends as it exits.
 type Piped struct {
 	In  io.WriteCloser
 	Out io.Reader
 	Pid int
 
-	group  *procgroup.Group
+	group  *process.Group
 	said   tail
 	exited chan struct{}
 	err    error // how it exited; set before exited closes
 }
 
+// drainAfter is the clock of the wait for a reader of an exited
+// program's stdout (nil: time.After); a test's own.
+var drainAfter func(time.Duration) <-chan time.Time
+
 // Pipe starts bin with args in dir and env (nil: this process's), in a
-// group of its own (procgroup.Start: a process group on Unix, a job
-// object on Windows), so what it starts goes with it on Kill. Its stderr goes to stderr (nil: dropped), its last line kept for
-// Said.
+// group of its own, so what it starts goes with it, as acp-go starts an
+// agent (process.Start's lifecycle; on Windows an npm shim runs as node
+// and its script, batchfile.Guard). Its stderr goes to stderr (nil:
+// dropped), its last line kept for Said.
 func Pipe(bin string, args []string, dir string, env []string, stderr io.Writer) (*Piped, error) {
 	cmd := exec.Command(bin, args...) //nolint:gosec,noctx // lives until Kill, not a context; the program its caller chose
 	cmd.Dir, cmd.Env = dir, env
@@ -60,59 +68,52 @@ func Pipe(bin string, args []string, dir string, env []string, stderr io.Writer)
 		cmd.Stderr = io.MultiWriter(stderr, &p.said)
 	}
 	cmd.WaitDelay = waitDelay
-	var err error
-	if p.In, err = cmd.StdinPipe(); err != nil {
-		return nil, err
-	}
-	// Our own pipe, not cmd's: Wait closes that one as the program exits,
-	// under a reader that hasn't yet read what it wrote last.
-	r, w, err := os.Pipe()
+	batchfile.Guard(cmd)
+	process.OwnGroup(cmd)
+	pipes, err := process.Start(cmd, false)
 	if err != nil {
 		return nil, err
 	}
-	cmd.Stdout = w
-	p.group, err = procgroup.Start(cmd)
-	_ = w.Close() // the program has its own copy
-	if err != nil {
-		_ = r.Close()
-		return nil, err
-	}
-	out := &stdout{f: r, ended: make(chan struct{})}
-	p.Out, p.Pid = out, cmd.Process.Pid
+	p.group = process.NewGroup(cmd)
+	out := &stdout{ReadCloser: pipes.Stdout, ended: make(chan struct{})}
+	p.In, p.Out, p.Pid = pipes.Stdin, out, cmd.Process.Pid
+	after := drainAfter // read here, not by the goroutine: a test sets it
 	go func() {
 		p.err = cmd.Wait()
 		close(p.exited)
-		select {
-		case <-out.ended:
-		case <-time.After(waitDelay):
-		}
-		_ = r.Close() // ends a read that a child holding stdout keeps waiting
+		_ = p.group.Sweep() // what it left in its group, which may hold its stdout
+		// What it wrote last is still read, unless a read waits idle: a
+		// process that left its group holds the pipe open.
+		out.Drain(out.ended, waitDelay, after)
+		_ = pipes.Stdout.Close()
+		_ = pipes.Stdin.Close() // its bridge leaves it open
+		p.group.Release()
 	}()
 	return p, nil
 }
 
-// stdout is the read end of Pipe's program's stdout, which says when its
-// reader has come to the end.
+// stdout is Pipe's program's stdout, which says when its reader has come
+// to the end (ended), for the wait after the exit.
 type stdout struct {
-	f     *os.File
+	process.Watched
 	once  sync.Once
 	ended chan struct{}
 }
 
 func (s *stdout) Read(b []byte) (int, error) {
-	n, err := s.f.Read(b)
+	n, err := s.Watched.Read(b)
 	if err != nil {
 		s.once.Do(func() { close(s.ended) })
 	}
 	return n, err
 }
 
-// Kill kills its group (procgroup.Group's Kill) and waits for it to
-// exit. Pi and Ante call it on every stop, often after the program has
-// exited: what it left in its group goes then, and on Windows nothing is
-// killed by a pid that may be another's by now.
+// Kill kills its group and waits for it to exit. Pi and Ante call it on
+// every stop, often after the program has exited: its group was swept
+// then, and the program alone is signalled, which does nothing once it
+// was waited for, so no group that took its id since is reached.
 func (p *Piped) Kill() {
-	_ = p.group.Kill() // the group may be gone already
+	_ = p.group.Kill() // the program may be gone already
 	<-p.exited
 }
 
