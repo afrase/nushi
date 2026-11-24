@@ -83,7 +83,9 @@ void main() {
       ];
     if (listing) {
       final files = StreamController<WatchChatFolderResponse>();
-      addTearDown(files.close);
+      // Not waited on: a stream no one listened to (the Files pane never
+      // opened) is never done, so its close's future never completes.
+      addTearDown(() => unawaited(files.close()));
       fake.streams = (i) => i is WatchChatFolderRequest ? files.stream : null;
     }
     final d = await openApp(tester, fake, size: Size(width, 900));
@@ -155,7 +157,7 @@ void main() {
   ) async {
     browserFakes();
     final browser = outside();
-    final d = await app(tester, width: 1200);
+    final d = await app(tester, width: 1200, listing: true);
     await tapLink(tester, 'the dev server');
     expect(d.chats['c']!.browser.shown.value, isA<BrowserTab>());
     expect(browser, isEmpty);
