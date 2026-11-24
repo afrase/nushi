@@ -105,6 +105,7 @@ A control's size comes from where it sits, never from the call: a `ControlScale`
 | `compact` | 26 | 13 | 10 | 14 | — | the details panel, a list's or table's row, a menu's row, a one-line toast, a narrow bar |
 | `regular` | 30 | 13 | 12 | 14 | — | everywhere else: a bar, a card, a settings row, a form; every text field |
 | `large` | 34 | 14 | 16 | 15 | 80 | a dialog's actions (`nushiDialog` sets it), a view's main call to action |
+| `touch` | 48 | 16 | 16 | 18 | its row's width | the phone's full-width button (`PhoneButton`) |
 
 `Button`, `MenuButton`, `SplitButton`, `SendButton`, a filled `MenuField`, `Segmented` and `LineSlider` follow it; corners scale with the height. These keep their own sizes, set by what they sit in: the composer's pills and round buttons (32), a tool row's small pills (24), `IconTap` (26; 32 in a header), `WideButton` (38, its corners its height's share all the same: `ControlSize.radiusFor`), menu rows (30), settings rows (46). A new dense place says `ControlScale.compact`, or its buttons grow.
 
@@ -149,7 +150,7 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 | `RoundButton` | a round icon button on a card: `plain` (the composer's +), `primary` (Send) | |
 | `Tap` | a list's row or a tab: a hover tint, `selected`, `fill` (a chat's colour), no ripple; focus shows as the tint | a button (use one) |
 | `Pressable` | the base of every control: hover, focus, press and its tooltip, for a new shared control in `controls*.dart` | a view's one-off button |
-| `PhoneIcon`, `PhoneButton` (`phone/ui.dart`) | the phone's icon button (44 square, a round tint pressed) and its full-width button (`primary` on the accent, `destructive` in red): on `Pressable`, so the focus ring and a press at once, as the Mac's | the Mac (`IconTap`, `Button`) |
+| `PhoneIcon`, `PhoneButton` (`phone/ui.dart`) | the phone's icon button (44 square, a round tint pressed) and its full-width button, a `Button` at `ControlSize.touch` (`primary` on the accent, `destructive` in red): on `Pressable`, so the focus ring and a press at once, as the Mac's | the Mac (`IconTap`, `Button`) |
 | `Swatch`, `DragGrip`, `KeyCap`, `keyHint`, `LineSlider` | a colour to pick; what can be dragged; a key's cap beside its action; a shortcut in small code; a value along a line | |
 | `KeyCapButton` (`controls_keys.dart`) | a key's cap that is the control changing it (Settings › Keyboard shortcuts): `KeyCapLook` `key` on `lifted`, `chosen` on the accent's soft fill, `none` ("None" on a `fieldBorder` outline), `listening` ("Press keys…"); `ring` for the keyboard's focus or listening; without `onTap` a key that can't change, in `textSecondary` | a key beside its action (`KeyCap`) |
 | `Toggle` | an on/off: a solid track, `accent` on and a solid grey off (`Toggle.offTrack`, the muted text's at half strength), the same round knob in `onAccent` either way (near black where a theme's accent is pastel), so only the knob moves | a faint dot on a bare track; Material's `Switch` |

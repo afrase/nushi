@@ -30,3 +30,5 @@ Every button, menu field and segmented control was 26 high with a 13-point label
 - The Mac's own 24/28: smaller than the owner wants, and Nushi's 13-point text in a 24-high box is what looked cramped.
 
 **Amendment (2026-11-15):** a side pane's top row is now level with the chat's header (ADR 0123), so its icon buttons (the side chat's, Files', a subagent's or a command's, the preview's) are the header's 32 (`IconTap.header`) too. The side chat's, a subagent's and a command's rows end them 12 from the pane's edge as the header does (`PaneHeader.buttonsEnd`); Files' row keeps its end of 8 and the preview's its own (`previewHeaderEnd`, 4, 8 or the gutter), the boxes bringing the rest of the room; the preview folds its buttons into ⋯ that much sooner.
+
+**Amendment (2026-11-24):** a fourth size, `touch` (48 high, a 16-point label, 16 at its ends, an 18-point icon, as wide as its place lets it be), for the phone's full-width button: `PhoneButton` is a `Button` under it, so its fills, its press, its faded look and its corners (the same share of its height) are a button's. Other buttons on the phone keep their place's size.

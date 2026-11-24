@@ -409,6 +409,74 @@ void main() {
     expect(presses, 2);
   });
 
+  testWidgets('the phone’s button is a Button 48 high, full width: its '
+      'corners that height’s share, its kind’s fill and ink, faded without '
+      'its tap, and a destructive one pressed on red’s soft fill', (
+    tester,
+  ) async {
+    const t = Tokens.light;
+    await tester.pumpWidget(
+      _app(
+        t,
+        TouchTargets(
+          child: SizedBox(
+            width: 300,
+            child: Column(
+              children: [
+                PhoneButton('Pair', primary: true, onTap: () {}),
+                PhoneButton('Forget', destructive: true, onTap: () {}),
+                const PhoneButton('Later', onTap: null),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    // The button's box: the Container that fills it.
+    Container box(String label) => tester
+        .widgetList<Container>(
+          find.ancestor(of: find.text(label), matching: find.byType(Container)),
+        )
+        .firstWhere((c) => c.decoration != null);
+    BoxDecoration fill(String label) => box(label).decoration! as BoxDecoration;
+    for (final label in ['Pair', 'Forget', 'Later']) {
+      expect(
+        find.ancestor(of: find.text(label), matching: find.byType(Button)),
+        findsOneWidget,
+      );
+      final r = tester.getRect(find.byWidget(box(label)));
+      expect(r.height, 48, reason: label);
+      expect(r.width, 300, reason: label);
+      expect(
+        fill(label).borderRadius,
+        BorderRadius.circular(ControlSize.radiusFor(48)),
+      );
+      expect(
+        tester.widget<Text>(find.text(label)).style!.fontWeight,
+        FontWeight.w500,
+      );
+    }
+    expect(fill('Pair').color, t.accent);
+    expect(tester.widget<Text>(find.text('Forget')).style!.color, t.crashed);
+    expect(
+      tester
+          .widget<Opacity>(
+            find.ancestor(
+              of: find.text('Later'),
+              matching: find.byType(Opacity),
+            ),
+          )
+          .opacity,
+      0.45,
+    );
+    final press = await tester.startGesture(
+      tester.getCenter(find.text('Forget')),
+    );
+    await tester.pump();
+    expect(fill('Forget').color, Color.alphaBlend(t.pressed, t.crashedSoft));
+    await press.up();
+  });
+
   testWidgets('WideButton’s corners are its height’s share; a PillLink '
       'without its tap is faded', (tester) async {
     await tester.pumpWidget(

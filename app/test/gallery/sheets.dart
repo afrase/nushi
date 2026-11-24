@@ -168,8 +168,16 @@ List<MenuEntry> _entries(bool on) => [
   ],
 ];
 
+/// The Mac's control sizes; `touch` is the phone's button, on the phone's
+/// page (`PhoneButton`).
+const List<ControlSize> _macSizes = [
+  ControlSize.compact,
+  ControlSize.regular,
+  ControlSize.large,
+];
+
 Widget _buttons() => page('Buttons', [
-  for (final size in ControlSize.values) ...[
+  for (final size in _macSizes) ...[
     heading('Button, ${size.name} (${size.height.round()})'),
     for (final kind in ButtonKind.values)
       stateRow(
@@ -384,7 +392,7 @@ Widget _row({required bool on, bool selected = false, Color? fill}) => SizedBox(
 
 Widget _fields() => page('Fields and pickers', [
   heading('MenuField'),
-  for (final size in ControlSize.values)
+  for (final size in _macSizes)
     stateRow(
       'MenuField, ${size.name}',
       ({required on}) =>
@@ -408,7 +416,7 @@ Widget _fields() => page('Fields and pickers', [
     ),
   ),
   heading('Segmented'),
-  for (final size in ControlSize.values)
+  for (final size in _macSizes)
     stateRow(
       size.name,
       ({required on}) => Segmented(

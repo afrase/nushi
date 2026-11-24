@@ -181,9 +181,10 @@ class PhoneLink extends StatelessWidget {
   );
 }
 
-/// A full-width button, 44 points tall: [primary] filled with the accent,
-/// any other with a button's own fill, no outline (ADR 0111); on
-/// [Pressable], so it shows a press at once and wears the focus ring.
+/// A full-width button, a finger's height: a [Button] at
+/// [ControlSize.touch] (ADR 0122), so its fill, ink, press, corners and
+/// faded look are a button's (ADR 0111): [primary] on the accent,
+/// [destructive] in red, any other on a button's own fill.
 class PhoneButton extends StatelessWidget {
   const new(
     this.label, {
@@ -199,42 +200,18 @@ class PhoneButton extends StatelessWidget {
   final bool destructive;
 
   @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    final fg = onTap == null
-        ? t.textMuted
-        : primary
-        ? t.onAccent
-        : destructive
-        ? t.crashed
-        : t.text;
-    final filled = primary && onTap != null;
-    final corners = BorderRadius.circular(NushiTheme.card);
-    return Pressable(
-      onTap: onTap,
-      builder: (context, look) => Container(
-        height: touch + 4,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: filled
-              ? (look.pressed ? t.accentPressed : t.accent)
-              : look.pressed
-              ? Color.alphaBlend(t.pressed, t.lifted)
-              : look.hover
-              ? Color.alphaBlend(t.hover, t.lifted)
-              : t.lifted,
-          borderRadius: corners,
-        ),
-        foregroundDecoration: filled
-            ? accentFocusRing(t, look, radius: corners)
-            : focusRing(t, look, radius: corners),
-        child: Text(
-          label,
-          style: phoneText(context, color: fg, weight: FontWeight.w600),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ControlScale(
+    size: ControlSize.touch,
+    child: Button(
+      label: label,
+      onPressed: onTap,
+      kind: primary
+          ? ButtonKind.primary
+          : destructive
+          ? ButtonKind.destructive
+          : ButtonKind.secondary,
+    ),
+  );
 }
 
 /// A section's heading in a list.
