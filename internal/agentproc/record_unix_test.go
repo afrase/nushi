@@ -4,6 +4,7 @@ package agentproc
 
 import (
 	"errors"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
@@ -23,7 +24,10 @@ import (
 func TestARecordedSweepLeavesABackgroundCommand(t *testing.T) {
 	defer func(d time.Duration) { proctree.Grace = d }(proctree.Grace)
 	proctree.Grace = 100 * time.Millisecond
-	a, err := Start(exec.Command("/bin/sh", "-c", `sleep 101 & set -m; sleep 102 & wait`), quiet{}, nil)
+	exe, err := os.Executable()
+	testcheck.NoErr(t, err)
+	// $0 is this test binary, which leaves the group and becomes sleep 102.
+	a, err := Start(exec.Command("/bin/sh", "-c", `sleep 101 & `+ownGroupEnv+`=102 "$0" & wait`, exe), quiet{}, nil)
 	testcheck.NoErr(t, err)
 	t.Cleanup(func() { _ = a.Close() })
 	var member, command model.Process
