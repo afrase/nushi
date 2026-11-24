@@ -8,16 +8,17 @@ import 'package:nushi/completions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_filter.dart';
 import 'package:nushi/keys.dart';
+import 'package:nushi/palette.dart';
 import 'package:nushi/picker.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/widgets.dart';
 
 /// ⌘P: Open file… in the chat shown.
 const openFileKey = Cmd(LogicalKeyboardKey.keyP, id: 'openFile');
 
 /// Opens a file of the chat shown in its preview, picked in a small box
-/// that matches as you type ([OpenFileBox]); nothing when no chat shows.
+/// that matches as you type ([OpenFileBox], a [PickBox]); nothing when no
+/// chat shows.
 Future<void> openFile(BuildContext context, Daemon daemon) async {
   final chat = daemon.selected;
   if (chat == null || !daemon.chatShows) return;
@@ -33,10 +34,10 @@ Future<void> openFile(BuildContext context, Daemon daemon) async {
   if (path != null) chat.openInFiles(path);
 }
 
-/// The quick-open box: a field, and under it the files of [folder] a
-/// preview shows (as `@` lists them: git's, not ignored) that match it,
-/// the chat's own ([chat]) first while it's empty. ↑↓ move, ⏎ or a click
-/// picks (the dialog pops with the path), Esc closes.
+/// The quick-open box, a [PickBox] of the files of [folder] a preview
+/// shows (as `@` lists them: git's, not ignored) that match what's typed
+/// ([rankChoices]), the chat's own ([chat]) first while it's empty; the
+/// dialog pops with the path picked.
 class OpenFileBox extends StatefulWidget {
   const new({
     required this.daemon,
@@ -49,33 +50,37 @@ class OpenFileBox extends StatefulWidget {
   final String folder;
   final List<String> chat;
 
+  /// A row's height: a line of 12-point text and its padding.
+  static const rowHeight = 25.0;
+
   @override
   State<OpenFileBox> createState() => _OpenFileBoxState();
 }
 
 class _OpenFileBoxState extends State<OpenFileBox> {
-  final _text = TextEditingController();
   // The folder's files, as last listed: shown at once, and listed again.
   late final GitFiles _git = gitFilesOf(widget.daemon, widget.folder);
-  List<String> _shown = const []; // as last built: what the keys move in
-  int _at = 0;
+
+  /// The rows as last listed: the same list while the listing is, so the
+  /// box ranks once a query.
+  List<String> _rows = const [];
 
   @override
   void initState() {
     super.initState();
+    _rows = _all;
     _git
       ..addListener(_listed)
       ..ask();
   }
 
   void _listed() {
-    if (mounted) setState(() {});
+    if (mounted) setState(() => _rows = _all);
   }
 
   @override
   void dispose() {
     _git.removeListener(_listed);
-    _text.dispose();
     super.dispose();
   }
 
@@ -86,102 +91,40 @@ class _OpenFileBoxState extends State<OpenFileBox> {
       if (opensInPreview(p)) p,
   }.toList();
 
-  /// What shows for what's typed: ranked once a build.
-  List<String> _rank() {
-    final q = _text.text.trim();
-    return q.isEmpty ? _all.take(8).toList() : rankChoices(_all, q);
-  }
-
-  void _pick(String path) => Navigator.pop(context, path);
-
-  KeyEventResult _onKey(FocusNode _, KeyEvent e) {
-    if (e is KeyUpEvent) return KeyEventResult.ignored;
-    final shown = _shown;
-    switch (e.logicalKey) {
-      case LogicalKeyboardKey.arrowDown || LogicalKeyboardKey.arrowUp
-          when shown.isNotEmpty:
-        final step = e.logicalKey == LogicalKeyboardKey.arrowDown ? 1 : -1;
-        setState(() => _at = (_at + step) % shown.length);
-      case LogicalKeyboardKey.enter || LogicalKeyboardKey.numpadEnter
-          when _at < shown.length:
-        _pick(shown[_at]);
-      default:
-        return KeyEventResult.ignored;
-    }
-    return KeyEventResult.handled;
+  /// What shows for what's typed, eight at most.
+  static List<String> _rank(List<String> rows, String query) {
+    final q = query.trim();
+    return q.isEmpty ? rows.take(8).toList() : rankChoices(rows, q);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final shown = _shown = _rank();
-    _at = _at.clamp(0, shown.isEmpty ? 0 : shown.length - 1);
-    return Dialog(
-      alignment: const Alignment(0, -0.6),
-      child: SizedBox(
-        width: 520,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Focus(
-                onKeyEvent: _onKey,
-                skipTraversal: true,
-                child: TextField(
-                  controller: _text,
-                  autofocus: true,
-                  style: theme.ui(t.text),
-                  onChanged: (_) => setState(() => _at = 0),
-                  decoration: const InputDecoration(
-                    hintText: 'Open file…',
-                    border: InputBorder.none,
-                    prefixIcon: Icon(Icons.search, size: 15),
-                    prefixIconConstraints: BoxConstraints(minWidth: 28),
-                  ),
-                ),
-              ),
-              const Divider(height: 9),
-              for (final (i, f) in shown.indexed)
-                Tap(
-                  onTap: () => _pick(f),
-                  selected: i == _at,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: baseName(f),
-                          style: theme.code(t.text, size: 12),
-                        ),
-                        TextSpan(
-                          text: '   ${folderOf(f)}',
-                          style: theme.ui(t.textMuted, size: 12),
-                        ),
-                      ],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              if (shown.isEmpty && _git.listed)
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text(
-                    _git.error.isNotEmpty
-                        ? 'Couldn’t list the folder: ${_git.error}'
-                        : 'No file to preview matches',
-                    style: theme.ui(t.textMuted),
-                  ),
-                ),
-            ],
-          ),
+    return PickBox<String>(
+      rows: _rows,
+      rank: _rank,
+      hint: 'Open file…',
+      rowHeight: OpenFileBox.rowHeight,
+      rowPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      empty: switch (_git) {
+        GitFiles(listed: false) => 'Listing…',
+        GitFiles(:final error) when error.isNotEmpty =>
+          'Couldn’t list the folder: $error',
+        _ => 'No file to preview matches',
+      },
+      row: (context, f) => Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: baseName(f), style: theme.code(t.text, size: 12)),
+            TextSpan(
+              text: '   ${folderOf(f)}',
+              style: theme.ui(t.textMuted, size: 12),
+            ),
+          ],
         ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

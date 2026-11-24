@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/inline_edit.dart';
@@ -329,6 +330,57 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
     expect(picked, ['NEW-2']);
+    await closeView(tester, d);
+  });
+
+  testWidgets('↓ past the rows that show scrolls the lit one into view, so '
+      '⏎ picks a row that can be seen', (tester) async {
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        FindJiraIssuesRequest() => FindJiraIssuesResponse(
+          issues: [
+            for (var i = 1; i <= 20; i++)
+              _found(_acme, 'ACME-$i', 'Issue number $i'),
+          ],
+        ),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    final picked = <String>[];
+    await tester.pumpWidget(
+      themed(
+        IssuePicker(
+          daemon: d,
+          sites: [JiraSite(id: _acme)],
+          onPick: (f) => picked.add(f.issue.key),
+          onBack: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final list = tester.getRect(find.byType(Scrollable).last);
+    for (var i = 0; i < 12; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      final lit = tester.getRect(
+        find.byWidgetPredicate((w) => w is Tap && w.selected),
+      );
+      expect(lit.top, greaterThanOrEqualTo(list.top - 0.5), reason: '↓ $i');
+      expect(lit.bottom, lessThanOrEqualTo(list.bottom + 0.5), reason: '↓ $i');
+    }
+    // Back up past the top of what shows.
+    for (var i = 0; i < 12; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      final lit = tester.getRect(
+        find.byWidgetPredicate((w) => w is Tap && w.selected),
+      );
+      expect(lit.top, greaterThanOrEqualTo(list.top - 0.5), reason: '↑ $i');
+      expect(lit.bottom, lessThanOrEqualTo(list.bottom + 0.5), reason: '↑ $i');
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(picked, ['ACME-1']);
     await closeView(tester, d);
   });
 }
