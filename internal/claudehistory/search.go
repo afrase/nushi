@@ -25,13 +25,13 @@ import (
 // Claude's text blocks, never tool calls or their results, thinking, meta
 // records, compaction summaries or what claude wrote in the user's place
 // (ADR 0035). Forks and what Claude's list leaves out are passed over, by
-// the list's own rules: forkedFrom in the first records, sessions.Store's
-// reading of the transcript's start and end (a subagent's, or one with
-// nothing to name it by), and claudeacp's (no folder). A hit's folder and
-// title are those of the transcript that was read, the title cut as the
-// list cuts it; searching every folder, a session with a transcript in
-// more than one is found once, by the one Claude's list of every folder
-// tells of (see transcripts).
+// the list's own rules: sessions.Store's reading of the transcript's start
+// and end (a fork, a subagent's, or one with nothing to name it by), and
+// claudeacp's (no folder). A hit's folder and title are those of the
+// transcript that was read, the title cut as the list cuts it; searching
+// every folder, a session with a transcript in more than one is found
+// once, by the one Claude's list of every folder tells of (see
+// transcripts).
 func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]model.SessionHit, bool, error) {
 	q := textfind.New(s.Query)
 	if q.Empty() {
@@ -55,7 +55,7 @@ func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]mod
 			return model.SessionHit{}, false
 		}
 		info, err := sessions.ReadInfo(f.path)
-		if err != nil || info.Cwd == "" || s.InFolder != nil && !s.InFolder(info.Cwd) {
+		if err != nil || info.Cwd == "" || info.ForkedFrom != nil || s.InFolder != nil && !s.InFolder(info.Cwd) {
 			return model.SessionHit{}, false
 		}
 		title := info.Summary
@@ -124,7 +124,7 @@ type entry struct {
 }
 
 // scan counts the hits in a transcript's messages and makes the first's
-// excerpt; 0 for a fork, or a file that can't be read. unnoted (nil: none)
+// excerpt; 0 for a file that can't be read. unnoted (nil: none)
 // takes Nushi's notes off each text of the user's.
 func scan(ctx context.Context, path string, q textfind.Query, unnoted func(string) string) (int, textfind.Excerpt) {
 	f, err := os.Open(path)
@@ -132,12 +132,8 @@ func scan(ctx context.Context, path string, q textfind.Query, unnoted func(strin
 		return 0, textfind.Excerpt{}
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	n, first, lines := 0, textfind.Excerpt{}, 0
+	n, first := 0, textfind.Excerpt{}
 	_ = textfind.Lines(ctx, f, func(line []byte) bool {
-		if lines++; lines <= forkLines && forkRecord(line) {
-			n = 0
-			return false
-		}
 		if !q.MayHold(line) && !typed(line) || !mayBeSaid(line) {
 			return true
 		}
