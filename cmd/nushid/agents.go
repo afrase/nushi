@@ -15,14 +15,14 @@ import (
 	"github.com/afrase/nushi/internal/shellenv"
 )
 
-// newShellEnv is the login shell's environment, started reading: agents
-// start with it, and on Linux the daemon's proxies come from it
-// (sysproxy.UseShellEnviron), read now and when Settings › Agents asks,
-// whatever started the daemon (ADR 0048, 0101). NUSHI_SHELL_ENV=off keeps
-// the daemon's own (tests set PATH to their fake agents; the shell's
-// would replace it).
-func newShellEnv() *shellenv.Env {
-	shellEnv := shellenv.New(knownShell(loginShell()), os.Environ())
+// newShellEnv is the environment of shell, the login shell, started
+// reading: agents start with it, and on Linux the daemon's proxies come
+// from it (sysproxy.UseShellEnviron), read now and when Settings › Agents
+// asks, whatever started the daemon (ADR 0048, 0101). NUSHI_SHELL_ENV=off
+// keeps the daemon's own (tests set PATH to their fake agents; the
+// shell's would replace it).
+func newShellEnv(shell string) *shellenv.Env {
+	shellEnv := shellenv.New(knownShell(shell), os.Environ())
 	if os.Getenv("NUSHI_SHELL_ENV") == "off" {
 		shellEnv = shellenv.Off(os.Environ())
 	}

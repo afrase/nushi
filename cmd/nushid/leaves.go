@@ -43,7 +43,7 @@ var _ daemon.Leaves = (*leaves)(nil)
 
 func (l *leaves) Agents(st *store.Store) ([]knownagents.Agent, *agents.Service) {
 	known := knownagents.All(l.projects, st.GoAgent)
-	l.shellEnv = newShellEnv()
+	l.shellEnv = newShellEnv(loginShell())
 	sysproxy.UseShellEnviron(l.shellEnv.Environ) // Linux only; before the relay, Jira, GitHub or Web Push asks
 	return known, newAgents(l.dir, known, l.shellEnv)
 }
