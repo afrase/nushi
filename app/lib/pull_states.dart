@@ -510,18 +510,20 @@ class _PullChipState extends State<PullChip> {
         ?checks?.words.toLowerCase(),
         if (open > 0) '$open open thread${open == 1 ? '' : 's'}',
       ].join(', ');
-      return Tap(
-        onTap: more > 0 && widget.onMore != null
-            ? widget.onMore
-            : it == null || it.url.isEmpty
-            ? null
-            : () => widget.onOpen(it.url),
-        radius: NushiTheme.pill,
-        child: Semantics(
-          label: words,
-          excludeSemantics: true,
-          child: SizedBox(
-            height: 44,
+      // A finger's height outside the Tap, so on the phone its press is
+      // a pill that high, not the bar's whole height.
+      return SizedBox(
+        height: 44,
+        child: Tap(
+          onTap: more > 0 && widget.onMore != null
+              ? widget.onMore
+              : it == null || it.url.isEmpty
+              ? null
+              : () => widget.onOpen(it.url),
+          radius: NushiTheme.pill,
+          child: Semantics(
+            label: words,
+            excludeSemantics: true,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Center(

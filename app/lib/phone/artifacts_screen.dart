@@ -128,17 +128,20 @@ class ArtifactsAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    return Tap(
-      onTap: onTap,
-      radius: NushiTheme.pill,
-      child: Semantics(
-        label: 'Artifacts, $count',
-        excludeSemantics: true,
-        child: SizedBox(
-          height: touch,
+    // A finger's height outside the Tap, so its press is a pill that
+    // high, not the bar's whole height.
+    return SizedBox(
+      height: touch,
+      child: Tap(
+        onTap: onTap,
+        radius: NushiTheme.pill,
+        child: Semantics(
+          label: 'Artifacts, $count',
+          excludeSemantics: true,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Center(
+              widthFactor: 1,
               child: Text(
                 'Artifacts $count',
                 style: phoneText(context, size: 15, color: t.link),

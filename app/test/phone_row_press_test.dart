@@ -5,9 +5,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/phone/artifacts_screen.dart';
 import 'package:nushi/phone/chat_screen.dart';
 import 'package:nushi/phone/chats_screen.dart';
 import 'package:nushi/phone/phone_app.dart';
+import 'package:nushi/phone/ui.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -59,4 +61,23 @@ void main() {
       });
     }
   }
+
+  testWidgets('the bar’s Artifacts chip presses as a 44-high pill, not '
+      'the bar’s whole height', (tester) async {
+    await tester.pumpWidget(
+      themed(
+        TouchTargets(
+          child: SizedBox(
+            height: 52, // the phone's bar
+            child: Row(children: [ArtifactsAction(3, onTap: () {})]),
+          ),
+        ),
+      ),
+    );
+    final tap = find.descendant(
+      of: find.byType(ArtifactsAction),
+      matching: find.byType(Tap),
+    );
+    expect(tester.getSize(tap).height, touch);
+  });
 }
