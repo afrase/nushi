@@ -66,14 +66,15 @@ func TestLive(t *testing.T) {
 			t.Fatalf("the inbox went past %s: %s", testRepo, it.Repo)
 		}
 	}
-	if len(in.Mine) == 0 || in.Mine[0].Number != 1 || len(in.Assigned) == 0 || in.Assigned[0].Number != 2 {
+	if len(in.Mine) == 0 || in.Mine[0].Number != 1 || in.Mine[0].Head != "subtract" || len(in.Assigned) == 0 || in.Assigned[0].Number != 2 {
 		t.Fatalf("inbox: %+v", in)
 	}
 	p, err := c.Pull(ctx, testRepo, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.Head != "subtract" || p.Base != "main" || len(p.Threads) < 3 || len(p.Runs) == 0 || !strings.Contains(p.Body, "Sub") {
+	if !p.Pull || p.Head != "subtract" || p.Base != "main" || len(p.Threads) < 3 || len(p.Runs) == 0 || p.CheckCounts.Failed == 0 ||
+		!strings.Contains(p.Body, "Sub") {
 		t.Fatalf("pull: %+v", p)
 	}
 	if strings.Contains(p.Body, "template comment") {
@@ -106,7 +107,7 @@ func TestLive(t *testing.T) {
 		t.Fatalf("blobs: %+v %v", blobs, err)
 	}
 	is, err := c.Issue(ctx, testRepo, 2)
-	if err != nil || is.Pull || !strings.Contains(is.Body, "Mul") {
+	if err != nil || is.Pull || is.Created.IsZero() || !strings.Contains(is.Body, "Mul") {
 		t.Fatalf("issue: %+v %v", is, err)
 	}
 }

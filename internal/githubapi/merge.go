@@ -9,7 +9,8 @@ import (
 
 // mergeFields is what a pull request's query asks for its Merge control
 // (ADR 0069). All of it is single objects and scalars, which cost no points.
-// The alias repo is because PullRow's repository decodes into row.
+// The alias repo keeps it apart from ItemPull's repository, which the
+// pull request's itemNode decodes.
 const mergeFields = `canBeRebased viewerCanMergeAsAdmin viewerCanEnableAutoMerge viewerCanDisableAutoMerge isMergeQueueEnabled
       autoMergeRequest { mergeMethod enabledBy { login } }
       mergeQueueEntry { position state estimatedTimeToMerge enqueuer { login } }

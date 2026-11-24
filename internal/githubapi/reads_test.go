@@ -136,6 +136,11 @@ func TestPull(t *testing.T) {
 	if !failed || !running {
 		t.Fatalf("runs %+v", p.Runs)
 	}
+	// Its item is a pull request's, its checks counted from the runs it
+	// lists (ADR 0117), as a row counts them.
+	if n := p.CheckCounts; !p.Pull || n.Failed == 0 || n.Running == 0 || n.Passed+n.Failed+n.Running+n.Skipped != len(p.Runs) {
+		t.Fatalf("pull %v, counts %+v of %d runs", p.Pull, n, len(p.Runs))
+	}
 	var review, comment bool
 	for _, c := range p.Conversation {
 		review = review || c.Review == "commented" && c.Body == "A first look." && c.Commit == "c0ffee10c4b1a7d2e9f3a6b8c5d4e1f0a9b8c7d6"

@@ -2,6 +2,7 @@
   "data": {
     "repository": {
       "pullRequest": {
+        "__typename": "PullRequest",
         "id": "PR_queue",
         "number": 30,
         "title": "In a merge queue",

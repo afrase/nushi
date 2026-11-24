@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -23,7 +24,7 @@ const itemsAnswer = `{"data":{
    "statusContextCountsByState":[{"state":"PENDING","count":1}]}}}}]},
   "reviewThreads":{"nodes":[{"isResolved":false},{"isResolved":true}]}},
   "i1":{"__typename":"Issue","id":"I_2","number":2,"title":"An issue","url":"javascript:alert(1)","state":"CLOSED","stateReason":"NOT_PLANNED",
-  "createdAt":"2026-11-01T10:00:00Z","updatedAt":"2026-11-02T10:00:00Z","author":null,"comments":{"totalCount":5}},
+  "createdAt":"2026-11-01T10:00:00Z","updatedAt":"2026-11-02T10:00:00Z","author":null,"commentCount":{"totalCount":5}},
   "i2":null},
  "r1":null},
  "errors":[{"type":"NOT_FOUND","path":["r0","i2"],"message":"Could not resolve"},{"type":"NOT_FOUND","path":["r1"],"message":"Could not resolve"}]}`
@@ -90,5 +91,99 @@ func TestItemsWithoutCounts(t *testing.T) {
 	}
 	if n := f.count("graphql Items"); n != 3 {
 		t.Fatalf("asked %d times, want 3 (once refused)", n)
+	}
+}
+
+// TestEveryReadCleansTitles: the inbox, Status, Pull and Issue show a
+// title as one line of plain text and an author only as a login, as
+// Items does (ADR 0117): no line break, bidi mark or zero-width character
+// of someone else's reaches a row.
+func TestEveryReadCleansTitles(t *testing.T) {
+	const node = `"id":"N_1","number":1,"title":"Fix\nthe\u202e\u200b thing  ","url":"https://github.com/a/b/pull/1","state":"OPEN",` +
+		`"author":{"login":"octo\u202ecat"},"repository":{"nameWithOwner":"a/b"}`
+	f := newFake(t)
+	f.route("graphql Inbox", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"review":{"issueCount":0,"nodes":[]},"mine":{"issueCount":1,"nodes":[{"__typename":"PullRequest",` + node + `}]},` +
+			`"assigned":{"issueCount":1,"nodes":[{"__typename":"Issue",` + node + `}]}}}`))
+	})
+	f.route("graphql Status", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"nodes":[{"__typename":"PullRequest",` + node + `}]}}`))
+	})
+	f.route("graphql PullRequest", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"repository":{"pullRequest":{"__typename":"PullRequest",` + node + `}}}}`))
+	})
+	f.route("graphql Issue", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"repository":{"issue":{"__typename":"Issue",` + node + `}}}}`))
+	})
+	c := f.client()
+	in, err := c.Inbox(t.Context(), InboxFilter{})
+	if err != nil || len(in.Mine) != 1 || len(in.Assigned) != 1 {
+		t.Fatalf("inbox %+v %v", in, err)
+	}
+	st, err := c.Status(t.Context(), []string{"N_1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := c.Pull(t.Context(), "a/b", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	is, err := c.Issue(t.Context(), "a/b", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, it := range map[string]model.GitHubItem{"inbox's pull": in.Mine[0], "inbox's issue": in.Assigned[0], "status": st["N_1"],
+		"pull": p.GitHubItem, "issue": is.GitHubItem} {
+		if it.Title != "Fix the thing" || it.Author != "someone" {
+			t.Errorf("%s: title %q, author %q", name, it.Title, it.Author)
+		}
+	}
+}
+
+// TestIssueSaysWhyItClosed: an issue whole is asked for when it was
+// opened and why it closed, so its pane dates its description and says
+// "Not planned".
+func TestIssueSaysWhyItClosed(t *testing.T) {
+	f := newFake(t)
+	var query string
+	f.route("graphql Issue", func(w http.ResponseWriter, r *http.Request) {
+		var q struct{ Query string }
+		_ = json.NewDecoder(r.Body).Decode(&q)
+		query = q.Query
+		_, _ = w.Write([]byte(`{"data":{"repository":{"issue":{"__typename":"Issue","id":"I_2","number":2,"title":"Add a Mul function",` +
+			`"url":"https://github.com/a/b/issues/2","state":"CLOSED","stateReason":"NOT_PLANNED","createdAt":"2026-10-26T04:10:00Z",` +
+			`"updatedAt":"2026-11-20T09:00:00Z","author":{"login":"afrase"},"repository":{"nameWithOwner":"a/b"},"commentCount":{"totalCount":1},` +
+			`"body":"We need Mul.","comments":{"nodes":[{"id":"IC_1","body":"Not now."}]}}}}}`))
+	})
+	is, err := f.client().Issue(t.Context(), "a/b", 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(query, "stateReason") || !strings.Contains(query, "commentCount: comments { totalCount }") {
+		t.Fatalf("asked %s", query)
+	}
+	if is.State != "closed" || is.StateReason != "not_planned" || !is.Created.Equal(time.Date(2026, 10, 26, 4, 10, 0, 0, time.UTC)) ||
+		is.Comments != 1 || len(is.Conversation) != 1 || is.Repo != "a/b" {
+		t.Fatalf("%+v", is)
+	}
+}
+
+// TestItemFragments: a document holds only the fragments it spreads
+// (GitHub refuses one it doesn't use), and only Items counts the checks:
+// the inbox costs what it did (ADR 0117), and Pull counts its own runs.
+func TestItemFragments(t *testing.T) {
+	for name, q := range map[string]string{"inbox": inboxQuery, "dated inbox": inboxDatedQuery, "status": statusQuery, "pull": pullQuery,
+		"issue": issueQuery} {
+		if strings.Contains(q, "CountsByState") || strings.Contains(q, "COUNTS") {
+			t.Errorf("%s counts the checks", name)
+		}
+		for _, frag := range []string{"ItemPull", "ItemIssue"} {
+			if strings.Contains(q, "..."+frag) != strings.Contains(q, "fragment "+frag+" ") {
+				t.Errorf("%s: %s spread and held disagree", name, frag)
+			}
+		}
+	}
+	if !strings.Contains(withItems("query Items { x { ...ItemPull ...ItemIssue } }", true), "checkRunCountsByState") {
+		t.Error("Items doesn't count the checks")
 	}
 }

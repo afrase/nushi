@@ -35,10 +35,12 @@ type GitHubItem struct {
 	ChecksOID  string
 	Unresolved int
 	Comments   int
-	// What GetGitHubItems adds (ADR 0117; the inbox leaves them unset): a
-	// pull request's size, its checks counted, its merge state ("clean",
-	// "blocked", …, as GitHubPull's), its base and head branches; an
-	// issue's close reason ("completed", "not_planned" or "").
+	// A pull request's size, its checks counted (by Items and Pull only:
+	// the inbox and Status leave CheckCounts unset, ADR 0117), its merge
+	// state ("clean", "blocked", "behind", "dirty", "unstable",
+	// "has_hooks", "unknown"), its base and head branches; an issue's
+	// close reason ("completed", "not_planned" or ""); when either was
+	// opened.
 	Additions, Deletions, ChangedFiles int
 	Created                            time.Time
 	CheckCounts                        CheckCounts
@@ -127,7 +129,8 @@ type GitHubReviewer struct {
 	CodeOwner    bool // asked as a code owner of what the pull request changes
 }
 
-// GitHubPull is a pull request whole.
+// GitHubPull is a pull request whole: its item (branches, size, merge
+// state, its checks counted from Runs) and what the tab shows besides.
 type GitHubPull struct {
 	GitHubItem
 	Body, Association string
@@ -137,18 +140,15 @@ type GitHubPull struct {
 	// CanEdit is GitHub letting the user edit its title and description.
 	CanEdit bool
 	// Reactions are those on its description.
-	Reactions  []GitHubReaction
-	Base, Head string // branches
+	Reactions []GitHubReaction
 	// HeadRepo is the head's repository (owner/name): another one than
 	// Repo for a fork's pull request (CrossRepo).
-	HeadRepo                           string
-	CrossRepo                          bool
-	BaseOID, HeadOID                   string
-	Mergeable                          string // "mergeable", "conflicting" or "unknown"
-	MergeState                         string // "clean", "blocked", "behind", "dirty", "unstable", "has_hooks", "unknown"
-	Additions, Deletions, ChangedFiles int
-	Commits                            int
-	Reviewers                          []GitHubReviewer
+	HeadRepo         string
+	CrossRepo        bool
+	BaseOID, HeadOID string
+	Mergeable        string // "mergeable", "conflicting" or "unknown"
+	Commits          int
+	Reviewers        []GitHubReviewer
 	// Conversation is the comments and the reviews that said something,
 	// oldest first (the latest 100 comments).
 	Conversation []GitHubComment

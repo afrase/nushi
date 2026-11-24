@@ -13,63 +13,7 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// pullRow and issueRow are what a list shows of a pull request and an
-// issue (a GraphQL document may hold only the fragments it uses).
-const pullRow = `
-fragment PullRow on PullRequest {
-  id number title url state isDraft updatedAt
-  author { login }
-  repository { nameWithOwner }
-  reviewDecision
-  totalCommentsCount
-  commits(last: 1) { nodes { commit { oid statusCheckRollup { state } } } }
-  reviewThreads(first: 100) { nodes { isResolved } }
-}`
-
-const issueRow = `
-fragment IssueRow on Issue {
-  id number title url state updatedAt
-  author { login }
-  repository { nameWithOwner }
-  commentCount: comments { totalCount }
-}`
-
-// row decodes either fragment.
-type row struct {
-	Typename   string    `json:"__typename"`
-	ID         string    `json:"id"`
-	Number     int       `json:"number"`
-	Title      text      `json:"title"`
-	URL        string    `json:"url"`
-	State      string    `json:"state"`
-	IsDraft    bool      `json:"isDraft"`
-	UpdatedAt  time.Time `json:"updatedAt"`
-	Author     *login    `json:"author"`
-	Repository struct {
-		NameWithOwner string `json:"nameWithOwner"`
-	} `json:"repository"`
-	ReviewDecision     string `json:"reviewDecision"`
-	TotalCommentsCount int    `json:"totalCommentsCount"`
-	Commits            struct {
-		Nodes []struct {
-			Commit struct {
-				OID               string `json:"oid"`
-				StatusCheckRollup *struct {
-					State string `json:"state"`
-				} `json:"statusCheckRollup"`
-			} `json:"commit"`
-		} `json:"nodes"`
-	} `json:"commits"`
-	ReviewThreads struct {
-		Nodes []struct {
-			IsResolved bool `json:"isResolved"`
-		} `json:"nodes"`
-	} `json:"reviewThreads"`
-	CommentCount struct {
-		TotalCount int `json:"totalCount"`
-	} `json:"commentCount"`
-}
-
+// login decodes an author, null for a deleted account.
 type login struct {
 	Login    string `json:"login"`
 	Typename string `json:"__typename"`
@@ -80,25 +24,6 @@ func (l *login) name() string {
 		return "ghost" // a deleted account, as GitHub shows it
 	}
 	return l.Login
-}
-
-func (r row) item(host string) model.GitHubItem {
-	it := model.GitHubItem{
-		Host: host, Repo: r.Repository.NameWithOwner, Number: r.Number,
-		ID: r.ID, Pull: r.Typename != "Issue", Title: string(r.Title), URL: webURL(r.URL), State: strings.ToLower(r.State),
-		Draft: r.IsDraft, Author: r.Author.name(), Updated: r.UpdatedAt, Review: strings.ToLower(r.ReviewDecision),
-		Comments: r.TotalCommentsCount + r.CommentCount.TotalCount,
-	}
-	if n := r.Commits.Nodes; len(n) > 0 && n[0].Commit.StatusCheckRollup != nil {
-		it.Checks = rollupState(n[0].Commit.StatusCheckRollup.State)
-		it.ChecksOID = n[0].Commit.OID
-	}
-	for _, t := range r.ReviewThreads.Nodes {
-		if !t.IsResolved {
-			it.Unresolved++
-		}
-	}
-	return it
 }
 
 // rollupState is a rollup's state as Nushi says it: "success", "failure"
@@ -219,22 +144,24 @@ func (f InboxFilter) narrowed() (InboxFilter, bool) {
 	return n, (len(f.Repos) == 0 || len(n.Repos) > 0) && (len(f.Owners) == 0 || len(n.Owners) > 0)
 }
 
+// inboxSearch's rows are the items' fragments without the checks'
+// counts (ADR 0117), so the inbox costs what it did.
 const inboxSearch = `
-  review: search(type: ISSUE, query: $review, first: 50) { issueCount nodes { __typename ...PullRow } }
-  mine: search(type: ISSUE, query: $mine, first: 50) { issueCount nodes { __typename ...PullRow } }
-  assigned: search(type: ISSUE, query: $assigned, first: 50) { issueCount nodes { __typename ...IssueRow } }`
+  review: search(type: ISSUE, query: $review, first: 50) { issueCount nodes { __typename ...ItemPull } }
+  mine: search(type: ISSUE, query: $mine, first: 50) { issueCount nodes { __typename ...ItemPull } }
+  assigned: search(type: ISSUE, query: $assigned, first: 50) { issueCount nodes { __typename ...ItemIssue } }`
 
-const inboxQuery = `query Inbox($review: String!, $mine: String!, $assigned: String!) {` + inboxSearch + `
-}` + pullRow + issueRow
+var inboxQuery = withItems(`query Inbox($review: String!, $mine: String!, $assigned: String!) {`+inboxSearch+`
+}`, false)
 
 // inboxDatedQuery also counts each search without its date: three
 // searches of no rows, which cost nothing more (the query's cost stays 1
 // to 2 points).
-const inboxDatedQuery = `query Inbox($review: String!, $mine: String!, $assigned: String!, $reviewAll: String!, $mineAll: String!, $assignedAll: String!) {` + inboxSearch + `
+var inboxDatedQuery = withItems(`query Inbox($review: String!, $mine: String!, $assigned: String!, $reviewAll: String!, $mineAll: String!, $assignedAll: String!) {`+inboxSearch+`
   reviewAll: search(type: ISSUE, query: $reviewAll, first: 0) { issueCount }
   mineAll: search(type: ISSUE, query: $mineAll, first: 0) { issueCount }
   assignedAll: search(type: ISSUE, query: $assignedAll, first: 0) { issueCount }
-}` + pullRow + issueRow
+}`, false)
 
 // repoQualifiers is how many repositories a search names (repo:o/n
 // each, any of them); past it, Inbox searches everywhere and keeps
@@ -304,8 +231,8 @@ func (c *Client) Inbox(ctx context.Context, f InboxFilter) (Inbox, error) {
 		return Inbox{}, err
 	}
 	type search struct {
-		IssueCount int   `json:"issueCount"`
-		Nodes      []row `json:"nodes"`
+		IssueCount int        `json:"issueCount"`
+		Nodes      []itemNode `json:"nodes"`
 	}
 	var data struct{ Review, Mine, Assigned, ReviewAll, MineAll, AssignedAll search }
 	f, left := f.narrowed()
@@ -321,9 +248,9 @@ func (c *Client) Inbox(ctx context.Context, f InboxFilter) (Inbox, error) {
 	}
 	items := func(s search) []model.GitHubItem {
 		var out []model.GitHubItem
-		for _, r := range s.Nodes {
-			if r.ID != "" && f.shows(r.Repository.NameWithOwner) { // not a node of another type
-				out = append(out, r.item(c.Host))
+		for _, n := range s.Nodes {
+			if repo := n.Repository.NameWithOwner; n.ID != "" && f.shows(repo) { // not a node of another type
+				out = append(out, n.item(c.Host, repo))
 			}
 		}
 		return out
@@ -340,9 +267,9 @@ func (c *Client) Inbox(ctx context.Context, f InboxFilter) (Inbox, error) {
 		AssignedOlder: older(data.Assigned, data.AssignedAll)}, nil
 }
 
-const statusQuery = `query Status($ids: [ID!]!) {
-  nodes(ids: $ids) { __typename ...PullRow ...IssueRow }
-}` + pullRow + issueRow
+var statusQuery = withItems(`query Status($ids: [ID!]!) {
+  nodes(ids: $ids) { __typename ...ItemPull ...ItemIssue }
+}`, false)
 
 // Status is how pull requests and issues are now, by their node ids, in
 // one query (at most 100). One GitHub can't find (deleted, or no longer
@@ -352,15 +279,15 @@ func (c *Client) Status(ctx context.Context, ids []string) (map[string]model.Git
 		return nil, errors.New("at most 100 at a time")
 	}
 	var data struct {
-		Nodes []*row `json:"nodes"`
+		Nodes []*itemNode `json:"nodes"`
 	}
 	if _, err := c.graphql(ctx, statusQuery, map[string]any{"ids": ids}, &data); err != nil {
 		return nil, err
 	}
 	out := map[string]model.GitHubItem{}
-	for _, r := range data.Nodes {
-		if r != nil && r.ID != "" {
-			out[r.ID] = r.item(c.Host)
+	for _, n := range data.Nodes {
+		if n != nil && n.ID != "" {
+			out[n.ID] = n.item(c.Host, n.Repository.NameWithOwner)
 		}
 	}
 	return out, nil

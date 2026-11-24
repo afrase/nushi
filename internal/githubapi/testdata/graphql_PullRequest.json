@@ -2,6 +2,7 @@
   "data": {
     "repository": {
       "pullRequest": {
+        "__typename": "PullRequest",
         "id": "PR_kwDOVXdqNc8AAAABKrwJXQ",
         "number": 1,
         "title": "Add Sub and Neg",
