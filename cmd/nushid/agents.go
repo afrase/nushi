@@ -10,7 +10,6 @@ import (
 
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
-	"github.com/afrase/nushi/internal/features/trust"
 	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/npm"
 	"github.com/afrase/nushi/internal/shellenv"
@@ -70,15 +69,6 @@ func chatKinds(dir string, known []knownagents.Agent, agentSvc *agents.Service) 
 		})
 	}
 	return kinds
-}
-
-// newTrust is the trust card's service: what a folder brings each agent.
-func newTrust(known []knownagents.Agent, st trust.Store) *trust.Service {
-	byName := map[string]trust.Agent{}
-	for _, a := range known {
-		byName[a.Agent.Name] = a.Trust
-	}
-	return trust.New(byName, st)
 }
 
 // signedOutError is a start the agent refused for want of a sign-in, in

@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 )
@@ -11,7 +12,7 @@ import (
 // (ADR 0100). A new set is a change to this test, and it must not reach a
 // merge.
 func TestAgentsGetNoGitHubTools(t *testing.T) {
-	main, err := os.ReadFile("main.go")
+	main, err := os.ReadFile(filepath.Join("..", "..", "internal", "daemon", "daemon.go"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -27,28 +27,14 @@ import (
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/claudehistory"
 	"github.com/afrase/nushi/internal/codex"
-	"github.com/afrase/nushi/internal/events"
-	"github.com/afrase/nushi/internal/features/chats"
-	"github.com/afrase/nushi/internal/features/memory"
-	"github.com/afrase/nushi/internal/features/preview"
-	"github.com/afrase/nushi/internal/features/remote"
-	"github.com/afrase/nushi/internal/features/restart"
-	"github.com/afrase/nushi/internal/features/servers"
+	"github.com/afrase/nushi/internal/daemon"
 	"github.com/afrase/nushi/internal/features/terminals"
-	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/filelock"
-	"github.com/afrase/nushi/internal/git"
-	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/mcpserver"
 	"github.com/afrase/nushi/internal/pi"
-	"github.com/afrase/nushi/internal/proctree"
 	"github.com/afrase/nushi/internal/shellenv"
-	"github.com/afrase/nushi/internal/store"
-	"github.com/afrase/nushi/internal/sysproxy"
 	"github.com/afrase/nushi/internal/terminal"
-	"github.com/afrase/nushi/internal/transcripts"
-	"github.com/afrase/nushi/relay"
 )
 
 func main() {
@@ -155,7 +141,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	ln, err := listen(filepath.Join(dir, "nushid.sock"))
+	ln, err := listen(socketPath(dir))
 	if err != nil {
 		return err
 	}
@@ -166,88 +152,30 @@ func run() error {
 	slog.Info("nushid started", "version", version(), "build", api.Build(), "api", api.Version, "data", dir, "pid", os.Getpid(),
 		"log_level", logs.Level.Level())
 
-	hub := &events.Hub{}
-	st := store.New(dir)
-	known := knownagents.All(projects, st.GoAgent)
-	shellEnv := newShellEnv()
-	sysproxy.UseShellEnviron(shellEnv.Environ) // Linux only; before the relay, Jira, GitHub or Web Push asks
-	agentSvc := newAgents(dir, known, shellEnv)
-	copies, err := transcripts.Open(filepath.Join(dir, "transcripts"))
-	if err != nil {
-		return err
-	}
-	dev := os.Getenv("NUSHI_DATA") != ""
-	jiraSvc := newJira(st, dev)
-	shows := preview.New(hub.Publish)
-	serverTools := &servers.AgentTools{}
-	toolSvc := tools.New(jiraSvc.Tools(), shows, serverTools)
-	channels := newChannels()
-	remoteSvc, err := remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish)
-	if err != nil {
-		return err
-	}
-	kinds := chatKinds(dir, known, agentSvc)
-	usageSvc, closeUsage := openUsage(filepath.Join(dir, "nushi.db"), st)
-	record := newRecord(dir)
-	chatSvc := chats.New(context.Background(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{},
-		Scratch: filepath.Join(dir, "scratch"), Uploads: filepath.Join(dir, "uploads"), Publish: hub.Publish, Tools: mcpTools(toolSvc, filepath.Join(dir, "nushid.sock")),
-		Viewers: remoteSvc, Processes: proctree.Tree{}, Record: record, Copies: copies, CopiesOn: st.KeepTranscripts, CopyDays: st.TranscriptDays, Sleep: st, Meter: usageSvc})
-	shows.UseChats(chatSvc)
-	// Each terminal names its own shell (terminal.Terminal's Name).
-	termSvc := terminals.New(shellStarter(agentSvc), "", chatSvc, hub.Publish)
-	chatSvc.UseTerminals(termSvc)
-	go hub.Follow(context.Background(), termSvc.Follow)
-	srvSvc := newServers(record, chatSvc, agentSvc, hub.Publish)
-	chatSvc.UseServers(srvSvc)
-	serverTools.Use(srvSvc)
-	go hub.Follow(context.Background(), srvSvc.Follow)
-	agentSvc.UseChats(chatSvc)
-	// The API, on the socket for the app (with the token) and on each
-	// paired device's channel (ADR 0034).
-	logs.SetDebug(st.DebugLog())
-	updateSvc := startUpdates(st, hub.Publish, agentSvc.Environ, home)
-	restarts := restart.New(chatSvc, restart.Together{termSvc, srvSvc, updateSvc})
-	sv := api.Services{Settings: st, ChatFiles: st, Chats: chatSvc, Agents: agentSvc, MCP: newMCP(known, agentSvc, chatSvc.MCPChanged), Skills: newSkills(known), Terms: termSvc,
-		Trust: newTrust(known, st), Hub: hub, Memory: memory.New(chatSvc), Restart: restarts, Jira: jiraSvc, Remote: remoteSvc, Servers: srvSvc}
-	sv.GitHub = newGitHub(st, dev, shellEnv)
-	chatSvc.UseGitHub(sv.GitHub)
-	sv.Updates = updateSvc
-	sv.Usage = usageSvc
-	if err := usePush(st, sv.Remote, chatSvc, kinds); err != nil {
-		return err
-	}
-	go hub.Follow(context.Background(), sv.Remote.Follow)
 	// A handler's panic, which net/http recovers, is logged with its stack.
 	errorLog := slog.NewLogLogger(slog.Default().Handler(), slog.LevelError)
-	socket, devices := api.Handlers(sv, toolSvc, token)
-	remoteSrv := &http.Server{Handler: devices, ConnContext: api.DeviceConn, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // served only over paired devices' Noise channels
-	remoteSrv.Protocols.SetUnencryptedHTTP2(true)
-	// Serve returns once remoteSrv.Close below closes channels.
-	go func() { _ = remoteSrv.Serve(channels) }()
-	srv := &http.Server{Handler: socket, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
+	d, err := daemon.Start(context.Background(), dir, token, &leaves{dir: dir, home: home, projects: projects,
+		dev: os.Getenv("NUSHI_DATA") != "", errorLog: errorLog})
+	if err != nil {
+		return err
+	}
+	srv := &http.Server{Handler: d.Socket, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
 	// On SIGINT or SIGTERM (the app's stop event on Windows), once its app
 	// is deleted, or for a restart into a newer build, stop the agents
 	// too: their sessions reopen through session/load when the daemon is
-	// back. The terminals and the
-	// dev servers end first: the restart found none running a moment ago,
-	// and ending them before the agents (which take up to stopGrace)
-	// leaves none the time to start.
-	// Usage is written last: the chats' last turns end as they close.
-	closeChats := sync.OnceFunc(func() { termSvc.CloseAll(); srvSvc.CloseAll(); chatSvc.Close(); closeUsage() })
+	// back (daemon.Daemon's CloseChats says in what order).
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	watchStopEvent(stop)
-	why, err := serve(srv, ln, stop, restarts.Due(), closeChats)
+	why, err := serve(srv, ln, stop, d.Restart.Due(), d.CloseChats)
 	if why != "" {
 		slog.Info("nushid stopping", "why", why)
 	} else {
 		slog.Error("nushid stopping", "why", err)
 	}
-	sv.Remote.Close()
-	_ = remoteSrv.Close() // stopping: nothing is left to tell
-	closeChats()
+	d.Close() // remote access, the devices' API, then the chats if serve didn't
 	if errors.Is(err, http.ErrServerClosed) {
 		slog.Info("nushid stopped")
 		return nil
@@ -342,6 +270,9 @@ func lockDataFolder(dir string, wait time.Duration) (unlock func(), err error) {
 	}
 	return unlock, nil
 }
+
+// socketPath is the daemon's socket in its data folder dir.
+func socketPath(dir string) string { return filepath.Join(dir, "nushid.sock") }
 
 // listen takes over the socket at path unless another daemon is answering on it.
 func listen(path string) (net.Listener, error) {
