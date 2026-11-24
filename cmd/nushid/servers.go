@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 
 	"github.com/afrase/nushi/internal/features/servers"
-	"github.com/afrase/nushi/internal/listeners"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/proctree"
 	"github.com/afrase/nushi/internal/terminal"
@@ -27,7 +26,7 @@ func newRecord(dir string) *proctree.Record {
 // agents'), its processes in record.
 func newServers(record servers.Record, chats servers.Chats, env servers.Env, publish func(model.Event)) *servers.Service {
 	return servers.New(servers.Options{Chats: chats, Procs: proctree.Tree{}, Env: env, Publish: publish,
-		Listeners: listeners.List, Record: record, Spawn: startServer})
+		Record: record, Spawn: startServer})
 }
 
 // startServer starts a dev server's program on a terminal.

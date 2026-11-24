@@ -1,7 +1,6 @@
 package servers
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -102,9 +101,10 @@ func (idleChats) Rest() (bool, string)  { return true, "" }
 func (idleChats) Unrest()               {}
 func (idleChats) Holding() []model.Hold { return nil }
 
-// A port that, once the server started, another program answers on is
-// no server of its: it fails, saying so.
-func TestAnotherProgramOnThePortFails(t *testing.T) {
+// A server whose port is answered by a process outside its tree, as a
+// Docker or OrbStack port proxy answers for a container, is running: the
+// answer is what counts (ADR 0098).
+func TestAPortAnsweredOutsideTheTreeIsReady(t *testing.T) {
 	p := freePort(t)
 	s, _, _ := setup(t, entry("web", p, "-never"))
 	_, err := s.Start(t.Context(), "c", Pick{Name: "web"})
@@ -113,8 +113,7 @@ func TestAnotherProgramOnThePortFails(t *testing.T) {
 	testcheck.NoErr(t, err)
 	defer ln.Close()                                                                                  //nolint:errcheck // a test's
 	go func() { _ = http.Serve(ln, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})) }() //nolint:gosec // a test's
-	r := row(t, s, "web", Failed)
-	if r.Error != fmt.Sprintf("another program answers on port %d", p) {
+	if r := row(t, s, "web", Running); r.Error != "" {
 		t.Errorf("error %q", r.Error)
 	}
 }

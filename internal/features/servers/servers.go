@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/launchfile"
-	"github.com/afrase/nushi/internal/listeners"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/realpath"
 )
@@ -65,10 +64,6 @@ type Options struct {
 	Procs   Procs
 	Env     Env
 	Publish func(model.Event)
-	// Listeners lists localhost's listeners (listeners.List); one that
-	// answers errors.ErrUnsupported skips the check that the port is the
-	// server's own.
-	Listeners func() ([]listeners.Listener, error)
 	// Record keeps running servers' processes, for the next daemon to
 	// stop after a crash; nil: none kept.
 	Record Record

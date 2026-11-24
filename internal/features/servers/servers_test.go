@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/afrase/nushi/internal/listeners"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/proctree"
 	"github.com/afrase/nushi/internal/terminal"
@@ -87,7 +86,7 @@ func setup(t *testing.T, configurations ...string) (*Service, *fakeChats, string
 	file := `{"version": "0.0.1", "configurations": [` + strings.ReplaceAll(strings.Join(configurations, ","), "$SERVER", fakeServer) + `]}`
 	testcheck.Write(t, filepath.Join(folder, ".agents", "launch.json"), file)
 	chats := &fakeChats{chats: map[string]model.ChatRecord{"c": {ID: "c", Folder: folder}}}
-	s := New(Options{Chats: chats, Procs: proctree.Tree{}, Env: plainEnv{}, Listeners: listeners.List,
+	s := New(Options{Chats: chats, Procs: proctree.Tree{}, Env: plainEnv{},
 		Record: &fakeRecord{owned: map[string][]model.Process{}},
 		Spawn: func(argv []string, dir string, env []string) (Process, error) {
 			return terminal.Start(argv, dir, env, 100, 30, func() {})
@@ -253,9 +252,9 @@ func TestATakenPortFailsWithoutAutoPort(t *testing.T) {
 	defer ln.Close() //nolint:errcheck // a test's
 	s, _, _ := setup(t, fmt.Sprintf(`{"name": "web", "runtimeExecutable": "$SERVER", "port": %d, "autoPort": false}`, p))
 	_, err = s.Start(t.Context(), "c", Pick{Name: "web"})
-	want := fmt.Sprintf("port %d is in use by ", p)
-	if err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), fmt.Sprintf("(pid %d)", os.Getpid())) {
-		t.Errorf("Start = %v, want %q naming this process", err, want)
+	want := fmt.Sprintf("port %d is in use, and autoPort is false", p)
+	if err == nil || err.Error() != want {
+		t.Errorf("Start = %v, want %q", err, want)
 	}
 	if r := row(t, s, "web", Failed); r.Error != err.Error() {
 		t.Errorf("the row says %q", r.Error)

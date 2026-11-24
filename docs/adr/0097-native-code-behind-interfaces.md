@@ -2,6 +2,8 @@
 
 Status: accepted, 2026-11-07.
 
+Amended 2026-11-24: `listeners.List`, named below among the stand-ins, is gone with `internal/listeners` (ADR 0098's amendment of the same day). The rest holds.
+
 ## Context
 The owner: "Any swift code should be hidden behind interfaces. We should not be writing concrete code coupled to swift. Fundamentally this is wrong for a cross platform app." Views called the Mac's Swift side over platform channels inline (the fonts in Settings › Terminal, the clipboard in the composer, notifications, the window's drag), the preview's host interfaces shared files with their WKWebViews, and the daemon's macOS-only code (cgo, darwin's sysctl, sandbox-exec, scutil) sat in files every OS compiles, so a Linux build failed. Nushi may later get a Linux daemon and a Windows (WSL) app; this builds no new platform, only the seams and the checks.
 

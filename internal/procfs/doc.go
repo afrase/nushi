@@ -1,6 +1,6 @@
 // Package procfs reads Linux's /proc without cgo: each process's stat
 // (parent, group, terminal, start time), its command line and
-// its open files, for proctree, listeners, footprint and claudehistory's
+// its open files, for proctree, footprint, ante and claudehistory's
 // Linux files (ADR 0097). Only the user's own processes matter: an entry
 // that can't be read, or has gone, is skipped, never an error for a whole
 // list.

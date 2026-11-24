@@ -2,6 +2,8 @@
 
 Status: accepted, 2026-11-08. Builds on [0097](0097-native-code-behind-interfaces.md) (its `_other.go` stand-ins get Linux implementations).
 
+Amended 2026-11-24: the Listeners bullet is gone with `internal/listeners` (ADR 0098's amendment of the same day): the daemon no longer asks sock_diag or reads `/proc/net/tcp` or the fd links. The rest holds.
+
 ## Context
 ADR 0097 made the seams: the daemon's macOS-only code in `_darwin.go` files, with `_other.go` stand-ins that compiled for Linux and answered `errors.ErrUnsupported` or nothing. Linux was the first other platform on the roadmap (the owner, 2026-10-27), and this is its first phase: `nushid` and every Go package working on Linux x86_64, `go test -race ./...` passing there as on the Mac. The app's Linux runner, its packaging and its web views are later phases.
 

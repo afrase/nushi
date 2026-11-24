@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"net/netip"
 	"slices"
 	"strconv"
 	"strings"
@@ -17,7 +16,6 @@ import (
 
 	"github.com/afrase/nushi/internal/ansi"
 	"github.com/afrase/nushi/internal/launchfile"
-	"github.com/afrase/nushi/internal/listeners"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/shellenv"
 )
@@ -69,8 +67,9 @@ func (s *Service) launch(ctx context.Context, sv *server) error {
 }
 
 // await waits for the server to answer on its port, dialing it with a
-// backoff from 100 ms to a second: then it's running, unless its port is
-// another program's. Past ReadyWithin it's running but not answering, and
+// backoff from 100 ms to a second: then it's running, whoever answers (a
+// container's port proxy answers from outside the server's processes,
+// ADR 0098). Past ReadyWithin it's running but not answering, and
 // still looked at, so a late answer counts.
 func (s *Service) await(sv *server) {
 	wait := 100 * time.Millisecond
@@ -92,19 +91,9 @@ func (s *Service) await(sv *server) {
 	}
 }
 
-// ready marks the server running, once the port it answers on is its
-// own: a listener there outside its processes means another program
-// answers, and the server is stopped.
+// ready marks the server running, and looks at its processes every 5 s
+// until it ends.
 func (s *Service) ready(sv *server) {
-	s.look(sv)
-	if s.foreign(sv) {
-		s.mu.Lock()
-		sv.err = fmt.Sprintf("another program answers on port %d", sv.port)
-		s.mu.Unlock()
-		slog.Info("dev server's port answered by another program", "server", sv.id)
-		s.stop(sv, ByNushi)
-		return
-	}
 	s.set(sv, Running, "")
 	s.unreserve(sv)
 	slog.Info("dev server answers", "server", sv.id)
@@ -187,32 +176,6 @@ func dials(ctx context.Context, addr string) bool {
 	}
 	_ = c.Close()
 	return true
-}
-
-// foreign says whether a connection to localhost's port may reach another
-// program than the server: a listener there outside its processes, or
-// none of its own. Where listeners can't be read (another OS) it can't
-// tell, and says no.
-func (s *Service) foreign(sv *server) bool {
-	if s.Listeners == nil {
-		return false
-	}
-	ls, err := s.Listeners()
-	if err != nil {
-		return false
-	}
-	below, _ := s.Procs.Under(sv.leader.Pid)
-	tree := listeners.Procs{Root: sv.leader.Pid, Below: below}
-	port := uint16(sv.port) //nolint:gosec // a port, 1 to 65535
-	mine := false
-	for _, a := range loopback {
-		in, out := tree.Split(listeners.Reaching(ls, netip.AddrPortFrom(a, port)))
-		if len(out) > 0 {
-			return true
-		}
-		mine = mine || len(in) > 0
-	}
-	return !mine
 }
 
 // look notes the server's processes as they are now, for its stop and

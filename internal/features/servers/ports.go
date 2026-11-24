@@ -4,11 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
-	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/afrase/nushi/internal/listeners"
 )
 
 // scan is how far past an entry's port autoPort looks for a free one, as
@@ -18,11 +15,18 @@ const scan = 20
 // pickPort finds the server its port and reserves it until the server
 // answers or ends, so two starts never take one port. With autoPort true
 // or unset, the entry's port or the first free one up to scan past it;
-// with autoPort false, the entry's or none, naming who holds it.
+// with autoPort false, the entry's or none.
 //
-// A port is taken when a connection to 127.0.0.1 or ::1 on it is: a probe
-// that listens can be let in beside another program's listener
-// (internal/listeners).
+// A port is taken when a connection to 127.0.0.1 or ::1 on it is, not
+// when a probe can't listen on it: Go's net.Listen sets SO_REUSEADDR, and
+// macOS then lets it bind beside another process's listener that a
+// connection to localhost reaches. Seen on macOS 27 (2026-11-06), a probe
+// bound with the other process on 0.0.0.0:p and the probe on 127.0.0.1:p
+// or ":p"; on 127.0.0.1:p and the probe on ":p" or 0.0.0.0:p; on a
+// dual-stack [::]:p and the probe on 127.0.0.1:p or [::1]:p; on [::1]:p
+// and the probe on ":p", whatever the other socket's own SO_REUSEADDR. A
+// dial connected in each case. Linux refuses those binds, but dialing is
+// right on both.
 func (s *Service) pickPort(ctx context.Context, sv *server) (int, error) {
 	// The probes outlive the call: a probe cut short by its caller going
 	// would read as a free port.
@@ -50,7 +54,7 @@ func (s *Service) pickPort(ctx context.Context, sv *server) (int, error) {
 		s.mu.Unlock()
 	}
 	if last == e.Port {
-		return 0, fmt.Errorf("port %d is in use%s, and autoPort is false", e.Port, s.holder(e.Port))
+		return 0, fmt.Errorf("port %d is in use, and autoPort is false", e.Port)
 	}
 	return 0, fmt.Errorf("no free port from %d to %d", e.Port, last)
 }
@@ -66,30 +70,6 @@ func dialLoopback(ctx context.Context, port int) string {
 		if dials(ctx, at) {
 			return at
 		}
-	}
-	return ""
-}
-
-// holder names the program a connection to localhost's port reaches, as
-// " by <name> (pid N)", or "" when it can't be told.
-func (s *Service) holder(port int) string {
-	if s.Listeners == nil {
-		return ""
-	}
-	ls, err := s.Listeners()
-	if err != nil {
-		return ""
-	}
-	for _, a := range loopback {
-		reach := listeners.Reaching(ls, netip.AddrPortFrom(a, uint16(port))) //nolint:gosec // a port, 1 to 65535
-		if len(reach) == 0 {
-			continue
-		}
-		pid := reach[0].Pid
-		if args := s.Procs.Args(pid); len(args) > 0 && args[0] != "" {
-			return fmt.Sprintf(" by %s (pid %d)", filepath.Base(args[0]), pid)
-		}
-		return fmt.Sprintf(" by pid %d", pid)
 	}
 	return ""
 }

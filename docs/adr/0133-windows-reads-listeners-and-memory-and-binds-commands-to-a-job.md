@@ -2,6 +2,8 @@
 
 Status: accepted, 2026-11-17. Amends [0124](0124-the-daemon-builds-on-windows.md) (the daemon on Windows: off were `listeners` and `footprint`, and a bound command had no job).
 
+Amended 2026-11-24: the Listeners half is gone. `internal/listeners`, its `GetExtendedTcpTable` reader among its Mac and Linux ones, was deleted with the dev servers' identity check it served (ADR 0098's amendment of the same day); memory and the bound command's job hold.
+
 ## Context
 ADR 0124 left the daemon on Windows reading no processes: `listeners` and `footprint` answered `errors.ErrUnsupported`, so a dev server's port was never checked as its own or named when taken, and the app's memory card stayed off (the daemon's `GetMemory` answers `unimplemented`, and the app stops asking). It also left `procgroup.Bound`'s commands (git, gh, npm, an agent's `--version`, Claude's `mcp` commands) to `taskkill /T`, which follows each process's parent from the command down and so misses one whose parent ended first; `procgroup.Start`'s programs had a job object, but `Bound` sets up a command its caller then runs, and 0124 found no moment after the start to add it to one. `proctree` (Toolhelp's snapshot, a process's command line) comes with the terminals, apart from this.
 

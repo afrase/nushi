@@ -6,6 +6,8 @@ Amended by [0100](0100-agents-run-dev-servers-and-their-logs-show.md): a chat's 
 
 Amended 2026-11-24: the record of running servers' processes is `proctree.Record`, in `processes.json`, which also holds what a clean stop of each chat's agent would end (its process group; everything below an agent stopped by signal), so the next daemon stops a crash's leftovers of both; a `servers.json` an older daemon left is swept too. The rest holds.
 
+Amended 2026-11-24 (Ready, Ports): a server is ready when the dial and the HEAD succeed, whoever answers; the check that the port's listener is in the server's process tree is gone, with `internal/listeners`. It failed servers whose port a process outside the tree answers (Docker Desktop's and OrbStack's port proxies, a root `docker-proxy` the user can't list, a server that daemonizes) and guarded nothing: since ADR 0100 an agent's `show` opens any loopback page, and the port was dialed free just before the start, so only a program binding it in between was caught. With `autoPort` false a taken port fails "port N is in use", naming no holder. Spotting servers (Consequences) would bring a listener reader back, sized for itself.
+
 ## Context
 The owner asked for Claude desktop's Servers button: the dev servers a project configures (its launch files, ADR 0095) listed beside the browser tab (ADR 0094), each run and stopped from its row, its page opening beside the chat. Claude desktop runs them in its app and gives its agent `preview_*` tools; Nushi's app comes and goes while the daemon keeps chats and terminals, and six agents run there, four without MCP. Design and review: the browser design's D7 and D10 (docs/facts/claude.md has what Claude does).
 
@@ -30,4 +32,4 @@ The owner asked for Claude desktop's Servers button: the dev servers a project c
 - Servers in the app (Claude desktop's way): they'd die with the window, and the phone and a later agent tool would have no one to ask.
 - Recording what ran and starting it again after a restart (the design's D7): an update would restart a server whose dependencies changed, unasked; holding the restart is what terminals do, and simpler.
 - Through the user's shell (`sh -c`): one more layer of the repository's text to quote, and Claude desktop spawns directly.
-- A listen probe for free ports: macOS lets Go's SO_REUSEADDR bind beside another listener (internal/listeners).
+- A listen probe for free ports: macOS lets Go's SO_REUSEADDR bind beside another listener (what was seen is in `ports.go`'s comment).

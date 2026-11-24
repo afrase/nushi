@@ -156,8 +156,8 @@ linters:
         text: "^exported:"
       # cgo: the linters read the C preamble's NULLs and the "C" import's
       # generated aliases as Go (duplicate words, imports, expressions).
-      # Only these two files import "C".
-      - path: ^internal/(keychain/keychain_darwin|listeners/libproc_darwin)\.go$
+      # Only this file imports "C".
+      - path: ^internal/keychain/keychain_darwin\.go$
         linters: [dupword, gocritic]
       # icongen writes SVG, whose attributes' "%s" quotes %q would escape
       # the Go way.

@@ -122,15 +122,6 @@ func TestLinks(t *testing.T) {
 	}
 }
 
-// The pids hold this process's and its parent's, and nothing that isn't a
-// pid.
-func TestPids(t *testing.T) {
-	pids := Pids()
-	if !slices.Contains(pids, os.Getpid()) || !slices.Contains(pids, os.Getppid()) || slices.ContainsFunc(pids, func(p int) bool { return p <= 0 }) {
-		t.Fatalf("pids %v; this one %d, its parent %d", pids, os.Getpid(), os.Getppid())
-	}
-}
-
 func TestNamespaceAndMachine(t *testing.T) {
 	if ns := PidNamespace(); len(ns) < len("pid:[1]") || ns[:5] != "pid:[" {
 		t.Fatalf("pid namespace %q", ns)
