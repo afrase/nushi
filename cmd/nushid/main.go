@@ -25,7 +25,6 @@ import (
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/claude"
-	"github.com/afrase/nushi/internal/claudehistory"
 	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/daemon"
 	"github.com/afrase/nushi/internal/features/terminals"
@@ -119,10 +118,6 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	projects, err := claudehistory.Projects()
-	if err != nil {
-		return err
-	}
 	dir := dataFolder(home)
 	dev := os.Getenv("NUSHI_DATA") != "" // as the launcher said, before the shell's environment
 	forgetLauncher()
@@ -154,7 +149,10 @@ func run() error {
 	logs.Mask(token)
 	slog.Info("nushid started", "version", version(), "build", api.Build(), "api", api.Version, "data", dir, "pid", os.Getpid(),
 		"log_level", logs.Level.Level())
-	shellEnv := newShellEnv(loginShell()) // before anything reads the environment, and before the socket answers
+	shellEnv, projects, err := fromLoginShell(loginShell()) // before anything reads the environment, and before the socket answers
+	if err != nil {
+		return err
+	}
 
 	// A handler's panic, which net/http recovers, is logged with its stack.
 	errorLog := slog.NewLogLogger(slog.Default().Handler(), slog.LevelError)

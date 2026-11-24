@@ -27,13 +27,14 @@ func TestMain(m *testing.M) {
 }
 
 // started is what a daemon starts with: its data folder, its own
-// environment, the one an agent starts with, and why reading the shell
-// failed ("": it didn't).
+// environment, the one an agent starts with, Claude's projects folder,
+// and why reading the shell failed ("": it didn't).
 type started struct {
-	Folder  string
-	Daemon  []string
-	Agent   []string
-	Problem string
+	Folder   string
+	Daemon   []string
+	Agent    []string
+	Projects string
+	Problem  string
 }
 
 // reportStarted does what -login and run do to the daemon's environment
@@ -48,7 +49,11 @@ func reportStarted(path string) {
 	if d, err := time.ParseDuration(os.Getenv(startedTimeout)); err == nil {
 		shellenv.Timeout = d
 	}
-	env := newShellEnv(os.Getenv(startedShell))
+	env, projects, err := fromLoginShell(os.Getenv(startedShell))
+	if err != nil {
+		return // no report: the test says it never started
+	}
+	r.Projects = projects
 	r.Agent = env.Environ()
 	r.Daemon, r.Problem = os.Environ(), env.Status().Problem
 	b, err := json.Marshal(r)

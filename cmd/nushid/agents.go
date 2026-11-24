@@ -9,6 +9,7 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
+	"github.com/afrase/nushi/internal/claudehistory"
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/knownagents"
@@ -34,6 +35,17 @@ func newShellEnv(shell string) *shellenv.Env {
 	shellEnv.Start()
 	shellEnv.Environ() // waits for the first reading
 	return shellEnv
+}
+
+// fromLoginShell reads the login shell's environment and applies it to
+// the daemon (newShellEnv), then reads what that environment decides:
+// Claude's projects folder (CLAUDE_CONFIG_DIR, which a profile or rc may
+// export), so the daemon reads Claude's history where its agents write
+// it.
+func fromLoginShell(shell string) (shellEnv *shellenv.Env, projects string, err error) {
+	shellEnv = newShellEnv(shell)
+	projects, err = claudehistory.Projects()
+	return shellEnv, projects, err
 }
 
 // setEnviron sets each of environ's variables in the daemon's own

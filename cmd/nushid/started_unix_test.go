@@ -197,6 +197,30 @@ func TestWhatTheDaemonStartsWith(t *testing.T) {
 	}
 }
 
+// Claude's history folder is read from the environment the daemon has
+// once the login shell's is applied: a CLAUDE_CONFIG_DIR the user's
+// profile or rc exports is where the daemon looks for Claude's sessions,
+// as their agents write them.
+func TestClaudesHistoryFolderIsTheShells(t *testing.T) {
+	home := t.TempDir()
+	for name, c := range map[string]struct{ profile, rc, want string }{
+		"in the profile": {profile: "export CLAUDE_CONFIG_DIR=/profile/claude", want: "/profile/claude/projects"},
+		"in the rc":      {rc: "export CLAUDE_CONFIG_DIR=/rc/claude", want: "/rc/claude/projects"},
+		"nowhere":        {want: filepath.Join(home, ".claude", "projects")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			launcher := []string{"PATH=/usr/bin:/bin", "HOME=" + home}
+			s, ok := startDaemon(t, loginShellNamed(t, "zsh", c.profile, c.rc), launcher, time.Minute, time.Minute)
+			if !ok {
+				t.Fatal("it didn't start")
+			}
+			if s.Projects != c.want {
+				t.Errorf("Claude's projects are in %s, want %s", s.Projects, c.want)
+			}
+		})
+	}
+}
+
 func mapsEqual(a, b map[string]string) bool {
 	if len(a) != len(b) {
 		return false
