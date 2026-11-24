@@ -322,7 +322,8 @@ class PullDot extends StatefulWidget {
   State<PullDot> createState() => _PullDotState();
 }
 
-class _PullDotState extends State<PullDot> with ClockRun {
+class _PullDotState extends State<PullDot>
+    with SingleTickerProviderStateMixin, ClockRun {
   String? _checks; // as last shown
 
   @override

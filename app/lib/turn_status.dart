@@ -45,7 +45,8 @@ class TurnStatus extends StatefulWidget {
   State<TurnStatus> createState() => _TurnStatusState();
 }
 
-class _TurnStatusState extends State<TurnStatus> with ClockRun {
+class _TurnStatusState extends State<TurnStatus>
+    with SingleTickerProviderStateMixin, ClockRun {
   late bool _busy = widget.chat.busy;
   String? _receipt; // "Done in 2m 30s", while it shows
   String _last = ''; // what the line said last, folding away

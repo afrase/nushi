@@ -225,7 +225,8 @@ class PlanStep extends StatefulWidget {
   State<PlanStep> createState() => _PlanStepState();
 }
 
-class _PlanStepState extends State<PlanStep> with ClockRun {
+class _PlanStepState extends State<PlanStep>
+    with SingleTickerProviderStateMixin, ClockRun {
   static const _size = 16.0;
 
   @override

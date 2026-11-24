@@ -52,7 +52,8 @@ class ContextMeter extends StatefulWidget {
   State<ContextMeter> createState() => _ContextMeterState();
 }
 
-class _ContextMeterState extends State<ContextMeter> with ClockRun {
+class _ContextMeterState extends State<ContextMeter>
+    with SingleTickerProviderStateMixin, ClockRun {
   double? _from; // the fill the motion started from
   double? _to; // the fill it goes to
   bool _drain = false; // a compaction: the figure follows the fill

@@ -80,47 +80,6 @@ abstract final class Waits {
   static const coalesce = Duration(milliseconds: 100);
 }
 
-/// One clock for the motions that run once ([ClockRun]) and the reply's
-/// pacing, every frame: it ticks only while something listens, so they
-/// move in step and stop together, and what listens repaints from it
-/// without its own controller. What loops for as long as a state lasts is
-/// on [pulseClock].
-class _Clock extends ChangeNotifier {
-  Ticker? _ticker;
-  Duration now = Duration.zero;
-
-  /// Where in a loop of [period] the clock is, from 0 to 1.
-  double phase(Duration period) =>
-      now.inMicroseconds % period.inMicroseconds / period.inMicroseconds;
-
-  @override
-  void addListener(VoidCallback listener) {
-    super.addListener(listener);
-    _ticker ??= Ticker((t) {
-      now = t;
-      notifyListeners();
-      // One that ended as it ticked (a run of [ClockRun]) is gone only
-      // now: a notifier keeps who leaves while it notifies until then.
-      _stopUnheard();
-    })..start();
-  }
-
-  @override
-  void removeListener(VoidCallback listener) {
-    super.removeListener(listener);
-    _stopUnheard();
-  }
-
-  void _stopUnheard() {
-    if (hasListeners) return;
-    _ticker?.dispose();
-    _ticker = null;
-  }
-}
-
-/// The one clock of what runs once (see [_Clock]).
-final frameClock = _Clock();
-
 /// How many times a second [pulseClock] ticks while Nushi is in front:
 /// about the fewest at which a shine still sweeps rather than steps across
 /// a title (its band moves two text widths in two seconds), and plenty for
@@ -223,52 +182,55 @@ bool get appInFront =>
 final pulseClock = _Pulse();
 
 /// A motion that runs once for a while (a call's title typing, a check
-/// drawing, sparks) on [frameClock]: the state rebuilds on each tick until
-/// it has run [runFor]'s length, so no ticker of its own runs, and
-/// nothing at rest.
-mixin ClockRun<T extends StatefulWidget> on State<T> {
-  Duration? _from; // the clock's time at the run's first tick
+/// drawing, sparks) on the State's own ticker, which it makes as its first
+/// run starts: the state rebuilds on each tick until it has run
+/// [runFor]'s length, and nothing ticks at rest. As any ticker, it's
+/// muted where tickers are off (`TickerMode`: a tucked rail), its time
+/// going on meanwhile, so a run hidden past its end ends as it shows. Its
+/// State mixes in a ticker provider before it
+/// (`with SingleTickerProviderStateMixin, ClockRun`).
+mixin ClockRun<T extends StatefulWidget> on State<T>, TickerProvider {
+  Ticker? _ticker;
+  Duration _now = Duration.zero; // the ticker's time at its last tick
+  Duration? _from; // the ticker's time at the run's first tick
   Duration _length = Duration.zero;
-  bool _on = false;
 
   /// How long the run has gone, to its length once it ended; zero until
   /// its first tick.
-  Duration get ran => !_on
+  Duration get ran => !running
       ? _length
       : _from == null
       ? Duration.zero
-      : frameClock.now - _from!;
+      : _now - _from!;
 
   /// [ran] in milliseconds.
   double get ranMs => ran.inMicroseconds / 1000;
 
   /// Whether it runs.
-  bool get running => _on;
+  bool get running => _ticker?.isActive ?? false;
 
   /// Starts (or starts again) a run of [length].
   void runFor(Duration length) {
     _length = length;
+    // Its next tick is the run's first, as it starts or starts again.
     _from = null;
-    if (_on) return;
-    _on = true;
-    frameClock.addListener(_tick);
+    if (running) return;
+    _now = Duration.zero;
+    (_ticker ??= createTicker(_tick)).start();
   }
 
   /// Ends the run where it is (as if it had run its length).
-  void stopRun() {
-    if (!_on) return;
-    _on = false;
-    frameClock.removeListener(_tick);
-  }
+  void stopRun() => _ticker?.stop();
 
   /// Called on each tick before the rebuild ([ran] as of this tick; the
   /// run may have just ended), to start another with [runFor].
   @protected
   void ticked() {}
 
-  void _tick() {
-    final from = _from ??= frameClock.now;
-    if (frameClock.now - from >= _length) stopRun();
+  void _tick(Duration now) {
+    _now = now;
+    final from = _from ??= now;
+    if (now - from >= _length) stopRun();
     if (!mounted) return;
     ticked();
     setState(() {});
@@ -276,7 +238,7 @@ mixin ClockRun<T extends StatefulWidget> on State<T> {
 
   @override
   void dispose() {
-    stopRun();
+    _ticker?.dispose();
     super.dispose();
   }
 }

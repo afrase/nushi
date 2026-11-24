@@ -46,7 +46,8 @@ class ThoughtLine extends StatefulWidget {
   State<ThoughtLine> createState() => _ThoughtLineState();
 }
 
-class _ThoughtLineState extends State<ThoughtLine> with ClockRun {
+class _ThoughtLineState extends State<ThoughtLine>
+    with SingleTickerProviderStateMixin, ClockRun {
   late ({String text, int start}) _now = latestSentence(widget.text);
   String? _old; // the sentence sliding out
   bool _folding = false;

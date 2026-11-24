@@ -32,7 +32,8 @@ class WaitingCard extends StatefulWidget {
   State<WaitingCard> createState() => _WaitingCardState();
 }
 
-class _WaitingCardState extends State<WaitingCard> with ClockRun {
+class _WaitingCardState extends State<WaitingCard>
+    with SingleTickerProviderStateMixin, ClockRun {
   bool _started = false;
 
   @override
@@ -109,7 +110,8 @@ class SettleCard extends StatefulWidget {
   State<SettleCard> createState() => _SettleCardState();
 }
 
-class _SettleCardState extends State<SettleCard> with ClockRun {
+class _SettleCardState extends State<SettleCard>
+    with SingleTickerProviderStateMixin, ClockRun {
   BoxDecoration? _from; // the box as the state changed
 
   BoxDecoration _box(BoxDecoration to) {

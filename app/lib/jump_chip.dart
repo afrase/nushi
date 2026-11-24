@@ -95,7 +95,8 @@ class JumpChip extends StatefulWidget {
   State<JumpChip> createState() => _JumpChipState();
 }
 
-class _JumpChipState extends State<JumpChip> with ClockRun {
+class _JumpChipState extends State<JumpChip>
+    with SingleTickerProviderStateMixin, ClockRun {
   @override
   void initState() {
     super.initState();

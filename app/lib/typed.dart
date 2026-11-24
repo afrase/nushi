@@ -35,7 +35,8 @@ class Typed extends StatefulWidget {
   State<Typed> createState() => _TypedState();
 }
 
-class _TypedState extends State<Typed> with ClockRun {
+class _TypedState extends State<Typed>
+    with SingleTickerProviderStateMixin, ClockRun {
   bool _started = false;
   int _from = 0; // characters shown as the typing started
   double _typeMs = 0;
@@ -107,7 +108,8 @@ class RunLine extends StatefulWidget {
   State<RunLine> createState() => _RunLineState();
 }
 
-class _RunLineState extends State<RunLine> with ClockRun {
+class _RunLineState extends State<RunLine>
+    with SingleTickerProviderStateMixin, ClockRun {
   late String _done = widget.done;
   String? _now;
   (String, String?)? _next; // what waits for the hold
