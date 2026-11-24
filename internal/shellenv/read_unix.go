@@ -112,6 +112,21 @@ func parse(out []byte, start, end string) ([]string, error) {
 	return vars, nil
 }
 
+// kept is base without the variables a reading of the shell (vars, run
+// with base) doesn't have: those its profile or rc unset. What the
+// reading leaves out itself (shells, Own) isn't the shell's to unset.
+func kept(base, vars []string) []string {
+	has := map[string]bool{}
+	for _, kv := range vars {
+		name, _, _ := strings.Cut(kv, "=")
+		has[name] = true
+	}
+	return slices.DeleteFunc(slices.Clone(base), func(kv string) bool {
+		name, _, _ := strings.Cut(kv, "=")
+		return !has[name] && !shells[name] && !Own(name)
+	})
+}
+
 // shells are the variables each shell sets for itself (where it is, how
 // deep): the shell's are the reading's, not an agent's.
 var shells = map[string]bool{"_": true, "PWD": true, "OLDPWD": true, "SHLVL": true}

@@ -182,6 +182,20 @@ func TestEnv(t *testing.T) {
 	}
 }
 
+// A variable of the daemon's the shell unsets is gone once a reading
+// worked; what the reading leaves out itself (PWD, Nushi's own) isn't.
+func TestEnvUnsets(t *testing.T) {
+	e := New(fakeShell(t, "zsh", "unset GONE"), []string{"PATH=/usr/bin:/bin", "GONE=1", "PWD=/daemon", "NUSHI_DATA=/d", "A=1"})
+	e.Start()
+	env := e.Environ()
+	if Get(env, "GONE") != "" || Get(env, "A") != "1" || Get(env, "PWD") != "/daemon" || Get(env, "ONLY_IN_SHELL") == "" {
+		t.Errorf("%q", env)
+	}
+	if gone := Gone([]string{"GONE=1", "A=1", "NUSHI_DATA=/d", "GONE=2"}, env); !slices.Equal(gone, []string{"GONE"}) {
+		t.Errorf("gone %q", gone)
+	}
+}
+
 // A shell that never worked leaves the daemon's environment.
 func TestEnvFallsBack(t *testing.T) {
 	Timeout = 500 * time.Millisecond

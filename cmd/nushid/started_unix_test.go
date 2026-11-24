@@ -221,6 +221,41 @@ func TestClaudesHistoryFolderIsTheShells(t *testing.T) {
 	}
 }
 
+// A variable the launcher passes and the user's profile or rc unsets
+// (Linux's desktop session passes its whole environment: a proxy, an
+// SSH_ASKPASS) is gone for the daemon and its agents, as it was when the
+// daemon started through the login shell. One the shell keeps, or every
+// variable when no reading worked, stays.
+func TestAVariableTheShellUnsetsIsGone(t *testing.T) {
+	for name, c := range map[string]struct {
+		profile, rc string
+		timeout     time.Duration
+		want        string
+	}{
+		"unset in the profile": {profile: "unset HTTP_PROXY", timeout: time.Minute},
+		"unset in the rc":      {rc: "unset HTTP_PROXY", timeout: time.Minute},
+		"kept":                 {profile: "export FROM_PROFILE=yes", timeout: time.Minute, want: "http://launcher:1"},
+		"no reading worked":    {profile: "unset HTTP_PROXY; exit 3", timeout: time.Minute, want: "http://launcher:1"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			launcher := []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir(), "HTTP_PROXY=http://launcher:1"}
+			s, ok := startDaemon(t, loginShellNamed(t, "bash", c.profile, c.rc), launcher, c.timeout, time.Minute)
+			if !ok {
+				t.Fatal("it didn't start")
+			}
+			if got := shellenv.Get(s.Daemon, "HTTP_PROXY"); got != c.want {
+				t.Errorf("the daemon's HTTP_PROXY is %q, want %q", got, c.want)
+			}
+			if got := shellenv.Get(s.Agent, "HTTP_PROXY"); got != c.want {
+				t.Errorf("an agent's HTTP_PROXY is %q, want %q", got, c.want)
+			}
+			if shellenv.Get(s.Daemon, "HOME") == "" || shellenv.Get(s.Agent, "PWD") != shellenv.Get(s.Daemon, "PWD") {
+				t.Errorf("the daemon's own HOME or PWD went: %q", s.Daemon)
+			}
+		})
+	}
+}
+
 func mapsEqual(a, b map[string]string) bool {
 	if len(a) != len(b) {
 		return false

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -31,7 +32,7 @@ func newShellEnv(shell string) *shellenv.Env {
 	if os.Getenv("NUSHI_SHELL_ENV") == "off" {
 		shellEnv = shellenv.Off(os.Environ())
 	}
-	shellEnv.Use(setEnviron)
+	shellEnv.Use(setEnviron(os.Environ()))
 	shellEnv.Start()
 	shellEnv.Environ() // waits for the first reading
 	return shellEnv
@@ -48,14 +49,22 @@ func fromLoginShell(shell string) (shellEnv *shellenv.Env, projects string, err 
 	return shellEnv, projects, err
 }
 
-// setEnviron sets each of environ's variables in the daemon's own
-// environment. Nothing is unset, and Nushi's own variables are never in
-// it (shellenv.Own).
-func setEnviron(environ []string) {
-	for _, kv := range environ {
-		if name, value, ok := strings.Cut(kv, "="); ok && name != "" {
-			_ = os.Setenv(name, value) // fails only on a malformed name, which no environment holds
+// setEnviron applies each environment it's given to the daemon's own,
+// which was base: it sets each of its variables and unsets those base or
+// an earlier one had that it hasn't (the shell unset them; shellenv.Gone).
+// Nushi's own variables are never in it, and stay (shellenv.Own).
+func setEnviron(base []string) func(environ []string) {
+	had := slices.Clone(base)
+	return func(environ []string) {
+		for _, name := range shellenv.Gone(had, environ) {
+			_ = os.Unsetenv(name) // fails only on a malformed name
 		}
+		for _, kv := range environ {
+			if name, value, ok := strings.Cut(kv, "="); ok && name != "" {
+				_ = os.Setenv(name, value) // fails only on a malformed name, which no environment holds
+			}
+		}
+		had = shellenv.Merge(had, environ)
 	}
 }
 

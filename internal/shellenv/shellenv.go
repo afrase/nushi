@@ -49,6 +49,24 @@ func Merge(base, over []string) []string {
 	return out
 }
 
+// Gone are the names of had's variables that environ hasn't (whatever
+// their case on Windows, nameKey), but Nushi's own (Own): what a daemon
+// that had had and now takes environ unsets.
+func Gone(had, environ []string) []string {
+	has := map[string]bool{}
+	for _, kv := range environ {
+		name, _, _ := strings.Cut(kv, "=")
+		has[nameKey(name)] = true
+	}
+	var out []string
+	for _, kv := range had {
+		if name, _, _ := strings.Cut(kv, "="); name != "" && !has[nameKey(name)] && !Own(name) && !slices.Contains(out, name) {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
 // Get is the value of the variable named name in env, the last one when
 // it's there twice (as exec does); "" when it isn't. On Windows a name is
 // the same whatever its case (nameKey).

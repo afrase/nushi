@@ -109,7 +109,7 @@ func (e *Env) Refresh(ctx context.Context, maxAge time.Duration) {
 		e.problem = err.Error()
 		log.Warn("shell environment not read; agents start with the last read or the daemon's", "why", err) // never what it printed
 	}
-	worked, environ := err == nil || loginWorked, Merge(e.base, e.vars)
+	worked, environ := err == nil || loginWorked, e.environ()
 	e.mu.Unlock()
 	if worked && e.use != nil {
 		e.use(environ)
@@ -151,13 +151,23 @@ func added(base, over []string) []string {
 func (e *Env) wait() { <-e.first }
 
 // Environ is the environment an agent starts with: the shell's over the
-// daemon's, without Nushi's own variables. The agent's own overrides go
+// daemon's, without Nushi's own variables or those the shell unset. The agent's own overrides go
 // after it (exec takes a name's last value).
 func (e *Env) Environ() []string {
 	e.wait()
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	return Merge(e.base, e.vars)
+	return e.environ()
+}
+
+// environ is Environ's environment, e.mu held: once a reading has worked,
+// a variable of base's the shell unset (in a profile or rc) is gone, as
+// in a terminal (kept).
+func (e *Env) environ() []string {
+	if e.vars == nil {
+		return Merge(e.base, nil)
+	}
+	return Merge(kept(e.base, e.vars), e.vars)
 }
 
 // LookPath finds name on the PATH agents get; "" when it isn't there.

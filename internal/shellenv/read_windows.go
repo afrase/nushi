@@ -42,6 +42,10 @@ func ReadLogin(context.Context, string, []string, time.Duration) ([]string, erro
 	return nil, errors.ErrUnsupported
 }
 
+// kept is base: the registry's environment is laid over the daemon's,
+// and unsets nothing of it.
+func kept(base, _ []string) []string { return base }
+
 // registryVars are the string values of the key at path under root, in
 // the registry's order; one of another type (a number, binary) isn't a
 // variable and is passed over.
