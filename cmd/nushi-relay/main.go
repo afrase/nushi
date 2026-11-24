@@ -114,9 +114,16 @@ func selfUpdate(update bool, unit string) error {
 	if err := checkUpdateFlags(update, unit); err != nil {
 		return err
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := updateContext()
 	defer stop()
 	return relayupdate.New(version, unit, os.Stdout).Run(ctx)
+}
+
+// updateContext ends on ^C, SIGTERM or SIGHUP (an ssh session that drops,
+// passed on by sudo), so an update cut short discards the binary it
+// staged rather than dying with it left beside the installed one.
+func updateContext() (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 }
 
 // checkUpdateFlags refuses -restart-unit without -update, or with a name
