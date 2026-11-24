@@ -33,6 +33,7 @@ bool daemonGone(Object e) =>
 
 /// Whether the daemon refused a call for [reason], as its Nushi-Reason
 /// says ('restarting', 'agent_start', 'changed_since', 'head_moved'):
-/// every daemon the app works with sends it (API 91; ADR 0004's floor).
+/// every daemon at or above the floor sends one (since API 91; ADR 0004),
+/// and a reason newer than that came with the call that refuses for it.
 bool refusedFor(ConnectException e, String reason) =>
     e.metadata['nushi-reason'] == reason;
