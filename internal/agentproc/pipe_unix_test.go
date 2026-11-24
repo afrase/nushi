@@ -49,17 +49,35 @@ func TestPipe(t *testing.T) {
 	}
 }
 
-// A child that left the group (a job of its own here; a daemonized MCP
-// server in Ante's) keeps stderr open, but Kill doesn't wait for it. Job
-// control is off again for the last sleep, so it stays in the group Kill
-// ends rather than leading one that outlives the test.
-func TestKillOutlastsAnEscapedChild(t *testing.T) {
-	p, err := Pipe("/bin/sh", []string{"-c", `set -m; sleep 100 & echo $!; set +m; sleep 100`}, t.TempDir(), nil, nil, true)
+// escaped starts sh with script, its $0 this test binary, which run with
+// ownGroupEnv set leaves the group and becomes sleep 100 (TestMain): a
+// child that left the group on any shell, job control or not. It returns
+// the program and its stdout past its first line, the child's pid, once
+// the child leads its own group (before, the group's end would take it
+// too, and the test would prove nothing).
+func escaped(t *testing.T, script string) (*Piped, *bufio.Reader) {
+	t.Helper()
+	exe, err := os.Executable()
 	testcheck.NoErr(t, err)
-	line, _ := bufio.NewReader(p.Out).ReadString('\n')
+	p, err := Pipe("/bin/sh", []string{"-c", ownGroupEnv + `=100 "$0" & echo $!; ` + script, exe}, t.TempDir(), nil, nil, true)
+	testcheck.NoErr(t, err)
+	r := bufio.NewReader(p.Out)
+	line, _ := r.ReadString('\n')
 	child, err := strconv.Atoi(strings.TrimSpace(line))
 	testcheck.NoErr(t, err)
 	t.Cleanup(func() { _ = syscall.Kill(child, syscall.SIGKILL) })
+	testcheck.Wait(t, "the child to lead its own group", func() bool {
+		g, err := syscall.Getpgid(child)
+		return err == nil && g == child
+	})
+	return p, r
+}
+
+// A child that left the group (a daemonized MCP server in Ante's) keeps
+// stderr open, but Kill doesn't wait for it. The program's own sleep
+// stays in the group Kill ends.
+func TestKillOutlastsAnEscapedChild(t *testing.T) {
+	p, _ := escaped(t, `sleep 100`)
 	killed := make(chan struct{})
 	go func() { p.Kill(); close(killed) }()
 	select {
@@ -94,15 +112,12 @@ func TestOutOutlastsTheExit(t *testing.T) {
 }
 
 // A child that left the group holds stdout open past the program's exit;
-// its reader still comes to an end.
+// its reader still comes to an end. The program exits once its line is
+// read, after the child left the group, as its exit ends the group.
 func TestOutEndsPastAnEscapedChild(t *testing.T) {
-	p, err := Pipe("/bin/sh", []string{"-c", `set -m; sleep 100 & echo $!`}, t.TempDir(), nil, nil, true)
+	p, r := escaped(t, `read x`)
+	_, err := p.In.Write([]byte("go\n"))
 	testcheck.NoErr(t, err)
-	r := bufio.NewReader(p.Out)
-	line, _ := r.ReadString('\n')
-	child, err := strconv.Atoi(strings.TrimSpace(line))
-	testcheck.NoErr(t, err)
-	t.Cleanup(func() { _ = syscall.Kill(child, syscall.SIGKILL) })
 	ended := make(chan struct{})
 	go func() { _, _ = io.ReadAll(r); close(ended) }()
 	select {
