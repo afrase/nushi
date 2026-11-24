@@ -28,31 +28,21 @@ import (
 	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/ante/antetest"
-	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/codex"
-	"github.com/afrase/nushi/internal/database"
+	nushid "github.com/afrase/nushi/internal/daemon"
+	"github.com/afrase/nushi/internal/daemon/daemontest"
 	"github.com/afrase/nushi/internal/events"
-	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
-	"github.com/afrase/nushi/internal/features/memory"
-	"github.com/afrase/nushi/internal/features/preview"
 	"github.com/afrase/nushi/internal/features/restart"
-	"github.com/afrase/nushi/internal/features/servers"
-	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/tools"
-	"github.com/afrase/nushi/internal/features/usage"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/pi"
 	"github.com/afrase/nushi/internal/pi/pitest"
-	"github.com/afrase/nushi/internal/shellenv"
-	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/testcheck"
-	"github.com/afrase/nushi/internal/transcripts"
 )
 
 // daemon is nushid with fake agents: "fake" (the default), and main's
@@ -71,6 +61,7 @@ type daemon struct {
 	codexes *codexes      // the fake app-servers Codex's Go agent ran
 	tools   *tools.Service
 	hub     *events.Hub
+	sent    *newSessions     // what each session/new asked of its agent
 	dataDir string           // what it was started on, for reopen
 	history *acptest.History // and the fake agent's sessions
 	signIn  *acptest.SignIn  // the login of the "signin" agent (signin_test.go)
@@ -139,6 +130,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 	t.Helper()
 	var mu sync.Mutex
 	var kill func()
+	sent := &newSessions{}
 	// serve runs an agent over pipes: the fake ACP agent, or Ante's bridge
 	// on a fake Ante.
 	launch := func(serve func(r io.Reader, w io.Writer)) chats.Launch {
@@ -149,7 +141,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 			kill = func() { _, _ = toAgentR.Close(), fromAgentW.Close() }
 			mu.Unlock()
 			go func() {
-				serve(toAgentR, fromAgentW)
+				serve(io.TeeReader(toAgentR, sent.reader()), fromAgentW)
 				_ = fromAgentW.Close()
 			}()
 			// acp-go writes to the chat's log, as agentproc.Start has it do for
@@ -172,8 +164,6 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 		go func() { anteStore.Serve(inR, outW); _ = outW.Close() }()
 		return agentproc.Program{In: inW, Out: outR, Kill: func() { _, _ = inR.Close(), outW.Close() }}, nil
 	}
-	hub := &events.Hub{}
-	st := store.New(dataDir)
 	// The default agent is "fake", shaped like Claude's adapter as far as
 	// these tests need: it names its sessions, and its notices read as
 	// Claude's (the fake isn't Claude's agent, so the rest of Claude's
@@ -231,64 +221,37 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 	kinds = append(kinds, chats.Kind{Harness: model.HarnessInfo{Name: "signin", Title: "Signin"}, NoSignIn: codex.NoSignIn, Launch: launch(func(r io.Reader, w io.Writer) {
 		(&acptest.Agent{History: history, SignIn: signIn}).Serve(r, w)
 	})})
-	copies, err := transcripts.Open(filepath.Join(dataDir, "transcripts"))
+	// The daemon as main builds it (daemon.Start), on fakes of what
+	// reaches outside it. A workflow's files are read often, so a test
+	// sees its end at once.
+	var devices string
+	d, err := nushid.Start(t.Context(), dataDir, "tok", &daemontest.Leaves{Dir: dataDir, ChatKinds: kinds, Terminal: startSh, ShellName: "sh",
+		ChatTiming: chats.Timing{WorkflowPoll: 20 * time.Millisecond}, OnDevices: func(url string) { devices = url }})
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Usage in the data folder's database, as main keeps it.
-	db, err := database.Open(filepath.Join(dataDir, "nushi.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	meter := usage.New(db, st)
-	// Sleep and the copies as main has them: the settings are the daemon's.
-	// A workflow's files are read often, so a test sees its end at once.
-	svc := chats.New(t.Context(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(dataDir, "scratch"),
-		Uploads: filepath.Join(dataDir, "uploads"), Publish: hub.Publish, Copies: copies, CopiesOn: st.KeepTranscripts, Sleep: st,
-		Timing: chats.Timing{WorkflowPoll: 20 * time.Millisecond}, Meter: meter})
-	shows := preview.New(hub.Publish)
-	shows.UseChats(svc)
-	serverTools := &servers.AgentTools{}
-	toolSvc := tools.New(shows, serverTools)
-	terms := terminals.New(startSh, "sh", svc, hub.Publish)
-	svc.UseTerminals(terms)
-	srvs := newServers(svc, filepath.Join(dataDir, "servers.json"), hub.Publish)
-	svc.UseServers(srvs)
-	serverTools.Use(srvs)
-	follow, unfollow := context.WithCancel(context.Background())
-	go func() {
-		hub.Follow(follow, func(e model.Event) { terms.Follow(e); srvs.Follow(e) })
-	}()
-	restarts := restart.New(svc, restart.Together{terms, srvs})
-	restarts.Every = 20 * time.Millisecond
+	d.Restart.Every = 20 * time.Millisecond
 	looks, lapsed := &atomic.Int64{}, &atomic.Bool{}
-	restarts.Looked = func(waiting bool) {
+	d.Restart.Looked = func(waiting bool) {
 		looks.Add(1)
 		lapsed.Store(!waiting)
 	}
-	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Settings: st, Restart: restarts,
-		Servers: srvs, Usage: meter, ChatFiles: st}
-	socket, forDevices := api.Handlers(sv, toolSvc, "tok") // as main serves them
-	srv := httptest.NewServer(socket)
-	devices := httptest.NewServer(forDevices)
+	srv := httptest.NewServer(d.Socket)
+	// As main stops: the chats while the socket still answers, then the
+	// socket, then the rest.
 	stop := func() {
-		unfollow()
-		for _, s := range []*httptest.Server{srv, devices} {
-			s.CloseClientConnections()
-			s.Close()
-		}
-		terms.CloseAll() // as main does: the shells don't outlive the daemon
-		srvs.CloseAll()
-		svc.Close()
-		meter.Close()
-		_ = db.Close() // closed already when stopped twice: reopen's, then the cleanup's
+		d.CloseChats()
+		srv.CloseClientConnections()
+		srv.Close()
+		d.Close()
 	}
 	t.Cleanup(stop)
-	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, chats: svc, restart: restarts, looks: looks, lapsed: lapsed, claudes: cls, codexes: cxs, tools: toolSvc, hub: hub, dataDir: dataDir, history: history, signIn: signIn, kill: func() {
-		mu.Lock()
-		defer mu.Unlock()
-		kill()
-	}}
+	return &daemon{url: srv.URL, devices: devices, stop: stop, chats: d.Chats, restart: d.Restart, looks: looks, lapsed: lapsed, claudes: cls, codexes: cxs,
+		tools: d.Tools, hub: d.Hub, sent: sent, dataDir: dataDir, history: history, signIn: signIn, kill: func() {
+			mu.Lock()
+			defer mu.Unlock()
+			kill()
+		}}
 }
 
 // The fake Ante's and pi's sessions by data folder, under fakesMu: tests
