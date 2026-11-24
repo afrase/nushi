@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/api"
@@ -35,6 +36,7 @@ import (
 	"github.com/afrase/nushi/internal/features/servers"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/tools"
+	"github.com/afrase/nushi/internal/filelock"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/logs"
@@ -144,6 +146,11 @@ func run() error {
 	if err := ownDataFolder(dir); err != nil {
 		return err
 	}
+	unlock, err := lockDataFolder(dir, 5*time.Second)
+	if err != nil {
+		return err
+	}
+	defer unlock() // as run returns; until then this keeps the lock's file open, which a dropped *os.File's finalizer would close
 	token, err := loadToken(filepath.Join(dir, "token"))
 	if err != nil {
 		return err
@@ -319,6 +326,21 @@ func loadToken(path string) (string, error) {
 	token := hex.EncodeToString(raw)
 	_ = os.Remove(path) // WriteFile keeps an old file's mode
 	return token, os.WriteFile(path, []byte(token), 0o600)
+}
+
+// lockDataFolder takes the lock on dir's nushid.lock, so one daemon runs
+// on a data folder: two started together could each pass listen's dial
+// and write a token of their own, and the one left without the socket
+// would run on, unreachable. It waits up to wait for one that holds it,
+// such as an old daemon still returning after its socket closed (ADR
+// 0056). The lock lasts until unlock or the process's end, whichever
+// comes first.
+func lockDataFolder(dir string, wait time.Duration) (unlock func(), err error) {
+	unlock, err = filelock.Lock(filepath.Join(dir, "nushid.lock"), wait)
+	if err != nil {
+		return nil, fmt.Errorf("locking the data folder (another daemon runs on it?): %w", err)
+	}
+	return unlock, nil
 }
 
 // listen takes over the socket at path unless another daemon is answering on it.
