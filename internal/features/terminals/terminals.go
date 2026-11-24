@@ -4,6 +4,7 @@ package terminals
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -49,8 +50,9 @@ type Service struct {
 	chats   Chats
 	publish func(model.Event)
 
-	mu    sync.Mutex
-	terms []*term // every chat's, in each chat's order
+	mu     sync.Mutex
+	terms  []*term // every chat's, in each chat's order
+	closed bool    // the daemon stops: no more terminals
 }
 
 type term struct {
@@ -88,6 +90,11 @@ func (s *Service) Open(chatID, folder, command string, cols, rows int) (model.Te
 		t.Shell = name
 	}
 	s.mu.Lock()
+	if s.closed { // CloseAll ran while it started: nothing would close it
+		s.mu.Unlock()
+		t.shell.Close()
+		return model.Terminal{}, errors.New("the daemon is stopping")
+	}
 	s.terms = append(s.terms, t)
 	m := t.state()
 	s.mu.Unlock()
@@ -329,8 +336,11 @@ func (s *Service) CloseChat(chatID string) {
 	}
 }
 
-// CloseAll ends every terminal (the daemon stops).
+// CloseAll ends every terminal, and opens none after (the daemon stops).
 func (s *Service) CloseAll() {
+	s.mu.Lock()
+	s.closed = true
+	s.mu.Unlock()
 	closeAll(s.unlist(func(*term) bool { return true }))
 }
 

@@ -255,3 +255,31 @@ func TestADroppedClientIsNotToldOfTheExit(t *testing.T) {
 		t.Errorf("exited %v, %v", exited, err)
 	}
 }
+
+// A terminal opened as the daemon stops (CloseAll while its shell
+// starts, or after) is refused, and the shell it started is closed:
+// nothing else would close it.
+func TestOpenAfterCloseAllIsRefused(t *testing.T) {
+	var s *Service
+	var shells []*fakeShell
+	start := func(string, string, int, int, func()) (Shell, error) {
+		if len(shells) == 0 {
+			s.CloseAll() // the daemon's stop lands while the first shell starts
+		}
+		sh := &fakeShell{}
+		shells = append(shells, sh)
+		return sh, nil
+	}
+	s = New(start, "zsh", folders{}, func(model.Event) {})
+	for i := range 2 {
+		if _, err := s.Open("one", "", "", 80, 24); err == nil || err.Error() != "the daemon is stopping" {
+			t.Errorf("open %d: %v, want the daemon is stopping", i, err)
+		}
+		if !shells[i].closed {
+			t.Errorf("open %d left its shell running", i)
+		}
+	}
+	if l := s.List("one"); len(l) != 0 {
+		t.Errorf("listed %v", l)
+	}
+}

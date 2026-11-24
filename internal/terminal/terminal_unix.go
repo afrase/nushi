@@ -132,7 +132,11 @@ func (t *Terminal) Resize(cols, rows int) error {
 	return errors.Join(err, err2)
 }
 
-// hangUp is Close's work.
+// hangUp is Close's work. The program itself is signalled through its
+// os.Process as well as by the listing, so it ends (and done closes) even
+// when the listing comes back empty (a failed sysctl or /proc read); its
+// os.Process signals nothing once Wait has reaped it, so its pid, given to
+// another process since, is never hit.
 func (t *Terminal) hangUp() {
 	// Listed while the program still holds the terminal: what it leaves
 	// running loses the terminal when it exits.
@@ -140,13 +144,23 @@ func (t *Terminal) hangUp() {
 	for _, pid := range pids {
 		_ = unix.Kill(pid, unix.SIGHUP)
 	}
+	_ = t.proc.Signal(unix.SIGHUP)
 	alive := func(pid int) bool { return unix.Kill(pid, 0) == nil }
-	for end := time.Now().Add(grace); time.Now().Before(end) && slices.ContainsFunc(pids, alive); {
+	running := func() bool {
+		select {
+		case <-t.done:
+			return false
+		default:
+			return true
+		}
+	}
+	for end := time.Now().Add(grace); time.Now().Before(end) && (running() || slices.ContainsFunc(pids, alive)); {
 		time.Sleep(50 * time.Millisecond)
 	}
 	for _, pid := range pids {
 		_ = unix.Kill(pid, unix.SIGKILL)
 	}
+	_ = t.proc.Kill()
 	<-t.done
 	_ = t.pty.Close()
 }
