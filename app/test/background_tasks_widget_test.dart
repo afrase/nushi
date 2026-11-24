@@ -1,3 +1,4 @@
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -67,6 +68,42 @@ void main() {
     expect(row(), before);
     expect(tester.getSize(find.byType(Tap).first).height, height);
     await pointer.removePointer();
+    await closeView(tester, d);
+  });
+
+  testWidgets('a subagent given more work later shows the time it worked, '
+      'its waits left out', (tester) async {
+    final d = Daemon(transport: FakeDaemon([]));
+    final chat = ChatState('c', '/x');
+    final long = msAgo(const Duration(minutes: 97, seconds: 20));
+    chat.items.addAll([
+      // Worked 3 minutes, waited, and has worked again for 20 seconds.
+      _subagent('again', 'running')
+        ..subagent = Subagent(
+          state: 'running',
+          started: long,
+          worked: Int64(180000),
+          workingSince: msAgo(const Duration(seconds: 20)),
+        ),
+      // Worked 5 minutes and waits for a message: nothing is added.
+      _subagent('waits', 'running')
+        ..subagent = Subagent(
+          state: 'running',
+          started: long,
+          worked: Int64(300000),
+        ),
+      // A daemon that doesn't say how long it worked: from its start.
+      _subagent('unknown', 'running')
+        ..subagent = Subagent(
+          state: 'running',
+          started: msAgo(const Duration(minutes: 2)),
+        ),
+    ]);
+    await show(tester, chat, d);
+    expect(find.text('3m 20s'), findsOneWidget);
+    expect(find.text('5m 00s'), findsOneWidget);
+    expect(find.text('2m 00s'), findsOneWidget);
+    expect(find.textContaining('97m'), findsNothing);
     await closeView(tester, d);
   });
 

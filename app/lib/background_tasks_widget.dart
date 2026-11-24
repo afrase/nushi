@@ -121,18 +121,24 @@ Widget _row(
 
 /// How long a task ran (or runs, ticking), from its [started] to its
 /// [ended] (ms since the epoch, 0 when not seen); its [state] instead once
-/// it ended otherwise than done, in red when it failed.
+/// it ended otherwise than done, in red when it failed. [worked], when it
+/// answers, is the time instead: a subagent's, whose waits between the
+/// runs a message to it starts don't count (its start can be hours back).
 Widget _time(
   BuildContext context, {
   required int started,
   required int ended,
   required String state,
   required bool runs,
+  Duration? Function()? worked,
 }) {
   final theme = NushiTheme.of(context);
   final t = theme.t;
-  String text() =>
-      !runs && state != 'done' ? state : ranFor(started, ended, runs: runs);
+  String ran() => switch (worked?.call()) {
+    final w? => elapsed(w),
+    null => ranFor(started, ended, runs: runs),
+  };
+  String text() => !runs && state != 'done' ? state : ran();
 
   return LiveText(
     text,
@@ -211,6 +217,7 @@ class _AgentRow extends StatelessWidget {
         ended: sa.ended.toInt(),
         state: sa.state,
         runs: subagentRunning(s),
+        worked: () => subagentWorked(sa, running: subagentRunning(s)),
       ),
       open: () => chat.pane.value = s.call.id,
       tooltip: [
