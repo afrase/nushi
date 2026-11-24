@@ -6,11 +6,10 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/panes.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/subagents.dart';
+import 'package:nushi/task_pane.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/widgets.dart';
 
 /// The tool calls that left a command running in the background, in order.
 List<Item> backgroundCommandsOf(List<Item> items) => [
@@ -92,9 +91,11 @@ class BackgroundCommandPane extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            PaneHeader(
-              end: PaneHeader.buttonsEnd,
-              child: Row(
+            TaskPaneHeader(
+              chat: chat,
+              daemon: daemon,
+              id: id,
+              title: Row(
                 children: [
                   Icon(Icons.terminal, size: 14, color: t.textSecondary),
                   const SizedBox(width: 6),
@@ -106,32 +107,14 @@ class BackgroundCommandPane extends StatelessWidget {
                       style: code,
                     ),
                   ),
-                  if (it != null && commandRunning(it))
-                    stopButton(
-                      context,
-                      daemon,
-                      chat,
-                      id,
-                      padding: IconTap.header,
-                    ),
-                  IconTap(
-                    Icons.close,
-                    tooltip: 'Close',
-                    size: 15,
-                    padding: IconTap.header,
-                    onTap: onClose,
-                  ),
                 ],
               ),
+              stoppable: it != null && commandRunning(it),
+              onClose: onClose,
             ),
             Expanded(
               child: it == null
-                  ? Center(
-                      child: Text(
-                        'This command is no longer in the chat.',
-                        style: small,
-                      ),
-                    )
+                  ? const PaneGone('This command is no longer in the chat.')
                   : SelectionArea(
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),

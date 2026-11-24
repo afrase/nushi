@@ -8,11 +8,10 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/panes.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/subagents.dart';
+import 'package:nushi/task_pane.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/tool_parts.dart';
 import 'package:nushi/transcript.dart';
 import 'package:nushi/widgets.dart';
 import 'package:nushi/workflow_card.dart';
@@ -116,32 +115,25 @@ class _WorkflowPaneState extends State<WorkflowPane> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            PaneHeader(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: call == null
-                        ? Text(
-                            'Workflow',
-                            maxLines: 1,
-                            style: theme.ui(t.text, size: 12, weight: .w600),
-                          )
-                        : workflowName(context, call, size: 12),
-                  ),
-                  if (w != null && workflowLive(w))
-                    stopButton(context, widget.daemon, widget.chat, widget.id),
-                  IconTap(
-                    Icons.close,
-                    tooltip: 'Close',
-                    size: 15,
-                    onTap: widget.onClose,
-                  ),
-                ],
-              ),
+            TaskPaneHeader(
+              chat: widget.chat,
+              daemon: widget.daemon,
+              id: widget.id,
+              title: call == null
+                  ? Text(
+                      'Workflow',
+                      maxLines: 1,
+                      style: theme.ui(t.text, size: 12, weight: .w600),
+                    )
+                  : workflowName(context, call, size: 12),
+              stoppable: w != null && workflowLive(w),
+              onClose: widget.onClose,
             ),
             Expanded(
               child: switch ((call, agent)) {
-                (null, _) => _empty('This workflow is no longer in the chat.'),
+                (null, _) => const PaneGone(
+                  'This workflow is no longer in the chat.',
+                ),
                 (final call?, final id?) => _AgentSteps(
                   key: ValueKey(id),
                   chat: widget.chat,
@@ -159,22 +151,6 @@ class _WorkflowPaneState extends State<WorkflowPane> {
       },
     );
   }
-
-  Widget _empty(String text) => Builder(
-    builder: (context) {
-      final theme = NushiTheme.of(context);
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: theme.ui(theme.t.textMuted, size: 12),
-          ),
-        ),
-      );
-    },
-  );
 
   /// The head, then each phase and its agents.
   Widget _tree(BuildContext context, Workflow w) {
@@ -664,17 +640,7 @@ class _AgentHead extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (a != null && a.prompt.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-              decoration: cardBox(t),
-              child: FoldedText(
-                a.prompt,
-                style: theme.ui(t.text, size: 12),
-                folded: 5,
-                padding: const EdgeInsets.symmetric(vertical: 2),
-              ),
-            ),
+          if (a != null && a.prompt.isNotEmpty) PromptCard(a.prompt),
           if (a != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
