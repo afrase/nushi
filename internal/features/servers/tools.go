@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/launchfile"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/tools"
 )
 
 // The agent's dev server tools (ADR 0100), on Nushi's MCP server beside

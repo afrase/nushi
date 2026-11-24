@@ -12,9 +12,9 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/acptest"
-	"github.com/afrase/nushi/internal/features/tools"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/testcheck"
+	"github.com/afrase/nushi/internal/tools"
 )
 
 // show calls the show tool as `nushid tools-mcp` does.

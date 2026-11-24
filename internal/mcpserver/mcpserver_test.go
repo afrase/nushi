@@ -14,8 +14,8 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/internal/api"
-	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/tools"
 )
 
 type fakeTools struct{}

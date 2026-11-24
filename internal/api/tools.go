@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/afrase/nushi/internal/features/tools"
+	"github.com/afrase/nushi/internal/tools"
 )
 
 // Tools serves a chat's tools to its `nushid tools-mcp` (ADR 0043), on the

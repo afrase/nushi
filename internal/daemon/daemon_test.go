@@ -21,13 +21,13 @@ import (
 	"github.com/afrase/nushi/internal/features/jira"
 	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/features/terminals"
-	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/features/updates"
 	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/proctree"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/testcheck"
+	"github.com/afrase/nushi/internal/tools"
 )
 
 func TestMain(m *testing.M) { testcheck.Main(m) }

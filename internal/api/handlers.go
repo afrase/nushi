@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/afrase/nushi/internal/features/tools"
+	"github.com/afrase/nushi/internal/tools"
 )
 
 // Handlers are the daemon's two APIs as main serves them, and as the

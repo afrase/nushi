@@ -12,11 +12,11 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/filewatch"
 	"github.com/afrase/nushi/internal/launchfile"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/regularfile"
+	"github.com/afrase/nushi/internal/tools"
 )
 
 // toolName is the tool as MCP lists it. Each agent names its calls its own

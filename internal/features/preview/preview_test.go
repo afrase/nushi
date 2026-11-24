@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
+	"github.com/afrase/nushi/internal/tools"
 )
 
 // fakeChats is one chat, "c", with these folders and written files.

@@ -35,7 +35,6 @@ import (
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/restart"
-	"github.com/afrase/nushi/internal/features/tools"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/knownagents"
@@ -43,6 +42,7 @@ import (
 	"github.com/afrase/nushi/internal/pi"
 	"github.com/afrase/nushi/internal/pi/pitest"
 	"github.com/afrase/nushi/internal/testcheck"
+	"github.com/afrase/nushi/internal/tools"
 )
 
 // daemon is nushid with fake agents: "fake" (the default), and main's

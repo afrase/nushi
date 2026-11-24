@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/tools"
 )
 
 func TestTools(t *testing.T) {

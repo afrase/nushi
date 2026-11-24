@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/tools"
 )
 
 // Tools is Jira's tool set for a chat's agent: its issue only, never

@@ -13,7 +13,6 @@ import (
 	"github.com/afrase/nushi/internal/features/jira"
 	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/features/terminals"
-	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/features/updates"
 	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/logs"
@@ -22,6 +21,7 @@ import (
 	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/sysproxy"
+	"github.com/afrase/nushi/internal/tools"
 	"github.com/afrase/nushi/relay"
 )
 

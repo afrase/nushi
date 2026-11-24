@@ -14,7 +14,6 @@ import (
 	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/features/servers"
 	"github.com/afrase/nushi/internal/features/skills"
-	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/features/trust"
 	"github.com/afrase/nushi/internal/features/usage"
 	"github.com/afrase/nushi/internal/knownagents"
@@ -23,6 +22,7 @@ import (
 	"github.com/afrase/nushi/internal/skillfile"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/terminal"
+	"github.com/afrase/nushi/internal/tools"
 	"github.com/afrase/nushi/internal/webpush"
 )
 

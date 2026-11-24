@@ -191,7 +191,7 @@ func merged(a, b map[string]any) map[string]any {
 }
 
 // Tools are the MCP servers of Nushi's own tools a chat's sessions get
-// (internal/features/tools): its id, its agent, its issue.
+// (internal/tools): its id, its agent, its issue.
 type Tools func(chat, agent string, issue *model.ChatIssue) []acp.MCPServer
 
 // mcpServers are the MCP servers of Nushi's own tools for the chat, if
