@@ -96,6 +96,35 @@ func TestReplaceIn(t *testing.T) {
 	leftovers(t, dir, filepath.Join(dir, "in"))
 }
 
+// Stage leaves the old file until Commit, its file has the mode and the
+// data, and Discard takes it away again.
+func TestStage(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "prog")
+	testcheck.NoErr(t, os.WriteFile(path, []byte("old"), 0o600))
+	s, err := Stage(path, strings.NewReader("new"), 0o751)
+	testcheck.NoErr(t, err)
+	fi, err := os.Stat(s.Name())
+	testcheck.NoErr(t, err)
+	if b, _ := os.ReadFile(path); string(b) != "old" || filepath.Dir(s.Name()) != dir || fi.Mode().Perm() != 0o751 {
+		t.Fatalf("staged %s (%v) beside %q", s.Name(), fi.Mode(), b)
+	}
+	s.Discard()
+	if b, _ := os.ReadFile(path); string(b) != "old" {
+		t.Errorf("Discard changed the old file: %q", b)
+	}
+	leftovers(t, dir)
+	s, err = Stage(path, strings.NewReader("new"), 0o751)
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, s.Commit())
+	fi, err = os.Stat(path)
+	testcheck.NoErr(t, err)
+	if b, _ := os.ReadFile(path); string(b) != "new" || fi.Mode().Perm() != 0o751 {
+		t.Errorf("committed: %q, %v", b, fi.Mode())
+	}
+	leftovers(t, dir)
+}
+
 // leftovers fails if a temporary file is left in dirs.
 func leftovers(t *testing.T, dirs ...string) {
 	t.Helper()

@@ -35,23 +35,54 @@ func Rewrite(path string, data []byte) error {
 // (a fresh name, never an existing file or symlink), then renames it over
 // path.
 func Replace(path string, data []byte, mode os.FileMode) error {
+	s, err := Stage(path, bytes.NewReader(data), mode)
+	if err != nil {
+		return err
+	}
+	return s.Commit()
+}
+
+// Staged is a new file written beside the one it will replace and not yet
+// renamed over it, for a caller that checks it first (the relay's update
+// runs it once): Commit puts it in place, Discard removes it.
+type Staged struct {
+	path string // the file it replaces
+	name string // its own, temporary
+}
+
+// Stage writes r to a new temporary file beside path (a fresh name, never
+// an existing file or symlink) with mode, on disk, and leaves path as it
+// is until Commit.
+func Stage(path string, r io.Reader, mode os.FileMode) (*Staged, error) {
 	f, err := os.CreateTemp(filepath.Dir(path), ".nushi-*")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	err = write(f, bytes.NewReader(data), mode)
-	if err == nil {
-		err = os.Rename(f.Name(), path)
-	}
-	if err != nil {
+	if err := write(f, r, mode); err != nil {
 		_ = os.Remove(f.Name()) // the write's error is the one to return
+		return nil, err
+	}
+	return &Staged{path: path, name: f.Name()}, nil
+}
+
+// Name is the staged file's own path, beside the one it replaces.
+func (s *Staged) Name() string { return s.name }
+
+// Commit renames the staged file over the one it replaces, durably. On a
+// failure the staged file is removed and the old one is left.
+func (s *Staged) Commit() error {
+	if err := os.Rename(s.name, s.path); err != nil {
+		_ = os.Remove(s.name) // the rename's error is the one to return
 		return err
 	}
-	if dir, err := os.Open(filepath.Dir(path)); err == nil {
+	if dir, err := os.Open(filepath.Dir(s.path)); err == nil {
 		syncDir(dir)
 	}
 	return nil
 }
+
+// Discard removes the staged file, leaving the old one.
+func (s *Staged) Discard() { _ = os.Remove(s.name) }
 
 // ReplaceIn is Replace for name inside root: neither it nor a folder on
 // its way can lead out of root (a link there that does is refused), so a
