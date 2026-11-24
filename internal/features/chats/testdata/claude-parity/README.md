@@ -29,7 +29,7 @@ They stay two: the first is about the Go agent's state (what it has read of clau
 The replay to the Go agent is strict and in order, so what the adapter wrote claude that the Go agent doesn't (or not at a fixed point) goes from the cassette, with claude's answers (`forGoAgent` in `../../claude_replay_test.go`):
 
 - `generate_session_title`: the Go agent asks on a goroutine of its own, answered whenever it comes;
-- the `interrupt` the adapter sends as it closes a session with claude idle (when its client goes), and what claude wrote after it: the Go agent interrupts only a running turn, else it just ends claude's stdin. An interrupt with a turn running, or one followed by more writes to claude (a cancel), stays.
+- in the adapter's frozen recording (`../claude-adapter-load`) only, the `interrupt` the adapter sent as it closed a session with claude idle (when its client goes), and what claude wrote after it: the Go agent interrupts only a running turn, else it just ends claude's stdin, so its own recordings have none. An interrupt with a turn running, or one followed by more writes to claude (a cancel), stays.
 
 The replay's client goes only once the Go agent has sent what the recording's client waited for last (`client.json`'s `waitFor` steps after its last step that sends anything), as the recording's did: a turn claude runs on its own after the last prompt would otherwise be cut off.
 

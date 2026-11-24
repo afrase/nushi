@@ -2,6 +2,7 @@ package chats
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -10,19 +11,25 @@ import (
 	"github.com/afrase/claude-acp-go/claudeagent/claudetest"
 )
 
-// forGoAgent is c as the Go agent's claude plays it: what the adapter
-// wrote claude that the Go agent doesn't, or not at a fixed point, goes
+// forGoAgent is c as the Go agent's claude plays it: what the recording
+// wrote claude that the Go agent doesn't write at a fixed point goes,
 // with claude's answers, and the rest keeps its order.
 //   - claude's asks for a title: the Go agent asks on a goroutine of its
 //     own, answered whenever it comes (readReplays).
-//   - The interrupt the adapter sends as it closes a session claude isn't
-//     running: the Go agent interrupts only a running turn and otherwise
-//     just ends stdin (claudeacp's close). See idleTeardown.
-func forGoAgent(c *claudetest.Cassette) *claudetest.Cassette {
-	dropped := map[string]bool{} // claude's requests and the adapter's whose answers go too
+//   - In the adapter's recording (adapter: testdata/claude-adapter-load),
+//     the interrupt it sent as it closed a session claude wasn't running:
+//     the Go agent interrupts only a running turn and otherwise just ends
+//     stdin (claudeacp's close), so its own recordings have none. See
+//     idleTeardown.
+func forGoAgent(c *claudetest.Cassette, adapter bool) *claudetest.Cassette {
+	dropped := map[string]bool{} // claude's requests and the recording's whose answers go too
 	out := *c
 	out.Frames = nil
-	for _, f := range c.Frames[:idleTeardown(c)] {
+	frames := c.Frames
+	if adapter {
+		frames = frames[:idleTeardown(c)]
+	}
+	for _, f := range frames {
 		fr := readFrame(f)
 		switch {
 		case f.Dir == "in" && fr.Request.Subtype == "generate_session_title":
@@ -36,7 +43,10 @@ func forGoAgent(c *claudetest.Cassette) *claudetest.Cassette {
 	return &out
 }
 
-// idleTeardown is where c ends for the Go agent: at the adapter's last
+// idleTeardown is where the adapter's recording c ends for the Go
+// agent (only testdata/claude-adapter-load's needs it; without it the
+// Go agent never sends the closing interrupt claude's script waits
+// for): at the adapter's last
 // write to claude when that is an interrupt sent with no turn open (the
 // last prompt's result had come, claude's last session_state_changed
 // said idle, or it never ran), which is the adapter closing the session,
@@ -75,13 +85,30 @@ type frame struct {
 	RequestID string `json:"request_id"`
 	Request   struct {
 		Subtype string `json:"subtype"`
-		Input   struct {
-			Event string `json:"hook_event_name"`
-		} `json:"input"`
 	} `json:"request"`
 	Response struct {
 		RequestID string `json:"request_id"`
 	} `json:"response"`
+}
+
+// adapterRecording says whether dir's acp.jsonl was recorded through
+// claude-agent-acp, the Node adapter: its initialize answer's agentInfo.
+func adapterRecording(t *testing.T, dir string) bool {
+	t.Helper()
+	_, all := readACP(t, filepath.Join(dir, "acp.jsonl"))
+	for _, l := range all {
+		var m struct {
+			Result struct {
+				AgentInfo struct {
+					Name string `json:"name"`
+				} `json:"agentInfo"`
+			} `json:"result"`
+		}
+		if l.Dir == "out" && json.Unmarshal(l.Msg, &m) == nil && m.Result.AgentInfo.Name != "" {
+			return m.Result.AgentInfo.Name == "@agentclientprotocol/claude-agent-acp"
+		}
+	}
+	return false
 }
 
 func readFrame(f claudetest.Frame) frame {
@@ -139,7 +166,7 @@ func TestForGoAgent(t *testing.T) {
 					want = append(want, f)
 				}
 			}
-			if got := forGoAgent(&c).Frames; !reflect.DeepEqual(got, want) {
+			if got := forGoAgent(&c, true).Frames; !reflect.DeepEqual(got, want) {
 				t.Errorf("got\n%s\nwant\n%s", frameLines(got), frameLines(want))
 			}
 		})
