@@ -187,6 +187,26 @@ void main() {
     d.dispose();
   });
 
+  // On its side with the keyboard up the chat has no room for the bar: it
+  // goes until the keyboard does, rather than push the composer over it.
+  testWidgets('on its side with the keyboard up the bar makes way', (
+    tester,
+  ) async {
+    final p = await _app(tester, _daemon(apiFloor - 1), phone: 'landscape');
+    await tester.tap(find.text('Fix the flaky relay test'));
+    await tester.pumpAndSettle();
+    expect(find.text(_words), findsOne);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 340);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text(_words), findsNothing);
+    await render(tester, find.byType(PhoneApp), 'phone_old_daemon_keyboard');
+    tester.view.resetViewInsets();
+    await tester.pumpAndSettle();
+    expect(find.text(_words), findsOne);
+    await endPhone(tester, p);
+  }, variant: onPhone);
+
   for (final phone in _phones.keys) {
     for (final b in renderThemes) {
       testWidgets('the bar ($phone, ${b.name})', (tester) async {

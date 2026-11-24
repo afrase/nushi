@@ -37,6 +37,7 @@ class ChatScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final daemon = phone.daemon!;
+    final typing = MediaQuery.viewInsetsOf(context).bottom > 0;
     return ListenableBuilder(
       listenable: Listenable.merge([chat, daemon]),
       builder: (context, _) => PhoneScreen(
@@ -81,7 +82,11 @@ class ChatScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ConnectionBar(phone),
-            OldDaemonBar(phone),
+            // Not while typing: on its side, the keyboard leaves no room
+            // for it beside the composer, and a call the daemon lacks
+            // still says the same. Read here, above the screen's Scaffold,
+            // whose body has the keyboard taken out.
+            if (!typing) OldDaemonBar(phone),
             Expanded(
               child: !chat.loaded && chat.items.isEmpty
                   ? TranscriptSkeleton(chat)

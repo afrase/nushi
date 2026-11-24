@@ -78,7 +78,7 @@ If a phone is lost or stolen, revoke it on your computer right away. A paired ph
 
 - If your computer is asleep, offline, or has remote access turned off, the phone first shows **Reconnecting…** with a spinner. Then it shows **Can't reach your Mac** (or **computer**) and why. It keeps trying on its own. To retry now, tap **Try again**.
 - When the phone app has a new version, it shows **Nushi was updated**. Tap **Reload**.
-- If the Nushi daemon on your computer is much older than the phone app, the phone says **Open Nushi on your Mac to update its daemon** (or **computer**). The phone keeps working. Open Nushi on the computer: the daemon updates once no chat is working. Anything the old daemon can't do yet fails with the same words.
+- If the Nushi daemon on your computer is much older than the phone app, the phone says **Open Nushi on your Mac to update its daemon** (or **computer**). The phone keeps working, and in a chat the bar steps aside while you type. Open Nushi on the computer: the daemon updates once no chat is working. Anything the old daemon can't do yet fails with the same words.
 - If the browser won't open the phone app's storage, it shows **Couldn’t open this app’s storage**. Tap **Reload**. Don't pair again: that replaces this phone's key, and the pairing is likely still there.
 - A chat's **⋯** menu shows its folder, branch, model and agent, with actions such as **Rename…**, **Files**, **Fork**, **Pin**, **Sleep** and **Archive**.
 - A chat's pull request shows at the top of the chat, with `+2` when it has more. Tap it to open it on GitHub. If the chat has several, tapping lists them all. A pull request or issue link in a message is a chip. Tap it to see its state and title, then tap **Open on GitHub**.
