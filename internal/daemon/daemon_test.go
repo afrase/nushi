@@ -1,6 +1,7 @@
 package daemon_test
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -206,6 +207,21 @@ func TestCloseOrder(t *testing.T) {
 				t.Errorf("stopped %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// An agent can never merge through Nushi (ADR 0069): the only tool sets a
+// chat's MCP server serves are Jira's, the preview's and the dev servers'
+// (ADR 0100). A new set is a change to this test, and it must not reach
+// a merge.
+func TestAgentsGetNoGitHubTools(t *testing.T) {
+	d := started(t, &steps{})
+	var sets []string
+	for _, set := range d.Tools.Sets() {
+		sets = append(sets, fmt.Sprintf("%T", set))
+	}
+	if want := []string{"jira.toolSet", "*preview.Set", "*servers.AgentTools"}; !slices.Equal(sets, want) {
+		t.Errorf("a chat's tool sets are %q, want %q", sets, want)
 	}
 }
 

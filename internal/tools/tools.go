@@ -72,6 +72,9 @@ func New(sets ...Set) *Service {
 	return &Service{sets: sets, grants: map[string]Grant{}}
 }
 
+// Sets are the tool sets the service serves, in the order New had them.
+func (s *Service) Sets() []Set { return slices.Clone(s.sets) }
+
 // Key is the key for a chat's tools: the one it has, or a new one. It
 // lives as long as the daemon runs.
 func (s *Service) Key(g Grant) string {
