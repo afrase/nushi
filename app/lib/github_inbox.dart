@@ -82,7 +82,6 @@ class InboxCards extends StatelessWidget {
     required this.onOpen,
     required this.onOlder,
     required this.onHide,
-    required this.startMenu,
     this.selectedRow,
     super.key,
   });
@@ -102,11 +101,9 @@ class InboxCards extends StatelessWidget {
   /// Hides a repository (owner/name).
   final ValueChanged<String> onHide;
 
-  /// The selected row's key, to scroll it into view.
-  final GlobalKey? selectedRow;
-
-  /// Takes the selected row's Start work menu (and its item), for ⌘⏎.
-  final void Function(GitHubRef ref, OpenMenu open) startMenu;
+  /// The selected row's key, to scroll it into view and open its Start
+  /// work (⌘⏎).
+  final GlobalKey<ItemRowState>? selectedRow;
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +159,6 @@ class InboxCards extends StatelessWidget {
                       selected: sameRef(it.ref, picked),
                       onOpen: () => onOpen(it),
                       onHide: () => onHide(it.ref.repo),
-                      startMenu: (open) => startMenu(it.ref, open),
                     ),
                   if (s.items.isEmpty && s.older == 0)
                     Padding(
@@ -208,7 +204,6 @@ class ItemRow extends StatefulWidget {
     required this.selected,
     required this.onOpen,
     required this.onHide,
-    required this.startMenu,
     super.key,
   });
 
@@ -218,15 +213,22 @@ class ItemRow extends StatefulWidget {
   final VoidCallback onOpen;
   final VoidCallback onHide;
 
-  /// Takes the row's Start work menu, for ⌘⏎ (when it's selected).
-  final void Function(OpenMenu open) startMenu;
-
   @override
-  State<ItemRow> createState() => _ItemRowState();
+  State<ItemRow> createState() => ItemRowState();
 }
 
-class _ItemRowState extends State<ItemRow> {
+/// An [ItemRow]'s state: its Start work menu opens from the view's ⌘⏎.
+class ItemRowState extends State<ItemRow> {
   bool _hover = false;
+
+  /// Start work's menu, opened by its button or [openStart].
+  final _startMenu = MenuController();
+
+  /// Opens Start work's menu by its button (⌘⏎ on the selected row,
+  /// which always shows it).
+  void openStart() {
+    if (mounted && widget.selected) _startMenu.open();
+  }
 
   /// Whether Start work's menu is open: its button is the menu's anchor,
   /// so it stays while it is, though the pointer has left the row for it.
@@ -345,22 +347,20 @@ class _ItemRowState extends State<ItemRow> {
 
   Widget _start(BuildContext context) => Menu(
     digits: true,
+    controller: _startMenu,
     onOpen: () => setState(() => _starting = true),
     onClose: () {
       if (mounted) setState(() => _starting = false);
     },
     entries: startEntries(context, widget.daemon, widget.item),
-    builder: (context, open) {
-      if (widget.selected) widget.startMenu(open);
-      return IconTap(
-        Icons.play_arrow_outlined,
-        size: 15,
-        tooltip: widget.selected
-            ? withKey('Start work', cmdEnterLabel)
-            : 'Start work',
-        onTap: open,
-      );
-    },
+    builder: (context, open) => IconTap(
+      Icons.play_arrow_outlined,
+      size: 15,
+      tooltip: widget.selected
+          ? withKey('Start work', cmdEnterLabel)
+          : 'Start work',
+      onTap: open,
+    ),
   );
 
   static Widget _column(double width, Widget? child) => SizedBox(

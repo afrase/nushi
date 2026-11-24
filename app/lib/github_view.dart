@@ -14,7 +14,6 @@ import 'package:nushi/github_issue.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/keys.dart';
-import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/pull_polls.dart';
 import 'package:nushi/run_state.dart';
@@ -105,12 +104,9 @@ class _GitHubViewState extends State<GitHubView> {
   final _viewFocus = FocusNode(debugLabel: 'github view');
 
   /// The selected row's, to keep it in view.
-  final GlobalKey _selectedRow = GlobalKey(debugLabel: 'github selected');
-
-  /// The selected row's Start work menu, for ⌘⏎, and whose it is: the
-  /// row registers it as it's built, and a row not built (scrolled away)
-  /// can't, so it may be another's.
-  (GitHubRef, OpenMenu)? _start;
+  final GlobalKey<ItemRowState> _selectedRow = GlobalKey(
+    debugLabel: 'github selected',
+  );
 
   GitHubHost? get _hostNow {
     final hosts = _hosts ?? const <GitHubHost>[];
@@ -318,12 +314,7 @@ class _GitHubViewState extends State<GitHubView> {
   void _startWork() => revealRow(
     _selectedRow,
     down: true,
-    then: () {
-      if (_start case (final ref, final open)
-          when sameRef(ref, _picked) && _selectedRow.currentContext != null) {
-        open();
-      }
-    },
+    then: () => _selectedRow.currentState?.openStart(),
   );
 
   void _open(GitHubItem it) {
@@ -593,7 +584,6 @@ class _GitHubViewState extends State<GitHubView> {
                       },
                       onHide: (repo) => _setHidden({..._hidden, repo}.toList()),
                       selectedRow: _selectedRow,
-                      startMenu: (ref, open) => _start = (ref, open),
                     ),
                   ),
           ),

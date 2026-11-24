@@ -91,7 +91,6 @@ class TaskList extends StatelessWidget {
     required this.sites,
     required this.onOpen,
     required this.onMoved,
-    required this.startMenu,
     super.key,
     this.people = true,
     this.selectedRow,
@@ -110,11 +109,9 @@ class TaskList extends StatelessWidget {
   final void Function(Task task) onOpen;
   final Future<void> Function() onMoved;
 
-  /// The selected row's key, to scroll it into view.
-  final GlobalKey? selectedRow;
-
-  /// Takes the selected row's Start work menu (and its issue), for ⌘⏎.
-  final void Function(IssueId id, OpenMenu open) startMenu;
+  /// The selected row's key, to scroll it into view and open its Start
+  /// work (⌘⏎).
+  final GlobalKey<TaskRowState>? selectedRow;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -192,7 +189,6 @@ class TaskList extends StatelessWidget {
                         columns: columns,
                         onOpen: () => onOpen(task),
                         onMoved: onMoved,
-                        startMenu: (open) => startMenu(idOf(task), open),
                       ),
                 ],
               ),
@@ -232,7 +228,6 @@ class TaskRow extends StatefulWidget {
     required this.columns,
     required this.onOpen,
     required this.onMoved,
-    required this.startMenu,
     super.key,
   });
 
@@ -243,14 +238,23 @@ class TaskRow extends StatefulWidget {
   final TaskColumns columns;
   final VoidCallback onOpen;
   final Future<void> Function() onMoved;
-  final void Function(OpenMenu open) startMenu;
 
   @override
-  State<TaskRow> createState() => _TaskRowState();
+  State<TaskRow> createState() => TaskRowState();
 }
 
-class _TaskRowState extends State<TaskRow> {
+/// A [TaskRow]'s state: its Start work menu opens from the view's ⌘⏎.
+class TaskRowState extends State<TaskRow> {
   bool _hover = false;
+
+  /// Start work's menu, opened by its button or [openStart].
+  final _startMenu = MenuController();
+
+  /// Opens Start work's menu by its button (⌘⏎ on the selected row,
+  /// which always shows it).
+  void openStart() {
+    if (mounted && widget.selected) _startMenu.open();
+  }
 
   /// Whether Start work's menu is open: its button is the menu's anchor,
   /// so it stays while it is, though the pointer has left the row for it.
@@ -375,22 +379,20 @@ class _TaskRowState extends State<TaskRow> {
 
   Widget _start(BuildContext context) => Menu(
     digits: true,
+    controller: _startMenu,
     onOpen: () => setState(() => _starting = true),
     onClose: () {
       if (mounted) setState(() => _starting = false);
     },
     entries: _folders(context),
-    builder: (context, open) {
-      if (widget.selected) widget.startMenu(open);
-      return IconTap(
-        Icons.play_arrow_outlined,
-        size: 15,
-        padding: 2,
-        tooltip: widget.selected
-            ? withKey('Start work', cmdEnterLabel)
-            : 'Start work',
-        onTap: open,
-      );
-    },
+    builder: (context, open) => IconTap(
+      Icons.play_arrow_outlined,
+      size: 15,
+      padding: 2,
+      tooltip: widget.selected
+          ? withKey('Start work', cmdEnterLabel)
+          : 'Start work',
+      onTap: open,
+    ),
   );
 }
