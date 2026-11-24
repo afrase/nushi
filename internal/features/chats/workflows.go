@@ -151,9 +151,19 @@ func (c *chat) followWorkflow(callID string, f *follow) {
 	}
 }
 
-// workflowStall is how long a run's files stay still, its agent alive,
-// before it shows as stalled (ADR 0127).
-const workflowStall = time.Hour
+// How a run is followed (ADR 0127), but for how often its files are read
+// while it runs (Timing.WorkflowPoll): every workflowStalledPoll once it
+// stalled; one never found within workflowFind shows as a plain call. Its
+// agent gone, a last read comes after workflowGrace; a run no agent of
+// this daemon's runs ends once its files are still for workflowQuiet, and
+// one whose agent lives stalls once they are still for workflowStall.
+const (
+	workflowStalledPoll = 30 * time.Second
+	workflowFind        = 30 * time.Second
+	workflowGrace       = 2 * time.Second
+	workflowQuiet       = 2 * time.Minute
+	workflowStall       = time.Hour
+)
 
 // judgeWorkflow is what a read of a run (got, err) makes of it (cur), and
 // how long to wait for the next read; nil when it is no workflow to show
@@ -164,7 +174,7 @@ const workflowStall = time.Hour
 func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone bool, now time.Time) (*model.Workflow, time.Duration) {
 	poll := c.svc.timing.workflowPoll()
 	switch {
-	case err != nil && !f.found && now.Sub(f.since) >= c.svc.timing.workflowFind():
+	case err != nil && !f.found && now.Sub(f.since) >= workflowFind:
 		return nil, 0
 	case err != nil && !f.found && !errors.Is(err, fs.ErrNotExist) && f.owner == nil:
 		return nil, 0 // a past run whose files can't be read
@@ -187,17 +197,17 @@ func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone
 	switch {
 	case f.owner != nil && gone && f.gone.IsZero():
 		f.gone = now // a last read after a grace, for the snapshot it may have left
-		return &got, c.svc.timing.workflowGrace()
+		return &got, workflowGrace
 	case f.owner != nil && gone:
 		return quit(got, now, c.kind.Title), 0
-	case !f.missing.IsZero() && now.Sub(f.missing) >= c.svc.timing.workflowFind():
+	case !f.missing.IsZero() && now.Sub(f.missing) >= workflowFind:
 		got.State, got.End, got.Ended, got.Running, got.RunningCount = model.RunUnknown, "its files are gone", now, nil, 0
 		return &got, 0 // Claude's files of the run went (a Move, the session deleted)
-	case f.owner == nil && now.Sub(got.Active) >= c.svc.timing.workflowQuiet():
+	case f.owner == nil && now.Sub(got.Active) >= workflowQuiet:
 		return quit(got, now, c.kind.Title), 0 // no agent of this daemon's runs it, and its files are still
 	case f.owner != nil && now.Sub(got.Active) >= workflowStall:
 		got.Stalled = true
-		return &got, c.svc.timing.workflowStalledPoll()
+		return &got, workflowStalledPoll
 	}
 	return &got, poll
 }
