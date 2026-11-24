@@ -169,9 +169,9 @@ sudo nushi-relay -update -restart-unit nushi-relay
 - Without `-restart-unit` it installs and tells you to restart the service yourself. It exits 1 on any failure, with the installed relay untouched.
 - It needs root because the binary is root's (`/usr/local/bin`); run without it, it says so before downloading anything.
 - A relay you built yourself (`make relay-web`) has no release's version and refuses: it has nothing to compare.
-- What it trusts: GitHub's answer for `afrase/nushi`, over TLS. The `.sha256` comes from the same release, so it checks the download, not who made it: releases aren't signed. Whoever can publish a release there can change every relay that runs this command, and the relay serves the phone's app, which holds the phone's key ([ADR 0054](adr/0054-the-phone-is-a-web-app-with-web-push.md)).
+- What it trusts: GitHub's answer for `afrase/nushi`, over TLS. The `.sha256` comes from the same release, so it checks the download, not who made it: releases aren't signed. Whoever can publish a release there gets their code run as root on the relay's machine, not only in the relay: the command runs as root and runs the new binary once with `-version` before it installs it. The relay also serves the phone's app, which holds the phone's key ([ADR 0054](adr/0054-the-phone-is-a-web-app-with-web-push.md)).
 
-**A timer, if you want it.** The relay never updates by itself. To have it check weekly, add these two units and run `sudo systemctl enable --now nushi-relay-update.timer`. Only do it if you accept the sentence above for every release, unattended: a release published to `afrase/nushi` then reaches your relay, and your phone, within a week, with no one looking.
+**A timer, if you want it.** The relay never updates by itself. To have it check weekly, add these two units and run `sudo systemctl enable --now nushi-relay-update.timer`. Only do it if you accept the sentence above for every release, unattended: a release published to `afrase/nushi` then runs as root on this machine, and reaches your phone, within a week, with no one looking.
 
 ```ini
 # /etc/systemd/system/nushi-relay-update.service

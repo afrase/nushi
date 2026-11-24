@@ -11,7 +11,7 @@ Updating a relay was four steps by hand (docs/remote.md): download a release's t
 - **Never by itself.** Nothing in the serving relay checks for releases. A timer is the operator's choice (docs/remote.md shows one), opt-in.
 
 ## What it trusts
-GitHub's answer for `afrase/nushi`, over TLS. The `.sha256` comes from the same release, so it guards the transfer, not the publisher: releases aren't signed. Whoever can publish a release there can change every relay that runs this command, and a relay serves the phone's app, which holds the phone's key (ADR 0054). So a person runs it, and a timer is opt-in. Signing releases is the step that would let a timer be the default.
+GitHub's answer for `afrase/nushi`, over TLS. The `.sha256` comes from the same release, so it guards the transfer, not the publisher: releases aren't signed. Whoever can publish a release there gets their code run as root on every machine that runs this command: `-update` runs as root and runs the new binary once with `-version` before installing it, and a timer runs the installed one as root again each week. That is more than the relay, which its service runs unprivileged, and more than the phone's app it serves, which holds the phone's key (ADR 0054). So a person runs it, and a timer is opt-in. Signing releases is the step that would let a timer be the default.
 
 ## Consequences
 - Run as root (the binary is root's, under `/usr/local/bin`); it says so when it can't write the folder.
