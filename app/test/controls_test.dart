@@ -477,6 +477,30 @@ void main() {
     await press.up();
   });
 
+  testWidgets('the phone’s button wraps a long label and grows, rather '
+      'than cutting it (a workflow’s name in Stop Workflow)', (tester) async {
+    const label = 'Stop Workflow: Refactor auth and tests';
+    await tester.pumpWidget(
+      _app(
+        Tokens.light,
+        TouchTargets(
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 288,
+              child: PhoneButton(label, destructive: true, onTap: () {}),
+            ),
+          ),
+        ),
+      ),
+    );
+    final text = tester.renderObject<RenderParagraph>(
+      find.descendant(of: find.text(label), matching: find.byType(RichText)),
+    );
+    expect(text.didExceedMaxLines, isFalse);
+    expect(tester.getSize(find.byType(PhoneButton)).height, greaterThan(48));
+  });
+
   testWidgets('WideButton’s corners are its height’s share; a PillLink '
       'without its tap is faded', (tester) async {
     await tester.pumpWidget(

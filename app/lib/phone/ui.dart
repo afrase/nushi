@@ -183,7 +183,9 @@ class PhoneLink extends StatelessWidget {
 /// A full-width button, a finger's height: a [Button] at
 /// [ControlSize.touch] (ADR 0122), so its fill, ink, press, corners and
 /// faded look are a button's (ADR 0111): [primary] on the accent,
-/// [destructive] in red, any other on a button's own fill.
+/// [destructive] in red, any other on a button's own fill. A long label
+/// wraps and the button grows, so a workflow's name in Stop Workflow
+/// isn't cut.
 class PhoneButton extends StatelessWidget {
   const new(
     this.label, {
@@ -204,6 +206,7 @@ class PhoneButton extends StatelessWidget {
     child: Button(
       label: label,
       onPressed: onTap,
+      wrap: true,
       kind: primary
           ? ButtonKind.primary
           : destructive
