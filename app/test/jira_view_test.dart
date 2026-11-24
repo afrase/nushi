@@ -522,6 +522,52 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('every site’s issues with one site failing: the others show, '
+      'and the line names the one that failed', (tester) async {
+    final other = JiraSite(id: 'other.atlassian.net', url: 'https://other');
+    var otherFails = true;
+    var more = false;
+    final (_, d) = await openView(
+      tester,
+      sites: [testSite, other],
+      more: (input) => switch (input) {
+        ListJiraIssuesRequest(site: 'other.atlassian.net') when otherFails =>
+          throw ConnectException(Code.unauthenticated, 'the token has expired'),
+        ListJiraIssuesRequest(site: 'other.atlassian.net') =>
+          ListJiraIssuesResponse(
+            issues: [issue('OTH-1', 'On the other site', 'To Do', 'new')],
+          ),
+        ListJiraIssuesRequest(list: 'mine') when more => ListJiraIssuesResponse(
+          issues: [issue('ACME-77', 'Come in since', 'To Do', 'new')],
+        ),
+        _ => null,
+      },
+    );
+    await tester.tap(find.text(testSite.id));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All sites'));
+    await tester.pumpAndSettle();
+    expect(find.text('ACME-12'), findsWidgets);
+    expect(
+      find.text('other.atlassian.net: the token has expired'),
+      findsOneWidget,
+    );
+    // Both answer, then the other fails on the poll: its rows stay, as
+    // they were, and the first site's move on.
+    otherFails = false;
+    await tester.pump(jiraPoll);
+    await tester.pumpAndSettle();
+    expect(find.text('OTH-1'), findsOneWidget);
+    expect(find.textContaining('token has expired'), findsNothing);
+    (otherFails, more) = (true, true);
+    await tester.pump(jiraPoll);
+    await tester.pumpAndSettle();
+    expect(find.text('OTH-1'), findsOneWidget);
+    expect(find.text('ACME-77'), findsOneWidget);
+    expect(find.text('ACME-12'), findsNothing);
+    await closeView(tester, d);
+  });
+
   testWidgets('the sprint list asks for its board first', (tester) async {
     final (fake, d) = await openView(
       tester,
@@ -742,6 +788,37 @@ void main() {
           await closeView(tester, d);
         }, variant: onMac);
       }
+      // Every site's list with one site failing, to look at its line.
+      renderTest('every site, one failing, ${w.round()} wide, $name', (
+        tester,
+      ) async {
+        final other = JiraSite(id: 'other.atlassian.net', url: 'https://o');
+        final (_, d) = await openView(
+          tester,
+          tokens: tokens,
+          size: Size(w, 900),
+          window: true,
+          sites: [testSite, other],
+          more: (input) =>
+              input is ListJiraIssuesRequest && input.site == other.id
+              ? throw ConnectException(
+                  Code.unauthenticated,
+                  'Jira refused the token: it has expired',
+                )
+              : null,
+        );
+        await tester.tap(find.text(testSite.id));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('All sites'));
+        await tester.pumpAndSettle();
+        expectTextInside(tester, w);
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'jira_one_site_failing_${w.round()}_$name',
+        );
+        await closeView(tester, d);
+      }, variant: onMac);
     }
   }
 }

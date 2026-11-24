@@ -273,41 +273,85 @@ class _JiraViewState extends State<JiraView> {
       });
       if (_shown != key) unawaited(_showKept(n, key, on, ask));
     }
-    try {
-      final got = await Future.wait([
-        for (final id in on) widget.daemon.client.listJiraIssues(ask(id)),
-      ]);
-      if (n != _asked || !mounted) return;
+    final got = await _askEach(on, ask);
+    if (n != _asked || !mounted) return;
+    final failed = {
+      for (final (i, r) in got.indexed)
+        if (r is! ListJiraIssuesResponse) on[i]: r,
+    };
+    if (failed.length < on.length) {
+      // The sites that answered show; one that didn't keeps its rows when
+      // this list is the one shown (a quiet poll then says nothing, as
+      // one site's does), and the line names it.
+      final kept = _shown == key ? _tasks : const <Task>[];
       setState(() {
-        _show(key, on, got);
+        _show(key, on, [
+          for (final (i, r) in got.indexed)
+            if (r is ListJiraIssuesResponse)
+              r
+            else
+              ListJiraIssuesResponse(
+                issues: [
+                  for (final t in kept)
+                    if (t.site == on[i]) t.issue,
+                ],
+              ),
+        ]);
         _cachedAt = null;
         _okAt = clock();
         _failed = false;
-        _error = null;
+        if (!quiet || failed.isEmpty) _error = _whyFailed(failed);
+        _loading = false;
       });
-    } on Object catch (e) {
-      if (n == _asked && mounted && quiet) {
-        // The last answer stays, saying it's from then (ADR 0046): only
-        // when what shows is this list's (another's time isn't its).
-        if (_shown == key) {
-          setState(() {
-            _cachedAt ??= _okAt;
-            _failed = _cachedAt != null;
-          });
-        }
-      } else if (n == _asked && mounted) {
+      return;
+    }
+    final e = got.first;
+    if (quiet) {
+      // The last answer stays, saying it's from then (ADR 0046): only
+      // when what shows is this list's (another's time isn't its).
+      if (_shown == key) {
         setState(() {
-          if (_shown != key) {
-            _tasks = const [];
-            _shown = _cachedAt = null;
-          }
-          _failed = false;
-          _error = errorText(e);
+          _cachedAt ??= _okAt;
+          _failed = _cachedAt != null;
         });
       }
-    } finally {
-      if (n == _asked && mounted) setState(() => _loading = false);
+    } else {
+      setState(() {
+        if (_shown != key) {
+          _tasks = const [];
+          _shown = _cachedAt = null;
+        }
+        _failed = false;
+        _error = on.length == 1 ? errorText(e) : _whyFailed(failed);
+      });
     }
+    setState(() => _loading = false);
+  }
+
+  /// Asks each of [on] for its list on its own: each site's answer, or
+  /// what it failed with, so one failing site keeps none of the others
+  /// from showing.
+  Future<List<Object>> _askEach(
+    List<String> on,
+    ListJiraIssuesRequest Function(String) ask,
+  ) => Future.wait([
+    for (final id in on)
+      widget.daemon.client
+          .listJiraIssues(ask(id))
+          .then<Object>((r) => r, onError: (Object e) => e),
+  ]);
+
+  /// The error line for the sites in [failed], each by its name and why
+  /// (null for none). A site the banner above speaks for (it needs Allow…
+  /// or a restart) is left to it.
+  String? _whyFailed(Map<String, Object> failed) {
+    final banner = _siteNow;
+    final lines = [
+      for (final MapEntry(key: id, value: e) in failed.entries)
+        if (id != banner?.id || !banner!.needsOk && !banner.needsRestart)
+          '$id: ${errorText(e)}',
+    ];
+    return lines.isEmpty ? null : lines.join('\n');
   }
 
   /// A list's key: its sites and what is asked of them.
@@ -321,24 +365,22 @@ class _JiraViewState extends State<JiraView> {
     List<String> on,
     ListJiraIssuesRequest Function(String) ask,
   ) async {
-    try {
-      final got = await Future.wait([
-        for (final id in on)
-          widget.daemon.client.listJiraIssues(ask(id)..cached = true),
-      ]);
-      final at = [
-        for (final r in got)
-          if (r.atMs > 0) r.atMs.toInt(),
-      ];
-      // Jira answered first, or nothing was kept.
-      if (n != _asked || !mounted || !_loading || at.isEmpty) return;
-      setState(() {
-        _show(key, on, got);
-        _cachedAt = DateTime.fromMillisecondsSinceEpoch(at.reduce(min));
-      });
-    } on Object {
-      // Nothing kept: Jira's answer decides.
-    }
+    // A site that kept nothing, or failed, adds no rows: Jira's answer
+    // decides.
+    final got = [
+      for (final r in await _askEach(on, (id) => ask(id)..cached = true))
+        if (r is ListJiraIssuesResponse) r else ListJiraIssuesResponse(),
+    ];
+    final at = [
+      for (final r in got)
+        if (r.atMs > 0) r.atMs.toInt(),
+    ];
+    // Jira answered first, or nothing was kept.
+    if (n != _asked || !mounted || !_loading || at.isEmpty) return;
+    setState(() {
+      _show(key, on, got);
+      _cachedAt = DateTime.fromMillisecondsSinceEpoch(at.reduce(min));
+    });
   }
 
   void _show(String key, List<String> on, List<ListJiraIssuesResponse> got) {
@@ -628,7 +670,8 @@ class _JiraViewState extends State<JiraView> {
                 ),
         ),
         // The banner above says why, and what to do.
-        if (_error case final e? when !site.needsOk && !site.needsRestart)
+        if (_error case final e?
+            when _every || !site.needsOk && !site.needsRestart)
           Padding(
             padding: const EdgeInsets.all(14),
             child: Text(e, style: theme.ui(t.crashed, size: 12)),
