@@ -50,9 +50,11 @@ func TestPipe(t *testing.T) {
 }
 
 // A child that left the group (a job of its own here; a daemonized MCP
-// server in Ante's) keeps stderr open, but Kill doesn't wait for it.
+// server in Ante's) keeps stderr open, but Kill doesn't wait for it. Job
+// control is off again for the last sleep, so it stays in the group Kill
+// ends rather than leading one that outlives the test.
 func TestKillOutlastsAnEscapedChild(t *testing.T) {
-	p, err := Pipe("/bin/sh", []string{"-c", `set -m; sleep 100 & echo $!; sleep 100`}, t.TempDir(), nil, nil, true)
+	p, err := Pipe("/bin/sh", []string{"-c", `set -m; sleep 100 & echo $!; set +m; sleep 100`}, t.TempDir(), nil, nil, true)
 	testcheck.NoErr(t, err)
 	line, _ := bufio.NewReader(p.Out).ReadString('\n')
 	child, err := strconv.Atoi(strings.TrimSpace(line))
