@@ -7,10 +7,14 @@
 // literal (NushiTheme's ui() or code() at a size instead), a size given
 // to ui() or code() off the type scale, a Duration(milliseconds: …)
 // literal (Motion's or Waits' instead), a raw SnackBar (showToast
-// instead, toast.dart's), and a corner as a number (a radius token
-// instead, ADR 0110). The controls' and the theme's own files make the
-// pieces, so they're left out, the controls' files but for durations,
-// corners and the type scale, and so are motion.dart for durations,
+// instead, toast.dart's), a corner as a number (a radius token
+// instead, ADR 0110), and a second press path (Material's ink, a ListTile,
+// or hover, focus and press kept by hand: Tap or Pressable instead, which
+// show a press at once and say button to a screen reader). The controls'
+// and the theme's own files make the pieces, so they're left out, the
+// controls' files but for durations, corners, the type scale and the
+// press path (controls_press.dart makes it), and so are motion.dart for
+// durations,
 // toast.dart for the snack bar it makes, and generated code. A deliberate
 // use stays with a marker on its line or alone on the line above:
 // `// design: <why>` (or `// not a corner: <why>` for a corner's rule
@@ -80,7 +84,15 @@ var rules = []rule{
 		regexp.MustCompile(`Radius\.circular\(\s*[0-9.]+\s*\)|\bradius:\s*(?:0[0-9.]+|[1-9.][0-9.]*)\s*(?:[,)]|$)`),
 		corner, "", true, "", regexp.MustCompile(`fromCircle\(`),
 	},
+	{
+		regexp.MustCompile(`\b(?:InkWell|InkResponse|ListTile|FocusableActionDetector|PressWatch)\(`),
+		pressPath, "", true, "controls_press.dart", nil,
+	},
 }
+
+// pressPath is the press rule's verdict: Pressable is the one press path
+// (ADR 0049), Tap a row's or a tab's on it.
+const pressPath = "a second press path: Tap or Pressable (controls_press.dart)"
 
 // keyInString is the rule on what a string says: a tooltip's shortcut is
 // written with withKey, never "(⌘K)" or "Close  ⌘W".

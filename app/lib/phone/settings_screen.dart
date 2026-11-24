@@ -82,6 +82,7 @@ class SettingsScreen extends StatelessWidget {
               // either way); the whole row flips it, as a switch's row
               // did, so the touch target is the row's, not the pill's.
               MergeSemantics(
+                // design: a switch's row, which a Tap would make a button
                 child: ListTile(
                   enabled: canFlip,
                   onTap: canFlip
