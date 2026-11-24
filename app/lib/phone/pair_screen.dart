@@ -75,11 +75,11 @@ class _PairScreenState extends State<PairScreen> {
     });
     try {
       await widget.phone.pair(_link.text, _name.text);
-    } on FormatException catch (e) {
-      _error = e.message.startsWith('This link is for')
-          ? '${e.message}.'
-          : "That isn't a Nushi pairing link: copy it again on your "
-                'computer.';
+    } on WrongRelay catch (e) {
+      _error = '$e.';
+    } on FormatException {
+      _error =
+          "That isn't a Nushi pairing link: copy it again on your computer.";
     } on PairingRefused {
       _error = 'Your computer refused this device, or no one answered in time.';
     } on Object catch (e) {

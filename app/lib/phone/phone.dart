@@ -198,10 +198,7 @@ class Phone extends ChangeNotifier {
   Future<void> pair(String link, String deviceName) async {
     final offer = rt.PairingOffer.parse(link);
     if (sameRelay && offer.relay.authority != platform.host) {
-      throw FormatException(
-        'This link is for the relay at ${offer.relay.authority}: open Nushi '
-        'from there',
-      );
+      throw WrongRelay(offer.relay.authority);
     }
     _key ??= await rt.KeyPair.make();
     name = deviceName.trim().isEmpty ? 'Phone' : deviceName.trim();
@@ -486,4 +483,18 @@ class Phone extends ChangeNotifier {
   }
 
   bool _forgetting = false;
+}
+
+/// A pairing link for another relay than the one this page came from: the
+/// phone pairs only through its own relay, so it says where to open Nushi.
+class WrongRelay implements Exception {
+  /// The relay [authority] (host and port) the link names.
+  const new(this.authority);
+
+  /// The host and port of the relay the link is for.
+  final String authority;
+
+  @override
+  String toString() =>
+      'This link is for the relay at $authority: open Nushi from there';
 }
