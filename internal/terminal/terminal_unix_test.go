@@ -5,6 +5,7 @@ package terminal
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -59,8 +60,8 @@ func TestExitCodeAndReplay(t *testing.T) {
 	again.wait(t, `before-exit\r\n`)
 }
 
-// The foreground is looked at once from the start, then after input or
-// output, never while the terminal is idle; a look that finds another
+// The foreground is looked at once from the start, then after output,
+// and after input for a while, never while the terminal is idle; a look that finds another
 // program says so.
 func TestProgramIsLookedAtAfterInputOrOutput(t *testing.T) {
 	timer := fakeLookTimer(t)
@@ -98,8 +99,42 @@ func TestProgramIsLookedAtAfterInputOrOutput(t *testing.T) {
 		t.Error("the program's change wasn't told")
 	}
 	timer.fire() // the echo came while the first was due
+	for range afterInput { // the looks that follow input, further apart
+		if !timer.armed() {
+			t.Fatal("the looks after input ended early")
+		}
+		timer.fire()
+	}
 	if timer.armed() {
-		t.Error("a look is due with sleep running silently")
+		t.Error("a look is due with sleep running silently, long after the input")
+	}
+}
+
+// A program that takes the foreground silently a while after the input
+// that started it (behind a slow $(...), a chain's second command) is
+// still seen: looks go on after input for a while, not once.
+func TestASilentLateProgramIsSeen(t *testing.T) {
+	gate := filepath.Join(t.TempDir(), "gate")
+	testcheck.Fifo(t, gate)
+	timer := fakeLookTimer(t)
+	term, err := Start([]string{"/bin/sh"}, t.TempDir(), []string{"PS1=$ ", "TERM=xterm-256color"}, 80, 24, func() {})
+	testcheck.NoErr(t, err)
+	t.Cleanup(term.Close)
+	testcheck.Wait(t, "the prompt", func() bool { return strings.Contains(string(term.Output()), "$ ") })
+	for timer.armed() {
+		timer.fire()
+	}
+	testcheck.NoErr(t, term.Write([]byte("x=$(cat "+gate+"); sleep 30\n")))
+	testcheck.Wait(t, "the echo", func() bool { return strings.Contains(string(term.Output()), "sleep 30\r\n") })
+	timer.fire() // the look after the input, and the one after its echo: the shell still waits on cat
+	timer.fire()
+	testcheck.NoErr(t, os.WriteFile(gate, []byte("go\n"), 0o600))
+	testcheck.Wait(t, "sleep in the foreground", func() bool { return term.Foreground() == "sleep 30" })
+	for timer.armed() && term.Program() != "sleep 30" {
+		timer.fire()
+	}
+	if got := term.Program(); got != "sleep 30" {
+		t.Errorf("program %q, want sleep 30", got)
 	}
 }
 

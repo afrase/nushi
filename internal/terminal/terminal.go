@@ -23,6 +23,14 @@ const (
 	lookAfter  = 300 * time.Millisecond // how soon after input or output the foreground is looked at
 )
 
+// afterInput are the waits between the looks that follow the first after
+// input, about 10 s in all: a program can take the foreground silently a
+// while after the Enter that started it (behind a slow $(...) or shell
+// function, a chain's second command), and the app decides on what the
+// last look saw (a terminal's close asks first only while a program
+// runs). Output brings its own look meanwhile.
+var afterInput = []time.Duration{600 * time.Millisecond, 1200 * time.Millisecond, 2400 * time.Millisecond, 5 * time.Second}
+
 // lookTimer is the one-shot timer of a terminal's look at its foreground
 // (a *time.Timer).
 type lookTimer interface {
@@ -51,12 +59,13 @@ type Terminal struct {
 	mu      sync.Mutex
 	output  []byte // the last output, about scrollback bytes of it
 	subs    map[*sub]struct{}
-	program string // the foreground program's command line, if not the shell
-	code    int    // the exit code, once done (-1: killed by a signal, or by Close on Windows)
-	signal  int    // the signal that killed it, once done; 0 for none (always on Windows)
-	ended   bool   // the exit is recorded: looks keep away from program
-	armed   bool   // looker is set to run
-	again   bool   // input or output came while armed: look once more after
+	program string          // the foreground program's command line, if not the shell
+	code    int             // the exit code, once done (-1: killed by a signal, or by Close on Windows)
+	signal  int             // the signal that killed it, once done; 0 for none (always on Windows)
+	ended   bool            // the exit is recorded: looks keep away from program
+	armed   bool            // looker is set to run
+	again   bool            // input or output came while armed: look once more after
+	left    []time.Duration // afterInput's waits still to come, since the last input
 }
 
 type sub struct {
@@ -71,7 +80,7 @@ func (t *Terminal) read(read chan<- struct{}) {
 	for {
 		n, err := t.out.Read(buf)
 		if n > 0 {
-			t.poke() // first: what reads the output then knows a look is due
+			t.poke(false) // first: what reads the output then knows a look is due
 			t.emit(buf[:n])
 		}
 		if err != nil {
@@ -128,9 +137,10 @@ func (t *Terminal) wait(read <-chan struct{}) {
 }
 
 // follow starts following the foreground program, for changed: one look
-// lookAfter from the start, and one lookAfter after input or output
-// (poke). A command starts on input (the user's Enter, a run typed in)
-// and its end prints the prompt, so that sees each change; an idle
+// lookAfter from the start, one lookAfter after output, and after input
+// one lookAfter later then more, further apart, for about 10 s
+// (afterInput). A command starts on input (the user's Enter, a run typed
+// in) and its end prints the prompt, so that sees each change; an idle
 // terminal does no work, as it would polling. Called by Start before the
 // program's output is read.
 func (t *Terminal) follow() {
@@ -142,13 +152,17 @@ func (t *Terminal) follow() {
 
 // poke asks for a look lookAfter from now, unless one is due already:
 // then for another after it, so a program that writes all the time is
-// still looked at as often, not put off by each write.
-func (t *Terminal) poke() {
+// still looked at as often, not put off by each write. After input
+// (input), afterInput's looks follow.
+func (t *Terminal) poke(input bool) {
 	if t.looker == nil {
 		return
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if input {
+		t.left = afterInput
+	}
 	switch {
 	case t.ended:
 	case t.armed:
@@ -174,10 +188,16 @@ func (t *Terminal) look() {
 	if differs {
 		t.program = program
 	}
-	if t.again && !t.ended {
+	switch {
+	case t.ended:
+		t.armed = false
+	case t.again:
 		t.again = false
 		t.looker.Reset(lookAfter)
-	} else {
+	case len(t.left) > 0:
+		t.looker.Reset(t.left[0])
+		t.left = t.left[1:]
+	default:
 		t.armed = false
 	}
 	t.mu.Unlock()
@@ -197,8 +217,8 @@ func (t *Terminal) programOf(pg int) string {
 
 // Foreground returns the foreground program's command line as it is now,
 // read from the terminal rather than from the last look (Program, taken
-// lookAfter after the latest input or output, so it misses a program that
-// took the foreground silently since): "" at the shell's prompt or once it
+// after the latest input or output, so it misses a program that took the
+// foreground silently since the looks after them ended): "" at the shell's prompt or once it
 // has exited. What decides to end the terminal asks this, so a command
 // started a moment ago counts.
 func (t *Terminal) Foreground() string {
@@ -251,7 +271,7 @@ func (t *Terminal) Done() <-chan struct{} { return t.done }
 // foreground after it.
 func (t *Terminal) Write(p []byte) error {
 	_, err := t.in.Write(p)
-	t.poke()
+	t.poke(true)
 	return err
 }
 
