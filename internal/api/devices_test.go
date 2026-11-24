@@ -103,7 +103,7 @@ var deviceMay = []string{
 	"ListAgentSessions", "OpenAgentSession", "SearchAgentSessions", "MoveChat", "SendPrompt", "RewindChat", "Unqueue",
 	"CancelTurn", "StopTask", "ForkChat", "CloseSideChat", "ForkAsChat", "KeepSideChat", "ArchiveSideChat",
 	"RestoreSideChat", "RenameChat", "PinChats", "SetChatColor", "PinMessage", "RenameBranch", "SwitchBranch",
-	"ArchiveChat", "SleepChat", "ReopenChat", "GetMemory",
+	"ArchiveChat", "SleepChat", "WakeChat", "ReopenChat", "GetMemory",
 	"GetSettings", "SetSettings", "ListTranscripts", "ClearTranscripts", "PlanDeleteChat", "DeleteChat",
 	"DismissRemovedChats", "AnswerPermission", "AnswerQuestion", "SetConfigOption", "GetDiff", "GetFile",
 	"WatchChatFile", "FindChatFiles", "WatchChatFolder", "ListCommits", "GetFolderStatus", "GetRelatedWorktrees",

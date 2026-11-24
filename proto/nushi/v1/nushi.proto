@@ -187,6 +187,15 @@ service NushiService {
   // and so does one last used over an hour (or the sleep time, if
   // shorter) before the daemon started whose transcript's copy is kept.
   rpc ReopenChat(ReopenChatRequest) returns (ReopenChatResponse);
+  // Wakes a sleeping chat (status.asleep: put to sleep, by the user or
+  // after idling, or left unopened since the daemon started) as a message
+  // would before it is sent, and sends nothing: it answers once the reopen
+  // (ACP session/load) has begun, and the chat's status shows the rest, busy
+  // with no turn while it opens, then awake, or reopen_failed with its
+  // notice. A chat that isn't asleep (awake, busy, reopening, or whose
+  // reopen failed: ReopenChat is Try again) is left as it is; an archived
+  // one is refused. (API 146)
+  rpc WakeChat(WakeChatRequest) returns (WakeChatResponse);
   // The daemon's settings, and changing them.
   // Says how much memory Nushi takes, as footprint (Activity Monitor's
   // Memory), in bytes: a few milliseconds' work.
@@ -1462,6 +1471,12 @@ message ReopenChatRequest {
 }
 
 message ReopenChatResponse {}
+
+message WakeChatRequest {
+  string chat_id = 1;
+}
+
+message WakeChatResponse {}
 
 message GetMemoryRequest {
   // The asking app's process, to read along; 0 for none.

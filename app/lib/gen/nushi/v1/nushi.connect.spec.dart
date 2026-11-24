@@ -433,6 +433,21 @@ abstract final class NushiService {
     nushiv1nushi.ReopenChatResponse.new,
   );
 
+  /// Wakes a sleeping chat (status.asleep: put to sleep, by the user or
+  /// after idling, or left unopened since the daemon started) as a message
+  /// would before it is sent, and sends nothing: it answers once the reopen
+  /// (ACP session/load) has begun, and the chat's status shows the rest, busy
+  /// with no turn while it opens, then awake, or reopen_failed with its
+  /// notice. A chat that isn't asleep (awake, busy, reopening, or whose
+  /// reopen failed: ReopenChat is Try again) is left as it is; an archived
+  /// one is refused. (API 146)
+  static const wakeChat = connect.Spec(
+    '/$name/WakeChat',
+    connect.StreamType.unary,
+    nushiv1nushi.WakeChatRequest.new,
+    nushiv1nushi.WakeChatResponse.new,
+  );
+
   /// The daemon's settings, and changing them.
   /// Says how much memory Nushi takes, as footprint (Activity Monitor's
   /// Memory), in bytes: a few milliseconds' work.

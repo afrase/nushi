@@ -286,6 +286,10 @@ func (s *server) ReopenChat(_ context.Context, req *connect.Request[nushiv1.Reop
 	return done[nushiv1.ReopenChatResponse](s.Chats.Reopen(req.Msg.ChatId), notFound)
 }
 
+func (s *server) WakeChat(_ context.Context, req *connect.Request[nushiv1.WakeChatRequest]) (*connect.Response[nushiv1.WakeChatResponse], error) {
+	return done[nushiv1.WakeChatResponse](s.Chats.Wake(req.Msg.ChatId), refused)
+}
+
 func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv1.PlanDeleteChatRequest]) (*connect.Response[nushiv1.PlanDeleteChatResponse], error) {
 	p, err := s.Chats.PlanDelete(ctx, req.Msg.ChatId)
 	if err != nil {

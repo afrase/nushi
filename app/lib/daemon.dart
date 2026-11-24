@@ -77,7 +77,7 @@ int dataDirOnWeb = 0;
 String? get appFiles => kIsWeb ? null : dataDir;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 145;
+const apiVersion = 146;
 
 /// The oldest daemon API this app works with (ADR 0004): below it the Mac
 /// shows only its Restart screen (`OutdatedScreen`) until the daemon has
@@ -132,6 +132,10 @@ const pageThroughApi = 137;
 /// The API from which the daemon opens a terminal that runs one command
 /// and ends with it (OpenTerminalRequest.command). Goes with the floor.
 const commandTerminalApi = 143;
+
+/// The API from which the daemon wakes a sleeping chat without a message
+/// (WakeChat): an older one has no Wake. Goes with the floor.
+const wakeApi = 146;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon

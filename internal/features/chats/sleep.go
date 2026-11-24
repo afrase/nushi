@@ -190,6 +190,32 @@ func (s *Service) awake(ctx context.Context, c *chat) error {
 	return nil
 }
 
+// Wake wakes a sleeping chat (put to sleep, by the user or by idling, or
+// left asleep since the daemon started: dormant) as a message does before
+// it is sent, and sends nothing: its session reopens in the background,
+// the chat busy with no turn till then, and a failed reopen says so in its
+// notice (failedLocked). A chat that isn't asleep is left as it is: awake,
+// busy or reopening, or one whose reopen failed (Try again is Reopen); an
+// archived one is refused.
+func (s *Service) Wake(chatID string) error {
+	c, err := s.chat(chatID)
+	if err != nil {
+		return err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.closedLocked(); err != nil {
+		return err
+	}
+	if !c.asleep {
+		return nil
+	}
+	c.asleep = false
+	c.logLocked().Info("chat waking", "for", "asked")
+	s.reopenLocked(c)
+	return nil
+}
+
 // awakeChat is chat id, awake (and woken first if it slept).
 func (s *Service) awakeChat(ctx context.Context, id string) (*chat, error) {
 	c, err := s.chat(id)

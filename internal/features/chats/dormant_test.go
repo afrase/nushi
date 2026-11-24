@@ -108,6 +108,23 @@ func TestAnOldChatWakesForWhatNeedsItsAgent(t *testing.T) {
 	}
 }
 
+// Wake opens an old chat left asleep since the daemon started, as a
+// message would, and sends nothing.
+func TestWakeOpensAnOldChat(t *testing.T) {
+	svc, agent, id := oldChat(t, 2*time.Hour, nil)
+	shows(t, svc, id)
+	before := len(agent.prompts)
+	testcheck.NoErr(t, svc.Wake(id))
+	c := svc.chats[id]
+	eventually(t, c, func() bool { return c.agent != nil && !c.busy && !c.asleep })
+	if launches, _, _ := agent.count(); launches != 2 { // the first daemon's, and this
+		t.Fatalf("%d launches", launches)
+	}
+	if got := shown(c); got != "user:one agent:m1" || len(agent.prompts) != before {
+		t.Fatalf("woken: %s, %d prompts (%d before)", got, len(agent.prompts), before)
+	}
+}
+
 // A chat used within the hour before the daemon started reopens when
 // shown, as the one the user was in the middle of.
 func TestARecentChatShownAfterARestartReopens(t *testing.T) {

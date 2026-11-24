@@ -7883,6 +7883,104 @@ class ReopenChatResponse extends $pb.GeneratedMessage {
   static ReopenChatResponse? _defaultInstance;
 }
 
+class WakeChatRequest extends $pb.GeneratedMessage {
+  factory WakeChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = WakeChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  WakeChatRequest._();
+
+  factory WakeChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WakeChatRequest()..mergeFromBuffer(data, registry);
+  factory WakeChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WakeChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WakeChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WakeChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WakeChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WakeChatRequest copyWith(void Function(WakeChatRequest) updates) =>
+      super.copyWith((message) => updates(message as WakeChatRequest))
+          as WakeChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WakeChatRequest() / WakeChatRequest.new instead')
+  static WakeChatRequest create() => WakeChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => WakeChatRequest._();
+  @$core.override
+  WakeChatRequest createEmptyInstance() => WakeChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static WakeChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<WakeChatRequest>(
+          WakeChatRequest.$_createMessage);
+  static WakeChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class WakeChatResponse extends $pb.GeneratedMessage {
+  factory WakeChatResponse() => WakeChatResponse._();
+
+  WakeChatResponse._();
+
+  factory WakeChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WakeChatResponse()..mergeFromBuffer(data, registry);
+  factory WakeChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WakeChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WakeChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WakeChatResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WakeChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WakeChatResponse copyWith(void Function(WakeChatResponse) updates) =>
+      super.copyWith((message) => updates(message as WakeChatResponse))
+          as WakeChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WakeChatResponse() / WakeChatResponse.new instead')
+  static WakeChatResponse create() => WakeChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => WakeChatResponse._();
+  @$core.override
+  WakeChatResponse createEmptyInstance() => WakeChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static WakeChatResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<WakeChatResponse>(
+          WakeChatResponse.$_createMessage);
+  static WakeChatResponse? _defaultInstance;
+}
+
 class GetMemoryRequest extends $pb.GeneratedMessage {
   factory GetMemoryRequest({
     $core.int? appPid,
@@ -37015,6 +37113,19 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, ReopenChatRequest request) =>
       _client.invoke<ReopenChatResponse>(
           ctx, 'NushiService', 'ReopenChat', request, ReopenChatResponse());
+
+  /// Wakes a sleeping chat (status.asleep: put to sleep, by the user or
+  /// after idling, or left unopened since the daemon started) as a message
+  /// would before it is sent, and sends nothing: it answers once the reopen
+  /// (ACP session/load) has begun, and the chat's status shows the rest, busy
+  /// with no turn while it opens, then awake, or reopen_failed with its
+  /// notice. A chat that isn't asleep (awake, busy, reopening, or whose
+  /// reopen failed: ReopenChat is Try again) is left as it is; an archived
+  /// one is refused. (API 146)
+  $async.Future<WakeChatResponse> wakeChat(
+          $pb.ClientContext? ctx, WakeChatRequest request) =>
+      _client.invoke<WakeChatResponse>(
+          ctx, 'NushiService', 'WakeChat', request, WakeChatResponse());
 
   /// The daemon's settings, and changing them.
   /// Says how much memory Nushi takes, as footprint (Activity Monitor's
