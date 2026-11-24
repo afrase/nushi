@@ -5,13 +5,13 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/daemon_settings.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/history_parts.dart';
 import 'package:nushi/history_table.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -26,19 +26,13 @@ String _chats(int n) => n == 1 ? 'chat' : 'chats';
 /// each chat's transcript (ADR 0047), what they take, and a table of
 /// them, built as it scrolls (the daemon lists them all at once: 5,000
 /// list in about 0.15 s): sorted, searched, filtered, picked one by one
-/// or by range, cleared one at a time or together. [settings] is the
-/// daemon's (null until it said).
+/// or by range, cleared one at a time or together. Its daemon rows show
+/// once [settings] came.
 class HistorySection extends StatefulWidget {
-  const new({
-    required this.daemon,
-    required this.settings,
-    required this.onChange,
-    super.key,
-  });
+  const new({required this.daemon, required this.settings, super.key});
 
   final Daemon daemon;
-  final Settings? settings;
-  final SettingsChange onChange;
+  final DaemonSettings settings;
 
   @override
   State<HistorySection> createState() => _HistorySectionState();
@@ -125,7 +119,7 @@ class _HistorySectionState extends State<HistorySection> {
   Future<void> _keep(bool on) async {
     final total = _list?.totalBytes.toInt() ?? 0;
     if (on || total == 0) {
-      await widget.onChange((s) => s.keepTranscripts = on);
+      await widget.settings.change((s) => s.keepTranscripts = on);
       return;
     }
     final delete = await showDialog<bool>(
@@ -155,7 +149,7 @@ class _HistorySectionState extends State<HistorySection> {
       ),
     );
     if (delete == null) return;
-    await widget.onChange((s) => s.keepTranscripts = false);
+    await widget.settings.change((s) => s.keepTranscripts = false);
     if (delete) await _clear(ClearTranscriptsRequest(all: true));
   }
 
@@ -225,10 +219,14 @@ class _HistorySectionState extends State<HistorySection> {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: widget.settings,
+    builder: (context, set, _) => _page(context, set),
+  );
+
+  Widget _page(BuildContext context, Settings? set) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final set = widget.settings;
     final list = _list;
     if (!identical(list, _rowsOf) || _chatsChanged) {
       _rowsOf = list;
@@ -411,7 +409,9 @@ class _HistorySectionState extends State<HistorySection> {
                         checked: key == days,
                         onPick: () => tryOrShow(
                           context,
-                          () => widget.onChange((s) => s.transcriptDays = key),
+                          () => widget.settings.change(
+                            (s) => s.transcriptDays = key,
+                          ),
                         ),
                       ),
                   ],

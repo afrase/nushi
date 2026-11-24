@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -6,7 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/agents_page.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/daemon_settings.dart';
 import 'package:nushi/github_settings.dart';
 import 'package:nushi/history_section.dart';
 import 'package:nushi/jira_settings.dart';
@@ -29,7 +28,8 @@ const settingsKey = Cmd(LogicalKeyboardKey.comma, id: 'settings');
 
 /// Settings, open over the window (ADR 0087; ⌘,, Esc or Close shut it): a
 /// nav of sections and the picked one's page. The daemon's settings are
-/// asked for once it opens.
+/// asked for each time it opens ([DaemonSettings]), for the pages that
+/// show them.
 class SettingsView extends StatefulWidget {
   const new(this.daemon, {super.key});
 
@@ -40,17 +40,7 @@ class SettingsView extends StatefulWidget {
 }
 
 class _SettingsViewState extends State<SettingsView> {
-  Settings? _set; // the daemon's, once it said
-  bool _asking = false;
-
-  // The settings asked for while the daemon was gone.
-  late final _again = LoadAgain(daemon, () {
-    if (mounted) _ask();
-  });
-
-  /// The changes being made, one after another: each sends every setting
-  /// (SetSettings), so each starts from what the one before set.
-  Future<void> _changes = Future.value();
+  late final DaemonSettings _settings;
 
   /// The integrations with an account that works, for the nav's dots: as
   /// known when Settings opens, then as their pages say.
@@ -75,44 +65,14 @@ class _SettingsViewState extends State<SettingsView> {
   @override
   void initState() {
     super.initState();
-    _ask();
+    _settings = DaemonSettings(daemon);
     _knownConnected();
   }
 
   @override
   void dispose() {
-    _again.cancel();
+    _settings.dispose();
     super.dispose();
-  }
-
-  /// Asks for the daemon's settings; the rows that need them stay out until
-  /// it said.
-  void _ask() {
-    if (_set != null || _asking) return;
-    _asking = true;
-    unawaited(
-      daemon.client
-          .getSettings(GetSettingsRequest())
-          .then(
-            (r) => mounted ? setState(() => _set = r.settings) : null,
-            onError: _again.failed, // asked again when the daemon is back
-          )
-          .whenComplete(() => _asking = false),
-    );
-  }
-
-  /// Sets the daemon's settings: [change] applied to them, after the
-  /// changes asked before it.
-  Future<void> _change(void Function(Settings) change) {
-    final done = _changes.then((_) async {
-      final set = _set!.deepCopy();
-      change(set);
-      await daemon.client.setSettings(SetSettingsRequest(settings: set));
-      _set = set;
-      if (mounted) setState(() {});
-    });
-    _changes = done.then((_) {}, onError: (_) {}); // a failure is the asker's
-    return done;
   }
 
   /// The folder MCP servers and Skills show when none was picked.
@@ -122,16 +82,14 @@ class _SettingsViewState extends State<SettingsView> {
   Widget _page(SettingsSection s) => switch (s) {
     SettingsSection.general => GeneralSection(
       daemon: daemon,
-      settings: _set,
-      onChange: _change,
+      settings: _settings,
     ),
     SettingsSection.appearance => const AppearanceSection(),
     SettingsSection.terminal => const TerminalSection(),
     SettingsSection.shortcuts => const ShortcutsSection(),
     SettingsSection.history => HistorySection(
       daemon: daemon,
-      settings: _set,
-      onChange: _change,
+      settings: _settings,
     ),
     SettingsSection.usage => UsageSection(daemon: daemon),
     SettingsSection.remote => SettingsPage(
@@ -144,8 +102,7 @@ class _SettingsViewState extends State<SettingsView> {
         AgentsPage(
           daemon.client,
           marked: daemon.settingsOpen?.agent,
-          settings: _set,
-          onChange: _change,
+          settings: _settings,
         ),
       ],
     ),
@@ -172,11 +129,7 @@ class _SettingsViewState extends State<SettingsView> {
         ),
       ],
     ),
-    SettingsSection.logs => LogsSection(
-      daemon: daemon,
-      debug: _set?.debugLog,
-      onDebug: ({required on}) => _change((s) => s.debugLog = on),
-    ),
+    SettingsSection.logs => LogsSection(daemon: daemon, settings: _settings),
   };
 
   @override

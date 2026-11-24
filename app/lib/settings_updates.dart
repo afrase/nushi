@@ -6,8 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/settings_general.dart';
+import 'package:nushi/daemon_settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/update_toast.dart';
 import 'package:nushi/widgets.dart';
@@ -21,19 +20,18 @@ String lastChecked(Int64 ms, DateTime now) {
 /// Settings › General's Updates: [login] first (Start at login's rows,
 /// which make it "Startup and updates"), whether the daemon checks GitHub
 /// for a newer release (on by default; at start and every 2 hours), then
-/// the version running, when GitHub was last asked, and Check now.
+/// the version running, when GitHub was last asked, and Check now. Shown
+/// once [settings] came.
 class UpdatesGroup extends StatefulWidget {
   const new({
     required this.daemon,
     required this.settings,
-    required this.onChange,
     super.key,
     this.login = const [],
   });
 
   final Daemon daemon;
-  final Settings settings;
-  final SettingsChange onChange;
+  final DaemonSettings settings;
   final List<Widget> login;
 
   @override
@@ -84,9 +82,9 @@ class _UpdatesGroupState extends State<UpdatesGroup> {
             'Check for updates',
             description: 'At start and every 2 hours.',
             control: SettingsSwitch(
-              value: widget.settings.checkUpdates,
+              value: widget.settings.value?.checkUpdates ?? false,
               run: ({required on}) =>
-                  widget.onChange((s) => s.checkUpdates = on),
+                  widget.settings.change((s) => s.checkUpdates = on),
             ),
           ),
           SettingsRow(

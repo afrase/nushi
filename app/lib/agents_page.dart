@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
+import 'package:nushi/daemon_settings.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shell_env_line.dart';
 import 'package:nushi/theme/theme.dart';
@@ -21,20 +21,13 @@ import 'package:nushi/widgets.dart';
 /// [settings] came. The [marked] agent's row stands out: a chat that
 /// couldn't start it sent you here.
 class AgentsPage extends StatefulWidget {
-  const new(
-    this.client, {
-    super.key,
-    this.marked,
-    this.settings,
-    this.onChange,
-  });
+  const new(this.client, {required this.settings, super.key, this.marked});
 
   final NushiServiceClient client;
   final String? marked;
 
-  /// The daemon's settings; null until it said.
-  final Settings? settings;
-  final SettingsChange? onChange;
+  /// The daemon's settings, which hold the switch to Nushi's Go agent.
+  final DaemonSettings settings;
 
   @override
   State<AgentsPage> createState() => _AgentsPageState();
@@ -67,10 +60,8 @@ class _AgentsPageState extends State<AgentsPage> {
   /// the agent's needs changed. Null while the daemon's settings aren't
   /// known, or when it is too old to keep the setting by agent (API 142).
   Widget? _goAgent(Agent a) {
-    final (set, change) = (widget.settings, widget.onChange);
-    if (set == null || change == null || !set.goAgents.containsKey(a.name)) {
-      return null;
-    }
+    final set = widget.settings.value;
+    if (set == null || !set.goAgents.containsKey(a.name)) return null;
     return Padding(
       padding: const EdgeInsets.only(left: agentTextIndent),
       child: SettingsRow(
@@ -79,7 +70,7 @@ class _AgentsPageState extends State<AgentsPage> {
         control: SettingsSwitch(
           value: set.goAgents[a.name]!,
           run: ({required on}) async {
-            await change((s) => s.goAgents[a.name] = on);
+            await widget.settings.change((s) => s.goAgents[a.name] = on);
             await listAgents(widget.client);
           },
         ),
@@ -88,13 +79,13 @@ class _AgentsPageState extends State<AgentsPage> {
   }
 
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: agentList,
-    builder: (context, agents, _) => Column(
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([agentList, widget.settings]),
+    builder: (context, _) => Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (agents.isNotEmpty)
+        if (agentList.value case final agents when agents.isNotEmpty)
           SettingsGroup(
             children: [
               for (final a in agents.values) ...[

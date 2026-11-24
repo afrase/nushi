@@ -242,7 +242,8 @@ void main() {
     await pumpSettings(tester, d, SettingsSection.general);
     final change = tester
         .widget<GeneralSection>(find.byType(GeneralSection))
-        .onChange;
+        .settings
+        .change;
     final first = change((s) => s.sleepAfterMinutes = 60);
     final second = change((s) => s.debugLog = true);
     await tester.pump();

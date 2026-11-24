@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/alerts_settings.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/daemon_settings.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/login_item.dart';
@@ -15,9 +16,6 @@ import 'package:nushi/settings_updates.dart';
 import 'package:nushi/speller.dart';
 import 'package:nushi/web_views.dart';
 import 'package:nushi/widgets.dart';
-
-/// Changes the daemon's settings: the function given applied to them.
-typedef SettingsChange = Future<void> Function(void Function(Settings));
 
 /// The choices for when idle chats sleep, in minutes; 0: never.
 const _sleepAfter = {
@@ -35,24 +33,18 @@ String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 /// the composer checks spelling, whether Enter starts a line or sends,
 /// where a chat's local links open), the
 /// notifications, then whether the daemon starts at login with the
-/// updates. [settings] is the daemon's, null until it said.
+/// updates. Its daemon rows show once [settings] came.
 class GeneralSection extends StatelessWidget {
-  const new({
-    required this.daemon,
-    required this.settings,
-    required this.onChange,
-    super.key,
-  });
+  const new({required this.daemon, required this.settings, super.key});
 
   final Daemon daemon;
-  final Settings? settings;
-  final SettingsChange onChange;
+  final DaemonSettings settings;
 
   @override
   Widget build(BuildContext context) => SettingsPage(
     title: 'General',
     children: [
-      _ChatsGroup(settings: settings, onChange: onChange),
+      _ChatsGroup(settings),
       const NotificationsGroup(),
       // Start at login starts the usual data folder's daemon, not chats:
       // it heads the updates' group, which it joins once the system says
@@ -68,16 +60,21 @@ class GeneralSection extends StatelessWidget {
   /// The group of how Nushi starts and updates: [login] (Start at login's
   /// rows) then the updates' once the daemon said; either alone if the
   /// other has none.
-  Widget _startup(List<Widget> login) => switch (settings) {
-    final s? when s.hasCheckUpdates() => UpdatesGroup(
-      daemon: daemon,
-      settings: s,
-      onChange: onChange,
-      login: login,
-    ),
-    _ when login.isNotEmpty => SettingsGroup(title: 'Startup', children: login),
-    _ => const SizedBox.shrink(),
-  };
+  Widget _startup(List<Widget> login) => ValueListenableBuilder(
+    valueListenable: settings,
+    builder: (context, set, _) => switch (set) {
+      final s? when s.hasCheckUpdates() => UpdatesGroup(
+        daemon: daemon,
+        settings: settings,
+        login: login,
+      ),
+      _ when login.isNotEmpty => SettingsGroup(
+        title: 'Startup',
+        children: login,
+      ),
+      _ => const SizedBox.shrink(),
+    },
+  );
 }
 
 /// Settings › General's first group, one card of the chat's settings that
@@ -87,15 +84,19 @@ class GeneralSection extends StatelessWidget {
 /// 0147), local links in a browser tab beside the chat (ADR 0094;
 /// where there are web views).
 class _ChatsGroup extends StatelessWidget {
-  const new({required this.settings, required this.onChange});
+  const new(this.settings);
 
-  final Settings? settings;
-  final SettingsChange onChange;
+  final DaemonSettings settings;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: settings,
+    builder: (context, set, _) => _group(context, set),
+  );
+
+  Widget _group(BuildContext context, Settings? set) {
     final rows = [
-      if (settings?.sleepAfterMinutes case final sleep?)
+      if (set?.sleepAfterMinutes case final sleep?)
         SettingsRow(
           'Sleep idle chats',
           description: 'The agent stops; your next message wakes it.',
@@ -110,7 +111,7 @@ class _ChatsGroup extends StatelessWidget {
                   checked: key == sleep,
                   onPick: () => tryOrShow(
                     context,
-                    () => onChange((s) => s.sleepAfterMinutes = key),
+                    () => settings.change((s) => s.sleepAfterMinutes = key),
                   ),
                 ),
             ],

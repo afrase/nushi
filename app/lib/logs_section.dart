@@ -6,6 +6,7 @@ import 'package:nushi/app_install.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/commits.dart' show dateTime;
 import 'package:nushi/daemon.dart';
+import 'package:nushi/daemon_settings.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/status_bar.dart' show restartDaemonAsking;
@@ -21,21 +22,18 @@ Future<void> showLogs() async {
 }
 
 /// Settings › Logs & advanced: Show logs, whether the daemon's log has
-/// DEBUG lines ([debug] null: the daemon didn't say, so no switch), and the
-/// daemon: its release, its API, its build, and Restart (the packaged
-/// app's).
+/// DEBUG lines (a switch once [settings] came), and the daemon: its
+/// release, its API, its build, and Restart (the packaged app's).
 class LogsSection extends StatelessWidget {
   const new({
     required this.daemon,
-    required this.debug,
-    required this.onDebug,
+    required this.settings,
     super.key,
     this.reveal = showLogs,
   });
 
   final Daemon daemon;
-  final bool? debug;
-  final Future<void> Function({required bool on}) onDebug;
+  final DaemonSettings settings;
   final Future<void> Function() reveal;
 
   @override
@@ -46,7 +44,7 @@ class LogsSection extends StatelessWidget {
       title: 'Logs & advanced',
       children: [
         ListenableBuilder(
-          listenable: daemon,
+          listenable: Listenable.merge([daemon, settings]),
           builder: (context, _) => SettingsGroup(
             children: [
               SettingsRow(
@@ -54,11 +52,15 @@ class LogsSection extends StatelessWidget {
                 description: 'nushid.log, and app.log beside it.',
                 control: Button(label: 'Show logs', onPressed: reveal),
               ),
-              if (debug case final on?)
+              if (settings.value?.debugLog case final on?)
                 SettingsRow(
                   'Debug lines',
                   description: 'Every agent and API call, with timings.',
-                  control: SettingsSwitch(value: on, run: onDebug),
+                  control: SettingsSwitch(
+                    value: on,
+                    run: ({required on}) =>
+                        settings.change((s) => s.debugLog = on),
+                  ),
                 ),
               SettingsRow(
                 'Daemon',

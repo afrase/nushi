@@ -6,6 +6,7 @@ import 'package:nushi/app_actions.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/controls.dart' show Toggle;
 import 'package:nushi/daemon.dart';
+import 'package:nushi/daemon_settings.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/logs_section.dart';
 
@@ -14,20 +15,28 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 import 'settings_harness.dart';
 
+/// The section on [fake]'s daemon, its settings asked for as Settings
+/// asks (disposed with the test).
 Future<Daemon> _section(
-  WidgetTester tester, {
-  required bool? debug,
-  required Future<void> Function({required bool on}) onDebug,
-  required Future<void> Function() reveal,
+  WidgetTester tester,
+  FakeDaemon fake, {
+  Future<void> Function() reveal = _nothing,
 }) async {
-  final d = await FakeDaemon([]).connect(tester);
+  final d = await fake.connect(tester);
   await tester.pumpWidget(
-    themed(
-      LogsSection(daemon: d, debug: debug, onDebug: onDebug, reveal: reveal),
-    ),
+    themed(LogsSection(daemon: d, settings: _settings(d), reveal: reveal)),
   );
+  await tester.pump();
   return d;
 }
+
+DaemonSettings _settings(Daemon d) {
+  final s = DaemonSettings(d);
+  addTearDown(s.dispose);
+  return s;
+}
+
+Future<void> _nothing() async {}
 
 void main() {
   test("a daemon build's time", () {
@@ -44,17 +53,13 @@ void main() {
     tester,
   ) async {
     var revealed = 0;
-    final set = <bool>[];
-    final d = await _section(
-      tester,
-      debug: false,
-      onDebug: ({required on}) async => set.add(on),
-      reveal: () async => revealed++,
-    );
+    final fake = FakeDaemon([])..settings = Settings(debugLog: false);
+    final d = await _section(tester, fake, reveal: () async => revealed++);
     await tester.tap(find.text('Show logs'));
     await tester.tap(find.byType(Toggle));
+    await tester.pump();
     expect(revealed, 1);
-    expect(set, [true]);
+    expect([for (final s in fake.setSettings) s.debugLog], [true]);
     expect(find.text('Debug lines'), findsOneWidget);
     expect(find.text('API $apiVersion'), findsOneWidget);
     d.dispose();
@@ -63,23 +68,17 @@ void main() {
   testWidgets('the debug switch sends once, however often it is clicked', (
     tester,
   ) async {
-    final sent = Completer<void>();
-    var calls = 0;
-    final d = await _section(
-      tester,
-      debug: false,
-      onDebug: ({required on}) {
-        calls++;
-        return sent.future;
-      },
-      reveal: () async {},
-    );
+    final sent = Completer<SetSettingsResponse>();
+    final fake = FakeDaemon([])
+      ..settings = Settings(debugLog: false)
+      ..on((input) => input is SetSettingsRequest ? sent.future : null);
+    final d = await _section(tester, fake);
     await tester.tap(find.byType(Toggle));
     await tester.pump();
     await tester.tap(find.byType(Toggle));
     await tester.pump();
-    expect(calls, 1);
-    sent.complete();
+    expect(fake.setSettings, hasLength(1));
+    sent.complete(SetSettingsResponse());
     await tester.pump();
     d.dispose();
   });
@@ -93,9 +92,7 @@ void main() {
           : null;
     final d = await fake.connect(tester);
     await tester.pumpWidget(
-      themed(
-        LogsSection(daemon: d, debug: null, onDebug: ({required on}) async {}),
-      ),
+      themed(LogsSection(daemon: d, settings: _settings(d))),
     );
     expect(find.text('Version 1.2.0 · API $apiVersion'), findsOneWidget);
     d.dispose();
@@ -112,11 +109,7 @@ void main() {
           Builder(
             builder: (c) {
               context = c;
-              return LogsSection(
-                daemon: d,
-                debug: null,
-                onDebug: ({required on}) async {},
-              );
+              return LogsSection(daemon: d, settings: _settings(d));
             },
           ),
         ),
@@ -138,14 +131,15 @@ void main() {
   });
 
   testWidgets('no switch until the daemon says', (tester) async {
-    final d = await _section(
-      tester,
-      debug: null,
-      onDebug: ({required on}) async {},
-      reveal: () async {},
-    );
+    final asked = Completer<GetSettingsResponse>();
+    final fake = FakeDaemon([])
+      ..on((input) => input is GetSettingsRequest ? asked.future : null);
+    final d = await _section(tester, fake);
     expect(find.text('Show logs'), findsOneWidget);
     expect(find.byType(Toggle), findsNothing);
+    asked.complete(GetSettingsResponse(settings: Settings(debugLog: true)));
+    await tester.pumpAndSettle();
+    expect(find.byType(Toggle), findsOneWidget);
     d.dispose();
   });
 
