@@ -18,8 +18,6 @@ List<Item> backgroundCommandsOf(List<Item> items) => [
     if (it.hasBackgroundCommand()) it,
 ];
 
-bool commandRunning(Item it) => it.backgroundCommand.state == 'running';
-
 /// A background command's state in a few words: "running · 12s", "done ·
 /// exited with code 0 · 15s", "stopped", or "started" (and how
 /// long ago, when the daemon saw it) when its end can't be known.

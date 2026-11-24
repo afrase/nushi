@@ -40,7 +40,7 @@ List<SubagentRun> subagentsOf(List<Item> items) {
 }
 
 /// Whether the subagent works, as the daemon says.
-bool subagentRunning(SubagentRun s) => s.call.subagent.state == 'running';
+bool subagentRunning(SubagentRun s) => subagentRuns(s.call);
 
 /// Whether the subagent can be stopped on its own (StopTask): it runs, and
 /// the agent shows it as a session of its own or said how to reach it.

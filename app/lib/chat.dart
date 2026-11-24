@@ -942,9 +942,17 @@ class ChatState extends ChangeNotifier {
 /// Whether [it] is a subagent, background command or workflow that runs: a
 /// stalled workflow doesn't count (ADR 0127).
 bool _runs(Item it) =>
-    it.backgroundCommand.state == 'running' ||
-    it.subagent.state == 'running' ||
+    commandRunning(it) ||
+    subagentRuns(it) ||
     workflowLive(it.workflow) && !it.workflow.stalled;
+
+/// Whether the command [it] left in the background runs, as the daemon
+/// says (background_commands.dart shows it).
+bool commandRunning(Item it) => it.backgroundCommand.state == 'running';
+
+/// Whether the subagent the call [it] started works, as the daemon says
+/// (subagents.dart's subagentRunning).
+bool subagentRuns(Item it) => it.subagent.state == 'running';
 
 /// Where the last [n] of [items] before [end] start: [n] back, and further
 /// back to the call that started a subagent whose steps are among them, so
