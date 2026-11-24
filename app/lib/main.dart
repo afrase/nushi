@@ -36,7 +36,6 @@ import 'package:nushi/native_linux.dart';
 import 'package:nushi/native_macos.dart';
 import 'package:nushi/native_windows.dart';
 import 'package:nushi/nothing_open.dart';
-import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart' show baseName;
 import 'package:nushi/remote.dart';
@@ -343,7 +342,10 @@ class _NushiAppState extends State<NushiApp> {
   ];
 
   PlatformMenuItem _appearance(String label, ThemeMode mode) =>
-      PlatformMenuItem(label: label, onSelected: () => appearance.value = mode);
+      PlatformMenuItem(
+        label: label,
+        onSelected: () => _gated(() => appearance.value = mode),
+      );
 
   /// [act]'s item in the menu bar: its label and key; it runs as from
   /// the palette.
@@ -361,6 +363,12 @@ class _NushiAppState extends State<NushiApp> {
   );
 
   void _run(Act act) => runAct(_navigator.currentContext!, widget.daemon, act);
+
+  /// Runs [change], a menu bar item's that isn't an [Act], when actions
+  /// run now ([actsNow]: not over a dialog).
+  void _gated(VoidCallback change) {
+    if (actsNow(_navigator.currentContext!)) change();
+  }
 
   List<PlatformMenuItem> _items(ActMenu menu) => [
     for (final a in Act.values)
@@ -409,8 +417,7 @@ class _NushiAppState extends State<NushiApp> {
         PlatformMenuItem(
           label: 'Command Palette…',
           shortcut: menuShortcut(paletteKey),
-          onSelected: () =>
-              unawaited(showPalette(_navigator.currentContext!, widget.daemon)),
+          onSelected: () => _run(Act.palette),
         ),
         PlatformMenuItemGroup(members: _items(ActMenu.view)),
         PlatformMenuItemGroup(
@@ -432,12 +439,12 @@ class _NushiAppState extends State<NushiApp> {
             PlatformMenuItem(
               label: 'Previous Chat',
               shortcut: menuShortcut(previousChatKey),
-              onSelected: () => stepChat(widget.daemon, -1),
+              onSelected: () => _gated(() => stepChat(widget.daemon, -1)),
             ),
             PlatformMenuItem(
               label: 'Next Chat',
               shortcut: menuShortcut(nextChatKey),
-              onSelected: () => stepChat(widget.daemon, 1),
+              onSelected: () => _gated(() => stepChat(widget.daemon, 1)),
             ),
             // Hold ⌘ to see the numbers in the sidebar.
             PlatformMenu(
@@ -447,7 +454,8 @@ class _NushiAppState extends State<NushiApp> {
                   PlatformMenuItem(
                     label: 'Chat $n in the Sidebar',
                     shortcut: menuShortcut(chatNumberKey(n)),
-                    onSelected: () => openNthChat(widget.daemon, n),
+                    onSelected: () =>
+                        _gated(() => openNthChat(widget.daemon, n)),
                   ),
               ],
             ),

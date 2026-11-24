@@ -472,11 +472,40 @@ List<AppAction> chatActions(
   ];
 }
 
+/// The route over the app's main views now, the top one present (one
+/// closing is gone), or null when none is: the views are Places on the
+/// Navigator's first route, so a route above it is a dialog or a picker.
+/// Read from the Navigator each time, so no flag can outlive what it
+/// stood for.
+Route<Object?>? routeOver(BuildContext context) {
+  final nav = Navigator.maybeOf(context);
+  if (nav == null) return null;
+  Route<Object?>? top;
+  // popUntil hands its test the top route present first and pops none
+  // when the test holds: a read of the top, which the Navigator has no
+  // getter for.
+  nav.popUntil((route) {
+    top = route;
+    return true;
+  });
+  return top == null || top!.isFirst ? null : top;
+}
+
+/// Whether an action from a key or the menu bar ([act]; none for one that
+/// isn't an [Act], as a chat's number) runs now: never over a dialog,
+/// which asks something and may name what the action would change (a
+/// confirm, a form), but Quit (docs/design.md's Dialogs). The dialog's own
+/// keys are its own, nearer the focus; the system's menu items (Hide,
+/// Quit on the Mac) never come here.
+bool actsNow(BuildContext context, [Act? act]) =>
+    act == Act.quit || routeOver(context) == null;
+
 /// Runs [act] as it is now, if it applies.
 void runAct(BuildContext context, Daemon d, Act act) {
   // Behind the Restart screen only Restart daemon and Quit apply: the
   // rest would act on a chat or a view no one can see.
   if (d.blocked && act != Act.restart && act != Act.quit) return;
+  if (!actsNow(context, act)) return;
   // The palette is no row of its own; its key never reaches here past
   // Settings, so it shuts nothing.
   if (act == Act.palette) return unawaited(showPalette(context, d));
