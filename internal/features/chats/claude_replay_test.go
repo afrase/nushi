@@ -94,15 +94,11 @@ func adapterRecording(t *testing.T, dir string) bool {
 	t.Helper()
 	_, all := readACP(t, filepath.Join(dir, "acp.jsonl"))
 	for _, l := range all {
-		var m struct {
-			Result struct {
-				AgentInfo struct {
-					Name string `json:"name"`
-				} `json:"agentInfo"`
-			} `json:"result"`
-		}
-		if l.Dir == "out" && json.Unmarshal(l.Msg, &m) == nil && m.Result.AgentInfo.Name != "" {
-			return m.Result.AgentInfo.Name == "@agentclientprotocol/claude-agent-acp"
+		var m rpc
+		if l.Dir == "out" && json.Unmarshal(l.Msg, &m) == nil {
+			if name := agentName(m); name != "" {
+				return name == adapterName
+			}
 		}
 	}
 	return false

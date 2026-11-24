@@ -223,6 +223,7 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 	testcheck.NoErr(t, err)
 	asked := map[string]event{} // the marked requests, by id
 	loading := 0                // loads not answered yet: what comes is their replay
+	adapter := false            // the recording is claude-agent-acp's, by its initialize answer
 	for line := range bytes.Lines(b) {
 		if len(bytes.TrimSpace(line)) == 0 {
 			continue
@@ -236,7 +237,7 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 		case l.Dir == "out" && m.Method == sessionUpdate:
 			var n acp.SessionNotification
 			testcheck.NoErr(t, json.Unmarshal(m.Params, &n))
-			if loading > 0 {
+			if adapter && loading > 0 {
 				replayedAsLive(&n)
 			}
 			events = append(events, event{note: &n})
@@ -248,6 +249,9 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 				loading++
 			}
 		case l.Dir == "out" && m.Method == "":
+			if name := agentName(m); name != "" {
+				adapter = name == adapterName
+			}
 			if e, ok := asked[string(m.ID)]; ok {
 				if e.method == "session/load" {
 					loading--
@@ -264,6 +268,21 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 	return events, all
 }
 
+// agentName is the agentInfo name an initialize answer m gives, else "".
+func agentName(m rpc) string {
+	var r struct {
+		AgentInfo struct {
+			Name string `json:"name"`
+		} `json:"agentInfo"`
+	}
+	_ = json.Unmarshal(m.Result, &r)
+	return r.AgentInfo.Name
+}
+
+// adapterName is claude-agent-acp's agentInfo name, the Node adapter
+// whose recording testdata/claude-adapter-load is.
+const adapterName = "@agentclientprotocol/claude-agent-acp"
+
 // noOutput is claude's text for the model of a command that printed
 // nothing, as claude-agent-acp 0.94's replay showed it.
 const noOutput = "```console\n(Bash completed with no output)\n```"
@@ -272,7 +291,10 @@ const noOutput = "```console\n(Bash completed with no output)\n```"
 // updates) showed of a command that printed nothing: claude-agent-acp
 // showed nothing live (from claude's structured tool_use_result) but
 // claude's text for the model in a replay, and claudeacp (since
-// claude-acp-go v0.4.0) replays it as live.
+// claude-acp-go v0.4.0) replays it as live. Only the frozen adapter
+// recording needs it (TestAnAdapterChatResumesOnTheGoAgent compares its
+// replay with the Go agent's); the Go agent's own recordings replay as
+// they showed live.
 func replayedAsLive(n *acp.SessionNotification) {
 	u := n.Update.ToolCallUpdate
 	if u == nil || len(u.Content) != 1 || u.Content[0].Content == nil {
