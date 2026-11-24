@@ -17,18 +17,22 @@ const MaxItems = 50
 // itemPull and itemIssue are what a chip, a row, the inbox and the
 // transcript's card show of a pull request and an issue, and the head of
 // one whole (ADR 0117): every read of one spreads them (withItems).
-// countsField is the checks counted by state, which only Items asks for:
-// an old Enterprise server refuses it, and is asked again without it
-// (noCounts). An issue's comments are counted under an alias, as Issue
-// asks its comments with other arguments (docs/facts/github.md).
+// sizeFields are a pull request's size, branches and merge state, which
+// the inbox doesn't ask: its rows show none of them, and GitHub works a
+// merge state out for each pull request asked. countsField is the checks
+// counted by state, which only Items asks for: an old Enterprise server
+// refuses it, and is asked again without it (noCounts). An issue's
+// comments are counted under an alias, as Issue asks its comments with
+// other arguments (docs/facts/github.md).
 const (
+	sizeFields  = `additions deletions changedFiles mergeStateStatus baseRefName headRefName`
 	countsField = `contexts(first: 0) { checkRunCountsByState { state count } statusContextCountsByState { state count } }`
 	itemPull    = `
 fragment ItemPull on PullRequest {
   id number title url state isDraft createdAt updatedAt
   author { login }
   repository { nameWithOwner }
-  additions deletions changedFiles mergeStateStatus baseRefName headRefName
+  SIZE
   reviewDecision totalCommentsCount
   commits(last: 1) { nodes { commit { oid statusCheckRollup { state COUNTS } } } }
   reviewThreads(first: 100) { nodes { isResolved } }
@@ -42,16 +46,28 @@ fragment ItemIssue on Issue {
 }`
 )
 
+// detail is how much of a pull request a read asks beyond its row.
+type detail int
+
+const (
+	rowOnly detail = iota // what a list's row shows (the inbox)
+	sized                 // and its size, branches and merge state (Pull)
+	counted               // and its checks counted by state (Items)
+)
+
 // withItems is a query with the item fragments it spreads after it (a
 // GraphQL document may hold only the fragments it uses), ItemPull with
-// the checks' counts or without.
-func withItems(query string, counts bool) string {
+// as much as d asks.
+func withItems(query string, d detail) string {
 	if strings.Contains(query, "...ItemPull") {
-		f := ""
-		if counts {
-			f = countsField
+		size, counts := "", ""
+		if d >= sized {
+			size = sizeFields
 		}
-		query += strings.Replace(itemPull, "COUNTS", f, 1)
+		if d == counted {
+			counts = countsField
+		}
+		query += strings.NewReplacer("SIZE", size, "COUNTS", counts).Replace(itemPull)
 	}
 	if strings.Contains(query, "...ItemIssue") {
 		query += itemIssue
@@ -232,7 +248,7 @@ func (c *Client) Items(ctx context.Context, refs []model.GitHubRef) ([]model.Git
 // refused them (remembered for the client).
 func (c *Client) itemsQuery(ctx context.Context, query string, vars map[string]any, out any) error {
 	if !c.noCounts.Load() {
-		_, err := c.graphql(ctx, withItems(query, true), vars, out)
+		_, err := c.graphql(ctx, withItems(query, counted), vars, out)
 		var api *APIError
 		if err == nil || !errors.As(err, &api) || !refusedCounts(api.Message) {
 			return err
@@ -240,7 +256,7 @@ func (c *Client) itemsQuery(ctx context.Context, query string, vars map[string]a
 		c.noCounts.Store(true)
 		c.log.Info("this server refuses check counts: asked without them")
 	}
-	_, err := c.graphql(ctx, withItems(query, false), vars, out)
+	_, err := c.graphql(ctx, withItems(query, sized), vars, out)
 	return err
 }
 

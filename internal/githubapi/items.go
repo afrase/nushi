@@ -144,15 +144,16 @@ func (f InboxFilter) narrowed() (InboxFilter, bool) {
 	return n, (len(f.Repos) == 0 || len(n.Repos) > 0) && (len(f.Owners) == 0 || len(n.Owners) > 0)
 }
 
-// inboxSearch's rows are the items' fragments without the checks'
-// counts (ADR 0117), so the inbox costs what it did.
+// inboxSearch's rows are the items' fragments as a row shows them: no
+// size, merge state or counts (ADR 0117), so the inbox asks GitHub for
+// what it did, and a creation date.
 const inboxSearch = `
   review: search(type: ISSUE, query: $review, first: 50) { issueCount nodes { __typename ...ItemPull } }
   mine: search(type: ISSUE, query: $mine, first: 50) { issueCount nodes { __typename ...ItemPull } }
   assigned: search(type: ISSUE, query: $assigned, first: 50) { issueCount nodes { __typename ...ItemIssue } }`
 
 var inboxQuery = withItems(`query Inbox($review: String!, $mine: String!, $assigned: String!) {`+inboxSearch+`
-}`, false)
+}`, rowOnly)
 
 // inboxDatedQuery also counts each search without its date: three
 // searches of no rows, which cost nothing more (the query's cost stays 1
@@ -161,7 +162,7 @@ var inboxDatedQuery = withItems(`query Inbox($review: String!, $mine: String!, $
   reviewAll: search(type: ISSUE, query: $reviewAll, first: 0) { issueCount }
   mineAll: search(type: ISSUE, query: $mineAll, first: 0) { issueCount }
   assignedAll: search(type: ISSUE, query: $assignedAll, first: 0) { issueCount }
-}`, false)
+}`, rowOnly)
 
 // repoQualifiers is how many repositories a search names (repo:o/n
 // each, any of them); past it, Inbox searches everywhere and keeps

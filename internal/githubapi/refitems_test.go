@@ -214,16 +214,25 @@ func TestIssueSaysWhyItClosed(t *testing.T) {
 func TestItemFragments(t *testing.T) {
 	for name, q := range map[string]string{"inbox": inboxQuery, "dated inbox": inboxDatedQuery, "pull": pullQuery,
 		"issue": issueQuery} {
-		if strings.Contains(q, "CountsByState") || strings.Contains(q, "COUNTS") {
-			t.Errorf("%s counts the checks", name)
+		if strings.Contains(q, "CountsByState") || strings.Contains(q, "COUNTS") || strings.Contains(q, "SIZE") {
+			t.Errorf("%s counts the checks, or kept a placeholder", name)
 		}
 		for _, frag := range []string{"ItemPull", "ItemIssue"} {
 			if strings.Contains(q, "..."+frag) != strings.Contains(q, "fragment "+frag+" ") {
 				t.Errorf("%s: %s spread and held disagree", name, frag)
 			}
 		}
+		// GitHub works a merge state out per pull request: the inbox's
+		// rows show none, so its 150 don't ask; a pull request's page does.
+		if got, want := strings.Contains(q, "mergeStateStatus"), name == "pull"; got != want {
+			t.Errorf("%s asks a merge state: %v, want %v", name, got, want)
+		}
 	}
-	if !strings.Contains(withItems("query Items { x { ...ItemPull ...ItemIssue } }", true), "checkRunCountsByState") {
-		t.Error("Items doesn't count the checks")
+	const items = "query Items { x { ...ItemPull ...ItemIssue } }"
+	if q := withItems(items, counted); !strings.Contains(q, "checkRunCountsByState") || !strings.Contains(q, "mergeStateStatus") {
+		t.Error("Items doesn't ask the checks' counts and the merge state")
+	}
+	if q := withItems(items, sized); strings.Contains(q, "CountsByState") || !strings.Contains(q, "mergeStateStatus") {
+		t.Error("Items asked again without counts must keep the merge state and drop only the counts")
 	}
 }

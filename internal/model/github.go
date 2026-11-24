@@ -35,12 +35,11 @@ type GitHubItem struct {
 	ChecksOID  string
 	Unresolved int
 	Comments   int
-	// A pull request's size, its checks counted (by Items and Pull only:
-	// the inbox and Status leave CheckCounts unset, ADR 0117), its merge
-	// state ("clean", "blocked", "behind", "dirty", "unstable",
-	// "has_hooks", "unknown"), its base and head branches; an issue's
-	// close reason ("completed", "not_planned" or ""); when either was
-	// opened.
+	// A pull request's size, its checks counted, its merge state ("clean",
+	// "blocked", "behind", "dirty", "unstable", "has_hooks", "unknown")
+	// and its base and head branches, by Items and Pull only: the inbox
+	// leaves all of these unset (ADR 0117). An issue's close reason
+	// ("completed", "not_planned" or ""); when either was opened.
 	Additions, Deletions, ChangedFiles int
 	Created                            time.Time
 	CheckCounts                        CheckCounts

@@ -49,7 +49,7 @@ var pullQuery = withItems(`query PullRequest($owner: String!, $name: String!, $n
       } } } } } }
     }
   }
-}`+threadFields, false)
+}`+threadFields, sized)
 
 const threadsQuery = `query Threads($id: ID!, $after: String!) {
   node(id: $id) { ... on PullRequest {
@@ -378,7 +378,7 @@ var issueQuery = withItems(`query Issue($owner: String!, $name: String!, $number
       comments(last: 100) { nodes `+saidFields+` }
     }
   }
-}`, false)
+}`, rowOnly)
 
 // Issue is an issue whole: its text, labels, assignees and the latest
 // 100 comments.
