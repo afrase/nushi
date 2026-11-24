@@ -18,8 +18,8 @@
 //     (the prompt run as a command) comes on the parent session, tagged
 //     with its parentToolUseId, then the call ends;
 //   - containing "workflow": a Workflow call that launches a run in the
-//     background, as Claude Code 2.1.325 sent it (the "workflow" parity
-//     recording: run wf_769a004c-2aa, task w9u1xb6ik), then a message; the
+//     background, as Claude Code 2.1.331 sent it (the "workflow" parity
+//     recording: run wf_194e61d3-d0e, task wtg819jtp), then a message; the
 //     run's files are the test's to write;
 //   - containing "screenshot": a tool call that returns an image
 //     (Screenshot), then a message;
@@ -542,17 +542,17 @@ func (a *Agent) usage(session string) {
 }
 
 // workflow sends the Workflow call of the "workflow" parity recording,
-// which launched run wf_769a004c-2aa in the background, then a message.
+// which launched run wf_194e61d3-d0e in the background, then a message.
 func (a *Agent) workflow(session string) {
 	claudeCode := func(fields map[string]any) map[string]any { return map[string]any{"claudeCode": fields} }
 	a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "wf1", "title": "Workflow", "kind": "other", "status": "pending",
 		"rawInput": map[string]any{}, "_meta": claudeCode(map[string]any{"toolName": "Workflow"})})
 	a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": "wf1", "_meta": claudeCode(map[string]any{"toolName": "Workflow",
-		"toolResponse": map[string]any{"status": "async_launched", "taskId": "w9u1xb6ik", "taskType": "local_workflow", "workflowName": "two-phases",
-			"runId": "wf_769a004c-2aa", "summary": "Ask four helpers in two phases"}})})
+		"toolResponse": map[string]any{"status": "async_launched", "taskId": "wtg819jtp", "taskType": "local_workflow", "workflowName": "two-phases",
+			"runId": "wf_194e61d3-d0e", "summary": "Ask four helpers in two phases"}})})
 	a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": "wf1", "status": "completed",
 		"content": []map[string]any{{"type": "content", "content": map[string]any{"type": "text",
-			"text": "Workflow launched in background. Task ID: w9u1xb6ik\nSummary: Ask four helpers in two phases\nRun ID: wf_769a004c-2aa\n"}}},
+			"text": "Workflow launched in background. Task ID: wtg819jtp\nSummary: Ask four helpers in two phases\nRun ID: wf_194e61d3-d0e\n"}}},
 		"_meta": claudeCode(map[string]any{"toolName": "Workflow"})})
 	a.say(session, "The workflow runs in the background.")
 }

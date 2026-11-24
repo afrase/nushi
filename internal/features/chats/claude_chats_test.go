@@ -314,8 +314,11 @@ func timeless(it model.Item) model.Item {
 	if it.Subagent != nil {
 		sa := *it.Subagent
 		sa.Started, sa.Ended, sa.Working = time.Time{}, time.Time{}, time.Time{}
-		if !sa.Reported { // the agent's own figure is the recording's
+		switch {
+		case !sa.Reported: // the agent's own figure is the recording's
 			sa.Worked = 0
+		case it.Totals != nil: // a later run (SendMessage) counts on by this run's clock
+			sa.Worked = it.Totals.Duration
 		}
 		it.Subagent = &sa
 	}

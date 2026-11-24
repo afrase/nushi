@@ -51,7 +51,6 @@ func TestClaudeParity(t *testing.T) {
 				t.Fatal("the recording shows nothing to compare")
 			}
 			commandsEnded(t, filepath.Base(dir), got, want)
-			subagentTotals(t, filepath.Base(dir), got, want)
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("the Go agent's chats differ from the adapter's:\n%s", differences(got, want))
 			}
@@ -65,9 +64,9 @@ func TestClaudeParity(t *testing.T) {
 // commandEnds are how claude's recorded background commands ended (each
 // cli.jsonl's task_notification), by scenario and task id.
 var commandEnds = map[string]map[string]model.BackgroundCommand{
-	"bash-background":               {"bqphuo3vw": {State: "done", End: "exited with code 0"}},
-	"bash-background-killed":        {"b709r21cm": {State: "failed", End: "exited with code 144"}},
-	"bash-background-taskstop":      {"bw5r8w073": {State: "stopped", End: "killed"}},
+	"bash-background":               {"bcgqmqtgt": {State: "done", End: "exited with code 0"}},
+	"bash-background-killed":        {"b4u19w10f": {State: "failed", End: "exited with code 144"}},
+	"bash-background-taskstop":      {"b2df8epcn": {State: "stopped", End: "killed"}},
 	"bash-background-stoptask":      {"bi8c2i7yx": {State: "stopped", End: "killed"}},
 	"bash-background-stoptask-turn": {"beit1md11": {State: "stopped", End: "killed"}},
 }
@@ -98,42 +97,6 @@ func commandsEnded(t *testing.T, scenario string, got, want []parity) {
 				}
 			}
 		}
-	}
-}
-
-// backgroundTokens are the tokens claude's recorded background subagents
-// used (each cli.jsonl's task_notification usage), by scenario.
-var backgroundTokens = map[string]int64{"subagent-background": 6979, "subagent-nested": 8152}
-
-// subagentTotals checks the Go agent's background subagents (got) have
-// the totals claude told as their tasks ended, which claude-acp-go sends
-// since v0.6.0. The adapter sent none: a subagent launched in the
-// background ends its call at once, without them. There, and only there,
-// the Go agent's item takes the adapter's totals for the comparison that
-// follows; every other difference stays one.
-func subagentTotals(t *testing.T, scenario string, got, want []parity) {
-	t.Helper()
-	seen := false
-	for i := range min(len(got), len(want)) {
-		for j := range min(len(got[i].Items), len(want[i].Items)) {
-			g, w := &got[i].Items[j], want[i].Items[j]
-			if g.Totals == nil || w.Totals != nil || g.ID != w.ID || g.Subagent == nil || w.Subagent == nil {
-				continue
-			}
-			if !strings.HasPrefix(g.Text, "Async agent launched") || g.Totals.Tokens <= 0 {
-				t.Errorf("the Go agent's call %s has totals %+v the adapter's hasn't, and isn't a background launch", g.ID, *g.Totals)
-				continue
-			}
-			if n, ok := backgroundTokens[scenario]; ok {
-				seen = seen || g.Totals.Tokens == n
-			}
-			sub := *g.Subagent
-			sub.Worked, sub.Tokens, sub.Reported = w.Subagent.Worked, w.Subagent.Tokens, w.Subagent.Reported
-			g.Totals, g.Subagent = nil, &sub
-		}
-	}
-	if n, ok := backgroundTokens[scenario]; ok && !seen {
-		t.Errorf("no background subagent of the Go agent's has claude's %d tokens", n)
 	}
 }
 

@@ -38,13 +38,13 @@ func (c claudeOnFake) WorkflowAgentItems(sid, folder string, w model.Workflow, a
 }
 
 // recordedRun is the session folder of the "workflow" parity recording
-// (Claude Code 2.1.325) once its run ended: run wf_769a004c-2aa, four
+// (Claude Code 2.1.331) once its run ended: run wf_194e61d3-d0e, four
 // agents in two phases.
-const recordedRun = "../features/chats/testdata/claude-parity/workflow/history/end/511e5af9-4263-4b34-8312-246b3236eca0"
+const recordedRun = "../features/chats/testdata/claude-parity/workflow/history/end/3c9308e8-e20b-411d-af80-1677aa3f9a47"
 
 const (
-	runID     = "wf_769a004c-2aa"
-	alphaID   = "a3779ff2d346be063" // map:alpha
+	runID     = "wf_194e61d3-d0e"
+	alphaID   = "aaa9c19b0db3fd1d5" // map:alpha
 	moreSteps = 450
 )
 

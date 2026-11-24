@@ -302,9 +302,13 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 	// waitLast waits for what the recording's client waited for before it
 	// went (a turn claude ran on its own after a background command
 	// ended): the Go agent must send it, in the same order, before the
-	// recording's end, as the adapter did.
+	// recording's end, as the adapter did. It looks from where the Go
+	// agent was when it was sent the client's last line, as the
+	// recorder's waits came after it: what came before can match a wait
+	// too (sendmessage's first hand-back, worded as its last).
+	lastSent := 0 // len(whole) as the last line went
 	waitLast := func() {
-		looked := 0
+		looked := lastSent
 		for _, want := range trailingWaits(t, dir) {
 			found := func() int { return slices.IndexFunc(whole[looked:], func(m any) bool { return like(want, m) }) }
 			for found() < 0 {
@@ -366,6 +370,7 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 			}
 			_, err := io.WriteString(toAgentW, rewrite(t, sessions(msg), id, cwd)+"\n")
 			testcheck.NoErr(t, err)
+			lastSent = len(whole)
 		case m.Method == sessionUpdate: // the adapter's, read by readACP
 			if k := mark(m.Params); k != "" {
 				pending = k

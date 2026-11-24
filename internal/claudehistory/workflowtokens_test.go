@@ -60,7 +60,7 @@ func TestEndedWorkflowTokens(t *testing.T) {
 	l, id, folder, session := recorded(t, "workflow")
 	got, err := l.ReadWorkflow(id, folder, runOf(t, session))
 	testcheck.NoErr(t, err)
-	if got.Tokens != 26406 {
+	if got.Tokens != 28146 {
 		t.Errorf("the recording's: %d", got.Tokens)
 	}
 	l, id, folder, _ = fakeRun(t, launchedLine+startA, `{"status":"completed","workflowProgress":[`+

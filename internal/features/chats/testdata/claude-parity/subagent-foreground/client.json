@@ -2,6 +2,8 @@
   "steps": [
     {"initialize": {}},
     {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Agent", "TaskStop", "SendMessage"]}}}}}},
-    {"prompt": "ask a helper to say hi", "session": "s1"}
+    {"prompt": "ask a helper to say hi", "session": "s1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "agent_message_chunk", "content": {"text": "Noted."}}}}},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "usage_update", "cost": {"currency": "USD"}}}}}
   ]
 }

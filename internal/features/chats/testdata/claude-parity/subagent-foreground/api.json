@@ -5,6 +5,7 @@
     {"match": {"toolResult": "Agent"}, "content": [{"type": "text", "text": "The helper said hi."}]}
   ],
   "side": [
+    {"match": {"lastUserText": "task-notification"}, "content": [{"type": "text", "text": "Noted."}]},
     {"match": {"lastUserText": "Subagent hand-back"}, "content": [{"type": "text", "text": "Noted."}]}
   ]
 }

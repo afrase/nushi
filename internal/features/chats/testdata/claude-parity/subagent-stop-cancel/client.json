@@ -6,6 +6,8 @@
     {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "running"}}}}, "capture": {"helper": "params.update.sessionId"}},
     {"cancel": "helper"},
     {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "idle"}}}}},
-    {"await": "p1"}
+    {"await": "p1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "agent_message_chunk", "content": {"text": "Noted."}}}}},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "usage_update", "cost": {"currency": "USD"}}}}}
   ]
 }
