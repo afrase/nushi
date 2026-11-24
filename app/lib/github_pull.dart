@@ -149,7 +149,14 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     widget.refreshes?.addListener(_refreshed);
   }
 
-  void _refreshed() => unawaited(_load());
+  /// The bar's Refresh (or ⌘R) under way: another press while it asks
+  /// joins it, as the chat's tab's does, rather than asking again.
+  Future<void>? _refreshing;
+
+  void _refreshed() {
+    if (_refreshing != null) return;
+    _refreshing = _load().whenComplete(() => _refreshing = null);
+  }
 
   void _changed() => setState(() {});
 

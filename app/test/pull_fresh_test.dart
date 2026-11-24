@@ -269,4 +269,32 @@ void main() {
     expect(find.text('Add Sub and Neg'), findsWidgets); // the page stays
     await closeView(tester, g);
   }, variant: onMac);
+
+  testWidgets('in the GitHub view a second Refresh while the page asks '
+      'asks nothing more', (tester) async {
+    Completer<GetGitHubPullResponse>? hang;
+    final (fake, g) = await gh.openView(
+      tester,
+      more: (input) => input is GetGitHubPullRequest ? hang?.future : null,
+    );
+    await tester.tap(find.text('Add Sub and Neg'));
+    await tester.pumpAndSettle();
+    hang = Completer();
+    fake.calls.clear();
+    final refresh = find.descendant(
+      of: find.byType(GitHubBar),
+      matching: find.byIcon(Icons.refresh),
+    );
+    await tester.tap(refresh);
+    await tester.pump();
+    await tester.tap(refresh);
+    await tester.pump();
+    await press(tester, LogicalKeyboardKey.keyR, cmd: true, settle: false);
+    hang.complete(GetGitHubPullResponse(pull: gh.pull()));
+    hang = null;
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<GetGitHubPullRequest>(), hasLength(1));
+    expect(_says('Updated just now'), findsOneWidget);
+    await closeView(tester, g);
+  }, variant: onMac);
 }
