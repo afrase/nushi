@@ -42,7 +42,9 @@ import 'package:nushi/widgets.dart';
 /// [footer], [live] while more come. A chat's transcript takes its older
 /// pages as it scrolls near the top: on the Mac with [EarlierMessages] at
 /// its top, on the phone ([Daemon.remote]) with its own [header], trying
-/// again on every scroll there after a failed page.
+/// again on every scroll there after a failed page. One State shows one
+/// chat, and its [items] or none, for its whole life: a caller that shows
+/// another chat keys it by the chat, so the other gets a new State.
 class Transcript extends StatefulWidget {
   const new({
     required this.chat,
@@ -161,16 +163,14 @@ class _TranscriptState extends State<Transcript> {
   // The entries' keys at the last build, once the chat had loaded: what
   // comes in after them rises in. Not what a load or an older page brings.
   List<String>? _shown;
-  ChatState? _shownChat;
 
   /// The keys of [entries] that are new since the last build, after the
   /// last of what was there; none on the first build or a load.
   Set<String> _arrived(List<Object> entries) {
     final keys = [for (final e in entries) _key(e)];
-    final was = _shownChat == widget.chat ? _shown : null;
+    final was = _shown;
     final loaded = widget.items != null || widget.chat.loaded;
     _shown = loaded ? keys : null;
-    _shownChat = widget.chat;
     if (was == null || was.isEmpty) return const {};
     final known = was.toSet();
     final last = keys.lastIndexWhere(known.contains);
@@ -589,35 +589,6 @@ class _TranscriptState extends State<Transcript> {
   /// Text streamed into an item: the chat doesn't notify for that, so the
   /// list follows it itself (ChatState.streamed).
   void _streamed() => setState(() {});
-
-  @override
-  void didUpdateWidget(Transcript old) {
-    super.didUpdateWidget(old);
-    if (old.chat != widget.chat) {
-      old.chat.streamed.removeListener(_streamed);
-      widget.chat.streamed.addListener(_streamed);
-    }
-    if (old.chat == widget.chat &&
-        (old.items == null) == (widget.items == null)) {
-      return;
-    }
-    if (old.chat != widget.chat) {
-      _findOlder = widget.chat.older;
-      _keep(old.chat);
-      _restore = null;
-      _laidKeys = const [];
-      _firstItem = null;
-      _planRevision = -1; // another chat's plan: nothing to hold
-      if (widget.items == null) _follower.follow();
-      _openAtKept();
-      if (_follower.following || _restore != null) {
-        _tail = Transcript.firstEntries;
-      }
-    }
-    _shownAsk = -1;
-    old.chat.find.removeListener(_findChanged);
-    if (widget.items == null) _attachFind(widget.chat);
-  }
 
   /// Follows [chat]'s find, and gives it the daemon's search of what isn't
   /// loaded (ChatFind); the entries laid out go with what it found.
