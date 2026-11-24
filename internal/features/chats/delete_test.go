@@ -232,8 +232,8 @@ func TestRemoveWorktreeHoldsTheChat(t *testing.T) {
 	testcheck.NoErr(t, <-removed)
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if len(agent.prompts) > 0 || !slices.Equal(wts.removed, []string{c.record.Folder}) || !c.asleep || c.removing {
-		t.Errorf("prompts %q, removed %q, asleep %v, removing %v", agent.prompts, wts.removed, c.asleep, c.removing)
+	if len(agent.prompts) > 0 || !slices.Equal(wts.removed, []string{c.record.Folder}) || !c.asleep || c.folder != "" {
+		t.Errorf("prompts %q, removed %q, asleep %v, folder %q", agent.prompts, wts.removed, c.asleep, c.folder)
 	}
 }
 

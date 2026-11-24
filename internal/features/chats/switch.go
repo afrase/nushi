@@ -45,8 +45,6 @@ func (s *Service) SwitchBranch(ctx context.Context, chatID, branch string, creat
 	folder, wt := c.record.Folder, c.record.Worktree
 	switch err = c.closedLocked(); {
 	case err != nil:
-	case !c.quietLocked():
-		err = errors.New("the agent is working: switch the branch once it's done")
 	case wt != nil:
 		err = errors.New("this chat works in a worktree: move it to the worktree of another branch instead")
 	case s.worktrees == nil:
@@ -56,6 +54,14 @@ func (s *Service) SwitchBranch(ctx context.Context, chatID, branch string, creat
 	if err != nil {
 		return none, err
 	}
+	// From here to its end no turn starts in the folder: git switches it
+	// under the agent (holdFolder), and the agent is told with the next
+	// prompt, which must come after.
+	release, err := holdFolder(switching, mustBeQuiet("the agent is working: switch the branch once it's done"), c)
+	if err != nil {
+		return none, err
+	}
+	defer release()
 	list, err := s.worktrees.List(ctx, folder)
 	if err != nil {
 		return none, errors.New("the chat's folder isn't in a git repository")
@@ -72,7 +78,8 @@ func (s *Service) SwitchBranch(ctx context.Context, chatID, branch string, creat
 			return Switched{Changed: n}, err
 		}
 	}
-	others, titles, err := s.inCheckout(c, list, folder)
+	others, titles, letGo, err := s.inCheckout(c, list, folder)
+	defer letGo()
 	if err != nil || len(titles) > 0 && !withOthers {
 		return Switched{Others: titles}, err
 	}
@@ -92,37 +99,90 @@ func (s *Service) SwitchBranch(ctx context.Context, chatID, branch string, creat
 	return Switched{Switched: true}, nil
 }
 
+// switching is what a branch switch does to a chat's folder (holdFolder).
+const switching = "branch is being switched"
+
 // inCheckout returns the chats besides c whose folders are in folder's
 // checkout (the same worktree, not one inside it) and the titles of
 // those not archived, for the user to confirm; an error names one that
-// works now.
-func (s *Service) inCheckout(c *chat, list []model.WorktreeEntry, folder string) ([]*chat, []string, error) {
+// works now. Each is held for the switch (holdFolder) until letGo.
+func (s *Service) inCheckout(c *chat, list []model.WorktreeEntry, folder string) (others []*chat, titles []string, letGo func(), err error) {
+	var releases []func()
+	letGo = func() {
+		for _, release := range releases {
+			release()
+		}
+	}
 	stored, err := s.sessions.Sessions()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, letGo, err
 	}
-	var others []*chat
-	var titles []string
 	for _, sess := range stored {
 		if sess.ID == c.id || sess.Worktree != nil || !git.Same(list, folder, sess.Folder) {
 			continue
 		}
 		o, err := s.lookup(sess.ID)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, letGo, err
 		}
-		o.mu.Lock()
-		quiet, title := o.quietLocked(), cmp.Or(o.record.Name, o.record.Title, "a chat without a title")
-		o.mu.Unlock()
-		if !quiet {
-			return nil, nil, fmt.Errorf("“%s” is working in this folder: switch the branch once it's done", title)
+		var title string
+		release, err := holdFolder(switching, func(o *chat) error {
+			if title = cmp.Or(o.record.Name, o.record.Title, "a chat without a title"); !o.quietLocked() {
+				return fmt.Errorf("“%s” is working in this folder: switch the branch once it's done", title)
+			}
+			return nil
+		}, o)
+		if err != nil {
+			return nil, nil, letGo, err
 		}
+		releases = append(releases, release)
 		others = append(others, o)
 		if !sess.Archived {
 			titles = append(titles, title)
 		}
 	}
-	return others, titles, nil
+	return others, titles, letGo, nil
+}
+
+// holdFolder holds chats' folder for a git step that changes it (why: what
+// it does, as closedLocked says it): from check (under each chat's lock)
+// until release, none takes a prompt, reopens or lets go. A chat held
+// already, or that check refuses, leaves none held and is the error.
+func holdFolder(why string, check func(*chat) error, chats ...*chat) (release func(), err error) {
+	var held []*chat
+	release = func() {
+		for _, c := range held {
+			c.mu.Lock()
+			c.folder = ""
+			c.mu.Unlock()
+		}
+	}
+	for _, c := range chats {
+		c.mu.Lock()
+		if c.folder != "" {
+			err = errors.New("the chat's " + c.folder)
+		} else if err = check(c); err == nil {
+			c.folder = why
+			held = append(held, c)
+		}
+		c.mu.Unlock()
+		if err != nil {
+			release()
+			return func() {}, err
+		}
+	}
+	return release, nil
+}
+
+// mustBeQuiet is a holdFolder check that refuses, saying working, a chat whose
+// agent isn't quiet (quietLocked).
+func mustBeQuiet(working string) func(*chat) error {
+	return func(c *chat) error {
+		if !c.quietLocked() {
+			return errors.New(working)
+		}
+		return nil
+	}
 }
 
 // switchedLocked records that the chat's folder went from branch from to

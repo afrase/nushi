@@ -150,7 +150,7 @@ func (s *Service) open(id string) (*chat, error) {
 // the last try failed, or the agent quit), unless it is archived, going or
 // asleep.
 func (s *Service) reopenLocked(c *chat) {
-	if c.agent == nil && !c.busy && !c.record.Archived && !c.halting && !c.removing && c.parent == nil && !c.reopenFailed && !c.asleep && !c.sessionGone &&
+	if c.agent == nil && !c.busy && !c.record.Archived && !c.halting && c.folder == "" && c.parent == nil && !c.reopenFailed && !c.asleep && !c.sessionGone &&
 		s.later(func() { s.resume(c) }) { // it waits for this lock, so busy is set first
 		c.busy, c.woke = true, make(chan struct{})
 		c.statusChangedLocked()

@@ -76,7 +76,7 @@ func (s *Service) othersIn(c *chat, folder string) ([]string, error) {
 // without asking) unless force, as Delete refuses them. The chat's agent stops first (it
 // sleeps, when it can reopen), and its terminals end. From the check that
 // the chat is quiet to the end, the chat takes no prompts and doesn't
-// reopen (removing), so no turn starts in a folder about to go. Once
+// reopen (holdFolder), so no turn starts in a folder about to go. Once
 // checked, the removal goes on when the request is gone (detached).
 //
 //nolint:contextcheck // a removal shouldn't stop halfway because the app went away
@@ -92,23 +92,16 @@ func (s *Service) RemoveWorktree(ctx context.Context, chatID string, force bool)
 		err = errors.New("this chat has no worktree")
 	case s.worktrees == nil:
 		err = errors.New("no git")
-	case c.removing:
-		err = errors.New("the chat's worktree is being removed")
-	case !c.quietLocked():
-		err = errors.New("the agent is working: clean up once its turn ends")
-	}
-	if err == nil {
-		c.removing = true
 	}
 	c.mu.Unlock()
 	if err != nil {
 		return err
 	}
-	defer func() {
-		c.mu.Lock()
-		c.removing = false
-		c.mu.Unlock()
-	}()
+	release, err := holdFolder("worktree is being removed", mustBeQuiet("the agent is working: clean up once its turn ends"), c)
+	if err != nil {
+		return err
+	}
+	defer release()
 	others, err := s.othersIn(c, wt.Path)
 	if err != nil {
 		return err

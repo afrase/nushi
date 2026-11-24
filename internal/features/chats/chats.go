@@ -172,7 +172,7 @@ type chat struct {
 	halting      bool                            // being deleted: never reopens
 	historyStays bool                            // the last PlanDelete said the agent's history stays (delete.go)
 	stopping     bool                            // its agent is being stopped: nothing more goes to it
-	removing     bool                            // its worktree is being removed (RemoveWorktree): it takes no prompts and doesn't reopen
+	folder       string                          // what a git step does to its folder ("worktree is being removed"; holdFolder): it takes no prompts and doesn't reopen
 	held         bool                            // the last turn was stopped or failed: the queue waits for the next
 	steering     bool                            // a steering worker hands the queue to the running turn
 	steerFailed  bool                            // a steer failed in the running turn: the rest waits for the next (queue.go)

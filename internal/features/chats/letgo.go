@@ -58,7 +58,7 @@ func (c *chat) letGoLocked() {
 // subagent would never let go.
 func (c *chat) canLetGoLocked() bool {
 	return c.copies != nil && c.copiesOn() && c.mirrored && len(c.unsaved) == 0 && len(c.items) > 0 &&
-		c.parent == nil && c.agent == nil && !c.busy && !c.opening && !c.replaying && !c.halting && !c.removing && !c.stopping &&
+		c.parent == nil && c.agent == nil && !c.busy && !c.opening && !c.replaying && !c.halting && c.folder == "" && !c.stopping &&
 		len(c.sides) == 0 && len(c.titling) == 0 && c.quietLocked() &&
 		!slices.ContainsFunc(c.items, underWay)
 }
