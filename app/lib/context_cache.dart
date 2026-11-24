@@ -20,11 +20,17 @@ import 'package:nushi/run_state.dart';
 /// next time the context is asked.
 const _keep = 300;
 
-File get _file => File('$dataDir/context.json');
+/// `context.json`; none on the phone ([appFiles]).
+File? get _file => switch (appFiles) {
+  final dir? => File('$dir/context.json'),
+  null => null,
+};
 
 final Map<String, (DateTime, GetContextUsageResponse)> _known = () {
+  final file = _file;
+  if (file == null) return <String, (DateTime, GetContextUsageResponse)>{};
   try {
-    return readContexts(_file.readAsStringSync());
+    return readContexts(file.readAsStringSync());
   } on Object {
     return <String, (DateTime, GetContextUsageResponse)>{};
   }
@@ -120,9 +126,11 @@ void rememberContext(String chatId, GetContextUsageResponse r) {
 }
 
 void _write() {
+  final file = _file;
+  if (file == null) return; // the phone's live in memory only
   try {
     writeWhole(
-      _file,
+      file,
       utf8.encode(
         jsonEncode({
           for (final MapEntry(:key, value: (at, r)) in _known.entries)

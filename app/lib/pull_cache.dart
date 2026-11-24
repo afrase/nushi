@@ -14,7 +14,11 @@ import 'package:nushi/run_state.dart';
 /// time is when it was read). The [_keep] most recent.
 const _keep = 50;
 
-Directory get _dir => Directory('$dataDir/pulls');
+/// `pulls/`; none on the phone ([appFiles]), which keeps them in memory.
+Directory? get _dir => switch (appFiles) {
+  final dir? => Directory('$dir/pulls'),
+  null => null,
+};
 
 final Map<String, (DateTime, GitHubPull)> _known = runMap();
 
@@ -35,8 +39,10 @@ String? _name(GitHubRef ref) {
   final name = _name(ref);
   if (name == null) return null;
   if (_known[name] case final k?) return k;
+  final dir = _dir;
+  if (dir == null) return null;
   try {
-    final f = File('${_dir.path}/$name');
+    final f = File('${dir.path}/$name');
     if (!f.existsSync()) return null;
     final k = (
       f.lastModifiedSync(),
@@ -54,28 +60,30 @@ void keepPull(GitHubRef ref, GitHubPull p) {
   if (name == null) return;
   final was = _known[name]?.$2;
   _known[name] = (clock(), p);
-  if (was == p) return _touch(name); // the same: only when
+  final dir = _dir;
+  if (dir == null) return; // the phone's live in memory only
+  if (was == p) return _touch(dir, name); // the same: only when
   try {
-    privateDir(_dir);
-    writeWhole(File('${_dir.path}/$name'), p.writeToBuffer());
-    _touch(name);
-    _prune();
+    privateDir(dir);
+    writeWhole(File('${dir.path}/$name'), p.writeToBuffer());
+    _touch(dir, name);
+    _prune(dir);
   } on Object {
     // Not kept on disk; memory still has it until the app quits.
   }
 }
 
-void _touch(String name) {
+void _touch(Directory dir, String name) {
   try {
-    File('${_dir.path}/$name').setLastModifiedSync(clock());
+    File('${dir.path}/$name').setLastModifiedSync(clock());
   } on Object {
     // Its time stays older: it says so, nothing more.
   }
 }
 
 /// Drops all but the [_keep] most recent.
-void _prune() {
-  final files = _dir.listSync().whereType<File>().toList();
+void _prune(Directory dir) {
+  final files = dir.listSync().whereType<File>().toList();
   if (files.length <= _keep) return;
   files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
   for (final f in files.skip(_keep)) {
@@ -89,5 +97,6 @@ void _prune() {
 @visibleForTesting
 void forgetPulls({bool disk = true}) {
   _known.clear();
-  if (disk && _dir.existsSync()) _dir.deleteSync(recursive: true);
+  final dir = _dir;
+  if (disk && dir != null && dir.existsSync()) dir.deleteSync(recursive: true);
 }

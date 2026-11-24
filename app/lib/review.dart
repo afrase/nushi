@@ -168,7 +168,11 @@ String? worktreeOf(String where) {
 /// The scope part of [where] ([whereIn]).
 String scopeOf(String where) => where.substring(where.lastIndexOf('\n') + 1);
 
-File get _file => File('$dataDir/reviews.json');
+/// `reviews.json`; none on the phone ([appFiles]).
+File? get _file => switch (appFiles) {
+  final dir? => File('$dir/reviews.json'),
+  null => null,
+};
 
 /// Every chat's review comments, by chat id, kept in `reviews.json` in
 /// the data folder until sent and gone, or removed.
@@ -183,9 +187,11 @@ bool _reviewsUnread = false;
 /// rest kept and written back, and one that can't be read at all is
 /// none, and isn't written over until it reads.
 Map<String, List<ReviewComment>> _readReviews() {
+  final file = _file;
+  if (file == null) return {}; // the phone's live in memory only
   final Map<String, Object?> j;
   try {
-    j = readKept(_file).json;
+    j = readKept(file).json;
   } on Object {
     _reviewsUnread = true;
     return {};
@@ -205,7 +211,7 @@ Map<String, List<ReviewComment>> _readReviews() {
   }
   if (dropped) {
     try {
-      copyAside(_file);
+      copyAside(file);
     } on Object {
       _reviewsUnread = true; // not copied: not written over either
       return all;
@@ -247,8 +253,10 @@ bool _readReviewsAgain() {
 /// Writes [all] over `reviews.json`; on an error they're kept in memory
 /// until the app quits.
 void _write(Map<String, List<ReviewComment>> all) {
+  final file = _file;
+  if (file == null) return;
   try {
-    writeWhole(_file, utf8.encode(jsonEncode(all)));
+    writeWhole(file, utf8.encode(jsonEncode(all)));
   } on Object {
     // Kept until the app quits.
   }

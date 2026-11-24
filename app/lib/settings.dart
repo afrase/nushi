@@ -843,7 +843,11 @@ Map<String, V> _entries<V extends Object>(
 
 Map<String, List<String>> _byPlace(Object? saved) => _entries(saved, _strings);
 
-File get _settings => File('$dataDir/app.json');
+/// `app.json`; none on the phone ([appFiles]).
+File? get _settings => switch (appFiles) {
+  final dir? => File('$dir/app.json'),
+  null => null,
+};
 
 /// `app.json` as it was at launch, read by [readKept] (one that didn't
 /// parse was set aside, and reads as none); null when it couldn't be read
@@ -852,11 +856,11 @@ File get _settings => File('$dataDir/app.json');
 Kept? _launch = _readLaunch();
 
 Kept? _readLaunch() {
-  // The phone keeps no file: none to read or set aside, and no data
-  // folder to name one in.
-  if (kIsWeb) return (json: <String, Object?>{}, setAside: false);
+  // The phone keeps no file: none to read or set aside.
+  final file = _settings;
+  if (file == null) return (json: <String, Object?>{}, setAside: false);
   try {
-    return readKept(_settings);
+    return readKept(file);
   } on Object catch (e) {
     appLog.warn("app.json can't be read, so it isn't written over", {
       'err': '$e',
@@ -872,8 +876,10 @@ Map<String, Object?> get _saved => _launch?.json ?? const {};
 /// once it reads, and then the prefs not changed since take what it
 /// holds, and what was changed is saved over it.
 bool _readAgain() {
+  final file = _settings;
+  if (file == null) return false;
   try {
-    _launch = readKept(_settings);
+    _launch = readKept(file);
   } on Object {
     return false; // still not: nothing saved, the changes kept in memory
   }
@@ -887,7 +893,7 @@ bool _readAgain() {
 @visibleForTesting
 Map<String, Object?> readSaved() {
   try {
-    return jsonDecode(_settings.readAsStringSync()) as Map<String, Object?>;
+    return jsonDecode(_settings!.readAsStringSync()) as Map<String, Object?>;
   } on Object {
     return <String, Object?>{};
   }
@@ -927,10 +933,12 @@ void _saveSoon() {
 /// that couldn't be read isn't written over, but read again first: the
 /// prefs changed apply in memory until it reads.
 void _save() {
+  final file = _settings;
+  if (file == null) return; // the phone's live in memory only
   if (_launch == null && !_readAgain()) return;
   try {
     writeWhole(
-      _settings,
+      file,
       utf8.encode(
         jsonEncode({
           for (final MapEntry(:key, :value) in _saved.entries)
@@ -954,13 +962,15 @@ void resetAppSettings() {
   for (final p in _made) {
     p._reset();
   }
+  final file = _settings;
+  if (file == null) return;
   try {
     if (_launch == null) {
       // Left as it is: it couldn't be read.
     } else if (_saved.isNotEmpty) {
-      writeWhole(_settings, utf8.encode(jsonEncode(_saved)));
-    } else if (_settings.existsSync()) {
-      _settings.deleteSync();
+      writeWhole(file, utf8.encode(jsonEncode(_saved)));
+    } else if (file.existsSync()) {
+      file.deleteSync();
     }
   } on Object {
     // A test that reads the file would fail on what's left.

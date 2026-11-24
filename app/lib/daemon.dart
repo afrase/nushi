@@ -52,6 +52,14 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     ? Directory.systemTemp.createTempSync('nushi-test-').path
     : Platform.environment['NUSHI_DATA'] ?? native.install.dataFolder;
 
+/// The folder the app's own stores keep their files in (`app.json`,
+/// `reviews.json`, `pulls/`, `context.json`): [dataDir], or null on the
+/// phone, which keeps no files (dart:io has no file system on the web,
+/// and [dataDir] throws there). Each store checks it once and keeps only
+/// memory when it's null, so its catches are left for a real file's
+/// trouble.
+String? get appFiles => kIsWeb ? null : dataDir;
+
 /// The API version this app was built with (`internal/api.Version`).
 const apiVersion = 145;
 
