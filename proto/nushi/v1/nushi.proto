@@ -3812,7 +3812,9 @@ message GitHubItem {
   // A pull request's merge state: "clean", "blocked", "behind", "dirty",
   // "unstable", "has_hooks", "draft", "unknown" or "".
   string merge_state = 19;
-  // A closed issue's reason: "completed", "not_planned" or "".
+  // An issue's state reason, as GitHub gives it: a closed one's
+  // "completed" or "not_planned", "reopened" for an open one that was
+  // once closed, or "". The app reads it for a closed issue only.
   string state_reason = 20;
   // A pull request's base and head branches.
   string base = 21;

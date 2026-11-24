@@ -22509,7 +22509,9 @@ type GitHubItem struct {
 	// A pull request's merge state: "clean", "blocked", "behind", "dirty",
 	// "unstable", "has_hooks", "draft", "unknown" or "".
 	MergeState string `protobuf:"bytes,19,opt,name=merge_state,json=mergeState,proto3" json:"merge_state,omitempty"`
-	// A closed issue's reason: "completed", "not_planned" or "".
+	// An issue's state reason, as GitHub gives it: a closed one's
+	// "completed" or "not_planned", "reopened" for an open one that was
+	// once closed, or "". The app reads it for a closed issue only.
 	StateReason string `protobuf:"bytes,20,opt,name=state_reason,json=stateReason,proto3" json:"state_reason,omitempty"`
 	// A pull request's base and head branches.
 	Base string `protobuf:"bytes,21,opt,name=base,proto3" json:"base,omitempty"`

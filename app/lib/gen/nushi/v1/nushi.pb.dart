@@ -29380,7 +29380,9 @@ class GitHubItem extends $pb.GeneratedMessage {
   @$pb.TagNumber(19)
   void clearMergeState() => $_clearField(19);
 
-  /// A closed issue's reason: "completed", "not_planned" or "".
+  /// An issue's state reason, as GitHub gives it: a closed one's
+  /// "completed" or "not_planned", "reopened" for an open one that was
+  /// once closed, or "". The app reads it for a closed issue only.
   @$pb.TagNumber(20)
   $core.String get stateReason => $_getSZ(19);
   @$pb.TagNumber(20)
