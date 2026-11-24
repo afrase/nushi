@@ -17,16 +17,27 @@ import (
 // stop fails would otherwise steer the next message into it.
 func (c *chat) deliverLocked() {
 	switch {
-	case len(c.queue) == 0 || c.agent == nil || c.stopping || c.halting || c.held || c.steering || c.sendingNow > 0:
-	case !c.busy:
+	case len(c.queue) == 0 || c.steering:
+	case c.mayStartLocked():
 		m := c.queue[0]
 		c.queue = c.queue[1:]
 		c.queueChangedLocked()
 		c.sendLocked(c.imagesTakenLocked(m))
-	case c.steer && !c.started.IsZero() && !c.stopped && !c.steerFailed:
+	case c.mayDeliverLocked() && c.steer && !c.started.IsZero() && !c.stopped && !c.steerFailed:
 		c.steering = true
 		go c.steerQueue(c.agent, acp.SessionID(c.sid))
 	}
+}
+
+// mayStartLocked says the queue's next message may start a turn now: the
+// chat is idle, and the queue may go to its agent (mayDeliverLocked).
+func (c *chat) mayStartLocked() bool { return !c.busy && c.mayDeliverLocked() }
+
+// mayDeliverLocked says the queue may go to the chat's agent at all: it
+// has one that isn't being stopped, the queue isn't held after a stopped
+// or failed turn, and no Send now is on its way, which goes first.
+func (c *chat) mayDeliverLocked() bool {
+	return c.agent != nil && !c.stopping && !c.halting && !c.held && c.sendingNow == 0
 }
 
 // imagesTakenLocked is a queued message as it goes to the agent: without
@@ -84,7 +95,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 			continue
 		case c.indexLocked(id) < 0:
 			return // taken back (Stop) meanwhile: it is in the box
-		case err == nil && !c.busy && c.agent == agent && !c.held && !c.stopped && !c.stopping && !c.halting && c.sendingNow == 0:
+		case err == nil && c.agent == agent && !c.stopped && c.mayStartLocked():
 			c.unsteerLocked(id)
 			c.startLocked(blocks) // the turn ended meanwhile: this starts the next
 			return

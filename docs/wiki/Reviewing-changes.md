@@ -70,7 +70,7 @@ To start a chat in one:
 
 Nushi makes a new branch for the chat. After the first turn, it names the branch after the chat's title. For a worktree chat, **Branch** shows all of the chat's work, committed or not.
 
-To move a chat that already has messages into a new worktree, open the **Worktree** row in the details panel's **Environment** widget and pick **New worktree…**. Uncommitted changes stay where they were.
+To move a chat that already has messages into a new worktree, open the **Worktree** row in the details panel's **Environment** widget and pick **New worktree…**. Uncommitted changes stay where they were. A move waits until the agent is done, including a prompt still waiting for your answer: answer or stop it first.
 
 ## Clean up a worktree
 

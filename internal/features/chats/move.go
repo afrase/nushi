@@ -42,14 +42,8 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	switch {
 	case c.closedLocked() != nil:
 		err = c.closedLocked()
-	case c.busy:
-		err = errors.New("the chat is busy; move it once the turn has ended")
-	case c.ownTurn:
-		err = errors.New("the agent is working on its own (a background task ended); move the chat once it's done")
-	case c.backgroundLocked(0):
-		err = errors.New("a subagent is still running in the background, and moving would stop it; move the chat once it's done")
-	case c.workflowLiveLocked():
-		err = errors.New("a workflow is still running, and moving would stop it; stop it, or move the chat once it's done")
+	default: // moving stops the agent, and with it what it runs or asks
+		err = c.workingLocked("move the chat")
 	}
 	if err != nil || from == folder && !worktree {
 		c.mu.Unlock()

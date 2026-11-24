@@ -209,14 +209,14 @@ func (s *Service) keepSide(ctx context.Context, id string, archive bool) (string
 	of, canLoad := p.record, p.canLoad
 	p.mu.Unlock()
 	side.mu.Lock()
-	busy := side.busy || side.ownTurn || side.waitsLocked() || side.backgroundLocked(0)
+	working := side.workingLocked("keep it")
 	base := slices.Clone(side.base)
 	side.mu.Unlock()
 	switch {
 	case !canLoad:
 		return "", errors.New("the agent can't reopen sessions, so the side chat can't be kept")
-	case busy && !archive:
-		return "", errors.New("the side chat is busy; keep it once its turn has ended")
+	case working != nil && !archive:
+		return "", working
 	}
 	// The side chat's base is the chat's items, which may hold images as
 	// references to the chat's copy; the new chat's copy is its own.

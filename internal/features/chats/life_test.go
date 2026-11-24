@@ -161,6 +161,43 @@ func TestNoMoveWhileTheChatGoesOrTheAgentWorks(t *testing.T) {
 	}
 }
 
+// A prompt the agent asks on its own, with no turn running (after a
+// background task), would be dropped by a Move, which stops the agent: the
+// Move is refused until it's answered or gone, as a rewind is.
+func TestNoMoveWhileAPromptWaitsAlone(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	c.kind.Moves = true
+	turn(t, svc, c, "one")
+	gone := askAlone(t, c)
+	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err == nil || !strings.Contains(err.Error(), "on its own") {
+		t.Errorf("moved while a prompt waited: %v", err)
+	}
+	gone()
+	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err != nil {
+		t.Error(err)
+	}
+}
+
+// askAlone has the chat's agent ask a permission outside a turn, as it
+// does on its own after a background task, and waits for the card; the
+// func it returns takes the ask back and waits until it has gone.
+func askAlone(t *testing.T, c *chat) func() {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _ = c.RequestPermission(ctx, &acp.RequestPermissionRequest{SessionID: "s1",
+			ToolCall: acp.ToolCallUpdate{ToolCallID: "t9", Title: "rm -rf build"}, Options: []acp.PermissionOption{{OptionID: "yes", Name: "Yes", Kind: "allow_once"}}})
+	}()
+	eventually(t, c, func() bool { return c.waitsLocked() })
+	t.Cleanup(func() { cancel(); <-done })
+	return func() {
+		cancel()
+		<-done
+	}
+}
+
 // What its agent ran ends with it: a call without a result (replayed after
 // the agent died) and a subagent in the background.
 func TestWhatTheAgentRanEndsWithIt(t *testing.T) {

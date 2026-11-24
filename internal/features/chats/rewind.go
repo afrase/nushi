@@ -58,15 +58,10 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		i := c.indexLocked(itemID)
+		if err := c.workingLocked("rewind"); err != nil {
+			return err
+		}
 		switch {
-		case c.busy:
-			return errors.New("the chat is busy; rewind once the turn has ended")
-		case c.ownTurn || c.waitsLocked():
-			return errors.New("the agent is working on its own (a background task ended); stop it, or rewind once it's done")
-		case c.backgroundLocked(0):
-			return errors.New("a subagent is still running in the background; rewind once it's done")
-		case c.workflowLiveLocked():
-			return errors.New("a workflow is still running, and rewinding would stop it; stop it, or rewind once it's done")
 		case i < 0 || c.items[i].Kind != model.UserMessage:
 			return errors.New("no such message")
 		case !c.rewindableLocked(i):

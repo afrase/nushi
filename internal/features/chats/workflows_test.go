@@ -555,6 +555,22 @@ func TestNoMoveOrRewindWhileAWorkflowRuns(t *testing.T) {
 	}
 }
 
+// A side chat whose workflow still runs isn't kept as a chat: keeping it
+// stops its agent, and the workflow with it.
+func TestNoKeepingASideChatWhileItsWorkflowRuns(t *testing.T) {
+	f := workflowChat(t, Timing{}, runningAs)
+	sideID, err := f.svc.Fork(t.Context(), f.c.id)
+	testcheck.NoErr(t, err)
+	f.svc.mu.Lock()
+	side := f.svc.chats[sideID]
+	f.svc.mu.Unlock()
+	launchAs(side, "wf2", "task2", "wf_2")
+	eventually(t, side, side.workflowLiveLocked)
+	if _, err := f.svc.KeepSide(t.Context(), sideID); err == nil || !strings.Contains(err.Error(), "workflow") {
+		t.Errorf("kept a side chat while its workflow ran: %v", err)
+	}
+}
+
 // The agent that ran it gone, a last read after the grace: its snapshot if
 // it left one, else stopped, in Nushi's words. In a bubble whose clock
 // never moves: reads come only from pokes, so each step is the

@@ -126,6 +126,26 @@ func (c *chat) quietLocked() bool {
 		!slices.ContainsFunc(c.items, running)
 }
 
+// workingLocked says why verb (a Move, a rewind, keeping a side chat,
+// renaming its branch) would cut into the agent's work, or nil: a turn or
+// another of the chat's steps runs, the agent works on its own or waits
+// on the user (a prompt it asked on its own, which a Move would drop), a
+// subagent runs in the background, or a workflow hasn't ended. One message
+// per cause, each saying when verb can go ahead.
+func (c *chat) workingLocked(verb string) error {
+	switch {
+	case c.busy:
+		return fmt.Errorf("the chat is busy; %s once the turn has ended", verb)
+	case c.ownTurn || c.waitsLocked():
+		return fmt.Errorf("the agent is working on its own (a background task ended); stop it, or %s once it's done", verb)
+	case c.backgroundLocked(0):
+		return fmt.Errorf("a subagent is still running in the background; %s once it's done", verb)
+	case c.workflowLiveLocked():
+		return fmt.Errorf("a workflow is still running; stop it, or %s once it's done", verb)
+	}
+	return nil
+}
+
 // awake wakes a sleeping chat for something that needs its agent, and
 // waits until it has reopened (or failed to: the chat says why).
 func (s *Service) awake(ctx context.Context, c *chat) error {
