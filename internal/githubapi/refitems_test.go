@@ -140,6 +140,53 @@ func TestEveryReadCleansTitles(t *testing.T) {
 	}
 }
 
+// TestManagedUserLogins: an Enterprise Managed User's login (handle,
+// underscore, the enterprise's short code) is a login, so a pull
+// request's or an issue's author stays theirs in the inbox, Pull, Issue
+// and Items; the app compares it with the viewer's login to know what is
+// the user's own.
+func TestManagedUserLogins(t *testing.T) {
+	const node = `"id":"N_1","number":1,"title":"t","url":"https://github.com/a/b/pull/1","state":"OPEN",` +
+		`"author":{"login":"mona-cat_octo"},"repository":{"nameWithOwner":"a/b"}`
+	f := newFake(t)
+	f.route("graphql Inbox", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"review":{"issueCount":0,"nodes":[]},"mine":{"issueCount":1,"nodes":[{"__typename":"PullRequest",` + node + `}]},` +
+			`"assigned":{"issueCount":1,"nodes":[{"__typename":"Issue",` + node + `}]}}}`))
+	})
+	f.route("graphql PullRequest", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"repository":{"pullRequest":{"__typename":"PullRequest",` + node + `}}}}`))
+	})
+	f.route("graphql Issue", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"repository":{"issue":{"__typename":"Issue",` + node + `}}}}`))
+	})
+	f.route("graphql Items", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"r0":{"i0":{"__typename":"PullRequest",` + node + `}}}}`))
+	})
+	c := f.client()
+	in, err := c.Inbox(t.Context(), InboxFilter{})
+	if err != nil || len(in.Mine) != 1 || len(in.Assigned) != 1 {
+		t.Fatalf("inbox %+v %v", in, err)
+	}
+	p, err := c.Pull(t.Context(), "a/b", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	is, err := c.Issue(t.Context(), "a/b", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, _, err := c.Items(t.Context(), []model.GitHubRef{{Repo: "a/b", Number: 1}})
+	if err != nil || len(items) != 1 {
+		t.Fatalf("items %+v %v", items, err)
+	}
+	for name, it := range map[string]model.GitHubItem{"inbox's pull": in.Mine[0], "inbox's issue": in.Assigned[0],
+		"pull": p.GitHubItem, "issue": is.GitHubItem, "items": items[0]} {
+		if it.Author != "mona-cat_octo" {
+			t.Errorf("%s: author %q", name, it.Author)
+		}
+	}
+}
+
 // TestIssueSaysWhyItClosed: an issue whole is asked for when it was
 // opened and why it closed, so its pane dates its description and says
 // "Not planned".

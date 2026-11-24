@@ -48,9 +48,10 @@ func (t *text) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// loginRE is a GitHub login: letters, digits and dashes, 39 at most, a
-// bot's with its [bot].
-var loginRE = regexp.MustCompile(`^[A-Za-z0-9-]{1,39}(\[bot\])?$`)
+// loginRE is a GitHub login: letters, digits and dashes, 39 at most, an
+// Enterprise Managed User's with an underscore and its enterprise's short
+// code after them (mona-cat_octo), a bot's with its [bot].
+var loginRE = regexp.MustCompile(`^[A-Za-z0-9-]{1,39}(_[A-Za-z0-9]{1,39})?(\[bot\])?$`)
 
 // shown is a login for a view's own sentence, where anything else ("someone")
 // would read as Nushi's words.
