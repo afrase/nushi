@@ -542,6 +542,30 @@ func TestGhLoginSince(t *testing.T) {
 	}
 }
 
+// TestHostsAfterGhLogin: Settings › GitHub lists a host gh signed in to
+// just now without the unknown host's 30 s: the user is looking.
+func TestHostsAfterGhLogin(t *testing.T) {
+	w := newWorld(t)
+	if _, err := w.s.client(t.Context(), "git.corp.example"); err == nil {
+		t.Fatal("a host gh doesn't know")
+	}
+	w.mu.Lock()
+	w.ghHosts = append(w.ghHosts, "git.corp.example") // gh auth login
+	w.mu.Unlock()
+	hosts, err := w.s.Hosts(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range hosts {
+		if h.Host == "git.corp.example" && h.Problem != "" {
+			t.Fatalf("listed with a problem: %q", h.Problem)
+		}
+	}
+	if _, err := w.s.client(t.Context(), "git.corp.example"); err != nil {
+		t.Fatalf("after the listing: %v", err)
+	}
+}
+
 // Ten asking at once for a host not yet read all get the same client.
 func TestHostAtOnce(t *testing.T) {
 	w := newWorld(t)

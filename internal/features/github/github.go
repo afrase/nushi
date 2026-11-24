@@ -203,6 +203,11 @@ func (s *Service) Hosts(ctx context.Context) ([]HostState, error) {
 		}
 	}
 	slices.Sort(names)
+	s.mu.Lock()
+	for _, name := range names {
+		delete(s.unknown, name) // listed just now, and the user is looking: not the 30 s memo
+	}
+	s.mu.Unlock()
 	out := make([]HostState, 0, len(names))
 	for _, name := range names {
 		st := HostState{Host: name, Pasted: slices.Contains(pasted, name)}
@@ -274,7 +279,8 @@ func normalHost(name string) (string, bool) {
 // picked: gh's GH_ENTERPRISE_TOKEN would be given for any. A host gh
 // doesn't know has gh's config read again first, for a login since; one
 // found unknown is believed for unknownFor (a GitLab remote's every
-// poll, a link in a transcript), until a token is added or removed.
+// poll, a link in a transcript), until a token is added or removed or
+// Hosts lists it.
 func (s *Service) known(name string) (string, []string, error) {
 	h, ok := normalHost(name)
 	if !ok {
