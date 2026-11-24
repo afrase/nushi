@@ -1,14 +1,10 @@
 package relayupdate
 
 import (
-	"bytes"
 	"context"
 	"debug/elf"
 	"fmt"
-	"os/exec"
 	"runtime"
-	"strings"
-	"time"
 )
 
 // machines is each architecture a release builds a relay for, as ELF
@@ -19,17 +15,21 @@ var machines = map[string]elf.Machine{
 }
 
 // CheckBinary is the check of a new relay before it takes this one's
-// place, as far as is cheap: a Linux program for this machine, which says
-// it is that version when asked.
-func CheckBinary(ctx context.Context, path, version string) error {
-	if err := checkMachine(path, runtime.GOARCH); err != nil {
+// place: its header must say a 64-bit Linux program for this machine. It
+// reads the file and never runs it, since -update usually runs as root
+// and running what it downloaded would hand the release's publisher root
+// before anyone chose to run it (ADR 0149). An update whose context has
+// ended (^C, a hangup) stops here, so the staged file is discarded.
+func CheckBinary(ctx context.Context, path string) error {
+	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return checkVersion(ctx, path, version)
+	return checkELF(path, runtime.GOARCH)
 }
 
-// checkMachine refuses a file that isn't an ELF program for goarch.
-func checkMachine(path, goarch string) error {
+// checkELF refuses a file that isn't a 64-bit ELF executable (ET_EXEC or
+// ET_DYN) for goarch.
+func checkELF(path, goarch string) error {
 	want, ok := machines[goarch]
 	if !ok {
 		return fmt.Errorf("a release has no relay for %s", goarch)
@@ -39,42 +39,13 @@ func checkMachine(path, goarch string) error {
 		return fmt.Errorf("the new file isn't a Linux program: %w", err)
 	}
 	defer f.Close() //nolint:errcheck // read only
-	if f.Machine != want {
+	switch {
+	case f.Class != elf.ELFCLASS64:
+		return fmt.Errorf("the new file is %s, not 64-bit", f.Class)
+	case f.Type != elf.ET_EXEC && f.Type != elf.ET_DYN:
+		return fmt.Errorf("the new file is %s, not an executable", f.Type)
+	case f.Machine != want:
 		return fmt.Errorf("the new file is for %s, not this machine's %s", f.Machine, want)
 	}
 	return nil
-}
-
-// checkVersion runs `<path> -version` with an empty environment for a few
-// seconds at most, and wants it to print "nushi-relay <version>".
-func checkVersion(ctx context.Context, path, version string) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, path, "-version")
-	cmd.Env = []string{}
-	cmd.Dir = "/"
-	out := &capped{max: 4096}
-	cmd.Stdout, cmd.Stderr = out, out
-	cmd.WaitDelay = time.Second
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("the new file's -version failed: %w: %s", err, bytes.TrimSpace(out.buf.Bytes()))
-	}
-	want := "nushi-relay " + version
-	if got := strings.TrimSpace(out.buf.String()); got != want {
-		return fmt.Errorf("the new file's -version says %q, not %q", got, want)
-	}
-	return nil
-}
-
-// capped keeps the first max bytes written to it and drops the rest.
-type capped struct {
-	buf bytes.Buffer
-	max int
-}
-
-func (c *capped) Write(p []byte) (int, error) {
-	if room := c.max - c.buf.Len(); room > 0 {
-		c.buf.Write(p[:min(len(p), room)])
-	}
-	return len(p), nil
 }

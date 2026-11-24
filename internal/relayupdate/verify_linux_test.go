@@ -1,21 +1,24 @@
 package relayupdate
 
 import (
+	"context"
 	"runtime"
 	"testing"
 
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// The real verifier passes a real program of this machine's that answers
-// as the version, and refuses one that answers otherwise.
+// The real verifier passes a real program of this machine's, reading it
+// only, and stops once the update's context has ended.
 func TestCheckBinaryOnLinux(t *testing.T) {
 	if _, ok := machines[runtime.GOARCH]; !ok {
 		t.Skip("a release has no relay for " + runtime.GOARCH)
 	}
-	prog := fakeRelay(t, "linux", runtime.GOARCH, "1.3.0")
-	testcheck.NoErr(t, CheckBinary(t.Context(), prog, "1.3.0"))
-	if err := CheckBinary(t.Context(), prog, "1.3.1"); err == nil {
-		t.Error("the wrong version passed")
+	prog := fakeRelay(t, "linux", runtime.GOARCH)
+	testcheck.NoErr(t, CheckBinary(t.Context(), prog))
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := CheckBinary(ctx, prog); err == nil {
+		t.Error("an ended update passed")
 	}
 }

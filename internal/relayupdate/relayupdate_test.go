@@ -49,7 +49,7 @@ func TestInstallsNewer(t *testing.T) {
 		t.Errorf("the old file was written over, not replaced: %q", buf[:n])
 	}
 	r.alone(t)
-	if !slices.Equal(r.verified, []string{"1.3.0"}) || len(r.restarts) != 0 {
+	if len(r.verified) != 1 || len(r.restarts) != 0 {
 		t.Errorf("verified %v, restarted %v", r.verified, r.restarts)
 	}
 	for _, ua := range f.agents {
@@ -229,13 +229,13 @@ func TestRefusalsLeaveTheRelay(t *testing.T) {
 		{"not gzip", withTarball([]byte("plain text")), "reading the tarball"},
 		{"an oversized file", func(_ *fakeGitHub, r *run) { r.u.limits.binary = 4 }, "more than 4"},
 		{"the verifier refuses", func(_ *fakeGitHub, r *run) {
-			r.u.Verify = func(_ context.Context, path, _ string) error {
+			r.u.Verify = func(_ context.Context, path string) error {
 				if b, _ := os.ReadFile(path); string(b) != "new relay" {
 					t.Errorf("verified %q", b)
 				}
-				return errors.New(`the new file's -version says "nushi-relay 1.2.0"`)
+				return errors.New("the new file is for EM_X86_64, not this machine's EM_AARCH64")
 			}
-		}, "checking the new relay: the new file's -version says"},
+		}, "checking the new relay: the new file is for EM_X86_64"},
 	} {
 		f := newFakeGitHub(t)
 		f.publish(t, "v1.3.0", false, false, map[string][]byte{name: good, name + ".sha256": sumOf(good)})

@@ -188,7 +188,7 @@ type run struct {
 	u        *Updater
 	exe      string
 	out      bytes.Buffer
-	verified []string // the versions the verifier was asked for
+	verified []string // the files the verifier was asked about
 	restarts []string
 }
 
@@ -205,11 +205,11 @@ func (f *fakeGitHub) newRun(t *testing.T, version string) *run {
 	r.u.Client = NewClient(f.api.Client().Transport)
 	r.u.Exe = r.exe
 	r.u.GOOS, r.u.GOARCH = "linux", "arm64"
-	r.u.Verify = func(_ context.Context, path, v string) error {
+	r.u.Verify = func(_ context.Context, path string) error {
 		if filepath.Dir(path) != filepath.Dir(r.exe) {
 			t.Errorf("verified %s, not beside %s", path, r.exe)
 		}
-		r.verified = append(r.verified, v)
+		r.verified = append(r.verified, path)
 		return nil
 	}
 	r.u.Restart = func(_ context.Context, unit string) error {

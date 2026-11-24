@@ -2,7 +2,8 @@
 // stable release's, when a person asks (`nushi-relay -update`, ADR 0149):
 // it asks GitHub for the latest release, downloads this machine's tarball
 // and its .sha256, checks one against the other, unpacks the one file,
-// runs it once with -version, and renames it over this binary.
+// checks its ELF header, and renames it over this binary. It never runs
+// what it downloaded.
 package relayupdate
 
 import (
@@ -47,9 +48,9 @@ type Updater struct {
 	GOARCH  string
 	Timeout time.Duration // the whole download and install
 
-	// Verify checks the new binary at path before it is installed
-	// (CheckBinary).
-	Verify func(ctx context.Context, path, version string) error
+	// Verify checks the new binary at path before it is installed,
+	// without running it (CheckBinary).
+	Verify func(ctx context.Context, path string) error
 	// Restart restarts the unit after an install (Systemctl).
 	Restart func(ctx context.Context, unit string) error
 
@@ -168,7 +169,7 @@ func (u *Updater) install(ctx context.Context, rel release, latest version) (str
 		err = copyOwner(staged.Name(), old)
 	}
 	if err == nil {
-		err = u.Verify(ctx, staged.Name(), latest.String())
+		err = u.Verify(ctx, staged.Name())
 	}
 	if err != nil {
 		staged.Discard()
