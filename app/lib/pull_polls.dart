@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 
 /// How often a chat's pull requests are asked for (ADR 0140): an open one,
@@ -12,17 +14,76 @@ const pullWidgetPoll = Duration(minutes: 1);
 const pullDonePoll = Duration(minutes: 15);
 const pullAwayPoll = Duration(minutes: 5);
 
-/// Whether the app's window is in front (focused): the polls slow down
-/// while it isn't (ADR 0140). A test's binding, which says nothing, is.
-bool get inFront {
-  final s = WidgetsBinding.instance.lifecycleState;
-  return s == null || s == AppLifecycleState.resumed;
-}
-
-/// [every], or [pullAwayPoll] while the window isn't in front, whichever
-/// is longer.
+/// [every], or [pullAwayPoll] while the window isn't in front
+/// ([appInFront]), whichever is longer.
 Duration polledEvery(Duration every) =>
-    inFront || every > pullAwayPoll ? every : pullAwayPoll;
+    appInFront || every > pullAwayPoll ? every : pullAwayPoll;
+
+/// A view's quiet poll (the Jira and GitHub views' lists and details;
+/// ADR 0042, 0046): [ask] each [every] while the view is seen, never
+/// while the window isn't in front ([appInFront]) or while [hidden] says
+/// something covers it (a list under its details), and once when the
+/// window comes back to the front if a poll was skipped for it. [every]
+/// is read as each wait starts, so a pull request merged meanwhile slows
+/// its own pace. A chat's pull requests keep polling in the background,
+/// slower ([polledEvery]; ADR 0140): their failing checks flag the chat,
+/// and a view has nothing like that.
+ViewPoll viewPoll(
+  Duration Function() every,
+  VoidCallback ask, {
+  bool Function()? hidden,
+}) => ViewPoll._(every, ask, hidden);
+
+/// A [viewPoll], to [ViewPoll.cancel] with its view.
+class ViewPoll {
+  new _(this._every, this._ask, this._hidden) {
+    _front = AppLifecycleListener(onResume: _resumed);
+    _arm();
+  }
+
+  final Duration Function() _every;
+  final VoidCallback _ask;
+  final bool Function()? _hidden;
+  late final AppLifecycleListener _front;
+  Timer? _timer;
+
+  /// A poll was skipped while the window wasn't in front.
+  bool _missed = false;
+
+  bool get _covered => _hidden?.call() ?? false;
+
+  void _arm() {
+    _timer?.cancel();
+    _timer = Timer(_every(), _tick);
+  }
+
+  void _tick() {
+    _arm();
+    if (!appInFront) {
+      _missed = true;
+    } else if (!_covered) {
+      _ask();
+    }
+  }
+
+  /// Back in front: one catch-up ask if a poll was skipped meanwhile.
+  void _resumed() {
+    if (!_missed) return;
+    _missed = false;
+    if (_covered) return;
+    _arm();
+    _ask();
+  }
+
+  /// The next poll a whole wait from now (the view asked itself).
+  void again() => _arm();
+
+  /// Stops polling.
+  void cancel() {
+    _timer?.cancel();
+    _front.dispose();
+  }
+}
 
 /// How long until [p] is asked for again: [pullDonePoll] once merged or
 /// closed, else [pullWidgetPoll] (also before it's known).

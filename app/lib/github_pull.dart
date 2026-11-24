@@ -19,7 +19,6 @@ import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_merge_card.dart';
 import 'package:nushi/pull_merge_state.dart';
 import 'package:nushi/pull_overview.dart';
-import 'package:nushi/pull_polls.dart';
 import 'package:nushi/pull_skeleton.dart';
 import 'package:nushi/pull_thread_card.dart';
 import 'package:nushi/pull_todo_items.dart';
@@ -80,7 +79,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   late DateTime? _keptAt = _kept?.$1;
   bool _asking = true;
   String? _error;
-  Timer? _poll;
+  ViewPoll? _poll;
   late PullSection _tab = _tabLeft[_refKey] ?? PullSection.overview;
   String get _refKey =>
       '${widget.ref.host} ${widget.ref.repo} ${widget.ref.number}';
@@ -114,7 +113,13 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       });
     } else {
       unawaited(_load());
-      _arm();
+      // As every pull poll's pace (ADR 0140): each minute, every 15 once
+      // merged or closed; only while seen (a view's poll, ADR 0046), and
+      // re-armed after each load, so its state picks the next wait.
+      _poll = viewPoll(
+        () => pullPoll(_pull),
+        () => unawaited(_load(quiet: true)),
+      );
     }
     unawaited(
       githubLogin(widget.daemon, widget.ref.host).then((me) {
@@ -153,17 +158,6 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     await s.again();
   }
 
-  /// The next quiet ask, as every pull poll is (ADR 0140): each minute,
-  /// every 15 once merged or closed, every 5 while the window isn't in
-  /// front; re-armed after each load, so its state picks the next pace.
-  void _arm() {
-    _poll?.cancel();
-    _poll = Timer(
-      polledEvery(pullPoll(_pull)),
-      () => unawaited(_load(quiet: true)),
-    );
-  }
-
   /// The newest [_load]'s number: an older answer (a poll overtaken by the
   /// reload after a merge or a post) is dropped.
   int _asked = 0;
@@ -190,7 +184,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       if (mounted && n == _asked && _asking) {
         setState(() => _asking = false);
       }
-      if (mounted && n == _asked) _arm();
+      if (mounted && n == _asked) _poll?.again();
     }
   }
 

@@ -29,7 +29,7 @@ Start work shows on the row under the pointer and the selected one (⌘⏎), and
 
 **Keys:** ↑↓ or j k pick, ⌘⏎ starts work, ⌘R refreshes, ⌥⌘1–9 (Alt+1–9 on Linux) switch lists, / goes to the JQL, Esc closes.
 
-**Freshness.** What a list or an issue showed last shows at once while Jira is asked again ("Updated 5m ago · refreshing"); the daemon keeps it per site in its data folder. Lists and the issue are asked for again each minute while the view shows. Nothing reaches Jira otherwise, and Nushi never writes to it unless you (or an agent, through its tools) do.
+**Freshness.** What a list or an issue showed last shows at once while Jira is asked again ("Updated 5m ago · refreshing"); the daemon keeps it per site in its data folder. Lists and the issue are asked for again each minute while the view shows: the list not while an issue covers it, and nothing while Nushi's window is in the background, then once as it comes back. A refresh that fails keeps what shows and says so: "Couldn't refresh · as of 3m ago". Nothing reaches Jira otherwise, and Nushi never writes to it unless you (or an agent, through its tools) do.
 
 ## Starting work on an issue
 

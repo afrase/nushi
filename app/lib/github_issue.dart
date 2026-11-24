@@ -9,6 +9,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/item_chats.dart';
 import 'package:nushi/keys.dart';
+import 'package:nushi/pull_polls.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -28,15 +29,15 @@ class GitHubIssuePane extends StatefulWidget {
 class _GitHubIssuePaneState extends State<GitHubIssuePane> {
   GitHubIssue? _issue;
   String? _error;
-  Timer? _poll;
+  ViewPoll? _poll;
 
   @override
   void initState() {
     super.initState();
     unawaited(_load());
-    _poll = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => unawaited(_load(quiet: true)),
+    _poll = viewPoll(
+      () => const Duration(minutes: 1),
+      () => unawaited(_load(quiet: true)),
     );
   }
 

@@ -128,6 +128,7 @@ class JiraBar extends StatelessWidget {
     required this.onClose,
     super.key,
     this.updated,
+    this.failed = false,
   });
 
   final List<JiraSite> sites;
@@ -136,6 +137,9 @@ class JiraBar extends StatelessWidget {
 
   /// When Jira said what shows, if it's what was kept from last time.
   final DateTime? updated;
+
+  /// The last quiet poll failed: [updated] is the last answer's time.
+  final bool failed;
   final void Function(String? id) onSite;
   final VoidCallback onRefresh;
   final VoidCallback onClose;
@@ -178,7 +182,8 @@ class JiraBar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (updatedLine(updated, loading: loading) case final line?)
+          if (updatedLine(updated, loading: loading, failed: failed)
+              case final line?)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: Text(line, style: theme.ui(t.textMuted, size: 12)),

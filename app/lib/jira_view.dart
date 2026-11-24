@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/back_swipe.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
@@ -14,6 +15,7 @@ import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/pull_polls.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/token_notices.dart';
@@ -79,12 +81,17 @@ class _JiraViewState extends State<JiraView> {
   String? _error;
   bool _loading = false;
   int _asked = 0;
-  Timer? _poll;
+  ViewPoll? _poll;
 
   /// Which list [_tasks] are ([_listKey]), and when Jira said so if they
   /// are what the daemon kept from last time (shown while it's asked).
   String? _shown;
   DateTime? _cachedAt;
+
+  /// When the last answer came, and whether the quiet poll after it
+  /// failed: what shows is then that answer, "as of" its time.
+  DateTime? _okAt;
+  bool _failed = false;
 
   /// A load has gone on a while (150 ms) with nothing to show: the
   /// skeleton shows.
@@ -141,7 +148,11 @@ class _JiraViewState extends State<JiraView> {
   void initState() {
     super.initState();
     unawaited(_loadSites());
-    _poll = Timer.periodic(jiraPoll, (_) => unawaited(_load(quiet: true)));
+    _poll = viewPoll(
+      () => jiraPoll,
+      () => unawaited(_load(quiet: true)),
+      hidden: () => _details != null, // the issue's pane polls instead
+    );
     _underSettings = widget.daemon.settingsOpen != null;
     widget.daemon.addListener(_settingsShut);
     jiraCollapsed.addListener(_keepVisible);
@@ -237,7 +248,7 @@ class _JiraViewState extends State<JiraView> {
         _tasks = const [];
         _error = null;
         _shown = _cachedAt = null;
-        _loading = _slow = false;
+        _loading = _slow = _failed = false;
       });
       return;
     }
@@ -270,15 +281,24 @@ class _JiraViewState extends State<JiraView> {
       setState(() {
         _show(key, on, got);
         _cachedAt = null;
+        _okAt = clock();
+        _failed = false;
         _error = null;
       });
     } on Object catch (e) {
-      if (n == _asked && mounted && !quiet) {
+      if (n == _asked && mounted && quiet) {
+        // The last answer stays, saying it's from then (ADR 0046).
+        setState(() {
+          _cachedAt ??= _okAt;
+          _failed = _cachedAt != null;
+        });
+      } else if (n == _asked && mounted) {
         setState(() {
           if (_shown != key) {
             _tasks = const [];
             _shown = _cachedAt = null;
           }
+          _failed = false;
           _error = errorText(e);
         });
       }
@@ -486,6 +506,7 @@ class _JiraViewState extends State<JiraView> {
               site: _every ? null : site,
               loading: _loading,
               updated: _cachedAt,
+              failed: _failed,
               onSite: (id) {
                 setState(() {
                   _all = id == null;

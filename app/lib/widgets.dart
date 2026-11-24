@@ -420,10 +420,17 @@ class RowsLoading extends StatelessWidget {
 
 /// What the bar says of what shows: "Updated 3m ago · refreshing" for
 /// what was kept from last time while it's asked again, "Updated 3m ago"
-/// once asking failed, "Loading…" with nothing kept.
-String? updatedLine(DateTime? updated, {required bool loading}) {
+/// once asking failed, "Loading…" with nothing kept; "Couldn't refresh ·
+/// as of 3m ago" once a quiet poll [failed] (what shows is the last
+/// answer, from [updated]; ADR 0046).
+String? updatedLine(
+  DateTime? updated, {
+  required bool loading,
+  bool failed = false,
+}) {
   if (updated == null) return loading ? 'Loading…' : null;
   final when = ago(clock().difference(updated), updated);
+  if (failed && !loading) return "Couldn't refresh · as of $when";
   return 'Updated $when${loading ? ' · refreshing' : ''}';
 }
 

@@ -16,6 +16,7 @@ Jira is the first integration with a UI of its own in Nushi: lists, an issue vie
 - Another program of the user's, an agent included, can't read the token without that prompt; it can still delete the item (`security delete-generic-password` asks nothing), which costs the user a token to paste again.
 - Images in an issue come from its attachments, fetched by the daemon with the token; a URL in an issue's text is never fetched.
 - Data Center, OAuth (or Rovo MCP's public-client OAuth) and webhooks are later adapters, not in the code.
+- 2026-11-24: "while the Jira view shows" means seen: the list and the open issue poll only while Nushi's window is in front (`viewPoll`, as ADR 0046's views), and the list not while the issue covers it; one catch-up ask as the window comes back. A failed quiet poll keeps the last answer, its line saying "Couldn't refresh · as of 3m ago".
 
 ## Alternatives considered
 - `go-atlassian` or `go-jira`: much more than Nushi uses, and the search endpoint Jira moved to is new in them; the client is about 830 lines.

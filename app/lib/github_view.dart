@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/back_swipe.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_bar.dart';
@@ -15,6 +16,7 @@ import 'package:nushi/github_pull.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/pull_polls.dart';
 import 'package:nushi/run_state.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/settings.dart';
@@ -84,12 +86,17 @@ class _GitHubViewState extends State<GitHubView> {
   String? _error;
   bool _loading = false;
   int _asked = 0;
-  Timer? _poll;
+  ViewPoll? _poll;
 
   /// Which inbox [_inbox] is (host, repositories, teams), and when GitHub
   /// said so if it's what the daemon kept from last time.
   String? _shown;
   DateTime? _cachedAt;
+
+  /// When the last answer came, and whether the quiet poll after it
+  /// failed: what shows is then that answer, "as of" its time (ADR 0046).
+  DateTime? _okAt;
+  bool _failed = false;
 
   /// A load has gone on 150 ms with nothing to show: the skeleton shows.
   bool _slow = false;
@@ -129,7 +136,11 @@ class _GitHubViewState extends State<GitHubView> {
   void initState() {
     super.initState();
     unawaited(_loadHosts());
-    _poll = Timer.periodic(githubPoll, (_) => unawaited(_load(quiet: true)));
+    _poll = viewPoll(
+      () => githubPoll,
+      () => unawaited(_load(quiet: true)),
+      hidden: () => _details != null, // the details' pane polls instead
+    );
     _underSettings = widget.daemon.settingsOpen != null;
     widget.daemon.addListener(_settingsShut);
   }
@@ -237,13 +248,24 @@ class _GitHubViewState extends State<GitHubView> {
       setState(() {
         _show(key, r);
         _cachedAt = null;
+        _okAt = r.atMs == 0
+            ? clock()
+            : DateTime.fromMillisecondsSinceEpoch(r.atMs.toInt());
+        _failed = false;
         _error = r.stale.isEmpty ? null : r.stale;
       });
     } on Object catch (e) {
-      if (n == _asked && mounted && !quiet) {
+      if (n == _asked && mounted && quiet) {
+        // The last answer stays, saying it's from then.
+        setState(() {
+          _cachedAt ??= _okAt;
+          _failed = _cachedAt != null;
+        });
+      } else if (n == _asked && mounted) {
         setState(() {
           // Another filter's rows aren't what this one asked for.
           if (_shown != key) _inbox = _shown = null;
+          _failed = false;
           _error = errorText(e);
         });
       }
@@ -424,6 +446,7 @@ class _GitHubViewState extends State<GitHubView> {
               onDays: _setDays,
               loading: _loading,
               updated: _cachedAt,
+              failed: _failed,
               onHost: (h) {
                 setState(() {
                   _host = h;

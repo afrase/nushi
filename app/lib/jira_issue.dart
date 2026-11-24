@@ -13,6 +13,7 @@ import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/jira_issue_parts.dart';
 import 'package:nushi/jira_work.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/pull_polls.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/web_page.dart' show openLinkOrSay;
 import 'package:nushi/widgets.dart';
@@ -47,12 +48,17 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
   JiraIssue? _issue;
   List<JiraWrite> _writes = const []; // what agents wrote through their tools
   String? _error;
-  Timer? _poll;
+  ViewPoll? _poll;
 
   /// When Jira said what shows, while it's what the daemon kept from last
   /// time; [_refreshing] while Jira is asked.
   DateTime? _cachedAt;
   bool _refreshing = true;
+
+  /// When Jira last answered, and whether the quiet poll after it failed:
+  /// what shows is then that answer, "as of" its time (ADR 0046).
+  DateTime? _okAt;
+  bool _failed = false;
 
   /// The newest [_load]'s number: an older answer (a poll overtaken by the
   /// reload after a post) is dropped.
@@ -63,7 +69,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
     super.initState();
     unawaited(_showKept());
     unawaited(_load());
-    _poll = Timer.periodic(issuePoll, (_) => unawaited(_load(quiet: true)));
+    _poll = viewPoll(() => issuePoll, () => unawaited(_load(quiet: true)));
   }
 
   @override
@@ -84,10 +90,17 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
           _writes = r.agentWrites;
           _error = null;
           _cachedAt = null;
+          _okAt = clock();
+          _failed = false;
         });
       }
     } on Object catch (e) {
-      if (mounted && n == _asked && !quiet) {
+      if (mounted && n == _asked && quiet) {
+        setState(() {
+          _cachedAt ??= _okAt;
+          _failed = _cachedAt != null;
+        });
+      } else if (mounted && n == _asked) {
         setState(() => _error = errorText(e));
       }
     } finally {
@@ -168,7 +181,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         ],
       ),
     );
-    final kept = updatedLine(_cachedAt, loading: _refreshing);
+    final kept = updatedLine(_cachedAt, loading: _refreshing, failed: _failed);
     return SelectionArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
