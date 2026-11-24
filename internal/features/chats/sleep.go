@@ -136,8 +136,8 @@ func (c *chat) quietLocked() bool {
 
 // workingLocked says why verb (a Move, a rewind, keeping a side chat,
 // renaming its branch) would cut into the agent's work, or nil: a turn or
-// another of the chat's steps runs, the agent works on its own or waits
-// on the user (a prompt it asked on its own, which a Move would drop), a
+// another of the chat's steps runs, the agent waits on the user (a prompt
+// it asked on its own, which a Move would drop) or works on its own, a
 // subagent runs in the background, or a workflow hasn't ended. One message
 // per cause, each saying when verb can go ahead.
 func (c *chat) workingLocked(verb string) error {
@@ -146,7 +146,9 @@ func (c *chat) workingLocked(verb string) error {
 		return fmt.Errorf("the chat is busy; %s once the turn has ended", verb)
 	case c.busyLocked():
 		return fmt.Errorf("%s; %s once that's done", c.stillLocked(), verb)
-	case c.ownTurn || c.waitsLocked():
+	case c.waitsLocked():
+		return fmt.Errorf("the agent is waiting for your answer; answer or stop it, then %s", verb)
+	case c.ownTurn:
 		return fmt.Errorf("the agent is working on its own (a background task ended); stop it, or %s once it's done", verb)
 	case c.backgroundLocked(0):
 		return fmt.Errorf("a subagent is still running in the background; %s once it's done", verb)

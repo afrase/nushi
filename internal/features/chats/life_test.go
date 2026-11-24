@@ -169,7 +169,7 @@ func TestNoMoveWhileAPromptWaitsAlone(t *testing.T) {
 	c.kind.Moves = true
 	turn(t, svc, c, "one")
 	gone := askAlone(t, c)
-	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err == nil || !strings.Contains(err.Error(), "on its own") {
+	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err == nil || !strings.Contains(err.Error(), "waiting for your answer") {
 		t.Errorf("moved while a prompt waited: %v", err)
 	}
 	gone()

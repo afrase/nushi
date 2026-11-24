@@ -190,7 +190,7 @@ func TestNoBranchRenameWhileTheAgentWorks(t *testing.T) {
 		svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 		worktree(c)
 		gone := askAlone(t, c)
-		if err := svc.RenameBranch(t.Context(), c.id, "nushi/mine"); err == nil || !strings.Contains(err.Error(), "on its own") {
+		if err := svc.RenameBranch(t.Context(), c.id, "nushi/mine"); err == nil || !strings.Contains(err.Error(), "waiting for your answer") {
 			t.Errorf("renamed while a prompt waited: %v", err)
 		}
 		gone()

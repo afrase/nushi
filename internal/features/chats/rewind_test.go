@@ -91,6 +91,10 @@ func TestRewindFailures(t *testing.T) {
 		block      func(c *chat) (undo func())
 	}{
 		{"the agent's own turn", "on its own", func(c *chat) func() { c.ownTurn = true; return func() { c.ownTurn = false } }},
+		{"a prompt waiting on the user", "waiting for your answer", func(c *chat) func() {
+			c.waiting["p"] = make(chan string, 1)
+			return func() { delete(c.waiting, "p") }
+		}},
 		{"a background subagent", "in the background", func(c *chat) func() {
 			c.items = append(c.items, model.Item{ID: "sa", Subagent: &model.Subagent{State: "running"}})
 			return func() { c.items = c.items[:len(c.items)-1] }
