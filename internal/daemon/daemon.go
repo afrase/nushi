@@ -38,7 +38,7 @@ import (
 // Start asks for it, in the order Start asks (the order the daemon has
 // always started in), from what Start built before it; main's are real
 // (cmd/nushid), the e2e tests' fakes (internal/daemon/daemontest).
-type Leaves interface {
+type Leaves interface { //nolint:interfacebloat // every part that reaches outside the daemon, which main and the fakes each give as one set
 	// Agents are the agents Nushi knows and the agents feature, with the
 	// login shell's environment they start with.
 	Agents(st *store.Store) ([]knownagents.Agent, *agents.Service)
@@ -128,7 +128,7 @@ func Start(ctx context.Context, dir, token string, l Leaves) (*Daemon, error) {
 		return nil, err
 	}
 	kinds := l.Kinds(known, agentSvc)
-	usageSvc, closeUsage := openUsage(filepath.Join(dir, "nushi.db"), st)
+	usageSvc, closeUsage := openUsage(filepath.Join(dir, "nushi.db"), st) //nolint:contextcheck // the database opens on its own context, as main's always did: ctx ends the daemon's loops, not the open
 	procs, record := l.Processes()
 	follow, unfollow := context.WithCancel(ctx)
 	chatSvc := chats.New(ctx, kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{},

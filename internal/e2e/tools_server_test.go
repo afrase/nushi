@@ -88,7 +88,7 @@ func TestANewSessionGetsTheToolsServer(t *testing.T) {
 	}
 	key := env[mcpserver.KeyEnv]
 
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, d.url+"/tools/list", nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, d.url+"/tools/list", http.NoBody)
 	testcheck.NoErr(t, err)
 	req.Header.Set("Authorization", "Bearer "+key)
 	resp, err := http.DefaultClient.Do(req)
