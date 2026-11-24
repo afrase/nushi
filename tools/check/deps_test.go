@@ -15,8 +15,9 @@ const repoRoot = "../.."
 // docs/development.md's Dependencies section names every module go.mod
 // requires directly and every package the app's pubspec depends on (but
 // Flutter's SDK and the repository's own packages), each with why it's
-// there: depguard is off for this list (.golangci.yml), so nothing else
-// notices a dependency added without a word.
+// there: gomodguard is off for this list (.golangci.yml; depguard checks
+// only the layering), so nothing else notices a dependency added without
+// a word.
 func TestDependenciesAreNamed(t *testing.T) {
 	section := dependenciesSection(t)
 	var missing []string
