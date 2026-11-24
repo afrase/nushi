@@ -246,7 +246,8 @@ Future<void> setUpAdapter(
   Agent agent,
 ) => showDialog(
   context: context,
-  barrierDismissible: false,
+  // Esc and a click outside cancel it, but not while it works: its
+  // PopScope holds it then.
   builder: (_) => _SetUp(client, agent),
 );
 

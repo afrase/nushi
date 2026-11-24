@@ -97,6 +97,31 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 
+  testWidgets('Esc cancels it and deletes nothing', (tester) async {
+    final (fake, d) = await _open(tester, []);
+    expect(find.text('Delete'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.text('Delete'), findsNothing);
+    expect(fake.calls.whereType<DeleteChatRequest>(), isEmpty);
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('Esc does nothing while it deletes', (tester) async {
+    final (fake, d) = await _open(tester, []);
+    final held = Completer<DeleteChatResponse>();
+    fake.answer = (input) => input is DeleteChatRequest ? held.future : null;
+    await tester.tap(find.text('Delete'));
+    await tester.pump();
+    expect(find.text('Deleting…'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(find.text('Deleting…'), findsOneWidget);
+    held.complete(DeleteChatResponse());
+    await tester.pumpAndSettle();
+    await closeView(tester, d);
+  }, variant: onMac);
+
   testWidgets('a worktree nobody else works in is removed by default', (
     tester,
   ) async {

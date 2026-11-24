@@ -110,7 +110,8 @@ Future<void> showDeleteChat(
   Daemon daemon,
 ) => showDialog<void>(
   context: context,
-  barrierDismissible: false, // not while it deletes: see _DeleteDialog
+  // Esc and a click outside cancel it, but not while it deletes: its
+  // PopScope holds it then (_DeleteDialog).
   builder: (_) => _DeleteDialog(chat, daemon),
 );
 
