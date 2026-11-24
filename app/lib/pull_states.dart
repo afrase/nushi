@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
@@ -54,18 +55,28 @@ String itemState(GitHubItem it) => switch (it.state) {
 /// rows' items (GetGitHubItems: one query a host for every chat, whose
 /// rows then need no ask of their own; the chats' linked issues ride on
 /// it, for the header's chip), before it GetGitHubStates (one query a
-/// host, kept 30 s there); a chat's widget puts what it read too.
-/// Archived chats and chats without a pull request aren't asked for.
+/// host, kept 30 s there, its answers put there too); a chat's widget
+/// puts what it read whole. What it knows is GitHubItems' (one store of
+/// the rows): it tells its listeners only when one of the chats' pull
+/// requests changed there. Archived chats and chats without a pull
+/// request aren't asked for.
 class PullStates extends ChangeNotifier {
   /// The one of [daemon].
   factory of(Daemon daemon) => _all[daemon] ??= PullStates._(daemon);
 
-  new _(this.daemon);
+  new _(this.daemon) : _items = GitHubItems.of(daemon) {
+    _items.addListener(_itemsChanged);
+  }
 
   static final _all = Expando<PullStates>();
 
   final Daemon daemon;
-  final _items = <String, GitHubItem>{}; // by node id
+  final GitHubItems _items;
+
+  /// The chats' pull requests as last told, by node id: what tells a
+  /// change of theirs from GitHubItems' others (an asking flip, a chip's
+  /// item).
+  Map<String, GitHubItem?> _told = const {};
   int _watchers = 0;
   Timer? _timer;
   Timer? _soon;
@@ -81,15 +92,16 @@ class PullStates extends ChangeNotifier {
   /// How long until the next ask: a minute; 15 once every one known is
   /// merged or closed; 5 at least while the window isn't in front.
   Duration get every {
-    final known = [for (final l in _links) _items[l.id]];
+    final known = [for (final l in _links) item(l)];
     final done =
         known.isNotEmpty &&
         known.every((it) => it != null && itemPoll(it) == pullDonePoll);
     return polledEvery(done ? pullDonePoll : pullWidgetPoll);
   }
 
-  /// [link]'s pull request as last known.
-  GitHubItem? item(GitHubLink? link) => link == null ? null : _items[link.id];
+  /// [link]'s pull request as last known (GitHubItems').
+  GitHubItem? item(GitHubLink? link) =>
+      link == null ? null : _items.look(addressOf(link)).item;
 
   /// The worst checks of [chat]'s open pull requests (ADR 0117): failing,
   /// then running, then passed; its primary's when none is open.
@@ -102,17 +114,45 @@ class PullStates extends ChangeNotifier {
     };
     String? worst;
     for (final l in chat.pulls) {
-      final it = _items[l.id];
+      final it = item(l);
       if (l.id.isEmpty || it == null || it.state != 'open') continue;
       if (rank(it.checks) > rank(worst)) worst = it.checks;
     }
     return worst ?? item(chat.pull)?.checks;
   }
 
-  /// Takes [it] as current (a widget read the pull request whole).
-  void put(GitHubItem it) {
-    if (_items[it.id] == it) return;
-    _items[it.id] = it;
+  /// Takes [whole] (a pull request read whole, whose item lacks what only
+  /// a row says: its checks' counts, merge state, size, branches) as
+  /// current in GitHubItems, over the row kept there; the counts go when
+  /// its checks changed, until the next row says them.
+  void put(GitHubItem whole) {
+    final kept = _items.look(GitHubAddress.of(whole.ref, pull: true)).item;
+    if (kept == null) return _items.put(whole);
+    final it = kept.deepCopy()
+      ..title = whole.title
+      ..url = whole.url
+      ..state = whole.state
+      ..draft = whole.draft
+      ..author = whole.author
+      ..updatedMs = whole.updatedMs
+      ..review = whole.review
+      ..unresolved = whole.unresolved
+      ..comments = whole.comments;
+    if (whole.checks != kept.checks || whole.checksOid != kept.checksOid) {
+      it
+        ..checks = whole.checks
+        ..checksOid = whole.checksOid
+        ..clearCheckCounts();
+    }
+    if (it != kept) _items.put(it);
+  }
+
+  /// GitHubItems changed: told on only if one of the chats' pull requests
+  /// did.
+  void _itemsChanged() {
+    final now = {for (final l in _links) l.id: item(l)};
+    if (mapEquals(now, _told)) return;
+    _told = now;
     notifyListeners();
   }
 
@@ -184,26 +224,26 @@ class PullStates extends ChangeNotifier {
     if (links.isEmpty) return; // asked again once a chat gets one
     try {
       if (daemon.daemonApi >= statesFromItemsApi) {
-        final items = GitHubItems.of(daemon);
         // The chats' issues ride on it too (their header chip, ADR 0117):
         // the same query a host, no poll of their own.
-        await items.ask([
+        await _items.ask([
           for (final l in links) addressOf(l),
           ..._issues.map(addressOf),
         ], quiet: quiet);
-        for (final l in links) {
-          if (items.look(addressOf(l)).item case final it?) _items[l.id] = it;
-        }
       } else {
         final r = await daemon.client.getGitHubStates(
           GetGitHubStatesRequest(items: links, quiet: quiet),
         );
+        // By node id: each its link's pull request, as GitHubItems keeps
+        // it.
         for (final it in r.items) {
-          _items[it.id] = it;
+          final l = links.where((l) => l.id == it.id).firstOrNull;
+          if (l == null) continue;
+          if (!it.hasRef()) it.ref = l.asRef;
+          _items.put(it..pull = true);
         }
       }
       _seenFirst();
-      notifyListeners();
     } on Object {
       // The last known states stay.
     } finally {
@@ -218,7 +258,7 @@ class PullStates extends ChangeNotifier {
     for (final c in daemon.chats.values) {
       if (c.archived) continue;
       for (final l in c.pulls) {
-        if (_items[l.id] case final it?) seenComments(c.id, it);
+        if (item(l) case final it?) seenComments(c.id, it);
       }
     }
   }
@@ -374,13 +414,12 @@ class ChecksMark extends CustomPainter {
 
 /// A chat's pull request on the phone, in its bar: the PR widget's
 /// one-line summary (`pullSummary`: its number in its state's color, then
-/// failing or running checks, changes requested or a reviewer waited on,
-/// open threads; or Ready, Draft, Merged, Closed), from the pull request
-/// whole, asked at once and then (quietly) as the PR widget asks for it
-/// ([pullPoll]: each minute, merged or closed every 15) while it shows;
-/// until then its number and checks' icon from the chats' states. A tap
-/// opens it on GitHub; with several (ADR 0117) it says `+2` for the others
-/// and a tap shows them all ([onMore]).
+/// failing or running checks, changes requested or a review still
+/// required, threads not resolved; or Ready, Draft, Merged, Closed), from
+/// its row's item as the chats' states have it (GitHubItems; ADR 0140:
+/// no read of its own); its number alone until then. A tap opens it on
+/// GitHub; with several (ADR 0117) it says `+2` for the others and a tap
+/// shows them all ([onMore]).
 class PullChip extends StatefulWidget {
   const new(
     this.daemon,
@@ -405,53 +444,17 @@ class PullChip extends StatefulWidget {
 
 class _PullChipState extends State<PullChip> {
   late final PullStates _states;
-  GitHubPull? _pull;
-  String? _asked; // the link last asked for
-  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _states = PullStates.of(widget.daemon)..watch();
-    widget.chat.addListener(_chatChanged);
-    unawaited(_ask());
   }
 
   @override
   void dispose() {
-    widget.chat.removeListener(_chatChanged);
-    _timer?.cancel();
     _states.unwatch();
     super.dispose();
-  }
-
-  /// The chat's link changed: the pull request it names is asked for.
-  void _chatChanged() {
-    if (widget.chat.pull?.id == _asked) return;
-    setState(() => _pull = null);
-    unawaited(_ask());
-  }
-
-  /// Asks for the linked pull request whole, then again in [pullPoll].
-  Future<void> _ask({bool quiet = false}) async {
-    final l = widget.chat.pull;
-    _asked = l?.id;
-    _timer?.cancel();
-    if (l == null) return;
-    try {
-      final r = await widget.daemon.client.getGitHubPull(
-        GetGitHubPullRequest(ref: l.asRef, quiet: quiet),
-      );
-      if (mounted && widget.chat.pull?.id == l.id) {
-        setState(() => _pull = r.pull);
-        _states.put(r.pull.item);
-      }
-    } on Object {
-      // What shows stays: the states' summary.
-    }
-    if (!mounted || widget.chat.pull?.id != l.id) return;
-    _timer?.cancel();
-    _timer = Timer(pullPoll(_pull), () => unawaited(_ask(quiet: true)));
   }
 
   @override
@@ -462,10 +465,9 @@ class _PullChipState extends State<PullChip> {
       final t = theme.t;
       final l = widget.chat.pull;
       if (l == null) return const SizedBox.shrink();
-      final p = _pull?.item.id == l.id ? _pull : null;
-      final it = p?.item ?? _states.item(l);
+      final it = _states.item(l);
       final checks = it == null ? null : checksIcon(t, it.checks);
-      final open = p?.threads.where((x) => !x.resolved).length ?? 0;
+      final open = it?.unresolved ?? 0;
       final more = widget.chat.pulls.length - 1;
       final words = [
         'Pull request #${l.number}',
@@ -489,42 +491,25 @@ class _PullChipState extends State<PullChip> {
             height: 44,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: p != null
-                  ? Center(
-                      widthFactor: 1,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        spacing: 6,
-                        children: [
-                          pullSummary(
-                            context,
-                            theme,
-                            number: l.number,
-                            pull: p,
-                            size: 13,
-                          ),
-                          if (more > 0)
-                            Text('+$more', style: theme.code(t.textMuted)),
-                        ],
-                      ),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 3,
-                      children: [
-                        Text(
-                          '#${l.number}',
-                          style: theme.code(
-                            it == null ? t.link : itemColor(t, it),
-                            size: 14,
-                          ),
-                        ),
-                        if (checks != null)
-                          Icon(checks.icon, size: 15, color: checks.color),
-                        if (more > 0)
-                          Text(' +$more', style: theme.code(t.textMuted)),
-                      ],
+              child: Center(
+                widthFactor: 1,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 6,
+                  children: [
+                    pullSummary(
+                      context,
+                      theme,
+                      number: l.number,
+                      pull: null,
+                      item: it,
+                      size: 13,
                     ),
+                    if (more > 0)
+                      Text('+$more', style: theme.code(t.textMuted)),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

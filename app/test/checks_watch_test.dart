@@ -177,7 +177,10 @@ void main() {
     var now = _state('a1');
     final (d, _) = await _open(tester, () => now, linked: false);
     final chat = d.chats['c']!;
-    expect(checksSeen.value['c'], isEmpty, reason: 'seen with none');
+    // Found on the branch as the app opened, its row read then (one store
+    // of the rows, GitHubItems): failing as first known, so not new.
+    expect(checksSeen.value['c'], ['PR_412@a1']);
+    expect(chat.needsYou, isFalse);
     chat.linkPull(fixtureLink);
     d.listChanged();
     await _poll(tester);

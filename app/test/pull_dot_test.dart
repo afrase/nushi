@@ -2,14 +2,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'github_fixture.dart' show item;
+import 'github_fixture.dart' show item, testRepo;
 import 'harness.dart';
 
 Widget _app(Widget child, {Tokens tokens = Tokens.dark, bool still = false}) =>
@@ -21,7 +20,7 @@ Widget _app(Widget child, {Tokens tokens = Tokens.dark, bool still = false}) =>
 
 final _link = GitHubLink(
   host: 'github.com',
-  repo: 'afrase/nushi',
+  repo: testRepo,
   number: 412,
   id: 'PR_412',
   pull: true,
@@ -57,11 +56,14 @@ void main() {
     String checks, {
     bool still = false,
   }) async {
-    final d = await FakeDaemon([]).connect(tester);
-    final chat = ChatState('c', '/x')..pull = _link;
+    // A chat of the daemon's: the states tell its dot of its pull
+    // request's changes.
+    final d = await FakeDaemon([chat('c', 'claude', 'CI')..pull = _link])
+        .connect(tester);
+    final c = d.chats['c']!;
     final states = PullStates.of(d)
       ..put(item(412, 'Speed up CI', checks: checks));
-    await tester.pumpWidget(_app(PullDot(chat, states), still: still));
+    await tester.pumpWidget(_app(PullDot(c, states), still: still));
     return (states, d.dispose);
   }
 
@@ -173,8 +175,9 @@ void main() {
     ) async {
       Shine.stopAt = 0.35;
       addTearDown(() => Shine.stopAt = 0);
-      final d = await FakeDaemon([]).connect(tester);
-      final chat = ChatState('c', '/x')..pull = _link;
+      final d = await FakeDaemon([chat('c', 'claude', 'CI')..pull = _link])
+          .connect(tester);
+      final c = d.chats['c']!;
       final states = PullStates.of(d)
         ..put(item(412, 'Speed up CI', checks: 'pending'));
       final theme = NushiTheme(tokens);
@@ -192,7 +195,7 @@ void main() {
                     Text('Speed up CI', style: theme.ui(tokens.text)),
                     const SizedBox(width: 6),
                     Text('#412', style: theme.ui(tokens.textMuted, size: 11)),
-                    PullDot(chat, states),
+                    PullDot(c, states),
                   ],
                 ),
               ),

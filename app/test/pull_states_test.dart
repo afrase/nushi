@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_items.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
@@ -144,8 +145,13 @@ void main() {
       final fake = FakeDaemon(_chats())
         ..answer = (input) => switch (input) {
           GetChatRequest() => GetChatResponse(chat: _chats().first),
-          GetGitHubPullRequest() => GetGitHubPullResponse(
-            pull: pull()..item.id = 'PR_1',
+          // Its row: a check failing, two threads open.
+          GetGitHubItemsRequest() => GetGitHubItemsResponse(
+            items: [
+              item(1, 'Add Sub', checks: 'failure', unresolved: 2)
+                ..checkCounts = GitHubCheckCounts(failed: 1, passed: 3),
+              ..._items.skip(1),
+            ],
           ),
           _ => _states(input),
         };
@@ -179,37 +185,28 @@ void main() {
     await closeView(tester, d);
   });
 
-  for (final (state, every) in [
-    ('open', pullWidgetPoll),
-    ('merged', pullDonePoll),
-  ]) {
-    testWidgets('the chip asks again each minute, a merged pull request '
-        'every 15 ($state)', (tester) async {
-      expect(pullDonePoll, greaterThan(pullWidgetPoll));
-      final fake = FakeDaemon(_chats())
-        ..answer = (input) => switch (input) {
-          GetGitHubPullRequest() => GetGitHubPullResponse(
-            pull: pull()
-              ..item.id = 'PR_3'
-              ..item.state = state,
-          ),
-          _ => _states(input),
-        };
-      final d = await fake.connect(tester);
-      await tester.pumpWidget(
-        themed(PullChip(d, d.chats['c']!, onOpen: (_) {})),
-      );
-      await tester.pumpAndSettle();
-      int asked() => fake.calls.whereType<GetGitHubPullRequest>().length;
-      expect(asked(), 1);
-      await tester.pump(every - const Duration(seconds: 1));
-      expect(asked(), 1);
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pump();
-      expect(asked(), 2);
-      await closeView(tester, d);
-    });
-  }
+  testWidgets('the chip reads no pull request of its own: its row, as the '
+      "chats' minute ask keeps it", (tester) async {
+    var state = 'open';
+    final fake = FakeDaemon(_chats())
+      ..answer = (input) => switch (input) {
+        GetGitHubItemsRequest() => GetGitHubItemsResponse(
+          items: [for (final it in _items) it.deepCopy()..state = state],
+        ),
+        _ => _states(input),
+      };
+    final d = await fake.connect(tester);
+    await tester.pumpWidget(themed(PullChip(d, d.chats['a']!, onOpen: (_) {})));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel(RegExp('#1, Open,')), findsOneWidget);
+    state = 'merged';
+    await tester.pump(pullWidgetPoll);
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel(RegExp('#1, Merged')), findsOneWidget);
+    await tester.pump(pullDonePoll);
+    expect(fake.calls.whereType<GetGitHubPullRequest>(), isEmpty);
+    await closeView(tester, d);
+  });
 
   testWidgets("a chat's linked issue rides on the chats' minute ask (its "
       "header chip's freshness), not an archived chat's", (tester) async {
@@ -253,6 +250,49 @@ void main() {
     final asked = fake.calls.whereType<GetGitHubStatesRequest>().single;
     expect(asked.items.map((l) => l.number), [1, 2, 3]);
     expect(fake.calls.whereType<GetGitHubItemsRequest>(), isEmpty);
+    // Its answers kept where every reader looks: GitHubItems.
+    final look = GitHubItems.of(d).look(addressOf(_link(1)));
+    expect(
+      (look.item?.checks, states.item(_link(1))?.checks),
+      ('failure', 'failure'),
+    );
+    d.dispose();
+  });
+
+  testWidgets('a pull request read whole is put over its row: what only the '
+      "row says stays, its checks' counts go once its checks changed", (
+    tester,
+  ) async {
+    final fake = FakeDaemon(_chats())..answer = _states;
+    final d = await fake.connect(tester);
+    final items = GitHubItems.of(d);
+    final states = PullStates.of(d);
+    items.put(
+      item(1, 'Add Sub', checks: 'pending')
+        ..additions = 12
+        ..mergeState = 'blocked'
+        ..checkCounts = GitHubCheckCounts(running: 2),
+    );
+    var told = 0;
+    states
+      ..addListener(() => told++)
+      ..put(item(1, 'Add Sub and Mul', checks: 'pending', unresolved: 1));
+    var it = states.item(_link(1))!;
+    expect(
+      (it.title, it.unresolved, it.additions, it.mergeState),
+      ('Add Sub and Mul', 1, 12, 'blocked'),
+    );
+    expect(it.checkCounts.running, 2);
+    states.put(item(1, 'Add Sub and Mul', checks: 'failure', unresolved: 1));
+    it = states.item(_link(1))!;
+    expect(
+      (it.checks, it.hasCheckCounts(), it.additions),
+      ('failure', false, 12),
+    );
+    expect(told, 2);
+    // A change to an item no chat has tells the states' listeners nothing.
+    items.put(item(9, 'Elsewhere'));
+    expect(told, 2);
     d.dispose();
   });
 }
