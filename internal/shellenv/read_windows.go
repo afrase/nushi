@@ -37,6 +37,11 @@ func Read(_ context.Context, _ string, env []string, _ time.Duration) ([]string,
 	return combine(system, user, env), nil
 }
 
+// ReadLogin has nothing to fall back on: Read runs no shell.
+func ReadLogin(context.Context, string, []string, time.Duration) ([]string, error) {
+	return nil, errors.ErrUnsupported
+}
+
 // registryVars are the string values of the key at path under root, in
 // the registry's order; one of another type (a number, binary) isn't a
 // variable and is passed over.

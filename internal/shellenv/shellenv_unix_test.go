@@ -192,3 +192,36 @@ func TestEnvFallsBack(t *testing.T) {
 		t.Errorf("%q, %+v", env, e.Status())
 	}
 }
+
+// A shell whose interactive config hangs or fails gives its plain login
+// shell's environment (-l -c), still saying what went wrong; what Use was
+// given is that environment. Only the hang is given a time to run out of.
+func TestEnvFallsBackToTheLoginShell(t *testing.T) {
+	t.Cleanup(func() { Timeout = 5 * time.Second })
+	for _, c := range []struct {
+		rc      string
+		timeout time.Duration
+		want    string
+	}{
+		{"sleep 300", 500 * time.Millisecond, "zsh took over 500ms"},
+		{"exit 3", time.Minute, "zsh exited with status 3 before printing its environment"},
+	} {
+		Timeout = c.timeout
+		shell := filepath.Join(t.TempDir(), "zsh")
+		if err := os.WriteFile(shell, []byte(`#!/bin/sh
+if [ "$2" = -i ]; then `+c.rc+`; fi
+export FROM_PROFILE=yes
+exec /bin/sh -c "$3"
+`), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		e := New(shell, []string{"PATH=/usr/bin:/bin"})
+		var used []string
+		e.Use(func(environ []string) { used = environ })
+		e.Start()
+		env := e.Environ()
+		if Get(env, "FROM_PROFILE") != "yes" || e.Status().Problem != c.want || !slices.Equal(used, env) {
+			t.Errorf("%q: %q, %+v, used %q", c.rc, env, e.Status(), used)
+		}
+	}
+}

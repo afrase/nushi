@@ -29,9 +29,9 @@ func TestTheLogGoesToTheDataFolder(t *testing.T) {
 	}
 }
 
-// -login leaves the login shell only stdio: a descriptor the app handed
-// down without O_CLOEXEC is closed at the exec, by close_range and by the
-// /proc walk older kernels get, and 0-2 stay as they were.
+// -login leaves what the daemon starts only stdio: a descriptor the app
+// handed down without O_CLOEXEC is marked close-on-exec, by close_range
+// and by the /proc walk older kernels get, and 0-2 stay as they were.
 func TestLoginKeepsOnlyStdio(t *testing.T) {
 	for name, mark := range map[string]func(){"close_range": keepOnlyStdio, "/proc": markProcFDs} {
 		t.Run(name, func(t *testing.T) {
@@ -44,7 +44,7 @@ func TestLoginKeepsOnlyStdio(t *testing.T) {
 			}
 			mark()
 			if fdFlags(t, fd)&unix.FD_CLOEXEC == 0 {
-				t.Error("the inherited descriptor would reach the login shell")
+				t.Error("the inherited descriptor would reach an agent")
 			}
 			if got := fdFlags(t, 2); got != stderr {
 				t.Errorf("stderr's flags %#x, were %#x", got, stderr)

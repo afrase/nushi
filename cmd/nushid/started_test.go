@@ -36,9 +36,12 @@ type started struct {
 	Problem string
 }
 
-// reportStarted does what run does to the daemon's environment before it
-// serves, and writes what the daemon then has to path.
+// reportStarted does what -login and run do to the daemon's environment
+// before it serves, and writes what the daemon then has to path.
 func reportStarted(path string) {
+	if setUpLogin() != nil {
+		return // no report: the test says it never started
+	}
 	home, _ := os.UserHomeDir() // "" leaves the OS's default folder, which the test doesn't expect
 	r := started{Folder: dataFolder(home)}
 	forgetLauncher()

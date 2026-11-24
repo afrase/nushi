@@ -8,13 +8,14 @@ import (
 	"slices"
 )
 
-// loginFlag starts the daemon through the user's login shell: the app
-// opens the daemon's helper app with it (ADR 0036), and Launch Services
-// gives a helper launchd's bare environment.
+// loginFlag is how the app's launcher starts the daemon (ADR 0036): in
+// its data folder, its output to nushid.log there, and holding none of
+// the launcher's descriptors but stdio. Launch Services gives the
+// daemon's helper launchd's bare environment: the login shell's comes
+// from the one reading run applies (newShellEnv, ADR 0048).
 const loginFlag = "-login"
 
-// knownShells are the shells whose `-l -c` the line below reads right in,
-// and shellenv's.
+// knownShells are the shells whose -c reads shellenv's line right in.
 var knownShells = []string{"sh", "zsh", "bash", "fish", "dash", "ksh"}
 
 // knownShell is shell when it's one of knownShells, else fallbackShell.
@@ -25,14 +26,10 @@ func knownShell(shell string) string {
 	return shell
 }
 
-// execLogin replaces the process with the login shell, which replaces
-// itself with the daemon (the pid stays, and so does the helper app it
-// belongs to), its output going to nushid.log in the data folder.
-func execLogin() error {
-	bin, err := os.Executable()
-	if err != nil {
-		return err
-	}
+// setUpLogin is what -login does before run: it makes the data folder
+// the working one and sends the daemon's output to nushid.log there,
+// so a start that fails before the log is set up says why there.
+func setUpLogin() error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -47,32 +44,22 @@ func execLogin() error {
 	if err := os.Chdir(dir); err != nil {
 		return err
 	}
-	argv, env := loginCommand(loginShell(), bin, dir, os.Environ())
 	keepOnlyStdio()
-	return replace(argv, env)
+	return logTo(filepath.Join(dir, "nushid.log"))
 }
 
-// loginCommand is the login shell's command line and environment. The
-// paths go through the environment: no quoting, and the line reads the
-// same in each known shell; another shell gets fallbackShell. The data
-// folder goes too (NUSHID_DATA), so the daemon keeps the one chosen here.
-func loginCommand(shell, bin, dir string, env []string) ([]string, []string) {
-	shell = knownShell(shell)
-	env = append(slices.Clone(env), "NUSHID_BIN="+bin, "NUSHID_DATA="+dir, "NUSHID_LOG="+filepath.Join(dir, "nushid.log"))
-	return []string{shell, "-l", "-c", `exec "$NUSHID_BIN" >>"$NUSHID_LOG" 2>&1`}, env
-}
-
-// dataFolder is the daemon's data folder, its log's too: the one -login
-// chose from its launcher's environment (NUSHID_DATA), so a profile that
-// sets XDG_DATA_HOME or NUSHI_DATA in the login shell doesn't move it away
-// from where the app and the log look; else NUSHI_DATA (a second daemon,
-// for development); else the OS's default, empty when it has none.
+// dataFolder is the daemon's data folder, its log's too: the one its
+// launcher chose (NUSHID_DATA, the app's on Linux and Windows); else
+// NUSHI_DATA (a second daemon, for development); else the OS's default,
+// empty when it has none. It's read before the login shell's environment
+// is applied, which never carries NUSHI_DATA (shellenv.Own), so a profile
+// that sets XDG_DATA_HOME or NUSHI_DATA doesn't move it.
 func dataFolder(home string) string {
 	return cmp.Or(os.Getenv("NUSHID_DATA"), os.Getenv("NUSHI_DATA"), defaultDataFolder(home))
 }
 
-// launcherVars are what loginCommand sets for the daemon.
-var launcherVars = []string{"NUSHID_BIN", "NUSHID_DATA", "NUSHID_LOG"}
+// launcherVars are what the app's launcher sets for the daemon.
+var launcherVars = []string{"NUSHID_DATA"}
 
 // forgetLauncher unsets launcherVars once the daemon has read them, so no
 // process it starts inherits them: a dev daemon started from one of its

@@ -35,7 +35,7 @@ type leaves struct {
 	projects string // Claude's projects folder (claudehistory.Projects)
 	dev      bool   // a daemon on another data folder: its tokens under test names
 	errorLog *log.Logger
-	shellEnv *shellenv.Env // the login shell's environment, read once Agents is asked
+	shellEnv *shellenv.Env // the login shell's environment, read and applied before the daemon starts
 	channels *channels     // paired devices' channels, made with remote access
 }
 
@@ -43,7 +43,6 @@ var _ daemon.Leaves = (*leaves)(nil)
 
 func (l *leaves) Agents(st *store.Store) ([]knownagents.Agent, *agents.Service) {
 	known := knownagents.All(l.projects, st.GoAgent)
-	l.shellEnv = newShellEnv(loginShell())
 	sysproxy.UseShellEnviron(l.shellEnv.Environ) // Linux only; before the relay, Jira, GitHub or Web Push asks
 	return known, newAgents(l.dir, known, l.shellEnv)
 }

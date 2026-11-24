@@ -9,9 +9,8 @@ import 'package:nushi/app_log.dart';
 String helperIn(String app) => '$app/Contents/Helpers/Nushi Daemon.app';
 
 /// What opens [helper] as a new instance through Launch Services, in the
-/// background, with [nushiData] (development) passed on. The daemon then
-/// goes through the user's login shell (`nushid -login`), so it and its
-/// agents get the user's PATH.
+/// background, with [nushiData] (development) passed on, as `nushid
+/// -login`: it then reads the user's login shell's environment itself.
 List<String> openHelper(String helper, String? nushiData) => [
   '-n',
   '-g',

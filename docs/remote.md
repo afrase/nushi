@@ -7,7 +7,7 @@ A phone follows your chats through a relay you run. The daemon dials out to the 
 Settings › Remote access connects the daemon to a relay you name (`wss://…`), so a phone can reach it from anywhere.
 
 - It's off until you turn it on.
-- Nothing listens on the Mac: the daemon dials out, through the Mac's proxy settings (the daemon's environment's `HTTPS_PROXY`, as its login shell starts it, not what only an interactive shell sets, else the system's proxy or PAC file; not WPAD, NTLM or Kerberos).
+- Nothing listens on the Mac: the daemon dials out, through the Mac's proxy settings (the daemon's environment's `HTTPS_PROXY`, the login shell's as agents get it, else the system's proxy or PAC file; not WPAD, NTLM or Kerberos).
 - While it's on, the Mac doesn't idle-sleep (`caffeinate`). A closed lid on battery still sleeps.
 - "Pair a phone" shows a QR code. The phone then shows a six-digit code, and the Mac asks to allow it, by name and code.
 - Everything between the phone and the daemon is end-to-end encrypted with Noise, and a paired phone is a full client, like the app ([ADR 0034](adr/0034-noise-between-phone-and-daemon.md), with the threat model).

@@ -74,8 +74,8 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
-	// Until the daemon holds its socket, its lines go to stderr, which the
-	// launcher points at nushid.log.
+	// Until the daemon holds its socket, its lines go to stderr, which
+	// -login points at nushid.log.
 	slog.SetDefault(slog.New(logs.Handler(os.Stderr)))
 	switch relaunched, err := hideConsole(); {
 	case relaunched:
@@ -84,7 +84,9 @@ func main() {
 		slog.Warn("console not hidden; a program the daemon starts may open a window", "err", err)
 	}
 	if login {
-		fatal(execLogin())
+		if err := setUpLogin(); err != nil {
+			fatal(err)
+		}
 	}
 	if err := run(); err != nil {
 		fatal(err)
@@ -122,6 +124,7 @@ func run() error {
 		return err
 	}
 	dir := dataFolder(home)
+	dev := os.Getenv("NUSHI_DATA") != "" // as the launcher said, before the shell's environment
 	forgetLauncher()
 	if dir == "" {
 		return errNoDataFolder
@@ -151,11 +154,12 @@ func run() error {
 	logs.Mask(token)
 	slog.Info("nushid started", "version", version(), "build", api.Build(), "api", api.Version, "data", dir, "pid", os.Getpid(),
 		"log_level", logs.Level.Level())
+	shellEnv := newShellEnv(loginShell()) // before anything reads the environment, and before the socket answers
 
 	// A handler's panic, which net/http recovers, is logged with its stack.
 	errorLog := slog.NewLogLogger(slog.Default().Handler(), slog.LevelError)
 	d, err := daemon.Start(context.Background(), dir, token, &leaves{dir: dir, home: home, projects: projects,
-		dev: os.Getenv("NUSHI_DATA") != "", errorLog: errorLog})
+		dev: dev, errorLog: errorLog, shellEnv: shellEnv})
 	if err != nil {
 		return err
 	}

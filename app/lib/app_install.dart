@@ -27,9 +27,8 @@ abstract interface class AppInstall {
   String get stopByHand;
 
   /// Starts the packaged [daemon] on [dataDir] in the background, where it
-  /// outlives the app, through the user's login shell (`nushid -login`;
-  /// Windows has none, and starts it itself). It doesn't wait for the
-  /// daemon to answer.
+  /// outlives the app, as `nushid -login` (Windows starts it without).
+  /// It doesn't wait for the daemon to answer.
   Future<void> launch(String dataDir);
 
   /// Stops the daemon listening in [dataDir], if one is; it doesn't wait

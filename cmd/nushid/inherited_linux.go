@@ -9,8 +9,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// keepOnlyStdio marks every descriptor above stderr close-on-exec, so the
-// login shell, and the daemon it becomes, start with 0-2 alone. The app
+// keepOnlyStdio marks every descriptor above stderr close-on-exec, so what
+// the daemon starts gets 0-2 alone (the daemon itself keeps the rest
+// open, unused, until it stops). The app
 // starts nushid -login with Dart's Process.start, whose fork hands down
 // each of the Flutter app's descriptors opened without O_CLOEXEC (its
 // assets folder among them), and Go never closes what it inherits when it

@@ -2,6 +2,8 @@
 
 Supersedes [0028](0028-agents-get-the-login-shells-environment.md). Amended by [0126](0126-agents-on-windows-start-with-the-registrys-environment.md): on Windows, which has no login shell, agents start with the registry's environment, as Windows builds it for a new process.
 
+Amended 2026-11-24: the daemon reads the shell once at start, after it takes its socket and before it serves or reads anything else, and applies each reading that works to its own environment (variables set, none unset; never `NUSHI_*`/`NUSHID_*`), so what it runs itself (`claude mcp`, `gh`, the trash) and its reads of agents' folders agree with the agents, however it was started. `-login` no longer goes through the login shell ([0036](0036-the-daemon-is-a-background-helper-app.md)), so when the interactive reading fails before any has worked, a plain login shell's (`-l -c`, the same line and cap) is read in its place, as the hop gave before, Settings › Agents still saying what failed; when that fails too, the daemon and agents keep the environment it was started with. `NUSHI_SHELL_ENV=off` keeps that environment, `-login` or not. The lines below on the daemon's own environment held until then.
+
 ## Context
 0028 gave agents the daemon's own environment, trusting the launch to have made it the login shell's (`nushid -login`, [0036](0036-the-daemon-is-a-background-helper-app.md)). A daemon started any other way had that way's: one opened without `-login` (a restart by hand, which `open` gives the opener's environment) had the opener's, and an agent chat failed with "No API key for FIREWORKS_API_KEY", a fish universal variable (`set -Ux`) only fish has. A variable added to the shell's config also reached agents only after a daemon restart.
 

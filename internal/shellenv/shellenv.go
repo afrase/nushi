@@ -3,8 +3,8 @@
 // its environment between two marks, as VS Code's "resolve shell
 // environment" does (read_unix.go). Windows has no login shell: there it
 // reads the registry's environment, which a new terminal gets
-// (read_windows.go). Agents start with it (ADR 0048), whatever started
-// the daemon. The values are never logged or kept anywhere but in memory;
+// (read_windows.go). Agents start with it, and the daemon applies it to
+// its own environment (ADR 0048), whatever started the daemon. The values are never logged or kept anywhere but in memory;
 // the log has the shell, how long it took and how it ended, and the names
 // the shell adds at DEBUG.
 package shellenv
@@ -19,8 +19,8 @@ import (
 const Resolving = "NUSHI_RESOLVING_ENVIRONMENT"
 
 // Own says the variable named name is Nushi's: the daemon's settings
-// (NUSHI_DATA, NUSHI_LOG), what its launcher sets (NUSHID_BIN,
-// NUSHID_DATA, NUSHID_LOG), a chat's tools server's (NUSHI_SOCKET, NUSHI_TOOLS_KEY).
+// (NUSHI_DATA, NUSHI_LOG), what its launcher sets (NUSHID_DATA), a chat's
+// tools server's (NUSHI_SOCKET, NUSHI_TOOLS_KEY).
 // None goes to an agent.
 func Own(name string) bool {
 	return strings.HasPrefix(name, "NUSHI_") || strings.HasPrefix(name, "NUSHID_")

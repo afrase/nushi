@@ -43,9 +43,9 @@ exec /bin/sh -c "$line"
 }
 
 // startDaemon starts this test binary as the app's launcher starts the
-// daemon (nushid -login), from launcher's environment, with shell the
-// user's login shell and timeout shellenv's cap, and says what the daemon
-// started with; false when it hadn't started once hold was over. It fails
+// daemon (nushid -login, the data folder in NUSHID_DATA as Linux's app
+// passes it), from launcher's environment, with shell the user's login
+// shell and timeout shellenv's cap, and says what the daemon started with; false when it hadn't started once hold was over. It fails
 // the test when the daemon left the data folder the launcher chose.
 func startDaemon(t *testing.T, shell string, launcher []string, timeout, hold time.Duration) (started, bool) {
 	t.Helper()
@@ -53,12 +53,12 @@ func startDaemon(t *testing.T, shell string, launcher []string, timeout, hold ti
 	report := filepath.Join(t.TempDir(), "report.json")
 	self, err := os.Executable()
 	testcheck.NoErr(t, err)
-	env := append(slices.Clone(launcher), startedReport+"="+report, startedShell+"="+shell, startedTimeout+"="+timeout.String())
-	argv, env := loginCommand(shell, self, dir, env)
+	env := append(slices.Clone(launcher), "NUSHID_DATA="+dir,
+		startedReport+"="+report, startedShell+"="+shell, startedTimeout+"="+timeout.String())
 	ctx, cancel := context.WithTimeout(t.Context(), hold)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
-	cmd.Env, cmd.Dir = env, dir
+	cmd := exec.CommandContext(ctx, self)
+	cmd.Env = env
 	procgroup.Bound(cmd) // a shell that hangs goes with what it started
 	_ = cmd.Run()        // how it ended is in the report, or in there being none
 	b, err := os.ReadFile(report)
@@ -103,7 +103,9 @@ func vars(kv ...string) map[string]string {
 // What the daemon's own environment and an agent's are when the app's
 // launcher starts it (nushid -login) from launchd's bare environment, for
 // login shells that set things in their profile, only when interactive,
-// print, hang or fail, and with NUSHI_SHELL_ENV=off.
+// print, hang or fail, and with NUSHI_SHELL_ENV=off. The daemon has what
+// its agents have: the interactive shell's, else a plain login shell's,
+// else its launcher's (ADR 0048).
 func TestWhatTheDaemonStartsWith(t *testing.T) {
 	zshProfile := `export PATH="/profile/bin:$PATH" FROM_PROFILE=yes NUSHI_DATA=/profile/nushi XDG_DATA_HOME=/profile/data`
 	zshRC := `export PATH="/rc/bin:$PATH" FROM_RC=yes`
@@ -120,12 +122,13 @@ func TestWhatTheDaemonStartsWith(t *testing.T) {
 	}{
 		{
 			name: "a profile and an rc", shell: "zsh", profile: zshProfile, rc: zshRC, timeout: long, hold: long, started: true,
-			daemon: vars("PATH=/profile/bin:/usr/bin:/bin", "LAUNCHER=yes", "FROM_PROFILE=yes", "NUSHI_DATA=/profile/nushi", "XDG_DATA_HOME=/profile/data"),
-			agent:  vars("PATH=/rc/bin:/profile/bin:/profile/bin:/usr/bin:/bin", "LAUNCHER=yes", "FROM_PROFILE=yes", "FROM_RC=yes", "XDG_DATA_HOME=/profile/data"),
+			// The profile's NUSHI_DATA is Nushi's own: never the daemon's (its dev mode).
+			daemon: vars("PATH=/rc/bin:/profile/bin:/usr/bin:/bin", "LAUNCHER=yes", "FROM_PROFILE=yes", "FROM_RC=yes", "XDG_DATA_HOME=/profile/data"),
+			agent:  vars("PATH=/rc/bin:/profile/bin:/usr/bin:/bin", "LAUNCHER=yes", "FROM_PROFILE=yes", "FROM_RC=yes", "XDG_DATA_HOME=/profile/data"),
 		},
 		{
 			name: "fish", shell: "fish", profile: fishConfig, rc: "export FROM_RC=yes", timeout: long, hold: long, started: true,
-			daemon: vars("PATH=/fish/bin:/usr/bin:/bin", "LAUNCHER=yes"),
+			daemon: vars("PATH=/fish/bin:/usr/bin:/bin", "LAUNCHER=yes", "FROM_RC=yes"),
 			agent:  vars("PATH=/fish/bin:/usr/bin:/bin", "LAUNCHER=yes", "FROM_RC=yes"),
 		},
 		{
@@ -135,7 +138,10 @@ func TestWhatTheDaemonStartsWith(t *testing.T) {
 			agent:   vars("PATH=/usr/bin:/bin", "LAUNCHER=yes", "FROM_PROFILE=yes"),
 		},
 		{
-			name: "a profile that hangs", shell: "zsh", profile: "sleep 300", timeout: short, hold: 3 * time.Second,
+			name: "a profile that hangs", shell: "zsh", profile: "sleep 300", timeout: short, hold: long, started: true,
+			daemon:  vars("PATH=/usr/bin:/bin", "LAUNCHER=yes"),
+			agent:   vars("PATH=/usr/bin:/bin", "LAUNCHER=yes"),
+			problem: "zsh took over 500ms",
 		},
 		{
 			name: "an rc that hangs", shell: "zsh", profile: "export FROM_PROFILE=yes", rc: "sleep 300", timeout: short, hold: long, started: true,
@@ -144,7 +150,10 @@ func TestWhatTheDaemonStartsWith(t *testing.T) {
 			problem: "zsh took over 500ms",
 		},
 		{
-			name: "a profile that fails", shell: "zsh", profile: "exit 3", timeout: long, hold: long,
+			name: "a profile that fails", shell: "zsh", profile: "exit 3", timeout: long, hold: long, started: true,
+			daemon:  vars("PATH=/usr/bin:/bin", "LAUNCHER=yes"),
+			agent:   vars("PATH=/usr/bin:/bin", "LAUNCHER=yes"),
+			problem: "zsh exited with status 3 before printing its environment",
 		},
 		{
 			name: "an rc that fails", shell: "zsh", profile: "export FROM_PROFILE=yes", rc: "exit 3", timeout: long, hold: long, started: true,
@@ -154,8 +163,9 @@ func TestWhatTheDaemonStartsWith(t *testing.T) {
 		},
 		{
 			name: "NUSHI_SHELL_ENV=off", shell: "zsh", profile: zshProfile, rc: zshRC, off: true, timeout: long, hold: long, started: true,
-			daemon: vars("PATH=/profile/bin:/usr/bin:/bin", "LAUNCHER=yes", "FROM_PROFILE=yes", "NUSHI_DATA=/profile/nushi", "XDG_DATA_HOME=/profile/data"),
-			agent:  vars("PATH=/profile/bin:/usr/bin:/bin", "LAUNCHER=yes", "FROM_PROFILE=yes", "XDG_DATA_HOME=/profile/data"),
+			// The environment the daemon was started with: no shell runs.
+			daemon: vars("PATH=/usr/bin:/bin", "LAUNCHER=yes"),
+			agent:  vars("PATH=/usr/bin:/bin", "LAUNCHER=yes"),
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {

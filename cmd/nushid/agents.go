@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -15,19 +16,35 @@ import (
 	"github.com/afrase/nushi/internal/shellenv"
 )
 
-// newShellEnv is the environment of shell, the login shell, started
-// reading: agents start with it, and on Linux the daemon's proxies come
-// from it (sysproxy.UseShellEnviron), read now and when Settings › Agents
-// asks, whatever started the daemon (ADR 0048, 0101). NUSHI_SHELL_ENV=off
-// keeps the daemon's own (tests set PATH to their fake agents; the
-// shell's would replace it).
+// newShellEnv is the environment of shell, the login shell, read once
+// before it returns (shellenv.Timeout at most, and as long again for a
+// plain login shell's when that fails) and again when Settings › Agents
+// asks, whatever started the daemon (ADR 0048, 0101): agents start with
+// it, and each reading that works is applied to the daemon's own
+// environment, so what the daemon runs itself (claude mcp, gh, the trash)
+// and its reads of agents' folders (CLAUDE_CONFIG_DIR, CODEX_HOME) agree
+// with the agents. NUSHI_SHELL_ENV=off keeps the daemon's own (tests set
+// PATH to their fake agents; the shell's would replace it).
 func newShellEnv(shell string) *shellenv.Env {
 	shellEnv := shellenv.New(knownShell(shell), os.Environ())
 	if os.Getenv("NUSHI_SHELL_ENV") == "off" {
 		shellEnv = shellenv.Off(os.Environ())
 	}
+	shellEnv.Use(setEnviron)
 	shellEnv.Start()
+	shellEnv.Environ() // waits for the first reading
 	return shellEnv
+}
+
+// setEnviron sets each of environ's variables in the daemon's own
+// environment. Nothing is unset, and Nushi's own variables are never in
+// it (shellenv.Own).
+func setEnviron(environ []string) {
+	for _, kv := range environ {
+		if name, value, ok := strings.Cut(kv, "="); ok && name != "" {
+			_ = os.Setenv(name, value) // fails only on a malformed name, which no environment holds
+		}
+	}
 }
 
 // newAgents is the agents feature: the agents Nushi knows, found on the

@@ -2,6 +2,7 @@ package shellenv
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"slices"
 	"strings"
@@ -22,8 +23,9 @@ type Env struct {
 	base  []string
 	off   bool // never read: agents get base (tests, NUSHI_SHELL_ENV=off)
 
-	reading sync.Mutex    // one reading at a time
-	first   chan struct{} // closed once the first reading ended
+	reading sync.Mutex             // one reading at a time
+	first   chan struct{}          // closed once the first reading ended
+	use     func(environ []string) // called after each reading that worked (Use)
 
 	mu      sync.Mutex
 	vars    []string  // the last reading that worked; nil before one has
@@ -47,6 +49,11 @@ func Off(base []string) *Env {
 	close(e.first)
 	return e
 }
+
+// Use has f called with Environ's environment after each reading that
+// works, before Environ answers with it: the daemon applies it to its
+// own (ADR 0048). Call it before Start.
+func (e *Env) Use(f func(environ []string)) { e.use = f }
 
 // Start reads the shell's environment in the background; Environ and
 // LookPath wait for it (Timeout at most).
@@ -79,18 +86,48 @@ func (e *Env) Refresh(ctx context.Context, maxAge time.Duration) {
 	vars, err := Read(context.WithoutCancel(ctx), e.shell, e.base, Timeout) // a client gone mid-way doesn't make it a failure
 	log := slog.With("shell", e.shell, "took", time.Since(start).Round(time.Millisecond))
 	e.mu.Lock()
-	defer e.mu.Unlock()
+	first := e.vars == nil
+	e.mu.Unlock()
+	var login []string
+	loginWorked := false
+	if err != nil && first {
+		login, loginWorked = e.readLogin(ctx)
+	}
+	e.mu.Lock()
 	e.read = time.Now()
-	if err != nil {
+	switch {
+	case err == nil:
+		e.vars, e.problem = vars, ""
+		log.Info("shell environment read", "vars", len(vars))
+		if slog.Default().Enabled(ctx, slog.LevelDebug) {
+			log.Debug("shell environment adds", "names", strings.Join(added(e.base, vars), " ")) // names only, never values
+		}
+	case loginWorked:
+		e.vars, e.problem = login, err.Error()
+		log.Warn("shell environment read without its interactive config", "why", err) // never what it printed
+	default:
 		e.problem = err.Error()
 		log.Warn("shell environment not read; agents start with the last read or the daemon's", "why", err) // never what it printed
-		return
 	}
-	e.vars, e.problem = vars, ""
-	log.Info("shell environment read", "vars", len(vars))
-	if slog.Default().Enabled(ctx, slog.LevelDebug) {
-		log.Debug("shell environment adds", "names", strings.Join(added(e.base, vars), " ")) // names only, never values
+	worked, environ := err == nil || loginWorked, Merge(e.base, e.vars)
+	e.mu.Unlock()
+	if worked && e.use != nil {
+		e.use(environ)
 	}
+}
+
+// readLogin is the shell's environment as a login shell that isn't
+// interactive gives it (-l -c), and whether that worked: what agents and
+// the daemon start with when no interactive reading has worked, as they
+// did when the daemon started through that shell (ADR 0036). Without it
+// a config that hangs or ends only when interactive (one that runs tmux)
+// would leave launchd's bare PATH.
+func (e *Env) readLogin(ctx context.Context) ([]string, bool) {
+	vars, err := ReadLogin(context.WithoutCancel(ctx), e.shell, e.base, Timeout)
+	if err != nil && !errors.Is(err, errors.ErrUnsupported) {
+		slog.Warn("shell environment not read as a plain login shell either", "shell", e.shell, "why", err)
+	}
+	return vars, err == nil
 }
 
 // added are the names of over's variables base doesn't have.

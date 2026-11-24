@@ -7,22 +7,6 @@ import (
 	"testing"
 )
 
-func TestTheLoginShellStartsTheDaemon(t *testing.T) {
-	for shell, want := range map[string]string{
-		"/opt/homebrew/bin/fish": "/opt/homebrew/bin/fish",
-		"/bin/bash":              "/bin/bash",
-		"/usr/local/bin/nu":      fallbackShell, // a shell whose -c the line isn't written for
-	} {
-		argv, env := loginCommand(shell, "/A/Nushi Daemon.app/Contents/MacOS/nushid", "/d", []string{"HOME=/h"})
-		if argv[0] != want || !slices.Equal(argv[1:3], []string{"-l", "-c"}) {
-			t.Errorf("%s: %q", shell, argv)
-		}
-		if !slices.Equal(env, []string{"HOME=/h", "NUSHID_BIN=/A/Nushi Daemon.app/Contents/MacOS/nushid", "NUSHID_DATA=/d", "NUSHID_LOG=/d/nushid.log"}) {
-			t.Errorf("%s: env %q", shell, env)
-		}
-	}
-}
-
 // The fallback shell is one this OS has.
 func TestTheFallbackShellIsThere(t *testing.T) {
 	if st, err := os.Stat(fallbackShell); err != nil || st.Mode()&0o111 == 0 {
@@ -38,8 +22,8 @@ func TestTheLogGoesToNUSHI_DATA(t *testing.T) {
 	}
 }
 
-// The daemon keeps the data folder -login chose, whatever the login
-// shell's profile sets (XDG_DATA_HOME, NUSHI_DATA).
+// The daemon keeps the data folder its launcher chose, whatever else
+// sets XDG_DATA_HOME or NUSHI_DATA.
 func TestTheLoginShellDoesntMoveTheDataFolder(t *testing.T) {
 	t.Setenv("NUSHID_DATA", "/launcher/nushi")
 	t.Setenv("NUSHI_DATA", "/profile/nushi")
@@ -72,8 +56,8 @@ func TestThePasswdEntrysShell(t *testing.T) {
 	}
 }
 
-// Once the daemon has its data folder, what -login set is gone from its
-// environment, so nothing it starts inherits the real data folder.
+// Once the daemon has its data folder, what its launcher set is gone from
+// its environment, so nothing it starts inherits the real data folder.
 func TestTheDaemonForgetsItsLauncher(t *testing.T) {
 	for _, name := range launcherVars {
 		t.Setenv(name, "/launcher")

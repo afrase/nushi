@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"syscall"
 	"time"
 
@@ -28,6 +29,18 @@ func source(shell string) string { return shell }
 // and Nushi's own (Own). env is the shell's environment; what the shell
 // writes to stderr is dropped unread.
 func Read(ctx context.Context, shell string, env []string, timeout time.Duration) ([]string, error) {
+	return read(ctx, shell, "-l -i", env, timeout)
+}
+
+// ReadLogin is Read of a login shell that isn't interactive (-l -c):
+// zsh's .zshrc, bash's .bashrc and fish's `status is-interactive` blocks
+// don't run.
+func ReadLogin(ctx context.Context, shell string, env []string, timeout time.Duration) ([]string, error) {
+	return read(ctx, shell, "-l", env, timeout)
+}
+
+// read is Read with flags, "-l -i" or "-l", before the -c.
+func read(ctx context.Context, shell, flags string, env []string, timeout time.Duration) ([]string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	mark := make([]byte, 12)
@@ -35,7 +48,8 @@ func Read(ctx context.Context, shell string, env []string, timeout time.Duration
 	start, end := "nushi-env-start-"+hex.EncodeToString(mark), "nushi-env-end-"+hex.EncodeToString(mark)
 	// The same line in fish, zsh, bash, sh, dash and ksh.
 	line := fmt.Sprintf("printf '%%s' %s; /usr/bin/env -0; printf '%%s' %s", start, end)
-	cmd := exec.CommandContext(ctx, shell, "-l", "-i", "-c", line) //nolint:gosec // the user's login shell, the line above
+	args := append(strings.Fields(flags), "-c", line)
+	cmd := exec.CommandContext(ctx, shell, args...) //nolint:gosec // the user's login shell, the line above
 	cmd.Env = append(slices.Clone(env), Resolving+"=1")
 	if home, err := os.UserHomeDir(); err == nil {
 		cmd.Dir = home
