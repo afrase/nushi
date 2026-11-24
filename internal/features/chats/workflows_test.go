@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -349,26 +350,70 @@ func TestAWorkflowIsWhatTheHarnessSays(t *testing.T) {
 	}
 }
 
-// Files that come late, and reads that fail after they came, keep it
-// running: a read error is no end.
-func TestWorkflowReadsThatFail(t *testing.T) {
-	var mu sync.Mutex
-	n := 0
-	f := workflowChat(t, Timing{}, func(w model.Workflow) (model.Workflow, error) {
-		mu.Lock()
-		defer mu.Unlock()
-		n++
-		switch {
-		case n < 3:
-			return w, fs.ErrNotExist
-		case n < 6 || n%2 == 0:
-			return runningAs(w)
-		}
-		return w, errors.New("permission denied")
+// What a read makes of a run, by the run as last read, the read, and
+// what the follower knows (its files found, since when they're missing,
+// its agent gone since when): no clock, every limit at its default.
+func TestJudgeWorkflow(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	owner := &fakeAgent{}
+	denied := errors.New("permission denied")
+	running := model.Workflow{RunID: "wf_1", State: model.RunRunning, Active: now, RunningCount: 2, Running: []string{"map:a", "map:b"}}
+	activeAt := func(at time.Time) model.Workflow { w := running; w.Active = at; return w }
+	with := func(w model.Workflow, change func(*model.Workflow)) *model.Workflow { change(&w); return &w }
+	quitAt := with(running, func(w *model.Workflow) {
+		w.State, w.End, w.Ended, w.Running, w.RunningCount = model.RunStopped, "Claude quit while it ran", now, nil, 0
 	})
-	f.files.waitReads(t, 12)
-	if w := workflowOf(f.c); w == nil || w.State != "running" {
-		t.Errorf("got %+v", w)
+	poll := Timing{}.workflowPoll()
+	for _, tc := range []struct {
+		name      string
+		cur, got  model.Workflow
+		err       error
+		f         follow
+		gone      bool
+		want      *model.Workflow // nil: a plain call after all
+		wait      time.Duration
+		found     bool      // f.found after
+		missing   time.Time // f.missing after
+		goneSince time.Time // f.gone after
+	}{
+		{name: "files never found within the find time", cur: running, err: fs.ErrNotExist, f: follow{owner: owner, since: now.Add(-30 * time.Second)}},
+		{name: "files not there yet", cur: running, err: fs.ErrNotExist, f: follow{owner: owner, since: now.Add(-29 * time.Second)}, want: &running, wait: poll},
+		{name: "a past run's files that can't be read", cur: running, err: denied, f: follow{since: now}},
+		{name: "a read failing before the files came", cur: running, err: denied, f: follow{owner: owner, since: now}, want: &running, wait: poll},
+		{name: "a read failing once they came", cur: running, err: denied, f: follow{owner: owner, found: true, missing: now.Add(-time.Second)}, want: &running, wait: poll, found: true},
+		{name: "files gone a moment", cur: running, err: fs.ErrNotExist, f: follow{owner: owner, found: true}, want: &running, wait: poll, found: true, missing: now},
+		{name: "files gone for the find time", cur: running, err: fs.ErrNotExist, f: follow{owner: owner, found: true, missing: now.Add(-30 * time.Second)}, found: true, missing: now.Add(-30 * time.Second),
+			want: with(running, func(w *model.Workflow) {
+				w.State, w.End, w.Ended, w.Running, w.RunningCount = model.RunUnknown, "its files are gone", now, nil, 0
+			})},
+		{name: "files back", cur: running, got: running, f: follow{owner: owner, missing: now.Add(-time.Second)}, want: &running, wait: poll, found: true},
+		{name: "its snapshot", cur: running, got: model.Workflow{RunID: "wf_1", State: model.RunDone, Ended: now}, f: follow{owner: owner}, found: true,
+			want: &model.Workflow{RunID: "wf_1", State: model.RunDone, Ended: now}},
+		{name: "its agent just gone: a grace", cur: running, got: running, gone: true, f: follow{owner: owner, found: true}, want: &running, wait: 2 * time.Second, found: true, goneSince: now},
+		{name: "its agent gone, the grace over", cur: running, got: running, gone: true, f: follow{owner: owner, found: true, gone: now.Add(-2 * time.Second)}, want: quitAt, found: true, goneSince: now.Add(-2 * time.Second)},
+		{name: "its agent gone, its files gone", cur: running, err: fs.ErrNotExist, gone: true, f: follow{owner: owner, found: true, gone: now.Add(-2 * time.Second)}, want: quitAt, found: true, missing: now, goneSince: now.Add(-2 * time.Second)},
+		{name: "no agent of this daemon's, files still", cur: running, got: activeAt(now.Add(-2 * time.Minute)), f: follow{found: true},
+			want: with(activeAt(now.Add(-2*time.Minute)), func(w *model.Workflow) {
+				w.State, w.End, w.Ended, w.Running, w.RunningCount = model.RunStopped, "Claude quit while it ran", now, nil, 0
+			}), found: true},
+		{name: "no agent of this daemon's, files written lately", cur: running, got: activeAt(now.Add(-2*time.Minute + time.Second)), f: follow{found: true}, want: new(activeAt(now.Add(-2*time.Minute + time.Second))), wait: poll, found: true},
+		{name: "its agent alive, files still an hour", cur: running, got: activeAt(now.Add(-time.Hour)), f: follow{owner: owner, found: true}, found: true,
+			want: with(activeAt(now.Add(-time.Hour)), func(w *model.Workflow) { w.Stalled = true }), wait: 30 * time.Second},
+		{name: "its agent alive, files still under an hour", cur: running, got: activeAt(now.Add(-time.Hour + time.Second)), f: follow{owner: owner, found: true}, found: true,
+			want: new(activeAt(now.Add(-time.Hour + time.Second))), wait: poll},
+		{name: "a stalled run written again", cur: *with(running, func(w *model.Workflow) { w.Stalled = true }), got: running, f: follow{owner: owner, found: true}, want: &running, wait: poll, found: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := &chat{svc: &Service{}, kind: testKind(testHarness{Name: "claude", Title: "Claude"})}
+			f := tc.f
+			got, wait := c.judgeWorkflow(tc.cur, tc.got, tc.err, &f, tc.gone, now)
+			if !reflect.DeepEqual(got, tc.want) || wait != tc.wait {
+				t.Errorf("got %+v, wait %s; want %+v, wait %s", got, wait, tc.want, tc.wait)
+			}
+			if f.found != tc.found || !f.missing.Equal(tc.missing) || !f.gone.Equal(tc.goneSince) {
+				t.Errorf("follow: found %v, missing %v, gone %v", f.found, f.missing, f.gone)
+			}
+		})
 	}
 }
 
@@ -456,14 +501,6 @@ func TestNoMoveOrRewindWhileAWorkflowRuns(t *testing.T) {
 	eventually(t, f.c, func() bool { return workflowEnded(f.c.itemLocked(wfCall).Workflow) })
 	if _, err := f.svc.Rewind(t.Context(), f.c.id, "x"); err == nil || strings.Contains(err.Error(), "workflow") {
 		t.Errorf("once it ended: %v", err)
-	}
-}
-
-// Each end the snapshot says is the run's.
-func TestWorkflowEnds(t *testing.T) {
-	for _, state := range []model.RunState{model.RunDone, model.RunFailed, model.RunStopped, model.RunUnknown} {
-		f := workflowChat(t, Timing{}, endedAs(state, "x"))
-		eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == state && len(f.c.following) == 0 })
 	}
 }
 
