@@ -4484,9 +4484,13 @@ func (x *RewindChatResponse) GetMessage() *QueuedMessage {
 }
 
 type UnqueueRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChatId        string                 `protobuf:"bytes,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
-	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	ChatId string                 `protobuf:"bytes,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
+	Id     string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	// Send the message now (Send now): the running turn stops first, as
+	// SendPrompt's now does. If the send fails or the call ends first, the
+	// message stays where it was in the queue. Since API 147.
+	SendNow       bool `protobuf:"varint,3,opt,name=send_now,json=sendNow,proto3" json:"send_now,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4535,9 +4539,17 @@ func (x *UnqueueRequest) GetId() string {
 	return ""
 }
 
+func (x *UnqueueRequest) GetSendNow() bool {
+	if x != nil {
+		return x.SendNow
+	}
+	return false
+}
+
 type UnqueueResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Message       *QueuedMessage         `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The message taken out; none with send_now.
+	Message       *QueuedMessage `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -28611,10 +28623,11 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x17\n" +
 	"\aitem_id\x18\x02 \x01(\tR\x06itemId\"G\n" +
 	"\x12RewindChatResponse\x121\n" +
-	"\amessage\x18\x01 \x01(\v2\x17.nushi.v1.QueuedMessageR\amessage\"9\n" +
+	"\amessage\x18\x01 \x01(\v2\x17.nushi.v1.QueuedMessageR\amessage\"T\n" +
 	"\x0eUnqueueRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\"D\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x19\n" +
+	"\bsend_now\x18\x03 \x01(\bR\asendNow\"D\n" +
 	"\x0fUnqueueResponse\x121\n" +
 	"\amessage\x18\x01 \x01(\v2\x17.nushi.v1.QueuedMessageR\amessage\"\x96\x01\n" +
 	"\tImageData\x12\x1b\n" +

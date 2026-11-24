@@ -419,7 +419,8 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }
 
   /// Takes a message out of the chat's queue before the agent gets it, and
-  /// returns it. Refused once the agent has it.
+  /// returns it. Refused once the agent has it. With send_now it sends the
+  /// message at once instead, as SendPrompt's now does, and returns none.
   Future<nushiv1nushi.UnqueueResponse> unqueue(
     nushiv1nushi.UnqueueRequest input, {
     connect.Headers? headers,

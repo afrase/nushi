@@ -77,7 +77,7 @@ int dataDirOnWeb = 0;
 String? get appFiles => kIsWeb ? null : dataDir;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 146;
+const apiVersion = 147;
 
 /// The oldest daemon API this app works with (ADR 0004): below it the Mac
 /// shows only its Restart screen (`OutdatedScreen`) until the daemon has
@@ -136,6 +136,11 @@ const commandTerminalApi = 143;
 /// The API from which the daemon wakes a sleeping chat without a message
 /// (WakeChat): an older one has no Wake. Goes with the floor.
 const wakeApi = 146;
+
+/// The API from which Unqueue sends a queued message now in one call
+/// (UnqueueRequest.send_now), keeping it queued should the send fail; an
+/// older daemon takes it out, then has it sent. Goes with the floor.
+const sendNowApi = 147;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon

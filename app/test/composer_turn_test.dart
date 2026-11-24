@@ -104,9 +104,23 @@ void main() {
     variant: onMac,
   );
 
-  testWidgets('a queued message sent now: out of the queue, then in place '
-      'of the turn', (tester) async {
+  testWidgets('a queued message sent now: one call, the daemon sending it '
+      'in place of the turn', (tester) async {
     final (fake, d, chat) = await _box(tester);
+    await tester.enterText(find.byType(TextField), 'Also the README');
+    await tester.tap(find.byTooltip('Send now: stop the turn and send it'));
+    await tester.pumpAndSettle();
+    final r = fake.calls.whereType<UnqueueRequest>().single;
+    expect((r.id, r.sendNow), ('q1', true));
+    expect(fake.calls.whereType<SendPromptRequest>(), isEmpty);
+    expect(chat.draft.text.text, 'Also the README'); // the box is left
+    d.dispose();
+  }, variant: onMac);
+
+  testWidgets('a queued message sent now by a daemon before sendNowApi: out '
+      'of the queue, then in place of the turn', (tester) async {
+    final (fake, d, chat) = await _box(tester);
+    d.daemonApi = sendNowApi - 1;
     await tester.tap(find.byTooltip('Send now: stop the turn and send it'));
     await tester.pump();
     expect(fake.calls.whereType<UnqueueRequest>().single.id, 'q1');
@@ -120,8 +134,11 @@ void main() {
   }, variant: onMac);
 
   testWidgets('a queued message sent now that fails to send is back in the '
-      'box, after what was written', (tester) async {
+      'box, after what was written, by a daemon before sendNowApi', (
+    tester,
+  ) async {
     final (fake, d, chat) = await _box(tester, sendFails: true);
+    d.daemonApi = sendNowApi - 1;
     await tester.enterText(find.byType(TextField), 'Also the README');
     await tester.tap(find.byTooltip('Send now: stop the turn and send it'));
     await tester.pumpAndSettle();

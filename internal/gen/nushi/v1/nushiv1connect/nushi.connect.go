@@ -578,7 +578,8 @@ type NushiServiceClient interface {
 	// is busy.
 	RewindChat(context.Context, *connect.Request[v1.RewindChatRequest]) (*connect.Response[v1.RewindChatResponse], error)
 	// Takes a message out of the chat's queue before the agent gets it, and
-	// returns it. Refused once the agent has it.
+	// returns it. Refused once the agent has it. With send_now it sends the
+	// message at once instead, as SendPrompt's now does, and returns none.
 	Unqueue(context.Context, *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
 	// "cancelled" notice, and prompts it was waiting on are cancelled. It can
@@ -3141,7 +3142,8 @@ type NushiServiceHandler interface {
 	// is busy.
 	RewindChat(context.Context, *connect.Request[v1.RewindChatRequest]) (*connect.Response[v1.RewindChatResponse], error)
 	// Takes a message out of the chat's queue before the agent gets it, and
-	// returns it. Refused once the agent has it.
+	// returns it. Refused once the agent has it. With send_now it sends the
+	// message at once instead, as SendPrompt's now does, and returns none.
 	Unqueue(context.Context, *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
 	// "cancelled" notice, and prompts it was waiting on are cancelled. It can

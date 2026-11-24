@@ -221,7 +221,8 @@ abstract final class NushiService {
   );
 
   /// Takes a message out of the chat's queue before the agent gets it, and
-  /// returns it. Refused once the agent has it.
+  /// returns it. Refused once the agent has it. With send_now it sends the
+  /// message at once instead, as SendPrompt's now does, and returns none.
   static const unqueue = connect.Spec(
     '/$name/Unqueue',
     connect.StreamType.unary,

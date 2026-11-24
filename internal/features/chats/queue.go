@@ -126,20 +126,51 @@ func (c *chat) unsendLocked(id string) {
 // Unqueue takes a message out of the chat's queue and returns it, before
 // the agent gets it.
 func (s *Service) Unqueue(chatID, id string) (model.Message, error) {
+	_, m, _, err := s.unqueue(chatID, id)
+	return m, err
+}
+
+// unqueue is Unqueue's: the chat, the message and where it was.
+func (s *Service) unqueue(chatID, id string) (*chat, model.Message, int, error) {
 	c, err := s.lookup(chatID) // a side chat's too
 	if err != nil {
-		return model.Message{}, err
+		return nil, model.Message{}, 0, err
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	i := slices.IndexFunc(c.queue, func(m model.Message) bool { return m.ID == id })
 	if i < 0 {
-		return model.Message{}, errors.New("the agent has it already")
+		return nil, model.Message{}, 0, errors.New("the agent has it already")
 	}
 	m := c.queue[i]
 	c.queue = slices.Delete(c.queue, i, i+1)
 	c.queueChangedLocked()
-	return m, nil
+	return c, m, i, nil
+}
+
+// SendQueuedNow sends a message of the chat's queue at once, as Prompt's
+// SendNow does (the running turn stops first), in one call: if the send
+// fails or ctx ends first (the app went while the agent wound its turn
+// down), the message goes back to its place in the queue, so no failure
+// loses it.
+func (s *Service) SendQueuedNow(ctx context.Context, chatID, id string) error {
+	c, m, at, err := s.unqueue(chatID, id)
+	if err != nil {
+		return err
+	}
+	send := m
+	send.ID = "" // a new message, as the box's
+	if err := s.Prompt(ctx, chatID, send, SendNow); err != nil {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		c.queue = slices.Insert(c.queue, min(at, len(c.queue)), m)
+		c.queueChangedLocked()
+		if !c.busy {
+			c.deliverLocked()
+		}
+		return err
+	}
+	return nil
 }
 
 func (c *chat) queueChangedLocked() {

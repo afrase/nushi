@@ -95,7 +95,8 @@ service NushiService {
   // is busy.
   rpc RewindChat(RewindChatRequest) returns (RewindChatResponse);
   // Takes a message out of the chat's queue before the agent gets it, and
-  // returns it. Refused once the agent has it.
+  // returns it. Refused once the agent has it. With send_now it sends the
+  // message at once instead, as SendPrompt's now does, and returns none.
   rpc Unqueue(UnqueueRequest) returns (UnqueueResponse);
   // Stops the chat's running turn (ACP session/cancel). The turn ends with a
   // "cancelled" notice, and prompts it was waiting on are cancelled. It can
@@ -1282,9 +1283,14 @@ message RewindChatResponse {
 message UnqueueRequest {
   string chat_id = 1;
   string id = 2;
+  // Send the message now (Send now): the running turn stops first, as
+  // SendPrompt's now does. If the send fails or the call ends first, the
+  // message stays where it was in the queue. Since API 147.
+  bool send_now = 3;
 }
 
 message UnqueueResponse {
+  // The message taken out; none with send_now.
   QueuedMessage message = 1;
 }
 

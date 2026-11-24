@@ -162,7 +162,15 @@ func (s *server) RewindChat(ctx context.Context, req *connect.Request[nushiv1.Re
 	return connect.NewResponse(&nushiv1.RewindChatResponse{Message: messageProto(m)}), nil
 }
 
-func (s *server) Unqueue(_ context.Context, req *connect.Request[nushiv1.UnqueueRequest]) (*connect.Response[nushiv1.UnqueueResponse], error) {
+func (s *server) Unqueue(ctx context.Context, req *connect.Request[nushiv1.UnqueueRequest]) (*connect.Response[nushiv1.UnqueueResponse], error) {
+	if req.Msg.SendNow {
+		if err := s.Chats.SendQueuedNow(ctx, req.Msg.ChatId, req.Msg.Id); errors.Is(err, chats.ErrRestarting) {
+			return nil, because(connect.NewError(connect.CodeUnavailable, err), ReasonRestarting) // the app sends it again
+		} else if err != nil {
+			return nil, waitErr(ctx, err)
+		}
+		return connect.NewResponse(&nushiv1.UnqueueResponse{}), nil
+	}
 	m, err := s.Chats.Unqueue(req.Msg.ChatId, req.Msg.Id)
 	if err != nil {
 		return nil, notFound(err)

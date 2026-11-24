@@ -296,3 +296,57 @@ func TestQueuedImagesGoOnlyToAnAgentThatTakesThem(t *testing.T) {
 		}
 	}
 }
+
+// Send now on a queued message whose send doesn't happen (the request
+// ends while the agent winds its turn down) leaves it where it was in the
+// queue: it isn't lost between taking it out and sending it.
+func TestSendNowOfAQueuedMessageThatDoesntGoKeepsIt(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate, agent.ignoreCancel = make(chan struct{}), true
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	for _, text := range []string{"a", "b"} {
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendQueue))
+	}
+	c.mu.Lock()
+	id := c.queue[0].ID
+	c.mu.Unlock()
+	ctx, cancel := context.WithCancel(t.Context())
+	sent := make(chan error, 1)
+	go func() { sent <- svc.SendQueuedNow(ctx, c.id, id) }()
+	eventually(t, c, func() bool { return c.sendingNow > 0 }) // it waits for the turn to end
+	cancel()
+	if err := <-sent; err == nil {
+		t.Fatal("sent")
+	}
+	c.mu.Lock()
+	var queued []string
+	for _, m := range c.queue {
+		queued = append(queued, m.Text)
+	}
+	c.mu.Unlock()
+	if !reflect.DeepEqual(queued, []string{"a", "b"}) {
+		t.Errorf("queue %q", queued)
+	}
+	agent.release()
+	idle(t, c)
+}
+
+// Send now on a queued message stops the turn and sends it, in one call:
+// it leaves the queue, and goes ahead of what stays queued.
+func TestSendNowOfAQueuedMessage(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	for _, text := range []string{"a", "b"} {
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendQueue))
+	}
+	c.mu.Lock()
+	id := c.queue[1].ID
+	c.mu.Unlock()
+	testcheck.NoErr(t, svc.SendQueuedNow(t.Context(), c.id, id))
+	eventually(t, c, func() bool { return c.busy && c.items[len(c.items)-1].Text == "b" && len(c.queue) == 1 })
+	agent.release()
+	eventually(t, c, func() bool { got, _ := agent.texts(); return reflect.DeepEqual(got, []string{"one", "b", "a"}) })
+	agent.release()
+	idle(t, c)
+}

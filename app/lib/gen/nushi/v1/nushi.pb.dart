@@ -5474,10 +5474,12 @@ class UnqueueRequest extends $pb.GeneratedMessage {
   factory UnqueueRequest({
     $core.String? chatId,
     $core.String? id,
+    $core.bool? sendNow,
   }) {
     final result = UnqueueRequest._();
     if (chatId != null) result.chatId = chatId;
     if (id != null) result.id = id;
+    if (sendNow != null) result.sendNow = sendNow;
     return result;
   }
 
@@ -5496,6 +5498,7 @@ class UnqueueRequest extends $pb.GeneratedMessage {
       createEmptyInstance: UnqueueRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOS(2, _omitFieldNames ? '' : 'id')
+    ..aOB(3, _omitFieldNames ? '' : 'sendNow')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -5537,6 +5540,18 @@ class UnqueueRequest extends $pb.GeneratedMessage {
   $core.bool hasId() => $_has(1);
   @$pb.TagNumber(2)
   void clearId() => $_clearField(2);
+
+  /// Send the message now (Send now): the running turn stops first, as
+  /// SendPrompt's now does. If the send fails or the call ends first, the
+  /// message stays where it was in the queue. Since API 147.
+  @$pb.TagNumber(3)
+  $core.bool get sendNow => $_getBF(2);
+  @$pb.TagNumber(3)
+  set sendNow($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSendNow() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSendNow() => $_clearField(3);
 }
 
 class UnqueueResponse extends $pb.GeneratedMessage {
@@ -5587,6 +5602,7 @@ class UnqueueResponse extends $pb.GeneratedMessage {
           UnqueueResponse.$_createMessage);
   static UnqueueResponse? _defaultInstance;
 
+  /// The message taken out; none with send_now.
   @$pb.TagNumber(1)
   QueuedMessage get message => $_getN(0);
   @$pb.TagNumber(1)
@@ -36943,7 +36959,8 @@ class NushiServiceApi {
           ctx, 'NushiService', 'RewindChat', request, RewindChatResponse());
 
   /// Takes a message out of the chat's queue before the agent gets it, and
-  /// returns it. Refused once the agent has it.
+  /// returns it. Refused once the agent has it. With send_now it sends the
+  /// message at once instead, as SendPrompt's now does, and returns none.
   $async.Future<UnqueueResponse> unqueue(
           $pb.ClientContext? ctx, UnqueueRequest request) =>
       _client.invoke<UnqueueResponse>(

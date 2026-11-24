@@ -155,7 +155,7 @@ Start a message with **!** to run it as a command instead of sending it, as in C
 
 You can send a message before the agent finishes. Type your message, then:
 
-- **⏎, or the Queue button,** puts it in line, as a pill over the box. If the agent takes input while it works, it gets the message right away. Otherwise the message goes when the current turn ends. You can edit or remove a pill, or send it now.
+- **⏎, or the Queue button,** puts it in line, as a pill over the box. If the agent takes input while it works, it gets the message right away. Otherwise the message goes when the current turn ends. You can edit or remove a pill, or send it now: the turn stops and it goes. If it can't go, it stays in line.
 - **⌘⏎, or the Stop and send button,** stops what the agent is doing and sends your message at once.
 
 With **Enter starts a new line** on, **⌘⏎** queues and **⇧⌘⏎** stops and sends. The box's hint and the buttons' tooltips show the keys.
