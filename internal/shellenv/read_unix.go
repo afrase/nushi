@@ -93,13 +93,12 @@ func parseLimits(out []byte, end, done string) Limits {
 	if e < 0 {
 		return Limits{}
 	}
-	tail := out[e+len(end):]
-	d := bytes.Index(tail, []byte(done))
-	if d < 0 {
+	printed, _, ok := bytes.Cut(out[e+len(end):], []byte(done))
+	if !ok {
 		return Limits{}
 	}
 	var l Limits
-	for line := range strings.Lines(string(tail[:d])) {
+	for line := range strings.Lines(string(printed)) {
 		line = strings.TrimSpace(line)
 		if v, ok := strings.CutPrefix(line, umaskKey); ok {
 			l.Umask = v

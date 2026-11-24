@@ -61,7 +61,7 @@ func Merge(base, over []string) []string {
 
 // Gone are the names of had's variables that environ hasn't (whatever
 // their case on Windows, nameKey), but Nushi's own (Own): what a daemon
-// that had had and now takes environ unsets.
+// whose environment was had unsets as it takes environ.
 func Gone(had, environ []string) []string {
 	has := map[string]bool{}
 	for _, kv := range environ {
