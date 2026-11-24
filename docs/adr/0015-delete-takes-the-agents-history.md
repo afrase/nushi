@@ -30,4 +30,5 @@ Later the same day: Delete honours the plan the user last saw. When the chat's l
 Later still: the plan says when the history stays because the agent couldn't start, and the dialog says that instead of promising its resume command opens the history (the agent may be gone).
 
 ## Amendment (2026-11-24): the file check runs each hour, not when the chats are listed
-The check of the agent's files alone runs in the daemon each hour while it runs (with the clearing of old transcript copies), not when the app lists the chats: a list ran it once per app connect (never while the app was quit), made the list wait on git, and a list cancelled midway kept a chat with a wrong reason.
+The check of the agent's files alone runs in the daemon as it starts and each hour while it runs (after the clearing of old transcript copies), not when the app lists the chats: a list ran it once per app connect (never while the app was quit), made the list wait on git, and a list cancelled midway kept a chat with a wrong reason.
+Later the same day: the first check runs as the daemon starts, as the first list made it, so a chat whose agent deleted its session while the daemon was down goes at once rather than an hour later.

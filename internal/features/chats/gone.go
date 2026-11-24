@@ -154,9 +154,13 @@ func (s *Service) keeps(ctx context.Context, sess model.ChatRecord) string {
 
 // sweep forgets the chats whose sessions their agent deleted, found from
 // the agent's files alone (HistoryChecker); no agent starts. A chat whose
-// agent runs, or whose folder is gone, is left as it is. It runs each hour
-// (eachHour), until ctx ends.
+// agent runs, or whose folder is gone, is left as it is. It runs as the
+// service starts and each hour (eachHour), until ctx ends; with no agent
+// whose files can tell, it reads nothing.
 func (s *Service) sweep(ctx context.Context) {
+	if !slices.ContainsFunc(s.kinds, func(k *kind) bool { return k.historyChecker != nil }) {
+		return
+	}
 	stored, err := s.sessions.Sessions()
 	if err != nil {
 		return

@@ -64,6 +64,10 @@ var errNotFound = &acp.Error{Code: acp.ErrorCodeResourceNotFound, Message: "Reso
 
 // goneService has one stored chat, "c", whose agent answers session/load
 // with loadErr; gone is its HistoryChecker, o the rest of its Options.
+// The chat's session is in the agent's files as the service starts, and
+// its first sweep finds it there (goneService waits for that; the sweep
+// doesn't look in a folder it can't reach); from then on gone says, as if
+// the agent deleted it after: the test's own step finds it gone.
 func goneService(t *testing.T, loadErr error, gone func(sid, folder string) bool, sess model.ChatRecord, o Options) (*Service, *fakeAgent, *memSessions, *events) {
 	t.Helper()
 	agent := &fakeAgent{loadErr: loadErr}
@@ -74,13 +78,24 @@ func goneService(t *testing.T, loadErr error, gone func(sid, folder string) bool
 	sess.HasMessages = true
 	sessions := &memSessions{stored: []model.ChatRecord{sess}}
 	ev := &events{}
+	swept := make(chan struct{})
+	var first sync.Once
+	there := func(sid, folder string) (deleted bool) {
+		deleted = true
+		first.Do(func() { deleted = false; close(swept) })
+		return deleted && gone(sid, folder)
+	}
 	k := Kind{Launch: agent.launch, Harness: struct {
 		testHarness
 		historyGone
-	}{testHarness{Name: "fake", Title: "Fake", gone: true, Expires: "it deletes old ones"}, gone}}
+	}{testHarness{Name: "fake", Title: "Fake", gone: true, Expires: "it deletes old ones"}, there}}
+	if folderGone(sess) != nil { // the sweep doesn't look
+		first.Do(func() { close(swept) })
+	}
 	o.Sessions, o.Worktrees, o.Scratch, o.Publish = sessions, stateWorktrees{}, t.TempDir(), ev.publish
 	svc := newService(t, []Kind{k}, o)
 	t.Cleanup(svc.Close)
+	<-swept
 	return svc, agent, sessions, ev
 }
 
@@ -132,7 +147,9 @@ func TestAChatStaysUnlessItsSessionIsSurelyGone(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			svc, _, sessions, ev := goneService(t, tc.err, tc.historyGone, model.ChatRecord{Folder: tc.folder}, Options{})
 			if tc.fresh {
+				sessions.mu.Lock()
 				sessions.stored[0].HasMessages = false
+				sessions.mu.Unlock()
 			}
 			_, _ = svc.Get("c")
 			cc := svc.chats["c"]
@@ -203,10 +220,11 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 	}
 }
 
-// The hourly sweep finds the chats whose sessions their agent's files no
-// longer have, starting no agent; one whose folder can't be reached, that
-// never had a message, or whose files can't tell, stays. In a bubble: the
-// loop sweeps each hour of its clock, and not as the service starts.
+// The sweep finds the chats whose sessions their agent's files no longer
+// have, starting no agent, as the service starts and each hour after; one
+// whose folder can't be reached, that never had a message, or whose files
+// can't tell, stays. In a bubble: the loop sweeps as the service starts,
+// then each hour of its clock.
 func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		agent := &fakeAgent{}
@@ -229,12 +247,8 @@ func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
 		}, Options{Sessions: sessions, Worktrees: stateWorktrees{}, Scratch: t.TempDir(), Publish: ev.publish})
 		defer svc.Close()
 		synctest.Wait()
-		if deleted := sessions.removedIDs(); len(deleted) != 0 {
-			t.Fatalf("swept as it started: deleted %v", deleted)
-		}
-		pass(time.Hour)
 		if deleted := sessions.removedIDs(); !slices.Equal(deleted, []string{"gone"}) {
-			t.Errorf("deleted %v", deleted)
+			t.Errorf("as it started: deleted %v", deleted)
 		}
 		if launches, _, _ := agent.count(); launches != 0 {
 			t.Errorf("%d agents started", launches)
@@ -242,7 +256,11 @@ func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
 		mu.Lock()
 		gone["s-here"] = true
 		mu.Unlock()
-		pass(time.Hour)
+		pass(time.Hour - time.Millisecond)
+		if deleted := sessions.removedIDs(); !slices.Equal(deleted, []string{"gone"}) {
+			t.Errorf("before the hour: deleted %v", deleted)
+		}
+		pass(time.Millisecond)
 		if deleted := sessions.removedIDs(); !slices.Equal(deleted, []string{"gone", "here"}) {
 			t.Errorf("deleted %v", deleted)
 		}
