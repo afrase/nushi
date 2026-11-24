@@ -41,13 +41,59 @@ linters:
     - funlen # length alone isn't a problem; gocognit counts what makes a function hard
     - nestif # gocognit counts nesting already
     # Linters that do nothing without configuration of their own.
-    - depguard # no import rules: dependencies are listed in docs/development.md and added on purpose
-    - gomodguard # the same (deprecated, replaced by gomodguard_v2)
+    - gomodguard # go.mod is the allowlist of modules; docs/development.md says why each is there (deprecated, replaced by gomodguard_v2)
     - gomodguard_v2 # the same
     - goheader # no license header in this repo
 
 
   settings:
+    # The layering as practised (AGENTS.md's Layering): two narrow rules,
+    # tests left out (a feature's tests use a real agent's package on
+    # purpose, ADR 0077, and a package's tests may build a feature).
+    # depguard matches a package and every package under its path.
+    depguard:
+      rules:
+        # chats names no agent (ADR 0077): a feature meets an agent through
+        # the interfaces it declares, and knownagents, which wires the
+        # agents into the features, and each agent's trust and skills
+        # reach a feature only through internal/daemon.
+        features-name-no-agent:
+          files:
+            - "**/internal/features/**"
+            - "!$test"
+          deny:
+            - pkg: github.com/afrase/nushi/internal/claude # claude, claudehistory, claudemcp, claudeskills, claudetrust
+              desc: a feature meets an agent through its own interfaces (ADR 0077)
+            - pkg: github.com/afrase/nushi/internal/codex
+              desc: a feature meets an agent through its own interfaces (ADR 0077)
+            - pkg: github.com/afrase/nushi/internal/ante # ante, antemcp, anteskills, antetrust
+              desc: a feature meets an agent through its own interfaces (ADR 0077)
+            - pkg: github.com/afrase/nushi/internal/pi # pi, piskills
+              desc: a feature meets an agent through its own interfaces (ADR 0077)
+            - pkg: github.com/afrase/nushi/internal/omp
+              desc: a feature meets an agent through its own interfaces (ADR 0077)
+            - pkg: github.com/afrase/nushi/internal/opencode
+              desc: a feature meets an agent through its own interfaces (ADR 0077)
+            - pkg: github.com/afrase/nushi/internal/knownagents
+              desc: knownagents wires the agents into the features, not the other way round
+        # Only the layers that wire or serve the features import them: the
+        # API's handlers, knownagents, the daemon's composition, its e2e
+        # tests, main and the Claude parity recorder. A plumbing,
+        # integration or agent package never imports a feature.
+        only-wiring-imports-features:
+          files:
+            - $all
+            - "!**/internal/api/**"
+            - "!**/internal/knownagents/**"
+            - "!**/internal/daemon/**"
+            - "!**/internal/e2e/**"
+            - "!**/internal/features/**"
+            - "!**/cmd/nushid/**"
+            - "!**/tools/claude-record/**"
+            - "!$test"
+          deny:
+            - pkg: github.com/afrase/nushi/internal/features
+              desc: only api, knownagents, daemon, e2e, cmd/nushid and tools/claude-record import a feature (AGENTS.md's Layering)
     errcheck:
       check-type-assertions: false # forcetypeassert covers them
     errchkjson:
