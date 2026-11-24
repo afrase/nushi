@@ -53,6 +53,28 @@ void main() {
         await render(tester, find.byType(NushiApp), 'pull_fresh_failed_$tag');
         await closeView(tester, d);
       }, variant: onMac);
+
+      renderTest('the tab whose first read failed, nothing kept '
+          '(${width.toInt()}, ${b.name})', (tester) async {
+        final (d, _) = await openPullTab(
+          tester,
+          fixturePull(),
+          size: Size(width, 900),
+          brightness: b,
+          open: false,
+          more: (input) => input is GetGitHubPullRequest
+              ? Future<GetGitHubPullResponse>.error(Exception('no network'))
+              : null,
+        );
+        d.chats['c']!.tab.value = ChatTab.pull;
+        await tester.pumpAndSettle();
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'pull_fresh_unread_${width.toInt()}_${b.name}',
+        );
+        await closeView(tester, d);
+      }, variant: onMac);
     }
   }
 }
