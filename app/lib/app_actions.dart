@@ -429,11 +429,7 @@ List<AppAction> chatActions(
       .wake,
       'Wake chat',
       short: 'Wake',
-      enabled:
-          chat != null &&
-          chat.asleep &&
-          !chat.archived &&
-          d.daemonApi >= wakeApi,
+      enabled: canWakeChat(d, chat),
       run: () => unawaited(wakeChat(context, chat!, d)),
     ),
     AppAction(

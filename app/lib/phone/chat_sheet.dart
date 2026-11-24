@@ -19,7 +19,8 @@ import 'package:nushi/workflows.dart';
 
 /// The phone's chat ⋯: what the chat runs in (its folder, branch and
 /// model) and what can be done to it from a phone: Rename, Fork ([onFork],
-/// which shows the fork), Pin or Unpin, Sleep, Archive or Unarchive, and
+/// which shows the fork), Pin or Unpin, Sleep or Wake (in one place, as
+/// the Mac's chat menu has them), Archive or Unarchive, and
 /// Stop every subagent and background command that runs. Everything else
 /// stays the Mac's.
 Future<void> showChatSheet(
@@ -178,11 +179,9 @@ class _ChatSheetState extends State<ChatSheet> {
                   false,
                 ),
               if (chat.canSleep && !chat.archived)
-                (
-                  'Sleep',
-                  () => _then(() => sleepChat(context, chat, d)),
-                  false,
-                ),
+                ('Sleep', () => _then(() => sleepChat(context, chat, d)), false)
+              else if (canWakeChat(d, chat))
+                ('Wake', () => _then(() => wakeChat(context, chat, d)), false),
               if (running.isNotEmpty)
                 (
                   running.length == 1

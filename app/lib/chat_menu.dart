@@ -134,6 +134,11 @@ Future<void> sleepChat(
   );
 }
 
+/// Whether [chat] can be woken without a message: it sleeps, isn't
+/// archived, and the daemon has WakeChat ([wakeApi]).
+bool canWakeChat(Daemon d, ChatState? chat) =>
+    chat != null && chat.asleep && !chat.archived && d.daemonApi >= wakeApi;
+
 /// Wakes a sleeping chat without a message: its session reopens, and the
 /// chat shows it opening as any reopen does (its status), and the reopen's
 /// notice with Try again if it fails.

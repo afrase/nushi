@@ -6,6 +6,8 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
+import 'package:nushi/phone/chat_sheet.dart';
+import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -157,4 +159,61 @@ void main() {
     expect(fake.calls.whereType<WakeChatRequest>(), isEmpty);
     await closeView(tester, d);
   }, variant: onMac);
+
+  // The phone's chat sheet, by the same rule: Wake where Sleep is.
+  for (final (size, tag) in const [
+    (Size(390, 844), '390'),
+    (Size(430, 932), '430'),
+    (Size(844, 390), 'landscape'),
+  ]) {
+    testWidgets("the phone's chat sheet offers Wake for a sleeping chat, "
+        'Sleep for an awake one ($tag)', (tester) async {
+      viewport(tester, size, ratio: 2);
+      final fake = FakeDaemon([
+        chat(
+          'a',
+          'claude',
+          'Wire the ledger',
+          status: ChatStatus(asleep: true),
+        ),
+        chat(
+          'b',
+          'codex',
+          'Cap the rates',
+          age: 5,
+          status: ChatStatus(canSleep: true),
+        ),
+      ]);
+      final phone = await startPhone(tester, fake);
+      Future<void> sheet(String title) async {
+        await tester.tap(find.text(title));
+        await tester.pumpAndSettle();
+        await tester.tap(find.bySemanticsLabel('Chat'));
+        await tester.pumpAndSettle();
+      }
+
+      Finder inSheet(String label) => find.descendant(
+        of: find.byType(ChatSheet),
+        matching: find.text(label),
+      );
+
+      await sheet('Wire the ledger');
+      expect(inSheet('Wake'), findsOne);
+      expect(inSheet('Sleep'), findsNothing);
+      await tester.ensureVisible(inSheet('Wake')); // landscape scrolls
+      await tester.pumpAndSettle();
+      await render(tester, find.byType(PhoneApp), 'phone_chat_sheet_wake_$tag');
+      await tester.tap(inSheet('Wake'));
+      await tester.pumpAndSettle();
+      expect(fake.calls.whereType<WakeChatRequest>().single.chatId, 'a');
+      expect(find.byType(ChatSheet), findsNothing);
+
+      await tester.tap(find.bySemanticsLabel('Back').first);
+      await tester.pumpAndSettle();
+      await sheet('Cap the rates');
+      expect(inSheet('Sleep'), findsOne);
+      expect(inSheet('Wake'), findsNothing);
+      await endPhone(tester, phone);
+    });
+  }
 }
