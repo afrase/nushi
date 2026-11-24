@@ -211,6 +211,30 @@ void main() {
     });
   }
 
+  testWidgets("a chat's linked issue rides on the chats' minute ask (its "
+      "header chip's freshness), not an archived chat's", (tester) async {
+    final issue = GitHubLink(
+      host: 'github.com',
+      repo: 'afrase/nushi-gh-test',
+      number: 7,
+      id: 'I_7',
+    );
+    final fake = FakeDaemon([
+      ..._chats(),
+      chat('e', 'claude', 'From an issue', age: 20)..github = issue,
+      chat('f', 'claude', 'Archived', age: 25)
+        ..github = (issue.deepCopy()..number = 8)
+        ..archived = true,
+    ])..answer = _states;
+    final d = await fake.connect(tester);
+    final states = PullStates.of(d);
+    fake.calls.clear();
+    await states.refresh();
+    final asked = fake.calls.whereType<GetGitHubItemsRequest>().single;
+    expect(asked.refs.map((r) => r.number), [1, 2, 3, 7]);
+    d.dispose();
+  });
+
   // Gates above the floor keep one test of the daemon below them (ADR
   // 0004): before the rows said their checks' commit (API 133), the
   // chats' states come from GetGitHubStates.

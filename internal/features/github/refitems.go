@@ -126,8 +126,8 @@ func (s *Service) keptItems(refs []model.GitHubRef) (items []model.GitHubItem, u
 	return items, unseen, hosts, ask
 }
 
-// keepItems keeps what a host said, and feeds the chats' states; false
-// when the host's token changed while it was asked.
+// keepItems keeps what a host said; false when the host's token changed
+// while it was asked.
 func (s *Service) keepItems(name string, h *host, got []model.GitHubItem, missing []model.GitHubRef) bool {
 	now := time.Now()
 	s.mu.Lock()
@@ -137,7 +137,6 @@ func (s *Service) keepItems(name string, h *host, got []model.GitHubItem, missin
 	}
 	for _, it := range got {
 		s.items[refKey(it.GitHubRef)] = itemCache{at: now, item: it}
-		s.states[it.ID] = stateCache{at: now, item: it}
 	}
 	for _, r := range missing {
 		s.items[refKey(r)] = itemCache{at: now, unseen: true}

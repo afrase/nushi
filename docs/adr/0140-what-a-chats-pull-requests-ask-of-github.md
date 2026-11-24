@@ -19,3 +19,4 @@ Since ADR 0138 the app asks for its chats' pull requests' states for its whole l
 - The widget's "N new comments" counts comments, not their times: a deleted comment can hide a new one.
 - The phone's chip still reads its primary whole each minute while the chat shows.
 - 2026-11-24: the GitHub view's pull request pane, outside a chat, polls the same way (each minute, every 15 once merged or closed, every 5 in the background), in place of its fixed 30 s (ADR 0046).
+- 2026-11-24: the header's chip of a chat's issue reads GitHubItems (asked once when built, as a link's chip is), and the chats' issues ride on the minute's `GetGitHubItems`; its own minute `GetGitHubStates` goes. The daemon answers an older app's `GetGitHubStates` from the items it keeps by number; its states cache and query are gone, and a write made in Nushi makes its host's items old.

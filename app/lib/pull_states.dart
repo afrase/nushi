@@ -52,8 +52,9 @@ String itemState(GitHubItem it) => switch (it.state) {
 /// minute, every 15 once all are merged or closed, every 5 at least while
 /// the window isn't in front; ADR 0140). From API 133 that call is the
 /// rows' items (GetGitHubItems: one query a host for every chat, whose
-/// rows then need no ask of their own), before it GetGitHubStates (one
-/// query a host, kept 30 s there); a chat's widget puts what it read too.
+/// rows then need no ask of their own; the chats' linked issues ride on
+/// it, for the header's chip), before it GetGitHubStates (one query a
+/// host, kept 30 s there); a chat's widget puts what it read too.
 /// Archived chats and chats without a pull request aren't asked for.
 class PullStates extends ChangeNotifier {
   /// The one of [daemon].
@@ -161,6 +162,13 @@ class PullStates extends ChangeNotifier {
           if (l.id.isNotEmpty) l,
   ];
 
+  /// The chats' linked issues (a chat started from one), not archived.
+  Iterable<GitHubLink> get _issues => [
+    for (final ChatState c in daemon.chats.values)
+      if (!c.archived)
+        if (c.github case final l? when !l.pull) l,
+  ];
+
   /// A chat got a pull request (or lost one): ask in a moment.
   void _chatsChanged() {
     final ids = {for (final l in _links) l.id};
@@ -177,7 +185,12 @@ class PullStates extends ChangeNotifier {
     try {
       if (daemon.daemonApi >= statesFromItemsApi) {
         final items = GitHubItems.of(daemon);
-        await items.ask([for (final l in links) addressOf(l)], quiet: quiet);
+        // The chats' issues ride on it too (their header chip, ADR 0117):
+        // the same query a host, no poll of their own.
+        await items.ask([
+          for (final l in links) addressOf(l),
+          ..._issues.map(addressOf),
+        ], quiet: quiet);
         for (final l in links) {
           if (items.look(addressOf(l)).item case final it?) _items[l.id] = it;
         }

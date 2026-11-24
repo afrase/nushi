@@ -4,39 +4,19 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strings"
 	"time"
 
 	"github.com/afrase/nushi/internal/githubapi"
-	"github.com/afrase/nushi/internal/model"
 )
 
-// How long an answer is taken as current: two windows asking, or a
+// How long an inbox is taken as current: two windows asking, or a
 // window asking again soon, cost nothing more.
-const (
-	inboxFresh = 20 * time.Second
-	stateFresh = 30 * time.Second
-)
+const inboxFresh = 20 * time.Second
 
 type inboxCache struct {
 	at    time.Time
 	inbox githubapi.Inbox
-}
-
-type stateCache struct {
-	at   time.Time
-	item model.GitHubItem
-}
-
-// fresh says the state is current: for stateFresh, or for itemDoneFresh
-// once merged or closed (which rarely changes, ADR 0117's items alike).
-func (k stateCache) fresh(now time.Time) bool {
-	ttl := stateFresh
-	if k.item.State == "merged" || k.item.State == "closed" {
-		ttl = itemDoneFresh
-	}
-	return now.Sub(k.at) < ttl
 }
 
 // Inbox is the host's inbox, in repos if any are given, and when GitHub
@@ -88,9 +68,6 @@ func (s *Service) Inbox(ctx context.Context, name string, f githubapi.InboxFilte
 	}
 	s.keep(name, inboxKey(f), in) // under s.mu, so a forget can't come between
 	s.inboxes[key] = inboxCache{at: now, inbox: in}
-	for _, it := range slices.Concat(in.Review, in.Mine, in.Assigned) {
-		s.states[it.ID] = stateCache{at: now, item: it}
-	}
 	return Inbox{Inbox: in, At: now}, nil
 }
 
@@ -113,7 +90,7 @@ func (s *Service) keep(name, key string, v any) {
 }
 
 // forget drops what the host's token was shown, on disk and here (its
-// inboxes, its items' states): another token may be another account's.
+// inboxes, its items): another token may be another account's.
 // s.mu is held.
 func (s *Service) forget(name string) {
 	if err := s.Store.ForgetCache(cacheArea, name); err != nil {
@@ -122,11 +99,6 @@ func (s *Service) forget(name string) {
 	for key := range s.inboxes {
 		if strings.HasPrefix(key, name+" ") {
 			delete(s.inboxes, key)
-		}
-	}
-	for id, st := range s.states {
-		if st.item.Host == name {
-			delete(s.states, id)
 		}
 	}
 	for k := range s.items {
@@ -149,51 +121,4 @@ func (s *Service) CachedInbox(name string, f githubapi.InboxFilter) (Inbox, erro
 		return Inbox{}, err // a part read of a broken answer isn't shown
 	}
 	return in, nil
-}
-
-// States are chats' items as they are now, by node id: the ones asked for
-// in the last 30 s (10 minutes once merged or closed) as they were, the
-// rest in one query a host. An item
-// GitHub can't give now keeps its last known state; one never known is
-// left out.
-func (s *Service) States(ctx context.Context, items []model.ChatGitHub, poll bool) map[string]model.GitHubItem {
-	out := map[string]model.GitHubItem{}
-	ask := map[string][]string{} // by host
-	now := time.Now()
-	s.mu.Lock()
-	for _, it := range items {
-		kept, ok := s.states[it.ID]
-		if ok {
-			out[it.ID] = kept.item
-		}
-		if (!ok || !kept.fresh(now)) && !slices.Contains(ask[it.Host], it.ID) && len(ask[it.Host]) < 100 {
-			ask[it.Host] = append(ask[it.Host], it.ID)
-		}
-	}
-	s.mu.Unlock()
-	if poll {
-		ctx = githubapi.Poll(ctx)
-	}
-	for name, ids := range ask {
-		h, err := s.host(ctx, name, false)
-		if err != nil {
-			continue
-		}
-		got, err := h.c.Status(ctx, ids)
-		if err != nil {
-			continue // the last known state stays
-		}
-		now := time.Now()
-		s.mu.Lock()
-		if n, _ := normalHost(name); s.clients[n] != h {
-			s.mu.Unlock()
-			continue // the token changed meanwhile: perhaps another account's
-		}
-		for id, it := range got {
-			s.states[id] = stateCache{at: now, item: it}
-			out[id] = it
-		}
-		s.mu.Unlock()
-	}
-	return out
 }

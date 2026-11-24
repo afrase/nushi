@@ -15,7 +15,7 @@ import (
 // open one 30 s, a merged one and an unseen one 10 minutes), each host's
 // in one call; one GitHub doesn't show is unseen; a host Nushi doesn't
 // know is never asked; GitHub failing keeps the last known, with the
-// error; they feed the chats' states.
+// error.
 func TestItems(t *testing.T) {
 	w := newWorld(t)
 	ctx := t.Context()
@@ -34,9 +34,6 @@ func TestItems(t *testing.T) {
 	}
 	if a := asked(); len(a) != 1 || a[0] != "items a/b#1,a/b#2,a/b#3" {
 		t.Fatalf("one call for the known host: %v", a)
-	}
-	if st := w.s.States(ctx, []model.ChatGitHub{{Host: "github.com", ID: "PR_1"}}, true); st["PR_1"].Title != "One" || len(asked()) != 1 {
-		t.Fatalf("the states fed: %+v", st)
 	}
 	if _, _, _, err := w.s.Items(ctx, refs, true); err != nil || len(asked()) != 1 {
 		t.Fatalf("asked again while current: %v %v", asked(), err)

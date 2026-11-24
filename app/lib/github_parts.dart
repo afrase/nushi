@@ -8,10 +8,12 @@ import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_items.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
+import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/run_state.dart';
 import 'package:nushi/theme/theme.dart';
@@ -260,58 +262,36 @@ class NoHost extends StatelessWidget {
   }
 }
 
-/// A chat's GitHub pull request or issue in its header: its number in its
-/// state's color, its checks, review and threads not resolved, asked of
-/// the daemon while it shows (each minute, quietly); the details on
-/// hover; a click shows it in the GitHub view.
-class GitHubChip extends StatefulWidget {
+/// A chat's GitHub issue in its header (its pull requests have a chip
+/// of their own): its number in its state's color, its checks, review and
+/// threads not resolved, as GitHubItems has it: asked once when first
+/// built, as a link's chip is, then kept current by the chats' minute ask
+/// (PullStates, ADR 0140); the details on hover; a click shows it in the
+/// GitHub view.
+class GitHubChip extends StatelessWidget {
   const new({required this.daemon, required this.link, super.key});
 
   final Daemon daemon;
   final GitHubLink link;
 
   @override
-  State<GitHubChip> createState() => _GitHubChipState();
-}
-
-class _GitHubChipState extends State<GitHubChip> {
-  GitHubItem? _item;
-  Timer? _poll;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_load(quiet: false));
-    _poll = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => _load(quiet: true),
+  Widget build(BuildContext context) {
+    final items = GitHubItems.of(daemon);
+    return ListenableBuilder(
+      listenable: items,
+      builder: (context, _) {
+        final a = addressOf(link);
+        // The hosts listed, so an Enterprise host's chip fills in.
+        if (items.knows(a.host)) items.want(a);
+        return _chip(context, items.look(a).item);
+      },
     );
   }
 
-  @override
-  void dispose() {
-    _poll?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _load({required bool quiet}) async {
-    try {
-      final r = await widget.daemon.client.getGitHubStates(
-        GetGitHubStatesRequest(items: [widget.link], quiet: quiet),
-      );
-      final it = r.items.where((i) => i.id == widget.link.id).firstOrNull;
-      if (mounted && it != null) setState(() => _item = it);
-    } on Object {
-      // The last state stays; the chip says nothing new.
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _chip(BuildContext context, GitHubItem? it) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final l = widget.link;
-    final it = _item;
+    final l = link;
     final checks = it == null ? null : checksIcon(t, it.checks);
     final review = it == null ? null : reviewWords(t, it.review);
     final details = it == null
@@ -325,13 +305,13 @@ class _GitHubChipState extends State<GitHubChip> {
           ].join('\n');
     return Tap(
       tooltip: details,
-      onTap: () => showItem(widget.daemon, l.asRef, pull: l.pull),
+      onTap: () => showItem(daemon, l.asRef, pull: l.pull),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            l.pull ? Icons.merge_type : Icons.adjust,
+            Icons.adjust,
             size: 13,
             color: it == null ? t.textMuted : itemColor(t, it),
           ),

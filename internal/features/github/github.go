@@ -29,7 +29,6 @@ type Client interface { //nolint:interfacebloat // the GitHub calls the feature 
 	Budget() []githubapi.Bucket
 	Refused() bool
 	Inbox(ctx context.Context, f githubapi.InboxFilter) (githubapi.Inbox, error)
-	Status(ctx context.Context, ids []string) (map[string]model.GitHubItem, error)
 	Items(ctx context.Context, refs []model.GitHubRef) ([]model.GitHubItem, []model.GitHubRef, error)
 	Pull(ctx context.Context, repo string, number int) (model.GitHubPull, error)
 	Commits(ctx context.Context, repo string, number int) (model.GitHubCommits, error)
@@ -135,9 +134,8 @@ type Service struct {
 	clients  map[string]*host     // by host, once its token was read
 	noToken  map[string]time.Time // by host: when gh last had no token for it
 	inboxes  map[string]inboxCache
-	states   map[string]stateCache // by node id
-	items    map[string]itemCache  // by refKey (refitems.go)
-	logs     map[string]string     // finished jobs' log tails, by host, repository and job
+	items    map[string]itemCache // by refKey (refitems.go)
+	logs     map[string]string    // finished jobs' log tails, by host, repository and job
 	blobs    *blobCache
 	repos    map[string]repoCache  // by folder
 	branches map[string]headsCache // by host, repository and head
@@ -168,7 +166,7 @@ func (s *Service) drop(name string, h *host) {
 // New makes the service.
 func New(d Deps) *Service {
 	return &Service{Deps: d, clients: map[string]*host{}, noToken: map[string]time.Time{}, inboxes: map[string]inboxCache{},
-		states: map[string]stateCache{}, items: map[string]itemCache{}, logs: map[string]string{}, blobs: newBlobCache(), repos: map[string]repoCache{}, branches: map[string]headsCache{}}
+		items: map[string]itemCache{}, logs: map[string]string{}, blobs: newBlobCache(), repos: map[string]repoCache{}, branches: map[string]headsCache{}}
 }
 
 // HostState is a host as Settings › GitHub shows it.

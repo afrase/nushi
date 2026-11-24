@@ -92,17 +92,18 @@ void main() {
     viewport(tester, const Size(1400, 300));
     // A linked pull request has every badge its chip can show.
     final fake = FakeDaemon([])
-      ..answer = (i) => i is GetGitHubStatesRequest
-          ? GetGitHubStatesResponse(
+      ..answer = (i) => i is GetGitHubItemsRequest
+          ? GetGitHubItemsResponse(
               items: [
-                for (final l in i.items)
+                for (final r in i.refs)
                   GitHubItem(
-                    id: l.id,
-                    pull: l.pull,
+                    ref: r,
+                    id: r.number == 4321 ? 'I_1' : 'PR_1',
+                    pull: r.number != 4321,
                     state: 'open',
-                    checks: l.pull ? 'failure' : '',
-                    review: l.pull ? 'changes_requested' : '',
-                    unresolved: l.pull ? 12 : 0,
+                    checks: r.number != 4321 ? 'failure' : '',
+                    review: r.number != 4321 ? 'changes_requested' : '',
+                    unresolved: r.number != 4321 ? 12 : 0,
                   ),
               ],
             )

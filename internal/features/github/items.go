@@ -309,8 +309,8 @@ func (s *Service) writer(ctx context.Context, name string) (Client, error) {
 }
 
 // wrote logs a write the user made (what, never its text) and makes the
-// inboxes and states it may have changed old, to be asked for again (the
-// states stay known meanwhile).
+// inboxes and the host's items it may have changed old, to be asked for
+// again (the items stay known meanwhile).
 func (s *Service) wrote(name, what string, err error) {
 	if err != nil {
 		// What failed, not GitHub's words, which could quote what was sent.
@@ -329,9 +329,14 @@ func (s *Service) wrote(name, what string, err error) {
 	slog.Info("github write", "host", name, "what", what, "by", "you")
 	s.mu.Lock()
 	clear(s.inboxes)
-	for id, st := range s.states {
-		st.at = time.Time{}
-		s.states[id] = st
+	if h, ok := normalHost(name); ok {
+		name = h // as the items are kept
+	}
+	for k, it := range s.items {
+		if strings.HasPrefix(k, name+"/") {
+			it.at = time.Time{}
+			s.items[k] = it
+		}
 	}
 	s.mu.Unlock()
 }

@@ -14,6 +14,7 @@ import 'package:nushi/github_bar.dart';
 import 'package:nushi/github_checks.dart';
 import 'package:nushi/github_files.dart';
 import 'package:nushi/github_issue.dart';
+import 'package:nushi/github_items.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_review.dart';
@@ -607,29 +608,31 @@ void main() {
     await closeView(tester, d);
   });
 
-  testWidgets("a chat's status chip: its state, checks and threads; a click "
-      'shows it in the view', (tester) async {
+  testWidgets("a chat's issue chip: its state and checks, from GitHubItems; "
+      'a click shows it in the view', (tester) async {
     final fake = FakeDaemon([])
       ..answer = (input) => switch (input) {
-        GetGitHubStatesRequest() => GetGitHubStatesResponse(
-          items: [item(1, 'Add Sub and Neg', checks: 'failure', unresolved: 2)],
+        GetGitHubItemsRequest() => GetGitHubItemsResponse(
+          items: [
+            item(2, 'Add a Mul function', pull: false, checks: 'failure'),
+          ],
         ),
         ListGitHubHostsRequest() => ListGitHubHostsResponse(
           hosts: [GitHubHost(host: 'github.com', login: 'me', source: 'gh')],
         ),
-        // The view the click opens: its inbox and the pull request.
+        // The view the click opens: its inbox and the issue.
         ListGitHubInboxRequest() => inboxForTests(),
-        GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
-        GetGitHubCommitsRequest() => pullCommits(),
+        GetGitHubIssueRequest() => GetGitHubIssueResponse(
+          issue: GitHubIssue(item: item(2, 'Add a Mul function', pull: false)),
+        ),
         _ => null,
       };
     final d = await fake.connect(tester);
     final link = GitHubLink(
       host: 'github.com',
-      id: 'PR_1',
+      id: 'I_2',
       repo: testRepo,
-      number: 1,
-      pull: true,
+      number: 2,
     );
     await tester.pumpWidget(
       themed(
@@ -638,18 +641,24 @@ void main() {
         ),
       ),
     );
+    await tester.pump(GitHubItems.gather); // the chips of a moment gathered
     await tester.pumpAndSettle();
-    expect(find.text('#1'), findsOneWidget);
-    expect(find.text('2'), findsOneWidget); // threads not resolved
-    final asked = fake.calls.whereType<GetGitHubStatesRequest>().single;
-    expect((asked.items.single.id, asked.quiet), ('PR_1', false));
-    await tester.tap(find.text('#1'));
+    expect(find.text('#2'), findsOneWidget);
+    expect(find.byIcon(Icons.close), findsOneWidget); // checks failing
+    final asked = fake.calls.whereType<GetGitHubItemsRequest>().single;
+    expect((asked.refs.single.number, asked.quiet), (2, true));
+    // No poll of its own, and no GetGitHubStates (ADR 0140: the chats'
+    // minute ask keeps it current).
+    await tester.pump(const Duration(minutes: 3));
+    expect(fake.calls.whereType<GetGitHubItemsRequest>(), hasLength(1));
+    expect(fake.calls.whereType<GetGitHubStatesRequest>(), isEmpty);
+    await tester.tap(find.text('#2'));
     expect(d.place, const GitHubPlace());
-    // The view, as the app mounts it there: the pull request's details.
+    // The view, as the app mounts it there: the issue's details.
     await tester.pumpWidget(themed(GitHubView(d)));
     await tester.pumpAndSettle();
-    final pane = tester.widget<GitHubPullPane>(find.byType(GitHubPullPane));
-    expect((pane.ref.repo, pane.ref.number), (testRepo, 1));
+    final pane = tester.widget<GitHubIssuePane>(find.byType(GitHubIssuePane));
+    expect((pane.ref.repo, pane.ref.number), (testRepo, 2));
     await closeView(tester, d);
   });
 

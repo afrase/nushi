@@ -105,15 +105,25 @@ func (s *server) ListGitHubInbox(ctx context.Context, req *connect.Request[nushi
 	return connect.NewResponse(out), nil
 }
 
+// GetGitHubStates answers chats' links as they are now, by node id: an
+// older app's call (before API 133; ADR 0004), answered from the items by
+// number GetGitHubItems keeps (ADR 0140), so it costs no query or cache of
+// its own. A link GitHub can't give now keeps its last known state; one
+// never known is left out.
 func (s *server) GetGitHubStates(ctx context.Context, req *connect.Request[nushiv1.GetGitHubStatesRequest]) (*connect.Response[nushiv1.GetGitHubStatesResponse], error) {
-	var links []model.ChatGitHub
+	ids := map[string]bool{}
+	refs := make([]model.GitHubRef, 0, len(req.Msg.Items))
 	for _, l := range req.Msg.Items {
-		links = append(links, model.ChatGitHub{Host: l.Host, ID: l.Id})
+		ids[l.Id] = true
+		refs = append(refs, model.GitHubRef{Host: l.Host, Repo: l.Repo, Number: int(l.Number)})
 	}
+	items, _, _, _ := s.GitHub.Items(ctx, refs, req.Msg.Quiet) // a host that failed keeps its last known
 	out := &nushiv1.GetGitHubStatesResponse{}
-	states := s.GitHub.States(ctx, links, req.Msg.Quiet)
-	seen := make([]model.GitHubItem, 0, len(states))
-	for _, it := range states {
+	seen := make([]model.GitHubItem, 0, len(items))
+	for _, it := range items {
+		if !ids[it.ID] {
+			continue // asked by number, not the node id the link named
+		}
 		out.Items = append(out.Items, ghItemProto(it))
 		seen = append(seen, it)
 	}

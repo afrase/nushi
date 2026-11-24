@@ -104,20 +104,6 @@ func (f *fakeClient) Items(_ context.Context, refs []model.GitHubRef) ([]model.G
 	return items, unseen, nil
 }
 
-func (f *fakeClient) Status(_ context.Context, ids []string) (map[string]model.GitHubItem, error) {
-	f.note("status " + strings.Join(ids, ","))
-	if f.fail != nil {
-		return nil, f.fail
-	}
-	out := map[string]model.GitHubItem{}
-	for _, id := range ids {
-		if it, ok := f.states[id]; ok {
-			out[id] = it
-		}
-	}
-	return out, nil
-}
-
 func (f *fakeClient) Pull(_ context.Context, _ string, n int) (model.GitHubPull, error) {
 	if f.pull != nil {
 		return *f.pull, nil
@@ -603,10 +589,6 @@ func TestInboxKeepsTheLastKnown(t *testing.T) {
 	if err != nil || in.Stale == nil || len(in.Mine) != 1 {
 		t.Fatalf("the last inbox goes on a failure: %+v %v", in, err)
 	}
-	// The inbox told the chips: a state from it costs nothing.
-	if st := w.s.States(ctx, []model.ChatGitHub{{Host: "github.com", ID: "PR_1"}}, true); st["PR_1"].Number != 1 {
-		t.Fatalf("%+v", st)
-	}
 }
 
 // The inbox GitHub gave last is kept per host and filter, read back
@@ -643,49 +625,34 @@ func TestInboxCache(t *testing.T) {
 	}
 }
 
-func TestStates(t *testing.T) {
+// TestWroteMakesItemsOld: a write made in Nushi makes its host's items
+// old, so the next Items asks GitHub again (the chips and rows read them,
+// ADR 0140); GitHub failing then keeps the last known.
+func TestWroteMakesItemsOld(t *testing.T) {
 	w := newWorld(t)
 	ctx := t.Context()
 	_, _ = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, false)
 	c := w.clients["gho_gh"]
-	c.states["PR_1"] = model.GitHubItem{ID: "PR_1", State: "open"}
-	items := []model.ChatGitHub{{Host: "github.com", ID: "PR_1"}, {Host: "github.com", ID: "I_gone"}}
-	st := w.s.States(ctx, items, true)
-	if st["PR_1"].State != "open" || len(st) != 1 {
-		t.Fatalf("%+v", st)
+	c.states["a/b#1"] = model.GitHubItem{ID: "PR_1", Pull: true, State: "open"}
+	refs := []model.GitHubRef{{Host: "github.com", Repo: "a/b", Number: 1}}
+	asked := func() int {
+		return len(slices.DeleteFunc(slices.Clone(c.asked), func(s string) bool { return !strings.HasPrefix(s, "items") }))
 	}
-	w.s.States(ctx, items[:1], true)
-	if n := len(slices.DeleteFunc(slices.Clone(c.asked), func(s string) bool { return !strings.HasPrefix(s, "status") })); n != 1 {
+	_, _, _, _ = w.s.Items(ctx, refs, true)
+	_, _, _, _ = w.s.Items(ctx, refs, true)
+	if n := asked(); n != 1 {
 		t.Fatalf("asked again within 30 s: %v", c.asked)
 	}
-	// A write makes them old; GitHub failing then keeps the last known.
-	if err := w.s.Comment(ctx, "github.com", "PR_1", "Thanks"); err != nil {
+	if err := w.s.Comment(ctx, "GitHub.com", "PR_1", "Thanks"); err != nil {
 		t.Fatal(err)
 	}
 	c.fail = errors.New("down")
-	if st := w.s.States(ctx, items[:1], true); st["PR_1"].State != "open" {
-		t.Fatalf("%+v", st)
+	items, _, _, err := w.s.Items(ctx, refs, true)
+	if n := asked(); n != 2 || err == nil || len(items) != 1 || items[0].State != "open" {
+		t.Fatalf("after a write: asked %d times, %+v %v", n, items, err)
 	}
 	if err := w.s.Comment(ctx, "github.com", "PR_1", " "); err == nil {
 		t.Fatal("an empty comment")
-	}
-}
-
-// TestStatesDoneKept: a merged or closed pull request's state is current
-// for 10 minutes, an open one's for 30 s.
-func TestStatesDoneKept(t *testing.T) {
-	w := newWorld(t)
-	ctx := t.Context()
-	_, _ = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, false)
-	c := w.clients["gho_gh"]
-	minute := time.Now().Add(-time.Minute)
-	w.s.mu.Lock()
-	w.s.states["PR_1"] = stateCache{at: minute, item: model.GitHubItem{ID: "PR_1", State: "merged"}}
-	w.s.states["PR_2"] = stateCache{at: minute, item: model.GitHubItem{ID: "PR_2", State: "open"}}
-	w.s.mu.Unlock()
-	w.s.States(ctx, []model.ChatGitHub{{Host: "github.com", ID: "PR_1"}, {Host: "github.com", ID: "PR_2"}}, true)
-	if !slices.Contains(c.asked, "status PR_2") {
-		t.Fatalf("only the open one asked again: %v", c.asked)
 	}
 }
 
@@ -910,7 +877,7 @@ func TestUnknownHosts(t *testing.T) {
 		if _, err := w.s.Commits(ctx, model.GitHubRef{Host: h, Repo: "a/b", Number: 1}, false); err == nil {
 			t.Errorf("%q: asked", h)
 		}
-		w.s.States(ctx, []model.ChatGitHub{{Host: h, ID: "PR_1"}}, false)
+		_, _, _, _ = w.s.Items(ctx, []model.GitHubRef{{Host: h, Repo: "a/b", Number: 1}}, false)
 	}
 	if len(w.asked) != 0 || len(w.clients) != 0 {
 		t.Fatalf("a token was read for %v", w.asked)
@@ -957,7 +924,7 @@ func TestOnlyAskedWrites(t *testing.T) {
 	ctx := t.Context()
 	ref := model.GitHubRef{Host: "github.com", Repo: "afrase/app", Number: 1}
 	_, _ = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, true)
-	w.s.States(ctx, []model.ChatGitHub{{Host: "github.com", ID: "PR_1"}}, true)
+	_, _, _, _ = w.s.Items(ctx, []model.GitHubRef{ref}, true)
 	_, _ = w.s.Pull(ctx, ref, true)
 	if cs, err := w.s.Commits(ctx, ref, true); err != nil || cs.Total != 1 || cs.Newest[0].Author != "mira" || cs.First.Author != "mira" {
 		t.Fatalf("commits %+v %v", cs, err)

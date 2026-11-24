@@ -10,7 +10,7 @@ import (
 )
 
 // Another token for a host may be another account: what the last one was
-// shown (its inboxes, its items' states) is never answered for it, fresh
+// shown (its inboxes, its items) is never answered for it, fresh
 // or as stale, and an inbox asked of the old one as the token changed is
 // dropped (an error: ask again), not kept.
 func TestTokenChangeDropsTheInbox(t *testing.T) {
@@ -34,8 +34,8 @@ func TestTokenChangeDropsTheInbox(t *testing.T) {
 	if in, err := w.s.Inbox(ctx, "github.com", f, false); err == nil || len(in.Mine) != 0 || len(b.asked) != 2 {
 		t.Fatalf("the other account's inbox: %+v %v, asked %v", in, err, b.asked)
 	}
-	if st := w.s.States(ctx, []model.ChatGitHub{{Host: "github.com", ID: "PR_1"}}, false); len(st) != 0 {
-		t.Fatalf("the other account's state: %+v", st)
+	if items, _, _, _ := w.s.Items(ctx, []model.GitHubRef{{Host: "github.com", Repo: "a/b", Number: 1}}, false); len(items) != 0 {
+		t.Fatalf("the other account's item: %+v", items)
 	}
 
 	// The token removed while the inbox is asked of it: its answer goes
@@ -54,10 +54,10 @@ func TestTokenChangeDropsTheInbox(t *testing.T) {
 		t.Error("kept on disk after the token changed")
 	}
 	w.s.mu.Lock()
-	n, m := len(w.s.inboxes), len(w.s.states)
+	n, m := len(w.s.inboxes), len(w.s.items)
 	w.s.mu.Unlock()
 	if n != 0 || m != 0 {
-		t.Fatalf("kept after the token changed: %d inboxes, %d states", n, m)
+		t.Fatalf("kept after the token changed: %d inboxes, %d items", n, m)
 	}
 }
 
