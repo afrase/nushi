@@ -44,7 +44,7 @@ class _FilesTreeState extends State<FilesTree> {
   final _list = FocusNode(debugLabel: 'files');
   final _scroll = ScrollController();
 
-  GitFiles get _git => gitFilesOf(widget.chat.folder);
+  GitFiles get _git => gitFilesOf(widget.daemon, widget.chat.folder);
   final _filter = FilterMemo();
 
   /// A file's row clicked twice keeps its tab (preview tabs, ADR 0070).
@@ -80,7 +80,7 @@ class _FilesTreeState extends State<FilesTree> {
 
   void _queried() {
     _filterAt = null;
-    if (_q.isNotEmpty) _git.ask(widget.daemon);
+    if (_q.isNotEmpty) _git.ask();
     setState(() {});
   }
 

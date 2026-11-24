@@ -66,22 +66,47 @@ void main() {
             : ListFilesResponse(paths: ['new.dart']);
       };
     final d = await fake.connect(tester);
-    expect(gitFilesOf('/old'), same(gitFilesOf('/old')));
-    gitFilesOf('/old').ask(d);
+    expect(gitFilesOf(d, '/old'), same(gitFilesOf(d, '/old')));
+    gitFilesOf(d, '/old').ask();
     // Moved a moment later: asked at once, not after the 5 seconds.
-    gitFilesOf('/new').ask(d);
+    gitFilesOf(d, '/new').ask();
     await tester.pump();
     expect(asked, ['/old', '/new']);
-    expect(gitFilesOf('/new').paths, ['new.dart']);
+    expect(gitFilesOf(d, '/new').paths, ['new.dart']);
     old.complete(ListFilesResponse(paths: ['old.dart']));
     await tester.pump();
-    expect(gitFilesOf('/new').paths, ['new.dart']);
-    expect(gitFilesOf('/old').paths, ['old.dart']);
+    expect(gitFilesOf(d, '/new').paths, ['new.dart']);
+    expect(gitFilesOf(d, '/old').paths, ['old.dart']);
     // Asked again within a few seconds: what it has, no listing.
-    gitFilesOf('/new').ask(d);
+    gitFilesOf(d, '/new').ask();
     await tester.pump();
     expect(asked, ['/old', '/new']);
     await closeView(tester, d);
+  });
+
+  testWidgets("git's list is its daemon's: the phone paired with another "
+      'Mac starts empty for a folder at the same path', (tester) async {
+    final fake = FakeDaemon([])
+      ..answer = (input) => input is ListFilesRequest
+          ? ListFilesResponse(paths: ['first.dart'])
+          : null;
+    final d = await fake.connect(tester);
+    gitFilesOf(d, '/repo').ask();
+    await tester.pump();
+    expect(gitFilesOf(d, '/repo').paths, ['first.dart']);
+    await closeView(tester, d);
+
+    final other = FakeDaemon([])
+      ..answer = (input) =>
+          input is ListFilesRequest ? throw Exception('not yet') : null;
+    final e = await other.connect(tester);
+    final git = gitFilesOf(e, '/repo');
+    expect((git.paths, git.listed), (const <String>[], false));
+    git.ask();
+    await tester.pump();
+    expect(git.paths, isEmpty, reason: "never the first Mac's");
+    expect(git.error, contains('not yet'));
+    await closeView(tester, e);
   });
 
   testWidgets("a listing that fails keeps git's last list and says why; the "
@@ -94,21 +119,21 @@ void main() {
         _ => null,
       };
     final d = await fake.connect(tester);
-    final git = gitFilesOf('/x');
+    final git = gitFilesOf(d, '/x');
     expect(git.listed, isFalse);
-    git.ask(d);
+    git.ask();
     await tester.pump();
     expect(git.paths, ['a.dart']);
     expect((git.error, git.listed), ('', true));
     fail = true;
     clock = () => fixtureNow.add(const Duration(seconds: 6));
-    git.ask(d);
+    git.ask();
     await tester.pump();
     expect(git.paths, ['a.dart']);
     expect(git.error, contains('folder gone'));
     fail = false;
     clock = () => fixtureNow.add(const Duration(seconds: 12));
-    git.ask(d);
+    git.ask();
     await tester.pump();
     expect(git.error, isEmpty);
     await closeView(tester, d);

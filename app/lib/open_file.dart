@@ -54,7 +54,7 @@ class OpenFileBox extends StatefulWidget {
 class _OpenFileBoxState extends State<OpenFileBox> {
   final _text = TextEditingController();
   // The folder's files, as last listed: shown at once, and listed again.
-  late final GitFiles _git = gitFilesOf(widget.folder);
+  late final GitFiles _git = gitFilesOf(widget.daemon, widget.folder);
   List<String> _shown = const []; // as last built: what the keys move in
   int _at = 0;
 
@@ -63,7 +63,7 @@ class _OpenFileBoxState extends State<OpenFileBox> {
     super.initState();
     _git
       ..addListener(_listed)
-      ..ask(widget.daemon);
+      ..ask();
   }
 
   void _listed() {

@@ -7,7 +7,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/errors.dart';
 import 'package:nushi/folder_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/run_state.dart';
 import 'package:nushi/tree_rows.dart';
 
 // The Files pane's filter: any file of the folder by name, as a tree.
@@ -119,20 +118,24 @@ class _Dir {
   final files = <String>[];
 }
 
-/// Each folder's [GitFiles], while the app runs.
-final Map<String, GitFiles> _gitFiles = runMap();
+/// Each daemon's folders' [GitFiles], while it lasts: a phone paired with
+/// another Mac (a new [Daemon]) never filters with the last one's names
+/// for a folder at the same path.
+final _gitFiles = Expando<Map<String, GitFiles>>('git files');
 
-/// [folder]'s one [GitFiles]: the Files pane's filter, the phone's, `@`
-/// and ⌘P read the same list.
-GitFiles gitFilesOf(String folder) => _gitFiles[folder] ??= GitFiles._(folder);
+/// [folder]'s one [GitFiles] on [daemon]: the Files pane's filter, the
+/// phone's, `@` and ⌘P read the same list.
+GitFiles gitFilesOf(Daemon daemon, String folder) =>
+    (_gitFiles[daemon] ??= {})[folder] ??= GitFiles._(daemon, folder);
 
 /// A folder's files as git lists them (ListFiles: what it doesn't
 /// ignore), for a filter, `@` or ⌘P: asked when one starts, and again
 /// once they're a few seconds old, so files the agent adds come in. A
 /// listing that fails keeps the last list and says why ([error]).
 class GitFiles extends ChangeNotifier {
-  new _(this.folder);
+  new _(this.daemon, this.folder);
 
+  final Daemon daemon;
   final String folder;
   List<String> paths = const [];
 
@@ -146,7 +149,7 @@ class GitFiles extends ChangeNotifier {
 
   /// Asks [daemon] for the folder's files, unless it did a moment ago (by
   /// the app's [clock], which a test moves).
-  void ask(Daemon daemon) {
+  void ask() {
     final at = _at;
     final now = clock();
     if (at != null && now.difference(at).inSeconds <= 5) return;

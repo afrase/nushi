@@ -57,14 +57,14 @@ class Completions extends ChangeNotifier {
       ];
       _token = (0, caret);
     } else if (RegExp(r'(^|\s)@(\S*)$').firstMatch(before) case final m?) {
-      final git = gitFilesOf(chat.folder);
+      final git = gitFilesOf(daemon, chat.folder);
       if (!identical(git, _git)) {
         _git?.removeListener(_update);
         _git = git..addListener(_update);
       }
       // Asked again for each mention, after a few seconds: the agent adds
       // files. The list it had shows meanwhile.
-      if (!git.listed || m[2]!.isEmpty) git.ask(daemon);
+      if (!git.listed || m[2]!.isEmpty) git.ask();
       found = [
         for (final f in rankChoices(git.paths, m[2]!))
           (label: f, detail: '', insert: '@$f '),
