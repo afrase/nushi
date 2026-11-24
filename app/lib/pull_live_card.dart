@@ -7,6 +7,7 @@ import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_card.dart';
 import 'package:nushi/github_items.dart';
+import 'package:nushi/github_link_chip.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_rows.dart';
@@ -71,6 +72,36 @@ LivePull? livePullOf(
   if (l == null) return null;
   final a = addressOf(l);
   return (address: a, merged: true, url: a.url);
+}
+
+/// The live cards under a transcript's entry: one for each of its tool
+/// [calls] that opened or merged a pull request, as [cp] finds them (ADR
+/// 0117 section 4). They follow [cp] themselves, so the entry around them
+/// keeps its cached view.
+class LivePullCards extends StatelessWidget {
+  const new(this.cp, this.calls, {super.key});
+
+  final ChatPull cp;
+  final List<String> calls;
+
+  @override
+  Widget build(BuildContext context) {
+    final onPull = GitHubLinks.of(context)?.onPull ?? () {};
+    return ListenableBuilder(
+      listenable: cp,
+      builder: (context, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final id in calls)
+            if (cp.live[id] case final p?)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: LivePullCard(cp, p, onShow: onPull),
+              ),
+        ],
+      ),
+    );
+  }
 }
 
 /// The card of a pull request the chat's tool call opened or merged (ADR
