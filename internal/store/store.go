@@ -52,8 +52,6 @@ func New(dir string) *Store { return &Store{dir: dir} }
 type agentPrefs struct {
 	Mode  string            `json:"mode,omitempty"`
 	Picks map[string]string `json:"picks,omitempty"` // the model, the effort, ... by option ID
-	// Commands is the slash commands the agent last listed.
-	Commands []model.Command `json:"commands,omitempty"`
 }
 
 // Mode returns the mode last picked for agent, or "" for the agent's default.
@@ -88,17 +86,24 @@ func (s *Store) SetPick(agent, id, value string) error {
 	})
 }
 
+// commandsArea is the cache of the slash commands each agent last
+// listed (cache/commands/<agent>.json): a cache, not a pref, so it's
+// under the cache's rule and lock (cacheMu), never settings' mu. Before
+// 2026-11-24 it was in agents.json, which the next change of a mode or
+// a pick rewrites without it: each agent's list is lost once, until it
+// lists again.
+const commandsArea = "commands"
+
 // Commands returns the slash commands agent last listed.
 func (s *Store) Commands(agent string) []model.Command {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	prefs, _ := s.agents()
-	return prefs[agent].Commands
+	var cmds []model.Command
+	_, _ = s.Cached(commandsArea, agent, "list", &cmds) // none known: the agent lists them
+	return cmds
 }
 
 // SetCommands remembers commands as the ones agent listed last.
 func (s *Store) SetCommands(agent string, commands []model.Command) error {
-	return s.changeAgent(agent, func(p *agentPrefs) { p.Commands = commands })
+	return s.Cache(commandsArea, agent, "list", commands)
 }
 
 func (s *Store) changeAgent(agent string, change func(*agentPrefs)) error {
