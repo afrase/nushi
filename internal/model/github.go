@@ -38,8 +38,9 @@ type GitHubItem struct {
 	// A pull request's size, its checks counted, its merge state ("clean",
 	// "blocked", "behind", "dirty", "unstable", "has_hooks", "unknown")
 	// and its base and head branches, by Items and Pull only: the inbox
-	// leaves all of these unset (ADR 0117). An issue's close reason
-	// ("completed", "not_planned" or ""); when either was opened.
+	// leaves all of these unset (ADR 0117). An issue's state reason
+	// ("completed", "not_planned", "reopened" for an open issue that was
+	// once closed, or ""); when either was opened.
 	Additions, Deletions, ChangedFiles int
 	Created                            time.Time
 	CheckCounts                        CheckCounts

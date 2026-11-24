@@ -16,7 +16,8 @@ import (
 // testRepo is the owner's throwaway repository for these tests: public,
 // a tiny Go module whose "on-demand" check fails on a branch with a FAIL
 // file. Pull request 1 (branch subtract) has that file, review threads
-// (one outdated) and a comment; issue 2 is assigned to the owner. No
+// (one outdated) and a comment; issue 2 is assigned to the owner. Both
+// must be open (reopened on 2026-11-24, docs/facts/github.md). No
 // other repository is read or written through the owner's token.
 const testRepo = "afrase/nushi-gh-test"
 
@@ -66,8 +67,13 @@ func TestLive(t *testing.T) {
 			t.Fatalf("the inbox went past %s: %s", testRepo, it.Repo)
 		}
 	}
-	if len(in.Mine) == 0 || in.Mine[0].Number != 1 || in.Mine[0].Head != "subtract" || len(in.Assigned) == 0 || in.Assigned[0].Number != 2 {
+	if len(in.Mine) == 0 || in.Mine[0].Number != 1 || len(in.Assigned) == 0 || in.Assigned[0].Number != 2 {
 		t.Fatalf("inbox: %+v", in)
+	}
+	// A row's own facts and when it was opened; no size or merge state,
+	// which the inbox doesn't ask (ADR 0117).
+	if m := in.Mine[0]; m.Created.IsZero() || m.Head != "" || m.MergeState != "" || m.ChangedFiles != 0 {
+		t.Fatalf("the inbox's pull request: %+v", m)
 	}
 	p, err := c.Pull(ctx, testRepo, 1)
 	if err != nil {

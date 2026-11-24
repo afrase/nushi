@@ -15,7 +15,8 @@
           "url": "https://github.com/afrase/nushi-gh-test/pull/1",
           "state": "OPEN",
           "isDraft": false,
-          "updatedAt": "2026-10-26T04:25:48Z",
+          "createdAt": "2026-10-26T04:14:48Z",
+          "updatedAt": "2026-11-24T12:25:47Z",
           "author": {
             "login": "afrase"
           },
@@ -23,11 +24,12 @@
             "nameWithOwner": "afrase/nushi-gh-test"
           },
           "reviewDecision": null,
-          "totalCommentsCount": 6,
+          "totalCommentsCount": 11,
           "commits": {
             "nodes": [
               {
                 "commit": {
+                  "oid": "465b7a4b3bc29650bbef832800f4ad10db363aa7",
                   "statusCheckRollup": {
                     "state": "FAILURE"
                   }
@@ -37,6 +39,9 @@
           },
           "reviewThreads": {
             "nodes": [
+              {
+                "isResolved": false
+              },
               {
                 "isResolved": false
               },
@@ -64,7 +69,9 @@
           "title": "Add a Mul function",
           "url": "https://github.com/afrase/nushi-gh-test/issues/2",
           "state": "OPEN",
-          "updatedAt": "2026-10-26T04:14:50Z",
+          "stateReason": "REOPENED",
+          "createdAt": "2026-10-26T04:14:50Z",
+          "updatedAt": "2026-11-24T12:25:49Z",
           "author": {
             "login": "afrase"
           },
