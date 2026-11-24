@@ -2,7 +2,7 @@
 
 Status: accepted, 2026-11-13. Builds on [0097](0097-native-code-behind-interfaces.md) (the seams) and [0101](0101-the-daemon-runs-on-linux.md) (a second platform's files).
 
-Amended 2026-11-24: `procgroup.Start` is gone. A program piped to a bridge (`agentproc.Pipe`) runs as acp-go's `process` package runs an agent: its job object lets a process break away (`JOB_OBJECT_LIMIT_BREAKAWAY_OK`), what it left is ended at its exit, and with no job a stop ends the program alone, not its `taskkill /T` tree. The rest holds.
+Amended 2026-11-24: `procgroup.Start` is gone. A bridge's pi or Ante host stays in the bridge's job (acp-go's, as every agent has), which the daemon's stop of the bridge ends; the bridge's own stop kills the program alone. A program the daemon pipes itself (`agentproc.Pipe`, the Ante MCP check) runs as acp-go's `process` package runs an agent: its job object lets a process break away (`JOB_OBJECT_LIMIT_BREAKAWAY_OK`), what it left is ended at its exit, and with no job a stop ends the program alone, not its `taskkill /T` tree. The rest holds.
 
 ## Context
 Windows is on the roadmap (the owner, 2026-10-27). ADR 0097 put the Mac's own code behind `_darwin.go` files and ADR 0101 gave Linux its `_linux.go` ones, but the calls macOS and Linux share (process groups and signals, flock and fcntl, dup2, open(2)'s flags, a pseudo-terminal, a Unix stat) sat in files every OS compiles: both are Unix, so nothing made them split. This is Windows's first phase: `nushid` and every Go package build with `GOOS=windows`, and the daemon starts and answers its API. Making each part work there, the app, packaging and CI are later phases.

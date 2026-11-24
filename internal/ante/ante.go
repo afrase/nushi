@@ -84,7 +84,7 @@ func Main() {
 		cfg.Version, err = version(bin)
 	}
 	cfg.Problem = err
-	cfg.Spawn = Server(bin, nil, os.Stderr)
+	cfg.Spawn = bridged(bin)
 	cfg.Catalog = func() ([]provider, error) { return catalog(bin) }
 	Serve(os.Stdin, os.Stdout, cfg)
 }

@@ -40,8 +40,8 @@ func TestMain(m *testing.M) {
 }
 
 // When the bridge stops, so does its Ante host, though the host doesn't
-// end on Shutdown or SIGTERM: the bridge's spawn (Server: agentproc, the
-// host in a process group of its own) kills it after its grace.
+// end on Shutdown or SIGTERM: the bridge's spawn (bridged: agentproc, the
+// host in the bridge's process group) kills it after its grace.
 func TestHostDoesntOutliveTheBridge(t *testing.T) {
 	home, pidFile := t.TempDir(), filepath.Join(t.TempDir(), "pid")
 	t.Setenv("NUSHI_FAKE_ANTE", home)
@@ -56,7 +56,7 @@ func TestHostDoesntOutliveTheBridge(t *testing.T) {
 	fromBridgeR, fromBridgeW := io.Pipe()
 	done := make(chan struct{})
 	go func() {
-		Serve(toBridgeR, fromBridgeW, Config{Spawn: Server(exe, nil, io.Discard), Home: home, Version: "0.2.14",
+		Serve(toBridgeR, fromBridgeW, Config{Spawn: server(exe, nil, io.Discard, false), Home: home, Version: "0.2.14",
 			Catalog: func() ([]provider, error) { return nil, nil }})
 		_ = fromBridgeW.Close()
 		close(done)

@@ -2,6 +2,7 @@ package agentproc
 
 import (
 	"io"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -36,15 +37,13 @@ func (p *Piped) Program() Program {
 }
 
 // Piped is a program started by Pipe, which a bridge talks to over its
-// stdin and stdout in the program's own protocol, in a group of its own
-// (acp-go's process.Group: a process group on Unix, a job object on
-// Windows), as an agent runs: what it left in its group ends as it exits.
+// stdin and stdout in the program's own protocol.
 type Piped struct {
 	In  io.WriteCloser
 	Out io.Reader
 	Pid int
 
-	group  *process.Group
+	group  group
 	said   tail
 	exited chan struct{}
 	err    error // how it exited; set before exited closes
@@ -54,12 +53,18 @@ type Piped struct {
 // program's stdout (nil: time.After); a test's own.
 var drainAfter func(time.Duration) <-chan time.Time
 
-// Pipe starts bin with args in dir and env (nil: this process's), in a
-// group of its own, so what it starts goes with it, as acp-go starts an
-// agent (process.Start's lifecycle; on Windows an npm shim runs as node
-// and its script, batchfile.Guard). Its stderr goes to stderr (nil:
-// dropped), its last line kept for Said.
-func Pipe(bin string, args []string, dir string, env []string, stderr io.Writer) (*Piped, error) {
+// Pipe starts bin with args in dir and env (nil: this process's), as
+// acp-go starts an agent (process.Start's lifecycle; on Windows an npm
+// shim runs as node and its script, batchfile.Guard). With own it runs in
+// a group of its own (acp-go's process.Group: a process group on Unix, a
+// job object on Windows), so what it starts goes with it, and what it
+// left in the group ends as it exits: for a program the daemon runs
+// itself. Without, it stays in this process's group, as a bridge's CLI
+// does (a bridge runs in a group of its own, which the daemon's stop of
+// it ends whole, the CLI and what it started included, as Claude's agent
+// keeps claude, docs/facts/claude.md), and Kill kills the program alone.
+// Its stderr goes to stderr (nil: dropped), its last line kept for Said.
+func Pipe(bin string, args []string, dir string, env []string, stderr io.Writer, own bool) (*Piped, error) {
 	cmd := exec.Command(bin, args...) //nolint:gosec,noctx // lives until Kill, not a context; the program its caller chose
 	cmd.Dir, cmd.Env = dir, env
 	p := &Piped{exited: make(chan struct{})}
@@ -69,19 +74,24 @@ func Pipe(bin string, args []string, dir string, env []string, stderr io.Writer)
 	}
 	cmd.WaitDelay = waitDelay
 	batchfile.Guard(cmd)
-	process.OwnGroup(cmd)
+	if own {
+		process.OwnGroup(cmd)
+	}
 	pipes, err := process.Start(cmd, false)
 	if err != nil {
 		return nil, err
 	}
-	p.group = process.NewGroup(cmd)
+	p.group = alone{cmd.Process}
+	if own {
+		p.group = process.NewGroup(cmd)
+	}
 	out := &stdout{ReadCloser: pipes.Stdout, ended: make(chan struct{})}
 	p.In, p.Out, p.Pid = pipes.Stdin, out, cmd.Process.Pid
 	after := drainAfter // read here, not by the goroutine: a test sets it
 	go func() {
 		p.err = cmd.Wait()
 		close(p.exited)
-		_ = p.group.Sweep() // what it left in its group, which may hold its stdout
+		_ = p.group.Sweep() // what it left in its own group, which may hold its stdout
 		// What it wrote last is still read, unless a read waits idle: a
 		// process that left its group holds the pipe open.
 		out.Drain(out.ended, waitDelay, after)
@@ -108,10 +118,28 @@ func (s *stdout) Read(b []byte) (int, error) {
 	return n, err
 }
 
-// Kill kills its group and waits for it to exit. Pi and Ante call it on
-// every stop, often after the program has exited: its group was swept
-// then, and the program alone is signalled, which does nothing once it
-// was waited for, so no group that took its id since is reached.
+// group is how a Piped is killed: its own group (*process.Group), or the
+// program alone.
+type group interface {
+	Kill() error
+	Sweep() error
+	Release()
+}
+
+// alone is a program in its caller's group, killed through its
+// os.Process (never a raw pid: once the program was waited for, Kill does
+// nothing). What it left goes when its caller's group does.
+type alone struct{ p *os.Process }
+
+func (a alone) Kill() error { return a.p.Kill() }
+func (alone) Sweep() error  { return nil }
+func (alone) Release()      {}
+
+// Kill kills it, its own group with it, and waits for it to exit. A
+// bridge calls it on every stop, often after the program has exited: an
+// own group was swept then, and the program alone is signalled, which
+// does nothing once it was waited for, so no group that took its id since
+// is reached.
 func (p *Piped) Kill() {
 	_ = p.group.Kill() // the program may be gone already
 	<-p.exited

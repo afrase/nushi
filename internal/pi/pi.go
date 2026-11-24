@@ -151,11 +151,12 @@ func (f Flavor) check(v string) error {
 	return nil
 }
 
-// spawn starts the program with args in cwd, in a process group of its own, its
-// stderr to the bridge's (its last line kept); its start and exit go to
-// the log.
+// spawn starts the program with args in cwd, in the bridge's process
+// group, so the daemon's stop of the bridge ends it and what it started
+// (what a closed session's pi left lives until then), its stderr to the
+// bridge's (its last line kept); its start and exit go to the log.
 func spawn(bin, cwd string, args []string) (agentproc.Program, error) {
-	p, err := agentproc.Pipe(bin, args, cwd, nil, os.Stderr) // the user's pi (ADR 0039)
+	p, err := agentproc.Pipe(bin, args, cwd, nil, os.Stderr, false) // the user's pi (ADR 0039)
 	if err != nil {
 		return agentproc.Program{}, err
 	}

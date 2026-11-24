@@ -577,8 +577,8 @@ func (s *session) steer(ctx context.Context, text string, images []image) (bool,
 
 // stopGrace is how long pi has to end once its input closes, before it is
 // killed: less than the 5 s the daemon gives the bridge (chats'
-// StopGrace), so the bridge kills it, in its own process group, before
-// the daemon kills the bridge and leaves it running. A variable only so a
+// StopGrace), so the bridge ends it itself, gently if it can, before the
+// daemon kills the bridge's process group, pi in it. A variable only so a
 // test can shorten it.
 var stopGrace = 3 * time.Second
 

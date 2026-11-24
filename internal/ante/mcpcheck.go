@@ -13,12 +13,20 @@ import (
 
 // Server is a Spawn of bin (`ante serve --stdio`) with env (nil: this
 // process's), its stderr to stderr (nil: dropped), in a process group of
-// its own (so the MCP servers it starts go with it). The bridge's hosts
-// write to the bridge's stderr, which the daemon logs; the MCP check's
-// are dropped.
-func Server(bin string, env []string, stderr io.Writer) Spawn {
+// its own (so the MCP servers it starts go with it): the daemon's MCP
+// check's, whose output is dropped.
+func Server(bin string, env []string, stderr io.Writer) Spawn { return server(bin, env, stderr, true) }
+
+// bridged is the bridge's Spawn of bin: Server's, its stderr the
+// bridge's, which the daemon logs, in the bridge's own process group, so
+// the daemon's stop of the bridge ends it and the MCP servers it started
+// too (agentproc.Pipe). What a closed session's host left lives until
+// then.
+func bridged(bin string) Spawn { return server(bin, nil, os.Stderr, false) }
+
+func server(bin string, env []string, stderr io.Writer, own bool) Spawn {
 	return func(cwd string) (agentproc.Program, error) {
-		p, err := agentproc.Pipe(bin, []string{"serve", "--stdio"}, cwd, env, stderr) // lives until the session or the check ends, which kills it
+		p, err := agentproc.Pipe(bin, []string{"serve", "--stdio"}, cwd, env, stderr, own) // lives until the session or the check ends, which kills it
 		if err != nil {
 			return agentproc.Program{}, err
 		}

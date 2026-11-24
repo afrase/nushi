@@ -130,9 +130,9 @@ func opID() string { return "op_" + ulid() }
 
 // stopGrace is how long a host has to end once asked, before it is
 // killed: less than the 5 s the daemon gives the bridge (chats'
-// StopGrace), so the bridge kills it, in its own process group, before
-// the daemon kills the bridge and leaves it running. A variable only so a
-// test can shorten it.
+// StopGrace), so the bridge ends it itself, gently if it can, before the
+// daemon kills the bridge's process group, the host in it. A variable
+// only so a test can shorten it.
 var stopGrace = 3 * time.Second
 
 // stop ends the host: Shutdown, then its input closes (EOF is Shutdown
