@@ -357,3 +357,22 @@ func TestSleepThenWakeWaitsForTheOldAgent(t *testing.T) {
 		}
 	})
 }
+
+// A chat put to sleep from its menu refuses a message from the moment it
+// is marked asleep, before its agent's stop takes the chat's lock: one
+// started there would be a turn end cancels at once.
+func TestSleepRefusesAMessageBeforeItsStop(t *testing.T) {
+	svc, agent, c := newChat(t, claudeSession, &memModes{})
+	turn(t, svc, c, "one")
+	c.mu.Lock()
+	testcheck.NoErr(t, c.nodOffLocked()) // Sleep's first step; stop comes next
+	c.mu.Unlock()
+	err := svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle)
+	agent.mu.Lock()
+	prompts := slices.Clone(agent.prompts)
+	agent.mu.Unlock()
+	if err == nil || !strings.Contains(err.Error(), "stopping") || len(prompts) != 1 {
+		t.Errorf("Prompt = %v; the agent got %q", err, prompts)
+	}
+	svc.stop(c)
+}

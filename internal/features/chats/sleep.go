@@ -22,10 +22,7 @@ func (s *Service) Sleep(chatID string) error {
 		return err
 	}
 	c.mu.Lock()
-	err = c.canSleepLocked()
-	if err == nil {
-		c.asleep, c.stopping = true, true // a message refused from now, not started for end to stop
-	}
+	err = c.nodOffLocked()
 	c.mu.Unlock()
 	if err != nil {
 		return err
@@ -36,6 +33,17 @@ func (s *Service) Sleep(chatID string) error {
 	c.statusChangedLocked()
 	c.logLocked().Info("chat asleep", "why", "asked")
 	c.letGoLocked()
+	return nil
+}
+
+// nodOffLocked marks a chat that can sleep asleep and its agent stopping,
+// together: a message sent before stop (end) takes the lock is refused,
+// not started for end to cancel at once.
+func (c *chat) nodOffLocked() error {
+	if err := c.canSleepLocked(); err != nil {
+		return err
+	}
+	c.asleep, c.stopping = true, true
 	return nil
 }
 
