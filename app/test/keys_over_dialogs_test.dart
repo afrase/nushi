@@ -17,6 +17,7 @@ import 'package:nushi/window_drag_linux.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
+import 'pull_fixture.dart';
 
 // No action from a key or the menu bar runs over a dialog that asks
 // something (docs/design.md's Dialogs): the palette, New chat, Archive and
@@ -163,6 +164,67 @@ void main() {
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<DeleteChatRequest>(), hasLength(1));
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('Clean Up… opens its dialog only if nothing opened while it '
+      'read the pull request: run twice, one dialog; ⌘K meanwhile, none', (
+    tester,
+  ) async {
+    showDetails.value = false;
+    final link = GitHubLink(
+      host: 'github.com',
+      repo: fixtureRepo,
+      number: 412,
+      id: 'PR_412',
+      pull: true,
+    );
+    final wt = Worktree(
+      repo: '/Users/me/nushi',
+      path: '/Users/me/nushi/.worktrees/tidy',
+      branch: 'tidy',
+      base: 'main',
+    );
+    final c = chat('c', 'claude', 'Tidy the note list')
+      ..worktree = wt
+      ..folder = wt.path
+      ..pull = link
+      ..pulls.add(link);
+    var held = Completer<GetGitHubPullResponse>();
+    final fake = FakeDaemon([c])
+      ..answer = (input) => switch (input) {
+        GetGitHubPullRequest() => held.future,
+        GetCleanUpRequest() => GetCleanUpResponse(
+          worktree: wt,
+          state: WorktreeState(commits: 1),
+        ),
+        _ => null,
+      };
+    final d = await openApp(tester, fake, size: const Size(1200, 700));
+    final cleanUp = _item(tester, 'Chat', 'Clean Up…');
+    final title = find.text('Clean up after #412');
+
+    cleanUp.onSelected!();
+    cleanUp.onSelected!();
+    await tester.pump();
+    held.complete(GetGitHubPullResponse(pull: fixturePull()));
+    await tester.pumpAndSettle();
+    expect(title, findsOne);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsNothing);
+
+    held = Completer();
+    cleanUp.onSelected!();
+    await tester.pump();
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
+    expect(find.byType(Palette), findsOne);
+    held.complete(GetGitHubPullResponse(pull: fixturePull()));
+    await tester.pumpAndSettle();
+    expect(title, findsNothing);
+    expect(find.byType(Palette), findsOne);
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
+    expect(find.byType(Palette), findsNothing);
     await closeView(tester, d);
   }, variant: onMac);
 }
