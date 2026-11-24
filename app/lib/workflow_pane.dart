@@ -320,9 +320,7 @@ class _PlannedRow extends StatelessWidget {
 /// one stopped with the run not counted as ended.
 String _phaseCount(Workflow w, String title, List<WorkflowAgent> agents) {
   for (final p in w.phases) {
-    if (title.isNotEmpty && p.title == title) {
-      return '${p.done + p.failed}/${p.started}';
-    }
+    if (title.isNotEmpty && p.title == title) return phaseCount(p);
   }
   final ended = agents.where((a) => a.state == 'done' || a.state == 'failed');
   return '${ended.length}/${agents.length}';
@@ -410,10 +408,7 @@ class _AgentRow extends StatelessWidget {
               width: 14,
               child: Center(
                 child: a.state == 'running'
-                    ? CustomPaint(
-                        size: const Size.square(TaskMark.size),
-                        painter: StatusMark(t.running),
-                      )
+                    ? const RunningDot()
                     : TaskMark(a.state),
               ),
             ),

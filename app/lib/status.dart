@@ -51,6 +51,19 @@ class StatusMark extends CustomPainter {
       old.color != color || old.ringing != ringing || old.halo != halo;
 }
 
+/// What a running row of a workflow has where [TaskMark] is (a phase on
+/// its card, an agent in its pane): the running dot, [TaskMark.size]
+/// square. A subagent's row has none: its words shine instead.
+class RunningDot extends StatelessWidget {
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    size: const Size.square(TaskMark.size),
+    painter: StatusMark(NushiTheme.of(context).t.running),
+  );
+}
+
 /// A ring of [color], its line fading in and out slowly ([pulsing]) every
 /// 2.4 seconds: work runs in the background, no turn.
 class _Ring extends CustomPainter {

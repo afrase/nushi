@@ -84,7 +84,7 @@ List<PhaseRow> workflowPhaseRows(Workflow w) {
     final shown = live ? labels[i] ?? const <String>[] : const <String>[];
     rows.add((
       title: p.title,
-      progress: '$ended/${p.started}',
+      progress: phaseCount(p),
       state: switch ((going, p.failed)) {
         (0, 0) => 'done',
         (0, _) => 'failed',
@@ -172,12 +172,7 @@ class _PhaseLine extends StatelessWidget {
           SizedBox(
             width: TaskMark.size,
             child: Center(
-              child: running
-                  ? CustomPaint(
-                      size: const Size.square(TaskMark.size),
-                      painter: StatusMark(t.running),
-                    )
-                  : TaskMark(r.state),
+              child: running ? const RunningDot() : TaskMark(r.state),
             ),
           ),
           // The title is cut only past half the line; who runs takes the
