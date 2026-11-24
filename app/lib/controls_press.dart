@@ -103,25 +103,34 @@ enum PressRole {
 }
 
 /// Hover, keyboard focus and press for a control that [builder] draws:
-/// the pointing hand, a click or Enter or Space press it, and a button
-/// (or its [role]) to a screen reader. Pressed from the pointer's going
-/// down, not the tap's win, which can wait on a drag beside it. Without
-/// [onTap] it's disabled: no hand, no focus, a dimmed button.
+/// the pointing hand (or [cursor]), a click or Enter or Space press it,
+/// and a button (or its [role]) to a screen reader. Pressed from the
+/// pointer's going down, not the tap's win, which can wait on a drag
+/// beside it; hovered from the pointer's being over it, which a touch
+/// highlight mode doesn't hide. Without [onTap] it's disabled: no hand,
+/// no focus, a dimmed button. Every press control is one (ADR 0049;
+/// `tools/design-check` keeps a second press path out).
 class Pressable extends StatefulWidget {
   const new({
     required this.onTap,
     required this.builder,
     super.key,
+    this.onSecondaryTapUp,
     this.tooltip = '',
     this.autofocus = false,
     this.slop,
     this.tooltipAt,
     this.focusNode,
+    this.cursor,
     this.role = PressRole.button,
     this.selected,
+    this.ownTarget = false,
   });
 
   final VoidCallback? onTap;
+
+  /// A right-click on it (a row's menu), whether or not it's enabled.
+  final GestureTapUpCallback? onSecondaryTapUp;
   final Widget Function(BuildContext context, ControlLook look) builder;
   final String tooltip;
   final bool autofocus;
@@ -129,8 +138,8 @@ class Pressable extends StatefulWidget {
   /// What it is to a screen reader.
   final PressRole role;
 
-  /// Whether it's the one picked, to a screen reader (a theme's card);
-  /// null when it's never picked.
+  /// Whether it's the one picked, to a screen reader (a theme's card, a
+  /// list's selected row); null when it's never picked.
   final bool? selected;
 
   /// Its focus, for a view that moves the keyboard to it (a clash's
@@ -146,6 +155,14 @@ class Pressable extends StatefulWidget {
   /// (beside the project rail's tiles).
   final TooltipPositionDelegate? tooltipAt;
 
+  /// The pointer over it, when not the pointing hand (a drag's open hand).
+  final MouseCursor? cursor;
+
+  /// Whether [builder] makes a finger's target itself (a [Tap]'s row, 44
+  /// high and as wide as it is), not centred in 44 square under
+  /// [TouchTargets].
+  final bool ownTarget;
+
   @override
   State<Pressable> createState() => _PressableState();
 }
@@ -159,11 +176,13 @@ class _PressableState extends State<Pressable> {
     if (mounted && down != _down) setState(() => _down = down);
   }
 
-  void _set(bool hover, bool focus) {
-    if (mounted && (hover != _hover || focus != _focus)) {
+  void _set({bool? hover, bool? focus}) {
+    final h = hover ?? _hover;
+    final f = focus ?? _focus;
+    if (mounted && (h != _hover || f != _focus)) {
       setState(() {
-        _hover = hover;
-        _focus = focus;
+        _hover = h;
+        _focus = f;
       });
     }
   }
@@ -175,30 +194,30 @@ class _PressableState extends State<Pressable> {
     final hover = shown?.hover ?? _hover;
     final focus = shown?.focus ?? _focus;
     final down = shown?.pressed ?? _down;
-    final control = FocusableActionDetector(
+    final look = widget.builder(context, (
+      hover: (hover || down) && on,
+      focus: focus && on,
+      pressed: down && on,
       enabled: on,
-      focusNode: widget.focusNode,
-      autofocus: widget.autofocus,
-      mouseCursor: on ? SystemMouseCursors.click : MouseCursor.defer,
-      actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (_) => widget.onTap?.call(),
-        ),
-      },
-      onShowHoverHighlight: (v) => _set(v, _focus),
-      onShowFocusHighlight: (v) => _set(_hover, v),
-      child: PressWatch(
-        onPress: (down) => _press(down && on),
-        child: _taps(
-          touchTarget(
-            context,
-            widget.builder(context, (
-              hover: (hover || down) && on,
-              focus: focus && on,
-              pressed: down && on,
-              enabled: on,
-            )),
+    ));
+    final control = MouseRegion(
+      cursor:
+          widget.cursor ?? (on ? SystemMouseCursors.click : MouseCursor.defer),
+      onEnter: (_) => _set(hover: true),
+      onExit: (_) => _set(hover: false),
+      child: FocusableActionDetector(
+        enabled: on,
+        focusNode: widget.focusNode,
+        autofocus: widget.autofocus,
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) => widget.onTap?.call(),
           ),
+        },
+        onShowFocusHighlight: (v) => _set(focus: v),
+        child: PressWatch(
+          onPress: (down) => _press(down && on),
+          child: _taps(widget.ownTarget ? look : touchTarget(context, look)),
         ),
       ),
     );
@@ -224,6 +243,7 @@ class _PressableState extends State<Pressable> {
     null => GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTap,
+      onSecondaryTapUp: widget.onSecondaryTapUp,
       child: child,
     ),
     final slop => RawGestureDetector(
@@ -235,7 +255,9 @@ class _PressableState extends State<Pressable> {
                 preAcceptSlopTolerance: slop,
                 postAcceptSlopTolerance: slop,
               ),
-              (r) => r.onTap = widget.onTap,
+              (r) => r
+                ..onTap = widget.onTap
+                ..onSecondaryTapUp = widget.onSecondaryTapUp,
             ),
       },
       child: child,
@@ -243,14 +265,14 @@ class _PressableState extends State<Pressable> {
   };
 }
 
-/// A quiet pressable area: a light tint under the pointer or with the
-/// keyboard's focus (unless not [tint]: a card's title, which shows its
-/// grip instead) or when [selected], a deeper one from the pointer's going
-/// down (a click shows at once, before what it opens is built), no
-/// ripple. A button to the keyboard (Tab reaches it, Enter or Space
-/// press it) and to a screen reader, as [Pressable] is; without [onTap],
-/// none.
-class Tap extends StatefulWidget {
+/// A quiet pressable area, a [Pressable] that draws its tint: a light one
+/// under the pointer or with the keyboard's focus (unless not [tint]: a
+/// card's title, which shows its grip instead) or when [selected], a
+/// deeper one from the pointer's going down (a click shows at once, before
+/// what it opens is built), no ripple. A button to the keyboard (Tab
+/// reaches it, Enter or Space press it) and to a screen reader (or its
+/// [role]); without [onTap], none. Under [TouchTargets] at least 44 high.
+class Tap extends StatelessWidget {
   const new({
     required this.onTap,
     required this.child,
@@ -264,6 +286,7 @@ class Tap extends StatefulWidget {
     this.tint = true,
     this.fill,
     this.focusNode,
+    this.role = PressRole.button,
   });
 
   final VoidCallback? onTap;
@@ -289,86 +312,41 @@ class Tap extends StatefulWidget {
   /// Whether the pointer over it tints it.
   final bool tint;
 
-  @override
-  State<Tap> createState() => _TapState();
-}
-
-class _TapState extends State<Tap> {
-  bool _hover = false;
-  bool _focus = false;
-  bool _down = false;
-
-  void _press(bool down) {
-    if (mounted && down != _down) setState(() => _down = down);
-  }
+  /// What it is to a screen reader when it has [onTap]: a row that holds
+  /// a switch is [PressRole.none], so it stays a switch.
+  final PressRole role;
 
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    final on = widget.onTap != null;
-    final rest = widget.fill ?? (widget.selected ? t.selected : null);
-    final shown = ShowLook.of(context);
-    final down = shown?.pressed ?? _down;
-    final lit =
-        ((shown?.hover ?? _hover) || (shown?.focus ?? _focus)) &&
-        on &&
-        widget.tint;
-    // The pointer's tint as before: a MouseRegion's, which a touch
-    // highlight mode doesn't hide; the keyboard's focus beside it.
-    final tap = MouseRegion(
-      cursor:
-          widget.cursor ?? (on ? SystemMouseCursors.click : MouseCursor.defer),
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: FocusableActionDetector(
-        enabled: on,
-        focusNode: widget.focusNode,
-        actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) => widget.onTap?.call(),
-          ),
-        },
-        onShowFocusHighlight: (v) => setState(() => _focus = v),
-        child: PressWatch(
-          onPress: (down) => _press(down && on),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.onTap,
-            onSecondaryTapUp: widget.onSecondaryTapUp,
-            child: Container(
-              padding: widget.padding,
-              constraints: TouchTargets.of(context)
-                  ? const BoxConstraints(minHeight: TouchTargets.size)
-                  : null,
-              alignment: TouchTargets.of(context)
-                  ? AlignmentDirectional.centerStart
-                  : null,
-              decoration: BoxDecoration(
-                color: down && on
-                    ? (rest == null
-                          ? t.pressed
-                          : Color.alphaBlend(t.pressed, rest))
-                    : !widget.selected && lit
-                    ? (rest == null ? t.hover : Color.alphaBlend(t.hover, rest))
-                    : rest,
-                borderRadius: BorderRadius.circular(widget.radius),
-              ),
-              child: widget.child,
-            ),
-          ),
+    final on = onTap != null;
+    final rest = fill ?? (selected ? t.selected : null);
+    final touch = TouchTargets.of(context);
+    return Pressable(
+      onTap: onTap,
+      onSecondaryTapUp: onSecondaryTapUp,
+      focusNode: focusNode,
+      tooltip: tooltip,
+      cursor: cursor,
+      role: on ? role : PressRole.none,
+      selected: on && selected ? true : null,
+      ownTarget: true,
+      builder: (context, look) => Container(
+        padding: padding,
+        constraints: touch
+            ? const BoxConstraints(minHeight: TouchTargets.size)
+            : null,
+        alignment: touch ? AlignmentDirectional.centerStart : null,
+        decoration: BoxDecoration(
+          color: look.pressed
+              ? (rest == null ? t.pressed : Color.alphaBlend(t.pressed, rest))
+              : !selected && tint && (look.hover || look.focus)
+              ? (rest == null ? t.hover : Color.alphaBlend(t.hover, rest))
+              : rest,
+          borderRadius: BorderRadius.circular(radius),
         ),
+        child: child,
       ),
     );
-    final button = on
-        ? Semantics(
-            button: true,
-            enabled: true,
-            selected: widget.selected ? true : null,
-            child: tap,
-          )
-        : tap;
-    return widget.tooltip.isEmpty
-        ? button
-        : tooltip(context, widget.tooltip, button);
   }
 }

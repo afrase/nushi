@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/phone/ui.dart';
@@ -47,8 +48,9 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
             children: [
               for (final f in a.recent) _row(context, f),
               if (a.older.isNotEmpty)
-                InkWell(
+                Tap(
                   onTap: () => setState(() => _older = !_older),
+                  radius: 0, // full-bleed
                   child: Container(
                     constraints: const BoxConstraints(minHeight: touch),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -83,8 +85,9 @@ class _ArtifactsScreenState extends State<ArtifactsScreen> {
     );
   }
 
-  Widget _row(BuildContext context, String f) => InkWell(
+  Widget _row(BuildContext context, String f) => Tap(
     onTap: () => PreviewScreen.open(context, widget.daemon, widget.chat, f),
+    radius: 0, // full-bleed
     child: Container(
       constraints: const BoxConstraints(minHeight: touch + 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -125,13 +128,12 @@ class ArtifactsAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    return Semantics(
-      button: true,
-      label: 'Artifacts, $count',
-      excludeSemantics: true,
-      child: InkResponse(
-        onTap: onTap,
-        radius: touch / 2,
+    return Tap(
+      onTap: onTap,
+      radius: NushiTheme.pill,
+      child: Semantics(
+        label: 'Artifacts, $count',
+        excludeSemantics: true,
         child: SizedBox(
           height: touch,
           child: Padding(

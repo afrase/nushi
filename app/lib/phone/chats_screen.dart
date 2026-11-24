@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_colors.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/phone/chat_screen.dart';
@@ -283,8 +284,10 @@ class ChatRow extends StatelessWidget {
       listenable: chat.look, // not at each streamed chunk
       builder: (context, _) {
         final (word, color) = phaseWord(chat.phase, t);
-        return InkWell(
+        // Full-bleed, so square: a finger on it tints it at once.
+        return Tap(
           onTap: onTap,
+          radius: 0,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: touch + 8),
             child: Padding(

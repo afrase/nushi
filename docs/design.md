@@ -148,7 +148,7 @@ Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](
 | `PillLink` | a link shown as a pill (a chat's Jira issue): `accentInk` on `accentSoft` | |
 | `PillButton` | a pill on a card: the composer's Queue and Stop and send; `small` in a tool row (Preview, Open), `on` while what it opens shows (Preview: its file in the Files pane, shown) | a dialog's or a bar's action |
 | `RoundButton` | a round icon button on a card: `plain` (the composer's +), `primary` (Send) | |
-| `Tap` | a list's row or a tab: a hover tint, `selected`, `fill` (a chat's colour), no ripple; focus shows as the tint | a button (use one) |
+| `Tap` | a list's row or a tab: a hover tint, `selected`, `fill` (a chat's colour), no ripple; focus shows as the tint; a `Pressable` that draws its tint, so the phone's rows (a chat in the list, a choice, an artifact; full-bleed at `radius: 0`) show a press at once as its buttons do | a button (use one) |
 | `Pressable` | the base of every control: hover, focus, press and its tooltip, for a new shared control in `controls*.dart` | a view's one-off button |
 | `PhoneIcon`, `PhoneButton` (`phone/ui.dart`) | the phone's icon button (44 square, a round tint pressed) and its full-width button, a `Button` at `ControlSize.touch` (`primary` on the accent, `destructive` in red): on `Pressable`, so the focus ring and a press at once, as the Mac's | the Mac (`IconTap`, `Button`) |
 | `Swatch`, `DragGrip`, `KeyCap`, `keyHint`, `LineSlider` | a colour to pick; what can be dragged (a card in a `CardList` shows it with the pointer anywhere on the card, its title row the handle: `DragTitle`, for `CardShell` and the details panel's widgets); a key's cap beside its action; a shortcut in small code; a value along a line | |

@@ -510,17 +510,16 @@ class _PullChipState extends State<PullChip> {
         ?checks?.words.toLowerCase(),
         if (open > 0) '$open open thread${open == 1 ? '' : 's'}',
       ].join(', ');
-      return Semantics(
-        button: true,
-        label: words,
-        excludeSemantics: true,
-        child: InkResponse(
-          onTap: more > 0 && widget.onMore != null
-              ? widget.onMore
-              : it == null || it.url.isEmpty
-              ? null
-              : () => widget.onOpen(it.url),
-          radius: 22, // not a corner: its splash's reach
+      return Tap(
+        onTap: more > 0 && widget.onMore != null
+            ? widget.onMore
+            : it == null || it.url.isEmpty
+            ? null
+            : () => widget.onOpen(it.url),
+        radius: NushiTheme.pill,
+        child: Semantics(
+          label: words,
+          excludeSemantics: true,
           child: SizedBox(
             height: 44,
             child: Padding(
