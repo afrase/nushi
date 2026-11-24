@@ -28,6 +28,7 @@ import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/rewind_picker.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
 import 'package:nushi/sidebar_button.dart';
@@ -316,8 +317,18 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
 
 /// Quits the app, where no menu bar's Quit does: what would be lost asks
 /// first (the app's onExitRequested: edits that can't be saved), as a
-/// cancelable exit's request does, and then the engine exits.
-Future<void> _quit() async {
+/// cancelable exit's request does, and then the engine exits. One at a
+/// time: Quit's key reaches the app over its own question, which would
+/// otherwise ask again on top of it.
+Future<void> _quit() => _quitting.value ??= _askAndQuit().whenComplete(
+  () => _quitting.value = null,
+);
+
+/// The quit [_quit] started, until it ends or is cancelled.
+final ValueNotifier<Future<void>?> _quitting = runValue(null);
+
+/// [_quit]'s one ask, then the exit.
+Future<void> _askAndQuit() async {
   final binding = ServicesBinding.instance;
   if (await binding.handleRequestAppExit() == AppExitResponse.exit) {
     await binding.exitApplication(AppExitType.required);

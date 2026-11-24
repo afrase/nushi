@@ -338,6 +338,37 @@ void main() {
     await endEditor(tester, d);
   }, variant: onLinux);
 
+  testWidgets('Ctrl+Q again over its own question asks nothing more: one '
+      'quit at a time', (tester) async {
+    _onLinux();
+    final (d, fake) = await openEditor(tester, {
+      'main.go': utf8.encode(goSource),
+    });
+    final e = editOf(d);
+    e.controller.selection = const CodeLineSelection.collapsed(
+      index: 3,
+      offset: 1,
+    );
+    await typeIn(tester, e, 'x');
+    fake.putFile('main.go', utf8.encode(goSource.replaceAll('println', 'p')));
+    await tester.pumpAndSettle();
+    const asks = 'Quit without your changes to main.go?';
+    await _press(tester, LogicalKeyboardKey.keyQ);
+    expect(find.text(asks), findsOneWidget);
+    await _press(tester, LogicalKeyboardKey.keyQ);
+    await _press(tester, LogicalKeyboardKey.keyQ);
+    expect(find.text(asks), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text(asks), findsNothing);
+    // Its question answered, Ctrl+Q asks again.
+    await _press(tester, LogicalKeyboardKey.keyQ);
+    expect(find.text(asks), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    await endEditor(tester, d);
+  }, variant: onLinux);
+
   testWidgets('on the Mac, Quit is its menu’s: ⌘Q is no key of the app’s '
       'and the palette has no Quit row', (tester) async {
     viewport(tester, const Size(1200, 760));
