@@ -234,7 +234,7 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 		// before the copy goes, and the images it and its side chats' bases
 		// hold as references; one nothing shows drops them (dropLetGoLocked).
 		ch.mu.Lock()
-		if ch.inCopy && ch.agent == nil && !ch.busy && (s.viewers == nil || !s.viewers.Shown(ch.id)) {
+		if ch.inCopy && ch.agent == nil && !ch.busyLocked() && (s.viewers == nil || !s.viewers.Shown(ch.id)) {
 			ch.dropLetGoLocked()
 		} else {
 			ch.itemsBackLocked()

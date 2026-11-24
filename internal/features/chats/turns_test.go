@@ -115,7 +115,7 @@ func TestAPromptWaitsForTheMessageOutForSteering(t *testing.T) {
 			ranTool(c, "t1") // "two" goes out for steering, and waits there
 			eventually(t, c, func() bool { return c.steering && len(c.queue) == 0 })
 			agent.release()
-			eventually(t, c, func() bool { return !c.busy })
+			eventually(t, c, func() bool { return !c.busyLocked() })
 			testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "three"}, SendIdle))
 			close(agent.steerGate)
 			testcheck.Wait(t, "two as the next prompt", prompts("one", "two"))
@@ -150,7 +150,7 @@ func TestAPromptAfterAFailedTurnGoesAheadOfTheSteer(t *testing.T) {
 	agent.turnErr = errors.New("overloaded")
 	agent.mu.Unlock()
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy && c.held })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.held })
 	agent.mu.Lock()
 	agent.turnErr = nil
 	agent.mu.Unlock()

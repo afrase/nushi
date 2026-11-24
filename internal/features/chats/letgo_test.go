@@ -286,7 +286,7 @@ func TestRestartReadsTheCopyOnce(t *testing.T) {
 	}
 	close(agent.loadGate)
 	c2 := svc2.chats[c.id]
-	eventually(t, c2, func() bool { return !c2.busy && c2.agent != nil })
+	eventually(t, c2, func() bool { return !c2.busyLocked() && c2.agent != nil })
 	if got := shown(c2); got != "user:one agent:m1 user:two agent:m2" || counted.reads.Load() != 1 {
 		t.Errorf("reopened: %s, %d whole reads", got, counted.reads.Load())
 	}

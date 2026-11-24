@@ -65,7 +65,7 @@ func (s *Service) ForkAsChat(ctx context.Context, chatID, at string) (string, er
 	c.record = forkRecord(c.id, o.sid, of) // with the chat's mode, which reapply puts on it
 	s.useLocked(c, o)
 	c.forkedLocked(items)
-	c.busy = true // until reapply: no prompt before the chat's picks are on it
+	c.beginOpLocked(opFork) // until reapply: no prompt before the chat's picks are on it
 	c.mu.Unlock()
 	s.register(c)
 	mode := c.reapply(ctx, o.agent, o.sid, of.Mode, of.Picks)

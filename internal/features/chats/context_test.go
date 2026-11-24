@@ -27,8 +27,8 @@ func TestContextUsageLeavesNoTrace(t *testing.T) {
 	if err != nil || md.Markdown != "## Context Usage" {
 		t.Errorf("ContextUsage = %+v, %v", md, err)
 	}
-	if len(c.items) != 0 || events != before || c.busy {
-		t.Errorf("a trace: %d items, %d events, busy %v", len(c.items), events-before, c.busy)
+	if len(c.items) != 0 || events != before || c.busyLocked() {
+		t.Errorf("a trace: %d items, %d events, busy %v", len(c.items), events-before, c.busyLocked())
 	}
 	agent.mu.Lock()
 	deleted := append([]acp.SessionID(nil), agent.deleted...)

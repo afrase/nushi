@@ -68,7 +68,7 @@ func (s *Service) terminalCommand(ctx context.Context, c *chat, m model.Message,
 	sends := rest.Text != "" || len(rest.Files) > 0 || len(rest.Images) > 0
 	c.mu.Lock()
 	err := s.refusesLocked(c)
-	if err == nil && sends && how == SendIdle && c.busy && !c.sessionOpLocked() { // as prompt would, before the option changes
+	if err == nil && sends && how == SendIdle && c.busyLocked() && !c.sessionOpLocked() { // as prompt would, before the option changes
 		err = errors.New("the agent is still working on the last prompt")
 	}
 	c.mu.Unlock()

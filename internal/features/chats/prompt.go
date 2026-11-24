@@ -123,13 +123,13 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 	// (steerQueue): one sent meanwhile goes after it, however it's sent.
 	// Not when that turn was stopped or failed: the message out goes back to
 	// the held queue, and a new one goes ahead of it, as in any held chat.
-	queue := c.sessionOpLocked() || c.steering && !c.busy && !c.held || c.busy && how == SendQueue
+	queue := c.sessionOpLocked() || c.steering && !c.busyLocked() && !c.held || c.busyLocked() && how == SendQueue
 	switch {
 	case len(m.Images) > 0 && !c.canImage && !c.sessionOpLocked():
 		// Reopening, the agent's answer isn't known yet: the queue checks.
 		return errors.New("the agent doesn't take images")
 	case queue:
-	case c.busy:
+	case c.busyLocked():
 		return errors.New("the agent is still working on the last prompt")
 	}
 	// Taken: its uploads are saved now, under the lock, and nothing refuses
@@ -233,7 +233,8 @@ func (c *chat) startLocked(prompt []acp.ContentBlock) {
 	}
 	notes := c.notesLocked()
 	sent, done := make(chan struct{}), make(chan struct{})
-	c.busy, c.started, c.done, c.sent, c.held = true, time.Now(), done, sent, false
+	c.beginOpLocked(opTurn)
+	c.started, c.done, c.sent, c.held = time.Now(), done, sent, false
 	c.released, c.steered, c.turnFrom, c.stopped, c.steerFailed = false, 0, len(c.items), false, false
 	c.endOwnTurnLocked(model.NotEnded, "") // the prompt supersedes the agent's own turn
 	c.statusChangedLocked()
@@ -249,7 +250,8 @@ func (c *chat) startLocked(prompt []acp.ContentBlock) {
 // its own work. The held prompt's answer then changes nothing (run).
 func (c *chat) releaseLocked() {
 	c.logLocked().Info("turn's work ended", "took", time.Since(c.started).Round(time.Millisecond), "held_for", "background subagents")
-	c.released, c.busy, c.started = true, false, time.Time{}
+	c.endOpLocked()
+	c.released, c.started = true, time.Time{}
 	close(c.done)
 	c.notPassedOnLocked()
 	c.copyLocked(true)
@@ -359,7 +361,8 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	} else {
 		log.Info("turn ended", "stop", resp.StopReason)
 	}
-	c.busy, c.started = false, time.Time{}
+	c.endOpLocked()
+	c.started = time.Time{}
 	close(c.done)
 	c.notPassedOnLocked()
 	if err == nil && resp.Usage != nil {

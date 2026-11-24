@@ -168,7 +168,7 @@ type chat struct {
 	mu           sync.Mutex
 	items        []model.Item
 	following    map[string]*follow              // workflows followed, by their call (workflows.go)
-	busy         bool                            // running a turn, or reopening or moving the session
+	op           chatOp                          // what it is busy with: a turn or a step on its session (ops.go)
 	halting      bool                            // being deleted: never reopens
 	historyStays bool                            // the last PlanDelete said the agent's history stays (delete.go)
 	stopping     bool                            // its agent is being stopped: nothing more goes to it
@@ -227,7 +227,7 @@ type chat struct {
 	asleep     bool             // its agent was stopped to sleep, or it was left asleep at the daemon's start (dormant): opening the chat doesn't reopen it
 	reapplying bool             // its session just opened: its picks aren't back on it yet (reapply)
 	retiring   Agent            // the agent that last left it (disconnectLocked), until a reopen has seen it end
-	woke       chan struct{}    // closed when the reopen under way ends
+	woke       chan struct{}    // closed when the reopen or reload under way ends (endOpLocked)
 	active     time.Time        // its last event
 	unsaved    map[string]bool  // items changed since the copy of the transcript last had them (copies.go)
 	titling    map[string]bool  // pins whose title the agent is making, by item (pin_titles.go)
@@ -446,8 +446,8 @@ func (c *chat) noticeLocked(reason, text string) {
 }
 
 func (c *chat) statusLocked() model.Status {
-	idle := c.agent == nil && !c.busy && c.parent == nil && !c.record.Archived
-	return model.Status{Busy: c.busy, Started: c.started, Waiting: c.waitsLocked(), CanFork: c.canFork, Images: c.canImage,
+	idle := c.agent == nil && !c.busyLocked() && c.parent == nil && !c.record.Archived
+	return model.Status{Busy: c.busyLocked(), Started: c.started, Waiting: c.waitsLocked(), CanFork: c.canFork, Images: c.canImage,
 		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: !idle && c.canAskContextLocked() == nil, CanWriteCommit: !idle && c.canWriteCommitLocked() == nil,
 		Asleep: idle && !c.reopenFailed, ReopenFailed: idle && c.reopenFailed, SessionGone: idle && c.reopenFailed && c.sessionGone, CanSleep: c.parent == nil && c.canSleepLocked() == nil,
 		Background: c.runningLocked(), Workflows: c.workflowsLocked(), OwnTurn: c.ownTurn}

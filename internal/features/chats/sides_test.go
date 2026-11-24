@@ -66,7 +66,7 @@ func TestSideChatKeepsToItself(t *testing.T) {
 	if err := svc.CloseSide(side); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, sideChat, func() bool { return !sideChat.busy && slices.Contains(agent.wired(), "cancel") })
+	eventually(t, sideChat, func() bool { return !sideChat.busyLocked() && slices.Contains(agent.wired(), "cancel") })
 	if sideChat.agent != nil {
 		t.Error("a closed side chat keeps the agent: what follows it (a background command) goes on")
 	}

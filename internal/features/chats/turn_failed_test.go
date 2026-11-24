@@ -78,12 +78,12 @@ func TestAResendGoesBeforeTheHeldQueue(t *testing.T) {
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "queued"}, SendQueue))
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.held && len(c.queue) == 1 })
 
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	eventually(t, c, func() bool { got, _ := agent.texts(); return len(got) == 2 })
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.held && len(c.queue) == 1 })
 
 	agent.failTurns(nil)
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
@@ -91,7 +91,7 @@ func TestAResendGoesBeforeTheHeldQueue(t *testing.T) {
 	agent.release()
 	eventually(t, c, func() bool { got, _ := agent.texts(); return len(got) == 4 })
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 })
+	eventually(t, c, func() bool { return !c.busyLocked() && len(c.queue) == 0 })
 	if got, _ := agent.texts(); !slices.Equal(got, []string{"one", "one", "one", "queued"}) {
 		t.Errorf("prompts %q", got)
 	}
@@ -130,7 +130,7 @@ func TestAFailedTurnsSteeredMessageIsMarked(t *testing.T) {
 	ranTool(c, "t1")
 	eventually(t, c, func() bool { _, steered := agent.texts(); return slices.Equal(steered, []string{"two"}) })
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 })
+	eventually(t, c, func() bool { return !c.busyLocked() && len(c.queue) == 0 })
 	want := []string{"user:one", ":", "user:two", "notice:The turn failed: " + errOverloaded.Error()}
 	if got := texts(c); !slices.Equal(got, want) {
 		t.Fatalf("transcript %q", got)
@@ -182,7 +182,7 @@ func TestAMessageToASleepingChatGoesBeforeTheHeldQueue(t *testing.T) {
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "queued"}, SendQueue))
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.held && len(c.queue) == 1 })
 	agent.failTurns(nil)
 	svc.SleepAgent("claude")
 	eventually(t, c, func() bool { return c.asleep })
@@ -191,7 +191,7 @@ func TestAMessageToASleepingChatGoesBeforeTheHeldQueue(t *testing.T) {
 		eventually(t, c, func() bool { got, _ := agent.texts(); return len(got) == n })
 		agent.release()
 	}
-	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 })
+	eventually(t, c, func() bool { return !c.busyLocked() && len(c.queue) == 0 })
 	if got, _ := agent.texts(); !slices.Equal(got, []string{"one", "Continue.", "queued"}) {
 		t.Errorf("prompts %q", got)
 	}

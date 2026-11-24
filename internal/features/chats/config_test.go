@@ -144,7 +144,7 @@ func TestUltracode(t *testing.T) {
 
 	agent.gate = make(chan struct{})
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
-	eventually(t, c, func() bool { return c.busy })
+	eventually(t, c, func() bool { return c.busyLocked() })
 	if err := svc.SetConfig(context.Background(), c.id, ultracodeID, "false"); err == nil || !c.record.Ultracode {
 		t.Errorf("during a turn: %v", err)
 	}

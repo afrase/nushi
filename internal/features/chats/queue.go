@@ -31,7 +31,7 @@ func (c *chat) deliverLocked() {
 
 // mayStartLocked says the queue's next message may start a turn now: the
 // chat is idle, and the queue may go to its agent (mayDeliverLocked).
-func (c *chat) mayStartLocked() bool { return !c.busy && c.mayDeliverLocked() }
+func (c *chat) mayStartLocked() bool { return !c.busyLocked() && c.mayDeliverLocked() }
 
 // mayDeliverLocked says the queue may go to the chat's agent at all: it
 // has one that isn't being stopped, the queue isn't held after a stopped
@@ -107,7 +107,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		}
 		c.queue = append([]model.Message{m}, c.queue...)
 		c.queueChangedLocked()
-		if err != nil && !c.busy { // the turn ended meanwhile: the queue, a message sent since among it, goes as the next prompt
+		if err != nil && !c.busyLocked() { // the turn ended meanwhile: the queue, a message sent since among it, goes as the next prompt
 			c.steering = false
 			c.deliverLocked()
 		}
@@ -118,7 +118,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 	// Not in the defer: the failed hand-off above puts its message back,
 	// and that waits for the next chance.
 	c.steering = false
-	if !c.busy {
+	if !c.busyLocked() {
 		c.deliverLocked()
 	}
 }
@@ -176,7 +176,7 @@ func (s *Service) SendQueuedNow(ctx context.Context, chatID, id string) error {
 		defer c.mu.Unlock()
 		c.queue = slices.Insert(c.queue, min(at, len(c.queue)), m)
 		c.queueChangedLocked()
-		if !c.busy {
+		if !c.busyLocked() {
 			c.deliverLocked()
 		}
 		return err

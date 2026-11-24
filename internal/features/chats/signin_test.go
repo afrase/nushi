@@ -185,7 +185,7 @@ func TestWakeWantsSignIn(t *testing.T) {
 	f.finish <- nil
 	testcheck.NoErr(t, svc.SignIn(t.Context(), "fake", "chat-gpt"))
 	testcheck.NoErr(t, svc.Reopen(c.id))
-	eventually(t, c, func() bool { return c.agent != nil && len(c.queue) == 0 && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && len(c.queue) == 0 && !c.busyLocked() })
 	f.fakeAgent.mu.Lock()
 	prompts := slices.Clone(f.prompts)
 	f.fakeAgent.mu.Unlock()

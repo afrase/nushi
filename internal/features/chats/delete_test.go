@@ -256,7 +256,7 @@ func TestRemoveWorktreeKeepsAStoppedChatFromReopening(t *testing.T) {
 	_, err := svc.Get(c.id)
 	testcheck.NoErr(t, err)
 	c.mu.Lock()
-	busy := c.busy // a reopen would have set it before Get returned
+	busy := c.busyLocked() // a reopen would have set it before Get returned
 	c.mu.Unlock()
 	close(wts.goOn)
 	testcheck.NoErr(t, <-removed)

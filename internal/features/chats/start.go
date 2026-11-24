@@ -73,7 +73,7 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 	c.mu.Lock()
 	c.record = model.ChatRecord{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch, Issue: opts.Issue, GitHub: opts.GitHub}
 	s.useLocked(c, o)
-	c.busy = true // until reapply: no prompt before its picks are on it
+	c.beginOpLocked(opStart) // until reapply: no prompt before its picks are on it
 	c.mu.Unlock()
 	s.register(c)
 	mode := c.reapply(ctx, o.agent, o.sid, s.remembered.Mode(k.Name), s.remembered.Picks(k.Name))
@@ -92,10 +92,8 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 func (c *chat) settled(mode error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.busy = false
 	if mode == nil || c.record.Mode == "" {
 		c.saveLocked(c.modeLocked)
 	}
-	c.statusChangedLocked()
-	c.deliverLocked()
+	c.endOpLocked()
 }

@@ -70,7 +70,7 @@ func TestMoveAChatThatNeverReopened(t *testing.T) {
 	_, err := svc.Get(sess.ID)
 	testcheck.NoErr(t, err)
 	c = svc.chats[sess.ID]
-	eventually(t, c, func() bool { return c.reopenFailed && !c.busy })
+	eventually(t, c, func() bool { return c.reopenFailed && !c.busyLocked() })
 	if got := texts(c); len(got) != 1 || !strings.HasPrefix(got[0], "notice:") {
 		t.Fatalf("its reopen failed, it holds %q", got)
 	}
@@ -78,7 +78,7 @@ func TestMoveAChatThatNeverReopened(t *testing.T) {
 	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
 	if got := texts(c); !slices.Equal(got, []string{"user:one", "agent:first"}) {
 		t.Errorf("transcript %q", got)
 	}
@@ -96,7 +96,7 @@ func TestAFailedDeleteThenAReopen(t *testing.T) {
 	if _, err := svc.Get(c.id); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
 	if got := texts(c); !slices.Equal(got, []string{"user:hi", "agent:hello"}) {
 		t.Errorf("transcript %q", got)
 	}
@@ -207,7 +207,7 @@ func TestWhatTheAgentRanEndsWithIt(t *testing.T) {
 	if err := svc.Reload(c.id); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
 	if it := c.itemLocked("t1"); it == nil || it.Status != "failed" {
 		t.Errorf("a replayed call without its result: %+v", it)
 	}

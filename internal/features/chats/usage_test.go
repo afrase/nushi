@@ -107,7 +107,7 @@ func TestAHeldTurnIsMetered(t *testing.T) {
 	agent.gate = make(chan struct{})
 	agent.updates = append(backgroundSubagent(), chunk("m1", "It runs in the background."), costUpdate(0.1))
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "start one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy && c.started.IsZero() })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.started.IsZero() })
 	base := model.TurnUsage{Chat: c.id, Meter: c.id, Agent: "claude", Model: "claude-opus-5-5", Folder: c.record.Folder, Total: 0.1, Currency: "USD", Costed: true}
 	released := base
 	released.End = model.UsageReleased

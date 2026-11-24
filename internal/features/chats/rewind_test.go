@@ -217,7 +217,7 @@ func stopTurn(t *testing.T, grace time.Duration, ignore bool) (*Service, *fakeAg
 func stillRuns(c *chat) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.busy || !c.started.IsZero()
+	return c.busyLocked() || !c.started.IsZero()
 }
 
 // Stop returns once the stopped turn ended, when the agent obeys at once.

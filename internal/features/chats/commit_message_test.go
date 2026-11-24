@@ -36,8 +36,8 @@ func TestCommitMessageLeavesNoTraceAndRunsReadOnly(t *testing.T) {
 	if err != nil || got != "Shorten the wait\n\nIt was flaky." {
 		t.Fatalf("CommitMessage = %q, %v", got, err)
 	}
-	if len(c.items) != 0 || events != before || c.busy {
-		t.Errorf("a trace: %d items, %d events, busy %v", len(c.items), events-before, c.busy)
+	if len(c.items) != 0 || events != before || c.busyLocked() {
+		t.Errorf("a trace: %d items, %d events, busy %v", len(c.items), events-before, c.busyLocked())
 	}
 	agent.mu.Lock()
 	defer agent.mu.Unlock()

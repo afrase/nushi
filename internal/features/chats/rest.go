@@ -83,7 +83,7 @@ func (c *chat) holdLocked() (own, side string) {
 	switch {
 	case c.waitsLocked():
 		return "needs you", "a side chat needs you"
-	case c.busy || !c.started.IsZero() || c.ownTurn || c.steering || c.sendingNow > 0 || len(c.probes) > 0:
+	case c.busyLocked() || !c.started.IsZero() || c.ownTurn || c.steering || c.sendingNow > 0 || len(c.probes) > 0:
 		return "working", "a side chat is working"
 	case len(c.queue) > 0:
 		return "a message queued", "a side chat has a message queued"

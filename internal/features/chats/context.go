@@ -36,7 +36,7 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.Contex
 	}
 	c.mu.Lock()
 	err = c.canAskContextLocked()
-	if err == nil && (c.busy || c.agent == nil) {
+	if err == nil && (c.busyLocked() || c.agent == nil) {
 		err = errors.New("the chat is busy")
 	}
 	agent, sid, folder := c.agent, c.sid, c.record.Folder

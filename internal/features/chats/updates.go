@@ -39,7 +39,7 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 	if c.commandTaskLocked(n.Update) {
 		return // a background command's task, told on its call: no step of the agent's work
 	}
-	if !c.busy && c.started.IsZero() && slices.Contains([]string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) &&
+	if !c.busyLocked() && c.started.IsZero() && slices.Contains([]string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) &&
 		parent == "" && c.parentLocked(n.Update) == "" { // a subagent's steps aren't the agent's own work
 		// Its work after a turn of the user's starts a chapter of its own in
 		// the transcript; an update to a call it made before (a late

@@ -59,9 +59,9 @@ func TestQueueGoesAfterTheTurnInOrder(t *testing.T) {
 		t.Errorf("Unqueue = %+v, %v", m, err)
 	}
 	agent.release()
-	eventually(t, c, func() bool { return len(c.queue) == 1 && c.busy })
+	eventually(t, c, func() bool { return len(c.queue) == 1 && c.busyLocked() })
 	agent.release()
-	eventually(t, c, func() bool { return len(c.queue) == 0 && c.busy })
+	eventually(t, c, func() bool { return len(c.queue) == 0 && c.busyLocked() })
 	agent.release()
 	idle(t, c)
 	if got, _ := agent.texts(); !reflect.DeepEqual(got, []string{"one", "two", "four"}) {
@@ -81,7 +81,7 @@ func TestUnqueueAsTheTurnEnds(t *testing.T) {
 	send("first", SendIdle)
 	var took, sent []string
 	for i := range 30 {
-		eventually(t, c, func() bool { return c.busy && len(c.queue) == 0 })
+		eventually(t, c, func() bool { return c.busyLocked() && len(c.queue) == 0 })
 		text := fmt.Sprintf("q%d", i)
 		send(text, SendQueue)
 		c.mu.Lock()
@@ -144,7 +144,7 @@ func TestSendNowStopsTheTurn(t *testing.T) {
 	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "now"}, SendNow); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return c.busy && c.items[len(c.items)-1].Text == "now" })
+	eventually(t, c, func() bool { return c.busyLocked() && c.items[len(c.items)-1].Text == "now" })
 	if c.items[1].Kind != model.Notice || len(c.queue) != 1 {
 		t.Errorf("items = %+v, queue = %+v", c.items, c.queue)
 	}
@@ -344,7 +344,7 @@ func TestSendNowOfAQueuedMessage(t *testing.T) {
 	id := c.queue[1].ID
 	c.mu.Unlock()
 	testcheck.NoErr(t, svc.SendQueuedNow(t.Context(), c.id, id))
-	eventually(t, c, func() bool { return c.busy && c.items[len(c.items)-1].Text == "b" && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return c.busyLocked() && c.items[len(c.items)-1].Text == "b" && len(c.queue) == 1 })
 	agent.release()
 	eventually(t, c, func() bool { got, _ := agent.texts(); return reflect.DeepEqual(got, []string{"one", "b", "a"}) })
 	agent.release()

@@ -132,7 +132,7 @@ func TestPinTitledByTheAgent(t *testing.T) {
 			agent.gate = make(chan struct{})
 			agent.updates = []acp.SessionUpdate{chunk("m2", "working")}
 			testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "t2"}, SendIdle))
-			eventually(t, c, func() bool { return c.busy })
+			eventually(t, c, func() bool { return c.busyLocked() })
 			testcheck.NoErr(t, svc.PinMessage(c.id, "m1", true))
 			if got := <-titles.asked; got != "s1: ## The plan\n\nFirst the relay." {
 				t.Errorf("asked %q", got)
@@ -140,7 +140,7 @@ func TestPinTitledByTheAgent(t *testing.T) {
 			if !testcheck.Eventually(func() bool { return strings.Join(pinTitles(c), "") == tc.want }) {
 				t.Errorf("titles %q, want %q", pinTitles(c), tc.want)
 			}
-			eventually(t, c, func() bool { return c.busy }) // the turn runs on
+			eventually(t, c, func() bool { return c.busyLocked() }) // the turn runs on
 
 			close(agent.gate)
 			idle(t, c)

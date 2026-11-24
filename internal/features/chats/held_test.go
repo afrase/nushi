@@ -40,7 +40,7 @@ func TestABackgroundSubagentLeavesTheChatIdle(t *testing.T) {
 	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "start one"}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy && c.started.IsZero() })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.started.IsZero() })
 	if st := c.statusLocked(); st.Busy || !st.Started.IsZero() || st.Background != 1 {
 		t.Errorf("status while only the subagent runs: %+v", st)
 	}
@@ -70,7 +70,7 @@ func TestABackgroundSubagentLeavesTheChatIdle(t *testing.T) {
 		t.Errorf("steered %q", steered)
 	}
 	agent.release() // both prompts answered: the held one first
-	eventually(t, c, func() bool { return !c.busy && !c.released })
+	eventually(t, c, func() bool { return !c.busyLocked() && !c.released })
 	for _, it := range c.items {
 		if it.Kind == model.Notice {
 			t.Errorf("a notice: %+v", it)
@@ -93,7 +93,7 @@ func TestASteeredTurnEndsAtItsLastResult(t *testing.T) {
 	c.mu.Unlock()
 	send(c, result())
 	c.mu.Lock()
-	busy := c.busy
+	busy := c.busyLocked()
 	c.mu.Unlock()
 	if !busy {
 		t.Fatal("the cut-short work's result ended the turn")
@@ -114,7 +114,7 @@ func TestAResultAloneDoesntEndTheTurn(t *testing.T) {
 	}
 	eventually(t, c, func() bool { return c.itemLocked("m1") != nil })
 	c.mu.Lock()
-	busy := c.busy
+	busy := c.busyLocked()
 	c.mu.Unlock()
 	if !busy {
 		t.Error("ended before the prompt's answer")
@@ -160,7 +160,7 @@ func TestAStoppedTurnWaitsForItsAnswer(t *testing.T) {
 	eventually(t, c, func() bool { return c.stopped })
 	send(c, result())
 	c.mu.Lock()
-	busy := c.busy
+	busy := c.busyLocked()
 	c.mu.Unlock()
 	if !busy {
 		t.Error("a stopped turn ended at its result")
@@ -169,5 +169,5 @@ func TestAStoppedTurnWaitsForItsAnswer(t *testing.T) {
 	agent.cancelled = true
 	agent.mu.Unlock()
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy && c.items[len(c.items)-1].Status == "cancelled" })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.items[len(c.items)-1].Status == "cancelled" })
 }

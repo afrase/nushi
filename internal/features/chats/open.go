@@ -69,7 +69,8 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	c := s.newChat(k)
 	c.id = rand.Text()
 	c.mu.Lock()
-	c.sid, c.busy = sessionID, true // until settled: its replay is the transcript, not a turn of the agent's own
+	c.sid = sessionID
+	c.beginOpLocked(opOpen) // until settled: its replay is the transcript, not a turn of the agent's own
 	// The mode a new chat of the agent's starts in, which load puts on
 	// it; only the mode: an agent that keeps the model in its sessions
 	// (Ante, PiG, omp, opencode) has the one the session was on.

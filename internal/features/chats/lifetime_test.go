@@ -77,7 +77,7 @@ func TestAFailedReopenIsntRetriedOnEveryCall(t *testing.T) {
 		t.Errorf("%d notices", n)
 	}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "again"}, SendQueue))
-	eventually(t, c, func() bool { again, _, _ := agent.count(); return !c.busy && again == launches+1 })
+	eventually(t, c, func() bool { again, _, _ := agent.count(); return !c.busyLocked() && again == launches+1 })
 	if n := notices(); n != 1 {
 		t.Errorf("%d notices after trying again: the new one replaces the old", n)
 	}

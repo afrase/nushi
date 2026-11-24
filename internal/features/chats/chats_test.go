@@ -347,7 +347,8 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 }
 
 func TestImagesJoinTheirMessageOrToolCall(t *testing.T) {
-	c := &chat{svc: &Service{remembered: &memModes{}}, id: "s1", sid: "s1", kind: &kind{}, busy: true, publish: func(model.Event) {}}
+	c := &chat{svc: &Service{remembered: &memModes{}}, id: "s1", sid: "s1", kind: &kind{}, publish: func(model.Event) {}}
+	c.beginOpLocked(opOpen) // a replay's, as session/load's
 	img := &acp.ImageContent{MimeType: "image/png", Data: "iVBORw=="}
 	send(c, []acp.SessionUpdate{ // as session/load replays a prompt with an image
 		{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "look"}}}},

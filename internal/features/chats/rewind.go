@@ -73,7 +73,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 			return fmt.Errorf("couldn't read the message's images back: %w", err)
 		}
 		agent, sid, folder, at, forkAt = c.agent, c.sid, c.record.Folder, c.items[i].ForkAt, c.forkAt
-		c.busy = true
+		c.beginOpLocked(opRewind)
 		c.statusChangedLocked()
 		return nil
 	}()
@@ -141,9 +141,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		}
 	}
 	c.mu.Lock() // busy until the fork is on the chat's picks: no prompt before
-	c.busy = false
-	c.statusChangedLocked()
-	c.deliverLocked()
+	c.endOpLocked()
 	c.mu.Unlock()
 	if err != nil {
 		return model.Message{}, err

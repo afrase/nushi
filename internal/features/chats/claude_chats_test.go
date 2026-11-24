@@ -76,9 +76,11 @@ func (p *player) play(e event) {
 		// updates, which no fake agent's prompt can place.
 		c.mu.Lock()
 		if e.done {
-			c.busy, c.started = false, time.Time{}
+			c.endOpLocked()
+			c.started = time.Time{}
 		} else {
-			c.busy, c.started, c.done = true, time.Now(), make(chan struct{}) // done: what a held turn's release closes
+			c.beginOpLocked(opTurn)
+			c.started, c.done = time.Now(), make(chan struct{}) // done: what a held turn's release closes
 			c.addLocked(model.Item{Kind: model.UserMessage, Text: e.text})
 		}
 		c.mu.Unlock()

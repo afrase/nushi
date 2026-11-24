@@ -32,7 +32,7 @@ func reopened(t *testing.T, svc *Service, id string) *chat {
 	_, err := svc.Get(id)
 	testcheck.NoErr(t, err)
 	c := svc.chats[id]
-	eventually(t, c, func() bool { return !c.busy && c.agent != nil })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.agent != nil })
 	return c
 }
 
@@ -92,7 +92,7 @@ func TestReopenShowsWhatBothHaveOnce(t *testing.T) {
 
 	// Reloading merges the replay the same way.
 	testcheck.NoErr(t, svc2.Reload(c.id))
-	eventually(t, c2, func() bool { return !c2.busy && c2.agent != nil })
+	eventually(t, c2, func() bool { return !c2.busyLocked() && c2.agent != nil })
 	if got := shown(c2); got != want {
 		t.Errorf("after a reload: %s", got)
 	}
@@ -394,7 +394,7 @@ func TestAMessageQueuedWhileAChatOpensGoes(t *testing.T) {
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "hi"}, SendIdle))
 	close(agent.loadGate)
 	testcheck.NoErr(t, <-opened)
-	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 && c.started.IsZero() })
+	eventually(t, c, func() bool { return !c.busyLocked() && len(c.queue) == 0 && c.started.IsZero() })
 	if got := texts(c); !slices.Contains(got, "agent:ok") {
 		t.Errorf("items %q", got)
 	}

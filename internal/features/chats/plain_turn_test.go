@@ -97,7 +97,7 @@ func TestAPlainAgentsUsageDoesntEndATurn(t *testing.T) {
 	prompted(t, c, agent, 1)
 	send(c, chunk("m1", "working"), plainUsage(3))
 	c.mu.Lock()
-	busy, own := c.busy, c.ownTurn
+	busy, own := c.busyLocked(), c.ownTurn
 	c.mu.Unlock()
 	if !busy || own {
 		t.Fatalf("after a usage mid-turn: busy %v, own turn %v", busy, own)
@@ -122,15 +122,15 @@ func TestAPlainAgentsQueueGoesAtEachAnswer(t *testing.T) {
 	prompted(t, c, agent, 1)
 	send(c, plainUsage(3))
 	c.mu.Lock()
-	busy, queued := c.busy, len(c.queue)
+	busy, queued := c.busyLocked(), len(c.queue)
 	c.mu.Unlock()
 	if prompts, _ := agent.texts(); !busy || queued != 2 || !slices.Equal(prompts, []string{"one"}) {
 		t.Fatalf("after a usage mid-turn: busy %v, %d queued, prompts %q", busy, queued, prompts)
 	}
 	agent.release()
-	eventually(t, c, func() bool { return c.busy && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return c.busyLocked() && len(c.queue) == 1 })
 	agent.release()
-	eventually(t, c, func() bool { return c.busy && len(c.queue) == 0 })
+	eventually(t, c, func() bool { return c.busyLocked() && len(c.queue) == 0 })
 	agent.release()
 	idle(t, c)
 	if prompts, steered := agent.texts(); !slices.Equal(prompts, []string{"one", "two", "three"}) || len(steered) != 0 {
@@ -157,7 +157,7 @@ func TestAPlainAgentsSteeredTurnEndsAtTheAnswer(t *testing.T) {
 	eventually(t, c, func() bool { return !c.steering && len(c.queue) == 0 })
 	send(c, plainUsage(3), plainUsage(4))
 	c.mu.Lock()
-	busy := c.busy
+	busy := c.busyLocked()
 	c.mu.Unlock()
 	if !busy {
 		t.Fatal("a usage after the steered message ended the turn")

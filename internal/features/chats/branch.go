@@ -35,7 +35,7 @@ const branchSlug = 40
 //nolint:contextcheck // between turns, after the request that started the turn (or the agent's update) is gone
 func (c *chat) nameBranchLocked() {
 	wt := c.record.Worktree
-	if wt == nil || !wt.AutoName || c.parent != nil || c.worktrees == nil || c.busy || c.ownTurn || c.backgroundLocked(0) {
+	if wt == nil || !wt.AutoName || c.parent != nil || c.worktrees == nil || c.busyLocked() || c.ownTurn || c.backgroundLocked(0) {
 		return
 	}
 	if c.kind.NamesSessions && !c.titled && c.record.Name == "" && !c.waitedTitle {

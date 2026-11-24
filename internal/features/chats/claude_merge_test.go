@@ -160,7 +160,8 @@ func replayOf(t *testing.T, events []event, sid string) []model.Item {
 	// replay, to a chat with no agent; a real reopen would need an agent
 	// that replays the recording, which this fixture has none of.
 	c.mu.Lock()
-	c.busy, c.replaying = true, true
+	c.beginOpLocked(opOpen)
+	c.replaying = true
 	c.mu.Unlock()
 	children := map[string]bool{}
 	for _, e := range events[start:end] {

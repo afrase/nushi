@@ -33,7 +33,7 @@ func (s *Service) CommitMessage(ctx context.Context, chatID string, diff func(co
 	}
 	c.mu.Lock()
 	err = c.canWriteCommitLocked()
-	if err == nil && (c.busy || c.agent == nil) {
+	if err == nil && (c.busyLocked() || c.agent == nil) {
 		err = errors.New("the chat is busy")
 	}
 	agent, sid, folder := c.agent, c.sid, c.record.Folder

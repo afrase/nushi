@@ -145,7 +145,7 @@ var errSessionOp = errors.New("the chat is reopening, moving or rewinding; try a
 // sessionOpLocked says the chat is busy with its session, not a turn: it
 // reopens, reloads, opens, starts, forks, moves or rewinds. A message
 // queues meanwhile, and what would stop the agent waits.
-func (c *chat) sessionOpLocked() bool { return c.busy && c.started.IsZero() }
+func (c *chat) sessionOpLocked() bool { return c.busyLocked() && c.started.IsZero() }
 
 // stop ends a chat's agent and its side chats (see end), then has the
 // agent's history forget the side chats. The queue stays, held: nothing

@@ -49,7 +49,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		c.mu.Unlock()
 		return err
 	}
-	c.busy = true
+	c.beginOpLocked(opMove)
 	c.statusChangedLocked()
 	c.mu.Unlock()
 
@@ -120,18 +120,15 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.busy = false
 	if err != nil {
 		c.noticeLocked(model.NoticeError, "Couldn't move the chat to "+folder+": "+err.Error())
 		c.logLocked().Warn("chat not moved", "to", folder, "err", err)
 	} else {
 		c.logLocked().Info("chat moved", "from", from, "old", sid, "worktree", wt != nil)
 	}
-	if replay && err == nil {
-		s.reopenLocked(c)
+	if !replay || err != nil || !s.beginReopenLocked(c) {
+		c.endOpLocked()
 	}
-	c.statusChangedLocked()
-	c.deliverLocked()
 	return err
 }
 

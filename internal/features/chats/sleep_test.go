@@ -246,14 +246,14 @@ func TestWakingWaitsForTheOldAgent(t *testing.T) {
 		t.Helper()
 		c.mu.Lock()
 		defer c.mu.Unlock()
-		if c.busy || len(c.queue) != 0 || !c.started.IsZero() || c.agent == nil {
-			t.Fatalf("not woken: busy %v, %d queued, agent %v", c.busy, len(c.queue), c.agent != nil)
+		if c.busyLocked() || len(c.queue) != 0 || !c.started.IsZero() || c.agent == nil {
+			t.Fatalf("not woken: busy %v, %d queued, agent %v", c.busyLocked(), len(c.queue), c.agent != nil)
 		}
 	}
 	reopening := func(c *chat) bool {
 		c.mu.Lock()
 		defer c.mu.Unlock()
-		return c.busy
+		return c.busyLocked()
 	}
 	answered := []string{"user:one", "agent:ok", "user:two", "agent:ok"}
 
@@ -297,7 +297,7 @@ func TestWakingWaitsForTheOldAgent(t *testing.T) {
 			}
 			pass(time.Millisecond)
 			c.mu.Lock()
-			failed, busy := c.reopenFailed, c.busy
+			failed, busy := c.reopenFailed, c.busyLocked()
 			c.mu.Unlock()
 			if !failed || busy {
 				t.Fatalf("reopen failed %v, busy %v", failed, busy)
@@ -310,7 +310,7 @@ func TestWakingWaitsForTheOldAgent(t *testing.T) {
 			testcheck.NoErr(t, svc.Reopen(c.id))
 			synctest.Wait()
 			c.mu.Lock()
-			reopened := c.agent != nil && !c.busy
+			reopened := c.agent != nil && !c.busyLocked()
 			c.mu.Unlock()
 			if !reopened {
 				t.Fatal("not reopened")

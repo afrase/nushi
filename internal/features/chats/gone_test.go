@@ -189,7 +189,7 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 			if err := svc.Prompt(t.Context(), "c", model.Message{Text: "hi"}, SendQueue); err == nil {
 				t.Error("a message went to a chat whose session is gone")
 			}
-			if l, _, _ := agent.count(); l != launches || c.busy {
+			if l, _, _ := agent.count(); l != launches || c.busyLocked() {
 				t.Errorf("tried again: %d launches after %d", l, launches)
 			}
 			testcheck.NoErr(t, svc.Delete(context.Background(), "c", nil))

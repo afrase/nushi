@@ -45,12 +45,12 @@ func TestMoveKeepsTheQueueHeld(t *testing.T) {
 	c.kind.Moves = true
 	agent.gate = make(chan struct{})
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return c.busy && !c.started.IsZero() })
+	eventually(t, c, func() bool { return c.busyLocked() && !c.started.IsZero() })
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "queued"}, SendQueue))
 	if _, err := svc.Stop(t.Context(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.held && len(c.queue) == 1 })
 	testcheck.NoErr(t, svc.Move(context.Background(), c.id, t.TempDir(), false))
 	agent.release()
 	idle(t, c)
@@ -141,12 +141,12 @@ func TestMoveNamesTheQueuedFilesFromTheNewFolder(t *testing.T) {
 	from := c.record.Folder
 	agent.gate = make(chan struct{})
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return c.busy && !c.started.IsZero() })
+	eventually(t, c, func() bool { return c.busyLocked() && !c.started.IsZero() })
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "queued", Files: []string{"spec.md"}}, SendQueue))
 	if _, err := svc.Stop(t.Context(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.held && len(c.queue) == 1 })
 	testcheck.NoErr(t, svc.Move(context.Background(), c.id, t.TempDir(), false))
 	agent.release()
 	idle(t, c)
@@ -170,12 +170,12 @@ func TestMoveKeepsTheUploadsAbsolute(t *testing.T) {
 		return model.Message{Text: text, Uploads: []model.Upload{{Name: text + ".txt", Data: []byte(text)}}}
 	}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, up("one"), SendIdle))
-	eventually(t, c, func() bool { return c.busy && !c.started.IsZero() })
+	eventually(t, c, func() bool { return c.busyLocked() && !c.started.IsZero() })
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, up("two"), SendQueue))
 	if _, err := svc.Stop(t.Context(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.held && len(c.queue) == 1 })
 	testcheck.NoErr(t, svc.Move(context.Background(), c.id, home, false))
 	agent.release()
 	idle(t, c)

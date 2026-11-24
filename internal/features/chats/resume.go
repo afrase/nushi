@@ -150,11 +150,22 @@ func (s *Service) open(id string) (*chat, error) {
 // the last try failed, or the agent quit), unless it is archived, going or
 // asleep.
 func (s *Service) reopenLocked(c *chat) {
-	if c.agent == nil && !c.busy && !c.record.Archived && !c.halting && c.folder == "" && c.parent == nil && !c.reopenFailed && !c.asleep && !c.sessionGone &&
-		s.later(func() { s.resume(c) }) { // it waits for this lock, so busy is set first
-		c.busy, c.woke = true, make(chan struct{})
-		c.statusChangedLocked()
+	if !c.busyLocked() {
+		s.beginReopenLocked(c)
 	}
+}
+
+// beginReopenLocked starts the reopen when the chat may reopen, and says
+// whether it did: its op becomes opReopen. A Move whose session must be
+// replayed hands its own op to it, so the chat never shows idle between.
+func (s *Service) beginReopenLocked(c *chat) bool {
+	if c.agent == nil && !c.record.Archived && !c.halting && c.folder == "" && c.parent == nil && !c.reopenFailed && !c.asleep && !c.sessionGone &&
+		s.later(func() { s.resume(c) }) { // it waits for this lock, so the op is set first
+		c.beginOpLocked(opReopen)
+		c.statusChangedLocked()
+		return true
+	}
+	return false
 }
 
 // chat returns an open chat to work with, its items held: not an archived
@@ -195,11 +206,6 @@ func (s *Service) resume(c *chat) {
 	} else {
 		log.Info("chat reopened")
 	}
-	c.busy = false
-	if c.woke != nil {
-		close(c.woke)
-		c.woke = nil
-	}
 	switch {
 	case err != nil && s.ending():
 	case gone:
@@ -208,8 +214,7 @@ func (s *Service) resume(c *chat) {
 	case err != nil:
 		c.failedLocked(err)
 	}
-	c.statusChangedLocked()
-	c.deliverLocked()
+	c.endOpLocked()
 }
 
 // failedLocked marks the chat's reopen failed, not tried again until it's
@@ -252,7 +257,7 @@ func (s *Service) Reopen(id string) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.reopenFailed && c.agent == nil && !c.busy && !c.sessionGone {
+	if c.reopenFailed && c.agent == nil && !c.busyLocked() && !c.sessionGone {
 		if err := cmp.Or(folderGone(c.record), c.kind.ready()); err != nil {
 			c.failedLocked(err)
 			return nil

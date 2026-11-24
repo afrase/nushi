@@ -87,7 +87,7 @@ func (s *Service) expire(ctx context.Context, c *chat, why string) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	c.mu.Lock()
-	sess, halting, running := c.record, c.halting, c.agent != nil || c.busy
+	sess, halting, running := c.record, c.halting, c.agent != nil || c.busyLocked()
 	c.mu.Unlock()
 	if halting || running {
 		return // being deleted or expired already, or it opened meanwhile (its session is there after all)
@@ -174,7 +174,7 @@ func (s *Service) sweep(ctx context.Context) {
 		s.mu.Unlock()
 		if c != nil {
 			c.mu.Lock()
-			skip := c.agent != nil || c.busy || c.halting || c.sessionGone || c.parent != nil
+			skip := c.agent != nil || c.busyLocked() || c.halting || c.sessionGone || c.parent != nil
 			c.mu.Unlock()
 			if skip {
 				continue

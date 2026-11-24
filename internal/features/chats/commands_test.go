@@ -21,7 +21,7 @@ func TestPlanAloneSwitchesTheModeAndSendsNothing(t *testing.T) {
 	svc, agent, c := newChat(t, claudeSession, modes)
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "/plan"}, SendIdle))
 	c.mu.Lock()
-	mode, busy := current(c, "mode"), c.busy
+	mode, busy := current(c, "mode"), c.busyLocked()
 	c.mu.Unlock()
 	if mode != "plan" || !slices.Equal(agent.set, []string{`mode="plan"`}) || (*modes)["claude"] != "plan" || busy {
 		t.Errorf("mode %q, set %v, remembered %q, busy %v; want plan, set once, remembered, idle", mode, agent.set, (*modes)["claude"], busy)
@@ -78,7 +78,7 @@ func TestPlanWhileBusy(t *testing.T) {
 	agent.release()
 	eventually(t, c, func() bool { sent, _ := agent.texts(); return len(sent) == 2 })
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 })
+	eventually(t, c, func() bool { return !c.busyLocked() && len(c.queue) == 0 })
 	if sent, _ := agent.texts(); !slices.Equal(sent, []string{"first", "next"}) {
 		t.Errorf("claude was sent %q", sent)
 	}

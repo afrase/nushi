@@ -134,7 +134,7 @@ func TestAPromptAskedAsTheChatReopensShows(t *testing.T) {
 			eventually(t, c2, func() bool { return c2.replaying })
 			asks(t, c2, kind)
 			close(agent.loadGate)
-			eventually(t, c2, func() bool { return !c2.busy && c2.agent != nil })
+			eventually(t, c2, func() bool { return !c2.busyLocked() && c2.agent != nil })
 			if got := shownPrompts(c2); got != name+":pending" || !svc2.Status(model.ChatRecord{ID: c.id}).Waiting {
 				t.Errorf("after the reopen: %q, waiting %v", got, svc2.Status(model.ChatRecord{ID: c.id}).Waiting)
 			}

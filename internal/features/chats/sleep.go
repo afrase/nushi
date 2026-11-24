@@ -121,7 +121,7 @@ func (c *chat) idleLocked(after time.Duration) bool {
 // daemon), no background command or subagent runs, and nothing moves,
 // rewinds or reopens it.
 func (c *chat) quietLocked() bool {
-	return !c.busy && c.started.IsZero() && !c.ownTurn && !c.steering && c.sendingNow == 0 &&
+	return !c.busyLocked() && c.started.IsZero() && !c.ownTurn && !c.steering && c.sendingNow == 0 &&
 		len(c.queue) == 0 && !c.waitsLocked() && len(c.probes) == 0 &&
 		!slices.ContainsFunc(c.items, running)
 }
@@ -134,7 +134,7 @@ func (c *chat) quietLocked() bool {
 // per cause, each saying when verb can go ahead.
 func (c *chat) workingLocked(verb string) error {
 	switch {
-	case c.busy:
+	case c.busyLocked():
 		return fmt.Errorf("the chat is busy; %s once the turn has ended", verb)
 	case c.ownTurn || c.waitsLocked():
 		return fmt.Errorf("the agent is working on its own (a background task ended); stop it, or %s once it's done", verb)
