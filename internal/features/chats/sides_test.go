@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -105,26 +106,39 @@ func TestASideChatThatEndsSaysSo(t *testing.T) {
 }
 
 // An agent that never answers a side chat's delete doesn't hold CloseSide
-// (and closeSides' loop after it) for good.
+// (and closeSides' loop after it) for good: it gives up after
+// throwAwayWait, and the delete after the harness's Redelete goes through.
+// In a bubble, so each wait is exact.
 func TestClosingASideChatGivesUpOnASilentDelete(t *testing.T) {
-	agent := &fakeAgent{}
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake", redelete: 20 * time.Millisecond}, Launch: agent.launch}},
-		Options{Timing: Timing{ThrowAwayWait: 10 * time.Millisecond, StopGrace: 10 * time.Millisecond}})
-	t.Cleanup(svc.Close)
-	ctx := context.Background()
-	id, _ := svc.Start(ctx, "", t.TempDir(), false)
-	side, err := svc.Fork(ctx, id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	agent.mu.Lock()
-	agent.silentDeletes = 1 // the second goes through
-	agent.mu.Unlock()
-	if err := svc.CloseSide(side); err != nil { // one that waits on the delete hangs the test
-		t.Fatal(err)
-	}
-	c := svc.chats[id]
-	eventually(t, c, func() bool { return !slices.Contains(c.record.Throwaway, side) })
+	synctest.Test(t, func(t *testing.T) {
+		const redelete = 20 * time.Millisecond
+		agent := &fakeAgent{}
+		svc := newService(t, []Kind{{Harness: testHarness{Name: "fake", redelete: redelete}, Launch: agent.launch}}, Options{})
+		t.Cleanup(svc.Close)
+		ctx := context.Background()
+		id, _ := svc.Start(ctx, "", t.TempDir(), false)
+		side, err := svc.Fork(ctx, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		agent.mu.Lock()
+		agent.silentDeletes = 1 // the second goes through
+		agent.mu.Unlock()
+		begun := time.Now()
+		if err := svc.CloseSide(side); err != nil { // one that waits on the delete hangs the test
+			t.Fatal(err)
+		}
+		if took := time.Since(begun); took != throwAwayWait {
+			t.Errorf("CloseSide gave up on the silent delete after %s", took)
+		}
+		c := svc.chats[id]
+		pass(redelete)
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if slices.Contains(c.record.Throwaway, side) {
+			t.Error("the delete after Redelete didn't go through")
+		}
+	})
 }
 
 // A new session's commands can reach the chat before the answer that names

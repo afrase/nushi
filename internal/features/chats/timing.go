@@ -13,10 +13,6 @@ type Timing struct {
 	// StopGrace is how long a stopping agent gets to end a turn, and then
 	// its sessions (5 s).
 	StopGrace time.Duration
-	// ThrowAwayWait is how long an agent gets to delete a thrown-away
-	// session: one alive but silent would otherwise hold closeSides' loop
-	// for good (30 s).
-	ThrowAwayWait time.Duration
 	// WorkflowPoll is how often a running workflow's files are read (a
 	// second; ADR 0127).
 	WorkflowPoll time.Duration
@@ -37,6 +33,5 @@ func (t Timing) sidesAfter(f func()) *time.Timer {
 	return after(cmp.Or(t.SidesGrace, 2*time.Minute), f)
 }
 
-func (t Timing) stopGrace() time.Duration     { return cmp.Or(t.StopGrace, 5*time.Second) }
-func (t Timing) throwAwayWait() time.Duration { return cmp.Or(t.ThrowAwayWait, 30*time.Second) }
-func (t Timing) workflowPoll() time.Duration  { return cmp.Or(t.WorkflowPoll, time.Second) }
+func (t Timing) stopGrace() time.Duration    { return cmp.Or(t.StopGrace, 5*time.Second) }
+func (t Timing) workflowPoll() time.Duration { return cmp.Or(t.WorkflowPoll, time.Second) }
