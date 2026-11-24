@@ -50,7 +50,9 @@ func MergeBlocks(p model.GitHubPull) []string {
 	if slices.ContainsFunc(p.Runs, func(c model.GitHubCheck) bool { return c.Required && Failed(c) }) {
 		out = append(out, "checks_failing")
 	}
-	if slices.ContainsFunc(p.Runs, func(c model.GitHubCheck) bool { return c.Required && c.State == "pending" }) {
+	if slices.ContainsFunc(p.Runs, func(c model.GitHubCheck) bool {
+		return c.Required && githubapi.KindOf(c.State) == githubapi.CheckRunning
+	}) {
 		out = append(out, "checks_running")
 	}
 	switch {
