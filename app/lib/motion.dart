@@ -75,6 +75,11 @@ abstract final class Waits {
   /// A draft's change is written this long after the last.
   static const save = Duration(milliseconds: 500);
 
+  /// A finger's press on a control in a list that scrolls tints it only
+  /// once held this long (or as a quicker tap lifts, for as long), so a
+  /// touch that turns into a scroll tints nothing.
+  static const pressInScroll = Duration(milliseconds: 70);
+
   /// What changes every frame while it's dragged (a terminal's size as a
   /// pane's edge moves) is sent at most this often.
   static const coalesce = Duration(milliseconds: 100);

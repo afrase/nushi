@@ -46,7 +46,11 @@ Widget touchTarget(BuildContext context, Widget child) =>
 /// Tells [onPress] true as the primary pointer goes down on [child], and
 /// false as it lifts, is cancelled or moves past the touch slop (a drag,
 /// not a click): a control's pressed look, from the pointer itself rather
-/// than the tap's win, which can wait on a drag recognizer beside it.
+/// than the tap's win, which can wait on a drag recognizer beside it. A
+/// finger's press inside a list that scrolls is told only once it's held
+/// [Waits.pressInScroll], so a touch that turns into a scroll tints
+/// nothing; a quicker tap is told as it lifts, for as long. A mouse's is
+/// told at once.
 class PressWatch extends StatefulWidget {
   const new({required this.onPress, required this.child, super.key});
 
@@ -59,26 +63,67 @@ class PressWatch extends StatefulWidget {
 
 class _PressWatchState extends State<PressWatch> {
   Offset? _at; // where the pointer went down, while it is
+  Timer? _wait; // a finger's press in a scrolling list, not yet told
+  Timer? _shown; // a quick tap's press, told as it lifted
+
+  void _tell(bool down) {
+    if (mounted) widget.onPress(down);
+  }
 
   void _end() {
     if (_at == null) return;
     _at = null;
-    widget.onPress(false);
+    _wait?.cancel();
+    _wait = null;
+    _tell(false);
+  }
+
+  void _down(PointerDownEvent e) {
+    if (e.buttons != kPrimaryButton) return;
+    _at = e.position;
+    _shown?.cancel();
+    _shown = null;
+    if (e.kind == PointerDeviceKind.touch &&
+        Scrollable.maybeOf(context) != null) {
+      _wait = Timer(Waits.pressInScroll, () {
+        _wait = null;
+        _tell(true);
+      });
+      return;
+    }
+    _tell(true);
+  }
+
+  void _up() {
+    if (_at == null) return;
+    if (_wait == null) return _end();
+    // A tap quicker than the wait: its press shows now, for as long.
+    _wait!.cancel();
+    _wait = null;
+    _at = null;
+    _tell(true);
+    _shown = Timer(Waits.pressInScroll, () {
+      _shown = null;
+      _tell(false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _wait?.cancel();
+    _shown?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => Listener(
-    onPointerDown: (e) {
-      if (e.buttons != kPrimaryButton) return;
-      _at = e.position;
-      widget.onPress(true);
-    },
+    onPointerDown: _down,
     onPointerMove: (e) {
       if (_at case final at? when (e.position - at).distance > kTouchSlop) {
         _end();
       }
     },
-    onPointerUp: (_) => _end(),
+    onPointerUp: (_) => _up(),
     onPointerCancel: (_) => _end(),
     child: widget.child,
   );

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_header.dart';
@@ -61,7 +62,8 @@ void main() {
     final all = _items();
     expect(all, 81, reason: 'every message of Alpha, once filled in');
 
-    await tester.tap(_row('Beta long chat'));
+    // A click: a finger's tap in a list shows its press a moment longer.
+    await tester.tap(_row('Beta long chat'), kind: PointerDeviceKind.mouse);
     await tester.pump();
     final t = NushiTheme.of(tester.element(find.byType(Sidebar))).t;
     expect(_rowColor(tester, 'Beta long chat'), t.accentSoft);
@@ -93,6 +95,7 @@ void main() {
     final t = NushiTheme.of(tester.element(find.byType(Sidebar))).t;
     final press = await tester.startGesture(
       tester.getCenter(_row('Beta long chat')),
+      kind: PointerDeviceKind.mouse,
     );
     await tester.pump();
     expect(_rowColor(tester, 'Beta long chat'), t.pressed);
