@@ -7,6 +7,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/clock.dart';
+import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -67,6 +69,48 @@ void main() {
     expect(find.byType(GitHubIssuePane), findsOneWidget);
     expect(find.text('Shall I take it?'), findsOneWidget);
     expect(find.text('  outside'), findsOneWidget); // a contributor
+    await closeView(tester, d);
+  });
+
+  testWidgets('the issue pane dates its description when it was opened, and '
+      'says a closed issue not planned as the card does', (tester) async {
+    final opened = msAgo(const Duration(days: 5));
+    final (_, d) = await openView(
+      tester,
+      more: (input) => input is GetGitHubIssueRequest
+          ? GetGitHubIssueResponse(
+              issue: GitHubIssue(
+                item:
+                    item(
+                        2,
+                        'Add a Mul function',
+                        pull: false,
+                        state: 'closed',
+                        age: const Duration(hours: 1), // a comment since
+                      )
+                      ..createdMs = opened
+                      ..stateReason = 'not_planned',
+                body: 'We need `Mul(a, b int) int` beside `Add`.',
+              ),
+            )
+          : null,
+    );
+    await tester.tap(find.text('Add a Mul function'));
+    await tester.pumpAndSettle();
+    final pane = find.byType(GitHubIssuePane);
+    expect(
+      find.descendant(
+        of: pane,
+        matching: find.text('  ${agoAt(opened.toInt(), clock())}'),
+      ),
+      findsOneWidget,
+    );
+    final word = find.descendant(of: pane, matching: find.text('Not planned'));
+    expect(word, findsOneWidget);
+    expect(
+      tester.widget<Text>(word).style!.color,
+      NushiTheme.of(tester.element(pane)).t.textMuted,
+    );
     await closeView(tester, d);
   });
 

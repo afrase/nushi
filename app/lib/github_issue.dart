@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/comment_box.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_card.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
@@ -116,10 +117,11 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
             spacing: 10,
             runSpacing: 4,
             children: [
+              // As the card and the chip say it (Not planned, gray).
               Text(
-                itemState(it),
+                stateWord(it),
                 style: theme.ui(
-                  itemColor(t, it),
+                  itemLook(t, it, pull: false).$2,
                   size: 12,
                   weight: FontWeight.w500,
                 ),
@@ -155,7 +157,9 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
               author: it.author,
               outside: i.outside,
               body: i.body,
-              createdMs: it.updatedMs,
+              // When it was opened; a daemon that doesn't say has only
+              // when it last changed.
+              createdMs: it.createdMs > 0 ? it.createdMs : it.updatedMs,
             ),
           ),
           if (i.body.isEmpty)
