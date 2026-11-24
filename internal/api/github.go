@@ -117,7 +117,8 @@ func (s *server) GetGitHubStates(ctx context.Context, req *connect.Request[nushi
 		ids[l.Id] = true
 		refs = append(refs, model.GitHubRef{Host: l.Host, Repo: l.Repo, Number: int(l.Number)})
 	}
-	items, _, _, _ := s.GitHub.Items(ctx, refs, req.Msg.Quiet) // a host that failed keeps its last known
+	// A host that failed keeps its last known, as States answered.
+	items, _, _, _ := s.GitHub.Items(ctx, refs, req.Msg.Quiet) //nolint:dogsled // the states answer only the items
 	out := &nushiv1.GetGitHubStatesResponse{}
 	seen := make([]model.GitHubItem, 0, len(items))
 	for _, it := range items {

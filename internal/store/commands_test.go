@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"slices"
@@ -34,7 +35,7 @@ func TestCommandsAreACache(t *testing.T) {
 	}
 	after, err := os.ReadFile(filepath.Join(dir, "agents.json"))
 	testcheck.NoErr(t, err)
-	if string(after) != string(before) || s.Mode("claude") != "plan" {
+	if !bytes.Equal(after, before) || s.Mode("claude") != "plan" {
 		t.Fatalf("agents.json changed: %s", after)
 	}
 	fi, err := os.Stat(filepath.Join(dir, "cache", "commands", "claude.json"))

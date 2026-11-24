@@ -630,6 +630,12 @@ func TestInboxCache(t *testing.T) {
 	}
 }
 
+// askItems asks Items for refs as a poll, for what that does to the cache
+// and to GitHub's asks.
+func askItems(ctx context.Context, s *Service, refs ...model.GitHubRef) {
+	_, _, _, _ = s.Items(ctx, refs, true) //nolint:dogsled // only its effect is looked at
+}
+
 // TestWroteMakesItemsOld: a write made in Nushi makes its host's items
 // old, so the next Items asks GitHub again (the chips and rows read them,
 // ADR 0140); GitHub failing then keeps the last known.
@@ -643,8 +649,8 @@ func TestWroteMakesItemsOld(t *testing.T) {
 	asked := func() int {
 		return len(slices.DeleteFunc(slices.Clone(c.asked), func(s string) bool { return !strings.HasPrefix(s, "items") }))
 	}
-	_, _, _, _ = w.s.Items(ctx, refs, true)
-	_, _, _, _ = w.s.Items(ctx, refs, true)
+	askItems(ctx, w.s, refs...)
+	askItems(ctx, w.s, refs...)
 	if n := asked(); n != 1 {
 		t.Fatalf("asked again within 30 s: %v", c.asked)
 	}
@@ -882,7 +888,7 @@ func TestUnknownHosts(t *testing.T) {
 		if _, err := w.s.Commits(ctx, model.GitHubRef{Host: h, Repo: "a/b", Number: 1}, false); err == nil {
 			t.Errorf("%q: asked", h)
 		}
-		_, _, _, _ = w.s.Items(ctx, []model.GitHubRef{{Host: h, Repo: "a/b", Number: 1}}, false)
+		askItems(ctx, w.s, model.GitHubRef{Host: h, Repo: "a/b", Number: 1})
 	}
 	if len(w.asked) != 0 || len(w.clients) != 0 {
 		t.Fatalf("a token was read for %v", w.asked)
@@ -972,7 +978,7 @@ func TestOnlyAskedWrites(t *testing.T) {
 	ctx := t.Context()
 	ref := model.GitHubRef{Host: "github.com", Repo: "afrase/app", Number: 1}
 	_, _ = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, true)
-	_, _, _, _ = w.s.Items(ctx, []model.GitHubRef{ref}, true)
+	askItems(ctx, w.s, ref)
 	_, _ = w.s.Pull(ctx, ref, true)
 	if cs, err := w.s.Commits(ctx, ref, true); err != nil || cs.Total != 1 || cs.Newest[0].Author != "mira" || cs.First.Author != "mira" {
 		t.Fatalf("commits %+v %v", cs, err)
