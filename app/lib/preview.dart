@@ -183,10 +183,14 @@ class Previews extends InheritedWidget {
 }
 
 /// A file of a chat's as the daemon sends it: again each time it changes,
-/// while this lives. [live] while the daemon watches it.
+/// while this lives and the window shows. [live] while the daemon watches
+/// it. While the window is hidden the watch ends (the daemon polls it each
+/// second, ADR 0090), the file as it last came still there, and it's
+/// watched again once the window shows, which sends it as it is then.
 class FileWatch extends ChangeNotifier {
   new(this.daemon, this.chatId, this.path) {
-    _watch();
+    daemon.macView.windowShows.addListener(_windowChanged);
+    if (daemon.macView.window) _watch();
   }
 
   final Daemon daemon;
@@ -254,13 +258,22 @@ class FileWatch extends ChangeNotifier {
   void _again() {
     _waiting?.cancel();
     _waiting = Timer(const Duration(seconds: 2), () {
-      if (!_disposed) _watch();
+      if (!_disposed && daemon.macView.window) _watch();
     });
+  }
+
+  void _windowChanged() {
+    _waiting?.cancel();
+    unawaited(_sub?.cancel());
+    _sub = null;
+    // A watch refused stays so; any other is watched again once it shows.
+    if (daemon.macView.window && error.isEmpty) _watch();
   }
 
   @override
   void dispose() {
     _disposed = true;
+    daemon.macView.windowShows.removeListener(_windowChanged);
     _waiting?.cancel();
     unawaited(_sub?.cancel());
     super.dispose();

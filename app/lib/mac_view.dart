@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
@@ -17,20 +19,25 @@ class MacView {
   /// Within the daemon's 40 s lease.
   static const again = Duration(seconds: 15);
 
-  bool _window = true;
   String? _told; // what the daemon was last told; null: tell it again
   DateTime _at = DateTime(0);
 
-  /// Whether the window is focused or visible (not hidden or minimised).
-  bool get window => _window;
+  /// Whether the window is focused or visible (not hidden or minimised),
+  /// for what follows it: the Files pane's listings and a file's watch,
+  /// which the daemon polls each second, end while it's hidden (ADR 0090).
+  /// Always true on the phone, whose page says nothing of it.
+  final windowShows = ValueNotifier<bool>(true);
+
+  /// Whether the window is focused or visible: [windowShows]'.
+  bool get window => windowShows.value;
   set window(bool shows) {
-    _window = shows;
+    windowShows.value = shows;
     tick();
   }
 
   /// The chat the window shows, or ''.
   String get showing =>
-      _window && daemon.chatShows ? daemon.selectedId ?? '' : '';
+      window && daemon.chatShows ? daemon.selectedId ?? '' : '';
 
   /// The daemon (re)started: it knows nothing yet.
   void forget() => _told = null;

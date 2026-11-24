@@ -60,6 +60,7 @@ class FolderTree extends ChangeNotifier {
     _daemon = daemon;
     if (_users++ == 0) {
       filesIgnored.addListener(_ignoredChanged);
+      daemon.macView.windowShows.addListener(_windowChanged);
       _refused.clear();
     }
     _sync();
@@ -69,6 +70,19 @@ class FolderTree extends ChangeNotifier {
   void detach() {
     if (--_users > 0) return;
     filesIgnored.removeListener(_ignoredChanged);
+    _daemon?.macView.windowShows.removeListener(_windowChanged);
+    _end();
+  }
+
+  /// Whether the window shows: hidden, the daemon is asked for nothing.
+  bool get _window => _daemon?.macView.window ?? true;
+
+  /// The window was hidden, or shows again: the listings end while it's
+  /// hidden (the daemon polls each one every second, ADR 0090), what
+  /// they listed still shown; shown again, each sends what's there now.
+  void _windowChanged() => _window ? _sync() : _end();
+
+  void _end() {
     for (final s in _subs.values) {
       unawaited(s.cancel());
     }
@@ -187,7 +201,7 @@ class FolderTree extends ChangeNotifier {
       }
       _subs.clear();
     }
-    if (_users == 0) return;
+    if (_users == 0 || !_window) return;
     final shown = _shown;
     for (final f in [..._subs.keys]) {
       if (!shown.contains(f)) unawaited(_subs.remove(f)!.cancel());
