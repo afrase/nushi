@@ -134,6 +134,7 @@ void showImagePreview(BuildContext context, ImageProvider image) =>
     showDialog<void>(
       context: context,
       barrierColor: NushiTheme.of(context).t.scrim,
+      // design: a click anywhere on the preview closes it, as Escape does
       builder: (context) => GestureDetector(
         onTap: () => Navigator.pop(context),
         child: Padding(
@@ -238,6 +239,7 @@ class ClickableImage extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget framed(Widget child) => MouseRegion(
       cursor: SystemMouseCursors.zoomIn,
+      // design: an image's zoom, a click on the picture, not a button
       child: GestureDetector(
         onTap: () => showImagePreview(context, image),
         child: Container(

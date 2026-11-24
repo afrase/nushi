@@ -133,6 +133,7 @@ class _HoverCardState extends State<HoverCard> {
       child = TapRegion(
         groupId: this,
         onTapOutside: (_) => _hide(),
+        // design: a touch screen's tap shows the card
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: _tap,

@@ -159,6 +159,8 @@ class _ShortcutRowState extends State<ShortcutRow> {
         canRequestFocus: false,
         skipTraversal: true,
         onFocusChange: (on) => setState(() => _focus = on),
+        // A press kept by hand from before Tap: no tint, no focus.
+        // design: to move onto Tap
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,

@@ -44,7 +44,14 @@ func TestCheck(t *testing.T) {
 			"FocusableActionDetector(actions: a);\nPressWatch(onPress: p, child: c);\n" +
 			"// design: a switch's row\nListTile(onTap: f),\nListTileTheme(data: d);\nTap(onTap: f, child: c);\n",
 		"controls_toggle.dart": "child: InkWell(onTap: f),\n",
-		"controls_press.dart":  "child: FocusableActionDetector(\nchild: PressWatch(\n",
+		// A GestureDetector that takes a primary tap, flagged on the line
+		// it opens, however laid out; a right-click's or a drag's, a tap
+		// of a nested call's, a marked one and a name in a string pass.
+		"gesture.dart": "GestureDetector(onTap: f, child: c);\nreturn GestureDetector(\n  behavior: b,\n  onDoubleTap: f,\n);\n" +
+			"GestureDetector(onSecondaryTapUp: f, onPanStart: g);\nGestureDetector(\n  child: Tap(onTap: f),\n);\n" +
+			"// design: an image's zoom\nGestureDetector(onTap: f);\nGestureDetector(onTapUp: f); // design: the dim\n" +
+			"text('GestureDetector(onTap:');\nchild: GestureDetector(\n  onTapDown: (d) => f(d),\n  child: GestureDetector(onTap: g),\n);\n",
+		"controls_press.dart": "child: FocusableActionDetector(\nchild: PressWatch(\nGestureDetector(onTap: f);\n",
 		// The type scale: a step passes, between steps fails, however the
 		// call is laid out; only ui() and code() are read, each branch of a
 		// ternary, and only the call's own size:, not a nested call's.
@@ -104,6 +111,10 @@ func TestCheck(t *testing.T) {
 		"controls_toggle.dart:1: " + pressPath,
 		cornerAt("corner.dart:1"), cornerAt("corner.dart:2"), cornerAt("corner.dart:3"), cornerAt("corner.dart:4"),
 		"dialog.dart:1: " + dialog,
+		"gesture.dart:14: " + pressPath, // sorted as text
+		"gesture.dart:16: " + pressPath,
+		"gesture.dart:1: " + pressPath,
+		"gesture.dart:2: " + pressPath,
 		"keys.dart:1: " + keyInString,
 		"keys.dart:2: " + keyInString,
 		"keys.dart:3: " + keyInString,

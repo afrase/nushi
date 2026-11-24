@@ -163,6 +163,7 @@ class TitleBand extends StatelessWidget {
                 background: const SizedBox.shrink(),
                 children: [
                   if (onTap case final onTap?)
+                    // design: the header's tap beside the window's drag
                     GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: onTap,

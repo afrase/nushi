@@ -103,6 +103,7 @@ class _SettingsModalState extends State<SettingsModal> {
             // The dim covers the headers, so its top moves the window.
             child: TitleBand(
               onTap: widget.daemon.closeSettings,
+              // design: a click on the dim closes Settings, as Escape does
               child: GestureDetector(
                 key: const ValueKey('settings-dim'),
                 behavior: HitTestBehavior.opaque,

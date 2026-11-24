@@ -254,6 +254,8 @@ class GitHubLinkWords extends StatelessWidget {
         ),
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
+          // A press kept by hand from before Tap: no tint, no focus.
+          // design: to move onto Tap
           child: GestureDetector(
             onTap: scope.onTapChip == null
                 ? onOpen
@@ -297,6 +299,8 @@ class _ChipTapState extends State<_ChipTap> {
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
+      // A press kept by hand from before Tap: no tint, no focus.
+      // design: to move onto Tap
       child: GestureDetector(
         onTap: widget.onTap,
         onSecondaryTapUp: widget.onSecondaryTapUp,

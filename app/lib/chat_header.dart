@@ -285,6 +285,8 @@ class ChatHeader extends StatelessWidget {
                                     style: titleStyle,
                                     onDone: () => _renaming = false,
                                   )
+                                // A double-click on the title renames it.
+                                // design: the title isn't a button
                                 : GestureDetector(
                                     onDoubleTap: () => _renaming = true,
                                     child: Text(

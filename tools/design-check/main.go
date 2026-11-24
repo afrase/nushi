@@ -9,8 +9,9 @@
 // literal (Motion's or Waits' instead), a raw SnackBar (showToast
 // instead, toast.dart's), a corner as a number (a radius token
 // instead, ADR 0110), and a second press path (Material's ink, a ListTile,
-// or hover, focus and press kept by hand: Tap or Pressable instead, which
-// show a press at once and say button to a screen reader). The controls'
+// a GestureDetector that takes a tap, or hover, focus and press kept by
+// hand: Tap or Pressable instead, which show a press at once, take the
+// keyboard's focus and say button to a screen reader). The controls'
 // and the theme's own files make the pieces, so they're left out, the
 // controls' files but for durations, corners, the type scale and the
 // press path (controls_press.dart makes it), and so are motion.dart for
@@ -153,7 +154,9 @@ func inFile(path string, controls bool) ([]dartcheck.Use, error) {
 	}
 	var uses []dartcheck.Use
 	var call styleCall
-	marked, cornerMarked := false, false // the line above is a marker alone
+	var taps tapCalls
+	pressOK := filepath.Base(path) == "controls_press.dart" // it makes the press path
+	marked, cornerMarked := false, false                    // the line above is a marker alone
 	for i, line := range strings.Split(string(b), "\n") {
 		trimmed := strings.TrimSpace(line)
 		above, cornerAbove := marked, cornerMarked
@@ -167,7 +170,13 @@ func inFile(path string, controls bool) ([]dartcheck.Use, error) {
 			code = code[:at]
 		}
 		sizes := call.sizes(code) // a marked line's brackets still count
-		if above || strings.Contains(line, marker) {
+		isMarked := above || strings.Contains(line, marker)
+		for _, at := range taps.pressLines(code, i+1, isMarked) {
+			if !pressOK {
+				uses = append(uses, dartcheck.Use{Path: path, Line: at, What: pressPath})
+			}
+		}
+		if isMarked {
 			continue
 		}
 		cornerOK := cornerAbove || strings.Contains(line, cornerMarker)

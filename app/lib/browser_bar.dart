@@ -236,6 +236,7 @@ class BrowserBar extends StatelessWidget {
     return MouseRegion(
       key: fieldKey,
       cursor: SystemMouseCursors.text,
+      // design: a click in the address field focuses its text, not a press
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: focus.requestFocus,
