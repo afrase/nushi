@@ -72,9 +72,10 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	}
 	if err == nil {
 		c.mu.Lock()
-		old := c.agent
-		c.dropPromptsLocked() // what ran on the old agent ends with it
-		c.orphanLocked(true)
+		// The old agent leaves as any does (what ran on it ends with it), the
+		// chat's retiring agent until it has ended; it stops below, once the
+		// side chats on it are dropped.
+		old := c.disconnectLocked()
 		held := c.held // a queue held after a stopped or failed turn stays held, as in load
 		s.useLocked(c, o)
 		c.held = held
@@ -89,8 +90,9 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 			s.Moved, s.BranchFrom = !fresh, ""
 		})
 		c.movedLocked(from)
+		var forker Agent // the agent that made the fork, which leaves: the reopen below replays it
 		if replay {
-			c.agent = nil // reopened below
+			forker = c.disconnectLocked()
 		}
 		c.mu.Unlock()
 		sides := s.dropSides(c) // they ran on the old agent
@@ -100,7 +102,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 					c.log().Warn("deleting the empty session left by the move", "old", sid, "err", err)
 				}
 			}
-			_ = old.Stop(c.svc.timing.stopGrace()) // its process is gone either way
+			c.stopAgent(old)
 		}
 		s.later(func() { s.discard(c, sides) }) // discarding outlives the request
 		if left := oldWT != nil && wt != oldWT && !oldWT.Found; left && (!fresh || s.inUse(c, oldWT.Path) || !s.dropWorktree(oldWT)) {
@@ -111,7 +113,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 			c.mu.Unlock()
 		}
 		if replay {
-			_ = o.agent.Stop(c.svc.timing.stopGrace()) // its process is gone either way
+			c.stopAgent(forker)
 		} else if err := c.reapply(ctx, o.agent, o.sid, mode, picks); err != nil {
 			c.log().Warn("mode after moving", "err", err)
 		}
