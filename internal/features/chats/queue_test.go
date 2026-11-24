@@ -313,7 +313,7 @@ func TestSendNowOfAQueuedMessageThatDoesntGoKeepsIt(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	sent := make(chan error, 1)
 	go func() { sent <- svc.SendQueuedNow(ctx, c.id, id) }()
-	eventually(t, c, func() bool { return c.sendingNow > 0 }) // it waits for the turn to end
+	eventually(t, c, func() bool { return c.sendingNow == 2 }) // taken (takeToSend), and waiting for the turn to end
 	cancel()
 	if err := <-sent; err == nil {
 		t.Fatal("sent")
@@ -349,4 +349,35 @@ func TestSendNowOfAQueuedMessage(t *testing.T) {
 	eventually(t, c, func() bool { got, _ := agent.texts(); return reflect.DeepEqual(got, []string{"one", "b", "a"}) })
 	agent.release()
 	idle(t, c)
+}
+
+// A queued message on its way to the agent (Send now) keeps its chat from
+// resting from the moment it leaves the queue: a restart that saw the
+// chat quiet before the message reached the agent would refuse it, and
+// the queue it went back to dies with the daemon.
+func TestSendNowOfAQueuedMessageHoldsARestart(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "a"}, SendQueue))
+	if _, err := svc.Stop(t.Context(), c.id, false); err != nil {
+		t.Fatal(err)
+	}
+	idle(t, c) // stopped: the queue is held, and only Send now sends it
+	c.mu.Lock()
+	id := c.queue[0].ID
+	c.mu.Unlock()
+	taken, m, at, err := svc.takeToSend(c.id, id)
+	testcheck.NoErr(t, err)
+	if ok, _ := svc.Rest(); ok {
+		svc.Unrest()
+		t.Fatal("Rest found the chat quiet with its message on its way")
+	}
+	testcheck.NoErr(t, svc.sendTaken(t.Context(), taken, m, at))
+	agent.release()
+	eventually(t, c, func() bool { got, _ := agent.texts(); return reflect.DeepEqual(got, []string{"one", "a"}) })
+	idle(t, c)
+	if ok, holding := svc.Rest(); !ok {
+		t.Errorf("the chat holds a restart once its message went: %s", holding)
+	}
 }

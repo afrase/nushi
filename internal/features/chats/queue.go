@@ -137,26 +137,26 @@ func (c *chat) unsendLocked(id string) {
 // Unqueue takes a message out of the chat's queue and returns it, before
 // the agent gets it.
 func (s *Service) Unqueue(chatID, id string) (model.Message, error) {
-	_, m, _, err := s.unqueue(chatID, id)
-	return m, err
-}
-
-// unqueue is Unqueue's: the chat, the message and where it was.
-func (s *Service) unqueue(chatID, id string) (*chat, model.Message, int, error) {
 	c, err := s.lookup(chatID) // a side chat's too
 	if err != nil {
-		return nil, model.Message{}, 0, err
+		return model.Message{}, err
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	m, _, err := c.unqueueLocked(id)
+	return m, err
+}
+
+// unqueueLocked takes message id out of the queue: it and where it was.
+func (c *chat) unqueueLocked(id string) (model.Message, int, error) {
 	i := slices.IndexFunc(c.queue, func(m model.Message) bool { return m.ID == id })
 	if i < 0 {
-		return nil, model.Message{}, 0, errors.New("the agent has it already")
+		return model.Message{}, 0, errors.New("the agent has it already")
 	}
 	m := c.queue[i]
 	c.queue = slices.Delete(c.queue, i, i+1)
 	c.queueChangedLocked()
-	return c, m, i, nil
+	return m, i, nil
 }
 
 // SendQueuedNow sends a message of the chat's queue at once, as Prompt's
@@ -165,23 +165,50 @@ func (s *Service) unqueue(chatID, id string) (*chat, model.Message, int, error) 
 // down), the message goes back to its place in the queue, so no failure
 // loses it.
 func (s *Service) SendQueuedNow(ctx context.Context, chatID, id string) error {
-	c, m, at, err := s.unqueue(chatID, id)
+	c, m, at, err := s.takeToSend(chatID, id)
 	if err != nil {
 		return err
 	}
+	return s.sendTaken(ctx, c, m, at)
+}
+
+// takeToSend takes a message out of the chat's queue for SendQueuedNow,
+// and counts it as a Send now on its way (sendingNow) in the same hold:
+// till sendTaken has sent it, the chat isn't quiet, so a restart can't
+// begin (Rest) and refuse it into a queue that dies with the daemon, and
+// the queue starts nothing ahead of it.
+func (s *Service) takeToSend(chatID, id string) (*chat, model.Message, int, error) {
+	c, err := s.lookup(chatID) // a side chat's too
+	if err != nil {
+		return nil, model.Message{}, 0, err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	m, at, err := c.unqueueLocked(id)
+	if err == nil {
+		c.sendingNow++
+	}
+	return c, m, at, err
+}
+
+// sendTaken sends m, which takeToSend took from the queue's place at, and
+// ends its count: the queue goes on, with m back in its place if it
+// didn't go.
+func (s *Service) sendTaken(ctx context.Context, c *chat, m model.Message, at int) error {
 	send := m
 	send.ID = "" // a new message, as the box's
-	if err := s.Prompt(ctx, chatID, send, SendNow); err != nil {
-		c.mu.Lock()
-		defer c.mu.Unlock()
+	err := s.Prompt(ctx, c.id, send, SendNow)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.sendingNow--
+	if err != nil {
 		c.queue = slices.Insert(c.queue, min(at, len(c.queue)), m)
 		c.queueChangedLocked()
-		if !c.busyLocked() {
-			c.deliverLocked()
-		}
-		return err
 	}
-	return nil
+	if !c.busyLocked() {
+		c.deliverLocked()
+	}
+	return err
 }
 
 func (c *chat) queueChangedLocked() {
