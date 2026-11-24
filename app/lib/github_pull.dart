@@ -309,9 +309,19 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     };
     final p = pull;
     if (p == null) {
-      return error == null
-          ? const PullSkeleton()
-          : Center(child: Text(error, style: theme.ui(t.crashed)));
+      if (error == null) return const PullSkeleton();
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 8,
+          children: [
+            Text(error, style: theme.ui(t.crashed)),
+            // Nothing read yet, so no line to hold it: the tab's Refresh
+            // goes under the error, where it's wanted most.
+            if (widget.source case final s?) _refreshButton(s),
+          ],
+        ),
+      );
     }
     if (_tab == PullSection.overview || _tab == PullSection.commits) {
       _commits.want(p.headOid);
@@ -364,16 +374,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                             ),
                             // The tab has no bar: its Refresh is here
                             // (the GitHub view's is in its bar).
-                            if (widget.source case final s?)
-                              IconTap(
-                                Icons.refresh,
-                                key: const ValueKey('pull-refresh'),
-                                tooltip: withKey(
-                                  'Refresh',
-                                  cmdLabel(LogicalKeyboardKey.keyR),
-                                ),
-                                onTap: () => unawaited(s.refresh()),
-                              ),
+                            if (widget.source case final s?) _refreshButton(s),
                           ],
                         ),
                       ),
@@ -500,6 +501,14 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       },
     );
   }
+
+  /// The chat's tab's Refresh (the GitHub view's is in its bar).
+  Widget _refreshButton(ChatPull s) => IconTap(
+    Icons.refresh,
+    key: const ValueKey('pull-refresh'),
+    tooltip: withKey('Refresh', cmdLabel(LogicalKeyboardKey.keyR)),
+    onTap: () => unawaited(s.refresh()),
+  );
 
   /// The page's line ([updatedLine]), spinning while it's asked; a failed
   /// one says why on hover.

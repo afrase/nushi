@@ -367,4 +367,30 @@ void main() {
     expect(asked, hasLength(1));
     await closeView(tester, d);
   }, variant: onMac);
+
+  testWidgets('a tab whose first read failed, with nothing kept, has a '
+      'Refresh under the error that asks again', (tester) async {
+    var failing = true;
+    final asked = <GetGitHubPullRequest>[];
+    final (d, _) = await openPullTab(
+      tester,
+      fixturePull(),
+      more: _counted(
+        asked,
+        () => failing
+            ? Future<GetGitHubPullResponse>.error(Exception('no network'))
+            : null,
+      ),
+    );
+    expect(find.text(_title), findsNothing);
+    expect(_refresh, findsOneWidget);
+    failing = false;
+    await tester.pump(const Duration(seconds: 20));
+    asked.clear();
+    await tester.tap(_refresh);
+    await tester.pumpAndSettle();
+    expect(asked, hasLength(1));
+    expect(find.text(_title), findsOneWidget);
+    await closeView(tester, d);
+  }, variant: onMac);
 }
