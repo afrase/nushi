@@ -13,3 +13,4 @@ The GitHub view should be a place to see what needs the user (reviews asked of t
 - With the view, a pull request and a chat open, Nushi spends at most about 3 GraphQL points a minute on polls (the inbox about 2, a pull request about 2 every 30 s, states 1), under 400 an hour of the 5,000; REST only when a log or files are opened.
 - What happens on GitHub shows within a minute (30 s for an open pull request), not at once.
 - A closed view costs nothing.
+- 2026-11-24: a pull request's details poll as a chat's pull request does (ADR 0140): each minute, every 15 once merged or closed, every 5 while the window isn't in front, no longer every 30 s.

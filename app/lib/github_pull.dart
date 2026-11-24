@@ -19,6 +19,7 @@ import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_merge_card.dart';
 import 'package:nushi/pull_merge_state.dart';
 import 'package:nushi/pull_overview.dart';
+import 'package:nushi/pull_polls.dart';
 import 'package:nushi/pull_skeleton.dart';
 import 'package:nushi/pull_thread_card.dart';
 import 'package:nushi/pull_todo_items.dart';
@@ -28,10 +29,6 @@ import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
-
-/// How often an open pull request is asked for again (quietly), in the
-/// GitHub view.
-const pullPoll = Duration(seconds: 30);
 
 /// Each pull request's tab (Overview, Commits, Checks, Files changed) as
 /// left, while the app runs: a look at a chat comes back to it, and to
@@ -117,7 +114,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       });
     } else {
       unawaited(_load());
-      _poll = Timer.periodic(pullPoll, (_) => unawaited(_load(quiet: true)));
+      _arm();
     }
     unawaited(
       githubLogin(widget.daemon, widget.ref.host).then((me) {
@@ -156,6 +153,17 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     await s.again();
   }
 
+  /// The next quiet ask, as every pull poll is (ADR 0140): each minute,
+  /// every 15 once merged or closed, every 5 while the window isn't in
+  /// front; re-armed after each load, so its state picks the next pace.
+  void _arm() {
+    _poll?.cancel();
+    _poll = Timer(
+      polledEvery(pullPoll(_pull)),
+      () => unawaited(_load(quiet: true)),
+    );
+  }
+
   /// The newest [_load]'s number: an older answer (a poll overtaken by the
   /// reload after a merge or a post) is dropped.
   int _asked = 0;
@@ -182,6 +190,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       if (mounted && n == _asked && _asking) {
         setState(() => _asking = false);
       }
+      if (mounted && n == _asked) _arm();
     }
   }
 

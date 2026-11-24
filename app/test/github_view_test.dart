@@ -20,6 +20,7 @@ import 'package:nushi/github_review.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
+import 'package:nushi/pull_polls.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -97,9 +98,10 @@ void main() {
     final (_, d) = await openView(
       tester,
       more: (input) => switch (input) {
-        // The first poll held, answered after the second.
-        GetGitHubPullRequest() when ++pulls >= 2 => switch (pulls) {
-          2 => holds[0].future.then(
+        // A pull request's first read held, answered after the poll; an
+        // issue's first poll held, answered after the second.
+        GetGitHubPullRequest() => switch (++pulls) {
+          1 => holds[0].future.then(
             (_) => GetGitHubPullResponse(
               pull: pull()..item = item(1, 'The old title'),
             ),
@@ -123,7 +125,7 @@ void main() {
     );
     Finder text(String s) => find.textContaining(s, findRichText: true);
     for (final (open, poll, hold) in [
-      ('Add Sub and Neg', pullPoll, holds[0]),
+      ('Add Sub and Neg', pullWidgetPoll, holds[0]),
       ('Add a Mul function', const Duration(minutes: 1), holds[1]),
     ]) {
       await tester.tap(find.text(open));
@@ -140,6 +142,33 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
     }
+    await closeView(tester, d);
+  });
+
+  testWidgets('a pull request on its own page is asked again each minute, '
+      'every 15 once merged', (tester) async {
+    var merged = false;
+    final (fake, d) = await openView(
+      tester,
+      more: (input) => input is GetGitHubPullRequest && merged
+          ? GetGitHubPullResponse(
+              pull: pull()..item = item(1, 'Add Sub and Neg', state: 'merged'),
+            )
+          : null,
+    );
+    int reads() => fake.calls.whereType<GetGitHubPullRequest>().length;
+    await tester.tap(find.text('Add Sub and Neg'));
+    await tester.pumpAndSettle();
+    expect(reads(), 1);
+    merged = true;
+    await tester.pump(pullWidgetPoll);
+    await tester.pumpAndSettle();
+    expect(reads(), 2); // open: a minute on
+    await tester.pump(pullWidgetPoll * 14);
+    expect(reads(), 2); // merged: not before 15 minutes
+    await tester.pump(pullWidgetPoll);
+    await tester.pumpAndSettle();
+    expect(reads(), 3);
     await closeView(tester, d);
   });
 

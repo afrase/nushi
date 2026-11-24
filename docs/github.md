@@ -41,7 +41,7 @@ The filters go into GitHub's searches, so what they leave out doesn't take the 5
 
 **Going back.** Esc or ← goes back to the inbox, and so does a swipe back, as in Safari: two fingers right on the trackpad (three if macOS's Swipe between pages says so), not while a diff or code block under them scrolls. An arrow at the left edge fills as the swipe gets far enough; short of it nothing happens. The mouse's back button goes back too, here, in Jira and in New chat's lists. The inbox comes back scrolled as you left it, with the item you opened in view (Jira's list too).
 
-**Freshness.** The inbox shows as GitHub gave it last while it's asked again. It's asked for again each minute while it shows, an open pull request every 30 s ([ADR 0046](adr/0046-the-github-inbox-and-polling.md)). Nothing reaches GitHub otherwise, and Nushi writes to it only what you send.
+**Freshness.** The inbox shows as GitHub gave it last while it's asked again. It's asked for again each minute while it shows, and a pull request's details too (every 15 minutes once merged or closed, every 5 while the window is in the background; [ADR 0046](adr/0046-the-github-inbox-and-polling.md)). Nothing reaches GitHub otherwise, and Nushi writes to it only what you send.
 
 ## Starting work
 
