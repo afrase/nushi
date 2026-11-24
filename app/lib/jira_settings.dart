@@ -57,7 +57,7 @@ class JiraPage extends StatefulWidget {
 class _JiraPageState extends State<JiraPage> {
   List<JiraSite>? _sites;
   String? _error; // why the sites couldn't be listed
-  final _checked = <String, String>{}; // site id -> "Connected as …" or why not
+  final _checked = <String, _SiteCheck>{}; // site id -> what Jira said
   bool _adding = false;
 
   // The sites asked for while the daemon was gone.
@@ -108,15 +108,15 @@ class _JiraPageState extends State<JiraPage> {
   }
 
   Future<void> _check(String id) async {
-    String said;
+    _SiteCheck said;
     try {
       final r = await widget.client.checkJiraSite(
         CheckJiraSiteRequest(site: id),
       );
-      said = 'Connected as ${r.name}';
+      said = (who: r.name, error: null);
       _jiraWorks[id] = true;
     } on Object catch (e) {
-      said = errorText(e);
+      said = (who: null, error: errorText(e));
       _jiraWorks[id] = false;
     }
     if (!mounted) return;
@@ -163,7 +163,7 @@ class _JiraPageState extends State<JiraPage> {
     if (!mounted) return;
     setState(() {
       _adding = false;
-      _checked[r.site.id] = 'Connected as ${r.site.name}';
+      _checked[r.site.id] = (who: r.site.name, error: null);
     });
     _jiraWorks[r.site.id] = true;
     unawaited(_load());
@@ -260,20 +260,23 @@ bool get jiraConnectedKnown => _jiraWorks.values.any((on) => on);
 /// Each site checked this launch: whether Jira took its token.
 final Map<String, bool> _jiraWorks = runMap();
 
+/// What Jira said when a site's token was checked: who the token is, or
+/// why it was refused.
+typedef _SiteCheck = ({String? who, String? error});
+
 /// A site's row: who its token is (Jira was asked: [checked]) and its
 /// email, or what's wrong, and when the token expires if soon; "Connected"
 /// once Jira said who; Remove behind ⋯.
 AccountRow _siteRow(
   Tokens t,
   JiraSite s, {
-  required String? checked,
+  required _SiteCheck? checked,
   required String? warning,
   required VoidCallback onAllow,
   required VoidCallback onRemove,
 }) {
-  const connected = 'Connected as ';
-  final ok = checked?.startsWith(connected) ?? false;
-  final who = ok ? checked!.substring(connected.length) : null;
+  final who = checked?.who;
+  final ok = who != null;
   return AccountRow(
     icon: Icons.task_alt,
     title: s.id,
@@ -287,7 +290,10 @@ AccountRow _siteRow(
       else if (s.problem.isNotEmpty)
         (s.problem, t.crashed)
       else if (!ok)
-        (checked ?? 'Checking…', checked == null ? t.textMuted : t.crashed),
+        (
+          checked?.error ?? 'Checking…',
+          checked == null ? t.textMuted : t.crashed,
+        ),
       if (warning case final w?)
         ('$w: make a new one and add the site again.', t.needs),
     ],
