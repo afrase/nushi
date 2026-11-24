@@ -79,7 +79,13 @@ final class ChatChanges extends ChangeNotifier {
   /// marked it (another chat in the folder, an editor or a terminal
   /// changed it); a later one reads only if it is behind.
   void follow() {
-    if (_followers++ == 0 || _behind) read().ignore();
+    final first = _followers++ == 0;
+    if (!first && !_behind) return;
+    // A read the marks began, unfollowed, listed no branches.
+    if (first && _reading != null && _readingGen == _gen) {
+      unawaited(listBranches());
+    }
+    read().ignore();
   }
 
   /// What showed it went.
@@ -131,7 +137,7 @@ final class ChatChanges extends ChangeNotifier {
   Future<ChangeSpan> _read() {
     final gen = _readingGen = _gen;
     final asked = ++_asked;
-    unawaited(listBranches());
+    if (_followers > 0) unawaited(listBranches());
     final reading = _reading = ChangeSpan.of(daemon, chat);
     reading
         .then(
@@ -155,8 +161,9 @@ final class ChatChanges extends ChangeNotifier {
     return reading;
   }
 
-  /// Lists the folder's branches and worktrees: with each read, and again
-  /// as the Branch row's menu opens. Outside git, or gone, they stay as
+  /// Lists the folder's branches and worktrees: with each read while
+  /// something shows it (the change marks alone don't need them), and
+  /// again as the Branch row's menu opens. Outside git, or gone, they stay as
   /// they were (the menu says Loading… until listed).
   Future<void> listBranches() async {
     try {

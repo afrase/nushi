@@ -109,6 +109,46 @@ void main() {
     changes.unfollow();
   });
 
+  test('the marks alone read no branches, which only a view of them '
+      'lists', () async {
+    final fake = FakeDaemon([Chat(id: 'c', agent: 'claude', folder: '/x')])
+      ..answer = (input) => switch (input) {
+        GetFolderStatusRequest() => GetFolderStatusResponse(
+          git: true,
+          branch: 'fix',
+          defaultBase: 'main',
+        ),
+        ListBranchesRequest() => ListBranchesResponse(),
+        _ => null,
+      };
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    await pumpEventQueue();
+    int lists() => fake.calls.whereType<ListBranchesRequest>().length;
+    final chat = ChatState('c', '/x');
+    expect(await marksBaseOf(chat).find(d), (
+      base: 'main',
+      from: MarksFrom.branch,
+    ));
+    expect(lists(), 0);
+    final changes = ChatChanges.of(d, chat)..follow();
+    await pumpEventQueue();
+    expect(lists(), 1);
+    expect(changes.branches, isNotNull);
+    changes.unfollow();
+
+    // Shown while the marks' read is under way: that read is taken, and
+    // the branches listed beside it.
+    final other = ChatState('o', '/x');
+    final finding = marksBaseOf(other).find(d);
+    final view = ChatChanges.of(d, other)..follow();
+    await finding;
+    await pumpEventQueue();
+    expect(lists(), 2);
+    expect(view.branches, isNotNull);
+    view.unfollow();
+  });
+
   test('a read that fails says why, and the next that answers clears it; '
       'the newest read asked for is what shows', () async {
     var fail = true;
