@@ -47,7 +47,7 @@ func TestRestartWaitsForTheTurn(t *testing.T) {
 
 	// It says what it waits for (API 85), for the app's bar.
 	holds := must(a.c.RestartWhenIdle(ctx, connect.NewRequest(&nushiv1.RestartWhenIdleRequest{}))).Holds
-	if len(holds) != 1 || holds[0].ChatId != id || holds[0].Why != "waits on you" || holds[0].Terminal {
+	if len(holds) != 1 || holds[0].ChatId != id || holds[0].Why != "needs you" || holds[0].Terminal {
 		t.Errorf("holds %v, want the chat, waiting on the user", holds)
 	}
 	if d.due(t) {

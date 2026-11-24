@@ -54,10 +54,10 @@ func (s *Service) Holding() []model.Hold {
 	for _, c := range open {
 		c.mu.Lock()
 		if !c.quietLocked() {
-			if c.parent == nil {
-				own[c.id] = c.holdLocked()
+			if why, side := c.holdLocked(); c.parent == nil {
+				own[c.id] = why
 			} else {
-				sides[c.parent.id] = sideHold(c.holdLocked()) // its id never changes: no need of its lock
+				sides[c.parent.id] = side // its id never changes: no need of its lock
 			}
 		}
 		c.mu.Unlock()
@@ -75,29 +75,18 @@ func (s *Service) Holding() []model.Hold {
 	return out
 }
 
-// sideHold is a side chat's hold (holdLocked) as its chat shows it.
-func sideHold(why string) string {
-	switch why {
-	case "waits on you":
-		return "a side chat waits on you"
-	case "working":
-		return "a side chat is working"
-	case "a message queued":
-		return "a side chat has a message queued"
-	}
-	return "a side chat is in background"
-}
-
-// holdLocked is why a chat that isn't quiet isn't, in a few words.
-func (c *chat) holdLocked() string {
+// holdLocked is why a chat that isn't quiet isn't, in a few words: own
+// as the chat shows it, side as its chat shows it when it is a side chat.
+// "Needs you" is the glossary's word for a chat that waits on the user.
+func (c *chat) holdLocked() (own, side string) {
 	switch {
 	case c.waitsLocked():
-		return "waits on you"
+		return "needs you", "a side chat needs you"
 	case c.busy || !c.started.IsZero() || c.ownTurn || c.steering || c.sendingNow > 0 || len(c.probes) > 0:
-		return "working"
+		return "working", "a side chat is working"
 	case len(c.queue) > 0:
-		return "a message queued"
+		return "a message queued", "a side chat has a message queued"
 	default:
-		return "in background"
+		return "in background", "a side chat is in background"
 	}
 }
