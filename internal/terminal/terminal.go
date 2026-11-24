@@ -20,7 +20,19 @@ const (
 	scrollback = 1 << 20 // output kept for clients that attach later
 	behind     = 4 << 20 // output a client may fall behind by before it is dropped
 	grace      = 2 * time.Second
+	lookAfter  = 300 * time.Millisecond // how soon after input or output the foreground is looked at
 )
+
+// lookTimer is the one-shot timer of a terminal's look at its foreground
+// (a *time.Timer).
+type lookTimer interface {
+	Reset(d time.Duration) bool
+	Stop() bool
+}
+
+// newLookTimer makes a terminal's look timer, which runs f lookAfter from
+// now; tests put a timer they fire themselves in its place.
+var newLookTimer = func(f func()) lookTimer { return time.AfterFunc(lookAfter, f) }
 
 // Terminal is a program running in a pseudo-terminal.
 type Terminal struct {
@@ -32,6 +44,9 @@ type Terminal struct {
 	changed func()
 	done    chan struct{} // closed once the program has exited
 	closing sync.Once     // Close's work, done once
+	looker  lookTimer     // the next look at the foreground; nil when nothing follows it (changed is nil)
+	lookMu  sync.Mutex    // one look at a time, so a later one's answer is the one kept
+	lastPg  int           // the foreground group the last look saw, under lookMu
 
 	mu      sync.Mutex
 	output  []byte // the last output, about scrollback bytes of it
@@ -39,6 +54,9 @@ type Terminal struct {
 	program string // the foreground program's command line, if not the shell
 	code    int    // the exit code, once done (-1: killed by a signal, or by Close on Windows)
 	signal  int    // the signal that killed it, once done; 0 for none (always on Windows)
+	ended   bool   // the exit is recorded: looks keep away from program
+	armed   bool   // looker is set to run
+	again   bool   // input or output came while armed: look once more after
 }
 
 type sub struct {
@@ -53,6 +71,7 @@ func (t *Terminal) read(read chan<- struct{}) {
 	for {
 		n, err := t.out.Read(buf)
 		if n > 0 {
+			t.poke() // first: what reads the output then knows a look is due
 			t.emit(buf[:n])
 		}
 		if err != nil {
@@ -97,38 +116,73 @@ func (t *Terminal) wait(read <-chan struct{}) {
 	t.code = code
 	t.signal = signal
 	t.program = ""
+	t.ended = true
 	t.mu.Unlock()
+	if t.looker != nil {
+		t.looker.Stop()
+	}
 	close(t.done)
 	if t.changed != nil {
 		t.changed()
 	}
 }
 
-// watch follows the foreground program twice a second until the program
-// exits.
-func (t *Terminal) watch() {
-	tick := time.NewTicker(500 * time.Millisecond)
-	defer tick.Stop()
-	last := 0
-	for {
-		select {
-		case <-t.done:
-			return
-		case <-tick.C:
-		}
-		pg := t.foreground()
-		if pg == last {
-			continue
-		}
-		last = pg
-		program := t.programOf(pg)
-		t.mu.Lock()
-		same := program == t.program
+// follow starts following the foreground program, for changed: one look
+// lookAfter from the start, and one lookAfter after input or output
+// (poke). A command starts on input (the user's Enter, a run typed in)
+// and its end prints the prompt, so that sees each change; an idle
+// terminal does no work, as it would polling. Called by Start before the
+// program's output is read.
+func (t *Terminal) follow() {
+	t.mu.Lock() // the look the timer runs reads looker under it
+	defer t.mu.Unlock()
+	t.armed = true
+	t.looker = newLookTimer(t.look)
+}
+
+// poke asks for a look lookAfter from now, unless one is due already:
+// then for another after it, so a program that writes all the time is
+// still looked at as often, not put off by each write.
+func (t *Terminal) poke() {
+	if t.looker == nil {
+		return
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	switch {
+	case t.ended:
+	case t.armed:
+		t.again = true
+	default:
+		t.armed = true
+		t.looker.Reset(lookAfter)
+	}
+}
+
+// look reads the foreground program, and tells changed when it changed.
+func (t *Terminal) look() {
+	t.lookMu.Lock()
+	defer t.lookMu.Unlock()
+	pg := t.foreground() // the terminal and the process list: outside t.mu
+	program, moved := "", pg != t.lastPg
+	if moved {
+		t.lastPg = pg
+		program = t.programOf(pg)
+	}
+	t.mu.Lock()
+	differs := moved && !t.ended && program != t.program
+	if differs {
 		t.program = program
-		t.mu.Unlock()
-		if !same {
-			t.changed()
-		}
+	}
+	if t.again && !t.ended {
+		t.again = false
+		t.looker.Reset(lookAfter)
+	} else {
+		t.armed = false
+	}
+	t.mu.Unlock()
+	if differs {
+		t.changed()
 	}
 }
 
@@ -142,10 +196,11 @@ func (t *Terminal) programOf(pg int) string {
 }
 
 // Foreground returns the foreground program's command line as it is now,
-// read from the terminal rather than from the watcher's last look (Program,
-// up to half a second old): "" at the shell's prompt or once it has exited.
-// What decides to end the terminal asks this, so a command started a moment
-// ago counts.
+// read from the terminal rather than from the last look (Program, taken
+// lookAfter after the latest input or output, so it misses a program that
+// took the foreground silently since): "" at the shell's prompt or once it
+// has exited. What decides to end the terminal asks this, so a command
+// started a moment ago counts.
 func (t *Terminal) Foreground() string {
 	select {
 	case <-t.done:
@@ -192,9 +247,11 @@ func ShellName(program string) string {
 // Done is closed once the program has exited.
 func (t *Terminal) Done() <-chan struct{} { return t.done }
 
-// Write sends input to the program.
+// Write sends input to the program, and asks for a look at the
+// foreground after it.
 func (t *Terminal) Write(p []byte) error {
 	_, err := t.in.Write(p)
+	t.poke()
 	return err
 }
 

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -58,13 +59,101 @@ func TestExitCodeAndReplay(t *testing.T) {
 	again.wait(t, `before-exit\r\n`)
 }
 
-func TestProgram(t *testing.T) {
-	term, out := shell(t)
-	_ = term.Write([]byte("echo started; sleep 30\n"))
-	out.wait(t, `started\r\n`)
-	if !testcheck.Eventually(func() bool { return term.Program() == "sleep 30" }) {
+// The foreground is looked at once from the start, then after input or
+// output, never while the terminal is idle; a look that finds another
+// program says so.
+func TestProgramIsLookedAtAfterInputOrOutput(t *testing.T) {
+	timer := fakeLookTimer(t)
+	changes := make(chan struct{}, 16)
+	term, err := Start([]string{"/bin/sh"}, t.TempDir(), []string{"PS1=$ ", "TERM=xterm-256color"}, 80, 24, func() { changes <- struct{}{} })
+	testcheck.NoErr(t, err)
+	t.Cleanup(term.Close)
+	output := func(want string) {
+		t.Helper()
+		testcheck.Wait(t, "the terminal to show "+want, func() bool { return strings.Contains(string(term.Output()), want) })
+	}
+	output("$ ") // the prompt: output, while the look at the start is due
+	if !timer.armed() {
+		t.Fatal("no look is due at the start")
+	}
+	timer.fire() // the look at the start; the prompt came meanwhile, so another
+	timer.fire()
+	if timer.armed() || term.Program() != "" {
+		t.Fatalf("idle at the prompt: a look due %v, program %q", timer.armed(), term.Program())
+	}
+
+	testcheck.NoErr(t, term.Write([]byte("sleep 30\n")))
+	if !timer.armed() {
+		t.Fatal("no look is due after input")
+	}
+	output("sleep 30\r\n") // the echo, whole
+	testcheck.Wait(t, "sleep in the foreground", func() bool { return term.Foreground() == "sleep 30" })
+	timer.fire()
+	if term.Program() != "sleep 30" {
 		t.Fatalf("program %q, want sleep 30", term.Program())
 	}
+	select {
+	case <-changes:
+	default:
+		t.Error("the program's change wasn't told")
+	}
+	timer.fire() // the echo came while the first was due
+	if timer.armed() {
+		t.Error("a look is due with sleep running silently")
+	}
+}
+
+// lookTimerFake is a look timer the test fires itself.
+type lookTimerFake struct {
+	mu  sync.Mutex
+	f   func()
+	set bool
+}
+
+func (l *lookTimerFake) Reset(time.Duration) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	was := l.set
+	l.set = true
+	return was
+}
+
+func (l *lookTimerFake) Stop() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	was := l.set
+	l.set = false
+	return was
+}
+
+func (l *lookTimerFake) armed() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.set
+}
+
+// fire runs the look as the timer would, once it was due.
+func (l *lookTimerFake) fire() {
+	l.mu.Lock()
+	l.set = false
+	f := l.f
+	l.mu.Unlock()
+	f()
+}
+
+// fakeLookTimer makes the next terminal's look timer one the test fires.
+func fakeLookTimer(t *testing.T) *lookTimerFake {
+	t.Helper()
+	l := &lookTimerFake{}
+	was := newLookTimer
+	newLookTimer = func(f func()) lookTimer {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		l.f, l.set = f, true
+		return l
+	}
+	t.Cleanup(func() { newLookTimer = was })
+	return l
 }
 
 func TestCloseKillsChildren(t *testing.T) {

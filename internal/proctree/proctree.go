@@ -102,7 +102,7 @@ func tracked(ps []proc, root int, was []model.Process) []model.Process {
 
 // Children lists the processes root started, without their command
 // lines: cheaper than Under, for a terminal's look at what runs on it
-// every half second.
+// after its input or output.
 func (Tree) Children(root int) ([]model.Process, error) {
 	ps, err := all()
 	if err != nil {

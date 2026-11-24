@@ -12,8 +12,9 @@ import (
 // On Windows (ADR 0132) who started whom, and when, is the system's
 // process list, read whole in one call (NtQuerySystemInformation's
 // SystemProcessInformation): no process is opened to list it, so it is
-// cheap enough to read twice a second and tells the start of every
-// process, another user's included. A command line is the system's own
+// cheap enough for a terminal's look at its foreground after each input
+// or output, and tells the start of every process, another user's
+// included. A command line is the system's own
 // copy (NtQueryInformationProcess), readable for the user's own
 // processes. Windows has no process groups: Pgid is 0, so StopGroup stops
 // none (signal_windows.go).

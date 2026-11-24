@@ -89,12 +89,12 @@ func Start(argv []string, dir string, env []string, cols, rows int, changed func
 		t.closeConsole()
 		return nil, err
 	}
+	if changed != nil {
+		t.follow()
+	}
 	read := make(chan struct{})
 	go t.read(read)
 	go t.wait(read)
-	if changed != nil {
-		go t.watch()
-	}
 	return t, nil
 }
 

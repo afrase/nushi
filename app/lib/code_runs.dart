@@ -65,8 +65,9 @@ class CodeRun extends ChangeNotifier {
   /// stays when the command ends, as a terminal they look at.
   bool shown = false;
 
-  /// Just typed, in a shell without marks: the daemon lists a terminal's
-  /// program only twice a second, so it runs until that can show.
+  /// Just typed, in a shell without marks: the daemon looks at a
+  /// terminal's program 300 ms after its input or output, so it runs until
+  /// that can show.
   bool justTyped = false;
 
   bool _started = false; // its output has started (after C, or the echo)
