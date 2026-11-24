@@ -169,30 +169,9 @@ sudo nushi-relay -update -restart-unit nushi-relay
 - Without `-restart-unit` it installs and tells you to restart the service yourself. It exits 1 on any failure, with the installed relay untouched, but for a failed restart: then the new relay is already in place (the message says so), and running the command again won't restart it, so restart the service yourself.
 - It needs root because the binary is root's (`/usr/local/bin`); run without it, it says so before downloading anything.
 - A relay you built yourself (`make relay-web`) has no release's version and refuses: it has nothing to compare.
-- What it trusts: GitHub's answer for `afrase/nushi`, over TLS. The `.sha256` comes from the same release, so it checks the download, not who made it: releases aren't signed. The command never runs what it downloaded, and the new relay runs as its service's limited user; but the installed binary is itself run as root the next time you run `sudo nushi-relay -update` (or a timer does), so whoever can publish a release there gets code run as root on this machine then. The relay also serves the phone's app, which holds the phone's key ([ADR 0054](adr/0054-the-phone-is-a-web-app-with-web-push.md)).
+- What it trusts: GitHub's answer for `afrase/nushi`, over TLS. The `.sha256` comes from the same release, so it checks the download, not who made it: releases aren't signed. The command never runs what it downloaded, and the new relay runs as its service's limited user; but the installed binary is itself run as root the next time you run `sudo nushi-relay -update`, so whoever can publish a release there gets code run as root on this machine then. The relay also serves the phone's app, which holds the phone's key ([ADR 0054](adr/0054-the-phone-is-a-web-app-with-web-push.md)).
 
-**A timer, if you want it.** The relay never updates by itself. To have it check weekly, add these two units and run `sudo systemctl enable --now nushi-relay-update.timer`. Only do it if you accept the sentence above for every release, unattended: a release published to `afrase/nushi` then reaches your phone within a week, and runs as root on this machine at the timer's next run, with no one looking.
-
-```ini
-# /etc/systemd/system/nushi-relay-update.service
-[Unit]
-Description=Update nushi-relay to the latest release
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/nushi-relay -update -restart-unit nushi-relay
-```
-
-```ini
-# /etc/systemd/system/nushi-relay-update.timer
-[Timer]
-OnCalendar=weekly
-RandomizedDelaySec=1h
-Persistent=true
-[Install]
-WantedBy=timers.target
-```
-
-`journalctl -u nushi-relay-update` shows what each run did.
+**No timer.** The relay never updates by itself, and this page gives no timer for it: an unattended run would install whatever was published to `afrase/nushi` and, at the run after, run it as root, with no one looking. That waits for signed releases ([ADR 0149](adr/0149-the-relay-updates-itself-when-asked.md)).
 
 **By hand**, for a first install, a relay from before the command (it answers `flag provided but not defined: -update`), or when the command can't run:
 
