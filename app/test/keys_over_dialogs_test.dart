@@ -24,6 +24,13 @@ import 'pull_fixture.dart';
 // a chat's number do nothing while Delete's confirm is open, and the
 // dialog keeps its own keys. On Linux the keys come through the app's
 // Shortcuts alone, as there's no menu bar.
+//
+// The key tests guard the app's keys as now bound, above the Navigator,
+// so a dialog's focus reaches them: they don't show the bug, and passed
+// before, when a dialog's keys never reached the app's Shortcuts. On the
+// Mac the bug came by the menu bar, which runs a key Flutter leaves
+// unhandled as its item; the harness has no menu bar to do that, so the
+// menu bar's own test, which runs its items, is the one that shows it.
 
 /// The Delete dialog's title for chat c.
 const _title = 'Delete “Tidy the note list”?';
