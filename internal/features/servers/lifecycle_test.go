@@ -22,18 +22,19 @@ func TestArchivingTheLastChatStopsTheServers(t *testing.T) {
 	_, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 	testcheck.NoErr(t, err)
 	row(t, s, "web", Running)
-	archive := func(id string) {
+	archive := func(id string) model.ChatRecord {
 		c, _ := chats.Session(id)
 		c.Archived = true
 		chats.set(c)
-		s.Follow(model.Event{ChatID: id, Record: &c})
+		return c
 	}
 	archive("c")
-	time.Sleep(200 * time.Millisecond)
+	s.release() // what Follow starts, done here so its end is known
 	if !s.Busy() {
 		t.Fatal("the server stopped while another chat has its folder")
 	}
-	archive("d")
+	d := archive("d")
+	s.Follow(model.Event{ChatID: "d", Record: &d})
 	if !testcheck.Eventually(func() bool { return !s.Busy() }) {
 		t.Error("the server runs on with no chat in its folder")
 	}
