@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:nushi/chat_paths.dart';
 import 'package:nushi/fnv.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/run_state.dart';
@@ -114,21 +115,18 @@ List<String> findingIds(List<Finding> findings) {
   ];
 }
 
-/// [path]'s segments with `.` and `..` resolved, or null if a `..` climbs
-/// above its start.
-List<String>? _segments(String path) {
-  final out = <String>[];
+/// Whether relative [path] climbs above its start with `..` at any point,
+/// even to come back: such a finding names no file of the chat's.
+bool _climbsOut(String path) {
+  var depth = 0;
   for (final s in path.split('/')) {
-    if (s.isEmpty || s == '.') continue;
-    if (s != '..') {
-      out.add(s);
-    } else if (out.isEmpty) {
-      return null;
-    } else {
-      out.removeLast();
+    if (s == '..') {
+      if (--depth < 0) return true;
+    } else if (s.isNotEmpty && s != '.') {
+      depth++;
     }
   }
-  return out;
+  return false;
 }
 
 final Map<String, String?> _real = runMap();
@@ -150,15 +148,12 @@ String? _realFolder(String folder) => _real.putIfAbsent(folder, () {
 /// phone the folder is the Mac's, matched only as written: the phone has
 /// no such path to resolve, and dart:io throws on the web.
 String? findingPath(String folder, String file) {
-  final parts = _segments(file);
-  if (parts == null || parts.isEmpty) return null;
-  if (!file.startsWith('/')) return parts.join('/');
+  if (!file.startsWith('/')) {
+    // A relative name needs no folder: cleaned as from the root.
+    return _climbsOut(file) ? null : insideOf('/', file);
+  }
   for (final root in {folder, if (!kIsWeb) ?_realFolder(folder)}) {
-    final r = _segments(root);
-    if (r == null || r.length >= parts.length) continue;
-    if (Iterable<int>.generate(r.length).every((i) => r[i] == parts[i])) {
-      return parts.skip(r.length).join('/');
-    }
+    if (insideOf(root, file) case final inside?) return inside;
   }
   return null;
 }

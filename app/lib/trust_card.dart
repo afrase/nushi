@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agents.dart';
+import 'package:nushi/chat_paths.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -14,9 +15,7 @@ export 'package:nushi/trust_ask.dart';
 /// [file], one of [ask]'s, as the card shows it: from the folder when it's
 /// in it, else with the home folder as "~".
 String trustFileShown(TrustAsk ask, String file) =>
-    file.startsWith('${ask.folder}/')
-    ? file.substring(ask.folder.length + 1)
-    : tildePath(file);
+    insideOf(ask.folder, file) ?? tildePath(file);
 
 /// What a folder would have the agent run on its own, before a chat starts
 /// or moves there: each file and what it runs, exactly, with "Start

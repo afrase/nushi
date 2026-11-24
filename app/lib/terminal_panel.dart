@@ -122,8 +122,8 @@ class _TerminalFootState extends State<TerminalFoot> {
   // there.
   Future<bool> _showChange(String path) async {
     final chat = widget.chat;
-    if (!path.startsWith('${chat.folder}/')) return false;
-    final rel = path.substring(chat.folder.length + 1);
+    final rel = insideOf(chat.folder, path);
+    if (rel == null) return false;
     final span = await ChangeSpan.of(widget.daemon, chat);
     final diff = await widget.daemon.client.getDiff(
       span.scope == Scope.commits

@@ -118,7 +118,7 @@ Future<String> pasteFiles(ChatState chat, {required int api}) =>
     if (f.data case final data?) {
       uploads.add(FileUpload(name: f.name, data: data));
     } else {
-      paths.add(insideFolder(f.path, folder) ?? f.path);
+      paths.add(insideOf(folder, f.path) ?? f.path);
     }
   }
   return (paths, uploads);
@@ -139,14 +139,6 @@ bool mentionsPath(String text, String path) {
 }
 
 final _goesOn = RegExp(r'[A-Za-z0-9_\-/]|\.[A-Za-z0-9_\-]');
-
-/// [path] relative to [folder] when it's inside it, else null.
-String? insideFolder(String path, String folder) {
-  final base = folder.endsWith('/') ? folder : '$folder/';
-  return folder.isNotEmpty && path.startsWith(base)
-      ? path.substring(base.length)
-      : null;
-}
 
 /// Attaches [files] (picked, dropped or pasted) to [chat]'s draft: an image
 /// as an image when the agent takes images ([Attachments]), anything else,

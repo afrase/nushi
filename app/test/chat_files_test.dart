@@ -18,6 +18,7 @@ import 'package:nushi/phone/artifacts_screen.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/trust_card.dart' show TrustAsk, TrustFor, trustFileShown;
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -164,6 +165,35 @@ void main() {
       '/Users/me/nushi/a.html',
     );
     expect(relativeIn('', 'a.html'), 'a.html'); // no folder known
+  });
+
+  test("a path whose '..' leaves the folder is outside it, wherever a view "
+      'asks', () {
+    const folder = '/proj';
+    expect(insideOf(folder, '/proj/../other/f'), isNull);
+    expect(insideOf(folder, '/proj/src/../f'), 'f');
+    expect(insideOf(folder, 'src/../../f'), isNull);
+    expect(insideOf(folder, '/proj2/f'), isNull);
+    expect(insideOf('$folder/', 'f'), 'f');
+    expect(insideOf('', 'f'), isNull); // no folder known: POSIX only
+    final ask = TrustAsk(folder, TrustFor.start, const [], 'claude');
+    expect(
+      trustFileShown(ask, '/proj/../etc/.mcp.json'),
+      isNot('../etc/.mcp.json'),
+    );
+    expect(trustFileShown(ask, '/proj/./.mcp.json'), '.mcp.json');
+  });
+
+  test("a tab's file shows in the tree by its cleaned name", () {
+    final d = Daemon(transport: FakeDaemon([]));
+    addTearDown(d.dispose);
+    final chat = ChatState('c', '/proj');
+    expect(inFiles(d, chat, 'src/../a.md'), 'a.md');
+    expect(inFiles(d, chat, '/proj//a.md'), 'a.md');
+    expect(inFiles(d, chat, '/proj/src/a.md'), 'src/a.md');
+    expect(inFiles(d, chat, '../a.md'), isNull);
+    expect(inFiles(d, chat, '/proj'), isNull);
+    expect(inFiles(d, chat, '/other/a.md'), isNull);
   });
 
   test('a file written, then shown by its absolute path, is one artifact; '

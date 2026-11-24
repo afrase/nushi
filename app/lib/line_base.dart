@@ -159,7 +159,7 @@ class LineBase extends ChangeNotifier implements ValueListenable<String?> {
         : absoluteIn(chat.folder, watch.path);
     final slash = abs.lastIndexOf('/');
     if (slash < 0) return await _land(asked, none: NoMarks.failed);
-    final inChat = abs.startsWith('${chat.folder}/');
+    final inChat = insideOf(chat.folder, abs) != null;
     Future<GetDiffResponse> diff(String base) => daemon.client.getDiff(
       GetDiffRequest(
         folder: slash == 0 ? '/' : abs.substring(0, slash),

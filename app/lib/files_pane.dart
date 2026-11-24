@@ -305,13 +305,8 @@ class FilesBlank extends StatelessWidget {
 
 /// [path] (as the preview names it) as [chat]'s Files pane does, relative
 /// to the chat's folder; null for a file outside it.
-String? inFiles(Daemon daemon, ChatState chat, String path) {
-  final folder = '${chat.folder}/';
-  final inside = path.startsWith('/')
-      ? (path.startsWith(folder) ? path.substring(folder.length) : null)
-      : path.replaceFirst(RegExp(r'^(\./)+'), '');
-  return inside == null || inside.isEmpty ? null : inside;
-}
+String? inFiles(Daemon daemon, ChatState chat, String path) =>
+    insideOf(chat.folder, path);
 
 /// Shows [inFiles]' file in [chat]'s Files pane: the pane opens on the Chat
 /// tab, the tree shows if it was hidden (⇧⌘Y), the folders above it open,
