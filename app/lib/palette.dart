@@ -49,6 +49,8 @@ final List<String> recentRows = runList();
 /// among them), then the archived chats; what's picked runs once it
 /// closes.
 Future<void> showPalette(BuildContext context, Daemon d) async {
+  // Its rows act on what the Restart screen hides.
+  if (d.blocked) return;
   final shown = d.chatShows ? d.selected : null;
   // The chats the last opened first, then the newest; whatever the project.
   int opened(ChatState c) =>

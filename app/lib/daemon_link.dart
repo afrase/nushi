@@ -32,6 +32,14 @@ extension DaemonLink on Daemon {
   bool get updatesWhenIdle =>
       !remote && bundled != null && (outdated || replaced);
 
+  /// Whether the Mac shows only its Restart screen (ADR 0004): the daemon
+  /// answered once, is older than the app, and is below [apiFloor] or has
+  /// no way to restart by itself. Nothing then acts on the chats behind
+  /// it (`runAct`, the palette). Never on the phone, which is never
+  /// blocked.
+  bool get blocked =>
+      !remote && daemonApi > 0 && outdated && (belowFloor || !updatesWhenIdle);
+
   void _sawUpdate(UpdateCheck u) {
     if (u == update) return;
     update = u;

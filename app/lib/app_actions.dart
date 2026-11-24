@@ -474,6 +474,9 @@ List<AppAction> chatActions(
 
 /// Runs [act] as it is now, if it applies.
 void runAct(BuildContext context, Daemon d, Act act) {
+  // Behind the Restart screen only Restart daemon and Quit apply: the
+  // rest would act on a chat or a view no one can see.
+  if (d.blocked && act != Act.restart && act != Act.quit) return;
   // The palette is no row of its own; its key never reaches here past
   // Settings, so it shuts nothing.
   if (act == Act.palette) return unawaited(showPalette(context, d));

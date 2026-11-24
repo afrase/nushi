@@ -1,7 +1,8 @@
 import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/daemon_update.dart';
@@ -217,6 +218,31 @@ void main() {
       }, variant: onMac);
     }
   }
+
+  // The menu bar, keys and palette sit above the screen: what acts on the
+  // chat hidden behind it does nothing, and the palette doesn't open.
+  testWidgets('behind the Restart screen the chat acts do nothing; Restart '
+      'daemon still asks', (tester) async {
+    final fake = _daemon(
+      () => PingResponse(apiVersion: apiFloor - 1, build: '7-1000'),
+    );
+    final d = await _open(tester, fake);
+    d.select('c');
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(d.blocked, isTrue);
+    final context = tester.element(find.byType(OutdatedScreen));
+    for (final act in [Act.archive, Act.stop, Act.pin, Act.newChat]) {
+      runAct(context, d, act);
+    }
+    runAct(context, d, Act.palette);
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<ArchiveChatRequest>(), isEmpty);
+    expect(fake.calls.whereType<PinChatsRequest>(), isEmpty);
+    expect(find.byType(OutdatedScreen), findsOne);
+    expect(find.byType(EditableText), findsNothing); // no palette, no dialog
+    d.dispose();
+  }, variant: onMac);
 
   // From the floor up, the app works on while the daemon waits for idle.
   for (final api in [apiFloor, apiFloor + 1]) {
