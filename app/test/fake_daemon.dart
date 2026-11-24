@@ -387,12 +387,21 @@ class FakeDaemon with Refusals implements Transport {
     if (other == null && input is GetGitHubItemsRequest) {
       other = await _itemsFromWhole(input);
     }
-    // The daemon lists the chat's pull requests with its primary, which a
-    // test's answer may name alone.
+    // The daemon lists all the chat's pull requests with its primary,
+    // first (internal/api/github_pull.go), which a test's answer may name
+    // alone.
     if (other is FindChatPullResponse &&
         other.hasPull() &&
-        other.pulls.isEmpty) {
-      other = other.deepCopy()..pulls.add(other.pull);
+        other.pulls.isEmpty &&
+        input is FindChatPullRequest) {
+      final primary = other.pull;
+      final c = chats.where((c) => c.id == input.chatId).firstOrNull;
+      other = other.deepCopy()
+        ..pulls.addAll([
+          primary,
+          for (final p in c == null ? <GitHubLink>[] : sentChat(c).pulls)
+            if (p.repo != primary.repo || p.number != primary.number) p,
+        ]);
     }
 
     calls.add(input);
@@ -515,7 +524,7 @@ class FakeDaemon with Refusals implements Transport {
           // A folder no GitHub repository is found for: the chat's own
           // links only (internal/api/github_pull.go).
           FindChatPullRequest(:final chatId) => () {
-            final c = _chat(chatId);
+            final c = sentChat(_chat(chatId));
             return FindChatPullResponse(
               pull: c.hasPull() ? c.pull : null,
               pulls: c.pulls,

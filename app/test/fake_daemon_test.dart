@@ -335,4 +335,32 @@ void main() {
     fake.refused.clear(); // what the test's end would fail on
     d.dispose(); // its ping timer ends with the test
   });
+  testWidgets('FindChatPull sends every pull request of the chat, its '
+      'primary first, as the daemon does', (tester) async {
+    GitHubLink pr(int n) =>
+        GitHubLink(host: 'github.com', repo: 'o/r', number: n, pull: true);
+    final fake = FakeDaemon([
+      chat('a', 'claude', 'Fix the login')..pull = pr(1),
+      chat('b', 'claude', 'Fix the logout')
+        ..pull = pr(2)
+        ..pulls.addAll([pr(2), pr(3)]),
+    ]);
+    final d = await fake.connect(tester);
+    List<int> numbers(FindChatPullResponse r) => [
+      r.pull.number,
+      for (final p in r.pulls) p.number,
+    ];
+    // The fake's own answer: a chat naming only its pull request.
+    var got = await d.client.findChatPull(FindChatPullRequest(chatId: 'a'));
+    expect(numbers(got), [1, 1]);
+    // A test's answer naming the primary alone keeps the chat's others.
+    fake.on(
+      (input) => input is FindChatPullRequest && input.chatId == 'b'
+          ? FindChatPullResponse(pull: pr(2))
+          : null,
+    );
+    got = await d.client.findChatPull(FindChatPullRequest(chatId: 'b'));
+    expect(numbers(got), [2, 2, 3]);
+    d.dispose(); // its ping timer ends with the test
+  });
 }
