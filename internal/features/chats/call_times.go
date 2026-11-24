@@ -22,7 +22,7 @@ func callRunning(status string) bool { return status == "pending" || status == "
 // its end when its status first becomes one. A replayed call gets no
 // times: when it ran isn't known.
 func (c *chat) timeCallLocked(it *model.Item, was string) {
-	if c.muted || c.reopeningLocked() {
+	if c.muted || c.sessionOpLocked() {
 		return
 	}
 	now := time.Now()

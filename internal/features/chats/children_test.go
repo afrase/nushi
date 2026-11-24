@@ -277,7 +277,7 @@ func TestSubagentsEndOnReopenAfterTheDaemonWent(t *testing.T) {
 	testcheck.NoErr(t, err)
 	testcheck.NoErr(t, svc.Reopen(c.id))
 	c = svc.chats[c.id]
-	eventually(t, c, func() bool { return c.agent != nil && !c.reopeningLocked() })
+	eventually(t, c, func() bool { return c.agent != nil && !c.sessionOpLocked() })
 	want := map[string]model.RunState{countSlowly: "stopped", countSlowlyV2: "done", counterA: "stopped", counterB: "stopped",
 		counterC: "stopped", counterD: "stopped"}
 	for call, state := range want {

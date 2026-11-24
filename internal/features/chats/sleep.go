@@ -45,8 +45,8 @@ func (c *chat) canSleepLocked() error {
 		return errors.New("the chat's agent isn't running")
 	case !c.canLoad:
 		return errors.New("the agent can't reopen its sessions, so it can't sleep")
-	case c.reopeningLocked():
-		return errReopening
+	case c.sessionOpLocked():
+		return errSessionOp
 	}
 	return c.closedLocked()
 }

@@ -259,7 +259,7 @@ var errSettling = errors.New("the chat is reopening, moving or rewinding; open a
 // settlingLocked says the chat's session is being opened again (a reopen,
 // move or rewind) and its mode and picks aren't back on it yet: what the
 // agent reports is the new session's defaults.
-func (c *chat) settlingLocked() bool { return c.reopeningLocked() || c.reapplying }
+func (c *chat) settlingLocked() bool { return c.sessionOpLocked() || c.reapplying }
 
 // CloseSide ends a side chat: its running turn stops, and the agent deletes
 // its session, history and all.

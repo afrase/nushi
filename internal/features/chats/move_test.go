@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 
@@ -14,6 +15,28 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/transcripts"
 )
+
+// What waits for a move to end says the chat is moving, not that it is
+// still reopening: Archive and Sleep while its fork is being made.
+func TestWhatWaitsForAMoveSaysSo(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	c.kind.Moves = true
+	turn(t, svc, c, "one")
+	agent.mu.Lock()
+	agent.forkGate, agent.entered = make(chan struct{}), make(chan string, 1)
+	agent.mu.Unlock()
+	moved := make(chan error, 1)
+	go func() { moved <- svc.Move(context.Background(), c.id, t.TempDir(), false) }()
+	<-agent.entered
+	if err := svc.Archive(c.id, true); err == nil || !strings.Contains(err.Error(), "moving") {
+		t.Errorf("archive mid-move: %v", err)
+	}
+	if err := svc.Sleep(c.id); err == nil || !strings.Contains(err.Error(), "moving") {
+		t.Errorf("sleep mid-move: %v", err)
+	}
+	close(agent.forkGate)
+	testcheck.NoErr(t, <-moved)
+}
 
 // A queue held after a stopped turn stays held when the chat moves: the
 // move isn't the next turn, so nothing from the queue starts one.

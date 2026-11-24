@@ -58,7 +58,7 @@ func (c *chat) workflowLocked(it *model.Item) {
 	f := &follow{poke: make(chan struct{}, 1), since: time.Now()}
 	// The agent running now ran it, unless the chat is reopening: a run
 	// followed again after its items were let go is still its agent's.
-	if !c.reopeningLocked() && c.agent != nil {
+	if !c.sessionOpLocked() && c.agent != nil {
 		f.owner = c.agent
 		if it.Workflow.State == "" {
 			w := *it.Workflow

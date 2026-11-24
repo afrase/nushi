@@ -73,9 +73,9 @@ func (s *Service) Archive(chatID string, archived bool) error {
 		return err
 	}
 	c.mu.Lock()
-	if archived && c.reopeningLocked() {
+	if archived && c.sessionOpLocked() {
 		c.mu.Unlock()
-		return errReopening
+		return errSessionOp
 	}
 	if !archived && c.record.Archived {
 		c.outlived, c.reopenFailed, c.asleep, c.sessionGone = false, false, false, false // it reopens (its replay merged with the copy), and says again
@@ -110,9 +110,9 @@ func (s *Service) halt(chatID string) (*chat, error) {
 	}
 	c.mu.Lock()
 	switch {
-	case c.reopeningLocked():
+	case c.sessionOpLocked():
 		c.mu.Unlock()
-		return nil, errReopening
+		return nil, errSessionOp
 	case c.halting: // a delete, or an archived side chat brought back
 		c.mu.Unlock()
 		return nil, errors.New("the chat is already going")
@@ -138,9 +138,14 @@ func (s *Service) forget(c *chat) error {
 	return nil
 }
 
-var errReopening = errors.New("the chat is still reopening; try again in a moment")
+// errSessionOp refuses what must wait for the chat's session to settle
+// (sessionOpLocked).
+var errSessionOp = errors.New("the chat is reopening, moving or rewinding; try again in a moment")
 
-func (c *chat) reopeningLocked() bool { return c.busy && c.started.IsZero() }
+// sessionOpLocked says the chat is busy with its session, not a turn: it
+// reopens, reloads, opens, starts, forks, moves or rewinds. A message
+// queues meanwhile, and what would stop the agent waits.
+func (c *chat) sessionOpLocked() bool { return c.busy && c.started.IsZero() }
 
 // stop ends a chat's agent and its side chats (see end), then has the
 // agent's history forget the side chats. The queue stays, held: nothing

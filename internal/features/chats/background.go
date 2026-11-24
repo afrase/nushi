@@ -106,7 +106,7 @@ func (c *chat) backgroundCommandLocked(it *model.Item) {
 	}
 	sh := model.BackgroundCommand{ID: id, State: model.RunStarted}
 	var agent Agent // none: the end is read once
-	if !c.reopeningLocked() {
+	if !c.sessionOpLocked() {
 		sh.State, sh.Started, agent = model.RunRunning, time.Now(), c.agent
 	}
 	sh = c.heardLocked(sh) // its end can come first

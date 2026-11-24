@@ -123,9 +123,9 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 	// (steerQueue): one sent meanwhile goes after it, however it's sent.
 	// Not when that turn was stopped or failed: the message out goes back to
 	// the held queue, and a new one goes ahead of it, as in any held chat.
-	queue := c.reopeningLocked() || c.steering && !c.busy && !c.held || c.busy && how == SendQueue
+	queue := c.sessionOpLocked() || c.steering && !c.busy && !c.held || c.busy && how == SendQueue
 	switch {
-	case len(m.Images) > 0 && !c.canImage && !c.reopeningLocked():
+	case len(m.Images) > 0 && !c.canImage && !c.sessionOpLocked():
 		// Reopening, the agent's answer isn't known yet: the queue checks.
 		return errors.New("the agent doesn't take images")
 	case queue:
@@ -138,7 +138,7 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 		return err
 	}
 	switch {
-	case c.reopeningLocked() && c.held:
+	case c.sessionOpLocked() && c.held:
 		// A new message is the held queue's chance, and goes ahead of it,
 		// as in a chat that's awake: Continue or Try again after a failed
 		// turn first, then the queue.
