@@ -192,3 +192,24 @@ func TestABridgesProgramDiesWithIt(t *testing.T) {
 	<-a.Done()
 	testcheck.Wait(t, "the bridge's program to end with it", func() bool { return errors.Is(syscall.Kill(pid, 0), syscall.ESRCH) })
 }
+
+// A reader that stopped short of the end without a read error (a Scanner
+// that met a line over its limit) is given up on once the program is
+// killed: its pipes close, rather than the wait for that reader going on
+// for good.
+func TestKillGivesUpAReaderThatStopped(t *testing.T) {
+	drainAfter = func(time.Duration) <-chan time.Time { return time.After(time.Millisecond) }
+	t.Cleanup(func() { drainAfter = nil })
+	p, err := Pipe("/bin/sh", []string{"-c", `echo a-line-longer-than-its-reader-takes; exec sleep 100`}, t.TempDir(), nil, nil, false)
+	testcheck.NoErr(t, err)
+	r := bufio.NewScanner(p.Out)
+	r.Buffer(nil, 10)
+	if r.Scan() || !errors.Is(r.Err(), bufio.ErrTooLong) {
+		t.Fatalf("scan: %v", r.Err())
+	}
+	p.Kill()
+	testcheck.Wait(t, "its stdin to close", func() bool {
+		_, err := p.In.Write([]byte("x\n"))
+		return errors.Is(err, os.ErrClosed)
+	})
+}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/afrase/acp-go/process"
@@ -47,6 +48,8 @@ type Piped struct {
 	said   tail
 	exited chan struct{}
 	err    error // how it exited; set before exited closes
+	killed chan struct{}
+	kill   sync.Once
 }
 
 // drainAfter is the clock of the wait for a reader of an exited
@@ -67,7 +70,7 @@ var drainAfter func(time.Duration) <-chan time.Time
 func Pipe(bin string, args []string, dir string, env []string, stderr io.Writer, own bool) (*Piped, error) {
 	cmd := exec.Command(bin, args...) //nolint:gosec,noctx // lives until Kill, not a context; the program its caller chose
 	cmd.Dir, cmd.Env = dir, env
-	p := &Piped{exited: make(chan struct{})}
+	p := &Piped{exited: make(chan struct{}), killed: make(chan struct{})}
 	cmd.Stderr = &p.said
 	if stderr != nil {
 		cmd.Stderr = io.MultiWriter(stderr, &p.said)
@@ -94,7 +97,7 @@ func Pipe(bin string, args []string, dir string, env []string, stderr io.Writer,
 		_ = p.group.Sweep() // what it left in its own group, which may hold its stdout
 		// What it wrote last is still read, unless a read waits idle: a
 		// process that left its group holds the pipe open.
-		out.Drain(out.ended, waitDelay, after)
+		out.drain(p.killed, waitDelay, after)
 		_ = pipes.Stdout.Close()
 		_ = pipes.Stdin.Close() // its bridge leaves it open
 		p.group.Release()
@@ -103,19 +106,57 @@ func Pipe(bin string, args []string, dir string, env []string, stderr io.Writer,
 }
 
 // stdout is Pipe's program's stdout, which says when its reader has come
-// to the end (ended), for the wait after the exit.
+// to the end (ended) and whether it is reading, for the wait after the
+// exit. It is acp-go's process.Watched with one more way to give up: a
+// reader that stopped reading once the program was killed.
 type stdout struct {
-	process.Watched
+	io.ReadCloser
+	edges atomic.Int64 // each Read's start and its end: odd while a Read is under way
 	once  sync.Once
 	ended chan struct{}
 }
 
 func (s *stdout) Read(b []byte) (int, error) {
-	n, err := s.Watched.Read(b)
+	s.edges.Add(1)
+	n, err := s.ReadCloser.Read(b)
+	s.edges.Add(1)
 	if err != nil {
 		s.once.Do(func() { close(s.ended) })
 	}
 	return n, err
+}
+
+// drain waits for the reader to come to the end (ended), and gives it up
+// (returns, for the caller to close the pipe) once a Read has waited idle
+// with nothing to read, or, after killed closes, once the reader has read
+// nothing for idle: it has stopped short of the end without a read error
+// (a Scanner that met a line over its limit), and nothing will read the
+// rest. A reader that is behind, still handling what it read, isn't given
+// up on before the kill: what the program wrote before it exited is still
+// in the pipe. after is the clock (nil: time.After).
+func (s *stdout) drain(killed <-chan struct{}, idle time.Duration, after func(time.Duration) <-chan time.Time) {
+	if after == nil {
+		after = time.After
+	}
+	for {
+		armed := s.edges.Load()
+		select {
+		case <-s.ended:
+			return
+		case <-after(idle):
+		}
+		if s.edges.Load() != armed {
+			continue
+		}
+		if armed%2 == 1 {
+			return
+		}
+		select {
+		case <-killed:
+			return
+		default:
+		}
+	}
 }
 
 // group is how a Piped is killed: its own group (*process.Group), or the
@@ -139,8 +180,10 @@ func (alone) Release()      {}
 // bridge calls it on every stop, often after the program has exited: an
 // own group was swept then, and the program alone is signalled, which
 // does nothing once it was waited for, so no group that took its id since
-// is reached.
+// is reached. A reader of its stdout that has stopped reading is then
+// given up on, so its pipes close.
 func (p *Piped) Kill() {
+	p.kill.Do(func() { close(p.killed) })
 	_ = p.group.Kill() // the program may be gone already
 	<-p.exited
 }
