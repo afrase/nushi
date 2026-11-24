@@ -5,6 +5,7 @@ import 'package:nushi/artifacts_widget.dart';
 import 'package:nushi/background_tasks_widget.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_changes.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/context_report.dart';
@@ -28,14 +29,16 @@ import 'package:nushi/worktrees_widget.dart';
 /// changes (uncommitted, or the branch's for a worktree chat), as the
 /// Changes view shows them, its subagents' worktrees, its background tasks,
 /// MCP servers and artifacts.
-/// They reload when a turn ends or the chat moves.
+/// They reload when a turn ends or the chat moves ([ChatChanges]).
 ///
-/// Another chat picked, the last one's rows stay until the new one's are
-/// known ([Waits.handover] at most), dimmed past [Waits.loading] as what's
-/// on its way out; then they fade out and the new one's fade in, as
-/// they'll stay, the two never over each other:
-/// no rows blank, none saying "Not reported yet" or "…" a moment, none
-/// folding and growing as the numbers come.
+/// A chat seen before shows at once, as its folder last stood. One seen
+/// for the first time waits for its snapshot and its folder's status
+/// ([Waits.slow] at most), its rows unseen meanwhile, then fades in; over
+/// another chat's, the last one's rows stay meanwhile ([Waits.handover] at
+/// most), dimmed past [Waits.loading] as what's on its way out, then fade
+/// out as the new one's fade in, the two never over each other: no rows
+/// blank, none saying "Not reported yet" or "…" a moment, none folding and
+/// growing as the numbers come.
 class DetailsPanel extends StatefulWidget {
   const new({
     required this.chat,
@@ -50,6 +53,11 @@ class DetailsPanel extends StatefulWidget {
   /// and the pull request's merge control at the panel's type.
   static const width = 320.0;
 
+  /// The parts of a handover's [Motion.standard]: the last chat's rows
+  /// fade out in the first, the new one's fade in in the rest.
+  static const before = Interval(0, 0.4);
+  static const after = Interval(0.4, 1);
+
   final ChatState chat;
   final Daemon daemon;
   final VoidCallback onChanges;
@@ -62,32 +70,60 @@ class DetailsPanel extends StatefulWidget {
 }
 
 class _DetailsPanelState extends State<DetailsPanel> {
-  /// The panel whose rows show while [widget]'s chat's wait unseen.
-  DetailsPanel? _leaving;
+  ChatChanges get _changes => ChatChanges.of(widget.daemon, widget.chat);
 
-  /// The last chat whose rows showed.
-  ChatState? _shown;
+  /// Whether the chat's rows show: what they say is known, or the wait for
+  /// it ended.
+  late bool _ready = _known;
+
+  /// The last chat's panel, whose rows show while this chat's wait.
+  DetailsPanel? _leaving;
 
   /// Whether [_leaving]'s rows are dimmed: the wait went past
   /// [Waits.loading].
   bool _dim = false;
   Timer? _dimming;
 
-  /// Whether [_leaving]'s rows fade out: the current chat's are known.
-  bool _out = false;
+  /// Ends the wait: past it the rows show with what they have.
+  Timer? _waiting;
+
+  /// What the rows say is known: the chat's snapshot and its folder.
+  bool get _known => widget.chat.loaded && _changes.known;
+
+  @override
+  void initState() {
+    super.initState();
+    _listen(widget.chat, _changes);
+    if (!_ready) _waiting = Timer(Waits.slow, _show);
+  }
 
   @override
   void didUpdateWidget(DetailsPanel old) {
     super.didUpdateWidget(old);
     if (old.chat == widget.chat) return;
+    _forget(old.chat, ChatChanges.of(old.daemon, old.chat));
+    _listen(widget.chat, _changes);
+    _waiting?.cancel();
+    _dimming?.cancel();
+    _dim = false;
+    // Seen before: as it last stood, at once.
+    if (_changes.known) {
+      _ready = true;
+      _leaving = null;
+      return;
+    }
     // What shows stays: the last chat's rows if they showed, or else what
     // already stayed for them.
-    if (_shown == old.chat) _leaving = old;
+    if (_ready) _leaving = old;
     if (_leaving?.chat == widget.chat) _leaving = null;
-    if (_leaving == null) {
-      _settle();
-    } else {
-      _dimming ??= Timer(Waits.loading, () {
+    _ready = _known;
+    if (_ready) {
+      _leaving = null;
+      return;
+    }
+    _waiting = Timer(_leaving == null ? Waits.slow : Waits.handover, _show);
+    if (_leaving != null) {
+      _dimming = Timer(Waits.loading, () {
         if (mounted) setState(() => _dim = true);
       });
     }
@@ -95,55 +131,76 @@ class _DetailsPanelState extends State<DetailsPanel> {
 
   @override
   void dispose() {
+    _forget(widget.chat, _changes);
+    _waiting?.cancel();
     _dimming?.cancel();
     super.dispose();
   }
 
-  void _settle() {
+  void _listen(ChatState chat, ChatChanges changes) {
+    chat.addListener(_check);
+    changes.addListener(_check);
+  }
+
+  void _forget(ChatState chat, ChatChanges changes) {
+    chat.removeListener(_check);
+    changes.removeListener(_check);
+  }
+
+  void _check() {
+    if (!_ready && _known) _show();
+  }
+
+  /// The rows show: they fade in, after the last chat's fade out.
+  void _show() {
+    if (!mounted || _ready) return;
+    _waiting?.cancel();
     _dimming?.cancel();
-    _dimming = null;
-    _dim = false;
-    _out = false;
-  }
-
-  void _onReady(ChatState chat) {
-    if (!mounted || chat != widget.chat || _leaving == null) return;
-    setState(() => _out = true);
-  }
-
-  void _onShown(ChatState chat) {
-    if (!mounted || chat != widget.chat) return;
     setState(() {
-      _shown = chat;
-      _leaving = null;
-      _settle();
+      _ready = true;
+      if (reduceMotion(context)) _leaving = null;
     });
   }
 
   /// [of]'s rows, keyed by its chat at the wrapper: they keep their state
   /// as they go from the current to the leaving.
-  Widget _details(DetailsPanel of, {required bool current}) => AnimatedOpacity(
-    key: ObjectKey(of.chat),
-    opacity: current
-        ? 1
-        : _out
-        ? 0
-        : _dim
-        ? 0.5
-        : 1,
-    duration: reduceMotion(context) ? Duration.zero : Motion.standard,
-    // Fading out, it's gone before the current chat's fade in.
-    curve: !current && _out ? _ChatDetails.before : Curves.linear,
-    child: _ChatDetails(
-      chat: of.chat,
-      daemon: of.daemon,
-      onChanges: of.onChanges,
-      onPull: of.onPull,
-      handover: current && _leaving != null,
-      onShown: current ? _onShown : null,
-      onReady: current ? _onReady : null,
-    ),
-  );
+  Widget _details(DetailsPanel of, {required bool current}) {
+    final handover = _leaving != null;
+    return AnimatedOpacity(
+      key: ObjectKey(of.chat),
+      opacity: current
+          ? (_ready ? 1 : 0)
+          : _ready
+          ? 0
+          : _dim
+          ? 0.5
+          : 1,
+      duration: reduceMotion(context)
+          ? Duration.zero
+          : handover && _ready
+          ? Motion.standard
+          : current
+          ? Motion.quick
+          : Motion.standard,
+      // Fading out, they're gone before the current chat's fade in.
+      curve: !handover || !_ready
+          ? Curves.linear
+          : current
+          ? DetailsPanel.after
+          : DetailsPanel.before,
+      onEnd: current || !_ready
+          ? null
+          : () {
+              if (mounted) setState(() => _leaving = null);
+            },
+      child: _ChatDetails(
+        chat: of.chat,
+        daemon: of.daemon,
+        onChanges: of.onChanges,
+        onPull: of.onPull,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -163,110 +220,33 @@ class _DetailsPanelState extends State<DetailsPanel> {
   }
 }
 
-/// [DetailsPanel]'s rows for one chat.
+/// [DetailsPanel]'s rows for one chat, from its [ChatChanges].
 class _ChatDetails extends StatefulWidget {
   const new({
     required this.chat,
     required this.daemon,
     required this.onChanges,
     required this.onPull,
-    required this.handover,
-    required this.onShown,
-    required this.onReady,
   });
-
-  /// The parts of a handover's [Motion.standard]: the last chat's rows
-  /// fade out in the first, the new one's fade in in the rest.
-  static const before = Interval(0, 0.4);
-  static const after = Interval(0.4, 1);
 
   final ChatState chat;
   final Daemon daemon;
   final VoidCallback onChanges;
   final VoidCallback? onPull;
 
-  /// Whether another chat's rows show meanwhile: it may wait longer.
-  final bool handover;
-
-  /// Its rows show in full: from the frame after, or once they faded in.
-  final void Function(ChatState chat)? onShown;
-
-  /// What its rows say is known, from the frame after: they fade in.
-  final void Function(ChatState chat)? onReady;
-
   @override
   State<_ChatDetails> createState() => _ChatDetailsState();
 }
 
-class _ChatDetailsState extends State<_ChatDetails> with FollowsChanges {
-  @override
+class _ChatDetailsState extends State<_ChatDetails> {
   ChatState get chat => widget.chat;
-  @override
   Daemon get daemon => widget.daemon;
-  GetFolderStatusResponse? _status; // counted as the Changes view shows
-  Scope _scope = Scope.uncommitted;
-  List<Commit> _commits = []; // in Commits
-  ListBranchesResponse? _branches; // for the Branch row's menu
-  String? _error;
+  late final ChatChanges _changes = ChatChanges.of(daemon, chat);
   late GetContextUsageResponse? _context = lastContext(chat.id)?.$2;
   Timer? _timer;
   bool _asking = false;
   bool _couldAsk = false; // the last time the chat changed
   late ChatPull _pull;
-
-  // What it shows waits, briefly, for what it says to be known (the
-  // chat's snapshot, its folder's status), its rows unseen meanwhile
-  // (another chat's showing under them, if any): a chat just opened
-  // doesn't flash "Not reported yet" and "…" for a frame or two, its rows
-  // folding and growing again as the numbers come.
-  bool _ready = false;
-  Timer? _waiting;
-
-  bool get _known => chat.loaded && (_status != null || _error != null);
-
-  /// Whether its rows show: once what they say is known, or it waited
-  /// long enough (Waits.slow, or Waits.handover over another chat's), from
-  /// then on.
-  bool _shows() {
-    if (_ready) return true;
-    if (!_known && _waiting!.isActive) return false;
-    _waiting!.cancel();
-    // There at once (known as it's first built, or Reduce Motion): shown
-    // from the frame after. Else once it faded in ([_rows]).
-    if (widget.onShown case final shown?
-        when !_built || reduceMotion(context)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => shown(chat));
-    }
-    if (widget.onReady case final ready?) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => ready(chat));
-    }
-    return _ready = true;
-  }
-
-  /// Whether it was built before: rows known only since fade in.
-  bool _built = false;
-
-  /// [rows] unseen until [_shows], then fading in: over [Motion.quick],
-  /// or after the last chat's fade out in a handover.
-  Widget _rows(Widget rows) {
-    final shows = _shows();
-    _built = true;
-    return AnimatedOpacity(
-      opacity: shows ? 1 : 0,
-      duration: reduceMotion(context)
-          ? Duration.zero
-          : widget.handover
-          ? Motion.standard
-          : Motion.quick,
-      curve: widget.handover ? _ChatDetails.after : Curves.linear,
-      // Under Reduce Motion there at once, and shown from the frame after
-      // ([_shows]): its end comes as it's built.
-      onEnd: () {
-        if (_ready && !reduceMotion(context)) widget.onShown?.call(chat);
-      },
-      child: rows,
-    );
-  }
 
   /// Whether the agent can be asked what fills its context: the daemon
   /// says so, and the chat is idle.
@@ -338,61 +318,35 @@ class _ChatDetailsState extends State<_ChatDetails> with FollowsChanges {
     super.initState();
     _couldAsk = _canAsk;
     chat.addListener(_onChat);
+    _changes
+      ..follow()
+      ..moved.addListener(_schedule);
+    _schedule();
     _pull = ChatPull.of(daemon, chat)..follow();
-    // Past it, the rows show with what they have.
-    _waiting = Timer(widget.handover ? Waits.handover : Waits.slow, () {
-      if (mounted && !_ready) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _waiting?.cancel();
     _timer?.cancel();
     chat.removeListener(_onChat);
+    _changes
+      ..unfollow()
+      ..moved.removeListener(_schedule);
     _pull.unfollow();
     super.dispose();
-  }
-
-  /// The folder's branches and worktrees, for the Branch row's menu: asked
-  /// with the rest, and again as the menu opens.
-  Future<void> _listBranches() async {
-    try {
-      final r = await daemon.client.listBranches(
-        ListBranchesRequest(folder: chat.folder),
-      );
-      if (mounted) setState(() => _branches = r);
-    } on Object catch (e) {
-      // Outside git, or gone: the menu says Loading… until asked again.
-      reloadFailed(e);
-    }
-  }
-
-  @override
-  Future<void> reload() async {
-    _schedule();
-    unawaited(_listBranches());
-    try {
-      final span = await ChangeSpan.of(daemon, chat);
-      if (mounted) {
-        setState(() {
-          _status = span.status;
-          _scope = span.scope;
-          _commits = span.commits;
-          _error = null;
-        });
-      }
-    } on Object catch (e) {
-      if (mounted) setState(() => _error = errorText(e));
-      reloadFailed(e);
-    }
   }
 
   // Live with the chat (usage, subagents), not only when a turn ends; and
   // with its side chat coming and going (its line follows its usage).
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([chat, chat.side, _pull, chat.related]),
+    listenable: Listenable.merge([
+      chat,
+      chat.side,
+      _pull,
+      chat.related,
+      _changes,
+    ]),
     builder: (context, _) => _panel(chat.side.value),
   );
 
@@ -437,15 +391,22 @@ class _ChatDetailsState extends State<_ChatDetails> with FollowsChanges {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final u = chat.usage;
-    final status = _status;
+    final span = _changes.span;
+    final status = span?.status;
+    final scope = span?.scope ?? Scope.uncommitted;
+    final spanCommits = span?.commits ?? const <Commit>[];
+    final error = _changes.error;
     final muted = theme.ui(t.textMuted, size: 12);
-    final commits = _scope == Scope.commits;
+    final commits = scope == Scope.commits;
     final unread = switch (_context) {
       final c? => c.categories.isEmpty && c.markdown.isNotEmpty,
       null => false,
     };
     final (added, removed) = commits
-        ? _commits.fold((0, 0), (n, c) => (n.$1 + c.added, n.$2 + c.removed))
+        ? spanCommits.fold(
+            (0, 0),
+            (n, c) => (n.$1 + c.added, n.$2 + c.removed),
+          )
         : (status?.added ?? 0, status?.removed ?? 0);
     final lines = status == null || !status.git
         ? null
@@ -462,8 +423,7 @@ class _ChatDetailsState extends State<_ChatDetails> with FollowsChanges {
           );
     // The cards lie on the pane's own fill (ADR 0111), which hides the
     // last chat's rows once these show.
-    return _rows(
-      ColoredBox(
+    return ColoredBox(
         color: t.base,
         child: PanelWidgets([
           PanelWidget(
@@ -484,9 +444,9 @@ class _ChatDetailsState extends State<_ChatDetails> with FollowsChanges {
                   chat,
                   daemon,
                   status.branch,
-                  list: _branches,
-                  onOpen: () => unawaited(_listBranches()),
-                  onChanged: () => unawaited(reload()),
+                  list: _changes.branches,
+                  onOpen: () => unawaited(_changes.listBranches()),
+                  onChanged: () => _changes.reload().ignore(),
                   onChanges: widget.onChanges,
                 ),
               if (status != null && status.gone)
@@ -563,14 +523,14 @@ class _ChatDetailsState extends State<_ChatDetails> with FollowsChanges {
           ),
           PanelWidget(
             title: 'Changes',
-            note: _error == null && status != null && !status.git
+            note: error == null && status != null && !status.git
                 ? (status.gone ? 'The folder is gone' : 'Not a git repository')
                 : null,
             summary: lines,
             onTap: status != null && status.git ? widget.onChanges : null,
             rows: [
-              if (_error != null)
-                (null, _error!)
+              if (error != null)
+                (null, error)
               else if (status == null)
                 (null, '…')
               else if (!status.git)
@@ -579,9 +539,12 @@ class _ChatDetailsState extends State<_ChatDetails> with FollowsChanges {
                   status.gone ? 'The folder is gone' : 'Not a git repository',
                 )
               else ...[
-                (_scope.label, lines!),
+                (scope.label, lines!),
                 if (commits)
-                  ('Number', _commits.isEmpty ? 'None' : '${_commits.length}')
+                  (
+                    'Number',
+                    spanCommits.isEmpty ? 'None' : '${spanCommits.length}',
+                  )
                 else
                   ('Files', status.files == 0 ? 'None' : '${status.files}'),
               ],
@@ -593,7 +556,6 @@ class _ChatDetailsState extends State<_ChatDetails> with FollowsChanges {
           mcpWidget(chat, daemon),
           ?artifactsWidget(chat),
         ]),
-      ),
     );
   }
 }

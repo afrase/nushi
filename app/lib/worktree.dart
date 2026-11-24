@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/branch_dialogs.dart';
 import 'package:nushi/branch_menu.dart';
-import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_changes.dart';
 import 'package:nushi/cleanup_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
@@ -140,39 +140,38 @@ class NewChatBar extends StatefulWidget {
   State<NewChatBar> createState() => _NewChatBarState();
 }
 
-class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
-  @override
+class _NewChatBarState extends State<NewChatBar> {
   ChatState get chat => widget.chat;
-  @override
   Daemon get daemon => widget.daemon;
-  bool _git = false;
-  List<GitWorktree> _worktrees = const []; // offered in the folder's menu
+
+  /// The chat's folder as it stands: whether it's in git, and its
+  /// worktrees, offered in the folder's menu. Until read, or outside git,
+  /// no chip.
+  late ChatChanges _changes = ChatChanges.of(daemon, chat)..follow();
 
   @override
-  Future<void> reload() async {
-    try {
-      final s = await daemon.client.getFolderStatus(
-        GetFolderStatusRequest(folder: chat.folder),
-      );
-      final l = s.git
-          ? await daemon.client
-                .listBranches(ListBranchesRequest(folder: chat.folder))
-                .then<ListBranchesResponse?>((l) => l, onError: (_) => null)
-          : null;
-      if (mounted) {
-        setState(() {
-          _git = s.git;
-          _worktrees = l?.worktrees ?? const [];
-        });
-      }
-    } on Object catch (e) {
-      // No chip, as outside git; asked again if the daemon was gone.
-      reloadFailed(e);
-    }
+  void didUpdateWidget(NewChatBar old) {
+    super.didUpdateWidget(old);
+    if (old.chat == widget.chat) return;
+    _changes.unfollow();
+    _changes = ChatChanges.of(daemon, chat)..follow();
   }
 
   @override
-  Widget build(BuildContext context) {
+  void dispose() {
+    _changes.unfollow();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: _changes, builder: (context, _) => _bar());
+
+  Widget _bar() {
+    final git = _changes.span?.status.git ?? false;
+    final worktrees = git
+        ? _changes.branches?.worktrees ?? const <GitWorktree>[]
+        : const <GitWorktree>[];
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final on = chat.worktree != null;
@@ -184,11 +183,11 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
             chat: chat,
             daemon: daemon,
             path: false,
-            worktrees: _worktrees,
+            worktrees: worktrees,
           ),
         ),
         // Known a moment after the folder: it comes in, not pops.
-        if (_git)
+        if (git)
           Enter.pop(
             child: DecoratedBox(
               decoration: BoxDecoration(

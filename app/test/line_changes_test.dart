@@ -722,7 +722,9 @@ void main() {
           ..worktree = Worktree(base: 'dev')
           ..notifyListeners();
         await tester.pumpAndSettle();
-        expect(statuses(), 4);
+        // The chat's changes read it (ChatChanges): from dev, then counted
+        // as Uncommitted, which its details and Changes show.
+        expect(statuses(), 5);
         expect(_asked(fake).last.base, 'dev');
         expect(lines.from, MarksFrom.branch);
         await end(tester);

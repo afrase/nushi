@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_changes.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
@@ -34,47 +34,35 @@ typedef MarksBase = ({String base, MarksFrom from});
 const MarksBase lastCommitBase = (base: '', from: MarksFrom.lastCommit);
 
 /// [chat]'s base for its marks and dots, found when first asked and again
-/// once it may have moved: the chat's turn ended, it committed, or its
-/// folder or worktree changed. One lookup for every file shown and the
-/// tree, and one notice to each of them (a file's `LineBase`, the tree's
+/// once its folder may have changed ([ChatChanges.moved]: the chat's turn
+/// ended, it committed, or its folder or worktree changed). One lookup for
+/// every file shown and the tree, from the span its details and Changes
+/// show, and one notice to each of them (a file's `LineBase`, the tree's
 /// `TreeDots`) when it may have moved, to ask again.
 final class ChatMarksBase extends ChangeNotifier {
-  new _(this.chat) {
-    _key = _keyNow();
-    _wasBusy = chat.busy;
-    chat.addListener(_check);
-  }
+  new _(this.chat);
 
   final ChatState chat;
 
   Future<MarksBase>? _found;
-  late (String, String, int) _key;
-  late bool _wasBusy;
 
-  (String, String, int) _keyNow() =>
-      (chat.folder, chat.worktree?.base ?? '', chat.commits);
+  /// The chat's changes, once a base was first asked for: what tells it
+  /// the base may have moved.
+  ChatChanges? _changes;
 
-  /// Forgets the base when it may have moved, and tells its listeners.
-  /// Run from the chat's own listener and again before each answer, so
-  /// whoever asks first gets the new base.
-  void _check() {
-    final ended = _wasBusy && !chat.busy;
-    _wasBusy = chat.busy;
-    final key = _keyNow();
-    if (ended || key != _key) {
-      _key = key;
-      _found = null;
-      notifyListeners();
-    }
+  /// Forgets the base, and tells its listeners to ask again.
+  void _moved() {
+    _found = null;
+    notifyListeners();
   }
 
   /// The base, as last found or found now. A lookup that fails throws
   /// (the marks say they couldn't compare, ADR 0131) and is forgotten, so
   /// the next ask looks again; a newer lookup already under way stays.
   Future<MarksBase> find(Daemon daemon) {
-    _check();
+    _changes ??= ChatChanges.of(daemon, chat)..moved.addListener(_moved);
     if (_found case final found?) return found;
-    final finding = _found = _find(daemon);
+    final finding = _found = _find(daemon, _changes!);
     unawaited(
       finding.then<void>(
         (_) {},
@@ -88,11 +76,10 @@ final class ChatMarksBase extends ChangeNotifier {
 
   /// The branch the Branch view counts from, or on that branch itself
   /// from before the chat's commits ([_chatStart]).
-  Future<MarksBase> _find(Daemon daemon) async {
-    final b = await ChangeSpan.branchBase(daemon, chat);
-    if (!b.status.git) return lastCommitBase;
-    final span = ChangeSpan(chat.folder, Scope.branch, b.base, b.status);
-    if (!span.onBase) return (base: b.base, from: MarksFrom.branch);
+  Future<MarksBase> _find(Daemon daemon, ChatChanges changes) async {
+    final span = await changes.current();
+    if (!span.status.git) return lastCommitBase;
+    if (!span.onBase) return (base: span.base, from: MarksFrom.branch);
     return await _chatStart(daemon);
   }
 

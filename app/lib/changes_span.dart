@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/widgets.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
@@ -219,55 +218,4 @@ class ChangeSpan {
   final i = commits.indexWhere((c) => c.hash == a);
   final j = commits.indexWhere((c) => c.hash == (b ?? a));
   return i < 0 || j < 0 ? null : (min(i, j), max(i, j));
-}
-
-/// Reloads (`reload`) a chat's changes when its turn ends, it moves, its
-/// scope is changed, or a commit is made in it; and once the daemon is
-/// back after a reload it was gone for ([reloadFailed]).
-mixin FollowsChanges<T extends StatefulWidget> on State<T> {
-  ChatState get chat;
-  Daemon get daemon;
-  late String _folder;
-  String? _scope;
-  bool _wasBusy = false;
-  int _commits = 0;
-  late final _again = LoadAgain(daemon, () {
-    if (mounted) unawaited(reload());
-  });
-
-  Future<void> reload();
-
-  /// After [error], a reload's failure: reloads once the daemon is back if
-  /// it was gone (a restart), rather than waiting for the next turn.
-  void reloadFailed(Object error) => _again.failed(error);
-
-  @override
-  void initState() {
-    super.initState();
-    _folder = chat.folder;
-    _scope = chat.scope;
-    _commits = chat.commits;
-    chat.addListener(_changed);
-    unawaited(reload());
-  }
-
-  @override
-  void dispose() {
-    _again.cancel();
-    chat.removeListener(_changed);
-    super.dispose();
-  }
-
-  void _changed() {
-    if (_wasBusy && !chat.busy ||
-        _folder != chat.folder ||
-        _scope != chat.scope ||
-        _commits != chat.commits) {
-      _commits = chat.commits;
-      _folder = chat.folder;
-      _scope = chat.scope;
-      unawaited(reload());
-    }
-    _wasBusy = chat.busy;
-  }
 }

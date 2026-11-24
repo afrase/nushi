@@ -4,16 +4,19 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/main.dart' show NushiApp;
 import 'package:nushi/motion.dart';
 import 'package:nushi/panel_widgets.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
+import 'panes_app.dart';
 
 // A chat just opened: the details panel doesn't flash "Not reported yet"
 // and "…" for a frame or two, its rows folding and growing again as the
 // numbers come. It waits for the chat's snapshot and its folder's status,
-// Waits.slow at most, its rows unseen meanwhile.
+// Waits.slow at most, its rows unseen meanwhile. A chat seen before shows
+// at once, as its folder last stood (ChatChanges).
 
 /// How much of each chat's rows shows, the last chat's first: the
 /// opacities over its cards, multiplied.
@@ -34,6 +37,9 @@ List<double> _layers(WidgetTester tester) => [
 double _shown(WidgetTester tester) => _layers(tester).last;
 
 void main() {
+  setUpAll(loadFonts);
+  _switchRenders();
+
   testWidgets('the rows wait for the chat and its folder, then show', (
     tester,
   ) async {
@@ -154,6 +160,103 @@ void main() {
     expect(_layers(tester), [1]);
     await closeView(tester, d);
   });
+
+  testWidgets('a chat seen before shows at once, as its folder last stood, '
+      'and reads it again only once it changed', (tester) async {
+    final fake =
+        FakeDaemon([
+            Chat(id: 'a', agent: 'claude', folder: '/a'),
+            Chat(id: 'b', agent: 'claude', folder: '/b'),
+          ])
+          ..answer = (input) => switch (input) {
+            GetFolderStatusRequest(:final folder) => Future.delayed(
+              const Duration(milliseconds: 40),
+              () => GetFolderStatusResponse(
+                git: true,
+                branch: folder == '/a' ? 'login-fix' : 'dark-mode',
+              ),
+            ),
+            _ => null,
+          };
+    final d = await fake.connect(tester);
+    int statuses(String folder) => fake.calls
+        .whereType<GetFolderStatusRequest>()
+        .where((r) => r.folder == folder)
+        .length;
+    final a = ChatState('a', '/a')..loaded = true;
+    final b = ChatState('b', '/b')..loaded = true;
+    final picked = ValueNotifier(a);
+    await _picking(tester, d, picked);
+    await tester.pumpAndSettle();
+    picked.value = b;
+    await tester.pumpAndSettle();
+    expect(find.text('dark-mode'), findsOneWidget);
+    expect(statuses('/a'), 1);
+
+    // Back to a: its rows at once, alone, its branch as it was.
+    picked.value = a;
+    await tester.pump();
+    expect(_layers(tester), [1]);
+    expect(find.text('login-fix'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(statuses('/a'), 1, reason: 'nothing changed it');
+
+    // A turn of b's ended while a showed: b is read again once picked,
+    // what it had showing meanwhile.
+    b
+      ..busy = true
+      ..notifyListeners()
+      ..busy = false
+      ..notifyListeners();
+    await tester.pumpAndSettle();
+    expect(statuses('/b'), 1);
+    picked.value = b;
+    await tester.pump();
+    expect(_layers(tester), [1]);
+    expect(find.text('dark-mode'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(statuses('/b'), 2);
+    await closeView(tester, d);
+  });
+}
+
+// The window on a switch between two chats, to look at: to one never seen
+// (its folder slow to answer, the last chat's rows staying, dimmed), and
+// back to one seen before, at once.
+void _switchRenders() {
+  for (final width in [1700.0, 720.0]) {
+    for (final b in Brightness.values) {
+      renderTest('render: a switch to a new chat and back, '
+          '${width.toInt()} ${b.name}', (tester) async {
+        final (d, fake) = await panesApp(
+          tester,
+          width: width,
+          brightness: b,
+        );
+        fake.on(
+          (input) => input is GetFolderStatusRequest
+              ? Future.delayed(
+                  const Duration(milliseconds: 400),
+                  () => GetFolderStatusResponse(git: true, branch: 'cart'),
+                )
+              : null,
+        );
+        final name = 'details_switch_${width.toInt()}_${b.name}';
+        d.select('d');
+        await tester.pump();
+        await tester.pump(Waits.loading);
+        await tester.pump(Motion.standard);
+        await render(tester, find.byType(NushiApp), '${name}_1_new_waiting');
+        await tester.pumpAndSettle();
+        await render(tester, find.byType(NushiApp), '${name}_2_new_shown');
+        d.select('c');
+        await tester.pump();
+        await render(tester, find.byType(NushiApp), '${name}_3_seen_at_once');
+        await tester.pumpAndSettle();
+        await closeView(tester, d);
+      }, variant: onMac);
+    }
+  }
 }
 
 /// A DetailsPanel of the chat [picked] says.

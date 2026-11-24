@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/changes_bar.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_changes.dart';
 import 'package:nushi/commit_box.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
@@ -39,11 +40,13 @@ class ChangesView extends StatefulWidget {
   State<ChangesView> createState() => _ChangesViewState();
 }
 
-class _ChangesViewState extends State<ChangesView> with FollowsChanges {
-  @override
+class _ChangesViewState extends State<ChangesView> {
   ChatState get chat => widget.chat;
-  @override
   Daemon get daemon => widget.daemon;
+
+  /// The chat's folder as it stands, the span of which this view lists
+  /// the files: shared with its details panel and its change marks.
+  late final ChatChanges _changes = ChatChanges.of(daemon, chat);
   ChangeSpan? _span;
   List<FileChange> _files = [];
   List<Commit> _commits = [];
@@ -95,6 +98,10 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   void initState() {
     _take();
     super.initState();
+    _changes
+      ..follow()
+      ..moved.addListener(_moved);
+    unawaited(reload(fresh: false));
     chat.addListener(_open);
     chat.related.addListener(_relatedChanged);
     _want();
@@ -105,6 +112,9 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
 
   @override
   void dispose() {
+    _changes
+      ..unfollow()
+      ..moved.removeListener(_moved);
     chat.removeListener(_open);
     chat.related.removeListener(_relatedChanged);
     if (_wanted case final path?) chat.related.unwant(path);
@@ -144,6 +154,10 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   void _open() {
     if (_take()) unawaited(reload());
   }
+
+  /// The folder may have changed (a turn ended, a commit, the scope): the
+  /// read the chat's changes start serves this view too.
+  void _moved() => unawaited(reload(fresh: false));
 
   /// A worktree was picked or asked for: read it. Otherwise the list or the
   /// stats moved, which changes the menu and may say what's read is behind.
@@ -208,8 +222,8 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   /// are in, so it's never another scope's files under this one's name. A
   /// related worktree is read only for a click, as this runs its filters
   /// (ADR 0081): a turn's end or the tab showing again changes nothing.
-  @override
-  Future<void> reload() => _reloaded = _reload();
+  /// Not [fresh], it takes the chat's read under way, if one is.
+  Future<void> reload({bool fresh = true}) => _reloaded = _reload(fresh);
 
   /// The newest [reload], for a commit to wait for what it shows.
   Future<void> _reloaded = Future.value();
@@ -223,7 +237,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     } while (!identical(r, _reloaded));
   }
 
-  Future<void> _reload() async {
+  Future<void> _reload(bool fresh) async {
     final worktree = chat.related.picked;
     if (worktree != null && !chat.related.takeAsked()) {
       if (mounted) setState(() {});
@@ -239,7 +253,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     _waiting();
     try {
       final span = worktree == null
-          ? await ChangeSpan.of(daemon, chat)
+          ? await (fresh ? _changes.reload() : _changes.read())
           : await _relatedSpan(worktree);
       if (!mounted || asked != _asked) return; // another load took over
       if (span == null) {
@@ -281,7 +295,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     } on Object catch (e) {
       if (mounted && asked == _asked) {
         setState(() => _error = errorText(e));
-        reloadFailed(e);
+        _changes.failed(e);
       }
     } finally {
       if (mounted && asked == _asked) {
