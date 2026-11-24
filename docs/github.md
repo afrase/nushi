@@ -83,7 +83,7 @@ A chat can hold up to 10 pull requests ([ADR 0117](adr/0117-github-links-as-chip
 
 The details panel's **Pull request** widget ("Pull requests" with two or more) is a row each, 44 tall, in the order linked except that a stack (one's base is another's head) lists its base first:
 
-- the state's icon, the title and the CI badge: a dot (red with any failing, amber with any running, else green) and `passed/total` (skipped in neither); none when merged, closed or without checks. Its click opens In progress, Passed, Failed, with Fix checks, Show checks and Open on GitHub;
+- the state's icon, the title and the CI badge: a dot (red with any failing, amber with any running, else green) and `passed/total` (neutral as passed, cancelled as failed, skipped in neither); none when merged, closed or without checks. Its click opens In progress, Passed, Failed, with Fix checks, Show checks and Open on GitHub;
 - under it `#n`, `+adds −dels` and one cue, the first that applies: Merged into `main` (with Clean up… while offered), Closed without merging, changes requested, N threads, N new comments, Ready to merge;
 - its ⋯ (under the pointer): Open on GitHub, Copy link, View changes, Merge… (what the merge status card offers, through ADR 0069's dialog: a merge, or Add to queue where the repository has a merge queue, else the card's reason; off with why while blocked), Send open threads to agent, Ready for review on GitHub, Clean up…, Unlink.
 
@@ -113,7 +113,7 @@ It follows GitHub's own pull request page ([ADR 0137](adr/0137-the-pull-request-
 
 **Commits** lists them newest first: headline, author, age, short SHA with Copy, checks. They're asked of GitHub when they first show and again when the head moves; past 100 it shows the newest 100 and says how many there are.
 
-**Checks**: failing first, each opening to its annotations and log, with **Re-run failed** (it asks GitHub to re-run the failed jobs of their workflow runs) and Fix checks; then the passed in two columns, then the skipped.
+**Checks**: failing first, each opening to its annotations and log, with **Re-run failed** (it asks GitHub to re-run the failed jobs of their workflow runs) and Fix checks; then the passed in two columns, then the skipped. A cancelled check counts as failing and a neutral one as passed, as on GitHub ([ADR 0117](adr/0117-github-links-as-chips-and-a-chats-pull-requests.md)).
 
 **Reactions** sit under the description, each comment and review, and each thread comment, as on GitHub: a smiley that opens GitHub's eight (👍 👎 😄 🎉 😕 ❤️ 🚀 👀), then a pill per kind used with its count, yours filled in the accent with its ring. A click on a pill or in the picker adds yours or takes it away on GitHub at once (put back with GitHub's words if it refuses), then the pull request is read again. They come with the pull request (`reactionGroups`), no call of their own (API 131).
 

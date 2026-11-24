@@ -53,13 +53,10 @@ func (s *Service) Issue(ctx context.Context, ref model.GitHubRef, poll bool) (mo
 	return c.Issue(ctx, ref.Repo, ref.Number)
 }
 
-// Failed says a check's state is a failure.
+// Failed says a check's state is a failure, by githubapi.KindOf: a
+// cancelled one too.
 func Failed(c model.GitHubCheck) bool {
-	switch c.State {
-	case "failure", "error", "timed_out", "startup_failure", "action_required":
-		return true
-	}
-	return false
+	return githubapi.KindOf(c.State) == githubapi.CheckFailed
 }
 
 // Outside says an author isn't the repository's owner, a member of its

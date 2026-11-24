@@ -86,7 +86,7 @@ The tab looks like the pull request's page on GitHub, so what you know from ther
 2. Each item goes into the chat's message box as a card, quoting the comment or the failing log.
 3. Add anything you want to say, and send.
 
-**Fix checks** in the **Checks** tab sends every failed check at once.
+**Fix checks** in the **Checks** tab sends every failed check at once. As on GitHub, a cancelled check counts as failed and a neutral one as passed.
 
 ## When checks fail
 

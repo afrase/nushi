@@ -4,22 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
+import 'package:nushi/pull_lights.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// A check's state as an icon and its color.
-(IconData, Color) checkIcon(Tokens t, GitHubCheck c) => switch (c.state) {
-  'success' => (Icons.check_circle_outline, t.done),
-  'pending' => (Icons.schedule, t.needs),
-  'skipped' ||
-  'neutral' ||
-  'cancelled' ||
-  'stale' => (Icons.remove_circle_outline, t.textMuted),
-  _ when c.failed => (Icons.cancel_outlined, t.crashed),
-  _ => (Icons.help_outline, t.textMuted),
-};
+/// A check's state as an icon and its color, by its kind ([checkKind]):
+/// a neutral one, though it counts as passed, muted as GitHub draws it.
+(IconData, Color) checkIcon(Tokens t, GitHubCheck c) =>
+    switch (checkKind(c.state)) {
+      _ when c.state == 'neutral' => (Icons.remove_circle_outline, t.textMuted),
+      CheckKind.passed => (Icons.check_circle_outline, t.done),
+      CheckKind.failed => (Icons.cancel_outlined, t.crashed),
+      CheckKind.running => (Icons.schedule, t.needs),
+      CheckKind.skipped => (Icons.remove_circle_outline, t.textMuted),
+    };
 
 /// How long a check took ("4m 12s"), or '' when it hasn't ended.
 String checkTook(GitHubCheck c) {

@@ -119,17 +119,16 @@ func (n itemNode) item(host, repo string) model.GitHubItem {
 
 // countCheck adds a state's count to the counts: a check run's
 // (CheckRunState and CheckConclusionState) or a commit status's
-// (StatusState). A neutral one passed; a cancelled one failed, as GitHub's
-// rollup has it; a skipped or stale one is neither.
+// (StatusState), in the rollup's upper case, by KindOf.
 func countCheck(c *model.CheckCounts, sc stateCount) {
-	switch sc.State {
-	case "SUCCESS", "NEUTRAL", "COMPLETED":
+	switch KindOf(strings.ToLower(sc.State)) {
+	case CheckPassed:
 		c.Passed += sc.Count
-	case "FAILURE", "ERROR", "TIMED_OUT", "STARTUP_FAILURE", "ACTION_REQUIRED", "CANCELLED":
+	case CheckFailed:
 		c.Failed += sc.Count
-	case "SKIPPED", "STALE":
+	case CheckSkipped:
 		c.Skipped += sc.Count
-	default: // QUEUED, IN_PROGRESS, PENDING, WAITING, REQUESTED, EXPECTED
+	case CheckRunning:
 		c.Running += sc.Count
 	}
 }

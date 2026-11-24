@@ -26,8 +26,28 @@ Color moodSoft(Tokens t, Mood m) => switch (m) {
   Mood.quiet => t.lifted,
 };
 
-/// A pull request's checks, each in one group: failed (the required
-/// first), running, passed, and the rest (skipped, neutral, cancelled).
+/// What a check's state counts as: the daemon's table, githubapi.KindOf
+/// (internal/githubapi/checks.go), kept the same here so a daemon of
+/// either age reads alike.
+enum CheckKind { passed, failed, running, skipped }
+
+/// A check's kind by its state (lower case): a neutral one passed and a
+/// cancelled one failed, as GitHub's rollup and its merge gate have it; a
+/// skipped or stale one is neither; any other state is still running.
+CheckKind checkKind(String state) => switch (state) {
+  'success' || 'neutral' || 'completed' => CheckKind.passed,
+  'failure' ||
+  'error' ||
+  'timed_out' ||
+  'startup_failure' ||
+  'action_required' ||
+  'cancelled' => CheckKind.failed,
+  'skipped' || 'stale' => CheckKind.skipped,
+  _ => CheckKind.running,
+};
+
+/// A pull request's checks, each in one group by [checkKind]: failed (the
+/// required first), running, passed, and the rest (skipped).
 ({
   List<GitHubCheck> failed,
   List<GitHubCheck> running,
@@ -40,14 +60,16 @@ splitChecks(GitHubPull p) {
   final passed = <GitHubCheck>[];
   final other = <GitHubCheck>[];
   for (final c in p.checks) {
-    (c.failed
-            ? failed
-            : c.state == 'pending'
-            ? running
-            : c.state == 'success'
-            ? passed
-            : other)
-        .add(c);
+    switch (checkKind(c.state)) {
+      case CheckKind.failed:
+        failed.add(c);
+      case CheckKind.running:
+        running.add(c);
+      case CheckKind.passed:
+        passed.add(c);
+      case CheckKind.skipped:
+        other.add(c);
+    }
   }
   failed.sort((a, b) => (b.required ? 1 : 0) - (a.required ? 1 : 0));
   return (failed: failed, running: running, passed: passed, other: other);

@@ -38,6 +38,10 @@ func TestMergeBlocks(t *testing.T) {
 		{"draft", func(p *model.GitHubPull) { p.Draft, p.MergeState = true, "unstable" }, "draft"},
 		{"conflicts", func(p *model.GitHubPull) { p.Mergeable, p.MergeState = "conflicting", "dirty" }, "conflicts"},
 		{"failing", func(p *model.GitHubPull) { p.MergeState, p.Runs = "blocked", failing }, "checks_failing"},
+		// Cancelled is failed, as GitHub's rollup and merge gate have it (githubapi.KindOf).
+		{"cancelled", func(p *model.GitHubPull) {
+			p.MergeState, p.Runs = "blocked", []model.GitHubCheck{{State: "cancelled", Required: true}}
+		}, "checks_failing"},
 		{"running", func(p *model.GitHubPull) { p.MergeState, p.Runs = "blocked", running }, "checks_running"},
 		{"review", func(p *model.GitHubPull) { p.MergeState, p.Review = "blocked", "review_required" }, "review_required"},
 		{"changes, enforced", func(p *model.GitHubPull) { p.MergeState, p.Review = "blocked", "changes_requested" }, "changes_requested"},
