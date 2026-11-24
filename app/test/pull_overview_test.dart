@@ -210,4 +210,45 @@ void main() {
       }
     }
   }
+
+  // Each kind of check (githubapi.KindOf, checkKind): cancelled and failed
+  // as failing, neutral as passed (its icon muted), skipped, running; in
+  // the Checks segment, its lights, and the Checks tab.
+  for (final b in renderThemes) {
+    for (final width in [1700.0, 720.0]) {
+      renderTest('renders each kind of check at ${width.toInt()}, ${b.name}', (
+        tester,
+      ) async {
+        sidebarHidden.value = true;
+        final p = overviewPull()
+          ..checks.clear()
+          ..checks.addAll([
+            // As the daemon sends it now: failed (githubapi.KindOf).
+            check('deploy (preview)', state: 'cancelled', id: 51)
+              ..failed = true,
+            check('lint', state: 'neutral', id: 52),
+            check('docs', state: 'skipped', id: 53),
+            check('test (ubuntu-latest)', state: 'failure', id: 54),
+            check('build', state: 'pending', id: 55),
+          ]);
+        final (d, _) = await openPullTab(
+          tester,
+          p,
+          size: const Size(1700, 1100),
+          brightness: b,
+          commits: overviewCommits(),
+        );
+        viewport(tester, Size(width, width < 1000 ? 2400 : 1100));
+        await tester.pumpAndSettle();
+        await tester.tap(_segment('checks'));
+        await tester.pumpAndSettle();
+        final at = '${width.toInt()}-${b.name}';
+        await render(tester, find.byType(NushiApp), 'pr-check-kinds-$at');
+        await tester.tap(find.textContaining('Checks  2 failing'));
+        await tester.pumpAndSettle();
+        await render(tester, find.byType(NushiApp), 'pr-check-kinds-tab-$at');
+        d.dispose();
+      }, variant: onMac);
+    }
+  }
 }
