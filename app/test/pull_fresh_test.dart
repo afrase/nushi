@@ -243,4 +243,30 @@ void main() {
     }
     await closeView(tester, g);
   }, variant: onMac);
+
+  testWidgets("a failed Refresh in the GitHub view says so in the page's "
+      'failure line, as on the tab, and keeps the page', (tester) async {
+    var failing = false;
+    final (_, g) = await gh.openView(
+      tester,
+      more: (input) => failing && input is GetGitHubPullRequest
+          ? Future<GetGitHubPullResponse>.error(Exception('no network'))
+          : null,
+    );
+    await tester.tap(find.text('Add Sub and Neg'));
+    await tester.pumpAndSettle();
+    clock = () => fixtureNow.add(const Duration(minutes: 3));
+    failing = true;
+    await tester.tap(
+      find.descendant(
+        of: find.byType(GitHubBar),
+        matching: find.byIcon(Icons.refresh),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(_says("Couldn't refresh · as of 3m ago"), findsOneWidget);
+    expect(find.textContaining('Not current'), findsNothing);
+    expect(find.text('Add Sub and Neg'), findsWidgets); // the page stays
+    await closeView(tester, g);
+  }, variant: onMac);
 }

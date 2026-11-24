@@ -206,8 +206,9 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
         });
       }
     } on Object catch (e) {
-      if (mounted && n == _asked && quiet && _pull != null) {
-        // A failed poll keeps what shows, saying it's from then.
+      if (mounted && n == _asked && _pull != null) {
+        // A failed ask (a poll or the bar's Refresh) keeps what shows,
+        // saying it's from then, as the chat's tab does.
         setState(() {
           _keptAt ??= _okAt;
           _failed = _keptAt != null;
