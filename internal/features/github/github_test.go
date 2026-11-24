@@ -525,13 +525,18 @@ func TestTokenReadCutShort(t *testing.T) {
 }
 
 // A host gh signed in to after the daemon started is known: gh's hosts
-// are read afresh each time.
+// are read afresh once the host's unknownFor is past.
 func TestGhLoginSince(t *testing.T) {
 	w := newWorld(t)
+	now := time.Now()
+	w.s.now = func() time.Time { return now }
 	if _, err := w.s.client(t.Context(), "git.corp.example"); err == nil {
 		t.Fatal("a host gh doesn't know")
 	}
+	w.mu.Lock()
 	w.ghHosts = append(w.ghHosts, "git.corp.example") // gh auth login, the config written
+	w.mu.Unlock()
+	now = now.Add(unknownFor)
 	if _, err := w.s.client(t.Context(), "git.corp.example"); err != nil {
 		t.Fatal(err)
 	}
