@@ -275,12 +275,12 @@ String _about(String agent, String from) => switch ((agent, from)) {
         'the repository’s root.',
   ('codex', 'system') => 'Installed with Codex, which puts them back.',
   ('ante', 'user') =>
-    'In every folder: ~/.ante/skills, and Claude’s ~/.claude/skills.',
+    'In every folder: skills in Ante’s folder, and Claude’s ~/.claude/skills.',
   ('ante', 'project') =>
     'In this folder only: .ante/skills and Claude’s .claude/skills.',
   ('ante', 'system') => 'Bundled with Ante, which rewrites them on updates.',
   ('omp', 'user') =>
-    'In every folder: ~/.omp/agent/skills and ~/.agent/skills.',
+    'In every folder: skills in oh-my-pi’s agent folder and ~/.agent/skills.',
   ('omp', 'project') =>
     'In this folder: .omp/skills, Claude’s .claude/skills and .agent/skills '
         'here and above it, up to the repository’s root; the nearest '
