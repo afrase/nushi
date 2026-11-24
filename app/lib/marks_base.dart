@@ -34,8 +34,9 @@ typedef MarksBase = ({String base, MarksFrom from});
 const MarksBase lastCommitBase = (base: '', from: MarksFrom.lastCommit);
 
 /// [chat]'s base for its marks and dots, found when first asked and again
-/// once its folder may have changed ([ChatChanges.moved]: the chat's turn
-/// ended, it committed, or its folder or worktree changed). One lookup for
+/// once its folder may have changed ([ChatChanges.baseMoved]: the chat's
+/// turn ended, it committed, or its folder or worktree changed; not a scope
+/// picked in Changes). One lookup for
 /// every file shown and the tree, from the span its details and Changes
 /// show, and one notice to each of them (a file's `LineBase`, the tree's
 /// `TreeDots`) when it may have moved, to ask again.
@@ -60,7 +61,7 @@ final class ChatMarksBase extends ChangeNotifier {
   /// (the marks say they couldn't compare, ADR 0131) and is forgotten, so
   /// the next ask looks again; a newer lookup already under way stays.
   Future<MarksBase> find(Daemon daemon) {
-    _changes ??= ChatChanges.of(daemon, chat)..moved.addListener(_moved);
+    _changes ??= ChatChanges.of(daemon, chat)..baseMoved.addListener(_moved);
     if (_found case final found?) return found;
     final finding = _found = _find(daemon, _changes!);
     unawaited(

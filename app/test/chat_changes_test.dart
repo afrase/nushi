@@ -149,6 +149,37 @@ void main() {
     view.unfollow();
   });
 
+  test('a scope picked reads the span again but leaves the marks be: '
+      'their base is not the scope', () async {
+    final fake = FakeDaemon([Chat(id: 'c', agent: 'claude', folder: '/x')])
+      ..answer = (input) => switch (input) {
+        GetFolderStatusRequest() => GetFolderStatusResponse(
+          git: true,
+          branch: 'fix',
+          defaultBase: 'main',
+        ),
+        ListBranchesRequest() => ListBranchesResponse(),
+        _ => null,
+      };
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    await pumpEventQueue();
+    final chat = ChatState('c', '/x');
+    final changes = ChatChanges.of(d, chat)..follow();
+    await marksBaseOf(chat).find(d);
+    var told = 0;
+    marksBaseOf(chat).addListener(() => told++);
+    var moved = 0;
+    changes.moved.addListener(() => moved++);
+    chat
+      ..scope = 'uncommitted'
+      ..notifyListeners();
+    await pumpEventQueue();
+    expect(moved, 1);
+    expect(told, 0);
+    changes.unfollow();
+  });
+
   test('a read that fails says why, and the next that answers clears it; '
       'the newest read asked for is what shows', () async {
     var fail = true;

@@ -56,6 +56,10 @@ final class ChatChanges extends ChangeNotifier {
   /// Goes up each time the folder may have changed.
   final moved = ValueNotifier<int>(0);
 
+  /// Goes up with [moved] but for a scope picked: the change marks' base
+  /// (ADR 0131) doesn't follow the scope Changes shows.
+  final baseMoved = ValueNotifier<int>(0);
+
   (String, String, String?, int) _key;
   bool _wasBusy;
   int _followers = 0;
@@ -96,17 +100,22 @@ final class ChatChanges extends ChangeNotifier {
     _wasBusy = chat.busy;
     final key = _keyOf(chat);
     if (!ended && key == _key) return;
+    final (folder, base, _, commits) = _key;
+    final scopeOnly =
+        !ended && key.$1 == folder && key.$2 == base && key.$4 == commits;
     _key = key;
-    _changed();
+    _changed(base: !scopeOnly);
   }
 
-  /// The folder may have changed: read again while followed.
-  void _changed() {
+  /// The folder may have changed: read again while followed. [base]: the
+  /// marks' base may have moved too (all but a scope picked).
+  void _changed({bool base = true}) {
     _gen++;
     _behind = true;
     _again.cancel();
     if (_followers > 0) read().ignore();
     moved.value++;
+    if (base) baseMoved.value++;
   }
 
   /// After [error], a read of the folder's that failed (the Changes view's
