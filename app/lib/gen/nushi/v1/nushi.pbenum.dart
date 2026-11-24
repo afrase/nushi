@@ -43,25 +43,39 @@ class ItemKind extends $pb.ProtobufEnum {
   static const ItemKind ITEM_KIND_PLAN =
       ItemKind._(7, _omitEnumNames ? '' : 'ITEM_KIND_PLAN');
 
-  /// How a turn ended when it didn't end normally, or an error: status is
-  /// "cancelled", "refusal", "max_tokens", "max_turn_requests", "turn_failed"
-  /// (the agent answered the prompt with an error; while last in the
-  /// transcript the app offers Continue, which sends "Continue.", when the
-  /// turn got somewhere, else Try again, which sends the last user message
-  /// again) or "error" (anything else that went wrong), and text says it in
-  /// words. A reopen that failed has one notice, which
-  /// goes once the chat runs again: "not_ready" (its agent isn't set up or
-  /// installed: Settings › Agents), "folder_gone" (MoveChat),
-  /// "session_gone" (its agent no longer has the session, and the chat is
-  /// kept only for its worktree's or scratch folder's work: DeleteChat), or
-  /// "reopen_failed" (ReopenChat tries again; with options, the ways its
-  /// agent signs in, AgentSignIn). "own_turn" marks where the
-  /// agent starts working on its own, outside a turn of the user's (after a
-  /// background task ended). "branch_renamed" says Nushi named the chat's
-  /// branch after it, between turns (the agent isn't told);
-  /// "branch_switched" that the chat's folder was switched to another
-  /// branch (SwitchBranch). "command" says what a command the daemon ran in
-  /// the agent's place did (SendPromptResponse.ran_command).
+  /// How a turn ended when it didn't end normally, or an error, or a mark
+  /// the daemon puts in the transcript; status says which (an app shows
+  /// one it doesn't know as a plain notice with its text), and text says
+  /// it in words:
+  /// - A turn's end: "cancelled", "refusal", "max_tokens",
+  ///   "max_turn_requests", "turn_failed" (the agent answered the prompt
+  ///   with an error; while last in the transcript the app offers
+  ///   Continue, which sends "Continue.", when the turn got somewhere,
+  ///   else Try again, which sends the last user message again) or "error"
+  ///   (anything else that went wrong).
+  /// - A reopen that failed has one notice, which goes once the chat runs
+  ///   again: "not_ready" (its agent isn't set up or installed: Settings ›
+  ///   Agents), "folder_gone" (MoveChat), "session_gone" (its agent no
+  ///   longer has the session, and the chat is kept only for its
+  ///   worktree's or scratch folder's work: DeleteChat), or "reopen_failed"
+  ///   (ReopenChat tries again; with options, the ways its agent signs in,
+  ///   AgentSignIn). "sign_in" is what 0.52's betas gave a reopen refused
+  ///   for want of a sign-in, and a kept transcript may still hold one.
+  /// - Where the daemon's copy of the transcript and the agent's replay
+  ///   meet (ADR 0047): "compacted" (the agent compacted the conversation
+  ///   here; text is its summary) or "history_differs" (the agent's
+  ///   history differs from the copy from here).
+  /// - "taken_back": the user's message is back in the box to edit, though
+  ///   the agent still has it in its history (RewindChat).
+  /// - "own_turn" marks where the agent starts working on its own, outside
+  ///   a turn of the user's (after a background task ended).
+  /// - "agent_notice" and "agent_warning": a notice of the agent's own,
+  ///   which it sent as a message (text is its words).
+  /// - "branch_renamed" says Nushi named the chat's branch after it,
+  ///   between turns (the agent isn't told); "branch_switched" that the
+  ///   chat's folder was switched to another branch (SwitchBranch).
+  /// - "command" says what a command the daemon ran in the agent's place
+  ///   did (SendPromptResponse.ran_command).
   static const ItemKind ITEM_KIND_NOTICE =
       ItemKind._(8, _omitEnumNames ? '' : 'ITEM_KIND_NOTICE');
 

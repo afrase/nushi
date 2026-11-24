@@ -709,8 +709,12 @@ class RestartHold extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearChatId() => $_clearField(1);
 
-  /// "working", "waits on you", "a message queued", "in background", or
-  /// for a terminal "running <its program>".
+  /// "working", "needs you", "a message queued" or "in background"; for a
+  /// chat held by one of its side chats "a side chat is working", "a side
+  /// chat needs you", "a side chat has a message queued" or "a side chat
+  /// is in background"; or for a terminal "running <its program>". Words
+  /// to show, never compared: a daemon before API 145 says "waits on you"
+  /// for "needs you".
   @$pb.TagNumber(2)
   $core.String get why => $_getSZ(1);
   @$pb.TagNumber(2)
@@ -17319,7 +17323,10 @@ class Item extends $pb.GeneratedMessage {
   void clearText() => $_clearField(3);
 
   /// A tool call's title, kind and status, as ACP names them ("execute",
-  /// "completed", ...).
+  /// "completed", ...). Status also carries a permission's or a question's
+  /// state ("pending", "answered"...), a notice's reason (ITEM_KIND_NOTICE
+  /// lists them), and "stopped_by_safeguards" on an agent's message whose
+  /// response the model's safeguards stopped.
   @$pb.TagNumber(4)
   $core.String get title => $_getSZ(3);
   @$pb.TagNumber(4)

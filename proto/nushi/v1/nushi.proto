@@ -649,8 +649,12 @@ message RestartWhenIdleResponse {
 message RestartHold {
   // The chat it's in (a terminal's chat too).
   string chat_id = 1;
-  // "working", "waits on you", "a message queued", "in background", or
-  // for a terminal "running <its program>".
+  // "working", "needs you", "a message queued" or "in background"; for a
+  // chat held by one of its side chats "a side chat is working", "a side
+  // chat needs you", "a side chat has a message queued" or "a side chat
+  // is in background"; or for a terminal "running <its program>". Words
+  // to show, never compared: a daemon before API 145 says "waits on you"
+  // for "needs you".
   string why = 2;
   // A terminal's, not the chat's own.
   bool terminal = 3;
@@ -2445,25 +2449,39 @@ enum ItemKind {
   ITEM_KIND_THOUGHT = 6;
   // The agent's plan as a checklist (plan), replaced as it changes.
   ITEM_KIND_PLAN = 7;
-  // How a turn ended when it didn't end normally, or an error: status is
-  // "cancelled", "refusal", "max_tokens", "max_turn_requests", "turn_failed"
-  // (the agent answered the prompt with an error; while last in the
-  // transcript the app offers Continue, which sends "Continue.", when the
-  // turn got somewhere, else Try again, which sends the last user message
-  // again) or "error" (anything else that went wrong), and text says it in
-  // words. A reopen that failed has one notice, which
-  // goes once the chat runs again: "not_ready" (its agent isn't set up or
-  // installed: Settings › Agents), "folder_gone" (MoveChat),
-  // "session_gone" (its agent no longer has the session, and the chat is
-  // kept only for its worktree's or scratch folder's work: DeleteChat), or
-  // "reopen_failed" (ReopenChat tries again; with options, the ways its
-  // agent signs in, AgentSignIn). "own_turn" marks where the
-  // agent starts working on its own, outside a turn of the user's (after a
-  // background task ended). "branch_renamed" says Nushi named the chat's
-  // branch after it, between turns (the agent isn't told);
-  // "branch_switched" that the chat's folder was switched to another
-  // branch (SwitchBranch). "command" says what a command the daemon ran in
-  // the agent's place did (SendPromptResponse.ran_command).
+  // How a turn ended when it didn't end normally, or an error, or a mark
+  // the daemon puts in the transcript; status says which (an app shows
+  // one it doesn't know as a plain notice with its text), and text says
+  // it in words:
+  // - A turn's end: "cancelled", "refusal", "max_tokens",
+  //   "max_turn_requests", "turn_failed" (the agent answered the prompt
+  //   with an error; while last in the transcript the app offers
+  //   Continue, which sends "Continue.", when the turn got somewhere,
+  //   else Try again, which sends the last user message again) or "error"
+  //   (anything else that went wrong).
+  // - A reopen that failed has one notice, which goes once the chat runs
+  //   again: "not_ready" (its agent isn't set up or installed: Settings ›
+  //   Agents), "folder_gone" (MoveChat), "session_gone" (its agent no
+  //   longer has the session, and the chat is kept only for its
+  //   worktree's or scratch folder's work: DeleteChat), or "reopen_failed"
+  //   (ReopenChat tries again; with options, the ways its agent signs in,
+  //   AgentSignIn). "sign_in" is what 0.52's betas gave a reopen refused
+  //   for want of a sign-in, and a kept transcript may still hold one.
+  // - Where the daemon's copy of the transcript and the agent's replay
+  //   meet (ADR 0047): "compacted" (the agent compacted the conversation
+  //   here; text is its summary) or "history_differs" (the agent's
+  //   history differs from the copy from here).
+  // - "taken_back": the user's message is back in the box to edit, though
+  //   the agent still has it in its history (RewindChat).
+  // - "own_turn" marks where the agent starts working on its own, outside
+  //   a turn of the user's (after a background task ended).
+  // - "agent_notice" and "agent_warning": a notice of the agent's own,
+  //   which it sent as a message (text is its words).
+  // - "branch_renamed" says Nushi named the chat's branch after it,
+  //   between turns (the agent isn't told); "branch_switched" that the
+  //   chat's folder was switched to another branch (SwitchBranch).
+  // - "command" says what a command the daemon ran in the agent's place
+  //   did (SendPromptResponse.ran_command).
   ITEM_KIND_NOTICE = 8;
 }
 
@@ -2474,7 +2492,10 @@ message Item {
   // The message, or a tool call's output as markdown (its diffs apart).
   string text = 3;
   // A tool call's title, kind and status, as ACP names them ("execute",
-  // "completed", ...).
+  // "completed", ...). Status also carries a permission's or a question's
+  // state ("pending", "answered"...), a notice's reason (ITEM_KIND_NOTICE
+  // lists them), and "stopped_by_safeguards" on an agent's message whose
+  // response the model's safeguards stopped.
   string title = 4;
   string tool_kind = 5;
   string status = 6;
