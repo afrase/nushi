@@ -231,6 +231,31 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
+  testWidgets("commits the base doesn't have say they would be lost, as "
+      "Delete's do", (tester) async {
+    final (d, _) = await _open(
+      tester,
+      pull: fixturePull()..item.state = 'closed',
+      u: _clean(commits: 2),
+    );
+    await tester.tap(
+      _inPull(
+        find.descendant(
+          of: find.byType(PullRow),
+          matching: find.byTooltip('Pull request'),
+        ),
+      ),
+    );
+    await _pump(tester);
+    await tester.tap(find.text('Clean up…').last);
+    await _pump(tester);
+    expect(
+      find.text("2 commits that main doesn't have would be lost."),
+      findsOneWidget,
+    );
+    d.dispose();
+  }, variant: onMac);
+
   // The dialog whole, to look at (`make renders`): a dirty worktree's
   // warning and the mid-turn choice over its rows.
   for (final b in renderThemes) {

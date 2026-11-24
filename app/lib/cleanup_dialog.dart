@@ -229,8 +229,9 @@ class _CleanUpDialogState extends State<_CleanUpDialog> {
                 ? "Squash-merged, so git can't tell. GitHub says "
                       '#${p!.item.ref.number} merged it.'
                 : st.commits == 1
-                ? "Its commit isn't in ${wt.base}."
-                : "Its ${st.commits} commits aren't in ${wt.base}.",
+                ? "1 commit that ${wt.base} doesn't have would be lost."
+                : "${st.commits} commits that ${wt.base} doesn't have would "
+                      'be lost.',
           ),
         if (_hasRemote)
           CleanUpChoice(
