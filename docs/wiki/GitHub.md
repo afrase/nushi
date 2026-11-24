@@ -73,6 +73,7 @@ The chip next to the chat's title shows the first pull request, and `+2` for the
 The tab looks like the pull request's page on GitHub, so what you know from there works here. Click **Pull request** next to **Chat** and **Changes** at the top of the chat, or press ⌃⌘3 (Ctrl+Alt+3 on Linux).
 
 - **Merge status** and **Submit review** are at the right of the title. Scroll down and a slim bar at the top keeps the state, number, title and both buttons in view.
+- Above them, the tab says when the pull request was last read (**Updated 2m ago**). It asks GitHub again each minute; to ask now, click **Refresh** (↻) beside that line. It says **refreshing** while it asks, then **Updated just now**, or **Couldn't refresh** in red if GitHub can't be reached.
 - **Four tabs**: **Overview**, **Commits**, **Checks** (every check, with **Re-run failed**) and **Files changed** (the diff, with review threads at their lines).
 - **Overview** starts with the **merge status card**: whether it can merge and what blocks it, the merge button, and three segments, **Checks**, **Comments** and **Approvals**. Click a segment to see its list.
 - Under the card are the description, the **Comments** (filter them by **All**, **Unresolved** or **Mine**; the box to write one comes first, then the newest), and the latest commits. Reviewers, assignees and labels are at the right.

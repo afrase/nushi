@@ -253,6 +253,7 @@ class ChatPull extends ChangeNotifier {
       return;
     }
     _asking = () async {
+      _started();
       try {
         await _readWhole(false);
       } on Object catch (e) {
@@ -373,6 +374,7 @@ class ChatPull extends ChangeNotifier {
         clock().difference(asked) < const Duration(seconds: 10)) {
       return Future.value();
     }
+    _started();
     return _asking = _ask(quiet, polled: polled).whenComplete(() {
       _asking = null;
       _asked = clock();
@@ -380,6 +382,11 @@ class ChatPull extends ChangeNotifier {
       notifyListeners();
     });
   }
+
+  /// An ask starts: the tab says so ("· refreshing") once [asking] is
+  /// set, after the frame when one is being built (an ask starts in a
+  /// pane's initState, [follow]).
+  void _started() => scheduleMicrotask(notifyListeners);
 
   /// Asks again after a change made here: an ask under way may have started
   /// before it, so another follows that one.

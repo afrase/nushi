@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -10,6 +11,7 @@ import 'package:nushi/github_files.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/item_chats.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/pull_cache.dart';
@@ -326,9 +328,34 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                     column(
                       Align(
                         alignment: Alignment.centerRight,
-                        child: _fresh(context, line, failed && !asking, error),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: 2,
+                          children: [
+                            Flexible(
+                              child: _fresh(
+                                context,
+                                line,
+                                failed && !asking,
+                                error,
+                              ),
+                            ),
+                            // The tab has no bar: its Refresh is here
+                            // (the GitHub view's is in its bar).
+                            if (widget.source case final s?)
+                              IconTap(
+                                Icons.refresh,
+                                key: const ValueKey('pull-refresh'),
+                                tooltip: withKey(
+                                  'Refresh',
+                                  cmdLabel(LogicalKeyboardKey.keyR),
+                                ),
+                                onTap: () => unawaited(s.refresh()),
+                              ),
+                          ],
+                        ),
                       ),
-                      top: 8,
+                      top: _inChat ? 4 : 8,
                     ),
                   column(
                     PullHeader(
@@ -338,7 +365,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                       titleKey: _title,
                       actions: actions(),
                     ),
-                    top: readAt == null ? 24 : 4,
+                    top: readAt == null ? 24 : (_inChat ? 0 : 4),
                   ),
                   if (error case final e? when !failed)
                     column(

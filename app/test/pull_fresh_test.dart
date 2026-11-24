@@ -15,6 +15,9 @@ const _title = "Ignore q params that aren't hashes in admin filters";
 /// The page's line ("Updated just now"), wherever it is.
 Finder get _line => find.byKey(const ValueKey('pull-kept'));
 
+/// The tab's Refresh, beside the line.
+Finder get _refresh => find.byKey(const ValueKey('pull-refresh'));
+
 /// The line's words.
 Finder _says(String text) =>
     find.descendant(of: _line, matching: find.text(text), matchRoot: true);
@@ -69,6 +72,69 @@ void main() {
     expect(_says("Couldn't refresh · as of just now"), findsOneWidget);
     expect(find.text(_title), findsOneWidget); // the page stays
     expect(find.textContaining('Not current'), findsNothing); // one cue
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets("the tab's Refresh asks GitHub at once, says so while it "
+      'asks, then "Updated just now"; a second press meanwhile asks nothing '
+      'more', (tester) async {
+    Completer<GetGitHubPullResponse>? hang;
+    final asked = <GetGitHubPullRequest>[];
+    final (d, fake) = await openPullTab(
+      tester,
+      fixturePull(),
+      more: (input) => switch (input) {
+        // The rows its own, so they don't wait on the whole one's.
+        GetGitHubItemsRequest() => GetGitHubItemsResponse(
+          items: [rowItem(fixturePull())],
+        ),
+        // Counted as asked: the fake records a call once it's answered.
+        GetGitHubPullRequest() =>
+          (asked..add(input)).isEmpty ? null : hang?.future,
+        _ => null,
+      },
+    );
+    clock = () => fixtureNow.add(const Duration(minutes: 3));
+    await tester.pump(const Duration(seconds: 20)); // past the 10 s guard
+    fake.calls.clear();
+    asked.clear();
+    hang = Completer();
+    await tester.tap(_refresh);
+    await tester.pumpAndSettle(); // the ask under way: the read hangs
+    List<GetGitHubPullRequest> pulls() => asked;
+    expect(pulls(), hasLength(1));
+    expect(pulls().single.quiet, isFalse); // asked for, not a poll
+    expect(fake.calls.whereType<FindChatPullRequest>(), hasLength(1));
+    expect(_says('Updated 3m ago · refreshing'), findsOneWidget);
+    await tester.tap(_refresh);
+    await tester.pumpAndSettle();
+    expect(pulls(), hasLength(1));
+    hang.complete(GetGitHubPullResponse(pull: fixturePull()));
+    hang = null;
+    await tester.pumpAndSettle();
+    expect(_says('Updated just now'), findsOneWidget);
+    expect(pulls(), hasLength(1));
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets("a Refresh that fails says so in the failure's line and "
+      'keeps the page', (tester) async {
+    var failing = false;
+    final (d, _) = await openPullTab(
+      tester,
+      fixturePull(),
+      more: (input) => failing && input is GetGitHubPullRequest
+          ? Future<GetGitHubPullResponse>.error(Exception('no network'))
+          : null,
+    );
+    clock = () => fixtureNow.add(const Duration(minutes: 3));
+    await tester.pump(const Duration(seconds: 20));
+    failing = true;
+    await tester.tap(_refresh);
+    await tester.pumpAndSettle();
+    expect(_says("Couldn't refresh · as of 3m ago"), findsOneWidget);
+    expect(find.text(_title), findsOneWidget);
+    expect(_refresh, findsOneWidget); // to try again
     await closeView(tester, d);
   }, variant: onMac);
 }
