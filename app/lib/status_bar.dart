@@ -115,10 +115,9 @@ class _StatusBarState extends State<StatusBar> {
         ]),
         builder: (context, _) {
           final live = widget.daemon.chats.values.where((c) => !c.archived);
-          // A turn, a workflow or the agent's own work (ADR 0127).
-          final working = live
-              .where((c) => c.started != null || c.workflows > 0 || c.ownTurn)
-              .length;
+          // As each chat's dot says (a turn, a workflow or the agent's
+          // own work, ADR 0127; not one waiting on the user).
+          final working = live.where((c) => c.phase == .working).length;
           // Asleep counts what runs no agent, unseen or not.
           final asleep = live.where((c) => c.asleep).length;
           final expired = live.where((c) => c.phase == .expired).length;
