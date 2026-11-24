@@ -368,6 +368,7 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 		for _, x := range n[0].Commit.StatusCheckRollup.Contexts.Nodes {
 			out.Runs = append(out.Runs, x.check())
 		}
+		out.Runs = withoutSuperseded(out.Runs)
 	}
 	return out, nil
 }

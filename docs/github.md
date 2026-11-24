@@ -113,7 +113,7 @@ It follows GitHub's own pull request page ([ADR 0137](adr/0137-the-pull-request-
 
 **Commits** lists them newest first: headline, author, age, short SHA with Copy, checks. They're asked of GitHub when they first show and again when the head moves; past 100 it shows the newest 100 and says how many there are.
 
-**Checks**: failing first, each opening to its annotations and log, with **Re-run failed** (it asks GitHub to re-run the failed jobs of their workflow runs) and Fix checks; then the passed in two columns, then the skipped. A cancelled check counts as failing and a neutral one as passed, as on GitHub ([ADR 0117](adr/0117-github-links-as-chips-and-a-chats-pull-requests.md)).
+**Checks**: failing first, each opening to its annotations and log, with **Re-run failed** (it asks GitHub to re-run the failed jobs of their workflow runs) and Fix checks; then the passed in two columns, then the skipped. A cancelled check counts as failing and a neutral one as passed, as on GitHub ([ADR 0117](adr/0117-github-links-as-chips-and-a-chats-pull-requests.md)); a run cancelled because a newer run of the same check replaced it is left out, as GitHub judges only the newest.
 
 **Reactions** sit under the description, each comment and review, and each thread comment, as on GitHub: a smiley that opens GitHub's eight (👍 👎 😄 🎉 😕 ❤️ 🚀 👀), then a pill per kind used with its count, yours filled in the accent with its ring. A click on a pill or in the picker adds yours or takes it away on GitHub at once (put back with GitHub's words if it refuses), then the pull request is read again. They come with the pull request (`reactionGroups`), no call of their own (API 131).
 

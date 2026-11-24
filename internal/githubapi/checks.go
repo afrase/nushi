@@ -1,5 +1,12 @@
 package githubapi
 
+import (
+	"slices"
+	"time"
+
+	"github.com/afrase/nushi/internal/model"
+)
+
 // CheckKind is what a check's state counts as: the one rule for a failed
 // check, which the rows' counts (countCheck), the daemon's merge blocks
 // and the API's GitHubCheck.failed share. The app keeps the same table
@@ -30,4 +37,25 @@ func KindOf(state string) CheckKind {
 		return CheckSkipped
 	}
 	return CheckRunning
+}
+
+// withoutSuperseded leaves out each cancelled check run that a run of the
+// same check (its app, workflow and name) started after it replaced: a
+// concurrency group's cancel-in-progress, or an event fired again on the
+// same head, leaves both in the head's rollup, and GitHub's merge gate
+// judges only the newest. Without this a replaced run, cancelled and so
+// failed by KindOf, would block a merge GitHub allows. A cancelled run
+// nothing replaced stays failed, and a commit status is one per name.
+func withoutSuperseded(runs []model.GitHubCheck) []model.GitHubCheck {
+	type check struct{ app, workflow, name string }
+	newest := map[check]time.Time{}
+	for _, c := range runs {
+		k := check{c.App, c.Workflow, c.Name}
+		if c.ID != 0 && c.Started.After(newest[k]) {
+			newest[k] = c.Started
+		}
+	}
+	return slices.DeleteFunc(slices.Clone(runs), func(c model.GitHubCheck) bool {
+		return c.ID != 0 && c.State == "cancelled" && newest[check{c.App, c.Workflow, c.Name}].After(c.Started)
+	})
 }
