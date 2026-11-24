@@ -287,7 +287,13 @@ func (s *server) ReopenChat(_ context.Context, req *connect.Request[nushiv1.Reop
 }
 
 func (s *server) WakeChat(_ context.Context, req *connect.Request[nushiv1.WakeChatRequest]) (*connect.Response[nushiv1.WakeChatResponse], error) {
-	return done[nushiv1.WakeChatResponse](s.Chats.Wake(req.Msg.ChatId), refused)
+	if err := s.Chats.Wake(req.Msg.ChatId); errors.Is(err, chats.ErrRestarting) {
+		why := errors.New("the daemon is restarting into a newer build: the chat wakes once it's back")
+		return nil, because(connect.NewError(connect.CodeUnavailable, why), ReasonRestarting) // the app asks again
+	} else if err != nil {
+		return nil, refused(err)
+	}
+	return connect.NewResponse(&nushiv1.WakeChatResponse{}), nil
 }
 
 func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv1.PlanDeleteChatRequest]) (*connect.Response[nushiv1.PlanDeleteChatResponse], error) {

@@ -141,12 +141,10 @@ bool canWakeChat(Daemon d, ChatState? chat) =>
 
 /// Wakes a sleeping chat without a message: its session reopens, and the
 /// chat shows it opening as any reopen does (its status), and the reopen's
-/// notice with Try again if it fails.
+/// notice if it fails. A daemon restarting into a newer build is asked
+/// again once the new one answers.
 Future<void> wakeChat(BuildContext context, ChatState chat, Daemon daemon) =>
-    tryOrShow(
-      context,
-      () => daemon.client.wakeChat(WakeChatRequest(chatId: chat.id)),
-    );
+    tryOrShow(context, () => daemon.wakeChat(WakeChatRequest(chatId: chat.id)));
 
 /// Asks [title] before stopping [chat]'s agent while background tasks it
 /// started run, since they stop with it; true when none runs or [action] is

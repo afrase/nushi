@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"errors"
 	"os"
 	"slices"
 	"sync"
@@ -10,6 +11,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/acptest"
+	"github.com/afrase/nushi/internal/api"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
@@ -130,5 +132,25 @@ func TestAnArchivedChatDoesntWake(t *testing.T) {
 	}
 	if l := d.sent.loaded(); len(l) != loads {
 		t.Errorf("archived, %d loads", len(l)-loads)
+	}
+}
+
+// Once the restart is due, a wake is refused as a prompt is (Unavailable,
+// its reason restarting) and the chat stays asleep: the app asks the new
+// daemon, rather than starting an agent the restart would stop.
+func TestAWakeAtTheRestartIsRefused(t *testing.T) {
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	a := open(t, d)
+	id, _ := asleepChat(t, a, t.TempDir())
+	loads := len(d.sent.loaded())
+	must(a.c.RestartWhenIdle(t.Context(), connect.NewRequest(&nushiv1.RestartWhenIdleRequest{})))
+	<-d.restart.Due()
+	err := wake(t.Context(), a, id)
+	var ce *connect.Error
+	if !errors.As(err, &ce) || ce.Code() != connect.CodeUnavailable || ce.Meta().Get(api.ReasonHeader) != api.ReasonRestarting {
+		t.Fatalf("a wake after the restart was due: %v, want Unavailable, its reason restarting", err)
+	}
+	if st := a.get(id).Status; !st.Asleep || st.Busy || len(d.sent.loaded()) != loads {
+		t.Errorf("refused, status %v, %d loads (was %d)", st, len(d.sent.loaded()), loads)
 	}
 }

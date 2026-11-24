@@ -196,7 +196,9 @@ func (s *Service) awake(ctx context.Context, c *chat) error {
 // the chat busy with no turn till then, and a failed reopen says so in its
 // notice (failedLocked). A chat that isn't asleep is left as it is: awake,
 // busy or reopening, or one whose reopen failed (Try again is Reopen); an
-// archived one is refused.
+// archived one is refused, and so is a wake once Rest has said every chat
+// is quiet (ErrRestarting, as a prompt is): the restart would stop the
+// agent it starts, and the chat would be asleep again on the new daemon.
 func (s *Service) Wake(chatID string) error {
 	c, err := s.chat(chatID)
 	if err != nil {
@@ -209,6 +211,9 @@ func (s *Service) Wake(chatID string) error {
 	}
 	if !c.asleep {
 		return nil
+	}
+	if s.resting.Load() {
+		return ErrRestarting
 	}
 	c.asleep = false
 	c.logLocked().Info("chat waking", "for", "asked")

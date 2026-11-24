@@ -28,3 +28,5 @@ An upgrade (Homebrew's, or `make install`) leaves the running daemon and its cha
 - Holding a prompt that comes in the moment of the restart in the queue: the queue isn't stored, so it would have to be, for one rare case.
 - The daemon starting its successor itself: an app-less restart, but two launchers (the app also starts one when none answers) race for the socket.
 - Restarting with terminals running commands: kills builds and servers the owner started.
+
+**Amendment (2026-11-24): a wake is refused as a prompt is.** `WakeChat` (API 146) starts a sleeping chat's agent, so once `Rest` has said every chat is quiet it is refused too (`Unavailable`, reason `restarting`), and the app's `wakeChat` asks the new daemon as `sendPrompt` does. A wake taken then would start an agent the restart stops, and a chat last used long before would be asleep again on the new daemon with nothing said.

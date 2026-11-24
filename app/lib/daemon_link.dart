@@ -267,9 +267,20 @@ class LoadAgain {
 extension SendPrompt on Daemon {
   /// Sends a prompt. One the daemon refused because it's restarting into a
   /// newer build goes again once the new one answers (a minute at most).
-  Future<SendPromptResponse> sendPrompt(SendPromptRequest r) async {
+  Future<SendPromptResponse> sendPrompt(SendPromptRequest r) =>
+      _againWhenRestarted(() => client.sendPrompt(r));
+
+  /// Wakes a sleeping chat, asking the new daemon as [sendPrompt] does
+  /// when this one is restarting into a newer build.
+  Future<WakeChatResponse> wakeChat(WakeChatRequest r) =>
+      _againWhenRestarted(() => client.wakeChat(r));
+
+  /// [call], made once more when the daemon refused it because it is
+  /// restarting into a newer build, once the new one answers (a minute at
+  /// most); another failure is the caller's.
+  Future<T> _againWhenRestarted<T>(Future<T> Function() call) async {
     try {
-      return await client.sendPrompt(r);
+      return await call();
     } on connect.ConnectException catch (e) {
       if (e.code != connect.Code.unavailable || !refusedFor(e, 'restarting')) {
         rethrow;
@@ -279,7 +290,7 @@ extension SendPrompt on Daemon {
         // design: a retry's pause, not motion
         await Future<void>.delayed(const Duration(milliseconds: 200));
       }
-      return await client.sendPrompt(r);
+      return await call();
     }
   }
 }

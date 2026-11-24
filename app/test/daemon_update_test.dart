@@ -352,6 +352,52 @@ void main() {
     d.dispose();
   });
 
+  // A wake refused as the restart is decided asks the new daemon, so the
+  // chat the user woke wakes rather than starting an agent the restart
+  // would stop.
+  testWidgets('a wake refused while the daemon restarts goes again to the '
+      'new one', (tester) async {
+    var running = '7-1000';
+    var refused = 0;
+    final woken = <String>[];
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        PingRequest() when running.isEmpty => throw ConnectException(
+          Code.unavailable,
+          'no daemon',
+        ),
+        PingRequest() => PingResponse(apiVersion: apiVersion, build: running),
+        WakeChatRequest() when running == '7-1000' => () {
+          refused++;
+          throw ConnectException(
+            Code.unavailable,
+            "the chat wakes once it's back",
+            metadata: Headers()..add('nushi-reason', 'restarting'),
+          );
+        }(),
+        WakeChatRequest(:final chatId) => () {
+          woken.add(chatId);
+          return WakeChatResponse();
+        }(),
+        _ => null,
+      };
+    final d = Daemon(transport: fake);
+    await tester.pump();
+    var done = false;
+    d.wakeChat(WakeChatRequest(chatId: 'c')).then((_) {
+      done = true;
+    }).ignore();
+    await tester.pump(const Duration(seconds: 1));
+    expect((refused, done), (1, false));
+    running = '';
+    await tester.pump(const Duration(seconds: 2));
+    running = '7-2000';
+    await tester.pump(const Duration(seconds: 3));
+    expect(done, isTrue);
+    expect(woken, ['c']);
+    d.dispose();
+  });
+
   testWidgets("another failure of a prompt is the caller's", (tester) async {
     for (final e in [
       ConnectException(Code.unavailable, 'no daemon'),

@@ -37121,7 +37121,9 @@ class NushiServiceApi {
   /// with no turn while it opens, then awake, or reopen_failed with its
   /// notice. A chat that isn't asleep (awake, busy, reopening, or whose
   /// reopen failed: ReopenChat is Try again) is left as it is; an archived
-  /// one is refused. (API 146)
+  /// one is refused, and once a restart into a newer build is due a wake is
+  /// refused as SendPrompt is (Unavailable, reason restarting: the app asks
+  /// the new daemon). (API 146)
   $async.Future<WakeChatResponse> wakeChat(
           $pb.ClientContext? ctx, WakeChatRequest request) =>
       _client.invoke<WakeChatResponse>(

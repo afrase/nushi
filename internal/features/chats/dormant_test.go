@@ -245,3 +245,27 @@ func TestAFirstLookupDoesntHoldTheService(t *testing.T) {
 		t.Errorf("two lookups found %p and %p", a, b)
 	}
 }
+
+// Once Rest has said every chat is quiet, a wake is refused as a prompt
+// is (ErrRestarting: the app asks the new daemon), so no agent starts
+// that the restart would stop.
+func TestWakeWhileRestingIsRefused(t *testing.T) {
+	svc, agent, id := oldChat(t, 2*time.Hour, nil)
+	shows(t, svc, id)
+	if ok, holding := svc.Rest(); !ok {
+		t.Fatalf("Rest held by %q", holding)
+	}
+	if err := svc.Wake(id); !errors.Is(err, ErrRestarting) {
+		t.Fatalf("Wake while resting: %v", err)
+	}
+	c := svc.chats[id]
+	c.mu.Lock()
+	busy, asleep := c.busy, c.asleep
+	c.mu.Unlock()
+	if launches, _, _ := agent.count(); launches != 1 || busy || !asleep {
+		t.Fatalf("while resting: %d launches, busy %v, asleep %v", launches, busy, asleep)
+	}
+	svc.Unrest()
+	testcheck.NoErr(t, svc.Wake(id))
+	eventually(t, c, func() bool { return c.agent != nil && !c.busy && !c.asleep })
+}

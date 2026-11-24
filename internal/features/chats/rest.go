@@ -8,8 +8,9 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// ErrRestarting refuses a prompt once the daemon has decided to restart
-// into a newer build (Rest): the app sends it again to the new daemon.
+// ErrRestarting refuses a prompt (or a wake) once the daemon has decided
+// to restart into a newer build (Rest): the app sends it again to the new
+// daemon.
 var ErrRestarting = errors.New("the daemon is restarting into a newer build: the message goes once it's back")
 
 // Rest says whether every chat is quiet (quietLocked: nothing running,

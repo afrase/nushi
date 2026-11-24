@@ -44,9 +44,9 @@ func waitErr(ctx context.Context, err error) error {
 const ReasonHeader = "Nushi-Reason"
 
 const (
-	// ReasonRestarting is a prompt refused as Unavailable because the
-	// daemon is restarting into a newer build (chats.ErrRestarting): the
-	// app sends it again to the new one. Another Unavailable (a dropped
+	// ReasonRestarting is a prompt (or a wake) refused as Unavailable
+	// because the daemon is restarting into a newer build
+	// (chats.ErrRestarting): the app sends it again to the new one. Another Unavailable (a dropped
 	// socket) may have taken it, so isn't sent again.
 	ReasonRestarting = "restarting"
 	// ReasonAgentStart is a new chat whose agent didn't start

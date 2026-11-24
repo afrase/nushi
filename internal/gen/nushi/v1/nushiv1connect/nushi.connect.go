@@ -677,7 +677,9 @@ type NushiServiceClient interface {
 	// with no turn while it opens, then awake, or reopen_failed with its
 	// notice. A chat that isn't asleep (awake, busy, reopening, or whose
 	// reopen failed: ReopenChat is Try again) is left as it is; an archived
-	// one is refused. (API 146)
+	// one is refused, and once a restart into a newer build is due a wake is
+	// refused as SendPrompt is (Unavailable, reason restarting: the app asks
+	// the new daemon). (API 146)
 	WakeChat(context.Context, *connect.Request[v1.WakeChatRequest]) (*connect.Response[v1.WakeChatResponse], error)
 	// The daemon's settings, and changing them.
 	// Says how much memory Nushi takes, as footprint (Activity Monitor's
@@ -3238,7 +3240,9 @@ type NushiServiceHandler interface {
 	// with no turn while it opens, then awake, or reopen_failed with its
 	// notice. A chat that isn't asleep (awake, busy, reopening, or whose
 	// reopen failed: ReopenChat is Try again) is left as it is; an archived
-	// one is refused. (API 146)
+	// one is refused, and once a restart into a newer build is due a wake is
+	// refused as SendPrompt is (Unavailable, reason restarting: the app asks
+	// the new daemon). (API 146)
 	WakeChat(context.Context, *connect.Request[v1.WakeChatRequest]) (*connect.Response[v1.WakeChatResponse], error)
 	// The daemon's settings, and changing them.
 	// Says how much memory Nushi takes, as footprint (Activity Monitor's
