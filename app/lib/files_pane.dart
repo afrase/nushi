@@ -304,9 +304,15 @@ class FilesBlank extends StatelessWidget {
 }
 
 /// [path] (as the preview names it) as [chat]'s Files pane does, relative
-/// to the chat's folder; null for a file outside it.
-String? inFiles(Daemon daemon, ChatState chat, String path) =>
-    insideOf(chat.folder, path);
+/// to the chat's folder; null for a file outside it. [insideOf] is
+/// POSIX-only, so on a folder that isn't (a Windows one, ADR 0125) a
+/// relative name passes as it is, without its leading `./`.
+String? inFiles(Daemon daemon, ChatState chat, String path) {
+  if (chat.folder.startsWith('/')) return insideOf(chat.folder, path);
+  if (path.startsWith('/')) return null;
+  final inside = path.replaceFirst(RegExp(r'^(\./)+'), '');
+  return inside.isEmpty ? null : inside;
+}
 
 /// Shows [inFiles]' file in [chat]'s Files pane: the pane opens on the Chat
 /// tab, the tree shows if it was hidden (⇧⌘Y), the folders above it open,

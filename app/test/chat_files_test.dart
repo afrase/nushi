@@ -196,6 +196,16 @@ void main() {
     expect(inFiles(d, chat, '/other/a.md'), isNull);
   });
 
+  test("on a Windows folder a tab's relative name still shows in the tree", () {
+    final d = Daemon(transport: FakeDaemon([]));
+    addTearDown(d.dispose);
+    final chat = ChatState('c', r'C:\proj');
+    expect(inFiles(d, chat, 'src/a.md'), 'src/a.md');
+    expect(inFiles(d, chat, r'src\a.md'), r'src\a.md');
+    expect(inFiles(d, chat, './a.md'), 'a.md');
+    expect(inFiles(d, chat, '/other/a.md'), isNull);
+  });
+
   test('a file written, then shown by its absolute path, is one artifact; '
       'deleted by it, none', () {
     final items = [
