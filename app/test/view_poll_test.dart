@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_bar.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_issue.dart';
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/pull_polls.dart';
 
 import 'github_fixture.dart' as gh;
@@ -178,5 +180,44 @@ void main() {
     expect(find.text('Add Sub and Neg'), findsOneWidget);
     expect(find.textContaining("Couldn't refresh · as of"), findsOneWidget);
     await closeView(tester, g);
+  });
+
+  testWidgets("a failed quiet poll after a switch to a list that never came "
+      "says nothing of the last one's time: the GitHub inbox, Jira's list", (
+    tester,
+  ) async {
+    var failing = false;
+    Never fail() => throw Exception('no network');
+    final (_, g) = await gh.openView(
+      tester,
+      more: (input) =>
+          failing && input is ListGitHubInboxRequest ? fail() : null,
+    );
+    expect(find.text('Add Sub and Neg'), findsOneWidget);
+    failing = true;
+    tester.widget<GitHubBar>(find.byType(GitHubBar)).onDays(30);
+    await tester.pumpAndSettle();
+    await tester.pump(githubPoll);
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Couldn't refresh"), findsNothing);
+    await closeView(tester, g);
+
+    failing = false;
+    final other = jira.testSite.deepCopy()
+      ..id = 'other.atlassian.net'
+      ..url = 'https://other.atlassian.net';
+    final (_, d) = await jira.openView(
+      tester,
+      sites: [jira.testSite, other],
+      more: (input) =>
+          failing && input is ListJiraIssuesRequest ? fail() : null,
+    );
+    failing = true;
+    tester.widget<JiraBar>(find.byType(JiraBar)).onSite(other.id);
+    await tester.pumpAndSettle();
+    await tester.pump(jiraPoll);
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Couldn't refresh"), findsNothing);
+    await closeView(tester, d);
   });
 }

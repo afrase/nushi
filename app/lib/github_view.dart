@@ -256,11 +256,14 @@ class _GitHubViewState extends State<GitHubView> {
       });
     } on Object catch (e) {
       if (n == _asked && mounted && quiet) {
-        // The last answer stays, saying it's from then.
-        setState(() {
-          _cachedAt ??= _okAt;
-          _failed = _cachedAt != null;
-        });
+        // The last answer stays, saying it's from then: only when what
+        // shows is this filter's (another's time isn't its).
+        if (_shown == key) {
+          setState(() {
+            _cachedAt ??= _okAt;
+            _failed = _cachedAt != null;
+          });
+        }
       } else if (n == _asked && mounted) {
         setState(() {
           // Another filter's rows aren't what this one asked for.
