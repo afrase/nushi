@@ -123,7 +123,7 @@ const commandTerminalApi = 143;
 /// stopped by [restartDaemon].
 class Daemon extends ChangeNotifier {
   /// [transport] reaches the daemon: on the Mac its socket with the
-  /// client token (`macTransport` in main.dart), on the phone its relay's,
+  /// client token (`macDaemon` in main.dart), on the phone its relay's,
   /// in a test a fake. The phone passes [remote]: then nothing of the
   /// Mac's runs (no bundled daemon, no app log), and its link pings
   /// (phone/link.dart), which also keeps its relay connection alive.
