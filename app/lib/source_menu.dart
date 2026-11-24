@@ -103,7 +103,7 @@ class SourceActions {
           await Clipboard.setData(
             ClipboardData(text: pathAt(some ? first : clicked)),
           );
-          if (context.mounted) showError(context, 'Copied');
+          if (context.mounted) showToast(Toasts.maybeOf(context), 'Copied');
         }),
       ),
       MenuEntry(

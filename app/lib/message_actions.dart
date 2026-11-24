@@ -114,7 +114,7 @@ class CopyAction extends StatelessWidget {
     tooltip: 'Copy as Markdown',
     onTap: () => tryOrShow(context, () async {
       await Clipboard.setData(ClipboardData(text: text));
-      if (context.mounted) showError(context, 'Copied');
+      if (context.mounted) showToast(Toasts.maybeOf(context), 'Copied');
     }),
   );
 }

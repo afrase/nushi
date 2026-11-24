@@ -64,7 +64,7 @@ class PathLine extends StatelessWidget {
 
   Future<void> _copy(BuildContext context) => tryOrShow(context, () async {
     await Clipboard.setData(ClipboardData(text: copiedPath(folder, path)));
-    if (context.mounted) showError(context, 'Copied');
+    if (context.mounted) showToast(Toasts.maybeOf(context), 'Copied');
   });
 
   @override

@@ -46,6 +46,6 @@ Future<void> copyMessage(BuildContext context, ChatState chat, int n) async {
   }
   await tryOrShow(context, () async {
     await Clipboard.setData(ClipboardData(text: text));
-    if (context.mounted) showError(context, 'Copied');
+    if (context.mounted) showToast(Toasts.maybeOf(context), 'Copied');
   });
 }

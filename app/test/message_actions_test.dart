@@ -91,6 +91,10 @@ void main() {
     await tester.tap(find.byTooltip('Copy as Markdown'));
     await tester.pump();
     expect(copied, ['Run the suite']);
+    await tester.pump();
+    expect(find.text('Copied'), findsOneWidget);
+    // Plain: a copy that worked is no failure (no ×, no failure's fill).
+    expect(find.byTooltip('Dismiss'), findsNothing);
     await tester.tap(find.byTooltip('Rewind to here\u2002Esc Esc'));
     expect(rewound, 1);
     d.dispose();

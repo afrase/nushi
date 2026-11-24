@@ -97,6 +97,10 @@ void main() {
     await _rightClick(tester, _inEditor(tester));
     await _pick(tester, 'Copy path');
     expect(copied.last, 'main.go:6');
+    await tester.pump();
+    expect(find.text('Copied'), findsOneWidget);
+    // Plain: a copy that worked is no failure (no ×, no failure's fill).
+    expect(find.byTooltip('Dismiss'), findsNothing);
     await endEditor(tester, d);
   }, variant: onMac);
 

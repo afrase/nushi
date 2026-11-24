@@ -88,6 +88,8 @@ void main() {
     await tester.pump();
     expect(copied, ['docs/roadmap.md']);
     expect(find.text('Copied'), findsOneWidget);
+    // Plain: a copy that worked is no failure (no ×, no failure's fill).
+    expect(find.byTooltip('Dismiss'), findsNothing);
     await closeView(tester, d);
   }, variant: onMac);
 

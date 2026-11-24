@@ -90,6 +90,8 @@ void main() {
     );
     await tester.pump();
     expect(find.text('Copied'), findsOneWidget);
+    // Plain: a copy that worked is no failure (no ×, no failure's fill).
+    expect(find.byTooltip('Dismiss'), findsNothing);
 
     await _send(tester, '/copy 2');
     expect(copied.first, 'First, **bold**');
