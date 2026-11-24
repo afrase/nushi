@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/motion.dart';
 
 /// The newest sentence of [text] (the last one, finished or not), plain:
@@ -97,14 +98,11 @@ class _ThoughtLineState extends State<ThoughtLine> with ClockRun {
         ThoughtLine.foldFor.inMilliseconds.toDouble(),
         Curves.ease,
       );
-      return ClipRect(
-        child: Align(
-          alignment: Alignment.topLeft,
-          heightFactor: 1 - v,
-          child: Opacity(
-            opacity: 1 - v,
-            child: SizedBox(height: height, child: line),
-          ),
+      return Fold(
+        factor: 1 - v,
+        child: Opacity(
+          opacity: 1 - v,
+          child: SizedBox(height: height, child: line),
         ),
       );
     }

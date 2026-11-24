@@ -1,6 +1,7 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -192,11 +193,12 @@ class TopBar extends StatelessWidget {
 }
 
 /// A bar over (or under) a view that opens as it comes and closes as it
-/// goes: its height eases and, with [fade], its opacity too. [down], it
-/// slides down from its top edge (a bar under the header); otherwise its
-/// top edge rises (the terminal, under the chat). What's inside is laid out
-/// at its own height throughout, so it's sized once (a terminal's PTY
-/// too), and clipped.
+/// goes: its height eases through [curve] and, with [fade], its opacity
+/// with it. [down], it slides down from its top edge (a bar under the
+/// header, the pinned plan's steps over its line); otherwise its top edge
+/// rises (the terminal, under the chat; a line over the composer). What's
+/// inside is laid out at its own height throughout, so it's sized once (a
+/// terminal's PTY too), and clipped ([Fold]).
 class BarSlide extends StatelessWidget {
   const new({
     required this.child,
@@ -204,20 +206,23 @@ class BarSlide extends StatelessWidget {
     this.down = true,
     this.fade = true,
     this.enter = Motion.standard,
+    this.curve = Motion.settle,
   });
 
   final Widget? child;
   final bool down;
   final bool fade;
   final Duration enter;
+  final Curve curve;
 
   @override
   Widget build(BuildContext context) => Presence(
     enter: enter,
+    curve: curve,
     child: child,
     builder: (context, run, child) => AnimatedBuilder(
       animation: run,
-      builder: (context, child) => _Reveal(
+      builder: (context, child) => Fold(
         factor: run.value,
         bottom: down,
         child: fade ? Faded(opacity: run.value, child: child) : child,
@@ -286,98 +291,6 @@ class _RenderFaded extends RenderProxyBox {
   @override
   void dispose() {
     _layer.layer = null;
-    super.dispose();
-  }
-}
-
-/// [child] at its own height, shown [factor] of it: its bottom part when
-/// [bottom], otherwise its top, the rest clipped.
-class _Reveal extends SingleChildRenderObjectWidget {
-  const new({required this.factor, required this.bottom, super.child});
-
-  final double factor;
-  final bool bottom;
-
-  @override
-  RenderObject createRenderObject(BuildContext context) =>
-      _RenderReveal(factor: factor, bottom: bottom);
-
-  @override
-  void updateRenderObject(BuildContext context, _RenderReveal render) => render
-    ..factor = factor
-    ..bottom = bottom;
-}
-
-class _RenderReveal extends RenderShiftedBox {
-  new({required this._factor, required this._bottom}) : super(null);
-
-  double _factor;
-  double get factor => _factor;
-  set factor(double v) {
-    if (v == _factor) return;
-    _factor = v;
-    markNeedsLayout();
-  }
-
-  bool _bottom;
-  bool get bottom => _bottom;
-  set bottom(bool v) {
-    if (v == _bottom) return;
-    _bottom = v;
-    markNeedsLayout();
-  }
-
-  final _clip = LayerHandle<ClipRectLayer>();
-
-  @override
-  void performLayout() {
-    final child = this.child;
-    if (child == null) {
-      size = constraints.smallest;
-      return;
-    }
-    // The width as given; the height its own, whatever is shown of it.
-    child.layout(
-      BoxConstraints(
-        minWidth: constraints.minWidth,
-        maxWidth: constraints.maxWidth,
-      ),
-      parentUsesSize: true,
-    );
-    final full = child.size;
-    size = constraints.constrain(
-      Size(full.width, full.height * _factor.clamp(0.0, 1.0)),
-    );
-    (child.parentData! as BoxParentData).offset = Offset(
-      0,
-      _bottom ? size.height - full.height : 0,
-    );
-  }
-
-  @override
-  void paint(PaintingContext context, Offset offset) {
-    final child = this.child;
-    if (child == null || size.height <= 0) {
-      _clip.layer = null;
-      return;
-    }
-    if (size.height >= child.size.height) {
-      _clip.layer = null;
-      super.paint(context, offset);
-      return;
-    }
-    _clip.layer = context.pushClipRect(
-      needsCompositing,
-      offset,
-      Offset.zero & size,
-      super.paint,
-      oldLayer: _clip.layer,
-    );
-  }
-
-  @override
-  void dispose() {
-    _clip.layer = null;
     super.dispose();
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/message_actions.dart';
 import 'package:nushi/motion.dart';
@@ -88,12 +89,9 @@ class SendingEntry extends StatelessWidget {
       tween: Tween(begin: 1, end: 0),
       duration: Motion.exit,
       curve: Motion.leave,
-      builder: (context, v, child) => ClipRect(
-        child: Align(
-          alignment: Alignment.topCenter,
-          heightFactor: v,
-          child: Opacity(opacity: 0.7 * v, child: child),
-        ),
+      builder: (context, v, child) => Fold(
+        factor: v,
+        child: Opacity(opacity: 0.7 * v, child: child),
       ),
       child: IgnorePointer(child: shown),
     );

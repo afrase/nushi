@@ -4,6 +4,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
@@ -158,12 +159,9 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
     _shows = 1 - fold;
     if (fold == 0) return line;
     if (_keeps(context)) return Opacity(opacity: 1 - fold, child: line);
-    return ClipRect(
-      child: Align(
-        alignment: Alignment.topCenter,
-        heightFactor: 1 - fold,
-        child: Opacity(opacity: 1 - fold, child: line),
-      ),
+    return Fold(
+      factor: 1 - fold,
+      child: Opacity(opacity: 1 - fold, child: line),
     );
   }
 
