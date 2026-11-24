@@ -35,7 +35,7 @@ Issues are grouped into a card per status. Click a card's title to fold it, or d
 
 On **Sprint**, **JQL** and saved searches, the menu at the right (**Everyone**) narrows the list to **Me**, **Unassigned**, or one person.
 
-If you have more than one site, the menu next to the **Jira** title switches sites. **All sites** shows your open issues from every site at once. If one site can't answer, the others still show, and a line above the list names that site and why.
+If you have more than one site, the menu next to the **Jira** title switches sites. **All sites** shows your open issues from every site at once. If one site can't answer, the others still show, and a line above the list names that site and why. If it fails on a later refresh, its last issues stay and the bar says **Couldn't refresh**.
 
 ## Start work on an issue
 

@@ -12,7 +12,7 @@ Settings › Jira adds a Jira Cloud site: its address, your email, and an API to
 
 ⌘J (View › Jira, or Jira at the sidebar's foot) shows Jira in the chat's place, as a task list.
 
-**Lists:** your open issues, in a card for each status; or the active sprint of a board you pick, a saved search, or JQL that completes fields, operators and values as you type. With several sites, "All sites" lists your open issues from each; a site that fails is named in the error line with why, and the others still show (a site that fails on a refresh keeps its last rows).
+**Lists:** your open issues, in a card for each status; or the active sprint of a board you pick, a saved search, or JQL that completes fields, operators and values as you type. With several sites, "All sites" lists your open issues from each; a site that fails is named in the error line with why, and the others still show (a site that fails on a refresh keeps its last rows, and the bar says "Couldn't refresh · as of" the last time every site answered).
 
 - Drag a card by its title to reorder it, and click its title to collapse it. Both are kept per site.
 - The sprint, a saved search and JQL have "Everyone ▾" at the bar's end: Me, Unassigned, or anyone the list has, remembered per site and list.

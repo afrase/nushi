@@ -281,9 +281,12 @@ class _JiraViewState extends State<JiraView> {
     };
     if (failed.length < on.length) {
       // The sites that answered show; one that didn't keeps its rows when
-      // this list is the one shown (a quiet poll then says nothing, as
-      // one site's does), and the line names it.
+      // this list is the one shown, and the line names it. A quiet poll
+      // adds no line, as one site's doesn't, but the bar says the list
+      // couldn't all be refreshed (ADR 0046), and a line already up
+      // names the sites failing now.
       final kept = _shown == key ? _tasks : const <Task>[];
+      final stale = quiet && failed.isNotEmpty;
       setState(() {
         _show(key, on, [
           for (final (i, r) in got.indexed)
@@ -297,10 +300,16 @@ class _JiraViewState extends State<JiraView> {
                 ],
               ),
         ]);
-        _cachedAt = null;
-        _okAt = clock();
-        _failed = false;
-        if (!quiet || failed.isEmpty) _error = _whyFailed(failed);
+        if (stale) {
+          _cachedAt ??= _okAt;
+          _failed = _cachedAt != null;
+          if (_error != null) _error = _whyFailed(failed);
+        } else {
+          _cachedAt = null;
+          _okAt = clock();
+          _failed = false;
+          _error = _whyFailed(failed);
+        }
         _loading = false;
       });
       return;

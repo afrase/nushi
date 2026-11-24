@@ -546,12 +546,59 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('OTH-1'), findsOneWidget);
     expect(find.textContaining('token has expired'), findsNothing);
+    expect(find.textContaining("Couldn't refresh"), findsNothing);
     (otherFails, more) = (true, true);
     await tester.pump(jiraPoll);
     await tester.pumpAndSettle();
     expect(find.text('OTH-1'), findsOneWidget);
     expect(find.text('ACME-77'), findsOneWidget);
     expect(find.text('ACME-12'), findsNothing);
+    // The other site's rows are from before: the bar says the list is
+    // partly not refreshed, as one site's own would.
+    expect(find.textContaining("Couldn't refresh"), findsOneWidget);
+    otherFails = false;
+    await tester.pump(jiraPoll);
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Couldn't refresh"), findsNothing);
+    await closeView(tester, d);
+  });
+
+  testWidgets('every site’s issues: a quiet poll keeps the error line true '
+      'to the sites failing now', (tester) async {
+    final other = JiraSite(id: 'other.atlassian.net', url: 'https://other');
+    final third = JiraSite(id: 'third.atlassian.net', url: 'https://third');
+    var otherFails = true;
+    var thirdFails = false;
+    final (_, d) = await openView(
+      tester,
+      sites: [testSite, other, third],
+      more: (input) => switch (input) {
+        ListJiraIssuesRequest(site: 'other.atlassian.net') when otherFails =>
+          throw ConnectException(Code.unauthenticated, 'the token has expired'),
+        ListJiraIssuesRequest(site: 'third.atlassian.net') when thirdFails =>
+          throw ConnectException(Code.unavailable, 'third is down'),
+        ListJiraIssuesRequest(site: 'other.atlassian.net') ||
+        ListJiraIssuesRequest(
+          site: 'third.atlassian.net',
+        ) => ListJiraIssuesResponse(),
+        _ => null,
+      },
+    );
+    await tester.tap(find.text(testSite.id));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All sites'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('other.atlassian.net: the token has expired'),
+      findsOneWidget,
+    );
+    // The other site answers now, and the third fails: the line no longer
+    // blames the other.
+    (otherFails, thirdFails) = (false, true);
+    await tester.pump(jiraPoll);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('token has expired'), findsNothing);
+    expect(find.text('third.atlassian.net: third is down'), findsOneWidget);
     await closeView(tester, d);
   });
 
