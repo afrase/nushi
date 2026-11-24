@@ -13,7 +13,6 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/app_log.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_images.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/dev_servers.dart';

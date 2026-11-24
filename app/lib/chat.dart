@@ -818,6 +818,42 @@ class ChatState extends ChangeNotifier {
   /// Asks for a fresh snapshot once the events at hand are applied.
   void _stale() => scheduleMicrotask(() => stale?.call());
 
+  /// Takes the daemon's record of it (a chat event, or its row in the list)
+  /// and tells its listeners once: a rename, a pin or a linked pull request
+  /// reaches what shows it without waiting on a wider rebuild. A record
+  /// comes on a prompt, a turn's end and a listing, so it isn't compared
+  /// field by field first. Only the list carries a status; a chat event's
+  /// would clear it, so one without leaves the status as it was.
+  void take(Chat c) {
+    worktree = c.hasWorktree() ? c.worktree : null;
+    agent = c.agent;
+    scratch = c.scratch;
+    jiraSite = c.jiraSite;
+    jiraKey = c.jiraKey;
+    github = c.hasGithub() ? c.github : null;
+    pull = c.hasPull() ? c.pull : null;
+    pulls = c.pulls;
+    title = c.title;
+    archived = c.archived;
+    archivedAt = c.archivedUnixMs == 0
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(c.archivedUnixMs.toInt());
+    _done = c.done;
+    _pin = c.pin;
+    _color = ChatColor.named(c.color);
+    if (!listEquals(c.pinnedMessages, _pinnedMessages)) {
+      _pinnedMessages = List.unmodifiable(c.pinnedMessages);
+    }
+    final titles = {for (final p in c.messagePins) p.itemId: p.title};
+    if (!mapEquals(titles, _pinTitles)) _pinTitles = Map.unmodifiable(titles);
+    created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt());
+    updated = DateTime.fromMillisecondsSinceEpoch(
+      (c.updatedUnixMs == 0 ? c.createdUnixMs : c.updatedUnixMs).toInt(),
+    );
+    if (c.hasStatus()) status(c.status);
+    notifyListeners();
+  }
+
   /// Its status as the chat list has it: what shows it follows (its dot
   /// in the sidebar, after a daemon's restart) without a snapshot.
   void listed(ChatStatus? s) {

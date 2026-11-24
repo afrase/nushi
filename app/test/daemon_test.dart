@@ -99,6 +99,43 @@ void main() {
     expect(chatsKept(), isEmpty);
   });
 
+  test("a chat's record tells its ChatState once: a rename alone, or a "
+      'pin, a color and a linked pull request together', () async {
+    final fake = _fake();
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    await pumpEventQueue();
+    final chat = d.chats['a']!;
+    var told = 0;
+    chat.addListener(() => told++);
+    Future<void> record(Chat c) async {
+      fake.emit(EventsResponse(chatId: 'a', chat: c));
+      await pumpEventQueue();
+    }
+
+    await record(
+      Chat(id: 'a', folder: '/x', agent: 'claude', title: 'Renamed'),
+    );
+    expect(chat.title, 'Renamed');
+    expect(told, 1);
+
+    await record(
+      Chat(
+        id: 'a',
+        folder: '/x',
+        agent: 'claude',
+        title: 'Renamed',
+        pin: 2,
+        color: 'blue',
+        pull: GitHubLink(host: 'github.com', repo: 'o/r', number: 7),
+      ),
+    );
+    expect(chat.pin, 2);
+    expect(chat.color, isNotNull);
+    expect(chat.pull?.number, 7);
+    expect(told, 2);
+  });
+
   test('places: Settings opens over the place and shuts leaving it; '
       'going elsewhere or picking a chat shuts it; Jira and GitHub go back '
       'to the chat', () {

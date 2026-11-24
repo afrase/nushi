@@ -220,31 +220,7 @@ extension DaemonEvents on Daemon {
     } else {
       drafts?.attach(chat);
     }
-    chat
-      ..worktree = c.hasWorktree() ? c.worktree : null
-      ..agent = c.agent
-      ..scratch = c.scratch
-      ..jiraSite = c.jiraSite
-      ..jiraKey = c.jiraKey
-      ..github = c.hasGithub() ? c.github : null
-      ..pull = c.hasPull() ? c.pull : null
-      ..pulls = c.pulls
-      ..title = c.title
-      ..archived = c.archived
-      ..archivedAt = c.archivedUnixMs == 0
-          ? null
-          : DateTime.fromMillisecondsSinceEpoch(c.archivedUnixMs.toInt())
-      ..done = c.done
-      ..pin = c.pin
-      ..color = ChatColor.named(c.color)
-      ..pinnedMessages = c.pinnedMessages
-      ..pinTitles = {for (final p in c.messagePins) p.itemId: p.title}
-      ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
-      ..updated = DateTime.fromMillisecondsSinceEpoch(
-        (c.updatedUnixMs == 0 ? c.createdUnixMs : c.updatedUnixMs).toInt(),
-      )
-      // Only the list carries a status; a chat event would clear it.
-      ..listed(c.hasStatus() ? c.status : null);
+    chat.take(c);
     // The sidebar (not the phone's list) keeps its folder as a project,
     // with chats or none ([sidebarProjects]); archived, it brings none
     // back.
