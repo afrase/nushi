@@ -17,7 +17,6 @@ type Timing struct {
 	// session: one alive but silent would otherwise hold closeSides' loop
 	// for good (30 s).
 	ThrowAwayWait time.Duration
-	SleepCheck    time.Duration // how often idle chats are looked for (a minute)
 	LetGoCheck    time.Duration // how often the chats no client shows are looked at (a minute)
 	CopiesCheck   time.Duration // how often copies past their days are looked for (an hour)
 	// WorkflowPoll is how often a running workflow's files are read (a
@@ -54,7 +53,6 @@ func (t Timing) sidesAfter(f func()) *time.Timer {
 
 func (t Timing) stopGrace() time.Duration     { return cmp.Or(t.StopGrace, 5*time.Second) }
 func (t Timing) throwAwayWait() time.Duration { return cmp.Or(t.ThrowAwayWait, 30*time.Second) }
-func (t Timing) sleepCheck() time.Duration    { return cmp.Or(t.SleepCheck, time.Minute) }
 func (t Timing) letGoCheck() time.Duration    { return cmp.Or(t.LetGoCheck, time.Minute) }
 func (t Timing) copiesCheck() time.Duration   { return cmp.Or(t.CopiesCheck, time.Hour) }
 func (t Timing) workflowPoll() time.Duration  { return cmp.Or(t.WorkflowPoll, time.Second) }
