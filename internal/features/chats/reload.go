@@ -1,9 +1,6 @@
 package chats
 
-import (
-	"errors"
-	"time"
-)
+import "errors"
 
 // MCPChanged marks agent's running chats whose folder affected says yes
 // to: their agent keeps the MCP servers it started with until the chat is
@@ -38,17 +35,10 @@ func (s *Service) Reload(chatID string) error {
 	}
 	c.busy, c.mcpChanged, c.reopenFailed = true, false, false
 	_ = c.cancelLocked() // a prompt or question of the agent's own turn: it won't be answered
-	agent := c.agent
 	c.statusChangedLocked()
 	c.mu.Unlock()
 	sides := s.dropSides(c)
-	c.disconnect()
-	if agent != nil { // its last updates, still on their way, before the cut
-		select {
-		case <-agent.Done():
-		case <-time.After(s.timing.stopGrace()):
-		}
-	}
+	c.disconnect() // its last updates are in once it has ended, which load waits for (retire)
 	c.mu.Lock()
 	c.outlived = false // the replay is merged with the copy (restore.go)
 	c.mu.Unlock()

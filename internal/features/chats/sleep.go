@@ -24,7 +24,7 @@ func (s *Service) Sleep(chatID string) error {
 	c.mu.Lock()
 	err = c.canSleepLocked()
 	if err == nil {
-		c.asleep = true
+		c.asleep, c.stopping = true, true // a message refused from now, not started for end to stop
 	}
 	c.mu.Unlock()
 	if err != nil {
@@ -91,61 +91,40 @@ func (s *Service) SleepAfter() time.Duration {
 
 // doze puts a chat to sleep if nothing happened in it for after and
 // nothing would be lost (see idleLocked). Its agent is let go under the
-// lock, so a message that comes while it stops wakes the chat on a new one
-// (load waits for the old one to end first: retire).
+// lock (disconnectLocked), so a message that comes while it stops wakes
+// the chat on a new one (load waits for the old one to end first: retire).
 func (s *Service) doze(c *chat, after time.Duration) {
 	c.mu.Lock()
 	if !c.idleLocked(after) {
 		c.mu.Unlock()
 		return
 	}
-	agent := c.agent
-	c.asleep, c.retiring = true, agent
-	c.agent, c.outlived = nil, len(c.items) > 0
+	c.asleep = true
+	agent := c.disconnectLocked()
 	c.statusChangedLocked()
 	c.logLocked().Info("chat asleep", "why", "idle", "after", after)
 	c.mu.Unlock()
-	if err := agent.Stop(s.timing.stopGrace()); err != nil {
-		c.log().Warn("stopping the agent to sleep", "err", err)
-	}
+	c.stopAgent(agent)
 	c.mu.Lock()
 	c.letGoLocked() // once its agent's last updates are in
 	c.mu.Unlock()
 }
 
-// retire waits for old, the agent the chat fell asleep from (nil: none),
-// to have ended before another agent opens its session: two processes
-// writing one session corrupt the agent's own history, the source of truth
-// (ADR 0047). doze's Stop gives it StopGrace and then kills it; one still
-// running at twice that is killed again here (Close, its process group),
-// and one that outlives that too keeps the chat from reopening, saying so,
-// and is waited for again by the next reopen. A message sent meanwhile
-// waits in the queue.
+// retire waits for old, the agent that last left the chat (nil: none), to
+// have ended before another agent opens its session: two processes writing
+// one session corrupt the agent's own history, the source of truth (ADR
+// 0047). Its Stop gives it StopGrace and then kills it; one that outlives
+// the reopen (ctx) keeps the chat from reopening, saying so, and is waited
+// for again by the next reopen. A message sent meanwhile waits in the
+// queue.
 func (c *chat) retire(ctx context.Context, old Agent) error {
 	if old == nil {
 		return nil
 	}
-	ended := func(wait time.Duration) (bool, error) {
-		select {
-		case <-old.Done():
-			return true, nil
-		case <-ctx.Done():
-			return false, ctx.Err()
-		case <-time.After(wait):
-			return false, nil
-		}
-	}
-	done, err := ended(2 * c.svc.timing.stopGrace())
-	if !done && err == nil {
-		c.log().Warn("the agent the chat slept from outlived its stop: killing it", "pid", old.Pid())
-		_ = old.Close()
-		done, err = ended(c.svc.timing.stopGrace())
-	}
-	switch {
-	case err != nil:
-		return err
-	case !done:
-		return fmt.Errorf("the agent this chat slept from is still running (process %d), so its session can't reopen until it ends", old.Pid())
+	select {
+	case <-old.Done():
+	case <-ctx.Done():
+		return fmt.Errorf("the chat's last agent is still running (process %d), so its session can't reopen until it ends", old.Pid())
 	}
 	c.mu.Lock()
 	if c.retiring == old {

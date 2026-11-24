@@ -352,11 +352,29 @@ func (c *chat) orphanLocked(stopped bool) {
 // reopen doesn't replay into it (kept).
 func (c *chat) disconnect() {
 	c.mu.Lock()
+	agent := c.disconnectLocked()
+	c.mu.Unlock()
+	c.stopAgent(agent)
+}
+
+// disconnectLocked is the one way an agent leaves a chat: the chat lets go
+// of it, what the agent can't finish now fails (orphanLocked), and it is
+// the chat's retiring agent, which the next reopen waits to have ended
+// (retire). The caller stops it, outside the lock (stopAgent).
+func (c *chat) disconnectLocked() Agent {
 	agent := c.agent
 	c.agent, c.outlived = nil, len(c.items) > 0
+	if agent != nil {
+		c.retiring = agent
+	}
 	c.dropPromptsLocked() // the agent can't take an answer once stopped
 	c.orphanLocked(true)
-	c.mu.Unlock()
+	return agent
+}
+
+// stopAgent stops agent (nil: none), as disconnectLocked left it: it has
+// StopGrace to end, and is then killed.
+func (c *chat) stopAgent(agent Agent) {
 	if agent != nil {
 		_ = agent.Stop(c.svc.timing.stopGrace()) // its process is gone either way
 	}

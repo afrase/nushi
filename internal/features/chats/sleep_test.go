@@ -202,8 +202,8 @@ func TestSleepAgent(t *testing.T) {
 // A chat woken while the agent it fell asleep from is still stopping
 // waits for that process to end before another opens its session: two
 // processes writing one session corrupt the agent's own history (ADR
-// 0047). The message waits, queued. A process that outlives twice
-// StopGrace is killed; one that outlives the kill keeps the chat from
+// 0047). The message waits, queued. A process that outlives StopGrace is
+// killed (its Stop); one that outlives the kill keeps the chat from
 // reopening, saying so, until it has ended. Each case in a bubble: no time
 // passes but what it lets pass, so each wait is exact.
 func TestWakingWaitsForTheOldAgent(t *testing.T) {
@@ -225,7 +225,8 @@ func TestWakingWaitsForTheOldAgent(t *testing.T) {
 				close(gate)
 			}
 		})
-		svc.doze(c, 0)
+		go svc.doze(c, 0) // it returns once the old agent has ended
+		synctest.Wait()
 		if !svc.Status(c.record).Asleep {
 			t.Fatal("not asleep")
 		}
@@ -276,7 +277,7 @@ func TestWakingWaitsForTheOldAgent(t *testing.T) {
 	t.Run("killed", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			_, agent, c, _ := asleep(t, false)
-			pass(2*grace - time.Millisecond)
+			pass(grace - time.Millisecond)
 			check(t, agent, 1, 0) // not yet killed
 			pass(time.Millisecond)
 			woke(t, c)
@@ -290,9 +291,9 @@ func TestWakingWaitsForTheOldAgent(t *testing.T) {
 	t.Run("outlives the kill", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			svc, agent, c, gate := asleep(t, true)
-			pass(3*grace - time.Millisecond)
+			pass(reopenTimeout - time.Millisecond)
 			if !reopening(c) {
-				t.Fatal("gave up on the old agent before twice StopGrace and once after the kill")
+				t.Fatal("gave up on the old agent before the reopen's time ran out")
 			}
 			pass(time.Millisecond)
 			c.mu.Lock()
@@ -316,5 +317,43 @@ func TestWakingWaitsForTheOldAgent(t *testing.T) {
 			}
 			check(t, agent, 2, 1)
 		})
+	})
+}
+
+// A chat put to sleep from its menu and woken while its agent still stops
+// (a change of its options wakes it) waits for that agent to end before
+// another opens its session, as a dozed one does: two processes writing
+// one session corrupt the agent's own history (ADR 0047). In a bubble: the
+// old agent ends only when the test lets it.
+func TestSleepThenWakeWaitsForTheOldAgent(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		svc, agent, c := newChat(t, claudeSession, &memModes{})
+		turn(t, svc, c, "one")
+		gate := make(chan struct{})
+		agent.mu.Lock()
+		agent.stopGate = gate
+		agent.mu.Unlock()
+		slept := make(chan error, 1)
+		go func() { slept <- svc.Sleep(c.id) }()
+		synctest.Wait()
+		set := make(chan error, 1)
+		go func() { set <- svc.SetConfig(t.Context(), c.id, "model", "sonnet") }()
+		synctest.Wait()
+		launches, _, _ := agent.count()
+		agent.mu.Lock()
+		overlaps := agent.overlaps
+		agent.mu.Unlock()
+		if overlaps != 0 || launches != 1 {
+			t.Errorf("%d launches over a running agent; %d launches, want 1", overlaps, launches)
+		}
+		close(gate)
+		testcheck.NoErr(t, <-slept)
+		testcheck.NoErr(t, <-set)
+		agent.mu.Lock()
+		overlaps = agent.overlaps
+		agent.mu.Unlock()
+		if launches, _, _ := agent.count(); overlaps != 0 || launches != 2 {
+			t.Errorf("after the old agent ended: %d overlaps, %d launches, want 2", overlaps, launches)
+		}
 	})
 }

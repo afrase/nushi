@@ -245,28 +245,32 @@ func (f *fakeAgent) enter(gate string) {
 	}
 }
 
-// Stop ends the process; its last words, if any, still come after, as
-// from a pipe read to its end.
+// Stop ends the process, as agentproc's does: its last words, if any, come
+// first, as from a pipe read to its end; one held at stopGate is killed
+// (Close) after grace; and Stop returns once it has ended.
 func (p *proc) Stop(grace time.Duration) error {
 	_ = p.fakeAgent.Stop(grace) // the fake's Stop doesn't fail
 	p.mu.Lock()
 	last, h, gate := p.lastWords, p.h, p.stopGate
 	p.mu.Unlock()
-	go func() {
-		if last != nil {
-			time.Sleep(5 * time.Millisecond)
-			_ = h.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: *last})
-		}
-		if gate != nil {
+	if last != nil {
+		_ = h.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: *last})
+	}
+	if gate != nil {
+		select {
+		case <-gate:
+		case <-p.done: // killed meanwhile
+		case <-time.After(grace):
+			_ = p.Close() // an unkillable one ends only once let go
 			select {
 			case <-gate:
-			case <-p.done: // killed meanwhile
+			case <-p.done:
 			}
 		}
-		p.mu.Lock()
-		defer p.mu.Unlock()
-		p.end()
-	}()
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.end()
 	return nil
 }
 
