@@ -132,7 +132,6 @@ class PhoneIcon extends StatelessWidget {
     final t = NushiTheme.of(context).t;
     final round = BorderRadius.circular(NushiTheme.pill);
     return Semantics(
-      button: true,
       label: label,
       child: Pressable(
         onTap: onTap,

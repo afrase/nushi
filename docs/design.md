@@ -129,7 +129,7 @@ Input never waits: the state changes at once and motion is only drawn; a second 
 
 ## Components
 
-Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](adr/0049-controls-look-like-controls.md)); all show the pointing hand, take the keyboard's focus with a ring, press on Enter and Space, show a press at once (before what it does is done), and are disabled with no `onTap`/`onPressed`. **Plain text is never clickable.**
+Everything clickable is one of these (`controls.dart` and its parts, ADR [0049](adr/0049-controls-look-like-controls.md)); all show the pointing hand, take the keyboard's focus with a ring, press on Enter and Space, show a press at once (before what it does is done), are a button to a screen reader (`Pressable`'s `role`: a `LinkText` is a link, a `Toggle` a switch; no hand-made `Semantics(button:)`), and are disabled with no `onTap`/`onPressed`. **Plain text is never clickable.**
 
 | Piece | Use it for | Not for |
 |---|---|---|

@@ -161,7 +161,6 @@ class _Themes extends StatelessWidget {
     final t = NushiTheme.of(context).t;
     Widget card(ColorTheme c, {required bool picked}) => Semantics(
       selected: picked,
-      button: true,
       label: c.name,
       child: Pressable(
         onTap: () => unawaited(phone.pickTheme(c)),

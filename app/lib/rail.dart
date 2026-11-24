@@ -244,7 +244,6 @@ class _RailState extends State<Rail> {
               }
             },
             child: Semantics(
-              button: true,
               label: widget.label,
               child: CompositedTransformTarget(
                 link: _link,

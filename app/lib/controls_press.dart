@@ -88,10 +88,25 @@ class _PressWatchState extends State<PressWatch> {
 Color _over(Tokens t, ControlLook look, Color fill) =>
     look.hover ? Color.alphaBlend(_tint(t, look), fill) : fill;
 
+/// What a press control is to a screen reader (VoiceOver, Orca, the
+/// web's): a button unless it says otherwise.
+enum PressRole {
+  /// A button, dimmed when disabled: most controls.
+  button,
+
+  /// A link, which goes somewhere ([LinkText]).
+  link,
+
+  /// Nothing of its own: the caller's Semantics says what it is (a
+  /// [Toggle]'s switch), which a button's flag would override.
+  none,
+}
+
 /// Hover, keyboard focus and press for a control that [builder] draws:
-/// the pointing hand, a click or Enter or Space press it. Pressed from the
-/// pointer's going down, not the tap's win, which can wait on a drag
-/// beside it. Without [onTap] it's disabled: no hand, no focus.
+/// the pointing hand, a click or Enter or Space press it, and a button
+/// (or its [role]) to a screen reader. Pressed from the pointer's going
+/// down, not the tap's win, which can wait on a drag beside it. Without
+/// [onTap] it's disabled: no hand, no focus, a dimmed button.
 class Pressable extends StatefulWidget {
   const new({
     required this.onTap,
@@ -102,12 +117,21 @@ class Pressable extends StatefulWidget {
     this.slop,
     this.tooltipAt,
     this.focusNode,
+    this.role = PressRole.button,
+    this.selected,
   });
 
   final VoidCallback? onTap;
   final Widget Function(BuildContext context, ControlLook look) builder;
   final String tooltip;
   final bool autofocus;
+
+  /// What it is to a screen reader.
+  final PressRole role;
+
+  /// Whether it's the one picked, to a screen reader (a theme's card);
+  /// null when it's never picked.
+  final bool? selected;
 
   /// Its focus, for a view that moves the keyboard to it (a clash's
   /// Cancel in Settings › Keyboard shortcuts); its own without one.
@@ -178,14 +202,21 @@ class _PressableState extends State<Pressable> {
         ),
       ),
     );
-    return widget.tooltip.isEmpty
-        ? control
-        : tooltip(
-            context,
-            widget.tooltip,
-            control,
-            positionDelegate: widget.tooltipAt,
-          );
+    // Over the tooltip, so its words name the same node.
+    return Semantics(
+      button: widget.role == PressRole.button ? true : null,
+      link: widget.role == PressRole.link ? true : null,
+      enabled: widget.role == PressRole.none ? null : on,
+      selected: widget.selected,
+      child: widget.tooltip.isEmpty
+          ? control
+          : tooltip(
+              context,
+              widget.tooltip,
+              control,
+              positionDelegate: widget.tooltipAt,
+            ),
+    );
   }
 
   /// [child] clicked, within [Pressable.slop] when it has one.
@@ -217,7 +248,8 @@ class _PressableState extends State<Pressable> {
 /// grip instead) or when [selected], a deeper one from the pointer's going
 /// down (a click shows at once, before what it opens is built), no
 /// ripple. A button to the keyboard (Tab reaches it, Enter or Space
-/// press it) and to VoiceOver, as [Pressable] is; without [onTap], none.
+/// press it) and to a screen reader, as [Pressable] is; without [onTap],
+/// none.
 class Tap extends StatefulWidget {
   const new({
     required this.onTap,

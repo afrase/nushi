@@ -25,6 +25,7 @@ class LinkText extends StatelessWidget {
     return Pressable(
       onTap: onTap,
       tooltip: tooltip,
+      role: PressRole.link,
       builder: (context, look) {
         final color = look.enabled ? t.link : t.textMuted;
         final style = mono

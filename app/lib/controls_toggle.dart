@@ -34,6 +34,7 @@ class Toggle extends StatelessWidget {
       enabled: change != null,
       child: Pressable(
         onTap: change == null ? null : () => change(!value),
+        role: PressRole.none, // a switch, as the Semantics above says
         builder: (context, look) {
           final fill = value ? t.accent : offTrack(t);
           final knob = size.height - 2 * _inset;
