@@ -16,14 +16,18 @@ import (
 
 // A chat that last ran on claude-agent-acp, the Node adapter Claude ran
 // through until 2026-11-04, reopens and resumes on the Go agent (ADR
-// 0066). The load scenario's session, as the adapter left it: its id and
+// 0066). testdata/claude-adapter-load is the load scenario as recorded
+// through that adapter, frozen there so a chat last run on it still
+// reopens cleanly while testdata/claude-parity is recorded again through
+// the Go agent; it goes when the owner ends that support (not decided
+// yet). Its session, as the adapter left it: its id and
 // claude's transcript as claude wrote it under the adapter, untouched
 // (history/1). A new Go agent loads it as Nushi reopens a chat: claude
 // resumed under that id, the replay the adapter gave, merged with Nushi's
 // copy of the chat with no divider; then the next prompt runs on it as it
 // ran on the adapter (the recording's resumed claude, cli-2.jsonl).
 func TestAnAdapterChatResumesOnTheGoAgent(t *testing.T) {
-	scenario := filepath.Join("testdata", "claude-parity", "load")
+	scenario := adapterLoad
 	skipUnrecorded(t, scenario)
 	adapter, all := readACP(t, filepath.Join(scenario, "acp.jsonl"))
 	// The recording from the load on, after the client's initialize: what

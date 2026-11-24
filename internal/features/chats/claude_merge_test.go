@@ -18,8 +18,16 @@ import (
 // A chat put to sleep and woken shows Nushi's copy of its transcript
 // merged with the agent's replay (session/load, ADR 0047). The Go
 // agent's replay must merge with no divider, the copy having been made
-// live with the adapter (a chat that changed agent between sleeps) or
-// with the Go agent: its ids and texts are the ones Nushi saw live.
+// live with the recording's agent or with the Go agent: its ids and
+// texts are the ones Nushi saw live.
+//
+// The adapter's arm, a copy made live with claude-agent-acp, the Node
+// adapter Claude ran through until 2026-11-04 (a chat that changed agent
+// between sleeps), is testdata/claude-adapter-load: the load scenario as
+// recorded through that adapter, frozen so a chat last run on it still
+// reopens cleanly while the parity scenarios are recorded again through
+// the Go agent. It goes when the owner ends that support (not decided
+// yet).
 //
 // A scenario that loads a session is merged at its load: the copy is the
 // chat until then, the replay what the load sent. Any other recorded
@@ -27,10 +35,14 @@ import (
 // first session after the recording, from that history, and is merged
 // with the whole run's chat.
 func TestClaudeMerge(t *testing.T) {
-	for _, dir := range scenarios(t) {
+	for _, dir := range append(scenarios(t), adapterLoad) {
 		t.Run(filepath.Base(dir), func(t *testing.T) {
 			skipUnrecorded(t, dir)
 			node, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
+			recorded := "the recording's"
+			if dir == adapterLoad {
+				recorded = "the adapter's"
+			}
 			var loads []string
 			for _, e := range node {
 				if e.method == "session/load" && !e.done && !slices.Contains(loads, e.session) {
@@ -43,10 +55,10 @@ func TestClaudeMerge(t *testing.T) {
 				loads, more = []string{sid}, load
 			}
 			goRun := runGoAgent(t, dir, sent, more)
-			copies := map[string][]event{"the adapter's": node, "the Go agent's": goRun}
+			copies := map[string][]event{recorded: node, "the Go agent's": goRun}
 			replays := map[string][]event{"the Go agent's": goRun}
 			if more == nil {
-				replays["the adapter's"] = node
+				replays[recorded] = node
 			}
 			for _, sid := range loads {
 				for cname, copied := range copies {
@@ -73,6 +85,10 @@ func TestClaudeMerge(t *testing.T) {
 		})
 	}
 }
+
+// adapterLoad is the load scenario as recorded through claude-agent-acp,
+// frozen (TestClaudeMerge, TestAnAdapterChatResumesOnTheGoAgent).
+var adapterLoad = filepath.Join("testdata", "claude-adapter-load")
 
 // loadAfter is the session a scenario without a load of its own has
 // loaded after its recording, the first it opened, and the lines that

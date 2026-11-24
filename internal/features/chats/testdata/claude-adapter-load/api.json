@@ -1,0 +1,11 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "make a note"}, "content": [
+       {"type": "thinking", "thinking": "A note, then."},
+       {"type": "text", "text": "Making it."},
+       {"type": "tool_use", "name": "Bash", "input": {"command": "touch note.txt", "description": "Make a note"}}
+     ]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "deltas": ["Made ", "note.txt."]}]},
+    {"match": {"lastUserText": "is it there"}, "content": [{"type": "text", "text": "Yes, note.txt is there."}]}
+  ]
+}
