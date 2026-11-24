@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 	"testing/synctest"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -57,6 +58,50 @@ func TestAReopenRacingCloseSaysNothing(t *testing.T) {
 		}()
 		synctest.Wait()
 		close(agent.loadGate)
+		<-closed
+		synctest.Wait()
+		c, err := svc.find("c0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.Notice }); i >= 0 {
+			t.Errorf("notice %q", c.items[i].Text)
+		}
+	})
+}
+
+// An agent a reopen adopts after Close has ended the chats', and that
+// Close then kills with the agents still being opened, didn't quit: the
+// chat says nothing (watch). In a bubble: the reopen's load is held past
+// its session's opening (reading the messages' times) until Close has
+// killed its agent, and adopts it after.
+func TestAnAgentAdoptedAsCloseKillsItSaysNothing(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		agent := &fakeAgent{stopGate: make(chan struct{})} // its kill (Close) ends it
+		dating, dated := make(chan struct{}), make(chan struct{})
+		h := struct {
+			model.HarnessInfo
+			messageTimes
+		}{model.HarnessInfo{Name: "a"}, func(string, string) map[string]time.Time {
+			close(dating)
+			<-dated
+			return nil
+		}}
+		sessions := &memSessions{stored: []model.ChatRecord{{ID: "c0", SessionID: "s0", Agent: "a", Folder: t.TempDir(), HasMessages: true}}}
+		svc := newService(t, []Kind{{Harness: h, Launch: agent.launch}}, Options{Sessions: sessions})
+		if _, err := svc.Get("c0"); err != nil { // reopens the chat
+			t.Fatal(err)
+		}
+		<-dating // its session is open, its agent not yet the chat's
+		closed := make(chan struct{})
+		go func() {
+			svc.Close()
+			close(closed)
+		}()
+		synctest.Wait() // Close has killed the agent, and waits for the reopen
+		close(dated)
 		<-closed
 		synctest.Wait()
 		c, err := svc.find("c0")
