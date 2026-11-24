@@ -9,7 +9,7 @@ import 'package:webview_flutter_platform_interface/webview_flutter_platform_inte
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 // A file's preview on the Mac (ADR 0068): a WKWebView, and the Swift
-// side's `nushi/browser` channel (`macos/Runner/MainFlutterWindow.swift`).
+// side's `nushi/browser` channel (`macos/Runner/Browser.swift`).
 
 /// Has a web view (by the plugin's `webViewIdentifier`) send and keep no
 /// cookies: the Swift side adds a content rule list to it. WebKit takes a

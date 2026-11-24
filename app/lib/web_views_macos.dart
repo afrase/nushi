@@ -13,7 +13,7 @@ const _browser = MethodChannel('nushi/browser');
 
 /// The Mac's web views, WKWebViews, and its default browser, through the
 /// Swift side's `nushi/browser` channel
-/// (`macos/Runner/MainFlutterWindow.swift`).
+/// (`macos/Runner/Browser.swift`).
 class MacWebViews implements WebViews {
   const new();
 

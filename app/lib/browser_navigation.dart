@@ -75,7 +75,7 @@ Future<PageNavigation> browserPageNavigation(
 }
 
 /// What WebKit says of a main frame's navigation as it's decided on
-/// (`CommitWatch` in `MainFlutterWindow.swift`): its `WKNavigationType`'s
+/// (`CommitWatch` in `Browser.swift`): its `WKNavigationType`'s
 /// raw value ([NavigationSource]'s `typed`, `step`, `reload`) and whether
 /// it's a server's redirect of the navigation before it (null when WebKit
 /// doesn't say: it says so only privately).

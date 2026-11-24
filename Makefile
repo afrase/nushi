@@ -336,9 +336,11 @@ test-timings:
 # 0093), what ⌘V attaches (Clipboard.swift, on a pasteboard of its own)
 # and what AppKit takes for its title bar and where the window's buttons
 # sit (TitleBar.swift, a window never shown), and what Flutter's engine was
-# told of the mouse (EngineMouse.swift), with their tests, built by swiftc
-# and run with no window on screen: an XCTest target is hosted by the app,
-# so xcodebuild test would launch Nushi (macOS only).
+# told of the mouse (EngineMouse.swift), and a page's find (PageFind.swift
+# and its PageFind.js, in a WKWebView never shown, ADR 0143), with their
+# tests, built by swiftc and run with no window on screen: an XCTest
+# target is hosted by the app, so xcodebuild test would launch Nushi
+# (macOS only).
 test-window:
 	@mkdir -p bin
 	xcrun swiftc -o bin/placement-test app/macos/Runner/Placement.swift app/macos/PlacementTests/main.swift
@@ -349,6 +351,8 @@ test-window:
 	bin/titlebar-test
 	xcrun swiftc -o bin/enginemouse-test app/macos/Runner/EngineMouse.swift app/macos/EngineMouseTests/main.swift
 	bin/enginemouse-test
+	xcrun swiftc -o bin/pagefind-test app/macos/Runner/PageFind.swift app/macos/PageFindTests/main.swift
+	bin/pagefind-test app/macos/Runner/PageFind.js
 
 # The web app in Chrome with the real nushid and nushi-relay (macOS, or
 # Linux with a Chrome, as CI runs it). Without a Chrome it says so and

@@ -7,7 +7,7 @@ import 'package:nushi/browser_address.dart';
 // there, so a site can't reach a dev server, a router or a printer
 // through the tab. WebKit has no private-network check of its own; a
 // content rule list on the tab's web view stands in for one
-// (`LocalNetwork` in MainFlutterWindow.swift), and the tab's navigation
+// (`LocalNetwork` in Browser.swift), and the tab's navigation
 // rule keeps the page itself from going there (`browserNavigation`).
 
 /// Whether [host] (a URL's, IPv6 without its brackets) is this Mac or the

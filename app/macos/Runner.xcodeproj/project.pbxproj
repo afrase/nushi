@@ -36,6 +36,9 @@
 		33CC11302044BFA00003C045 /* TitleBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11312044BFA00003C045 /* TitleBar.swift */; };
 		33CC11322044BFA00003C045 /* EngineMouse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11332044BFA00003C045 /* EngineMouse.swift */; };
 		33CC11342044BFA00003C045 /* NushiViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11352044BFA00003C045 /* NushiViewController.swift */; };
+		33CC11362044BFA00003C045 /* Browser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11372044BFA00003C045 /* Browser.swift */; };
+		33CC11382044BFA00003C045 /* PageFind.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11392044BFA00003C045 /* PageFind.swift */; };
+		33CC113A2044BFA00003C045 /* PageFind.js in Resources */ = {isa = PBXBuildFile; fileRef = 33CC113B2044BFA00003C045 /* PageFind.js */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 /* End PBXBuildFile section */
 
@@ -81,6 +84,9 @@
 		33CC11312044BFA00003C045 /* TitleBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleBar.swift; sourceTree = "<group>"; };
 		33CC11332044BFA00003C045 /* EngineMouse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineMouse.swift; sourceTree = "<group>"; };
 		33CC11352044BFA00003C045 /* NushiViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NushiViewController.swift; sourceTree = "<group>"; };
+		33CC11372044BFA00003C045 /* Browser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Browser.swift; sourceTree = "<group>"; };
+		33CC11392044BFA00003C045 /* PageFind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageFind.swift; sourceTree = "<group>"; };
+		33CC113B2044BFA00003C045 /* PageFind.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = PageFind.js; sourceTree = "<group>"; };
 		33CEB47222A05771004F2AC0 /* Flutter-Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Debug.xcconfig"; sourceTree = "<group>"; };
 		33CEB47422A05771004F2AC0 /* Flutter-Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Release.xcconfig"; sourceTree = "<group>"; };
 		33CEB47722A0578A004F2AC0 /* Flutter-Generated.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = "Flutter-Generated.xcconfig"; path = "ephemeral/Flutter-Generated.xcconfig"; sourceTree = "<group>"; };
@@ -171,6 +177,9 @@
 				33CC11312044BFA00003C045 /* TitleBar.swift */,
 				33CC11332044BFA00003C045 /* EngineMouse.swift */,
 				33CC11352044BFA00003C045 /* NushiViewController.swift */,
+				33CC11372044BFA00003C045 /* Browser.swift */,
+				33CC11392044BFA00003C045 /* PageFind.swift */,
+				33CC113B2044BFA00003C045 /* PageFind.js */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -269,6 +278,7 @@
 				33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */,
 				9A1C0DE0A1C0DE0000000001 /* AppIcon.icon in Resources */,
 				33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */,
+				33CC113A2044BFA00003C045 /* PageFind.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -330,6 +340,8 @@
 				33CC11302044BFA00003C045 /* TitleBar.swift in Sources */,
 				33CC11322044BFA00003C045 /* EngineMouse.swift in Sources */,
 				33CC11342044BFA00003C045 /* NushiViewController.swift in Sources */,
+				33CC11362044BFA00003C045 /* Browser.swift in Sources */,
+				33CC11382044BFA00003C045 /* PageFind.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 			);

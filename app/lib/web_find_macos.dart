@@ -4,10 +4,10 @@ import 'package:nushi/transcript_find.dart';
 import 'package:nushi/web_find.dart';
 
 // A WKWebView's find (issue 63, ADR 0143): the Swift side's `PageFind`
-// (`macos/Runner/MainFlutterWindow.swift`) runs its script in a content
-// world of its own, so the page's scripts neither see its variables nor
-// change what it calls; it marks the matches with the CSS Custom Highlight
-// API, which changes nothing in the page's text.
+// (`macos/Runner/PageFind.swift`) runs its script (`PageFind.js`) in a
+// content world of its own, so the page's scripts neither see its
+// variables nor change what it calls; it marks the matches with the CSS
+// Custom Highlight API, which changes nothing in the page's text.
 
 const _browser = MethodChannel('nushi/browser');
 

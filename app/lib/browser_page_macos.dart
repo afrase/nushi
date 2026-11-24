@@ -15,7 +15,7 @@ import 'package:webview_flutter_platform_interface/webview_flutter_platform_inte
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 // A browser tab's page on the Mac (ADR 0094): a WKWebView, and the Swift
-// side's `nushi/browser` channel (`macos/Runner/MainFlutterWindow.swift`).
+// side's `nushi/browser` channel (`macos/Runner/Browser.swift`).
 
 /// Has the Swift side tell `onCommit` the address of each load that
 /// commits in the plugin's web view `id` (`webViewIdentifier`), until
