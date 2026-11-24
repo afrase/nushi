@@ -1,0 +1,75 @@
+{
+ "steps": [
+  {
+   "initialize": {}
+  },
+  {
+   "new": "s1",
+   "meta": {
+    "claudeCode": {
+     "options": {
+      "settings": {
+       "permissions": {
+        "allow": [
+         "Bash"
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "prompt": "run it in the background",
+   "session": "s1"
+  },
+  {
+   "waitFor": {
+    "method": "session/update",
+    "params": {
+     "update": {
+      "sessionUpdate": "tool_call_update",
+      "_meta": {
+       "claudeCode": {
+        "task": {
+         "status": "running"
+        }
+       }
+      }
+     }
+    }
+   },
+   "capture": {
+    "task": "params.update._meta.claudeCode.task.id"
+   }
+  },
+  {
+   "request": "_session/stopTask",
+   "params": {
+    "sessionId": "$s1",
+    "taskId": "$task"
+   }
+  },
+  {
+   "pause": "5s"
+  },
+  {
+   "prompt": "is it still running",
+   "session": "s1"
+  },
+  {
+   "request": "_session/stopTask",
+   "params": {
+    "sessionId": "$s1",
+    "taskId": "$task"
+   }
+  },
+  {
+   "request": "_session/stopTask",
+   "params": {
+    "sessionId": "$s1",
+    "taskId": "bnotatask1"
+   }
+  }
+ ]
+}

@@ -1,0 +1,61 @@
+{
+ "turns": [
+  {
+   "match": {
+    "lastUserText": "write the notes"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "I'll write them."
+    },
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "command": "printf '# Notes\\n\\nAnswer in one word.\\n' > CLAUDE.md && mkdir -p .claude/agents && printf -- '---\\nname: helper\\ndescription: Helps with small things.\\n---\\nHelp briefly.\\n' > .claude/agents/helper.md",
+      "description": "Write notes"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Written."
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "wait a little"
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "command": "sleep 4; echo done",
+      "description": "Wait"
+     },
+     "id": "toolu_wait"
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Done."
+    }
+   ]
+  }
+ ]
+}

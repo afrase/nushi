@@ -1,0 +1,137 @@
+{
+ "steps": [
+  {
+   "initialize": {}
+  },
+  {
+   "new": "s1",
+   "meta": {
+    "claudeCode": {
+     "options": {
+      "settings": {
+       "permissions": {
+        "allow": [
+         "Bash"
+        ]
+       }
+      }
+     }
+    }
+   },
+   "mcpServers": [
+    {
+     "name": "echo",
+     "command": "$mcp-echo",
+     "args": [],
+     "env": []
+    }
+   ]
+  },
+  {
+   "request": "_session/contextUsage",
+   "params": {
+    "sessionId": "$s1",
+    "detail": "full"
+   }
+  },
+  {
+   "request": "_session/contextUsage",
+   "params": {
+    "sessionId": "$s1"
+   }
+  },
+  {
+   "prompt": "write the notes",
+   "session": "s1",
+   "async": "p1"
+  },
+  {
+   "answer": "session/request_permission",
+   "option": "allow_once"
+  },
+  {
+   "await": "p1"
+  },
+  {
+   "request": "_session/contextUsage",
+   "params": {
+    "sessionId": "$s1",
+    "detail": "full"
+   }
+  },
+  {
+   "request": "_session/contextUsage",
+   "params": {
+    "sessionId": "$s1",
+    "detail": "summary"
+   }
+  },
+  {
+   "prompt": "wait a little",
+   "session": "s1",
+   "async": "p2"
+  },
+  {
+   "waitFor": {
+    "method": "session/update",
+    "params": {
+     "update": {
+      "sessionUpdate": "tool_call_update",
+      "toolCallId": "toolu_wait",
+      "rawInput": {
+       "command": "sleep 4; echo done"
+      }
+     }
+    }
+   }
+  },
+  {
+   "request": "_session/contextUsage",
+   "params": {
+    "sessionId": "$s1",
+    "detail": "full"
+   }
+  },
+  {
+   "await": "p2"
+  },
+  {
+   "new": "s2",
+   "meta": {
+    "claudeCode": {
+     "options": {
+      "settings": {
+       "permissions": {
+        "allow": [
+         "Bash"
+        ]
+       }
+      }
+     }
+    }
+   },
+   "mcpServers": [
+    {
+     "name": "echo",
+     "command": "$mcp-echo",
+     "args": [],
+     "env": []
+    }
+   ]
+  },
+  {
+   "request": "_session/contextUsage",
+   "params": {
+    "sessionId": "$s2",
+    "detail": "full"
+   }
+  },
+  {
+   "request": "_session/contextUsage",
+   "params": {
+    "sessionId": "$s2",
+    "detail": "summary"
+   }
+  }
+ ]
+}

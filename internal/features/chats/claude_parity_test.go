@@ -65,9 +65,11 @@ func TestClaudeParity(t *testing.T) {
 // commandEnds are how claude's recorded background commands ended (each
 // cli.jsonl's task_notification), by scenario and task id.
 var commandEnds = map[string]map[string]model.BackgroundCommand{
-	"bash-background":          {"bqphuo3vw": {State: "done", End: "exited with code 0"}},
-	"bash-background-killed":   {"b709r21cm": {State: "failed", End: "exited with code 144"}},
-	"bash-background-taskstop": {"bw5r8w073": {State: "stopped", End: "killed"}},
+	"bash-background":               {"bqphuo3vw": {State: "done", End: "exited with code 0"}},
+	"bash-background-killed":        {"b709r21cm": {State: "failed", End: "exited with code 144"}},
+	"bash-background-taskstop":      {"bw5r8w073": {State: "stopped", End: "killed"}},
+	"bash-background-stoptask":      {"bi8c2i7yx": {State: "stopped", End: "killed"}},
+	"bash-background-stoptask-turn": {"beit1md11": {State: "stopped", End: "killed"}},
 }
 
 // commandsEnded checks the Go agent's background commands (got) ended as

@@ -1,0 +1,10 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "run it in the background"}, "content": [{"type": "tool_use", "id": "toolu_bg", "name": "Bash", "input": {"command": "sleep 302; echo never", "description": "Wait long", "run_in_background": true}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "It runs in the background."}]},
+    {"match": {"lastUserText": "wait a little"}, "content": [{"type": "tool_use", "id": "toolu_wait", "name": "Bash", "input": {"command": "sleep 8; echo waited", "description": "Wait"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Waited."}]},
+    {"match": {"lastUserText": "is it still running"}, "content": [{"type": "tool_use", "id": "toolu_look", "name": "Bash", "input": {"command": "ps -axo command | grep '[s]leep 302' || echo gone", "description": "Look for it"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "No."}]}
+  ]
+}

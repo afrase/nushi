@@ -1,0 +1,65 @@
+{
+ "turns": [
+  {
+   "match": {
+    "lastUserText": "run the workflow"
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Workflow",
+     "input": {
+      "script": "export const meta = {\n  name: 'one-waits',\n  description: 'Ask one helper that takes its time',\n  phases: [{ title: 'Wait' }],\n}\nphase('Wait')\nreturn await agent('Reply with one word: wait.', { label: 'wait', phase: 'Wait' })\n"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Workflow"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "The workflow runs in the background."
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "is it done"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Stopped."
+    }
+   ]
+  }
+ ],
+ "side": [
+  {
+   "match": {
+    "lastUserText": "Reply with one word: wait."
+   },
+   "hang": true,
+   "content": [
+    {
+     "type": "text",
+     "text": "wait"
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "task-notification"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Noted."
+    }
+   ]
+  }
+ ]
+}
