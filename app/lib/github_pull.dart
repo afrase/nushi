@@ -59,10 +59,20 @@ void openPullAt(GitHubRef ref, PullSection section) =>
 /// with no Start work or chats' links (the chat is the one); its comments
 /// are seen while it shows.
 class GitHubPullPane extends StatefulWidget {
-  const new({required this.daemon, required this.ref, super.key, this.source});
+  const new({
+    required this.daemon,
+    required this.ref,
+    super.key,
+    this.source,
+    this.refreshes,
+  });
 
   final Daemon daemon;
   final GitHubRef ref;
+
+  /// Asks the page again each time it tells: the GitHub view's bar's
+  /// Refresh and ⌘R.
+  final Listenable? refreshes;
 
   /// The chat's pull request, in its Pull request tab.
   final ChatPull? source;
@@ -136,7 +146,10 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     );
     _redraw.addListener(_changed);
     minuteClock.addListener(_changed); // "Updated 2m ago" moves on
+    widget.refreshes?.addListener(_refreshed);
   }
+
+  void _refreshed() => unawaited(_load());
 
   void _changed() => setState(() {});
 
@@ -154,6 +167,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       ..hideTab();
     _redraw.removeListener(_changed);
     minuteClock.removeListener(_changed);
+    widget.refreshes?.removeListener(_refreshed);
     _poll?.cancel();
     _scroll.dispose();
     _commits.dispose();

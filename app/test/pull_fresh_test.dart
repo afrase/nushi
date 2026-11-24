@@ -6,10 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_bar.dart';
+import 'package:nushi/github_view.dart' show githubPoll;
 import 'package:nushi/pull_polls.dart';
 
 import 'browser_fixture.dart';
 import 'fake_daemon.dart';
+import 'github_fixture.dart' as gh;
 import 'harness.dart';
 import 'pull_fixture.dart';
 
@@ -188,5 +191,56 @@ void main() {
     expect(fakes.hosts.single.reloads, 1);
     expect(asked, isEmpty);
     await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets("the GitHub view with a pull request's page open: one "
+      "freshness line, the page's, and the bar's Refresh and ⌘R refresh "
+      'the page', (tester) async {
+    var failing = false;
+    Never fail() => throw Exception('no network');
+    final (fake, g) = await gh.openView(
+      tester,
+      more: (input) =>
+          failing &&
+              (input is ListGitHubInboxRequest && !input.cached ||
+                  input is GetGitHubPullRequest && input.quiet)
+          ? fail()
+          : null,
+    );
+    failing = true;
+    await tester.pump(githubPoll);
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Couldn't refresh"), findsOneWidget); // bar
+    await tester.tap(find.text('Add Sub and Neg'));
+    await tester.pumpAndSettle();
+    await tester.pump(pullWidgetPoll);
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Couldn't refresh"), findsOneWidget);
+    expect(_says("Couldn't refresh · as of just now"), findsOneWidget);
+    expect(find.byKey(const ValueKey('pull-refresh')), findsNothing);
+
+    failing = false;
+    clock = () => fixtureNow.add(const Duration(minutes: 3));
+    for (final how in ['button', 'key']) {
+      fake.calls.clear();
+      if (how == 'button') {
+        await tester.tap(
+          find.descendant(
+            of: find.byType(GitHubBar),
+            matching: find.byIcon(Icons.refresh),
+          ),
+        );
+        await tester.pumpAndSettle();
+      } else {
+        await press(tester, LogicalKeyboardKey.keyR, cmd: true);
+      }
+      final pulls = fake.calls.whereType<GetGitHubPullRequest>().toList();
+      expect(pulls, hasLength(1), reason: how);
+      expect(pulls.single.quiet, isFalse, reason: how);
+      expect(fake.calls.whereType<ListGitHubInboxRequest>(), isEmpty);
+      expect(_says('Updated just now'), findsOneWidget, reason: how);
+      expect(find.textContaining('Updated'), findsOneWidget, reason: how);
+    }
+    await closeView(tester, g);
   }, variant: onMac);
 }

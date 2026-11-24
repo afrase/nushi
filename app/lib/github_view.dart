@@ -163,6 +163,7 @@ class _GitHubViewState extends State<GitHubView> {
     _slowTimer?.cancel();
     _listFocus.dispose();
     _viewFocus.dispose();
+    _pageRefresh.dispose();
     super.dispose();
   }
 
@@ -416,6 +417,22 @@ class _GitHubViewState extends State<GitHubView> {
     }),
   );
 
+  /// Whether a pull request's page covers the list.
+  bool get _pageOpen => _details?.pull ?? false;
+
+  /// Tells the open pull request's page to ask again (its pane reads it).
+  final ValueNotifier<int> _pageRefresh = ValueNotifier(0);
+
+  /// Refresh and ⌘R: the pull request's page when one is open, else the
+  /// inbox.
+  void _refresh() {
+    if (_pageOpen) {
+      _pageRefresh.value++;
+    } else {
+      unawaited(_load());
+    }
+  }
+
   // Its hosts are read again when Settings shuts ([_settingsShut]).
   void _settings() =>
       widget.daemon.openSettings(section: SettingsSection.github);
@@ -427,7 +444,7 @@ class _GitHubViewState extends State<GitHubView> {
     final details = _details;
     return CallbackShortcuts(
       bindings: {
-        const Cmd(LogicalKeyboardKey.keyR): _load,
+        const Cmd(LogicalKeyboardKey.keyR): _refresh,
         const SingleActivator(LogicalKeyboardKey.escape): () =>
             details != null ? _back() : widget.daemon.back(),
       },
@@ -447,9 +464,11 @@ class _GitHubViewState extends State<GitHubView> {
               onOwners: _setOwners,
               onHidden: _setHidden,
               onDays: _setDays,
-              loading: _loading,
-              updated: _cachedAt,
-              failed: _failed,
+              // A pull request's page says its own (one line a screen);
+              // this one is the list's behind it.
+              loading: !_pageOpen && _loading,
+              updated: _pageOpen ? null : _cachedAt,
+              failed: !_pageOpen && _failed,
               onHost: (h) {
                 setState(() {
                   _host = h;
@@ -464,7 +483,7 @@ class _GitHubViewState extends State<GitHubView> {
                 setState(() => githubKnownRepos.value = known);
                 unawaited(_load());
               },
-              onRefresh: _load,
+              onRefresh: _refresh,
               onClose: widget.daemon.back,
             ),
             const BarsRow(),
@@ -506,6 +525,7 @@ class _GitHubViewState extends State<GitHubView> {
                   key: ValueKey('${ref.host} ${ref.repo} ${ref.number}'),
                   daemon: widget.daemon,
                   ref: ref,
+                  refreshes: _pageRefresh,
                 )
               : GitHubIssuePane(
                   key: ValueKey('${ref.host} ${ref.repo} ${ref.number}'),
