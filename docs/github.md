@@ -100,7 +100,7 @@ The header's chip is the chat's pull requests: the primary's icon, number and ba
 
 **Pull request**, beside Chat and Changes, is the GitHub view's pull request in the chat's place.
 
-It has no bar of its own, so its **Refresh** (↻) sits at its top right, beside the line that says how fresh it is ("Updated 2m ago"): it asks GitHub at once for the pull request and its rows, as the minute's poll does, the line saying "· refreshing" meanwhile and "Couldn't refresh" in red if it fails.
+It has no bar of its own, so its **Refresh** (↻, ⌘R) sits at its top right, beside the line that says how fresh it is ("Updated 2m ago"): it asks GitHub at once for the pull request and its rows, as the minute's poll does, the line saying "· refreshing" meanwhile and "Couldn't refresh" in red if it fails.
 
 It follows GitHub's own pull request page ([ADR 0137](adr/0137-the-pull-request-tab-follows-githubs-page.md)). **The head** is the title, Open on GitHub, the state, who opened it and when, base ← head and the diff's size, with **Merge status** (back to the merge status card, its first unmet segment open) and **Submit review** at the title's right. Once the title has scrolled away, **a slim bar** takes its place at the top: the state, `#n`, the title on one line and the same two buttons, in the page's column; it fades in and out whole, nothing in it moves. **Tabs**: Overview, Commits, Checks, Files changed, each with its count.
 

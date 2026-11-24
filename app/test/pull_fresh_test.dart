@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_polls.dart';
 
+import 'browser_fixture.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 import 'pull_fixture.dart';
@@ -21,6 +24,23 @@ Finder get _refresh => find.byKey(const ValueKey('pull-refresh'));
 /// The line's words.
 Finder _says(String text) =>
     find.descendant(of: _line, matching: find.text(text), matchRoot: true);
+
+/// The tab's answers with each read of the pull request whole counted in
+/// [asked] as it's asked (the fake records a call once it's answered) and
+/// answered by [whole] (the fixture's when it says null). The rows are
+/// answered on their own: the fake would read them from the whole one, an
+/// ask more, and wait on it.
+Object? Function(Object) _counted(
+  List<GetGitHubPullRequest> asked, [
+  Object? Function()? whole,
+]) => (input) {
+  if (input is GetGitHubItemsRequest) {
+    return GetGitHubItemsResponse(items: [rowItem(fixturePull())]);
+  }
+  if (input is! GetGitHubPullRequest) return null;
+  asked.add(input);
+  return whole?.call();
+};
 
 void main() {
   setUpAll(loadFonts);
@@ -83,16 +103,7 @@ void main() {
     final (d, fake) = await openPullTab(
       tester,
       fixturePull(),
-      more: (input) => switch (input) {
-        // The rows its own, so they don't wait on the whole one's.
-        GetGitHubItemsRequest() => GetGitHubItemsResponse(
-          items: [rowItem(fixturePull())],
-        ),
-        // Counted as asked: the fake records a call once it's answered.
-        GetGitHubPullRequest() =>
-          (asked..add(input)).isEmpty ? null : hang?.future,
-        _ => null,
-      },
+      more: _counted(asked, () => hang?.future),
     );
     clock = () => fixtureNow.add(const Duration(minutes: 3));
     await tester.pump(const Duration(seconds: 20)); // past the 10 s guard
@@ -101,19 +112,18 @@ void main() {
     hang = Completer();
     await tester.tap(_refresh);
     await tester.pumpAndSettle(); // the ask under way: the read hangs
-    List<GetGitHubPullRequest> pulls() => asked;
-    expect(pulls(), hasLength(1));
-    expect(pulls().single.quiet, isFalse); // asked for, not a poll
+    expect(asked, hasLength(1));
+    expect(asked.single.quiet, isFalse); // asked for, not a poll
     expect(fake.calls.whereType<FindChatPullRequest>(), hasLength(1));
     expect(_says('Updated 3m ago · refreshing'), findsOneWidget);
     await tester.tap(_refresh);
     await tester.pumpAndSettle();
-    expect(pulls(), hasLength(1));
+    expect(asked, hasLength(1));
     hang.complete(GetGitHubPullResponse(pull: fixturePull()));
     hang = null;
     await tester.pumpAndSettle();
     expect(_says('Updated just now'), findsOneWidget);
-    expect(pulls(), hasLength(1));
+    expect(asked, hasLength(1));
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -135,6 +145,48 @@ void main() {
     expect(_says("Couldn't refresh · as of 3m ago"), findsOneWidget);
     expect(find.text(_title), findsOneWidget);
     expect(_refresh, findsOneWidget); // to try again
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('⌘R on the tab refreshes as its button does; over a dialog '
+      'it does nothing; on the chat with a page in the browser it still '
+      'reloads the page', (tester) async {
+    final fakes = browserFakes();
+    final asked = <GetGitHubPullRequest>[];
+    final (d, _) = await openPullTab(
+      tester,
+      fixturePull(),
+      size: const Size(1700, 900),
+      more: _counted(asked),
+    );
+    clock = () => fixtureNow.add(const Duration(minutes: 3));
+    await tester.pump(const Duration(seconds: 20));
+    asked.clear();
+    await press(tester, LogicalKeyboardKey.keyR, cmd: true);
+    expect(asked, hasLength(1));
+    expect(asked.single.quiet, isFalse);
+    expect(_says('Updated just now'), findsOneWidget);
+
+    // A dialog over it: the key is the dialog's, never the tab's.
+    await tester.tap(find.text('Submit review').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsOneWidget);
+    await tester.pump(const Duration(seconds: 20));
+    asked.clear();
+    await press(tester, LogicalKeyboardKey.keyR, cmd: true);
+    expect(asked, isEmpty);
+    await press(tester, LogicalKeyboardKey.escape);
+    expect(find.byType(Dialog), findsNothing);
+
+    // The chat, a page in its browser: ⌘R is Reload page's.
+    final c = d.chats['c']!..tab.value = ChatTab.chat;
+    await tester.pumpAndSettle();
+    c.openBrowserTab('http://localhost:3000');
+    await tester.pumpAndSettle();
+    asked.clear();
+    await press(tester, LogicalKeyboardKey.keyR, cmd: true);
+    expect(fakes.hosts.single.reloads, 1);
+    expect(asked, isEmpty);
     await closeView(tester, d);
   }, variant: onMac);
 }

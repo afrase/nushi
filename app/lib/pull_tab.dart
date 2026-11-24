@@ -1,11 +1,16 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'package:nushi/app_actions.dart' show actsNow;
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_card.dart';
 import 'package:nushi/github_pull.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/pull_header.dart' show pullPad;
 import 'package:nushi/pull_link.dart';
@@ -22,8 +27,10 @@ import 'package:nushi/widgets.dart';
 /// replies and comments) for the chat's pull request; its comments are
 /// seen while it shows. A comment, a thread or a failed check goes to the
 /// chat's box as a reply card (Send to agent), several together; a bar
-/// counts them, with the way back to the chat ([onChat]).
-class PullTab extends StatelessWidget {
+/// counts them, with the way back to the chat ([onChat]). ⌘R refreshes it,
+/// as its Refresh does (a view's key, as the GitHub view's: the browser's
+/// Reload page has it only on the chat, where a page shows).
+class PullTab extends StatefulWidget {
   const new({
     required this.chat,
     required this.daemon,
@@ -36,11 +43,58 @@ class PullTab extends StatelessWidget {
   final VoidCallback onChat;
 
   @override
+  State<PullTab> createState() => _PullTabState();
+}
+
+class _PullTabState extends State<PullTab> {
+  /// The tab's keys' focus: it takes the focus as the tab shows when
+  /// nothing below the window's own has it (a tab's click leaves it at
+  /// the window, above the tab), so ⌘R comes here; a field or a terminal
+  /// with the focus keeps it.
+  final _keys = FocusNode(debugLabel: 'pull tab', skipTraversal: true);
+
+  ChatState get chat => widget.chat;
+  Daemon get daemon => widget.daemon;
+  VoidCallback get onChat => widget.onChat;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final now = FocusManager.instance.primaryFocus;
+      if (mounted && (now == null || _keys.ancestors.contains(now))) {
+        _keys.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _keys.dispose();
+    super.dispose();
+  }
+
+  /// ⌘R: the pull request asked for now, unless a dialog is over the
+  /// views (no key acts there, [actsNow]).
+  KeyEventResult _onKey(FocusNode _, KeyEvent e) {
+    if (!_refreshKey.accepts(e, HardwareKeyboard.instance) ||
+        !actsNow(context)) {
+      return KeyEventResult.ignored;
+    }
+    unawaited(ChatPull.of(daemon, chat).refresh());
+    return KeyEventResult.handled;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final source = ChatPull.of(daemon, chat);
-    return ListenableBuilder(
-      listenable: source,
-      builder: (context, _) => _build(context, source),
+    return Focus(
+      focusNode: _keys,
+      onKeyEvent: _onKey,
+      child: ListenableBuilder(
+        listenable: source,
+        builder: (context, _) => _build(context, source),
+      ),
     );
   }
 
@@ -95,6 +149,9 @@ class PullTab extends StatelessWidget {
     );
   }
 }
+
+/// The tab's Refresh key, the GitHub view's (⌘R).
+const _refreshKey = Cmd(LogicalKeyboardKey.keyR);
 
 /// With several pull requests (ADR 0117), the tab's head starts with a
 /// menu field of their rows; the one picked is remembered for the chat.
