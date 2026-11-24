@@ -100,4 +100,23 @@ void main() {
     expect(_open(), (0, 0));
     await closeView(tester, d);
   }, variant: macAndLinux);
+
+  testWidgets("the file opener's key over the palette, with no chat shown "
+      'to open a file of, leaves the palette open', (tester) async {
+    if (defaultTargetPlatform == TargetPlatform.linux) {
+      native
+        ..window = const LinuxWindow()
+        ..conventions = linuxConventions;
+    }
+    final d = await openApp(
+      tester,
+      FakeDaemon([]),
+      size: const Size(1200, 700),
+    );
+    await press(tester, LogicalKeyboardKey.keyK, cmd: true);
+    expect(_open(), (1, 0));
+    await press(tester, LogicalKeyboardKey.keyP, cmd: true);
+    expect(_open(), (1, 0));
+    await closeView(tester, d);
+  }, variant: macAndLinux);
 }

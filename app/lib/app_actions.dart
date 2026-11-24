@@ -499,7 +499,7 @@ Route<Object?>? routeOver(BuildContext context) {
 /// isn't an [Act], as a chat's number) runs now: always over the main
 /// views; over a dialog, which asks something and may name what the
 /// action would change (a confirm, a form), only Quit; over a picker
-/// Quit and the pickers' own actions too, which [clearFor] lets take its
+/// Quit and the pickers' own actions too, which [runAct] lets take its
 /// place (docs/design.md's Dialogs). The dialog's own keys are its own,
 /// nearer the focus; the system's menu items (Hide, Quit on the Mac) never
 /// come here.
@@ -518,28 +518,32 @@ Picker? _pickerOf(Act? act) => switch (act) {
   _ => null,
 };
 
-/// Clears the way for [act] (as [actsNow]) and says whether it runs: a
-/// picker on top closes first, so one shows at a time, and when it's the
-/// one [act] opens, closing it is all [act] does (its key toggles it).
-/// Quit leaves it open.
-bool clearFor(BuildContext context, [Act? act]) {
-  if (!actsNow(context, act)) return false;
-  final over = routeOver(context);
-  final picker = pickerOf(over);
-  if (picker == null || _pickerOf(act) == null) return true;
-  over!.navigator!.pop();
-  return picker != _pickerOf(act);
-}
-
-/// Runs [act] as it is now, if it applies.
+/// Runs [act] as it is now, if it applies. Over a picker another picker's
+/// action takes its place, once it applies: the open one closes just
+/// before it runs, so one shows at a time and one that can't open leaves
+/// it; the picker's own action closes it (its key toggles it).
 void runAct(BuildContext context, Daemon d, Act act) {
   // Behind the Restart screen only Restart daemon and Quit apply: the
   // rest would act on a chat or a view no one can see.
   if (d.blocked && act != Act.restart && act != Act.quit) return;
-  if (!clearFor(context, act)) return;
+  if (!actsNow(context, act)) return;
+  final over = routeOver(context);
+  final open = pickerOf(over);
+  final opens = _pickerOf(act);
+  if (open != null && open == opens) {
+    over!.navigator!.pop();
+    return;
+  }
+  void clear() {
+    if (open != null && opens != null) over!.navigator!.pop();
+  }
+
   // The palette is no row of its own; its key never reaches here past
   // Settings, so it shuts nothing.
-  if (act == Act.palette) return unawaited(showPalette(context, d));
+  if (act == Act.palette) {
+    clear();
+    return unawaited(showPalette(context, d));
+  }
   // Only the menu bar (and Linux's Quit) reaches here past Settings (it
   // stops the keys): what runs is elsewhere, so Settings shuts first (ADR
   // 0087).
@@ -552,5 +556,7 @@ void runAct(BuildContext context, Daemon d, Act act) {
     d.closeSettings();
   }
   final a = appActions(context, d).firstWhere((a) => a.act == act);
-  if (a.enabled) a.run();
+  if (!a.enabled) return;
+  clear();
+  a.run();
 }
