@@ -48,8 +48,7 @@ type Brew struct {
 	Prefixes []string
 	// Apps are the folders a cask puts Nushi.app in, and Exe the daemon's
 	// own executable: only a Nushi running from one of them is the cask's
-	// to upgrade, never a build run from elsewhere (as the app's
-	// homebrewCask says too).
+	// to upgrade, never a build run from elsewhere.
 	Apps []string
 	Exe  string
 	// Env is the environment brew runs in, before what keeps it quiet:
@@ -84,6 +83,25 @@ func (b *Brew) Installed() string {
 		}
 	}
 	return ""
+}
+
+// For is the cask whose upgrade brings version: Installed, except that
+// a pre-release ("0.29.0-beta.1") is only nushi@beta's (ADR 0108), so the
+// release's cask gets "" for one. Asked each time it matters, as
+// Installed is.
+func (b *Brew) For(version string) string {
+	cask := b.Installed()
+	if cask != BetaCask && prerelease(version) {
+		return ""
+	}
+	return cask
+}
+
+// prerelease says whether version is a semantic version's pre-release:
+// a dash before any build metadata.
+func prerelease(version string) bool {
+	core, _, _ := strings.Cut(version, "+")
+	return strings.Contains(core, "-")
 }
 
 // Beta says whether Homebrew's nushi@beta cask is installed, wherever

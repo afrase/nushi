@@ -196,9 +196,11 @@ class PingResponse extends $pb.GeneratedMessage {
 }
 
 /// What the daemon's check for a newer release of Nushi found: GitHub's
-/// latest release (not a draft or a pre-release), compared with the
-/// daemon's own version. A build that isn't a release never has a newer
-/// one; nor does any while Settings.check_updates is off.
+/// latest release (not a draft or a pre-release), or for a Nushi that
+/// follows beta versions the highest version among the newest releases,
+/// pre-releases too (ADR 0108), compared with the daemon's own version. A
+/// build that isn't a release never has a newer one; nor does any while
+/// Settings.check_updates is off.
 class UpdateCheck extends $pb.GeneratedMessage {
   factory UpdateCheck({
     $core.String? version,
@@ -208,6 +210,7 @@ class UpdateCheck extends $pb.GeneratedMessage {
     $core.bool? installing,
     $core.String? installError,
     $core.String? installed,
+    $core.String? cask,
   }) {
     final result = UpdateCheck._();
     if (version != null) result.version = version;
@@ -217,6 +220,7 @@ class UpdateCheck extends $pb.GeneratedMessage {
     if (installing != null) result.installing = installing;
     if (installError != null) result.installError = installError;
     if (installed != null) result.installed = installed;
+    if (cask != null) result.cask = cask;
     return result;
   }
 
@@ -240,6 +244,7 @@ class UpdateCheck extends $pb.GeneratedMessage {
     ..aOB(6, _omitFieldNames ? '' : 'installing')
     ..aOS(7, _omitFieldNames ? '' : 'installError')
     ..aOS(8, _omitFieldNames ? '' : 'installed')
+    ..aOS(9, _omitFieldNames ? '' : 'cask')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -336,6 +341,19 @@ class UpdateCheck extends $pb.GeneratedMessage {
   $core.bool hasInstalled() => $_has(6);
   @$pb.TagNumber(8)
   void clearInstalled() => $_clearField(8);
+
+  /// The Homebrew cask whose upgrade brings version, the one InstallUpdate
+  /// upgrades (ADR 0109): the cask that installed this Nushi, when it can
+  /// carry version (a pre-release only "nushi@beta"); "" when none can,
+  /// and InstallUpdate is then refused. API 145.
+  @$pb.TagNumber(9)
+  $core.String get cask => $_getSZ(7);
+  @$pb.TagNumber(9)
+  set cask($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(9)
+  $core.bool hasCask() => $_has(7);
+  @$pb.TagNumber(9)
+  void clearCask() => $_clearField(9);
 }
 
 class CheckForUpdatesRequest extends $pb.GeneratedMessage {
@@ -36678,12 +36696,13 @@ class NushiServiceApi {
 
   /// Has Homebrew upgrade the cask that installed Nushi (ADR 0109): the
   /// daemon runs `brew update`, then `brew upgrade --cask` of nushi@beta
-  /// or nushi, whichever its Caskroom has. The request names nothing: no
-  /// cask, path or version. It answers once the install has started;
-  /// UpdateCheck (the update event, Ping) says how it goes. Refused with
-  /// failed_precondition when Homebrew didn't install this Nushi, when no
-  /// newer version was found, or while an install runs. Not on a device's
-  /// channel. API 115.
+  /// or nushi, whichever its Caskroom has (UpdateCheck.cask, asked again).
+  /// The request names nothing: no cask, path or version. It answers once
+  /// the install has started; UpdateCheck (the update event, Ping) says how
+  /// it goes. Refused with failed_precondition when Homebrew didn't install
+  /// this Nushi or its cask can't bring the version (a pre-release from
+  /// nushi), when no newer version was found, or while an install runs.
+  /// Not on a device's channel. API 115.
   $async.Future<InstallUpdateResponse> installUpdate(
           $pb.ClientContext? ctx, InstallUpdateRequest request) =>
       _client.invoke<InstallUpdateResponse>(ctx, 'NushiService',

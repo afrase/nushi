@@ -21,12 +21,13 @@ service NushiService {
   rpc CheckForUpdates(CheckForUpdatesRequest) returns (CheckForUpdatesResponse);
   // Has Homebrew upgrade the cask that installed Nushi (ADR 0109): the
   // daemon runs `brew update`, then `brew upgrade --cask` of nushi@beta
-  // or nushi, whichever its Caskroom has. The request names nothing: no
-  // cask, path or version. It answers once the install has started;
-  // UpdateCheck (the update event, Ping) says how it goes. Refused with
-  // failed_precondition when Homebrew didn't install this Nushi, when no
-  // newer version was found, or while an install runs. Not on a device's
-  // channel. API 115.
+  // or nushi, whichever its Caskroom has (UpdateCheck.cask, asked again).
+  // The request names nothing: no cask, path or version. It answers once
+  // the install has started; UpdateCheck (the update event, Ping) says how
+  // it goes. Refused with failed_precondition when Homebrew didn't install
+  // this Nushi or its cask can't bring the version (a pre-release from
+  // nushi), when no newer version was found, or while an install runs.
+  // Not on a device's channel. API 115.
   rpc InstallUpdate(InstallUpdateRequest) returns (InstallUpdateResponse);
   // Lists every stored chat.
   rpc ListChats(ListChatsRequest) returns (ListChatsResponse);
@@ -593,9 +594,11 @@ message PingResponse {
 }
 
 // What the daemon's check for a newer release of Nushi found: GitHub's
-// latest release (not a draft or a pre-release), compared with the
-// daemon's own version. A build that isn't a release never has a newer
-// one; nor does any while Settings.check_updates is off.
+// latest release (not a draft or a pre-release), or for a Nushi that
+// follows beta versions the highest version among the newest releases,
+// pre-releases too (ADR 0108), compared with the daemon's own version. A
+// build that isn't a release never has a newer one; nor does any while
+// Settings.check_updates is off.
 message UpdateCheck {
   // The newer release, when there is one: its version ("0.1.17") and its
   // page on GitHub.
@@ -617,6 +620,11 @@ message UpdateCheck {
   // still running then is the old one, which Homebrew couldn't quit.
   // API 115.
   string installed = 8;
+  // The Homebrew cask whose upgrade brings version, the one InstallUpdate
+  // upgrades (ADR 0109): the cask that installed this Nushi, when it can
+  // carry version (a pre-release only "nushi@beta"); "" when none can,
+  // and InstallUpdate is then refused. API 145.
+  string cask = 9;
 }
 
 message CheckForUpdatesRequest {}

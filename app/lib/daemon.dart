@@ -58,7 +58,7 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     : Platform.environment['NUSHI_DATA'] ?? native.install.dataFolder;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 144;
+const apiVersion = 145;
 
 /// The oldest daemon API this app works with (ADR 0004): below it the Mac
 /// shows only its Restart screen (`OutdatedScreen`) until the daemon has

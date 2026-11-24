@@ -90,9 +90,8 @@ Future<(Daemon, FakeDaemon)> _app(
 }) async {
   showDetails.value = false;
   sidebarHidden.value = true;
-  brewCask = 'nushi';
   final fake = updateDaemon(
-    () => update ? newerUpdate('0.1.17') : UpdateCheck(),
+    () => update ? newerUpdate('0.1.17', cask: 'nushi') : UpdateCheck(),
   );
   final c = fake.chats.single;
   fake.on(

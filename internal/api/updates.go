@@ -61,5 +61,5 @@ func (s *server) update() *nushiv1.UpdateCheck {
 
 func updateProto(u model.Update) *nushiv1.UpdateCheck {
 	return &nushiv1.UpdateCheck{Version: u.Version, Url: u.URL, Latest: u.Latest, CheckedMs: unixMs(u.Checked),
-		Installing: u.Installing, InstallError: u.InstallError, Installed: u.Installed}
+		Installing: u.Installing, InstallError: u.InstallError, Installed: u.Installed, Cask: u.Cask}
 }

@@ -27,9 +27,6 @@ import 'update_fixtures.dart';
 
 void main() {
   setUpAll(loadFonts);
-  setUp(() {
-    brewCask = null;
-  });
 
   test('versions order as semantic versioning does', () {
     expect(compareVersions('0.1.17', '0.1.16'), 1);
@@ -42,45 +39,6 @@ void main() {
     expect(compareVersions('', '0.1.17'), -1);
   });
 
-  test('Homebrew installed it: Nushi.app in an Applications folder, and '
-      'its Caskroom has nushi', () {
-    bool brew(String exe, Set<String> folders) =>
-        homebrewCask(exe, '/Users/me', folders.contains) == 'nushi';
-    const caskroom = {'/opt/homebrew/Caskroom/nushi'};
-    expect(
-      brew('/Applications/Nushi.app/Contents/MacOS/Nushi', caskroom),
-      true,
-    );
-    expect(
-      brew('/Users/me/Applications/Nushi.app/Contents/MacOS/Nushi', {
-        '/usr/local/Caskroom/nushi',
-      }),
-      true,
-    );
-    // make install's app, without the cask; a build's; elsewhere.
-    expect(
-      brew('/Users/me/Applications/Nushi.app/Contents/MacOS/Nushi', {}),
-      false,
-    );
-    expect(
-      brew(
-        '/Users/me/nushi/app/build/Nushi.app/Contents/MacOS/Nushi',
-        caskroom,
-      ),
-      false,
-    );
-    expect(brew('/Volumes/x/Nushi.app/Contents/MacOS/Nushi', caskroom), false);
-    // The cask that follows beta versions.
-    expect(
-      homebrewCask(
-        '/Applications/Nushi.app/Contents/MacOS/Nushi',
-        '/Users/me',
-        {'/opt/homebrew/Caskroom/nushi@beta'}.contains,
-      ),
-      'nushi@beta',
-    );
-  });
-
   for (final kind in ['zip', ...toastStates.keys]) {
     for (final (name, brightness) in [
       ('dark', Brightness.dark),
@@ -91,7 +49,6 @@ void main() {
             'the bottom right, above the composer', (tester) async {
           final (found, buttons) =
               toastStates[kind] ?? (newerUpdate('0.1.17'), ['Download']);
-          brewCask = kind == 'zip' ? null : 'nushi';
           final d = await openWithUpdate(
             tester,
             updateDaemon(() => found),

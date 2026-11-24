@@ -429,9 +429,11 @@ func (x *PingResponse) GetPid() int32 {
 }
 
 // What the daemon's check for a newer release of Nushi found: GitHub's
-// latest release (not a draft or a pre-release), compared with the
-// daemon's own version. A build that isn't a release never has a newer
-// one; nor does any while Settings.check_updates is off.
+// latest release (not a draft or a pre-release), or for a Nushi that
+// follows beta versions the highest version among the newest releases,
+// pre-releases too (ADR 0108), compared with the daemon's own version. A
+// build that isn't a release never has a newer one; nor does any while
+// Settings.check_updates is off.
 type UpdateCheck struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The newer release, when there is one: its version ("0.1.17") and its
@@ -450,7 +452,12 @@ type UpdateCheck struct {
 	// The version the last install brought, "" until one has: the app
 	// still running then is the old one, which Homebrew couldn't quit.
 	// API 115.
-	Installed     string `protobuf:"bytes,8,opt,name=installed,proto3" json:"installed,omitempty"`
+	Installed string `protobuf:"bytes,8,opt,name=installed,proto3" json:"installed,omitempty"`
+	// The Homebrew cask whose upgrade brings version, the one InstallUpdate
+	// upgrades (ADR 0109): the cask that installed this Nushi, when it can
+	// carry version (a pre-release only "nushi@beta"); "" when none can,
+	// and InstallUpdate is then refused. API 145.
+	Cask          string `protobuf:"bytes,9,opt,name=cask,proto3" json:"cask,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -530,6 +537,13 @@ func (x *UpdateCheck) GetInstallError() string {
 func (x *UpdateCheck) GetInstalled() string {
 	if x != nil {
 		return x.Installed
+	}
+	return ""
+}
+
+func (x *UpdateCheck) GetCask() string {
+	if x != nil {
+		return x.Cask
 	}
 	return ""
 }
@@ -28209,7 +28223,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\aversion\x18\x03 \x01(\tR\aversion\x12-\n" +
 	"\x06update\x18\x04 \x01(\v2\x15.nushi.v1.UpdateCheckR\x06update\x12\x0e\n" +
 	"\x02os\x18\x05 \x01(\tR\x02os\x12\x10\n" +
-	"\x03pid\x18\x06 \x01(\x05R\x03pid\"\xe7\x01\n" +
+	"\x03pid\x18\x06 \x01(\x05R\x03pid\"\xfb\x01\n" +
 	"\vUpdateCheck\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12\x16\n" +
@@ -28220,7 +28234,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"installing\x18\x06 \x01(\bR\n" +
 	"installing\x12#\n" +
 	"\rinstall_error\x18\a \x01(\tR\finstallError\x12\x1c\n" +
-	"\tinstalled\x18\b \x01(\tR\tinstalledJ\x04\b\x03\x10\x04R\fpublished_ms\"\x18\n" +
+	"\tinstalled\x18\b \x01(\tR\tinstalled\x12\x12\n" +
+	"\x04cask\x18\t \x01(\tR\x04caskJ\x04\b\x03\x10\x04R\fpublished_ms\"\x18\n" +
 	"\x16CheckForUpdatesRequest\"\x16\n" +
 	"\x14InstallUpdateRequest\"\x17\n" +
 	"\x15InstallUpdateResponse\"H\n" +

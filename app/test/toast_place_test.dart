@@ -24,9 +24,6 @@ import 'update_fixtures.dart';
 
 void main() {
   setUpAll(loadFonts);
-  setUp(() {
-    brewCask = null;
-  });
 
   void say(BuildContext context, String text, {ToastAction? action}) =>
       showToast(Toasts.maybeOf(context), text, action: action);

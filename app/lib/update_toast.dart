@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,52 +12,8 @@ import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The cask that follows beta versions (ADR 0108); `nushi` has releases
-/// only.
-const betaCask = 'nushi@beta';
-
 /// What upgrades a Nushi that Homebrew's [cask] installed.
 String brewUpgrade(String cask) => 'brew update && brew upgrade --cask $cask';
-
-/// The cask of Homebrew's that installed the app running as [executable],
-/// if one did: it is Nushi.app in /Applications or ~/Applications (the
-/// casks' places), and Homebrew's Caskroom has nushi@beta or nushi (one
-/// of them: they conflict; under /opt/homebrew, or /usr/local on an Intel
-/// Mac). A few looks at folders; running `brew --prefix` to find a moved
-/// prefix would cost far more.
-String? homebrewCask(
-  String executable,
-  String home,
-  bool Function(String folder) exists,
-) {
-  // Nushi.app/Contents/MacOS/Nushi
-  final app = File(executable).parent.parent.parent.path;
-  if (app != '/Applications/Nushi.app' &&
-      app != '$home/Applications/Nushi.app') {
-    return null;
-  }
-  for (final cask in [betaCask, 'nushi']) {
-    if (exists('/opt/homebrew/Caskroom/$cask') ||
-        exists('/usr/local/Caskroom/$cask')) {
-      return cask;
-    }
-  }
-  return null;
-}
-
-/// The cask this app came from, if Homebrew installed it; tests set it.
-String? brewCask = homebrewCask(
-  Platform.resolvedExecutable,
-  Platform.environment['HOME'] ?? '',
-  (f) => Directory(f).existsSync(),
-);
-
-/// The cask whose upgrade brings [version], if Homebrew installed the app
-/// and has it: a beta version is only nushi@beta's.
-String? caskWith(String version) => switch (brewCask) {
-  final cask? when cask == betaCask || !isBeta(version) => cask,
-  _ => null,
-};
 
 /// Orders two versions as semantic versioning does (a pre-release before
 /// its release; build metadata aside); one that isn't a version is before
@@ -114,21 +69,20 @@ String? updateToShow(Daemon d) {
 void openRelease(BuildContext context, Daemon d) =>
     openWeb(context, d.update.url);
 
-/// Whether [version] is a beta version: a pre-release ("0.29.0-beta.1";
-/// ADR 0108).
-bool isBeta(String version) => version.split('+').first.contains('-');
-
 /// Says a newer release is out, in the main area's bottom right corner,
 /// whatever is open there, above a bar with controls under it (a composer,
 /// the commit box; `TopNotices`, `Beside`, `CardFloor`, ADR 0128), out of
 /// the way: not modal, no sound.
-/// When Homebrew installed the app and its cask has the release
-/// ([caskWith]), Update has the daemon run Homebrew's upgrade (ADR 0109;
-/// Release notes opens the release's page):
+/// When the daemon names the cask that brings the release
+/// (`UpdateCheck.cask`: Homebrew installed Nushi, and a beta version only
+/// from nushi@beta), Update has the daemon run Homebrew's upgrade (ADR
+/// 0109; Release notes opens the release's page):
 /// the card says "Updating…" until Homebrew quits the app and opens the
 /// new one, or why it failed, with Retry and Copy (Homebrew's upgrade on
-/// the clipboard). Without a cask, Download opens the release's page. ×
-/// dismisses it until a newer one.
+/// the clipboard). Without a cask, Download opens the release's page;
+/// so too on a daemon from before API 145, which sends none: it is the
+/// one the app waits to restart into its own (ADR 0056), so no gate
+/// keeps the old guess for it. × dismisses it until a newer one.
 class UpdateToast extends StatefulWidget {
   const new(this.daemon, {super.key});
 
@@ -195,7 +149,7 @@ class _UpdateToastState extends State<UpdateToast> {
     final t = theme.t;
     final d = widget.daemon;
     final u = d.update;
-    final cask = caskWith(version);
+    final cask = u.cask.isEmpty ? null : u.cask;
     // What the daemon's own install says, when it has one to offer.
     final installs = cask != null;
     final installing = installs && u.installing;

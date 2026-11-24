@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/main.dart';
 import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/update_toast.dart';
@@ -18,12 +19,10 @@ import 'update_fixtures.dart';
 // card shows it, in each state.
 void main() {
   setUpAll(loadFonts);
-  setUp(() {
-    brewCask = null;
-  });
 
-  testWidgets('a beta version: Update and Copy upgrade the beta cask; the '
-      "release's cask doesn't have it, so Download", (tester) async {
+  testWidgets('a beta version: Update and Copy upgrade the cask the '
+      "daemon names; a daemon that names none (the release's cask can't "
+      'bring it) gets Download', (tester) async {
     String? copied;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       SystemChannels.platform,
@@ -40,8 +39,7 @@ void main() {
         null,
       ),
     );
-    brewCask = betaCask;
-    var found = newerUpdate('0.29.0-beta.1');
+    var found = newerUpdate('0.29.0-beta.1', cask: 'nushi@beta');
     final fake = updateDaemon(() => found);
     final d = await openWithUpdate(tester, fake);
     expect(find.text('Nushi 0.29.0-beta.1 is available.'), findsOneWidget);
@@ -49,7 +47,11 @@ void main() {
       find.byTooltip('Runs “brew update && brew upgrade --cask nushi@beta”'),
       findsOneWidget,
     );
-    found = newerUpdate('0.29.0-beta.1', error: 'brew upgrade: no network');
+    found = newerUpdate(
+      '0.29.0-beta.1',
+      cask: 'nushi@beta',
+      error: 'brew upgrade: no network',
+    );
     fake.emit(EventsResponse(update: found));
     await tester.pump();
     await tester.pump();
@@ -59,7 +61,6 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     d.dispose();
 
-    brewCask = 'nushi';
     final d2 = await openWithUpdate(
       tester,
       updateDaemon(() => newerUpdate('0.29.0-beta.1')),
@@ -68,13 +69,27 @@ void main() {
     d2.dispose();
   }, variant: onMac);
 
+  testWidgets('a daemon from before API 145 sends no cask: Download, '
+      'with no guess of its own', (tester) async {
+    viewport(tester, const Size(1700, 700));
+    final fake = updateDaemon(() => newerUpdate('0.1.17'), api: 144);
+    // The app bundles a newer daemon, which this one restarts into once
+    // idle (ADR 0056): meanwhile the app works as usual.
+    final d = (await fake.connect(tester))..bundled = '7-2000';
+    await tester.pumpWidget(NushiApp(daemon: d));
+    await tester.pumpAndSettle();
+    expect(d.daemonApi, 144);
+    expect(find.text('Nushi 0.1.17 is available.'), findsOneWidget);
+    expect(toastButtons(tester), ['Download']);
+    await closeView(tester, d);
+  }, variant: onMac);
+
   for (final (name, tokens) in [
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
     testWidgets('the card on its own, in each state ($name)', (tester) async {
       viewport(tester, const Size(360, 200));
-      brewCask = 'nushi';
       var found = UpdateCheck();
       final fake = updateDaemon(() => found);
       final d = await fake.connect(tester);
@@ -102,8 +117,7 @@ void main() {
 
   testWidgets('Update has the daemon install it, once: Updating… until '
       'Homebrew is through', (tester) async {
-    brewCask = 'nushi';
-    var found = newerUpdate('0.1.17');
+    var found = newerUpdate('0.1.17', cask: 'nushi');
     final fake = updateDaemon(() => found);
     // The daemon answers once Homebrew has started, the event before it.
     final started = Completer<InstallUpdateResponse>();
@@ -116,7 +130,7 @@ void main() {
     await tester.tap(find.text('Update'));
     await tester.tap(find.text('Update'), warnIfMissed: false);
     await tester.pump();
-    found = newerUpdate('0.1.17', installing: true);
+    found = newerUpdate('0.1.17', cask: 'nushi', installing: true);
     fake.emit(EventsResponse(update: found));
     started.complete(InstallUpdateResponse());
     await tester.pump();
@@ -139,8 +153,7 @@ void main() {
 
   testWidgets('a failed install says why, with Copy, Retry and Release '
       'notes; Retry installs again', (tester) async {
-    brewCask = 'nushi';
-    var found = newerUpdate('0.1.17', error: notYet);
+    var found = newerUpdate('0.1.17', cask: 'nushi', error: notYet);
     final fake = updateDaemon(() => found);
     final d = await openWithUpdate(tester, fake);
     expect(find.text('Nushi 0.1.17 is available.'), findsOneWidget);
@@ -149,7 +162,7 @@ void main() {
     await tester.tap(find.text('Retry'));
     await tester.pump();
     expect(fake.calls.whereType<InstallUpdateRequest>(), hasLength(1));
-    found = newerUpdate('0.1.17', installing: true);
+    found = newerUpdate('0.1.17', cask: 'nushi', installing: true);
     fake.emit(EventsResponse(update: found));
     await tester.pump();
     await tester.pump();
@@ -160,10 +173,11 @@ void main() {
 
   testWidgets('installed with this app still running: it says to quit and '
       'open it again', (tester) async {
-    brewCask = 'nushi';
     final d = await openWithUpdate(
       tester,
-      updateDaemon(() => newerUpdate('0.1.17', installed: '0.1.17')),
+      updateDaemon(
+        () => newerUpdate('0.1.17', cask: 'nushi', installed: '0.1.17'),
+      ),
     );
     expect(find.text('Nushi 0.1.17 is installed.'), findsOneWidget);
     expect(find.text('Quit Nushi and open it again.'), findsOneWidget);
@@ -172,8 +186,7 @@ void main() {
   }, variant: onMac);
 
   testWidgets('an install the daemon refuses says why', (tester) async {
-    brewCask = 'nushi';
-    final fake = updateDaemon(() => newerUpdate('0.1.17'))
+    final fake = updateDaemon(() => newerUpdate('0.1.17', cask: 'nushi'))
       ..on(
         (input) => input is InstallUpdateRequest
             ? throw ConnectException(
@@ -193,7 +206,6 @@ void main() {
 
   testWidgets('after a failure, Copy puts the Homebrew command on the '
       'clipboard', (tester) async {
-    brewCask = 'nushi';
     String? copied;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       SystemChannels.platform,
@@ -212,7 +224,7 @@ void main() {
     );
     final d = await openWithUpdate(
       tester,
-      updateDaemon(() => newerUpdate('0.1.17', error: notYet)),
+      updateDaemon(() => newerUpdate('0.1.17', cask: 'nushi', error: notYet)),
     );
     await tester.tap(find.text('Copy'));
     await tester.pump();

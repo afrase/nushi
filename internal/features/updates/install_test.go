@@ -12,11 +12,13 @@ import (
 )
 
 // brew is a fake Homebrew: cask is installed, at version once an upgrade
-// went through (unless stale: the tap doesn't have it yet); an upgrade
-// waits on hold when there is one, and fails with err.
+// went through (unless stale: the tap doesn't have it yet), and brings
+// every version but those in lacks; an upgrade waits on hold when there
+// is one, and fails with err.
 type brew struct {
 	mu       sync.Mutex
 	cask     string
+	lacks    map[string]bool
 	version  string // what an upgrade brings
 	stale    bool
 	err      error
@@ -25,7 +27,14 @@ type brew struct {
 	at       string
 }
 
-func (b *brew) Installed() string { return b.cask }
+func (b *brew) For(version string) string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.lacks[version] {
+		return ""
+	}
+	return b.cask
+}
 
 func (b *brew) Has(cask, version string) bool {
 	b.mu.Lock()
@@ -57,7 +66,7 @@ func found(t *testing.T, b Homebrew, ev *events) *Service {
 	if b != nil {
 		s.Brew = b
 	}
-	if got, err := s.Check(t.Context()); err != nil || got.Version != "0.29.0" {
+	if got, err := s.Check(t.Context()); err != nil || got.Version != "0.29.0" || b != nil && got.Cask != b.For("0.29.0") {
 		t.Fatalf("check: %+v %v", got, err)
 	}
 	return s
@@ -90,6 +99,29 @@ func TestInstall(t *testing.T) {
 		if got.Installing || got.InstallError != "" || got.Installed != "0.29.0" || s.Busy() || ev.got[len(ev.got)-1] != got {
 			t.Fatalf("installed: %+v, published %+v", got, ev.got)
 		}
+		if len(b.upgraded) != 1 || b.upgraded[0] != "nushi@beta" {
+			t.Fatalf("upgraded %q", b.upgraded)
+		}
+	})
+}
+
+// Install asks Homebrew again which cask brings the version: one swapped
+// since the check is the one upgraded, and the update says so.
+func TestInstallAsksForTheCaskAgain(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var ev events
+		b := &brew{cask: "nushi", version: "0.29.0"}
+		s := found(t, b, &ev)
+		b.mu.Lock()
+		b.cask = "nushi@beta"
+		b.mu.Unlock()
+		if err := s.Install(); err != nil {
+			t.Fatal(err)
+		}
+		if got := s.Get(); got.Cask != "nushi@beta" {
+			t.Fatalf("the cask while installing: %+v", got)
+		}
+		synctest.Wait()
 		if len(b.upgraded) != 1 || b.upgraded[0] != "nushi@beta" {
 			t.Fatalf("upgraded %q", b.upgraded)
 		}
@@ -154,8 +186,8 @@ func TestInstallBeforeTheCaskHasIt(t *testing.T) {
 	})
 }
 
-// Nothing to install with, or nothing to install: refused, and Homebrew
-// isn't run.
+// Nothing to install with, nothing to install, or no cask that brings
+// it: refused, and Homebrew isn't run.
 func TestInstallRefused(t *testing.T) {
 	var ev events
 	if err := found(t, nil, &ev).Install(); !errors.Is(err, ErrNotHomebrew) {
@@ -165,8 +197,16 @@ func TestInstallRefused(t *testing.T) {
 	if err := found(t, zip, &ev).Install(); !errors.Is(err, ErrNotHomebrew) || zip.upgraded != nil {
 		t.Fatalf("not Homebrew's: %v, upgraded %q", err, zip.upgraded)
 	}
+	beta := &brew{cask: "nushi", lacks: map[string]bool{"0.29.0": true}} // the release's cask, and a beta found
+	s := found(t, beta, &ev)
+	if got := s.Get(); got.Cask != "" {
+		t.Fatalf("a version the cask can't bring: %+v", got)
+	}
+	if err := s.Install(); !errors.Is(err, ErrNotHomebrew) || beta.upgraded != nil || s.Get().Installing {
+		t.Fatalf("a version the cask can't bring: %v, upgraded %q", err, beta.upgraded)
+	}
 	b := &brew{cask: "nushi"}
-	s := New(func(context.Context) (string, error) { return "v0.28.1", nil }, &prefs{on: true}, "0.28.1", "", ev.publish)
+	s = New(func(context.Context) (string, error) { return "v0.28.1", nil }, &prefs{on: true}, "0.28.1", "", ev.publish)
 	s.Brew = b
 	if err := s.Install(); !errors.Is(err, ErrNoUpdate) || b.upgraded != nil || s.Get() != (model.Update{}) {
 		t.Fatalf("nothing newer: %v, upgraded %q, %+v", err, b.upgraded, s.Get())

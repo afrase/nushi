@@ -83,6 +83,34 @@ func TestInstalled(t *testing.T) {
 	}
 }
 
+// A version comes from the cask that installed Nushi, but a pre-release
+// only from nushi@beta: the release's cask can't bring one.
+func TestFor(t *testing.T) {
+	for _, c := range []struct {
+		casks         []string
+		version, want string
+	}{
+		{nil, "0.29.0", ""},
+		{[]string{"0/nushi"}, "0.29.0", Cask},
+		{[]string{"0/nushi"}, "0.29.0+40", Cask},
+		{[]string{"0/nushi"}, "0.29.0-beta.1", ""},
+		{[]string{"0/nushi"}, "0.29.0-beta.1+40", ""},
+		{[]string{"1/nushi@beta"}, "0.29.0-beta.1", BetaCask},
+		{[]string{"1/nushi@beta"}, "0.29.0", BetaCask},
+		{[]string{"0/nushi", "1/nushi@beta"}, "0.29.0-beta.1", BetaCask},
+	} {
+		b, _ := mac(t, c.casks...)
+		if got := b.For(c.version); got != c.want {
+			t.Errorf("%q with %q: %q, want %q", c.version, c.casks, got, c.want)
+		}
+	}
+	b, _ := mac(t, "1/nushi@beta")
+	b.Exe = "/Users/me/nushi/bin/nushid"
+	if got := b.For("0.29.0-beta.1"); got != "" {
+		t.Errorf("a build run from elsewhere: %q", got)
+	}
+}
+
 // A cask has a version when its Caskroom folder has one of that name; a
 // name that leads elsewhere is never looked for.
 func TestHas(t *testing.T) {

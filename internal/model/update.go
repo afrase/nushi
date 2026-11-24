@@ -8,6 +8,10 @@ type Update struct {
 	// page.
 	Version string
 	URL     string
+	// Cask is the Homebrew cask whose upgrade brings Version, the one
+	// Install upgrades (ADR 0109); "" when none can: Homebrew didn't
+	// install this Nushi, or its cask doesn't carry a pre-release.
+	Cask string
 	// Latest is the latest release, newer or not; "" until GitHub answered.
 	Latest string
 	// Checked is when GitHub last answered; zero: not yet.

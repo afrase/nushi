@@ -239,9 +239,6 @@ Future<void> _tab(WidgetTester tester, String tab, double width) async {
 
 void main() {
   setUpAll(loadFonts);
-  setUp(() {
-    brewCask = null;
-  });
 
   // Renders to look at: the card over a chat alone, beside the details
   // column and over a side chat, wide and narrow, in both themes.

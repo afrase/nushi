@@ -11,33 +11,57 @@ import (
 // log: its end, where it says why.
 const logged = 4 << 10
 
-// Install has Homebrew upgrade the cask that installed this Nushi to the
-// newer version found (ADR 0109), and returns once that has started: how
-// it goes is in Get and the update event (Installing, then InstallError
-// or Installed). One at a time. It takes nothing from its caller, and of
-// the check's answer only the version to look for afterwards: Homebrew's
-// own cask says what is installed.
+// Install has Homebrew upgrade the cask whose upgrade brings the newer
+// version found (ADR 0109), and returns once that has started: how it
+// goes is in Get and the update event (Installing, then InstallError or
+// Installed). One at a time. It takes nothing from its caller, and of
+// the check's answer only the version: Homebrew's own casks say, asked
+// again now (a cask swapped since the check needs no restart), which one
+// brings it, and none is refused.
 func (s *Service) Install() error {
 	if s.Brew == nil {
 		return ErrNotHomebrew
 	}
-	cask := s.Brew.Installed()
-	if cask == "" {
-		return ErrNotHomebrew
+	cask, err := s.caskLocked()
+	if err != nil {
+		return err
 	}
-	s.mu.Lock()
 	defer s.mu.Unlock()
-	switch {
-	case s.found.Installing:
-		return ErrInstalling
-	case s.found.Version == "":
-		return ErrNoUpdate
-	}
-	s.found.Installing, s.found.InstallError = true, ""
+	s.found.Installing, s.found.InstallError, s.found.Cask = true, "", cask
 	found := s.found
 	s.publish(model.Event{Update: &found})
 	go s.install(cask, found.Version)
 	return nil
+}
+
+// caskLocked is the cask that brings the version found, asked of
+// Homebrew outside mu (it looks at folders) and returned with mu held
+// for a version still current; an error, with mu not held, when there is
+// nothing to install or nothing to install it with.
+func (s *Service) caskLocked() (string, error) {
+	for {
+		version := s.Get().Version
+		cask := ""
+		if version != "" {
+			cask = s.Brew.For(version)
+		}
+		s.mu.Lock()
+		switch {
+		case s.found.Installing:
+			s.mu.Unlock()
+			return "", ErrInstalling
+		case s.found.Version == "":
+			s.mu.Unlock()
+			return "", ErrNoUpdate
+		case s.found.Version != version:
+			s.mu.Unlock()
+			continue // a check found another meanwhile: ask for that one
+		case cask == "":
+			s.mu.Unlock()
+			return "", ErrNotHomebrew
+		}
+		return cask, nil
+	}
 }
 
 // install runs the upgrade and says how it ended. It runs as long as the

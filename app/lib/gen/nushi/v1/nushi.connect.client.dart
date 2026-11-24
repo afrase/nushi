@@ -73,12 +73,13 @@ extension type NushiServiceClient(connect.Transport _transport) {
 
   /// Has Homebrew upgrade the cask that installed Nushi (ADR 0109): the
   /// daemon runs `brew update`, then `brew upgrade --cask` of nushi@beta
-  /// or nushi, whichever its Caskroom has. The request names nothing: no
-  /// cask, path or version. It answers once the install has started;
-  /// UpdateCheck (the update event, Ping) says how it goes. Refused with
-  /// failed_precondition when Homebrew didn't install this Nushi, when no
-  /// newer version was found, or while an install runs. Not on a device's
-  /// channel. API 115.
+  /// or nushi, whichever its Caskroom has (UpdateCheck.cask, asked again).
+  /// The request names nothing: no cask, path or version. It answers once
+  /// the install has started; UpdateCheck (the update event, Ping) says how
+  /// it goes. Refused with failed_precondition when Homebrew didn't install
+  /// this Nushi or its cask can't bring the version (a pre-release from
+  /// nushi), when no newer version was found, or while an install runs.
+  /// Not on a device's channel. API 115.
   Future<nushiv1nushi.InstallUpdateResponse> installUpdate(
     nushiv1nushi.InstallUpdateRequest input, {
     connect.Headers? headers,

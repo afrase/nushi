@@ -36,8 +36,10 @@ type Prefs interface {
 // Homebrew is Homebrew's casks of Nushi (internal/homebrew): the way a
 // newer version is installed (ADR 0109).
 type Homebrew interface {
-	// Installed is the cask that installed this Nushi; "" when none did.
-	Installed() string
+	// For is the cask whose upgrade brings version: the one that
+	// installed this Nushi, when it can carry that version (a
+	// pre-release only nushi@beta); "" otherwise.
+	For(version string) string
 	// Has says whether cask is installed at version.
 	Has(cask, version string) bool
 	// Upgrade runs Homebrew's upgrade of cask, to install version, and
@@ -138,7 +140,7 @@ func (s *Service) Turned(on bool) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.found.Version, s.found.URL = "", ""
+	s.found.Version, s.found.URL, s.found.Cask = "", "", ""
 	found := s.found
 	s.publish(model.Event{Update: &found}) // under mu: a check ending now publishes before, or not at all
 }
@@ -172,6 +174,9 @@ func (s *Service) check(ctx context.Context, auto bool) (model.Update, error) {
 	newer := s.current != "" && Compare(v, s.current) > 0
 	if newer {
 		found.Version, found.URL = v, s.web+"/releases/tag/"+url.PathEscape(tag)
+		if s.Brew != nil {
+			found.Cask = s.Brew.For(v)
+		}
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
