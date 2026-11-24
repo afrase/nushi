@@ -24,7 +24,7 @@ func (s *server) OpenTerminal(_ context.Context, req *connect.Request[nushiv1.Op
 }
 
 func (s *server) ListTerminals(_ context.Context, req *connect.Request[nushiv1.ListTerminalsRequest]) (*connect.Response[nushiv1.ListTerminalsResponse], error) {
-	return connect.NewResponse(&nushiv1.ListTerminalsResponse{Terminals: terminalsProto(s.Terms.List(req.Msg.ChatId))}), nil
+	return connect.NewResponse(&nushiv1.ListTerminalsResponse{Terminals: terminalsProto(s.Terms.ListNow(req.Msg.ChatId))}), nil
 }
 
 func (s *server) AttachTerminal(ctx context.Context, req *connect.Request[nushiv1.AttachTerminalRequest], stream *connect.ServerStream[nushiv1.AttachTerminalResponse]) error {

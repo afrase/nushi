@@ -218,16 +218,32 @@ func (t *Terminal) programOf(pg int) string {
 // Foreground returns the foreground program's command line as it is now,
 // read from the terminal rather than from the last look (Program, taken
 // after the latest input or output, so it misses a program that took the
-// foreground silently since the looks after them ended): "" at the shell's prompt or once it
-// has exited. What decides to end the terminal asks this, so a command
-// started a moment ago counts.
+// foreground silently since the looks after them ended): "" at the shell's
+// prompt or once it has exited. What decides on the terminal (ending it,
+// typing a run into it) asks this, so a command started a moment ago
+// counts. It keeps what it found as a look would, and tells changed when
+// that differs, so the state sent next agrees with it.
 func (t *Terminal) Foreground() string {
 	select {
 	case <-t.done:
 		return ""
 	default:
 	}
-	return t.programOf(t.foreground())
+	t.lookMu.Lock() // one look at a time: this is one, its answer the newest
+	defer t.lookMu.Unlock()
+	pg := t.foreground()
+	program := t.programOf(pg)
+	t.lastPg = pg
+	t.mu.Lock()
+	differs := !t.ended && program != t.program
+	if differs {
+		t.program = program
+	}
+	t.mu.Unlock()
+	if differs && t.changed != nil {
+		t.changed()
+	}
+	return program
 }
 
 // commandLine returns a process's arguments, the first without its folder,

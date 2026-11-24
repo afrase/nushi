@@ -6,6 +6,8 @@ Amended 2026-11-24: a terminal's foreground is no longer looked at twice a secon
 
 Amended 2026-11-24 (later): after input the looks go on, further apart (at 0.3, 0.9, 2.1, 4.5 and 9.5 s), so a program that takes the foreground silently a while after the Enter (behind a slow `$(...)`, a chain's second command) is seen; the app's close, archive and code runs decide on what the last look saw. One that takes it later still is missed until the next input or output; what the daemon itself decides on (its restart's hold) reads the foreground live. The rest holds.
 
+Amended 2026-11-24 (decisions): the looks feed only what is shown; a decision never rests on them. ListTerminals (and a delete's plan) reads each terminal's foreground live, and the terminal keeps what that read found, telling its change, so the next state sent agrees; the app asks ListTerminals afresh before it closes a terminal or types a code run into one, as archiving already did, and falls back to what it knows only when that ask fails. The rest holds.
+
 ## Context
 A terminal beside a chat, and a dev server's program, run on one of the daemon's pseudo-terminals (`internal/terminal`): on Unix a pty device, the program in a session and process group of its own, what runs on it found by its controlling terminal, Close a SIGHUP to all of it. Windows has none of that. Its pseudo-terminal is ConPTY's pseudo-console (`CreatePseudoConsole`): two pipes, one the program reads and one it writes, and a console host between them. Go's `os/exec` can't attach a program to one (`SysProcAttr` has no attribute list), Windows has no foreground process group or SIGHUP, and no login shell to start: so terminals refused to start there (ADR 0124), and proctree read no processes.
 

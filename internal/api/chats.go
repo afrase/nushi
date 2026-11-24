@@ -300,7 +300,7 @@ func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv
 	for _, sess := range p.Sessions {
 		out.Sessions = append(out.Sessions, &nushiv1.AgentSession{SessionId: sess.ID, Folder: sess.Folder})
 	}
-	for _, t := range s.Terms.List(req.Msg.ChatId) {
+	for _, t := range s.Terms.ListNow(req.Msg.ChatId) {
 		if !t.Exited {
 			out.Terminals = append(out.Terminals, terminalProto(t))
 		}

@@ -133,6 +133,37 @@ func (s *Service) List(chatID string) []model.Terminal {
 	return out
 }
 
+// ListNow returns a chat's terminals, in order, each with its foreground
+// program as it is now (Foreground) rather than as last seen: ListTerminals
+// answers it, and the app decides on that answer whether closing a
+// terminal or archiving its chat asks first, and which terminal a code run
+// may type into (ADR 0132). The pushed state (List) may lag; a decision
+// doesn't. Each foreground is read outside the lock every keystroke takes,
+// as Running reads it, and the terminal keeps what it found, so its next
+// event agrees.
+func (s *Service) ListNow(chatID string) []model.Terminal {
+	type listed struct {
+		m     model.Terminal
+		shell Shell
+	}
+	s.mu.Lock()
+	var terms []listed
+	for _, t := range s.terms {
+		if t.ChatID == chatID {
+			terms = append(terms, listed{t.Terminal, t.shell})
+		}
+	}
+	s.mu.Unlock()
+	out := make([]model.Terminal, 0, len(terms))
+	for _, t := range terms {
+		m := t.m
+		m.Program = t.shell.Foreground()
+		m.Exited, m.ExitCode = exitOf(t.shell, m.Command)
+		out = append(out, m)
+	}
+	return out
+}
+
 func (s *Service) changed(chatID string) {
 	list := s.List(chatID)
 	s.publish(model.Event{ChatID: chatID, Terminals: &list})

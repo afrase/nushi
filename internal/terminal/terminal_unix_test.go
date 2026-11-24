@@ -88,7 +88,7 @@ func TestProgramIsLookedAtAfterInputOrOutput(t *testing.T) {
 		t.Fatal("no look is due after input")
 	}
 	output("sleep 30\r\n") // the echo, whole
-	testcheck.Wait(t, "sleep in the foreground", func() bool { return term.Foreground() == "sleep 30" })
+	testcheck.Wait(t, "sleep in the foreground", func() bool { return term.programOf(term.foreground()) == "sleep 30" })
 	timer.fire()
 	if term.Program() != "sleep 30" {
 		t.Fatalf("program %q, want sleep 30", term.Program())
@@ -129,12 +129,52 @@ func TestASilentLateProgramIsSeen(t *testing.T) {
 	timer.fire() // the look after the input, and the one after its echo: the shell still waits on cat
 	timer.fire()
 	testcheck.NoErr(t, os.WriteFile(gate, []byte("go\n"), 0o600))
-	testcheck.Wait(t, "sleep in the foreground", func() bool { return term.Foreground() == "sleep 30" })
+	testcheck.Wait(t, "sleep in the foreground", func() bool { return term.programOf(term.foreground()) == "sleep 30" })
 	for timer.armed() && term.Program() != "sleep 30" {
 		timer.fire()
 	}
 	if got := term.Program(); got != "sleep 30" {
 		t.Errorf("program %q, want sleep 30", got)
+	}
+}
+
+// Foreground, read when something decides on the terminal, keeps what it
+// found: a program the looks missed (it took the foreground silently
+// after they ended) becomes Program, and changed is told, so the next
+// state sent agrees; a look after finds nothing new to tell.
+func TestForegroundKeepsWhatItFound(t *testing.T) {
+	timer := fakeLookTimer(t)
+	changes := make(chan struct{}, 16)
+	term, err := Start([]string{"/bin/sh"}, t.TempDir(), []string{"PS1=$ ", "TERM=xterm-256color"}, 80, 24, func() { changes <- struct{}{} })
+	testcheck.NoErr(t, err)
+	t.Cleanup(term.Close)
+	testcheck.Wait(t, "the prompt", func() bool { return strings.Contains(string(term.Output()), "$ ") })
+	for timer.armed() {
+		timer.fire()
+	}
+	testcheck.NoErr(t, term.Write([]byte("sleep 30\n")))
+	testcheck.Wait(t, "sleep in the foreground", func() bool { return term.programOf(term.foreground()) == "sleep 30" })
+	if got := term.Program(); got != "" { // no look has run since the input
+		t.Fatalf("program %q before any look, want \"\"", got)
+	}
+	if got := term.Foreground(); got != "sleep 30" {
+		t.Fatalf("Foreground %q, want sleep 30", got)
+	}
+	if got := term.Program(); got != "sleep 30" {
+		t.Errorf("program %q after Foreground, want sleep 30", got)
+	}
+	select {
+	case <-changes:
+	default:
+		t.Error("the program Foreground found wasn't told")
+	}
+	for timer.armed() {
+		timer.fire()
+	}
+	select {
+	case <-changes:
+		t.Error("a look told again what Foreground had told")
+	default:
 	}
 }
 
