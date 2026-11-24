@@ -2,6 +2,11 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show AppExitResponse;
 
+import 'package:connectrpc/connect.dart' as connect;
+import 'package:connectrpc/http2.dart';
+import 'package:connectrpc/protobuf.dart';
+import 'package:connectrpc/protocol/connect.dart' as protocol;
+import 'package:daemon_transport/uds_transport.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -70,12 +75,35 @@ void main() => runZonedGuarded(() {
     ..load()
     ..watch();
   runApp(
-    NushiApp(
-      daemon: Daemon(drafts: Drafts(DraftFiles(dataDir))),
-      commentDrafts: CommentDraftFile(dataDir),
-    ),
+    NushiApp(daemon: macDaemon(), commentDrafts: CommentDraftFile(dataDir)),
   );
 }, (e, s) => appLog.error('uncaught error', e, s));
+
+/// The Mac's (and Linux's) link to its own daemon: over the Unix socket in
+/// the data folder, each call carrying the client token. Only this app
+/// has them; the phone and tests pass [Daemon] a transport of their own.
+Daemon macDaemon() {
+  final socket = UdsTransport('$dataDir/nushid.sock');
+  return Daemon(
+    transport: protocol.Transport(
+      baseUrl: 'http://nushid',
+      codec: const ProtoCodec(),
+      httpClient: createHttpClient(transport: socket),
+      interceptors: [_withToken],
+    ),
+    drafts: Drafts(DraftFiles(dataDir)),
+  )..whenDisposed(() => unawaited(socket.close()));
+}
+
+/// Puts the client token on [next]'s call, read at every call: the daemon
+/// writes it on its first start.
+connect.AnyFn<I, O> _withToken<I extends Object, O extends Object>(
+  connect.AnyFn<I, O> next,
+) => (req) async {
+  final token = await File('$dataDir/token').readAsString();
+  req.headers['authorization'] = 'Bearer ${token.trim()}';
+  return await next(req);
+};
 
 class NushiApp extends StatefulWidget {
   const new({required this.daemon, this.commentDrafts, super.key});

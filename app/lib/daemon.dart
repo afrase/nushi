@@ -3,10 +3,6 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:connectrpc/connect.dart' as connect;
-import 'package:connectrpc/http2.dart';
-import 'package:connectrpc/protobuf.dart';
-import 'package:connectrpc/protocol/connect.dart' as protocol;
-import 'package:daemon_transport/uds_transport.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show WidgetsBinding;
 import 'package:nushi/agents.dart';
@@ -118,20 +114,17 @@ const commandTerminalApi = 143;
 /// answers, the bundled one is started; a running daemon is only ever
 /// stopped by [restartDaemon].
 class Daemon extends ChangeNotifier {
-  /// A test passes a [transport] of its own. The phone passes its
-  /// relay's, [remote]: then nothing of the Mac's runs (no bundled daemon,
-  /// no token, no app log), and its link pings (phone/link.dart), which
-  /// also keeps its relay connection alive.
-  new({connect.Transport? transport, this.remote = false, this.drafts}) {
-    client = NushiServiceClient(
-      transport ??
-          protocol.Transport(
-            baseUrl: 'http://nushid',
-            codec: const ProtoCodec(),
-            httpClient: createHttpClient(transport: _transport),
-            interceptors: [_auth],
-          ),
-    );
+  /// [transport] reaches the daemon: on the Mac its socket with the
+  /// client token (`macTransport` in main.dart), on the phone its relay's,
+  /// in a test a fake. The phone passes [remote]: then nothing of the
+  /// Mac's runs (no bundled daemon, no app log), and its link pings
+  /// (phone/link.dart), which also keeps its relay connection alive.
+  new({
+    required connect.Transport transport,
+    this.remote = false,
+    this.drafts,
+  }) {
+    client = NushiServiceClient(transport);
     // The phone's link pings on its own schedule (phone/link.dart).
     if (remote) return;
     addListener(macView.tick);
@@ -159,7 +152,6 @@ class Daemon extends ChangeNotifier {
   /// Where the chats' drafts are kept, if anywhere (not in tests).
   final Drafts? drafts;
 
-  late final _transport = UdsTransport('$dataDir/nushid.sock');
   late final NushiServiceClient client;
   Timer? _timer;
 
@@ -266,15 +258,6 @@ class Daemon extends ChangeNotifier {
     });
     super.notifyListeners();
   }
-
-  connect.AnyFn<I, O> _auth<I extends Object, O extends Object>(
-    connect.AnyFn<I, O> next,
-  ) => (req) async {
-    // Read at every call: the daemon writes it on its first start.
-    final token = await File('$dataDir/token').readAsString();
-    req.headers['authorization'] = 'Bearer ${token.trim()}';
-    return await next(req);
-  };
 
   /// What shows in the chat's place: the chat, Jira or GitHub.
   Place place = const ChatPlace();
@@ -393,7 +376,6 @@ class Daemon extends ChangeNotifier {
       t.cancel();
     }
     _unsubscribe();
-    if (!remote) unawaited(_transport.close());
     super.dispose();
   }
 }
