@@ -108,14 +108,22 @@ void main() {
       final ready = mergePull('ready')..merge.canMerge = false;
       expect(mergeView(ready)!.step, MergeStep.words);
       expect(words(ready), contains('takes write access'));
+      final blocked = mergePull('blocked')..merge.canMerge = false;
+      expect(mergeView(blocked)!.step, MergeStep.words);
+    });
+
+    // Rare: no method of the repository's the viewer may use. The shared
+    // fixtures have a real repository's three, so this one has its own.
+    test('no merge method it can use: the note, and nothing offered', () {
       final noMethod = mergePull('ready')
         ..merge.methods.clear()
         ..merge.methods.add('rebase')
         ..merge.canRebase = false;
       expect(mergeView(noMethod)!.step, MergeStep.words);
-      expect(words(noMethod), contains("None of the repository's merge"));
-      final blocked = mergePull('blocked')..merge.canMerge = false;
-      expect(mergeView(blocked)!.step, MergeStep.words);
+      expect(
+        words(noMethod),
+        contains("None of the repository's merge methods can merge it now."),
+      );
     });
 
     test('auto-merge only where it can wait for something', () {

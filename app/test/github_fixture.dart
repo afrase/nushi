@@ -70,9 +70,15 @@ GitHubPull pull() => GitHubPull(
   headOid: 'b' * 40,
   mergeable: 'mergeable',
   mergeState: 'unstable',
-  // As the daemon says it (API 96): nothing blocks, and no merge method to
-  // offer here.
-  merge: GitHubMerge(canMerge: true),
+  // As the daemon says it: nothing blocks, and the merge methods a real
+  // repository has (GitHub's default allows all three). None at all is
+  // rare: pull_merge_test covers it with its own data.
+  merge: GitHubMerge(
+    methods: ['merge', 'squash', 'rebase'],
+    defaultMethod: 'merge',
+    canMerge: true,
+    canRebase: true,
+  ),
   additions: 18,
   changedFiles: 3,
   reviewers: [
