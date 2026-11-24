@@ -132,6 +132,10 @@ func (t *Terminal) Resize(cols, rows int) error {
 	return errors.Join(err, err2)
 }
 
+// onTerminalOf lists the processes on t's terminal (onTerminal); a test
+// puts a failed listing in its place.
+var onTerminalOf = (*Terminal).onTerminal
+
 // hangUp is Close's work. The program itself is signalled through its
 // os.Process as well as by the listing, so it ends (and done closes) even
 // when the listing comes back empty (a failed sysctl or /proc read); its
@@ -140,7 +144,7 @@ func (t *Terminal) Resize(cols, rows int) error {
 func (t *Terminal) hangUp() {
 	// Listed while the program still holds the terminal: what it leaves
 	// running loses the terminal when it exits.
-	pids := t.onTerminal()
+	pids := onTerminalOf(t)
 	for _, pid := range pids {
 		_ = unix.Kill(pid, unix.SIGHUP)
 	}

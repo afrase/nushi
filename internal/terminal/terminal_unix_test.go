@@ -98,7 +98,7 @@ func TestProgramIsLookedAtAfterInputOrOutput(t *testing.T) {
 	default:
 		t.Error("the program's change wasn't told")
 	}
-	timer.fire() // the echo came while the first was due
+	timer.fire()           // the echo came while the first was due
 	for range afterInput { // the looks that follow input, further apart
 		if !timer.armed() {
 			t.Fatal("the looks after input ended early")
@@ -135,6 +135,34 @@ func TestASilentLateProgramIsSeen(t *testing.T) {
 	}
 	if got := term.Program(); got != "sleep 30" {
 		t.Errorf("program %q, want sleep 30", got)
+	}
+}
+
+// Close hangs up the program itself, then kills it after the grace, even
+// when the listing of what is on its terminal comes back empty (a failed
+// sysctl or /proc read): it doesn't wait on the program for good.
+func TestCloseEndsTheProgramWithoutAListing(t *testing.T) {
+	was := onTerminalOf
+	onTerminalOf = func(*Terminal) []int { return nil }
+	t.Cleanup(func() { onTerminalOf = was })
+	heard := filepath.Join(t.TempDir(), "heard")
+	term, err := Start([]string{"/bin/sh", "-c", `trap 'echo hup > "$0"' HUP; echo ready; while :; do read x; done`, heard}, t.TempDir(), []string{"TERM=xterm-256color"}, 80, 24, nil)
+	testcheck.NoErr(t, err)
+	t.Cleanup(func() { // a failed Close's program, still running
+		if t.Failed() {
+			_ = syscall.Kill(term.Pid(), syscall.SIGKILL)
+		}
+	})
+	testcheck.Wait(t, "the trap set", func() bool { return strings.Contains(string(term.Output()), "ready") })
+	closed := make(chan struct{})
+	go func() { term.Close(); close(closed) }()
+	select {
+	case <-closed:
+	case <-time.After(grace + 3*time.Second): // a bound on a failure, not a wait
+		t.Fatal("Close is still waiting for the program")
+	}
+	if b, err := os.ReadFile(heard); err != nil || string(b) != "hup\n" {
+		t.Errorf("the program wasn't hung up first: %q, %v", b, err)
 	}
 }
 
