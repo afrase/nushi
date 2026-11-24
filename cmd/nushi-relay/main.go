@@ -109,11 +109,13 @@ func main() {
 // selfUpdate is -update: the relay replaces itself with the latest stable
 // release's when that is newer (internal/relayupdate), and restarts unit
 // after an install when it is given. -restart-unit without -update is a
-// mistake, not a relay to start.
+// mistake, not a relay to start. Its output is best-effort: a write that
+// fails never stops the update or skips removing the staged file.
 func selfUpdate(update bool, unit string) error {
 	if err := checkUpdateFlags(update, unit); err != nil {
 		return err
 	}
+	ignoreBrokenPipe()
 	ctx, stop := updateContext()
 	defer stop()
 	return relayupdate.New(version, unit, os.Stdout).Run(ctx)

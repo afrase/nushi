@@ -386,3 +386,35 @@ func TestDeadline(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 }
+
+// brokenOut is an output that has gone away (a closed pipe, a dropped ssh
+// session with SIGPIPE ignored): every write fails.
+type brokenOut struct{}
+
+func (brokenOut) Write([]byte) (int, error) { return 0, errors.New("broken pipe") }
+
+// Output is best-effort: when every write fails, a good update still
+// installs and restarts, and a refused one still leaves nothing staged.
+func TestBrokenOutput(t *testing.T) {
+	f := newFakeGitHub(t)
+	f.publish(t, "v1.3.0", false, false, releaseFiles(t))
+
+	r := f.newRun(t, "1.2.9")
+	r.u.Out, r.u.Unit = brokenOut{}, "nushi-relay"
+	testcheck.NoErr(t, r.u.Run(t.Context()))
+	if b, _ := os.ReadFile(r.exe); string(b) != "new relay" {
+		t.Errorf("installed %q", b)
+	}
+	r.alone(t)
+	if !slices.Equal(r.restarts, []string{"nushi-relay"}) {
+		t.Errorf("restarted %v", r.restarts)
+	}
+
+	r = f.newRun(t, "1.2.9")
+	r.u.Out = brokenOut{}
+	r.u.Verify = func(context.Context, string) error { return errors.New("not an executable") }
+	if err := r.u.Run(t.Context()); err == nil || !strings.Contains(err.Error(), "not an executable") {
+		t.Errorf("a refused update: %v", err)
+	}
+	r.untouched(t)
+}
