@@ -184,7 +184,9 @@ func (t itemText) count(q textfind.Query) int {
 // output where the app shows them (showsInput, showsRawOutput). Not a
 // call's diffs, a plan, a question's form, a message's files or images,
 // which the find doesn't look in. A title is the agent's, not the row's as
-// the app writes it, as ADR 0144 accepts.
+// the app writes it, and an MCP call's input is whole, where the app drops
+// Codex's {server, tool, arguments} wrapper (shownInput), as ADR 0144
+// accepts.
 func findText(it model.Item) []string {
 	switch it.Kind {
 	case model.ToolCall, model.Permission:

@@ -2,7 +2,7 @@
 
 Status: accepted, 2026-11-20 (#64). Amends 0026.
 
-Amended 2026-11-24: a tool call's input and raw output count where the app shows them (`findText` copies its `showsInput` and `showsRawOutput`), so only the title and Markdown drift below remain.
+Amended 2026-11-24: a tool call's input and raw output count where the app shows them (`findText` copies its `showsInput` and `showsRawOutput`), so what drifts is the title and Markdown below, and an MCP call's input whose `{server, tool, arguments}` wrapper (Codex's) the app drops to show the arguments alone (`shownInput`), which the daemon counts whole.
 
 ## Context
 A long chat opens with its recent part and loads the rest a page at a time (ADR 0026). ⌘F found only in what was loaded, said so under the field, and offered Load all, which laid out the whole chat. The owner wants ⌘F in a long chat to count the whole conversation at once, and a step to a match that isn't loaded to bring it in.
