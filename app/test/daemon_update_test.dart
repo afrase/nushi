@@ -1,4 +1,5 @@
 import 'package:connectrpc/connect.dart';
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -155,6 +156,68 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
+  // The screen hides the chats, so it says what the restart waits for, and
+  // Restart daemon asks before it stops a running turn.
+  testWidgets('below the floor the Restart screen says it restarts by '
+      'itself and what it waits for, and asks before restarting', (
+    tester,
+  ) async {
+    final fake = _daemon(
+      () => PingResponse(apiVersion: apiFloor - 1, build: '7-1000'),
+    );
+    final d = await _open(tester, fake);
+    // Chat c's turn runs, as its hold says.
+    fake.emit(
+      EventsResponse(
+        chatId: 'c',
+        seq: Int64(9),
+        status: ChatStatus(busy: true),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(find.byType(OutdatedScreen), findsOne);
+    expect(find.textContaining('by itself once the chats are idle'), findsOne);
+    expect(
+      find.text(
+        'Waiting for: Fix the login redirect (working), a terminal running '
+        'npm run dev in Release notes',
+      ),
+      findsOne,
+    );
+    await tester.tap(find.text('Restart daemon'));
+    await tester.pumpAndSettle();
+    expect(find.text('Restart the daemon?'), findsOne);
+    expect(find.textContaining('stops 1 running turn'), findsOne);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(d.restarting, isFalse);
+    d.dispose();
+  }, variant: onMac);
+
+  for (final b in Brightness.values) {
+    for (final width in [1700.0, 720.0]) {
+      renderTest('the Restart screen, waiting, ${width.toInt()} wide '
+          '(${b.name})', (tester) async {
+        tester.platformDispatcher.platformBrightnessTestValue = b;
+        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+        final fake = _daemon(
+          () => PingResponse(apiVersion: apiFloor - 1, build: '7-1000'),
+        );
+        final d = await _open(tester, fake, width: width);
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pumpAndSettle();
+        expectTextInside(tester, width);
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'outdated_screen_${width.toInt()}_${b.name}',
+        );
+        d.dispose();
+      }, variant: onMac);
+    }
+  }
+
   // From the floor up, the app works on while the daemon waits for idle.
   for (final api in [apiFloor, apiFloor + 1]) {
     testWidgets('a daemon at API $api, at or above the floor, keeps the app '
@@ -188,6 +251,9 @@ void main() {
     expect(find.textContaining('The daemon is older than this app'), findsOne);
     expect(find.text('Restart daemon'), findsOneWidget);
     expect(find.text(_bar), findsNothing);
+    // It won't restart by itself, so the screen doesn't say it will.
+    expect(find.textContaining('by itself'), findsNothing);
+    expect(find.textContaining('Waiting for'), findsNothing);
     expect(refused, greaterThan(0));
     expect(tester.takeException(), isNull);
     d.dispose();

@@ -210,6 +210,11 @@ class Daemon extends ChangeNotifier {
   /// said (API 85): chats that run or wait, terminals running a command.
   List<RestartHold> restartHolds = const [];
 
+  /// Whether the daemon took the last ask to restart once idle: it will
+  /// restart by itself, as the Restart screen then says. One older than
+  /// API 77 refuses the ask, and waits for Restart daemon.
+  bool restartsWhenIdle = false;
+
   /// What the daemon's check for a newer release found, from its pings and
   /// events (API 86); empty until it said.
   UpdateCheck update = UpdateCheck();

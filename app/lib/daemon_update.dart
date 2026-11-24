@@ -97,16 +97,30 @@ class _Waiting extends StatelessWidget {
 /// the app can't stop it, how to): the app shows nothing else until it
 /// has. For a daemon below [apiFloor] (asked meanwhile to restart once
 /// idle, so it clears by itself), or one with no bundled daemon to restart
-/// into.
+/// into. The chats are hidden behind it, so while the daemon waits for
+/// idle it says what for, and Restart daemon asks before it stops
+/// anything (a permission card no one can see would hold it for ever).
 class OutdatedScreen extends StatelessWidget {
   const new(this.daemon, {super.key});
 
   final Daemon daemon;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: daemon, builder: _build);
+
+  Widget _build(BuildContext context, Widget? _) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final waits = daemon.updating && daemon.restartsWhenIdle;
+    final holds = [
+      for (final h in daemon.restartHolds)
+        if (daemon.chats[h.chatId] case final c?)
+          if (h.terminal)
+            'a terminal ${h.why} in ${c.shownTitle}'
+          else
+            '${c.shownTitle} (${h.why})',
+    ];
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
@@ -114,23 +128,34 @@ class OutdatedScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'The daemon is older than this app. Restarting it stops '
-              'running turns and closes terminals; chats reopen as you open '
-              'them.',
+              waits
+                  ? 'The daemon is older than this app. It restarts into the '
+                        'new one by itself once the chats are idle; '
+                        'restarting now stops running turns and closes '
+                        'terminals.'
+                  : 'The daemon is older than this app. Restarting it stops '
+                        'running turns and closes terminals; chats reopen as '
+                        'you open them.',
               textAlign: TextAlign.center,
               style: theme.ui(t.textSecondary),
             ),
+            if (waits && holds.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Waiting for: ${holds.join(', ')}',
+                textAlign: TextAlign.center,
+                style: theme.ui(t.textMuted, size: 12),
+              ),
+            ],
             const SizedBox(height: 14),
             if (daemon.bundled != null)
-              ListenableBuilder(
-                listenable: daemon,
-                builder: (context, _) => Button(
-                  label: daemon.restarting ? 'Restarting…' : 'Restart daemon',
-                  kind: ButtonKind.primary,
-                  onPressed: daemon.restarting
-                      ? null
-                      : () => tryOrShow(context, daemon.restartDaemon),
-                ),
+              Button(
+                label: daemon.restarting ? 'Restarting…' : 'Restart daemon',
+                kind: ButtonKind.primary,
+                // What it stops is asked first.
+                onPressed: daemon.restarting
+                    ? null
+                    : () => restartDaemonAsking(context, daemon),
               )
             else
               Text('make stop daemon', style: theme.code(t.textMuted)),

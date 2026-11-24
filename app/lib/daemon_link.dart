@@ -93,6 +93,8 @@ extension DaemonLink on Daemon {
       connected = ok;
       if (ok) {
         if (!was || build != _build) _links++;
+        // Another daemon: whether it restarts when idle is its own to say.
+        if (build != _build) restartsWhenIdle = false;
         daemonApi = api; // kept while away: the app stays as it was
         _build = build;
         daemonVersion = version;
@@ -126,8 +128,9 @@ extension DaemonLink on Daemon {
         client.restartWhenIdle(RestartWhenIdleRequest()).then((r) {
           // What it waits for, for the update bar (an older daemon says
           // nothing).
-          if (!listEquals(r.holds, restartHolds)) {
+          if (!listEquals(r.holds, restartHolds) || !restartsWhenIdle) {
             restartHolds = r.holds;
+            restartsWhenIdle = true;
             _changed();
           }
         }, onError: (Object _) {}),
