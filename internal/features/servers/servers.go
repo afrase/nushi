@@ -249,29 +249,43 @@ func (s *Service) Start(ctx context.Context, chatID string, pick Pick) (Row, err
 	if pick.Agent {
 		sv.showTo = chatID
 	}
-	s.mu.Lock()
-	switch {
-	case s.closed:
-		s.mu.Unlock()
-		return Row{}, refuse("the daemon is stopping", errors.New("the daemon is stopping"))
-	case slices.ContainsFunc(s.alive, func(o *server) bool { return o.key == sv.key }):
-		o := s.alive[slices.IndexFunc(s.alive, func(o *server) bool { return o.key == sv.key })]
-		row := o.row()
-		if pick.Agent && o.showTo == "" {
-			o.showTo = chatID // shown once it answers, if it hasn't yet
+	for {
+		s.mu.Lock()
+		live := slices.DeleteFunc(slices.Clone(s.alive), dying)
+		same := func(o *server) bool { return o.key == sv.key }
+		switch {
+		case s.closed:
+			s.mu.Unlock()
+			return Row{}, refuse("the daemon is stopping", errors.New("the daemon is stopping"))
+		case slices.ContainsFunc(live, same):
+			o := live[slices.IndexFunc(live, same)]
+			row := o.row()
+			if pick.Agent && o.showTo == "" {
+				o.showTo = chatID // shown once it answers, if it hasn't yet
+			}
+			s.mu.Unlock()
+			if row.Program == "" { // still starting, its program not found yet
+				program(&row, o.entry, s.Env.Environ())
+			}
+			row.Index = i
+			if pick.Agent && row.State == Running {
+				s.showAsked(chatID, row.URL)
+			}
+			return row, nil // a start of one that runs: the same server
+		case slices.ContainsFunc(s.alive, same): // stopping or ending: wait it out, then look again
+			o := s.alive[slices.IndexFunc(s.alive, same)]
+			s.mu.Unlock()
+			select {
+			case <-o.ended:
+				continue
+			case <-ctx.Done():
+				return Row{}, ctx.Err()
+			}
+		case inFolder(live, folder) >= PerFolder:
+			s.mu.Unlock()
+			return Row{}, refuse("the folder runs its most", fmt.Errorf("%d servers already run in this folder: stop one first", PerFolder))
 		}
-		s.mu.Unlock()
-		if row.Program == "" { // still starting, its program not found yet
-			program(&row, o.entry, s.Env.Environ())
-		}
-		row.Index = i
-		if pick.Agent && row.State == Running {
-			s.showAsked(chatID, row.URL)
-		}
-		return row, nil // a start of one that runs: the same server
-	case inFolder(s.alive, folder) >= PerFolder:
-		s.mu.Unlock()
-		return Row{}, refuse("the folder runs its most", fmt.Errorf("%d servers already run in this folder: stop one first", PerFolder))
+		break
 	}
 	s.alive = append(s.alive, sv)
 	s.mu.Unlock()
@@ -287,6 +301,23 @@ func (s *Service) Start(ctx context.Context, chatID string, pick Pick) (Row, err
 	s.mu.Unlock()
 	row.Index = i
 	return row, nil
+}
+
+// dying says whether a live server is on its way out: stopping, or its
+// program ended and reap is ending what it left. Called with s.mu.
+func dying(sv *server) bool {
+	if sv.stopping != "" {
+		return true
+	}
+	if sv.proc == nil {
+		return false // still starting
+	}
+	select {
+	case <-sv.proc.Done():
+		return true
+	default:
+		return false
+	}
 }
 
 // Stop stops a server of a chat's folder, the user's doing.
