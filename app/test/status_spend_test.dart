@@ -95,6 +95,17 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets(r'a cost too small to write as a cent: no spend, not $0.00', (
+    tester,
+  ) async {
+    final fake = FakeDaemon([])..usage = _day(0.004);
+    final d = await _card(tester, fake);
+    expect(_asked(fake), hasLength(1));
+    expect(find.textContaining(r'$'), findsNothing);
+    expect(find.byKey(const ValueKey('status-spend')), findsNothing);
+    await closeView(tester, d);
+  });
+
   testWidgets("the spend's tooltip, and a press opens Settings › Usage", (
     tester,
   ) async {

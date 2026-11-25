@@ -107,11 +107,14 @@ final class Spent {
   const new(this.amount, this.turns);
 
   /// [t]'s spend in the currency most was spent in, or null when nothing
-  /// reported a cost.
+  /// reported a cost, or one too small to write as more than nothing
+  /// ("$0.00").
   static Spent? of(UsageTotals t) {
     final measure = UsageMeasure.mostSpent(t);
     if (!measure.costs) return null;
-    return Spent(measure.write(measure.of(t)), t.turns.toInt());
+    final amount = measure.write(measure.of(t));
+    if (!amount.contains(RegExp('[1-9]'))) return null;
+    return Spent(amount, t.turns.toInt());
   }
 
   /// "$12.40".
