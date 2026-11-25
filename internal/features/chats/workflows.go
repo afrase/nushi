@@ -29,7 +29,6 @@ type follow struct {
 	poke    chan struct{}
 	found   bool      // its files were read once
 	since   time.Time // when following began
-	gone    time.Time // when its owner was first seen gone
 	missing time.Time // when its files, found before, were first not there
 }
 
@@ -109,8 +108,7 @@ func (c *chat) workflowTaskLocked(task model.TaskUpdate, call string) {
 }
 
 // pokeWorkflowsLocked has each workflow followed read its files now:
-// something happened that may be its end (an own turn starting, as its
-// notification does; the agent going; a task stopped).
+// the agent went, and its runs with it.
 func (c *chat) pokeWorkflowsLocked() {
 	for _, f := range c.following {
 		select {
@@ -171,14 +169,13 @@ func (c *chat) followWorkflow(callID string, f *follow) {
 
 // How a run is followed (ADR 0127), but for how often its files are read
 // while it runs (Timing.WorkflowPoll): every workflowStalledPoll once it
-// stalled; one never found within workflowFind shows as a plain call. Its
-// agent gone, a last read comes after workflowGrace; a run no agent of
-// this daemon's runs ends once its files are still for workflowQuiet, and
-// one whose agent lives stalls once they are still for workflowStall.
+// stalled; one never found within workflowFind shows as a plain call. A
+// run no agent of this daemon's runs, whose end the replay didn't tell,
+// ends once its files are still for workflowQuiet, and one whose agent
+// lives stalls once they are still for workflowStall.
 const (
 	workflowStalledPoll = 30 * time.Second
 	workflowFind        = 30 * time.Second
-	workflowGrace       = 2 * time.Second
 	workflowQuiet       = 2 * time.Minute
 	workflowStall       = time.Hour
 )
@@ -220,10 +217,7 @@ func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone
 	}
 	got.Stalled = false
 	switch {
-	case f.owner != nil && gone && f.gone.IsZero():
-		f.gone = now // a last read after a grace, for the snapshot it may have left
-		return &got, workflowGrace
-	case f.owner != nil && gone:
+	case f.owner != nil && gone: // a killed claude tells no end of its task
 		return quit(got, now, c.kind.Title), 0
 	case !f.missing.IsZero() && now.Sub(f.missing) >= workflowFind:
 		got.State, got.End, got.Ended, got.Running, got.RunningCount = model.RunUnknown, "its files are gone", now, nil, 0

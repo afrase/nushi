@@ -241,9 +241,6 @@ func (c *chat) stoppedLocked(call model.Item) {
 	if unknown {
 		return
 	}
-	if id != "" && slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Workflow != nil && it.TaskID == id }) {
-		c.pokeWorkflowsLocked() // its snapshot is written as it stops
-	}
 	i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Agent != "" && it.AgentID == id })
 	if id == "" || i < 0 || c.items[i].Subagent == nil || c.items[i].Subagent.State != model.RunRunning {
 		return

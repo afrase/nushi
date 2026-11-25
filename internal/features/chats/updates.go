@@ -52,7 +52,6 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		if !c.ownTurn {
 			c.ownTurn = true // until the usage_update that ends the turn
 			c.statusChangedLocked()
-			c.pokeWorkflowsLocked() // a workflow's end starts one (Claude's task-notification)
 		}
 	}
 	switch u := n.Update; u.SessionUpdate {
