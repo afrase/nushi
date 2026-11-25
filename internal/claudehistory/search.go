@@ -217,8 +217,12 @@ func cleaned(text string, unnoted func(string) string) []string {
 	if unnoted != nil {
 		text = unnoted(text)
 	}
-	if t, ok := sessions.UserText(bashText(text)); ok {
-		return []string{t}
+	// bashText reads what UserText leaves, as the app reads the replay's
+	// text: a bash tag inside a marker goes with the marker.
+	if t, ok := sessions.UserText(text); ok {
+		if t = strings.TrimSpace(bashText(t)); t != "" {
+			return []string{t}
+		}
 	}
 	return nil
 }

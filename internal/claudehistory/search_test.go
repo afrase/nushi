@@ -191,7 +191,9 @@ func TestSearchAsTheReplayShows(t *testing.T) {
 		prompt("<bash-stdout>On branch quokka</bash-stdout><bash-stderr></bash-stderr>")+
 		prompt("And the bilby?\n\n<bash-input>make lint</bash-input>\n<bash-stdout>quokka ok</bash-stdout><bash-stderr></bash-stderr><bash-exit-code>0</bash-exit-code>")+
 		prompt("<system-reminder>a</command-message> echidna</system-reminder>The platypus")+
-		prompt("<command-name>/dingo and the potoroo"))
+		prompt("<command-name>/dingo and the potoroo")+
+		prompt("<system-reminder>Tool output: <bash-stdout> wallaby</system-reminder>The bandicoot\n\n"+
+			"<bash-input>ls</bash-input>\n<bash-stdout>x</bash-stdout><bash-stderr></bash-stderr><bash-exit-code>0</bash-exit-code>"))
 	l := Local{Projects: projects}
 	for _, c := range []struct{ q, before, after string }{
 		{"/review the relay", "", ""},
@@ -201,13 +203,15 @@ func TestSearchAsTheReplayShows(t *testing.T) {
 		{"!make lint", "And the bilby? ", ""},
 		{"platypus", "The ", ""},
 		{"potoroo", "<command-name>/dingo and the ", ""},
+		{"bandicoot", "The ", " !ls"},
+		{"!ls", "The bandicoot ", ""},
 	} {
 		hits := search(t, l, model.SessionSearch{Query: c.q})
 		if len(hits) != 1 || hits[0].Count != 1 || hits[0].Before != c.before || hits[0].After != c.after {
 			t.Errorf("%s: %+v", c.q, hits)
 		}
 	}
-	for _, q := range []string{"/compact", "/fix", "fix the burrow", "/wombat", "quokka", "echidna", "bash", "exit-code"} {
+	for _, q := range []string{"/compact", "/fix", "fix the burrow", "/wombat", "quokka", "echidna", "bash", "exit-code", "Tool output", "wallaby"} {
 		if hits := search(t, l, model.SessionSearch{Query: q}); len(hits) != 0 {
 			t.Errorf("%s: %+v, want nothing", q, hits)
 		}
