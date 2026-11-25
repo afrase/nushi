@@ -255,7 +255,7 @@ func TestSent(t *testing.T) {
 		meta map[string]any
 		want time.Time
 	}{
-		{meta("2026-11-24T22:23:18.367Z"), time.Date(2026, 11, 24, 22, 23, 18, 367e6, time.UTC)},
+		{meta("2026-11-24T22:23:18.367Z"), time.Date(2026, 11, 24, 22, 23, 18, 367000000, time.UTC)},
 		{meta("not a time"), time.Time{}},
 		{meta(42), time.Time{}},
 		{map[string]any{"claudeCode": map[string]any{}}, time.Time{}},

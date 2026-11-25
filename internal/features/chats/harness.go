@@ -276,7 +276,11 @@ type WorkflowReader interface {
 
 // MessageDater says when the agent's own files say session sid's messages of
 // folder were sent, by item id: a replay doesn't tell, so a message Nushi
-// never saw gets its time from here.
+// never saw gets its time from here. It is Ante's alone (ante.Local reads
+// the session's events.jsonl a second time on each reopen), until a real
+// Ante is checked to send a time on its host's replay lines: its bridge
+// would then pass that time on in the replay (SentReader), and this goes
+// (ADR 0076).
 type MessageDater interface {
 	MessageTimes(sid, folder string) map[string]time.Time
 }

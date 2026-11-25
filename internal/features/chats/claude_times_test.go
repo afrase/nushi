@@ -1,16 +1,13 @@
 package chats
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
-	"github.com/afrase/claude-acp-go/claudeagent/sessions"
 
-	"github.com/afrase/nushi/internal/claudehistory"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -21,12 +18,35 @@ import (
 // when the message begins with thinking: load's msg_fake_0001). A copy
 // merged with the replay takes the times too, for its rows that had none
 // (a copy from before Nushi kept times). ADR 0076.
+//
+// The times are what claude's transcript of each scenario (history/1, as
+// its load read it) says of each message: its record's timestamp, the
+// first record's for an agent message split over several, as
+// claudehistory's MessageTimes read them before the replay told them.
 func TestClaudeReplayDatesItsMessages(t *testing.T) {
+	at := func(s string) time.Time {
+		w, err := time.Parse(time.RFC3339Nano, s)
+		testcheck.NoErr(t, err)
+		return w
+	}
+	transcripts := map[string]map[string]time.Time{
+		"load": {
+			"a689e8e3-9294-421f-9d8d-b0abd8acd531": at("2026-11-24T22:23:18.367Z"),
+			"msg_fake_0001":                        at("2026-11-24T22:23:18.385Z"),
+			"msg_fake_0003":                        at("2026-11-24T22:23:18.447Z"),
+		},
+		"plan": {
+			"49ecd2ae-fa04-493e-a01f-94ab19adf4dd": at("2026-11-24T22:24:34.096Z"),
+			"msg_fake_0001":                        at("2026-11-24T22:24:34.115Z"),
+			"msg_fake_0007":                        at("2026-11-24T22:24:34.153Z"),
+			"msg_fake_0010":                        at("2026-11-24T22:24:34.165Z"),
+		},
+	}
 	for _, name := range []string{"load", "plan"} {
 		dir := filepath.Join("testdata", "claude-parity", name)
 		rec, _ := readACP(t, filepath.Join(dir, "acp.jsonl"))
 		sid, history := recordedLoad(t, rec)
-		want := transcriptTimes(t, dir, sid)
+		want := transcripts[name]
 		byText := map[string]time.Time{} // a message's time by its whole text, for a copy's rows under ids of Nushi's
 		texts := map[string]string{}
 		var order []string
@@ -114,18 +134,6 @@ func recordedLoad(t *testing.T, rec []event) (string, []acp.SessionUpdate) {
 	return "", nil
 }
 
-// transcriptTimes is when claude's transcript of session sid, as the
-// scenario's load read it (history/1), says each message was sent.
-func transcriptTimes(t *testing.T, dir, sid string) map[string]time.Time {
-	t.Helper()
-	b, err := os.ReadFile(filepath.Join(dir, "history", "1", sid+".jsonl"))
-	testcheck.NoErr(t, err)
-	config, folder := t.TempDir(), t.TempDir()
-	hist := sessions.Store{ConfigDir: config}.ProjectDir(folder)
-	testcheck.Write(t, filepath.Join(hist, sid+".jsonl"), string(b))
-	return claudehistory.Local{Projects: filepath.Join(config, "projects")}.MessageTimes(sid, folder)
-}
-
 // A replayed chunk's time that is no time dates nothing, a message keeps
 // the time of the first chunk to tell one, and the times gathered go with
 // the replay: none is held once the chat has reopened.
@@ -150,7 +158,7 @@ func TestReplayTimesGoWithTheReplay(t *testing.T) {
 	if !sent["m0"].IsZero() {
 		t.Errorf("a message whose time is no time sent at %v", sent["m0"])
 	}
-	if want := time.Date(2026, 11, 24, 22, 23, 18, 385e6, time.UTC); !sent["m1"].Equal(want) {
+	if want := time.Date(2026, 11, 24, 22, 23, 18, 385000000, time.UTC); !sent["m1"].Equal(want) {
 		t.Errorf("m1 sent at %v, want its first chunk's %v", sent["m1"], want)
 	}
 }

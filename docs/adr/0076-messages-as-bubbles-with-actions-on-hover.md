@@ -22,3 +22,5 @@ The owner, after ADR 0072 took the box off tool rows: "I like that they were mor
 **Note (ADR [0077](0077-each-harness-is-a-type.md)):** `Dialect` and `Kind`'s function fields are now the interfaces of `features/chats/harness.go`, met by each agent's `Harness` type.
 
 **Amended by [ADR 0111](0111-surfaces-and-floating-panes.md)** (2026-11-11): a tool row is a card's fill with no outline, 36 high, its failure a red mark and word; a bubble's padding is 12 by 18.
+
+**Amended** (2026-11-25): Claude's replay now says when: claude-acp-go (v0.8.0 on) puts each replayed message's transcript time on its first chunk (`_meta.claudeCode.timestamp`; a thought's when the message begins with thinking). A harness that reads such a time is a `SentReader`: chats keeps the first told for each message id during the load and dates the replay and the copy's merged rows from it, so a reopen no longer reads Claude's transcript a second time. `MessageDater` is Ante's alone, until a real Ante is checked to send a time on its host's replay lines; PiG keeps `model.SentMeta`.

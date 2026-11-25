@@ -37,7 +37,6 @@ var (
 	_ chats.OpenFinder      = claudehistory.Local{}
 	_ chats.ForkFinder      = claudehistory.Local{}
 	_ chats.HistoryChecker  = claudehistory.Local{}
-	_ chats.MessageDater    = claudehistory.Local{}
 	_ chats.WorktreeFinder  = claudehistory.Local{}
 	_ chats.SessionSearcher = claudehistory.Local{}
 	_ chats.WorkflowReader  = claudehistory.Local{}
