@@ -1,0 +1,17 @@
+{
+  "timeout": "45s",
+  "steps": [
+    {"repo": {}},
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "Write", "EnterWorktree", "ExitWorktree"]}}}}}},
+    {"prompt": "make a worktree and enter it", "session": "s1", "async": "p1"},
+    {"answer": "session/request_permission", "option": "allow_once"},
+    {"await": "p1"},
+    {"close": "s1"},
+    {"load": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "Write", "EnterWorktree", "ExitWorktree"]}}}}}},
+    {"prompt": "where are you, reopened", "session": "s1"},
+    {"close": "s1"},
+    {"load": "s1", "cwd": ".worktrees/side", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "Write", "EnterWorktree", "ExitWorktree"]}}}}}},
+    {"prompt": "where are you, opened in the worktree", "session": "s1"}
+  ]
+}

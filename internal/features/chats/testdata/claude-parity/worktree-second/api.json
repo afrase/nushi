@@ -1,0 +1,15 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "enter worktrees twice"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Find the worktree", "command": "git -C .worktrees/other rev-parse --show-toplevel"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "EnterWorktree", "input": {"name": "first"}}]},
+    {"match": {"toolResult": "EnterWorktree"}, "content": [{"type": "tool_use", "name": "EnterWorktree", "input": {"name": "second"}}]},
+    {"match": {"toolResult": "EnterWorktree", "capture": {"wt": "(/\\S*/\\.worktrees/other)"}}, "content": [{"type": "tool_use", "name": "EnterWorktree", "input": {"path": "${wt}"}}]},
+    {"match": {"toolResult": "EnterWorktree"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I", "command": "pwd; find \"$CLAUDE_CONFIG_DIR\"/projects -name '*.jsonl' | sort"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which branch", "command": "git branch --show-current"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "ExitWorktree", "input": {"action": "keep"}}]},
+    {"match": {"toolResult": "ExitWorktree"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I", "command": "pwd; find \"$CLAUDE_CONFIG_DIR\"/projects -name '*.jsonl' | sort"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which branch", "command": "git branch --show-current"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which worktrees", "command": "git worktree list --porcelain"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Done."}]}
+  ]
+}

@@ -66,6 +66,12 @@ Every scenario is recorded (2026-11-25, Claude Code 2.1.331 through the Go agent
 | `subagent-stop-turn` | a foreground subagent stopped with the turn | |
 | `subagent-worktree` | subagents with `isolation: "worktree"`: one that commits, one that changes nothing, a foreground one that leaves a file; what is left | what `.meta.json`, the lock and `toolResponse` hold (`docs/facts/claude.md`) |
 | `subagent-worktree-bash` | a subagent that runs `git worktree add` itself, and writes there by absolute path | its transcript's `cwd` stays the chat's folder |
+| `worktree-enter-path` | `git worktree add` by Bash, then `EnterWorktree` with its `path` (asked: Yes); where commands run; `ExitWorktree` `remove`, then `keep` | the ask for a worktree outside `.claude/worktrees/`; the transcript moved to the worktree's project folder and back |
+| `worktree-enter-name` | `EnterWorktree` with a `name`; a file left, `ExitWorktree` `remove`, then with `discard_changes`; another entered and the session closed in it; a new session after | the lock on a worktree Claude made; what a close leaves |
+| `worktree-bash-cd` | `git worktree add` and `cd` into it in one Bash call, then `EnterWorktree` there, `ExitWorktree` | `cd` moves the session; EnterWorktree refuses the folder it is in |
+| `worktree-reopen` | the session entered a worktree by `path` and closed; loaded from the run's folder, then from the worktree's | where a resumed session runs |
+| `worktree-gone` | a worktree made before the session (`git` step), entered by `path`, removed by `git` between turns; a prompt, then `ExitWorktree` `keep` | claude's warning; Bash refused |
+| `worktree-second` | `EnterWorktree` by name, by another name, then by `path` to a worktree outside `.claude/worktrees/`, then `ExitWorktree` `keep` | |
 | `sendmessage` | a message to a finished background subagent, which runs again | |
 | `compaction` | `/compact`, then a prompt | |
 | `context` | a throwaway fork, a command (`/context`) run in it, deleted after, as Nushi's commit message forks one | |

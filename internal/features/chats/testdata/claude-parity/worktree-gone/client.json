@@ -1,0 +1,15 @@
+{
+  "timeout": "45s",
+  "steps": [
+    {"repo": {}},
+    {"git": ["worktree", "add", "-q", ".worktrees/side", "-b", "side"]},
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "Write", "EnterWorktree", "ExitWorktree"]}}}}}},
+    {"prompt": "enter the side worktree", "session": "s1", "async": "p1"},
+    {"answer": "session/request_permission", "option": "allow_once"},
+    {"await": "p1"},
+    {"git": ["worktree", "remove", "-f", "-f", ".worktrees/side"]},
+    {"prompt": "where are you now", "session": "s1"},
+    {"prompt": "leave the worktree", "session": "s1"}
+  ]
+}

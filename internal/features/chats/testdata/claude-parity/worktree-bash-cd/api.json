@@ -1,0 +1,12 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "make a worktree and enter it"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Add a worktree", "command": "git worktree add -q .worktrees/side -b side && cd .worktrees/side && pwd"}}]},
+    {"match": {"toolResult": "Bash", "capture": {"wt": "(/\\S*/\\.worktrees/side)"}}, "content": [{"type": "tool_use", "name": "EnterWorktree", "input": {"path": "${wt}"}}]},
+    {"match": {"toolResult": "EnterWorktree"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I", "command": "pwd; git branch --show-current; git worktree list --porcelain; find \"$CLAUDE_CONFIG_DIR\"/projects -name '*.jsonl' | sort"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "In it."}]},
+    {"match": {"lastUserText": "leave the worktree"}, "content": [{"type": "tool_use", "name": "ExitWorktree", "input": {"action": "remove"}}]},
+    {"match": {"toolResult": "ExitWorktree"}, "content": [{"type": "tool_use", "name": "ExitWorktree", "input": {"action": "keep"}}]},
+    {"match": {"toolResult": "ExitWorktree"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I", "command": "pwd; git branch --show-current; git worktree list --porcelain; find \"$CLAUDE_CONFIG_DIR\"/projects -name '*.jsonl' | sort"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Left."}]}
+  ]
+}
