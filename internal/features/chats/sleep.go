@@ -162,6 +162,7 @@ func (c *chat) workingLocked(verb string) error {
 // waits until it has reopened (or failed to: the chat says why).
 func (s *Service) awake(ctx context.Context, c *chat) error {
 	c.mu.Lock()
+	c.wantedLocked()
 	if c.asleep {
 		c.asleep, c.reopenFailed = false, false
 		c.logLocked().Info("chat waking")
@@ -198,6 +199,7 @@ func (s *Service) Wake(chatID string) error {
 	if err := c.closedLocked(); err != nil {
 		return err
 	}
+	c.wantedLocked()
 	if !c.asleep {
 		return nil
 	}

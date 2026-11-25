@@ -35,18 +35,21 @@ func (s *Service) eachMinute() {
 	}
 }
 
-// eachHour deletes the copies past their days (clearOld), then forgets
-// the chats whose sessions their agents deleted (sweep), as the daemon
-// starts and each hour after, until the service's life ends: a chat whose
-// agent lost its session while the daemon was down goes at once, as it
-// did when the first list swept. Both can remove a chat (expire), so one
-// waits for the other.
+// eachHour deletes the copies past their days (clearOld), then marks the
+// chats whose sessions their agents deleted (sweep), then makes the
+// copies of a few chats that have none before their agent deletes their
+// sessions (copyAhead), as the daemon starts and each hour after, until
+// the service's life ends: a chat whose agent lost its session while the
+// daemon was down is marked at once. Each waits for the one before: a
+// chat swept is not opened for its copy, and a copy cleared for its age
+// is cleared before the pass looks.
 func (s *Service) eachHour(days func() int) {
 	tick := time.NewTicker(time.Hour)
 	defer tick.Stop()
 	for {
 		s.clearOld(days)
 		s.sweep(s.ctx)
+		s.copyAhead(s.ctx)
 		select {
 		case <-tick.C:
 		case <-s.ctx.Done():

@@ -105,6 +105,11 @@ type ChatRecord struct {
 	// Pins are the chat's pinned messages, in the order they were pinned
 	// (chats.PinMessage, ADR 0085): the agent's alone.
 	Pins []MessagePin `json:",omitempty"`
+	// CopyCleared is when the user last cleared the chat's transcript copy
+	// (Settings › Chat history, by hand or by its age; ADR 0047): Nushi
+	// doesn't make one again on its own (the copy-ahead pass) unless the
+	// chat is used after (Updated). Zero: never cleared.
+	CopyCleared time.Time `json:",omitzero"`
 	// SideOf is where an archived side chat came from: a side chat with
 	// messages is archived as it's closed (ADR 0115), and Undo makes it
 	// that chat's side chat again. Unarchiving clears it.

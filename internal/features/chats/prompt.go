@@ -97,6 +97,7 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 			c.logLocked().Info("chat waking", "for", "a message")
 		}
 		c.reopenFailed, c.asleep = false, false // a message tries again, and wakes it
+		c.wantedLocked()
 		s.reopenLocked(c)
 		if how != SendNow || c.started.IsZero() || waited {
 			break

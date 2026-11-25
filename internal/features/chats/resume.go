@@ -257,6 +257,9 @@ func (s *Service) Reopen(id string) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.ahead == aheadIdle { // the copy-ahead pass opens it: shown, it stays open, as it would have reopened
+		c.wantedLocked()
+	}
 	if c.reopenFailed && c.agent == nil && !c.busyLocked() && !c.sessionGone {
 		if err := cmp.Or(folderGone(c.record), c.kind.ready()); err != nil {
 			c.failedLocked(err)

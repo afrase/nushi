@@ -226,6 +226,14 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 	if err != nil {
 		return 0, 0, err
 	}
+	stored, err := s.sessions.Sessions()
+	if err != nil {
+		return 0, 0, err
+	}
+	known := make(map[string]bool, len(stored))
+	for _, sess := range stored {
+		known[sess.ID] = true
+	}
 	for _, c := range list {
 		if !slices.Contains(chats, c.Chat) {
 			continue
@@ -233,6 +241,9 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 		s.mu.Lock()
 		ch := s.chats[c.Chat]
 		s.mu.Unlock()
+		if ch == nil && known[c.Chat] { // its record keeps that the copy was cleared (CopyCleared)
+			ch, _ = s.listed(c.Chat) // nil: deleted meanwhile
+		}
 		if ch == nil {
 			if err := s.copies.Delete(c.Chat); err != nil {
 				return n, bytes, err
@@ -252,6 +263,9 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 		}
 		err := s.copies.Delete(c.Chat)
 		ch.mirrored, ch.unread = false, ch.unread && err != nil // a new copy starts empty
+		if err == nil {
+			ch.saveLocked(func(r *model.ChatRecord) { r.CopyCleared = time.Now() })
+		}
 		gone := ch.sessionGone
 		ch.mu.Unlock()
 		if err != nil {

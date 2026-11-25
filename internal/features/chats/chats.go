@@ -183,6 +183,7 @@ type chat struct {
 	outlived     bool                            // the transcript outlived its agent: reopening doesn't replay into it
 	reopenFailed bool                            // the last reopen failed: see failedLocked
 	sessionGone  bool                            // and its agent no longer has its session: see goneLocked
+	ahead        aheadLoad                       // its load is the copy-ahead pass's (ahead.go)
 	failure      string                          // the notice saying why it failed (item id)
 	waiting      map[string]chan<- string        // permission prompts by item id, for the picked option
 	drops        int                             // dropPromptsLocked's calls, for an ask that let go the lock (permissions.go)
