@@ -17,6 +17,7 @@ import 'package:nushi/items.dart';
 import 'package:nushi/jump_chip.dart';
 import 'package:nushi/message_pins.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/move_here.dart';
 import 'package:nushi/plan_view.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_live_card.dart';
@@ -335,6 +336,9 @@ class _TranscriptState extends State<Transcript> {
     return widget.chat.outbox.unsent.contains(e.id) ? 2 : 1;
   }
 
+  /// The id of the call offering Move chat here, as of this build.
+  String? _offer;
+
   /// An entry's widget, the one built before if its items are the same:
   /// only its place (its insets, which follow the window's width, and the
   /// gap above it) is new, so a sidebar's slide moves the rows and
@@ -371,6 +375,7 @@ class _TranscriptState extends State<Transcript> {
         e is Item &&
         canPinMessage(widget.daemon, widget.chat, e, live: live);
     final flash = e is Item && e.id == _flash;
+    final moveHere = e is Item && e.id == _offer;
     // A notice's fix button (Try again, Set up…) and the sign-in card
     // under it are off while the chat is busy.
     final busy =
@@ -386,6 +391,7 @@ class _TranscriptState extends State<Transcript> {
       pinned,
       pinnable,
       flash,
+      moveHere,
       ...items,
     ];
     final was = before[key];
@@ -402,6 +408,7 @@ class _TranscriptState extends State<Transcript> {
       forkable: forkable,
       pinned: pinned,
       pinnable: pinnable,
+      moveHere: moveHere,
     );
     // The live cards of what its tool calls did to pull requests (ADR 0117
     // section 4), after it and beside its rise and marks: the Mac's own
@@ -474,6 +481,7 @@ class _TranscriptState extends State<Transcript> {
     bool forkable = false,
     bool pinned = false,
     bool pinnable = false,
+    bool moveHere = false,
   }) => switch (e) {
     final List<Item> run => RunView(
       run,
@@ -499,6 +507,7 @@ class _TranscriptState extends State<Transcript> {
           ? () => forkChat(context, widget.daemon, widget.chat, at: e)
           : null,
       pinned: pinned,
+      moveHere: moveHere,
       onPin: pinnable
           ? () => tryOrShow(
               context,
@@ -861,9 +870,15 @@ class _TranscriptState extends State<Transcript> {
     final chat = widget.chat;
     // A prompt waiting from before the recent part shows at the foot; what
     // this app sent shows at once, after the items, until its echo.
+    // The Mac's call offering Move chat here keeps a row of its own; the
+    // phone shows nothing new (ADR 0150).
+    _offer = widget.daemon.remote
+        ? null
+        : moveOffer(chat, side: widget.daemon.sideOf(chat.id) != null)?.id;
     final entries = transcriptEntries(
       widget.items ??
           [...chat.items, ...chat.asksBefore, ...chat.outbox.sending],
+      alone: _offer,
     );
     final query = widget.items == null ? chat.find.query ?? '' : '';
     final header =

@@ -289,6 +289,13 @@ If Undo can't bring it back (the chat was deleted or archived, or has another si
 
 A worktree is a separate copy of your repository on its own branch. To keep a chat's work apart from your checkout, click **New worktree** under the box before the first message. It shows only when the chat's folder is a git repository. The chat gets its own worktree, on a new branch named after the chat. Review its work in the **Changes** tab: see [Reviewing changes](Reviewing-changes).
 
+Claude can also enter a worktree on its own. The chat doesn't follow it by itself, so its folder, **Changes** and terminals stay where they were. To move the chat into that worktree:
+
+1. Find the call's row (**EnterWorktree**) in the chat.
+2. Click **Move chat here** at the row's end.
+
+The button is greyed out while the agent works or waits on you; it works once the agent is done. It goes away once the chat is in that worktree, or after Claude leaves the worktree again.
+
 ## Find text in a chat
 
 Press ⌘F in a chat to find text in it, all of it, even the part of a long chat you haven't scrolled up to yet.

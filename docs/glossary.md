@@ -48,7 +48,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Wake** | A sleeping chat's agent started again without a message: its session reopens, nothing is sent. In Sleep's place in the chat's menu. | `WakeChat` | 0032 |
 | **Archive** | Put a chat away: its agent stops, it's read-only and listed last. Unarchive reopens it. | `ArchiveChat`, `ChatRecord.Archived` | |
 | **Reload** | Restart the chat's agent on its session, to pick up changed MCP servers. | `ReloadChat` | |
-| **Move** | The chat goes on in another folder or worktree; its session forks there. | `MoveChat` | 0014 |
+| **Move** | The chat goes on in another folder or worktree; its session forks there. From the folder button, or from Move chat here on the call where the agent entered a worktree. | `MoveChat`, `moveChat`, `MoveHereButton`, `moveOffer` | 0014, 0150 |
 | **Delete** | Remove a chat, the agent's history of it, and its worktree and branch if you say so. | `PlanDeleteChat`, `DeleteChat` | 0015 |
 | **Expired** | A chat whose agent deleted its session: read-only, on Nushi's copy, with Start a new chat here. | `session_gone`, `RemovedChat` | 0015, 0047 |
 | **Transcript** | The conversation as shown: your messages as bubbles (bands on the phone), tool rows, subagents, plans. | `transcript.dart`, `items.dart` | 0026 |

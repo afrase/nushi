@@ -301,6 +301,10 @@ abstract final class RowRoom {
   static const titleLeast = 48.0;
 }
 
+/// A call's Move chat here and the gap before it (move_here.dart): the
+/// call's time keeps its place only with room for both.
+const double moveRoom = 140;
+
 /// A call's icon and the gap after it, in its header.
 const double _iconRoom = 23;
 
@@ -367,9 +371,15 @@ class ToolCallView extends StatelessWidget {
     this.still = false,
     this.nested = false,
     this.refs,
+    this.offer,
   });
 
   final Item item;
+
+  /// What its row offers at its end, before its time: a call that entered
+  /// a worktree, its Move chat here (move_here.dart), the gap before it
+  /// its own.
+  final Widget? offer;
 
   /// Where its images that came as references come from (ADR 0099).
   final ImageRefs? refs;
@@ -436,8 +446,10 @@ class ToolCallView extends StatelessWidget {
               builder: (context, row) {
                 final room = _AfterTitle.roomIn(row.maxWidth);
                 // Its time keeps its place before the spinner does: it
-                // says the call runs too, ticking.
-                final timed = room >= callTimeRoom;
+                // says the call runs too, ticking. An offer keeps its
+                // place before the time: it's what the row asks of you.
+                final timed =
+                    room >= callTimeRoom + (offer == null ? 0 : moveRoom);
                 return Row(
                   children: [
                     Icon(
@@ -502,6 +514,7 @@ class ToolCallView extends StatelessWidget {
                           const SizedBox(width: 8),
                           const Flexible(child: _Failed('failed')),
                         ],
+                        if (offer case final offer?) Flexible(child: offer),
                         if (working &&
                             room >=
                                 _spinnerRoom + (timed ? callTimeRoom : 0)) ...[
