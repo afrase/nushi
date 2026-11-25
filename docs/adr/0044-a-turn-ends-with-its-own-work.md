@@ -26,4 +26,4 @@ claude-agent-acp holds a turn's `session/prompt` open, for v1 clients, until the
 
 **Note (ADR [0077](0077-each-harness-is-a-type.md)):** `Dialect` and `Kind`'s function fields are now the interfaces of `features/chats/harness.go`, met by each agent's `Harness` type.
 
-**Note (2026-11-25):** the Go agent holds no prompt, so a Claude turn ends at its prompt's answer and `TurnDone` is gone; what of this still holds is in [0066](0066-claude-through-nushis-go-agent.md)'s amendment of that day.
+**Note (2026-11-25):** the Go agent holds no prompt for background subagents, so a Claude turn ends at its prompt's answer and `TurnDone` is gone; what of this still holds is in [0066](0066-claude-through-nushis-go-agent.md)'s amendment of that day.
