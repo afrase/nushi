@@ -54,3 +54,20 @@ func TestQueueEventImagesGoAsReferences(t *testing.T) {
 		t.Errorf("a message handed back to send again: %d bytes, want %d", len(back.GetData()), len(large.Data))
 	}
 }
+
+// Where a tool call says the agent works goes out on its item: the
+// worktree it entered, an empty path for its folder again, and nothing
+// for any other call (API 152).
+func TestItemProtoWorksIn(t *testing.T) {
+	entered := itemProto(&model.Item{ID: "c", Kind: model.ToolCall, WorksIn: &model.AgentWorktree{Path: "/r/.claude/worktrees/made"}}, false)
+	if w := entered.GetWorksIn(); w == nil || w.GetPath() != "/r/.claude/worktrees/made" {
+		t.Errorf("entered: %v", w)
+	}
+	left := itemProto(&model.Item{ID: "c", Kind: model.ToolCall, WorksIn: &model.AgentWorktree{}}, false)
+	if w := left.GetWorksIn(); w == nil || w.GetPath() != "" {
+		t.Errorf("left: %v", w)
+	}
+	if w := itemProto(&model.Item{ID: "c", Kind: model.ToolCall}, false).GetWorksIn(); w != nil {
+		t.Errorf("another call: %v", w)
+	}
+}

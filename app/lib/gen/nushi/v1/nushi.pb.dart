@@ -17276,6 +17276,7 @@ class Item extends $pb.GeneratedMessage {
     $fixnum.Int64? ended,
     $core.String? mcpServer,
     $core.String? mcpTool,
+    WorksIn? worksIn,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -17320,6 +17321,7 @@ class Item extends $pb.GeneratedMessage {
     if (ended != null) result.ended = ended;
     if (mcpServer != null) result.mcpServer = mcpServer;
     if (mcpTool != null) result.mcpTool = mcpTool;
+    if (worksIn != null) result.worksIn = worksIn;
     return result;
   }
 
@@ -17388,6 +17390,8 @@ class Item extends $pb.GeneratedMessage {
     ..aInt64(42, _omitFieldNames ? '' : 'ended')
     ..aOS(43, _omitFieldNames ? '' : 'mcpServer')
     ..aOS(44, _omitFieldNames ? '' : 'mcpTool')
+    ..aOM<WorksIn>(45, _omitFieldNames ? '' : 'worksIn',
+        subBuilder: WorksIn.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -17828,6 +17832,82 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasMcpTool() => $_has(41);
   @$pb.TagNumber(44)
   void clearMcpTool() => $_clearField(44);
+
+  /// For the main agent's tool call that moved where it works, once the
+  /// call succeeded (Claude's EnterWorktree and ExitWorktree): the worktree
+  /// it entered, or an empty path for its session's folder again; unset
+  /// for any other call. The call that entered one offers Move chat here
+  /// (MoveChat with that path; ADR 0150). Unset from a daemon below API 152.
+  @$pb.TagNumber(45)
+  WorksIn get worksIn => $_getN(42);
+  @$pb.TagNumber(45)
+  set worksIn(WorksIn value) => $_setField(45, value);
+  @$pb.TagNumber(45)
+  $core.bool hasWorksIn() => $_has(42);
+  @$pb.TagNumber(45)
+  void clearWorksIn() => $_clearField(45);
+  @$pb.TagNumber(45)
+  WorksIn ensureWorksIn() => $_ensure(42);
+}
+
+/// Where an agent's tool call says it works once it completes: a worktree
+/// it entered (Nushi didn't make it), or, with an empty path, its
+/// session's folder again.
+class WorksIn extends $pb.GeneratedMessage {
+  factory WorksIn({
+    $core.String? path,
+  }) {
+    final result = WorksIn._();
+    if (path != null) result.path = path;
+    return result;
+  }
+
+  WorksIn._();
+
+  factory WorksIn.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WorksIn()..mergeFromBuffer(data, registry);
+  factory WorksIn.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WorksIn()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WorksIn',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WorksIn.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WorksIn clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WorksIn copyWith(void Function(WorksIn) updates) =>
+      super.copyWith((message) => updates(message as WorksIn)) as WorksIn;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WorksIn() / WorksIn.new instead')
+  static WorksIn create() => WorksIn._();
+  static $pb.GeneratedMessage $_createMessage() => WorksIn._();
+  @$core.override
+  WorksIn createEmptyInstance() => WorksIn._();
+  @$core.pragma('dart2js:noInline')
+  static WorksIn getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WorksIn>(WorksIn.$_createMessage);
+  static WorksIn? _defaultInstance;
+
+  /// The worktree's absolute path, as the agent's tool result named it;
+  /// empty when it left one.
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
 }
 
 /// A workflow: a run a tool call launched, a script of the agent's running

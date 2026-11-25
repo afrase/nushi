@@ -2638,6 +2638,21 @@ message Item {
   // where the app shows the call as any other (ADR 0068's amendment).
   string mcp_server = 43;
   string mcp_tool = 44;
+  // For the main agent's tool call that moved where it works, once the
+  // call succeeded (Claude's EnterWorktree and ExitWorktree): the worktree
+  // it entered, or an empty path for its session's folder again; unset
+  // for any other call. The call that entered one offers Move chat here
+  // (MoveChat with that path; ADR 0150). Unset from a daemon below API 152.
+  WorksIn works_in = 45;
+}
+
+// Where an agent's tool call says it works once it completes: a worktree
+// it entered (Nushi didn't make it), or, with an empty path, its
+// session's folder again.
+message WorksIn {
+  // The worktree's absolute path, as the agent's tool result named it;
+  // empty when it left one.
+  string path = 1;
 }
 
 // A workflow: a run a tool call launched, a script of the agent's running
