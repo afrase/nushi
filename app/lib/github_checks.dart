@@ -4,6 +4,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_check_row.dart';
 import 'package:nushi/github_parts.dart';
+import 'package:nushi/pull_check_lines.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -39,22 +40,17 @@ class _GitHubChecksState extends State<GitHubChecks> {
   bool _all = false;
   bool _rerunning = false;
 
-  Future<void> _rerun(List<GitHubCheck> failed) async {
+  Future<void> _rerun(List<GitHubCheck> jobs) async {
     setState(() => _rerunning = true);
     await tryOrShow(context, () async {
       final r = await widget.daemon.client.rerunGitHubChecks(
         RerunGitHubChecksRequest(
           ref: widget.pull.item.ref,
-          jobs: [for (final c in failed) c.id],
+          jobs: [for (final c in jobs) c.id],
         ),
       );
       if (!mounted) return;
-      showToast(
-        Toasts.maybeOf(context),
-        r.runs == 1
-            ? 'Re-running the failed jobs of 1 workflow run'
-            : 'Re-running the failed jobs of ${r.runs} workflow runs',
-      );
+      showToast(Toasts.maybeOf(context), rerunWords(jobs, r.runs));
       await widget.onChanged?.call();
     });
     if (mounted) setState(() => _rerunning = false);
@@ -72,7 +68,10 @@ class _GitHubChecksState extends State<GitHubChecks> {
         child: Text('No checks', style: theme.ui(t.textMuted)),
       );
     }
-    final jobs = failed.where((c) => c.id != 0).toList();
+    // A cancelled job holds the merge back until it runs again, so Re-run
+    // takes it too; its label names what it takes.
+    final jobs = [...failed, ...cancelled].where((c) => c.id != 0).toList();
+    final what = rerunWhat(jobs);
     Widget group(String name) => Padding(
       padding: const EdgeInsets.fromLTRB(2, 14, 2, 6),
       child: Text(
@@ -115,11 +114,11 @@ class _GitHubChecksState extends State<GitHubChecks> {
               ),
               if (jobs.isNotEmpty) ...[
                 Button(
-                  label: _rerunning ? 'Re-running…' : 'Re-run failed',
+                  label: _rerunning ? 'Re-running…' : 'Re-run $what',
                   icon: Icons.sync,
                   tooltip:
-                      "Re-run the failed jobs of these checks' workflow runs "
-                      'on GitHub',
+                      "Re-run the $what jobs of these checks' workflow "
+                      'runs on GitHub',
                   onPressed: _rerunning ? null : () => _rerun(jobs),
                 ),
                 const SizedBox(width: 6),

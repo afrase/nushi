@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
+import 'package:nushi/pull_check_lines.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/status.dart';
@@ -115,15 +116,27 @@ class _CheckRowState extends State<CheckRow> {
                     style: theme.ui(t.textMuted, size: 11.5),
                   ),
                 ),
-              if (checkTook(c) case final took when took.isNotEmpty)
+              // A cancelled one in GitHub's words, "Cancelled after 30m",
+              // as its line in the merge card has it.
+              if (c.kind == CheckKind.cancelled)
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
-                  child: Text(took, style: theme.ui(t.textMuted, size: 11.5)),
+                  child: Text(
+                    checkWords(c),
+                    style: theme.ui(color, size: 11.5),
+                  ),
+                )
+              else ...[
+                if (checkTook(c) case final took when took.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(took, style: theme.ui(t.textMuted, size: 11.5)),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(c.state, style: theme.ui(color, size: 11.5)),
                 ),
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: Text(c.state, style: theme.ui(color, size: 11.5)),
-              ),
+              ],
               if (failed)
                 SendIcon(
                   () => checkReply(widget.daemon, widget.ref, c),

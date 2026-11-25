@@ -87,7 +87,7 @@ The tab looks like the pull request's page on GitHub, so what you know from ther
 2. Each item goes into the chat's message box as a card, quoting the comment or the failing log.
 3. Add anything you want to say, and send.
 
-**Fix checks** in the **Checks** tab sends every failed check at once. As on GitHub, a neutral check counts as passed. A cancelled check isn't a failure: it shows as **Cancelled** with a grey stop sign and isn't sent to the agent, but it still blocks the merge until it runs again (**⋯** › **Re-run**).
+**Fix checks** in the **Checks** tab sends every failed check at once. As on GitHub, a neutral check counts as passed. A cancelled check isn't a failure: it shows as **Cancelled** with a grey stop sign and isn't sent to the agent, but it still blocks the merge until it runs again: **Re-run cancelled** in the **Checks** tab, or **⋯** › **Re-run** on its line.
 
 ## When checks fail
 

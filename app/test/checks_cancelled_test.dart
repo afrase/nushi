@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_check_row.dart';
 import 'package:nushi/github_checks.dart';
+import 'package:nushi/pull_check_lines.dart';
 import 'package:nushi/pull_commits.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_merge_card.dart';
@@ -321,4 +323,89 @@ void main() {
     expect(find.byTooltip('Checks failing'), findsOneWidget);
     expect(tester.widget<Icon>(find.byIcon(Icons.close)).color, t.crashed);
   });
+
+  testWidgets('the Checks tab: a cancelled card says "Cancelled after", '
+      'and Re-run takes cancelled jobs and names them so', (tester) async {
+    final fake = FakeDaemon([])
+      ..answer = (input) => input is RerunGitHubChecksRequest
+          ? RerunGitHubChecksResponse(runs: 1)
+          : null;
+    final d = await fake.connect(tester);
+    viewport(tester, const Size(900, 1200));
+    Future<void> show(GitHubPull p) async {
+      await tester.pumpWidget(
+        themed(
+          SingleChildScrollView(
+            child: GitHubChecks(daemon: d, pull: p),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await show(cancelledPull());
+    final card = find.byType(CheckRow);
+    expect(
+      find.descendant(of: card, matching: find.text('Cancelled after 30m 00s')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: card, matching: find.text('30m 00s')),
+      findsNothing,
+    );
+    expect(find.text('cancelled'), findsNothing);
+    expect(find.text('Re-run failed'), findsNothing);
+    await tester.tap(find.text('Re-run cancelled'));
+    await tester.pumpAndSettle();
+    final asked = fake.calls.whereType<RerunGitHubChecksRequest>().last;
+    expect(asked.jobs.map((j) => j.toInt()), [46]);
+    expect(
+      find.text('Re-running the cancelled jobs of 1 workflow run'),
+      findsOneWidget,
+    );
+
+    await show(cancelledPull(mixed: true));
+    await tester.tap(find.text('Re-run failed and cancelled'));
+    await tester.pumpAndSettle();
+    expect(
+      fake.calls.whereType<RerunGitHubChecksRequest>().last.jobs.map(
+        (j) => j.toInt(),
+      ),
+      [41, 42, 46],
+    );
+    // The merge card's ⋯ › Re-run of one cancelled check says the same.
+    expect(
+      rerunWords([GitHubCheck(state: 'cancelled')], 2),
+      'Re-running the cancelled jobs of 2 workflow runs',
+    );
+    d.dispose();
+  });
+
+  for (final (name, tokens) in [
+    ('dark', Tokens.dark),
+    ('light', Tokens.light),
+  ]) {
+    testWidgets('golden: the Checks tab with a cancelled card beside the '
+        'failing and running ones, $name', (tester) async {
+      final d = await FakeDaemon([]).connect(tester);
+      viewport(tester, const Size(760, 560));
+      await tester.pumpWidget(
+        themed(
+          tokens: tokens,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SingleChildScrollView(
+              child: GitHubChecks(daemon: d, pull: cancelledPull(mixed: true)),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(GitHubChecks),
+        matchesGoldenFile('goldens/github_checks_cancelled_$name.png'),
+      );
+      d.dispose();
+    });
+  }
 }

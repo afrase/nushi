@@ -31,6 +31,25 @@ String checkWords(GitHubCheck c) {
   };
 }
 
+/// Which jobs a re-run of [picked] takes, in words: "failed",
+/// "cancelled" or "failed and cancelled" (a cancelled check is never
+/// called failed).
+String rerunWhat(List<GitHubCheck> picked) {
+  final failed = picked.any((c) => c.kind == CheckKind.failed);
+  final cancelled = picked.any((c) => c.kind == CheckKind.cancelled);
+  return failed && cancelled
+      ? 'failed and cancelled'
+      : cancelled
+      ? 'cancelled'
+      : 'failed';
+}
+
+/// What a re-run of [picked] says once GitHub took it, over [runs]
+/// workflow runs.
+String rerunWords(List<GitHubCheck> picked, int runs) =>
+    'Re-running the ${rerunWhat(picked)} jobs of $runs workflow '
+    'run${runs == 1 ? '' : 's'}';
+
 /// The Checks segment's list: every check, failing first, then the
 /// cancelled, each its state, name and how it went; a failing one's Send
 /// to agent (a cancelled one isn't a failure to fix); a ⋯ of its log,
@@ -115,12 +134,7 @@ class _CheckLineState extends State<_CheckLine> {
       ),
     );
     if (!mounted) return;
-    showToast(
-      Toasts.maybeOf(context),
-      r.runs == 1
-          ? 'Re-running the failed jobs of 1 workflow run'
-          : 'Re-running the failed jobs of ${r.runs} workflow runs',
-    );
+    showToast(Toasts.maybeOf(context), rerunWords([widget.check], r.runs));
     await widget.onChanged();
   });
 
