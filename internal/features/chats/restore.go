@@ -78,7 +78,8 @@ func (c *chat) messageTimes(sid, folder string) map[string]time.Time {
 
 // restoreLocked makes the chat's transcript from its copy and the agent's
 // replay, tells the app what changed, and keeps the copy to what it shows.
-// times is what messageTimes read. The items, when they are the copy's as
+// times is when the replay's messages were sent, by id: what its chunks
+// told (SentReader) or what messageTimes read. The items, when they are the copy's as
 // it stands (mirrored), stand for it: a long copy isn't read a second time
 // while the transcript holds it (ADR 0103).
 func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) {

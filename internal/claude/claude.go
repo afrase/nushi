@@ -184,6 +184,19 @@ func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[s
 // own tool calls, text and thinking), from _meta.claudeCode.
 func (Harness) Parent(meta map[string]any) string { return claudeCode(meta, "parentToolUseId") }
 
+// Sent reads when a replayed message was sent: the _meta.claudeCode.timestamp
+// claude-acp-go (v0.8.0 on) puts on the first chunk of each message
+// session/load replays, the user's or the agent's (a thought's, when the
+// message begins with thinking), from the transcript record's own
+// timestamp. Zero when the chunk has none or it is no time.
+func (Harness) Sent(meta map[string]any) time.Time {
+	at, err := time.Parse(time.RFC3339Nano, claudeCode(meta, "timestamp"))
+	if err != nil {
+		return time.Time{}
+	}
+	return at
+}
+
 // Gone says a session/load error means Claude no longer has the session:
 // the agent answers ACP's "Resource not found".
 func (Harness) Gone(err error) bool { return agentproc.NotFound(err) }

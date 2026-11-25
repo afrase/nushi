@@ -301,7 +301,7 @@ func (s *Service) load(ctx context.Context, c *chat) (mode, err error) {
 	replay := !c.outlived
 	if replay {
 		c.copyLocked(true)
-		c.replaying, c.replay = gone == nil, nil // no agent will replay into a gone folder
+		c.replaying, c.replay, c.replaySent = gone == nil, nil, nil // no agent will replay into a gone folder
 	}
 	c.mu.Unlock()
 	if gone != nil {
@@ -316,14 +316,13 @@ func (s *Service) load(ctx context.Context, c *chat) (mode, err error) {
 		}
 	}
 	c.mu.Lock()
-	replayed := c.replay
-	c.replaying, c.replay = false, nil
+	replayed, times := c.replay, c.replaySent // the replay's own times (SentReader)
+	c.replaying, c.replay, c.replaySent = false, nil, nil
 	c.mu.Unlock()
 	if err != nil {
 		return nil, err
 	}
-	var times map[string]time.Time
-	if replay {
+	if replay && c.kind.messageDater != nil { // the agent's files say instead
 		times = c.messageTimes(o.sid, folder)
 	}
 	c.mu.Lock()

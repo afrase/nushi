@@ -280,3 +280,13 @@ type WorkflowReader interface {
 type MessageDater interface {
 	MessageTimes(sid, folder string) map[string]time.Time
 }
+
+// SentReader says when a replayed message was sent, as the agent tells it
+// in the _meta of one of the message's chunks (the first): a zero time
+// when that chunk doesn't say, or says what is no time. A replay's times
+// are gathered by message id, whatever the chunk's kind (a message that
+// begins with thinking tells it on its thought), for restoreLocked
+// (ADR 0076).
+type SentReader interface {
+	Sent(meta map[string]any) time.Time
+}

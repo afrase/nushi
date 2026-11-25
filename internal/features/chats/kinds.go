@@ -60,6 +60,7 @@ type kind struct {
 	searcher       SessionSearcher
 	historyChecker HistoryChecker
 	messageDater   MessageDater
+	sentReader     SentReader
 	worktreeFinder WorktreeFinder
 	workflows      WorkflowReader
 	usageReader    UsageReader
@@ -73,7 +74,7 @@ func newKind(k Kind) *kind {
 		defaultReader: can[DefaultReader](h), transcript: can[Transcript](h), subagents: can[Subagents](h), subOutput: can[SubagentOutput](h), toSubagents: can[SubagentMessages](h),
 		background: can[BackgroundTasks](h), terminalCmds: can[TerminalCommands](h), commandHider: can[CommandHider](h), contextAsker: can[ContextAsker](h), titleMaker: can[TitleMaker](h), readOnly: can[ReadOnly](h), goneReader: can[GoneReader](h),
 		openFinder: can[OpenFinder](h), forkFinder: can[ForkFinder](h), searcher: can[SessionSearcher](h), historyChecker: can[HistoryChecker](h),
-		messageDater: can[MessageDater](h), worktreeFinder: can[WorktreeFinder](h), workflows: can[WorkflowReader](h),
+		messageDater: can[MessageDater](h), sentReader: can[SentReader](h), worktreeFinder: can[WorktreeFinder](h), workflows: can[WorkflowReader](h),
 		usageReader: can[UsageReader](h)}
 }
 

@@ -235,6 +235,10 @@ type chat struct {
 	titleSlots chan struct{}    // and how many it makes at once
 	replaying  bool             // a session/load's replay goes to replay, not the transcript (restore.go)
 	replay     []model.Item
+	// replaySent is when the replay's messages were sent, as its chunks
+	// tell it (SentReader), by message id: gathered with the replay,
+	// cleared with it, for restoreLocked's date pass.
+	replaySent map[string]time.Time
 	muted      bool // a replayed update is being taken: its events aren't the app's
 
 	// mirrored says the items, but for those unsaved and those that only

@@ -263,6 +263,7 @@ func (c *chat) parentLocked(u acp.SessionUpdate) string {
 // of the same kind. parent is the subagent call it is a step of, when its
 // session says (else its _meta may).
 func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent string) {
+	c.sentLocked(m)
 	var text string
 	var images []model.Image
 	switch {
@@ -323,6 +324,26 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent stri
 	c.unnotedLocked(&item)
 	c.readToSubagentLocked(&item)
 	c.addLocked(item)
+}
+
+// sentLocked keeps when a replayed message was sent, as the first of its
+// chunks to tell it says (SentReader), by the message's id whatever the
+// chunk's kind: a message that begins with thinking tells it on its
+// thought, and its text takes it (restoreLocked).
+func (c *chat) sentLocked(m *acp.ContentChunk) {
+	if !c.replaying || c.kind.sentReader == nil || m.MessageID == "" {
+		return
+	}
+	id := string(m.MessageID)
+	if _, told := c.replaySent[id]; told {
+		return
+	}
+	if at := c.kind.sentReader.Sent(m.Meta); !at.IsZero() {
+		if c.replaySent == nil {
+			c.replaySent = map[string]time.Time{}
+		}
+		c.replaySent[id] = at
+	}
 }
 
 // agentNoticeLocked adds a notice of the agent's own (Transcript.Notice). One
