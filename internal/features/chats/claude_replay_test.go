@@ -18,6 +18,9 @@ import (
 //     the Go agent interrupts only a running turn and otherwise just ends
 //     stdin (claudeacp's close), so its own recordings have none. See
 //     idleTeardown.
+//   - In the adapter's recording, claude's hook calls take the Go agent's
+//     id for their event (goAgentHooks): the adapter numbered its hooks
+//     otherwise, and the Go agent runs a call by its id.
 func forGoAgent(c *claudetest.Cassette, adapter bool) *claudetest.Cassette {
 	dropped := map[string]bool{} // claude's requests and the recording's whose answers go too
 	out := *c
@@ -34,10 +37,34 @@ func forGoAgent(c *claudetest.Cassette, adapter bool) *claudetest.Cassette {
 			continue
 		case fr.Response.RequestID != "" && dropped[fr.Response.RequestID]:
 			continue
+		case adapter && f.Dir == "out" && fr.Request.Subtype == "hook_callback":
+			f.Frame = goAgentHook(f.Frame, fr.Request.Input.Event)
 		}
 		out.Frames = append(out.Frames, f)
 	}
 	return &out
+}
+
+// goAgentHooks are the callback ids the Go agent gives the hooks it
+// registers (claudeacp's session start; claudeagent numbers them in the
+// order of their events' names).
+var goAgentHooks = map[string]string{"PostModelSwitch": "hook_0", "PostToolUse": "hook_1"}
+
+// goAgentHook is claude's hook call b with the Go agent's id for its
+// event.
+func goAgentHook(b json.RawMessage, event string) json.RawMessage {
+	id, ok := goAgentHooks[event]
+	var m map[string]any
+	if !ok || json.Unmarshal(b, &m) != nil {
+		return b
+	}
+	req, _ := m["request"].(map[string]any)
+	req["callback_id"] = id
+	out, err := json.Marshal(m)
+	if err != nil {
+		return b
+	}
+	return out
 }
 
 // idleTeardown is where the adapter's recording c ends for the Go
@@ -82,6 +109,9 @@ type frame struct {
 	RequestID string `json:"request_id"`
 	Request   struct {
 		Subtype string `json:"subtype"`
+		Input   struct {
+			Event string `json:"hook_event_name"`
+		} `json:"input"`
 	} `json:"request"`
 	Response struct {
 		RequestID string `json:"request_id"`
@@ -108,4 +138,22 @@ func readFrame(f claudetest.Frame) frame {
 	var fr frame
 	_ = json.Unmarshal(f.Frame, &fr)
 	return fr
+}
+
+// The adapter's recording calls claude's PostToolUse hook under the
+// adapter's id for it; the Go agent's claude must call the Go agent's
+// PostToolUse, whose answer (the call's toolResponse) Nushi reads, not
+// whatever the Go agent has under that id.
+func TestTheAdapterLoadCallsTheGoAgentsPostToolUse(t *testing.T) {
+	_, sent := readACP(t, filepath.Join(adapterLoad, "acp.jsonl"))
+	for _, e := range runGoAgent(t, adapterLoad, sent, nil) {
+		if e.note == nil || e.note.Update.ToolCallUpdate == nil {
+			continue
+		}
+		cc, _ := e.note.Update.ToolCallUpdate.Meta["claudeCode"].(map[string]any)
+		if _, ok := cc["toolResponse"]; ok {
+			return
+		}
+	}
+	t.Error("no tool call update with the PostToolUse hook's toolResponse")
 }
