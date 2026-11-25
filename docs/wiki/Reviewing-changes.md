@@ -27,6 +27,15 @@ The button in the bar switches between two views:
 
 You can also use **View › Show Diffs Unified**. Your choice applies to every diff in Nushi, and Nushi remembers it.
 
+## Copy code from a diff
+
+Select code in any diff and copy it, as in an editor: in Changes, a pull request's files, or a tool call in the chat.
+
+1. Drag across the code. Double-click selects a word, triple-click a line, and Shift-click extends the selection.
+2. Press ⌘C (Ctrl+C on Linux and Windows), or right-click the code and pick **Copy**.
+
+You get the code as it shows, without the line numbers or the + and - marks. Escape or a click elsewhere in the diff clears the selection. Selecting code never opens a comment: comments start from the line numbers. On the phone a drag scrolls the diff instead.
+
 ## Comment on lines
 
 Leave comments for the agent, as in a code review.
