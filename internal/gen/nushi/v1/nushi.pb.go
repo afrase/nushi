@@ -906,7 +906,8 @@ type ListChatsResponse struct {
 	Chats []*Chat                `protobuf:"bytes,1,rep,name=chats,proto3" json:"chats,omitempty"`
 	// Chats the daemon removed since it started because their agent no
 	// longer has their sessions (Claude Code deletes old ones), until
-	// DismissRemovedChats; oldest first.
+	// DismissRemovedChats; oldest first. From API 150 always empty: the
+	// daemon keeps such a chat, marked (Status.session_gone; ADR 0015).
 	Removed []*RemovedChat `protobuf:"bytes,2,rep,name=removed,proto3" json:"removed,omitempty"`
 	// The ids of chats whose record the daemon couldn't read or parse
 	// (sessions/<id>.json), sorted. They aren't in chats, and aren't gone:
@@ -13141,7 +13142,8 @@ type EventsResponse_Remote struct {
 
 type EventsResponse_RemovedChats struct {
 	// The chats removed because their agent no longer has their sessions,
-	// all of them (ListChatsResponse.removed); chat_id is empty.
+	// all of them (ListChatsResponse.removed); chat_id is empty. Never
+	// sent from API 150.
 	RemovedChats *RemovedChats `protobuf:"bytes,15,opt,name=removed_chats,json=removedChats,proto3,oneof"`
 }
 
@@ -15265,8 +15267,9 @@ type ChatStatus struct {
 	// becomes ready clears it where it wasn't (the next ReopenChat reopens).
 	ReopenFailed bool `protobuf:"varint,12,opt,name=reopen_failed,json=reopenFailed,proto3" json:"reopen_failed,omitempty"`
 	// Of a chat whose reopen failed: its agent no longer has its session
-	// (it deleted it). The chat stays only for its worktree's or scratch
-	// folder's work; DeleteChat is what's left.
+	// (it deleted it). The chat stays, read-only, its transcript Nushi's
+	// copy where it has one, until DeleteChat (from API 150 whether or not
+	// it has a copy or work; before, only then).
 	SessionGone bool `protobuf:"varint,13,opt,name=session_gone,json=sessionGone,proto3" json:"session_gone,omitempty"`
 	// How many subagents, background commands and workflows the chat's
 	// agent started still run (API 84; workflows API 120): a turn can end

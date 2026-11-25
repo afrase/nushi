@@ -142,6 +142,13 @@ const wakeApi = 146;
 /// older daemon takes it out, then has it sent. Goes with the floor.
 const sendNowApi = 147;
 
+/// The API from which the daemon never removes a chat because its agent
+/// no longer has its session (ADR 0015's amendment of 2026-11-25): a
+/// daemon at 149 or below may, and says so in ListChats' `removed` and the
+/// `removedChats` event, which the removed chats' bar shows. The bar, its
+/// [Daemon.removedChats] and DismissRemovedChats go with the floor.
+const keepsGoneChatsApi = 150;
+
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
 /// answers, the bundled one is started; a running daemon is only ever
@@ -257,7 +264,8 @@ class Daemon extends ChangeNotifier {
   bool chatsListed = false;
 
   /// The chats the daemon removed because their agent no longer had their
-  /// sessions, until [dismissRemoved].
+  /// sessions, until [dismissRemoved]: only a daemon before
+  /// [keepsGoneChatsApi] removes any.
   List<RemovedChat> removedChats = [];
 
   /// What the Mac's window shows, told to the daemon (not the phone's).

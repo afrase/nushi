@@ -367,9 +367,9 @@ A chat's history is its agent's: a chat reopens from the agent's session, and re
 
 **Sessions the agent deleted.** Claude Code deletes sessions older than `cleanupPeriodDays` (30 days by default, in Claude's settings) when it starts ([ADR 0015](adr/0015-delete-takes-the-agents-history.md)).
 
-- A chat with a copy stays, read-only. Its transcript is the copy, with Delete… and Start a new chat here (in its folder).
-- A chat without one is forgotten, when you open it or when Nushi finds the session's file gone from Claude's history (it looks as the daemon starts and each hour while it runs, starting nothing). The app says once which chats went.
-- Nothing else is touched: a worktree and its branch stay. A chat whose worktree has uncommitted changes or commits stays too, saying Claude no longer has its session, with Delete… to deal with the worktree.
+- Nushi never removes such a chat: only you delete a chat. It finds the session gone when you open the chat, or when the session's file is gone from Claude's history (it looks as the daemon starts and each hour while it runs, starting nothing), and marks the chat.
+- A chat with a copy stays read-only, its transcript the copy. One without a copy shows its title, its folder and a notice saying Claude no longer has the session. Both have Delete… and Start a new chat here (in its folder).
+- Nothing of it is touched: its worktree and branch, its scratch folder. When its worktree has uncommitted changes or commits, or its scratch folder has files, the notice says so, and Delete… asks what to do with them.
 - A Codex session you archived isn't gone: run `codex unarchive <id>`, then Try again.
 
 ## Notifications

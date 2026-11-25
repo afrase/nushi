@@ -19,7 +19,7 @@ func (s *server) ListChats(_ context.Context, _ *connect.Request[nushiv1.ListCha
 	if err != nil {
 		return nil, refused(err)
 	}
-	resp := &nushiv1.ListChatsResponse{Removed: removedProto(s.Chats.Removed())}
+	resp := &nushiv1.ListChatsResponse{} // removed stays empty: Nushi no longer removes chats (ADR 0015's amendment of 2026-11-25)
 	resp.Unreadable = s.ChatFiles.Unreadable()
 	for _, sess := range sessions {
 		c := chatProto(sess)
@@ -333,8 +333,7 @@ func (s *server) DeleteChat(ctx context.Context, req *connect.Request[nushiv1.De
 	return done[nushiv1.DeleteChatResponse](s.Chats.Delete(ctx, m.ChatId, opts), refused)
 }
 
-func (s *server) DismissRemovedChats(_ context.Context, req *connect.Request[nushiv1.DismissRemovedChatsRequest]) (*connect.Response[nushiv1.DismissRemovedChatsResponse], error) {
-	s.Chats.DismissRemoved(req.Msg.Ids)
+func (s *server) DismissRemovedChats(context.Context, *connect.Request[nushiv1.DismissRemovedChatsRequest]) (*connect.Response[nushiv1.DismissRemovedChatsResponse], error) {
 	return connect.NewResponse(&nushiv1.DismissRemovedChatsResponse{}), nil
 }
 

@@ -71,11 +71,10 @@ type Service struct {
 	closing   bool        // Close began: no agent starts any more
 	resting   atomic.Bool // Rest: no prompt is taken any more
 	live      map[Agent]bool
-	opening   map[string]bool     // sessions Open is making chats of
-	signingIn map[string]*signIn  // the sign-in SignIn runs of each agent, by name
-	removed   []model.RemovedChat // removed because their agent no longer had their sessions (gone.go)
-	following int                 // apps following the events (Following)
-	idle      *time.Timer         // closes the side chats once none has for Timing.SidesGrace
+	opening   map[string]bool    // sessions Open is making chats of
+	signingIn map[string]*signIn // the sign-in SignIn runs of each agent, by name
+	following int                // apps following the events (Following)
+	idle      *time.Timer        // closes the side chats once none has for Timing.SidesGrace
 }
 
 // Terminals are the shells beside chats (internal/features/terminals).

@@ -9,7 +9,8 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Says, once, which chats the daemon removed because their agent no longer
-/// had their sessions; OK dismisses it (ADR 0015).
+/// had their sessions; OK dismisses it (ADR 0015). Only a daemon before
+/// [keepsGoneChatsApi] removes chats, so the bar goes with the floor.
 class RemovedChatsBar extends StatelessWidget {
   const new(this.daemon, {super.key});
 

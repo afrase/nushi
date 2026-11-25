@@ -1,12 +1,12 @@
 package chats
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"os"
 	"slices"
+	"strings"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -16,12 +16,11 @@ import (
 
 // A chat whose session its agent deleted (Claude Code deletes sessions
 // older than cleanupPeriodDays when it starts) can't reopen. Once that is
-// certain, a chat with Nushi's copy of its transcript stays, read-only, its
-// transcript the copy (ADR 0047); one without is forgotten, leaving
-// everything else as it is (its worktree and branch, a scratch folder with
-// files), and the app says so once (ListChats' removed). A chat whose
-// worktree or scratch folder holds work stays too, its session gone, with
-// Delete what's left (ADR 0015).
+// certain, the chat is marked so and stays: Nushi never removes a chat
+// because its agent no longer has its session, only the user does (ADR
+// 0015's amendment of 2026-11-25). Its transcript is Nushi's copy, read-only,
+// where it has one (ADR 0047); one without shows its title, its folder and
+// the notice. Nothing of it is touched: its worktrees, its scratch folder.
 
 // detail is an agent's error with the details its data may carry (codex-acp
 // puts the reason there: "session … is archived. Run `codex unarchive …`").
@@ -65,12 +64,13 @@ func (k *kind) goneText() string {
 }
 
 // goneLocked marks the chat's session gone: no reopen is tried again, and
-// one notice says so, and why the chat stays when kept says.
+// one notice says so, and what of its work Delete asks about when kept
+// (keeps) says.
 func (c *chat) goneLocked(kept string) {
 	c.reopenFailed, c.sessionGone = true, true
 	text := c.kind.goneText() + "."
 	if kept != "" {
-		text += " The chat stays because " + kept + ": Delete… removes it and asks what to do with that."
+		text += " " + strings.ToUpper(kept[:1]) + kept[1:] + ": Delete… asks what to do with that."
 	}
 	if i := c.indexLocked(c.failure); i >= 0 && i == len(c.items)-1 && c.items[i].Text == text {
 		return
@@ -80,9 +80,9 @@ func (c *chat) goneLocked(kept string) {
 	c.statusChangedLocked()
 }
 
-// expire forgets a chat whose agent no longer has its session (why says
-// how that was found), unless the chat holds work or Nushi has its
-// transcript's copy: then it stays, marked.
+// expire marks a chat whose agent no longer has its session gone (why says
+// how that was found), and keeps it, copy or not, work or not: its notice
+// says what its work is, which Delete asks about.
 func (s *Service) expire(ctx context.Context, c *chat, why string) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
@@ -90,37 +90,17 @@ func (s *Service) expire(ctx context.Context, c *chat, why string) {
 	sess, halting, running := c.record, c.halting, c.agent != nil || c.busyLocked()
 	c.mu.Unlock()
 	if halting || running {
-		return // being deleted or expired already, or it opened meanwhile (its session is there after all)
+		return // being deleted, or it opened meanwhile (its session is there after all)
 	}
-	// Its work keeps it, or its transcript's copy, read-only.
-	if kept, copied := s.keeps(ctx, sess), s.copies != nil && s.copies.Has(c.id); kept != "" || copied {
-		c.mu.Lock()
-		c.goneLocked(kept)
-		c.logLocked().Info("chat's session gone; chat kept", "why", why, "kept", kept, "copy", copied)
-		c.mu.Unlock()
+	kept := s.keeps(ctx, sess) // git, outside the lock
+	copied := s.copies != nil && s.copies.Has(c.id)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.halting || c.agent != nil || c.busyLocked() {
 		return
 	}
-	if _, err := s.halt(c.id); err != nil {
-		c.log().Warn("chat's session gone; chat not removed", "why", why, "err", err)
-		return
-	}
-	if sess.Scratch {
-		_ = os.Remove(sess.Folder) // empty (keeps said so); only the scratch folder Nushi made
-	}
-	if err := s.forget(c); err != nil {
-		c.mu.Lock()
-		c.unhaltLocked()
-		c.goneLocked("")
-		c.logLocked().Warn("chat's session gone; chat not removed", "why", why, "err", err)
-		c.mu.Unlock()
-		return
-	}
-	c.log().Info("chat removed: its agent no longer has its session", "why", why)
-	s.mu.Lock()
-	s.removed = append(s.removed, model.RemovedChat{ID: c.id, Agent: c.kind.Name, Title: cmp.Or(sess.Name, sess.Title), Folder: sess.Folder})
-	list := slices.Clone(s.removed)
-	s.mu.Unlock()
-	s.publish(model.Event{RemovedChats: &list})
+	c.goneLocked(kept)
+	c.logLocked().Info("chat's session gone; chat kept", "why", why, "kept", kept, "copy", copied)
 }
 
 // keeps says why a chat whose session is gone must stay (its worktrees'
@@ -152,7 +132,7 @@ func (s *Service) keeps(ctx context.Context, sess model.ChatRecord) string {
 	return ""
 }
 
-// sweep forgets the chats whose sessions their agent deleted, found from
+// sweep marks the chats whose sessions their agent deleted, found from
 // the agent's files alone (HistoryChecker); no agent starts. A chat whose
 // agent runs, or whose folder is gone, is left as it is. It runs as the
 // service starts and each hour (eachHour), until ctx ends; with no agent
@@ -190,25 +170,5 @@ func (s *Service) sweep(ctx context.Context) {
 		if c, err = s.stored(sess.ID); err == nil {
 			s.expire(ctx, c, "its history is gone")
 		}
-	}
-}
-
-// Removed are the chats removed since the daemon started because their
-// agent no longer had their sessions, oldest first, until DismissRemoved.
-func (s *Service) Removed() []model.RemovedChat {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return slices.Clone(s.removed)
-}
-
-// DismissRemoved takes chats off Removed (the app said so).
-func (s *Service) DismissRemoved(ids []string) {
-	s.mu.Lock()
-	n := len(s.removed)
-	s.removed = slices.DeleteFunc(s.removed, func(r model.RemovedChat) bool { return slices.Contains(ids, r.ID) })
-	list := slices.Clone(s.removed)
-	s.mu.Unlock()
-	if len(list) != n {
-		s.publish(model.Event{RemovedChats: &list})
 	}
 }

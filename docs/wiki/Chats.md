@@ -329,3 +329,4 @@ Spend is what the agent reports. On a subscription that's what the API would cha
 - **A dialog that asks something keeps the keys.** While it's open, the app's keys and the menu bar's items do nothing (but Quit), so the chat it names can't change under it. Answer it or press **Cancel** first.
 - **Rewind, forks and side chats** show only for agents that support them.
 - **Don't use a session in Nushi and a terminal at once.** Both would write to it.
+- **Chats outlast Claude's cleanup.** Claude Code deletes sessions after 30 days by default. Nushi never removes a chat because of it: the chat stays, read-only, showing Nushi's copy of its transcript if it has one, with **Delete…** and **Start a new chat here**. Only you delete a chat.

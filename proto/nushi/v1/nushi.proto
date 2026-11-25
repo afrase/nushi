@@ -220,7 +220,8 @@ service NushiService {
   // chat's sessions (ACP session/delete, when it can), the chat's scratch
   // folder goes, and Nushi's record of it.
   rpc DeleteChat(DeleteChatRequest) returns (DeleteChatResponse);
-  // Takes chats off ListChatsResponse.removed (the app has said so).
+  // Takes chats off ListChatsResponse.removed (the app has said so). From
+  // API 150 there are none, and it does nothing.
   rpc DismissRemovedChats(DismissRemovedChatsRequest) returns (DismissRemovedChatsResponse);
   // Answers a pending permission prompt with one of its options.
   rpc AnswerPermission(AnswerPermissionRequest) returns (AnswerPermissionResponse);
@@ -679,7 +680,8 @@ message ListChatsResponse {
   repeated Chat chats = 1;
   // Chats the daemon removed since it started because their agent no
   // longer has their sessions (Claude Code deletes old ones), until
-  // DismissRemovedChats; oldest first.
+  // DismissRemovedChats; oldest first. From API 150 always empty: the
+  // daemon keeps such a chat, marked (Status.session_gone; ADR 0015).
   repeated RemovedChat removed = 2;
   // The ids of chats whose record the daemon couldn't read or parse
   // (sessions/<id>.json), sorted. They aren't in chats, and aren't gone:
@@ -2404,7 +2406,8 @@ message EventsResponse {
     // Remote access changed (chat_id is empty).
     Remote remote = 14;
     // The chats removed because their agent no longer has their sessions,
-    // all of them (ListChatsResponse.removed); chat_id is empty.
+    // all of them (ListChatsResponse.removed); chat_id is empty. Never
+    // sent from API 150.
     RemovedChats removed_chats = 15;
     // What the check for a newer release found, when that changed
     // (chat_id is empty; API 86).
@@ -2911,8 +2914,9 @@ message ChatStatus {
   // becomes ready clears it where it wasn't (the next ReopenChat reopens).
   bool reopen_failed = 12;
   // Of a chat whose reopen failed: its agent no longer has its session
-  // (it deleted it). The chat stays only for its worktree's or scratch
-  // folder's work; DeleteChat is what's left.
+  // (it deleted it). The chat stays, read-only, its transcript Nushi's
+  // copy where it has one, until DeleteChat (from API 150 whether or not
+  // it has a copy or work; before, only then).
   bool session_gone = 13;
   // How many subagents, background commands and workflows the chat's
   // agent started still run (API 84; workflows API 120): a turn can end

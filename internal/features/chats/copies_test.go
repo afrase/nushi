@@ -217,9 +217,9 @@ func TestFailedCopyWriteIsTriedAgain(t *testing.T) {
 	}
 }
 
-// A chat whose session its agent deleted stays when Nushi has its copy:
+// A chat whose session its agent deleted stays with Nushi's copy:
 // read-only, its transcript the copy, the notice last. Clearing the copy
-// lets it go as any such chat.
+// keeps it, marked.
 func TestExpiredChatKeptForItsCopy(t *testing.T) {
 	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
 	testcheck.NoErr(t, err)
@@ -233,7 +233,7 @@ func TestExpiredChatKeptForItsCopy(t *testing.T) {
 	if got := shown(c); got != "user:one agent:m1 notice:session_gone" {
 		t.Fatalf("shown %s", got)
 	}
-	if ids, _ := ev.removed(); len(ids) != 0 || len(sessions.deleted) != 0 {
+	if ids := ev.removed(); len(ids) != 0 || len(sessions.deleted) != 0 {
 		t.Fatalf("removed %v", ids)
 	}
 	if err := svc.Prompt(t.Context(), "c", model.Message{Text: "more"}, SendIdle); err == nil {
@@ -244,8 +244,17 @@ func TestExpiredChatKeptForItsCopy(t *testing.T) {
 	if err != nil || n != 1 || bytes == 0 {
 		t.Fatalf("ClearCopies = %d, %d, %v", n, bytes, err)
 	}
-	if _, gone := ev.removed(); !slices.Equal(gone, []string{"c"}) || store.Has("c") {
-		t.Errorf("after clearing: removed %v, copy %v", gone, store.Has("c"))
+	if ids := ev.removed(); len(ids) != 0 || len(sessions.deleted) != 0 || store.Has("c") {
+		t.Errorf("after clearing: removed %v, deleted %v, copy %v", ids, sessions.deleted, store.Has("c"))
+	}
+	if got := shown(c); !strings.HasSuffix(got, "notice:session_gone") { // what it held stays shown till the daemon restarts
+		t.Errorf("after clearing: shown %s", got)
+	}
+	c.mu.Lock()
+	marked := c.sessionGone
+	c.mu.Unlock()
+	if !marked {
+		t.Error("after clearing: no longer marked gone")
 	}
 }
 

@@ -175,7 +175,6 @@ func TestEventsMarshalWhateverTheModelHolds(t *testing.T) {
 		"item":     {Item: &it},
 		"chat":     {Record: &rec},
 		"terminal": {Terminals: &[]model.Terminal{{Name: bad, Folder: bad, Shell: bad, Program: bad}}},
-		"removed":  {RemovedChats: &[]model.RemovedChat{{Title: bad, Folder: bad}}},
 		"commands": {Commands: []model.Command{{Name: bad, Description: bad, Hint: bad}}},
 		"config":   {Config: []model.ConfigOption{{Name: bad, Current: bad, Values: []model.ConfigValue{{Name: bad}}}}},
 		"show":     {Show: bad},

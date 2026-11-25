@@ -836,7 +836,8 @@ class ListChatsResponse extends $pb.GeneratedMessage {
 
   /// Chats the daemon removed since it started because their agent no
   /// longer has their sessions (Claude Code deletes old ones), until
-  /// DismissRemovedChats; oldest first.
+  /// DismissRemovedChats; oldest first. From API 150 always empty: the
+  /// daemon keeps such a chat, marked (Status.session_gone; ADR 0015).
   @$pb.TagNumber(2)
   $pb.PbList<RemovedChat> get removed => $_getList(1);
 
@@ -16867,7 +16868,8 @@ class EventsResponse extends $pb.GeneratedMessage {
   Remote ensureRemote() => $_ensure(13);
 
   /// The chats removed because their agent no longer has their sessions,
-  /// all of them (ListChatsResponse.removed); chat_id is empty.
+  /// all of them (ListChatsResponse.removed); chat_id is empty. Never
+  /// sent from API 150.
   @$pb.TagNumber(15)
   RemovedChats get removedChats => $_getN(14);
   @$pb.TagNumber(15)
@@ -19840,8 +19842,9 @@ class ChatStatus extends $pb.GeneratedMessage {
   void clearReopenFailed() => $_clearField(12);
 
   /// Of a chat whose reopen failed: its agent no longer has its session
-  /// (it deleted it). The chat stays only for its worktree's or scratch
-  /// folder's work; DeleteChat is what's left.
+  /// (it deleted it). The chat stays, read-only, its transcript Nushi's
+  /// copy where it has one, until DeleteChat (from API 150 whether or not
+  /// it has a copy or work; before, only then).
   @$pb.TagNumber(13)
   $core.bool get sessionGone => $_getBF(11);
   @$pb.TagNumber(13)
@@ -37243,7 +37246,8 @@ class NushiServiceApi {
       _client.invoke<DeleteChatResponse>(
           ctx, 'NushiService', 'DeleteChat', request, DeleteChatResponse());
 
-  /// Takes chats off ListChatsResponse.removed (the app has said so).
+  /// Takes chats off ListChatsResponse.removed (the app has said so). From
+  /// API 150 there are none, and it does nothing.
   $async.Future<DismissRemovedChatsResponse> dismissRemovedChats(
           $pb.ClientContext? ctx, DismissRemovedChatsRequest request) =>
       _client.invoke<DismissRemovedChatsResponse>(ctx, 'NushiService',

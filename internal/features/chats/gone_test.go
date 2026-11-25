@@ -41,23 +41,16 @@ func (e *events) publish(ev model.Event) {
 	e.all = append(e.all, ev)
 }
 
-// removed are the chats the events said were removed, and the last list of
-// chats removed because their sessions were gone.
-func (e *events) removed() (ids, gone []string) {
+// removed are the chats the events said were removed.
+func (e *events) removed() (ids []string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	for _, ev := range e.all {
 		if ev.Removed {
 			ids = append(ids, ev.ChatID)
 		}
-		if ev.RemovedChats != nil {
-			gone = nil
-			for _, r := range *ev.RemovedChats {
-				gone = append(gone, r.ID)
-			}
-		}
 	}
-	return ids, gone
+	return ids
 }
 
 var errNotFound = &acp.Error{Code: acp.ErrorCodeResourceNotFound, Message: "Resource not found: s1"}
@@ -103,27 +96,48 @@ func always(string, string) bool { return true }
 func never(string, string) bool  { return false }
 
 // A chat whose agent says its session doesn't exist, and whose files agree,
-// is forgotten when it reopens: its record goes, and the list of removed
-// chats says so, until dismissed.
-func TestAChatWhoseSessionIsGoneIsRemoved(t *testing.T) {
-	svc, _, sessions, ev := goneService(t, errNotFound, always, model.ChatRecord{Title: "Old work"}, Options{})
+// stays when it reopens, though Nushi has no copy of its transcript and no
+// work keeps it (ADR 0015's amendment of 2026-11-25): marked gone, its
+// notice last, no removal said, nothing of it touched (its empty scratch
+// folder, its worktree). It can be deleted, and a new chat starts in its
+// folder.
+func TestAChatWhoseSessionIsGoneStays(t *testing.T) {
+	scratch := t.TempDir()
+	folder := filepath.Join(scratch, "c")
+	testcheck.NoErr(t, os.MkdirAll(folder, 0o700))
+	wt := model.Worktree{Path: filepath.Join(t.TempDir(), "w"), Branch: "nushi/w"}
+	svc, agent, sessions, ev := goneService(t, errNotFound, always, model.ChatRecord{Title: "Old work", Folder: folder, EarlierWorktrees: []model.Worktree{wt}}, Options{})
+	wts := &removingWorktrees{}
+	svc.worktrees, svc.scratch = wts, scratch
 	_, _ = svc.Get("c")
-	if !testcheck.Eventually(func() bool { _, gone := ev.removed(); return len(gone) == 1 }) {
-		t.Fatal("not removed")
+	c := svc.chats["c"]
+	eventually(t, c, func() bool { return c.sessionGone && !c.busyLocked() })
+	svc.work.Wait() // the expire the reopen began, done
+	if got := shown(c); got != "notice:session_gone" {
+		t.Errorf("shown %s", got)
 	}
-	ids, gone := ev.removed()
-	if !slices.Equal(ids, []string{"c"}) || !slices.Equal(gone, []string{"c"}) || !slices.Equal(sessions.deleted, []string{"c"}) {
-		t.Errorf("removed %v, gone %v, deleted %v", ids, gone, sessions.deleted)
+	if ids := ev.removed(); len(ids) > 0 || len(sessions.deleted) > 0 {
+		t.Fatalf("removed %v, deleted %v", ids, sessions.deleted)
 	}
-	if r := svc.Removed(); len(r) != 1 || r[0].Title != "Old work" || r[0].Agent != "fake" {
-		t.Errorf("Removed() = %+v", r)
+	if st := svc.Status(c.record); !st.SessionGone {
+		t.Errorf("status %+v", st)
 	}
-	svc.DismissRemoved([]string{"c"})
-	if r := svc.Removed(); len(r) != 0 {
-		t.Errorf("dismissed, still %+v", r)
+	if _, err := os.Stat(folder); err != nil {
+		t.Errorf("its scratch folder: %v", err)
 	}
-	if _, gone := ev.removed(); len(gone) != 0 {
-		t.Errorf("the last list after dismissing: %v", gone)
+	if len(wts.removed) > 0 {
+		t.Errorf("worktrees removed: %v", wts.removed)
+	}
+
+	id, err := svc.Start(t.Context(), "fake", t.TempDir(), false) // Start a new chat here
+	testcheck.NoErr(t, err)
+	if id == "c" || id == "" {
+		t.Errorf("a new chat: %q", id)
+	}
+	agent.deletes = true
+	testcheck.NoErr(t, svc.Delete(context.Background(), "c", nil))
+	if !slices.Equal(sessions.removedIDs(), []string{"c"}) {
+		t.Errorf("Delete: deleted %v", sessions.removedIDs())
 	}
 }
 
@@ -155,7 +169,7 @@ func TestAChatStaysUnlessItsSessionIsSurelyGone(t *testing.T) {
 			cc := svc.chats["c"]
 			idle(t, cc)
 			svc.work.Wait() // one the reopen began (by now, as it set busy), done
-			if ids, _ := ev.removed(); len(ids) > 0 || len(sessions.deleted) > 0 {
+			if ids := ev.removed(); len(ids) > 0 || len(sessions.deleted) > 0 {
 				t.Errorf("removed %v", ids)
 			}
 			if st := svc.Status(cc.record); st.SessionGone {
@@ -178,7 +192,7 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 		"changes":   {stateWorktrees{state: model.WorktreeState{Changed: 2}}, model.ChatRecord{Worktree: wt}, "has uncommitted changes"},
 		"commits":   {stateWorktrees{state: model.WorktreeState{Commits: 1}}, model.ChatRecord{EarlierWorktrees: []model.Worktree{*wt}}, "has commits its base branch doesn't have"},
 		"unchecked": {stateWorktrees{err: errors.New("git")}, model.ChatRecord{Worktree: wt}, "can't be checked"},
-		"scratch":   {stateWorktrees{}, model.ChatRecord{Folder: "scratch"}, "its scratch folder has files"},
+		"scratch":   {stateWorktrees{}, model.ChatRecord{Folder: "scratch"}, "Its scratch folder has files"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			scratch := t.TempDir()
@@ -195,7 +209,7 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 			eventually(t, c, func() bool {
 				return c.sessionGone && len(c.items) > 0 && c.items[len(c.items)-1].Status == "session_gone" && strings.Contains(c.items[len(c.items)-1].Text, tc.want)
 			})
-			if ids, _ := ev.removed(); len(ids) > 0 || len(sessions.deleted) > 0 {
+			if ids := ev.removed(); len(ids) > 0 || len(sessions.deleted) > 0 {
 				t.Fatalf("removed %v", ids)
 			}
 			if st := svc.Status(c.record); !st.ReopenFailed || !st.SessionGone {
@@ -221,11 +235,12 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 }
 
 // The sweep finds the chats whose sessions their agent's files no longer
-// have, starting no agent, as the service starts and each hour after; one
-// whose folder can't be reached, that never had a message, or whose files
-// can't tell, stays. In a bubble: the loop sweeps as the service starts,
-// then each hour of its clock.
-func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
+// have, starting no agent, as the service starts and each hour after, and
+// marks them gone, keeping them (none has a copy here); one whose folder
+// can't be reached, that never had a message, or whose files can't tell,
+// stays as it is. In a bubble: the loop sweeps as the service starts, then
+// each hour of its clock.
+func TestSweepMarksChatsWhoseHistoryIsGone(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		agent := &fakeAgent{}
 		var mu sync.Mutex
@@ -246,9 +261,21 @@ func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
 			{Harness: testHarness{Name: "other", Title: "Other", gone: true}, Launch: agent.launch},
 		}, Options{Sessions: sessions, Worktrees: stateWorktrees{}, Scratch: t.TempDir(), Publish: ev.publish})
 		defer svc.Close()
+		marked := func() []string {
+			var ids []string
+			for _, c := range svc.openChats() {
+				c.mu.Lock()
+				if c.sessionGone {
+					ids = append(ids, c.id)
+				}
+				c.mu.Unlock()
+			}
+			slices.Sort(ids)
+			return ids
+		}
 		synctest.Wait()
-		if deleted := sessions.removedIDs(); !slices.Equal(deleted, []string{"gone"}) {
-			t.Errorf("as it started: deleted %v", deleted)
+		if got := marked(); !slices.Equal(got, []string{"gone"}) {
+			t.Errorf("as it started: marked %v", got)
 		}
 		if launches, _, _ := agent.count(); launches != 0 {
 			t.Errorf("%d agents started", launches)
@@ -257,12 +284,15 @@ func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
 		gone["s-here"] = true
 		mu.Unlock()
 		pass(time.Hour - time.Millisecond)
-		if deleted := sessions.removedIDs(); !slices.Equal(deleted, []string{"gone"}) {
-			t.Errorf("before the hour: deleted %v", deleted)
+		if got := marked(); !slices.Equal(got, []string{"gone"}) {
+			t.Errorf("before the hour: marked %v", got)
 		}
 		pass(time.Millisecond)
-		if deleted := sessions.removedIDs(); !slices.Equal(deleted, []string{"gone", "here"}) {
-			t.Errorf("deleted %v", deleted)
+		if got := marked(); !slices.Equal(got, []string{"gone", "here"}) {
+			t.Errorf("marked %v", got)
+		}
+		if deleted, ids := sessions.removedIDs(), ev.removed(); len(deleted) > 0 || len(ids) > 0 {
+			t.Errorf("deleted %v, removed %v", deleted, ids)
 		}
 	})
 }

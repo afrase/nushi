@@ -14,3 +14,6 @@ ADR 0008 made the agent's session the only history: Nushi rebuilt a transcript f
 - A copy holds the user's code, prompts and tool output in the data folder, readable by anything running as the user (as Claude's own transcripts are); never logged (counts and sizes only), never sent anywhere but to Nushi's clients, as transcripts already are. A long chat's copy is about a third of Claude's own transcript of it.
 - What the copy shows before a compaction is Nushi's record, not the agent's: the agent kept only a summary of it. A rewind to a message there forks Claude's session at it, which works (its transcript keeps everything).
 - Edits elsewhere are caught only on a reopen, and only as far as ids and texts tell; a copy cleared or turned off falls back to the agent's replay, as before this ADR.
+
+## Amendment (2026-11-25): the copy isn't what keeps a chat
+A chat whose session the agent deleted now stays whether or not it has a copy ([ADR 0015](0015-delete-takes-the-agents-history.md)'s amendment of the same day): the copy is what it shows, not why it stays. One without shows its title, folder and notice; clearing a gone chat's copy keeps the chat.

@@ -245,8 +245,8 @@ type Status struct {
 	// failed (a notice says why); it isn't Asleep then.
 	ReopenFailed bool
 	// SessionGone says, of a chat whose reopen failed, that its agent no
-	// longer has its session: the chat stays only for its worktree's or
-	// scratch folder's work, and Delete is what's left.
+	// longer has its session: the chat stays, read-only, until deleted
+	// (ADR 0015).
 	SessionGone bool
 	// CanSleep says Sleep can stop its agent: the agent reopens sessions.
 	CanSleep bool
@@ -299,12 +299,6 @@ type TranscriptCopy struct {
 	Chat     string
 	Bytes    int64
 	Modified time.Time
-}
-
-// RemovedChat is a chat Nushi removed because its agent no longer has its
-// session (Claude Code deletes old ones): what Nushi kept of it.
-type RemovedChat struct {
-	ID, Agent, Title, Folder string
 }
 
 // FolderRun is something a folder has the agent run on its own: an MCP

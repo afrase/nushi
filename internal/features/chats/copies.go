@@ -216,8 +216,8 @@ func (s *Service) ListCopies() ([]CopyEntry, error) {
 
 // ClearCopies deletes the copies of chats, and returns how many there were
 // and their size. A chat goes on as before, its history from its agent
-// alone; one whose session its agent deleted, kept for its copy, goes
-// unless its work keeps it (gone.go).
+// alone; one whose session its agent deleted stays, marked again, with
+// its notice alone once what it held is dropped (gone.go).
 func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes int64, err error) {
 	if s.copies == nil {
 		return 0, 0, nil
