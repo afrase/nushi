@@ -33055,6 +33055,7 @@ class GitHubIssue extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? labels,
     $core.Iterable<$core.String>? assignees,
     $core.Iterable<GitHubComment>? conversation,
+    $core.Iterable<GitHubReaction>? reactions,
   }) {
     final result = GitHubIssue._();
     if (item != null) result.item = item;
@@ -33063,6 +33064,7 @@ class GitHubIssue extends $pb.GeneratedMessage {
     if (labels != null) result.labels.addAll(labels);
     if (assignees != null) result.assignees.addAll(assignees);
     if (conversation != null) result.conversation.addAll(conversation);
+    if (reactions != null) result.reactions.addAll(reactions);
     return result;
   }
 
@@ -33087,6 +33089,8 @@ class GitHubIssue extends $pb.GeneratedMessage {
     ..pPS(6, _omitFieldNames ? '' : 'assignees')
     ..pPM<GitHubComment>(7, _omitFieldNames ? '' : 'conversation',
         subBuilder: GitHubComment.$_createMessage)
+    ..pPM<GitHubReaction>(8, _omitFieldNames ? '' : 'reactions',
+        subBuilder: GitHubReaction.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -33148,6 +33152,10 @@ class GitHubIssue extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(7)
   $pb.PbList<GitHubComment> get conversation => $_getList(5);
+
+  /// The reactions on its description, as GitHubPull.reactions. API 155.
+  @$pb.TagNumber(8)
+  $pb.PbList<GitHubReaction> get reactions => $_getList(6);
 }
 
 class GetGitHubIssueRequest extends $pb.GeneratedMessage {

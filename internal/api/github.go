@@ -201,7 +201,7 @@ func (s *server) GetGitHubIssue(ctx context.Context, req *connect.Request[nushiv
 	}
 	return connect.NewResponse(&nushiv1.GetGitHubIssueResponse{Issue: &nushiv1.GitHubIssue{Item: ghItemProto(is.GitHubItem), Body: is.Body,
 		Outside: github.Outside(is.Association), Labels: is.Labels, Assignees: is.Assignees,
-		Conversation: ghCommentsProto(is.Conversation)}}), nil
+		Conversation: ghCommentsProto(is.Conversation), Reactions: reactionsProto(is.Reactions)}}), nil
 }
 
 func (s *server) GetGitHubFiles(ctx context.Context, req *connect.Request[nushiv1.GetGitHubFilesRequest]) (*connect.Response[nushiv1.GetGitHubFilesResponse], error) {

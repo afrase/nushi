@@ -247,6 +247,8 @@ type GitHubIssue struct {
 	Body, Association string
 	Labels, Assignees []string
 	Conversation      []GitHubComment
+	// Reactions are those on its description.
+	Reactions []GitHubReaction
 }
 
 // ChatGitHub is the pull request or issue a chat was started from, or

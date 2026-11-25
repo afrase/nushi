@@ -12,6 +12,9 @@ import (
 	"testing"
 	"time"
 	"unicode/utf8"
+
+	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 const repo = "afrase/nushi-gh-test"
@@ -202,6 +205,26 @@ func TestIssue(t *testing.T) {
 	}
 	if _, err := c.Issue(t.Context(), "not a repo", 2); err == nil {
 		t.Fatal("a bad repository's name")
+	}
+}
+
+// An issue's own reactions come with it, as a pull request's description's
+// do: the kinds used, in GitHub's order, mine marked. The recording has
+// none, so they are patched in.
+func TestIssueReactions(t *testing.T) {
+	f := newFake(t)
+	f.patched("graphql Issue", "graphql_Issue.json", func(data map[string]any) {
+		issue := data["repository"].(map[string]any)["issue"].(map[string]any)
+		issue["reactionGroups"] = []any{
+			map[string]any{"content": "THUMBS_UP", "viewerHasReacted": false, "reactors": map[string]any{"totalCount": 0}},
+			map[string]any{"content": "HEART", "viewerHasReacted": true, "reactors": map[string]any{"totalCount": 2}},
+			map[string]any{"content": "ROCKET", "viewerHasReacted": false, "reactors": map[string]any{"totalCount": 1}},
+		}
+	})
+	is, err := f.client().Issue(t.Context(), repo, 2)
+	testcheck.NoErr(t, err)
+	if want := []model.GitHubReaction{{Content: "heart", Count: 2, Mine: true}, {Content: "rocket", Count: 1}}; !slices.Equal(is.Reactions, want) {
+		t.Fatalf("the issue's reactions %+v", is.Reactions)
 	}
 }
 

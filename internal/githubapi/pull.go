@@ -373,6 +373,7 @@ var issueQuery = withItems(`query Issue($owner: String!, $name: String!, $number
   repository(owner: $owner, name: $name) {
     issue(number: $number) {
       __typename ...ItemIssue body authorAssociation
+      `+reactionFields+`
       labels(first: 20) { nodes { name } }
       assignees(first: 10) { nodes { login } }
       comments(last: 100) { nodes `+saidFields+` }
@@ -380,8 +381,8 @@ var issueQuery = withItems(`query Issue($owner: String!, $name: String!, $number
   }
 }`, rowOnly)
 
-// Issue is an issue whole: its text, labels, assignees and the latest
-// 100 comments.
+// Issue is an issue whole: its text and the reactions on it, labels,
+// assignees and the latest 100 comments.
 func (c *Client) Issue(ctx context.Context, repo string, number int) (model.GitHubIssue, error) {
 	owner, name, err := SplitRepo(repo)
 	if err != nil {
@@ -391,9 +392,10 @@ func (c *Client) Issue(ctx context.Context, repo string, number int) (model.GitH
 		Repository *struct {
 			Issue *struct {
 				itemNode
-				Body              string `json:"body"`
-				AuthorAssociation string `json:"authorAssociation"`
-				Labels            labels `json:"labels"`
+				Body              string          `json:"body"`
+				AuthorAssociation string          `json:"authorAssociation"`
+				ReactionGroups    []reactionGroup `json:"reactionGroups"`
+				Labels            labels          `json:"labels"`
 				Assignees         struct {
 					Nodes []login `json:"nodes"`
 				} `json:"assignees"`
@@ -410,7 +412,8 @@ func (c *Client) Issue(ctx context.Context, repo string, number int) (model.GitH
 		return model.GitHubIssue{}, ErrNotFound
 	}
 	is := data.Repository.Issue
-	out := model.GitHubIssue{GitHubItem: is.item(c.Host, is.Repository.NameWithOwner), Body: Markdown(is.Body), Association: is.AuthorAssociation}
+	out := model.GitHubIssue{GitHubItem: is.item(c.Host, is.Repository.NameWithOwner), Body: Markdown(is.Body), Association: is.AuthorAssociation,
+		Reactions: reactions(is.ReactionGroups)}
 	for _, l := range is.Labels.labels() {
 		out.Labels = append(out.Labels, l.Name)
 	}

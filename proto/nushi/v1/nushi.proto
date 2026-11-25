@@ -4297,6 +4297,8 @@ message GitHubIssue {
   repeated string labels = 5;
   repeated string assignees = 6;
   repeated GitHubComment conversation = 7;
+  // The reactions on its description, as GitHubPull.reactions. API 155.
+  repeated GitHubReaction reactions = 8;
 }
 
 message GetGitHubIssueRequest {
