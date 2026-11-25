@@ -289,7 +289,7 @@ A match further up than what's loaded takes a moment: Nushi loads that part of t
 
 ## See what the agents used
 
-Settings has a Usage page: what your chats spent and the tokens they used, by day, agent, model and project, and the chats that cost the most. Where an agent reports your account's limits (Claude's 5-hour and weekly ones), they show there too.
+Settings has a Usage page (today's spend at the bottom of the sidebar opens it): what your chats spent and the tokens they used, by day, agent, model and project, and the chats that cost the most. Where an agent reports your account's limits (Claude's 5-hour and weekly ones), they show there too.
 
 1. Open **Settings**, then **Usage**.
 2. Pick **7 days**, **30 days**, **90 days** or **All**. Nushi remembers your pick.
@@ -302,7 +302,7 @@ Spend is what the agent reports. On a subscription that's what the API would cha
 
 - **Chats belong to your agent.** Each is the agent's own session, so its own resume command, run in the chat's folder, picks it up in a terminal.
 - **Quitting Nushi doesn't stop your agents.** A background helper (the daemon) keeps them and the chat's terminals running. More on terminals in [Previews and terminals](Previews-and-terminals).
-- **The card at the bottom of the sidebar** counts the agents that are working, awake and asleep, and shows how much memory Nushi uses. Click the memory to see each awake chat's share, with **Sleep** beside it.
+- **The card at the bottom of the sidebar** shows what today's turns cost and how much memory Nushi uses. Click the spend to open **Settings › Usage**. Click the memory to see each awake chat's share, with **Sleep** beside it. The spend counts from midnight and doesn't show on a day with no cost, such as when your agents report none.
 - **Idle chats sleep** after 30 minutes: the agent stops, and your next message wakes it. A sleeping chat's row in the sidebar has no dot and is faint and in italics (unless a turn it finished is still unseen); its header says **Asleep**. Change it in **Settings › General › Sleep idle chats**.
 - **Wake a chat without sending anything**: open its **⋯** (or right-click it in the sidebar) and choose **Wake**, where **Sleep** is while it's awake. The chat shows it's opening, as after a restart; if it can't, it says why and offers what helps: **Try again**, **Move…** when its folder is gone, or **Set up…** when its agent isn't ready.
 - **Old chats stay asleep after Nushi restarts.** Looking at one doesn't start its agent. Your next message does, or **Wake**. A chat you used in the hour before the restart wakes when you open it.
