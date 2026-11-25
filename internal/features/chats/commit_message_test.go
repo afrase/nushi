@@ -21,7 +21,13 @@ func staged(context.Context, string) (string, error) { return "+new line", nil }
 func commitChat(t *testing.T, agent *fakeAgent, h Harness, events *int) (*Service, string, *chat) {
 	t.Helper()
 	agent.session.Modes = &acp.SessionModeState{CurrentModeID: "bypass", AvailableModes: []acp.SessionMode{{ID: "bypass"}, {ID: "plan"}}}
-	svc := newService(t, []Kind{{Harness: h, Launch: agent.launch}}, Options{Publish: func(model.Event) { *events++ }})
+	// The chat's record, which keeps the fork until it's deleted, isn't a
+	// trace: the transcript and the chat's state are.
+	svc := newService(t, []Kind{{Harness: h, Launch: agent.launch}}, Options{Publish: func(e model.Event) {
+		if e.Record == nil {
+			*events++
+		}
+	}})
 	c := startChat(t, svc, t.TempDir())
 	c.record.HasMessages = true
 	return svc, c.id, c
@@ -99,4 +105,53 @@ func TestCommitMessageStopsOnADiffItCantRead(t *testing.T) {
 	if _, err := svc.CommitMessage(context.Background(), id, func(context.Context, string) (string, error) { return "", want }); !errors.Is(err, want) {
 		t.Fatalf("got %v", err)
 	}
+}
+
+// lastSaved is the chat record sessions last saved.
+func lastSaved(t *testing.T, sessions *memSessions) model.ChatRecord {
+	t.Helper()
+	sessions.mu.Lock()
+	defer sessions.mu.Unlock()
+	if len(sessions.saved) == 0 {
+		t.Fatal("nothing saved")
+	}
+	return sessions.saved[len(sessions.saved)-1]
+}
+
+// The commit message's fork is in the chat's record from the moment the
+// agent made it until it is deleted, so a daemon that dies in between
+// leaves a record that the chat's next open clears.
+func TestCommitMessagesForkIsRecordedUntilDeleted(t *testing.T) {
+	sessions := &memSessions{}
+	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "Shorten the wait")}}
+	agent.session.Modes = &acp.SessionModeState{CurrentModeID: "bypass", AvailableModes: []acp.SessionMode{{ID: "bypass"}, {ID: "plan"}}}
+	var held model.ChatRecord
+	agent.setHook = func(sid acp.SessionID) { // the fork, made and not yet used
+		if sid == "fork1" {
+			held = lastSaved(t, sessions)
+		}
+	}
+	h := readOnlyHarness{testHarness{Name: "fake", once: true}}
+	svc := newService(t, []Kind{{Harness: h, Launch: agent.launch}}, Options{Sessions: sessions})
+	c := startChat(t, svc, t.TempDir())
+	c.record.HasMessages = true
+	if _, err := svc.CommitMessage(context.Background(), c.id, staged); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(held.Throwaway, []string{"fork1"}) {
+		t.Fatalf("the fork wasn't recorded before it was used: %v", held.Throwaway)
+	}
+	if got := lastSaved(t, sessions).Throwaway; len(got) != 0 {
+		t.Errorf("deleted, it's still recorded: %v", got)
+	}
+
+	// The daemon died with the fork made: the next open deletes it.
+	again := &fakeAgent{deletes: true}
+	svc2 := newService(t, []Kind{{Harness: h, Launch: again.launch}}, Options{Sessions: &memSessions{stored: []model.ChatRecord{held}}})
+	if _, err := svc2.Get(held.ID); err != nil {
+		t.Fatal(err)
+	}
+	c2 := svc2.chats[held.ID]
+	eventually(t, c2, func() bool { _, _, deleted := again.count(); return slices.Contains(deleted, "fork1") })
+	eventually(t, c2, func() bool { return len(c2.record.Throwaway) == 0 })
 }

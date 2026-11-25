@@ -62,6 +62,9 @@ func (s *Service) CommitMessage(ctx context.Context, chatID string, diff func(co
 	run := &silentRun{text: map[string]string{}, tool: cancel}
 	c.mu.Lock()
 	c.probes[fork] = run
+	// Written ahead: a daemon that dies before throwAway's last delete
+	// leaves it in the record, which the chat's next open deletes.
+	c.throwawayLocked([]string{fork}, false)
 	c.mu.Unlock()
 	defer func() {
 		s.throwAway(c, agent, fork)

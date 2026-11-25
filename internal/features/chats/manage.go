@@ -224,8 +224,9 @@ func (s *Service) discard(c *chat, ids []string) {
 }
 
 // throwawayLocked adds sessions the agent forked from the chat that nobody
-// will see again to the chat's record of them, or with deleted takes them
-// out of it (model.ChatRecord.Throwaway).
+// will see again to the chat's record of them (once each: a fork is written
+// ahead, then again if its delete fails), or with deleted takes them out of
+// it (model.ChatRecord.Throwaway).
 // Not while the chat is being deleted: its file may be gone, and Delete
 // deletes them anyway.
 func (c *chat) throwawayLocked(ids []string, deleted bool) {
@@ -236,7 +237,11 @@ func (c *chat) throwawayLocked(ids []string, deleted bool) {
 		if deleted {
 			s.Throwaway = slices.DeleteFunc(slices.Clone(s.Throwaway), func(id string) bool { return slices.Contains(ids, id) })
 		} else {
-			s.Throwaway = append(slices.Clip(s.Throwaway), ids...)
+			for _, id := range ids {
+				if !slices.Contains(s.Throwaway, id) {
+					s.Throwaway = append(slices.Clip(s.Throwaway), id)
+				}
+			}
 		}
 		if len(s.Throwaway) == 0 {
 			s.Throwaway = nil
