@@ -110,7 +110,7 @@ func TestPlay(t *testing.T) {
 	options := func(method string) map[string]any {
 		return params(method)["_meta"].(map[string]any)["claudeCode"].(map[string]any)["options"].(map[string]any)
 	}
-	check("new has Nushi's _meta and the step's", options("session/new")["model"] == "opus" && options("session/new")["perTaskStopAffordance"] != nil)
+	check("new has Nushi's _meta and the step's", options("session/new")["model"] == "opus" && options("session/new")["env"] != nil)
 	check("new's cwd", params("session/new")["cwd"] == "/work")
 	check("a fork has Nushi's _meta only", options("session/fork")["model"] == nil && params("session/fork")["sessionId"] == "sid-1")
 	check("the steer", params("_session/steering")["sessionId"] == "sid-1" && strings.Contains(byMethodJSON(byMethod["_session/steering"]), `"idleBehavior":"promptRequired"`))

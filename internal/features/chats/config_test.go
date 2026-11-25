@@ -110,8 +110,8 @@ func ultracodeOn(meta map[string]any) bool {
 	opts, _ := meta["claudeCode"].(map[string]any)["options"].(map[string]any)
 	settings, _ := opts["settings"].(map[string]any)
 	on, _ := settings["ultracode"].(bool)
-	stop, _ := opts["perTaskStopAffordance"].(bool) // merged, not replaced
-	return on && stop
+	_, env := opts["env"].(map[string]any) // merged, not replaced
+	return on && env
 }
 
 // Ultracode is the chat's: off at first; turned on, kept with the chat

@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
@@ -88,6 +89,31 @@ func TestAClaudeChatThroughTheGoAgent(t *testing.T) {
 	if err := fakes[0].Err(); err != nil {
 		t.Errorf("claude's script: %v", err)
 	}
+	claudeInitialized(t, fakes[0])
+}
+
+// claudeInitialized checks claude was asked, as Nushi's chats need, to
+// spare background tasks on a cancel (perTaskStopAffordance) and to send
+// its subagents' text (forwardSubagentText), whoever of Nushi and the Go
+// agent asks it.
+func claudeInitialized(t *testing.T, fake *claudetest.Fake) {
+	t.Helper()
+	for _, line := range fake.Responded() {
+		var f struct {
+			Request struct {
+				Subtype               string `json:"subtype"`
+				PerTaskStopAffordance bool   `json:"perTaskStopAffordance"`
+				ForwardSubagentText   bool   `json:"forwardSubagentText"`
+			} `json:"request"`
+		}
+		if json.Unmarshal([]byte(line), &f) == nil && f.Request.Subtype == "initialize" {
+			if !f.Request.PerTaskStopAffordance || !f.Request.ForwardSubagentText {
+				t.Errorf("claude's initialize: %s", line)
+			}
+			return
+		}
+	}
+	t.Error("claude wasn't initialized")
 }
 
 // A Claude chat with messages moves to another folder through the Go

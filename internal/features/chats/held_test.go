@@ -123,12 +123,12 @@ func TestAResultAloneDoesntEndTheTurn(t *testing.T) {
 	idle(t, c)
 }
 
-// Claude's sessions ask that a stop spare background subagents; a
-// subagent stopped with the agent says so.
+// Claude's sessions get the harness's _meta, a fork's merged with the
+// fork's own; a subagent stopped with the agent says so.
 func TestStoppingTheAgentStopsItsSubagents(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	opts, _ := agent.newMeta["claudeCode"].(map[string]any)["options"].(map[string]any)
-	if on, _ := opts["perTaskStopAffordance"].(bool); !on {
+	if _, ok := opts["env"].(map[string]any); !ok {
 		t.Errorf("session/new's _meta: %v", agent.newMeta)
 	}
 	_, _, err := c.forkSession(context.Background(), agent, "s1", t.TempDir(), map[string]any{"jetbrains": 1})
