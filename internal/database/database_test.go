@@ -67,6 +67,98 @@ func TestOpenRefusesANewerVersion(t *testing.T) {
 	}
 }
 
+// A database from before the daemon took Ante's cache out of its input:
+// Ante's rows have it taken out, once, where the input could hold it; no
+// other agent's rows change, and no row's other figures. The version
+// doesn't move, so an older daemon still opens the file.
+func TestOpenTakesTheCacheOutOfAntesInput(t *testing.T) {
+	d, path := open(t)
+	ctx := t.Context()
+	at := time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC)
+	use := func(agent string, in, out, read, write int64) model.UsageRow {
+		return model.UsageRow{At: at, Chat: "c-" + agent, Agent: agent, End: model.UsageTurn, Input: in, Output: out, CacheRead: read, CacheWrite: write}
+	}
+	side := use("ante", 500, 5, 400, 0)
+	side.Side = true
+	own := use("ante", 0, 0, 0, 0)
+	own.End = model.UsageOwn
+	kept := []model.UsageRow{
+		use("ante", 1050, 20, 900, 50),    // the whole prompt, the cache in it
+		use("ante", 3110, 60, 2700, 100),  // three calls' sum
+		use("ante", 3000, 20, 1024, 0),    // what's left could hold the cache again
+		use("ante", 10, 2, 0, 0),          // no cache
+		use("ante", 900, 20, 900, 0),      // all of it from the cache
+		use("ante", 100, 20, 900, 0),      // can't hold its cache: left as it is
+		side,                              // a side chat's
+		own,                               // a turn of the agent's own that used nothing
+		use("claude", 1000, 20, 900, 50),  // another agent's, cache already apart
+		use("codex", 1000, 20, 900, 0),    // and another's
+		use("anteater", 1000, 20, 900, 0), // not Ante's
+	}
+	testcheck.NoErr(t, d.AddUsage(ctx, kept))
+	// As a build before the repair left the file.
+	_, err := d.db.Exec(`DELETE FROM meta WHERE key = 'ante_cache_out'`)
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, d.Close())
+
+	type figures struct{ in, out, read, write int64 }
+	read := func() []figures {
+		t.Helper()
+		again, err := Open(path)
+		testcheck.NoErr(t, err)
+		defer func() { _ = again.Close() }()
+		var v int
+		testcheck.NoErr(t, again.db.QueryRow(`PRAGMA user_version`).Scan(&v))
+		if v != 1 {
+			t.Errorf("version %d: v0.55.0 opens version 1 only", v)
+		}
+		rows, err := again.db.Query(`SELECT input, output, cache_read, cache_write FROM turns ORDER BY id`)
+		testcheck.NoErr(t, err)
+		defer func() { _ = rows.Close() }()
+		var out []figures
+		for rows.Next() {
+			var f figures
+			testcheck.NoErr(t, rows.Scan(&f.in, &f.out, &f.read, &f.write))
+			out = append(out, f)
+		}
+		testcheck.NoErr(t, rows.Err())
+		return out
+	}
+	want := make([]figures, len(kept))
+	for i, r := range kept {
+		want[i] = figures{r.Input, r.Output, r.CacheRead, r.CacheWrite}
+	}
+	want[0].in, want[1].in, want[2].in, want[4].in, want[6].in = 100, 310, 1976, 0, 100
+	if got := read(); !reflect.DeepEqual(got, want) {
+		t.Errorf("rows %v, want %v", got, want)
+	}
+	// Opened again, nothing is taken out twice: the third row's 1976
+	// could hold its 1024 again, and only the repair's mark says it has
+	// been done.
+	if got := read(); !reflect.DeepEqual(got, want) {
+		t.Errorf("opened again: rows %v, want %v", got, want)
+	}
+}
+
+// A row the daemon keeps after the repair, its cache already out, isn't
+// touched by a later open, even where its input could hold its cache.
+func TestTheRepairRunsOnce(t *testing.T) {
+	d, path := open(t)
+	ctx := t.Context()
+	testcheck.NoErr(t, d.AddUsage(ctx, []model.UsageRow{
+		{At: time.Date(2026, 11, 27, 10, 0, 0, 0, time.UTC), Chat: "c", Agent: "ante", End: model.UsageTurn, Input: 1976, Output: 20, CacheRead: 1024},
+	}))
+	testcheck.NoErr(t, d.Close())
+	again, err := Open(path)
+	testcheck.NoErr(t, err)
+	t.Cleanup(func() { _ = again.Close() })
+	var in int64
+	testcheck.NoErr(t, again.db.QueryRow(`SELECT input FROM turns`).Scan(&in))
+	if in != 1976 {
+		t.Errorf("input %d, want 1976 as kept", in)
+	}
+}
+
 func row(at time.Time, chat, agent string, cost float64, in int64) model.UsageRow {
 	return model.UsageRow{At: at, Chat: chat, Agent: agent, Model: "m-" + agent, Folder: "/p/" + agent, End: model.UsageTurn,
 		Input: in, Output: 2 * in, CacheRead: 3 * in, CacheWrite: 4 * in, Cost: cost, Currency: "USD", Costed: cost > 0, Total: cost}

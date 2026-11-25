@@ -55,6 +55,10 @@ func Open(path string) (*DB, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	if err := d.repair(context.Background()); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	var began int64
 	if err := db.QueryRowContext(context.Background(), `SELECT value FROM meta WHERE key = 'began'`).Scan(&began); err != nil {
 		_ = db.Close()
@@ -106,6 +110,53 @@ var migrations = []string{
 		seen        INTEGER NOT NULL,
 		PRIMARY KEY (agent, kind)
 	) STRICT;`,
+}
+
+// repairs put right rows an earlier build kept wrongly: each runs once,
+// and says so with its key in meta. They change rows, never the tables,
+// so the version stays and a daemon older than the repair still opens
+// the file; a version step would shut it out, and it would keep no usage
+// at all (ADR 0136's amendment). Add one at the end; never change one
+// that shipped.
+var repairs = []struct{ key, sql string }{
+	// Ante's input was kept as Ante reports it, the whole prompt with the
+	// cache's tokens in it (docs/facts/ante.md), so the Usage page counted
+	// its cache twice. The daemon takes them out of a turn's input now
+	// (HarnessInfo.CacheInInput), and the rows kept before have them
+	// taken out here: where the input could hold the cache, the rule the
+	// daemon keeps. Every row before this ran is as Ante reported it, an
+	// older daemon's too, whichever build its bridge was.
+	{"ante_cache_out", `UPDATE turns SET input = input - cache_read - cache_write
+		WHERE agent = 'ante' AND cache_read + cache_write > 0 AND input >= cache_read + cache_write`},
+}
+
+// repair runs each of repairs that hasn't run on this file, in one
+// transaction with the marks that say they have.
+func (d *DB) repair(ctx context.Context) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("opening the database: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	for _, r := range repairs {
+		var done int
+		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM meta WHERE key = ?`, r.key).Scan(&done); err != nil {
+			return fmt.Errorf("reading the database's repairs: %w", err)
+		}
+		if done > 0 {
+			continue
+		}
+		if _, err := tx.ExecContext(ctx, r.sql); err != nil {
+			return fmt.Errorf("repairing the database (%s): %w", r.key, err)
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO meta (key, value) VALUES (?, CAST(unixepoch('subsec') * 1000 AS INTEGER))`, r.key); err != nil {
+			return fmt.Errorf("repairing the database (%s): %w", r.key, err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("repairing the database: %w", err)
+	}
+	return nil
 }
 
 // migrate brings the tables to the latest version, in one transaction.

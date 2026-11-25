@@ -101,6 +101,11 @@ func TestEveryAgentIsWhole(t *testing.T) {
 		if takes := n == "claude" || n == "codex"; info.ClientMCP != takes {
 			t.Errorf("%s: ClientMCP %v, want %v (ADR 0043)", n, info.ClientMCP, takes)
 		}
+		// Only Ante's input takes in the cache's tokens; the rest report
+		// theirs without (docs/facts/ante.md, ADR 0136's amendment).
+		if holds := n == "ante"; info.CacheInInput != holds {
+			t.Errorf("%s: CacheInInput %v, want %v", n, info.CacheInInput, holds)
+		}
 		if moves := n == "claude" || n == "codex"; info.Moves != moves {
 			t.Errorf("%s: Moves %v, want %v (ADR 0014)", n, info.Moves, moves)
 		}

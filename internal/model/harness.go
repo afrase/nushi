@@ -25,6 +25,11 @@ type HarnessInfo struct {
 	// "Claude Code deletes sessions after 30 days by default"; "" if
 	// nothing does.
 	Expires string
+	// CacheInInput says the input tokens it reports take in the cache's
+	// (what was read from it and written to it): Ante's, whose input is
+	// the whole prompt (docs/facts/ante.md). A turn's input is kept
+	// without them, as the others report theirs (ADR 0136).
+	CacheInInput bool
 	// NamesSessions says the agent titles a session itself, soon after its
 	// first prompt (Claude, with a model call of its own that may end after
 	// a short first turn): a worktree's branch waits for that title, a

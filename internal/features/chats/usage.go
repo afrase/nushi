@@ -71,10 +71,28 @@ func (c *chat) modelLocked() string {
 }
 
 // promptUsage is a turn's tokens from the prompt's answer; nil when it
-// failed or said none.
-func promptUsage(resp *acp.PromptResponse, err error) *acp.Usage {
-	if err != nil || resp == nil {
+// failed or said none. Its input is without the cache's tokens, whoever
+// the agent: one whose input takes them in (HarnessInfo.CacheInInput,
+// Ante) has them taken out, so the chat and the Usage page count input
+// and output with the cache apart, and never the cache twice (ADR 0136).
+// An input that couldn't hold its cache is left as it is: the same rule
+// as the database's repair of the rows kept before.
+func (k *kind) promptUsage(resp *acp.PromptResponse, err error) *acp.Usage {
+	if err != nil || resp == nil || resp.Usage == nil {
 		return nil
 	}
-	return resp.Usage
+	if !k.CacheInInput {
+		return resp.Usage
+	}
+	u := *resp.Usage
+	var cache uint64
+	for _, n := range []*uint64{u.CachedReadTokens, u.CachedWriteTokens} {
+		if n != nil {
+			cache += *n
+		}
+	}
+	if cache > 0 && u.InputTokens >= cache {
+		u.InputTokens -= cache
+	}
+	return &u
 }

@@ -338,13 +338,13 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	c.started = time.Time{}
 	close(done)
 	c.notPassedOnLocked()
-	if err == nil && resp.Usage != nil {
-		u := resp.Usage
-		c.usage.Input, c.usage.Output = int64(u.InputTokens), int64(u.OutputTokens) //nolint:gosec // token counts, far below the limits
-		c.usage.CachedRead, c.usage.CachedWrite = tokens(u.CachedReadTokens), tokens(u.CachedWriteTokens)
+	used := c.kind.promptUsage(resp, err)
+	if used != nil {
+		c.usage.Input, c.usage.Output = int64(used.InputTokens), int64(used.OutputTokens) //nolint:gosec // token counts, far below the limits
+		c.usage.CachedRead, c.usage.CachedWrite = tokens(used.CachedReadTokens), tokens(used.CachedWriteTokens)
 		c.usageChangedLocked()
 	}
-	c.meterLocked(model.UsageTurn, promptUsage(resp, err))
+	c.meterLocked(model.UsageTurn, used)
 	quit := errors.Is(err, acp.ErrClosed) // the agent's connection ended: watch says so
 	select {
 	case <-agent.Done():
