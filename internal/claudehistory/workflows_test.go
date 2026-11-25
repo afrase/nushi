@@ -125,6 +125,21 @@ func TestRunningWorkflow(t *testing.T) {
 	}
 }
 
+// A run that ended with no snapshot (its task's end told chats: ADR
+// 0127) lists the agents its journal still has running as stopped with
+// it; one that runs lists them running.
+func TestAnEndedWorkflowsAgentsWithoutASnapshot(t *testing.T) {
+	l, id, folder, _ := fakeRun(t, launchedLine+startA+startB+resultA, "")
+	w := model.Workflow{RunID: "wf_abc", TaskID: "t1", State: model.RunRunning}
+	if agents, _ := l.WorkflowAgents(id, folder, w); len(agents) != 2 || agents[0].State != "done" || agents[1].State != "running" {
+		t.Errorf("running: %+v", agents)
+	}
+	w.State = model.RunFailed
+	if agents, _ := l.WorkflowAgents(id, folder, w); len(agents) != 2 || agents[0].State != "done" || agents[1].State != "stopped" {
+		t.Errorf("ended: %+v", agents)
+	}
+}
+
 // Active is when the run last wrote: its journal, or the transcript of an
 // agent that runs, looked at every agentStat; a done agent's transcript
 // doesn't count. The follower stalls and ends runs by it.
