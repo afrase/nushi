@@ -194,3 +194,48 @@ func TestAStoppedLaunchWhoseCallTheResumeRanAgain(t *testing.T) {
 		t.Error("the stopped launch opens the resume's helper's steps")
 	}
 }
+
+// A third launch while it runs: the second (a resume with other args)
+// was stopped while its own wait ran, so the snapshot is the second's,
+// killed, and the third starts that call again under a new key. The
+// first launch's wait is in no snapshot any more; it is still none of
+// the third's: the card shows the helper served from cache and the one
+// the third runs.
+func TestAThirdLaunchWhileItRuns(t *testing.T) {
+	const scenario = "workflow-resume"
+	l, id, folder, session := recorded(t, scenario)
+	run := runOf(t, session).RunID
+	snapPath := filepath.Join(session, "workflows", run+".json")
+	data, err := os.ReadFile(snapPath)
+	testcheck.NoErr(t, err)
+	var snap map[string]any
+	testcheck.NoErr(t, json.Unmarshal(data, &snap))
+	snap["status"] = "killed"
+	progress, _ := snap["workflowProgress"].([]any)
+	second, _ := progress[len(progress)-1].(map[string]any)
+	if second["agentId"] != "a0759a443235bd6bd" {
+		t.Fatalf("the snapshot's last row: %v", second)
+	}
+	second["state"] = "progress"
+	data, err = json.Marshal(snap)
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, os.WriteFile(snapPath, data, 0o600))
+
+	journal := filepath.Join(session, "subagents", "workflows", run, "journal.jsonl")
+	data, err = os.ReadFile(journal)
+	testcheck.NoErr(t, err)
+	lines := bytes.SplitAfter(bytes.TrimRight(data, "\n"), []byte("\n"))
+	data = bytes.Join(lines[:len(lines)-1], nil) // the second's wait has no result
+	data = append(data, "\n"+`{"type":"started","key":"v2:3333333333333333333333333333333333333333333333333333333333333333","agentId":"cccccccccccccccc1","label":"second","phase":"Second"}`+"\n"...)
+	testcheck.NoErr(t, os.WriteFile(journal, data, 0o600))
+
+	third := model.Workflow{RunID: run, TaskID: "w3third00", State: model.RunRunning}
+	got, err := l.ReadWorkflow(id, folder, third)
+	testcheck.NoErr(t, err)
+	agents, err := l.WorkflowAgents(id, folder, got)
+	testcheck.NoErr(t, err)
+	if got.Agents != 2 || got.Done != 1 || got.RunningCount != 1 ||
+		!slices.Equal(labelsStates(agents), []string{"first:done", "second:running"}) || agents[1].ID != "cccccccccccccccc1" {
+		t.Errorf("the third launch: %+v, %+v", got, agents)
+	}
+}

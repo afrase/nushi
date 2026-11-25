@@ -354,25 +354,51 @@ func (r *run) ended(w model.Workflow, s snapshot) model.Workflow {
 // other launch's snapshot tells them apart; every row when there is none.
 // The snapshot file holds the launch that ended last, so another's is of
 // an earlier launch while this one runs (ended false), and of a later one
-// once this one ended. While it runs, the rows the earlier launch left
-// unfinished are its own, not this launch's: a resume runs those again
-// under a new agent (or a new row, when their call changed). Once it
-// ended, the later launch's rows that it ran afresh aren't this one's. A
-// call both launches made (the same key started again) names only the
-// later one's agent, so this launch's card shows less: not that agent as
-// its own stopped one.
+// once this one ended.
+//
+// While it runs, its rows are those started after the last row the
+// earlier launch's snapshot lists, and before that only the finished ones,
+// which a resume serves from cache: every row left unfinished there is an
+// earlier launch's, the one the snapshot names or one before it (a chain
+// of resumes), and a resume runs it again under a new agent, or a new row
+// when its call changed. A finished row the launch doesn't call again
+// (its script changed) still shows as done; a call of an earlier launch's
+// started again under its old key shows only once it finishes.
+//
+// Once it ended, the later launch's rows that it ran afresh aren't this
+// one's. A call both launches made (the same key started again) names
+// only the later one's agent, so this launch's card shows less: not that
+// agent as its own stopped one.
 func (r *run) rows(ended bool) []journalRow {
 	o := r.other
 	if r.snap != nil || o == nil {
 		return r.j.rows
 	}
-	fresh := map[string]bool{} // the other launch's agents not served from cache, or not finished
+	var out []journalRow
+	if !ended {
+		listed := map[string]bool{}
+		for _, a := range o.Agents {
+			listed[a.ID] = true
+		}
+		last := -1
+		for i, row := range r.j.rows {
+			if listed[row.AgentID] {
+				last = i
+			}
+		}
+		for i, row := range r.j.rows {
+			if i > last || row.State == "done" {
+				out = append(out, row)
+			}
+		}
+		return out
+	}
+	fresh := map[string]bool{} // the later launch's agents not served from cache
 	for _, a := range o.Agents {
-		if ended && !a.Cached || !ended && a.State != "done" {
+		if !a.Cached {
 			fresh[a.ID] = true
 		}
 	}
-	var out []journalRow
 	for _, row := range r.j.rows {
 		if !fresh[row.AgentID] {
 			out = append(out, row)
