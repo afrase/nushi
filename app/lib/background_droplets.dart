@@ -152,7 +152,8 @@ class _Frame {
 // are moving. They should then merge together as one. Then separate kind
 // of in a similar motion. They should look like droplets of water or
 // gel"), set tick by tick, as it's seen, in the tables below:
-//  0 to  7  the two start to turn clockwise, tails growing behind them;
+//  0 to  7  the two start to turn clockwise, slowly and then faster,
+//           round at first, then tails growing behind them;
 //  7 to 11  they spiral in, faster; a thin neck reaches between them at 9
 //           and thickens, and they join;
 // 11 to 15  the tails are drawn into the one drop, which turns on, a
@@ -162,7 +163,8 @@ class _Frame {
 // 25 to 34  the two spiral out, tails behind them, and slow into their
 //           places, the tails drawn in, a wobble.
 // Clockwise on screen: the angle grows, and y points down. A full turn
-// over the play, at most about 15 degrees a tick, so it never strobes.
+// over the play, faster tick after tick into the merge and slower out
+// of it ([_turns]), 18 degrees a tick at most, so it never strobes.
 
 /// Half the distance between the two, at each tick of the play.
 const _hs = [
@@ -204,14 +206,14 @@ const _pinches = [
 const _pinchWidth = 1.3;
 
 /// How much of its tail each drop shows at each tick. The head leads:
-/// the drop moves on the first tick, still round, and pulls its tail out
+/// the drop is seen to move first, still round, and pulls its tail out
 /// over the ticks after as it gathers speed, a little more each tick,
 /// never there on one tick and whole two ticks on; it's drawn in over
 /// the ticks the two become one, grown again as they part, and catches
 /// its head up over the ticks the drop slows into its place.
 const _tails = [
-  0.0, 0.0, 0.2, 0.34, 0.47, 0.58, 0.69, 0.8, 0.92, 1.0, //
-  0.85, 0.62, 0.38, 0.15, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
+  0.0, 0.0, 0.0, 0.2, 0.34, 0.47, 0.58, 0.69, 0.8, 0.92, //
+  0.9, 0.65, 0.4, 0.15, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
   0.0, 0.1, 0.25, 0.45, 0.65, 0.82, 0.92, 0.95, 0.9, 0.78, //
   0.62, 0.46, 0.3, 0.14, 0.0,
 ];
@@ -268,30 +270,30 @@ double _headRadius(double h) {
   return (lo + hi) / 2;
 }
 
-/// The turn so far: the spin's speed eases up from the start, holds, and
-/// eases off into the settle, a whole turn in all.
-double _angle(double u) => 2 * pi * _turn[u.clamp(0, _play).round()];
+/// The turn so far, smoothly between ticks.
+double _angle(double u) => _key(_turned, u);
 
-/// The share of the turn made by each millisecond of the play.
-final List<double> _turn = () {
-  double speed(double u) =>
-      (_spinFrom +
-          (1 - _spinFrom) *
-              Curves.easeInOut.transform((u / _spinUp).clamp(0.0, 1.0))) *
-      Curves.easeInOut.transform(((_spinEnd - u) / _spinDown).clamp(0.0, 1.0));
-  final sums = List<double>.filled(_play.round() + 1, 0);
-  for (var u = 1; u < sums.length; u++) {
-    sums[u] = sums[u - 1] + speed(u - 0.5);
+/// How far the two turn on each tick of the play, in degrees, a whole
+/// turn in all. From rest they gather speed tick after tick as they
+/// spiral in, never up to speed at once and held, fastest while they're
+/// one drop (as a skater drawing in her arms); they lose it the same way
+/// as they part, and ease to a stop in their places.
+const _turns = [
+  2.0, 3.5, 5.0, 6.5, 8.0, 9.5, 11.0, 12.5, 14.0, 15.1, //
+  16.0, 16.8, 17.3, 17.5, 17.5, 17.2, 16.5, 15.9, 15.2, 14.5, //
+  13.8, 13.1, 12.4, 11.7, 11.0, 10.1, 9.0, 7.8, 6.5, 5.2, //
+  3.9, 2.5, 1.2, 0.3,
+];
+
+/// The turn at each tick of the play, from none to a whole one.
+final List<double> _turned = () {
+  assert(_turns.length == BackgroundMark.playTicks, 'a turn a tick');
+  final sums = [0.0];
+  for (final t in _turns) {
+    sums.add(sums.last + t);
   }
-  return [for (final s in sums) s / sums.last];
+  return [for (final s in sums) 2 * pi * s / sums.last];
 }();
-const double _spinUp = 260;
-
-/// The share of its speed the spin starts at, so the drops are seen to
-/// move on the play's first tick, a tick before their tails grow.
-const _spinFrom = 0.35;
-const double _spinDown = 340;
-const double _spinEnd = _play - 20;
 
 /// Where a tail reaches back to, from the middle, for a drop [h] from it
 /// that went [out] outward: further out, or nearer in but never past the

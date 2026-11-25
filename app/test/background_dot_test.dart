@@ -274,6 +274,41 @@ void main() {
       }
     });
 
+    test('the spin gathers speed until the two join, and loses it as they '
+        'part', () {
+      // How far the two turn from one tick to the next, in degrees, read
+      // from their heads (to about a degree) while they're apart.
+      double turned(int i) {
+        final before = _drops(at(i)).map(_headOf).toList();
+        final after = _drops(at(i + 1)).map(_headOf).toList();
+        expect(before, hasLength(2), reason: 'tick $i');
+        expect(after, hasLength(2), reason: 'tick ${i + 1}');
+        var sum = 0.0;
+        for (final a in before) {
+          final b = after.reduce(
+            (x, y) => (x - a).distance < (y - a).distance ? x : y,
+          );
+          sum += _angleBetween(a - mid, b - mid);
+        }
+        return sum / 2 * 180 / pi;
+      }
+
+      final up = [for (var i = rest; i < rest + 9; i++) turned(i)];
+      final down = [for (var i = rest + 26; i < rest + 33; i++) turned(i)];
+      // Faster tick after tick, never easing off before the join, and
+      // still gathering speed late: not up to speed at once and held.
+      for (var i = 1; i < up.length; i++) {
+        expect(up[i], greaterThan(up[i - 1] - 1.5), reason: '$up at $i');
+      }
+      expect(up[8], greaterThan(up[4] + 3), reason: '$up');
+      expect(up.last, greaterThan(up.first * 2.5), reason: '$up');
+      // And slower tick after tick as the two settle.
+      for (var i = 1; i < down.length; i++) {
+        expect(down[i], lessThan(down[i - 1] + 1.5), reason: '$down at $i');
+      }
+      expect(down.first, greaterThan(down.last + 2), reason: '$down');
+    });
+
     test("a moving drop's tail trails behind it", () {
       // Spinning in, and spiralling out.
       for (final i in [rest + 5, rest + 7, rest + 28, rest + 30]) {
@@ -293,13 +328,19 @@ void main() {
       }
     });
 
-    test('the drops move a tick before their tails grow', () {
-      // The head leads: on the play's first tick the two have turned,
-      // enough to see, and are still round; a tail shows from the next.
+    test('the drops are seen to move before their tails grow', () {
+      // The head leads: the two turn, enough to see, while still round; a
+      // tail shows only on a tick after that.
       final still = [for (final d in _drops(at(rest))) d.getBounds().center];
-      final moved = _drops(at(rest + 1));
-      expect(moved, hasLength(2));
-      for (final d in moved) {
+      // The first tick a tail shows on.
+      var first = rest + 1;
+      while (_drops(at(first)).map(_tailOf).reduce(max) / 10 < 0.12) {
+        first++;
+        expect(first, lessThan(rest + 6), reason: 'a tail begins');
+      }
+      final before = _drops(at(first - 1));
+      expect(before, hasLength(2));
+      for (final d in before) {
         expect(_tailOf(d) / 10, lessThan(0.1), reason: 'still round');
         final now = d.getBounds().center;
         final was = still.reduce(
@@ -310,9 +351,6 @@ void main() {
           greaterThan(4 * pi / 180),
           reason: 'seen to move',
         );
-      }
-      for (final d in _drops(at(rest + 2))) {
-        expect(_tailOf(d) / 10, greaterThan(0.12), reason: 'a tail begins');
       }
     });
 
