@@ -154,8 +154,8 @@ void main() {
     const play = BackgroundMark.playTicks;
     final seconds = (loop * 2).inSeconds + 1;
     expect(frames, inInclusiveRange(play, 2 * play + seconds));
-    // Never the pulse rate the whole time.
-    expect(frames, lessThan((loop * 2).inSeconds * pulseRate ~/ 2));
+    // Never the pulse rate the whole time: under half of its ticks.
+    expect(frames, lessThan((loop * 2).inMilliseconds * pulseRate ~/ 2000));
     await close();
   }, variant: onMac);
 

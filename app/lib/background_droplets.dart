@@ -160,18 +160,23 @@ class _Frame {
 //           little long across its two heads;
 // 15 to 25  two heads bulge out of it, still turning, the waist between
 //           them thinning to a thread at 24 that parts at 25;
-// 25 to 34  the two spiral out, tails behind them, and slow into their
-//           places, the tails drawn in, a wobble.
+// 25 to 33  the two spiral out, tails behind them, slow, and a little
+//           past their places, the tails drawn in;
+// 30 to 38  they wobble into their places like jelly: squat as the tail
+//           lands, long, squat again, less each swing, round only at
+//           rest (the owner: "the ball [should] wobble also like the
+//           original not become solid until is settled").
 // Clockwise on screen: the angle grows, and y points down. A full turn
 // over the play, faster tick after tick into the merge and slower out
 // of it ([_turns]), 18 degrees a tick at most, so it never strobes.
 
-/// Half the distance between the two, at each tick of the play.
+/// Half the distance between the two, at each tick of the play: as they
+/// settle, a little past their places and back.
 const _hs = [
   2.68, 2.68, 2.68, 2.68, 2.67, 2.64, 2.58, 2.48, 2.36, 2.22, //
   2.06, 1.80, 1.45, 1.00, 0.62, 0.32, 0.56, 0.84, 1.08, 1.32, //
-  1.55, 1.74, 1.88, 1.98, 2.06, 2.14, 2.24, 2.35, 2.45, 2.53, //
-  2.60, 2.64, 2.67, 2.68, 2.68,
+  1.55, 1.74, 1.88, 1.98, 2.06, 2.14, 2.24, 2.35, 2.46, 2.57, //
+  2.67, 2.74, 2.77, 2.74, 2.69, 2.65, 2.64, 2.66, 2.68,
 ];
 
 /// The neck's reach at each tick: out as they near, so a neck joins
@@ -180,7 +185,7 @@ const _ks = [
   0.4, 0.4, 0.4, 0.4, 0.4, 0.5, 0.65, 0.8, 0.95, 1.0, //
   1.0, 1.0, 0.9, 0.7, 0.9, 1.2, 1.4, 0.6, 0.4, 0.4, //
   0.5, 0.65, 0.8, 0.72, 0.62, 0.5, 0.4, 0.4, 0.4, 0.4, //
-  0.4, 0.4, 0.4, 0.4, 0.4,
+  0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4,
 ];
 
 /// The thread between the two heads at each tick: a thin one as they
@@ -190,7 +195,7 @@ const _necks = [
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
   0.25, 0.6, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
   0.0, 0.0, 0.0, 0.5, 0.35, 0.15, 0.0, 0.0, 0.0, 0.0, //
-  0.0, 0.0, 0.0, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 ];
 
 /// The one drop's waist at each tick: still there as the two settle into
@@ -199,7 +204,7 @@ const _pinches = [
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
   0.0, 0.0, 0.3, 0.3, 0.25, 0.0, 0.0, 0.2, 0.3, 0.25, //
   0.15, 0.05, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
-  0.0, 0.0, 0.0, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 ];
 
 /// How wide the waist's band is.
@@ -214,8 +219,8 @@ const _pinchWidth = 1.3;
 const _tails = [
   0.0, 0.0, 0.0, 0.2, 0.34, 0.47, 0.58, 0.69, 0.8, 0.92, //
   0.9, 0.65, 0.4, 0.15, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
-  0.0, 0.1, 0.25, 0.45, 0.65, 0.82, 0.92, 0.95, 0.9, 0.78, //
-  0.62, 0.46, 0.3, 0.14, 0.0,
+  0.0, 0.1, 0.25, 0.45, 0.65, 0.82, 0.92, 0.95, 0.88, 0.72, //
+  0.52, 0.32, 0.14, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 ];
 
 /// [v] (a value at each tick) at [u] milliseconds into the play, smoothly
@@ -281,8 +286,8 @@ double _angle(double u) => _key(_turned, u);
 const _turns = [
   2.0, 3.5, 5.0, 6.5, 8.0, 9.5, 11.0, 12.5, 14.0, 15.1, //
   16.0, 16.8, 17.3, 17.5, 17.5, 17.2, 16.5, 15.9, 15.2, 14.5, //
-  13.8, 13.1, 12.4, 11.7, 11.0, 10.1, 9.0, 7.8, 6.5, 5.2, //
-  3.9, 2.5, 1.2, 0.3,
+  13.8, 13.1, 12.4, 11.7, 11.0, 10.1, 9.0, 7.8, 6.4, 5.0, //
+  3.6, 2.4, 1.3, 0.6, 0.2, 0.1, 0.0, 0.0,
 ];
 
 /// The turn at each tick of the play, from none to a whole one.
@@ -312,13 +317,19 @@ double _inward(double out) => out <= 0 ? out * 0.5 : out * 0.3;
 /// thins to a soft point.
 double _taper(double x) => 1 - 0.86 * x;
 
-/// The squash of the drops as they settle, along their turn.
+/// How much longer along its turn than round each drop is at each tick
+/// (less than 0: squat). The drops are jelly until they're still: squat
+/// as the tail lands in the head, long as it springs back, squat again,
+/// less each swing, and round only at rest.
+const _wobbles = [
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
+  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
+  -0.06, -0.14, -0.12, 0.0, 0.08, 0.07, 0.0, -0.04, 0.0,
+];
+
+/// The squash and stretch of the drops as they settle, along their turn.
 _Bend _wobble(double u) {
-  const from = _play - 9 * _tickMs;
-  if (u < from) return _Bend.identity;
-  final s = (u - from) / (_play - from);
-  return _Bend.stretch(
-    _angle(u) + pi / 2,
-    1 + 0.1 * exp(-2 * s) * sin(3 * pi * s),
-  );
+  final w = _key(_wobbles, u);
+  return w == 0 ? _Bend.identity : _Bend.stretch(_angle(u) + pi / 2, 1 + w);
 }

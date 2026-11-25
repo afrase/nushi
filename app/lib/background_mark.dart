@@ -12,11 +12,12 @@ part 'background_trace.dart';
 
 /// The mark of a chat whose turn ended while its background tasks run
 /// (#113), "rest and play": two drops of [color] side by side, still for
-/// two seconds; then for 1.7 seconds they spin clockwise, each a
-/// teardrop as it gathers speed, its tail trailing along the way it came;
-/// spiral in and merge into one drop, which squashes and settles; and
-/// spiral out of it as two again, a neck between them thinning and
-/// parting, and slow into their places, round.
+/// two seconds; then for 1.9 seconds they spin clockwise, slowly and then
+/// faster, each a teardrop as it gathers speed, its tail trailing along
+/// the way it came; spiral in and merge into one drop, which squashes and
+/// settles; and spiral out of it as two again, a neck between them
+/// thinning and parting, slow, and wobble into their places like jelly,
+/// round only once they're still.
 ///
 /// The two are drops of liquid: each a round head and a tapering tail
 /// run into it with a fillet, the two joined by a neck where they near (a
@@ -39,15 +40,16 @@ class BackgroundMark extends CustomPainter {
 
   final bool _moves;
 
-  /// The loop's ticks of [pulseClock], at rest and at play: 34 to play,
+  /// The loop's ticks of [pulseClock], at rest and at play: 38 to play,
   /// so the two join over three ticks and their neck thins over four
-  /// before it parts, each tick a little change from the one before.
+  /// before it parts, each tick a little change from the one before, and
+  /// the last eight are theirs to wobble in.
   static const restTicks = 40;
-  static const playTicks = 34;
+  static const playTicks = 38;
   static const int ticks = restTicks + playTicks;
 
-  /// The loop's length: 3.7 s.
-  // design: a loop's beat, on pulseClock: 74 ticks, 40 at rest, 34 at play
+  /// The loop's length: 3.9 s.
+  // design: a loop's beat, on pulseClock: 78 ticks, 40 at rest, 38 at play
   static const period = Duration(milliseconds: ticks * 1000 ~/ pulseRate);
 
   /// What a mark under [context] repaints with: the play's ticks; null
