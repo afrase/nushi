@@ -219,7 +219,7 @@ TerminalTheme terminalTheme(Tokens t, {Color? cursor}) {
   final a = t.terminal;
   return TerminalTheme(
     cursor: cursor ?? a.foreground ?? t.text,
-    selection: t.accent.withValues(alpha: 0.3),
+    selection: t.textSelection,
     foreground: a.foreground ?? t.text,
     background: t.base,
     black: a.black,
