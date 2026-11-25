@@ -1,0 +1,109 @@
+{
+ "turns": [
+  {
+   "match": {
+    "lastUserText": "run the workflow"
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Workflow",
+     "input": {
+      "script": "export const meta = {\n  name: 'two-steps',\n  description: 'Ask one helper, then one that takes its time',\n  phases: [{ title: 'First' }, { title: 'Second' }],\n}\nphase('First')\nconst a = await agent('Reply with one word: alpha.', { label: 'first', phase: 'First' })\nphase('Second')\nconst again = typeof args === 'object' && args !== null && args.again === true\nconst b = await agent(again ? 'Reply with one word: go.' : 'Reply with one word: wait.', { label: 'second', phase: 'Second' })\nreturn { a, b }\n"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Workflow"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "The workflow runs in the background."
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "resume the workflow",
+    "capture": {
+     "script": "Script file: (/[^\\s\"]+\\.js)",
+     "run": "Run ID: (wf_[A-Za-z0-9_-]+)"
+    }
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Workflow",
+     "input": {
+      "scriptPath": "${script}",
+      "resumeFromRunId": "${run}",
+      "args": {
+       "again": true
+      }
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Workflow"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "The workflow runs again in the background."
+    }
+   ]
+  }
+ ],
+ "side": [
+  {
+   "match": {
+    "lastUserText": "Reply with one word: alpha."
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "alpha"
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "Reply with one word: wait."
+   },
+   "hang": true,
+   "content": [
+    {
+     "type": "text",
+     "text": "wait"
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "Reply with one word: go."
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "go"
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "<status>completed</status>"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "The workflow finished."
+    }
+   ]
+  }
+ ]
+}

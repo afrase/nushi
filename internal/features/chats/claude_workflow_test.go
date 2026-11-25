@@ -7,15 +7,17 @@ import (
 
 // A chat reopened after a workflow's run ended ends the run on the end
 // the Go agent replays from claude's history (ADR 0127): the recordings
-// of a run that ended by itself, one the model stopped (TaskStop) and one
-// stopped by stop_task, each loaded after its recording as
+// of a run that ended by itself, one the model stopped (TaskStop), one
+// stopped by stop_task, and one stopped by stop_task and resumed (two
+// launches of one run, each its own call and task), each loaded after its
+// recording as
 // TestClaudeMerge loads it. Live, TestClaudeParity's workflowsEnded holds
 // the same ends. No file of the run is read (noWorkflowFiles), and the
 // reopened run has no agent of this daemon's as its owner: without the
 // replayed end it would run on until its files were still for
 // workflowQuiet.
 func TestClaudeWorkflowEndsOnItsReplayedTask(t *testing.T) {
-	for _, name := range []string{"workflow", "workflow-stop", "workflow-stoptask"} {
+	for _, name := range []string{"workflow", "workflow-stop", "workflow-stoptask", "workflow-resume"} {
 		t.Run(name, func(t *testing.T) {
 			dir := filepath.Join("testdata", "claude-parity", name)
 			skipUnrecorded(t, dir)
@@ -23,8 +25,8 @@ func TestClaudeWorkflowEndsOnItsReplayedTask(t *testing.T) {
 			sid, more := loadAfter(t, dir, rec, sent)
 			c := reopenedOn(t, loadOf(runGoAgent(t, dir, sent, more), sid), sid)
 			ended := recordedWorkflowEnds(t, dir)
-			if len(ended) != 1 {
-				t.Fatalf("the recording's workflows: %+v", ended)
+			if len(ended) == 0 {
+				t.Fatal("the recording has no workflow")
 			}
 			eventually(t, c, func() bool { return len(c.following) == 0 })
 			c.mu.Lock()
@@ -38,8 +40,8 @@ func TestClaudeWorkflowEndsOnItsReplayedTask(t *testing.T) {
 					}
 				}
 			}
-			if n != 1 {
-				t.Errorf("%d workflows reopened", n)
+			if n != len(ended) {
+				t.Errorf("%d workflows reopened, the recording's %d", n, len(ended))
 			}
 		})
 	}
