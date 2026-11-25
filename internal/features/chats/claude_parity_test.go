@@ -12,6 +12,7 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -40,7 +41,9 @@ import (
 // with its parent's (claude_chats_test.go). The chats' items, usage,
 // status and model option must match: the JSON may differ where Nushi
 // doesn't look. Both sides go through the same reading, so a change to
-// chats that reads both alike passes here: chats' own tests hold that.
+// chats that reads both alike passes that comparison: chats' own tests
+// hold that, and commandsEnded holds each background command's end to
+// claude's own recording.
 func TestClaudeParity(t *testing.T) {
 	for _, dir := range scenarios(t) {
 		t.Run(filepath.Base(dir), func(t *testing.T) {
@@ -54,6 +57,7 @@ func TestClaudeParity(t *testing.T) {
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("the Go agent's chats differ from the recording's:\n%s", differences(got, want))
 			}
+			commandsEnded(t, dir, want)
 			switch filepath.Base(dir) {
 			case "workflow", "workflow-stop":
 				launchedARun(t, want)
@@ -64,6 +68,87 @@ func TestClaudeParity(t *testing.T) {
 			}
 		})
 	}
+}
+
+// commandsEnded checks each background command the chats show ended as
+// claude's own recording says its task did: the task_notification in the
+// scenario's cli*.jsonl, read as CommandTask reads Claude's word on it
+// (ADR 0130). The comparison above can't tell: both sides go through the
+// same reading. Every backgrounded local_bash task claude started must
+// have its row, and every row its task.
+func commandsEnded(t *testing.T, dir string, views []parity) {
+	t.Helper()
+	ended := recordedCommandEnds(t, dir)
+	seen := map[string]bool{}
+	for _, v := range views {
+		for _, it := range v.Items {
+			sh := it.BackgroundCommand
+			if sh == nil {
+				continue
+			}
+			seen[sh.ID] = true
+			end, ok := ended[sh.ID]
+			if !ok {
+				t.Errorf("command %s: claude's recording started no background command by that id", sh.ID)
+			} else if sh.State != end.State || sh.End != end.End {
+				t.Errorf("command %s ended %q (%q), claude's recording %q (%q)", sh.ID, sh.State, sh.End, end.State, end.End)
+			}
+		}
+	}
+	for id := range ended {
+		if !seen[id] {
+			t.Errorf("claude's background command %s has no row", id)
+		}
+	}
+}
+
+// recordedCommandEnds are the background commands claude started in a
+// scenario's cli*.jsonl (task_started, local_bash, backgrounded), by task
+// id, each with its end as CommandTask maps its task_notification: none
+// (State "") when claude told no end.
+func recordedCommandEnds(t *testing.T, dir string) map[string]model.BackgroundCommand {
+	t.Helper()
+	files, err := filepath.Glob(filepath.Join(dir, "cli*.jsonl"))
+	testcheck.NoErr(t, err)
+	ends := map[string]model.BackgroundCommand{}
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		testcheck.NoErr(t, err)
+		for line := range bytes.Lines(b) {
+			var l struct {
+				Dir   string `json:"dir"`
+				Frame struct {
+					Subtype      string `json:"subtype"`
+					TaskID       string `json:"task_id"`
+					TaskType     string `json:"task_type"`
+					Backgrounded bool   `json:"is_backgrounded"`
+					Status       string `json:"status"`
+					Summary      string `json:"summary"`
+				} `json:"frame"`
+			}
+			if json.Unmarshal(line, &l) != nil || l.Dir != "out" {
+				continue
+			}
+			fr := l.Frame
+			switch fr.Subtype {
+			case "task_started":
+				if fr.TaskType == "local_bash" && fr.Backgrounded {
+					ends[fr.TaskID] = model.BackgroundCommand{ID: fr.TaskID}
+				}
+			case "task_notification":
+				if _, ok := ends[fr.TaskID]; !ok {
+					continue
+				}
+				task := map[string]any{"id": fr.TaskID, "type": "local_bash", "status": fr.Status, "summary": fr.Summary}
+				_, state, end, ok := claudeHarness.CommandTask(map[string]any{"claudeCode": map[string]any{"task": task}})
+				if !ok {
+					t.Fatalf("%s: CommandTask doesn't read task %s's status %q", f, fr.TaskID, fr.Status)
+				}
+				ends[fr.TaskID] = model.BackgroundCommand{ID: fr.TaskID, State: model.RunState(state), End: end}
+			}
+		}
+	}
+	return ends
 }
 
 // launchedARun checks the recorded Workflow call became a workflow's item
