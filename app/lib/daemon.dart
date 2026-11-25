@@ -77,7 +77,7 @@ int dataDirOnWeb = 0;
 String? get appFiles => kIsWeb ? null : dataDir;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 150;
+const apiVersion = 151;
 
 /// The oldest daemon API this app works with (ADR 0004): below it the Mac
 /// shows only its Restart screen (`OutdatedScreen`) until the daemon has
@@ -144,10 +144,10 @@ const sendNowApi = 147;
 
 /// The API from which the daemon never removes a chat because its agent
 /// no longer has its session (ADR 0015's amendment of 2026-11-25): a
-/// daemon at 149 or below may, and says so in ListChats' `removed` and the
+/// daemon at 150 or below may, and says so in ListChats' `removed` and the
 /// `removedChats` event, which the removed chats' bar shows. The bar, its
 /// [Daemon.removedChats] and DismissRemovedChats go with the floor.
-const keepsGoneChatsApi = 150;
+const keepsGoneChatsApi = 151;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon

@@ -704,7 +704,7 @@ type NushiServiceClient interface {
 	// folder goes, and Nushi's record of it.
 	DeleteChat(context.Context, *connect.Request[v1.DeleteChatRequest]) (*connect.Response[v1.DeleteChatResponse], error)
 	// Takes chats off ListChatsResponse.removed (the app has said so). From
-	// API 150 there are none, and it does nothing.
+	// API 151 there are none, and it does nothing.
 	DismissRemovedChats(context.Context, *connect.Request[v1.DismissRemovedChatsRequest]) (*connect.Response[v1.DismissRemovedChatsResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
@@ -3270,7 +3270,7 @@ type NushiServiceHandler interface {
 	// folder goes, and Nushi's record of it.
 	DeleteChat(context.Context, *connect.Request[v1.DeleteChatRequest]) (*connect.Response[v1.DeleteChatResponse], error)
 	// Takes chats off ListChatsResponse.removed (the app has said so). From
-	// API 150 there are none, and it does nothing.
+	// API 151 there are none, and it does nothing.
 	DismissRemovedChats(context.Context, *connect.Request[v1.DismissRemovedChatsRequest]) (*connect.Response[v1.DismissRemovedChatsResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)

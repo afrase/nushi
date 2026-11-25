@@ -993,7 +993,7 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }
 
   /// Takes chats off ListChatsResponse.removed (the app has said so). From
-  /// API 150 there are none, and it does nothing.
+  /// API 151 there are none, and it does nothing.
   Future<nushiv1nushi.DismissRemovedChatsResponse> dismissRemovedChats(
     nushiv1nushi.DismissRemovedChatsRequest input, {
     connect.Headers? headers,

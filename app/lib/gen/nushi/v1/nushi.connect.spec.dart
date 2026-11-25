@@ -515,7 +515,7 @@ abstract final class NushiService {
   );
 
   /// Takes chats off ListChatsResponse.removed (the app has said so). From
-  /// API 150 there are none, and it does nothing.
+  /// API 151 there are none, and it does nothing.
   static const dismissRemovedChats = connect.Spec(
     '/$name/DismissRemovedChats',
     connect.StreamType.unary,

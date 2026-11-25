@@ -836,7 +836,7 @@ class ListChatsResponse extends $pb.GeneratedMessage {
 
   /// Chats the daemon removed since it started because their agent no
   /// longer has their sessions (Claude Code deletes old ones), until
-  /// DismissRemovedChats; oldest first. From API 150 always empty: the
+  /// DismissRemovedChats; oldest first. From API 151 always empty: the
   /// daemon keeps such a chat, marked (Status.session_gone; ADR 0015).
   @$pb.TagNumber(2)
   $pb.PbList<RemovedChat> get removed => $_getList(1);
@@ -16869,7 +16869,7 @@ class EventsResponse extends $pb.GeneratedMessage {
 
   /// The chats removed because their agent no longer has their sessions,
   /// all of them (ListChatsResponse.removed); chat_id is empty. Never
-  /// sent from API 150.
+  /// sent from API 151.
   @$pb.TagNumber(15)
   RemovedChats get removedChats => $_getN(14);
   @$pb.TagNumber(15)
@@ -19843,7 +19843,7 @@ class ChatStatus extends $pb.GeneratedMessage {
 
   /// Of a chat whose reopen failed: its agent no longer has its session
   /// (it deleted it). The chat stays, read-only, its transcript Nushi's
-  /// copy where it has one, until DeleteChat (from API 150 whether or not
+  /// copy where it has one, until DeleteChat (from API 151 whether or not
   /// it has a copy or work; before, only then).
   @$pb.TagNumber(13)
   $core.bool get sessionGone => $_getBF(11);
@@ -37247,7 +37247,7 @@ class NushiServiceApi {
           ctx, 'NushiService', 'DeleteChat', request, DeleteChatResponse());
 
   /// Takes chats off ListChatsResponse.removed (the app has said so). From
-  /// API 150 there are none, and it does nothing.
+  /// API 151 there are none, and it does nothing.
   $async.Future<DismissRemovedChatsResponse> dismissRemovedChats(
           $pb.ClientContext? ctx, DismissRemovedChatsRequest request) =>
       _client.invoke<DismissRemovedChatsResponse>(ctx, 'NushiService',
