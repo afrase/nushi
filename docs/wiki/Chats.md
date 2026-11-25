@@ -238,7 +238,7 @@ Claude, Codex and Ante let you pick an option and add a note to it, such as **PD
 1. Type your note in the box under the options. Once an option is picked, the box says **Add a note…**, and **Note:** stays in front of what you type.
 2. Pick the option. A single question is sent as soon as you pick, so type the note first.
 
-The answered card shows **Note:** and your note after your pick, greyed. With other agents, or on Claude's questions with several answers, text in the box is an answer of its own.
+The answered card shows **Note:** and your note after your pick, greyed. With other agents, or on Claude's questions with several answers, text in the box is an answer of its own. With OpenCode and oh-my-pi, text in the box takes the place of a pick on a question with one answer: the agent never sees the pick, so pick or type, not both.
 
 ### See every option of an answered question
 
