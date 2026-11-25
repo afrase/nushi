@@ -61,6 +61,7 @@ func TestClaudeParity(t *testing.T) {
 			}
 			commandsEnded(t, dir, want)
 			workflowsEnded(t, dir, want)
+			answeredAtResult(t, recorded)
 			switch filepath.Base(dir) {
 			case "workflow", "workflow-stop":
 				launchedARun(t, want)
