@@ -39,7 +39,7 @@ func (r *run) agents(ended bool) []model.WorkflowAgent {
 		}
 		return out
 	}
-	for _, row := range r.j.rows {
+	for _, row := range r.rows(ended) {
 		state := model.RunState(row.State)
 		if (r.snap != nil || ended) && state == model.RunRunning {
 			state = model.RunStopped // the run ended without it

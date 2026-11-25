@@ -80,9 +80,12 @@ func (r *Runs) get(key string) *run {
 
 // run is what was read of one workflow.
 type run struct {
-	mu      sync.Mutex
-	j       journal
-	snap    *snapshot
+	mu   sync.Mutex
+	j    journal
+	snap *snapshot
+	// other is the snapshot of another launch of the run (a resume keeps
+	// the run's id), which tells this launch's rows from that one's (rows).
+	other   *snapshot
 	snapMod time.Time
 	active  time.Time
 	statted time.Time
@@ -172,6 +175,7 @@ func (r *run) readSnapshot(root *os.Root, w model.Workflow) {
 	switch {
 	case err != nil: // being written: the next read takes it
 	case s.TaskID != "" && w.TaskID != "" && s.TaskID != w.TaskID:
+		r.other = &s
 	case (s.TaskID == "" || w.TaskID == "") && !w.Started.IsZero() && fi.ModTime().Before(w.Started.Add(-time.Second)):
 	default:
 		r.snap, r.snapMod = &s, fi.ModTime()
@@ -251,14 +255,15 @@ func (r *run) summary(w model.Workflow) model.Workflow {
 	w.Started = cmp.Or(w.Started, r.started)
 	w.Active = r.active
 	w.Phases, w.Running, w.RunningPhases = nil, nil, nil
-	w.Agents, w.Done, w.Failed, w.RunningCount = len(r.j.rows), 0, 0, 0
-	w.Tokens = r.tokensSum()
+	rows := r.rows(w.State.Ended())
+	w.Agents, w.Done, w.Failed, w.RunningCount = len(rows), 0, 0, 0
+	w.Tokens = r.tokensSum(rows)
 	if s := r.snap; s != nil {
 		return r.ended(w, *s)
 	}
 	w.State, w.End, w.Ended = "running", "", time.Time{}
 	at := map[string]int{}
-	for _, row := range r.j.rows {
+	for _, row := range rows {
 		i := phaseOf(&w, at, row.Phase, "")
 		if i >= 0 {
 			w.Phases[i].Started++
@@ -333,8 +338,8 @@ func (r *run) ended(w model.Workflow, s snapshot) model.Workflow {
 		default: // stopped: neither
 		}
 	}
-	r.plan(&w, at) // what the snapshot doesn't list
-	w.Agents = max(w.Agents, s.AgentCount, len(s.Agents))
+	r.plan(&w, at)                                                // what the snapshot doesn't list
+	w.Agents = cmp.Or(max(s.AgentCount, len(s.Agents)), w.Agents) // the journal's rows are every launch's
 	// The snapshot's total, else its agents', else what their transcripts
 	// said.
 	var rows int64
@@ -343,6 +348,40 @@ func (r *run) ended(w model.Workflow, s snapshot) model.Workflow {
 	}
 	w.Tokens = cmp.Or(s.Tokens, rows, w.Tokens)
 	return w
+}
+
+// rows are the journal's rows of this launch of the run, as far as the
+// other launch's snapshot tells them apart; every row when there is none.
+// The snapshot file holds the launch that ended last, so another's is of
+// an earlier launch while this one runs (ended false), and of a later one
+// once this one ended. While it runs, the rows the earlier launch left
+// unfinished are its own, not this launch's: a resume runs those again
+// under a new agent (or a new row, when their call changed). Once it
+// ended, the later launch's rows that it ran afresh aren't this one's,
+// but for one this launch started too (started again: this launch's,
+// stopped with it).
+func (r *run) rows(ended bool) []journalRow {
+	o := r.other
+	if r.snap != nil || o == nil {
+		return r.j.rows
+	}
+	fresh := map[string]bool{} // the other launch's agents not served from cache, or not finished
+	for _, a := range o.Agents {
+		if ended && !a.Cached || !ended && a.State != "done" {
+			fresh[a.ID] = true
+		}
+	}
+	var out []journalRow
+	for _, row := range r.j.rows {
+		switch {
+		case !fresh[row.AgentID]:
+			out = append(out, row)
+		case ended && row.Starts > 1:
+			row.State = "stopped"
+			out = append(out, row)
+		}
+	}
+	return out
 }
 
 // endState is a workflow's state from the snapshot's status: Claude's

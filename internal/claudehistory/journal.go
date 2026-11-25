@@ -24,18 +24,22 @@ var errJournalTooBig = errors.New("workflow journal too big")
 // journalRow is one agent of a workflow as its journal tells: State is
 // "running" from its started line, "done" from its result, "failed", or
 // "stopped" when the run it started in ended before it did (a resume
-// follows).
+// follows). Starts counts its started lines: more than one, a resume (or
+// a retry) ran it again.
 type journalRow struct {
 	Key, AgentID, Label, Phase, State string
+	Starts                            int
 }
 
 // journal reads a workflow's journal incrementally (lines). Rows are in start order, found
 // by their key (a failed line has an empty agentId). The journal is one
-// for every run of the same id, as Claude's own reader takes it: a resume
-// appends a resumed line (a launched one only for a hidden script's), keeps
-// the results it has, and starts again only what had none. So each resumed
-// or launched line ends the rows still running, stopped with the run
-// before; one started again runs again.
+// for every launch of the same run id, as Claude's own reader takes it: a
+// resume keeps the results it has and starts again only what had none.
+// Claude 2.1.325 was read to append a resumed line (a launched one only
+// for a hidden script's), which ends the rows still running, stopped with
+// the launch before; 2.1.331 was seen to mark nothing of a plain resume
+// (the workflow-resume recordings), so the launches are told apart by
+// their snapshots instead (run.rows). One started again runs again.
 type journal struct {
 	lines
 	rows  []journalRow
@@ -91,11 +95,11 @@ func (j *journal) line(line []byte) {
 		j.skipped++
 	case l.Type == "started" && known:
 		r := &j.rows[i]
-		r.AgentID, r.State = cmp.Or(l.AgentID, r.AgentID), "running"
+		r.AgentID, r.State, r.Starts = cmp.Or(l.AgentID, r.AgentID), "running", r.Starts+1
 		r.Label, r.Phase = cmp.Or(l.Label, r.Label), cmp.Or(l.Phase, r.Phase)
 	case l.Type == "started":
 		j.byKey[l.Key] = len(j.rows)
-		j.rows = append(j.rows, journalRow{Key: l.Key, AgentID: l.AgentID, Label: l.Label, Phase: l.Phase, State: "running"})
+		j.rows = append(j.rows, journalRow{Key: l.Key, AgentID: l.AgentID, Label: l.Label, Phase: l.Phase, State: "running", Starts: 1})
 	case (l.Type == "result" || l.Type == "failed") && known:
 		r := &j.rows[i]
 		r.AgentID, r.State = cmp.Or(r.AgentID, l.AgentID), map[string]string{"result": "done", "failed": "failed"}[l.Type]
