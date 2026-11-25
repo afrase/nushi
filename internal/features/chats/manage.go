@@ -73,9 +73,13 @@ func (s *Service) Archive(chatID string, archived bool) error {
 		return err
 	}
 	c.mu.Lock()
-	if archived && c.reopeningLocked() {
+	if archived {
+		c.yieldAheadLocked()
+	}
+	if archived && c.sessionOpLocked() {
+		err := c.sessionOpErrLocked()
 		c.mu.Unlock()
-		return errReopening
+		return err
 	}
 	if !archived && c.record.Archived {
 		c.outlived, c.reopenFailed, c.asleep, c.sessionGone = false, false, false, false // it reopens (its replay merged with the copy), and says again
@@ -109,10 +113,12 @@ func (s *Service) halt(chatID string) (*chat, error) {
 		return nil, err
 	}
 	c.mu.Lock()
+	c.yieldAheadLocked()
 	switch {
-	case c.reopeningLocked():
+	case c.sessionOpLocked():
+		err := c.sessionOpErrLocked()
 		c.mu.Unlock()
-		return nil, errReopening
+		return nil, err
 	case c.halting: // a delete, or an archived side chat brought back
 		c.mu.Unlock()
 		return nil, errors.New("the chat is already going")
@@ -138,9 +144,10 @@ func (s *Service) forget(c *chat) error {
 	return nil
 }
 
-var errReopening = errors.New("the chat is still reopening; try again in a moment")
-
-func (c *chat) reopeningLocked() bool { return c.busy && c.started.IsZero() }
+// sessionOpLocked says the chat is busy with its session, not a turn: it
+// reopens, reloads, opens, starts, forks, moves or rewinds. A message
+// queues meanwhile, and what would stop the agent waits.
+func (c *chat) sessionOpLocked() bool { return c.busyLocked() && c.started.IsZero() }
 
 // stop ends a chat's agent and its side chats (see end), then has the
 // agent's history forget the side chats. The queue stays, held: nothing
@@ -221,8 +228,9 @@ func (s *Service) discard(c *chat, ids []string) {
 }
 
 // throwawayLocked adds sessions the agent forked from the chat that nobody
-// will see again to the chat's record of them, or with deleted takes them
-// out of it (model.ChatRecord.Throwaway).
+// will see again to the chat's record of them (once each: a fork is written
+// ahead, then again if its delete fails), or with deleted takes them out of
+// it (model.ChatRecord.Throwaway).
 // Not while the chat is being deleted: its file may be gone, and Delete
 // deletes them anyway.
 func (c *chat) throwawayLocked(ids []string, deleted bool) {
@@ -233,7 +241,11 @@ func (c *chat) throwawayLocked(ids []string, deleted bool) {
 		if deleted {
 			s.Throwaway = slices.DeleteFunc(slices.Clone(s.Throwaway), func(id string) bool { return slices.Contains(ids, id) })
 		} else {
-			s.Throwaway = append(slices.Clip(s.Throwaway), ids...)
+			for _, id := range ids {
+				if !slices.Contains(s.Throwaway, id) {
+					s.Throwaway = append(slices.Clip(s.Throwaway), id)
+				}
+			}
 		}
 		if len(s.Throwaway) == 0 {
 			s.Throwaway = nil

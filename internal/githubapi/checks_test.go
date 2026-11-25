@@ -25,7 +25,7 @@ var checkKinds = []struct {
 	{"timed_out", CheckFailed},
 	{"startup_failure", CheckFailed},
 	{"action_required", CheckFailed},
-	{"cancelled", CheckFailed},
+	{"cancelled", CheckCancelled},
 	{"skipped", CheckSkipped},
 	{"stale", CheckSkipped},
 	{"queued", CheckRunning},
@@ -50,7 +50,9 @@ func TestCountCheckUsesKindOf(t *testing.T) {
 	for _, tc := range checkKinds {
 		var c model.CheckCounts
 		countCheck(&c, stateCount{State: strings.ToUpper(tc.state), Count: 1})
-		got := map[CheckKind]int{CheckPassed: c.Passed, CheckFailed: c.Failed, CheckRunning: c.Running, CheckSkipped: c.Skipped}
+		// A cancelled check counts in Failed too, as the merge gate has
+		// it, and in Cancelled, which says how many of them were.
+		got := map[CheckKind]int{CheckPassed: c.Passed, CheckFailed: c.Failed - c.Cancelled, CheckCancelled: c.Cancelled, CheckRunning: c.Running, CheckSkipped: c.Skipped}
 		if got[tc.want] != 1 || c.Passed+c.Failed+c.Running+c.Skipped != 1 {
 			t.Errorf("countCheck(%q) = %+v, want one %s", tc.state, c, tc.want)
 		}

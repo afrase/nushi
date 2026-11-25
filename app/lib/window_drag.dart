@@ -127,6 +127,7 @@ class _WindowDragState extends State<WindowDrag> {
             },
             onPointerUp: _up,
             onPointerCancel: (e) => _downs.remove(e.pointer),
+            // design: the window drag's arena entry, never a press of its own
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               // The window's to move, not a control VoiceOver offers.

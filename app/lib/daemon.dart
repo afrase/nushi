@@ -77,7 +77,7 @@ int dataDirOnWeb = 0;
 String? get appFiles => kIsWeb ? null : dataDir;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 145;
+const apiVersion = 152;
 
 /// The oldest daemon API this app works with (ADR 0004): below it the Mac
 /// shows only its Restart screen (`OutdatedScreen`) until the daemon has
@@ -87,21 +87,12 @@ const apiVersion = 145;
 /// The API of the newest stable release at least 7 days old, raised in
 /// the commit that cuts each stable release (`docs/development.md`'s
 /// Releases); a gate at or below it goes (`api_floor_test.dart`).
-const apiFloor = 120;
+const apiFloor = 123;
 
 // The gates above the floor (ADR 0004), oldest first: each guards a call
 // or a request field a daemon between the floor and the app's API lacks
 // (a field an older daemon would drop unsaid most of all), and each goes
 // with the floor once the floor reaches it (`api_floor_test.dart`).
-
-/// The API from which GetDiff answers one file (GetDiffRequest.path), what
-/// a file preview's change marks are drawn from. Goes with the floor.
-const oneFileDiffApi = 121;
-
-/// The API from which GetDiff lists a base's changes by name alone
-/// (GetDiffRequest.names), what the Files tree's dots come from. Goes with
-/// the floor.
-const namesDiffApi = 123;
 
 /// The API that answers GetUsage (ADR 0136). Goes with the floor.
 const usageApi = 126;
@@ -132,6 +123,22 @@ const pageThroughApi = 137;
 /// The API from which the daemon opens a terminal that runs one command
 /// and ends with it (OpenTerminalRequest.command). Goes with the floor.
 const commandTerminalApi = 143;
+
+/// The API from which the daemon wakes a sleeping chat without a message
+/// (WakeChat): an older one has no Wake. Goes with the floor.
+const wakeApi = 146;
+
+/// The API from which Unqueue sends a queued message now in one call
+/// (UnqueueRequest.send_now), keeping it queued should the send fail; an
+/// older daemon takes it out, then has it sent. Goes with the floor.
+const sendNowApi = 147;
+
+/// The API from which the daemon never removes a chat because its agent
+/// no longer has its session (ADR 0015's amendment of 2026-11-25): a
+/// daemon at 150 or below may, and says so in ListChats' `removed` and the
+/// `removedChats` event, which the removed chats' bar shows. The bar, its
+/// [Daemon.removedChats] and DismissRemovedChats go with the floor.
+const keepsGoneChatsApi = 151;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
@@ -248,7 +255,8 @@ class Daemon extends ChangeNotifier {
   bool chatsListed = false;
 
   /// The chats the daemon removed because their agent no longer had their
-  /// sessions, until [dismissRemoved].
+  /// sessions, until [dismissRemoved]: only a daemon before
+  /// [keepsGoneChatsApi] removes any.
   List<RemovedChat> removedChats = [];
 
   /// What the Mac's window shows, told to the daemon (not the phone's).

@@ -205,6 +205,8 @@ class _MenuRow extends StatelessWidget {
       cursor: SystemMouseCursors.click,
       onEnter: (_) => onHover(true),
       onExit: (_) => onHover(false),
+      // A press kept by hand from before Tap: no tint, no focus.
+      // design: to move onto Tap
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,

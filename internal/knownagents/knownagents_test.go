@@ -104,11 +104,12 @@ func TestEveryAgentIsWhole(t *testing.T) {
 		if moves := n == "claude" || n == "codex"; info.Moves != moves {
 			t.Errorf("%s: Moves %v, want %v (ADR 0014)", n, info.Moves, moves)
 		}
-		// Claude's has all three; opencode's initialize alone asks for
+		// Claude's sessions have theirs (its subagents' text comes with
+		// the subagents capability); opencode's initialize alone asks for
 		// its subagents' updates.
 		claudes := n == "claude"
-		if (info.InitMeta != nil) != (claudes || n == "opencode") || (info.SessionMeta != nil) != claudes || (info.UltracodeMeta != nil) != claudes {
-			t.Errorf("%s: _meta %v, %v, %v, only Claude's and opencode's initialize has any", n, info.InitMeta, info.SessionMeta, info.UltracodeMeta)
+		if (info.InitMeta != nil) != (n == "opencode") || (info.SessionMeta != nil) != claudes || (info.UltracodeMeta != nil) != claudes {
+			t.Errorf("%s: _meta %v, %v, %v, only Claude's sessions and opencode's initialize have any", n, info.InitMeta, info.SessionMeta, info.UltracodeMeta)
 		}
 	}
 	if !slices.Equal(names, []string{"claude", "codex", "ante", "omp", "opencode", "pi", "pig"}) {
@@ -120,12 +121,12 @@ func TestEveryAgentIsWhole(t *testing.T) {
 var capabilities = map[string]func(chats.Harness) bool{
 	"Forker": has[chats.Forker], "ToolReader": has[chats.ToolReader],
 	"DefaultReader": has[chats.DefaultReader], "Transcript": has[chats.Transcript],
-	"Subagents": has[chats.Subagents], "SubagentOutput": has[chats.SubagentOutput], "SubagentMessages": has[chats.SubagentMessages], "BackgroundTasks": has[chats.BackgroundTasks], "ContextCommander": has[chats.ContextCommander], "ReadOnly": has[chats.ReadOnly],
-	"ContextAsker": has[chats.ContextAsker], "GoneReader": has[chats.GoneReader],
-	"OpenFinder": has[chats.OpenFinder], "ForkFinder": has[chats.ForkFinder], "HistoryChecker": has[chats.HistoryChecker], "MessageDater": has[chats.MessageDater],
+	"Subagents": has[chats.Subagents], "SubagentOutput": has[chats.SubagentOutput], "SubagentMessages": has[chats.SubagentMessages], "BackgroundTasks": has[chats.BackgroundTasks], "ReadOnly": has[chats.ReadOnly],
+	"ContextAsker": has[chats.ContextAsker], "TaskStopper": has[chats.TaskStopper], "GoneReader": has[chats.GoneReader],
+	"OpenFinder": has[chats.OpenFinder], "ForkFinder": has[chats.ForkFinder], "HistoryChecker": has[chats.HistoryChecker], "MessageDater": has[chats.MessageDater], "SentReader": has[chats.SentReader],
 	"TitleMaker": has[chats.TitleMaker], "TerminalCommands": has[chats.TerminalCommands], "WorktreeFinder": has[chats.WorktreeFinder],
 	"SessionSearcher": has[chats.SessionSearcher], "CommandHider": has[chats.CommandHider], "WorkflowReader": has[chats.WorkflowReader],
-	"UsageReader": has[chats.UsageReader],
+	"UsageReader": has[chats.UsageReader], "WorkReader": has[chats.WorkReader],
 }
 
 // Every capability chats declares is in capabilities, so a harness can't
@@ -163,8 +164,8 @@ func listed(h chats.Harness) []string {
 // tests run Harness, so they can never read the owner's files.
 func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 	want := map[string]struct{ harness, local []string }{
-		"claude": {[]string{"BackgroundTasks", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "ReadOnly", "SubagentMessages", "SubagentOutput", "Subagents", "TerminalCommands", "TitleMaker", "ToolReader", "Transcript", "UsageReader"},
-			[]string{"ForkFinder", "HistoryChecker", "MessageDater", "OpenFinder", "SessionSearcher", "WorkflowReader", "WorktreeFinder"}},
+		"claude": {[]string{"BackgroundTasks", "ContextAsker", "DefaultReader", "Forker", "GoneReader", "ReadOnly", "SentReader", "SubagentMessages", "SubagentOutput", "Subagents", "TaskStopper", "TerminalCommands", "TitleMaker", "ToolReader", "Transcript", "UsageReader", "WorkReader"},
+			[]string{"ForkFinder", "HistoryChecker", "OpenFinder", "SessionSearcher", "WorkflowReader", "WorktreeFinder"}},
 		"codex":    {[]string{"Forker", "GoneReader", "ReadOnly", "ToolReader"}, []string{"ForkFinder", "OpenFinder", "SessionSearcher"}},
 		"ante":     {[]string{"ContextAsker", "Forker", "Subagents", "ToolReader"}, []string{"MessageDater", "OpenFinder"}},
 		"omp":      {[]string{"ToolReader"}, []string{"ForkFinder", "OpenFinder"}},

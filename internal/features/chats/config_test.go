@@ -110,8 +110,8 @@ func ultracodeOn(meta map[string]any) bool {
 	opts, _ := meta["claudeCode"].(map[string]any)["options"].(map[string]any)
 	settings, _ := opts["settings"].(map[string]any)
 	on, _ := settings["ultracode"].(bool)
-	stop, _ := opts["perTaskStopAffordance"].(bool) // merged, not replaced
-	return on && stop
+	_, env := opts["env"].(map[string]any) // merged, not replaced
+	return on && env
 }
 
 // Ultracode is the chat's: off at first; turned on, kept with the chat
@@ -144,7 +144,7 @@ func TestUltracode(t *testing.T) {
 
 	agent.gate = make(chan struct{})
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
-	eventually(t, c, func() bool { return c.busy })
+	eventually(t, c, func() bool { return c.busyLocked() })
 	if err := svc.SetConfig(context.Background(), c.id, ultracodeID, "false"); err == nil || !c.record.Ultracode {
 		t.Errorf("during a turn: %v", err)
 	}

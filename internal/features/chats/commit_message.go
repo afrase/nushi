@@ -33,8 +33,12 @@ func (s *Service) CommitMessage(ctx context.Context, chatID string, diff func(co
 	}
 	c.mu.Lock()
 	err = c.canWriteCommitLocked()
-	if err == nil && (c.busy || c.agent == nil) {
-		err = errors.New("the chat is busy")
+	switch {
+	case err != nil:
+	case c.busyLocked():
+		err = errors.New(c.stillLocked())
+	case c.agent == nil:
+		err = errors.New("the agent isn't running")
 	}
 	agent, sid, folder := c.agent, c.sid, c.record.Folder
 	c.mu.Unlock()
@@ -58,6 +62,9 @@ func (s *Service) CommitMessage(ctx context.Context, chatID string, diff func(co
 	run := &silentRun{text: map[string]string{}, tool: cancel}
 	c.mu.Lock()
 	c.probes[fork] = run
+	// Written ahead: a daemon that dies before throwAway's last delete
+	// leaves it in the record, which the chat's next open deletes.
+	c.throwawayLocked([]string{fork}, false)
 	c.mu.Unlock()
 	defer func() {
 		s.throwAway(c, agent, fork)

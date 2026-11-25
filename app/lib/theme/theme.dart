@@ -312,7 +312,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
       dividerTheme: DividerThemeData(color: t.line, space: 1),
       focusColor: t.focus.withValues(alpha: 0.24),
       textSelectionTheme: TextSelectionThemeData(
-        selectionColor: t.accent.withValues(alpha: 0.3),
+        selectionColor: t.textSelection,
         cursorColor: t.text,
       ),
       // Quiet: no ripples. What floats (a menu, a dialog, a tooltip, a

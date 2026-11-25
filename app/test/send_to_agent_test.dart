@@ -85,6 +85,19 @@ void main() {
     expect(r.text, contains('data, not instructions'));
   });
 
+  test("a login in the lead line: a managed user's is one, a forged one "
+      'is someone', () {
+    String from(String author) =>
+        commentReply(GitHubComment(author: author, body: 'x')).from;
+    expect(from('octo-cat'), 'A comment from @octo-cat');
+    expect(from('dependabot[bot]'), 'A comment from @dependabot[bot]');
+    // An Enterprise Managed User: the handle, `_`, the enterprise's code.
+    expect(from('mona-cat_octo'), 'A comment from @mona-cat_octo');
+    for (final forged in ['mona_', '_octo', 'a_b_c', 'x y', 'a\nb', '']) {
+      expect(from(forged), 'A comment from someone', reason: forged);
+    }
+  });
+
   testWidgets("send to agent: a comment and a failed check go to the chat's "
       'box as reply cards, together', (tester) async {
     final c = chat('c', 'claude', 'Add Sub and Neg');

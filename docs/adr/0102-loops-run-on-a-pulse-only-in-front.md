@@ -10,7 +10,7 @@ What loops for as long as a state lasts (a working chat's ring, the slow pulse o
 - **It ticks only while Nushi is in front**: the app's state is resumed (the Mac's window focused, the phone's page in front; unknown counts as in front). Inactive (visible beside the focused app), hidden or paused, it stands still.
 - **Standing still, each loop draws its rest look**, as under Reduce Motion: a working chat's dot without its ring, the background ring at full strength, a spinner's ring three parts drawn, a shine's text as it is. The clock notifies once as it stops and once as it starts, so each loop repaints into or out of it.
 - **It stops when no one listens**, but only after the work at hand: a painter made anew on a rebuild leaves the clock and its successor joins in the same frame.
-- What runs once (a check drawing, a title typing) and the reply's pacing stay on the per-frame `frameClock`: they end on their own, a run within a second or two, the pacing once the reply's text has shown.
+- What runs once (a check drawing, a title typing) and the reply's pacing run every frame, each on its State's own ticker (amended 2026-11-24: until then one shared `frameClock`, which ignored `TickerMode`): they end on their own, a run within a second or two, the pacing once the reply's text has shown, and where tickers are off (a tucked rail) they stand still.
 
 ## Consequences
 - An idle Nushi draws nothing; one with a loop showing draws 20 frames a second while focused, none otherwise.

@@ -3,7 +3,9 @@ package chats
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -16,12 +18,12 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// The parity tests hold Nushi's Go agent for Claude (claudeacp) to its
-// golden behaviour, as far as Nushi reads it: what claude-agent-acp, the
-// Node adapter Claude ran through until 2026-11-04, did. Each scenario in
-// testdata/claude-parity is one run of an agent, recorded at both ends
-// (until 2026-11-03 the adapter's; make claude-record now records the Go
-// agent's own, which then serve as its golden):
+// The parity tests hold Nushi's Go agent for Claude (claudeacp, at the
+// version go.mod pins) to its own recorded runs on the real claude, as
+// far as Nushi reads them: a regression check against claude's real
+// output, for a library bump or a change to how chats reads Claude (ADR
+// 0066). Each scenario in testdata/claude-parity is one run of the Go
+// agent, recorded at both ends:
 //   - cli.jsonl: claude's stdin and stdout, a claudetest cassette, and
 //     cli-2.jsonl and on for each further claude the agent ran;
 //   - acp.jsonl: the ACP between Nushi and the agent, a line a
@@ -34,105 +36,216 @@ import (
 // yet is skipped, by name.
 //
 // The test replays the cassettes to the Go agent as its claudes, in the
-// order it starts them, sends it what Nushi sent the adapter, and plays
-// both agents' session updates and requests (permissions, questions,
-// answered as the recording's client answered) into a chat for each
-// session Nushi opened, a subagent's session going with its parent's
-// (claude_chats_test.go). The chats' items, usage and status must match:
-// the JSON may differ where Nushi doesn't look.
+// order it starts them, sends it what the recording's client sent, and
+// plays the recording's and the replay's session updates and requests
+// (permissions, questions, answered as the recording's client answered)
+// into a chat for each session Nushi opened, a subagent's session going
+// with its parent's (claude_chats_test.go). The chats' items, usage,
+// status and model option must match: the JSON may differ where Nushi
+// doesn't look. Both sides go through the same reading, so a change to
+// chats that reads both alike passes that comparison: chats' own tests
+// hold that, and commandsEnded holds each background command's end to
+// claude's own recording.
 func TestClaudeParity(t *testing.T) {
 	for _, dir := range scenarios(t) {
 		t.Run(filepath.Base(dir), func(t *testing.T) {
 			skipUnrecorded(t, dir)
-			node, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
+			recorded, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
 			goRun := runGoAgent(t, dir, sent, nil)
-			want, got := views(t, node), views(t, goRun)
+			want, got := views(t, recorded), views(t, goRun)
 			if len(want) == 0 || len(want[0].Items) == 0 {
 				t.Fatal("the recording shows nothing to compare")
 			}
-			commandsEnded(t, filepath.Base(dir), got, want)
-			subagentTotals(t, filepath.Base(dir), got, want)
 			if !reflect.DeepEqual(got, want) {
-				t.Errorf("the Go agent's chats differ from the adapter's:\n%s", differences(got, want))
+				t.Errorf("the Go agent's chats differ from the recording's:\n%s", differences(got, want))
 			}
-			if name := filepath.Base(dir); name == "workflow" || name == "workflow-stop" {
+			commandsEnded(t, dir, want)
+			workflowsEnded(t, dir, want)
+			answeredAtResult(t, recorded)
+			switch filepath.Base(dir) {
+			case "workflow", "workflow-stop":
 				launchedARun(t, want)
+			case "refusal": // claude answered on its fallback model, which the option shows
+				if m := want[0].Model; m != "claude-opus-4-8" {
+					t.Errorf("the model option after the fallback: %q", m)
+				}
 			}
 		})
 	}
 }
 
-// commandEnds are how claude's recorded background commands ended (each
-// cli.jsonl's task_notification), by scenario and task id.
-var commandEnds = map[string]map[string]model.BackgroundCommand{
-	"bash-background":          {"bqphuo3vw": {State: "done", End: "exited with code 0"}},
-	"bash-background-killed":   {"b709r21cm": {State: "failed", End: "exited with code 144"}},
-	"bash-background-taskstop": {"bw5r8w073": {State: "stopped", End: "killed"}},
-}
-
-// commandsEnded checks the Go agent's background commands (got) ended as
-// claude's recorded tasks did: from the task's status, which claude-acp-go
-// sends since v0.5.0 (ADR 0130). The adapter sent none, and the commands'
-// output files are gone (noOutputFile), so its side can't know an end no
-// TaskStop told: it shows "started" (the end unknown), as Nushi shows such
-// a command. There, and only there, the Go agent's command takes the
-// adapter's row for the comparison that follows; every other difference
-// stays one.
-func commandsEnded(t *testing.T, scenario string, got, want []parity) {
+// commandsEnded checks each background command the chats show ended as
+// claude's own recording says its task did: the task_notification in the
+// scenario's cli*.jsonl, read as Task reads Claude's word on it
+// (ADR 0130). The comparison above can't tell: both sides go through the
+// same reading. Every row must have its task, and every backgrounded
+// local_bash task claude started its row, where this machine follows the
+// recording's commands at all: Claude named their files in the
+// recorder's own folder (/private/tmp/claude-<its uid>), and a harness
+// reads a task's file only in its own user's (claude's taskFile), so
+// under another user or on Linux the chats show no row for them.
+func commandsEnded(t *testing.T, dir string, views []parity) {
 	t.Helper()
-	for i := range min(len(got), len(want)) {
-		for j := range got[i].Items {
-			sh := got[i].Items[j].BackgroundCommand
+	ended, followed := recordedCommandEnds(t, dir)
+	seen := map[string]bool{}
+	for _, v := range views {
+		for _, it := range v.Items {
+			sh := it.BackgroundCommand
 			if sh == nil {
 				continue
 			}
-			end, ok := commandEnds[scenario][sh.ID]
-			if !ok || sh.State != end.State || sh.End != end.End {
-				t.Errorf("the Go agent's command %s ended %q (%q), claude's %+v", sh.ID, sh.State, sh.End, end)
+			seen[sh.ID] = true
+			end, ok := ended[sh.ID]
+			if !ok {
+				t.Errorf("command %s: claude's recording started no background command by that id", sh.ID)
+			} else if sh.State != end.State || sh.End != end.End {
+				t.Errorf("command %s ended %q (%q), claude's recording %q (%q)", sh.ID, sh.State, sh.End, end.State, end.End)
 			}
-			if j < len(want[i].Items) {
-				if w := want[i].Items[j].BackgroundCommand; w != nil && w.ID == sh.ID && w.State == "started" {
-					got[i].Items[j].BackgroundCommand = w
+		}
+	}
+	for id := range ended {
+		if !seen[id] && followed {
+			t.Errorf("claude's background command %s has no row", id)
+		}
+	}
+}
+
+// workflowsEnded checks each workflow's run the chats show ended as
+// claude's own recording says its task did, as commandsEnded does for
+// commands: every local_workflow task claude started has its item, and
+// each item's run has the end Task reads from claude's task_notification
+// (none while the recording told no end). No file of the run is read
+// (noWorkflowFiles), so any machine shows them.
+func workflowsEnded(t *testing.T, dir string, views []parity) {
+	t.Helper()
+	ended := recordedWorkflowEnds(t, dir)
+	seen := map[string]bool{}
+	for _, v := range views {
+		for _, it := range v.Items {
+			w := it.Workflow
+			if w == nil {
+				continue
+			}
+			seen[w.TaskID] = true
+			end, ok := ended[w.TaskID]
+			if !ok {
+				t.Errorf("workflow %s: claude's recording started no workflow by that task id", w.TaskID)
+			} else if w.State != end.State || w.End != end.End {
+				t.Errorf("workflow %s ended %q (%q), claude's recording %q (%q)", w.TaskID, w.State, w.End, end.State, end.End)
+			}
+		}
+	}
+	for id := range ended {
+		if !seen[id] {
+			t.Errorf("claude's workflow %s has no item", id)
+		}
+	}
+}
+
+// recordedWorkflowEnds are the workflows' runs claude started in a
+// scenario's cli*.jsonl (task_started, local_workflow), by task id, each
+// with its end as Task reads its task_notification.
+func recordedWorkflowEnds(t *testing.T, dir string) map[string]model.TaskUpdate {
+	t.Helper()
+	files, err := filepath.Glob(filepath.Join(dir, "cli*.jsonl"))
+	testcheck.NoErr(t, err)
+	ends := map[string]model.TaskUpdate{}
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		testcheck.NoErr(t, err)
+		for line := range bytes.Lines(b) {
+			var l struct {
+				Dir   string `json:"dir"`
+				Frame struct {
+					Subtype  string `json:"subtype"`
+					TaskID   string `json:"task_id"`
+					TaskType string `json:"task_type"`
+					Status   string `json:"status"`
+					Summary  string `json:"summary"`
+				} `json:"frame"`
+			}
+			if json.Unmarshal(line, &l) != nil || l.Dir != "out" {
+				continue
+			}
+			switch fr := l.Frame; fr.Subtype {
+			case "task_started":
+				if fr.TaskType == "local_workflow" {
+					ends[fr.TaskID] = model.TaskUpdate{}
+				}
+			case "task_notification":
+				if _, ok := ends[fr.TaskID]; !ok {
+					continue
+				}
+				task := map[string]any{"id": fr.TaskID, "type": "local_workflow", "status": fr.Status, "summary": fr.Summary}
+				word, ok := claudeHarness.Task(map[string]any{"claudeCode": map[string]any{"task": task}})
+				if !ok || !word.State.Ended() {
+					t.Fatalf("%s: Task doesn't read workflow %s's status %q", f, fr.TaskID, fr.Status)
+				}
+				ends[fr.TaskID] = word
+			}
+		}
+	}
+	return ends
+}
+
+// recordedCommandEnds are the background commands claude started in a
+// scenario's cli*.jsonl (task_started, local_bash, backgrounded), by task
+// id, each with its end as Task maps its task_notification: none
+// (State "") when claude told no end. followed says this machine's
+// harness would read the files claude named for them (every
+// task_notification's output_file, and there is one): the file is gone,
+// but it is where this user's claude writes a task's output.
+func recordedCommandEnds(t *testing.T, dir string) (ends map[string]model.BackgroundCommand, followed bool) {
+	t.Helper()
+	files, err := filepath.Glob(filepath.Join(dir, "cli*.jsonl"))
+	testcheck.NoErr(t, err)
+	ends = map[string]model.BackgroundCommand{}
+	named, mine := 0, 0 // the files claude named, and those this user's claude would write
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		testcheck.NoErr(t, err)
+		for line := range bytes.Lines(b) {
+			var l struct {
+				Dir   string `json:"dir"`
+				Frame struct {
+					Subtype      string `json:"subtype"`
+					TaskID       string `json:"task_id"`
+					TaskType     string `json:"task_type"`
+					Backgrounded bool   `json:"is_backgrounded"`
+					Status       string `json:"status"`
+					Summary      string `json:"summary"`
+					OutputFile   string `json:"output_file"`
+				} `json:"frame"`
+			}
+			if json.Unmarshal(line, &l) != nil || l.Dir != "out" {
+				continue
+			}
+			fr := l.Frame
+			switch fr.Subtype {
+			case "task_started":
+				if fr.TaskType == "local_bash" && fr.Backgrounded {
+					ends[fr.TaskID] = model.BackgroundCommand{ID: fr.TaskID}
+				}
+			case "task_notification":
+				if _, ok := ends[fr.TaskID]; !ok {
+					continue
+				}
+				task := map[string]any{"id": fr.TaskID, "type": "local_bash", "status": fr.Status, "summary": fr.Summary}
+				word, ok := claudeHarness.Task(map[string]any{"claudeCode": map[string]any{"task": task}})
+				if !ok || word.State == "" {
+					t.Fatalf("%s: Task doesn't read task %s's status %q", f, fr.TaskID, fr.Status)
+				}
+				ends[fr.TaskID] = model.BackgroundCommand{ID: fr.TaskID, State: word.State, End: word.End}
+				if fr.OutputFile != "" {
+					named++
+					if _, _, err := claudeHarness.StatBackgroundCommand(fr.TaskID, fr.OutputFile); err == nil || errors.Is(err, fs.ErrNotExist) {
+						mine++
+					}
 				}
 			}
 		}
 	}
-}
-
-// backgroundTokens are the tokens claude's recorded background subagents
-// used (each cli.jsonl's task_notification usage), by scenario.
-var backgroundTokens = map[string]int64{"subagent-background": 6979, "subagent-nested": 8152}
-
-// subagentTotals checks the Go agent's background subagents (got) have
-// the totals claude told as their tasks ended, which claude-acp-go sends
-// since v0.6.0. The adapter sent none: a subagent launched in the
-// background ends its call at once, without them. There, and only there,
-// the Go agent's item takes the adapter's totals for the comparison that
-// follows; every other difference stays one.
-func subagentTotals(t *testing.T, scenario string, got, want []parity) {
-	t.Helper()
-	seen := false
-	for i := range min(len(got), len(want)) {
-		for j := range min(len(got[i].Items), len(want[i].Items)) {
-			g, w := &got[i].Items[j], want[i].Items[j]
-			if g.Totals == nil || w.Totals != nil || g.ID != w.ID || g.Subagent == nil || w.Subagent == nil {
-				continue
-			}
-			if !strings.HasPrefix(g.Text, "Async agent launched") || g.Totals.Tokens <= 0 {
-				t.Errorf("the Go agent's call %s has totals %+v the adapter's hasn't, and isn't a background launch", g.ID, *g.Totals)
-				continue
-			}
-			if n, ok := backgroundTokens[scenario]; ok {
-				seen = seen || g.Totals.Tokens == n
-			}
-			sub := *g.Subagent
-			sub.Worked, sub.Tokens, sub.Reported = w.Subagent.Worked, w.Subagent.Tokens, w.Subagent.Reported
-			g.Totals, g.Subagent = nil, &sub
-		}
-	}
-	if n, ok := backgroundTokens[scenario]; ok && !seen {
-		t.Errorf("no background subagent of the Go agent's has claude's %d tokens", n)
-	}
+	return ends, named > 0 && mine == named
 }
 
 // launchedARun checks the recorded Workflow call became a workflow's item
@@ -155,43 +268,13 @@ func launchedARun(t *testing.T, views []parity) {
 	t.Error("no Workflow call")
 }
 
-// After a refusal's fallback both agents leave the model option on the
-// fallback model, which claude's list doesn't name: the chats above don't
-// compare options.
-func TestClaudeFallbackModel(t *testing.T) {
-	dir := filepath.Join("testdata", "claude-parity", "refusal")
-	skipUnrecorded(t, dir)
-	node, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
-	want, got := lastModel(node), lastModel(runGoAgent(t, dir, sent, nil))
-	if want != "claude-opus-4-8" || got != want {
-		t.Errorf("the model option: the Go agent's %q, the adapter's %q", got, want)
-	}
-}
-
-// lastModel is the model option's value in the last config_option_update
-// of events.
-func lastModel(events []event) string {
-	v := ""
-	for _, e := range events {
-		if e.note == nil || e.note.Update.ConfigOptionUpdate == nil {
-			continue
-		}
-		for _, o := range e.note.Update.ConfigOptionUpdate.ConfigOptions {
-			if o.ID == "model" && o.Select != nil {
-				v = string(o.Select.CurrentValue)
-			}
-		}
-	}
-	return v
-}
-
 // differences says where the Go agent's chats (got) differ from the
-// adapter's (want): each item, usage or status that does, as JSON.
+// recording's (want): each item, usage or status that does, as JSON.
 func differences(got, want []parity) string {
 	var b strings.Builder
 	js := func(v any) string { s, _ := json.Marshal(v); return string(s) }
 	if len(got) != len(want) {
-		fmt.Fprintf(&b, "%d chats, the adapter's %d\n", len(got), len(want))
+		fmt.Fprintf(&b, "%d chats, the recording's %d\n", len(got), len(want))
 	}
 	for i := range min(len(got), len(want)) {
 		g, w := got[i], want[i]
@@ -204,12 +287,12 @@ func differences(got, want []parity) string {
 				wi = w.Items[j]
 			}
 			if !reflect.DeepEqual(gi, wi) {
-				fmt.Fprintf(&b, "session %s, item %d:\n  go:      %s\n  adapter: %s\n", w.Session, j, js(gi), js(wi))
+				fmt.Fprintf(&b, "session %s, item %d:\n  go:        %s\n  recording: %s\n", w.Session, j, js(gi), js(wi))
 			}
 		}
 		g.Items, w.Items = nil, nil
 		if !reflect.DeepEqual(g, w) {
-			fmt.Fprintf(&b, "session %s:\n  go:      %s\n  adapter: %s\n", w.Session, js(g), js(w))
+			fmt.Fprintf(&b, "session %s:\n  go:        %s\n  recording: %s\n", w.Session, js(g), js(w))
 		}
 	}
 	return b.String()
@@ -299,6 +382,7 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 	testcheck.NoErr(t, err)
 	asked := map[string]event{} // the marked requests, by id
 	loading := 0                // loads not answered yet: what comes is their replay
+	adapter := false            // the recording is claude-agent-acp's, by its initialize answer
 	for line := range bytes.Lines(b) {
 		if len(bytes.TrimSpace(line)) == 0 {
 			continue
@@ -312,7 +396,7 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 		case l.Dir == "out" && m.Method == sessionUpdate:
 			var n acp.SessionNotification
 			testcheck.NoErr(t, json.Unmarshal(m.Params, &n))
-			if loading > 0 {
+			if adapter && loading > 0 {
 				replayedAsLive(&n)
 			}
 			events = append(events, event{note: &n})
@@ -324,6 +408,9 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 				loading++
 			}
 		case l.Dir == "out" && m.Method == "":
+			if name := agentName(m); name != "" {
+				adapter = name == adapterName
+			}
 			if e, ok := asked[string(m.ID)]; ok {
 				if e.method == "session/load" {
 					loading--
@@ -340,6 +427,21 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 	return events, all
 }
 
+// agentName is the agentInfo name an initialize answer m gives, else "".
+func agentName(m rpc) string {
+	var r struct {
+		AgentInfo struct {
+			Name string `json:"name"`
+		} `json:"agentInfo"`
+	}
+	_ = json.Unmarshal(m.Result, &r)
+	return r.AgentInfo.Name
+}
+
+// adapterName is claude-agent-acp's agentInfo name, the Node adapter
+// whose recording testdata/claude-adapter-load is.
+const adapterName = "@agentclientprotocol/claude-agent-acp"
+
 // noOutput is claude's text for the model of a command that printed
 // nothing, as claude-agent-acp 0.94's replay showed it.
 const noOutput = "```console\n(Bash completed with no output)\n```"
@@ -348,7 +450,10 @@ const noOutput = "```console\n(Bash completed with no output)\n```"
 // updates) showed of a command that printed nothing: claude-agent-acp
 // showed nothing live (from claude's structured tool_use_result) but
 // claude's text for the model in a replay, and claudeacp (since
-// claude-acp-go v0.4.0) replays it as live.
+// claude-acp-go v0.4.0) replays it as live. Only the frozen adapter
+// recording needs it (TestAnAdapterChatResumesOnTheGoAgent compares its
+// replay with the Go agent's); the Go agent's own recordings replay as
+// they showed live.
 func replayedAsLive(n *acp.SessionNotification) {
 	u := n.Update.ToolCallUpdate
 	if u == nil || len(u.Content) != 1 || u.Content[0].Content == nil {

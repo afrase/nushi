@@ -114,11 +114,15 @@ func (s *Service) SetConfig(ctx context.Context, chatID, id, value string) error
 		return err
 	}
 	c.mu.Lock()
-	agent, sid, reopening := c.agent, c.sid, c.reopeningLocked()
+	agent, sid := c.agent, c.sid
+	var settling error
+	if c.sessionOpLocked() {
+		settling = c.sessionOpErrLocked()
+	}
 	c.mu.Unlock()
 	switch {
-	case reopening:
-		return errors.New("the chat is reopening or moving; try again in a moment")
+	case settling != nil:
+		return settling
 	case agent == nil:
 		return errors.New("the agent isn't running")
 	}

@@ -1,0 +1,9 @@
+{"type":"launched"}
+{"type":"started","key":"v2:73c1b8c091e19244ae5fddb375b026aa86f3ec14283feeb937303dba1481873a","agentId":"aaa9c19b0db3fd1d5","label":"map:alpha","phase":"Map"}
+{"type":"started","key":"v2:44b02df11f014079d2effe53580ff26d1ef40208b13d49054ea5119a0165fa83","agentId":"a5f5ee54570c1d136","label":"map:beta","phase":"Map"}
+{"type":"result","key":"v2:73c1b8c091e19244ae5fddb375b026aa86f3ec14283feeb937303dba1481873a","agentId":"aaa9c19b0db3fd1d5","result":"alpha","remoteControlDeviceReport":false,"sessionId":"3c9308e8-e20b-411d-af80-1677aa3f9a47"}
+{"type":"result","key":"v2:44b02df11f014079d2effe53580ff26d1ef40208b13d49054ea5119a0165fa83","agentId":"a5f5ee54570c1d136","result":"beta","remoteControlDeviceReport":false,"sessionId":"3c9308e8-e20b-411d-af80-1677aa3f9a47"}
+{"type":"started","key":"v2:f12b4aa2b3c61b4e3a82802220adcf9c7bcdf39ee54248a3b90f8db0e827623c","agentId":"af242e452aad06dbb","label":"review:gamma","phase":"Review"}
+{"type":"started","key":"v2:d31c3d2d3f18324523418b37c599d0bd9ff2b937bd0c6d5afc660abc270f43ef","agentId":"ad2943e37494c0e45","label":"review:delta","phase":"Review"}
+{"type":"result","key":"v2:f12b4aa2b3c61b4e3a82802220adcf9c7bcdf39ee54248a3b90f8db0e827623c","agentId":"af242e452aad06dbb","result":"gamma","remoteControlDeviceReport":false,"sessionId":"3c9308e8-e20b-411d-af80-1677aa3f9a47"}
+{"type":"result","key":"v2:d31c3d2d3f18324523418b37c599d0bd9ff2b937bd0c6d5afc660abc270f43ef","agentId":"ad2943e37494c0e45","result":{"word":"delta"},"remoteControlDeviceReport":false,"toolsUsed":["StructuredOutput"],"sessionId":"3c9308e8-e20b-411d-af80-1677aa3f9a47"}

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/motion.dart';
@@ -58,16 +59,17 @@ class Paced extends StatefulWidget {
   State<Paced> createState() => _PacedState();
 }
 
-class _PacedState extends State<Paced> {
+class _PacedState extends State<Paced> with SingleTickerProviderStateMixin {
   double _shown = 0; // characters shown, fractional
   int _end = 0; // characters drawn: whole words
   final _steps = <(int, int, Duration)>[]; // revealed runs: from, to, when
-  Duration? _last; // the clock at the last tick
+  Ticker? _ticker; // ticking while it paces, made as it first does
+  Duration _now = Duration.zero; // the ticker's time at its last tick
+  Duration? _last; // the ticker's time at the tick before
   Duration? _ended; // when the text was all there and no longer live
   double? _endRate; // once it's no longer live: the rest within 250 ms
-  bool _listening = false;
   bool _started = false;
-  Duration _drawn = Duration.zero; // when it last rebuilt
+  Duration? _drawn; // when it last rebuilt
   var _code = CodeLines(); // where the text's fenced code blocks are
 
   bool get _off =>
@@ -111,29 +113,27 @@ class _PacedState extends State<Paced> {
 
   @override
   void dispose() {
-    if (_listening) frameClock.removeListener(_tick);
+    _ticker?.dispose();
     super.dispose();
   }
 
+  bool get _listening => _ticker?.isActive ?? false;
+
   void _listen() {
     if (_listening) return;
-    _listening = true;
-    // The clock may start again from zero: nothing timed before counts.
+    // Its ticker starts again from zero: nothing timed before counts.
+    _now = Duration.zero;
     _last = null;
-    _drawn = Duration.zero;
+    _drawn = null;
     _ended = null;
     _steps.clear();
-    frameClock.addListener(_tick);
+    (_ticker ??= createTicker(_tick)).start();
   }
 
-  void _stop() {
-    if (!_listening) return;
-    _listening = false;
-    frameClock.removeListener(_tick);
-  }
+  void _stop() => _ticker?.stop();
 
-  void _tick() {
-    final now = frameClock.now;
+  void _tick(Duration now) {
+    _now = now;
     final dt = _last == null
         ? 0.0
         : min(0.25, (now - _last!).inMicroseconds / 1e6);
@@ -174,9 +174,12 @@ class _PacedState extends State<Paced> {
     if (all && !widget.live) _ended ??= now;
     final caretGone = _ended != null && now - _ended! >= Paced.caretOut || _off;
     final idle = all && _steps.isEmpty && (widget.live || caretGone);
-    // At most 30 times a second, and at once when it settles.
+    // At most 30 times a second, from its first tick, and at once when it
+    // settles.
+    final drawn = _drawn;
     // design: a frame budget, not motion
-    if (now - _drawn >= const Duration(milliseconds: 33) || idle) {
+    const budget = Duration(milliseconds: 33);
+    if (drawn == null || now - drawn >= budget || idle) {
       _drawn = now;
       setState(() {});
     }
@@ -186,7 +189,7 @@ class _PacedState extends State<Paced> {
   @override
   Widget build(BuildContext context) {
     final text = widget.text;
-    final now = frameClock.now;
+    final now = _now;
     final ended = _ended;
     final done = !widget.live && _end >= text.length;
     if (_off || done && ended != null && now - ended >= Paced.caretOut) {

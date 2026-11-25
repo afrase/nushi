@@ -32,7 +32,7 @@ func reopened(t *testing.T, svc *Service, id string) *chat {
 	_, err := svc.Get(id)
 	testcheck.NoErr(t, err)
 	c := svc.chats[id]
-	eventually(t, c, func() bool { return !c.busy && c.agent != nil })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.agent != nil })
 	return c
 }
 
@@ -92,7 +92,7 @@ func TestReopenShowsWhatBothHaveOnce(t *testing.T) {
 
 	// Reloading merges the replay the same way.
 	testcheck.NoErr(t, svc2.Reload(c.id))
-	eventually(t, c2, func() bool { return !c2.busy && c2.agent != nil })
+	eventually(t, c2, func() bool { return !c2.busyLocked() && c2.agent != nil })
 	if got := shown(c2); got != want {
 		t.Errorf("after a reload: %s", got)
 	}
@@ -362,12 +362,40 @@ func TestAGoneFolderLeavesNoReplayGoing(t *testing.T) {
 	testcheck.NoErr(t, os.Mkdir(folder, 0o700))
 	c := startChat(t, svc, folder)
 	testcheck.NoErr(t, os.Remove(folder))
-	if err := svc.load(t.Context(), c); err == nil {
+	if _, err := svc.load(t.Context(), c); err == nil {
 		t.Fatal("loaded a chat whose folder is gone")
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.replaying {
 		t.Error("still waiting for a replay")
+	}
+}
+
+// A message sent to a chat opened from the agent's sessions while it
+// replays waits, queued, and goes once the chat has settled on its mode,
+// as for a new chat or a fork: it isn't left in the queue for good.
+func TestAMessageQueuedWhileAChatOpensGoes(t *testing.T) {
+	agent := &fakeAgent{loadGate: make(chan struct{}), entered: make(chan string, 1), updates: []acp.SessionUpdate{chunk("m1", "ok")}}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}}, Options{Scratch: t.TempDir()})
+	t.Cleanup(svc.Close)
+	opened := make(chan error, 1)
+	go func() {
+		_, err := svc.Open(context.Background(), "claude", t.TempDir(), "s9", "Old")
+		opened <- err
+	}()
+	<-agent.entered // its replay waits
+	svc.mu.Lock()
+	var c *chat
+	for _, opening := range svc.chats {
+		c = opening
+	}
+	svc.mu.Unlock()
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "hi"}, SendIdle))
+	close(agent.loadGate)
+	testcheck.NoErr(t, <-opened)
+	eventually(t, c, func() bool { return !c.busyLocked() && len(c.queue) == 0 && c.started.IsZero() })
+	if got := texts(c); !slices.Contains(got, "agent:ok") {
+		t.Errorf("items %q", got)
 	}
 }

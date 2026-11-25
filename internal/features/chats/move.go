@@ -42,20 +42,14 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	switch {
 	case c.closedLocked() != nil:
 		err = c.closedLocked()
-	case c.busy:
-		err = errors.New("the chat is busy; move it once the turn has ended")
-	case c.ownTurn:
-		err = errors.New("the agent is working on its own (a background task ended); move the chat once it's done")
-	case c.backgroundLocked(0):
-		err = errors.New("a subagent is still running in the background, and moving would stop it; move the chat once it's done")
-	case c.workflowLiveLocked():
-		err = errors.New("a workflow is still running, and moving would stop it; stop it, or move the chat once it's done")
+	default: // moving stops the agent, and with it what it runs or asks
+		err = c.workingLocked("move the chat")
 	}
 	if err != nil || from == folder && !worktree {
 		c.mu.Unlock()
 		return err
 	}
-	c.busy = true
+	c.beginOpLocked(opMove)
 	c.statusChangedLocked()
 	c.mu.Unlock()
 
@@ -78,9 +72,10 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	}
 	if err == nil {
 		c.mu.Lock()
-		old := c.agent
-		c.dropPromptsLocked() // what ran on the old agent ends with it
-		c.orphanLocked(true)
+		// The old agent leaves as any does (what ran on it ends with it), the
+		// chat's retiring agent until it has ended; it stops below, once the
+		// side chats on it are dropped.
+		old := c.disconnectLocked()
 		held := c.held // a queue held after a stopped or failed turn stays held, as in load
 		s.useLocked(c, o)
 		c.held = held
@@ -95,8 +90,9 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 			s.Moved, s.BranchFrom = !fresh, ""
 		})
 		c.movedLocked(from)
+		var forker Agent // the agent that made the fork, which leaves: the reopen below replays it
 		if replay {
-			c.agent = nil // reopened below
+			forker = c.disconnectLocked()
 		}
 		c.mu.Unlock()
 		sides := s.dropSides(c) // they ran on the old agent
@@ -106,7 +102,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 					c.log().Warn("deleting the empty session left by the move", "old", sid, "err", err)
 				}
 			}
-			_ = old.Stop(c.svc.timing.stopGrace()) // its process is gone either way
+			c.stopAgent(old)
 		}
 		s.later(func() { s.discard(c, sides) }) // discarding outlives the request
 		if left := oldWT != nil && wt != oldWT && !oldWT.Found; left && (!fresh || s.inUse(c, oldWT.Path) || !s.dropWorktree(oldWT)) {
@@ -117,7 +113,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 			c.mu.Unlock()
 		}
 		if replay {
-			_ = o.agent.Stop(c.svc.timing.stopGrace()) // its process is gone either way
+			c.stopAgent(forker)
 		} else if err := c.reapply(ctx, o.agent, o.sid, mode, picks); err != nil {
 			c.log().Warn("mode after moving", "err", err)
 		}
@@ -126,18 +122,15 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.busy = false
 	if err != nil {
 		c.noticeLocked(model.NoticeError, "Couldn't move the chat to "+folder+": "+err.Error())
 		c.logLocked().Warn("chat not moved", "to", folder, "err", err)
 	} else {
 		c.logLocked().Info("chat moved", "from", from, "old", sid, "worktree", wt != nil)
 	}
-	if replay && err == nil {
-		s.reopenLocked(c)
+	if !replay || err != nil || !s.beginReopenLocked(c) {
+		c.endOpLocked()
 	}
-	c.statusChangedLocked()
-	c.deliverLocked()
 	return err
 }
 

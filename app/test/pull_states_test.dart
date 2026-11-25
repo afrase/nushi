@@ -372,7 +372,11 @@ void main() {
     );
     it = states.item(_link(1))!;
     expect((it.checks, it.additions), ('failure', 12));
-    expect(it.checkCounts, GitHubCheckCounts(failed: 2, passed: 1, skipped: 1));
+    // Failed counts the cancelled too, as the daemon's rows do.
+    expect(
+      it.checkCounts,
+      GitHubCheckCounts(failed: 2, cancelled: 1, passed: 1, skipped: 1),
+    );
     expect(told, 2);
     // A change to an item no chat has tells the states' listeners nothing.
     items.put(item(9, 'Elsewhere'));

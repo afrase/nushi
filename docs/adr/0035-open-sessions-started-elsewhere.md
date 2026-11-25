@@ -25,3 +25,5 @@ The list names sessions by title only; the owner wanted to find the one to open 
 - A cheap test of each raw line comes first (the query's longest run of plain ASCII, case aside; records that can't be a message), so a line is decoded only when it may hold a hit; a line over 8 MB is passed over unread.
 
 Consequences: a search reads up to the whole of an agent's history (gigabytes; measured on fixtures at about 1 GB/s a core, several files at once); a new CLI version can change what counts as said (`docs/facts/`). Considered: an index (a second copy of every transcript to keep current, ADR 0008), and grepping raw lines (it matches tool output, nearly every file).
+
+Amended 2026-11-25: Claude's user text is matched as its replay shows it, through claude-acp-go's own cleaning (`sessions.UserText`), not a copy of it: a command the replay leaves out (`/compact`, `/context` and the like) isn't found, prose beside a command's tags is, and a tag runs only to its own closing tag. A `!` command still reads as typed and its output is passed over, as the app shows a run.

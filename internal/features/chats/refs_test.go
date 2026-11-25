@@ -103,7 +103,7 @@ func imageTurn(t *testing.T, svc *Service, c *chat, images ...[]byte) {
 		m.Images = append(m.Images, model.Image{MimeType: "image/png", Data: d})
 	}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, m, SendIdle))
-	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 })
+	eventually(t, c, func() bool { return !c.busyLocked() && len(c.queue) == 0 })
 }
 
 func TestAnImageIsHeldAsAReferenceOnceItsCopyHasIt(t *testing.T) {
@@ -200,7 +200,7 @@ func TestAMessageSentAgainHasItsImages(t *testing.T) {
 	// Taken back from a stopped turn, once the copy has it.
 	agent.updates, agent.gate = nil, make(chan struct{})
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "and this", Images: []model.Image{{MimeType: "image/png", Data: second}}}, SendIdle))
-	eventually(t, c, func() bool { return c.busy })
+	eventually(t, c, func() bool { return c.busyLocked() })
 	c.mu.Lock()
 	c.copyLocked(true)
 	c.mu.Unlock()

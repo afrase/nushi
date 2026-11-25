@@ -20,3 +20,6 @@
 
 ## Alternatives considered
 - Restoring the whole set of options from before (what sleep did): it kept agent defaults as if picked, and lived only in memory.
+
+## Amendment (2026-11-24): a refused mode leaves the record's
+A fork or a session opened from elsewhere whose agent refuses the mode put on it runs on the agent's, as before, but its record keeps the mode it was to have, as a reopen's does: the next open tries it again. A chat with no mode yet takes the agent's. An opened session takes no prompt until its mode is back on it (a message sent meanwhile waits, queued), as a new chat and a fork don't.

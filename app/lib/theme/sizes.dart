@@ -17,7 +17,11 @@ enum ControlSize {
   /// A dialog's actions and a view's main call to action (an empty view's
   /// New chat): a step up in height and type, and wide enough that a
   /// short label (OK, Add) still reads as a button.
-  large(height: 34, pad: 16, text: 14, icon: 15, minWidth: 80);
+  large(height: 34, pad: 16, text: 14, icon: 15, minWidth: 80),
+
+  /// A phone's full-width button (`PhoneButton`): a finger's size, the
+  /// phone's 16-point text, and as wide as it's let be.
+  touch(height: 48, pad: 16, text: 16, icon: 18, minWidth: double.infinity);
 
   new({
     required this.height,
@@ -39,7 +43,7 @@ enum ControlSize {
   /// A leading icon's size.
   final double icon;
 
-  /// A button's narrowest.
+  /// A button's narrowest (infinite: as wide as its place lets it be).
   final double minWidth;
 
   /// Its corners: [NushiTheme.control] at the compact height, the same

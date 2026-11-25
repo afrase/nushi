@@ -7,12 +7,12 @@ import (
 	"io/fs"
 	"regexp"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -50,6 +50,7 @@ func (p *player) chatOf(sid string) (*Service, *chat, acp.SessionID) {
 		svc, _, c := newTimedChat(p.t, claudeSession, &memModes{}, p.timing)
 		c.mu.Lock()
 		c.kind.background = noOutputFile{c.kind.background}
+		c.kind.workflows = noWorkflowFiles{claudeHarness}
 		c.mu.Unlock()
 		p.svcs[sid], p.chats[sid] = svc, c
 		p.order = append(p.order, sid)
@@ -70,11 +71,17 @@ func (p *player) play(e event) {
 		feed(c, []acp.SessionNotification{n})
 	case e.method == "session/prompt" && p.prompts:
 		_, c, _ := p.chatOf(e.session)
+		// The turn's fields are set by hand, not through a prompt: the
+		// player feeds a recorded session's wire to a chat with no agent,
+		// and a turn begins and ends where the recording says, among its
+		// updates, which no fake agent's prompt can place.
 		c.mu.Lock()
 		if e.done {
-			c.busy, c.started = false, time.Time{}
+			c.endOpLocked()
+			c.started = time.Time{}
 		} else {
-			c.busy, c.started, c.done = true, time.Now(), make(chan struct{}) // done: what a held turn's release closes
+			c.beginOpLocked(opTurn)
+			c.started, c.done = time.Now(), make(chan struct{}) // done: what a held turn's release closes
 			c.addLocked(model.Item{Kind: model.UserMessage, Text: e.text})
 		}
 		c.mu.Unlock()
@@ -211,13 +218,14 @@ func (r *pending) answer(t *testing.T, result json.RawMessage) {
 }
 
 // parity is what Nushi makes of a session's events: a chat's items,
-// usage and status, without the times of this run.
+// usage, status and model option, without the times of this run.
 type parity struct {
 	Session           string
 	Items             []model.Item
 	Usage             model.Usage
 	Busy, Waiting     bool
 	BackgroundRunning int
+	Model             string // the model option's value: after a refusal's fallback, one claude's list doesn't name
 }
 
 // views are the chats Nushi makes of an agent's events, in the order
@@ -237,9 +245,12 @@ func views(t *testing.T, events []event) []parity {
 		// its output file once, on a goroutine of its own; the file is
 		// gone (noOutputFile), so then it shows as started.
 		c := p.chats[sid]
+		// A workflow's run ends on its task's end once its follower has
+		// read it, on a goroutine of its own too.
 		eventually(t, c, func() bool {
 			return !slices.ContainsFunc(c.items, func(it model.Item) bool {
-				return it.BackgroundCommand != nil && it.BackgroundCommand.State == "running"
+				return it.BackgroundCommand != nil && it.BackgroundCommand.State == "running" ||
+					it.Workflow != nil && !it.Workflow.State.Ended() && c.tasks[it.Workflow.TaskID].state.Ended()
 			})
 		})
 		v := view(c)
@@ -250,8 +261,8 @@ func views(t *testing.T, events []event) []parity {
 }
 
 // recordedFolder is the recording's folder in a tool call's title: the
-// adapter titles a file inside it by its relative path, and the Go agent,
-// replayed in a folder of its own, by the whole one.
+// recording's agent titled a file inside it by its relative path, and the
+// Go agent, replayed in a folder of its own, by the whole one.
 var recordedFolder = regexp.MustCompile(`/\S*/claude-record-\d+/work/`)
 
 // view is a chat's items, usage and status, without the times of this
@@ -262,15 +273,11 @@ func view(c *chat) parity {
 	defer c.mu.Unlock()
 	st := c.statusLocked()
 	p := parity{Usage: c.usage, Busy: st.Busy, Waiting: st.Waiting, BackgroundRunning: st.Background}
+	if i := configIndex(c.config, "model"); i >= 0 {
+		p.Model = c.config[i].Current
+	}
 	for _, it := range c.items {
 		it = timeless(it)
-		// A model fallback's notice is worded by each agent: the Go
-		// agent passes on claude's own text (model_refusal_fallback's
-		// content, what claude's terminal shows), the adapter writes a
-		// summary of its own; the label stays compared.
-		if before, _, ok := strings.Cut(it.Text, modelFallback); ok {
-			it.Text = before + modelFallback
-		}
 		if it.Kind == model.Permission {
 			opts := make([]model.Option, 0, len(it.Options))
 			for _, o := range it.Options {
@@ -297,9 +304,22 @@ func (noOutputFile) ReadBackgroundCommand(string, string) (output, end, state st
 	return "", "", "", fs.ErrNotExist
 }
 
-// modelFallback is the label both agents give claude's notice that it
-// answered on another model after a refusal (docs/facts/claude.md).
-const modelFallback = "**Model fallback:** "
+// noWorkflowFiles finds no file of a workflow's run, as this machine has
+// none of the recording's: a run is followed, and ends only on what the
+// agent said of its task.
+type noWorkflowFiles struct{ claude.Harness }
+
+func (noWorkflowFiles) ReadWorkflow(string, string, model.Workflow) (model.Workflow, error) {
+	return model.Workflow{}, fs.ErrNotExist
+}
+
+func (noWorkflowFiles) WorkflowAgents(string, string, model.Workflow) ([]model.WorkflowAgent, error) {
+	return nil, fs.ErrNotExist
+}
+
+func (noWorkflowFiles) WorkflowAgentItems(string, string, model.Workflow, string, int) ([]model.Item, int, error) {
+	return nil, 0, fs.ErrNotExist
+}
 
 // timeless is an item without the times of this run.
 func timeless(it model.Item) model.Item {
@@ -308,10 +328,18 @@ func timeless(it model.Item) model.Item {
 	if it.Subagent != nil {
 		sa := *it.Subagent
 		sa.Started, sa.Ended, sa.Working = time.Time{}, time.Time{}, time.Time{}
-		if !sa.Reported { // the agent's own figure is the recording's
+		switch {
+		case !sa.Reported: // the agent's own figure is the recording's
 			sa.Worked = 0
+		case it.Totals != nil: // a later run (SendMessage) counts on by this run's clock
+			sa.Worked = it.Totals.Duration
 		}
 		it.Subagent = &sa
+	}
+	if it.Workflow != nil { // and where this run's chat is
+		w := *it.Workflow
+		w.Started, w.Ended, w.Active, w.Folder = time.Time{}, time.Time{}, time.Time{}, ""
+		it.Workflow = &w
 	}
 	if it.BackgroundCommand != nil {
 		bc := *it.BackgroundCommand

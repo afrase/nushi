@@ -5,10 +5,9 @@ import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
-import 'package:nushi/panes.dart';
 import 'package:nushi/subagents.dart';
+import 'package:nushi/task_pane.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/tool_parts.dart';
 import 'package:nushi/top_notices.dart';
 import 'package:nushi/transcript.dart';
 import 'package:nushi/widgets.dart';
@@ -32,8 +31,6 @@ class SubagentPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
     return ListenableBuilder(
       // Its steps' text streams in on ChatState.streamed.
       listenable: Listenable.merge([chat, chat.streamed]),
@@ -44,41 +41,19 @@ class SubagentPane extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            PaneHeader(
-              end: PaneHeader.buttonsEnd,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: s == null
-                        ? const SizedBox.shrink()
-                        : subagentName(context, s, size: 12),
-                  ),
-                  if (s != null && subagentStoppable(s))
-                    stopButton(
-                      context,
-                      daemon,
-                      chat,
-                      id,
-                      padding: IconTap.header,
-                    ),
-                  IconTap(
-                    Icons.close,
-                    tooltip: 'Close',
-                    size: 15,
-                    padding: IconTap.header,
-                    onTap: onClose,
-                  ),
-                ],
-              ),
+            TaskPaneHeader(
+              chat: chat,
+              daemon: daemon,
+              id: id,
+              title: s == null
+                  ? const SizedBox.shrink()
+                  : subagentName(context, s, size: 12),
+              stoppable: s != null && subagentStoppable(s),
+              onClose: onClose,
             ),
             Expanded(
               child: s == null
-                  ? Center(
-                      child: Text(
-                        'This subagent is no longer in the chat.',
-                        style: theme.ui(t.textMuted, size: 12),
-                      ),
-                    )
+                  ? const PaneGone('This subagent is no longer in the chat.')
                   : Transcript(
                       key: ValueKey(id),
                       chat: chat,
@@ -155,17 +130,7 @@ class _Head extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (call.prompt.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-              decoration: cardBox(t),
-              child: FoldedText(
-                call.prompt,
-                style: theme.ui(t.text, size: 12),
-                folded: 5,
-                padding: const EdgeInsets.symmetric(vertical: 2),
-              ),
-            ),
+          if (call.prompt.isNotEmpty) PromptCard(call.prompt),
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text.rich(

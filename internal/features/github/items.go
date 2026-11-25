@@ -53,10 +53,12 @@ func (s *Service) Issue(ctx context.Context, ref model.GitHubRef, poll bool) (mo
 	return c.Issue(ctx, ref.Repo, ref.Number)
 }
 
-// Failed says a check's state is a failure, by githubapi.KindOf: a
-// cancelled one too.
+// Failed says a check holds a merge back as not passed, by
+// githubapi.KindOf: a failed one, or a cancelled one, which GitHub's merge
+// gate counts the same though its page names it apart (the API's
+// GitHubCheck.failed, MergeBlocks' "checks_failing").
 func Failed(c model.GitHubCheck) bool {
-	return githubapi.KindOf(c.State) == githubapi.CheckFailed
+	return githubapi.KindOf(c.State).NotPassed()
 }
 
 // Outside says an author isn't the repository's owner, a member of its

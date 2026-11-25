@@ -2,25 +2,34 @@
   "data": {
     "repository": {
       "pullRequest": {
+        "__typename": "PullRequest",
         "id": "PR_kwDOVXdqNc8AAAABKrwJXQ",
         "number": 1,
         "title": "Add Sub and Neg",
         "url": "https://github.com/afrase/nushi-gh-test/pull/1",
         "state": "OPEN",
         "isDraft": false,
-        "updatedAt": "2026-10-26T04:25:48Z",
+        "createdAt": "2026-10-26T04:14:48Z",
+        "updatedAt": "2026-11-24T12:25:47Z",
         "author": {
           "login": "afrase"
         },
         "repository": {
           "nameWithOwner": "afrase/nushi-gh-test"
         },
+        "additions": 18,
+        "deletions": 0,
+        "changedFiles": 3,
+        "mergeStateStatus": "UNSTABLE",
+        "baseRefName": "main",
+        "headRefName": "subtract",
         "reviewDecision": null,
-        "totalCommentsCount": 6,
+        "totalCommentsCount": 11,
         "commits": {
           "nodes": [
             {
               "commit": {
+                "oid": "465b7a4b3bc29650bbef832800f4ad10db363aa7",
                 "statusCheckRollup": {
                   "state": "FAILURE"
                 }
@@ -41,35 +50,111 @@
             },
             {
               "isResolved": false
+            },
+            {
+              "isResolved": false
             }
           ]
         },
         "body": "Adds `Sub` and `Neg`.\n\n<!-- A template comment that should not show. -->\n\n- [x] tests\n- [ ] docs\n\nThe `FAIL` file makes the **on-demand** check fail on purpose.",
+        "viewerCanUpdate": true,
         "authorAssociation": "OWNER",
-        "baseRefName": "main",
-        "headRefName": "subtract",
-        "baseRefOid": "521c8d9a1db6c75193e4fd2daf7ddf4c5d61940d",
+        "baseRefOid": "e1087d44fdc189f272280508419a45bd31ffef02",
         "headRefOid": "465b7a4b3bc29650bbef832800f4ad10db363aa7",
         "isCrossRepository": false,
+        "reactionGroups": [
+          {
+            "content": "THUMBS_UP",
+            "viewerHasReacted": false,
+            "reactors": {
+              "totalCount": 0
+            }
+          },
+          {
+            "content": "THUMBS_DOWN",
+            "viewerHasReacted": false,
+            "reactors": {
+              "totalCount": 0
+            }
+          },
+          {
+            "content": "LAUGH",
+            "viewerHasReacted": false,
+            "reactors": {
+              "totalCount": 0
+            }
+          },
+          {
+            "content": "HOORAY",
+            "viewerHasReacted": false,
+            "reactors": {
+              "totalCount": 0
+            }
+          },
+          {
+            "content": "CONFUSED",
+            "viewerHasReacted": false,
+            "reactors": {
+              "totalCount": 0
+            }
+          },
+          {
+            "content": "HEART",
+            "viewerHasReacted": false,
+            "reactors": {
+              "totalCount": 0
+            }
+          },
+          {
+            "content": "ROCKET",
+            "viewerHasReacted": false,
+            "reactors": {
+              "totalCount": 0
+            }
+          },
+          {
+            "content": "EYES",
+            "viewerHasReacted": false,
+            "reactors": {
+              "totalCount": 0
+            }
+          }
+        ],
         "headRepository": {
           "nameWithOwner": "afrase/nushi-gh-test"
         },
         "mergeable": "MERGEABLE",
-        "mergeStateStatus": "UNSTABLE",
-        "additions": 18,
-        "deletions": 0,
-        "changedFiles": 3,
-        "viewerCanUpdate": true,
+        "canBeRebased": true,
+        "viewerCanMergeAsAdmin": false,
+        "viewerCanEnableAutoMerge": false,
+        "viewerCanDisableAutoMerge": false,
+        "isMergeQueueEnabled": false,
+        "autoMergeRequest": null,
+        "mergeQueueEntry": null,
+        "mergeQueue": null,
+        "baseRef": {
+          "refUpdateRule": null
+        },
+        "repo": {
+          "mergeCommitAllowed": true,
+          "squashMergeAllowed": true,
+          "rebaseMergeAllowed": true,
+          "autoMergeAllowed": false,
+          "deleteBranchOnMerge": false,
+          "viewerDefaultMergeMethod": "SQUASH",
+          "viewerPermission": "ADMIN"
+        },
+        "commitCount": {
+          "totalCount": 3
+        },
+        "labels": {
+          "nodes": []
+        },
+        "assignees": {
+          "nodes": []
+        },
         "reviewRequests": {
-          "nodes": [
-            {
-              "asCodeOwner": true,
-              "requestedReviewer": {
-                "__typename": "Team",
-                "slug": "core"
-              }
-            }
-          ]
+          "nodes": []
         },
         "latestReviews": {
           "nodes": []
@@ -85,7 +170,134 @@
               },
               "authorAssociation": "OWNER",
               "body": "Thanks! The on-demand check fails because of the `FAIL` file.",
-              "createdAt": "2026-10-26T04:15:17Z"
+              "createdAt": "2026-10-26T04:15:17Z",
+              "reactionGroups": [
+                {
+                  "content": "THUMBS_UP",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "THUMBS_DOWN",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "LAUGH",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HOORAY",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "CONFUSED",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HEART",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "ROCKET",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "EYES",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                }
+              ]
+            },
+            {
+              "id": "IC_kwDOVXdqNc8AAAABffXwgQ",
+              "url": "https://github.com/afrase/nushi-gh-test/pull/1#issuecomment-6408237185",
+              "author": {
+                "login": "afrase",
+                "__typename": "User"
+              },
+              "authorAssociation": "OWNER",
+              "body": "A comment from Nushi's live test.",
+              "createdAt": "2026-10-26T04:28:04Z",
+              "reactionGroups": [
+                {
+                  "content": "THUMBS_UP",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "THUMBS_DOWN",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "LAUGH",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HOORAY",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "CONFUSED",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HEART",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "ROCKET",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "EYES",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                }
+              ]
             }
           ]
         },
@@ -103,8 +315,66 @@
               "state": "COMMENTED",
               "submittedAt": "2026-10-26T04:15:07Z",
               "commit": {
-                "oid": "c0ffee10c4b1a7d2e9f3a6b8c5d4e1f0a9b8c7d6"
-              }
+                "oid": "8a7f9e9087b0bc99c5ae61e28c1285905444e03a"
+              },
+              "reactionGroups": [
+                {
+                  "content": "THUMBS_UP",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "THUMBS_DOWN",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "LAUGH",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HOORAY",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "CONFUSED",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HEART",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "ROCKET",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "EYES",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                }
+              ]
             },
             {
               "id": "PRR_kwDOVXdqNc8AAAABUJxVdg",
@@ -116,7 +386,287 @@
               "authorAssociation": "OWNER",
               "body": "",
               "state": "COMMENTED",
-              "submittedAt": "2026-10-26T04:25:45Z"
+              "submittedAt": "2026-10-26T04:25:45Z",
+              "commit": {
+                "oid": "9d8657ba874b54bd560f223ebd5f06e039a3a639"
+              },
+              "reactionGroups": [
+                {
+                  "content": "THUMBS_UP",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "THUMBS_DOWN",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "LAUGH",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HOORAY",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "CONFUSED",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HEART",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "ROCKET",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "EYES",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                }
+              ]
+            },
+            {
+              "id": "PRR_kwDOVXdqNc8AAAABUJyOyA",
+              "url": "https://github.com/afrase/nushi-gh-test/pull/1#pullrequestreview-5647404744",
+              "author": {
+                "login": "afrase",
+                "__typename": "User"
+              },
+              "authorAssociation": "OWNER",
+              "body": "",
+              "state": "COMMENTED",
+              "submittedAt": "2026-10-26T04:27:58Z",
+              "commit": {
+                "oid": "465b7a4b3bc29650bbef832800f4ad10db363aa7"
+              },
+              "reactionGroups": [
+                {
+                  "content": "THUMBS_UP",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "THUMBS_DOWN",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "LAUGH",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HOORAY",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "CONFUSED",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HEART",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "ROCKET",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "EYES",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                }
+              ]
+            },
+            {
+              "id": "PRR_kwDOVXdqNc8AAAABUJyRmA",
+              "url": "https://github.com/afrase/nushi-gh-test/pull/1#pullrequestreview-5647405464",
+              "author": {
+                "login": "afrase",
+                "__typename": "User"
+              },
+              "authorAssociation": "OWNER",
+              "body": "A review from Nushi's live test.",
+              "state": "COMMENTED",
+              "submittedAt": "2026-10-26T04:28:06Z",
+              "commit": {
+                "oid": "465b7a4b3bc29650bbef832800f4ad10db363aa7"
+              },
+              "reactionGroups": [
+                {
+                  "content": "THUMBS_UP",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "THUMBS_DOWN",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "LAUGH",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HOORAY",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "CONFUSED",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HEART",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "ROCKET",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "EYES",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                }
+              ]
+            },
+            {
+              "id": "PRR_kwDOVXdqNc8AAAABUKZxaQ",
+              "url": "https://github.com/afrase/nushi-gh-test/pull/1#pullrequestreview-5648052585",
+              "author": {
+                "login": "afrase",
+                "__typename": "User"
+              },
+              "authorAssociation": "OWNER",
+              "body": "",
+              "state": "COMMENTED",
+              "submittedAt": "2026-10-26T06:14:38Z",
+              "commit": {
+                "oid": "465b7a4b3bc29650bbef832800f4ad10db363aa7"
+              },
+              "reactionGroups": [
+                {
+                  "content": "THUMBS_UP",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "THUMBS_DOWN",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "LAUGH",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HOORAY",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "CONFUSED",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "HEART",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "ROCKET",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                },
+                {
+                  "content": "EYES",
+                  "viewerHasReacted": false,
+                  "reactors": {
+                    "totalCount": 0
+                  }
+                }
+              ]
             }
           ]
         },
@@ -126,7 +676,7 @@
         "threads": {
           "pageInfo": {
             "hasNextPage": false,
-            "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0xMC0yNlQwNDoyNTo0NVrOsCKF9Q=="
+            "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0xMC0yNlQwNDoyODowNlrOsCKePg=="
           },
           "nodes": [
             {
@@ -154,7 +704,147 @@
                     },
                     "authorAssociation": "OWNER",
                     "body": "Should this check for overflow?",
-                    "createdAt": "2026-10-26T04:15:07Z"
+                    "createdAt": "2026-10-26T04:15:07Z",
+                    "pullRequestReview": {
+                      "id": "PRR_kwDOVXdqNc8AAAABUJtZbQ"
+                    },
+                    "reactionGroups": [
+                      {
+                        "content": "THUMBS_UP",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "THUMBS_DOWN",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "LAUGH",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HOORAY",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "CONFUSED",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HEART",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "ROCKET",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "EYES",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "PRRC_kwDOVXdqNc8AAAABBLUVRA",
+                    "url": "https://github.com/afrase/nushi-gh-test/pull/1#discussion_r4373943620",
+                    "author": {
+                      "login": "afrase",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "OWNER",
+                    "body": "A reply from Nushi's live test.",
+                    "createdAt": "2026-10-26T04:27:58Z",
+                    "pullRequestReview": {
+                      "id": "PRR_kwDOVXdqNc8AAAABUJyOyA"
+                    },
+                    "reactionGroups": [
+                      {
+                        "content": "THUMBS_UP",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "THUMBS_DOWN",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "LAUGH",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HOORAY",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "CONFUSED",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HEART",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "ROCKET",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "EYES",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "hunk": {
+                "nodes": [
+                  {
+                    "diffHunk": "@@ -0,0 +1,11 @@\n+package add\n+\n+// Sub returns a minus b.\n+func Sub(a, b int) int {\n+\treturn a - b"
                   }
                 ]
               }
@@ -184,7 +874,75 @@
                     },
                     "authorAssociation": "OWNER",
                     "body": "`Neg` could just be `-a`.",
-                    "createdAt": "2026-10-26T04:15:08Z"
+                    "createdAt": "2026-10-26T04:15:08Z",
+                    "pullRequestReview": {
+                      "id": "PRR_kwDOVXdqNc8AAAABUJtZbQ"
+                    },
+                    "reactionGroups": [
+                      {
+                        "content": "THUMBS_UP",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "THUMBS_DOWN",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "LAUGH",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HOORAY",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "CONFUSED",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HEART",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "ROCKET",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "EYES",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "hunk": {
+                "nodes": [
+                  {
+                    "diffHunk": "@@ -0,0 +1,11 @@\n+package add\n+\n+// Sub returns a minus b.\n+func Sub(a, b int) int {\n+\treturn a - b\n+}\n+\n+// Neg returns -a.\n+func Neg(a int) int {"
                   }
                 ]
               }
@@ -214,7 +972,75 @@
                     },
                     "authorAssociation": "OWNER",
                     "body": "A table test would cover more cases.",
-                    "createdAt": "2026-10-26T04:15:08Z"
+                    "createdAt": "2026-10-26T04:15:08Z",
+                    "pullRequestReview": {
+                      "id": "PRR_kwDOVXdqNc8AAAABUJtZbQ"
+                    },
+                    "reactionGroups": [
+                      {
+                        "content": "THUMBS_UP",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "THUMBS_DOWN",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "LAUGH",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HOORAY",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "CONFUSED",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HEART",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "ROCKET",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "EYES",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "hunk": {
+                "nodes": [
+                  {
+                    "diffHunk": "@@ -7,3 +7,9 @@ func TestAdd(t *testing.T) {\n \t\tt.Fatalf(\"Add(2, 3) = %d, want 5\", got)\n \t}\n }\n+\n+func TestSub(t *testing.T) {\n+\tif got := Sub(5, 3); got != 2 {\n+\t\tt.Fatalf(\"Sub(5, 3) = %d, want 2\", got)\n+\t}\n+}"
                   }
                 ]
               }
@@ -244,7 +1070,245 @@
                     },
                     "authorAssociation": "OWNER",
                     "body": "Is `-a` safe for the smallest int?",
-                    "createdAt": "2026-10-26T04:25:45Z"
+                    "createdAt": "2026-10-26T04:25:45Z",
+                    "pullRequestReview": {
+                      "id": "PRR_kwDOVXdqNc8AAAABUJxVdg"
+                    },
+                    "reactionGroups": [
+                      {
+                        "content": "THUMBS_UP",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "THUMBS_DOWN",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "LAUGH",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HOORAY",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "CONFUSED",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HEART",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "ROCKET",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "EYES",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "hunk": {
+                "nodes": [
+                  {
+                    "diffHunk": "@@ -0,0 +1,11 @@\n+package add\n+\n+// Sub returns a minus b.\n+func Sub(a, b int) int {\n+\treturn a - b\n+}\n+\n+// Neg returns -a.\n+func Neg(a int) int {\n+\treturn -a"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOVXdqNc6wIp4-",
+              "path": "sub.go",
+              "line": 4,
+              "startLine": 4,
+              "originalLine": 4,
+              "originalStartLine": null,
+              "diffSide": "RIGHT",
+              "subjectType": "LINE",
+              "isOutdated": false,
+              "isResolved": false,
+              "viewerCanReply": true,
+              "viewerCanResolve": true,
+              "viewerCanUnresolve": false,
+              "comments": {
+                "nodes": [
+                  {
+                    "id": "PRRC_kwDOVXdqNc8AAAABBLUXRA",
+                    "url": "https://github.com/afrase/nushi-gh-test/pull/1#discussion_r4373944132",
+                    "author": {
+                      "login": "afrase",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "OWNER",
+                    "body": "An inline comment from Nushi's live test.",
+                    "createdAt": "2026-10-26T04:28:06Z",
+                    "pullRequestReview": {
+                      "id": "PRR_kwDOVXdqNc8AAAABUJyRmA"
+                    },
+                    "reactionGroups": [
+                      {
+                        "content": "THUMBS_UP",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "THUMBS_DOWN",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "LAUGH",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HOORAY",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "CONFUSED",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HEART",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "ROCKET",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "EYES",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "PRRC_kwDOVXdqNc8AAAABBLyR3w",
+                    "url": "https://github.com/afrase/nushi-gh-test/pull/1#discussion_r4374434271",
+                    "author": {
+                      "login": "afrase",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "OWNER",
+                    "body": "A reply through Nushi's daemon (by-hand test).",
+                    "createdAt": "2026-10-26T06:14:38Z",
+                    "pullRequestReview": {
+                      "id": "PRR_kwDOVXdqNc8AAAABUKZxaQ"
+                    },
+                    "reactionGroups": [
+                      {
+                        "content": "THUMBS_UP",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "THUMBS_DOWN",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "LAUGH",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HOORAY",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "CONFUSED",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "HEART",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "ROCKET",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      },
+                      {
+                        "content": "EYES",
+                        "viewerHasReacted": false,
+                        "reactors": {
+                          "totalCount": 0
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "hunk": {
+                "nodes": [
+                  {
+                    "diffHunk": "@@ -0,0 +1,11 @@\n+package add\n+\n+// Sub returns a minus b.\n+func Sub(a, b int) int {"
                   }
                 ]
               }
@@ -260,15 +1324,15 @@
                     "nodes": [
                       {
                         "__typename": "CheckRun",
-                        "databaseId": 121397628255,
+                        "databaseId": 123251545984,
                         "name": "test",
-                        "status": "IN_PROGRESS",
-                        "conclusion": null,
-                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269032226/job/121397628255",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269032226/job/123251545984",
                         "title": null,
                         "summary": null,
                         "startedAt": "2026-10-26T04:25:53Z",
-                        "completedAt": null,
+                        "completedAt": "2026-10-26T04:26:19Z",
                         "isRequired": false,
                         "checkSuite": {
                           "app": {
@@ -286,15 +1350,64 @@
                       },
                       {
                         "__typename": "CheckRun",
-                        "databaseId": 121397621549,
+                        "databaseId": 138442789459,
                         "name": "test",
-                        "status": "IN_PROGRESS",
-                        "conclusion": null,
-                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269030252/job/121397621549",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/45393420835/job/138442789459",
+                        "title": null,
+                        "summary": null,
+                        "startedAt": "2026-11-24T12:25:53Z",
+                        "completedAt": "2026-11-24T12:26:08Z",
+                        "isRequired": false,
+                        "checkSuite": {
+                          "app": {
+                            "name": "GitHub Actions"
+                          },
+                          "workflowRun": {
+                            "workflow": {
+                              "name": "checks"
+                            }
+                          }
+                        },
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "title": "",
+                              "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-go@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+                              "annotationLevel": "WARNING",
+                              "location": {
+                                "start": {
+                                  "line": 2
+                                }
+                              }
+                            },
+                            {
+                              "path": ".github",
+                              "title": "",
+                              "message": "Restore cache failed: Dependencies file is not found in /home/runner/work/nushi-gh-test/nushi-gh-test. Supported file pattern: go.sum",
+                              "annotationLevel": "WARNING",
+                              "location": {
+                                "start": {
+                                  "line": 19
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "databaseId": 123251553881,
+                        "name": "test",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269030252/job/123251553881",
                         "title": null,
                         "summary": null,
                         "startedAt": "2026-10-26T04:25:51Z",
-                        "completedAt": null,
+                        "completedAt": "2026-10-26T04:26:15Z",
                         "isRequired": false,
                         "checkSuite": {
                           "app": {
@@ -312,15 +1425,15 @@
                       },
                       {
                         "__typename": "CheckRun",
-                        "databaseId": 121397621823,
+                        "databaseId": 123251544773,
                         "name": "on-demand",
                         "status": "COMPLETED",
                         "conclusion": "FAILURE",
-                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269030252/job/121397621823",
+                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269032226/job/123251544773",
                         "title": null,
                         "summary": null,
-                        "startedAt": "2026-10-26T04:25:51Z",
-                        "completedAt": "2026-10-26T04:25:54Z",
+                        "startedAt": "2026-10-29T03:49:13Z",
+                        "completedAt": "2026-10-29T03:49:17Z",
                         "isRequired": false,
                         "checkSuite": {
                           "app": {
@@ -342,9 +1455,6 @@
                               "location": {
                                 "start": {
                                   "line": 2
-                                },
-                                "end": {
-                                  "line": 2
                                 }
                               }
                             },
@@ -355,9 +1465,6 @@
                               "annotationLevel": "FAILURE",
                               "location": {
                                 "start": {
-                                  "line": 14
-                                },
-                                "end": {
                                   "line": 14
                                 }
                               }
@@ -370,9 +1477,6 @@
                               "location": {
                                 "start": {
                                   "line": 1
-                                },
-                                "end": {
-                                  "line": 1
                                 }
                               }
                             },
@@ -384,9 +1488,6 @@
                               "location": {
                                 "start": {
                                   "line": 1
-                                },
-                                "end": {
-                                  "line": 1
                                 }
                               }
                             }
@@ -395,15 +1496,15 @@
                       },
                       {
                         "__typename": "CheckRun",
-                        "databaseId": 121397628141,
+                        "databaseId": 138442788880,
                         "name": "on-demand",
-                        "status": "IN_PROGRESS",
-                        "conclusion": null,
-                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269032226/job/121397628141",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/45393420835/job/138442788880",
                         "title": null,
                         "summary": null,
-                        "startedAt": "2026-10-26T04:25:52Z",
-                        "completedAt": null,
+                        "startedAt": "2026-11-24T12:25:53Z",
+                        "completedAt": "2026-11-24T12:25:58Z",
                         "isRequired": false,
                         "checkSuite": {
                           "app": {
@@ -416,7 +1517,112 @@
                           }
                         },
                         "annotations": {
-                          "nodes": []
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "title": "",
+                              "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+                              "annotationLevel": "WARNING",
+                              "location": {
+                                "start": {
+                                  "line": 2
+                                }
+                              }
+                            },
+                            {
+                              "path": ".github",
+                              "title": "",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE",
+                              "location": {
+                                "start": {
+                                  "line": 14
+                                }
+                              }
+                            },
+                            {
+                              "path": "FAIL",
+                              "title": "",
+                              "message": "Remove FAIL to make this check pass",
+                              "annotationLevel": "FAILURE",
+                              "location": {
+                                "start": {
+                                  "line": 1
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "databaseId": 123251552580,
+                        "name": "on-demand",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269030252/job/123251552580",
+                        "title": null,
+                        "summary": null,
+                        "startedAt": "2026-10-29T03:49:14Z",
+                        "completedAt": "2026-10-29T03:49:19Z",
+                        "isRequired": false,
+                        "checkSuite": {
+                          "app": {
+                            "name": "GitHub Actions"
+                          },
+                          "workflowRun": {
+                            "workflow": {
+                              "name": "checks"
+                            }
+                          }
+                        },
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "title": "",
+                              "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+                              "annotationLevel": "WARNING",
+                              "location": {
+                                "start": {
+                                  "line": 2
+                                }
+                              }
+                            },
+                            {
+                              "path": ".github",
+                              "title": "",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE",
+                              "location": {
+                                "start": {
+                                  "line": 14
+                                }
+                              }
+                            },
+                            {
+                              "path": "FAIL",
+                              "title": "",
+                              "message": "Remove FAIL to make this check pass",
+                              "annotationLevel": "FAILURE",
+                              "location": {
+                                "start": {
+                                  "line": 1
+                                }
+                              }
+                            },
+                            {
+                              "path": ".github",
+                              "title": "",
+                              "message": "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748\"",
+                              "annotationLevel": "NOTICE",
+                              "location": {
+                                "start": {
+                                  "line": 1
+                                }
+                              }
+                            }
+                          ]
                         }
                       }
                     ]
@@ -425,9 +1631,6 @@
               }
             }
           ]
-        },
-        "commitCount": {
-          "totalCount": 2
         }
       }
     }

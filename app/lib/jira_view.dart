@@ -13,7 +13,6 @@ import 'package:nushi/jira_sources.dart';
 import 'package:nushi/jira_tasks.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/keys.dart';
-import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/pull_polls.dart';
 import 'package:nushi/settings.dart';
@@ -103,12 +102,9 @@ class _JiraViewState extends State<JiraView> {
   final _jqlText = TextEditingController(text: _jql);
 
   /// The selected row's, to keep it in view.
-  final GlobalKey _selectedRow = GlobalKey(debugLabel: 'jira selected');
-
-  /// The selected row's Start work menu, for ⌘⏎, and whose it is: the
-  /// row registers it as it's built, and a row not built (scrolled away)
-  /// can't, so it may be another's.
-  (IssueId, OpenMenu)? _start;
+  final GlobalKey<TaskRowState> _selectedRow = GlobalKey(
+    debugLabel: 'jira selected',
+  );
 
   JiraSite? get _siteNow {
     final sites = _sites ?? const <JiraSite>[];
@@ -428,12 +424,7 @@ class _JiraViewState extends State<JiraView> {
   void _startWork() => revealRow(
     _selectedRow,
     down: true,
-    then: () {
-      if (_start case (final id, final open)
-          when id == _picked && _selectedRow.currentContext != null) {
-        open();
-      }
-    },
+    then: () => _selectedRow.currentState?.openStart(),
   );
 
   void _open(Task task) {
@@ -705,7 +696,6 @@ class _JiraViewState extends State<JiraView> {
                     },
                     onMoved: _load,
                     selectedRow: _selectedRow,
-                    startMenu: (id, open) => _start = (id, open),
                   ),
           ),
         ),

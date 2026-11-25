@@ -12,6 +12,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/remote.dart';
+import 'package:nushi/status_spend.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -19,9 +20,9 @@ import 'package:nushi/widgets.dart';
 /// milliseconds of the daemon's time.
 const _every = Duration(seconds: 5);
 
-/// How many agents work, are awake and sleep, and the memory Nushi takes
-/// (agents, daemon, app), which opens a list of the awake chats, each with
-/// Sleep: the card at the sidebar's foot (ADR 0111; a bar along the
+/// Today's spend ([TodaySpend]) and the memory Nushi takes (agents,
+/// daemon, app), which opens a list of the awake chats, each with Sleep:
+/// the card at the sidebar's foot (ADR 0111; a bar along the
 /// window's bottom until then). It hides with the sidebar: a line under
 /// the main pane in its place changed the pane's height each time the
 /// sidebar came or went.
@@ -32,10 +33,6 @@ class StatusBar extends StatefulWidget {
 
   /// The card's height.
   static const cardHeight = 34.0;
-
-  /// The narrowest it says "working" after the first count: the card of
-  /// a sidebar about 250 wide, with the remote's mark and a memory in GB.
-  static const wordFrom = 212.0;
 
   @override
   State<StatusBar> createState() => _StatusBarState();
@@ -49,6 +46,8 @@ class _StatusBarState extends State<StatusBar> {
   /// and one that comes shows what the last read rather than nothing.
   static final _last = Expando<GetMemoryResponse>();
   late GetMemoryResponse? _memory = _last[widget.daemon];
+
+  late final _spend = TodaySpend(widget.daemon);
 
   @override
   void initState() {
@@ -66,6 +65,7 @@ class _StatusBarState extends State<StatusBar> {
   void dispose() {
     _timer.cancel();
     _lifecycle.dispose();
+    _spend.dispose();
     super.dispose();
   }
 
@@ -104,116 +104,65 @@ class _StatusBarState extends State<StatusBar> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final small = theme
-        .ui(t.textSecondary, size: 12)
+        .ui(t.textMuted, size: 12)
         .copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
-    // The chat list is the daemon's; each chat's status is its look's.
-    return ListenableBuilder(
-      listenable: widget.daemon,
-      builder: (context, _) => ListenableBuilder(
-        listenable: Listenable.merge([
-          for (final c in widget.daemon.chats.values) c.look,
-        ]),
-        builder: (context, _) {
-          final live = widget.daemon.chats.values.where((c) => !c.archived);
-          // As each chat's dot says (a turn, a workflow or the agent's
-          // own work, ADR 0127; not one waiting on the user).
-          final working = live.where((c) => c.phase == .working).length;
-          // Asleep counts what runs no agent, unseen or not.
-          final asleep = live.where((c) => c.asleep).length;
-          final expired = live.where((c) => c.phase == .expired).length;
-          final failed = live.where((c) => c.phase == .failed).length;
-          final background = live.where((c) => c.phase == .background);
-          final inBackground = background.isEmpty
-              ? ''
-              : ' (${background.length} working in the background)';
-          final awake = live.length - asleep - failed - expired;
-          return Container(
-            height: StatusBar.cardHeight,
-            padding: const EdgeInsets.only(left: 12, right: 6),
-            decoration: BoxDecoration(
-              color: t.raised,
-              borderRadius: BorderRadius.circular(NushiTheme.control),
-            ),
-            // The first count says what it is and the last, asleep, always
-            // does; a sidebar dragged narrow keeps the first's number
-            // alone, which the tooltip names.
-            child: LayoutBuilder(
-              builder: (context, box) => Row(
-                children: [
-                  // What the rest leaves: scaled down rather than cut,
-                  // should a narrow sidebar's card not hold them.
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: tooltip(
-                          context,
-                          '$working working, $awake awake$inBackground, '
-                          '$asleep asleep'
-                          "${failed > 0 ? ", $failed couldn't start" : ''}"
-                          "${expired > 0 ? ', $expired expired' : ''}",
-                          Row(
-                            spacing: 5,
-                            children: [
-                              _Dot(t.running, filled: true),
-                              Text(
-                                box.maxWidth >= StatusBar.wordFrom
-                                    ? '$working working'
-                                    : '$working',
-                                style: small,
-                              ),
-                              const SizedBox(width: 6),
-                              _Dot(t.idle),
-                              Text('$awake', style: small),
-                              const SizedBox(width: 6),
-                              // Asleep has no mark, as in the list: its
-                              // count in words, muted, narrow or not (a
-                              // number alone would read as the awake's).
-                              Text(
-                                '$asleep asleep',
-                                style: small.copyWith(color: t.textMuted),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const RemoteMark(),
-                  if (_memory case final m?)
-                    _MemoryButton(
-                      m,
-                      widget.daemon,
-                      onOpen: _read,
-                      style: small.copyWith(color: t.textMuted),
-                    ),
-                ],
+    return Container(
+      height: StatusBar.cardHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: t.raised,
+        borderRadius: BorderRadius.circular(NushiTheme.control),
+      ),
+      // Two quiet figures, each with what says what it is: today's spend
+      // at the start, the memory at the end, the remote's mark before it.
+      // Without a spend the start is empty: the memory and the mark stay
+      // where they are, so nothing moves as a spend comes or goes. A
+      // narrow card scales the spend down rather than cutting it.
+      child: ValueListenableBuilder(
+        valueListenable: _spend,
+        builder: (context, spent, _) {
+          // Its list names the chats and offers Sleep as each one's look
+          // says: it follows the daemon's list and each chat's look.
+          final memory = switch (_memory) {
+            final m? => ListenableBuilder(
+              listenable: widget.daemon,
+              builder: (context, _) => ListenableBuilder(
+                listenable: Listenable.merge([
+                  for (final c in widget.daemon.chats.values) c.look,
+                ]),
+                builder: (context, _) => _MemoryButton(
+                  m,
+                  widget.daemon,
+                  onOpen: _read,
+                  style: small,
+                ),
               ),
             ),
+            null => null,
+          };
+          final shown = widget.daemon.daemonApi >= usageApi ? spent : null;
+          return Row(
+            children: [
+              Expanded(
+                child: switch (shown) {
+                  final s? => Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: SpendButton(s, widget.daemon, style: small),
+                    ),
+                  ),
+                  null => const SizedBox.shrink(),
+                },
+              ),
+              const RemoteMark(),
+              ?memory,
+            ],
           );
         },
       ),
     );
   }
-}
-
-class _Dot extends StatelessWidget {
-  const new(this.color, {this.filled = false});
-
-  final Color color;
-  final bool filled;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 8,
-    height: 8,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: filled ? color : null,
-      border: filled ? null : Border.all(color: color, width: 1.5),
-    ),
-  );
 }
 
 /// The whole of [m]: the agents', Nushi's and the rest.

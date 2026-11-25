@@ -22,10 +22,10 @@ func callRunning(status string) bool { return status == "pending" || status == "
 // its end when its status first becomes one. A replayed call gets no
 // times: when it ran isn't known.
 func (c *chat) timeCallLocked(it *model.Item, was string) {
-	if c.muted || c.reopeningLocked() {
+	if c.muted || c.sessionOpLocked() {
 		return
 	}
-	now := c.svc.timing.now()
+	now := time.Now()
 	if it.Started.IsZero() && was == "" && c.asking[it.ID] == 0 {
 		it.Started = now
 	}
@@ -60,7 +60,7 @@ func (c *chat) permittedLocked(callID string, allowed bool) {
 	if !allowed || it == nil || it.Kind != model.ToolCall || callEnded(it.Status) {
 		return
 	}
-	it.Started, it.Ended = c.svc.timing.now(), time.Time{}
+	it.Started, it.Ended = time.Now(), time.Time{}
 	c.publishLocked(*it)
 }
 
@@ -69,7 +69,7 @@ func (c *chat) permittedLocked(callID string, allowed bool) {
 // agent's, but they no longer count as running; an end of their own
 // later replaces this one. It says whether it ended any.
 func (c *chat) endCallsLocked() bool {
-	now := c.svc.timing.now()
+	now := time.Now()
 	ended := false
 	for i := range c.items {
 		if it := &c.items[i]; it.Kind == model.ToolCall && callRunning(it.Status) && !it.Started.IsZero() && it.Ended.IsZero() {

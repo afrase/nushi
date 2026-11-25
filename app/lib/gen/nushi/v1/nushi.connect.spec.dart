@@ -221,7 +221,8 @@ abstract final class NushiService {
   );
 
   /// Takes a message out of the chat's queue before the agent gets it, and
-  /// returns it. Refused once the agent has it.
+  /// returns it. Refused once the agent has it. With send_now it sends the
+  /// message at once instead, as SendPrompt's now does, and returns none.
   static const unqueue = connect.Spec(
     '/$name/Unqueue',
     connect.StreamType.unary,
@@ -433,6 +434,23 @@ abstract final class NushiService {
     nushiv1nushi.ReopenChatResponse.new,
   );
 
+  /// Wakes a sleeping chat (status.asleep: put to sleep, by the user or
+  /// after idling, or left unopened since the daemon started) as a message
+  /// would before it is sent, and sends nothing: it answers once the reopen
+  /// (ACP session/load) has begun, and the chat's status shows the rest, busy
+  /// with no turn while it opens, then awake, or reopen_failed with its
+  /// notice. A chat that isn't asleep (awake, busy, reopening, or whose
+  /// reopen failed: ReopenChat is Try again) is left as it is; an archived
+  /// one is refused, and once a restart into a newer build is due a wake is
+  /// refused as SendPrompt is (Unavailable, reason restarting: the app asks
+  /// the new daemon). (API 146)
+  static const wakeChat = connect.Spec(
+    '/$name/WakeChat',
+    connect.StreamType.unary,
+    nushiv1nushi.WakeChatRequest.new,
+    nushiv1nushi.WakeChatResponse.new,
+  );
+
   /// The daemon's settings, and changing them.
   /// Says how much memory Nushi takes, as footprint (Activity Monitor's
   /// Memory), in bytes: a few milliseconds' work.
@@ -496,7 +514,8 @@ abstract final class NushiService {
     nushiv1nushi.DeleteChatResponse.new,
   );
 
-  /// Takes chats off ListChatsResponse.removed (the app has said so).
+  /// Takes chats off ListChatsResponse.removed (the app has said so). From
+  /// API 151 there are none, and it does nothing.
   static const dismissRemovedChats = connect.Spec(
     '/$name/DismissRemovedChats',
     connect.StreamType.unary,
@@ -692,8 +711,9 @@ abstract final class NushiService {
   );
 
   /// Asks the chat's agent, unseen, what fills its context (Claude's
-  /// /context), in a throwaway fork of its session, while the chat is idle.
-  /// Refused when the agent can't fork.
+  /// get_context_usage, Ante's and Pi's own ask), while the chat is idle:
+  /// no turn and no fork, so a side chat or a new chat can be asked too.
+  /// Refused when the agent can't say, the chat is busy or no agent runs.
   static const getContextUsage = connect.Spec(
     '/$name/GetContextUsage',
     connect.StreamType.unary,

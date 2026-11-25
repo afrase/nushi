@@ -121,7 +121,12 @@ class _PinnedPlanState extends State<PinnedPlan> {
   Widget build(BuildContext context) {
     final shown = _shown;
     final touch = TouchTargets.of(context);
-    return _Fold(
+    // It grows and folds with its bottom edge where it is: the card
+    // stands on the composer, and its steps on the summary line. Only the
+    // fold eases its height, so a change inside shows at once rather than
+    // trailing the steps' own.
+    return BarSlide(
+      curve: Motion.size,
       child: shown == null
           ? null
           : touch
@@ -185,7 +190,8 @@ class _Card extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Fold(
+            BarSlide(
+              curve: Motion.size,
               // The steps scroll above a hairline, the line under it.
               child: open
                   ? Column(
@@ -378,37 +384,4 @@ class _StepsState extends State<_Steps> {
       ),
     );
   }
-}
-
-/// [child] growing in from no height over [Motion.standard], fading in
-/// over the first of it, and folding away once it's null, as the
-/// composer's lines do (`GrowLine`), but with its bottom edge where it
-/// is: the card stands on the composer and its steps on the summary line,
-/// so what grows or folds is above them. Its height eases only so: a
-/// change inside it shows at once, rather than an easing that would trail
-/// the steps' own. With Reduce Motion it comes and goes at once.
-class _Fold extends StatelessWidget {
-  const new({required this.child});
-
-  final Widget? child;
-
-  @override
-  Widget build(BuildContext context) => Presence(
-    enter: Motion.standard,
-    curve: Motion.size,
-    builder: (context, run, last) {
-      final fade = run.status == AnimationStatus.reverse
-          ? run
-          : run.drive(CurveTween(curve: const Interval(0, 0.6)));
-      return SizeTransition(
-        sizeFactor: run,
-        alignment: Alignment.bottomCenter,
-        child: FadeTransition(
-          opacity: fade,
-          child: SizedBox(width: double.infinity, child: last),
-        ),
-      );
-    },
-    child: child,
-  );
 }

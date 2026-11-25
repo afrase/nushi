@@ -26,17 +26,19 @@ var (
 	_ chats.SubagentOutput   = claude.Harness{}
 	_ chats.SubagentMessages = claude.Harness{}
 	_ chats.BackgroundTasks  = claude.Harness{}
-	_ chats.ContextCommander = claude.Harness{}
+	_ chats.ContextAsker     = claude.Harness{}
+	_ chats.TaskStopper      = claude.Harness{}
 	_ chats.TerminalCommands = claude.Harness{}
 	_ chats.ReadOnly         = claude.Harness{}
 	_ chats.GoneReader       = claude.Harness{}
 	_ chats.TitleMaker       = claude.Harness{}
 	_ chats.UsageReader      = claude.Harness{}
+	_ chats.SentReader       = claude.Harness{}
+	_ chats.WorkReader       = claude.Harness{}
 
 	_ chats.OpenFinder      = claudehistory.Local{}
 	_ chats.ForkFinder      = claudehistory.Local{}
 	_ chats.HistoryChecker  = claudehistory.Local{}
-	_ chats.MessageDater    = claudehistory.Local{}
 	_ chats.WorktreeFinder  = claudehistory.Local{}
 	_ chats.SessionSearcher = claudehistory.Local{}
 	_ chats.WorkflowReader  = claudehistory.Local{}

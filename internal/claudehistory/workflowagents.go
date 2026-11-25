@@ -13,18 +13,19 @@ import (
 )
 
 // WorkflowAgents lists the agents of the run w names, in the order they
-// started: the snapshot's rows once the run ended, the journal's while it
-// runs (as last read by ReadWorkflow, or now when nothing was).
+// started: the snapshot's rows once the run ended, else the journal's (as
+// last read by ReadWorkflow, or now when nothing was), those it has
+// running stopped with the run once w says it ended.
 func (l Local) WorkflowAgents(sid, folder string, w model.Workflow) ([]model.WorkflowAgent, error) {
 	var agents []model.WorkflowAgent
 	err := l.readRun(sid, folder, w, func(r *run, _ *os.Root) error {
-		agents = r.agents()
+		agents = r.agents(w.State.Ended())
 		return nil
 	})
 	return agents, err
 }
 
-func (r *run) agents() []model.WorkflowAgent {
+func (r *run) agents(ended bool) []model.WorkflowAgent {
 	var out []model.WorkflowAgent
 	if s := r.snap; s != nil && len(s.Agents) > 0 {
 		for _, a := range s.Agents {
@@ -40,7 +41,7 @@ func (r *run) agents() []model.WorkflowAgent {
 	}
 	for _, row := range r.j.rows {
 		state := model.RunState(row.State)
-		if (r.snap != nil || r.noted() != nil) && state == model.RunRunning {
+		if (r.snap != nil || ended) && state == model.RunRunning {
 			state = model.RunStopped // the run ended without it
 		}
 		wa := model.WorkflowAgent{ID: row.AgentID, Label: label(row.Label, row.AgentID), Phase: label(row.Phase, ""), State: state}
@@ -61,7 +62,7 @@ func (l Local) WorkflowAgentItems(sid, folder string, w model.Workflow, id strin
 	earlier := 0
 	err := l.readRun(sid, folder, w, func(r *run, root *os.Root) error {
 		listed := false
-		for _, a := range r.agents() {
+		for _, a := range r.agents(false) {
 			listed = listed || a.ID == id && id != ""
 		}
 		if !listed || !agentID.MatchString(id) || root == nil {

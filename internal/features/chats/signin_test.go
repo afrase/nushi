@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -184,7 +185,7 @@ func TestWakeWantsSignIn(t *testing.T) {
 	f.finish <- nil
 	testcheck.NoErr(t, svc.SignIn(t.Context(), "fake", "chat-gpt"))
 	testcheck.NoErr(t, svc.Reopen(c.id))
-	eventually(t, c, func() bool { return c.agent != nil && len(c.queue) == 0 && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && len(c.queue) == 0 && !c.busyLocked() })
 	f.fakeAgent.mu.Lock()
 	prompts := slices.Clone(f.prompts)
 	f.fakeAgent.mu.Unlock()
@@ -228,22 +229,27 @@ func TestSignIn(t *testing.T) {
 	}
 }
 
-// A sign-in left waiting in the browser past SignInTimeout ends, saying
-// so, and its agent, and with it the login, is stopped.
+// A sign-in left waiting in the browser past signInTimeout ends, saying
+// so, and its agent, and with it the login, is stopped. In a bubble: its
+// clock moves only once the sign-in waits for the user.
 func TestSignInTimesOut(t *testing.T) {
-	old := SignInTimeout
-	SignInTimeout = 0 // already passed as it begins: no clock to race
-	t.Cleanup(func() { SignInTimeout = old })
-	f := newSignInFake()
-	f.methods = codexMethods(t)
-	svc := newService(t, []Kind{f.kindFor()}, Options{})
-	err := svc.SignIn(t.Context(), "fake", "chat-gpt")
-	if err == nil || err.Error() != "Fake didn't finish signing in within 0s: context deadline exceeded" {
-		t.Errorf("a sign-in that ran out of time = %v", err)
-	}
-	<-f.closed
-	if got := minutes(10 * time.Minute); got != "10 minutes" {
-		t.Errorf("minutes(10m) = %q", got)
+	synctest.Test(t, func(t *testing.T) {
+		f := newSignInFake()
+		f.methods = codexMethods(t)
+		svc := newService(t, []Kind{f.kindFor()}, Options{})
+		begun := time.Now()
+		err := svc.SignIn(t.Context(), "fake", "chat-gpt")
+		if err == nil || err.Error() != "Fake didn't finish signing in within 10 minutes: context deadline exceeded" {
+			t.Errorf("a sign-in that ran out of time = %v", err)
+		}
+		if took := time.Since(begun); took != signInTimeout {
+			t.Errorf("it ended after %s", took)
+		}
+		<-f.closed
+		f.quit() // a kill ends a real process; the fake's ends here, so nothing in the bubble waits on it
+	})
+	if got := minutes(time.Minute); got != "1 minute" {
+		t.Errorf("minutes(1m) = %q", got)
 	}
 }
 

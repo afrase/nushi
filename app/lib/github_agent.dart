@@ -109,7 +109,8 @@ Future<int> putReplies(
 }
 
 /// Fix checks' cards: one per failed check (five at most), each with the
-/// failing part of its job's log.
+/// failing part of its job's log. A cancelled check isn't one: nothing in
+/// it failed for the agent to fix, it wants running again.
 Future<List<Reply>> checkReplies(Daemon daemon, GitHubRef ref, GitHubPull p) =>
     Future.wait([
       for (final c in p.checks.where((c) => c.kind == CheckKind.failed).take(5))

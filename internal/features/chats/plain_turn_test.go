@@ -13,8 +13,8 @@ import (
 
 // These tests run the plain ACP agent's path (a model.HarnessInfo: no
 // Transcript), where updates.go's usage_update branches from Claude's: any
-// usage ends the agent's own turn, and no TurnDone decides a turn's end
-// or a steered message's, so a turn of Nushi's ends at its prompt's answer.
+// usage ends the agent's own turn, and a turn of Nushi's ends at its
+// prompt's answer, as Claude's does.
 
 // plainChat is a chat of an agent with no Transcript, whose events a
 // follower keeps; steerable, the agent takes messages into a running turn.
@@ -97,7 +97,7 @@ func TestAPlainAgentsUsageDoesntEndATurn(t *testing.T) {
 	prompted(t, c, agent, 1)
 	send(c, chunk("m1", "working"), plainUsage(3))
 	c.mu.Lock()
-	busy, own := c.busy, c.ownTurn
+	busy, own := c.busyLocked(), c.ownTurn
 	c.mu.Unlock()
 	if !busy || own {
 		t.Fatalf("after a usage mid-turn: busy %v, own turn %v", busy, own)
@@ -122,15 +122,15 @@ func TestAPlainAgentsQueueGoesAtEachAnswer(t *testing.T) {
 	prompted(t, c, agent, 1)
 	send(c, plainUsage(3))
 	c.mu.Lock()
-	busy, queued := c.busy, len(c.queue)
+	busy, queued := c.busyLocked(), len(c.queue)
 	c.mu.Unlock()
 	if prompts, _ := agent.texts(); !busy || queued != 2 || !slices.Equal(prompts, []string{"one"}) {
 		t.Fatalf("after a usage mid-turn: busy %v, %d queued, prompts %q", busy, queued, prompts)
 	}
 	agent.release()
-	eventually(t, c, func() bool { return c.busy && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return c.busyLocked() && len(c.queue) == 1 })
 	agent.release()
-	eventually(t, c, func() bool { return c.busy && len(c.queue) == 0 })
+	eventually(t, c, func() bool { return c.busyLocked() && len(c.queue) == 0 })
 	agent.release()
 	idle(t, c)
 	if prompts, steered := agent.texts(); !slices.Equal(prompts, []string{"one", "two", "three"}) || len(steered) != 0 {
@@ -142,9 +142,8 @@ func TestAPlainAgentsQueueGoesAtEachAnswer(t *testing.T) {
 }
 
 // A steerable agent takes the queued message at its next chance, and the
-// turn still ends at the prompt's answer, never at a usage_update (no
-// TurnDone counts the steered message's result); the next turn starts
-// afresh.
+// turn still ends at the prompt's answer, never at a usage_update; the
+// next turn starts afresh.
 func TestAPlainAgentsSteeredTurnEndsAtTheAnswer(t *testing.T) {
 	svc, agent, c, f := plainChat(t, true)
 	agent.gate = make(chan struct{})
@@ -157,7 +156,7 @@ func TestAPlainAgentsSteeredTurnEndsAtTheAnswer(t *testing.T) {
 	eventually(t, c, func() bool { return !c.steering && len(c.queue) == 0 })
 	send(c, plainUsage(3), plainUsage(4))
 	c.mu.Lock()
-	busy := c.busy
+	busy := c.busyLocked()
 	c.mu.Unlock()
 	if !busy {
 		t.Fatal("a usage after the steered message ended the turn")

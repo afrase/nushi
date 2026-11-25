@@ -19,22 +19,24 @@ fragment Thread on PullRequestReviewThread {
   hunk: comments(first: 1) { nodes { diffHunk } }
 }`
 
-const pullQuery = `query PullRequest($owner: String!, $name: String!, $number: Int!) {
+// pullQuery's head is the items' fragment without the checks' counts:
+// Pull counts its own (Runs).
+var pullQuery = withItems(`query PullRequest($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
-      ...PullRow
-      createdAt body viewerCanUpdate authorAssociation baseRefName headRefName baseRefOid headRefOid isCrossRepository
-      ` + reactionFields + `
+      __typename ...ItemPull
+      body viewerCanUpdate authorAssociation baseRefOid headRefOid isCrossRepository
+      `+reactionFields+`
       headRepository { nameWithOwner }
-      mergeable mergeStateStatus additions deletions changedFiles
-      ` + mergeFields + `
+      mergeable
+      `+mergeFields+`
       commitCount: commits { totalCount }
       labels(first: 20) { nodes { name color } }
       assignees(first: 10) { nodes { login } }
       reviewRequests(first: 30) { nodes { asCodeOwner requestedReviewer { __typename ... on User { login } ... on Bot { login } ... on Mannequin { login } ... on Team { slug } } } }
       latestReviews(first: 30) { nodes { author { login } state } }
-      comments(last: 100) { nodes ` + saidFields + ` }
-      reviews(last: 100) { nodes { id url author { login __typename } authorAssociation body state submittedAt commit { oid } ` + reactionFields + ` } }
+      comments(last: 100) { nodes `+saidFields+` }
+      reviews(last: 100) { nodes { id url author { login __typename } authorAssociation body state submittedAt commit { oid } `+reactionFields+` } }
       pending: reviews(first: 1, states: PENDING) { nodes { id comments { totalCount } } }
       threads: reviewThreads(first: 100) { pageInfo { hasNextPage endCursor } nodes { ...Thread } }
       last: commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes {
@@ -47,7 +49,7 @@ const pullQuery = `query PullRequest($owner: String!, $name: String!, $number: I
       } } } } } }
     }
   }
-}` + pullRow + threadFields
+}`+threadFields, sized)
 
 const threadsQuery = `query Threads($id: ID!, $after: String!) {
   node(id: $id) { ... on PullRequest {
@@ -242,13 +244,10 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 	var data struct {
 		Repository *struct {
 			PullRequest *struct {
-				row
-				CreatedAt         time.Time       `json:"createdAt"`
+				itemNode
 				Body              string          `json:"body"`
 				ViewerCanUpdate   bool            `json:"viewerCanUpdate"`
 				AuthorAssociation string          `json:"authorAssociation"`
-				BaseRefName       string          `json:"baseRefName"`
-				HeadRefName       string          `json:"headRefName"`
 				BaseRefOid        string          `json:"baseRefOid"`
 				HeadRefOid        string          `json:"headRefOid"`
 				IsCrossRepository bool            `json:"isCrossRepository"`
@@ -256,11 +255,7 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 				HeadRepository    *struct {
 					NameWithOwner string `json:"nameWithOwner"`
 				} `json:"headRepository"`
-				Mergeable        string `json:"mergeable"`
-				MergeStateStatus string `json:"mergeStateStatus"`
-				Additions        int    `json:"additions"`
-				Deletions        int    `json:"deletions"`
-				ChangedFiles     int    `json:"changedFiles"`
+				Mergeable string `json:"mergeable"`
 				mergeNode
 				CommitCount struct {
 					TotalCount int `json:"totalCount"`
@@ -318,13 +313,11 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 		return model.GitHubPull{}, ErrNotFound
 	}
 	p := data.Repository.PullRequest
-	out := model.GitHubPull{GitHubItem: p.item(c.Host), Body: Markdown(p.Body), BodySource: Source(p.Body),
+	out := model.GitHubPull{GitHubItem: p.item(c.Host, p.Repository.NameWithOwner), Body: Markdown(p.Body), BodySource: Source(p.Body),
 		CanEdit: p.ViewerCanUpdate, Association: p.AuthorAssociation,
-		Base: p.BaseRefName, Head: p.HeadRefName, BaseOID: p.BaseRefOid, HeadOID: p.HeadRefOid, CrossRepo: p.IsCrossRepository,
-		Mergeable: strings.ToLower(p.Mergeable), MergeState: strings.ToLower(p.MergeStateStatus), Additions: p.Additions,
-		Deletions: p.Deletions, ChangedFiles: p.ChangedFiles, Commits: p.CommitCount.TotalCount, Merge: p.merge(),
+		BaseOID: p.BaseRefOid, HeadOID: p.HeadRefOid, CrossRepo: p.IsCrossRepository,
+		Mergeable: strings.ToLower(p.Mergeable), Commits: p.CommitCount.TotalCount, Merge: p.merge(),
 		Labels: p.Labels.labels(), Reactions: reactions(p.ReactionGroups)}
-	out.Created = p.CreatedAt
 	for _, a := range p.Assignees.Nodes {
 		out.Assignees = append(out.Assignees, a.Login)
 	}
@@ -370,19 +363,22 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 		}
 		out.Runs = withoutSuperseded(out.Runs)
 	}
+	for _, r := range out.Runs { // the first 100, as the tab lists them
+		countCheck(&out.CheckCounts, stateCount{State: r.State, Count: 1})
+	}
 	return out, nil
 }
 
-const issueQuery = `query Issue($owner: String!, $name: String!, $number: Int!) {
+var issueQuery = withItems(`query Issue($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     issue(number: $number) {
-      __typename ...IssueRow body authorAssociation
+      __typename ...ItemIssue body authorAssociation
       labels(first: 20) { nodes { name } }
       assignees(first: 10) { nodes { login } }
-      comments(last: 100) { nodes ` + saidFields + ` }
+      comments(last: 100) { nodes `+saidFields+` }
     }
   }
-}` + issueRow
+}`, rowOnly)
 
 // Issue is an issue whole: its text, labels, assignees and the latest
 // 100 comments.
@@ -394,7 +390,7 @@ func (c *Client) Issue(ctx context.Context, repo string, number int) (model.GitH
 	var data struct {
 		Repository *struct {
 			Issue *struct {
-				row
+				itemNode
 				Body              string `json:"body"`
 				AuthorAssociation string `json:"authorAssociation"`
 				Labels            labels `json:"labels"`
@@ -414,7 +410,7 @@ func (c *Client) Issue(ctx context.Context, repo string, number int) (model.GitH
 		return model.GitHubIssue{}, ErrNotFound
 	}
 	is := data.Repository.Issue
-	out := model.GitHubIssue{GitHubItem: is.item(c.Host), Body: Markdown(is.Body), Association: is.AuthorAssociation}
+	out := model.GitHubIssue{GitHubItem: is.item(c.Host, is.Repository.NameWithOwner), Body: Markdown(is.Body), Association: is.AuthorAssociation}
 	for _, l := range is.Labels.labels() {
 		out.Labels = append(out.Labels, l.Name)
 	}

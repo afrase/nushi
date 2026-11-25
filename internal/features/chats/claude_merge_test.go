@@ -18,8 +18,16 @@ import (
 // A chat put to sleep and woken shows Nushi's copy of its transcript
 // merged with the agent's replay (session/load, ADR 0047). The Go
 // agent's replay must merge with no divider, the copy having been made
-// live with the adapter (a chat that changed agent between sleeps) or
-// with the Go agent: its ids and texts are the ones Nushi saw live.
+// live with the recording's agent or with the Go agent: its ids and
+// texts are the ones Nushi saw live.
+//
+// The adapter's arm, a copy made live with claude-agent-acp, the Node
+// adapter Claude ran through until 2026-11-04 (a chat that changed agent
+// between sleeps), is testdata/claude-adapter-load: the load scenario as
+// recorded through that adapter, frozen so a chat last run on it still
+// reopens cleanly while the parity scenarios are recorded again through
+// the Go agent. It goes when the owner ends that support (not decided
+// yet).
 //
 // A scenario that loads a session is merged at its load: the copy is the
 // chat until then, the replay what the load sent. Any other recorded
@@ -27,26 +35,30 @@ import (
 // first session after the recording, from that history, and is merged
 // with the whole run's chat.
 func TestClaudeMerge(t *testing.T) {
-	for _, dir := range scenarios(t) {
+	for _, dir := range append(scenarios(t), adapterLoad) {
 		t.Run(filepath.Base(dir), func(t *testing.T) {
 			skipUnrecorded(t, dir)
-			node, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
+			rec, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
+			recorded := "the recording's"
+			if dir == adapterLoad {
+				recorded = "the adapter's"
+			}
 			var loads []string
-			for _, e := range node {
+			for _, e := range rec {
 				if e.method == "session/load" && !e.done && !slices.Contains(loads, e.session) {
 					loads = append(loads, e.session)
 				}
 			}
 			var more []acpLine
 			if len(loads) == 0 {
-				sid, load := loadAfter(t, dir, node, sent)
+				sid, load := loadAfter(t, dir, rec, sent)
 				loads, more = []string{sid}, load
 			}
 			goRun := runGoAgent(t, dir, sent, more)
-			copies := map[string][]event{"the adapter's": node, "the Go agent's": goRun}
+			copies := map[string][]event{recorded: rec, "the Go agent's": goRun}
 			replays := map[string][]event{"the Go agent's": goRun}
 			if more == nil {
-				replays["the adapter's"] = node
+				replays[recorded] = rec
 			}
 			for _, sid := range loads {
 				for cname, copied := range copies {
@@ -74,17 +86,21 @@ func TestClaudeMerge(t *testing.T) {
 	}
 }
 
+// adapterLoad is the load scenario as recorded through claude-agent-acp,
+// frozen (TestClaudeMerge, TestAnAdapterChatResumesOnTheGoAgent).
+var adapterLoad = filepath.Join("testdata", "claude-adapter-load")
+
 // loadAfter is the session a scenario without a load of its own has
 // loaded after its recording, the first it opened, and the lines that
 // load it: a session/load and its answer. It skips a scenario without
 // claude's history at its end, or that ends the session.
-func loadAfter(t *testing.T, dir string, node []event, sent []acpLine) (string, []acpLine) {
+func loadAfter(t *testing.T, dir string, rec []event, sent []acpLine) (string, []acpLine) {
 	t.Helper()
 	if _, err := os.Stat(filepath.Join(dir, "history", "end")); err != nil {
 		t.Skip("no load, and no history of claude's to load from")
 	}
 	var sid string
-	for _, e := range node {
+	for _, e := range rec {
 		if e.method == "session/prompt" {
 			sid = e.session
 			break
@@ -95,8 +111,8 @@ func loadAfter(t *testing.T, dir string, node []event, sent []acpLine) (string, 
 	}
 	// The load sets the session up as session/new did (its folder, MCP
 	// servers and _meta): the session is still open in the Go agent,
-	// which restarts claude for a load that sets it up otherwise, as
-	// claude-agent-acp does, and Nushi only loads with the same setup.
+	// which restarts claude for a load that sets it up otherwise, and
+	// Nushi only loads with the same setup.
 	var params map[string]json.RawMessage
 	for _, l := range sent {
 		var m rpc
@@ -142,6 +158,36 @@ func copyOf(t *testing.T, events []event, sid string) []model.Item {
 // aside to merge (Service.open).
 func replayOf(t *testing.T, events []event, sid string) []model.Item {
 	t.Helper()
+	load := loadOf(events, sid)
+	if load == nil {
+		return nil
+	}
+	_, _, c := newChat(t, claudeSession, &memModes{})
+	// Set by hand, not through a reopen: what's fed is a recorded load's
+	// replay, to a chat with no agent; a real reopen would need an agent
+	// that replays the recording, which this fixture has none of.
+	c.mu.Lock()
+	c.beginOpLocked(opOpen)
+	c.replaying = true
+	c.mu.Unlock()
+	children := map[string]bool{}
+	for _, e := range load {
+		if e.note != nil {
+			sessionNote(c, *e.note, sid, children)
+		}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := make([]model.Item, 0, len(c.replay))
+	for _, it := range c.replay {
+		out = append(out, timeless(it))
+	}
+	return out
+}
+
+// loadOf is what came of session sid's last load: its events from the
+// load's request to its answer; nil when there was none.
+func loadOf(events []event, sid string) []event {
 	start, end := -1, len(events)
 	for i, e := range events {
 		if e.session == sid && e.method == "session/load" {
@@ -155,23 +201,7 @@ func replayOf(t *testing.T, events []event, sid string) []model.Item {
 	if start < 0 {
 		return nil
 	}
-	_, _, c := newChat(t, claudeSession, &memModes{})
-	c.mu.Lock()
-	c.busy, c.replaying = true, true
-	c.mu.Unlock()
-	children := map[string]bool{}
-	for _, e := range events[start:end] {
-		if e.note != nil {
-			sessionNote(c, *e.note, sid, children)
-		}
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	out := make([]model.Item, 0, len(c.replay))
-	for _, it := range c.replay {
-		out = append(out, timeless(it))
-	}
-	return out
+	return events[start:end]
 }
 
 // sessionNote feeds c an update of session sid's (as its own) or of one

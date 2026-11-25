@@ -64,10 +64,9 @@ func (Harness) PassesToSubagent(it model.Item) string {
 }
 
 // StopTask asks Claude to stop one of its background tasks with its
-// TaskStop tool, by the task's id: a subagent's agentId, or a background
-// command's task id when Nushi couldn't stop the command itself. A client
-// that isn't JetBrains AIR has no way to stop a subagent itself
-// (_session/async_task/stop answers {stopped: false}). The prompt is as
+// TaskStop tool, by the task's id: an Agent-tool subagent's agentId when
+// it has no session of its own to cancel (stop_task, EndTask, is for a
+// task without a session: claudeacp.StopTaskMethod). The prompt is as
 // short as Claude reads reliably: the id and the one reply wanted; what
 // the task is shows from the call it names.
 func (Harness) StopTask(taskID string) string {

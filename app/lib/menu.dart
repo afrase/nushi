@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/controls.dart';
+import 'package:nushi/picker.dart';
 import 'package:nushi/run_state.dart';
 import 'package:nushi/submenu.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart' show revealRow;
 
 /// One row of a [Menu]: [icon] (if any), [label], then [detail] dimmed on
 /// the same line, and a check on the right when [checked], or with a key
@@ -674,37 +676,34 @@ class _FilteredState extends State<_Filtered> {
     super.dispose();
   }
 
-  List<MenuEntry> get _shown {
-    final q = _text.text.trim().toLowerCase();
-    return [
-      for (final e in widget.entries)
-        if (e._pickable &&
-            '${e.label} ${e.detail} ${e.tooltip}'.toLowerCase().contains(q))
-          e,
-    ];
-  }
+  List<MenuEntry> get _shown => [
+    for (final e in widget.entries)
+      if (e._pickable &&
+          matchesWords('${e.label} ${e.detail} ${e.tooltip}', _text.text))
+        e,
+  ];
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
-    if (e is KeyUpEvent) return KeyEventResult.ignored;
     final shown = _shown;
-    switch (e.logicalKey) {
-      case LogicalKeyboardKey.arrowDown || LogicalKeyboardKey.arrowUp
-          when shown.isNotEmpty:
-        final step = e.logicalKey == LogicalKeyboardKey.arrowDown ? 1 : -1;
-        setState(() => _at = (_at + step) % shown.length);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_lit.currentContext case final c?) Scrollable.ensureVisible(c);
-        });
-      case LogicalKeyboardKey.enter when _at < shown.length:
+    return pickKey(
+      e,
+      count: shown.length,
+      at: _at,
+      move: (to, by) {
+        setState(() => _at = to);
+        revealRow(_lit, down: by > 0);
+      },
+      pick: () {
         widget.close();
         shown[_at].onPick!();
-      case LogicalKeyboardKey.escape when _text.text.isNotEmpty:
-        _text.clear();
-        setState(() => _at = 0);
-      default:
-        return KeyEventResult.ignored;
-    }
-    return KeyEventResult.handled;
+      },
+      escape: _text.text.isEmpty
+          ? null
+          : () {
+              _text.clear();
+              setState(() => _at = 0);
+            },
+    );
   }
 
   @override

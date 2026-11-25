@@ -15,6 +15,7 @@ import 'package:nushi/history_mark.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/message_actions.dart';
 import 'package:nushi/message_pins.dart';
+import 'package:nushi/move_here.dart';
 import 'package:nushi/plan_view.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
@@ -45,6 +46,7 @@ class ItemView extends StatelessWidget {
     this.onFork,
     this.pinned = false,
     this.onPin,
+    this.moveHere = false,
   });
 
   final Item item;
@@ -68,6 +70,10 @@ class ItemView extends StatelessWidget {
 
   /// Pins or unpins it, if it can be: one of the agent's messages.
   final VoidCallback? onPin;
+
+  /// It's the chat's [moveOffer], on the Mac: its row offers Move chat
+  /// here, and only then keeps the button's room (ADR 0150).
+  final bool moveHere;
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +106,12 @@ class ItemView extends StatelessWidget {
         if (isWorkflow(item)) {
           return WorkflowCard(item, chat, daemon: daemon, still: still);
         }
-        return ToolCallView(item, still: still, refs: _refs);
+        return ToolCallView(
+          item,
+          still: still,
+          refs: _refs,
+          offer: moveHere ? MoveHereButton(item, chat, daemon) : null,
+        );
       case ItemKind.ITEM_KIND_QUESTION:
         return QuestionCard(
           item,

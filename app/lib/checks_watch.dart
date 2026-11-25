@@ -5,6 +5,7 @@ import 'package:nushi/chat_column.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
+import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
@@ -13,11 +14,13 @@ import 'package:nushi/widgets.dart';
 
 /// [it]'s failure as the user acts on it, `<node id>@<commit>`, while its
 /// checks fail on an open pull request; null otherwise, and from a daemon
-/// that doesn't say the commit.
+/// that doesn't say the commit. Checks only cancelled are
+/// `<node id>@<commit>:cancelled`, so a cancel acted on doesn't quiet a
+/// real failure of a re-run on the same commit (ADR 0138).
 String? failureOf(GitHubItem? it) {
   if (it == null || it.state != 'open' || it.checksOid.isEmpty) return null;
   if (it.checks != 'failure' && it.checks != 'error') return null;
-  return '${it.id}@${it.checksOid}';
+  return '${it.id}@${it.checksOid}${onlyCancelled(it) ? ':cancelled' : ''}';
 }
 
 /// The chats whose pull request's checks newly failed (ADR 0138): from the
@@ -139,16 +142,24 @@ class ChecksWatch {
   }
 }
 
+/// Whether [it]'s checks fail only because some were cancelled
+/// ([itemChecks]): its flag then says so, and has nothing to fix.
+bool onlyCancelled(GitHubItem? it) =>
+    it != null && itemChecks(it) == 'cancelled';
+
 /// Ask to fix: each failed check of [chat]'s flagged pull requests as a
 /// reply card in its box, with the failing part of its job's log (Fix
-/// checks' cards, `github_agent.dart`); never sent here. The flag goes.
+/// checks' cards, `github_agent.dart`); never sent here, and none for a
+/// pull request whose checks were only cancelled. The flag goes.
 Future<void> askToFix(
   BuildContext context,
   Daemon daemon,
   ChatState chat,
 ) async {
   final cp = ChatPull.of(daemon, chat);
+  final states = ChecksWatch.of(daemon).states;
   for (final l in chat.checksFailed) {
+    if (onlyCancelled(states.item(l))) continue;
     final p = await cp.whole(context, l);
     if (p == null || !context.mounted) return;
     await toAgent(
@@ -165,7 +176,10 @@ Future<void> askToFix(
 
 /// Over the composer while the chat's pull request's checks newly failed
 /// (ADR 0138): what failed, Ask to fix (the failed checks' logs into the
-/// box, for the user to send) and Dismiss.
+/// box, for the user to send) and Dismiss. Checks only cancelled still
+/// hold the merge back, so they flag the chat too, in their own words ("A
+/// check was cancelled on #12") and the stop sign, with nothing to ask
+/// the agent to fix.
 class ChecksFailedBar extends StatelessWidget {
   const new(this.chat, this.daemon, {super.key});
 
@@ -182,10 +196,42 @@ class ChecksFailedBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final states = ChecksWatch.of(daemon).states;
+    // The flag's pull requests can stay the same while what failed on
+    // them changes (a failure beside a cancelled check): it reads them
+    // as they change.
+    return ListenableBuilder(
+      listenable: states,
+      builder: (context, _) => _bar(context, states),
+    );
+  }
+
+  Widget _bar(BuildContext context, PullStates states) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final links = chat.checksFailed;
     if (links.isEmpty || chat.archived) return const SizedBox.shrink();
+    final failed = [
+      for (final l in links)
+        if (!onlyCancelled(states.item(l))) l,
+    ];
+    final cancelled = [
+      for (final l in links)
+        if (onlyCancelled(states.item(l))) l,
+    ];
+    final n = [
+      for (final l in cancelled) ?states.item(l)?.checkCounts.cancelled,
+    ].fold(0, (a, b) => a + b);
+    final stopped = n == 1 ? 'a check was cancelled' : 'checks were cancelled';
+    final also = cancelled.isEmpty
+        ? ''
+        : ', and $stopped on ${numbers(cancelled)}';
+    final (head, rest) = failed.isEmpty
+        ? (
+            '${stopped[0].toUpperCase()}${stopped.substring(1)}',
+            ' on ${numbers(cancelled)}',
+          )
+        : ('Checks failed', ' on ${numbers(failed)}$also');
     // The "needs you" amber's soft fill, a notice's (no line, no stripe):
     // it waits on you as a question does.
     return ChatColumn(
@@ -202,14 +248,17 @@ class ChecksFailedBar extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.cancel, size: 15, color: t.crashed),
+            if (failed.isEmpty)
+              CheckMark(cancelledIcon, size: 15, color: t.textSecondary)
+            else
+              Icon(Icons.cancel, size: 15, color: t.crashed),
             const SizedBox(width: 8),
             Expanded(
               child: Text.rich(
                 TextSpan(
                   children: [
                     TextSpan(
-                      text: 'Checks failed',
+                      text: head,
                       style: theme.ui(
                         t.text,
                         // design: off the type scale, to move to a step
@@ -217,7 +266,7 @@ class ChecksFailedBar extends StatelessWidget {
                         weight: FontWeight.w600,
                       ),
                     ),
-                    TextSpan(text: ' on ${numbers(links)}'),
+                    TextSpan(text: rest),
                   ],
                 ),
                 maxLines: 1,
@@ -227,13 +276,15 @@ class ChecksFailedBar extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            RunButton(
-              label: 'Ask to fix',
-              kind: ButtonKind.primary,
-              tooltip: "Each failed check's log as a card in the chat's box",
-              run: () => askToFix(context, daemon, chat),
-            ),
-            const SizedBox(width: 2),
+            if (failed.isNotEmpty) ...[
+              RunButton(
+                label: 'Ask to fix',
+                kind: ButtonKind.primary,
+                tooltip: "Each failed check's log as a card in the chat's box",
+                run: () => askToFix(context, daemon, chat),
+              ),
+              const SizedBox(width: 2),
+            ],
             IconTap(
               Icons.close,
               size: 14,

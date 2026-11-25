@@ -69,20 +69,23 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	c := s.newChat(k)
 	c.id = rand.Text()
 	c.mu.Lock()
-	c.sid, c.busy = sessionID, true // its replay is the transcript, not a turn of the agent's own
-	c.replaying = true
-	c.record = model.ChatRecord{ID: c.id, SessionID: sessionID, Agent: k.Name, Folder: folder, Title: listed, Created: time.Now(), HasMessages: true}
+	c.sid = sessionID
+	c.beginOpLocked(opOpen) // until settled: its replay is the transcript, not a turn of the agent's own
+	// The mode a new chat of the agent's starts in, which load puts on
+	// it; only the mode: an agent that keeps the model in its sessions
+	// (Ante, PiG, omp, opencode) has the one the session was on.
+	c.record = model.ChatRecord{ID: c.id, SessionID: sessionID, Agent: k.Name, Folder: folder, Title: listed, Created: time.Now(), HasMessages: true, Mode: s.remembered.Mode(k.Name)}
 	c.mu.Unlock()
 	// Its title can store it during the replay: found by id, it must be this
 	// one, not a second agent's.
 	s.mu.Lock()
 	s.chats[c.id] = c
 	s.mu.Unlock()
-	o, err := c.openSession(ctx, sessionID, folder, false, "")
-	c.mu.Lock()
-	replayed := c.replay
-	c.replaying, c.replay = false, nil
-	c.mu.Unlock()
+	// Bounded as a reopen is, and kept going if the app goes: the agent
+	// has the session open by then.
+	lctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), reopenTimeout)
+	defer cancel()
+	mode, err := s.load(lctx, c)
 	if err != nil {
 		s.mu.Lock()
 		delete(s.chats, c.id)
@@ -97,27 +100,13 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 		}
 		return "", fmt.Errorf("couldn't open the session: %w", err)
 	}
-	times := c.messageTimes(o.sid, folder)
 	c.mu.Lock()
-	s.useLocked(c, o)
-	c.restoreLocked(replayed, times)
-	c.childrenSaidLocked()
-	c.orphanLocked(false) // calls whose agent ended before their results
-	c.busy = false
 	if i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage }); c.record.Title == "" && i >= 0 {
 		c.record.Title = title(c.items[i].Text) // as for a chat's first prompt
 	}
 	c.storeLocked()
 	c.mu.Unlock()
-	// Only the mode: an agent that keeps the model in its sessions (Ante,
-	// PiG, omp, opencode) has the one the session was on.
-	if err := c.reapply(ctx, o.agent, o.sid, s.remembered.Mode(k.Name), nil); err != nil {
-		c.log().Warn("starting mode", "err", err)
-	}
-	c.mu.Lock()
-	c.saveLocked(c.modeLocked)
-	c.statusChangedLocked()
-	c.mu.Unlock()
+	c.settled(mode)
 	c.log().Info("chat opened from the agent's session")
 	return c.id, nil
 }

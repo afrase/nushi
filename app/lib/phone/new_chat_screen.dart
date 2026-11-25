@@ -234,8 +234,9 @@ class _Choice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    return InkWell(
+    return Tap(
       onTap: onTap,
+      radius: 0, // full-bleed
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: touch + 4),
         child: Padding(

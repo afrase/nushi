@@ -35,10 +35,12 @@ type GitHubItem struct {
 	ChecksOID  string
 	Unresolved int
 	Comments   int
-	// What GetGitHubItems adds (ADR 0117; the inbox leaves them unset): a
-	// pull request's size, its checks counted, its merge state ("clean",
-	// "blocked", …, as GitHubPull's), its base and head branches; an
-	// issue's close reason ("completed", "not_planned" or "").
+	// A pull request's size, its checks counted, its merge state ("clean",
+	// "blocked", "behind", "dirty", "unstable", "has_hooks", "unknown")
+	// and its base and head branches, by Items and Pull only: the inbox
+	// leaves all of these unset (ADR 0117). An issue's state reason
+	// ("completed", "not_planned", "reopened" for an open issue that was
+	// once closed, or ""); when either was opened.
 	Additions, Deletions, ChangedFiles int
 	Created                            time.Time
 	CheckCounts                        CheckCounts
@@ -58,9 +60,10 @@ type GitHubReaction struct {
 
 // CheckCounts are a pull request's checks by state, at its head: a
 // neutral one counts as passed; skipped ones count in neither side of
-// passed/total.
+// passed/total. Failed counts the cancelled too, as GitHub's merge gate
+// has them not passed; Cancelled says how many of Failed were.
 type CheckCounts struct {
-	Passed, Failed, Running, Skipped int
+	Passed, Failed, Running, Skipped, Cancelled int
 }
 
 // GitHubComment is a comment, or a review with what it said. Body is
@@ -127,7 +130,8 @@ type GitHubReviewer struct {
 	CodeOwner    bool // asked as a code owner of what the pull request changes
 }
 
-// GitHubPull is a pull request whole.
+// GitHubPull is a pull request whole: its item (branches, size, merge
+// state, its checks counted from Runs) and what the tab shows besides.
 type GitHubPull struct {
 	GitHubItem
 	Body, Association string
@@ -137,18 +141,15 @@ type GitHubPull struct {
 	// CanEdit is GitHub letting the user edit its title and description.
 	CanEdit bool
 	// Reactions are those on its description.
-	Reactions  []GitHubReaction
-	Base, Head string // branches
+	Reactions []GitHubReaction
 	// HeadRepo is the head's repository (owner/name): another one than
 	// Repo for a fork's pull request (CrossRepo).
-	HeadRepo                           string
-	CrossRepo                          bool
-	BaseOID, HeadOID                   string
-	Mergeable                          string // "mergeable", "conflicting" or "unknown"
-	MergeState                         string // "clean", "blocked", "behind", "dirty", "unstable", "has_hooks", "unknown"
-	Additions, Deletions, ChangedFiles int
-	Commits                            int
-	Reviewers                          []GitHubReviewer
+	HeadRepo         string
+	CrossRepo        bool
+	BaseOID, HeadOID string
+	Mergeable        string // "mergeable", "conflicting" or "unknown"
+	Commits          int
+	Reviewers        []GitHubReviewer
 	// Conversation is the comments and the reviews that said something,
 	// oldest first (the latest 100 comments).
 	Conversation []GitHubComment
@@ -177,10 +178,12 @@ type GitHubLabel struct {
 // first line, its author's login (when the commit's email is an
 // account's, else "") and name as git has it, when it was committed, and
 // its checks ("success", "failure", "pending", or "" for none).
+// Cancelled says a "failure" is only cancelled checks, none failed.
 type GitHubCommit struct {
 	OID, Headline, Author, AuthorName string
 	Committed                         time.Time
 	Checks                            string
+	Cancelled                         bool
 }
 
 // GitHubCommits are a pull request's newest 100 commits, oldest first

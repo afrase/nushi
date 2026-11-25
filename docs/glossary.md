@@ -44,10 +44,11 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Pinned message** | One of the agent's messages marked with a pin (Pin, Unpin among its actions), listed by its title in the rail's menu, which goes to it; the daemon keeps them and their titles, so the phone lists them too. Not a pinned chat. | `Chat.pinned_messages`, `Chat.message_pins`, `ChatRecord.Pins`, `MessagePin`, `PinMessage`, `message_pins.dart` | 0085 |
 | **Pins rail** | The dashes in the transcript's left margin at its top while a chat has pinned messages: Session start and each pin, the current one long and bright; pointing at it opens its menu. | `Rail` (`rail.dart`, `rail_dashes.dart`, `rail_menu.dart`), `message_pins.dart` | 0085 |
 | **Rewind** | Go back to just before one of your messages: the session forks there and the message returns to the box. Files aren't rewound. Esc Esc lists them. | `RewindChat`, `Item.ForkAt`, `Rewindable` | 0020 |
-| **Sleep** | An idle chat's agent stops; the chat stays and the next message wakes it. On its own after 30 idle minutes. The chat is then asleep. | `SleepChat`, `ChatStatus.asleep` | 0032 |
+| **Sleep** | An idle chat's agent stops; the chat stays and the next message, or Wake, wakes it. On its own after 30 idle minutes. The chat is then asleep. | `SleepChat`, `ChatStatus.asleep` | 0032 |
+| **Wake** | A sleeping chat's agent started again without a message: its session reopens, nothing is sent. In Sleep's place in the chat's menu. | `WakeChat` | 0032 |
 | **Archive** | Put a chat away: its agent stops, it's read-only and listed last. Unarchive reopens it. | `ArchiveChat`, `ChatRecord.Archived` | |
 | **Reload** | Restart the chat's agent on its session, to pick up changed MCP servers. | `ReloadChat` | |
-| **Move** | The chat goes on in another folder or worktree; its session forks there. | `MoveChat` | 0014 |
+| **Move** | The chat goes on in another folder or worktree; its session forks there. From the folder button, or from Move chat here on the call where the agent entered a worktree. | `MoveChat`, `moveChat`, `MoveHereButton`, `moveOffer` | 0014, 0150 |
 | **Delete** | Remove a chat, the agent's history of it, and its worktree and branch if you say so. | `PlanDeleteChat`, `DeleteChat` | 0015 |
 | **Expired** | A chat whose agent deleted its session: read-only, on Nushi's copy, with Start a new chat here. | `session_gone`, `RemovedChat` | 0015, 0047 |
 | **Transcript** | The conversation as shown: your messages as bubbles (bands on the phone), tool rows, subagents, plans. | `transcript.dart`, `items.dart` | 0026 |
@@ -128,7 +129,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **File card** | A file attached to the message being written, in the box: its kind, name and size. Sent as a link to the file; the phone's go whole. In a sent message, a **file chip**. | `AttachedFile`, `FileCard`, `FileChip`, `Draft.files`, `SendPromptRequest.uploads` | 0091 |
 | **Output card** | A run's output in the box, sent after your next message's text as bare tags: only from a run that ended on its own. A command typed after `!` has its card from its start, running (Show, ✕) until it ends. In the transcript the message shows each as a command card. | `OutputCard`, `Draft.outputs`, `RunOutput`, `withOutputs`, `commandTags`, `splitCommands`, `SentCommandCard`, `CommandRuns` | 0084, 0148 |
 | **Command mode** | The box while its text starts with `!`: what follows runs as a command in a terminal of the chat's, its output in an output card for your next message, rather than being sent. The desktop app only. | `commandMode`, `command_mode.dart`, `runBoxCommand`, `CommandMark` | 0148 |
-| **Status card** | The card at the sidebar's foot: working, awake and sleeping agents, and Nushi's memory. | `StatusBar` | 0032, 0111 |
+| **Status card** | The card at the sidebar's foot: today's spend, which opens Settings › Usage, and Nushi's memory. | `StatusBar`, `TodaySpend` | 0111, 0136 |
 | **Pane** | A rounded surface floating on the window's background: the main area, with a view's header at its top. A side pane is a column inside it. | `Pane`, `PaneHeader`, `NushiTheme.windowPad`, `paneGap` | 0111 |
 | **Palette** | ⌘K (⇧⌘P): go to a chat or run an action. | `palette.dart`, `AppAction` | |
 | **Open file** | ⌘P: any file that previews in the chat's folder. | `open_file.dart`, `FindChatFiles` | |
@@ -148,7 +149,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Send to agent** | Put a GitHub comment, thread or failed check into the box as a reply card, to send when you're ready; Send N to agent puts what blocks the merge. Never sends by itself. | `SendToAgent`, `toAgent` | 0059 |
 | **Ask to fix** | The bar over the composer when a chat's pull request's checks newly fail ("Checks failed on #n"): puts Fix checks' cards in the box, nothing sent; its ✕ dismisses. | `ChecksFailedBar`, `ChecksWatch`, `askToFix`, `checksSeen` | 0138 |
 | **Fix checks**, **Address** | Put the failed checks, or the review threads, into the box as reply cards: the Checks tab's and the PR widget's buttons, in the send look. | `checkReplies`, `threadReplies` | 0059 |
-| **Re-run failed** | Ask GitHub to re-run the failed jobs of a pull request's failed checks' workflow runs. | `RerunGitHubChecks` | |
+| **Re-run failed** | Ask GitHub to re-run the failed jobs of a pull request's failed checks' workflow runs (**Re-run cancelled**, or **Re-run failed and cancelled**, when cancelled jobs are among them). | `RerunGitHubChecks` | |
 | **Overview** | The Pull request tab's first tab, after GitHub's page: the merge status card, the description, Comments and the commit trail, the side column beside them (under them when narrow). | `PullOverview` | 0137 |
 | **Comments** (a pull request's) | The Overview's comment box, then its reviews and comments, the newest first, each review holding its threads (by review id), with a filter: All, Unresolved, Mine; a resolved or outdated thread folds to one line (Show). | `PullComments`, `PullThread`, `commentItems` | 0137 |
 | **Commit trail** | The newest and oldest commits after the comments, with "N additional commits by …" between, which opens the Commits tab. | `CommitTrail`, `PullCommits` | 0137 |

@@ -1,0 +1,14 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash"]}}}}}},
+    {"prompt": "run it in the background", "session": "s1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "tool_call_update", "toolCallId": "toolu_bg", "_meta": {"claudeCode": {"task": {"status": "running"}}}}}},
+     "capture": {"task": "params.update._meta.claudeCode.task.id"}},
+    {"prompt": "wait a little", "session": "s1", "async": "p2"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "tool_call_update", "toolCallId": "toolu_wait", "_meta": {"claudeCode": {"task": {"status": "running"}}}}}}},
+    {"request": "_session/stopTask", "params": {"sessionId": "$s1", "taskId": "$task"}},
+    {"await": "p2"},
+    {"prompt": "is it still running", "session": "s1"}
+  ]
+}

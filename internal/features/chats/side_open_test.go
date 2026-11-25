@@ -54,12 +54,29 @@ func TestASideChatIsUnheardOfUntilForkAnswers(t *testing.T) {
 // While its chat's session is opened again (a reopen, move or rewind),
 // the agent reports the new session's defaults, not the chat's mode: a
 // side chat isn't opened then, as Fork chat isn't, nor when that begins
-// while the side chat's session forks.
+// while the side chat's session forks. A rewind is the one that runs here,
+// held as its own fork is made.
 func TestNoSideChatWhileItsChatSettles(t *testing.T) {
-	settle := map[string]func(c *chat){
-		"reopening": func(c *chat) { c.busy = true },
-		"its mode not back on it": func(c *chat) {
-			c.reapplying, c.config[modeIndex(c.config)].Current = true, "auto"
+	type fixture struct {
+		svc   *Service
+		agent *fakeAgent
+		c     *chat
+	}
+	settle := map[string]func(t *testing.T, f fixture) (undo func()){
+		"a rewind under way": func(t *testing.T, f fixture) func() {
+			t.Helper()
+			release := rewinding(t, f.svc, f.agent, f.c, lastAsked(f.c))
+			return func() { testcheck.NoErr(t, release()) }
+		},
+		"its mode not back on it": func(_ *testing.T, f fixture) func() {
+			f.c.mu.Lock()
+			defer f.c.mu.Unlock()
+			f.c.reapplying, f.c.config[modeIndex(f.c.config)].Current = true, "auto"
+			return func() {
+				f.c.mu.Lock()
+				defer f.c.mu.Unlock()
+				f.c.reapplying = false
+			}
 		},
 	}
 	for name, settle := range settle {
@@ -68,20 +85,19 @@ func TestNoSideChatWhileItsChatSettles(t *testing.T) {
 				svc, agent, c := newChat(t, claudeSession, &memModes{})
 				ctx := context.Background()
 				testcheck.NoErr(t, svc.SetConfig(ctx, c.id, "mode", "plan"))
-				in := func() {
-					c.mu.Lock()
-					settle(c)
-					c.mu.Unlock()
+				for _, text := range []string{"one", "two"} { // a message to rewind to: forked at the agent's answer before it
+					agent.updates = []acp.SessionUpdate{chunk("m-"+text, "ok")}
+					turn(t, svc, c, text)
 				}
+				var undo func()
 				if during {
-					agent.forkHook = in
+					var once sync.Once
+					agent.forkHook = func() { once.Do(func() { undo = settle(t, fixture{svc, agent, c}) }) } // the rewind's own fork passes
 				} else {
-					in()
+					undo = settle(t, fixture{svc, agent, c})
 				}
 				id, err := svc.Fork(ctx, c.id)
-				c.mu.Lock()
-				c.busy, c.reapplying = false, false
-				c.mu.Unlock()
+				undo()
 				if !errors.Is(err, errSettling) {
 					t.Fatalf("Fork = %q, %v; want %v", id, err, errSettling)
 				}

@@ -1,9 +1,11 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/message_actions.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/move_here.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/workflows.dart';
 
@@ -11,16 +13,20 @@ import 'package:nushi/workflows.dart';
 // their keys and the room above each, and a message on its way.
 
 /// Whether [e] is a tool call that shows as a row, and can join a run of
-/// them (a review's findings and a workflow show as cards of their own).
-bool _row(Object? e) =>
+/// them (a review's findings and a workflow show as cards of their own,
+/// and the call [alone] names as a row of its own: the one offering Move
+/// chat here, so the offer is never folded away).
+bool _row(Object? e, String? alone) =>
     e is Item &&
     e.kind == ItemKind.ITEM_KIND_TOOL_CALL &&
     !e.hasFindings() &&
-    !isWorkflow(e);
+    !isWorkflow(e) &&
+    e.id != alone;
 
 /// The items, with each run of tool calls as one list, and each subagent
-/// as one [SubagentRun] with what it did.
-List<Object> transcriptEntries(List<Item> items) {
+/// as one [SubagentRun] with what it did; the call [alone] names (the
+/// Mac's [moveOffer]) never joins a run.
+List<Object> transcriptEntries(List<Item> items, {String? alone}) {
   final subs = {for (final s in subagentsOf(items)) s.call.id: s};
   final out = <Object>[];
   for (final it in items) {
@@ -28,9 +34,9 @@ List<Object> transcriptEntries(List<Item> items) {
     if (subs.containsKey(it.parent)) continue;
     if (subs[it.id] case final sub?) {
       out.add(sub);
-    } else if (_row(it) && last is List<Item>) {
+    } else if (_row(it, alone) && last is List<Item>) {
       last.add(it);
-    } else if (_row(it) && _row(last)) {
+    } else if (_row(it, alone) && _row(last, alone)) {
       out.last = [last! as Item, it];
     } else {
       out.add(it);
@@ -88,12 +94,9 @@ class SendingEntry extends StatelessWidget {
       tween: Tween(begin: 1, end: 0),
       duration: Motion.exit,
       curve: Motion.leave,
-      builder: (context, v, child) => ClipRect(
-        child: Align(
-          alignment: Alignment.topCenter,
-          heightFactor: v,
-          child: Opacity(opacity: 0.7 * v, child: child),
-        ),
+      builder: (context, v, child) => Fold(
+        factor: v,
+        child: Opacity(opacity: 0.7 * v, child: child),
       ),
       child: IgnorePointer(child: shown),
     );

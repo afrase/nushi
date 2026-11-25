@@ -96,7 +96,7 @@ func TestFindTextInALongChat(t *testing.T) {
 // A chat whose items were let go is searched in its copy without taking
 // them back or reading the copy whole, and finds what it found before.
 func TestFindTextInALetGoChat(t *testing.T) {
-	svc, agent, c, copies, _ := lettingGo(t, nil, Timing{})
+	svc, agent, c, copies, _ := lettingGo(t, nil)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "the first needle")}
 	turn(t, svc, c, "one")
 	agent.updates = []acp.SessionUpdate{chunk("m2", "nothing"), toolCall("t1", "completed")}
@@ -122,7 +122,7 @@ func TestFindTextInALetGoChat(t *testing.T) {
 // the pages read it (savedLocked) before it's searched: an old show call's
 // input doesn't show, so find doesn't count it.
 func TestFindTextInAnOldCopy(t *testing.T) {
-	svc, agent, c, copies, _ := lettingGo(t, nil, Timing{})
+	svc, agent, c, copies, _ := lettingGo(t, nil)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "the first widget")}
 	turn(t, svc, c, "one")
 	testcheck.NoErr(t, svc.Sleep(c.id))

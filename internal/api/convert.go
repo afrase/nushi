@@ -94,8 +94,6 @@ func toProto(e model.Event, refs bool) *nushiv1.EventsResponse {
 		out.Kind = &nushiv1.EventsResponse_Commands{Commands: &nushiv1.ChatCommands{Commands: commandsProto(e.Commands)}}
 	case e.Remote != nil:
 		out.Kind = &nushiv1.EventsResponse_Remote{Remote: remoteProto(*e.Remote)}
-	case e.RemovedChats != nil:
-		out.Kind = &nushiv1.EventsResponse_RemovedChats{RemovedChats: &nushiv1.RemovedChats{Chats: removedProto(*e.RemovedChats)}}
 	case e.Update != nil:
 		out.Kind = &nushiv1.EventsResponse_Update{Update: updateProto(*e.Update)}
 	case e.Terminals != nil:
@@ -118,6 +116,9 @@ func itemProto(it *model.Item, refs bool) *nushiv1.Item {
 		McpServer: it.MCPServer, McpTool: it.MCPTool}
 	if sh := it.BackgroundCommand; sh != nil {
 		out.BackgroundCommand = &nushiv1.BackgroundCommand{Id: sh.ID, State: string(sh.State), Started: unixMs(sh.Started), Ended: unixMs(sh.Ended), Output: sh.Output, End: sh.End}
+	}
+	if w := it.WorksIn; w != nil {
+		out.WorksIn = &nushiv1.WorksIn{Path: w.Path}
 	}
 	if w := it.Workflow; w != nil && w.State != "" { // unset until the run is followed, as the proto says
 		out.Workflow = workflowProto(*w)
@@ -149,7 +150,7 @@ func itemProto(it *model.Item, refs bool) *nushiv1.Item {
 	}
 	for _, f := range it.Fields {
 		out.Fields = append(out.Fields, &nushiv1.Field{Id: f.ID, Title: f.Title, Description: f.Description,
-			Type: fieldTypes[f.Type], Options: optionsProto(f.Options), Required: f.Required, Values: f.Values, OtherFor: f.OtherFor})
+			Type: fieldTypes[f.Type], Options: optionsProto(f.Options), Required: f.Required, Values: f.Values, OtherFor: f.OtherFor, Note: f.Note})
 	}
 	return out
 }
@@ -179,14 +180,6 @@ var turnEndProto = map[model.TurnEnd]nushiv1.TurnEnd{
 	model.TurnDone:    nushiv1.TurnEnd_TURN_END_DONE,
 	model.TurnFailed:  nushiv1.TurnEnd_TURN_END_FAILED,
 	model.TurnStopped: nushiv1.TurnEnd_TURN_END_STOPPED,
-}
-
-func removedProto(removed []model.RemovedChat) []*nushiv1.RemovedChat {
-	out := make([]*nushiv1.RemovedChat, 0, len(removed))
-	for _, r := range removed {
-		out = append(out, &nushiv1.RemovedChat{Id: r.ID, Agent: r.Agent, Title: r.Title, Folder: r.Folder})
-	}
-	return out
 }
 
 // unixMs is t in Unix milliseconds, 0 for the zero time.

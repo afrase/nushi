@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/app_actions.dart';
@@ -158,10 +157,9 @@ List<PaletteRow> matchRows(List<PaletteRow> rows, String query) {
   }
 
   final q = query.trim().toLowerCase();
-  final words = q.split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
   final hits = [
     for (final r in rows)
-      if (words.every('${r.title} ${r.detail}'.toLowerCase().contains)) r,
+      if (matchesWords('${r.title} ${r.detail}', q)) r,
   ];
   int score(PaletteRow r) {
     final t = r.title.toLowerCase();
@@ -193,10 +191,9 @@ String get _paletteKeys =>
       (final first, final second) => '$first, or $second (in a terminal too)',
     };
 
-/// The palette's box, as ⌘P's: a field, and under it the rows that match
-/// what's typed. ↑↓ move, ⏎ or a click picks (the dialog pops with the
-/// row), Esc closes.
-class Palette extends StatefulWidget {
+/// The palette: [rows] in a [PickBox], matched as [matchRows] says, its
+/// keys at the field's end. ⌘K's, and Artifacts…'s with its own [hint].
+class Palette extends StatelessWidget {
   const new({
     required this.rows,
     super.key,
@@ -206,140 +203,32 @@ class Palette extends StatefulWidget {
   final List<PaletteRow> rows;
   final String hint;
 
-  /// A row's height, and how many show before the list scrolls.
-  static const rowHeight = 28.0;
-  static const shownRows = 12;
-
-  @override
-  State<Palette> createState() => _PaletteState();
-}
-
-class _PaletteState extends State<Palette> {
-  final _text = TextEditingController();
-  final _scroll = ScrollController();
-  int _at = 0;
-
-  @override
-  void dispose() {
-    _text.dispose();
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  List<PaletteRow> get _shown => matchRows(widget.rows, _text.text);
-
-  /// Moves the selection to [at], scrolling it into view.
-  void _move(int at) {
-    setState(() => _at = at);
-    if (!_scroll.hasClients) return;
-    const h = Palette.rowHeight;
-    final view = _scroll.position.viewportDimension;
-    if (at * h < _scroll.offset) {
-      _scroll.jumpTo(at * h);
-    } else if ((at + 1) * h > _scroll.offset + view) {
-      _scroll.jumpTo((at + 1) * h - view);
-    }
-  }
-
-  KeyEventResult _onKey(FocusNode _, KeyEvent e) {
-    if (e is KeyUpEvent) return KeyEventResult.ignored;
-    final shown = _shown;
-    switch (e.logicalKey) {
-      case LogicalKeyboardKey.arrowDown || LogicalKeyboardKey.arrowUp
-          when shown.isNotEmpty:
-        final step = e.logicalKey == LogicalKeyboardKey.arrowDown ? 1 : -1;
-        _move((_at + step) % shown.length);
-      case LogicalKeyboardKey.enter || LogicalKeyboardKey.numpadEnter
-          when _at < shown.length:
-        Navigator.pop(context, shown[_at]);
-      default:
-        return KeyEventResult.ignored;
-    }
-    return KeyEventResult.handled;
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final shown = _shown;
-    _at = _at.clamp(0, shown.isEmpty ? 0 : shown.length - 1);
-    return Dialog(
-      alignment: const Alignment(0, -0.6),
-      child: SizedBox(
-        width: 560,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Focus(
-                onKeyEvent: _onKey,
-                skipTraversal: true,
-                child: TextField(
-                  controller: _text,
-                  autofocus: true,
-                  style: theme.ui(t.text),
-                  onChanged: (_) => _move(0),
-                  decoration: InputDecoration(
-                    hintText: widget.hint,
-                    border: InputBorder.none,
-                    prefixIcon: const Icon(Icons.search, size: 15),
-                    prefixIconConstraints: const BoxConstraints(minWidth: 28),
-                    suffixIcon: switch (_paletteKeys) {
-                      '' => null,
-                      final keys => tooltip(
-                        context,
-                        'The palette: $keys',
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4),
-                          child: keyText(
-                            keyLabel(paletteKey).isEmpty
-                                ? keyLabel(paletteKeyToo)
-                                : keyLabel(paletteKey),
-                            theme.code(t.textMuted, size: 12),
-                          ),
-                        ),
-                      ),
-                    },
-                    suffixIconConstraints: const BoxConstraints(),
-                  ),
-                ),
-              ),
-              const Divider(height: 9),
-              if (shown.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text('Nothing matches', style: theme.ui(t.textMuted)),
-                )
-              else
-                SizedBox(
-                  height:
-                      Palette.rowHeight *
-                      shown.length.clamp(1, Palette.shownRows),
-                  child: ListView.builder(
-                    controller: _scroll,
-                    itemExtent: Palette.rowHeight,
-                    itemCount: shown.length,
-                    itemBuilder: (context, i) => _row(shown[i], i == _at),
-                  ),
-                ),
-            ],
+    return PickBox<PaletteRow>(
+      rows: rows,
+      rank: matchRows,
+      hint: hint,
+      empty: 'Nothing matches',
+      suffix: switch (_paletteKeys) {
+        '' => null,
+        final keys => tooltip(
+          context,
+          'The palette: $keys',
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: keyText(
+              keyLabel(paletteKey).isEmpty
+                  ? keyLabel(paletteKeyToo)
+                  : keyLabel(paletteKey),
+              theme.code(t.textMuted, size: 12),
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _row(PaletteRow r, bool selected) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Tap(
-      onTap: () => Navigator.pop(context, r),
-      selected: selected,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
+      },
+      row: (context, r) => Row(
         children: [
           SizedBox(
             width: 22,
@@ -367,6 +256,166 @@ class _PaletteState extends State<Palette> {
               Text(r.detail, style: theme.ui(t.textMuted, size: 12)),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// The pickers' one box: the palette's, Artifacts…'s, Open file…'s and
+/// the rewind list's. A field (its [icon], [hint] and [suffix]), and under
+/// it the [rows] that [rank] keeps for what's typed, each drawn by [row]
+/// in a lazy list [rowHeight] high a row (taller with larger text, as
+/// the text scale grows it), [shownRows] showing before it scrolls. ↑↓
+/// move the selection, kept in view; ⏎ or a click picks (the dialog pops
+/// with the row); Esc closes. [status], given, shows in the
+/// rows' place (a turn to stop first), [empty] when none match, and
+/// [footer] under it all.
+class PickBox<T extends Object> extends StatefulWidget {
+  const new({
+    required this.rows,
+    required this.rank,
+    required this.row,
+    required this.hint,
+    super.key,
+    this.icon = Icons.search,
+    this.suffix,
+    this.rowHeight = 28,
+    this.rowPadding = const EdgeInsets.symmetric(horizontal: 8),
+    this.status,
+    this.empty,
+    this.footer,
+  });
+
+  final List<T> rows;
+
+  /// The rows that show for a query, the best first.
+  final List<T> Function(List<T> rows, String query) rank;
+  final Widget Function(BuildContext context, T row) row;
+  final String hint;
+  final IconData icon;
+  final Widget? suffix;
+  final double rowHeight;
+  final EdgeInsetsGeometry rowPadding;
+  final String? status;
+  final String? empty;
+  final Widget? footer;
+
+  /// How many rows show before the list scrolls.
+  static const shownRows = 12;
+
+  @override
+  State<PickBox<T>> createState() => _PickBoxState<T>();
+}
+
+class _PickBoxState<T extends Object> extends State<PickBox<T>> {
+  final _text = TextEditingController();
+  final _scroll = ScrollController();
+  int _at = 0;
+
+  /// The rows ranked last, and for which rows and query: a key and the
+  /// build after it rank once.
+  (List<T>, String, List<T>)? _ranked;
+
+  @override
+  void dispose() {
+    _text.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  List<T> get _shown {
+    if (widget.status != null) return <T>[];
+    final q = _text.text;
+    if (_ranked case (final rows, final query, final shown)
+        when identical(rows, widget.rows) && query == q) {
+      return shown;
+    }
+    final shown = widget.rank(widget.rows, q);
+    _ranked = (widget.rows, q, shown);
+    return shown;
+  }
+
+  /// A row's height: [PickBox.rowHeight] at the text's scale, so a line
+  /// of larger text (Linux's Large Text) isn't cut.
+  double get _row => MediaQuery.textScalerOf(context).scale(widget.rowHeight);
+
+  void _move(int at, [int _ = 0]) {
+    setState(() => _at = at);
+    revealRowAt(_scroll, at, _row);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final shown = _shown;
+    _at = _at.clamp(0, shown.isEmpty ? 0 : shown.length - 1);
+    final note = widget.status ?? (shown.isEmpty ? widget.empty : null);
+    return Dialog(
+      alignment: const Alignment(0, -0.6),
+      child: SizedBox(
+        width: 560,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Focus(
+                onKeyEvent: (_, e) {
+                  final shown = _shown;
+                  return pickKey(
+                    e,
+                    count: shown.length,
+                    at: _at,
+                    move: _move,
+                    pick: () => Navigator.pop(context, shown[_at]),
+                  );
+                },
+                skipTraversal: true,
+                child: TextField(
+                  controller: _text,
+                  autofocus: true,
+                  style: theme.ui(t.text),
+                  onChanged: (_) => _move(0),
+                  decoration: InputDecoration(
+                    hintText: widget.hint,
+                    border: InputBorder.none,
+                    prefixIcon: Icon(widget.icon, size: 15),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 28),
+                    suffixIcon: widget.suffix,
+                    suffixIconConstraints: const BoxConstraints(),
+                  ),
+                ),
+              ),
+              const Divider(height: 9),
+              if (note != null)
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(note, style: theme.ui(t.textMuted)),
+                )
+              else if (shown.isNotEmpty)
+                SizedBox(
+                  height: _row * shown.length.clamp(1, PickBox.shownRows),
+                  child: ListView.builder(
+                    controller: _scroll,
+                    itemExtent: _row,
+                    itemCount: shown.length,
+                    itemBuilder: (context, i) => Tap(
+                      onTap: () => Navigator.pop(context, shown[i]),
+                      selected: i == _at,
+                      padding: widget.rowPadding,
+                      child: widget.row(context, shown[i]),
+                    ),
+                  ),
+                ),
+              if (widget.footer case final footer?) ...[
+                const Divider(height: 9),
+                footer,
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

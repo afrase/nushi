@@ -1,9 +1,9 @@
 package model
 
-// Event is a change to one chat, or, with ChatID "", to remote access, the
-// chats removed or the update check. Exactly one of Record, Item, Status,
-// Config, Commands, Removed, Usage, Queue, Cut, Dropped, Terminals, Remote,
-// RemovedChats, Update, Show and Servers is set.
+// Event is a change to one chat, or, with ChatID "", to remote access or
+// the update check. Exactly one of Record, Item, Status, Config, Commands,
+// Removed, Usage, Queue, Cut, Dropped, Terminals, Remote, Update, Show and
+// Servers is set.
 type Event struct {
 	ChatID string
 	// Seq numbers the chat's events from 1; a Chat snapshot says which
@@ -54,9 +54,6 @@ type Event struct {
 	Servers string
 	// Remote, when not nil, is remote access as it stands; ChatID is "".
 	Remote *Remote
-	// RemovedChats, when not nil, are all the chats removed because their
-	// agent no longer has their sessions; ChatID is "".
-	RemovedChats *[]RemovedChat
 	// Update, when not nil, is what the check for a newer release found,
 	// as it stands; ChatID is "".
 	Update *Update

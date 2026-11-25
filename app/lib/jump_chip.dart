@@ -95,7 +95,8 @@ class JumpChip extends StatefulWidget {
   State<JumpChip> createState() => _JumpChipState();
 }
 
-class _JumpChipState extends State<JumpChip> with ClockRun {
+class _JumpChipState extends State<JumpChip>
+    with SingleTickerProviderStateMixin, ClockRun {
   @override
   void initState() {
     super.initState();
@@ -130,27 +131,24 @@ class _JumpChipState extends State<JumpChip> with ClockRun {
     if (TouchTargets.of(context)) {
       // The phone's: the arrow says it; a pill of words is too much there.
       // A button to VoiceOver, named by its tooltip, as RoundButton is.
-      chip = Semantics(
-        button: true,
-        child: Pressable(
-          onTap: widget.onTap,
-          tooltip: needs ? 'Needs you: jump to latest' : 'Jump to latest',
-          builder: (context, look) => Container(
-            key: JumpChip.roundKey,
-            width: JumpChip.round,
-            height: JumpChip.round,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: look.pressed
-                  ? Color.alphaBlend(t.pressed, fill)
-                  : look.hover
-                  ? Color.alphaBlend(t.hover, fill)
-                  : fill,
-              shape: BoxShape.circle,
-              boxShadow: shadow,
-            ),
-            child: Icon(Icons.arrow_downward, size: 18, color: color),
+      chip = Pressable(
+        onTap: widget.onTap,
+        tooltip: needs ? 'Needs you: jump to latest' : 'Jump to latest',
+        builder: (context, look) => Container(
+          key: JumpChip.roundKey,
+          width: JumpChip.round,
+          height: JumpChip.round,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: look.pressed
+                ? Color.alphaBlend(t.pressed, fill)
+                : look.hover
+                ? Color.alphaBlend(t.hover, fill)
+                : fill,
+            shape: BoxShape.circle,
+            boxShadow: shadow,
           ),
+          child: Icon(Icons.arrow_downward, size: 18, color: color),
         ),
       );
     } else {

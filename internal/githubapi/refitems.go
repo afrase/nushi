@@ -14,17 +14,25 @@ import (
 // query (ADR 0117: about a point).
 const MaxItems = 50
 
-// itemPull and itemIssue are what a chip, a row and the transcript's card
-// show of a pull request and an issue (ADR 0117). countsField is the
-// checks counted by state: an old Enterprise server refuses it, and is
-// asked again without it (noCounts).
+// itemPull and itemIssue are what a chip, a row, the inbox and the
+// transcript's card show of a pull request and an issue, and the head of
+// one whole (ADR 0117): every read of one spreads them (withItems).
+// sizeFields are a pull request's size, branches and merge state, which
+// the inbox doesn't ask: its rows show none of them, and GitHub works a
+// merge state out for each pull request asked. countsField is the checks
+// counted by state, which only Items and Commits ask for: an old Enterprise server
+// refuses it, and is asked again without it (noCounts). An issue's
+// comments are counted under an alias, as Issue asks its comments with
+// other arguments (docs/facts/github.md).
 const (
+	sizeFields  = `additions deletions changedFiles mergeStateStatus baseRefName headRefName`
 	countsField = `contexts(first: 0) { checkRunCountsByState { state count } statusContextCountsByState { state count } }`
 	itemPull    = `
 fragment ItemPull on PullRequest {
   id number title url state isDraft createdAt updatedAt
   author { login }
-  additions deletions changedFiles mergeStateStatus baseRefName headRefName
+  repository { nameWithOwner }
+  SIZE
   reviewDecision totalCommentsCount
   commits(last: 1) { nodes { commit { oid statusCheckRollup { state COUNTS } } } }
   reviewThreads(first: 100) { nodes { isResolved } }
@@ -33,9 +41,39 @@ fragment ItemPull on PullRequest {
 fragment ItemIssue on Issue {
   id number title url state stateReason createdAt updatedAt
   author { login }
-  comments { totalCount }
+  repository { nameWithOwner }
+  commentCount: comments { totalCount }
 }`
 )
+
+// detail is how much of a pull request a read asks beyond its row.
+type detail int
+
+const (
+	rowOnly detail = iota // what a list's row shows (the inbox)
+	sized                 // and its size, branches and merge state (Pull)
+	counted               // and its checks counted by state (Items)
+)
+
+// withItems is a query with the item fragments it spreads after it (a
+// GraphQL document may hold only the fragments it uses), ItemPull with
+// as much as d asks.
+func withItems(query string, d detail) string {
+	if strings.Contains(query, "...ItemPull") {
+		size, counts := "", ""
+		if d >= sized {
+			size = sizeFields
+		}
+		if d == counted {
+			counts = countsField
+		}
+		query += strings.NewReplacer("SIZE", size, "COUNTS", counts).Replace(itemPull)
+	}
+	if strings.Contains(query, "...ItemIssue") {
+		query += itemIssue
+	}
+	return query
+}
 
 // itemNode decodes either fragment.
 type itemNode struct {
@@ -58,9 +96,12 @@ type itemNode struct {
 	HeadRefName        string    `json:"headRefName"`
 	ReviewDecision     string    `json:"reviewDecision"`
 	TotalCommentsCount int       `json:"totalCommentsCount"`
-	Comments           struct {
+	CommentCount       struct {
 		TotalCount int `json:"totalCount"`
-	} `json:"comments"`
+	} `json:"commentCount"`
+	Repository struct {
+		NameWithOwner string `json:"nameWithOwner"`
+	} `json:"repository"`
 	Commits struct {
 		Nodes []struct {
 			Commit struct {
@@ -90,6 +131,8 @@ type stateCount struct {
 // plainTitle is a title from GitHub as one line of plain text.
 func plainTitle(s text) string { return oneLine(plain(string(s), 1024)) }
 
+// item is the node as Nushi has it, in repo (owner/name): Items passes
+// the name it was asked by, the rest the node's own.
 func (n itemNode) item(host, repo string) model.GitHubItem {
 	it := model.GitHubItem{
 		Host: host, Repo: repo, Number: n.Number,
@@ -99,7 +142,7 @@ func (n itemNode) item(host, repo string) model.GitHubItem {
 		Additions: n.Additions, Deletions: n.Deletions, ChangedFiles: n.ChangedFiles,
 		MergeState: strings.ToLower(n.MergeStateStatus), StateReason: strings.ToLower(n.StateReason),
 		Base: n.BaseRefName, Head: n.HeadRefName,
-		Comments: n.TotalCommentsCount + n.Comments.TotalCount,
+		Comments: n.TotalCommentsCount + n.CommentCount.TotalCount,
 	}
 	if c := n.Commits.Nodes; len(c) > 0 && c[0].Commit.StatusCheckRollup != nil {
 		r := c[0].Commit.StatusCheckRollup
@@ -119,13 +162,18 @@ func (n itemNode) item(host, repo string) model.GitHubItem {
 
 // countCheck adds a state's count to the counts: a check run's
 // (CheckRunState and CheckConclusionState) or a commit status's
-// (StatusState), in the rollup's upper case, by KindOf.
+// (StatusState), in the rollup's upper case or Nushi's lower, by KindOf.
+// A cancelled one counts in Failed, as the merge gate has it, and again
+// in Cancelled.
 func countCheck(c *model.CheckCounts, sc stateCount) {
 	switch KindOf(strings.ToLower(sc.State)) {
 	case CheckPassed:
 		c.Passed += sc.Count
 	case CheckFailed:
 		c.Failed += sc.Count
+	case CheckCancelled:
+		c.Failed += sc.Count
+		c.Cancelled += sc.Count
 	case CheckSkipped:
 		c.Skipped += sc.Count
 	case CheckRunning:
@@ -202,17 +250,22 @@ func (c *Client) Items(ctx context.Context, refs []model.GitHubRef) ([]model.Git
 }
 
 // itemsQuery runs Items' query, without the checks' counts on a host that
-// refused them (remembered for the client).
+// refused them.
 func (c *Client) itemsQuery(ctx context.Context, query string, vars map[string]any, out any) error {
-	doc := func(counts bool) string {
-		f := ""
+	return c.countedQuery(ctx, func(counts bool) string {
 		if counts {
-			f = countsField
+			return withItems(query, counted)
 		}
-		return query + strings.Replace(itemPull, "COUNTS", f, 1) + itemIssue
-	}
+		return withItems(query, sized)
+	}, vars, out)
+}
+
+// countedQuery runs the query ask makes, with the checks' counts unless
+// the host refused them (remembered for the client), when it's asked
+// again without them.
+func (c *Client) countedQuery(ctx context.Context, ask func(counts bool) string, vars map[string]any, out any) error {
 	if !c.noCounts.Load() {
-		_, err := c.graphql(ctx, doc(true), vars, out)
+		_, err := c.graphql(ctx, ask(true), vars, out)
 		var api *APIError
 		if err == nil || !errors.As(err, &api) || !refusedCounts(api.Message) {
 			return err
@@ -220,7 +273,7 @@ func (c *Client) itemsQuery(ctx context.Context, query string, vars map[string]a
 		c.noCounts.Store(true)
 		c.log.Info("this server refuses check counts: asked without them")
 	}
-	_, err := c.graphql(ctx, doc(false), vars, out)
+	_, err := c.graphql(ctx, ask(false), vars, out)
 	return err
 }
 

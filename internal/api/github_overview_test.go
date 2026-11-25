@@ -56,7 +56,7 @@ func (overviewPull) Commits(_ context.Context, repo string, number int) (model.G
 		return model.GitHubCommits{}, githubapi.ErrNotFound
 	}
 	first := model.GitHubCommit{OID: "1a2b3c4d5e6f708192a3b4c5d6e7f80912345678", Headline: "Expire idle sessions", Author: "mira",
-		AuthorName: "Mira", Committed: overviewOpened, Checks: "failure"}
+		AuthorName: "Mira", Committed: overviewOpened, Checks: "failure", Cancelled: true}
 	return model.GitHubCommits{Newest: []model.GitHubCommit{first,
 		{OID: "2222222222222222222222222222222222222222", Headline: "Say why", AuthorName: "Tomas", Committed: overviewOpened.Add(time.Hour)},
 		{OID: "3333333333333333333333333333333333333333", Headline: "Docs", Author: "mira", AuthorName: "Mira", Committed: overviewOpened.Add(2 * time.Hour), Checks: "success"},
@@ -111,7 +111,7 @@ func TestGitHubPullOverview(t *testing.T) {
 	}
 	m := cs.Msg
 	if m.Total != 3 || len(m.Commits) != 3 || m.Commits[0].Oid != "1a2b3c4d5e6f708192a3b4c5d6e7f80912345678" || m.Commits[0].Author != "mira" ||
-		m.Commits[0].Checks != "failure" || m.Commits[0].CommittedMs == 0 || m.Commits[1].AuthorName != "Tomas" ||
+		m.Commits[0].Checks != "failure" || !m.Commits[0].Cancelled || m.Commits[2].Cancelled || m.Commits[0].CommittedMs == 0 || m.Commits[1].AuthorName != "Tomas" ||
 		m.First.GetOid() != m.Commits[0].Oid || m.First.GetAuthor() != "mira" {
 		t.Fatalf("commits %v", m)
 	}

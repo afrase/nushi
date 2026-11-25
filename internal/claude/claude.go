@@ -21,7 +21,6 @@ import (
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
-	"github.com/afrase/claude-acp-go/claudeacp"
 
 	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
@@ -36,13 +35,14 @@ type Harness struct{}
 // deleting closes it first, but Claude writes a little of the session back
 // as it ends. The agent shows subagents as sessions of their own (ACP's
 // subagents RFD) to a client that says it can take them: each subagent's
-// end, why it ended, and a stop of its own (session/cancel on its session).
+// end, why it ended, its text and thinking, and a stop of its own
+// (session/cancel on its session), so Nushi's initialize needs no _meta.
+// It asks Claude Code itself that stopping a turn (session/cancel) stop
+// only the turn (perTaskStopAffordance, as Claude Code's terminal has it),
+// as without it Claude Code's interrupt kills the background tasks too,
+// which no update then tells.
 //
-// Its _meta: InitMeta has the agent send a subagent's text and thinking too.
-// SessionMeta is the host options the agent passes Claude Code:
-// perTaskStopAffordance, as Claude Code's terminal has it, makes stopping a
-// turn (session/cancel) stop only the turn, as without it Claude Code's
-// interrupt kills the background subagents too, which no update then tells;
+// Its _meta: SessionMeta is the host options the agent passes Claude Code:
 // CLAUDE_CODE_REPORT_FINDINGS in Claude Code's environment makes its
 // /code-review report through its ReportFindings tool, which the transcript
 // draws as a card, instead of printing JSON. UltracodeMeta is Claude Code's
@@ -54,11 +54,10 @@ type Harness struct{}
 func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{Name: "claude", Title: "Claude", Resume: "claude --resume", ClientMCP: true,
 		Expires: "Claude Code deletes sessions after 30 days by default", NamesSessions: true, SubagentSessions: true, Redelete: 3 * time.Second, Moves: true,
-		OtherSuffix: "_custom", // AskUserQuestion's free text after a question
-		InitMeta:    map[string]any{"subagent-transcript": true},
+		OtherSuffix: "_custom",        // AskUserQuestion's free text after a question
+		OtherNotes:  model.NotesOnOne, // claude-acp-go's `answered`: a note on one pick, one more answer to several
 		SessionMeta: map[string]any{"claudeCode": map[string]any{"options": map[string]any{
-			"perTaskStopAffordance": true,
-			"env":                   map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
+			"env": map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
 		}}},
 		UltracodeMeta: map[string]any{"claudeCode": map[string]any{"options": map[string]any{
 			"settings": map[string]any{"ultracode": true},
@@ -148,32 +147,19 @@ func SignedIn(run func(args ...string) ([]byte, error)) string {
 // ReadOnlyMode is Claude's plan mode (docs/facts/claude.md).
 func (Harness) ReadOnlyMode() string { return "plan" }
 
-// TurnDone says a usage update is the result of the user's turn: the one
-// with the cost, from a model cycle the user started
-// (`_claude/origin.kind` "human", not a task notification or a
-// subagent's report). The agent answers the turn's prompt only once the
-// background subagents the turn started have ended, and their reports
-// have been answered (claude's result comes only then).
-func (Harness) TurnDone(u *acp.UsageUpdate) bool {
-	origin, _ := u.Meta["_claude/origin"].(map[string]any)
-	return u.Cost != nil && origin["kind"] == "human"
-}
-
 // OwnTurnEnded says a usage update ends Claude's own turn: its result's,
 // the one with the cost. Claude sends one without after each model call
 // in the turn too (claude-acp-go's contextUsed).
 func (Harness) OwnTurnEnded(u *acp.UsageUpdate) bool { return u.Cost != nil }
 
-// ForkAt says how to fork a session at a message, if the agent is Nushi's
-// Go agent. ACP's session/fork copies a whole conversation; the agent cuts
-// the copy after an agent message (its ACP messageId, the message included)
-// only given the vendor extension claude-agent-acp took from JetBrains AIR,
-// `_meta.jetbrains.air.fork` (ADR 0020). Drop it when ACP has a standard
-// way.
-func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
-	if init.AgentInfo == nil || init.AgentInfo.Name != claudeacp.Name {
-		return nil
-	}
+// ForkAt says how to fork a session at a message. ACP's session/fork
+// copies a whole conversation; Nushi's Go agent cuts the copy after an
+// agent message (its ACP messageId, the message included) given the
+// vendor extension claude-agent-acp took from JetBrains AIR,
+// `_meta.jetbrains.air.fork` (ADR 0020), from any client. The harness
+// starts only that agent, so init isn't asked. Drop it when ACP has a
+// standard way.
+func (Harness) ForkAt(*acp.InitializeResponse) func(messageID string) map[string]any {
 	return func(messageID string) map[string]any {
 		return map[string]any{"jetbrains": map[string]any{"air": map[string]any{
 			"fork": map[string]any{"version": 1, "messageId": messageID}}}}
@@ -183,6 +169,19 @@ func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[s
 // Parent reads the subagent tool call an update comes from (the subagent's
 // own tool calls, text and thinking), from _meta.claudeCode.
 func (Harness) Parent(meta map[string]any) string { return claudeCode(meta, "parentToolUseId") }
+
+// Sent reads when a replayed message was sent: the _meta.claudeCode.timestamp
+// claude-acp-go (v0.8.0 on) puts on the first chunk of each message
+// session/load replays, the user's or the agent's (a thought's, when the
+// message begins with thinking), from the transcript record's own
+// timestamp. Zero when the chunk has none or it is no time.
+func (Harness) Sent(meta map[string]any) time.Time {
+	at, err := time.Parse(time.RFC3339Nano, claudeCode(meta, "timestamp"))
+	if err != nil {
+		return time.Time{}
+	}
+	return at
+}
 
 // Gone says a session/load error means Claude no longer has the session:
 // the agent answers ACP's "Resource not found".
@@ -360,16 +359,4 @@ const summaryStart = "This session is being continued from a previous conversati
 func (Harness) Compacted(it model.Item) bool {
 	return it.Kind == model.ToolCall && it.Tool == "compact" ||
 		it.Kind == model.UserMessage && strings.HasPrefix(it.Text, summaryStart)
-}
-
-// ContextCommand says what fills the context. Claude answers it itself,
-// without the model, but keeps the answer in the conversation (ADR 0017).
-func (Harness) ContextCommand() string { return "context" }
-
-// ReadContext reads /context's reply: its last message, since the agent
-// may send the output twice, as two messages (claude-agent-acp did).
-func (Harness) ReadContext(messages []string) model.ContextUsage {
-	md := messages[len(messages)-1]
-	cats, _ := Parse(md) // the app shows the markdown when there are none
-	return model.ContextUsage{Markdown: md, Categories: cats, Lists: Lists(md)}
 }

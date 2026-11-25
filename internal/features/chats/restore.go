@@ -78,7 +78,8 @@ func (c *chat) messageTimes(sid, folder string) map[string]time.Time {
 
 // restoreLocked makes the chat's transcript from its copy and the agent's
 // replay, tells the app what changed, and keeps the copy to what it shows.
-// times is what messageTimes read. The items, when they are the copy's as
+// times is when the replay's messages were sent, by id: what its chunks
+// told (SentReader) or what messageTimes read. The items, when they are the copy's as
 // it stands (mirrored), stand for it: a long copy isn't read a second time
 // while the transcript holds it (ADR 0103).
 func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) {
@@ -109,7 +110,7 @@ func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) 
 		it := &items[i]
 		c.noteID(it.ID)
 		date(it)
-		if it.BackgroundCommand != nil { // the copy's row takes the end the replay told (commandTaskLocked)
+		if it.BackgroundCommand != nil { // the copy's row takes the end the replay told (taskLocked)
 			sh := c.heardLocked(*it.BackgroundCommand)
 			it.BackgroundCommand = &sh
 		}
@@ -143,6 +144,7 @@ func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) 
 	c.repinLocked(items)
 	c.showLocked(items)
 	clear(c.unsaved)
+	clear(c.tails)
 	c.saveCopyLocked(copied, items)
 	c.followWorkflowsLocked()
 	c.logLocked().Info("transcript restored", "copy", len(copied), "replay", len(replayed), "shown", len(items), "compacted", compacted, "differs", differs)

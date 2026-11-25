@@ -11,11 +11,11 @@ import (
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
-// A session Claude no longer has (its agent answers resource not found,
-// docs/facts/claude.md) reads as gone when the chat reopens: the chat
+// A session Claude no longer has (its files lack it, and its agent
+// answers resource not found, docs/facts/claude.md) reads as gone, from
+// the daemon's first check of its files or when the chat reopens: the chat
 // stays on Nushi's copy of its transcript and says so, and Delete asks
-// the agent for nothing. The test daemon has no history checker, so the
-// code alone is taken as the answer.
+// the agent for nothing.
 func TestAClaudeSessionThatIsGone(t *testing.T) {
 	ctx := context.Background()
 	dataDir := t.TempDir()

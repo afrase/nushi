@@ -56,7 +56,7 @@ func TestClosingASideChatArchivesIt(t *testing.T) {
 	if len(c.sides) != 0 || slices.Contains(deletedBy(agent), acp.SessionID(r.SessionID)) || len(c.record.Throwaway) != 0 {
 		t.Errorf("still a side chat (%d), or its session thrown away: %v", len(c.sides), deletedBy(agent))
 	}
-	if a.agent != nil || a.busy {
+	if a.agent != nil || a.busyLocked() {
 		t.Error("the archived chat runs")
 	}
 	// Delete from Archived removes it as any chat.

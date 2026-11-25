@@ -51,7 +51,7 @@ func TestARealShellHoldsItsCommandRunning(t *testing.T) {
 	agent := &fakeAgent{pid: os.Getpid()} // the test is the shell's parent, as claude is
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
 	tree := &lookingTree{}
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Processes: tree, Timing: Timing{CommandPoll: 5 * time.Millisecond}})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Processes: tree})
 	t.Cleanup(svc.Close)
 	c := startChat(t, svc, t.TempDir())
 	file := filepath.Join(taskDir(t), waitTask+".output")
@@ -66,7 +66,7 @@ func TestARealShellHoldsItsCommandRunning(t *testing.T) {
 	c.mu.Lock()
 	c.addLocked(model.Item{ID: waitCall, Kind: model.ToolCall, Tool: "Bash", Title: command, Status: "completed", Input: string(in),
 		BackgroundCommand: &model.BackgroundCommand{ID: waitTask, State: "running", Started: time.Now()}})
-	go c.followCommand(waitCall, waitTask, file, c.agent)
+	go c.followCommand(waitCall, waitTask, file, c.agent, 5*time.Millisecond)
 	c.mu.Unlock()
 
 	if !testcheck.Eventually(func() bool { return tree.looked.Load() > 1 }) {

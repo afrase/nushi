@@ -1,9 +1,6 @@
 package chats
 
-import (
-	"errors"
-	"time"
-)
+import "fmt"
 
 // MCPChanged marks agent's running chats whose folder affected says yes
 // to: their agent keeps the MCP servers it started with until the chat is
@@ -25,34 +22,35 @@ func (s *Service) MCPChanged(agent string, affected func(folder string) bool) {
 
 // Reload reopens a chat's session on a new agent (session/load, as after a
 // daemon restart), so it starts with the MCP servers as they are now. Its
-// transcript is replayed; its side chats end. Refused while it is busy.
+// transcript is replayed; its side chats end. Refused while it is busy;
+// meanwhile, what needs the agent waits for it (awake), as for a reopen.
 func (s *Service) Reload(chatID string) error {
 	c, err := s.chat(chatID)
 	if err != nil {
 		return err
 	}
 	c.mu.Lock()
-	if c.busy {
+	if c.busyLocked() {
+		err := fmt.Errorf("%s; reload it once that's done", c.stillLocked())
 		c.mu.Unlock()
-		return errors.New("the chat is busy; reload it once the agent is done")
+		return err
 	}
-	c.busy, c.mcpChanged, c.reopenFailed = true, false, false
+	c.beginOpLocked(opReload)
+	c.mcpChanged, c.reopenFailed = false, false
 	_ = c.cancelLocked() // a prompt or question of the agent's own turn: it won't be answered
-	agent := c.agent
 	c.statusChangedLocked()
 	c.mu.Unlock()
 	sides := s.dropSides(c)
-	c.disconnect()
-	if agent != nil { // its last updates, still on their way, before the cut
-		select {
-		case <-agent.Done():
-		case <-time.After(s.timing.stopGrace()):
-		}
-	}
+	c.disconnect() // its last updates are in once it has ended, which load waits for (retire)
 	c.mu.Lock()
 	c.outlived = false // the replay is merged with the copy (restore.go)
 	c.mu.Unlock()
 	s.later(func() { s.discard(c, sides) })
-	go s.resume(c)
+	if !s.later(func() { s.resume(c) }) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		c.endOpLocked()
+		return errClosing
+	}
 	return nil
 }

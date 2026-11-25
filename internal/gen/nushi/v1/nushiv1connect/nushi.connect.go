@@ -133,6 +133,8 @@ const (
 	NushiServiceSleepChatProcedure = "/nushi.v1.NushiService/SleepChat"
 	// NushiServiceReopenChatProcedure is the fully-qualified name of the NushiService's ReopenChat RPC.
 	NushiServiceReopenChatProcedure = "/nushi.v1.NushiService/ReopenChat"
+	// NushiServiceWakeChatProcedure is the fully-qualified name of the NushiService's WakeChat RPC.
+	NushiServiceWakeChatProcedure = "/nushi.v1.NushiService/WakeChat"
 	// NushiServiceGetMemoryProcedure is the fully-qualified name of the NushiService's GetMemory RPC.
 	NushiServiceGetMemoryProcedure = "/nushi.v1.NushiService/GetMemory"
 	// NushiServiceGetSettingsProcedure is the fully-qualified name of the NushiService's GetSettings
@@ -576,7 +578,8 @@ type NushiServiceClient interface {
 	// is busy.
 	RewindChat(context.Context, *connect.Request[v1.RewindChatRequest]) (*connect.Response[v1.RewindChatResponse], error)
 	// Takes a message out of the chat's queue before the agent gets it, and
-	// returns it. Refused once the agent has it.
+	// returns it. Refused once the agent has it. With send_now it sends the
+	// message at once instead, as SendPrompt's now does, and returns none.
 	Unqueue(context.Context, *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
 	// "cancelled" notice, and prompts it was waiting on are cancelled. It can
@@ -668,6 +671,17 @@ type NushiServiceClient interface {
 	// and so does one last used over an hour (or the sleep time, if
 	// shorter) before the daemon started whose transcript's copy is kept.
 	ReopenChat(context.Context, *connect.Request[v1.ReopenChatRequest]) (*connect.Response[v1.ReopenChatResponse], error)
+	// Wakes a sleeping chat (status.asleep: put to sleep, by the user or
+	// after idling, or left unopened since the daemon started) as a message
+	// would before it is sent, and sends nothing: it answers once the reopen
+	// (ACP session/load) has begun, and the chat's status shows the rest, busy
+	// with no turn while it opens, then awake, or reopen_failed with its
+	// notice. A chat that isn't asleep (awake, busy, reopening, or whose
+	// reopen failed: ReopenChat is Try again) is left as it is; an archived
+	// one is refused, and once a restart into a newer build is due a wake is
+	// refused as SendPrompt is (Unavailable, reason restarting: the app asks
+	// the new daemon). (API 146)
+	WakeChat(context.Context, *connect.Request[v1.WakeChatRequest]) (*connect.Response[v1.WakeChatResponse], error)
 	// The daemon's settings, and changing them.
 	// Says how much memory Nushi takes, as footprint (Activity Monitor's
 	// Memory), in bytes: a few milliseconds' work.
@@ -689,7 +703,8 @@ type NushiServiceClient interface {
 	// chat's sessions (ACP session/delete, when it can), the chat's scratch
 	// folder goes, and Nushi's record of it.
 	DeleteChat(context.Context, *connect.Request[v1.DeleteChatRequest]) (*connect.Response[v1.DeleteChatResponse], error)
-	// Takes chats off ListChatsResponse.removed (the app has said so).
+	// Takes chats off ListChatsResponse.removed (the app has said so). From
+	// API 151 there are none, and it does nothing.
 	DismissRemovedChats(context.Context, *connect.Request[v1.DismissRemovedChatsRequest]) (*connect.Response[v1.DismissRemovedChatsResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
@@ -765,8 +780,9 @@ type NushiServiceClient interface {
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
 	// Asks the chat's agent, unseen, what fills its context (Claude's
-	// /context), in a throwaway fork of its session, while the chat is idle.
-	// Refused when the agent can't fork.
+	// get_context_usage, Ante's and Pi's own ask), while the chat is idle:
+	// no turn and no fork, so a side chat or a new chat can be asked too.
+	// Refused when the agent can't say, the chat is busy or no agent runs.
 	GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error)
 	// Lists the MCP servers the agent's config gives a folder, read from the
 	// agent's own files, env and header values masked. With check_health, the
@@ -1299,6 +1315,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceReopenChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("ReopenChat")),
+			connect.WithClientOptions(opts...),
+		),
+		wakeChat: connect.NewClient[v1.WakeChatRequest, v1.WakeChatResponse](
+			httpClient,
+			baseURL+NushiServiceWakeChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("WakeChat")),
 			connect.WithClientOptions(opts...),
 		),
 		getMemory: connect.NewClient[v1.GetMemoryRequest, v1.GetMemoryResponse](
@@ -2084,6 +2106,7 @@ type nushiServiceClient struct {
 	archiveChat             *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
 	sleepChat               *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
 	reopenChat              *connect.Client[v1.ReopenChatRequest, v1.ReopenChatResponse]
+	wakeChat                *connect.Client[v1.WakeChatRequest, v1.WakeChatResponse]
 	getMemory               *connect.Client[v1.GetMemoryRequest, v1.GetMemoryResponse]
 	getSettings             *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
 	setSettings             *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
@@ -2407,6 +2430,11 @@ func (c *nushiServiceClient) SleepChat(ctx context.Context, req *connect.Request
 // ReopenChat calls nushi.v1.NushiService.ReopenChat.
 func (c *nushiServiceClient) ReopenChat(ctx context.Context, req *connect.Request[v1.ReopenChatRequest]) (*connect.Response[v1.ReopenChatResponse], error) {
 	return c.reopenChat.CallUnary(ctx, req)
+}
+
+// WakeChat calls nushi.v1.NushiService.WakeChat.
+func (c *nushiServiceClient) WakeChat(ctx context.Context, req *connect.Request[v1.WakeChatRequest]) (*connect.Response[v1.WakeChatResponse], error) {
+	return c.wakeChat.CallUnary(ctx, req)
 }
 
 // GetMemory calls nushi.v1.NushiService.GetMemory.
@@ -3116,7 +3144,8 @@ type NushiServiceHandler interface {
 	// is busy.
 	RewindChat(context.Context, *connect.Request[v1.RewindChatRequest]) (*connect.Response[v1.RewindChatResponse], error)
 	// Takes a message out of the chat's queue before the agent gets it, and
-	// returns it. Refused once the agent has it.
+	// returns it. Refused once the agent has it. With send_now it sends the
+	// message at once instead, as SendPrompt's now does, and returns none.
 	Unqueue(context.Context, *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
 	// "cancelled" notice, and prompts it was waiting on are cancelled. It can
@@ -3208,6 +3237,17 @@ type NushiServiceHandler interface {
 	// and so does one last used over an hour (or the sleep time, if
 	// shorter) before the daemon started whose transcript's copy is kept.
 	ReopenChat(context.Context, *connect.Request[v1.ReopenChatRequest]) (*connect.Response[v1.ReopenChatResponse], error)
+	// Wakes a sleeping chat (status.asleep: put to sleep, by the user or
+	// after idling, or left unopened since the daemon started) as a message
+	// would before it is sent, and sends nothing: it answers once the reopen
+	// (ACP session/load) has begun, and the chat's status shows the rest, busy
+	// with no turn while it opens, then awake, or reopen_failed with its
+	// notice. A chat that isn't asleep (awake, busy, reopening, or whose
+	// reopen failed: ReopenChat is Try again) is left as it is; an archived
+	// one is refused, and once a restart into a newer build is due a wake is
+	// refused as SendPrompt is (Unavailable, reason restarting: the app asks
+	// the new daemon). (API 146)
+	WakeChat(context.Context, *connect.Request[v1.WakeChatRequest]) (*connect.Response[v1.WakeChatResponse], error)
 	// The daemon's settings, and changing them.
 	// Says how much memory Nushi takes, as footprint (Activity Monitor's
 	// Memory), in bytes: a few milliseconds' work.
@@ -3229,7 +3269,8 @@ type NushiServiceHandler interface {
 	// chat's sessions (ACP session/delete, when it can), the chat's scratch
 	// folder goes, and Nushi's record of it.
 	DeleteChat(context.Context, *connect.Request[v1.DeleteChatRequest]) (*connect.Response[v1.DeleteChatResponse], error)
-	// Takes chats off ListChatsResponse.removed (the app has said so).
+	// Takes chats off ListChatsResponse.removed (the app has said so). From
+	// API 151 there are none, and it does nothing.
 	DismissRemovedChats(context.Context, *connect.Request[v1.DismissRemovedChatsRequest]) (*connect.Response[v1.DismissRemovedChatsResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
@@ -3305,8 +3346,9 @@ type NushiServiceHandler interface {
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
 	// Asks the chat's agent, unseen, what fills its context (Claude's
-	// /context), in a throwaway fork of its session, while the chat is idle.
-	// Refused when the agent can't fork.
+	// get_context_usage, Ante's and Pi's own ask), while the chat is idle:
+	// no turn and no fork, so a side chat or a new chat can be asked too.
+	// Refused when the agent can't say, the chat is busy or no agent runs.
 	GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error)
 	// Lists the MCP servers the agent's config gives a folder, read from the
 	// agent's own files, env and header values masked. With check_health, the
@@ -3835,6 +3877,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceReopenChatProcedure,
 		svc.ReopenChat,
 		connect.WithSchema(nushiServiceMethods.ByName("ReopenChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceWakeChatHandler := connect.NewUnaryHandler(
+		NushiServiceWakeChatProcedure,
+		svc.WakeChat,
+		connect.WithSchema(nushiServiceMethods.ByName("WakeChat")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceGetMemoryHandler := connect.NewUnaryHandler(
@@ -4657,6 +4705,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceSleepChatHandler.ServeHTTP(w, r)
 		case NushiServiceReopenChatProcedure:
 			nushiServiceReopenChatHandler.ServeHTTP(w, r)
+		case NushiServiceWakeChatProcedure:
+			nushiServiceWakeChatHandler.ServeHTTP(w, r)
 		case NushiServiceGetMemoryProcedure:
 			nushiServiceGetMemoryHandler.ServeHTTP(w, r)
 		case NushiServiceGetSettingsProcedure:
@@ -5070,6 +5120,10 @@ func (UnimplementedNushiServiceHandler) SleepChat(context.Context, *connect.Requ
 
 func (UnimplementedNushiServiceHandler) ReopenChat(context.Context, *connect.Request[v1.ReopenChatRequest]) (*connect.Response[v1.ReopenChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ReopenChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) WakeChat(context.Context, *connect.Request[v1.WakeChatRequest]) (*connect.Response[v1.WakeChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.WakeChat is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) GetMemory(context.Context, *connect.Request[v1.GetMemoryRequest]) (*connect.Response[v1.GetMemoryResponse], error) {

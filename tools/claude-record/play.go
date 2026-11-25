@@ -10,6 +10,7 @@ import (
 	"maps"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -73,12 +74,20 @@ func makeRepo(ctx context.Context, dir string) error {
 		{"init", "-q", "-b", "main"},
 		{"-c", "user.name=Recorder", "-c", "user.email=recorder@example.com", "commit", "-q", "--allow-empty", "-m", "start"},
 	} {
-		cmd := exec.CommandContext(ctx, "git", args...)
-		cmd.Dir = dir
-		cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + dir, "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null"}
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("git %s: %w: %s", args[0], err, out)
+		if err := runGit(ctx, dir, args); err != nil {
+			return err
 		}
+	}
+	return nil
+}
+
+// runGit runs git with args in dir, without the caller's git config.
+func runGit(ctx context.Context, dir string, args []string) error {
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Dir = dir
+	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + dir, "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null"}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git %s: %w: %s", args[0], err, out)
 	}
 	return nil
 }
@@ -127,6 +136,8 @@ func (p *player) step(ctx context.Context, s *step) error {
 		return p.kill(ctx, s.Kill)
 	case "repo":
 		return makeRepo(ctx, p.cwd)
+	case "git":
+		return runGit(ctx, p.cwd, s.Git)
 	case "answer":
 		return p.answer(ctx, s)
 	case "cancel":
@@ -241,6 +252,7 @@ func (p *player) build(s *step) (string, any, error) {
 			return "", nil, fmt.Errorf("mcpServers: %w", err)
 		}
 	}
+	cwd := filepath.Join(p.cwd, s.Cwd)
 	var id acp.SessionID
 	for _, name := range []string{s.Load, s.Resume, s.Fork, s.Close, s.Delete, s.Session} {
 		if name != "" {
@@ -257,13 +269,13 @@ func (p *player) build(s *step) (string, any, error) {
 		}
 		return "initialize", chats.InitializeRequest(claude.Harness{}.Info()), nil
 	case "new":
-		return "session/new", acp.NewSessionRequest{Cwd: p.cwd, MCPServers: servers, Meta: meta}, nil
+		return "session/new", acp.NewSessionRequest{Cwd: cwd, MCPServers: servers, Meta: meta}, nil
 	case "load":
-		return "session/load", acp.LoadSessionRequest{SessionID: id, Cwd: p.cwd, MCPServers: servers, Meta: meta}, nil
+		return "session/load", acp.LoadSessionRequest{SessionID: id, Cwd: cwd, MCPServers: servers, Meta: meta}, nil
 	case "resume":
-		return "session/resume", acp.ResumeSessionRequest{SessionID: id, Cwd: p.cwd, MCPServers: servers, Meta: meta}, nil
+		return "session/resume", acp.ResumeSessionRequest{SessionID: id, Cwd: cwd, MCPServers: servers, Meta: meta}, nil
 	case "fork":
-		return "session/fork", acp.ForkSessionRequest{SessionID: id, Cwd: p.cwd, MCPServers: servers, Meta: meta}, nil
+		return "session/fork", acp.ForkSessionRequest{SessionID: id, Cwd: cwd, MCPServers: servers, Meta: meta}, nil
 	case "list":
 		return "session/list", acp.ListSessionsRequest{Cwd: p.cwd}, nil
 	case "close":

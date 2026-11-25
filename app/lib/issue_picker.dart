@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/picker.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -45,6 +45,9 @@ class _IssuePickerState extends State<IssuePicker> {
   FindJiraIssuesResponse? _found;
   String? _error;
   int _at = 0;
+
+  /// The lit row's, to keep it in view.
+  final GlobalKey _lit = GlobalKey(debugLabel: 'lit issue');
   Timer? _wait;
 
   /// The text of the newest search, so an older answer is dropped.
@@ -107,26 +110,20 @@ class _IssuePickerState extends State<IssuePicker> {
     widget.onPick(f);
   }
 
-  KeyEventResult _key(FocusNode _, KeyEvent e) {
-    if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
-      return KeyEventResult.ignored;
-    }
-    final n = _issues.length;
-    switch (e.logicalKey) {
-      case LogicalKeyboardKey.escape:
-        widget.onBack();
-      case LogicalKeyboardKey.arrowDown when n > 0:
-        setState(() => _at = (_at + 1) % n);
-      case LogicalKeyboardKey.arrowUp when n > 0:
-        setState(() => _at = (_at - 1 + n) % n);
-      case LogicalKeyboardKey.enter || LogicalKeyboardKey.numpadEnter
-          when n > 0 && _answered == _text.text.trim():
-        _pick(_at);
-      default:
-        return KeyEventResult.ignored;
-    }
-    return KeyEventResult.handled;
-  }
+  /// ↑↓ move the lit row, kept in view (its rows are two lines and grow
+  /// with the text, so it's found by its key, not its index); ⏎ picks it
+  /// once what's typed is answered; Esc goes back.
+  KeyEventResult _key(FocusNode _, KeyEvent e) => pickKey(
+    e,
+    count: _issues.length,
+    at: _at,
+    move: (to, by) {
+      setState(() => _at = to);
+      revealRow(_lit, down: by > 0);
+    },
+    pick: _answered == _text.text.trim() ? () => _pick(_at) : null,
+    escape: widget.onBack,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -225,6 +222,7 @@ class _IssuePickerState extends State<IssuePicker> {
     final t = theme.t;
     final is_ = f.issue;
     return Tap(
+      key: i == _at ? _lit : null,
       onTap: () => _pick(i),
       selected: i == _at,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),

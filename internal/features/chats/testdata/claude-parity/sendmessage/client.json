@@ -8,6 +8,8 @@
     {"prompt": "tell the helper to say bye", "session": "s1", "async": "p2"},
     {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "running"}}}}},
     {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "idle"}}}}},
-    {"await": "p2"}
+    {"await": "p2"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "agent_message_chunk", "content": {"text": "Noted."}}}}},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "usage_update", "cost": {"currency": "USD"}}}}}
   ]
 }

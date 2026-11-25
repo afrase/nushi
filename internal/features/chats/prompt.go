@@ -97,6 +97,7 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 			c.logLocked().Info("chat waking", "for", "a message")
 		}
 		c.reopenFailed, c.asleep = false, false // a message tries again, and wakes it
+		c.wantedLocked()
 		s.reopenLocked(c)
 		if how != SendNow || c.started.IsZero() || waited {
 			break
@@ -123,13 +124,13 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 	// (steerQueue): one sent meanwhile goes after it, however it's sent.
 	// Not when that turn was stopped or failed: the message out goes back to
 	// the held queue, and a new one goes ahead of it, as in any held chat.
-	queue := c.reopeningLocked() || c.steering && !c.busy && !c.held || c.busy && how == SendQueue
+	queue := c.sessionOpLocked() || c.steering && !c.busyLocked() && !c.held || c.busyLocked() && how == SendQueue
 	switch {
-	case len(m.Images) > 0 && !c.canImage && !c.reopeningLocked():
+	case len(m.Images) > 0 && !c.canImage && !c.sessionOpLocked():
 		// Reopening, the agent's answer isn't known yet: the queue checks.
 		return errors.New("the agent doesn't take images")
 	case queue:
-	case c.busy:
+	case c.busyLocked():
 		return errors.New("the agent is still working on the last prompt")
 	}
 	// Taken: its uploads are saved now, under the lock, and nothing refuses
@@ -138,7 +139,7 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 		return err
 	}
 	switch {
-	case c.reopeningLocked() && c.held:
+	case c.sessionOpLocked() && c.held:
 		// A new message is the held queue's chance, and goes ahead of it,
 		// as in a chat that's awake: Continue or Try again after a failed
 		// turn first, then the queue.
@@ -192,8 +193,8 @@ func (c *chat) toSubagentOfLocked(m *model.Message) error {
 }
 
 // closedLocked says why a chat takes no prompts: it is archived, being
-// deleted, its agent is stopping, or its worktree is being removed; nil
-// when it takes them.
+// deleted, its agent is stopping, or a git step changes its folder
+// (holdFolder); nil when it takes them.
 func (c *chat) closedLocked() error {
 	switch {
 	case c.record.Archived:
@@ -202,8 +203,8 @@ func (c *chat) closedLocked() error {
 		return errors.New("the chat is being deleted")
 	case c.stopping:
 		return errors.New("the chat's agent is stopping")
-	case c.removing:
-		return errors.New("the chat's worktree is being removed")
+	case c.folder != "":
+		return errors.New("the chat's " + c.folder)
 	}
 	return nil
 }
@@ -233,33 +234,13 @@ func (c *chat) startLocked(prompt []acp.ContentBlock) {
 	}
 	notes := c.notesLocked()
 	sent, done := make(chan struct{}), make(chan struct{})
-	c.busy, c.started, c.done, c.sent, c.held = true, time.Now(), done, sent, false
-	c.released, c.steered, c.turnFrom, c.stopped, c.steerFailed = false, 0, len(c.items), false, false
+	c.beginOpLocked(opTurn)
+	c.started, c.done, c.sent, c.held = time.Now(), done, sent, false
+	c.turnFrom, c.stopped, c.steerFailed = len(c.items), false, false
 	c.endOwnTurnLocked(model.NotEnded, "") // the prompt supersedes the agent's own turn
 	c.statusChangedLocked()
 	c.logLocked().Info("turn started", "queued", len(c.queue))
 	go c.run(c.agent, &acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt}, notes, sent, done)
-}
-
-// releaseLocked ends the running turn for the chat while the agent still
-// holds its prompt open for subagents the turn left running in the
-// background (see Transcript.TurnDone): the chat is idle, a message goes as
-// the next prompt (which the agent takes at once, answering the held one),
-// and the subagents' steps and the agent's answer to their reports come as
-// its own work. The held prompt's answer then changes nothing (run).
-func (c *chat) releaseLocked() {
-	c.logLocked().Info("turn's work ended", "took", time.Since(c.started).Round(time.Millisecond), "held_for", "background subagents")
-	c.released, c.busy, c.started = true, false, time.Time{}
-	close(c.done)
-	c.notPassedOnLocked()
-	c.copyLocked(true)
-	c.lookRelatedLocked()
-	end := model.TurnDone
-	if c.turnStoppedLocked() {
-		end = model.TurnStopped
-	}
-	c.turnEndedLocked(end, "")
-	c.deliverLocked()
 }
 
 // backgroundLocked says a subagent the agent started (since item from)
@@ -348,19 +329,14 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.done != done || c.released { // released: its end was the chat's already
-		c.released = c.released && c.done != done
-		c.logLocked().Info("held prompt answered", "err", err)
-		c.meterLocked(model.UsageHeld, promptUsage(resp, err)) // its tokens: the turn's work was metered at its release
-		return
-	}
 	if log := c.logLocked().With("took", time.Since(c.started).Round(time.Millisecond)); err != nil {
 		log.Warn("turn failed", "err", err)
 	} else {
 		log.Info("turn ended", "stop", resp.StopReason)
 	}
-	c.busy, c.started = false, time.Time{}
-	close(c.done)
+	c.endOpLocked()
+	c.started = time.Time{}
+	close(done)
 	c.notPassedOnLocked()
 	if err == nil && resp.Usage != nil {
 		u := resp.Usage
@@ -394,7 +370,7 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	c.lookRelatedLocked()
 	end, failure := c.verdictLocked(resp, err, quit)
 	// The copy has the turn's last items before the turn is said to have
-	// ended, as releaseLocked has it: whoever reads it then reads them.
+	// ended: whoever reads it then reads them.
 	c.copyLocked(true)
 	c.turnEndedLocked(end, failure)
 	// A stopped or failed turn holds the queue until the next one ends: one

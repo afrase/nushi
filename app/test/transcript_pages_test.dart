@@ -18,6 +18,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/message_pins.dart';
+import 'package:nushi/palette.dart';
 import 'package:nushi/rail.dart';
 import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/settings.dart';
@@ -417,16 +418,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.older, older, reason: 'the transcript lays out none of them');
     expect(paged.pages, isNotEmpty);
-    final rows = find.descendant(
-      of: find.byType(RewindPicker),
-      matching: find.textContaining('Turn '),
-    );
-    expect(rows, findsNWidgets(60));
-    expect(
-      tester.widget<Text>(rows.last).data,
-      startsWith('Turn 0:'),
-      reason: 'the oldest last',
-    );
+    // The list builds the rows that show; it holds them all.
+    final rows = tester
+        .widget<PickBox<Item>>(find.byType(PickBox<Item>))
+        .rows
+        .map(rewindLine)
+        .where((l) => l.startsWith('Turn '))
+        .toList();
+    expect(rows, hasLength(60));
+    expect(rows.last, startsWith('Turn 0:'), reason: 'the oldest last');
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     await closeView(tester, d);

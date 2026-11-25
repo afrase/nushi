@@ -65,13 +65,14 @@ func (s *Service) ForkAsChat(ctx context.Context, chatID, at string) (string, er
 	c.record = forkRecord(c.id, o.sid, of) // with the chat's mode, which reapply puts on it
 	s.useLocked(c, o)
 	c.forkedLocked(items)
-	c.busy = true // until reapply: no prompt before the chat's picks are on it
+	c.beginOpLocked(opFork) // until reapply: no prompt before the chat's picks are on it
 	c.mu.Unlock()
 	s.register(c)
-	if err := c.reapply(ctx, o.agent, o.sid, of.Mode, of.Picks); err != nil {
-		c.log().Warn("mode after forking", "err", err)
+	mode := c.reapply(ctx, o.agent, o.sid, of.Mode, of.Picks)
+	if mode != nil {
+		c.log().Warn("mode after forking", "err", mode)
 	}
-	c.settled()
+	c.settled(mode)
 	c.log().Info("chat forked", "from", p.id, "at_message", at != "")
 	return c.id, nil
 }
@@ -87,8 +88,8 @@ func (c *chat) forkLocked(at string) ([]model.Item, string, error) {
 	switch {
 	case c.agent == nil || !c.canFork || c.parent != nil:
 		return nil, "", errors.New("the agent can't fork this chat")
-	case c.reopeningLocked():
-		return nil, "", errors.New("the chat is reopening, moving or rewinding; fork it once that's done")
+	case c.sessionOpLocked():
+		return nil, "", fmt.Errorf("%s; fork it once that's done", c.stillLocked())
 	case !c.record.HasMessages:
 		return nil, "", errors.New("the chat has no messages to fork")
 	}
@@ -208,14 +209,14 @@ func (s *Service) keepSide(ctx context.Context, id string, archive bool) (string
 	of, canLoad := p.record, p.canLoad
 	p.mu.Unlock()
 	side.mu.Lock()
-	busy := side.busy || side.ownTurn || side.waitsLocked() || side.backgroundLocked(0)
+	working := side.workingLocked("keep it")
 	base := slices.Clone(side.base)
 	side.mu.Unlock()
 	switch {
 	case !canLoad:
 		return "", errors.New("the agent can't reopen sessions, so the side chat can't be kept")
-	case busy && !archive:
-		return "", errors.New("the side chat is busy; keep it once its turn has ended")
+	case working != nil && !archive:
+		return "", working
 	}
 	// The side chat's base is the chat's items, which may hold images as
 	// references to the chat's copy; the new chat's copy is its own.

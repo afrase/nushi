@@ -345,15 +345,6 @@ void main() {
     await endEditor(tester, d);
   }, variant: onMac);
 
-  testWidgets('an older daemon: says marks need a newer one', (tester) async {
-    final (d, _) = await _open(tester, open: []);
-    d.daemonApi = oneFileDiffApi - 1;
-    await _show(tester, d, 'same.go');
-    expect(_status('Change marks need a newer daemon'), findsOneWidget);
-    expect(tester.widget<NotePill>(_pill).tone, NoteTone.needs);
-    await endEditor(tester, d);
-  }, variant: onMac);
-
   testWidgets('a slow answer: nothing at first, then a quiet Comparing…, '
       'then the word', (tester) async {
     final answer = Completer<Object?>();

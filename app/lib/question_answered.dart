@@ -125,6 +125,12 @@ class _AnsweredQuestionState extends State<AnsweredQuestion> {
       for (final v in f.values)
         if (!f.options.any((o) => o.id == v)) v,
     ];
+    // A note on the pick follows the last option picked, not Other.
+    final note = answeredNote(q);
+    final last = f.options.lastWhere(
+      (o) => f.values.contains(o.id),
+      orElse: Option.new,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 2,
@@ -144,6 +150,7 @@ class _AnsweredQuestionState extends State<AnsweredQuestion> {
             o,
             many: many,
             picked: f.values.contains(o.id),
+            note: identical(o, last) ? note : '',
             onTap: null,
           ),
         if (f.options.isEmpty)
@@ -164,8 +171,8 @@ class _AnsweredQuestionState extends State<AnsweredQuestion> {
           QuestionOption(
             Option(name: other.title.isEmpty ? 'Other' : other.title),
             many: many,
-            picked: other.values.isNotEmpty,
-            said: other.values.join(', '),
+            picked: note.isEmpty && other.values.isNotEmpty,
+            said: note.isEmpty ? other.values.join(', ') : '',
             onTap: null,
           ),
       ],

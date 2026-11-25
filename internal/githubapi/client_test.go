@@ -90,10 +90,26 @@ func (f *fake) route(route string, h http.HandlerFunc) {
 // answer has no such file. An answer TestLive doesn't ask (MergeText's,
 // recorded once and since edited by hand) keeps its .graphql too, kept by
 // hand: a changed query then means looking at the answer again.
-func (f *fake) file(route, name string) {
+func (f *fake) file(route, name string) { f.patched(route, name, nil) }
+
+// patched answers route as file does, with patch's changes over the
+// answer's data first, for a case the recording lacks (a recording is
+// what GitHub said and is never edited by hand). The request is still
+// checked against the recorded query.
+func (f *fake) patched(route, name string, patch func(data map[string]any)) {
 	b, err := os.ReadFile("testdata/" + name)
 	if err != nil {
 		f.t.Fatal(err)
+	}
+	if patch != nil {
+		var answer struct {
+			Data map[string]any `json:"data"`
+		}
+		if err := json.Unmarshal(b, &answer); err != nil || answer.Data == nil {
+			f.t.Fatalf("testdata/%s: %v", name, err)
+		}
+		patch(answer.Data)
+		b = []byte(testcheck.JSON(f.t, answer))
 	}
 	asked, err := os.ReadFile("testdata/" + strings.TrimSuffix(name, ".json") + ".graphql")
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -116,6 +132,20 @@ func (f *fake) file(route, name string) {
 		}
 		_, _ = w.Write(b)
 	})
+}
+
+// object is the object at keys' path below m, for a patch: a missing or
+// other value there fails the test.
+func object(t *testing.T, m map[string]any, keys ...string) map[string]any {
+	t.Helper()
+	for _, k := range keys {
+		next, ok := m[k].(map[string]any)
+		if !ok {
+			t.Fatalf("no object at %s", strings.Join(keys, "."))
+		}
+		m = next
+	}
+	return m
 }
 
 func (f *fake) count(route string) int {

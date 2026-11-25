@@ -95,7 +95,8 @@ service NushiService {
   // is busy.
   rpc RewindChat(RewindChatRequest) returns (RewindChatResponse);
   // Takes a message out of the chat's queue before the agent gets it, and
-  // returns it. Refused once the agent has it.
+  // returns it. Refused once the agent has it. With send_now it sends the
+  // message at once instead, as SendPrompt's now does, and returns none.
   rpc Unqueue(UnqueueRequest) returns (UnqueueResponse);
   // Stops the chat's running turn (ACP session/cancel). The turn ends with a
   // "cancelled" notice, and prompts it was waiting on are cancelled. It can
@@ -187,6 +188,17 @@ service NushiService {
   // and so does one last used over an hour (or the sleep time, if
   // shorter) before the daemon started whose transcript's copy is kept.
   rpc ReopenChat(ReopenChatRequest) returns (ReopenChatResponse);
+  // Wakes a sleeping chat (status.asleep: put to sleep, by the user or
+  // after idling, or left unopened since the daemon started) as a message
+  // would before it is sent, and sends nothing: it answers once the reopen
+  // (ACP session/load) has begun, and the chat's status shows the rest, busy
+  // with no turn while it opens, then awake, or reopen_failed with its
+  // notice. A chat that isn't asleep (awake, busy, reopening, or whose
+  // reopen failed: ReopenChat is Try again) is left as it is; an archived
+  // one is refused, and once a restart into a newer build is due a wake is
+  // refused as SendPrompt is (Unavailable, reason restarting: the app asks
+  // the new daemon). (API 146)
+  rpc WakeChat(WakeChatRequest) returns (WakeChatResponse);
   // The daemon's settings, and changing them.
   // Says how much memory Nushi takes, as footprint (Activity Monitor's
   // Memory), in bytes: a few milliseconds' work.
@@ -208,7 +220,8 @@ service NushiService {
   // chat's sessions (ACP session/delete, when it can), the chat's scratch
   // folder goes, and Nushi's record of it.
   rpc DeleteChat(DeleteChatRequest) returns (DeleteChatResponse);
-  // Takes chats off ListChatsResponse.removed (the app has said so).
+  // Takes chats off ListChatsResponse.removed (the app has said so). From
+  // API 151 there are none, and it does nothing.
   rpc DismissRemovedChats(DismissRemovedChatsRequest) returns (DismissRemovedChatsResponse);
   // Answers a pending permission prompt with one of its options.
   rpc AnswerPermission(AnswerPermissionRequest) returns (AnswerPermissionResponse);
@@ -285,8 +298,9 @@ service NushiService {
   // repository the ones git doesn't ignore.
   rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
   // Asks the chat's agent, unseen, what fills its context (Claude's
-  // /context), in a throwaway fork of its session, while the chat is idle.
-  // Refused when the agent can't fork.
+  // get_context_usage, Ante's and Pi's own ask), while the chat is idle:
+  // no turn and no fork, so a side chat or a new chat can be asked too.
+  // Refused when the agent can't say, the chat is busy or no agent runs.
   rpc GetContextUsage(GetContextUsageRequest) returns (GetContextUsageResponse);
   // Lists the MCP servers the agent's config gives a folder, read from the
   // agent's own files, env and header values masked. With check_health, the
@@ -666,7 +680,8 @@ message ListChatsResponse {
   repeated Chat chats = 1;
   // Chats the daemon removed since it started because their agent no
   // longer has their sessions (Claude Code deletes old ones), until
-  // DismissRemovedChats; oldest first.
+  // DismissRemovedChats; oldest first. From API 151 always empty: the
+  // daemon keeps such a chat, marked (Status.session_gone; ADR 0015).
   repeated RemovedChat removed = 2;
   // The ids of chats whose record the daemon couldn't read or parse
   // (sessions/<id>.json), sorted. They aren't in chats, and aren't gone:
@@ -1271,9 +1286,14 @@ message RewindChatResponse {
 message UnqueueRequest {
   string chat_id = 1;
   string id = 2;
+  // Send the message now (Send now): the running turn stops first, as
+  // SendPrompt's now does. If the send fails or the call ends first, the
+  // message stays where it was in the queue. Since API 147.
+  bool send_now = 3;
 }
 
 message UnqueueResponse {
+  // The message taken out; none with send_now.
   QueuedMessage message = 1;
 }
 
@@ -1462,6 +1482,12 @@ message ReopenChatRequest {
 }
 
 message ReopenChatResponse {}
+
+message WakeChatRequest {
+  string chat_id = 1;
+}
+
+message WakeChatResponse {}
 
 message GetMemoryRequest {
   // The asking app's process, to read along; 0 for none.
@@ -2380,7 +2406,8 @@ message EventsResponse {
     // Remote access changed (chat_id is empty).
     Remote remote = 14;
     // The chats removed because their agent no longer has their sessions,
-    // all of them (ListChatsResponse.removed); chat_id is empty.
+    // all of them (ListChatsResponse.removed); chat_id is empty. Never
+    // sent from API 151.
     RemovedChats removed_chats = 15;
     // What the check for a newer release found, when that changed
     // (chat_id is empty; API 86).
@@ -2611,6 +2638,21 @@ message Item {
   // where the app shows the call as any other (ADR 0068's amendment).
   string mcp_server = 43;
   string mcp_tool = 44;
+  // For the main agent's tool call that moved where it works, once the
+  // call succeeded (Claude's EnterWorktree and ExitWorktree): the worktree
+  // it entered, or an empty path for its session's folder again; unset
+  // for any other call. The call that entered one offers Move chat here
+  // (MoveChat with that path; ADR 0150). Unset from a daemon below API 152.
+  WorksIn works_in = 45;
+}
+
+// Where an agent's tool call says it works once it completes: a worktree
+// it entered (Nushi didn't make it), or, with an empty path, its
+// session's folder again.
+message WorksIn {
+  // The worktree's absolute path, as the agent's tool result named it;
+  // empty when it left one.
+  string path = 1;
 }
 
 // A workflow: a run a tool call launched, a script of the agent's running
@@ -2833,6 +2875,11 @@ message Field {
   // For a free-text field that is another field's "Other" answer: that
   // field's id.
   string other_for = 8;
+  // For an "Other" field: the agent takes its text, beside a pick of the
+  // field it is for, as a note on that pick, not as an answer of its own
+  // (the harness's OtherNotes: Claude's and Codex's with one choice,
+  // Ante's with any). API 150.
+  bool note = 9;
 }
 
 message ItemEvent {
@@ -2882,8 +2929,9 @@ message ChatStatus {
   // becomes ready clears it where it wasn't (the next ReopenChat reopens).
   bool reopen_failed = 12;
   // Of a chat whose reopen failed: its agent no longer has its session
-  // (it deleted it). The chat stays only for its worktree's or scratch
-  // folder's work; DeleteChat is what's left.
+  // (it deleted it). The chat stays, read-only, its transcript Nushi's
+  // copy where it has one, until DeleteChat (from API 151 whether or not
+  // it has a copy or work; before, only then).
   bool session_gone = 13;
   // How many subagents, background commands and workflows the chat's
   // agent started still run (API 84; workflows API 120): a turn can end
@@ -3789,7 +3837,9 @@ message GitHubItem {
   // A pull request's merge state: "clean", "blocked", "behind", "dirty",
   // "unstable", "has_hooks", "draft", "unknown" or "".
   string merge_state = 19;
-  // A closed issue's reason: "completed", "not_planned" or "".
+  // An issue's state reason, as GitHub gives it: a closed one's
+  // "completed" or "not_planned", "reopened" for an open one that was
+  // once closed, or "". The app reads it for a closed issue only.
   string state_reason = 20;
   // A pull request's base and head branches.
   string base = 21;
@@ -3805,9 +3855,14 @@ message GitHubItem {
 // skipped ones count in neither side of passed/total.
 message GitHubCheckCounts {
   int32 passed = 1;
+  // Failed counts the cancelled too: GitHub's merge gate has them not
+  // passed.
   int32 failed = 2;
   int32 running = 3;
   int32 skipped = 4;
+  // How many of failed were cancelled, a kind GitHub draws and names
+  // apart; 0 from a daemon before API 148, whose failed says them all.
+  int32 cancelled = 5;
 }
 
 message ListGitHubInboxRequest {
@@ -4043,6 +4098,8 @@ message GitHubCheck {
   // "pending" until it ends, then its conclusion: "success", "failure",
   // "cancelled", "skipped", "neutral", "timed_out"…
   string state = 5;
+  // Not passed, as GitHub's merge gate has it: failed, or cancelled (from
+  // API 145); its state tells the two apart.
   bool failed = 6;
   string url = 7;
   string title = 8;
@@ -4137,6 +4194,9 @@ message GitHubCommit {
   int64 committed_ms = 5;
   // Its checks: "success", "failure", "pending", or "" for none.
   string checks = 6;
+  // From API 149: checks is "failure" only because some were cancelled,
+  // none failed (an older daemon sends false).
+  bool cancelled = 7;
 }
 
 message GetGitHubCommitsRequest {

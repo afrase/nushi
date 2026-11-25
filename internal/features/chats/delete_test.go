@@ -232,8 +232,8 @@ func TestRemoveWorktreeHoldsTheChat(t *testing.T) {
 	testcheck.NoErr(t, <-removed)
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if len(agent.prompts) > 0 || !slices.Equal(wts.removed, []string{c.record.Folder}) || !c.asleep || c.removing {
-		t.Errorf("prompts %q, removed %q, asleep %v, removing %v", agent.prompts, wts.removed, c.asleep, c.removing)
+	if len(agent.prompts) > 0 || !slices.Equal(wts.removed, []string{c.record.Folder}) || !c.asleep || c.folder != "" {
+		t.Errorf("prompts %q, removed %q, asleep %v, folder %q", agent.prompts, wts.removed, c.asleep, c.folder)
 	}
 }
 
@@ -256,7 +256,7 @@ func TestRemoveWorktreeKeepsAStoppedChatFromReopening(t *testing.T) {
 	_, err := svc.Get(c.id)
 	testcheck.NoErr(t, err)
 	c.mu.Lock()
-	busy := c.busy // a reopen would have set it before Get returned
+	busy := c.busyLocked() // a reopen would have set it before Get returned
 	c.mu.Unlock()
 	close(wts.goOn)
 	testcheck.NoErr(t, <-removed)
@@ -547,6 +547,33 @@ func TestAFailedDeleteWritesTheStoppedTurnsCopy(t *testing.T) {
 	}
 }
 
+// deleting begins a Delete of c that waits on its history's delete until
+// the release it returns, and then fails: meanwhile the chat is being
+// deleted (halting), and after, it stays, as a failed delete leaves it
+// (unhaltLocked).
+func deleting(t *testing.T, svc *Service, agent *fakeAgent, c *chat) (release func()) {
+	t.Helper()
+	agent.mu.Lock()
+	agent.deletes, agent.deleteErr = true, errors.New("busy")
+	agent.deleteGate, agent.entered = make(chan struct{}), make(chan string, 1)
+	agent.mu.Unlock()
+	done := make(chan error, 1)
+	go func() { done <- svc.Delete(context.Background(), c.id, nil) }()
+	if got := <-agent.entered; got != "delete" {
+		t.Fatalf("the delete waits at %s", got)
+	}
+	return func() {
+		t.Helper()
+		close(agent.deleteGate) // left closed: a later delete passes it
+		if err := <-done; err == nil {
+			t.Fatal("deleted")
+		}
+		agent.mu.Lock()
+		agent.deleteErr, agent.entered = nil, nil
+		agent.mu.Unlock()
+	}
+}
+
 // A reopen's write of the copy waits while the chat is being deleted, as
 // the other writers do: it would make the copy again. Its items stay
 // unsaved, for a delete that fails to write then (unhaltLocked).
@@ -555,15 +582,15 @@ func TestADeletedChatsReopenWritesNoCopy(t *testing.T) {
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")
 	testcheck.NoErr(t, store.Delete(c.id))
+	release := deleting(t, svc, agent, c)
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.halting = true
 	c.saveCopyLocked(nil, c.items)
-	if store.Has(c.id) || c.mirrored || len(c.unsaved) != 2 {
-		t.Fatalf("while halting: a copy %v, mirrored %v, unsaved %v", store.Has(c.id), c.mirrored, c.unsaved)
+	written, mirrored, unsaved := store.Has(c.id), c.mirrored, len(c.unsaved)
+	c.mu.Unlock()
+	if written || mirrored || unsaved != 2 {
+		t.Fatalf("while being deleted: a copy %v, mirrored %v, %d unsaved", written, mirrored, unsaved)
 	}
-	c.halting = false
-	c.copyLocked(true)
+	release()
 	if got := copied(t, store, c.id); got != "user:one agent:m1" {
 		t.Errorf("after the failed delete: %q", got)
 	}
@@ -572,20 +599,23 @@ func TestADeletedChatsReopenWritesNoCopy(t *testing.T) {
 // A move's renaming of the copy's files waits while the chat is being
 // deleted: the copy is left as it is.
 func TestADeletedChatsMoveLeavesTheCopy(t *testing.T) {
-	svc, _, c, store, _ := newCopyingChat(t)
+	svc, agent, c, store, _ := newCopyingChat(t)
 	if svc.copies == nil {
 		t.Fatal("the service keeps no copies")
 	}
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.addLocked(model.Item{Kind: model.ToolCall, ID: "t1", Status: "completed", Paths: []string{"a.go"}})
 	c.copyLocked(true)
-	c.halting = true
+	c.mu.Unlock()
+	release := deleting(t, svc, agent, c)
+	defer release()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.movedLocked(t.TempDir())
 	items, err := store.Read(c.id)
 	testcheck.NoErr(t, err)
 	if len(items) != 1 || !slices.Equal(items[0].Paths, []string{"a.go"}) {
-		t.Errorf("the copy while halting: %+v", items)
+		t.Errorf("the copy while being deleted: %+v", items)
 	}
 	if c.mirrored {
 		t.Error("mirrored, though the copy lacks the move")

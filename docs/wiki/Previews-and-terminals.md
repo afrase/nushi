@@ -56,7 +56,7 @@ Rendered views (Markdown, CSV, HTML) can't show marks: click the pill (**3 chang
 
 In the tree, a green dot marks every file with changes (the ones that open with marks or **New file**), whoever made them: the agent, a command, or you. Folders that hold such a file have the dot too, even when closed. A file the chat changed and then put back as it was has no dot. Opened, it says **No changes since main**. In a folder that isn't a git repository there's nothing to compare with, so the dot marks the files the chat wrote instead.
 
-A file with a dot and no marks always says why next to its path: **Not in a git repository**, **Ignored by git**, a link, not text, too large or over 10,000 lines, **Change marks need a newer daemon** (restart Nushi), or **Couldn’t compare with git** (click it for git's words). A file outside the chat's folder is marked against its own last commit.
+A file with a dot and no marks always says why next to its path: **Not in a git repository**, **Ignored by git**, a link, not text, too large or over 10,000 lines, or **Couldn’t compare with git** (click it for git's words). A file outside the chat's folder is marked against its own last commit.
 
 ## Work with several files
 

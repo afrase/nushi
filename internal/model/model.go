@@ -44,7 +44,7 @@ type ChatRecord struct {
 	// nor removes them.
 	RelatedWorktrees []RelatedWorktree `json:",omitempty"`
 	// Throwaway are sessions the agent forked from the chat's that nobody
-	// will see again (side chats, /context runs), until the agent has
+	// will see again (side chats, commit messages' forks), until the agent has
 	// deleted them: a daemon that stops or crashes first leaves them for
 	// the next time the chat opens, or Delete.
 	Throwaway []string `json:",omitempty"`
@@ -105,6 +105,11 @@ type ChatRecord struct {
 	// Pins are the chat's pinned messages, in the order they were pinned
 	// (chats.PinMessage, ADR 0085): the agent's alone.
 	Pins []MessagePin `json:",omitempty"`
+	// CopyCleared is when the user last cleared the chat's transcript copy
+	// (Settings › Chat history, by hand or by its age; ADR 0047): Nushi
+	// doesn't make one again on its own (the copy-ahead pass) unless the
+	// chat is used after (Updated). Zero: never cleared.
+	CopyCleared time.Time `json:",omitzero"`
 	// SideOf is where an archived side chat came from: a side chat with
 	// messages is archived as it's closed (ADR 0115), and Undo makes it
 	// that chat's side chat again. Unarchiving clears it.
@@ -245,8 +250,8 @@ type Status struct {
 	// failed (a notice says why); it isn't Asleep then.
 	ReopenFailed bool
 	// SessionGone says, of a chat whose reopen failed, that its agent no
-	// longer has its session: the chat stays only for its worktree's or
-	// scratch folder's work, and Delete is what's left.
+	// longer has its session: the chat stays, read-only, until deleted
+	// (ADR 0015).
 	SessionGone bool
 	// CanSleep says Sleep can stop its agent: the agent reopens sessions.
 	CanSleep bool
@@ -299,12 +304,6 @@ type TranscriptCopy struct {
 	Chat     string
 	Bytes    int64
 	Modified time.Time
-}
-
-// RemovedChat is a chat Nushi removed because its agent no longer has its
-// session (Claude Code deletes old ones): what Nushi kept of it.
-type RemovedChat struct {
-	ID, Agent, Title, Folder string
 }
 
 // FolderRun is something a folder has the agent run on its own: an MCP

@@ -3,7 +3,9 @@ package chats
 import (
 	"context"
 	"errors"
+	"os"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -53,18 +55,30 @@ func TestMoveAfterTheAgentQuit(t *testing.T) {
 }
 
 // A chat whose reopen failed has an empty transcript: moved, it is replayed.
+// Its reopen fails as after a daemon restart, its folder gone.
 func TestMoveAChatThatNeverReopened(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	c.kind.Moves = true
 	agent.updates = []acp.SessionUpdate{chunk("m1", "first")}
 	turn(t, svc, c, "one")
-	c.mu.Lock() // as after a daemon restart, when its folder was gone
-	c.agent, c.items, c.outlived = nil, nil, false
+	c.mu.Lock()
+	sess := c.record
 	c.mu.Unlock()
+	svc.Close()
+	testcheck.NoErr(t, os.RemoveAll(sess.Folder))
+	svc = newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sessions: &memSessions{stored: []model.ChatRecord{sess}}})
+	t.Cleanup(svc.Close)
+	_, err := svc.Get(sess.ID)
+	testcheck.NoErr(t, err)
+	c = svc.chats[sess.ID]
+	eventually(t, c, func() bool { return c.reopenFailed && !c.busyLocked() })
+	if got := texts(c); len(got) != 1 || !strings.HasPrefix(got[0], "notice:") {
+		t.Fatalf("its reopen failed, it holds %q", got)
+	}
+	c.kind.Moves = true
 	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
 	if got := texts(c); !slices.Equal(got, []string{"user:one", "agent:first"}) {
 		t.Errorf("transcript %q", got)
 	}
@@ -82,7 +96,7 @@ func TestAFailedDeleteThenAReopen(t *testing.T) {
 	if _, err := svc.Get(c.id); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
 	if got := texts(c); !slices.Equal(got, []string{"user:hi", "agent:hello"}) {
 		t.Errorf("transcript %q", got)
 	}
@@ -129,15 +143,12 @@ func TestNoMoveWhileTheChatGoesOrTheAgentWorks(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	c.kind.Moves = true
 	turn(t, svc, c, "one")
-	c.mu.Lock()
-	c.halting = true
-	c.mu.Unlock()
+	release := deleting(t, svc, agent, c)
 	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err == nil {
 		t.Error("moved a chat being deleted")
 	}
-	c.mu.Lock()
-	c.halting = false
-	c.mu.Unlock()
+	release()
+	turn(t, svc, c, "two") // the delete stopped its agent: a message reopens it
 	// The agent's own turn (a background command ended), until its usage.
 	send(c, chunk("own", "tests passed"))
 	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err == nil {
@@ -148,7 +159,43 @@ func TestNoMoveWhileTheChatGoesOrTheAgentWorks(t *testing.T) {
 	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err != nil {
 		t.Error(err)
 	}
-	_ = agent
+}
+
+// A prompt the agent asks on its own, with no turn running (after a
+// background task), would be dropped by a Move, which stops the agent: the
+// Move is refused until it's answered or gone, as a rewind is.
+func TestNoMoveWhileAPromptWaitsAlone(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	c.kind.Moves = true
+	turn(t, svc, c, "one")
+	gone := askAlone(t, c)
+	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err == nil || !strings.Contains(err.Error(), "waiting for your answer") {
+		t.Errorf("moved while a prompt waited: %v", err)
+	}
+	gone()
+	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err != nil {
+		t.Error(err)
+	}
+}
+
+// askAlone has the chat's agent ask a permission outside a turn, as it
+// does on its own after a background task, and waits for the card; the
+// func it returns takes the ask back and waits until it has gone.
+func askAlone(t *testing.T, c *chat) func() {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, _ = c.RequestPermission(ctx, &acp.RequestPermissionRequest{SessionID: "s1",
+			ToolCall: acp.ToolCallUpdate{ToolCallID: "t9", Title: "rm -rf build"}, Options: []acp.PermissionOption{{OptionID: "yes", Name: "Yes", Kind: "allow_once"}}})
+	}()
+	eventually(t, c, func() bool { return c.waitsLocked() })
+	t.Cleanup(func() { cancel(); <-done })
+	return func() {
+		cancel()
+		<-done
+	}
 }
 
 // What its agent ran ends with it: a call without a result (replayed after
@@ -160,7 +207,7 @@ func TestWhatTheAgentRanEndsWithIt(t *testing.T) {
 	if err := svc.Reload(c.id); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
 	if it := c.itemLocked("t1"); it == nil || it.Status != "failed" {
 		t.Errorf("a replayed call without its result: %+v", it)
 	}

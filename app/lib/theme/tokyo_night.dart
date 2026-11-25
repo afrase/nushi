@@ -11,7 +11,8 @@ import 'package:nushi/theme/tokens.dart';
 // the theme is known by is as published: the background (bg, the panes),
 // the side bar's (bg_dark, the window and code's surface), the text of
 // the transcript, code, diffs and the terminal (fg), comments, the
-// selection (bg_visual), code's colors by tokyonight's own groups, its
+// selection (bg_visual, a diff's selected code's too, at 0.8 so a changed
+// word shows through), code's colors by tokyonight's own groups, its
 // diff's fills and the terminal's sixteen. Code's and the terminal's
 // colors are not held to Nushi's contrast floors (`published_colors_test`).
 //
@@ -151,6 +152,7 @@ const tokyoNightDark = Tokens(
     foldPlaceholderText: Color(0xFF737AA2),
     loadingBar: Color(0xFF292E42),
     hoverAffordance: Color(0xFF7AA2F7),
+    textSelection: Color(0xCC283457), // bg_visual
   ),
 );
 
@@ -278,5 +280,6 @@ const tokyoNightLight = Tokens(
     foldPlaceholderText: Color(0xFF494E6C),
     loadingBar: Color(0xFFC4C8DA),
     hoverAffordance: Color(0xFF114DA0),
+    textSelection: Color(0xCCB7C1E3), // bg_visual
   ),
 );

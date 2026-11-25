@@ -25,6 +25,7 @@ func (c *chat) createElicitation(ctx context.Context, req *acp.CreateElicitation
 	for i := 1; i < len(fields); i++ {
 		if isOther(fields[i], fields[i-1], c.kind.OtherSuffix) {
 			fields[i].OtherFor = fields[i-1].ID
+			fields[i].Note = c.kind.OtherNotes.On(fields[i-1].Type)
 		}
 	}
 	answer := make(chan []model.Field, 1)

@@ -217,8 +217,8 @@ void main() {
   // One rule for a check's kind: the list, the Checks tab's label, a line's
   // Send to agent and Re-run, and Fix checks all count a cancelled check
   // as failing by checkKind, whatever GitHubCheck.failed a daemon sends.
-  testWidgets('a cancelled check is failing everywhere, from a daemon that '
-      'says it is not', (tester) async {
+  testWidgets('a cancelled check is cancelled everywhere, not failing, '
+      'from a daemon of either age', (tester) async {
     final p = overviewPull()
       ..checks.clear()
       ..checks.addAll([
@@ -236,7 +236,7 @@ void main() {
           ? GetGitHubJobLogResponse(tail: 'job ${input.job}')
           : null,
     );
-    expect(find.text('Checks  2 failing'), findsOneWidget);
+    expect(find.text('Checks  1 failing, 1 cancelled'), findsOneWidget);
     await tester.tap(_segment('checks'));
     await tester.pumpAndSettle();
     expect(
@@ -244,9 +244,10 @@ void main() {
         of: find.byType(ChecksList),
         matching: find.widgetWithText(Button, 'Send to agent'),
       ),
-      findsNWidgets(2),
+      findsOneWidget,
+      reason: "the failed one's: a cancelled one is no failure to fix",
     );
-    // Its words in the failing colour, as the failed check's.
+    // Its words in the secondary ink, not the failing colour.
     final deploy = find.byWidgetPredicate(
       (w) =>
           w is Text &&
@@ -255,15 +256,15 @@ void main() {
     final words = tester.widget<Text>(deploy).textSpan! as TextSpan;
     expect(
       words.children!.last.style!.color,
-      NushiTheme.of(tester.element(deploy)).t.crashed,
+      NushiTheme.of(tester.element(deploy)).t.textSecondary,
     );
     final fix = await checkReplies(d, p.item.ref, p);
-    expect(fix, hasLength(2));
+    expect(fix, hasLength(1));
     d.dispose();
   }, variant: onMac);
 
-  // Each kind of check (githubapi.KindOf, checkKind): cancelled and failed
-  // as failing, neutral as passed (its icon muted), skipped, running; in
+  // Each kind of check (githubapi.KindOf, checkKind): failed, cancelled
+  // (its own), neutral as passed (its icon muted), skipped, running; in
   // the Checks segment, its lights, and the Checks tab.
   for (final b in renderThemes) {
     for (final width in [1700.0, 720.0]) {
@@ -274,7 +275,7 @@ void main() {
         final p = overviewPull()
           ..checks.clear()
           ..checks.addAll([
-            // As the daemon sends it now: failed (githubapi.KindOf).
+            // As the daemon sends it now: failed, not passed (github.Failed).
             check('deploy (preview)', state: 'cancelled', id: 51)
               ..failed = true,
             check('lint', state: 'neutral', id: 52),

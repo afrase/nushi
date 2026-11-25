@@ -81,29 +81,41 @@ mixin _Opening<W extends StatefulWidget>
 }
 
 /// [child] laid out as its parent lays it out, any height, taking
-/// [factor] of its height from the top, and clipped to that while it's
-/// less than 1 (unless not [clip]). Unlike a SizeTransition it doesn't
-/// loosen the width: a stretched child stays stretched.
+/// [factor] of its height from the top (or, when [bottom], showing its
+/// bottom part), and clipped to that while it's less than 1 (unless not
+/// [clip]). Unlike a SizeTransition it doesn't loosen the width: a
+/// stretched child stays stretched. The one height reveal: a
+/// [Disclosure], a list's row, a bar (`BarSlide`) and the folds of a
+/// line that ends.
 class Fold extends SingleChildRenderObjectWidget {
-  const new({required this.factor, super.child, super.key, this.clip = true});
+  const new({
+    required this.factor,
+    super.child,
+    super.key,
+    this.clip = true,
+    this.bottom = false,
+  });
 
   final double factor;
   final bool clip;
+  final bool bottom;
 
   @override
-  RenderObject createRenderObject(BuildContext context) =>
-      RenderFold(factor)..clip = clip;
+  RenderObject createRenderObject(BuildContext context) => RenderFold(factor)
+    ..clip = clip
+    ..bottom = bottom;
 
   @override
   void updateRenderObject(BuildContext context, RenderFold renderObject) =>
       renderObject
         ..factor = factor
-        ..clip = clip;
+        ..clip = clip
+        ..bottom = bottom;
 }
 
 /// [Fold]'s render object.
-class RenderFold extends RenderProxyBox {
-  new(this._factor);
+class RenderFold extends RenderShiftedBox {
+  new(this._factor) : super(null);
 
   bool _clip = true;
   bool get clip => _clip;
@@ -111,6 +123,14 @@ class RenderFold extends RenderProxyBox {
     if (v == _clip) return;
     _clip = v;
     markNeedsPaint();
+  }
+
+  bool _bottom = false;
+  bool get bottom => _bottom;
+  set bottom(bool v) {
+    if (v == _bottom) return;
+    _bottom = v;
+    markNeedsLayout();
   }
 
   double _factor;
@@ -139,6 +159,11 @@ class RenderFold extends RenderProxyBox {
     }
     c.layout(_inner(constraints), parentUsesSize: true);
     size = _outer(constraints, c.size);
+    // From the bottom, the child's bottom edge is the fold's.
+    (c.parentData! as BoxParentData).offset = Offset(
+      0,
+      _bottom ? size.height - c.size.height : 0,
+    );
   }
 
   @override
@@ -162,11 +187,10 @@ class RenderFold extends RenderProxyBox {
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    final c = child;
-    if (c == null) return;
+    if (child == null) return;
     if (_factor >= 1 || !_clip) {
       _clipLayer.layer = null;
-      context.paintChild(c, offset);
+      super.paint(context, offset);
       return;
     }
     if (size.isEmpty) {
@@ -177,7 +201,7 @@ class RenderFold extends RenderProxyBox {
       needsCompositing,
       offset,
       Offset.zero & size,
-      (context, offset) => context.paintChild(c, offset),
+      super.paint,
       oldLayer: _clipLayer.layer,
     );
   }

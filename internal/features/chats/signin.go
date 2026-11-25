@@ -75,8 +75,8 @@ func (k *kind) signInMethods(init *acp.InitializeResponse) []model.Option {
 	return out
 }
 
-// SignInTimeout bounds a sign-in: the user is in a browser meanwhile.
-var SignInTimeout = 10 * time.Minute
+// signInTimeout bounds a sign-in: the user is in a browser meanwhile.
+const signInTimeout = 10 * time.Minute
 
 // authenticator is an agent that takes ACP's authenticate, as an agent's
 // process (agentproc.Agent) does.
@@ -92,7 +92,7 @@ type signInClient struct{ acp.UnimplementedClient }
 // it offers (SignInError.Methods): a process of the agent, started as a
 // chat's is (the same Launch, so as its settings say now), is asked to
 // authenticate, and stopped, with its process group, once it has answered,
-// or when ctx ends or SignInTimeout passes, which ends its login. The agent
+// or when ctx ends or signInTimeout passes, which ends its login. The agent
 // runs its own login: Codex opens the browser and waits for the user.
 // One sign-in at a time for each agent (beginSignIn). Once it is signed
 // in, its chats whose reopen failed for want of it may reopen when next
@@ -102,7 +102,7 @@ func (s *Service) SignIn(ctx context.Context, agent, method string) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(ctx, SignInTimeout)
+	ctx, cancel := context.WithTimeout(ctx, signInTimeout)
 	defer cancel()
 	run, err := s.beginSignIn(ctx, k)
 	if err != nil {
@@ -194,7 +194,7 @@ func (s *Service) endSignIn(name string, run *signIn) {
 func signInFailed(ctx context.Context, title string, err error) error {
 	switch {
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
-		return fmt.Errorf("%s didn't finish signing in within %s: %w", title, minutes(SignInTimeout), err)
+		return fmt.Errorf("%s didn't finish signing in within %s: %w", title, minutes(signInTimeout), err)
 	case ctx.Err() != nil:
 		return ctx.Err()
 	}

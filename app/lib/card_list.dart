@@ -58,12 +58,12 @@ class DraggedCard extends InheritedWidget {
 }
 
 /// A card's look: rounded, a [title] row that collapses it ([onToggle])
-/// and drags it in a [CardList] (as its [index]th), [trailing] on that
-/// row's right, then [body] while [open] ([Disclosure]). Under the
-/// pointer the title row shows the open hand and a six-dot grip on its
-/// right (in a collapsed card's [trailing] place, its summary); the closed
-/// hand while dragged.
-class CardShell extends StatefulWidget {
+/// and drags it in a [CardList] (as its [index]th; [DragTitle]),
+/// [trailing] on that row's right, then [body] while [open]
+/// ([Disclosure]). With the pointer anywhere on it, the six-dot grip shows
+/// on the title row's right (in a collapsed card's [trailing] place, its
+/// summary).
+class CardShell extends StatelessWidget {
   const new({
     required this.title,
     required this.open,
@@ -82,71 +82,123 @@ class CardShell extends StatefulWidget {
   final int index;
 
   @override
-  State<CardShell> createState() => _CardShellState();
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return Padding(
+      // The gap under it isn't its, nor the pointer's.
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DragTitle(
+        index: index,
+        onTap: onToggle,
+        radius: NushiTheme.inner(NushiTheme.card, 1),
+        padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
+        card: (context, row) => Container(
+          // The point its outline took, so its rows are where they were.
+          padding: const EdgeInsets.all(1),
+          decoration: cardBox(t),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              row,
+              Disclosure(open: open, child: body),
+            ],
+          ),
+        ),
+        title: (context, {required grip}) => Row(
+          children: [
+            title,
+            const SizedBox(width: 2),
+            TurnChevron(open: open, size: 15),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                // Collapsed, the grip takes the summary's place.
+                child: !open && grip ? const DragGrip() : trailing,
+              ),
+            ),
+            if (open)
+              SizedBox(
+                width: 14,
+                child: grip
+                    ? const Align(
+                        alignment: Alignment.centerRight,
+                        child: DragGrip(),
+                      )
+                    : null,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _CardShellState extends State<CardShell> {
+/// What a card in a [CardList] does as it's dragged, for both cards
+/// ([CardShell], the details panel's widgets), each keeping its own
+/// layout ([card], around its title row): the pointer anywhere on the
+/// card shows the [DragGrip] (the `grip` [title] is told, as while
+/// dragged or [held]; ADR 0092's amendment), and its title row drags it
+/// (as its [index]th) and [onTap]s, the open hand over it and the closed
+/// one while dragged.
+class DragTitle extends StatefulWidget {
+  const new({
+    required this.index,
+    required this.onTap,
+    required this.padding,
+    required this.radius,
+    required this.title,
+    required this.card,
+    super.key,
+    this.held = false,
+  });
+
+  final int index;
+  final VoidCallback? onTap;
+
+  /// The title row's padding and the corners of its pressed fill.
+  final EdgeInsetsGeometry padding;
+  final double radius;
+
+  /// Something else keeps the grip shown (a menu the title's button
+  /// opened, which the pointer is on).
+  final bool held;
+
+  /// The title row's content, told whether the grip shows.
+  final Widget Function(BuildContext context, {required bool grip}) title;
+
+  /// The card around the title row.
+  final Widget Function(BuildContext context, Widget title) card;
+
+  @override
+  State<DragTitle> createState() => _DragTitleState();
+}
+
+class _DragTitleState extends State<DragTitle> {
   bool _hover = false;
 
   @override
   Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
     final dragged = DraggedCard.of(context);
-    final grip = _hover || dragged;
-    final cursor = dragged
-        ? SystemMouseCursors.grabbing
-        : SystemMouseCursors.grab;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      // The point its outline took, so its rows are where they were.
-      padding: const EdgeInsets.all(1),
-      decoration: cardBox(t),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ReorderableDragStartListener(
-            index: widget.index,
-            child: MouseRegion(
-              onEnter: (_) => setState(() => _hover = true),
-              onExit: (_) => setState(() => _hover = false),
-              child: Tap(
-                onTap: widget.onToggle,
-                cursor: cursor,
-                tint: false,
-                radius: NushiTheme.inner(NushiTheme.card, 1),
-                padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
-                child: Row(
-                  children: [
-                    widget.title,
-                    const SizedBox(width: 2),
-                    TurnChevron(open: widget.open, size: 15),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        // Collapsed, the grip takes the summary's place.
-                        child: !widget.open && grip
-                            ? const DragGrip()
-                            : widget.trailing,
-                      ),
-                    ),
-                    if (widget.open)
-                      SizedBox(
-                        width: 14,
-                        child: grip
-                            ? const Align(
-                                alignment: Alignment.centerRight,
-                                child: DragGrip(),
-                              )
-                            : null,
-                      ),
-                  ],
-                ),
-              ),
-            ),
+    final grip = _hover || widget.held || dragged;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: widget.card(
+        context,
+        ReorderableDragStartListener(
+          index: widget.index,
+          child: Tap(
+            onTap: widget.onTap,
+            cursor: dragged
+                ? SystemMouseCursors.grabbing
+                : SystemMouseCursors.grab,
+            tint: false,
+            radius: widget.radius,
+            padding: widget.padding,
+            child: widget.title(context, grip: grip),
           ),
-          Disclosure(open: widget.open, child: widget.body),
-        ],
+        ),
       ),
     );
   }

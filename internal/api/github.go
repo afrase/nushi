@@ -191,7 +191,7 @@ func (s *server) GetGitHubCommits(ctx context.Context, req *connect.Request[nush
 // ghCommitProto is a pull request's commit as the API sends it.
 func ghCommitProto(c model.GitHubCommit) *nushiv1.GitHubCommit {
 	return &nushiv1.GitHubCommit{Oid: c.OID, Headline: c.Headline, Author: c.Author, AuthorName: c.AuthorName,
-		CommittedMs: unixMs(c.Committed), Checks: c.Checks}
+		CommittedMs: unixMs(c.Committed), Checks: c.Checks, Cancelled: c.Cancelled}
 }
 
 func (s *server) GetGitHubIssue(ctx context.Context, req *connect.Request[nushiv1.GetGitHubIssueRequest]) (*connect.Response[nushiv1.GetGitHubIssueResponse], error) {
@@ -309,7 +309,8 @@ func checkCountsProto(c model.CheckCounts) *nushiv1.GitHubCheckCounts {
 	if c == (model.CheckCounts{}) {
 		return nil
 	}
-	return &nushiv1.GitHubCheckCounts{Passed: int32(c.Passed), Failed: int32(c.Failed), Running: int32(c.Running), Skipped: int32(c.Skipped)}
+	return &nushiv1.GitHubCheckCounts{Passed: int32(c.Passed), Failed: int32(c.Failed), Running: int32(c.Running), Skipped: int32(c.Skipped),
+		Cancelled: int32(c.Cancelled)}
 }
 
 func ghItemsProto(items []model.GitHubItem) []*nushiv1.GitHubItem {

@@ -219,6 +219,56 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 
+  testWidgets('a check only cancelled flags the chat in its own words, '
+      'with nothing to ask the agent to fix', (tester) async {
+    var now = _state('a1', checks: 'pending');
+    final (d, _) = await _open(tester, () => now);
+    now = _state('a1')
+      ..checkCounts = GitHubCheckCounts(passed: 5, failed: 1, cancelled: 1);
+    await _poll(tester);
+    expect(d.chats['c']!.needsYou, isTrue, reason: 'it holds the merge back');
+    expect(
+      find.text('A check was cancelled on #412', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.textContaining('failed', findRichText: true), findsNothing);
+    expect(find.text('Ask to fix'), findsNothing);
+    // A failure beside it on the same pull request: failed, as before.
+    now = _state('b2')
+      ..checkCounts = GitHubCheckCounts(passed: 4, failed: 2, cancelled: 1);
+    await _poll(tester);
+    expect(
+      find.text('Checks failed on #412', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.text('Ask to fix'), findsOneWidget);
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets('a cancel acted on stays quiet, but a real failure on the '
+      'same commit after it flags the chat again', (tester) async {
+    final cancelled = _state('a1')
+      ..checkCounts = GitHubCheckCounts(passed: 5, failed: 1, cancelled: 1);
+    expect(failureOf(cancelled), 'PR_412@a1:cancelled');
+    var now = _state('a1', checks: 'pending');
+    final (d, _) = await _open(tester, () => now);
+    now = cancelled;
+    await _poll(tester);
+    expect(d.chats['c']!.needsYou, isTrue);
+    ChecksWatch.of(d).seen(d.chats['c']!);
+    await _poll(tester);
+    expect(d.chats['c']!.needsYou, isFalse, reason: 'dismissed');
+    // Run again on the same commit, it really fails.
+    now = _state('a1')..checkCounts = GitHubCheckCounts(passed: 5, failed: 1);
+    await _poll(tester);
+    expect(d.chats['c']!.needsYou, isTrue);
+    expect(
+      find.text('Checks failed on #412', findRichText: true),
+      findsOneWidget,
+    );
+    await closeView(tester, d);
+  }, variant: onMac);
+
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
     if (rendering) ('light', Brightness.light),

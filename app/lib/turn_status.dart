@@ -4,6 +4,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
@@ -44,7 +45,8 @@ class TurnStatus extends StatefulWidget {
   State<TurnStatus> createState() => _TurnStatusState();
 }
 
-class _TurnStatusState extends State<TurnStatus> with ClockRun {
+class _TurnStatusState extends State<TurnStatus>
+    with SingleTickerProviderStateMixin, ClockRun {
   late bool _busy = widget.chat.busy;
   String? _receipt; // "Done in 2m 30s", while it shows
   String _last = ''; // what the line said last, folding away
@@ -158,12 +160,9 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
     _shows = 1 - fold;
     if (fold == 0) return line;
     if (_keeps(context)) return Opacity(opacity: 1 - fold, child: line);
-    return ClipRect(
-      child: Align(
-        alignment: Alignment.topCenter,
-        heightFactor: 1 - fold,
-        child: Opacity(opacity: 1 - fold, child: line),
-      ),
+    return Fold(
+      factor: 1 - fold,
+      child: Opacity(opacity: 1 - fold, child: line),
     );
   }
 

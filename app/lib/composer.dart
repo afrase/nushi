@@ -361,9 +361,17 @@ class _ComposerState extends State<Composer> {
         if (!drop) _restoreMessage(r.message);
       });
 
-  /// Sends a queued message now: out of the queue, then in place of the
-  /// running turn (Stop and send). Should the send fail, it's back in the box.
+  /// Sends a queued message now, in place of the running turn (Stop and
+  /// send), in one call: should the send fail, it stays in the queue. A
+  /// daemon older than [sendNowApi] takes it out of the queue, then sends
+  /// it, and should that fail it's back in the box.
   Future<void> _sendNow(QueuedMessage m) => tryOrShow(context, () async {
+    if (widget.daemon.daemonApi >= sendNowApi) {
+      await widget.daemon.client.unqueue(
+        UnqueueRequest(chatId: widget.chat.id, id: m.id, sendNow: true),
+      );
+      return;
+    }
     final r = await widget.daemon.client.unqueue(
       UnqueueRequest(chatId: widget.chat.id, id: m.id),
     );

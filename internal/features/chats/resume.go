@@ -150,11 +150,22 @@ func (s *Service) open(id string) (*chat, error) {
 // the last try failed, or the agent quit), unless it is archived, going or
 // asleep.
 func (s *Service) reopenLocked(c *chat) {
-	if c.agent == nil && !c.busy && !c.record.Archived && !c.halting && !c.removing && c.parent == nil && !c.reopenFailed && !c.asleep && !c.sessionGone {
-		c.busy, c.woke = true, make(chan struct{})
-		c.statusChangedLocked()
-		go s.resume(c)
+	if !c.busyLocked() {
+		s.beginReopenLocked(c)
 	}
+}
+
+// beginReopenLocked starts the reopen when the chat may reopen, and says
+// whether it did: its op becomes opReopen. A Move whose session must be
+// replayed hands its own op to it, so the chat never shows idle between.
+func (s *Service) beginReopenLocked(c *chat) bool {
+	if c.agent == nil && !c.record.Archived && !c.halting && c.folder == "" && c.parent == nil && !c.reopenFailed && !c.asleep && !c.sessionGone &&
+		s.later(func() { s.resume(c) }) { // it waits for this lock, so the op is set first
+		c.beginOpLocked(opReopen)
+		c.statusChangedLocked()
+		return true
+	}
+	return false
 }
 
 // chat returns an open chat to work with, its items held: not an archived
@@ -175,14 +186,18 @@ func (s *Service) chat(id string) (*chat, error) {
 
 // reopenTimeout bounds a reopen: an agent that never answers (a stalled
 // npx, an MCP server that hangs) mustn't leave the chat reopening for good.
-var reopenTimeout = 2 * time.Minute
+const reopenTimeout = 2 * time.Minute
 
-//nolint:contextcheck // a reopen runs on its own: every request waiting on the chat waits for it
+// resume reopens the chat (load) on its own, as work Close waits for
+// (later): every request waiting on the chat waits for it. It ends with
+// the service's life, at once, and says nothing then (ending).
+//
+//nolint:contextcheck // a reopen runs on the service's life, not a request's: every request waiting on the chat waits for it
 func (s *Service) resume(c *chat) {
-	ctx, cancel := context.WithTimeout(context.Background(), reopenTimeout)
+	ctx, cancel := context.WithTimeout(s.ctx, reopenTimeout)
 	defer cancel()
 	start := time.Now()
-	err := s.load(ctx, c)
+	_, err := s.load(ctx, c) // a mode refused is logged: the chat runs
 	gone := err != nil && c.isGone(err)
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -191,20 +206,15 @@ func (s *Service) resume(c *chat) {
 	} else {
 		log.Info("chat reopened")
 	}
-	c.busy = false
-	if c.woke != nil {
-		close(c.woke)
-		c.woke = nil
-	}
 	switch {
+	case err != nil && s.ending():
 	case gone:
 		c.goneLocked("")
-		s.expires.Go(func() { s.expire(context.WithoutCancel(ctx), c, "the agent says so") })
+		s.later(func() { s.expire(s.ctx, c, "the agent says so") })
 	case err != nil:
 		c.failedLocked(err)
 	}
-	c.statusChangedLocked()
-	c.deliverLocked()
+	c.endOpLocked()
 }
 
 // failedLocked marks the chat's reopen failed, not tried again until it's
@@ -247,7 +257,10 @@ func (s *Service) Reopen(id string) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.reopenFailed && c.agent == nil && !c.busy && !c.sessionGone {
+	if c.ahead == aheadIdle { // the copy-ahead pass opens it: shown, it stays open, as it would have reopened
+		c.wantedLocked()
+	}
+	if c.reopenFailed && c.agent == nil && !c.busyLocked() && !c.sessionGone {
 		if err := cmp.Or(folderGone(c.record), c.kind.ready()); err != nil {
 			c.failedLocked(err)
 			return nil
@@ -278,10 +291,10 @@ func (s *Service) AgentReady(agent string) {
 // load starts the chat's agent and has it replay the session, then puts the
 // session back on the chat's picks and in the mode it was last in (an agent
 // may reopen a session on its defaults: Claude does); one it refuses is
-// logged, since the chat runs. A chat that never had
+// logged, since the chat runs, and returned as mode. A chat that never had
 // a message may have nothing to replay (Claude keeps a session only once it
 // has one): it gets a new session instead.
-func (s *Service) load(ctx context.Context, c *chat) error {
+func (s *Service) load(ctx context.Context, c *chat) (mode, err error) {
 	c.mu.Lock()
 	c.itemsBackLocked()
 	sid, folder, fresh, gone := c.sid, c.record.Folder, !c.record.HasMessages, folderGone(c.record)
@@ -291,14 +304,14 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	replay := !c.outlived
 	if replay {
 		c.copyLocked(true)
-		c.replaying, c.replay = gone == nil, nil // no agent will replay into a gone folder
+		c.replaying, c.replay, c.replaySent = gone == nil, nil, nil // no agent will replay into a gone folder
 	}
 	c.mu.Unlock()
 	if gone != nil {
-		return gone
+		return nil, gone
 	}
 	var o opened
-	err := c.retire(ctx, old)
+	err = c.retire(ctx, old)
 	if err == nil {
 		o, err = c.openSession(ctx, sid, folder, false, "")
 		if err != nil && fresh {
@@ -306,14 +319,13 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 		}
 	}
 	c.mu.Lock()
-	replayed := c.replay
-	c.replaying, c.replay = false, nil
+	replayed, times := c.replay, c.replaySent // the replay's own times (SentReader)
+	c.replaying, c.replay, c.replaySent = false, nil, nil
 	c.mu.Unlock()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	var times map[string]time.Time
-	if replay {
+	if replay && c.kind.messageDater != nil { // the agent's files say instead
 		times = c.messageTimes(o.sid, folder)
 	}
 	c.mu.Lock()
@@ -328,16 +340,16 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	if o.sid != sid {
 		c.saveLocked(func(s *model.ChatRecord) { s.SessionID = o.sid })
 	}
-	mode, picks, throwaway := c.record.Mode, c.record.Picks, slices.Clone(c.record.Throwaway)
+	remembered, picks, throwaway := c.record.Mode, c.record.Picks, slices.Clone(c.record.Throwaway)
 	c.mu.Unlock()
 	s.later(func() { s.discard(c, throwaway) }) // outlives the request; left by an agent that stopped before it could
 	// The agent runs the session now: a mode or pick it refuses leaves
 	// the chat on its own, as for a start, a fork or an open, and the
 	// chat's record keeps the remembered one for the next reopen.
-	if err := c.reapply(ctx, o.agent, o.sid, mode, picks); err != nil {
-		c.log().Warn("mode after reopening", "err", err)
+	if mode = c.reapply(ctx, o.agent, o.sid, remembered, picks); mode != nil {
+		c.log().Warn("mode after reopening", "err", mode)
 	}
-	return nil
+	return mode, nil
 }
 
 // folderGone says why a chat can't run when its folder no longer exists

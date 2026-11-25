@@ -2,7 +2,6 @@ package chats
 
 import (
 	"slices"
-	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -27,25 +26,6 @@ import (
 type asideItem struct {
 	item  model.Item
 	after string
-}
-
-// letGoUnseen lets go of the items of the chats no client shows, now and
-// then, until the service's life ends.
-func (s *Service) letGoUnseen() {
-	tick := time.NewTicker(s.timing.letGoCheck())
-	defer tick.Stop()
-	for {
-		select {
-		case <-tick.C:
-		case <-s.ctx.Done():
-			return
-		}
-		for _, c := range s.openChats() {
-			c.mu.Lock()
-			c.letGoLocked()
-			c.mu.Unlock()
-		}
-	}
 }
 
 // letGoLocked lets go of the chat's items if its copy holds them all and
@@ -78,7 +58,7 @@ func (c *chat) letGoLocked() {
 // subagent would never let go.
 func (c *chat) canLetGoLocked() bool {
 	return c.copies != nil && c.copiesOn() && c.mirrored && len(c.unsaved) == 0 && len(c.items) > 0 &&
-		c.parent == nil && c.agent == nil && !c.busy && !c.opening && !c.replaying && !c.halting && !c.removing && !c.stopping &&
+		c.parent == nil && c.agent == nil && !c.busyLocked() && !c.opening && !c.replaying && !c.halting && c.folder == "" && !c.stopping &&
 		len(c.sides) == 0 && len(c.titling) == 0 && c.quietLocked() &&
 		!slices.ContainsFunc(c.items, underWay)
 }

@@ -173,7 +173,6 @@ class ThemeCard extends StatelessWidget {
     final t = nushi.t;
     return Semantics(
       selected: picked,
-      button: true,
       label: theme.name,
       child: Pressable(
         onTap: () => colorTheme.value = theme.id,

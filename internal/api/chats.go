@@ -14,13 +14,12 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-func (s *server) ListChats(ctx context.Context, _ *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {
-	s.Chats.Sweep(ctx)
+func (s *server) ListChats(_ context.Context, _ *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {
 	sessions, err := s.Chats.List()
 	if err != nil {
 		return nil, refused(err)
 	}
-	resp := &nushiv1.ListChatsResponse{Removed: removedProto(s.Chats.Removed())}
+	resp := &nushiv1.ListChatsResponse{} // removed stays empty: Nushi no longer removes chats (ADR 0015's amendment of 2026-11-25)
 	resp.Unreadable = s.ChatFiles.Unreadable()
 	for _, sess := range sessions {
 		c := chatProto(sess)
@@ -163,7 +162,15 @@ func (s *server) RewindChat(ctx context.Context, req *connect.Request[nushiv1.Re
 	return connect.NewResponse(&nushiv1.RewindChatResponse{Message: messageProto(m)}), nil
 }
 
-func (s *server) Unqueue(_ context.Context, req *connect.Request[nushiv1.UnqueueRequest]) (*connect.Response[nushiv1.UnqueueResponse], error) {
+func (s *server) Unqueue(ctx context.Context, req *connect.Request[nushiv1.UnqueueRequest]) (*connect.Response[nushiv1.UnqueueResponse], error) {
+	if req.Msg.SendNow {
+		if err := s.Chats.SendQueuedNow(ctx, req.Msg.ChatId, req.Msg.Id); errors.Is(err, chats.ErrRestarting) {
+			return nil, because(connect.NewError(connect.CodeUnavailable, err), ReasonRestarting) // the app sends it again
+		} else if err != nil {
+			return nil, waitErr(ctx, err)
+		}
+		return connect.NewResponse(&nushiv1.UnqueueResponse{}), nil
+	}
 	m, err := s.Chats.Unqueue(req.Msg.ChatId, req.Msg.Id)
 	if err != nil {
 		return nil, notFound(err)
@@ -286,6 +293,16 @@ func (s *server) ReopenChat(_ context.Context, req *connect.Request[nushiv1.Reop
 	return done[nushiv1.ReopenChatResponse](s.Chats.Reopen(req.Msg.ChatId), notFound)
 }
 
+func (s *server) WakeChat(_ context.Context, req *connect.Request[nushiv1.WakeChatRequest]) (*connect.Response[nushiv1.WakeChatResponse], error) {
+	if err := s.Chats.Wake(req.Msg.ChatId); errors.Is(err, chats.ErrRestarting) {
+		why := errors.New("the daemon is restarting into a newer build: the chat wakes once it's back")
+		return nil, because(connect.NewError(connect.CodeUnavailable, why), ReasonRestarting) // the app asks again
+	} else if err != nil {
+		return nil, refused(err)
+	}
+	return connect.NewResponse(&nushiv1.WakeChatResponse{}), nil
+}
+
 func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv1.PlanDeleteChatRequest]) (*connect.Response[nushiv1.PlanDeleteChatResponse], error) {
 	p, err := s.Chats.PlanDelete(ctx, req.Msg.ChatId)
 	if err != nil {
@@ -316,8 +333,7 @@ func (s *server) DeleteChat(ctx context.Context, req *connect.Request[nushiv1.De
 	return done[nushiv1.DeleteChatResponse](s.Chats.Delete(ctx, m.ChatId, opts), refused)
 }
 
-func (s *server) DismissRemovedChats(_ context.Context, req *connect.Request[nushiv1.DismissRemovedChatsRequest]) (*connect.Response[nushiv1.DismissRemovedChatsResponse], error) {
-	s.Chats.DismissRemoved(req.Msg.Ids)
+func (s *server) DismissRemovedChats(context.Context, *connect.Request[nushiv1.DismissRemovedChatsRequest]) (*connect.Response[nushiv1.DismissRemovedChatsResponse], error) {
 	return connect.NewResponse(&nushiv1.DismissRemovedChatsResponse{}), nil
 }
 

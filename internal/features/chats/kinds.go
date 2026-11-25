@@ -49,10 +49,10 @@ type kind struct {
 	subOutput      SubagentOutput
 	toSubagents    SubagentMessages
 	background     BackgroundTasks
-	contextCommand ContextCommander
 	terminalCmds   TerminalCommands
 	commandHider   CommandHider
 	contextAsker   ContextAsker
+	taskStopper    TaskStopper
 	titleMaker     TitleMaker
 	readOnly       ReadOnly
 	goneReader     GoneReader
@@ -61,9 +61,11 @@ type kind struct {
 	searcher       SessionSearcher
 	historyChecker HistoryChecker
 	messageDater   MessageDater
+	sentReader     SentReader
 	worktreeFinder WorktreeFinder
 	workflows      WorkflowReader
 	usageReader    UsageReader
+	workReader     WorkReader
 }
 
 // newKind asks k's harness what it can do, once: nothing else in this
@@ -72,10 +74,10 @@ func newKind(k Kind) *kind {
 	h := k.Harness
 	return &kind{Kind: k, HarnessInfo: h.Info(), forker: can[Forker](h), toolReader: can[ToolReader](h),
 		defaultReader: can[DefaultReader](h), transcript: can[Transcript](h), subagents: can[Subagents](h), subOutput: can[SubagentOutput](h), toSubagents: can[SubagentMessages](h),
-		background: can[BackgroundTasks](h), contextCommand: can[ContextCommander](h), terminalCmds: can[TerminalCommands](h), commandHider: can[CommandHider](h), contextAsker: can[ContextAsker](h), titleMaker: can[TitleMaker](h), readOnly: can[ReadOnly](h), goneReader: can[GoneReader](h),
+		background: can[BackgroundTasks](h), terminalCmds: can[TerminalCommands](h), commandHider: can[CommandHider](h), contextAsker: can[ContextAsker](h), taskStopper: can[TaskStopper](h), titleMaker: can[TitleMaker](h), readOnly: can[ReadOnly](h), goneReader: can[GoneReader](h),
 		openFinder: can[OpenFinder](h), forkFinder: can[ForkFinder](h), searcher: can[SessionSearcher](h), historyChecker: can[HistoryChecker](h),
-		messageDater: can[MessageDater](h), worktreeFinder: can[WorktreeFinder](h), workflows: can[WorkflowReader](h),
-		usageReader: can[UsageReader](h)}
+		messageDater: can[MessageDater](h), sentReader: can[SentReader](h), worktreeFinder: can[WorktreeFinder](h), workflows: can[WorkflowReader](h),
+		usageReader: can[UsageReader](h), workReader: can[WorkReader](h)}
 }
 
 // can is h as a capability, a nil T when h hasn't it. Harnesses are values,
@@ -112,7 +114,7 @@ type Options struct {
 	Publish    func(model.Event) // nil: events go nowhere
 	Tools      Tools             // Nushi's own tools for chats' sessions
 	Viewers    Viewers           // who shows chats, for chats done while nobody looked (seen.go)
-	Processes  Processes         // nil: background commands are stopped only by asking the agent (background.go)
+	Processes  Processes         // nil: no command's shell is known to still run (background.go), and no crash record
 	// Record keeps what a clean stop of each agent would end, for the
 	// next daemon to stop after a crash (record.go); nil, or no
 	// Processes: nothing kept.
@@ -152,15 +154,10 @@ func New(ctx context.Context, agents []Kind, o Options) *Service {
 		kn.launch, kn.tools = s.started(k.Launch), o.Tools
 		s.kinds = append(s.kinds, kn)
 	}
-	if o.Sleep != nil || o.Record != nil {
-		s.loops.Go(s.autoSleep)
+	if o.Sleep != nil || o.Record != nil || o.Copies != nil {
+		s.loops.Go(s.eachMinute)
 	}
-	if o.Copies != nil && o.CopyDays != nil {
-		s.loops.Go(func() { s.autoClearCopies(o.CopyDays) })
-	}
-	if o.Copies != nil {
-		s.loops.Go(s.letGoUnseen)
-	}
+	s.loops.Go(func() { s.eachHour(o.CopyDays) })
 	return s
 }
 

@@ -85,7 +85,7 @@ func TestUnarchiveReplaysOnce(t *testing.T) {
 	if err := svc.Archive(c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy && c.agent != nil })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.agent != nil })
 	if got := texts(c); !reflect.DeepEqual(got, before) {
 		t.Errorf("after unarchiving: %q, want %q", got, before)
 	}
@@ -147,7 +147,7 @@ func TestTheQueueGoesOnWhenATurnEndsMidSteer(t *testing.T) {
 	agent.release()                                            // the turn ends meanwhile
 	idle(t, c)
 	close(agent.steerGate) // the agent takes "two"; "three" starts the next turn
-	eventually(t, c, func() bool { return len(c.queue) == 0 && c.busy && !c.steering })
+	eventually(t, c, func() bool { return len(c.queue) == 0 && c.busyLocked() && !c.steering })
 	agent.release()
 	idle(t, c)
 	prompts, steered := agent.texts()
@@ -272,7 +272,7 @@ func TestAStopRacingTheAgentsEndHoldsTheQueue(t *testing.T) {
 		t.Fatal(err)
 	}
 	agent.release() // it answers end_turn, not cancelled
-	eventually(t, c, func() bool { return !c.busy || len(c.queue) == 0 })
+	eventually(t, c, func() bool { return !c.busyLocked() || len(c.queue) == 0 })
 	c.mu.Lock()
 	queued, held := len(c.queue), c.held
 	c.mu.Unlock()

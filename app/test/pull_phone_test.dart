@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_card.dart';
 import 'package:nushi/github_items.dart';
 import 'package:nushi/github_link_chip.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
+import 'package:nushi/phone/ui.dart';
 import 'package:nushi/pull_states.dart';
 
 import 'fake_daemon.dart';
@@ -83,9 +85,21 @@ void main() {
         final chip = find.byType(PullChip);
         expect(find.descendant(of: chip, matching: find.text('+2')), findsOne);
         expect(tester.getTopRight(chip).dx, lessThanOrEqualTo(size.width));
+        // Its press is a 44-high pill, not the bar's whole height.
+        expect(
+          tester
+              .getSize(find.descendant(of: chip, matching: find.byType(Tap)))
+              .height,
+          touch,
+        );
         expect(find.byType(GitHubLinkChip), findsNWidgets(2));
         final tag = '${size.width.toInt()}_$name';
         await render(tester, find.byType(PhoneApp), 'pull_phone_chips_$tag');
+        final finger = await tester.startGesture(tester.getCenter(chip));
+        await tester.pump();
+        await render(tester, find.byType(PhoneApp), 'pull_phone_pressed_$tag');
+        await finger.cancel();
+        await tester.pump();
         await tester.tap(chip);
         await tester.pumpAndSettle();
         expect(find.text('3 pull requests'), findsOne);

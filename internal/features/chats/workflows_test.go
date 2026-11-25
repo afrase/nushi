@@ -7,13 +7,16 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
+	"github.com/afrase/claude-acp-go/claudeacp"
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
@@ -202,6 +205,20 @@ func (f workflowFixture) waitStatus(t *testing.T, ok func(model.Status) bool) {
 	}
 }
 
+// pass lets d of a synctest bubble's clock pass, and then everything it
+// woke settle.
+func pass(d time.Duration) {
+	time.Sleep(d)
+	synctest.Wait()
+}
+
+// status is the chat's status now.
+func (f workflowFixture) status() model.Status {
+	f.c.mu.Lock()
+	defer f.c.mu.Unlock()
+	return f.c.statusLocked()
+}
+
 // A launched run is followed: running, it counts as the chat's background
 // work and as a workflow; its snapshot ends it, and the follower with it.
 func TestAWorkflowIsFollowedToItsEnd(t *testing.T) {
@@ -250,41 +267,53 @@ func TestARunningWorkflowBeforeTheRecentPage(t *testing.T) {
 
 // Two runs in a chat count as two, each its own: one ending leaves the
 // other; one stalling leaves the count but stays live (a Move would stop it).
+// In a bubble: each read comes a poll of its clock later.
 func TestTwoWorkflowsInAChat(t *testing.T) {
-	const call2, run2 = "toolu_wf2", "wf_2"
-	var mu sync.Mutex
-	ended := map[string]bool{}
-	stalled := false
-	f := workflowChat(t, Timing{WorkflowStalledPoll: 5 * time.Millisecond}, func(w model.Workflow) (model.Workflow, error) {
+	synctest.Test(t, func(t *testing.T) {
+		const call2, run2 = "toolu_wf2", "wf_2"
+		var mu sync.Mutex
+		ended := map[string]bool{}
+		stalled := false
+		f := workflowChat(t, Timing{WorkflowPoll: time.Second}, func(w model.Workflow) (model.Workflow, error) {
+			mu.Lock()
+			defer mu.Unlock()
+			if ended[w.RunID] {
+				return endedAs("done", "completed")(w)
+			}
+			w, _ = runningAs(w)
+			if w.RunID == run2 && stalled {
+				w.Active = time.Now().Add(-2 * time.Hour)
+			}
+			return w, nil
+		})
+		launchAs(f.c, call2, "t2", run2)
+		synctest.Wait()
+		if st := f.status(); st.Workflows != 2 || st.Background != 2 {
+			t.Fatalf("both running: %+v", st)
+		}
 		mu.Lock()
-		defer mu.Unlock()
-		if ended[w.RunID] {
-			return endedAs("done", "completed")(w)
+		ended["wf_769a004c-2aa"] = true
+		mu.Unlock()
+		pass(time.Second)
+		if st := f.status(); st.Workflows != 1 || st.Background != 1 {
+			t.Fatalf("one ended: %+v", st)
 		}
-		w, _ = runningAs(w)
-		if w.RunID == run2 && stalled {
-			w.Active = time.Now().Add(-2 * time.Hour)
+		if w := workflowOf(f.c); w.State != "done" {
+			t.Errorf("the one ended: %+v", w)
 		}
-		return w, nil
+		mu.Lock()
+		stalled = true
+		mu.Unlock()
+		pass(time.Second)
+		if st := f.status(); st.Workflows != 0 || st.Background != 0 {
+			t.Errorf("one ended, one stalled: %+v", st)
+		}
+		f.c.mu.Lock()
+		defer f.c.mu.Unlock()
+		if w := f.c.itemLocked(call2).Workflow; !w.Stalled || !f.c.workflowLiveLocked() {
+			t.Errorf("the one stalled: %+v, live %v", w, f.c.workflowLiveLocked())
+		}
 	})
-	launchAs(f.c, call2, "t2", run2)
-	f.waitStatus(t, func(st model.Status) bool { return st.Workflows == 2 && st.Background == 2 })
-	mu.Lock()
-	ended["wf_769a004c-2aa"] = true
-	mu.Unlock()
-	f.waitStatus(t, func(st model.Status) bool { return st.Workflows == 1 && st.Background == 1 })
-	if w := workflowOf(f.c); w.State != "done" {
-		t.Errorf("the one ended: %+v", w)
-	}
-	mu.Lock()
-	stalled = true
-	mu.Unlock()
-	f.waitStatus(t, func(st model.Status) bool { return st.Workflows == 0 && st.Background == 0 })
-	f.c.mu.Lock()
-	defer f.c.mu.Unlock()
-	if w := f.c.itemLocked(call2).Workflow; !w.Stalled || !f.c.workflowLiveLocked() {
-		t.Errorf("the one stalled: %+v, live %v", w, f.c.workflowLiveLocked())
-	}
 }
 
 // Reads that change nothing publish nothing.
@@ -301,17 +330,27 @@ func TestAnUnchangedWorkflowSaysNothing(t *testing.T) {
 	}
 }
 
-// A run whose files never come shows as the plain call it was.
+// A run whose files never come shows as the plain call it was, once
+// workflowFind has passed, and not a poll before. In a bubble.
 func TestAWorkflowNeverFoundIsAPlainCall(t *testing.T) {
-	f := workflowChat(t, Timing{WorkflowFind: 30 * time.Millisecond}, func(model.Workflow) (model.Workflow, error) {
-		return model.Workflow{}, fs.ErrNotExist
+	synctest.Test(t, func(t *testing.T) {
+		f := workflowChat(t, Timing{WorkflowPoll: time.Second}, func(model.Workflow) (model.Workflow, error) {
+			return model.Workflow{}, fs.ErrNotExist
+		})
+		pass(workflowFind - time.Second)
+		if workflowOf(f.c) == nil {
+			t.Fatal("a plain call before workflowFind passed")
+		}
+		pass(time.Second)
+		f.c.mu.Lock()
+		defer f.c.mu.Unlock()
+		if f.c.itemLocked(wfCall).Workflow != nil || len(f.c.following) != 0 {
+			t.Fatal("still a workflow, or followed")
+		}
+		if f.c.workflowsLocked() != 0 || f.c.workflows != 0 || f.c.itemLocked(wfCall).TaskID != "" {
+			t.Error("still counted")
+		}
 	})
-	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow == nil && len(f.c.following) == 0 })
-	f.c.mu.Lock()
-	defer f.c.mu.Unlock()
-	if f.c.workflowsLocked() != 0 || f.c.workflows != 0 || f.c.itemLocked(wfCall).TaskID != "" {
-		t.Error("still counted")
-	}
 }
 
 // otherLauncher is an agent whose own tool "Run" launches its workflows.
@@ -332,16 +371,14 @@ func TestAWorkflowIsWhatTheHarnessSays(t *testing.T) {
 	files := &fakeWorkflows{read: runningAs, reads: make(chan int, 1000)}
 	h := otherLauncher{workflowHarness{testHarness{Name: "claude"}, files}}
 	svc := newService(t, []Kind{{Harness: h, Launch: agent.launch}},
-		Options{Timing: Timing{WorkflowPoll: 5 * time.Millisecond, WorkflowQuiet: time.Hour}})
+		Options{Timing: Timing{WorkflowPoll: 5 * time.Millisecond}})
 	t.Cleanup(svc.Close)
 	c := startChat(t, svc, t.TempDir())
 	c.mu.Lock()
-	c.busy = true // reopening: the agent replays
-	c.restoreLocked([]model.Item{
+	c.restoreLocked([]model.Item{ // as a reopen's replay restores them
 		{ID: "run", Kind: model.ToolCall, Tool: "Run", Status: "completed"},
 		{ID: "wf", Kind: model.ToolCall, Tool: "Workflow", Status: "completed", Text: launchText},
 	}, nil)
-	c.busy = false
 	run, wf := c.following["run"], c.following["wf"]
 	c.mu.Unlock()
 	if run == nil || wf != nil {
@@ -349,60 +386,128 @@ func TestAWorkflowIsWhatTheHarnessSays(t *testing.T) {
 	}
 }
 
-// Files that come late, and reads that fail after they came, keep it
-// running: a read error is no end.
-func TestWorkflowReadsThatFail(t *testing.T) {
-	var mu sync.Mutex
-	n := 0
-	f := workflowChat(t, Timing{}, func(w model.Workflow) (model.Workflow, error) {
-		mu.Lock()
-		defer mu.Unlock()
-		n++
-		switch {
-		case n < 3:
-			return w, fs.ErrNotExist
-		case n < 6 || n%2 == 0:
-			return runningAs(w)
-		}
-		return w, errors.New("permission denied")
+// What a read makes of a run, by the run as last read, the read, and
+// what the follower knows (its files found, since when they're missing,
+// its agent gone since when): no clock, every limit at its default.
+func TestJudgeWorkflow(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	owner := &fakeAgent{}
+	denied := errors.New("permission denied")
+	running := model.Workflow{RunID: "wf_1", State: model.RunRunning, Active: now, RunningCount: 2, Running: []string{"map:a", "map:b"}}
+	activeAt := func(at time.Time) model.Workflow { w := running; w.Active = at; return w }
+	with := func(w model.Workflow, change func(*model.Workflow)) *model.Workflow { change(&w); return &w }
+	quitAt := with(running, func(w *model.Workflow) {
+		w.State, w.End, w.Ended, w.Running, w.RunningCount = model.RunStopped, "Claude quit while it ran", now, nil, 0
 	})
-	f.files.waitReads(t, 12)
-	if w := workflowOf(f.c); w == nil || w.State != "running" {
-		t.Errorf("got %+v", w)
+	poll := Timing{}.workflowPoll()
+	for _, tc := range []struct {
+		name     string
+		cur, got model.Workflow
+		err      error
+		f        follow
+		gone     bool
+		heard    taskWord        // the agent's word on its task
+		want     *model.Workflow // nil: a plain call after all
+		wait     time.Duration
+		found    bool      // f.found after
+		missing  time.Time // f.missing after
+	}{
+		{name: "its task ended", cur: running, got: running, heard: taskWord{state: model.RunFailed, end: "failed", summary: "boom"}, f: follow{owner: owner}, found: true,
+			want: with(running, func(w *model.Workflow) {
+				w.State, w.End, w.Ended, w.Running, w.RunningCount, w.Summary = model.RunFailed, "failed", now, nil, 0, "boom"
+			})},
+		{name: "its task ended, its snapshot there", cur: running, got: model.Workflow{RunID: "wf_1", State: model.RunStopped, End: "killed", Ended: now.Add(-time.Second)},
+			heard: taskWord{state: model.RunStopped, end: "killed"}, f: follow{owner: owner}, found: true,
+			want: &model.Workflow{RunID: "wf_1", State: model.RunStopped, End: "killed", Ended: now.Add(-time.Second)}},
+		{name: "its task ended, its files never found", cur: running, err: fs.ErrNotExist, heard: taskWord{state: model.RunDone, end: "completed"}, f: follow{owner: owner, since: now.Add(-time.Hour)},
+			want: with(running, func(w *model.Workflow) {
+				w.State, w.End, w.Ended, w.Running, w.RunningCount = model.RunDone, "completed", now, nil, 0
+			})},
+		{name: "its task said running", cur: running, got: running, heard: taskWord{state: model.RunRunning}, f: follow{owner: owner}, want: &running, wait: poll, found: true},
+		{name: "files never found within the find time", cur: running, err: fs.ErrNotExist, f: follow{owner: owner, since: now.Add(-30 * time.Second)}},
+		{name: "files not there yet", cur: running, err: fs.ErrNotExist, f: follow{owner: owner, since: now.Add(-29 * time.Second)}, want: &running, wait: poll},
+		{name: "a past run's files that can't be read", cur: running, err: denied, f: follow{since: now}},
+		{name: "a read failing before the files came", cur: running, err: denied, f: follow{owner: owner, since: now}, want: &running, wait: poll},
+		{name: "a read failing once they came", cur: running, err: denied, f: follow{owner: owner, found: true, missing: now.Add(-time.Second)}, want: &running, wait: poll, found: true},
+		{name: "files gone a moment", cur: running, err: fs.ErrNotExist, f: follow{owner: owner, found: true}, want: &running, wait: poll, found: true, missing: now},
+		{name: "files gone for the find time", cur: running, err: fs.ErrNotExist, f: follow{owner: owner, found: true, missing: now.Add(-30 * time.Second)}, found: true, missing: now.Add(-30 * time.Second),
+			want: with(running, func(w *model.Workflow) {
+				w.State, w.End, w.Ended, w.Running, w.RunningCount = model.RunUnknown, "its files are gone", now, nil, 0
+			})},
+		{name: "files back", cur: running, got: running, f: follow{owner: owner, missing: now.Add(-time.Second)}, want: &running, wait: poll, found: true},
+		{name: "its snapshot", cur: running, got: model.Workflow{RunID: "wf_1", State: model.RunDone, Ended: now}, f: follow{owner: owner}, found: true,
+			want: &model.Workflow{RunID: "wf_1", State: model.RunDone, Ended: now}},
+		{name: "its agent gone", cur: running, got: running, gone: true, f: follow{owner: owner, found: true}, want: quitAt, found: true},
+		{name: "its agent gone, its files gone", cur: running, err: fs.ErrNotExist, gone: true, f: follow{owner: owner, found: true}, want: quitAt, found: true, missing: now},
+		{name: "no agent of this daemon's, files still", cur: running, got: activeAt(now.Add(-2 * time.Minute)), f: follow{found: true},
+			want: with(activeAt(now.Add(-2*time.Minute)), func(w *model.Workflow) {
+				w.State, w.End, w.Ended, w.Running, w.RunningCount = model.RunStopped, "Claude quit while it ran", now, nil, 0
+			}), found: true},
+		{name: "no agent of this daemon's, files written lately", cur: running, got: activeAt(now.Add(-2*time.Minute + time.Second)), f: follow{found: true}, want: new(activeAt(now.Add(-2*time.Minute + time.Second))), wait: poll, found: true},
+		{name: "its agent alive, files still an hour", cur: running, got: activeAt(now.Add(-time.Hour)), f: follow{owner: owner, found: true}, found: true,
+			want: with(activeAt(now.Add(-time.Hour)), func(w *model.Workflow) { w.Stalled = true }), wait: 30 * time.Second},
+		{name: "its agent alive, files still under an hour", cur: running, got: activeAt(now.Add(-time.Hour + time.Second)), f: follow{owner: owner, found: true}, found: true,
+			want: new(activeAt(now.Add(-time.Hour + time.Second))), wait: poll},
+		{name: "a stalled run written again", cur: *with(running, func(w *model.Workflow) { w.Stalled = true }), got: running, f: follow{owner: owner, found: true}, want: &running, wait: poll, found: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := &chat{svc: &Service{}, kind: testKind(testHarness{Name: "claude", Title: "Claude"})}
+			f := tc.f
+			got, wait := c.judgeWorkflow(tc.cur, tc.got, tc.err, &f, tc.gone, tc.heard, now)
+			if !reflect.DeepEqual(got, tc.want) || wait != tc.wait {
+				t.Errorf("got %+v, wait %s; want %+v, wait %s", got, wait, tc.want, tc.wait)
+			}
+			if f.found != tc.found || !f.missing.Equal(tc.missing) {
+				t.Errorf("follow: found %v, missing %v", f.found, f.missing)
+			}
+		})
 	}
 }
 
 // A run whose files, once found, can't be read again still ends: its
-// agent gone, after the grace, stopped; its agent alive, once they stay
-// gone for WorkflowFind, ended in Nushi's words. Its follower goes.
+// agent gone, at once, stopped; its agent alive, once they stay
+// gone for workflowFind, ended in Nushi's words. Its follower goes. In a
+// bubble, so each limit is exactly its own.
 func TestAWorkflowWhoseFilesGo(t *testing.T) {
 	for name, agentGoes := range map[string]bool{"its agent goes": true, "its agent stays": false} {
 		t.Run(name, func(t *testing.T) {
-			f := workflowChat(t, Timing{WorkflowGrace: time.Millisecond, WorkflowFind: 20 * time.Millisecond}, runningAs)
-			f.waitStatus(t, func(st model.Status) bool { return st.Workflows == 1 })
-			f.files.set(func(w model.Workflow) (model.Workflow, error) { return w, fs.ErrNotExist })
-			f.c.mu.Lock()
-			agent := f.c.agent
-			if agentGoes {
-				f.c.agent = nil // halted, as Delete does
-			}
-			f.c.pokeWorkflowsLocked()
-			f.c.mu.Unlock()
-			eventually(t, f.c, func() bool { return workflowEnded(f.c.itemLocked(wfCall).Workflow) && len(f.c.following) == 0 })
-			w := workflowOf(f.c)
-			switch {
-			case agentGoes && (w.State != "stopped" || w.End != "Claude quit while it ran"):
-				t.Errorf("its agent gone: %+v", w)
-			case !agentGoes && (w.State != "unknown" || w.End != "its files are gone" || w.RunningCount != 0):
-				t.Errorf("its files gone: %+v", w)
-			}
-			f.c.mu.Lock()
-			f.c.agent = agent
-			n := f.c.workflowsLocked()
-			f.c.mu.Unlock()
-			if n != 0 {
-				t.Errorf("%d still counted", n)
-			}
+			synctest.Test(t, func(t *testing.T) {
+				f := workflowChat(t, Timing{WorkflowPoll: time.Second}, runningAs)
+				synctest.Wait()
+				if st := f.status(); st.Workflows != 1 {
+					t.Fatalf("running: %+v", st)
+				}
+				f.files.set(func(w model.Workflow) (model.Workflow, error) { return w, fs.ErrNotExist })
+				f.c.mu.Lock()
+				agent := f.c.agent
+				if agentGoes {
+					f.c.agent = nil // halted, as Delete does
+				}
+				f.c.pokeWorkflowsLocked()
+				f.c.mu.Unlock()
+				if !agentGoes {
+					pass(workflowFind - time.Millisecond)
+					if workflowEnded(workflowOf(f.c)) {
+						t.Fatal("ended before its time")
+					}
+					pass(time.Millisecond)
+				}
+				synctest.Wait()
+				w := workflowOf(f.c)
+				switch {
+				case agentGoes && (w.State != "stopped" || w.End != "Claude quit while it ran"):
+					t.Errorf("its agent gone: %+v", w)
+				case !agentGoes && (w.State != "unknown" || w.End != "its files are gone" || w.RunningCount != 0):
+					t.Errorf("its files gone: %+v", w)
+				}
+				f.c.mu.Lock()
+				f.c.agent = agent
+				n, followed := f.c.workflowsLocked(), len(f.c.following)
+				f.c.mu.Unlock()
+				if n != 0 || followed != 0 {
+					t.Errorf("%d still counted, %d followed", n, followed)
+				}
+			})
 		})
 	}
 }
@@ -410,30 +515,32 @@ func TestAWorkflowWhoseFilesGo(t *testing.T) {
 // The run's files stay with the session that launched it: once the chat
 // is on another session (a Move forks it, and stops the claude that ran
 // the run), the follower and the pane still read the run's, and the run
-// ends with its claude.
+// ends with its claude. In a bubble.
 func TestAWorkflowStaysWithItsSession(t *testing.T) {
-	f := workflowChat(t, Timing{WorkflowGrace: time.Millisecond, WorkflowPoll: time.Hour}, runningAs)
-	f.files.waitReads(t, 1)
-	f.c.mu.Lock()
-	launched := f.c.sid
-	f.c.sid, f.c.record.Folder = "22222222-3333-4444-5555-666666666666", t.TempDir()
-	f.files.mu.Lock()
-	f.files.sids = nil
-	f.files.mu.Unlock()
-	f.c.pokeWorkflowsLocked()
-	f.c.mu.Unlock()
-	eventually(t, f.c, func() bool { return workflowEnded(f.c.itemLocked(wfCall).Workflow) })
-	if w := workflowOf(f.c); w.State != "stopped" || w.Session != launched {
-		t.Errorf("after the move: %+v", w)
-	}
-	if _, _, _, err := f.svc.Workflow(f.c.id, wfCall); err != nil {
-		t.Fatal(err)
-	}
-	f.files.mu.Lock()
-	defer f.files.mu.Unlock()
-	if len(f.files.sids) != 1 || !f.files.sids[launched] {
-		t.Errorf("read sessions %v, want only %s", f.files.sids, launched)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		f := workflowChat(t, Timing{WorkflowPoll: time.Hour}, runningAs)
+		synctest.Wait()
+		f.c.mu.Lock()
+		launched := f.c.sid
+		f.c.sid, f.c.record.Folder = "22222222-3333-4444-5555-666666666666", t.TempDir()
+		f.files.mu.Lock()
+		f.files.sids = nil
+		f.files.mu.Unlock()
+		f.c.pokeWorkflowsLocked()
+		f.c.mu.Unlock()
+		synctest.Wait()
+		if w := workflowOf(f.c); w.State != "stopped" || w.Session != launched {
+			t.Errorf("after the move: %+v", w)
+		}
+		if _, _, _, err := f.svc.Workflow(f.c.id, wfCall); err != nil {
+			t.Fatal(err)
+		}
+		f.files.mu.Lock()
+		defer f.files.mu.Unlock()
+		if len(f.files.sids) != 1 || !f.files.sids[launched] {
+			t.Errorf("read sessions %v, want only %s", f.files.sids, launched)
+		}
+	})
 }
 
 // A Move or a rewind would stop the claude that runs the workflow: both
@@ -459,50 +566,56 @@ func TestNoMoveOrRewindWhileAWorkflowRuns(t *testing.T) {
 	}
 }
 
-// Each end the snapshot says is the run's.
-func TestWorkflowEnds(t *testing.T) {
-	for _, state := range []model.RunState{model.RunDone, model.RunFailed, model.RunStopped, model.RunUnknown} {
-		f := workflowChat(t, Timing{}, endedAs(state, "x"))
-		eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == state && len(f.c.following) == 0 })
+// A side chat whose workflow still runs isn't kept as a chat: keeping it
+// stops its agent, and the workflow with it.
+func TestNoKeepingASideChatWhileItsWorkflowRuns(t *testing.T) {
+	f := workflowChat(t, Timing{}, runningAs)
+	sideID, err := f.svc.Fork(t.Context(), f.c.id)
+	testcheck.NoErr(t, err)
+	f.svc.mu.Lock()
+	side := f.svc.chats[sideID]
+	f.svc.mu.Unlock()
+	launchAs(side, "wf2", "task2", "wf_2")
+	eventually(t, side, side.workflowLiveLocked)
+	if _, err := f.svc.KeepSide(t.Context(), sideID); err == nil || !strings.Contains(err.Error(), "workflow") {
+		t.Errorf("kept a side chat while its workflow ran: %v", err)
 	}
 }
 
-// The agent that ran it gone, a last read after the grace: its snapshot if
-// it left one, else stopped, in Nushi's words. Reads come only from pokes
-// (an hour's poll and grace), so each step is the follower's answer to one.
+// The agent that ran it gone, its run ends at once, on the read the
+// going pokes (a killed claude tells no end of its task): its snapshot if
+// it left one, else stopped, in Nushi's words. In a bubble whose clock
+// never moves: reads come only from pokes, so each step is the
+// follower's answer to one.
 func TestAWorkflowEndsWithItsAgent(t *testing.T) {
-	for name, snapshot := range map[string]bool{"no snapshot": false, "a snapshot in the grace": true} {
+	for name, snapshot := range map[string]bool{"no snapshot": false, "a snapshot": true} {
 		t.Run(name, func(t *testing.T) {
-			f := workflowChat(t, Timing{WorkflowPoll: time.Hour, WorkflowGrace: time.Hour}, runningAs)
-			f.files.waitReads(t, 1)
-			eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == "running" })
-			f.c.mu.Lock()
-			agent := f.c.agent
-			f.c.agent = &fakeAgent{} // another process: the one that ran it went
-			f.c.pokeWorkflowsLocked()
-			f.c.mu.Unlock()
-			// The first read after: the grace starts, and the run still runs.
-			eventually(t, f.c, func() bool { fl := f.c.following[wfCall]; return fl != nil && !fl.gone.IsZero() })
-			if w := workflowOf(f.c); w.State != "running" {
-				t.Errorf("in the grace: %+v", w)
-			}
-			if snapshot {
-				f.files.set(endedAs("done", "completed"))
-			}
-			f.c.mu.Lock()
-			f.c.pokeWorkflowsLocked() // the grace's end
-			f.c.mu.Unlock()
-			eventually(t, f.c, func() bool { return workflowEnded(f.c.itemLocked(wfCall).Workflow) })
-			w := workflowOf(f.c)
-			switch {
-			case snapshot && w.State != "done":
-				t.Errorf("with a snapshot: %+v", w)
-			case !snapshot && (w.State != "stopped" || w.End != "Claude quit while it ran" || w.RunningCount != 0):
-				t.Errorf("without one: %+v", w)
-			}
-			f.c.mu.Lock()
-			f.c.agent = agent
-			f.c.mu.Unlock()
+			synctest.Test(t, func(t *testing.T) {
+				f := workflowChat(t, Timing{WorkflowPoll: time.Hour}, runningAs)
+				synctest.Wait()
+				if w := workflowOf(f.c); w.State != "running" {
+					t.Fatalf("launched: %+v", w)
+				}
+				if snapshot {
+					f.files.set(endedAs("done", "completed"))
+				}
+				f.c.mu.Lock()
+				agent := f.c.agent
+				f.c.agent = &fakeAgent{} // another process: the one that ran it went
+				f.c.pokeWorkflowsLocked()
+				f.c.mu.Unlock()
+				synctest.Wait()
+				w := workflowOf(f.c)
+				switch {
+				case snapshot && w.State != "done":
+					t.Errorf("with a snapshot: %+v", w)
+				case !snapshot && (w.State != "stopped" || w.End != "Claude quit while it ran" || w.RunningCount != 0):
+					t.Errorf("without one: %+v", w)
+				}
+				f.c.mu.Lock()
+				f.c.agent = agent
+				f.c.mu.Unlock()
+			})
 		})
 	}
 }
@@ -515,43 +628,54 @@ const launchText = "Workflow launched in background. Task ID: w9u1xb6ik\nSummary
 // transcript follows its run, with no agent of this daemon's as its owner
 // (the claude that ran it went with the daemon that started it). It runs
 // while its files change, ends stopped once they are still, or done by
-// its snapshot.
+// its snapshot. In a bubble.
 func TestAWorkflowAfterAReopen(t *testing.T) {
 	for name, end := range map[string]model.RunState{"its files still": model.RunStopped, "a snapshot": model.RunDone} {
 		t.Run(name, func(t *testing.T) {
-			var mu sync.Mutex
-			active := time.Now()
-			f := workflowService(t, Timing{WorkflowQuiet: time.Hour}, func(w model.Workflow) (model.Workflow, error) {
-				mu.Lock()
-				defer mu.Unlock()
-				w, _ = runningAs(w)
-				w.Active = active
-				return w, nil
+			synctest.Test(t, func(t *testing.T) {
+				var mu sync.Mutex
+				active := time.Now()
+				f := workflowService(t, Timing{WorkflowPoll: time.Second}, func(w model.Workflow) (model.Workflow, error) {
+					mu.Lock()
+					defer mu.Unlock()
+					w, _ = runningAs(w)
+					w.Active = active
+					return w, nil
+				})
+				// Its reopen (a reload) replays the call: text alone.
+				turn(t, f.svc, f.c, "one")
+				f.agent.mu.Lock()
+				f.agent.history = append(f.agent.history, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: wfCall, Title: "Workflow", Kind: "other", Status: "completed",
+					Meta:    map[string]any{"claudeCode": map[string]any{"toolName": "Workflow"}},
+					Content: []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: launchText}}}}}}})
+				f.agent.mu.Unlock()
+				testcheck.NoErr(t, f.svc.Reload(f.c.id))
+				synctest.Wait()
+				f.c.mu.Lock()
+				fl := f.c.following[wfCall]
+				f.c.mu.Unlock()
+				if fl == nil || fl.owner != nil {
+					t.Fatalf("followed %+v", fl)
+				}
+				if w := workflowOf(f.c); f.status().Workflows != 1 || w.State != "running" || w.RunID != "wf_769a004c-2aa" || w.TaskID != "w9u1xb6ik" {
+					t.Fatalf("its files fresh: %+v", w)
+				}
+				if end == "done" {
+					f.files.set(endedAs("done", "completed"))
+				} else {
+					pass(workflowQuiet - time.Second)
+					if w := workflowOf(f.c); w.State != "running" {
+						t.Fatalf("ended before its files were still for workflowQuiet: %+v", w)
+					}
+				}
+				pass(time.Second)
+				if w := workflowOf(f.c); w.State != end {
+					t.Errorf("got %+v", w)
+				}
+				if got := f.endsMarked(); len(got) != 0 {
+					t.Errorf("a run found ended after a reopen was marked ended: %+v", got)
+				}
 			})
-			f.c.mu.Lock()
-			f.c.busy = true // reopening: the agent replays
-			f.c.restoreLocked([]model.Item{{ID: wfCall, Kind: model.ToolCall, Tool: "Workflow", Status: "completed", Text: launchText}}, nil)
-			fl := f.c.following[wfCall]
-			f.c.busy = false
-			f.c.mu.Unlock()
-			if fl == nil || fl.owner != nil {
-				t.Fatalf("followed %+v", fl)
-			}
-			f.waitStatus(t, func(st model.Status) bool { return st.Workflows == 1 })
-			if w := workflowOf(f.c); w.State != "running" || w.RunID != "wf_769a004c-2aa" || w.TaskID != "w9u1xb6ik" {
-				t.Fatalf("its files fresh: %+v", w)
-			}
-			if end == "done" {
-				f.files.set(endedAs("done", "completed"))
-			} else {
-				mu.Lock()
-				active = time.Now().Add(-2 * time.Hour)
-				mu.Unlock()
-			}
-			eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == end })
-			if got := f.endsMarked(); len(got) != 0 {
-				t.Errorf("a run found ended after a reopen was marked ended: %+v", got)
-			}
 		})
 	}
 }
@@ -607,34 +731,44 @@ func TestAWorkflowFollowedWhenItsItemsComeBack(t *testing.T) {
 
 // A run whose files stay still for an hour, its agent alive, stalls: no
 // longer the chat's work, not ended; a write clears it, and the snapshot
-// still ends it.
+// still ends it. In a bubble: a stalled run is read every
+// workflowStalledPoll.
 func TestAWorkflowStalls(t *testing.T) {
-	var mu sync.Mutex
-	active := time.Now().Add(-2 * time.Hour)
-	f := workflowChat(t, Timing{WorkflowStalledPoll: 5 * time.Millisecond}, func(w model.Workflow) (model.Workflow, error) {
+	synctest.Test(t, func(t *testing.T) {
+		var mu sync.Mutex
+		active := time.Now().Add(-workflowStall)
+		f := workflowChat(t, Timing{WorkflowPoll: time.Second}, func(w model.Workflow) (model.Workflow, error) {
+			mu.Lock()
+			defer mu.Unlock()
+			w, _ = runningAs(w)
+			w.Active = active
+			return w, nil
+		})
+		synctest.Wait()
+		f.c.mu.Lock()
+		stalled, quiet, n := f.c.itemLocked(wfCall).Workflow.Stalled, f.c.quietLocked(), f.c.workflowsLocked()
+		st := f.c.statusLocked()
+		f.c.mu.Unlock()
+		if !stalled || !quiet || n != 0 || st.Background != 0 || workflowEnded(workflowOf(f.c)) {
+			t.Errorf("stalled %v: quiet %v, %d running, %+v", stalled, quiet, n, st)
+		}
 		mu.Lock()
-		defer mu.Unlock()
-		w, _ = runningAs(w)
-		w.Active = active
-		return w, nil
+		active = time.Now()
+		mu.Unlock()
+		pass(workflowStalledPoll - time.Second)
+		if w := workflowOf(f.c); !w.Stalled {
+			t.Fatalf("read again before workflowStalledPoll: %+v", w)
+		}
+		pass(time.Second)
+		if w := workflowOf(f.c); w.Stalled || f.status().Workflows != 1 {
+			t.Errorf("after a write: %+v", w)
+		}
+		f.files.set(endedAs("done", "completed"))
+		pass(time.Second)
+		if w := workflowOf(f.c); w.State != "done" {
+			t.Errorf("its snapshot: %+v", w)
+		}
 	})
-	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.Stalled })
-	f.c.mu.Lock()
-	quiet, n := f.c.quietLocked(), f.c.workflowsLocked()
-	st := f.c.statusLocked()
-	f.c.mu.Unlock()
-	if !quiet || n != 0 || st.Background != 0 || workflowEnded(workflowOf(f.c)) {
-		t.Errorf("stalled: quiet %v, %d running, %+v", quiet, n, st)
-	}
-	mu.Lock()
-	active = time.Now()
-	mu.Unlock()
-	f.waitStatus(t, func(st model.Status) bool { return st.Workflows == 1 })
-	if w := workflowOf(f.c); w.Stalled {
-		t.Errorf("after a write: %+v", w)
-	}
-	f.files.set(endedAs("done", "completed"))
-	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == "done" })
 }
 
 // A run that goes on and on, writing as it goes, keeps running: never
@@ -647,17 +781,15 @@ func TestALongWorkflowKeepsRunning(t *testing.T) {
 	}
 }
 
-// An own turn of the agent's starting (a workflow's notification) has the
-// run read at once: its end shows without waiting for a poll. The turn
-// shows as the chat's own work from its first update to its result's
-// usage, not between its model calls.
-func TestAnOwnTurnPokesTheWorkflow(t *testing.T) {
+// An own turn of the agent's beside a running workflow (a workflow's
+// notification starts one) shows as the chat's own work from its first
+// update to its result's usage, not between its model calls.
+func TestAnOwnTurnBesideAWorkflow(t *testing.T) {
 	f := workflowChat(t, Timing{WorkflowPoll: time.Hour}, runningAs)
 	f.waitStatus(t, func(st model.Status) bool { return st.Workflows == 1 })
 	for len(f.events) > 0 { // launch's own statuses
 		<-f.events
 	}
-	f.files.set(endedAs("done", "completed"))
 	send := func(u acp.SessionUpdate) {
 		_ = f.c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: acp.SessionID(f.c.sid), Update: u})
 	}
@@ -671,7 +803,6 @@ func TestAnOwnTurnPokesTheWorkflow(t *testing.T) {
 		return out
 	}
 	send(acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "Done."}}}})
-	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == "done" })
 	send(acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{Used: 1, Size: 2}}) // a model call's
 	if got := ownTurns(); len(got) == 0 || slices.Contains(got, false) {
 		t.Errorf("in the turn: own turn %v", got)
@@ -692,8 +823,10 @@ func TestARewoundWorkflowIsLetGo(t *testing.T) {
 	eventually(t, f.c, func() bool { return len(f.c.following) == 0 })
 }
 
-// Stop asks Claude to stop the run by its task's id, after the turn; a
-// stalled run (nothing says it ended) can be stopped too.
+// Stop stops the run with claude's stop_task, by its task's id, with no
+// prompt; the run ends on its task's own update. A stalled run (nothing
+// says it ended) can be stopped too. An agent that can't is asked, after
+// the turn.
 func TestStoppingAWorkflow(t *testing.T) {
 	for _, stalled := range []bool{false, true} {
 		f := workflowChat(t, Timing{WorkflowPoll: time.Hour}, runningAs)
@@ -702,44 +835,41 @@ func TestStoppingAWorkflow(t *testing.T) {
 		f.c.mu.Lock()
 		f.c.itemLocked(wfCall).Workflow.Stalled = stalled
 		f.c.mu.Unlock()
+		stoppedBy(f.agent, workflowTask("killed", ""), workflowTask("stopped", "Ask four helpers"))
 		testcheck.NoErr(t, f.svc.StopTask(t.Context(), f.c.id, wfCall))
-		idle(t, f.c)
-		if prompts, _ := f.agent.texts(); len(prompts) != 1 || prompts[0] != claudeHarness.StopTask("w9u1xb6ik") {
+		if want := (claudeacp.StopTaskRequest{SessionID: "s1", TaskID: "w9u1xb6ik"}); len(stopsAsked(f.agent)) != 1 || stopsAsked(f.agent)[0] != want {
+			t.Errorf("stalled %v: called %+v", stalled, stopsAsked(f.agent))
+		}
+		eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == model.RunStopped })
+		if w := workflowOf(f.c); w.End != "killed" {
+			t.Errorf("stalled %v: ended %+v", stalled, w)
+		}
+		if prompts, _ := f.agent.texts(); len(prompts) != 0 {
 			t.Errorf("stalled %v: asked %q", stalled, prompts)
 		}
 	}
-}
-
-// Claude's TaskStop of the run's task has it read at once: its snapshot,
-// written as it stops, ends it without waiting for a poll.
-func TestATaskStopPokesTheWorkflow(t *testing.T) {
 	f := workflowChat(t, Timing{WorkflowPoll: time.Hour}, runningAs)
-	f.files.waitReads(t, 1)
-	f.c.mu.Lock()
-	f.c.ownTurn = true // in a turn of its own already: its start pokes too
-	f.c.mu.Unlock()
-	f.files.set(endedAs("stopped", "killed"))
-	stop := map[string]any{"claudeCode": map[string]any{"toolName": "TaskStop"}}
-	for _, u := range []acp.SessionUpdate{
-		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "toolu_stop", Title: "TaskStop", Kind: "other", Status: "pending", Meta: stop,
-			RawInput: json.RawMessage(`{"task_id":"w9u1xb6ik"}`)}},
-		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "toolu_stop", Status: "completed", Meta: stop}},
-	} {
-		_ = f.c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: acp.SessionID(f.c.sid), Update: u})
+	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == "running" })
+	f.c.kind.taskStopper = nil
+	testcheck.NoErr(t, f.svc.StopTask(t.Context(), f.c.id, wfCall))
+	idle(t, f.c)
+	if prompts, _ := f.agent.texts(); len(prompts) != 1 || prompts[0] != claudeHarness.StopTask("w9u1xb6ik") {
+		t.Errorf("without stop_task: asked %q", prompts)
 	}
-	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == "stopped" })
 }
 
-// The agent's process ending has its runs read at once.
+// The agent's process ending has its runs read at once. In a bubble whose
+// clock never moves: no poll reads it.
 func TestAnAgentQuittingPokesTheWorkflow(t *testing.T) {
-	f := workflowChat(t, Timing{WorkflowPoll: time.Hour, WorkflowGrace: time.Hour}, runningAs)
-	f.files.waitReads(t, 1)
-	for len(f.files.reads) > 0 {
-		<-f.files.reads
-	}
-	f.agent.quit()
-	f.files.waitReads(t, 1)
-	eventually(t, f.c, func() bool { fl := f.c.following[wfCall]; return fl != nil && !fl.gone.IsZero() })
+	synctest.Test(t, func(t *testing.T) {
+		f := workflowChat(t, Timing{WorkflowPoll: time.Hour}, runningAs)
+		synctest.Wait()
+		f.agent.quit()
+		synctest.Wait()
+		if w := workflowOf(f.c); w.State != model.RunStopped {
+			t.Errorf("its agent's going wasn't read: %+v", w)
+		}
+	})
 }
 
 // GetWorkflow's and GetWorkflowAgent's answers: the run, its agents, an

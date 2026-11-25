@@ -130,6 +130,11 @@ type Item struct {
 	// WorktreePath is the worktree the agent says it gave the subagent, if
 	// it says (untrusted: chats' related.go checks it against git's list).
 	WorktreePath string `json:",omitempty"`
+	// WorksIn is where the main agent's tool call says it works once the
+	// call succeeded (the harness's WorkReader): the worktree it entered,
+	// or a zero one for its session's folder when it left one; nil for any
+	// other call.
+	WorksIn *AgentWorktree `json:",omitempty"`
 	// AgentID is the agent's id for the subagent, when it can pass it
 	// messages; for a call that passes one a message (SubagentMessages.PassesToSubagent in chats),
 	// that subagent's.
@@ -176,8 +181,9 @@ type Item struct {
 	// Nushi's copy knows it: a replay doesn't say.
 	Steered bool `json:",omitzero"`
 	// Sent is when a message was sent: a user message through Nushi, an
-	// agent's as it began to arrive, else what the replay (SentMeta) or
-	// the agent's own files (chats' MessageDater) say. Zero when not known.
+	// agent's as it began to arrive, else what the replay (SentMeta, or
+	// the harness's own replay meta read by chats' SentReader) or the
+	// agent's own files (chats' MessageDater) say. Zero when not known.
 	Sent time.Time `json:",omitzero"`
 	// Started and Ended are when the daemon saw a tool call start to run
 	// (once allowed, when the agent asked permission) and end (Nushi's copy
@@ -217,15 +223,12 @@ type Item struct {
 // "started" when its end can't be known (its agent is gone, or it started
 // before the chat reopened, and it hasn't said it ended). Started and Ended
 // are when the daemon saw that; Output is what it wrote (the end of it),
-// End how it ended, in the agent's words ("exited with code 0"). Killed
-// says Nushi stopped it itself, at the user's Stop: an end other than
-// success then reads "stopped", whatever exit code the agent gives it.
+// End how it ended, in the agent's words ("exited with code 0").
 type BackgroundCommand struct {
 	ID             string
 	State          RunState
 	Started, Ended time.Time
 	Output, End    string
-	Killed         bool `json:",omitzero"`
 }
 
 // Process is one of the processes an agent runs: its id, its process
@@ -343,6 +346,10 @@ type Field struct {
 	Required               bool
 	Values                 []string
 	OtherFor               string // the field this free-text one is the "Other" answer of
+	// Note says the agent takes this "Other" field's text, beside a pick of
+	// the field it is for, as a note on that pick rather than an answer of
+	// its own (HarnessInfo.OtherNotes).
+	Note bool `json:",omitempty"`
 }
 
 // Message is what the user sends: text, the files it mentions or attaches

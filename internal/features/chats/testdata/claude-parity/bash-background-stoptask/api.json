@@ -1,0 +1,11 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "run it in the background"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "sleep 301; echo never", "description": "Wait long", "run_in_background": true}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "It runs in the background."}]},
+    {"match": {"lastUserText": "is it still running"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "ps -axo command | grep '[s]leep 301' || echo gone", "description": "Look for it"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "No."}]}
+  ],
+  "side": [
+    {"match": {"lastUserText": "task-notification"}, "content": [{"type": "text", "text": "Noted."}]}
+  ]
+}

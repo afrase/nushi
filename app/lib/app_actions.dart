@@ -424,6 +424,14 @@ List<AppAction> chatActions(
       enabled: chat != null && chat.canSleep && !chat.archived,
       run: () => unawaited(sleepChat(context, chat!, d)),
     ),
+    // In Sleep's place while the chat sleeps: never both (chatMenu).
+    AppAction(
+      .wake,
+      'Wake chat',
+      short: 'Wake',
+      enabled: canWakeChat(d, chat),
+      run: () => unawaited(wakeChat(context, chat!, d)),
+    ),
     AppAction(
       .reload,
       'Reload chat',

@@ -210,3 +210,50 @@ func TestIsOther(t *testing.T) {
 		}
 	}
 }
+
+// An "Other" field is a note on its question's pick where the agent reads
+// it so (HarnessInfo.OtherNotes): Claude's and Codex's on a question that
+// takes one choice, Ante's on any, and nobody's for opencode and omp; a
+// form without an agent's suffix pairs nothing.
+func TestOtherIsANoteWhereTheAgentTakesOne(t *testing.T) {
+	var req acp.CreateElicitationRequest
+	testcheck.NoErr(t, json.Unmarshal([]byte(claudeForm), &req))
+	for _, c := range []struct {
+		info model.HarnessInfo
+		want string // each field's OtherFor and Note
+	}{
+		{model.HarnessInfo{OtherSuffix: "_custom", OtherNotes: model.NotesOnOne}, " question_0+note  question_1"},
+		{model.HarnessInfo{OtherSuffix: "_custom", OtherNotes: model.NotesOnAll}, " question_0+note  question_1+note"},
+		{model.HarnessInfo{OtherSuffix: "_custom"}, " question_0  question_1"},
+		{model.HarnessInfo{}, "   "},
+	} {
+		events := make(chan model.Event, 100)
+		ch := &chat{svc: &Service{remembered: &memModes{}}, id: "s1", sid: "s1", kind: &kind{HarnessInfo: c.info}, agent: &fakeAgent{}, publish: func(e model.Event) { events <- e }, questions: map[string]chan<- []model.Field{}}
+		ctx, cancel := context.WithCancel(t.Context())
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			_, _ = ch.CreateElicitation(ctx, &req)
+		}()
+		var it model.Item
+		for e := range events {
+			if e.Item != nil && e.Item.Status == "pending" {
+				it = *e.Item
+				break
+			}
+		}
+		cancel()
+		<-done
+		var got []string
+		for _, f := range it.Fields {
+			s := f.OtherFor
+			if f.Note {
+				s += "+note"
+			}
+			got = append(got, s)
+		}
+		if strings.Join(got, " ") != c.want {
+			t.Errorf("%+v: fields %q, want %q", c.info, strings.Join(got, " "), c.want)
+		}
+	}
+}

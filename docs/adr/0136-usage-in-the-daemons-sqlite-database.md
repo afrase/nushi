@@ -19,3 +19,5 @@ The owner wants a Usage page: what the agents spent and the tokens they used, by
 Usage starts at the upgrade; older chats count from their next turn. Turns while the daemon was down, or run in a terminal, aren't seen. The binary grows by SQLite's Go translation.
 
 **Amendment (2026-11-23):** GetUsage takes only `from`; its `to` and `time_zone`, which no client sent, are reserved, and days are the daemon's zone, the Mac's. The costliest chats rank, after cost, by input and output tokens, as the page counts them.
+
+**Amendment (2026-11-25):** Nushi writes no `released` or `held` row any more. Claude's Go agent answers a prompt right at its turn's result, background subagents or not (`docs/facts/claude.md`), so a Claude turn ends at the prompt's answer and is one `turn` row, its cost and tokens together. Rows already stored with those kinds are still read as above (`held` not counted as a turn).

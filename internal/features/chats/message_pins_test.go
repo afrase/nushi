@@ -125,7 +125,7 @@ func TestPinsHoldWithTheCopy(t *testing.T) {
 		t.Fatalf("after a restart: %s", got)
 	}
 	testcheck.NoErr(t, svc2.Reload(c.id))
-	eventually(t, c2, func() bool { return !c2.busy && c2.agent != nil })
+	eventually(t, c2, func() bool { return !c2.busyLocked() && c2.agent != nil })
 	if got := pinned(c2); got != "agent:m1 agent:m2" || !slices.Equal(c2.record.Pins, ids) {
 		t.Errorf("after a reload: %s, %v want %v", got, c2.record.Pins, ids)
 	}

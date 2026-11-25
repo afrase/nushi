@@ -41,7 +41,6 @@ func TestNotesAreBareTags(t *testing.T) {
 		{switchNote("main", "other"), `<nushi-branch-switched from="main" to="other"/>`},
 		{moveNote("/r/a b", ""), `<nushi-moved folder="/r/a b"/>`},
 		{moveNote("/r/try", "try-sqrly"), `<nushi-moved folder="/r/try" branch="try-sqrly"/>`},
-		{stopNote("b1x_2"), `<nushi-command-stopped id="b1x_2"/>`},
 		{editNote("a.go"), `<nushi-edited path="a.go"/>`},
 		{editNote(`odd"/><x y="`), `<nushi-edited path="odd&quot;/&gt;&lt;x y=&quot;"/>`},
 		{editNote("a&b`c'.go"), `<nushi-edited path="a&amp;b` + "`" + `c'.go"/>`},
@@ -51,7 +50,7 @@ func TestNotesAreBareTags(t *testing.T) {
 			t.Errorf("got %s, want %s", c.got, c.want)
 		}
 	}
-	all := stopNote("b1") + editNote(`x"/>y`) + "\n\n" + moveNote("/r", "b") + branchNote("a", "b") + "Carry on"
+	all := `<nushi-command-stopped id="b1"/>` + editNote(`x"/>y`) + "\n\n" + moveNote("/r", "b") + branchNote("a", "b") + "Carry on"
 	if text, ok := unnoted(all); !ok || text != "Carry on" {
 		t.Errorf("replayed as %q", text)
 	}

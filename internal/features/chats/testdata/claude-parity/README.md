@@ -1,6 +1,6 @@
 # Claude parity scenarios
 
-Each folder is a scenario of `TestClaudeParity` (`../../claude_parity_test.go`): one run of an ACP agent on the real `claude`, recorded at both ends, which the test replays to Nushi's Go agent (`claudeacp`) to compare what Nushi makes of each. Every scenario here was recorded through the Node adapter (claude-agent-acp 0.94.0), which Claude ran through until 2026-11-04 (ADR 0066): those recordings are the Go agent's golden behaviour. The adapter is gone from Nushi, so `make claude-record` now records through the Go agent (`nushid claude-acp`): a scenario recorded again holds the Go agent's own run, a regression check against claude's real output rather than a comparison with the adapter. The cassette's filtering for what only the adapter wrote claude (below) then has nothing to drop.
+Each folder is a scenario of `TestClaudeParity` (`../../claude_parity_test.go`): one run of Nushi's Go agent (`claudeacp`, through `nushid claude-acp`) on the real `claude`, recorded at both ends. The test replays the recorded `claude` to the Go agent at the version `go.mod` pins, sends it what the recording's client sent, and checks that what Nushi makes of the replay is what it makes of the recording: a regression check against claude's real output, for a library bump or a change to how chats reads Claude (ADR 0066). Until 2026-11-25 the scenarios were runs of the Node adapter Claude ran through until 2026-11-04 (claude-agent-acp 0.94.0); its `load` is kept, frozen, in `../claude-adapter-load`, so a chat last run on the adapter is still shown to reopen on the Go agent.
 
 A scenario is two scripts, written by hand:
 
@@ -19,25 +19,25 @@ A scenario without `cli.jsonl` is skipped by the test, by name, until it is reco
 
 The test sends the Go agent the recorded client's messages in order, waiting where the recording's agent answered or asked. The replayed claude plays at its own pace, not the recording's, so a client's line also waits for one or two points of the run, `runGoAgent` in `../../claude_goagent_test.go`:
 
-- **The Go agent caught up** (every line): the line goes once the Go agent has sent its copy of the last update the adapter sent before it that marks a point (a call's report or status, a subagent's state, a message; `mark`), 2 s at most, so the Go agent has shown what the client saw. Without it a cancel sent after the adapter showed a subagent running reached the Go agent before claude's echo of the prompt had, and the Go agent took the prompt for a queued one (`subagent-stop-turn`).
+- **The Go agent caught up** (every line): the line goes once the Go agent has sent its copy of the last update the recording had before it that marks a point (a call's report or status, a subagent's state, a message; `mark`), and once it has sent each session that had its first update by then an update of its own, 10 s at most (`readUntil`; the test then fails saying what it waited for, and goes on so the chats compared say how they differ), so the Go agent has shown what the client saw. Without it a cancel sent after the recording showed a subagent running reached the Go agent before claude's echo of the prompt had, and the Go agent took the prompt for a queued one (`subagent-stop-turn`).
 - **claude's replay waits for the line** (a steer, a cancel, a prompt queued behind a running one: `midTurn`): the line goes only once claude's script waits for the line it makes (`claudetest.Fake.Awaiting`), so it reaches claude where the recorded one did. Without it a cancel's interrupt reached claude ahead of the queued prompt just before it, and a steer ahead of a tool's hook answer.
 
 They stay two: the first is about the Go agent's state (what it has read of claude), which claude's script can't see, the second about where claude's script is, which the Go agent's updates don't say; neither implies the other, and only the lines that write claude one mid-turn need the second.
 
 ## What the replay leaves out
 
-The replay to the Go agent is strict and in order, so what the adapter wrote claude that the Go agent doesn't (or not at a fixed point) goes from the cassette, with claude's answers (`forGoAgent` in `../../claude_replay_test.go`):
+The replay to the Go agent is strict and in order, so what the recording wrote claude that the Go agent doesn't write at a fixed point goes from the cassette, with claude's answers (`forGoAgent` in `../../claude_replay_test.go`):
 
-- `generate_session_title`: the Go agent asks on a goroutine of its own, answered whenever it comes;
-- calls of the hooks the Go agent doesn't register (PostCompact, TaskCreated…); a PostToolUse call takes the Go agent's id;
-- the `interrupt` the adapter sends as it closes a session with claude idle (when its client goes), and what claude wrote after it: the Go agent interrupts only a running turn, else it just ends claude's stdin. An interrupt with a turn running, or one followed by more writes to claude (a cancel), stays;
-- a second `interrupt` sent before claude answered the first, with its answer: the adapter sends two as its client goes mid-turn, the Go agent one.
+- `generate_session_title`: the Go agent asks on a goroutine of its own after a turn, so where the ask falls in claude's stream differs from run to run; the replay answers it (with no title) whenever it comes.
+- In the adapter's frozen recording (`../claude-adapter-load`) only, the `interrupt` the adapter sent as it closed a session with claude idle, and what claude wrote after it: the Go agent interrupts only a running turn, else it just ends claude's stdin, so its own recordings have none. That recording's replay also showed a command that printed nothing with claude's text for the model, which it never showed live; the test drops that text from it (`replayedAsLive`). Its one hook call (PostToolUse, under the adapter's `hook_0`) takes the Go agent's id for that hook (`hook_1`): the Go agent runs a hook call by its id.
+
+The chats compared leave out what differs by run, not by agent: the times of this run, the ids an agent gives a permission prompt's options (the kind picked stands for its id), the recording's folder in a tool call's title, and a background command's output file, which is gone (Nushi reads that output from claude's file, not from the agent). Both sides are played through the same reading of chats, so a change to that reading that treats both alike passes: the comparison catches claude or the Go agent changing, and chats' own tests hold its reading. One check is absolute: each background command's row must end as claude's own `task_notification` in `cli*.jsonl` says its task did, read as `Task` reads it (`commandsEnded`); and each workflow's run must end as claude's `task_notification` says its task did, with no file of the run read, so it holds on any machine (`workflowsEnded`).
 
 The replay's client goes only once the Go agent has sent what the recording's client waited for last (`client.json`'s `waitFor` steps after its last step that sends anything), as the recording's did: a turn claude runs on its own after the last prompt would otherwise be cut off.
 
 ## The scenarios
 
-Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent-acp 0.94.0, `make claude-record`; the two `subagent-worktree` ones 2026-11-02, 2.1.314, `plan` 2026-11-03, 2.1.314), and the Go agent matches the adapter on each (`go test -race -run 'ClaudeParity|ClaudeMerge' ./internal/features/chats`, green at `-count=20`). What the recordings showed is in `docs/facts/claude.md` (its Go-agent section). Scenarios that don't ask about a tool allow it in claude's session settings (`meta`), so only the scenarios about asking ask. `tools/claude-record`'s tests load every scenario, and play those a fake claude can take.
+Every scenario is recorded (2026-11-25, Claude Code 2.1.331 through the Go agent, claudeacp 0.8.0, `make claude-record`; until then 2026-10-30, 2.1.312, through claude-agent-acp 0.94.0, whose `load` is kept in `../claude-adapter-load`), and the Go agent matches the recording on each (`go test -race -run 'ClaudeParity|ClaudeMerge' ./internal/features/chats`, green at `-count=20`). What the recordings showed is in `docs/facts/claude.md` (its Go-agent section). Scenarios that don't ask about a tool allow it in claude's session settings (`meta`), so only the scenarios about asking ask. `tools/claude-record`'s tests load every scenario, and play those a fake claude can take.
 
 | Scenario | What it does | Also showed |
 |---|---|---|
@@ -56,6 +56,8 @@ Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent
 | `bash-background` | a background command that ends; claude's turn on its own after | |
 | `bash-background-killed` | a background command whose process group Nushi stops (`kill`) | |
 | `bash-background-taskstop` | a background command stopped by Claude's `TaskStop` | |
+| `bash-background-stoptask` | a background command stopped by `_session/stopTask` with claude idle, a prompt after; the stop again, and of an unknown id | the frames, no turn, the model told at the next prompt; `{}` for an ended or unknown id |
+| `bash-background-stoptask-turn` | a background command stopped by `_session/stopTask` while a turn waits on a foreground command, a prompt after | the same frames mid-turn; the model told in that turn; the process gone; a foreground command's task |
 | `subagent-foreground` | a foreground subagent | |
 | `subagent-background` | a background subagent that ends; the held turn | `session_state_changed: idle` only once no subagent runs |
 | `subagent-nested` | a background subagent that starts another, whose end reaches it mid-turn | where a nested subagent's notification is kept |
@@ -64,22 +66,30 @@ Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent
 | `subagent-stop-turn` | a foreground subagent stopped with the turn | |
 | `subagent-worktree` | subagents with `isolation: "worktree"`: one that commits, one that changes nothing, a foreground one that leaves a file; what is left | what `.meta.json`, the lock and `toolResponse` hold (`docs/facts/claude.md`) |
 | `subagent-worktree-bash` | a subagent that runs `git worktree add` itself, and writes there by absolute path | its transcript's `cwd` stays the chat's folder |
+| `worktree-enter-path` | `git worktree add` by Bash, then `EnterWorktree` with its `path` (asked: Yes); where commands run; `ExitWorktree` `remove`, then `keep` | the ask for a worktree outside `.claude/worktrees/`; the transcript moved to the worktree's project folder and back |
+| `worktree-enter-name` | `EnterWorktree` with a `name`; a file left, `ExitWorktree` `remove`, then with `discard_changes`; another entered and the session closed in it; a new session after | the lock on a worktree Claude made; what a close leaves |
+| `worktree-bash-cd` | `git worktree add` and `cd` into it in one Bash call, then `EnterWorktree` there, `ExitWorktree` | `cd` moves the session; EnterWorktree refuses the folder it is in |
+| `worktree-reopen` | the session entered a worktree by `path` and closed; loaded from the run's folder, then from the worktree's | where a resumed session runs |
+| `worktree-gone` | a worktree made before the session (`git` step), entered by `path`, removed by `git` between turns; a prompt, then `ExitWorktree` `keep` | claude's warning; Bash refused |
+| `worktree-second` | `EnterWorktree` by name, by another name, then by `path` to a worktree outside `.claude/worktrees/`, then `ExitWorktree` `keep` | |
+| `worktree-fork` | a worktree made before the session (`git` step), entered by `path`; `session/fork` of the whole session and at its answer (a rewind), from the run's folder, each asked where it is; then the parent | where a fork of a session in a worktree starts |
+| `worktree-fork-into` | `EnterWorktree` with a `name`; `session/fork` of the whole session with `cwd` the worktree's path (Nushi's Move), asked where it is, a Bash call that joins git with other commands, `ExitWorktree` `keep`; then the parent | what a fork into the worktree is |
+| `worktree-reopen-name` | `EnterWorktree` with a `name`, a subagent there; the session closed in it and loaded from the run's folder | where a session resumes in a worktree Claude made; where its subagents' files are |
+| `worktree-reopen-gone` | a worktree made before the session, entered by `path`; the session closed, the worktree removed and pruned by `git`, then loaded from the run's folder | the load after the worktree is gone |
 | `sendmessage` | a message to a finished background subagent, which runs again | |
 | `compaction` | `/compact`, then a prompt | |
-| `context` | `/context` in a throwaway fork, deleted after, as Nushi asks it | |
+| `context` | a throwaway fork, a command (`/context`) run in it, deleted after, as Nushi's commit message forks one | |
+| `context-usage` | `_session/contextUsage` full, summary and without a detail: idle, mid-command, in a second session, before and after a `CLAUDE.md`, an agent and an MCP server | `get_context_usage`'s answer (`docs/facts/claude.md`) |
 | `safeguards` | a refusal: the notice, then claude's retry | |
 | `refusal` | a refusal of the retry too: the turn ends `refusal` | |
 | `findings` | a `ReportFindings` call | |
 | `plan` | three `TaskCreate`s, then `TaskUpdate`s through the steps; `session/close`, `session/load`, a prompt after | the `plan` updates (`docs/facts/claude.md`) |
-| `workflow` | a Workflow call (two phases, four agents, one with a schema) that ends; claude's turn on its own after (2026-11-16, 2.1.325, through the Go agent) | the call's `toolResponse`, the run's files, the prompt answered while the run goes |
+| `workflow` | a Workflow call (two phases, four agents, one with a schema) that ends; claude's turn on its own after | the call's `toolResponse`, the run's files, the prompt answered while the run goes |
 | `workflow-stop` | a running workflow stopped by `TaskStop` with its task id | the `killed` snapshot |
+| `workflow-stoptask` | a running workflow stopped by `_session/stopTask`, a prompt after, the stop again | a workflow's task frames; the `killed` snapshot |
 | `ultracode` | ultracode on, then an effort change | |
 | `models` | `availableModels` in the session's settings | `initialize`'s models are already filtered |
 | `mcp` | a tool of a stdio MCP server (`mcp-echo`), asked about | |
-
-The three `bash-background` scenarios' commands end, on the Go agent's side, by claude's task status (claude-acp-go v0.5.0 on, ADR 0130), which the adapter never sent: the test checks each against how claude's recorded task ended (`commandEnds`), and where the adapter's side can only show the end unknown (its file is gone), compares the rest of the call without it.
-
-`stop_task` on a background command isn't among them: the adapter never sent it, so the recordings through it couldn't show it.
 
 ## Recording
 
@@ -157,7 +167,7 @@ Each step has one verb. Requests wait for their answer unless they have `async` 
 | `{"request": "method", "params": {…}}` | any request; `"$s1"` in params is that session's id, `"$cwd"` the run's folder |
 | `{"notify": "method", "params": {…}}` | any notification, the same way |
 
-`meta` on `new`, `load`, `resume` and `fork` joins Nushi's session `_meta`, objects merged key by key (`{"claudeCode": {"options": {"settings": {"ultracode": true}}}}`). `settings` there is claude's own settings for the session, which the scenarios use to allow the tools they don't ask about (`{"permissions": {"allow": ["Bash"]}}`). `mcpServers` on the same steps is the session's MCP servers as ACP gives them (`[]` when not given); `"$mcp-echo"` in it is the library's `claudetest/cmd/mcp-echo`, a stdio server with one tool, `echo`, which `make claude-record` builds.
+`cwd` on `new`, `load`, `resume` and `fork` is the request's folder, relative to the run's (`".worktrees/side"`); the run's folder when not given. `meta` on the same steps joins Nushi's session `_meta`, objects merged key by key (`{"claudeCode": {"options": {"settings": {"ultracode": true}}}}`). `settings` there is claude's own settings for the session, which the scenarios use to allow the tools they don't ask about (`{"permissions": {"allow": ["Bash"]}}`). `mcpServers` on the same steps is the session's MCP servers as ACP gives them (`[]` when not given); `"$mcp-echo"` in it is the library's `claudetest/cmd/mcp-echo`, a stdio server with one tool, `echo`, which `make claude-record` builds.
 
 | Step | Does |
 |---|---|
@@ -168,5 +178,6 @@ Each step has one verb. Requests wait for their answer unless they have `async` 
 | `{"pause": "500ms"}` | waits that long; prefer `waitFor` |
 | `{"end": {}}` | ends the script there: the client goes at once (stdin's end), waiting for no answer it hasn't had |
 | `{"repo": {}}` | makes the run's folder a git repository on `main` with one empty commit, without your git config; before `new`, for a scenario about worktrees |
+| `{"git": ["worktree", "add", "-q", ".worktrees/side", "-b", "side"]}` | runs git with those arguments in the run's folder, as `repo` does: a worktree made before the session, or removed between turns |
 
 Every request the agent makes must be answered by a step, or the recording fails.

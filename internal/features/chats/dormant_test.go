@@ -73,8 +73,8 @@ func TestAnOldChatShownAfterARestartStaysAsleep(t *testing.T) {
 	before, _, _ := agent.count()
 	shows(t, svc, id)
 	c := svc.chats[id]
-	if launches, _, _ := agent.count(); launches != before || c.busy || c.agent != nil {
-		t.Fatalf("shown, %d launches, busy %v", launches-before, c.busy)
+	if launches, _, _ := agent.count(); launches != before || c.busyLocked() || c.agent != nil {
+		t.Fatalf("shown, %d launches, busy %v", launches-before, c.busyLocked())
 	}
 	if st := statusOf(t, svc, id); !st.Asleep || st.ReopenFailed {
 		t.Fatalf("status %+v", st)
@@ -87,7 +87,7 @@ func TestAnOldChatShownAfterARestartStaysAsleep(t *testing.T) {
 
 	agent.updates = []acp.SessionUpdate{chunk("m2", "more")}
 	turn(t, svc, c, "two")
-	eventually(t, c, func() bool { return c.agent != nil && !c.asleep && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.asleep && !c.busyLocked() })
 	if got := shown(c); got != "user:one agent:m1 user:two agent:m2" {
 		t.Fatalf("woken by a message: %s", got)
 	}
@@ -102,9 +102,26 @@ func TestAnOldChatWakesForWhatNeedsItsAgent(t *testing.T) {
 	shows(t, svc, id)
 	c, err := svc.awakeChat(t.Context(), id)
 	testcheck.NoErr(t, err)
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
 	if launches, _, _ := agent.count(); launches != 2 { // the first daemon's, and this
 		t.Fatalf("%d launches", launches)
+	}
+}
+
+// Wake opens an old chat left asleep since the daemon started, as a
+// message would, and sends nothing.
+func TestWakeOpensAnOldChat(t *testing.T) {
+	svc, agent, id := oldChat(t, 2*time.Hour, nil)
+	shows(t, svc, id)
+	before := len(agent.prompts)
+	testcheck.NoErr(t, svc.Wake(id))
+	c := svc.chats[id]
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() && !c.asleep })
+	if launches, _, _ := agent.count(); launches != 2 { // the first daemon's, and this
+		t.Fatalf("%d launches", launches)
+	}
+	if got := shown(c); got != "user:one agent:m1" || len(agent.prompts) != before {
+		t.Fatalf("woken: %s, %d prompts (%d before)", got, len(agent.prompts), before)
 	}
 }
 
@@ -114,7 +131,7 @@ func TestARecentChatShownAfterARestartReopens(t *testing.T) {
 	svc, _, id := oldChat(t, 30*time.Minute, nil)
 	shows(t, svc, id)
 	c := svc.chats[id]
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
 }
 
 // Chats that sleep after idling for less than an hour: the window is that
@@ -130,8 +147,8 @@ func TestTheSleepTimeShortensTheWindow(t *testing.T) {
 		shows(t, svc, id)
 		c := svc.chats[id]
 		if tc.reopen {
-			eventually(t, c, func() bool { return c.agent != nil && !c.busy })
-		} else if launches, _, _ := agent.count(); launches != 1 || c.busy {
+			eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
+		} else if launches, _, _ := agent.count(); launches != 1 || c.busyLocked() {
 			t.Errorf("used %v before: %d launches since", tc.ago, launches-1)
 		}
 	}
@@ -146,13 +163,13 @@ func TestAnOldChatsFailedWakeTriesAgain(t *testing.T) {
 	agent.loadErr = errors.New("no such session")
 	agent.updates = []acp.SessionUpdate{chunk("m2", "more")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), id, model.Message{Text: "two"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy && c.reopenFailed })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.reopenFailed })
 	if st := statusOf(t, svc, id); st.Asleep || !st.ReopenFailed {
 		t.Fatalf("status %+v", st)
 	}
 	agent.loadErr = nil
 	testcheck.NoErr(t, svc.Reopen(id))
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy && len(c.queue) == 0 && c.started.IsZero() })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() && len(c.queue) == 0 && c.started.IsZero() })
 	if got := shown(c); got != "user:one agent:m1 user:two agent:m2" {
 		t.Fatalf("after Try again: %s", got)
 	}
@@ -165,7 +182,7 @@ func TestAnOldChatWithoutACopyReopens(t *testing.T) {
 	testcheck.NoErr(t, svc.copies.Delete(id))
 	shows(t, svc, id)
 	c := svc.chats[id]
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
 }
 
 // blockingHas is a copies store whose Has waits at gate once it is set,
@@ -227,4 +244,28 @@ func TestAFirstLookupDoesntHoldTheService(t *testing.T) {
 	if a, b := <-found, <-found; a == nil || a != b {
 		t.Errorf("two lookups found %p and %p", a, b)
 	}
+}
+
+// Once Rest has said every chat is quiet, a wake is refused as a prompt
+// is (ErrRestarting: the app asks the new daemon), so no agent starts
+// that the restart would stop.
+func TestWakeWhileRestingIsRefused(t *testing.T) {
+	svc, agent, id := oldChat(t, 2*time.Hour, nil)
+	shows(t, svc, id)
+	if ok, holding := svc.Rest(); !ok {
+		t.Fatalf("Rest held by %q", holding)
+	}
+	if err := svc.Wake(id); !errors.Is(err, ErrRestarting) {
+		t.Fatalf("Wake while resting: %v", err)
+	}
+	c := svc.chats[id]
+	c.mu.Lock()
+	busy, asleep := c.busyLocked(), c.asleep
+	c.mu.Unlock()
+	if launches, _, _ := agent.count(); launches != 1 || busy || !asleep {
+		t.Fatalf("while resting: %d launches, busy %v, asleep %v", launches, busy, asleep)
+	}
+	svc.Unrest()
+	testcheck.NoErr(t, svc.Wake(id))
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() && !c.asleep })
 }

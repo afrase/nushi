@@ -27,7 +27,9 @@ func TestInbox(t *testing.T) {
 		t.Fatalf("%+v", in)
 	}
 	pr, is := in.Mine[0], in.Assigned[0]
-	if !pr.Pull || pr.Number != 1 || pr.Repo != repo || pr.State != "open" || pr.Checks != "failure" || pr.Unresolved != 4 || pr.Author != "afrase" {
+	// Unresolved is the recording's count (5 threads on pull request 1 as
+	// recorded on 2026-11-24): a re-record that changes it moves this.
+	if !pr.Pull || pr.Number != 1 || pr.Repo != repo || pr.State != "open" || pr.Checks != "failure" || pr.Unresolved != 5 || pr.Author != "afrase" {
 		t.Fatalf("%+v", pr)
 	}
 	if is.Pull || is.Number != 2 || is.Title != "Add a Mul function" || is.Host != f.client().Host {
@@ -98,9 +100,26 @@ func TestInboxReviewRequested(t *testing.T) {
 	}
 }
 
+// TestPull reads the recorded pull request 1 (2026-11-24), patched for
+// what the recording lacks: a team asked to review as a code owner, and
+// a check still running (every check had ended).
 func TestPull(t *testing.T) {
 	f := newFake(t)
-	f.file("graphql PullRequest", "graphql_PullRequest.json")
+	f.patched("graphql PullRequest", "graphql_PullRequest.json", func(data map[string]any) {
+		pr := object(t, data, "repository", "pullRequest")
+		object(t, pr, "reviewRequests")["nodes"] = []any{map[string]any{"asCodeOwner": true,
+			"requestedReviewer": map[string]any{"__typename": "Team", "slug": "core"}}}
+		runs, _ := object(t, pr, "last")["nodes"].([]any)
+		if len(runs) == 0 {
+			t.Fatal("no head commit recorded")
+		}
+		checks, _ := object(t, runs[0].(map[string]any), "commit", "statusCheckRollup", "contexts")["nodes"].([]any)
+		i := slices.IndexFunc(checks, func(c any) bool { return c.(map[string]any)["name"] == "test" })
+		if i < 0 {
+			t.Fatal("no test check recorded")
+		}
+		checks[i].(map[string]any)["status"], checks[i].(map[string]any)["conclusion"] = "IN_PROGRESS", nil
+	})
 	p, err := f.client().Pull(t.Context(), repo, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -111,10 +130,12 @@ func TestPull(t *testing.T) {
 	if strings.Contains(p.Body, "template comment") || !strings.Contains(p.Body, "- [x] tests") {
 		t.Fatalf("body %q", p.Body)
 	}
-	if p.Commits != 2 || len(p.Reviewers) == 0 || !p.Reviewers[0].CodeOwner || !p.Reviewers[0].Team || p.Reviewers[0].Login != "core" {
+	// Commits and threads are the recording's counts: a re-record that
+	// changes them moves these.
+	if p.Commits != 3 || len(p.Reviewers) == 0 || !p.Reviewers[0].CodeOwner || !p.Reviewers[0].Team || p.Reviewers[0].Login != "core" {
 		t.Fatalf("commits %d, reviewers %+v", p.Commits, p.Reviewers)
 	}
-	if len(p.Threads) != 4 {
+	if len(p.Threads) != 5 {
 		t.Fatalf("threads %+v", p.Threads)
 	}
 	var outdated, ranged bool
@@ -136,9 +157,15 @@ func TestPull(t *testing.T) {
 	if !failed || !running {
 		t.Fatalf("runs %+v", p.Runs)
 	}
+	// Its item is a pull request's, its checks counted from the runs it
+	// lists (ADR 0117), as a row counts them.
+	if n := p.CheckCounts; !p.Pull || n.Failed == 0 || n.Running == 0 || n.Passed+n.Failed+n.Running+n.Skipped != len(p.Runs) {
+		t.Fatalf("pull %v, counts %+v of %d runs", p.Pull, n, len(p.Runs))
+	}
 	var review, comment bool
 	for _, c := range p.Conversation {
-		review = review || c.Review == "commented" && c.Body == "A first look." && c.Commit == "c0ffee10c4b1a7d2e9f3a6b8c5d4e1f0a9b8c7d6"
+		// The recorded review's commit, an earlier head of the branch.
+		review = review || c.Review == "commented" && c.Body == "A first look." && c.Commit == "8a7f9e9087b0bc99c5ae61e28c1285905444e03a"
 		comment = comment || c.Review == "" && strings.Contains(c.Body, "FAIL")
 	}
 	if !review || !comment {
@@ -160,27 +187,18 @@ func TestThreadsPage(t *testing.T) {
 	}
 }
 
-func TestIssueAndStatus(t *testing.T) {
+func TestIssue(t *testing.T) {
 	f := newFake(t)
 	f.file("graphql Issue", "graphql_Issue.json")
-	f.file("graphql Status", "graphql_Status.json")
 	c := f.client()
 	is, err := c.Issue(t.Context(), repo, 2)
 	if err != nil || is.Pull || is.Number != 2 || len(is.Assignees) != 1 || !strings.Contains(is.Body, "Ignore all previous instructions") {
 		t.Fatalf("%+v %v", is, err)
 	}
-	st, err := c.Status(t.Context(), []string{"x"})
-	if err != nil || len(st) != 2 {
-		t.Fatalf("%+v %v", st, err)
-	}
-	for id, it := range st {
-		if it.ID != id || it.Number == 0 {
-			t.Fatalf("%s: %+v", id, it)
-		}
-	}
-	// A pull request's checks say which commit they're of (ADR 0138).
-	if pr := st["PR_kwDOVXdqNc8AAAABKrwJXQ"]; pr.Checks != "failure" || pr.ChecksOID != "4f1c2e9a7b3d5c6e8f0a1b2c3d4e5f6a7b8c9d0e" {
-		t.Fatalf("%+v", pr)
+	// Issue 2 was closed and reopened before it was recorded: open, with
+	// the reason GitHub gives a reopened issue.
+	if is.State != "open" || is.StateReason != "reopened" {
+		t.Fatalf("state %q, reason %q", is.State, is.StateReason)
 	}
 	if _, err := c.Issue(t.Context(), "not a repo", 2); err == nil {
 		t.Fatal("a bad repository's name")

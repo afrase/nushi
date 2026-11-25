@@ -145,6 +145,7 @@ func TestPlain(t *testing.T) {
 	for in, want := range map[string]string{
 		"octo": "octo", "dependabot[bot]": "dependabot[bot]", "mona\u202e": "someone", "two words": "someone",
 		strings.Repeat("a", 40): "someone", "": "someone",
+		"mona-cat_octo": "mona-cat_octo", "mona_": "someone", "_octo": "someone", "a_b_c": "someone", "mona_oc\u202eto": "someone",
 	} {
 		if got := shown(in); got != want {
 			t.Errorf("shown(%q) = %q, want %q", in, got, want)

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/back_swipe.dart';
 import 'package:nushi/diff_box_find.dart';
 import 'package:nushi/diff_comment_button.dart';
+import 'package:nushi/diff_presses.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/review_cards.dart';
@@ -273,6 +274,8 @@ class _DiffBoxState extends State<DiffBox> {
       theme: _theme,
       captureNames: syntaxCaptures,
       devicePixelRatio: dpr,
+      // The phone has no mouse: a drag there scrolls.
+      textSelectionEnabled: !kIsWeb,
     )..selectionChanges.addListener(() => _selecting = true);
     // Its panes scroll sideways without a Scrollable: a swipe back over
     // it is the diff's while it moves.
@@ -569,9 +572,14 @@ class _DiffBoxState extends State<DiffBox> {
     final inlays = widget.review == null && widget.note == null
         ? _noInlay
         : _inlay;
-    final Widget view = unified
-        ? UnifiedDiff(controller: c, theme: _theme, inlayBuilder: inlays)
-        : SideBySideDiff(controller: c, theme: _theme, inlayBuilder: inlays);
+    final Widget view = DiffPresses(
+      controller: c,
+      unified: unified,
+      theme: _theme,
+      child: unified
+          ? UnifiedDiff(controller: c, theme: _theme, inlayBuilder: inlays)
+          : SideBySideDiff(controller: c, theme: _theme, inlayBuilder: inlays),
+    );
     // A line that takes a comment shows a + under the pointer; the phone
     // has none (no pointer hovers there).
     final commentable =

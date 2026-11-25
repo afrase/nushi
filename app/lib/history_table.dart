@@ -296,6 +296,8 @@ class HistoryRowView extends StatelessWidget {
       ),
       wide: wide,
     );
+    // A press kept by hand from before Tap: no tint, no focus.
+    // design: to move onto Tap
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,

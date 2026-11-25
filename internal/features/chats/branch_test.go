@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -172,4 +173,40 @@ func TestRenamingTheBranchRefusesARemotesName(t *testing.T) {
 	if !slices.Equal(wts.renames, []string{"nushi/mine"}) {
 		t.Errorf("renames: %v", wts.renames)
 	}
+}
+
+// Renaming the branch waits for the agent, as a Move does: a prompt it
+// asks on its own, or a workflow still running, refuses it until done.
+func TestNoBranchRenameWhileTheAgentWorks(t *testing.T) {
+	worktree := func(c *chat) *usedWorktrees {
+		wts := &usedWorktrees{use: model.BranchUse{OnIt: true}}
+		c.mu.Lock()
+		c.worktrees = wts
+		c.record.Worktree = &model.Worktree{Repo: "/r", Path: "/r/.worktrees/brave-otter", Branch: "nushi/brave-otter"}
+		c.mu.Unlock()
+		return wts
+	}
+	t.Run("a prompt waits", func(t *testing.T) {
+		svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+		worktree(c)
+		gone := askAlone(t, c)
+		if err := svc.RenameBranch(t.Context(), c.id, "nushi/mine"); err == nil || !strings.Contains(err.Error(), "waiting for your answer") {
+			t.Errorf("renamed while a prompt waited: %v", err)
+		}
+		gone()
+		testcheck.NoErr(t, svc.RenameBranch(t.Context(), c.id, "nushi/mine"))
+	})
+	t.Run("a workflow runs", func(t *testing.T) {
+		f := workflowChat(t, Timing{}, runningAs)
+		f.waitStatus(t, func(st model.Status) bool { return st.Workflows == 1 })
+		wts := worktree(f.c)
+		if err := f.svc.RenameBranch(t.Context(), f.c.id, "nushi/mine"); err == nil || !strings.Contains(err.Error(), "workflow") {
+			t.Errorf("renamed while a workflow ran: %v", err)
+		}
+		wts.mu.Lock()
+		defer wts.mu.Unlock()
+		if len(wts.renames) != 0 {
+			t.Errorf("renames: %v", wts.renames)
+		}
+	})
 }

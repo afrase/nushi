@@ -27,6 +27,15 @@ The button in the bar switches between two views:
 
 You can also use **View › Show Diffs Unified**. Your choice applies to every diff in Nushi, and Nushi remembers it.
 
+## Copy code from a diff
+
+Select code in any diff and copy it, as in an editor: in Changes, a pull request's files, or a tool call in the chat.
+
+1. Drag across the code. Double-click selects a word, triple-click a line, and Shift-click extends the selection.
+2. Press ⌘C (Ctrl+C on Linux and Windows), or right-click the code and pick **Copy**.
+
+You get the code as it shows, without the line numbers or the + and - marks. Escape or a click elsewhere in the diff clears the selection. Selecting code never opens a comment: comments start from the line numbers. On the phone a drag scrolls the diff instead.
+
 ## Comment on lines
 
 Leave comments for the agent, as in a code review.
@@ -70,7 +79,7 @@ To start a chat in one:
 
 Nushi makes a new branch for the chat. After the first turn, it names the branch after the chat's title. For a worktree chat, **Branch** shows all of the chat's work, committed or not.
 
-To move a chat that already has messages into a new worktree, open the **Worktree** row in the details panel's **Environment** widget and pick **New worktree…**. Uncommitted changes stay where they were.
+To move a chat that already has messages into a new worktree, open the **Worktree** row in the details panel's **Environment** widget and pick **New worktree…**. Uncommitted changes stay where they were. A move waits until the agent is done, including a prompt still waiting for your answer: answer or stop it first.
 
 ## Clean up a worktree
 

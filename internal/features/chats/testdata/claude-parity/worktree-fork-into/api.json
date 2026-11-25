@@ -1,0 +1,16 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "enter a new worktree"}, "content": [{"type": "tool_use", "name": "EnterWorktree", "input": {"name": "into"}}]},
+    {"match": {"toolResult": "EnterWorktree"}, "id": "msg_worktree_fork_into_point", "content": [{"type": "text", "text": "In it."}]},
+    {"match": {"lastUserText": "where is the fork"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I, at once", "command": "pwd; git branch --show-current; git worktree list --porcelain"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I", "command": "pwd; find \"$CLAUDE_CONFIG_DIR\"/projects -type f | sort"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which branch", "command": "git branch --show-current"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which worktrees", "command": "git worktree list --porcelain"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "ExitWorktree", "input": {"action": "keep"}}]},
+    {"match": {"toolResult": "ExitWorktree"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I after", "command": "pwd"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Fork here."}]},
+    {"match": {"lastUserText": "where is the parent"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I", "command": "pwd"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which branch", "command": "git branch --show-current"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Parent here."}]}
+  ]
+}

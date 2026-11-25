@@ -155,7 +155,7 @@ Start a message with **!** to run it as a command instead of sending it, as in C
 
 You can send a message before the agent finishes. Type your message, then:
 
-- **⏎, or the Queue button,** puts it in line, as a pill over the box. If the agent takes input while it works, it gets the message right away. Otherwise the message goes when the current turn ends. You can edit or remove a pill, or send it now.
+- **⏎, or the Queue button,** puts it in line, as a pill over the box. If the agent takes input while it works, it gets the message right away. Otherwise the message goes when the current turn ends. You can edit or remove a pill, or send it now: the turn stops and it goes. If it can't go, it stays in line.
 - **⌘⏎, or the Stop and send button,** stops what the agent is doing and sends your message at once.
 
 With **Enter starts a new line** on, **⌘⏎** queues and **⇧⌘⏎** stops and sends. The box's hint and the buttons' tooltips show the keys.
@@ -195,7 +195,7 @@ Claude can run a workflow: a script that has many subagents work in phases, in t
 2. To see its phases without leaving the chat, click the card, or the chevron (›) at its start. The card opens in place: what the workflow does, then each phase with its progress and the subagents running in it. The phases still to come follow, each with an empty circle and **planned**. Click again to close it.
 3. Click the pane button at the card's end to open the **Workflow pane**. It lists each phase with all its subagents, their state, tokens and time, then the phases still planned. A phase the workflow ended before reaching says **not reached**.
 4. Click a subagent to read its steps. **All agents** (←) goes back.
-5. To stop it, point at the card and click **Stop**, or use Stop in the pane's header.
+5. To stop it, point at the card and click **Stop**, or use Stop in the pane's header. It stops at once, even while Claude works, and nothing is added to the conversation.
 
 If a workflow writes nothing for an hour, it says "no activity for 1h" and no longer counts as working. It still ends only when Claude says so.
 
@@ -220,6 +220,25 @@ When the agent asks permission to run something, or asks a question, the chat **
 - If you've scrolled up, a **Needs you** chip takes you down to the card.
 
 Nushi never answers for you.
+
+### Answer a question from the keyboard
+
+A new question card takes the keyboard when nothing else is using it.
+
+- Press an option's number to pick it.
+- **↑** and **↓** move through the options and then the box under them, round again at either end. **Space** picks the option you're on.
+- Start typing to write in the box. You don't need to reach it first: the letters go there. In the box, numbers and spaces are just text.
+- **Esc** in the box takes you back to the options, and keeps what you typed.
+- **⏎** sends, or goes on to the next question. **←**, **→** and **Tab** move between questions.
+
+### Add a note to your pick
+
+Claude, Codex and Ante let you pick an option and add a note to it, such as **PDF** with "landscape pages". The agent gets your pick as the answer and your words as a note on it. Claude and Codex take a note on a question with one answer; Ante on any question.
+
+1. Type your note in the box under the options. Once an option is picked, the box says **Add a note…**, and **Note:** stays in front of what you type.
+2. Pick the option. A single question is sent as soon as you pick, so type the note first.
+
+The answered card shows **Note:** and your note after your pick, greyed. With other agents, or on Claude's questions with several answers, text in the box is an answer of its own. With OpenCode and oh-my-pi, text in the box takes the place of a pick on a question with one answer: the agent never sees the pick, so pick or type, not both.
 
 ### See every option of an answered question
 
@@ -270,6 +289,13 @@ If Undo can't bring it back (the chat was deleted or archived, or has another si
 
 A worktree is a separate copy of your repository on its own branch. To keep a chat's work apart from your checkout, click **New worktree** under the box before the first message. It shows only when the chat's folder is a git repository. The chat gets its own worktree, on a new branch named after the chat. Review its work in the **Changes** tab: see [Reviewing changes](Reviewing-changes).
 
+Claude can also enter a worktree on its own. The chat doesn't follow it by itself, so its folder, **Changes** and terminals stay where they were. To move the chat into that worktree:
+
+1. Find the call's row (**EnterWorktree**) in the chat.
+2. Click **Move chat here** at the row's end.
+
+The button is greyed out while the agent works or waits on you; it works once the agent is done. It goes away once the chat is in that worktree, or after Claude leaves the worktree again.
+
 ## Find text in a chat
 
 Press ⌘F in a chat to find text in it, all of it, even the part of a long chat you haven't scrolled up to yet.
@@ -289,23 +315,25 @@ A match further up than what's loaded takes a moment: Nushi loads that part of t
 
 ## See what the agents used
 
-Settings has a Usage page: what your chats spent and the tokens they used, by day, agent, model and project, and the chats that cost the most. Where an agent reports your account's limits (Claude's 5-hour and weekly ones), they show there too.
+Settings has a Usage page (today's spend at the bottom of the sidebar opens it): what your chats spent and the tokens they used, by day, agent, model and project, and the chats that cost the most. Where an agent reports your account's limits (Claude's 5-hour and weekly ones), they show there too.
 
 1. Open **Settings**, then **Usage**.
 2. Pick **7 days**, **30 days**, **90 days** or **All**. Nushi remembers your pick.
 3. Point at a day in the chart for its spend, tokens and turns.
 4. Click a chat under **Costliest chats** to open it.
 
-Spend is what the agent reports. On a subscription that's what the API would charge for the same tokens, not what you pay. Codex and Ante report no cost, so the page says so and counts their tokens. A limit shows as the agent last said it, and changes only while one of its chats runs. Usage counts from the first turn after you updated to a version that keeps it; turns Nushi runs out of sight, such as the Context widget's check or a workflow's agents, aren't counted. The phone doesn't have this page.
+Spend is what the agent reports. On a subscription that's what the API would charge for the same tokens, not what you pay. Codex and Ante report no cost, so the page says so and counts their tokens. A limit shows as the agent last said it, and changes only while one of its chats runs. Usage counts from the first turn after you updated to a version that keeps it; turns Nushi runs out of sight, such as a commit message it drafts or a workflow's agents, aren't counted. The phone doesn't have this page.
 
 ## Good to know
 
 - **Chats belong to your agent.** Each is the agent's own session, so its own resume command, run in the chat's folder, picks it up in a terminal.
 - **Quitting Nushi doesn't stop your agents.** A background helper (the daemon) keeps them and the chat's terminals running. More on terminals in [Previews and terminals](Previews-and-terminals).
-- **The card at the bottom of the sidebar** counts the agents that are working, awake and asleep, and shows how much memory Nushi uses. Click the memory to see each awake chat's share, with **Sleep** beside it.
+- **The card at the bottom of the sidebar** shows what today's turns cost and how much memory Nushi uses. Click the spend to open **Settings › Usage**. Click the memory to see each awake chat's share, with **Sleep** beside it. The spend counts from midnight and doesn't show on a day with no cost, such as when your agents report none.
 - **Idle chats sleep** after 30 minutes: the agent stops, and your next message wakes it. A sleeping chat's row in the sidebar has no dot and is faint and in italics (unless a turn it finished is still unseen); its header says **Asleep**. Change it in **Settings › General › Sleep idle chats**.
-- **Old chats stay asleep after Nushi restarts.** Looking at one doesn't start its agent. Your next message does. A chat you used in the hour before the restart wakes when you open it.
+- **Wake a chat without sending anything**: open its **⋯** (or right-click it in the sidebar) and choose **Wake**, where **Sleep** is while it's awake. The chat shows it's opening, as after a restart; if it can't, it says why and offers what helps: **Try again**, **Move…** when its folder is gone, or **Set up…** when its agent isn't ready.
+- **Old chats stay asleep after Nushi restarts.** Looking at one doesn't start its agent. Your next message does, or **Wake**. A chat you used in the hour before the restart wakes when you open it.
 - **An agent that quits says why.** The chat's notice, or the error when a chat can't start, gives how it ended (`exit 1`) and the error line it printed last, with anything that looks like a key masked; when its CLI is a version Nushi wasn't tested with, it also says which versions it was. In **New chat** that agent is dimmed with its reason beside it, on up to two lines; hover over it for all of it. Its whole output is in the daemon's log: **Settings › Logs & advanced › Show logs**.
 - **A dialog that asks something keeps the keys.** While it's open, the app's keys and the menu bar's items do nothing (but Quit), so the chat it names can't change under it. Answer it or press **Cancel** first.
 - **Rewind, forks and side chats** show only for agents that support them.
 - **Don't use a session in Nushi and a terminal at once.** Both would write to it.
+- **Chats outlast Claude's cleanup.** Claude Code deletes sessions after 30 days by default. Nushi never removes a chat because of it: the chat stays, read-only, showing Nushi's copy of its transcript, with **Delete…** and **Start a new chat here**. Only you delete a chat. A chat with no copy yet (last used before Nushi kept them) gets one first: a few an hour, Nushi opens such a chat for a moment, Claude replays it from its own files (no prompt, no tokens), and it goes back to sleep. For a chat Claude has compacted, that copy starts at Claude's summary, since Claude no longer has the earlier part. A copy you cleared in **Settings › Chat history** isn't made again until you use that chat.

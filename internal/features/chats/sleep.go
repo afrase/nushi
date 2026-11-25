@@ -22,10 +22,7 @@ func (s *Service) Sleep(chatID string) error {
 		return err
 	}
 	c.mu.Lock()
-	err = c.canSleepLocked()
-	if err == nil {
-		c.asleep = true
-	}
+	err = c.nodOffLocked()
 	c.mu.Unlock()
 	if err != nil {
 		return err
@@ -39,14 +36,25 @@ func (s *Service) Sleep(chatID string) error {
 	return nil
 }
 
+// nodOffLocked marks a chat that can sleep asleep and its agent stopping,
+// together: a message sent before stop (end) takes the lock is refused,
+// not started for end to cancel at once.
+func (c *chat) nodOffLocked() error {
+	if err := c.canSleepLocked(); err != nil {
+		return err
+	}
+	c.asleep, c.stopping = true, true
+	return nil
+}
+
 func (c *chat) canSleepLocked() error {
 	switch {
 	case c.agent == nil:
 		return errors.New("the chat's agent isn't running")
 	case !c.canLoad:
 		return errors.New("the agent can't reopen its sessions, so it can't sleep")
-	case c.reopeningLocked():
-		return errReopening
+	case c.sessionOpLocked():
+		return c.sessionOpErrLocked()
 	}
 	return c.closedLocked()
 }
@@ -54,28 +62,6 @@ func (c *chat) canSleepLocked() error {
 // SleepPrefs keeps how long a chat idles before its agent sleeps.
 type SleepPrefs interface {
 	SleepAfter() time.Duration // 0: never
-}
-
-// autoSleep puts chats to sleep once they have idled as long as the
-// service's prefs say, and records what their agents run (record.go),
-// until the service's life ends.
-func (s *Service) autoSleep() {
-	tick := time.NewTicker(s.timing.sleepCheck())
-	defer tick.Stop()
-	for {
-		select {
-		case <-tick.C:
-		case <-s.ctx.Done():
-			return
-		}
-		s.recordAgents()
-		open := s.openChats()
-		if after := s.SleepAfter(); after > 0 {
-			for _, c := range open {
-				s.doze(c, after)
-			}
-		}
-	}
 }
 
 // SleepAfter is how long a chat idles before its agent sleeps; 0: never.
@@ -88,61 +74,40 @@ func (s *Service) SleepAfter() time.Duration {
 
 // doze puts a chat to sleep if nothing happened in it for after and
 // nothing would be lost (see idleLocked). Its agent is let go under the
-// lock, so a message that comes while it stops wakes the chat on a new one
-// (load waits for the old one to end first: retire).
+// lock (disconnectLocked), so a message that comes while it stops wakes
+// the chat on a new one (load waits for the old one to end first: retire).
 func (s *Service) doze(c *chat, after time.Duration) {
 	c.mu.Lock()
 	if !c.idleLocked(after) {
 		c.mu.Unlock()
 		return
 	}
-	agent := c.agent
-	c.asleep, c.retiring = true, agent
-	c.agent, c.outlived = nil, len(c.items) > 0
+	c.asleep = true
+	agent := c.disconnectLocked()
 	c.statusChangedLocked()
 	c.logLocked().Info("chat asleep", "why", "idle", "after", after)
 	c.mu.Unlock()
-	if err := agent.Stop(s.timing.stopGrace()); err != nil {
-		c.log().Warn("stopping the agent to sleep", "err", err)
-	}
+	c.stopAgent(agent)
 	c.mu.Lock()
 	c.letGoLocked() // once its agent's last updates are in
 	c.mu.Unlock()
 }
 
-// retire waits for old, the agent the chat fell asleep from (nil: none),
-// to have ended before another agent opens its session: two processes
-// writing one session corrupt the agent's own history, the source of truth
-// (ADR 0047). doze's Stop gives it StopGrace and then kills it; one still
-// running at twice that is killed again here (Close, its process group),
-// and one that outlives that too keeps the chat from reopening, saying so,
-// and is waited for again by the next reopen. A message sent meanwhile
-// waits in the queue.
+// retire waits for old, the agent that last left the chat (nil: none), to
+// have ended before another agent opens its session: two processes writing
+// one session corrupt the agent's own history, the source of truth (ADR
+// 0047). Its Stop gives it StopGrace and then kills it; one that outlives
+// the reopen (ctx) keeps the chat from reopening, saying so, and is waited
+// for again by the next reopen. A message sent meanwhile waits in the
+// queue.
 func (c *chat) retire(ctx context.Context, old Agent) error {
 	if old == nil {
 		return nil
 	}
-	ended := func(wait time.Duration) (bool, error) {
-		select {
-		case <-old.Done():
-			return true, nil
-		case <-ctx.Done():
-			return false, ctx.Err()
-		case <-time.After(wait):
-			return false, nil
-		}
-	}
-	done, err := ended(2 * c.svc.timing.stopGrace())
-	if !done && err == nil {
-		c.log().Warn("the agent the chat slept from outlived its stop: killing it", "pid", old.Pid())
-		_ = old.Close()
-		done, err = ended(c.svc.timing.stopGrace())
-	}
-	switch {
-	case err != nil:
-		return err
-	case !done:
-		return fmt.Errorf("the agent this chat slept from is still running (process %d), so its session can't reopen until it ends", old.Pid())
+	select {
+	case <-old.Done():
+	case <-ctx.Done():
+		return fmt.Errorf("the chat's last agent is still running (process %d), so its session can't reopen until it ends", old.Pid())
 	}
 	c.mu.Lock()
 	if c.retiring == old {
@@ -164,15 +129,40 @@ func (c *chat) idleLocked(after time.Duration) bool {
 // daemon), no background command or subagent runs, and nothing moves,
 // rewinds or reopens it.
 func (c *chat) quietLocked() bool {
-	return !c.busy && c.started.IsZero() && !c.ownTurn && !c.steering && c.sendingNow == 0 &&
+	return !c.busyLocked() && c.started.IsZero() && !c.ownTurn && !c.steering && c.sendingNow == 0 &&
 		len(c.queue) == 0 && !c.waitsLocked() && len(c.probes) == 0 &&
 		!slices.ContainsFunc(c.items, running)
+}
+
+// workingLocked says why verb (a Move, a rewind, keeping a side chat,
+// renaming its branch) would cut into the agent's work, or nil: a turn or
+// another of the chat's steps runs, the agent waits on the user (a prompt
+// it asked on its own, which a Move would drop) or works on its own, a
+// subagent runs in the background, or a workflow hasn't ended. One message
+// per cause, each saying when verb can go ahead.
+func (c *chat) workingLocked(verb string) error {
+	switch {
+	case c.op == opTurn:
+		return fmt.Errorf("the chat is busy; %s once the turn has ended", verb)
+	case c.busyLocked():
+		return fmt.Errorf("%s; %s once that's done", c.stillLocked(), verb)
+	case c.waitsLocked():
+		return fmt.Errorf("the agent is waiting for your answer; answer or stop it, then %s", verb)
+	case c.ownTurn:
+		return fmt.Errorf("the agent is working on its own (a background task ended); stop it, or %s once it's done", verb)
+	case c.backgroundLocked(0):
+		return fmt.Errorf("a subagent is still running in the background; %s once it's done", verb)
+	case c.workflowLiveLocked():
+		return fmt.Errorf("a workflow is still running; stop it, or %s once it's done", verb)
+	}
+	return nil
 }
 
 // awake wakes a sleeping chat for something that needs its agent, and
 // waits until it has reopened (or failed to: the chat says why).
 func (s *Service) awake(ctx context.Context, c *chat) error {
 	c.mu.Lock()
+	c.wantedLocked()
 	if c.asleep {
 		c.asleep, c.reopenFailed = false, false
 		c.logLocked().Info("chat waking")
@@ -187,6 +177,38 @@ func (s *Service) awake(ctx context.Context, c *chat) error {
 			return ctx.Err()
 		}
 	}
+	return nil
+}
+
+// Wake wakes a sleeping chat (put to sleep, by the user or by idling, or
+// left asleep since the daemon started: dormant) as a message does before
+// it is sent, and sends nothing: its session reopens in the background,
+// the chat busy with no turn till then, and a failed reopen says so in its
+// notice (failedLocked). A chat that isn't asleep is left as it is: awake,
+// busy or reopening, or one whose reopen failed (Try again is Reopen); an
+// archived one is refused, and so is a wake once Rest has said every chat
+// is quiet (ErrRestarting, as a prompt is): the restart would stop the
+// agent it starts, and the chat would be asleep again on the new daemon.
+func (s *Service) Wake(chatID string) error {
+	c, err := s.chat(chatID)
+	if err != nil {
+		return err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.closedLocked(); err != nil {
+		return err
+	}
+	c.wantedLocked()
+	if !c.asleep {
+		return nil
+	}
+	if s.resting.Load() {
+		return ErrRestarting
+	}
+	c.asleep = false
+	c.logLocked().Info("chat waking", "for", "asked")
+	s.reopenLocked(c)
 	return nil
 }
 

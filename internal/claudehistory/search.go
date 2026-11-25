@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/afrase/claude-acp-go/claudeagent/sessions"
 
@@ -26,13 +25,13 @@ import (
 // Claude's text blocks, never tool calls or their results, thinking, meta
 // records, compaction summaries or what claude wrote in the user's place
 // (ADR 0035). Forks and what Claude's list leaves out are passed over, by
-// the list's own rules: forkedFrom in the first records, sessions.Store's
-// reading of the transcript's start and end (a subagent's, or one with
-// nothing to name it by), and claudeacp's (no folder). A hit's folder and
-// title are those of the transcript that was read, the title cut as the
-// list cuts it; searching every folder, a session with a transcript in
-// more than one is found once, by the one Claude's list of every folder
-// tells of (see transcripts).
+// the list's own rules: sessions.Store's reading of the transcript's start
+// and end (a fork, a subagent's, or one with nothing to name it by), and
+// claudeacp's (no folder). A hit's folder and title are those of the
+// transcript that was read, the title cut as the list cuts it; searching
+// every folder, a session with a transcript in more than one is found
+// once, by the one Claude's list of every folder tells of (see
+// transcripts).
 func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]model.SessionHit, bool, error) {
 	q := textfind.New(s.Query)
 	if q.Empty() {
@@ -51,19 +50,25 @@ func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]mod
 	files := transcripts(dirs, s.Skip)
 	return textfind.Each(ctx, len(files), s.Max, func(ctx context.Context, i int) (model.SessionHit, bool) {
 		f := files[i]
-		n, ex := scan(ctx, f.path, q, s.Unnoted)
+		n, ex, fork := scan(ctx, f.path, q, s.Unnoted, true)
+		if fork {
+			if forked(f.path) {
+				return model.SessionHit{}, false
+			}
+			n, ex, _ = scan(ctx, f.path, q, s.Unnoted, false)
+		}
 		if n == 0 {
 			return model.SessionHit{}, false
 		}
 		info, err := sessions.ReadInfo(f.path)
-		if err != nil || info.Cwd == "" || s.InFolder != nil && !s.InFolder(info.Cwd) {
+		if err != nil || info.Cwd == "" || info.ForkedFrom != nil || s.InFolder != nil && !s.InFolder(info.Cwd) {
 			return model.SessionHit{}, false
 		}
 		title := info.Summary
 		if s.Unnoted != nil {
 			title = s.Unnoted(title) // the first prompt's first text block may be a note
 		}
-		return model.SessionHit{SessionID: f.id, Folder: info.Cwd, Title: listTitle(title),
+		return model.SessionHit{SessionID: f.id, Folder: info.Cwd, Title: sessions.ListTitle(title),
 			Updated: f.modified, Count: n, Before: ex.Before, Match: ex.Match, After: ex.After}, true
 	})
 }
@@ -72,21 +77,6 @@ func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]mod
 type transcript struct {
 	id, path string
 	modified time.Time
-}
-
-// maxTitle is the most characters of a found session's title, as
-// claudeacp lists one.
-const maxTitle = 256
-
-// listTitle is a session's summary on one line, cut to maxTitle
-// characters, as claudeacp's list has it (its listTitle, which it doesn't
-// export): the title a chat opened from the search takes.
-func listTitle(s string) string {
-	s = strings.Join(strings.Fields(s), " ")
-	if utf8.RuneCountInString(s) <= maxTitle {
-		return s
-	}
-	return string([]rune(s)[:maxTitle-1]) + "…"
 }
 
 // transcripts lists the transcripts in dirs, the newest first, but those
@@ -139,20 +129,37 @@ type entry struct {
 	} `json:"message"`
 }
 
+// forkHead is how far into a transcript a record starts that scan, asked
+// to, stops at for its forkedFrom key: where sessions.ReadInfo looks for
+// one (its 64 KiB head and the record that head cuts short).
+const forkHead = 64 << 10
+
+// forkKey is a forkedFrom key as claude and the library write it; quotes
+// in a JSON string are escaped, so a prompt quoting one doesn't match.
+var forkKey = []byte(`"forkedFrom":`)
+
 // scan counts the hits in a transcript's messages and makes the first's
-// excerpt; 0 for a fork, or a file that can't be read. unnoted (nil: none)
-// takes Nushi's notes off each text of the user's.
-func scan(ctx context.Context, path string, q textfind.Query, unnoted func(string) string) (int, textfind.Excerpt) {
+// excerpt; 0 for a file that can't be read. unnoted (nil: none)
+// takes Nushi's notes off each text of the user's. With stopAtFork, it
+// stops at a record of the transcript's start that has a forkedFrom key
+// and says so (fork): a fork's transcript is as long as its source's, and
+// is passed over, so isn't read on (the caller asks ReadInfo and, for
+// what isn't a fork after all, scans again without it).
+func scan(ctx context.Context, path string, q textfind.Query, unnoted func(string) string, stopAtFork bool) (n int, first textfind.Excerpt, fork bool) {
 	f, err := os.Open(path)
 	if err != nil {
-		return 0, textfind.Excerpt{}
+		return 0, textfind.Excerpt{}, false
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	n, first, lines := 0, textfind.Excerpt{}, 0
+	// at is where line starts, near enough: Lines skips empty and long lines.
+	at := 0
 	_ = textfind.Lines(ctx, f, func(line []byte) bool {
-		if lines++; lines <= forkLines && forkRecord(line) {
-			n = 0
-			return false
+		if stopAtFork && at < forkHead {
+			if bytes.Contains(line, forkKey) {
+				fork = true
+				return false
+			}
+			at += len(line) + 1
 		}
 		if !q.MayHold(line) && !typed(line) || !mayBeSaid(line) {
 			return true
@@ -170,13 +177,17 @@ func scan(ctx context.Context, path string, q textfind.Query, unnoted func(strin
 		}
 		return true
 	})
-	return n, first
+	return n, first, fork
 }
 
-// typed says a record may hold a command the user typed, which userText
+// typed says a record may hold a command the user typed, which cleaned
 // writes with a `!` or `/` the line may not have ("!git" for
 // <bash-input>git status</bash-input>): the query's anchor can't rule it
-// out, so it is decoded.
+// out, so it is decoded. A marker UserText removes from between two
+// words can join them into a run the anchor wants ("foo<command-args>x
+// </command-args>bar" for "foobar"); such a line isn't decoded, and that
+// query isn't found there: no recording or fixture has a marker
+// directly against a word.
 func typed(line []byte) bool {
 	return bytes.Contains(line, []byte("<bash-input>")) || bytes.Contains(line, []byte("<command-name>"))
 }
@@ -197,7 +208,7 @@ func has(line []byte, key, value string) bool {
 }
 
 // said is the text of a message the user or Claude said: a user's
-// string or text blocks, cleaned of what claude adds (userText), or
+// string or text blocks, cleaned of what claude adds (cleaned), or
 // Claude's text blocks. Nothing for any other record.
 func said(typ string, content json.RawMessage, unnoted func(string) string) []string {
 	var s string
@@ -226,8 +237,9 @@ func said(typ string, content json.RawMessage, unnoted func(string) string) []st
 	return out
 }
 
-// cleaned is a user's text as userText has it, without Nushi's notes
-// (unnoted, when not nil), nothing for what isn't the user's (claude's
+// cleaned is a user's text as a replay shows it (sessions.UserText),
+// without Nushi's notes (unnoted, when not nil), with a `!` command as
+// the app shows it (bashText); nothing for what isn't the user's (claude's
 // mark where a turn was stopped among it).
 func cleaned(text string, unnoted func(string) string) []string {
 	if claude.InterruptMark(text) {
@@ -236,39 +248,32 @@ func cleaned(text string, unnoted func(string) string) []string {
 	if unnoted != nil {
 		text = unnoted(text)
 	}
-	if t, ok := userText(text); ok {
-		return []string{t}
+	// bashText reads what UserText leaves, as the app reads the replay's
+	// text: a bash tag inside a marker goes with the marker.
+	if t, ok := sessions.UserText(text); ok {
+		if t = strings.TrimSpace(bashText(t)); t != "" {
+			return []string{t}
+		}
 	}
 	return nil
 }
 
-// What claude writes into a user message besides what the user typed, as
-// claude-acp-go's claudeacp cleans a replayed one (its userText, which it
-// doesn't export): context it adds and a `!` command's output, removed
-// whole, and a slash command or a `!` command as tags, which read as the
-// command typed (docs/facts/claude.md).
+// A `!` command's tags, which sessions.UserText leaves in on purpose: the
+// app shows them as a run (app/lib/run_text.dart), the command as typed
+// after a `!` and its output in the run's card, not as the user's words,
+// so search matches the command as `!X` and passes over the output. Each
+// runs to the nearest closing tag of its own name; one with none after it
+// is the user's text, as UserText has a marker.
 var (
-	injected = regexp.MustCompile(`(?s)<(system-reminder|task-notification|local-command-stdout|local-command-stderr|local-command-caveat|command-message|bash-stdout|bash-stderr|bash-exit-code)>.*?</(?:system-reminder|task-notification|local-command-stdout|local-command-stderr|local-command-caveat|command-message|bash-stdout|bash-stderr|bash-exit-code)>`)
-
-	commandName = regexp.MustCompile(`(?s)<command-name>(.*?)</command-name>`)
-	commandArgs = regexp.MustCompile(`(?s)<command-args>(.*?)</command-args>`)
-	bashInput   = regexp.MustCompile(`(?s)<bash-input>(.*?)</bash-input>`)
+	bashInput  = regexp.MustCompile(`(?s)<bash-input>(.*?)</bash-input>`)
+	bashOutput = regexp.MustCompile(`(?s)<bash-stdout>.*?</bash-stdout>|<bash-stderr>.*?</bash-stderr>|<bash-exit-code>.*?</bash-exit-code>`)
 )
 
-// userText is a user message's text as the user wrote it; false when
-// nothing of it is the user's.
-func userText(text string) (string, bool) {
-	if m := commandName.FindStringSubmatch(text); m != nil {
-		name := "/" + strings.TrimPrefix(strings.TrimSpace(m[1]), "/")
-		if a := commandArgs.FindStringSubmatch(text); len(a) > 1 && strings.TrimSpace(a[1]) != "" {
-			name += " " + strings.TrimSpace(a[1])
-		}
-		return name, true
+// bashText is text with a `!` command as the app shows it: the command
+// as typed, "!" and all, and its output left out.
+func bashText(text string) string {
+	if !strings.Contains(text, "<bash-") {
+		return text
 	}
-	if strings.Contains(text, "<") {
-		text = injected.ReplaceAllString(text, "")
-		text = bashInput.ReplaceAllString(text, "!$1")
-	}
-	text = strings.TrimSpace(text)
-	return text, text != ""
+	return bashInput.ReplaceAllString(bashOutput.ReplaceAllString(text, ""), "!$1")
 }

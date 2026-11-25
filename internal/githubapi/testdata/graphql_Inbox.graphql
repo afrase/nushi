@@ -1,0 +1,20 @@
+query Inbox($review: String!, $mine: String!, $assigned: String!) {
+  review: search(type: ISSUE, query: $review, first: 50) { issueCount nodes { __typename ...ItemPull } }
+  mine: search(type: ISSUE, query: $mine, first: 50) { issueCount nodes { __typename ...ItemPull } }
+  assigned: search(type: ISSUE, query: $assigned, first: 50) { issueCount nodes { __typename ...ItemIssue } }
+}
+fragment ItemPull on PullRequest {
+  id number title url state isDraft createdAt updatedAt
+  author { login }
+  repository { nameWithOwner }
+  
+  reviewDecision totalCommentsCount
+  commits(last: 1) { nodes { commit { oid statusCheckRollup { state  } } } }
+  reviewThreads(first: 100) { nodes { isResolved } }
+}
+fragment ItemIssue on Issue {
+  id number title url state stateReason createdAt updatedAt
+  author { login }
+  repository { nameWithOwner }
+  commentCount: comments { totalCount }
+}

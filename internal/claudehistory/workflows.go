@@ -48,14 +48,11 @@ type Runs struct {
 	runs      map[string]*run
 	used      []string      // keys, the most recently used last
 	agentStat time.Duration // how often a run's running agents are looked at
-	// snapshotWait is how long a run its notification ended waits for
-	// its snapshot.
-	snapshotWait time.Duration
 }
 
 // NewRuns returns an empty Runs.
 func NewRuns() *Runs {
-	return &Runs{runs: map[string]*run{}, agentStat: agentStat, snapshotWait: snapshotWait}
+	return &Runs{runs: map[string]*run{}, agentStat: agentStat}
 }
 
 // maxRuns is how many runs Runs keeps: the ones being followed, and the
@@ -64,7 +61,7 @@ const maxRuns = 64
 
 func (r *Runs) get(key string) *run {
 	if r == nil {
-		return &run{agentStat: agentStat} // read once: no wait for a snapshot
+		return &run{agentStat: agentStat} // read once
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -76,7 +73,7 @@ func (r *Runs) get(key string) *run {
 		delete(r.runs, r.used[0])
 		r.used = r.used[1:]
 	}
-	r.runs[key] = &run{agentStat: r.agentStat, snapshotWait: r.snapshotWait}
+	r.runs[key] = &run{agentStat: r.agentStat}
 	r.used = append(r.used, key)
 	return r.runs[key]
 }
@@ -94,13 +91,11 @@ type run struct {
 	// scripted says the script was read; meta is what it says of the run.
 	scripted bool
 	meta     scriptMeta
-	notes    notes // the session's transcript, for the run's notification
 	// agentStat is how often the running agents' transcripts are looked
-	// at; snapshotWait how long an end its notification told waits for
-	// the snapshot.
-	agentStat, snapshotWait time.Duration
-	steps                   map[string]*steps       // the agents' transcripts read for the pane
-	tokens                  map[string]*agentTokens // and for their tokens, by agent id
+	// at.
+	agentStat time.Duration
+	steps     map[string]*steps       // the agents' transcripts read for the pane
+	tokens    map[string]*agentTokens // and for their tokens, by agent id
 }
 
 // runKey is the folder of session sid in folder's history, for a run of
@@ -116,8 +111,7 @@ func (l Local) runKey(sid, folder string, w model.Workflow) (dir, key string, er
 }
 
 // readRun reads what the run w names added to its files since the last
-// read: the session's transcript for its notification, its snapshot once
-// there, its journal. Locked, it calls read with the run and the session's
+// read: its snapshot once there, its journal. Locked, it calls read with the run and the session's
 // folder (nil when it isn't there). An error matching fs.ErrNotExist says
 // none of the run's files is there (yet).
 func (l Local) readRun(sid, folder string, w model.Workflow, read func(r *run, root *os.Root) error) error {
@@ -128,21 +122,15 @@ func (l Local) readRun(sid, folder string, w model.Workflow, read func(r *run, r
 	r := l.Workflows.get(key)
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.snap == nil {
-		r.readNotes(filepath.Dir(dir), sid, w.TaskID)
-	}
 	root, err := os.OpenRoot(dir)
 	if err != nil {
-		if r.notes.end != nil {
-			return read(r, nil)
-		}
 		return err
 	}
 	defer root.Close() //nolint:errcheck // read-only
 	if r.snap == nil {
 		r.readSnapshot(root, w)
 	}
-	if jerr := r.readJournal(root, w.RunID); jerr != nil && r.snap == nil && r.notes.end == nil {
+	if jerr := r.readJournal(root, w.RunID); jerr != nil && r.snap == nil {
 		return jerr
 	}
 	if !r.scripted {
@@ -153,8 +141,9 @@ func (l Local) readRun(sid, folder string, w model.Workflow, read func(r *run, r
 
 // ReadWorkflow reads the run w names (its RunID and TaskID, and Started,
 // when the daemon saw it start) of session sid in folder: w with what its
-// files say. Its State is "running" until it ended (Claude's notification
-// of its task, or its snapshot), then how; Active is when its files last
+// files say. Its State is "running" until its snapshot says it ended,
+// then how (the run's task, which the agent tells chats of, ends it
+// whether or not the snapshot comes: ADR 0127); Active is when its files last
 // changed. An error matching fs.ErrNotExist says none of its files is
 // there (yet).
 func (l Local) ReadWorkflow(sid, folder string, w model.Workflow) (model.Workflow, error) {
@@ -268,7 +257,6 @@ func (r *run) summary(w model.Workflow) model.Workflow {
 		return r.ended(w, *s)
 	}
 	w.State, w.End, w.Ended = "running", "", time.Time{}
-	n := r.noted()
 	at := map[string]int{}
 	for _, row := range r.j.rows {
 		i := phaseOf(&w, at, row.Phase, "")
@@ -284,20 +272,11 @@ func (r *run) summary(w model.Workflow) model.Workflow {
 			count(&w, i, func(p *model.WorkflowPhase) { p.Failed++ })
 		case "stopped": // the run it was in ended before it did
 		default:
-			if n != nil {
-				continue // stopped with the run
-			}
 			w.RunningCount++
 			if len(w.Running) < model.WorkflowRunning {
 				w.Running = append(w.Running, label(row.Label, row.AgentID))
 				w.RunningPhases = append(w.RunningPhases, i)
 			}
-		}
-	}
-	if n != nil { // its notification, and no snapshot came
-		w.State, w.End, w.Ended = endState(n.status), n.status, cmp.Or(n.at, n.seen)
-		if w.State == "failed" {
-			w.Summary = clipText(secrets.Mask(n.summary, "…", nil), model.WorkflowSummaryText)
 		}
 	}
 	r.plan(&w, at)
@@ -322,16 +301,6 @@ func (r *run) plan(w *model.Workflow, at map[string]int) {
 		at[p.Title] = -1 // listed once
 		w.Planned = append(w.Planned, model.WorkflowPhase{Title: label(p.Title, ""), Detail: clipText(secrets.MaskText(p.Detail), 200)})
 	}
-}
-
-// noted is the end the run's notification told, once the snapshot had
-// its time to come and didn't; nil while the run runs, or ended with a
-// snapshot.
-func (r *run) noted() *note {
-	if n := r.notes.end; r.snap == nil && n != nil && time.Since(n.seen) >= r.snapshotWait {
-		return n
-	}
-	return nil
 }
 
 // ended is w as the snapshot says the run ended.

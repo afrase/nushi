@@ -46,7 +46,7 @@ func (c *chat) SessionUpdate(_ context.Context, n *acp.SessionNotification) erro
 	return nil
 }
 
-// probe takes an update of a throwaway fork (see contextInFork): its
+// probe takes an update of a throwaway fork (see CommitMessage): its
 // message text goes to its silent run, and nothing else of it is kept.
 func (c *chat) probe(n *acp.SessionNotification) bool {
 	c.mu.Lock()
@@ -223,6 +223,7 @@ func (s *Service) openSide(ctx context.Context, p *chat, from *sideSource) (stri
 	if from != nil {
 		mode, picks = from.mode, maps.Clone(from.picks)
 	}
+	side.folder = p.folder // held with its chat (holdFolder), as one open before
 	p.sides[side.id] = side
 	side.commands = slices.Clone(p.commands) // the agent's, which it told only the chat
 	p.mu.Unlock()
@@ -259,7 +260,7 @@ var errSettling = errors.New("the chat is reopening, moving or rewinding; open a
 // settlingLocked says the chat's session is being opened again (a reopen,
 // move or rewind) and its mode and picks aren't back on it yet: what the
 // agent reports is the new session's defaults.
-func (c *chat) settlingLocked() bool { return c.reopeningLocked() || c.reapplying }
+func (c *chat) settlingLocked() bool { return c.sessionOpLocked() || c.reapplying }
 
 // CloseSide ends a side chat: its running turn stops, and the agent deletes
 // its session, history and all.
@@ -292,14 +293,6 @@ func (s *Service) CloseSide(id string) error {
 	return nil
 }
 
-// SidesGrace is how long side chats outlive the last app following: one
-// that reconnects within it still has them.
-var SidesGrace = 2 * time.Minute
-
-// SidesAfter starts the side chats' grace: time.AfterFunc, which a test
-// replaces to see a grace begin and end it itself, not by a clock.
-var SidesAfter = time.AfterFunc
-
 // Followers is how many apps follow the events now (Following).
 func (s *Service) Followers() int {
 	s.mu.Lock()
@@ -309,7 +302,7 @@ func (s *Service) Followers() int {
 
 // Following counts an app following the events (by +1, then -1), on the
 // Mac's socket and devices' channels alike. Side chats live only in the
-// apps (ADR 0027): once none has followed for SidesGrace, they're closed
+// apps (ADR 0027): once none has followed for Timing.SidesGrace, they're closed
 // (unless the service closed first: Close stops the timer).
 func (s *Service) Following(n int) {
 	s.mu.Lock()
@@ -319,12 +312,12 @@ func (s *Service) Following(n int) {
 		s.idle.Stop()
 	}
 	if s.following == 0 && !s.closing {
-		s.idle = SidesAfter(SidesGrace, s.closeSides)
+		s.idle = s.timing.sidesAfter(s.closeSides)
 	}
 }
 
 // closeSides ends every side chat (see CloseSide), once no app has followed
-// for SidesGrace: the app keeps them only while it runs, so nobody will see
+// for Timing.SidesGrace: the app keeps them only while it runs, so nobody will see
 // them again.
 func (s *Service) closeSides() {
 	s.mu.Lock()
@@ -340,8 +333,12 @@ func (s *Service) closeSides() {
 	}
 }
 
+// throwAwayWait is how long an agent gets to delete a thrown-away session:
+// one alive but silent would otherwise hold closeSides' loop for good.
+const throwAwayWait = 30 * time.Second
+
 // throwAway has the chat's agent delete a session forked from the chat that
-// nobody will see again (a side chat, a /context fork), and again a moment
+// nobody will see again (a side chat, a commit message's fork), and again a moment
 // later for an agent that writes a little of it back as it ends
 // (model.HarnessInfo.Redelete); then the chat forgets it. If the agent can't (it
 // went, or is going, meanwhile), the chat keeps it, and a fresh agent
@@ -350,7 +347,7 @@ func (s *Service) closeSides() {
 //nolint:contextcheck // the side chat's session is deleted after the request that closed it
 func (s *Service) throwAway(c *chat, agent Agent, sid string) {
 	del := func() error {
-		ctx, cancel := context.WithTimeout(s.ctx, s.timing.throwAwayWait())
+		ctx, cancel := context.WithTimeout(s.ctx, throwAwayWait)
 		defer cancel()
 		_, err := agent.DeleteSession(ctx, &acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)})
 		if err != nil {

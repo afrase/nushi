@@ -343,6 +343,7 @@ Tokens _rebuild(
       ),
       loadingBar: pick('diff.loadingBar', d.loadingBar),
       hoverAffordance: pick('diff.hoverAffordance', d.hoverAffordance),
+      textSelection: d.textSelection,
     ),
   );
 }

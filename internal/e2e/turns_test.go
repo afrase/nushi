@@ -58,3 +58,35 @@ func TestAQuestionRoundTrip(t *testing.T) {
 		t.Error("a question was answered twice")
 	}
 }
+
+// Send now on a queued message (Unqueue with send_now) stops the running
+// turn and sends that message in the one call, which answers with no
+// message; what stays queued goes after it. One no longer queued is
+// refused, and nothing is sent.
+func TestSendNowOfAQueuedMessage(t *testing.T) {
+	ctx := context.Background()
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	a := open(t, d)
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.send(id, "wait")
+	a.waitFor("the turn to start", func(e *nushiv1.EventsResponse) bool { return e.GetStatus().GetBusy() })
+	for _, text := range []string{"first", "second"} {
+		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text, Queue: true})))
+	}
+	queued := a.get(id).GetQueue().GetMessages()
+	if len(queued) != 2 {
+		t.Fatalf("queue %v", queued)
+	}
+	res := must(a.c.Unqueue(ctx, connect.NewRequest(&nushiv1.UnqueueRequest{ChatId: id, Id: queued[1].Id, SendNow: true})))
+	if res.Message != nil {
+		t.Errorf("Send now answered with %v", res.Message)
+	}
+	want := "USER_MESSAGE:wait:\nNOTICE:Stopped:cancelled\nUSER_MESSAGE:second:\nAGENT_MESSAGE:You said: second:\nUSER_MESSAGE:first:\nAGENT_MESSAGE:You said: first:"
+	a.waitFor("both turns", func(*nushiv1.EventsResponse) bool { return transcript(a.get(id).Items) == want })
+	if _, err := a.c.Unqueue(ctx, connect.NewRequest(&nushiv1.UnqueueRequest{ChatId: id, Id: queued[0].Id, SendNow: true})); err == nil {
+		t.Error("a message the agent had was sent again")
+	}
+	if got := transcript(a.get(id).Items); got != want {
+		t.Errorf("transcript:\n%s\nwant:\n%s", got, want)
+	}
+}

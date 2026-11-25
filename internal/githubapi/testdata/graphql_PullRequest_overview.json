@@ -2,6 +2,7 @@
   "data": {
     "repository": {
       "pullRequest": {
+        "__typename": "PullRequest",
         "id": "PR_lumen_57",
         "number": 57,
         "title": "Expire idle sessions after 30 minutes",

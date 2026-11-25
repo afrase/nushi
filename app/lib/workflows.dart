@@ -37,9 +37,13 @@ WorkflowPhase? currentPhase(Workflow w) {
 /// 0141): "planned" while the run goes, "not reached" once it ended.
 String plannedWords({required bool live}) => live ? 'planned' : 'not reached';
 
+/// A phase's count, "5/7": its agents that ended, done or failed, of
+/// those started. The card's rows, its state line and the pane all say it
+/// so.
+String phaseCount(WorkflowPhase p) => '${p.done + p.failed}/${p.started}';
+
 /// A phase's progress: "Review 5/7" (its agents ended of those started).
-String phaseProgress(WorkflowPhase p) =>
-    '${p.title} ${p.done + p.failed}/${p.started}';
+String phaseProgress(WorkflowPhase p) => '${p.title} ${phaseCount(p)}';
 
 /// Its state line, in a subagent row's order (#103, #106): while it runs
 /// "Review 5/7 · 3 running · 412k tokens · 4m 12s"; at its end "100

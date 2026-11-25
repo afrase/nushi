@@ -1,0 +1,14 @@
+{
+  "timeout": "45s",
+  "steps": [
+    {"repo": {}},
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "Write", "EnterWorktree", "ExitWorktree"]}}}}}},
+    {"prompt": "enter a new worktree", "session": "s1"},
+    {"prompt": "leave and remove it", "session": "s1"},
+    {"prompt": "enter another and stay", "session": "s1"},
+    {"close": "s1"},
+    {"new": "s2", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "Write", "EnterWorktree", "ExitWorktree"]}}}}}},
+    {"prompt": "list what is left", "session": "s2"}
+  ]
+}

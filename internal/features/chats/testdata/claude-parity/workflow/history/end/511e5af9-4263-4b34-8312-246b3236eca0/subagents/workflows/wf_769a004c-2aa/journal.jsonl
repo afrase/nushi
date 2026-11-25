@@ -1,9 +1,0 @@
-{"type":"launched"}
-{"type":"started","key":"v2:73c1b8c091e19244ae5fddb375b026aa86f3ec14283feeb937303dba1481873a","agentId":"a3779ff2d346be063","label":"map:alpha","phase":"Map"}
-{"type":"started","key":"v2:44b02df11f014079d2effe53580ff26d1ef40208b13d49054ea5119a0165fa83","agentId":"abfb4bc34604e1102","label":"map:beta","phase":"Map"}
-{"type":"result","key":"v2:73c1b8c091e19244ae5fddb375b026aa86f3ec14283feeb937303dba1481873a","agentId":"a3779ff2d346be063","result":"alpha","remoteControlDeviceReport":false}
-{"type":"result","key":"v2:44b02df11f014079d2effe53580ff26d1ef40208b13d49054ea5119a0165fa83","agentId":"abfb4bc34604e1102","result":"beta","remoteControlDeviceReport":false}
-{"type":"started","key":"v2:f12b4aa2b3c61b4e3a82802220adcf9c7bcdf39ee54248a3b90f8db0e827623c","agentId":"a065db6acdd53b0e6","label":"review:gamma","phase":"Review"}
-{"type":"started","key":"v2:d31c3d2d3f18324523418b37c599d0bd9ff2b937bd0c6d5afc660abc270f43ef","agentId":"a46091f9dd250db39","label":"review:delta","phase":"Review"}
-{"type":"result","key":"v2:f12b4aa2b3c61b4e3a82802220adcf9c7bcdf39ee54248a3b90f8db0e827623c","agentId":"a065db6acdd53b0e6","result":"gamma","remoteControlDeviceReport":false}
-{"type":"result","key":"v2:d31c3d2d3f18324523418b37c599d0bd9ff2b937bd0c6d5afc660abc270f43ef","agentId":"a46091f9dd250db39","result":{"word":"delta"},"remoteControlDeviceReport":false,"toolsUsed":["StructuredOutput"]}

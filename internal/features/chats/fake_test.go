@@ -15,7 +15,6 @@ import (
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
-	"github.com/afrase/claude-acp-go/claudeacp"
 
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
@@ -59,6 +58,15 @@ func (h testHarness) ReadBackgroundCommand(id, file string) (output, end, state 
 		return h.read(id, file)
 	}
 	return h.Harness.ReadBackgroundCommand(id, file)
+}
+
+// StatBackgroundCommand fails where read stands for the file: each step
+// then reads.
+func (h testHarness) StatBackgroundCommand(id, file string) (int64, time.Time, error) {
+	if h.read != nil {
+		return 0, time.Time{}, errors.ErrUnsupported
+	}
+	return h.Harness.StatBackgroundCommand(id, file)
 }
 
 // Fakes of a capability each, to embed in a test's harness: a double with
@@ -119,7 +127,11 @@ type fakeAgent struct {
 	deletes   bool
 	deleteErr error
 	noLoad    bool // it can't reopen sessions
-	pid       int  // its process, for the processes below it (fakeProcesses); 0: unknown
+	// notReady is why it can't start now (Kind.Ready, by ready); nil: it can.
+	notReady error
+	// authMethods are the ways to sign it in that initialize advertises.
+	authMethods []acp.AuthMethod
+	pid         int // its process, for the processes below it (fakeProcesses); 0: unknown
 	// lists makes it able to list sessions: listed, listPage at a time
 	// (all at once for 0), the cursor being the next one's index.
 	lists    bool
@@ -173,6 +185,16 @@ type fakeAgent struct {
 	replay      []acp.SessionNotification // and then, on their sessions (s1 is the one loaded)
 	subagents   []acp.SessionID           // its subagents' sessions: a cancel stops only the one
 	cur         *proc                     // the last process launched
+	// answers are its extensions' answers (Agent.Call), JSON by method;
+	// called gets each call's params, in order; callErr fails every call.
+	answers map[string]string
+	called  []any
+	callErr error
+	// afterCall are the updates it sends, on the call's session, just after
+	// it answers an extension of this method: claude's task updates for a
+	// stop_task, which may reach the client after its {}
+	// (claudeacp.StopTaskMethod).
+	afterCall map[string][]acp.SessionUpdate
 }
 
 // proc is one of the fake agent's processes: each launch starts one, and
@@ -241,28 +263,32 @@ func (f *fakeAgent) enter(gate string) {
 	}
 }
 
-// Stop ends the process; its last words, if any, still come after, as
-// from a pipe read to its end.
+// Stop ends the process, as agentproc's does: its last words, if any, come
+// first, as from a pipe read to its end; one held at stopGate is killed
+// (Close) after grace; and Stop returns once it has ended.
 func (p *proc) Stop(grace time.Duration) error {
 	_ = p.fakeAgent.Stop(grace) // the fake's Stop doesn't fail
 	p.mu.Lock()
 	last, h, gate := p.lastWords, p.h, p.stopGate
 	p.mu.Unlock()
-	go func() {
-		if last != nil {
-			time.Sleep(5 * time.Millisecond)
-			_ = h.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: *last})
-		}
-		if gate != nil {
+	if last != nil {
+		_ = h.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: *last})
+	}
+	if gate != nil {
+		select {
+		case <-gate:
+		case <-p.done: // killed meanwhile
+		case <-time.After(grace):
+			_ = p.Close() // an unkillable one ends only once let go
 			select {
 			case <-gate:
-			case <-p.done: // killed meanwhile
+			case <-p.done:
 			}
 		}
-		p.mu.Lock()
-		defer p.mu.Unlock()
-		p.end()
-	}()
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.end()
 	return nil
 }
 
@@ -299,8 +325,18 @@ func (f *fakeAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.In
 	if f.lists {
 		caps.SessionCapabilities.List = &acp.SessionListCapabilities{}
 	}
-	return &acp.InitializeResponse{ProtocolVersion: acp.LatestProtocolVersion, AgentInfo: &acp.Implementation{Name: claudeacp.Name}, // as Claude's agent, which forks at a message
-		AgentCapabilities: caps}, nil
+	f.mu.Lock()
+	methods := slices.Clone(f.authMethods)
+	f.mu.Unlock()
+	return &acp.InitializeResponse{ProtocolVersion: acp.LatestProtocolVersion,
+		AgentCapabilities: caps, AuthMethods: methods}, nil
+}
+
+// ready is the fake's Kind.Ready: notReady.
+func (f *fakeAgent) ready() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.notReady
 }
 
 func (f *fakeAgent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
@@ -338,7 +374,11 @@ func (f *fakeAgent) ListSessions(_ context.Context, req *acp.ListSessionsRequest
 func (f *fakeAgent) LoadSession(ctx context.Context, req *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
 	if f.loadGate != nil {
 		f.enter("load")
-		<-f.loadGate
+		select {
+		case <-f.loadGate:
+		case <-ctx.Done(): // as a real agent's call ends with its context
+			return nil, ctx.Err()
+		}
 	}
 	if f.loadErr != nil {
 		return nil, f.loadErr
@@ -458,8 +498,30 @@ func (f *fakeAgent) openGateLocked() {
 
 func (f *fakeAgent) CanSteer() bool { return f.steerable }
 
-func (f *fakeAgent) Call(context.Context, string, any, any) error {
-	return &acp.Error{Code: acp.ErrorCodeMethodNotFound, Message: "Method not found"}
+func (f *fakeAgent) Call(ctx context.Context, method string, params, result any) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	answer, ok := f.answers[method]
+	if !ok {
+		return &acp.Error{Code: acp.ErrorCodeMethodNotFound, Message: "Method not found"}
+	}
+	f.called = append(f.called, params)
+	if f.callErr != nil {
+		return f.callErr
+	}
+	if after := f.afterCall[method]; len(after) > 0 {
+		var p struct {
+			SessionID acp.SessionID `json:"sessionId"`
+		}
+		b, _ := json.Marshal(params)
+		_ = json.Unmarshal(b, &p)
+		go func(ctx context.Context, h acp.Client) { // after the answer: the call's ctx may end first
+			for _, u := range after {
+				_ = h.SessionUpdate(ctx, &acp.SessionNotification{SessionID: p.SessionID, Update: u})
+			}
+		}(context.WithoutCancel(ctx), f.h)
+	}
+	return json.Unmarshal([]byte(answer), result)
 }
 
 func (f *fakeAgent) Steer(_ context.Context, _ acp.SessionID, prompt []acp.ContentBlock) (bool, error) {

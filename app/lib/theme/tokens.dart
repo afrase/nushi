@@ -227,6 +227,11 @@ class Tokens {
   /// The ring a focused control wears.
   Color get focus => accentInk;
 
+  /// Behind selected text: the transcript's, a field's, the editor's and
+  /// the terminal's, one colour in every place; a diff's code takes it a
+  /// step stronger, or its theme's own (`diffTheme`). A tint of [accent].
+  Color get textSelection => accent.withValues(alpha: 0.3);
+
   // Status: a running chat, one that needs the user, done, idle, failed.
   final Color running;
   final Color needs;

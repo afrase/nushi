@@ -2,72 +2,75 @@ package chats
 
 import (
 	"encoding/json"
-	"reflect"
-	"slices"
-	"strings"
+	"path/filepath"
 	"testing"
 
 	"github.com/afrase/claude-acp-go/claudeagent/claudetest"
 )
 
-// goAgentHooks are the callback ids the Go agent gives its hooks
-// (claudeacp's session start; claudeagent numbers hooks in the order of
-// their events' names).
-var goAgentHooks = map[string]string{"PostModelSwitch": "hook_0", "PostToolUse": "hook_1"}
-
-// forGoAgent is c as the Go agent's claude plays it: what the adapter
-// wrote claude that the Go agent doesn't, or not at a fixed point, goes
+// forGoAgent is c as the Go agent's claude plays it: what the recording
+// wrote claude that the Go agent doesn't write at a fixed point goes,
 // with claude's answers, and the rest keeps its order.
 //   - claude's asks for a title: the Go agent asks on a goroutine of its
 //     own, answered whenever it comes (readReplays).
-//   - Hooks: the adapter registers more (PostCompact, TaskCreated…) under
-//     ids of its own, so claude's calls of the others go, and a call of
-//     one of the Go agent's takes its id.
-//   - The interrupt the adapter sends as it closes a session claude isn't
-//     running: the Go agent interrupts only a running turn and otherwise
-//     just ends stdin (claudeacp's close). See idleTeardown.
-//   - A second interrupt before claude answers the first: the adapter
-//     sends two as its client goes mid-turn (the session's close and the
-//     prompt's cancel each send one; eof-mid-tool), the Go agent one,
-//     which stops the turn as well.
-func forGoAgent(c *claudetest.Cassette) *claudetest.Cassette {
-	dropped := map[string]bool{} // claude's requests and the adapter's whose answers go too
+//   - In the adapter's recording (adapter: testdata/claude-adapter-load),
+//     the interrupt it sent as it closed a session claude wasn't running:
+//     the Go agent interrupts only a running turn and otherwise just ends
+//     stdin (claudeacp's close), so its own recordings have none. See
+//     idleTeardown.
+//   - In the adapter's recording, claude's hook calls take the Go agent's
+//     id for their event (goAgentHooks): the adapter numbered its hooks
+//     otherwise, and the Go agent runs a call by its id.
+func forGoAgent(c *claudetest.Cassette, adapter bool) *claudetest.Cassette {
+	dropped := map[string]bool{} // claude's requests and the recording's whose answers go too
 	out := *c
 	out.Frames = nil
-	pending := "" // the adapter's last interrupt, until claude answers it
-	for _, f := range c.Frames[:idleTeardown(c)] {
+	frames := c.Frames
+	if adapter {
+		frames = frames[:idleTeardown(c)]
+	}
+	for _, f := range frames {
 		fr := readFrame(f)
-		again := pending != "" && f.Dir == "in" && fr.Request.Subtype == "interrupt"
 		switch {
-		case again:
-		case f.Dir == "in" && fr.Request.Subtype == "interrupt":
-			pending = fr.RequestID
-		case pending != "" && fr.Response.RequestID == pending:
-			pending = ""
-		}
-		switch {
-		case again:
-			dropped[fr.RequestID] = true
-			continue
-		case f.Dir == "in" && fr.Request.Subtype == "generate_session_title",
-			f.Dir == "out" && fr.Request.Subtype == "hook_callback" && goAgentHooks[fr.Request.Input.Event] == "":
+		case f.Dir == "in" && fr.Request.Subtype == "generate_session_title":
 			dropped[fr.RequestID] = true
 			continue
 		case fr.Response.RequestID != "" && dropped[fr.Response.RequestID]:
 			continue
-		case fr.Request.Subtype == "hook_callback":
-			var m map[string]any
-			if json.Unmarshal(f.Frame, &m) == nil {
-				m["request"].(map[string]any)["callback_id"] = goAgentHooks[fr.Request.Input.Event]
-				f.Frame, _ = json.Marshal(m)
-			}
+		case adapter && f.Dir == "out" && fr.Request.Subtype == "hook_callback":
+			f.Frame = goAgentHook(f.Frame, fr.Request.Input.Event)
 		}
 		out.Frames = append(out.Frames, f)
 	}
 	return &out
 }
 
-// idleTeardown is where c ends for the Go agent: at the adapter's last
+// goAgentHooks are the callback ids the Go agent gives the hooks it
+// registers (claudeacp's session start; claudeagent numbers them in the
+// order of their events' names).
+var goAgentHooks = map[string]string{"PostModelSwitch": "hook_0", "PostToolUse": "hook_1"}
+
+// goAgentHook is claude's hook call b with the Go agent's id for its
+// event.
+func goAgentHook(b json.RawMessage, event string) json.RawMessage {
+	id, ok := goAgentHooks[event]
+	var m map[string]any
+	if !ok || json.Unmarshal(b, &m) != nil {
+		return b
+	}
+	req, _ := m["request"].(map[string]any)
+	req["callback_id"] = id
+	out, err := json.Marshal(m)
+	if err != nil {
+		return b
+	}
+	return out
+}
+
+// idleTeardown is where the adapter's recording c ends for the Go
+// agent (only testdata/claude-adapter-load's needs it; without it the
+// Go agent never sends the closing interrupt claude's script waits
+// for): at the adapter's last
 // write to claude when that is an interrupt sent with no turn open (the
 // last prompt's result had come, claude's last session_state_changed
 // said idle, or it never ran), which is the adapter closing the session,
@@ -115,77 +118,42 @@ type frame struct {
 	} `json:"response"`
 }
 
+// adapterRecording says whether dir's acp.jsonl was recorded through
+// claude-agent-acp, the Node adapter: its initialize answer's agentInfo.
+func adapterRecording(t *testing.T, dir string) bool {
+	t.Helper()
+	_, all := readACP(t, filepath.Join(dir, "acp.jsonl"))
+	for _, l := range all {
+		var m rpc
+		if l.Dir == "out" && json.Unmarshal(l.Msg, &m) == nil {
+			if name := agentName(m); name != "" {
+				return name == adapterName
+			}
+		}
+	}
+	return false
+}
+
 func readFrame(f claudetest.Frame) frame {
 	var fr frame
 	_ = json.Unmarshal(f.Frame, &fr)
 	return fr
 }
 
-// Frames of the adapter's that the Go agent doesn't send, and claude's
-// answers, as claude 2.1.312 and the adapter 0.94.0 write them.
-const (
-	contextAsk    = `{"type":"control_request","request_id":"ctx","request":{"subtype":"get_context_usage","detail":"summary"}}`
-	contextAnswer = `{"type":"control_response","response":{"subtype":"success","request_id":"ctx","response":{"rawMaxTokens":200000}}}`
-	interruptAsk  = `{"type":"control_request","request_id":"int","request":{"subtype":"interrupt"}}`
-	interruptAck  = `{"type":"control_response","response":{"subtype":"success","request_id":"int","response":{"still_queued":[]}}}`
-)
-
-func TestForGoAgent(t *testing.T) {
-	const (
-		stateRunning = `{"type":"system","subtype":"session_state_changed","state":"running"}`
-		stateIdle    = `{"type":"system","subtype":"session_state_changed","state":"idle"}`
-		initAsk      = `{"type":"control_request","request_id":"1","request":{"subtype":"initialize"}}`
-		initAnswer   = `{"type":"control_response","response":{"subtype":"success","request_id":"1","response":{}}}`
-		prompt       = `{"type":"user","message":{"role":"user","content":"hi"}}`
-		result       = `{"type":"result","subtype":"success"}`
-		keepAlive    = `{"type":"keep_alive"}`
-		// claude's call of a hook the Go agent doesn't register, and its answer
-		compacted    = `{"type":"control_request","request_id":"pc","request":{"subtype":"hook_callback","callback_id":"hook_2","input":{"hook_event_name":"PostCompact"}}}`
-		compactedAck = `{"type":"control_response","response":{"subtype":"success","request_id":"pc","response":{"continue":true}}}`
-		// the adapter's second interrupt as its client goes mid-turn
-		interrupt2Ask = `{"type":"control_request","request_id":"int2","request":{"subtype":"interrupt"}}`
-		interrupt2Ack = `{"type":"control_response","response":{"subtype":"success","request_id":"int2","response":{"still_queued":[]}}}`
-	)
-	in, out := func(s string) string { return "in " + s }, func(s string) string { return "out " + s }
-	for _, tc := range []struct {
-		name     string
-		frames   []string
-		wantDrop []int // the indexes of frames that go
-	}{
-		{"context usage after initialize", []string{in(initAsk), out(initAnswer), in(contextAsk), in(prompt), out(contextAnswer), out(result)}, nil},
-		{"a hook only the adapter registers", []string{in(initAsk), out(initAnswer), in(prompt), out(compacted), in(compactedAck), out(result)}, []int{3, 4}},
-		{"interrupt closing an idle session", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), out(stateIdle), in(interruptAsk), out(interruptAck)}, []int{6, 7}},
-		{"interrupt closing a session after the result, before claude says idle", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), in(interruptAsk), out(stateIdle), out(interruptAck)}, []int{5, 6, 7}},
-		{"interrupt after a prompt claude hasn't started", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), out(stateIdle), in(prompt), in(interruptAsk), out(interruptAck)}, nil},
-		{"interrupt closing a session never prompted", []string{in(initAsk), out(initAnswer), in(interruptAsk), out(interruptAck)}, []int{2, 3}},
-		{"a keep-alive after the closing interrupt", []string{in(initAsk), out(initAnswer), in(interruptAsk), in(keepAlive)}, []int{2, 3}},
-		{"interrupt closing a running turn", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), in(interruptAsk), out(interruptAck), out(result), out(stateIdle)}, nil},
-		{"two interrupts closing a running turn", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), in(interruptAsk), in(interrupt2Ask), out(interruptAck), out(interrupt2Ack)}, []int{5, 7}},
-		{"an interrupt after the last was answered", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), in(interruptAsk), out(interruptAck), in(interrupt2Ask), out(interrupt2Ack)}, nil},
-		{"a cancel's interrupt, then a prompt", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), out(stateIdle), in(interruptAsk), out(interruptAck), in(prompt)}, nil},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			var c claudetest.Cassette
-			var want []claudetest.Frame
-			for i, s := range tc.frames {
-				dir, msg, _ := strings.Cut(s, " ")
-				f := claudetest.Frame{Dir: dir, Frame: json.RawMessage(msg)}
-				c.Frames = append(c.Frames, f)
-				if !slices.Contains(tc.wantDrop, i) {
-					want = append(want, f)
-				}
-			}
-			if got := forGoAgent(&c).Frames; !reflect.DeepEqual(got, want) {
-				t.Errorf("got\n%s\nwant\n%s", frameLines(got), frameLines(want))
-			}
-		})
+// The adapter's recording calls claude's PostToolUse hook under the
+// adapter's id for it; the Go agent's claude must call the Go agent's
+// PostToolUse, whose answer (the call's toolResponse) Nushi reads, not
+// whatever the Go agent has under that id.
+func TestTheAdapterLoadCallsTheGoAgentsPostToolUse(t *testing.T) {
+	_, sent := readACP(t, filepath.Join(adapterLoad, "acp.jsonl"))
+	for _, e := range runGoAgent(t, adapterLoad, sent, nil) {
+		if e.note == nil || e.note.Update.ToolCallUpdate == nil {
+			continue
+		}
+		cc, _ := e.note.Update.ToolCallUpdate.Meta["claudeCode"].(map[string]any)
+		if _, ok := cc["toolResponse"]; ok {
+			return
+		}
 	}
-}
-
-func frameLines(fs []claudetest.Frame) string {
-	var b strings.Builder
-	for _, f := range fs {
-		b.WriteString(f.Dir + " " + string(f.Frame) + "\n")
-	}
-	return b.String()
+	t.Error("no tool call update with the PostToolUse hook's toolResponse")
 }

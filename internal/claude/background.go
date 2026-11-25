@@ -9,9 +9,11 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/regularfile"
+	"github.com/afrase/nushi/internal/secrets"
 )
 
 // outputFile is where Claude says a background command's output goes, in
@@ -119,6 +121,24 @@ func (Harness) ReadBackgroundCommand(id, file string) (output, end, state string
 	return out, end, endState(end), nil
 }
 
+// StatBackgroundCommand is the size of a background command's output file
+// and when it last changed, without opening it, by ReadBackgroundCommand's
+// rules (the task's file in Claude's folder for them, a regular file): its
+// follower reads the file again only once either changed.
+func (Harness) StatBackgroundCommand(id, file string) (size int64, modified time.Time, err error) {
+	if !taskFile(id, file) {
+		return 0, time.Time{}, errors.New("not the task's output file")
+	}
+	st, err := os.Lstat(file)
+	if err != nil {
+		return 0, time.Time{}, err
+	}
+	if !st.Mode().IsRegular() {
+		return 0, time.Time{}, errors.New("not a regular file")
+	}
+	return st.Size(), st.ModTime(), nil
+}
+
 // endState is a background command's state from its file's end line's
 // words: "exited with code 0" done, "killed" stopped, any other code
 // failed.
@@ -137,37 +157,55 @@ func endState(end string) string {
 // 0)` or `… failed with exit code 144` (docs/facts/claude.md).
 var taskSummary = regexp.MustCompile(`" (?:completed \(exit code (-?\d+)\)|failed with exit code (-?\d+))$`)
 
-// CommandTask reads Claude's own word on a background command's task, the
-// _meta.claudeCode.task that claude-acp-go (v0.5.0 on) sends as an update
-// of the Bash call that started it: running, then how it ended
-// (completed; failed, also when killed from outside; killed then stopped
-// for Claude's TaskStop). The end is in the words of the file's end line:
-// "exited with code N" from the summary, which comes with the second of
-// an end's two updates, or "killed" for a stop (docs/facts/claude.md).
-func (Harness) CommandTask(meta map[string]any) (id, state, end string, ok bool) {
+// Task reads Claude's word on one of its tasks: the
+// _meta.claudeCode.task claude-acp-go sends as an update of the call that
+// started it (docs/facts/claude.md). A background command's (local_bash,
+// v0.5.0 on; a foreground command that ran long is one too): running,
+// then how it ended (completed; failed, also when killed from outside;
+// killed then stopped for a stop), the end in the words of the file's end
+// line, "exited with code N" from the summary, which comes with the
+// second of an end's two updates, or "killed" for a stop. A workflow's
+// (local_workflow, v0.8.0 on) the same way, the end in its snapshot's
+// words (completed, failed, killed), a failed run's summary masked. Any
+// other type is a task Nushi doesn't read.
+func (Harness) Task(meta map[string]any) (model.TaskUpdate, bool) {
 	cc, _ := meta["claudeCode"].(map[string]any)
 	task, _ := cc["task"].(map[string]any)
-	id, _ = task["id"].(string)
+	id, _ := task["id"].(string)
 	kind, _ := task["type"].(string)
 	status, _ := task["status"].(string)
 	summary, _ := task["summary"].(string)
-	if id == "" || kind != "local_bash" {
-		return "", "", "", false
+	if id == "" {
+		return model.TaskUpdate{}, false
+	}
+	t := model.TaskUpdate{ID: id}
+	switch kind {
+	case "local_bash":
+		t.Of = model.TaskCommand
+	case "local_workflow":
+		t.Of = model.TaskWorkflow
 	}
 	switch status {
 	case "running":
-		return id, "running", "", true
+		t.State = model.RunRunning
 	case "completed":
-		state = "done"
+		t.State = model.RunDone
 	case "failed":
-		state = "failed"
+		t.State = model.RunFailed
 	case "killed", "stopped":
-		return id, "stopped", "killed", true
-	default:
-		return "", "", "", false
+		t.State = model.RunStopped
 	}
-	if m := taskSummary.FindStringSubmatch(summary); m != nil {
-		end = "exited with code " + m[1] + m[2]
+	switch {
+	case t.State == model.RunStopped && t.Of != "":
+		t.End = "killed"
+	case t.Of == model.TaskCommand && t.State.Ended():
+		if m := taskSummary.FindStringSubmatch(summary); m != nil {
+			t.End = "exited with code " + m[1] + m[2]
+		}
+	case t.Of == model.TaskWorkflow && t.State == model.RunDone:
+		t.End = "completed"
+	case t.Of == model.TaskWorkflow && t.State == model.RunFailed:
+		t.End, t.Summary = "failed", clip(strings.ToValidUTF8(secrets.Mask(summary, "…", nil), "�"), model.WorkflowSummaryText)
 	}
-	return id, state, end, true
+	return t, true
 }

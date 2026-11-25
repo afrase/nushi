@@ -55,7 +55,7 @@ The **Chats** screen lists your chats. Chats waiting on you come first, under **
 
 Tap a chat to see its transcript. When the agent asks a question or asks for permission, answer it with a tap.
 
-A chat running one of Claude's workflows says **working**, and the workflow's card shows its phase, progress, tokens and time, as on the Mac. Tap the card to open it in place: what it does, then each phase with the subagents running in it, and the phases still **planned**. Tap it again to close it. To stop it, open the chat's **⋯** menu and tap **Stop Workflow: …**. If other tasks are running too, the item says **Stop N background tasks**.
+A chat running one of Claude's workflows says **working**, and the workflow's card shows its phase, progress, tokens and time, as on the Mac. Tap the card to open it in place: what it does, then each phase with the subagents running in it, and the phases still **planned**. Tap it again to close it. To stop it, open the chat's **⋯** menu and tap **Stop Workflow: …**. It stops at once, and nothing is added to the conversation. If other tasks are running too, the item says **Stop N background tasks**.
 
 ## Send a message or stop the agent
 
@@ -80,7 +80,7 @@ If a phone is lost or stolen, revoke it on your computer right away. A paired ph
 - When the phone app has a new version, it shows **Nushi was updated**. Tap **Reload**.
 - If the Nushi daemon on your computer is much older than the phone app, the phone says **Open Nushi on your Mac to update its daemon** (or **computer**). The phone keeps working, and in a chat the bar steps aside while you type. Open Nushi on the computer, and if it offers an update, click **Update**: the app may be as old as the daemon, as when the relay was updated first. The daemon moves to the new version once no chat is working. Anything the old daemon can't do yet fails with the same words.
 - If the browser won't open the phone app's storage, it shows **Couldn’t open this app’s storage**. Tap **Reload**. Don't pair again: that replaces this phone's key, and the pairing is likely still there.
-- A chat's **⋯** menu shows its folder, branch, model and agent, with actions such as **Rename…**, **Files**, **Fork**, **Pin**, **Sleep** and **Archive**.
+- A chat's **⋯** menu shows its folder, branch, model and agent, with actions such as **Rename…**, **Files**, **Fork**, **Pin**, **Sleep** (or **Wake** for a sleeping chat, which starts its agent without sending anything) and **Archive**.
 - A chat's pull request shows at the top of the chat, with `+2` when it has more. Tap it to open it on GitHub. If the chat has several, tapping lists them all. A pull request or issue link in a message is a chip. Tap it to see its state and title, then tap **Open on GitHub**.
 - Files the agent wrote open full screen from **Artifacts** at the top of the chat. More on these in [Previews and terminals](Previews-and-terminals).
 - The phone app also works in a desktop browser. Chrome on a Mac gets notifications too.

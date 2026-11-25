@@ -23,16 +23,17 @@ func backgroundSubagent() []acp.SessionUpdate {
 }
 
 // result is Claude's usage report at the end of a model cycle the user
-// started (Transcript.TurnDone).
+// started: its turn's result.
 func result() acp.SessionUpdate {
 	return acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{Used: 1, Size: 2,
 		Cost: &acp.Cost{Amount: 0.1, Currency: "USD"}, Meta: map[string]any{"_claude/origin": map[string]any{"kind": "human"}}}}
 }
 
-// Claude holds a turn's prompt open while subagents it started in the
-// background run; the chat is idle once the turn's own work has ended: a
-// message goes at once, as a prompt, and the held prompt's answer changes
-// nothing.
+// A turn that leaves a subagent in the background ends at the prompt's
+// answer, which Claude's Go agent gives right at the result
+// (docs/facts/claude.md), not at the result: then the chat is idle while
+// only the subagent runs, its steps are its own, and a message goes as a
+// prompt.
 func TestABackgroundSubagentLeavesTheChatIdle(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate = make(chan struct{})
@@ -40,7 +41,15 @@ func TestABackgroundSubagentLeavesTheChatIdle(t *testing.T) {
 	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "start one"}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy && c.started.IsZero() })
+	eventually(t, c, func() bool { return c.itemLocked("m1") != nil && c.usage.Cost == 0.1 })
+	c.mu.Lock()
+	busy := c.busyLocked()
+	c.mu.Unlock()
+	if !busy {
+		t.Fatal("the turn ended at its result, before the prompt's answer")
+	}
+	agent.release()
+	eventually(t, c, func() bool { return !c.busyLocked() && c.started.IsZero() })
 	if st := c.statusLocked(); st.Busy || !st.Started.IsZero() || st.Background != 1 {
 		t.Errorf("status while only the subagent runs: %+v", st)
 	}
@@ -69,38 +78,13 @@ func TestABackgroundSubagentLeavesTheChatIdle(t *testing.T) {
 	if _, steered := agent.texts(); len(steered) != 0 {
 		t.Errorf("steered %q", steered)
 	}
-	agent.release() // both prompts answered: the held one first
-	eventually(t, c, func() bool { return !c.busy && !c.released })
+	agent.release()
+	idle(t, c)
 	for _, it := range c.items {
 		if it.Kind == model.Notice {
 			t.Errorf("a notice: %+v", it)
 		}
 	}
-}
-
-// The result of the work a steered message cut short isn't the turn's
-// end: the next one is.
-func TestASteeredTurnEndsAtItsLastResult(t *testing.T) {
-	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	agent.gate = make(chan struct{})
-	agent.updates = backgroundSubagent()
-	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "start one"}, SendIdle); err != nil {
-		t.Fatal(err)
-	}
-	eventually(t, c, func() bool { return c.itemLocked("a1") != nil && c.itemLocked("a1").Status == "completed" })
-	c.mu.Lock()
-	c.steered = 1
-	c.mu.Unlock()
-	send(c, result())
-	c.mu.Lock()
-	busy := c.busy
-	c.mu.Unlock()
-	if !busy {
-		t.Fatal("the cut-short work's result ended the turn")
-	}
-	send(c, result())
-	idle(t, c)
-	agent.release()
 }
 
 // A result with no subagent left in the background waits for the prompt's
@@ -114,7 +98,7 @@ func TestAResultAloneDoesntEndTheTurn(t *testing.T) {
 	}
 	eventually(t, c, func() bool { return c.itemLocked("m1") != nil })
 	c.mu.Lock()
-	busy := c.busy
+	busy := c.busyLocked()
 	c.mu.Unlock()
 	if !busy {
 		t.Error("ended before the prompt's answer")
@@ -123,12 +107,12 @@ func TestAResultAloneDoesntEndTheTurn(t *testing.T) {
 	idle(t, c)
 }
 
-// Claude's sessions ask that a stop spare background subagents; a
-// subagent stopped with the agent says so.
+// Claude's sessions get the harness's _meta, a fork's merged with the
+// fork's own; a subagent stopped with the agent says so.
 func TestStoppingTheAgentStopsItsSubagents(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	opts, _ := agent.newMeta["claudeCode"].(map[string]any)["options"].(map[string]any)
-	if on, _ := opts["perTaskStopAffordance"].(bool); !on {
+	if _, ok := opts["env"].(map[string]any); !ok {
 		t.Errorf("session/new's _meta: %v", agent.newMeta)
 	}
 	_, _, err := c.forkSession(context.Background(), agent, "s1", t.TempDir(), map[string]any{"jetbrains": 1})
@@ -160,7 +144,7 @@ func TestAStoppedTurnWaitsForItsAnswer(t *testing.T) {
 	eventually(t, c, func() bool { return c.stopped })
 	send(c, result())
 	c.mu.Lock()
-	busy := c.busy
+	busy := c.busyLocked()
 	c.mu.Unlock()
 	if !busy {
 		t.Error("a stopped turn ended at its result")
@@ -169,5 +153,5 @@ func TestAStoppedTurnWaitsForItsAnswer(t *testing.T) {
 	agent.cancelled = true
 	agent.mu.Unlock()
 	agent.release()
-	eventually(t, c, func() bool { return !c.busy && c.items[len(c.items)-1].Status == "cancelled" })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.items[len(c.items)-1].Status == "cancelled" })
 }

@@ -1,0 +1,12 @@
+{
+  "timeout": "45s",
+  "steps": [
+    {"repo": {}},
+    {"git": ["worktree", "add", "-q", ".worktrees/other", "-b", "other"]},
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "Write", "EnterWorktree", "ExitWorktree"]}}}}}},
+    {"prompt": "enter worktrees twice", "session": "s1", "async": "p1"},
+    {"answer": "session/request_permission", "option": "allow_once"},
+    {"await": "p1"}
+  ]
+}

@@ -86,15 +86,17 @@ func settled(it *model.Item, last bool) bool {
 
 // copyLocked writes the items that changed since the copy last had them
 // and have settled, or with all every one of them (a turn ended, the agent
-// stopped), then holds their images as references (images.go). While
+// stopped), then holds their images as references (images.go); a row
+// whose running command's output alone changed (tails) waits for all. While
 // copies are off, or the copy couldn't be read (unread), nothing is
 // written.
 func (c *chat) copyLocked(all bool) {
-	if c.copies == nil || len(c.unsaved) == 0 || c.halting { // being deleted: its items stay unsaved (unhaltLocked)
+	if c.copies == nil || len(c.unsaved) == 0 && (!all || len(c.tails) == 0) || c.halting { // being deleted: its items stay unsaved (unhaltLocked)
 		return
 	}
 	if !c.copiesOn() || c.unread {
 		clear(c.unsaved)
+		clear(c.tails)
 		c.mirrored = false
 		return
 	}
@@ -108,7 +110,7 @@ func (c *chat) copyLocked(all bool) {
 			delete(c.unsaved, it.ID)
 			continue
 		}
-		if c.unsaved[it.ID] && (all || settled(it, i == len(c.items)-1)) {
+		if c.unsaved[it.ID] && (all || settled(it, i == len(c.items)-1)) || all && c.tails[it.ID] {
 			items, after, written = append(items, *it), append(after, prev), append(written, i)
 		}
 		prev = it.ID
@@ -123,9 +125,11 @@ func (c *chat) copyLocked(all bool) {
 	}
 	if all {
 		clear(c.unsaved) // items gone meanwhile too
+		clear(c.tails)
 	}
 	for _, it := range items {
 		delete(c.unsaved, it.ID)
+		delete(c.tails, it.ID)
 	}
 	for _, i := range written {
 		c.byRefLocked(i)
@@ -139,6 +143,11 @@ func (c *chat) cutCopyLocked(item string) {
 	for id := range c.unsaved {
 		if c.indexLocked(id) < 0 {
 			delete(c.unsaved, id)
+		}
+	}
+	for id := range c.tails {
+		if c.indexLocked(id) < 0 {
+			delete(c.tails, id)
 		}
 	}
 	switch {
@@ -156,6 +165,7 @@ func (c *chat) cutCopyLocked(item string) {
 // dropCopyLocked takes an item that's gone from the transcript out of the
 // copy, if it may be in it.
 func (c *chat) dropCopyLocked(it model.Item) {
+	delete(c.tails, it.ID)
 	if c.unsaved[it.ID] || shownOnly(it) || c.copies == nil {
 		delete(c.unsaved, it.ID)
 		return
@@ -206,8 +216,8 @@ func (s *Service) ListCopies() ([]CopyEntry, error) {
 
 // ClearCopies deletes the copies of chats, and returns how many there were
 // and their size. A chat goes on as before, its history from its agent
-// alone; one whose session its agent deleted, kept for its copy, goes
-// unless its work keeps it (gone.go).
+// alone; one whose session its agent deleted stays, marked again, with
+// its notice alone once what it held is dropped (gone.go).
 func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes int64, err error) {
 	if s.copies == nil {
 		return 0, 0, nil
@@ -216,6 +226,14 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 	if err != nil {
 		return 0, 0, err
 	}
+	stored, err := s.sessions.Sessions()
+	if err != nil {
+		return 0, 0, err
+	}
+	known := make(map[string]bool, len(stored))
+	for _, sess := range stored {
+		known[sess.ID] = true
+	}
 	for _, c := range list {
 		if !slices.Contains(chats, c.Chat) {
 			continue
@@ -223,6 +241,9 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 		s.mu.Lock()
 		ch := s.chats[c.Chat]
 		s.mu.Unlock()
+		if ch == nil && known[c.Chat] { // its record keeps that the copy was cleared (CopyCleared)
+			ch, _ = s.listed(c.Chat) // nil: deleted meanwhile
+		}
 		if ch == nil {
 			if err := s.copies.Delete(c.Chat); err != nil {
 				return n, bytes, err
@@ -234,7 +255,7 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 		// before the copy goes, and the images it and its side chats' bases
 		// hold as references; one nothing shows drops them (dropLetGoLocked).
 		ch.mu.Lock()
-		if ch.inCopy && ch.agent == nil && !ch.busy && (s.viewers == nil || !s.viewers.Shown(ch.id)) {
+		if ch.inCopy && ch.agent == nil && !ch.busyLocked() && (s.viewers == nil || !s.viewers.Shown(ch.id)) {
 			ch.dropLetGoLocked()
 		} else {
 			ch.itemsBackLocked()
@@ -242,6 +263,9 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 		}
 		err := s.copies.Delete(c.Chat)
 		ch.mirrored, ch.unread = false, ch.unread && err != nil // a new copy starts empty
+		if err == nil {
+			ch.saveLocked(func(r *model.ChatRecord) { r.CopyCleared = time.Now() })
+		}
 		gone := ch.sessionGone
 		ch.mu.Unlock()
 		if err != nil {
@@ -268,23 +292,6 @@ func (s *Service) Older(age time.Duration) ([]string, error) {
 		}
 	}
 	return ids, err
-}
-
-// autoClearCopies deletes the copies last written more than days() ago
-// (0: none), now and each hour, until the service's life ends.
-func (s *Service) autoClearCopies(days func() int) {
-	tick := time.NewTicker(s.timing.copiesCheck())
-	defer tick.Stop()
-	for {
-		if d := days(); d > 0 {
-			s.clearOlder(time.Duration(d) * 24 * time.Hour)
-		}
-		select {
-		case <-tick.C:
-		case <-s.ctx.Done():
-			return
-		}
-	}
 }
 
 func (s *Service) clearOlder(age time.Duration) {

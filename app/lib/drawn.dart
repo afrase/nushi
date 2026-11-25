@@ -139,7 +139,8 @@ class TaskMark extends StatefulWidget {
   State<TaskMark> createState() => _TaskMarkState();
 }
 
-class _TaskMarkState extends State<TaskMark> with ClockRun {
+class _TaskMarkState extends State<TaskMark>
+    with SingleTickerProviderStateMixin, ClockRun {
   @override
   void didUpdateWidget(TaskMark old) {
     super.didUpdateWidget(old);

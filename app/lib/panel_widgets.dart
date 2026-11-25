@@ -258,8 +258,6 @@ class _SectionState extends State<_Section> {
   /// The card's text sits this far in from its sides.
   static const double _side = PanelType.side - PanelType.inset;
 
-  bool _hovered = false;
-
   /// A menu of the action's is open: the pointer on it has left the widget,
   /// but the title row keeps its hovered look.
   bool _menuOpen = false;
@@ -293,9 +291,7 @@ class _SectionState extends State<_Section> {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    final dragged = DraggedCard.of(context);
     final w = widget;
-    final grip = _hovered || _menuOpen || dragged;
     // A card, dragged too; the gap under it isn't its, nor the pointer's.
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -304,10 +300,15 @@ class _SectionState extends State<_Section> {
         PanelType.inset,
         PanelType.inset,
       ),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: Container(
+      child: DragTitle(
+        index: w.index,
+        onTap: w.onToggle,
+        held: _menuOpen,
+        radius: 0,
+        // Folded, the title is the whole card, and so is its pressed fill:
+        // the foot's gap is the title's then.
+        padding: EdgeInsets.fromLTRB(_side, 12, _side, w.open ? 6 : 12),
+        card: (context, row) => Container(
           decoration: cardBox(t),
           // The title's pressed fill runs to the card's edges and takes
           // its corners, so the card clips it.
@@ -315,45 +316,7 @@ class _SectionState extends State<_Section> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ReorderableDragStartListener(
-                index: w.index,
-                child: Tap(
-                  onTap: w.onToggle,
-                  cursor: dragged
-                      ? SystemMouseCursors.grabbing
-                      : SystemMouseCursors.grab,
-                  tint: false,
-                  radius: 0,
-                  // Folded, the title is the whole card, and so is its
-                  // pressed fill: the foot's gap is the title's then.
-                  padding: EdgeInsets.fromLTRB(
-                    _side,
-                    12,
-                    _side,
-                    w.open ? 6 : 12,
-                  ),
-                  child: Row(
-                    children: [
-                      w.title,
-                      if (w.folds) ...[
-                        const SizedBox(width: 2),
-                        _Triangle(open: w.open),
-                      ],
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: w.acts && w.trailing != null
-                              ? _action(grip: grip)
-                              : grip
-                              ? const DragGrip()
-                              : w.trailing,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              row,
               // The rows end 10 from the card's foot; folded, the title
               // has as much under it as over it.
               Disclosure(
@@ -366,6 +329,23 @@ class _SectionState extends State<_Section> {
               if (w.open) const SizedBox(height: 6),
             ],
           ),
+        ),
+        title: (context, {required grip}) => Row(
+          children: [
+            w.title,
+            if (w.folds) ...[const SizedBox(width: 2), _Triangle(open: w.open)],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: w.acts && w.trailing != null
+                    ? _action(grip: grip)
+                    : grip
+                    ? const DragGrip()
+                    : w.trailing,
+              ),
+            ),
+          ],
         ),
       ),
     );

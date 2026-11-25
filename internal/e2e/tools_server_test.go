@@ -22,10 +22,12 @@ import (
 )
 
 // newSessions are the MCP servers each session/new gave its agent, in
-// order, as the agents read them off their pipes.
+// order, as the agents read them off their pipes, and the sessions each
+// session/load asked for.
 type newSessions struct {
-	mu   sync.Mutex
-	asks [][]acp.MCPServer
+	mu    sync.Mutex
+	asks  [][]acp.MCPServer
+	loads []acp.SessionID
 }
 
 // reader is a writer of one agent's input, a line a message.
@@ -35,6 +37,13 @@ func (n *newSessions) all() [][]acp.MCPServer {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	return slices.Clone(n.asks)
+}
+
+// loaded is the sessions session/load asked the agents for, in order.
+func (n *newSessions) loaded() []acp.SessionID {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	return slices.Clone(n.loads)
 }
 
 // sessionLines is one agent's input, its unfinished line held.
@@ -51,12 +60,19 @@ func (s *sessionLines) Write(p []byte) (int, error) {
 			return len(p), nil
 		}
 		var m struct {
-			Method string                `json:"method"`
-			Params acp.NewSessionRequest `json:"params"`
+			Method string          `json:"method"`
+			Params json.RawMessage `json:"params"`
 		}
-		if json.Unmarshal(s.line[:i], &m) == nil && m.Method == "session/new" {
+		var created acp.NewSessionRequest
+		var load acp.LoadSessionRequest
+		if json.Unmarshal(s.line[:i], &m) == nil {
 			s.to.mu.Lock()
-			s.to.asks = append(s.to.asks, m.Params.MCPServers)
+			switch {
+			case m.Method == "session/new" && json.Unmarshal(m.Params, &created) == nil:
+				s.to.asks = append(s.to.asks, created.MCPServers)
+			case m.Method == "session/load" && json.Unmarshal(m.Params, &load) == nil:
+				s.to.loads = append(s.to.loads, load.SessionID)
+			}
 			s.to.mu.Unlock()
 		}
 		s.line = s.line[i+1:]

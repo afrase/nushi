@@ -1,5 +1,6 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
@@ -103,6 +104,27 @@ void main() {
     expect(
       find.text('Files aren’t rewound: Claude’s changes since then stay.'),
       findsOne,
+    );
+    await _done(tester, daemon);
+  });
+
+  testWidgets('with larger text (GNOME’s Large Text) a row grows to fit '
+      'its line, not cut', (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 1.25;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final (daemon, _) = await _box(tester, _chat());
+    await _esc(tester);
+    await _esc(tester);
+    await tester.pumpAndSettle();
+    final line = tester.renderObject<RenderParagraph>(
+      find.descendant(
+        of: find.text('Now the golden'),
+        matching: find.byType(RichText),
+      ),
+    );
+    expect(
+      line.size.height,
+      greaterThanOrEqualTo(line.getMaxIntrinsicHeight(double.infinity)),
     );
     await _done(tester, daemon);
   });

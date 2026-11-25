@@ -37,6 +37,21 @@ func TestCheck(t *testing.T) {
 			"Radius.circular(thickness / 2)\nradius: 9, // not a corner: the circle\n  // not a corner: its splash\nradius: 9,\n" +
 			"BorderRadius.all(Radius.circular(4)).fromCircle(4)\nradius: 9, // design: a dot\n",
 		"controls_menus.dart": "borderRadius: BorderRadius.circular(6),\n",
+		// One press path: Material's ink, a ListTile or a hand-kept press,
+		// in a view or another control's file, but in controls_press.dart,
+		// which makes Pressable; a marked line and a look-alike name pass.
+		"press.dart": "InkWell(onTap: f, child: c);\nreturn InkResponse(onTap: f);\nListTile(title: t),\n" +
+			"FocusableActionDetector(actions: a);\nPressWatch(onPress: p, child: c);\n" +
+			"// design: a switch's row\nListTile(onTap: f),\nListTileTheme(data: d);\nTap(onTap: f, child: c);\n",
+		"controls_toggle.dart": "child: InkWell(onTap: f),\n",
+		// A GestureDetector that takes a primary tap, flagged on the line
+		// it opens, however laid out; a right-click's or a drag's, a tap
+		// of a nested call's, a marked one and a name in a string pass.
+		"gesture.dart": "GestureDetector(onTap: f, child: c);\nreturn GestureDetector(\n  behavior: b,\n  onDoubleTap: f,\n);\n" +
+			"GestureDetector(onSecondaryTapUp: f, onPanStart: g);\nGestureDetector(\n  child: Tap(onTap: f),\n);\n" +
+			"// design: an image's zoom\nGestureDetector(onTap: f);\nGestureDetector(onTapUp: f); // design: the dim\n" +
+			"text('GestureDetector(onTap:');\nchild: GestureDetector(\n  onTapDown: (d) => f(d),\n  child: GestureDetector(onTap: g),\n);\n",
+		"controls_press.dart": "child: FocusableActionDetector(\nchild: PressWatch(\nGestureDetector(onTap: f);\n",
 		// The type scale: a step passes, between steps fails, however the
 		// call is laid out; only ui() and code() are read, each branch of a
 		// ternary, and only the call's own size:, not a nested call's.
@@ -93,14 +108,24 @@ func TestCheck(t *testing.T) {
 		"color.dart:2: " + named,
 		"controls_menus.dart:1: " + corner,
 		"controls_small.dart:1: " + ms,
+		"controls_toggle.dart:1: " + pressPath,
 		cornerAt("corner.dart:1"), cornerAt("corner.dart:2"), cornerAt("corner.dart:3"), cornerAt("corner.dart:4"),
 		"dialog.dart:1: " + dialog,
+		"gesture.dart:14: " + pressPath, // sorted as text
+		"gesture.dart:16: " + pressPath,
+		"gesture.dart:1: " + pressPath,
+		"gesture.dart:2: " + pressPath,
 		"keys.dart:1: " + keyInString,
 		"keys.dart:2: " + keyInString,
 		"keys.dart:3: " + keyInString,
 		"keys.dart:4: " + keyInString,
 		"phone/scale.dart:2: " + offScale,
 		"phone/x.dart:1: " + button,
+		"press.dart:1: " + pressPath,
+		"press.dart:2: " + pressPath,
+		"press.dart:3: " + pressPath,
+		"press.dart:4: " + pressPath,
+		"press.dart:5: " + pressPath,
 		"say.dart:1: " + snack,
 		"say.dart:2: " + snack,
 		"scale.dart:10: " + offScale, // sorted as text

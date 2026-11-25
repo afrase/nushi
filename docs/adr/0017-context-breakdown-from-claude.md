@@ -34,3 +34,7 @@ turn, at most once a minute, while it is open. Agents that can't fork
 aren't asked (a run in the chat's own session, which they once had,
 went on 2026-10-24). Codex has no such command: its card shows the
 context used and its size only.
+
+**Amendment (2026-11-25): Claude is asked, not forked.** Claude runs through Nushi's Go agent (ADR 0066), whose library answers `_session/contextUsage` with claude's own `get_context_usage` answer, so the card asks that (detail `"full"`: a summary has no category for the conversation) as it asks Ante and Pi: no fork, no `/context`, nothing written into Claude's history. `internal/claude` maps claude's categories by their `kind` and `id`, never their English names, each a share of the window as `/context`'s table had it, and the lists the card showed (MCP tools, custom agents, memory files, skills) from claude's undocumented fields, a list it drops or retypes left out. Markdown is left empty, since the app shows it only for an answer without categories. So the card works on a new chat and a side chat, and the fork's gates went. It is still asked whenever the chat is idle, the card open or not, at most once a minute (what the app does; "while it is open" above is not). The first full ask of a session makes claude call the API's token-counting endpoint about thirty times; later ones none or two.
+
+**Note (2026-11-25):** what of this still holds with Claude's Go agent is in [0066](0066-claude-through-nushis-go-agent.md)'s amendment of that day.

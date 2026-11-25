@@ -8,8 +8,9 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// ErrRestarting refuses a prompt once the daemon has decided to restart
-// into a newer build (Rest): the app sends it again to the new daemon.
+// ErrRestarting refuses a prompt (or a wake) once the daemon has decided
+// to restart into a newer build (Rest): the app sends it again to the new
+// daemon.
 var ErrRestarting = errors.New("the daemon is restarting into a newer build: the message goes once it's back")
 
 // Rest says whether every chat is quiet (quietLocked: nothing running,
@@ -82,7 +83,7 @@ func (c *chat) holdLocked() (own, side string) {
 	switch {
 	case c.waitsLocked():
 		return "needs you", "a side chat needs you"
-	case c.busy || !c.started.IsZero() || c.ownTurn || c.steering || c.sendingNow > 0 || len(c.probes) > 0:
+	case c.busyLocked() || !c.started.IsZero() || c.ownTurn || c.steering || c.sendingNow > 0 || len(c.probes) > 0:
 		return "working", "a side chat is working"
 	case len(c.queue) > 0:
 		return "a message queued", "a side chat has a message queued"

@@ -50,7 +50,7 @@ import 'package:nushi/window_drag.dart';
 /// It sits on the window's own background, with no pane and no border
 /// (ADR 0111): the strip under the traffic lights and the title buttons,
 /// New chat as a card-filled button, the chats, the views' links, and at
-/// its foot the agents' counts and the memory as a card ([StatusBar]).
+/// its foot today's spend and the memory as a card ([StatusBar]).
 /// Its own fill is the window's, so it covers the main pane it slides
 /// over as it goes.
 class Sidebar extends StatefulWidget {

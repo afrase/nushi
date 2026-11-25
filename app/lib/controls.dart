@@ -1,3 +1,4 @@
+import 'dart:async' show Timer;
 import 'dart:math' show max;
 
 import 'package:flutter/gestures.dart';

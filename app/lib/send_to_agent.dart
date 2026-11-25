@@ -121,10 +121,12 @@ String _cut(String text, int max) {
 }
 
 /// A login as the lead line names it: GitHub's logins are letters, digits
-/// and dashes (a bot's ends in `[bot]`); anything else isn't one, and isn't
-/// put outside the quote.
+/// and dashes (a managed user's ends in `_` and its enterprise's short
+/// code, a bot's in `[bot]`), as the daemon's `shown` has it; anything
+/// else isn't one, and isn't put outside the quote.
 String _who(String login) =>
-    RegExp(r'^[A-Za-z0-9-]{1,39}(\[bot\])?$').hasMatch(login)
+    RegExp(r'^[A-Za-z0-9-]{1,39}(_[A-Za-z0-9]{1,39})?(\[bot\])?$')
+        .hasMatch(login)
     ? '@$login'
     : 'someone';
 

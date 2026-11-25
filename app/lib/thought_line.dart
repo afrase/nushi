@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/motion.dart';
 
 /// The newest sentence of [text] (the last one, finished or not), plain:
@@ -45,7 +46,8 @@ class ThoughtLine extends StatefulWidget {
   State<ThoughtLine> createState() => _ThoughtLineState();
 }
 
-class _ThoughtLineState extends State<ThoughtLine> with ClockRun {
+class _ThoughtLineState extends State<ThoughtLine>
+    with SingleTickerProviderStateMixin, ClockRun {
   late ({String text, int start}) _now = latestSentence(widget.text);
   String? _old; // the sentence sliding out
   bool _folding = false;
@@ -97,14 +99,11 @@ class _ThoughtLineState extends State<ThoughtLine> with ClockRun {
         ThoughtLine.foldFor.inMilliseconds.toDouble(),
         Curves.ease,
       );
-      return ClipRect(
-        child: Align(
-          alignment: Alignment.topLeft,
-          heightFactor: 1 - v,
-          child: Opacity(
-            opacity: 1 - v,
-            child: SizedBox(height: height, child: line),
-          ),
+      return Fold(
+        factor: 1 - v,
+        child: Opacity(
+          opacity: 1 - v,
+          child: SizedBox(height: height, child: line),
         ),
       );
     }

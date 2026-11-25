@@ -36,10 +36,10 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		c.items, c.replay, c.muted = c.replay, c.items, true
 		defer func() { c.items, c.replay, c.muted = c.replay, c.items, false }()
 	}
-	if c.commandTaskLocked(n.Update) {
-		return // a background command's task, told on its call: no step of the agent's work
+	if c.taskLocked(n.Update) {
+		return // a task's word, told on its call: no step of the agent's work
 	}
-	if !c.busy && c.started.IsZero() && slices.Contains([]string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) &&
+	if !c.busyLocked() && c.started.IsZero() && slices.Contains([]string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) &&
 		parent == "" && c.parentLocked(n.Update) == "" { // a subagent's steps aren't the agent's own work
 		// Its work after a turn of the user's starts a chapter of its own in
 		// the transcript; an update to a call it made before (a late
@@ -52,7 +52,6 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		if !c.ownTurn {
 			c.ownTurn = true // until the usage_update that ends the turn
 			c.statusChangedLocked()
-			c.pokeWorkflowsLocked() // a workflow's end starts one (Claude's task-notification)
 		}
 	}
 	switch u := n.Update; u.SessionUpdate {
@@ -73,25 +72,19 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		keepRaw(&item, t.RawInput, t.RawOutput)
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
 			item.Subagent, item.BackgroundCommand = it.Subagent, it.BackgroundCommand
+			if item.WorksIn == nil && item.Status != string(acp.ToolCallStatusFailed) { // its result came on an update before
+				item.WorksIn = it.WorksIn
+			}
 			item.Started, item.Ended, item.Totals = it.Started, it.Ended, cmp.Or(item.Totals, it.Totals)
-			c.timeCallLocked(&item, cmp.Or(it.Status, "pending"))
 			if it.Workflow != nil {
 				item.Workflow, item.TaskID = it.Workflow, it.TaskID
 			}
+			was := it.Status
 			*it = item
-			c.subagentLocked(it)
-			c.backgroundCommandLocked(it)
-			c.workflowLocked(it)
-			c.publishLocked(*it)
+			c.callChangedLocked(it, was, false)
 		} else {
-			c.timeCallLocked(&item, "")
-			c.subagentLocked(&item)
-			c.backgroundCommandLocked(&item)
-			c.workflowLocked(&item)
-			c.addLocked(item)
+			c.callChangedLocked(&item, "", true)
 		}
-		c.reportedLocked(item)
-		c.passedOnLocked(item)
 	case "available_commands_update":
 		listed := []model.Command{}
 		for _, a := range u.AvailableCommandsUpdate.AvailableCommands {
@@ -104,7 +97,6 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		listed = c.kind.offered(listed) // one it can't run here is neither shown nor remembered
 		c.commands = c.kind.withTerminalCommands(listed)
 		c.emitLocked(model.Event{ChatID: c.id, Commands: slices.Clone(c.commands)})
-		c.statusChangedLocked() // CanAskContext
 		if len(listed) > 0 && !slices.Equal(listed, c.svc.remembered.Commands(c.kind.Name)) {
 			if err := c.svc.remembered.SetCommands(c.kind.Name, listed); err != nil {
 				c.logLocked().Warn("commands not remembered", "err", err)
@@ -122,18 +114,9 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		u := u.UsageUpdate
 		// The agent's own turn ends with the usage_update its harness says
 		// ends it (Transcript.OwnTurnEnded); without a Transcript, any.
-		var ownEnded, released bool // the turn that ends here, for the meter once the cost is in
+		var ownEnded bool // the turn that ends here, for the meter once the cost is in
 		if ends := c.kind.transcript == nil || c.kind.transcript.OwnTurnEnded(u); ends {
 			ownEnded, c.ownNoted = c.ownTurn, false // ended below, once its usage is in
-		}
-		if c.kind.transcript != nil && !c.started.IsZero() && !c.stopped && c.kind.transcript.TurnDone(u) {
-			switch {
-			case c.steered > 0: // the result of the work a steered message cut short: the turn goes on
-				c.steered = 0
-			case c.backgroundLocked(c.turnFrom): // the agent holds a turn for the subagents it started
-				c.releaseLocked()
-				released = true
-			}
 		}
 		// The end of the agent's own turn: its items have settled. During one of
 		// Nushi's, which ends with the prompt's answer, a model call's.
@@ -144,13 +127,8 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		}
 		c.usageMetaLocked(u.Meta)
 		c.usageChangedLocked()
-		switch {
-		case released:
-			c.meterLocked(model.UsageReleased, nil)
-		case ownEnded:
-			c.meterLocked(model.UsageOwn, nil)
-		}
 		if ownEnded {
+			c.meterLocked(model.UsageOwn, nil)
 			c.endOwnTurnLocked(model.TurnDone, "")
 		}
 	case "session_info_update":
@@ -187,25 +165,46 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 			c.setOutput(it, t.Content)
 		}
 		keepRaw(it, t.RawInput, t.RawOutput)
-		c.timeCallLocked(it, cmp.Or(was, "pending"))
-		c.subagentLocked(it)
-		c.backgroundCommandLocked(it)
-		c.workflowLocked(it)
+		c.callChangedLocked(it, was, false)
+	}
+}
+
+// callChangedLocked runs what follows a tool call's change, from a
+// tool_call (a new call, add, or one repeated) or a tool_call_update: was
+// is its status before ("" for a new call). Its times, subagent,
+// background command and workflow are read from it, it is shown, and when
+// it has just ended (not on each update that says it has) what its end
+// tells is taken: a pull request opened, a push, a stop, its related
+// worktrees, and, between the agent's own tool calls, the queue's chance.
+func (c *chat) callChangedLocked(it *model.Item, was string, add bool) {
+	from := ""
+	if !add {
+		from = cmp.Or(was, "pending")
+	}
+	c.timeCallLocked(it, from)
+	c.subagentLocked(it)
+	c.backgroundCommandLocked(it)
+	c.workflowLocked(it)
+	if add {
+		c.addLocked(*it)
+		it = &c.items[len(c.items)-1]
+	} else {
 		c.publishLocked(*it)
-		c.reportedLocked(*it)
-		c.passedOnLocked(*it)
-		if callEnded(string(t.Status)) {
-			c.openedPullLocked(*it)
-			c.pushedLocked(*it)
-			c.stoppedLocked(*it)
-			c.copyLocked(false)
-			if it.Parent != "" {
-				c.relatedStepLocked()
-			}
-		}
-		if callEnded(string(t.Status)) && it.Parent == "" && !c.started.IsZero() {
-			c.deliverLocked() // between tool calls: the agent's chance to take queued messages
-		}
+	}
+	c.reportedLocked(*it)
+	c.passedOnLocked(*it)
+	if !callEnded(it.Status) || callEnded(was) {
+		return
+	}
+	c.openedPullLocked(*it)
+	c.pushedLocked(*it)
+	c.stoppedLocked(*it)
+	c.copyLocked(false)
+	if it.Parent != "" {
+		c.relatedStepLocked()
+	}
+	if it.Parent == "" && !c.started.IsZero() {
+		c.deliverLocked() // between tool calls: the agent's chance to take queued messages
 	}
 }
 
@@ -251,6 +250,7 @@ func (c *chat) parentLocked(u acp.SessionUpdate) string {
 // of the same kind. parent is the subagent call it is a step of, when its
 // session says (else its _meta may).
 func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent string) {
+	c.sentLocked(m)
 	var text string
 	var images []model.Image
 	switch {
@@ -313,6 +313,26 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent stri
 	c.addLocked(item)
 }
 
+// sentLocked keeps when a replayed message was sent, as the first of its
+// chunks to tell it says (SentReader), by the message's id whatever the
+// chunk's kind: a message that begins with thinking tells it on its
+// thought, and its text takes it (restoreLocked).
+func (c *chat) sentLocked(m *acp.ContentChunk) {
+	if !c.replaying || c.kind.sentReader == nil || m.MessageID == "" {
+		return
+	}
+	id := string(m.MessageID)
+	if _, told := c.replaySent[id]; told {
+		return
+	}
+	if at := c.kind.sentReader.Sent(m.Meta); !at.IsZero() {
+		if c.replaySent == nil {
+			c.replaySent = map[string]time.Time{}
+		}
+		c.replaySent[id] = at
+	}
+}
+
 // agentNoticeLocked adds a notice of the agent's own (Transcript.Notice). One
 // that says the model's safeguards stopped the response before it marks
 // what streamed of that response, the message just before, if any.
@@ -331,9 +351,12 @@ func (c *chat) agentNoticeLocked(n model.AgentNotice) {
 }
 
 // toolCallLocked adds what the agent tells of a tool call beyond ACP (see
-// ToolReader).
+// ToolReader), and where the main agent works once it completes (see
+// worksInLocked).
 func (c *chat) toolCallLocked(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
-	return c.kind.toolReader != nil && c.kind.toolReader.ToolCall(it, meta, input)
+	own := c.kind.toolReader != nil && c.kind.toolReader.ToolCall(it, meta, input)
+	c.worksInLocked(it, meta)
+	return own
 }
 
 // planLocked shows the agent's plan: it replaces the plan of the current

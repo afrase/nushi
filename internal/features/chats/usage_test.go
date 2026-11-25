@@ -100,28 +100,23 @@ func TestAnAgentWithoutCostIsMetered(t *testing.T) {
 	}
 }
 
-// A turn the agent holds for background subagents is metered when its
-// work ends (its cost), and its prompt's late answer brings its tokens.
-func TestAHeldTurnIsMetered(t *testing.T) {
+// A turn that leaves a subagent in the background is metered once, at
+// the prompt's answer: its cost and its tokens together.
+func TestATurnWithABackgroundSubagentIsMeteredOnce(t *testing.T) {
 	svc, agent, c, m := meteredChat(t, testHarness{Name: "claude"}, `{"sessionId":"s1"}`)
 	agent.gate = make(chan struct{})
 	agent.updates = append(backgroundSubagent(), chunk("m1", "It runs in the background."), costUpdate(0.1))
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "start one"}, SendIdle))
-	eventually(t, c, func() bool { return !c.busy && c.started.IsZero() })
-	base := model.TurnUsage{Chat: c.id, Meter: c.id, Agent: "claude", Model: "claude-opus-5-5", Folder: c.record.Folder, Total: 0.1, Currency: "USD", Costed: true}
-	released := base
-	released.End = model.UsageReleased
-	if got := m.told(); !reflect.DeepEqual(got, []model.TurnUsage{released}) {
-		t.Errorf("at its release: %s", testcheck.JSON(t, got))
+	eventually(t, c, func() bool { return c.usage.Cost == 0.1 })
+	if got := m.told(); len(got) != 0 {
+		t.Errorf("metered at the result: %s", testcheck.JSON(t, got))
 	}
 	agent.release()
-	if !testcheck.Eventually(func() bool { return len(m.told()) == 2 }) {
-		t.Fatalf("the held prompt's answer: %s", testcheck.JSON(t, m.told()))
-	}
-	held := base
-	held.End, held.Input, held.Output, held.CacheRead, held.CacheWrite = model.UsageHeld, 10, 20, 30, 40
-	if got := m.told()[1]; !reflect.DeepEqual(got, held) {
-		t.Errorf("held: %s", testcheck.JSON(t, got))
+	idle(t, c)
+	want := []model.TurnUsage{{Chat: c.id, Meter: c.id, Agent: "claude", Model: "claude-opus-5-5", Folder: c.record.Folder, End: model.UsageTurn,
+		Input: 10, Output: 20, CacheRead: 30, CacheWrite: 40, Total: 0.1, Currency: "USD", Costed: true}}
+	if got := m.told(); !reflect.DeepEqual(got, want) {
+		t.Errorf("turns %s", testcheck.JSON(t, got))
 	}
 }
 

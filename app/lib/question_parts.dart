@@ -27,7 +27,8 @@ List<AskedQuestion> askedQuestions(List<Field> fields) {
 /// [many], a check box, its name and description. [at]: ↑/↓ are on it.
 /// Without [onTap] it's an answered question's, read-only: no digit, no
 /// row to press, and its name muted unless [picked]; [said] is what was
-/// typed for it (an "Other" answer), after its name.
+/// typed for it (an "Other" answer), after its name, and [note] the note
+/// on it, a line under it in the secondary colour.
 class QuestionOption extends StatelessWidget {
   const new(
     this.option, {
@@ -38,6 +39,7 @@ class QuestionOption extends StatelessWidget {
     this.digit,
     this.at = false,
     this.said = '',
+    this.note = '',
   });
 
   final Option option;
@@ -47,6 +49,7 @@ class QuestionOption extends StatelessWidget {
   final bool at;
   final VoidCallback? onTap;
   final String said;
+  final String note;
 
   @override
   Widget build(BuildContext context) {
@@ -81,20 +84,28 @@ class QuestionOption extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Text.rich(
-            TextSpan(
-              text: option.name,
-              style: theme.ui(readOnly && !picked ? t.textMuted : t.text),
-              children: [
-                if (said.isNotEmpty)
-                  TextSpan(text: '  $said', style: theme.ui(t.text)),
-                if (option.description.isNotEmpty)
-                  TextSpan(
-                    text: '  ${option.description}',
-                    style: theme.ui(t.textMuted, size: 12),
-                  ),
-              ],
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text.rich(
+                TextSpan(
+                  text: option.name,
+                  style: theme.ui(readOnly && !picked ? t.textMuted : t.text),
+                  children: [
+                    if (said.isNotEmpty)
+                      TextSpan(text: '  $said', style: theme.ui(t.text)),
+                    if (option.description.isNotEmpty)
+                      TextSpan(
+                        text: '  ${option.description}',
+                        style: theme.ui(t.textMuted, size: 12),
+                      ),
+                  ],
+                ),
+              ),
+              // Under the option it's on, so it reads as the pick's.
+              if (note.isNotEmpty)
+                Text.rich(TextSpan(children: noteSpans(theme, note))),
+            ],
           ),
         ),
       ],
@@ -121,8 +132,31 @@ List<Widget> answeredLines(BuildContext context, Item item) => [
   ...answerSummary(context, item),
 ];
 
+/// [note] labelled as the note on a pick: "Note:" muted, then the note in
+/// the secondary colour, so it reads neither as one more answer nor as
+/// the option's description.
+List<InlineSpan> noteSpans(NushiTheme theme, String note, {double size = 13}) =>
+    [
+      TextSpan(
+        text: 'Note: ',
+        style: theme.ui(theme.t.textMuted, size: size),
+      ),
+      TextSpan(
+        text: note,
+        style: theme.ui(theme.t.textSecondary, size: size),
+      ),
+    ];
+
+/// The note on [q]'s pick, or '': its "Other" text where the agent read
+/// it as one (Field.note) and an option was picked.
+String answeredNote(AskedQuestion q) =>
+    (q.other?.note ?? false) && q.field.values.isNotEmpty
+    ? q.other!.values.join(', ')
+    : '';
+
 /// The lines under an answered question's title: each answer, or that it
-/// was skipped or cancelled.
+/// was skipped or cancelled. A note on a pick follows it, in the
+/// secondary colour, rather than standing as an answer of its own.
 List<Widget> answerSummary(BuildContext context, Item item) {
   final theme = NushiTheme.of(context);
   final muted = theme.ui(theme.t.textMuted, size: 12);
@@ -131,25 +165,32 @@ List<Widget> answerSummary(BuildContext context, Item item) {
       Text(item.status == 'declined' ? 'Skipped' : 'Cancelled', style: muted),
     ];
   }
-  return [
-    for (final f in item.fields.where((f) => f.values.isNotEmpty))
-      Text.rich(
+  Widget line(Field f, String note) => Text.rich(
+    TextSpan(
+      text: '${f.options.isEmpty ? f.title : f.description}  ',
+      style: muted,
+      children: [
         TextSpan(
-          text: '${f.options.isEmpty ? f.title : f.description}  ',
-          style: muted,
-          children: [
-            TextSpan(
-              text: f.values
-                  .map(
-                    (v) =>
-                        f.options.where((o) => o.id == v).firstOrNull?.name ??
-                        v,
-                  )
-                  .join(', '),
-              style: theme.ui(theme.t.text, size: 12),
-            ),
-          ],
+          text: f.values
+              .map(
+                (v) => f.options.where((o) => o.id == v).firstOrNull?.name ?? v,
+              )
+              .join(', '),
+          style: theme.ui(theme.t.text, size: 12),
         ),
-      ),
+        if (note.isNotEmpty) ...[
+          TextSpan(text: '  ', style: muted),
+          ...noteSpans(theme, note, size: 12),
+        ],
+      ],
+    ),
+  );
+  return [
+    for (final q in askedQuestions(item.fields))
+      if (answeredNote(q) case final note when note.isNotEmpty)
+        line(q.field, note)
+      else
+        for (final f in [q.field, ?q.other])
+          if (f.values.isNotEmpty) line(f, ''),
   ];
 }

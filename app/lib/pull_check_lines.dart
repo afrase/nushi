@@ -13,14 +13,15 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// How a check went, as GitHub words it: "Failing after 2m 14s",
-/// "Successful in 1m 12s", "In progress", "Skipped".
+/// "Successful in 1m 12s", "Cancelled after 30m", "In progress",
+/// "Skipped".
 String checkWords(GitHubCheck c) {
   final took = checkTook(c);
   return switch (c.state) {
     'success' => took.isEmpty ? 'Successful' : 'Successful in $took',
     'pending' => 'In progress',
     'skipped' => 'Skipped',
-    'cancelled' => 'Cancelled',
+    'cancelled' => took.isEmpty ? 'Cancelled' : 'Cancelled after $took',
     'neutral' => 'Neutral',
     'stale' => 'Stale',
     'timed_out' => took.isEmpty ? 'Timed out' : 'Timed out after $took',
@@ -30,9 +31,29 @@ String checkWords(GitHubCheck c) {
   };
 }
 
-/// The Checks segment's list: every check, failing first, each its state,
-/// name and how it went; a failing one's Send to agent; a ⋯ of its log,
-/// Re-run (a failed Actions job's run) and Open on GitHub.
+/// Which jobs a re-run of [picked] takes, in words: "failed",
+/// "cancelled" or "failed and cancelled" (a cancelled check is never
+/// called failed).
+String rerunWhat(List<GitHubCheck> picked) {
+  final failed = picked.any((c) => c.kind == CheckKind.failed);
+  final cancelled = picked.any((c) => c.kind == CheckKind.cancelled);
+  return failed && cancelled
+      ? 'failed and cancelled'
+      : cancelled
+      ? 'cancelled'
+      : 'failed';
+}
+
+/// What a re-run of [picked] says once GitHub took it, over [runs]
+/// workflow runs.
+String rerunWords(List<GitHubCheck> picked, int runs) =>
+    'Re-running the ${rerunWhat(picked)} jobs of $runs workflow '
+    'run${runs == 1 ? '' : 's'}';
+
+/// The Checks segment's list: every check, failing first, then the
+/// cancelled, each its state, name and how it went; a failing one's Send
+/// to agent (a cancelled one isn't a failure to fix); a ⋯ of its log,
+/// Re-run (a failed or cancelled Actions job's run) and Open on GitHub.
 class ChecksList extends StatelessWidget {
   const new({
     required this.daemon,
@@ -51,7 +72,13 @@ class ChecksList extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final s = splitChecks(pull);
-    final all = [...s.failed, ...s.running, ...s.passed, ...s.other];
+    final all = [
+      ...s.failed,
+      ...s.cancelled,
+      ...s.running,
+      ...s.passed,
+      ...s.other,
+    ];
     if (all.isEmpty) return const NoneLine('No checks');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -107,12 +134,7 @@ class _CheckLineState extends State<_CheckLine> {
       ),
     );
     if (!mounted) return;
-    showToast(
-      Toasts.maybeOf(context),
-      r.runs == 1
-          ? 'Re-running the failed jobs of 1 workflow run'
-          : 'Re-running the failed jobs of ${r.runs} workflow runs',
-    );
+    showToast(Toasts.maybeOf(context), rerunWords([widget.check], r.runs));
     await widget.onChanged();
   });
 
@@ -124,7 +146,9 @@ class _CheckLineState extends State<_CheckLine> {
     final (icon, ink) = checkIcon(t, c);
     final name = c.workflow.isEmpty ? c.name : '${c.workflow} / ${c.name}';
     final failed = c.kind == CheckKind.failed;
-    final rerun = failed && c.id != 0;
+    final cancelled = c.kind == CheckKind.cancelled;
+    // A cancelled one holds the merge back until it runs again.
+    final rerun = (failed || cancelled) && c.id != 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -134,7 +158,7 @@ class _CheckLineState extends State<_CheckLine> {
             height: 30,
             child: Row(
               children: [
-                Icon(icon, size: 16, color: ink),
+                CheckMark(icon, size: 16, color: ink),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text.rich(
@@ -145,14 +169,22 @@ class _CheckLineState extends State<_CheckLine> {
                           style: theme.ui(t.text, weight: FontWeight.w500),
                         ),
                         TextSpan(
-                          text:
-                              '  ${checkWords(c)}'
-                              '${c.required ? ' · Required' : ''}',
+                          text: '  ${checkWords(c)}',
                           style: theme.ui(
-                            failed ? t.crashed : t.textMuted,
+                            failed
+                                ? t.crashed
+                                : cancelled
+                                ? t.textSecondary
+                                : t.textMuted,
                             size: 12,
                           ),
                         ),
+                        // Apart and muted, as the Checks tab's card has it.
+                        if (c.required)
+                          TextSpan(
+                            text: '  Required',
+                            style: theme.ui(t.textMuted, size: 12),
+                          ),
                       ],
                     ),
                     maxLines: 1,

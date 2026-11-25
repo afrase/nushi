@@ -166,6 +166,30 @@ void main() {
   });
 
   // At 2×, mid-ring: the dot sits in the middle of its ring.
+  testWidgets('a check cancelled and none failed: the secondary ink, '
+      'still, no hop; a failure beside it turns it red', (tester) async {
+    final (states, done) = await open(tester, 'pending');
+    const t = Tokens.dark;
+    GitHubPull pull(List<String> kinds) => GitHubPull(
+      item: item(412, 'Speed up CI', checks: 'failure'),
+      checks: [
+        for (final (i, s) in kinds.indexed)
+          GitHubCheck(name: 'check $i', state: s),
+      ],
+    );
+    states.put(pull(['success', 'cancelled']));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(_mark(tester)!.color, t.textSecondary);
+    expect(_mark(tester)!.ringing, isFalse);
+    expect(_hop(tester), 0);
+    expect(find.byTooltip('#412: checks cancelled'), findsOneWidget);
+    states.put(pull(['failure', 'cancelled']));
+    await tester.pumpAndSettle();
+    expect(_mark(tester)!.color, t.crashed);
+    done();
+  });
+
   for (final (name, tokens) in [
     ('dark', Tokens.dark),
     ('light', Tokens.light),

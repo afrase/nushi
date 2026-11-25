@@ -56,12 +56,11 @@ func TestSideChatsLeaveNoHistory(t *testing.T) {
 }
 
 // The app quits with a side chat open: nobody will see it again, so it
-// goes from the agent's history. A test of its own, as the grace is made
-// short before the daemon starts (shortSidesGrace).
+// goes from the agent's history, once its short grace has passed
+// (shortSidesGrace).
 func TestASideChatGoesWhenTheAppLeaves(t *testing.T) {
-	shortSidesGrace(t)
 	history := &acptest.History{}
-	d := startDaemon(t, t.TempDir(), history)
+	d := startDaemon(t, t.TempDir(), history, shortSidesGrace)
 	a := open(t, d)
 	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	a.say(id, "hello")
@@ -76,10 +75,10 @@ func TestASideChatGoesWhenTheAppLeaves(t *testing.T) {
 // Side chats stay while any app follows, the Mac's or a phone's: the Mac
 // quitting doesn't close the one a phone is using.
 func TestSideChatsStayWhileAPhoneFollows(t *testing.T) {
-	g := holdGraces(t)
+	g := &graces{}
 	ctx := context.Background()
 	history := &acptest.History{}
-	d := startDaemon(t, t.TempDir(), history)
+	d := startDaemon(t, t.TempDir(), history, g.hold)
 	mac, phone := open(t, d), openAt(t, d.devices)
 	id := mac.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	mac.say(id, "hello")
@@ -123,23 +122,13 @@ func TestASideChatStartsInItsChatsMode(t *testing.T) {
 	}
 }
 
-// shortSidesGrace makes side chats close 10 ms after the last app goes, for
-// one test, which calls it before it starts a daemon: no handler reads the
-// grace as it changes, and it's put back in a cleanup, not a defer:
-// cleanups run after the test's defers, and an earlier one runs later, so
-// this one runs only once the daemon's (registered after it) has stopped
-// every handler that reads it.
-func shortSidesGrace(t *testing.T) {
-	t.Helper()
-	g := chats.SidesGrace
-	t.Cleanup(func() { chats.SidesGrace = g })
-	chats.SidesGrace = 10 * time.Millisecond
-}
+// shortSidesGrace makes the daemon's side chats close 10 ms after the
+// last app goes (startDaemon's timing).
+func shortSidesGrace(tm *chats.Timing) { tm.SidesGrace = 10 * time.Millisecond }
 
-// graces holds the side chats' graces for one test (chats.SidesAfter),
-// which calls holdGraces before it starts a daemon, as shortSidesGrace's
-// test does: each grace begun is kept, never ended by a clock, and end
-// runs those still pending, as their timers would have.
+// graces holds the side chats' graces for one daemon (its hold, as
+// startDaemon's timing): each grace begun is kept, never ended by a clock,
+// and end runs those still pending, as their timers would have.
 type graces struct {
 	mu    sync.Mutex
 	begun []grace
@@ -150,19 +139,15 @@ type grace struct {
 	run   func()
 }
 
-func holdGraces(t *testing.T) *graces {
-	t.Helper()
-	g := &graces{}
-	after := chats.SidesAfter
-	t.Cleanup(func() { chats.SidesAfter = after })
-	chats.SidesAfter = func(_ time.Duration, f func()) *time.Timer {
+// hold makes the daemon begin its side chats' graces in g.
+func (g *graces) hold(tm *chats.Timing) {
+	tm.SidesAfter = func(_ time.Duration, f func()) *time.Timer {
 		g.mu.Lock()
 		defer g.mu.Unlock()
-		tm := time.AfterFunc(time.Hour, func() {}) // only to be stopped: end runs f
-		g.begun = append(g.begun, grace{tm, f})
-		return tm
+		timer := time.AfterFunc(time.Hour, func() {}) // only to be stopped: end runs f
+		g.begun = append(g.begun, grace{timer, f})
+		return timer
 	}
-	return g
 }
 
 // count is how many graces have begun.

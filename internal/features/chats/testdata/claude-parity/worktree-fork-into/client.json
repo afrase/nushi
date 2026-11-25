@@ -1,0 +1,12 @@
+{
+  "timeout": "45s",
+  "steps": [
+    {"repo": {}},
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "Write", "EnterWorktree", "ExitWorktree"]}}}}}},
+    {"prompt": "enter a new worktree", "session": "s1"},
+    {"fork": "s1", "as": "s2", "cwd": ".claude/worktrees/into", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "Write", "EnterWorktree", "ExitWorktree"]}}}}}},
+    {"prompt": "where is the fork", "session": "s2"},
+    {"prompt": "where is the parent", "session": "s1"}
+  ]
+}

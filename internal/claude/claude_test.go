@@ -123,27 +123,6 @@ func TestOwnTurnEnded(t *testing.T) {
 	}
 }
 
-func TestTurnDone(t *testing.T) {
-	origin := func(kind string) map[string]any {
-		return map[string]any{"_claude/origin": map[string]any{"kind": kind}}
-	}
-	cost := &acp.Cost{Amount: 0.1, Currency: "USD"}
-	for _, tc := range []struct {
-		u    acp.UsageUpdate
-		want bool
-	}{
-		{acp.UsageUpdate{Cost: cost, Meta: origin("human")}, true},
-		{acp.UsageUpdate{Meta: origin("human")}, false},            // a model call's, mid-cycle
-		{acp.UsageUpdate{Cost: cost, Meta: origin("peer")}, false}, // the answer to a subagent's report
-		{acp.UsageUpdate{Cost: cost, Meta: origin("task-notification")}, false},
-		{acp.UsageUpdate{Cost: cost}, false},
-	} {
-		if got := harness.TurnDone(&tc.u); got != tc.want {
-			t.Errorf("harness.TurnDone(%v) = %v", tc.u.Meta, got)
-		}
-	}
-}
-
 func TestReportFindings(t *testing.T) {
 	it := model.Item{}
 	meta := map[string]any{"claudeCode": map[string]any{"toolName": "ReportFindings"}}
@@ -243,6 +222,26 @@ func TestMCPCall(t *testing.T) {
 	} {
 		if s, tl := mcpName(name); s != want[0] || tl != want[1] {
 			t.Errorf("mcpName(%q) = %q, %q; want %q", name, s, tl, want)
+		}
+	}
+}
+
+// A replayed chunk's time is read from claude-acp-go's
+// _meta.claudeCode.timestamp; none, or one that is no time, is zero.
+func TestSent(t *testing.T) {
+	meta := func(v any) map[string]any { return map[string]any{"claudeCode": map[string]any{"timestamp": v}} }
+	for _, c := range []struct {
+		meta map[string]any
+		want time.Time
+	}{
+		{meta("2026-11-24T22:23:18.367Z"), time.Date(2026, 11, 24, 22, 23, 18, 367000000, time.UTC)},
+		{meta("not a time"), time.Time{}},
+		{meta(42), time.Time{}},
+		{map[string]any{"claudeCode": map[string]any{}}, time.Time{}},
+		{nil, time.Time{}},
+	} {
+		if got := harness.Sent(c.meta); !got.Equal(c.want) {
+			t.Errorf("Sent(%v) = %v, want %v", c.meta, got, c.want)
 		}
 	}
 }

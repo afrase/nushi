@@ -171,6 +171,13 @@ Future<(Daemon, FakeDaemon)> _app(
   });
   final fake = FakeDaemon(demoChats())
     ..answer = ((input) => more?.call(input) ?? _demo(input))
+    // Today's spend on the sidebar's card.
+    ..usage = GetUsageResponse(
+      totals: UsageTotals(
+        cost: [UsageCost(currency: 'USD', amount: 12.4)],
+        turns: Int64(14),
+      ),
+    )
     ..streams = (input) {
       final first = switch (input) {
         WatchChatFileRequest(:final path) => WatchChatFileResponse(

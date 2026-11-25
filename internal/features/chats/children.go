@@ -3,7 +3,9 @@ package chats
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -163,14 +165,14 @@ func (c *chat) childOfLocked(ch *child, sid string) string {
 	return ch.launch
 }
 
-// StopTask stops one of the agent's background tasks: the subagent or the
-// background command tool call callID started. A subagent the agent shows
-// as a session of its own stops when that session is cancelled; a command
-// Nushi can find among the agent's processes, by its process group
-// (stopCommand); any other is stopped by asking the agent
-// (BackgroundTasks.StopTask), as a message of the user's that waits for the
-// agent's next chance. Either way it shows as stopped only once the agent
-// says so.
+// StopTask stops one of the agent's background tasks: the subagent, the
+// background command or the workflow tool call callID started. A
+// subagent the agent shows as a session of its own stops when that
+// session is cancelled; a command or a workflow, where the agent can,
+// with no turn (TaskStopper), at once, mid-turn too; any other is stopped
+// by asking the agent (BackgroundTasks.StopTask), as a message of the
+// user's that waits for the agent's next chance. Either way it shows as
+// stopped only once the agent says so (taskLocked).
 func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
 	c, err := s.chat(chatID)
 	if err != nil {
@@ -192,16 +194,36 @@ func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
 		c.mu.Unlock()
 		return cancelTurn(agent, &acp.CancelNotification{SessionID: acp.SessionID(sid)}, c.svc.timing.stopGrace())
 	}
-	shell := call.BackgroundCommand != nil
-	if shell && call.BackgroundCommand.Killed {
+	if task := endableTask(*call); task != "" && c.kind.taskStopper != nil {
+		agent, sid, log := c.agent, c.sid, c.logLocked()
 		c.mu.Unlock()
-		return nil // being stopped: its group was signalled
-	}
-	c.mu.Unlock()
-	if shell && s.stopCommand(c, callID) {
+		if agent == nil {
+			return errors.New("the agent isn't running")
+		}
+		log.Info("stopping a task", "call", callID)
+		ctx, cancel := context.WithTimeout(ctx, time.Minute) // an agent alive but silent
+		defer cancel()
+		if err := c.kind.taskStopper.EndTask(ctx, agent.Call, sid, task); err != nil {
+			log.Warn("task not stopped", "call", callID, "err", err)
+			return fmt.Errorf("the agent didn't stop the task: %w", err)
+		}
 		return nil
 	}
+	c.mu.Unlock()
 	return s.Prompt(ctx, chatID, model.Message{To: callID, ToSubagent: &model.ToSubagent{Stop: true}}, SendQueue)
+}
+
+// endableTask is the agent's id for the task call started that has no
+// session of its own, a background command's or a workflow's, which a
+// TaskStopper stops; "" for any other.
+func endableTask(call model.Item) string {
+	switch {
+	case call.BackgroundCommand != nil:
+		return call.BackgroundCommand.ID
+	case stopWorkflow(call) != nil:
+		return call.TaskID
+	}
+	return ""
 }
 
 // stopTaskLocked finds what a message asking the agent to stop the task
@@ -240,9 +262,6 @@ func (c *chat) stoppedLocked(call model.Item) {
 	}
 	if unknown {
 		return
-	}
-	if id != "" && slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Workflow != nil && it.TaskID == id }) {
-		c.pokeWorkflowsLocked() // its snapshot is written as it stops
 	}
 	i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Agent != "" && it.AgentID == id })
 	if id == "" || i < 0 || c.items[i].Subagent == nil || c.items[i].Subagent.State != model.RunRunning {

@@ -5,12 +5,12 @@ import (
 	"slices"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // memRecord is a Record kept in memory.
@@ -65,17 +65,21 @@ func TestTheRecordHoldsWhatAStopWouldEnd(t *testing.T) {
 		}
 		return groupAgent{a}, nil
 	}
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: launch}},
-		Options{Processes: procs, Record: rec, Timing: Timing{SleepCheck: 5 * time.Millisecond}})
-	t.Cleanup(svc.Close)
-	startChat(t, svc, t.TempDir())
-	owner := agentOwner(agentPid)
-	testcheck.Wait(t, "the agent's processes recorded", func() bool { return rec.pids(owner) != nil })
-	if got := rec.pids(owner); !slices.Equal(got, []int{agentPid, member.Pid}) {
-		t.Errorf("recorded %v, want the agent and its group's member", got)
-	}
-	agent.quit()
-	testcheck.Wait(t, "the ended agent's processes dropped", func() bool { return rec.pids(owner) == nil })
+	synctest.Test(t, func(t *testing.T) { // the record is looked at each minute of the bubble's clock
+		svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: launch}}, Options{Processes: procs, Record: rec})
+		t.Cleanup(svc.Close)
+		startChat(t, svc, t.TempDir())
+		owner := agentOwner(agentPid)
+		pass(time.Minute)
+		if got := rec.pids(owner); !slices.Equal(got, []int{agentPid, member.Pid}) {
+			t.Errorf("recorded %v, want the agent and its group's member", got)
+		}
+		agent.quit()
+		synctest.Wait()
+		if got := rec.pids(owner); got != nil {
+			t.Errorf("the ended agent's processes stay recorded: %v", got)
+		}
+	})
 }
 
 // An agent is recorded as it starts, not first at the next minute's tick:
@@ -91,12 +95,19 @@ func TestAnAgentIsRecordedAsItStarts(t *testing.T) {
 		}
 		return groupAgent{a}, nil
 	}
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: launch}},
-		Options{Processes: procs, Record: rec, Timing: Timing{SleepCheck: time.Hour}})
-	t.Cleanup(svc.Close)
-	startChat(t, svc, t.TempDir())
-	owner := agentOwner(agentPid)
-	testcheck.Wait(t, "the agent recorded before any tick", func() bool { return slices.Equal(rec.pids(owner), []int{agentPid}) })
-	agent.quit()
-	testcheck.Wait(t, "the ended agent dropped", func() bool { return rec.pids(owner) == nil })
+	synctest.Test(t, func(t *testing.T) { // the bubble's clock never moves: no tick comes
+		svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: launch}}, Options{Processes: procs, Record: rec})
+		t.Cleanup(svc.Close)
+		startChat(t, svc, t.TempDir())
+		owner := agentOwner(agentPid)
+		synctest.Wait()
+		if got := rec.pids(owner); !slices.Equal(got, []int{agentPid}) {
+			t.Errorf("recorded before any tick: %v", got)
+		}
+		agent.quit()
+		synctest.Wait()
+		if got := rec.pids(owner); got != nil {
+			t.Errorf("the ended agent stays recorded: %v", got)
+		}
+	})
 }

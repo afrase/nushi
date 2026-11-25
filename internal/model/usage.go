@@ -8,12 +8,11 @@ type UsageEnd string
 const (
 	// UsageTurn is a turn of the user's that ended with the prompt's answer.
 	UsageTurn UsageEnd = "turn"
-	// UsageReleased is a turn of the user's whose work ended while the
-	// agent held its prompt for background subagents (Transcript.TurnDone):
-	// its cost so far, the tokens coming with UsageHeld.
-	UsageReleased UsageEnd = "released"
-	// UsageHeld is the late answer to a held prompt: its tokens. It
-	// continues a UsageReleased turn and isn't counted as a turn of its own.
+	// UsageHeld is the late answer to a prompt claude-agent-acp held for
+	// background subagents: its tokens, continuing the "released" row that
+	// had the turn's cost, and not counted as a turn of its own. Nushi
+	// wrote both until 2026-11-25 (ADR 0136's amendment) and still reads
+	// the rows stored with them; a "released" row counts as a turn.
 	UsageHeld UsageEnd = "held"
 	// UsageOwn is the agent's own turn, after a background task: no prompt
 	// answered it, so only its cost is known.

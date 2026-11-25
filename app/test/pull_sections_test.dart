@@ -39,7 +39,7 @@ void main() {
     );
     await tester.tap(find.text('Checks  3 failing'));
     await tester.pumpAndSettle();
-    expect(find.text('Passed · 18'), findsOneWidget);
+    expect(find.text('Passed (18)'), findsOneWidget);
     expect(find.text('Show 6 more'), findsOneWidget);
     // Two columns: the second check beside the first.
     final a = tester.getRect(find.text('CI / rspec (admin 1/8)'));

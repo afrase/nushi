@@ -44,16 +44,24 @@ func (s *Service) Close() {
 }
 
 // later runs f on its own, as work Close waits for, unless Close has begun:
-// then it doesn't run, and what it would have deleted stays in the chat's
-// record for the next time the chat opens (model.ChatRecord.Throwaway).
-func (s *Service) later(f func()) {
+// then it doesn't run (false), and what it would have done waits for the
+// next start (what it would have deleted stays in the chat's record:
+// model.ChatRecord.Throwaway). It takes s.mu, a leaf lock: it may be
+// called under a chat's lock, and nothing takes a chat's lock under s.mu.
+func (s *Service) later(f func()) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closing {
-		return
+		return false
 	}
 	s.work.Go(f)
+	return true
 }
+
+// ending says the service's life is ending (Close cancels its ctx first):
+// an agent Close killed didn't quit, and a reopen it cut short didn't
+// fail, so neither says so in the chat.
+func (s *Service) ending() bool { return s.ctx.Err() != nil }
 
 // started wraps launch: once Close has begun, no agent starts, and the
 // agents still running when it has ended the chats' (those a reopen or a

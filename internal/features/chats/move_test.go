@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 
@@ -15,6 +16,42 @@ import (
 	"github.com/afrase/nushi/internal/transcripts"
 )
 
+// What waits for a move to end says the chat is still moving, not that it
+// is reopening: Archive and Sleep while its fork is being made.
+func TestWhatWaitsForAMoveSaysSo(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	c.kind.Moves = true
+	turn(t, svc, c, "one")
+	agent.mu.Lock()
+	agent.forkGate, agent.entered = make(chan struct{}), make(chan string, 1)
+	agent.mu.Unlock()
+	moved := make(chan error, 1)
+	go func() { moved <- svc.Move(context.Background(), c.id, t.TempDir(), false) }()
+	<-agent.entered
+	if err := svc.Archive(c.id, true); err == nil || !strings.HasPrefix(err.Error(), "the chat is still moving;") {
+		t.Errorf("archive mid-move: %v", err)
+	}
+	if err := svc.Sleep(c.id); err == nil || !strings.HasPrefix(err.Error(), "the chat is still moving;") {
+		t.Errorf("sleep mid-move: %v", err)
+	}
+	close(agent.forkGate)
+	testcheck.NoErr(t, <-moved)
+}
+
+// And what waits for a rewind says the chat is still rewinding.
+func TestWhatWaitsForARewindSaysSo(t *testing.T) {
+	svc, agent, c := newChat(t, claudeSession, &memModes{})
+	for _, text := range []string{"one", "two"} { // a message to rewind to: forked at the agent's answer before it
+		agent.updates = []acp.SessionUpdate{chunk("m-"+text, "ok")}
+		turn(t, svc, c, text)
+	}
+	release := rewinding(t, svc, agent, c, lastAsked(c))
+	if err := svc.Archive(c.id, true); err == nil || !strings.HasPrefix(err.Error(), "the chat is still rewinding;") {
+		t.Errorf("archive mid-rewind: %v", err)
+	}
+	testcheck.NoErr(t, release())
+}
+
 // A queue held after a stopped turn stays held when the chat moves: the
 // move isn't the next turn, so nothing from the queue starts one.
 func TestMoveKeepsTheQueueHeld(t *testing.T) {
@@ -22,12 +59,12 @@ func TestMoveKeepsTheQueueHeld(t *testing.T) {
 	c.kind.Moves = true
 	agent.gate = make(chan struct{})
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return c.busy && !c.started.IsZero() })
+	eventually(t, c, func() bool { return c.busyLocked() && !c.started.IsZero() })
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "queued"}, SendQueue))
 	if _, err := svc.Stop(t.Context(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.held && len(c.queue) == 1 })
 	testcheck.NoErr(t, svc.Move(context.Background(), c.id, t.TempDir(), false))
 	agent.release()
 	idle(t, c)
@@ -118,12 +155,12 @@ func TestMoveNamesTheQueuedFilesFromTheNewFolder(t *testing.T) {
 	from := c.record.Folder
 	agent.gate = make(chan struct{})
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	eventually(t, c, func() bool { return c.busy && !c.started.IsZero() })
+	eventually(t, c, func() bool { return c.busyLocked() && !c.started.IsZero() })
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "queued", Files: []string{"spec.md"}}, SendQueue))
 	if _, err := svc.Stop(t.Context(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.held && len(c.queue) == 1 })
 	testcheck.NoErr(t, svc.Move(context.Background(), c.id, t.TempDir(), false))
 	agent.release()
 	idle(t, c)
@@ -147,12 +184,12 @@ func TestMoveKeepsTheUploadsAbsolute(t *testing.T) {
 		return model.Message{Text: text, Uploads: []model.Upload{{Name: text + ".txt", Data: []byte(text)}}}
 	}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, up("one"), SendIdle))
-	eventually(t, c, func() bool { return c.busy && !c.started.IsZero() })
+	eventually(t, c, func() bool { return c.busyLocked() && !c.started.IsZero() })
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, up("two"), SendQueue))
 	if _, err := svc.Stop(t.Context(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.held && len(c.queue) == 1 })
 	testcheck.NoErr(t, svc.Move(context.Background(), c.id, home, false))
 	agent.release()
 	idle(t, c)

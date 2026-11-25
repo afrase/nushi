@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 	"unicode/utf8"
 
@@ -96,31 +97,33 @@ func TestPromptStreamsTheReply(t *testing.T) {
 }
 
 func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
-	text := func(s string) []acp.ToolCallContent {
-		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
-	}
-	at := time.Date(2026, 11, 19, 9, 0, 0, 0, time.UTC)
-	c := &chat{svc: &Service{remembered: &memModes{}, timing: Timing{Now: func() time.Time { return at }}}, id: "s1", sid: "s1", kind: &kind{},
-		publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
-	send(c, []acp.SessionUpdate{
-		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "Terminal", Kind: "execute", Status: "pending"}},
-		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Title: "ls -la", Content: text("List files")}},
-		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed", Content: text("a.txt")}},
-		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t2", Title: "Edit", Kind: "edit", Content: []acp.ToolCallContent{
-			{Type: "diff", Diff: &acp.Diff{Path: "/w/a.txt", OldText: new("one\ntwo\n"), NewText: "three"}},
-			{Type: "diff", Diff: &acp.Diff{Path: "/w/new.txt", NewText: "made"}},                  // no old text: a new file
-			{Type: "diff", Diff: &acp.Diff{Path: "/w/empty.txt", OldText: new(""), NewText: "x"}}, // "": an empty one
-		}, Locations: []acp.ToolCallLocation{{Path: "/w/a.txt"}, {Path: "/elsewhere/b.txt"}}}},
-	}...)
-	want := []model.Item{
-		{ID: "t1", Kind: model.ToolCall, Title: "ls -la", ToolKind: "execute", Status: "completed", Text: "a.txt", Started: at, Ended: at},
-		{ID: "t2", Kind: model.ToolCall, Title: "Edit", ToolKind: "edit", Started: at, Paths: []string{"a.txt", "/elsewhere/b.txt"},
-			Diffs: []model.FileChange{{Path: "a.txt", Status: "modified", Old: "one\ntwo\n", New: "three"},
-				{Path: "new.txt", Status: "added", New: "made"}, {Path: "empty.txt", Status: "modified", New: "x"}}},
-	}
-	if !reflect.DeepEqual(c.items, want) {
-		t.Errorf("items = %+v\nwant %+v", c.items, want)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		text := func(s string) []acp.ToolCallContent {
+			return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
+		}
+		at := time.Now() // the bubble's, which stands still
+		c := &chat{svc: &Service{remembered: &memModes{}}, id: "s1", sid: "s1", kind: &kind{},
+			publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
+		send(c, []acp.SessionUpdate{
+			{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "Terminal", Kind: "execute", Status: "pending"}},
+			{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Title: "ls -la", Content: text("List files")}},
+			{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed", Content: text("a.txt")}},
+			{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t2", Title: "Edit", Kind: "edit", Content: []acp.ToolCallContent{
+				{Type: "diff", Diff: &acp.Diff{Path: "/w/a.txt", OldText: new("one\ntwo\n"), NewText: "three"}},
+				{Type: "diff", Diff: &acp.Diff{Path: "/w/new.txt", NewText: "made"}},                  // no old text: a new file
+				{Type: "diff", Diff: &acp.Diff{Path: "/w/empty.txt", OldText: new(""), NewText: "x"}}, // "": an empty one
+			}, Locations: []acp.ToolCallLocation{{Path: "/w/a.txt"}, {Path: "/elsewhere/b.txt"}}}},
+		}...)
+		want := []model.Item{
+			{ID: "t1", Kind: model.ToolCall, Title: "ls -la", ToolKind: "execute", Status: "completed", Text: "a.txt", Started: at, Ended: at},
+			{ID: "t2", Kind: model.ToolCall, Title: "Edit", ToolKind: "edit", Started: at, Paths: []string{"a.txt", "/elsewhere/b.txt"},
+				Diffs: []model.FileChange{{Path: "a.txt", Status: "modified", Old: "one\ntwo\n", New: "three"},
+					{Path: "new.txt", Status: "added", New: "made"}, {Path: "empty.txt", Status: "modified", New: "x"}}},
+		}
+		if !reflect.DeepEqual(c.items, want) {
+			t.Errorf("items = %+v\nwant %+v", c.items, want)
+		}
+	})
 }
 
 func TestToolCallKeepsItsRawInputAndOutput(t *testing.T) {
@@ -344,7 +347,8 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 }
 
 func TestImagesJoinTheirMessageOrToolCall(t *testing.T) {
-	c := &chat{svc: &Service{remembered: &memModes{}}, id: "s1", sid: "s1", kind: &kind{}, busy: true, publish: func(model.Event) {}}
+	c := &chat{svc: &Service{remembered: &memModes{}}, id: "s1", sid: "s1", kind: &kind{}, publish: func(model.Event) {}}
+	c.beginOpLocked(opOpen) // a replay's, as session/load's
 	img := &acp.ImageContent{MimeType: "image/png", Data: "iVBORw=="}
 	send(c, []acp.SessionUpdate{ // as session/load replays a prompt with an image
 		{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "look"}}}},
@@ -419,86 +423,90 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 }
 
 func TestBackgroundCommandsAreFollowed(t *testing.T) {
-	file := filepath.Join(taskDir(t), "b1.output")
-	testcheck.NoErr(t, os.WriteFile(file, []byte("half"), 0o600))
-	events := make(chan model.Event, 100)
-	var counts []int // how many run in the background, as each status said (under c.mu)
-	c := &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context(), timing: Timing{CommandPoll: 10 * time.Millisecond}}, id: "s1", sid: "s1", kind: testKind(testHarness{}), agent: &fakeAgent{}, record: model.ChatRecord{Folder: "/w"},
-		publish: func(e model.Event) {
-			if e.Status != nil {
-				counts = append(counts, e.Status.Background)
-			}
-			events <- e
-		}}
-	text := func(s string) []acp.ToolCallContent {
-		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
-	}
-	send(c, []acp.SessionUpdate{
-		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "sleep 9", Kind: "execute", Status: "pending",
-			Meta: map[string]any{"claudeCode": map[string]any{"toolName": "Bash"}}}},
-		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed",
-			Content: text("Command running in background with ID: b1. Output is being written to: " + file + ". You will be notified."),
-			Meta:    map[string]any{"claudeCode": map[string]any{"toolName": "Bash", "toolResponse": map[string]any{"backgroundTaskId": "b1"}}}}},
-	}...)
-	shell := func(want model.RunState) model.BackgroundCommand {
-		t.Helper()
-		for { // every change comes with an event; a state never reached hangs the test
-			c.mu.Lock()
-			sh := *c.items[0].BackgroundCommand
-			c.mu.Unlock()
-			if sh.State == want && sh.Output != "" {
-				return sh
-			}
-			<-events
+	synctest.Test(t, func(t *testing.T) { // the file is read each commandPoll, a second of the bubble's clock
+		file := filepath.Join(taskDir(t), "b1.output")
+		testcheck.NoErr(t, os.WriteFile(file, []byte("half"), 0o600))
+		events := make(chan model.Event, 100)
+		var counts []int // how many run in the background, as each status said (under c.mu)
+		c := &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context()}, id: "s1", sid: "s1", kind: testKind(testHarness{}), agent: &fakeAgent{}, record: model.ChatRecord{Folder: "/w"},
+			publish: func(e model.Event) {
+				if e.Status != nil {
+					counts = append(counts, e.Status.Background)
+				}
+				events <- e
+			}}
+		text := func(s string) []acp.ToolCallContent {
+			return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
 		}
-	}
-	if sh := shell("running"); sh.Output != "half" || sh.Started.IsZero() {
-		t.Errorf("running: %+v", sh)
-	}
-	testcheck.NoErr(t, os.WriteFile(file, []byte("all\n\n[exited with code 0]\n"), 0o600))
-	if sh := shell("done"); sh.Output != "all" || sh.End != "exited with code 0" || sh.Ended.IsZero() {
-		t.Errorf("done: %+v", sh)
-	}
-	c.mu.Lock()
-	said := slices.Compact(slices.Clone(counts))
-	c.mu.Unlock()
-	if !slices.Equal(said, []int{0, 1, 0}) { // the call came outside a turn: the own turn's status first
-		t.Errorf("the status said %v running in the background, want 0 (its own turn), 1, then 0", said)
-	}
+		send(c, []acp.SessionUpdate{
+			{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "sleep 9", Kind: "execute", Status: "pending",
+				Meta: map[string]any{"claudeCode": map[string]any{"toolName": "Bash"}}}},
+			{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed",
+				Content: text("Command running in background with ID: b1. Output is being written to: " + file + ". You will be notified."),
+				Meta:    map[string]any{"claudeCode": map[string]any{"toolName": "Bash", "toolResponse": map[string]any{"backgroundTaskId": "b1"}}}}},
+		}...)
+		shell := func(want model.RunState) model.BackgroundCommand {
+			t.Helper()
+			for { // every change comes with an event; a state never reached hangs the test
+				c.mu.Lock()
+				sh := *c.items[0].BackgroundCommand
+				c.mu.Unlock()
+				if sh.State == want && sh.Output != "" {
+					return sh
+				}
+				<-events
+			}
+		}
+		if sh := shell("running"); sh.Output != "half" || sh.Started.IsZero() {
+			t.Errorf("running: %+v", sh)
+		}
+		testcheck.NoErr(t, os.WriteFile(file, []byte("all\n\n[exited with code 0]\n"), 0o600))
+		if sh := shell("done"); sh.Output != "all" || sh.End != "exited with code 0" || sh.Ended.IsZero() {
+			t.Errorf("done: %+v", sh)
+		}
+		c.mu.Lock()
+		said := slices.Compact(slices.Clone(counts))
+		c.mu.Unlock()
+		if !slices.Equal(said, []int{0, 1, 0}) { // the call came outside a turn: the own turn's status first
+			t.Errorf("the status said %v running in the background, want 0 (its own turn), 1, then 0", said)
+		}
 
-	// Its agent gone without a word of its end: only that it started.
-	testcheck.NoErr(t, os.WriteFile(file, []byte("again"), 0o600))
-	c.mu.Lock()
-	c.items[0].BackgroundCommand = nil
-	c.mu.Unlock()
-	send(c, acp.SessionUpdate{SessionUpdate: "tool_call_update",
-		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}})
-	shell("running")
-	c.mu.Lock()
-	c.agent = nil
-	c.mu.Unlock()
-	shell("started")
+		// Its agent gone without a word of its end: only that it started.
+		testcheck.NoErr(t, os.WriteFile(file, []byte("again"), 0o600))
+		c.mu.Lock()
+		c.items[0].BackgroundCommand = nil
+		c.mu.Unlock()
+		send(c, acp.SessionUpdate{SessionUpdate: "tool_call_update",
+			ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}})
+		shell("running")
+		c.mu.Lock()
+		c.agent = nil
+		c.mu.Unlock()
+		shell("started")
+	})
 }
 
 // A line that reads as the end, which the command printed itself, isn't
 // its end: the file goes on growing after it.
 func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
-	reads := [][3]string{{"[killed]", "killed", "stopped"}, {"[killed] and on", "", ""}, {"[killed] and on", "exited with code 0", "done"},
-		{"[killed] and on", "exited with code 0", "done"}}
-	var states []model.RunState
-	read := func(string, string) (string, string, string, error) {
-		r := reads[min(len(states), len(reads)-1)]
-		return r[0], r[1], r[2], nil
-	}
-	c := &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context(), timing: Timing{CommandPoll: time.Millisecond}}, id: "s1", kind: testKind(testHarness{read: read}), publish: func(e model.Event) {
-		if e.Item != nil && e.Item.BackgroundCommand != nil {
-			states = append(states, e.Item.BackgroundCommand.State)
+	synctest.Test(t, func(t *testing.T) { // a tail held for commandTail passes on the bubble's clock
+		reads := [][3]string{{"[killed]", "killed", "stopped"}, {"[killed] and on", "", ""}, {"[killed] and on", "exited with code 0", "done"},
+			{"[killed] and on", "exited with code 0", "done"}}
+		var states []model.RunState
+		read := func(string, string) (string, string, string, error) {
+			r := reads[min(len(states), len(reads)-1)]
+			return r[0], r[1], r[2], nil
 		}
-	}, agent: &fakeAgent{}, items: []model.Item{{ID: "t1", BackgroundCommand: &model.BackgroundCommand{State: "running"}}}}
-	c.followCommand("t1", "b1", "f", c.agent)
-	if c.items[0].BackgroundCommand.State != "done" || slices.Contains(states, "stopped") {
-		t.Errorf("states %q, the end %+v", states, c.items[0].BackgroundCommand)
-	}
+		c := &chat{svc: &Service{remembered: &memModes{}, ctx: t.Context()}, id: "s1", kind: testKind(testHarness{read: read}), publish: func(e model.Event) {
+			if e.Item != nil && e.Item.BackgroundCommand != nil {
+				states = append(states, e.Item.BackgroundCommand.State)
+			}
+		}, agent: &fakeAgent{}, items: []model.Item{{ID: "t1", BackgroundCommand: &model.BackgroundCommand{State: "running"}}}}
+		c.followCommand("t1", "b1", "f", c.agent, time.Millisecond)
+		if c.items[0].BackgroundCommand.State != "done" || slices.Contains(states, "stopped") {
+			t.Errorf("states %q, the end %+v", states, c.items[0].BackgroundCommand)
+		}
+	})
 }
 
 // A chat on an issue gives its sessions Nushi's tools, for the chat and

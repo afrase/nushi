@@ -38,7 +38,8 @@ linux() {
 }
 
 # The Mac's: the daemon's helper app where the app looks for it (ADR 0036),
-# Mermaid among its assets, and every part signed.
+# Mermaid among its assets, the page-find script among its resources, and
+# every part signed.
 mac() {
   helper="$app/Contents/Helpers/Nushi Daemon.app"
   key() { plutil -extract "$2" raw -o - "$1/Contents/Info.plist" 2>/dev/null || true; }
@@ -53,6 +54,9 @@ mac() {
   [ -x "$app/Contents/Resources/start-daemon" ] || fail "no start-daemon"
   mermaid="$app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/mermaid"
   [ -f "$mermaid/mermaid.html" ] && [ -f "$mermaid/mermaid.min.js" ] || fail "no mermaid.html and mermaid.min.js (make mermaid)"
+  # Find in a page's script (Browser.swift); without it ⌘F in a preview
+  # or a browser tab finds nothing and says nothing.
+  [ -f "$app/Contents/Resources/PageFind.js" ] || fail "no Contents/Resources/PageFind.js (Runner's Copy Bundle Resources)"
   for part in "$helper" "$app"; do
     codesign --verify --strict "$part" || fail "$part isn't signed"
   done

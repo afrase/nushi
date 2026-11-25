@@ -77,7 +77,7 @@ func TestAFailedReopenIsntRetriedOnEveryCall(t *testing.T) {
 		t.Errorf("%d notices", n)
 	}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "again"}, SendQueue))
-	eventually(t, c, func() bool { again, _, _ := agent.count(); return !c.busy && again == launches+1 })
+	eventually(t, c, func() bool { again, _, _ := agent.count(); return !c.busyLocked() && again == launches+1 })
 	if n := notices(); n != 1 {
 		t.Errorf("%d notices after trying again: the new one replaces the old", n)
 	}
@@ -152,14 +152,14 @@ func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
 	}
 	agent := &fakeAgent{}
 	life, end := context.WithCancel(t.Context())
-	svc := New(life, []Kind{{Harness: testHarness{Name: "fake", read: read}, Launch: agent.launch}}, Options{Remembered: &memModes{}, Sessions: &memSessions{}, Timing: Timing{CommandPoll: time.Millisecond}})
+	svc := New(life, []Kind{{Harness: testHarness{Name: "fake", read: read}, Launch: agent.launch}}, Options{Remembered: &memModes{}, Sessions: &memSessions{}})
 	c := startChat(t, svc, t.TempDir())
 	c.mu.Lock()
 	c.items = append(c.items, model.Item{ID: "t1", BackgroundCommand: &model.BackgroundCommand{State: "running"}})
 	running := c.agent
 	c.mu.Unlock()
 	followed := make(chan struct{})
-	go func() { c.followCommand("t1", "b1", "f", running); close(followed) }()
+	go func() { c.followCommand("t1", "b1", "f", running, time.Millisecond); close(followed) }()
 	<-reads
 	end()
 	select {

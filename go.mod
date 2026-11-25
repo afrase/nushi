@@ -6,7 +6,7 @@ require (
 	connectrpc.com/connect v1.21.1
 	github.com/BurntSushi/toml v1.6.0
 	github.com/afrase/acp-go v0.5.0
-	github.com/afrase/claude-acp-go v0.7.0
+	github.com/afrase/claude-acp-go v0.8.1
 	github.com/afrase/codex-acp-go v0.3.4
 	github.com/andybalholm/brotli v1.2.0
 	github.com/creack/pty v1.1.24

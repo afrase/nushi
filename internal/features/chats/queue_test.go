@@ -59,9 +59,9 @@ func TestQueueGoesAfterTheTurnInOrder(t *testing.T) {
 		t.Errorf("Unqueue = %+v, %v", m, err)
 	}
 	agent.release()
-	eventually(t, c, func() bool { return len(c.queue) == 1 && c.busy })
+	eventually(t, c, func() bool { return len(c.queue) == 1 && c.busyLocked() })
 	agent.release()
-	eventually(t, c, func() bool { return len(c.queue) == 0 && c.busy })
+	eventually(t, c, func() bool { return len(c.queue) == 0 && c.busyLocked() })
 	agent.release()
 	idle(t, c)
 	if got, _ := agent.texts(); !reflect.DeepEqual(got, []string{"one", "two", "four"}) {
@@ -81,7 +81,7 @@ func TestUnqueueAsTheTurnEnds(t *testing.T) {
 	send("first", SendIdle)
 	var took, sent []string
 	for i := range 30 {
-		eventually(t, c, func() bool { return c.busy && len(c.queue) == 0 })
+		eventually(t, c, func() bool { return c.busyLocked() && len(c.queue) == 0 })
 		text := fmt.Sprintf("q%d", i)
 		send(text, SendQueue)
 		c.mu.Lock()
@@ -144,7 +144,7 @@ func TestSendNowStopsTheTurn(t *testing.T) {
 	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "now"}, SendNow); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, c, func() bool { return c.busy && c.items[len(c.items)-1].Text == "now" })
+	eventually(t, c, func() bool { return c.busyLocked() && c.items[len(c.items)-1].Text == "now" })
 	if c.items[1].Kind != model.Notice || len(c.queue) != 1 {
 		t.Errorf("items = %+v, queue = %+v", c.items, c.queue)
 	}
@@ -294,5 +294,90 @@ func TestQueuedImagesGoOnlyToAnAgentThatTakesThem(t *testing.T) {
 		if withImages || !said {
 			t.Errorf("steer %v: the message went with its images (%v), or the chat doesn't say they didn't (%v): %q", steer, withImages, !said, texts(c))
 		}
+	}
+}
+
+// Send now on a queued message whose send doesn't happen (the request
+// ends while the agent winds its turn down) leaves it where it was in the
+// queue: it isn't lost between taking it out and sending it.
+func TestSendNowOfAQueuedMessageThatDoesntGoKeepsIt(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate, agent.ignoreCancel = make(chan struct{}), true
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	for _, text := range []string{"a", "b"} {
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendQueue))
+	}
+	c.mu.Lock()
+	id := c.queue[0].ID
+	c.mu.Unlock()
+	ctx, cancel := context.WithCancel(t.Context())
+	sent := make(chan error, 1)
+	go func() { sent <- svc.SendQueuedNow(ctx, c.id, id) }()
+	eventually(t, c, func() bool { return c.sendingNow == 2 }) // taken (takeToSend), and waiting for the turn to end
+	cancel()
+	if err := <-sent; err == nil {
+		t.Fatal("sent")
+	}
+	c.mu.Lock()
+	var queued []string
+	for _, m := range c.queue {
+		queued = append(queued, m.Text)
+	}
+	c.mu.Unlock()
+	if !reflect.DeepEqual(queued, []string{"a", "b"}) {
+		t.Errorf("queue %q", queued)
+	}
+	agent.release()
+	idle(t, c)
+}
+
+// Send now on a queued message stops the turn and sends it, in one call:
+// it leaves the queue, and goes ahead of what stays queued.
+func TestSendNowOfAQueuedMessage(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	for _, text := range []string{"a", "b"} {
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendQueue))
+	}
+	c.mu.Lock()
+	id := c.queue[1].ID
+	c.mu.Unlock()
+	testcheck.NoErr(t, svc.SendQueuedNow(t.Context(), c.id, id))
+	eventually(t, c, func() bool { return c.busyLocked() && c.items[len(c.items)-1].Text == "b" && len(c.queue) == 1 })
+	agent.release()
+	eventually(t, c, func() bool { got, _ := agent.texts(); return reflect.DeepEqual(got, []string{"one", "b", "a"}) })
+	agent.release()
+	idle(t, c)
+}
+
+// A queued message on its way to the agent (Send now) keeps its chat from
+// resting from the moment it leaves the queue: a restart that saw the
+// chat quiet before the message reached the agent would refuse it, and
+// the queue it went back to dies with the daemon.
+func TestSendNowOfAQueuedMessageHoldsARestart(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "a"}, SendQueue))
+	if _, err := svc.Stop(t.Context(), c.id, false); err != nil {
+		t.Fatal(err)
+	}
+	idle(t, c) // stopped: the queue is held, and only Send now sends it
+	c.mu.Lock()
+	id := c.queue[0].ID
+	c.mu.Unlock()
+	taken, m, at, err := svc.takeToSend(c.id, id)
+	testcheck.NoErr(t, err)
+	if ok, _ := svc.Rest(); ok {
+		svc.Unrest()
+		t.Fatal("Rest found the chat quiet with its message on its way")
+	}
+	testcheck.NoErr(t, svc.sendTaken(t.Context(), taken, m, at))
+	agent.release()
+	eventually(t, c, func() bool { got, _ := agent.texts(); return reflect.DeepEqual(got, []string{"one", "a"}) })
+	idle(t, c)
+	if ok, holding := svc.Rest(); !ok {
+		t.Errorf("the chat holds a restart once its message went: %s", holding)
 	}
 }

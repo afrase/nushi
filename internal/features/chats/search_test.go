@@ -138,9 +138,9 @@ func TestSearchWithoutNotes(t *testing.T) {
 		t.Fatal("the reader isn't given the unnoting")
 	}
 	for in, want := range map[string]string{
-		stopNote("b1") + "\n\n" + "the flaky test":                                                     "the flaky test",
+		`<nushi-command-stopped id="b1"/>` + "\n\n" + "the flaky test":                                 "the flaky test",
 		"[Nushi] The user edited `a.go` in Nushi since your last turn; re-read it before changing it.": "",
-		"plain " + stopNote("b1"):                                                                      "plain " + stopNote("b1"),
+		"plain <nushi-command-stopped id=\"b1\"/>":                                                     "plain <nushi-command-stopped id=\"b1\"/>",
 	} {
 		if got := asked.Unnoted(in); got != want {
 			t.Errorf("Unnoted(%q) = %q, want %q", in, got, want)

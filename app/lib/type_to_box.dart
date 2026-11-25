@@ -22,22 +22,31 @@ import 'package:nushi/run_state.dart';
 /// button) keeps its keys.
 final Set<FocusNode> typesThrough = runSet();
 
+/// Focus nodes whose own focused descendants a typed character goes on
+/// from as well, when they sit under one of [typesThrough]'s: a diff's
+/// (`DiffPresses`), whose panes take the focus on a click in their code,
+/// in the transcript. A text field among them (an inlay's) keeps its
+/// keys; the Changes and pull request tabs' diffs aren't on the chat's
+/// tab, where alone a character goes on.
+final Set<FocusNode> typesThroughWithin = runSet();
+
+/// Whether a character typed with [focus] focused goes on to the box.
+bool _passes(FocusNode focus) {
+  if (typesThrough.contains(focus)) return true;
+  final up = focus.ancestors;
+  return up.any(typesThroughWithin.contains) &&
+      up.any(typesThrough.contains) &&
+      focus.context?.findAncestorWidgetOfExactType<EditableText>() == null;
+}
+
 /// Puts [e], a key the window's own focus ([root]) got unhandled, in the
 /// shown chat's box when it's a character typed with nothing else that
 /// takes it focused, no menu open and no dialog over the window.
 KeyEventResult typeIntoBox(Daemon d, FocusNode root, KeyEvent e) {
-  if (e is KeyUpEvent) return KeyEventResult.ignored;
-  final c = e.character;
-  final keys = HardwareKeyboard.instance;
-  final altGr = conventions.altGr && keys.isControlPressed && keys.isAltPressed;
-  if (c == null ||
-      !_typed(c) ||
-      keys.isMetaPressed ||
-      !altGr && (keys.isControlPressed || keys.isAltPressed)) {
-    return KeyEventResult.ignored;
-  }
+  final c = typedCharacter(e);
+  if (c == null) return KeyEventResult.ignored;
   final focus = FocusManager.instance.primaryFocus;
-  if (focus != root && !typesThrough.contains(focus)) {
+  if (focus == null || focus != root && !_passes(focus)) {
     return KeyEventResult.ignored;
   }
   final context = root.context;
@@ -54,6 +63,24 @@ KeyEventResult typeIntoBox(Daemon d, FocusNode root, KeyEvent e) {
   return take != null && take(c)
       ? KeyEventResult.handled
       : KeyEventResult.ignored;
+}
+
+/// The character [e] types, or null when it types none: a key let go,
+/// one held with ⌘, Control or Option (but AltGr), or one whose character
+/// isn't text (Esc, Enter, Tab, a space alone). What a question card
+/// takes to start its box (`question_card.dart`) as well.
+String? typedCharacter(KeyEvent e) {
+  if (e is KeyUpEvent) return null;
+  final c = e.character;
+  final keys = HardwareKeyboard.instance;
+  final altGr = conventions.altGr && keys.isControlPressed && keys.isAltPressed;
+  if (c == null ||
+      !_typed(c) ||
+      keys.isMetaPressed ||
+      !altGr && (keys.isControlPressed || keys.isAltPressed)) {
+    return null;
+  }
+  return c;
 }
 
 /// Whether [c] is text typed: printable, and not a space alone (Space

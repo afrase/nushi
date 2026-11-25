@@ -305,6 +305,8 @@ class _JqlFieldState extends State<JqlField> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final (i, s) in _shown.indexed)
+                  // A press kept by hand from before Tap: no tint, no focus.
+                  // design: to move onto Tap
                   GestureDetector(
                     onTap: () => _take(i),
                     child: Container(

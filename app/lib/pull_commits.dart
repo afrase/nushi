@@ -6,6 +6,7 @@ import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_side.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -67,13 +68,21 @@ String commitAuthor(GitHubCommit c) =>
 String shortSha(GitHubCommit c) =>
     c.oid.length > 7 ? c.oid.substring(0, 7) : c.oid;
 
-/// A commit's checks as an icon and its ink; null for none.
-(IconData, Color)? commitChecks(Tokens t, GitHubCommit c) => switch (c.checks) {
-  'success' => (Icons.check, t.done),
-  'failure' => (Icons.close, t.crashed),
-  'pending' => (Icons.circle, t.needs),
-  _ => null,
-};
+/// A commit's checks as an icon, its ink and its words; null for none. A
+/// rollup failing only because of cancelled checks (`cancelled`, API 149)
+/// is the stop sign in the secondary ink, as a cancelled check's row.
+(IconData, Color, String)? commitChecks(Tokens t, GitHubCommit c) =>
+    switch (c.checks) {
+      'success' => (Icons.check, t.done, 'Checks passed'),
+      'failure' when c.cancelled => (
+        cancelledIcon,
+        t.textSecondary,
+        'Checks cancelled',
+      ),
+      'failure' => (Icons.close, t.crashed, 'Checks failing'),
+      'pending' => (Icons.circle, t.needs, 'Checks running'),
+      _ => null,
+    };
 
 /// The Commits tab: newest first, each its headline, author, age, short
 /// id with Copy and its checks; capped at the newest 100, it says so.
@@ -206,12 +215,12 @@ class CommitRow extends StatelessWidget {
                     style: theme.ui(t.textSecondary),
                   ),
           ),
-          if (checks case (final icon, final ink))
-            tooltip(context, switch (c.checks) {
-              'success' => 'Checks passed',
-              'failure' => 'Checks failing',
-              _ => 'Checks running',
-            }, Icon(icon, size: icon == Icons.circle ? 8 : 15, color: ink)),
+          if (checks case (final icon, final ink, final words))
+            tooltip(
+              context,
+              words,
+              CheckMark(icon, size: icon == Icons.circle ? 8 : 15, color: ink),
+            ),
           Text(shortSha(c), style: theme.code(t.textMuted, size: 12)),
           IconTap(
             Icons.copy,

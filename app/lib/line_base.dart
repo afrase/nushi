@@ -28,7 +28,6 @@ enum NoMarks {
   tooLarge('Too large for change marks'),
   tooManyLines('Over 10,000 lines: no change marks'),
   otherRepository('A repository of its own'),
-  oldDaemon('Change marks need a newer daemon'),
   failed('Couldn’t compare with git');
 
   new(this.label);
@@ -45,8 +44,8 @@ enum NoMarks {
 /// folder (another root, so another repository) counts from its last
 /// commit. A file new against the base ([isNew]: untracked, or added
 /// since) has the empty text as its base, so every line is marked added.
-/// Asked of the daemon (GetDiff with the file's path and the base, API
-/// [oneFileDiffApi]) as the file changes on disk, the chat's turn ends, it
+/// Asked of the daemon (GetDiff with the file's path and the base) as the
+/// file changes on disk, the chat's turn ends, it
 /// commits or its folder or worktree changes; the base itself is found
 /// again when the turn ends, it commits or the folder changes, once for
 /// the chat ([marksBaseOf]), the Files tree's dots counting from the same
@@ -150,9 +149,6 @@ class LineBase extends ChangeNotifier implements ValueListenable<String?> {
     }
     if (f.tooLarge) return await _land(asked, none: NoMarks.tooLarge);
     if (watch.notText) return await _land(asked, none: NoMarks.binary);
-    if (daemon.daemonApi < oneFileDiffApi) {
-      return await _land(asked, none: NoMarks.oldDaemon);
-    }
     final now = utf8.decode(f.data, allowMalformed: true);
     final abs = f.path.isNotEmpty
         ? f.path

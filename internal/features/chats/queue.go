@@ -17,16 +17,27 @@ import (
 // stop fails would otherwise steer the next message into it.
 func (c *chat) deliverLocked() {
 	switch {
-	case len(c.queue) == 0 || c.agent == nil || c.stopping || c.halting || c.held || c.steering || c.sendingNow > 0:
-	case !c.busy:
+	case len(c.queue) == 0 || c.steering:
+	case c.mayStartLocked():
 		m := c.queue[0]
 		c.queue = c.queue[1:]
 		c.queueChangedLocked()
 		c.sendLocked(c.imagesTakenLocked(m))
-	case c.steer && !c.started.IsZero() && !c.stopped && !c.steerFailed:
+	case c.mayDeliverLocked() && c.steer && !c.started.IsZero() && !c.stopped && !c.steerFailed:
 		c.steering = true
 		go c.steerQueue(c.agent, acp.SessionID(c.sid))
 	}
+}
+
+// mayStartLocked says the queue's next message may start a turn now: the
+// chat is idle, and the queue may go to its agent (mayDeliverLocked).
+func (c *chat) mayStartLocked() bool { return !c.busyLocked() && c.mayDeliverLocked() }
+
+// mayDeliverLocked says the queue may go to the chat's agent at all: it
+// has one that isn't being stopped, the queue isn't held after a stopped
+// or failed turn, and no Send now is on its way, which goes first.
+func (c *chat) mayDeliverLocked() bool {
+	return c.agent != nil && !c.stopping && !c.halting && !c.held && c.sendingNow == 0
 }
 
 // imagesTakenLocked is a queued message as it goes to the agent: without
@@ -70,21 +81,16 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		it.Steered = true
 		id := c.addLocked(it)
 		blocks := c.blocks(m)
-		// The agent's updates may come before its answer: not under the lock;
-		// counted before, as they may be the result of the work it cuts short.
-		c.steered++
+		// The agent's updates may come before its answer: not under the lock.
 		c.mu.Unlock()
 		taken, err := agent.Steer(context.Background(), sid, blocks)
 		c.mu.Lock()
-		if !taken {
-			c.steered = max(c.steered-1, 0)
-		}
 		switch {
 		case taken:
 			continue
 		case c.indexLocked(id) < 0:
 			return // taken back (Stop) meanwhile: it is in the box
-		case err == nil && !c.busy && c.agent == agent && !c.held && !c.stopped && !c.stopping && !c.halting && c.sendingNow == 0:
+		case err == nil && c.agent == agent && !c.stopped && c.mayStartLocked():
 			c.unsteerLocked(id)
 			c.startLocked(blocks) // the turn ended meanwhile: this starts the next
 			return
@@ -96,7 +102,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		}
 		c.queue = append([]model.Message{m}, c.queue...)
 		c.queueChangedLocked()
-		if err != nil && !c.busy { // the turn ended meanwhile: the queue, a message sent since among it, goes as the next prompt
+		if err != nil && !c.busyLocked() { // the turn ended meanwhile: the queue, a message sent since among it, goes as the next prompt
 			c.steering = false
 			c.deliverLocked()
 		}
@@ -107,7 +113,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 	// Not in the defer: the failed hand-off above puts its message back,
 	// and that waits for the next chance.
 	c.steering = false
-	if !c.busy {
+	if !c.busyLocked() {
 		c.deliverLocked()
 	}
 }
@@ -132,14 +138,72 @@ func (s *Service) Unqueue(chatID, id string) (model.Message, error) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	m, _, err := c.unqueueLocked(id)
+	return m, err
+}
+
+// unqueueLocked takes message id out of the queue: it and where it was.
+func (c *chat) unqueueLocked(id string) (model.Message, int, error) {
 	i := slices.IndexFunc(c.queue, func(m model.Message) bool { return m.ID == id })
 	if i < 0 {
-		return model.Message{}, errors.New("the agent has it already")
+		return model.Message{}, 0, errors.New("the agent has it already")
 	}
 	m := c.queue[i]
 	c.queue = slices.Delete(c.queue, i, i+1)
 	c.queueChangedLocked()
-	return m, nil
+	return m, i, nil
+}
+
+// SendQueuedNow sends a message of the chat's queue at once, as Prompt's
+// SendNow does (the running turn stops first), in one call: if the send
+// fails or ctx ends first (the app went while the agent wound its turn
+// down), the message goes back to its place in the queue, so no failure
+// loses it.
+func (s *Service) SendQueuedNow(ctx context.Context, chatID, id string) error {
+	c, m, at, err := s.takeToSend(chatID, id)
+	if err != nil {
+		return err
+	}
+	return s.sendTaken(ctx, c, m, at)
+}
+
+// takeToSend takes a message out of the chat's queue for SendQueuedNow,
+// and counts it as a Send now on its way (sendingNow) in the same hold:
+// till sendTaken has sent it, the chat isn't quiet, so a restart can't
+// begin (Rest) and refuse it into a queue that dies with the daemon, and
+// the queue starts nothing ahead of it.
+func (s *Service) takeToSend(chatID, id string) (*chat, model.Message, int, error) {
+	c, err := s.lookup(chatID) // a side chat's too
+	if err != nil {
+		return nil, model.Message{}, 0, err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	m, at, err := c.unqueueLocked(id)
+	if err == nil {
+		c.sendingNow++
+	}
+	return c, m, at, err
+}
+
+// sendTaken sends m, which takeToSend took from the queue's place at, and
+// ends its count: the queue goes on, with m back in its place if it
+// didn't go.
+func (s *Service) sendTaken(ctx context.Context, c *chat, m model.Message, at int) error {
+	send := m
+	send.ID = "" // a new message, as the box's
+	err := s.Prompt(ctx, c.id, send, SendNow)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.sendingNow--
+	if err != nil {
+		c.queue = slices.Insert(c.queue, min(at, len(c.queue)), m)
+		c.queueChangedLocked()
+	}
+	if !c.busyLocked() {
+		c.deliverLocked()
+	}
+	return err
 }
 
 func (c *chat) queueChangedLocked() {

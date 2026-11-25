@@ -40,7 +40,7 @@ type Service struct {
 	servers   Servers     // set once at startup, if there are any
 	gitHub    GitHub      // set once at startup
 	viewers   Viewers     // Options', for chats done while nobody looked (seen.go)
-	procs     Processes   // Options', for stopping background commands
+	procs     Processes   // Options', for whether a command's shell runs and the crash record
 	record    Record      // Options', if agents' processes are recorded (record.go)
 	prefs     SleepPrefs  // Options', if chats sleep
 	copies    Copies      // Options', if chats keep copies of their transcripts
@@ -55,12 +55,10 @@ type Service struct {
 	cancel context.CancelFunc
 	loops  sync.WaitGroup // its loops (sleep, copies, letting go), which Close waits for
 	// work is what a request left running when it ended (deleting thrown-away
-	// sessions), which Close waits for too: it saves the chat's record, which
-	// must not be written once the daemon has stopped (see later).
+	// sessions, a reopen, an expire it began), which Close waits for too: it
+	// saves the chat's record, which must not be written once the daemon has
+	// stopped (see later).
 	work sync.WaitGroup
-	// expires are the expires a reopen began (resume), which nothing waits
-	// for but a test, to see what one did.
-	expires sync.WaitGroup
 
 	// signInWaits, when set (a test), runs as a sign-in begins to wait for
 	// an ended one's agent to stop (beginSignIn).
@@ -68,18 +66,19 @@ type Service struct {
 
 	pinMu sync.Mutex // Pin's, one order at a time
 
+	// aheadTried are the chats the copy-ahead pass opened and got no copy
+	// of, by id (ahead.go). Only the hourly loop reads or writes it.
+	aheadTried map[string]aheadTry
+
 	mu        sync.Mutex
 	chats     map[string]*chat
 	closing   bool        // Close began: no agent starts any more
 	resting   atomic.Bool // Rest: no prompt is taken any more
 	live      map[Agent]bool
-	opening   map[string]bool     // sessions Open is making chats of
-	signingIn map[string]*signIn  // the sign-in SignIn runs of each agent, by name
-	removed   []model.RemovedChat // removed because their agent no longer had their sessions (gone.go)
-	swept     time.Time           // the last Sweep
-	sweeping  bool
-	following int         // apps following the events (Following)
-	idle      *time.Timer // closes the side chats once none has for SidesGrace
+	opening   map[string]bool    // sessions Open is making chats of
+	signingIn map[string]*signIn // the sign-in SignIn runs of each agent, by name
+	following int                // apps following the events (Following)
+	idle      *time.Timer        // closes the side chats once none has for Timing.SidesGrace
 }
 
 // Terminals are the shells beside chats (internal/features/terminals).
@@ -172,24 +171,24 @@ type chat struct {
 	mu           sync.Mutex
 	items        []model.Item
 	following    map[string]*follow              // workflows followed, by their call (workflows.go)
-	busy         bool                            // running a turn, or reopening or moving the session
+	op           chatOp                          // what it is busy with: a turn or a step on its session (ops.go)
 	halting      bool                            // being deleted: never reopens
 	historyStays bool                            // the last PlanDelete said the agent's history stays (delete.go)
 	stopping     bool                            // its agent is being stopped: nothing more goes to it
-	removing     bool                            // its worktree is being removed (RemoveWorktree): it takes no prompts and doesn't reopen
+	folder       string                          // what a git step does to its folder ("worktree is being removed"; holdFolder): it takes no prompts and doesn't reopen
 	held         bool                            // the last turn was stopped or failed: the queue waits for the next
 	steering     bool                            // a steering worker hands the queue to the running turn
 	steerFailed  bool                            // a steer failed in the running turn: the rest waits for the next (queue.go)
 	sendingNow   int                             // SendNow prompts waiting on the turn they stop: the queue waits too
 	ownTurn      bool                            // the agent works on its own, outside a turn of Nushi's
 	ownNoted     bool                            // the transcript says so, since the last user message or usage report
-	released     bool                            // the running turn's work ended, but the agent holds its prompt (Transcript.TurnDone)
-	steered      int                             // messages steered into the running turn since the agent's last result
 	turnFrom     int                             // the running turn's first item, about (items may go)
 	stopped      bool                            // the running turn was told to stop: it ends with the agent's answer
 	outlived     bool                            // the transcript outlived its agent: reopening doesn't replay into it
 	reopenFailed bool                            // the last reopen failed: see failedLocked
 	sessionGone  bool                            // and its agent no longer has its session: see goneLocked
+	ahead        aheadLoad                       // its load is the copy-ahead pass's (ahead.go)
+	aheadCancel  context.CancelFunc              // calls that load off (yieldAheadLocked)
 	failure      string                          // the notice saying why it failed (item id)
 	waiting      map[string]chan<- string        // permission prompts by item id, for the picked option
 	drops        int                             // dropPromptsLocked's calls, for an ask that let go the lock (permissions.go)
@@ -211,7 +210,6 @@ type chat struct {
 	started      time.Time             // when the running turn started
 	background   int                   // subagents, background commands and workflows running, as last said
 	workflows    int                   // workflows running, as last said
-	killed       []string              // background commands Nushi stopped since the last prompt, by the agent's id: told with the next (stopNote)
 	tasks        map[string]taskWord   // the agent's word on its background commands' tasks, by its id (background.go)
 	edited       []string              // files the user saved in the preview since the last prompt: told with the next (editNote)
 	done         chan struct{}         // closed when the running turn ends
@@ -230,14 +228,19 @@ type chat struct {
 	canLoad    bool             // the agent can reopen the session, so it can sleep
 	asleep     bool             // its agent was stopped to sleep, or it was left asleep at the daemon's start (dormant): opening the chat doesn't reopen it
 	reapplying bool             // its session just opened: its picks aren't back on it yet (reapply)
-	retiring   Agent            // the agent it fell asleep from, until a reopen has seen it end
-	woke       chan struct{}    // closed when the reopen under way ends
+	retiring   Agent            // the agent that last left it (disconnectLocked), until a reopen has seen it end
+	woke       chan struct{}    // closed when the reopen or reload under way ends (endOpLocked)
 	active     time.Time        // its last event
 	unsaved    map[string]bool  // items changed since the copy of the transcript last had them (copies.go)
+	tails      map[string]bool  // rows whose running command's output alone changed since: only a turn's or the agent's end writes them (copies.go)
 	titling    map[string]bool  // pins whose title the agent is making, by item (pin_titles.go)
 	titleSlots chan struct{}    // and how many it makes at once
 	replaying  bool             // a session/load's replay goes to replay, not the transcript (restore.go)
 	replay     []model.Item
+	// replaySent is when the replay's messages were sent, as its chunks
+	// tell it (SentReader), by message id: gathered with the replay,
+	// cleared with it, for restoreLocked's date pass.
+	replaySent map[string]time.Time
 	muted      bool // a replayed update is being taken: its events aren't the app's
 
 	// mirrored says the items, but for those unsaved and those that only
@@ -450,8 +453,8 @@ func (c *chat) noticeLocked(reason, text string) {
 }
 
 func (c *chat) statusLocked() model.Status {
-	idle := c.agent == nil && !c.busy && c.parent == nil && !c.record.Archived
-	return model.Status{Busy: c.busy, Started: c.started, Waiting: c.waitsLocked(), CanFork: c.canFork, Images: c.canImage,
+	idle := c.agent == nil && !c.busyLocked() && c.parent == nil && !c.record.Archived
+	return model.Status{Busy: c.busyLocked(), Started: c.started, Waiting: c.waitsLocked(), CanFork: c.canFork, Images: c.canImage,
 		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: !idle && c.canAskContextLocked() == nil, CanWriteCommit: !idle && c.canWriteCommitLocked() == nil,
 		Asleep: idle && !c.reopenFailed, ReopenFailed: idle && c.reopenFailed, SessionGone: idle && c.reopenFailed && c.sessionGone, CanSleep: c.parent == nil && c.canSleepLocked() == nil,
 		Background: c.runningLocked(), Workflows: c.workflowsLocked(), OwnTurn: c.ownTurn}

@@ -13,6 +13,7 @@ import 'package:nushi/github_view.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
+import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/run_state.dart';
@@ -56,7 +57,7 @@ class ItemBadges extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final it = item;
-    final checks = checksIcon(t, it.checks);
+    final checks = checksIcon(t, it);
     final review = reviewWords(t, it.review);
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -65,7 +66,7 @@ class ItemBadges extends StatelessWidget {
           tooltip(
             context,
             checks.words,
-            Icon(checks.icon, size: 14, color: checks.color),
+            CheckMark(checks.icon, size: 14, color: checks.color),
           ),
         if (review != null) ...[
           const SizedBox(width: 8),
@@ -292,7 +293,7 @@ class GitHubChip extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final l = link;
-    final checks = it == null ? null : checksIcon(t, it.checks);
+    final checks = it == null ? null : checksIcon(t, it);
     final review = it == null ? null : reviewWords(t, it.review);
     final details = it == null
         ? '${l.repo}#${l.number}'

@@ -1,6 +1,6 @@
 # 0111. Surfaces, not outlines: floating panes on the window
 
-Status: accepted, 2026-11-11. Amended by [0128](0128-toasts-come-from-the-top.md): toasts float under the header too; and on 2026-11-17 the notices no longer float: they take a row of their own under the header (0128).
+Status: accepted, 2026-11-11. Amended by [0128](0128-toasts-come-from-the-top.md): toasts float under the header too; and on 2026-11-17 the notices no longer float: they take a row of their own under the header (0128). Amended 2026-11-25: the status card shows today's spend (which opens Settings › Usage, [0136](0136-usage-in-the-daemons-sqlite-database.md)) and the memory, and no longer the agents' counts, which repeated the chats' own dots (the owner reads only the memory, and bills by API use); the memory and the remote's mark stay at its end with a spend or without.
 
 ## Context
 The owner found the app's look dated and approved a mock of a fresh one (2026-11-11), wanting the app to look like it. ADR 0110 made the corners rounder; this page is the rest of the look, built the same day in five passes on one branch (the frame, the transcript and composer, the shared controls with Changes and the Pull request tab, then every view left, the phone and the Mac's window buttons) and changed where the owner saw a pass and said so: the details stay flat inside the pane, the composer's Stop is the old one, and what Nushi copied from Claude's desktop app keeps its structure. Every view is in it; this is its reference.

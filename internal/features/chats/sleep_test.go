@@ -3,10 +3,12 @@ package chats
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -78,81 +80,105 @@ func TestNoSleepWithoutLoad(t *testing.T) {
 // A chat sleeps on its own once idle, but not while anything would be
 // lost, and activity puts it off. Each check is a doze of its own, with
 // the chat idle for good but for what's checked; the service's loop is
-// set going only at the end (its sleep time is never until then), so no
-// check races it. The check right after an event takes an hour's sleep
-// time: a short one could pass before the doze on a slow machine.
+// set going only at the end (its sleep time is never until then). In a
+// bubble: no time passes but what the test lets pass, so a doze right
+// after an event is exact, and the loop's tick is a minute of its clock.
 func TestAutoSleep(t *testing.T) {
-	const after = 30 * time.Millisecond
-	agent := &fakeAgent{}
-	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
-	prefs := &memPrefs{}
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}},
-		Options{Sleep: prefs, Timing: Timing{SleepCheck: 5 * time.Millisecond}})
-	defer svc.Close()
-	c := startChat(t, svc, t.TempDir())
-	turn(t, svc, c, "one")
-	blockers := map[string]func(c *chat) (undo func()){
-		"a turn":               func(c *chat) func() { c.started = time.Now(); return func() { c.started = time.Time{} } },
-		"the agent's own turn": func(c *chat) func() { c.ownTurn = true; return func() { c.ownTurn = false } },
-		"a move or rewind":     func(c *chat) func() { c.busy = true; return func() { c.busy = false } },
-		"a queued message": func(c *chat) func() {
-			c.queue = []model.Message{{Text: "later"}}
-			return func() { c.queue = nil }
-		},
-		"a permission prompt": func(c *chat) func() {
-			c.waiting["p"] = make(chan string, 1)
-			return func() { delete(c.waiting, "p") }
-		},
-		"a question": func(c *chat) func() {
-			c.questions["q"] = make(chan []model.Field, 1)
-			return func() { delete(c.questions, "q") }
-		},
-		"a background command": func(c *chat) func() {
-			c.items = append(c.items, model.Item{ID: "sh", BackgroundCommand: &model.BackgroundCommand{State: "running"}})
-			return func() { c.items = c.items[:len(c.items)-1] }
-		},
-		"a subagent": func(c *chat) func() {
-			c.items = append(c.items, model.Item{ID: "sa", Subagent: &model.Subagent{State: "running"}})
-			return func() { c.items = c.items[:len(c.items)-1] }
-		},
-		"a side chat": func(c *chat) func() {
-			c.sides["x"] = &chat{svc: &Service{remembered: &memModes{}}}
-			return func() { delete(c.sides, "x") }
-		},
-	}
-	awake := func() bool {
+	synctest.Test(t, func(t *testing.T) {
+		const after = 30 * time.Millisecond
+		agent := &fakeAgent{}
+		testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
+		prefs := &memPrefs{}
+		svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sleep: prefs})
+		defer svc.Close()
+		c := startChat(t, svc, t.TempDir())
+		turn(t, svc, c, "one")
+		blockers := map[string]func(c *chat) (undo func()){
+			"a turn":               func(c *chat) func() { c.started = time.Now(); return func() { c.started = time.Time{} } },
+			"the agent's own turn": func(c *chat) func() { c.ownTurn = true; return func() { c.ownTurn = false } },
+			"a queued message": func(c *chat) func() {
+				c.queue = []model.Message{{Text: "later"}}
+				return func() { c.queue = nil }
+			},
+			"a permission prompt": func(c *chat) func() {
+				c.waiting["p"] = make(chan string, 1)
+				return func() { delete(c.waiting, "p") }
+			},
+			"a question": func(c *chat) func() {
+				c.questions["q"] = make(chan []model.Field, 1)
+				return func() { delete(c.questions, "q") }
+			},
+			"a background command": func(c *chat) func() {
+				c.items = append(c.items, model.Item{ID: "sh", BackgroundCommand: &model.BackgroundCommand{State: "running"}})
+				return func() { c.items = c.items[:len(c.items)-1] }
+			},
+			"a subagent": func(c *chat) func() {
+				c.items = append(c.items, model.Item{ID: "sa", Subagent: &model.Subagent{State: "running"}})
+				return func() { c.items = c.items[:len(c.items)-1] }
+			},
+			"a side chat": func(c *chat) func() {
+				c.sides["x"] = &chat{svc: &Service{remembered: &memModes{}}}
+				return func() { delete(c.sides, "x") }
+			},
+		}
+		awake := func() bool {
+			c.mu.Lock()
+			defer c.mu.Unlock()
+			return c.agent != nil
+		}
+		for name, block := range blockers {
+			c.mu.Lock()
+			undo := block(c)
+			c.active = time.Time{}
+			c.mu.Unlock()
+			svc.doze(c, after)
+			c.mu.Lock()
+			undo()
+			c.mu.Unlock()
+			if !awake() {
+				t.Fatalf("slept during %s", name)
+			}
+		}
+		// A rewind under way, held as its fork is made (one that then fails).
+		agent.mu.Lock()
+		agent.forkErr = errors.New("no fork")
+		agent.mu.Unlock()
+		for _, text := range []string{"two", "three"} { // a message to rewind to: forked at the agent's answer before it
+			agent.updates = []acp.SessionUpdate{chunk("m-"+text, "ok")}
+			turn(t, svc, c, text)
+		}
+		release := rewinding(t, svc, agent, c, lastAsked(c))
 		c.mu.Lock()
-		defer c.mu.Unlock()
-		return c.agent != nil
-	}
-	for name, block := range blockers {
-		c.mu.Lock()
-		undo := block(c)
 		c.active = time.Time{}
 		c.mu.Unlock()
-		svc.doze(c, after)
-		c.mu.Lock()
-		undo()
-		c.mu.Unlock()
-		if !awake() {
-			t.Fatalf("slept during %s", name)
+		if svc.doze(c, after); !awake() {
+			t.Fatal("slept during a rewind")
 		}
-	}
-	// An event puts it off.
-	c.mu.Lock()
-	c.active = time.Time{}
-	c.usageChangedLocked()
-	c.mu.Unlock()
-	if svc.doze(c, time.Hour); !awake() { // an hour, as the event is only just past
-		t.Fatal("slept right after an event")
-	}
-	prefs.after.Store(int64(after))
-	eventually(t, c, func() bool { return c.agent == nil && c.asleep })
-	launches, _, _ := agent.count()
-	turn(t, svc, c, "two")
-	if again, _, _ := agent.count(); again != launches+1 {
-		t.Errorf("%d launches after waking, was %d", again, launches)
-	}
+		if err := release(); err == nil {
+			t.Fatal("rewound")
+		}
+		// An event puts it off.
+		c.mu.Lock()
+		c.active = time.Time{}
+		c.usageChangedLocked()
+		c.mu.Unlock()
+		if svc.doze(c, after); !awake() {
+			t.Fatal("slept right after an event")
+		}
+		prefs.after.Store(int64(after))
+		pass(time.Minute) // the loop's tick
+		c.mu.Lock()
+		slept := c.agent == nil && c.asleep
+		c.mu.Unlock()
+		if !slept {
+			t.Fatal("still awake after the loop's tick")
+		}
+		launches, _, _ := agent.count()
+		turn(t, svc, c, "two")
+		if again, _, _ := agent.count(); again != launches+1 {
+			t.Errorf("%d launches after waking, was %d", again, launches)
+		}
+	})
 }
 
 // SleepAgent puts an agent's awake chats to sleep, before its adapter
@@ -176,13 +202,15 @@ func TestSleepAgent(t *testing.T) {
 // A chat woken while the agent it fell asleep from is still stopping
 // waits for that process to end before another opens its session: two
 // processes writing one session corrupt the agent's own history (ADR
-// 0047). The message waits, queued. A process that outlives twice
-// StopGrace is killed; one that outlives the kill keeps the chat from
-// reopening, saying so, until it has ended.
+// 0047). The message waits, queued. A process that outlives StopGrace is
+// killed (its Stop); one that outlives the kill keeps the chat from
+// reopening, saying so, until it has ended. Each case in a bubble: no time
+// passes but what it lets pass, so each wait is exact.
 func TestWakingWaitsForTheOldAgent(t *testing.T) {
-	asleep := func(t *testing.T, grace time.Duration, unkillable bool) (*Service, *fakeAgent, *chat, chan struct{}) {
+	grace := Timing{}.stopGrace()
+	asleep := func(t *testing.T, unkillable bool) (*Service, *fakeAgent, *chat, chan struct{}) {
 		t.Helper()
-		svc, agent, c := newTimedChat(t, claudeSession, &memModes{}, Timing{StopGrace: grace})
+		svc, agent, c := newChat(t, claudeSession, &memModes{})
 		agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 		turn(t, svc, c, "one")
 		gate := make(chan struct{})
@@ -197,11 +225,13 @@ func TestWakingWaitsForTheOldAgent(t *testing.T) {
 				close(gate)
 			}
 		})
-		svc.doze(c, 0)
+		go svc.doze(c, 0) // it returns once the old agent has ended
+		synctest.Wait()
 		if !svc.Status(c.record).Asleep {
 			t.Fatal("not asleep")
 		}
 		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle)) // queued: it doesn't wait or fail
+		synctest.Wait()
 		return svc, agent, c, gate
 	}
 	check := func(t *testing.T, agent *fakeAgent, launches, kills int) {
@@ -212,40 +242,137 @@ func TestWakingWaitsForTheOldAgent(t *testing.T) {
 			t.Errorf("%d launches over a running agent; %d launches, want %d; %d kills, want %d", agent.overlaps, agent.launches, launches, agent.closed, kills)
 		}
 	}
+	woke := func(t *testing.T, c *chat) {
+		t.Helper()
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if c.busyLocked() || len(c.queue) != 0 || !c.started.IsZero() || c.agent == nil {
+			t.Fatalf("not woken: busy %v, %d queued, agent %v", c.busyLocked(), len(c.queue), c.agent != nil)
+		}
+	}
+	reopening := func(c *chat) bool {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		return c.busyLocked()
+	}
 	answered := []string{"user:one", "agent:ok", "user:two", "agent:ok"}
 
 	t.Run("in time", func(t *testing.T) {
-		_, agent, c, gate := asleep(t, time.Hour, false) // it's never killed, however slow the test
-		eventually(t, c, func() bool { return c.busy })
-		time.Sleep(50 * time.Millisecond) // a negative window: the reopen waits
-		check(t, agent, 1, 0)
-		close(gate)
-		eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 && c.started.IsZero() && c.agent != nil })
-		check(t, agent, 2, 0)
-		if got := texts(c); !slices.Equal(got, answered) {
-			t.Errorf("items %q", got)
-		}
+		synctest.Test(t, func(t *testing.T) {
+			_, agent, c, gate := asleep(t, false)
+			if !reopening(c) {
+				t.Fatal("the reopen didn't begin")
+			}
+			check(t, agent, 1, 0) // the reopen waits
+			close(gate)
+			synctest.Wait()
+			woke(t, c)
+			check(t, agent, 2, 0)
+			if got := texts(c); !slices.Equal(got, answered) {
+				t.Errorf("items %q", got)
+			}
+		})
 	})
 
 	t.Run("killed", func(t *testing.T) {
-		_, agent, c, _ := asleep(t, 10*time.Millisecond, false)
-		eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 && c.started.IsZero() && c.agent != nil })
-		check(t, agent, 2, 1)
-		if got := texts(c); !slices.Equal(got, answered) {
-			t.Errorf("items %q", got)
-		}
+		synctest.Test(t, func(t *testing.T) {
+			_, agent, c, _ := asleep(t, false)
+			pass(grace - time.Millisecond)
+			check(t, agent, 1, 0) // not yet killed
+			pass(time.Millisecond)
+			woke(t, c)
+			check(t, agent, 2, 1)
+			if got := texts(c); !slices.Equal(got, answered) {
+				t.Errorf("items %q", got)
+			}
+		})
 	})
 
 	t.Run("outlives the kill", func(t *testing.T) {
-		svc, agent, c, gate := asleep(t, 10*time.Millisecond, true)
-		eventually(t, c, func() bool { return c.reopenFailed && !c.busy })
-		check(t, agent, 1, 1)
-		if got := texts(c); len(got) != 3 || !strings.Contains(got[2], "still running") {
-			t.Errorf("items %q", got)
-		}
-		close(gate) // it ends at last: Try again reopens it
-		testcheck.NoErr(t, svc.Reopen(c.id))
-		eventually(t, c, func() bool { return c.agent != nil && !c.busy })
-		check(t, agent, 2, 1)
+		synctest.Test(t, func(t *testing.T) {
+			svc, agent, c, gate := asleep(t, true)
+			pass(reopenTimeout - time.Millisecond)
+			if !reopening(c) {
+				t.Fatal("gave up on the old agent before the reopen's time ran out")
+			}
+			pass(time.Millisecond)
+			c.mu.Lock()
+			failed, busy := c.reopenFailed, c.busyLocked()
+			c.mu.Unlock()
+			if !failed || busy {
+				t.Fatalf("reopen failed %v, busy %v", failed, busy)
+			}
+			check(t, agent, 1, 1)
+			if got := texts(c); len(got) != 3 || !strings.Contains(got[2], "still running") {
+				t.Errorf("items %q", got)
+			}
+			close(gate) // it ends at last: Try again reopens it
+			testcheck.NoErr(t, svc.Reopen(c.id))
+			synctest.Wait()
+			c.mu.Lock()
+			reopened := c.agent != nil && !c.busyLocked()
+			c.mu.Unlock()
+			if !reopened {
+				t.Fatal("not reopened")
+			}
+			check(t, agent, 2, 1)
+		})
 	})
+}
+
+// A chat put to sleep from its menu and woken while its agent still stops
+// (a change of its options wakes it) waits for that agent to end before
+// another opens its session, as a dozed one does: two processes writing
+// one session corrupt the agent's own history (ADR 0047). In a bubble: the
+// old agent ends only when the test lets it.
+func TestSleepThenWakeWaitsForTheOldAgent(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		svc, agent, c := newChat(t, claudeSession, &memModes{})
+		turn(t, svc, c, "one")
+		gate := make(chan struct{})
+		agent.mu.Lock()
+		agent.stopGate = gate
+		agent.mu.Unlock()
+		slept := make(chan error, 1)
+		go func() { slept <- svc.Sleep(c.id) }()
+		synctest.Wait()
+		set := make(chan error, 1)
+		go func() { set <- svc.SetConfig(t.Context(), c.id, "model", "sonnet") }()
+		synctest.Wait()
+		launches, _, _ := agent.count()
+		agent.mu.Lock()
+		overlaps := agent.overlaps
+		agent.mu.Unlock()
+		if overlaps != 0 || launches != 1 {
+			t.Errorf("%d launches over a running agent; %d launches, want 1", overlaps, launches)
+		}
+		close(gate)
+		testcheck.NoErr(t, <-slept)
+		testcheck.NoErr(t, <-set)
+		agent.mu.Lock()
+		overlaps = agent.overlaps
+		agent.mu.Unlock()
+		if launches, _, _ := agent.count(); overlaps != 0 || launches != 2 {
+			t.Errorf("after the old agent ended: %d overlaps, %d launches, want 2", overlaps, launches)
+		}
+	})
+}
+
+// A chat put to sleep from its menu refuses a message from the moment it
+// is marked asleep, before its agent's stop takes the chat's lock: one
+// started there would be a turn end cancels at once.
+func TestSleepRefusesAMessageBeforeItsStop(t *testing.T) {
+	svc, agent, c := newChat(t, claudeSession, &memModes{})
+	turn(t, svc, c, "one")
+	c.mu.Lock()
+	testcheck.NoErr(t, c.nodOffLocked()) // Sleep's first step; stop comes next
+	c.mu.Unlock()
+	err := svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle)
+	agent.mu.Lock()
+	prompts := slices.Clone(agent.prompts)
+	agent.mu.Unlock()
+	if err == nil || !strings.Contains(err.Error(), "stopping") || len(prompts) != 1 {
+		t.Errorf("Prompt = %v; the agent got %q", err, prompts)
+	}
+	svc.stop(c)
 }

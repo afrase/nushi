@@ -16,7 +16,8 @@ import (
 // testRepo is the owner's throwaway repository for these tests: public,
 // a tiny Go module whose "on-demand" check fails on a branch with a FAIL
 // file. Pull request 1 (branch subtract) has that file, review threads
-// (one outdated) and a comment; issue 2 is assigned to the owner. No
+// (one outdated) and a comment; issue 2 is assigned to the owner. Both
+// must be open (reopened on 2026-11-24, docs/facts/github.md). No
 // other repository is read or written through the owner's token.
 const testRepo = "afrase/nushi-gh-test"
 
@@ -69,11 +70,17 @@ func TestLive(t *testing.T) {
 	if len(in.Mine) == 0 || in.Mine[0].Number != 1 || len(in.Assigned) == 0 || in.Assigned[0].Number != 2 {
 		t.Fatalf("inbox: %+v", in)
 	}
+	// A row's own facts and when it was opened; no size or merge state,
+	// which the inbox doesn't ask (ADR 0117).
+	if m := in.Mine[0]; m.Created.IsZero() || m.Head != "" || m.MergeState != "" || m.ChangedFiles != 0 {
+		t.Fatalf("the inbox's pull request: %+v", m)
+	}
 	p, err := c.Pull(ctx, testRepo, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.Head != "subtract" || p.Base != "main" || len(p.Threads) < 3 || len(p.Runs) == 0 || !strings.Contains(p.Body, "Sub") {
+	if !p.Pull || p.Head != "subtract" || p.Base != "main" || len(p.Threads) < 3 || len(p.Runs) == 0 || p.CheckCounts.Failed == 0 ||
+		!strings.Contains(p.Body, "Sub") {
 		t.Fatalf("pull: %+v", p)
 	}
 	if strings.Contains(p.Body, "template comment") {
@@ -92,10 +99,6 @@ func TestLive(t *testing.T) {
 	if err != nil || !strings.Contains(Tail(log, TailSize), "FAIL") {
 		t.Fatalf("job log: %v\n%s", err, Tail(log, 2000))
 	}
-	st, err := c.Status(ctx, []string{p.ID, in.Assigned[0].ID})
-	if err != nil || st[p.ID].Number != 1 || st[in.Assigned[0].ID].Pull {
-		t.Fatalf("status: %+v %v", st, err)
-	}
 	base, files, err := c.Compare(ctx, testRepo, p.BaseOID, p.HeadOID)
 	if err != nil || base == "" || len(files) == 0 {
 		t.Fatalf("compare: %s %+v %v", base, files, err)
@@ -106,7 +109,7 @@ func TestLive(t *testing.T) {
 		t.Fatalf("blobs: %+v %v", blobs, err)
 	}
 	is, err := c.Issue(ctx, testRepo, 2)
-	if err != nil || is.Pull || !strings.Contains(is.Body, "Mul") {
+	if err != nil || is.Pull || is.Created.IsZero() || !strings.Contains(is.Body, "Mul") {
 		t.Fatalf("issue: %+v %v", is, err)
 	}
 }
@@ -115,10 +118,47 @@ func TestLive(t *testing.T) {
 // request (a GraphQL operation, or the REST path's last part), and a
 // GraphQL answer's query beside it (graphql_X.graphql), which the tests'
 // fake checks a request against (fake.file). Request headers (the token)
-// are never written.
+// are never written, and every email address in an answer is masked
+// (masked): a compare answer carries each commit's author's and
+// committer's, GitHub's own @users.noreply.github.com ones holding an
+// account's id and login, and none may be committed. So compare.json,
+// trimmed by hand to its files and holding no commit, stays as it is,
+// and a re-record writes it masked.
 type recorder struct{ t *testing.T }
 
 var nameRE = regexp.MustCompile(`[^A-Za-z0-9]+`)
+
+// stringRE is a JSON string literal, its escapes and all.
+var stringRE = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)
+
+// emailRE is an email address in a decoded string: a local part of any
+// characters but space and those that end one in text (quotes, brackets,
+// a comma, a colon, a slash), so "josé@" and "o'neil@" are taken whole,
+// and a domain of letters, digits, dots and hyphens.
+var emailRE = regexp.MustCompile(`[^\s"\\<>@()\[\],;:/]+@[\p{L}\p{N}.-]+\.\p{L}{2,}`)
+
+// maskedEmail is what every email address in a recorded answer becomes.
+const maskedEmail = "someone@example.com"
+
+// masked is a JSON answer with each email address in it replaced by
+// maskedEmail. Each string is decoded before it is searched, so an escape
+// in or before an address hides none of it; a string holding one is
+// written again, and every other byte stays as it was.
+func masked(b []byte) []byte {
+	return stringRE.ReplaceAllFunc(b, func(lit []byte) []byte {
+		var s string
+		if json.Unmarshal(lit, &s) != nil || !emailRE.MatchString(s) {
+			return lit
+		}
+		var out bytes.Buffer
+		enc := json.NewEncoder(&out)
+		enc.SetEscapeHTML(false)
+		if enc.Encode(emailRE.ReplaceAllString(s, maskedEmail)) != nil {
+			return lit
+		}
+		return bytes.TrimSuffix(out.Bytes(), []byte("\n"))
+	})
+}
 
 func (r recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	name := nameRE.ReplaceAllString(req.URL.Path[strings.LastIndex(req.URL.Path, "/")+1:], "_")
@@ -149,7 +189,7 @@ func (r recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	resp.Body = io.NopCloser(bytes.NewReader(b))
 	var pretty bytes.Buffer
-	if json.Indent(&pretty, b, "", "  ") == nil {
+	if json.Indent(&pretty, masked(b), "", "  ") == nil {
 		if err := os.WriteFile("testdata/"+name+".json", append(pretty.Bytes(), '\n'), 0o600); err != nil {
 			r.t.Error(err)
 		}
@@ -228,5 +268,51 @@ func TestLiveInboxFilters(t *testing.T) {
 	hidden, err := c.Inbox(ctx, InboxFilter{Repos: []string{testRepo}, Hide: []string{testRepo}})
 	if err != nil || hidden.MineTotal != 0 || hidden.AssignedTotal != 0 {
 		t.Fatalf("hidden: %+v %v", hidden, err)
+	}
+}
+
+// TestRecorderMasksEmails: an answer's email addresses (a commit's
+// author's, one in a nested object, GitHub's noreply one, one right after
+// an escape) are masked before it is written, and nothing else changes:
+// not the escapes of a string without one, logins, URLs, an @mention or a
+// pinned version. Whatever reads as an address is masked too, on purpose:
+// a URL's user and password with its host, an SSH remote's user and host,
+// and a scoped package at a pre-release with a word in its last part.
+func TestRecorderMasksEmails(t *testing.T) {
+	answer := `{"commits":[{"sha":"465b7a4b","commit":{"author":{"name":"Octo Cat","email":"octo.cat+gh@mail.example.org","date":"2026-11-24T12:00:00Z"},` +
+		`"committer":{"name":"GitHub","email":"noreply@github.com"}},"author":{"login":"octo","html_url":"https://github.com/octo"}}],` +
+		`"files":[{"patch":"@@ -1 +1 @@\n-a\n+b"}],"pr":{"review":{"author":{"emails":{"primary":"1234+octo@users.noreply.github.com"}}}},` +
+		`"body":"Thanks @octo!\nmail me at x_y@host.io, or \"quoted\" \\back"}`
+	want := `{"commits":[{"sha":"465b7a4b","commit":{"author":{"name":"Octo Cat","email":"someone@example.com","date":"2026-11-24T12:00:00Z"},` +
+		`"committer":{"name":"GitHub","email":"someone@example.com"}},"author":{"login":"octo","html_url":"https://github.com/octo"}}],` +
+		`"files":[{"patch":"@@ -1 +1 @@\n-a\n+b"}],"pr":{"review":{"author":{"emails":{"primary":"someone@example.com"}}}},` +
+		`"body":"Thanks @octo!\nmail me at someone@example.com, or \"quoted\" \\back"}`
+	got := masked([]byte(answer))
+	if string(got) != want {
+		t.Fatalf("masked:\n%s\nwant:\n%s", got, want)
+	}
+	if !json.Valid(got) {
+		t.Fatal("not JSON")
+	}
+	edge := `{"a":"\nme@x.io","b":"\u0041b@c.io"}`
+	if got := string(masked([]byte(edge))); got != `{"a":"\nsomeone@example.com","b":"someone@example.com"}` {
+		t.Fatalf("an escape before or in an address: %s", got)
+	}
+	// A local part may hold any letter and an apostrophe; none of it stays.
+	for _, address := range []string{"josé@example.com", "日本@example.jp", "o'neil@example.com", "名前@例え.jp"} { //nolint:gosmopolitan // addresses in other scripts are what is checked
+		if got := string(masked([]byte(`{"email":"` + address + `"}`))); got != `{"email":"someone@example.com"}` {
+			t.Errorf("%s: %s", address, got)
+		}
+	}
+	for text, want := range map[string]string{
+		"https://github.com/octo/x?a=b@c":          "https://github.com/octo/x?a=b@c",
+		"actions/checkout@v4, react@18.3.1, @octo": "actions/checkout@v4, react@18.3.1, @octo",
+		"https://user:pw@host.example.com/x":       "https://user:someone@example.com/x",
+		"git@github.com:afrase/nushi-gh-test.git":  "someone@example.com:afrase/nushi-gh-test.git",
+		"@scope/pkg@1.0.0-rc.alpha":                "@scope/someone@example.com",
+	} {
+		if got := string(masked([]byte(`"` + text + `"`))); got != `"`+want+`"` {
+			t.Errorf("%s: %s", text, got)
+		}
 	}
 }

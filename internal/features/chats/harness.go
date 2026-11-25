@@ -44,11 +44,6 @@ type DefaultReader interface {
 
 // Transcript is what in the agent's updates and replays isn't what it seems.
 type Transcript interface {
-	// TurnDone says a usage update reports the end of the running turn's
-	// own work: an agent that holds the prompt open for subagents it left
-	// running in the background (Claude) answers it only once they end,
-	// so the chat counts as idle from here while one runs.
-	TurnDone(*acp.UsageUpdate) bool
 	// OwnTurnEnded says a usage update ends the agent's own turn: one that
 	// sends usage after each model call in a turn ends it with only one of
 	// them (Claude: the result's, the one with the cost). An agent without
@@ -133,21 +128,27 @@ type BackgroundTasks interface {
 	// its shell is gone, and only where the agent hasn't said
 	// (followCommand).
 	ReadBackgroundCommand(id, file string) (output, end, state string, err error)
-	// CommandTask reads the agent's own word on such a command, from an
-	// update of the call that started it (its _meta): the task's id, its
-	// state ("running", "done", "failed" or "stopped") and how it ended in
-	// the file's words ("exited with code 0", "killed"; "" unsaid). ok is
-	// false for an update that says nothing of one. Once heard, it is the
-	// source of truth for whether the command runs (ADR 0130).
-	CommandTask(meta map[string]any) (id, state, end string, ok bool)
+	// StatBackgroundCommand is that file's size and when it last changed,
+	// without opening it, by the same rules: a file whose both are as
+	// at its last read isn't read again (followCommand).
+	StatBackgroundCommand(id, file string) (size int64, modified time.Time, err error)
+	// Task reads the agent's own word on one of its tasks, from an update
+	// of the call that started it (its _meta): the task's id, whether it
+	// is a background command's or a workflow's (or one Nushi doesn't
+	// read), its state and how it ended. ok is false for an update that
+	// says nothing of a task. Once heard, it is the source of truth for
+	// whether the command or the run goes on (ADR 0130, ADR 0127), and an
+	// update that carries only it is no step of the agent's work.
+	Task(meta map[string]any) (t model.TaskUpdate, ok bool)
 	// RunsBackgroundCommand says a process the agent runs (its command
 	// line) is the shell running the command of call, a tool call that left
-	// it running in the background: Nushi then stops the command itself, by
-	// its process group, without a turn (children.go).
+	// it running in the background: the follower then knows the command
+	// still runs where the agent hasn't said (commandShellRuns).
 	RunsBackgroundCommand(call model.Item, args []string) bool
-	// StopTask asks the agent to stop one of its background tasks (a
-	// subagent, or a command it left running), by the agent's id for it,
-	// when Nushi can't stop it itself.
+	// StopTask is a prompt asking the agent to stop one of its background
+	// tasks (a subagent, or a command or workflow it left running), by the
+	// agent's id for it, when it can't be stopped with no turn
+	// (TaskStopper).
 	StopTask(taskID string) string
 	// ReadStopTask reads such a prompt back (label is what it names the
 	// task, "" when only its id).
@@ -157,6 +158,18 @@ type BackgroundTasks interface {
 	// of that id, which ends only a command Nushi shows running (a subagent
 	// could be named wrongly).
 	Stopped(call model.Item) (taskID string, unknown bool)
+}
+
+// WorkReader tells where the agent works once one of its tool calls
+// completes: in a worktree it entered, or back in its session's folder
+// (Claude's EnterWorktree and ExitWorktree, docs/facts/claude.md). The
+// chat keeps one folder: the call that entered a worktree only offers
+// to move the chat there (ADR 0150).
+type WorkReader interface {
+	// WorksIn reads it from an update of a tool call (its _meta): the
+	// worktree, or a zero one for the session's folder; ok is false for an
+	// update that says nothing of it, and for a call that failed.
+	WorksIn(meta map[string]any) (to model.AgentWorktree, ok bool)
 }
 
 // ReadOnly is an agent with a mode that can't change anything. Its name is
@@ -185,19 +198,21 @@ type CommandHider interface {
 	HidesCommand(name string) bool
 }
 
-// ContextCommander has a slash command that says what fills the context:
-// ContextCommand, run unseen in a throwaway fork; ReadContext reads its reply
-// (the reply's messages, in order, at least one).
-type ContextCommander interface {
-	ContextCommand() string
-	ReadContext(messages []string) model.ContextUsage
-}
-
-// ContextAsker can be asked what fills the context, and needs no
-// ContextCommander: Context asks, with call (an extension of the agent's:
-// Agent.Call), leaving nothing behind: no fork, no command.
+// ContextAsker can be asked what fills the context: Context asks, with
+// call (an extension of the agent's: Agent.Call), leaving nothing behind:
+// no fork, no command. An agent without it isn't asked (ADR 0017).
 type ContextAsker interface {
 	Context(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error)
+}
+
+// TaskStopper can stop one of the agent's tasks that has no session of
+// its own (a background command, a workflow's run) with no turn: EndTask
+// stops task taskID of session sessionID with call (an extension of the
+// agent's: Agent.Call). Its answer isn't the task's end: the task's own
+// update is (BackgroundTasks.Task). An agent without it is asked to stop
+// the task in a prompt (BackgroundTasks.StopTask; ADR 0065).
+type TaskStopper interface {
+	EndTask(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID, taskID string) error
 }
 
 // TitleMaker makes a short title for a piece of a session's text (a pinned
@@ -274,7 +289,21 @@ type WorkflowReader interface {
 
 // MessageDater says when the agent's own files say session sid's messages of
 // folder were sent, by item id: a replay doesn't tell, so a message Nushi
-// never saw gets its time from here.
+// never saw gets its time from here. It is Ante's alone (ante.Local reads
+// the session's events.jsonl a second time on each reopen), until a real
+// Ante is checked to send a time on its host's replay lines: its bridge
+// would then pass that time on in the replay (SentReader), and this goes
+// (ADR 0076).
 type MessageDater interface {
 	MessageTimes(sid, folder string) map[string]time.Time
+}
+
+// SentReader says when a replayed message was sent, as the agent tells it
+// in the _meta of one of the message's chunks (the first): a zero time
+// when that chunk doesn't say, or says what is no time. A replay's times
+// are gathered by message id, whatever the chunk's kind (a message that
+// begins with thinking tells it on its thought), for restoreLocked
+// (ADR 0076).
+type SentReader interface {
+	Sent(meta map[string]any) time.Time
 }

@@ -35,7 +35,7 @@ const branchSlug = 40
 //nolint:contextcheck // between turns, after the request that started the turn (or the agent's update) is gone
 func (c *chat) nameBranchLocked() {
 	wt := c.record.Worktree
-	if wt == nil || !wt.AutoName || c.parent != nil || c.worktrees == nil || c.busy || c.ownTurn || c.backgroundLocked(0) {
+	if wt == nil || !wt.AutoName || c.parent != nil || c.worktrees == nil || c.busyLocked() || c.ownTurn || c.backgroundLocked(0) {
 		return
 	}
 	if c.kind.NamesSessions && !c.titled && c.record.Name == "" && !c.waitedTitle {
@@ -156,8 +156,9 @@ func usesBranch(s model.ChatRecord, wt model.Worktree) bool {
 // RenameBranch renames the branch of a chat's worktree to name, as the
 // user asked, and names it so for good (the chat's title no longer does);
 // the transcript says so, and the agent is told with the next prompt.
-// Refused during a turn, and when the branch is on a remote or another
-// worktree or chat has it; the worktree's folder stays.
+// Refused while the agent works or waits on the user (workingLocked),
+// and when the branch is on a remote or another worktree or chat has it;
+// the worktree's folder stays.
 func (s *Service) RenameBranch(ctx context.Context, chatID, name string) error {
 	c, err := s.stored(chatID)
 	if err != nil {
@@ -166,12 +167,13 @@ func (s *Service) RenameBranch(ctx context.Context, chatID, name string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	wt := c.record.Worktree
-	switch {
-	case wt == nil:
+	if wt == nil {
 		return errors.New("the chat has no worktree of its own")
-	case c.busy || c.ownTurn || c.backgroundLocked(0):
-		return errors.New("the agent is working; rename the branch once it's done")
-	case name == wt.Branch:
+	}
+	if err := c.workingLocked("rename the branch"); err != nil {
+		return err
+	}
+	if name == wt.Branch {
 		c.branchNamedLocked("")
 		return nil
 	}

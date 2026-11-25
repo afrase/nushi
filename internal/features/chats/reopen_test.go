@@ -62,7 +62,7 @@ func TestAChatReopensOnceItsAgentIsReady(t *testing.T) {
 	}
 	shown, hidden := svc.chats["shown"], svc.chats["hidden"]
 	for _, c := range []*chat{shown, hidden} {
-		eventually(t, c, func() bool { return !c.busy && c.reopenFailed })
+		eventually(t, c, func() bool { return !c.busyLocked() && c.reopenFailed })
 	}
 	want := []string{"not_ready:Couldn't reopen the chat: Fake isn't set up: Settings › Agents"}
 	if got := notices(shown); !slices.Equal(got, want) {
@@ -73,7 +73,7 @@ func TestAChatReopensOnceItsAgentIsReady(t *testing.T) {
 	}
 
 	testcheck.NoErr(t, svc.Reopen("shown")) // still not set up: nothing starts
-	if launches, _, _ := agent.count(); launches != 0 || shown.busy || !slices.Equal(notices(shown), want) {
+	if launches, _, _ := agent.count(); launches != 0 || shown.busyLocked() || !slices.Equal(notices(shown), want) {
 		t.Errorf("shown while not set up: %d launches, notices %q", launches, notices(shown))
 	}
 
@@ -91,7 +91,7 @@ func TestAChatReopensOnceItsAgentIsReady(t *testing.T) {
 	}
 
 	testcheck.NoErr(t, svc.Reopen("shown"))
-	eventually(t, shown, func() bool { return shown.agent != nil && !shown.busy })
+	eventually(t, shown, func() bool { return shown.agent != nil && !shown.busyLocked() })
 	if got := texts(shown); !slices.Equal(got, []string{"agent:before"}) {
 		t.Errorf("shown: transcript %q, the notice should be gone", got)
 	}
@@ -99,7 +99,7 @@ func TestAChatReopensOnceItsAgentIsReady(t *testing.T) {
 		t.Errorf("%d launches; the hidden chat reopened before it was shown", launches)
 	}
 	testcheck.NoErr(t, svc.Reopen("hidden"))
-	eventually(t, hidden, func() bool { return hidden.agent != nil && !hidden.busy })
+	eventually(t, hidden, func() bool { return hidden.agent != nil && !hidden.busyLocked() })
 	if got := texts(hidden); !slices.Equal(got, []string{"agent:before"}) {
 		t.Errorf("hidden: transcript %q", got)
 	}
@@ -115,18 +115,18 @@ func TestAFailingReopenTriesOncePerShow(t *testing.T) {
 	eventually(t, c, func() bool { return c.agent == nil })
 	agent.loadErr = errors.New("no such session")
 	_, _ = svc.Get(c.id)
-	eventually(t, c, func() bool { return !c.busy && c.reopenFailed })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.reopenFailed })
 	before, _, _ := agent.count()
 	for i := 1; i <= 3; i++ {
 		_, _ = svc.Get(c.id) // not a show: a reopen it started would have the chat busy by now
 		c.mu.Lock()
-		busy := c.busy
+		busy := c.busyLocked()
 		c.mu.Unlock()
 		if busy {
 			t.Fatalf("a look that isn't a show reopened the chat (show %d)", i)
 		}
 		testcheck.NoErr(t, svc.Reopen(c.id))
-		eventually(t, c, func() bool { return !c.busy && c.reopenFailed })
+		eventually(t, c, func() bool { return !c.busyLocked() && c.reopenFailed })
 		if launches, _, _ := agent.count(); launches != before+i {
 			t.Fatalf("show %d: %d launches, want %d", i, launches, before+i)
 		}
@@ -137,7 +137,7 @@ func TestAFailingReopenTriesOncePerShow(t *testing.T) {
 	}
 	agent.loadErr = nil
 	testcheck.NoErr(t, svc.Reopen(c.id))
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
 	if got := notices(c); slices.Contains(got, failed) {
 		t.Errorf("notices %q once it reopened", got)
 	}
@@ -153,16 +153,16 @@ func TestAChatWhoseFolderIsGone(t *testing.T) {
 	folder := c.record.Folder
 	testcheck.NoErr(t, os.Remove(folder))
 	_, _ = svc.Get(c.id)
-	eventually(t, c, func() bool { return !c.busy && c.reopenFailed })
+	eventually(t, c, func() bool { return !c.busyLocked() && c.reopenFailed })
 	before, _, _ := agent.count()
 	testcheck.NoErr(t, svc.Reopen(c.id))
 	got := notices(c)
-	if launches, _, _ := agent.count(); launches != before || c.busy || len(got) != 2 || got[1] != "folder_gone:Couldn't reopen the chat: its folder "+folder+" is gone" {
+	if launches, _, _ := agent.count(); launches != before || c.busyLocked() || len(got) != 2 || got[1] != "folder_gone:Couldn't reopen the chat: its folder "+folder+" is gone" {
 		t.Errorf("%d launches, notices %q", launches-before, got)
 	}
 	testcheck.NoErr(t, os.Mkdir(folder, 0o700))
 	testcheck.NoErr(t, svc.Reopen(c.id))
-	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+	eventually(t, c, func() bool { return c.agent != nil && !c.busyLocked() })
 }
 
 // modeRefuser is a fake agent's process whose session/set_mode fails.

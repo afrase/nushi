@@ -3,7 +3,6 @@ package chats
 import (
 	"context"
 	"errors"
-	"slices"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -12,8 +11,8 @@ import (
 )
 
 // silentRun is the agent's reply to a prompt Nushi sends on its own in a
-// throwaway fork, kept out of the transcript: its messages' text, by
-// message id, in order.
+// throwaway fork (a commit message's), kept out of the transcript: its
+// messages' text, by message id, in order.
 type silentRun struct {
 	ids  []string
 	text map[string]string
@@ -23,12 +22,9 @@ type silentRun struct {
 	toolCalled bool
 }
 
-// ContextUsage runs the agent's command that says what fills its context
-// (ContextCommander, Claude's /context) without a trace, and returns
-// what it answers. It runs while the chat is idle, in a throwaway fork of
-// the session (same history, so the same numbers), which is deleted after:
-// the agent may keep the answer in a conversation. An agent that can't
-// fork isn't asked.
+// ContextUsage asks the agent what fills the chat's context
+// (ContextAsker), leaving no trace: no turn, no fork. It asks while the
+// chat is idle, of a side chat's session too (ADR 0017).
 func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.ContextUsage, error) {
 	c, err := s.awakeChat(ctx, chatID)
 	if err != nil {
@@ -36,63 +32,28 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.Contex
 	}
 	c.mu.Lock()
 	err = c.canAskContextLocked()
-	if err == nil && (c.busy || c.agent == nil) {
-		err = errors.New("the chat is busy")
+	switch {
+	case err != nil:
+	case c.busyLocked():
+		err = errors.New(c.stillLocked())
+	case c.agent == nil:
+		err = errors.New("the agent isn't running")
 	}
-	agent, sid, folder := c.agent, c.sid, c.record.Folder
+	agent, sid := c.agent, c.sid
 	c.mu.Unlock()
 	if err != nil {
 		return model.ContextUsage{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Minute) // an agent alive but silent
 	defer cancel()
-	if c.kind.contextAsker != nil {
-		return c.kind.contextAsker.Context(ctx, agent.Call, sid)
-	}
-	fork, _, err := c.forkSession(ctx, agent, sid, folder, nil)
-	if err != nil {
-		return model.ContextUsage{}, err
-	}
-	run := &silentRun{text: map[string]string{}}
-	c.mu.Lock()
-	c.probes[fork] = run
-	c.mu.Unlock()
-	defer func() {
-		s.throwAway(c, agent, fork)
-		c.mu.Lock()
-		delete(c.probes, fork)
-		c.mu.Unlock()
-	}()
-	if err := prompt(ctx, agent, acp.SessionID(fork), "/"+c.kind.contextCommand.ContextCommand()); err != nil {
-		return model.ContextUsage{}, err
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if len(run.ids) == 0 {
-		return model.ContextUsage{}, errors.New("the agent answered nothing")
-	}
-	var messages []string
-	for _, id := range run.ids {
-		messages = append(messages, run.text[id])
-	}
-	return c.kind.contextCommand.ReadContext(messages), nil
+	return c.kind.contextAsker.Context(ctx, agent.Call, sid)
 }
 
 // canAskContextLocked says why the agent can't be asked what fills the
-// chat's context, or nil: it needs a way to ask of its own (ContextAsker),
-// or the command, a fork, and a chat with messages (Claude would name a new
-// chat after /context).
+// chat's context, or nil: it needs a way to ask (ContextAsker).
 func (c *chat) canAskContextLocked() error {
-	cmd := c.kind.contextCommand
-	switch {
-	case c.kind.contextAsker != nil:
-		return nil
-	case cmd == nil || !slices.ContainsFunc(c.commandsLocked(), func(m model.Command) bool { return m.Name == cmd.ContextCommand() }):
+	if c.kind.contextAsker == nil {
 		return errors.New("the agent can't say what fills its context")
-	case !c.canFork || c.parent != nil:
-		return errors.New("the agent can't fork this chat to ask")
-	case !c.record.HasMessages:
-		return errors.New("the chat has no messages yet")
 	}
 	return nil
 }

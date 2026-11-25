@@ -836,7 +836,8 @@ class ListChatsResponse extends $pb.GeneratedMessage {
 
   /// Chats the daemon removed since it started because their agent no
   /// longer has their sessions (Claude Code deletes old ones), until
-  /// DismissRemovedChats; oldest first.
+  /// DismissRemovedChats; oldest first. From API 151 always empty: the
+  /// daemon keeps such a chat, marked (Status.session_gone; ADR 0015).
   @$pb.TagNumber(2)
   $pb.PbList<RemovedChat> get removed => $_getList(1);
 
@@ -5474,10 +5475,12 @@ class UnqueueRequest extends $pb.GeneratedMessage {
   factory UnqueueRequest({
     $core.String? chatId,
     $core.String? id,
+    $core.bool? sendNow,
   }) {
     final result = UnqueueRequest._();
     if (chatId != null) result.chatId = chatId;
     if (id != null) result.id = id;
+    if (sendNow != null) result.sendNow = sendNow;
     return result;
   }
 
@@ -5496,6 +5499,7 @@ class UnqueueRequest extends $pb.GeneratedMessage {
       createEmptyInstance: UnqueueRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOS(2, _omitFieldNames ? '' : 'id')
+    ..aOB(3, _omitFieldNames ? '' : 'sendNow')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -5537,6 +5541,18 @@ class UnqueueRequest extends $pb.GeneratedMessage {
   $core.bool hasId() => $_has(1);
   @$pb.TagNumber(2)
   void clearId() => $_clearField(2);
+
+  /// Send the message now (Send now): the running turn stops first, as
+  /// SendPrompt's now does. If the send fails or the call ends first, the
+  /// message stays where it was in the queue. Since API 147.
+  @$pb.TagNumber(3)
+  $core.bool get sendNow => $_getBF(2);
+  @$pb.TagNumber(3)
+  set sendNow($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSendNow() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSendNow() => $_clearField(3);
 }
 
 class UnqueueResponse extends $pb.GeneratedMessage {
@@ -5587,6 +5603,7 @@ class UnqueueResponse extends $pb.GeneratedMessage {
           UnqueueResponse.$_createMessage);
   static UnqueueResponse? _defaultInstance;
 
+  /// The message taken out; none with send_now.
   @$pb.TagNumber(1)
   QueuedMessage get message => $_getN(0);
   @$pb.TagNumber(1)
@@ -7881,6 +7898,104 @@ class ReopenChatResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<ReopenChatResponse>(
           ReopenChatResponse.$_createMessage);
   static ReopenChatResponse? _defaultInstance;
+}
+
+class WakeChatRequest extends $pb.GeneratedMessage {
+  factory WakeChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = WakeChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  WakeChatRequest._();
+
+  factory WakeChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WakeChatRequest()..mergeFromBuffer(data, registry);
+  factory WakeChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WakeChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WakeChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WakeChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WakeChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WakeChatRequest copyWith(void Function(WakeChatRequest) updates) =>
+      super.copyWith((message) => updates(message as WakeChatRequest))
+          as WakeChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WakeChatRequest() / WakeChatRequest.new instead')
+  static WakeChatRequest create() => WakeChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => WakeChatRequest._();
+  @$core.override
+  WakeChatRequest createEmptyInstance() => WakeChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static WakeChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<WakeChatRequest>(
+          WakeChatRequest.$_createMessage);
+  static WakeChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class WakeChatResponse extends $pb.GeneratedMessage {
+  factory WakeChatResponse() => WakeChatResponse._();
+
+  WakeChatResponse._();
+
+  factory WakeChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WakeChatResponse()..mergeFromBuffer(data, registry);
+  factory WakeChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WakeChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WakeChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WakeChatResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WakeChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WakeChatResponse copyWith(void Function(WakeChatResponse) updates) =>
+      super.copyWith((message) => updates(message as WakeChatResponse))
+          as WakeChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WakeChatResponse() / WakeChatResponse.new instead')
+  static WakeChatResponse create() => WakeChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => WakeChatResponse._();
+  @$core.override
+  WakeChatResponse createEmptyInstance() => WakeChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static WakeChatResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<WakeChatResponse>(
+          WakeChatResponse.$_createMessage);
+  static WakeChatResponse? _defaultInstance;
 }
 
 class GetMemoryRequest extends $pb.GeneratedMessage {
@@ -16753,7 +16868,8 @@ class EventsResponse extends $pb.GeneratedMessage {
   Remote ensureRemote() => $_ensure(13);
 
   /// The chats removed because their agent no longer has their sessions,
-  /// all of them (ListChatsResponse.removed); chat_id is empty.
+  /// all of them (ListChatsResponse.removed); chat_id is empty. Never
+  /// sent from API 151.
   @$pb.TagNumber(15)
   RemovedChats get removedChats => $_getN(14);
   @$pb.TagNumber(15)
@@ -17160,6 +17276,7 @@ class Item extends $pb.GeneratedMessage {
     $fixnum.Int64? ended,
     $core.String? mcpServer,
     $core.String? mcpTool,
+    WorksIn? worksIn,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -17204,6 +17321,7 @@ class Item extends $pb.GeneratedMessage {
     if (ended != null) result.ended = ended;
     if (mcpServer != null) result.mcpServer = mcpServer;
     if (mcpTool != null) result.mcpTool = mcpTool;
+    if (worksIn != null) result.worksIn = worksIn;
     return result;
   }
 
@@ -17272,6 +17390,8 @@ class Item extends $pb.GeneratedMessage {
     ..aInt64(42, _omitFieldNames ? '' : 'ended')
     ..aOS(43, _omitFieldNames ? '' : 'mcpServer')
     ..aOS(44, _omitFieldNames ? '' : 'mcpTool')
+    ..aOM<WorksIn>(45, _omitFieldNames ? '' : 'worksIn',
+        subBuilder: WorksIn.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -17712,6 +17832,82 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasMcpTool() => $_has(41);
   @$pb.TagNumber(44)
   void clearMcpTool() => $_clearField(44);
+
+  /// For the main agent's tool call that moved where it works, once the
+  /// call succeeded (Claude's EnterWorktree and ExitWorktree): the worktree
+  /// it entered, or an empty path for its session's folder again; unset
+  /// for any other call. The call that entered one offers Move chat here
+  /// (MoveChat with that path; ADR 0150). Unset from a daemon below API 152.
+  @$pb.TagNumber(45)
+  WorksIn get worksIn => $_getN(42);
+  @$pb.TagNumber(45)
+  set worksIn(WorksIn value) => $_setField(45, value);
+  @$pb.TagNumber(45)
+  $core.bool hasWorksIn() => $_has(42);
+  @$pb.TagNumber(45)
+  void clearWorksIn() => $_clearField(45);
+  @$pb.TagNumber(45)
+  WorksIn ensureWorksIn() => $_ensure(42);
+}
+
+/// Where an agent's tool call says it works once it completes: a worktree
+/// it entered (Nushi didn't make it), or, with an empty path, its
+/// session's folder again.
+class WorksIn extends $pb.GeneratedMessage {
+  factory WorksIn({
+    $core.String? path,
+  }) {
+    final result = WorksIn._();
+    if (path != null) result.path = path;
+    return result;
+  }
+
+  WorksIn._();
+
+  factory WorksIn.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WorksIn()..mergeFromBuffer(data, registry);
+  factory WorksIn.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WorksIn()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WorksIn',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WorksIn.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WorksIn clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WorksIn copyWith(void Function(WorksIn) updates) =>
+      super.copyWith((message) => updates(message as WorksIn)) as WorksIn;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WorksIn() / WorksIn.new instead')
+  static WorksIn create() => WorksIn._();
+  static $pb.GeneratedMessage $_createMessage() => WorksIn._();
+  @$core.override
+  WorksIn createEmptyInstance() => WorksIn._();
+  @$core.pragma('dart2js:noInline')
+  static WorksIn getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WorksIn>(WorksIn.$_createMessage);
+  static WorksIn? _defaultInstance;
+
+  /// The worktree's absolute path, as the agent's tool result named it;
+  /// empty when it left one.
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
 }
 
 /// A workflow: a run a tool call launched, a script of the agent's running
@@ -19274,6 +19470,7 @@ class Field extends $pb.GeneratedMessage {
     $core.bool? required,
     $core.Iterable<$core.String>? values,
     $core.String? otherFor,
+    $core.bool? note,
   }) {
     final result = Field._();
     if (id != null) result.id = id;
@@ -19284,6 +19481,7 @@ class Field extends $pb.GeneratedMessage {
     if (required != null) result.required = required;
     if (values != null) result.values.addAll(values);
     if (otherFor != null) result.otherFor = otherFor;
+    if (note != null) result.note = note;
     return result;
   }
 
@@ -19310,6 +19508,7 @@ class Field extends $pb.GeneratedMessage {
     ..aOB(6, _omitFieldNames ? '' : 'required')
     ..pPS(7, _omitFieldNames ? '' : 'values')
     ..aOS(8, _omitFieldNames ? '' : 'otherFor')
+    ..aOB(9, _omitFieldNames ? '' : 'note')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -19394,6 +19593,19 @@ class Field extends $pb.GeneratedMessage {
   $core.bool hasOtherFor() => $_has(7);
   @$pb.TagNumber(8)
   void clearOtherFor() => $_clearField(8);
+
+  /// For an "Other" field: the agent takes its text, beside a pick of the
+  /// field it is for, as a note on that pick, not as an answer of its own
+  /// (the harness's OtherNotes: Claude's and Codex's with one choice,
+  /// Ante's with any). API 150.
+  @$pb.TagNumber(9)
+  $core.bool get note => $_getBF(8);
+  @$pb.TagNumber(9)
+  set note($core.bool value) => $_setBool(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasNote() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearNote() => $_clearField(9);
 }
 
 class ItemEvent extends $pb.GeneratedMessage {
@@ -19710,8 +19922,9 @@ class ChatStatus extends $pb.GeneratedMessage {
   void clearReopenFailed() => $_clearField(12);
 
   /// Of a chat whose reopen failed: its agent no longer has its session
-  /// (it deleted it). The chat stays only for its worktree's or scratch
-  /// folder's work; DeleteChat is what's left.
+  /// (it deleted it). The chat stays, read-only, its transcript Nushi's
+  /// copy where it has one, until DeleteChat (from API 151 whether or not
+  /// it has a copy or work; before, only then).
   @$pb.TagNumber(13)
   $core.bool get sessionGone => $_getBF(11);
   @$pb.TagNumber(13)
@@ -29266,7 +29479,9 @@ class GitHubItem extends $pb.GeneratedMessage {
   @$pb.TagNumber(19)
   void clearMergeState() => $_clearField(19);
 
-  /// A closed issue's reason: "completed", "not_planned" or "".
+  /// An issue's state reason, as GitHub gives it: a closed one's
+  /// "completed" or "not_planned", "reopened" for an open one that was
+  /// once closed, or "". The app reads it for a closed issue only.
   @$pb.TagNumber(20)
   $core.String get stateReason => $_getSZ(19);
   @$pb.TagNumber(20)
@@ -29317,12 +29532,14 @@ class GitHubCheckCounts extends $pb.GeneratedMessage {
     $core.int? failed,
     $core.int? running,
     $core.int? skipped,
+    $core.int? cancelled,
   }) {
     final result = GitHubCheckCounts._();
     if (passed != null) result.passed = passed;
     if (failed != null) result.failed = failed;
     if (running != null) result.running = running;
     if (skipped != null) result.skipped = skipped;
+    if (cancelled != null) result.cancelled = cancelled;
     return result;
   }
 
@@ -29343,6 +29560,7 @@ class GitHubCheckCounts extends $pb.GeneratedMessage {
     ..aI(2, _omitFieldNames ? '' : 'failed')
     ..aI(3, _omitFieldNames ? '' : 'running')
     ..aI(4, _omitFieldNames ? '' : 'skipped')
+    ..aI(5, _omitFieldNames ? '' : 'cancelled')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -29376,6 +29594,8 @@ class GitHubCheckCounts extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearPassed() => $_clearField(1);
 
+  /// Failed counts the cancelled too: GitHub's merge gate has them not
+  /// passed.
   @$pb.TagNumber(2)
   $core.int get failed => $_getIZ(1);
   @$pb.TagNumber(2)
@@ -29402,6 +29622,17 @@ class GitHubCheckCounts extends $pb.GeneratedMessage {
   $core.bool hasSkipped() => $_has(3);
   @$pb.TagNumber(4)
   void clearSkipped() => $_clearField(4);
+
+  /// How many of failed were cancelled, a kind GitHub draws and names
+  /// apart; 0 from a daemon before API 148, whose failed says them all.
+  @$pb.TagNumber(5)
+  $core.int get cancelled => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set cancelled($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCancelled() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCancelled() => $_clearField(5);
 }
 
 class ListGitHubInboxRequest extends $pb.GeneratedMessage {
@@ -31378,6 +31609,8 @@ class GitHubCheck extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   void clearState() => $_clearField(5);
 
+  /// Not passed, as GitHub's merge gate has it: failed, or cancelled (from
+  /// API 145); its state tells the two apart.
   @$pb.TagNumber(6)
   $core.bool get failed => $_getBF(5);
   @$pb.TagNumber(6)
@@ -31985,6 +32218,7 @@ class GitHubCommit extends $pb.GeneratedMessage {
     $core.String? authorName,
     $fixnum.Int64? committedMs,
     $core.String? checks,
+    $core.bool? cancelled,
   }) {
     final result = GitHubCommit._();
     if (oid != null) result.oid = oid;
@@ -31993,6 +32227,7 @@ class GitHubCommit extends $pb.GeneratedMessage {
     if (authorName != null) result.authorName = authorName;
     if (committedMs != null) result.committedMs = committedMs;
     if (checks != null) result.checks = checks;
+    if (cancelled != null) result.cancelled = cancelled;
     return result;
   }
 
@@ -32015,6 +32250,7 @@ class GitHubCommit extends $pb.GeneratedMessage {
     ..aOS(4, _omitFieldNames ? '' : 'authorName')
     ..aInt64(5, _omitFieldNames ? '' : 'committedMs')
     ..aOS(6, _omitFieldNames ? '' : 'checks')
+    ..aOB(7, _omitFieldNames ? '' : 'cancelled')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -32097,6 +32333,17 @@ class GitHubCommit extends $pb.GeneratedMessage {
   $core.bool hasChecks() => $_has(5);
   @$pb.TagNumber(6)
   void clearChecks() => $_clearField(6);
+
+  /// From API 149: checks is "failure" only because some were cancelled,
+  /// none failed (an older daemon sends false).
+  @$pb.TagNumber(7)
+  $core.bool get cancelled => $_getBF(6);
+  @$pb.TagNumber(7)
+  set cancelled($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasCancelled() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearCancelled() => $_clearField(7);
 }
 
 class GetGitHubCommitsRequest extends $pb.GeneratedMessage {
@@ -36845,7 +37092,8 @@ class NushiServiceApi {
           ctx, 'NushiService', 'RewindChat', request, RewindChatResponse());
 
   /// Takes a message out of the chat's queue before the agent gets it, and
-  /// returns it. Refused once the agent has it.
+  /// returns it. Refused once the agent has it. With send_now it sends the
+  /// message at once instead, as SendPrompt's now does, and returns none.
   $async.Future<UnqueueResponse> unqueue(
           $pb.ClientContext? ctx, UnqueueRequest request) =>
       _client.invoke<UnqueueResponse>(
@@ -37016,6 +37264,21 @@ class NushiServiceApi {
       _client.invoke<ReopenChatResponse>(
           ctx, 'NushiService', 'ReopenChat', request, ReopenChatResponse());
 
+  /// Wakes a sleeping chat (status.asleep: put to sleep, by the user or
+  /// after idling, or left unopened since the daemon started) as a message
+  /// would before it is sent, and sends nothing: it answers once the reopen
+  /// (ACP session/load) has begun, and the chat's status shows the rest, busy
+  /// with no turn while it opens, then awake, or reopen_failed with its
+  /// notice. A chat that isn't asleep (awake, busy, reopening, or whose
+  /// reopen failed: ReopenChat is Try again) is left as it is; an archived
+  /// one is refused, and once a restart into a newer build is due a wake is
+  /// refused as SendPrompt is (Unavailable, reason restarting: the app asks
+  /// the new daemon). (API 146)
+  $async.Future<WakeChatResponse> wakeChat(
+          $pb.ClientContext? ctx, WakeChatRequest request) =>
+      _client.invoke<WakeChatResponse>(
+          ctx, 'NushiService', 'WakeChat', request, WakeChatResponse());
+
   /// The daemon's settings, and changing them.
   /// Says how much memory Nushi takes, as footprint (Activity Monitor's
   /// Memory), in bytes: a few milliseconds' work.
@@ -37063,7 +37326,8 @@ class NushiServiceApi {
       _client.invoke<DeleteChatResponse>(
           ctx, 'NushiService', 'DeleteChat', request, DeleteChatResponse());
 
-  /// Takes chats off ListChatsResponse.removed (the app has said so).
+  /// Takes chats off ListChatsResponse.removed (the app has said so). From
+  /// API 151 there are none, and it does nothing.
   $async.Future<DismissRemovedChatsResponse> dismissRemovedChats(
           $pb.ClientContext? ctx, DismissRemovedChatsRequest request) =>
       _client.invoke<DismissRemovedChatsResponse>(ctx, 'NushiService',
@@ -37223,8 +37487,9 @@ class NushiServiceApi {
           ctx, 'NushiService', 'ListFiles', request, ListFilesResponse());
 
   /// Asks the chat's agent, unseen, what fills its context (Claude's
-  /// /context), in a throwaway fork of its session, while the chat is idle.
-  /// Refused when the agent can't fork.
+  /// get_context_usage, Ante's and Pi's own ask), while the chat is idle:
+  /// no turn and no fork, so a side chat or a new chat can be asked too.
+  /// Refused when the agent can't say, the chat is busy or no agent runs.
   $async.Future<GetContextUsageResponse> getContextUsage(
           $pb.ClientContext? ctx, GetContextUsageRequest request) =>
       _client.invoke<GetContextUsageResponse>(ctx, 'NushiService',
