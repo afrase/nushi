@@ -169,3 +169,32 @@ func waitWorkflow(a *app, id, state string, workflows int32) string {
 	})
 	return call
 }
+
+// Stop on a running workflow is claude's stop_task through the agent: no
+// message goes to it, and the run ends on its task's own updates.
+func TestStoppingAWorkflowThroughTheAPI(t *testing.T) {
+	ctx := t.Context()
+	data := t.TempDir()
+	d := startDaemon(t, data, &acptest.History{})
+	a := open(t, d)
+	folder, _ := filepath.EvalSymlinks(t.TempDir())
+	id := a.start(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: folder})
+	sid := a.get(id).Chat.SessionId
+	session := filepath.Join(sessions.Store{ConfigDir: filepath.Join(data, "claude")}.ProjectDir(folder), sid)
+	testcheck.NoErr(t, os.CopyFS(session, os.DirFS(recordedRun)))
+	testcheck.NoErr(t, os.Remove(filepath.Join(session, "workflows", runID+".json")))
+
+	a.send(id, "launch the workflow")
+	callID := waitWorkflow(a, id, "running", 1)
+	must(a.c.StopTask(ctx, connect.NewRequest(&nushiv1.StopTaskRequest{ChatId: id, CallId: callID})))
+	waitWorkflow(a, id, "stopped", 0)
+	users := 0
+	for _, it := range a.get(id).Items {
+		if it.Kind == nushiv1.ItemKind_ITEM_KIND_USER_MESSAGE {
+			users++
+		}
+	}
+	if users != 1 {
+		t.Errorf("%d user messages: the stop went as a message", users)
+	}
+}

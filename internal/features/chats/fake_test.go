@@ -499,7 +499,7 @@ func (f *fakeAgent) openGateLocked() {
 
 func (f *fakeAgent) CanSteer() bool { return f.steerable }
 
-func (f *fakeAgent) Call(_ context.Context, method string, params, result any) error {
+func (f *fakeAgent) Call(ctx context.Context, method string, params, result any) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	answer, ok := f.answers[method]
@@ -516,11 +516,11 @@ func (f *fakeAgent) Call(_ context.Context, method string, params, result any) e
 		}
 		b, _ := json.Marshal(params)
 		_ = json.Unmarshal(b, &p)
-		go func(h acp.Client) {
+		go func(ctx context.Context, h acp.Client) { // after the answer: the call's ctx may end first
 			for _, u := range after {
-				_ = h.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: p.SessionID, Update: u})
+				_ = h.SessionUpdate(ctx, &acp.SessionNotification{SessionID: p.SessionID, Update: u})
 			}
-		}(f.h)
+		}(context.WithoutCancel(ctx), f.h)
 	}
 	return json.Unmarshal([]byte(answer), result)
 }

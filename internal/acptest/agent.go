@@ -20,7 +20,9 @@
 //   - containing "workflow": a Workflow call that launches a run in the
 //     background, as Claude Code 2.1.331 sent it (the "workflow" parity
 //     recording: run wf_194e61d3-d0e, task wtg819jtp), then a message; the
-//     run's files are the test's to write;
+//     run's files are the test's to write; _session/stopTask of its task
+//     answers {}, then ends it as claude-acp-go does (its task "killed",
+//     then "stopped", on the call), any other id only {};
 //   - containing "screenshot": a tool call that returns an image
 //     (Screenshot), then a message;
 //   - containing "tool": a command run with the prompt as its input and
@@ -97,8 +99,12 @@ type Agent struct {
 	childUpdates bool
 	after        map[string]func()
 	spent        map[string]float64 // each session's cost so far in this process, for "usage"
+	tasks        map[string]task    // the tasks it runs in the background, by id (_session/stopTask)
 	served       chan struct{}      // closed once Serve's input has ended
 }
+
+// task is a background task's session and the call that started it.
+type task struct{ session, call, kind, tool string }
 
 // turn is a running prompt's: cancelled once session/cancel came for it.
 type turn struct{ cancelled bool }
@@ -126,6 +132,7 @@ func (a *Agent) Serve(r io.Reader, w io.Writer) {
 	a.cwds = map[string]string{}
 	a.turns = map[string]*turn{}
 	a.spent = map[string]float64{}
+	a.tasks = map[string]task{}
 	a.served = make(chan struct{})
 	defer close(a.served)
 	sc := bufio.NewScanner(r)
@@ -315,6 +322,9 @@ func (a *Agent) answer(f frame) {
 		result = a.promptAnswer(p.SessionID, blocks)
 	case "session/set_config_option":
 		result = a.optionsSet(f.Params)
+	case "_session/stopTask":
+		a.stopTask(f)
+		return
 	default:
 		result = map[string]any{}
 	}
@@ -541,6 +551,27 @@ func (a *Agent) usage(session string) {
 			"_claude/rateLimit": map[string]any{"status": "allowed_warning", "rateLimitType": "five_hour", "utilization": 0.9, "resetsAt": 1700000000}}})
 }
 
+// stopTask answers _session/stopTask as claude-acp-go does: {}, and for a
+// task it runs its task's "killed", then "stopped", on the call that
+// started it, which may reach the client just after the answer
+// (docs/facts/claude.md).
+func (a *Agent) stopTask(f frame) {
+	var req struct{ TaskID string }
+	_ = json.Unmarshal(f.Params, &req)
+	a.mu.Lock()
+	t, ok := a.tasks[req.TaskID]
+	delete(a.tasks, req.TaskID)
+	a.mu.Unlock()
+	a.send(frame{ID: f.ID, Result: json.RawMessage(`{}`)})
+	if !ok {
+		return
+	}
+	for _, status := range []string{"killed", "stopped"} {
+		a.update(t.session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": t.call, "_meta": map[string]any{"claudeCode": map[string]any{
+			"toolName": t.tool, "task": map[string]any{"id": req.TaskID, "type": t.kind, "status": status}}}})
+	}
+}
+
 // workflow sends the Workflow call of the "workflow" parity recording,
 // which launched run wf_194e61d3-d0e in the background, then a message.
 func (a *Agent) workflow(session string) {
@@ -554,5 +585,8 @@ func (a *Agent) workflow(session string) {
 		"content": []map[string]any{{"type": "content", "content": map[string]any{"type": "text",
 			"text": "Workflow launched in background. Task ID: wtg819jtp\nSummary: Ask four helpers in two phases\nRun ID: wf_194e61d3-d0e\n"}}},
 		"_meta": claudeCode(map[string]any{"toolName": "Workflow"})})
+	a.mu.Lock()
+	a.tasks["wtg819jtp"] = task{session: session, call: "wf1", kind: "local_workflow", tool: "Workflow"}
+	a.mu.Unlock()
 	a.say(session, "The workflow runs in the background.")
 }
