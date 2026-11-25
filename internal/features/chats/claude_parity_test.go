@@ -74,7 +74,7 @@ func TestClaudeParity(t *testing.T) {
 
 // commandsEnded checks each background command the chats show ended as
 // claude's own recording says its task did: the task_notification in the
-// scenario's cli*.jsonl, read as CommandTask reads Claude's word on it
+// scenario's cli*.jsonl, read as Task reads Claude's word on it
 // (ADR 0130). The comparison above can't tell: both sides go through the
 // same reading. Every row must have its task, and every backgrounded
 // local_bash task claude started its row, where this machine follows the
@@ -110,7 +110,7 @@ func commandsEnded(t *testing.T, dir string, views []parity) {
 
 // recordedCommandEnds are the background commands claude started in a
 // scenario's cli*.jsonl (task_started, local_bash, backgrounded), by task
-// id, each with its end as CommandTask maps its task_notification: none
+// id, each with its end as Task maps its task_notification: none
 // (State "") when claude told no end. followed says this machine's
 // harness would read the files claude named for them (every
 // task_notification's output_file, and there is one): the file is gone,
@@ -151,11 +151,11 @@ func recordedCommandEnds(t *testing.T, dir string) (ends map[string]model.Backgr
 					continue
 				}
 				task := map[string]any{"id": fr.TaskID, "type": "local_bash", "status": fr.Status, "summary": fr.Summary}
-				_, state, end, ok := claudeHarness.CommandTask(map[string]any{"claudeCode": map[string]any{"task": task}})
-				if !ok {
-					t.Fatalf("%s: CommandTask doesn't read task %s's status %q", f, fr.TaskID, fr.Status)
+				word, ok := claudeHarness.Task(map[string]any{"claudeCode": map[string]any{"task": task}})
+				if !ok || word.State == "" {
+					t.Fatalf("%s: Task doesn't read task %s's status %q", f, fr.TaskID, fr.Status)
 				}
-				ends[fr.TaskID] = model.BackgroundCommand{ID: fr.TaskID, State: model.RunState(state), End: end}
+				ends[fr.TaskID] = model.BackgroundCommand{ID: fr.TaskID, State: word.State, End: word.End}
 				if fr.OutputFile != "" {
 					named++
 					if _, _, err := claudeHarness.StatBackgroundCommand(fr.TaskID, fr.OutputFile); err == nil || errors.Is(err, fs.ErrNotExist) {

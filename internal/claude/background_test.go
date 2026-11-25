@@ -111,52 +111,50 @@ func TestBackgroundCommands(t *testing.T) {
 	}
 }
 
-// Claude's task, as claude-acp-go v0.5.0 sends it on the Bash call
-// (docs/facts/claude.md), in Nushi's words: the state, and how it ended
-// in the file's words, the exit code only from the summary.
-func TestCommandTask(t *testing.T) {
-	task := func(status, summary string) map[string]any {
+// Claude's task, as claude-acp-go sends it on the call that started it
+// (docs/facts/claude.md): a background command's (v0.5.0 on), with how
+// it ended in the file's words, the exit code only from the summary; a
+// workflow's (v0.8.0 on), in its snapshot's words, a failed one's summary
+// masked; and any other task's, read as a task Nushi doesn't read.
+func TestTask(t *testing.T) {
+	task := func(typ, status, summary string) map[string]any {
 		return map[string]any{"claudeCode": map[string]any{"toolName": "Bash", "task": map[string]any{
-			"id": "b1", "type": "local_bash", "status": status, "summary": summary}}}
+			"id": "b1", "type": typ, "status": status, "summary": summary}}}
 	}
-	for _, tc := range []struct {
-		meta       map[string]any
-		state, end string
-		ok         bool
-	}{
-		{task("running", ""), "running", "", true},
-		{task("completed", ""), "done", "", true},
-		{task("completed", `Background command "Run it" completed (exit code 0)`), "done", "exited with code 0", true},
-		{task("failed", `Background command "Wait (exit code 3)" failed with exit code 144`), "failed", "exited with code 144", true},
-		{task("failed", "Background command \"x\" failed with exit code 144\nmore"), "failed", "", true},
-		{task("killed", ""), "stopped", "killed", true},
-		{task("stopped", "Wait long"), "stopped", "killed", true},
-		{task("pending", ""), "", "", false},
-		{map[string]any{"claudeCode": map[string]any{"task": map[string]any{"id": "b1", "type": "local_agent", "status": "completed"}}}, "", "", false},
-		{map[string]any{"claudeCode": map[string]any{"toolName": "Bash"}}, "", "", false},
-		{nil, "", "", false},
-	} {
-		id, state, end, ok := Harness{}.CommandTask(tc.meta)
-		if ok != tc.ok || state != tc.state || end != tc.end || ok && id != "b1" {
-			t.Errorf("%v: %q %q %q %v", tc.meta, id, state, end, ok)
-		}
+	bash := func(status, summary string) map[string]any { return task("local_bash", status, summary) }
+	wf := func(status, summary string) map[string]any { return task("local_workflow", status, summary) }
+	cmd := func(state model.RunState, end string) model.TaskUpdate {
+		return model.TaskUpdate{ID: "b1", Of: model.TaskCommand, State: state, End: end}
 	}
-}
-
-// Any task of Claude's is its word on a task, a command's or not.
-func TestTaskWord(t *testing.T) {
+	run := func(state model.RunState, end, summary string) model.TaskUpdate {
+		return model.TaskUpdate{ID: "b1", Of: model.TaskWorkflow, State: state, End: end, Summary: summary}
+	}
 	for _, tc := range []struct {
 		meta map[string]any
-		want bool
+		want model.TaskUpdate
+		ok   bool
 	}{
-		{map[string]any{"claudeCode": map[string]any{"task": map[string]any{"id": "b1", "type": "local_bash", "status": "running"}}}, true},
-		{map[string]any{"claudeCode": map[string]any{"toolName": "Workflow", "task": map[string]any{"id": "w1", "type": "local_workflow", "status": "killed"}}}, true},
-		{map[string]any{"claudeCode": map[string]any{"task": map[string]any{"type": "local_workflow"}}}, false},
-		{map[string]any{"claudeCode": map[string]any{"toolName": "Workflow"}}, false},
-		{nil, false},
+		{bash("running", ""), cmd("running", ""), true},
+		{bash("completed", ""), cmd("done", ""), true},
+		{bash("completed", `Background command "Run it" completed (exit code 0)`), cmd("done", "exited with code 0"), true},
+		{bash("failed", `Background command "Wait (exit code 3)" failed with exit code 144`), cmd("failed", "exited with code 144"), true},
+		{bash("failed", "Background command \"x\" failed with exit code 144\nmore"), cmd("failed", ""), true},
+		{bash("killed", ""), cmd("stopped", "killed"), true},
+		{bash("stopped", "Wait long"), cmd("stopped", "killed"), true},
+		{bash("pending", ""), cmd("", ""), true},
+		{wf("running", ""), run("running", "", ""), true},
+		{wf("completed", "Ask four helpers"), run("done", "completed", ""), true},
+		{wf("failed", `Dynamic workflow "x" failed: ghp_abcdefghijklmnopqrstuvwxyz0123`), run("failed", "failed", `Dynamic workflow "x" failed: …`), true},
+		{wf("killed", ""), run("stopped", "killed", ""), true},
+		{wf("stopped", "Ask one helper"), run("stopped", "killed", ""), true},
+		{task("local_agent", "completed", ""), model.TaskUpdate{ID: "b1", State: "done"}, true},
+		{map[string]any{"claudeCode": map[string]any{"task": map[string]any{"type": "local_workflow", "status": "killed"}}}, model.TaskUpdate{}, false},
+		{map[string]any{"claudeCode": map[string]any{"toolName": "Bash"}}, model.TaskUpdate{}, false},
+		{nil, model.TaskUpdate{}, false},
 	} {
-		if got := (Harness{}).TaskWord(tc.meta); got != tc.want {
-			t.Errorf("%v: %v", tc.meta, got)
+		got, ok := Harness{}.Task(tc.meta)
+		if ok != tc.ok || got != tc.want {
+			t.Errorf("%v: %+v %v, want %+v %v", tc.meta, got, ok, tc.want, tc.ok)
 		}
 	}
 }

@@ -137,19 +137,14 @@ type BackgroundTasks interface {
 	// without opening it, by the same rules: a file whose both are as
 	// at its last read isn't read again (followCommand).
 	StatBackgroundCommand(id, file string) (size int64, modified time.Time, err error)
-	// CommandTask reads the agent's own word on such a command, from an
-	// update of the call that started it (its _meta): the task's id, its
-	// state ("running", "done", "failed" or "stopped") and how it ended in
-	// the file's words ("exited with code 0", "killed"; "" unsaid). ok is
-	// false for an update that says nothing of one. Once heard, it is the
-	// source of truth for whether the command runs (ADR 0130).
-	CommandTask(meta map[string]any) (id, state, end string, ok bool)
-	// TaskWord says an update's _meta is the agent's word on one of its
-	// tasks of any kind, a command's or not (Claude's foreground command
-	// and workflow are tasks too): an update of a call that carries only
-	// that is no step of the agent's work, whether Nushi reads the word
-	// (CommandTask) or passes over it.
-	TaskWord(meta map[string]any) bool
+	// Task reads the agent's own word on one of its tasks, from an update
+	// of the call that started it (its _meta): the task's id, whether it
+	// is a background command's or a workflow's (or one Nushi doesn't
+	// read), its state and how it ended. ok is false for an update that
+	// says nothing of a task. Once heard, it is the source of truth for
+	// whether the command or the run goes on (ADR 0130, ADR 0127), and an
+	// update that carries only it is no step of the agent's work.
+	Task(meta map[string]any) (t model.TaskUpdate, ok bool)
 	// RunsBackgroundCommand says a process the agent runs (its command
 	// line) is the shell running the command of call, a tool call that left
 	// it running in the background: Nushi then stops the command itself, by

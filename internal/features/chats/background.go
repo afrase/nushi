@@ -12,13 +12,13 @@ import (
 // A background command's end is the agent's to say, where it says
 // (ADR 0130): Claude, through claude-acp-go v0.5.0 on, sends its task's
 // status as updates of the call that started it (BackgroundTasks'
-// CommandTask). Its output file and the command's shell are the fallback,
+// Task). Its output file and the command's shell are the fallback,
 // used only for a command whose task the agent hasn't told of: an agent
 // that doesn't, a claude that went mid-command, a reopened chat whose
 // history had no end.
 
 // taskWord is what the agent last said of a background command's task:
-// its state and how it ended, as CommandTask reads them, and the agent
+// its state and how it ended, as Task reads them, and the agent
 // that said "running", which counts only while that agent runs.
 type taskWord struct {
 	state model.RunState
@@ -33,7 +33,7 @@ type taskWord struct {
 // its detail at most once more. It says whether the update said nothing
 // else, so it is no step of the agent's work (no turn of its own, no
 // change to the call): that goes too for the agent's word on a task
-// Nushi doesn't read (TaskWord), such as Claude's workflow's, which
+// that isn't a command's, such as Claude's workflow's, which
 // otherwise started a turn of the agent's own when it came with the
 // chat idle, and kept it when no turn followed.
 func (c *chat) commandTaskLocked(u acp.SessionUpdate) (only bool) {
@@ -42,11 +42,14 @@ func (c *chat) commandTaskLocked(u acp.SessionUpdate) (only bool) {
 		return false
 	}
 	only = t.Status == "" && t.Title == "" && t.Kind == "" && t.Content == nil && t.Locations == nil && t.RawInput == nil && t.RawOutput == nil
-	id, word, end, ok := c.kind.background.CommandTask(t.Meta)
+	task, ok := c.kind.background.Task(t.Meta)
 	if !ok {
-		return only && c.kind.background.TaskWord(t.Meta)
+		return false
 	}
-	state := model.RunState(word)
+	if task.Of != model.TaskCommand || task.State == "" {
+		return only
+	}
+	id, state, end := task.ID, task.State, task.End
 	was := c.tasks[id]
 	switch {
 	case was.state.Ended() && state == model.RunRunning: // late, or replayed after its end
