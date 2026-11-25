@@ -4,6 +4,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -40,7 +41,7 @@ func TestForked(t *testing.T) {
 // out a session with nothing to name it by, so Forked isn't asked of one).
 func TestForkedAsWritten(t *testing.T) {
 	projects := t.TempDir()
-	recordedForks(t, filepath.Join(projects, "-work"))
+	fork, forkAt := recordedForks(t, filepath.Join(projects, "-work"))
 	long := strings.Repeat("x", 70<<10)
 	testcheck.Write(t, filepath.Join(projects, "-work", sessA+".jsonl"),
 		`{"type":"queue-operation","operation":"enqueue","sessionId":"`+sessA+`"}`+"\n"+
@@ -51,28 +52,43 @@ func TestForkedAsWritten(t *testing.T) {
 		`{"type":"user","cwd":"/work","message":{"role":"user","content":"`+long+`"},"forkedFrom":{"sessionId":"`+sessE+`","messageUuid":"u1"}}`+"\n"+title)
 	testcheck.Write(t, filepath.Join(projects, "-work", sessE+".jsonl"),
 		`{"type":"user","cwd":"/work","message":{"role":"user","content":"`+long+`"}}`+"\n"+title)
-	ids := []string{recordedFork, recordedForkAt, recordedSource, recordedSourceAt, sessA, sessD, sessE}
-	want := map[string]bool{recordedFork: true, recordedForkAt: true, sessA: true, sessD: true}
+	ids := []string{fork.fork, forkAt.fork, fork.source, forkAt.source, sessA, sessD, sessE}
+	want := map[string]bool{fork.fork: true, forkAt.fork: true, sessA: true, sessD: true}
 	if got := local(projects).Forked(ids); !maps.Equal(got, want) {
 		t.Errorf("forked = %v, want %v", got, want)
 	}
 }
 
-// The parity recordings' fork and fork-at sessions: each scenario's
-// source and its fork.
-const (
-	recordedSource   = "5fe258b6-07b3-4f65-bd2b-dcd61f4114a3"
-	recordedFork     = "f2b48e2f-eacc-4825-bbaf-d7ffa4d2ee2f"
-	recordedSourceAt = "d9eee52d-81f9-446a-a556-9b0e22993542"
-	recordedForkAt   = "38cc0ba6-9ae4-486f-8dc1-194a1971d601"
-)
+// forkPair is a parity recording's source session and its fork.
+type forkPair struct{ source, fork string }
 
 // recordedForks copies the parity recordings' fork and fork-at
-// transcripts, as claude left them, into dir.
-func recordedForks(t *testing.T, dir string) {
+// transcripts, as claude left them, into dir, and says which sessions
+// they are: a scenario's source is the one transcript it had before the
+// fork (history/1), its fork the other it ended with. Read from the
+// recording, so one made again needs no change here.
+func recordedForks(t *testing.T, dir string) (fork, forkAt forkPair) {
 	t.Helper()
-	for _, scenario := range []string{"fork", "fork-at"} {
-		end := filepath.Join("..", "features", "chats", "testdata", "claude-parity", scenario, "history", "end")
-		testcheck.NoErr(t, os.CopyFS(dir, os.DirFS(end)))
+	read := func(scenario string) forkPair {
+		history := filepath.Join("..", "features", "chats", "testdata", "claude-parity", scenario, "history")
+		ids := func(step string) []string {
+			files, err := filepath.Glob(filepath.Join(history, step, "*.jsonl"))
+			testcheck.NoErr(t, err)
+			for i, f := range files {
+				files[i] = strings.TrimSuffix(filepath.Base(f), ".jsonl")
+			}
+			return files
+		}
+		before, end := ids("1"), ids("end")
+		if len(before) != 1 || len(end) != 2 || !slices.Contains(end, before[0]) {
+			t.Fatalf("%s: transcripts %v, then %v: want a source, then it and its fork", scenario, before, end)
+		}
+		testcheck.NoErr(t, os.CopyFS(dir, os.DirFS(filepath.Join(history, "end"))))
+		r := forkPair{source: before[0], fork: end[0]}
+		if r.fork == r.source {
+			r.fork = end[1]
+		}
+		return r
 	}
+	return read("fork"), read("fork-at")
 }

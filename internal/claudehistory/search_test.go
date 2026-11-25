@@ -314,12 +314,12 @@ func TestSearchWithoutNushisNotes(t *testing.T) {
 // the Info), are found.
 func TestSearchPassesOverForks(t *testing.T) {
 	projects := filepath.Join(t.TempDir(), "projects")
-	recordedForks(t, filepath.Join(projects, "-work"))
+	fork, forkAt := recordedForks(t, filepath.Join(projects, "-work"))
 	long := strings.Repeat("x", 70<<10)
 	user := func(text, fork string) string {
 		return `{"type":"user","cwd":"/work","message":{"role":"user","content":"` + text + `"}` + fork + `}` + "\n"
 	}
-	forkedFrom := `,"forkedFrom":{"sessionId":"` + recordedSource + `","messageUuid":"u1"}`
+	forkedFrom := `,"forkedFrom":{"sessionId":"` + fork.source + `","messageUuid":"u1"}`
 	testcheck.Write(t, filepath.Join(projects, "-work", sessA+".jsonl"),
 		`{"type":"queue-operation","operation":"enqueue","sessionId":"`+sessA+`"}`+"\n"+user("first question", forkedFrom))
 	// A title at the end names each long one: its first prompt is past
@@ -335,7 +335,7 @@ func TestSearchPassesOverForks(t *testing.T) {
 		found = append(found, h.SessionID)
 	}
 	slices.Sort(found)
-	want := []string{notFork, sessE, recordedSource, recordedSourceAt}
+	want := []string{notFork, sessE, fork.source, forkAt.source}
 	slices.Sort(want)
 	if !slices.Equal(found, want) {
 		t.Errorf("found %v, want %v", found, want)
