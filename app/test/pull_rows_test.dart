@@ -265,7 +265,7 @@ void main() {
       );
       await tester.tap(find.text('4/10'));
       await tester.pumpAndSettle();
-      expect(find.text('Checks · 10'), findsOneWidget);
+      expect(find.text('Checks (10)'), findsOneWidget);
       expect(find.text('Show checks'), findsOneWidget);
       expect(find.text('Fix checks'), findsNothing); // none failing
       await render(tester, find.byType(NushiApp), 'pull_rows_badge_$name');

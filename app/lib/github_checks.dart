@@ -154,7 +154,7 @@ class _GitHubChecksState extends State<GitHubChecks> {
             ),
           ),
         if (passed.isNotEmpty) ...[
-          group('Passed · ${passed.length}'),
+          group('Passed (${passed.length})'),
           _Grid([for (final c in shown) _Mini(c)]),
           if (shown.length < passed.length)
             Padding(
@@ -167,7 +167,7 @@ class _GitHubChecksState extends State<GitHubChecks> {
             ),
         ],
         if (other.isNotEmpty) ...[
-          group('Skipped · ${other.length}'),
+          group('Skipped (${other.length})'),
           _Grid([for (final c in other) _Mini(c)]),
         ],
       ],

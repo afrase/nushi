@@ -379,8 +379,8 @@ class ChecksBadge extends StatelessWidget {
       filter: false,
       entries: [
         MenuEntry.heading(
-          'Checks · ${n.total + skipped}'
-          '${skipped > 0 ? ' ($skipped skipped)' : ''}',
+          'Checks (${n.total + skipped}'
+          '${skipped > 0 ? ', $skipped skipped' : ''})',
         ),
         MenuEntry.row((_) => count('In progress', n.running, t.needs)),
         MenuEntry.row((_) => count('Passed', n.passed, t.done)),

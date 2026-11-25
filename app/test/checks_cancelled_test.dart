@@ -408,4 +408,37 @@ void main() {
       d.dispose();
     });
   }
+
+  testWidgets("a required check's line says Required apart, with no middle "
+      'dot', (tester) async {
+    final d = await FakeDaemon([]).connect(tester);
+    final p = cancelledPull(required: true);
+    viewport(tester, const Size(900, 1200));
+    await tester.pumpWidget(
+      themed(
+        SendToAgent(
+          onSend: (_, _) {},
+          child: SingleChildScrollView(
+            child: MergeCard(
+              daemon: d,
+              pull: p,
+              items: todo(p).items,
+              onChanged: () async {},
+              onThread: (_) {},
+              onReview: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('segment checks')));
+    await tester.pumpAndSettle();
+    final line = find.textContaining('Cancelled after', findRichText: true);
+    final words = tester.widget<RichText>(line).text.toPlainText();
+    expect(words, contains('Cancelled after 30m 00s  Required'));
+    expect(words, isNot(contains('·')));
+    expect(_ink(tester, 'Required', within: 'Cancelled after'), t.textMuted);
+    d.dispose();
+  });
 }

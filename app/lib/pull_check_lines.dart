@@ -169,9 +169,7 @@ class _CheckLineState extends State<_CheckLine> {
                           style: theme.ui(t.text, weight: FontWeight.w500),
                         ),
                         TextSpan(
-                          text:
-                              '  ${checkWords(c)}'
-                              '${c.required ? ' · Required' : ''}',
+                          text: '  ${checkWords(c)}',
                           style: theme.ui(
                             failed
                                 ? t.crashed
@@ -181,6 +179,12 @@ class _CheckLineState extends State<_CheckLine> {
                             size: 12,
                           ),
                         ),
+                        // Apart and muted, as the Checks tab's card has it.
+                        if (c.required)
+                          TextSpan(
+                            text: '  Required',
+                            style: theme.ui(t.textMuted, size: 12),
+                          ),
                       ],
                     ),
                     maxLines: 1,
