@@ -17,8 +17,9 @@ const _every = Duration(minutes: 1);
 /// the Mac's midnight cost, as GetUsage sums it (ADR 0136). Null until
 /// known, and while today cost nothing (no turn, or agents that report no
 /// cost, as on a subscription) or the daemon is older than GetUsage.
-/// Asked as it starts, as the window shows again, as any chat's turn ends
-/// and each minute while the window shows; never while it's hidden. A
+/// Asked as it starts, as the window shows again, as any chat's turn ends,
+/// as the daemon answers again after it was gone and each minute while
+/// the window shows; never while it's hidden. A
 /// failed ask keeps the last answer and says nothing: Settings › Usage
 /// shows why.
 class TodaySpend extends ValueNotifier<Spent?> {
@@ -40,6 +41,7 @@ class TodaySpend extends ValueNotifier<Spent?> {
   int _asks = 0; // which ask is the latest: an older answer is dropped
   final _busy = <String>{}; // the chats whose turn runs, to see one end
   Listenable? _chats;
+  late bool _connected = daemon.connected; // as last seen, to see it return
   bool _gone = false;
 
   @override
@@ -58,8 +60,12 @@ class TodaySpend extends ValueNotifier<Spent?> {
     if (daemon.macView.window) unawaited(_ask());
   }
 
-  /// Follows the chats the daemon lists now, for their turns' ends.
+  /// Follows the chats the daemon lists now, for their turns' ends, and
+  /// asks as the daemon answers again: one back from a restart may be
+  /// newer, or have metered turns while it was out of reach.
   void _follow() {
+    if (daemon.connected && !_connected) unawaited(_ask());
+    _connected = daemon.connected;
     _chats?.removeListener(_turns);
     _chats = Listenable.merge([...daemon.chats.values])..addListener(_turns);
     _turns();

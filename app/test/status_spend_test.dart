@@ -178,6 +178,26 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('asked as the daemon answers again after it was gone', (
+    tester,
+  ) async {
+    final fake = FakeDaemon([])..usage = _day(2);
+    final d = await _card(tester, fake);
+    expect(_asked(fake), hasLength(1));
+    fake.down = true;
+    await tester.pump(const Duration(seconds: 6));
+    expect(d.connected, isFalse);
+    fake
+      ..usage = _day(7)
+      ..down = false;
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pump();
+    expect(d.connected, isTrue);
+    expect(_asked(fake), hasLength(2));
+    expect(_spend(r'$7.00'), findsOne);
+    await closeView(tester, d);
+  });
+
   testWidgets('the last answer stays while another is asked, and after a '
       'failed ask', (tester) async {
     final fake = FakeDaemon([])..usage = _day(12.4);
