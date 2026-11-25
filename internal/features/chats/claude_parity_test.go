@@ -3,7 +3,9 @@ package chats
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -74,11 +76,15 @@ func TestClaudeParity(t *testing.T) {
 // claude's own recording says its task did: the task_notification in the
 // scenario's cli*.jsonl, read as CommandTask reads Claude's word on it
 // (ADR 0130). The comparison above can't tell: both sides go through the
-// same reading. Every backgrounded local_bash task claude started must
-// have its row, and every row its task.
+// same reading. Every row must have its task, and every backgrounded
+// local_bash task claude started its row, where this machine follows the
+// recording's commands at all: Claude named their files in the
+// recorder's own folder (/private/tmp/claude-<its uid>), and a harness
+// reads a task's file only in its own user's (claude's taskFile), so
+// under another user or on Linux the chats show no row for them.
 func commandsEnded(t *testing.T, dir string, views []parity) {
 	t.Helper()
-	ended := recordedCommandEnds(t, dir)
+	ended, followed := recordedCommandEnds(t, dir)
 	seen := map[string]bool{}
 	for _, v := range views {
 		for _, it := range v.Items {
@@ -96,7 +102,7 @@ func commandsEnded(t *testing.T, dir string, views []parity) {
 		}
 	}
 	for id := range ended {
-		if !seen[id] {
+		if !seen[id] && followed {
 			t.Errorf("claude's background command %s has no row", id)
 		}
 	}
@@ -105,12 +111,16 @@ func commandsEnded(t *testing.T, dir string, views []parity) {
 // recordedCommandEnds are the background commands claude started in a
 // scenario's cli*.jsonl (task_started, local_bash, backgrounded), by task
 // id, each with its end as CommandTask maps its task_notification: none
-// (State "") when claude told no end.
-func recordedCommandEnds(t *testing.T, dir string) map[string]model.BackgroundCommand {
+// (State "") when claude told no end. followed says this machine's
+// harness would read the files claude named for them (every
+// task_notification's output_file, and there is one): the file is gone,
+// but it is where this user's claude writes a task's output.
+func recordedCommandEnds(t *testing.T, dir string) (ends map[string]model.BackgroundCommand, followed bool) {
 	t.Helper()
 	files, err := filepath.Glob(filepath.Join(dir, "cli*.jsonl"))
 	testcheck.NoErr(t, err)
-	ends := map[string]model.BackgroundCommand{}
+	ends = map[string]model.BackgroundCommand{}
+	named, mine := 0, 0 // the files claude named, and those this user's claude would write
 	for _, f := range files {
 		b, err := os.ReadFile(f)
 		testcheck.NoErr(t, err)
@@ -124,6 +134,7 @@ func recordedCommandEnds(t *testing.T, dir string) map[string]model.BackgroundCo
 					Backgrounded bool   `json:"is_backgrounded"`
 					Status       string `json:"status"`
 					Summary      string `json:"summary"`
+					OutputFile   string `json:"output_file"`
 				} `json:"frame"`
 			}
 			if json.Unmarshal(line, &l) != nil || l.Dir != "out" {
@@ -145,10 +156,16 @@ func recordedCommandEnds(t *testing.T, dir string) map[string]model.BackgroundCo
 					t.Fatalf("%s: CommandTask doesn't read task %s's status %q", f, fr.TaskID, fr.Status)
 				}
 				ends[fr.TaskID] = model.BackgroundCommand{ID: fr.TaskID, State: model.RunState(state), End: end}
+				if fr.OutputFile != "" {
+					named++
+					if _, _, err := claudeHarness.StatBackgroundCommand(fr.TaskID, fr.OutputFile); err == nil || errors.Is(err, fs.ErrNotExist) {
+						mine++
+					}
+				}
 			}
 		}
 	}
-	return ends
+	return ends, named > 0 && mine == named
 }
 
 // launchedARun checks the recorded Workflow call became a workflow's item
