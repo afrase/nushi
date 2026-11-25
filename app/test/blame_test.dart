@@ -9,6 +9,7 @@ import 'package:nushi/blame_gutter.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/file_tree.dart' show FileList;
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
@@ -507,6 +508,49 @@ void main() {
       );
       expect(chatC(d).tab.value, ChatTab.chat);
       await tester.pump(const Duration(seconds: 5));
+      await endEditor(tester, d);
+    }, variant: onMac);
+
+    testWidgets("Changes' file menu: Blame opens the file with Blame on", (
+      tester,
+    ) async {
+      final (d, fake) = await _open(
+        tester,
+        answer: (input) => switch (input) {
+          GetDiffRequest(:final path, names: false)
+              when path.isEmpty && input.base.isEmpty =>
+            GetDiffResponse(
+              files: [
+                FileChange(
+                  path: 'main.go',
+                  status: 'modified',
+                  oldText: changeBase,
+                  newText: changeShown,
+                  added: 3,
+                  removed: 2,
+                ),
+              ],
+            ),
+          _ => _onMain(input),
+        },
+      );
+      final c = chatC(d);
+      c.tab.value = ChatTab.changes;
+      await tester.pumpAndSettle();
+      final row = find
+          .descendant(
+            of: find.byType(FileList),
+            matching: find.textContaining('main.go', findRichText: true),
+          )
+          .first;
+      await tester.tap(row, buttons: kSecondaryButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Blame'));
+      await tester.pumpAndSettle();
+      expect(c.tab.value, ChatTab.chat);
+      expect(c.files.blamed.value, {'main.go'});
+      expect(_asked(fake), hasLength(1));
+      expect(find.byType(EditorBlame), findsOneWidget);
       await endEditor(tester, d);
     }, variant: onMac);
   });

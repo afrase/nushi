@@ -515,6 +515,13 @@ class ChatState extends ChangeNotifier {
     sawFile(path);
   }
 
+  /// Opens [path] in its Files pane with Blame on (Changes' file menu,
+  /// issue #78): in the tab of the same file, if it has one.
+  void blameInFiles(String path) {
+    openInFiles(path);
+    if (files.shown.value case final tab?) files.blame(tab.path, on: true);
+  }
+
   /// Shows [entry], one of its file or browser tabs: a click on its tab,
   /// which doesn't keep a provisional one (a double click does, ADR 0070).
   void showTab(PreviewEntry entry) => switch (entry) {

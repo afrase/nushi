@@ -68,6 +68,8 @@ Blame shows, beside each line number, who last changed that line and when, as gi
 4. Click a name to open that commit in the **Changes** tab's **Commits**. A commit Commits doesn't list (older than the branch's commits, or from another repository) has its id copied instead, and Nushi says so.
 5. Click **Hide blame** to turn it off.
 
+From the **Changes** tab, right-click a file and pick **Blame** to open it in the Files pane with Blame on.
+
 Blame is per tab: it's off when a file opens, and stays on for that tab until you close it or quit. It keeps up as the file changes and after each commit; lines you've typed and not saved say **Not committed**.
 
 While it's asked, the path's row says **Blaming…**. A file git has no history for says why instead: **Not in a git repository**, **Ignored by git**, **Not committed yet** (git doesn't track it) or **New file: not committed yet** (staged, not committed). A link, a file that isn't text, one over 1 MB or over 10,000 lines has no blame either, and says so. **Couldn’t blame** shows git's words when you click it.
