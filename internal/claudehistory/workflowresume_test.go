@@ -149,8 +149,8 @@ func TestAWorkflowWhileItsResumeRuns(t *testing.T) {
 	}
 }
 
-// rewriteJournal replaces old with new in the run's journal of session.
-func rewriteJournal(t *testing.T, session, run, old, new string) {
+// rewriteJournal replaces old with repl in the run's journal of session.
+func rewriteJournal(t *testing.T, session, run, old, repl string) {
 	t.Helper()
 	journal := filepath.Join(session, "subagents", "workflows", run, "journal.jsonl")
 	data, err := os.ReadFile(journal)
@@ -158,7 +158,7 @@ func rewriteJournal(t *testing.T, session, run, old, new string) {
 	if !bytes.Contains(data, []byte(old)) {
 		t.Fatalf("the journal has no %q", old)
 	}
-	testcheck.NoErr(t, os.WriteFile(journal, bytes.ReplaceAll(data, []byte(old), []byte(new)), 0o600))
+	testcheck.NoErr(t, os.WriteFile(journal, bytes.ReplaceAll(data, []byte(old), []byte(repl)), 0o600))
 }
 
 // A resume that runs the stopped call again with the same args (as the
