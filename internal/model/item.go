@@ -341,6 +341,10 @@ type Field struct {
 	Required               bool
 	Values                 []string
 	OtherFor               string // the field this free-text one is the "Other" answer of
+	// Note says the agent takes this "Other" field's text, beside a pick of
+	// the field it is for, as a note on that pick rather than an answer of
+	// its own (HarnessInfo.OtherNotes).
+	Note bool `json:",omitempty"`
 }
 
 // Message is what the user sends: text, the files it mentions or attaches

@@ -54,7 +54,8 @@ type Harness struct{}
 func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{Name: "claude", Title: "Claude", Resume: "claude --resume", ClientMCP: true,
 		Expires: "Claude Code deletes sessions after 30 days by default", NamesSessions: true, SubagentSessions: true, Redelete: 3 * time.Second, Moves: true,
-		OtherSuffix: "_custom", // AskUserQuestion's free text after a question
+		OtherSuffix: "_custom",        // AskUserQuestion's free text after a question
+		OtherNotes:  model.NotesOnOne, // claude-acp-go's `answered`: a note on one pick, one more answer to several
 		SessionMeta: map[string]any{"claudeCode": map[string]any{"options": map[string]any{
 			"env": map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
 		}}},

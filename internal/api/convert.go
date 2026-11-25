@@ -149,7 +149,7 @@ func itemProto(it *model.Item, refs bool) *nushiv1.Item {
 	}
 	for _, f := range it.Fields {
 		out.Fields = append(out.Fields, &nushiv1.Field{Id: f.ID, Title: f.Title, Description: f.Description,
-			Type: fieldTypes[f.Type], Options: optionsProto(f.Options), Required: f.Required, Values: f.Values, OtherFor: f.OtherFor})
+			Type: fieldTypes[f.Type], Options: optionsProto(f.Options), Required: f.Required, Values: f.Values, OtherFor: f.OtherFor, Note: f.Note})
 	}
 	return out
 }

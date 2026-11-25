@@ -37,7 +37,8 @@ type Local struct{ Harness }
 // Codex finds a session by its id whatever the folder, so it Moves.
 func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{Name: "codex", Title: "Codex", Resume: "codex resume", ClientMCP: true, DeleteArchives: true, OneWriter: true, Moves: true,
-		OtherSuffix: "_note"} // "Additional answer or note" after a question
+		OtherSuffix: "_note",          // "Additional answer or note" after a question
+		OtherNotes:  model.NotesOnOne} // after the choice as "user_note: …" (codex-acp-go's askQuestions)
 }
 
 // Start starts the adapter, as claude.Harness does Claude's, running r's

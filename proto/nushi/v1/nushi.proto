@@ -2857,6 +2857,11 @@ message Field {
   // For a free-text field that is another field's "Other" answer: that
   // field's id.
   string other_for = 8;
+  // For an "Other" field: the agent takes its text, beside a pick of the
+  // field it is for, as a note on that pick, not as an answer of its own
+  // (the harness's OtherNotes: Claude's and Codex's with one choice,
+  // Ante's with any). API 150.
+  bool note = 9;
 }
 
 message ItemEvent {

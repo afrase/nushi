@@ -42,7 +42,7 @@ func TestAnAnteChat(t *testing.T) {
 	a.waitFor("the write", turnEnded(id))
 	a.send(id, "ask me")
 	q := a.waitFor("the question", questionPending).GetItem().Item
-	if len(q.Fields) != 2 || q.Fields[1].OtherFor != "q0" {
+	if len(q.Fields) != 2 || q.Fields[1].OtherFor != "q0" || !q.Fields[1].Note {
 		t.Errorf("question fields %v", q.Fields)
 	}
 	must(a.c.AnswerQuestion(ctx, connect.NewRequest(&nushiv1.AnswerQuestionRequest{ChatId: id, ItemId: q.Id,

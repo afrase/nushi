@@ -59,6 +59,35 @@ type HarnessInfo struct {
 	// with no choices of its own ("_custom": Claude's `color_custom`). ""
 	// when its forms have none.
 	OtherSuffix string
+	// OtherNotes says for which questions the agent takes that "Other"
+	// field's text, beside a pick, as a note on the pick rather than an
+	// answer of its own (docs/facts): none, those taking one choice, or
+	// all of them.
+	OtherNotes OtherNotes
+}
+
+// OtherNotes is which questions' "Other" text an agent reads, beside a
+// pick, as a note on the pick (HarnessInfo.OtherNotes).
+type OtherNotes int
+
+// Which questions' "Other" text is a note on their pick.
+const (
+	NotesOnNone OtherNotes = iota // an answer of its own, or in place of the pick
+	NotesOnOne                    // a question taking one choice; with several, one more answer
+	NotesOnAll                    // any question with choices
+)
+
+// On says whether the "Other" text of a question of type t is a note on
+// its pick.
+func (n OtherNotes) On(t FieldType) bool {
+	switch n {
+	case NotesOnOne:
+		return t == Choice
+	case NotesOnAll:
+		return t == Choice || t == Choices
+	case NotesOnNone:
+	}
+	return false
 }
 
 // Info is i itself, so a HarnessInfo is a harness.

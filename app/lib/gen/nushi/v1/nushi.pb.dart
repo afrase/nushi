@@ -19388,6 +19388,7 @@ class Field extends $pb.GeneratedMessage {
     $core.bool? required,
     $core.Iterable<$core.String>? values,
     $core.String? otherFor,
+    $core.bool? note,
   }) {
     final result = Field._();
     if (id != null) result.id = id;
@@ -19398,6 +19399,7 @@ class Field extends $pb.GeneratedMessage {
     if (required != null) result.required = required;
     if (values != null) result.values.addAll(values);
     if (otherFor != null) result.otherFor = otherFor;
+    if (note != null) result.note = note;
     return result;
   }
 
@@ -19424,6 +19426,7 @@ class Field extends $pb.GeneratedMessage {
     ..aOB(6, _omitFieldNames ? '' : 'required')
     ..pPS(7, _omitFieldNames ? '' : 'values')
     ..aOS(8, _omitFieldNames ? '' : 'otherFor')
+    ..aOB(9, _omitFieldNames ? '' : 'note')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -19508,6 +19511,19 @@ class Field extends $pb.GeneratedMessage {
   $core.bool hasOtherFor() => $_has(7);
   @$pb.TagNumber(8)
   void clearOtherFor() => $_clearField(8);
+
+  /// For an "Other" field: the agent takes its text, beside a pick of the
+  /// field it is for, as a note on that pick, not as an answer of its own
+  /// (the harness's OtherNotes: Claude's and Codex's with one choice,
+  /// Ante's with any). API 150.
+  @$pb.TagNumber(9)
+  $core.bool get note => $_getBF(8);
+  @$pb.TagNumber(9)
+  set note($core.bool value) => $_setBool(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasNote() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearNote() => $_clearField(9);
 }
 
 class ItemEvent extends $pb.GeneratedMessage {

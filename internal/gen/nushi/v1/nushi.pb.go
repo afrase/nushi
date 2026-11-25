@@ -15055,7 +15055,12 @@ type Field struct {
 	Values []string `protobuf:"bytes,7,rep,name=values,proto3" json:"values,omitempty"`
 	// For a free-text field that is another field's "Other" answer: that
 	// field's id.
-	OtherFor      string `protobuf:"bytes,8,opt,name=other_for,json=otherFor,proto3" json:"other_for,omitempty"`
+	OtherFor string `protobuf:"bytes,8,opt,name=other_for,json=otherFor,proto3" json:"other_for,omitempty"`
+	// For an "Other" field: the agent takes its text, beside a pick of the
+	// field it is for, as a note on that pick, not as an answer of its own
+	// (the harness's OtherNotes: Claude's and Codex's with one choice,
+	// Ante's with any). API 150.
+	Note          bool `protobuf:"varint,9,opt,name=note,proto3" json:"note,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -15144,6 +15149,13 @@ func (x *Field) GetOtherFor() string {
 		return x.OtherFor
 	}
 	return ""
+}
+
+func (x *Field) GetNote() bool {
+	if x != nil {
+		return x.Note
+	}
+	return false
 }
 
 type ItemEvent struct {
@@ -29371,7 +29383,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
 	"\x04kind\x18\x03 \x01(\tR\x04kind\x12 \n" +
-	"\vdescription\x18\x04 \x01(\tR\vdescription\"\xf5\x01\n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\"\x89\x02\n" +
 	"\x05Field\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
@@ -29380,7 +29392,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\aoptions\x18\x05 \x03(\v2\x10.nushi.v1.OptionR\aoptions\x12\x1a\n" +
 	"\brequired\x18\x06 \x01(\bR\brequired\x12\x16\n" +
 	"\x06values\x18\a \x03(\tR\x06values\x12\x1b\n" +
-	"\tother_for\x18\b \x01(\tR\botherFor\"\x84\x01\n" +
+	"\tother_for\x18\b \x01(\tR\botherFor\x12\x12\n" +
+	"\x04note\x18\t \x01(\bR\x04note\"\x84\x01\n" +
 	"\tItemEvent\x12\"\n" +
 	"\x04item\x18\x01 \x01(\v2\x0e.nushi.v1.ItemR\x04item\x12\x16\n" +
 	"\x06append\x18\x02 \x01(\bR\x06append\x12\x14\n" +
