@@ -157,7 +157,7 @@ Each step has one verb. Requests wait for their answer unless they have `async` 
 | `{"request": "method", "params": {…}}` | any request; `"$s1"` in params is that session's id, `"$cwd"` the run's folder |
 | `{"notify": "method", "params": {…}}` | any notification, the same way |
 
-`meta` on `new`, `load`, `resume` and `fork` joins Nushi's session `_meta`, objects merged key by key (`{"claudeCode": {"options": {"settings": {"ultracode": true}}}}`). `settings` there is claude's own settings for the session, which the scenarios use to allow the tools they don't ask about (`{"permissions": {"allow": ["Bash"]}}`). `mcpServers` on the same steps is the session's MCP servers as ACP gives them (`[]` when not given); `"$mcp-echo"` in it is the library's `claudetest/cmd/mcp-echo`, a stdio server with one tool, `echo`, which `make claude-record` builds.
+`cwd` on `new`, `load`, `resume` and `fork` is the request's folder, relative to the run's (`".worktrees/side"`); the run's folder when not given. `meta` on the same steps joins Nushi's session `_meta`, objects merged key by key (`{"claudeCode": {"options": {"settings": {"ultracode": true}}}}`). `settings` there is claude's own settings for the session, which the scenarios use to allow the tools they don't ask about (`{"permissions": {"allow": ["Bash"]}}`). `mcpServers` on the same steps is the session's MCP servers as ACP gives them (`[]` when not given); `"$mcp-echo"` in it is the library's `claudetest/cmd/mcp-echo`, a stdio server with one tool, `echo`, which `make claude-record` builds.
 
 | Step | Does |
 |---|---|
@@ -168,5 +168,6 @@ Each step has one verb. Requests wait for their answer unless they have `async` 
 | `{"pause": "500ms"}` | waits that long; prefer `waitFor` |
 | `{"end": {}}` | ends the script there: the client goes at once (stdin's end), waiting for no answer it hasn't had |
 | `{"repo": {}}` | makes the run's folder a git repository on `main` with one empty commit, without your git config; before `new`, for a scenario about worktrees |
+| `{"git": ["worktree", "add", "-q", ".worktrees/side", "-b", "side"]}` | runs git with those arguments in the run's folder, as `repo` does: a worktree made before the session, or removed between turns |
 
 Every request the agent makes must be answered by a step, or the recording fails.

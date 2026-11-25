@@ -46,9 +46,11 @@ type step struct {
 	Kill       string          `json:"kill,omitempty"`       // stop the process group below the agent whose command line has this, as Nushi stops a background command
 	End        json.RawMessage `json:"end,omitempty"`        // {}: the client goes here, waiting for no answer it hasn't had (stdin's end mid-turn)
 	Repo       json.RawMessage `json:"repo,omitempty"`       // {}: makes $cwd a git repository with one commit, for a scenario about worktrees
+	Git        []string        `json:"git,omitempty"`        // runs git with these arguments in $cwd, as repo does (a worktree added or removed between turns)
 
 	Session     string            `json:"session,omitempty"`     // Prompt's and Steer's session
 	As          string            `json:"as,omitempty"`          // Fork's name for the fork
+	Cwd         string            `json:"cwd,omitempty"`         // a session request's folder, relative to $cwd; $cwd when not given
 	Meta        json.RawMessage   `json:"meta,omitempty"`        // joins a session request's _meta (Nushi's)
 	MCPServers  json.RawMessage   `json:"mcpServers,omitempty"`  // a session request's MCP servers, as ACP gives them; [] when not given
 	Capture     map[string]string `json:"capture,omitempty"`     // WaitFor's: names for values in the message it found, by dotted path ("params.update.sessionId")
@@ -67,6 +69,7 @@ func (s *step) verb() string {
 		"prompt": s.Prompt != "", "steer": s.Steer != "", "cancel": s.Cancel != "", "request": s.Request != "",
 		"notify": s.Notify != "", "answer": s.Answer != "", "await": s.Await != "", "waitFor": s.WaitFor != nil,
 		"pause": s.Pause != "", "kill": s.Kill != "", "end": s.End != nil, "repo": s.Repo != nil,
+		"git": s.Git != nil,
 	}
 	var out string
 	for _, v := range slices.Sorted(maps.Keys(verbs)) {
@@ -107,10 +110,17 @@ func loadClient(dir string) (*clientScript, time.Duration, error) {
 			if s.Session == "" {
 				return nil, 0, fmt.Errorf("%s: step %d: %s without a session", path, i+1, s.verb())
 			}
+		case "git":
+			if len(s.Git) == 0 {
+				return nil, 0, fmt.Errorf("%s: step %d: git without arguments", path, i+1)
+			}
 		case "pause":
 			if _, err := time.ParseDuration(s.Pause); err != nil {
 				return nil, 0, fmt.Errorf("%s: step %d: %w", path, i+1, err)
 			}
+		}
+		if s.Cwd != "" && (filepath.IsAbs(s.Cwd) || !filepath.IsLocal(s.Cwd)) {
+			return nil, 0, fmt.Errorf("%s: step %d: cwd %q is not a folder in $cwd", path, i+1, s.Cwd)
 		}
 		for _, name := range []string{s.Load, s.Resume, s.Fork, s.Close, s.Delete, s.Cancel, s.Session} {
 			if name != "" && !named[name] {

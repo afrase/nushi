@@ -225,3 +225,53 @@ func TestRepoStep(t *testing.T) {
 		t.Errorf("the repository's log: %q", got)
 	}
 }
+
+// The git step runs git in the run's folder (a worktree added before a
+// session), and a session step's cwd names a folder in it.
+func TestGitStepAndCwd(t *testing.T) {
+	dir := t.TempDir()
+	p := &player{cwd: dir}
+	for _, raw := range []string{`{"repo": {}}`, `{"git": ["worktree", "add", "-q", ".worktrees/side", "-b", "side"]}`} {
+		var s step
+		if err := json.Unmarshal([]byte(raw), &s); err != nil {
+			t.Fatal(err)
+		}
+		if err := p.step(t.Context(), &s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	out, err := exec.CommandContext(t.Context(), "git", "-C", filepath.Join(dir, ".worktrees", "side"), "branch", "--show-current").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(string(out)); got != "side" {
+		t.Errorf("the worktree's branch: %q", got)
+	}
+	p.ids = map[string]string{"s1": "sid-1"}
+	s := step{Load: "s1", Cwd: ".worktrees/side"}
+	_, params, err := p.build(&s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := json.Marshal(params)
+	var got struct{ Cwd string }
+	_ = json.Unmarshal(b, &got)
+	if want := filepath.Join(dir, ".worktrees", "side"); got.Cwd != want {
+		t.Errorf("the load's cwd: %q, want %q", got.Cwd, want)
+	}
+
+	scripts := map[string]string{
+		`{"steps": [{"git": []}]}`:                          "git without arguments",
+		`{"steps": [{"new": "s1", "cwd": "../elsewhere"}]}`: "not a folder in $cwd",
+		`{"steps": [{"new": "s1", "cwd": "/elsewhere"}]}`:   "not a folder in $cwd",
+	}
+	for script, want := range scripts {
+		d := t.TempDir()
+		if err := os.WriteFile(filepath.Join(d, "client.json"), []byte(script), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := loadClient(d); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: %v, want an error with %q", script, err, want)
+		}
+	}
+}
