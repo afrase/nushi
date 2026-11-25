@@ -121,6 +121,22 @@ func (s *server) StageHunks(ctx context.Context, req *connect.Request[nushiv1.St
 	return connect.NewResponse(&nushiv1.StageHunksResponse{Staged: staged}), nil
 }
 
+func (s *server) PushBranch(ctx context.Context, req *connect.Request[nushiv1.PushBranchRequest]) (*connect.Response[nushiv1.PushBranchResponse], error) {
+	if err := absolute(req.Msg.Folder); err != nil {
+		return nil, err
+	}
+	branch, remote, err := git.Push(ctx, req.Msg.Folder, s.Agents.Environ())
+	if err != nil {
+		return nil, waitErr(ctx, err)
+	}
+	if req.Msg.ChatId != "" {
+		if err := s.Chats.Pushed(req.Msg.ChatId, req.Msg.Folder, branch); err != nil {
+			return nil, refused(fmt.Errorf("pushed, but not taken as the chat's: %w", err))
+		}
+	}
+	return connect.NewResponse(&nushiv1.PushBranchResponse{Branch: branch, Remote: remote}), nil
+}
+
 // blocksOf is a request's change blocks.
 func blocksOf(blocks []*nushiv1.ChangeBlock) []git.Block {
 	out := make([]git.Block, len(blocks))
@@ -276,6 +292,9 @@ func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushi
 			return nil, refused(err)
 		}
 		resp.Ahead = int32(ahead)
+	}
+	if push, err := git.PushStatus(ctx, req.Msg.Folder); err == nil { // a count that fails shows nothing to push
+		resp.Unpushed, resp.Unpublished = int32(push.Unpushed), push.Unpublished
 	}
 	return connect.NewResponse(resp), nil
 }

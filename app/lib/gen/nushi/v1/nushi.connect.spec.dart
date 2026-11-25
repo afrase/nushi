@@ -605,6 +605,18 @@ abstract final class NushiService {
     nushiv1nushi.StageHunksResponse.new,
   );
 
+  /// Pushes the folder's branch, and nothing else, as the user's own git
+  /// push: hooks run and their credential helper answers. To its upstream
+  /// (a branch of the same name), or with none to the only remote or
+  /// origin, setting it. Never a force, tags, another branch or a detached
+  /// HEAD. Only the user's own ask (ADR 0079). (API 157)
+  static const pushBranch = connect.Spec(
+    '/$name/PushBranch',
+    connect.StreamType.unary,
+    nushiv1nushi.PushBranchRequest.new,
+    nushiv1nushi.PushBranchResponse.new,
+  );
+
   /// Reads one of a folder's files as it is now, as a change that changes
   /// nothing (status "unchanged", the text on both sides): a file a review
   /// names that isn't among the changes. Only a regular file inside the

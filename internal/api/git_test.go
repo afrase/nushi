@@ -96,6 +96,43 @@ func TestStageHunksThroughTheAPI(t *testing.T) {
 	}
 }
 
+// A push through the API sends the branch to a bare repository in a temp
+// folder, and the folder's status says what's left to push; a device
+// can't push.
+func TestPushThroughTheAPI(t *testing.T) {
+	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	repo, remote := t.TempDir(), filepath.Join(t.TempDir(), "remote.git")
+	testcheck.Git(t, repo, "init", "-q", "--bare", remote)
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Write(t, filepath.Join(repo, "f.txt"), "x\n")
+	testcheck.Git(t, repo, "add", ".")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "one")
+	testcheck.Git(t, repo, "remote", "add", "origin", remote)
+
+	c := client(t, New(Services{Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil)}))
+	ctx := t.Context()
+	st, err := c.GetFolderStatus(ctx, connect.NewRequest(&nushiv1.GetFolderStatusRequest{Folder: repo}))
+	if err != nil || !st.Msg.Unpublished || st.Msg.Unpushed != 0 {
+		t.Fatalf("before: %v %v", st, err)
+	}
+	done, err := c.PushBranch(ctx, connect.NewRequest(&nushiv1.PushBranchRequest{Folder: repo}))
+	if err != nil || done.Msg.Branch != "main" || done.Msg.Remote != "origin" {
+		t.Fatalf("push: %v %v", done, err)
+	}
+	testcheck.Write(t, filepath.Join(repo, "f.txt"), "y\n")
+	testcheck.Git(t, repo, "commit", "-q", "-am", "two")
+	st, err = c.GetFolderStatus(ctx, connect.NewRequest(&nushiv1.GetFolderStatusRequest{Folder: repo}))
+	if err != nil || st.Msg.Unpublished || st.Msg.Unpushed != 1 {
+		t.Fatalf("after: %v %v", st, err)
+	}
+
+	d := client(t, ForDevices(Services{}))
+	if _, err := d.PushBranch(ctx, connect.NewRequest(&nushiv1.PushBranchRequest{Folder: repo})); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Errorf("a device pushed: %v", err)
+	}
+}
+
 // TestGetDiffOfOnePath: a file preview's GetDiff (path) answers that file
 // alone, without the index's state, and refuses a path outside its folder.
 func TestGetDiffOfOnePath(t *testing.T) {

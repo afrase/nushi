@@ -1183,6 +1183,28 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Pushes the folder's branch, and nothing else, as the user's own git
+  /// push: hooks run and their credential helper answers. To its upstream
+  /// (a branch of the same name), or with none to the only remote or
+  /// origin, setting it. Never a force, tags, another branch or a detached
+  /// HEAD. Only the user's own ask (ADR 0079). (API 157)
+  Future<nushiv1nushi.PushBranchResponse> pushBranch(
+    nushiv1nushi.PushBranchRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.pushBranch,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Reads one of a folder's files as it is now, as a change that changes
   /// nothing (status "unchanged", the text on both sides): a file a review
   /// names that isn't among the changes. Only a regular file inside the

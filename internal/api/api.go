@@ -31,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 156
+const Version = 157
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -150,9 +150,11 @@ var macOnly = map[string]bool{
 	// 0109).
 	nushiv1connect.NushiServiceInstallUpdateProcedure: true,
 	// The phone has no Changes view, and a commit's hooks run on the Mac.
-	nushiv1connect.NushiServiceStageFilesProcedure:         true,
-	nushiv1connect.NushiServiceGetHunksProcedure:           true,
-	nushiv1connect.NushiServiceStageHunksProcedure:         true,
+	nushiv1connect.NushiServiceStageFilesProcedure: true,
+	nushiv1connect.NushiServiceGetHunksProcedure:   true,
+	nushiv1connect.NushiServiceStageHunksProcedure: true,
+	// A push runs the repository's hooks with the user's credentials.
+	nushiv1connect.NushiServicePushBranchProcedure:         true,
 	nushiv1connect.NushiServiceCommitStagedProcedure:       true,
 	nushiv1connect.NushiServiceWriteCommitMessageProcedure: true,
 	// macOS's keychain prompt shows on the Mac's screen.

@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -63,6 +64,31 @@ func (c *chat) pushedLocked(it model.Item) {
 	if branch == "" {
 		return
 	}
+	c.recordPushLocked(branch)
+	c.logLocked().Info("branch pushed in the chat")
+}
+
+// Pushed records branch as the chat's own when the user pushed it from
+// Changes in the chat's folder (the API's PushBranch), as a tool call's
+// push is, so its pull request is found the same way. A push from another
+// folder is no push of the chat's.
+func (s *Service) Pushed(chatID, folder, branch string) error {
+	c, err := s.listed(chatID)
+	if err != nil {
+		return err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.parent != nil || branch == "" || filepath.Clean(folder) != filepath.Clean(c.record.Folder) {
+		return nil
+	}
+	c.recordPushLocked(branch)
+	c.logLocked().Info("branch pushed from Changes")
+	return nil
+}
+
+// recordPushLocked notes that branch was pushed now.
+func (c *chat) recordPushLocked(branch string) {
 	now := time.Now()
 	c.saveLocked(func(s *model.ChatRecord) {
 		s.Pushed = slices.Clone(s.Pushed)
@@ -75,5 +101,4 @@ func (c *chat) pushedLocked(it model.Item) {
 			s.Pushed = slices.Delete(s.Pushed, 0, over)
 		}
 	})
-	c.logLocked().Info("branch pushed in the chat")
 }

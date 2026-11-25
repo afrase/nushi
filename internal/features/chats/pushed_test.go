@@ -232,3 +232,24 @@ func TestACallThatArrivesCompletedPushed(t *testing.T) {
 		t.Errorf("pushed %s", got)
 	}
 }
+
+// TestPushedFromChanges: a push from Changes in the chat's folder is the
+// chat's, as a tool call's is, so its branch's pull request is found; one
+// from another folder isn't.
+func TestPushedFromChanges(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	testcheck.NoErr(t, svc.Pushed(c.id, t.TempDir(), "elsewhere"))
+	testcheck.NoErr(t, svc.Pushed(c.id, c.record.Folder+"/", "sub"))
+	s, err := svc.Session(c.id)
+	testcheck.NoErr(t, err)
+	if got := fmt.Sprint(branches(s.Pushed)); got != "[sub]" {
+		t.Fatalf("pushed: %s", got)
+	}
+	testcheck.NoErr(t, svc.FoundPull(c.id, "sub", new(pullLink(7, "sub")), time.Now().Add(time.Hour)))
+	if s, _ = svc.Session(c.id); fmt.Sprint(numbers(s.AllPulls())) != "[7]" {
+		t.Fatalf("its pull request: %v", numbers(s.AllPulls()))
+	}
+	if err := svc.Pushed("no such chat", c.record.Folder, "sub"); err == nil {
+		t.Error("a chat that isn't")
+	}
+}

@@ -13811,6 +13811,8 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
     $core.bool? gone,
     $core.String? defaultBase,
     $core.int? ahead,
+    $core.int? unpushed,
+    $core.bool? unpublished,
   }) {
     final result = GetFolderStatusResponse._();
     if (git != null) result.git = git;
@@ -13821,6 +13823,8 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
     if (gone != null) result.gone = gone;
     if (defaultBase != null) result.defaultBase = defaultBase;
     if (ahead != null) result.ahead = ahead;
+    if (unpushed != null) result.unpushed = unpushed;
+    if (unpublished != null) result.unpublished = unpublished;
     return result;
   }
 
@@ -13845,6 +13849,8 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
     ..aOB(6, _omitFieldNames ? '' : 'gone')
     ..aOS(7, _omitFieldNames ? '' : 'defaultBase')
     ..aI(8, _omitFieldNames ? '' : 'ahead')
+    ..aI(9, _omitFieldNames ? '' : 'unpushed')
+    ..aOB(10, _omitFieldNames ? '' : 'unpublished')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -13950,6 +13956,28 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
   $core.bool hasAhead() => $_has(7);
   @$pb.TagNumber(8)
   void clearAhead() => $_clearField(8);
+
+  /// What PushBranch would send, from git's refs as last fetched (no
+  /// network): the commits the branch has that the remote's copy lacks,
+  /// or that the remote has no copy yet (PushBranch publishes it). Both
+  /// are zero when PushBranch would refuse. (API 157)
+  @$pb.TagNumber(9)
+  $core.int get unpushed => $_getIZ(8);
+  @$pb.TagNumber(9)
+  set unpushed($core.int value) => $_setSignedInt32(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasUnpushed() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearUnpushed() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.bool get unpublished => $_getBF(9);
+  @$pb.TagNumber(10)
+  set unpublished($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasUnpublished() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearUnpublished() => $_clearField(10);
 }
 
 class ListBranchesRequest extends $pb.GeneratedMessage {
@@ -15213,6 +15241,148 @@ class StageHunksResponse extends $pb.GeneratedMessage {
   /// Each block's state after, as blocks.
   @$pb.TagNumber(1)
   $pb.PbList<$core.bool> get staged => $_getList(0);
+}
+
+class PushBranchRequest extends $pb.GeneratedMessage {
+  factory PushBranchRequest({
+    $core.String? folder,
+    $core.String? chatId,
+  }) {
+    final result = PushBranchRequest._();
+    if (folder != null) result.folder = folder;
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  PushBranchRequest._();
+
+  factory PushBranchRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PushBranchRequest()..mergeFromBuffer(data, registry);
+  factory PushBranchRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PushBranchRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PushBranchRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: PushBranchRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PushBranchRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PushBranchRequest copyWith(void Function(PushBranchRequest) updates) =>
+      super.copyWith((message) => updates(message as PushBranchRequest))
+          as PushBranchRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use PushBranchRequest() / PushBranchRequest.new instead')
+  static PushBranchRequest create() => PushBranchRequest._();
+  static $pb.GeneratedMessage $_createMessage() => PushBranchRequest._();
+  @$core.override
+  PushBranchRequest createEmptyInstance() => PushBranchRequest._();
+  @$core.pragma('dart2js:noInline')
+  static PushBranchRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PushBranchRequest>(
+          PushBranchRequest.$_createMessage);
+  static PushBranchRequest? _defaultInstance;
+
+  /// An absolute path.
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  /// The chat whose Changes pushed, if one did: the branch becomes the
+  /// chat's own, as when its agent pushes, so its pull request is found.
+  @$pb.TagNumber(2)
+  $core.String get chatId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set chatId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasChatId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearChatId() => $_clearField(2);
+}
+
+class PushBranchResponse extends $pb.GeneratedMessage {
+  factory PushBranchResponse({
+    $core.String? branch,
+    $core.String? remote,
+  }) {
+    final result = PushBranchResponse._();
+    if (branch != null) result.branch = branch;
+    if (remote != null) result.remote = remote;
+    return result;
+  }
+
+  PushBranchResponse._();
+
+  factory PushBranchResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PushBranchResponse()..mergeFromBuffer(data, registry);
+  factory PushBranchResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PushBranchResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PushBranchResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: PushBranchResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'branch')
+    ..aOS(2, _omitFieldNames ? '' : 'remote')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PushBranchResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PushBranchResponse copyWith(void Function(PushBranchResponse) updates) =>
+      super.copyWith((message) => updates(message as PushBranchResponse))
+          as PushBranchResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use PushBranchResponse() / PushBranchResponse.new instead')
+  static PushBranchResponse create() => PushBranchResponse._();
+  static $pb.GeneratedMessage $_createMessage() => PushBranchResponse._();
+  @$core.override
+  PushBranchResponse createEmptyInstance() => PushBranchResponse._();
+  @$core.pragma('dart2js:noInline')
+  static PushBranchResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PushBranchResponse>(
+          PushBranchResponse.$_createMessage);
+  static PushBranchResponse? _defaultInstance;
+
+  /// The branch pushed and the remote it went to.
+  @$pb.TagNumber(1)
+  $core.String get branch => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set branch($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasBranch() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearBranch() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get remote => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set remote($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRemote() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRemote() => $_clearField(2);
 }
 
 class GetFileRequest extends $pb.GeneratedMessage {
@@ -37869,6 +38039,16 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, StageHunksRequest request) =>
       _client.invoke<StageHunksResponse>(
           ctx, 'NushiService', 'StageHunks', request, StageHunksResponse());
+
+  /// Pushes the folder's branch, and nothing else, as the user's own git
+  /// push: hooks run and their credential helper answers. To its upstream
+  /// (a branch of the same name), or with none to the only remote or
+  /// origin, setting it. Never a force, tags, another branch or a detached
+  /// HEAD. Only the user's own ask (ADR 0079). (API 157)
+  $async.Future<PushBranchResponse> pushBranch(
+          $pb.ClientContext? ctx, PushBranchRequest request) =>
+      _client.invoke<PushBranchResponse>(
+          ctx, 'NushiService', 'PushBranch', request, PushBranchResponse());
 
   /// Reads one of a folder's files as it is now, as a change that changes
   /// nothing (status "unchanged", the text on both sides): a file a review

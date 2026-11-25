@@ -180,6 +180,8 @@ const (
 	NushiServiceGetHunksProcedure = "/nushi.v1.NushiService/GetHunks"
 	// NushiServiceStageHunksProcedure is the fully-qualified name of the NushiService's StageHunks RPC.
 	NushiServiceStageHunksProcedure = "/nushi.v1.NushiService/StageHunks"
+	// NushiServicePushBranchProcedure is the fully-qualified name of the NushiService's PushBranch RPC.
+	NushiServicePushBranchProcedure = "/nushi.v1.NushiService/PushBranch"
 	// NushiServiceGetFileProcedure is the fully-qualified name of the NushiService's GetFile RPC.
 	NushiServiceGetFileProcedure = "/nushi.v1.NushiService/GetFile"
 	// NushiServiceWatchChatFileProcedure is the fully-qualified name of the NushiService's
@@ -738,6 +740,12 @@ type NushiServiceClient interface {
 	// the rest: the index alone is written, never the work tree, and only on
 	// the user's own ask (ADR 0079). (API 156)
 	StageHunks(context.Context, *connect.Request[v1.StageHunksRequest]) (*connect.Response[v1.StageHunksResponse], error)
+	// Pushes the folder's branch, and nothing else, as the user's own git
+	// push: hooks run and their credential helper answers. To its upstream
+	// (a branch of the same name), or with none to the only remote or
+	// origin, setting it. Never a force, tags, another branch or a detached
+	// HEAD. Only the user's own ask (ADR 0079). (API 157)
+	PushBranch(context.Context, *connect.Request[v1.PushBranchRequest]) (*connect.Response[v1.PushBranchResponse], error)
 	// Reads one of a folder's files as it is now, as a change that changes
 	// nothing (status "unchanged", the text on both sides): a file a review
 	// names that isn't among the changes. Only a regular file inside the
@@ -1434,6 +1442,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceStageHunksProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("StageHunks")),
+			connect.WithClientOptions(opts...),
+		),
+		pushBranch: connect.NewClient[v1.PushBranchRequest, v1.PushBranchResponse](
+			httpClient,
+			baseURL+NushiServicePushBranchProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("PushBranch")),
 			connect.WithClientOptions(opts...),
 		),
 		getFile: connect.NewClient[v1.GetFileRequest, v1.GetFileResponse](
@@ -2147,6 +2161,7 @@ type nushiServiceClient struct {
 	commitStaged            *connect.Client[v1.CommitStagedRequest, v1.CommitStagedResponse]
 	getHunks                *connect.Client[v1.GetHunksRequest, v1.GetHunksResponse]
 	stageHunks              *connect.Client[v1.StageHunksRequest, v1.StageHunksResponse]
+	pushBranch              *connect.Client[v1.PushBranchRequest, v1.PushBranchResponse]
 	getFile                 *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
 	watchChatFile           *connect.Client[v1.WatchChatFileRequest, v1.WatchChatFileResponse]
 	findChatFiles           *connect.Client[v1.FindChatFilesRequest, v1.FindChatFilesResponse]
@@ -2545,6 +2560,11 @@ func (c *nushiServiceClient) GetHunks(ctx context.Context, req *connect.Request[
 // StageHunks calls nushi.v1.NushiService.StageHunks.
 func (c *nushiServiceClient) StageHunks(ctx context.Context, req *connect.Request[v1.StageHunksRequest]) (*connect.Response[v1.StageHunksResponse], error) {
 	return c.stageHunks.CallUnary(ctx, req)
+}
+
+// PushBranch calls nushi.v1.NushiService.PushBranch.
+func (c *nushiServiceClient) PushBranch(ctx context.Context, req *connect.Request[v1.PushBranchRequest]) (*connect.Response[v1.PushBranchResponse], error) {
+	return c.pushBranch.CallUnary(ctx, req)
 }
 
 // GetFile calls nushi.v1.NushiService.GetFile.
@@ -3335,6 +3355,12 @@ type NushiServiceHandler interface {
 	// the rest: the index alone is written, never the work tree, and only on
 	// the user's own ask (ADR 0079). (API 156)
 	StageHunks(context.Context, *connect.Request[v1.StageHunksRequest]) (*connect.Response[v1.StageHunksResponse], error)
+	// Pushes the folder's branch, and nothing else, as the user's own git
+	// push: hooks run and their credential helper answers. To its upstream
+	// (a branch of the same name), or with none to the only remote or
+	// origin, setting it. Never a force, tags, another branch or a detached
+	// HEAD. Only the user's own ask (ADR 0079). (API 157)
+	PushBranch(context.Context, *connect.Request[v1.PushBranchRequest]) (*connect.Response[v1.PushBranchResponse], error)
 	// Reads one of a folder's files as it is now, as a change that changes
 	// nothing (status "unchanged", the text on both sides): a file a review
 	// names that isn't among the changes. Only a regular file inside the
@@ -4027,6 +4053,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceStageHunksProcedure,
 		svc.StageHunks,
 		connect.WithSchema(nushiServiceMethods.ByName("StageHunks")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServicePushBranchHandler := connect.NewUnaryHandler(
+		NushiServicePushBranchProcedure,
+		svc.PushBranch,
+		connect.WithSchema(nushiServiceMethods.ByName("PushBranch")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceGetFileHandler := connect.NewUnaryHandler(
@@ -4795,6 +4827,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceGetHunksHandler.ServeHTTP(w, r)
 		case NushiServiceStageHunksProcedure:
 			nushiServiceStageHunksHandler.ServeHTTP(w, r)
+		case NushiServicePushBranchProcedure:
+			nushiServicePushBranchHandler.ServeHTTP(w, r)
 		case NushiServiceGetFileProcedure:
 			nushiServiceGetFileHandler.ServeHTTP(w, r)
 		case NushiServiceWatchChatFileProcedure:
@@ -5250,6 +5284,10 @@ func (UnimplementedNushiServiceHandler) GetHunks(context.Context, *connect.Reque
 
 func (UnimplementedNushiServiceHandler) StageHunks(context.Context, *connect.Request[v1.StageHunksRequest]) (*connect.Response[v1.StageHunksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StageHunks is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) PushBranch(context.Context, *connect.Request[v1.PushBranchRequest]) (*connect.Response[v1.PushBranchResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.PushBranch is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {

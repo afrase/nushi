@@ -251,6 +251,12 @@ service NushiService {
   // the rest: the index alone is written, never the work tree, and only on
   // the user's own ask (ADR 0079). (API 156)
   rpc StageHunks(StageHunksRequest) returns (StageHunksResponse);
+  // Pushes the folder's branch, and nothing else, as the user's own git
+  // push: hooks run and their credential helper answers. To its upstream
+  // (a branch of the same name), or with none to the only remote or
+  // origin, setting it. Never a force, tags, another branch or a detached
+  // HEAD. Only the user's own ask (ADR 0079). (API 157)
+  rpc PushBranch(PushBranchRequest) returns (PushBranchResponse);
   // Reads one of a folder's files as it is now, as a change that changes
   // nothing (status "unchanged", the text on both sides): a file a review
   // names that isn't among the changes. Only a regular file inside the
@@ -2118,6 +2124,12 @@ message GetFolderStatusResponse {
   // The commits HEAD has that the base (or else default_base) lacks
   //.
   int32 ahead = 8;
+  // What PushBranch would send, from git's refs as last fetched (no
+  // network): the commits the branch has that the remote's copy lacks,
+  // or that the remote has no copy yet (PushBranch publishes it). Both
+  // are zero when PushBranch would refuse. (API 157)
+  int32 unpushed = 9;
+  bool unpublished = 10;
 }
 
 message ListBranchesRequest {
@@ -2261,6 +2273,20 @@ message StageHunksRequest {
 message StageHunksResponse {
   // Each block's state after, as blocks.
   repeated bool staged = 1;
+}
+
+message PushBranchRequest {
+  // An absolute path.
+  string folder = 1;
+  // The chat whose Changes pushed, if one did: the branch becomes the
+  // chat's own, as when its agent pushes, so its pull request is found.
+  string chat_id = 2;
+}
+
+message PushBranchResponse {
+  // The branch pushed and the remote it went to.
+  string branch = 1;
+  string remote = 2;
 }
 
 message GetFileRequest {
