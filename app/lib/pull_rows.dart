@@ -10,30 +10,48 @@ import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_card.dart';
 import 'package:nushi/markdown.dart' show openWeb;
 import 'package:nushi/menu.dart';
+import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_merge_dialog.dart';
 import 'package:nushi/pull_merge_state.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
+/// A row's badge's counts: passed of total, and failed (not cancelled),
+/// cancelled and running.
+typedef BadgeCounts = ({
+  int passed,
+  int total,
+  int failed,
+  int cancelled,
+  int running,
+});
+
 /// A pull request's checks as a row's badge counts them (ADR 0117):
-/// passed (neutral too) of the total, skipped ones in neither; null with
-/// none, or once merged or closed.
-({int passed, int total, int failed, int running})? badgeCounts(GitHubItem it) {
+/// passed (neutral too) of the total, skipped ones in neither, a
+/// cancelled one apart from the failed; null with none, or once merged or
+/// closed.
+BadgeCounts? badgeCounts(GitHubItem it) {
   if (it.state != 'open' || !it.hasCheckCounts()) return null;
   final c = it.checkCounts;
   final total = c.passed + c.failed + c.running;
   if (total == 0) return null;
-  return (passed: c.passed, total: total, failed: c.failed, running: c.running);
+  return (
+    passed: c.passed,
+    total: total,
+    failed: c.failing,
+    cancelled: c.failed - c.failing,
+    running: c.running,
+  );
 }
 
-/// The badge's dot: red with any failing, amber with any running, else
-/// green.
-Color badgeColor(
-  Tokens t,
-  ({int passed, int total, int failed, int running}) n,
-) => n.failed > 0
+/// The badge's dot: red with any failing, the secondary ink with any
+/// cancelled (it waits on someone without having failed), amber with any
+/// running, else green.
+Color badgeColor(Tokens t, BadgeCounts n) => n.failed > 0
     ? t.crashed
+    : n.cancelled > 0
+    ? t.textSecondary
     : n.running > 0
     ? t.needs
     : t.done;
@@ -42,7 +60,7 @@ Color badgeColor(
 /// type of [size] (the phone's sheet draws it a size up).
 Widget badgeFace(
   NushiTheme theme,
-  ({int passed, int total, int failed, int running}) n, {
+  BadgeCounts n, {
   double dot = 7,
   double size = 11.5,
 }) => Row(
@@ -58,11 +76,15 @@ Widget badgeFace(
 );
 
 /// The checks' state as words: "2 of 3 checks passed", "Checks running",
-/// "1 check failing" (the transcript's card).
-String checksSentence(({int passed, int total, int failed, int running}) n) {
+/// "1 check failing", "2 checks failing, 1 cancelled", "1 check
+/// cancelled" (the transcript's card).
+String checksSentence(BadgeCounts n) {
+  String checks(int n) => '$n check${n == 1 ? '' : 's'}';
   if (n.failed > 0) {
-    return '${n.failed} check${n.failed == 1 ? '' : 's'} failing';
+    final also = n.cancelled > 0 ? ', ${n.cancelled} cancelled' : '';
+    return '${checks(n.failed)} failing$also';
   }
+  if (n.cancelled > 0) return '${checks(n.cancelled)} cancelled';
   if (n.running > 0) return 'Checks running';
   return '${n.passed} of ${n.total} checks passed';
 }
@@ -326,10 +348,10 @@ Future<void> _address(
   );
 }
 
-/// A pull request's CI badge: a dot (red with any failing, amber with any
-/// running, else green) and passed/total; its click opens the checks'
-/// popover: In progress, Passed, Failed, then Fix checks, Show checks and
-/// Open on GitHub.
+/// A pull request's CI badge: a dot ([badgeColor]) and passed/total; its
+/// click opens the checks' popover: In progress, Passed, Failed (and
+/// Cancelled when any was), then Fix checks (the failed only), Show
+/// checks and Open on GitHub.
 class ChecksBadge extends StatelessWidget {
   const new(this.cp, this.link, this.item, {required this.onShow, super.key});
 
@@ -363,6 +385,10 @@ class ChecksBadge extends StatelessWidget {
         MenuEntry.row((_) => count('In progress', n.running, t.needs)),
         MenuEntry.row((_) => count('Passed', n.passed, t.done)),
         MenuEntry.row((_) => count('Failed', n.failed, t.crashed)),
+        if (n.cancelled > 0)
+          MenuEntry.row(
+            (_) => count('Cancelled', n.cancelled, t.textSecondary),
+          ),
         if (n.failed > 0)
           MenuEntry(
             'Fix checks',
@@ -580,7 +606,8 @@ class _PullRowState extends State<PullRow> {
 }
 
 /// A chat's pull requests folded into one line, as the widget's summary
-/// says several: "3 open, 1 merged" and the worst checks.
+/// says several: "3 open, 1 merged" and the worst checks ("2 failing, 1
+/// cancelled", red only when one failed).
 Widget pullsFolded(NushiTheme theme, List<GitHubItem?> items) {
   final t = theme.t;
   final counts = <String, int>{};
@@ -593,6 +620,7 @@ Widget pullsFolded(NushiTheme theme, List<GitHubItem?> items) {
       if (counts[s] case final n?) '$n $s',
   ].join(', ');
   var failed = 0;
+  var cancelled = 0;
   var running = 0;
   var passed = false;
   for (final it in items) {
@@ -600,11 +628,15 @@ Widget pullsFolded(NushiTheme theme, List<GitHubItem?> items) {
     final n = badgeCounts(it);
     if (n == null) continue;
     failed += n.failed;
+    cancelled += n.cancelled;
     running += n.running;
     passed = true;
   }
+  final held = failingWords(failing: failed, cancelled: cancelled);
   final worst = failed > 0
-      ? ('$failed failing', t.crashed)
+      ? (held, t.crashed)
+      : cancelled > 0
+      ? (held, t.textSecondary)
       : running > 0
       ? ('$running running', t.needs)
       : passed

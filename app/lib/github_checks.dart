@@ -10,13 +10,15 @@ import 'package:nushi/widgets.dart';
 
 export 'package:nushi/github_check_row.dart' show checkIcon, checkTook;
 
-/// A pull request's checks: what they came to (failing, passed, skipped)
-/// with Re-run failed (the failed Actions jobs' runs, when the daemon can)
-/// and Fix checks (each failed check's reply card in the chat's box); the
+/// A pull request's checks: what they came to (failing, cancelled,
+/// running, passed, skipped) with Re-run failed (the failed Actions jobs'
+/// runs, when the daemon can) and Fix checks (each failed check's reply
+/// card in the chat's box; a cancelled one isn't a failure to fix); the
 /// failed first, each a box that opens to its annotations and its log's
-/// end (an Actions job's, asked of GitHub when opened), then those
-/// running, then the passed in two columns (twelve, then Show the rest),
-/// then the skipped. [onChanged] asks for the pull request again.
+/// end (an Actions job's, asked of GitHub when opened), then the
+/// cancelled, then those running, then the passed in two columns (twelve,
+/// then Show the rest), then the skipped. [onChanged] asks for the pull
+/// request again.
 class GitHubChecks extends StatefulWidget {
   const new({
     required this.daemon,
@@ -63,7 +65,7 @@ class _GitHubChecksState extends State<GitHubChecks> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final p = widget.pull;
-    final (:failed, :running, :passed, :other) = splitChecks(p);
+    final (:failed, :cancelled, :running, :passed, :other) = splitChecks(p);
     if (p.checks.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
@@ -92,12 +94,13 @@ class _GitHubChecksState extends State<GitHubChecks> {
                     children: [
                       for (final (i, (n, words, color)) in [
                         (failed.length, 'failing', t.crashed),
+                        (cancelled.length, 'cancelled', t.textSecondary),
                         (running.length, 'running', t.needs),
                         (passed.length, 'passed', t.done),
                         (other.length, 'skipped', t.textMuted),
                       ].where((x) => x.$1 > 0).indexed) ...[
                         if (i > 0)
-                          TextSpan(text: '  ·  ', style: theme.ui(t.textMuted)),
+                          TextSpan(text: ', ', style: theme.ui(t.textMuted)),
                         TextSpan(
                           text: '$n $words',
                           style: theme.ui(
@@ -137,13 +140,14 @@ class _GitHubChecksState extends State<GitHubChecks> {
             ],
           ),
         ),
-        for (final c in [...failed, ...running])
+        for (final c in [...failed, ...cancelled, ...running])
           Padding(
             // Each row its check's, open and with its log, as the checks
             // change under it (a push, a re-run).
             key: ValueKey(c.id != 0 ? c.id : '${c.workflow}/${c.name}'),
             padding: const EdgeInsets.only(bottom: 6),
-            // A card (ADR 0111): that it failed is its own mark's to say.
+            // A card (ADR 0111): that it failed or was cancelled is its
+            // own mark's to say.
             child: Container(
               clipBehavior: Clip.antiAlias,
               decoration: cardBox(t),
@@ -211,7 +215,7 @@ class _Mini extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: color),
+          CheckMark(icon, size: 14, color: color),
           const SizedBox(width: 7),
           Expanded(
             child: Text(

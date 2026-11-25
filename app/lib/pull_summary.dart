@@ -8,13 +8,14 @@ import 'package:nushi/theme/theme.dart';
 
 /// A pull request on one line, as the collapsed PR widget (and the
 /// phone's chat bar) shows it: its number in its state's color, then for
-/// an open one what's going on (failing or running checks, changes
-/// requested or a reviewer waiting, threads not resolved, new comments),
-/// or "Ready" once it can merge; "Draft", "Merged", "Closed" else. From
-/// the pull request whole, else from its row's [item] (ADR 0140: the
-/// widget doesn't read it whole), where a reviewer waited on is a review
-/// still required, and checks with no counts (an older daemon's state)
-/// show without a number.
+/// an open one what's going on (failing, cancelled or running checks, the
+/// cancelled in the secondary ink as they hold it back without failing;
+/// changes requested or a reviewer waiting, threads not resolved, new
+/// comments), or "Ready" once it can merge; "Draft", "Merged", "Closed"
+/// else. From the pull request whole, else from its row's [item] (ADR
+/// 0140: the widget doesn't read it whole), where a reviewer waited on is
+/// a review still required, and checks with no counts (an older daemon's
+/// state) show without a number.
 Widget pullSummary(
   BuildContext context,
   NushiTheme theme, {
@@ -34,7 +35,7 @@ Widget pullSummary(
       mainAxisSize: MainAxisSize.min,
       spacing: 3,
       children: [
-        Icon(icon, size: size + 1, color: color),
+        CheckMark(icon, size: size + 1, color: color),
         if (words.isNotEmpty) Text(words, style: theme.ui(color, size: size)),
       ],
     ),
@@ -43,7 +44,8 @@ Widget pullSummary(
   final parts = <Widget>[];
   if (it != null) {
     final counted = p == null ? null : countChecks(p);
-    final failing = counted?.failing ?? it.checkCounts.failed;
+    final failing = counted?.failing ?? it.checkCounts.failing;
+    final cancelled = counted?.cancelled ?? it.checkCounts.cancelled;
     final running = counted?.running ?? it.checkCounts.running;
     // A state with no counts (an older daemon's, before API 133): its
     // checks' state alone, with no number.
@@ -80,7 +82,16 @@ Widget pullSummary(
               Icons.cancel_outlined,
               t.crashed,
               '$failing',
-              'Checks: $failing failing',
+              'Checks: ${failingWords(failing: failing, cancelled: cancelled)}',
+            ),
+          );
+        } else if (cancelled > 0) {
+          parts.add(
+            count(
+              cancelledIcon,
+              t.textSecondary,
+              '$cancelled',
+              'Checks: $cancelled cancelled',
             ),
           );
         } else if (running > 0) {

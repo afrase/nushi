@@ -11,12 +11,14 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// A check's state as an icon and its color, by its kind ([checkKind]):
-/// a neutral one, though it counts as passed, muted as GitHub draws it.
+/// a neutral one, though it counts as passed, muted as GitHub draws it; a
+/// cancelled one a stop sign ([cancelledIcon]) in the secondary ink.
 (IconData, Color) checkIcon(Tokens t, GitHubCheck c) =>
     switch (checkKind(c.state)) {
       _ when c.state == 'neutral' => (Icons.remove_circle_outline, t.textMuted),
       CheckKind.passed => (Icons.check_circle_outline, t.done),
       CheckKind.failed => (Icons.cancel_outlined, t.crashed),
+      CheckKind.cancelled => (cancelledIcon, t.textSecondary),
       CheckKind.running => (Icons.schedule, t.needs),
       CheckKind.skipped => (Icons.remove_circle_outline, t.textMuted),
     };
@@ -29,9 +31,10 @@ String checkTook(GitHubCheck c) {
   return elapsed(Duration(seconds: (to - from) ~/ 1000));
 }
 
-/// A failed or running check: its state, workflow and name, whether it's
-/// required, how long it took, Send to agent and its link; open, its
-/// annotations and its log's end (an Actions job's, asked of GitHub).
+/// A failed, cancelled or running check: its state, workflow and name,
+/// whether it's required, how long it took, a failed one's Send to agent
+/// and its link; a failed or cancelled one open, its annotations and its
+/// log's end (an Actions job's, asked of GitHub).
 class CheckRow extends StatefulWidget {
   const new({
     required this.daemon,
@@ -61,7 +64,7 @@ class _CheckRowState extends State<CheckRow> {
     final (icon, color) = checkIcon(t, c);
     final failed = c.kind == CheckKind.failed;
     final more =
-        failed &&
+        (failed || c.kind == CheckKind.cancelled) &&
         (c.id != 0 || c.annotations.isNotEmpty || c.summary.isNotEmpty);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -80,7 +83,7 @@ class _CheckRowState extends State<CheckRow> {
               else
                 const SizedBox(width: 14),
               const SizedBox(width: 4),
-              Icon(icon, size: 15, color: color),
+              CheckMark(icon, size: 15, color: color),
               const SizedBox(width: 8),
               Expanded(
                 child: Text.rich(

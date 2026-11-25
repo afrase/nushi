@@ -160,7 +160,13 @@ void main() {
 
   test('the badge counts passed of the total, skipped in neither', () {
     final it = _item(1, 't', checks: (8, 3, 0, 2));
-    expect(badgeCounts(it), (passed: 8, total: 11, failed: 3, running: 0));
+    expect(badgeCounts(it), (
+      passed: 8,
+      total: 11,
+      failed: 3,
+      cancelled: 0,
+      running: 0,
+    ));
     expect(checksSentence(badgeCounts(it)!), '3 checks failing');
     expect(badgeCounts(_stack[215]!), isNull);
     expect(checksSentence(badgeCounts(_stack[224]!)!), '3 of 3 checks passed');

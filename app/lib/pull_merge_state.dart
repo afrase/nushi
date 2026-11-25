@@ -66,16 +66,29 @@ String pickedMethod(GitHubPull p) {
 /// [b], a block (GitHubMerge.blocks), in a few words: the one table the
 /// merge status card's line and a row's Merge… say a block from. [base] is
 /// the base branch; [required] the required checks [b] counts (failing or
-/// running), 0 when not known (a row's item doesn't say).
-String blockWords(String b, {required String base, int required = 0}) {
+/// running), 0 when not known (a row's item doesn't say); [cancelled] the
+/// required checks cancelled, which the daemon's "checks_failing" counts
+/// too (GitHub's merge gate has them not passed) but which are named
+/// apart: "1 required check failing, 1 cancelled".
+String blockWords(
+  String b, {
+  required String base,
+  int required = 0,
+  int cancelled = 0,
+}) {
   final name = plainName(base);
   String checks(String doing) => required == 0
       ? 'checks $doing'
       : '$required required check${required == 1 ? '' : 's'} $doing';
+  String failing() => switch ((required, cancelled)) {
+    (_, 0) => checks('failing'),
+    (0, final c) => '$c required check${c == 1 ? ' was' : 's were'} cancelled',
+    (_, final c) => '${checks('failing')}, $c cancelled',
+  };
   return switch (b) {
     'draft' => "it's a draft",
     'conflicts' => 'conflicts with $name',
-    'checks_failing' => checks('failing'),
+    'checks_failing' => failing(),
     'checks_running' => checks('running'),
     'changes_requested' => 'changes requested',
     'review_required' => 'an approving review required',
@@ -195,6 +208,8 @@ MergeView? mergeView(GitHubPull p) {
       : MergeStep.words;
   int required(bool Function(GitHubCheck) test) =>
       p.checks.where((c) => c.required && test(c)).length;
+  final failedRequired = required((c) => c.kind == CheckKind.failed);
+  final cancelledRequired = required((c) => c.kind == CheckKind.cancelled);
   return say(
     step,
     'Merging is blocked',
@@ -204,14 +219,19 @@ MergeView? mergeView(GitHubPull p) {
           b,
           base: p.base,
           required: switch (b) {
-            'checks_failing' => required((c) => c.kind == CheckKind.failed),
+            'checks_failing' => failedRequired,
             'checks_running' => required((c) => c.kind == CheckKind.running),
             _ => 0,
           },
+          cancelled: b == 'checks_failing' ? cancelledRequired : 0,
         ),
       if (!m.canMerge) 'merging here takes write access',
     ]),
-    blocks.contains('conflicts') || blocks.contains('checks_failing')
+    // Red only when something failed: required checks that were only
+    // cancelled hold it back without having failed.
+    blocks.contains('conflicts') ||
+            blocks.contains('checks_failing') &&
+                (failedRequired > 0 || cancelledRequired == 0)
         ? Mood.bad
         : Mood.warn,
     Icons.block,

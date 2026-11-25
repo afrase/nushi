@@ -35,15 +35,21 @@ String itemState(GitHubItem it) => switch (it.state) {
   _ => it.draft ? 'Draft' : 'Open',
 };
 
-/// A checks' state (an item's `checks`) as an icon, its color and its
-/// words; null with no checks.
+/// An item's checks ([itemChecks]) as an icon, its color and its words;
+/// null with no checks. Cancelled ones with none failed are the stop
+/// sign in the secondary ink, not the red of a failure.
 ({IconData icon, Color color, String words})? checksIcon(
   Tokens t,
-  String state,
-) => switch (state) {
+  GitHubItem it,
+) => switch (itemChecks(it)) {
   'success' => (icon: Icons.check, color: t.done, words: 'Checks passed'),
   'failure' ||
   'error' => (icon: Icons.close, color: t.crashed, words: 'Checks failing'),
+  'cancelled' => (
+    icon: cancelledIcon,
+    color: t.textSecondary,
+    words: 'Checks cancelled',
+  ),
   'pending' => (icon: Icons.schedule, color: t.needs, words: 'Checks running'),
   _ => null,
 };
@@ -104,11 +110,13 @@ class PullStates extends ChangeNotifier {
   GitHubItem? item(GitHubLink? link) =>
       link == null ? null : _items.look(addressOf(link)).item;
 
-  /// The worst checks of [chat]'s open pull requests (ADR 0117): failing,
-  /// then running, then passed; its primary's when none is open.
+  /// The worst checks of [chat]'s open pull requests (ADR 0117), as
+  /// [itemChecks] says them: failing, then cancelled, then running, then
+  /// passed; its primary's when none is open.
   String? checksOf(ChatState chat) {
     int rank(String? c) => switch (c) {
-      'failure' || 'error' => 3,
+      'failure' || 'error' => 4,
+      'cancelled' => 3,
       'pending' => 2,
       'success' => 1,
       _ => 0,
@@ -117,9 +125,13 @@ class PullStates extends ChangeNotifier {
     for (final l in chat.pulls) {
       final it = item(l);
       if (l.id.isEmpty || it == null || it.state != 'open') continue;
-      if (rank(it.checks) > rank(worst)) worst = it.checks;
+      if (rank(itemChecks(it)) > rank(worst)) worst = itemChecks(it);
     }
-    return worst ?? item(chat.pull)?.checks;
+    return worst ??
+        switch (item(chat.pull)) {
+          final it? => itemChecks(it),
+          null => null,
+        };
   }
 
   /// Takes [whole] (a pull request read whole, whose item lacks what only
@@ -134,7 +146,9 @@ class PullStates extends ChangeNotifier {
     _take(
       whole.item,
       counts: GitHubCheckCounts(
-        failed: some(n.failing),
+        // Failed counts the cancelled too, as the daemon's rows do.
+        failed: some(n.failing + n.cancelled),
+        cancelled: some(n.cancelled),
         running: some(n.running),
         passed: some(n.passed),
         skipped: some(n.other),
@@ -299,7 +313,9 @@ class PullStates extends ChangeNotifier {
 
 /// A chat's pull request's checks as a dot, in the chat's row: amber with
 /// the working ring growing out of it while they run (the ring and the dot
-/// drawn from one centre), red while one fails; nothing otherwise. Seen
+/// drawn from one centre), red while one fails, the secondary ink while
+/// one was cancelled and none failed (still, it waits on someone);
+/// nothing otherwise. Seen
 /// to change: passing, it turns green, pops and stays 4 s before fading,
 /// so success is seen rather than just gone; failing, it pops red and hops
 /// once. With Reduce Motion only the colors change (green still goes after
@@ -367,6 +383,7 @@ class _PullDotState extends State<PullDot>
     final passed = checks == 'success' && running;
     final (color, words) = switch (checks) {
       'failure' || 'error' => (t.crashed, 'failing'),
+      'cancelled' => (t.textSecondary, 'cancelled'),
       'pending' => (t.needs, 'running'),
       'success' when passed => (t.done, 'passed'),
       _ => (null, ''),
@@ -500,7 +517,7 @@ class _PullChipState extends State<PullChip> {
       final l = widget.chat.pull;
       if (l == null) return const SizedBox.shrink();
       final it = _states.item(l);
-      final checks = it == null ? null : checksIcon(t, it.checks);
+      final checks = it == null ? null : checksIcon(t, it);
       final open = it?.unresolved ?? 0;
       final more = widget.chat.pulls.length - 1;
       final words = [

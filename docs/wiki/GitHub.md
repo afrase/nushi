@@ -87,7 +87,7 @@ The tab looks like the pull request's page on GitHub, so what you know from ther
 2. Each item goes into the chat's message box as a card, quoting the comment or the failing log.
 3. Add anything you want to say, and send.
 
-**Fix checks** in the **Checks** tab sends every failed check at once. As on GitHub, a cancelled check counts as failed and a neutral one as passed.
+**Fix checks** in the **Checks** tab sends every failed check at once. As on GitHub, a neutral check counts as passed. A cancelled check isn't a failure: it shows as **Cancelled** with a grey stop sign and isn't sent to the agent, but it still blocks the merge until it runs again (**⋯** › **Re-run**).
 
 ## When checks fail
 
@@ -97,6 +97,8 @@ When a chat's pull request fails its checks after the agent is done, the chat sh
 2. Add anything you want to say, and send.
 
 Click **✕** instead to dismiss it. The same failure doesn't ask again, but a failure after a new push does. A failure that was already there when Nushi first saw the chat doesn't ask.
+
+If a check was only cancelled, the bar says **A check was cancelled on #n** instead, with no **Ask to fix**: re-run it from the pull request's checks, or dismiss it.
 
 By default, review cards tell the agent not to reply on GitHub, and failed-check cards tell it not to commit or push. Change what each kind of card asks in **Settings › GitHub › What reply cards ask**:
 
@@ -154,7 +156,7 @@ After the merge, **Clean up…** offers to delete the worktree and branches and 
 ## Good to know
 
 - Nushi always follows your repository's merge rules.
-- A chat's row in the sidebar gets a red dot while its checks fail, and an amber one while they run.
+- A chat's row in the sidebar gets a red dot while its checks fail, a grey one while a check was cancelled and none failed, and an amber one while they run.
 - For a pull request from a fork, the chat's branch isn't linked to the fork, so a push from the chat doesn't reach the pull request.
 - A fine-grained token works, but sees only one owner's repositories and can't show checks.
 - While Nushi runs it checks your chats' pull requests' state once a minute, every 5 minutes while its window is in the background. It reads a whole pull request only while the GitHub view or its Pull request tab shows it, and only writes what you send. The GitHub view refreshes each minute while it shows and Nushi is in front; if a refresh fails, the bar (and a pull request's page) says, in red, **Couldn't refresh · as of** when what shows is from. A pull request's page always says at its top right when it was last read (**Updated 2m ago**), and **refreshing** while it asks again. With a pull request open in the GitHub view, the bar's **Refresh** (or ⌘R) refreshes that pull request.

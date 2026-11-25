@@ -93,7 +93,8 @@ String threadPlace(GitHubThread x, {String dash = '–'}) {
 /// bot's login and that commit).
 typedef Todo = ({List<TodoItem> items, Map<String, String> older});
 
-/// What blocks the merge, first: the failing checks (required first), the
+/// What blocks the merge, first: the failing checks (required first; a
+/// cancelled one isn't a failure for the agent to fix), the
 /// reviews whose reviewer still requests changes, the review threads not
 /// resolved (each with the bots' findings on its lines), then, with
 /// `findings` (Settings › GitHub's Findings from review bots), the bots'

@@ -17,3 +17,7 @@ A chat's pull request fails its checks after the agent's turn has ended, often w
 - A re-run that fails again on the same commit doesn't flag it again; a push does.
 - The states are asked for while the app runs even with the sidebar hidden: the same one query a minute the sidebar asked for.
 - Only the Mac's app judges it: the phone doesn't flag, and a failure while the app is closed shows when it next asks.
+
+## Amendment (2026-11-25): a cancelled check
+
+A cancelled check is its own kind (githubapi.KindOf, API 148). Checks that fail only because some were cancelled still flag the chat, since GitHub's merge gate holds them back, but the bar says "A check was cancelled on #n" with a grey stop sign and no Ask to fix: nothing in them failed for the agent to fix.

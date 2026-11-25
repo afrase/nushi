@@ -7,6 +7,7 @@ import 'package:nushi/github_filters.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/pull_lights.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -244,7 +245,7 @@ class ItemRowState extends State<ItemRow> {
       'approved' || 'changes_requested' => reviewWords(t, it.review),
       _ => null,
     };
-    final checks = checksIcon(t, it.checks);
+    final checks = checksIcon(t, it);
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
@@ -322,7 +323,7 @@ class ItemRowState extends State<ItemRow> {
                       : tooltip(
                           context,
                           checks.words,
-                          Icon(checks.icon, size: 14, color: checks.color),
+                          CheckMark(checks.icon, size: 14, color: checks.color),
                         ),
                 ),
                 _column(40, _talk(context, theme, it)),

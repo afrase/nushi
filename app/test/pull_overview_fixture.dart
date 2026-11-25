@@ -301,3 +301,45 @@ GetGitHubCommitsResponse longCommits(int total, {bool withFirst = true}) {
     first: withFirst ? commit(1) : null,
   );
 }
+
+/// [overviewPull] ready but for a cancelled check: "Smoke tests / smoke
+/// (linux)", 30 minutes in (Actions job 46; [required] or not), among the
+/// passed ones. With [mixed], two failed and one running beside it. Its
+/// rollup says failure, as GitHub's does for a cancelled check.
+GitHubPull cancelledPull({bool required = false, bool mixed = false}) {
+  final p = overviewPull(ready: true);
+  final stopped = _check(
+    'smoke (linux)',
+    'cancelled',
+    id: 46,
+    required: required,
+    workflow: 'Smoke tests',
+    took: const Duration(minutes: 30),
+  )..failed = true;
+  p.checks.insert(2, stopped);
+  if (mixed) {
+    p.checks[0] = _check(
+      'test (ubuntu-latest)',
+      'failure',
+      id: 41,
+      required: true,
+      took: const Duration(minutes: 2, seconds: 14),
+    );
+    p.checks[1] = _check(
+      'lint',
+      'failure',
+      id: 42,
+      required: true,
+      took: const Duration(seconds: 41),
+    );
+    p.checks.add(_check('e2e', 'pending', id: 47));
+  }
+  p
+    ..item.checks = 'failure'
+    ..mergeState = mixed || required ? 'blocked' : 'unstable';
+  p.merge.blocks.addAll([
+    if (mixed || required) 'checks_failing',
+    if (mixed) 'checks_running',
+  ]);
+  return p;
+}

@@ -226,6 +226,15 @@ void main() {
         matchesGoldenFile('goldens/pull_merge_card_ready_$name.png'),
       );
       d.dispose();
+      // One cancelled check among passed ones, its list open.
+      d = await card(tester, cancelledPull(), tokens: tokens);
+      await tester.tap(_segment('checks'));
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byKey(const ValueKey('card')),
+        matchesGoldenFile('goldens/pull_merge_card_cancelled_$name.png'),
+      );
+      d.dispose();
     });
   }
 }

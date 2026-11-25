@@ -7,9 +7,10 @@ import 'package:nushi/widgets.dart';
 /// The merge status card's three segments, after GitHub's page.
 enum Segment { checks, comments, approvals }
 
-/// A segment's bar: its met (done), failing (crashed) and waiting (needs)
-/// shares; all three none draws it hatched, nothing to meet.
-typedef Progress = ({int done, int failing, int waiting});
+/// A segment's bar: its met (done), failing (crashed), cancelled (the
+/// secondary ink: checks that hold the merge back until run again) and
+/// waiting (needs) shares; all none draws it hatched, nothing to meet.
+typedef Progress = ({int done, int failing, int cancelled, int waiting});
 
 /// A segment as it shows: its label, its status in a few words, its bar,
 /// and whether it holds the merge back (its `mood` bad or warn).
@@ -21,15 +22,17 @@ typedef SegmentState = ({
   Mood mood,
 });
 
+/// Red only when something failed: a cancelled check, like one still
+/// waited on, holds the merge back without having failed.
 Mood _moodOf(Progress p) => p.failing > 0
     ? Mood.bad
-    : p.waiting > 0
+    : p.cancelled > 0 || p.waiting > 0
     ? Mood.warn
     : Mood.ok;
 
-/// [p]'s segments: Checks (failing, running, passed), Comments (its review
-/// threads, and [findings], a review bot's findings to address) and
-/// Approvals (its reviewers' states).
+/// [p]'s segments: Checks (failing and cancelled, running, passed),
+/// Comments (its review threads, and [findings], a review bot's findings
+/// to address) and Approvals (its reviewers' states).
 List<SegmentState> segmentsOf(GitHubPull p, {int findings = 0}) {
   SegmentState seg(Segment s, String label, String words, Progress pr) =>
       (segment: s, label: label, words: words, progress: pr, mood: _moodOf(pr));
@@ -37,8 +40,8 @@ List<SegmentState> segmentsOf(GitHubPull p, {int findings = 0}) {
   final checks = seg(
     Segment.checks,
     'Checks',
-    n.failing > 0
-        ? '${n.failing} failing'
+    n.failing > 0 || n.cancelled > 0
+        ? failingWords(failing: n.failing, cancelled: n.cancelled)
         : n.running > 0
         ? '${n.running} running'
         : n.passed > 0
@@ -46,7 +49,12 @@ List<SegmentState> segmentsOf(GitHubPull p, {int findings = 0}) {
         : p.checks.isEmpty
         ? 'None'
         : 'Skipped',
-    (done: n.passed, failing: n.failing, waiting: n.running),
+    (
+      done: n.passed,
+      failing: n.failing,
+      cancelled: n.cancelled,
+      waiting: n.running,
+    ),
   );
   final open = p.threads.where((x) => !x.resolved).length;
   final resolved = p.threads.length - open;
@@ -61,7 +69,7 @@ List<SegmentState> segmentsOf(GitHubPull p, {int findings = 0}) {
         : p.threads.isEmpty
         ? (found.isEmpty ? 'None' : found.substring(3))
         : 'All resolved$found',
-    (done: resolved, failing: 0, waiting: open + findings),
+    (done: resolved, failing: 0, cancelled: 0, waiting: open + findings),
   );
   var approved = 0;
   var changes = 0;
@@ -92,6 +100,7 @@ List<SegmentState> segmentsOf(GitHubPull p, {int findings = 0}) {
     (
       done: approved,
       failing: changes,
+      cancelled: 0,
       waiting: waiting == 0 && required && approved == 0 ? 1 : waiting,
     ),
   );
@@ -205,7 +214,8 @@ class _Cell extends StatelessWidget {
   }
 }
 
-/// A segment's bar: its shares in their inks (met, waiting, failing), or
+/// A segment's bar: its shares in their inks (met, waiting, cancelled,
+/// failing: the cancelled beside the failing, both wanting someone), or
 /// hatched with nothing to meet.
 class SegmentBar extends StatelessWidget {
   const new(this.p, {super.key});
@@ -215,7 +225,7 @@ class SegmentBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    final total = p.done + p.failing + p.waiting;
+    final total = p.done + p.failing + p.cancelled + p.waiting;
     return ClipRRect(
       borderRadius: BorderRadius.circular(NushiTheme.pill),
       child: SizedBox(
@@ -237,6 +247,11 @@ class SegmentBar extends StatelessWidget {
                     Expanded(
                       flex: p.waiting,
                       child: ColoredBox(color: t.needs),
+                    ),
+                  if (p.cancelled > 0)
+                    Expanded(
+                      flex: p.cancelled,
+                      child: ColoredBox(color: t.textSecondary),
                     ),
                   if (p.failing > 0)
                     Expanded(
