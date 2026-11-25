@@ -38,7 +38,9 @@ func TestForked(t *testing.T) {
 // longer than the 64 KiB claude's list reads of a transcript's start (a
 // pasted screenshot), whose forkedFrom comes at its end (a title at the
 // end names it, as its first prompt is past the head; Claude's list leaves
-// out a session with nothing to name it by, so Forked isn't asked of one).
+// out a session with nothing to name it by, so Forked isn't asked of one),
+// and one whose long first record is a queued prompt's, the forkedFrom on
+// the record after it.
 func TestForkedAsWritten(t *testing.T) {
 	projects := t.TempDir()
 	fork, forkAt := recordedForks(t, filepath.Join(projects, "-work"))
@@ -52,8 +54,14 @@ func TestForkedAsWritten(t *testing.T) {
 		`{"type":"user","cwd":"/work","message":{"role":"user","content":"`+long+`"},"forkedFrom":{"sessionId":"`+sessE+`","messageUuid":"u1"}}`+"\n"+title)
 	testcheck.Write(t, filepath.Join(projects, "-work", sessE+".jsonl"),
 		`{"type":"user","cwd":"/work","message":{"role":"user","content":"`+long+`"}}`+"\n"+title)
-	ids := []string{fork.fork, forkAt.fork, fork.source, forkAt.source, sessA, sessD, sessE}
-	want := map[string]bool{fork.fork: true, forkAt.fork: true, sessA: true, sessD: true}
+	// A long prompt queued as the fork began: its queue record, longer than
+	// the head and with no forkedFrom, comes before the record that has it.
+	const queued = "0a1b2c3d-0000-4000-8000-00000000000f"
+	testcheck.Write(t, filepath.Join(projects, "-work", queued+".jsonl"),
+		`{"type":"queue-operation","operation":"enqueue","sessionId":"`+queued+`","content":"`+long+`"}`+"\n"+
+			`{"type":"user","cwd":"/work","message":{"role":"user","content":"`+long+`"},"forkedFrom":{"sessionId":"`+sessE+`","messageUuid":"u1"}}`+"\n"+title)
+	ids := []string{fork.fork, forkAt.fork, fork.source, forkAt.source, sessA, sessD, sessE, queued}
+	want := map[string]bool{fork.fork: true, forkAt.fork: true, sessA: true, sessD: true, queued: true}
 	if got := local(projects).Forked(ids); !maps.Equal(got, want) {
 		t.Errorf("forked = %v, want %v", got, want)
 	}
