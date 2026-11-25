@@ -95,7 +95,6 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		listed = c.kind.offered(listed) // one it can't run here is neither shown nor remembered
 		c.commands = c.kind.withTerminalCommands(listed)
 		c.emitLocked(model.Event{ChatID: c.id, Commands: slices.Clone(c.commands)})
-		c.statusChangedLocked() // CanAskContext
 		if len(listed) > 0 && !slices.Equal(listed, c.svc.remembered.Commands(c.kind.Name)) {
 			if err := c.svc.remembered.SetCommands(c.kind.Name, listed); err != nil {
 				c.logLocked().Warn("commands not remembered", "err", err)
