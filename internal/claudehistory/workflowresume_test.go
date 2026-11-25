@@ -148,3 +148,49 @@ func TestAWorkflowWhileItsResumeRuns(t *testing.T) {
 		t.Errorf("the stopped launch: %+v, %v", got, labelsStates(agents))
 	}
 }
+
+// rewriteJournal replaces old with new in the run's journal of session.
+func rewriteJournal(t *testing.T, session, run, old, new string) {
+	t.Helper()
+	journal := filepath.Join(session, "subagents", "workflows", run, "journal.jsonl")
+	data, err := os.ReadFile(journal)
+	testcheck.NoErr(t, err)
+	if !bytes.Contains(data, []byte(old)) {
+		t.Fatalf("the journal has no %q", old)
+	}
+	testcheck.NoErr(t, os.WriteFile(journal, bytes.ReplaceAll(data, []byte(old), []byte(new)), 0o600))
+}
+
+// A resume that runs the stopped call again with the same args (as the
+// recovery text asks) starts the same key again, under the resume's
+// agent. The stopped launch's card shows no agent of the resume's: its
+// own wait's id is gone from the journal, so it shows less, not the
+// resume's helper as its stopped wait.
+func TestAStoppedLaunchWhoseCallTheResumeRanAgain(t *testing.T) {
+	const scenario = "workflow-resume"
+	tasks := recordedTasks(t, scenario)
+	l, id, folder, session := recorded(t, scenario)
+	run := runOf(t, session).RunID
+	const (
+		stoppedKey = "v2:3d96ceec6a55f9861a8e290f807d0b58c8b0c4ba28f866e922726f5e1c54c0c9"
+		resumedKey = "v2:18d9f701adce9d6b985ede108e444a083164ac631a4d23a8a7eea478660d0dab"
+		resumes    = "a0759a443235bd6bd" // the resume's helper
+	)
+	rewriteJournal(t, session, run, resumedKey, stoppedKey)
+	stopped := model.Workflow{RunID: run, TaskID: tasks[0], State: model.RunStopped, End: "killed"}
+	got, err := l.ReadWorkflow(id, folder, stopped)
+	testcheck.NoErr(t, err)
+	agents, err := l.WorkflowAgents(id, folder, stopped)
+	testcheck.NoErr(t, err)
+	for _, a := range agents {
+		if a.ID == resumes {
+			t.Errorf("the stopped launch shows the resume's helper: %+v", a)
+		}
+	}
+	if got.Agents != len(agents) || got.Done != 1 || !slices.Equal(labelsStates(agents)[:1], []string{"first:done"}) {
+		t.Errorf("the stopped launch: %+v, %v", got, labelsStates(agents))
+	}
+	if _, _, err := l.WorkflowAgentItems(id, folder, stopped, resumes, 10); err == nil {
+		t.Error("the stopped launch opens the resume's helper's steps")
+	}
+}

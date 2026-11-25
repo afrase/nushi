@@ -24,11 +24,9 @@ var errJournalTooBig = errors.New("workflow journal too big")
 // journalRow is one agent of a workflow as its journal tells: State is
 // "running" from its started line, "done" from its result, "failed", or
 // "stopped" when the run it started in ended before it did (a resume
-// follows). Starts counts its started lines: more than one, a resume (or
-// a retry) ran it again.
+// follows).
 type journalRow struct {
 	Key, AgentID, Label, Phase, State string
-	Starts                            int
 }
 
 // journal reads a workflow's journal incrementally (lines). Rows are in start order, found
@@ -95,11 +93,11 @@ func (j *journal) line(line []byte) {
 		j.skipped++
 	case l.Type == "started" && known:
 		r := &j.rows[i]
-		r.AgentID, r.State, r.Starts = cmp.Or(l.AgentID, r.AgentID), "running", r.Starts+1
+		r.AgentID, r.State = cmp.Or(l.AgentID, r.AgentID), "running"
 		r.Label, r.Phase = cmp.Or(l.Label, r.Label), cmp.Or(l.Phase, r.Phase)
 	case l.Type == "started":
 		j.byKey[l.Key] = len(j.rows)
-		j.rows = append(j.rows, journalRow{Key: l.Key, AgentID: l.AgentID, Label: l.Label, Phase: l.Phase, State: "running", Starts: 1})
+		j.rows = append(j.rows, journalRow{Key: l.Key, AgentID: l.AgentID, Label: l.Label, Phase: l.Phase, State: "running"})
 	case (l.Type == "result" || l.Type == "failed") && known:
 		r := &j.rows[i]
 		r.AgentID, r.State = cmp.Or(r.AgentID, l.AgentID), map[string]string{"result": "done", "failed": "failed"}[l.Type]

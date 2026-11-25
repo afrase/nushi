@@ -62,7 +62,7 @@ func (l Local) WorkflowAgentItems(sid, folder string, w model.Workflow, id strin
 	earlier := 0
 	err := l.readRun(sid, folder, w, func(r *run, root *os.Root) error {
 		listed := false
-		for _, a := range r.agents(false) {
+		for _, a := range r.agents(w.State.Ended()) {
 			listed = listed || a.ID == id && id != ""
 		}
 		if !listed || !agentID.MatchString(id) || root == nil {

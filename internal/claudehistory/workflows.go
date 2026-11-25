@@ -357,9 +357,10 @@ func (r *run) ended(w model.Workflow, s snapshot) model.Workflow {
 // once this one ended. While it runs, the rows the earlier launch left
 // unfinished are its own, not this launch's: a resume runs those again
 // under a new agent (or a new row, when their call changed). Once it
-// ended, the later launch's rows that it ran afresh aren't this one's,
-// but for one this launch started too (started again: this launch's,
-// stopped with it).
+// ended, the later launch's rows that it ran afresh aren't this one's. A
+// call both launches made (the same key started again) names only the
+// later one's agent, so this launch's card shows less: not that agent as
+// its own stopped one.
 func (r *run) rows(ended bool) []journalRow {
 	o := r.other
 	if r.snap != nil || o == nil {
@@ -373,11 +374,7 @@ func (r *run) rows(ended bool) []journalRow {
 	}
 	var out []journalRow
 	for _, row := range r.j.rows {
-		switch {
-		case !fresh[row.AgentID]:
-			out = append(out, row)
-		case ended && row.Starts > 1:
-			row.State = "stopped"
+		if !fresh[row.AgentID] {
 			out = append(out, row)
 		}
 	}
