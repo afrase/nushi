@@ -15,7 +15,6 @@ import (
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
-	"github.com/afrase/claude-acp-go/claudeacp"
 
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
@@ -329,7 +328,7 @@ func (f *fakeAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.In
 	f.mu.Lock()
 	methods := slices.Clone(f.authMethods)
 	f.mu.Unlock()
-	return &acp.InitializeResponse{ProtocolVersion: acp.LatestProtocolVersion, AgentInfo: &acp.Implementation{Name: claudeacp.Name}, // as Claude's agent, which forks at a message
+	return &acp.InitializeResponse{ProtocolVersion: acp.LatestProtocolVersion,
 		AgentCapabilities: caps, AuthMethods: methods}, nil
 }
 

@@ -10,21 +10,18 @@ import (
 	"github.com/afrase/claude-acp-go/claudeacp"
 )
 
-// Fork-at goes to Nushi's Go agent, which reads the extension, and to no
-// other agent: claude-agent-acp, which read it too, no longer runs.
-func TestForkAtIsTheGoAgents(t *testing.T) {
-	for _, tc := range []struct {
-		info *acp.Implementation
-		want bool
-	}{
-		{&acp.Implementation{Name: "@agentclientprotocol/claude-agent-acp"}, false},
-		{&acp.Implementation{Name: claudeacp.Name}, true},
-		{&acp.Implementation{Name: "@agentclientprotocol/codex-acp"}, false},
-		{nil, false},
-	} {
-		at := harness.ForkAt(&acp.InitializeResponse{AgentInfo: tc.info})
-		if (at != nil) != tc.want {
-			t.Errorf("%+v: fork-at %v, want %v", tc.info, at != nil, tc.want)
+// Fork-at goes to whatever agent the harness started: Nushi's Go agent,
+// which takes the extension from any client (docs/facts/claude.md), so
+// its name isn't asked.
+func TestForkAtNeedsNoName(t *testing.T) {
+	for _, info := range []*acp.Implementation{{Name: claudeacp.Name}, {Name: "another"}, nil} {
+		at := harness.ForkAt(&acp.InitializeResponse{AgentInfo: info})
+		if at == nil {
+			t.Fatalf("%+v: no fork-at", info)
+		}
+		air, _ := at("m1")["jetbrains"].(map[string]any)["air"].(map[string]any)
+		if fork, _ := air["fork"].(map[string]any); fork["messageId"] != "m1" || fork["version"] != 1 {
+			t.Errorf("%+v: fork-at's _meta %v", info, at("m1"))
 		}
 	}
 }

@@ -21,7 +21,6 @@ import (
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
-	"github.com/afrase/claude-acp-go/claudeacp"
 
 	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
@@ -164,16 +163,14 @@ func (Harness) TurnDone(u *acp.UsageUpdate) bool {
 // in the turn too (claude-acp-go's contextUsed).
 func (Harness) OwnTurnEnded(u *acp.UsageUpdate) bool { return u.Cost != nil }
 
-// ForkAt says how to fork a session at a message, if the agent is Nushi's
-// Go agent. ACP's session/fork copies a whole conversation; the agent cuts
-// the copy after an agent message (its ACP messageId, the message included)
-// only given the vendor extension claude-agent-acp took from JetBrains AIR,
-// `_meta.jetbrains.air.fork` (ADR 0020). Drop it when ACP has a standard
-// way.
-func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
-	if init.AgentInfo == nil || init.AgentInfo.Name != claudeacp.Name {
-		return nil
-	}
+// ForkAt says how to fork a session at a message. ACP's session/fork
+// copies a whole conversation; Nushi's Go agent cuts the copy after an
+// agent message (its ACP messageId, the message included) given the
+// vendor extension claude-agent-acp took from JetBrains AIR,
+// `_meta.jetbrains.air.fork` (ADR 0020), from any client. The harness
+// starts only that agent, so init isn't asked. Drop it when ACP has a
+// standard way.
+func (Harness) ForkAt(*acp.InitializeResponse) func(messageID string) map[string]any {
 	return func(messageID string) map[string]any {
 		return map[string]any{"jetbrains": map[string]any{"air": map[string]any{
 			"fork": map[string]any{"version": 1, "messageId": messageID}}}}
