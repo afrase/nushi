@@ -85,8 +85,11 @@ class _Frame {
     final speed = Offset(h * turn, outward).distance;
     final shown = _key(_tails, u).clamp(0.0, 1.0);
     final length = shown <= 0 ? 0.0 : _hid + (_tail - _hid) * shown;
-    // The head grows as the two overlap, so the one drop holds both.
-    final head = _headRadius(h);
+    // The head grows as the two overlap, so the one drop holds both:
+    // by how far apart they are before the bend, which draws them in or
+    // out along the line between them.
+    final long = _key(_longs, u);
+    final head = _headRadius(h * (1 + long));
     // The time it takes the drop to go that far: the tail runs back along
     // where it was over it.
     final reach = speed < 1e-9 ? 0.0 : length / speed;
@@ -123,7 +126,7 @@ class _Frame {
 
     return _Frame(
       drops: [drop(1), drop(-1)],
-      m: _wobble(u),
+      m: _bend(u, long),
       k: _key(_ks, u),
       neck: _key(_necks, u),
       pinch: _key(_pinches, u),
@@ -166,9 +169,12 @@ class _Frame {
 //           lands, long, squat again, less each swing, round only at
 //           rest (the owner: "the ball [should] wobble also like the
 //           original not become solid until is settled").
-// Clockwise on screen: the angle grows, and y points down. A full turn
+// Clockwise on screen: the angle grows, and y points down. Twice round
 // over the play, faster tick after tick into the merge and slower out
-// of it ([_turns]), 18 degrees a tick at most, so it never strobes.
+// of it ([_turns]), and squashed and stretched all the way ([_longs]):
+// the owner, of the first take, "the first one also had the squash and
+// [stretch] more to give it more life", and at a dot's size it "appears
+// to spin around multiple times" and "looks better".
 
 /// Half the distance between the two, at each tick of the play: as they
 /// settle, a little past their places and back.
@@ -176,7 +182,7 @@ const _hs = [
   2.68, 2.68, 2.68, 2.68, 2.67, 2.64, 2.58, 2.48, 2.36, 2.22, //
   2.06, 1.80, 1.45, 1.00, 0.62, 0.32, 0.56, 0.84, 1.08, 1.32, //
   1.55, 1.74, 1.88, 1.98, 2.06, 2.14, 2.24, 2.35, 2.46, 2.57, //
-  2.67, 2.74, 2.77, 2.74, 2.69, 2.65, 2.64, 2.66, 2.68,
+  2.66, 2.72, 2.74, 2.72, 2.69, 2.65, 2.64, 2.66, 2.68,
 ];
 
 /// The neck's reach at each tick: out as they near, so a neck joins
@@ -194,7 +200,7 @@ const _ks = [
 const _necks = [
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
   0.25, 0.6, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
-  0.0, 0.0, 0.0, 0.5, 0.35, 0.15, 0.0, 0.0, 0.0, 0.0, //
+  0.0, 0.0, 0.0, 0.5, 0.35, 0.2, 0.0, 0.0, 0.0, 0.0, //
   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 ];
 
@@ -220,7 +226,7 @@ const _tails = [
   0.0, 0.0, 0.0, 0.2, 0.34, 0.47, 0.58, 0.69, 0.8, 0.92, //
   0.9, 0.65, 0.4, 0.15, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
   0.0, 0.1, 0.25, 0.45, 0.65, 0.82, 0.92, 0.95, 0.88, 0.72, //
-  0.52, 0.32, 0.14, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  0.54, 0.38, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 ];
 
 /// [v] (a value at each tick) at [u] milliseconds into the play, smoothly
@@ -278,26 +284,31 @@ double _headRadius(double h) {
 /// The turn so far, smoothly between ticks.
 double _angle(double u) => _key(_turned, u);
 
-/// How far the two turn on each tick of the play, in degrees, a whole
-/// turn in all. From rest they gather speed tick after tick as they
-/// spiral in, never up to speed at once and held, fastest while they're
-/// one drop (as a skater drawing in her arms); they lose it the same way
-/// as they part, and ease to a stop in their places.
+/// How far the two turn on each tick of the play, in degrees: twice
+/// round in all, so the whirl is seen at the size of a chat's dot, where
+/// a tail is under a pixel. From rest they gather speed tick after tick
+/// as they spiral in, never up to speed at once and held, fastest while
+/// they're one drop (as a skater drawing in her arms); they lose it the
+/// same way as they part, and ease to a stop in their places. The pair
+/// looks the same after half a turn, so 35 degrees a tick is far from
+/// seeming to turn back.
 const _turns = [
-  2.0, 3.5, 5.0, 6.5, 8.0, 9.5, 11.0, 12.5, 14.0, 15.1, //
-  16.0, 16.8, 17.3, 17.5, 17.5, 17.2, 16.5, 15.9, 15.2, 14.5, //
-  13.8, 13.1, 12.4, 11.7, 11.0, 10.1, 9.0, 7.8, 6.4, 5.0, //
-  3.6, 2.4, 1.3, 0.6, 0.2, 0.1, 0.0, 0.0,
+  4.0, 7.0, 10.0, 13.0, 16.0, 19.0, 22.0, 25.0, 28.0, 30.2, //
+  32.0, 33.6, 34.6, 35.0, 35.0, 34.4, 33.0, 31.8, 30.4, 29.0, //
+  27.6, 26.2, 24.8, 23.4, 22.0, 20.2, 18.0, 15.6, 12.8, 10.0, //
+  7.2, 4.8, 2.6, 1.2, 0.4, 0.2, 0.0, 0.0,
 ];
 
-/// The turn at each tick of the play, from none to a whole one.
+/// The turn at each tick of the play: whole half turns by its end, so
+/// the two are side by side again as at rest.
 final List<double> _turned = () {
   assert(_turns.length == BackgroundMark.playTicks, 'a turn a tick');
   final sums = [0.0];
   for (final t in _turns) {
     sums.add(sums.last + t);
   }
-  return [for (final s in sums) 2 * pi * s / sums.last];
+  assert((sums.last / 180 - (sums.last / 180).round()).abs() < 1e-6, 'level');
+  return [for (final s in sums) s * pi / 180];
 }();
 
 /// Where a tail reaches back to, from the middle, for a drop [h] from it
@@ -318,18 +329,23 @@ double _inward(double out) => out <= 0 ? out * 0.5 : out * 0.3;
 double _taper(double x) => 1 - 0.86 * x;
 
 /// How much longer along its turn than round each drop is at each tick
-/// (less than 0: squat). The drops are jelly until they're still: squat
-/// as the tail lands in the head, long as it springs back, squat again,
-/// less each swing, and round only at rest.
-const _wobbles = [
-  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
-  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
-  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
-  -0.06, -0.14, -0.12, 0.0, 0.08, 0.07, 0.0, -0.04, 0.0,
+/// (less than 0: squat along it, long across). Squash and stretch give
+/// the play its life, most of all at a dot's size, where it's what's
+/// seen: a crouch as the drops start, long along their way as they gather
+/// speed, short and full as the two land in each other, long across its
+/// two heads as the one drop springs (a bar that turns: never a plain
+/// disc, and never long the other way, so its spin shows and doesn't
+/// seem to jump), long along their way again as they part, and jelly
+/// until they're still:
+/// squat as the tail lands in the head, long as it springs back, squat
+/// again, less each swing, and round only at rest.
+const _longs = [
+  0.0, -0.12, 0.06, 0.12, 0.16, 0.19, 0.23, 0.26, 0.27, 0.27, //
+  0.16, 0.08, 0.02, -0.02, -0.04, -0.06, -0.15, -0.22, -0.22, -0.16, //
+  -0.08, 0.0, 0.06, 0.1, 0.12, 0.14, 0.2, 0.22, 0.16, 0.06, //
+  -0.1, -0.18, -0.15, 0.0, 0.12, 0.1, 0.0, -0.04, 0.0,
 ];
 
-/// The squash and stretch of the drops as they settle, along their turn.
-_Bend _wobble(double u) {
-  final w = _key(_wobbles, u);
-  return w == 0 ? _Bend.identity : _Bend.stretch(_angle(u) + pi / 2, 1 + w);
-}
+/// The squash and stretch of the drops: [long] along their turn.
+_Bend _bend(double u, double long) =>
+    long == 0 ? _Bend.identity : _Bend.stretch(_angle(u) + pi / 2, 1 + long);

@@ -12,12 +12,13 @@ part 'background_trace.dart';
 
 /// The mark of a chat whose turn ended while its background tasks run
 /// (#113), "rest and play": two drops of [color] side by side, still for
-/// two seconds; then for 1.9 seconds they spin clockwise, slowly and then
-/// faster, each a teardrop as it gathers speed, its tail trailing along
-/// the way it came; spiral in and merge into one drop, which squashes and
-/// settles; and spiral out of it as two again, a neck between them
-/// thinning and parting, slow, and wobble into their places like jelly,
-/// round only once they're still.
+/// two seconds; then for 1.9 seconds they spin clockwise twice round,
+/// slowly and then faster, squashed and stretched by their way, each a
+/// teardrop as it gathers speed, its tail trailing along the way it came;
+/// spiral in and merge into one drop, which lands wide and springs long;
+/// and spiral out of it as two again, a neck between them thinning and
+/// parting, slow, and wobble into their places like jelly, round only
+/// once they're still.
 ///
 /// The two are drops of liquid: each a round head and a tapering tail
 /// run into it with a fillet, the two joined by a neck where they near (a

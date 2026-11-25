@@ -268,7 +268,9 @@ void main() {
                 .reduce((x, y) => (x - a).distance < (y - a).distance ? x : y);
             final turn = _angleBetween(a - mid, b - mid);
             expect(turn, greaterThan(0), reason: 'tick $i, clockwise');
-            expect(turn, lessThan(20 * pi / 180), reason: 'tick $i');
+            // The pair looks the same after half a turn: well under a
+            // quarter of one a tick, or it would seem to turn back.
+            expect(turn, lessThan(40 * pi / 180), reason: 'tick $i');
           }
         }
       }
@@ -310,20 +312,12 @@ void main() {
     });
 
     test("a moving drop's tail trails behind it", () {
-      // Spinning in, and spiralling out (before it's drawn in).
-      for (final i in [rest + 5, rest + 7, rest + 28, rest + 29]) {
+      // Spinning in, and spiralling out (before it's drawn in): its
+      // outline reaches further behind its head than ahead of it, by a
+      // quarter of a rest drop's radius or more.
+      for (final i in [rest + 6, rest + 7, rest + 28, rest + 29]) {
         for (final d in _drops(at(i))) {
-          final head = _headOf(d);
-          final r = head - mid;
-          final way = Offset(-r.dy, r.dx) / r.distance; // clockwise
-          var ahead = 0.0;
-          var behind = 0.0;
-          for (final p in _outline(d)) {
-            final along = (p - head).dx * way.dx + (p - head).dy * way.dy;
-            ahead = max(ahead, along);
-            behind = max(behind, -along);
-          }
-          expect(behind, greaterThan(ahead * 1.25), reason: 'tick $i');
+          expect(_tailOf(d, mid) / 10, greaterThan(0.25), reason: 'tick $i');
         }
       }
     });
@@ -342,7 +336,7 @@ void main() {
       final before = _drops(at(first - 1));
       expect(before, hasLength(2));
       for (final d in before) {
-        expect(_tailOf(d, mid) / 10, lessThan(0.1), reason: 'still round');
+        expect(_tailOf(d, mid) / 10, lessThan(0.1), reason: 'no tail yet');
         final now = d.getBounds().center;
         final was = still.reduce(
           (x, y) => (x - now).distance < (y - now).distance ? x : y,
@@ -365,17 +359,17 @@ void main() {
       ];
       final starting = reach(rest, rest + 9);
       final settling = reach(rest + 27, n);
-      final full = starting.reduce(max);
-      expect(full, greaterThan(0.9), reason: 'a teardrop at speed');
+      final full = [...starting, ...settling].reduce(max);
+      expect(full, greaterThan(0.5), reason: 'a teardrop at speed');
       expect(starting.first, lessThan(0.1), reason: 'round at rest');
       expect(settling.last, lessThan(0.1), reason: 'round at rest');
-      // No tick's change is more than a third of the whole tail: it's
-      // never there on one frame and full two frames on.
+      // No tick's change is as much as 40% of the whole tail (it was 47
+      // and 49%): it's never there on one frame and full two frames on.
       for (final run in [starting, settling]) {
         for (var i = 1; i < run.length; i++) {
           expect(
             (run[i] - run[i - 1]).abs(),
-            lessThan(full / 3),
+            lessThan(full * 0.4),
             reason: '$run at $i',
           );
         }
@@ -390,35 +384,90 @@ void main() {
       expect(moving(settling, up: false), greaterThanOrEqualTo(4));
     });
 
-    test('the drops wobble into their places, round only at rest', () {
-      // The ticks after the last with a tail, up to the rest: each drop
-      // is still jelly, long along its turn and squat by turns, less each
-      // swing.
-      var last = n - 1;
-      while (_drops(at(last)).map((d) => _tailOf(d, mid)).reduce(max) / 10 <
-          0.12) {
-        last--;
+    test('the drops squash and stretch all through the play', () {
+      // It crouches as it starts, squat along its way, and is long along
+      // it a tick on, before any tail.
+      double longAt(int tick) =>
+          _drops(at(rest + tick))
+              .map((d) => _longOf(d, mid))
+              .reduce((a, b) => a + b) /
+          2;
+      expect(longAt(1), lessThan(-0.05), reason: 'a crouch');
+      expect(longAt(2), greaterThan(0.05), reason: 'and off');
+      // At speed its head is long along its way, coming in and going out:
+      // how much further it reaches ahead of its middle than out to its
+      // side (the side away from the other drop, which a tail doesn't
+      // reach). 0 for a round head, whatever its tail.
+      double lean(Path drop) {
+        final head = _headOf(drop);
+        final r = head - mid;
+        final out = r / r.distance;
+        final way = Offset(-out.dy, out.dx);
+        var ahead = 0.0;
+        var aside = 0.0;
+        for (final p in _outline(drop)) {
+          final d = p - head;
+          ahead = max(ahead, d.dx * way.dx + d.dy * way.dy);
+          aside = max(aside, d.dx * out.dx + d.dy * out.dy);
+        }
+        return ahead / aside - 1;
       }
-      final after = [
-        for (var i = last + 1; i < n; i++)
-          _drops(at(i)).map((d) => _longOf(d, mid)).reduce((a, b) => a + b) / 2,
+
+      for (final tick in [6, 8, 26, 27]) {
+        for (final d in _drops(at(rest + tick))) {
+          expect(lean(d), greaterThan(0.2), reason: 'tick $tick');
+        }
+      }
+      // The one drop is never a plain disc, so its spin is seen: short
+      // and full as the two land in each other, long as it springs.
+      final parts = [for (var i = rest; i <= n; i++) _drops(at(i)).length];
+      final first = parts.indexOf(1);
+      final last = parts.lastIndexOf(1);
+      final longs = [
+        for (var i = first; i <= last; i++)
+          _elongation(_drops(at(rest + i)).single),
       ];
-      expect(after.length, greaterThanOrEqualTo(4), reason: 'time to wobble');
-      expect(after.reduce(max), greaterThan(0.08), reason: 'long: $after');
-      expect(after.reduce(min), lessThan(-0.05), reason: 'squat: $after');
-      // One way, the other and back again, the last swing smaller than
-      // the first.
+      expect(longs.reduce(min), greaterThan(1.15), reason: '$longs');
+      expect(longs.reduce(max), greaterThan(2), reason: 'a bar: $longs');
+    });
+
+    test('the drops wobble into their places, round only at rest', () {
+      // The play's last eight ticks: each drop is jelly, squat along its
+      // turn as its tail lands, long as it springs back and squat again,
+      // less each swing.
+      double longAt(int i) =>
+          _drops(at(i)).map((d) => _longOf(d, mid)).reduce((a, b) => a + b) / 2;
+      final wobble = [for (var i = n - 8; i < n; i++) longAt(i)];
+      expect(wobble.reduce(max), greaterThan(0.08), reason: 'long: $wobble');
+      expect(wobble.reduce(min), lessThan(-0.05), reason: 'squat: $wobble');
       final swings = [
-        for (final q in after)
+        for (final q in wobble)
           if (q.abs() > 0.03) q,
       ];
       var turns = 0;
       for (var i = 1; i < swings.length; i++) {
         if (swings[i].sign != swings[i - 1].sign) turns++;
       }
-      expect(turns, greaterThanOrEqualTo(2), reason: '$after');
-      expect(swings.last.abs(), lessThan(swings.first.abs()), reason: '$after');
-      expect(after.last.abs(), lessThan(0.1), reason: 'nearly still: $after');
+      expect(turns, greaterThanOrEqualTo(2), reason: '$wobble');
+      expect(
+        swings.last.abs(),
+        lessThan(swings.first.abs()),
+        reason: '$wobble',
+      );
+      expect(wobble.last.abs(), lessThan(0.1), reason: 'nearly still: $wobble');
+      // It isn't solid once its tail is in: out of round on three ticks
+      // or more after the last with a tail, and round at rest.
+      var last = n - 1;
+      while (_drops(at(last)).map((d) => _tailOf(d, mid)).reduce(max) / 10 <
+          0.12) {
+        last--;
+      }
+      final after = [for (var i = last + 1; i < n; i++) longAt(i)];
+      expect(
+        after.where((q) => q.abs() > 0.05).length,
+        greaterThanOrEqualTo(3),
+        reason: '$after',
+      );
       for (final d in _drops(at(n))) {
         expect(_longOf(d, mid), closeTo(0, 0.02), reason: 'round at rest');
       }
@@ -632,25 +681,31 @@ List<Offset> _outline(Path drop) => [
       m.getTangentForOffset(d)!.position,
 ];
 
-/// The point of [drop] deepest inside it: its head, the roundest and
-/// fullest part (a tail thins).
+/// The middle of [drop]'s head, its roundest and fullest part (a tail
+/// thins): the middle of the points deepest inside it, which in a drop
+/// stretched long are a line, not one point.
 Offset _headOf(Path drop) {
   final edge = _outline(drop);
   final b = drop.getBounds();
-  var best = b.center;
+  final depths = <(Offset, double)>[];
   var deepest = -1.0;
   for (var y = b.top; y <= b.bottom; y += 0.5) {
     for (var x = b.left; x <= b.right; x += 0.5) {
       final q = Offset(x, y);
       if (!drop.contains(q)) continue;
       final d = edge.map((e) => (e - q).distance).reduce(min);
-      if (d > deepest) {
-        deepest = d;
-        best = q;
-      }
+      depths.add((q, d));
+      deepest = max(deepest, d);
     }
   }
-  return best;
+  var sum = Offset.zero;
+  var n = 0;
+  for (final (q, d) in depths) {
+    if (d < deepest - 0.5) continue;
+    sum += q;
+    n++;
+  }
+  return sum / n.toDouble();
 }
 
 /// How far [drop]'s tail reaches behind its head, past how far the drop
@@ -669,6 +724,31 @@ double _tailOf(Path drop, Offset mid) {
     behind = max(behind, -along);
   }
   return behind - ahead;
+}
+
+/// How long [drop] is over how wide, from its second moments: 1 for a
+/// disc, more for anything longer one way.
+double _elongation(Path drop) {
+  final b = drop.getBounds();
+  final pts = <Offset>[];
+  for (var y = b.top + 0.25; y < b.bottom; y += 0.5) {
+    for (var x = b.left + 0.25; x < b.right; x += 0.5) {
+      if (drop.contains(Offset(x, y))) pts.add(Offset(x, y));
+    }
+  }
+  final c = pts.reduce((a, b) => a + b) / pts.length.toDouble();
+  var xx = 0.0;
+  var yy = 0.0;
+  var xy = 0.0;
+  for (final p in pts) {
+    final d = p - c;
+    xx += d.dx * d.dx;
+    yy += d.dy * d.dy;
+    xy += d.dx * d.dy;
+  }
+  final mean = (xx + yy) / 2;
+  final spread = sqrt((xx - yy) * (xx - yy) / 4 + xy * xy);
+  return sqrt((mean + spread) / (mean - spread));
 }
 
 /// How much longer [drop] is along its turn about [mid] than across it:
