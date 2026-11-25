@@ -186,6 +186,10 @@ type fakeAgent struct {
 	replay      []acp.SessionNotification // and then, on their sessions (s1 is the one loaded)
 	subagents   []acp.SessionID           // its subagents' sessions: a cancel stops only the one
 	cur         *proc                     // the last process launched
+	// answers are its extensions' answers (Agent.Call), JSON by method;
+	// called gets each call's params, in order.
+	answers map[string]string
+	called  []any
 }
 
 // proc is one of the fake agent's processes: each launch starts one, and
@@ -489,8 +493,15 @@ func (f *fakeAgent) openGateLocked() {
 
 func (f *fakeAgent) CanSteer() bool { return f.steerable }
 
-func (f *fakeAgent) Call(context.Context, string, any, any) error {
-	return &acp.Error{Code: acp.ErrorCodeMethodNotFound, Message: "Method not found"}
+func (f *fakeAgent) Call(_ context.Context, method string, params, result any) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	answer, ok := f.answers[method]
+	if !ok {
+		return &acp.Error{Code: acp.ErrorCodeMethodNotFound, Message: "Method not found"}
+	}
+	f.called = append(f.called, params)
+	return json.Unmarshal([]byte(answer), result)
 }
 
 func (f *fakeAgent) Steer(_ context.Context, _ acp.SessionID, prompt []acp.ContentBlock) (bool, error) {

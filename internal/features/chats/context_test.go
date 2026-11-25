@@ -2,44 +2,46 @@ package chats
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
-	acp "github.com/afrase/acp-go/unstable"
+	"github.com/afrase/claude-acp-go/claudeacp"
 
 	"github.com/afrase/nushi/internal/model"
 )
 
-func TestContextUsageLeavesNoTrace(t *testing.T) {
-	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "## Context"), chunk("m2", "## Context Usage")}}
+// Claude is asked what fills its context through its agent's extension,
+// not a fork: so a new chat can be asked before its first message, and a
+// side chat on its own session; nothing shows in either, and nothing is
+// forked or deleted.
+func TestContextUsageAsksANewChatAndASideChat(t *testing.T) {
+	agent := &fakeAgent{answers: map[string]string{claudeacp.ContextUsageMethod: `{"categories":[{"id":"messages","name":"Messages","tokens":20,"kind":"used"}],"maxTokens":1000}`}}
 	var events int
 	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake"}, Launch: agent.launch}}, Options{Publish: func(model.Event) { events++ }})
 	c := startChat(t, svc, t.TempDir())
-	if _, err := svc.ContextUsage(context.Background(), c.id); err == nil {
-		t.Error("ran /context for an agent without the command")
+	if !c.statusLocked().CanAskContext {
+		t.Error("a new chat isn't askable")
 	}
-	c.commands = []model.Command{{Name: "context"}}
-	if _, err := svc.ContextUsage(context.Background(), c.id); err == nil {
-		t.Error("ran /context in a chat without messages")
-	}
-	c.record.HasMessages = true
 	before := events
-	md, err := svc.ContextUsage(context.Background(), c.id)
-	if err != nil || md.Markdown != "## Context Usage" {
-		t.Errorf("ContextUsage = %+v, %v", md, err)
+	got, err := svc.ContextUsage(context.Background(), c.id)
+	want := model.ContextUsage{Categories: []model.ContextCategory{{Name: "Messages", Tokens: 20, Percent: 2, Part: model.PartMessages}}}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("ContextUsage = %+v, %v; want %+v", got, err, want)
 	}
 	if len(c.items) != 0 || events != before || c.busyLocked() {
 		t.Errorf("a trace: %d items, %d events, busy %v", len(c.items), events-before, c.busyLocked())
 	}
-	agent.mu.Lock()
-	deleted := append([]acp.SessionID(nil), agent.deleted...)
-	agent.mu.Unlock()
-	if got := agent.prompt[0].Text.Text; got != "/context" || len(deleted) != 1 || deleted[0] != "fork1" || len(c.probes) != 0 {
-		t.Errorf("prompt = %q, deleted %v", got, deleted)
+	side, err := svc.Fork(context.Background(), c.id)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	// An agent that can't fork isn't asked.
-	c.canFork = false
-	if _, err := svc.ContextUsage(context.Background(), c.id); err == nil {
-		t.Error("ran /context without a fork")
+	if _, err := svc.ContextUsage(context.Background(), side); err != nil {
+		t.Errorf("the side chat: %v", err)
+	}
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	asked := []any{claudeacp.ContextUsageRequest{SessionID: "s1", Detail: "full"}, claudeacp.ContextUsageRequest{SessionID: side, Detail: "full"}}
+	if !reflect.DeepEqual(agent.called, asked) || agent.forks != 1 || len(agent.prompt) != 0 {
+		t.Errorf("asked %+v, %d forks, prompted %v; want %+v, the side chat's fork alone", agent.called, agent.forks, agent.prompt, asked)
 	}
 }

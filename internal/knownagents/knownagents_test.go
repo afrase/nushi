@@ -163,7 +163,7 @@ func listed(h chats.Harness) []string {
 // tests run Harness, so they can never read the owner's files.
 func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 	want := map[string]struct{ harness, local []string }{
-		"claude": {[]string{"BackgroundTasks", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "ReadOnly", "SubagentMessages", "SubagentOutput", "Subagents", "TerminalCommands", "TitleMaker", "ToolReader", "Transcript", "UsageReader"},
+		"claude": {[]string{"BackgroundTasks", "ContextAsker", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "ReadOnly", "SubagentMessages", "SubagentOutput", "Subagents", "TerminalCommands", "TitleMaker", "ToolReader", "Transcript", "UsageReader"},
 			[]string{"ForkFinder", "HistoryChecker", "MessageDater", "OpenFinder", "SessionSearcher", "WorkflowReader", "WorktreeFinder"}},
 		"codex":    {[]string{"Forker", "GoneReader", "ReadOnly", "ToolReader"}, []string{"ForkFinder", "OpenFinder", "SessionSearcher"}},
 		"ante":     {[]string{"ContextAsker", "Forker", "Subagents", "ToolReader"}, []string{"MessageDater", "OpenFinder"}},
