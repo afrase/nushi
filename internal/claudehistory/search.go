@@ -37,13 +37,14 @@ func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]mod
 	if q.Empty() {
 		return nil, false, nil
 	}
-	dirs := []string{historyDir(l.Projects, s.Folder)}
+	projects := l.projects()
+	dirs := []string{historyDir(projects, s.Folder)}
 	if s.Folder == "" {
 		dirs = dirs[:0]
-		entries, _ := os.ReadDir(l.Projects)
+		entries, _ := os.ReadDir(projects)
 		for _, e := range entries {
 			if e.IsDir() {
-				dirs = append(dirs, filepath.Join(l.Projects, e.Name()))
+				dirs = append(dirs, filepath.Join(projects, e.Name()))
 			}
 		}
 	}

@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
 
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/shellenv"
 )
 
@@ -54,11 +56,8 @@ func reportStarted(path string) {
 	if d, err := time.ParseDuration(os.Getenv(startedTimeout)); err == nil {
 		shellenv.Timeout = d
 	}
-	env, projects, err := fromLoginShell(os.Getenv(startedShell))
-	if err != nil {
-		return // no report: the test says it never started
-	}
-	r.Projects = projects
+	env := fromLoginShell(os.Getenv(startedShell))
+	r.Projects = filepath.Join(claude.ConfigDir(), "projects") // as claudehistory.Local reads it
 	r.Agent = env.Environ()
 	r.Daemon, r.Problem = os.Environ(), env.Status().Problem
 	if runtime.GOOS != "windows" {

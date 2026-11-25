@@ -70,3 +70,30 @@ func TestGoneNotWhenTheTranscriptMoved(t *testing.T) {
 
 // local is the Local of a projects folder.
 func local(projects string) Local { return Local{Projects: projects} }
+
+// With no Projects of its own, Local reads Claude's projects folder from
+// the daemon's environment each time, not once at start: a
+// CLAUDE_CONFIG_DIR the login shell exports after the daemon started
+// (applied to the daemon's own when Settings › Agents reads it again) is
+// where it looks next, as the agents started after then write there.
+func TestTheProjectsFolderFollowsTheEnvironment(t *testing.T) {
+	folder := t.TempDir()
+	first, second := t.TempDir(), t.TempDir()
+	for _, config := range []string{first, second} {
+		if err := os.MkdirAll(historyDir(filepath.Join(config, "projects"), folder), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(historyDir(filepath.Join(first, "projects"), folder), "s1.jsonl"), []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var l Local
+	t.Setenv("CLAUDE_CONFIG_DIR", first)
+	if l.HistoryGone("s1", folder) || !l.HistoryGone("s2", folder) {
+		t.Error("the first folder has s1, not s2")
+	}
+	t.Setenv("CLAUDE_CONFIG_DIR", second)
+	if !l.HistoryGone("s1", folder) {
+		t.Error("not gone: the projects folder is still the first")
+	}
+}

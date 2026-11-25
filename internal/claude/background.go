@@ -57,10 +57,10 @@ func taskFile(id, file string) bool {
 }
 
 // tempRoots are the folders Claude's claude-<uid> folder can be in:
-// $CLAUDE_CODE_TMPDIR as the daemon has it, else /tmp, each also as its
-// real path (/tmp is /private/tmp on the Mac, the path Claude names). A
-// CLAUDE_CODE_TMPDIR set only in the shell agents start from isn't seen:
-// their background commands aren't followed then.
+// $CLAUDE_CODE_TMPDIR as the daemon has it (the login shell's, which the
+// daemon applies to its own as its agents start with it: ADR 0048), else
+// /tmp, each also as its real path (/tmp is /private/tmp on the Mac, the
+// path Claude names).
 func tempRoots() []string {
 	root := "/tmp"
 	if d := os.Getenv("CLAUDE_CODE_TMPDIR"); d != "" {

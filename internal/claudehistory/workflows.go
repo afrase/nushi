@@ -106,7 +106,7 @@ func (l Local) runKey(sid, folder string, w model.Workflow) (dir, key string, er
 	if !sessionID.MatchString(sid) || !claude.ValidRunID(w.RunID) || w.TaskID != "" && !claude.ValidTaskID(w.TaskID) {
 		return "", "", fmt.Errorf("workflow %q of session %q: %w", w.RunID, sid, fs.ErrNotExist)
 	}
-	dir = filepath.Join(historyDir(l.Projects, folder), sid)
+	dir = filepath.Join(historyDir(l.projects(), folder), sid)
 	return dir, dir + "\x00" + w.RunID + "\x00" + w.TaskID, nil
 }
 

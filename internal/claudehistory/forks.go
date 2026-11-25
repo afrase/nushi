@@ -18,14 +18,15 @@ func (l Local) Forked(ids []string) map[string]bool {
 		want[id+".jsonl"] = true
 	}
 	out := map[string]bool{}
-	dirs, _ := os.ReadDir(l.Projects)
+	projects := l.projects()
+	dirs, _ := os.ReadDir(projects)
 	for _, d := range dirs {
 		if !d.IsDir() {
 			continue
 		}
-		files, _ := os.ReadDir(filepath.Join(l.Projects, d.Name()))
+		files, _ := os.ReadDir(filepath.Join(projects, d.Name()))
 		for _, f := range files {
-			if want[f.Name()] && f.Type().IsRegular() && forked(filepath.Join(l.Projects, d.Name(), f.Name())) {
+			if want[f.Name()] && f.Type().IsRegular() && forked(filepath.Join(projects, d.Name(), f.Name())) {
 				out[strings.TrimSuffix(f.Name(), ".jsonl")] = true
 			}
 		}
