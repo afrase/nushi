@@ -37355,8 +37355,9 @@ class NushiServiceApi {
           ctx, 'NushiService', 'ListFiles', request, ListFilesResponse());
 
   /// Asks the chat's agent, unseen, what fills its context (Claude's
-  /// /context), in a throwaway fork of its session, while the chat is idle.
-  /// Refused when the agent can't fork.
+  /// get_context_usage, Ante's and Pi's own ask), while the chat is idle:
+  /// no turn and no fork, so a side chat or a new chat can be asked too.
+  /// Refused when the agent can't say, the chat is busy or no agent runs.
   $async.Future<GetContextUsageResponse> getContextUsage(
           $pb.ClientContext? ctx, GetContextUsageRequest request) =>
       _client.invoke<GetContextUsageResponse>(ctx, 'NushiService',

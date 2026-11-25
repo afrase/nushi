@@ -779,8 +779,9 @@ type NushiServiceClient interface {
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
 	// Asks the chat's agent, unseen, what fills its context (Claude's
-	// /context), in a throwaway fork of its session, while the chat is idle.
-	// Refused when the agent can't fork.
+	// get_context_usage, Ante's and Pi's own ask), while the chat is idle:
+	// no turn and no fork, so a side chat or a new chat can be asked too.
+	// Refused when the agent can't say, the chat is busy or no agent runs.
 	GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error)
 	// Lists the MCP servers the agent's config gives a folder, read from the
 	// agent's own files, env and header values masked. With check_health, the
@@ -3343,8 +3344,9 @@ type NushiServiceHandler interface {
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
 	// Asks the chat's agent, unseen, what fills its context (Claude's
-	// /context), in a throwaway fork of its session, while the chat is idle.
-	// Refused when the agent can't fork.
+	// get_context_usage, Ante's and Pi's own ask), while the chat is idle:
+	// no turn and no fork, so a side chat or a new chat can be asked too.
+	// Refused when the agent can't say, the chat is busy or no agent runs.
 	GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error)
 	// Lists the MCP servers the agent's config gives a folder, read from the
 	// agent's own files, env and header values masked. With check_health, the
