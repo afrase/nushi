@@ -189,6 +189,16 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('the clock stops when its last listener leaves as it '
+      'ticks', (tester) async {
+    void leave() => pulseClock.removeListener(leave);
+    pulseClock.addListener(leave);
+    expect(pulseClock.running, isTrue);
+    // Its first tick: the listener leaves while the clock notifies.
+    await tester.pump(const Duration(milliseconds: 1000 ~/ pulseRate));
+    expect(pulseClock.running, isFalse);
+  });
+
   testWidgets('while Nushi is not in front, a shine shows its text as it '
       'is, and sweeps again once it is', (tester) async {
     Shine.stopAt = null;

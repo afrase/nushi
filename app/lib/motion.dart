@@ -141,8 +141,10 @@ class _Pulse extends ChangeNotifier {
     // once (RenderCustomPaint swaps them), and a spinner rebuilt each
     // frame would otherwise start the timer again every frame and never
     // turn. One that leaves as it ticks is gone only then too: a notifier
-    // keeps who leaves while it notifies until it's done.
-    if (!hasListeners) scheduleMicrotask(_run);
+    // keeps who leaves while it notifies until it's done, so whether anyone
+    // is left is asked then, not now (the background mark leaves as its
+    // play's last tick comes).
+    scheduleMicrotask(_run);
   }
 
   // The app's state changed: if Nushi came to the front or left it, each
