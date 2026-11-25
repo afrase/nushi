@@ -195,17 +195,9 @@ type CommandHider interface {
 	HidesCommand(name string) bool
 }
 
-// ContextCommander has a slash command that says what fills the context:
-// ContextCommand, run unseen in a throwaway fork; ReadContext reads its reply
-// (the reply's messages, in order, at least one).
-type ContextCommander interface {
-	ContextCommand() string
-	ReadContext(messages []string) model.ContextUsage
-}
-
-// ContextAsker can be asked what fills the context, and needs no
-// ContextCommander: Context asks, with call (an extension of the agent's:
-// Agent.Call), leaving nothing behind: no fork, no command.
+// ContextAsker can be asked what fills the context: Context asks, with
+// call (an extension of the agent's: Agent.Call), leaving nothing behind:
+// no fork, no command. An agent without it isn't asked (ADR 0017).
 type ContextAsker interface {
 	Context(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error)
 }

@@ -44,7 +44,7 @@ type ChatRecord struct {
 	// nor removes them.
 	RelatedWorktrees []RelatedWorktree `json:",omitempty"`
 	// Throwaway are sessions the agent forked from the chat's that nobody
-	// will see again (side chats, /context runs), until the agent has
+	// will see again (side chats, commit messages' forks), until the agent has
 	// deleted them: a daemon that stops or crashes first leaves them for
 	// the next time the chat opens, or Delete.
 	Throwaway []string `json:",omitempty"`

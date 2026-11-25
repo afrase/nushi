@@ -46,7 +46,7 @@ func (c *chat) SessionUpdate(_ context.Context, n *acp.SessionNotification) erro
 	return nil
 }
 
-// probe takes an update of a throwaway fork (see contextInFork): its
+// probe takes an update of a throwaway fork (see CommitMessage): its
 // message text goes to its silent run, and nothing else of it is kept.
 func (c *chat) probe(n *acp.SessionNotification) bool {
 	c.mu.Lock()
@@ -338,7 +338,7 @@ func (s *Service) closeSides() {
 const throwAwayWait = 30 * time.Second
 
 // throwAway has the chat's agent delete a session forked from the chat that
-// nobody will see again (a side chat, a /context fork), and again a moment
+// nobody will see again (a side chat, a commit message's fork), and again a moment
 // later for an agent that writes a little of it back as it ends
 // (model.HarnessInfo.Redelete); then the chat forgets it. If the agent can't (it
 // went, or is going, meanwhile), the chat keeps it, and a fresh agent

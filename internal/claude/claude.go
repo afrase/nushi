@@ -361,15 +361,3 @@ func (Harness) Compacted(it model.Item) bool {
 	return it.Kind == model.ToolCall && it.Tool == "compact" ||
 		it.Kind == model.UserMessage && strings.HasPrefix(it.Text, summaryStart)
 }
-
-// ContextCommand says what fills the context. Claude answers it itself,
-// without the model, but keeps the answer in the conversation (ADR 0017).
-func (Harness) ContextCommand() string { return "context" }
-
-// ReadContext reads /context's reply: its last message, since the agent
-// may send the output twice, as two messages (claude-agent-acp did).
-func (Harness) ReadContext(messages []string) model.ContextUsage {
-	md := messages[len(messages)-1]
-	cats, _ := Parse(md) // the app shows the markdown when there are none
-	return model.ContextUsage{Markdown: md, Categories: cats, Lists: Lists(md)}
-}
