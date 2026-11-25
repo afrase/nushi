@@ -20,4 +20,4 @@ A chat's pull request fails its checks after the agent's turn has ended, often w
 
 ## Amendment (2026-11-25): a cancelled check
 
-A cancelled check is its own kind (githubapi.KindOf, API 148). Checks that fail only because some were cancelled still flag the chat, since GitHub's merge gate holds them back, but the bar says "A check was cancelled on #n" with a grey stop sign and no Ask to fix: nothing in them failed for the agent to fix.
+A cancelled check is its own kind (githubapi.KindOf, API 148). Checks that fail only because some were cancelled still flag the chat, since GitHub's merge gate holds them back, but the bar says "A check was cancelled on #n" with a grey stop sign and no Ask to fix: nothing in them failed for the agent to fix. A cancel acted on is remembered as a cancel (`<id>@<commit>:cancelled`), so a re-run on the same commit that really fails flags the chat again: the user was told only of a cancel.

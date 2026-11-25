@@ -14,11 +14,13 @@ import 'package:nushi/widgets.dart';
 
 /// [it]'s failure as the user acts on it, `<node id>@<commit>`, while its
 /// checks fail on an open pull request; null otherwise, and from a daemon
-/// that doesn't say the commit.
+/// that doesn't say the commit. Checks only cancelled are
+/// `<node id>@<commit>:cancelled`, so a cancel acted on doesn't quiet a
+/// real failure of a re-run on the same commit (ADR 0138).
 String? failureOf(GitHubItem? it) {
   if (it == null || it.state != 'open' || it.checksOid.isEmpty) return null;
   if (it.checks != 'failure' && it.checks != 'error') return null;
-  return '${it.id}@${it.checksOid}';
+  return '${it.id}@${it.checksOid}${onlyCancelled(it) ? ':cancelled' : ''}';
 }
 
 /// The chats whose pull request's checks newly failed (ADR 0138): from the

@@ -245,6 +245,30 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 
+  testWidgets('a cancel acted on stays quiet, but a real failure on the '
+      'same commit after it flags the chat again', (tester) async {
+    final cancelled = _state('a1')
+      ..checkCounts = GitHubCheckCounts(passed: 5, failed: 1, cancelled: 1);
+    expect(failureOf(cancelled), 'PR_412@a1:cancelled');
+    var now = _state('a1', checks: 'pending');
+    final (d, _) = await _open(tester, () => now);
+    now = cancelled;
+    await _poll(tester);
+    expect(d.chats['c']!.needsYou, isTrue);
+    ChecksWatch.of(d).seen(d.chats['c']!);
+    await _poll(tester);
+    expect(d.chats['c']!.needsYou, isFalse, reason: 'dismissed');
+    // Run again on the same commit, it really fails.
+    now = _state('a1')..checkCounts = GitHubCheckCounts(passed: 5, failed: 1);
+    await _poll(tester);
+    expect(d.chats['c']!.needsYou, isTrue);
+    expect(
+      find.text('Checks failed on #412', findRichText: true),
+      findsOneWidget,
+    );
+    await closeView(tester, d);
+  }, variant: onMac);
+
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
     if (rendering) ('light', Brightness.light),
