@@ -176,8 +176,9 @@ type Item struct {
 	// Nushi's copy knows it: a replay doesn't say.
 	Steered bool `json:",omitzero"`
 	// Sent is when a message was sent: a user message through Nushi, an
-	// agent's as it began to arrive, else what the replay (SentMeta) or
-	// the agent's own files (chats' MessageDater) say. Zero when not known.
+	// agent's as it began to arrive, else what the replay (SentMeta, or
+	// the harness's own replay meta read by chats' SentReader) or the
+	// agent's own files (chats' MessageDater) say. Zero when not known.
 	Sent time.Time `json:",omitzero"`
 	// Started and Ended are when the daemon saw a tool call start to run
 	// (once allowed, when the agent asked permission) and end (Nushi's copy
