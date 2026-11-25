@@ -9,9 +9,8 @@ import (
 // the Go agent replays from claude's history (ADR 0127): the recordings
 // of a run that ended by itself, one the model stopped (TaskStop), one
 // stopped by stop_task, and one stopped by stop_task and resumed (two
-// launches of one run, each its own call and task), each loaded after its
-// recording as
-// TestClaudeMerge loads it. Live, TestClaudeParity's workflowsEnded holds
+// launches of one run, each its own call and task, each reopened as its
+// own item), each loaded after its recording as TestClaudeMerge loads it. Live, TestClaudeParity's workflowsEnded holds
 // the same ends. No file of the run is read (noWorkflowFiles), and the
 // reopened run has no agent of this daemon's as its owner: without the
 // replayed end it would run on until its files were still for
@@ -31,17 +30,25 @@ func TestClaudeWorkflowEndsOnItsReplayedTask(t *testing.T) {
 			eventually(t, c, func() bool { return len(c.following) == 0 })
 			c.mu.Lock()
 			defer c.mu.Unlock()
-			n := 0
+			seen := map[string]bool{}
 			for _, it := range c.items {
 				if w := it.Workflow; w != nil {
-					n++
+					if seen[w.TaskID] {
+						t.Errorf("workflow %s reopened twice", w.TaskID)
+					}
+					seen[w.TaskID] = true
 					if end := ended[w.TaskID]; w.State != end.State || w.End != end.End {
 						t.Errorf("workflow %s reopened %q (%q), claude's recording %q (%q)", w.TaskID, w.State, w.End, end.State, end.End)
 					}
 				}
 			}
-			if n != len(ended) {
-				t.Errorf("%d workflows reopened, the recording's %d", n, len(ended))
+			for task := range ended {
+				if !seen[task] {
+					t.Errorf("claude's workflow %s has no item", task)
+				}
+			}
+			if len(seen) != len(ended) {
+				t.Errorf("workflows reopened %v, the recording's %v", seen, ended)
 			}
 		})
 	}
