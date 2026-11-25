@@ -1,8 +1,10 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/cards.dart';
 import 'package:nushi/changes_view.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/composer.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/review.dart';
@@ -58,6 +60,30 @@ void main() {
     expect(copied, ['sum := start\n  for _, ', 'start']);
     await closeView(tester, d);
   }, variant: macAndLinux);
+
+  testWidgets("a letter typed after a click in a tool call's diff goes "
+      "into the chat's box, as after a click on the transcript's text", (
+    tester,
+  ) async {
+    Collapsible.opened.add('e1');
+    final fake = FakeDaemon([chat('c', 'claude', 'Total')])
+      ..chatItems['c'] = _edited();
+    final d = await openApp(tester, fake);
+    final box = find.descendant(
+      of: find.byType(ToolCallView),
+      matching: find.byType(DiffBox),
+    );
+    await clickCode(tester, 1, 4, within: box);
+    await press(tester, LogicalKeyboardKey.keyX);
+    final field = find
+        .descendant(
+          of: find.byType(Composer),
+          matching: find.byType(EditableText),
+        )
+        .first;
+    expect(tester.widget<EditableText>(field).controller.text, 'x');
+    await closeView(tester, d);
+  }, variant: onMac);
 
   testWidgets("a permission card's diff in the transcript: a drag across "
       'its code copies exactly that', (tester) async {

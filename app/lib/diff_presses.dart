@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/type_to_box.dart';
 
 /// A diff's view ([child], a `UnifiedDiff` or a `SideBySideDiff` of
 /// [controller]) whose presses on its lines are its own: a press of the
@@ -44,6 +45,13 @@ class DiffPresses extends StatefulWidget {
 
 class _DiffPressesState extends State<DiffPresses> {
   final _menu = MenuController();
+  // Around the panes: in the transcript, a character typed with a pane
+  // focused (after a click in the code) goes to the chat's box (ADR 0121).
+  final _keys = FocusNode(
+    debugLabel: 'diff presses',
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
   final GlobalKey _anchor = GlobalKey();
   OpenMenu? _open;
   bool _canCopy = false;
@@ -51,6 +59,7 @@ class _DiffPressesState extends State<DiffPresses> {
   @override
   void initState() {
     super.initState();
+    typesThroughWithin.add(_keys);
     widget.controller.selectionChanges.addListener(_selectionChanged);
   }
 
@@ -65,6 +74,8 @@ class _DiffPressesState extends State<DiffPresses> {
 
   @override
   void dispose() {
+    typesThroughWithin.remove(_keys);
+    _keys.dispose();
     widget.controller.selectionChanges.removeListener(_selectionChanged);
     super.dispose();
   }
@@ -127,8 +138,7 @@ class _DiffPressesState extends State<DiffPresses> {
 
   @override
   Widget build(BuildContext context) => Focus(
-    canRequestFocus: false,
-    skipTraversal: true,
+    focusNode: _keys,
     onKeyEvent: _key,
     child: Stack(
       fit: StackFit.expand,

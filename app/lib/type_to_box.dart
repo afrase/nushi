@@ -22,6 +22,23 @@ import 'package:nushi/run_state.dart';
 /// button) keeps its keys.
 final Set<FocusNode> typesThrough = runSet();
 
+/// Focus nodes whose own focused descendants a typed character goes on
+/// from as well, when they sit under one of [typesThrough]'s: a diff's
+/// (`DiffPresses`), whose panes take the focus on a click in their code,
+/// in the transcript. A text field among them (an inlay's) keeps its
+/// keys; the Changes and pull request tabs' diffs aren't on the chat's
+/// tab, where alone a character goes on.
+final Set<FocusNode> typesThroughWithin = runSet();
+
+/// Whether a character typed with [focus] focused goes on to the box.
+bool _passes(FocusNode focus) {
+  if (typesThrough.contains(focus)) return true;
+  final up = focus.ancestors;
+  return up.any(typesThroughWithin.contains) &&
+      up.any(typesThrough.contains) &&
+      focus.context?.findAncestorWidgetOfExactType<EditableText>() == null;
+}
+
 /// Puts [e], a key the window's own focus ([root]) got unhandled, in the
 /// shown chat's box when it's a character typed with nothing else that
 /// takes it focused, no menu open and no dialog over the window.
@@ -37,7 +54,7 @@ KeyEventResult typeIntoBox(Daemon d, FocusNode root, KeyEvent e) {
     return KeyEventResult.ignored;
   }
   final focus = FocusManager.instance.primaryFocus;
-  if (focus != root && !typesThrough.contains(focus)) {
+  if (focus == null || focus != root && !_passes(focus)) {
     return KeyEventResult.ignored;
   }
   final context = root.context;
