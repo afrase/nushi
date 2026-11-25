@@ -3,6 +3,8 @@
 // working one, and 8 times its size, both themes), which make an
 // animation at the clock's rate, and its play as a strip. Every name on
 // them is made up.
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/background_mark.dart';
@@ -123,10 +125,17 @@ void main() {
   });
 
   renderTest('the background mark, its play as a strip', (tester) async {
-    // Every tick of the play side by side, real size above, 6 times below.
+    // Every tick of the play from the rest before it to the rest after,
+    // in two rows: each at real size above, 8 times below.
     const from = BackgroundMark.restTicks - 1;
     const count = _ticks - from + 1;
-    viewport(tester, const Size(count * 72.0 + 40, 170), ratio: 2);
+    const perRow = (count + 1) ~/ 2;
+    const cellSize = 100.0;
+    viewport(
+      tester,
+      const Size(perRow * cellSize + 40, 2 * 150 + 40),
+      ratio: 2,
+    );
     await tester.pumpWidget(
       themed(
         Builder(
@@ -137,34 +146,39 @@ void main() {
               size: const Size.square(_room),
               painter: BackgroundMark(t.running, t: i % _ticks / _ticks),
             );
+            Widget cell(int i) => SizedBox(
+              width: cellSize,
+              child: Column(
+                children: [
+                  Text('${i % _ticks}', style: theme.ui(t.textMuted, size: 12)),
+                  const SizedBox(height: 6),
+                  mark(i),
+                  SizedBox.square(
+                    dimension: cellSize,
+                    child: Center(
+                      child: Transform.scale(scale: 8, child: mark(i)),
+                    ),
+                  ),
+                ],
+              ),
+            );
             return ColoredBox(
               color: t.window,
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (var i = from; i < from + count; i++)
-                      SizedBox(
-                        width: 72,
-                        child: Column(
-                          children: [
-                            Text(
-                              '${i % _ticks}',
-                              style: theme.ui(t.textMuted, size: 12),
-                            ),
-                            const SizedBox(height: 6),
-                            mark(i),
-                            SizedBox.square(
-                              dimension: 72,
-                              child: Center(
-                                child: Transform.scale(
-                                  scale: 6,
-                                  child: mark(i),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                    for (var row = 0; row < 2; row++)
+                      Row(
+                        children: [
+                          for (
+                            var i = from + row * perRow;
+                            i < min(from + (row + 1) * perRow, from + count);
+                            i++
+                          )
+                            cell(i),
+                        ],
                       ),
                   ],
                 ),

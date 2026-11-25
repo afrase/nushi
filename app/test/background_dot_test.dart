@@ -1,7 +1,7 @@
 // A chat whose turn ended while its background tasks run wears its own
-// mark (#113): two dots side by side that now and then merge, spin and
-// split. At rest it asks for nothing; its play draws outlines traced once
-// and kept.
+// mark (#113): two dots side by side that now and then spin clockwise as
+// droplets, merge and split. At rest it asks for nothing; its play draws
+// outlines traced once and kept.
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -240,30 +240,91 @@ void main() {
     expect(last, same(backgroundMarkPath(_roomSize, 0)));
   });
 
-  test('the drops join through a neck a tick before they are one', () {
-    // The narrowest the outline is across its middle, in any direction.
-    double waist(Path p) {
-      final c = _roomSize.center(Offset.zero);
-      var least = double.infinity;
-      for (var a = 0.0; a < pi; a += 0.05) {
-        var inside = 0;
-        for (var r = -_room / 2; r <= _room / 2; r += 0.05) {
-          if (p.contains(c + Offset.fromDirection(a, r))) inside++;
-        }
-        least = min(least, inside * 0.05);
-      }
-      return least;
-    }
-
-    int parts(Path p) => p.computeMetrics().length;
+  group('the play, from its outlines', () {
+    // Ten times the dot's room, for a finer reading.
+    const size = Size.square(_room * 10);
+    final mid = size.center(Offset.zero);
     const n = BackgroundMark.ticks;
-    // The first tick where the two are one, as they pull together.
-    var i = BackgroundMark.restTicks + 1;
-    while (parts(backgroundMarkPath(_roomSize, i / n)) > 1) {
-      i++;
-    }
-    final joined = backgroundMarkPath(_roomSize, i / n);
-    expect(waist(joined), inInclusiveRange(0.5, 1.5), reason: 'tick $i');
+    const rest = BackgroundMark.restTicks;
+    Path at(int tick) => backgroundMarkPath(size, tick % n / n);
+
+    test('it turns clockwise on screen, never fast enough to strobe', () {
+      // Each drop's head, tick by tick, while the two are apart: as they
+      // start to spin and again as they separate. y points down, so a
+      // growing angle is clockwise as seen.
+      for (final (from, to) in [(rest + 1, rest + 7), (rest + 18, rest + 26)]) {
+        for (var i = from; i < to; i++) {
+          final before = _drops(at(i));
+          final after = _drops(at(i + 1));
+          expect(before, hasLength(2), reason: 'tick $i');
+          expect(after, hasLength(2), reason: 'tick ${i + 1}');
+          for (final d in before) {
+            final a = _headOf(d);
+            // The same drop a tick on: the one whose head is nearest.
+            final b = after
+                .map(_headOf)
+                .reduce((x, y) => (x - a).distance < (y - a).distance ? x : y);
+            final turn = _angleBetween(a - mid, b - mid);
+            expect(turn, greaterThan(0), reason: 'tick $i, clockwise');
+            expect(turn, lessThan(20 * pi / 180), reason: 'tick $i');
+          }
+        }
+      }
+    });
+
+    test("a moving drop's tail trails behind it", () {
+      // Spinning in, and spiralling out.
+      for (final i in [rest + 5, rest + 6, rest + 21, rest + 23]) {
+        for (final d in _drops(at(i))) {
+          final head = _headOf(d);
+          final r = head - mid;
+          final way = Offset(-r.dy, r.dx) / r.distance; // clockwise
+          var ahead = 0.0;
+          var behind = 0.0;
+          for (final p in _outline(d)) {
+            final along = (p - head).dx * way.dx + (p - head).dy * way.dy;
+            ahead = max(ahead, along);
+            behind = max(behind, -along);
+          }
+          expect(behind, greaterThan(ahead * 1.25), reason: 'tick $i');
+        }
+      }
+    });
+
+    test('two at rest, one drop at the merge, joined by a neck either '
+        'side of it', () {
+      final parts = [for (var i = rest; i <= n; i++) _drops(at(i)).length];
+      expect(parts.first, 2, reason: 'the play starts at rest');
+      expect(parts.last, 2, reason: 'and ends there');
+      final first = parts.indexOf(1);
+      final last = parts.lastIndexOf(1);
+      expect(first, greaterThan(0), reason: 'they merge');
+      // One stretch of one drop, round for a moment in its middle.
+      expect(parts.sublist(first, last + 1), everyElement(1));
+      final middle = _drops(at(rest + (first + last) ~/ 2)).single;
+      expect(_fullness(middle), greaterThan(0.99), reason: 'round');
+      // The tick they join and the last before they part: one outline
+      // pinched in by a neck, not a round drop or an oval.
+      for (final i in [rest + first, rest + last]) {
+        expect(_fullness(_drops(at(i)).single), lessThan(0.97), reason: '$i');
+      }
+    });
+
+    test('the outline changes on every tick of the play', () {
+      for (var i = rest; i < n; i++) {
+        final a = at(i);
+        final b = at(i + 1);
+        var changed = 0;
+        for (var y = 0.5; y < size.height; y++) {
+          for (var x = 0.5; x < size.width; x++) {
+            if (a.contains(Offset(x, y)) != b.contains(Offset(x, y))) {
+              changed++;
+            }
+          }
+        }
+        expect(changed, greaterThan(20), reason: 'tick $i to ${i + 1}');
+      }
+    });
   });
 
   test('each outline is traced once per size and kept', () {
@@ -391,4 +452,78 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     d.dispose();
   });
+}
+
+/// Each separate drop of [p], as its own path.
+List<Path> _drops(Path p) => [
+  for (final m in p.computeMetrics()) m.extractPath(0, m.length)..close(),
+];
+
+/// Points round [drop]'s outline, half a pixel apart.
+List<Offset> _outline(Path drop) => [
+  for (final m in drop.computeMetrics())
+    for (var d = 0.0; d < m.length; d += 0.5)
+      m.getTangentForOffset(d)!.position,
+];
+
+/// The point of [drop] deepest inside it: its head, the roundest and
+/// fullest part (a tail thins).
+Offset _headOf(Path drop) {
+  final edge = _outline(drop);
+  final b = drop.getBounds();
+  var best = b.center;
+  var deepest = -1.0;
+  for (var y = b.top; y <= b.bottom; y += 0.5) {
+    for (var x = b.left; x <= b.right; x += 0.5) {
+      final q = Offset(x, y);
+      if (!drop.contains(q)) continue;
+      final d = edge.map((e) => (e - q).distance).reduce(min);
+      if (d > deepest) {
+        deepest = d;
+        best = q;
+      }
+    }
+  }
+  return best;
+}
+
+/// The angle from [a] to [b], from -pi to pi: positive is clockwise on
+/// screen (y down).
+double _angleBetween(Offset a, Offset b) {
+  final d = b.direction - a.direction;
+  return atan2(sin(d), cos(d));
+}
+
+/// [drop]'s area over its convex hull's: 1 for a round drop or an oval,
+/// less where a neck pinches it in.
+double _fullness(Path drop) {
+  final pts = _outline(
+    drop,
+  )..sort((a, b) => a.dx != b.dx ? a.dx.compareTo(b.dx) : a.dy.compareTo(b.dy));
+  double area(List<Offset> l) {
+    var a = 0.0;
+    for (var i = 0; i < l.length; i++) {
+      final p = l[i];
+      final q = l[(i + 1) % l.length];
+      a += p.dx * q.dy - q.dx * p.dy;
+    }
+    return a.abs() / 2;
+  }
+
+  double cross(Offset o, Offset a, Offset b) =>
+      (a.dx - o.dx) * (b.dy - o.dy) - (a.dy - o.dy) * (b.dx - o.dx);
+  // Andrew's monotone chain: the lower hull, then the upper.
+  List<Offset> half(Iterable<Offset> points) {
+    final h = <Offset>[];
+    for (final p in points) {
+      while (h.length >= 2 && cross(h[h.length - 2], h.last, p) <= 0) {
+        h.removeLast();
+      }
+      h.add(p);
+    }
+    return h..removeLast();
+  }
+
+  final hull = [...half(pts), ...half(pts.reversed)];
+  return area(_outline(drop)) / area(hull);
 }

@@ -70,8 +70,8 @@ class RunningDot extends StatelessWidget {
 /// while the agent works, a ring when idle (a check draws itself there for
 /// a moment when a turn is done), solid green while a turn's end is unseen
 /// (the check settles into it); two dots side by side that now and then
-/// merge, spin and split ([BackgroundMark]) while subagents or commands
-/// run in the background after the turn; nothing
+/// spin as droplets, merge and split ([BackgroundMark]) while subagents
+/// or commands run in the background after the turn; nothing
 /// asleep (an empty slot of the same size, so titles stay in line: a
 /// sleeping chat recedes, its title muted where it's listed, rather than
 /// wear a mark that reads like the idle ring), a quiet clock when its

@@ -1,12 +1,12 @@
 import 'dart:ui';
 
 /// The outline where [field] is at the level that encloses [area], as
-/// one smoothed path. [field] holds the (n + 1) by (n + 1) corners of a
-/// grid [n] cells across, each [cell] wide, from [origin], under 0
-/// inside; its edge must be outside, so every outline closes. Marching
-/// squares, the level found by secant steps from 0 and from a fifth of
-/// [step] (the shape's scale) inside. The background mark is drawn with
-/// it (`background_mark.dart`).
+/// one smoothed path without holes. [field] holds the (n + 1) by (n + 1)
+/// corners of a grid [n] cells across, each [cell] wide, from [origin],
+/// under 0 inside; its edge must be outside, so every outline closes.
+/// Marching squares, the level found by secant steps from 0 and from a
+/// fifth of [step] (the shape's scale) inside. The background mark is
+/// drawn with it (`background_mark.dart`).
 Path fieldOutline(
   List<double> field,
   int n,
@@ -28,7 +28,7 @@ Path fieldOutline(
     a1 = _area(_loops(field, n, cell, origin, l1)) - area;
   }
   final path = Path()..fillType = PathFillType.evenOdd;
-  for (final loop in _loops(field, n, cell, origin, l1)) {
+  for (final loop in _outer(_loops(field, n, cell, origin, l1))) {
     // Smoothed: a curve through each side's middle, its corner the point.
     final m = loop.length;
     if (m < 3) continue;
@@ -45,9 +45,30 @@ Path fieldOutline(
   return path;
 }
 
+/// The [loops] that lie inside no other: liquid has no holes, so a gap
+/// closed in by the shape (two necks meeting round it) is filled.
+List<List<Offset>> _outer(List<List<Offset>> loops) => [
+  for (final l in loops)
+    if (!loops.any((o) => !identical(o, l) && _inside(l.first, o))) l,
+];
+
+/// Whether [p] is inside the polygon [loop] (even-odd).
+bool _inside(Offset p, List<Offset> loop) {
+  var inside = false;
+  for (var i = 0, j = loop.length - 1; i < loop.length; j = i++) {
+    final a = loop[i];
+    final b = loop[j];
+    if ((a.dy > p.dy) != (b.dy > p.dy) &&
+        p.dx < (b.dx - a.dx) * (p.dy - a.dy) / (b.dy - a.dy) + a.dx) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
 double _area(List<List<Offset>> loops) {
   var sum = 0.0;
-  for (final l in loops) {
+  for (final l in _outer(loops)) {
     var a = 0.0;
     for (var i = 0; i < l.length; i++) {
       final p = l[i];
