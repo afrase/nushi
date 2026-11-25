@@ -26,6 +26,17 @@ final class FileTabs {
   /// file's view is made again each time it shows. Changed by [showSource].
   final sources = <String>{};
 
+  /// The files whose view shows Blame (issue #78), by their tabs' paths:
+  /// off as a tab opens, gone as it closes, never kept across launches.
+  /// Changed by [blame].
+  final blamed = ValueNotifier<Set<String>>(const {});
+
+  /// Turns [path]'s Blame on or off.
+  void blame(String path, {required bool on}) {
+    final now = {...blamed.value};
+    if (on ? now.add(path) : now.remove(path)) blamed.value = now;
+  }
+
   /// Counts [showSource]'s changes, for [changes].
   final _sourced = ValueNotifier<int>(0);
 
@@ -60,6 +71,7 @@ final class FileTabs {
     final at = old == null ? -1 : tabs.value.indexOf(old);
     if (!keep && at >= 0) {
       sources.remove(old!.path);
+      blame(old.path, on: false);
       provisional.value = tab;
       tabs.value = [...tabs.value]..[at] = tab;
       shown.value = tab;
@@ -89,6 +101,7 @@ final class FileTabs {
     keep(tab);
     tabs.value = rest;
     sources.remove(tab.path);
+    blame(tab.path, on: false);
     if (rest.isEmpty) {
       shown.value = null;
     } else if (shown.value == tab) {
