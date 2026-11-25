@@ -108,11 +108,34 @@ class _QuestionCardState extends State<QuestionCard> {
 
   /// The answer to [q] in words, or ''.
   String _said(AskedQuestion q) => [
-    for (final id in _picked[q.field.id] ?? const <String>[])
-      q.field.options.firstWhere((o) => o.id == id).name,
-    for (final f in [q.field, ?q.other])
-      if (_text[f.id]?.text.trim() case final s? when s.isNotEmpty) s,
-  ].join(', ');
+    _answered(q).answer,
+    _answered(q).note,
+  ].where((s) => s.isNotEmpty).join(', ');
+
+  /// The answer to [q] in words and the note on its pick, each or ''.
+  /// The box's text is a note where the agent reads it so (Field.note)
+  /// and an option is picked; otherwise it's one more answer.
+  ({String answer, String note}) _answered(AskedQuestion q) {
+    String typed(Field f) => _text[f.id]?.text.trim() ?? '';
+    final picks = [
+      for (final id in _picked[q.field.id] ?? const <String>[])
+        q.field.options.firstWhere((o) => o.id == id).name,
+    ];
+    final note = _notes(q) ? typed(q.other!) : '';
+    return (
+      answer: [
+        ...picks,
+        for (final f in [q.field, if (note.isEmpty) ?q.other])
+          if (typed(f) case final s when s.isNotEmpty) s,
+      ].join(', '),
+      note: note,
+    );
+  }
+
+  /// Whether [q]'s box holds a note on its pick: the agent reads it so
+  /// and an option is picked.
+  bool _notes(AskedQuestion q) =>
+      (q.other?.note ?? false) && (_picked[q.field.id]?.isNotEmpty ?? false);
 
   void _go(int tab) => setState(() {
     _tab = tab.clamp(0, _many ? _qs.length : 0);
@@ -329,7 +352,8 @@ class _QuestionCardState extends State<QuestionCard> {
           },
         ),
       if (f.options.isEmpty) field(f, f.title),
-      if (q.other case final other?) field(other, '${other.title}…'),
+      if (q.other case final other?)
+        field(other, _notes(q) ? 'Add a note…' : '${other.title}…'),
       if (!_many && (many || f.options.isEmpty))
         RunButton(
           label: 'Submit',
@@ -350,9 +374,15 @@ class _QuestionCardState extends State<QuestionCard> {
             text: '${q.field.title}   ',
             style: theme.ui(t.textMuted, size: 12),
             children: [
-              if (_said(q) case final s when s.isNotEmpty)
-                TextSpan(text: s, style: theme.ui(t.text, size: 12))
-              else
+              if (_answered(q) case (:final answer, :final note)
+                  when answer.isNotEmpty || note.isNotEmpty) ...[
+                TextSpan(text: answer, style: theme.ui(t.text, size: 12)),
+                if (note.isNotEmpty)
+                  TextSpan(
+                    text: '  $note',
+                    style: theme.ui(t.textSecondary, size: 12),
+                  ),
+              ] else
                 TextSpan(
                   text: 'Not answered',
                   style: theme.ui(t.needs, size: 12),

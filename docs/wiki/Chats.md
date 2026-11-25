@@ -221,6 +221,15 @@ When the agent asks permission to run something, or asks a question, the chat **
 
 Nushi never answers for you.
 
+### Add a note to your pick
+
+Claude, Codex and Ante let you pick an option and add a note to it, such as **PDF** with "landscape pages". The agent gets your pick as the answer and your words as a note on it. Claude and Codex take a note on a question with one answer; Ante on any question.
+
+1. Type your note in the box under the options. Once an option is picked, the box says **Add a note…**.
+2. Pick the option. A single question is sent as soon as you pick, so type the note first.
+
+The answered card shows the note after your pick, greyed. With other agents, or on Claude's questions with several answers, text in the box is an answer of its own.
+
 ### See every option of an answered question
 
 Once you answer, the question card shrinks to your answers. To see everything it offered:
