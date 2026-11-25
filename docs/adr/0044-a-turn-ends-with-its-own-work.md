@@ -25,3 +25,5 @@ claude-agent-acp holds a turn's `session/prompt` open, for v1 clients, until the
 - Alternatives: AIR's extension (async tasks, `_session/async_task/stop`): it turns on AIR's behaviour throughout the adapter and still has no stop for subagents; ending a background subagent at the next task notification turn (it names no task); a stop shown in the app only (the subagent would go on).
 
 **Note (ADR [0077](0077-each-harness-is-a-type.md)):** `Dialect` and `Kind`'s function fields are now the interfaces of `features/chats/harness.go`, met by each agent's `Harness` type.
+
+**Note (2026-11-25):** the Go agent holds no prompt, so a Claude turn ends at its prompt's answer and `TurnDone` is gone; what of this still holds is in [0066](0066-claude-through-nushis-go-agent.md)'s amendment of that day.

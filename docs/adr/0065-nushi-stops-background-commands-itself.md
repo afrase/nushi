@@ -19,3 +19,5 @@ Stop on a background command asked Claude, in a prompt, to call its `TaskStop`: 
 - Only a shorter prompt: still a turn and still waits behind a running one.
 - Matching by "the command is in the command line": a longer command containing it, or a pipeline's subshell (same command line, not the group's leader), would match.
 - AIR's async tasks (`asyncTasks`), which give a real stop: they switch the adapter to AIR's behaviour throughout.
+
+**Note (2026-11-25):** what of this still holds with Claude's Go agent, beside the amendment above, is in [0066](0066-claude-through-nushis-go-agent.md)'s amendment of that day.
