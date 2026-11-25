@@ -115,17 +115,18 @@ class _QuestionCardState extends State<QuestionCard> {
   }
 
   /// Whether the card may take the keyboard: nothing has it, or an empty
-  /// box on the same screen (the composer, waiting), or an earlier card.
-  /// Never from text being written, a dialog, or anything else that takes
-  /// keys (a terminal: Enter or a digit meant for it would answer).
+  /// box on the same screen (the composer, waiting; an earlier card's), or
+  /// an earlier card itself. Never from text being written (in an earlier
+  /// card's box too), a dialog, or anything else that takes keys (a
+  /// terminal: Enter or a digit meant for it would answer).
   bool _free() {
     final focus = FocusManager.instance.primaryFocus;
     final at = focus?.context;
     if (focus == null || at == null || focus is FocusScopeNode) return true;
     if (ModalRoute.of(at) != ModalRoute.of(context)) return false;
-    if (at.findAncestorStateOfType<_QuestionCardState>() != null) return true;
     final box = at.findAncestorWidgetOfExactType<EditableText>();
-    return box != null && box.controller.text.isEmpty;
+    if (box != null) return box.controller.text.isEmpty;
+    return at.findAncestorStateOfType<_QuestionCardState>() != null;
   }
 
   bool get _many => _qs.length > 1;

@@ -222,6 +222,60 @@ void main() {
     expect(card.sends, 0);
   }, variant: macAndLinux);
 
+  group('a newer card', () {
+    /// [first]'s card, then [second]'s under it once given.
+    Widget both(_Card first, [_Card? second]) => themed(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [first.build(), ?second?.build()],
+      ),
+    );
+
+    testWidgets('leaves an older card’s box being written in', (tester) async {
+      final first = _Card(_item([_format(), _other()]));
+      await tester.pumpWidget(both(first));
+      await tester.pump();
+      await _key(tester, LogicalKeyboardKey.keyL);
+      final older = find.byType(EditableText).first;
+      expect(
+        tester.widget<EditableText>(older).focusNode.hasPrimaryFocus,
+        true,
+      );
+      await tester.pumpWidget(both(first, _Card(_item([_format(), _other()]))));
+      await tester.pump();
+      expect(
+        tester.widget<EditableText>(older).focusNode.hasPrimaryFocus,
+        isTrue,
+        reason: 'mid-word',
+      );
+      expect(tester.widget<EditableText>(older).controller.text, 'l');
+    });
+
+    testWidgets('takes the keys from an older card, or its empty box', (
+      tester,
+    ) async {
+      for (final inBox in [false, true]) {
+        final first = _Card(_item([_format(), _other()]));
+        await tester.pumpWidget(both(first));
+        await tester.pump();
+        if (inBox) await _key(tester, LogicalKeyboardKey.arrowUp);
+        final focus = FocusManager.instance.primaryFocus;
+        expect(
+          tester
+              .widget<EditableText>(find.byType(EditableText).first)
+              .focusNode
+              .hasPrimaryFocus,
+          inBox,
+        );
+        await tester.pumpWidget(
+          both(first, _Card(_item([_format(), _other()]))),
+        );
+        await tester.pump();
+        expect(FocusManager.instance.primaryFocus, isNot(focus));
+      }
+    });
+  });
+
   testWidgets('Esc in the box gives the keys back, the text kept', (
     tester,
   ) async {
