@@ -1,0 +1,16 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "enter a new worktree and ask a helper"}, "content": [{"type": "tool_use", "name": "EnterWorktree", "input": {"name": "kept"}}]},
+    {"match": {"toolResult": "EnterWorktree"}, "content": [{"type": "tool_use", "name": "Agent", "input": {"description": "Say hi", "subagent_type": "general-purpose", "prompt": "Reply with one word: hi."}}]},
+    {"match": {"lastUserText": "where are you, reopened"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I", "command": "pwd; find \"$CLAUDE_CONFIG_DIR\"/projects -type f | sort"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which branch", "command": "git branch --show-current"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which worktrees", "command": "git worktree list --porcelain"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Here."}]}
+  ],
+  "side": [
+    {"match": {"lastUserText": "Reply with one word: hi."}, "content": [{"type": "text", "text": "hi"}]},
+    {"match": {"toolResult": "Agent"}, "content": [{"type": "text", "text": "The helper said hi."}]},
+    {"match": {"lastUserText": "task-notification"}, "content": [{"type": "text", "text": "Noted."}]},
+    {"match": {"lastUserText": "Subagent hand-back"}, "content": [{"type": "text", "text": "Noted."}]}
+  ]
+}

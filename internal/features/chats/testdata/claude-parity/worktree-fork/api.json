@@ -1,0 +1,19 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "enter the side worktree"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Find the worktree", "command": "git -C .worktrees/side rev-parse --show-toplevel"}}]},
+    {"match": {"toolResult": "Bash", "capture": {"wt": "(/\\S*/\\.worktrees/side)"}}, "content": [{"type": "tool_use", "name": "EnterWorktree", "input": {"path": "${wt}"}}]},
+    {"match": {"toolResult": "EnterWorktree"}, "id": "msg_worktree_fork_point", "content": [{"type": "text", "text": "In it."}]},
+    {"match": {"lastUserText": "where is the fork"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I", "command": "pwd; find \"$CLAUDE_CONFIG_DIR\"/projects -type f | sort"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which branch", "command": "git branch --show-current"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which worktrees", "command": "git worktree list --porcelain"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Fork here."}]},
+    {"match": {"lastUserText": "where is the rewound fork"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I", "command": "pwd; find \"$CLAUDE_CONFIG_DIR\"/projects -type f | sort"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which branch", "command": "git branch --show-current"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which worktrees", "command": "git worktree list --porcelain"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Rewound here."}]},
+    {"match": {"lastUserText": "where is the parent"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I", "command": "pwd; find \"$CLAUDE_CONFIG_DIR\"/projects -type f | sort"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which branch", "command": "git branch --show-current"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Which worktrees", "command": "git worktree list --porcelain"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Parent here."}]}
+  ]
+}

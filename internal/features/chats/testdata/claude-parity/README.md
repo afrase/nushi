@@ -72,6 +72,9 @@ Every scenario is recorded (2026-11-25, Claude Code 2.1.331 through the Go agent
 | `worktree-reopen` | the session entered a worktree by `path` and closed; loaded from the run's folder, then from the worktree's | where a resumed session runs |
 | `worktree-gone` | a worktree made before the session (`git` step), entered by `path`, removed by `git` between turns; a prompt, then `ExitWorktree` `keep` | claude's warning; Bash refused |
 | `worktree-second` | `EnterWorktree` by name, by another name, then by `path` to a worktree outside `.claude/worktrees/`, then `ExitWorktree` `keep` | |
+| `worktree-fork` | a worktree made before the session (`git` step), entered by `path`; `session/fork` of the whole session and at its answer (a rewind), from the run's folder, each asked where it is; then the parent | where a fork of a session in a worktree starts |
+| `worktree-reopen-name` | `EnterWorktree` with a `name`, a subagent there; the session closed in it and loaded from the run's folder | where a session resumes in a worktree Claude made; where its subagents' files are |
+| `worktree-reopen-gone` | a worktree made before the session, entered by `path`; the session closed, the worktree removed and pruned by `git`, then loaded from the run's folder | the load after the worktree is gone |
 | `sendmessage` | a message to a finished background subagent, which runs again | |
 | `compaction` | `/compact`, then a prompt | |
 | `context` | a throwaway fork, a command (`/context`) run in it, deleted after, as Nushi's commit message forks one | |

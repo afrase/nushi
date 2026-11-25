@@ -1,0 +1,14 @@
+{
+  "timeout": "45s",
+  "steps": [
+    {"repo": {}},
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "Write", "Agent", "EnterWorktree", "ExitWorktree"]}}}}}},
+    {"prompt": "enter a new worktree and ask a helper", "session": "s1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "agent_message_chunk", "content": {"text": "Noted."}}}}},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "usage_update", "cost": {"currency": "USD"}}}}},
+    {"close": "s1"},
+    {"load": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "Write", "Agent", "EnterWorktree", "ExitWorktree"]}}}}}},
+    {"prompt": "where are you, reopened", "session": "s1"}
+  ]
+}
