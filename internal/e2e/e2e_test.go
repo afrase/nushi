@@ -102,6 +102,7 @@ func (fakeHarness) OwnTurnEnded(u *acp.UsageUpdate) bool { return claude.Harness
 type claudeOnFake struct {
 	claude.Harness
 	projects string
+	history  *acptest.History // the fake agent's sessions, its files as far as HistoryGone is asked
 }
 
 func (claudeOnFake) Info() model.HarnessInfo {
@@ -214,7 +215,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, timing 
 			kinds = append(kinds, chats.Kind{Harness: h, Launch: l, MCP: a.MCP != nil})
 		}
 	}
-	kinds = append(kinds, chats.Kind{Harness: claudeOnFake{projects: filepath.Join(dataDir, "claude", "projects")}, Launch: fake(""), MCP: true})
+	kinds = append(kinds, chats.Kind{Harness: claudeOnFake{projects: filepath.Join(dataDir, "claude", "projects"), history: history}, Launch: fake(""), MCP: true})
 	cxs := codexStores(dataDir)
 	kinds = append(kinds, chats.Kind{Harness: codexGo{}, Launch: launch(cxs.serve), MCP: true})
 	// "signin" is the fake agent behind a login, offering Codex's ways to
