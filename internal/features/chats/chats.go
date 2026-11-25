@@ -207,7 +207,6 @@ type chat struct {
 	started      time.Time             // when the running turn started
 	background   int                   // subagents, background commands and workflows running, as last said
 	workflows    int                   // workflows running, as last said
-	killed       []string              // background commands Nushi stopped since the last prompt, by the agent's id: told with the next (stopNote)
 	tasks        map[string]taskWord   // the agent's word on its background commands' tasks, by its id (background.go)
 	edited       []string              // files the user saved in the preview since the last prompt: told with the next (editNote)
 	done         chan struct{}         // closed when the running turn ends

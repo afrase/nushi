@@ -92,19 +92,15 @@ func (c *chat) commandTaskLocked(task model.TaskUpdate, call string) {
 }
 
 // heardLocked is sh as the agent's word on its task has it: ended, if
-// the agent said so, whatever the file or a TaskStop made of it before;
-// a command Nushi stopped itself reads "stopped" though Claude says it
-// failed (model.BackgroundCommand's Killed). How it ended keeps the words
-// it has (the file's end line), else takes the agent's.
+// the agent said so, whatever the file or a TaskStop made of it before.
+// How it ended keeps the words it has (the file's end line), else takes
+// the agent's.
 func (c *chat) heardLocked(sh model.BackgroundCommand) model.BackgroundCommand {
 	t := c.tasks[sh.ID]
 	if !t.state.Ended() {
 		return sh
 	}
 	state := t.state
-	if state == model.RunFailed && sh.Killed {
-		state = model.RunStopped
-	}
 	if sh.State != state {
 		if sh.State != model.RunRunning && sh.State != model.RunStarted {
 			sh.End = "" // the fallback's guess, overruled
@@ -288,9 +284,6 @@ func (f *commandFollower) nextLocked(sh model.BackgroundCommand, out, end, state
 	case task.state == model.RunRunning && task.agent == f.agent && live: // it runs, whatever the file says
 	case end != "" && (gone || f.endAt != nil && *f.endAt == out):
 		sh.State, sh.End = cmp.Or(model.RunState(state), model.RunFailed), end
-		if sh.Killed && sh.State == model.RunFailed { // Nushi stopped it, though the agent saw an exit code (Claude: 144 for SIGTERM)
-			sh.State = model.RunStopped
-		}
 		if !sh.Started.IsZero() && sh.Ended.IsZero() {
 			sh.Ended = time.Now()
 		}
@@ -375,19 +368,4 @@ type Processes interface {
 	// Under lists the processes below root, root not included, with their
 	// command lines.
 	Under(root int) ([]model.Process, error)
-}
-
-// markKilled marks the background command callID started as stopped by
-// Nushi (model.BackgroundCommand's Killed), or not, while it still runs under agent.
-func (c *chat) markKilled(callID string, agent Agent, killed bool) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	it := c.itemLocked(callID)
-	if it == nil || it.BackgroundCommand == nil || it.BackgroundCommand.State != model.RunRunning || c.agent != agent {
-		return false
-	}
-	sh := *it.BackgroundCommand
-	sh.Killed = killed
-	it.BackgroundCommand = &sh
-	return true
 }

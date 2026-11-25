@@ -67,18 +67,10 @@ func moveNote(folder, branch string) string {
 	return note("moved", "folder", folder, "branch", branch)
 }
 
-// stopNote tells the agent the user stopped its background command id
-// (stopCommand): the agent heard only that it failed, with an exit code
-// (docs/facts/claude.md). Only an id of noteID's shape is told.
-func stopNote(id string) string {
-	return note("command-stopped", "id", id)
-}
-
-// noteID is a task id a note may name.
-var noteID = regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
-
 // noteTag matches a note at the start of a user's message as the agent
-// replays it (its own text block, or run into the user's text).
+// replays it (its own text block, or run into the user's text): today's,
+// and <nushi-command-stopped id="…"/>, which told Claude until 2026-11-25
+// that the user had stopped its background command (ADR 0065).
 var noteTag = regexp.MustCompile(`^<nushi-[a-z-]+(?: [a-z]+="[^"]*")*/>\s*`)
 
 // oldNoteTexts match the sentences Nushi sent as notes until 2026-11-23,
@@ -138,7 +130,6 @@ type notes struct {
 	log      *slog.Logger
 	renamed  []string // the renames' lines not told yet, when the branch was renamed
 	switched []string // the moves' and switches' lines not told yet, when there's one
-	stopped  []string // the background commands Nushi stopped since the last prompt
 	edited   []string // the files the user saved in the preview since the last prompt
 }
 
@@ -149,8 +140,8 @@ func (c *chat) notesLocked() *notes {
 		return nil
 	}
 	sess := c.record
-	n := &notes{sess: sess, git: c.worktrees, log: c.logLocked(), stopped: c.killed, edited: c.edited}
-	c.killed, c.edited = nil, nil
+	n := &notes{sess: sess, git: c.worktrees, log: c.logLocked(), edited: c.edited}
+	c.edited = nil
 	if wt := sess.Worktree; wt != nil && wt.Told != "" && wt.Told != wt.Branch {
 		n.renamed = c.untoldLocked(model.NoticeBranchRenamed)
 	}
@@ -167,9 +158,6 @@ func (n *notes) blocks() ([]acp.ContentBlock, *told) {
 		return nil, nil
 	}
 	var blocks []acp.ContentBlock
-	for _, id := range n.stopped {
-		blocks = append(blocks, acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: stopNote(id)}})
-	}
 	for _, p := range n.edited {
 		blocks = append(blocks, acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: editNote(p)}})
 	}

@@ -218,15 +218,12 @@ type Item struct {
 // "started" when its end can't be known (its agent is gone, or it started
 // before the chat reopened, and it hasn't said it ended). Started and Ended
 // are when the daemon saw that; Output is what it wrote (the end of it),
-// End how it ended, in the agent's words ("exited with code 0"). Killed
-// says Nushi stopped it itself, at the user's Stop: an end other than
-// success then reads "stopped", whatever exit code the agent gives it.
+// End how it ended, in the agent's words ("exited with code 0").
 type BackgroundCommand struct {
 	ID             string
 	State          RunState
 	Started, Ended time.Time
 	Output, End    string
-	Killed         bool `json:",omitzero"`
 }
 
 // Process is one of the processes an agent runs: its id, its process

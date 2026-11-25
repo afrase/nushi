@@ -112,32 +112,22 @@ func (f *followed) ends() []model.BackgroundCommand {
 // Claude's task status ends a running command, though its file has no
 // end line, or one with output after it while its shell runs (which the
 // file alone would wait on); the end's two updates end it once, the
-// second adding only how, and none counts as a turn of Claude's own. A
-// command Nushi stopped itself reads "stopped" though Claude says failed.
+// second adding only how, and none counts as a turn of Claude's own.
 func TestTheTaskEndsTheCommand(t *testing.T) {
 	shell := model.Process{Pid: 4100, Pgid: 4100, Args: zshRunning(waitLoop)}
 	for name, tc := range map[string]struct {
-		text   string
-		end    []map[string]any
-		killed bool
-		want   model.BackgroundCommand
+		text string
+		end  []map[string]any
+		want model.BackgroundCommand
 	}{
 		"completed, no end line": {text: "waiting\n", end: taskCompleted, want: model.BackgroundCommand{State: "done", End: "exited with code 0"}},
 		"stopped, output after the end line": {text: "waiting\n\n[killed]\nshutting down\n", end: taskStopped,
 			want: model.BackgroundCommand{State: "stopped", End: "killed"}},
 		"failed": {text: "waiting\n", end: taskFailed, want: model.BackgroundCommand{State: "failed", End: "exited with code 144"}},
-		"failed, stopped by Nushi": {text: "waiting\n", end: taskFailed, killed: true,
-			want: model.BackgroundCommand{State: "stopped", End: "exited with code 144", Killed: true}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			f := followedCommand(t, tc.text, shell)
 			c := f.c
-			if tc.killed {
-				c.mu.Lock()
-				agent := c.agent
-				c.mu.Unlock()
-				c.markKilled(waitCall, agent, true)
-			}
 			feed(c, []acp.SessionNotification{taskUpdate(taskRunning)})
 			f.readAgain(t)
 			if sh := commandOf(c); sh.State != "running" {
@@ -152,7 +142,7 @@ func TestTheTaskEndsTheCommand(t *testing.T) {
 			}
 			feed(c, []acp.SessionNotification{taskUpdate(tc.end[1])})
 			eventually(t, c, func() bool { return f.steps.Load() > 0 && c.itemLocked(waitCall).BackgroundCommand.End != "" })
-			if sh := commandOf(c); sh.State != tc.want.State || sh.End != tc.want.End || sh.Killed != tc.want.Killed {
+			if sh := commandOf(c); sh.State != tc.want.State || sh.End != tc.want.End {
 				t.Errorf("ended as %+v, want %+v", sh, tc.want)
 			}
 			if ends := f.ends(); len(ends) != 1 {
