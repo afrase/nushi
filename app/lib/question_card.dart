@@ -10,6 +10,7 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/question_answered.dart';
 import 'package:nushi/question_parts.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/type_to_box.dart';
 import 'package:nushi/widgets.dart';
 
 /// The agent's question form, one question at a time as in Claude Code.
@@ -17,8 +18,11 @@ import 'package:nushi/widgets.dart';
 /// Submit tab that reviews the answers; ←/→ or Tab move between them.
 /// Picking an option (a click or its digit) answers a one-choice question
 /// and moves on; a many-choice one toggles with a click, its digit or Space,
-/// and Enter moves on. ↑/↓ move through the options. A single question has
-/// no tabs, and picking an option sends it at once.
+/// and Enter moves on. ↑/↓ move through the options and the box under
+/// them as one list, and a character typed on the card (not a digit that
+/// picks) goes into the box; Esc there gives the keys back to the card,
+/// the text kept. A single question has no tabs, and picking an option
+/// sends it at once.
 class QuestionCard extends StatefulWidget {
   const new(
     this.item, {
@@ -52,6 +56,31 @@ class _QuestionCardState extends State<QuestionCard> {
   set _tab(int v) => _draft.tab = v;
   int _at = 0; // the option ↑/↓ are on
 
+  /// The focus of the box under the question shown (see [_boxField]).
+  late final FocusNode _box = FocusNode(onKeyEvent: _onBoxKey)
+    ..addListener(_typed);
+
+  /// The box ↑/↓ reach after the options and typing goes into: the
+  /// question's "Other" field, or the field itself when it has no options;
+  /// null on the review, or for a question without one.
+  Field? get _boxField {
+    if (_tab >= _qs.length) return null;
+    final q = _qs[_tab];
+    return q.other ?? (q.field.options.isEmpty ? q.field : null);
+  }
+
+  /// Puts the keys in the box, [typed] after its text and the caret at its
+  /// end, as type to write does for the chat's box (`type_to_box.dart`).
+  void _toBox([String typed = '']) {
+    final c = _text[_boxField!.id]!;
+    final text = '${c.text}$typed';
+    c.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    _box.requestFocus();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +107,9 @@ class _QuestionCardState extends State<QuestionCard> {
       c.removeListener(_typed);
     }
     _focus.dispose();
+    _box
+      ..removeListener(_typed)
+      ..dispose();
     _sending.dispose();
     super.dispose();
   }
@@ -190,11 +222,14 @@ class _QuestionCardState extends State<QuestionCard> {
     } else if (options.isNotEmpty &&
         (k == LogicalKeyboardKey.arrowDown ||
             k == LogicalKeyboardKey.arrowUp)) {
-      setState(
-        () => _at =
-            (_at + (k == LogicalKeyboardKey.arrowDown ? 1 : -1)) %
-            options.length,
-      );
+      final down = k == LogicalKeyboardKey.arrowDown;
+      // The box is the list's last entry, between the last option and
+      // the first.
+      if (_boxField != null && _at == (down ? options.length - 1 : 0)) {
+        _toBox();
+      } else {
+        setState(() => _at = (_at + (down ? 1 : -1)) % options.length);
+      }
     } else if (options.isNotEmpty && k == LogicalKeyboardKey.space) {
       _pick(_at);
     } else if (k == LogicalKeyboardKey.enter ||
@@ -210,6 +245,29 @@ class _QuestionCardState extends State<QuestionCard> {
       } else if (_answer.isNotEmpty) {
         unawaited(_send(_answer));
       }
+    } else if (typedCharacter(e) case final c? when _boxField != null) {
+      _toBox(c); // a digit no option has too
+    } else {
+      return KeyEventResult.ignored;
+    }
+    return KeyEventResult.handled;
+  }
+
+  /// The box's own keys, before its text's: ↑ to the last option, ↓ to the
+  /// first, and Esc back to the card, the text kept.
+  KeyEventResult _onBoxKey(FocusNode _, KeyEvent e) {
+    if (e is KeyUpEvent) return KeyEventResult.ignored;
+    final k = e.logicalKey;
+    final options = _tab < _qs.length ? _qs[_tab].field.options : <Option>[];
+    if (k == LogicalKeyboardKey.escape) {
+      _focus.requestFocus();
+    } else if (options.isNotEmpty &&
+        (k == LogicalKeyboardKey.arrowUp ||
+            k == LogicalKeyboardKey.arrowDown)) {
+      setState(
+        () => _at = k == LogicalKeyboardKey.arrowUp ? options.length - 1 : 0,
+      );
+      _focus.requestFocus();
     } else {
       return KeyEventResult.ignored;
     }
@@ -321,6 +379,7 @@ class _QuestionCardState extends State<QuestionCard> {
     final many = f.type == FieldType.FIELD_TYPE_CHOICES;
     Widget field(Field f, String hint) => TextField(
       controller: _text[f.id],
+      focusNode: f == _boxField ? _box : null,
       style: theme.ui(t.text),
       onSubmitted: (_) {
         if (_many) {
@@ -345,7 +404,7 @@ class _QuestionCardState extends State<QuestionCard> {
           digit: n < 9 ? '${n + 1}' : null,
           many: many,
           picked: picked.contains(o.id),
-          at: n == _at,
+          at: n == _at && !_box.hasFocus,
           onTap: () {
             _pick(n);
             _focus.requestFocus();

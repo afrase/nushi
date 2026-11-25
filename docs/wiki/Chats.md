@@ -221,6 +221,16 @@ When the agent asks permission to run something, or asks a question, the chat **
 
 Nushi never answers for you.
 
+### Answer a question from the keyboard
+
+A new question card takes the keyboard when nothing else is using it.
+
+- Press an option's number to pick it.
+- **↑** and **↓** move through the options and then the box under them, round again at either end. **Space** picks the option you're on.
+- Start typing to write in the box. You don't need to reach it first: the letters go there. In the box, numbers and spaces are just text.
+- **Esc** in the box takes you back to the options, and keeps what you typed.
+- **⏎** sends, or goes on to the next question. **←**, **→** and **Tab** move between questions.
+
 ### Add a note to your pick
 
 Claude, Codex and Ante let you pick an option and add a note to it, such as **PDF** with "landscape pages". The agent gets your pick as the answer and your words as a note on it. Claude and Codex take a note on a question with one answer; Ante on any question.
