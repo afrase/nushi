@@ -24,7 +24,7 @@ func TestInfo(t *testing.T) {
 	want := model.HarnessInfo{
 		Name: "opencode", Title: "OpenCode", Resume: "opencode --session",
 		InitMeta:    map[string]any{"opencode/child-session-updates": true},
-		OtherSuffix: "_custom",
+		OtherSuffix: "_custom", OtherNotes: model.ReplacesOnOne,
 	}
 	if got := harness.Info(); !reflect.DeepEqual(got, want) {
 		t.Errorf("got %+v", got)

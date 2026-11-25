@@ -213,8 +213,9 @@ func TestIsOther(t *testing.T) {
 
 // An "Other" field is a note on its question's pick where the agent reads
 // it so (HarnessInfo.OtherNotes): Claude's and Codex's on a question that
-// takes one choice, Ante's on any, and nobody's for opencode and omp; a
-// form without an agent's suffix pairs nothing.
+// takes one choice, Ante's on any; opencode's and omp's text takes the
+// place of a one-choice question's pick; a form without an agent's suffix
+// pairs nothing.
 func TestOtherIsANoteWhereTheAgentTakesOne(t *testing.T) {
 	var req acp.CreateElicitationRequest
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeForm), &req))
@@ -224,6 +225,7 @@ func TestOtherIsANoteWhereTheAgentTakesOne(t *testing.T) {
 	}{
 		{model.HarnessInfo{OtherSuffix: "_custom", OtherNotes: model.NotesOnOne}, " question_0+note  question_1"},
 		{model.HarnessInfo{OtherSuffix: "_custom", OtherNotes: model.NotesOnAll}, " question_0+note  question_1+note"},
+		{model.HarnessInfo{OtherSuffix: "_custom", OtherNotes: model.ReplacesOnOne}, " question_0+replaces  question_1"},
 		{model.HarnessInfo{OtherSuffix: "_custom"}, " question_0  question_1"},
 		{model.HarnessInfo{}, "   "},
 	} {
@@ -249,6 +251,9 @@ func TestOtherIsANoteWhereTheAgentTakesOne(t *testing.T) {
 			s := f.OtherFor
 			if f.Note {
 				s += "+note"
+			}
+			if f.Replaces {
+				s += "+replaces"
 			}
 			got = append(got, s)
 		}

@@ -2880,6 +2880,11 @@ message Field {
   // (the harness's OtherNotes: Claude's and Codex's with one choice,
   // Ante's with any). API 150.
   bool note = 9;
+  // For an "Other" field: the agent takes its text, when not blank, in
+  // place of a pick of the field it is for, and drops the pick, so an
+  // answer is one or the other (the harness's OtherNotes: OpenCode's and
+  // oh-my-pi's with one choice). API 153.
+  bool replaces = 10;
 }
 
 message ItemEvent {

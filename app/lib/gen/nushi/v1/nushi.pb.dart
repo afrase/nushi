@@ -19471,6 +19471,7 @@ class Field extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? values,
     $core.String? otherFor,
     $core.bool? note,
+    $core.bool? replaces,
   }) {
     final result = Field._();
     if (id != null) result.id = id;
@@ -19482,6 +19483,7 @@ class Field extends $pb.GeneratedMessage {
     if (values != null) result.values.addAll(values);
     if (otherFor != null) result.otherFor = otherFor;
     if (note != null) result.note = note;
+    if (replaces != null) result.replaces = replaces;
     return result;
   }
 
@@ -19509,6 +19511,7 @@ class Field extends $pb.GeneratedMessage {
     ..pPS(7, _omitFieldNames ? '' : 'values')
     ..aOS(8, _omitFieldNames ? '' : 'otherFor')
     ..aOB(9, _omitFieldNames ? '' : 'note')
+    ..aOB(10, _omitFieldNames ? '' : 'replaces')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -19606,6 +19609,19 @@ class Field extends $pb.GeneratedMessage {
   $core.bool hasNote() => $_has(8);
   @$pb.TagNumber(9)
   void clearNote() => $_clearField(9);
+
+  /// For an "Other" field: the agent takes its text, when not blank, in
+  /// place of a pick of the field it is for, and drops the pick, so an
+  /// answer is one or the other (the harness's OtherNotes: OpenCode's and
+  /// oh-my-pi's with one choice). API 153.
+  @$pb.TagNumber(10)
+  $core.bool get replaces => $_getBF(9);
+  @$pb.TagNumber(10)
+  set replaces($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasReplaces() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearReplaces() => $_clearField(10);
 }
 
 class ItemEvent extends $pb.GeneratedMessage {

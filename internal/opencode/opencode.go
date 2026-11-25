@@ -39,7 +39,8 @@ func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{
 		Name: "opencode", Title: "OpenCode", Resume: "opencode --session",
 		InitMeta:    map[string]any{"opencode/child-session-updates": true},
-		OtherSuffix: "_custom", // "Type your own answer" after a question
+		OtherSuffix: "_custom",           // "Type your own answer" after a question
+		OtherNotes:  model.ReplacesOnOne, // its text drops a one-choice question's pick (docs/facts/opencode.md)
 	}
 }
 
