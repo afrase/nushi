@@ -98,3 +98,15 @@ func TestContextSkipsAListItCantRead(t *testing.T) {
 		t.Error("a failed call answered")
 	}
 }
+
+// Only the categories and the window are read: a field Nushi doesn't read
+// that claude retypes can't fail the card.
+func TestContextIgnoresAFieldItDoesntRead(t *testing.T) {
+	answer := json.RawMessage(`{"categories":[{"id":"messages","name":"Messages","tokens":500,"kind":"used"}],"maxTokens":1000,
+		"model":{"id":"opus"},"totalTokens":"many","rawMaxTokens":null,"percentage":"half"}`)
+	got, err := Harness{}.Context(context.Background(), answering(t, answer), "s1")
+	want := model.ContextUsage{Categories: []model.ContextCategory{{Name: "Messages", Tokens: 500, Percent: 50, Part: model.PartMessages}}}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Context = %+v, %v; want %+v", got, err, want)
+	}
+}

@@ -29,7 +29,10 @@ func (Harness) Context(ctx context.Context, call func(ctx context.Context, metho
 	if err := call(ctx, claudeacp.ContextUsageMethod, claudeacp.ContextUsageRequest{SessionID: sessionID, Detail: "full"}, &raw); err != nil {
 		return model.ContextUsage{}, err
 	}
-	var u claudeagent.ContextUsage
+	var u struct { // only what's read: one claude retypes can't fail the card
+		Categories []claudeagent.ContextCategory `json:"categories"`
+		MaxTokens  int                           `json:"maxTokens"`
+	}
 	if err := json.Unmarshal(raw, &u); err != nil {
 		return model.ContextUsage{}, err
 	}
