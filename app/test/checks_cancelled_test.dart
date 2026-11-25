@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_checks.dart';
+import 'package:nushi/pull_commits.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_merge_card.dart';
 import 'package:nushi/pull_merge_state.dart';
@@ -293,5 +294,31 @@ void main() {
     );
     expect(itemChecks(row), 'cancelled');
     d.dispose();
+  });
+
+  testWidgets("a commit's checks: the grey stop sign and \"Checks "
+      'cancelled" when its rollup fails only because of a cancelled check '
+      '(API 149); the red cross for a failure', (tester) async {
+    GitHubCommit commit(String oid, {bool cancelled = false}) => GitHubCommit(
+      oid: oid,
+      headline: 'Commit $oid',
+      authorName: 'Ann',
+      checks: 'failure',
+      cancelled: cancelled,
+    );
+    await tester.pumpWidget(
+      themed(
+        Column(
+          children: [
+            CommitRow(commit('1111111', cancelled: true)),
+            CommitRow(commit('2222222')),
+          ],
+        ),
+      ),
+    );
+    expect(tester.widget<CheckMark>(_stopSign).color, t.textSecondary);
+    expect(find.byTooltip('Checks cancelled'), findsOneWidget);
+    expect(find.byTooltip('Checks failing'), findsOneWidget);
+    expect(tester.widget<Icon>(find.byIcon(Icons.close)).color, t.crashed);
   });
 }

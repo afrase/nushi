@@ -191,7 +191,7 @@ func (s *server) GetGitHubCommits(ctx context.Context, req *connect.Request[nush
 // ghCommitProto is a pull request's commit as the API sends it.
 func ghCommitProto(c model.GitHubCommit) *nushiv1.GitHubCommit {
 	return &nushiv1.GitHubCommit{Oid: c.OID, Headline: c.Headline, Author: c.Author, AuthorName: c.AuthorName,
-		CommittedMs: unixMs(c.Committed), Checks: c.Checks}
+		CommittedMs: unixMs(c.Committed), Checks: c.Checks, Cancelled: c.Cancelled}
 }
 
 func (s *server) GetGitHubIssue(ctx context.Context, req *connect.Request[nushiv1.GetGitHubIssueRequest]) (*connect.Response[nushiv1.GetGitHubIssueResponse], error) {

@@ -2,6 +2,7 @@ package githubapi
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
@@ -9,8 +10,10 @@ import (
 
 // commitsQuery asks for a pull request's newest 100 commits, and its
 // first (the alias first), which the newest 100 leave out of a longer
-// one: one query of about a point, where more would page (GitHub allows
-// 250 at most).
+// one: one query of about two points, where more would page (GitHub
+// allows 250 at most). Each commit's checks are counted by state
+// (COUNTS, countsField), to tell a rollup failing only because of
+// cancelled checks; a server that refuses the counts is asked without.
 const commitsQuery = `query Commits($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
@@ -22,7 +25,7 @@ const commitsQuery = `query Commits($owner: String!, $name: String!, $number: In
 fragment TrailCommit on Commit {
   oid messageHeadline committedDate
   author { name user { login } }
-  statusCheckRollup { state }
+  statusCheckRollup { state COUNTS }
 }`
 
 // commitNode decodes a TrailCommit.
@@ -36,7 +39,11 @@ type commitNode struct {
 			User *login `json:"user"`
 		} `json:"author"`
 		StatusCheckRollup *struct {
-			State string `json:"state"`
+			State    string `json:"state"`
+			Contexts struct {
+				CheckRuns []stateCount `json:"checkRunCountsByState"`
+				Statuses  []stateCount `json:"statusContextCountsByState"`
+			} `json:"contexts"`
 		} `json:"statusCheckRollup"`
 	} `json:"commit"`
 }
@@ -52,6 +59,11 @@ func (n commitNode) commit() model.GitHubCommit {
 	}
 	if r := x.StatusCheckRollup; r != nil {
 		cm.Checks = rollupState(r.State)
+		var n model.CheckCounts
+		for _, sc := range append(r.Contexts.CheckRuns, r.Contexts.Statuses...) {
+			countCheck(&n, sc)
+		}
+		cm.Cancelled = cm.Checks == "failure" && n.Cancelled > 0 && n.Failed == n.Cancelled
 	}
 	return cm
 }
@@ -78,7 +90,13 @@ func (c *Client) Commits(ctx context.Context, repo string, number int) (model.Gi
 		} `json:"repository"`
 	}
 	vars := map[string]any{"owner": owner, "name": name, "number": number}
-	if _, err := c.graphql(ctx, commitsQuery, vars, &data); err != nil {
+	ask := func(counts bool) string {
+		if counts {
+			return strings.ReplaceAll(commitsQuery, "COUNTS", countsField)
+		}
+		return strings.ReplaceAll(commitsQuery, "COUNTS", "")
+	}
+	if err := c.countedQuery(ctx, ask, vars, &data); err != nil {
 		return model.GitHubCommits{}, err
 	}
 	if data.Repository == nil || data.Repository.PullRequest == nil {

@@ -4170,6 +4170,9 @@ message GitHubCommit {
   int64 committed_ms = 5;
   // Its checks: "success", "failure", "pending", or "" for none.
   string checks = 6;
+  // From API 149: checks is "failure" only because some were cancelled,
+  // none failed (an older daemon sends false).
+  bool cancelled = 7;
 }
 
 message GetGitHubCommitsRequest {

@@ -178,10 +178,12 @@ type GitHubLabel struct {
 // first line, its author's login (when the commit's email is an
 // account's, else "") and name as git has it, when it was committed, and
 // its checks ("success", "failure", "pending", or "" for none).
+// Cancelled says a "failure" is only cancelled checks, none failed.
 type GitHubCommit struct {
 	OID, Headline, Author, AuthorName string
 	Committed                         time.Time
 	Checks                            string
+	Cancelled                         bool
 }
 
 // GitHubCommits are a pull request's newest 100 commits, oldest first

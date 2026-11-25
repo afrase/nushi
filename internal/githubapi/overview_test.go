@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
 	"strconv"
@@ -113,6 +114,53 @@ func TestCommits(t *testing.T) {
 	})
 	if _, err := f.client().Commits(t.Context(), "acme/lumen", 404); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing: %v", err)
+	}
+}
+
+// TestCommitsCancelled: a commit whose rollup fails only because a check
+// was cancelled says so (Cancelled), told from the checks' counts, as a
+// row's are; one with a failure beside the cancelled check doesn't. A
+// server that refuses the counts is asked again without them, and its
+// commits fail as GitHub's rollup has them.
+func TestCommitsCancelled(t *testing.T) {
+	node := func(oid, counts string) string {
+		return `{"commit":{"oid":"` + oid + `","messageHeadline":"h","committedDate":"2026-11-18T09:00:00Z","author":null,` +
+			`"statusCheckRollup":{"state":"FAILURE","contexts":{"checkRunCountsByState":[` + counts + `],"statusContextCountsByState":[]}}}}`
+	}
+	stopped := node("1", `{"state":"SUCCESS","count":3},{"state":"CANCELLED","count":1}`)
+	both := node("2", `{"state":"FAILURE","count":1},{"state":"CANCELLED","count":1}`)
+	body := `{"data":{"repository":{"pullRequest":{"commits":{"totalCount":2,"nodes":[` + stopped + `,` + both + `]},"first":{"nodes":[` + stopped + `]}}}}}`
+	f := newFake(t)
+	f.route("graphql Commits", func(w http.ResponseWriter, r *http.Request) {
+		asked, _ := io.ReadAll(r.Body)
+		if !strings.Contains(string(asked), "checkRunCountsByState") || strings.Contains(string(asked), "COUNTS") {
+			t.Errorf("asked %s", asked)
+		}
+		_, _ = w.Write([]byte(body))
+	})
+	got, err := f.client().Commits(t.Context(), "acme/lumen", 57)
+	if err != nil || len(got.Newest) != 2 {
+		t.Fatalf("%+v %v", got, err)
+	}
+	if c := got.Newest[0]; c.Checks != "failure" || !c.Cancelled || !got.First.Cancelled {
+		t.Fatalf("only cancelled: %+v %+v", c, got.First)
+	}
+	if c := got.Newest[1]; c.Checks != "failure" || c.Cancelled {
+		t.Fatalf("failed and cancelled: %+v", c)
+	}
+
+	old := newFake(t)
+	old.route("graphql Commits", func(w http.ResponseWriter, r *http.Request) {
+		asked, _ := io.ReadAll(r.Body)
+		if strings.Contains(string(asked), "checkRunCountsByState") {
+			_, _ = w.Write([]byte(`{"errors":[{"message":"Field 'checkRunCountsByState' doesn't exist on type 'StatusCheckRollupContextConnection'"}]}`))
+			return
+		}
+		_, _ = w.Write([]byte(commitsAnswer(2)))
+	})
+	got, err = old.client().Commits(t.Context(), "acme/lumen", 57)
+	if err != nil || len(got.Newest) != 2 || old.count("graphql Commits") != 2 {
+		t.Fatalf("an old server: %+v %v, asked %d", got, err, old.count("graphql Commits"))
 	}
 }
 

@@ -20,7 +20,7 @@ const MaxItems = 50
 // sizeFields are a pull request's size, branches and merge state, which
 // the inbox doesn't ask: its rows show none of them, and GitHub works a
 // merge state out for each pull request asked. countsField is the checks
-// counted by state, which only Items asks for: an old Enterprise server
+// counted by state, which only Items and Commits ask for: an old Enterprise server
 // refuses it, and is asked again without it (noCounts). An issue's
 // comments are counted under an alias, as Issue asks its comments with
 // other arguments (docs/facts/github.md).
@@ -250,10 +250,22 @@ func (c *Client) Items(ctx context.Context, refs []model.GitHubRef) ([]model.Git
 }
 
 // itemsQuery runs Items' query, without the checks' counts on a host that
-// refused them (remembered for the client).
+// refused them.
 func (c *Client) itemsQuery(ctx context.Context, query string, vars map[string]any, out any) error {
+	return c.countedQuery(ctx, func(counts bool) string {
+		if counts {
+			return withItems(query, counted)
+		}
+		return withItems(query, sized)
+	}, vars, out)
+}
+
+// countedQuery runs the query ask makes, with the checks' counts unless
+// the host refused them (remembered for the client), when it's asked
+// again without them.
+func (c *Client) countedQuery(ctx context.Context, ask func(counts bool) string, vars map[string]any, out any) error {
 	if !c.noCounts.Load() {
-		_, err := c.graphql(ctx, withItems(query, counted), vars, out)
+		_, err := c.graphql(ctx, ask(true), vars, out)
 		var api *APIError
 		if err == nil || !errors.As(err, &api) || !refusedCounts(api.Message) {
 			return err
@@ -261,7 +273,7 @@ func (c *Client) itemsQuery(ctx context.Context, query string, vars map[string]a
 		c.noCounts.Store(true)
 		c.log.Info("this server refuses check counts: asked without them")
 	}
-	_, err := c.graphql(ctx, withItems(query, sized), vars, out)
+	_, err := c.graphql(ctx, ask(false), vars, out)
 	return err
 }
 

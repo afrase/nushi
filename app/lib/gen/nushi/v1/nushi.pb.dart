@@ -32119,6 +32119,7 @@ class GitHubCommit extends $pb.GeneratedMessage {
     $core.String? authorName,
     $fixnum.Int64? committedMs,
     $core.String? checks,
+    $core.bool? cancelled,
   }) {
     final result = GitHubCommit._();
     if (oid != null) result.oid = oid;
@@ -32127,6 +32128,7 @@ class GitHubCommit extends $pb.GeneratedMessage {
     if (authorName != null) result.authorName = authorName;
     if (committedMs != null) result.committedMs = committedMs;
     if (checks != null) result.checks = checks;
+    if (cancelled != null) result.cancelled = cancelled;
     return result;
   }
 
@@ -32149,6 +32151,7 @@ class GitHubCommit extends $pb.GeneratedMessage {
     ..aOS(4, _omitFieldNames ? '' : 'authorName')
     ..aInt64(5, _omitFieldNames ? '' : 'committedMs')
     ..aOS(6, _omitFieldNames ? '' : 'checks')
+    ..aOB(7, _omitFieldNames ? '' : 'cancelled')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -32231,6 +32234,17 @@ class GitHubCommit extends $pb.GeneratedMessage {
   $core.bool hasChecks() => $_has(5);
   @$pb.TagNumber(6)
   void clearChecks() => $_clearField(6);
+
+  /// From API 149: checks is "failure" only because some were cancelled,
+  /// none failed (an older daemon sends false).
+  @$pb.TagNumber(7)
+  $core.bool get cancelled => $_getBF(6);
+  @$pb.TagNumber(7)
+  set cancelled($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasCancelled() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearCancelled() => $_clearField(7);
 }
 
 class GetGitHubCommitsRequest extends $pb.GeneratedMessage {

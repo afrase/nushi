@@ -24758,7 +24758,10 @@ type GitHubCommit struct {
 	AuthorName  string `protobuf:"bytes,4,opt,name=author_name,json=authorName,proto3" json:"author_name,omitempty"`
 	CommittedMs int64  `protobuf:"varint,5,opt,name=committed_ms,json=committedMs,proto3" json:"committed_ms,omitempty"`
 	// Its checks: "success", "failure", "pending", or "" for none.
-	Checks        string `protobuf:"bytes,6,opt,name=checks,proto3" json:"checks,omitempty"`
+	Checks string `protobuf:"bytes,6,opt,name=checks,proto3" json:"checks,omitempty"`
+	// From API 149: checks is "failure" only because some were cancelled,
+	// none failed (an older daemon sends false).
+	Cancelled     bool `protobuf:"varint,7,opt,name=cancelled,proto3" json:"cancelled,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -24833,6 +24836,13 @@ func (x *GitHubCommit) GetChecks() string {
 		return x.Checks
 	}
 	return ""
+}
+
+func (x *GitHubCommit) GetCancelled() bool {
+	if x != nil {
+		return x.Cancelled
+	}
+	return false
 }
 
 type GetGitHubCommitsRequest struct {
@@ -30067,7 +30077,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\treactions\x18\x1d \x03(\v2\x18.nushi.v1.GitHubReactionR\treactionsJ\x04\b\x03\x10\x04R\vassociation\"7\n" +
 	"\vGitHubLabel\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
-	"\x05color\x18\x02 \x01(\tR\x05color\"\xb0\x01\n" +
+	"\x05color\x18\x02 \x01(\tR\x05color\"\xce\x01\n" +
 	"\fGitHubCommit\x12\x10\n" +
 	"\x03oid\x18\x01 \x01(\tR\x03oid\x12\x1a\n" +
 	"\bheadline\x18\x02 \x01(\tR\bheadline\x12\x16\n" +
@@ -30075,7 +30085,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vauthor_name\x18\x04 \x01(\tR\n" +
 	"authorName\x12!\n" +
 	"\fcommitted_ms\x18\x05 \x01(\x03R\vcommittedMs\x12\x16\n" +
-	"\x06checks\x18\x06 \x01(\tR\x06checks\"V\n" +
+	"\x06checks\x18\x06 \x01(\tR\x06checks\x12\x1c\n" +
+	"\tcancelled\x18\a \x01(\bR\tcancelled\"V\n" +
 	"\x17GetGitHubCommitsRequest\x12%\n" +
 	"\x03ref\x18\x01 \x01(\v2\x13.nushi.v1.GitHubRefR\x03ref\x12\x14\n" +
 	"\x05quiet\x18\x02 \x01(\bR\x05quiet\"\x90\x01\n" +

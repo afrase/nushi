@@ -77,7 +77,7 @@ int dataDirOnWeb = 0;
 String? get appFiles => kIsWeb ? null : dataDir;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 148;
+const apiVersion = 149;
 
 /// The oldest daemon API this app works with (ADR 0004): below it the Mac
 /// shows only its Restart screen (`OutdatedScreen`) until the daemon has
