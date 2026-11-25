@@ -112,7 +112,12 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 		}
 	}
 	if span == (Span{}) {
-		if err := markStaged(ctx, folder, changes); err != nil {
+		staged, unstaged, err := indexEntries(ctx, folder)
+		if err != nil {
+			return nil, err
+		}
+		markStaged(changes, staged, unstaged)
+		if err := markHunks(ctx, folder, changes, staged, unstaged); err != nil {
 			return nil, err
 		}
 	}

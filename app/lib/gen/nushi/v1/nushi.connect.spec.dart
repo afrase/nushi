@@ -586,6 +586,25 @@ abstract final class NushiService {
     nushiv1nushi.CommitStagedResponse.new,
   );
 
+  /// Says which of a file's change blocks are staged, for a file whose
+  /// FileChange.hunks is set. (API 156)
+  static const getHunks = connect.Spec(
+    '/$name/GetHunks',
+    connect.StreamType.unary,
+    nushiv1nushi.GetHunksRequest.new,
+    nushiv1nushi.GetHunksResponse.new,
+  );
+
+  /// Stages the change blocks the user pressed, or unstages them, leaving
+  /// the rest: the index alone is written, never the work tree, and only on
+  /// the user's own ask (ADR 0079). (API 156)
+  static const stageHunks = connect.Spec(
+    '/$name/StageHunks',
+    connect.StreamType.unary,
+    nushiv1nushi.StageHunksRequest.new,
+    nushiv1nushi.StageHunksResponse.new,
+  );
+
   /// Reads one of a folder's files as it is now, as a change that changes
   /// nothing (status "unchanged", the text on both sides): a file a review
   /// names that isn't among the changes. Only a regular file inside the

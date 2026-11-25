@@ -176,6 +176,10 @@ const (
 	// NushiServiceCommitStagedProcedure is the fully-qualified name of the NushiService's CommitStaged
 	// RPC.
 	NushiServiceCommitStagedProcedure = "/nushi.v1.NushiService/CommitStaged"
+	// NushiServiceGetHunksProcedure is the fully-qualified name of the NushiService's GetHunks RPC.
+	NushiServiceGetHunksProcedure = "/nushi.v1.NushiService/GetHunks"
+	// NushiServiceStageHunksProcedure is the fully-qualified name of the NushiService's StageHunks RPC.
+	NushiServiceStageHunksProcedure = "/nushi.v1.NushiService/StageHunks"
 	// NushiServiceGetFileProcedure is the fully-qualified name of the NushiService's GetFile RPC.
 	NushiServiceGetFileProcedure = "/nushi.v1.NushiService/GetFile"
 	// NushiServiceWatchChatFileProcedure is the fully-qualified name of the NushiService's
@@ -727,6 +731,13 @@ type NushiServiceClient interface {
 	// Commits what's staged as the user's git commit would, hooks and signing
 	// included, if it's still what GetDiff said (index). (API 98)
 	CommitStaged(context.Context, *connect.Request[v1.CommitStagedRequest]) (*connect.Response[v1.CommitStagedResponse], error)
+	// Says which of a file's change blocks are staged, for a file whose
+	// FileChange.hunks is set. (API 156)
+	GetHunks(context.Context, *connect.Request[v1.GetHunksRequest]) (*connect.Response[v1.GetHunksResponse], error)
+	// Stages the change blocks the user pressed, or unstages them, leaving
+	// the rest: the index alone is written, never the work tree, and only on
+	// the user's own ask (ADR 0079). (API 156)
+	StageHunks(context.Context, *connect.Request[v1.StageHunksRequest]) (*connect.Response[v1.StageHunksResponse], error)
 	// Reads one of a folder's files as it is now, as a change that changes
 	// nothing (status "unchanged", the text on both sides): a file a review
 	// names that isn't among the changes. Only a regular file inside the
@@ -1411,6 +1422,18 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceCommitStagedProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("CommitStaged")),
+			connect.WithClientOptions(opts...),
+		),
+		getHunks: connect.NewClient[v1.GetHunksRequest, v1.GetHunksResponse](
+			httpClient,
+			baseURL+NushiServiceGetHunksProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetHunks")),
+			connect.WithClientOptions(opts...),
+		),
+		stageHunks: connect.NewClient[v1.StageHunksRequest, v1.StageHunksResponse](
+			httpClient,
+			baseURL+NushiServiceStageHunksProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("StageHunks")),
 			connect.WithClientOptions(opts...),
 		),
 		getFile: connect.NewClient[v1.GetFileRequest, v1.GetFileResponse](
@@ -2122,6 +2145,8 @@ type nushiServiceClient struct {
 	stageFiles              *connect.Client[v1.StageFilesRequest, v1.StageFilesResponse]
 	writeCommitMessage      *connect.Client[v1.WriteCommitMessageRequest, v1.WriteCommitMessageResponse]
 	commitStaged            *connect.Client[v1.CommitStagedRequest, v1.CommitStagedResponse]
+	getHunks                *connect.Client[v1.GetHunksRequest, v1.GetHunksResponse]
+	stageHunks              *connect.Client[v1.StageHunksRequest, v1.StageHunksResponse]
 	getFile                 *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
 	watchChatFile           *connect.Client[v1.WatchChatFileRequest, v1.WatchChatFileResponse]
 	findChatFiles           *connect.Client[v1.FindChatFilesRequest, v1.FindChatFilesResponse]
@@ -2510,6 +2535,16 @@ func (c *nushiServiceClient) WriteCommitMessage(ctx context.Context, req *connec
 // CommitStaged calls nushi.v1.NushiService.CommitStaged.
 func (c *nushiServiceClient) CommitStaged(ctx context.Context, req *connect.Request[v1.CommitStagedRequest]) (*connect.Response[v1.CommitStagedResponse], error) {
 	return c.commitStaged.CallUnary(ctx, req)
+}
+
+// GetHunks calls nushi.v1.NushiService.GetHunks.
+func (c *nushiServiceClient) GetHunks(ctx context.Context, req *connect.Request[v1.GetHunksRequest]) (*connect.Response[v1.GetHunksResponse], error) {
+	return c.getHunks.CallUnary(ctx, req)
+}
+
+// StageHunks calls nushi.v1.NushiService.StageHunks.
+func (c *nushiServiceClient) StageHunks(ctx context.Context, req *connect.Request[v1.StageHunksRequest]) (*connect.Response[v1.StageHunksResponse], error) {
+	return c.stageHunks.CallUnary(ctx, req)
 }
 
 // GetFile calls nushi.v1.NushiService.GetFile.
@@ -3293,6 +3328,13 @@ type NushiServiceHandler interface {
 	// Commits what's staged as the user's git commit would, hooks and signing
 	// included, if it's still what GetDiff said (index). (API 98)
 	CommitStaged(context.Context, *connect.Request[v1.CommitStagedRequest]) (*connect.Response[v1.CommitStagedResponse], error)
+	// Says which of a file's change blocks are staged, for a file whose
+	// FileChange.hunks is set. (API 156)
+	GetHunks(context.Context, *connect.Request[v1.GetHunksRequest]) (*connect.Response[v1.GetHunksResponse], error)
+	// Stages the change blocks the user pressed, or unstages them, leaving
+	// the rest: the index alone is written, never the work tree, and only on
+	// the user's own ask (ADR 0079). (API 156)
+	StageHunks(context.Context, *connect.Request[v1.StageHunksRequest]) (*connect.Response[v1.StageHunksResponse], error)
 	// Reads one of a folder's files as it is now, as a change that changes
 	// nothing (status "unchanged", the text on both sides): a file a review
 	// names that isn't among the changes. Only a regular file inside the
@@ -3973,6 +4015,18 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceCommitStagedProcedure,
 		svc.CommitStaged,
 		connect.WithSchema(nushiServiceMethods.ByName("CommitStaged")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetHunksHandler := connect.NewUnaryHandler(
+		NushiServiceGetHunksProcedure,
+		svc.GetHunks,
+		connect.WithSchema(nushiServiceMethods.ByName("GetHunks")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceStageHunksHandler := connect.NewUnaryHandler(
+		NushiServiceStageHunksProcedure,
+		svc.StageHunks,
+		connect.WithSchema(nushiServiceMethods.ByName("StageHunks")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceGetFileHandler := connect.NewUnaryHandler(
@@ -4737,6 +4791,10 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceWriteCommitMessageHandler.ServeHTTP(w, r)
 		case NushiServiceCommitStagedProcedure:
 			nushiServiceCommitStagedHandler.ServeHTTP(w, r)
+		case NushiServiceGetHunksProcedure:
+			nushiServiceGetHunksHandler.ServeHTTP(w, r)
+		case NushiServiceStageHunksProcedure:
+			nushiServiceStageHunksHandler.ServeHTTP(w, r)
 		case NushiServiceGetFileProcedure:
 			nushiServiceGetFileHandler.ServeHTTP(w, r)
 		case NushiServiceWatchChatFileProcedure:
@@ -5184,6 +5242,14 @@ func (UnimplementedNushiServiceHandler) WriteCommitMessage(context.Context, *con
 
 func (UnimplementedNushiServiceHandler) CommitStaged(context.Context, *connect.Request[v1.CommitStagedRequest]) (*connect.Response[v1.CommitStagedResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CommitStaged is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetHunks(context.Context, *connect.Request[v1.GetHunksRequest]) (*connect.Response[v1.GetHunksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetHunks is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) StageHunks(context.Context, *connect.Request[v1.StageHunksRequest]) (*connect.Response[v1.StageHunksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StageHunks is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {

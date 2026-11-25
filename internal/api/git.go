@@ -95,6 +95,53 @@ func (s *server) StageFiles(ctx context.Context, req *connect.Request[nushiv1.St
 	return connect.NewResponse(&nushiv1.StageFilesResponse{}), nil
 }
 
+func (s *server) GetHunks(ctx context.Context, req *connect.Request[nushiv1.GetHunksRequest]) (*connect.Response[nushiv1.GetHunksResponse], error) {
+	if err := absolute(req.Msg.Folder); err != nil {
+		return nil, err
+	}
+	staged, ok, err := git.HunkStates(ctx, req.Msg.Folder, req.Msg.Path, req.Msg.Hunks, blocksOf(req.Msg.Blocks))
+	if err != nil {
+		return nil, hunksErr(err)
+	}
+	return connect.NewResponse(&nushiv1.GetHunksResponse{Staged: staged, WholeOnly: !ok}), nil
+}
+
+func (s *server) StageHunks(ctx context.Context, req *connect.Request[nushiv1.StageHunksRequest]) (*connect.Response[nushiv1.StageHunksResponse], error) {
+	if err := absolute(req.Msg.Folder); err != nil {
+		return nil, err
+	}
+	pressed := make([]int, len(req.Msg.Pressed))
+	for i, k := range req.Msg.Pressed {
+		pressed[i] = int(k)
+	}
+	staged, err := git.StageHunks(ctx, req.Msg.Folder, req.Msg.Path, req.Msg.Hunks, blocksOf(req.Msg.Blocks), pressed, req.Msg.Staged)
+	if err != nil {
+		return nil, hunksErr(err)
+	}
+	return connect.NewResponse(&nushiv1.StageHunksResponse{Staged: staged}), nil
+}
+
+// blocksOf is a request's change blocks.
+func blocksOf(blocks []*nushiv1.ChangeBlock) []git.Block {
+	out := make([]git.Block, len(blocks))
+	for i, b := range blocks {
+		out[i] = git.Block{OldStart: int(b.OldStart), OldEnd: int(b.OldEnd), NewStart: int(b.NewStart), NewEnd: int(b.NewEnd)}
+	}
+	return out
+}
+
+// hunksErr is a block request's failure: a file that moved since it was
+// shown carries ReasonFileMoved, for the app to look again.
+func hunksErr(err error) error {
+	switch {
+	case errors.Is(err, git.ErrFileMoved):
+		return because(connect.NewError(connect.CodeFailedPrecondition, err), ReasonFileMoved)
+	case errors.Is(err, git.ErrBlocksDontFit):
+		return invalid(err)
+	}
+	return refused(err)
+}
+
 func (s *server) WriteCommitMessage(ctx context.Context, req *connect.Request[nushiv1.WriteCommitMessageRequest]) (*connect.Response[nushiv1.WriteCommitMessageResponse], error) {
 	message, err := s.Chats.CommitMessage(ctx, req.Msg.ChatId, git.StagedDiff)
 	if err != nil {
@@ -136,7 +183,7 @@ func (s *server) GetFile(_ context.Context, req *connect.Request[nushiv1.GetFile
 
 func fileChangeProto(c model.FileChange) *nushiv1.FileChange {
 	return &nushiv1.FileChange{Path: c.Path, Status: c.Status, OldText: c.Old, NewText: c.New, Skipped: c.Skipped,
-		OldPath: c.OldPath, Added: int32(c.Added), Removed: int32(c.Removed), Staged: c.Staged}
+		OldPath: c.OldPath, Added: int32(c.Added), Removed: int32(c.Removed), Staged: c.Staged, Hunks: c.Hunks}
 }
 
 func (s *server) GetRelatedWorktrees(ctx context.Context, req *connect.Request[nushiv1.GetRelatedWorktreesRequest]) (*connect.Response[nushiv1.GetRelatedWorktreesResponse], error) {

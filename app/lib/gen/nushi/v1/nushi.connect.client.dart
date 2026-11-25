@@ -1144,6 +1144,45 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Says which of a file's change blocks are staged, for a file whose
+  /// FileChange.hunks is set. (API 156)
+  Future<nushiv1nushi.GetHunksResponse> getHunks(
+    nushiv1nushi.GetHunksRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getHunks,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Stages the change blocks the user pressed, or unstages them, leaving
+  /// the rest: the index alone is written, never the work tree, and only on
+  /// the user's own ask (ADR 0079). (API 156)
+  Future<nushiv1nushi.StageHunksResponse> stageHunks(
+    nushiv1nushi.StageHunksRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.stageHunks,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Reads one of a folder's files as it is now, as a change that changes
   /// nothing (status "unchanged", the text on both sides): a file a review
   /// names that isn't among the changes. Only a regular file inside the

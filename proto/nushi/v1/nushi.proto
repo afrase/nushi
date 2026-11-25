@@ -244,6 +244,13 @@ service NushiService {
   // Commits what's staged as the user's git commit would, hooks and signing
   // included, if it's still what GetDiff said (index). (API 98)
   rpc CommitStaged(CommitStagedRequest) returns (CommitStagedResponse);
+  // Says which of a file's change blocks are staged, for a file whose
+  // FileChange.hunks is set. (API 156)
+  rpc GetHunks(GetHunksRequest) returns (GetHunksResponse);
+  // Stages the change blocks the user pressed, or unstages them, leaving
+  // the rest: the index alone is written, never the work tree, and only on
+  // the user's own ask (ADR 0079). (API 156)
+  rpc StageHunks(StageHunksRequest) returns (StageHunksResponse);
   // Reads one of a folder's files as it is now, as a change that changes
   // nothing (status "unchanged", the text on both sides): a file a review
   // names that isn't among the changes. Only a regular file inside the
@@ -2205,6 +2212,57 @@ message CommitStagedResponse {
   string short = 1;
 }
 
+// One change block of a file as the Changes view shows it: lines
+// [old_start, old_end) of the HEAD text (old_text) become lines
+// [new_start, new_end) of the work tree's (new_text), counted from 0.
+// Lines split at "\n", a "\r" before it being the line's ending, and
+// compare by text alone, as diff_view's TextDiff does; the lines between
+// two blocks are equal on both sides.
+message ChangeBlock {
+  int32 old_start = 1;
+  int32 old_end = 2;
+  int32 new_start = 3;
+  int32 new_end = 4;
+}
+
+message GetHunksRequest {
+  // An absolute path.
+  string folder = 1;
+  // Relative to folder.
+  string path = 2;
+  // The file's FileChange.hunks as shown: refused (FailedPrecondition,
+  // reason "file_moved") when the file or its index entry changed since.
+  string hunks = 3;
+  // Every change block of the file, in order.
+  repeated ChangeBlock blocks = 4;
+}
+
+message GetHunksResponse {
+  // Each block's state, as blocks; empty when whole_only.
+  repeated bool staged = 1;
+  // The index holds a version of the file the blocks don't make (it was
+  // staged and changed again since): only the whole file stages.
+  bool whole_only = 2;
+}
+
+message StageHunksRequest {
+  // As GetHunksRequest's.
+  string folder = 1;
+  string path = 2;
+  string hunks = 3;
+  repeated ChangeBlock blocks = 4;
+  // The blocks pressed, by their place in blocks.
+  repeated int32 pressed = 5;
+  // Whether they go in the index or out of it; a block already so is
+  // left as it is.
+  bool staged = 6;
+}
+
+message StageHunksResponse {
+  // Each block's state after, as blocks.
+  repeated bool staged = 1;
+}
+
 message GetFileRequest {
   // An absolute path.
   string folder = 1;
@@ -2354,6 +2412,12 @@ message FileChange {
   // An uncommitted change only: how much is in the index, "", "part" or
   // "all".
   string staged = 9;
+  // An uncommitted change only, set when its change blocks stage one at a
+  // time (GetHunks, StageHunks): a text file modified in place. A new,
+  // deleted or renamed file, a binary or over-large one, a link, a
+  // submodule, an unmerged file and one a filter driver cleans stage
+  // whole. It names the texts and index entry shown. (API 156)
+  string hunks = 10;
 }
 
 message ListCommitsRequest {

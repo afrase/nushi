@@ -144,6 +144,10 @@ type FileChange struct {
 	// Staged is how much of an uncommitted change is in the index: "", or
 	// StagedPart or StagedAll.
 	Staged string
+	// Hunks is set on an uncommitted change whose blocks stage one at a
+	// time: it names the texts and index entry shown, which staging a
+	// block checks (git.StageHunks).
+	Hunks string
 }
 
 // FileChange.Staged's values.

@@ -60,6 +60,10 @@ const (
 	// no longer has what the edit began from (github.ErrChangedSince): the
 	// app keeps the user's text and offers GitHub's.
 	ReasonChangedSince = "changed_since"
+	// ReasonFileMoved is a change block's read or press refused because
+	// the file or its index entry isn't what the user was shown
+	// (git.ErrFileMoved): the app reads the changes again.
+	ReasonFileMoved = "file_moved"
 )
 
 // because is err carrying reason (ReasonHeader).

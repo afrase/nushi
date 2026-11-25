@@ -160,35 +160,17 @@ func lastSaid(b []byte) string {
 	return s
 }
 
-// markStaged says how much of each change is in the index.
-func markStaged(ctx context.Context, folder string, changes []model.FileChange) error {
-	list := func(args ...string) (map[string]bool, error) {
-		out, err := run(ctx, folder, append(append([]string{"diff"}, args...), "--name-only", "-z", "--no-renames", "--relative", "--ignore-submodules=dirty")...)
-		if err != nil {
-			return nil, err
-		}
-		set := map[string]bool{}
-		for _, p := range split(out) {
-			set[p] = true
-		}
-		return set, nil
-	}
-	staged, err := list("--cached")
-	if err != nil {
-		return err
-	}
-	unstaged, err := list()
-	if err != nil {
-		return err
-	}
+// markStaged says how much of each change is in the index, from
+// indexEntries' staged and unstaged entries.
+func markStaged(changes []model.FileChange, staged, unstaged map[string]entry) {
 	for i := range changes {
 		c := &changes[i]
 		paths := []string{c.Path}
 		if c.OldPath != "" {
 			paths = append(paths, c.OldPath) // a rename is two: a new file, and the old one's deletion
 		}
-		in := func(p string) bool { return staged[p] }
-		whole := func(p string) bool { return staged[p] && !unstaged[p] }
+		in := func(p string) bool { _, ok := staged[p]; return ok }
+		whole := func(p string) bool { _, ok := unstaged[p]; return in(p) && !ok }
 		switch {
 		case slices.ContainsFunc(paths, in) && !allOf(paths, whole):
 			c.Staged = model.StagedPart
@@ -196,7 +178,6 @@ func markStaged(ctx context.Context, folder string, changes []model.FileChange) 
 			c.Staged = model.StagedAll
 		}
 	}
-	return nil
 }
 
 func allOf(paths []string, ok func(string) bool) bool {

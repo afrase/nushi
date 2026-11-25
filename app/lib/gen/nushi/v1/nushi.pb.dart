@@ -14795,6 +14795,426 @@ class CommitStagedResponse extends $pb.GeneratedMessage {
   void clearShort() => $_clearField(1);
 }
 
+/// One change block of a file as the Changes view shows it: lines
+/// [old_start, old_end) of the HEAD text (old_text) become lines
+/// [new_start, new_end) of the work tree's (new_text), counted from 0.
+/// Lines split at "\n", a "\r" before it being the line's ending, and
+/// compare by text alone, as diff_view's TextDiff does; the lines between
+/// two blocks are equal on both sides.
+class ChangeBlock extends $pb.GeneratedMessage {
+  factory ChangeBlock({
+    $core.int? oldStart,
+    $core.int? oldEnd,
+    $core.int? newStart,
+    $core.int? newEnd,
+  }) {
+    final result = ChangeBlock._();
+    if (oldStart != null) result.oldStart = oldStart;
+    if (oldEnd != null) result.oldEnd = oldEnd;
+    if (newStart != null) result.newStart = newStart;
+    if (newEnd != null) result.newEnd = newEnd;
+    return result;
+  }
+
+  ChangeBlock._();
+
+  factory ChangeBlock.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChangeBlock()..mergeFromBuffer(data, registry);
+  factory ChangeBlock.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChangeBlock()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ChangeBlock',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ChangeBlock.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'oldStart')
+    ..aI(2, _omitFieldNames ? '' : 'oldEnd')
+    ..aI(3, _omitFieldNames ? '' : 'newStart')
+    ..aI(4, _omitFieldNames ? '' : 'newEnd')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChangeBlock clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChangeBlock copyWith(void Function(ChangeBlock) updates) =>
+      super.copyWith((message) => updates(message as ChangeBlock))
+          as ChangeBlock;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ChangeBlock() / ChangeBlock.new instead')
+  static ChangeBlock create() => ChangeBlock._();
+  static $pb.GeneratedMessage $_createMessage() => ChangeBlock._();
+  @$core.override
+  ChangeBlock createEmptyInstance() => ChangeBlock._();
+  @$core.pragma('dart2js:noInline')
+  static ChangeBlock getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ChangeBlock>(
+          ChangeBlock.$_createMessage);
+  static ChangeBlock? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get oldStart => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set oldStart($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasOldStart() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearOldStart() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get oldEnd => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set oldEnd($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasOldEnd() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearOldEnd() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get newStart => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set newStart($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasNewStart() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearNewStart() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get newEnd => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set newEnd($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasNewEnd() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearNewEnd() => $_clearField(4);
+}
+
+class GetHunksRequest extends $pb.GeneratedMessage {
+  factory GetHunksRequest({
+    $core.String? folder,
+    $core.String? path,
+    $core.String? hunks,
+    $core.Iterable<ChangeBlock>? blocks,
+  }) {
+    final result = GetHunksRequest._();
+    if (folder != null) result.folder = folder;
+    if (path != null) result.path = path;
+    if (hunks != null) result.hunks = hunks;
+    if (blocks != null) result.blocks.addAll(blocks);
+    return result;
+  }
+
+  GetHunksRequest._();
+
+  factory GetHunksRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetHunksRequest()..mergeFromBuffer(data, registry);
+  factory GetHunksRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetHunksRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetHunksRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetHunksRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..aOS(3, _omitFieldNames ? '' : 'hunks')
+    ..pPM<ChangeBlock>(4, _omitFieldNames ? '' : 'blocks',
+        subBuilder: ChangeBlock.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetHunksRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetHunksRequest copyWith(void Function(GetHunksRequest) updates) =>
+      super.copyWith((message) => updates(message as GetHunksRequest))
+          as GetHunksRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetHunksRequest() / GetHunksRequest.new instead')
+  static GetHunksRequest create() => GetHunksRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetHunksRequest._();
+  @$core.override
+  GetHunksRequest createEmptyInstance() => GetHunksRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetHunksRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetHunksRequest>(
+          GetHunksRequest.$_createMessage);
+  static GetHunksRequest? _defaultInstance;
+
+  /// An absolute path.
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  /// Relative to folder.
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+
+  /// The file's FileChange.hunks as shown: refused (FailedPrecondition,
+  /// reason "file_moved") when the file or its index entry changed since.
+  @$pb.TagNumber(3)
+  $core.String get hunks => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set hunks($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasHunks() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearHunks() => $_clearField(3);
+
+  /// Every change block of the file, in order.
+  @$pb.TagNumber(4)
+  $pb.PbList<ChangeBlock> get blocks => $_getList(3);
+}
+
+class GetHunksResponse extends $pb.GeneratedMessage {
+  factory GetHunksResponse({
+    $core.Iterable<$core.bool>? staged,
+    $core.bool? wholeOnly,
+  }) {
+    final result = GetHunksResponse._();
+    if (staged != null) result.staged.addAll(staged);
+    if (wholeOnly != null) result.wholeOnly = wholeOnly;
+    return result;
+  }
+
+  GetHunksResponse._();
+
+  factory GetHunksResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetHunksResponse()..mergeFromBuffer(data, registry);
+  factory GetHunksResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetHunksResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetHunksResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetHunksResponse.$_createMessage)
+    ..p<$core.bool>(1, _omitFieldNames ? '' : 'staged', $pb.PbFieldType.KB)
+    ..aOB(2, _omitFieldNames ? '' : 'wholeOnly')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetHunksResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetHunksResponse copyWith(void Function(GetHunksResponse) updates) =>
+      super.copyWith((message) => updates(message as GetHunksResponse))
+          as GetHunksResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetHunksResponse() / GetHunksResponse.new instead')
+  static GetHunksResponse create() => GetHunksResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetHunksResponse._();
+  @$core.override
+  GetHunksResponse createEmptyInstance() => GetHunksResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetHunksResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetHunksResponse>(
+          GetHunksResponse.$_createMessage);
+  static GetHunksResponse? _defaultInstance;
+
+  /// Each block's state, as blocks; empty when whole_only.
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.bool> get staged => $_getList(0);
+
+  /// The index holds a version of the file the blocks don't make (it was
+  /// staged and changed again since): only the whole file stages.
+  @$pb.TagNumber(2)
+  $core.bool get wholeOnly => $_getBF(1);
+  @$pb.TagNumber(2)
+  set wholeOnly($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasWholeOnly() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearWholeOnly() => $_clearField(2);
+}
+
+class StageHunksRequest extends $pb.GeneratedMessage {
+  factory StageHunksRequest({
+    $core.String? folder,
+    $core.String? path,
+    $core.String? hunks,
+    $core.Iterable<ChangeBlock>? blocks,
+    $core.Iterable<$core.int>? pressed,
+    $core.bool? staged,
+  }) {
+    final result = StageHunksRequest._();
+    if (folder != null) result.folder = folder;
+    if (path != null) result.path = path;
+    if (hunks != null) result.hunks = hunks;
+    if (blocks != null) result.blocks.addAll(blocks);
+    if (pressed != null) result.pressed.addAll(pressed);
+    if (staged != null) result.staged = staged;
+    return result;
+  }
+
+  StageHunksRequest._();
+
+  factory StageHunksRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StageHunksRequest()..mergeFromBuffer(data, registry);
+  factory StageHunksRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StageHunksRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StageHunksRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StageHunksRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..aOS(3, _omitFieldNames ? '' : 'hunks')
+    ..pPM<ChangeBlock>(4, _omitFieldNames ? '' : 'blocks',
+        subBuilder: ChangeBlock.$_createMessage)
+    ..p<$core.int>(5, _omitFieldNames ? '' : 'pressed', $pb.PbFieldType.K3)
+    ..aOB(6, _omitFieldNames ? '' : 'staged')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StageHunksRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StageHunksRequest copyWith(void Function(StageHunksRequest) updates) =>
+      super.copyWith((message) => updates(message as StageHunksRequest))
+          as StageHunksRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use StageHunksRequest() / StageHunksRequest.new instead')
+  static StageHunksRequest create() => StageHunksRequest._();
+  static $pb.GeneratedMessage $_createMessage() => StageHunksRequest._();
+  @$core.override
+  StageHunksRequest createEmptyInstance() => StageHunksRequest._();
+  @$core.pragma('dart2js:noInline')
+  static StageHunksRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<StageHunksRequest>(
+          StageHunksRequest.$_createMessage);
+  static StageHunksRequest? _defaultInstance;
+
+  /// As GetHunksRequest's.
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get hunks => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set hunks($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasHunks() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearHunks() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $pb.PbList<ChangeBlock> get blocks => $_getList(3);
+
+  /// The blocks pressed, by their place in blocks.
+  @$pb.TagNumber(5)
+  $pb.PbList<$core.int> get pressed => $_getList(4);
+
+  /// Whether they go in the index or out of it; a block already so is
+  /// left as it is.
+  @$pb.TagNumber(6)
+  $core.bool get staged => $_getBF(5);
+  @$pb.TagNumber(6)
+  set staged($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasStaged() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearStaged() => $_clearField(6);
+}
+
+class StageHunksResponse extends $pb.GeneratedMessage {
+  factory StageHunksResponse({
+    $core.Iterable<$core.bool>? staged,
+  }) {
+    final result = StageHunksResponse._();
+    if (staged != null) result.staged.addAll(staged);
+    return result;
+  }
+
+  StageHunksResponse._();
+
+  factory StageHunksResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StageHunksResponse()..mergeFromBuffer(data, registry);
+  factory StageHunksResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StageHunksResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StageHunksResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StageHunksResponse.$_createMessage)
+    ..p<$core.bool>(1, _omitFieldNames ? '' : 'staged', $pb.PbFieldType.KB)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StageHunksResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StageHunksResponse copyWith(void Function(StageHunksResponse) updates) =>
+      super.copyWith((message) => updates(message as StageHunksResponse))
+          as StageHunksResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use StageHunksResponse() / StageHunksResponse.new instead')
+  static StageHunksResponse create() => StageHunksResponse._();
+  static $pb.GeneratedMessage $_createMessage() => StageHunksResponse._();
+  @$core.override
+  StageHunksResponse createEmptyInstance() => StageHunksResponse._();
+  @$core.pragma('dart2js:noInline')
+  static StageHunksResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StageHunksResponse>(
+          StageHunksResponse.$_createMessage);
+  static StageHunksResponse? _defaultInstance;
+
+  /// Each block's state after, as blocks.
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.bool> get staged => $_getList(0);
+}
+
 class GetFileRequest extends $pb.GeneratedMessage {
   factory GetFileRequest({
     $core.String? folder,
@@ -16063,6 +16483,7 @@ class FileChange extends $pb.GeneratedMessage {
     $core.int? added,
     $core.int? removed,
     $core.String? staged,
+    $core.String? hunks,
   }) {
     final result = FileChange._();
     if (path != null) result.path = path;
@@ -16074,6 +16495,7 @@ class FileChange extends $pb.GeneratedMessage {
     if (added != null) result.added = added;
     if (removed != null) result.removed = removed;
     if (staged != null) result.staged = staged;
+    if (hunks != null) result.hunks = hunks;
     return result;
   }
 
@@ -16099,6 +16521,7 @@ class FileChange extends $pb.GeneratedMessage {
     ..aI(7, _omitFieldNames ? '' : 'added')
     ..aI(8, _omitFieldNames ? '' : 'removed')
     ..aOS(9, _omitFieldNames ? '' : 'staged')
+    ..aOS(10, _omitFieldNames ? '' : 'hunks')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -16209,6 +16632,20 @@ class FileChange extends $pb.GeneratedMessage {
   $core.bool hasStaged() => $_has(8);
   @$pb.TagNumber(9)
   void clearStaged() => $_clearField(9);
+
+  /// An uncommitted change only, set when its change blocks stage one at a
+  /// time (GetHunks, StageHunks): a text file modified in place. A new,
+  /// deleted or renamed file, a binary or over-large one, a link, a
+  /// submodule, an unmerged file and one a filter driver cleans stage
+  /// whole. It names the texts and index entry shown. (API 156)
+  @$pb.TagNumber(10)
+  $core.String get hunks => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set hunks($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasHunks() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearHunks() => $_clearField(10);
 }
 
 class ListCommitsRequest extends $pb.GeneratedMessage {
@@ -37417,6 +37854,21 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, CommitStagedRequest request) =>
       _client.invoke<CommitStagedResponse>(
           ctx, 'NushiService', 'CommitStaged', request, CommitStagedResponse());
+
+  /// Says which of a file's change blocks are staged, for a file whose
+  /// FileChange.hunks is set. (API 156)
+  $async.Future<GetHunksResponse> getHunks(
+          $pb.ClientContext? ctx, GetHunksRequest request) =>
+      _client.invoke<GetHunksResponse>(
+          ctx, 'NushiService', 'GetHunks', request, GetHunksResponse());
+
+  /// Stages the change blocks the user pressed, or unstages them, leaving
+  /// the rest: the index alone is written, never the work tree, and only on
+  /// the user's own ask (ADR 0079). (API 156)
+  $async.Future<StageHunksResponse> stageHunks(
+          $pb.ClientContext? ctx, StageHunksRequest request) =>
+      _client.invoke<StageHunksResponse>(
+          ctx, 'NushiService', 'StageHunks', request, StageHunksResponse());
 
   /// Reads one of a folder's files as it is now, as a change that changes
   /// nothing (status "unchanged", the text on both sides): a file a review

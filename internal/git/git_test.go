@@ -52,6 +52,12 @@ func TestChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	for i := range got { // only a text file modified in place stages in blocks
+		if (got[i].Hunks != "") != (got[i].Path == "kept.txt") {
+			t.Errorf("%s's hunks %q", got[i].Path, got[i].Hunks)
+		}
+		got[i].Hunks = ""
+	}
 	want := []model.FileChange{
 		{Path: "bin", Status: "modified", Skipped: "binary"},
 		{Path: "gone.txt", Status: "deleted", Old: "bye\n", Removed: 1},
