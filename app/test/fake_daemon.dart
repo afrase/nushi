@@ -1087,6 +1087,7 @@ GitHubItem rowItem(GitHubPull p) {
   var failed = 0;
   var running = 0;
   var skipped = 0;
+  var cancelled = 0;
   for (final c in p.checks) {
     switch (c.state) {
       case 'success' || 'neutral':
@@ -1095,6 +1096,10 @@ GitHubItem rowItem(GitHubPull p) {
         running++;
       case 'skipped' || 'stale':
         skipped++;
+      case 'cancelled':
+        // As internal/githubapi's countCheck: failed counts it too.
+        failed++;
+        cancelled++;
       default:
         failed++;
     }
@@ -1113,6 +1118,7 @@ GitHubItem rowItem(GitHubPull p) {
       failed: failed,
       running: running,
       skipped: skipped,
+      cancelled: cancelled,
     );
 }
 

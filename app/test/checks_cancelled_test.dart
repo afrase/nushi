@@ -262,4 +262,36 @@ void main() {
     expect(itemChecks(kept), 'cancelled');
     d.dispose();
   });
+
+  testWidgets("the fake daemon's row of a pull request with only a "
+      'cancelled check counts it as the daemon does: grey, not red', (
+    tester,
+  ) async {
+    final whole = GitHubPull(
+      item: item(413, 'Trim the cache', checks: 'failure'),
+      checks: [
+        GitHubCheck(name: 'build', state: 'success'),
+        GitHubCheck(name: 'smoke', state: 'cancelled', failed: true),
+      ],
+    );
+    final fake = FakeDaemon([])
+      ..answer = (input) => input is GetGitHubPullRequest
+          ? GetGitHubPullResponse(pull: whole)
+          : null;
+    final d = await fake.connect(tester);
+    final r = await d.client.getGitHubItems(
+      GetGitHubItemsRequest(refs: [whole.item.ref]),
+    );
+    final row = r.items.single;
+    expect(
+      (
+        row.checkCounts.passed,
+        row.checkCounts.failed,
+        row.checkCounts.cancelled,
+      ),
+      (1, 1, 1),
+    );
+    expect(itemChecks(row), 'cancelled');
+    d.dispose();
+  });
 }
