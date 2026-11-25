@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
@@ -64,47 +66,55 @@ class RunningDot extends StatelessWidget {
   );
 }
 
-/// A ring of [color], its line fading in and out slowly ([pulsing]) every
-/// 2.4 seconds: work runs in the background, no turn.
-class _Ring extends CustomPainter {
-  new(this.color, {required this.pulsing, Listenable? repaint})
-    : super(repaint: pulsing ? repaint : null);
+/// The mark of a chat whose turn ended while its background tasks run: a
+/// disc of [color] the idle dot's size, its left half solid and its right
+/// half a ring (#113). It differs from every other state by shape, so it
+/// reads without its colour, its tooltip or motion, and it stands still.
+class HalfDisc extends CustomPainter {
+  new(this.color);
 
   final Color color;
-  final bool pulsing;
 
-  // design: a loop's beat, on pulseClock
-  static const period = Duration(milliseconds: 2400);
+  /// The disc's outer radius in a mark's room of [size]: the idle dot's.
+  static double radius(Size size) => size.shortestSide / 2 * 0.625;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final v = pulsing ? loopPhase(period) : 0.0;
-    // 1 → 0.35 → 1, eased.
-    final alpha = 1 - 0.65 * Curves.easeInOut.transform(1 - (2 * v - 1).abs());
-    canvas.drawCircle(
-      size.center(Offset.zero),
-      size.shortestSide / 2 * 0.55,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = color.withValues(alpha: alpha),
-    );
+    final c = size.center(Offset.zero);
+    final r = radius(size);
+    const line = 1.5; // the idle ring's width
+    canvas
+      ..drawCircle(
+        c,
+        r - line / 2,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = line
+          ..color = color,
+      )
+      ..drawPath(
+        Path()
+          ..moveTo(c.dx, c.dy + r)
+          ..arcTo(Rect.fromCircle(center: c, radius: r), pi / 2, pi, false)
+          ..close(),
+        Paint()..color = color,
+      );
   }
 
   @override
-  bool shouldRepaint(_Ring old) => old.color != color || old.pulsing != pulsing;
+  bool shouldRepaint(HalfDisc old) => old.color != color;
 }
 
 /// A chat's status dot: amber, a size up, with a soft ring while it waits
 /// on the user (it hops once when that starts), a ring growing out of it
 /// while the agent works, a ring when idle (a check draws itself there for
 /// a moment when a turn is done), solid green while a turn's end is unseen
-/// (the check settles into it); a ring that pulses slowly while subagents
-/// or commands run in the background after the turn; nothing asleep (an
-/// empty slot of the same size, so titles stay in line: a sleeping chat
-/// recedes, its title muted where it's listed, rather than wear a mark
-/// that reads like the idle ring), a quiet clock when its agent deleted
-/// its session, an error mark when it couldn't start.
+/// (the check settles into it); a half-filled disc ([HalfDisc]) while
+/// subagents or commands run in the background after the turn; nothing
+/// asleep (an empty slot of the same size, so titles stay in line: a
+/// sleeping chat recedes, its title muted where it's listed, rather than
+/// wear a mark that reads like the idle ring), a quiet clock when its
+/// agent deleted its session, an error mark when it couldn't start.
 /// With [sparks], a turn you watched end (after [Sparks.after] or more,
 /// Nushi in front) sends sparks out of its check.
 class ChatDot extends StatefulWidget {
@@ -215,9 +225,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
         return tooltip(
           context,
           backgroundWords(chat.background),
-          _mark(
-            _Ring(t.running, pulsing: !still, repaint: loopRepaintOf(context)),
-          ),
+          _mark(HalfDisc(t.running)),
         );
       case .archived || .waiting || .done || .fresh || .idle:
         break;
@@ -374,13 +382,7 @@ class PhaseDot extends StatelessWidget {
           repaint: loopRepaintOf(context),
         ),
       ),
-      .background => _mark(
-        _Ring(
-          color,
-          pulsing: !reduceMotion(context),
-          repaint: loopRepaintOf(context),
-        ),
-      ),
+      .background => _mark(HalfDisc(color)),
       .waiting => _waitingDot(t),
       _ => _dot(fill: color),
     });

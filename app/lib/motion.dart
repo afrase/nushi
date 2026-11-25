@@ -92,8 +92,8 @@ abstract final class Waits {
 const pulseRate = 20;
 
 /// The clock everything that loops for as long as a state lasts repaints
-/// from (a shine, a working chat's ring, work in the background, a pull
-/// request's running checks, a streaming reply's caret, a spinner):
+/// from (a shine, a working chat's ring, a pull request's running checks,
+/// a streaming reply's caret, a spinner):
 /// [pulseRate] times a second while Nushi is in front (the window focused,
 /// the phone's page in front; unknown counts as in front), still otherwise,
 /// where each loop draws its rest look ([loopMoving]), as under Reduce
