@@ -249,6 +249,14 @@ service NushiService {
   // names that isn't among the changes. Only a regular file inside the
   // folder: no "..", no link.
   rpc GetFile(GetFileRequest) returns (GetFileResponse);
+  // Who last changed each line of one of a folder's files, as it is on
+  // disk now (lines not committed yet marked so), for the file viewer's
+  // Blame: git blame of the text read, with the repository's own filters,
+  // textconv drivers and commits to skip off, in 30 seconds at most. Only a
+  // regular file inside the folder: no "..", no link out. A file git has
+  // no history for, a link, a binary one, one over 1 MiB or over 10,000
+  // lines has no blame and says why. The Mac's only. (API 155)
+  rpc GetBlame(GetBlameRequest) returns (GetBlameResponse);
   // Reads a file of a chat's (in its folder or its worktree) and sends it
   // again each time it changes, until the call ends: the preview of what
   // the agent wrote. A path that leads outside them, through a link too,
@@ -2210,6 +2218,42 @@ message GetFileRequest {
   string folder = 1;
   // Relative to folder.
   string path = 2;
+}
+
+message GetBlameRequest {
+  // An absolute path.
+  string folder = 1;
+  // Relative to folder.
+  string path = 2;
+}
+
+message GetBlameResponse {
+  // Every line's run in order, from line 1; none for an empty file, or
+  // with none_reason.
+  repeated BlameRun runs = 1;
+  // Why there is no blame: "not a repository", "ignored", "untracked"
+  // (not tracked, not ignored), "new" (staged, not in HEAD yet, or no
+  // commit yet), "a link", "binary", "too large" (over 1 MiB), "too many
+  // lines" (over 10,000). Empty when there is.
+  string none_reason = 2;
+}
+
+// Lines in a row that one commit last changed. Names and subjects are text
+// anyone who made a commit chose: plain (no control or format
+// characters), to be shown as text, never as Markdown. No email address.
+message BlameRun {
+  // The run's first line, from 1.
+  int32 start = 1;
+  int32 count = 2;
+  // The commit's whole id; empty for lines not committed yet, which have
+  // nothing else.
+  string commit = 3;
+  // The author's name, 256 bytes at most.
+  string author = 4;
+  // When the author made it.
+  int64 author_unix_seconds = 5;
+  // The first line of the commit's message, 1 KiB at most.
+  string subject = 6;
 }
 
 message WatchChatFileRequest {

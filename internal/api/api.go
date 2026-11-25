@@ -31,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 154
+const Version = 155
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -156,6 +156,8 @@ var macOnly = map[string]bool{
 	// macOS's keychain prompt shows on the Mac's screen.
 	nushiv1connect.NushiServiceAllowJiraTokenProcedure:   true,
 	nushiv1connect.NushiServiceAllowGitHubTokenProcedure: true,
+	// The phone has no Files pane, whose file viewer alone blames a file.
+	nushiv1connect.NushiServiceGetBlameProcedure: true,
 	// The phone never edits a file (ADR 0096).
 	nushiv1connect.NushiServiceWriteChatFileProcedure: true,
 	// Dev servers run on the Mac's word only (ADR 0098).

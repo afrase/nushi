@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/afrase/nushi/internal/features/agents"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
@@ -118,5 +119,61 @@ func TestGetDiffNames(t *testing.T) {
 	}
 	if _, err := c.GetDiff(ctx, connect.NewRequest(&nushiv1.GetDiffRequest{Folder: repo, Path: "a.txt", Names: true})); connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("names with a path: %v", err)
+	}
+}
+
+// TestGetBlame: a file's runs as git blames it now, a reason where there
+// is none, a path outside the folder refused, and the Mac's alone.
+func TestGetBlame(t *testing.T) {
+	repo := t.TempDir()
+	c := client(t, New(Services{}))
+	ctx := t.Context()
+	blame := func(folder, path string) (*nushiv1.GetBlameResponse, error) {
+		r, err := c.GetBlame(ctx, connect.NewRequest(&nushiv1.GetBlameRequest{Folder: folder, Path: path}))
+		if err != nil {
+			return nil, err
+		}
+		return r.Msg, nil
+	}
+	testcheck.Write(t, filepath.Join(repo, "a.txt"), "one\n")
+	if got, err := blame(repo, "a.txt"); err != nil || got.NoneReason != "not a repository" || len(got.Runs) != 0 {
+		t.Errorf("not a repository: %v, %v", got, err)
+	}
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "add", ".")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "Say one", "--author", "Cy Example <cy@example.com>", "--date", "1700000000 +0000")
+	head := testcheck.Git(t, repo, "rev-parse", "HEAD")
+	testcheck.Write(t, filepath.Join(repo, "a.txt"), "one\ntwo\n")
+	testcheck.Write(t, filepath.Join(repo, "u.txt"), "u\n")
+
+	got, err := blame(repo, "a.txt")
+	if err != nil || got.NoneReason != "" || len(got.Runs) != 2 {
+		t.Fatalf("a file: %v, %v", got, err)
+	}
+	want := &nushiv1.BlameRun{Start: 1, Count: 1, Commit: head, Author: "Cy Example", AuthorUnixSeconds: 1700000000, Subject: "Say one"}
+	if r := got.Runs[0]; !proto.Equal(r, want) {
+		t.Errorf("its commit's run: %v", r)
+	}
+	if r := got.Runs[1]; !proto.Equal(r, &nushiv1.BlameRun{Start: 2, Count: 1}) {
+		t.Errorf("its uncommitted run: %v", r)
+	}
+	if got, err := blame(repo, "u.txt"); err != nil || got.NoneReason != "untracked" {
+		t.Errorf("untracked: %v, %v", got, err)
+	}
+	for _, p := range []string{"../a.txt", "/etc/hosts"} {
+		if _, err := blame(repo, p); connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Errorf("%s: %v", p, err)
+		}
+	}
+	if _, err := blame("rel", "a.txt"); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Errorf("a relative folder: %v", err)
+	}
+	if _, err := blame(repo, "gone.txt"); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Errorf("a missing file: %v", err)
+	}
+
+	d := client(t, ForDevices(Services{}))
+	if _, err := d.GetBlame(ctx, connect.NewRequest(&nushiv1.GetBlameRequest{Folder: repo, Path: "a.txt"})); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Errorf("a device blamed: %v", err)
 	}
 }

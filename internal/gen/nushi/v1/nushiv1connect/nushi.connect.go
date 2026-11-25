@@ -178,6 +178,8 @@ const (
 	NushiServiceCommitStagedProcedure = "/nushi.v1.NushiService/CommitStaged"
 	// NushiServiceGetFileProcedure is the fully-qualified name of the NushiService's GetFile RPC.
 	NushiServiceGetFileProcedure = "/nushi.v1.NushiService/GetFile"
+	// NushiServiceGetBlameProcedure is the fully-qualified name of the NushiService's GetBlame RPC.
+	NushiServiceGetBlameProcedure = "/nushi.v1.NushiService/GetBlame"
 	// NushiServiceWatchChatFileProcedure is the fully-qualified name of the NushiService's
 	// WatchChatFile RPC.
 	NushiServiceWatchChatFileProcedure = "/nushi.v1.NushiService/WatchChatFile"
@@ -732,6 +734,14 @@ type NushiServiceClient interface {
 	// names that isn't among the changes. Only a regular file inside the
 	// folder: no "..", no link.
 	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error)
+	// Who last changed each line of one of a folder's files, as it is on
+	// disk now (lines not committed yet marked so), for the file viewer's
+	// Blame: git blame of the text read, with the repository's own filters,
+	// textconv drivers and commits to skip off, in 30 seconds at most. Only a
+	// regular file inside the folder: no "..", no link out. A file git has
+	// no history for, a link, a binary one, one over 1 MiB or over 10,000
+	// lines has no blame and says why. The Mac's only. (API 155)
+	GetBlame(context.Context, *connect.Request[v1.GetBlameRequest]) (*connect.Response[v1.GetBlameResponse], error)
 	// Reads a file of a chat's (in its folder or its worktree) and sends it
 	// again each time it changes, until the call ends: the preview of what
 	// the agent wrote. A path that leads outside them, through a link too,
@@ -1417,6 +1427,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceGetFileProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("GetFile")),
+			connect.WithClientOptions(opts...),
+		),
+		getBlame: connect.NewClient[v1.GetBlameRequest, v1.GetBlameResponse](
+			httpClient,
+			baseURL+NushiServiceGetBlameProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetBlame")),
 			connect.WithClientOptions(opts...),
 		),
 		watchChatFile: connect.NewClient[v1.WatchChatFileRequest, v1.WatchChatFileResponse](
@@ -2123,6 +2139,7 @@ type nushiServiceClient struct {
 	writeCommitMessage      *connect.Client[v1.WriteCommitMessageRequest, v1.WriteCommitMessageResponse]
 	commitStaged            *connect.Client[v1.CommitStagedRequest, v1.CommitStagedResponse]
 	getFile                 *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
+	getBlame                *connect.Client[v1.GetBlameRequest, v1.GetBlameResponse]
 	watchChatFile           *connect.Client[v1.WatchChatFileRequest, v1.WatchChatFileResponse]
 	findChatFiles           *connect.Client[v1.FindChatFilesRequest, v1.FindChatFilesResponse]
 	writeChatFile           *connect.Client[v1.WriteChatFileRequest, v1.WriteChatFileResponse]
@@ -2515,6 +2532,11 @@ func (c *nushiServiceClient) CommitStaged(ctx context.Context, req *connect.Requ
 // GetFile calls nushi.v1.NushiService.GetFile.
 func (c *nushiServiceClient) GetFile(ctx context.Context, req *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {
 	return c.getFile.CallUnary(ctx, req)
+}
+
+// GetBlame calls nushi.v1.NushiService.GetBlame.
+func (c *nushiServiceClient) GetBlame(ctx context.Context, req *connect.Request[v1.GetBlameRequest]) (*connect.Response[v1.GetBlameResponse], error) {
+	return c.getBlame.CallUnary(ctx, req)
 }
 
 // WatchChatFile calls nushi.v1.NushiService.WatchChatFile.
@@ -3298,6 +3320,14 @@ type NushiServiceHandler interface {
 	// names that isn't among the changes. Only a regular file inside the
 	// folder: no "..", no link.
 	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error)
+	// Who last changed each line of one of a folder's files, as it is on
+	// disk now (lines not committed yet marked so), for the file viewer's
+	// Blame: git blame of the text read, with the repository's own filters,
+	// textconv drivers and commits to skip off, in 30 seconds at most. Only a
+	// regular file inside the folder: no "..", no link out. A file git has
+	// no history for, a link, a binary one, one over 1 MiB or over 10,000
+	// lines has no blame and says why. The Mac's only. (API 155)
+	GetBlame(context.Context, *connect.Request[v1.GetBlameRequest]) (*connect.Response[v1.GetBlameResponse], error)
 	// Reads a file of a chat's (in its folder or its worktree) and sends it
 	// again each time it changes, until the call ends: the preview of what
 	// the agent wrote. A path that leads outside them, through a link too,
@@ -3979,6 +4009,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceGetFileProcedure,
 		svc.GetFile,
 		connect.WithSchema(nushiServiceMethods.ByName("GetFile")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetBlameHandler := connect.NewUnaryHandler(
+		NushiServiceGetBlameProcedure,
+		svc.GetBlame,
+		connect.WithSchema(nushiServiceMethods.ByName("GetBlame")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceWatchChatFileHandler := connect.NewServerStreamHandler(
@@ -4739,6 +4775,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceCommitStagedHandler.ServeHTTP(w, r)
 		case NushiServiceGetFileProcedure:
 			nushiServiceGetFileHandler.ServeHTTP(w, r)
+		case NushiServiceGetBlameProcedure:
+			nushiServiceGetBlameHandler.ServeHTTP(w, r)
 		case NushiServiceWatchChatFileProcedure:
 			nushiServiceWatchChatFileHandler.ServeHTTP(w, r)
 		case NushiServiceFindChatFilesProcedure:
@@ -5188,6 +5226,10 @@ func (UnimplementedNushiServiceHandler) CommitStaged(context.Context, *connect.R
 
 func (UnimplementedNushiServiceHandler) GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetFile is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetBlame(context.Context, *connect.Request[v1.GetBlameRequest]) (*connect.Response[v1.GetBlameResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetBlame is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) WatchChatFile(context.Context, *connect.Request[v1.WatchChatFileRequest], *connect.ServerStream[v1.WatchChatFileResponse]) error {
