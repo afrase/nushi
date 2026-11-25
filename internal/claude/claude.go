@@ -146,17 +146,6 @@ func SignedIn(run func(args ...string) ([]byte, error)) string {
 // ReadOnlyMode is Claude's plan mode (docs/facts/claude.md).
 func (Harness) ReadOnlyMode() string { return "plan" }
 
-// TurnDone says a usage update is the result of the user's turn: the one
-// with the cost, from a model cycle the user started
-// (`_claude/origin.kind` "human", not a task notification or a
-// subagent's report). The agent answers the turn's prompt only once the
-// background subagents the turn started have ended, and their reports
-// have been answered (claude's result comes only then).
-func (Harness) TurnDone(u *acp.UsageUpdate) bool {
-	origin, _ := u.Meta["_claude/origin"].(map[string]any)
-	return u.Cost != nil && origin["kind"] == "human"
-}
-
 // OwnTurnEnded says a usage update ends Claude's own turn: its result's,
 // the one with the cost. Claude sends one without after each model call
 // in the turn too (claude-acp-go's contextUsed).

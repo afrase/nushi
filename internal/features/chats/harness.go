@@ -44,11 +44,6 @@ type DefaultReader interface {
 
 // Transcript is what in the agent's updates and replays isn't what it seems.
 type Transcript interface {
-	// TurnDone says a usage update reports the end of the running turn's
-	// own work: an agent that holds the prompt open for subagents it left
-	// running in the background (Claude) answers it only once they end,
-	// so the chat counts as idle from here while one runs.
-	TurnDone(*acp.UsageUpdate) bool
 	// OwnTurnEnded says a usage update ends the agent's own turn: one that
 	// sends usage after each model call in a turn ends it with only one of
 	// them (Claude: the result's, the one with the cost). An agent without

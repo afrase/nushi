@@ -123,27 +123,6 @@ func TestOwnTurnEnded(t *testing.T) {
 	}
 }
 
-func TestTurnDone(t *testing.T) {
-	origin := func(kind string) map[string]any {
-		return map[string]any{"_claude/origin": map[string]any{"kind": kind}}
-	}
-	cost := &acp.Cost{Amount: 0.1, Currency: "USD"}
-	for _, tc := range []struct {
-		u    acp.UsageUpdate
-		want bool
-	}{
-		{acp.UsageUpdate{Cost: cost, Meta: origin("human")}, true},
-		{acp.UsageUpdate{Meta: origin("human")}, false},            // a model call's, mid-cycle
-		{acp.UsageUpdate{Cost: cost, Meta: origin("peer")}, false}, // the answer to a subagent's report
-		{acp.UsageUpdate{Cost: cost, Meta: origin("task-notification")}, false},
-		{acp.UsageUpdate{Cost: cost}, false},
-	} {
-		if got := harness.TurnDone(&tc.u); got != tc.want {
-			t.Errorf("harness.TurnDone(%v) = %v", tc.u.Meta, got)
-		}
-	}
-}
-
 func TestReportFindings(t *testing.T) {
 	it := model.Item{}
 	meta := map[string]any{"claudeCode": map[string]any{"toolName": "ReportFindings"}}

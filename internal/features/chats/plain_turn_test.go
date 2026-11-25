@@ -13,8 +13,8 @@ import (
 
 // These tests run the plain ACP agent's path (a model.HarnessInfo: no
 // Transcript), where updates.go's usage_update branches from Claude's: any
-// usage ends the agent's own turn, and no TurnDone decides a turn's end
-// or a steered message's, so a turn of Nushi's ends at its prompt's answer.
+// usage ends the agent's own turn, and a turn of Nushi's ends at its
+// prompt's answer, as Claude's does.
 
 // plainChat is a chat of an agent with no Transcript, whose events a
 // follower keeps; steerable, the agent takes messages into a running turn.
@@ -142,9 +142,8 @@ func TestAPlainAgentsQueueGoesAtEachAnswer(t *testing.T) {
 }
 
 // A steerable agent takes the queued message at its next chance, and the
-// turn still ends at the prompt's answer, never at a usage_update (no
-// TurnDone counts the steered message's result); the next turn starts
-// afresh.
+// turn still ends at the prompt's answer, never at a usage_update; the
+// next turn starts afresh.
 func TestAPlainAgentsSteeredTurnEndsAtTheAnswer(t *testing.T) {
 	svc, agent, c, f := plainChat(t, true)
 	agent.gate = make(chan struct{})

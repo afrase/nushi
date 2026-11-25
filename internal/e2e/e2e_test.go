@@ -88,10 +88,9 @@ func (fakeHarness) Notice(meta map[string]any, text string) (model.AgentNotice, 
 	return claude.Harness{}.Notice(meta, text)
 }
 
-func (fakeHarness) TurnDone(*acp.UsageUpdate) bool { return false }
-func (fakeHarness) Interrupted(string) bool        { return false }
-func (fakeHarness) Compacted(model.Item) bool      { return false }
-func (fakeHarness) ForkTitle(string, string) bool  { return false }
+func (fakeHarness) Interrupted(string) bool       { return false }
+func (fakeHarness) Compacted(model.Item) bool     { return false }
+func (fakeHarness) ForkTitle(string, string) bool { return false }
 
 // OwnTurnEnded is Claude's: the fake agent sends its usage as Claude's does.
 func (fakeHarness) OwnTurnEnded(u *acp.UsageUpdate) bool { return claude.Harness{}.OwnTurnEnded(u) }
