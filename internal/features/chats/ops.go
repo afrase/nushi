@@ -39,7 +39,7 @@ func (c *chat) beginOpLocked(o chatOp) {
 // endOpLocked ends the chat's op: woke is closed, and the chat says its
 // status and hands the queue its chance. A turn's end does neither here:
 // it says its status with how it ended (turnEndedLocked), and delivers
-// once its notices are in (run, releaseLocked).
+// once its notices are in (run).
 func (c *chat) endOpLocked() {
 	was := c.op
 	c.op = opNone

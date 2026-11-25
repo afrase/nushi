@@ -111,18 +111,9 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		u := u.UsageUpdate
 		// The agent's own turn ends with the usage_update its harness says
 		// ends it (Transcript.OwnTurnEnded); without a Transcript, any.
-		var ownEnded, released bool // the turn that ends here, for the meter once the cost is in
+		var ownEnded bool // the turn that ends here, for the meter once the cost is in
 		if ends := c.kind.transcript == nil || c.kind.transcript.OwnTurnEnded(u); ends {
 			ownEnded, c.ownNoted = c.ownTurn, false // ended below, once its usage is in
-		}
-		if c.kind.transcript != nil && !c.started.IsZero() && !c.stopped && c.kind.transcript.TurnDone(u) {
-			switch {
-			case c.steered > 0: // the result of the work a steered message cut short: the turn goes on
-				c.steered = 0
-			case c.backgroundLocked(c.turnFrom): // the agent holds a turn for the subagents it started
-				c.releaseLocked()
-				released = true
-			}
 		}
 		// The end of the agent's own turn: its items have settled. During one of
 		// Nushi's, which ends with the prompt's answer, a model call's.
@@ -133,13 +124,8 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		}
 		c.usageMetaLocked(u.Meta)
 		c.usageChangedLocked()
-		switch {
-		case released:
-			c.meterLocked(model.UsageReleased, nil)
-		case ownEnded:
-			c.meterLocked(model.UsageOwn, nil)
-		}
 		if ownEnded {
+			c.meterLocked(model.UsageOwn, nil)
 			c.endOwnTurnLocked(model.TurnDone, "")
 		}
 	case "session_info_update":

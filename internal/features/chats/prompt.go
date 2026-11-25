@@ -235,33 +235,11 @@ func (c *chat) startLocked(prompt []acp.ContentBlock) {
 	sent, done := make(chan struct{}), make(chan struct{})
 	c.beginOpLocked(opTurn)
 	c.started, c.done, c.sent, c.held = time.Now(), done, sent, false
-	c.released, c.steered, c.turnFrom, c.stopped, c.steerFailed = false, 0, len(c.items), false, false
+	c.turnFrom, c.stopped, c.steerFailed = len(c.items), false, false
 	c.endOwnTurnLocked(model.NotEnded, "") // the prompt supersedes the agent's own turn
 	c.statusChangedLocked()
 	c.logLocked().Info("turn started", "queued", len(c.queue))
 	go c.run(c.agent, &acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt}, notes, sent, done)
-}
-
-// releaseLocked ends the running turn for the chat while the agent still
-// holds its prompt open for subagents the turn left running in the
-// background (see Transcript.TurnDone): the chat is idle, a message goes as
-// the next prompt (which the agent takes at once, answering the held one),
-// and the subagents' steps and the agent's answer to their reports come as
-// its own work. The held prompt's answer then changes nothing (run).
-func (c *chat) releaseLocked() {
-	c.logLocked().Info("turn's work ended", "took", time.Since(c.started).Round(time.Millisecond), "held_for", "background subagents")
-	c.endOpLocked()
-	c.released, c.started = true, time.Time{}
-	close(c.done)
-	c.notPassedOnLocked()
-	c.copyLocked(true)
-	c.lookRelatedLocked()
-	end := model.TurnDone
-	if c.turnStoppedLocked() {
-		end = model.TurnStopped
-	}
-	c.turnEndedLocked(end, "")
-	c.deliverLocked()
 }
 
 // backgroundLocked says a subagent the agent started (since item from)
@@ -350,12 +328,6 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.done != done || c.released { // released: its end was the chat's already
-		c.released = c.released && c.done != done
-		c.logLocked().Info("held prompt answered", "err", err)
-		c.meterLocked(model.UsageHeld, promptUsage(resp, err)) // its tokens: the turn's work was metered at its release
-		return
-	}
 	if log := c.logLocked().With("took", time.Since(c.started).Round(time.Millisecond)); err != nil {
 		log.Warn("turn failed", "err", err)
 	} else {
@@ -363,7 +335,7 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	}
 	c.endOpLocked()
 	c.started = time.Time{}
-	close(c.done)
+	close(done)
 	c.notPassedOnLocked()
 	if err == nil && resp.Usage != nil {
 		u := resp.Usage
@@ -397,7 +369,7 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	c.lookRelatedLocked()
 	end, failure := c.verdictLocked(resp, err, quit)
 	// The copy has the turn's last items before the turn is said to have
-	// ended, as releaseLocked has it: whoever reads it then reads them.
+	// ended: whoever reads it then reads them.
 	c.copyLocked(true)
 	c.turnEndedLocked(end, failure)
 	// A stopped or failed turn holds the queue until the next one ends: one

@@ -81,15 +81,10 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		it.Steered = true
 		id := c.addLocked(it)
 		blocks := c.blocks(m)
-		// The agent's updates may come before its answer: not under the lock;
-		// counted before, as they may be the result of the work it cuts short.
-		c.steered++
+		// The agent's updates may come before its answer: not under the lock.
 		c.mu.Unlock()
 		taken, err := agent.Steer(context.Background(), sid, blocks)
 		c.mu.Lock()
-		if !taken {
-			c.steered = max(c.steered-1, 0)
-		}
 		switch {
 		case taken:
 			continue
