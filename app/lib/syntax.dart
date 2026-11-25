@@ -396,11 +396,17 @@ DiffThemeData diffTheme(Tokens t, {Color? surface, String? family}) {
     dividerBackground: surface ?? d.dividerBackground,
     selection: d.selection,
     selectionOverCap: d.selectionOverCap,
-    // Selected code in the app's selection colour, a step stronger than
-    // prose's: the line tints under it (a changed line's is the accent's
-    // own hue in several themes) left it faint at the transcript's 0.3.
-    // Still a tint, so a changed word's colour shows through it.
-    textSelection: t.textSelection.withValues(alpha: 0.45),
+    // Selected code in the theme's own selection colour where it
+    // publishes one (Tokyo Night's bg_visual: the accent's tint made Day's
+    // blue code unreadable, and a selected changed line looked like a
+    // changed word). Else the app's, a step stronger than prose's, as the
+    // line tints under it (a changed line's is the accent's own hue in
+    // several themes) left it faint at the transcript's 0.3; on a light
+    // set a little less, as at 0.45 Latte's text fell under 3:1 over it.
+    // Both a tint, so a changed word's colour shows through
+    // (`diff_selection_look_test`).
+    textSelection:
+        d.textSelection ?? t.textSelection.withValues(alpha: dark ? 0.45 : 0.4),
     foldPlaceholderBackground: on(d.foldPlaceholderBackground),
     foldPlaceholderText: d.foldPlaceholderText,
     loadingBar: on(d.loadingBar),

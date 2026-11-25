@@ -26,6 +26,7 @@ class DiffColors {
     required this.foldPlaceholderText,
     required this.loadingBar,
     required this.hoverAffordance,
+    this.textSelection,
   });
 
   /// A theme's diff drawn from its own surfaces, inks and status colors:
@@ -94,6 +95,11 @@ class DiffColors {
   final Color foldPlaceholderText;
   final Color loadingBar;
   final Color hoverAffordance;
+
+  /// Behind selected code, where the theme publishes a selection colour
+  /// of its own (Tokyo Night's bg_visual); unset, the app's text
+  /// selection a step stronger (`diffTheme`).
+  final Color? textSelection;
 
   /// `diff_view`'s IntelliJ Light, the Nushi theme's.
   static const intelliJLight = DiffColors(
