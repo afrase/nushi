@@ -113,7 +113,7 @@ type Options struct {
 	Publish    func(model.Event) // nil: events go nowhere
 	Tools      Tools             // Nushi's own tools for chats' sessions
 	Viewers    Viewers           // who shows chats, for chats done while nobody looked (seen.go)
-	Processes  Processes         // nil: background commands are stopped only by asking the agent (background.go)
+	Processes  Processes         // nil: no command's shell is known to still run (background.go), and no crash record
 	// Record keeps what a clean stop of each agent would end, for the
 	// next daemon to stop after a crash (record.go); nil, or no
 	// Processes: nothing kept.

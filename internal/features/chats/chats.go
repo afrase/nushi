@@ -40,7 +40,7 @@ type Service struct {
 	servers   Servers     // set once at startup, if there are any
 	gitHub    GitHub      // set once at startup
 	viewers   Viewers     // Options', for chats done while nobody looked (seen.go)
-	procs     Processes   // Options', for stopping background commands
+	procs     Processes   // Options', for whether a command's shell runs and the crash record
 	record    Record      // Options', if agents' processes are recorded (record.go)
 	prefs     SleepPrefs  // Options', if chats sleep
 	copies    Copies      // Options', if chats keep copies of their transcripts
