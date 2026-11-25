@@ -42,7 +42,6 @@ MarksWord? marksWord(
       label: none.label,
       tone: switch (none) {
         NoMarks.failed => NoteTone.crashed,
-        NoMarks.oldDaemon => NoteTone.needs,
         _ => NoteTone.quiet,
       },
       tip: switch (none) {
@@ -55,8 +54,6 @@ MarksWord? marksWord(
         NoMarks.tooLarge => 'Change marks stop at 1 MiB',
         NoMarks.tooManyLines => 'Change marks stop at 10,000 lines',
         NoMarks.otherRepository => 'A repository inside this one',
-        NoMarks.oldDaemon =>
-          'The daemon running is older than this app: restart Nushi',
         NoMarks.failed =>
           lines.error.isEmpty ? 'Click for the error' : lines.error,
       },

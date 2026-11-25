@@ -104,7 +104,6 @@ void main() {
       String path = 'src/a.go',
       String text = _base,
       Object? change,
-      int api = oneFileDiffApi,
       Object? Function(Object input)? answer,
       Worktree? worktree,
     }) async {
@@ -113,7 +112,7 @@ void main() {
       fake = FakeDaemon([made])..answer = answer;
       fake.files[path] = utf8.encode(text);
       if (change != null) fake.fileDiffs['/Users/me/nushi/$path'] = change;
-      d = (await fake.connect(tester))..daemonApi = api;
+      d = await fake.connect(tester);
       c = d.chats['c']!;
       watch = FileWatch(d, 'c', path);
       lines = LineBase(d, c, watch);
@@ -729,14 +728,6 @@ void main() {
         expect(lines.from, MarksFrom.branch);
         await end(tester);
       });
-    });
-
-    testWidgets('an older daemon is never asked', (tester) async {
-      await start(tester, api: oneFileDiffApi - 1);
-      expect(_asked(fake), isEmpty);
-      expect(lines.value, isNull);
-      expect(lines.none, NoMarks.oldDaemon);
-      await end(tester);
     });
   });
 }

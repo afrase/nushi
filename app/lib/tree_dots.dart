@@ -19,12 +19,12 @@ const Duration treeDotsWait = Waits.typing;
 /// the base its change marks count from ([marksBaseOf], one lookup for
 /// both), added, changed, renamed or new and untracked, whoever changed
 /// them, and the folders holding them, so a dot and a file's marks always
-/// agree. Asked of the daemon by name alone (GetDiff's `names`, API
-/// [namesDiffApi]: no texts) when a pane showing the tree starts, then a
+/// agree. Asked of the daemon by name alone (GetDiff's `names`: no
+/// texts) when a pane showing the tree starts, then a
 /// moment after one of its listings changes, a shown file's marks change,
 /// the chat's turn ends, it commits, or its folder or worktree changes;
-/// never while no pane shows the tree. A folder outside git (or a daemon
-/// too old to list names) keeps the files the chat wrote ([writtenMarks]):
+/// never while no pane shows the tree. A folder outside git keeps the
+/// files the chat wrote ([writtenMarks]):
 /// there's nothing to compare with.
 final class TreeDots extends ChangeNotifier {
   new _(this.chat);
@@ -79,7 +79,6 @@ final class TreeDots extends ChangeNotifier {
     final daemon = _daemon;
     if (daemon == null) return;
     final asked = ++_asked;
-    if (daemon.daemonApi < namesDiffApi) return _land(asked, null);
     final folder = chat.folder;
     Future<GetDiffResponse> names(String base) => daemon.client.getDiff(
       GetDiffRequest(folder: folder, base: base, names: true),

@@ -87,21 +87,12 @@ const apiVersion = 152;
 /// The API of the newest stable release at least 7 days old, raised in
 /// the commit that cuts each stable release (`docs/development.md`'s
 /// Releases); a gate at or below it goes (`api_floor_test.dart`).
-const apiFloor = 120;
+const apiFloor = 123;
 
 // The gates above the floor (ADR 0004), oldest first: each guards a call
 // or a request field a daemon between the floor and the app's API lacks
 // (a field an older daemon would drop unsaid most of all), and each goes
 // with the floor once the floor reaches it (`api_floor_test.dart`).
-
-/// The API from which GetDiff answers one file (GetDiffRequest.path), what
-/// a file preview's change marks are drawn from. Goes with the floor.
-const oneFileDiffApi = 121;
-
-/// The API from which GetDiff lists a base's changes by name alone
-/// (GetDiffRequest.names), what the Files tree's dots come from. Goes with
-/// the floor.
-const namesDiffApi = 123;
 
 /// The API that answers GetUsage (ADR 0136). Goes with the floor.
 const usageApi = 126;

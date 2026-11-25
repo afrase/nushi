@@ -238,28 +238,6 @@ void main() {
     await closeView(tester, d);
   }, variant: onMac);
 
-  testWidgets('an older daemon is not asked, and keeps the old dots', (
-    tester,
-  ) async {
-    final c = chat('c', 'claude', 'Write it');
-    final fake = FakeDaemon([c])
-      ..answer = ((input) => input is GetChatRequest
-          ? GetChatResponse(chat: c, items: _items)
-          : null)
-      ..repositories.add(_root);
-    final d = (await fake.connect(tester))
-      ..daemonApi = namesDiffApi - 1
-      ..select('c');
-    await tester.pumpAndSettle();
-    final dots = treeDotsOf(d.chats['c']!)..attach(d);
-    await tester.pumpAndSettle();
-    expect(_names(fake), isEmpty);
-    expect(dots.fromGit, isFalse);
-    expect(dots.marks.files, {'docs/report.md'});
-    dots.detach();
-    await closeView(tester, d);
-  });
-
   for (final (width, brightness) in [
     (1700.0, Brightness.dark),
     if (rendering) (1700.0, Brightness.light),
