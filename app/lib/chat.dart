@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart'
 import 'package:nushi/agents.dart';
 import 'package:nushi/browser_tabs.dart';
 import 'package:nushi/chat_colors.dart';
+import 'package:nushi/chat_files.dart';
 import 'package:nushi/chat_find.dart';
 import 'package:nushi/chat_look.dart';
 import 'package:nushi/chat_paths.dart';
@@ -606,6 +607,18 @@ class ChatState extends ChangeNotifier {
   /// part, GetChatRequest.recent); 0 when it has them all.
   int older = 0;
 
+  /// Every file the items before [items] wrote, the one changed last first
+  /// (GetChatResponse.older_written), and what trimmed items wrote: the
+  /// chat's artifacts and the Files pane's marks reach past what's loaded
+  /// (chat_files.dart). Null from a daemon before `olderWrittenApi`, whose
+  /// chat lists only what's loaded.
+  List<String>? olderWritten;
+
+  // How many of the first [items] olderWritten counts already: the older
+  // pages loaded since the snapshot. A rewind among them asks for a fresh
+  // snapshot, as the list can't tell what only the cut items wrote.
+  int _counted = 0;
+
   /// The items before [items] whose subagent or background command runs,
   /// or that wait for an answer (GetChatResponse.running), kept up by their
   /// events: its background tasks show and stop, and its prompts are
@@ -658,13 +671,17 @@ class ChatState extends ChangeNotifier {
   int _seq = 0; // the last event applied
   final _early = <EventsResponse>[];
 
-  /// Takes a snapshot, then the events that arrived while it was on its way.
-  void load(GetChatResponse s) {
+  /// Takes a snapshot, then the events that arrived while it was on its way;
+  /// what its older items wrote unless the daemon can't say ([written]
+  /// false: before `olderWrittenApi`).
+  void load(GetChatResponse s, {bool written = true}) {
     items
       ..clear()
       ..addAll(s.items);
     revision++;
     older = s.older;
+    olderWritten = written ? [...s.olderWritten] : null;
+    _counted = 0;
     runningBefore
       ..clear()
       ..addAll(s.running);
@@ -710,6 +727,7 @@ class ChatState extends ChangeNotifier {
     items
       ..removeWhere((it) => ids.contains(it.id))
       ..insertAll(0, [for (final it in page) late[it.id] ?? it]);
+    _counted += page.length;
     revision++;
     older = olderNow;
     notifyListeners();
@@ -734,7 +752,17 @@ class ChatState extends ChangeNotifier {
     runningBefore.addAll(
       items.take(start).where((it) => _runs(it) || _waits(it)),
     );
+    // What they wrote stays among the chat's files, as the daemon's list.
+    if (olderWritten case final had?) {
+      olderWritten = chatFiles(
+        items.take(start),
+        folder: folder,
+        any: true,
+        before: had,
+      );
+    }
     items.removeRange(0, start);
+    _counted = max(0, _counted - start);
     older += start;
     olderFailed = false;
     revision++;
@@ -742,8 +770,16 @@ class ChatState extends ChangeNotifier {
     return true;
   }
 
-  /// The chat moved to [to]; what shows its folder follows.
+  /// The chat moved to [to]; what shows its folder follows. What its older
+  /// items wrote is named again as the daemon names their paths on a move
+  /// (chats' movedLocked), whose item events past the loaded part don't
+  /// come here.
   void moved(String to) {
+    if (olderWritten case final had?) {
+      olderWritten = [
+        for (final p in had) relativeIn(to, absoluteIn(folder, p)),
+      ];
+    }
     folder = to;
     notifyListeners();
   }
@@ -757,6 +793,8 @@ class ChatState extends ChangeNotifier {
     runningBefore.clear();
     outbox.clear();
     older = 0;
+    olderWritten = null;
+    _counted = 0;
     olderFailed = false;
     revision++;
   }
@@ -918,6 +956,7 @@ class ChatState extends ChangeNotifier {
         final i = items.indexWhere((it) => it.id == e.cut);
         if (i > 0 || i == 0 && older == 0) {
           items.removeRange(i, items.length);
+          if (olderWritten != null && i < _counted) _stale();
         } else if (older > 0) {
           // Cut before the recent part, or at its start: what shows is
           // what came before, which a fresh snapshot brings.

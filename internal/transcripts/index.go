@@ -112,10 +112,11 @@ func (s *Store) forgetIndexMu(chat string) {
 }
 
 // Heads returns chat's copy as it stands with only each item's ID, Kind,
-// Status, Parent and WorktreePath, and its images' MimeType and Hash (no
-// Data); none (nil) when it has no copy. It reads no item's text, so a
-// long copy costs its items' heads, not its size; the store keeps them
-// (the index) for Pick.
+// Status, Parent, WorktreePath, ToolKind, MCPServer, MCPTool and Paths,
+// its diffs' Path (no text) and its images' MimeType and Hash (no Data);
+// none (nil) when it has no copy. It reads no item's text, so a long copy
+// costs its items' heads, not its size; the store keeps them (the index)
+// for Pick.
 func (s *Store) Heads(chat string) ([]model.Item, error) {
 	if err := checkChat(chat); err != nil {
 		return nil, err

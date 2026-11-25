@@ -835,6 +835,13 @@ message GetChatResponse {
   // command still runs, in order, so the chat's running tasks show and stop
   // before their page is loaded. Their events say where they are.
   repeated Item running = 10;
+  // With `recent`: every file the items before `items` wrote or edited (a
+  // subagent's too), each once by the name the items give it, the one
+  // changed last first, 1000 at most (the ones changed last); a file a
+  // later call deleted is left out. A client goes over the items it has
+  // after these, as they load and as they come, for the chat's whole list
+  // (issue #62). API 154.
+  repeated string older_written = 11;
 }
 
 message GetChatItemsRequest {

@@ -1733,6 +1733,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     ChatQueue? queue,
     $core.int? older,
     $core.Iterable<Item>? running,
+    $core.Iterable<$core.String>? olderWritten,
   }) {
     final result = GetChatResponse._();
     if (chat != null) result.chat = chat;
@@ -1745,6 +1746,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     if (queue != null) result.queue = queue;
     if (older != null) result.older = older;
     if (running != null) result.running.addAll(running);
+    if (olderWritten != null) result.olderWritten.addAll(olderWritten);
     return result;
   }
 
@@ -1779,6 +1781,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     ..aI(9, _omitFieldNames ? '' : 'older')
     ..pPM<Item>(10, _omitFieldNames ? '' : 'running',
         subBuilder: Item.$_createMessage)
+    ..pPS(11, _omitFieldNames ? '' : 'olderWritten')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1884,6 +1887,15 @@ class GetChatResponse extends $pb.GeneratedMessage {
   /// before their page is loaded. Their events say where they are.
   @$pb.TagNumber(10)
   $pb.PbList<Item> get running => $_getList(9);
+
+  /// With `recent`: every file the items before `items` wrote or edited (a
+  /// subagent's too), each once by the name the items give it, the one
+  /// changed last first, 1000 at most (the ones changed last); a file a
+  /// later call deleted is left out. A client goes over the items it has
+  /// after these, as they load and as they come, for the chat's whole list
+  /// (issue #62). API 154.
+  @$pb.TagNumber(11)
+  $pb.PbList<$core.String> get olderWritten => $_getList(10);
 }
 
 class GetChatItemsRequest extends $pb.GeneratedMessage {

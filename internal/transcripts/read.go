@@ -68,12 +68,23 @@ type itemHead struct {
 	Parent       string
 	WorktreePath string
 	Pictures     []picture `json:"pictures"`
+	// A tool call's kind, its MCP tool and the files it names, without its
+	// diffs' text: what the chats' writtenBy reads of the items a client
+	// hasn't loaded.
+	ToolKind           string
+	MCPServer, MCPTool string
+	Paths              []string
+	Diffs              []struct{ Path string }
 }
 
 // item is h as a model.Item of only what it has: its images are their
 // MimeType and Hash (and size, when the record has it), without Data.
 func (h *itemHead) item() model.Item {
-	it := model.Item{ID: h.ID, Kind: h.Kind, Status: h.Status, Parent: h.Parent, WorktreePath: h.WorktreePath}
+	it := model.Item{ID: h.ID, Kind: h.Kind, Status: h.Status, Parent: h.Parent, WorktreePath: h.WorktreePath,
+		ToolKind: h.ToolKind, MCPServer: h.MCPServer, MCPTool: h.MCPTool, Paths: h.Paths}
+	for _, d := range h.Diffs {
+		it.Diffs = append(it.Diffs, model.FileChange{Path: d.Path})
+	}
 	for _, p := range h.Pictures {
 		it.Images = append(it.Images, model.Image{MimeType: p.MimeType, Hash: p.Hash, Size: p.Size, Width: p.Width, Height: p.Height})
 	}

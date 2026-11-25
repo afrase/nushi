@@ -46,6 +46,7 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 		Queue: queueProto(c.Queue, req.Msg.ImageRefs), Older: int32(start)}
 	resp.Items = s.itemsProto(req.Msg.ChatId, c.Items, req.Msg.ImageRefs)
 	resp.Running = s.itemsProto(req.Msg.ChatId, part.Running, req.Msg.ImageRefs)
+	resp.OlderWritten = part.Written
 	return connect.NewResponse(resp), nil
 }
 

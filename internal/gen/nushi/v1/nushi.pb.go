@@ -1646,7 +1646,14 @@ type GetChatResponse struct {
 	// With `recent`: the items before `items` whose subagent or background
 	// command still runs, in order, so the chat's running tasks show and stop
 	// before their page is loaded. Their events say where they are.
-	Running       []*Item `protobuf:"bytes,10,rep,name=running,proto3" json:"running,omitempty"`
+	Running []*Item `protobuf:"bytes,10,rep,name=running,proto3" json:"running,omitempty"`
+	// With `recent`: every file the items before `items` wrote or edited (a
+	// subagent's too), each once by the name the items give it, the one
+	// changed last first, 1000 at most (the ones changed last); a file a
+	// later call deleted is left out. A client goes over the items it has
+	// after these, as they load and as they come, for the chat's whole list
+	// (issue #62). API 154.
+	OlderWritten  []string `protobuf:"bytes,11,rep,name=older_written,json=olderWritten,proto3" json:"older_written,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1747,6 +1754,13 @@ func (x *GetChatResponse) GetOlder() int32 {
 func (x *GetChatResponse) GetRunning() []*Item {
 	if x != nil {
 		return x.Running
+	}
+	return nil
+}
+
+func (x *GetChatResponse) GetOlderWritten() []string {
+	if x != nil {
+		return x.OlderWritten
 	}
 	return nil
 }
@@ -28534,7 +28548,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x16\n" +
 	"\x06recent\x18\x02 \x01(\x05R\x06recent\x12\x1d\n" +
 	"\n" +
-	"image_refs\x18\x03 \x01(\bR\timageRefs\"\x8c\x03\n" +
+	"image_refs\x18\x03 \x01(\bR\timageRefs\"\xb1\x03\n" +
 	"\x0fGetChatResponse\x12\"\n" +
 	"\x04chat\x18\x01 \x01(\v2\x0e.nushi.v1.ChatR\x04chat\x12$\n" +
 	"\x05items\x18\x02 \x03(\v2\x0e.nushi.v1.ItemR\x05items\x12.\n" +
@@ -28546,7 +28560,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05queue\x18\b \x01(\v2\x13.nushi.v1.ChatQueueR\x05queue\x12\x14\n" +
 	"\x05older\x18\t \x01(\x05R\x05older\x12(\n" +
 	"\arunning\x18\n" +
-	" \x03(\v2\x0e.nushi.v1.ItemR\arunning\"\x95\x01\n" +
+	" \x03(\v2\x0e.nushi.v1.ItemR\arunning\x12#\n" +
+	"\rolder_written\x18\v \x03(\tR\folderWritten\"\x95\x01\n" +
 	"\x13GetChatItemsRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x16\n" +
 	"\x06before\x18\x02 \x01(\tR\x06before\x12\x14\n" +

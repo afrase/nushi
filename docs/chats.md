@@ -270,7 +270,7 @@ The browser's tabs are chips in the pane's title row (a file's tab is in the Fil
 - its tool row's Preview (in a narrow row, such as a subagent's pane's, inside the opened row; a narrow row leaves out its `+n −m` too, which its diffs show);
 - the Artifacts widget in the details panel, the open one marked. The palette's Artifacts… shows the panel and the widget, or lists them in a window too narrow for the panel.
 
-Each list shows the files the chat wrote that way, in the same order:
+Each list shows the files the chat wrote that way, in the same order, in a long chat those it wrote before the part you've scrolled to too (and so do the Files pane's marks of what the chat wrote): the daemon names what the items above the loaded part wrote with the chat (`GetChatResponse.older_written`, API 154; the 1000 changed last), and the app goes over what it has after them. A file only shown above the loaded part, never written, joins once its part loads. An older daemon's chat lists only what's loaded, as before.
 
 1. those you pinned (the pin shows when the pointer is over a row; pins are kept per chat);
 2. the recent: what the agent wrote in the last turn, the file open now, and those you opened in the last hour, newest first;

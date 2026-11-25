@@ -77,7 +77,7 @@ int dataDirOnWeb = 0;
 String? get appFiles => kIsWeb ? null : dataDir;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 153;
+const apiVersion = 154;
 
 /// The oldest daemon API this app works with (ADR 0004): below it the Mac
 /// shows only its Restart screen (`OutdatedScreen`) until the daemon has
@@ -139,6 +139,12 @@ const sendNowApi = 147;
 /// `removedChats` event, which the removed chats' bar shows. The bar, its
 /// [Daemon.removedChats] and DismissRemovedChats go with the floor.
 const keepsGoneChatsApi = 151;
+
+/// The API from which GetChat's recent part says what the items before it
+/// wrote (GetChatResponse.older_written, issue #62): with an older daemon
+/// a long chat's artifacts and the Files pane's marks are only those of
+/// what's loaded. Goes with the floor.
+const olderWrittenApi = 154;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
