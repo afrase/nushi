@@ -396,6 +396,11 @@ DiffThemeData diffTheme(Tokens t, {Color? surface, String? family}) {
     dividerBackground: surface ?? d.dividerBackground,
     selection: d.selection,
     selectionOverCap: d.selectionOverCap,
+    // Selected code in the app's selection colour, a step stronger than
+    // prose's: the line tints under it (a changed line's is the accent's
+    // own hue in several themes) left it faint at the transcript's 0.3.
+    // Still a tint, so a changed word's colour shows through it.
+    textSelection: t.textSelection.withValues(alpha: 0.45),
     foldPlaceholderBackground: on(d.foldPlaceholderBackground),
     foldPlaceholderText: d.foldPlaceholderText,
     loadingBar: on(d.loadingBar),

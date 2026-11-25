@@ -46,6 +46,8 @@ Every colour is a token of `Tokens`; a theme changes values, never names. Read t
 
 **States**, each an ink and a soft fill for its pill (`PhasePill`): `running` (on `accentSoft`), `needs`/`needsSoft` (waiting on the user; a warning), `done`/`doneSoft`, `crashed`/`crashedSoft` (failed; destructive), `idle` (off). Asleep has no mark in a list: the dot's slot stays empty and the row's title and agent mark take `textMuted` at half strength and the title is italic (`recededColor`, `recededTitle`: fainter than an archived chat's, since muted alone read like an idle row; a moon beside the word Asleep in the chat's header only). A state that asks for nothing is `textSecondary` on `raised`.
 
+**Selected text**: `textSelection`, the accent's tint behind selected text everywhere (the transcript, a field, the editor, a file's source); a diff's code takes it a step stronger (`diffTheme`), so it shows over a changed line's tint.
+
 **Shadows**: `shadow`, and `floatShadow` under what floats (twice as deep on a dark set); `scrim` behind an image opened whole.
 
 **The transcript's own**: `userBand*` (your message's bubble), `agentText`, `inlineCode`/`inlineCodeText`, `toolAccent`, `subagentTint`/`subagentAccent`, `findingsAccent`, `selectionBar*`, `shine`/`shineBand` (what's still going). **Marks**: `claude`, `ante`, `ompPlug`, `pi`, `pig`, `monogramText`, `gold`, `avatars` (people's and chats' colours). **Code**: `syntax` by `Capture`, `terminal` (ANSI), `diff`.
