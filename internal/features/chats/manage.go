@@ -73,6 +73,9 @@ func (s *Service) Archive(chatID string, archived bool) error {
 		return err
 	}
 	c.mu.Lock()
+	if archived {
+		c.yieldAheadLocked()
+	}
 	if archived && c.sessionOpLocked() {
 		err := c.sessionOpErrLocked()
 		c.mu.Unlock()
@@ -110,6 +113,7 @@ func (s *Service) halt(chatID string) (*chat, error) {
 		return nil, err
 	}
 	c.mu.Lock()
+	c.yieldAheadLocked()
 	switch {
 	case c.sessionOpLocked():
 		err := c.sessionOpErrLocked()

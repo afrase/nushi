@@ -508,3 +508,56 @@ func TestCopyAheadLeavesAChatWithAQueue(t *testing.T) {
 		}
 	})
 }
+
+// Delete and Archive on a chat the pass is loading go ahead: the user
+// didn't ask for the load, so it is called off rather than the user's
+// step refused.
+func TestCopyAheadGivesWayToDeleteAndArchive(t *testing.T) {
+	for name, act := range map[string]func(t *testing.T, svc *Service) error{
+		"Delete": func(t *testing.T, svc *Service) error {
+			t.Helper()
+			return svc.Delete(t.Context(), "c", DeleteOptions{})
+		},
+		"Archive": func(_ *testing.T, svc *Service) error { return svc.Archive("c", true) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				f := newAhead(t, false, []model.ChatRecord{{ID: "c", Updated: daysAgo(20)}})
+				f.agent.mu.Lock()
+				f.agent.loadGate = make(chan struct{}) // never opened: the load hangs
+				f.agent.mu.Unlock()
+				f.on.Store(true)
+				pass(time.Hour)
+				c := f.chat(t, "c")
+				c.mu.Lock()
+				loading := c.busyLocked() && c.ahead != notAhead
+				c.mu.Unlock()
+				if !loading {
+					t.Fatal("the pass isn't loading the chat")
+				}
+				f.agent.mu.Lock()
+				loader := f.agent.cur
+				f.agent.mu.Unlock()
+				testcheck.NoErr(t, act(t, f.svc))
+				synctest.Wait()
+				// The fake's Close leaves its processes running, as a real
+				// kill wouldn't: the pass's, and the one Delete starts to
+				// delete the session.
+				loader.end()
+				f.agent.quit()
+				synctest.Wait()
+				if _, err := f.svc.listed("c"); name == "Delete" && err == nil {
+					t.Error("not deleted")
+				}
+				c.mu.Lock()
+				defer c.mu.Unlock()
+				if c.agent != nil || c.busyLocked() || f.store.Has("c") {
+					t.Errorf("agent %v, busy %v, copy %v", c.agent, c.busyLocked(), f.store.Has("c"))
+				}
+				if name == "Archive" && !c.record.Archived {
+					t.Error("not archived")
+				}
+			})
+		})
+	}
+}

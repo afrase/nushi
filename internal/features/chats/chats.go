@@ -188,6 +188,7 @@ type chat struct {
 	reopenFailed bool                            // the last reopen failed: see failedLocked
 	sessionGone  bool                            // and its agent no longer has its session: see goneLocked
 	ahead        aheadLoad                       // its load is the copy-ahead pass's (ahead.go)
+	aheadCancel  context.CancelFunc              // calls that load off (yieldAheadLocked)
 	failure      string                          // the notice saying why it failed (item id)
 	waiting      map[string]chan<- string        // permission prompts by item id, for the picked option
 	drops        int                             // dropPromptsLocked's calls, for an ask that let go the lock (permissions.go)

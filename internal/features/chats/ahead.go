@@ -157,12 +157,13 @@ func (s *Service) copyOne(ctx context.Context, id string) bool {
 	if c.asleep {
 		c.ahead = aheadAsleep
 	}
+	lctx, cancel := context.WithTimeout(ctx, reopenTimeout)
+	c.aheadCancel = cancel
 	c.beginOpLocked(opReopen) // what comes meanwhile waits for it, as for any reopen
 	c.statusChangedLocked()
 	c.logLocked().Info("chat opening", "for", "its transcript's copy")
 	c.mu.Unlock()
 
-	lctx, cancel := context.WithTimeout(ctx, reopenTimeout)
 	start := time.Now()
 	_, err = s.load(lctx, c)
 	cancel()
@@ -182,7 +183,7 @@ func (s *Service) copyOne(ctx context.Context, id string) bool {
 	default:
 		log.Info("chat's copy made; chat stays open", "why", "it was wanted meanwhile")
 	}
-	c.ahead = notAhead
+	c.ahead, c.aheadCancel = notAhead, nil
 	c.endOpLocked()
 	c.mu.Unlock()
 	c.stopAgent(agent)
@@ -193,4 +194,20 @@ func (s *Service) copyOne(ctx context.Context, id string) bool {
 		s.expire(ctx, c, "the agent says so")
 	}
 	return true
+}
+
+// yieldAheadLocked calls off the pass's load of the chat, if it is
+// loading it still for its copy alone, and waits for the load to end:
+// Delete and Archive, which the user asked for, go ahead rather than
+// being refused for a load the user didn't ask for. The lock is let go
+// while it waits.
+func (c *chat) yieldAheadLocked() {
+	if c.ahead == notAhead || c.aheadCancel == nil || c.op != opReopen || c.woke == nil {
+		return
+	}
+	c.aheadCancel()
+	woke := c.woke
+	c.mu.Unlock()
+	<-woke
+	c.mu.Lock()
 }
