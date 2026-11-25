@@ -163,12 +163,17 @@ func (n itemNode) item(host, repo string) model.GitHubItem {
 // countCheck adds a state's count to the counts: a check run's
 // (CheckRunState and CheckConclusionState) or a commit status's
 // (StatusState), in the rollup's upper case or Nushi's lower, by KindOf.
+// A cancelled one counts in Failed, as the merge gate has it, and again
+// in Cancelled.
 func countCheck(c *model.CheckCounts, sc stateCount) {
 	switch KindOf(strings.ToLower(sc.State)) {
 	case CheckPassed:
 		c.Passed += sc.Count
 	case CheckFailed:
 		c.Failed += sc.Count
+	case CheckCancelled:
+		c.Failed += sc.Count
+		c.Cancelled += sc.Count
 	case CheckSkipped:
 		c.Skipped += sc.Count
 	case CheckRunning:

@@ -29433,12 +29433,14 @@ class GitHubCheckCounts extends $pb.GeneratedMessage {
     $core.int? failed,
     $core.int? running,
     $core.int? skipped,
+    $core.int? cancelled,
   }) {
     final result = GitHubCheckCounts._();
     if (passed != null) result.passed = passed;
     if (failed != null) result.failed = failed;
     if (running != null) result.running = running;
     if (skipped != null) result.skipped = skipped;
+    if (cancelled != null) result.cancelled = cancelled;
     return result;
   }
 
@@ -29459,6 +29461,7 @@ class GitHubCheckCounts extends $pb.GeneratedMessage {
     ..aI(2, _omitFieldNames ? '' : 'failed')
     ..aI(3, _omitFieldNames ? '' : 'running')
     ..aI(4, _omitFieldNames ? '' : 'skipped')
+    ..aI(5, _omitFieldNames ? '' : 'cancelled')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -29492,6 +29495,8 @@ class GitHubCheckCounts extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearPassed() => $_clearField(1);
 
+  /// Failed counts the cancelled too: GitHub's merge gate has them not
+  /// passed.
   @$pb.TagNumber(2)
   $core.int get failed => $_getIZ(1);
   @$pb.TagNumber(2)
@@ -29518,6 +29523,17 @@ class GitHubCheckCounts extends $pb.GeneratedMessage {
   $core.bool hasSkipped() => $_has(3);
   @$pb.TagNumber(4)
   void clearSkipped() => $_clearField(4);
+
+  /// How many of failed were cancelled, a kind GitHub draws and names
+  /// apart; 0 from a daemon before API 148, whose failed says them all.
+  @$pb.TagNumber(5)
+  $core.int get cancelled => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set cancelled($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCancelled() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCancelled() => $_clearField(5);
 }
 
 class ListGitHubInboxRequest extends $pb.GeneratedMessage {
@@ -31494,6 +31510,8 @@ class GitHubCheck extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   void clearState() => $_clearField(5);
 
+  /// Not passed, as GitHub's merge gate has it: failed, or cancelled (from
+  /// API 145); its state tells the two apart.
   @$pb.TagNumber(6)
   $core.bool get failed => $_getBF(5);
   @$pb.TagNumber(6)

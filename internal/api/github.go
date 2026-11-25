@@ -309,7 +309,8 @@ func checkCountsProto(c model.CheckCounts) *nushiv1.GitHubCheckCounts {
 	if c == (model.CheckCounts{}) {
 		return nil
 	}
-	return &nushiv1.GitHubCheckCounts{Passed: int32(c.Passed), Failed: int32(c.Failed), Running: int32(c.Running), Skipped: int32(c.Skipped)}
+	return &nushiv1.GitHubCheckCounts{Passed: int32(c.Passed), Failed: int32(c.Failed), Running: int32(c.Running), Skipped: int32(c.Skipped),
+		Cancelled: int32(c.Cancelled)}
 }
 
 func ghItemsProto(items []model.GitHubItem) []*nushiv1.GitHubItem {

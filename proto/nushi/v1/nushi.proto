@@ -3831,9 +3831,14 @@ message GitHubItem {
 // skipped ones count in neither side of passed/total.
 message GitHubCheckCounts {
   int32 passed = 1;
+  // Failed counts the cancelled too: GitHub's merge gate has them not
+  // passed.
   int32 failed = 2;
   int32 running = 3;
   int32 skipped = 4;
+  // How many of failed were cancelled, a kind GitHub draws and names
+  // apart; 0 from a daemon before API 148, whose failed says them all.
+  int32 cancelled = 5;
 }
 
 message ListGitHubInboxRequest {
@@ -4069,6 +4074,8 @@ message GitHubCheck {
   // "pending" until it ends, then its conclusion: "success", "failure",
   // "cancelled", "skipped", "neutral", "timed_out"…
   string state = 5;
+  // Not passed, as GitHub's merge gate has it: failed, or cancelled (from
+  // API 145); its state tells the two apart.
   bool failed = 6;
   string url = 7;
   string title = 8;

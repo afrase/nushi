@@ -22719,11 +22719,16 @@ func (x *GitHubItem) GetChecksOid() string {
 // A pull request's checks at its head, by state: a neutral one is passed;
 // skipped ones count in neither side of passed/total.
 type GitHubCheckCounts struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Passed        int32                  `protobuf:"varint,1,opt,name=passed,proto3" json:"passed,omitempty"`
-	Failed        int32                  `protobuf:"varint,2,opt,name=failed,proto3" json:"failed,omitempty"`
-	Running       int32                  `protobuf:"varint,3,opt,name=running,proto3" json:"running,omitempty"`
-	Skipped       int32                  `protobuf:"varint,4,opt,name=skipped,proto3" json:"skipped,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Passed int32                  `protobuf:"varint,1,opt,name=passed,proto3" json:"passed,omitempty"`
+	// Failed counts the cancelled too: GitHub's merge gate has them not
+	// passed.
+	Failed  int32 `protobuf:"varint,2,opt,name=failed,proto3" json:"failed,omitempty"`
+	Running int32 `protobuf:"varint,3,opt,name=running,proto3" json:"running,omitempty"`
+	Skipped int32 `protobuf:"varint,4,opt,name=skipped,proto3" json:"skipped,omitempty"`
+	// How many of failed were cancelled, a kind GitHub draws and names
+	// apart; 0 from a daemon before API 148, whose failed says them all.
+	Cancelled     int32 `protobuf:"varint,5,opt,name=cancelled,proto3" json:"cancelled,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -22782,6 +22787,13 @@ func (x *GitHubCheckCounts) GetRunning() int32 {
 func (x *GitHubCheckCounts) GetSkipped() int32 {
 	if x != nil {
 		return x.Skipped
+	}
+	return 0
+}
+
+func (x *GitHubCheckCounts) GetCancelled() int32 {
+	if x != nil {
+		return x.Cancelled
 	}
 	return 0
 }
@@ -24192,7 +24204,9 @@ type GitHubCheck struct {
 	App      string                 `protobuf:"bytes,4,opt,name=app,proto3" json:"app,omitempty"`
 	// "pending" until it ends, then its conclusion: "success", "failure",
 	// "cancelled", "skipped", "neutral", "timed_out"…
-	State  string `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"`
+	State string `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"`
+	// Not passed, as GitHub's merge gate has it: failed, or cancelled (from
+	// API 145); its state tells the two apart.
 	Failed bool   `protobuf:"varint,6,opt,name=failed,proto3" json:"failed,omitempty"`
 	Url    string `protobuf:"bytes,7,opt,name=url,proto3" json:"url,omitempty"`
 	Title  string `protobuf:"bytes,8,opt,name=title,proto3" json:"title,omitempty"`
@@ -29873,12 +29887,13 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x04base\x18\x15 \x01(\tR\x04base\x12\x12\n" +
 	"\x04head\x18\x16 \x01(\tR\x04head\x12\x1d\n" +
 	"\n" +
-	"checks_oid\x18\x17 \x01(\tR\tchecksOid\"w\n" +
+	"checks_oid\x18\x17 \x01(\tR\tchecksOid\"\x95\x01\n" +
 	"\x11GitHubCheckCounts\x12\x16\n" +
 	"\x06passed\x18\x01 \x01(\x05R\x06passed\x12\x16\n" +
 	"\x06failed\x18\x02 \x01(\x05R\x06failed\x12\x18\n" +
 	"\arunning\x18\x03 \x01(\x05R\arunning\x12\x18\n" +
-	"\askipped\x18\x04 \x01(\x05R\askipped\"\xe9\x01\n" +
+	"\askipped\x18\x04 \x01(\x05R\askipped\x12\x1c\n" +
+	"\tcancelled\x18\x05 \x01(\x05R\tcancelled\"\xe9\x01\n" +
 	"\x16ListGitHubInboxRequest\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x14\n" +
 	"\x05repos\x18\x02 \x03(\tR\x05repos\x12\x14\n" +

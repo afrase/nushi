@@ -60,9 +60,10 @@ type GitHubReaction struct {
 
 // CheckCounts are a pull request's checks by state, at its head: a
 // neutral one counts as passed; skipped ones count in neither side of
-// passed/total.
+// passed/total. Failed counts the cancelled too, as GitHub's merge gate
+// has them not passed; Cancelled says how many of Failed were.
 type CheckCounts struct {
-	Passed, Failed, Running, Skipped int
+	Passed, Failed, Running, Skipped, Cancelled int
 }
 
 // GitHubComment is a comment, or a review with what it said. Body is
