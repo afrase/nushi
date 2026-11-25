@@ -124,7 +124,8 @@ func (s *Service) needsCopy(sess model.ChatRecord) bool {
 
 // copyOne opens a chat for its copy and puts it back, and says whether an
 // agent was started for it. A chat that ran since the daemon started and
-// holds what it showed (outlived) gets that as its copy, with no agent. A chat that runs, is busy, going, opening,
+// holds what it showed (outlived) gets that as its copy, with no agent;
+// one that holds a queue isn't opened. A chat that runs, is busy, going, opening,
 // shown, whose last reopen failed or whose session is gone is left.
 //
 //nolint:contextcheck // the load runs on the pass's life, the service's
@@ -145,6 +146,10 @@ func (s *Service) copyOne(ctx context.Context, id string) bool {
 		c.saveCopyLocked(nil, c.items)
 		c.logLocked().Info("chat's copy made", "from", "what it shows")
 		c.letGoLocked()
+		c.mu.Unlock()
+		return false
+	}
+	if len(c.queue) > 0 { // held (an archived chat's): the agent a load starts would stay for it
 		c.mu.Unlock()
 		return false
 	}

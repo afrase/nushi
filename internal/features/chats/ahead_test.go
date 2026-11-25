@@ -488,3 +488,23 @@ func TestCopyAheadTriedChatsGoLastAndLessOften(t *testing.T) {
 		}
 	})
 }
+
+// A chat that holds a queue (an archived chat's, held) isn't opened by
+// the pass: what it holds would keep the agent it started.
+func TestCopyAheadLeavesAChatWithAQueue(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		f := newAhead(t, false, []model.ChatRecord{{ID: "c", Updated: daysAgo(20), Archived: true}})
+		c, err := f.svc.listed("c")
+		testcheck.NoErr(t, err)
+		c.mu.Lock()
+		c.queue, c.held = []model.Message{{Text: "later"}}, true
+		c.mu.Unlock()
+		f.on.Store(true)
+		pass(time.Hour)
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if n, _ := f.launches(); n != 0 || c.agent != nil {
+			t.Errorf("%d agents started; agent %v", n, c.agent)
+		}
+	})
+}
