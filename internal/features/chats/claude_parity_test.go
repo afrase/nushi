@@ -15,12 +15,12 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// The parity tests hold Nushi's Go agent for Claude (claudeacp) to its
-// golden behaviour, as far as Nushi reads it: what claude-agent-acp, the
-// Node adapter Claude ran through until 2026-11-04, did. Each scenario in
-// testdata/claude-parity is one run of an agent, recorded at both ends
-// (until 2026-11-03 the adapter's; make claude-record now records the Go
-// agent's own, which then serve as its golden):
+// The parity tests hold Nushi's Go agent for Claude (claudeacp, at the
+// version go.mod pins) to its own recorded runs on the real claude, as
+// far as Nushi reads them: a regression check against claude's real
+// output, for a library bump or a change to how chats reads Claude (ADR
+// 0066). Each scenario in testdata/claude-parity is one run of the Go
+// agent, recorded at both ends:
 //   - cli.jsonl: claude's stdin and stdout, a claudetest cassette, and
 //     cli-2.jsonl and on for each further claude the agent ran;
 //   - acp.jsonl: the ACP between Nushi and the agent, a line a
@@ -33,24 +33,26 @@ import (
 // yet is skipped, by name.
 //
 // The test replays the cassettes to the Go agent as its claudes, in the
-// order it starts them, sends it what Nushi sent the adapter, and plays
-// both agents' session updates and requests (permissions, questions,
-// answered as the recording's client answered) into a chat for each
-// session Nushi opened, a subagent's session going with its parent's
-// (claude_chats_test.go). The chats' items, usage and status must match:
-// the JSON may differ where Nushi doesn't look.
+// order it starts them, sends it what the recording's client sent, and
+// plays the recording's and the replay's session updates and requests
+// (permissions, questions, answered as the recording's client answered)
+// into a chat for each session Nushi opened, a subagent's session going
+// with its parent's (claude_chats_test.go). The chats' items, usage,
+// status and model option must match: the JSON may differ where Nushi
+// doesn't look. Both sides go through the same reading, so a change to
+// chats that reads both alike passes here: chats' own tests hold that.
 func TestClaudeParity(t *testing.T) {
 	for _, dir := range scenarios(t) {
 		t.Run(filepath.Base(dir), func(t *testing.T) {
 			skipUnrecorded(t, dir)
-			node, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
+			recorded, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
 			goRun := runGoAgent(t, dir, sent, nil)
-			want, got := views(t, node), views(t, goRun)
+			want, got := views(t, recorded), views(t, goRun)
 			if len(want) == 0 || len(want[0].Items) == 0 {
 				t.Fatal("the recording shows nothing to compare")
 			}
 			if !reflect.DeepEqual(got, want) {
-				t.Errorf("the Go agent's chats differ from the adapter's:\n%s", differences(got, want))
+				t.Errorf("the Go agent's chats differ from the recording's:\n%s", differences(got, want))
 			}
 			switch filepath.Base(dir) {
 			case "workflow", "workflow-stop":
@@ -85,12 +87,12 @@ func launchedARun(t *testing.T, views []parity) {
 }
 
 // differences says where the Go agent's chats (got) differ from the
-// adapter's (want): each item, usage or status that does, as JSON.
+// recording's (want): each item, usage or status that does, as JSON.
 func differences(got, want []parity) string {
 	var b strings.Builder
 	js := func(v any) string { s, _ := json.Marshal(v); return string(s) }
 	if len(got) != len(want) {
-		fmt.Fprintf(&b, "%d chats, the adapter's %d\n", len(got), len(want))
+		fmt.Fprintf(&b, "%d chats, the recording's %d\n", len(got), len(want))
 	}
 	for i := range min(len(got), len(want)) {
 		g, w := got[i], want[i]
@@ -103,12 +105,12 @@ func differences(got, want []parity) string {
 				wi = w.Items[j]
 			}
 			if !reflect.DeepEqual(gi, wi) {
-				fmt.Fprintf(&b, "session %s, item %d:\n  go:      %s\n  adapter: %s\n", w.Session, j, js(gi), js(wi))
+				fmt.Fprintf(&b, "session %s, item %d:\n  go:        %s\n  recording: %s\n", w.Session, j, js(gi), js(wi))
 			}
 		}
 		g.Items, w.Items = nil, nil
 		if !reflect.DeepEqual(g, w) {
-			fmt.Fprintf(&b, "session %s:\n  go:      %s\n  adapter: %s\n", w.Session, js(g), js(w))
+			fmt.Fprintf(&b, "session %s:\n  go:        %s\n  recording: %s\n", w.Session, js(g), js(w))
 		}
 	}
 	return b.String()

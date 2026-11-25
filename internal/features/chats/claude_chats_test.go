@@ -256,8 +256,8 @@ func views(t *testing.T, events []event) []parity {
 }
 
 // recordedFolder is the recording's folder in a tool call's title: the
-// adapter titles a file inside it by its relative path, and the Go agent,
-// replayed in a folder of its own, by the whole one.
+// recording's agent titled a file inside it by its relative path, and the
+// Go agent, replayed in a folder of its own, by the whole one.
 var recordedFolder = regexp.MustCompile(`/\S*/claude-record-\d+/work/`)
 
 // view is a chat's items, usage and status, without the times of this

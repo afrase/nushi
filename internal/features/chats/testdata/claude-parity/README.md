@@ -1,6 +1,6 @@
 # Claude parity scenarios
 
-Each folder is a scenario of `TestClaudeParity` (`../../claude_parity_test.go`): one run of an ACP agent on the real `claude`, recorded at both ends, which the test replays to Nushi's Go agent (`claudeacp`) to compare what Nushi makes of each. Every scenario here was recorded through the Node adapter (claude-agent-acp 0.94.0), which Claude ran through until 2026-11-04 (ADR 0066): those recordings are the Go agent's golden behaviour. The adapter is gone from Nushi, so `make claude-record` now records through the Go agent (`nushid claude-acp`): a scenario recorded again holds the Go agent's own run, a regression check against claude's real output rather than a comparison with the adapter. The cassette's filtering for what only the adapter wrote claude (below) then has nothing to drop.
+Each folder is a scenario of `TestClaudeParity` (`../../claude_parity_test.go`): one run of Nushi's Go agent (`claudeacp`, through `nushid claude-acp`) on the real `claude`, recorded at both ends. The test replays the recorded `claude` to the Go agent at the version `go.mod` pins, sends it what the recording's client sent, and checks that what Nushi makes of the replay is what it makes of the recording: a regression check against claude's real output, for a library bump or a change to how chats reads Claude (ADR 0066). Until 2026-11-25 the scenarios were runs of the Node adapter Claude ran through until 2026-11-04 (claude-agent-acp 0.94.0); its `load` is kept, frozen, in `../claude-adapter-load`, so a chat last run on the adapter is still shown to reopen on the Go agent.
 
 A scenario is two scripts, written by hand:
 
@@ -19,17 +19,19 @@ A scenario without `cli.jsonl` is skipped by the test, by name, until it is reco
 
 The test sends the Go agent the recorded client's messages in order, waiting where the recording's agent answered or asked. The replayed claude plays at its own pace, not the recording's, so a client's line also waits for one or two points of the run, `runGoAgent` in `../../claude_goagent_test.go`:
 
-- **The Go agent caught up** (every line): the line goes once the Go agent has sent its copy of the last update the adapter sent before it that marks a point (a call's report or status, a subagent's state, a message; `mark`), 2 s at most, so the Go agent has shown what the client saw. Without it a cancel sent after the adapter showed a subagent running reached the Go agent before claude's echo of the prompt had, and the Go agent took the prompt for a queued one (`subagent-stop-turn`).
+- **The Go agent caught up** (every line): the line goes once the Go agent has sent its copy of the last update the recording had before it that marks a point (a call's report or status, a subagent's state, a message; `mark`), and once it has sent each session that had its first update by then an update of its own, 10 s at most (`readUntil`; the test then fails saying what it waited for, and goes on so the chats compared say how they differ), so the Go agent has shown what the client saw. Without it a cancel sent after the recording showed a subagent running reached the Go agent before claude's echo of the prompt had, and the Go agent took the prompt for a queued one (`subagent-stop-turn`).
 - **claude's replay waits for the line** (a steer, a cancel, a prompt queued behind a running one: `midTurn`): the line goes only once claude's script waits for the line it makes (`claudetest.Fake.Awaiting`), so it reaches claude where the recorded one did. Without it a cancel's interrupt reached claude ahead of the queued prompt just before it, and a steer ahead of a tool's hook answer.
 
 They stay two: the first is about the Go agent's state (what it has read of claude), which claude's script can't see, the second about where claude's script is, which the Go agent's updates don't say; neither implies the other, and only the lines that write claude one mid-turn need the second.
 
 ## What the replay leaves out
 
-The replay to the Go agent is strict and in order, so what the adapter wrote claude that the Go agent doesn't (or not at a fixed point) goes from the cassette, with claude's answers (`forGoAgent` in `../../claude_replay_test.go`):
+The replay to the Go agent is strict and in order, so what the recording wrote claude that the Go agent doesn't write at a fixed point goes from the cassette, with claude's answers (`forGoAgent` in `../../claude_replay_test.go`):
 
-- `generate_session_title`: the Go agent asks on a goroutine of its own, answered whenever it comes;
-- in the adapter's frozen recording (`../claude-adapter-load`) only, the `interrupt` the adapter sent as it closed a session with claude idle (when its client goes), and what claude wrote after it: the Go agent interrupts only a running turn, else it just ends claude's stdin, so its own recordings have none. An interrupt with a turn running, or one followed by more writes to claude (a cancel), stays.
+- `generate_session_title`: the Go agent asks on a goroutine of its own after a turn, so where the ask falls in claude's stream differs from run to run; the replay answers it (with no title) whenever it comes.
+- In the adapter's frozen recording (`../claude-adapter-load`) only, the `interrupt` the adapter sent as it closed a session with claude idle, and what claude wrote after it: the Go agent interrupts only a running turn, else it just ends claude's stdin, so its own recordings have none. That recording's replay also showed a command that printed nothing with claude's text for the model, which it never showed live; the test drops that text from it (`replayedAsLive`).
+
+The chats compared leave out what differs by run, not by agent: the times of this run, the ids an agent gives a permission prompt's options (the kind picked stands for its id), the recording's folder in a tool call's title, and a background command's output file, which is gone (Nushi reads that output from claude's file, not from the agent). Both sides are played through the same reading of chats, so a change to that reading that treats both alike passes: the comparison catches claude or the Go agent changing, and chats' own tests hold its reading.
 
 The replay's client goes only once the Go agent has sent what the recording's client waited for last (`client.json`'s `waitFor` steps after its last step that sends anything), as the recording's did: a turn claude runs on its own after the last prompt would otherwise be cut off.
 
@@ -78,8 +80,6 @@ Every scenario is recorded (2026-11-25, Claude Code 2.1.331 through the Go agent
 | `ultracode` | ultracode on, then an effort change | |
 | `models` | `availableModels` in the session's settings | `initialize`'s models are already filtered |
 | `mcp` | a tool of a stdio MCP server (`mcp-echo`), asked about | |
-
-`stop_task` on a background command isn't among them: the adapter never sent it, so the recordings through it couldn't show it.
 
 ## Recording
 

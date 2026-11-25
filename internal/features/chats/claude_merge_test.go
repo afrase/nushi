@@ -38,27 +38,27 @@ func TestClaudeMerge(t *testing.T) {
 	for _, dir := range append(scenarios(t), adapterLoad) {
 		t.Run(filepath.Base(dir), func(t *testing.T) {
 			skipUnrecorded(t, dir)
-			node, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
+			rec, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
 			recorded := "the recording's"
 			if dir == adapterLoad {
 				recorded = "the adapter's"
 			}
 			var loads []string
-			for _, e := range node {
+			for _, e := range rec {
 				if e.method == "session/load" && !e.done && !slices.Contains(loads, e.session) {
 					loads = append(loads, e.session)
 				}
 			}
 			var more []acpLine
 			if len(loads) == 0 {
-				sid, load := loadAfter(t, dir, node, sent)
+				sid, load := loadAfter(t, dir, rec, sent)
 				loads, more = []string{sid}, load
 			}
 			goRun := runGoAgent(t, dir, sent, more)
-			copies := map[string][]event{recorded: node, "the Go agent's": goRun}
+			copies := map[string][]event{recorded: rec, "the Go agent's": goRun}
 			replays := map[string][]event{"the Go agent's": goRun}
 			if more == nil {
-				replays[recorded] = node
+				replays[recorded] = rec
 			}
 			for _, sid := range loads {
 				for cname, copied := range copies {
@@ -94,13 +94,13 @@ var adapterLoad = filepath.Join("testdata", "claude-adapter-load")
 // loaded after its recording, the first it opened, and the lines that
 // load it: a session/load and its answer. It skips a scenario without
 // claude's history at its end, or that ends the session.
-func loadAfter(t *testing.T, dir string, node []event, sent []acpLine) (string, []acpLine) {
+func loadAfter(t *testing.T, dir string, rec []event, sent []acpLine) (string, []acpLine) {
 	t.Helper()
 	if _, err := os.Stat(filepath.Join(dir, "history", "end")); err != nil {
 		t.Skip("no load, and no history of claude's to load from")
 	}
 	var sid string
-	for _, e := range node {
+	for _, e := range rec {
 		if e.method == "session/prompt" {
 			sid = e.session
 			break
@@ -111,8 +111,8 @@ func loadAfter(t *testing.T, dir string, node []event, sent []acpLine) (string, 
 	}
 	// The load sets the session up as session/new did (its folder, MCP
 	// servers and _meta): the session is still open in the Go agent,
-	// which restarts claude for a load that sets it up otherwise, as
-	// claude-agent-acp does, and Nushi only loads with the same setup.
+	// which restarts claude for a load that sets it up otherwise, and
+	// Nushi only loads with the same setup.
 	var params map[string]json.RawMessage
 	for _, l := range sent {
 		var m rpc

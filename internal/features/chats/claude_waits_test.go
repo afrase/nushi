@@ -13,9 +13,9 @@ import (
 // trailingWaits are the waitFor steps of dir's client.json after its last
 // step that sends the agent anything: what the recording's client waited
 // to see before it went, which acp.jsonl doesn't say. The replay to
-// the Go agent waits for the same before its client goes, or the Go agent
-// would be cut off where the adapter wasn't (a background command's turn
-// after the last prompt).
+// the Go agent waits for the same before its client goes, or the Go
+// agent would be cut off where the recording's wasn't (a background
+// command's turn after the last prompt).
 func trailingWaits(t *testing.T, dir string) []any {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join(dir, "client.json"))

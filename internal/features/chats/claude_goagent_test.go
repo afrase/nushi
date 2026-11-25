@@ -75,7 +75,7 @@ func (r *replays) Spawn(ctx context.Context, s claudeagent.Spec) (*claudeagent.P
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.next == len(r.fakes) {
-		return nil, fmt.Errorf("the Go agent started claude %d times, the adapter %d", r.next+1, len(r.fakes))
+		return nil, fmt.Errorf("the Go agent started claude %d times, the recording %d", r.next+1, len(r.fakes))
 	}
 	r.next++
 	r.specs = append(r.specs, s)
@@ -215,10 +215,10 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 			}
 		}
 	}
-	// readUntil reads the Go agent's messages until done says so, for 10 s at
-	// most: what it waits for is what the adapter had sent. If the Go agent
-	// never sends it the test fails saying what it waited for, and goes on,
-	// so the chats compared also say how they differ.
+	// readUntil reads the Go agent's messages until done says so, for 10 s
+	// at most: what it waits for is what the recording had. If the Go
+	// agent never sends it the test fails saying what it waited for, and
+	// goes on, so the chats compared also say how they differ.
 	readUntil := func(what string, done func() bool) {
 		deadline := time.After(10 * time.Second)
 		for !done() {
@@ -231,13 +231,13 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 					held = append(held, m)
 				}
 			case <-deadline:
-				t.Errorf("waited 10 s for the Go agent to send %s, as the adapter had", what)
+				t.Errorf("waited 10 s for the Go agent to send %s, as the recording had", what)
 				return
 			}
 		}
 	}
 	// sent waits until the Go agent has sent the update marked want after
-	// the last one waited for: the adapter had sent it before the client's
+	// the last one waited for: the recording had it before the client's
 	// next line, which may count on it (a cancel once a subagent runs).
 	seen := 0 // the marks waited past
 	sent := func(want string) {
@@ -268,12 +268,12 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 			}
 		}
 	}
-	pending := ""                       // the mark of the adapter's last marked update since the client's last line
-	ids := map[string]string{}          // the recorded sessions' ids to the live ones
-	adapterUpdated := map[string]bool{} // the recorded sessions the adapter has sent an update
-	var opened []string                 // those whose first update came since the client's last line
+	pending := ""                   // the mark of the recording's last marked update since the client's last line
+	ids := map[string]string{}      // the recorded sessions' ids to the live ones
+	recUpdated := map[string]bool{} // the recorded sessions the recording has sent an update
+	var opened []string             // those whose first update came since the client's last line
 	// heard waits until the Go agent has sent each of opened an update, as
-	// the adapter had: a session's first update makes its chat. sent
+	// the recording had: a session's first update makes its chat. sent
 	// doesn't wait for it: a new session's first is its commands, unmarked,
 	// which the Go agent sends on a goroutine once its answer is written.
 	heard := func() {
@@ -283,13 +283,13 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 		}
 		opened = nil
 	}
-	adapterMeters := map[string]meter{} // the adapter's last usage, by recorded session
-	// metered waits until the Go agent's last usage is the adapter's in
+	recMeters := map[string]meter{} // the recording's last usage, by recorded session
+	// metered waits until the Go agent's last usage is the recording's in
 	// each session, as the client goes: the Go agent sends a usage again
 	// once claude's answer says the context window, on a goroutine of its
 	// own (claudeacp's askWindow), so it may come after the next update.
 	metered := func() {
-		for sid, want := range adapterMeters {
+		for sid, want := range recMeters {
 			live := cmp.Or(ids[sid], sid)
 			readUntil(fmt.Sprintf("the usage %+v in session %s", want, live), func() bool { return goMeters[live] == want })
 		}
@@ -303,8 +303,8 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 	// waitLast waits for what the recording's client waited for before it
 	// went (a turn claude ran on its own after a background command
 	// ended): the Go agent must send it, in the same order, before the
-	// recording's end, as the adapter did. It looks from where the Go
-	// agent was when it was sent the client's last line, as the
+	// recording's end, as the recording's agent did. It looks from where
+	// the Go agent was when it was sent the client's last line, as the
 	// recorder's waits came after it: what came before can match a wait
 	// too (sendmessage's first hand-back, worded as its last).
 	lastSent := 0 // len(whole) as the last line went
@@ -372,25 +372,25 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 			_, err := io.WriteString(toAgentW, rewrite(t, sessions(msg), id, cwd)+"\n")
 			testcheck.NoErr(t, err)
 			lastSent = len(whole)
-		case m.Method == sessionUpdate: // the adapter's, read by readACP
+		case m.Method == sessionUpdate: // the recording's, read by readACP
 			if k := mark(m.Params); k != "" {
 				pending = k
 			}
 			var n acp.SessionNotification
 			testcheck.NoErr(t, json.Unmarshal(m.Params, &n))
 			sid := string(n.SessionID)
-			if !adapterUpdated[sid] {
-				adapterUpdated[sid] = true
+			if !recUpdated[sid] {
+				recUpdated[sid] = true
 				opened = append(opened, sid)
 			}
 			if u, ok := meterOf(&n); ok {
-				adapterMeters[sid] = u
+				recMeters[sid] = u
 			}
-		case m.Method != "" && m.ID == nil: // another notification (the adapter's _auth/status_update): Nushi reads none
+		case m.Method != "" && m.ID == nil: // another notification (the adapter recording's _auth/status_update): Nushi reads none
 		case m.Method != "": // a request of the agent's
 			got := next(m.Method, func(g rpc) bool { return g.Method != "" })
 			if got.Method != m.Method {
-				t.Fatalf("the Go agent sent %s %s, the adapter %s", got.Method, got.Params, m.Method)
+				t.Fatalf("the Go agent sent %s %s, the recording %s", got.Method, got.Params, m.Method)
 			}
 			agentReqs[string(m.ID)] = agentReq{id: got.ID, method: got.Method, recorded: m.Params, live: got.Params}
 			params := recordedIDs(ids).Replace(string(got.Params))
@@ -401,7 +401,7 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 			// can end before the turn's answer is written).
 			got := next("the answer to "+string(m.ID), func(g rpc) bool { return g.Method == "" && string(g.ID) == string(m.ID) })
 			if string(got.ID) != string(m.ID) || (got.Error == nil) != (m.Error == nil) {
-				t.Fatalf("the Go agent answered %s with %s %s, the adapter with %s %s (claude's script: %v)", m.ID, got.Result, got.Error, m.Result, m.Error, fake.Err())
+				t.Fatalf("the Go agent answered %s with %s %s, the recording with %s %s (claude's script: %v)", m.ID, got.Result, got.Error, m.Result, m.Error, fake.Err())
 			}
 			var recS, liveS struct {
 				SessionID string `json:"sessionId"`
@@ -421,7 +421,7 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 		waitLast()
 	}
 	heard()
-	if pending != "" { // the adapter's last word came before its client went
+	if pending != "" { // the recording's last word came before its client went
 		sent(pending)
 	}
 	if len(more) == 0 { // the chats compared are the recording's
@@ -463,14 +463,14 @@ func meterOf(n *acp.SessionNotification) (meter, bool) {
 }
 
 // agentReq is a request of the Go agent's: its id, and what it and the
-// adapter's request asked.
+// recording's request asked.
 type agentReq struct {
 	id             json.RawMessage
 	method         string
 	recorded, live json.RawMessage
 }
 
-// answer is the recorded client's answer to the adapter's request as an
+// answer is the recorded client's answer to the recording's request as an
 // answer to the Go agent's: a permission option of the same kind, the
 // options' ids being each agent's own (Nushi only passes back the one
 // picked).
