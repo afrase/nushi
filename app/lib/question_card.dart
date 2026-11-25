@@ -377,7 +377,7 @@ class _QuestionCardState extends State<QuestionCard> {
     final f = q.field;
     final picked = _picked[f.id] ?? const [];
     final many = f.type == FieldType.FIELD_TYPE_CHOICES;
-    Widget field(Field f, String hint) => TextField(
+    Widget field(Field f, String hint, {bool note = false}) => TextField(
       controller: _text[f.id],
       focusNode: f == _boxField ? _box : null,
       style: theme.ui(t.text),
@@ -391,6 +391,9 @@ class _QuestionCardState extends State<QuestionCard> {
       },
       decoration: InputDecoration(
         hintText: hint,
+        // A note being written stays labelled once its placeholder goes.
+        prefixText: note && _text[f.id]!.text.isNotEmpty ? 'Note: ' : null,
+        prefixStyle: theme.ui(t.textMuted),
         filled: true,
         fillColor: t.base,
       ),
@@ -412,7 +415,11 @@ class _QuestionCardState extends State<QuestionCard> {
         ),
       if (f.options.isEmpty) field(f, f.title),
       if (q.other case final other?)
-        field(other, _notes(q) ? 'Add a note…' : '${other.title}…'),
+        field(
+          other,
+          _notes(q) ? 'Add a note…' : '${other.title}…',
+          note: _notes(q),
+        ),
       if (!_many && (many || f.options.isEmpty))
         RunButton(
           label: 'Submit',
@@ -436,11 +443,10 @@ class _QuestionCardState extends State<QuestionCard> {
               if (_answered(q) case (:final answer, :final note)
                   when answer.isNotEmpty || note.isNotEmpty) ...[
                 TextSpan(text: answer, style: theme.ui(t.text, size: 12)),
-                if (note.isNotEmpty)
-                  TextSpan(
-                    text: '  $note',
-                    style: theme.ui(t.textSecondary, size: 12),
-                  ),
+                if (note.isNotEmpty) ...[
+                  const TextSpan(text: '  '),
+                  ...noteSpans(theme, note, size: 12),
+                ],
               ] else
                 TextSpan(
                   text: 'Not answered',

@@ -101,6 +101,9 @@ QuestionDraft _picked([String typed = '']) => QuestionDraft()
 String? _hint(WidgetTester tester) =>
     tester.widget<TextField>(find.byType(TextField)).decoration?.hintText;
 
+String? _label(WidgetTester tester) =>
+    tester.widget<TextField>(find.byType(TextField)).decoration?.prefixText;
+
 /// The style of the span saying [text] in the rich text holding it.
 TextStyle? _styleOf(WidgetTester tester, String text) {
   for (final r in tester.widgetList<RichText>(
@@ -131,6 +134,37 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
     await tester.pump();
     expect(_hint(tester), 'Add a note…');
+  });
+
+  testWidgets('a note being written says so in the box', (tester) async {
+    await tester.pumpWidget(
+      _card(_item([_format(), _other()]), draft: _picked()),
+    );
+    await tester.pump();
+    expect(_label(tester), isNull, reason: 'empty: the placeholder says it');
+    await tester.enterText(find.byType(TextField), 'landscape pages');
+    await tester.pump();
+    expect(_label(tester), 'Note: ');
+    expect(find.text('Note: '), findsOneWidget, reason: 'shown, typing on');
+  });
+
+  testWidgets('text with nothing picked, or no note field, has no label', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _card(
+        _item([_format(), _other()]),
+        draft: QuestionDraft()
+          ..text['question_0_custom'] = TextEditingController(text: 'x'),
+      ),
+    );
+    await tester.pump();
+    expect(_label(tester), isNull);
+    await tester.pumpWidget(
+      _card(_item([_format(), _other(note: false)]), draft: _picked('x')),
+    );
+    await tester.pump();
+    expect(_label(tester), isNull);
   });
 
   testWidgets('where the agent takes no note, the box is as it was', (
@@ -175,9 +209,10 @@ void main() {
     const t = Tokens.dark;
     expect(_styleOf(tester, 'PDF')?.color, t.text);
     expect(_styleOf(tester, 'landscape pages')?.color, t.textSecondary);
+    expect(_styleOf(tester, 'Note:')?.color, t.textMuted);
     expect(
-      find.textContaining('PDF, landscape', findRichText: true),
-      findsNothing,
+      find.textContaining('PDF  Note: landscape pages', findRichText: true),
+      findsOneWidget,
     );
   });
 
@@ -194,6 +229,11 @@ void main() {
     expect(_styleOf(tester, 'PDF')?.color, t.text);
     expect(_styleOf(tester, 'landscape pages')?.color, t.textSecondary);
     expect(
+      find.textContaining('PDF  Note: landscape pages', findRichText: true),
+      findsOneWidget,
+      reason: 'labelled, not a second answer',
+    );
+    expect(
       find.textContaining('Other', findRichText: true),
       findsNothing,
       reason: 'not an answer of its own',
@@ -203,7 +243,9 @@ void main() {
     final pdf = tester.getRect(
       find.textContaining('PDF  Pages to print', findRichText: true).last,
     );
-    final note = tester.getRect(find.text('landscape pages').last);
+    final note = tester.getRect(
+      find.textContaining('Note: landscape pages', findRichText: true).last,
+    );
     expect(note.left, pdf.left, reason: 'under the option picked');
     expect(note.top, greaterThanOrEqualTo(pdf.bottom));
   });

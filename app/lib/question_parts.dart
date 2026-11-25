@@ -103,7 +103,8 @@ class QuestionOption extends StatelessWidget {
                 ),
               ),
               // Under the option it's on, so it reads as the pick's.
-              if (note.isNotEmpty) Text(note, style: theme.ui(t.textSecondary)),
+              if (note.isNotEmpty)
+                Text.rich(TextSpan(children: noteSpans(theme, note))),
             ],
           ),
         ),
@@ -130,6 +131,21 @@ List<Widget> answeredLines(BuildContext context, Item item) => [
   CardTitle(item.text, waiting: false),
   ...answerSummary(context, item),
 ];
+
+/// [note] labelled as the note on a pick: "Note:" muted, then the note in
+/// the secondary colour, so it reads neither as one more answer nor as
+/// the option's description.
+List<InlineSpan> noteSpans(NushiTheme theme, String note, {double size = 13}) =>
+    [
+      TextSpan(
+        text: 'Note: ',
+        style: theme.ui(theme.t.textMuted, size: size),
+      ),
+      TextSpan(
+        text: note,
+        style: theme.ui(theme.t.textSecondary, size: size),
+      ),
+    ];
 
 /// The note on [q]'s pick, or '': its "Other" text where the agent read
 /// it as one (Field.note) and an option was picked.
@@ -162,11 +178,10 @@ List<Widget> answerSummary(BuildContext context, Item item) {
               .join(', '),
           style: theme.ui(theme.t.text, size: 12),
         ),
-        if (note.isNotEmpty)
-          TextSpan(
-            text: '  $note',
-            style: theme.ui(theme.t.textSecondary, size: 12),
-          ),
+        if (note.isNotEmpty) ...[
+          TextSpan(text: '  ', style: muted),
+          ...noteSpans(theme, note, size: 12),
+        ],
       ],
     ),
   );
