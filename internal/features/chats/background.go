@@ -375,50 +375,6 @@ type Processes interface {
 	// Under lists the processes below root, root not included, with their
 	// command lines.
 	Under(root int) ([]model.Process, error)
-	// StopGroup ends the process group p leads, if p is still that process
-	// below root: SIGTERM, then SIGKILL to what is left after a grace.
-	StopGroup(root int, p model.Process) error
-}
-
-// stopCommand stops a command the agent left running in the background
-// itself, without a turn or a word to the agent: the one process below the
-// agent's that leads a process group and is the shell running the call's
-// command (BackgroundTasks.RunsBackgroundCommand), by its group. Its row ends "stopped" once
-// the agent's own record says it ended (followCommand); the agent hears it
-// failed, and the next prompt tells it why (stopNote). False when that one
-// process can't be told (none, two alike, a command line Nushi can't read
-// whole): the agent is asked instead.
-func (s *Service) stopCommand(c *chat, callID string) bool {
-	c.mu.Lock()
-	agent, tasks, log := c.agent, c.kind.background, c.logLocked()
-	call := c.itemLocked(callID)
-	if s.procs == nil || tasks == nil || agent == nil || agent.Pid() <= 0 || call == nil || call.BackgroundCommand == nil {
-		c.mu.Unlock()
-		return false
-	}
-	cp := *call
-	c.mu.Unlock()
-	root := agent.Pid()
-	found, err := commandShells(s.procs, root, tasks, cp)
-	if err != nil || len(found) != 1 {
-		log.Info("background command left to the agent to stop", "call", callID, "found", len(found), "err", err)
-		return false
-	}
-	if !c.markKilled(callID, agent, true) {
-		return false
-	}
-	if err := s.procs.StopGroup(root, found[0]); err != nil {
-		c.markKilled(callID, agent, false)
-		log.Warn("background command not stopped", "call", callID, "err", err)
-		return false
-	}
-	log.Info("background command stopped", "call", callID, "pid", found[0].Pid)
-	if noteID.MatchString(cp.BackgroundCommand.ID) {
-		c.mu.Lock()
-		c.killed = append(c.killed, cp.BackgroundCommand.ID)
-		c.mu.Unlock()
-	}
-	return true
 }
 
 // markKilled marks the background command callID started as stopped by

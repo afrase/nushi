@@ -2,10 +2,8 @@ package chats
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,14 +14,11 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// fakeProcesses is a process tree: what lies below each root, and the
-// groups it was asked to stop.
+// fakeProcesses is a process tree: what lies below each root.
 type fakeProcesses struct {
-	mu      sync.Mutex
-	below   map[int][]model.Process
-	stopped []model.Process // with the root asked under, in Pgid's place
-	err     error           // StopGroup's
-	looked  int             // Under's calls
+	mu     sync.Mutex
+	below  map[int][]model.Process
+	looked int // Under's calls
 }
 
 // Get is pid leading its group, as an agent's process does.
@@ -36,19 +31,6 @@ func (f *fakeProcesses) Under(root int) ([]model.Process, error) {
 	defer f.mu.Unlock()
 	f.looked++
 	return f.below[root], nil
-}
-
-func (f *fakeProcesses) StopGroup(root int, p model.Process) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.err != nil {
-		return f.err
-	}
-	if !slices.ContainsFunc(f.below[root], func(q model.Process) bool { return q.Pid == p.Pid }) {
-		return errors.New("not below root")
-	}
-	f.stopped = append(f.stopped, p)
-	return nil
 }
 
 // set puts procs below root in place of what was there.
@@ -166,88 +148,6 @@ func commandOf(c *chat) model.BackgroundCommand {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return *c.itemLocked(waitCall).BackgroundCommand
-}
-
-// The one shell below the agent that leads its group and runs the
-// command is stopped by its group, at once and without a turn; the row
-// ends "stopped" when Claude's file says it ended (an exit code, as for a
-// failure), and the next prompt tells Claude why, unseen in the
-// transcript when replayed.
-func TestABackgroundCommandIsStoppedByItsProcessGroup(t *testing.T) {
-	shell := model.Process{Pid: 4100, Pgid: 4100, Args: zshRunning(waitLoop)}
-	f := commandChat(t, true,
-		model.Process{Pid: 4001, Pgid: 4000, Args: []string{"claude"}},
-		shell,
-		model.Process{Pid: 4101, Pgid: 4100, Args: zshRunning(waitLoop)}, // a subshell of it: the same command line, not its group's leader
-		model.Process{Pid: 4200, Pgid: 4200, Args: zshRunning("sleep 60")},
-	)
-	svc, agent, c, procs, file := f.svc, f.agent, f.c, f.procs, f.file
-	testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, waitCall))
-	if prompts, _ := agent.texts(); len(prompts) != 0 {
-		t.Errorf("asked Claude %q", prompts)
-	}
-	if len(procs.stopped) != 1 || procs.stopped[0].Pid != shell.Pid {
-		t.Fatalf("stopped %+v", procs.stopped)
-	}
-	if sh := commandOf(c); sh.State != "running" || !sh.Killed {
-		t.Errorf("before Claude says it ended: %+v", sh)
-	}
-	testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, waitCall)) // Stop again while it ends: nothing more
-	if prompts, _ := agent.texts(); len(prompts) != 0 || len(procs.stopped) != 1 {
-		t.Errorf("a second Stop asked %q, stopped %+v", prompts, procs.stopped)
-	}
-	procs.set(agentPid) // the group ended
-	testcheck.NoErr(t, os.WriteFile(file, []byte("waiting\n\n[exited with code 144]\n"), 0o600))
-	eventually(t, c, func() bool { return c.itemLocked(waitCall).BackgroundCommand.State == "stopped" })
-	if sh := commandOf(c); sh.End != "exited with code 144" || sh.Ended.IsZero() {
-		t.Errorf("ended: %+v", sh)
-	}
-
-	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "Carry on"}, SendQueue))
-	idle(t, c)
-	agent.mu.Lock()
-	sent := agent.prompt
-	agent.mu.Unlock()
-	if len(sent) != 2 || sent[0].Text.Text != stopNote(waitTask) || sent[1].Text.Text != "Carry on" {
-		t.Errorf("sent %+v", sent)
-	}
-	if text, ok := unnoted(stopNote(waitTask) + "\n\nCarry on"); !ok || text != "Carry on" {
-		t.Errorf("replayed as %q", text)
-	}
-}
-
-// Unless exactly one process is the command's shell, Claude is asked to
-// stop it with TaskStop; so too when the group can't be signalled, and
-// the row then reads as Claude says (failed, for an exit code).
-func TestABackgroundCommandFallsBackToTaskStop(t *testing.T) {
-	leader := func(pid int, args []string) model.Process { return model.Process{Pid: pid, Pgid: pid, Args: args} }
-	for name, tc := range map[string]struct {
-		below []model.Process
-		err   error
-	}{
-		"none":           {below: []model.Process{leader(4200, zshRunning("sleep 60"))}},
-		"two alike":      {below: []model.Process{leader(4100, zshRunning(waitLoop)), leader(4300, zshRunning(waitLoop))}},
-		"unreadable":     {below: []model.Process{leader(4100, nil)}},
-		"cut short":      {below: []model.Process{leader(4100, zshRunning(waitLoop)[:2])}},
-		"signal refused": {below: []model.Process{leader(4100, zshRunning(waitLoop))}, err: errors.New("gone")},
-	} {
-		t.Run(name, func(t *testing.T) {
-			f := commandChat(t, false, tc.below...)
-			svc, agent, c, procs := f.svc, f.agent, f.c, f.procs
-			procs.err = tc.err
-			testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, waitCall))
-			idle(t, c)
-			if prompts, _ := agent.texts(); len(prompts) != 1 || prompts[0] != claudeHarness.StopTask(waitTask) {
-				t.Errorf("asked %q", prompts)
-			}
-			if len(procs.stopped) != 0 {
-				t.Errorf("stopped %+v", procs.stopped)
-			}
-			if sh := commandOf(c); sh.Killed {
-				t.Errorf("marked as Nushi's stop: %+v", sh)
-			}
-		})
-	}
 }
 
 // Claude's replay of a stop it was asked for, today's (the id only) or one

@@ -187,9 +187,15 @@ type fakeAgent struct {
 	subagents   []acp.SessionID           // its subagents' sessions: a cancel stops only the one
 	cur         *proc                     // the last process launched
 	// answers are its extensions' answers (Agent.Call), JSON by method;
-	// called gets each call's params, in order.
+	// called gets each call's params, in order; callErr fails every call.
 	answers map[string]string
 	called  []any
+	callErr error
+	// afterCall are the updates it sends, on the call's session, just after
+	// it answers an extension of this method: claude's task updates for a
+	// stop_task, which may reach the client after its {}
+	// (claudeacp.StopTaskMethod).
+	afterCall map[string][]acp.SessionUpdate
 }
 
 // proc is one of the fake agent's processes: each launch starts one, and
@@ -501,6 +507,21 @@ func (f *fakeAgent) Call(_ context.Context, method string, params, result any) e
 		return &acp.Error{Code: acp.ErrorCodeMethodNotFound, Message: "Method not found"}
 	}
 	f.called = append(f.called, params)
+	if f.callErr != nil {
+		return f.callErr
+	}
+	if after := f.afterCall[method]; len(after) > 0 {
+		var p struct {
+			SessionID acp.SessionID `json:"sessionId"`
+		}
+		b, _ := json.Marshal(params)
+		_ = json.Unmarshal(b, &p)
+		go func(h acp.Client) {
+			for _, u := range after {
+				_ = h.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: p.SessionID, Update: u})
+			}
+		}(f.h)
+	}
 	return json.Unmarshal([]byte(answer), result)
 }
 

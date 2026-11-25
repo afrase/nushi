@@ -167,12 +167,14 @@ func TestSubagentsStoppedEachWay(t *testing.T) {
 	}
 }
 
-// A background command has no session of its own: Claude is asked to stop
-// it with TaskStop, as a message of the user's for the command; its result
-// passes the message on.
+// A background command has no session of its own: an agent that can't
+// stop it with no turn (TaskStopper) is asked to stop it with TaskStop, as
+// a message of the user's for the command; its result passes the message
+// on.
 func TestABackgroundCommandIsStoppedThroughClaude(t *testing.T) {
 	svc, agent, c := newChat(t, claudeSession, &memModes{})
 	c.mu.Lock()
+	c.kind.taskStopper = nil
 	c.addLocked(model.Item{ID: sleeping, Kind: model.ToolCall, Tool: "Bash", Title: "sleep 600; echo slept", Status: "completed",
 		BackgroundCommand: &model.BackgroundCommand{ID: "bgu2i75cc", State: "running"}})
 	c.mu.Unlock()

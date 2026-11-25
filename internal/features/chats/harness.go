@@ -147,12 +147,13 @@ type BackgroundTasks interface {
 	Task(meta map[string]any) (t model.TaskUpdate, ok bool)
 	// RunsBackgroundCommand says a process the agent runs (its command
 	// line) is the shell running the command of call, a tool call that left
-	// it running in the background: Nushi then stops the command itself, by
-	// its process group, without a turn (children.go).
+	// it running in the background: the follower then knows the command
+	// still runs where the agent hasn't said (commandShellRuns).
 	RunsBackgroundCommand(call model.Item, args []string) bool
-	// StopTask asks the agent to stop one of its background tasks (a
-	// subagent, or a command it left running), by the agent's id for it,
-	// when Nushi can't stop it itself.
+	// StopTask is a prompt asking the agent to stop one of its background
+	// tasks (a subagent, or a command or workflow it left running), by the
+	// agent's id for it, when it can't be stopped with no turn
+	// (TaskStopper).
 	StopTask(taskID string) string
 	// ReadStopTask reads such a prompt back (label is what it names the
 	// task, "" when only its id).
@@ -195,6 +196,16 @@ type CommandHider interface {
 // no fork, no command. An agent without it isn't asked (ADR 0017).
 type ContextAsker interface {
 	Context(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error)
+}
+
+// TaskStopper can stop one of the agent's tasks that has no session of
+// its own (a background command, a workflow's run) with no turn: EndTask
+// stops task taskID of session sessionID with call (an extension of the
+// agent's: Agent.Call). Its answer isn't the task's end: the task's own
+// update is (BackgroundTasks.Task). An agent without it is asked to stop
+// the task in a prompt (BackgroundTasks.StopTask; ADR 0065).
+type TaskStopper interface {
+	EndTask(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID, taskID string) error
 }
 
 // TitleMaker makes a short title for a piece of a session's text (a pinned

@@ -16,6 +16,7 @@ import (
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
+	"github.com/afrase/claude-acp-go/claudeacp"
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
@@ -822,8 +823,10 @@ func TestARewoundWorkflowIsLetGo(t *testing.T) {
 	eventually(t, f.c, func() bool { return len(f.c.following) == 0 })
 }
 
-// Stop asks Claude to stop the run by its task's id, after the turn; a
-// stalled run (nothing says it ended) can be stopped too.
+// Stop stops the run with claude's stop_task, by its task's id, with no
+// prompt; the run ends on its task's own update. A stalled run (nothing
+// says it ended) can be stopped too. An agent that can't is asked, after
+// the turn.
 func TestStoppingAWorkflow(t *testing.T) {
 	for _, stalled := range []bool{false, true} {
 		f := workflowChat(t, Timing{WorkflowPoll: time.Hour}, runningAs)
@@ -832,11 +835,26 @@ func TestStoppingAWorkflow(t *testing.T) {
 		f.c.mu.Lock()
 		f.c.itemLocked(wfCall).Workflow.Stalled = stalled
 		f.c.mu.Unlock()
+		stoppedBy(f.agent, workflowTask("killed", ""), workflowTask("stopped", "Ask four helpers"))
 		testcheck.NoErr(t, f.svc.StopTask(t.Context(), f.c.id, wfCall))
-		idle(t, f.c)
-		if prompts, _ := f.agent.texts(); len(prompts) != 1 || prompts[0] != claudeHarness.StopTask("w9u1xb6ik") {
+		if want := (claudeacp.StopTaskRequest{SessionID: "s1", TaskID: "w9u1xb6ik"}); len(stopsAsked(f.agent)) != 1 || stopsAsked(f.agent)[0] != want {
+			t.Errorf("stalled %v: called %+v", stalled, stopsAsked(f.agent))
+		}
+		eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == model.RunStopped })
+		if w := workflowOf(f.c); w.End != "killed" {
+			t.Errorf("stalled %v: ended %+v", stalled, w)
+		}
+		if prompts, _ := f.agent.texts(); len(prompts) != 0 {
 			t.Errorf("stalled %v: asked %q", stalled, prompts)
 		}
+	}
+	f := workflowChat(t, Timing{WorkflowPoll: time.Hour}, runningAs)
+	eventually(t, f.c, func() bool { return f.c.itemLocked(wfCall).Workflow.State == "running" })
+	f.c.kind.taskStopper = nil
+	testcheck.NoErr(t, f.svc.StopTask(t.Context(), f.c.id, wfCall))
+	idle(t, f.c)
+	if prompts, _ := f.agent.texts(); len(prompts) != 1 || prompts[0] != claudeHarness.StopTask("w9u1xb6ik") {
+		t.Errorf("without stop_task: asked %q", prompts)
 	}
 }
 
