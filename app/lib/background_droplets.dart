@@ -19,11 +19,12 @@ const double _loop = BackgroundMark.ticks * 1000.0 / pulseRate;
 const double _tickMs = 1000.0 / pulseRate;
 
 /// A drop's tail lies along the way its head just came, so it curves as
-/// it turned: as long as the way it goes in [_lag] milliseconds while
-/// slow, and at most [_tail] (in [_room]'s units) while fast. Drawn with
-/// [_beads] beads.
-const double _lag = 200;
+/// it turned: at most [_tail] long (in [_room]'s units, from the head's
+/// middle), of which the first [_hid] is inside the head and doesn't
+/// show. How much of the rest shows is set tick by tick ([_tails]). Drawn
+/// with [_beads] beads.
 const double _tail = 3.8;
+const _hid = 1.3;
 
 /// How far out a tail's tip is flung, over its length: it lies a little
 /// outside the way its head came, so it curves less than the turn and
@@ -77,12 +78,13 @@ class _Frame {
     // millisecond either side.
     final turn = (_angle(u + 1) - _angle(u - 1)) / 2;
     final outward = (_h(u + 1) - _h(u - 1)) / 2;
-    // The tail's length grows with the drop's speed, up to [_tail], and
-    // is drawn in over the ticks the two become one, and grown again as
-    // they part ([_tails]).
+    // The tail: none, or from where it starts to show to its whole
+    // length, as much as this tick shows of it ([_tails]). The drop's
+    // speed only says which way it lies.
     final h = _h(u);
     final speed = Offset(h * turn, outward).distance;
-    final length = _tail * _tanh(speed * _lag) * _key(_tails, u);
+    final shown = _key(_tails, u).clamp(0.0, 1.0);
+    final length = shown <= 0 ? 0.0 : _hid + (_tail - _hid) * shown;
     // The head grows as the two overlap, so the one drop holds both.
     final head = _headRadius(h);
     // The time it takes the drop to go that far: the tail runs back along
@@ -201,13 +203,17 @@ const _pinches = [
 /// How wide the waist's band is.
 const _pinchWidth = 1.3;
 
-/// How much of its tail each drop keeps at each tick: drawn in over the
-/// ticks the two join, grown again as they part.
+/// How much of its tail each drop shows at each tick. The head leads:
+/// the drop moves on the first tick, still round, and pulls its tail out
+/// over the ticks after as it gathers speed, a little more each tick,
+/// never there on one tick and whole two ticks on; it's drawn in over
+/// the ticks the two become one, grown again as they part, and catches
+/// its head up over the ticks the drop slows into its place.
 const _tails = [
-  1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, //
-  0.95, 0.75, 0.4, 0.12, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
-  0.1, 0.25, 0.5, 0.75, 0.9, 1.0, 1.0, 1.0, 1.0, 1.0, //
-  1.0, 1.0, 1.0, 1.0, 1.0,
+  0.0, 0.0, 0.2, 0.34, 0.47, 0.58, 0.69, 0.8, 0.92, 1.0, //
+  0.85, 0.62, 0.38, 0.15, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, //
+  0.0, 0.1, 0.25, 0.45, 0.65, 0.82, 0.92, 0.95, 0.9, 0.78, //
+  0.62, 0.46, 0.3, 0.14, 0.0,
 ];
 
 /// [v] (a value at each tick) at [u] milliseconds into the play, smoothly
@@ -269,7 +275,9 @@ double _angle(double u) => 2 * pi * _turn[u.clamp(0, _play).round()];
 /// The share of the turn made by each millisecond of the play.
 final List<double> _turn = () {
   double speed(double u) =>
-      Curves.easeInOut.transform((u / _spinUp).clamp(0.0, 1.0)) *
+      (_spinFrom +
+          (1 - _spinFrom) *
+              Curves.easeInOut.transform((u / _spinUp).clamp(0.0, 1.0))) *
       Curves.easeInOut.transform(((_spinEnd - u) / _spinDown).clamp(0.0, 1.0));
   final sums = List<double>.filled(_play.round() + 1, 0);
   for (var u = 1; u < sums.length; u++) {
@@ -278,6 +286,10 @@ final List<double> _turn = () {
   return [for (final s in sums) s / sums.last];
 }();
 const double _spinUp = 260;
+
+/// The share of its speed the spin starts at, so the drops are seen to
+/// move on the play's first tick, a tick before their tails grow.
+const _spinFrom = 0.35;
 const double _spinDown = 340;
 const double _spinEnd = _play - 20;
 
@@ -307,9 +319,4 @@ _Bend _wobble(double u) {
     _angle(u) + pi / 2,
     1 + 0.1 * exp(-2 * s) * sin(3 * pi * s),
   );
-}
-
-double _tanh(double x) {
-  final e = exp(-2 * x);
-  return (1 - e) / (1 + e);
 }

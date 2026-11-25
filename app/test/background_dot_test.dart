@@ -293,6 +293,64 @@ void main() {
       }
     });
 
+    test('the drops move a tick before their tails grow', () {
+      // The head leads: on the play's first tick the two have turned,
+      // enough to see, and are still round; a tail shows from the next.
+      final still = [for (final d in _drops(at(rest))) d.getBounds().center];
+      final moved = _drops(at(rest + 1));
+      expect(moved, hasLength(2));
+      for (final d in moved) {
+        expect(_tailOf(d) / 10, lessThan(0.1), reason: 'still round');
+        final now = d.getBounds().center;
+        final was = still.reduce(
+          (x, y) => (x - now).distance < (y - now).distance ? x : y,
+        );
+        expect(
+          _angleBetween(was - mid, now - mid),
+          greaterThan(4 * pi / 180),
+          reason: 'seen to move',
+        );
+      }
+      for (final d in _drops(at(rest + 2))) {
+        expect(_tailOf(d) / 10, greaterThan(0.12), reason: 'a tail begins');
+      }
+    });
+
+    test('a tail grows and is drawn in over several ticks, never at once', () {
+      // How far each drop's outline reaches past its head, tick by tick,
+      // while the two are apart: from the rest into the spin, and from
+      // the parting back to the rest.
+      List<double> reach(int from, int to) => [
+        for (var i = from; i <= to; i++)
+          _drops(at(i)).map(_tailOf).reduce(max) / 10,
+      ];
+      final starting = reach(rest, rest + 9);
+      final settling = reach(rest + 27, n);
+      final full = starting.reduce(max);
+      expect(full, greaterThan(1.2), reason: 'a teardrop at speed');
+      expect(starting.first, lessThan(0.1), reason: 'round at rest');
+      expect(settling.last, lessThan(0.1), reason: 'round at rest');
+      // No tick's change is more than a third of the whole tail: it's
+      // never there on one frame and full two frames on.
+      for (final run in [starting, settling]) {
+        for (var i = 1; i < run.length; i++) {
+          expect(
+            (run[i] - run[i - 1]).abs(),
+            lessThan(full / 3),
+            reason: '$run at $i',
+          );
+        }
+      }
+      // It's growing on at least five ticks as the spin starts, and
+      // shortening on at least four as the two settle.
+      int moving(List<double> run, {required bool up}) => [
+        for (var i = 1; i < run.length; i++)
+          if ((run[i] - run[i - 1]) * (up ? 1 : -1) > full * 0.04) i,
+      ].length;
+      expect(moving(starting, up: true), greaterThanOrEqualTo(5));
+      expect(moving(settling, up: false), greaterThanOrEqualTo(4));
+    });
+
     test('two at rest, one drop at the merge, joined by a neck either '
         'side of it', () {
       final parts = [for (var i = rest; i <= n; i++) _drops(at(i)).length];
@@ -520,6 +578,14 @@ Offset _headOf(Path drop) {
     }
   }
   return best;
+}
+
+/// How far [drop]'s tail reaches past its head: the furthest its outline
+/// is from its head's middle, less the nearest. About 0 for a round drop.
+double _tailOf(Path drop) {
+  final head = _headOf(drop);
+  final far = _outline(drop).map((e) => (e - head).distance);
+  return far.reduce(max) - far.reduce(min);
 }
 
 /// The angle from [a] to [b], from -pi to pi: positive is clockwise on
