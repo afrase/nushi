@@ -22,8 +22,8 @@ import (
 //   - a chat older than the kept usage, with no row yet, spent its first
 //     figure before: it is only the start.
 //
-// A turn that isn't one of the user's (the agent's own, a held prompt's
-// answer) and used nothing isn't kept. The total measured goes in batch,
+// A turn that isn't one of the user's (the agent's own) and used nothing
+// isn't kept. The total measured goes in batch,
 // the batch's own, which writeBatch copies into s.totals only once its
 // rows are written: a batch that fails leaves the totals where the kept
 // rows have them, so the next turn's cost takes in the lost one's.
@@ -43,7 +43,7 @@ func (s *Service) row(ctx context.Context, batch map[string]float64, t model.Tur
 		batch[t.Meter] = t.Total
 	}
 	used := r.Input+r.Output+r.CacheRead+r.CacheWrite > 0 || r.Cost > 0
-	return r, used || t.End == model.UsageTurn || t.End == model.UsageReleased
+	return r, used || t.End == model.UsageTurn
 }
 
 // total is the last total measured for meter: its own, in batch (an
