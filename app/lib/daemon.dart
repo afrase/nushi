@@ -146,6 +146,11 @@ const keepsGoneChatsApi = 151;
 /// what's loaded. Goes with the floor.
 const olderWrittenApi = 154;
 
+/// The API that says who last changed each line of a file (GetBlame,
+/// issue #78): an older daemon's Files pane has no Blame. Goes with the
+/// floor.
+const blameApi = 155;
+
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
 /// answers, the bundled one is started; a running daemon is only ever

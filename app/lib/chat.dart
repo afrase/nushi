@@ -161,6 +161,17 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A commit its Changes view is to pick next, in Commits (a press on a
+  /// line's blame, issue #78): by its whole id.
+  String? openCommit;
+
+  /// Shows [commit] in its Changes view's Commits, which lists it.
+  void showCommit(String commit) {
+    openCommit = commit;
+    scope = 'commits';
+    tab.value = ChatTab.changes;
+  }
+
   String agent = ''; // the agent it runs, such as "claude"
   bool scratch = false; // its folder is a scratch folder: it has none yet
 

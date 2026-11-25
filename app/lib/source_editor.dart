@@ -8,6 +8,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/app_actions.dart' show findKey;
+import 'package:nushi/blame.dart';
+import 'package:nushi/blame_gutter.dart';
 import 'package:nushi/change_marks.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/editor_find.dart';
@@ -38,6 +40,9 @@ import 'package:re_editor/re_editor.dart';
 /// have change marks beside their numbers (ADR 0131), unsaved edits too,
 /// a pause in typing after each. With [menu] a right-click opens its menu
 /// ([SourceMenu]), with Find and, when it can be written, Cut and Paste.
+/// With [blame] (its Blame on, issue #78) a gutter left of the numbers
+/// says who last changed each run of lines, an unsaved edit's lines not
+/// committed, worked out again as typing pauses.
 class SourceEditor extends StatefulWidget {
   const new({
     required this.edit,
@@ -46,6 +51,7 @@ class SourceEditor extends StatefulWidget {
     this.padding = EdgeInsets.zero,
     this.base,
     this.menu,
+    this.blame,
   });
 
   final FileEdit edit;
@@ -57,6 +63,9 @@ class SourceEditor extends StatefulWidget {
 
   /// What its right-click menu does; null: it has none.
   final SourceActions? menu;
+
+  /// Its Blame, while on; null: no gutter.
+  final BlameShown? blame;
 
   @override
   State<SourceEditor> createState() => _SourceEditorState();
@@ -88,6 +97,9 @@ class _SourceEditorState extends State<SourceEditor> {
   Timer? _typing;
   int _markings = 0;
 
+  /// Each line's blame, against [SourceEditor.blame]'s text.
+  final _blamed = ValueNotifier<List<BlameCell>>(const []);
+
   /// The selection as last drawn: a right-click keeps it, though
   /// re_editor's own press has moved the caret by then.
   late CodeLineSelection _drawn = widget.edit.controller.selection;
@@ -111,6 +123,8 @@ class _SourceEditorState extends State<SourceEditor> {
       old.base?.removeListener(_mark);
       widget.base?.addListener(_mark);
       _mark();
+    } else if (!identical(old.blame?.blamed, widget.blame?.blamed)) {
+      _mark();
     }
   }
 
@@ -127,6 +141,7 @@ class _SourceEditorState extends State<SourceEditor> {
     final marked = ++_markings;
     final lines = widget.edit.controller.codeLines;
     _marked = lines;
+    _blame(marked);
     final base = widget.base?.value;
     if (base == null) {
       _cells.value = const [];
@@ -140,6 +155,23 @@ class _SourceEditorState extends State<SourceEditor> {
       case final Future<List<LineMark>> later:
         later.then((marks) {
           if (mounted && marked == _markings) _cells.value = cells(marks);
+        }).ignore();
+    }
+  }
+
+  /// The lines' blame, for the marking [marked].
+  void _blame(int marked) {
+    final blamed = widget.blame?.blamed;
+    if (blamed == null) {
+      _blamed.value = const [];
+      return;
+    }
+    switch (blameCells(blamed, widget.edit.text)) {
+      case final List<BlameCell> cells:
+        _blamed.value = cells;
+      case final Future<List<BlameCell>> later:
+        later.then((cells) {
+          if (mounted && marked == _markings) _blamed.value = cells;
         }).ignore();
     }
   }
@@ -212,6 +244,7 @@ class _SourceEditorState extends State<SourceEditor> {
       ..removeListener(_edited)
       ..removeListener(_selectionMoved);
     _cells.dispose();
+    _blamed.dispose();
     tabSize.removeListener(_tabSizeChanged);
     _unfollow();
     _find.dispose();
@@ -347,25 +380,38 @@ class _SourceEditorState extends State<SourceEditor> {
               return Padding(
                 key: _gutter,
                 padding: EdgeInsets.only(left: widget.padding.left),
-                child: Stack(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                    if (widget.blame case final blame?)
+                      EditorBlame(
+                        lines: notifier,
+                        cells: _blamed,
+                        line: lineHeight,
+                        pane: box.maxWidth,
+                        onOpen: blame.onOpen,
+                      ),
+                    Stack(
                       children: [
-                        DefaultCodeLineNumber(
-                          controller: controller,
-                          notifier: notifier,
-                          minNumberCount: 1,
-                          textStyle: gutter,
-                          focusedTextStyle: gutter.copyWith(
-                            color: t.textSecondary,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            DefaultCodeLineNumber(
+                              controller: controller,
+                              notifier: notifier,
+                              minNumberCount: 1,
+                              textStyle: gutter,
+                              focusedTextStyle: gutter.copyWith(
+                                color: t.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(width: markGap + markBar),
+                          ],
                         ),
-                        const SizedBox(width: markGap + markBar),
+                        Positioned.fill(
+                          child: _EditorMarks(lines: notifier, cells: _cells),
+                        ),
                       ],
-                    ),
-                    Positioned.fill(
-                      child: _EditorMarks(lines: notifier, cells: _cells),
                     ),
                   ],
                 ),

@@ -14,6 +14,7 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/marks_note.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/preview.dart' show PreviewKind;
 import 'package:nushi/preview_path.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -24,7 +25,8 @@ import 'package:nushi/view_options.dart';
 /// and never moving: Collapse all folders, the tree shown or hidden (lit
 /// while it shows, ⇧⌘Y) and the pane's ⋯ ([filesMenu]). Left of them,
 /// while a file shows, its path line ([PathLine], a click copies it) over
-/// the viewer, the source button, a page's Reload and Open in browser, and
+/// the viewer, Blame (lit while on; a daemon with GetBlame's, for text),
+/// the source button, a page's Reload and Open in browser, and
 /// Show in Finder; those buttons fold into the ⋯ where the row is narrow.
 /// [start] is the room before the path, so it stays over the viewer.
 class FilesBar extends StatelessWidget {
@@ -89,6 +91,7 @@ class FilesBar extends StatelessWidget {
           folderTreeOf(chat),
           ?shown?.watch,
           ?shown?.source,
+          ?shown?.blame,
         ]),
         builder: (context, _) => LayoutBuilder(
           builder: (context, box) {
@@ -108,6 +111,7 @@ class FilesBar extends StatelessWidget {
             // folds too.
             final source =
                 shown != null && shown.switches && room >= _button + _gap;
+            final blame = shown != null && _blames(shown);
             return Row(
               children: [
                 SizedBox(width: start),
@@ -119,6 +123,7 @@ class FilesBar extends StatelessWidget {
                           shown,
                           folds: folds,
                           source: source,
+                          blame: blame && !folds,
                           gap: room >= _gap,
                         ),
                 ),
@@ -128,7 +133,7 @@ class FilesBar extends StatelessWidget {
                   buttons: buttons,
                   folded: [
                     if (shown != null && folds)
-                      ..._folded(context, shown, source: !source),
+                      ..._folded(context, shown, source: !source, blame: blame),
                   ],
                 ),
               ],
@@ -139,10 +144,26 @@ class FilesBar extends StatelessWidget {
     );
   }
 
+  /// Whether [shown] has Blame: text, from a daemon that blames.
+  bool _blames(ShownFile shown) =>
+      daemon.daemonApi >= blameApi &&
+      shown.kind != PreviewKind.image &&
+      shown.kind != PreviewKind.pdf &&
+      !shown.watch.notText;
+
+  /// Turns [shown]'s Blame on or off; on, a rendered file shows its
+  /// Source, where the lines are.
+  static void _toggleBlame(ShownFile shown) {
+    final on = !shown.blame.on;
+    if (on && !shown.showsSource && shown.switches) shown.showSource(on: true);
+    shown.blame.turn(on: on);
+  }
+
   /// The room [shown]'s path and buttons need before the buttons fold.
   double _least(BuildContext context, ShownFile shown) {
-    // Its page's actions and Show in Finder; the source button stays.
-    final count = shown.actions(context).length + 1;
+    // Its page's actions, Blame and Show in Finder; the source button
+    // stays.
+    final count = shown.actions(context).length + 1 + (_blames(shown) ? 1 : 0);
     return _pathLeast + (count + (shown.switches ? 1 : 0)) * _button;
   }
 
@@ -154,6 +175,7 @@ class FilesBar extends StatelessWidget {
     ShownFile shown, {
     required bool folds,
     required bool source,
+    required bool blame,
     required bool gap,
   }) {
     final actions = shown.actions(context);
@@ -171,6 +193,14 @@ class FilesBar extends StatelessWidget {
             ),
           ),
         ),
+        if (blame)
+          IconTap(
+            Icons.history,
+            tooltip: shown.blame.on ? 'Hide blame' : 'Show blame',
+            padding: IconTap.header,
+            lit: shown.blame.on,
+            onTap: () => _toggleBlame(shown),
+          ),
         if (source)
           SourceButton(
             source: shown.source.value,
@@ -199,17 +229,25 @@ class FilesBar extends StatelessWidget {
   }
 
   /// The file's buttons as the ⋯'s rows, when they fold: its [source]
-  /// button's first, when that folds too.
+  /// button's first, when that folds too, then Blame, when it has it.
   List<MenuEntry> _folded(
     BuildContext context,
     ShownFile shown, {
     required bool source,
+    required bool blame,
   }) => [
     if (source)
       MenuEntry(
         SourceButton.tooltip(source: shown.source.value),
         line: LineIcon.source,
         onPick: () => shown.showSource(on: !shown.source.value),
+      ),
+    if (blame)
+      MenuEntry(
+        'Blame',
+        icon: Icons.history,
+        checked: shown.blame.on,
+        onPick: () => _toggleBlame(shown),
       ),
     for (final (icon, tooltip, _, onTap) in shown.actions(context))
       MenuEntry(tooltip, icon: icon, onPick: onTap),

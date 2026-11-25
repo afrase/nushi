@@ -37,6 +37,13 @@ enum NoBlame {
   binary('Not text: no blame', 'Only text has blame'),
   tooLarge('Too large for blame', 'Blame stops at 1 MiB'),
   tooManyLines('Over 10,000 lines: no blame', 'Blame stops at 10,000 lines'),
+
+  /// The app's own: the view shows the file other than as saved (JSON
+  /// pretty-printed), so git's lines aren't the lines shown.
+  reformatted(
+    'Shown reformatted: no blame',
+    'The file is shown reformatted here, so its lines aren’t the saved ones',
+  ),
   failed('Couldn’t blame', '');
 
   new(this.label, this.tip);

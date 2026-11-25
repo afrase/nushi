@@ -140,8 +140,16 @@ class _ChangesViewState extends State<ChangesView> {
     _stale = false;
   }
 
-  /// Takes the file the chat asks to show (see ChatState.showFile).
+  /// Takes the file the chat asks to show (see ChatState.showFile), or
+  /// the commit to pick (ChatState.showCommit).
   bool _take() {
+    if (chat.openCommit case final commit?) {
+      chat.openCommit = null;
+      chat.related.pick(null); // the chat's own commits
+      _first = commit;
+      _last = null;
+      return true;
+    }
     final path = chat.openPath;
     if (path == null) return false;
     chat.openPath = null;

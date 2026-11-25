@@ -5,6 +5,8 @@ import 'dart:ui' show BoxHeightStyle;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import 'package:nushi/blame.dart';
+import 'package:nushi/blame_gutter.dart';
 import 'package:nushi/change_marks.dart';
 import 'package:nushi/indent_guides.dart';
 import 'package:nushi/line_changes.dart';
@@ -38,7 +40,9 @@ const _blank = '\u200B';
 /// (ADR 0131); pretty-printed JSON's lines aren't the file's, so it has
 /// none. With [menu] (the Files pane's) a right-click opens its menu
 /// ([SourceMenu]). Under a [FindSlot] (the Files pane's) ⌘F finds in its
-/// lines, all of them, not only those laid out.
+/// lines, all of them, not only those laid out. With [blame] (its Blame
+/// on, issue #78) a gutter left of the numbers says who last changed each
+/// run of lines and when.
 class SourceView extends StatefulWidget {
   const new(
     this.text, {
@@ -51,6 +55,7 @@ class SourceView extends StatefulWidget {
     this.pastEnd = false,
     this.base,
     this.menu,
+    this.blame,
   });
 
   final String text;
@@ -74,6 +79,9 @@ class SourceView extends StatefulWidget {
 
   /// What its right-click menu does; null: it has none.
   final SourceActions? menu;
+
+  /// Its Blame, while on; null: no gutter.
+  final BlameShown? blame;
 
   @override
   State<SourceView> createState() => _SourceViewState();
@@ -112,6 +120,8 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
   Indents? _indents; // each line's indent, worked out when guides show
   List<MarkCell?> _cells = const []; // each line's change mark
   int _markings = 0; // marks land only for the latest base and text
+  List<BlameCell> _blamed = const []; // each line's blame
+  int _blamings = 0; // blame lands only for the latest answer and text
 
   /// Each wrapping's list, to find the line at its top (a key of their
   /// own: one shared would carry the scroll offset across); and its
@@ -145,8 +155,9 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
     // The file changed: read again where it scrolled to.
     if (old.text != widget.text || old.path != widget.path) {
       _read();
-    } else if (old.base != widget.base) {
-      _mark();
+    } else {
+      if (old.base != widget.base) _mark();
+      if (!identical(old.blame?.blamed, widget.blame?.blamed)) _blame();
     }
     if (old.wrap != widget.wrap) _keepTopLine();
     if (old.tabSize != widget.tabSize) _columns = _indents = null;
@@ -174,6 +185,7 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
     _columns = null;
     _indents = null;
     _mark();
+    _blame();
     // The find looks in the new text, once this build is done.
     if (find?.query != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -227,6 +239,38 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
         }).ignore();
     }
   }
+
+  /// Its lines' blame ([SourceView.blame]): none when its lines aren't
+  /// the file's own (JSON pretty-printed), as for the marks.
+  void _blame() {
+    final blamings = ++_blamings;
+    final blamed = widget.blame?.blamed;
+    if (blamed == null || _text.trimRight() != widget.text.trimRight()) {
+      _blamed = const [];
+      return;
+    }
+    switch (blameCells(blamed, _text)) {
+      case final List<BlameCell> cells:
+        _blamed = cells;
+      case final Future<List<BlameCell>> later:
+        later.then((cells) {
+          if (mounted && blamings == _blamings) {
+            setState(() => _blamed = cells);
+          }
+        }).ignore();
+    }
+  }
+
+  /// Line [i]'s Blame cell, [look]'s width.
+  Widget _blameCell(int i, BlameLook look) => SelectionContainer.disabled(
+    child: BlameCellView(
+      cell: _blamed.elementAtOrNull(i),
+      look: look,
+      line: _lineHeight,
+      divider: i > 0,
+      onOpen: widget.blame!.onOpen,
+    ),
+  );
 
   /// The laid-out lines of the list [wrapped] or not, while it shows.
   RenderSliverMultiBoxAdaptor? _sliver({required bool wrapped}) {
@@ -479,151 +523,226 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
       );
     }
 
+    // The Blame gutter, left of the numbers, while on; its width set by
+    // the pane's.
+    final scaler = MediaQuery.textScalerOf(context);
+    BlameLook? lookIn(double pane) => widget.blame == null
+        ? null
+        : BlameLook(context, pane: pane, scaler: scaler);
     if (widget.wrap) {
+      Widget blamed(int i, Widget line, {required BlameLook? look}) =>
+          look == null
+          ? line
+          : Stack(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(left: look.width + blameGap),
+                  child: line,
+                ),
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: look.width,
+                  child: _blameCell(i, look),
+                ),
+              ],
+            );
       return _selectable(
         _wholeWrapped,
         LayoutBuilder(
-          builder: (context, box) => ListView.builder(
-            key: _wrapped,
-            controller: _down,
-            padding: padded(box.maxHeight),
-            itemCount: _lines.length,
-            itemBuilder: (context, i) => _marked(
-              i,
-              cell: digits * char + markGap + markBar + markRoom,
-              bar: digits * char + markGap,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SelectionContainer.disabled(
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                        right: markGap + markBar + markRoom,
-                      ),
-                      child: Text(number(i), style: gutter),
-                    ),
-                  ),
-                  Expanded(
-                    child: _Line(
-                      LineHits(
-                        hits: _lineHits(i),
-                        colors: colors,
-                        child: Text.rich(
-                          text(i),
-                          strutStyle: strut,
-                          selectionColor: Colors.transparent,
+          builder: (context, box) {
+            final look = lookIn(box.maxWidth);
+            return ListView.builder(
+              key: _wrapped,
+              controller: _down,
+              padding: padded(box.maxHeight),
+              itemCount: _lines.length,
+              itemBuilder: (context, i) => blamed(
+                look: look,
+                i,
+                _marked(
+                  i,
+                  cell: digits * char + markGap + markBar + markRoom,
+                  bar: digits * char + markGap,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SelectionContainer.disabled(
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                            right: markGap + markBar + markRoom,
+                          ),
+                          child: Text(number(i), style: gutter),
                         ),
                       ),
-                      whole: _lines[i],
-                      column: char,
-                      level: level(i),
-                      step: step,
-                    ),
+                      Expanded(
+                        child: _Line(
+                          LineHits(
+                            hits: _lineHits(i),
+                            colors: colors,
+                            child: Text.rich(
+                              text(i),
+                              strutStyle: strut,
+                              selectionColor: Colors.transparent,
+                            ),
+                          ),
+                          whole: _lines[i],
+                          column: char,
+                          level: level(i),
+                          step: step,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       );
     }
     final pad = _pad;
-    // The numbers' column, the view's inset with them: it stays as the
-    // lines scroll under it, over them in the view's color.
-    final numbers = _numbers =
-        pad.left + digits * char + markGap + markBar + markRoom + 1;
-    final width = numbers + _widest * char + pad.right;
     return LayoutBuilder(
-      builder: (context, box) => MacScrollbar(
-        controller: _down,
-        notificationPredicate: (n) => n.metrics.axis == Axis.vertical,
-        child: MacScrollbar(
-          controller: _across,
-          notificationPredicate: (n) =>
-              n.depth == 0 && n.metrics.axis == Axis.horizontal,
-          child: ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context)
-                .copyWith(scrollbars: false),
-            child: _selectable(
-              _wholeRunOn,
-              SingleChildScrollView(
-                controller: _across,
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: max(box.maxWidth, width),
-                  child: ListView.builder(
-                    key: _runOn,
-                    controller: _down,
-                    padding: EdgeInsets.only(
-                      top: pad.top,
-                      bottom: padded(box.maxHeight).bottom,
-                    ),
-                    itemExtent: _lineHeight,
-                    itemCount: _lines.length,
-                    itemBuilder: (context, i) => Stack(
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(left: numbers),
-                          child: _Line(
-                            LineHits(
-                              hits: _lineHits(i),
-                              colors: colors,
-                              child: Text.rich(
-                                text(i),
-                                softWrap: false,
-                                strutStyle: strut,
-                                selectionColor: Colors.transparent,
-                              ),
-                            ),
-                            whole: _lines[i],
-                            column: char,
-                            level: level(i),
-                            step: step,
-                          ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          top: 0,
-                          bottom: 0,
-                          width: numbers,
-                          child: SelectionContainer.disabled(
-                            child: ListenableBuilder(
-                              listenable: _across,
-                              builder: (context, child) => Transform.translate(
-                                offset: Offset(
-                                  _across.hasClients ? _across.offset : 0,
-                                  0,
+      builder: (context, box) {
+        final look = lookIn(box.maxWidth);
+        final blameWidth = look == null ? 0.0 : look.width + blameGap;
+        // The numbers' column, the view's inset with them: it stays as
+        // the lines scroll under it, over them in the view's color.
+        final numbers = _numbers =
+            pad.left +
+            blameWidth +
+            digits * char +
+            markGap +
+            markBar +
+            markRoom +
+            1;
+        final width = numbers + _widest * char + pad.right;
+        return MacScrollbar(
+          controller: _down,
+          notificationPredicate: (n) => n.metrics.axis == Axis.vertical,
+          child: MacScrollbar(
+            controller: _across,
+            notificationPredicate: (n) =>
+                n.depth == 0 && n.metrics.axis == Axis.horizontal,
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context)
+                  .copyWith(scrollbars: false),
+              child: _selectable(
+                _wholeRunOn,
+                SingleChildScrollView(
+                  controller: _across,
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: max(box.maxWidth, width),
+                    child: ListView.builder(
+                      key: _runOn,
+                      controller: _down,
+                      padding: EdgeInsets.only(
+                        top: pad.top,
+                        bottom: padded(box.maxHeight).bottom,
+                      ),
+                      itemExtent: _lineHeight,
+                      itemCount: _lines.length,
+                      itemBuilder: (context, i) => Stack(
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(left: numbers),
+                            child: _Line(
+                              LineHits(
+                                hits: _lineHits(i),
+                                colors: colors,
+                                child: Text.rich(
+                                  text(i),
+                                  softWrap: false,
+                                  strutStyle: strut,
+                                  selectionColor: Colors.transparent,
                                 ),
-                                child: child,
                               ),
-                              child: ColoredBox(
-                                color: t.base,
-                                child: _marked(
-                                  i,
-                                  cell: numbers,
-                                  bar: pad.left + digits * char + markGap,
-                                  child: Padding(
-                                    padding: EdgeInsets.only(left: pad.left),
-                                    child: Text(
-                                      number(i),
-                                      style: gutter,
-                                      softWrap: false,
+                              whole: _lines[i],
+                              column: char,
+                              level: level(i),
+                              step: step,
+                            ),
+                          ),
+                          Positioned(
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: numbers,
+                            child: SelectionContainer.disabled(
+                              child: ListenableBuilder(
+                                listenable: _across,
+                                builder: (context, child) =>
+                                    Transform.translate(
+                                      offset: Offset(
+                                        _across.hasClients ? _across.offset : 0,
+                                        0,
+                                      ),
+                                      child: child,
                                     ),
-                                  ),
+                                child: ColoredBox(
+                                  color: t.base,
+                                  child: look == null
+                                      ? _marked(
+                                          i,
+                                          cell: numbers,
+                                          bar:
+                                              pad.left +
+                                              digits * char +
+                                              markGap,
+                                          child: Padding(
+                                            padding: EdgeInsets.only(
+                                              left: pad.left,
+                                            ),
+                                            child: Text(
+                                              number(i),
+                                              style: gutter,
+                                              softWrap: false,
+                                            ),
+                                          ),
+                                        )
+                                      : Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            SizedBox(width: pad.left),
+                                            SizedBox(
+                                              width: look.width,
+                                              child: _blameCell(i, look),
+                                            ),
+                                            const SizedBox(width: blameGap),
+                                            Expanded(
+                                              child: _marked(
+                                                i,
+                                                cell:
+                                                    numbers -
+                                                    pad.left -
+                                                    blameWidth,
+                                                bar: digits * char + markGap,
+                                                child: Text(
+                                                  number(i),
+                                                  style: gutter,
+                                                  softWrap: false,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
