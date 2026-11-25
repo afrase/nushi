@@ -2,6 +2,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/background_mark.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -133,19 +134,28 @@ void main() {
     }, variant: onMac);
   }
 
-  testWidgets('a chat working in the background: its mark stands still, '
-      'so the window draws nothing for it', (tester) async {
+  testWidgets('a chat working in the background: the window draws only '
+      "its mark's play, nothing while it rests", (tester) async {
     final close = await _open(tester, [
       chat('b', 'claude', 'Speed up CI', status: ChatStatus(background: 1)),
       chat('i', 'codex', 'Tidy the docs', age: 30),
     ], shown: 'i');
     expect(find.byTooltip(backgroundWords(1)), findsOneWidget);
     expect(
-      find.byWidgetPredicate((w) => w is CustomPaint && w.painter is HalfDisc),
+      find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.painter is BackgroundMark,
+      ),
       findsOneWidget,
     );
-    // At most one a second (an elapsed time), never the pulse's.
-    expect(await _framesOver(tester, span), lessThanOrEqualTo(span.inSeconds));
+    const loop = BackgroundMark.period;
+    final frames = await _framesOver(tester, loop * 2);
+    // Two plays' ticks (after each one's first, and the one back to
+    // rest), and at most one a second besides (an elapsed time).
+    const play = BackgroundMark.playTicks;
+    final seconds = (loop * 2).inSeconds + 1;
+    expect(frames, inInclusiveRange(play, 2 * play + seconds));
+    // Never the pulse rate the whole time.
+    expect(frames, lessThan((loop * 2).inSeconds * pulseRate ~/ 2));
     await close();
   }, variant: onMac);
 
