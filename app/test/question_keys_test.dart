@@ -276,6 +276,28 @@ void main() {
     });
   });
 
+  testWidgets('a digit with ⌘, Control or Option held picks nothing', (
+    tester,
+  ) async {
+    final card = await _show(tester, [_format(), _other()]);
+    for (final (cmd, ctrl, alt) in [
+      (true, false, false),
+      (false, true, false),
+      (false, false, true),
+    ]) {
+      await press(
+        tester,
+        LogicalKeyboardKey.digit1,
+        cmd: cmd,
+        ctrl: ctrl,
+        alt: alt,
+        settle: false,
+      );
+    }
+    expect(card.sends, 0, reason: 'the chat keys have it (⌘1 a chat)');
+    expect(card.draft.picked['question_0'] ?? const [], isEmpty);
+  }, variant: macAndLinux);
+
   testWidgets('Esc in the box gives the keys back, the text kept', (
     tester,
   ) async {

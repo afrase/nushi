@@ -208,7 +208,9 @@ class _QuestionCardState extends State<QuestionCard> {
     final k = e.logicalKey;
     final onQuestion = _tab < _qs.length;
     final options = onQuestion ? _qs[_tab].field.options : <Option>[];
-    final digit = int.tryParse(e.character ?? '') ?? 0;
+    // Typed: with ⌘, Control or Option held a digit is the chat keys'
+    // (⌘1 a chat), not a pick.
+    final digit = int.tryParse(typedCharacter(e) ?? '') ?? 0;
     final shift = HardwareKeyboard.instance.isShiftPressed;
     // ⌃Tab and ⌃⇧Tab go on to the chat's tabs (`chat_keys.dart`).
     final tab =
