@@ -238,7 +238,15 @@ Claude, Codex and Ante let you pick an option and add a note to it, such as **PD
 1. Type your note in the box under the options. Once an option is picked, the box says **Add a note…**, and **Note:** stays in front of what you type.
 2. Pick the option. A single question is sent as soon as you pick, so type the note first.
 
-The answered card shows **Note:** and your note after your pick, greyed. With other agents, or on Claude's questions with several answers, text in the box is an answer of its own. With OpenCode and oh-my-pi, text in the box takes the place of a pick on a question with one answer: the agent never sees the pick, so pick or type, not both.
+The answered card shows **Note:** and your note after your pick, greyed. With other agents, or on Claude's questions with several answers, text in the box is an answer of its own.
+
+### Pick or type, with OpenCode and oh-my-pi
+
+On a question with one answer, OpenCode and oh-my-pi take text in the box in place of a pick, so Nushi sends one or the other.
+
+- Typing in the box unmarks the option you picked. The box says **Type your own answer in place of your pick…** while an option is picked.
+- Picking an option keeps what you typed, greyed, with **Not sent:** in front of it. Type in the box again to send your text instead; deleting text keeps your pick.
+- The answered card shows only what was sent.
 
 ### See every option of an answered question
 

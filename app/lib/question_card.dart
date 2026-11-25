@@ -60,6 +60,10 @@ class _QuestionCardState extends State<QuestionCard> {
   late final FocusNode _box = FocusNode(onKeyEvent: _onBoxKey)
     ..addListener(_typed);
 
+  /// What each box whose text takes the place of its question's pick
+  /// (Field.replaces) listens with, so typing there unmarks the pick.
+  final _unpickers = <TextEditingController, VoidCallback>{};
+
   /// The box ↑/↓ reach after the options and typing goes into: the
   /// question's "Other" field, or the field itself when it has no options;
   /// null on the review, or for a question without one.
@@ -89,6 +93,27 @@ class _QuestionCardState extends State<QuestionCard> {
         (_text[f.id] ??= TextEditingController()).addListener(_typed);
       }
     }
+    for (final q in _qs) {
+      if (q.other case final other? when _replaces(q)) {
+        final c = _text[other.id]!;
+        var last = c.text;
+        void unpick() {
+          // Text typed, not the caret moved nor text deleted (the greyed
+          // text backspaced away, or cleared): the answer is the text now
+          // (docs/facts/opencode.md).
+          if (c.text == last) return;
+          final deleted = _deleted(last, c.text);
+          last = c.text;
+          if (deleted || c.text.trim().isEmpty) return;
+          if (_picked[q.field.id]?.isNotEmpty ?? false) {
+            setState(() => _picked[q.field.id]!.clear());
+          }
+        }
+
+        _unpickers[c] = unpick;
+        c.addListener(unpick);
+      }
+    }
     // The agent is waiting on this: take the keyboard, when nothing else
     // has a use for it (see _free).
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -106,6 +131,7 @@ class _QuestionCardState extends State<QuestionCard> {
     for (final c in _text.values) {
       c.removeListener(_typed);
     }
+    _unpickers.forEach((c, unpick) => c.removeListener(unpick));
     _focus.dispose();
     _box
       ..removeListener(_typed)
@@ -132,7 +158,7 @@ class _QuestionCardState extends State<QuestionCard> {
   bool get _many => _qs.length > 1;
 
   List<FieldAnswer> get _answer => [
-    for (final f in widget.item.fields)
+    for (final f in widget.item.fields.where((f) => !_dropped(f)))
       if (_picked[f.id]?.isNotEmpty ?? false)
         FieldAnswer(fieldId: f.id, values: _picked[f.id])
       else if (_text[f.id]?.text.trim().isNotEmpty ?? false)
@@ -155,10 +181,11 @@ class _QuestionCardState extends State<QuestionCard> {
         q.field.options.firstWhere((o) => o.id == id).name,
     ];
     final note = _notes(q) ? typed(q.other!) : '';
+    final other = note.isEmpty && !_dropped(q.other) ? q.other : null;
     return (
       answer: [
         ...picks,
-        for (final f in [q.field, if (note.isEmpty) ?q.other])
+        for (final f in [q.field, ?other])
           if (typed(f) case final s when s.isNotEmpty) s,
       ].join(', '),
       note: note,
@@ -169,6 +196,28 @@ class _QuestionCardState extends State<QuestionCard> {
   /// and an option is picked.
   bool _notes(AskedQuestion q) =>
       (q.other?.note ?? false) && (_picked[q.field.id]?.isNotEmpty ?? false);
+
+  /// Whether [now] is [was] with one run of it deleted, nothing typed.
+  static bool _deleted(String was, String now) {
+    if (now.length >= was.length) return false;
+    var head = 0;
+    while (head < now.length && now[head] == was[head]) {
+      head++;
+    }
+    return was.endsWith(now.substring(head));
+  }
+
+  /// Whether the agent takes [q]'s box's text in place of its pick
+  /// (Field.replaces): a pick or the text, never both.
+  bool _replaces(AskedQuestion q) => q.other?.replaces ?? false;
+
+  /// Whether [f] is a box whose text an option picked keeps out of the
+  /// answer (Field.replaces): kept and greyed, not sent.
+  bool _dropped(Field? f) =>
+      f != null &&
+      f.replaces &&
+      (_picked[f.otherFor]?.isNotEmpty ?? false) &&
+      (_text[f.id]?.text.trim().isNotEmpty ?? false);
 
   void _go(int tab) => setState(() {
     _tab = tab.clamp(0, _many ? _qs.length : 0);
@@ -383,7 +432,7 @@ class _QuestionCardState extends State<QuestionCard> {
     Widget field(Field f, String hint, {bool note = false}) => TextField(
       controller: _text[f.id],
       focusNode: f == _boxField ? _box : null,
-      style: theme.ui(t.text),
+      style: theme.ui(_dropped(f) ? t.textMuted : t.text),
       onSubmitted: (_) {
         if (_many) {
           _go(_tab + 1);
@@ -395,7 +444,11 @@ class _QuestionCardState extends State<QuestionCard> {
       decoration: InputDecoration(
         hintText: hint,
         // A note being written stays labelled once its placeholder goes.
-        prefixText: note && _text[f.id]!.text.isNotEmpty ? 'Note: ' : null,
+        prefixText: _dropped(f)
+            ? 'Not sent: '
+            : note && _text[f.id]!.text.isNotEmpty
+            ? 'Note: '
+            : null,
         prefixStyle: theme.ui(t.textMuted),
         filled: true,
         fillColor: t.base,
@@ -418,11 +471,12 @@ class _QuestionCardState extends State<QuestionCard> {
         ),
       if (f.options.isEmpty) field(f, f.title),
       if (q.other case final other?)
-        field(
-          other,
-          _notes(q) ? 'Add a note…' : '${other.title}…',
-          note: _notes(q),
-        ),
+        field(other, switch ((_replaces(q), picked.isNotEmpty)) {
+          (true, true) => 'Type your own answer in place of your pick…',
+          (true, false) => 'Type your own answer…',
+          _ when _notes(q) => 'Add a note…',
+          _ => '${other.title}…',
+        }, note: _notes(q)),
       if (!_many && (many || f.options.isEmpty))
         RunButton(
           label: 'Submit',
