@@ -441,4 +441,36 @@ void main() {
     expect(_ink(tester, 'Required', within: 'Cancelled after'), t.textMuted);
     d.dispose();
   });
+
+  testWidgets('a cancelled run a newer run of the same check replaced, '
+      'which the daemon leaves out of the whole pull request, is nowhere: '
+      "not in the segment, the lists or the chat's dot", (tester) async {
+    final d = await FakeDaemon([]).connect(tester);
+    final states = PullStates.of(d);
+    // The newer run of "smoke" passed; the cancelled one it replaced is
+    // gone (internal/githubapi's withoutSuperseded).
+    final whole = GitHubPull(
+      item: item(414, 'Pin the toolchain', checks: 'success'),
+      checks: [
+        GitHubCheck(name: 'build', state: 'success'),
+        GitHubCheck(name: 'smoke', state: 'success'),
+      ],
+    );
+    final link = GitHubLink(
+      host: 'github.com',
+      repo: whole.item.ref.repo,
+      number: 414,
+      id: 'PR_414',
+      pull: true,
+    );
+    states.put(whole);
+    final kept = states.item(link)!;
+    expect((kept.checkCounts.failed, kept.checkCounts.cancelled), (0, 0));
+    expect(itemChecks(kept), 'success');
+    expect(splitChecks(whole).cancelled, isEmpty);
+    final seg = segmentsOf(whole).first;
+    expect(seg.words, isNot(contains('cancelled')));
+    expect(seg.progress.cancelled, 0);
+    d.dispose();
+  });
 }
