@@ -164,6 +164,14 @@ With **Enter starts a new line** on, **⌘⏎** queues and **⇧⌘⏎** stops a
 
 Press **Esc**, or click the round red **Stop** button at the end of the box's row. Queued messages wait until you send again.
 
+## Get back to the latest
+
+Scrolled up, a button over the bottom right of the chat takes you back down. Click it and the chat follows the agent again.
+
+- **While the agent works**, the button is a small round Nushi mark whose rings turn. Point at it and it shows the down arrow. With Reduce Motion the mark stands still.
+- **When something below needs you**, it turns amber and says **Needs you**, whatever the agent is doing.
+- **Idle**, it says **Jump to latest**. On the phone it's a round down arrow, or the mark while the agent works.
+
 ## See how long a step took
 
 Each step the agent takes (a tool call) has a row that ends with how long it ran, such as **12s**. While the step runs, the time counts up. A folded group of calls, such as **Ran 3 commands**, ends with the time from its first call's start to its last call's end.

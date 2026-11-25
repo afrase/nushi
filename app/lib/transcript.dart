@@ -1056,6 +1056,8 @@ class _TranscriptState extends State<Transcript> {
                   builder: (context) => JumpChip(
                     // A prompt waits below: the chip says so.
                     needs: widget.items == null && chat.waiting,
+                    // The agent works below: Nushi's mark turns on it.
+                    working: live,
                     onTap: () =>
                         _follower.follow(glide: !reduceMotion(context)),
                   ),

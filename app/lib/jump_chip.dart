@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:nushi/controls.dart';
+import 'package:nushi/logo.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -79,16 +81,30 @@ class _ChipFadeState extends State<ChipFade>
 /// ([needs]), amber and "Needs you ↓", hopping once as it turns so (still
 /// with Reduce Motion). On the phone ([TouchTargets]) it's the arrow
 /// alone, on a round button of the same fill, its words its tooltip.
+/// While the agent works ([working]) and doesn't need you, it's a round
+/// face with Nushi's mark turning on it, on the Mac too ([face] across):
+/// under the pointer or the keyboard's focus the mark gives way to the
+/// arrow, and a press jumps as ever (#51). Needing you wins.
 class JumpChip extends StatefulWidget {
-  const new({required this.needs, required this.onTap, super.key});
+  const new({
+    required this.needs,
+    required this.onTap,
+    this.working = false,
+    super.key,
+  });
 
-  /// The phone's round face, [round] points across, in a finger's target.
+  /// The round face, [round] points across on the phone (in a finger's
+  /// target), [face] on the Mac.
   static const roundKey = Key('jump-round');
 
   /// The phone's round face's width.
   static const round = 38.0;
 
+  /// The Mac's round face's width, a regular control's height.
+  static double get face => ControlSize.regular.height;
+
   final bool needs;
+  final bool working;
   final VoidCallback onTap;
 
   @override
@@ -127,17 +143,20 @@ class _JumpChipState extends State<JumpChip>
     final shadow = [
       BoxShadow(color: t.shadow, blurRadius: 12, offset: const Offset(0, 3)),
     ];
+    final phone = TouchTargets.of(context);
+    final mark = widget.working && !needs;
     final Widget chip;
-    if (TouchTargets.of(context)) {
+    if (phone || mark) {
       // The phone's: the arrow says it; a pill of words is too much there.
       // A button to VoiceOver, named by its tooltip, as RoundButton is.
+      final size = phone ? JumpChip.round : JumpChip.face;
       chip = Pressable(
         onTap: widget.onTap,
         tooltip: needs ? 'Needs you: jump to latest' : 'Jump to latest',
         builder: (context, look) => Container(
           key: JumpChip.roundKey,
-          width: JumpChip.round,
-          height: JumpChip.round,
+          width: size,
+          height: size,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: look.pressed
@@ -148,7 +167,14 @@ class _JumpChipState extends State<JumpChip>
             shape: BoxShape.circle,
             boxShadow: shadow,
           ),
-          child: Icon(Icons.arrow_downward, size: 18, color: color),
+          foregroundDecoration: focusRing(
+            t,
+            look,
+            radius: BorderRadius.circular(NushiTheme.pill),
+          ),
+          child: mark && !look.hover && !look.focus
+              ? Logo(color: color, size: size * 0.7, turning: true)
+              : Icon(Icons.arrow_downward, size: phone ? 18 : 14, color: color),
         ),
       );
     } else {

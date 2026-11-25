@@ -138,7 +138,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **View in the chat's place** | Jira and GitHub: they take the chat's place beside the sidebar; Esc goes back. | `Place`, `Daemon.go`, `back` | 0053 |
 | **Toast** | A short note that slides down at the top of the main area, under its header, and goes by itself: what happened, a call's error, Undo. The newer release's card, at the bottom right, is one that stays. | `showToast`, `ToastHost`, `UpdateToast` | 0061, 0128 |
 | **Bar** | A strip over the app or a view saying something (what didn't start, the daemon updating, the connection). | `NoticeBar`, `DaemonUpdateBar`, `ConnectionBar`, `BarSlide` | |
-| **Jump chip** | "Jump to latest" over a transcript scrolled up; "Needs you ↓" when something below waits. | `JumpChip` | |
+| **Jump chip** | "Jump to latest" over a transcript scrolled up; "Needs you ↓" when something below waits; Nushi's turning mark on a round face while the agent works. | `JumpChip` | |
 | **Notifications** | The Mac's notices when a chat needs you or a turn ends or fails; the Dock badge counts chats that need you. | `alerts.dart` | |
 
 ## Review and GitHub

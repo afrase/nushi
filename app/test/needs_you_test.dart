@@ -4,6 +4,7 @@ import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jump_chip.dart';
+import 'package:nushi/logo.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
@@ -124,8 +125,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 400));
     await tester.pumpAndSettle();
-    expect(find.text('Jump to latest'), findsOneWidget);
-    expect(_amber(tester), isFalse);
+    // Working, it's Nushi's mark (#51); needing you wins over it.
+    expect(
+      find.descendant(of: find.byType(JumpChip), matching: find.byType(Logo)),
+      findsOneWidget,
+    );
 
     chat
       ..waiting = true
