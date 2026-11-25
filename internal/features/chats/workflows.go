@@ -15,10 +15,11 @@ import (
 // A workflow (ADR 0127) is a run a tool call launched, which goes on past
 // the call, its agents writing only to the agent's own files: Claude's
 // Workflow. The call answers at once and the turn ends, so the chat
-// follows the run from those files (WorkflowReader) and counts it as
-// working while it runs. Nothing in what the agent sends says reliably that
-// a run ended: Claude's snapshot of it does, and when that never comes,
-// the agent's going does.
+// follows the run from those files (WorkflowReader) for its phases,
+// agents and totals, and counts it as working while it runs. It ends when
+// its task does, as the agent says on the call (BackgroundTasks' Task),
+// live or replayed on a reopen; its snapshot, read for the detail, ends it
+// too; and when neither comes, the agent's going does.
 
 // follow is a workflow being followed: the agent that ran it (nil when
 // the chat reopened since: no agent of this daemon's runs it), and a poke
@@ -90,6 +91,23 @@ func (c *chat) workflowLiveLocked() bool {
 	return slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Workflow != nil && it.Workflow.State == model.RunRunning })
 }
 
+// workflowTaskLocked keeps the agent's word on the task of the run call
+// started, and has the run read at once when the word is its end: the
+// follower ends it then (judgeWorkflow). A run not followed yet (a
+// reopen's replay, before the transcript is restored) takes the end
+// when it is.
+func (c *chat) workflowTaskLocked(task model.TaskUpdate, call string) {
+	if !c.heardTaskLocked(task).state.Ended() {
+		return
+	}
+	if f := c.following[call]; f != nil {
+		select {
+		case f.poke <- struct{}{}:
+		default:
+		}
+	}
+}
+
 // pokeWorkflowsLocked has each workflow followed read its files now:
 // something happened that may be its end (an own turn starting, as its
 // notification does; the agent going; a task stopped).
@@ -132,7 +150,7 @@ func (c *chat) followWorkflow(callID string, f *follow) {
 			c.mu.Unlock()
 			return
 		}
-		next, wait := c.judgeWorkflow(*it.Workflow, got, err, f, gone, time.Now())
+		next, wait := c.judgeWorkflow(*it.Workflow, got, err, f, gone, c.tasks[it.Workflow.TaskID], time.Now())
 		// Its end, seen now, of a run this daemon's agent ran: said once
 		// (ADR 0141). A run found ended on a reopen or a replay isn't one.
 		ended := f.owner != nil && next != nil && next.State.Ended() && !it.Workflow.State.Ended()
@@ -167,13 +185,20 @@ const (
 
 // judgeWorkflow is what a read of a run (got, err) makes of it (cur), and
 // how long to wait for the next read; nil when it is no workflow to show
-// after all (its files never came: the call shows as a plain one). Once
+// after all (its files never came: the call shows as a plain one). The
+// agent's word on its task (heard) ends it, whatever its files say:
+// they give only the detail. Once
 // its files were found, a read that fails is judged on the run as last
 // read: its agent gone, its files still too long or gone for good end it
 // all the same, so no run reads "running" for good.
-func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone bool, now time.Time) (*model.Workflow, time.Duration) {
+func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone bool, heard taskWord, now time.Time) (*model.Workflow, time.Duration) {
 	poll := c.svc.timing.workflowPoll()
 	switch {
+	case heard.state.Ended() && err == nil:
+		f.found, f.missing = true, time.Time{}
+		return endedOnTask(got, heard, now), 0
+	case heard.state.Ended():
+		return endedOnTask(cur, heard, now), 0
 	case err != nil && !f.found && now.Sub(f.since) >= workflowFind:
 		return nil, 0
 	case err != nil && !f.found && !errors.Is(err, fs.ErrNotExist) && f.owner == nil:
@@ -210,6 +235,20 @@ func (c *chat) judgeWorkflow(cur, got model.Workflow, err error, f *follow, gone
 		return &got, workflowStalledPoll
 	}
 	return &got, poll
+}
+
+// endedOnTask is w ended as the agent said its task did: its state and
+// end, and a failed run's summary where its files gave none; when, as
+// its snapshot says, else now.
+func endedOnTask(w model.Workflow, heard taskWord, now time.Time) *model.Workflow {
+	if !w.State.Ended() || w.Ended.IsZero() {
+		w.Ended = now
+	}
+	w.State, w.End, w.Running, w.RunningPhases, w.RunningCount, w.Stalled = heard.state, cmp.Or(heard.end, w.End), nil, nil, 0, false
+	if w.State == model.RunFailed {
+		w.Summary = cmp.Or(w.Summary, heard.summary)
+	}
+	return &w
 }
 
 // quit is w ended with the agent that ran it, title as people read the

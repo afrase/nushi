@@ -111,7 +111,7 @@ func (f *costFixture) add(t *testing.T, s string) {
 func (f *costFixture) tell(task map[string]any) {
 	f.c.mu.Lock()
 	defer f.c.mu.Unlock()
-	f.c.commandTaskLocked(taskUpdate(task).Update)
+	f.c.taskLocked(taskUpdate(task).Update)
 }
 
 // A file that didn't change isn't opened again, yet the steps that wait

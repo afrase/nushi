@@ -12,6 +12,7 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -49,6 +50,7 @@ func (p *player) chatOf(sid string) (*Service, *chat, acp.SessionID) {
 		svc, _, c := newTimedChat(p.t, claudeSession, &memModes{}, p.timing)
 		c.mu.Lock()
 		c.kind.background = noOutputFile{c.kind.background}
+		c.kind.workflows = noWorkflowFiles{claudeHarness}
 		c.mu.Unlock()
 		p.svcs[sid], p.chats[sid] = svc, c
 		p.order = append(p.order, sid)
@@ -243,9 +245,12 @@ func views(t *testing.T, events []event) []parity {
 		// its output file once, on a goroutine of its own; the file is
 		// gone (noOutputFile), so then it shows as started.
 		c := p.chats[sid]
+		// A workflow's run ends on its task's end once its follower has
+		// read it, on a goroutine of its own too.
 		eventually(t, c, func() bool {
 			return !slices.ContainsFunc(c.items, func(it model.Item) bool {
-				return it.BackgroundCommand != nil && it.BackgroundCommand.State == "running"
+				return it.BackgroundCommand != nil && it.BackgroundCommand.State == "running" ||
+					it.Workflow != nil && !it.Workflow.State.Ended() && c.tasks[it.Workflow.TaskID].state.Ended()
 			})
 		})
 		v := view(c)
@@ -299,6 +304,23 @@ func (noOutputFile) ReadBackgroundCommand(string, string) (output, end, state st
 	return "", "", "", fs.ErrNotExist
 }
 
+// noWorkflowFiles finds no file of a workflow's run, as this machine has
+// none of the recording's: a run is followed, and ends only on what the
+// agent said of its task.
+type noWorkflowFiles struct{ claude.Harness }
+
+func (noWorkflowFiles) ReadWorkflow(string, string, model.Workflow) (model.Workflow, error) {
+	return model.Workflow{}, fs.ErrNotExist
+}
+
+func (noWorkflowFiles) WorkflowAgents(string, string, model.Workflow) ([]model.WorkflowAgent, error) {
+	return nil, fs.ErrNotExist
+}
+
+func (noWorkflowFiles) WorkflowAgentItems(string, string, model.Workflow, string, int) ([]model.Item, int, error) {
+	return nil, 0, fs.ErrNotExist
+}
+
 // timeless is an item without the times of this run.
 func timeless(it model.Item) model.Item {
 	it.Sent, it.Started, it.Ended = time.Time{}, time.Time{}, time.Time{}
@@ -313,6 +335,11 @@ func timeless(it model.Item) model.Item {
 			sa.Worked = it.Totals.Duration
 		}
 		it.Subagent = &sa
+	}
+	if it.Workflow != nil { // and where this run's chat is
+		w := *it.Workflow
+		w.Started, w.Ended, w.Active, w.Folder = time.Time{}, time.Time{}, time.Time{}, ""
+		it.Workflow = &w
 	}
 	if it.BackgroundCommand != nil {
 		bc := *it.BackgroundCommand

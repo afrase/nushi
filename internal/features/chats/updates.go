@@ -36,8 +36,8 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		c.items, c.replay, c.muted = c.replay, c.items, true
 		defer func() { c.items, c.replay, c.muted = c.replay, c.items, false }()
 	}
-	if c.commandTaskLocked(n.Update) {
-		return // a background command's task, told on its call: no step of the agent's work
+	if c.taskLocked(n.Update) {
+		return // a task's word, told on its call: no step of the agent's work
 	}
 	if !c.busyLocked() && c.started.IsZero() && slices.Contains([]string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) &&
 		parent == "" && c.parentLocked(n.Update) == "" { // a subagent's steps aren't the agent's own work

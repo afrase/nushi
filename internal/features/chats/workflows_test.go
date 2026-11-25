@@ -405,12 +405,25 @@ func TestJudgeWorkflow(t *testing.T) {
 		err       error
 		f         follow
 		gone      bool
+		heard     taskWord        // the agent's word on its task
 		want      *model.Workflow // nil: a plain call after all
 		wait      time.Duration
 		found     bool      // f.found after
 		missing   time.Time // f.missing after
 		goneSince time.Time // f.gone after
 	}{
+		{name: "its task ended", cur: running, got: running, heard: taskWord{state: model.RunFailed, end: "failed", summary: "boom"}, f: follow{owner: owner}, found: true,
+			want: with(running, func(w *model.Workflow) {
+				w.State, w.End, w.Ended, w.Running, w.RunningCount, w.Summary = model.RunFailed, "failed", now, nil, 0, "boom"
+			})},
+		{name: "its task ended, its snapshot there", cur: running, got: model.Workflow{RunID: "wf_1", State: model.RunStopped, End: "killed", Ended: now.Add(-time.Second)},
+			heard: taskWord{state: model.RunStopped, end: "killed"}, f: follow{owner: owner}, found: true,
+			want: &model.Workflow{RunID: "wf_1", State: model.RunStopped, End: "killed", Ended: now.Add(-time.Second)}},
+		{name: "its task ended, its files never found", cur: running, err: fs.ErrNotExist, heard: taskWord{state: model.RunDone, end: "completed"}, f: follow{owner: owner, since: now.Add(-time.Hour)},
+			want: with(running, func(w *model.Workflow) {
+				w.State, w.End, w.Ended, w.Running, w.RunningCount = model.RunDone, "completed", now, nil, 0
+			})},
+		{name: "its task said running", cur: running, got: running, heard: taskWord{state: model.RunRunning}, f: follow{owner: owner}, want: &running, wait: poll, found: true},
 		{name: "files never found within the find time", cur: running, err: fs.ErrNotExist, f: follow{owner: owner, since: now.Add(-30 * time.Second)}},
 		{name: "files not there yet", cur: running, err: fs.ErrNotExist, f: follow{owner: owner, since: now.Add(-29 * time.Second)}, want: &running, wait: poll},
 		{name: "a past run's files that can't be read", cur: running, err: denied, f: follow{since: now}},
@@ -441,7 +454,7 @@ func TestJudgeWorkflow(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			c := &chat{svc: &Service{}, kind: testKind(testHarness{Name: "claude", Title: "Claude"})}
 			f := tc.f
-			got, wait := c.judgeWorkflow(tc.cur, tc.got, tc.err, &f, tc.gone, now)
+			got, wait := c.judgeWorkflow(tc.cur, tc.got, tc.err, &f, tc.gone, tc.heard, now)
 			if !reflect.DeepEqual(got, tc.want) || wait != tc.wait {
 				t.Errorf("got %+v, wait %s; want %+v, wait %s", got, wait, tc.want, tc.wait)
 			}

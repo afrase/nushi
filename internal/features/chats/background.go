@@ -17,60 +17,78 @@ import (
 // that doesn't, a claude that went mid-command, a reopened chat whose
 // history had no end.
 
-// taskWord is what the agent last said of a background command's task:
-// its state and how it ended, as Task reads them, and the agent
-// that said "running", which counts only while that agent runs.
+// taskWord is what the agent last said of a task of its: its state, how
+// it ended and a failed workflow's summary, as Task reads them, and the
+// agent that said "running", which counts only while that agent runs.
 type taskWord struct {
-	state model.RunState
-	end   string
-	agent Agent
+	state   model.RunState
+	end     string
+	summary string
+	agent   Agent
 }
 
-// commandTaskLocked takes an update that is the agent's word on a
-// background command's task, and ends its row when the word is an end:
-// the first of an end's two updates ends it, the second (and a stop's
-// "stopped" after "killed") only adds how, so the row changes once and
-// its detail at most once more. It says whether the update said nothing
-// else, so it is no step of the agent's work (no turn of its own, no
-// change to the call): that goes too for the agent's word on a task
-// that isn't a command's, such as Claude's workflow's, which
-// otherwise started a turn of the agent's own when it came with the
+// taskLocked takes an update that is the agent's word on one of its
+// tasks: a background command's ends its row (commandTaskLocked), a
+// workflow's ends its run (workflowTaskLocked). It says whether the
+// update said nothing else, so it is no step of the agent's work (no
+// turn of its own, no change to the call): that goes for the agent's word
+// on any task, a word Nushi doesn't read too. Claude's workflow's, taken
+// for a step, started a turn of the agent's own when it came with the
 // chat idle, and kept it when no turn followed.
-func (c *chat) commandTaskLocked(u acp.SessionUpdate) (only bool) {
+func (c *chat) taskLocked(u acp.SessionUpdate) (only bool) {
 	t := u.ToolCallUpdate
 	if c.kind.background == nil || u.SessionUpdate != "tool_call_update" || t == nil {
 		return false
 	}
-	only = t.Status == "" && t.Title == "" && t.Kind == "" && t.Content == nil && t.Locations == nil && t.RawInput == nil && t.RawOutput == nil
 	task, ok := c.kind.background.Task(t.Meta)
 	if !ok {
 		return false
 	}
-	if task.Of != model.TaskCommand || task.State == "" {
-		return only
-	}
-	id, state, end := task.ID, task.State, task.End
-	was := c.tasks[id]
 	switch {
-	case was.state.Ended() && state == model.RunRunning: // late, or replayed after its end
+	case task.State == "":
+	case task.Of == model.TaskCommand:
+		c.commandTaskLocked(task, string(t.ToolCallID))
+	case task.Of == model.TaskWorkflow:
+		c.workflowTaskLocked(task, string(t.ToolCallID))
+	}
+	return t.Status == "" && t.Title == "" && t.Kind == "" && t.Content == nil && t.Locations == nil && t.RawInput == nil && t.RawOutput == nil
+}
+
+// heardTaskLocked keeps the agent's word on a task and returns it as kept:
+// the first end it said is the end, a later one (the second of an end's
+// two updates, a stop's "stopped" after "killed") only adds how it ended,
+// and a "running" after an end (late, or replayed after it) is passed
+// over.
+func (c *chat) heardTaskLocked(task model.TaskUpdate) taskWord {
+	was := c.tasks[task.ID]
+	switch {
+	case was.state.Ended() && task.State == model.RunRunning:
 	case was.state.Ended():
-		was.end = cmp.Or(was.end, end)
-	case state == model.RunRunning:
-		was = taskWord{state: state, agent: c.agent}
+		was.end, was.summary = cmp.Or(was.end, task.End), cmp.Or(was.summary, task.Summary)
+	case task.State == model.RunRunning:
+		was = taskWord{state: task.State, agent: c.agent}
 	default:
-		was = taskWord{state: state, end: end}
+		was = taskWord{state: task.State, end: task.End, summary: task.Summary}
 	}
 	if c.tasks == nil {
 		c.tasks = map[string]taskWord{}
 	}
-	c.tasks[id] = was
-	if it := c.itemLocked(string(t.ToolCallID)); it != nil && it.BackgroundCommand != nil && it.BackgroundCommand.ID == id {
+	c.tasks[task.ID] = was
+	return was
+}
+
+// commandTaskLocked ends the row of the background command call started
+// when the agent's word on its task is an end: the first of an end's two
+// updates ends it, the second only adds how, so the row changes once and
+// its detail at most once more.
+func (c *chat) commandTaskLocked(task model.TaskUpdate, call string) {
+	c.heardTaskLocked(task)
+	if it := c.itemLocked(call); it != nil && it.BackgroundCommand != nil && it.BackgroundCommand.ID == task.ID {
 		if sh := c.heardLocked(*it.BackgroundCommand); sh != *it.BackgroundCommand {
 			it.BackgroundCommand = &sh
 			c.publishLocked(*it)
 		}
 	}
-	return only
 }
 
 // heardLocked is sh as the agent's word on its task has it: ended, if

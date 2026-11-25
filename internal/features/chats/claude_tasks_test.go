@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -13,12 +14,15 @@ import (
 // claude-acp-go sends claude's task of a call as updates of the call
 // with only _meta.claudeCode.task: a background command's since v0.5.0,
 // which Nushi reads (ADR 0130), but also a long foreground command's
-// (claude makes one a task a few seconds in) and, since v0.8.0, a
-// workflow's (local_workflow), which Nushi doesn't read yet. Played
-// into a chat with and without those updates, a recording must show
-// the same at every step: the items, the working dot (Busy, OwnTurn),
-// what runs (Background, Workflows) and whether it may sleep
-// (docs/facts/claude.md).
+// (claude makes one a task a few seconds in), which Nushi doesn't, and,
+// since v0.8.0, a workflow's (local_workflow), from which Nushi reads
+// only the run's end (ADR 0127; TestClaudeParity's workflowsEnded holds
+// it). Played into a chat with and without those updates, a recording
+// must show the same at every step, the run's state aside: the items,
+// the working dot (Busy, OwnTurn), what runs (Background, Workflows) and
+// whether it may sleep (docs/facts/claude.md). None is a step of the
+// agent's work: a workflow's "running" right after its turn started a
+// turn of the agent's own before.
 func TestClaudeTasksNushiDoesntRead(t *testing.T) {
 	for _, tc := range []struct {
 		scenario string
@@ -43,6 +47,11 @@ func TestClaudeTasksNushiDoesntRead(t *testing.T) {
 			}
 			wantSteps, wantItems := trail(t, events, unread)
 			gotSteps, gotItems := trail(t, events, func(event) bool { return false })
+			for _, items := range [][]model.Item{wantItems, gotItems} {
+				for i := range items {
+					items[i].Workflow = runless(items[i].Workflow)
+				}
+			}
 			for i := range gotSteps {
 				if gotSteps[i] != wantSteps[i] {
 					t.Fatalf("after event %d: with the task updates %+v, without %+v", i, gotSteps[i], wantSteps[i])
@@ -106,13 +115,23 @@ func inBackground(id string, events []event) bool {
 
 // taskStep is what a chat shows after an event that a task could move: its
 // items' number, the working dot (Busy, OwnTurn), whether it may sleep,
-// what runs, and its workflow's and background commands' states.
+// what runs, and its background commands.
 type taskStep struct {
 	Items                   int
 	Busy, OwnTurn, CanSleep bool
 	Background, Workflows   int
-	Workflow                model.RunState
 	Commands                string
+}
+
+// runless is w without what the run's end sets, which the task's update
+// moves (nil for none).
+func runless(w *model.Workflow) *model.Workflow {
+	if w == nil {
+		return nil
+	}
+	r := *w
+	r.State, r.End, r.Ended, r.Summary = "", "", time.Time{}, ""
+	return &r
 }
 
 // trail plays events into a chat, its prompts as turns, but for those
@@ -133,9 +152,6 @@ func trail(t *testing.T, events []event, skip func(event) bool) ([]taskStep, []m
 			st := c.statusLocked()
 			s = taskStep{Items: len(c.items), Busy: st.Busy, OwnTurn: st.OwnTurn, CanSleep: st.CanSleep, Background: st.Background, Workflows: st.Workflows}
 			for _, it := range c.items {
-				if it.Workflow != nil {
-					s.Workflow = it.Workflow.State
-				}
 				if it.BackgroundCommand != nil {
 					s.Commands += it.ID + " "
 				}

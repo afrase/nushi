@@ -60,6 +60,7 @@ func TestClaudeParity(t *testing.T) {
 				t.Errorf("the Go agent's chats differ from the recording's:\n%s", differences(got, want))
 			}
 			commandsEnded(t, dir, want)
+			workflowsEnded(t, dir, want)
 			switch filepath.Base(dir) {
 			case "workflow", "workflow-stop":
 				launchedARun(t, want)
@@ -106,6 +107,84 @@ func commandsEnded(t *testing.T, dir string, views []parity) {
 			t.Errorf("claude's background command %s has no row", id)
 		}
 	}
+}
+
+// workflowsEnded checks each workflow's run the chats show ended as
+// claude's own recording says its task did, as commandsEnded does for
+// commands: every local_workflow task claude started has its item, and
+// each item's run has the end Task reads from claude's task_notification
+// (none while the recording told no end). No file of the run is read
+// (noWorkflowFiles), so any machine shows them.
+func workflowsEnded(t *testing.T, dir string, views []parity) {
+	t.Helper()
+	ended := recordedWorkflowEnds(t, dir)
+	seen := map[string]bool{}
+	for _, v := range views {
+		for _, it := range v.Items {
+			w := it.Workflow
+			if w == nil {
+				continue
+			}
+			seen[w.TaskID] = true
+			end, ok := ended[w.TaskID]
+			if !ok {
+				t.Errorf("workflow %s: claude's recording started no workflow by that task id", w.TaskID)
+			} else if w.State != end.State || w.End != end.End {
+				t.Errorf("workflow %s ended %q (%q), claude's recording %q (%q)", w.TaskID, w.State, w.End, end.State, end.End)
+			}
+		}
+	}
+	for id := range ended {
+		if !seen[id] {
+			t.Errorf("claude's workflow %s has no item", id)
+		}
+	}
+}
+
+// recordedWorkflowEnds are the workflows' runs claude started in a
+// scenario's cli*.jsonl (task_started, local_workflow), by task id, each
+// with its end as Task reads its task_notification.
+func recordedWorkflowEnds(t *testing.T, dir string) map[string]model.TaskUpdate {
+	t.Helper()
+	files, err := filepath.Glob(filepath.Join(dir, "cli*.jsonl"))
+	testcheck.NoErr(t, err)
+	ends := map[string]model.TaskUpdate{}
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		testcheck.NoErr(t, err)
+		for line := range bytes.Lines(b) {
+			var l struct {
+				Dir   string `json:"dir"`
+				Frame struct {
+					Subtype  string `json:"subtype"`
+					TaskID   string `json:"task_id"`
+					TaskType string `json:"task_type"`
+					Status   string `json:"status"`
+					Summary  string `json:"summary"`
+				} `json:"frame"`
+			}
+			if json.Unmarshal(line, &l) != nil || l.Dir != "out" {
+				continue
+			}
+			switch fr := l.Frame; fr.Subtype {
+			case "task_started":
+				if fr.TaskType == "local_workflow" {
+					ends[fr.TaskID] = model.TaskUpdate{}
+				}
+			case "task_notification":
+				if _, ok := ends[fr.TaskID]; !ok {
+					continue
+				}
+				task := map[string]any{"id": fr.TaskID, "type": "local_workflow", "status": fr.Status, "summary": fr.Summary}
+				word, ok := claudeHarness.Task(map[string]any{"claudeCode": map[string]any{"task": task}})
+				if !ok || !word.State.Ended() {
+					t.Fatalf("%s: Task doesn't read workflow %s's status %q", f, fr.TaskID, fr.Status)
+				}
+				ends[fr.TaskID] = word
+			}
+		}
+	}
+	return ends
 }
 
 // recordedCommandEnds are the background commands claude started in a

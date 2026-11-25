@@ -158,6 +158,36 @@ func copyOf(t *testing.T, events []event, sid string) []model.Item {
 // aside to merge (Service.open).
 func replayOf(t *testing.T, events []event, sid string) []model.Item {
 	t.Helper()
+	load := loadOf(events, sid)
+	if load == nil {
+		return nil
+	}
+	_, _, c := newChat(t, claudeSession, &memModes{})
+	// Set by hand, not through a reopen: what's fed is a recorded load's
+	// replay, to a chat with no agent; a real reopen would need an agent
+	// that replays the recording, which this fixture has none of.
+	c.mu.Lock()
+	c.beginOpLocked(opOpen)
+	c.replaying = true
+	c.mu.Unlock()
+	children := map[string]bool{}
+	for _, e := range load {
+		if e.note != nil {
+			sessionNote(c, *e.note, sid, children)
+		}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := make([]model.Item, 0, len(c.replay))
+	for _, it := range c.replay {
+		out = append(out, timeless(it))
+	}
+	return out
+}
+
+// loadOf is what came of session sid's last load: its events from the
+// load's request to its answer; nil when there was none.
+func loadOf(events []event, sid string) []event {
 	start, end := -1, len(events)
 	for i, e := range events {
 		if e.session == sid && e.method == "session/load" {
@@ -171,27 +201,7 @@ func replayOf(t *testing.T, events []event, sid string) []model.Item {
 	if start < 0 {
 		return nil
 	}
-	_, _, c := newChat(t, claudeSession, &memModes{})
-	// Set by hand, not through a reopen: what's fed is a recorded load's
-	// replay, to a chat with no agent; a real reopen would need an agent
-	// that replays the recording, which this fixture has none of.
-	c.mu.Lock()
-	c.beginOpLocked(opOpen)
-	c.replaying = true
-	c.mu.Unlock()
-	children := map[string]bool{}
-	for _, e := range events[start:end] {
-		if e.note != nil {
-			sessionNote(c, *e.note, sid, children)
-		}
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	out := make([]model.Item, 0, len(c.replay))
-	for _, it := range c.replay {
-		out = append(out, timeless(it))
-	}
-	return out
+	return events[start:end]
 }
 
 // sessionNote feeds c an update of session sid's (as its own) or of one

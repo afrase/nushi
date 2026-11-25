@@ -238,7 +238,7 @@ func TestAReplayedTaskEndsTheCopysCommand(t *testing.T) {
 			c.mu.Unlock()
 			c.mu.Lock()
 			c.replay = copied // what the replay brought: the same call
-			c.commandTaskLocked(taskUpdate(tc.replayed).Update)
+			c.taskLocked(taskUpdate(tc.replayed).Update)
 			c.replaying = false
 			c.restoreLocked(c.replay, nil)
 			got := c.itemLocked(waitCall).BackgroundCommand.State
