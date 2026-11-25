@@ -252,7 +252,9 @@ void main() {
       // Each drop's head, tick by tick, while the two are apart: as they
       // start to spin and again as they separate. y points down, so a
       // growing angle is clockwise as seen.
-      for (final (from, to) in [(rest + 1, rest + 7), (rest + 18, rest + 26)]) {
+      // From the second tick of each: on the first the turn is a few
+      // degrees, less than the grid this reads it on.
+      for (final (from, to) in [(rest + 2, rest + 9), (rest + 26, rest + 32)]) {
         for (var i = from; i < to; i++) {
           final before = _drops(at(i));
           final after = _drops(at(i + 1));
@@ -274,7 +276,7 @@ void main() {
 
     test("a moving drop's tail trails behind it", () {
       // Spinning in, and spiralling out.
-      for (final i in [rest + 5, rest + 6, rest + 21, rest + 23]) {
+      for (final i in [rest + 5, rest + 7, rest + 28, rest + 30]) {
         for (final d in _drops(at(i))) {
           final head = _headOf(d);
           final r = head - mid;
@@ -299,14 +301,44 @@ void main() {
       final first = parts.indexOf(1);
       final last = parts.lastIndexOf(1);
       expect(first, greaterThan(0), reason: 'they merge');
-      // One stretch of one drop, round for a moment in its middle.
+      // One stretch of one drop, round for a moment in it.
       expect(parts.sublist(first, last + 1), everyElement(1));
-      final middle = _drops(at(rest + (first + last) ~/ 2)).single;
-      expect(_fullness(middle), greaterThan(0.99), reason: 'round');
-      // The tick they join and the last before they part: one outline
-      // pinched in by a neck, not a round drop or an oval.
+      final roundest = [
+        for (var i = first; i <= last; i++) _waist(_drops(at(rest + i)).single),
+      ].reduce(max);
+      expect(roundest, greaterThan(0.95), reason: 'round for a moment');
+      // The tick they join and the last before they part: a thin neck
+      // between two heads, not two drops pressed together or one round.
       for (final i in [rest + first, rest + last]) {
-        expect(_fullness(_drops(at(i)).single), lessThan(0.97), reason: '$i');
+        expect(
+          _waist(_drops(at(i)).single),
+          inInclusiveRange(0.05, 0.35),
+          reason: 'tick $i',
+        );
+      }
+      // The neck thickens tick by tick as they join, and thins tick by
+      // tick before they part.
+      final joining = [
+        for (var i = first; i < first + 3; i++)
+          _waist(_drops(at(rest + i)).single),
+      ];
+      final parting = [
+        for (var i = last - 3; i <= last; i++)
+          _waist(_drops(at(rest + i)).single),
+      ];
+      for (var i = 1; i < joining.length; i++) {
+        expect(joining[i], greaterThan(joining[i - 1]), reason: '$joining');
+      }
+      for (var i = 1; i < parting.length; i++) {
+        expect(parting[i], lessThan(parting[i - 1]), reason: '$parting');
+      }
+    });
+
+    test('every tick holds the same liquid', () {
+      // Two rest drops' area on every tick, within a few per cent.
+      final rest0 = _area(at(0));
+      for (var i = rest; i <= n; i++) {
+        expect(_area(at(i)) / rest0, closeTo(1, 0.03), reason: 'tick $i');
       }
     });
 
@@ -411,7 +443,10 @@ void main() {
       was = now;
     }
     expect(plays, loops);
-    expect(played.inMilliseconds, closeTo(1500 * loops, 100));
+    expect(
+      played.inMilliseconds,
+      closeTo(BackgroundMark.playTicks * 1000 / pulseRate * loops, 100),
+    );
     await tester.pumpWidget(const SizedBox());
     d.dispose();
   });
@@ -494,36 +529,62 @@ double _angleBetween(Offset a, Offset b) {
   return atan2(sin(d), cos(d));
 }
 
-/// [drop]'s area over its convex hull's: 1 for a round drop or an oval,
-/// less where a neck pinches it in.
-double _fullness(Path drop) {
-  final pts = _outline(
-    drop,
-  )..sort((a, b) => a.dx != b.dx ? a.dx.compareTo(b.dx) : a.dy.compareTo(b.dy));
-  double area(List<Offset> l) {
-    var a = 0.0;
-    for (var i = 0; i < l.length; i++) {
-      final p = l[i];
-      final q = l[(i + 1) % l.length];
-      a += p.dx * q.dy - q.dx * p.dy;
+/// [p]'s area, by its pixels.
+double _area(Path p) {
+  final b = p.getBounds();
+  var inside = 0;
+  for (var y = b.top.floorToDouble() + 0.5; y < b.bottom; y++) {
+    for (var x = b.left.floorToDouble() + 0.5; x < b.right; x++) {
+      if (p.contains(Offset(x, y))) inside++;
     }
-    return a.abs() / 2;
+  }
+  return inside.toDouble();
+}
+
+/// How thin [drop] is at its waist over its fullest: its widths across
+/// its long axis (from its second moments), the least in its middle
+/// third over the most. About 1 for a round drop, small for two heads
+/// joined by a thin neck.
+double _waist(Path drop) {
+  final b = drop.getBounds();
+  final pts = <Offset>[];
+  for (var y = b.top + 0.25; y < b.bottom; y += 0.5) {
+    for (var x = b.left + 0.25; x < b.right; x += 0.5) {
+      if (drop.contains(Offset(x, y))) pts.add(Offset(x, y));
+    }
+  }
+  final c = pts.reduce((a, b) => a + b) / pts.length.toDouble();
+  var xx = 0.0;
+  var yy = 0.0;
+  var xy = 0.0;
+  for (final p in pts) {
+    final d = p - c;
+    xx += d.dx * d.dx;
+    yy += d.dy * d.dy;
+    xy += d.dx * d.dy;
+  }
+  final along = Offset.fromDirection(0.5 * atan2(2 * xy, xx - yy));
+  final across = Offset(-along.dy, along.dx);
+  double width(double t) {
+    var w = 0;
+    for (var q = -b.longestSide; q <= b.longestSide; q += 0.5) {
+      if (drop.contains(c + along * t + across * q)) w++;
+    }
+    return w * 0.5;
   }
 
-  double cross(Offset o, Offset a, Offset b) =>
-      (a.dx - o.dx) * (b.dy - o.dy) - (a.dy - o.dy) * (b.dx - o.dx);
-  // Andrew's monotone chain: the lower hull, then the upper.
-  List<Offset> half(Iterable<Offset> points) {
-    final h = <Offset>[];
-    for (final p in points) {
-      while (h.length >= 2 && cross(h[h.length - 2], h.last, p) <= 0) {
-        h.removeLast();
-      }
-      h.add(p);
-    }
-    return h..removeLast();
+  var reach = 0.0;
+  for (final p in pts) {
+    final t = (p - c).dx * along.dx + (p - c).dy * along.dy;
+    reach = max(reach, t.abs());
   }
-
-  final hull = [...half(pts), ...half(pts.reversed)];
-  return area(_outline(drop)) / area(hull);
+  final widths = [
+    for (var t = -reach; t <= reach; t += reach / 15) (t: t, w: width(t)),
+  ];
+  final fullest = widths.map((e) => e.w).reduce(max);
+  final waist = widths
+      .where((e) => e.t.abs() <= reach / 3)
+      .map((e) => e.w)
+      .reduce(min);
+  return waist / fullest;
 }

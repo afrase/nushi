@@ -8,10 +8,11 @@ import 'package:nushi/motion.dart';
 import 'package:nushi/run_state.dart';
 
 part 'background_droplets.dart';
+part 'background_trace.dart';
 
 /// The mark of a chat whose turn ended while its background tasks run
 /// (#113), "rest and play": two drops of [color] side by side, still for
-/// two seconds; then for a second and a half they spin clockwise, each a
+/// two seconds; then for 1.7 seconds they spin clockwise, each a
 /// teardrop as it gathers speed, its tail trailing along the way it came;
 /// spiral in and merge into one drop, which squashes and settles; and
 /// spiral out of it as two again, a neck between them thinning and
@@ -38,13 +39,15 @@ class BackgroundMark extends CustomPainter {
 
   final bool _moves;
 
-  /// The loop's ticks of [pulseClock], at rest and at play.
+  /// The loop's ticks of [pulseClock], at rest and at play: 34 to play,
+  /// so the two join over three ticks and their neck thins over four
+  /// before it parts, each tick a little change from the one before.
   static const restTicks = 40;
-  static const playTicks = 30;
+  static const playTicks = 34;
   static const int ticks = restTicks + playTicks;
 
-  /// The loop's length: 3.5 s.
-  // design: a loop's beat, on pulseClock: 70 ticks, 40 at rest, 30 at play
+  /// The loop's length: 3.7 s.
+  // design: a loop's beat, on pulseClock: 74 ticks, 40 at rest, 34 at play
   static const period = Duration(milliseconds: ticks * 1000 ~/ pulseRate);
 
   /// What a mark under [context] repaints with: the play's ticks; null
