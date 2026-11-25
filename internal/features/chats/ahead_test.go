@@ -416,3 +416,39 @@ func TestCopyAheadChatWantedMeanwhileStaysOpen(t *testing.T) {
 		})
 	}
 }
+
+// A chat used while copies were off and put to sleep since holds its
+// items as having outlived their agent: a load wouldn't replay into them.
+// The pass writes its copy from what it shows, with no agent, and doesn't
+// open it again.
+func TestCopyAheadCopiesAnOutlivedChatFromWhatItShows(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		f := newAhead(t, false, nil)
+		c := startChat(t, f.svc, t.TempDir())
+		testcheck.NoErr(t, f.svc.Prompt(t.Context(), c.id, model.Message{Text: "hi"}, SendNow))
+		synctest.Wait()
+		testcheck.NoErr(t, f.svc.Sleep(c.id))
+		synctest.Wait()
+		c.mu.Lock()
+		outlived, shown := c.outlived, slices.DeleteFunc(slices.Clone(c.items), shownOnly)
+		c.mu.Unlock()
+		if !outlived || len(shown) == 0 || f.store.Has(c.id) {
+			t.Fatalf("outlived %v, items %d, copy %v", outlived, len(shown), f.store.Has(c.id))
+		}
+		before, _ := f.launches()
+		f.on.Store(true)
+		pass(time.Hour)
+		got, err := f.store.Read(c.id)
+		testcheck.NoErr(t, err)
+		if testcheck.JSON(t, got) != testcheck.JSON(t, shown) {
+			t.Errorf("copy %s, shown %s", testcheck.JSON(t, got), testcheck.JSON(t, shown))
+		}
+		pass(5 * time.Hour)
+		c.mu.Lock()
+		asleep := c.asleep
+		c.mu.Unlock()
+		if n, _ := f.launches(); n != before || !asleep {
+			t.Errorf("%d agents started, asleep %v", n-before, asleep)
+		}
+	})
+}
