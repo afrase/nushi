@@ -50,7 +50,13 @@ func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]mod
 	files := transcripts(dirs, s.Skip)
 	return textfind.Each(ctx, len(files), s.Max, func(ctx context.Context, i int) (model.SessionHit, bool) {
 		f := files[i]
-		n, ex := scan(ctx, f.path, q, s.Unnoted)
+		n, ex, fork := scan(ctx, f.path, q, s.Unnoted, true)
+		if fork {
+			if forked(f.path) {
+				return model.SessionHit{}, false
+			}
+			n, ex, _ = scan(ctx, f.path, q, s.Unnoted, false)
+		}
 		if n == 0 {
 			return model.SessionHit{}, false
 		}
@@ -123,17 +129,38 @@ type entry struct {
 	} `json:"message"`
 }
 
+// forkHead is how far into a transcript a record starts that scan, asked
+// to, stops at for its forkedFrom key: where sessions.ReadInfo looks for
+// one (its 64 KiB head and the record that head cuts short).
+const forkHead = 64 << 10
+
+// forkKey is a forkedFrom key as claude and the library write it; quotes
+// in a JSON string are escaped, so a prompt quoting one doesn't match.
+var forkKey = []byte(`"forkedFrom":`)
+
 // scan counts the hits in a transcript's messages and makes the first's
 // excerpt; 0 for a file that can't be read. unnoted (nil: none)
-// takes Nushi's notes off each text of the user's.
-func scan(ctx context.Context, path string, q textfind.Query, unnoted func(string) string) (int, textfind.Excerpt) {
+// takes Nushi's notes off each text of the user's. With stopAtFork, it
+// stops at a record of the transcript's start that has a forkedFrom key
+// and says so (fork): a fork's transcript is as long as its source's, and
+// is passed over, so isn't read on (the caller asks ReadInfo and, for
+// what isn't a fork after all, scans again without it).
+func scan(ctx context.Context, path string, q textfind.Query, unnoted func(string) string, stopAtFork bool) (n int, first textfind.Excerpt, fork bool) {
 	f, err := os.Open(path)
 	if err != nil {
-		return 0, textfind.Excerpt{}
+		return 0, textfind.Excerpt{}, false
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	n, first := 0, textfind.Excerpt{}
+	// at is where line starts, near enough: Lines skips empty and long lines.
+	at := 0
 	_ = textfind.Lines(ctx, f, func(line []byte) bool {
+		if stopAtFork && at < forkHead {
+			if bytes.Contains(line, forkKey) {
+				fork = true
+				return false
+			}
+			at += len(line) + 1
+		}
 		if !q.MayHold(line) && !typed(line) || !mayBeSaid(line) {
 			return true
 		}
@@ -150,7 +177,7 @@ func scan(ctx context.Context, path string, q textfind.Query, unnoted func(strin
 		}
 		return true
 	})
-	return n, first
+	return n, first, fork
 }
 
 // typed says a record may hold a command the user typed, which cleaned

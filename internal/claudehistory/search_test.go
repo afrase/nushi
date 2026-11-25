@@ -309,8 +309,9 @@ func TestSearchWithoutNushisNotes(t *testing.T) {
 // Forks are passed over, as Claude's list's Info tells them: the recorded
 // ones, written by claude-acp-go's Fork, a fork as claude --fork-session
 // writes it, and one whose first record is longer than the 64 KiB the
-// Info reads; their sources, and a session whose first record is as long
-// but is no fork, are found.
+// Info reads; their sources, a session whose first record is as long
+// but is no fork, and one whose forkedFrom names no session (no fork to
+// the Info), are found.
 func TestSearchPassesOverForks(t *testing.T) {
 	projects := filepath.Join(t.TempDir(), "projects")
 	recordedForks(t, filepath.Join(projects, "-work"))
@@ -326,12 +327,17 @@ func TestSearchPassesOverForks(t *testing.T) {
 	title := `{"type":"custom-title","customTitle":"Long"}` + "\n"
 	testcheck.Write(t, filepath.Join(projects, "-work", sessD+".jsonl"), user(long+" first question", forkedFrom)+title)
 	testcheck.Write(t, filepath.Join(projects, "-work", sessE+".jsonl"), user(long+" first question", "")+title)
+	const notFork = "0a1b2c3d-0000-4000-8000-00000000000b"
+	testcheck.Write(t, filepath.Join(projects, "-work", notFork+".jsonl"),
+		user("hi", `,"forkedFrom":{"messageUuid":"u1"}`)+user("first question", ""))
 	var found []string
 	for _, h := range search(t, Local{Projects: projects}, model.SessionSearch{Query: "first question"}) {
 		found = append(found, h.SessionID)
 	}
 	slices.Sort(found)
-	if want := []string{sessE, recordedSource, recordedSourceAt}; !slices.Equal(found, want) {
+	want := []string{notFork, sessE, recordedSource, recordedSourceAt}
+	slices.Sort(want)
+	if !slices.Equal(found, want) {
 		t.Errorf("found %v, want %v", found, want)
 	}
 }
