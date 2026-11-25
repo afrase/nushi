@@ -72,6 +72,9 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		keepRaw(&item, t.RawInput, t.RawOutput)
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
 			item.Subagent, item.BackgroundCommand = it.Subagent, it.BackgroundCommand
+			if item.WorksIn == nil && item.Status != string(acp.ToolCallStatusFailed) { // its result came on an update before
+				item.WorksIn = it.WorksIn
+			}
 			item.Started, item.Ended, item.Totals = it.Started, it.Ended, cmp.Or(item.Totals, it.Totals)
 			if it.Workflow != nil {
 				item.Workflow, item.TaskID = it.Workflow, it.TaskID
@@ -348,9 +351,12 @@ func (c *chat) agentNoticeLocked(n model.AgentNotice) {
 }
 
 // toolCallLocked adds what the agent tells of a tool call beyond ACP (see
-// ToolReader).
+// ToolReader), and where the main agent works once it completes (see
+// worksInLocked).
 func (c *chat) toolCallLocked(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
-	return c.kind.toolReader != nil && c.kind.toolReader.ToolCall(it, meta, input)
+	own := c.kind.toolReader != nil && c.kind.toolReader.ToolCall(it, meta, input)
+	c.worksInLocked(it, meta)
+	return own
 }
 
 // planLocked shows the agent's plan: it replaces the plan of the current

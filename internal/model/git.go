@@ -29,6 +29,15 @@ type Worktree struct {
 	Found bool `json:",omitempty"`
 }
 
+// AgentWorktree is a worktree the agent entered itself (Claude's
+// EnterWorktree, docs/facts/claude.md). Nushi never acts on it by
+// itself: the chat only offers to move there. Path is the absolute path
+// the agent's tool result named; empty, the agent left one for its
+// session's folder.
+type AgentWorktree struct {
+	Path string
+}
+
 // RelatedWorktree is a worktree of the chat's repository that one of its
 // subagents worked in. It stays after the worktree goes, as what was last
 // seen of it. Path and Branch are as git lists them, which an agent can

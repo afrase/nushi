@@ -34,6 +34,7 @@ var (
 	_ chats.TitleMaker       = claude.Harness{}
 	_ chats.UsageReader      = claude.Harness{}
 	_ chats.SentReader       = claude.Harness{}
+	_ chats.WorkReader       = claude.Harness{}
 
 	_ chats.OpenFinder      = claudehistory.Local{}
 	_ chats.ForkFinder      = claudehistory.Local{}

@@ -130,6 +130,11 @@ type Item struct {
 	// WorktreePath is the worktree the agent says it gave the subagent, if
 	// it says (untrusted: chats' related.go checks it against git's list).
 	WorktreePath string `json:",omitempty"`
+	// WorksIn is where the main agent's tool call says it works once the
+	// call succeeded (the harness's WorkReader): the worktree it entered,
+	// or a zero one for its session's folder when it left one; nil for any
+	// other call.
+	WorksIn *AgentWorktree `json:",omitempty"`
 	// AgentID is the agent's id for the subagent, when it can pass it
 	// messages; for a call that passes one a message (SubagentMessages.PassesToSubagent in chats),
 	// that subagent's.

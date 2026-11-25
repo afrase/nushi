@@ -160,6 +160,18 @@ type BackgroundTasks interface {
 	Stopped(call model.Item) (taskID string, unknown bool)
 }
 
+// WorkReader tells where the agent works once one of its tool calls
+// completes: in a worktree it entered, or back in its session's folder
+// (Claude's EnterWorktree and ExitWorktree, docs/facts/claude.md). The
+// chat keeps one folder: the call that entered a worktree only offers
+// to move the chat there (ADR 0150).
+type WorkReader interface {
+	// WorksIn reads it from an update of a tool call (its _meta): the
+	// worktree, or a zero one for the session's folder; ok is false for an
+	// update that says nothing of it, and for a call that failed.
+	WorksIn(meta map[string]any) (to model.AgentWorktree, ok bool)
+}
+
 // ReadOnly is an agent with a mode that can't change anything. Its name is
 // the value of its mode option.
 type ReadOnly interface {

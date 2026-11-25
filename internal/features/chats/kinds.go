@@ -65,6 +65,7 @@ type kind struct {
 	worktreeFinder WorktreeFinder
 	workflows      WorkflowReader
 	usageReader    UsageReader
+	workReader     WorkReader
 }
 
 // newKind asks k's harness what it can do, once: nothing else in this
@@ -76,7 +77,7 @@ func newKind(k Kind) *kind {
 		background: can[BackgroundTasks](h), terminalCmds: can[TerminalCommands](h), commandHider: can[CommandHider](h), contextAsker: can[ContextAsker](h), taskStopper: can[TaskStopper](h), titleMaker: can[TitleMaker](h), readOnly: can[ReadOnly](h), goneReader: can[GoneReader](h),
 		openFinder: can[OpenFinder](h), forkFinder: can[ForkFinder](h), searcher: can[SessionSearcher](h), historyChecker: can[HistoryChecker](h),
 		messageDater: can[MessageDater](h), sentReader: can[SentReader](h), worktreeFinder: can[WorktreeFinder](h), workflows: can[WorkflowReader](h),
-		usageReader: can[UsageReader](h)}
+		usageReader: can[UsageReader](h), workReader: can[WorkReader](h)}
 }
 
 // can is h as a capability, a nil T when h hasn't it. Harnesses are values,
