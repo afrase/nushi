@@ -35,14 +35,14 @@ type Harness struct{}
 // deleting closes it first, but Claude writes a little of the session back
 // as it ends. The agent shows subagents as sessions of their own (ACP's
 // subagents RFD) to a client that says it can take them: each subagent's
-// end, why it ended, and a stop of its own (session/cancel on its session).
+// end, why it ended, its text and thinking, and a stop of its own
+// (session/cancel on its session), so Nushi's initialize needs no _meta.
 // It asks Claude Code itself that stopping a turn (session/cancel) stop
 // only the turn (perTaskStopAffordance, as Claude Code's terminal has it),
 // as without it Claude Code's interrupt kills the background tasks too,
 // which no update then tells.
 //
-// Its _meta: InitMeta has the agent send a subagent's text and thinking too.
-// SessionMeta is the host options the agent passes Claude Code:
+// Its _meta: SessionMeta is the host options the agent passes Claude Code:
 // CLAUDE_CODE_REPORT_FINDINGS in Claude Code's environment makes its
 // /code-review report through its ReportFindings tool, which the transcript
 // draws as a card, instead of printing JSON. UltracodeMeta is Claude Code's
@@ -55,7 +55,6 @@ func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{Name: "claude", Title: "Claude", Resume: "claude --resume", ClientMCP: true,
 		Expires: "Claude Code deletes sessions after 30 days by default", NamesSessions: true, SubagentSessions: true, Redelete: 3 * time.Second, Moves: true,
 		OtherSuffix: "_custom", // AskUserQuestion's free text after a question
-		InitMeta:    map[string]any{"subagent-transcript": true},
 		SessionMeta: map[string]any{"claudeCode": map[string]any{"options": map[string]any{
 			"env": map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
 		}}},
