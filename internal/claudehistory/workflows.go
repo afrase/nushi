@@ -368,7 +368,10 @@ func (r *run) ended(w model.Workflow, s snapshot) model.Workflow {
 // Once it ended, the later launch's rows that it ran afresh aren't this
 // one's. A call both launches made (the same key started again) names
 // only the later one's agent, so this launch's card shows less: not that
-// agent as its own stopped one.
+// agent as its own stopped one. A launch that ended without writing its
+// snapshot (claude gone while it ran) takes the earlier one's for a later
+// one's: its card shows only the agents it ran afresh, and the phases it
+// served from cache as still to come.
 func (r *run) rows(ended bool) []journalRow {
 	o := r.other
 	if r.snap != nil || o == nil {
