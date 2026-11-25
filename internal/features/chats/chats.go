@@ -66,6 +66,10 @@ type Service struct {
 
 	pinMu sync.Mutex // Pin's, one order at a time
 
+	// aheadTried are the chats the copy-ahead pass opened and got no copy
+	// of, by id (ahead.go). Only the hourly loop reads or writes it.
+	aheadTried map[string]aheadTry
+
 	mu        sync.Mutex
 	chats     map[string]*chat
 	closing   bool        // Close began: no agent starts any more

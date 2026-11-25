@@ -452,3 +452,39 @@ func TestCopyAheadCopiesAnOutlivedChatFromWhatItShows(t *testing.T) {
 		}
 	})
 }
+
+// A chat whose load makes no copy (its replay holds nothing a copy keeps,
+// or it fails) goes after the chats not tried yet, and is tried again
+// less often each time: a few such chats at the head don't take every
+// hour's turn, nor start an agent each hour for good.
+func TestCopyAheadTriedChatsGoLastAndLessOften(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		f := newAhead(t, false, []model.ChatRecord{
+			{ID: "a", Updated: daysAgo(29)}, {ID: "b", Updated: daysAgo(28)}, {ID: "c", Updated: daysAgo(27)},
+			{ID: "d", Updated: daysAgo(5)},
+		})
+		f.agent.mu.Lock()
+		f.agent.history = nil // what d's replay holds alone
+		for _, u := range aheadHistory {
+			f.agent.replay = append(f.agent.replay, acp.SessionNotification{SessionID: "s-d", Update: u})
+		}
+		f.agent.mu.Unlock()
+		f.on.Store(true)
+		pass(time.Hour)
+		if got := f.copiedIDs(t); len(got) > 0 {
+			t.Errorf("the first hour: copies %v", got)
+		}
+		pass(time.Hour)
+		if got := f.copiedIDs(t); !slices.Equal(got, []string{"d"}) {
+			t.Errorf("the second hour: copies %v", got)
+		}
+		before, _ := f.launches()
+		pass(22 * time.Hour)
+		// Each is tried again 1, 2, 4, 8 and 16 hours after its first try,
+		// three an hour at most: a and b at hours 4, 8 and 16, c (left out
+		// at hour 2 for d) at 3, 5, 9 and 17.
+		if n, _ := f.launches(); n-before != 10 {
+			t.Errorf("%d agents started in a day for three chats that make no copy", n-before)
+		}
+	})
+}

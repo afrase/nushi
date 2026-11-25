@@ -24,8 +24,22 @@ import (
 
 // aheadPerHour is how many chats the copy-ahead pass opens an hour at
 // most: a backlog of hundreds mustn't start an agent after another for
-// the whole hour. A failed load counts, and is tried again the next hour.
+// the whole hour. A failed load counts.
 const aheadPerHour = 3
+
+// aheadRetryMax is the longest the pass waits to try a chat again whose
+// load made no copy (it failed, or its replay held nothing a copy keeps):
+// it waits an hour after the first try, twice as long after each next,
+// up to this. Such chats go after those not tried yet, so a few that never
+// copy can't take every hour's turn from the rest.
+const aheadRetryMax = 24 * time.Hour
+
+// aheadTry is how often the pass opened a chat and got no copy, and when
+// it may try again.
+type aheadTry struct {
+	n    int
+	next time.Time
+}
 
 // aheadLoad says a chat's load is the copy-ahead pass's, and how the chat
 // is put back after it; what needs the agent meanwhile (a message, Wake, a
@@ -44,7 +58,8 @@ const (
 func (c *chat) wantedLocked() { c.ahead = notAhead }
 
 // copyAhead makes the copies of the chats that need one (needsCopy), the
-// longest unused first, aheadPerHour at most, until ctx ends.
+// longest unused first, those it tried before last and less often each
+// time (aheadTry), aheadPerHour at most, until ctx ends.
 func (s *Service) copyAhead(ctx context.Context) {
 	if s.copies == nil || !s.copiesOn() || s.resting.Load() ||
 		!slices.ContainsFunc(s.kinds, func(k *kind) bool { return k.Expires != "" && k.historyChecker != nil }) {
@@ -55,20 +70,42 @@ func (s *Service) copyAhead(ctx context.Context) {
 		return
 	}
 	stored = slices.DeleteFunc(stored, func(sess model.ChatRecord) bool { return !s.needsCopy(sess) })
-	slices.SortStableFunc(stored, func(a, b model.ChatRecord) int {
-		return cmp.Or(a.Updated, a.Created).Compare(cmp.Or(b.Updated, b.Created))
-	})
-	tried := 0
+	tried := make(map[string]aheadTry, len(s.aheadTried)) // the chats that need a copy still
 	for _, sess := range stored {
-		if tried == aheadPerHour || ctx.Err() != nil || !s.copiesOn() {
+		if t, ok := s.aheadTried[sess.ID]; ok {
+			tried[sess.ID] = t
+		}
+	}
+	s.aheadTried = tried
+	now := time.Now()
+	stored = slices.DeleteFunc(stored, func(sess model.ChatRecord) bool { return now.Before(tried[sess.ID].next) })
+	slices.SortStableFunc(stored, func(a, b model.ChatRecord) int {
+		return cmp.Or(cmp.Compare(tried[a.ID].n, tried[b.ID].n),
+			cmp.Or(a.Updated, a.Created).Compare(cmp.Or(b.Updated, b.Created)))
+	})
+	opened := 0
+	for _, sess := range stored {
+		if opened == aheadPerHour || ctx.Err() != nil || !s.copiesOn() {
 			return
 		}
 		if k, _ := s.kindOf(sess.Agent); k.historyChecker.HistoryGone(sess.SessionID, sess.Folder) {
 			continue // the sweep's to mark
 		}
-		if s.copyOne(ctx, sess.ID) {
-			tried++
+		start := time.Now()
+		if !s.copyOne(ctx, sess.ID) {
+			continue
 		}
+		opened++
+		if s.copies.Has(sess.ID) {
+			delete(tried, sess.ID)
+			continue
+		}
+		t := tried[sess.ID]
+		t.n++
+		// A minute's slack: the next hour's pass may begin a little
+		// before the hour after this one began.
+		t.next = start.Add(min(time.Hour<<(t.n-1), aheadRetryMax) - time.Minute)
+		tried[sess.ID] = t
 	}
 }
 
@@ -136,7 +173,7 @@ func (s *Service) copyOne(ctx context.Context, id string) bool {
 	case c.ahead != notAhead && len(c.queue) == 0:
 		agent = c.disconnectLocked()
 		c.asleep = c.ahead == aheadAsleep || s.dormant(c.record, c.kind, true)
-		log.Info("chat's copy made; chat asleep again")
+		log.Info("chat asleep again", "copied", s.copies.Has(c.id))
 	default:
 		log.Info("chat's copy made; chat stays open", "why", "it was wanted meanwhile")
 	}
