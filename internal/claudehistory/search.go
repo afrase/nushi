@@ -183,7 +183,11 @@ func scan(ctx context.Context, path string, q textfind.Query, unnoted func(strin
 // typed says a record may hold a command the user typed, which cleaned
 // writes with a `!` or `/` the line may not have ("!git" for
 // <bash-input>git status</bash-input>): the query's anchor can't rule it
-// out, so it is decoded.
+// out, so it is decoded. A marker UserText removes from between two
+// words can join them into a run the anchor wants ("foo<command-args>x
+// </command-args>bar" for "foobar"); such a line isn't decoded, and that
+// query isn't found there: no recording or fixture has a marker
+// directly against a word.
 func typed(line []byte) bool {
 	return bytes.Contains(line, []byte("<bash-input>")) || bytes.Contains(line, []byte("<command-name>"))
 }
