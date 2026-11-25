@@ -89,9 +89,9 @@ void main() {
     expect(_asked(fake), hasLength(1));
     expect(find.textContaining(r'$'), findsNothing);
     expect(find.byKey(const ValueKey('status-spend')), findsNothing);
-    // The memory still shows, at the card's start in the spend's place.
+    // The memory still shows, at the card's end where it always is.
     expect(find.text('438 MB'), findsOne);
-    expect(tester.getRect(find.text('438 MB')).left, lessThan(50));
+    expect(tester.getRect(find.text('438 MB')).right, greaterThan(220));
     await closeView(tester, d);
   });
 
@@ -103,6 +103,27 @@ void main() {
     expect(_asked(fake), hasLength(1));
     expect(find.textContaining(r'$'), findsNothing);
     expect(find.byKey(const ValueKey('status-spend')), findsNothing);
+    await closeView(tester, d);
+  });
+
+  testWidgets("the remote's mark stays beside the memory, and neither "
+      'moves as a spend comes', (tester) async {
+    final fake = FakeDaemon([])
+      ..usage = _day(0)
+      ..remote = Remote(on: true, state: 'connected');
+    final d = await _card(tester, fake);
+    final memory = find.text('438 MB');
+    final mark = find.byIcon(Icons.phone_iphone);
+    expect(mark, findsOne);
+    final (m, p) = (tester.getRect(memory), tester.getRect(mark));
+    expect(m.left - p.right, inInclusiveRange(0, 30));
+
+    fake.usage = _day(5);
+    await tester.pump(const Duration(minutes: 1));
+    await tester.pump();
+    expect(_spend(r'$5.00'), findsOne);
+    expect(tester.getRect(memory), m);
+    expect(tester.getRect(mark), p);
     await closeView(tester, d);
   });
 

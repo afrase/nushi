@@ -115,9 +115,9 @@ class _StatusBarState extends State<StatusBar> {
       ),
       // Two quiet figures, each with what says what it is: today's spend
       // at the start, the memory at the end, the remote's mark before it.
-      // Without a spend the memory takes the start, so the card doesn't
-      // read as missing something. A narrow card scales the spend down
-      // rather than cutting it.
+      // Without a spend the start is empty: the memory and the mark stay
+      // where they are, so nothing moves as a spend comes or goes. A
+      // narrow card scales the spend down rather than cutting it.
       child: ValueListenableBuilder(
         valueListenable: _spend,
         builder: (context, spent, _) {
@@ -140,19 +140,20 @@ class _StatusBarState extends State<StatusBar> {
             ),
             null => null,
           };
-          if (spent == null || widget.daemon.daemonApi < usageApi) {
-            return Row(children: [?memory, const Spacer(), const RemoteMark()]);
-          }
+          final shown = widget.daemon.daemonApi >= usageApi ? spent : null;
           return Row(
             children: [
               Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: SpendButton(spent, widget.daemon, style: small),
+                child: switch (shown) {
+                  final s? => Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: SpendButton(s, widget.daemon, style: small),
+                    ),
                   ),
-                ),
+                  null => const SizedBox.shrink(),
+                },
               ),
               const RemoteMark(),
               ?memory,
