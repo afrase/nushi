@@ -135,7 +135,7 @@ void main() {
     await closeView(tester, d);
   });
 
-  // The owner's report: a new chat took the pull request its folder's
+  // The case: a new chat took the pull request its folder's
   // branch already had. The chat links it by itself only once it pushed
   // the branch; until then the dialog offers it first.
   testWidgets('the branch’s pull request is offered first, once, and '

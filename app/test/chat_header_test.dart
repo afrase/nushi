@@ -123,7 +123,7 @@ void main() {
           ('claude', false, 0, '', null),
           ('omp', true, 0, '', null),
           ('omp', false, 2, '', null), // "in background"
-          ('claude', false, 0, 'PLATFORM-12345', null),
+          ('claude', false, 0, 'ACMEDEMO-12345', null),
           // The chat's issue, or its pull request with its badges.
           ('claude', false, 0, '', pull ? pullItem : issue),
         ]) {

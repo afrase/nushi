@@ -101,9 +101,9 @@ String? _label(List<Item> items, {void Function(ChatState)? also}) {
   return failedTurnRetry(s, items.last)?.label;
 }
 
-/// The owner's case: a turn that ran commands, then failed.
+/// A turn that ran commands, then failed.
 final List<Item> _worked = [
-  _user('u', 'maybe skip guild boss for now'),
+  _user('u', 'maybe leave the intro out for now'),
   _tool('t1'),
   _notice(),
 ];
@@ -113,7 +113,7 @@ void main() {
 
   test('what the agent did after the message is progress', () {
     for (final it in [
-      agentSays('a', 'Skipping it.'),
+      agentSays('a', 'Leaving it out.'),
       Item(id: 'a', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, images: [_image]),
       Item(id: 'th', kind: ItemKind.ITEM_KIND_THOUGHT),
       _tool('t1'),
@@ -245,12 +245,12 @@ void main() {
       Item(
         id: 'item-1',
         kind: ItemKind.ITEM_KIND_USER_MESSAGE,
-        text: 'maybe skip guild boss for now',
+        text: 'maybe leave the intro out for now',
       ),
       Item(
         id: 'toolu_01',
         kind: ItemKind.ITEM_KIND_TOOL_CALL,
-        title: 'grep boss',
+        title: 'grep intro',
         status: 'completed',
       ),
       _notice(),
@@ -349,7 +349,10 @@ void main() {
   for (final width in [1700.0, 720.0]) {
     for (final (name, items) in [
       ('continue', _worked),
-      ('try_again', [_user('u', 'maybe skip guild boss for now'), _notice()]),
+      (
+        'try_again',
+        [_user('u', 'maybe leave the intro out for now'), _notice()],
+      ),
     ]) {
       testWidgets('$name renders at $width', (tester) async {
         final (_, d) = await _window(tester, items, size: Size(width, 900));

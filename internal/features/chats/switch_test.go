@@ -112,7 +112,7 @@ func TestNoSideChatTurnStartsMidSwitch(t *testing.T) {
 	}
 }
 
-// A side chat at work keeps its chat's folder from switching branch, as
+// A side chat that works keeps its chat's folder from switching branch, as
 // the chat's own turn does: git would change the folder under its agent.
 func TestNoSwitchWhileASideChatWorks(t *testing.T) {
 	svc, agent, c := newChat(t, claudeSession, &memModes{})

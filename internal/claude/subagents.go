@@ -95,8 +95,8 @@ func (Harness) ReadStopTask(prompt string) (what, taskID string, ok bool) {
 // having found it no longer running ("Task <id> is not running (status:
 // killed)", an error): the task's id. With unknown, Claude has no task of
 // that id ("No task found", an error): a mistyped id, or a task that ended
-// and that Claude has let go (the owner's second stop of a command,
-// 2026-11-17: docs/facts/claude.md).
+// and that Claude has let go (a second stop of a command:
+// docs/facts/claude.md).
 func (Harness) Stopped(it model.Item) (taskID string, unknown bool) {
 	switch {
 	case it.Tool != "TaskStop" || it.Stops == "":

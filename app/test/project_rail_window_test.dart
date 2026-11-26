@@ -301,7 +301,7 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         // Narrowed to a project.
-        await tester.tap(find.byTooltip('ledger-poc\n$ledger'));
+        await tester.tap(find.byTooltip('parcel-poc\n$ledger'));
         await frames(tester, 5, const Duration(milliseconds: 300));
         expectTextInside(tester, width);
         await render(tester, find.byType(NushiApp), 'rail_one_$name');

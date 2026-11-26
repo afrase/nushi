@@ -182,8 +182,8 @@ void main() {
   testWidgets('a file written, then shown by its absolute path, is one '
       'row, marked when the show opens it, its old pin kept', (tester) async {
     // The daemon names the written file relative to the chat's folder; the
-    // show call's path is the agent's own (a page as the owner saw it, but
-    // Markdown: a test has no web view).
+    // show call's path is the agent's own (a page, but Markdown here: a
+    // test has no web view).
     const page = '/Users/me/nushi/mock/page.md';
     final (d, fake) = await _app(tester, [
       ..._three,

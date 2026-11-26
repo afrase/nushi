@@ -14,7 +14,7 @@ import 'package:nushi/widgets.dart';
 /// Pull request tab puts each into the chat's box as a reply card (the
 /// quote, and a line asking the agent to act on it), for the user to send;
 /// several wait there together, and a toast says what went ([onSend]'s
-/// `what` names it: "CI / rubocop"). [box] is that box, for what's in it.
+/// `what` names it: "CI / linters"). [box] is that box, for what's in it.
 /// Without one (the GitHub view) the parts show no Send to agent.
 class SendToAgent extends InheritedWidget {
   const new({required this.onSend, required super.child, super.key, this.box});

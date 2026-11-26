@@ -33,7 +33,7 @@ void spellTest(String name, Future<void> Function(WidgetTester) body) =>
 
 /// A stand-in for the Mac's checker: [wrong] are misspelled, and it records
 /// what it was asked. It never reaches the real one, whose `learnWord` writes
-/// the owner's dictionary.
+/// the user's dictionary.
 class FakeSpeller implements Speller {
   new(this.wrong, {this.fixes = const {}});
 

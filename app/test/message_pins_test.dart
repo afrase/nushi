@@ -631,13 +631,13 @@ void main() {
                 label: 'Pinned messages',
                 entries: const [
                   sessionStart,
-                  RailEntry('a', 'Stripe UI styling'),
-                  RailEntry('b', 'Inline code formatting display'),
+                  RailEntry('a', 'Banner UI spacing'),
+                  RailEntry('b', 'Table column alignment in docs'),
                   RailEntry(
                     'c',
-                    'Theme-card screenshots and the v0.3.0 release notes',
+                    'Icon-set mockups and the 2.4 changelog, a first cut',
                   ),
-                  RailEntry('d', 'v0.3.1 deployment and parallel features'),
+                  RailEntry('d', '2.4.1 rollout and the next three chores'),
                 ],
                 current: current,
                 fit: RailFit.wide,

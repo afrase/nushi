@@ -128,7 +128,7 @@ void main() {
       'notes',
       'garden',
       'zeta',
-      'ledger-poc',
+      'parcel-poc',
       'attic',
       'Add project…',
     ]);
@@ -159,7 +159,7 @@ void main() {
       Section(id: 's2', name: 'Later', chats: ['d']),
     ];
     final (d, _) = await arrangedSidebar(tester);
-    const headers = ['Pinned', 'Reviews', 'Later', 'ledger-poc', 'attic'];
+    const headers = ['Pinned', 'Reviews', 'Later', 'parcel-poc', 'attic'];
     List<String> shown() =>
         shownInOrder(tester, [...headers, ...arrangeTitles, 'No chats']);
     expect(_chats(tester), [
@@ -167,13 +167,13 @@ void main() {
       'Cap the rates',
       'Jot it down',
       'Plant the beds',
-      'Wire the ledger',
+      'Wire the parcel',
       'Seed data',
     ]);
 
-    await _press(tester, 'ledger-poc');
-    expect(_picked(tester), 'ledger-poc');
-    expect(shown(), ['ledger-poc', 'Wire the ledger', 'Seed data']);
+    await _press(tester, 'parcel-poc');
+    expect(_picked(tester), 'parcel-poc');
+    expect(shown(), ['parcel-poc', 'Wire the parcel', 'Seed data']);
     expect(sidebarProject.value, ledger);
     expect(readSaved()['sidebarProject'], ledger);
     // ⌘1–⌘9 go through what shows.
@@ -213,7 +213,7 @@ void main() {
     expect(sidebarProject.value, garden);
     expect(_chats(tester), ['Plant the beds']);
     // The same project's: it stays.
-    await _press(tester, 'ledger-poc');
+    await _press(tester, 'parcel-poc');
     d.select('b');
     await tester.pumpAndSettle();
     expect(sidebarProject.value, ledger);
@@ -346,7 +346,7 @@ void main() {
       final f when f.evaluate().isNotEmpty => tester.widget<Text>(f).data,
       _ => null,
     };
-    expect(badge('ledger-poc'), '1');
+    expect(badge('parcel-poc'), '1');
     expect(badge('cubby'), isNull);
     expect(badge('attic'), isNull);
 
@@ -362,12 +362,12 @@ void main() {
     }
 
     await waits('b');
-    expect(badge('ledger-poc'), '2');
+    expect(badge('parcel-poc'), '2');
     await waits('p'); // attic's pinned chat
     expect(badge('attic'), '1');
     await waits('a', waiting: false);
     await waits('b', waiting: false);
-    expect(badge('ledger-poc'), isNull);
+    expect(badge('parcel-poc'), isNull);
     // At its tile's top right corner, a little past it.
     final tile = tester.getRect(_tile('attic'));
     final mark = tester.getRect(find.byKey(const Key('tile badge')));
@@ -548,7 +548,7 @@ void main() {
       icons: {garden: await iconPng(tester)},
     );
     await decodeImages(tester);
-    for (final name in ['ledger-poc', 'cubby', 'garden', 'notes', 'attic']) {
+    for (final name in ['parcel-poc', 'cubby', 'garden', 'notes', 'attic']) {
       final small = find.byWidgetPredicate(
         (w) =>
             w is ProjectTile && w.name == name && w.size == ProjectTile.small,
@@ -651,7 +651,7 @@ void main() {
     ('light', Tokens.light),
   ]) {
     testWidgets('the sidebar with its rail, $name', (tester) async {
-      // Narrowed to ledger-poc, attic's pin stays, marked as attic's.
+      // Narrowed to parcel-poc, attic's pin stays, marked as attic's.
       pinnedEveryProject.value = true;
       sidebarProjects.value = {'/Users/me/zeta'};
       projectTiles.value = {cubby: const TileLook(mark: 'CR', color: 'teal')};
@@ -665,7 +665,7 @@ void main() {
         find.byKey(const Key('shot')),
         matchesGoldenFile('goldens/project_rail_$name.png'),
       );
-      await _press(tester, 'ledger-poc');
+      await _press(tester, 'parcel-poc');
       await expectLater(
         find.byKey(const Key('shot')),
         matchesGoldenFile('goldens/project_rail_one_$name.png'),

@@ -111,7 +111,7 @@ Future<(FakeDaemon, Daemon)> _open(
         for (final i in _sprint)
           if (i.assigneeId == 'me-1') i,
         _is(
-          'OPS-1204',
+          'ACME-204',
           'Rotate the deploy keys before the audit, every one of them',
           'To Do',
           'new',
@@ -163,7 +163,7 @@ Future<void> _filter(WidgetTester tester, String from, String who) async {
 
 /// The keys of the rows shown.
 List<String> _keys() => [
-  for (final k in [..._sprint.map((i) => i.key), 'OPS-1204'])
+  for (final k in [..._sprint.map((i) => i.key), 'ACME-204'])
     if (find.text(k).evaluate().isNotEmpty) k,
 ];
 
@@ -181,7 +181,7 @@ void _expectColumns(WidgetTester tester) {
     lessThanOrEqualTo(1),
     reason: 'assignees',
   );
-  for (final k in ['ABCD-12345', 'OPS-1204']) {
+  for (final k in ['ABCD-12345', 'ACME-204']) {
     if (find.text(k).evaluate().isEmpty) continue;
     expect(
       tester.renderObject<RenderParagraph>(find.text(k)).didExceedMaxLines,

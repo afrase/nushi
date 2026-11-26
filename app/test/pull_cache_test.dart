@@ -16,7 +16,7 @@ import 'pull_fixture.dart';
 
 final _ref = GitHubRef(host: 'github.com', repo: fixtureRepo, number: 412);
 
-const _title = "Ignore q params that aren't hashes in admin filters";
+const _title = "Read an n that isn't a number as page 1 in listings";
 
 /// Keeps the fixture's pull request as read [ago] before the fixture's
 /// now, as an earlier open would have.
@@ -154,7 +154,7 @@ void main() {
     final dir = Directory('$dataDir/pulls');
     final files = dir.listSync().whereType<File>().toList();
     expect(files.map((f) => f.uri.pathSegments.last).toSet(), {
-      for (var n = 3; n <= 52; n++) 'github.com_octo_notes_$n.pb',
+      for (var n = 3; n <= 52; n++) 'github.com_octo_shelf_$n.pb',
     });
     int mode(String path) => FileStat.statSync(path).mode & 0x1ff;
     expect(mode(dir.path), 0x1c0);

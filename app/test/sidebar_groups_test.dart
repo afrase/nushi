@@ -16,14 +16,14 @@ import 'package:nushi/theme/theme.dart';
 import 'fake_daemon.dart';
 import 'sidebar_fixture.dart';
 
-/// Four projects, newest chat first: ledger-poc (one chat waiting on you,
+/// Four projects, newest chat first: parcel-poc (one chat waiting on you,
 /// one idle), cubby (working), garden (a turn's end unseen), notes (idle).
 List<Chat> _chats() => [
   chat(
     'a',
     'claude',
-    'Wire the ledger',
-    folder: '/Users/me/ledger-poc',
+    'Wire the parcel',
+    folder: '/Users/me/parcel-poc',
     status: ChatStatus(busy: true, waiting: true),
   ),
   chat(
@@ -37,7 +37,7 @@ List<Chat> _chats() => [
   chat('d', 'claude', 'Plant the beds', folder: '/Users/me/garden', age: 2)
     ..done = true,
   chat('e', 'ante', 'Jot it down', folder: '/Users/me/notes', age: 3),
-  chat('b', 'pig', 'Seed data', folder: '/Users/me/ledger-poc', age: 5),
+  chat('b', 'pig', 'Seed data', folder: '/Users/me/parcel-poc', age: 5),
 ];
 
 Future<Daemon> _sidebar(
@@ -57,7 +57,7 @@ Future<Daemon> _sidebar(
   return d;
 }
 
-const _projects = ['ledger-poc', 'cubby', 'garden', 'notes'];
+const _projects = ['parcel-poc', 'cubby', 'garden', 'notes'];
 
 /// The projects' headers, top to bottom.
 List<String> _order(WidgetTester tester) => [
@@ -92,8 +92,8 @@ void main() {
     var d = await _sidebar(tester);
     expect(_order(tester), _projects);
     // With the mouse, as on the Mac (a touch drag scrolls the list); up,
-    // into the top half of ledger-poc's group.
-    final top = _y(tester, 'ledger-poc');
+    // into the top half of parcel-poc's group.
+    final top = _y(tester, 'parcel-poc');
     var at = tester.getCenter(find.text('notes'));
     final drag = await tester.startGesture(at, kind: PointerDeviceKind.mouse);
     while (at.dy > top - 4) {
@@ -102,10 +102,10 @@ void main() {
       await tester.pump();
     }
     // Reduce Motion: there at once, notes's place open above it.
-    expect(_y(tester, 'ledger-poc'), greaterThan(top));
+    expect(_y(tester, 'parcel-poc'), greaterThan(top));
     await drag.up();
     await tester.pump();
-    final order = ['notes', 'ledger-poc', 'cubby', 'garden'];
+    final order = ['notes', 'parcel-poc', 'cubby', 'garden'];
     expect(_order(tester), order);
     final paths = [for (final p in order) '/Users/me/$p'];
     expect(sidebarOrder.value, paths);
@@ -129,18 +129,18 @@ void main() {
   testWidgets('the chevron collapses a project: its rows hidden, the most '
       'urgent state as one dot, remembered', (tester) async {
     final d = await _sidebar(tester);
-    expect(_dot(tester, 'ledger-poc'), isNull); // open: no summary
+    expect(_dot(tester, 'parcel-poc'), isNull); // open: no summary
     await tester.tap(
       find.descendant(
-        of: _header('ledger-poc'),
+        of: _header('parcel-poc'),
         matching: find.byTooltip('Collapse'),
       ),
     );
     await tester.pump();
-    expect(find.text('Wire the ledger'), findsNothing);
+    expect(find.text('Wire the parcel'), findsNothing);
     expect(find.text('Seed data'), findsNothing);
-    expect(_dot(tester, 'ledger-poc'), ChatPhase.waiting); // over idle
-    expect(readSaved()['sidebarCollapsed'], ['/Users/me/ledger-poc']);
+    expect(_dot(tester, 'parcel-poc'), ChatPhase.waiting); // over idle
+    expect(readSaved()['sidebarCollapsed'], ['/Users/me/parcel-poc']);
 
     // The chevron is a button the keyboard presses.
     Focus.of(
@@ -173,13 +173,13 @@ void main() {
 
     await tester.tap(
       find.descendant(
-        of: _header('ledger-poc'),
+        of: _header('parcel-poc'),
         matching: find.byTooltip('Expand'),
       ),
     );
     await tester.pump();
-    expect(find.text('Wire the ledger'), findsOneWidget);
-    expect(_dot(tester, 'ledger-poc'), isNull);
+    expect(find.text('Wire the parcel'), findsOneWidget);
+    expect(_dot(tester, 'parcel-poc'), isNull);
     expect(sidebarCollapsed.value, {
       '/Users/me/cubby',
       '/Users/me/garden',
@@ -260,7 +260,7 @@ void main() {
     );
     expect(find.text('cubby  · me'), findsOneWidget);
     expect(find.text('cubby  · work'), findsOneWidget);
-    expect(find.text('ledger-poc'), findsOneWidget); // no twin: the name
+    expect(find.text('parcel-poc'), findsOneWidget); // no twin: the name
     expect(find.text('needs you'), findsNothing);
     expect(
       find.ancestor(
@@ -285,10 +285,10 @@ void main() {
     d.dispose();
   });
 
-  testWidgets('golden: ledger-poc collapsed, its dot amber (dark)', (
+  testWidgets('golden: parcel-poc collapsed, its dot amber (dark)', (
     tester,
   ) async {
-    sidebarCollapsed.value = {'/Users/me/ledger-poc'};
+    sidebarCollapsed.value = {'/Users/me/parcel-poc'};
     final d = await _sidebar(tester);
     await expectLater(
       find.byKey(const Key('shot')),

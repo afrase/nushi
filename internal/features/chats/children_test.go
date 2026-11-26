@@ -104,7 +104,7 @@ func TestAStoppedSubagentEndsAndTheNextHasItsOwnSteps(t *testing.T) {
 	_, _, c := newChat(t, claudeSession, &memModes{})
 	notes := recorded(t, "stop_then_start.jsonl")
 	feed(c, notes)
-	if sa := subagentOf(t, c, countSlowly); sa.State != "stopped" || sa.Session != "ab89b68fab85fc5e7" || sa.Ended.IsZero() {
+	if sa := subagentOf(t, c, countSlowly); sa.State != "stopped" || sa.Session != "a1111111111111111" || sa.Ended.IsZero() {
 		t.Errorf("the stopped one: %+v", sa)
 	}
 	if sa := subagentOf(t, c, countSlowlyV2); sa.State != "done" || sa.Result == "" {
@@ -199,8 +199,8 @@ func TestABackgroundCommandIsStoppedThroughClaude(t *testing.T) {
 
 // Claude's TaskStop of a background command's task (as recorded) ends its
 // row at once, whatever its file says, and the restart no longer waits for
-// it; so does a TaskStop that finds the task no longer running (the owner's
-// second stop, 2026-11-17, "No task found"), how it ended unsaid. One that
+// it; so does a TaskStop that finds the task no longer running (a second
+// stop, "No task found"), how it ended unsaid. One that
 // failed otherwise changes nothing.
 func TestTaskStopEndsABackgroundCommand(t *testing.T) {
 	const call = "toolu_018dAWSFW2XgQGT1zPQWK8n5"
@@ -250,7 +250,7 @@ func TestTaskStopEndsABackgroundCommand(t *testing.T) {
 }
 
 // A subagent still running in the transcript's copy when the daemon went
-// (as an owner's chat stuck showing one) takes the end Claude's replay
+// (a chat could stay stuck showing one) takes the end Claude's replay
 // says; one whose end was seen keeps it, though the replay tells it
 // otherwise.
 func TestSubagentsEndOnReopenAfterTheDaemonWent(t *testing.T) {

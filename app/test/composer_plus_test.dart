@@ -1,5 +1,5 @@
-// The composer's + menu, in the form of Claude's app (the owner's
-// screenshot, 2026-11-04): Add files or photos (⌘U), Mention a file, Slash
+// The composer's + menu, in the form of Claude's app (as it was on
+// 2026-11-04): Add files or photos (⌘U), Mention a file, Slash
 // commands, each with a drawn icon; no Connectors. Files of any kind become
 // file cards and go to the agent as links (ADR 0091).
 

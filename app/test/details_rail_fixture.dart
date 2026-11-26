@@ -13,7 +13,7 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 /// What Claude's /context says of a long chat, as in Claude Code's rail
-/// (the owner's screenshot, 2026-11-05).
+/// (its shape as of 2026-11-05; the numbers are made up).
 const reportMarkdown = '''
 ## Context Usage
 

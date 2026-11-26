@@ -9,7 +9,7 @@ import 'package:nushi/settings.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-const fixtureRepo = 'octo/notes';
+const fixtureRepo = 'octo/shelf';
 
 GitHubComment said(
   String author,
@@ -53,41 +53,41 @@ GitHubCheck check(
 /// The Danger bot's comment: a table of one message.
 const dangerBody =
     '| | 1 Message |\n| --- | --- |\n'
-    '| :book: | **Review App Links** · Notes: '
-    '[filters-malformed-q.review.example.dev]($_review) · Traces: '
-    '[Datadog](https://example.dev/traces) · You can add sample notes with: '
-    '`NOTES=$_review ./bin/seed-notes` |';
+    '| :book: | **Trial Site Links** · Shelf: '
+    '[shelf-page-size-fix.sample.example.dev]($_review) · Graphs: '
+    '[Plotter](https://example.dev/graphs) · You can add sample books with: '
+    '`BOOKS=$_review ./bin/fill-shelf` |';
 
-const _review = 'https://filters-malformed-q.review.example.dev';
+const _review = 'https://shelf-page-size-fix.sample.example.dev';
 
 /// A review bot's long review, with its findings to address.
 const aiReviewBody = r'''
-## Summary
+## Outline
 
-This PR treats a `q` param that isn't a hash (`q=foo` or `q[]=foo`) like a missing `q` in the admin and notebook filters, so these requests return unfiltered results instead of a 500. It touches `Admin::NotesController`, `Admin::UsersController`, `Admin::SearchHelper`, and the notebook pages. The guards are correct under Rails 8's `permit`, and well-formed `q` hashes take the same path as before.
+This PR reads an `n` param that isn't a number (`n=all` or `n[]=20`) like a missing `n` in the staff and catalogue listings, so these requests return the first page instead of a 500. It touches `Staff::LoansController`, `Staff::BooksController`, `Staff::LookupHelper`, and the catalogue pages. The checks hold up under Ruby 3.4's `Integer()`, and well-formed `n` values take the same path as before.
 
-**Risk:** Medium
+**Scope:** Small
 
 ## Key findings
 
 ### Must address
 
-1. **`spec/notebooks/page_spec.rb:68-72`**: The only test for the notebooks-page guard is in a file tagged `:deprecated`, which CI never runs. Nothing has run it.
-2. **`spec/reports/page_spec.rb:409`**: The example says a non-hash `q` means no filters but only checks the 201. Assert `report.filters == {}` too.
+1. **`spec/catalogue/list_spec.rb:57-63`**: The one example for the catalogue-list check sits in a file marked `:slow`, which CI skips on pulls. It has never run.
+2. **`spec/members/loan_spec.rb:316`**: The example says a bad `n` gives the first page but only checks the 200. Assert `loans.size == 25` as well.
 
 ### Suggestions
 
-- If this guard is later extended to other `q` readers, keep it per action: autocomplete endpoints take `q` as a search term.
+- If this check later covers other `n` readers, keep it per action: the export endpoint takes `n` as a row limit, not a page.
 
-## Test coverage
+## Tests missing
 
-- The array case is missing for the users controller and the search helper.
+- The list case is missing for the books controller and the lookup helpers.
 
-## PR hygiene
+## Commit log
 
-- 12 files, +69/−5, one commit with a clear subject and body.
+- 12 files, +69/−5, one commit, with a message that says why.
 
-claude-opus · $2.61 · 10m 31s''';
+reviewer-xl · $3.48 · 12m 05s''';
 
 GitHubThread thread(
   String id,
@@ -128,7 +128,7 @@ GitHubComment _botSaid() => said(
 
 GitHubComment _monaSaid() => said(
   'mona',
-  'Thanks, the guard looks right. Two small things before this goes in.',
+  'Thanks, the checks read right. Two small things, then this can land.',
   review: 'changes_requested',
   age: const Duration(minutes: 1),
   id: _monaReview,
@@ -141,7 +141,7 @@ GitHubComment _monaSaid() => said(
 GetGitHubCommitsResponse fixtureCommits({bool many = false}) {
   final head = GitHubCommit(
     oid: 'b' * 40,
-    headline: "Ignore q params that aren't hashes in admin filters",
+    headline: "Read an n that isn't a number as page 1 in listings",
     author: 'afrase',
     authorName: 'afrase',
     committedMs: msAgo(const Duration(minutes: 20)),
@@ -153,7 +153,7 @@ GetGitHubCommitsResponse fixtureCommits({bool many = false}) {
     commits: [
       GitHubCommit(
         oid: '1a2b3c4d5e6f708192a3b4c5d6e7f80912345678',
-        headline: 'Guard the admin filters',
+        headline: 'Check the staff listing',
         author: 'afrase',
         authorName: 'afrase',
         committedMs: msAgo(const Duration(hours: 3)),
@@ -161,7 +161,7 @@ GetGitHubCommitsResponse fixtureCommits({bool many = false}) {
       ),
       GitHubCommit(
         oid: '9f8e7d6c5b4a39281706f5e4d3c2b1a098765432',
-        headline: 'Guard the notebook pages too',
+        headline: 'Check the catalogue page too',
         authorName: 'Tomas',
         committedMs: msAgo(const Duration(hours: 2)),
       ),
@@ -180,7 +180,7 @@ GitHubPull fixturePull() => GitHubPull(
     ref: GitHubRef(host: 'github.com', repo: fixtureRepo, number: 412),
     id: 'PR_412',
     pull: true,
-    title: "Ignore q params that aren't hashes in admin filters",
+    title: "Read an n that isn't a number as page 1 in listings",
     url: 'https://github.com/$fixtureRepo/pull/412',
     state: 'open',
     author: 'afrase',
@@ -192,7 +192,7 @@ GitHubPull fixturePull() => GitHubPull(
   ),
   labels: [
     GitHubLabel(name: 'bug', color: 'd73a4a'),
-    GitHubLabel(name: 'admin', color: '0e8a16'),
+    GitHubLabel(name: 'staff', color: '0e8a16'),
   ],
   assignees: ['afrase', 'mira'],
   reviews: [
@@ -207,14 +207,14 @@ GitHubPull fixturePull() => GitHubPull(
     _monaSaid(),
   ],
   body:
-      '**Explanation:** admin and notebook filters call '
-      "`params[:q].permit(…)`, so a `q` that isn't a hash (`q=foo` or "
-      '`q[]=foo`) raises and the page 500s. This treats those like a '
-      'missing `q`.\n\n'
-      '- [x] Tests for each filter that reads `q`\n'
-      '- [ ] Specs run locally (CI will run them)',
+      '**Why and how:** staff and catalogue listings call '
+      "`Integer(params[:n])`, so an `n` that isn't a number (`n=all` or "
+      '`n[]=20`) raises and the page 500s. This treats them as a '
+      'missing `n`.\n\n'
+      '- [x] Specs for each listing that uses `n`\n'
+      '- [ ] Specs pass on my Mac (CI will rerun)',
   base: 'main',
-  head: 'filters-malformed-q',
+  head: 'shelf-page-size-fix',
   headRepo: fixtureRepo,
   baseOid: 'a' * 40,
   headOid: 'b' * 40,
@@ -232,7 +232,7 @@ GitHubPull fixturePull() => GitHubPull(
   commits: 1,
   reviewers: [
     GitHubReviewer(
-      login: 'notes-reviewers',
+      login: 'library-keepers',
       state: 'requested',
       team: true,
       codeOwner: true,
@@ -254,13 +254,13 @@ GitHubPull fixturePull() => GitHubPull(
   threads: [
     thread(
       'T1',
-      'app/controllers/admin/notes_controller.rb',
+      'app/controllers/staff/loans_controller.rb',
       42,
       [
         said(
           'mona',
-          'Can we log when we drop a malformed `q`? Otherwise we lose the '
-              'signal that someone is sending scalars here.',
+          "Could we log when a bad `n` gets dropped? Otherwise we'd never "
+              'learn which client keeps sending words here.',
           age: const Duration(minutes: 1),
           reviewId: _monaReview,
         ),
@@ -270,93 +270,89 @@ GitHubPull fixturePull() => GitHubPull(
           '     # 39\n'
           '     # 40\n'
           '     # 41\n'
-          '-      q\n'
-          '+      q.is_a?(Hash) ? q : {}',
+          '-      n\n'
+          '+      Integer(n) rescue nil',
     ),
     thread(
       'T2',
-      'spec/reports/page_spec.rb',
-      409,
+      'spec/members/loan_spec.rb',
+      316,
       [
         said(
           'mona',
-          'The example says a non-hash `q` means no filters but only checks '
-              'the 201. Can it assert `report.filters == {}` too?',
+          'The example says a bad `n` gives the first page but only checks '
+              'the 200. Could it also assert `loans.size == 25`?',
           age: const Duration(minutes: 1),
           reviewId: _monaReview,
         ),
       ],
       diffHunk:
-          '@@ -405,3 +405,5 @@ describe "reports" do\n'
-          '   it "ignores a non-hash q" do\n'
-          '+    get "/reports", params: { q: "foo" }\n'
-          '+    expect(response).to have_http_status(201)',
+          '@@ -312,3 +312,5 @@ describe "members" do\n'
+          '   it "reads a bad n as one" do\n'
+          '+    get "/members", params: { n: "all" }\n'
+          '+    expect(response).to have_http_status(200)',
     ),
     thread(
       'T3',
-      'app/helpers/admin/search_helper.rb',
+      'app/helpers/staff/lookup_helper.rb',
       18,
       [
-        said(
-          'mona',
-          'nit, `.presence` reads better here',
-          reviewId: _monaFirst,
-        ),
+        said('mona', 'nit, `.delete` reads better to me', reviewId: _monaFirst),
         said('afrase', 'Done.', reviewId: 'PRR_afrase_reply'),
       ],
       resolved: true,
       diffHunk:
-          '@@ -16,3 +16,3 @@ module SearchHelper\n'
-          '     def term\n'
-          '-      params[:term].blank? ? nil : params[:term]\n'
-          '+      params[:term].presence',
+          '@@ -16,3 +16,3 @@ module LookupHelper\n'
+          '     def isbn\n'
+          '-      params[:isbn].to_s.gsub(" ", "").downcase\n'
+          '+      isbn_param.delete(" ")',
     ),
   ],
   checks: [
     check(
-      'rspec (admin 3/8)',
+      'specs (staff 3/8)',
       state: 'failure',
       required: true,
       id: 31,
       annotations: [
         GitHubAnnotation(
-          path: 'spec/admin/users_controller_spec.rb',
-          line: 88,
+          path: 'spec/staff/books_controller_spec.rb',
+          line: 73,
           level: 'failure',
-          message: 'expected 5 users, got 0',
+          message: 'expected 3 loans, got 0',
         ),
       ],
     ),
     check(
-      'rubocop',
+      'linters',
       state: 'failure',
       required: true,
       id: 32,
       annotations: [
         GitHubAnnotation(
-          path: 'app/helpers/admin/search_helper.rb',
-          line: 21,
+          path: 'app/helpers/staff/lookup_helper.rb',
+          line: 27,
           level: 'failure',
           message:
-              'Style/GuardClause: use a guard clause instead of wrapping '
-              'the code in a conditional',
+              'Naming/OneLetter: name the variable for what it holds, '
+              'rather than by a lone letter',
         ),
       ],
     ),
-    check('packwerk check', state: 'failure', id: 33),
+    check('layering check', state: 'failure', id: 33),
     for (final n in [
-      'rspec (admin 1/8)',
-      'rspec (admin 2/8)',
-      'rspec (admin 4/8)',
-      'rspec (admin 5/8)',
-      'brakeman',
-      'eslint',
-      'review-app',
-      'claude-review',
+      'specs (staff 1/8)',
+      'specs (staff 2/8)',
+      'specs (staff 4/8)',
+      'specs (staff 5/8)',
+      'sec-scan',
+      'js-fmt',
+      'trial-site',
+      'review-by-bot',
     ])
-      check(n, required: n.startsWith('rspec')),
-    check('staging', state: 'skipped', workflow: 'Deploy'),
-    check('release notes', state: 'skipped', workflow: ''),
+      check(n, required: n.startsWith('specs')),
+    check('preview', state: 'skipped', workflow: 'Launch'),
+    check('changelog row', state: 'skipped', workflow: ''),
   ],
 );
 
@@ -381,7 +377,7 @@ GitHubPull mergePull(String state) {
   p
     ..mergeState = 'clean'
     ..checks.clear()
-    ..checks.addAll([check('rspec', required: true), check('rubocop')])
+    ..checks.addAll([check('specs', required: true), check('linters')])
     ..reviewers.clear()
     ..reviewers.add(GitHubReviewer(login: 'mona', state: 'approved'))
     ..threads.clear()
@@ -439,7 +435,7 @@ Future<(Daemon, FakeDaemon)> openPullTab(
   final c = chat(
     'c',
     'claude',
-    'Fix malformed q in admin filters',
+    'Fix the page size in staff lists',
     status: busy ? ChatStatus(busy: true) : null,
   );
   if (worktree != null) {
@@ -472,34 +468,34 @@ Future<(Daemon, FakeDaemon)> openPullTab(
           ),
           GetGitHubJobLogRequest() => GetGitHubJobLogResponse(
             tail:
-                'Run bundle exec rspec\n'
-                'Failures:\n  1) Admin::UsersController filters\n'
-                '     expected 5 users, got 0\n'
+                'Run bin/specs shard 3\n'
+                'Failures:\n  1) Staff::BooksController listing\n'
+                '     expected 3 loans, got 0\n'
                 '##[error]Process completed with exit code 1.',
           ),
           GetGitHubFilesRequest() => GetGitHubFilesResponse(
             files: [
               for (final (path, text) in [
                 (
-                  'app/helpers/admin/search_helper.rb',
-                  'module Admin\n  module SearchHelper\n  end\nend\n',
+                  'app/helpers/staff/lookup_helper.rb',
+                  'module Staff\n  module LookupHelper\n  end\nend\n',
                 ),
                 (
-                  'app/controllers/admin/notes_controller.rb',
+                  'app/controllers/staff/loans_controller.rb',
                   [
                     for (var i = 1; i <= 50; i++)
                       if (i == 42)
-                        '      q.is_a?(Hash) ? q : {}'
+                        '      Integer(n) rescue nil'
                       else
                         '    # $i',
                   ].join('\n'),
                 ),
-                ('spec/reports/page_spec.rb', 'describe "reports" do\nend\n'),
+                ('spec/members/loan_spec.rb', 'describe "members" do\nend\n'),
               ])
                 FileChange(
                   path: path,
                   status: 'modified',
-                  oldText: text.replaceFirst('q.is_a?(Hash) ? q : {}', 'q'),
+                  oldText: text.replaceFirst('Integer(n) rescue nil', 'n'),
                   newText: text,
                   added: 1,
                   removed: 1,

@@ -48,7 +48,7 @@ Object? _jira(Object input) => switch (input) {
     'login' || '' => FindJiraIssuesResponse(
       issues: [
         _found(_acme, 'ACME-12', 'Log in with a passkey'),
-        _found(_other, 'OPS-3', 'Login page is slow'),
+        _found(_other, 'ACME-3', 'Login page is slow'),
       ],
     ),
     _ => FindJiraIssuesResponse(),
@@ -158,9 +158,9 @@ void main() {
     expect(find.text('Login page is slow'), findsOneWidget);
     await _key(tester, LogicalKeyboardKey.arrowDown);
     await _key(tester, LogicalKeyboardKey.enter);
-    expect(find.text('Chat on OPS-3 in nushi'), findsOneWidget);
+    expect(find.text('Chat on ACME-3 in nushi'), findsOneWidget);
     // Another, by a click; then none.
-    await tester.tap(find.text('OPS-3'));
+    await tester.tap(find.text('ACME-3'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Log in with a passkey'));
     await tester.pumpAndSettle();

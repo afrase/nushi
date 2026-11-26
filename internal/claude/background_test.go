@@ -50,7 +50,7 @@ func TestBackgroundCommands(t *testing.T) {
 			t.Errorf("followed %+v", it)
 		}
 	}
-	// The owner's server (2026-11-17), stopped by TaskStop, logged its
+	// A server stopped by TaskStop can log its
 	// shutdown after Claude's "[killed]".
 	const served = "SIGTERM exit code: 0\ntime=12:51:34 level=INFO msg=\"serving http\" addr=:9030\n"
 	const shutdown = "time=12:54:20 level=INFO msg=\"shutting down server\"\ntime=12:54:20 level=INFO msg=\"server stopped\"\n"

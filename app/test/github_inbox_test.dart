@@ -114,7 +114,7 @@ void main() {
           item(
             7,
             'Retry flaky uploads',
-            repo: 'boltops-tools/puma-cloudwatch-and-a-much-longer-name',
+            repo: 'lakeside-kits/swan-moodboards-and-a-much-longer-name',
           ),
         ],
       ),
@@ -122,7 +122,7 @@ void main() {
     RenderParagraph p(String text) =>
         tester.renderObject(find.textContaining(text)) as RenderParagraph;
     expect(p('Retry flaky uploads').didExceedMaxLines, isFalse);
-    expect(p('boltops-tools/').didExceedMaxLines, isTrue); // cut instead
+    expect(p('lakeside-kits/').didExceedMaxLines, isTrue); // cut instead
     await closeView(tester, d);
   });
 

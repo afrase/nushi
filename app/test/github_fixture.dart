@@ -323,7 +323,7 @@ ListGitHubInboxResponse inboxForTests() => ListGitHubInboxResponse(
     item(
       7,
       'Retry flaky uploads',
-      repo: 'octo/infrastructure-terraform',
+      repo: 'octo/infrastructure-playbooks',
       checks: 'failure',
       review: 'changes_requested',
       unresolved: 12,

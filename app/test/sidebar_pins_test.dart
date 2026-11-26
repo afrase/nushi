@@ -15,13 +15,13 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 import 'sidebar_fixture.dart';
 
-const _ledger = '/Users/me/ledger-poc';
+const _ledger = '/Users/me/parcel-poc';
 
-/// Four projects, the newest chat first: ledger-poc (three chats), cubby,
+/// Four projects, the newest chat first: parcel-poc (three chats), cubby,
 /// garden, notes; [pins] pinned, by id, at their places.
 List<Chat> _chats({Map<String, int> pins = const {}}) => [
   for (final c in [
-    chat('a', 'claude', 'Wire the ledger', folder: _ledger),
+    chat('a', 'claude', 'Wire the parcel', folder: _ledger),
     chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cubby', age: 1),
     chat('d', 'claude', 'Plant the beds', folder: '/Users/me/garden', age: 2),
     chat('e', 'ante', 'Jot it down', folder: '/Users/me/notes', age: 3),
@@ -140,20 +140,20 @@ void main() {
   testWidgets('a chat is dragged into another place in its project, the '
       'rows moving apart where it goes; refused in another project; kept, a '
       'new chat first', (tester) async {
-    const ledger = ['Wire the ledger', 'Seed data', 'Price the bonds'];
+    const ledger = ['Wire the parcel', 'Seed data', 'Price the bonds'];
     var d = await _sidebar(tester, _chats());
     expect(_rows(tester, ledger), ledger); // the newest first
 
-    // Up, into the top half of Wire the ledger's row, which moves down.
-    final wire = _ys(tester, 'Wire the ledger');
+    // Up, into the top half of Wire the parcel's row, which moves down.
+    final wire = _ys(tester, 'Wire the parcel');
     await _drag(
       tester,
       'Price the bonds',
-      'Wire the ledger',
+      'Wire the parcel',
       whileOver: () async =>
-          expect(_ys(tester, 'Wire the ledger'), greaterThan(wire)),
+          expect(_ys(tester, 'Wire the parcel'), greaterThan(wire)),
     );
-    const moved = ['Price the bonds', 'Wire the ledger', 'Seed data'];
+    const moved = ['Price the bonds', 'Wire the parcel', 'Seed data'];
     expect(_rows(tester, ledger), moved);
     expect(sidebarChats.value, {
       _ledger: ['f', 'a', 'b'],
@@ -161,7 +161,7 @@ void main() {
     expect((readSaved()['sidebarChats']! as Map)[_ledger], ['f', 'a', 'b']);
     expect(chatOrder(d).take(3).map((c) => c.id), ['f', 'a', 'b']);
 
-    // Cap the rates (cubby) onto ledger-poc's rows: they stay, no move.
+    // Cap the rates (cubby) onto parcel-poc's rows: they stay, no move.
     final seed = _ys(tester, 'Seed data');
     await _drag(
       tester,
@@ -175,7 +175,7 @@ void main() {
     expect(sidebarChats.value.keys, [_ledger]);
     d.dispose();
 
-    // As after a restart, with a new chat in ledger-poc: it goes first.
+    // As after a restart, with a new chat in parcel-poc: it goes first.
     d = await _sidebar(tester, [
       ..._chats(),
       chat('n', 'claude', 'New ledger work', folder: _ledger, age: -1),
@@ -195,8 +195,8 @@ void main() {
     expect(find.text('Seed data'), findsOne);
     expect(find.text('Jot it down'), findsOne);
     expect(
-      _rows(tester, ['Pinned', 'Jot it down', 'Seed data', 'Wire the ledger']),
-      ['Pinned', 'Jot it down', 'Seed data', 'Wire the ledger'],
+      _rows(tester, ['Pinned', 'Jot it down', 'Seed data', 'Wire the parcel']),
+      ['Pinned', 'Jot it down', 'Seed data', 'Wire the parcel'],
     );
     // The project's name after the title, muted.
     expect(
@@ -204,7 +204,7 @@ void main() {
       closeTo(_y(tester, 'Jot it down'), 2),
       reason: 'the project on the pinned row',
     );
-    expect(find.text('ledger-poc'), findsNWidgets(2)); // b's, the header
+    expect(find.text('parcel-poc'), findsNWidgets(2)); // b's, the header
     // All its chats pinned: its header stays, last, alone (it has a
     // chat, so no "No chats").
     expect(find.text('notes'), findsNWidgets(2));
@@ -251,7 +251,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(pinned(), ['a']);
     expect(find.text('Pinned'), findsOne);
-    expect(_inSidebar('Wire the ledger'), findsOne);
+    expect(_inSidebar('Wire the parcel'), findsOne);
 
     d.select('c');
     await tester.pumpAndSettle();
@@ -270,7 +270,7 @@ void main() {
     );
     expect([
       for (final t in tester.widgetList<Text>(rows).take(6)) t.data,
-    ], containsAllInOrder(['Wire the ledger', 'Cap the rates', 'Jot it down']));
+    ], containsAllInOrder(['Wire the parcel', 'Cap the rates', 'Jot it down']));
     await tester.enterText(
       find.descendant(
         of: find.byType(Palette),

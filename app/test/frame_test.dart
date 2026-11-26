@@ -239,7 +239,7 @@ void main() {
         await closeView(tester, d);
       }, variant: onMac);
 
-      // For the owner's look (2026-11-11): the details shown and hidden.
+      // To look at (2026-11-11): the details shown and hidden.
       for (final (state, details) in [('open', true), ('closed', false)]) {
         testWidgets('the details $state, $w wide, $theme', (tester) async {
           final d = await _window(

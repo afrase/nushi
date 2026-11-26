@@ -201,7 +201,7 @@ void main() {
     d.dispose();
   });
 
-  // The owner's four states side by side, in the dark theme.
+  // The four states side by side, in the dark theme.
   testWidgets('golden: working, needs you, done, idle', (tester) async {
     viewport(tester, const Size(400, 400));
     final d = await FakeDaemon(_chats().take(4).toList()).connect(tester);

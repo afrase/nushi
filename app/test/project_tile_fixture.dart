@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 // The project rail's tests' folders and pictures (`project_rail_test.dart`,
 // `project_tile_test.dart`): `sidebar_fixture.dart`'s chats are in these.
 
-const ledger = '/Users/me/ledger-poc';
+const ledger = '/Users/me/parcel-poc';
 const cubby = '/Users/me/cubby';
 const garden = '/Users/me/garden';
 const notes = '/Users/me/notes';

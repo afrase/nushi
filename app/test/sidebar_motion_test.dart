@@ -18,11 +18,11 @@ import 'sidebar_fixture.dart';
 // to its new place, and a starting chat's placeholder row is replaced by
 // its row with no jump; only when the lists change, never on a status.
 
-const _ledger = '/Users/me/ledger-poc';
+const _ledger = '/Users/me/parcel-poc';
 const _garden = '/Users/me/garden';
 
 List<Chat> _chats() => [
-  chat('a', 'claude', 'Wire the ledger', folder: _ledger),
+  chat('a', 'claude', 'Wire the parcel', folder: _ledger),
   chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cubby', age: 1),
   chat('d', 'claude', 'Plant the beds', folder: _garden, age: 2),
   chat('b', 'pig', 'Seed data', folder: _ledger, age: 5),
@@ -166,7 +166,7 @@ void main() {
     await tester.pumpAndSettle();
     final to = _y(tester, 'Price the bonds');
     expect(mid, greaterThan(to));
-    expect(to, lessThan(_y(tester, 'Wire the ledger')));
+    expect(to, lessThan(_y(tester, 'Wire the parcel')));
 
     // Unpinned and pinned again mid-glide: it ends up shown, once, and
     // takes clicks.
@@ -190,7 +190,7 @@ void main() {
     final reply = Completer<StartChatResponse>();
     fake.answer = (input) => input is StartChatRequest ? reply.future : null;
     final row = _height(tester, 'Plant the beds');
-    final first = _y(tester, 'Wire the ledger');
+    final first = _y(tester, 'Wire the parcel');
     final was = _y(tester, 'Plant the beds');
     unawaited(d.startChat(_garden, 'claude'));
     await tester.pump();

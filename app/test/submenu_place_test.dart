@@ -12,7 +12,7 @@ import 'package:nushi/submenu.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-// The owner's report: under the composer, the model menu's More models
+// The case: under the composer, the model menu's More models
 // opened wholly above its row, up and to the right of the menu, so the
 // pointer left both on its way across. Flutter opens a submenu with no
 // room under its row above it; macOS slides one up only as far as it must.

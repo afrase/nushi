@@ -84,7 +84,7 @@ List<String> _order(WidgetTester tester) => shownInOrder(tester, [
   'Reviews',
   'Later',
   'Drag chats here',
-  'ledger-poc',
+  'parcel-poc',
   'cubby',
   'garden',
   'notes',
@@ -120,8 +120,8 @@ void main() {
       'Reviews',
       'Plant the beds',
       'garden', // its row says its project
-      'ledger-poc',
-      'Wire the ledger',
+      'parcel-poc',
+      'Wire the parcel',
       'Seed data',
       'cubby',
       'Cap the rates',
@@ -186,16 +186,16 @@ void main() {
     expect(shownInOrder(tester, arrangeTitles + ['Reviews', 'Later']), [
       'Keep this',
       'Reviews',
-      'Wire the ledger',
+      'Wire the parcel',
       'Seed data',
       'Later',
       'Jot it down',
       'Cap the rates',
       'Plant the beds',
     ]);
-    // ledger-poc's chats are all in Reviews: the rows say it, over its
+    // parcel-poc's chats are all in Reviews: the rows say it, over its
     // group, which stays with none.
-    expect(find.text('ledger-poc'), findsNWidgets(3));
+    expect(find.text('parcel-poc'), findsNWidgets(3));
 
     // Later, by its header, above Reviews.
     await _dragTo(
@@ -212,7 +212,7 @@ void main() {
     await _dragTo(
       tester,
       'Seed data',
-      tester.getTopLeft(_in('Wire the ledger')) + const Offset(10, 2),
+      tester.getTopLeft(_in('Wire the parcel')) + const Offset(10, 2),
     );
     expect(sidebarSections.value[1].chats, ['b', 'a']);
 
@@ -263,7 +263,7 @@ void main() {
     fake.emit(EventsResponse(chatId: 'a', removed: true));
     await tester.pumpAndSettle();
     expect(sidebarSections.value.single.chats, ['d']);
-    expect(find.text('Wire the ledger'), findsNothing);
+    expect(find.text('Wire the parcel'), findsNothing);
     d.dispose();
   });
 
@@ -286,7 +286,7 @@ void main() {
     // Dropped among the others, nothing moves: the sort decides.
     await _dragTo(
       tester,
-      'Wire the ledger',
+      'Wire the parcel',
       tester.getTopLeft(_in('Cap the rates')) + const Offset(10, 2),
     );
     expect(sidebarChats.value, isEmpty);
@@ -294,7 +294,7 @@ void main() {
       'Cap the rates',
       'Jot it down',
       'Seed data',
-      'Wire the ledger',
+      'Wire the parcel',
     ]);
     // Onto the section, it moves in.
     await _dragTo(tester, 'Jot it down', tester.getCenter(_in('Reviews')));
@@ -317,19 +317,19 @@ void main() {
       Section(id: 's1', name: 'Reviews', chats: ['e', 'a', 'b']),
     ];
     projectRail.value = true;
-    sidebarProject.value = '/Users/me/ledger-poc';
+    sidebarProject.value = '/Users/me/parcel-poc';
     pinnedEveryProject.value = false; // attic's pin out of the way
     final (d, _) = await arrangedSidebar(tester);
-    expect(shownProject, '/Users/me/ledger-poc');
+    expect(shownProject, '/Users/me/parcel-poc');
     expect(_titles(tester).take(3), [
       'Reviews',
-      'Wire the ledger',
+      'Wire the parcel',
       'Seed data',
     ]);
     await _dragTo(
       tester,
       'Seed data',
-      tester.getTopLeft(_in('Wire the ledger')) + const Offset(10, 2),
+      tester.getTopLeft(_in('Wire the parcel')) + const Offset(10, 2),
     );
     expect(sidebarSections.value.single.chats, ['e', 'b', 'a']);
     d.dispose();

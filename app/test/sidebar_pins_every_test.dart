@@ -23,9 +23,9 @@ import 'sidebar_fixture.dart';
 // project); off, only the shown project's. Renders to look at:
 // `make renders TEST=test/sidebar_pins_every_test.dart`.
 
-const _ledger = '/Users/me/ledger-poc';
+const _ledger = '/Users/me/parcel-poc';
 
-/// The fixture's chats, ledger-poc's Wire the ledger pinned under attic's
+/// The fixture's chats, parcel-poc's Wire the parcel pinned under attic's
 /// Keep this, and a chat with no folder pinned last.
 List<Chat> _chats() => [
   for (final c in arrangeChats())
@@ -81,20 +81,20 @@ void main() {
     expect(_shown(tester), [
       'Pinned',
       'Keep this',
-      'Wire the ledger',
+      'Wire the parcel',
       'Scratch notes',
       'Seed data',
     ]);
     expect(_mark(tester, 'Keep this', 'attic'), ('/Users/me/attic', true));
     expect(_mark(tester, 'Scratch notes', 'No folder'), (null, true));
     // The shown project's own pin is as it was.
-    expect(_mark(tester, 'Wire the ledger', 'ledger-poc'), (null, false));
+    expect(_mark(tester, 'Wire the parcel', 'parcel-poc'), (null, false));
     // ⌘1–⌘9 and ⌥⌘↑↓ go through the rows shown.
     expect([for (final c in chatOrder(d)) c.id], ['p', 'a', 's', 'b']);
 
     pinnedEveryProject.value = false;
     await tester.pumpAndSettle();
-    expect(_shown(tester), ['Pinned', 'Wire the ledger', 'Seed data']);
+    expect(_shown(tester), ['Pinned', 'Wire the parcel', 'Seed data']);
     expect([for (final c in chatOrder(d)) c.id], ['a', 'b']);
 
     // All projects: none is marked, as before.
@@ -117,7 +117,7 @@ void main() {
     expect(sidebarProject.value, _ledger, reason: 'a look in, not a move');
     expect(_mark(tester, 'Keep this', 'attic').$1, '/Users/me/attic');
     // Back to the project's own chat, then the pin by a click: the same.
-    await tester.tap(_row('Wire the ledger'));
+    await tester.tap(_row('Wire the parcel'));
     await tester.pumpAndSettle();
     await tester.tap(_row('Keep this'));
     await tester.pumpAndSettle();

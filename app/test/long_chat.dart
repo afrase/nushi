@@ -1,6 +1,6 @@
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
-/// A long made-up chat, as the owner's real ones are: [turns] exchanges of
+/// A long made-up chat, as real ones can be: [turns] exchanges of
 /// a user message, tool rows (reads, an edit with a diff, a command), a
 /// subagent with its own steps every few turns, and a long reply in
 /// Markdown with a list, a table and fenced code. About 11 entries a turn

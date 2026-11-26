@@ -104,15 +104,15 @@ void main() {
       find.textContaining('Hide this repository', findRichText: true),
     );
     await tester.pumpAndSettle();
-    expect(_asks(fake).last.hide, ['octo/infrastructure-terraform']);
+    expect(_asks(fake).last.hide, ['octo/infrastructure-playbooks']);
     expect((readSaved()['githubHidden']! as Map)['github.com'], [
-      'octo/infrastructure-terraform',
+      'octo/infrastructure-playbooks',
     ]);
     // The menu says so, and lists it to show it again.
     await _pick(
       tester,
       'All repositories · 1 hidden',
-      'octo/infrastructure-terraform',
+      'octo/infrastructure-playbooks',
     );
     expect(_asks(fake).last.hide, isEmpty);
     expect(find.text('All repositories'), findsOneWidget);
@@ -153,7 +153,7 @@ void main() {
   ]) {
     testWidgets('golden: the older items line, $name', (tester) async {
       githubHidden.value = {
-        'github.com': ['boltops-tools/puma-cloudwatch'],
+        'github.com': ['lakeside-kits/swan-moodboards'],
       };
       final (_, d) = await openView(
         tester,
@@ -179,7 +179,7 @@ void main() {
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetDevicePixelRatio);
         githubHidden.value = {
-          'github.com': ['boltops-tools/puma-cloudwatch'],
+          'github.com': ['lakeside-kits/swan-moodboards'],
         };
         final (_, d) = await openView(
           tester,
