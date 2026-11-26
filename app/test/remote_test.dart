@@ -1,7 +1,7 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/controls.dart' show Toggle;
+import 'package:nushi/controls.dart' show Button, Toggle;
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/remote.dart';
@@ -151,6 +151,41 @@ void main() {
     await tester.pumpAndSettle();
     expect(copied.last, pairingLink(_qr));
     expect(find.text('Copied'), findsOneWidget);
+  });
+
+  testWidgets('Copy link keeps its width as it reads Copied, so Close '
+      'beside it stays put', (tester) async {
+    clipboardCopies(tester);
+    for (final b in renderThemes) {
+      remoteState.value = Remote(
+        on: true,
+        relay: 'wss://relay.example.com',
+        pairing: Pairing(),
+      );
+      viewport(tester, const Size(720, 560));
+      await tester.pumpWidget(
+        themed(
+          RemoteSection(NushiServiceClient(_daemon())),
+          banner: false,
+          tokens: b == Brightness.dark ? Tokens.dark : Tokens.light,
+        ),
+      );
+      await tester.tap(find.text('Pair a phone'));
+      await tester.pumpAndSettle();
+      Finder button(String label) =>
+          find.byWidgetPredicate((w) => w is Button && w.label == label);
+      final copy = tester.getRect(button('Copy link'));
+      final close = tester.getRect(button('Close'));
+      await render(tester, find.byType(Dialog), 'press_copy_link_${b.name}');
+      await tester.tap(button('Copy link'));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(button('Copied')), copy);
+      expect(tester.getRect(button('Close')), close);
+      await render(tester, find.byType(Dialog), 'press_copied_link_${b.name}');
+      await tester.tap(button('Close'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 5));
+    }
   });
 
   testWidgets("Copy link copies the daemon's link, built from the QR only "

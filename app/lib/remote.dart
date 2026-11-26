@@ -440,6 +440,8 @@ class _CopyLinkState extends State<_CopyLink> {
   @override
   Widget build(BuildContext context) => Button(
     label: _copied ? 'Copied' : 'Copy link',
+    // It keeps its width as it reads Copied, so Close beside it stays put.
+    roomFor: const ['Copy link', 'Copied'],
     icon: Icons.link,
     onPressed: () async {
       await Clipboard.setData(ClipboardData(text: widget.link));
