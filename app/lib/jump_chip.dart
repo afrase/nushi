@@ -76,15 +76,15 @@ class _ChipFadeState extends State<ChipFade>
   }
 }
 
-/// The chip over a transcript scrolled up, back to the latest: "Jump to
-/// latest", or, while the agent waits on a permission prompt or question
-/// ([needs]), amber and "Needs you ↓", hopping once as it turns so (still
-/// with Reduce Motion). On the phone ([TouchTargets]) it's the arrow
-/// alone, on a round button of the same fill, its words its tooltip.
-/// While the agent works ([working]) and doesn't need you, it's a round
-/// face with Nushi's mark turning on it, on the Mac too ([face] across):
-/// under the pointer or the keyboard's focus the mark gives way to the
-/// arrow, and a press jumps as ever (#51). Needing you wins.
+/// The chip over a transcript scrolled up, back to the latest: a round
+/// face ([face] across on the Mac, [round] on the phone) with the arrow
+/// on it, its words ("Jump to latest") its tooltip. While the agent works
+/// ([working]) Nushi's mark turns on it in the arrow's place, nothing else
+/// changing: under the pointer or the keyboard's focus the arrow is back,
+/// and a press jumps as ever (#51). While the agent waits on a permission
+/// prompt or question ([needs]) it's amber, hopping once as it turns so
+/// (still with Reduce Motion): on the Mac a pill of words, "Needs you ↓",
+/// as high as the face; on the phone the amber arrow. Needing you wins.
 class JumpChip extends StatefulWidget {
   const new({
     required this.needs,
@@ -94,7 +94,7 @@ class JumpChip extends StatefulWidget {
   });
 
   /// The round face, [round] points across on the phone (in a finger's
-  /// target), [face] on the Mac.
+  /// target), [face] on the Mac; on the Mac, every look but Needs you.
   static const roundKey = Key('jump-round');
 
   /// The phone's round face's width.
@@ -102,6 +102,16 @@ class JumpChip extends StatefulWidget {
 
   /// The Mac's round face's width, a regular control's height.
   static double get face => ControlSize.regular.height;
+
+  /// How long the working mark's outer ring takes to go round on the
+  /// face: quicker than the mark's drift elsewhere, so a mark this small
+  /// is seen to move.
+  // design: a loop's beat on pulseClock
+  static const outerTurn = Duration(milliseconds: 2400);
+
+  /// Its inner ring's, the drift's ratio kept.
+  // design: a loop's beat on pulseClock
+  static const innerTurn = Duration(milliseconds: 1600);
 
   final bool needs;
   final bool working;
@@ -146,9 +156,9 @@ class _JumpChipState extends State<JumpChip>
     final phone = TouchTargets.of(context);
     final mark = widget.working && !needs;
     final Widget chip;
-    if (phone || mark) {
-      // The phone's: the arrow says it; a pill of words is too much there.
-      // A button to VoiceOver, named by its tooltip, as RoundButton is.
+    if (phone || !needs) {
+      // One face, whatever the agent does: only what's on it changes. A
+      // button to VoiceOver, named by its tooltip, as RoundButton is.
       final size = phone ? JumpChip.round : JumpChip.face;
       chip = Pressable(
         onTap: widget.onTap,
@@ -173,12 +183,21 @@ class _JumpChipState extends State<JumpChip>
             radius: BorderRadius.circular(NushiTheme.pill),
           ),
           child: mark && !look.hover && !look.focus
-              ? Logo(color: color, size: size * 0.7, turning: true)
+              // In the running ink, as a working chat's dot, and large
+              // enough to be seen at a glance: a state cue (#51).
+              ? Logo(
+                  color: t.running,
+                  size: size * 0.8,
+                  turning: true,
+                  outerTurn: JumpChip.outerTurn,
+                  innerTurn: JumpChip.innerTurn,
+                )
               : Icon(Icons.arrow_downward, size: phone ? 18 : 14, color: color),
         ),
       );
     } else {
-      final icon = Icon(Icons.arrow_downward, size: 14, color: color);
+      // Needs you wants its words; as high as the face, so its middle is
+      // the face's.
       chip = DecoratedBox(
         decoration: BoxDecoration(
           color: fill,
@@ -187,19 +206,22 @@ class _JumpChipState extends State<JumpChip>
         ),
         child: Tap(
           onTap: widget.onTap,
+          tooltip: 'Needs you: jump to latest',
           radius: NushiTheme.pill,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 6,
-            children: [
-              if (!needs) icon,
-              Text(
-                needs ? 'Needs you' : 'Jump to latest',
-                style: theme.ui(color, size: 12, weight: FontWeight.w500),
-              ),
-              if (needs) icon,
-            ],
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: SizedBox(
+            height: JumpChip.face,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 6,
+              children: [
+                Text(
+                  'Needs you',
+                  style: theme.ui(color, size: 12, weight: FontWeight.w500),
+                ),
+                Icon(Icons.arrow_downward, size: 14, color: color),
+              ],
+            ),
           ),
         ),
       );

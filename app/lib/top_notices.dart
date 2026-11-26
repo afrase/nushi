@@ -290,8 +290,8 @@ class _Bar extends RenderProxyBox {
 /// the transforms they paint with (a pane sliding in, the view gliding, the
 /// card's own lift), so the card goes at once where it will stay rather
 /// than a frame behind each step. Null while it's offstage (under a pane
-/// expanded over all).
-Rect? _resting(RenderBox box) {
+/// expanded over all). `ClearOfPanes` places Jump to latest by it too.
+Rect? restingRect(RenderBox box) {
   var at = Offset.zero;
   RenderObject node = box;
   for (var up = node.parent; up != null; up = node.parent) {
@@ -346,16 +346,16 @@ class _Lifted extends RenderProxyBox {
   double get _lift {
     final floor = _floor;
     if (floor == null || !attached || !hasSize) return 0;
-    final card = _resting(this);
+    final card = restingRect(this);
     if (card == null) return 0;
     final cut = switch ((floor.cut, parent)) {
-      (final at?, final RenderBox box) => (_resting(box)?.left ?? 0) + at,
+      (final at?, final RenderBox box) => (restingRect(box)?.left ?? 0) + at,
       _ => null,
     };
     var lift = 0.0;
     for (final bar in floor._bars) {
       if (!bar.attached || !bar.hasSize) continue;
-      final whole = _resting(bar);
+      final whole = restingRect(bar);
       if (whole == null) continue;
       // Its bare ends aside: the card may stand across from them.
       final r = Rect.fromLTRB(

@@ -8,19 +8,27 @@ import 'package:nushi/motion.dart';
 /// and the light at the centre. The same drawing as the app icon
 /// (tools/icongen). [turning], its rings go round, each the other way
 /// with its agents on it, on [pulseClock] (the jump chip while the agent
-/// works, #51); with Reduce Motion or at rest ([loopMoving]) it stands
-/// still as the icon.
+/// works, #51), once every [outerTurn] and [innerTurn]; with Reduce Motion
+/// or at rest ([loopMoving]) it stands still as the icon.
 class Logo extends StatelessWidget {
   const new({
     required this.color,
     this.size = 72,
     this.turning = false,
+    this.outerTurn = LogoPainter.driftOuter,
+    this.innerTurn = LogoPainter.driftInner,
     super.key,
   });
 
   final Color color;
   final double size;
   final bool turning;
+
+  /// How long the outer ring takes to go round once, turning.
+  final Duration outerTurn;
+
+  /// How long the inner ring takes to go round once, the other way.
+  final Duration innerTurn;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +38,8 @@ class Logo extends StatelessWidget {
       painter: LogoPainter(
         color,
         turning: turns,
+        outerTurn: outerTurn,
+        innerTurn: innerTurn,
         repaint: turns ? loopRepaintOf(context) : null,
       ),
     );
@@ -54,19 +64,36 @@ const _beads = [
 
 /// [Logo]'s drawing. Turning, the outer ring goes round clockwise once
 /// every [outerTurn] and the inner one the other way every [innerTurn],
-/// read from [loopPhase] as it paints; still, as the icon.
+/// read from [loopPhase] as it paints; still, as the icon. A ring's
+/// stroke is never thinner than [leastStroke], so a small mark doesn't
+/// fade to hairlines; from about 40 across it's drawn to scale.
 class LogoPainter extends CustomPainter {
-  new(this.color, {required this.turning, super.repaint});
+  new(
+    this.color, {
+    required this.turning,
+    this.outerTurn = driftOuter,
+    this.innerTurn = driftInner,
+    super.repaint,
+  });
 
   final Color color;
   final bool turning;
 
+  /// How long the outer ring takes to go round once.
+  final Duration outerTurn;
+
+  /// How long the inner ring takes to go round once, the other way.
+  final Duration innerTurn;
+
   // design: a slow drift, a loop's beat on pulseClock (well under a
   // pixel a tick at the chip's size)
-  static const outerTurn = Duration(seconds: 6);
+  static const driftOuter = Duration(seconds: 6);
   // design: a loop's beat on pulseClock, quicker than the outer ring's,
   // so the two never line up for long
-  static const innerTurn = Duration(seconds: 4);
+  static const driftInner = Duration(seconds: 4);
+
+  /// The thinnest a ring is drawn, in logical points.
+  static const leastStroke = 1.5;
 
   /// How far each ring has turned now, in radians: the outer clockwise,
   /// the inner the other way; both 0 when still.
@@ -85,10 +112,11 @@ class LogoPainter extends CustomPainter {
       final paint = Paint()
         ..color = color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke * u
+        ..strokeWidth = max(stroke * u, leastStroke)
         ..strokeCap = StrokeCap.round;
       final period = 2 * pi / n;
-      final sweep = period * share - stroke / r;
+      // Less the round caps' reach, so the gaps stay as wide.
+      final sweep = period * share - paint.strokeWidth / (r * u);
       for (var k = 0; k < n; k++) {
         canvas.drawArc(
           Rect.fromCircle(center: c, radius: r * u),
@@ -109,5 +137,8 @@ class LogoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(LogoPainter old) =>
-      old.color != color || old.turning != turning;
+      old.color != color ||
+      old.turning != turning ||
+      old.outerTurn != outerTurn ||
+      old.innerTurn != innerTurn;
 }

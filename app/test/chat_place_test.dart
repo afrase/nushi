@@ -87,7 +87,7 @@ void main() {
     // Its tap: a screen above the bottom at once, then a glide; the chip
     // fades as it goes, and takes no click meanwhile.
     final screen = p.viewportDimension;
-    await tester.tap(find.text('Jump to latest'));
+    await tester.tap(find.byTooltip('Jump to latest'));
     await tester.pump();
     expect(p.maxScrollExtent - p.pixels, lessThanOrEqualTo(screen + 1));
     await tester.pump(const Duration(milliseconds: 80));
@@ -111,7 +111,7 @@ void main() {
     await tester.drag(_scroll, const Offset(0, 900));
     await tester.pump();
     expect(_opacity(tester), 1); // there at once
-    await tester.tap(find.text('Jump to latest'));
+    await tester.tap(find.byTooltip('Jump to latest'));
     await tester.pump();
     expect(p.pixels, p.maxScrollExtent);
     expect(find.byType(JumpChip), findsNothing);
@@ -148,10 +148,10 @@ void main() {
     expect(p.extentAfter, closeTo(left, 1));
     await tester.pumpAndSettle();
     expect(p.extentAfter, closeTo(left, 1));
-    expect(find.text('Jump to latest'), findsOneWidget);
+    expect(find.byTooltip('Jump to latest'), findsOneWidget);
 
     // Back to the bottom, then away and back: at its bottom.
-    await tester.tap(find.text('Jump to latest'));
+    await tester.tap(find.byTooltip('Jump to latest'));
     await tester.pumpAndSettle();
     d.select('b');
     await tester.pumpAndSettle();

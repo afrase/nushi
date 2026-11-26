@@ -1,6 +1,7 @@
 // Jump to latest on the phone: a round ↓ over the transcript's bottom
-// right, not the desktop's labelled pill; it says what it is to VoiceOver
-// and in its tooltip, and takes the chat back down.
+// right, where a thumb reaches (the Mac's is in the column's middle); it
+// says what it is to VoiceOver and in its tooltip, and takes the chat
+// back down.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -105,9 +106,16 @@ void main() {
     expect(find.byTooltip('Needs you: jump to latest'), findsOneWidget);
   });
 
-  testWidgets('on the desktop it keeps its words', (tester) async {
+  testWidgets('on the desktop, a smaller round ↓, its words its tooltip', (
+    tester,
+  ) async {
     await tester.pumpWidget(themed(JumpChip(needs: false, onTap: () {})));
     await tester.pumpAndSettle();
-    expect(find.text('Jump to latest'), findsOneWidget);
+    expect(find.text('Jump to latest'), findsNothing);
+    expect(find.byTooltip('Jump to latest'), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(JumpChip.roundKey)),
+      Size.square(JumpChip.face),
+    );
   });
 }

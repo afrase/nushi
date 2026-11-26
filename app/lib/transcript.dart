@@ -10,6 +10,7 @@ import 'package:nushi/bottom_follower.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/chat_find.dart';
+import 'package:nushi/clear_of_panes.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -962,6 +963,20 @@ class _TranscriptState extends State<Transcript> {
     final view = LayoutBuilder(
       builder: (context, box) {
         final sides = chatSides(context, box.maxWidth);
+        final jump = ListenableBuilder(
+          listenable: _follower,
+          builder: (context, _) => ChipFade(
+            // It goes as Jump to latest glides down.
+            show: !_follower.following && !_follower.gliding,
+            builder: (context) => JumpChip(
+              // A prompt waits below: the chip says so.
+              needs: widget.items == null && chat.waiting,
+              // The agent works below: Nushi's mark turns on it.
+              working: live,
+              onTap: () => _follower.follow(glide: !reduceMotion(context)),
+            ),
+          ),
+        );
         // The selection gets the transcript's own box, as tall as the window
         // on a short chat, to place its toolbar and reply box in.
         return Stack(
@@ -1045,25 +1060,24 @@ class _TranscriptState extends State<Transcript> {
                   onPick: (id) => unawaited(_pick(id)),
                 ),
               ),
-            Positioned(
-              right: TouchTargets.of(context) ? 20 : NushiTheme.gutter,
-              bottom: 12,
-              child: ListenableBuilder(
-                listenable: _follower,
-                builder: (context, _) => ChipFade(
-                  // It goes as Jump to latest glides down.
-                  show: !_follower.following && !_follower.gliding,
-                  builder: (context) => JumpChip(
-                    // A prompt waits below: the chip says so.
-                    needs: widget.items == null && chat.waiting,
-                    // The agent works below: Nushi's mark turns on it.
-                    working: live,
-                    onTap: () =>
-                        _follower.follow(glide: !reduceMotion(context)),
+            // On the phone at the right, where a thumb reaches; on the Mac
+            // in the middle of the column (#51), and of what the side
+            // panes leave of it while they lie over the view.
+            if (TouchTargets.of(context))
+              Positioned(right: 20, bottom: 12, child: jump)
+            else
+              Positioned(
+                left: sides.left,
+                right: sides.right,
+                bottom: 12,
+                child: ClearOfPanes(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    heightFactor: 1,
+                    child: jump,
                   ),
                 ),
               ),
-            ),
           ],
         );
       },

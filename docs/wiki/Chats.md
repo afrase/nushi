@@ -166,11 +166,12 @@ Press **Esc**, or click the round red **Stop** button at the end of the box's ro
 
 ## Get back to the latest
 
-Scrolled up, a button over the bottom right of the chat takes you back down. Click it and the chat follows the agent again.
+Scrolled up, a small round button at the bottom middle of the chat takes you back down. Click it and the chat follows the agent again. Its tooltip says **Jump to latest**.
 
-- **While the agent works**, the button is a small round Nushi mark whose rings turn. Point at it and it shows the down arrow. With Reduce Motion the mark stands still.
+- **Idle**, it shows a down arrow.
+- **While the agent works**, the same button shows Nushi's mark in the colour of a working chat's dot, its rings turning. Point at it and it shows the arrow. With Reduce Motion the mark stands still.
 - **When something below needs you**, it turns amber and says **Needs you**, whatever the agent is doing.
-- **Idle**, it says **Jump to latest**. On the phone it's a round down arrow, or the mark while the agent works.
+- **On the phone** it's at the bottom right, where your thumb is: a round down arrow, or the mark while the agent works.
 
 ## See how long a step took
 
