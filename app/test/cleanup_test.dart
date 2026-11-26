@@ -16,8 +16,8 @@ import 'pull_fixture.dart';
 
 final _wt = Worktree(
   repo: '/Users/me/shop',
-  path: '/Users/me/shop/.worktrees/filters-malformed-q',
-  branch: 'filters-malformed-q',
+  path: '/Users/me/shop/.worktrees/shelf-page-size-fix',
+  branch: 'shelf-page-size-fix',
   base: 'main',
 );
 
@@ -31,8 +31,8 @@ GetCleanUpResponse _clean({
   worktree: _wt,
   state: WorktreeState(changed: changed, commits: commits, ignored: ignored),
   changes: [
-    if (changed > 0) 'M app/notebooks/page_spec.rb',
-    if (changed > 1) '?? tmp/q_params_repro.rb',
+    if (changed > 0) 'M app/catalogue/list_spec.rb',
+    if (changed > 1) '?? tmp/n_values_repro.rb',
   ],
 );
 
@@ -144,7 +144,7 @@ void main() {
     await tester.tap(_inPull(find.text('Clean up…')));
     await tester.pumpAndSettle();
     expect(find.text('Clean up after #412'), findsOneWidget);
-    expect(find.text('.worktrees/filters-malformed-q · clean'), findsOneWidget);
+    expect(find.text('.worktrees/shelf-page-size-fix · clean'), findsOneWidget);
     expect(
       find.text(
         "Squash-merged, so git can't tell. GitHub says #412 merged it.",
@@ -196,7 +196,7 @@ void main() {
     await tester.tap(_inPull(find.text('Clean up…')));
     await tester.pumpAndSettle();
     expect(find.text('2 uncommitted files would be lost.'), findsOneWidget);
-    expect(find.text('M app/notebooks/page_spec.rb'), findsOneWidget);
+    expect(find.text('M app/catalogue/list_spec.rb'), findsOneWidget);
     expect(
       find.text("The worktree you're keeping has it checked out."),
       findsOneWidget,
@@ -435,7 +435,7 @@ void main() {
       fake.emit(
         EventsResponse(
           chatId: 'c',
-          chat: chat('c', 'claude', 'Fix malformed q in admin filters')
+          chat: chat('c', 'claude', 'Fix the page size in staff lists')
             ..archived = true
             ..worktree = _wt
             ..folder = _wt.path

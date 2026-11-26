@@ -16,7 +16,7 @@ void main() {
   test("a comment's first words: a table's first row, plain", () {
     expect(
       commentSummary(dangerBody),
-      startsWith('Review App Links · Notes: filters-malformed-q'),
+      startsWith('Trial Site Links · Shelf: shelf-page-size-fix'),
     );
     expect(commentSummary('## Hello *there*\n\nmore'), 'Hello *there*');
     expect(
@@ -53,7 +53,7 @@ void main() {
     final (d, _) = await openPullTab(tester, fixturePull());
     // Danger's table: its first row, on one line, until Show.
     expect(
-      find.textContaining('Review App Links · Notes', findRichText: true),
+      find.textContaining('Trial Site Links · Shelf', findRichText: true),
       findsOneWidget,
     );
     expect(find.byType(Table), findsNothing);
@@ -62,7 +62,7 @@ void main() {
       of: find
           .ancestor(
             of: find.textContaining(
-              'Review App Links · Notes',
+              'Trial Site Links · Shelf',
               findRichText: true,
             ),
             matching: find.byType(Row),
@@ -80,7 +80,7 @@ void main() {
     expect(find.text('Show the whole review'), findsOneWidget);
     await tester.ensureVisible(find.text('Show the whole review'));
     final clamp = find.ancestor(
-      of: find.textContaining('PR hygiene', findRichText: true),
+      of: find.textContaining('Commit log', findRichText: true),
       matching: find.byType(ClipRect),
     );
     expect(clamp, findsWidgets);
@@ -117,7 +117,7 @@ void main() {
     final pane = tester.getRect(find.byType(GitHubPullPane));
     final text = tester.getRect(
       find.text(
-        'Thanks, the guard looks right. Two small things before this goes in.',
+        'Thanks, the checks read right. Two small things, then this can land.',
         findRichText: true,
       ),
     );

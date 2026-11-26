@@ -17,10 +17,10 @@ void main() {
   ) async {
     final (d, _) = await openPullTab(tester, fixturePull());
     // The review's last line, its numbers, apart and muted.
-    expect(find.text(r'claude-opus · $2.61 · 10m 31s'), findsOneWidget);
+    expect(find.text(r'reviewer-xl · $3.48 · 12m 05s'), findsOneWidget);
     expect(find.text('Show the whole review'), findsOneWidget);
     expect(find.text('Resolved'), findsOneWidget);
-    expect(find.text('nit, .presence reads better here'), findsNothing);
+    expect(find.text('nit, .delete reads better to me'), findsNothing);
     expect(find.text('Markdown · posts to GitHub as afrase'), findsOneWidget);
     d.dispose();
   }, variant: onMac);
@@ -42,8 +42,8 @@ void main() {
     expect(find.text('Passed (18)'), findsOneWidget);
     expect(find.text('Show 6 more'), findsOneWidget);
     // Two columns: the second check beside the first.
-    final a = tester.getRect(find.text('CI / rspec (admin 1/8)'));
-    final b = tester.getRect(find.text('CI / rspec (admin 2/8)'));
+    final a = tester.getRect(find.text('CI / specs (staff 1/8)'));
+    final b = tester.getRect(find.text('CI / specs (staff 2/8)'));
     expect((b.top - a.top).abs(), lessThan(1));
     expect(b.left, greaterThan(a.right));
     await tester.tap(find.text('Re-run failed'));
@@ -71,9 +71,9 @@ void main() {
     await tester.tap(find.text('Files changed  12'));
     await tester.pumpAndSettle();
     expect(find.text('With unresolved threads · 2'), findsOneWidget);
-    final records = tester.getRect(find.text('notes_controller.rb'));
-    final spec = tester.getRect(find.text('page_spec.rb'));
-    final helper = tester.getRect(find.text('search_helper.rb'));
+    final records = tester.getRect(find.text('loans_controller.rb'));
+    final spec = tester.getRect(find.text('loan_spec.rb'));
+    final helper = tester.getRect(find.text('lookup_helper.rb'));
     expect(records.top, lessThan(helper.top));
     expect(spec.top, lessThan(helper.top));
     d.dispose();

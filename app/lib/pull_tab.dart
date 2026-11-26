@@ -222,9 +222,9 @@ class _Picker extends StatelessWidget {
 }
 
 /// What a toast says of [sent] cards put in the chat's box, [added] of
-/// them new there: "Added to the chat's box: CI / rubocop", "Added 6 to
+/// them new there: "Added to the chat's box: CI / linters", "Added 6 to
 /// the chat's box", "Added 4 to the chat's box; 2 were there already",
-/// "Already in the chat's box: CI / rubocop".
+/// "Already in the chat's box: CI / linters".
 String sentWords(int sent, int added, String what) {
   final there = sent - added;
   if (sent == 1 || (added == 0 && what.isNotEmpty)) {

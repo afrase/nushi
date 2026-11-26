@@ -245,8 +245,8 @@ void main() {
       testWidgets('cleanup $at', (tester) async {
         final wt = Worktree(
           repo: '/Users/me/shop',
-          path: '/Users/me/shop/.worktrees/filters-malformed-q',
-          branch: 'filters-malformed-q',
+          path: '/Users/me/shop/.worktrees/shelf-page-size-fix',
+          branch: 'shelf-page-size-fix',
           base: 'main',
         );
         final (d, _) = await openPullTab(
@@ -262,8 +262,8 @@ void main() {
               worktree: wt,
               state: WorktreeState(changed: 2, commits: 1),
               changes: [
-                'M app/notebooks/page_spec.rb',
-                '?? tmp/q_params_repro.rb',
+                'M app/catalogue/list_spec.rb',
+                '?? tmp/n_values_repro.rb',
               ],
             ),
             _ => null,

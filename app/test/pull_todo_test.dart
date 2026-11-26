@@ -26,31 +26,31 @@ List<ReviewFinding> _read(String body) {
   return r.findings;
 }
 
-/// A re-review on a later commit, as the owner's screenshot showed it
-/// (four "must address" rows of one sentence's pieces).
+/// A re-review on a later commit whose one finding is a sentence spelled
+/// out as a list (four "must address" rows of one sentence's pieces).
 const _pinReview = r'''
-## Summary
+## Outline
 
-Re-review after c0ffee1 and 5eed0a2: the webhook URL is resolved once and the connection pinned to that address.
+Re-review after c0ffee1 and 5eed0a2: the cover image is checked once and the stored copy locked to that digest.
 
 ## Key findings
 
 ### Must address
 
-`lib/webhooks/http/pinned_connection.rb:31-58`: the pin holds only if every connection uses it. As written:
+`lib/covers/store/locked_image.rb:31-58`: the lock holds only if every reader checks it. As written:
 
-- the adapter block runs for every request and every redirect hop;
-- connect dials ipaddr;
-- SNI and post_connection_check still use the hostname;
-- proxy = nil reaches Net::HTTP.new(host, port, nil).
+- the thumbnail job reads the file before the digest is saved;
+- download streams the raw bytes;
+- the preview and the export still open the path;
+- digest = nil reaches File.open(path, mode, nil).
 
-Both earlier threads are addressed: c0ffee1 adds the address fallback (thread resolved), and 5eed0a2 limits webhook_url validation to URL changes, with deliver!/save specs.
+Both earlier threads are addressed: c0ffee1 adds the size limit (thread resolved), and 5eed0a2 limits cover validation to new uploads, with attach!/purge specs.
 
 ### Suggestions
 
-- A spec for a redirect to a private address would pin this down.
+- A spec for an image changed on disk would pin this down.
 
-claude-opus · $1.12 · 4m 02s''';
+reviewer-xl · $0.94 · 3m 47s''';
 
 /// The bar at the tab's foot, saying [n] cards wait in the box.
 Finder _waiting(int n) => find.text(
@@ -64,33 +64,30 @@ void main() {
   test("a review bot's findings to address: a long review's shape", () {
     final f = _read(aiReviewBody);
     expect(f.map((f) => (f.path, f.start, f.end)), [
-      ('spec/notebooks/page_spec.rb', 68, 72),
-      ('spec/reports/page_spec.rb', 409, 409),
+      ('spec/catalogue/list_spec.rb', 57, 63),
+      ('spec/members/loan_spec.rb', 316, 316),
     ]);
-    expect(f.first.text, startsWith('The only test for the notebooks-page'));
-    expect(findingPlace(f.first), 'spec/notebooks/page_spec.rb:68–72');
-    // Suggestions, test coverage and hygiene aren't findings.
-    expect(f.any((f) => f.text.contains('autocomplete')), isFalse);
+    expect(f.first.text, startsWith('The one example for the catalogue-list'));
+    expect(findingPlace(f.first), 'spec/catalogue/list_spec.rb:57–63');
+    // Suggestions, missing tests and the commit log aren't findings.
+    expect(f.any((f) => f.text.contains('export endpoint')), isFalse);
   });
 
   test('a sentence spelled out as a list is one finding, its place the '
       "title; the reviewer's note after it isn't one", () {
     final f = _read(_pinReview);
     expect(f, hasLength(1));
-    expect(
-      findingPlace(f.single),
-      'lib/webhooks/http/pinned_connection.rb:31–58',
-    );
-    expect(f.single.text, startsWith('the pin holds only if every connection'));
+    expect(findingPlace(f.single), 'lib/covers/store/locked_image.rb:31–58');
+    expect(f.single.text, startsWith('the lock holds only if every reader'));
     expect(
       f.single.text,
       contains(
-        'As written: the adapter block runs for every request and every '
-        'redirect hop; connect dials ipaddr; SNI and post_connection_check '
-        'still use the hostname; proxy = nil reaches',
+        'As written: the thumbnail job reads the file before the digest is '
+        'saved; download streams the raw bytes; the preview and the export '
+        'still open the path; digest = nil reaches',
       ),
     );
-    expect(f.single.text, endsWith('Net::HTTP.new(host, port, nil).'));
+    expect(f.single.text, endsWith('File.open(path, mode, nil).'));
     expect(f.single.text, isNot(contains('Both earlier threads')));
   });
 
@@ -163,22 +160,22 @@ void main() {
       FindingTodo(:final finding) => findingPlace(finding),
     };
     const base = [
-      'rspec (admin 3/8)',
-      'rubocop',
-      'packwerk check',
+      'specs (staff 3/8)',
+      'linters',
+      'layering check',
       '@mona review',
-      'app/controllers/admin/notes_controller.rb +0',
+      'app/controllers/staff/loans_controller.rb +0',
     ];
     // Off (the default): only what GitHub structures.
     expect(todo(fixturePull()).items.map(say), [
       ...base,
-      'spec/reports/page_spec.rb +0',
+      'spec/members/loan_spec.rb +0',
     ]);
     final items = todo(fixturePull(), findings: _setup).items;
     expect(items.map(say), [
       ...base,
-      'spec/reports/page_spec.rb +1',
-      'spec/notebooks/page_spec.rb:68–72',
+      'spec/members/loan_spec.rb +1',
+      'spec/catalogue/list_spec.rb:57–63',
     ]);
     final merged = fixturePull()..item.state = 'merged';
     expect(todo(merged, findings: _setup).items, isEmpty);
@@ -200,7 +197,7 @@ void main() {
       f.quote,
       startsWith(
         "Finding in github-actions' review on "
-        'spec/notebooks/page_spec.rb:68–72:',
+        'spec/catalogue/list_spec.rb:57–63:',
       ),
     );
   });
@@ -284,10 +281,10 @@ void main() {
     await tester.tap(find.text('Send to agent').at(1));
     await tester.pumpAndSettle();
     expect(box.value.single.from, startsWith('Failed checks on PR'));
-    expect(box.value.single.quote, startsWith('Check CI / rubocop:'));
+    expect(box.value.single.quote, startsWith('Check CI / linters:'));
     expect(
       box.value.single.from,
-      endsWith('on PR octo/notes#412 (GitHub), my pull request:'),
+      endsWith('on PR octo/shelf#412 (GitHub), my pull request:'),
     );
     expect(find.byType(ToastLine), findsNothing);
     // The bar, at the tab's foot.
@@ -321,11 +318,11 @@ void main() {
     final (d, _) = await openPullTab(tester, fixturePull());
     await tester.tap(find.byKey(const ValueKey('segment comments')));
     await tester.pumpAndSettle();
-    expect(find.text('spec/notebooks/page_spec.rb:68–72'), findsNothing);
+    expect(find.text('spec/catalogue/list_spec.rb:57–63'), findsNothing);
     githubFindings.value = true;
     await tester.pumpAndSettle();
     expect(find.text('2 unresolved · 1 finding'), findsOneWidget);
-    expect(find.text('spec/notebooks/page_spec.rb:68–72'), findsOneWidget);
+    expect(find.text('spec/catalogue/list_spec.rb:57–63'), findsOneWidget);
     expect(find.text('Send 7 to agent'), findsOneWidget);
     d.dispose();
   }, variant: onMac);
@@ -405,14 +402,14 @@ void main() {
     final p = mergePull('ready')
       ..conversation.clear()
       ..reviewers.add(
-        GitHubReviewer(login: 'notes-reviewers', state: 'requested'),
+        GitHubReviewer(login: 'library-keepers', state: 'requested'),
       );
     final (d, _) = await openPullTab(tester, p);
     expect(find.text('Ready to merge'), findsOneWidget);
     expect(find.text('1 approved · 1 awaited'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('segment approvals')));
     await tester.pumpAndSettle();
-    expect(find.text('notes-reviewers'), findsNWidgets(2)); // and the side's
+    expect(find.text('library-keepers'), findsNWidgets(2)); // and the side's
     expect(find.text('Ping on GitHub'), findsOneWidget);
     d.dispose();
   }, variant: onMac);

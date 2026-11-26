@@ -19,7 +19,7 @@ import 'github_fixture.dart' as gh;
 import 'harness.dart';
 import 'pull_fixture.dart';
 
-const _title = "Ignore q params that aren't hashes in admin filters";
+const _title = "Read an n that isn't a number as page 1 in listings";
 
 /// The page's line ("Updated just now"), wherever it is.
 Finder get _line => find.byKey(const ValueKey('pull-kept'));
