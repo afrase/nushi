@@ -231,7 +231,7 @@ class _FileRow extends StatelessWidget {
             [
               plainName(f),
               if (when != null) ago(clock().difference(when), when),
-            ].join(' · '),
+            ].join(', '),
             if (gone) 'Not there any more',
             if (run != null) 'Written by the workflow ${plainName(run)}',
           ].join('\n'),

@@ -64,6 +64,22 @@ type RelatedWorktree struct {
 	// One still open is asked again at later looks.
 	PullMerged bool `json:",omitempty"`
 	PullAsked  bool `json:",omitempty"`
+	// RemovedAfter is, once it is removed, the last of the chat's tool
+	// calls that could have named its worktree before it went (the item's
+	// ID): only calls after it can own a worktree made again at its path
+	// (issue #118). "" for one removed before Nushi kept this, or before
+	// any call.
+	RemovedAfter string `json:",omitempty"`
+	// RemovedAt is when the look that took RemovedAfter read the chat's
+	// calls (Unix nanoseconds; 0 for one taken before Nushi kept this): a
+	// call up to RemovedAfter that hadn't ended by then counts as after it.
+	RemovedAt int64 `json:",omitempty"`
+	// Made is when its worktree's .git file last changed, as a look first
+	// saw it (Unix nanoseconds; 0 not yet seen): a look that finds another
+	// time finds another worktree made at the path, though none saw it
+	// go, which a branch switched in it doesn't change (a move back or a
+	// repair does, and the rule for one made again keeps it the same).
+	Made int64 `json:",omitempty"`
 }
 
 // RelatedState says whether a related worktree is still there.

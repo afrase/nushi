@@ -79,7 +79,7 @@ void main() {
           size: Size(width, 900),
           brightness: brightness,
         );
-        await tester.tap(find.text('github · search_issues'));
+        await tester.tap(find.text('search_issues (github)'));
         await tester.pumpAndSettle();
         expect(find.textContaining(r'$ mcp'), findsNothing);
         expect(find.text('Input'), findsOneWidget);
@@ -97,6 +97,42 @@ void main() {
         await closeView(tester, d);
       }, variant: onMac);
     }
+  }
+
+  // The ask to run an MCP call is titled as the call is (issue 119), not
+  // with the agent's raw tool name.
+  for (final agent in ['claude', 'codex']) {
+    testWidgets("a $agent chat's MCP permission reads as its tool and "
+        'server', (tester) async {
+      browserFakes();
+      showDetails.value = false;
+      final codex = agent == 'codex';
+      final c = chat('c', agent, 'Fix the tea shop');
+      final ask =
+          mcpCall(
+              'p',
+              'github',
+              'search_issues',
+              {'query': 'is:open'},
+              codex: codex,
+              status: 'pending',
+            )
+            ..kind = ItemKind.ITEM_KIND_PERMISSION
+            ..options.addAll([
+              Option(id: 'yes', name: 'Yes', kind: 'allow_once'),
+              Option(id: 'no', name: 'No', kind: 'reject_once'),
+            ]);
+      final fake = FakeDaemon([c])
+        ..answer = ((input) => switch (input) {
+          GetChatRequest() => GetChatResponse(chat: c, items: [ask]),
+          _ => null,
+        });
+      final d = await openApp(tester, fake);
+      expect(find.text('search_issues (github)'), findsWidgets);
+      expect(find.textContaining('mcp__'), findsNothing);
+      expect(find.textContaining('mcp.github'), findsNothing);
+      await closeView(tester, d);
+    }, variant: onMac);
   }
 
   // A daemon below API 140 says no call's server and tool: each MCP call

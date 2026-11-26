@@ -412,7 +412,7 @@ class ToolCallView extends StatelessWidget {
             ],
           )
         : TextSpan(text: toolTitle(it), style: theme.ui(t.textSecondary));
-    // An MCP call's title is its server and tool; its raw name on hover.
+    // An MCP call's title is its tool and server; its raw name on hover.
     final rawName = show
         ? showPath(it) ?? showUrl(it)
         : mcpOf(it) == null

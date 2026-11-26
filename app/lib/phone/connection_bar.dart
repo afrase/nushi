@@ -89,13 +89,11 @@ class ConnectionBar extends StatelessWidget {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              Text(
-                                [
-                                  reason(link.why),
-                                  if (link.seen case final s?) seenAt(s),
-                                ].join(' · '),
-                                style: muted,
-                              ),
+                              Text(reason(link.why), style: muted),
+                              // A line of its own: the reason has commas,
+                              // a colon or a question mark of its own.
+                              if (link.seen case final s?)
+                                Text(seenAt(s), style: muted),
                             ],
                           ),
                         ),
@@ -145,20 +143,20 @@ class ConnectionBar extends StatelessWidget {
 
 /// Why the Mac can't be reached, in a few words.
 String reason(Unreachable? why) => switch (why) {
-  Unreachable.mac => "it's asleep or offline, or its remote access is off",
-  Unreachable.relay => "the relay can't be reached: check this phone's network",
-  Unreachable.answer => "it didn't answer: was this phone removed there?",
-  null => 'the connection failed',
+  Unreachable.mac => "It's asleep or offline, or its remote access is off",
+  Unreachable.relay => "The relay can't be reached: check this phone's network",
+  Unreachable.answer => "It didn't answer: was this phone removed there?",
+  null => 'The connection failed',
 };
 
-/// "last seen 10:42", or with the day when it wasn't today.
+/// "Last seen 10:42", or with the day when it wasn't today.
 String seenAt(DateTime s, {DateTime? now}) {
   final n = now ?? clock();
   final time = '${two(s.hour)}:${two(s.minute)}';
   if (s.year == n.year && s.month == n.month && s.day == n.day) {
-    return 'last seen $time';
+    return 'Last seen $time';
   }
-  return 'last seen ${months[s.month - 1].substring(0, 3)} ${s.day}, $time';
+  return 'Last seen ${months[s.month - 1].substring(0, 3)} ${s.day}, $time';
 }
 
 /// The daemon is below the app's floor (ADR 0004): the phone keeps

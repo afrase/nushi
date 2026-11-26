@@ -70,7 +70,7 @@ class CommentBox extends StatefulWidget {
   final String hint;
   final String label;
 
-  /// Small print at the buttons' left ("Markdown · posts to GitHub as
+  /// Small print at the buttons' left ("Markdown, posts to GitHub as
   /// octo").
   final String note;
 

@@ -158,7 +158,7 @@ void main() {
     await tester.pump(jiraPoll * 3);
     await tester.pumpAndSettle();
     expect(find.text('Log in with a passkey'), findsOneWidget);
-    expect(find.text("Couldn't refresh · as of just now"), findsOneWidget);
+    expect(find.text("Couldn't refresh, as of just now"), findsOneWidget);
     failing = false;
     await tester.pump(jiraPoll);
     await tester.pumpAndSettle();
@@ -169,7 +169,7 @@ void main() {
     failing = true;
     await tester.pump(issuePoll * 2);
     await tester.pumpAndSettle();
-    expect(find.text("Couldn't refresh · as of just now"), findsOneWidget);
+    expect(find.text("Couldn't refresh, as of just now"), findsOneWidget);
     await closeView(tester, d);
 
     final (_, g) = await gh.openView(
@@ -185,7 +185,7 @@ void main() {
     await tester.pump(githubPoll);
     await tester.pumpAndSettle();
     expect(find.text('Add Sub and Neg'), findsOneWidget);
-    expect(find.textContaining("Couldn't refresh · as of"), findsOneWidget);
+    expect(find.textContaining("Couldn't refresh, as of"), findsOneWidget);
     // A pull request's page: the same line over it, not an error's.
     await tester.tap(find.text('Add Sub and Neg'));
     await tester.pumpAndSettle();
@@ -195,7 +195,7 @@ void main() {
     expect(
       find.descendant(
         of: kept,
-        matching: find.text("Couldn't refresh · as of just now"),
+        matching: find.text("Couldn't refresh, as of just now"),
       ),
       findsOneWidget,
     );

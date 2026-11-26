@@ -26,6 +26,7 @@ import 'package:nushi/rail.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
 import 'package:nushi/subagents.dart';
+import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 import 'package:nushi/transcript_entries.dart';
@@ -635,7 +636,7 @@ class _TranscriptState extends State<Transcript> {
 
   // A find's matches in the text as it's laid out (ChatState.find has their
   // keys), and the last time the find asked for its current one to show.
-  final _marks = TextMarks();
+  final _marks = TextMarks(ink: codeOnMark);
   int _shownAsk = -1;
   // The list is where typing in the find took it, not scrolled since.
   bool _typedTo = false;

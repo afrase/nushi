@@ -156,7 +156,7 @@ class _PhaseLine extends StatelessWidget {
           ),
           if (r.progress.isNotEmpty)
             TextSpan(
-              text: planned ? ' · ${r.progress}' : ' ${r.progress}',
+              text: ' ${r.progress}',
               style: planned ? muted : theme.ui(t.textSecondary, size: 12),
             ),
         ],

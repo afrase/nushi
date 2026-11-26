@@ -95,7 +95,7 @@ void main() {
         ),
       ),
     ]);
-    expect(subagentState(subs.single), 'Thinking · 3m 00s');
+    expect(subagentState(subs.single), 'Thinking, 3m 00s');
     // Ended, the tokens the agent reported, then its worked time; done
     // says no word (its check does, #106), failed does.
     subs.single.call.subagent
@@ -103,9 +103,9 @@ void main() {
       ..workingSince = Int64.ZERO
       ..worked = Int64(192500)
       ..tokens = Int64(48120);
-    expect(subagentState(subs.single), '48.1k tokens · 3m 12s');
+    expect(subagentState(subs.single), '48.1k tokens, 3m 12s');
     subs.single.call.subagent.state = 'failed';
-    expect(subagentState(subs.single), 'failed · 48.1k tokens · 3m 12s');
+    expect(subagentState(subs.single), 'failed, 48.1k tokens, 3m 12s');
     // One the daemon didn't see work (replayed): neither.
     subs.single.call.subagent
       ..state = 'done'

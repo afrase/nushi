@@ -30,7 +30,7 @@ void main() {
       },
     );
     expect(find.text('ACME-7'), findsOneWidget);
-    expect(find.text('Updated 5m ago · refreshing'), findsOneWidget);
+    expect(find.text('Updated 5m ago, refreshing'), findsOneWidget);
     fresh.complete(
       ListJiraIssuesResponse(
         issues: [issue('ACME-8', 'As it is', 'To Do', 'new')],
@@ -153,7 +153,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.text('Kept summary'), findsOneWidget);
-    expect(find.text('Updated 5m ago · refreshing'), findsOneWidget);
+    expect(find.text('Updated 5m ago, refreshing'), findsOneWidget);
     fresh.complete(
       GetJiraIssueResponse(
         issue: issue('ACME-9', 'Fresh summary', 'To Do', 'new'),

@@ -256,7 +256,7 @@ void main() {
     await tester.pump(GitHubItems.gather);
     await tester.pumpAndSettle();
     expect(find.text('a/b#7'), findsOneWidget);
-    expect(find.text(' · '), findsNothing);
+    expect(find.textContaining('·'), findsNothing);
     await closeView(tester, d);
   });
 

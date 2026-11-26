@@ -166,7 +166,7 @@ class ChangesFind extends Find {
   String get count {
     final (at, of) = files;
     return of > 1 && (query ?? '').isNotEmpty
-        ? '${super.count} · file $at of $of'
+        ? '${super.count}, file $at of $of'
         : super.count;
   }
 
@@ -371,7 +371,7 @@ class _FindBarState extends State<FindBar> {
                         child: Text(
                           widget.loading
                               ? 'Loading earlier messages…'
-                              : 'Searching loaded messages · ',
+                              : 'Searching loaded messages. ',
                           overflow: TextOverflow.ellipsis,
                           style: theme.ui(t.textMuted, size: 12),
                         ),

@@ -152,7 +152,7 @@ void compareEdit(BuildContext context, FileEdit edit, String disk) => unawaited(
                 children: [
                   Expanded(
                     child: Text(
-                      '${plainPath(baseName(edit.path))}: on disk · yours',
+                      '${plainPath(baseName(edit.path))}: on disk and yours',
                       style: NushiTheme.of(context).ui(
                         NushiTheme.of(context).t.text,
                         size: 14,

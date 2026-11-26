@@ -89,7 +89,7 @@ void main() {
     await tester.pumpAndSettle();
     // The source as written, its template comment too.
     expect(tester.widget<TextField>(description).controller!.text, source);
-    expect(find.text('Markdown · saves to GitHub as afrase'), findsOneWidget);
+    expect(find.text('Markdown, saves to GitHub as afrase'), findsOneWidget);
     await tester.enterText(description, 'Stops the redirect loop.');
     final reads = fake.calls.whereType<GetGitHubPullRequest>().length;
     await tester.tap(find.text('Save'));

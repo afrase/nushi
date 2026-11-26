@@ -388,7 +388,7 @@ class _Row extends StatelessWidget {
     };
     final notes = comments == 0
         ? ''
-        : ' · $comments review comment${comments == 1 ? '' : 's'}';
+        : ', $comments review comment${comments == 1 ? '' : 's'}';
     return Tap(
       onTap: onTap,
       onSecondaryTapUp: onMenu,

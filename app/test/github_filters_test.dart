@@ -56,25 +56,40 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('the bar names who is signed in on which host, not a list of '
+      'two (issue 119)', (tester) async {
+    final (_, d) = await openView(
+      tester,
+      hosts: [GitHubHost(host: 'github.com', login: 'mona-q', source: 'gh')],
+    );
+    expect(find.text('mona-q on github.com'), findsOneWidget);
+    await closeView(tester, d);
+  });
+
   testWidgets("a card's older items: how many, and Show widens only that "
-      'card, until the span changes', (tester) async {
+      'card, until the span changes; the whole phrase is the link', (
+    tester,
+  ) async {
     final (fake, d) = await openView(
       tester,
       more: (input) => input is ListGitHubInboxRequest ? _answer(input) : null,
     );
-    expect(find.text('1 older than 90 days'), findsOneWidget);
-    expect(find.text('3 older than 90 days'), findsOneWidget);
+    // One link, so "Show" never runs on from the count (issue 119).
+    expect(find.text('Show 1 older than 90 days'), findsOneWidget);
+    expect(find.text('Show 3 older than 90 days'), findsOneWidget);
     expect(find.text('An old one'), findsNothing);
-    await tester.tap(find.text('Show').first); // Review requested's
+    await tester.tap(
+      find.text('Show 1 older than 90 days'),
+    ); // Review requested's
     await tester.pumpAndSettle();
     expect(_asks(fake).last.wide, ['review']);
     expect(_asks(fake).last.updatedDays, 90);
     expect(find.text('An old one'), findsOneWidget);
-    expect(find.text('1 older than 90 days'), findsNothing);
-    expect(find.text('3 older than 90 days'), findsOneWidget); // the other
+    expect(find.text('Show 1 older than 90 days'), findsNothing);
+    expect(find.text('Show 3 older than 90 days'), findsOneWidget); // other
     await _pick(tester, 'Last 90 days', 'Last year');
     expect(_asks(fake).last.wide, isEmpty);
-    expect(find.text('3 older than a year'), findsOneWidget);
+    expect(find.text('Show 3 older than a year'), findsOneWidget);
     await closeView(tester, d);
   });
 
@@ -111,7 +126,7 @@ void main() {
     // The menu says so, and lists it to show it again.
     await _pick(
       tester,
-      'All repositories · 1 hidden',
+      'All repositories, 1 hidden',
       'octo/infrastructure-playbooks',
     );
     expect(_asks(fake).last.hide, isEmpty);
@@ -171,7 +186,7 @@ void main() {
     });
 
     for (final (menu, label) in [
-      ('repos', 'All repositories · 1 hidden'),
+      ('repos', 'All repositories, 1 hidden'),
       ('updated', 'Last 90 days'),
     ]) {
       testWidgets('golden: the $menu menu, $name', (tester) async {

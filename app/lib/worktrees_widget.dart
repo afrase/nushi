@@ -25,8 +25,15 @@ PanelWidget? worktreesWidget(
   final list = chat.related.ordered;
   if (list.isEmpty) return null;
   final subs = {for (final s in subagentsOf(chat.items)) s.call.id: s};
-  Widget row(RelatedWorktree w) =>
-      _WorktreeRow(chat, w, subs[w.callId], onChanges, key: ValueKey(w.path));
+  Widget row(RelatedWorktree w) => _WorktreeRow(
+    chat,
+    w,
+    subs[w.callId],
+    onChanges,
+    key: ValueKey(
+      chat.related.keyOf(w)!,
+    ), // of the list; a path can have several
+  );
   final there = [
     for (final w in list)
       if (w.state == 'present') row(w),
@@ -103,15 +110,18 @@ class _WorktreeRow extends StatefulWidget {
 }
 
 class _WorktreeRowState extends State<_WorktreeRow> {
+  // Its record's key: the row is keyed by it, so it stays the row's.
+  late final String _key = widget.chat.related.keyOf(widget.worktree)!;
+
   @override
   void initState() {
     super.initState();
-    widget.chat.related.want(widget.worktree.path);
+    widget.chat.related.want(_key);
   }
 
   @override
   void dispose() {
-    widget.chat.related.unwant(widget.worktree.path);
+    widget.chat.related.unwant(_key);
     super.dispose();
   }
 
@@ -124,7 +134,7 @@ class _WorktreeRowState extends State<_WorktreeRow> {
     final end = worktreeEnd(w);
     return Tap(
       onTap: () {
-        widget.chat.related.pick(w.path);
+        widget.chat.related.pick(_key);
         widget.onChanges();
       },
       tooltip: plainName(w.path),
@@ -158,7 +168,7 @@ class _WorktreeRowState extends State<_WorktreeRow> {
                 child: ListenableBuilder(
                   listenable: widget.chat.related,
                   builder: (context, _) => _Work(
-                    widget.chat.related.stats(w.path),
+                    widget.chat.related.stats(_key),
                     gone: w.state != 'present',
                   ),
                 ),

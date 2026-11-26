@@ -62,9 +62,9 @@ class _UpdatesGroupState extends State<UpdatesGroup> {
     final d = widget.daemon;
     final u = d.update;
     final checked = lastChecked(u.checkedMs, clock());
-    if (u.version.isNotEmpty) return '$checked · ${u.version} is out';
+    if (u.version.isNotEmpty) return '$checked, ${u.version} is out';
     if (u.latest.isNotEmpty && u.latest == d.daemonVersion) {
-      return '$checked · up to date';
+      return '$checked, up to date';
     }
     return checked;
   }

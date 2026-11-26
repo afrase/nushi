@@ -27,7 +27,7 @@ Drag a card by its title row to reorder the cards, and click its title to collap
 
 **The bar** picks what's listed, remembered:
 
-- "Last 90 days ▾": 30 days, a year, or any time. A card ends with "3 older than 90 days · Show" to see them until Nushi quits.
+- "Last 90 days ▾": 30 days, a year, or any time. A card ends with "Show 3 older than 90 days", a link that shows them until Nushi quits.
 - The repositories: all, those of the folders Nushi knows, or only some owners' (such as `octo-org acme`). The owners and repositories are listed, checked while shown, to hide one or show it again.
 
 The filters go into GitHub's searches, so what they leave out doesn't take the 50 places of a card.
@@ -42,7 +42,7 @@ The filters go into GitHub's searches, so what they leave out doesn't take the 5
 
 **Going back.** Esc or ← goes back to the inbox, and so does a swipe back, as in Safari: two fingers right on the trackpad (three if macOS's Swipe between pages says so), not while a diff or code block under them scrolls. An arrow at the left edge fills as the swipe gets far enough; short of it nothing happens. The mouse's back button goes back too, here, in Jira and in New chat's lists. The inbox comes back scrolled as you left it, with the item you opened in view (Jira's list too).
 
-**Freshness.** The inbox shows as GitHub gave it last while it's asked again. It's asked for again each minute while it shows, and a pull request's or an issue's details too (a pull request every 15 minutes once merged or closed); the inbox not while details cover it, and nothing while Nushi's window is in the background, then once as it comes back ([ADR 0046](adr/0046-the-github-inbox-and-polling.md)). A refresh that fails keeps what shows and says so: "Couldn't refresh · as of 3m ago". A pull request's page always says how fresh it is at its top right: "Updated just now", "Updated 2m ago", with a spinner and "· refreshing" while it's asked again. With a pull request's page open, the bar's Refresh and ⌘R ask for the page, and only the page's line shows (the bar's is the list's, behind it). Nothing reaches GitHub otherwise, and Nushi writes to it only what you send.
+**Freshness.** The inbox shows as GitHub gave it last while it's asked again. It's asked for again each minute while it shows, and a pull request's or an issue's details too (a pull request every 15 minutes once merged or closed); the inbox not while details cover it, and nothing while Nushi's window is in the background, then once as it comes back ([ADR 0046](adr/0046-the-github-inbox-and-polling.md)). A refresh that fails keeps what shows and says so: "Couldn't refresh, as of 3m ago". A pull request's page always says how fresh it is at its top right: "Updated just now", "Updated 2m ago", with a spinner and ", refreshing" while it's asked again. With a pull request's page open, the bar's Refresh and ⌘R ask for the page, and only the page's line shows (the bar's is the list's, behind it). Nothing reaches GitHub otherwise, and Nushi writes to it only what you send.
 
 ## Starting work
 
@@ -76,7 +76,7 @@ It looks:
 - a few seconds after the agent pushes or runs `gh pr create`, and after each turn;
 - when Nushi's window comes to the front.
 
-The widget's title says when it last looked ("Checked 20 s ago · every minute").
+The widget's title says when it last looked ("Checked 20 s ago, every minute").
 
 ### The Pull request widget
 
@@ -85,12 +85,12 @@ A chat can hold up to 10 pull requests ([ADR 0117](adr/0117-github-links-as-chip
 The details panel's **Pull request** widget ("Pull requests" with two or more) is a row each, 44 tall, in the order linked except that a stack (one's base is another's head) lists its base first:
 
 - the state's icon, the title and the CI badge: a dot (red with any failing, grey with any cancelled and none failing, amber with any running, else green) and `passed/total` (neutral as passed, skipped in neither); none when merged, closed or without checks. Its click opens In progress, Passed, Failed (and Cancelled when any was), with Fix checks, Show checks and Open on GitHub;
-- under it `#n`, `+adds −dels` and one cue, the first that applies: Merged into `main` (with Clean up… while offered), Closed without merging, changes requested, N threads, N new comments, Ready to merge;
+- under it `#n`, `+adds −dels` and, after a comma, one cue in lower case, the first that applies: merged into `main` (with a Clean up… pill at the end of the title's line while offered, where an open one has its checks); the counts give way before the cue, which is cut only when it alone is wider than the line, closed without merging, changes requested, N threads, N new comments, ready to merge;
 - its ⋯ (under the pointer): Open on GitHub, Copy link, View changes, Merge… (what the merge status card offers, through ADR 0069's dialog: a merge, or Add to queue where the repository has a merge queue; in the merge queue or with auto-merge on, the card's heading and line, such as "Auto-merge is on. With squash, turned on by mona."; else the card's reason; off with why while blocked), Send open threads to agent, Ready for review on GitHub, Clean up…, Unlink.
 
 A click opens the Pull request tab on it. The checks, the reviewers, the threads, the merge status card and the comments are the tab's. Folded, one pull request is one line (the number in its state's color, failing or running checks, changes requested or a reviewer waited on, open threads and new comments; or Ready, Draft, Merged, Closed); several are their count by state and the worst checks.
 
-While the chat shows, a tool call of its that opens a pull request (`gh pr create`, a `create_pull_request` tool) or merges one of its own (`gh pr merge`, a `merge_pull_request` tool) gets a card after its turn group: a filled card with the state pill, `owner/repo #n · author · age`, the title, the files and `+adds −dels` as tags, and under a hairline the checks in words or the row's cue. A click opens the tab on it; right-click is the row's ⋯. It lives in the app's memory only: leaving the chat, or quitting, drops it (ADR 0117).
+While the chat shows, a tool call of its that opens a pull request (`gh pr create`, a `create_pull_request` tool) or merges one of its own (`gh pr merge`, a `merge_pull_request` tool) gets a card after its turn group: a filled card with the state pill, `owner/repo #n, author, age`, the title, the files and `+adds −dels` as tags, and under a hairline the checks in words or the row's cue. A click opens the tab on it; right-click is the row's ⋯. It lives in the app's memory only: leaving the chat, or quitting, drops it (ADR 0117).
 
 The rows come with the chats' states, asked each minute for every chat in one `GetGitHubItems` call a host; the pull request is read whole only while its Pull request tab shows it, or as Fix checks, Merge… or Clean up… starts ([ADR 0140](adr/0140-what-a-chats-pull-requests-ask-of-github.md)). New comments are those its count has past what the chat last saw. The widget's ⋯ links one by hand; without one it says "No pull request linked for `branch`", with Link…, whose dialog offers the branch's pull request first when there is one.
 
@@ -100,7 +100,7 @@ The header's chip is the chat's pull requests: the primary's icon, number and ba
 
 **Pull request**, beside Chat and Changes, is the GitHub view's pull request in the chat's place.
 
-It has no bar of its own, so its **Refresh** (↻, ⌘R) sits at its top right, beside the line that says how fresh it is ("Updated 2m ago"): it asks GitHub at once for the pull request and its rows, as the minute's poll does, the line saying "· refreshing" meanwhile and "Couldn't refresh" in red if it fails.
+It has no bar of its own, so its **Refresh** (↻, ⌘R) sits at its top right, beside the line that says how fresh it is ("Updated 2m ago"): it asks GitHub at once for the pull request and its rows, as the minute's poll does, the line saying ", refreshing" meanwhile and "Couldn't refresh" in red if it fails.
 
 It follows GitHub's own pull request page ([ADR 0137](adr/0137-the-pull-request-tab-follows-githubs-page.md)). **The head** is the title, Open on GitHub, the state, who opened it and when, base ← head and the diff's size, with **Merge status** (back to the merge status card, its first unmet segment open) and **Submit review** at the title's right. Once the title has scrolled away, **a slim bar** takes its place at the top: the state, `#n`, the title on one line and the same two buttons, in the page's column; it fades in and out whole, nothing in it moves. **Tabs**: Overview, Commits, Checks, Files changed, each with its count.
 

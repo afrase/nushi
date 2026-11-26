@@ -105,13 +105,13 @@ void main() {
     expect(_inRows(find.text('report.md')), findsOneWidget);
     expect(
       _tip(tester, 'summary.md'),
-      'audit/summary.md · 5m ago\nWritten by the workflow audit-docs',
+      'audit/summary.md, 5m ago\nWritten by the workflow audit-docs',
     );
     expect(
       _tip(tester, 'report.md'),
-      'docs/report.md · 5m ago\nWritten by the workflow audit-docs',
+      'docs/report.md, 5m ago\nWritten by the workflow audit-docs',
     );
-    expect(_tip(tester, 'chart.png'), 'docs/img/chart.png · 5m ago');
+    expect(_tip(tester, 'chart.png'), 'docs/img/chart.png, 5m ago');
     // No mark: the workflow's glyph is the Diagram kind's and a worktree's.
     expect(_inRows(find.byIcon(Icons.account_tree_outlined)), findsNothing);
     final row = tester.getRect(_row('summary.md').first);
@@ -133,9 +133,9 @@ void main() {
     ]);
     expect(
       _tip(tester, 'coverage.svg'),
-      'audit/coverage.svg · 5m ago\nWritten by the workflow wf_wf',
+      'audit/coverage.svg, 5m ago\nWritten by the workflow wf_wf',
     );
-    expect(_tip(tester, 'summary.md'), 'audit/summary.md · 5m ago');
+    expect(_tip(tester, 'summary.md'), 'audit/summary.md, 5m ago');
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -144,7 +144,7 @@ void main() {
       'named as a run', (tester) async {
     final (d, _) = await _app(tester, _items(written: false));
     expect(_names(), ['chart.png', 'report.md']);
-    expect(_tip(tester, 'report.md'), 'docs/report.md · 5m ago');
+    expect(_tip(tester, 'report.md'), 'docs/report.md, 5m ago');
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -190,9 +190,9 @@ void main() {
     expect(_names(), ['eviltxt.md', 'tab here[31m.md']);
     expect(
       _tip(tester, 'eviltxt.md'),
-      'audit/eviltxt.md · 5m ago\nWritten by the workflow audit',
+      'audit/eviltxt.md, 5m ago\nWritten by the workflow audit',
     );
-    expect(_tip(tester, 'tab here[31m.md'), 'docs/tab here[31m.md · 5m ago');
+    expect(_tip(tester, 'tab here[31m.md'), 'docs/tab here[31m.md, 5m ago');
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -230,7 +230,7 @@ void main() {
     addTearDown(mouse.removePointer);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    final tip = find.text('$long · 5m ago', findRichText: true);
+    final tip = find.text('$long, 5m ago', findRichText: true);
     expect(tip, findsOneWidget);
     expect(tester.getSize(tip).width, lessThanOrEqualTo(fileTipWidth));
     expect(tester.getSize(tip).height, greaterThan(40)); // it wrapped

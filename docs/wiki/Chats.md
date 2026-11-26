@@ -182,13 +182,13 @@ Each step the agent takes (a tool call) has a row that ends with how long it ran
 - Calls from before Nushi saw the chat (resumed from a terminal, or replayed by the agent) have no time.
 - A call still running when the turn ends stops counting there.
 
-A call to an MCP server's tool reads as the server and the tool, such as **github · search_issues**, in Claude and Codex chats alike. Click it to see what the agent sent (**Input**) and what came back (**Output**). Calls made while an older Nushi ran show as the agent named them until Nushi restarts on its own.
+A call to an MCP server's tool reads as the tool and then its server in brackets, such as **search_issues (github)**, in Claude and Codex chats alike. Click it to see what the agent sent (**Input**) and what came back (**Output**). Calls made while an older Nushi ran show as the agent named them until Nushi restarts on its own.
 
-A subagent is a helper the agent starts for part of a task. Its row shows how many tools it used and the time it actually worked, such as **6 tools · 3m 12s**. Its clock stops while it waits for a message. Once a Claude subagent is done, its row also shows the tokens it used, before the time: **39 tools · 182k tokens · 7m 55s**, then a check mark. Other agents don't report tokens, so their subagents show only the tools and the time. No cost shows: Claude counts a subagent's cost in the chat's total, not on its own.
+A subagent is a helper the agent starts for part of a task. Its row shows how many tools it used and the time it actually worked, such as **6 tools, 3m 12s**. Its clock stops while it waits for a message. Once a Claude subagent is done, its row also shows the tokens it used, before the time: **39 tools, 182k tokens, 7m 55s**, then a check mark. Other agents don't report tokens, so their subagents show only the tools and the time. No cost shows: Claude counts a subagent's cost in the chat's total, not on its own.
 
 ## Follow the agent's plan
 
-When the agent keeps a to-do list, its plan stays over the box until every step is done, even after the turn ends. It shows "Plan · 2 of 5 done", a progress bar, and the steps, with a dot on the one being worked on.
+When the agent keeps a to-do list, its plan stays over the box until every step is done, even after the turn ends. It shows "Plan 2 of 5 done", a progress bar, and the steps, with a dot on the one being worked on.
 
 - **To make it one line**, click the plan's bottom line (or press Enter on it). Collapsed, it shows the count and the step being worked on. Click it again to see every step.
 - Your choice holds for every chat, and after you quit.

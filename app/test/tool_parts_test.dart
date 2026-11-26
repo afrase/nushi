@@ -53,18 +53,21 @@ Widget _rows(List<Item> calls, {Tokens tokens = Tokens.dark}) => themed(
 void main() {
   setUpAll(loadFonts);
 
-  test("an MCP call's title is its server, tool and the tool it runs", () {
+  test("an MCP call's title is the tool it runs, then its server in "
+      'parentheses', () {
     expect(mcpOf(_call('1')), ('example-mcp-gateway', 'invoke_tool'));
     expect(mcpOf(Item(mcpServer: 'a', mcpTool: 'b__c')), ('a', 'b__c'));
     expect(mcpOf(Item(mcpServer: 'a')), isNull);
     // A daemon below API 140 sends neither: the title is shown as it is.
     expect(mcpOf(Item(title: _gateway)), isNull);
     expect(toolTitle(Item(title: _gateway)), _gateway);
+    // A gateway's call reads as the tool it runs (its own tool is in the
+    // raw name on hover), never a list of three (issue 119).
     expect(
       toolTitle(_call('1', input: _input)),
-      'example-mcp-gateway · invoke_tool · jira_search',
+      'jira_search (example-mcp-gateway)',
     );
-    expect(toolTitle(_call('2')), 'example-mcp-gateway · invoke_tool');
+    expect(toolTitle(_call('2')), 'invoke_tool (example-mcp-gateway)');
     // tool before name; a nested "tool" isn't the call's; a cut input
     // still names it.
     expect(
@@ -91,16 +94,13 @@ void main() {
           '{\n  "server": "github",\n  "tool": "search_issues",\n'
           '  "arguments": {\n    "query": "is:open"\n  }\n}',
     );
-    expect(toolTitle(codex), 'github · search_issues');
+    expect(toolTitle(codex), 'search_issues (github)');
     expect(toolTitle(_call('3', title: 'Read notes.md')), 'Read notes.md');
   });
 
   testWidgets('the MCP title, its raw name on hover', (tester) async {
     await tester.pumpWidget(_rows([_call('1', input: _input)]));
-    expect(
-      find.text('example-mcp-gateway · invoke_tool · jira_search'),
-      findsOneWidget,
-    );
+    expect(find.text('jira_search (example-mcp-gateway)'), findsOneWidget);
     expect(find.byTooltip(_gateway), findsOneWidget);
   });
 

@@ -235,7 +235,7 @@ void main() {
     await show(tester, CommitTrail(commits: commits, onAll: () {}));
     Finder row(String headline) => find.descendant(
       of: find.byType(CommitRow),
-      matching: find.textContaining(RegExp('^$headline ·'), findRichText: true),
+      matching: find.textContaining(RegExp('^$headline '), findRichText: true),
     );
     expect(row('Commit 250'), findsOneWidget);
     expect(row('Commit 1'), findsOneWidget);

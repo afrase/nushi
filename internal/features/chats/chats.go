@@ -259,16 +259,22 @@ type chat struct {
 	// runs, relateAgain that another was asked for since, and relatedAt is
 	// when one last started; pullsAfter is when a look may next ask GitHub
 	// after it failed, lookedTips the default branch's commits the last look
-	// saw, and pullsOpen the related worktrees (by path) whose pull request
-	// GitHub said was open, with when each is asked again (all held by
-	// looking).
+	// saw, lookedStep the last of the subagents' steps it read and lookedAt
+	// when, and pullsOpen the related worktrees (by pullKey) whose pull
+	// request GitHub said was open, with when each is asked again (all
+	// held by looking). rewound says the chat was rewound since the last
+	// look, and rewoundTo the last step that kept (under mu).
 	looking     sync.Mutex
 	relating    bool
 	relateAgain bool
 	relatedAt   time.Time
 	pullsAfter  time.Time
 	lookedTips  []string
+	lookedStep  string
+	lookedAt    int64
 	pullsOpen   map[string]pullOpen
+	rewound     bool
+	rewoundTo   string
 	// titled says the agent titled the session while the daemon ran, and
 	// waitedTitle that a turn ended without that title, for naming the
 	// chat's branch (branch.go).

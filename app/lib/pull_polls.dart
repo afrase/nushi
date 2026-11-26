@@ -96,18 +96,18 @@ Duration itemPoll(GitHubItem? it) {
 }
 
 /// When the chat's pull request was last looked for and how often it is,
-/// as the widget's tooltip says it: "Checked 20 s ago · every minute".
+/// as the widget's tooltip says it: "Checked 20 s ago, every minute".
 String checkedWords(DateTime? checked, Duration every, DateTime now) {
   final m = every.inMinutes;
   final often = m == 1 ? 'every minute' : 'every $m minutes';
-  if (checked == null) return 'Not checked yet · $often';
+  if (checked == null) return 'Not checked yet, $often';
   final age = now.difference(checked);
   final when = switch (age) {
     _ when age.inSeconds < 60 => '${max(age.inSeconds, 0)} s',
     _ when age.inMinutes < 60 => '${age.inMinutes} min',
     _ => '${age.inHours} h',
   };
-  return 'Checked $when ago · $often';
+  return 'Checked $when ago, $often';
 }
 
 /// The comments [it] (a row's item, which counts them) has that [chat]

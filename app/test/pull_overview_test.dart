@@ -88,7 +88,7 @@ void main() {
     await tester.tap(_segment('approvals'));
     await tester.pumpAndSettle();
     expect(find.text('Requested changes'), findsOneWidget);
-    expect(find.text('Awaiting review · code owner'), findsOneWidget);
+    expect(find.text('Awaiting review, code owner'), findsOneWidget);
     expect(find.text('Ping on GitHub'), findsOneWidget);
     // A second click closes it.
     await tester.tap(_segment('approvals'));

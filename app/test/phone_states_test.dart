@@ -153,11 +153,13 @@ void main() {
         await tried;
         await tester.pump();
         expect(find.text("Still can't reach your Mac"), findsOneWidget);
+        // The reason has commas of its own, so when it was last seen is a
+        // line of its own, never joined on with another comma (issue 119).
         expect(
-          find.textContaining("it's asleep or offline, or its remote access"),
+          find.text("It's asleep or offline, or its remote access is off"),
           findsOneWidget,
         );
-        expect(find.textContaining('last seen'), findsOneWidget);
+        expect(find.text('Last seen 10:42'), findsOneWidget);
         _inside(tester, find.byType(ConnectionBar), phone);
         await render(tester, find.byType(PhoneApp), 'phone_cant_reach_$name');
 

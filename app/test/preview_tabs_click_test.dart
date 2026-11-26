@@ -141,8 +141,9 @@ void main() {
     ]);
     // Measured in italics too: its name isn't cut with room to spare.
     expect(find.byType(PaneTabs), findsOneWidget);
-    expect(_italics(tester), hasLength(1));
-    expect(_italics(tester).single, isNot('README.md'), reason: 'auth’s');
+    // The provisional tab is auth's: its folder before its name, both in
+    // italics, whole.
+    expect(_italics(tester), ['auth/', 'README.md']);
     await render(tester, find.byType(NushiApp), 'files_preview_tabs');
     await closeView(tester, d);
   }, variant: onMac);

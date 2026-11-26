@@ -119,7 +119,7 @@ class _Row extends StatelessWidget {
                         ],
                         if (it != null && it.state != 'open')
                           TextSpan(
-                            text: ' · ${stateWord(it)}',
+                            text: ' ${stateWord(it)}',
                             style: theme.ui(t.textMuted, size: 12),
                           ),
                       ],

@@ -94,7 +94,7 @@ Future<void> showPalette(BuildContext context, Daemon d) async {
           detail: [
             'archived',
             if (!chat.scratch) baseName(chat.home),
-          ].join(' · '),
+          ].join(', '),
           agent: chat.agent,
         ),
   ];
@@ -129,7 +129,7 @@ Future<void> showArtifacts(BuildContext context, ChatState chat) async {
         [
           fileDetail(f, changed),
           if (filesLooked && changed == null) 'Gone',
-        ].where((s) => s.isNotEmpty).join(' · '),
+        ].where((s) => s.isNotEmpty).join(', '),
       ),
       icon: Icons.description_outlined,
       cutFromStart: true,

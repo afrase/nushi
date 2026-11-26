@@ -112,14 +112,10 @@ void main() {
       );
       expect(running.state, RunState.running);
       expect(_words(tester, cards.at(0)), '! npm run dev');
-      expect(
-        _words(tester, cards.at(1)),
-        '! git status --short · exit 0 · 1 line',
-      );
-      expect(
-        _words(tester, cards.at(2)),
-        '! make lint-dart · exit 2 · 2 lines',
-      );
+      // No comma against the command's code ink, where it reads as part
+      // of the command: a gap, then how it went (issue 119).
+      expect(_words(tester, cards.at(1)), '! git status --shortexit 0, 1 line');
+      expect(_words(tester, cards.at(2)), '! make lint-dartexit 2, 2 lines');
       final failed = tester.widget<Container>(
         find.byKey(ValueKey('output-${chat.draft.outputs.value[2].key}')),
       );

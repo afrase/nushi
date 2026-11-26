@@ -22,23 +22,31 @@ class TextMarksScope extends InheritedWidget {
 /// entries a [TextMarks] looks in: put it where a repaint stays small.
 class Marks extends SingleChildRenderObjectWidget {
   /// Marks the text in [child].
-  const new({required Widget super.child, super.key, this.entry});
+  const new({
+    required Widget super.child,
+    super.key,
+    this.entry,
+    this.background,
+  });
 
   /// The entry's name, unique under its scope.
   final String? entry;
 
+  /// The opaque fill the text is on (a code block's), where its colours
+  /// were chosen for: given one, a match's text is drawn in the
+  /// [TextMarks.ink] of its colour on the match's fill over it.
+  final Color? background;
+
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _RenderMarks(TextMarksScope.maybeOf(context), entry, null, null);
+      _RenderMarks(TextMarksScope.maybeOf(context), entry, null, null)
+        .._background = background;
 
   @override
   void updateRenderObject(BuildContext context, RenderObject renderObject) =>
-      (renderObject as _RenderMarks).update(
-        TextMarksScope.maybeOf(context),
-        entry,
-        null,
-        null,
-      );
+      (renderObject as _RenderMarks)
+        ..update(TextMarksScope.maybeOf(context), entry, null, null)
+        ..background = background;
 }
 
 /// Something that folds [text] away (what opening a row shows, what a
@@ -111,6 +119,24 @@ class _RenderMarks extends RenderProxyBox {
 
   TextMarks? _scope;
   String? _entry;
+  Color? _background; // a code block's: its matches' text drawn in ink
+  final _inked = <RenderParagraph, _Inked>{};
+
+  Color? get background => _background;
+  set background(Color? v) {
+    if (v == _background) return;
+    _background = v;
+    _forget();
+    markNeedsPaint();
+  }
+
+  void _forget() {
+    for (final i in _inked.values) {
+      i.painter?.dispose();
+    }
+    _inked.clear();
+  }
+
   String? _fold; // what's folded away here; null: not a fold
   ValueNotifier<int>? _count;
   (String, String)? _foldLowered;
@@ -137,6 +163,7 @@ class _RenderMarks extends RenderProxyBox {
     }
     if (scope != _scope || entry != _entry) {
       _drop();
+      _forget(); // another scope may ink otherwise
       _scope = scope;
       _entry = entry;
       _join();
@@ -177,6 +204,10 @@ class _RenderMarks extends RenderProxyBox {
     if (scope._query.isNotEmpty) scope._later();
   }
 
+  // A scan keeps the inked painters: one is made again only when its
+  // paragraph's text, constraints, matches or fills change (`_inkedOf`), so
+  // a code block stays as laid out while the agent streams after it. Those
+  // of a paragraph it no longer paints marks in go at the scan's end.
   void _begin() {
     _had = _painted.isNotEmpty || _folded.isNotEmpty;
     _painted = [];
@@ -184,11 +215,23 @@ class _RenderMarks extends RenderProxyBox {
   }
 
   void _end() {
+    if (_inked.isNotEmpty) {
+      final still = {
+        for (final m in _painted)
+          for (final p in m._parts) p.paragraph,
+      };
+      _inked.removeWhere((p, i) {
+        if (still.contains(p)) return false;
+        i.painter?.dispose();
+        return true;
+      });
+    }
     _count?.value = _folded.length;
     if (_had || _painted.isNotEmpty || _folded.isNotEmpty) markNeedsPaint();
   }
 
   void _clear() {
+    _forget();
     _painted = const [];
     _folded = const [];
     _count?.value = 0;
@@ -204,7 +247,14 @@ class _RenderMarks extends RenderProxyBox {
   @override
   void detach() {
     _drop();
+    _forget();
     super.detach();
+  }
+
+  @override
+  void dispose() {
+    _forget();
+    super.dispose();
   }
 
   @override
@@ -247,5 +297,6 @@ class _RenderMarks extends RenderProxyBox {
       }
     }
     super.paint(context, offset);
+    _ink(context, offset);
   }
 }

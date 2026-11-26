@@ -87,7 +87,7 @@ void main() {
     hang = Completer();
     await tester.pump(pullWidgetPoll);
     await tester.pump();
-    expect(_says('Updated just now · refreshing'), findsOneWidget);
+    expect(_says('Updated just now, refreshing'), findsOneWidget);
     hang.complete(GetGitHubPullResponse(pull: fixturePull()));
     hang = null;
     await tester.pumpAndSettle();
@@ -95,7 +95,7 @@ void main() {
     failing = true;
     await tester.pump(pullWidgetPoll);
     await tester.pumpAndSettle();
-    expect(_says("Couldn't refresh · as of just now"), findsOneWidget);
+    expect(_says("Couldn't refresh, as of just now"), findsOneWidget);
     expect(find.text(_title), findsOneWidget); // the page stays
     expect(find.textContaining('Not current'), findsNothing); // one cue
     await closeView(tester, d);
@@ -121,7 +121,7 @@ void main() {
     expect(asked, hasLength(1));
     expect(asked.single.quiet, isFalse); // asked for, not a poll
     expect(fake.calls.whereType<FindChatPullRequest>(), hasLength(1));
-    expect(_says('Updated 3m ago · refreshing'), findsOneWidget);
+    expect(_says('Updated 3m ago, refreshing'), findsOneWidget);
     await tester.tap(_refresh);
     await tester.pumpAndSettle();
     expect(asked, hasLength(1));
@@ -150,7 +150,7 @@ void main() {
     await tester.tap(_refresh);
     await tester.pumpAndSettle();
     await tester.pump(Waits.refreshShown); // the Refresh's busy cue
-    expect(_says("Couldn't refresh · as of 3m ago"), findsOneWidget);
+    expect(_says("Couldn't refresh, as of 3m ago"), findsOneWidget);
     expect(find.text(_title), findsOneWidget);
     expect(_refresh, findsOneWidget); // to try again
     await closeView(tester, d);
@@ -222,7 +222,7 @@ void main() {
     await tester.pump(pullWidgetPoll);
     await tester.pumpAndSettle();
     expect(find.textContaining("Couldn't refresh"), findsOneWidget);
-    expect(_says("Couldn't refresh · as of just now"), findsOneWidget);
+    expect(_says("Couldn't refresh, as of just now"), findsOneWidget);
     expect(find.byKey(const ValueKey('pull-refresh')), findsNothing);
 
     failing = false;
@@ -272,7 +272,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.pump(Waits.refreshShown); // the Refresh's busy cue
-    expect(_says("Couldn't refresh · as of 3m ago"), findsOneWidget);
+    expect(_says("Couldn't refresh, as of 3m ago"), findsOneWidget);
     expect(find.textContaining('Not current'), findsNothing);
     expect(find.text('Add Sub and Neg'), findsWidgets); // the page stays
     await closeView(tester, g);

@@ -14,6 +14,7 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/review_cards.dart';
@@ -302,6 +303,77 @@ void main() {
     chatState.draft.replies.value = const [];
     await tester.pump(const Duration(seconds: 3));
     await closeView(tester, daemon);
+  });
+
+  testWidgets("a path made again: each record's comments are its own, "
+      'under a lead naming it', (tester) async {
+    // The worktree removed at the path, and another made there since.
+    final old = _worktree(state: 'removed');
+    final made = _worktree()
+      ..branch = 'b'
+      ..lastHead = 'd' * 40;
+    final inMade = whereIn('uncommitted', worktree: relatedKey(_tree, 1));
+    await setUpChat(tester, [_comment('1', inTree, 'old', 'On the old')]);
+    chatState.related.take([old, made]);
+    await tester.pumpAndSettle();
+    await pick(tester, 'b');
+    expect(tester.widget<DiffBox>(find.byType(DiffBox)).review?.where, inMade);
+    expect(_inDiff('On the old'), findsNothing);
+    expect(find.text('a, Uncommitted, same.go, Line 1'), findsOne);
+    setComments('c', [
+      ...commentsOf('c'),
+      _comment('2', inMade, 'tree', 'On the new'),
+    ]);
+    await tester.pumpAndSettle();
+    expect(_inDiff('On the new'), findsOne);
+    await tester.tap(find.text('Send to agent (2)'));
+    await tester.pumpAndSettle();
+    final cards = chatState.draft.replies.value;
+    expect(cards.map((r) => (r.text, r.from)), [
+      (
+        'On the old',
+        'My review comments on the changes in the worktree '
+            '`/x/.claude/worktrees/a` on branch `a` (removed since: its last '
+            'commit is `ccccccc`), its paths relative to that folder:',
+      ),
+      (
+        'On the new',
+        'My review comments on the changes in the worktree '
+            '`/x/.claude/worktrees/a` on branch `b`, its paths relative to '
+            'that folder:',
+      ),
+    ]);
+    expect(whereLabel(inMade, [old, made]), 'b, Uncommitted');
+    chatState.draft.replies.value = const [];
+    await tester.pump(const Duration(seconds: 3));
+    await closeView(tester, daemon);
+  });
+
+  test("after a restart, a card waits only for its own record's comment", () {
+    // Two records of one path, a comment on each on the same file and
+    // lines' text, both sent to the box.
+    final chat = ChatState('c', '/x');
+    final made = _worktree()
+      ..branch = 'b'
+      ..lastHead = 'd' * 40;
+    chat.related.take([_worktree(state: 'removed'), made]);
+    final inMade = whereIn('uncommitted', worktree: relatedKey(_tree, 1));
+    setComments('c', [
+      _comment('1', inTree, 'same', 'On the old'),
+      _comment('2', inMade, 'same', 'On the new'),
+    ]);
+    reviewToBox(chat);
+    final cards = chat.draft.replies.value;
+    expect(cards, hasLength(2));
+    // A restart forgets which card each comment went as; the new
+    // record's card is then taken out of the box, and its file read gone.
+    final kept = commentsOf('c');
+    forgetReviews();
+    setComments('c', kept);
+    chat.draft.replies.value = [cards.first];
+    filesRead(chat, inMade, const [], idle: true);
+    filesRead(chat, inTree, const [], idle: true);
+    expect(commentsOf('c').map((c) => c.id), ['1']);
   });
 
   test("a removed worktree's lead says so, and its last commit", () {

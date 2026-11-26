@@ -299,13 +299,14 @@ class ChangesBar extends StatelessWidget {
           ),
           const MenuEntry.heading('Related worktrees'),
           for (final w in related.ordered)
-            MenuEntry(
-              worktreeName(w),
-              detail: worktreeEnd(w),
-              muted: w.state != 'present',
-              checked: w.path == picked?.path,
-              onPick: () => related.pick(w.path),
-            ),
+            if (related.keyOf(w) case final key?) // each is: of the list
+              MenuEntry(
+                worktreeName(w),
+                detail: worktreeEnd(w),
+                muted: w.state != 'present',
+                checked: key == related.shown,
+                onPick: () => related.pick(key),
+              ),
         ],
       ),
     );

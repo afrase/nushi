@@ -12,3 +12,6 @@ A workflow's card (ADR 0127) had three lines: the name with the current phase's 
 
 ## Consequences
 The summary on the item grows by a number and an index per running label. A run's total can step when its snapshot replaces the daemon's reading, should Claude count an agent otherwise than by its last message (the recordings can't tell, `docs/facts/claude.md`). Were claude's `task_progress` usage passed on by the agent, it could replace the reading of transcripts.
+
+## Amendment (2026-11-26): commas, not dots
+The line joins its parts with commas ("Review 4/7, 3 running, 412k tokens, 4m 12s"), as a subagent's row does at every width: no dot between a line's parts (issue 119).

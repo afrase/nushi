@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:nushi/clock.dart';
 
 /// [text] on one line in [style], again every second while [live]: a
-/// running time ("12s", a subagent's "Thinking · 40s"), in tabular figures
+/// running time ("12s", a subagent's "Thinking, 40s"), in tabular figures
 /// so it doesn't jitter as it ticks.
 class LiveText extends StatefulWidget {
   const new(this.text, {required this.live, required this.style, super.key});

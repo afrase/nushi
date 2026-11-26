@@ -90,7 +90,7 @@ void main() {
           isFalse,
           reason: '$n is cut',
         );
-        final detail = _inPalette(find.textContaining('/notes · 5m ago'))
+        final detail = _inPalette(find.textContaining('/notes, 5m ago'))
             .evaluate()
             .map((e) => (e.widget as Text).data!);
         expect(detail, isNotEmpty);
@@ -98,7 +98,7 @@ void main() {
       }
       // A file gone from a folder still there says so in its detail.
       expect(_inPalette(find.text('gone.md')), findsOneWidget);
-      expect(_inPalette(find.text('docs · Gone')), findsOneWidget);
+      expect(_inPalette(find.text('docs, Gone')), findsOneWidget);
       await closeView(tester, d);
     }, variant: onMac);
   }

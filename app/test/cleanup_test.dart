@@ -120,7 +120,7 @@ void main() {
   ) async {
     final (d, _) = await _open(tester);
     expect(
-      _inPull(find.textContaining('Merged into main', findRichText: true)),
+      _inPull(find.textContaining('merged into main', findRichText: true)),
       findsOneWidget,
     );
     expect(_inPull(find.text('Clean up…')), findsOneWidget);
@@ -144,7 +144,7 @@ void main() {
     await tester.tap(_inPull(find.text('Clean up…')));
     await tester.pumpAndSettle();
     expect(find.text('Clean up after #537'), findsOneWidget);
-    expect(find.text('.worktrees/export-in-site-zone · clean'), findsOneWidget);
+    expect(find.text('.worktrees/export-in-site-zone, clean'), findsOneWidget);
     expect(
       find.text(
         "Squash-merged, so git can't tell. GitHub says #537 merged it.",

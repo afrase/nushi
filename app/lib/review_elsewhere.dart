@@ -124,14 +124,17 @@ class _CommentsElsewhereState extends State<CommentsElsewhere> {
 
 /// A Changes view's name ([ReviewComment.where]): its scope's, and in
 /// Commits the commits picked, newest last; a related worktree's first, as
-/// its menu names it when it's among [related], else by its folder.
+/// its menu names it when its record is among [related], else by its
+/// folder.
 String whereLabel(String where, [List<RelatedWorktree> related = const []]) {
   final scope = _scopeLabel(scopeOf(where));
-  final path = worktreeOf(where);
-  if (path == null) return scope;
-  final w = related.where((w) => w.path == path).firstOrNull;
-  return '${w == null ? plainName(path.split('/').last) : worktreeName(w)}, '
-      '$scope';
+  final key = worktreeOf(where);
+  if (key == null) return scope;
+  final i = relatedKeys(related).indexOf(key);
+  final name = i < 0
+      ? plainName(relatedPath(key).split('/').last)
+      : worktreeName(related[i]);
+  return '$name, $scope';
 }
 
 /// A scope's name ([scopeOf]) as its tab says it, Commits' by the commits.

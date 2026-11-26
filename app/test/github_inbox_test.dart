@@ -150,7 +150,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       expect(find.text('As it was'), kept ? findsOneWidget : findsNothing);
       expect(
-        find.text('Updated 5m ago · refreshing'),
+        find.text('Updated 5m ago, refreshing'),
         kept ? findsOneWidget : findsNothing,
       );
       expect(find.byType(RowsLoading), kept ? findsNothing : findsOneWidget);
@@ -193,6 +193,22 @@ void main() {
     (fake, d) = await openView(tester, teams: null);
     expect(asks(fake).single.teams, isTrue);
     expect(find.text('Me and my teams'), findsOneWidget);
+    await closeView(tester, d);
+  });
+
+  testWidgets("the bar's account: the login whole and the host dropped "
+      "where both don't fit (issue 119)", (tester) async {
+    var (_, d) = await openView(tester, size: const Size(1100, 520));
+    expect(find.text('afrase on github.com'), findsOneWidget);
+    await closeView(tester, d);
+    (_, d) = await openView(tester, size: const Size(480, 520));
+    expect(find.text('afrase on github.com'), findsNothing);
+    final login = find.text('afrase');
+    expect(login, findsOneWidget, reason: 'the login alone, not cut');
+    expect(
+      tester.renderObject<RenderParagraph>(login).didExceedMaxLines,
+      isFalse,
+    );
     await closeView(tester, d);
   });
 

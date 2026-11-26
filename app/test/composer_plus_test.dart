@@ -234,7 +234,7 @@ void main() {
       expect(opened, 1);
       expect(find.byType(FileCard), findsNWidgets(2));
       expect(find.text('notes.txt'), findsOne);
-      expect(find.text('PDF · 3.0 MB'), findsOne);
+      expect(find.text('PDF, 3.0 MB'), findsOne);
       await tester.pumpAndSettle(); // the cards' line grows in
       await expectLater(
         find.byType(MaterialApp),

@@ -81,3 +81,5 @@ The owner found the app's look dated and approved a mock of a fresh one (2026-11
 ## Amendment (2026-11-19): a switch reads as on or off at a glance
 - The switch's off look (a `lifted` track, a small `textMuted` thumb) was hard to tell from a disabled one, a faint dot on a card. A switch is now Nushi's own `Toggle` (`controls_toggle.dart`), not Material's `Switch` and its theme: a solid track, `accent` on and a solid grey off (`textMuted` at 55%), and one knob in the theme's `onAccent` (white in most sets, near black in Catppuccin Mocha and Tokyo Night, whose accents are pastel), the same size on and off and pressed, so only its place moves; `toggle_themes.png` holds it in every built-in set. Every on/off is one: `SettingsSwitch` in Settings and the details, and the phone's Notifications.
 
+## Amendment (2026-11-26): no dot in the plan's line
+The plan's line reads "Plan 2 of 4 done", the count muted after "Plan" (issue 119; ADR 0135's amendment).

@@ -160,7 +160,7 @@ class _SharedRow extends StatelessWidget {
                   else
                     names.join(', '),
                   ...notes,
-                ].join('  ·  '),
+                ].join('\n'),
                 style: muted,
               ),
             ],

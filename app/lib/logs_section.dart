@@ -70,7 +70,7 @@ class LogsSection extends StatelessWidget {
                   'API ${daemon.daemonApi}',
                   if (built != null) 'built ${dateTime(built)}',
                   if (daemon.replaced) 'a newer one is installed',
-                ].join(' · '),
+                ].join(', '),
                 control: native.install.restartsDaemon
                     ? Button(
                         label: daemon.restarting ? 'Restarting…' : 'Restart',

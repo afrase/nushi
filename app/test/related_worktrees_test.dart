@@ -613,6 +613,162 @@ void main() {
     });
   });
 
+  group('a path made again (issue #118)', () {
+    // The old worktree at the path, removed, and the one made there since
+    // on another branch: two records of one path, the latest last.
+    final old = RelatedWorktree(
+      path: '/x/.claude/worktrees/a',
+      branch: 'first-try',
+      baseCommit: _base,
+      lastHead: 'd' * 40,
+      callId: 'x',
+      state: 'removed',
+    );
+    final made = _worktree('a', call: 'y').deepCopy()..branch = 'second-try';
+
+    // The daemon's answer: one stat for each record of the path, in the
+    // order of its list (the removed one's, then the new one's), whatever
+    // the app's list holds.
+    Object? byRecord(Object input) => switch (input) {
+      GetRelatedWorktreeStatsRequest() => GetRelatedWorktreeStatsResponse(
+        stats: [
+          RelatedWorktreeStats(path: old.path, files: 1, added: 4),
+          RelatedWorktreeStats(path: made.path, files: 3, added: 9),
+        ],
+      ),
+      _ => answers(input),
+    };
+
+    test('a key never names another record', () {
+      final related = RelatedWorktrees('c')..take([old, made]);
+      final held = related.list[1];
+      related.take([old, made.deepCopy()..lastHead = 'e' * 40]);
+      expect(related.keyOf(held), relatedKey(made.path, 1));
+      expect(related.keyOf(old.deepCopy()..callId = 'z'), isNull);
+    });
+
+    test('a key of one call and branch made twice is its own, or none', () {
+      // One subagent's worktree, removed, then made again on its branch
+      // after a reset: two records of one path, call and branch.
+      final first = old.deepCopy()..callId = 'y';
+      final again = first.deepCopy()
+        ..lastHead = 'e' * 40
+        ..state = 'present';
+      final related = RelatedWorktrees('c')..take([first, again]);
+      final held = related.list[0];
+      related.take([first.deepCopy()..baseCommit = 'f' * 40, again]);
+      expect(related.keyOf(held), relatedKey(first.path, 0));
+      // Nothing left to tell them apart by: no key.
+      related.take([
+        first.deepCopy()..baseCommit = 'f' * 40,
+        again.deepCopy()..lastHead = first.lastHead,
+      ]);
+      expect(related.keyOf(held), isNull);
+    });
+
+    testWidgets(
+      'the Changes view keeps the record it read, and checks only it',
+      (tester) async {
+        await setUpChat(tester);
+        chatState.related.take([old, made]);
+        // The list moves while the stats of the record picked are asked.
+        fake.answer = (input) {
+          if (input is GetRelatedWorktreeStatsRequest) {
+            chatState.related.take([old, made.deepCopy()..lastHead = 'e' * 40]);
+          }
+          return byRecord(input);
+        };
+        await showChanges(tester);
+        fake.calls.clear();
+        await pickFromMenu(tester, 'second-try');
+        expect(_calls<GetDiffRequest>(fake).single.folder, made.path);
+        expect(find.text('Show its changes'), findsNothing);
+        await tester.tap(find.byType(MenuField));
+        await tester.pumpAndSettle();
+        expect(find.byIcon(Icons.check), findsOne);
+        expect(
+          find.descendant(
+            of: find.ancestor(
+              of: find.text('second-try').last,
+              matching: find.byType(MenuItemButton),
+            ),
+            matching: find.byIcon(Icons.check),
+          ),
+          findsOne,
+        );
+        await closeView(tester, daemon);
+      },
+    );
+
+    testWidgets('the widget has a row of each, with its own work', (
+      tester,
+    ) async {
+      await setUpChat(tester);
+      fake.answer = byRecord;
+      chatState.related.take([old, made]);
+      final w = worktreesWidget(chatState, onChanges: () {})!;
+      await tester.pumpWidget(
+        themed(
+          SizedBox(
+            width: 240,
+            child: Column(children: [for (final r in w.rows) r.$2 as Widget]),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.text('1 removed'));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      Finder row(String name) =>
+          find.ancestor(of: find.text(name), matching: find.byType(Tap));
+      expect(
+        find.descendant(
+          of: row('second-try'),
+          matching: find.text('+9 −0, 3 files', findRichText: true),
+        ),
+        findsOne,
+      );
+      expect(
+        find.descendant(
+          of: row('first-try'),
+          matching: find.text('+4 −0, 1 file', findRichText: true),
+        ),
+        findsOne,
+      );
+      await tester.tap(find.text('first-try'));
+      expect(chatState.related.picked?.branch, 'first-try');
+      await tester.tap(find.text('second-try'));
+      expect(chatState.related.picked?.branch, 'second-try');
+      await closeView(tester, daemon);
+    });
+
+    testWidgets("the picker reads each one's own commits", (tester) async {
+      await setUpChat(tester);
+      fake.answer = byRecord;
+      chatState.related.take([old, made]);
+      await showChanges(tester);
+      fake.calls.clear();
+      await pickFromMenu(tester, 'first-try', detail: true);
+      final diff = _calls<GetDiffRequest>(fake).single;
+      expect((diff.folder, diff.commit), ('/x', old.lastHead));
+      expect(chatState.related.picked?.branch, 'first-try');
+      fake.calls.clear();
+      await pickFromMenu(tester, 'second-try');
+      expect(_calls<GetDiffRequest>(fake).single.folder, made.path);
+      expect(chatState.related.picked?.branch, 'second-try');
+      // A new record of the path comes: the one picked stays picked.
+      final third = made.deepCopy()
+        ..branch = 'third-try'
+        ..lastHead = 'e' * 40;
+      chatState.related.take([old, made.deepCopy()..state = 'removed', third]);
+      await tester.pumpAndSettle();
+      expect(chatState.related.picked?.branch, 'second-try');
+      await closeView(tester, daemon);
+    });
+  });
+
   group('a subagent', () {
     testWidgets('tagged by call id, in the transcript and the widget', (
       tester,

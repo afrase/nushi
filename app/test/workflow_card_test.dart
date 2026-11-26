@@ -99,11 +99,11 @@ void main() {
   test('each state in words', () {
     expect(
       workflowState(workflowCall('running').workflow),
-      'Review 4/7 · 3 running · 61.2k tokens · 4m 12s',
+      'Review 4/7, 3 running, 61.2k tokens, 4m 12s',
     );
     expect(
       workflowState(workflowCall('done').workflow),
-      '12 agents · 96.5k tokens · 4m 12s', // its check says done
+      '12 agents, 96.5k tokens, 4m 12s', // its check says done
     );
     expect(
       workflowState(workflowCall('failed').workflow),
@@ -119,17 +119,17 @@ void main() {
     );
     expect(
       workflowState(workflowCall('running', stalled: true).workflow),
-      'no activity for 1h · Review 4/7 · 3 running · 61.2k tokens',
+      'no activity for 1h, Review 4/7, 3 running, 61.2k tokens',
     );
     expect(
       workflowState(Workflow(state: 'running', started: msAgo(Duration.zero))),
-      'starting · 0s',
+      'starting, 0s',
     );
     // A short line's choices: its count, then its tokens, give way.
     expect(workflowStates(workflowCall('running').workflow), [
-      'Review 4/7 · 3 running · 61.2k tokens · 4m 12s',
-      'Review 4/7 · 61.2k tokens · 4m 12s',
-      'Review 4/7 · 4m 12s',
+      'Review 4/7, 3 running, 61.2k tokens, 4m 12s',
+      'Review 4/7, 61.2k tokens, 4m 12s',
+      'Review 4/7, 4m 12s',
     ]);
     expect(
       workflowEndWords(workflowCall('unknown').workflow, 'Claude'),
@@ -299,11 +299,11 @@ void main() {
     );
     expect(find.byTooltip('Hide its phases'), findsOne);
     // A click on the card opens and closes it in place too, never the pane.
-    await tester.tap(find.textContaining('Review 4/7 · 3 running'));
+    await tester.tap(find.textContaining('Review 4/7, 3 running'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('Show its phases'), findsOne);
     expect(chat.pane.value, isNull);
-    await tester.tap(find.textContaining('Review 4/7 · 3 running'));
+    await tester.tap(find.textContaining('Review 4/7, 3 running'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('Hide its phases'), findsOne);
     // Its pane is the button's at its end.
@@ -360,7 +360,7 @@ void main() {
     testWidgets('a narrow workflow card: the state on a line of its own '
         '($name)', (tester) async {
       await _pump(tester, workflowCall('running'), tokens: tokens, width: 392);
-      expect(find.text('Map 2/2 · Review 4/7'), findsNothing);
+      expect(find.text('Map 2/2, Review 4/7'), findsNothing);
       await expectLater(
         find.byType(WorkflowCard),
         matchesGoldenFile('goldens/workflow_card_narrow_$name.png'),

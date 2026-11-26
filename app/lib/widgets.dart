@@ -421,9 +421,9 @@ class RowsLoading extends StatelessWidget {
   }
 }
 
-/// What the bar says of what shows: "Updated 3m ago · refreshing" for
+/// What the bar says of what shows: "Updated 3m ago, refreshing" for
 /// what was kept from last time while it's asked again, "Updated 3m ago"
-/// once asking failed, "Loading…" with nothing kept; "Couldn't refresh ·
+/// once asking failed, "Loading…" with nothing kept; "Couldn't refresh,
 /// as of 3m ago" once a quiet poll [failed] (what shows is the last
 /// answer, from [updated]; ADR 0046).
 String? updatedLine(
@@ -433,12 +433,15 @@ String? updatedLine(
 }) {
   if (updated == null) return loading ? 'Loading…' : null;
   final when = ago(clock().difference(updated), updated);
-  if (failed && !loading) return "Couldn't refresh · as of $when";
+  if (failed && !loading) return '$couldNotRefresh, as of $when';
   return 'Updated $when${loading ? refreshingWords : ''}';
 }
 
 /// What [updatedLine] adds while it's asked again.
-const refreshingWords = ' · refreshing';
+const refreshingWords = ', refreshing';
+
+/// How a failed refresh's line starts, all a narrow bar says of it.
+const couldNotRefresh = "Couldn't refresh";
 
 /// [updatedLine]'s [line] as it shows (the bars', an issue's or a pull
 /// request's page): muted, or once a quiet poll [failed] in the failure's
@@ -482,7 +485,7 @@ Widget updatedText(
       Icon(Icons.sync_problem, size: size + 2, color: t.crashed),
       Flexible(
         child: Text(
-          short ? line.split(' · ').first : line,
+          short && line.startsWith(couldNotRefresh) ? couldNotRefresh : line,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.ui(t.crashed, size: size),

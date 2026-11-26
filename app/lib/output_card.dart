@@ -11,7 +11,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// A run's output in the composer, to go with the next message: a ▷ run's
-/// ("Output of `cmd` · exit 0 · 42 lines") or a command's typed after `!`
+/// ("Output of `cmd`, exit 0, 42 lines") or a command's typed after `!`
 /// ("! cmd"), which shows from its start: running, the spinner, Show
 /// (its terminal) and ✕ (stops it, and the card goes); done, its exit and
 /// lines; failed (an exit not 0), on the failed state's fill with its mark
@@ -104,17 +104,16 @@ class OutputCard extends StatelessWidget {
             ),
           ),
         ] else ...[
-          Text(' · ', style: muted),
+          // A gap, not a comma: against the command's code ink a comma
+          // reads as part of the command.
+          const SizedBox(width: 8),
           Text(
             'exit ${o.exit}',
             style: failed
                 ? theme.ui(t.crashed, size: 11.5, weight: FontWeight.w600)
                 : muted,
           ),
-          Text(
-            ' · ${o.lines} ${o.lines == 1 ? 'line' : 'lines'}',
-            style: muted,
-          ),
+          Text(', ${o.lines} ${o.lines == 1 ? 'line' : 'lines'}', style: muted),
         ],
       ],
     );

@@ -8,6 +8,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/double_clicks.dart';
 import 'package:nushi/edit_bars.dart';
+import 'package:nushi/path_name.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_entry.dart';
@@ -21,28 +22,41 @@ import 'package:nushi/widgets.dart';
 // pages, as chips, as Claude desktop's browser draws its tabs. The two kinds
 // never share a row (ADR 0071). What each says, how wide it is, and the row.
 
-/// What the tab of [file] says: its name, with as much of its folder as
-/// tells it from the others of that name in [files] ("plan.md · docs"),
-/// its bidi marks shown (plainPath).
+/// What the tab of [file] says: its name, after as much of its folder as
+/// tells it from the others of that name in [files], as a path ("docs/
+/// plan.md", the folder drawn muted and giving way first, as a sidebar's
+/// twin projects are: PathName; [tabParts]), its bidi marks shown
+/// (plainPath).
 String tabLabel(String file, List<String> files) =>
-    plainPath(_label(file, files));
+    switch (tabParts(file, files)) {
+      (final name, '') => name,
+      (final name, final hint) => '$hint/$name',
+    };
 
-String _label(String file, List<String> files) {
+/// [tabLabel]'s two parts: the file's name and the folder that tells it
+/// apart ('' when no other open file has its name), each with its bidi
+/// marks shown.
+(String, String) tabParts(String file, List<String> files) {
+  final (name, hint) = _parts(file, files);
+  return (plainPath(name), plainPath(hint));
+}
+
+(String, String) _parts(String file, List<String> files) {
   final name = baseName(file);
   final others = [
     for (final f in files)
       if (f != file && baseName(f) == name) folderOf(f),
   ];
   final folder = folderOf(file);
-  if (others.isEmpty || folder.isEmpty) return name;
+  if (others.isEmpty || folder.isEmpty) return (name, '');
   final parts = folder.split('/');
   for (var n = 1; n < parts.length; n++) {
     final hint = parts.sublist(parts.length - n).join('/');
     if (!others.any((o) => o == hint || o.endsWith('/$hint'))) {
-      return '$name · $hint';
+      return (name, hint);
     }
   }
-  return '$name · $folder';
+  return (name, folder);
 }
 
 /// How narrow a tab gets before the row scrolls instead, while the row
@@ -260,6 +274,13 @@ class _PaneTabsState extends State<PaneTabs> {
           final BrowserTab b => b.label,
         },
     ];
+    final hints = [
+      for (final e in tabs)
+        switch (e) {
+          PreviewFile(:final path) => tabParts(path, files).$2,
+          BrowserTab() => '',
+        },
+    ];
     final chips = widget.chips;
     // A provisional file's name in italics, measured so too.
     final provisional = widget.chat.files.provisional.value;
@@ -312,6 +333,7 @@ class _PaneTabsState extends State<PaneTabs> {
                       chat: widget.chat,
                       tab: e,
                       label: labels[i],
+                      hint: hints[i],
                       tooltip: switch (e) {
                         PreviewFile(:final path) => plainPath(path),
                         final BrowserTab b => plainPath(b.address.value),
@@ -344,6 +366,7 @@ class _Tab extends StatelessWidget {
     required this.tooltip,
     required this.face,
     required this.showing,
+    this.hint = '',
     this.chip = false,
     this.clicks,
   });
@@ -351,6 +374,10 @@ class _Tab extends StatelessWidget {
   final ChatState chat;
   final PreviewEntry tab;
   final String label;
+
+  /// The start of [label] that is the file's folder (without its slash),
+  /// drawn muted.
+  final String hint;
   final String tooltip;
   final TextStyle Function(Color color) face;
   final bool showing;
@@ -399,12 +426,13 @@ class _Tab extends StatelessWidget {
                               padding: const EdgeInsets.only(
                                 left: previewNameInset,
                               ),
-                              child: Text(
-                                label,
-                                maxLines: 1,
-                                softWrap: false,
-                                overflow: TextOverflow.ellipsis,
+                              child: PathName(
+                                hint.isEmpty ? '' : '$hint/',
+                                hint.isEmpty
+                                    ? label
+                                    : label.substring(hint.length + 1),
                                 style: face(ink),
+                                parentStyle: face(t.textMuted),
                               ),
                             ),
                           ),

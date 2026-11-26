@@ -395,7 +395,7 @@ void main() {
     final (fake, d) = await openView(tester);
     await tester.tap(find.text('Sprint'));
     await tester.pumpAndSettle();
-    expect(find.text('ACME board · Sprint 4'), findsOneWidget);
+    expect(find.text('ACME board, Sprint 4'), findsOneWidget);
     await tester.tap(find.text('Bugs'));
     await tester.pumpAndSettle();
     expect(

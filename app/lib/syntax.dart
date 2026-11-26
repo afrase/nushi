@@ -6,6 +6,7 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/widgets.dart';
 import 'package:nushi/diff_find.dart';
 import 'package:nushi/syntax_languages.dart';
+import 'package:nushi/theme/contrast.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:re_highlight/re_highlight.dart';
 
@@ -384,6 +385,12 @@ class SyntaxLines implements DiffLineSource {
 /// WCAG's floor for large text and for what must be seen; 4.5 would
 /// recolour most of a light set's code even where it reads.
 const double codeOnTintContrast = 3;
+
+/// Code's colour on a find's mark in a code block (`TextMarks.ink`): the
+/// same rule as on a diff's tint, for the fills Nushi paints itself
+/// (issue 117).
+Color codeOnMark(Color color, Color fill, Color background) =>
+    codeOn(color, fill, background: background, floor: codeOnTintContrast);
 
 /// The diff theme for [t]: its diff colors, with the transcript's code
 /// colors. A removed line in one column is red, the way an inserted one is

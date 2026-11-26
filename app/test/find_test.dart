@@ -165,7 +165,7 @@ void main() {
     await tester.pump(ChatFind.pause); // typing pauses, then it looks
     await tester.pumpAndSettle();
     final find_ = chat.changesFind;
-    expect(find.text('1 of 3 · file 1 of 2'), findsOne);
+    expect(find.text('1 of 3, file 1 of 2'), findsOne);
     for (final (mode, name) in [
       (Brightness.dark, 'dark'),
       (Brightness.light, 'light'),
@@ -177,12 +177,12 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find_.files, (1, 2));
-    expect(find.text('2 of 3 · file 1 of 2'), findsOne);
+    expect(find.text('2 of 3, file 1 of 2'), findsOne);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find_.files, (2, 2));
-    expect(find.text('1 of 1 · file 2 of 2'), findsOne);
+    expect(find.text('1 of 1, file 2 of 2'), findsOne);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find_.files, (1, 2));

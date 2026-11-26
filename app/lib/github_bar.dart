@@ -6,6 +6,7 @@ import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/text_width.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -112,14 +113,7 @@ class GitHubBar extends StatelessWidget {
                     label: Text(h?.host ?? ''),
                   )
                 else if (h != null)
-                  Flexible(
-                    child: Text(
-                      [h.host, if (h.login.isNotEmpty) h.login].join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.ui(t.textSecondary, size: 12),
-                    ),
-                  ),
+                  Flexible(child: _Account(h)),
                 const SizedBox(width: 12),
                 if (h != null) ...[
                   Flexible(
@@ -173,6 +167,36 @@ class GitHubBar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Who on which host, in the bar: "mona on github.com" ("github.com, mona"
+/// read as two things). Where both don't fit, " on github.com" is what
+/// gives way, dropped whole and said on hover, so the login shows whole
+/// (issue 119); only a login too long for the room alone is cut.
+class _Account extends StatelessWidget {
+  const new(this.host);
+
+  final GitHubHost host;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final style = theme.ui(theme.t.textSecondary, size: 12);
+    final h = host;
+    final both = h.login.isEmpty ? h.host : '${h.login} on ${h.host}';
+    return LayoutBuilder(
+      builder: (context, box) {
+        final fits = textWidth(context, both, style) <= box.maxWidth;
+        final text = Text(
+          fits || h.login.isEmpty ? both : h.login,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: style,
+        );
+        return fits || h.login.isEmpty ? text : tooltip(context, both, text);
+      },
     );
   }
 }

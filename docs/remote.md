@@ -40,7 +40,7 @@ Forget this Mac (Settings) forgets the pairing and the device's key on the phone
 
 ### Using it
 
-- When the Mac can't be reached the app says so quietly ("Reconnecting…") and keeps trying. After a couple of tries it says why ("it's asleep or offline, or its remote access is off") and when it last answered, with Try again.
+- When the Mac can't be reached the app says so quietly ("Reconnecting…") and keeps trying. After a couple of tries it says why ("It's asleep or offline, or its remote access is off") and, on a line of its own, when it last answered ("Last seen 10:42"), with Try again.
 - A long chat opens with its latest part; older parts come as you scroll up, and the round ↓ at the bottom right takes you back to the latest (amber when the agent needs you).
 - Scrolling a chat while you type keeps the keyboard up; a tap on the transcript puts it away.
 - A chat's ⋯ shows its folder, branch and model, with Rename, Sleep (Wake while it sleeps), Archive and Stop for what runs in the background.

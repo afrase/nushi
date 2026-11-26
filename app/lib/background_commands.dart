@@ -17,8 +17,8 @@ List<Item> backgroundCommandsOf(List<Item> items) => [
     if (it.hasBackgroundCommand()) it,
 ];
 
-/// A background command's state in a few words: "running · 12s", "done ·
-/// exited with code 0 · 15s", "stopped", or "started" (and how
+/// A background command's state in a few words: "running, 12s", "done,
+/// exited with code 0, 15s", "stopped", or "started" (and how
 /// long ago, when the daemon saw it) when its end can't be known.
 String commandState(Item it) {
   final sh = it.backgroundCommand;
@@ -33,7 +33,7 @@ String commandState(Item it) {
       sh.state,
       if (sh.end.isNotEmpty && sh.state != 'stopped') sh.end,
       if (since != null && end != null) elapsed(end.difference(since)),
-    ].join(' · '),
+    ].join(', '),
   };
 }
 

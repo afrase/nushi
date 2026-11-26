@@ -22,7 +22,7 @@ Future<JiraBoard?> pickBoard(BuildContext context, List<JiraBoard> boards) =>
               Tap(
                 onTap: () => Navigator.pop(context, b),
                 padding: const EdgeInsets.all(6),
-                child: Text('${b.name}  ·  ${b.project}'),
+                child: Text('${b.name}, ${b.project}'),
               ),
             if (boards.isEmpty) const Text('No boards on this site'),
           ],

@@ -12,7 +12,7 @@ Settings › Jira adds a Jira Cloud site: its address, your email, and an API to
 
 ⌘J (View › Jira, or Jira at the sidebar's foot) shows Jira in the chat's place, as a task list.
 
-**Lists:** your open issues, in a card for each status; or the active sprint of a board you pick, a saved search, or JQL that completes fields, operators and values as you type. With several sites, "All sites" lists your open issues from each; a site that fails is named in the error line with why, and the others still show (a site that fails on a refresh keeps its last rows, and the bar says "Couldn't refresh · as of" the last time every site answered).
+**Lists:** your open issues, in a card for each status; or the active sprint of a board you pick, a saved search, or JQL that completes fields, operators and values as you type. With several sites, "All sites" lists your open issues from each; a site that fails is named in the error line with why, and the others still show (a site that fails on a refresh keeps its last rows, and the bar says "Couldn't refresh, as of" the last time every site answered).
 
 - Drag a card by its title to reorder it, and click its title to collapse it. Both are kept per site.
 - The sprint, a saved search and JQL have "Everyone ▾" at the bar's end: Me, Unassigned, or anyone the list has, remembered per site and list.
@@ -29,7 +29,7 @@ Start work shows on the row under the pointer and the selected one (⌘⏎), and
 
 **Keys:** ↑↓ or j k pick, ⌘⏎ starts work, ⌘R refreshes, ⌥⌘1–9 (Alt+1–9 on Linux) switch lists, / goes to the JQL, Esc closes.
 
-**Freshness.** What a list or an issue showed last shows at once while Jira is asked again ("Updated 5m ago · refreshing"); the daemon keeps it per site in its data folder. Lists and the issue are asked for again each minute while the view shows: the list not while an issue covers it, and nothing while Nushi's window is in the background, then once as it comes back. A refresh that fails keeps what shows and says so: "Couldn't refresh · as of 3m ago". Nothing reaches Jira otherwise, and Nushi never writes to it unless you (or an agent, through its tools) do.
+**Freshness.** What a list or an issue showed last shows at once while Jira is asked again ("Updated 5m ago, refreshing"); the daemon keeps it per site in its data folder. Lists and the issue are asked for again each minute while the view shows: the list not while an issue covers it, and nothing while Nushi's window is in the background, then once as it comes back. A refresh that fails keeps what shows and says so: "Couldn't refresh, as of 3m ago". Nothing reaches Jira otherwise, and Nushi never writes to it unless you (or an agent, through its tools) do.
 
 ## Starting work on an issue
 

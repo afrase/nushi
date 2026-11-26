@@ -27,6 +27,15 @@ void main() {
     );
     expect(commentSummary('\n\n'), '');
     expect(commentSummary('x' * 300).length, 200);
+    // A table row's cells are made plain once: an escape is read once, and
+    // a cell that then starts with a dash keeps it.
+    expect(
+      commentSummary(
+        '| a | b |\n| --- | --- |\n'
+        r'| \- y | \\_x |',
+      ),
+      r'- y, \_x',
+    );
   });
 
   test("a table's empty columns go; the rest stay as written", () {

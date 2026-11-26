@@ -207,7 +207,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
 
   Future<void> _load({bool quiet = false}) async {
     final n = ++_asked;
-    // Its line says so ("· refreshing"); true already as it opens.
+    // Its line says so (", refreshing"); true already as it opens.
     if (!_asking) setState(() => _asking = true);
     try {
       final r = await widget.daemon.client.getGitHubPull(
@@ -376,7 +376,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                 controller: _scroll,
                 slivers: [
                   // How fresh it is, always (docs/design.md's state cues):
-                  // "Updated 2m ago", "· refreshing" while it's asked, the
+                  // "Updated 2m ago", ", refreshing" while it's asked, the
                   // failure's line once an ask failed.
                   if (updatedLine(readAt, loading: asking, failed: failed)
                       case final line?)

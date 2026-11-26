@@ -128,7 +128,7 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
               ),
               if (i.labels.isNotEmpty)
                 Text(
-                  i.labels.join(' · '),
+                  i.labels.join(', '),
                   style: theme.ui(t.textSecondary, size: 12),
                 ),
               if (i.assignees.isNotEmpty)

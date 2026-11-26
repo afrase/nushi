@@ -293,7 +293,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(Palette),
-        matching: find.text('archived · site'),
+        matching: find.text('archived, site'),
       ),
       findsOne,
     );

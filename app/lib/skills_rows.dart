@@ -83,13 +83,16 @@ class SkillSwitch extends StatelessWidget {
 }
 
 /// A row's name and, under it, its author's text, plain (never Markdown or
-/// links), dimmed when [off].
+/// links), then [note], Nushi's own words, in a muted line of its own (a
+/// plugin's counts), so a long description never pushes it out or passes
+/// it off as the author's; dimmed when [off].
 Widget skillNamed(
   BuildContext context,
   String name,
   String text, {
   required bool off,
   List<Widget> after = const [],
+  String note = '',
 }) {
   final theme = NushiTheme.of(context);
   final t = theme.t;
@@ -118,6 +121,7 @@ Widget skillNamed(
             overflow: TextOverflow.ellipsis,
             style: theme.ui(t.textSecondary, size: 12),
           ),
+        if (note.isNotEmpty) Text(note, style: theme.ui(t.textMuted, size: 11)),
       ],
     ),
   );

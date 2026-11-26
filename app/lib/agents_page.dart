@@ -150,7 +150,7 @@ class AgentRow extends StatelessWidget {
     final found = [
       if (a.version.isNotEmpty) a.version,
       tildePath(a.path),
-    ].join(' · ');
+    ].join(', ');
     // An agent that isn't installed says so on its own line, not again as
     // its problem.
     final problem = installed ? a.problem : '';

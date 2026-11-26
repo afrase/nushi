@@ -8,6 +8,7 @@ import 'package:nushi/markdown.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/preview_find.dart';
 import 'package:nushi/rail.dart';
+import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
 
@@ -110,7 +111,7 @@ class _OutlinedMarkdownState extends State<OutlinedMarkdown>
   /// The find's matches in the text as laid out, its one entry the text;
   /// the last time the find asked for its current one to show; whether
   /// the text starts below the bar, for a match at its very top.
-  final _hits = TextMarks();
+  final _hits = TextMarks(ink: codeOnMark);
   int _shownAsk = -1;
   bool _roomAbove = false;
 

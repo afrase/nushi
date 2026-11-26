@@ -156,6 +156,7 @@ class _FormState extends State<_Form> {
   /// What's wrong with the form, or ''.
   String _check(Map<String, dynamic> c) {
     if (!_name.hasMatch(_nameCtl.text)) {
+      // design: the hyphen named, not a separator
       return 'A name can only have letters, digits, - and _, and can’t '
           'start with -.';
     }

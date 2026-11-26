@@ -78,7 +78,7 @@ void main() {
     final drawing = _checks(tester);
     expect(drawing.first, 1);
     expect(drawing.last, inExclusiveRange(0, 1));
-    expect(find.text('Plan · 2 of 3 done'), findsOneWidget); // at once
+    expect(find.text('Plan 2 of 3 done'), findsOneWidget); // at once
 
     await tester.pumpAndSettle();
     expect(_checks(tester), [1, 1]);

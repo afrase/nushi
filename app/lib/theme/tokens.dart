@@ -236,6 +236,60 @@ class Tokens {
   final Color running;
   final Color needs;
   final Color needsSoft;
+
+  // The terminal's search hits: the rest on [needsSoft], the current one
+  // on [searchHitCurrent], and every one's text in [searchHitInk], since
+  // xterm draws all hits' text in one colour. Both are Nushi's, derived
+  // here so a user's theme gets them too (`contrastWarnings` says where
+  // one misses); the terminal's own colours (`terminal.*`) are never
+  // touched. The two fills differ in hue as the app's other finds' do
+  // (`findColors`): the current one the accent's, the rest needs'.
+
+  /// The text of every search hit: the terminal's own text
+  /// ([TerminalColors.foreground], else [text]), its lightness alone moved
+  /// away from [needsSoft] by the least step that leaves room for both
+  /// fills, AA's 4.5:1 on each and [searchHitGap] between them; that text
+  /// itself where it already does (most sets), or as far as it goes.
+  Color get searchHitInk {
+    final own = terminal.foreground ?? text;
+    final up = own.computeLuminance() > needsSoft.computeLuminance();
+    // A hair over the product, for each colour's 8-bit rounding.
+    const room = searchHitContrast * searchHitGap * 1.02;
+    return _lightnessTo(own, up, (c) => _ratio(c, needsSoft) >= room);
+  }
+
+  /// The current search hit's fill: [accent], its lightness alone moved
+  /// by the least step that puts it between the rest's [needsSoft] and
+  /// [searchHitInk]: [searchHitInk] reads [searchHitContrast] on it, and it
+  /// stands [searchHitGap] off [needsSoft] on the ink's side. The ink
+  /// makes room for both; where a theme leaves none, the ink's 4.5:1 wins
+  /// and the gap goes short.
+  Color get searchHitCurrent {
+    final ink = searchHitInk;
+    final (i, n) = (ink.computeLuminance(), needsSoft.computeLuminance());
+    final up = i > n; // which way the ink is from needsSoft
+    bool beyond(Color c, double l) =>
+        up ? c.computeLuminance() > l : c.computeLuminance() < l;
+    bool reads(Color c) => !beyond(c, i) && _ratio(ink, c) >= searchHitContrast;
+    bool apart(Color c) => beyond(c, n) && _ratio(c, needsSoft) >= searchHitGap;
+    if (!reads(accent)) return _lightnessTo(accent, !up, reads);
+    final far = _lightnessTo(accent, up, apart);
+    if (reads(far)) return far;
+    // No room for both: the nearest to the gap that still reads.
+    final (a, f) = (HSLColor.fromColor(accent), HSLColor.fromColor(far));
+    return _lightnessFrom(accent, f.lightness, a.lightness, reads);
+  }
+
+  /// A search hit's text on its fill: AA's 4.5:1.
+  static const searchHitContrast = 4.5;
+
+  /// How far the current hit's fill stands off the rest's: 2:1. xterm
+  /// itself takes colours within 1.5:1 as too near to tell apart (it
+  /// swaps an ink that near a selection), so a cue that has to be plain
+  /// at a glance sits well over that; 2:1 is what every built-in set can
+  /// give with [searchHitInk] a lightness step of [text].
+  static const searchHitGap = 2.0;
+
   final Color done;
   final Color doneSoft; // behind words that say it went well
   final Color idle;
@@ -559,4 +613,41 @@ class Tokens {
     },
     diff: DiffColors.darcula,
   );
+}
+
+/// The WCAG contrast of [a] and [b] (`contrast.dart`'s, which imports
+/// this file).
+double _ratio(Color a, Color b) {
+  final (x, y) = (a.computeLuminance(), b.computeLuminance());
+  return (max(x, y) + 0.05) / (min(x, y) + 0.05);
+}
+
+/// [c] with its lightness alone (hue and saturation kept) moved toward
+/// white if [up], else black, by the least step at which [ok] holds;
+/// [c] itself if it already does, the end if nothing does.
+Color _lightnessTo(Color c, bool up, bool Function(Color) ok) =>
+    _lightnessFrom(c, HSLColor.fromColor(c).lightness, up ? 1 : 0, ok);
+
+/// [c]'s hue and saturation at the lightness nearest [from], on the way
+/// to [to], at which [ok] holds (it holds from some point on and stays);
+/// at [to] if nothing does.
+Color _lightnessFrom(Color c, double from, double to, bool Function(Color) ok) {
+  final hsl = HSLColor.fromColor(c);
+  Color at(double f) {
+    final l = from + (to - from) * f;
+    return Color(hsl.withLightness(l).toColor().toARGB32());
+  }
+
+  if (ok(at(0))) return at(0);
+  if (!ok(at(1))) return at(1);
+  var (lo, hi) = (0.0, 1.0); // how far toward [to]: hi holds
+  for (var i = 0; i < 20; i++) {
+    final mid = (lo + hi) / 2;
+    if (ok(at(mid))) {
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+  return at(hi);
 }

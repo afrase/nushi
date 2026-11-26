@@ -88,15 +88,15 @@ List<Item> subagentSteps(SubagentRun s) => [
 const IconData paneIcon = Icons.view_sidebar_outlined;
 
 /// A subagent's state in a few words, in the order the workflow card's
-/// shares: "Reading notes.md · 6 tools · 40s" while it works, "39 tools ·
-/// 182k tokens · 7m 55s" once done (its check says so, #106), "failed ·
-/// 2 tools · 1m 03s". The count shows only when its steps are known (a
+/// shares: "Reading notes.md, 6 tools, 40s" while it works, "39 tools,
+/// 182k tokens, 7m 55s" once done (its check says so, #106), "failed,
+/// 2 tools, 1m 03s". The count shows only when its steps are known (a
 /// background subagent's aren't after the chat reopened), the tokens once
 /// the agent reported them, the time only when the daemon knows it.
 /// Without [time], its tokens and time are left to [subagentTime].
 String subagentState(SubagentRun s, {bool time = true}) {
   final spent = time ? subagentTime(s) : '';
-  return [..._stateWords(s), if (spent.isNotEmpty) spent].join(' · ');
+  return [..._stateWords(s), if (spent.isNotEmpty) spent].join(', ');
 }
 
 /// What a subagent does or how it ended (nothing once done: its check
@@ -117,20 +117,20 @@ List<String> _stateWords(SubagentRun s) {
 String toolsCount(int n) => '$n tool${n == 1 ? '' : 's'}';
 
 /// A subagent's state for a narrow line, the fullest first, each next
-/// without its first part: "6 tools · 48k tokens · 3m 12s", "48k tokens ·
+/// without its first part: "6 tools, 48k tokens, 3m 12s", "48k tokens,
 /// 3m 12s", then the time alone. A line takes the first that fits whole
 /// ([SubagentState.fitted]), so a word is never cut to a bare "…" (its
 /// mark says how it ended). Without tokens or a time, its words alone.
 List<String> subagentStatesNarrow(SubagentRun s) {
   final spent = subagentTimeParts(s);
   final parts = [..._stateWords(s), ...spent];
-  if (spent.isEmpty) return [parts.join(' · ')];
-  return [for (var i = 0; i < parts.length; i++) parts.sublist(i).join(' · ')];
+  if (spent.isEmpty) return [parts.join(', ')];
+  return [for (var i = 0; i < parts.length; i++) parts.sublist(i).join(', ')];
 }
 
-/// A subagent's tokens and time: "48k tokens · 3m 12s", "40s" while it
+/// A subagent's tokens and time: "48k tokens, 3m 12s", "40s" while it
 /// works and the agent hasn't said; '' when neither is known.
-String subagentTime(SubagentRun s) => subagentTimeParts(s).join(' · ');
+String subagentTime(SubagentRun s) => subagentTimeParts(s).join(', ');
 
 /// [subagentTime]'s parts: its tokens, then its time.
 List<String> subagentTimeParts(SubagentRun s) {
@@ -357,55 +357,33 @@ class SubagentLine extends StatelessWidget {
                           child: WorktreeTag(tag),
                         ),
                       // The name takes the room; the state ends the line,
-                      // a third of it at most where the row is narrow (a
-                      // phone's), so the name still says which it is.
-                      // Narrow, its parts give way from the front, its
-                      // tokens and time last; wide, those are apart, muted
-                      // (and a done one's words may be none).
-                      if (box.maxWidth < _timeApart ||
-                          _stateWords(s).isNotEmpty)
+                      // a third of it at most (room for its tokens and
+                      // time, up to half), so the name still says which it
+                      // is. One string wide as narrow, as the workflow's
+                      // card says it: "failed, 2 tools, 48k tokens, 3m
+                      // 12s"; where it doesn't fit whole, its parts give
+                      // way from the front, its tokens and time last.
+                      if (subagentState(s).isNotEmpty || subagentRunning(s))
                         ConstrainedBox(
                           constraints: BoxConstraints(
                             maxWidth: math.min(
-                              240,
+                              360,
                               math.max(
                                 box.maxWidth / 3,
-                                // Narrow, room for its time and tokens, up
-                                // to half the line.
-                                box.maxWidth < _timeApart
-                                    ? math.min(
-                                        box.maxWidth / 2,
-                                        liveTextWidth(
-                                              context,
-                                              subagentTime(s),
-                                              state,
-                                            ) +
-                                            1,
-                                      )
-                                    : 0,
+                                math.min(
+                                  box.maxWidth / 2,
+                                  liveTextWidth(
+                                        context,
+                                        subagentTime(s),
+                                        state,
+                                      ) +
+                                      1,
+                                ),
                               ),
                             ),
                           ),
-                          child: SubagentState(
-                            s,
-                            style: state,
-                            time: box.maxWidth < _timeApart,
-                            fitted: box.maxWidth < _timeApart,
-                          ),
+                          child: SubagentState(s, style: state, fitted: true),
                         ),
-                      if (box.maxWidth >= _timeApart)
-                        if (subagentTime(s).isNotEmpty || subagentRunning(s))
-                          LiveText(
-                            // After its words, a dot joins them: "39 tools
-                            // · 182k tokens · 7m 55s" reads as one line.
-                            () => switch (subagentTime(s)) {
-                              '' => '',
-                              final time when _stateWords(s).isEmpty => time,
-                              final time => '· $time',
-                            },
-                            live: subagentRunning(s),
-                            style: theme.ui(t.textMuted, size: 12),
-                          ),
                       if (hover && daemon != null && subagentStoppable(s))
                         stopButton(context, daemon, chat, s.call.id, size: 13)
                       else
@@ -422,10 +400,6 @@ class SubagentLine extends StatelessWidget {
     );
   }
 }
-
-/// The narrowest subagent row whose time and tokens show apart from its
-/// state, at its end.
-const double _timeApart = 420;
 
 /// "Explore: find the scroll handling", the type in bold and the subagents'
 /// accent, on one line.

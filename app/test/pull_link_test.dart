@@ -27,7 +27,7 @@ void main() {
     expect(
       pushedOrOpened(
         call(
-          'github · create_pull_request',
+          'github, create_pull_request',
           tool: 'mcp__github__create_pull_request',
         ),
       ),

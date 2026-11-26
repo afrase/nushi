@@ -112,7 +112,7 @@ class HistorySelectionBar extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              '$n selected · '
+              '$n selected, '
               '${diskSize(picked.fold(0, (s, r) => s + r.bytes))}',
               style: theme.ui(t.text),
             ),

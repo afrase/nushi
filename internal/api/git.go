@@ -181,7 +181,7 @@ func (s *server) GetRelatedWorktreeStats(ctx context.Context, req *connect.Reque
 		return nil, refused(err)
 	}
 	resp := &nushiv1.GetRelatedWorktreeStatsResponse{}
-	for _, r := range list {
+	for _, r := range list { // in the list's order, which the app pairs a path's records by
 		if slices.Contains(req.Msg.Paths, r.Path) {
 			resp.Stats = append(resp.Stats, relatedStats(ctx, folder, r))
 		}

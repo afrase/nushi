@@ -165,7 +165,7 @@ class CodeBlockView extends StatelessWidget {
       builder: (context) {
         final selection = SelectionContainer.maybeOf(context);
         // Inside the scroll: it clips the marks with the text.
-        final marked = Marks(child: body);
+        final marked = Marks(background: style.codeBackground, child: body);
         final scroll = SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.all(10),

@@ -282,7 +282,7 @@ AccountRow _siteRow(
     title: s.id,
     lines: [
       (
-        [?who, s.email, if (s.scoped) 'scoped token'].join(' · '),
+        [?who, s.email, if (s.scoped) 'scoped token'].join(', '),
         t.textSecondary,
       ),
       if (s.needsOk)

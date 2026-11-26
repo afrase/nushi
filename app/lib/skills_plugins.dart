@@ -37,7 +37,7 @@ class PluginsGroup extends StatelessWidget {
   }
 }
 
-/// "2 skills · 1 command · …", what a plugin brings.
+/// "2 skills, 1 command, …", what a plugin brings.
 String pluginCounts(Plugin p) => [
   for (final (n, word) in [
     (p.skills, 'skill'),
@@ -46,7 +46,7 @@ String pluginCounts(Plugin p) => [
     (p.mcpServers, 'MCP server'),
   ])
     if (n > 0) '$n $word${n == 1 ? '' : 's'}',
-].join(' · ');
+].join(', ');
 
 class _PluginRow extends StatelessWidget {
   const new(this.list, this.plugin);
@@ -89,10 +89,8 @@ class _PluginRow extends StatelessWidget {
           child: skillNamed(
             context,
             plugin.id,
-            [
-              plugin.description,
-              if (counts.isNotEmpty) counts,
-            ].where((s) => s.isNotEmpty).join('  ·  '),
+            plugin.description,
+            note: counts,
             off: !plugin.enabled,
             after: [
               const SizedBox(width: 8),

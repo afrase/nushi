@@ -153,3 +153,107 @@ List<TextSpan> spansOf(Tokens t, String line, Uint32List? spans) {
   if (at < line.length) out.add(TextSpan(text: line.substring(at)));
   return out;
 }
+
+/// A find's match in a line, by character, and whether it's the current
+/// one (`preview_find.dart`'s `LineHit`).
+typedef Hit = ({int start, int end, bool now});
+
+/// [runs], a line's text in styled runs from its start, split where each
+/// of [hits] (a find's matches in it, by character) starts and ends, a
+/// hit's part drawn in [ink] of its run's colour ([plain] where the run
+/// has none of its own): code keeps its contrast on the hit's fill, as on
+/// a diff's tint (ADR 0086's amendment, issue 117). A line's spans are
+/// built as it is, so this is once per line and query, not per frame.
+List<TextSpan> onHits(
+  List<TextSpan> runs,
+  List<Hit> hits, {
+  required Color plain,
+  required Color Function(Color color, {required bool now}) ink,
+}) {
+  if (hits.isEmpty) return runs;
+  return [
+    for (final (text, style, hit) in _pieces(runs, hits))
+      if (hit == null)
+        TextSpan(text: text, style: style)
+      else
+        switch ((
+          style?.color ?? plain,
+          ink(style?.color ?? plain, now: hit.now),
+        )) {
+          (final was, final drawn) when was == drawn => TextSpan(
+            text: text,
+            style: style,
+          ),
+          (_, final drawn) => TextSpan(
+            text: text,
+            style: (style ?? const TextStyle()).copyWith(color: drawn),
+          ),
+        },
+  ];
+}
+
+/// [runs] as they are drawn again over a selection ([hits] the find's
+/// matches in the line, which are painted over the selection): each part
+/// in [ink] of its colour ([plain] where it has none) on the selection's
+/// fill, or a hit's over it, and clear where that is its own colour, as
+/// what reads isn't drawn again. Null when nothing changes.
+List<TextSpan>? overSelected(
+  List<TextSpan> runs,
+  List<Hit> hits, {
+  required Color plain,
+  required Color Function(Color color, Hit? hit) ink,
+}) {
+  var any = false;
+  final out = <TextSpan>[];
+  for (final (text, style, hit) in _pieces(runs, hits)) {
+    final color = style?.color ?? plain;
+    final drawn = ink(color, hit);
+    if (drawn != color) any = true;
+    out.add(
+      TextSpan(
+        text: text,
+        style: (style ?? const TextStyle()).copyWith(
+          // design: clear, not a colour: what reads isn't drawn again
+          color: drawn == color ? const Color(0x00000000) : drawn,
+        ),
+      ),
+    );
+  }
+  return any ? out : null;
+}
+
+/// [runs] in pieces, split where each of [hits] starts and ends: each
+/// piece's text, its run's style and the hit it's in, if any. [hits] are
+/// in order and apart, as a find gives them (`hitsIn`): one walk forward
+/// over them, so a long line with a hit every few characters costs as
+/// many steps as it has pieces.
+Iterable<(String, TextStyle?, Hit?)> _pieces(
+  List<TextSpan> runs,
+  List<Hit> hits,
+) sync* {
+  var at = 0;
+  var next = 0; // the first hit that may still end after [from]
+  for (final run in runs) {
+    final text = run.text ?? '';
+    final end = at + text.length;
+    var from = at;
+    while (from < end) {
+      while (next < hits.length && hits[next].end <= from) {
+        next++;
+      }
+      // The hit [from] is in, or the next one's start.
+      final hit = next < hits.length && hits[next].start < end
+          ? hits[next]
+          : null;
+      final inHit = hit != null && hit.start <= from;
+      final to = hit == null
+          ? end
+          : inHit
+          ? min(hit.end, end)
+          : min(hit.start, end);
+      yield (text.substring(from - at, to - at), run.style, inHit ? hit : null);
+      from = to;
+    }
+    at = end;
+  }
+}

@@ -696,9 +696,17 @@ func TestContext(t *testing.T) {
 	prompt(t, c, s.SessionID, "hello")
 	prompt(t, c, s.SessionID, "/compact")
 	u, err := Harness{Pi}.Context(context.Background(), c.Call, string(s.SessionID)) // the bridge runs as Pi
-	want := "- Messages: 2 from you, 3 from Pi\n- Tool calls: 1\n- Tokens: 1.5k in · 250 out\n- Cache: 64 read\n- Compactions: 1\n"
+	want := "- Messages: 2 from you, 3 from Pi\n- Tool calls: 1\n- Tokens: 1.5k in, 250 out\n- Cache: 64 read\n- Compactions: 1\n"
 	if err != nil || u.Markdown != want || len(u.Categories) != 0 {
 		t.Errorf("context = %q, %v", u.Markdown, err)
+	}
+	// Both of the cache's parts, joined with a comma as the app's lines are.
+	both := func(_ context.Context, _ string, _, result any) error {
+		return json.Unmarshal([]byte(`{"userMessages":1,"assistantMessages":1,"tokens":{"input":900,"output":40,"cacheRead":21840,"cacheWrite":1200}}`), result)
+	}
+	u, err = Harness{Pi}.Context(context.Background(), both, "s")
+	if want := "- Messages: 1 from you, 1 from Pi\n- Tool calls: 0\n- Tokens: 900 in, 40 out\n- Cache: 21.8k read, 1.2k written\n- Compactions: 0\n"; err != nil || u.Markdown != want {
+		t.Errorf("context with both cache parts = %q, %v", u.Markdown, err)
 	}
 	if got := short(1_000_000) + " " + short(21_840) + " " + short(123_456) + " " + short(950); got != "1M 21.8k 123k 950" {
 		t.Errorf("short = %s", got)

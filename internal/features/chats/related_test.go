@@ -368,8 +368,12 @@ func TestRelatedHeadsAndRemoval(t *testing.T) {
 		t.Fatalf("second look: %+v", got)
 	}
 	f.remove(wt)
-	want.State = model.RelatedRemoved
-	if got := related(t, svc, c); !slices.Equal(got, []model.RelatedWorktree{want}) {
+	want.State, want.RemovedAfter = model.RelatedRemoved, "s1"
+	got := related(t, svc, c)
+	if len(got) == 1 && got[0].RemovedAt > 0 {
+		want.RemovedAt = got[0].RemovedAt // when the look read the steps
+	}
+	if !slices.Equal(got, []model.RelatedWorktree{want}) {
 		t.Fatalf("removed: %+v", got)
 	}
 	stored.mu.Lock()
@@ -378,8 +382,10 @@ func TestRelatedHeadsAndRemoval(t *testing.T) {
 	if !slices.Equal(last.RelatedWorktrees, []model.RelatedWorktree{want}) {
 		t.Errorf("stored: %+v", last.RelatedWorktrees)
 	}
-	f.with(func() { f.entries = append(f.entries, model.WorktreeEntry{Path: wt, Branch: "w2", Head: head}) })
-	want.State, want.Branch = model.RelatedPresent, "w2"
+	// Back on its branch at its head, it's the same worktree; on another
+	// branch it would be a new one (TestRelatedMadeAgainOnAnotherBranch).
+	f.with(func() { f.entries = append(f.entries, model.WorktreeEntry{Path: wt, Branch: "w", Head: head}) })
+	want.State, want.RemovedAfter, want.RemovedAt = model.RelatedPresent, "", 0
 	if got := related(t, svc, c); !slices.Equal(got, []model.RelatedWorktree{want}) {
 		t.Errorf("back: %+v", got)
 	}
@@ -642,7 +648,13 @@ func TestRelatedRefusesAForgedList(t *testing.T) {
 	}
 	step(t, c, "a1", "s2", shell(t, "ls "+secret))
 	want := []model.RelatedWorktree{{Path: wt, Branch: "w", BaseCommit: head, LastHead: head, CallID: "a1", State: model.RelatedRemoved}}
-	if got := related(t, svc, c); !slices.Equal(got, want) {
+	got := related(t, svc, c)
+	for i := range got {
+		got[i].RemovedAfter = "" // s1 or s2, as s1's own look may come after the forgery
+		got[i].RemovedAt = 0     // and when that look read them
+		got[i].Made = 0          // the .git file's time
+	}
+	if !slices.Equal(got, want) {
 		t.Errorf("after the forgery: %+v", got)
 	}
 }
@@ -704,7 +716,10 @@ func TestRelatedLeavesOutWhatIsntUTF8(t *testing.T) {
 	check(got)
 	want := []model.RelatedWorktree{
 		{Path: fine, Branch: "fine", BaseCommit: head, LastHead: head, CallID: "a1", State: model.RelatedPresent},
-		{Path: renamed, Branch: "renamed", BaseCommit: head, LastHead: head, CallID: "a1", State: model.RelatedRemoved},
+		{Path: renamed, Branch: "renamed", BaseCommit: head, LastHead: head, CallID: "a1", State: model.RelatedRemoved, RemovedAfter: "s1"},
+	}
+	for i := range got {
+		got[i].RemovedAt = 0 // when the look read the steps
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("after the rename: %+v", got)
@@ -825,7 +840,7 @@ func TestRelatedFromRecordings(t *testing.T) {
 				t.Fatalf("worktrees in the steps: %v", named)
 			}
 			for wt, call := range named {
-				if got := whose(wt, folder, steps, nil); got != call {
+				if got := whose(wt, folder, steps, nil, nil); got != call {
 					t.Errorf("%s is %q's, says whose: %q", wt, call, got)
 				}
 			}
@@ -1017,7 +1032,7 @@ func TestRelatedOpenPullsWaitTheirTurn(t *testing.T) {
 	if got := gh.askedOf(); len(got) != len(list) {
 		t.Fatalf("asked %d times before any wait was over: %v", len(got), got)
 	}
-	first := c.pullsOpen[list[0].Path].wait
+	first := c.pullsOpen[pullKey(&list[0])].wait
 	for range 3 {
 		pullsWaited(c)
 		ask()
@@ -1031,7 +1046,7 @@ func TestRelatedOpenPullsWaitTheirTurn(t *testing.T) {
 			t.Errorf("%s asked %d times: %v", k.Branch, times[k.Branch], gh.askedOf())
 		}
 	}
-	if again := c.pullsOpen[list[0].Path].wait; again <= first {
+	if again := c.pullsOpen[pullKey(&list[0])].wait; again <= first {
 		t.Errorf("waits %v, then %v: no longer", first, again)
 	}
 }
@@ -1039,8 +1054,8 @@ func TestRelatedOpenPullsWaitTheirTurn(t *testing.T) {
 // pullsWaited puts every open pull request's next ask in the past, as if
 // its wait were over, keeping their order. It runs under c.looking.
 func pullsWaited(c *chat) {
-	for path, o := range c.pullsOpen {
+	for key, o := range c.pullsOpen {
 		o.next = o.next.Add(-pullsOpenMax)
-		c.pullsOpen[path] = o
+		c.pullsOpen[key] = o
 	}
 }

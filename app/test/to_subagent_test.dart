@@ -78,7 +78,7 @@ void main() {
       matching: find.textContaining(text, findRichText: true),
     );
     expect(inPane('Look at auth/session.go too'), findsOneWidget);
-    expect(inPane('through Claude · passed on'), findsOneWidget);
+    expect(inPane('through Claude, passed on'), findsOneWidget);
     expect(inPane('Claude didn’t pass it on'), findsOneWidget);
     // Where it was sent: after the step before it.
     expect(

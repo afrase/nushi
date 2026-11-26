@@ -10,6 +10,7 @@ import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_card.dart';
 import 'package:nushi/markdown.dart' show openWeb;
 import 'package:nushi/menu.dart';
+import 'package:nushi/plain_text.dart' show capital;
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_merge_dialog.dart';
@@ -128,7 +129,10 @@ bool offersCleanUp(ChatPull cp) => !CleanUpJob.of(cp.chat).started;
 
 /// The row's one cue under its title (ADR 0117), the first that applies:
 /// merged (with Clean up… while offered), closed without merging, changes
-/// requested, open threads, new comments, ready to merge.
+/// requested, open threads, new comments, ready to merge. Its words are
+/// lower case, as they follow the counts after a comma; where a cue stands
+/// alone, with no counts before it (the live card's foot), it takes a
+/// capital (`capital`, plain_text.dart).
 ({String words, Color color, VoidCallback? cleanUp})? rowCue(
   BuildContext context,
   ChatPull cp,
@@ -139,7 +143,7 @@ bool offersCleanUp(ChatPull cp) => !CleanUpJob.of(cp.chat).started;
   switch (it.state) {
     case 'merged':
       return (
-        words: it.base.isEmpty ? 'Merged' : 'Merged into ${it.base}',
+        words: it.base.isEmpty ? 'merged' : 'merged into ${it.base}',
         color: t.textMuted,
         cleanUp: offersCleanUp(cp)
             ? () => cleanUpPull(context, cp, link)
@@ -147,7 +151,7 @@ bool offersCleanUp(ChatPull cp) => !CleanUpJob.of(cp.chat).started;
       );
     case 'closed':
       return (
-        words: 'Closed without merging',
+        words: 'closed without merging',
         color: t.textMuted,
         cleanUp: null,
       );
@@ -172,7 +176,7 @@ bool offersCleanUp(ChatPull cp) => !CleanUpJob.of(cp.chat).started;
     );
   }
   if (itemReady(it)) {
-    return (words: 'Ready to merge', color: t.done, cleanUp: null);
+    return (words: 'ready to merge', color: t.done, cleanUp: null);
   }
   return null;
 }
@@ -452,11 +456,15 @@ class CheckDot extends StatelessWidget {
 }
 
 /// One of a chat's pull requests as a row of the PR widget (ADR 0117),
-/// 44 tall: the state's icon, the title, the CI badge; under the title
-/// `#n`, `+adds −dels` and one cue. Its ⋯ shows under the pointer or
-/// focus (its room kept, so nothing moves). A click opens the Pull request
-/// tab on it ([onShow]). Without [menu] (the header chip's hover) it has
-/// no ⋯ and no badge's popover.
+/// 44 tall: the state's icon, then two lines. The first is the title, cut
+/// if it must, and at its end the CI badge, or on a merged one that offers
+/// it Clean up… as a pill: a control with a face beside a cut title, never
+/// bare link text, which read as a run-on sentence after the ellipsis
+/// (issue 119). The second ([PullSubLine]) is `#n`, `+adds −dels` and,
+/// after a comma, one cue, which gives way last. Its ⋯ shows under the
+/// pointer or focus (its room kept, so nothing moves). A click opens the
+/// Pull request tab on it ([onShow]). Without [menu] (the header chip's
+/// hover) it has no ⋯ and no badge's popover.
 class PullRow extends StatefulWidget {
   const new(
     this.cp,
@@ -494,8 +502,7 @@ class _PullRowState extends State<PullRow> {
     final menu = it == null
         ? const <MenuEntry>[]
         : pullRowMenu(context, cp, l, it, onShow: widget.onShow);
-    final sub = <InlineSpan>[
-      TextSpan(text: '#${l.number}', style: theme.code(t.textMuted, size: 11)),
+    final changes = <InlineSpan>[
       if (it != null && (it.additions > 0 || it.deletions > 0)) ...[
         const TextSpan(text: ' '),
         TextSpan(text: '+${it.additions}', style: theme.code(t.done, size: 11)),
@@ -505,11 +512,24 @@ class _PullRowState extends State<PullRow> {
           style: theme.code(t.crashed, size: 11),
         ),
       ],
-      if (cue != null) ...[
-        TextSpan(text: ' · ', style: muted),
-        TextSpan(text: cue.words, style: theme.ui(cue.color, size: 11.5)),
-      ],
     ];
+    final badge = it == null ? null : badgeCounts(it);
+    // The title line's end: Clean up… on a merged row that offers it, as
+    // a pill, where an open row has its checks badge (issue 119).
+    final end = switch (cue?.cleanUp) {
+      final clean? => PillButton(
+        label: 'Clean up…',
+        small: true,
+        tooltip: 'Clean up after this pull request',
+        onPressed: clean,
+      ),
+      null when it != null && badge != null =>
+        widget.menu
+            ? ChecksBadge(cp, l, it, onShow: widget.onShow)
+            // The badge without its popover (the header chip's hover).
+            : Padding(padding: _badgePadding, child: badgeFace(theme, badge)),
+      null => null,
+    };
     final row = SizedBox(
       height: PullRow.height,
       child: Row(
@@ -523,43 +543,43 @@ class _PullRowState extends State<PullRow> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 2,
+              // The pill is taller than a line: it takes the gap's room.
+              spacing: end is PillButton ? 0 : 2,
               children: [
-                Text(
-                  it?.title ?? '${l.repo}#${l.number}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
-                ),
                 Row(
                   children: [
-                    Flexible(
-                      child: Text.rich(
-                        TextSpan(children: sub),
+                    Expanded(
+                      child: Text(
+                        it?.title ?? '${l.repo}#${l.number}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        style: theme.ui(
+                          t.text,
+                          size: 12,
+                          weight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                    if (cue?.cleanUp case final clean?) ...[
-                      Text(' · ', style: muted),
-                      LinkText('Clean up…', size: 11.5, onTap: clean),
+                    if (end != null) ...[
+                      SizedBox(width: end is PillButton ? 8 : 4),
+                      end,
                     ],
                   ],
+                ),
+                PullSubLine(
+                  number: TextSpan(
+                    text: '#${l.number}',
+                    style: theme.code(t.textMuted, size: 11),
+                  ),
+                  changes: changes,
+                  cue: cue == null
+                      ? null
+                      : (cue.words, theme.ui(cue.color, size: 11.5)),
+                  comma: muted,
                 ),
               ],
             ),
           ),
-          if (it != null && badgeCounts(it) != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14, left: 4),
-              child: widget.menu
-                  ? ChecksBadge(cp, l, it, onShow: widget.onShow)
-                  // The badge without its popover (the header chip's hover).
-                  : Padding(
-                      padding: _badgePadding,
-                      child: badgeFace(theme, badgeCounts(it)!),
-                    ),
-            ),
           if (widget.menu)
             Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -602,6 +622,86 @@ class _PullRowState extends State<PullRow> {
         ),
       ),
     );
+  }
+}
+
+/// A pull request row's second line: [number] (`#n`) and [changes]
+/// (` +adds −dels`), then, after [comma]'s ", ", the [cue]'s words in its
+/// style. The cue is the last to give way (issue 119): the changes are
+/// dropped whole when they don't fit, never cut inside a count, and the
+/// number too once even it won't, the cue then standing alone with a
+/// capital (as [rowCue] says); only a cue wider than the whole line is cut,
+/// at its end. With no cue, the changes are dropped the same way.
+class PullSubLine extends StatelessWidget {
+  const new({
+    required this.number,
+    required this.changes,
+    required this.cue,
+    required this.comma,
+    super.key,
+  });
+
+  final InlineSpan number;
+  final List<InlineSpan> changes;
+  final (String, TextStyle)? cue;
+  final TextStyle comma;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final cue = this.cue;
+      final tail = cue == null
+          ? null
+          : TextSpan(
+              children: [
+                TextSpan(text: ', ', style: comma),
+                TextSpan(text: cue.$1, style: cue.$2),
+              ],
+            );
+      final room = box.maxWidth - (tail == null ? 0 : _width(context, tail));
+      final whole = TextSpan(children: [number, ...changes]);
+      final InlineSpan counts;
+      if (_width(context, whole) <= room) {
+        counts = whole;
+      } else if (cue == null || _width(context, number) <= room) {
+        counts = number;
+      } else {
+        return Text(
+          capital(cue.$1),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: cue.$2,
+        );
+      }
+      final shown = Text.rich(
+        TextSpan(children: [counts]),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+      if (tail == null) return shown;
+      return Row(
+        children: [
+          Flexible(child: shown),
+          Text.rich(tail, maxLines: 1),
+        ],
+      );
+    },
+  );
+
+  /// [span]'s width on one line, as a [Text] here lays it out.
+  static double _width(BuildContext context, InlineSpan span) {
+    final painter = TextPainter(
+      text: TextSpan(
+        style: DefaultTextStyle.of(context).style,
+        children: [span],
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
   }
 }
 

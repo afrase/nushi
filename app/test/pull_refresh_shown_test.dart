@@ -54,9 +54,9 @@ Object? Function(Object) _counted(
 /// busy, busy, then [after].
 Future<void> _heldThen(WidgetTester tester, String after) async {
   await tester.pump(_ms100);
-  expect(_says('Updated just now · refreshing'), findsOneWidget);
+  expect(_says('Updated just now, refreshing'), findsOneWidget);
   await tester.pump(_ms100 * 4);
-  expect(_says('Updated just now · refreshing'), findsOneWidget);
+  expect(_says('Updated just now, refreshing'), findsOneWidget);
   await tester.pump(_ms100 * 2);
   expect(_says(after), findsOneWidget);
 }
@@ -90,7 +90,7 @@ void main() {
     await tester.pump(_ms100 * 3);
     await tester.tap(_refresh); // inside the 600 ms: no more, no longer
     await tester.pump(_ms100 * 2);
-    expect(_says('Updated just now · refreshing'), findsOneWidget);
+    expect(_says('Updated just now, refreshing'), findsOneWidget);
     await tester.pump(_ms100 * 2);
     expect(_says('Updated just now'), findsOneWidget);
     expect(asked, hasLength(1));
@@ -135,7 +135,7 @@ void main() {
     hang = Completer();
     await tester.tap(_refresh);
     await tester.pump(_ms100 * 10);
-    expect(_says('Updated just now · refreshing'), findsOneWidget);
+    expect(_says('Updated just now, refreshing'), findsOneWidget);
     await tester.pump(_ms100 * 10);
     hang.complete(GetGitHubPullResponse(pull: fixturePull()));
     hang = null;
@@ -173,7 +173,7 @@ void main() {
     );
     failing = true;
     await tester.tap(_refresh);
-    await _heldThen(tester, "Couldn't refresh · as of just now");
+    await _heldThen(tester, "Couldn't refresh, as of just now");
     await closeView(tester, d);
   }, variant: onMac);
 }

@@ -138,7 +138,7 @@ class _Head extends StatelessWidget {
                 children: [
                   TextSpan(text: 'Model ', style: small),
                   TextSpan(text: settingText(runs.model)),
-                  TextSpan(text: '  ·  Effort ', style: small),
+                  TextSpan(text: ', effort ', style: small),
                   TextSpan(text: settingText(runs.effort)),
                 ],
               ),

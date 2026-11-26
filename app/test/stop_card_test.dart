@@ -119,6 +119,9 @@ void main() {
       expect(tester.getSize(line).height, lessThan(22));
     }
     expect(find.textContaining('stopped', findRichText: true), findsOneWidget);
+    // A gap after the command, not a comma against its code ink, where it
+    // reads as part of the command (issue 119).
+    expect(find.textContaining(', stopped', findRichText: true), findsNothing);
     await closeView(tester, d);
   }, variant: onMac);
 

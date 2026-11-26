@@ -444,8 +444,8 @@ DateTime? _modified(String path) {
 }
 
 /// What a file's row says under or beside its name: its folder, and when
-/// it last changed ("docs · 2m ago").
+/// it last changed ("docs, 2m ago").
 String fileDetail(String path, DateTime? changed) => [
   folderOf(path),
   if (changed != null) ago(clock().difference(changed), changed),
-].where((s) => s.isNotEmpty).join(' · ');
+].where((s) => s.isNotEmpty).join(', ');

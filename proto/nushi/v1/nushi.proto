@@ -2131,6 +2131,9 @@ message GetRelatedWorktreeStatsRequest {
 }
 
 message GetRelatedWorktreeStatsResponse {
+  // One for each of the chat's records of a path asked, in the order of
+  // its list: a path can have several, a worktree removed and another made
+  // there since (issue #118), and the list only grows.
   repeated RelatedWorktreeStats stats = 1;
 }
 

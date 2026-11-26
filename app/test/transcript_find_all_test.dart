@@ -90,7 +90,7 @@ void main() {
     expect(paged.pages, isEmpty);
     expect(c.older, older);
     expect(find.text('Load all'), findsNothing);
-    expect(find.text('Searching loaded messages · '), findsNothing);
+    expect(find.text('Searching loaded messages. '), findsNothing);
     expect(_shows(tester, 'Turn 98 left a needle'), isTrue);
     await closeView(tester, d);
   }, variant: onMac);
@@ -110,7 +110,7 @@ void main() {
       c.find.query = q;
       for (var i = 0; i < 4; i++) {
         await tester.pump(ChatFind.pause ~/ 3);
-        expect(find.text('Searching loaded messages · '), findsNothing);
+        expect(find.text('Searching loaded messages. '), findsNothing);
         expect(find.text('Load all'), findsNothing);
       }
     }
@@ -136,7 +136,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(c.find.whole, isFalse);
     expect(c.find.count, '1 of 1');
-    expect(find.text('Searching loaded messages · '), findsOneWidget);
+    expect(find.text('Searching loaded messages. '), findsOneWidget);
     expect(find.text('Load all'), findsOneWidget);
     c.find.query = 'needles';
     await tester.pump(ChatFind.pause ~/ 2);

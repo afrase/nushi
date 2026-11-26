@@ -123,14 +123,14 @@ void main() {
 
   testWidgets('each agent as found, and what can be done', (tester) async {
     final (_, d) = await _settings(tester);
-    expect(find.text('2.1.310 · /opt/homebrew/bin/claude'), findsOneWidget);
+    expect(find.text('2.1.310, /opt/homebrew/bin/claude'), findsOneWidget);
     expect(find.text('Not signed in'), findsOneWidget);
     expect(find.text('Set up'), findsNothing); // Claude needs none
     expect(find.text('Adapter 2.2.1'), findsOneWidget);
     expect(find.text('Update to 2.2.2'), findsOneWidget);
     expect(find.text('Remove'), findsOneWidget);
     expect(find.text('Ready'), findsNWidgets(3)); // Claude, Ante, PiG
-    expect(find.text('0.5.3 · /Users/me/.local/bin/pig'), findsOneWidget);
+    expect(find.text('0.5.3, /Users/me/.local/bin/pig'), findsOneWidget);
     expect(find.text('Not installed'), findsOneWidget);
     d.dispose();
   });

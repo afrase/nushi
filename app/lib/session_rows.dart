@@ -54,7 +54,7 @@ class SessionRow extends StatelessWidget {
       if (everyFolder && s.folder.isNotEmpty) folderParts(s.folder).$1,
       if (s.folderGone) 'folder gone',
       if (extra.isNotEmpty) extra,
-    ].join(' · ');
+    ].join(', ');
     return Tap(
       onTap: why != null ? null : onTap,
       selected: selected,
@@ -76,7 +76,7 @@ class SessionRow extends StatelessWidget {
                 TextSpan(text: details),
                 if (s.openIn.isNotEmpty)
                   TextSpan(
-                    text: '${details.isEmpty ? '' : ' · '}open in ${s.openIn}',
+                    text: '${details.isEmpty ? '' : ', '}open in ${s.openIn}',
                     style: TextStyle(color: t.needs),
                   ),
               ],

@@ -246,7 +246,7 @@ String worktreePlace(GitWorktree w, ListBranchesResponse list) {
       : repo.isNotEmpty && w.path.startsWith('$repo/')
       ? w.path.substring(repo.length + 1)
       : tildePath(w.path);
-  return w.locked ? '$place · locked' : place;
+  return w.locked ? '$place, locked' : place;
 }
 
 /// Moves [chat] into the worktree [w] that's there, asking first when it

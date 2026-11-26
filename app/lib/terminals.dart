@@ -234,7 +234,7 @@ String terminalName(pb.Terminal t) => t.name.isNotEmpty
     ? t.name
     : t.program.isNotEmpty
     ? t.program
-    : '${t.shell} — ${t.folder.split('/').last}';
+    : '${t.shell} in ${t.folder.split('/').last}';
 
 /// An emulator showing one of the daemon's terminals: it replays what the
 /// terminal kept, then follows it; keys go back to it, in order.

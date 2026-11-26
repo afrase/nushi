@@ -79,6 +79,34 @@ void main() {
     );
   });
 
+  testWidgets('Keeps the Mac awake is a line of its own, never run into '
+      "the relay's error (issue 119)", (tester) async {
+    viewport(tester, const Size(720, 560));
+    await tester.pumpWidget(
+      themed(RemoteSection(NushiServiceClient(_daemon())), banner: false),
+    );
+    remoteState.value = Remote(on: true, state: 'connected');
+    await tester.pumpAndSettle();
+    expect(find.text('Connected'), findsOneWidget);
+    expect(find.text('Keeps the Mac awake'), findsOneWidget);
+    remoteState.value = Remote(
+      on: true,
+      state: 'error',
+      error: 'dial tcp: lookup relay.example.com: no such host',
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        "Can't reach the relay: dial tcp: lookup relay.example.com: no such "
+        'host (trying again)',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Keeps the Mac awake'), findsOneWidget);
+    await render(tester, find.byType(MaterialApp), 'remote_error_720');
+    await tester.pumpWidget(const SizedBox());
+  }, variant: onMac);
+
   testWidgets('the relay field fills when the daemon first answers; turning '
       'off sends the saved relay, not what the field holds', (tester) async {
     final daemon = _daemon()
@@ -200,13 +228,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Notifications on · connected'), findsOneWidget);
+      expect(find.text('Notifications on, connected'), findsOneWidget);
       expect(
         find.textContaining(keyFingerprint(List.filled(32, 9))),
         findsOneWidget,
       );
       expect(
-        find.text('Notifications off · 3h ago'), // no kind, though it's ""
+        find.text('Notifications off, 3h ago'), // no kind, though it's ""
         findsOneWidget,
       );
       expect(find.text('Revoke'), findsNWidgets(2)); // a device's each

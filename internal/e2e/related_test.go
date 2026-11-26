@@ -175,3 +175,48 @@ func TestRelatedWorktreeStatsAndDiffs(t *testing.T) {
 		t.Errorf("collected: %v", got)
 	}
 }
+
+// A path with two records (a worktree removed, and another made there on
+// another branch since: issue #118) has a stat for each, in the list's
+// order, which is what the app pairs them by: the removed one's from its
+// commits, the new one's from its folder.
+func TestRelatedWorktreeStatsOfOnePath(t *testing.T) {
+	ctx := context.Background()
+	repo := gitRepo(t)
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "start")
+	wt := filepath.Join(repo, ".claude", "worktrees", "feature-x")
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "feature-x", wt)
+	wt = testcheck.Git(t, wt, "rev-parse", "--show-toplevel")
+	testcheck.Write(t, filepath.Join(wt, "old.txt"), "one\n")
+	testcheck.Git(t, wt, "add", ".")
+	testcheck.Git(t, wt, "commit", "-q", "-m", "old work")
+
+	a := open(t, startDaemon(t, t.TempDir(), &acptest.History{}))
+	id := a.start(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: repo})
+	look := func() []*nushiv1.RelatedWorktree {
+		t.Helper()
+		return must(a.c.GetRelatedWorktrees(ctx, connect.NewRequest(&nushiv1.GetRelatedWorktreesRequest{ChatId: id}))).Worktrees
+	}
+	a.send(id, "subagent ls "+wt)
+	a.settled(id)
+	if got := look(); len(got) != 1 || got[0].State != "present" {
+		t.Fatalf("found: %v", got)
+	}
+	testcheck.Git(t, repo, "worktree", "remove", wt)
+	if got := look(); len(got) != 1 || got[0].State != "removed" {
+		t.Fatalf("removed: %v", got)
+	}
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "feature-y", wt, "main")
+	for _, name := range []string{"a.txt", "b.txt", "c.txt"} {
+		testcheck.Write(t, filepath.Join(wt, name), "new\n")
+	}
+	a.send(id, "subagent call=b1 ls "+wt)
+	a.settled(id)
+	if got := look(); len(got) != 2 || got[0].CallId != "a1" || got[1].CallId != "b1" || got[1].State != "present" {
+		t.Fatalf("made again: %v", got)
+	}
+	got := must(a.c.GetRelatedWorktreeStats(ctx, connect.NewRequest(&nushiv1.GetRelatedWorktreeStatsRequest{ChatId: id, Paths: []string{wt}}))).Stats
+	if len(got) != 2 || got[0].Files != 1 || got[0].Ahead != 1 || got[1].Files != 3 || got[1].Ahead != 0 {
+		t.Errorf("stats: %v; want the removed one's (1 file, 1 ahead), then the new one's (3 files)", got)
+	}
+}

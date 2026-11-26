@@ -10833,7 +10833,10 @@ func (x *GetRelatedWorktreeStatsRequest) GetPaths() []string {
 }
 
 type GetRelatedWorktreeStatsResponse struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// One for each of the chat's records of a path asked, in the order of
+	// its list: a path can have several, a worktree removed and another made
+	// there since (issue #118), and the list only grows.
 	Stats         []*RelatedWorktreeStats `protobuf:"bytes,1,rep,name=stats,proto3" json:"stats,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

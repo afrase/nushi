@@ -61,7 +61,49 @@ func TestCheck(t *testing.T) {
 			"theme.ui(t.text, size: small ? 12.5 : 13)\ntheme.ui(colorOf(Icon(i, size: 18)), size: 13)\n" +
 			"theme.code(t.text, size: small ? 12 : 13)\ntheme.ui(t.text, size: a ? 12 : 13.5, weight: w)\n" +
 			"theme.ui(t.text, size: a ? 1.5 : 2.5)\n",
-		"phone/scale.dart":       "theme.ui(t.text, size: 16)\ntheme.ui(t.text, size: 17)\n",
+		"phone/scale.dart": "theme.ui(t.text, size: 16)\ntheme.ui(t.text, size: 17)\n",
+		// A separator between a line's parts: a middle dot, a spaced en or
+		// em dash, a hyphen with a space either side, in a string, the
+		// controls' too; a minus in an interpolation, a range, a bullet,
+		// a dash alone, a comment and a marked line pass.
+		"dots.dart": "Text('a · b'),\n].join(' · '),\ntext: '  · ${w.twin}',\n'$shell — $folder',\n'Running – click',\n'$a - $b',\n" +
+			"'and ${n - 1} more',\n'Lines 3–5',\n'• $name archives',\n'- [ ] task'\ndim ? '—' : p\n" +
+			"// \"Plan · 2 of 4\"\nfinal r = RegExp(r'·.*·'); // design: a bot's text\n'a, b'\nx - y\n",
+		// What the first rule missed (issue 119's review): a dot in a string
+		// nested in an interpolation, a leading spaced hyphen, an em dash
+		// spaced or not, a bullet as a join, a line inside a multi-line
+		// string, each one's escape; a blank em dash, a masked secret, a
+		// bullet starting an item and a multi-line string's plain lines pass.
+		"nested.dart": "'${x.isEmpty ? '' : ' · ${x}'}'\n' - $state'\n'Running—click to cancel'\n].join(' • '),\n" +
+			"text: \"\"\"\nfirst line\nPlan · 2 of 4\n\"\"\",\n" +
+			"'\\u00b7'\n' \\u2014 '\n'a\\u{2022} b'.split(' \\u2022 ')\n'\\u2013 later \\u2013'\n" +
+			"dim ? '—' : p\n'••••'\n'• first'\nr'\\u00b7'\n",
+		// The second review's probes: a dash or hyphen between no-break
+		// spaces (as written and as escapes), the dot operators and other
+		// points that look like a middle dot, and a spaced hyphen that
+		// starts the second of two adjacent literals (one string to Dart),
+		// on one line and over two; then what must pass: a range, a minus in
+		// an interpolation, a blank, Markdown items, counts, a command's
+		// flag, comments, a mask, adjacent or separate literals that join
+		// nothing, and a marked literal whose join the next one goes on
+		// with (found on the marked line, not again on the next).
+		"probes.dart": "'$a\u00a0–\u00a0$b',\n'$a\\u00a0\\u2013\\u00a0$b',\n'$a\u202f-\u202f$b',\n'a ∙ b',\n'a ⋅ b',\n" +
+			"'a ‧ b',\n'a ・ b',\n'$a ' '- $b',\n'$a '\n    '- $b',\n'a \\u2219 b',\n" +
+			"'3–5 files',\n'and ${n - 1} more'\ndim ? '—' : p,\n'- item\\n- [ ] next',\n'+$n −$m',\n'git log -n 5',\n" +
+			"// a · b — c\n/* a – b */\n'••••',\n'first line ' 'second'\nf('$a ', '- b')\n'$a ' + '- b',\n" +
+			"// design: the hyphen named\n'digits, - and _, and can\\'t '\n    'start with -.',\n",
+		// The third review's probes: the middle dot's look-alikes (U+0387,
+		// U+2E31, U+FF65), the rest of the dash class spaced (‒ ― ⸺), the
+		// bullets ● and ▪ as a join, and an en dash between zero-width
+		// spaces, as written and as escapes; then what passes: a range in
+		// figure dashes, a horizontal bar alone (a blank), a bullet that
+		// starts an item, a mask of ●, and two literals joined with + (not
+		// judged as one string: the tool reads literals, not expressions).
+		"probes3.dart": "'a \u0387 b',\n'a ⸱ b',\n'a ･ b',\n'$a ‒ $b',\n'$a ― $b',\n'$a ⸺ $b',\n" +
+			"'a ● b',\n'a ▪ b',\n'$a\\u200b–\\u200b$b',\n'$a\u200b–\u200b$b',\n'a·b',\n" +
+			"'3‒5 files',\ndim ? '―' : p,\n'● first',\n'●●●●',\n'$a ' + '- $b',\n'▪ item',\n",
+		"theme/names.dart":       "label: 'Tokyo Night · Day',\n",
+		"controls_dots.dart":     "label: 'Open · 2',\n",
 		"motion.dart":            "static const quick = Duration(milliseconds: 120);\n",
 		"toast.dart":             "messenger.showSnackBar(SnackBar(content: c));\n",
 		"controls.dart":          "return Tooltip(message: m, child: c);\n",
@@ -106,11 +148,18 @@ func TestCheck(t *testing.T) {
 		"button.dart:2: " + button,
 		"color.dart:1: " + raw,
 		"color.dart:2: " + named,
+		"controls_dots.dart:1: " + separator,
 		"controls_menus.dart:1: " + corner,
 		"controls_small.dart:1: " + ms,
 		"controls_toggle.dart:1: " + pressPath,
 		cornerAt("corner.dart:1"), cornerAt("corner.dart:2"), cornerAt("corner.dart:3"), cornerAt("corner.dart:4"),
 		"dialog.dart:1: " + dialog,
+		"dots.dart:1: " + separator,
+		"dots.dart:2: " + separator,
+		"dots.dart:3: " + separator,
+		"dots.dart:4: " + separator,
+		"dots.dart:5: " + separator,
+		"dots.dart:6: " + separator,
 		"gesture.dart:14: " + pressPath, // sorted as text
 		"gesture.dart:16: " + pressPath,
 		"gesture.dart:1: " + pressPath,
@@ -119,6 +168,15 @@ func TestCheck(t *testing.T) {
 		"keys.dart:2: " + keyInString,
 		"keys.dart:3: " + keyInString,
 		"keys.dart:4: " + keyInString,
+		"nested.dart:10: " + separator, // sorted as text
+		"nested.dart:11: " + separator,
+		"nested.dart:12: " + separator,
+		"nested.dart:1: " + separator,
+		"nested.dart:2: " + separator,
+		"nested.dart:3: " + separator,
+		"nested.dart:4: " + separator,
+		"nested.dart:7: " + separator,
+		"nested.dart:9: " + separator,
 		"phone/scale.dart:2: " + offScale,
 		"phone/x.dart:1: " + button,
 		"press.dart:1: " + pressPath,
@@ -126,6 +184,27 @@ func TestCheck(t *testing.T) {
 		"press.dart:3: " + pressPath,
 		"press.dart:4: " + pressPath,
 		"press.dart:5: " + pressPath,
+		"probes.dart:10: " + separator, // sorted as text: the second of two lines
+		"probes.dart:11: " + separator,
+		"probes.dart:1: " + separator,
+		"probes.dart:2: " + separator,
+		"probes.dart:3: " + separator,
+		"probes.dart:4: " + separator,
+		"probes.dart:5: " + separator,
+		"probes.dart:6: " + separator,
+		"probes.dart:7: " + separator,
+		"probes.dart:8: " + separator,
+		"probes3.dart:10: " + separator, // sorted as text
+		"probes3.dart:11: " + separator,
+		"probes3.dart:1: " + separator,
+		"probes3.dart:2: " + separator,
+		"probes3.dart:3: " + separator,
+		"probes3.dart:4: " + separator,
+		"probes3.dart:5: " + separator,
+		"probes3.dart:6: " + separator,
+		"probes3.dart:7: " + separator,
+		"probes3.dart:8: " + separator,
+		"probes3.dart:9: " + separator,
 		"say.dart:1: " + snack,
 		"say.dart:2: " + snack,
 		"scale.dart:10: " + offScale, // sorted as text
@@ -136,6 +215,7 @@ func TestCheck(t *testing.T) {
 		"scale.dart:1: " + offScale,
 		"scale.dart:5: " + offScale,
 		"size.dart:1: " + size,
+		"theme/names.dart:1: " + separator,
 		"tip.dart:1: " + tip,
 		"wait.dart:1: " + ms,
 	}

@@ -1,9 +1,11 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_header.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_card.dart';
@@ -351,7 +353,7 @@ void main() {
     expect(
       find.descendant(
         of: row,
-        matching: find.textContaining('Ready to merge', findRichText: true),
+        matching: find.textContaining('ready to merge', findRichText: true),
       ),
       findsOneWidget,
     );
@@ -532,6 +534,51 @@ void main() {
     final sent = fake.calls.whereType<LinkChatPullRequest>().single;
     expect(sent.unlink.number, 224);
     expect(sent.hasPull(), isFalse);
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  testWidgets("a merged row's state shows whole in the details panel, "
+      'Clean up… at the end of its title line (issue 119)', (tester) async {
+    // The panel has one width (DetailsPanel.width), so its narrowest is
+    // its default: the 1700 window shows it.
+    final (d, _) = await _app(tester, numbers: [221, 224, 215]);
+    final merged = find.byWidgetPredicate(
+      (w) => w is PullRow && w.link.number == 215,
+    );
+    final state = find.descendant(
+      of: merged,
+      matching: find.textContaining('merged into main', findRichText: true),
+    );
+    expect(state, findsOneWidget);
+    final line = tester.renderObject<RenderParagraph>(state);
+    expect(
+      line.text.toPlainText(),
+      ', merged into main',
+      reason: 'the cue after a comma starts lower case, no full stop',
+    );
+    expect(line.didExceedMaxLines, isFalse, reason: 'the state is cut');
+    expect(
+      find.descendant(of: merged, matching: find.text('#215 +88 −20')),
+      findsOneWidget,
+      reason: 'the counts before it, whole where they fit',
+    );
+    final clean = find.descendant(of: merged, matching: find.text('Clean up…'));
+    final title = find.descendant(
+      of: merged,
+      matching: find.text('Cursor in store.ListPosts'),
+    );
+    // Its own place: a pill level with the title, at the row's end, never
+    // against the state.
+    expect(
+      find.ancestor(of: clean, matching: find.byType(PillButton)),
+      findsOneWidget,
+    );
+    expect(tester.getCenter(clean).dy, tester.getCenter(title).dy);
+    expect(
+      tester.getBottomLeft(clean).dy,
+      lessThanOrEqualTo(tester.getTopLeft(state).dy),
+      reason: "on the title's line, not the state's",
+    );
     await closeView(tester, d);
   }, variant: onMac);
 

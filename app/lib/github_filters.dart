@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The spans the inbox can be limited to, in days (0: any time).
@@ -144,7 +143,7 @@ class ReposMenu extends StatelessWidget {
             ),
         ],
       ],
-      label: Text(hidden.isEmpty ? scope : '$scope · ${hidden.length} hidden'),
+      label: Text(hidden.isEmpty ? scope : '$scope, ${hidden.length} hidden'),
     );
   }
 }
@@ -214,7 +213,8 @@ Future<List<String>?> askOwners(BuildContext context, List<String> owners) {
   );
 }
 
-/// A card's quiet last line: "3 older than 90 days · Show".
+/// A card's quiet last line, a link whole: "Show 3 older than 90 days"
+/// (the phrase and a "Show" after it ran together, issue 119).
 class OlderLine extends StatelessWidget {
   const new({
     required this.count,
@@ -228,23 +228,16 @@ class OlderLine extends StatelessWidget {
   final VoidCallback onShow;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final muted = theme.ui(theme.t.textMuted, size: 12);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 2),
-      child: Row(
-        children: [
-          Text('$count older than ${daysWords(days)}', style: muted),
-          Text('  ·  ', style: muted),
-          LinkText(
-            'Show',
-            size: 12,
-            tooltip: 'Show them in this card until Nushi quits',
-            onTap: onShow,
-          ),
-        ],
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(8, 4, 8, 2),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: LinkText(
+        'Show $count older than ${daysWords(days)}',
+        size: 12,
+        tooltip: 'Show them in this card until Nushi quits',
+        onTap: onShow,
       ),
-    );
-  }
+    ),
+  );
 }

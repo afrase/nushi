@@ -96,10 +96,8 @@ class _RemoteSectionState extends State<RemoteSection> {
                 if (r.hasWasReset()) RemoteResetLine(r.wasReset),
                 SettingsRow(
                   'Remote access',
-                  description: [
-                    if (state.isNotEmpty) state,
-                    if (r.on) 'keeps the ${conventions.machine} awake',
-                  ].join(' · '),
+                  description: state,
+                  note: r.on ? 'Keeps the ${conventions.machine} awake' : null,
                   descriptionColor: r.state == 'error' ? t.crashed : null,
                   control: SettingsSwitch(
                     value: r.on,
@@ -211,7 +209,7 @@ class _DeviceRow extends StatelessWidget {
       stackBelow: 520,
       description:
           'Notifications ${d.push ? 'on' : 'off'}'
-          '${seen.isEmpty ? '' : ' · $seen'}',
+          '${seen.isEmpty ? '' : ', $seen'}',
       control: Row(
         mainAxisSize: MainAxisSize.min,
         spacing: 6,

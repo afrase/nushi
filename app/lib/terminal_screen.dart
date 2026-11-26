@@ -239,8 +239,10 @@ TerminalTheme terminalTheme(Tokens t, {Color? cursor}) {
     brightMagenta: a.brightMagenta,
     brightCyan: a.brightCyan,
     brightWhite: a.brightWhite,
+    // xterm draws every hit's text in the one colour: it reads on both
+    // fills, and the current one stands plainly off the rest.
     searchHitBackground: t.needsSoft,
-    searchHitBackgroundCurrent: t.needs,
-    searchHitForeground: t.text,
+    searchHitBackgroundCurrent: t.searchHitCurrent,
+    searchHitForeground: t.searchHitInk,
   );
 }

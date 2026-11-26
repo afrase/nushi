@@ -211,7 +211,7 @@ void main() {
     paged.fail = true;
     await _toTop(tester);
     await tester.pumpAndSettle();
-    expect(find.text('Couldn’t load earlier messages · '), findsOneWidget);
+    expect(find.text('Couldn’t load earlier messages. '), findsOneWidget);
     expect(_chat(d).olderFailed, isTrue);
     final asked = paged.pages.length;
     await _wheel(tester, 200);
@@ -223,7 +223,7 @@ void main() {
     await tester.tap(find.text('Try again'));
     await tester.pumpAndSettle();
     expect(paged.pages.length, asked + 1);
-    expect(find.text('Couldn’t load earlier messages · '), findsNothing);
+    expect(find.text('Couldn’t load earlier messages. '), findsNothing);
     expect(_chat(d).olderFailed, isFalse);
     await closeView(tester, d);
   }, variant: onMac);
@@ -245,7 +245,7 @@ void main() {
     paged.hold = null;
     await tester.pumpAndSettle();
     expect(c.olderFailed, isFalse);
-    expect(find.text('Couldn’t load earlier messages · '), findsNothing);
+    expect(find.text('Couldn’t load earlier messages. '), findsNothing);
     await closeView(tester, d);
   }, variant: onMac);
 
@@ -328,7 +328,7 @@ void main() {
       ..open()
       ..query = 'Turn 3:';
     await tester.pumpAndSettle();
-    expect(find.text('Searching loaded messages · '), findsOneWidget);
+    expect(find.text('Searching loaded messages. '), findsOneWidget);
     expect(c.find.count, 'None');
     expect(paged.asked.whereType<FindInChatRequest>(), isEmpty);
     expect(
@@ -345,7 +345,7 @@ void main() {
       lessThanOrEqualTo(4 * Transcript.moreEntries + 4),
       reason: 'never all at once',
     );
-    expect(find.text('Searching loaded messages · '), findsNothing);
+    expect(find.text('Searching loaded messages. '), findsNothing);
     expect(c.find.count, '1 of 1');
     final list = tester.getRect(find.byType(SelectionArea));
     final hit = tester.getRect(

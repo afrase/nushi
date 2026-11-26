@@ -13682,6 +13682,9 @@ class GetRelatedWorktreeStatsResponse extends $pb.GeneratedMessage {
           GetRelatedWorktreeStatsResponse.$_createMessage);
   static GetRelatedWorktreeStatsResponse? _defaultInstance;
 
+  /// One for each of the chat's records of a path asked, in the order of
+  /// its list: a path can have several, a worktree removed and another made
+  /// there since (issue #118), and the list only grows.
   @$pb.TagNumber(1)
   $pb.PbList<RelatedWorktreeStats> get stats => $_getList(0);
 }

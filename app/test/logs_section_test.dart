@@ -96,7 +96,7 @@ void main() {
     await tester.pumpWidget(
       themed(LogsSection(daemon: d, settings: _settings(d))),
     );
-    expect(find.text('Version 1.2.0 · API $apiVersion'), findsOneWidget);
+    expect(find.text('Version 1.2.0, API $apiVersion'), findsOneWidget);
     d.dispose();
   });
 

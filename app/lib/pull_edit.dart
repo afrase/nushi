@@ -349,7 +349,7 @@ class _PullDescriptionState extends _PullEdit<PullDescription> {
             theme,
             note: widget.me.isEmpty
                 ? 'Markdown'
-                : 'Markdown · saves to GitHub as ${widget.me}',
+                : 'Markdown, saves to GitHub as ${widget.me}',
           ),
         ],
       );

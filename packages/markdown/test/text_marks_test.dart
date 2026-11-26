@@ -202,4 +202,132 @@ void main() {
     expect(m.marks, isEmpty);
     expect(tester.renderObject(find.byType(Marks)), isNot(paints..rrect()));
   });
+
+  testWidgets("on a background, a match's text is drawn again in its ink, "
+      'its spans untouched', (tester) async {
+    const dim = Color(0xFF303030);
+    const bg = Color(0xFF000000);
+    final asked = <(Color, Color, Color)>[];
+    final m = TextMarks(
+      ink: (color, fill, background) {
+        asked.add((color, fill, background));
+        return color == dim ? const Color(0xFFFFFFFF) : color;
+      },
+    );
+    addTearDown(m.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SelectionArea(
+            child: TextMarksScope(
+              marks: m,
+              child: const Marks(
+                entry: 'e',
+                background: bg,
+                child: Text.rich(
+                  TextSpan(
+                    text: 'a ',
+                    children: [
+                      TextSpan(
+                        text: 'dim',
+                        style: TextStyle(color: dim),
+                      ),
+                      TextSpan(text: ' relay'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final p = tester.renderObject<RenderParagraph>(find.byType(RichText));
+    final span = p.text;
+    final box = tester.renderObject(find.byType(Marks));
+    await _look(tester, m, 'dim');
+    expect(identical(p.text, span), isTrue);
+    expect(asked, contains((dim, _hit, bg)));
+    expect(
+      box,
+      paints
+        ..rrect(color: _hit)
+        ..paragraph()
+        ..paragraph(),
+    );
+    // What reads as it is isn't drawn again.
+    await _look(tester, m, 'relay');
+    expect(
+      box,
+      paints
+        ..rrect(color: _hit)
+        ..paragraph(),
+    );
+    expect(
+      box,
+      isNot(
+        paints
+          ..paragraph()
+          ..paragraph(),
+      ),
+    );
+  });
+
+  testWidgets("a code block's inked text isn't laid out again while other "
+      'text in its entry changes', (tester) async {
+    const dim = Color(0xFF303030);
+    const bg = Color(0xFF000000);
+    var asked = 0;
+    final m = TextMarks(
+      ink: (color, fill, background) {
+        asked++;
+        return color == dim ? const Color(0xFFFFFFFF) : color;
+      },
+    );
+    addTearDown(m.dispose);
+    final streamed = ValueNotifier('a reply');
+    addTearDown(streamed.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SelectionArea(
+            child: TextMarksScope(
+              marks: m,
+              child: Marks(
+                entry: 'e',
+                child: Column(
+                  children: [
+                    const Marks(
+                      background: bg,
+                      child: Text('dim words', style: TextStyle(color: dim)),
+                    ),
+                    ValueListenableBuilder(
+                      valueListenable: streamed,
+                      builder: (_, text, _) => Text(text),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await _look(tester, m, 'dim');
+    expect(asked, greaterThan(0));
+    final first = asked;
+    for (var i = 0; i < 5; i++) {
+      streamed.value += ' more';
+      await tester.pump();
+      await tester.pump();
+    }
+    expect(m.marks, hasLength(1));
+    expect(asked, first, reason: 'the unchanged block was inked again');
+    // A new pair of fills is a new ink.
+    m.look('dim', const ['e'], hit: _now, now: _hit, edge: _edge);
+    tester.binding.scheduleFrame();
+    await tester.pump();
+    await tester.pump();
+    expect(asked, greaterThan(first));
+  });
 }

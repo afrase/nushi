@@ -108,7 +108,7 @@ void main() {
     );
     expect(
       budgetLine(h, fixtureNow),
-      'Left this hour: REST 10 of 5000 · GraphQL 4000 of 5000 '
+      'Left this hour: REST 10 of 5000, GraphQL 4000 of 5000 '
       '(GraphQL resets in 5m)',
     );
     expect(budgetLine(GitHubHost(), fixtureNow), '');
@@ -119,7 +119,7 @@ void main() {
     final (fake, d) = await _open(tester);
     expect(find.text('github.com'), findsOneWidget);
     // Who and from where in the row, its state in a pill.
-    expect(find.text("octo (Octo Cat) · from gh's login"), findsOneWidget);
+    expect(find.text("octo (Octo Cat), from gh's login"), findsOneWidget);
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('account-state-github.com')),
@@ -135,7 +135,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('account-more-github.com')));
     await tester.pumpAndSettle();
     expect(
-      find.text('OAuth token · scopes gist, read:org, repo, workflow'),
+      find.text('OAuth token with scopes gist, read:org, repo, workflow'),
       findsOneWidget,
     );
     // gh's login can't be removed here; a pasted token can.

@@ -205,7 +205,7 @@ class CommitRow extends StatelessWidget {
                       children: [
                         TextSpan(text: c.headline),
                         TextSpan(
-                          text: ' · $age',
+                          text: ' $age',
                           style: theme.ui(t.textMuted, size: 12),
                         ),
                       ],

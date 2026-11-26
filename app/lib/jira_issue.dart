@@ -199,7 +199,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
                       ),
                     )
                   : Text(
-                      [kept, ?_error].join(' · '),
+                      [kept, ?_error].join('\n'),
                       style: theme.ui(t.crashed, size: 12),
                     ),
             ),
@@ -216,10 +216,16 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
               if (i.reporter.isNotEmpty) 'Reported by ${i.reporter}',
               if (i.created > 0) age(i.created.toInt()),
               if (i.updated > 0) 'updated ${age(i.updated.toInt())}',
-              if (i.labels.isNotEmpty) i.labels.join(', '),
-            ].join(' · '),
+            ].join(', '),
             style: theme.ui(t.textMuted, size: 12),
           ),
+          // A line of their own: run into the meta line's commas, where it
+          // ended and the labels began couldn't be told.
+          if (i.labels.isNotEmpty)
+            Text(
+              'Labels: ${i.labels.join(', ')}',
+              style: theme.ui(t.textMuted, size: 12),
+            ),
           if (i.hasParent())
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -260,7 +266,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
                       )
                     else
                       Text(
-                        '${a.name} · ${diskSize(a.size.toInt())}',
+                        '${a.name}, ${diskSize(a.size.toInt())}',
                         style: theme.ui(t.text, size: 12),
                       ),
                 ],
@@ -319,7 +325,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
             section('Moved by agents', [
               for (final w in moves)
                 Text(
-                  'To ${w.to} · ${age(w.at.toInt())} · ${_byAgent(w)}',
+                  'To ${w.to}, ${age(w.at.toInt())}, ${_byAgent(w)}',
                   style: theme.ui(t.textSecondary, size: 12),
                 ),
             ]),
@@ -342,7 +348,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
                                 .firstOrNull
                             case final w?)
                           _byAgent(w),
-                      ].join(' · '),
+                      ].join(', '),
                       style: theme.ui(t.textMuted, size: 12),
                     ),
                     AgentMarkdown(c.body, images: images),
