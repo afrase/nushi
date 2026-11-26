@@ -112,7 +112,7 @@ Future<(FakeDaemon, Daemon)> _open(
           if (i.assigneeId == 'me-1') i,
         _is(
           'ACME-204',
-          'Repaint the lobby sign before the fair, and both sides too',
+          'Search results forget their sort order after a page reload',
           'To Do',
           'new',
           who: 'Test User',

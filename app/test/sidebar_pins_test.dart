@@ -178,10 +178,10 @@ void main() {
     // As after a restart, with a new chat in parcel-poc: it goes first.
     d = await _sidebar(tester, [
       ..._chats(),
-      chat('n', 'claude', 'New parcelRows work', folder: _parcel, age: -1),
+      chat('n', 'claude', 'Swap the tab icons', folder: _parcel, age: -1),
     ]);
-    expect(_rows(tester, ['New parcelRows work', ...parcelRows]), [
-      'New parcelRows work',
+    expect(_rows(tester, ['Swap the tab icons', ...parcelRows]), [
+      'Swap the tab icons',
       ...moved,
     ]);
     d.dispose();

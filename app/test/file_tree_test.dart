@@ -63,7 +63,7 @@ main.go +2''');
     // The longest name, whole, with its counts after it.
     expect(
       find.text(
-        'rolling_parcels_weight_grams_calculator.rb  +120 −48',
+        'pick_driest_bed_by_soil_moisture_reading.rb  +120 −48',
         findRichText: true,
       ),
       findsOneWidget,
@@ -127,11 +127,11 @@ main.go +2''');
   }
 }
 
-const _deep = 'app/lib/features/consignment/rolling_parcels';
+const _deep = 'lib/garden/plots/irrigation/sprinklers';
 const _long = [
-  '$_deep/rolling_parcels_weight_grams_calculator.rb',
+  '$_deep/pick_driest_bed_by_soil_moisture_reading.rb',
   '$_deep/short.rb',
-  'spec/rolling_parcels_spec.rb',
+  'spec/sprinkler_zones_spec.rb',
   'README.md',
 ];
 

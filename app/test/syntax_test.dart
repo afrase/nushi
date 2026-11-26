@@ -72,33 +72,33 @@ void main() {
   test('Ruby', () async {
     expect(
       await runs('ruby', '''
-# @return [Integer] the result
-class Parcel < Base
-  def rolling_parcels_weight_grams(a, b = 2)
-    @total = rolling_parcel_weight_ounces + self.tare(:kg) + @@count
-    puts "#{a} grams", 42, nil, LIMIT
+# @param beds [Array<Bed>] every bed on the plot
+class Sprinkler < Base
+  def driest_bed(beds)
+    @next = beds.min_by(&:moisture) || self.nearest(:shed) || @@spare
+    puts "#{beds.size} beds", 12, nil, NOZZLES
   end
 end'''),
       [
         '# : comment',
-        '@return: docTag',
-        ' [Integer] the result: comment',
+        '@param: docTag',
+        ' beds [Array<Bed>] every bed on the plot: comment',
         'class: keyword',
-        'Parcel: declaration',
+        'Sprinkler: declaration',
         'Base: type',
         'def: keyword',
-        'rolling_parcels_weight_grams: declaration',
-        'a, b = : parameter',
-        '2: number',
-        '@total: field',
+        'driest_bed: declaration',
+        'beds: parameter',
+        '@next: field',
+        ':moisture: symbol',
         'self: keyword',
-        ':kg: symbol',
-        '@@count: field',
+        ':shed: symbol',
+        '@@spare: field',
         '": string',
-        ' grams": string',
-        '42: number',
+        ' beds": string',
+        '12: number',
         'nil: keyword',
-        'LIMIT: constant',
+        'NOZZLES: constant',
         'end: keyword',
         'end: keyword',
       ],
@@ -108,18 +108,18 @@ end'''),
   test('Go', () async {
     expect(
       await runs('go', '''
-// Sum adds.
-func (l *Parcel) Sum(a int) error {
-	x := 42 + len("b")
+// Soak waters one bed.
+func (s *Sprinkler) Soak(bed int) error {
+	x := 12 + len("b")
 	return nil
 }'''),
       [
-        '// Sum adds.: comment',
+        '// Soak waters one bed.: comment',
         'func: keyword',
-        '(l *Parcel): parameter',
+        '(s *Sprinkler): parameter',
         'int: type',
         'error: type',
-        '42: number',
+        '12: number',
         'len: keyword',
         '"b": string',
         'return: keyword',
@@ -131,25 +131,25 @@ func (l *Parcel) Sum(a int) error {
   test('Dart', () async {
     expect(
       await runs('dart', r'''
-/// Sums [a].
-class Parcel extends Base {
+/// Soaks [bed].
+class Sprinkler extends Base {
   @override
-  int sum(int a) => this.x + 42;
-  final s = 'hi $a';
+  int soak(int bed) => this.x + 12;
+  final s = 'bed $bed';
 }'''),
       [
-        '/// Sums [a].: comment',
+        '/// Soaks [bed].: comment',
         'class: keyword',
-        'Parcel: declaration',
+        'Sprinkler: declaration',
         'extends: keyword',
         'Base: declaration',
         '@override: meta',
         'int: keyword',
         'int: keyword',
         'this: keyword',
-        '42: number',
+        '12: number',
         'final: keyword',
-        "'hi : string",
+        "'bed : string",
         "': string",
       ],
     );
@@ -158,30 +158,30 @@ class Parcel extends Base {
   test('TypeScript', () async {
     expect(
       await runs('typescript', r'''
-/** @param a the weight */
-export class Parcel extends Base {
-  total = 42;
-  sum(a: number): string {
-    return `${a} grams` + /x+/g;
+/** @param bed which one to soak */
+export class Sprinkler extends Base {
+  minutes = 12;
+  soak(bed: number): string {
+    return `${bed} is soaked` + /x+/g;
   }
 }'''),
       [
         '/** : comment',
         '@param: docTag',
-        ' a the weight */: comment',
+        ' bed which one to soak */: comment',
         'export: keyword',
         'class: keyword',
-        'Parcel: declaration',
+        'Sprinkler: declaration',
         'extends: keyword',
         'Base: type',
-        '42: number',
-        'sum: declaration',
-        'a: field',
+        '12: number',
+        'soak: declaration',
+        'bed: field',
         'number: keyword',
         'string: keyword',
         'return: keyword',
         '`: string',
-        ' grams`: string',
+        ' is soaked`: string',
         '/x+/g: regexp',
       ],
     );

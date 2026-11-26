@@ -31,7 +31,7 @@ List<ReviewFinding> _read(String body) {
 const _zoneReview = '''
 ## Outline
 
-Second pass, on 7d1e3aa and 0b5e9c4. The site record carries its zone now, and the CSV writer asks for it row by row.
+Each site keeps its zone on its record now, and the CSV writer looks it up for every row.
 
 ## Key findings
 
