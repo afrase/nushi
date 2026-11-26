@@ -2,6 +2,8 @@
 
 Status: accepted, 2026-11-20 (#64). Amends 0026.
 
+Amended 2026-11-26: find in a chat reads newest first. Typing makes the newest match current (the last one loaded, or with none loaded the nearest above, loading nothing), ⏎ goes to the next older one and ⇧⏎ to the next newer, round both ways, and the count reads from the newest ("1 of 12", a floor's "1 of 12+"). A chat is read from its end, and what you look for was most often just said: from the first match loaded, typing jumped screens up the chat past the match just written. The bar's ↑ and ↓ still go up and down the chat; their tooltips say Older match and Newer match. It's the find's own order (`FindOrder.newestFirst`, set by `ChatFind`), so a file, a diff, a preview, a page and Changes keep theirs; a terminal's find reads newest first too (`TerminalFind`), a terminal being read from its end as a chat is: it opened on the latest match, but ⏎ went down and wrapped to the oldest line of the scrollback. Below, "the first match loaded" is now the newest; a match the agent's new text brings while the bar is open still leaves the current one on its match, though its number may change. Wrapping now loads most of a long chat from the newest with ⇧⏎, not ⏎.
+
 Amended 2026-11-24: a tool call's input and raw output count where the app shows them (`findText` copies its `showsInput` and `showsRawOutput`), so what drifts is the title and Markdown below, and an MCP call's input whose `{server, tool, arguments}` wrapper (Codex's) the app drops to show the arguments alone (`shownInput`), which the daemon counts whole.
 
 ## Context

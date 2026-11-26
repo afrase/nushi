@@ -22,11 +22,12 @@ typedef AskAbove = Future<FindInChatResponse?> Function(
 /// is a hit keyed `far <item> <n>`, before the matches the transcript
 /// finds in what's loaded. A step to one asks the transcript to load up to
 /// its item ([pending]); once it's in and laid out, the step lands on that
-/// item's own matches there. Typing goes to the first match loaded (the
-/// nearest above with none), loading nothing; the first step from that
-/// nearest one, either way, shows it.
+/// item's own matches there. It reads newest first ([FindOrder.newestFirst]):
+/// typing goes to the newest match loaded (the nearest above with none),
+/// loading nothing, and ⏎ goes older; the first step from that nearest
+/// one, either way, shows it.
 class ChatFind extends Find {
-  new(this._chat);
+  new(this._chat) : super(order: .newestFirst);
 
   final ChatState _chat;
 
@@ -49,6 +50,7 @@ class ChatFind extends Find {
   String _next = '';
   CancelableSignal? _asking;
   bool _typed = false; // no step since the query changed
+  bool _fresh = false; // the transcript hasn't found the query's yet
   int _stepAsk = -1;
 
   /// Something is looked for, or about to be (typed, in its pause): the
@@ -111,6 +113,9 @@ class ChatFind extends Find {
   /// Looks for [q] now.
   void _look(String? q) {
     _typed = true;
+    // The transcript looks case aside: a change of case alone finds what
+    // it found, and no new finding comes to settle on the newest.
+    _fresh = q?.toLowerCase() != query?.toLowerCase();
     _pending = null;
     super.query = q;
     _askAbove(now: true);
@@ -200,13 +205,14 @@ class ChatFind extends Find {
     _near = hits;
     _laid = laid;
     _merge();
+    _fresh = false;
   }
 
   @override
   void step(int by) {
     if (_typing != null) {
       // ⏎ before the pause is over: what's typed is looked for now, which
-      // goes to its first match.
+      // goes to its newest match.
       _typing!.cancel();
       _typing = null;
       _look(_next);
@@ -227,7 +233,10 @@ class ChatFind extends Find {
 
   /// The hits: the far ones whose items aren't laid out (not loaded, or
   /// loaded and not yet built), then the loaded ones. A pending step lands
-  /// once its item is laid out.
+  /// once its item is laid out. What's typed goes to the newest, as the
+  /// transcript first finds it (or, with nothing current, as the daemon
+  /// answers); after that the current one stays on its match, whatever
+  /// the agent's new text brings after it.
   void _merge() {
     final all = _Hits([
       for (final m in _far)
@@ -247,8 +256,8 @@ class ChatFind extends Find {
     final was = current;
     final int i;
     final wasAt = was == null ? -1 : all.indexOf(was);
-    if (_typed) {
-      i = _near.isNotEmpty ? far : all.length - 1;
+    if (_typed && (_fresh || wasAt < 0)) {
+      i = all.length - 1;
     } else if (wasAt >= 0) {
       i = wasAt;
     } else {

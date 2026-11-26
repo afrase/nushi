@@ -2,10 +2,12 @@ import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/terminals.dart';
+import 'package:nushi/transcript_find.dart';
 import 'package:xterm2/xterm.dart' show TerminalView;
 
 import 'fake_daemon.dart' show FakeDaemon, loadFonts;
@@ -98,8 +100,9 @@ void main() {
     expect(hidden, isTrue);
   });
 
-  testWidgets('⌘F in a terminal starts at the latest match; ⏎ goes down '
-      '(round to the first), ⇧⏎ up', (tester) async {
+  testWidgets('⌘F in a terminal reads newest first, as a chat: the latest '
+      'match is 1, ⏎ goes up to older output (round to the latest), ⇧⏎ '
+      'down', (tester) async {
     final (fake, shells) = _daemon(replay: 'one x\r\ntwo x\r\nthree x\r\n\$ ');
     final terms = Terminals(NushiServiceClient(fake));
     await _panel(tester, terms);
@@ -107,7 +110,21 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'x');
     await tester.pump();
-    expect(find.text('3 of 3'), findsOne);
+    expect(find.text('1 of 3'), findsOne, reason: 'the latest, counted 1');
+    // The arrows go up and down the scrollback, their words the chat's.
+    Finder arrow(IconData icon) =>
+        find.descendant(of: find.byType(FindBar), matching: find.byIcon(icon));
+    final (up, down) = (
+      arrow(Icons.keyboard_arrow_up),
+      arrow(Icons.keyboard_arrow_down),
+    );
+    String tip(Finder arrow) => tester
+        .widget<IconTap>(
+          find.ancestor(of: arrow, matching: find.byType(IconTap)).first,
+        )
+        .tooltip;
+    expect(tip(up), 'Older match\u2002⏎');
+    expect(tip(down), 'Newer match\u2002⇧⏎');
     for (final w in [1700.0, 720.0]) {
       viewport(tester, Size(w, 500));
       await tester.pumpAndSettle();
@@ -117,14 +134,21 @@ void main() {
         'terminal_find_${w.toInt()}',
       );
     }
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.pump();
-    expect(find.text('1 of 3'), findsOne);
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.pump();
-    expect(find.text('2 of 3'), findsOne);
+    for (final count in ['2 of 3', '3 of 3', '1 of 3']) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(find.text(count), findsOne, reason: '⏎ goes older, round');
+    }
     await press(tester, LogicalKeyboardKey.enter, shift: true, settle: false);
-    expect(find.text('1 of 3'), findsOne);
+    expect(find.text('3 of 3'), findsOne, reason: '⇧⏎ from the latest, round');
+    await press(tester, LogicalKeyboardKey.enter, shift: true, settle: false);
+    expect(find.text('2 of 3'), findsOne, reason: '⇧⏎ goes newer');
+    await tester.tap(up);
+    await tester.pump();
+    expect(find.text('3 of 3'), findsOne, reason: 'the up arrow goes up');
+    await tester.tap(down);
+    await tester.pump();
+    expect(find.text('2 of 3'), findsOne, reason: 'the down arrow goes down');
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
     expect(find.byType(TextField), findsNothing);

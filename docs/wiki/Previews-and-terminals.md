@@ -111,7 +111,7 @@ While you're editing, **Cut** and **Paste** are there too. Copy, Cut and Quote i
 
 ## Find in a file
 
-Press ⌘F with a file in the Files pane to find text in it, the same way you find in the chat. Click in the file first: ⌘F finds in whatever has the focus, so with the message box focused it finds in the chat.
+Press ⌘F with a file in the Files pane to find text in it, the same way you find in the chat, but from the top down. Click in the file first: ⌘F finds in whatever has the focus, so with the message box focused it finds in the chat.
 
 1. Click in the file, then press ⌘F. The find bar opens at the file's top right.
 2. Type. Every match is marked, the current one in the accent, and the bar counts them ("2 of 7", or "None").
@@ -161,7 +161,7 @@ In the chat, your message shows each command it carried as a card with its exit.
 
 ## Good to know
 
-- ⌥⌘1 to ⌥⌘9 switch between terminals, and ⌘F searches a terminal's scrollback. On Linux, use Alt+1 to Alt+9 and Ctrl+Shift+F.
+- ⌥⌘1 to ⌥⌘9 switch between terminals, and ⌘F searches a terminal's scrollback. On Linux, use Alt+1 to Alt+9 and Ctrl+Shift+F. As in the chat, it starts at the latest match ("1 of 5"): ⏎ goes up to older output and ⇧⏎ back down.
 - Restarting the daemon closes your terminals. Archiving or deleting a chat also closes its terminals.
 - On Linux, HTML pages, SVG, PDFs and browser tabs show a placeholder with an **Open in** button for your default browser. Mermaid diagrams show as source, in files and in messages.
 - Some files are read-only in the Files pane, for example files over 1 MB or files you don't have permission to write. The reason shows above the text.

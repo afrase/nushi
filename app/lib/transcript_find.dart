@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,10 +22,39 @@ FindColors findColors(Tokens t) => (
   edge: t.accent,
 );
 
+/// Which way a find reads its matches: where ⏎ goes and what its count
+/// counts from. Its hits are in the text's order, top to bottom, either
+/// way, and its bar's ↑ and ↓ go up and down the text.
+enum FindOrder {
+  /// From the top down, as a file, a diff, a page and Changes are read: ⏎
+  /// the next match below, the first one counted 1.
+  topDown,
+
+  /// From the newest up, as a chat is read from its end (ADR 0144): ⏎ the
+  /// next older match, above, the last one counted 1, since what is looked
+  /// for was most often just said.
+  newestFirst;
+
+  /// The step ⏎ takes through the hits: 1 down the text, -1 up it.
+  int get onward => this == topDown ? 1 : -1;
+
+  /// Hit [at]'s number among [of], counted from where it reads from.
+  int number(int at, int of) => this == topDown ? at + 1 : of - at;
+
+  /// Where it starts among [of] hits: the first, or the newest (the last).
+  int start(int of) => this == topDown ? 0 : max(0, of - 1);
+}
+
 /// ⌘F in a chat's transcript: what's looked for (null: the bar is closed),
 /// its matches as the transcript last laid them out ([TextMark.key]: each
 /// match in a text, each in what a row folds away) and which one is current.
 class Find extends ChangeNotifier {
+  /// A find reading in [order]; top down unless its maker says.
+  new({this.order = FindOrder.topDown});
+
+  /// Which way it reads: ⏎'s way through the hits and the count's start.
+  final FindOrder order;
+
   String? _query;
   List<String> _hits = const [];
   int _at = 0;
@@ -52,7 +83,7 @@ class Find extends ChangeNotifier {
       ? ''
       : _hits.isEmpty
       ? 'None'
-      : '${_at + 1} of ${_hits.length}';
+      : '${order.number(_at, _hits.length)} of ${_hits.length}';
 
   /// Opens the bar (or takes the focus back to it).
   void open() {
@@ -71,7 +102,9 @@ class Find extends ChangeNotifier {
   set query(String? q) {
     if (q == _query) return;
     _query = q;
-    _at = 0;
+    // Where it reads from, before anyone hears: a chat's find told with
+    // its oldest hit current would take the view up the chat.
+    _at = order.start(_hits.length);
     _asked++;
     notifyListeners();
   }
@@ -82,7 +115,7 @@ class Find extends ChangeNotifier {
     final was = current;
     _hits = hits;
     final i = was == null ? -1 : hits.indexOf(was);
-    _at = i >= 0 ? i : 0;
+    _at = i >= 0 ? i : order.start(hits.length);
     notifyListeners();
   }
 
@@ -98,7 +131,8 @@ class Find extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// The next hit ([by] 1) or the one before (-1), round.
+  /// The next hit down the text ([by] 1) or the one above it (-1), round;
+  /// ⏎ goes [FindOrder.onward].
   void step(int by) {
     if (_hits.isEmpty) return;
     _at = (_at + by) % _hits.length;
@@ -198,13 +232,15 @@ class FoundCount extends StatelessWidget {
   }
 }
 
-/// ⇧⏎: the match before.
-const _previousKey = SingleActivator(LogicalKeyboardKey.enter, shift: true);
+/// ⇧⏎: the match the other way from ⏎'s.
+const _backKey = SingleActivator(LogicalKeyboardKey.enter, shift: true);
 
-/// The find bar over the transcript: the field, "2 of 7", ↑ and ↓ (or ⏎
-/// and ⇧⏎), and × (or Esc) to close. Given [loadAll] (a chat with more
-/// before what it has loaded), a line under them says the find looks in
-/// what's loaded, and Load all takes the rest ([loading] while it comes).
+/// The find bar over the transcript: the field, "2 of 7", ↑ and ↓ (up and
+/// down the text, whichever way the find reads), ⏎ onward in its order
+/// ([FindOrder.onward]) and ⇧⏎ back, and × (or Esc) to close. Given
+/// [loadAll] (a chat with more before what it has loaded), a line under
+/// them says the find looks in what's loaded, and Load all takes the rest
+/// ([loading] while it comes).
 class FindBar extends StatefulWidget {
   const new(
     this.find, {
@@ -249,6 +285,18 @@ class _FindBarState extends State<FindBar> {
       listenable: f,
       builder: (context, _) {
         final all = widget.loadAll;
+        final on = f.order.onward;
+        final (enter, back) = (enterLabel, keyLabel(_backKey));
+        final (up, down) = switch (f.order) {
+          FindOrder.topDown => (
+            withKey('Previous', back),
+            withKey('Next', enter),
+          ),
+          FindOrder.newestFirst => (
+            withKey('Older match', enter),
+            withKey('Newer match', back),
+          ),
+        };
         final row = Row(
           children: [
             Icon(Icons.search, size: 14, color: t.textMuted),
@@ -258,12 +306,8 @@ class _FindBarState extends State<FindBar> {
                 bindings: {
                   const SingleActivator(LogicalKeyboardKey.escape): f.close,
                   const SingleActivator(LogicalKeyboardKey.enter): () =>
-                      f.step(1),
-                  const SingleActivator(
-                    LogicalKeyboardKey.enter,
-                    shift: true,
-                  ): () =>
-                      f.step(-1),
+                      f.step(on),
+                  _backKey: () => f.step(-on),
                   const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
                       f.step(1),
                   const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
@@ -290,12 +334,12 @@ class _FindBarState extends State<FindBar> {
             Text(f.count, style: theme.ui(t.textMuted, size: 12)),
             IconTap(
               Icons.keyboard_arrow_up,
-              tooltip: withKey('Previous', keyLabel(_previousKey)),
+              tooltip: up,
               onTap: f.canStep ? () => f.step(-1) : null,
             ),
             IconTap(
               Icons.keyboard_arrow_down,
-              tooltip: withKey('Next', enterLabel),
+              tooltip: down,
               onTap: f.canStep ? () => f.step(1) : null,
             ),
             IconTap(

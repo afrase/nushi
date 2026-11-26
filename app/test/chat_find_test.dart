@@ -1,21 +1,25 @@
 // ChatFind on its own (ADR 0144): the daemon's counts of the matches
-// above what's loaded, the transcript's matches as laid out, and where a
-// step lands once a far match's part is in.
+// above what's loaded, the transcript's matches as laid out, where a step
+// lands once a far match's part is in, and its order: newest first.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_find.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/transcript_find.dart';
 
 /// A chat whose loaded part is items l1 and l2, with 100 items above, and
 /// its find, whose daemon answers [far], and the entries laid out (an
 /// item's id to its entry's key), which go with what's found.
-(ChatFind, Map<String, String>) _find(List<ChatMatch> far) {
+(ChatFind, Map<String, String>) _find(
+  List<ChatMatch> far, {
+  bool more = false,
+}) {
   final chat = ChatState('c', '/x')
     ..older = 100
     ..items.addAll([Item(id: 'l1'), Item(id: 'l2')]);
   final laid = <String, String>{'l1': 'l1', 'l2': 'l2'};
   final f = chat.find
-    ..ask = (r, signal) async => FindInChatResponse(matches: far);
+    ..ask = (r, signal) async => FindInChatResponse(matches: far, more: more);
   return (f, laid);
 }
 
@@ -29,6 +33,100 @@ Future<void> _type(WidgetTester tester, ChatFind f, String q) async {
 }
 
 void main() {
+  testWidgets('a chat reads newest first: typing makes the newest match '
+      'current, counted 1, and the count goes up as the steps go older', (
+    tester,
+  ) async {
+    final (f, laid) = _find([ChatMatch(itemId: 'c1', count: 1)]);
+    expect(f.order, FindOrder.newestFirst);
+    await _type(tester, f, 'needle');
+    f.found(['l1 0', 'l2 0', 'l2 1'], laid: {...laid});
+    expect(f.hits, ['far c1 0', 'l1 0', 'l2 0', 'l2 1']);
+    expect(f.current, 'l2 1', reason: 'the newest, not the first loaded');
+    expect(f.count, '1 of 4');
+    f.step(f.order.onward);
+    expect((f.current, f.count), ('l2 0', '2 of 4'));
+    f.step(f.order.onward);
+    expect((f.current, f.count), ('l1 0', '3 of 4'));
+    f.step(f.order.onward);
+    expect((f.current, f.count), ('far c1 0', '4 of 4'));
+    expect(f.pending, 'far c1 0', reason: 'older than what is loaded: loads');
+    f.step(f.order.onward);
+    expect((f.current, f.count), ('l2 1', '1 of 4'), reason: 'round');
+    f.step(-f.order.onward);
+    expect((f.current, f.count), ('far c1 0', '4 of 4'), reason: 'round');
+  });
+
+  testWidgets('where the daemon’s count is a floor, the newest is still 1', (
+    tester,
+  ) async {
+    final (f, laid) = _find([ChatMatch(itemId: 'c1', count: 3)], more: true);
+    await _type(tester, f, 'needle');
+    f.found(['l1 0', 'l2 0'], laid: {...laid});
+    expect(f.current, 'l2 0');
+    expect(f.count, '1 of 5+');
+  });
+
+  testWidgets('the daemon answering after the transcript keeps the newest '
+      'match current; with none loaded, the nearest above is', (tester) async {
+    final (f, laid) = _find([ChatMatch(itemId: 'c1', count: 2)]);
+    f
+      ..open()
+      ..query = 'needle';
+    await tester.pump(ChatFind.pause);
+    f.found(['l1 0'], laid: {...laid}); // before the daemon has answered
+    expect(f.current, 'l1 0');
+    await tester.pump();
+    expect(f.hits, ['far c1 0', 'far c1 1', 'l1 0']);
+    expect((f.current, f.count), ('l1 0', '1 of 3'));
+
+    f.query = 'thread';
+    await tester.pump(ChatFind.pause);
+    f.found(const []); // nothing loaded has it, the daemon not yet heard
+    await tester.pump();
+    expect((f.current, f.count), ('far c1 1', '1 of 2'));
+  });
+
+  testWidgets('a match the agent’s new text brings at the end leaves the '
+      'current one on its match; its number moves', (tester) async {
+    final (f, laid) = _find(const []);
+    await _type(tester, f, 'needle');
+    f.found(['l1 0', 'l2 0'], laid: {...laid});
+    expect((f.current, f.count), ('l2 0', '1 of 2'));
+    f.found(['l1 0', 'l2 0', 'l2 1'], laid: {...laid});
+    expect((f.current, f.count), ('l2 0', '2 of 3'));
+    final ask = f.asked;
+    f.found(['l1 0', 'l2 0', 'l2 1', 'l3 0'], laid: {...laid, 'l3': 'l3'});
+    expect(f.current, 'l2 0');
+    expect(f.asked, ask, reason: 'not brought into view again');
+  });
+
+  testWidgets('a query changed while it has matches never tells of the '
+      'oldest as current; by its case alone, new matches leave it put', (
+    tester,
+  ) async {
+    final (f, laid) = _find(const []);
+    await _type(tester, f, 'needle');
+    f.found(['l1 0', 'l2 0'], laid: {...laid});
+    expect(f.current, 'l2 0');
+    final told = <String?>[];
+    f.addListener(() => told.add(f.current));
+    f.query = 'Needle'; // the transcript finds the same, case aside
+    await tester.pump(ChatFind.pause);
+    await tester.pump();
+    expect(told, isNotEmpty);
+    expect(told, everyElement('l2 0'), reason: 'never the oldest');
+    f.found(['l1 0', 'l2 0', 'l2 1'], laid: {...laid}); // the agent's text
+    expect((f.current, f.count), ('l2 0', '2 of 3'));
+    told.clear();
+    f.query = 'needl';
+    await tester.pump(ChatFind.pause);
+    await tester.pump();
+    expect(told, isNot(contains('l1 0')), reason: 'a letter fewer');
+    f.found(['l1 0', 'l2 0', 'l2 1'], laid: {...laid});
+    expect(f.current, 'l2 1', reason: 'typed: the newest');
+  });
+
   testWidgets('a step to the second of a run of calls above lands on that '
       'call’s match, not the run’s first', (tester) async {
     final (f, laid) = _find([
@@ -98,7 +196,7 @@ void main() {
       ]);
       await _type(tester, f, 'needle');
       f.found(const []);
-      expect(f.count, '3 of 3');
+      expect(f.count, '1 of 3', reason: 'the newest');
       expect(f.current, 'far c 0');
       f.step(by);
       expect(f.current, 'far c 0', reason: 'not moved off unseen');
@@ -129,8 +227,12 @@ void main() {
     took.stop();
     expect(took.elapsed, lessThan(const Duration(seconds: 3)));
     expect(f.hits, hasLength(10000003));
-    expect(f.count, '10000001 of 10000003');
-    f.step(-1);
+    // The newest as typed, kept as the reply's matches came after it.
+    expect(f.current, 'l2 1');
+    expect(f.count, '2 of 10000003');
+    f
+      ..step(-1)
+      ..step(-1);
     expect(f.current, 'far i4999 1999');
     expect(f.pending, 'far i4999 1999');
   });

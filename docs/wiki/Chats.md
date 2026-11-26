@@ -318,8 +318,8 @@ The button is greyed out while the agent works or waits on you; it works once th
 Press ⌘F in a chat to find text in it, all of it, even the part of a long chat you haven't scrolled up to yet.
 
 1. Press **⌘F**. The find bar opens at the chat's top right.
-2. Type. The bar counts the matches in the whole chat ("2 of 9").
-3. Press ⏎ (or ↓) for the next match, ⇧⏎ (or ↑) for the one before. Past the last it goes round to the first.
+2. Type. It goes to the newest match, the one nearest the end, and counts the matches in the whole chat from there ("1 of 9").
+3. Press ⏎ (or ↑) for the next older match, ⇧⏎ (or ↓) for the next newer one. Past the oldest it goes round to the newest.
 4. Press **Esc** to close it.
 
 A match further up than what's loaded takes a moment: Nushi loads that part of the chat and goes to it. It finds in what the chat shows (messages, thoughts, tool rows and their output), not in diffs, plans or images, and ignores case.

@@ -7,10 +7,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_find.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_find.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/preview_find.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/transcript_find.dart';
 
@@ -89,9 +91,10 @@ void main() {
     );
     await tester.pump(ChatFind.pause); // typing pauses, then it looks
     await tester.pumpAndSettle();
+    // The newest match first, counted 1: a chat is read from its end.
     expect(find.text('1 of 2'), findsOne);
     expect(_marks(tester), hasLength(2));
-    expect(chat.find.current, 'u1 0');
+    expect(chat.find.current, 'a2 0');
     for (final (mode, name) in [
       (Brightness.dark, 'dark'),
       (Brightness.light, 'light'),
@@ -102,10 +105,15 @@ void main() {
     }
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
-    expect(find.text('2 of 2'), findsOne);
-    expect(chat.find.current, 'a2 0');
-    await press(tester, LogicalKeyboardKey.enter, shift: true);
+    expect(find.text('2 of 2'), findsOne, reason: '⏎ goes older');
     expect(chat.find.current, 'u1 0');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(chat.find.current, 'a2 0', reason: 'from the oldest, round');
+    await press(tester, LogicalKeyboardKey.enter, shift: true);
+    expect(chat.find.current, 'u1 0', reason: '⇧⏎ from the newest, round');
+    await press(tester, LogicalKeyboardKey.enter, shift: true);
+    expect(chat.find.current, 'a2 0', reason: '⇧⏎ goes newer');
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(find.byType(FindBar), findsNothing);
@@ -182,6 +190,63 @@ void main() {
     expect(find_.files, (2, 2));
     d.dispose();
   }, variant: onMac);
+
+  testWidgets("the bar's arrows keep their directions on screen; their "
+      'words and ⏎ follow the order the find reads in', (tester) async {
+    for (final (f, up, down, enter) in [
+      (Find(), 'Previous\u2002⇧⏎', 'Next\u2002⏎', 1),
+      (ChangesFind(), 'Previous\u2002⇧⏎', 'Next\u2002⏎', 1),
+      (
+        ChatState('c', '/x').find,
+        'Older match\u2002⏎',
+        'Newer match\u2002⇧⏎',
+        -1,
+      ),
+    ]) {
+      f
+        ..open()
+        ..found(const ['a', 'b', 'c'])
+        ..step(1);
+      await tester.pumpWidget(themed(FindBar(f)));
+      await tester.pump();
+      final arrowUp = find.byIcon(Icons.keyboard_arrow_up);
+      final arrowDown = find.byIcon(Icons.keyboard_arrow_down);
+      // Each arrow's own words: swapped, they'd still both be in the bar.
+      String tip(Finder arrow) => tester
+          .widget<IconTap>(
+            find.ancestor(of: arrow, matching: find.byType(IconTap)).first,
+          )
+          .tooltip;
+      expect(tip(arrowUp), up, reason: '${f.runtimeType}: the up arrow');
+      expect(tip(arrowDown), down, reason: '${f.runtimeType}: the down arrow');
+      expect(
+        tester.getCenter(arrowUp).dx,
+        lessThan(tester.getCenter(arrowDown).dx),
+      );
+      await tester.tap(arrowUp);
+      expect(f.at, 0, reason: 'up the text');
+      await tester.tap(arrowDown);
+      expect(f.at, 1, reason: 'down the text');
+      f.focus.requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      expect(f.at, 1 + enter);
+      await press(tester, LogicalKeyboardKey.enter, shift: true);
+      expect(f.at, 1);
+      f.close();
+    }
+  }, variant: onMac);
+
+  test('only a transcript’s find reads newest first', () {
+    expect(ChatState('c', '/x').find.order, FindOrder.newestFirst);
+    for (final f in [Find(), ChangesFind(), PreviewFind()]) {
+      expect(f.order, FindOrder.topDown, reason: '${f.runtimeType}');
+    }
+    final f = Find()
+      ..query = 'a'
+      ..found(const ['a', 'b', 'c']);
+    expect(f.count, '1 of 3', reason: 'counted from the top');
+  });
 
   test('a diff is found through top to bottom, an unchanged line once', () {
     final diff = TextDiff.compute(
