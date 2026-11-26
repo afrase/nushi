@@ -38,6 +38,11 @@ type replays struct {
 	fakes []*claudetest.Fake
 	next  int
 	specs []claudeagent.Spec // how the agent started each
+	// started, when set, sees the nth claude (from 1) as it starts, and
+	// waiting each time the replay waits for the Go agent's updates: a
+	// test's hold on what a claude writes (claude_taskwords_test.go).
+	started func(n int, p *claudeagent.Proc)
+	waiting func()
 }
 
 // readReplays reads dir's cli.jsonl, cli-2.jsonl and on, as claude-tee
@@ -79,7 +84,11 @@ func (r *replays) Spawn(ctx context.Context, s claudeagent.Spec) (*claudeagent.P
 	}
 	r.next++
 	r.specs = append(r.specs, s)
-	return r.fakes[r.next-1].Spawn(ctx, s)
+	p, err := r.fakes[r.next-1].Spawn(ctx, s)
+	if err == nil && r.started != nil {
+		r.started(r.next, p)
+	}
+	return p, err
 }
 
 // awaiting is closed once one of the claudes' scripts waits for a line
@@ -220,6 +229,9 @@ func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) 
 	// agent never sends it the test fails saying what it waited for, and
 	// goes on, so the chats compared also say how they differ.
 	readUntil := func(what string, done func() bool) {
+		if fake.waiting != nil {
+			fake.waiting()
+		}
 		deadline := time.After(10 * time.Second)
 		for !done() {
 			select {
@@ -569,10 +581,16 @@ func rewrite(t *testing.T, msg string, id json.RawMessage, cwd string) string {
 }
 
 // mark names a session update that marks a point in a session: a tool
-// call's first report or a status of it, a subagent's state, a message;
-// "" for the rest (usage, commands, a call's fields), which the two
-// agents send at points of their own. Its ids are claude's (calls,
-// messages, subagents), the same in a recording and its replay.
+// call's first report or a status of it, a task's word on its call (any
+// status: running and completed too, so every scenario with a task
+// waits on its words; the reason is a stop's "killed" and "stopped",
+// which claude writes before its answer to the stop and the Go agent
+// may pass on after it: the replay waits for them before the client's
+// next line, a close, as the recorder's pause did), a subagent's
+// state, a message; "" for the rest (usage,
+// commands, a call's fields), which the two agents send at points of
+// their own. Its ids are claude's (calls, tasks, messages, subagents),
+// the same in a recording and its replay.
 func mark(params json.RawMessage) string {
 	var p struct {
 		Update struct {
@@ -584,6 +602,14 @@ func mark(params json.RawMessage) string {
 			State     struct {
 				State string `json:"state"`
 			} `json:"state"`
+			Meta struct {
+				ClaudeCode struct {
+					Task struct {
+						ID     string `json:"id"`
+						Status string `json:"status"`
+					} `json:"task"`
+				} `json:"claudeCode"`
+			} `json:"_meta"`
 		} `json:"update"`
 	}
 	if json.Unmarshal(params, &p) != nil {
@@ -596,6 +622,9 @@ func mark(params json.RawMessage) string {
 	case "tool_call_update":
 		if u.Status != "" {
 			return u.Kind + " " + u.ToolCall + " " + u.Status
+		}
+		if task := u.Meta.ClaudeCode.Task; task.ID != "" && task.Status != "" {
+			return "task " + task.ID + " " + task.Status
 		}
 	case "subagent_update":
 		return u.Kind + " " + u.SessionID + " " + u.State.State
