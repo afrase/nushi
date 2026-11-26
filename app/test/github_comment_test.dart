@@ -37,6 +37,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
       Finder link(String text) =>
           find.byWidgetPredicate((w) => w is LinkText && w.text == text);
       final time = find.text('  5m ago');
