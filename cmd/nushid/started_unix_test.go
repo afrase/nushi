@@ -112,7 +112,13 @@ func TestWhatTheDaemonStartsWith(t *testing.T) {
 	zshRC := `export PATH="/rc/bin:$PATH" FROM_RC=yes`
 	// fish_add_path adds a folder once.
 	fishConfig := `case ":$PATH:" in *:/fish/bin:*) ;; *) export PATH="/fish/bin:$PATH" ;; esac`
-	const long, short = time.Minute, 500 * time.Millisecond
+	// short is the cap a shell that hangs is cut at. The shell tried next
+	// must start and print inside the same cap, on a machine running every
+	// other package's tests at once: at 500ms it lost that race under a
+	// full check, so the cap is far above what a start can take there.
+	// The hanging cases wait it out, beside the others.
+	const long, short = time.Minute, 10 * time.Second
+	tookOver := "zsh took over " + short.String()
 	for _, c := range []struct {
 		name, shell, profile, rc string
 		off                      bool          // the launcher sets NUSHI_SHELL_ENV to off
@@ -142,13 +148,13 @@ func TestWhatTheDaemonStartsWith(t *testing.T) {
 			name: "a profile that hangs", shell: "zsh", profile: "sleep 300", timeout: short, hold: long, started: true,
 			daemon:  vars("PATH=/usr/bin:/bin", "LAUNCHER=yes"),
 			agent:   vars("PATH=/usr/bin:/bin", "LAUNCHER=yes"),
-			problem: "zsh took over 500ms",
+			problem: tookOver,
 		},
 		{
 			name: "an rc that hangs", shell: "zsh", profile: "export FROM_PROFILE=yes", rc: "sleep 300", timeout: short, hold: long, started: true,
 			daemon:  vars("PATH=/usr/bin:/bin", "LAUNCHER=yes", "FROM_PROFILE=yes"),
 			agent:   vars("PATH=/usr/bin:/bin", "LAUNCHER=yes", "FROM_PROFILE=yes"),
-			problem: "zsh took over 500ms",
+			problem: tookOver,
 		},
 		{
 			name: "a profile that fails", shell: "zsh", profile: "exit 3", timeout: long, hold: long, started: true,
