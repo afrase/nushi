@@ -778,7 +778,10 @@ type NushiServiceClient interface {
 	// looked at now: its head is recorded, and one that went stays as
 	// "removed". GetDiff and GetFolderStatus read one by its path, against
 	// its base_commit; once it's removed, GetDiff in the chat's folder with
-	// since and commit, while git keeps the commit. ADR 0081. API 99.
+	// since and commit, while git keeps the commit. ADR 0081. API 99. A
+	// workflow's removed record with nothing to show (no commit of its own)
+	// is left out while it is its path's last record, and sent again, in
+	// its place, once a later record is made at its path (API 158).
 	GetRelatedWorktrees(context.Context, *connect.Request[v1.GetRelatedWorktreesRequest]) (*connect.Response[v1.GetRelatedWorktreesResponse], error)
 	// What the Worktrees widget says of some of a chat's related worktrees,
 	// as last looked at: no look, and no filter or hook runs (API 100).
@@ -3371,7 +3374,10 @@ type NushiServiceHandler interface {
 	// looked at now: its head is recorded, and one that went stays as
 	// "removed". GetDiff and GetFolderStatus read one by its path, against
 	// its base_commit; once it's removed, GetDiff in the chat's folder with
-	// since and commit, while git keeps the commit. ADR 0081. API 99.
+	// since and commit, while git keeps the commit. ADR 0081. API 99. A
+	// workflow's removed record with nothing to show (no commit of its own)
+	// is left out while it is its path's last record, and sent again, in
+	// its place, once a later record is made at its path (API 158).
 	GetRelatedWorktrees(context.Context, *connect.Request[v1.GetRelatedWorktreesRequest]) (*connect.Response[v1.GetRelatedWorktreesResponse], error)
 	// What the Worktrees widget says of some of a chat's related worktrees,
 	// as last looked at: no look, and no filter or hook runs (API 100).

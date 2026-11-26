@@ -26,7 +26,9 @@ import "time"
 // the agent counts a subagent's (Claude's totalTokens), 0 when not known;
 // no agent reports a workflow's cost. Written are the files its agents
 // wrote or edited with their file tools, the one changed last first,
-// WorkflowWritten at most (WrittenFile). Stalled says
+// WorkflowWritten at most (WrittenFile). Worktrees are the worktrees
+// Claude gave the run's subagents (WorkflowWorktree), WorkflowWorktrees at
+// most: the daemon's own, never on the wire. Stalled says
 // no file of the run changed for so long (an hour) that it no longer
 // counts as working, though nothing says it ended; any change clears it.
 //
@@ -49,9 +51,21 @@ type Workflow struct {
 	RunningPhases                    []int `json:",omitempty"`
 	RunningCount                     int
 	Summary                          string
-	Tokens                           int64         `json:",omitzero"`
-	Stalled                          bool          `json:",omitzero"`
-	Written                          []WrittenFile `json:",omitempty"`
+	Tokens                           int64              `json:",omitzero"`
+	Stalled                          bool               `json:",omitzero"`
+	Written                          []WrittenFile      `json:",omitempty"`
+	Worktrees                        []WorkflowWorktree `json:",omitempty"`
+}
+
+// WorkflowWorktree is a worktree Claude gave one of a workflow's
+// subagents, as the subagent's .meta.json names it (worktreePath, with
+// spawnedWithWorktree true; docs/facts/claude.md): its path, absolute and
+// cleaned, untrusted text Claude wrote (the sidecar keeps naming it after
+// the worktree is gone), and Since, the time of the subagent's first
+// transcript line (its transcript's time when that line has none).
+type WorkflowWorktree struct {
+	Path  string
+	Since time.Time `json:",omitzero"`
 }
 
 // WrittenFile is a file a workflow's agents wrote or edited: its path as
@@ -91,6 +105,7 @@ const (
 	WorkflowLabel       = 60   // runes
 	WorkflowSummaryText = 2048 // bytes
 	WorkflowWritten     = 1000 // files, as a chat's own list has at most
+	WorkflowWorktrees   = 256  // worktrees, a run's first
 )
 
 // Runs says the workflow runs and counts as the chat's work: running and

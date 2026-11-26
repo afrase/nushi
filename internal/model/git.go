@@ -39,7 +39,7 @@ type AgentWorktree struct {
 }
 
 // RelatedWorktree is a worktree of the chat's repository that one of its
-// subagents worked in. It stays after the worktree goes, as what was last
+// subagents, or of a workflow's, worked in. It stays after the worktree goes, as what was last
 // seen of it. Path and Branch are as git lists them, which an agent can
 // write: they are data.
 type RelatedWorktree struct {
@@ -51,9 +51,14 @@ type RelatedWorktree struct {
 	// diff once the worktree and its branch are gone, while git keeps the
 	// commit.
 	LastHead string `json:",omitempty"`
-	// CallID is the tool call that started the subagent.
+	// CallID is the tool call that has it: the Agent call that started the
+	// subagent, or the Workflow call whose run claimed it, its launch or a
+	// resume of it.
 	CallID string
-	State  RelatedState
+	// RunID is the run id of the workflow whose subagents work in it, when
+	// CallID is a Workflow call; "" for a subagent's (ADR 0081).
+	RunID string `json:",omitempty"`
+	State RelatedState
 	// Merged says git shows LastHead on the chat's branch or its base, and
 	// it has commits of its own. git can't see a squash merge.
 	Merged bool `json:",omitempty"`

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/motion.dart';
+import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// A check drawn [drawn] of the way (0 to 1), at [opacity]: a turn's end,
@@ -127,11 +128,17 @@ bool sparksFor(Duration turnLasted) =>
 /// Motion), a stop mark once stopped, a red mark once it failed, an empty
 /// ring when only planned (a workflow's phase not reached). Any other
 /// state (a workflow that ended unseen) keeps the mark's square empty, so a
-/// row's words end where every other row's do.
+/// row's words end where every other row's do. With [dot], a running one
+/// is the running dot instead (a row with no state words, as the
+/// Worktrees widget's), and its check still draws itself as it finishes:
+/// one widget holds the mark across the change.
 class TaskMark extends StatefulWidget {
-  const new(this.state, {super.key});
+  const new(this.state, {super.key, this.dot = false});
 
   final String state;
+
+  /// Whether a running one shows the running dot rather than nothing.
+  final bool dot;
 
   static const size = 13.0;
 
@@ -156,6 +163,7 @@ class _TaskMarkState extends State<TaskMark>
     final t = NushiTheme.of(context).t;
     const size = TaskMark.size;
     return switch (widget.state) {
+      'running' when widget.dot => const RunningDot(),
       'running' => const SizedBox.square(dimension: size),
       'done' => CustomPaint(
         size: const Size.square(size),

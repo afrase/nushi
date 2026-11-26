@@ -275,6 +275,12 @@ type chat struct {
 	pullsOpen   map[string]pullOpen
 	rewound     bool
 	rewoundTo   string
+	// relatedOwed says a workflow's claim wanted a look the limiter
+	// dropped: the follower asks again at its next read (under mu); gate
+	// is what tells a workflow's files could make a record, without git
+	// (related_gate.go).
+	relatedOwed bool
+	gate        worktreeGate
 	// titled says the agent titled the session while the daemon ran, and
 	// waitedTitle that a turn ended without that title, for naming the
 	// chat's branch (branch.go).

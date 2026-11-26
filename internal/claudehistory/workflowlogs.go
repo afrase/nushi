@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"time"
 
 	"github.com/afrase/nushi/internal/regularfile"
 )
@@ -19,7 +20,8 @@ import (
 // own total stands; the files are read to the end once more.
 
 // agentLog is what was read of one agent's transcript, read as it grows
-// (lines): its last message's tokens and the files it wrote. final says
+// (lines): its last message's tokens, the files it wrote, and the
+// worktree Claude gave it (its sidecar's). final says
 // it was read after its agent ended: nothing more comes.
 type agentLog struct {
 	lines
@@ -28,6 +30,13 @@ type agentLog struct {
 	read   int64 // the bytes read of it in all
 	files  agentFiles
 	file   os.FileInfo // the file read last: another in its place is read anew
+	// begun says its first line was read, since is that line's time, and
+	// worktree the worktree its sidecar names (workflowworktrees.go);
+	// metaRead says the sidecar is read no more.
+	begun    bool
+	since    time.Time
+	worktree string
+	metaRead bool
 }
 
 // readLog reads what the transcript (f, as fi) added since the last; one
@@ -49,6 +58,13 @@ func (a *agentLog) readLog(f io.ReaderAt, fi os.FileInfo) error {
 // when it has any, is the agent's tokens now; its file tools' calls and
 // their results are the files it wrote.
 func (a *agentLog) line(line []byte) {
+	if !a.begun {
+		var first struct {
+			Timestamp string `json:"timestamp"`
+		}
+		_ = json.Unmarshal(line, &first) // none: the transcript's time
+		a.begin(first.Timestamp)
+	}
 	usage, tools := bytes.Contains(line, []byte(`"usage"`)), bytes.Contains(line, []byte(`"tool_`))
 	if !usage && !tools {
 		return // a line of text only
@@ -110,6 +126,7 @@ func (r *run) readLogs(root *os.Root, dir string, due, ending bool) {
 		}
 		_ = a.readLog(f, fi) // what was read stands; the next read goes on
 		_ = f.Close()
+		a.worktreeOf(root, dir, row.AgentID, !running)
 		if a.final = !running; a.final {
 			a.files.done()
 		}

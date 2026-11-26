@@ -39,9 +39,12 @@ type ChatRecord struct {
 	// EarlierWorktrees are the worktrees Nushi made for the chat before it
 	// moved out of them, oldest first. They stay until the chat is deleted.
 	EarlierWorktrees []Worktree `json:",omitempty"`
-	// RelatedWorktrees are the worktrees the chat's subagents worked in
-	// (ADR 0081), in the order Nushi found them. Nushi neither made them
-	// nor removes them.
+	// RelatedWorktrees are the worktrees the chat's subagents, or its
+	// workflows' subagents, worked in (ADR 0081), in the order Nushi found
+	// them. Nushi neither made them nor removes them. The list only grows,
+	// but for a workflow's removed record with nothing to show while it is
+	// its path's last: kept, hidden from the app, and forgotten, oldest
+	// first, past 256 such (chats' hidden).
 	RelatedWorktrees []RelatedWorktree `json:",omitempty"`
 	// Throwaway are sessions the agent forked from the chat's that nobody
 	// will see again (side chats, commit messages' forks), until the agent has

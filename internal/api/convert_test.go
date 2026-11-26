@@ -71,3 +71,11 @@ func TestItemProtoWorksIn(t *testing.T) {
 		t.Errorf("another call: %v", w)
 	}
 }
+
+// A related worktree carries its workflow's run id; a subagent's has none.
+func TestRelatedProtoRunID(t *testing.T) {
+	got := relatedProto([]model.RelatedWorktree{{Path: "/repo/wt", CallID: "wf", RunID: "wf_1"}, {Path: "/repo/sub", CallID: "toolu_1"}})
+	if got[0].GetRunId() != "wf_1" || got[0].GetCallId() != "wf" || got[1].GetRunId() != "" {
+		t.Errorf("run ids: %v", got)
+	}
+}

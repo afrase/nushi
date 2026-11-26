@@ -56,8 +56,10 @@ type fakeCheckouts struct {
 	bases      map[string]string
 	merged     []string
 	outside    bool
+	common     string // the common folder Locate says, "/common" when ""
 	lists      int
 	mergeBases int // MergeBase's runs
+	runs       int // every answer's: each is a run of git's
 }
 
 // oid is a commit's id, made up from what it says.
@@ -125,6 +127,7 @@ func (f *fakeCheckouts) remove(path string) {
 func (f *fakeCheckouts) List(ctx context.Context, _ string) ([]model.WorktreeEntry, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.runs++
 	f.lists++
 	if err := f.fails(ctx); err != nil {
 		return nil, err
@@ -135,15 +138,17 @@ func (f *fakeCheckouts) List(ctx context.Context, _ string) ([]model.WorktreeEnt
 func (f *fakeCheckouts) Locate(ctx context.Context, folder string) (string, string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.runs++
 	if err := f.fails(ctx); err != nil {
 		return "", "", err
 	}
-	return "/common", realpath.Of(folder), nil
+	return cmp.Or(f.common, "/common"), realpath.Of(folder), nil
 }
 
 func (f *fakeCheckouts) DefaultTips(context.Context, string) []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.runs++
 	return slices.Clone(f.tips)
 }
 
@@ -152,6 +157,7 @@ func (f *fakeCheckouts) DefaultTips(context.Context, string) []string {
 func (f *fakeCheckouts) MergeBase(ctx context.Context, _, head string, from ...string) (string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.runs++
 	f.mergeBases++
 	if err := f.fails(ctx); err != nil {
 		return "", err
@@ -168,6 +174,7 @@ func (f *fakeCheckouts) MergeBase(ctx context.Context, _, head string, from ...s
 func (f *fakeCheckouts) Merged(ctx context.Context, _, _ string, tips []string) ([]string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.runs++
 	if err := f.fails(ctx); err != nil {
 		return nil, err
 	}
@@ -826,7 +833,7 @@ func TestRelatedFromRecordings(t *testing.T) {
 			p.end()
 			c := p.chats[p.order[0]]
 			c.mu.Lock()
-			steps := c.relatedStepsLocked()
+			steps, _ := c.relatedCallsLocked()
 			c.mu.Unlock()
 			named := map[string]string{}
 			for _, st := range steps {
@@ -840,7 +847,7 @@ func TestRelatedFromRecordings(t *testing.T) {
 				t.Fatalf("worktrees in the steps: %v", named)
 			}
 			for wt, call := range named {
-				if got := whose(wt, folder, steps, nil, nil); got != call {
+				if got := whose(wt, folder, steps, nil, nil, realpath.Of); got != call {
 					t.Errorf("%s is %q's, says whose: %q", wt, call, got)
 				}
 			}

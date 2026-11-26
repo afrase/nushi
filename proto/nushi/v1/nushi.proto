@@ -293,7 +293,10 @@ service NushiService {
   // looked at now: its head is recorded, and one that went stays as
   // "removed". GetDiff and GetFolderStatus read one by its path, against
   // its base_commit; once it's removed, GetDiff in the chat's folder with
-  // since and commit, while git keeps the commit. ADR 0081. API 99.
+  // since and commit, while git keeps the commit. ADR 0081. API 99. A
+  // workflow's removed record with nothing to show (no commit of its own)
+  // is left out while it is its path's last record, and sent again, in
+  // its place, once a later record is made at its path (API 158).
   rpc GetRelatedWorktrees(GetRelatedWorktreesRequest) returns (GetRelatedWorktreesResponse);
 
   // What the Worktrees widget says of some of a chat's related worktrees,
@@ -2100,8 +2103,9 @@ message ChatRelatedWorktrees {
   repeated RelatedWorktree worktrees = 1;
 }
 
-// A worktree of the chat's repository that one of its subagents works in.
-// Paths and branches are as git lists them, which an agent can write.
+// A worktree of the chat's repository that one of its subagents, or of a
+// workflow's, works in. Paths and branches are as git lists them, which an
+// agent can write.
 message RelatedWorktree {
   string path = 1;
   string branch = 2;
@@ -2110,7 +2114,9 @@ message RelatedWorktree {
   string base_commit = 3;
   // Its commit the last time the daemon looked.
   string last_head = 4;
-  // The tool call that started the subagent (Item.id).
+  // The tool call that has it (Item.id): the Agent call that started the
+  // subagent, or the Workflow call whose run claimed it (run_id set): its
+  // launch, or a resume of it.
   string call_id = 5;
   // "present", or "removed" once git no longer lists it.
   string state = 6;
@@ -2122,6 +2128,11 @@ message RelatedWorktree {
   // after it was removed with commits of its own that merged doesn't show
   // (API 135).
   bool pull_merged = 8;
+  // The run id of the workflow whose subagents work in it, when call_id is
+  // a Workflow call; empty for a subagent's (API 158). A resumed run keeps
+  // its id: the client finds the run's state on the latest Workflow item
+  // with it.
+  string run_id = 9;
 }
 
 message GetRelatedWorktreeStatsRequest {
@@ -2133,7 +2144,11 @@ message GetRelatedWorktreeStatsRequest {
 message GetRelatedWorktreeStatsResponse {
   // One for each of the chat's records of a path asked, in the order of
   // its list: a path can have several, a worktree removed and another made
-  // there since (issue #118), and the list only grows.
+  // there since (issue #118). The list only grows, but for a workflow's
+  // removed record with nothing to show, left out while it is its path's
+  // last (GetRelatedWorktrees): a record's place among its path's records
+  // never changes, but for a hidden record forgotten past 256 (ADR 0081),
+  // whose place a later record at its path takes.
   repeated RelatedWorktreeStats stats = 1;
 }
 
@@ -2536,8 +2551,8 @@ message EventsResponse {
     // named it (its show tool, ADR 0068); these events have no seq, and
     // only the Mac's app acts on them (API 95).
     string show = 17;
-    // The chat's related worktrees, all of them, when they changed; these
-    // events have no seq (API 99).
+    // The chat's related worktrees, all of them as GetRelatedWorktrees
+    // sends them, when they changed; these events have no seq (API 99).
     ChatRelatedWorktrees related_worktrees = 18;
     // A folder whose dev servers changed: one started, answered, failed
     // or ended (chat_id is empty; API 109).

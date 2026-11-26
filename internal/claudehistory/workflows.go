@@ -250,7 +250,8 @@ func latest(a, b time.Time) time.Time {
 // summary is w with what was read: while it runs, the journal's phases in
 // the order reached, its counts and who runs, and the phases its script
 // plans that it hasn't reached; once it ended, the snapshot's; and the
-// files its agents wrote, named as the chat in folder names its own.
+// files its agents wrote, named as the chat in folder names its own, and
+// the worktrees Claude gave them.
 func (r *run) summary(w model.Workflow, folder string) model.Workflow {
 	w.Started = cmp.Or(w.Started, r.started)
 	w.Active = r.active
@@ -259,6 +260,7 @@ func (r *run) summary(w model.Workflow, folder string) model.Workflow {
 	w.Agents, w.Done, w.Failed, w.RunningCount = len(rows), 0, 0, 0
 	w.Tokens = r.tokensSum(rows)
 	w.Written = r.written(rows, folder)
+	w.Worktrees = r.worktrees(rows)
 	if s := r.snap; s != nil {
 		return r.ended(w, *s)
 	}

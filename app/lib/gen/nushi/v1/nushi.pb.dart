@@ -13404,8 +13404,9 @@ class ChatRelatedWorktrees extends $pb.GeneratedMessage {
   $pb.PbList<RelatedWorktree> get worktrees => $_getList(0);
 }
 
-/// A worktree of the chat's repository that one of its subagents works in.
-/// Paths and branches are as git lists them, which an agent can write.
+/// A worktree of the chat's repository that one of its subagents, or of a
+/// workflow's, works in. Paths and branches are as git lists them, which an
+/// agent can write.
 class RelatedWorktree extends $pb.GeneratedMessage {
   factory RelatedWorktree({
     $core.String? path,
@@ -13416,6 +13417,7 @@ class RelatedWorktree extends $pb.GeneratedMessage {
     $core.String? state,
     $core.bool? merged,
     $core.bool? pullMerged,
+    $core.String? runId,
   }) {
     final result = RelatedWorktree._();
     if (path != null) result.path = path;
@@ -13426,6 +13428,7 @@ class RelatedWorktree extends $pb.GeneratedMessage {
     if (state != null) result.state = state;
     if (merged != null) result.merged = merged;
     if (pullMerged != null) result.pullMerged = pullMerged;
+    if (runId != null) result.runId = runId;
     return result;
   }
 
@@ -13450,6 +13453,7 @@ class RelatedWorktree extends $pb.GeneratedMessage {
     ..aOS(6, _omitFieldNames ? '' : 'state')
     ..aOB(7, _omitFieldNames ? '' : 'merged')
     ..aOB(8, _omitFieldNames ? '' : 'pullMerged')
+    ..aOS(9, _omitFieldNames ? '' : 'runId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -13513,7 +13517,9 @@ class RelatedWorktree extends $pb.GeneratedMessage {
   @$pb.TagNumber(4)
   void clearLastHead() => $_clearField(4);
 
-  /// The tool call that started the subagent (Item.id).
+  /// The tool call that has it (Item.id): the Agent call that started the
+  /// subagent, or the Workflow call whose run claimed it (run_id set): its
+  /// launch, or a resume of it.
   @$pb.TagNumber(5)
   $core.String get callId => $_getSZ(4);
   @$pb.TagNumber(5)
@@ -13556,6 +13562,19 @@ class RelatedWorktree extends $pb.GeneratedMessage {
   $core.bool hasPullMerged() => $_has(7);
   @$pb.TagNumber(8)
   void clearPullMerged() => $_clearField(8);
+
+  /// The run id of the workflow whose subagents work in it, when call_id is
+  /// a Workflow call; empty for a subagent's (API 158). A resumed run keeps
+  /// its id: the client finds the run's state on the latest Workflow item
+  /// with it.
+  @$pb.TagNumber(9)
+  $core.String get runId => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set runId($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasRunId() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearRunId() => $_clearField(9);
 }
 
 class GetRelatedWorktreeStatsRequest extends $pb.GeneratedMessage {
@@ -13684,7 +13703,11 @@ class GetRelatedWorktreeStatsResponse extends $pb.GeneratedMessage {
 
   /// One for each of the chat's records of a path asked, in the order of
   /// its list: a path can have several, a worktree removed and another made
-  /// there since (issue #118), and the list only grows.
+  /// there since (issue #118). The list only grows, but for a workflow's
+  /// removed record with nothing to show, left out while it is its path's
+  /// last (GetRelatedWorktrees): a record's place among its path's records
+  /// never changes, but for a hidden record forgotten past 256 (ADR 0081),
+  /// whose place a later record at its path takes.
   @$pb.TagNumber(1)
   $pb.PbList<RelatedWorktreeStats> get stats => $_getList(0);
 }
@@ -17388,8 +17411,8 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(17)
   void clearShow() => $_clearField(17);
 
-  /// The chat's related worktrees, all of them, when they changed; these
-  /// events have no seq (API 99).
+  /// The chat's related worktrees, all of them as GetRelatedWorktrees
+  /// sends them, when they changed; these events have no seq (API 99).
   @$pb.TagNumber(18)
   ChatRelatedWorktrees get relatedWorktrees => $_getN(17);
   @$pb.TagNumber(18)
@@ -38050,7 +38073,10 @@ class NushiServiceApi {
   /// looked at now: its head is recorded, and one that went stays as
   /// "removed". GetDiff and GetFolderStatus read one by its path, against
   /// its base_commit; once it's removed, GetDiff in the chat's folder with
-  /// since and commit, while git keeps the commit. ADR 0081. API 99.
+  /// since and commit, while git keeps the commit. ADR 0081. API 99. A
+  /// workflow's removed record with nothing to show (no commit of its own)
+  /// is left out while it is its path's last record, and sent again, in
+  /// its place, once a later record is made at its path (API 158).
   $async.Future<GetRelatedWorktreesResponse> getRelatedWorktrees(
           $pb.ClientContext? ctx, GetRelatedWorktreesRequest request) =>
       _client.invoke<GetRelatedWorktreesResponse>(ctx, 'NushiService',

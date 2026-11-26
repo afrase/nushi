@@ -11,6 +11,7 @@ import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/review.dart';
+import 'package:nushi/status.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/worktrees_widget.dart';
@@ -544,12 +545,20 @@ void main() {
       Finder row(String name) =>
           find.ancestor(of: find.text(name), matching: find.byType(Tap));
       expect(find.text('a'), findsOne);
-      // Its subagent's mark, running; the other has none.
-      final mark = find.descendant(
-        of: row('a'),
-        matching: find.byType(TaskMark),
+      // Its subagent's mark, the running dot (one TaskMark, so its check
+      // draws as it ends); the other, of no call, has none.
+      expect(
+        find.descendant(of: row('a'), matching: find.byType(RunningDot)),
+        findsOne,
       );
-      expect(tester.widget<TaskMark>(mark).state, 'running');
+      expect(
+        tester
+            .widget<TaskMark>(
+              find.descendant(of: row('a'), matching: find.byType(TaskMark)),
+            )
+            .dot,
+        isTrue,
+      );
       expect(
         find.descendant(of: row('b'), matching: find.byType(TaskMark)),
         findsNothing,

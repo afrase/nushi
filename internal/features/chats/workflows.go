@@ -136,12 +136,14 @@ func (c *chat) followWorkflow(callID string, f *follow) {
 			return
 		}
 		sid, folder, w := c.sidFolderLocked(*it)
+		chatFolder, present := c.record.Folder, c.presentRelatedLocked()
 		// The run lives in the claude of the session that launched it: that
 		// agent gone, or the chat on another session (it stops that claude),
 		// the run went with it.
 		gone := f.owner != nil && (c.agent != f.owner || c.sid != sid)
 		c.mu.Unlock()
 		got, err := c.kind.workflows.ReadWorkflow(sid, folder, w)
+		fresh := err == nil && c.gate.freshClaims(w, got, chatFolder, present) // its walks on no lock
 		c.mu.Lock()
 		it = c.itemLocked(callID)
 		if it == nil || it.Workflow == nil {
@@ -152,7 +154,8 @@ func (c *chat) followWorkflow(callID string, f *follow) {
 		if next != nil && next.State.Ended() && err == nil && !got.State.Ended() {
 			// Judged ended with no snapshot (its task's word, its agent
 			// gone): the agents still shown running are read to their end
-			// once more, for the files they wrote last.
+			// once more, for the files they wrote last and the worktrees
+			// their sidecars named last.
 			c.mu.Unlock()
 			last, lerr := c.kind.workflows.ReadWorkflow(sid, folder, *next)
 			c.mu.Lock()
@@ -161,13 +164,14 @@ func (c *chat) followWorkflow(callID string, f *follow) {
 				return
 			}
 			if lerr == nil {
-				next.Written, next.Tokens = last.Written, cmp.Or(last.Tokens, next.Tokens)
+				next.Written, next.Worktrees, next.Tokens = last.Written, last.Worktrees, cmp.Or(last.Tokens, next.Tokens)
 			}
 		}
 		// Its end, seen now, of a run this daemon's agent ran: said once
 		// (ADR 0141). A run found ended on a reopen or a replay isn't one.
 		ended := f.owner != nil && next != nil && next.State.Ended() && !it.Workflow.State.Ended()
 		c.setWorkflowLocked(it, next, ended)
+		c.workflowLookLocked(fresh)
 		final := next == nil || next.State.Ended()
 		c.mu.Unlock()
 		if final {
@@ -284,6 +288,9 @@ func (c *chat) setWorkflowLocked(it *model.Item, w *model.Workflow, ended bool) 
 			it.Workflow = &kept
 			return
 		}
+	}
+	if w != nil && w.State.Ended() && (it.Workflow == nil || !it.Workflow.State.Ended()) {
+		defer c.lookRelatedLocked() // its subagents' last files and worktrees (ADR 0081), whoever ran it
 	}
 	it.Workflow = w
 	if w == nil {

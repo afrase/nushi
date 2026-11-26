@@ -10666,8 +10666,9 @@ func (x *ChatRelatedWorktrees) GetWorktrees() []*RelatedWorktree {
 	return nil
 }
 
-// A worktree of the chat's repository that one of its subagents works in.
-// Paths and branches are as git lists them, which an agent can write.
+// A worktree of the chat's repository that one of its subagents, or of a
+// workflow's, works in. Paths and branches are as git lists them, which an
+// agent can write.
 type RelatedWorktree struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Path   string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
@@ -10677,7 +10678,9 @@ type RelatedWorktree struct {
 	BaseCommit string `protobuf:"bytes,3,opt,name=base_commit,json=baseCommit,proto3" json:"base_commit,omitempty"`
 	// Its commit the last time the daemon looked.
 	LastHead string `protobuf:"bytes,4,opt,name=last_head,json=lastHead,proto3" json:"last_head,omitempty"`
-	// The tool call that started the subagent (Item.id).
+	// The tool call that has it (Item.id): the Agent call that started the
+	// subagent, or the Workflow call whose run claimed it (run_id set): its
+	// launch, or a resume of it.
 	CallId string `protobuf:"bytes,5,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
 	// "present", or "removed" once git no longer lists it.
 	State string `protobuf:"bytes,6,opt,name=state,proto3" json:"state,omitempty"`
@@ -10688,7 +10691,12 @@ type RelatedWorktree struct {
 	// the chat's life: a squash merge, which merged can't say. Asked once,
 	// after it was removed with commits of its own that merged doesn't show
 	// (API 135).
-	PullMerged    bool `protobuf:"varint,8,opt,name=pull_merged,json=pullMerged,proto3" json:"pull_merged,omitempty"`
+	PullMerged bool `protobuf:"varint,8,opt,name=pull_merged,json=pullMerged,proto3" json:"pull_merged,omitempty"`
+	// The run id of the workflow whose subagents work in it, when call_id is
+	// a Workflow call; empty for a subagent's (API 158). A resumed run keeps
+	// its id: the client finds the run's state on the latest Workflow item
+	// with it.
+	RunId         string `protobuf:"bytes,9,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10779,6 +10787,13 @@ func (x *RelatedWorktree) GetPullMerged() bool {
 	return false
 }
 
+func (x *RelatedWorktree) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
 type GetRelatedWorktreeStatsRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	ChatId string                 `protobuf:"bytes,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
@@ -10836,7 +10851,11 @@ type GetRelatedWorktreeStatsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// One for each of the chat's records of a path asked, in the order of
 	// its list: a path can have several, a worktree removed and another made
-	// there since (issue #118), and the list only grows.
+	// there since (issue #118). The list only grows, but for a workflow's
+	// removed record with nothing to show, left out while it is its path's
+	// last (GetRelatedWorktrees): a record's place among its path's records
+	// never changes, but for a hidden record forgotten past 256 (ADR 0081),
+	// whose place a later record at its path takes.
 	Stats         []*RelatedWorktreeStats `protobuf:"bytes,1,rep,name=stats,proto3" json:"stats,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -13595,8 +13614,8 @@ type EventsResponse_Show struct {
 }
 
 type EventsResponse_RelatedWorktrees struct {
-	// The chat's related worktrees, all of them, when they changed; these
-	// events have no seq (API 99).
+	// The chat's related worktrees, all of them as GetRelatedWorktrees
+	// sends them, when they changed; these events have no seq (API 99).
 	RelatedWorktrees *ChatRelatedWorktrees `protobuf:"bytes,18,opt,name=related_worktrees,json=relatedWorktrees,proto3,oneof"`
 }
 
@@ -29630,7 +29649,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x1bGetRelatedWorktreesResponse\x127\n" +
 	"\tworktrees\x18\x01 \x03(\v2\x19.nushi.v1.RelatedWorktreeR\tworktrees\"O\n" +
 	"\x14ChatRelatedWorktrees\x127\n" +
-	"\tworktrees\x18\x01 \x03(\v2\x19.nushi.v1.RelatedWorktreeR\tworktrees\"\xe3\x01\n" +
+	"\tworktrees\x18\x01 \x03(\v2\x19.nushi.v1.RelatedWorktreeR\tworktrees\"\xfa\x01\n" +
 	"\x0fRelatedWorktree\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x1f\n" +
@@ -29641,7 +29660,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05state\x18\x06 \x01(\tR\x05state\x12\x16\n" +
 	"\x06merged\x18\a \x01(\bR\x06merged\x12\x1f\n" +
 	"\vpull_merged\x18\b \x01(\bR\n" +
-	"pullMerged\"O\n" +
+	"pullMerged\x12\x15\n" +
+	"\x06run_id\x18\t \x01(\tR\x05runId\"O\n" +
 	"\x1eGetRelatedWorktreeStatsRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x14\n" +
 	"\x05paths\x18\x02 \x03(\tR\x05paths\"W\n" +

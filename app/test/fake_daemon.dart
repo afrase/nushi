@@ -1197,3 +1197,18 @@ Chat sentChat(Chat c) {
         c.pull,
     ]);
 }
+
+/// The related worktrees the daemon sends of [stored], a chat's list as it
+/// keeps it (internal/features/chats/related_workflow.go's `visible`): a
+/// run's record removed with nothing to show (its last head its base) is
+/// held back while it is its path's last, and sent again, in its place,
+/// once a later record at its path is. So no record's place among its
+/// path's records, the app's key for it, ever moves.
+List<RelatedWorktree> relatedSent(List<RelatedWorktree> stored) => [
+  for (final (i, w) in stored.indexed)
+    if (w.runId.isEmpty ||
+        w.state != 'removed' ||
+        w.lastHead != w.baseCommit ||
+        stored.skip(i + 1).any((k) => k.path == w.path))
+      w,
+];

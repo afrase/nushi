@@ -19,9 +19,16 @@ import 'package:nushi/plain_text.dart';
 /// Nothing here runs on a timer.
 ///
 /// A path can have several records: a worktree removed and another made
-/// at its path since (issue #118). Each is told by its key ([keyOf]), and
-/// the daemon answers stats for each record of a path asked, in its list's
-/// order, which only grows: this list is the front of it.
+/// at its path since (issue #118). Each is told by its key ([keyOf]), its
+/// place among its path's records, and the daemon answers stats for each
+/// record of a path asked, in its list's order. That list only grows, but
+/// for a run's removed record with nothing to show: the daemon holds it
+/// back while it is its path's last, and sends it again, in its place,
+/// once a later record at its path comes. So a record's place never moves
+/// and no key is ever another record's, but for a hidden record forgotten
+/// past 256 (ADR 0081), whose place and key a later record at its path
+/// takes: a record held back takes its row and its key with it, and comes
+/// back to them.
 class RelatedWorktrees extends ChangeNotifier {
   new(this.chatId);
 
