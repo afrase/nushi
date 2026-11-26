@@ -145,10 +145,16 @@ func piFlavor(f pi.Flavor) Agent {
 	h := pi.Harness{Flavor: f}
 	a := Agent{
 		Harness: h, Local: h,
-		Agent:  agents.Agent{CLI: f.CLI, Min: f.Min, Tested: []string{f.Version}},
+		Agent:  agents.Agent{CLI: f.CLI, Min: f.Min, Tested: f.Tested},
 		Skills: piskills.Skills{Flavor: f}, Trust: pi.Trust{},
 	}
-	if f == pi.PiG {
+	if f.Own != "" { // --version names the Pi it ports
+		a.Agent.Version = func(run func(bare []string, args ...string) ([]byte, error)) string {
+			v, _ := f.ReadVersion(run)
+			return v
+		}
+	}
+	if f.Name == pi.PiG.Name {
 		a.MCP = func(run func() (model.AgentRun, error)) mcp.Config { return pigmcp.PiG{Flavor: f, Run: run} }
 	}
 	return a

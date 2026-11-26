@@ -1,6 +1,8 @@
-// Package pitest is a fake `pi --mode rpc` for tests, speaking Pi
-// 0.5.3's RPC mode as the real one was seen to: commands in, responses
-// (by id) and events out. Sessions are files in a folder, as Pi keeps
+// Package pitest is a fake `pig --mode rpc` for tests, speaking PiG
+// 0.8.0's RPC mode (Pi 1.6.0's) as the real one was seen to
+// (docs/facts/pig.md): commands in, responses (by id) and events out.
+// Store.Shape PiG053 gives what 0.5.3 did differently, so the bridge's
+// tests run on both. Sessions are files in a folder, as Pi keeps
 // them (a header line, then entries that make a tree), so a pi started
 // later can open or fork them. Prompts are answered by script, keyed on
 // their text:
@@ -9,18 +11,51 @@
 //     as a notification; the prompt is "handled", no run;
 //   - "/hang": a command that never ends;
 //   - containing "tool": a bash call (`ls`) and its output, then "Done";
+//     the call's model call writes 96 cached tokens, the next reads them;
 //   - containing "todo": a todo tool's call with its list in its result's
 //     details, then a plan-mode entry with its own list;
 //   - containing "think": a thought, then an answer, not streamed;
 //   - containing "fail": a failed model call ("boom");
 //   - containing "garbage": a line that isn't JSON and an event nobody
 //     knows, then an answer;
-//   - containing "wait": nothing, until abort (or a steer, answered);
+//   - containing "listen": nothing, until a steer, which it takes as the
+//     user's, then nothing again (said on Waiting again), until abort;
+//   - containing "wait": nothing, until abort (or a steer, taken as the
+//     user's, then answered);
+//   - containing "hold": nothing, until abort; a steer meanwhile is
+//     queued, and an abort leaves it for the next run (0.8.0's), or
+//     brings it in as the aborted run's user message (0.5.3's);
+//   - the command steer: queued, a run going or not (0.8.0's; 0.5.3's
+//     with no run wasn't seen, and is taken to be the same), with a
+//     queue_update of the whole queue; a prompt's run brings what is
+//     queued in after its own message; clear_queue takes back the whole
+//     queue;
+//   - containing "long": an answer cut at the model's limit (stopReason
+//     length), then the context_edit entry PiG appends for it;
 //   - containing "deaf": nothing, and pi then answers no abort, until its
 //     input ends (as PiG 0.5.3 after /sprite, docs/facts/pig.md);
 //   - the command compact: a compaction entry ("Summary: <instructions>"),
 //     unless the session has nothing to compact; "slow" waits for abort;
 //   - anything else: "You said: <text>", as two deltas.
+//
+// A session's first prompt brings PiG 0.8.0's system message (a message
+// of role system, in the events and the session) before the user's; a
+// bash call's first update has no output yet. The model's messages
+// stream as 0.8.0's do (speak): message_start "pending", the updates of
+// each text and tool call, message_end whole; a tool call's turn ends
+// after its result's message (turn_end), and the next model call has a
+// turn_start of its own. Three exchanges were compared with the real
+// 0.8.0's (2026-11-26, against an OpenAI-style fake provider), each
+// event's type, its fields' names, an update's kind and a message's
+// role and stop reason: a session's first prompt, a bash call and its
+// answer (TestAToolTurnAsPiGSentIt keeps that one), and a clone with an
+// extension greeting on session_start. They differ only where the fake
+// says a text as two deltas and in the values (times, ids, the usage's
+// numbers, the provider's names); the usage has the real one's fields. Not compared: thoughts (they come whole here), the
+// to-do list and plan-mode extensions' events, a cut answer's. With Greets, an extension
+// says "Started (<reason>)" on session_start: as pi starts, and as a fork
+// or clone replaces the session, once before the answer (0.8.0), or a
+// second time after it (0.5.3).
 //
 // One that waits ("/hang", "wait", a slow compact) says so on the Store's
 // Waiting once it does, so a test stops or steers it when it runs, not
@@ -34,17 +69,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
+)
+
+// Shape is which PiG the fake is.
+type Shape int
+
+const (
+	PiG080 Shape = iota // as PiG 0.8.0 was seen to, the default
+	PiG053              // what PiG 0.5.3 did differently
 )
 
 // Store is Pi's sessions folder.
 type Store struct {
 	Sessions string
+	// Shape is which PiG the fake is.
+	Shape Shape
+	// Greets runs an extension that notifies on session_start.
+	Greets bool
 	// Waiting, when set, gets the text of each prompt or command that
 	// waits for an abort or a steer, once it waits. The fake blocks on
 	// it: the test reads each, or gives the channel room.
@@ -53,6 +99,12 @@ type Store struct {
 	// before its answer and the run's agent_start, which wait until the
 	// test closes it: a run pi took that the bridge hasn't heard of yet.
 	Starts chan chan struct{}
+	// Settles, when set, gets a channel for each run that has ended,
+	// before its agent_settled goes out, which waits until the test
+	// closes it: pi is idle (a steer is queued for the next prompt, an
+	// abort answered) and the bridge hasn't heard, as while agent_settled
+	// is on its way.
+	Settles chan chan struct{}
 	// PromptLag, when set, is how long a prompt takes to be taken: pi
 	// handles each command as it reads it, and its prompt sets up before
 	// a run starts, so an abort read right after a prompt can be handled
@@ -61,6 +113,8 @@ type Store struct {
 	// Read, when set, gets each prompt's text as pi reads it, before its
 	// PromptLag.
 	Read chan string
+	// Steered, when set, gets each steer's text once pi has queued it.
+	Steered chan string
 
 	mu sync.Mutex
 	n  int
@@ -83,7 +137,12 @@ type Program struct {
 	running  bool
 	aborted  chan struct{}
 	settled  chan struct{} // closed once the run settled
-	steered  chan string
+	// queued is pi's steering queue, oldest first: a run takes from it
+	// (kicked says it grew), and a prompt's run brings in what it holds
+	// after the prompt's own message (what an abort or an idle steer left).
+	queued   []string
+	kicked   chan struct{}
+	prompted bool // the system message is in
 	answers  map[string]chan map[string]any
 
 	compacting chan struct{} // closed by abort
@@ -94,7 +153,7 @@ type Program struct {
 // Serve runs a pi with args in cwd on r and w until r ends.
 func (st *Store) Serve(r io.Reader, w io.Writer, cwd string, args []string) {
 	p := &Program{st: st, w: w, cwd: cwd, model: "m1", level: "low", answers: map[string]chan map[string]any{}, leaf: nil,
-		gone: make(chan struct{})}
+		kicked: make(chan struct{}, 1), gone: make(chan struct{})}
 	defer close(p.gone)
 	p.id = st.newID()
 	p.file = filepath.Join(st.Sessions, p.id+".jsonl")
@@ -103,6 +162,7 @@ func (st *Store) Serve(r io.Reader, w io.Writer, cwd string, args []string) {
 			p.load(args[i+1])
 		}
 	}
+	p.greet("startup")
 	sc := bufio.NewScanner(r)
 	sc.Buffer(nil, 1<<26)
 	for sc.Scan() {
@@ -136,6 +196,13 @@ func (st *Store) Serve(r io.Reader, w io.Writer, cwd string, args []string) {
 	}
 }
 
+// greet is the Greets extension's session_start.
+func (p *Program) greet(reason string) {
+	if p.st.Greets {
+		p.emit(map[string]any{"type": "extension_ui_request", "id": fmt.Sprintf("greet%d", greets.Add(1)), "method": "notify", "message": "Started (" + reason + ")"})
+	}
+}
+
 // waiting says a turn running text now waits.
 func (st *Store) waiting(text string) {
 	if st.Waiting != nil {
@@ -148,25 +215,6 @@ func (st *Store) newID() string {
 	defer st.mu.Unlock()
 	st.n++
 	return fmt.Sprintf("01a171d2-0000-7000-8000-%012d", st.n)
-}
-
-// load opens a session file.
-func (p *Program) load(file string) {
-	b, err := os.ReadFile(file) //nolint:gosec // the fake's session file in a test's folder
-	if err != nil {
-		return
-	}
-	p.file = file
-	for i, line := range strings.Split(strings.TrimSpace(string(b)), "\n") {
-		var e map[string]any
-		_ = json.Unmarshal([]byte(line), &e)
-		if i == 0 {
-			p.id, p.cwd = e["id"].(string), e["cwd"].(string)
-			continue
-		}
-		p.entries = append(p.entries, e)
-		p.leaf = e["id"]
-	}
 }
 
 func (p *Program) emit(v any) {
@@ -233,7 +281,7 @@ func (p *Program) command(cmd map[string]any) {
 			p.mu.Lock()
 			return
 		}
-		p.running, p.aborted, p.settled, p.steered = true, make(chan struct{}), make(chan struct{}), make(chan string, 4)
+		p.running, p.aborted, p.settled = true, make(chan struct{}), make(chan struct{})
 		p.deaf = strings.Contains(text, "deaf")
 		if p.st.Starts != nil {
 			held := make(chan struct{})
@@ -244,13 +292,20 @@ func (p *Program) command(cmd map[string]any) {
 		}
 		p.respond(cmd, map[string]any{"disposition": "started"}, "")
 		go p.run(text)
-	case "steer":
-		if !p.running {
-			p.respond(cmd, nil, "nothing runs")
-			return
-		}
-		p.steered <- cmd["message"].(string)
+	case "steer": // queued, a run going or not: with none, the next prompt's run brings it in
+		text := cmd["message"].(string)
+		p.queued = append(p.queued, text)
+		p.emit(map[string]any{"type": "queue_update", "steering": slices.Clone(p.queued), "followUp": []string{}})
 		p.respond(cmd, map[string]any{"disposition": "queued"}, "")
+		select {
+		case p.kicked <- struct{}{}:
+		default:
+		}
+		if p.st.Steered != nil {
+			p.st.Steered <- text
+		}
+	case "clear_queue":
+		p.clearQueue(cmd)
 	case "abort":
 		if p.running && p.deaf { // never answered
 			return
@@ -287,6 +342,14 @@ func (p *Program) command(cmd map[string]any) {
 	}
 }
 
+// clearQueue takes back what is queued, which never reaches the model.
+func (p *Program) clearQueue(cmd map[string]any) {
+	steers := p.queued
+	p.queued = nil
+	p.emit(map[string]any{"type": "queue_update", "steering": []string{}, "followUp": []string{}})
+	p.respond(cmd, map[string]any{"steering": append([]string{}, steers...), "followUp": []string{}}, "")
+}
+
 // ask asks a select dialog, then notifies the choice.
 func (p *Program) ask(cmd map[string]any) {
 	ch := make(chan map[string]any, 1)
@@ -297,204 +360,4 @@ func (p *Program) ask(cmd map[string]any) {
 	a := <-ch
 	p.emit(map[string]any{"type": "extension_ui_request", "id": "ui2", "method": "notify", "message": fmt.Sprintf("Chose %v", a["value"])})
 	p.respond(cmd, map[string]any{"disposition": "handled"}, "")
-}
-
-var clock atomic.Int64
-
-// stamp is a message's time: milliseconds, unique.
-func stamp() int64 {
-	clock.CompareAndSwap(0, time.Now().UnixMilli())
-	return clock.Add(1)
-}
-
-// append adds a message to the session's branch, and writes the file.
-func (p *Program) append(msg map[string]any) {
-	p.add(map[string]any{"type": "message", "message": msg})
-}
-
-// add adds an entry to the session's branch, and writes the file.
-func (p *Program) add(entry map[string]any) {
-	id := fmt.Sprintf("e%d", len(p.entries)+1)
-	entry["id"], entry["parentId"] = id, p.leaf
-	b, _ := json.Marshal(entry)
-	var e map[string]any
-	_ = json.Unmarshal(b, &e) // as read from the file
-	p.entries = append(p.entries, e)
-	p.leaf = id
-	p.save()
-}
-
-func (p *Program) save() {
-	h := map[string]any{"type": "session", "version": 3, "id": p.id, "cwd": p.cwd}
-	if p.parent != "" {
-		h["parentSession"] = p.parent
-	}
-	var b strings.Builder
-	for _, v := range append([]map[string]any{h}, p.entries...) {
-		line, _ := json.Marshal(v)
-		b.Write(append(line, '\n'))
-	}
-	_ = os.WriteFile(p.file, []byte(b.String()), 0o600)
-}
-
-func assistant(blocks ...map[string]any) map[string]any {
-	return map[string]any{"role": "assistant", "content": blocks, "timestamp": stamp(), "stopReason": "stop",
-		"usage": map[string]any{"input": 10, "output": 5, "totalTokens": 15}}
-}
-
-func textBlock(s string) map[string]any { return map[string]any{"type": "text", "text": s} }
-
-// run answers a prompt, by script.
-func (p *Program) run(text string) {
-	p.emit(map[string]any{"type": "agent_start"})
-	user := map[string]any{"role": "user", "content": []map[string]any{textBlock(text)}, "timestamp": stamp()}
-	p.emit(map[string]any{"type": "message_end", "message": user})
-	p.mu.Lock()
-	p.append(user)
-	aborted, settled, steered := p.aborted, p.settled, p.steered
-	p.mu.Unlock()
-	say := func(m map[string]any) {
-		p.emit(map[string]any{"type": "message_start", "message": map[string]any{"role": "assistant", "content": []any{}, "timestamp": m["timestamp"]}})
-		blocks := m["content"].([]map[string]any)
-		for i, b := range blocks {
-			if t, ok := b["text"].(string); ok && b["type"] == "text" && blocks[0]["type"] != "thinking" {
-				half := len(t) / 2
-				for _, d := range []string{t[:half], t[half:]} {
-					p.emit(map[string]any{"type": "message_update", "assistantMessageEvent": map[string]any{"type": "text_delta", "contentIndex": i, "delta": d}})
-				}
-			}
-		}
-		p.emit(map[string]any{"type": "message_end", "message": m})
-		p.mu.Lock()
-		p.append(m)
-		p.mu.Unlock()
-	}
-	settle := func(abort bool) { // at once: an abort or a prompt finds the run running, or settled and said so
-		p.mu.Lock()
-		defer p.mu.Unlock()
-		p.running = false
-		p.emit(map[string]any{"type": "agent_end"})
-		p.emit(map[string]any{"type": "agent_settled", "aborted": abort})
-		close(settled)
-	}
-	switch {
-	case strings.Contains(text, "tool"):
-		call := map[string]any{"type": "toolCall", "id": "call_1", "name": "bash", "arguments": map[string]any{"command": "ls"}}
-		say(assistant(call))
-		p.emit(map[string]any{"type": "tool_execution_start", "toolCallId": "call_1", "toolName": "bash", "args": call["arguments"]})
-		out := map[string]any{"content": []map[string]any{textBlock("a.txt\n")}}
-		p.emit(map[string]any{"type": "tool_execution_update", "toolCallId": "call_1", "toolName": "bash", "partialResult": out})
-		p.emit(map[string]any{"type": "tool_execution_end", "toolCallId": "call_1", "toolName": "bash", "result": out, "isError": false})
-		res := map[string]any{"role": "toolResult", "toolCallId": "call_1", "toolName": "bash", "content": out["content"], "isError": false, "timestamp": stamp()}
-		p.emit(map[string]any{"type": "message_end", "message": res})
-		p.mu.Lock()
-		p.append(res)
-		p.mu.Unlock()
-		say(assistant(textBlock("Done")))
-	case strings.Contains(text, "todo"): // as Pi's todo and plan-mode extensions keep their lists
-		todos := []map[string]any{{"id": 1, "text": "Write tests", "done": true}, {"id": 2, "text": "Ship", "done": false}}
-		call := map[string]any{"type": "toolCall", "id": "call_2", "name": "todo", "arguments": map[string]any{"action": "toggle", "id": 1}}
-		say(assistant(call))
-		p.emit(map[string]any{"type": "tool_execution_start", "toolCallId": "call_2", "toolName": "todo", "args": call["arguments"]})
-		out := map[string]any{"content": []map[string]any{textBlock("Toggled #1")}, "details": map[string]any{"action": "toggle", "todos": todos, "nextId": 3}}
-		p.emit(map[string]any{"type": "tool_execution_end", "toolCallId": "call_2", "toolName": "todo", "result": out, "isError": false})
-		res := map[string]any{"role": "toolResult", "toolCallId": "call_2", "toolName": "todo", "content": out["content"], "details": out["details"], "isError": false, "timestamp": stamp()}
-		p.emit(map[string]any{"type": "message_end", "message": res})
-		custom := map[string]any{"type": "custom", "customType": "plan-mode", "data": map[string]any{"todos": []map[string]any{{"step": 1, "text": "Plan it", "completed": false}}}}
-		p.mu.Lock()
-		p.append(res)
-		p.add(custom)
-		p.mu.Unlock()
-		p.emit(map[string]any{"type": "entry_appended", "entry": custom})
-		say(assistant(textBlock("Done")))
-	case strings.Contains(text, "think"):
-		m := assistant(map[string]any{"type": "thinking", "thinking": "Hmm."}, textBlock("Thought about it"))
-		say(m) // it comes whole, with the message's end
-	case strings.Contains(text, "fail"):
-		m := assistant()
-		m["stopReason"], m["errorMessage"] = "error", "boom"
-		say(m)
-	case strings.Contains(text, "garbage"):
-		p.wmu.Lock()
-		_, _ = p.w.Write([]byte("not json\n"))
-		p.wmu.Unlock()
-		p.emit(map[string]any{"type": "mystery"})
-		say(assistant(textBlock("Still here")))
-	case strings.Contains(text, "deaf"):
-		p.st.waiting(text)
-		<-p.gone
-		return
-	case strings.Contains(text, "wait"):
-		p.st.waiting(text)
-		select {
-		case <-aborted:
-			m := assistant()
-			m["stopReason"], m["errorMessage"] = "aborted", "This operation was aborted"
-			say(m)
-			settle(true)
-			return
-		case s := <-steered:
-			say(assistant(textBlock("Steered: " + s)))
-		}
-	default:
-		say(assistant(textBlock("You said: " + text)))
-	}
-	settle(false)
-}
-
-// fork switches to a new session: the branch up to before the user's
-// message entryId (fork), or all of it (clone).
-func (p *Program) fork(cmd map[string]any) {
-	var keep []map[string]any
-	text := ""
-	for _, e := range p.entries {
-		if e["id"] == cmd["entryId"] {
-			m := e["message"].(map[string]any)
-			text = m["content"].([]any)[0].(map[string]any)["text"].(string)
-			break
-		}
-		keep = append(keep, e)
-	}
-	p.parent, p.entries, p.leaf = p.file, keep, nil
-	if len(keep) > 0 {
-		p.leaf = keep[len(keep)-1]["id"]
-	}
-	p.id = p.st.newID()
-	p.file = filepath.Join(p.st.Sessions, p.id+".jsonl")
-	p.save()
-	data := map[string]any{"cancelled": false}
-	if cmd["type"] == "fork" {
-		data["text"] = text
-	}
-	p.respond(cmd, data, "")
-}
-
-// compact summarizes the session: "Summary: <instructions>"; with nothing
-// to summarize it fails as Pi does, and "slow" waits for an abort.
-func (p *Program) compact(cmd map[string]any) {
-	p.emit(map[string]any{"type": "compaction_start", "reason": "manual"})
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	instructions, _ := cmd["customInstructions"].(string)
-	if len(p.entries) < 2 {
-		p.emit(map[string]any{"type": "compaction_end", "reason": "manual", "aborted": false, "willRetry": false,
-			"errorMessage": "Compaction failed: Nothing to compact (session too small)"})
-		p.respond(cmd, nil, "Nothing to compact (session too small)")
-		return
-	}
-	if instructions == "slow" {
-		stop := make(chan struct{})
-		p.compacting = stop
-		p.mu.Unlock()
-		p.st.waiting("/compact " + instructions)
-		<-stop
-		p.mu.Lock()
-		p.emit(map[string]any{"type": "compaction_end", "reason": "manual", "aborted": true, "willRetry": false})
-		p.respond(cmd, nil, "Compaction cancelled")
-		return
-	}
-	result := map[string]any{"summary": "Summary: " + instructions, "firstKeptEntryId": p.leaf, "tokensBefore": 100 * len(p.entries), "estimatedTokensAfter": 42}
-	p.add(map[string]any{"type": "compaction", "summary": result["summary"], "firstKeptEntryId": p.leaf, "tokensBefore": result["tokensBefore"]})
-	p.emit(map[string]any{"type": "compaction_end", "reason": "manual", "result": result, "aborted": false, "willRetry": false})
-	p.respond(cmd, result, "")
 }

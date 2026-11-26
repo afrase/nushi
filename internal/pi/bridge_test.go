@@ -199,6 +199,14 @@ func startOn(t *testing.T, store *pitest.Store, log, wire io.Writer) (c *peer, d
 	return c, die
 }
 
+// shapes runs test on a fake of each PiG whose RPC mode differs where the
+// test looks: 0.8.0's, the one the bridge follows, and 0.5.3's.
+func shapes(t *testing.T, test func(*testing.T, pitest.Shape)) {
+	t.Helper()
+	t.Run("0.8.0", func(t *testing.T) { test(t, pitest.PiG080) })
+	t.Run("0.5.3", func(t *testing.T) { test(t, pitest.PiG053) })
+}
+
 // turnTimeout bounds a turn's wait: a turn that never ends fails its test
 // then, not at go test's 10 minutes.
 const turnTimeout = 10 * time.Second
@@ -260,8 +268,10 @@ func options(opts []acp.SessionConfigOption) string {
 // A turn: the model's text streams under the message's id, its tool call
 // shows with its output, a thought that didn't stream comes with the
 // message's end, the usage follows; a failed model call fails the turn.
-func TestATurn(t *testing.T) {
-	c := start(t, &pitest.Store{Sessions: t.TempDir()}, io.Discard)
+func TestATurn(t *testing.T) { shapes(t, aTurn) }
+
+func aTurn(t *testing.T, shape pitest.Shape) { //nolint:thelper // a test, run on each shape
+	c := start(t, &pitest.Store{Sessions: t.TempDir(), Shape: shape}, io.Discard)
 	s := openNew(t, c, t.TempDir())
 	if got := options(s.ConfigOptions); got != "model/model=fake/m1 thinking/thought_level=low" {
 		t.Errorf("options = %s", got)
@@ -278,7 +288,13 @@ func TestATurn(t *testing.T) {
 	if u.Size != 1000 || u.Cost == nil || u.Cost.Amount != 0.25 {
 		t.Errorf("usage = %+v", u)
 	}
-	prompt(t, c, s.SessionID, "use a tool")
+	// The tool's turn makes two model calls: one writes 96 cached
+	// tokens, the next reads them; the turn's usage adds them up.
+	r = prompt(t, c, s.SessionID, "use a tool")
+	if u := r.Usage; u == nil || u.InputTokens != 20 || u.OutputTokens != 10 || u.CachedReadTokens == nil || *u.CachedReadTokens != 96 ||
+		u.CachedWriteTokens == nil || *u.CachedWriteTokens != 96 || u.TotalTokens != 222 {
+		t.Errorf("the tool turn's usage = %+v", u)
+	}
 	call := c.find(t, s.SessionID, "tool_call", nil).ToolCall
 	if call.Title != "ls" || call.Kind != "execute" {
 		t.Errorf("call = %+v", call)
@@ -299,10 +315,26 @@ func TestATurn(t *testing.T) {
 }
 
 // Stop ends a running turn as cancelled; a message sent meanwhile is
-// steered into it.
-func TestCancelAndSteer(t *testing.T) {
-	store := &pitest.Store{Sessions: t.TempDir(), Waiting: make(chan string)}
-	c := start(t, store, io.Discard)
+// steered into it, and the queue_update pi sends for it is no event the
+// bridge doesn't know.
+func TestCancelAndSteer(t *testing.T) { shapes(t, cancelAndSteer) }
+
+func cancelAndSteer(t *testing.T, shape pitest.Shape) { //nolint:thelper // a test, run on each shape
+	store := &pitest.Store{Sessions: t.TempDir(), Waiting: make(chan string), Shape: shape}
+	var log bytes.Buffer
+	var mu sync.Mutex
+	c := start(t, store, writerFunc(func(p []byte) (int, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		return log.Write(p)
+	}))
+	defer func() {
+		mu.Lock()
+		defer mu.Unlock()
+		if strings.Contains(log.String(), "doesn't know") {
+			t.Errorf("log: %s", log.String())
+		}
+	}()
 	s := openNew(t, c, t.TempDir())
 	wait := begin(t, c, store, s.SessionID, "wait")
 	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
@@ -336,6 +368,38 @@ func TestCancelAndSteer(t *testing.T) {
 	if d := time.Since(stopped); d > 30*time.Second {
 		t.Errorf("a hung command took %v to stop", d)
 	}
+}
+
+// A steer is answered as taken once pi brings it into the run, while
+// the run goes on, not only as the turn ends: the chat's next queued
+// message can then be steered in too.
+func TestASteerAnsweredOnceTaken(t *testing.T) {
+	shapes(t, func(t *testing.T, shape pitest.Shape) { //nolint:thelper // a test, run on each shape
+		store := &pitest.Store{Sessions: t.TempDir(), Waiting: make(chan string), Shape: shape}
+		c := start(t, store, io.Discard)
+		s := openNew(t, c, t.TempDir())
+		wait := begin(t, c, store, s.SessionID, "listen")
+		t.Cleanup(func() { _ = c.Cancel(context.Background(), &acp.CancelNotification{SessionID: s.SessionID}) }) // a failed wait leaves no run behind
+		ctx, cancel := context.WithTimeout(t.Context(), turnTimeout)
+		defer cancel()
+		answer := make(chan error, 1)
+		go func() {
+			ok, err := c.Steer(ctx, s.SessionID, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "turn left"}}})
+			if err == nil && !ok {
+				err = errors.New("answered as not taken")
+			}
+			answer <- err
+		}()
+		// The answer comes with no Stop sent, so while the run goes on.
+		if err := next(ctx, t, answer, "the steer's answer while the run goes on"); err != nil {
+			t.Errorf("the steer pi took: %v", err)
+		}
+		next(ctx, t, store.Waiting, "the run going on with the steer taken")
+		testcheck.NoErr(t, c.Cancel(ctx, &acp.CancelNotification{SessionID: s.SessionID}))
+		if r := wait(); r.StopReason != "cancelled" {
+			t.Errorf("stop = %s", r.StopReason)
+		}
+	})
 }
 
 // Stop before the bridge has read pi's agent_start ends the turn at once;
@@ -423,8 +487,10 @@ func (f writerFunc) Write(p []byte) (int, error) { return f(p) }
 
 // Pi's sessions: listed (not forks), loaded with their conversation
 // (the same message ids as live), forked after a turn or whole, deleted.
-func TestSessions(t *testing.T) {
-	store := &pitest.Store{Sessions: t.TempDir()}
+func TestSessions(t *testing.T) { shapes(t, sessions) }
+
+func sessions(t *testing.T, shape pitest.Shape) { //nolint:thelper // a test, run on each shape
+	store := &pitest.Store{Sessions: t.TempDir(), Shape: shape}
 	c := start(t, store, io.Discard)
 	cwd := t.TempDir()
 	s := openNew(t, c, cwd)
@@ -746,5 +812,122 @@ func TestVersionCheck(t *testing.T) {
 	}
 	if err := PiG.check("0.1.0"); err != nil {
 		t.Errorf("PiG: %v", err)
+	}
+}
+
+// Each program's own version, from every form seen and from garbage:
+// PiG 0.8.0's `pig version` is asked only when --version names the Pi
+// that 0.8.0 ports, or a later one, never of a PiG that may lack it.
+func TestReadVersion(t *testing.T) {
+	const v080 = "pig: 0.8.0\nupstream pi: 1.6.0\ngo: go1.27.4\nplatform: darwin/arm64\nbuild: 0123abcd\n"
+	boom := errors.New("exit status 1")
+	for _, c := range []struct {
+		name          string
+		f             Flavor
+		dashed, own   string
+		dashErr, oErr error
+		want          string
+		asked         bool // whether Own ran
+		fails         bool
+	}{
+		{name: "pi", f: Pi, dashed: "1.4.0\n", want: "1.4.0"},
+		{name: "pi never asks", f: Pi, dashed: "1.6.0\n", want: "1.6.0"},
+		{name: "pig 0.5.3", f: PiG, dashed: "0.5.3+1.4.0.74f46864\n", want: "0.5.3"},
+		{name: "build metadata after garbage", f: PiG, dashed: "garbage+1.4.0\n", want: ""},
+		{name: "build metadata alone", f: PiG, dashed: "+\n", want: ""},
+		{name: "pig 0.8.0", f: PiG, dashed: "1.6.0\n", own: v080, want: "0.8.0", asked: true},
+		{name: "a later pig", f: PiG, dashed: "1.7.2\n", own: "pig: 0.9.1-rc.1\n", want: "0.9.1-rc.1", asked: true},
+		{name: "a pig before 0.8.0", f: PiG, dashed: "1.5.0\n", own: v080, want: ""},
+		{name: "own fails", f: PiG, dashed: "1.6.0\n", oErr: boom, want: "", asked: true},
+		{name: "own empty", f: PiG, dashed: "1.6.0\n", own: "", want: "", asked: true},
+		{name: "own garbage", f: PiG, dashed: "1.6.0\n", own: "pig: soon\n", want: "", asked: true},
+		{name: "own another program", f: PiG, dashed: "1.6.0\n", own: "pi: 0.8.0\n", want: "", asked: true},
+		{name: "dashed empty", f: PiG, dashed: "", want: ""},
+		{name: "dashed garbage", f: PiG, dashed: "Usage: pig [options]\n", want: ""},
+		{name: "dashed fails", f: PiG, dashErr: boom, fails: true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			asked := false
+			got, err := c.f.ReadVersion(func(bare []string, args ...string) ([]byte, error) {
+				switch strings.Join(args, " ") {
+				case "--version":
+					if bare != nil {
+						t.Errorf("--version ran bare: %q", bare)
+					}
+					return []byte(c.dashed), c.dashErr
+				case "version":
+					asked = true
+					if len(bare) != 3 {
+						t.Errorf("version ran in %q, not bare", bare)
+					}
+					return []byte(c.own), c.oErr
+				}
+				t.Fatalf("ran %q", args)
+				return nil, nil
+			})
+			if (err != nil) != c.fails || got != c.want || asked != c.asked {
+				t.Errorf("= %q, %v, asked %v; want %q, asked %v", got, err, asked, c.want, c.asked)
+			}
+		})
+	}
+}
+
+// `pig version` may be a prompt to a pig without the subcommand, so it
+// runs bare: PATH, and HOME, PIG_HOME and PIG_CODING_AGENT_DIR in an
+// empty temp folder removed after, no key or other variable, in that
+// temp HOME as its working folder (no AGENTS.md or folder of the
+// user's); --version runs as a chat's pig would.
+func TestOwnVersionRunsBare(t *testing.T) {
+	dir := t.TempDir()
+	rec := filepath.Join(dir, "rec")
+	script := "#!/bin/sh\ncase \"$1\" in\n--version) /usr/bin/env > " + rec + ".dashed; echo 1.6.0 ;;\n" +
+		"version) /usr/bin/env > " + rec + ".own; pwd -P > " + rec + ".cwd; (cd \"$HOME\" && pwd -P) >> " + rec + ".cwd; ls -A \"$HOME\" \"$PIG_HOME\" \"$PIG_CODING_AGENT_DIR\" > " + rec + ".ls; printf 'pig: 0.8.0\\nupstream pi: 1.6.0\\n' ;;\nesac\n"
+	bin := filepath.Join(dir, "pig")
+	testcheck.NoErr(t, os.WriteFile(bin, []byte(script), 0o700))
+	t.Setenv("FIREWORKS_API_KEY", "fw-not-a-key")
+	v, err := PiG.version(bin)
+	if err != nil || v != "0.8.0" {
+		t.Fatalf("= %q, %v", v, err)
+	}
+	vars := func(file string) map[string]string {
+		b, err := os.ReadFile(file)
+		testcheck.NoErr(t, err)
+		out := map[string]string{}
+		for line := range strings.SplitSeq(strings.TrimSpace(string(b)), "\n") {
+			k, v, _ := strings.Cut(line, "=")
+			out[k] = v
+		}
+		return out
+	}
+	if dashed := vars(rec + ".dashed"); dashed["FIREWORKS_API_KEY"] == "" {
+		t.Errorf("--version ran without the chat's environment: %v", dashed)
+	}
+	own := vars(rec + ".own")
+	for k := range own {
+		switch k {
+		case "PATH", "HOME", "PIG_HOME", "PIG_CODING_AGENT_DIR", "PWD", "SHLVL", "OLDPWD", "_": // the last four the shell's own
+		default:
+			t.Errorf("pig version had %s", k)
+		}
+	}
+	if own["PATH"] != os.Getenv("PATH") {
+		t.Errorf("PATH = %q", own["PATH"])
+	}
+	for _, k := range []string{"HOME", "PIG_HOME", "PIG_CODING_AGENT_DIR"} {
+		home, _ := os.UserHomeDir()
+		if own[k] == "" || own[k] == home || own[k] == os.Getenv(k) {
+			t.Errorf("%s = %q", k, own[k])
+		}
+		if _, err := os.Stat(own[k]); !os.IsNotExist(err) {
+			t.Errorf("%s left behind: %v", own[k], err)
+		}
+	}
+	b, err := os.ReadFile(rec + ".cwd")
+	testcheck.NoErr(t, err)
+	if cwd, home, _ := strings.Cut(strings.TrimSpace(string(b)), "\n"); cwd != home {
+		t.Errorf("pig version ran in %s, not its temp home %s", cwd, home)
+	}
+	if b, _ := os.ReadFile(rec + ".ls"); strings.Count(strings.TrimSpace(string(b)), "\n") > 4 {
+		t.Errorf("the temp homes weren't empty: %s", b)
 	}
 }

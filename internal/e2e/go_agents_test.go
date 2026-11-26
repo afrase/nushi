@@ -38,7 +38,7 @@ func TestGoAgentsBothWays(t *testing.T) {
 		found = append(found, a.Agent)
 	}
 	svc := chats.New(t.Context(), kinds, chats.Options{Remembered: st, Sessions: st, Sleep: st})
-	agentSvc := agents.New(found, func(context.Context, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})
+	agentSvc := agents.New(found, func(context.Context, string, []string, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})
 	agentSvc.UseChats(svc)
 	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, Settings: st})))
 	defer srv.Close()

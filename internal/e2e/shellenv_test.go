@@ -117,7 +117,7 @@ func TestTheAppGetsNothingOfTheEnvironment(t *testing.T) {
 	env := shellenv.New(shell, []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir()})
 	env.Start()
 	agentSvc := agents.New([]agents.Agent{{Name: "fake", Title: "Fake", CLI: "sh"}},
-		func(context.Context, string, ...string) ([]byte, error) { return nil, nil }, env, t.TempDir(), setUp{})
+		func(context.Context, string, []string, string, ...string) ([]byte, error) { return nil, nil }, env, t.TempDir(), setUp{})
 	data := t.TempDir()
 	st := store.New(data)
 	svc := chats.New(t.Context(), []chats.Kind{{Harness: model.HarnessInfo{Name: "fake", Title: "Fake"}}}, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(data, "scratch")})

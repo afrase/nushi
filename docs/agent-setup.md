@@ -82,7 +82,7 @@ Nushi runs your `opencode acp`. Nothing to set up once `opencode` is on your log
 
 ### PiG
 
-[PiG](https://pi-in-go.dev) runs through Nushi's own bridge, `nushid pig-acp`, which runs your `pig --mode rpc` per session ([ADR 0039](adr/0039-our-own-bridge-for-pig.md)). Nothing to set up once `pig` is on your login shell's `PATH`. Nushi follows PiG 0.5.3; Settings › Agents then says Ready.
+[PiG](https://pi-in-go.dev) runs through Nushi's own bridge, `nushid pig-acp`, which runs your `pig --mode rpc` per session ([ADR 0039](adr/0039-our-own-bridge-for-pig.md)). Nothing to set up once `pig` is on your login shell's `PATH`. Nushi follows PiG 0.8.0 and still runs 0.5.3; Settings › Agents then says Ready, with PiG's own version (from `pig version`, as 0.8.0's `pig --version` prints the Pi it ports).
 
 - It uses PiG's own settings, providers and keys: `~/.pig` (or `$PIG_HOME`), and the environment (`FIREWORKS_API_KEY` for Fireworks).
 - To pick what new chats start on, set it in `~/.pig/agent/settings.json`:

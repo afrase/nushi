@@ -35,6 +35,11 @@ type Agent struct {
 	// SignedIn says whether the CLI is signed in, "yes" or "no", or ""
 	// when it can't tell cheaply; run runs the CLI with args (Probe).
 	SignedIn func(run func(args ...string) ([]byte, error)) string
+	// Version reads the CLI's own version with run (the CLI run with args,
+	// its stdout; with bare not nil, in an environment of the agents' PATH
+	// and bare alone, in bare's HOME: agentproc.Bare); nil: versionIn of what --version printed. PiG
+	// 0.8.0's --version names only the Pi it ports.
+	Version func(run func(bare []string, args ...string) ([]byte, error)) string
 	// SignIn is what the user runs in a terminal to sign the CLI in:
 	// "codex login". "": Nushi doesn't know it.
 	SignIn string
@@ -49,21 +54,28 @@ type Agent struct {
 	Own func() bool
 }
 
-// Probe runs a program and returns its stdout: Run's, or a test's.
-type Probe func(ctx context.Context, path string, args ...string) ([]byte, error)
+// Probe runs a program and returns its stdout: Run's, or a test's. env,
+// when not nil, is its whole environment, and dir, when not "", its
+// working folder.
+type Probe func(ctx context.Context, path string, env []string, dir string, args ...string) ([]byte, error)
 
 // ProbeTimeout bounds a Probe's run: a CLI asked its version that hangs
 // (a prompt, a network wait) is stopped with what it started.
 var ProbeTimeout = 10 * time.Second
 
 // Run is the Probe that runs the program in env's environment (nil, or
-// env returning nil: the daemon's), for at most ProbeTimeout.
+// env returning nil: the daemon's) unless given one, for at most
+// ProbeTimeout.
 func Run(env func() []string) Probe {
-	return func(ctx context.Context, path string, args ...string) ([]byte, error) {
+	return func(ctx context.Context, path string, given []string, dir string, args ...string) ([]byte, error) {
 		ctx, cancel := context.WithTimeout(ctx, ProbeTimeout)
 		defer cancel()
 		cmd := exec.CommandContext(ctx, path, args...) //nolint:gosec // a CLI found on PATH, asked its version or sign-in
-		if env != nil {
+		cmd.Dir = dir
+		switch {
+		case given != nil:
+			cmd.Env = given
+		case env != nil:
 			cmd.Env = env()
 		}
 		procgroup.Bound(cmd)
@@ -205,9 +217,7 @@ func (s *Service) find(ctx context.Context, a Agent) (st Status) {
 		st.Problem = "Not installed"
 		return st
 	}
-	if out, err := s.probe(ctx, st.Path, "--version"); err == nil {
-		st.Version = versionIn(string(out))
-	}
+	st.Version = s.version(ctx, a, st.Path)
 	old, _ := agentproc.Older(st.Version, a.Min) // false when either is none
 	switch {
 	case a.Min != "" && st.Version != "" && old:
@@ -216,7 +226,7 @@ func (s *Service) find(ctx context.Context, a Agent) (st Status) {
 		st.Problem = "Needs Node"
 	}
 	if a.SignedIn != nil && st.Problem == "" {
-		st.SignedIn = a.SignedIn(func(args ...string) ([]byte, error) { return s.probe(ctx, st.Path, args...) })
+		st.SignedIn = a.SignedIn(func(args ...string) ([]byte, error) { return s.probe(ctx, st.Path, nil, "", args...) })
 	}
 	return st
 }
@@ -231,6 +241,25 @@ func (s *Service) lookPath(name string, also []string) string {
 		if st, err := os.Stat(p); err == nil && st.Mode().IsRegular() && st.Mode()&0o111 != 0 {
 			return p
 		}
+	}
+	return ""
+}
+
+// version is the CLI's version at path, as a's Version reads it, else
+// versionIn of its --version; "" when that can't be read.
+func (s *Service) version(ctx context.Context, a Agent, path string) string {
+	if a.Version != nil {
+		return a.Version(func(bare []string, args ...string) ([]byte, error) {
+			var env []string // nil and "": as a chat runs it
+			var dir string
+			if bare != nil {
+				env, dir = agentproc.Bare(s.env.Environ(), bare)
+			}
+			return s.probe(ctx, path, env, dir, args...)
+		})
+	}
+	if out, err := s.probe(ctx, path, nil, "", "--version"); err == nil {
+		return versionIn(string(out))
 	}
 	return ""
 }
@@ -281,8 +310,7 @@ func (s *Service) Explain(name string) func(error) error {
 		if !ok || rerr != nil || len(a.Tested) == 0 {
 			return err
 		}
-		out, _ := s.probe(context.Background(), run.CLI, "--version")
-		v := versionIn(string(out))
+		v := s.version(context.Background(), a, run.CLI)
 		if v == "" || slices.Contains(a.Tested, v) {
 			return err
 		}

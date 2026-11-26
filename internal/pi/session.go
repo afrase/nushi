@@ -58,6 +58,14 @@ type session struct {
 	// Stop.
 	unsent  int
 	allSent chan struct{}
+
+	// steers are the running turn's steers pi has queued and not yet
+	// brought into the run, oldest first: each is answered once pi brings
+	// it in, or once its turn ends without it (unqueue). steerMu, a
+	// writer's mutex taken before mu, keeps a steer's write ahead of the
+	// clear_queue that ends its turn.
+	steers  []*steered
+	steerMu sync.Mutex
 }
 
 // turn is a running turn: Nushi's prompt (result, which nobody reads for
@@ -83,6 +91,11 @@ type turn struct {
 	// starts after it.
 	taken chan struct{}
 	take  func()
+	// own says pi has brought in the user's message the turn began with:
+	// a user's message after it is a steer.
+	own bool
+	// closing says the turn's end has begun (unqueue): no steer joins it.
+	closing bool
 }
 
 // takeWait is the longest a Stop's abort waits for pi to take the
@@ -95,6 +108,10 @@ const takeWait = 2 * time.Second
 // that answers nothing (PiG 0.5.3 after /sprite) would keep the turn, and
 // the chat, busy for good. A variable only so a test can shorten it.
 var abortWait = 10 * time.Second
+
+// clearWait bounds the clear_queue a turn's end sends (unqueue): pi
+// answers it at once, as nothing runs then.
+const clearWait = 10 * time.Second
 
 // errNoTurn is a prompt whose pi went before its turn began: nothing of
 // it reached pi, so the bridge may run it on the session opened again.
@@ -135,6 +152,7 @@ func (s *session) pump() {
 	s.mu.Lock()
 	s.handled = math.MaxInt // none will come
 	s.caught.Broadcast()
+	s.answerSteersLocked(0) // what pi still held went with it
 	if t := s.turn; t != nil && s.killed.Load() {
 		s.endLocked(t, &acp.PromptResponse{StopReason: "cancelled", Usage: &t.usage}, nil)
 	} else if t != nil {
@@ -237,6 +255,9 @@ func (s *session) handle(ev event) {
 	case "message_update":
 		out = s.deltaLocked(&e)
 	case "message_end":
+		if m := e.Message; m != nil && m.Role == "user" {
+			s.tookLocked(m)
+		}
 		out = s.messageEndLocked(e.Message)
 	case "tool_execution_start", "tool_execution_update", "tool_execution_end":
 		out = s.toolLocked(ev.Type, &e)
@@ -334,6 +355,7 @@ func chunk(thought bool, text, id string) acp.SessionUpdate {
 // prompt's answer. ACP has no stop reason for a failed turn, so that is
 // an error.
 func (s *session) settle(t *turn) {
+	s.unqueue(t)
 	s.b.usage(s)
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -400,17 +422,23 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 		after, err := s.p.callWritten(context.WithoutCancel(ctx), map[string]any{"type": "prompt", "message": text, "images": images}, &r, t.wrote)
 		t.take()
 		s.mu.Lock()
-		defer s.mu.Unlock()
 		for s.handled < after { // the events pi sent first, before the turn ends
 			s.caught.Wait()
 		}
+		var resp *acp.PromptResponse
 		switch {
 		case err != nil && t.answered: // stopped (its ctx ends with the answer): the abort's answer ends it
+			s.mu.Unlock()
+			return
 		case err != nil:
-			s.endLocked(t, nil, err)
 		case r.Disposition == "handled" && !t.ran:
-			s.endLocked(t, &acp.PromptResponse{StopReason: "end_turn"}, nil)
+			resp = &acp.PromptResponse{StopReason: "end_turn"}
+		default: // its run ends it (settle)
+			s.mu.Unlock()
+			return
 		}
+		s.mu.Unlock()
+		s.end(t, resp, err)
 	}()
 	res := <-t.result // the turn ends, or pi does
 	return res.resp, res.err
@@ -523,11 +551,11 @@ func (s *session) cancel(seq uint64) {
 			return
 		}
 		s.mu.Lock()
-		defer s.mu.Unlock()
 		for s.handled < after { // the run's events, before the next turn
 			s.caught.Wait()
 		}
-		s.endLocked(t, nil, nil)
+		s.mu.Unlock()
+		s.end(t, nil, nil)
 	}()
 }
 
@@ -548,32 +576,6 @@ var beforeAbort atomic.Pointer[func()]
 // steerWaits, when set, is called as a steered command of the bridge's
 // own starts waiting for the running turn to end: a test waits for it.
 var steerWaits atomic.Pointer[func()]
-
-// steer hands text to the running turn, which takes it after the tools
-// running now; false when no turn runs (a stopped one that waits for pi's
-// abort doesn't). One of ownCommands isn't taken: it waits for the turn
-// to end, then runs as the next.
-func (s *session) steer(ctx context.Context, text string, images []image) (bool, error) {
-	s.mu.Lock()
-	running, idle := s.turn != nil && !s.turn.answered, s.idle
-	s.mu.Unlock()
-	if !running {
-		return false, nil
-	}
-	if _, _, own := ownCommand(text); own { // a turn of its own, once this one ends
-		if waits := steerWaits.Load(); waits != nil {
-			(*waits)()
-		}
-		select {
-		case <-idle:
-		case <-s.ended:
-		case <-ctx.Done():
-		}
-		return false, nil
-	}
-	err := s.p.call(ctx, map[string]any{"type": "steer", "message": text, "images": images}, nil)
-	return err == nil, err
-}
 
 // stopGrace is how long pi has to end once its input closes, before it is
 // killed: less than the 5 s the daemon gives the bridge (chats'

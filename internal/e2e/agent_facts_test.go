@@ -105,7 +105,7 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 		}
 	}
 	svc := chats.New(t.Context(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(data, "scratch")})
-	agentSvc := agents.New(found, func(context.Context, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})
+	agentSvc := agents.New(found, func(context.Context, string, []string, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})
 	agentSvc.UseChats(svc)
 	shown := skills.New([]string{"claude", "codex"}, map[string]skills.Reader{"claude": builtInPlugins{}, "codex": fileSkill{}},
 		func(_, _ []string, path string) error { return fmt.Errorf("%s is a file", path) }, nil)
