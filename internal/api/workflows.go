@@ -65,6 +65,9 @@ func workflowProto(w model.Workflow) *nushiv1.Workflow {
 	for _, p := range w.Planned {
 		out.Planned = append(out.Planned, &nushiv1.WorkflowPhase{Title: p.Title, Detail: p.Detail})
 	}
+	for _, f := range w.Written {
+		out.Written = append(out.Written, &nushiv1.WrittenFile{Path: f.Path, Changed: unixMs(f.Changed)})
+	}
 	return out
 }
 

@@ -1032,6 +1032,33 @@ Item wrote(String id, String path) => Item(
   paths: [path],
 );
 
+/// A Workflow call of the agent's, item [id] of a transcript: run [name]
+/// in [state], whose agents wrote [files] (each path and how long ago it
+/// last changed, the one changed last first), as a daemon from
+/// `workflowWrittenApi` sends it (Workflow.written).
+Item workflowWrote(
+  String id,
+  String name,
+  List<(String, Duration)> files, {
+  String state = 'running',
+}) => Item(
+  id: id,
+  kind: ItemKind.ITEM_KIND_TOOL_CALL,
+  toolKind: 'other',
+  title: 'Workflow',
+  tool: 'Workflow',
+  status: 'completed',
+  workflow: Workflow(
+    runId: 'wf_$id',
+    name: name,
+    state: state,
+    written: [
+      for (final (path, ago) in files)
+        WrittenFile(path: path, changed: msAgo(ago)),
+    ],
+  ),
+);
+
 /// An MCP tool call, item [id] of a transcript: [server]'s [tool] with
 /// [args], titled and its input written as Claude sends one
 /// (`mcp__server__tool`, the arguments as indented JSON) or, with

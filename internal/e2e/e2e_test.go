@@ -29,6 +29,7 @@ import (
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/ante/antetest"
 	"github.com/afrase/nushi/internal/claude"
+	"github.com/afrase/nushi/internal/claudehistory"
 	"github.com/afrase/nushi/internal/codex"
 	nushid "github.com/afrase/nushi/internal/daemon"
 	"github.com/afrase/nushi/internal/daemon/daemontest"
@@ -102,7 +103,8 @@ func (fakeHarness) OwnTurnEnded(u *acp.UsageUpdate) bool { return claude.Harness
 type claudeOnFake struct {
 	claude.Harness
 	projects string
-	history  *acptest.History // the fake agent's sessions, its files as far as HistoryGone is asked
+	history  *acptest.History    // the fake agent's sessions, its files as far as HistoryGone is asked
+	runs     *claudehistory.Runs // what was read of its workflows, as main keeps it
 }
 
 func (claudeOnFake) Info() model.HarnessInfo {
@@ -215,7 +217,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, timing 
 			kinds = append(kinds, chats.Kind{Harness: h, Launch: l, MCP: a.MCP != nil})
 		}
 	}
-	kinds = append(kinds, chats.Kind{Harness: claudeOnFake{projects: filepath.Join(dataDir, "claude", "projects"), history: history}, Launch: fake(""), MCP: true})
+	kinds = append(kinds, chats.Kind{Harness: claudeOnFake{projects: filepath.Join(dataDir, "claude", "projects"), history: history, runs: claudehistory.NewRuns()}, Launch: fake(""), MCP: true})
 	cxs := codexStores(dataDir)
 	kinds = append(kinds, chats.Kind{Harness: codexGo{}, Launch: launch(cxs.serve), MCP: true})
 	// "signin" is the fake agent behind a login, offering Codex's ways to

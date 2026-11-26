@@ -149,6 +149,21 @@ func (c *chat) followWorkflow(callID string, f *follow) {
 			return
 		}
 		next, wait := c.judgeWorkflow(*it.Workflow, got, err, f, gone, c.tasks[it.Workflow.TaskID], time.Now())
+		if next != nil && next.State.Ended() && err == nil && !got.State.Ended() {
+			// Judged ended with no snapshot (its task's word, its agent
+			// gone): the agents still shown running are read to their end
+			// once more, for the files they wrote last.
+			c.mu.Unlock()
+			last, lerr := c.kind.workflows.ReadWorkflow(sid, folder, *next)
+			c.mu.Lock()
+			if it = c.itemLocked(callID); it == nil || it.Workflow == nil {
+				c.mu.Unlock()
+				return
+			}
+			if lerr == nil {
+				next.Written, next.Tokens = last.Written, cmp.Or(last.Tokens, next.Tokens)
+			}
+		}
 		// Its end, seen now, of a run this daemon's agent ran: said once
 		// (ADR 0141). A run found ended on a reopen or a replay isn't one.
 		ended := f.owner != nil && next != nil && next.State.Ended() && !it.Workflow.State.Ended()

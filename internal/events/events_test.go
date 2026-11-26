@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -226,5 +227,63 @@ func TestOneLargeEventIsDelivered(t *testing.T) {
 	case err := <-c:
 		t.Fatalf("ended while in fn: %v", err)
 	default:
+	}
+}
+
+// A workflow's written files and an item's paths count by their size too:
+// a run of many files sent again at each change of its summary drops a
+// stuck subscriber on bytes, long before MaxQueued.
+func TestPathsCountBySize(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		item func(paths []string) *model.Item
+	}{
+		{"a workflow's written files", func(paths []string) *model.Item {
+			w := &model.Workflow{}
+			for _, p := range paths {
+				w.Written = append(w.Written, model.WrittenFile{Path: p})
+			}
+			return &model.Item{Workflow: w}
+		}},
+		{"an item's paths", func(paths []string) *model.Item { return &model.Item{Paths: paths} }},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			h := &Hub{MaxBytes: 1 << 20}
+			stuck, release := make(chan struct{}, 1), make(chan struct{})
+			defer close(release)
+			subscribe(t.Context(), t, h, func(model.Event) bool {
+				select {
+				case stuck <- struct{}{}:
+				default:
+				}
+				<-release
+				return true
+			})
+			h.Publish(model.Event{})
+			<-stuck
+			paths := make([]string, 1000)
+			for i := range paths {
+				paths[i] = fmt.Sprintf("/work/app-worktree/some/deeper/folder/of/the/run/finding-%04d.md", i)
+			}
+			for range 16 { // about 1.3 MB of paths, with what each costs beside
+				h.Publish(model.Event{Item: c.item(paths)})
+			}
+			if !behind(h) {
+				t.Error("about 1.3 MB of paths waiting didn't drop it")
+			}
+		})
+	}
+}
+
+// A path costs its header beside its bytes, and a written file its time
+// too: what each holds in memory, so a run's 1000 files aren't counted
+// short.
+func TestSizeCountsWhatAPathHolds(t *testing.T) {
+	w := &model.Workflow{Written: []model.WrittenFile{{Path: "ab"}, {Path: "c"}}}
+	if got, want := size(model.Event{Item: &model.Item{Workflow: w}}), 256+3+2*40; got != want {
+		t.Errorf("written files: %d, want %d", got, want)
+	}
+	if got, want := size(model.Event{Item: &model.Item{Paths: []string{"ab", "c"}}}), 256+3+2*16; got != want {
+		t.Errorf("paths: %d, want %d", got, want)
 	}
 }

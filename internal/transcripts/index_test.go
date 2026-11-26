@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
@@ -17,7 +18,9 @@ import (
 func TestHeadsAndPick(t *testing.T) {
 	s, _ := open(t)
 	img := model.Image{MimeType: "image/png", Data: []byte("png bytes")}
-	step := model.Item{ID: "s1", Kind: model.ToolCall, Status: "completed", Parent: "sa", WorktreePath: "/wt", Text: "step", Images: []model.Image{img}}
+	step := model.Item{ID: "s1", Kind: model.ToolCall, Status: "completed", Parent: "sa", WorktreePath: "/wt", Text: "step", Images: []model.Image{img},
+		Started: time.UnixMilli(1000).UTC(), Ended: time.UnixMilli(2000).UTC(),
+		Workflow: &model.Workflow{RunID: "wf_1", Name: "audit", Written: []model.WrittenFile{{Path: "a.md", Changed: time.UnixMilli(1500).UTC()}}}}
 	add(t, s, "C", "", msg("a", "A"), msg("b", "B"), step, msg("c", "C"), msg("d", "D"))
 	add(t, s, "C", "a", msg("b", "B2")) // written again, in place
 	testcheck.NoErr(t, s.Drop("C", "c"))
@@ -32,6 +35,11 @@ func TestHeadsAndPick(t *testing.T) {
 	}
 	if h := heads[2]; h.Parent != "sa" || h.WorktreePath != "/wt" || len(h.Images) != 1 || h.Images[0].Data != nil || h.Images[0].Hash == "" || h.Images[0].MimeType != "image/png" {
 		t.Errorf("a step's head %+v", h)
+	}
+	// What writtenBy reads of a workflow's call, and no more of its run.
+	if h := heads[2]; !h.Ended.Equal(step.Ended) || !h.Started.Equal(step.Started) || h.Workflow == nil || h.Workflow.Name != "" ||
+		len(h.Workflow.Written) != 1 || h.Workflow.Written[0] != step.Workflow.Written[0] {
+		t.Errorf("a workflow call's head: %+v, %+v", h, h.Workflow)
 	}
 	picked, err := s.Pick("C", []string{"d", "s1", "b", "c", "none"})
 	testcheck.NoErr(t, err)

@@ -4,6 +4,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/panel_widgets.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
@@ -251,7 +252,7 @@ class _WorkflowRow extends StatelessWidget {
       context,
       icon: Icons.account_tree_outlined,
       name: Text(
-        w.name.isEmpty ? 'Workflow' : w.name,
+        w.name.isEmpty ? 'Workflow' : plainName(w.name),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: theme.ui(theme.t.text),

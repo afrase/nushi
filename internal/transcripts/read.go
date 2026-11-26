@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"path"
 	"regexp"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -75,13 +76,20 @@ type itemHead struct {
 	MCPServer, MCPTool string
 	Paths              []string
 	Diffs              []struct{ Path string }
+	// When the daemon saw it, and for a call that launched a workflow the
+	// files its agents wrote: what writtenBy places them by.
+	Sent, Started, Ended time.Time
+	Workflow             *struct{ Written []model.WrittenFile }
 }
 
 // item is h as a model.Item of only what it has: its images are their
 // MimeType and Hash (and size, when the record has it), without Data.
 func (h *itemHead) item() model.Item {
 	it := model.Item{ID: h.ID, Kind: h.Kind, Status: h.Status, Parent: h.Parent, WorktreePath: h.WorktreePath,
-		ToolKind: h.ToolKind, MCPServer: h.MCPServer, MCPTool: h.MCPTool, Paths: h.Paths}
+		ToolKind: h.ToolKind, MCPServer: h.MCPServer, MCPTool: h.MCPTool, Paths: h.Paths, Sent: h.Sent, Started: h.Started, Ended: h.Ended}
+	if h.Workflow != nil && len(h.Workflow.Written) > 0 {
+		it.Workflow = &model.Workflow{Written: h.Workflow.Written}
+	}
 	for _, d := range h.Diffs {
 		it.Diffs = append(it.Diffs, model.FileChange{Path: d.Path})
 	}

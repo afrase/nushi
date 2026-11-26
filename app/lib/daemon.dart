@@ -77,7 +77,7 @@ int dataDirOnWeb = 0;
 String? get appFiles => kIsWeb ? null : dataDir;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 155;
+const apiVersion = 156;
 
 /// The oldest daemon API this app works with (ADR 0004): below it the Mac
 /// shows only its Restart screen (`OutdatedScreen`) until the daemon has
@@ -145,6 +145,12 @@ const keepsGoneChatsApi = 151;
 /// a long chat's artifacts and the Files pane's marks are only those of
 /// what's loaded. Goes with the floor.
 const olderWrittenApi = 154;
+
+/// The API from which a workflow says the files its agents wrote
+/// (Workflow.written) and GetChat's older_written takes them in: with an
+/// older daemon a chat's artifacts are only its own calls'. Goes with the
+/// floor.
+const workflowWrittenApi = 156;
 
 /// The API that says who last changed each line of a file (GetBlame,
 /// issue #78): an older daemon's Files pane has no Blame. Goes with the

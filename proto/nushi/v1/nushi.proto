@@ -846,9 +846,11 @@ message GetChatResponse {
   // With `recent`: every file the items before `items` wrote or edited (a
   // subagent's too), each once by the name the items give it, the one
   // changed last first, 1000 at most (the ones changed last); a file a
-  // later call deleted is left out. A client goes over the items it has
-  // after these, as they load and as they come, for the chat's whole list
-  // (issue #62). API 154.
+  // later call deleted is left out. From API 156 it takes in the files
+  // the workflows those items launched wrote (Workflow.written), placed
+  // among the items' own by when they changed. A client goes over the
+  // items it has after these, as they load and as they come, for the
+  // chat's whole list (issue #62). API 154.
   repeated string older_written = 11;
 }
 
@@ -2755,6 +2757,21 @@ message Workflow {
   // order (Claude's meta.phases), with phases 32 at most; their counts are
   // 0. A phase leaves it for phases once reached. API 134.
   repeated WorkflowPhase planned = 20;
+  // The files its agents wrote or edited with their file tools, each once,
+  // the one changed last first, 1000 at most: by the rule a chat's own
+  // calls have (a failed call counts for nothing), named as a chat's calls
+  // name theirs (relative to the chat's folder when inside it), the
+  // agent's paths as plain text. Kept up to date while it runs (read
+  // every few seconds), read to the end once it ended. A shell command's
+  // files aren't among them. Empty from a daemon below API 156.
+  repeated WrittenFile written = 21;
+}
+
+// A file a workflow's agents wrote: its path, and when the last call that
+// changed it ended, in Unix milliseconds (0 when not known).
+message WrittenFile {
+  string path = 1;
+  int64 changed = 2;
 }
 
 // A phase of a workflow: its title, the agent's line on it, and how many

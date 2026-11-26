@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
 
@@ -5,7 +7,9 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart' show ago;
+import 'package:nushi/palette.dart';
 import 'package:nushi/panel_widgets.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -15,10 +19,14 @@ import 'package:nushi/widgets.dart';
 /// pinned, the recent, the older), five of them and "Show more" for the
 /// rest; each its icon, its name and, on the right, its kind, with a pin on
 /// hover (always on a pinned one) and its folder and when it changed in its
-/// tooltip. A click opens its preview, the open one's row marked.
+/// tooltip, and the run that changed it last when a workflow's agents did
+/// (no mark: the workflow's glyph is the Diagram kind's and a worktree's,
+/// and a row has no room to spare). A click opens its preview,
+/// the open one's row marked.
 /// Collapsed, it counts them. Null (no widget) when there are none.
 PanelWidget? artifactsWidget(ChatState chat) {
-  if (chatFilesOf(chat).isEmpty) return null;
+  final a = chatArtifacts(chat);
+  if (a.pinned.isEmpty && a.recent.isEmpty && a.older.isEmpty) return null;
   return PanelWidget(
     title: 'Artifacts',
     summary: ListenableBuilder(
@@ -39,8 +47,15 @@ PanelWidget? artifactsWidget(ChatState chat) {
 /// How many rows show before "Show more", as Claude's rail has it.
 const shownFiles = 5;
 
+/// How many rows "Show more" opens at most: a workflow can write a
+/// thousand, and every row shown is built and its file's time read; past
+/// these, "Show all in Artifacts…" lists every one in Artifacts…'s
+/// palette, which builds only the rows in view.
+const moreFiles = 50;
+
 /// The widget's rows: the first [shownFiles], then "Show more", which
-/// opens the rest in place (and "Show less" folds them again).
+/// opens the rest in place up to [moreFiles] (and "Show less" folds them
+/// again).
 class FileRows extends StatefulWidget {
   const new(this.chat, {super.key});
 
@@ -53,8 +68,28 @@ class FileRows extends StatefulWidget {
 /// How far a row's text sits in from its mark's edge.
 const _inset = 6.0;
 
+/// How wide a row's tooltip grows before it wraps: a path is an agent's
+/// choice, and one of a few hundred characters would cross the window.
+const fileTipWidth = 420.0;
+
 class _FileRowsState extends State<FileRows> {
   bool _more = false;
+
+  /// While the pointer is over the rows the order they showed holds
+  /// ([_held]), so a file a running workflow adds doesn't slide the row
+  /// under the pointer away before a click; what came is applied once it
+  /// leaves. Only the pointer: the keyboard's focus stays on a row opened
+  /// with Enter, and would hold the list with nothing on screen saying so.
+  List<String>? _held;
+  List<String> _shown = const [];
+
+  void _hold({required bool pointer}) {
+    if (pointer) {
+      _held ??= _shown;
+    } else if (_held != null) {
+      setState(() => _held = null);
+    }
+  }
 
   /// When each row's file last changed: read again on the minute's tick
   /// and when the chat's items or folder change, not as text streams in.
@@ -100,9 +135,13 @@ class _FileRowsState extends State<FileRows> {
         minWidth: box.maxWidth + 2 * _inset,
         maxWidth: box.maxWidth + 2 * _inset,
         fit: OverflowBoxFit.deferToChild,
-        child: ListenableBuilder(
-          listenable: artifactsOf(widget.chat),
-          builder: (context, _) => _rows(theme, chatArtifacts(widget.chat)),
+        child: MouseRegion(
+          onEnter: (_) => _hold(pointer: true),
+          onExit: (_) => _hold(pointer: false),
+          child: ListenableBuilder(
+            listenable: artifactsOf(widget.chat),
+            builder: (context, _) => _rows(theme, chatArtifacts(widget.chat)),
+          ),
         ),
       ),
     );
@@ -111,28 +150,37 @@ class _FileRowsState extends State<FileRows> {
   Widget _rows(NushiTheme theme, Artifacts a) {
     final t = theme.t;
     final open = openArtifact(widget.chat);
-    final all = [...a.pinned, ...a.recent, ...a.older];
+    final all = _shown = _held ?? [...a.pinned, ...a.recent, ...a.older];
     final more = all.length > shownFiles;
+    Widget link(String label, VoidCallback onTap) => Tap(
+      onTap: onTap,
+      tint: false,
+      padding: const EdgeInsets.symmetric(
+        horizontal: _inset,
+        vertical: PanelType.rowGap,
+      ),
+      child: Text(label, style: theme.ui(t.textMuted)),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final f in more && !_more ? all.take(shownFiles) : all)
+        for (final f in all.take(_more ? moreFiles : shownFiles))
           _FileRow(widget.chat, f, open: f == open, changed: _changedOf(f)),
         if (more)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Tap(
-              onTap: () => setState(() => _more = !_more),
-              tint: false,
-              padding: const EdgeInsets.symmetric(
-                horizontal: _inset,
-                vertical: PanelType.rowGap,
-              ),
-              child: Text(
+          Row(
+            children: [
+              link(
                 _more ? 'Show less' : 'Show more',
-                style: theme.ui(t.textMuted),
+                () => setState(() => _more = !_more),
               ),
-            ),
+              if (_more && all.length > moreFiles)
+                Flexible(
+                  child: link(
+                    'Show all in Artifacts…',
+                    () => unawaited(showArtifacts(context, widget.chat)),
+                  ),
+                ),
+            ],
           ),
       ],
     );
@@ -140,8 +188,10 @@ class _FileRowsState extends State<FileRows> {
 }
 
 /// A file's row: its kind's icon (its pin there on hover, or always when
-/// pinned), its name, its kind on the right; its folder and when it
-/// [changed] in its tooltip.
+/// pinned), its name, its kind on the right ("Gone", and no pin on hover,
+/// once the file isn't there); its folder and when it
+/// [changed] in its tooltip, and on a line of its own the workflow that
+/// changed it last, if one did.
 class _FileRow extends StatelessWidget {
   const new(this.chat, this.file, {required this.open, required this.changed});
 
@@ -157,44 +207,70 @@ class _FileRow extends StatelessWidget {
     final f = file;
     final kind = previewKind(f);
     final when = changed;
+    final run = writtenByWorkflow(chat, f);
+    // No time read: the file isn't there any more (the stat the row takes
+    // anyway). It stays a row, so nothing moves under the pointer: its name
+    // muted and italic, and "Gone" in its kind's place, since a muted name
+    // alone reads as a quieter row; with nothing to keep, no pin.
+    final gone = filesLooked && when == null;
     return Hover(
-      builder: (context, {required hover}) => Tap(
-        onTap: () => chat.openInFiles(f),
-        selected: open,
-        tooltip: [
-          f,
-          if (when != null) ago(clock().difference(when), when),
-        ].join(' · '),
-        // A background task's room, as Claude's Outputs and its tasks share.
-        padding: const EdgeInsets.symmetric(
-          horizontal: _inset,
-          vertical: 1 + PanelType.rowGap,
+      builder: (context, {required hover}) => TooltipTheme(
+        data: TooltipTheme.of(context).copyWith(
+          // The least height a desktop tooltip has, and a widest.
+          constraints: const BoxConstraints(
+            minHeight: 24,
+            maxWidth: fileTipWidth,
+          ),
         ),
-        child: SizedBox(
-          height: 22,
-          child: Row(
-            spacing: 8,
-            children: [
-              pinMark(
-                chat,
-                f,
-                hover: hover,
-                icon: Icon(
-                  kind?.icon ?? Icons.description_outlined,
-                  size: 15,
-                  color: t.textMuted,
+        child: Tap(
+          onTap: () => chat.openInFiles(f),
+          selected: open,
+          tooltip: [
+            // A path and a run's name are an agent's text: plain, so they
+            // can't reorder or hide what's around them.
+            [
+              plainName(f),
+              if (when != null) ago(clock().difference(when), when),
+            ].join(' · '),
+            if (gone) 'Not there any more',
+            if (run != null) 'Written by the workflow ${plainName(run)}',
+          ].join('\n'),
+          // A background task's room, as Claude's Outputs and its tasks share.
+          padding: const EdgeInsets.symmetric(
+            horizontal: _inset,
+            vertical: 1 + PanelType.rowGap,
+          ),
+          child: SizedBox(
+            height: 22,
+            child: Row(
+              spacing: 8,
+              children: [
+                pinMark(
+                  chat,
+                  f,
+                  hover: hover && !gone,
+                  icon: Icon(
+                    kind?.icon ?? Icons.description_outlined,
+                    size: 15,
+                    color: t.textMuted,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: Text(
-                  baseName(f),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.ui(t.text),
+                Expanded(
+                  child: Text(
+                    plainName(baseName(f)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme
+                        .ui(gone ? t.textMuted : t.text)
+                        .copyWith(fontStyle: gone ? FontStyle.italic : null),
+                  ),
                 ),
-              ),
-              if (kind != null) Text(kind.label, style: theme.ui(t.textMuted)),
-            ],
+                if (gone)
+                  Text('Gone', style: theme.ui(t.textMuted))
+                else if (kind != null)
+                  Text(kind.label, style: theme.ui(t.textMuted)),
+              ],
+            ),
           ),
         ),
       ),

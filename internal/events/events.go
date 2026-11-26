@@ -78,21 +78,38 @@ func (h *Hub) limits() (queued, bytes int) {
 	return queued, bytes
 }
 
-// size is about what an event holds: its text, diffs and images, and a
-// little for the rest.
+// size is about what an event holds: its text, diffs, images and paths
+// (a workflow's written files too, up to model.WorkflowWritten of them,
+// sent again at each change of its summary), and a little for the rest.
 func size(e model.Event) int {
 	n := 256
 	if it := e.Item; it != nil {
 		n += len(it.Text)
 		for _, d := range it.Diffs {
-			n += len(d.Old) + len(d.New)
+			n += len(d.Old) + len(d.New) + len(d.Path)
 		}
 		for _, img := range it.Images {
 			n += len(img.Data)
 		}
+		for _, p := range it.Paths {
+			n += len(p) + pathCost
+		}
+		if w := it.Workflow; w != nil {
+			for _, f := range w.Written {
+				n += len(f.Path) + writtenCost
+			}
+		}
 	}
 	return n
 }
+
+// pathCost is what a path costs beside its bytes: its string's header.
+// writtenCost is a written file's (model.WrittenFile): its path's header
+// and its time.Time.
+const (
+	pathCost    = 16
+	writtenCost = 40
+)
 
 // Subscribe calls fn with each event published from then on, until fn
 // returns false or ctx ends (nil), or the subscriber falls too far behind

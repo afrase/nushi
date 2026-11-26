@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:math' show max;
 
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
@@ -10,34 +12,60 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/run_state.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 
 /// The artifacts ([isArtifact]) [items] wrote, edited or showed (a
-/// subagent's calls too), or with [any] every file they wrote or edited
-/// (one only shown wasn't written), each once, the one changed last
-/// first; a file deleted since is left out. [before] is what items before
-/// them wrote, the one changed last first (GetChatResponse.older_written):
+/// subagent's calls too, and the files the workflows they launched wrote:
+/// Workflow.written, API 156), or with [any] every file they wrote or
+/// edited (one only shown wasn't written), each once, the one changed last
+/// first; a file deleted since is left out. A workflow's files sit among
+/// the items by when they changed, as the daemon places them (chats'
+/// writtenBy): at each item a clock moves up to the item's time
+/// ([_itemTime], or stays), the files changed not after it go in, oldest
+/// first, and then the item, so an item at a file's time is the later; a
+/// file whose time isn't known takes the clock at its launch, and those
+/// changed after every item go in last. [before] is
+/// what items before them wrote, the one changed last first
+/// (GetChatResponse.older_written):
 /// [items] go over it, so going over items it already counts changes
 /// nothing. Each by one name, however the agent named it ([relativeIn] the
 /// chat's [folder]): relative to it when inside it, as the daemon names a
-/// written file.
+/// written file. With [runs], it is filled with the run that changed
+/// each file last ([runName]), for each file a workflow changed last.
 List<String> chatFiles(
   Iterable<Item> items, {
   String folder = '',
   bool any = false,
   Iterable<String> before = const [],
+  Map<String, String>? runs,
 }) {
   String name(String p) => relativeIn(folder, p);
   final files = <String>{}; // in the order last changed
-  for (final p in before.toList().reversed.map(name)) {
-    if (!any && !isArtifact(p)) continue;
+  void wrote(String p, [String? run]) {
+    if (!any && !isArtifact(p)) return;
     files
       ..remove(p)
       ..add(p);
+    if (run != null) {
+      runs?[p] = run;
+    } else {
+      runs?.remove(p);
+    }
   }
+
+  before.toList().reversed.map(name).forEach(wrote);
+  final ran = _workflowFiles(items);
+  var next = 0;
+  var clock = 0; // the latest time an item so far says
   for (final it in items) {
+    clock = max(clock, _itemTime(it));
+    // A tie goes in first: an item of the same millisecond is the later.
+    for (; next < ran.length && ran[next].changed <= clock; next++) {
+      wrote(name(ran[next].path), ran[next].run);
+    }
     if (it.kind != ItemKind.ITEM_KIND_TOOL_CALL || it.status == 'failed') {
       continue;
     }
@@ -48,33 +76,83 @@ List<String> chatFiles(
           ..add(name(p));
       }
     } else if (it.toolKind == 'delete') {
-      files.removeAll(it.paths.map(name));
+      for (final p in it.paths.map(name)) {
+        files.remove(p);
+        runs?.remove(p);
+      }
     } else if (it.toolKind == 'edit' || it.diffs.isNotEmpty) {
-      for (final p in {
+      <String>{
         ...it.paths.map(name),
         for (final d in it.diffs) name(d.path),
-      }) {
-        if (!any && !isArtifact(p)) continue;
-        files
-          ..remove(p)
-          ..add(p);
-      }
+      }.forEach(wrote);
     }
+  }
+  for (final f in ran.skip(next)) {
+    wrote(name(f.path), f.run); // changed after every item
   }
   return files.toList().reversed.toList();
 }
+
+/// The files the workflows [items] launched wrote, the one changed first
+/// first, each with when it changed in Unix ms (one whose time isn't known
+/// at its launch's: the latest time an item up to it says) and the run's
+/// name ([runName]).
+List<({String path, int changed, String run})> _workflowFiles(
+  Iterable<Item> items,
+) {
+  final out = <({String path, int changed, String run})>[];
+  var clock = 0;
+  for (final it in items) {
+    clock = max(clock, _itemTime(it));
+    if (!it.hasWorkflow()) continue;
+    final run = runName(it.workflow);
+    for (final f in it.workflow.written.reversed) {
+      final t = f.changed.toInt();
+      // A file with no time whose launch has none either takes the time of
+      // the last item before it that has one, and as a tie goes in before
+      // that item: below a file the chat wrote before the run began. A
+      // quirk of the rule, kept: the daemon's writtenBy does the same, and
+      // the two lists must agree.
+      out.add((path: f.path, changed: t == 0 ? clock : t, run: run));
+    }
+  }
+  // List.sort isn't stable: the index keeps a run's own order on a tie.
+  final order = [...out.indexed]
+    ..sort(
+      (a, b) => switch (a.$2.changed.compareTo(b.$2.changed)) {
+        0 => a.$1.compareTo(b.$1),
+        final c => c,
+      },
+    );
+  return [for (final (_, f) in order) f];
+}
+
+/// A run's name as its card shows it: its script's name, its id while it
+/// has none.
+String runName(Workflow w) => w.name.isNotEmpty ? w.name : w.runId;
+
+/// When the daemon saw [it], in Unix ms: a call's start (which follows the
+/// items' order, where a long call's end would jump past its children),
+/// else its end, a message's sending; 0 when it didn't (a replay).
+int _itemTime(Item it) => [
+  it.started,
+  it.ended,
+  it.sent,
+].firstWhere((t) => t != 0, orElse: () => Int64.ZERO).toInt();
 
 /// [chatFiles] of a chat's items, all of them and those of its last turn
 /// (from the last message of the user's on), and every file it wrote, as
 /// of its items' revision and its folder (a chat can move); all and every
 /// file reach past the loaded items to what the older ones wrote (issue
-/// #62).
+/// #62). Its workflows name the run that changed each file last, for the
+/// files a workflow changed last.
 typedef _Written = ({
   int revision,
   String folder,
   List<String> all,
   Set<String> last,
   Set<String> any,
+  Map<String, String> workflows,
 });
 
 final _written = Expando<_Written>();
@@ -93,14 +171,59 @@ _Written _writtenBy(ChatState chat) {
   // left it (ChatState.olderWritten); none from a daemon before
   // olderWrittenApi, whose chat lists only what's loaded.
   final before = chat.olderWritten ?? const <String>[];
+  // A workflow still running before the loaded part writes on: what it
+  // wrote since the daemon's list (or a trim) counted its files.
+  final all = [
+    for (final it in chat.runningBefore.where((it) => it.hasWorkflow()))
+      _since(it, chat.olderRunFiles[it.id]),
+    ...items,
+  ];
+  final runs = <String, String>{};
   return _written[chat] = (
     revision: chat.revision,
     folder: folder,
-    all: chatFiles(items, folder: folder, before: before),
+    all: chatFiles(all, folder: folder, before: before),
     last: chatFiles(items.skip(turn + 1), folder: folder).toSet(),
-    any: chatFiles(items, folder: folder, any: true, before: before).toSet(),
+    any: chatFiles(
+      all,
+      folder: folder,
+      any: true,
+      before: before,
+      runs: runs,
+    ).toSet(),
+    workflows: runs,
   );
 }
+
+/// A workflow's call [it] with only the files it wrote or changed again
+/// since [counted] (each file's time then) was taken.
+Item _since(Item it, Map<String, int>? counted) {
+  if (counted == null || counted.isEmpty) return it;
+  final w = it.workflow;
+  return Item(
+    id: it.id,
+    kind: it.kind,
+    status: it.status,
+    toolKind: it.toolKind,
+    started: it.started,
+    ended: it.ended,
+    sent: it.sent,
+    workflow: Workflow(
+      runId: w.runId,
+      name: w.name,
+      written: [
+        for (final f in w.written)
+          if (counted[f.path] != f.changed.toInt()) f,
+      ],
+    ),
+  );
+}
+
+/// The name ([runName]) of the workflow that changed [file] last in
+/// [chat], null when none of its loaded workflows did or the chat changed
+/// it since: the Artifacts widget's row says so.
+String? writtenByWorkflow(ChatState chat, String file) =>
+    _writtenBy(chat).workflows[file];
 
 /// [chatFiles] of [chat]'s items, worked out again only when they changed
 /// but by text streaming in ([ChatState.revision]): every chunk builds the
@@ -141,24 +264,27 @@ Artifacts sortArtifacts(
   String? open,
   Map<String, DateTime> opened = const {},
 }) {
-  final pinned = [
+  // Sets, not lists' contains: a workflow's thousand files would make
+  // each build quadratic.
+  final listed = files.toSet();
+  final pinned = <String>{
     for (final p in pins)
-      if (files.contains(p)) p,
-  ];
+      if (listed.contains(p)) p,
+  };
   bool recent(String f) =>
       last.contains(f) ||
       f == open ||
       (opened[f] != null && now.difference(opened[f]!) < openedRecent);
-  var fresh = [
+  var fresh = <String>{
     for (final f in files)
       if (!pinned.contains(f) && recent(f)) f,
-  ];
+  };
   if (pinned.isEmpty && fresh.isEmpty) {
-    fresh = files.take(recentAtLeast).toList();
+    fresh = files.take(recentAtLeast).toSet();
   }
   return (
-    pinned: pinned,
-    recent: fresh,
+    pinned: pinned.toList(),
+    recent: fresh.toList(),
     older: [
       for (final f in files)
         if (!pinned.contains(f) && !fresh.contains(f)) f,
@@ -170,10 +296,17 @@ Artifacts sortArtifacts(
 /// not [pins] (the phone: they're kept in the Mac's `app.json`). The open
 /// file and the pins go by the artifacts' names ([relativeIn]): a show
 /// call's row opens its file by the agent's.
+/// A file whose folder is gone (a worktree removed once its branch
+/// merged, beside the chat's folder or under it) is left out
+/// ([inGoneFolder]); one gone from a folder still there stays, a "Gone"
+/// row.
 Artifacts chatArtifacts(ChatState chat, {bool pins = true}) {
   final written = _writtenBy(chat);
   return sortArtifacts(
-    written.all,
+    [
+      for (final f in written.all)
+        if (!inGoneFolder(chat.folder, f)) f,
+    ],
     last: written.last,
     now: clock(),
     pins: [
@@ -194,9 +327,52 @@ String? openArtifact(ChatState chat) => switch (chat.shownFile) {
   null => null,
 };
 
-/// What [chatArtifacts] reads, to build again when it changes.
-Listenable artifactsOf(ChatState chat) =>
-    Listenable.merge([chat, chat.files.shown, chat.opened, pinnedFiles]);
+/// What [chatArtifacts] reads, to build again when it changes: the
+/// minute's tick too, for a folder looked at again ([inGoneFolder]).
+Listenable artifactsOf(ChatState chat) => Listenable.merge([
+  chat,
+  chat.files.shown,
+  chat.opened,
+  pinnedFiles,
+  minuteClock,
+]);
+
+/// Whether the folder at an absolute path is there; true where that can't
+/// be known (the phone, which keeps its whole list). Tests set their own.
+bool Function(String folder) folderThere = _folderThere;
+
+bool _folderThere(String folder) => kIsWeb || Directory(folder).existsSync();
+
+/// Whether each folder [inGoneFolder] looked at was there, and when it
+/// looked.
+final Map<String, ({bool there, DateTime at})> _folders = runMap();
+
+/// How long what [inGoneFolder] found of a folder holds.
+const folderLooked = Duration(minutes: 1);
+
+/// Whether [file], as [chatFiles] names it in the chat's [folder], is in a
+/// folder that is gone: a worktree removed once its branch merged takes
+/// all its files at once, one beside the chat's folder (an absolute name)
+/// as one under it (Claude's `.claude/worktrees/<name>`, a relative
+/// name). Each folder is looked at once (one stat for a run's many files
+/// in it), and again at the first build after [folderLooked] (the widget
+/// builds on the minute's tick), not per file nor per frame.
+bool inGoneFolder(String folder, String file) {
+  final path = absoluteIn(folder, file);
+  final dir = path.substring(0, max(1, path.lastIndexOf('/')));
+  final now = clock();
+  if (_folders[dir] case final had?
+      when now.difference(had.at) < folderLooked) {
+    return !had.there;
+  }
+  final there = folderThere(dir);
+  _folders[dir] = (there: there, at: now);
+  return !there;
+}
+
+/// Whether a missing time from [fileChanged] means the file isn't there:
+/// false on the phone, which can't look.
+const bool filesLooked = !kIsWeb;
 
 /// Whether [file] is pinned in [chat], by whatever name it was.
 bool pinned(ChatState chat, String file) =>

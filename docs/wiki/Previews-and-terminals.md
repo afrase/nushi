@@ -12,7 +12,7 @@ When the agent writes a document, page, image or diagram, its row in the chat ha
 
 Other ways to open a file:
 
-- **Artifacts**: in the details panel (the panel button in the chat's header), the **Artifacts** list shows the documents, pages and images the chat made, in a long chat the early ones too. Click one to open it.
+- **Artifacts**: in the details panel (the panel button in the chat's header), the **Artifacts** list shows the documents, pages and images the chat made, in a long chat the early ones too. Files a Claude workflow's agents wrote are there as well; the pointer over one names the workflow that changed it last. Click one to open it. Files made by a shell command aren't listed, nor files whose folder is gone, such as a worktree removed since; a file deleted from a folder that's still there shows as **Gone**.
 - **Open file** (⌘P): type part of a name to open any file in the chat's folder, code included.
 - **Files** (⇧⌘E, or the folder button in the header): the open files on the left and a tree of the chat's folder on the right, as in Claude's desktop app. With nothing open it says **Open files appear here**. Files with changes have a dot (see below). Opening a file never moves the tree. To find a file anywhere in the folder, type in **Search files…** above the tree.
 

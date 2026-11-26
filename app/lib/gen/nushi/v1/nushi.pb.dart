@@ -1891,9 +1891,11 @@ class GetChatResponse extends $pb.GeneratedMessage {
   /// With `recent`: every file the items before `items` wrote or edited (a
   /// subagent's too), each once by the name the items give it, the one
   /// changed last first, 1000 at most (the ones changed last); a file a
-  /// later call deleted is left out. A client goes over the items it has
-  /// after these, as they load and as they come, for the chat's whole list
-  /// (issue #62). API 154.
+  /// later call deleted is left out. From API 156 it takes in the files
+  /// the workflows those items launched wrote (Workflow.written), placed
+  /// among the items' own by when they changed. A client goes over the
+  /// items it has after these, as they load and as they come, for the
+  /// chat's whole list (issue #62). API 154.
   @$pb.TagNumber(11)
   $pb.PbList<$core.String> get olderWritten => $_getList(10);
 }
@@ -18211,6 +18213,7 @@ class Workflow extends $pb.GeneratedMessage {
     $fixnum.Int64? tokens,
     $core.Iterable<$core.int>? runningPhases,
     $core.Iterable<WorkflowPhase>? planned,
+    $core.Iterable<WrittenFile>? written,
   }) {
     final result = Workflow._();
     if (runId != null) result.runId = runId;
@@ -18232,6 +18235,7 @@ class Workflow extends $pb.GeneratedMessage {
     if (tokens != null) result.tokens = tokens;
     if (runningPhases != null) result.runningPhases.addAll(runningPhases);
     if (planned != null) result.planned.addAll(planned);
+    if (written != null) result.written.addAll(written);
     return result;
   }
 
@@ -18270,6 +18274,8 @@ class Workflow extends $pb.GeneratedMessage {
         19, _omitFieldNames ? '' : 'runningPhases', $pb.PbFieldType.K3)
     ..pPM<WorkflowPhase>(20, _omitFieldNames ? '' : 'planned',
         subBuilder: WorkflowPhase.$_createMessage)
+    ..pPM<WrittenFile>(21, _omitFieldNames ? '' : 'written',
+        subBuilder: WrittenFile.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -18461,6 +18467,87 @@ class Workflow extends $pb.GeneratedMessage {
   /// 0. A phase leaves it for phases once reached. API 134.
   @$pb.TagNumber(20)
   $pb.PbList<WorkflowPhase> get planned => $_getList(18);
+
+  /// The files its agents wrote or edited with their file tools, each once,
+  /// the one changed last first, 1000 at most: by the rule a chat's own
+  /// calls have (a failed call counts for nothing), named as a chat's calls
+  /// name theirs (relative to the chat's folder when inside it), the
+  /// agent's paths as plain text. Kept up to date while it runs (read
+  /// every few seconds), read to the end once it ended. A shell command's
+  /// files aren't among them. Empty from a daemon below API 156.
+  @$pb.TagNumber(21)
+  $pb.PbList<WrittenFile> get written => $_getList(19);
+}
+
+/// A file a workflow's agents wrote: its path, and when the last call that
+/// changed it ended, in Unix milliseconds (0 when not known).
+class WrittenFile extends $pb.GeneratedMessage {
+  factory WrittenFile({
+    $core.String? path,
+    $fixnum.Int64? changed,
+  }) {
+    final result = WrittenFile._();
+    if (path != null) result.path = path;
+    if (changed != null) result.changed = changed;
+    return result;
+  }
+
+  WrittenFile._();
+
+  factory WrittenFile.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WrittenFile()..mergeFromBuffer(data, registry);
+  factory WrittenFile.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WrittenFile()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WrittenFile',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WrittenFile.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aInt64(2, _omitFieldNames ? '' : 'changed')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WrittenFile clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WrittenFile copyWith(void Function(WrittenFile) updates) =>
+      super.copyWith((message) => updates(message as WrittenFile))
+          as WrittenFile;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WrittenFile() / WrittenFile.new instead')
+  static WrittenFile create() => WrittenFile._();
+  static $pb.GeneratedMessage $_createMessage() => WrittenFile._();
+  @$core.override
+  WrittenFile createEmptyInstance() => WrittenFile._();
+  @$core.pragma('dart2js:noInline')
+  static WrittenFile getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<WrittenFile>(
+          WrittenFile.$_createMessage);
+  static WrittenFile? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get changed => $_getI64(1);
+  @$pb.TagNumber(2)
+  set changed($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasChanged() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearChanged() => $_clearField(2);
 }
 
 /// A phase of a workflow: its title, the agent's line on it, and how many

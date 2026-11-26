@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -293,7 +294,9 @@ func (c *chat) rootsLocked() []string {
 // count, whatever its agent says it touched: asking to show a file can't
 // be what allows it (ADR 0068). Of a chat whose items were let go, only
 // its tool calls are read from the copy (ADR 0103): a file link asks on
-// every message that names a path outside the chat's folder.
+// every message that names a path outside the chat's folder. A file a
+// workflow's agent wrote (a call's Workflow.Written: its finished,
+// non-error writes) counts by exact name too (writtenIn).
 func (s *Service) Wrote(chatID, path string) bool {
 	c, err := s.find(chatID)
 	if err != nil {
@@ -328,6 +331,30 @@ func (s *Service) Wrote(chatID, path string) bool {
 			if abs(d.Path) == path {
 				return true
 			}
+		}
+		if w := it.Workflow; w != nil && writtenIn(*w, cmp.Or(w.Folder, c.record.Folder), path) {
+			return true
+		}
+	}
+	return false
+}
+
+// writtenIn says the run w wrote the file at path (absolute, cleaned):
+// a Written path equal to it, an absolute one once cleaned, a relative
+// one resolved against folder (the run's) and only when local, so one
+// like "../../x" never counts; no prefix of a path counts.
+func writtenIn(w model.Workflow, folder, path string) bool {
+	for _, f := range w.Written {
+		p := f.Path
+		switch {
+		case filepath.IsAbs(p):
+		case filepath.IsLocal(p) && filepath.IsAbs(folder):
+			p = filepath.Join(folder, p)
+		default:
+			continue
+		}
+		if filepath.Clean(p) == path {
+			return true
 		}
 	}
 	return false
