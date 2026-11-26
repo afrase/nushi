@@ -40,7 +40,7 @@ func TestNotesAreBareTags(t *testing.T) {
 	for _, c := range []struct{ got, want string }{
 		{switchNote("main", "other"), `<nushi-branch-switched from="main" to="other"/>`},
 		{moveNote("/r/a b", ""), `<nushi-moved folder="/r/a b"/>`},
-		{moveNote("/r/try", "try-sqrly"), `<nushi-moved folder="/r/try" branch="try-sqrly"/>`},
+		{moveNote("/r/try", "try-rusty"), `<nushi-moved folder="/r/try" branch="try-rusty"/>`},
 		{editNote("a.go"), `<nushi-edited path="a.go"/>`},
 		{editNote(`odd"/><x y="`), `<nushi-edited path="odd&quot;/&gt;&lt;x y=&quot;"/>`},
 		{editNote("a&b`c'.go"), `<nushi-edited path="a&amp;b` + "`" + `c'.go"/>`},
@@ -63,7 +63,7 @@ func TestOldNotesStillUnnoted(t *testing.T) {
 		"[Nushi] This worktree's branch was renamed from nushi/brave-otter to nushi/bump-go-1-27-3. Use the new name.",
 		"[Nushi] This folder's branch changed from main to other. Work on other from now on.",
 		"[Nushi] This chat moved to `/Users/me/src/try`. Work there from now on.",
-		"[Nushi] This chat moved to `/Users/me/src/try`, on branch try-sqrly. Work there from now on.",
+		"[Nushi] This chat moved to `/Users/me/src/try`, on branch try-rusty. Work there from now on.",
 		"[Nushi] The user stopped your background command bx81fz2; its exit code was that stop, not a failure.",
 		"[Nushi] The user edited `a.go` in Nushi since your last turn; re-read it before changing it.",
 		"[Nushi] The user edited `a.go`, `docs/b.md` in Nushi since your last turn; re-read them before changing them.",

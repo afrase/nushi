@@ -85,7 +85,7 @@ List<String> _order(WidgetTester tester) => shownInOrder(tester, [
   'Later',
   'Drag chats here',
   'ledger-poc',
-  'cappy',
+  'cubby',
   'garden',
   'notes',
   ...arrangeTitles,
@@ -123,7 +123,7 @@ void main() {
       'ledger-poc',
       'Wire the ledger',
       'Seed data',
-      'cappy',
+      'cubby',
       'Cap the rates',
       'notes',
       'Jot it down',
@@ -142,7 +142,7 @@ void main() {
     await _dragTo(tester, 'Cap the rates', tester.getCenter(_in('Reviews')));
     expect(sidebarSections.value.single.chats, ['c', 'd']);
     // Its row says its project, whose group stays too.
-    expect(find.text('cappy'), findsNWidgets(2));
+    expect(find.text('cubby'), findsNWidgets(2));
     expect(_titles(tester).sublist(2, 5), [
       'Reviews',
       'Cap the rates',
@@ -158,7 +158,7 @@ void main() {
     // Dragged onto the groups, it goes back to its project.
     await _dragTo(tester, 'Cap the rates', tester.getCenter(_in('notes')));
     expect(sidebarSections.value.single.chats, ['p', 'd']);
-    expect(_order(tester), containsAllInOrder(['cappy', 'Cap the rates']));
+    expect(_order(tester), containsAllInOrder(['cubby', 'Cap the rates']));
 
     // Remove from section, from the row's menu.
     await _rowMenu(tester, 'Keep this', [

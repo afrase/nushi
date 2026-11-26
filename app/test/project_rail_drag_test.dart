@@ -42,7 +42,7 @@ List<String> _tiles(WidgetTester tester) {
 /// The projects' headers in the sidebar's list, top to bottom.
 List<String> _headers(WidgetTester tester) => shownInOrder(tester, _names);
 
-const _names = ['ledger-poc', 'cappy', 'garden', 'notes', 'attic'];
+const _names = ['ledger-poc', 'cubby', 'garden', 'notes', 'attic'];
 
 /// Presses [name]'s tile with the mouse and moves it, in small steps, to
 /// [goal] (a height in the window), pumping each.
@@ -60,7 +60,7 @@ Future<TestGesture> _drag(WidgetTester tester, String name, double goal) async {
 
 /// The sidebar of `arrangedSidebar` with no chat pinned, so each
 /// project's name shows only in its header: the projects, the newest chat
-/// first, are ledger-poc, cappy, garden, notes and attic.
+/// first, are ledger-poc, cubby, garden, notes and attic.
 Future<(Daemon, FakeDaemon)> _sidebar(
   WidgetTester tester, {
   Tokens tokens = Tokens.dark,
@@ -85,7 +85,7 @@ void main() {
   testWidgets('a tile dragged lands where it’s dropped: the sidebar’s '
       'order is saved, and its list follows', (tester) async {
     final (d, _) = await _sidebar(tester);
-    const before = ['ledger-poc', 'cappy', 'garden', 'notes', 'attic'];
+    const before = ['ledger-poc', 'cubby', 'garden', 'notes', 'attic'];
     expect(_tiles(tester), ['All projects', ...before, 'Add project…']);
     expect(_headers(tester), before);
 
@@ -93,19 +93,19 @@ void main() {
     var drag = await _drag(tester, 'ledger-poc', _bottom(tester, 'garden'));
     await drag.up();
     await tester.pumpAndSettle();
-    const once = ['cappy', 'garden', 'ledger-poc', 'notes', 'attic'];
-    expect(sidebarOrder.value, [cappy, garden, ledger, notes, attic]);
+    const once = ['cubby', 'garden', 'ledger-poc', 'notes', 'attic'];
+    expect(sidebarOrder.value, [cubby, garden, ledger, notes, attic]);
     expect(readSaved()['sidebarOrder'], sidebarOrder.value);
     expect(_tiles(tester), ['All projects', ...once, 'Add project…']);
     expect(_headers(tester), once);
     // A move isn't a click: the sidebar isn't narrowed.
     expect(sidebarProject.value, isNull);
 
-    // Up: attic to the upper half of cappy, first.
-    drag = await _drag(tester, 'attic', _top(tester, 'cappy') + 4);
+    // Up: attic to the upper half of cubby, first.
+    drag = await _drag(tester, 'attic', _top(tester, 'cubby') + 4);
     await drag.up();
     await tester.pumpAndSettle();
-    const twice = ['attic', 'cappy', 'garden', 'ledger-poc', 'notes'];
+    const twice = ['attic', 'cubby', 'garden', 'ledger-poc', 'notes'];
     expect(_tiles(tester), ['All projects', ...twice, 'Add project…']);
     expect(_headers(tester), twice);
 
@@ -120,15 +120,15 @@ void main() {
     // so they go first.
     sidebarOrder.value = [garden, '', notes];
     final (d, _) = await _sidebar(tester);
-    const before = ['ledger-poc', 'cappy', 'attic', 'garden', 'notes'];
+    const before = ['ledger-poc', 'cubby', 'attic', 'garden', 'notes'];
     expect(_tiles(tester), ['All projects', ...before, 'Add project…']);
-    final drag = await _drag(tester, 'notes', _top(tester, 'cappy') + 4);
+    final drag = await _drag(tester, 'notes', _top(tester, 'cubby') + 4);
     await drag.up();
     await tester.pumpAndSettle();
-    const after = ['ledger-poc', 'notes', 'cappy', 'attic', 'garden'];
+    const after = ['ledger-poc', 'notes', 'cubby', 'attic', 'garden'];
     expect(_tiles(tester), ['All projects', ...after, 'Add project…']);
     expect(_headers(tester), after);
-    expect(sidebarOrder.value, [ledger, '', notes, cappy, attic, garden]);
+    expect(sidebarOrder.value, [ledger, '', notes, cubby, attic, garden]);
     d.dispose();
   });
 
@@ -182,7 +182,7 @@ void main() {
       'All projects',
       'garden',
       'ledger-poc',
-      'cappy',
+      'cubby',
       'notes',
       'attic',
       'Add project…',
@@ -190,7 +190,7 @@ void main() {
     expect(tester.getRect(_tile('All projects')), all);
 
     // Over Add project…: last, over it.
-    drag = await _drag(tester, 'cappy', add.center.dy);
+    drag = await _drag(tester, 'cubby', add.center.dy);
     expect(tester.getRect(_tile('Add project…')), add);
     await drag.up();
     await tester.pumpAndSettle();
@@ -200,11 +200,11 @@ void main() {
       'ledger-poc',
       'notes',
       'attic',
-      'cappy',
+      'cubby',
       'Add project…',
     ]);
     expect(tester.getRect(_tile('Add project…')), add);
-    expect(sidebarOrder.value, [garden, ledger, notes, attic, cappy]);
+    expect(sidebarOrder.value, [garden, ledger, notes, attic, cubby]);
 
     // All projects doesn't drag: pressed and moved over the tiles, it
     // moves nothing, and the release isn't its click.
@@ -234,7 +234,7 @@ void main() {
     expect(position.maxScrollExtent, greaterThan(0));
     expect(position.pixels, 0);
     final edge = tester.getRect(rail).bottom;
-    final drag = await _drag(tester, 'cappy', edge - 4);
+    final drag = await _drag(tester, 'cubby', edge - 4);
     await frames(tester, 20, const Duration(milliseconds: 50));
     expect(position.pixels, greaterThan(0));
     await drag.up();
@@ -256,7 +256,7 @@ void main() {
         tokens: tokens,
         size: const Size(260, 560),
       );
-      final drag = await _drag(tester, 'cappy', _bottom(tester, 'notes') - 6);
+      final drag = await _drag(tester, 'cubby', _bottom(tester, 'notes') - 6);
       await tester.pump();
       await expectLater(
         find.byType(MaterialApp),

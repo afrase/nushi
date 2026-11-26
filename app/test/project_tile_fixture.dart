@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 // `project_tile_test.dart`): `sidebar_fixture.dart`'s chats are in these.
 
 const ledger = '/Users/me/ledger-poc';
-const cappy = '/Users/me/cappy';
+const cubby = '/Users/me/cubby';
 const garden = '/Users/me/garden';
 const notes = '/Users/me/notes';
 const attic = '/Users/me/attic';

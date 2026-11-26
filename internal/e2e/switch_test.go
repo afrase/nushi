@@ -31,8 +31,8 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	testcheck.Git(t, repo, "add", ".")
 	testcheck.Git(t, repo, "commit", "-q", "-m", "a")
 	testcheck.Git(t, repo, "branch", "other")
-	try := filepath.Join(repo, ".worktrees", "cappy", "try-sqrly")
-	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "try-sqrly", try)
+	try := filepath.Join(repo, ".worktrees", "cubby", "try-rusty")
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "try-rusty", try)
 	d := startDaemon(t, t.TempDir(), history)
 	a := open(t, d)
 	start := func(text string) string {
@@ -69,15 +69,15 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	for _, b := range l.Branches {
 		at[b.Name] = b.Worktree
 	}
-	if len(at) != 3 || at["main"] != repo || at["other"] != "" || at["try-sqrly"] != try {
+	if len(at) != 3 || at["main"] != repo || at["other"] != "" || at["try-rusty"] != try {
 		t.Errorf("branches: %v", at)
 	}
-	if len(l.Worktrees) != 2 || !l.Worktrees[0].Main || !l.Worktrees[0].Current || l.Worktrees[1].Path != try || l.Worktrees[1].Branch != "try-sqrly" {
+	if len(l.Worktrees) != 2 || !l.Worktrees[0].Main || !l.Worktrees[0].Current || l.Worktrees[1].Path != try || l.Worktrees[1].Branch != "try-rusty" {
 		t.Errorf("worktrees: %v", l.Worktrees)
 	}
 
 	// Another worktree's branch: that worktree, not a switch.
-	if r, err := switchTo(one, "try-sqrly", true); err != nil || r.Switched || r.Worktree != try {
+	if r, err := switchTo(one, "try-rusty", true); err != nil || r.Switched || r.Worktree != try {
 		t.Errorf("a worktree's branch: %v, %v", r, err)
 	}
 	// Uncommitted changes: not switched, and nothing stashed.
@@ -145,10 +145,10 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := a.get(one).Chat
-	if wt := c.Worktree; c.Folder != try || wt == nil || !wt.Found || wt.Path != try || wt.Repo != repo || wt.Branch != "try-sqrly" {
+	if wt := c.Worktree; c.Folder != try || wt == nil || !wt.Found || wt.Path != try || wt.Repo != repo || wt.Branch != "try-rusty" {
 		t.Fatalf("moved: %s in %v", c.Folder, c.Worktree)
 	}
-	moved := `<nushi-moved folder="` + try + `" branch="try-sqrly"/>`
+	moved := `<nushi-moved folder="` + try + `" branch="try-rusty"/>`
 	if got := turn(one, "where"); !slices.Equal(got, []string{moved, "where"}) {
 		t.Errorf("the prompt after the move: %q", got)
 	}

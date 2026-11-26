@@ -23,7 +23,7 @@ const _garden = '/Users/me/garden';
 
 List<Chat> _chats() => [
   chat('a', 'claude', 'Wire the ledger', folder: _ledger),
-  chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cappy', age: 1),
+  chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cubby', age: 1),
   chat('d', 'claude', 'Plant the beds', folder: _garden, age: 2),
   chat('b', 'pig', 'Seed data', folder: _ledger, age: 5),
   chat('f', 'claude', 'Price the bonds', folder: _ledger, age: 6),
