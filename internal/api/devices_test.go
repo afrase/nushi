@@ -109,7 +109,7 @@ var deviceMay = []string{
 	"WatchChatFile", "FindChatFiles", "WatchChatFolder", "ListCommits", "GetFolderStatus", "GetRelatedWorktrees",
 	"GetRelatedWorktreeStats", "ListBranches", "ListFiles", "GetContextUsage", "ListMcpServers", "ListSkills",
 	"SetSkillOn", "SetPluginOn", "UninstallPlugin", "TrashSkill", "LinkSkill", "ReloadChat", "OpenTerminal",
-	"ListTerminals", "AttachTerminal", "WriteTerminal", "ResizeTerminal", "RenameTerminal", "ArrangeTerminals",
+	"ListTerminals", "AttachTerminal", "WriteTerminal", "ClearTerminal", "ResizeTerminal", "RenameTerminal", "ArrangeTerminals",
 	"RestartTerminal", "CloseTerminal", "CheckFolder", "TrustFolder", "GetRemote", "GetPushKey",
 	"SetPushSubscription", "SetDeviceView", "UnpairThisDevice", "Log", "ListJiraSites", "AddJiraSite",
 	"RemoveJiraSite", "CheckJiraSite", "ListJiraBoards", "SetJiraBoard", "SetJiraSearches", "ListJiraIssues",

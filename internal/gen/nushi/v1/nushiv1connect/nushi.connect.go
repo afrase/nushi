@@ -264,6 +264,9 @@ const (
 	// NushiServiceWriteTerminalProcedure is the fully-qualified name of the NushiService's
 	// WriteTerminal RPC.
 	NushiServiceWriteTerminalProcedure = "/nushi.v1.NushiService/WriteTerminal"
+	// NushiServiceClearTerminalProcedure is the fully-qualified name of the NushiService's
+	// ClearTerminal RPC.
+	NushiServiceClearTerminalProcedure = "/nushi.v1.NushiService/ClearTerminal"
 	// NushiServiceResizeTerminalProcedure is the fully-qualified name of the NushiService's
 	// ResizeTerminal RPC.
 	NushiServiceResizeTerminalProcedure = "/nushi.v1.NushiService/ResizeTerminal"
@@ -877,9 +880,19 @@ type NushiServiceClient interface {
 	ListTerminals(context.Context, *connect.Request[v1.ListTerminalsRequest]) (*connect.Response[v1.ListTerminalsResponse], error)
 	// Streams a terminal's output: first what it kept (the last 1 MB, maybe
 	// empty), then new output, and a last message once its shell has exited.
-	// A client that falls far behind is cut off and attaches again.
+	// A client that falls far behind is cut off and attaches again. Each
+	// message says where its data falls in all the terminal has printed
+	// (offset), and the first where the terminal was cleared, if it was
+	// (cleared_at; API 159).
 	AttachTerminal(context.Context, *connect.Request[v1.AttachTerminalRequest]) (*connect.ServerStreamForClient[v1.AttachTerminalResponse], error)
 	WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error)
+	// Tells the daemon a client cleared a terminal (⌘K) at a place, which
+	// the first message of each later attach gives as cleared_at, so the
+	// client clears again there (issue #122). The terminal keeps the latest
+	// place: an older one is ignored, one past its output taken as its end.
+	// The place goes when the terminal closes or restarts, with its output.
+	// API 159.
+	ClearTerminal(context.Context, *connect.Request[v1.ClearTerminalRequest]) (*connect.Response[v1.ClearTerminalResponse], error)
 	ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error)
 	// Names a terminal; an empty name goes back to the one it shows by
 	// itself.
@@ -1625,6 +1638,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("WriteTerminal")),
 			connect.WithClientOptions(opts...),
 		),
+		clearTerminal: connect.NewClient[v1.ClearTerminalRequest, v1.ClearTerminalResponse](
+			httpClient,
+			baseURL+NushiServiceClearTerminalProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ClearTerminal")),
+			connect.WithClientOptions(opts...),
+		),
 		resizeTerminal: connect.NewClient[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse](
 			httpClient,
 			baseURL+NushiServiceResizeTerminalProcedure,
@@ -2180,6 +2199,7 @@ type nushiServiceClient struct {
 	listTerminals           *connect.Client[v1.ListTerminalsRequest, v1.ListTerminalsResponse]
 	attachTerminal          *connect.Client[v1.AttachTerminalRequest, v1.AttachTerminalResponse]
 	writeTerminal           *connect.Client[v1.WriteTerminalRequest, v1.WriteTerminalResponse]
+	clearTerminal           *connect.Client[v1.ClearTerminalRequest, v1.ClearTerminalResponse]
 	resizeTerminal          *connect.Client[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse]
 	renameTerminal          *connect.Client[v1.RenameTerminalRequest, v1.RenameTerminalResponse]
 	arrangeTerminals        *connect.Client[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse]
@@ -2697,6 +2717,11 @@ func (c *nushiServiceClient) AttachTerminal(ctx context.Context, req *connect.Re
 // WriteTerminal calls nushi.v1.NushiService.WriteTerminal.
 func (c *nushiServiceClient) WriteTerminal(ctx context.Context, req *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error) {
 	return c.writeTerminal.CallUnary(ctx, req)
+}
+
+// ClearTerminal calls nushi.v1.NushiService.ClearTerminal.
+func (c *nushiServiceClient) ClearTerminal(ctx context.Context, req *connect.Request[v1.ClearTerminalRequest]) (*connect.Response[v1.ClearTerminalResponse], error) {
+	return c.clearTerminal.CallUnary(ctx, req)
 }
 
 // ResizeTerminal calls nushi.v1.NushiService.ResizeTerminal.
@@ -3473,9 +3498,19 @@ type NushiServiceHandler interface {
 	ListTerminals(context.Context, *connect.Request[v1.ListTerminalsRequest]) (*connect.Response[v1.ListTerminalsResponse], error)
 	// Streams a terminal's output: first what it kept (the last 1 MB, maybe
 	// empty), then new output, and a last message once its shell has exited.
-	// A client that falls far behind is cut off and attaches again.
+	// A client that falls far behind is cut off and attaches again. Each
+	// message says where its data falls in all the terminal has printed
+	// (offset), and the first where the terminal was cleared, if it was
+	// (cleared_at; API 159).
 	AttachTerminal(context.Context, *connect.Request[v1.AttachTerminalRequest], *connect.ServerStream[v1.AttachTerminalResponse]) error
 	WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error)
+	// Tells the daemon a client cleared a terminal (⌘K) at a place, which
+	// the first message of each later attach gives as cleared_at, so the
+	// client clears again there (issue #122). The terminal keeps the latest
+	// place: an older one is ignored, one past its output taken as its end.
+	// The place goes when the terminal closes or restarts, with its output.
+	// API 159.
+	ClearTerminal(context.Context, *connect.Request[v1.ClearTerminalRequest]) (*connect.Response[v1.ClearTerminalResponse], error)
 	ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error)
 	// Names a terminal; an empty name goes back to the one it shows by
 	// itself.
@@ -4217,6 +4252,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("WriteTerminal")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceClearTerminalHandler := connect.NewUnaryHandler(
+		NushiServiceClearTerminalProcedure,
+		svc.ClearTerminal,
+		connect.WithSchema(nushiServiceMethods.ByName("ClearTerminal")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceResizeTerminalHandler := connect.NewUnaryHandler(
 		NushiServiceResizeTerminalProcedure,
 		svc.ResizeTerminal,
@@ -4857,6 +4898,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceAttachTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceWriteTerminalProcedure:
 			nushiServiceWriteTerminalHandler.ServeHTTP(w, r)
+		case NushiServiceClearTerminalProcedure:
+			nushiServiceClearTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceResizeTerminalProcedure:
 			nushiServiceResizeTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceRenameTerminalProcedure:
@@ -5370,6 +5413,10 @@ func (UnimplementedNushiServiceHandler) AttachTerminal(context.Context, *connect
 
 func (UnimplementedNushiServiceHandler) WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.WriteTerminal is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ClearTerminal(context.Context, *connect.Request[v1.ClearTerminalRequest]) (*connect.Response[v1.ClearTerminalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ClearTerminal is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error) {

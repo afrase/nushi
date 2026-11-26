@@ -1772,7 +1772,10 @@ extension type NushiServiceClient(connect.Transport _transport) {
 
   /// Streams a terminal's output: first what it kept (the last 1 MB, maybe
   /// empty), then new output, and a last message once its shell has exited.
-  /// A client that falls far behind is cut off and attaches again.
+  /// A client that falls far behind is cut off and attaches again. Each
+  /// message says where its data falls in all the terminal has printed
+  /// (offset), and the first where the terminal was cleared, if it was
+  /// (cleared_at; API 159).
   Stream<nushiv1nushi.AttachTerminalResponse> attachTerminal(
     nushiv1nushi.AttachTerminalRequest input, {
     connect.Headers? headers,
@@ -1799,6 +1802,29 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.writeTerminal,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Tells the daemon a client cleared a terminal (⌘K) at a place, which
+  /// the first message of each later attach gives as cleared_at, so the
+  /// client clears again there (issue #122). The terminal keeps the latest
+  /// place: an older one is ignored, one past its output taken as its end.
+  /// The place goes when the terminal closes or restarts, with its output.
+  /// API 159.
+  Future<nushiv1nushi.ClearTerminalResponse> clearTerminal(
+    nushiv1nushi.ClearTerminalRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.clearTerminal,
       input,
       signal: signal,
       headers: headers,

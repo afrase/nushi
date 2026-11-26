@@ -21170,11 +21170,15 @@ class AttachTerminalResponse extends $pb.GeneratedMessage {
     $core.List<$core.int>? data,
     $core.bool? exited,
     $core.int? exitCode,
+    $fixnum.Int64? offset,
+    $fixnum.Int64? clearedAt,
   }) {
     final result = AttachTerminalResponse._();
     if (data != null) result.data = data;
     if (exited != null) result.exited = exited;
     if (exitCode != null) result.exitCode = exitCode;
+    if (offset != null) result.offset = offset;
+    if (clearedAt != null) result.clearedAt = clearedAt;
     return result;
   }
 
@@ -21195,6 +21199,8 @@ class AttachTerminalResponse extends $pb.GeneratedMessage {
         1, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
     ..aOB(2, _omitFieldNames ? '' : 'exited')
     ..aI(3, _omitFieldNames ? '' : 'exitCode')
+    ..aInt64(4, _omitFieldNames ? '' : 'offset')
+    ..aInt64(5, _omitFieldNames ? '' : 'clearedAt')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -21248,6 +21254,33 @@ class AttachTerminalResponse extends $pb.GeneratedMessage {
   $core.bool hasExitCode() => $_has(2);
   @$pb.TagNumber(3)
   void clearExitCode() => $_clearField(3);
+
+  /// The place of data's first byte: how many bytes the terminal had
+  /// printed before it, since it started (a restart starts again at 0).
+  /// On every message; on the last, the place after all it printed. The
+  /// first message's data starts where the kept output does, so its
+  /// offset is 0 until the terminal has printed more than it keeps. API
+  /// 159.
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get offset => $_getI64(3);
+  @$pb.TagNumber(4)
+  set offset($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasOffset() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearOffset() => $_clearField(4);
+
+  /// On the first message only, and only when the terminal was cleared
+  /// (ClearTerminal): the place of the latest clear. It may be before
+  /// offset, when the kept output no longer reaches back to it. API 159.
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get clearedAt => $_getI64(4);
+  @$pb.TagNumber(5)
+  set clearedAt($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasClearedAt() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearClearedAt() => $_clearField(5);
 }
 
 class WriteTerminalRequest extends $pb.GeneratedMessage {
@@ -21362,6 +21395,122 @@ class WriteTerminalResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<WriteTerminalResponse>(
           WriteTerminalResponse.$_createMessage);
   static WriteTerminalResponse? _defaultInstance;
+}
+
+class ClearTerminalRequest extends $pb.GeneratedMessage {
+  factory ClearTerminalRequest({
+    $core.String? terminalId,
+    $fixnum.Int64? at,
+  }) {
+    final result = ClearTerminalRequest._();
+    if (terminalId != null) result.terminalId = terminalId;
+    if (at != null) result.at = at;
+    return result;
+  }
+
+  ClearTerminalRequest._();
+
+  factory ClearTerminalRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTerminalRequest()..mergeFromBuffer(data, registry);
+  factory ClearTerminalRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTerminalRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ClearTerminalRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ClearTerminalRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'terminalId')
+    ..aInt64(2, _omitFieldNames ? '' : 'at')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTerminalRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTerminalRequest copyWith(void Function(ClearTerminalRequest) updates) =>
+      super.copyWith((message) => updates(message as ClearTerminalRequest))
+          as ClearTerminalRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ClearTerminalRequest() / ClearTerminalRequest.new instead')
+  static ClearTerminalRequest create() => ClearTerminalRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ClearTerminalRequest._();
+  @$core.override
+  ClearTerminalRequest createEmptyInstance() => ClearTerminalRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ClearTerminalRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ClearTerminalRequest>(
+          ClearTerminalRequest.$_createMessage);
+  static ClearTerminalRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get terminalId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set terminalId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTerminalId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTerminalId() => $_clearField(1);
+
+  /// The place the client's screen had taken in when it was cleared: the
+  /// offset after the last byte it was given (AttachTerminalResponse's
+  /// offset). A negative one is ignored.
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get at => $_getI64(1);
+  @$pb.TagNumber(2)
+  set at($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAt() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAt() => $_clearField(2);
+}
+
+class ClearTerminalResponse extends $pb.GeneratedMessage {
+  factory ClearTerminalResponse() => ClearTerminalResponse._();
+
+  ClearTerminalResponse._();
+
+  factory ClearTerminalResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTerminalResponse()..mergeFromBuffer(data, registry);
+  factory ClearTerminalResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTerminalResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ClearTerminalResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ClearTerminalResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTerminalResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTerminalResponse copyWith(
+          void Function(ClearTerminalResponse) updates) =>
+      super.copyWith((message) => updates(message as ClearTerminalResponse))
+          as ClearTerminalResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ClearTerminalResponse() / ClearTerminalResponse.new instead')
+  static ClearTerminalResponse create() => ClearTerminalResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ClearTerminalResponse._();
+  @$core.override
+  ClearTerminalResponse createEmptyInstance() => ClearTerminalResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ClearTerminalResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ClearTerminalResponse>(
+          ClearTerminalResponse.$_createMessage);
+  static ClearTerminalResponse? _defaultInstance;
 }
 
 class ResizeTerminalRequest extends $pb.GeneratedMessage {
@@ -38256,7 +38405,10 @@ class NushiServiceApi {
 
   /// Streams a terminal's output: first what it kept (the last 1 MB, maybe
   /// empty), then new output, and a last message once its shell has exited.
-  /// A client that falls far behind is cut off and attaches again.
+  /// A client that falls far behind is cut off and attaches again. Each
+  /// message says where its data falls in all the terminal has printed
+  /// (offset), and the first where the terminal was cleared, if it was
+  /// (cleared_at; API 159).
   $async.Future<AttachTerminalResponse> attachTerminal(
           $pb.ClientContext? ctx, AttachTerminalRequest request) =>
       _client.invoke<AttachTerminalResponse>(ctx, 'NushiService',
@@ -38265,6 +38417,17 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, WriteTerminalRequest request) =>
       _client.invoke<WriteTerminalResponse>(ctx, 'NushiService',
           'WriteTerminal', request, WriteTerminalResponse());
+
+  /// Tells the daemon a client cleared a terminal (⌘K) at a place, which
+  /// the first message of each later attach gives as cleared_at, so the
+  /// client clears again there (issue #122). The terminal keeps the latest
+  /// place: an older one is ignored, one past its output taken as its end.
+  /// The place goes when the terminal closes or restarts, with its output.
+  /// API 159.
+  $async.Future<ClearTerminalResponse> clearTerminal(
+          $pb.ClientContext? ctx, ClearTerminalRequest request) =>
+      _client.invoke<ClearTerminalResponse>(ctx, 'NushiService',
+          'ClearTerminal', request, ClearTerminalResponse());
   $async.Future<ResizeTerminalResponse> resizeTerminal(
           $pb.ClientContext? ctx, ResizeTerminalRequest request) =>
       _client.invoke<ResizeTerminalResponse>(ctx, 'NushiService',

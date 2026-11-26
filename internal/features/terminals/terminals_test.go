@@ -13,16 +13,20 @@ import (
 type fakeShell struct {
 	closed bool
 	name   string
+	clears []int64
 }
 
-func (*fakeShell) Write([]byte) error                             { return nil }
-func (*fakeShell) Resize(int, int) error                          { return nil }
-func (*fakeShell) Program() string                                { return "" }
-func (*fakeShell) Foreground() string                             { return "" }
-func (f *fakeShell) Exit() (bool, int)                            { return f.closed, 0 }
-func (*fakeShell) Follow(<-chan struct{}, func([]byte) bool) bool { return true }
-func (f *fakeShell) Close()                                       { f.closed = true }
-func (f *fakeShell) Name() string                                 { return f.name }
+func (*fakeShell) Write([]byte) error    { return nil }
+func (*fakeShell) Resize(int, int) error { return nil }
+func (*fakeShell) Program() string       { return "" }
+func (*fakeShell) Foreground() string    { return "" }
+func (f *fakeShell) Exit() (bool, int)   { return f.closed, 0 }
+func (*fakeShell) FollowAt(<-chan struct{}, func(model.TerminalOutput) bool) bool {
+	return true
+}
+func (f *fakeShell) Clear(at int64) { f.clears = append(f.clears, at) }
+func (f *fakeShell) Close()         { f.closed = true }
+func (f *fakeShell) Name() string   { return f.name }
 
 type folders struct{}
 
@@ -111,7 +115,7 @@ func (e *endingShell) Exit() (bool, int) {
 	}
 }
 
-func (e *endingShell) Follow(stop <-chan struct{}, _ func([]byte) bool) bool {
+func (e *endingShell) FollowAt(stop <-chan struct{}, _ func(model.TerminalOutput) bool) bool {
 	e.attached <- struct{}{}
 	select {
 	case <-stop:
@@ -141,7 +145,7 @@ func TestRestartDoesNotEndOtherClients(t *testing.T) {
 	attach := func() <-chan ended {
 		got := make(chan ended, 1)
 		go func() {
-			exited, _, err := s.Attach(m.ID, make(chan struct{}), func([]byte) bool { return true })
+			exited, _, err := s.Attach(m.ID, make(chan struct{}), func(model.TerminalOutput) bool { return true })
 			got <- ended{exited, err}
 		}()
 		<-attached
@@ -179,8 +183,8 @@ func TestBusyAsSoonAsACommandRuns(t *testing.T) {
 	ready := make(chan struct{})
 	go func() {
 		var out []byte
-		_, _, _ = s.Attach(m.ID, nil, func(b []byte) bool {
-			out = append(out, b...)
+		_, _, _ = s.Attach(m.ID, nil, func(o model.TerminalOutput) bool {
+			out = append(out, o.Data...)
 			if bytes.Contains(out, []byte("42-ready")) {
 				close(ready)
 				return false
@@ -237,8 +241,10 @@ func TestRestartNamesTheNewShell(t *testing.T) {
 // droppedShell drops its client, then has exited by the time it's asked.
 type droppedShell struct{ fakeShell }
 
-func (*droppedShell) Exit() (bool, int)                              { return true, 0 }
-func (*droppedShell) Follow(<-chan struct{}, func([]byte) bool) bool { return false }
+func (*droppedShell) Exit() (bool, int) { return true, 0 }
+func (*droppedShell) FollowAt(<-chan struct{}, func(model.TerminalOutput) bool) bool {
+	return false
+}
 
 // A client dropped for falling behind isn't told the shell exited, though
 // it has since: it missed the output's tail, and a command's card would
@@ -251,7 +257,7 @@ func TestADroppedClientIsNotToldOfTheExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if exited, _, err := s.Attach(m.ID, nil, func([]byte) bool { return true }); err != nil || exited {
+	if exited, _, err := s.Attach(m.ID, nil, func(model.TerminalOutput) bool { return true }); err != nil || exited {
 		t.Errorf("exited %v, %v", exited, err)
 	}
 }
@@ -305,5 +311,36 @@ func TestOpenRacingCloseChatIsRefused(t *testing.T) {
 	}
 	if l := s.List("one"); len(l) != 0 {
 		t.Errorf("listed %v", l)
+	}
+}
+
+// A clear goes to the terminal's shell of now, whose output it marks: a
+// restarted terminal's new shell, not the old one. A terminal that isn't
+// known is refused, as input to it is.
+func TestAClearGoesToTheShellOfNow(t *testing.T) {
+	var shells []*fakeShell
+	s := New(func(string, string, int, int, func()) (Shell, error) {
+		sh := &fakeShell{}
+		shells = append(shells, sh)
+		return sh, nil
+	}, "zsh", folders{}, func(model.Event) {})
+	m, err := s.Open("c1", "", "", 80, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Clear(m.ID, 5); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Restart(m.ID, 80, 24); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Clear(m.ID, 2); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(shells[0].clears, []int64{5}) || !slices.Equal(shells[1].clears, []int64{2}) {
+		t.Errorf("clears %v, %v", shells[0].clears, shells[1].clears)
+	}
+	if err, werr := s.Clear("nope", 1), s.Write("nope", nil); err == nil || err.Error() != werr.Error() {
+		t.Errorf("an unknown terminal: %v, input %v", err, werr)
 	}
 }

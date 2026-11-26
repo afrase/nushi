@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/widgets.dart';
 import 'package:nushi/conventions.dart';
+import 'package:nushi/daemon.dart' show clearTerminalApi;
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
 import 'package:nushi/keys.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/terminal_clear.dart';
 import 'package:nushi/terminal_find.dart';
 import 'package:xterm2/xterm.dart';
 
@@ -15,9 +18,12 @@ import 'package:xterm2/xterm.dart';
 /// one the app has shown. The daemon runs the shells; the emulators replay
 /// their output when the app attaches.
 class Terminals extends ChangeNotifier {
-  new(this.client);
+  new(this.client, {this.api = noDaemonApi});
 
   final NushiServiceClient client;
+
+  /// The daemon's API version, as it is now (`Daemon.daemonApi`).
+  final int Function() api;
   final _lists = <String, List<pb.Terminal>>{}; // by chat, once known
   final _sessions = <String, TermSession>{}; // by terminal id
   final _opened = <String>{}; // opened here, not attached to yet
@@ -111,7 +117,7 @@ class Terminals extends ChangeNotifier {
 
   /// The emulator of a terminal, attached to it.
   TermSession session(pb.Terminal t) =>
-      _sessions[t.id] ??= TermSession(client, t.id, t.chatId)
+      _sessions[t.id] ??= TermSession(client, t.id, t.chatId, api: api)
         ..fresh = _opened.remove(t.id);
 
   /// Opens a terminal for a chat (in [folder], or the chat's) and shows it.
@@ -236,16 +242,32 @@ String terminalName(pb.Terminal t) => t.name.isNotEmpty
     ? t.program
     : '${t.shell} in ${t.folder.split('/').last}';
 
+/// No daemon's API known: what a [Terminals] or [TermSession] made
+/// without one assumes, as a daemon older than every gate.
+int noDaemonApi() => 0;
+
 /// An emulator showing one of the daemon's terminals: it replays what the
 /// terminal kept, then follows it; keys go back to it, in order.
+///
+/// A daemon of [clearTerminalApi] or newer places each message in all the
+/// terminal printed: the session counts what it took in, tells the daemon
+/// where ⌘K cleared ([clear]), and clears again at the place an attach's
+/// replay gives, so what was cleared stays cleared (issue #122).
 class TermSession extends ChangeNotifier {
-  new(this.client, this.id, this.chatId) {
+  new(this.client, this.id, this.chatId, {this.api = noDaemonApi}) {
     _create();
   }
 
   final NushiServiceClient client;
   final String id;
   final String chatId;
+
+  /// The daemon's API version, as it is now.
+  final int Function() api;
+
+  /// The place after the last byte of output the emulator took in, from
+  /// the shell's start; null until a message of a daemon that counts.
+  int? _place;
   final controller = TerminalController();
   final focus = FocusNode();
   final scroll = ScrollController();
@@ -283,6 +305,7 @@ class TermSession extends ChangeNotifier {
     unawaited(_sub?.cancel());
     _sub = null;
     _exited = false;
+    _place = null;
     terminal = Terminal(
       maxLines: 10000,
       platform: terminalPlatform,
@@ -340,28 +363,69 @@ class TermSession extends ChangeNotifier {
       )
       .ignore();
 
+  /// Clears the emulator as ⌘K does ([clearTerminal]) and tells the
+  /// daemon the place, so a later attach clears there again. Not in a
+  /// full-screen program's alternate screen, which ⌘K leaves alone. A
+  /// failed call shows nothing: the screen stays cleared, and only the
+  /// next attach could bring the output back.
+  void clear() {
+    if (terminal.isUsingAltBuffer) return;
+    clearTerminal(terminal);
+    final at = _place;
+    if (at == null || api() < clearTerminalApi) return;
+    client
+        .clearTerminal(pb.ClearTerminalRequest(terminalId: id, at: Int64(at)))
+        .ignore();
+  }
+
   void _attach() {
     // The first message is the replay (maybe empty): what it decodes to,
     // not the first text decoded.
     var first = true;
+    // Where the replay says the terminal was cleared, until the message
+    // that reaches it: the bytes before it are fed, the clear runs, then
+    // the rest, as a live ⌘K there had it. Before the first byte kept, it
+    // runs before any.
+    int? clearAt;
     final text = StringBuffer();
     // One decoder per attach, dropped with the stream it decodes.
     // ignore: close_sinks
     final utf8 = const Utf8Decoder(allowMalformed: true)
         .startChunkedConversion(StringConversionSink.fromStringSink(text));
+    void feed(List<int> data) {
+      utf8.add(data);
+      final s = text.toString();
+      text.clear();
+      if (s.isNotEmpty) terminal.write(s);
+    }
+
     late final StreamSubscription<pb.AttachTerminalResponse> sub;
     _sub = sub = client
         .attachTerminal(pb.AttachTerminalRequest(terminalId: id))
         .listen(
           (m) {
             _exited = m.exited;
-            utf8.add(m.data);
-            final s = text.toString();
-            text.clear();
+            // An older daemon's offset is always 0: nothing is counted.
+            final counts = api() >= clearTerminalApi;
+            if (first && counts && m.hasClearedAt()) {
+              clearAt = m.clearedAt.toInt();
+            }
             _replaying = first && !fresh;
             first = fresh = false;
-            if (s.isNotEmpty) terminal.write(s);
+            final data = m.data;
+            final offset = m.offset.toInt();
+            final at = clearAt;
+            if (at != null && at <= offset + data.length) {
+              clearAt = null;
+              final cut = (at - offset).clamp(0, data.length);
+              feed(data.sublist(0, cut));
+              clearTerminal(terminal);
+              feed(data.sublist(cut));
+            } else {
+              feed(data);
+            }
             _replaying = false;
+            if (counts) _place = offset + data.length;
           },
           onError: (_) => _retry(sub),
           onDone: () => _retry(sub),
@@ -374,6 +438,10 @@ class TermSession extends ChangeNotifier {
   // (a restart here): one more would replay the screen twice.
   void _retry(StreamSubscription<pb.AttachTerminalResponse> ended) {
     if (_disposed) return;
+    // The place was that stream's: the terminal may be another shell by
+    // the next attach (restarted elsewhere), where it would name nothing.
+    // A clear made meanwhile clears the screen and sends none.
+    if (_sub == ended) _place = null;
     Timer(const Duration(seconds: 1), () {
       if (!_disposed && !_exited && _sub == ended) attach();
     });

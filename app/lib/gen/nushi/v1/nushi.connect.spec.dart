@@ -914,7 +914,10 @@ abstract final class NushiService {
 
   /// Streams a terminal's output: first what it kept (the last 1 MB, maybe
   /// empty), then new output, and a last message once its shell has exited.
-  /// A client that falls far behind is cut off and attaches again.
+  /// A client that falls far behind is cut off and attaches again. Each
+  /// message says where its data falls in all the terminal has printed
+  /// (offset), and the first where the terminal was cleared, if it was
+  /// (cleared_at; API 159).
   static const attachTerminal = connect.Spec(
     '/$name/AttachTerminal',
     connect.StreamType.server,
@@ -927,6 +930,19 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.WriteTerminalRequest.new,
     nushiv1nushi.WriteTerminalResponse.new,
+  );
+
+  /// Tells the daemon a client cleared a terminal (⌘K) at a place, which
+  /// the first message of each later attach gives as cleared_at, so the
+  /// client clears again there (issue #122). The terminal keeps the latest
+  /// place: an older one is ignored, one past its output taken as its end.
+  /// The place goes when the terminal closes or restarts, with its output.
+  /// API 159.
+  static const clearTerminal = connect.Spec(
+    '/$name/ClearTerminal',
+    connect.StreamType.unary,
+    nushiv1nushi.ClearTerminalRequest.new,
+    nushiv1nushi.ClearTerminalResponse.new,
   );
 
   static const resizeTerminal = connect.Spec(

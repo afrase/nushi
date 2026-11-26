@@ -34,7 +34,7 @@ func follow(t *testing.T, s *Service, id string) (out string, exited bool, code 
 	var b strings.Builder
 	got := make(chan result, 1)
 	go func() {
-		exited, code, err := s.Attach(id, nil, func(p []byte) bool { b.Write(p); return true })
+		exited, code, err := s.Attach(id, nil, func(o model.TerminalOutput) bool { b.Write(o.Data); return true })
 		if err != nil {
 			t.Error(err)
 		}

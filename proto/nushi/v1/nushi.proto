@@ -393,9 +393,19 @@ service NushiService {
   rpc ListTerminals(ListTerminalsRequest) returns (ListTerminalsResponse);
   // Streams a terminal's output: first what it kept (the last 1 MB, maybe
   // empty), then new output, and a last message once its shell has exited.
-  // A client that falls far behind is cut off and attaches again.
+  // A client that falls far behind is cut off and attaches again. Each
+  // message says where its data falls in all the terminal has printed
+  // (offset), and the first where the terminal was cleared, if it was
+  // (cleared_at; API 159).
   rpc AttachTerminal(AttachTerminalRequest) returns (stream AttachTerminalResponse);
   rpc WriteTerminal(WriteTerminalRequest) returns (WriteTerminalResponse);
+  // Tells the daemon a client cleared a terminal (⌘K) at a place, which
+  // the first message of each later attach gives as cleared_at, so the
+  // client clears again there (issue #122). The terminal keeps the latest
+  // place: an older one is ignored, one past its output taken as its end.
+  // The place goes when the terminal closes or restarts, with its output.
+  // API 159.
+  rpc ClearTerminal(ClearTerminalRequest) returns (ClearTerminalResponse);
   rpc ResizeTerminal(ResizeTerminalRequest) returns (ResizeTerminalResponse);
   // Names a terminal; an empty name goes back to the one it shows by
   // itself.
@@ -3181,6 +3191,17 @@ message AttachTerminalResponse {
   // The shell has exited; this is the last message.
   bool exited = 2;
   int32 exit_code = 3;
+  // The place of data's first byte: how many bytes the terminal had
+  // printed before it, since it started (a restart starts again at 0).
+  // On every message; on the last, the place after all it printed. The
+  // first message's data starts where the kept output does, so its
+  // offset is 0 until the terminal has printed more than it keeps. API
+  // 159.
+  int64 offset = 4;
+  // On the first message only, and only when the terminal was cleared
+  // (ClearTerminal): the place of the latest clear. It may be before
+  // offset, when the kept output no longer reaches back to it. API 159.
+  optional int64 cleared_at = 5;
 }
 
 message WriteTerminalRequest {
@@ -3189,6 +3210,16 @@ message WriteTerminalRequest {
 }
 
 message WriteTerminalResponse {}
+
+message ClearTerminalRequest {
+  string terminal_id = 1;
+  // The place the client's screen had taken in when it was cleared: the
+  // offset after the last byte it was given (AttachTerminalResponse's
+  // offset). A negative one is ignored.
+  int64 at = 2;
+}
+
+message ClearTerminalResponse {}
 
 message ResizeTerminalRequest {
   string terminal_id = 1;

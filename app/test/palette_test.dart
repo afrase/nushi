@@ -52,6 +52,7 @@ Future<(Daemon, FakeDaemon)> _app(
     ),
     GetGitHubPullRequest() => GetGitHubPullResponse(pull: pullOf(_pull)),
     GetGitHubCommitsRequest() => pullCommits(),
+    ClearTerminalRequest() => ClearTerminalResponse(),
     _ => null,
   };
   // A live shell's stream: it stays open.
@@ -121,7 +122,7 @@ void main() {
   testWidgets('⌃⌘2 shows Changes with the focus in the terminal; there ⌘K '
       'clears it and ⌘⇧P opens the palette', (tester) async {
     terminalChats.value = {'a'};
-    final (d, _) = await _app(tester, select: 'a');
+    final (d, fake) = await _app(tester, select: 'a');
     final view = find.byType(TerminalView);
     expect(view, findsOneWidget);
     await tester.tap(view);
@@ -132,6 +133,14 @@ void main() {
     await press(tester, LogicalKeyboardKey.keyK, cmd: true);
     expect(find.byType(Palette), findsNothing);
     expect(term.buffer.getText(), isNot(contains('old output')));
+    // The daemon is told where, after all 14 bytes the shell printed.
+    expect(
+      [
+        for (final c in fake.calls.whereType<ClearTerminalRequest>())
+          (c.terminalId, c.at.toInt()),
+      ],
+      [('t1', 14)],
+    );
 
     await press(tester, LogicalKeyboardKey.digit2, cmd: true, ctrl: true);
     expect(d.chats['a']!.shownTab, ChatTab.changes);
