@@ -393,6 +393,9 @@ class _CommentCardState extends State<_CommentCard> {
                 if (folds)
                   Button(
                     label: _open ? 'Hide' : 'Show',
+                    // The same width either way, so it and the summary
+                    // beside it stay put as it's pressed.
+                    roomFor: const ['Show', 'Hide'],
                     kind: ButtonKind.quiet,
                     onPressed: () => setState(() => _open = !_open),
                   ),
