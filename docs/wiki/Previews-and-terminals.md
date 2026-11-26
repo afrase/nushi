@@ -161,6 +161,9 @@ In the chat, your message shows each command it carried as a card with its exit.
 
 ## Good to know
 
+- To copy more than fits on the screen, drag past the terminal's top or bottom edge and hold the mouse there: it keeps scrolling, faster the further past you go, and the selection keeps its start. Move back inside or let go to stop. Press ⌘C to copy it.
+- Or click where the text starts, scroll to where it ends, and Shift+click there. Shift+click also grows a selection you already have: a click after its start moves its end there, and one before its start moves its start, keeping the rest. After a double-click it grows by whole words, after a triple-click by whole lines.
+- ⌘A (Ctrl+Shift+A on Linux) selects everything in the terminal, scrollback included.
 - ⌥⌘1 to ⌥⌘9 switch between terminals, and ⌘F searches a terminal's scrollback. On Linux, use Alt+1 to Alt+9 and Ctrl+Shift+F. As in the chat, it starts at the latest match ("1 of 5"): ⏎ goes up to older output and ⇧⏎ back down.
 - Restarting the daemon closes your terminals. Archiving or deleting a chat also closes its terminals.
 - On Linux, HTML pages, SVG, PDFs and browser tabs show a placeholder with an **Open in** button for your default browser. Mermaid diagrams show as source, in files and in messages.

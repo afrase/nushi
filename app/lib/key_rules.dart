@@ -290,6 +290,7 @@ bool shellKey(SingleActivator a) =>
 /// Whether [a] is one of a focused terminal's own keys.
 bool terminalOwns(SingleActivator a) => [
   terminalCopyKey,
+  terminalSelectAllKey,
   terminalPasteKey,
   terminalClearKey,
   newTerminalKey,

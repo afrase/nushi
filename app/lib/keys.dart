@@ -193,6 +193,9 @@ class Cmd extends ShortcutActivator with MenuSerializableShortcut {
 /// Copies the terminal's selection.
 const terminalCopyKey = Cmd(LogicalKeyboardKey.keyC, terminal: true);
 
+/// Selects all the terminal holds, its scrollback too.
+const terminalSelectAllKey = Cmd(LogicalKeyboardKey.keyA, terminal: true);
+
 /// Pastes into the terminal.
 const terminalPasteKey = Cmd(LogicalKeyboardKey.keyV, terminal: true);
 

@@ -330,7 +330,9 @@ A chat in a git repository can run in a worktree of its own, `.worktrees/<two wo
 
 - The daemon owns them, so they keep running when the app quits and reopens. A daemon restart ends them.
 - The shell is your login shell; on Windows, the one Windows Terminal's default profile opens, else PowerShell ([ADR 0132](adr/0132-terminals-on-windows-run-on-conpty.md)). Archiving or deleting the chat closes its terminals.
-- ⌘T opens another, ⌘W closes one, ⌥⌘1 – ⌥⌘9 pick one, ⌘F finds in its scrollback and ⌘K clears it. On Linux Ctrl+Shift+T, Ctrl+Shift+W, Alt+1 – Alt+9, Ctrl+Shift+F and Ctrl+Shift+K, since Ctrl and a letter is the shell's.
+- A drag that goes past the top or bottom edge scrolls and keeps selecting from where it began, while output arrives too; held there, still or not, it goes on scrolling, faster the further past (as in Terminal), until it comes back inside, is let go or reaches the first or last line; a double-click drag selects whole words, a triple-click drag whole lines, and ⌥ a block. In a program that reads the mouse a drag is the program's, as in Terminal; ⇧ makes it a selection.
+- ⇧-click extends the selection, however far the view scrolled between, as in Terminal: a click after its start moves its end there, one before its start moves its start there, and the rest stays; after a double or triple click it grows by whole words or lines, and a block by the rectangle that holds the click. With no selection it selects from the last click (else the cursor). It selects a run of text unless it extends a block or ⌥ is held; a click with ⌘ still opens a link. In a program that reads the mouse ⇧-click selects too, unless the program asked for ⇧-clicks as well.
+- ⌘T opens another, ⌘W closes one, ⌥⌘1 – ⌥⌘9 pick one, ⌘F finds in its scrollback, ⌘A selects all of it, scrollback too (⌘C copies it), and ⌘K clears it. On Linux Ctrl+Shift+T, Ctrl+Shift+W, Alt+1 – Alt+9, Ctrl+Shift+F, Ctrl+Shift+A and Ctrl+Shift+K, since Ctrl and a letter is the shell's.
 
 ### Running a code block
 

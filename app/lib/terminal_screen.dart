@@ -10,6 +10,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/terminal_clear.dart';
 import 'package:nushi/terminal_find.dart';
 import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/terminal_select.dart';
 import 'package:nushi/terminal_tabs.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/theme/theme.dart';
@@ -63,6 +64,10 @@ class TerminalScreen extends StatelessWidget {
     for (final MapEntry(:key, :value) in appKeys.entries)
       if (terminalPasses(key)) key: value,
     terminalCopyKey: CopySelectionTextIntent.copy,
+    // Nushi's keys replace the package's, ⌘A with them.
+    terminalSelectAllKey: const SelectAllTextIntent(
+      SelectionChangedCause.keyboard,
+    ),
     terminalPasteKey: const PasteTextIntent(SelectionChangedCause.keyboard),
     terminalClearKey: VoidCallbackIntent(() => clearTerminal(s.terminal)),
     newTerminalKey: VoidCallbackIntent(
@@ -106,40 +111,49 @@ class TerminalScreen extends StatelessWidget {
             ]),
             builder: (context, _) => Stack(
               children: [
-                TerminalView(
-                  s.terminal,
+                TerminalSelect(
                   key: ObjectKey(s.terminal),
+                  terminal: s.terminal,
                   controller: s.controller,
-                  scrollController: s.scroll,
-                  focusNode: s.focus,
-                  autofocus: true,
-                  theme: terminalTheme(t),
-                  textStyle: terminalStyle(),
-                  padding: const EdgeInsets.fromLTRB(10, 6, 6, 4),
-                  cursorType: TerminalCursorType.verticalBar,
-                  cursorBlink: true,
-                  keyboardAppearance: t.brightness,
-                  shortcuts: _keys(context, s),
-                  onKeyEvent: (_, event) => _interruptWithSelection(event, s),
-                  readOnly: info.exited,
-                  // ⌘-click (Ctrl-click on Linux) opens one thing: an OSC 8
-                  // link's real target, else the URL or file under the
-                  // pointer.
-                  onTapUp: (_, at) {
-                    if (cmdPressed()) {
-                      unawaited(
-                        openLink(
-                          context,
-                          clickTarget(s.terminal, at),
-                          info.folder,
-                          showChange,
-                        ),
-                      );
-                    }
-                  },
-                  onHover: (_, at) =>
-                      s.hoveredLink.value = s.terminal.hyperlinkAt(at),
-                  onExit: (_) => s.hoveredLink.value = null,
+                  ended: info.exited,
+                  builder: (context, view, click) => TerminalView(
+                    s.terminal,
+                    key: view,
+                    controller: s.controller,
+                    scrollController: s.scroll,
+                    focusNode: s.focus,
+                    autofocus: true,
+                    theme: terminalTheme(t),
+                    textStyle: terminalStyle(),
+                    padding: const EdgeInsets.fromLTRB(10, 6, 6, 4),
+                    cursorType: TerminalCursorType.verticalBar,
+                    cursorBlink: true,
+                    keyboardAppearance: t.brightness,
+                    shortcuts: _keys(context, s),
+                    onKeyEvent: (_, event) => _interruptWithSelection(event, s),
+                    readOnly: info.exited,
+                    // ⌘-click (Ctrl-click on Linux) opens one thing: an OSC 8
+                    // link's real target, else the URL or file under the
+                    // pointer. Any other click is for selecting
+                    // (Shift+click).
+                    onTapUp: (_, at) {
+                      if (!cmdPressed()) {
+                        click(at);
+                      } else {
+                        unawaited(
+                          openLink(
+                            context,
+                            clickTarget(s.terminal, at),
+                            info.folder,
+                            showChange,
+                          ),
+                        );
+                      }
+                    },
+                    onHover: (_, at) =>
+                        s.hoveredLink.value = s.terminal.hyperlinkAt(at),
+                    onExit: (_) => s.hoveredLink.value = null,
+                  ),
                 ),
                 // A link's text can say anything: its target shows here.
                 ValueListenableBuilder(

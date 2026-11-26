@@ -46,7 +46,7 @@ On Linux:
 
 - Pages (an HTML or PDF preview, a browser tab) open in your default browser when you click **Open in …**, not inside Nushi, and a diagram shows its source. Ubuntu's Firefox and Chromium are snaps, which can't read hidden folders in your home, so a scratch chat's page (in the data folder) doesn't open in them; a page in a project does.
 - The window has your desktop's own title bar.
-- Shortcuts use Ctrl where the Mac's use ⌘ (Ctrl+K for the palette, Ctrl+N for a new chat). The palette and tooltips show them that way. Ctrl+Q quits. In a terminal, Ctrl+Shift+C and Ctrl+Shift+V copy and paste, and Ctrl with a letter goes to the shell.
+- Shortcuts use Ctrl where the Mac's use ⌘ (Ctrl+K for the palette, Ctrl+N for a new chat). The palette and tooltips show them that way. Ctrl+Q quits. In a terminal, Ctrl+Shift+C and Ctrl+Shift+V copy and paste, Ctrl+Shift+A selects all, and Ctrl with a letter goes to the shell.
 - Start at login is an autostart entry. Your desktop session starts it when you log in.
 
 ## Updates
