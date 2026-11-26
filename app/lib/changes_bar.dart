@@ -36,6 +36,10 @@ const double _roomyFrom = 560;
 /// The file list's least width, beside the diff.
 const double changesFilesLeast = 180;
 
+/// The least of a gone worktree's name the menu's label keeps beside how
+/// it went.
+const double _nameLeast = 60;
+
 /// The switcher's name for what the chat itself runs in.
 const _ownFolder = "Chat's folder";
 
@@ -235,7 +239,58 @@ class ChangesBar extends StatelessWidget {
             ? 'Show a related worktree'
             : "Nushi doesn't stage or commit here; comments go to the "
                   "chat's agent",
-        label: Text(picked == null ? _ownFolder : worktreeName(picked)),
+        label: switch (picked) {
+          null => const Text(_ownFolder),
+          // Gone, it's muted as its widget row is, and says how it went
+          // after its name, as the pull request's picker sets its parts.
+          // The word is never cut: the name is, and in a narrow bar's
+          // menu the word is the short one, so some of the name shows.
+          final w when w.state != 'present' => LayoutBuilder(
+            builder: (context, box) {
+              final theme = NushiTheme.of(context);
+              final muted = theme.ui(theme.t.textMuted, size: 12);
+              double widthOf(String s) {
+                final painter = TextPainter(
+                  text: TextSpan(text: s, style: muted),
+                  textDirection: TextDirection.ltr,
+                  textScaler: MediaQuery.textScalerOf(context),
+                )..layout();
+                final width = painter.width;
+                painter.dispose();
+                return width;
+              }
+
+              var end = worktreeEnd(w);
+              if (box.maxWidth - widthOf(end) < _nameLeast) end = 'Removed';
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 6,
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: max(0, box.maxWidth - widthOf(end) - 6),
+                    ),
+                    child: Text(
+                      worktreeName(w),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: muted,
+                    ),
+                  ),
+                  Flexible(
+                    child: Text(
+                      end,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: muted,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          final w => Text(worktreeName(w)),
+        },
         entries: [
           MenuEntry(
             _ownFolder,
@@ -247,6 +302,7 @@ class ChangesBar extends StatelessWidget {
             MenuEntry(
               worktreeName(w),
               detail: worktreeEnd(w),
+              muted: w.state != 'present',
               checked: w.path == picked?.path,
               onPick: () => related.pick(w.path),
             ),

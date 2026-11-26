@@ -12,6 +12,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/subagents.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/worktrees_widget.dart';
 
 import 'fake_daemon.dart';
@@ -433,6 +434,54 @@ void main() {
       );
       expect(find.text('No changes'), findsNothing);
       expect(_calls<GetDiffRequest>(fake), isEmpty);
+      await closeView(tester, daemon);
+    });
+
+    testWidgets("a gone one is muted in the menu, as the widget's row is, "
+        'and picked the bar says how it went', (tester) async {
+      await setUpChat(tester);
+      chatState.related.take([
+        _worktree('live'),
+        _worktree('gone', state: 'removed', merged: true),
+      ]);
+      await showChanges(tester);
+      final t = NushiTheme.of(tester.element(find.byType(MenuField))).t;
+      // The ink of [label]'s span in the open menu's row.
+      Color? inMenu(String label) {
+        Color? ink;
+        final row = find.textContaining(label, findRichText: true).last;
+        tester.widget<RichText>(row).text.visitChildren((s) {
+          if (s is TextSpan && s.text == label) ink = s.style?.color;
+          return true;
+        });
+        return ink;
+      }
+
+      await tester.tap(find.byType(MenuField));
+      await tester.pumpAndSettle();
+      expect(inMenu('live'), t.text);
+      expect(inMenu('gone'), t.textMuted);
+      await tester.tap(find.textContaining('gone', findRichText: true).last);
+      await tester.pumpAndSettle();
+      final spans = [
+        for (final e
+            in find
+                .descendant(
+                  of: find.byType(MenuField),
+                  matching: find.byType(Text),
+                )
+                .evaluate())
+          ((e.widget as Text).data, (e.widget as Text).style?.color),
+      ];
+      expect(spans, [('gone', t.textMuted), ('Merged, removed', t.textMuted)]);
+      await pickFromMenu(tester, 'live', detail: true);
+      expect(
+        find.descendant(
+          of: find.byType(MenuField),
+          matching: find.text('Removed', findRichText: true),
+        ),
+        findsNothing,
+      );
       await closeView(tester, daemon);
     });
 

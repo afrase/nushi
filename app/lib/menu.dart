@@ -14,14 +14,15 @@ import 'package:nushi/widgets.dart' show revealRow;
 /// One row of a [Menu]: [icon] (if any), [label], then [detail] dimmed on
 /// the same line, and a check on the right when [checked], or with a key
 /// [shortcut] the check and then the key, at the right; in red when it
-/// is [danger] (it deletes or loses something). Picking it runs [onPick]; with
-/// [submenu] it opens those rows beside it instead, its [detail] (the value
-/// it sets) at the right before a chevron, as macOS and Claude draw one; an
-/// empty [submenu] is one that can't be changed now. Without either it
-/// shows unavailable. [tooltip] shows on hover. [controls], for a row that
-/// isn't one choice (a chat's color): what it holds after its [label], given
-/// what closes the menu; each picks for itself, and the row itself does
-/// nothing.
+/// is [danger] (it deletes or loses something), in muted ink when it is
+/// [muted] (something no longer live: a removed worktree). Picking it
+/// runs [onPick]; with [submenu] it opens those rows beside it instead,
+/// its [detail] (the value it sets) at the right before a chevron, as
+/// macOS and Claude draw one; an empty [submenu] is one that can't be
+/// changed now. Without either it shows unavailable. [tooltip] shows on
+/// hover. [controls], for a row that isn't one choice (a chat's color):
+/// what it holds after its [label], given what closes the menu; each
+/// picks for itself, and the row itself does nothing.
 class MenuEntry {
   const new(
     this.label, {
@@ -39,6 +40,7 @@ class MenuEntry {
     this.lit = false,
     this.autofocus = false,
     this.inTap = false,
+    this.muted = false,
   }) : heading = false,
        custom = null;
 
@@ -61,6 +63,7 @@ class MenuEntry {
       lit = false,
       autofocus = false,
       inTap = false,
+      muted = false,
       heading = false;
 
   /// A group's name over its rows.
@@ -79,6 +82,7 @@ class MenuEntry {
       lit = false,
       autofocus = false,
       inTap = false,
+      muted = false,
       heading = true,
       custom = null;
 
@@ -116,6 +120,9 @@ class MenuEntry {
   /// Runs [onPick] in the tap itself, not a frame later as Flutter's menus
   /// do: Safari opens a file picker only from inside the tap.
   final bool inTap;
+
+  /// Its label in muted ink: what it names is no longer live.
+  final bool muted;
 
   /// Whether it can be picked or opened.
   bool get _on => onPick != null || (submenu?.isNotEmpty ?? false);
@@ -470,7 +477,7 @@ Widget _row(
   final theme = NushiTheme.of(context);
   final t = theme.t;
   final on = e._on;
-  final color = !on
+  final color = !on || e.muted
       ? t.textMuted
       : e.danger
       ? t.crashed

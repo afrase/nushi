@@ -2,6 +2,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -250,6 +251,15 @@ void main() {
           await tester.pumpAndSettle();
           chat.related.pick(_worktrees[2].path);
           await tester.pumpAndSettle();
+          // How it went, whole, after its name: the short word narrow.
+          expect(
+            find.descendant(
+              of: find.byType(MenuField),
+              matching: find.text(width == 720 ? 'Removed' : 'Merged, removed'),
+            ),
+            findsOne,
+          );
+          expectTextInside(tester, width);
           await shot(tester, 'related_removed_$w');
           await closeView(tester, d);
         }, variant: onMac);
