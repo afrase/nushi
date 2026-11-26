@@ -1,0 +1,143 @@
+{
+ "turns": [
+  {
+   "match": {
+    "lastUserText": "run the workflow",
+    "tools": true
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Workflow",
+     "input": {
+      "script": "export const meta = {\n  name: 'handmade',\n  description: 'A helper that makes a worktree itself',\n  phases: [{ title: 'Work', detail: 'one helper' }],\n}\nphase('Work')\nreturn await agent('Make a worktree yourself.', { label: 'handmade', phase: 'Work' })\n"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "Make a worktree yourself."
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "Add a worktree",
+      "command": "git worktree add -q .worktrees/handmade -b handmade && cd .worktrees/handmade && pwd"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash"
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "Where am I",
+      "command": "pwd; git branch --show-current"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash",
+    "capture": {
+     "wt": "(/\\S*/\\.worktrees/handmade)"
+    }
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Write",
+     "input": {
+      "file_path": "${wt}/written.txt",
+      "content": "written\n"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Write"
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "Add it again",
+      "command": "git worktree add -q .worktrees/handmade -b handmade"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Made it."
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "list what is left"
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "What is left",
+      "command": "git worktree list --porcelain; git for-each-ref; stat -f \"%Fm %N\" .worktrees/handmade/.git .worktrees/handmade/written.txt .git/worktrees/handmade; find \"$CLAUDE_CONFIG_DIR\"/projects -mindepth 2 | sort; for f in $(find \"$CLAUDE_CONFIG_DIR\"/projects -name \"*.meta.json\" | sort); do echo \"== $f\"; cat \"$f\"; echo; done"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Listed."
+    }
+   ]
+  }
+ ],
+ "side": [
+  {
+   "match": {
+    "toolResult": "Workflow"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "The workflow runs in the background."
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "task-notification"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "The workflow finished."
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,57 @@
+{
+ "timeout": "120s",
+ "steps": [
+  {
+   "repo": {}
+  },
+  {
+   "initialize": {}
+  },
+  {
+   "new": "s1",
+   "meta": {
+    "claudeCode": {
+     "options": {
+      "settings": {
+       "permissions": {
+        "allow": [
+         "Workflow",
+         "Bash",
+         "Write",
+         "Edit"
+        ]
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "prompt": "run the workflow",
+   "session": "s1",
+   "async": "p1"
+  },
+  {
+   "await": "p1"
+  },
+  {
+   "waitFor": {
+    "method": "session/update",
+    "params": {
+     "update": {
+      "sessionUpdate": "usage_update",
+      "_meta": {
+       "_claude/origin": {
+        "kind": "task-notification"
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "prompt": "list what is left",
+   "session": "s1"
+  }
+ ]
+}

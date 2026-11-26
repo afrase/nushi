@@ -1,0 +1,243 @@
+{
+ "turns": [
+  {
+   "match": {
+    "lastUserText": "run the workflow",
+    "tools": true
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Workflow",
+     "input": {
+      "script": "export const meta = {\n  name: 'isolated',\n  description: 'Three helpers, each in a worktree',\n  phases: [{ title: 'Work', detail: 'three helpers, one after another' }],\n}\nphase('Work')\nconst a = await agent('Commit in your worktree.', { label: 'commit', phase: 'Work', isolation: 'worktree' })\nconst b = await agent('Change nothing in your worktree.', { label: 'nothing', phase: 'Work', isolation: 'worktree' })\nconst c = await agent('Leave a file in your worktree.', { label: 'file', phase: 'Work', isolation: 'worktree' })\nreturn { a, b, c }\n"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "Commit in your worktree."
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "Where am I",
+      "command": "pwd"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash"
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "Worktrees",
+      "command": "git worktree list --porcelain"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash"
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "Meta files",
+      "command": "for f in $(find \"$CLAUDE_CONFIG_DIR\"/projects -name \"*.meta.json\" | sort); do echo \"== $f\"; cat \"$f\"; echo; done"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash",
+    "capture": {
+     "wt": "(/[^\\s\"]*/\\.claude/worktrees/[^\\s/\"]+)"
+    }
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Write",
+     "input": {
+      "file_path": "${wt}/committed.txt",
+      "content": "committed\n"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Write"
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "Stage",
+      "command": "git add committed.txt"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash"
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "Commit",
+      "command": "git -c user.name=Sub -c user.email=sub@example.com commit -qm committed"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Committed."
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "Change nothing in your worktree."
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "Worktrees",
+      "command": "git worktree list --porcelain"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Nothing changed."
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "Leave a file in your worktree."
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "Where am I",
+      "command": "pwd"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash",
+    "capture": {
+     "wt": "(/[^\\s\"]*/\\.claude/worktrees/[^\\s/\"]+)"
+    }
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Write",
+     "input": {
+      "file_path": "${wt}/left.txt",
+      "content": "left\n"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Write"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Left a file."
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "list what is left"
+   },
+   "content": [
+    {
+     "type": "tool_use",
+     "name": "Bash",
+     "input": {
+      "description": "What is left",
+      "command": "git worktree list --porcelain; git for-each-ref; ls -1 .claude/worktrees 2>&1; find \"$CLAUDE_CONFIG_DIR\"/projects -mindepth 2 | sort; for f in $(find \"$CLAUDE_CONFIG_DIR\"/projects -name \"*.meta.json\" | sort); do echo \"== $f\"; cat \"$f\"; echo; done"
+     }
+    }
+   ]
+  },
+  {
+   "match": {
+    "toolResult": "Bash"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Listed."
+    }
+   ]
+  }
+ ],
+ "side": [
+  {
+   "match": {
+    "toolResult": "Workflow"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "The workflow runs in the background."
+    }
+   ]
+  },
+  {
+   "match": {
+    "lastUserText": "task-notification"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "The workflow finished."
+    }
+   ]
+  }
+ ]
+}
