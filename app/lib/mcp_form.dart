@@ -379,6 +379,8 @@ class _FormState extends State<_Form> {
             children: [
               Button(
                 label: _asJson ? 'Edit in the form' : 'Edit as JSON',
+                // The same width either way: it stays put as it's pressed.
+                roomFor: const ['Edit as JSON', 'Edit in the form'],
                 onPressed: _toggleJson,
               ),
               const Spacer(),

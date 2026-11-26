@@ -53,6 +53,60 @@ void main() {
     d.dispose();
   });
 
+  // Edit as JSON turns into Edit in the form without changing width, so
+  // it stays put; Cancel and Add don't move either.
+  testWidgets('Edit as JSON keeps its width as it reads Edit in the form', (
+    tester,
+  ) async {
+    for (final b in renderThemes) {
+      viewport(tester, const Size(900, 900));
+      final d = await FakeDaemon([]).connect(tester);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: NushiTheme(b == Brightness.dark ? Tokens.dark : Tokens.light)
+              .toThemeData(),
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () =>
+                  mcpForm(context, McpServers.of(d, '/x', agent: 'claude')),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      // The dialog's own, after any of the form's (its env's Add).
+      Finder button(String label) =>
+          find.byWidgetPredicate((w) => w is Button && w.label == label).last;
+      final at = tester.getRect(button('Edit as JSON'));
+      final cancel = tester.getRect(button('Cancel'));
+      final add = tester.getRect(button('Add'));
+      await render(
+        tester,
+        find.byType(Dialog),
+        'press_mcp_edit_json_${b.name}',
+      );
+      await tester.tap(button('Edit as JSON'));
+      await tester.pumpAndSettle();
+      Rect across(Rect r) => Rect.fromLTRB(r.left, 0, r.right, r.height);
+      expect(across(tester.getRect(button('Edit in the form'))), across(at));
+      expect(across(tester.getRect(button('Cancel'))), across(cancel));
+      expect(across(tester.getRect(button('Add'))), across(add));
+      await render(
+        tester,
+        find.byType(Dialog),
+        'press_mcp_edit_form_${b.name}',
+      );
+      await tester.tap(button('Edit in the form'));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(button('Edit as JSON')), at);
+      await tester.tap(button('Cancel'));
+      await tester.pumpAndSettle();
+      d.dispose();
+    }
+  });
+
   testWidgets('an OAuth server with hidden parts says beside its URL that '
       'they are changed in Edit as JSON; one without says nothing', (
     tester,

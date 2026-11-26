@@ -106,6 +106,8 @@ class _FindingsCardState extends State<FindingsCard> {
           if (widget.json != null)
             Button(
               label: _json ? 'Hide JSON' : 'Show JSON',
+              // The same width either way: it stays put as it's pressed.
+              roomFor: const ['Show JSON', 'Hide JSON'],
               onPressed: () => setState(() => _json = !_json),
             ),
         ],
