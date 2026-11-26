@@ -11,7 +11,8 @@ import 'pull_fixture.dart';
 
 final _text = GetGitHubMergeTextResponse(
   squashTitle: "Read an n that isn't a number as page 1 in listings (#412)",
-  squashBody: '* Treat a non-number n as missing\n\n* Specs for each listing that uses n',
+  squashBody:
+      '* Read a bad n as a missing one\n\n* Specs for each listing that uses n',
 );
 
 /// The Pull request tab of [p] at [width]. The header folds its tabs at 720,

@@ -153,7 +153,7 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets("the first case: sent with a queued message, then the "
+  testWidgets('the first case: sent with a queued message, then the '
       'agent commits; it shows outdated, removable, and goes once the '
       'message is answered', (tester) async {
     final (d, chat) = await open(tester);
@@ -273,7 +273,7 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
-  testWidgets("the second case: a stranded comment sent to the "
+  testWidgets('the second case: a stranded comment sent to the '
       'box and its card removed is gone; the next Send to agent sends only '
       'the new comments', (tester) async {
     final (d, chat) = await open(tester);
