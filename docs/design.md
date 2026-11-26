@@ -96,7 +96,7 @@ Every rounded corner is one of these, or `NushiTheme.inner(outer, gap)` for a sh
 | `panel` | 14 | a pane, a menu, a dialog, a popover, a message's bubble, the composer |
 | `pill` | 999 | round ends: chips, badges, counts, `PillButton`, `RoundButton`, a thin bar |
 
-A row one line high is never a card (12 on 28 makes a lozenge). What isn't a corner (a dot, a scrollbar's thumb, an icon's geometry) says `// not a corner: <why>`.
+A row one line high is never a card (12 on 28 makes a lozenge). Nor is a field one line high a regular field: a name edited in place (`InlineEdit`: a chat's title in the sidebar or its header, a terminal tab, a section, the new chat dialog's branch) is a low box with `tag` corners and an edge in `focus`, drawn a few points past the text, so the row keeps its height and the name doesn't move as editing starts; a regular field's corners on it make a pill. What isn't a corner (a dot, a scrollbar's thumb, an icon's geometry) says `// not a corner: <why>`.
 
 ### Control sizes (`theme/sizes.dart`, ADR [0122](adr/0122-control-sizes-by-place.md))
 

@@ -20,21 +20,31 @@ class DoubleClick {
 
 /// Edits [text] in place, all of it selected: Enter or leaving the box
 /// gives [onDone] the text, trimmed; Escape gives it null.
+///
+/// The text stays where the name it edits sat: the field is the text
+/// alone, as high as its line, and its box (`tag` corners, the focus
+/// ring's colour) is drawn [outset] past it, so a row neither grows nor
+/// shifts its name as editing starts. A field as low as a line takes
+/// small corners: a regular field's would make it a pill (docs/design.md's
+/// Corners).
 class InlineEdit extends StatefulWidget {
   const new({
     required this.text,
     required this.onDone,
     super.key,
     this.style,
-    this.decoration = const InputDecoration(
-      contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-    ),
+    this.hint,
   });
 
   final String text;
   final ValueChanged<String?> onDone;
   final TextStyle? style;
-  final InputDecoration decoration;
+
+  /// What the field says while it's empty.
+  final String? hint;
+
+  /// How far the box is drawn past the text, on each side.
+  static const outset = EdgeInsets.symmetric(horizontal: 4, vertical: 3);
 
   @override
   State<InlineEdit> createState() => _InlineEditState();
@@ -74,6 +84,7 @@ class _InlineEditState extends State<InlineEdit> {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
+    final style = widget.style ?? theme.ui(theme.t.text);
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): () =>
@@ -82,13 +93,38 @@ class _InlineEditState extends State<InlineEdit> {
       // A menu around it (a sidebar row's) takes the arrow keys for itself:
       // these come first, so the caret moves.
       child: DefaultTextEditingShortcuts(
-        child: TextField(
-          controller: _text,
-          focusNode: _focus,
-          style: widget.style ?? theme.ui(theme.t.text),
-          onSubmitted: (_) => _finish(save: true),
-          onTapOutside: (_) => _finish(save: true),
-          decoration: widget.decoration,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: -InlineEdit.outset.left,
+              top: -InlineEdit.outset.top,
+              right: -InlineEdit.outset.right,
+              bottom: -InlineEdit.outset.bottom,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: theme.t.focus, width: 1.5),
+                    borderRadius: BorderRadius.circular(NushiTheme.tag),
+                  ),
+                ),
+              ),
+            ),
+            TextField(
+              controller: _text,
+              focusNode: _focus,
+              style: style,
+              onSubmitted: (_) => _finish(save: true),
+              onTapOutside: (_) => _finish(save: true),
+              // No border or padding of the theme's: the box above is
+              // its edge, and the text keeps the name's place. The hint
+              // is the text's size, so it adds no height.
+              decoration: InputDecoration.collapsed(
+                hintText: widget.hint,
+                hintStyle: style.copyWith(color: theme.t.hint),
+              ),
+            ),
+          ],
         ),
       ),
     );

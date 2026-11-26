@@ -146,7 +146,7 @@ class _TabState extends State<_Tab> {
             child: InlineEdit(
               text: terminalName(info),
               style: theme.ui(t.text, size: 12),
-              decoration: const InputDecoration.collapsed(hintText: 'Name'),
+              hint: 'Name',
               onDone: _done,
             ),
           )
