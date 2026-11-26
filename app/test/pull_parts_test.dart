@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart' show Button, NotePill;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_commits.dart';
@@ -138,6 +139,56 @@ void main() {
       fake.calls.whereType<ResolveGitHubThreadRequest>().single.thread,
       'T_session',
     );
+    d.dispose();
+  });
+
+  // Show turns into Hide and back without moving: its width and its
+  // row's height are the same folded or open, so the pills before it stay
+  // put too.
+  testWidgets("a folded thread's Show keeps its place and width as it "
+      'reads Hide, and its pills stay put', (tester) async {
+    final d = await daemon(tester);
+    final [_, _, outdated] = overviewPull().threads;
+    final both = outdated.deepCopy()..resolved = true;
+    for (final b in renderThemes) {
+      await show(
+        tester,
+        PullThread(
+          daemon: d,
+          item: overviewPull().item,
+          thread: both,
+          onChanged: () async {},
+        ),
+        tokens: b == Brightness.dark ? Tokens.dark : Tokens.light,
+      );
+      Finder button(String label) =>
+          find.byWidgetPredicate((w) => w is Button && w.label == label);
+      List<Rect> pills() => [
+        for (final e in find.byType(NotePill).evaluate())
+          tester.getRect(find.byWidget(e.widget)),
+      ];
+      final at = tester.getRect(button('Show'));
+      final before = pills();
+      expect(before, hasLength(2));
+      await render(
+        tester,
+        find.byKey(const ValueKey('part')),
+        'press_thread_show_${b.name}',
+      );
+      await tester.tap(button('Show'));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(button('Hide')), at);
+      expect(pills(), before);
+      await render(
+        tester,
+        find.byKey(const ValueKey('part')),
+        'press_thread_hide_${b.name}',
+      );
+      await tester.tap(button('Hide'));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(button('Show')), at);
+      expect(pills(), before);
+    }
     d.dispose();
   });
 
