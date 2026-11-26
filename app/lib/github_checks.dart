@@ -115,6 +115,7 @@ class _GitHubChecksState extends State<GitHubChecks> {
               if (jobs.isNotEmpty) ...[
                 Button(
                   label: _rerunning ? 'Re-running…' : 'Re-run $what',
+                  roomFor: ['Re-running…', 'Re-run $what'],
                   icon: Icons.sync,
                   tooltip:
                       "Re-run the $what jobs of these checks' workflow "

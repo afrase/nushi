@@ -74,6 +74,8 @@ class LogsSection extends StatelessWidget {
                 control: native.install.restartsDaemon
                     ? Button(
                         label: daemon.restarting ? 'Restarting…' : 'Restart',
+                        // Its width while it runs, so it doesn't grow.
+                        roomFor: const ['Restarting…'],
                         onPressed: daemon.restarting
                             ? null
                             : () => restartDaemonAsking(context, daemon),

@@ -215,6 +215,7 @@ class AgentRow extends StatelessWidget {
       if (!setUp)
         Button(
           label: onRemove == null ? 'Removing…' : 'Remove',
+          roomFor: const ['Removing…'],
           onPressed: onRemove,
         ),
       if (setUp || update) ...[

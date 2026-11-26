@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:fixnum/fixnum.dart';
@@ -180,6 +181,78 @@ void main() {
     expect(asked, 1);
     await closeView(tester, d);
   }, variant: onMac);
+
+  /// Settings › General scrolled to the updates' row, its check held
+  /// until [answer] completes.
+  Future<Daemon> checkNow(
+    WidgetTester tester,
+    Completer<CheckForUpdatesResponse> answer, {
+    Size size = const Size(1700, 1000),
+    Brightness brightness = Brightness.dark,
+  }) async {
+    native.speller = FakeSpeller({});
+    final fake = settingsFake()
+      ..on((input) => input is CheckForUpdatesRequest ? answer.future : null);
+    final d = await pumpSettingsApp(
+      tester,
+      fake,
+      SettingsSection.general,
+      size: size,
+      brightness: brightness,
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('check-now')),
+      100,
+      scrollable: find
+          .descendant(
+            of: find.byType(SettingsPage),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    return d;
+  }
+
+  testWidgets('Check now keeps its place and width while it reads '
+      'Checking…', (tester) async {
+    final answer = Completer<CheckForUpdatesResponse>();
+    final d = await checkNow(tester, answer);
+    final button = find.byKey(const ValueKey('check-now'));
+    final rest = tester.getRect(button);
+    await tester.tap(button);
+    await tester.pump();
+    expect(tester.widget<Button>(button).label, 'Checking…');
+    expect(tester.getRect(button), rest);
+    answer.complete(
+      CheckForUpdatesResponse(
+        update: UpdateCheck(latest: '1.2.0', checkedMs: Int64(1)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.widget<Button>(button).label, 'Check now');
+    expect(tester.getRect(button), rest);
+    await closeView(tester, d);
+  }, variant: onMac);
+
+  for (final size in const [Size(1700, 1000), Size(720, 900)]) {
+    renderTest('Check now and Checking…, at ${size.width.round()} wide', (
+      tester,
+    ) async {
+      for (final b in Brightness.values) {
+        final answer = Completer<CheckForUpdatesResponse>();
+        final d = await checkNow(tester, answer, size: size, brightness: b);
+        final name = 'settings_check_now_${size.width.round()}_${b.name}';
+        await render(tester, find.byType(MaterialApp), name);
+        await tester.tap(find.byKey(const ValueKey('check-now')));
+        await tester.pump();
+        await render(tester, find.byType(MaterialApp), '${name}_checking');
+        answer.complete(CheckForUpdatesResponse(update: UpdateCheck()));
+        await tester.pumpAndSettle();
+        await closeView(tester, d);
+      }
+    }, variant: onMac);
+  }
 
   testWidgets(
     'Start at login heads Startup and updates, not the chats’ group',

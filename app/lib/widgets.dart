@@ -146,7 +146,9 @@ class RunButton extends StatefulWidget {
   final String? hint;
   final String tooltip;
 
-  /// Its label while the call runs ("Reloading…"); [label] if none.
+  /// Its label while the call runs ("Reloading…"); [label] if none. The
+  /// button keeps room for both, so it doesn't change width as it's
+  /// pressed, longer or shorter, and what's beside it stays put.
   final String? running;
   final bool wrap; // Button.wrap
 
@@ -170,6 +172,7 @@ class _RunButtonState extends State<RunButton> {
     valueListenable: _runner,
     builder: (context, running, _) => Button(
       label: running ? widget.running ?? widget.label : widget.label,
+      roomFor: [?widget.running, widget.label],
       kind: widget.kind,
       icon: widget.icon,
       hint: widget.hint,

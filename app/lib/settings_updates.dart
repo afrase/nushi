@@ -94,6 +94,8 @@ class _UpdatesGroupState extends State<UpdatesGroup> {
             control: Button(
               key: const ValueKey('check-now'),
               label: _checking.value ? 'Checking…' : 'Check now',
+              // Its width while it checks, so it doesn't change.
+              roomFor: const ['Checking…'],
               onPressed: _checking.value
                   ? null
                   : () => unawaited(

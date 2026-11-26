@@ -265,6 +265,75 @@ void main() {
     d.dispose();
   });
 
+  /// The token form opened beside a host (so it has Cancel) and filled in,
+  /// its check held until [answer] completes.
+  Future<(FakeDaemon, Daemon)> tokenForm(
+    WidgetTester tester,
+    Completer<AddGitHubTokenResponse> answer, {
+    Tokens tokens = Tokens.dark,
+    Size size = const Size(1000, 760),
+  }) async {
+    final (fake, d) = await _open(
+      tester,
+      hosts: [_hosts().first],
+      tokens: tokens,
+      size: size,
+    );
+    fake.on((input) => input is AddGitHubTokenRequest ? answer.future : null);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add a token'));
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'git.corp.example');
+    await tester.enterText(fields.at(1), 'ghp_good');
+    await tester.pump();
+    return (fake, d);
+  }
+
+  Finder button(String label) =>
+      find.byWidgetPredicate((w) => w is Button && w.label == label);
+
+  testWidgets('Add keeps its width while it reads Checking…, so Cancel '
+      'beside it stays put', (tester) async {
+    final answer = Completer<AddGitHubTokenResponse>();
+    final (_, d) = await tokenForm(tester, answer);
+    final cancel = tester.getRect(button('Cancel'));
+    final add = tester.getRect(button('Add'));
+    await tester.tap(button('Add'));
+    await tester.pump();
+    expect(tester.getRect(button('Checking…')), add);
+    expect(tester.getRect(button('Cancel')), cancel);
+    answer.complete(AddGitHubTokenResponse());
+    await tester.pumpAndSettle();
+    d.dispose();
+  });
+
+  for (final size in const [Size(1700, 1000), Size(720, 900)]) {
+    renderTest('the token form, Add and Checking…, at ${size.width.round()} '
+        'wide', (tester) async {
+      for (final (b, tokens) in [
+        ('dark', Tokens.dark),
+        ('light', Tokens.light),
+      ]) {
+        final answer = Completer<AddGitHubTokenResponse>();
+        final (_, d) = await tokenForm(
+          tester,
+          answer,
+          tokens: tokens,
+          size: size,
+        );
+        final name = 'settings_github_token_${size.width.round()}_$b';
+        await render(tester, find.byType(MaterialApp), name);
+        await tester.tap(button('Add'));
+        await tester.pump();
+        await render(tester, find.byType(MaterialApp), '${name}_checking');
+        answer.complete(AddGitHubTokenResponse());
+        await tester.pumpAndSettle();
+        await closeView(tester, d);
+      }
+    });
+  }
+
   testWidgets('a token added in Settings is a host the GitHub views know '
       'at once; a removed one is not', (tester) async {
     final (fake, d) = await _open(tester, hosts: [_hosts().first]);

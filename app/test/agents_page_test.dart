@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fixnum/fixnum.dart';
 
 import 'package:flutter/services.dart';
@@ -170,6 +172,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(fake.removed, ['codex']);
     expect(fake.setUp, isEmpty);
+    d.dispose();
+  });
+
+  testWidgets('Remove keeps its place and width while it reads Removing…', (
+    tester,
+  ) async {
+    final (fake, d) = await _settings(tester);
+    final held = Completer<RemoveAgentResponse>();
+    fake.on((input) => input is RemoveAgentRequest ? held.future : null);
+    Finder button(String label) =>
+        find.byWidgetPredicate((w) => w is Button && w.label == label);
+    final rest = tester.getRect(button('Remove'));
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove').last);
+    await tester.pump();
+    expect(tester.getRect(button('Removing…')), rest);
+    held.complete(RemoveAgentResponse());
+    await tester.pumpAndSettle();
+    expect(fake.removed, ['codex']);
+    expect(tester.getRect(button('Remove')), rest);
     d.dispose();
   });
 

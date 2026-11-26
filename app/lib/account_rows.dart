@@ -261,6 +261,8 @@ class _TokenFormState extends State<TokenForm> {
               const SizedBox(width: 6),
               Button(
                 label: _busy ? 'Checking…' : 'Add',
+                // Its width while it checks, so Cancel beside it stays.
+                roomFor: const ['Checking…'],
                 kind: ButtonKind.primary,
                 onPressed: _busy ? null : _add,
               ),

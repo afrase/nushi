@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_check_row.dart';
 import 'package:nushi/github_checks.dart';
@@ -378,6 +381,34 @@ void main() {
       rerunWords([GitHubCheck(state: 'cancelled')], 2),
       'Re-running the cancelled jobs of 2 workflow runs',
     );
+    d.dispose();
+  });
+
+  testWidgets('the Checks tab: Re-run keeps its width while it reads '
+      'Re-running…', (tester) async {
+    final held = Completer<RerunGitHubChecksResponse>();
+    final fake = FakeDaemon([])
+      ..answer = (input) =>
+          input is RerunGitHubChecksRequest ? held.future : null;
+    final d = await fake.connect(tester);
+    viewport(tester, const Size(900, 1200));
+    await tester.pumpWidget(
+      themed(
+        SingleChildScrollView(
+          child: GitHubChecks(daemon: d, pull: overviewPull()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    Finder button(String label) =>
+        find.byWidgetPredicate((w) => w is Button && w.label == label);
+    final rest = tester.getRect(button('Re-run failed'));
+    await tester.tap(button('Re-run failed'));
+    await tester.pump();
+    expect(tester.getRect(button('Re-running…')), rest);
+    held.complete(RerunGitHubChecksResponse(runs: 1));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(button('Re-run failed')), rest);
     d.dispose();
   });
 
