@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +12,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -123,6 +126,50 @@ void main() {
         d.dispose();
       }, variant: onMac);
     }
+  }
+
+  // The bar's Restart now and the Restart screen's Restart daemon keep
+  // their width while they read Restarting…: the bar's text beside it
+  // doesn't move, nor the screen's centred button.
+  for (final (label, api) in [
+    ('Restart now', apiVersion),
+    ('Restart daemon', apiFloor - 1),
+  ]) {
+    testWidgets('$label keeps its width while it reads Restarting…', (
+      tester,
+    ) async {
+      final fake = _daemon(
+        () => PingResponse(apiVersion: api, build: '7-1000'),
+      );
+      final d = await _open(tester, fake);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      Finder button(String label) =>
+          find.byWidgetPredicate((w) => w is Button && w.label == label);
+      final rest = tester.getRect(button(label));
+      await render(
+        tester,
+        find.byType(NushiApp),
+        'busy_restart_${label.split(' ').last}_idle',
+      );
+      Object? failed;
+      unawaited(
+        d.restartDaemon().then((_) {}, onError: (Object e) => failed = e),
+      );
+      await tester.pump();
+      expect(tester.getRect(button('Restarting…')), rest);
+      await render(
+        tester,
+        find.byType(NushiApp),
+        'busy_restart_${label.split(' ').last}_busy',
+      );
+      // The fake daemon never stops: the restart gives up.
+      await tester.pump(const Duration(seconds: 11));
+      await tester.pumpAndSettle();
+      expect(failed, isA<StateError>());
+      expect(tester.getRect(button(label)), rest);
+      d.dispose();
+    }, variant: onMac);
   }
 
   // ADR 0004: below the floor, the Restart screen alone; the pings still

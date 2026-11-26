@@ -340,6 +340,9 @@ class _SetUpState extends State<_SetUp> {
             label: _working
                 ? (update ? 'Updating…' : 'Setting up…')
                 : (update ? 'Update' : 'Set up'),
+            roomFor: update
+                ? const ['Updating…', 'Update']
+                : const ['Setting up…', 'Set up'],
             kind: ButtonKind.primary,
             autofocus: true,
             onPressed: _working ? null : _run,

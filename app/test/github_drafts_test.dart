@@ -13,6 +13,7 @@ import 'package:nushi/github_review.dart';
 import 'package:nushi/github_thread.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/send_to_agent.dart';
+import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'github_fixture.dart' show openView, pull;
@@ -240,6 +241,43 @@ void main() {
       hasLength(1),
     );
     expect(reviewDrafts(ref), isEmpty, reason: 'sent, so not sent again');
+    await closeView(tester, d);
+  });
+
+  testWidgets('Submit review keeps its width while it reads Submitting…, '
+      'so Cancel beside it stays put', (tester) async {
+    final hold = Completer<void>();
+    final (_, d) = await _files(
+      tester,
+      more: (input) => input is SubmitGitHubReviewRequest
+          ? hold.future.then((_) => SubmitGitHubReviewResponse())
+          : null,
+    );
+    tester.widget<DiffBox>(find.byType(DiffBox)).onLines!(
+      const LineSelection(side: PaneSide.neu, anchor: 2, focus: 3),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Call it Minus?');
+    await _post(tester);
+    final review = find.text('Submit review (1)', skipOffstage: false).last;
+    await tester.ensureVisible(review);
+    await tester.pumpAndSettle();
+    await tester.tap(review);
+    await tester.pumpAndSettle();
+    Finder button(String label) => find.descendant(
+      of: find.byType(Dialog),
+      matching: find.byWidgetPredicate((w) => w is Button && w.label == label),
+    );
+    final rest = tester.getRect(button('Submit review'));
+    final cancel = tester.getRect(button('Cancel'));
+    await render(tester, find.byType(Dialog), 'busy_submit_review_idle');
+    await tester.tap(button('Submit review'));
+    await tester.pump();
+    expect(tester.getRect(button('Submitting…')), rest);
+    await render(tester, find.byType(Dialog), 'busy_submit_review_busy');
+    expect(tester.getRect(button('Cancel')), cancel);
+    hold.complete();
+    await tester.pumpAndSettle();
     await closeView(tester, d);
   });
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:fixnum/fixnum.dart';
 
+import 'package:flutter/material.dart' show Dialog;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/agents_page.dart';
@@ -195,6 +196,45 @@ void main() {
     expect(tester.getRect(button('Remove')), rest);
     d.dispose();
   });
+
+  // The set-up sheet's Set up and Update keep their width while they
+  // read Setting up… or Updating…, so Cancel beside them stays put.
+  for (final (row, idle, busy) in [
+    ('Set up', 'Set up', 'Setting up…'),
+    ('Update to 2.2.2', 'Update', 'Updating…'),
+  ]) {
+    testWidgets('the sheet’s $idle keeps its width while it reads $busy', (
+      tester,
+    ) async {
+      final (fake, d) = await _settings(tester, codexSetUp: idle != 'Set up');
+      final held = Completer<SetUpAgentResponse>();
+      fake.on((input) => input is SetUpAgentRequest ? held.future : null);
+      await tester.tap(find.text(row));
+      await tester.pumpAndSettle();
+      // The sheet's: the last, after the row's own.
+      Finder button(String label) =>
+          find.byWidgetPredicate((w) => w is Button && w.label == label).last;
+      final rest = tester.getRect(button(idle));
+      final cancel = tester.getRect(button('Cancel'));
+      await render(
+        tester,
+        find.byType(Dialog),
+        'busy_agent_sheet_${idle.split(' ').first.toLowerCase()}_idle',
+      );
+      await tester.tap(button(idle));
+      await tester.pump();
+      expect(tester.getRect(button(busy)), rest);
+      await render(
+        tester,
+        find.byType(Dialog),
+        'busy_agent_sheet_${idle.split(' ').first.toLowerCase()}_busy',
+      );
+      expect(tester.getRect(button('Cancel')), cancel);
+      held.complete(SetUpAgentResponse());
+      await tester.pumpAndSettle();
+      d.dispose();
+    });
+  }
 
   testWidgets("Codex's Go agent: the switch sets it, and Codex then needs "
       'no adapter; off again, it does', (tester) async {

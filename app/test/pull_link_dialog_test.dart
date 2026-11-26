@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +8,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
+import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'github_fixture.dart' show item, testRepo;
@@ -120,6 +123,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<GetGitHubPullRequest>().single.ref.number, 12);
     expect(_linked(fake)!.number, 12);
+    await closeView(tester, d);
+  });
+
+  testWidgets('Link keeps its width while it reads Linking…, so Cancel '
+      'beside it stays put', (tester) async {
+    final (fake, d) = await _open(tester);
+    final held = Completer<GetGitHubPullResponse>();
+    fake.on((input) => input is GetGitHubPullRequest ? held.future : null);
+    await tester.enterText(find.byType(TextField), '12');
+    Finder button(String label) =>
+        find.byWidgetPredicate((w) => w is Button && w.label == label);
+    final rest = tester.getRect(button('Link'));
+    final cancel = tester.getRect(button('Cancel'));
+    await render(tester, find.byType(Dialog), 'busy_link_pull_idle');
+    await tester.tap(button('Link'));
+    await tester.pump();
+    expect(tester.getRect(button('Linking…')), rest);
+    await render(tester, find.byType(Dialog), 'busy_link_pull_busy');
+    expect(tester.getRect(button('Cancel')), cancel);
+    held.complete(
+      GetGitHubPullResponse(pull: GitHubPull(item: item(12, 'Linked'))),
+    );
+    await tester.pumpAndSettle();
     await closeView(tester, d);
   });
 

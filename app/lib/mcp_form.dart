@@ -386,6 +386,7 @@ class _FormState extends State<_Form> {
               const SizedBox(width: 8),
               Button(
                 label: _saving ? 'Saving…' : (_editing ? 'Save' : 'Add'),
+                roomFor: const ['Saving…'],
                 kind: ButtonKind.primary,
                 onPressed: _saving ? null : _save,
               ),

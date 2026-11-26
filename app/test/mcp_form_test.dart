@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -103,6 +105,71 @@ void main() {
     }
     d.dispose();
   });
+
+  // Add, and Save when editing, keep their width while they read Saving…,
+  // so Cancel beside them stays put.
+  for (final editing in [false, true]) {
+    final idle = editing ? 'Save' : 'Add';
+    testWidgets('$idle keeps its width while it reads Saving…', (tester) async {
+      viewport(tester, const Size(900, 900));
+      final held = Completer<Object>();
+      final fake = FakeDaemon([])
+        ..answer = (input) =>
+            input is AddMcpServerRequest || input is EditMcpServerRequest
+            ? held.future
+            : null;
+      final d = await fake.connect(tester);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: const NushiTheme(Tokens.dark).toThemeData(),
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => mcpForm(
+                context,
+                McpServers.of(d, '/x', agent: 'claude'),
+                server: editing
+                    ? McpServer(
+                        name: 'wiki',
+                        scope: 'user',
+                        configJson: '{"command":"npx","args":["wiki-mcp"]}',
+                      )
+                    : null,
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      if (!editing) {
+        await tester.enterText(find.byType(TextField).at(0), 'wiki');
+        await tester.enterText(find.byType(TextField).at(1), 'npx');
+      }
+      // The last: the env's and headers' rows have an Add of their own.
+      Finder button(String label) =>
+          find.byWidgetPredicate((w) => w is Button && w.label == label).last;
+      final rest = tester.getRect(button(idle));
+      final cancel = tester.getRect(button('Cancel'));
+      await render(
+        tester,
+        find.byType(Dialog),
+        'busy_mcp_form_${idle.toLowerCase()}_idle',
+      );
+      await tester.tap(button(idle));
+      await tester.pump();
+      expect(tester.getRect(button('Saving…')), rest);
+      await render(
+        tester,
+        find.byType(Dialog),
+        'busy_mcp_form_${idle.toLowerCase()}_busy',
+      );
+      expect(tester.getRect(button('Cancel')), cancel);
+      held.complete(editing ? EditMcpServerResponse() : AddMcpServerResponse());
+      await tester.pumpAndSettle();
+      d.dispose();
+    });
+  }
 
   // The empty form to look at (`make renders`): its hints a step fainter
   // than a typed value, so an example never reads as typed.

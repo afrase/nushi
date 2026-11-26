@@ -151,6 +151,33 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
+  // Update keeps its width while it reads Updating…, so Release notes
+  // beside it stays put.
+  testWidgets('Update keeps its width while it reads Updating…', (
+    tester,
+  ) async {
+    var found = newerUpdate('0.1.17', cask: 'nushi');
+    final fake = updateDaemon(() => found);
+    final d = await openWithUpdate(tester, fake);
+    Finder button(String label) => find.descendant(
+      of: updateToast,
+      matching: find.byWidgetPredicate((w) => w is Button && w.label == label),
+    );
+    final rest = tester.getRect(button('Update'));
+    final notes = tester.getRect(button('Release notes'));
+    await render(tester, updateToast, 'busy_update_toast_idle');
+    await tester.tap(button('Update'));
+    await tester.pump();
+    found = newerUpdate('0.1.17', cask: 'nushi', installing: true);
+    fake.emit(EventsResponse(update: found));
+    await tester.pump();
+    await tester.pump();
+    expect(tester.getRect(button('Updating…')), rest);
+    await render(tester, updateToast, 'busy_update_toast_busy');
+    expect(tester.getRect(button('Release notes')), notes);
+    d.dispose();
+  }, variant: onMac);
+
   testWidgets('a failed install says why, with Copy, Retry and Release '
       'notes; Retry installs again', (tester) async {
     var found = newerUpdate('0.1.17', cask: 'nushi', error: notYet);

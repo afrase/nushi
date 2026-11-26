@@ -30,6 +30,7 @@ class DaemonUpdateBar extends StatelessWidget {
             listenable: daemon,
             builder: (context, _) => Button(
               label: daemon.restarting ? 'Restarting…' : 'Restart now',
+              roomFor: const ['Restarting…', 'Restart now'],
               // What it stops is asked first.
               onPressed: daemon.restarting
                   ? null
@@ -151,6 +152,7 @@ class OutdatedScreen extends StatelessWidget {
             if (daemon.bundled != null)
               Button(
                 label: daemon.restarting ? 'Restarting…' : 'Restart daemon',
+                roomFor: const ['Restarting…', 'Restart daemon'],
                 kind: ButtonKind.primary,
                 // What it stops is asked first.
                 onPressed: daemon.restarting

@@ -173,6 +173,10 @@ class _UpdateToastState extends State<UpdateToast> {
             : again
             ? 'Retry'
             : 'Update',
+        // Update keeps its width as it reads Updating…, so Release notes
+        // stays put. Retry needn't: Copy beside it goes as it updates, and
+        // the failure's row has no room for a wider Retry.
+        roomFor: again ? const [] : const ['Updating…', 'Update'],
         kind: again ? ButtonKind.secondary : ButtonKind.primary,
         tooltip: installing ? '' : 'Runs “${brewUpgrade(cask)}”',
         onPressed: installing || _install.value
