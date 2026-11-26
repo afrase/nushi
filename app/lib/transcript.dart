@@ -1070,13 +1070,7 @@ class _TranscriptState extends State<Transcript> {
                 left: sides.left,
                 right: sides.right,
                 bottom: 12,
-                child: ClearOfPanes(
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    heightFactor: 1,
-                    child: jump,
-                  ),
-                ),
+                child: ClearOfPanes(child: jump),
               ),
           ],
         );
