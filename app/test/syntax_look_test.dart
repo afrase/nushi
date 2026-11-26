@@ -10,22 +10,22 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 const _old = '''
-class Ledger < Base
-  # @return [Integer] the total, in cents
-  def rolling_reserves_total_cents(days = 30)
-    @total = rolling_reserve_amount_cents + self.fee(:usd)
+class Parcel < Base
+  # @return [Integer] the total, in grams
+  def rolling_parcels_weight_grams(days = 30)
+    @total = rolling_parcel_weight_ounces + self.tare(:kg)
   end
 end
 ''';
 
 const _new = '''
-class Ledger < Base
+class Parcel < Base
   LIMIT = 5_000
 
-  # @return [Integer] the total, in cents
+  # @return [Integer] the total, in grams
   # @param days [Integer] how far back
-  def rolling_reserves_total_cents(days = 30)
-    @total = rolling_reserve_amount_cents + self.fee(:usd) + @@count
+  def rolling_parcels_weight_grams(days = 30)
+    @total = rolling_parcel_weight_ounces + self.tare(:kg) + @@count
     puts "#{days} days: #{@total}", nil, LIMIT
   end
 end
@@ -35,11 +35,11 @@ const _block = r'''
 A code block:
 
 ```ts
-/** @param a the amount */
-export class Ledger extends Base {
+/** @param a the weight */
+export class Parcel extends Base {
   total = 42;
   sum(a: number): string {
-    return `${a} cents` + /x+/g;
+    return `${a} grams` + /x+/g;
   }
 }
 ```
@@ -104,7 +104,7 @@ void main() {
               SizedBox(
                 height: 240,
                 child: DiffBox(
-                  FileChange(path: 'ledger.rb', oldText: _old, newText: _new),
+                  FileChange(path: 'parcel.rb', oldText: _old, newText: _new),
                   fit: false,
                 ),
               ),

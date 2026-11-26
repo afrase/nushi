@@ -24,8 +24,8 @@ void main() {
               chat(
                 'a',
                 'claude',
-                'Wire the ledger',
-                folder: '/Users/me/ledger',
+                'Wire the parcel',
+                folder: '/Users/me/parcel',
               ),
             ])
             ..answer = (input) => switch (input) {
@@ -47,7 +47,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('664 MB'));
       await tester.pumpAndSettle();
-      expect(find.text('Wire the ledger', findRichText: true), findsOne);
+      expect(find.text('Wire the parcel', findRichText: true), findsOne);
       expect(find.text('Nushi app', findRichText: true), findsOne);
       expect(find.text('410 MB'), findsOne);
       expect(find.text('Nushi daemon', findRichText: true), findsOne);

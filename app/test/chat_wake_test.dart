@@ -29,7 +29,7 @@ Future<(Daemon, FakeDaemon)> _app(
   showDetails.value = false;
   viewport(tester, const Size(1700, 900));
   final fake =
-      FakeDaemon([chat('c', 'claude', 'Wire the ledger', status: status)])
+      FakeDaemon([chat('c', 'claude', 'Wire the parcel', status: status)])
         ..agents = [for (final a in readyAgents()) a..mcp = true]
         ..answer = (input) => input is PingRequest && api != apiVersion
             ? PingResponse(apiVersion: api, build: '7-1000')
@@ -173,13 +173,13 @@ void main() {
         chat(
           'a',
           'claude',
-          'Wire the ledger',
+          'Wire the parcel',
           status: ChatStatus(asleep: true),
         ),
         chat(
           'b',
           'codex',
-          'Cap the rates',
+          'Fold the maps',
           age: 5,
           status: ChatStatus(canSleep: true),
         ),
@@ -197,7 +197,7 @@ void main() {
         matching: find.text(label),
       );
 
-      await sheet('Wire the ledger');
+      await sheet('Wire the parcel');
       expect(inSheet('Wake'), findsOne);
       expect(inSheet('Sleep'), findsNothing);
       await tester.ensureVisible(inSheet('Wake')); // landscape scrolls
@@ -210,7 +210,7 @@ void main() {
 
       await tester.tap(find.bySemanticsLabel('Back').first);
       await tester.pumpAndSettle();
-      await sheet('Cap the rates');
+      await sheet('Fold the maps');
       expect(inSheet('Sleep'), findsOne);
       expect(inSheet('Wake'), findsNothing);
       await endPhone(tester, phone);

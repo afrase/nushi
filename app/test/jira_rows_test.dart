@@ -112,7 +112,7 @@ Future<(FakeDaemon, Daemon)> _open(
           if (i.assigneeId == 'me-1') i,
         _is(
           'ACME-204',
-          'Rotate the deploy keys before the audit, every one of them',
+          'Repaint the lobby sign before the fair, and both sides too',
           'To Do',
           'new',
           who: 'Test User',

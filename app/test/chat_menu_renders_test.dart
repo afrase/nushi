@@ -8,7 +8,7 @@ import 'package:nushi/settings.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-const _wt = '/Users/me/.nushi/worktrees/ledger/quiet-fox';
+const _wt = '/Users/me/.nushi/worktrees/parcel/quiet-fox';
 
 /// The chat's ⋯ menu open, drawn: an awake chat with everything on offer
 /// (a linked pull request, a worktree, review comments to send), and a
@@ -29,21 +29,21 @@ void main() {
               chat(
                   'c',
                   'claude',
-                  'Wire the ledger',
+                  'Wire the parcel',
                   folder: _wt,
                   status: asleep
                       ? ChatStatus(asleep: true)
                       : ChatStatus(canSleep: true, canFork: true),
                 )
                 ..worktree = Worktree(
-                  repo: '/Users/me/ledger',
+                  repo: '/Users/me/parcel',
                   path: _wt,
                   branch: 'nushi/quiet-fox',
                   base: 'main',
                 )
                 ..pull = GitHubLink(
                   host: 'github.com',
-                  repo: 'example/ledger',
+                  repo: 'example/parcel',
                   number: 42,
                   pull: true,
                 );
@@ -52,7 +52,7 @@ void main() {
             ReviewComment(
               id: 'r1',
               where: 'uncommitted',
-              path: 'ledger.go',
+              path: 'parcel.go',
               old: false,
               start: 1,
               end: 1,

@@ -73,10 +73,10 @@ void main() {
     expect(
       await runs('ruby', '''
 # @return [Integer] the result
-class Ledger < Base
-  def rolling_reserves_total_cents(a, b = 2)
-    @total = rolling_reserve_amount_cents + self.fee(:usd) + @@count
-    puts "#{a} cents", 42, nil, LIMIT
+class Parcel < Base
+  def rolling_parcels_weight_grams(a, b = 2)
+    @total = rolling_parcel_weight_ounces + self.tare(:kg) + @@count
+    puts "#{a} grams", 42, nil, LIMIT
   end
 end'''),
       [
@@ -84,18 +84,18 @@ end'''),
         '@return: docTag',
         ' [Integer] the result: comment',
         'class: keyword',
-        'Ledger: declaration',
+        'Parcel: declaration',
         'Base: type',
         'def: keyword',
-        'rolling_reserves_total_cents: declaration',
+        'rolling_parcels_weight_grams: declaration',
         'a, b = : parameter',
         '2: number',
         '@total: field',
         'self: keyword',
-        ':usd: symbol',
+        ':kg: symbol',
         '@@count: field',
         '": string',
-        ' cents": string',
+        ' grams": string',
         '42: number',
         'nil: keyword',
         'LIMIT: constant',
@@ -109,14 +109,14 @@ end'''),
     expect(
       await runs('go', '''
 // Sum adds.
-func (l *Ledger) Sum(a int) error {
+func (l *Parcel) Sum(a int) error {
 	x := 42 + len("b")
 	return nil
 }'''),
       [
         '// Sum adds.: comment',
         'func: keyword',
-        '(l *Ledger): parameter',
+        '(l *Parcel): parameter',
         'int: type',
         'error: type',
         '42: number',
@@ -132,7 +132,7 @@ func (l *Ledger) Sum(a int) error {
     expect(
       await runs('dart', r'''
 /// Sums [a].
-class Ledger extends Base {
+class Parcel extends Base {
   @override
   int sum(int a) => this.x + 42;
   final s = 'hi $a';
@@ -140,7 +140,7 @@ class Ledger extends Base {
       [
         '/// Sums [a].: comment',
         'class: keyword',
-        'Ledger: declaration',
+        'Parcel: declaration',
         'extends: keyword',
         'Base: declaration',
         '@override: meta',
@@ -158,20 +158,20 @@ class Ledger extends Base {
   test('TypeScript', () async {
     expect(
       await runs('typescript', r'''
-/** @param a the amount */
-export class Ledger extends Base {
+/** @param a the weight */
+export class Parcel extends Base {
   total = 42;
   sum(a: number): string {
-    return `${a} cents` + /x+/g;
+    return `${a} grams` + /x+/g;
   }
 }'''),
       [
         '/** : comment',
         '@param: docTag',
-        ' a the amount */: comment',
+        ' a the weight */: comment',
         'export: keyword',
         'class: keyword',
-        'Ledger: declaration',
+        'Parcel: declaration',
         'extends: keyword',
         'Base: type',
         '42: number',
@@ -181,7 +181,7 @@ export class Ledger extends Base {
         'string: keyword',
         'return: keyword',
         '`: string',
-        ' cents`: string',
+        ' grams`: string',
         '/x+/g: regexp',
       ],
     );

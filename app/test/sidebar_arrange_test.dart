@@ -77,7 +77,7 @@ void main() {
         'Wire the parcel',
         'Seed data',
         'cubby',
-        'Cap the rates',
+        'Fold the maps',
         'garden',
         'Plant the beds',
         'notes',
@@ -115,19 +115,19 @@ void main() {
       'Yesterday',
       'Seed data',
       'Previous 7 days',
-      'Cap the rates',
+      'Fold the maps',
       'Previous 30 days',
       'Plant the beds',
       'September',
       'Jot it down',
     ]);
-    // By last updated, Cap the rates is today's.
+    // By last updated, Fold the maps is today's.
     sidebarSort.value = SortBy.updated;
     await tester.pumpAndSettle();
     expect(order(tester).sublist(2, 5), [
       'Today',
       'Wire the parcel',
-      'Cap the rates',
+      'Fold the maps',
     ]);
 
     sidebarGroupBy.value = GroupBy.status;
@@ -139,7 +139,7 @@ void main() {
       'Needs you',
       'Wire the parcel',
       'Working',
-      'Cap the rates',
+      'Fold the maps',
       'Done',
       'Plant the beds',
       'Idle',
@@ -153,7 +153,7 @@ void main() {
         {
             'ante': ['Jot it down'],
             'claude': ['Wire the parcel', 'Plant the beds'],
-            'codex': ['Cap the rates'],
+            'codex': ['Fold the maps'],
             'pig': ['Seed data'],
           }.entries.toList()
           ..sort((a, b) => agentTitle(a.key).compareTo(agentTitle(b.key)));
@@ -175,7 +175,7 @@ void main() {
       'Seed data',
       'Not in a worktree',
       'Wire the parcel',
-      'Cap the rates',
+      'Fold the maps',
       'Plant the beds',
       'Jot it down',
     ]);
@@ -187,7 +187,7 @@ void main() {
       'Keep this',
       'Wire the parcel',
       'Seed data',
-      'Cap the rates',
+      'Fold the maps',
       'Plant the beds',
       'Jot it down',
     ]);
@@ -207,7 +207,7 @@ void main() {
     expect(order(tester).sublist(order(tester).indexOf('Idle')), [
       'Idle',
       'Seed data',
-      'Cap the rates',
+      'Fold the maps',
       'Jot it down',
     ]);
     d.dispose();
@@ -230,7 +230,7 @@ void main() {
     expect(sidebarAscending.value, isTrue); // names from A
     final titles = shownInOrder(tester, arrangeTitles).sublist(1);
     expect(titles, [
-      'Cap the rates',
+      'Fold the maps',
       'Jot it down',
       'Plant the beds',
       'Seed data',
@@ -243,7 +243,7 @@ void main() {
     expect(sidebarAscending.value, isFalse);
     expect(shownInOrder(tester, arrangeTitles).sublist(1), [
       'Wire the parcel',
-      'Cap the rates',
+      'Fold the maps',
       'Seed data',
       'Plant the beds',
       'Jot it down',
@@ -257,7 +257,7 @@ void main() {
     expect(shownInOrder(tester, arrangeTitles).sublist(1, 4), [
       'Wire the parcel',
       'Seed data',
-      'Cap the rates',
+      'Fold the maps',
     ]);
 
     // By project and by hand, dragging orders.
@@ -278,7 +278,7 @@ void main() {
       [for (final c in chatOrder(d)) c.shownTitle],
       [
         'Keep this',
-        'Cap the rates',
+        'Fold the maps',
         'Jot it down',
         'Plant the beds',
         'Seed data',

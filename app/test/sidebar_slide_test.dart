@@ -14,18 +14,18 @@ import 'sidebar_fixture.dart';
 // apart to open the gap where the dragged one would land, and settle on
 // the drop; a list that refuses the drag doesn't move.
 
-const _ledger = '/Users/me/parcel-poc';
+const _parcel = '/Users/me/parcel-poc';
 
 /// Four projects, the newest chat first: parcel-poc (three chats), cubby,
 /// garden, notes; [pins] pinned, by id, at their places.
 List<Chat> _chats({Map<String, int> pins = const {}}) => [
   for (final c in [
-    chat('a', 'claude', 'Wire the parcel', folder: _ledger),
-    chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cubby', age: 1),
+    chat('a', 'claude', 'Wire the parcel', folder: _parcel),
+    chat('c', 'codex', 'Fold the maps', folder: '/Users/me/cubby', age: 1),
     chat('d', 'claude', 'Plant the beds', folder: '/Users/me/garden', age: 2),
     chat('e', 'ante', 'Jot it down', folder: '/Users/me/notes', age: 3),
-    chat('b', 'pig', 'Seed data', folder: _ledger, age: 5),
-    chat('f', 'claude', 'Price the bonds', folder: _ledger, age: 6),
+    chat('b', 'pig', 'Seed data', folder: _parcel, age: 5),
+    chat('f', 'claude', 'Sweep the porch', folder: _parcel, age: 6),
   ])
     c..pin = pins[c.id] ?? 0,
 ];
@@ -89,17 +89,17 @@ void main() {
       'apart to open the gap, it shows faded there, and the drop settles '
       'without sliding again', (tester) async {
     final (d, _) = await _sidebar(tester);
-    const ledger = ['Wire the parcel', 'Seed data', 'Price the bonds'];
-    final before = _ys(tester, ledger);
+    const parcelRows = ['Wire the parcel', 'Seed data', 'Sweep the porch'];
+    final before = _ys(tester, parcelRows);
     final row = before['Seed data']! - before['Wire the parcel']!;
 
     // Up, into the top half of Wire the parcel's row.
     final drag = await _drag(
       tester,
-      'Price the bonds',
+      'Sweep the porch',
       before['Wire the parcel']! - 4,
     );
-    expect(find.text('Price the bonds'), findsNWidgets(2)); // and lifted
+    expect(find.text('Sweep the porch'), findsNWidgets(2)); // and lifted
     // The gap opened, the rows not moved yet: they slide.
     expect(_y(tester, 'Wire the parcel'), before['Wire the parcel']);
     await tester.pump(_slide ~/ 2);
@@ -107,28 +107,28 @@ void main() {
     expect(midway, greaterThan(before['Wire the parcel']!));
     expect(midway, lessThan(before['Wire the parcel']! + row));
     await tester.pump(_slide);
-    expect(_ys(tester, ledger), {
+    expect(_ys(tester, parcelRows), {
       'Wire the parcel': before['Wire the parcel']! + row,
       'Seed data': before['Seed data']! + row,
-      'Price the bonds': before['Wire the parcel'], // in the gap
+      'Sweep the porch': before['Wire the parcel'], // in the gap
     });
-    expect(_opacity(tester, 'Price the bonds'), 0.4);
+    expect(_opacity(tester, 'Sweep the porch'), 0.4);
     expect(_opacity(tester, 'Wire the parcel'), 1);
     // The projects below don't move.
-    expect(_y(tester, 'cubby'), greaterThan(before['Price the bonds']!));
+    expect(_y(tester, 'cubby'), greaterThan(before['Sweep the porch']!));
 
     await drag.up();
     await tester.pump();
     // Already where they land: no slide back and forth.
-    expect(_ys(tester, ledger), {
-      'Price the bonds': before['Wire the parcel'],
+    expect(_ys(tester, parcelRows), {
+      'Sweep the porch': before['Wire the parcel'],
       'Wire the parcel': before['Seed data'],
-      'Seed data': before['Price the bonds'],
+      'Seed data': before['Sweep the porch'],
     });
     await tester.pump(_slide);
-    expect(_opacity(tester, 'Price the bonds'), 1); // settled
+    expect(_opacity(tester, 'Sweep the porch'), 1); // settled
     expect(sidebarChats.value, {
-      _ledger: ['f', 'a', 'b'],
+      _parcel: ['f', 'a', 'b'],
     });
     expect(chatOrder(d).take(3).map((c) => c.id), ['f', 'a', 'b']);
     d.dispose();
@@ -138,44 +138,44 @@ void main() {
       'its project, nothing slides; dragged off its list, the rows slide '
       'back and nothing moves', (tester) async {
     final (d, fake) = await _sidebar(tester, pins: {'b': 1});
-    const ledger = ['Wire the parcel', 'Price the bonds'];
-    final before = _ys(tester, [...ledger, 'Cap the rates', 'Seed data']);
+    const parcelRows = ['Wire the parcel', 'Sweep the porch'];
+    final before = _ys(tester, [...parcelRows, 'Fold the maps', 'Seed data']);
 
-    // Cap the rates (cubby) onto parcel-poc's rows.
+    // Fold the maps (cubby) onto parcel-poc's rows.
     var drag = await _drag(
       tester,
-      'Cap the rates',
+      'Fold the maps',
       before['Wire the parcel']! - 4,
     );
     await tester.pump(_slide * 2);
-    expect(_ys(tester, ledger), {for (final t in ledger) t: before[t]});
+    expect(_ys(tester, parcelRows), {for (final t in parcelRows) t: before[t]});
     await drag.up();
     await tester.pump(_slide * 2);
-    expect(_y(tester, 'Cap the rates'), before['Cap the rates']);
+    expect(_y(tester, 'Fold the maps'), before['Fold the maps']);
 
     // Seed data (pinned, of parcel-poc) onto its project's rows.
-    drag = await _drag(tester, 'Seed data', before['Price the bonds']! + 4);
+    drag = await _drag(tester, 'Seed data', before['Sweep the porch']! + 4);
     await tester.pump(_slide * 2);
-    expect(_ys(tester, ledger), {for (final t in ledger) t: before[t]});
+    expect(_ys(tester, parcelRows), {for (final t in parcelRows) t: before[t]});
     await drag.up();
     await tester.pump(_slide * 2);
     expect(fake.calls.whereType<PinChatsRequest>(), isEmpty);
 
-    // Price the bonds up over Wire the parcel, then off, onto cubby's.
+    // Sweep the porch up over Wire the parcel, then off, onto cubby's.
     drag = await _drag(
       tester,
-      'Price the bonds',
+      'Sweep the porch',
       before['Wire the parcel']! - 4,
     );
     await tester.pump(_slide * 2);
     expect(_y(tester, 'Wire the parcel'), isNot(before['Wire the parcel']));
-    await drag.moveTo(tester.getCenter(_in('Cap the rates')));
+    await drag.moveTo(tester.getCenter(_in('Fold the maps')));
     await tester.pump();
     await tester.pump(_slide * 2);
-    expect(_ys(tester, ledger), {for (final t in ledger) t: before[t]});
+    expect(_ys(tester, parcelRows), {for (final t in parcelRows) t: before[t]});
     await drag.up();
     await tester.pump(_slide * 2);
-    expect(_ys(tester, ledger), {for (final t in ledger) t: before[t]});
+    expect(_ys(tester, parcelRows), {for (final t in parcelRows) t: before[t]});
     expect(sidebarChats.value, isEmpty);
     d.dispose();
   });
@@ -226,7 +226,7 @@ void main() {
     });
     expect(sidebarOrder.value, [
       '/Users/me/notes',
-      _ledger,
+      _parcel,
       '/Users/me/cubby',
       '/Users/me/garden',
     ]);
@@ -240,20 +240,20 @@ void main() {
   testWidgets('Pinned slides too, and the drop sends the new order to the '
       'daemon', (tester) async {
     final (d, fake) = await _sidebar(tester, pins: {'e': 1, 'b': 2, 'c': 3});
-    const pinned = ['Jot it down', 'Seed data', 'Cap the rates'];
+    const pinned = ['Jot it down', 'Seed data', 'Fold the maps'];
     final before = _ys(tester, pinned);
     final row = before['Seed data']! - before['Jot it down']!;
 
     final drag = await _drag(
       tester,
-      'Cap the rates',
+      'Fold the maps',
       before['Jot it down']! - 4,
     );
     await tester.pump(_slide * 2);
     expect(_ys(tester, pinned), {
       'Jot it down': before['Jot it down']! + row,
       'Seed data': before['Seed data']! + row,
-      'Cap the rates': before['Jot it down'],
+      'Fold the maps': before['Jot it down'],
     });
     await drag.up();
     await tester.pump();
@@ -263,9 +263,9 @@ void main() {
       'b',
     ]);
     expect(_ys(tester, pinned), {
-      'Cap the rates': before['Jot it down'],
+      'Fold the maps': before['Jot it down'],
       'Jot it down': before['Seed data'],
-      'Seed data': before['Cap the rates'],
+      'Seed data': before['Fold the maps'],
     });
     expect(chatOrder(d).take(3).map((c) => c.id), ['c', 'e', 'b']);
     d.dispose();
@@ -277,15 +277,15 @@ void main() {
     final row = before['Seed data']! - before['Wire the parcel']!;
     final drag = await _drag(
       tester,
-      'Price the bonds',
+      'Sweep the porch',
       before['Wire the parcel']! - 4,
     );
     // No time has passed, and it's there.
     expect(_y(tester, 'Wire the parcel'), before['Wire the parcel']! + row);
     await drag.up();
     await tester.pump();
-    expect(_opacity(tester, 'Price the bonds'), 1);
-    expect(sidebarChats.value[_ledger], ['f', 'a', 'b']);
+    expect(_opacity(tester, 'Sweep the porch'), 1);
+    expect(sidebarChats.value[_parcel], ['f', 'a', 'b']);
     d.dispose();
   });
 
@@ -293,7 +293,7 @@ void main() {
     final (d, _) = await _sidebar(tester, pins: {'e': 1, 'c': 2});
     final drag = await _drag(
       tester,
-      'Price the bonds',
+      'Sweep the porch',
       _y(tester, 'Wire the parcel') - 4,
     );
     await tester.pump(_slide * 2);

@@ -124,7 +124,7 @@ void main() {
       'Wire the parcel',
       'Seed data',
       'cubby',
-      'Cap the rates',
+      'Fold the maps',
       'notes',
       'Jot it down',
     ]);
@@ -139,13 +139,13 @@ void main() {
     );
 
     // By a drag onto its header; the last moved in comes first.
-    await _dragTo(tester, 'Cap the rates', tester.getCenter(_in('Reviews')));
+    await _dragTo(tester, 'Fold the maps', tester.getCenter(_in('Reviews')));
     expect(sidebarSections.value.single.chats, ['c', 'd']);
     // Its row says its project, whose group stays too.
     expect(find.text('cubby'), findsNWidgets(2));
     expect(_titles(tester).sublist(2, 5), [
       'Reviews',
-      'Cap the rates',
+      'Fold the maps',
       'Plant the beds',
     ]);
 
@@ -156,9 +156,9 @@ void main() {
     expect(sidebarSections.value.single.chats, ['p', 'c', 'd']);
 
     // Dragged onto the groups, it goes back to its project.
-    await _dragTo(tester, 'Cap the rates', tester.getCenter(_in('notes')));
+    await _dragTo(tester, 'Fold the maps', tester.getCenter(_in('notes')));
     expect(sidebarSections.value.single.chats, ['p', 'd']);
-    expect(_order(tester), containsAllInOrder(['cubby', 'Cap the rates']));
+    expect(_order(tester), containsAllInOrder(['cubby', 'Fold the maps']));
 
     // Remove from section, from the row's menu.
     await _rowMenu(tester, 'Keep this', [
@@ -190,7 +190,7 @@ void main() {
       'Seed data',
       'Later',
       'Jot it down',
-      'Cap the rates',
+      'Fold the maps',
       'Plant the beds',
     ]);
     // parcel-poc's chats are all in Reviews: the rows say it, over its
@@ -281,17 +281,17 @@ void main() {
       'Keep this',
       'Reviews',
       'Plant the beds',
-      'Cap the rates',
+      'Fold the maps',
     ]);
     // Dropped among the others, nothing moves: the sort decides.
     await _dragTo(
       tester,
       'Wire the parcel',
-      tester.getTopLeft(_in('Cap the rates')) + const Offset(10, 2),
+      tester.getTopLeft(_in('Fold the maps')) + const Offset(10, 2),
     );
     expect(sidebarChats.value, isEmpty);
     expect(_titles(tester).sublist(4), [
-      'Cap the rates',
+      'Fold the maps',
       'Jot it down',
       'Seed data',
       'Wire the parcel',

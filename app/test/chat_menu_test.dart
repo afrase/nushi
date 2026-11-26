@@ -24,12 +24,12 @@ void main() {
       (tester) async {
         viewport(tester, const Size(520, 520));
         final d = await FakeDaemon([
-          chat('a', 'claude', 'Wire the ledger', folder: '/Users/me/ledger'),
+          chat('a', 'claude', 'Wire the parcel', folder: '/Users/me/parcel'),
           chat(
             'b',
             'codex',
-            'Cap the rates',
-            folder: '/Users/me/ledger',
+            'Fold the maps',
+            folder: '/Users/me/parcel',
             age: 1,
           ),
         ]).connect(tester);
@@ -52,7 +52,7 @@ void main() {
         );
         await tester.pump();
         await tester.tap(
-          find.text('Wire the ledger'),
+          find.text('Wire the parcel'),
           buttons: kSecondaryButton,
         );
         await tester.pumpAndSettle();
