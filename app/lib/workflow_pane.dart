@@ -407,9 +407,8 @@ class _AgentRow extends StatelessWidget {
             SizedBox(
               width: 14,
               child: Center(
-                child: a.state == 'running'
-                    ? const RunningDot()
-                    : TaskMark(a.state),
+                // One TaskMark, so its check draws itself as it ends.
+                child: TaskMark(a.state, dot: a.state == 'running'),
               ),
             ),
             Expanded(
