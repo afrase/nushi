@@ -38,8 +38,8 @@ const _long =
     'people back to a page that sent them to the login page again. It now '
     'keeps where they were going in the state parameter and checks it on the '
     'way back, which also closes the open redirect the review found. The '
-    'staff listing had the same shape of bug: a query parameter that was '
-    'trusted as a number and then read as one. Both have tests now, and the '
+    'logout link was worse: it followed any address in its next parameter, '
+    'so it now passes through the same check. Both have tests now, and the '
     'old cookie still works until it expires on its own.';
 
 Item _tool(

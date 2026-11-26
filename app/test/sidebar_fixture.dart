@@ -39,7 +39,7 @@ Chat _chat(
 /// months before [fixtureNow] (Thursday 29 October 2026, noon):
 /// - Wire the parcel: Claude, parcel-poc, needs you; made today.
 /// - Seed data: PiG, parcel-poc, in a worktree; made yesterday.
-/// - Cap the rates: Codex, cubby, working; made 5 days ago, updated today.
+/// - Fold the maps: Codex, cubby, working; made 5 days ago, updated today.
 /// - Plant the beds: Claude, garden, done; made 19 days ago.
 /// - Jot it down: Ante, notes; made in September.
 /// - Keep this: Claude, attic, pinned.
@@ -67,7 +67,7 @@ List<Chat> arrangeChats() => [
   _chat(
     'c',
     'codex',
-    'Cap the rates',
+    'Fold the maps',
     '/Users/me/cubby',
     created: DateTime(2026, 10, 24, 15),
     updated: fixtureNow.subtract(const Duration(hours: 1)),
@@ -181,7 +181,7 @@ List<String> shownInOrder(WidgetTester tester, List<String> texts) {
 const arrangeTitles = [
   'Wire the parcel',
   'Seed data',
-  'Cap the rates',
+  'Fold the maps',
   'Plant the beds',
   'Jot it down',
   'Keep this',

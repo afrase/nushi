@@ -18,15 +18,15 @@ import 'sidebar_fixture.dart';
 // to its new place, and a starting chat's placeholder row is replaced by
 // its row with no jump; only when the lists change, never on a status.
 
-const _ledger = '/Users/me/parcel-poc';
+const _parcel = '/Users/me/parcel-poc';
 const _garden = '/Users/me/garden';
 
 List<Chat> _chats() => [
-  chat('a', 'claude', 'Wire the parcel', folder: _ledger),
-  chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cubby', age: 1),
+  chat('a', 'claude', 'Wire the parcel', folder: _parcel),
+  chat('c', 'codex', 'Fold the maps', folder: '/Users/me/cubby', age: 1),
   chat('d', 'claude', 'Plant the beds', folder: _garden, age: 2),
-  chat('b', 'pig', 'Seed data', folder: _ledger, age: 5),
-  chat('f', 'claude', 'Price the bonds', folder: _ledger, age: 6),
+  chat('b', 'pig', 'Seed data', folder: _parcel, age: 5),
+  chat('f', 'claude', 'Sweep the porch', folder: _parcel, age: 6),
 ];
 
 /// The sidebar alone on [_chats], with Reduce Motion when [still].
@@ -86,7 +86,7 @@ void main() {
     final row = _height(tester, 'Seed data');
     final seed = _y(tester, 'Seed data');
 
-    final n = chat('n', 'ante', 'Try the ghost', folder: _ledger, age: -1);
+    final n = chat('n', 'ante', 'Try the ghost', folder: _parcel, age: -1);
     fake
       ..chats.add(n)
       ..emit(EventsResponse(chatId: 'n', chat: n));
@@ -111,7 +111,7 @@ void main() {
   testWidgets('an archived chat’s row fades and folds, taking no clicks as '
       'it goes; a status change moves nothing', (tester) async {
     final (d, fake) = await _sidebar(tester);
-    final price = _y(tester, 'Price the bonds');
+    final price = _y(tester, 'Sweep the porch');
     final row = _height(tester, 'Seed data');
 
     final working = fake.chats.firstWhere((c) => c.id == 'a')
@@ -143,28 +143,28 @@ void main() {
           .ignoring,
       isTrue,
     );
-    expect(_y(tester, 'Price the bonds'), inExclusiveRange(price - row, price));
+    expect(_y(tester, 'Sweep the porch'), inExclusiveRange(price - row, price));
     await tester.pump(Motion.exit);
     await tester.pump();
     expect(_in('Seed data'), findsNothing);
-    expect(_y(tester, 'Price the bonds'), price - row);
+    expect(_y(tester, 'Sweep the porch'), price - row);
     d.dispose();
   });
 
   testWidgets('a pinned chat glides from its place to Pinned, from where '
       'it was drawn', (tester) async {
     final (d, _) = await _sidebar(tester);
-    final from = _y(tester, 'Price the bonds');
+    final from = _y(tester, 'Sweep the porch');
     unawaited(setChatPins(d, ['f']));
     await tester.pump();
     // The first frame draws it where it was, in its new list (Pinned,
     // first; the place it left is empty).
-    expect(_y(tester, 'Price the bonds'), closeTo(from, 0.5));
+    expect(_y(tester, 'Sweep the porch'), closeTo(from, 0.5));
     await tester.pump(Motion.standard ~/ 2);
-    final mid = _y(tester, 'Price the bonds');
+    final mid = _y(tester, 'Sweep the porch');
     expect(mid, lessThan(from - 20));
     await tester.pumpAndSettle();
-    final to = _y(tester, 'Price the bonds');
+    final to = _y(tester, 'Sweep the porch');
     expect(mid, greaterThan(to));
     expect(to, lessThan(_y(tester, 'Wire the parcel')));
 
@@ -176,8 +176,8 @@ void main() {
     unawaited(setChatPins(d, ['f']));
     await tester.pump();
     await tester.pumpAndSettle();
-    expect(_in('Price the bonds'), findsOneWidget);
-    await tester.tap(_in('Price the bonds'));
+    expect(_in('Sweep the porch'), findsOneWidget);
+    await tester.tap(_in('Sweep the porch'));
     await tester.pump();
     expect(d.selectedId, 'f');
     d.dispose();
@@ -246,7 +246,7 @@ void main() {
       'still shows', (tester) async {
     final (d, fake) = await _sidebar(tester, still: true);
     final row = _height(tester, 'Seed data');
-    final n = chat('n', 'ante', 'Try the ghost', folder: _ledger, age: -1);
+    final n = chat('n', 'ante', 'Try the ghost', folder: _parcel, age: -1);
     fake
       ..chats.add(n)
       ..emit(EventsResponse(chatId: 'n', chat: n));

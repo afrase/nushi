@@ -77,7 +77,7 @@ void main() {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          row(mark, 'Sort the ledger'),
+                          row(mark, 'Sort the parcel'),
                           row(
                             ChatDot(chat: d.chats['i']!),
                             'Tidy the garden notes',

@@ -63,7 +63,7 @@ main.go +2''');
     // The longest name, whole, with its counts after it.
     expect(
       find.text(
-        'rolling_reserves_total_cents_calculator.rb  +120 −48',
+        'pick_driest_bed_by_soil_moisture_reading.rb  +120 −48',
         findRichText: true,
       ),
       findsOneWidget,
@@ -127,11 +127,11 @@ main.go +2''');
   }
 }
 
-const _deep = 'app/lib/features/settlements/rolling_reserves';
+const _deep = 'lib/garden/plots/irrigation/sprinklers';
 const _long = [
-  '$_deep/rolling_reserves_total_cents_calculator.rb',
+  '$_deep/pick_driest_bed_by_soil_moisture_reading.rb',
   '$_deep/short.rb',
-  'spec/rolling_reserves_spec.rb',
+  'spec/sprinkler_zones_spec.rb',
   'README.md',
 ];
 

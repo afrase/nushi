@@ -241,7 +241,7 @@ class PullComments extends StatelessWidget {
   }
 }
 
-/// A trailing line of a bot's numbers ("reviewer-xl · $3.48 · 12m 05s"):
+/// A trailing line of a bot's numbers ("sage-review · 18.2k tokens · 6m 18s"):
 /// short, after a blank line, with dots between its parts or money, tokens
 /// or a duration in it.
 final _numbers = RegExp(

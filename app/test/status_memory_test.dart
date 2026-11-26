@@ -25,7 +25,7 @@ void main() {
     testWidgets('the memory: each chat, then the app and the daemon apart '
         '($name)', (tester) async {
       final d = await _openMenu(tester, tokens);
-      expect(find.text('Wire the ledger', findRichText: true), findsOne);
+      expect(find.text('Wire the parcel', findRichText: true), findsOne);
       expect(find.text('Nushi app', findRichText: true), findsOne);
       expect(find.text('410 MB'), findsOne);
       expect(find.text('Nushi daemon', findRichText: true), findsOne);
@@ -246,7 +246,7 @@ FakeDaemon _fake() {
   const mb = 1 << 20;
   final awake = ChatStatus(canSleep: true);
   return FakeDaemon([
-      chat('c', 'claude', 'Wire the ledger', status: awake),
+      chat('c', 'claude', 'Wire the parcel', status: awake),
       chat('b', 'codex', 'Tidy the parser', status: awake),
       chat('x', 'claude', 'Old notes', status: ChatStatus(asleep: true)),
       chat('y', 'pi', 'Spare idea', status: ChatStatus(asleep: true)),

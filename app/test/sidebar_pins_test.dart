@@ -15,18 +15,18 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 import 'sidebar_fixture.dart';
 
-const _ledger = '/Users/me/parcel-poc';
+const _parcel = '/Users/me/parcel-poc';
 
 /// Four projects, the newest chat first: parcel-poc (three chats), cubby,
 /// garden, notes; [pins] pinned, by id, at their places.
 List<Chat> _chats({Map<String, int> pins = const {}}) => [
   for (final c in [
-    chat('a', 'claude', 'Wire the parcel', folder: _ledger),
-    chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cubby', age: 1),
+    chat('a', 'claude', 'Wire the parcel', folder: _parcel),
+    chat('c', 'codex', 'Fold the maps', folder: '/Users/me/cubby', age: 1),
     chat('d', 'claude', 'Plant the beds', folder: '/Users/me/garden', age: 2),
     chat('e', 'ante', 'Jot it down', folder: '/Users/me/notes', age: 3),
-    chat('b', 'pig', 'Seed data', folder: _ledger, age: 5),
-    chat('f', 'claude', 'Price the bonds', folder: _ledger, age: 6),
+    chat('b', 'pig', 'Seed data', folder: _parcel, age: 5),
+    chat('f', 'claude', 'Sweep the porch', folder: _parcel, age: 6),
   ])
     c..pin = pins[c.id] ?? 0,
 ];
@@ -119,7 +119,7 @@ void main() {
     tester,
   ) async {
     final d = await _sidebar(tester, _chats());
-    final row = _inSidebar('Cap the rates');
+    final row = _inSidebar('Fold the maps');
     await tester.tap(row);
     await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(row);
@@ -140,48 +140,48 @@ void main() {
   testWidgets('a chat is dragged into another place in its project, the '
       'rows moving apart where it goes; refused in another project; kept, a '
       'new chat first', (tester) async {
-    const ledger = ['Wire the parcel', 'Seed data', 'Price the bonds'];
+    const parcelRows = ['Wire the parcel', 'Seed data', 'Sweep the porch'];
     var d = await _sidebar(tester, _chats());
-    expect(_rows(tester, ledger), ledger); // the newest first
+    expect(_rows(tester, parcelRows), parcelRows); // the newest first
 
     // Up, into the top half of Wire the parcel's row, which moves down.
     final wire = _ys(tester, 'Wire the parcel');
     await _drag(
       tester,
-      'Price the bonds',
+      'Sweep the porch',
       'Wire the parcel',
       whileOver: () async =>
           expect(_ys(tester, 'Wire the parcel'), greaterThan(wire)),
     );
-    const moved = ['Price the bonds', 'Wire the parcel', 'Seed data'];
-    expect(_rows(tester, ledger), moved);
+    const moved = ['Sweep the porch', 'Wire the parcel', 'Seed data'];
+    expect(_rows(tester, parcelRows), moved);
     expect(sidebarChats.value, {
-      _ledger: ['f', 'a', 'b'],
+      _parcel: ['f', 'a', 'b'],
     });
-    expect((readSaved()['sidebarChats']! as Map)[_ledger], ['f', 'a', 'b']);
+    expect((readSaved()['sidebarChats']! as Map)[_parcel], ['f', 'a', 'b']);
     expect(chatOrder(d).take(3).map((c) => c.id), ['f', 'a', 'b']);
 
-    // Cap the rates (cubby) onto parcel-poc's rows: they stay, no move.
+    // Fold the maps (cubby) onto parcel-poc's rows: they stay, no move.
     final seed = _ys(tester, 'Seed data');
     await _drag(
       tester,
-      'Cap the rates',
+      'Fold the maps',
       'Seed data',
       by: 4,
       whileOver: () async => expect(_ys(tester, 'Seed data'), seed),
     );
-    expect(_rows(tester, ledger), moved);
-    expect(_y(tester, 'Cap the rates'), greaterThan(_y(tester, 'Seed data')));
-    expect(sidebarChats.value.keys, [_ledger]);
+    expect(_rows(tester, parcelRows), moved);
+    expect(_y(tester, 'Fold the maps'), greaterThan(_y(tester, 'Seed data')));
+    expect(sidebarChats.value.keys, [_parcel]);
     d.dispose();
 
     // As after a restart, with a new chat in parcel-poc: it goes first.
     d = await _sidebar(tester, [
       ..._chats(),
-      chat('n', 'claude', 'New ledger work', folder: _ledger, age: -1),
+      chat('n', 'claude', 'Swap the tab icons', folder: _parcel, age: -1),
     ]);
-    expect(_rows(tester, ['New ledger work', ...ledger]), [
-      'New ledger work',
+    expect(_rows(tester, ['Swap the tab icons', ...parcelRows]), [
+      'Swap the tab icons',
       ...moved,
     ]);
     d.dispose();
@@ -257,7 +257,7 @@ void main() {
     await tester.pumpAndSettle();
     await press(tester, LogicalKeyboardKey.keyD, cmd: true);
     expect(pinned(), ['a', 'c']);
-    expect(_ys(tester, 'Cap the rates'), lessThan(_ys(tester, 'Seed data')));
+    expect(_ys(tester, 'Fold the maps'), lessThan(_ys(tester, 'Seed data')));
 
     // With nothing typed, the pinned chats first, whatever was opened last.
     d.select('d');
@@ -270,7 +270,7 @@ void main() {
     );
     expect([
       for (final t in tester.widgetList<Text>(rows).take(6)) t.data,
-    ], containsAllInOrder(['Wire the parcel', 'Cap the rates', 'Jot it down']));
+    ], containsAllInOrder(['Wire the parcel', 'Fold the maps', 'Jot it down']));
     await tester.enterText(
       find.descendant(
         of: find.byType(Palette),
@@ -308,8 +308,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(pinned(), ['a']);
-    expect(_inSidebar('Cap the rates'), findsOne);
-    expect(_ys(tester, 'Cap the rates'), greaterThan(_ys(tester, 'cubby')));
+    expect(_inSidebar('Fold the maps'), findsOne);
+    expect(_ys(tester, 'Fold the maps'), greaterThan(_ys(tester, 'cubby')));
 
     // Archived, a's pin goes (the daemon's), and with it Pinned.
     d.select('a');
@@ -328,7 +328,7 @@ void main() {
     tester,
   ) async {
     sidebarChats.value = {
-      _ledger: ['f', 'a'],
+      _parcel: ['f', 'a'],
     };
     final d = await _sidebar(tester, _chats(pins: {'e': 1, 'c': 2}));
     await expectLater(

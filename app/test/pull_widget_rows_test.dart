@@ -23,7 +23,7 @@ Map<String, GitHubPull Function()> states = {
     ..checks.removeWhere((c) => c.failed)
     ..checks.addAll([
       for (var i = 1; i <= 6; i++)
-        check('specs (catalogue $i/6)', state: 'pending'),
+        check('pytest (slow $i/6)', state: 'pending'),
     ])
     ..item.review = 'review_required'
     ..reviewers.removeWhere((r) => !r.team)
@@ -35,7 +35,7 @@ Map<String, GitHubPull Function()> states = {
     ..reviewers.clear()
     ..reviewers.addAll([
       GitHubReviewer(login: 'mona', state: 'approved'),
-      GitHubReviewer(login: 'library-keepers', state: 'approved', team: true),
+      GitHubReviewer(login: 'field-data-team', state: 'approved', team: true),
     ])
     ..threads.removeWhere((x) => !x.resolved)
     ..mergeState = 'clean'
@@ -64,7 +64,7 @@ GitHubPull _optionalFailing() => mergePull('ready')
 Widget _summary(GitHubPull p, {Tokens tokens = Tokens.dark}) => themed(
   Builder(
     builder: (context) =>
-        pullSummary(context, NushiTheme.of(context), number: 412, pull: p),
+        pullSummary(context, NushiTheme.of(context), number: 537, pull: p),
   ),
   tokens: tokens,
 );
@@ -88,7 +88,7 @@ void main() {
             builder: (context) => pullSummary(
               context,
               NushiTheme.of(context),
-              number: 412,
+              number: 537,
               pull: null,
               item: it,
             ),
@@ -104,7 +104,7 @@ void main() {
             builder: (context) => pullSummary(
               context,
               NushiTheme.of(context),
-              number: 412,
+              number: 537,
               pull: null,
               item: it.deepCopy()..checkCounts = GitHubCheckCounts(passed: 3),
             ),
@@ -130,10 +130,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(box.value, hasLength(3));
     expect(box.value.first.from, startsWith('Failed checks on PR'));
-    expect(box.value.first.quote, startsWith('Check CI / specs'));
+    expect(box.value.first.quote, startsWith('Check CI / pytest'));
     expect(
       box.value.first.from,
-      endsWith('on PR octo/shelf#412 (GitHub), my pull request:'),
+      endsWith('on PR octo/tally#537 (GitHub), my pull request:'),
     );
     await tester.tap(
       _inPull(
@@ -239,7 +239,7 @@ void main() {
                             pullSummary(
                               context,
                               theme,
-                              number: 412,
+                              number: 537,
                               pull: p(),
                               unread: s == 'running' ? 1 : 0,
                             ),

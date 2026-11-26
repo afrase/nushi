@@ -244,9 +244,9 @@ void main() {
 
       testWidgets('cleanup $at', (tester) async {
         final wt = Worktree(
-          repo: '/Users/me/shop',
-          path: '/Users/me/shop/.worktrees/shelf-page-size-fix',
-          branch: 'shelf-page-size-fix',
+          repo: '/Users/me/tally',
+          path: '/Users/me/tally/.worktrees/export-in-site-zone',
+          branch: 'export-in-site-zone',
           base: 'main',
         );
         final (d, _) = await openPullTab(
@@ -262,8 +262,8 @@ void main() {
               worktree: wt,
               state: WorktreeState(changed: 2, commits: 1),
               changes: [
-                'M app/catalogue/list_spec.rb',
-                '?? tmp/n_values_repro.rb',
+                'M tests/export/test_dst.py',
+                '?? scratch/lima_rows.csv',
               ],
             ),
             _ => null,

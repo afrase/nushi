@@ -10,23 +10,23 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 const _old = '''
-class Ledger < Base
-  # @return [Integer] the total, in cents
-  def rolling_reserves_total_cents(days = 30)
-    @total = rolling_reserve_amount_cents + self.fee(:usd)
+class Sprinkler < Base
+  # @param beds [Array<Bed>] every bed on the plot
+  def driest_bed(beds)
+    @next = beds.min_by(&:moisture) || self.nearest(:shed)
   end
 end
 ''';
 
 const _new = '''
-class Ledger < Base
-  LIMIT = 5_000
+class Sprinkler < Base
+  NOZZLES = 4
 
-  # @return [Integer] the total, in cents
-  # @param days [Integer] how far back
-  def rolling_reserves_total_cents(days = 30)
-    @total = rolling_reserve_amount_cents + self.fee(:usd) + @@count
-    puts "#{days} days: #{@total}", nil, LIMIT
+  # @param beds [Array<Bed>] every bed on the plot
+  # @return [Bed, nil] none on a day it rained
+  def driest_bed(beds)
+    @next = beds.min_by(&:moisture) || self.nearest(:shed) || @@spare
+    puts "#{beds.size} beds, #{NOZZLES} nozzles", nil, @next
   end
 end
 ''';
@@ -35,11 +35,11 @@ const _block = r'''
 A code block:
 
 ```ts
-/** @param a the amount */
-export class Ledger extends Base {
-  total = 42;
-  sum(a: number): string {
-    return `${a} cents` + /x+/g;
+/** @param bed which one to soak */
+export class Sprinkler extends Base {
+  minutes = 12;
+  soak(bed: number): string {
+    return `${bed} is soaked` + /x+/g;
   }
 }
 ```
@@ -104,7 +104,7 @@ void main() {
               SizedBox(
                 height: 240,
                 child: DiffBox(
-                  FileChange(path: 'ledger.rb', oldText: _old, newText: _new),
+                  FileChange(path: 'garden.rb', oldText: _old, newText: _new),
                   fit: false,
                 ),
               ),

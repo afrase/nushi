@@ -23,7 +23,7 @@ void main() {
       jsonEncode({
         'projectRail': true,
         'sidebarProject': cubby,
-        'sidebarProjects': [ledger, cubby, garden, notes, attic],
+        'sidebarProjects': [parcel, cubby, garden, notes, attic],
         'projectTiles': {
           garden: {'mark': 'G7', 'color': 'amber'},
         },
@@ -52,7 +52,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ProjectRail), findsOneWidget);
     // Its chats, under Pinned's: attic's pin shows in every project.
-    expect(shownInOrder(tester, arrangeTitles), ['Keep this', 'Cap the rates']);
+    expect(shownInOrder(tester, arrangeTitles), ['Keep this', 'Fold the maps']);
     final saved = readSaved();
     expect(saved.containsKey('projectRail'), isFalse);
     expect(saved['projectRailOn'], isTrue);

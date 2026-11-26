@@ -450,7 +450,7 @@ void main() {
         );
         await _card(tester, d, fake);
         d.chats['c']!.draft.replies.value = [
-          (quote: 'CI / linters', text: 'Fix it', from: 'checks'),
+          (quote: 'CI / ruff', text: 'Fix it', from: 'checks'),
         ];
         await _tab(tester, 'Pull request', width);
         expect(find.byType(RepliesWaiting), findsOneWidget);

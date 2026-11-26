@@ -21,15 +21,15 @@ import 'sidebar_fixture.dart';
 // what joins it, where its empty group goes, how it looks and how it's
 // removed. Its renders: `make renders TEST=test/sidebar_projects_test.dart`.
 
-const _ledger = '/Users/me/parcel-poc';
+const _parcel = '/Users/me/parcel-poc';
 const _cubby = '/Users/me/cubby';
 const _garden = '/Users/me/garden';
 
 /// Three projects of one chat each, the newest first (parcel-poc, cubby,
 /// garden), a chat with no folder, and an archived one in attic.
 List<Chat> _chats() => [
-  chat('a', 'claude', 'Wire the parcel', folder: _ledger),
-  chat('c', 'codex', 'Cap the rates', folder: _cubby, age: 1),
+  chat('a', 'claude', 'Wire the parcel', folder: _parcel),
+  chat('c', 'codex', 'Fold the maps', folder: _cubby, age: 1),
   chat('d', 'claude', 'Plant the beds', folder: _garden, age: 2),
   chat('s', 'ante', 'Loose end', folder: '/tmp/scratch/s', age: 3)
     ..scratch = true,
@@ -97,22 +97,22 @@ void main() {
     final fake = FakeDaemon(_chats());
     final d = await fake.connect(tester);
     // Not the scratch folder, nor attic, whose one chat is archived.
-    expect(sidebarProjects.value, [_ledger, _cubby, _garden]);
-    expect(readSaved()['sidebarProjects'], [_ledger, _cubby, _garden]);
-    expect(sidebarGroups(d).keys, [_ledger, _cubby, _garden, '']);
+    expect(sidebarProjects.value, [_parcel, _cubby, _garden]);
+    expect(readSaved()['sidebarProjects'], [_parcel, _cubby, _garden]);
+    expect(sidebarGroups(d).keys, [_parcel, _cubby, _garden, '']);
 
     await _gone(tester, fake, 'c');
-    expect(sidebarGroups(d).keys, [_ledger, _garden, '', _cubby]);
+    expect(sidebarGroups(d).keys, [_parcel, _garden, '', _cubby]);
     expect(sidebarGroups(d)[_cubby], isEmpty);
     await _gone(tester, fake, 'a', deleted: true);
     // After those with chats, in the order they joined.
-    expect(sidebarGroups(d).keys, [_garden, '', _ledger, _cubby]);
+    expect(sidebarGroups(d).keys, [_garden, '', _parcel, _cubby]);
     expect(liveFolders(d), {_garden});
     // The phone's list has only folders with chats.
     expect(chatGroups(d).keys, [_garden, '']);
     // The last chat with no folder gone, "No folder" goes too.
     await _gone(tester, fake, 's');
-    expect(sidebarGroups(d).keys, [_garden, _ledger, _cubby]);
+    expect(sidebarGroups(d).keys, [_garden, _parcel, _cubby]);
 
     // Unarchived, its chat is in its group again: the newest, so first.
     fake.emit(
@@ -122,31 +122,31 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(sidebarGroups(d).keys, [_cubby, _garden, _ledger]);
-    expect(sidebarProjects.value, [_ledger, _cubby, _garden]);
+    expect(sidebarGroups(d).keys, [_cubby, _garden, _parcel]);
+    expect(sidebarProjects.value, [_parcel, _cubby, _garden]);
     d.dispose();
   });
 
   testWidgets('an empty project keeps the place it was dragged to; a chat '
       'starting there puts one not placed first', (tester) async {
-    sidebarOrder.value = [_cubby, _ledger];
+    sidebarOrder.value = [_cubby, _parcel];
     final fake = FakeDaemon(_chats());
     final d = await fake.connect(tester);
-    expect(sidebarGroups(d).keys, [_garden, '', _cubby, _ledger]);
+    expect(sidebarGroups(d).keys, [_garden, '', _cubby, _parcel]);
     await _gone(tester, fake, 'c');
     await _gone(tester, fake, 'd');
     // cubby where it was dragged; garden, never placed, after the others.
-    expect(sidebarGroups(d).keys, ['', _cubby, _ledger, _garden]);
+    expect(sidebarGroups(d).keys, ['', _cubby, _parcel, _garden]);
     expect(sidebarGroups(d, starting: _garden).keys, [
       _garden,
       '',
       _cubby,
-      _ledger,
+      _parcel,
     ]);
     expect(sidebarGroups(d, starting: _cubby).keys, [
       '',
       _cubby,
-      _ledger,
+      _parcel,
       _garden,
     ]);
     d.dispose();
@@ -160,11 +160,11 @@ void main() {
     final fake = FakeDaemon(_chats()..[1].pin = 1);
     final d = await fake.connect(tester);
     final view = arrangeSidebar(d);
-    expect(view.projects.keys, [_garden, '', _ledger, _cubby]);
-    expect(view.projects[_ledger], isEmpty); // its chat is in Reviews
+    expect(view.projects.keys, [_garden, '', _parcel, _cubby]);
+    expect(view.projects[_parcel], isEmpty); // its chat is in Reviews
     expect(view.projects[_cubby], isEmpty); // its chat is pinned
     // Their chats aren't archived: neither can be removed.
-    expect(liveFolders(d), {_ledger, _cubby, _garden});
+    expect(liveFolders(d), {_parcel, _cubby, _garden});
 
     sidebarGroupBy.value = GroupBy.none;
     expect(arrangeSidebar(d).projects, isEmpty);
@@ -177,38 +177,38 @@ void main() {
 
   testWidgets('a project removed is forgotten with its place, its collapse '
       "and its chats' order, until a chat is there again", (tester) async {
-    sidebarOrder.value = [_cubby, _ledger];
+    sidebarOrder.value = [_cubby, _parcel];
     sidebarCollapsed.value = {_cubby, _garden};
     sidebarChats.value = {
       _cubby: ['c'],
-      _ledger: ['a'],
+      _parcel: ['a'],
     };
     final fake = FakeDaemon(_chats());
     final d = await fake.connect(tester);
     await _gone(tester, fake, 'c');
     forgetProject(_cubby);
     await tester.pump();
-    expect(sidebarGroups(d).keys, [_garden, '', _ledger]);
-    expect(sidebarProjects.value, [_ledger, _garden]);
-    expect(sidebarOrder.value, [_ledger]);
+    expect(sidebarGroups(d).keys, [_garden, '', _parcel]);
+    expect(sidebarProjects.value, [_parcel, _garden]);
+    expect(sidebarOrder.value, [_parcel]);
     expect(sidebarCollapsed.value, {_garden});
     expect(sidebarChats.value, {
-      _ledger: ['a'],
+      _parcel: ['a'],
     });
     final saved = readSaved();
-    expect(saved['sidebarProjects'], [_ledger, _garden]);
-    expect(saved['sidebarOrder'], [_ledger]);
+    expect(saved['sidebarProjects'], [_parcel, _garden]);
+    expect(saved['sidebarOrder'], [_parcel]);
 
     // The chats listed again (the daemon back): still forgotten.
     await fake.restart(tester);
-    expect(sidebarProjects.value, [_ledger, _garden]);
+    expect(sidebarProjects.value, [_parcel, _garden]);
 
     // A new chat there: its project is back, first, as any new one.
     final n = chat('n', 'claude', 'Cap them again', folder: _cubby, age: -1);
     fake.chats.add(n);
     fake.emit(EventsResponse(chatId: 'n', chat: n));
     await tester.pumpAndSettle();
-    expect(sidebarGroups(d).keys, [_cubby, _garden, '', _ledger]);
+    expect(sidebarGroups(d).keys, [_cubby, _garden, '', _parcel]);
     d.dispose();
   });
 
@@ -217,7 +217,7 @@ void main() {
     final (d, fake) = await arrangedSidebar(tester, chats: _chats());
     expect(_in('No chats'), findsNothing);
     await _gone(tester, fake, 'c');
-    expect(_in('Cap the rates'), findsNothing);
+    expect(_in('Fold the maps'), findsNothing);
     expect(_in('cubby'), findsOne);
     // Last, its line under its name and starting where its header does,
     // at its tile.
@@ -292,8 +292,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(_in('cubby'), findsNothing);
     expect(_in('No chats'), findsNothing);
-    expect(sidebarProjects.value, [_ledger, _garden]);
-    expect(readSaved()['sidebarProjects'], [_ledger, _garden]);
+    expect(sidebarProjects.value, [_parcel, _garden]);
+    expect(readSaved()['sidebarProjects'], [_parcel, _garden]);
     d.dispose();
   });
 
@@ -303,7 +303,7 @@ void main() {
     const refusal = '"/Users/me/cubby" is not an absolute path to a folder';
     final (d, fake) = await arrangedSidebar(
       tester,
-      chats: [chat('a', 'claude', 'Wire the parcel', folder: _ledger)],
+      chats: [chat('a', 'claude', 'Wire the parcel', folder: _parcel)],
     );
     fake.answer = (input) => input is StartChatRequest
         ? throw ConnectException(Code.failedPrecondition, refusal)
@@ -327,15 +327,15 @@ void main() {
     testWidgets('golden: projects with no chats, one collapsed ($name)', (
       tester,
     ) async {
-      sidebarProjects.value = {_ledger, _cubby, _garden, '/Users/me/notes'};
-      sidebarOrder.value = [_cubby, _ledger, _garden, '/Users/me/notes'];
+      sidebarProjects.value = {_parcel, _cubby, _garden, '/Users/me/notes'};
+      sidebarOrder.value = [_cubby, _parcel, _garden, '/Users/me/notes'];
       sidebarCollapsed.value = {_garden};
       final (d, _) = await arrangedSidebar(
         tester,
         tokens: tokens,
         size: const Size(560, 420),
         chats: [
-          chat('a', 'claude', 'Wire the parcel', folder: _ledger),
+          chat('a', 'claude', 'Wire the parcel', folder: _parcel),
           chat('e', 'ante', 'Jot it down', folder: '/Users/me/notes', age: 3),
         ],
       );
@@ -347,11 +347,11 @@ void main() {
     });
 
     testWidgets("golden: an empty project's menu ($name)", (tester) async {
-      sidebarProjects.value = {_ledger, _cubby};
+      sidebarProjects.value = {_parcel, _cubby};
       // In a window of a size, which a menu's width goes by.
       viewport(tester, const Size(560, 420));
       final d = await FakeDaemon([
-        chat('a', 'claude', 'Wire the parcel', folder: _ledger),
+        chat('a', 'claude', 'Wire the parcel', folder: _parcel),
       ]).connect(tester);
       await tester.pumpWidget(
         MaterialApp(
@@ -395,7 +395,7 @@ void main() {
       testWidgets('the window with empty projects, $name', (tester) async {
         viewport(tester, Size(width, 760), brightness: brightness);
         sidebarProjects.value = {'/Users/me/zeta', '/Users/me/work/cubby'};
-        sidebarOrder.value = [_ledger, '/Users/me/zeta', _cubby];
+        sidebarOrder.value = [_parcel, '/Users/me/zeta', _cubby];
         sidebarCollapsed.value = {'/Users/me/work/cubby'};
         final d = await FakeDaemon(_chats()).connect(tester);
         await tester.pumpWidget(NushiApp(daemon: d));

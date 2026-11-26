@@ -22,7 +22,7 @@ Chat _chat(
   String id,
   String agent,
   String title, {
-  String folder = '/Users/me/ledger',
+  String folder = '/Users/me/parcel',
   int minutes = 0,
   ChatStatus? status,
 }) => Chat(
@@ -41,13 +41,13 @@ List<Chat> _chats() => [
   _chat(
     'w',
     'claude',
-    'Wire the ledger',
+    'Wire the parcel',
     status: ChatStatus(busy: true, started: msAgo(Duration.zero)),
   ),
   _chat(
     'n',
     'codex',
-    'Pick the rate source',
+    'Pick the font colour',
     minutes: 1,
     status: ChatStatus(busy: true, waiting: true),
   ),

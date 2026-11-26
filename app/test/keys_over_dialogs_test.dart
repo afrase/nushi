@@ -182,8 +182,8 @@ void main() {
     final link = GitHubLink(
       host: 'github.com',
       repo: fixtureRepo,
-      number: 412,
-      id: 'PR_412',
+      number: 537,
+      id: 'PR_537',
       pull: true,
     );
     final wt = Worktree(
@@ -209,7 +209,7 @@ void main() {
       };
     final d = await openApp(tester, fake, size: const Size(1200, 700));
     final cleanUp = _item(tester, 'Chat', 'Clean Up…');
-    final title = find.text('Clean up after #412');
+    final title = find.text('Clean up after #537');
 
     cleanUp.onSelected!();
     cleanUp.onSelected!();

@@ -32,10 +32,10 @@ Future<void> _pressMerge(WidgetTester tester) async {
 }
 
 final _text = GetGitHubMergeTextResponse(
-  mergeTitle: 'Merge pull request #412',
-  mergeBody: 'Filters',
-  squashTitle: 'Ignore q params (#412)',
-  squashBody: '* One\n* Two',
+  mergeTitle: 'Merge pull request #537',
+  mergeBody: "Export sighting dates in every site's own time zone",
+  squashTitle: "Export sighting dates in every site's own time zone (#537)",
+  squashBody: '* Give each site a time zone\n* Format rows in their own zone',
 );
 
 void main() {
@@ -196,9 +196,14 @@ void main() {
             .widget<Text>(find.byKey(const ValueKey('merge-what')))
             .textSpan!
             .toPlainText();
-        expect(what, contains('#412 into main'));
+        expect(what, contains('#537 into main'));
         expect(what, contains('bbbbbbb'));
-        expect(find.text('Ignore q params (#412)'), findsOneWidget);
+        expect(
+          find.text(
+            "Export sighting dates in every site's own time zone (#537)",
+          ),
+          findsOneWidget,
+        );
         await tester.enterText(find.byKey(_key), 'My title');
         await tester.pump();
         await tester.tap(
@@ -216,7 +221,10 @@ void main() {
         expect(sent.base, 'main');
         expect(sent.method, 'squash');
         expect(sent.title, 'My title');
-        expect(sent.body, '* One\n* Two');
+        expect(
+          sent.body,
+          '* Give each site a time zone\n* Format rows in their own zone',
+        );
         expect(find.byType(AlertDialog), findsNothing);
         // The view follows: no merge button on a merged pull request.
         expect(find.byType(SplitButton), findsNothing);
@@ -431,7 +439,10 @@ void main() {
       final sent = fake.calls.whereType<EnableGitHubAutoMergeRequest>().single;
       expect(sent.headOid, 'b' * 40);
       expect(sent.method, 'squash');
-      expect(sent.title, 'Ignore q params (#412)');
+      expect(
+        sent.title,
+        "Export sighting dates in every site's own time zone (#537)",
+      );
       expect(_says(tester), contains('turned on by mona'));
       await tester.tap(find.text('Disable auto-merge').first);
       await tester.pumpAndSettle();

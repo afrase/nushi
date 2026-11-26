@@ -223,21 +223,21 @@ void main() {
   ) async {
     final fake = FakeDaemon([chat('a', 'claude', 'Fix the login')])
       ..answer = (input) => switch (input) {
-        GetFolderStatusRequest(folder: '/Users/me/ledger') =>
+        GetFolderStatusRequest(folder: '/Users/me/parcel') =>
           GetFolderStatusResponse(git: true, branch: 'fix-login'),
         _ => null,
       };
     final d = await fake.connect(tester);
     final got = await d.client.listBranches(
-      ListBranchesRequest(folder: '/Users/me/ledger'),
+      ListBranchesRequest(folder: '/Users/me/parcel'),
     );
     expect(
       [for (final b in got.branches) (b.name, b.worktree)],
-      [('fix-login', '/Users/me/ledger')],
+      [('fix-login', '/Users/me/parcel')],
     );
     expect(
       [for (final w in got.worktrees) (w.path, w.branch, w.main, w.current)],
-      [('/Users/me/ledger', 'fix-login', true, true)],
+      [('/Users/me/parcel', 'fix-login', true, true)],
     );
 
     await expectLater(

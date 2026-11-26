@@ -94,7 +94,7 @@ void main() {
     await drag.up();
     await tester.pumpAndSettle();
     const once = ['cubby', 'garden', 'parcel-poc', 'notes', 'attic'];
-    expect(sidebarOrder.value, [cubby, garden, ledger, notes, attic]);
+    expect(sidebarOrder.value, [cubby, garden, parcel, notes, attic]);
     expect(readSaved()['sidebarOrder'], sidebarOrder.value);
     expect(_tiles(tester), ['All projects', ...once, 'Add project…']);
     expect(_headers(tester), once);
@@ -128,7 +128,7 @@ void main() {
     const after = ['parcel-poc', 'notes', 'cubby', 'attic', 'garden'];
     expect(_tiles(tester), ['All projects', ...after, 'Add project…']);
     expect(_headers(tester), after);
-    expect(sidebarOrder.value, [ledger, '', notes, cubby, attic, garden]);
+    expect(sidebarOrder.value, [parcel, '', notes, cubby, attic, garden]);
     d.dispose();
   });
 
@@ -204,7 +204,7 @@ void main() {
       'Add project…',
     ]);
     expect(tester.getRect(_tile('Add project…')), add);
-    expect(sidebarOrder.value, [garden, ledger, notes, attic, cubby]);
+    expect(sidebarOrder.value, [garden, parcel, notes, attic, cubby]);
 
     // All projects doesn't drag: pressed and moved over the tiles, it
     // moves nothing, and the release isn't its click.

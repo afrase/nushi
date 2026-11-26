@@ -23,7 +23,7 @@ import 'sidebar_fixture.dart';
 // project); off, only the shown project's. Renders to look at:
 // `make renders TEST=test/sidebar_pins_every_test.dart`.
 
-const _ledger = '/Users/me/parcel-poc';
+const _parcel = '/Users/me/parcel-poc';
 
 /// The fixture's chats, parcel-poc's Wire the parcel pinned under attic's
 /// Keep this, and a chat with no folder pinned last.
@@ -76,7 +76,7 @@ void main() {
     tester,
   ) async {
     expect(pinnedEveryProject.value, isTrue);
-    sidebarProject.value = _ledger;
+    sidebarProject.value = _parcel;
     final (d, _) = await arrangedSidebar(tester, chats: _chats());
     expect(_shown(tester), [
       'Pinned',
@@ -107,14 +107,14 @@ void main() {
 
   testWidgets('a pin of another project opens its chat and the sidebar '
       'stays on the project picked; off, it goes to the pin’s', (tester) async {
-    sidebarProject.value = _ledger;
+    sidebarProject.value = _parcel;
     final (d, _) = await arrangedSidebar(tester, chats: _chats());
     d.select('a');
     await tester.pumpAndSettle();
     stepChat(d, -1); // the row above: attic's pin
     await tester.pumpAndSettle();
     expect(d.selectedId, 'p');
-    expect(sidebarProject.value, _ledger, reason: 'a look in, not a move');
+    expect(sidebarProject.value, _parcel, reason: 'a look in, not a move');
     expect(_mark(tester, 'Keep this', 'attic').$1, '/Users/me/attic');
     // Back to the project's own chat, then the pin by a click: the same.
     await tester.tap(_row('Wire the parcel'));
@@ -122,7 +122,7 @@ void main() {
     await tester.tap(_row('Keep this'));
     await tester.pumpAndSettle();
     expect(d.selectedId, 'p');
-    expect(sidebarProject.value, _ledger);
+    expect(sidebarProject.value, _parcel);
 
     // Off, Pinned is the picked project's only, and the open chat's
     // project is followed as any other's is.
@@ -142,7 +142,7 @@ void main() {
     d.select('p');
     await tester.pumpAndSettle();
     // A tile picked with a chat open stays picked.
-    sidebarProject.value = _ledger;
+    sidebarProject.value = _parcel;
     pinnedCollapsed.value = true;
     await tester.pumpAndSettle();
     expect(_shown(tester), ['Pinned', 'Keep this', 'Seed data']);
@@ -188,7 +188,7 @@ void main() {
       testWidgets('the window narrowed to a project, another’s pin in '
           'Pinned, $name', (tester) async {
         viewport(tester, Size(width, 900), brightness: brightness);
-        sidebarProject.value = _ledger;
+        sidebarProject.value = _parcel;
         final fake = FakeDaemon(_chats());
         final d = await fake.connect(tester);
         await tester.pumpWidget(NushiApp(daemon: d));

@@ -112,7 +112,7 @@ Future<(FakeDaemon, Daemon)> _open(
           if (i.assigneeId == 'me-1') i,
         _is(
           'ACME-204',
-          'Rotate the deploy keys before the audit, every one of them',
+          'Search results forget their sort order after a page reload',
           'To Do',
           'new',
           who: 'Test User',

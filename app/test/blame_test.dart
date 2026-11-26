@@ -503,7 +503,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(copied, [blameStart]);
       expect(
-        find.text('Copied c0ffee1: Changes’ Commits doesn’t list it'),
+        find.text('Copied d0d0ca7: Changes’ Commits doesn’t list it'),
         findsOneWidget,
       );
       expect(chatC(d).tab.value, ChatTab.chat);

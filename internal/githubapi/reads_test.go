@@ -442,9 +442,9 @@ func TestInboxOlder(t *testing.T) {
 // TestTailEndsAtTheLastError: what follows a failed step's last error is
 // the job's clean-up (a service container's own log), not why it failed.
 func TestTailEndsAtTheLastError(t *testing.T) {
-	log := "Run bundle exec rspec\n1 example, 1 failure\n##[error]Process completed with exit code 1.\n" +
+	log := "Run ./ci/weigh-parcels --all\n3 weighed, 1 over\n##[error]Process completed with exit code 1.\n" +
 		"Post job cleanup.\nStop containers\n" + strings.Repeat(`{"log.level": "INFO", "message":"adding index lifecycle policy"}`+"\n", 400)
-	if got := Tail(log, 70); got != "1 example, 1 failure\n##[error]Process completed with exit code 1." {
+	if got := Tail(log, 70); got != "3 weighed, 1 over\n##[error]Process completed with exit code 1." {
 		t.Fatalf("%q", got)
 	}
 	if got := Tail("no marks\nat all", 100); got != "no marks\nat all" {

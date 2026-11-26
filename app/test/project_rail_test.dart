@@ -117,11 +117,11 @@ void main() {
   testWidgets('the rail has All projects, the projects in the sidebar’s '
       'order, kept empty ones too, and Add project…', (tester) async {
     sidebarProjects.value = {'/Users/me/zeta'};
-    sidebarOrder.value = [garden, '/Users/me/zeta', ledger];
+    sidebarOrder.value = [garden, '/Users/me/zeta', parcel];
     final (d, _) = await arrangedSidebar(tester);
     // cubby and notes aren't placed, so first; attic's one chat is pinned.
     final groups = arrangeSidebar(d).projects.keys;
-    expect(groups, [cubby, notes, garden, '/Users/me/zeta', ledger, attic]);
+    expect(groups, [cubby, notes, garden, '/Users/me/zeta', parcel, attic]);
     expect(_tiles(tester), [
       'All projects',
       'cubby',
@@ -164,7 +164,7 @@ void main() {
         shownInOrder(tester, [...headers, ...arrangeTitles, 'No chats']);
     expect(_chats(tester), [
       'Keep this',
-      'Cap the rates',
+      'Fold the maps',
       'Jot it down',
       'Plant the beds',
       'Wire the parcel',
@@ -174,15 +174,15 @@ void main() {
     await _press(tester, 'parcel-poc');
     expect(_picked(tester), 'parcel-poc');
     expect(shown(), ['parcel-poc', 'Wire the parcel', 'Seed data']);
-    expect(sidebarProject.value, ledger);
-    expect(readSaved()['sidebarProject'], ledger);
+    expect(sidebarProject.value, parcel);
+    expect(readSaved()['sidebarProject'], parcel);
     // ⌘1–⌘9 go through what shows.
     expect([for (final c in chatOrder(d)) c.id], ['a', 'b']);
 
     // A section shows the project's chats of it; one with none is left
     // out, and so is an empty Pinned.
     await _press(tester, 'cubby');
-    expect(shown(), ['Reviews', 'Cap the rates']);
+    expect(shown(), ['Reviews', 'Fold the maps']);
     await _press(tester, 'attic');
     expect(shown(), ['Pinned', 'Keep this', 'attic']);
 
@@ -207,7 +207,7 @@ void main() {
       'chat of it opens; a project removed shows all again', (tester) async {
     sidebarProject.value = cubby;
     final (d, fake) = await arrangedSidebar(tester);
-    expect(_chats(tester), ['Cap the rates']);
+    expect(_chats(tester), ['Fold the maps']);
     d.select('d');
     await tester.pumpAndSettle();
     expect(sidebarProject.value, garden);
@@ -216,7 +216,7 @@ void main() {
     await _press(tester, 'parcel-poc');
     d.select('b');
     await tester.pumpAndSettle();
-    expect(sidebarProject.value, ledger);
+    expect(sidebarProject.value, parcel);
 
     // A tile picked while a chat is open stays picked.
     await _press(tester, 'notes');
@@ -309,7 +309,7 @@ void main() {
   ) async {
     sidebarProject.value = cubby;
     final (d, _) = await arrangedSidebar(tester);
-    expect(_chats(tester), ['Cap the rates']);
+    expect(_chats(tester), ['Fold the maps']);
     sidebarGroupBy.value = GroupBy.date;
     await tester.pumpAndSettle();
     expect(find.byType(ProjectRail), findsNothing);
@@ -329,7 +329,7 @@ void main() {
     projectRail.value = true;
     await tester.pumpAndSettle();
     expect(sidebarProject.value, cubby);
-    expect(_chats(tester), ['Cap the rates']);
+    expect(_chats(tester), ['Fold the maps']);
     d.dispose();
   });
 
@@ -459,7 +459,7 @@ void main() {
     final (d, _) = await arrangedSidebar(tester);
     final arrange = find.byTooltip(RegExp('^Arrange the sidebar'));
     expect(find.byType(ProjectRail), findsOneWidget);
-    expect(_chats(tester), ['Cap the rates']);
+    expect(_chats(tester), ['Fold the maps']);
     final button = tester.getRect(arrange);
     final withRail = tester.getRect(find.byType(WideButton));
 
@@ -476,7 +476,7 @@ void main() {
     projectRail.value = true;
     await tester.pumpAndSettle();
     expect(find.byType(ProjectRail), findsOneWidget);
-    expect(_chats(tester), ['Cap the rates']);
+    expect(_chats(tester), ['Fold the maps']);
 
     // The rail is the projects': none by Date.
     sidebarGroupBy.value = GroupBy.date;

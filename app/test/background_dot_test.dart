@@ -81,7 +81,7 @@ Future<Daemon> _dots(
       chat(
         'b$i',
         'claude',
-        'Sort the ledger $i',
+        'Sort the parcel $i',
         status: ChatStatus(background: 1),
       )..done = true,
   ]).connect(tester);
@@ -120,7 +120,7 @@ void main() {
         chat(
           'b',
           'claude',
-          'Sort the ledger',
+          'Sort the parcel',
           status: ChatStatus(background: 2),
         )..done = true,
         chat('i', 'codex', 'Idle one'),
@@ -146,7 +146,7 @@ void main() {
         of: find.ancestor(of: find.text(title), matching: find.byType(ChatRow)),
         matching: find.byType(ChatDot),
       );
-      final mark = _markOf(tester, rowDot('Sort the ledger'));
+      final mark = _markOf(tester, rowDot('Sort the parcel'));
       expect(mark, isNotNull, reason: "the chat's dot");
       expect(mark!.color, t.running);
       if (still) expect(mark.t, 0, reason: 'the still frame');
@@ -155,7 +155,7 @@ void main() {
       expect(group?.t, 0, reason: 'a still mark');
       expect(_markOf(tester, rowDot('Idle one')), isNull);
       // In the dot's room, as every state's mark: no row shifts.
-      for (final title in ['Sort the ledger', 'Idle one', 'Busy one']) {
+      for (final title in ['Sort the parcel', 'Idle one', 'Busy one']) {
         final size = tester.getSize(rowDot(title));
         expect(size.width, closeTo(_room, 0.01), reason: title);
         expect(size.height, closeTo(_room, 0.01), reason: title);

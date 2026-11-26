@@ -25,7 +25,7 @@ sealed class TodoItem {
     FindingTodo(:final finding) => Future.value(findingReply(finding)),
   };
 
-  /// What it is, in a few words, as the toast names it: "CI / linters",
+  /// What it is, in a few words, as the toast names it: "CI / ruff",
   /// "@mona's review", "the thread on a.rb:12", "a finding on a.rb:3".
   String get what => switch (this) {
     CheckTodo(check: final c) =>

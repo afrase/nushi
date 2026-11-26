@@ -29,7 +29,7 @@ List<Chat> _chats() => [
   chat(
     'c',
     'codex',
-    'Cap the rates',
+    'Fold the maps',
     folder: '/Users/me/cubby',
     age: 1,
     status: ChatStatus(busy: true),
@@ -154,7 +154,7 @@ void main() {
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
-    expect(find.text('Cap the rates'), findsNothing);
+    expect(find.text('Fold the maps'), findsNothing);
     expect(_dot(tester, 'cubby'), ChatPhase.working);
 
     sidebarCollapsed.value = {
@@ -192,18 +192,18 @@ void main() {
       'until another is selected', (tester) async {
     sidebarCollapsed.value = {'/Users/me/cubby'};
     final d = await _sidebar(tester);
-    expect(find.text('Cap the rates'), findsNothing);
+    expect(find.text('Fold the maps'), findsNothing);
     expect(chatOrder(d).map((c) => c.id), ['a', 'b', 'd', 'e']);
     d.select('c'); // as ⌘1–9, a notification or New chat do
     await tester.pump();
-    expect(find.text('Cap the rates'), findsOneWidget);
-    expect(_y(tester, 'Cap the rates'), greaterThan(_y(tester, 'cubby')));
-    expect(_y(tester, 'Cap the rates'), lessThan(_y(tester, 'garden')));
+    expect(find.text('Fold the maps'), findsOneWidget);
+    expect(_y(tester, 'Fold the maps'), greaterThan(_y(tester, 'cubby')));
+    expect(_y(tester, 'Fold the maps'), lessThan(_y(tester, 'garden')));
     expect(chatOrder(d).map((c) => c.id), ['a', 'b', 'c', 'd', 'e']);
     expect(sidebarCollapsed.value, {'/Users/me/cubby'}); // still collapsed
     d.select('a');
     await tester.pump();
-    expect(find.text('Cap the rates'), findsNothing);
+    expect(find.text('Fold the maps'), findsNothing);
     d.dispose();
   });
 
