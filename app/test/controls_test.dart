@@ -610,6 +610,57 @@ void main() {
     expect(presses, 2);
   });
 
+  testWidgets('the labels a button or a link keeps room for are never '
+      'shown: it is as wide as the widest, and only its own is found', (
+    tester,
+  ) async {
+    Widget host(String button, String link, {bool room = true}) => _app(
+      Tokens.light,
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Button(
+            label: button,
+            roomFor: room ? const ['Copy', 'Copied'] : const [],
+            onPressed: () {},
+          ),
+          LinkText(
+            link,
+            roomFor: room ? const ['Show', 'Hide'] : const [],
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(host('Copy', 'Show'));
+    final button = tester.getRect(find.byType(Button));
+    final link = tester.getRect(find.byType(LinkText));
+    // A test that waits for "Copied" must not find the room kept for it.
+    expect(find.text('Copy'), findsOneWidget);
+    expect(find.text('Copied'), findsNothing);
+    expect(find.text('Show'), findsOneWidget);
+    expect(find.text('Hide'), findsNothing);
+    expect(find.bySemanticsLabel('Copied'), findsNothing);
+    expect(find.bySemanticsLabel('Hide'), findsNothing);
+
+    await tester.pumpWidget(host('Copied', 'Hide'));
+    expect(tester.getRect(find.byType(Button)), button);
+    expect(tester.getRect(find.byType(LinkText)), link);
+    expect(find.text('Copied'), findsOneWidget);
+    expect(find.text('Copy'), findsNothing);
+    expect(find.text('Hide'), findsOneWidget);
+    expect(find.text('Show'), findsNothing);
+    expect(find.bySemanticsLabel('Copy'), findsNothing);
+    expect(find.bySemanticsLabel('Show'), findsNothing);
+
+    // Without the room each is only as wide as the label it shows.
+    await tester.pumpWidget(host('Copy', 'Hide', room: false));
+    expect(tester.getRect(find.byType(Button)).width, lessThan(button.width));
+    expect(tester.getRect(find.byType(LinkText)).width, lessThan(link.width));
+    handle.dispose();
+  });
+
   testWidgets('a menu field opens its menu', (tester) async {
     String? picked;
     await tester.pumpWidget(

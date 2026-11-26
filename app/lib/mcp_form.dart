@@ -215,16 +215,6 @@ class _FormState extends State<_Form> {
     }
   }
 
-  /// [child] when [shown]; else only its room: unseen, out of reach of a
-  /// pointer, the focus and a screen reader, its fields kept as typed.
-  Widget _shown(bool shown, Widget child) => Visibility(
-    visible: shown,
-    maintainState: true,
-    maintainAnimation: true,
-    maintainSize: true,
-    child: child,
-  );
-
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -397,13 +387,17 @@ class _FormState extends State<_Form> {
             Text(where, style: muted),
             // Both views are laid out and one shown, so the dialog is as
             // tall as the taller in either and Edit as JSON, Cancel and Add
-            // stay put as it's pressed.
-            Stack(
-              fit: StackFit.passthrough,
+            // stay put as it's pressed. The one not shown keeps its fields
+            // as typed, out of reach of a pointer, the focus, a screen
+            // reader and a test's finders (an IndexedStack's other
+            // children).
+            IndexedStack(
+              sizing: StackFit.passthrough,
+              index: _asJson ? 2 : 0,
               children: [
-                _shown(!_asJson, fields),
-                _shown(false, least),
-                Positioned.fill(child: _shown(_asJson, json)),
+                fields,
+                least,
+                Positioned.fill(child: json),
               ],
             ),
             if (_error.isNotEmpty)

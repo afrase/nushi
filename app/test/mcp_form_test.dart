@@ -91,12 +91,16 @@ void main() {
       ('Transport', 'Config', 'Edit as JSON'),
       ('Config', 'Transport', 'Edit in the form'),
     ]) {
-      final unseen = find.descendant(
-        of: find.byWidgetPredicate((w) => w is Visibility && !w.visible),
-        matching: find.byType(EditableText),
-      );
-      expect(unseen, findsWidgets, reason: shown);
-      for (final e in unseen.evaluate()) {
+      // The fields of the view not shown: in the tree, off stage.
+      final onStage = find.byType(EditableText).evaluate().toSet();
+      final unseen = find
+          .byType(EditableText, skipOffstage: false)
+          .evaluate()
+          .where((e) => !onStage.contains(e))
+          .toList();
+      expect(onStage, isNotEmpty, reason: shown);
+      expect(unseen, isNotEmpty, reason: shown);
+      for (final e in unseen) {
         final node = (e.widget as EditableText).focusNode;
         expect(node.canRequestFocus, isFalse, reason: shown);
       }
@@ -107,7 +111,7 @@ void main() {
         await tester.pump();
         reached.add(FocusManager.instance.primaryFocus!);
       }
-      for (final e in unseen.evaluate()) {
+      for (final e in unseen) {
         final node = (e.widget as EditableText).focusNode;
         expect(reached, isNot(contains(node)), reason: shown);
         expect(node.hasFocus, isFalse, reason: shown);
@@ -167,7 +171,7 @@ void main() {
         await tester.tap(find.text('Edit as JSON'));
         await tester.pumpAndSettle();
         // Kept with the form's fields, under the JSON's box, unseen.
-        expect(find.text(note).hitTestable(), findsNothing);
+        expect(find.text(note), findsNothing);
       }
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();

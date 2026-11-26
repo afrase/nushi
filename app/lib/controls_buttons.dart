@@ -143,8 +143,12 @@ class Button extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       textAlign: lines > 1 ? TextAlign.center : null,
     );
-    // The labels it keeps room for lie under its own, unseen and unheard;
-    // the one it shows needs no copy (a RunButton's running label, as it
+    // The labels it keeps room for are laid out with its own and never
+    // shown: an IndexedStack is as large as its largest child and paints
+    // only the one it shows, so they're unseen, unheard, out of the
+    // pointer's and the focus's reach, and off stage to a test's finders
+    // (a test that looks for "Copied" finds it only once it's shown). The
+    // label it shows needs no copy (a RunButton's running label, as it
     // runs).
     final room = [
       for (final l in roomFor)
@@ -152,23 +156,17 @@ class Button extends StatelessWidget {
     ];
     final text = room.isEmpty
         ? shown
-        : Stack(
+        : IndexedStack(
             alignment: Alignment.center,
             children: [
-              for (final l in room)
-                Visibility(
-                  visible: false,
-                  maintainState: true,
-                  maintainAnimation: true,
-                  maintainSize: true,
-                  child: Text(
-                    l,
-                    style: style,
-                    maxLines: lines,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
               shown,
+              for (final l in room)
+                Text(
+                  l,
+                  style: style,
+                  maxLines: lines,
+                  overflow: TextOverflow.ellipsis,
+                ),
             ],
           );
     return Pressable(

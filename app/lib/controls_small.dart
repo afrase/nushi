@@ -47,25 +47,18 @@ class LinkText extends StatelessWidget {
             decorationColor: color,
           ),
         );
-        // The texts it keeps room for lie under its own, unseen and
-        // unheard, as a Button's.
+        // The texts it keeps room for are laid out with its own and
+        // never shown, as a Button's.
         final room = [
           for (final l in roomFor)
             if (l != text) l,
         ];
         if (room.isEmpty) return shown;
-        return Stack(
+        return IndexedStack(
           alignment: AlignmentDirectional.centerStart,
           children: [
-            for (final l in room)
-              Visibility(
-                visible: false,
-                maintainState: true,
-                maintainAnimation: true,
-                maintainSize: true,
-                child: Text(l, style: style),
-              ),
             shown,
+            for (final l in room) Text(l, style: style),
           ],
         );
       },
