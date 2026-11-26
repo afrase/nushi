@@ -14,8 +14,8 @@ import 'pull_fixture.dart';
 /// The chat's pull request as the chats' states say it: its checks
 /// [checks] on commit [oid].
 GitHubItem _state(String oid, {String checks = 'failure'}) => GitHubItem(
-  ref: GitHubRef(host: 'github.com', repo: fixtureRepo, number: 412),
-  id: 'PR_412',
+  ref: GitHubRef(host: 'github.com', repo: fixtureRepo, number: 537),
+  id: 'PR_537',
   pull: true,
   title: 'Speed up the search index',
   state: 'open',
@@ -23,7 +23,7 @@ GitHubItem _state(String oid, {String checks = 'failure'}) => GitHubItem(
   checksOid: oid,
 );
 
-/// A chat on pull request #412 whose checks are as [now] says at each
+/// A chat on pull request #537 whose checks are as [now] says at each
 /// ask, the app open on it.
 Future<(Daemon, FakeDaemon)> _open(
   WidgetTester tester,
@@ -81,8 +81,8 @@ void main() {
 
   test('a failure is its pull request and commit, only while open and '
       'failing, and only from a daemon that says the commit', () {
-    expect(failureOf(_state('a1')), 'PR_412@a1');
-    expect(failureOf(_state('a1', checks: 'error')), 'PR_412@a1');
+    expect(failureOf(_state('a1')), 'PR_537@a1');
+    expect(failureOf(_state('a1', checks: 'error')), 'PR_537@a1');
     expect(failureOf(_state('a1', checks: 'pending')), isNull);
     expect(failureOf(_state('a1', checks: 'success')), isNull);
     expect(failureOf(_state('')), isNull);
@@ -110,7 +110,7 @@ void main() {
     final (d, fake) = await _open(tester, () => now);
     final chat = d.chats['c']!;
     // Failing when the chat was first seen: not new.
-    expect(checksSeen.value['c'], ['PR_412@a1']);
+    expect(checksSeen.value['c'], ['PR_537@a1']);
     expect(find.byType(ChecksFailedBar), findsNothing);
     expect(chat.needsYou, isFalse);
 
@@ -122,7 +122,7 @@ void main() {
     await _poll(tester);
     expect(find.byType(ChecksFailedBar), findsOneWidget);
     expect(
-      find.text('Checks failed on #412', findRichText: true),
+      find.text('Checks failed on #537', findRichText: true),
       findsOneWidget,
       reason: 'its words',
     );
@@ -140,7 +140,7 @@ void main() {
     expect(fake.calls.whereType<SendPromptRequest>(), isEmpty);
     expect(find.byType(ChecksFailedBar), findsNothing);
     expect(chat.needsYou, isFalse);
-    expect(checksSeen.value['c'], ['PR_412@b2']);
+    expect(checksSeen.value['c'], ['PR_537@b2']);
     expect(
       fake.calls.whereType<GetGitHubItemsRequest>().length,
       asked,
@@ -166,7 +166,7 @@ void main() {
     await tester.tap(find.byTooltip('Dismiss'));
     await tester.pumpAndSettle();
     expect(find.byType(ChecksFailedBar), findsNothing);
-    expect(checksSeen.value['c'], ['PR_412@c3']);
+    expect(checksSeen.value['c'], ['PR_537@c3']);
     await _poll(tester);
     expect(find.byType(ChecksFailedBar), findsNothing);
     await closeView(tester, d);
@@ -179,13 +179,13 @@ void main() {
     final chat = d.chats['c']!;
     // Found on the branch as the app opened, its row read then (one store
     // of the rows, GitHubItems): failing as first known, so not new.
-    expect(checksSeen.value['c'], ['PR_412@a1']);
+    expect(checksSeen.value['c'], ['PR_537@a1']);
     expect(chat.needsYou, isFalse);
     chat.linkPull(fixtureLink);
     d.listChanged();
     await _poll(tester);
     await _poll(tester);
-    expect(checksSeen.value['c'], ['PR_412@a1']);
+    expect(checksSeen.value['c'], ['PR_537@a1']);
     expect(chat.needsYou, isFalse, reason: 'failing as it was linked');
     expect(find.byType(ChecksFailedBar), findsNothing);
     now = _state('b2');
@@ -198,7 +198,7 @@ void main() {
       'on the same commit too', (tester) async {
     var now = _state('a1', checks: 'success');
     final (d, _) = await _open(tester, () => now);
-    expect(checksSeen.value['c'], ['PR_412@']);
+    expect(checksSeen.value['c'], ['PR_537@']);
     now = _state('a1');
     await _poll(tester);
     expect(d.chats['c']!.needsYou, isTrue);
@@ -228,7 +228,7 @@ void main() {
     await _poll(tester);
     expect(d.chats['c']!.needsYou, isTrue, reason: 'it holds the merge back');
     expect(
-      find.text('A check was cancelled on #412', findRichText: true),
+      find.text('A check was cancelled on #537', findRichText: true),
       findsOneWidget,
     );
     expect(find.textContaining('failed', findRichText: true), findsNothing);
@@ -238,7 +238,7 @@ void main() {
       ..checkCounts = GitHubCheckCounts(passed: 4, failed: 2, cancelled: 1);
     await _poll(tester);
     expect(
-      find.text('Checks failed on #412', findRichText: true),
+      find.text('Checks failed on #537', findRichText: true),
       findsOneWidget,
     );
     expect(find.text('Ask to fix'), findsOneWidget);
@@ -249,7 +249,7 @@ void main() {
       'same commit after it flags the chat again', (tester) async {
     final cancelled = _state('a1')
       ..checkCounts = GitHubCheckCounts(passed: 5, failed: 1, cancelled: 1);
-    expect(failureOf(cancelled), 'PR_412@a1:cancelled');
+    expect(failureOf(cancelled), 'PR_537@a1:cancelled');
     var now = _state('a1', checks: 'pending');
     final (d, _) = await _open(tester, () => now);
     now = cancelled;
@@ -263,7 +263,7 @@ void main() {
     await _poll(tester);
     expect(d.chats['c']!.needsYou, isTrue);
     expect(
-      find.text('Checks failed on #412', findRichText: true),
+      find.text('Checks failed on #537', findRichText: true),
       findsOneWidget,
     );
     await closeView(tester, d);

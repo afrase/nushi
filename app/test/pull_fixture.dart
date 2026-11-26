@@ -9,7 +9,7 @@ import 'package:nushi/settings.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-const fixtureRepo = 'octo/shelf';
+const fixtureRepo = 'octo/tally';
 
 GitHubComment said(
   String author,
@@ -27,7 +27,7 @@ GitHubComment said(
   outside: outside,
   bot: bot,
   body: body,
-  url: 'https://github.com/$fixtureRepo/pull/412#c',
+  url: 'https://github.com/$fixtureRepo/pull/537#c',
   createdMs: msAgo(age),
   review: review,
 );
@@ -53,18 +53,18 @@ GitHubCheck check(
 /// The Danger bot's comment: a table of one message.
 const dangerBody =
     '| | 1 Message |\n| --- | --- |\n'
-    '| :book: | **Trial Site Links** · Shelf: '
-    '[shelf-page-size-fix.sample.example.dev]($_review) · Graphs: '
-    '[Plotter](https://example.dev/graphs) · You can add sample books with: '
-    '`BOOKS=$_review ./bin/fill-shelf` |';
+    '| :book: | **Export Dry Run** · Last night again, on this branch: '
+    '[sightings-2026-11-25.csv]($_export) · 1,204 rows, 38 of them moved a '
+    'day · Their sites: [Lima, Quito, Osaka](https://example.dev/sites) · '
+    'Compare it with `tally diff $_export --since 2026-11-24` |';
 
-const _review = 'https://shelf-page-size-fix.sample.example.dev';
+const _export = 'https://files.example.dev/dry-run/export-in-site-zone.csv';
 
 /// A review bot's long review, with its findings to address.
-const aiReviewBody = r'''
+const aiReviewBody = '''
 ## Outline
 
-This PR reads an `n` param that isn't a number (`n=all` or `n[]=20`) like a missing `n` in the staff and catalogue listings, so these requests return the first page instead of a 500. It touches `Staff::LoansController`, `Staff::BooksController`, `Staff::LookupHelper`, and the catalogue pages. The checks hold up under Ruby 3.4's `Integer()`, and well-formed `n` values take the same path as before.
+The nightly export turned each sighting's UTC time into a date without a zone, so anything seen after 19:00 in Lima was filed under the next day. Rows now pass through `to_local()` with their site's zone before the CSV writer formats them; the JSON feed, which already sends offsets, is left alone. A new `zone_for(site)` reads the zone from the site record.
 
 **Scope:** Small
 
@@ -72,22 +72,22 @@ This PR reads an `n` param that isn't a number (`n=all` or `n[]=20`) like a miss
 
 ### Must address
 
-1. **`spec/catalogue/list_spec.rb:57-63`**: The one example for the catalogue-list check sits in a file marked `:slow`, which CI skips on pulls. It has never run.
-2. **`spec/members/loan_spec.rb:316`**: The example says a bad `n` gives the first page but only checks the 200. Assert `loans.size == 25` as well.
+1. **`tests/export/test_dst.py:88-97`**: Both cases build their times with naive `datetime(...)` calls, so they compare UTC with UTC and pass with or without the fix.
+2. **`tests/export/test_zones.py:188`**: Only a site west of Greenwich is tested. Osaka, where a sighting before 09:00 falls on the previous UTC day, would cover the other side.
 
 ### Suggestions
 
-- If this check later covers other `n` readers, keep it per action: the export endpoint takes `n` as a row limit, not a page.
+- `zone_for` builds a fresh zone object for every row; holding one per site for the run would save most of the export's new time.
 
 ## Tests missing
 
-- The list case is missing for the books controller and the lookup helpers.
+- Nothing covers a site whose zone is blank; it falls back to UTC with no warning.
 
-## Commit log
+## History
 
-- 12 files, +69/−5, one commit, with a message that says why.
+- One commit. Its message names the night the dates first went wrong.
 
-reviewer-xl · $3.48 · 12m 05s''';
+sage-review · 18.2k tokens · 6m 18s''';
 
 GitHubThread thread(
   String id,
@@ -128,7 +128,7 @@ GitHubComment _botSaid() => said(
 
 GitHubComment _monaSaid() => said(
   'mona',
-  'Thanks, the checks read right. Two small things, then this can land.',
+  "Nice catch on Lima. I'd like the blank zone logged before we ship it.",
   review: 'changes_requested',
   age: const Duration(minutes: 1),
   id: _monaReview,
@@ -141,7 +141,7 @@ GitHubComment _monaSaid() => said(
 GetGitHubCommitsResponse fixtureCommits({bool many = false}) {
   final head = GitHubCommit(
     oid: 'b' * 40,
-    headline: "Read an n that isn't a number as page 1 in listings",
+    headline: "Export sighting dates in every site's own time zone",
     author: 'afrase',
     authorName: 'afrase',
     committedMs: msAgo(const Duration(minutes: 20)),
@@ -153,7 +153,7 @@ GetGitHubCommitsResponse fixtureCommits({bool many = false}) {
     commits: [
       GitHubCommit(
         oid: '1a2b3c4d5e6f708192a3b4c5d6e7f80912345678',
-        headline: 'Check the staff listing',
+        headline: 'Give each site a time zone',
         author: 'afrase',
         authorName: 'afrase',
         committedMs: msAgo(const Duration(hours: 3)),
@@ -161,8 +161,8 @@ GetGitHubCommitsResponse fixtureCommits({bool many = false}) {
       ),
       GitHubCommit(
         oid: '9f8e7d6c5b4a39281706f5e4d3c2b1a098765432',
-        headline: 'Check the catalogue page too',
-        authorName: 'Tomas',
+        headline: 'Format rows in their own zone',
+        authorName: 'Priya',
         committedMs: msAgo(const Duration(hours: 2)),
       ),
       head,
@@ -177,11 +177,11 @@ GetGitHubCommitsResponse fixtureCommits({bool many = false}) {
 /// its diff hunk (API 127).
 GitHubPull fixturePull() => GitHubPull(
   item: GitHubItem(
-    ref: GitHubRef(host: 'github.com', repo: fixtureRepo, number: 412),
-    id: 'PR_412',
+    ref: GitHubRef(host: 'github.com', repo: fixtureRepo, number: 537),
+    id: 'PR_537',
     pull: true,
-    title: "Read an n that isn't a number as page 1 in listings",
-    url: 'https://github.com/$fixtureRepo/pull/412',
+    title: "Export sighting dates in every site's own time zone",
+    url: 'https://github.com/$fixtureRepo/pull/537',
     state: 'open',
     author: 'afrase',
     updatedMs: msAgo(const Duration(minutes: 1)),
@@ -192,7 +192,7 @@ GitHubPull fixturePull() => GitHubPull(
   ),
   labels: [
     GitHubLabel(name: 'bug', color: 'd73a4a'),
-    GitHubLabel(name: 'staff', color: '0e8a16'),
+    GitHubLabel(name: 'export', color: '0e8a16'),
   ],
   assignees: ['afrase', 'mira'],
   reviews: [
@@ -207,14 +207,13 @@ GitHubPull fixturePull() => GitHubPull(
     _monaSaid(),
   ],
   body:
-      '**Why and how:** staff and catalogue listings call '
-      "`Integer(params[:n])`, so an `n` that isn't a number (`n=all` or "
-      '`n[]=20`) raises and the page 500s. This treats them as a '
-      'missing `n`.\n\n'
-      '- [x] Specs for each listing that uses `n`\n'
-      '- [ ] Specs pass on my Mac (CI will rerun)',
+      'Sightings in the Americas came out a day late in the morning '
+      'export: `.date()` ran on the stored UTC time. Each row is now moved '
+      "into its site's zone first, and sites gained a `zone` column.\n\n"
+      '- [x] Tests for Lima and the March clock change\n'
+      "- [ ] Rerun last night's export and compare",
   base: 'main',
-  head: 'shelf-page-size-fix',
+  head: 'export-in-site-zone',
   headRepo: fixtureRepo,
   baseOid: 'a' * 40,
   headOid: 'b' * 40,
@@ -226,13 +225,13 @@ GitHubPull fixturePull() => GitHubPull(
     canMerge: true,
     blocks: ['checks_failing', 'changes_requested'],
   ),
-  additions: 69,
-  deletions: 5,
+  additions: 74,
+  deletions: 9,
   changedFiles: 12,
   commits: 1,
   reviewers: [
     GitHubReviewer(
-      login: 'library-keepers',
+      login: 'field-data-team',
       state: 'requested',
       team: true,
       codeOwner: true,
@@ -254,13 +253,13 @@ GitHubPull fixturePull() => GitHubPull(
   threads: [
     thread(
       'T1',
-      'app/controllers/staff/loans_controller.rb',
+      'src/tally/export/nightly_sightings_csv.py',
       42,
       [
         said(
           'mona',
-          "Could we log when a bad `n` gets dropped? Otherwise we'd never "
-              'learn which client keeps sending words here.',
+          'A site with no zone gets UTC here without a word. Could that be '
+              "a warning in the run's summary, with the site's id?",
           age: const Duration(minutes: 1),
           reviewId: _monaReview,
         ),
@@ -270,89 +269,89 @@ GitHubPull fixturePull() => GitHubPull(
           '     # 39\n'
           '     # 40\n'
           '     # 41\n'
-          '-      n\n'
-          '+      Integer(n) rescue nil',
+          '-    day = seen_at.date()\n'
+          '+    day = to_local(seen_at, site).date()',
     ),
     thread(
       'T2',
-      'spec/members/loan_spec.rb',
-      316,
+      'tests/export/test_zones.py',
+      188,
       [
         said(
           'mona',
-          'The example says a bad `n` gives the first page but only checks '
-              'the 200. Could it also assert `loans.size == 25`?',
+          'Osaka would be a good second case: its early birds are the ones '
+              'that land on the day before.',
           age: const Duration(minutes: 1),
           reviewId: _monaReview,
         ),
       ],
       diffHunk:
-          '@@ -312,3 +312,5 @@ describe "members" do\n'
-          '   it "reads a bad n as one" do\n'
-          '+    get "/members", params: { n: "all" }\n'
-          '+    expect(response).to have_http_status(200)',
+          '@@ -185,3 +185,5 @@ class TestZones:\n'
+          '     def test_lima_evening(self):\n'
+          '+        row = sighting("lima", "2026-03-08T21:30:00-05:00")\n'
+          '+        assert export_date(row) == "2026-03-08"',
     ),
     thread(
       'T3',
-      'app/helpers/staff/lookup_helper.rb',
+      'src/tally/sites/zone_lookup.py',
       18,
       [
-        said('mona', 'nit, `.delete` reads better to me', reviewId: _monaFirst),
-        said('afrase', 'Done.', reviewId: 'PRR_afrase_reply'),
+        said('mona', 'nit: `zoneinfo` over `pytz` now?', reviewId: _monaFirst),
+        said('afrase', 'Switched.', reviewId: 'PRR_afrase_reply'),
       ],
       resolved: true,
       diffHunk:
-          '@@ -16,3 +16,3 @@ module LookupHelper\n'
-          '     def isbn\n'
-          '-      params[:isbn].to_s.gsub(" ", "").downcase\n'
-          '+      isbn_param.delete(" ")',
+          '@@ -16,3 +16,3 @@ def zone_for(site):\n'
+          '     key = site.zone or "UTC"\n'
+          '-    return pytz.timezone(key)\n'
+          '+    return ZoneInfo(key)',
     ),
   ],
   checks: [
     check(
-      'specs (staff 3/8)',
+      'pytest (part 3)',
       state: 'failure',
       required: true,
       id: 31,
       annotations: [
         GitHubAnnotation(
-          path: 'spec/staff/books_controller_spec.rb',
-          line: 73,
+          path: 'tests/export/test_zones.py',
+          line: 192,
           level: 'failure',
-          message: 'expected 3 loans, got 0',
+          message: "assert '2026-03-09' == '2026-03-08'",
         ),
       ],
     ),
     check(
-      'linters',
+      'ruff',
       state: 'failure',
       required: true,
       id: 32,
       annotations: [
         GitHubAnnotation(
-          path: 'app/helpers/staff/lookup_helper.rb',
+          path: 'src/tally/sites/zone_lookup.py',
           line: 27,
           level: 'failure',
           message:
-              'Naming/OneLetter: name the variable for what it holds, '
-              'rather than by a lone letter',
+              'DTZ001: datetime() called without a tzinfo argument; give it '
+              "the site's own zone",
         ),
       ],
     ),
-    check('layering check', state: 'failure', id: 33),
+    check('mypy', state: 'failure', id: 33),
     for (final n in [
-      'specs (staff 1/8)',
-      'specs (staff 2/8)',
-      'specs (staff 4/8)',
-      'specs (staff 5/8)',
-      'sec-scan',
-      'js-fmt',
-      'trial-site',
-      'review-by-bot',
+      'pytest (part 1)',
+      'pytest (part 2)',
+      'pytest (part 4)',
+      'pytest (part 5)',
+      'pip-audit',
+      'docs build',
+      'sample export',
+      'sage-review',
     ])
-      check(n, required: n.startsWith('specs')),
-    check('preview', state: 'skipped', workflow: 'Launch'),
-    check('changelog row', state: 'skipped', workflow: ''),
+      check(n, required: n.startsWith('pytest')),
+    check('publish wheel', state: 'skipped', workflow: 'Release'),
+    check('news fragment', state: 'skipped', workflow: ''),
   ],
 );
 
@@ -377,7 +376,7 @@ GitHubPull mergePull(String state) {
   p
     ..mergeState = 'clean'
     ..checks.clear()
-    ..checks.addAll([check('specs', required: true), check('linters')])
+    ..checks.addAll([check('pytest', required: true), check('ruff')])
     ..reviewers.clear()
     ..reviewers.add(GitHubReviewer(login: 'mona', state: 'approved'))
     ..threads.clear()
@@ -408,8 +407,8 @@ GitHubPull mergePull(String state) {
 final fixtureLink = GitHubLink(
   host: 'github.com',
   repo: fixtureRepo,
-  number: 412,
-  id: 'PR_412',
+  number: 537,
+  id: 'PR_537',
   pull: true,
 );
 
@@ -435,7 +434,7 @@ Future<(Daemon, FakeDaemon)> openPullTab(
   final c = chat(
     'c',
     'claude',
-    'Fix the page size in staff lists',
+    "Export dates in each site's zone",
     status: busy ? ChatStatus(busy: true) : null,
   );
   if (worktree != null) {
@@ -468,34 +467,38 @@ Future<(Daemon, FakeDaemon)> openPullTab(
           ),
           GetGitHubJobLogRequest() => GetGitHubJobLogResponse(
             tail:
-                'Run bin/specs shard 3\n'
-                'Failures:\n  1) Staff::BooksController listing\n'
-                '     expected 3 loans, got 0\n'
+                'Run make test PART=3\n'
+                'FAILED tests/export/test_zones.py::test_lima_evening\n'
+                "     assert '2026-03-09' == '2026-03-08'\n"
                 '##[error]Process completed with exit code 1.',
           ),
           GetGitHubFilesRequest() => GetGitHubFilesResponse(
             files: [
               for (final (path, text) in [
                 (
-                  'app/helpers/staff/lookup_helper.rb',
-                  'module Staff\n  module LookupHelper\n  end\nend\n',
+                  'src/tally/sites/zone_lookup.py',
+                  'from zoneinfo import ZoneInfo\n\n\ndef zone_for(site):\n'
+                      '    return ZoneInfo(site.zone or "UTC")\n',
                 ),
                 (
-                  'app/controllers/staff/loans_controller.rb',
+                  'src/tally/export/nightly_sightings_csv.py',
                   [
                     for (var i = 1; i <= 50; i++)
                       if (i == 42)
-                        '      Integer(n) rescue nil'
+                        '    day = to_local(seen_at, site).date()'
                       else
                         '    # $i',
                   ].join('\n'),
                 ),
-                ('spec/members/loan_spec.rb', 'describe "members" do\nend\n'),
+                ('tests/export/test_zones.py', 'class TestZones:\n    pass\n'),
               ])
                 FileChange(
                   path: path,
                   status: 'modified',
-                  oldText: text.replaceFirst('Integer(n) rescue nil', 'n'),
+                  oldText: text.replaceFirst(
+                    'to_local(seen_at, site)',
+                    'seen_at',
+                  ),
                   newText: text,
                   added: 1,
                   removed: 1,

@@ -28,29 +28,29 @@ List<ReviewFinding> _read(String body) {
 
 /// A re-review on a later commit whose one finding is a sentence spelled
 /// out as a list (four "must address" rows of one sentence's pieces).
-const _pinReview = r'''
+const _zoneReview = '''
 ## Outline
 
-Re-review after c0ffee1 and 5eed0a2: the cover image is checked once and the stored copy locked to that digest.
+Second pass, on 7d1e3aa and 0b5e9c4. The site record carries its zone now, and the CSV writer asks for it row by row.
 
 ## Key findings
 
 ### Must address
 
-`lib/covers/store/locked_image.rb:31-58`: the lock holds only if every reader checks it. As written:
+`src/tally/export/rows.py:40-66`: four callers still take the date straight from the UTC time, so their days can be one out. They are:
 
-- the thumbnail job reads the file before the digest is saved;
-- download streams the raw bytes;
-- the preview and the export still open the path;
-- digest = nil reaches File.open(path, mode, nil).
+- the backfill script, which writes rows before the sites are loaded;
+- the summary sheet, grouping by the UTC day;
+- the weekly mail and the API's day view, which call date() themselves;
+- to_local(), which hands the time back untouched when a site has no zone.
 
-Both earlier threads are addressed: c0ffee1 adds the size limit (thread resolved), and 5eed0a2 limits cover validation to new uploads, with attach!/purge specs.
+The new zone column defaults to UTC, so older sites keep today's dates until someone fills theirs in; that seems fine for this pull request.
 
 ### Suggestions
 
-- A spec for an image changed on disk would pin this down.
+- Log the site's id when its zone is blank, so the gaps can be found.
 
-reviewer-xl · $0.94 · 3m 47s''';
+sage-review · 6.4k tokens · 2m 09s''';
 
 /// The bar at the tab's foot, saying [n] cards wait in the box.
 Finder _waiting(int n) => find.text(
@@ -64,31 +64,31 @@ void main() {
   test("a review bot's findings to address: a long review's shape", () {
     final f = _read(aiReviewBody);
     expect(f.map((f) => (f.path, f.start, f.end)), [
-      ('spec/catalogue/list_spec.rb', 57, 63),
-      ('spec/members/loan_spec.rb', 316, 316),
+      ('tests/export/test_dst.py', 88, 97),
+      ('tests/export/test_zones.py', 188, 188),
     ]);
-    expect(f.first.text, startsWith('The one example for the catalogue-list'));
-    expect(findingPlace(f.first), 'spec/catalogue/list_spec.rb:57–63');
+    expect(f.first.text, startsWith('Both cases build their times'));
+    expect(findingPlace(f.first), 'tests/export/test_dst.py:88–97');
     // Suggestions, missing tests and the commit log aren't findings.
-    expect(f.any((f) => f.text.contains('export endpoint')), isFalse);
+    expect(f.any((f) => f.text.contains('one per site')), isFalse);
   });
 
   test('a sentence spelled out as a list is one finding, its place the '
       "title; the reviewer's note after it isn't one", () {
-    final f = _read(_pinReview);
+    final f = _read(_zoneReview);
     expect(f, hasLength(1));
-    expect(findingPlace(f.single), 'lib/covers/store/locked_image.rb:31–58');
-    expect(f.single.text, startsWith('the lock holds only if every reader'));
+    expect(findingPlace(f.single), 'src/tally/export/rows.py:40–66');
+    expect(f.single.text, startsWith('four callers still take the date'));
     expect(
       f.single.text,
       contains(
-        'As written: the thumbnail job reads the file before the digest is '
-        'saved; download streams the raw bytes; the preview and the export '
-        'still open the path; digest = nil reaches',
+        'They are: the backfill script, which writes rows before the sites '
+        'are loaded; the summary sheet, grouping by the UTC day; the weekly '
+        "mail and the API's day view, which call date() themselves; to_local()",
       ),
     );
-    expect(f.single.text, endsWith('File.open(path, mode, nil).'));
-    expect(f.single.text, isNot(contains('Both earlier threads')));
+    expect(f.single.text, endsWith('when a site has no zone.'));
+    expect(f.single.text, isNot(contains('The new zone column')));
   });
 
   test('places: path:line, a backticked path, bold; one said later is no '
@@ -160,22 +160,22 @@ void main() {
       FindingTodo(:final finding) => findingPlace(finding),
     };
     const base = [
-      'specs (staff 3/8)',
-      'linters',
-      'layering check',
+      'pytest (part 3)',
+      'ruff',
+      'mypy',
       '@mona review',
-      'app/controllers/staff/loans_controller.rb +0',
+      'src/tally/export/nightly_sightings_csv.py +0',
     ];
     // Off (the default): only what GitHub structures.
     expect(todo(fixturePull()).items.map(say), [
       ...base,
-      'spec/members/loan_spec.rb +0',
+      'tests/export/test_zones.py +0',
     ]);
     final items = todo(fixturePull(), findings: _setup).items;
     expect(items.map(say), [
       ...base,
-      'spec/members/loan_spec.rb +1',
-      'spec/catalogue/list_spec.rb:57–63',
+      'tests/export/test_zones.py +1',
+      'tests/export/test_dst.py:88–97',
     ]);
     final merged = fixturePull()..item.state = 'merged';
     expect(todo(merged, findings: _setup).items, isEmpty);
@@ -190,14 +190,14 @@ void main() {
     final thread = items[5] as ThreadTodo;
     final r = threadReply(thread.thread, also: thread.also);
     expect(r.from, 'Review comments from @mona, @github-actions');
-    expect(r.quote, contains("github-actions' review: The example says"));
+    expect(r.quote, contains("github-actions' review: Only a site west"));
     final f = findingReply((items[6] as FindingTodo).finding);
     expect(f.from, "A finding from @github-actions' review");
     expect(
       f.quote,
       startsWith(
         "Finding in github-actions' review on "
-        'spec/catalogue/list_spec.rb:57–63:',
+        'tests/export/test_dst.py:88–97:',
       ),
     );
   });
@@ -239,7 +239,7 @@ void main() {
       ..conversation.add(
         said(
           'github-actions',
-          'Review app deployed.',
+          'Dry run done: 1,204 rows.',
           bot: true,
           age: const Duration(seconds: 30),
         ),
@@ -258,13 +258,13 @@ void main() {
     expect(found(two).map((i) => findingPlace(i.finding)), ['lib/x.rb:3']);
     // On an older commit: its findings, the bot marked.
     final old = fixturePull();
-    old.conversation[1].commit = 'c0ffee1${'c' * 33}';
+    old.conversation[1].commit = '7d1e3aa${'c' * 33}';
     final t = todo(old, findings: _setup);
     expect(
       t.items.whereType<FindingTodo>(),
       hasLength(1),
     ); // and one on a thread
-    expect(t.older, {'github-actions': 'c0ffee1${'c' * 33}'});
+    expect(t.older, {'github-actions': '7d1e3aa${'c' * 33}'});
     old.conversation[1].commit = old.headOid;
     expect(todo(old, findings: _setup).older, isEmpty);
   });
@@ -281,10 +281,10 @@ void main() {
     await tester.tap(find.text('Send to agent').at(1));
     await tester.pumpAndSettle();
     expect(box.value.single.from, startsWith('Failed checks on PR'));
-    expect(box.value.single.quote, startsWith('Check CI / linters:'));
+    expect(box.value.single.quote, startsWith('Check CI / ruff:'));
     expect(
       box.value.single.from,
-      endsWith('on PR octo/shelf#412 (GitHub), my pull request:'),
+      endsWith('on PR octo/tally#537 (GitHub), my pull request:'),
     );
     expect(find.byType(ToastLine), findsNothing);
     // The bar, at the tab's foot.
@@ -318,11 +318,11 @@ void main() {
     final (d, _) = await openPullTab(tester, fixturePull());
     await tester.tap(find.byKey(const ValueKey('segment comments')));
     await tester.pumpAndSettle();
-    expect(find.text('spec/catalogue/list_spec.rb:57–63'), findsNothing);
+    expect(find.text('tests/export/test_dst.py:88–97'), findsNothing);
     githubFindings.value = true;
     await tester.pumpAndSettle();
     expect(find.text('2 unresolved · 1 finding'), findsOneWidget);
-    expect(find.text('spec/catalogue/list_spec.rb:57–63'), findsOneWidget);
+    expect(find.text('tests/export/test_dst.py:88–97'), findsOneWidget);
     expect(find.text('Send 7 to agent'), findsOneWidget);
     d.dispose();
   }, variant: onMac);
@@ -332,12 +332,12 @@ void main() {
   ) async {
     githubFindings.value = true;
     final old = fixturePull();
-    old.conversation[1].commit = 'c0ffee1${'c' * 33}';
-    old.reviews[1].commit = 'c0ffee1${'c' * 33}';
+    old.conversation[1].commit = '7d1e3aa${'c' * 33}';
+    old.reviews[1].commit = '7d1e3aa${'c' * 33}';
     final (d2, _) = await openPullTab(tester, old);
     expect(
       find.text(
-        'On an older commit (c0ffee1): some findings may be done · comment '
+        'On an older commit (7d1e3aa): some findings may be done · comment '
         '/review for a fresh one',
       ),
       findsOneWidget,
@@ -402,14 +402,14 @@ void main() {
     final p = mergePull('ready')
       ..conversation.clear()
       ..reviewers.add(
-        GitHubReviewer(login: 'library-keepers', state: 'requested'),
+        GitHubReviewer(login: 'field-data-team', state: 'requested'),
       );
     final (d, _) = await openPullTab(tester, p);
     expect(find.text('Ready to merge'), findsOneWidget);
     expect(find.text('1 approved · 1 awaited'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('segment approvals')));
     await tester.pumpAndSettle();
-    expect(find.text('library-keepers'), findsNWidgets(2)); // and the side's
+    expect(find.text('field-data-team'), findsNWidgets(2)); // and the side's
     expect(find.text('Ping on GitHub'), findsOneWidget);
     d.dispose();
   }, variant: onMac);

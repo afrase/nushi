@@ -15,9 +15,9 @@ import 'harness.dart';
 import 'pull_fixture.dart';
 
 final _wt = Worktree(
-  repo: '/Users/me/shop',
-  path: '/Users/me/shop/.worktrees/shelf-page-size-fix',
-  branch: 'shelf-page-size-fix',
+  repo: '/Users/me/tally',
+  path: '/Users/me/tally/.worktrees/export-in-site-zone',
+  branch: 'export-in-site-zone',
   base: 'main',
 );
 
@@ -31,8 +31,8 @@ GetCleanUpResponse _clean({
   worktree: _wt,
   state: WorktreeState(changed: changed, commits: commits, ignored: ignored),
   changes: [
-    if (changed > 0) 'M app/catalogue/list_spec.rb',
-    if (changed > 1) '?? tmp/n_values_repro.rb',
+    if (changed > 0) 'M tests/export/test_dst.py',
+    if (changed > 1) '?? scratch/lima_rows.csv',
   ],
 );
 
@@ -143,11 +143,11 @@ void main() {
     final (d, fake) = await _open(tester);
     await tester.tap(_inPull(find.text('Clean up…')));
     await tester.pumpAndSettle();
-    expect(find.text('Clean up after #412'), findsOneWidget);
-    expect(find.text('.worktrees/shelf-page-size-fix · clean'), findsOneWidget);
+    expect(find.text('Clean up after #537'), findsOneWidget);
+    expect(find.text('.worktrees/export-in-site-zone · clean'), findsOneWidget);
     expect(
       find.text(
-        "Squash-merged, so git can't tell. GitHub says #412 merged it.",
+        "Squash-merged, so git can't tell. GitHub says #537 merged it.",
       ),
       findsOneWidget,
     );
@@ -179,7 +179,7 @@ void main() {
     );
     expect(
       fake.calls.whereType<DeleteGitHubBranchRequest>().single.ref.number,
-      412,
+      537,
     );
     expect(_inPull(find.text('Branch deleted on GitHub')), findsOneWidget);
     expect(_inPull(find.text('Worktree deleted')), findsOneWidget);
@@ -196,7 +196,7 @@ void main() {
     await tester.tap(_inPull(find.text('Clean up…')));
     await tester.pumpAndSettle();
     expect(find.text('2 uncommitted files would be lost.'), findsOneWidget);
-    expect(find.text('M app/catalogue/list_spec.rb'), findsOneWidget);
+    expect(find.text('M tests/export/test_dst.py'), findsOneWidget);
     expect(
       find.text("The worktree you're keeping has it checked out."),
       findsOneWidget,
@@ -435,7 +435,7 @@ void main() {
       fake.emit(
         EventsResponse(
           chatId: 'c',
-          chat: chat('c', 'claude', 'Fix the page size in staff lists')
+          chat: chat('c', 'claude', "Export dates in each site's zone")
             ..archived = true
             ..worktree = _wt
             ..folder = _wt.path
