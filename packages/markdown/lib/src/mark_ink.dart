@@ -18,20 +18,14 @@ final class _Inked {
   final InlineSpan text;
   final List<(int, int, bool)> ranges;
   final BoxConstraints constraints;
-  final (Color, Color) fills; // a match's and the current one's
+  final Object fills; // the fills each kind of character is drawn for
   final TextPainter? painter; // null: nothing to draw again
 }
 
 extension on _RenderMarks {
-  /// Draws the matches' text in ink over the paragraphs this paints marks
-  /// under, where it names its background and the marks have an ink.
-  void _ink(PaintingContext context, Offset offset) {
-    final scope = _scope;
-    final background = _background;
-    final ink = scope?.ink;
-    if (scope == null || background == null || ink == null) return;
-    if (_painted.isEmpty) return;
-    final current = scope._current;
+  /// Each paragraph's matches painted here: (start, end, current).
+  Map<RenderParagraph, List<(int, int, bool)>> _matchesByParagraph() {
+    final current = _scope?._current;
     final byParagraph = <RenderParagraph, List<(int, int, bool)>>{};
     for (final m in _painted) {
       if (!m._here) continue;
@@ -40,12 +34,27 @@ extension on _RenderMarks {
         (byParagraph[p.paragraph] ??= []).add((p.start, p.end, now));
       }
     }
+    return byParagraph;
+  }
+
+  /// Draws the matches' text in ink over the paragraphs this paints marks
+  /// under, where it names its background and the marks have an ink; not
+  /// inside [selected], which [_inkSelected] draws for its own fills.
+  void _ink(PaintingContext context, Offset offset, {Path? selected}) {
+    final scope = _scope;
+    final background = _background;
+    final ink = scope?.ink;
+    if (scope == null || background == null || ink == null) return;
+    if (_painted.isEmpty) return;
     final hit = Color.alphaBlend(scope._hit, background);
     final nowFill = Color.alphaBlend(scope._now, background);
     final fills = (hit, nowFill);
-    for (final MapEntry(key: p, value: ranges) in byParagraph.entries) {
+    final canvas = context.canvas;
+    for (final MapEntry(key: p, value: ranges)
+        in _matchesByParagraph().entries) {
       if (!p.hasSize) continue;
       final inked = _inkedOf(
+        _inked,
         p,
         ranges,
         fills,
@@ -55,17 +64,36 @@ extension on _RenderMarks {
       final at =
           offset +
           MatrixUtils.transformPoint(p.getTransformTo(this), Offset.zero);
-      inked.paint(context.canvas, at);
+      if (selected == null) {
+        inked.paint(canvas, at);
+        continue;
+      }
+      canvas
+        ..save()
+        ..clipPath(
+          Path.combine(
+            PathOperation.difference,
+            Path()..addRect(at & inked.size),
+            selected,
+          ),
+        );
+      inked.paint(canvas, at);
+      canvas.restore();
     }
   }
 
+  /// [p]'s text drawn again in ink, from [kept] while its text,
+  /// constraints, [ranges] and [fills] are the same; [rest]: the ink of
+  /// what's outside [ranges] (clear without it).
   TextPainter? _inkedOf(
+    Map<RenderParagraph, _Inked> kept,
     RenderParagraph p,
     List<(int, int, bool)> ranges,
-    (Color, Color) fills,
-    Color Function(Color color, {required bool now}) ink,
-  ) {
-    final had = _inked[p];
+    Object fills,
+    Color Function(Color color, {required bool now}) ink, {
+    Color Function(Color color)? rest,
+  }) {
+    final had = kept[p];
     if (had != null &&
         identical(had.text, p.text) &&
         had.constraints == p.constraints &&
@@ -74,11 +102,11 @@ extension on _RenderMarks {
       return had.painter;
     }
     had?.painter?.dispose();
-    _inked.remove(p);
+    kept.remove(p);
     final c = p.constraints;
-    final text = _recoloured(p.text, ranges, ink);
+    final text = _recoloured(p.text, ranges, ink, rest: rest);
     if (text == null) {
-      _inked[p] = _Inked(p.text, ranges, c, fills, null);
+      kept[p] = _Inked(p.text, ranges, c, fills, null);
       return null;
     }
     final painter = TextPainter(
@@ -98,7 +126,7 @@ extension on _RenderMarks {
       minWidth: c.minWidth,
       maxWidth: wraps ? c.maxWidth : double.infinity,
     );
-    _inked[p] = _Inked(p.text, ranges, c, fills, painter);
+    kept[p] = _Inked(p.text, ranges, c, fills, painter);
     return painter;
   }
 }
@@ -106,15 +134,17 @@ extension on _RenderMarks {
 const _clear = Color(0x00000000);
 
 /// [span] with the same text and styles but each character's colour:
-/// within one of [ranges] (start, end, current) its [ink], clear where
-/// that is its own colour (drawn over itself it would thicken); clear
-/// outside them. Null with nothing to recolour, or a widget in the text,
-/// which a painter can't lay out as the paragraph does.
+/// within one of [ranges] (start, end, current) its [ink], outside them
+/// its [rest]; clear where that is its own colour (drawn over itself it
+/// would thicken), and outside them without [rest]. Null with nothing to
+/// recolour, or a widget in the text, which a painter can't lay out as
+/// the paragraph does.
 TextSpan? _recoloured(
   InlineSpan span,
   List<(int, int, bool)> ranges,
-  Color Function(Color color, {required bool now}) ink,
-) {
+  Color Function(Color color, {required bool now}) ink, {
+  Color Function(Color color)? rest,
+}) {
   var at = 0;
   var any = false;
   var widget = false;
@@ -131,17 +161,17 @@ TextSpan? _recoloured(
       var from = at;
       while (from < end) {
         var to = end;
-        var shown = _clear;
+        Color? drawn;
         for (final (a, b, now) in ranges) {
           if (a > from && a < to) to = a;
           if (b > from && b < to) to = b;
-          if (a <= from && b > from) {
-            final c = ink(color, now: now);
-            if (c != color) {
-              shown = c;
-              any = true;
-            }
-          }
+          if (a <= from && b > from) drawn = ink(color, now: now);
+        }
+        drawn ??= rest?.call(color);
+        var shown = _clear;
+        if (drawn != null && drawn != color) {
+          shown = drawn;
+          any = true;
         }
         pieces.add(
           TextSpan(

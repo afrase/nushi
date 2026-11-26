@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 part 'mark_ink.dart';
 part 'marks.dart';
+part 'selection_ink.dart';
 
 /// Where a [WidgetSpan] sits in a paragraph's plain text.
 const _placeholder = '￼';

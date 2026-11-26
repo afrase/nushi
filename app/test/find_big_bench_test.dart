@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/editor_find.dart';
@@ -16,10 +17,11 @@ import 'preview_find_fixture.dart';
 
 // Timings of ⌘F in large files, to read, not to check: what a key holds
 // the UI thread for in a read-only source (5 MiB the most the Files pane
-// shows; 20 MB beyond it) and in the editor (1 MiB the most), and a
-// scroll with the matches marked. A debug build's times, a few times a
-// release build's. It asserts nothing about time, and runs only with
-// NUSHI_FIND_BENCH set:
+// shows; 20 MB beyond it) and in the editor (1 MiB the most), a scroll
+// with the matches marked, and in the editor with find open, a wheel's
+// steps, a key typed into the file's longest line and a step of its
+// selection. A debug build's times, a few times a release build's. It
+// asserts nothing about time, and runs only with NUSHI_FIND_BENCH set:
 //
 //   NUSHI_FIND_BENCH=1 flutter test test/find_big_bench_test.dart
 
@@ -154,6 +156,56 @@ void main() {
           await tester.pump();
         }
         _say('  scrolling: ${_ms(scroll.elapsedMicroseconds ~/ 10)} ms a drag');
+        // The mouse's wheel, 300 px a step down and back, find open.
+        final mouse = TestPointer(7, PointerDeviceKind.mouse);
+        await tester.sendEventToBinding(
+          mouse.hover(tester.getCenter(find.byType(CodeEditor))),
+        );
+        await tester.pumpAndSettle();
+        final wheel = Stopwatch()..start();
+        for (var i = 0; i < 40; i++) {
+          await tester.sendEventToBinding(
+            mouse.scroll(Offset(0, i < 20 ? 300 : -300)),
+          );
+          await tester.pump();
+        }
+        _say('  the wheel: ${_ms(wheel.elapsedMicroseconds ~/ 40)} ms a step');
+        // In the text, with find open on "s": keys typed into the file's
+        // longest line, and its selection widened a character at a time,
+        // each with its frame.
+        final c = editOf(d, 'dump.sql').controller;
+        var long = 0;
+        for (var i = 0; i < c.codeLines.length; i++) {
+          if (c.codeLines[i].length > c.codeLines[long].length) long = i;
+        }
+        c
+          ..selection = CodeLineSelection.collapsed(index: long, offset: 5)
+          ..makeCursorVisible();
+        await tester.pumpAndSettle();
+        final typing = Stopwatch()..start();
+        for (var i = 0; i < 10; i++) {
+          c.replaceSelection('x');
+          await tester.pump();
+        }
+        final typed = typing.elapsedMicroseconds ~/ 10;
+        c.selection = CodeLineSelection.collapsed(index: long, offset: 5);
+        await tester.pump();
+        final selecting = Stopwatch()..start();
+        for (var i = 0; i < 20; i++) {
+          c.selection = CodeLineSelection(
+            baseIndex: long,
+            baseOffset: 5,
+            extentIndex: long,
+            extentOffset: 6 + i,
+          );
+          await tester.pump();
+        }
+        _say(
+          '  in its longest line, of ${c.codeLines[long].length} '
+          'characters: typing '
+          '${_ms(typed)} ms a key, selecting '
+          '${_ms(selecting.elapsedMicroseconds ~/ 20)} ms a step',
+        );
         await endEditor(tester, d);
       },
       variant: onMac,

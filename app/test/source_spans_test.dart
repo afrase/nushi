@@ -4,7 +4,8 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/source_spans.dart';
 
-// onHits and overSelected: a line's runs split at a find's hit edges.
+// onHits, overSelected and onFills: a line's runs split at the edges of
+// a find's hits and the fills under them.
 
 const _plain = Color(0xFF111111);
 const _red = Color(0xFFAA0000);
@@ -94,5 +95,53 @@ void main() {
     hits.reads = 0;
     overSelected(runs, hits, plain: _plain, ink: (c, h) => _inked);
     expect(hits.reads, lessThan(hits.length * 8));
+  });
+
+  const fill = Color(0xFF777777);
+  const other = Color(0xFF888888);
+  // Red is drawn anew on [fill]; blue and the plain text read as they are.
+  Color onFill(Color c, Color f) => c == _red && f == fill ? _inked : c;
+
+  test('a run on a fill is split where its ink changes, and only there', () {
+    const runs = [
+      TextSpan(
+        text: 'apples',
+        style: TextStyle(color: _red),
+      ),
+      TextSpan(text: ' and '),
+      TextSpan(
+        text: 'pears',
+        style: TextStyle(color: _blue),
+      ),
+    ];
+    final out = onFills(
+      runs,
+      const [(start: 2, end: 9, fill: fill), (start: 12, end: 16, fill: other)],
+      plain: _plain,
+      ink: onFill,
+    );
+    expect(_shape(out), [
+      ('ap', _red),
+      ('ples', _inked),
+      (' and ', null),
+      ('pears', _blue),
+    ]);
+  });
+
+  test('a line whose code reads on its fills keeps its very runs', () {
+    const runs = [
+      TextSpan(
+        text: 'pears',
+        style: TextStyle(color: _blue),
+      ),
+      TextSpan(text: ' and '),
+    ];
+    final out = onFills(
+      runs,
+      const [(start: 0, end: 9, fill: fill)],
+      plain: _plain,
+      ink: onFill,
+    );
+    expect(identical(out, runs), isTrue);
   });
 }

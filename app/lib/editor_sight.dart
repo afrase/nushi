@@ -16,6 +16,49 @@ import 'package:re_editor/re_editor.dart';
 /// half a screen's worth around it.
 const _longLine = 2000;
 
+/// The first of [matches] (in order down the text, each on one line)
+/// that ends at or past [offset] of line [line], or is on a later line.
+int firstFrom(List<CodeLineSelection> matches, int line, int offset) {
+  var (lo, hi) = (0, matches.length);
+  while (lo < hi) {
+    final mid = (lo + hi) >> 1;
+    final m = matches[mid];
+    if (m.startIndex < line || m.startIndex == line && m.endOffset < offset) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  return lo;
+}
+
+/// re_editor's scrolling, which also knows where its text is laid out,
+/// so its lines can be laid out again ([relayout]).
+class EditorScroll extends CodeScrollController {
+  new({super.verticalScroller, super.horizontalScroller});
+
+  GlobalKey? _field;
+
+  @override
+  void bindEditor(GlobalKey key) {
+    _field = key;
+    super.bindEditor(key);
+  }
+
+  /// re_editor lays its lines in sight out again, in the next frame: each
+  /// from the spans it's given then, kept paragraphs for spans it laid
+  /// out before. Its own way, `forceRepaint`, lays every line out anew,
+  /// outside a frame's layout.
+  void relayout() =>
+      _field?.currentContext?.findRenderObject()?.markNeedsLayout();
+
+  @override
+  void dispose() {
+    _field = null;
+    super.dispose();
+  }
+}
+
 /// Where matches are painted: the lines `first` to `last`; of a long line
 /// laid out, only its characters in `cut`; a long line not laid out,
 /// none of it.
@@ -41,24 +84,25 @@ class EditorSight extends ChangeNotifier {
   bool _told = false;
   bool _gone = false;
 
-  /// The window for the matches painted now: what's in sight and some
-  /// around it (a screen's worth of lines, half of a long line's).
-  SightWindow take() => _window = _measure(around: true);
+  /// The window the matches are painted in, and the editor's code drawn
+  /// for them (`EditorInk`): what was in sight when it was taken and some
+  /// around it (a screen's worth of lines, half of a long line's). It's
+  /// kept until what's in sight leaves it, so the hits painted and the
+  /// code drawn on them are always of the same window.
+  SightWindow take() => _window ??= _measure(around: true);
 
   /// What's in sight now, no more.
   @visibleForTesting
   SightWindow get inSight => _measure(around: false);
 
-  /// No matches are painted: nothing to build again for.
-  void forget() => _window = null;
-
-  /// Whether a match on [line] from [start] to [end] is painted, in
-  /// [window].
-  bool shows(SightWindow window, int line, int start, int end) {
-    if (line < window.first || line > window.last) return false;
-    if (window.cut[line] case final c?) return end >= c.start && start <= c.end;
-    return line < editor.codeLines.length &&
-        editor.codeLines[line].length <= _longLine;
+  /// The part of line [line] whose matches are painted in [window]: all
+  /// of a line short enough, a long one's cut, or none.
+  TextRange? paints(SightWindow window, int line) {
+    if (line < window.first || line > window.last) return null;
+    if (window.cut[line] case final c?) return c;
+    if (line >= editor.codeLines.length) return null;
+    final length = editor.codeLines[line].length;
+    return length <= _longLine ? TextRange(start: 0, end: length) : null;
   }
 
   SightWindow _measure({required bool around}) {
@@ -91,8 +135,9 @@ class EditorSight extends ChangeNotifier {
   }
 
   /// re_editor laid its lines out again, or they moved sideways: once
-  /// what's in sight has left the window, the view is built again, after
-  /// this frame (it's laying out now).
+  /// what's in sight has left the window, it's let go and the view is
+  /// built again, after this frame (it's laying out now), for a window
+  /// taken anew.
   void _laidOut() {
     final window = _window;
     if (window == null || _told) return;

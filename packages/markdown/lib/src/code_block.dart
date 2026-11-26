@@ -169,9 +169,10 @@ class CodeBlockView extends StatelessWidget {
         final scroll = SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.all(10),
+          // Its selected code is drawn again for the selection's fill.
           child: selection == null
               ? marked
-              : SelectionRegistrarScope(registrar: selection, child: marked),
+              : InkedSelection(registrar: selection, child: marked),
         );
         return selection == null
             ? scroll

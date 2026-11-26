@@ -1,21 +1,18 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
 import 'package:nushi/daemon.dart';
+import 'package:nushi/editor_ink.dart';
+import 'package:nushi/editor_spans.dart';
 import 'package:nushi/errors.dart';
 import 'package:nushi/file_text.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/indent_guides.dart' show indents;
 import 'package:nushi/merge_lines.dart';
-import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart' show tabSize;
-import 'package:nushi/source_spans.dart';
-import 'package:nushi/syntax.dart';
 import 'package:nushi/tab_indent.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:re_editor/re_editor.dart';
 
 /// A file's text being edited in the preview (ADR 0096): the editor's
@@ -37,11 +34,11 @@ class FileEdit extends ChangeNotifier {
       options: CodeLineOptions(
         indentSize: indents(file.text.split(_lineBreak), tabSize.value).unit,
       ),
-      spanBuilder: _span,
+      spanBuilder: spans.line,
     );
+    spans.start(controller);
     _lines = controller.codeLines;
     controller.addListener(_changed);
-    _highlight();
   }
 
   final Daemon daemon;
@@ -118,8 +115,7 @@ class FileEdit extends ChangeNotifier {
         _unsaved = unsaved;
         notifyListeners();
       }
-      _soon?.cancel();
-      _soon = Timer(Waits.typing, _highlight);
+      spans.changed();
     }
     if (_held case (final sha, final file) when !controller.isComposing) {
       _held = null;
@@ -333,79 +329,26 @@ class FileEdit extends ChangeNotifier {
     notifyListeners();
   }
 
-  // The syntax's spans, as the preview's source has them (SourceView):
-  // the whole text highlighted off the UI thread a moment after it
-  // changes; until then a line keeps its spans while its text is as it
-  // was, at its index or as far from the end.
-  Timer? _soon;
-  int _reads = 0;
-  List<String> _hlLines = const [];
-  List<Uint32List?> _hlSpans = const [];
-
-  void _highlight() {
-    final text = this.text;
-    final language = sourceLanguage(path, text);
-    if (language == null) return;
-    final read = ++_reads;
-    highlightSides(language, '', text).then((s) {
-      if (read != _reads || _disposed || s[1] == null) return;
-      _hlLines = text.split('\n');
-      _hlSpans = s[1]!;
-      controller.forceRepaint();
-    }).ignore();
-  }
+  /// The spans the editor lays its lines out from.
+  late final EditorSpans spans = EditorSpans(path);
 
   /// Whether the syntax's spans came (tests wait for them).
   @visibleForTesting
-  bool get highlighted => _hlLines.isNotEmpty;
+  bool get highlighted => spans.highlighted;
 
-  Uint32List? _spansAt(int i, String line) {
-    if (i < _hlLines.length && _hlLines[i] == line) {
-      return _hlSpans.elementAtOrNull(i);
-    }
-    final j = i + _hlLines.length - controller.codeLines.length;
-    if (j >= 0 && j < _hlLines.length && _hlLines[j] == line) {
-      return _hlSpans.elementAtOrNull(j);
-    }
-    return null;
-  }
-
-  TextSpan _span({
-    required BuildContext context,
-    required int index,
-    required CodeLine codeLine,
-    required TextSpan textSpan,
-    required TextStyle style,
-  }) {
-    final t = NushiTheme.of(context).t;
-    final line = codeLine.text;
-    return TextSpan(
-      style: style.copyWith(fontFeatures: _noLigatures),
-      // re_editor draws with no text scaling.
-      children: tabStops(
-        spansOf(t, line, _spansAt(index, line)),
-        fontSize: style.fontSize!,
-        column: columnWidth(style, TextScaler.noScaling),
-        tabSize: tabSize.value,
-        spacing: style.letterSpacing ?? 0,
-      ),
-    );
-  }
-
-  bool _disposed = false;
+  /// What the open editor paints under its lines ([EditorSpans.ink]).
+  EditorInk? get ink => spans.ink;
+  set ink(EditorInk? ink) => spans.ink = ink;
 
   @override
   void dispose() {
-    _disposed = true;
-    _soon?.cancel();
+    spans.dispose();
     controller
       ..removeListener(_changed)
       ..dispose();
     super.dispose();
   }
 }
-
-const _noLigatures = [FontFeature.disable('liga'), FontFeature.disable('calt')];
 
 /// A version of the file on disk: its text, sum and codec.
 typedef FileVersion = ({String text, String sha, FileCodec codec});

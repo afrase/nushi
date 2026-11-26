@@ -40,13 +40,15 @@ class Marks extends SingleChildRenderObjectWidget {
   @override
   RenderObject createRenderObject(BuildContext context) =>
       _RenderMarks(TextMarksScope.maybeOf(context), entry, null, null)
-        .._background = background;
+        .._background = background
+        ..seen = _SeenScope.maybeOf(context);
 
   @override
   void updateRenderObject(BuildContext context, RenderObject renderObject) =>
       (renderObject as _RenderMarks)
         ..update(TextMarksScope.maybeOf(context), entry, null, null)
-        ..background = background;
+        ..background = background
+        ..seen = _SeenScope.maybeOf(context);
 }
 
 /// Something that folds [text] away (what opening a row shows, what a
@@ -122,6 +124,19 @@ class _RenderMarks extends RenderProxyBox {
   Color? _background; // a code block's: its matches' text drawn in ink
   final _inked = <RenderParagraph, _Inked>{};
 
+  // Under an [InkedSelection]: its selected text drawn in ink too.
+  _Seen? _seen;
+  final _selInked = <RenderParagraph, _Inked>{};
+
+  _Seen? get seen => _seen;
+  set seen(_Seen? v) {
+    if (identical(v, _seen)) return;
+    if (attached) _seen?.removeListener(markNeedsPaint);
+    _seen = v;
+    if (attached) _seen?.addListener(markNeedsPaint);
+    markNeedsPaint();
+  }
+
   Color? get background => _background;
   set background(Color? v) {
     if (v == _background) return;
@@ -131,10 +146,11 @@ class _RenderMarks extends RenderProxyBox {
   }
 
   void _forget() {
-    for (final i in _inked.values) {
+    for (final i in [..._inked.values, ..._selInked.values]) {
       i.painter?.dispose();
     }
     _inked.clear();
+    _selInked.clear();
   }
 
   String? _fold; // what's folded away here; null: not a fold
@@ -241,11 +257,13 @@ class _RenderMarks extends RenderProxyBox {
   @override
   void attach(PipelineOwner owner) {
     super.attach(owner);
+    _seen?.addListener(markNeedsPaint);
     _join();
   }
 
   @override
   void detach() {
+    _seen?.removeListener(markNeedsPaint);
     _drop();
     _forget();
     super.detach();
@@ -297,6 +315,8 @@ class _RenderMarks extends RenderProxyBox {
       }
     }
     super.paint(context, offset);
-    _ink(context, offset);
+    final selected = _selectedPath(offset);
+    _ink(context, offset, selected: selected);
+    if (selected != null) _inkSelected(context, offset, selected);
   }
 }
