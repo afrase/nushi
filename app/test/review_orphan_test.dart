@@ -477,7 +477,7 @@ void main() {
       await settle(tester);
       expect(find.text('1 comment not on these files'), findsOne);
       expect(find.text('Outdated'), findsOne);
-      expect(find.text('sub.go · Line 4'), findsOne);
+      expect(find.text('sub.go, Line 4'), findsOne);
       // Above the list, inside the files' column.
       expect(
         tester.getBottomLeft(find.text('Check for overflow.')).dy,

@@ -58,7 +58,7 @@ class _CommentsElsewhereState extends State<CommentsElsewhere> {
   /// Where [c] is: its file, and the view it was made in if not this one.
   String _place(ReviewComment c) => c.where == widget.where
       ? c.path
-      : '${whereLabel(c.where, widget.related)} · ${c.path}';
+      : '${whereLabel(c.where, widget.related)}, ${c.path}';
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +93,7 @@ class _CommentsElsewhereState extends State<CommentsElsewhere> {
                   if (c == _editing)
                     ReviewCommentBox(
                       key: ValueKey(c.id),
-                      lines: '${_place(c)} · ${c.lines}',
+                      lines: '${_place(c)}, ${c.lines}',
                       controller: _text,
                       editing: true,
                       onSave: _save,

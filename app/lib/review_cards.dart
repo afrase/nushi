@@ -63,7 +63,7 @@ class CommentCard extends StatelessWidget {
                           _State('Outdated', t.needs, t.needsSoft),
                         Flexible(
                           child: Text(
-                            [?place, c.lines].join(' · '),
+                            [?place, c.lines].join(', '),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.ui(t.textMuted, size: 11.5),
