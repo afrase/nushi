@@ -13,6 +13,7 @@ func TestMask(t *testing.T) {
 	name := regexp.MustCompile(`((?i)\b[A-Za-z_]\w*token=)\S{4,}`)
 	for _, tc := range []struct{ in, want string }{
 		{"key sk-ant-api03-abcdefghijklmnopqrstuv end", "key ** end"},
+		{"-----BEGIN OPENSSH PRIVATE KEY-----", "-----BEGIN OPENSSH PRIVATE KEY-----**"}, // a key's first line alone still says so
 		{"fw_3ZabcdefghijklmnopqrstUV", "**"},
 		{"ghp_abcdefghijklmnopqrstuvwxyz0123456789 github_pat_11ABCDEFG0123456789_abcdefghij", "** **"},
 		{"xoxb-123456789012-abcdefghijkl xoxp-123456789012-abcdefghijkl", "** **"},

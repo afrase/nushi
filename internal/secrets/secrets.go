@@ -216,7 +216,10 @@ func find(re *regexp.Regexp, s string, named bool, accept func(string) bool) [][
 		if strings.HasPrefix(keep, "://") {
 			to-- // the '@' stays
 		}
-		if to > from {
+		// A run can be empty: a key's BEGIN line with nothing after it
+		// (a stderr read a line at a time). It still gets the mask, as it
+		// always did, so the line says a key was there.
+		if to > from || to == from && keep != "" && !strings.HasPrefix(keep, "://") {
 			out = append(out, [2]int{from, to})
 		}
 	}
