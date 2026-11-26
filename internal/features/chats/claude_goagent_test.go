@@ -581,11 +581,13 @@ func rewrite(t *testing.T, msg string, id json.RawMessage, cwd string) string {
 }
 
 // mark names a session update that marks a point in a session: a tool
-// call's first report or a status of it, a task's word on its call (a
-// stop's "killed" and "stopped", which claude writes before its answer
-// to the stop and the Go agent may pass on after it: the replay waits
-// for them before the client's next line, a close, as the recorder's
-// pause did), a subagent's state, a message; "" for the rest (usage,
+// call's first report or a status of it, a task's word on its call (any
+// status: running and completed too, so every scenario with a task
+// waits on its words; the reason is a stop's "killed" and "stopped",
+// which claude writes before its answer to the stop and the Go agent
+// may pass on after it: the replay waits for them before the client's
+// next line, a close, as the recorder's pause did), a subagent's
+// state, a message; "" for the rest (usage,
 // commands, a call's fields), which the two agents send at points of
 // their own. Its ids are claude's (calls, tasks, messages, subagents),
 // the same in a recording and its replay.
