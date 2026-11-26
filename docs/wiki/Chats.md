@@ -335,10 +335,10 @@ Settings has a Usage page (today's spend at the bottom of the sidebar opens it):
 
 1. Open **Settings**, then **Usage**.
 2. Pick **7 days**, **30 days**, **90 days** or **All**. Nushi remembers your pick.
-3. Point at a day in the chart for its spend, tokens and turns.
+3. Point at a day in the chart for its spend, tokens, cached tokens and turns.
 4. Click a chat under **Costliest chats** to open it.
 
-Spend is what the agent reports. On a subscription that's what the API would charge for the same tokens, not what you pay. Codex and Ante report no cost, so the page says so and counts their tokens. A limit shows as the agent last said it, and changes only while one of its chats runs. Usage counts from the first turn after you updated to a version that keeps it; turns Nushi runs out of sight, such as a commit message it drafts or a workflow's agents, aren't counted. The phone doesn't have this page.
+Spend is what the agent reports. On a subscription that's what the API would charge for the same tokens, not what you pay. Codex and Ante report no cost, so the page says so and counts their tokens. Tokens are what was sent and received fresh. **Cached** is what the agent read back from its cache, apart from the tokens: it's often many times the tokens, and much cheaper. A limit shows as the agent last said it, and changes only while one of its chats runs. Usage counts from the first turn after you updated to a version that keeps it; turns Nushi runs out of sight, such as a commit message it drafts or a workflow's agents, aren't counted. The phone doesn't have this page.
 
 ## Good to know
 

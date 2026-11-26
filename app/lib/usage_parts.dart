@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agents.dart';
@@ -33,83 +35,128 @@ class UsageNote extends StatelessWidget {
 }
 
 /// The span's totals: what was spent (in each currency), the tokens in
-/// and out, the turns, and the cache's own figures apart. With no cost
-/// reported at all the tokens lead and no spend shows; the agents that
-/// reported none are named beside it either way.
+/// and out, what was read back from the cache (its share of the input,
+/// and what was written to it), and the turns. With no cost reported at
+/// all the tokens lead and no spend shows; the agents that reported none
+/// are named on a line of their own under the figures, either way. Too
+/// narrow for them side by side, the figures go two to a row.
 class UsageTotalsCard extends StatelessWidget {
   const new(this.r, this.measure, {super.key});
 
   final GetUsageResponse r;
   final UsageMeasure measure;
 
+  /// The least a figure takes beside the others, whatever its small line.
+  static const figureRoom = 100.0;
+
+  /// Between figures, across and down.
+  static const _gap = 16.0;
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final scaler = MediaQuery.textScalerOf(context);
     final u = r.totals;
     final none = r.noCost.isEmpty
         ? null
         : '${andList(r.noCost.map(agentTitle))} '
               '${r.noCost.length == 1 ? 'reports' : 'report'} no cost';
-    final turns = u.turns.toInt();
-    final cache = [
-      if (u.cacheReadTokens > 0) '${tokens(u.cacheReadTokens.toInt())} read',
-      if (u.cacheWriteTokens > 0)
-        '${tokens(u.cacheWriteTokens.toInt())} written',
+    final read = u.cacheReadTokens.toInt();
+    final written = u.cacheWriteTokens.toInt();
+    final figures = [
+      if (measure.costs)
+        _Figure('Spend', spendOf(u), key: const ValueKey('usage-spend')),
+      _Figure(
+        'Tokens',
+        tokens(tokensOf(u)),
+        key: const ValueKey('usage-tokens'),
+        sub:
+            '${tokens(u.inputTokens.toInt())} in, '
+            '${tokens(u.outputTokens.toInt())} out',
+      ),
+      if (read > 0 || written > 0)
+        _Figure(
+          'Cached',
+          tokens(read),
+          key: const ValueKey('usage-cached'),
+          sub: [
+            '${cachedShare(u)} of all input',
+            if (written > 0) '${tokens(written)} written',
+          ].join(', '),
+        ),
+      _Figure(
+        'Turns',
+        '${u.turns.toInt()}',
+        key: const ValueKey('usage-turns'),
+      ),
     ];
     return SettingsGroup(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 10,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 16,
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final n = figures.length;
+              final room = [
+                figureRoom,
+                for (final f in figures)
+                  if (f.sub case final s?)
+                    _twoLines(s, _Figure.subStyle(theme), scaler),
+              ].reduce(max);
+              final fits = (box.maxWidth - _gap * (n - 1)) / n >= room;
+              final across = fits ? n : 2;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 12,
                 children: [
-                  if (measure.costs)
-                    Expanded(
-                      child: _Figure(
-                        'Spend',
-                        spendOf(u),
-                        key: const ValueKey('usage-spend'),
-                        sub: none,
-                      ),
+                  for (var i = 0; i < n; i += across)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: _gap,
+                      children: [
+                        for (var j = i; j < i + across; j++)
+                          Expanded(
+                            child: j < n ? figures[j] : const SizedBox(),
+                          ),
+                      ],
                     ),
-                  Expanded(
-                    child: _Figure(
-                      'Tokens',
-                      tokens(tokensOf(u)),
-                      key: const ValueKey('usage-tokens'),
-                      sub: measure.costs
-                          ? '${tokens(u.inputTokens.toInt())} in · '
-                                '${tokens(u.outputTokens.toInt())} out'
-                          : none,
+                  if (none != null)
+                    Text(
+                      none,
+                      key: const ValueKey('usage-no-cost-note'),
+                      style: theme.ui(theme.t.textMuted, size: 12),
                     ),
-                  ),
-                  Expanded(
-                    child: _Figure(
-                      'Turns',
-                      '$turns',
-                      key: const ValueKey('usage-turns'),
-                    ),
-                  ),
                 ],
-              ),
-              if (cache.isNotEmpty)
-                Text(
-                  'Cache: ${cache.join(' · ')}, apart from the tokens',
-                  key: const ValueKey('usage-cache'),
-                  style: tabular(theme.ui(t.textMuted, size: 12)),
-                ),
-            ],
+              );
+            },
           ),
         ),
       ],
     );
   }
+}
+
+/// The least width that holds [words] in [style] on two lines: a figure's
+/// small line is never cut while its figures can go two to a row.
+double _twoLines(String words, TextStyle style, TextScaler scaler) {
+  final p = TextPainter(
+    text: TextSpan(text: words, style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: scaler,
+    maxLines: 2,
+  )..layout();
+  var (fit, short) = (p.width, 0.0);
+  while (fit - short > 1) {
+    final mid = (fit + short) / 2;
+    p.layout(maxWidth: mid);
+    if (p.didExceedMaxLines) {
+      short = mid;
+    } else {
+      fit = mid;
+    }
+  }
+  p.dispose();
+  return fit.ceilToDouble();
 }
 
 /// A headline figure: its label, the value large, a muted line under it.
@@ -143,21 +190,41 @@ class _Figure extends StatelessWidget {
           ),
         ),
         if (sub case final s?)
-          Text(s, maxLines: 2, style: theme.ui(t.textMuted, size: 12)),
+          // Two lines always fit (UsageTotalsCard makes the room); the
+          // ellipsis is the last resort, never a silent cut.
+          Text(
+            s,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: subStyle(theme),
+          ),
       ],
     );
   }
+
+  /// The small line's style, which the card measures its room by.
+  static TextStyle subStyle(NushiTheme theme) =>
+      theme.ui(theme.t.textMuted, size: 12);
 }
 
 /// What the figures are and aren't, in small print under them.
 class UsageFootnote extends StatelessWidget {
-  const new(this.earliest, {required this.costs, super.key});
+  const new(
+    this.earliest, {
+    required this.costs,
+    this.cached = false,
+    super.key,
+  });
 
   /// When the first turn kept ended.
   final DateTime earliest;
 
   /// Whether a cost was reported: then what spend is, said first.
   final bool costs;
+
+  /// Whether the Cached figure shows (anything read from or written to
+  /// the cache): then what it is.
+  final bool cached;
 
   @override
   Widget build(BuildContext context) {
@@ -170,6 +237,8 @@ class UsageFootnote extends StatelessWidget {
       child: Text(
         '${costs ? 'Spend is what the agent reports, which on a subscription '
                   'is what the API would charge. ' : ''}'
+        '${cached ? 'Cached is what the agent read back from its cache, '
+                  'apart from the tokens. ' : ''}'
         'Usage is counted from $since, the first turn this version kept; '
         'turns Nushi runs out of sight (a context check, a workflow’s '
         'agents) aren’t counted.',
