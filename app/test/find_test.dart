@@ -256,7 +256,7 @@ void main() {
     );
     final doc = diff.document;
     final hits = findInDiff(
-      diff.lines,
+      diff.lines.lineAt,
       doc.oldLineCount,
       doc.newLineCount,
       'A',

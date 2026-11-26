@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/preview_find.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/source_view.dart';
 
@@ -149,5 +150,58 @@ void main() {
       );
       await endEditor(tester, d);
     }
+  }, variant: onMac);
+
+  testWidgets('unwrapped, a line dense with matches paints those in sight, '
+      'not the rest', (tester) async {
+    wrapLines.value = false;
+    final (d, _) = await openEditor(
+      tester,
+      {'dense.txt': utf8.encode('line 1: ${'zq ' * 1500}\nline 2: end')},
+      open: const ['dense.txt'],
+      readOnly: const {'dense.txt'},
+    );
+    await tester.tap(_line('line 2: end'));
+    await tester.pumpAndSettle();
+    await press(tester, LogicalKeyboardKey.keyF, cmd: true);
+    await look(tester, 'zq');
+    expect(find.text('1 of 1500'), findsOne);
+    final dense = find.byWidgetPredicate(
+      (w) => w is LineHits && w.hits.length == 1500,
+    );
+    final view = tester.getRect(find.byType(SourceView));
+    final across = tester
+        .widgetList<SingleChildScrollView>(
+          find.descendant(
+            of: find.byType(SourceView),
+            matching: find.byType(SingleChildScrollView),
+          ),
+        )
+        .firstWhere((v) => v.scrollDirection == Axis.horizontal)
+        .controller!;
+    // Scrolled along it: the line is painted again, its matches in sight.
+    for (final part in [1 / 3, 2 / 3]) {
+      LineHits.painted = 0;
+      across.jumpTo(across.position.maxScrollExtent * part);
+      await tester.pump();
+      final p = hitParagraphIn(tester.renderObject(dense))!;
+      final at = p.localToGlobal(Offset.zero);
+      final shown = tester
+          .widget<LineHits>(dense)
+          .hits
+          .where(
+            (h) => hitBoxes(
+              p,
+              h.start,
+              h.end,
+            ).any((b) => view.overlaps(b.shift(at))),
+          );
+      expect(shown.length, greaterThan(10));
+      expect(
+        LineHits.painted,
+        inInclusiveRange(shown.length, shown.length + 4),
+      );
+    }
+    await endEditor(tester, d);
   }, variant: onMac);
 }

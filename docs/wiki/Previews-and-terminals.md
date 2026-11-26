@@ -118,7 +118,7 @@ Press ⌘F with a file in the Files pane to find text in it, the same way you fi
 3. Press ⏎ for the next match and ⇧⏎ for the one before. The file scrolls to each one.
 4. Press Esc to close the bar.
 
-It works in rendered Markdown, in a CSV's table (its header too; a match hidden past a cell's "…" marks the whole cell), in a file you're editing, and in one that shows read-only. It finds in every line or row, not just those on screen.
+It works in rendered Markdown, in a CSV's table (its header too; a match hidden past a cell's "…" marks the whole cell), in a file you're editing, and in one that shows read-only. It finds in every line or row, not just those on screen. In a large read-only file the count goes 10,000 at a time ("1 of 10,000+"), ⏎ and ⇧⏎ still reach every match, and every match on screen is still marked.
 
 On the Mac it works in an HTML page and a browser tab too: click in the page, then press ⌘F. It finds the text you can see on the page; Esc puts you back where you were: in the page, or in the address bar if you pressed ⌘F there. On Linux and Windows a page has no find of its own yet. SVG, PDF and diagram previews have none.
 

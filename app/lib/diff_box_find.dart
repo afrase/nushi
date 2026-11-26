@@ -2,6 +2,7 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:nushi/diff_find.dart';
+import 'package:nushi/line_search.dart' show LazyKeys;
 import 'package:nushi/syntax.dart';
 import 'package:nushi/transcript_find.dart';
 
@@ -10,9 +11,16 @@ import 'package:nushi/transcript_find.dart';
 /// and kept where it was across a switch of views (ADR 0107).
 class DiffBoxFind {
   (String, SyntaxLines)? _foundFor;
-  List<DiffHit> _also = const [];
-  Map<String, DiffHit> _hits = const {};
+  List<DiffHit> _steps = const []; // in the find's order, each its key's
+  List<DiffHit> _marked = const []; // those and the unchanged lines' others
   String? _shown; // the hit last gone to
+
+  /// The find's current hit, while it holds these hits.
+  DiffHit? _now(Find f) {
+    if (_steps.isEmpty || f.hits.length != _steps.length) return null;
+    final h = _steps[f.at.clamp(0, _steps.length - 1)];
+    return f.current == hitKey(h) ? h : null;
+  }
 
   /// Finds and marks what [f] asks for in [c]'s [lines], and goes to its
   /// current hit. [alive] says whether the box is still there once the
@@ -35,19 +43,25 @@ class DiffBoxFind {
         tell(const []);
       }
       _foundFor = _shown = null;
-      _hits = const {};
+      _steps = _marked = const [];
       return;
     }
     if (_foundFor != (q, lines)) {
       _foundFor = (q, lines);
       final doc = c.document;
-      final hits = findInDiff(lines, doc.oldLineCount, doc.newLineCount, q);
-      _also = hits.also;
-      _hits = {for (final h in hits.steps) hitKey(h): h};
-      tell(_hits.keys.toList());
+      final hits = findInDiff(
+        lines.plainAt,
+        doc.oldLineCount,
+        doc.newLineCount,
+        q,
+      );
+      final steps = _steps = hits.steps;
+      _marked = [...steps, ...hits.also];
+      // Each key made only when read: there can be tens of thousands.
+      tell(LazyKeys(steps.length, (i) => hitKey(steps[i])));
     }
-    final now = _hits[f.current];
-    lines.mark([..._hits.values, ..._also], now);
+    final now = _now(f);
+    lines.mark(_marked, now);
     if (now != null && f.current != _shown) {
       _shown = f.current;
       c.jumpToLine(now.side, now.line);
@@ -66,7 +80,7 @@ class DiffBoxFind {
     required bool unified,
     required bool Function() current,
   }) {
-    final now = _hits[f.current];
+    final now = _now(f);
     if (now == null) return;
     // Where the leaving view, still laid out, shows it.
     final y = c.viewportYOfLine(now.side, now.line);

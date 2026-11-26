@@ -10,6 +10,7 @@ import 'package:nushi/blame_gutter.dart';
 import 'package:nushi/change_marks.dart';
 import 'package:nushi/indent_guides.dart';
 import 'package:nushi/line_changes.dart';
+import 'package:nushi/line_search.dart';
 import 'package:nushi/menu.dart' show MenuEntry;
 import 'package:nushi/preview_find.dart';
 import 'package:nushi/preview_text.dart';
@@ -91,16 +92,19 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
   String _text = '';
 
   /// The find's matches in the lines (`source_view_find.dart`), for the
-  /// lowered query [_looked]; each line's, by its index; the last ask for
-  /// the current one that was brought into view; whether the text starts
-  /// below the bar, for a match at its very top; the line numbers' width
-  /// when unwrapped, which stays over the lines.
-  List<_Hit> _hits = const [];
-  Map<int, List<int>> _hitsByLine = const {};
+  /// lowered query [_looked], and the search that finds them; the last ask
+  /// for the current one that was brought into view; whether the text
+  /// starts below the bar, for a match at its very top; the line numbers'
+  /// width when unwrapped, which stays over the lines.
+  PackedHits _hits = PackedHits();
+  final _search = LineSearch();
   String _looked = '';
   int _shownAsk = -1;
   bool _roomAbove = false;
   double _numbers = 0;
+
+  @override
+  LaterFind makeFind() => LaterFind()..onBeyond = _beyond;
 
   @override
   void findChanged() {
@@ -165,6 +169,8 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
 
   @override
   void dispose() {
+    // A search still going would tell the find, disposed below.
+    _search.cancel();
     _down.dispose();
     _across.dispose();
     _wholeWrapped.dispose();
@@ -186,7 +192,9 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
     _indents = null;
     _mark();
     _blame();
-    // The find looks in the new text, once this build is done.
+    // The find looks in the new text once this build is done. A search in
+    // the old one needs no cancel: no slice of it can run before the frame
+    // ends, and the look then drops it.
     if (find?.query != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _look(_looked);
@@ -652,6 +660,7 @@ class _SourceViewState extends State<SourceView> with FindInSlot<SourceView> {
                               LineHits(
                                 hits: _lineHits(i),
                                 colors: colors,
+                                inSightAcross: true,
                                 child: Text.rich(
                                   text(i),
                                   softWrap: false,

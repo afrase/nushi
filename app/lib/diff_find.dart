@@ -14,10 +14,12 @@ typedef DiffHits = ({List<DiffHit> steps, List<DiffHit> also});
 /// A hit's name for the find's list.
 String hitKey(DiffHit h) => '${h.side.index}:${h.line}:${h.start}';
 
-/// The hits of [query] in [lines]; case aside. The sides are walked
-/// together: unchanged lines meet, so what's between them is in order.
+/// The hits of [query] in the lines [lineAt] reads, plain (not as a
+/// find drew them: a large diff's earlier query would draw thousands);
+/// case aside. The sides are walked together: unchanged lines meet, so
+/// what's between them is in order.
 DiffHits findInDiff(
-  DiffLineSource lines,
+  DiffLine? Function(PaneSide side, int line) lineAt,
   int oldLines,
   int newLines,
   String query,
@@ -37,8 +39,8 @@ DiffHits findInDiff(
 
   var (o, n) = (0, 0);
   while (o < oldLines || n < newLines) {
-    final old = o < oldLines ? lines.lineAt(PaneSide.old, o) : null;
-    final neu = n < newLines ? lines.lineAt(PaneSide.neu, n) : null;
+    final old = o < oldLines ? lineAt(PaneSide.old, o) : null;
+    final neu = n < newLines ? lineAt(PaneSide.neu, n) : null;
     if (old != null && old.kind != LineKind.unchanged) {
       add(steps, PaneSide.old, old);
       o++;
