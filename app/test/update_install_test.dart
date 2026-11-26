@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -175,6 +176,108 @@ void main() {
     expect(tester.getRect(button('Updating…')), rest);
     await render(tester, updateToast, 'busy_update_toast_busy');
     expect(tester.getRect(button('Release notes')), notes);
+    d.dispose();
+  }, variant: onMac);
+
+  // The failure's buttons stay put as they're pressed: Copy keeps its
+  // width as it reads Copied, and Retry, where Update stands, keeps its
+  // width as it reads Updating…, so Release notes stays put too. The card
+  // sits on the main area's floor, so its row stays where it was as the
+  // reason above it goes.
+  testWidgets("a failure's Copy and Retry keep their width as they're "
+      'pressed, and nothing beside them moves', (tester) async {
+    clipboardCopies(tester);
+    for (final b in renderThemes) {
+      var found = newerUpdate('0.1.17', cask: 'nushi', error: notYet);
+      final fake = updateDaemon(() => found);
+      final d = await openWithUpdate(tester, fake, brightness: b);
+      Finder button(String label) => find.descendant(
+        of: updateToast,
+        matching: find.byWidgetPredicate(
+          (w) => w is Button && w.label == label,
+        ),
+      );
+      final copy = tester.getRect(button('Copy'));
+      final retry = tester.getRect(button('Retry'));
+      final notes = tester.getRect(button('Release notes'));
+      await render(tester, updateToast, 'press_update_toast_failed_${b.name}');
+      await tester.tap(button('Copy'));
+      await tester.pump();
+      expect(tester.getRect(button('Copied')), copy);
+      expect(tester.getRect(button('Retry')), retry);
+      expect(tester.getRect(button('Release notes')), notes);
+      await render(tester, updateToast, 'press_update_toast_copied_${b.name}');
+      await tester.tap(button('Retry'));
+      await tester.pump();
+      expect(tester.getRect(button('Copied')), copy);
+      expect(tester.getRect(button('Retry')), retry);
+      expect(tester.getRect(button('Release notes')), notes);
+      found = newerUpdate('0.1.17', cask: 'nushi', installing: true);
+      fake.emit(EventsResponse(update: found));
+      await tester.pump();
+      await tester.pump();
+      expect(tester.getRect(button('Updating…')), retry);
+      expect(tester.getRect(button('Release notes')), notes);
+      await render(
+        tester,
+        updateToast,
+        'press_update_toast_retrying_${b.name}',
+      );
+      await tester.pump(const Duration(seconds: 3));
+      await closeView(tester, d);
+    }
+  }, variant: onMac);
+
+  // The card is narrow: in each state its rows fit it, and no button's
+  // label is cut, whichever of its labels it reads.
+  testWidgets('the card at its width: nothing overflows and no label is '
+      'cut, in each state', (tester) async {
+    clipboardCopies(tester);
+    var found = newerUpdate('0.1.17', cask: 'nushi', error: notYet);
+    final fake = updateDaemon(() => found);
+    final hold = Completer<InstallUpdateResponse>();
+    fake.on((input) => input is InstallUpdateRequest ? hold.future : null);
+    final d = await openWithUpdate(tester, fake);
+    void fits(String state) {
+      final card = tester.getRect(updateToast);
+      expect(card.width, UpdateToast.width, reason: state);
+      for (final b
+          in find
+              .descendant(of: updateToast, matching: find.byType(Button))
+              .evaluate()) {
+        final label = (b.widget as Button).label;
+        final r = tester.getRect(find.byWidget(b.widget));
+        expect(card.contains(r.topLeft), isTrue, reason: '$state: $label');
+        expect(
+          card.contains(r.bottomRight - const Offset(1, 1)),
+          isTrue,
+          reason: '$state: $label',
+        );
+        final text = tester.renderObject<RenderParagraph>(
+          find.descendant(
+            of: find.byWidget(b.widget),
+            matching: find.text(label),
+          ),
+        );
+        expect(text.didExceedMaxLines, isFalse, reason: '$state: $label');
+      }
+      expect(tester.takeException(), isNull, reason: state);
+    }
+
+    fits('failed');
+    await tester.tap(find.text('Copy'));
+    await tester.pump();
+    fits('copied');
+    await tester.tap(find.text('Retry'));
+    await tester.pump();
+    fits('retrying');
+    found = newerUpdate('0.1.17', cask: 'nushi', installing: true);
+    fake.emit(EventsResponse(update: found));
+    await tester.pump();
+    await tester.pump();
+    fits('updating');
+    hold.complete(InstallUpdateResponse());
+    await tester.pump(const Duration(seconds: 3));
     d.dispose();
   }, variant: onMac);
 
