@@ -249,12 +249,17 @@ String worktreeName(RelatedWorktree w) {
       : head.substring(0, min(7, head.length));
 }
 
-/// "merged", as git shows it on the branch or, for a squash merge git can't
-/// see, as GitHub has its pull request merged (asked once it's gone, again
-/// while it's open; issue 83); else "removed" for one that's gone, '' for
-/// one still there.
-String worktreeEnd(RelatedWorktree w) => w.merged || w.pullMerged
-    ? 'merged'
-    : w.state == 'present'
-    ? ''
-    : 'removed';
+/// How [w] ended, in the panel's words: "Merged" when its commits are on
+/// the branch, as git shows it or, for a squash merge git can't see, as
+/// GitHub has its pull request merged (asked once it's gone, again while
+/// it's open; issue 83); "Removed", or "Merged, removed", once it's gone;
+/// '' for one still there and not merged.
+String worktreeEnd(RelatedWorktree w) {
+  final merged = w.merged || w.pullMerged;
+  return switch ((w.state == 'present', merged)) {
+    (true, false) => '',
+    (true, true) => 'Merged',
+    (false, false) => 'Removed',
+    (false, true) => 'Merged, removed',
+  };
+}

@@ -130,8 +130,8 @@ String whereLabel(String where, [List<RelatedWorktree> related = const []]) {
   final path = worktreeOf(where);
   if (path == null) return scope;
   final w = related.where((w) => w.path == path).firstOrNull;
-  return '${w == null ? plainName(path.split('/').last) : worktreeName(w)} '
-      '· $scope';
+  return '${w == null ? plainName(path.split('/').last) : worktreeName(w)}, '
+      '$scope';
 }
 
 /// A scope's name ([scopeOf]) as its tab says it, Commits' by the commits.

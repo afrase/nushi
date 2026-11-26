@@ -401,7 +401,7 @@ void main() {
       chatState.related.take([_worktree('a', state: 'removed')]);
       await showChanges(tester);
       fake.calls.clear();
-      await pickFromMenu(tester, 'removed', detail: true);
+      await pickFromMenu(tester, 'Removed', detail: true);
       final diff = _calls<GetDiffRequest>(fake).single;
       expect(diff.folder, '/x');
       expect(diff.after, _base);
@@ -426,7 +426,7 @@ void main() {
       chatState.related.take([a]);
       await showChanges(tester);
       fake.calls.clear();
-      await pickFromMenu(tester, 'removed', detail: true);
+      await pickFromMenu(tester, 'Removed', detail: true);
       expect(
         find.text("This worktree's commits are gone: git no longer has them."),
         findsOne,
@@ -506,16 +506,19 @@ void main() {
         findsNothing,
       );
       expect(
-        find.text('+12 −3 · 4 files · 2 ahead', findRichText: true),
+        find.text('+12 −3, 4 files, 2 ahead', findRichText: true),
         findsOne,
       );
-      // How each ended: nothing while it's there.
+      // How each ended: nothing while it's there; the gone one folded.
+      expect(find.text('b'), findsNothing);
+      await tester.tap(find.text('1 removed'));
+      await tester.pump();
       expect(
-        find.descendant(of: row('b'), matching: find.text('removed')),
+        find.descendant(of: row('b'), matching: find.text('Removed')),
         findsOne,
       );
       expect(
-        find.descendant(of: row('a'), matching: find.text('removed')),
+        find.descendant(of: row('a'), matching: find.text('Removed')),
         findsNothing,
       );
       await tester.tap(find.text('a'));
@@ -525,7 +528,7 @@ void main() {
     });
 
     testWidgets('merged is what git shows, or what GitHub does of a squash '
-        '(issue 83); one neither shows reads as removed', (tester) async {
+        '(issue 83); one neither shows reads as removed only', (tester) async {
       await setUpChat(tester);
       chatState.related.take([
         _worktree('kept'),
@@ -534,9 +537,12 @@ void main() {
         _worktree('merged', state: 'removed', merged: true),
       ]);
       await showWidget(tester);
-      // The branch and the ends.
-      expect(find.text('merged'), findsNWidgets(3));
-      expect(find.text('removed'), findsOne);
+      await tester.tap(find.text('3 removed, 2 merged'));
+      await tester.pump();
+      // The ends.
+      expect(find.text('Merged, removed'), findsNWidgets(2));
+      expect(find.text('Removed'), findsOne);
+      expect(find.text('Merged'), findsNothing);
       await closeView(tester, daemon);
     });
 

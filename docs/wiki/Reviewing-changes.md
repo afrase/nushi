@@ -100,5 +100,5 @@ When a chat's pull request is merged or closed, the details panel's **Pull reque
 - If the agent is still working when you commit, Nushi warns you that files may change.
 - If something else staged files after you looked (the agent, for example), **Commit** refuses, so you can check them first.
 - If you remove a comment's card from the message box before sending, the comment is gone for good.
-- When the agent's helpers (subagents) work in their own worktrees, a menu at the left of the bar lets you look at those too. You can comment there, but you can't commit. One that's gone says "merged" or "removed"; a squash merge says "merged" once its pull request on GitHub is.
+- When the agent's helpers (subagents) work in their own worktrees, the details panel's **Worktrees** widget lists those still there, and a menu at the left of the bar lets you look at any of them. You can comment there, but you can't commit. Worktrees that are gone fold under one line in the widget, such as "2 removed, 1 merged": open it to see each, marked **Removed** or **Merged, removed** (one still there and merged says **Merged**). A squash merge reads as merged once its pull request on GitHub is.
 - On Linux and Windows, use Ctrl where the Mac uses ⌘. ⌃⌘2 is Ctrl+Alt+2 on Linux and Ctrl+Shift+2 on Windows.
