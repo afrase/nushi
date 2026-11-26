@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
@@ -151,6 +152,13 @@ type listed struct {
 // an entry PiG skipped as it can't read it comes back failed, with PiG's
 // words, by its file's scope.
 // PiG exits 1 when a server failed: the list says how each went.
+//
+// It runs in folder only when PiG trusts it. In one PiG doesn't trust it
+// runs in an empty temporary folder: pig would leave that folder's
+// .pig/mcp.json out anyway, and run elsewhere it reads nothing else the
+// folder brings, whatever its version does with a folder's settings. So
+// a list asked for any folder (Settings names one, a paired device any)
+// starts nothing of a folder the user hasn't trusted in PiG.
 func (c PiG) Check(ctx context.Context, folder string) ([]model.MCPServer, error) {
 	r, err := c.Run()
 	if err != nil {
@@ -158,8 +166,17 @@ func (c PiG) Check(ctx context.Context, folder string) ([]model.MCPServer, error
 	}
 	ctx, cancel := context.WithTimeout(ctx, checkFor)
 	defer cancel()
+	dir := folder
+	if !c.Trusts(folder) {
+		empty, err := os.MkdirTemp("", "nushi-pig-mcp-")
+		if err != nil {
+			return nil, fmt.Errorf("pig mcp list: %w", err)
+		}
+		defer func() { _ = os.RemoveAll(empty) }()
+		dir = empty
+	}
 	cmd := exec.CommandContext(ctx, r.CLI, "mcp", "list", "--json") //nolint:gosec // the user's pig, words of ours
-	cmd.Dir, cmd.Env = folder, r.Env
+	cmd.Dir, cmd.Env = dir, r.Env
 	procgroup.Bound(cmd)
 	var stdout, stderr capped
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -337,8 +354,9 @@ func (PiG) Shape() model.MCPShape {
 // same answer Servers marks Untrusted by (mcp's folderTrust).
 func (c PiG) TrustsFolder(folder string) bool { return c.Trusts(folder) }
 
-// ChecksInFolder is true: `pig mcp list` runs in the folder, where it
-// reads its .pig/mcp.json if PiG trusts it (mcp.Config).
+// ChecksInFolder is true: `pig mcp list` runs in the folder when PiG
+// trusts it, where it reads its .pig/mcp.json (mcp.Config); Check runs it
+// elsewhere for a folder PiG doesn't trust.
 func (PiG) ChecksInFolder() bool { return true }
 
 // errNoLocal is why Claude's local scope is refused.

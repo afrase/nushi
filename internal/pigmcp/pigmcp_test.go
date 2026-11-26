@@ -3,6 +3,7 @@ package pigmcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -387,6 +388,7 @@ func TestCheckReadsPigMcpList(t *testing.T) {
 		"` + p.project() + `: invalid server name \"bad name!\" (use letters, digits, \"_\" and \"-\")",
 		"` + p.project() + `: Unexpected end of JSON input",
 		"` + p.project() + `: server \"good\": legacy SSE transport is not supported; use the streamable HTTP URL"]}`
+	p.trust(t, true)
 	r, log := fakePig(t, list, 1)
 	got, err := PiG{Flavor: pi.PiG, Run: runs(r)}.Check(context.Background(), p.folder)
 	testcheck.NoErr(t, err)
@@ -409,6 +411,34 @@ func TestCheckReadsPigMcpList(t *testing.T) {
 	r, _ = fakePig(t, "Error: unknown command\n", 2)
 	if _, err := (PiG{Flavor: pi.PiG, Run: runs(r)}).Check(context.Background(), p.folder); err == nil || !strings.Contains(err.Error(), "said on stderr") {
 		t.Errorf("not a list: %v", err)
+	}
+}
+
+// In a folder PiG doesn't trust, the check runs pig somewhere else: an
+// empty temporary folder, gone when the check is over. pig would leave
+// the folder's own servers out anyway, and so nothing the folder brings
+// is read by a pig started there. Once PiG trusts it, pig runs in it.
+func TestCheckRunsElsewhereInAFolderPiGDoesntTrust(t *testing.T) {
+	p := newPlace(t)
+	list := `{"servers": [{"name": "good", "scope": "global", "state": "connected"}], "errors": []}`
+	for _, trusted := range []bool{false, true} {
+		if trusted {
+			p.trust(t, true)
+		}
+		r, log := fakePig(t, list, 0)
+		_, err := PiG{Flavor: pi.PiG, Run: runs(r)}.Check(context.Background(), p.folder)
+		testcheck.NoErr(t, err)
+		ran := strings.TrimSuffix(read(t, log), " mcp list --json\n")
+		switch {
+		case trusted && ran != p.folder:
+			t.Errorf("trusted: pig ran in %q, want the folder", ran)
+		case !trusted && (ran == p.folder || strings.HasPrefix(ran, p.folder+string(filepath.Separator))):
+			t.Errorf("not trusted: pig ran in the folder (%q)", ran)
+		case !trusted:
+			if _, err := os.Stat(ran); !errors.Is(err, os.ErrNotExist) {
+				t.Errorf("not trusted: the temporary folder %q is still there (%v)", ran, err)
+			}
+		}
 	}
 }
 
