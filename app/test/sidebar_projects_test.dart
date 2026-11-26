@@ -21,14 +21,14 @@ import 'sidebar_fixture.dart';
 // what joins it, where its empty group goes, how it looks and how it's
 // removed. Its renders: `make renders TEST=test/sidebar_projects_test.dart`.
 
-const _ledger = '/Users/me/ledger-poc';
+const _ledger = '/Users/me/parcel-poc';
 const _cubby = '/Users/me/cubby';
 const _garden = '/Users/me/garden';
 
-/// Three projects of one chat each, the newest first (ledger-poc, cubby,
+/// Three projects of one chat each, the newest first (parcel-poc, cubby,
 /// garden), a chat with no folder, and an archived one in attic.
 List<Chat> _chats() => [
-  chat('a', 'claude', 'Wire the ledger', folder: _ledger),
+  chat('a', 'claude', 'Wire the parcel', folder: _ledger),
   chat('c', 'codex', 'Cap the rates', folder: _cubby, age: 1),
   chat('d', 'claude', 'Plant the beds', folder: _garden, age: 2),
   chat('s', 'ante', 'Loose end', folder: '/tmp/scratch/s', age: 3)
@@ -303,7 +303,7 @@ void main() {
     const refusal = '"/Users/me/cubby" is not an absolute path to a folder';
     final (d, fake) = await arrangedSidebar(
       tester,
-      chats: [chat('a', 'claude', 'Wire the ledger', folder: _ledger)],
+      chats: [chat('a', 'claude', 'Wire the parcel', folder: _ledger)],
     );
     fake.answer = (input) => input is StartChatRequest
         ? throw ConnectException(Code.failedPrecondition, refusal)
@@ -335,7 +335,7 @@ void main() {
         tokens: tokens,
         size: const Size(560, 420),
         chats: [
-          chat('a', 'claude', 'Wire the ledger', folder: _ledger),
+          chat('a', 'claude', 'Wire the parcel', folder: _ledger),
           chat('e', 'ante', 'Jot it down', folder: '/Users/me/notes', age: 3),
         ],
       );
@@ -351,7 +351,7 @@ void main() {
       // In a window of a size, which a menu's width goes by.
       viewport(tester, const Size(560, 420));
       final d = await FakeDaemon([
-        chat('a', 'claude', 'Wire the ledger', folder: _ledger),
+        chat('a', 'claude', 'Wire the parcel', folder: _ledger),
       ]).connect(tester);
       await tester.pumpWidget(
         MaterialApp(

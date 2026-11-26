@@ -16,7 +16,7 @@ import 'harness.dart';
 import 'long_chat.dart';
 
 // ⌘F's jump: the current match in view, whatever its distance, on a chat
-// as long as the owner's. Its marks are in find_marks_test.dart.
+// thousands of lines long. Its marks are in find_marks_test.dart.
 
 /// The app on chat c with [items]; [settle] lets it fill in first.
 Future<Daemon> _app(

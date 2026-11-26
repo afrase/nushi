@@ -21,7 +21,7 @@ import 'right_panes_fixture.dart';
 
 // The bars (the daemon's update waiting for idle chats, a notice) take a
 // row of their own and never lie over what's under them (ADR 0128,
-// amended 2026-11-17): the owner's screenshot had the update's bar over
+// amended 2026-11-17): the case is the update's bar lying over
 // the transcript's first lines and a background command's pane for as
 // long as a chat ran.
 

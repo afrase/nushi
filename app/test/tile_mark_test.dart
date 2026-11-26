@@ -12,8 +12,8 @@ import 'package:nushi/tile_mark.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-// A tile's mark is where its ink is in the middle of the tile (the owner
-// saw an emoji low and left in one): what the tile painted is looked at,
+// A tile's mark is where its ink is in the middle of the tile (an emoji
+// once sat low and left in one): what the tile painted is looked at,
 // pixel by pixel, at both of a tile's sizes. Letters in the bundled font
 // everywhere; an emoji only where the Mac's own emoji font is, which the
 // tests' fonts don't have.

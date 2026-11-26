@@ -15,13 +15,13 @@ const _style = MarkdownStyle(
 
 TextSpan? _plain(String language, String code, TextStyle style) => null;
 
-/// A column of names beside three of sentences, as the owner saw it
-/// (2026-11-12): the names broke every two letters.
+/// A column of short names beside three of sentences, which once broke
+/// the names every two letters.
 const _table = '''
-| Name | Meaning / connection | Sound / katakana | Collision |
+| Name | Meaning / origin | Sound / stress | Clash |
 | --- | --- | --- | --- |
-| Bowler | The hat of London City clerks and bankers | BOH-ler, a long word about how it sounds when it is said aloud | None found |
-| Eyeshade | The green eyeshade was the bookkeeper's headwear, and "green eyeshade" means an accountant. Closest meaning in this group | EYE-shade, said as two words by most people who say it at all | None found (Visor is taken, see above). Apache Derby is a database, and elsewhere it suggests a horse race |
+| Magpie | A bird that gathers small shiny things into its nest | MAG-pie, a short word that is easy to say aloud in one breath | None found |
+| Starling | A small bird that flies at dusk in great flocks, and "murmuration" names the way they turn together. Closest meaning in this group | STAR-ling, said as two parts by most people who say it at all | None found (Swift is taken, see above). It is also a common surname, and elsewhere it suggests a song |
 ''';
 
 void main() {
@@ -47,7 +47,7 @@ void main() {
         ),
       );
       // One line each: a line is 13.5 × 1.5 high.
-      for (final name in ['Name', 'Bowler', 'Eyeshade']) {
+      for (final name in ['Name', 'Magpie', 'Starling']) {
         expect(
           tester.getSize(find.text(name)).height,
           lessThan(25),

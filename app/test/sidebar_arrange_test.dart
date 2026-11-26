@@ -65,7 +65,7 @@ void main() {
       shownInOrder(tester, [
         ...headers(),
         ...arrangeTitles,
-        'ledger-poc',
+        'parcel-poc',
         'cubby',
         'garden',
         'notes',
@@ -73,8 +73,8 @@ void main() {
       [
         'Pinned',
         'Keep this',
-        'ledger-poc',
-        'Wire the ledger',
+        'parcel-poc',
+        'Wire the parcel',
         'Seed data',
         'cubby',
         'Cap the rates',
@@ -111,7 +111,7 @@ void main() {
       'Pinned',
       'Keep this',
       'Today',
-      'Wire the ledger',
+      'Wire the parcel',
       'Yesterday',
       'Seed data',
       'Previous 7 days',
@@ -126,7 +126,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(order(tester).sublist(2, 5), [
       'Today',
-      'Wire the ledger',
+      'Wire the parcel',
       'Cap the rates',
     ]);
 
@@ -137,7 +137,7 @@ void main() {
       'Pinned',
       'Keep this',
       'Needs you',
-      'Wire the ledger',
+      'Wire the parcel',
       'Working',
       'Cap the rates',
       'Done',
@@ -152,7 +152,7 @@ void main() {
     final byAgent =
         {
             'ante': ['Jot it down'],
-            'claude': ['Wire the ledger', 'Plant the beds'],
+            'claude': ['Wire the parcel', 'Plant the beds'],
             'codex': ['Cap the rates'],
             'pig': ['Seed data'],
           }.entries.toList()
@@ -174,7 +174,7 @@ void main() {
       'In a worktree',
       'Seed data',
       'Not in a worktree',
-      'Wire the ledger',
+      'Wire the parcel',
       'Cap the rates',
       'Plant the beds',
       'Jot it down',
@@ -185,14 +185,14 @@ void main() {
     expect(shownInOrder(tester, ['Pinned', ...arrangeTitles]), [
       'Pinned',
       'Keep this',
-      'Wire the ledger',
+      'Wire the parcel',
       'Seed data',
       'Cap the rates',
       'Plant the beds',
       'Jot it down',
     ]);
     // A row outside its project's group says its project.
-    expect(find.text('ledger-poc'), findsNWidgets(2));
+    expect(find.text('parcel-poc'), findsNWidgets(2));
     d.dispose();
   });
 
@@ -234,7 +234,7 @@ void main() {
       'Jot it down',
       'Plant the beds',
       'Seed data',
-      'Wire the ledger',
+      'Wire the parcel',
     ]);
     await _pick(tester, ['Sort by', 'Z to A']);
     expect(shownInOrder(tester, arrangeTitles).sublist(1), titles.reversed);
@@ -242,7 +242,7 @@ void main() {
     await _pick(tester, ['Sort by', 'Last updated']);
     expect(sidebarAscending.value, isFalse);
     expect(shownInOrder(tester, arrangeTitles).sublist(1), [
-      'Wire the ledger',
+      'Wire the parcel',
       'Cap the rates',
       'Seed data',
       'Plant the beds',
@@ -255,7 +255,7 @@ void main() {
     ]);
     await _pick(tester, ['Sort by', 'Date created']);
     expect(shownInOrder(tester, arrangeTitles).sublist(1, 4), [
-      'Wire the ledger',
+      'Wire the parcel',
       'Seed data',
       'Cap the rates',
     ]);
@@ -282,7 +282,7 @@ void main() {
         'Jot it down',
         'Plant the beds',
         'Seed data',
-        'Wire the ledger',
+        'Wire the parcel',
       ],
     );
     openNthChat(d, 2);
@@ -307,7 +307,7 @@ void main() {
     await _pick(tester, ['Show', 'Branch']);
     expect(find.text('brisk-otter'), findsNothing);
     await _pick(tester, ['Show', 'Time']);
-    expect(find.text('10m'), findsOne); // Wire the ledger's age
+    expect(find.text('10m'), findsOne); // Wire the parcel's age
     expect(arrangedAsDefault, isFalse);
     expect(find.byTooltip('Arrange the sidebar (arranged your way)'), findsOne);
     await _pick(tester, ['Reset to defaults']);

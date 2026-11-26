@@ -42,7 +42,7 @@ List<String> _tiles(WidgetTester tester) {
 /// The projects' headers in the sidebar's list, top to bottom.
 List<String> _headers(WidgetTester tester) => shownInOrder(tester, _names);
 
-const _names = ['ledger-poc', 'cubby', 'garden', 'notes', 'attic'];
+const _names = ['parcel-poc', 'cubby', 'garden', 'notes', 'attic'];
 
 /// Presses [name]'s tile with the mouse and moves it, in small steps, to
 /// [goal] (a height in the window), pumping each.
@@ -60,7 +60,7 @@ Future<TestGesture> _drag(WidgetTester tester, String name, double goal) async {
 
 /// The sidebar of `arrangedSidebar` with no chat pinned, so each
 /// project's name shows only in its header: the projects, the newest chat
-/// first, are ledger-poc, cubby, garden, notes and attic.
+/// first, are parcel-poc, cubby, garden, notes and attic.
 Future<(Daemon, FakeDaemon)> _sidebar(
   WidgetTester tester, {
   Tokens tokens = Tokens.dark,
@@ -85,15 +85,15 @@ void main() {
   testWidgets('a tile dragged lands where it’s dropped: the sidebar’s '
       'order is saved, and its list follows', (tester) async {
     final (d, _) = await _sidebar(tester);
-    const before = ['ledger-poc', 'cubby', 'garden', 'notes', 'attic'];
+    const before = ['parcel-poc', 'cubby', 'garden', 'notes', 'attic'];
     expect(_tiles(tester), ['All projects', ...before, 'Add project…']);
     expect(_headers(tester), before);
 
-    // Down: ledger-poc to the lower half of garden, after it.
-    var drag = await _drag(tester, 'ledger-poc', _bottom(tester, 'garden'));
+    // Down: parcel-poc to the lower half of garden, after it.
+    var drag = await _drag(tester, 'parcel-poc', _bottom(tester, 'garden'));
     await drag.up();
     await tester.pumpAndSettle();
-    const once = ['cubby', 'garden', 'ledger-poc', 'notes', 'attic'];
+    const once = ['cubby', 'garden', 'parcel-poc', 'notes', 'attic'];
     expect(sidebarOrder.value, [cubby, garden, ledger, notes, attic]);
     expect(readSaved()['sidebarOrder'], sidebarOrder.value);
     expect(_tiles(tester), ['All projects', ...once, 'Add project…']);
@@ -105,7 +105,7 @@ void main() {
     drag = await _drag(tester, 'attic', _top(tester, 'cubby') + 4);
     await drag.up();
     await tester.pumpAndSettle();
-    const twice = ['attic', 'cubby', 'garden', 'ledger-poc', 'notes'];
+    const twice = ['attic', 'cubby', 'garden', 'parcel-poc', 'notes'];
     expect(_tiles(tester), ['All projects', ...twice, 'Add project…']);
     expect(_headers(tester), twice);
 
@@ -120,12 +120,12 @@ void main() {
     // so they go first.
     sidebarOrder.value = [garden, '', notes];
     final (d, _) = await _sidebar(tester);
-    const before = ['ledger-poc', 'cubby', 'attic', 'garden', 'notes'];
+    const before = ['parcel-poc', 'cubby', 'attic', 'garden', 'notes'];
     expect(_tiles(tester), ['All projects', ...before, 'Add project…']);
     final drag = await _drag(tester, 'notes', _top(tester, 'cubby') + 4);
     await drag.up();
     await tester.pumpAndSettle();
-    const after = ['ledger-poc', 'notes', 'cubby', 'attic', 'garden'];
+    const after = ['parcel-poc', 'notes', 'cubby', 'attic', 'garden'];
     expect(_tiles(tester), ['All projects', ...after, 'Add project…']);
     expect(_headers(tester), after);
     expect(sidebarOrder.value, [ledger, '', notes, cubby, attic, garden]);
@@ -175,13 +175,13 @@ void main() {
     // Over All projects: the gap opens at the top, under it.
     var drag = await _drag(tester, 'garden', all.center.dy);
     expect(tester.getRect(_tile('All projects')), all);
-    expect(_top(tester, 'ledger-poc'), greaterThan(_top(tester, 'garden')));
+    expect(_top(tester, 'parcel-poc'), greaterThan(_top(tester, 'garden')));
     await drag.up();
     await tester.pumpAndSettle();
     expect(_tiles(tester), [
       'All projects',
       'garden',
-      'ledger-poc',
+      'parcel-poc',
       'cubby',
       'notes',
       'attic',
@@ -197,7 +197,7 @@ void main() {
     expect(_tiles(tester), [
       'All projects',
       'garden',
-      'ledger-poc',
+      'parcel-poc',
       'notes',
       'attic',
       'cubby',

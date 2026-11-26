@@ -13,7 +13,7 @@ import 'harness.dart';
 import 'long_chat.dart';
 
 // Jump to latest's glide and its chip, and a chat opening where it was
-// left: on a chat thousands of lines long (longChat), as the owner's are.
+// left: on a chat thousands of lines long (longChat), as real ones can be.
 
 /// The app with chats a and b, each [turns] long; [waiting] chats wait on
 /// the user.

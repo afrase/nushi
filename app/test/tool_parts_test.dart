@@ -8,7 +8,7 @@ import 'package:nushi/widgets.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-const _gateway = 'mcp__litellm-mcp-gateway__invoke_tool';
+const _gateway = 'mcp__example-mcp-gateway__invoke_tool';
 
 /// A call titled [title], with the MCP server and tool Claude's harness
 /// reads from a title of the form `mcp__<server>__<tool>`.
@@ -54,7 +54,7 @@ void main() {
   setUpAll(loadFonts);
 
   test("an MCP call's title is its server, tool and the tool it runs", () {
-    expect(mcpOf(_call('1')), ('litellm-mcp-gateway', 'invoke_tool'));
+    expect(mcpOf(_call('1')), ('example-mcp-gateway', 'invoke_tool'));
     expect(mcpOf(Item(mcpServer: 'a', mcpTool: 'b__c')), ('a', 'b__c'));
     expect(mcpOf(Item(mcpServer: 'a')), isNull);
     // A daemon below API 140 sends neither: the title is shown as it is.
@@ -62,9 +62,9 @@ void main() {
     expect(toolTitle(Item(title: _gateway)), _gateway);
     expect(
       toolTitle(_call('1', input: _input)),
-      'litellm-mcp-gateway · invoke_tool · jira_search',
+      'example-mcp-gateway · invoke_tool · jira_search',
     );
-    expect(toolTitle(_call('2')), 'litellm-mcp-gateway · invoke_tool');
+    expect(toolTitle(_call('2')), 'example-mcp-gateway · invoke_tool');
     // tool before name; a nested "tool" isn't the call's; a cut input
     // still names it.
     expect(
@@ -98,7 +98,7 @@ void main() {
   testWidgets('the MCP title, its raw name on hover', (tester) async {
     await tester.pumpWidget(_rows([_call('1', input: _input)]));
     expect(
-      find.text('litellm-mcp-gateway · invoke_tool · jira_search'),
+      find.text('example-mcp-gateway · invoke_tool · jira_search'),
       findsOneWidget,
     );
     expect(find.byTooltip(_gateway), findsOneWidget);

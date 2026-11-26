@@ -15,7 +15,7 @@ import 'package:nushi/trust_card.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-// The owner clicked New skill… for PiG and got an empty new chat: the
+// New skill… for PiG once gave an empty new chat: the
 // request was dropped when the chat's snapshot hadn't come yet, and went
 // nowhere when the start ended with another chat selected (ADR 0052).
 

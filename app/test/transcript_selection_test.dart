@@ -294,7 +294,7 @@ void main() {
     await tester.pump();
     await closeView(tester, d);
 
-    // The message sent with it, as the owner saw it.
+    // The message sent with it, as the transcript shows it.
     final sent = await _app(
       tester,
       {

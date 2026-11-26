@@ -168,7 +168,7 @@ void main() {
 
   testWidgets('the button sits left of the ⋯, and the menu lists the '
       'servers, then Add server', (tester) async {
-    final s = _Servers()..rows = [_server('court-finder')];
+    final s = _Servers()..rows = [_server('tide-tracker')];
     await _pane(tester, s);
     final servers = tester.getRect(find.byTooltip('Servers'));
     final more = tester.getRect(find.byTooltip('More'));
@@ -176,7 +176,7 @@ void main() {
     expect(servers.center.dy, closeTo(more.center.dy, 0.5));
     await _openMenu(tester);
     expect(find.text('Servers'), findsOneWidget);
-    expect(find.text('court-finder'), findsOneWidget);
+    expect(find.text('tide-tracker'), findsOneWidget);
     expect(find.text('pnpm run dev --port 3000'), findsOneWidget);
     expect(find.text('Add server'), findsOneWidget);
     expect(find.text('Stop all servers'), findsNothing);
@@ -471,7 +471,7 @@ void main() {
   final states = <String, List<DevServer> Function()>{
     'empty': () => [],
     'entries': () => [
-      _server('court-finder'),
+      _server('tide-tracker'),
       _server(
         'storybook',
         index: 1,
@@ -488,14 +488,14 @@ void main() {
     ],
     'starting': () => [
       _server(
-        'court-finder',
+        'tide-tracker',
         state: DevServerState.DEV_SERVER_STATE_STARTING,
         id: 'a',
       ),
     ],
     'running': () => [
       _server(
-        'court-finder',
+        'tide-tracker',
         state: DevServerState.DEV_SERVER_STATE_RUNNING,
         id: 'a',
         logId: 'a',
@@ -503,7 +503,7 @@ void main() {
     ],
     'failed': () => [
       _server(
-        'court-finder',
+        'tide-tracker',
         state: DevServerState.DEV_SERVER_STATE_FAILED,
         error: 'it ended (exit code 1) before answering on port 3000',
         output: 'Error: Cannot find module vite',
@@ -519,7 +519,7 @@ void main() {
         port: 8080,
       ),
       _server(
-        'court-finder',
+        'tide-tracker',
         index: 1,
         state: DevServerState.DEV_SERVER_STATE_NOT_ANSWERING,
         id: 'b',

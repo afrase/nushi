@@ -318,7 +318,7 @@ void main() {
     }
   }, variant: onMac);
 
-  // The owner's Mac has about 290 families. The menu filters as you type,
+  // A Mac can have about 290 families. The menu filters as you type,
   // and opens on the picked family, wherever it is in the list. The one
   // picked here is a font the tests have that has no letters (the
   // terminal's icons): its text is drawn by the bundled font behind it.

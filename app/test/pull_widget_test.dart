@@ -131,7 +131,7 @@ void main() {
     clock = () => _now;
   });
 
-  // The owner's report: a chat whose widget said "No pull request for x"
+  // The case: a chat whose widget said "No pull request for x"
   // didn't link the one opened since; only the details panel's widget
   // asked each minute, so with the panel hidden (or another tab) nothing
   // asked again.
@@ -285,7 +285,7 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
-  // The owner's report: old chats had pull requests opened after they
+  // The case: old chats had pull requests opened after they
   // were archived. An archived chat finds nothing new; its rows are asked
   // with the chat named, so the daemon drops one opened outside its life.
   testWidgets('an archived chat asks for its rows, never to find one', (
@@ -487,7 +487,7 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
-  // The owner's report: the widget's ⋯, at the window's right, opened its
+  // The case: the widget's ⋯, at the window's right, opened its
   // menu off to one side; and the pointer going onto it closed it. A row's
   // ⋯ is the same kind of button.
   testWidgets("a row's ⋯ opens its menu under it, ending at its right "

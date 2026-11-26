@@ -27,13 +27,13 @@ final _items = <Item>[
     title: 'Build CSV date parser in rusty',
     status: 'completed',
     model: 'sonnet',
-    agentId: 'ab89b68fab85fc5e7',
+    agentId: 'a1111111111111111',
     subagent: Subagent(
       state: 'stopped',
-      started: Int64(1793088263304),
-      ended: Int64(1793088325304),
+      started: Int64(1790000000000),
+      ended: Int64(1790000062000),
       worked: Int64(62000),
-      session: 'ab89b68fab85fc5e7',
+      session: 'a1111111111111111',
     ),
   ),
   for (final (id, title) in [
@@ -50,7 +50,7 @@ final _items = <Item>[
   Item(
     id: 'u2',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
-    text: 'Use Opus for it instead.',
+    text: 'Run it again on Opus, please.',
   ),
   // Its Stop, asked of Claude (as without a session of its own).
   Item(
@@ -68,8 +68,8 @@ final _items = <Item>[
     title: 'Build CSV date parser (Opus)',
     status: 'completed',
     model: 'opus',
-    agentId: 'aba0c75971268c18b',
-    subagent: Subagent(state: 'running', session: 'aba0c75971268c18b'),
+    agentId: 'a2222222222222222',
+    subagent: Subagent(state: 'running', session: 'a2222222222222222'),
   ),
   Item(
     id: 'b1',
@@ -94,7 +94,7 @@ final _items = <Item>[
     toolKind: 'execute',
     status: 'completed',
     backgroundCommand: BackgroundCommand(
-      id: 'bgu2i75cc',
+      id: 'bg1111111',
       state: 'running',
       output: 'watching…\n',
     ),

@@ -30,8 +30,8 @@ func (l *lookingTree) Under(root int) ([]model.Process, error) {
 
 // A real shell, started as Claude Code starts a background command (a
 // process group of its own running "eval '<command>' … && pwd -P >| …"),
-// holds the command running past an end line in its file, as the owner's
-// server's shutdown log did (2026-11-17); once its group is killed, the
+// holds the command running past an end line in its file, as a
+// server's shutdown log can; once its group is killed, the
 // end is taken.
 func TestARealShellHoldsItsCommandRunning(t *testing.T) {
 	dir := t.TempDir()

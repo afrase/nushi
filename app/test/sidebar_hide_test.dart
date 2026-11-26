@@ -152,7 +152,7 @@ void main() {
       d.dispose();
     }, variant: onMac);
 
-    // The owner, of the beta: the button at a header's left was smaller
+    // In a beta, the button at a header's left was smaller
     // than the icon buttons at its right. It's the same control: the same
     // icon, the same box around it, so the same fill under the pointer.
     for (final (hidden, brightness) in [

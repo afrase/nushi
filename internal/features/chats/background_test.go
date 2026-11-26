@@ -47,8 +47,8 @@ func (f *fakeProcesses) lookedSince(n int) bool {
 	return f.looked > n
 }
 
-// Output can follow Claude's end line: the owner's server (2026-11-17),
-// stopped by TaskStop, logged its shutdown after "[killed]". That ends the
+// Output can follow Claude's end line: a server stopped by TaskStop
+// can log its shutdown after "[killed]". That ends the
 // command once the file stops growing and its shell no longer runs; while
 // the shell runs, the line is taken for the command's own, and the
 // restart waits for it.

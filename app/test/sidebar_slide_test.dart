@@ -14,13 +14,13 @@ import 'sidebar_fixture.dart';
 // apart to open the gap where the dragged one would land, and settle on
 // the drop; a list that refuses the drag doesn't move.
 
-const _ledger = '/Users/me/ledger-poc';
+const _ledger = '/Users/me/parcel-poc';
 
-/// Four projects, the newest chat first: ledger-poc (three chats), cubby,
+/// Four projects, the newest chat first: parcel-poc (three chats), cubby,
 /// garden, notes; [pins] pinned, by id, at their places.
 List<Chat> _chats({Map<String, int> pins = const {}}) => [
   for (final c in [
-    chat('a', 'claude', 'Wire the ledger', folder: _ledger),
+    chat('a', 'claude', 'Wire the parcel', folder: _ledger),
     chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cubby', age: 1),
     chat('d', 'claude', 'Plant the beds', folder: '/Users/me/garden', age: 2),
     chat('e', 'ante', 'Jot it down', folder: '/Users/me/notes', age: 3),
@@ -89,31 +89,31 @@ void main() {
       'apart to open the gap, it shows faded there, and the drop settles '
       'without sliding again', (tester) async {
     final (d, _) = await _sidebar(tester);
-    const ledger = ['Wire the ledger', 'Seed data', 'Price the bonds'];
+    const ledger = ['Wire the parcel', 'Seed data', 'Price the bonds'];
     final before = _ys(tester, ledger);
-    final row = before['Seed data']! - before['Wire the ledger']!;
+    final row = before['Seed data']! - before['Wire the parcel']!;
 
-    // Up, into the top half of Wire the ledger's row.
+    // Up, into the top half of Wire the parcel's row.
     final drag = await _drag(
       tester,
       'Price the bonds',
-      before['Wire the ledger']! - 4,
+      before['Wire the parcel']! - 4,
     );
     expect(find.text('Price the bonds'), findsNWidgets(2)); // and lifted
     // The gap opened, the rows not moved yet: they slide.
-    expect(_y(tester, 'Wire the ledger'), before['Wire the ledger']);
+    expect(_y(tester, 'Wire the parcel'), before['Wire the parcel']);
     await tester.pump(_slide ~/ 2);
-    final midway = _y(tester, 'Wire the ledger');
-    expect(midway, greaterThan(before['Wire the ledger']!));
-    expect(midway, lessThan(before['Wire the ledger']! + row));
+    final midway = _y(tester, 'Wire the parcel');
+    expect(midway, greaterThan(before['Wire the parcel']!));
+    expect(midway, lessThan(before['Wire the parcel']! + row));
     await tester.pump(_slide);
     expect(_ys(tester, ledger), {
-      'Wire the ledger': before['Wire the ledger']! + row,
+      'Wire the parcel': before['Wire the parcel']! + row,
       'Seed data': before['Seed data']! + row,
-      'Price the bonds': before['Wire the ledger'], // in the gap
+      'Price the bonds': before['Wire the parcel'], // in the gap
     });
     expect(_opacity(tester, 'Price the bonds'), 0.4);
-    expect(_opacity(tester, 'Wire the ledger'), 1);
+    expect(_opacity(tester, 'Wire the parcel'), 1);
     // The projects below don't move.
     expect(_y(tester, 'cubby'), greaterThan(before['Price the bonds']!));
 
@@ -121,8 +121,8 @@ void main() {
     await tester.pump();
     // Already where they land: no slide back and forth.
     expect(_ys(tester, ledger), {
-      'Price the bonds': before['Wire the ledger'],
-      'Wire the ledger': before['Seed data'],
+      'Price the bonds': before['Wire the parcel'],
+      'Wire the parcel': before['Seed data'],
       'Seed data': before['Price the bonds'],
     });
     await tester.pump(_slide);
@@ -138,14 +138,14 @@ void main() {
       'its project, nothing slides; dragged off its list, the rows slide '
       'back and nothing moves', (tester) async {
     final (d, fake) = await _sidebar(tester, pins: {'b': 1});
-    const ledger = ['Wire the ledger', 'Price the bonds'];
+    const ledger = ['Wire the parcel', 'Price the bonds'];
     final before = _ys(tester, [...ledger, 'Cap the rates', 'Seed data']);
 
-    // Cap the rates (cubby) onto ledger-poc's rows.
+    // Cap the rates (cubby) onto parcel-poc's rows.
     var drag = await _drag(
       tester,
       'Cap the rates',
-      before['Wire the ledger']! - 4,
+      before['Wire the parcel']! - 4,
     );
     await tester.pump(_slide * 2);
     expect(_ys(tester, ledger), {for (final t in ledger) t: before[t]});
@@ -153,7 +153,7 @@ void main() {
     await tester.pump(_slide * 2);
     expect(_y(tester, 'Cap the rates'), before['Cap the rates']);
 
-    // Seed data (pinned, of ledger-poc) onto its project's rows.
+    // Seed data (pinned, of parcel-poc) onto its project's rows.
     drag = await _drag(tester, 'Seed data', before['Price the bonds']! + 4);
     await tester.pump(_slide * 2);
     expect(_ys(tester, ledger), {for (final t in ledger) t: before[t]});
@@ -161,14 +161,14 @@ void main() {
     await tester.pump(_slide * 2);
     expect(fake.calls.whereType<PinChatsRequest>(), isEmpty);
 
-    // Price the bonds up over Wire the ledger, then off, onto cubby's.
+    // Price the bonds up over Wire the parcel, then off, onto cubby's.
     drag = await _drag(
       tester,
       'Price the bonds',
-      before['Wire the ledger']! - 4,
+      before['Wire the parcel']! - 4,
     );
     await tester.pump(_slide * 2);
-    expect(_y(tester, 'Wire the ledger'), isNot(before['Wire the ledger']));
+    expect(_y(tester, 'Wire the parcel'), isNot(before['Wire the parcel']));
     await drag.moveTo(tester.getCenter(_in('Cap the rates')));
     await tester.pump();
     await tester.pump(_slide * 2);
@@ -199,29 +199,29 @@ void main() {
     );
     await tester.pumpAndSettle(); // its rows fold (a Disclosure)
     expect(_in('Jot it down'), findsNothing);
-    const headers = ['ledger-poc', 'cubby', 'garden', 'notes'];
+    const headers = ['parcel-poc', 'cubby', 'garden', 'notes'];
     final before = _ys(tester, headers);
     // A collapsed group is its header: cubby's group less its one row.
-    final row = _y(tester, 'Seed data') - _y(tester, 'Wire the ledger');
+    final row = _y(tester, 'Seed data') - _y(tester, 'Wire the parcel');
     final notes = before['garden']! - before['cubby']! - row;
 
-    final drag = await _drag(tester, 'notes', before['ledger-poc']! - 4);
+    final drag = await _drag(tester, 'notes', before['parcel-poc']! - 4);
     await tester.pump(_slide * 2);
     final moved = _ys(tester, headers);
-    // ledger-poc, cubby and garden down by the same: notes's height.
-    final by = moved['ledger-poc']! - before['ledger-poc']!;
+    // parcel-poc, cubby and garden down by the same: notes's height.
+    final by = moved['parcel-poc']! - before['parcel-poc']!;
     expect(by, closeTo(notes, 0.01));
     for (final h in ['cubby', 'garden']) {
       expect(moved[h], closeTo(before[h]! + by, 0.01));
     }
-    expect(moved['notes'], closeTo(before['ledger-poc']!, 0.01));
+    expect(moved['notes'], closeTo(before['parcel-poc']!, 0.01));
     expect(_opacity(tester, 'notes'), 0.4);
 
     await drag.up();
     await tester.pump();
     expect(_ys(tester, headers), {
-      'notes': closeTo(before['ledger-poc']!, 0.01),
-      for (final h in ['ledger-poc', 'cubby', 'garden'])
+      'notes': closeTo(before['parcel-poc']!, 0.01),
+      for (final h in ['parcel-poc', 'cubby', 'garden'])
         h: closeTo(before[h]! + by, 0.01),
     });
     expect(sidebarOrder.value, [
@@ -273,15 +273,15 @@ void main() {
 
   testWidgets('Reduce Motion: the gap opens at once, no slide', (tester) async {
     final (d, _) = await _sidebar(tester, still: true);
-    final before = _ys(tester, ['Wire the ledger', 'Seed data']);
-    final row = before['Seed data']! - before['Wire the ledger']!;
+    final before = _ys(tester, ['Wire the parcel', 'Seed data']);
+    final row = before['Seed data']! - before['Wire the parcel']!;
     final drag = await _drag(
       tester,
       'Price the bonds',
-      before['Wire the ledger']! - 4,
+      before['Wire the parcel']! - 4,
     );
     // No time has passed, and it's there.
-    expect(_y(tester, 'Wire the ledger'), before['Wire the ledger']! + row);
+    expect(_y(tester, 'Wire the parcel'), before['Wire the parcel']! + row);
     await drag.up();
     await tester.pump();
     expect(_opacity(tester, 'Price the bonds'), 1);
@@ -294,7 +294,7 @@ void main() {
     final drag = await _drag(
       tester,
       'Price the bonds',
-      _y(tester, 'Wire the ledger') - 4,
+      _y(tester, 'Wire the parcel') - 4,
     );
     await tester.pump(_slide * 2);
     await tester.pump(); // the hover, moved after the slide's last frame

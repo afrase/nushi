@@ -20,7 +20,7 @@ func TestParseLink(t *testing.T) {
 		{"https://ACME.atlassian.net:443/browse/abc-123?focusedCommentId=1#c", "acme.atlassian.net", "ABC-123"},
 		{"https://acme.atlassian.net/jira/software/projects/ABC/boards/1?selectedIssue=ABC-7", "acme.atlassian.net", "ABC-7"},
 		{"https://acme.atlassian.net/jira/software/c/projects/ABC/issues/ABC-9?jql=x", "acme.atlassian.net", "ABC-9"},
-		{"https://jira.corp.example:8443/jira/browse/OPS-1/", "jira.corp.example:8443", "OPS-1"},
+		{"https://jira.corp.example:8443/jira/browse/ACME-1/", "jira.corp.example:8443", "ACME-1"},
 		{"http://acme.atlassian.net/browse/X_Y-2", "acme.atlassian.net", "X_Y-2"},
 	} {
 		host, key, ok := parseLink(c.text)

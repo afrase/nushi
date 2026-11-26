@@ -158,7 +158,7 @@ void main() {
     }
   });
 
-  // The owner's report: a panel widget's ⋯ at the window's right opened
+  // The case: a panel widget's ⋯ at the window's right opened
   // its menu off to one side. Flutter pushes a menu with no room on its
   // opener's right back to the window's edge; a trailing button's ends
   // under it, as macOS and Claude draw one.

@@ -356,9 +356,9 @@ func TestEveryTextIsAsGitHubShowsIt(t *testing.T) {
 // repositories and owners, and only some owners.
 func TestInboxSearches(t *testing.T) {
 	today := time.Date(2026, 10, 26, 23, 30, 0, 0, time.FixedZone("JST", 9*3600)) // the 26th, 14:30 UTC
-	s := inboxSearches(InboxFilter{Days: 90, Wide: []string{"mine"}, Hide: []string{"boltops-tools/puma-cloudwatch", "spammy"},
+	s := inboxSearches(InboxFilter{Days: 90, Wide: []string{"mine"}, Hide: []string{"lakeside-kits/swan-moodboards", "spammy"},
 		Owners: []string{"afrase", "my-org"}}, today)
-	const opts = "is:open archived:false sort:updated-desc user:afrase user:my-org -repo:boltops-tools/puma-cloudwatch -user:spammy"
+	const opts = "is:open archived:false sort:updated-desc user:afrase user:my-org -repo:lakeside-kits/swan-moodboards -user:spammy"
 	want := map[string]any{
 		"review":      "is:pr " + opts + " user-review-requested:@me updated:>=2026-07-28",
 		"reviewAll":   "is:pr " + opts + " user-review-requested:@me",

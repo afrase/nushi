@@ -16,7 +16,7 @@ import 'harness.dart';
 
 const _new = 'package sub\n\nfunc Sub(a, b int) int {\n\treturn a - b\n}\n';
 
-/// The owner's report: a review comment went with a queued message, the
+/// The case: a review comment went with a queued message, the
 /// agent committed, and the comment was left where it couldn't be removed
 /// or changed. Each case below is one way a comment's file leaves the view
 /// it was made in, with the comment unsent, in the box, queued or answered.
@@ -153,7 +153,7 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets("the owner's case: sent with a queued message, then the "
+  testWidgets("the first case: sent with a queued message, then the "
       'agent commits; it shows outdated, removable, and goes once the '
       'message is answered', (tester) async {
     final (d, chat) = await open(tester);
@@ -273,7 +273,7 @@ void main() {
     d.dispose();
   }, variant: onMac);
 
-  testWidgets("the owner's second report: a stranded comment sent to the "
+  testWidgets("the second case: a stranded comment sent to the "
       'box and its card removed is gone; the next Send to agent sends only '
       'the new comments', (tester) async {
     final (d, chat) = await open(tester);
@@ -367,7 +367,7 @@ void main() {
     await settle(tester);
   }
 
-  // The owner's screenshot: "Outdated · Lines 124–139 · sent" above a file
+  // The case: "Outdated · Lines 124–139 · sent" above a file
   // still in the diff, after the turn ended.
   testWidgets('sent, then the agent rewrote its lines: outdated once the '
       'turn ends, and dropped', (tester) async {

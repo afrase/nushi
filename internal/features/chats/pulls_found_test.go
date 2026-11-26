@@ -41,8 +41,8 @@ func prItem(n int, created time.Time) model.GitHubItem {
 	return model.GitHubItem{Host: "github.com", Repo: "a/b", Number: n, ID: fmt.Sprint("PR_", n), Pull: true, Created: created}
 }
 
-// TestFoundPullInItsLife (the owner, 2026-11-16: "old chats have PRs that
-// were created after I archived them"): a pull request opened before the
+// TestFoundPullInItsLife (old chats showed pull requests opened after
+// they were archived): a pull request opened before the
 // chat began isn't found; an archived chat links nothing new; a found one
 // opened after the chat was archived, or before it began, is dropped
 // (not as unlinked: a hand link still works), and the chat still opens;
