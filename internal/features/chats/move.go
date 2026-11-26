@@ -77,6 +77,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		// side chats on it are dropped.
 		old := c.disconnectLocked()
 		held := c.held // a queue held after a stopped or failed turn stays held, as in load
+		// What the new session takes is stored with the move, by the save below.
 		s.useLocked(c, o)
 		c.held = held
 		c.saveLocked(func(s *model.ChatRecord) {

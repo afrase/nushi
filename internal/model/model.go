@@ -114,9 +114,22 @@ type ChatRecord struct {
 	// messages is archived as it's closed (ADR 0115), and Undo makes it
 	// that chat's side chat again. Unarchiving clears it.
 	SideOf *SideOf `json:",omitempty"`
+	// Took is what the chat's agent took when its session last opened,
+	// for the chat's status while no agent runs (asleep, or not reopened
+	// since the daemon started); nil: not known (a record from before it
+	// was kept).
+	Took *AgentTook `json:",omitempty"`
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`
+}
+
+// AgentTook is what a chat's agent said it can do when its session
+// opened, of what the app offers before the chat wakes.
+type AgentTook struct {
+	Images bool `json:",omitempty"` // images in prompts
+	Fork   bool `json:",omitempty"` // forking the session (side chats, Fork chat)
+	Rewind bool `json:",omitempty"` // forking at a message (rewind, Fork from here)
 }
 
 // ProjectFolder is the folder the chat stands for: in a worktree, the same

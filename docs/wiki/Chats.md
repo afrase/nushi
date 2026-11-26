@@ -133,7 +133,7 @@ Rather press Enter for new lines? Turn on **Enter starts a new line** in **Setti
 
 You don't have to click the box first. Start typing anywhere in the chat and the letters go into the box. (A menu, a dialog or another text field keeps what you type.)
 
-- **Attach files or images**: click the **+** in the box and pick **Add files or photos** (**⌘U**), drop files on the chat, or paste a picture.
+- **Attach files or images**: click the **+** in the box and pick **Add files or photos** (**⌘U**), drop files on the chat, or paste a picture. If the agent can't take pictures, Nushi says so and leaves the picture out.
 - **Mention a file**: type `@` and pick one.
 - **Slash commands**: type `/` to see the agent's commands.
 

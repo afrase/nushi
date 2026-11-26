@@ -205,3 +205,38 @@ func TestMoveKeepsTheUploadsAbsolute(t *testing.T) {
 		t.Errorf("queue %+v", c.queue)
 	}
 }
+
+// A move whose new session takes other things than the old one (here no
+// images) stores the chat's record once: the app is sent one record.
+func TestAMoveSendsOneRecord(t *testing.T) {
+	agent := &fakeAgent{}
+	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
+	var mu sync.Mutex
+	var records []model.ChatRecord
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Scratch: t.TempDir(),
+		Publish: func(e model.Event) {
+			if e.Record != nil {
+				mu.Lock()
+				records = append(records, *e.Record)
+				mu.Unlock()
+			}
+		}})
+	t.Cleanup(svc.Close)
+	c := startChat(t, svc, t.TempDir())
+	c.kind.Moves = true
+	turn(t, svc, c, "one")
+	agent.mu.Lock()
+	agent.noImages = true
+	agent.mu.Unlock()
+	mu.Lock()
+	records = nil
+	mu.Unlock()
+	to := t.TempDir()
+	testcheck.NoErr(t, svc.Move(t.Context(), c.id, to, false))
+	idle(t, c)
+	mu.Lock()
+	defer mu.Unlock()
+	if len(records) != 1 || records[0].Folder != to || records[0].Took == nil || records[0].Took.Images {
+		t.Errorf("records sent: %+v", records)
+	}
+}

@@ -127,6 +127,7 @@ type fakeAgent struct {
 	deletes   bool
 	deleteErr error
 	noLoad    bool // it can't reopen sessions
+	noImages  bool // it takes no images in prompts
 	// notReady is why it can't start now (Kind.Ready, by ready); nil: it can.
 	notReady error
 	// authMethods are the ways to sign it in that initialize advertises.
@@ -317,7 +318,10 @@ func (f *fakeAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.In
 	if f.initErr != nil {
 		return nil, f.initErr
 	}
-	caps := &acp.AgentCapabilities{LoadSession: !f.noLoad, PromptCapabilities: &acp.PromptCapabilities{Image: true}}
+	f.mu.Lock()
+	images := !f.noImages
+	f.mu.Unlock()
+	caps := &acp.AgentCapabilities{LoadSession: !f.noLoad, PromptCapabilities: &acp.PromptCapabilities{Image: images}}
 	caps.SessionCapabilities = &acp.SessionCapabilities{}
 	if f.deletes {
 		caps.SessionCapabilities.Delete = &acp.SessionDeleteCapabilities{}

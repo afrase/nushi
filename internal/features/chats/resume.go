@@ -330,7 +330,9 @@ func (s *Service) load(ctx context.Context, c *chat) (mode, err error) {
 	}
 	c.mu.Lock()
 	held := c.held // a queue held before (an archived chat's) stays held
-	s.useLocked(c, o)
+	if s.useLocked(c, o) {
+		c.storeLocked()
+	}
 	c.held = held
 	if replay {
 		c.restoreLocked(replayed, times)

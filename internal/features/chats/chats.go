@@ -396,7 +396,9 @@ func (s *Service) Status(sess model.ChatRecord) model.Status {
 	c := s.chats[sess.ID]
 	s.mu.Unlock()
 	if c == nil {
-		return model.Status{Asleep: !sess.Archived}
+		st := model.Status{Asleep: !sess.Archived}
+		st.Images, st.CanFork, st.CanRewind = remembered(sess.Took)
+		return st
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -454,10 +456,33 @@ func (c *chat) noticeLocked(reason, text string) {
 
 func (c *chat) statusLocked() model.Status {
 	idle := c.agent == nil && !c.busyLocked() && c.parent == nil && !c.record.Archived
-	return model.Status{Busy: c.busyLocked(), Started: c.started, Waiting: c.waitsLocked(), CanFork: c.canFork, Images: c.canImage,
-		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: !idle && c.canAskContextLocked() == nil, CanWriteCommit: !idle && c.canWriteCommitLocked() == nil,
+	images, fork, rewind := c.canImage, c.canFork, c.forkAt != nil
+	if c.agent == nil && c.parent == nil {
+		images, fork, rewind = remembered(c.record.Took)
+	}
+	return model.Status{Busy: c.busyLocked(), Started: c.started, Waiting: c.waitsLocked(), CanFork: fork, Images: images,
+		CanRewind: rewind, MCPChanged: c.mcpChanged, CanAskContext: !idle && c.canAskContextLocked() == nil, CanWriteCommit: !idle && c.canWriteCommitLocked() == nil,
 		Asleep: idle && !c.reopenFailed, ReopenFailed: idle && c.reopenFailed, SessionGone: idle && c.reopenFailed && c.sessionGone, CanSleep: c.parent == nil && c.canSleepLocked() == nil,
 		Background: c.runningLocked(), Workflows: c.workflowsLocked(), OwnTurn: c.ownTurn}
+}
+
+// remembered is what a chat whose agent isn't running says its agent
+// takes: what it took when its session last opened (took), as a message
+// wakes it on the same agent. Not known (a record of a daemon that didn't
+// keep it), images are taken, as every agent Nushi runs takes them: the
+// new session checks as the message goes (imagesTakenLocked), which says
+// so if they aren't. Forking and rewinding stay off until it wakes.
+func remembered(took *model.AgentTook) (images, fork, rewind bool) {
+	if took == nil {
+		return true, false, false
+	}
+	return took.Images, took.Fork, took.Rewind
+}
+
+// tookLocked is what the chat's running agent takes, as its record keeps
+// it (model.ChatRecord.Took).
+func (c *chat) tookLocked() *model.AgentTook {
+	return &model.AgentTook{Images: c.canImage, Fork: c.canFork, Rewind: c.forkAt != nil}
 }
 
 // runningLocked counts the subagents, background commands and workflows

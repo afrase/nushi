@@ -165,8 +165,8 @@ func TestKeepSideChat(t *testing.T) {
 	if describe(c.items) != "user:one agent:m1" {
 		t.Errorf("the chat changed: %q", describe(c.items))
 	}
-	if k.agent != nil || k.busyLocked() || !k.statusLocked().Asleep {
-		t.Errorf("the kept chat isn't waiting to reopen on its own agent: %+v", k.statusLocked())
+	if st := k.statusLocked(); k.agent != nil || k.busyLocked() || !st.Asleep || !st.Images || !st.CanFork {
+		t.Errorf("the kept chat isn't waiting to reopen on its own agent, taking what it took: %+v", st)
 	}
 }
 

@@ -174,6 +174,10 @@ func forkRecord(id, sid string, of model.ChatRecord) model.ChatRecord {
 		wt.AutoName = false
 		r.Worktree = &wt
 	}
+	if of.Took != nil { // the same agent: a kept side chat says so until it opens
+		took := *of.Took
+		r.Took = &took
+	}
 	return r
 }
 
