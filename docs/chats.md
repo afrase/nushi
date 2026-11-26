@@ -128,7 +128,7 @@ The chat keys work in a terminal too: on the Mac every ⌘ key but ⌘F and ⌘W
 
 ## The palette
 
-⌘K (View › Command Palette…) opens the palette. In a terminal ⌘K clears it, so use ⇧⌘P there, which works everywhere while the palette keeps ⌘K.
+⌘K (View › Command Palette…) opens the palette. In a terminal ⌘K clears it, as Terminal does: the line you're typing on stays, at the top, and the rest goes. The clear lasts until the terminal reconnects (the app or the daemon restarting), when the daemon sends its kept output again; [issue #122](https://github.com/afrase/nushi/issues/122) is the fix. So use ⇧⌘P there, which works everywhere while the palette keeps ⌘K.
 
 - **Go to a chat** by its title: the pinned first, then the last opened. Archived chats are listed last, marked.
 - **Run an action**: New chat, Open file…, Artifacts…, Chat, Changes, Pull request, show or hide the sidebar, Back, Forward, the details and the terminal, Rewind…; the chat's own: Side chat, Fork chat, Send review comments, Stop, Rename, Pin or Unpin, Sleep or Wake, Reload, Link pull request…, Archive or Unarchive, MCP servers, Skills, Delete…; and Settings, Jira, GitHub, Restart daemon.

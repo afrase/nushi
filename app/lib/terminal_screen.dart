@@ -7,6 +7,7 @@ import 'package:nushi/conventions.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
 import 'package:nushi/keys.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/terminal_clear.dart';
 import 'package:nushi/terminal_find.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/terminal_tabs.dart';
@@ -63,7 +64,7 @@ class TerminalScreen extends StatelessWidget {
       if (terminalPasses(key)) key: value,
     terminalCopyKey: CopySelectionTextIntent.copy,
     terminalPasteKey: const PasteTextIntent(SelectionChangedCause.keyboard),
-    terminalClearKey: VoidCallbackIntent(s.terminal.clear),
+    terminalClearKey: VoidCallbackIntent(() => clearTerminal(s.terminal)),
     newTerminalKey: VoidCallbackIntent(
       () => tryOrShow(context, () => terms.open(info.chatId)),
     ),
