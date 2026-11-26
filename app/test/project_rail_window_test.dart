@@ -48,7 +48,7 @@ void main() {
           dropTileImage(gif);
         });
         projectTiles.value = {
-          cappy: const TileLook(mark: 'CR', color: 'teal'),
+          cubby: const TileLook(mark: 'CR', color: 'teal'),
           notes: TileLook(
             image: photo,
             crop: const TileCrop(zoom: 3, x: 0.42, y: 0.38),
@@ -220,7 +220,7 @@ void main() {
         ));
         addTearDown(() => dropTileImage(photo));
         projectTiles.value = {
-          cappy: const TileLook(mark: 'CR', color: 'teal'),
+          cubby: const TileLook(mark: 'CR', color: 'teal'),
           // Framed on the disc's edge.
           notes: TileLook(
             image: photo,
@@ -245,7 +245,7 @@ void main() {
         /// A tile mid-drag, rendered: lifted under the pointer, the others
         /// apart; dropped after.
         Future<void> dragRender() async {
-          var at = tester.getCenter(find.byTooltip('cappy\n$cappy'));
+          var at = tester.getCenter(find.byTooltip('cubby\n$cubby'));
           final goal = tester.getRect(find.byTooltip('notes\n$notes')).bottom;
           final drag = await tester.startGesture(
             at,

@@ -17,7 +17,7 @@ import 'fake_daemon.dart';
 import 'sidebar_fixture.dart';
 
 /// Four projects, newest chat first: ledger-poc (one chat waiting on you,
-/// one idle), cappy (working), garden (a turn's end unseen), notes (idle).
+/// one idle), cubby (working), garden (a turn's end unseen), notes (idle).
 List<Chat> _chats() => [
   chat(
     'a',
@@ -30,7 +30,7 @@ List<Chat> _chats() => [
     'c',
     'codex',
     'Cap the rates',
-    folder: '/Users/me/cappy',
+    folder: '/Users/me/cubby',
     age: 1,
     status: ChatStatus(busy: true),
   ),
@@ -57,7 +57,7 @@ Future<Daemon> _sidebar(
   return d;
 }
 
-const _projects = ['ledger-poc', 'cappy', 'garden', 'notes'];
+const _projects = ['ledger-poc', 'cubby', 'garden', 'notes'];
 
 /// The projects' headers, top to bottom.
 List<String> _order(WidgetTester tester) => [
@@ -105,7 +105,7 @@ void main() {
     expect(_y(tester, 'ledger-poc'), greaterThan(top));
     await drag.up();
     await tester.pump();
-    final order = ['notes', 'ledger-poc', 'cappy', 'garden'];
+    final order = ['notes', 'ledger-poc', 'cubby', 'garden'];
     expect(_order(tester), order);
     final paths = [for (final p in order) '/Users/me/$p'];
     expect(sidebarOrder.value, paths);
@@ -146,7 +146,7 @@ void main() {
     Focus.of(
       tester.element(
         find.descendant(
-          of: _header('cappy'),
+          of: _header('cubby'),
           matching: find.byIcon(Icons.expand_more),
         ),
       ),
@@ -155,7 +155,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
     expect(find.text('Cap the rates'), findsNothing);
-    expect(_dot(tester, 'cappy'), ChatPhase.working);
+    expect(_dot(tester, 'cubby'), ChatPhase.working);
 
     sidebarCollapsed.value = {
       ...sidebarCollapsed.value,
@@ -181,7 +181,7 @@ void main() {
     expect(find.text('Wire the ledger'), findsOneWidget);
     expect(_dot(tester, 'ledger-poc'), isNull);
     expect(sidebarCollapsed.value, {
-      '/Users/me/cappy',
+      '/Users/me/cubby',
       '/Users/me/garden',
       '/Users/me/notes',
     });
@@ -190,17 +190,17 @@ void main() {
 
   testWidgets('the selected chat of a collapsed project still shows its row, '
       'until another is selected', (tester) async {
-    sidebarCollapsed.value = {'/Users/me/cappy'};
+    sidebarCollapsed.value = {'/Users/me/cubby'};
     final d = await _sidebar(tester);
     expect(find.text('Cap the rates'), findsNothing);
     expect(chatOrder(d).map((c) => c.id), ['a', 'b', 'd', 'e']);
     d.select('c'); // as ⌘1–9, a notification or New chat do
     await tester.pump();
     expect(find.text('Cap the rates'), findsOneWidget);
-    expect(_y(tester, 'Cap the rates'), greaterThan(_y(tester, 'cappy')));
+    expect(_y(tester, 'Cap the rates'), greaterThan(_y(tester, 'cubby')));
     expect(_y(tester, 'Cap the rates'), lessThan(_y(tester, 'garden')));
     expect(chatOrder(d).map((c) => c.id), ['a', 'b', 'c', 'd', 'e']);
-    expect(sidebarCollapsed.value, {'/Users/me/cappy'}); // still collapsed
+    expect(sidebarCollapsed.value, {'/Users/me/cubby'}); // still collapsed
     d.select('a');
     await tester.pump();
     expect(find.text('Cap the rates'), findsNothing);
@@ -210,15 +210,15 @@ void main() {
   testWidgets('a header is one line, its path in the tooltip; the + shows '
       'under the pointer or with keyboard focus', (tester) async {
     final d = await _sidebar(tester);
-    final header = tester.getRect(_header('cappy'));
+    final header = tester.getRect(_header('cubby'));
     expect(header.height, lessThan(40)); // no second line
-    expect(find.byTooltip('/Users/me/cappy'), findsOneWidget);
+    expect(find.byTooltip('/Users/me/cubby'), findsOneWidget);
     double plus() => tester
         .widget<Opacity>(
           find
               .ancestor(
                 of: find.descendant(
-                  of: _header('cappy'),
+                  of: _header('cubby'),
                   matching: find.byTooltip('New chat here'),
                 ),
                 matching: find.byType(Opacity),
@@ -229,7 +229,7 @@ void main() {
     expect(plus(), 0);
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     addTearDown(mouse.removePointer);
-    await mouse.addPointer(location: tester.getCenter(find.text('cappy')));
+    await mouse.addPointer(location: tester.getCenter(find.text('cubby')));
     await tester.pump();
     expect(plus(), 1);
     await mouse.moveTo(tester.getCenter(find.text('Jot it down')));
@@ -238,7 +238,7 @@ void main() {
     // Tabbed to, it shows.
     Focus.of(
       tester.element(
-        find.descendant(of: _header('cappy'), matching: find.byIcon(Icons.add)),
+        find.descendant(of: _header('cubby'), matching: find.byIcon(Icons.add)),
       ),
     ).requestFocus();
     await tester.pump();
@@ -255,11 +255,11 @@ void main() {
       tester,
       chats: [
         ..._chats(),
-        chat('w', 'claude', 'Ship it', folder: '/Users/me/work/cappy', age: 7),
+        chat('w', 'claude', 'Ship it', folder: '/Users/me/work/cubby', age: 7),
       ],
     );
-    expect(find.text('cappy  · me'), findsOneWidget);
-    expect(find.text('cappy  · work'), findsOneWidget);
+    expect(find.text('cubby  · me'), findsOneWidget);
+    expect(find.text('cubby  · work'), findsOneWidget);
     expect(find.text('ledger-poc'), findsOneWidget); // no twin: the name
     expect(find.text('needs you'), findsNothing);
     expect(

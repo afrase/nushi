@@ -119,12 +119,12 @@ void main() {
     sidebarProjects.value = {'/Users/me/zeta'};
     sidebarOrder.value = [garden, '/Users/me/zeta', ledger];
     final (d, _) = await arrangedSidebar(tester);
-    // cappy and notes aren't placed, so first; attic's one chat is pinned.
+    // cubby and notes aren't placed, so first; attic's one chat is pinned.
     final groups = arrangeSidebar(d).projects.keys;
-    expect(groups, [cappy, notes, garden, '/Users/me/zeta', ledger, attic]);
+    expect(groups, [cubby, notes, garden, '/Users/me/zeta', ledger, attic]);
     expect(_tiles(tester), [
       'All projects',
-      'cappy',
+      'cubby',
       'notes',
       'garden',
       'zeta',
@@ -181,7 +181,7 @@ void main() {
 
     // A section shows the project's chats of it; one with none is left
     // out, and so is an empty Pinned.
-    await _press(tester, 'cappy');
+    await _press(tester, 'cubby');
     expect(shown(), ['Reviews', 'Cap the rates']);
     await _press(tester, 'attic');
     expect(shown(), ['Pinned', 'Keep this', 'attic']);
@@ -205,7 +205,7 @@ void main() {
 
   testWidgets('narrowed to a project, the sidebar goes to another’s as a '
       'chat of it opens; a project removed shows all again', (tester) async {
-    sidebarProject.value = cappy;
+    sidebarProject.value = cubby;
     final (d, fake) = await arrangedSidebar(tester);
     expect(_chats(tester), ['Cap the rates']);
     d.select('d');
@@ -241,11 +241,11 @@ void main() {
   // hidden, so a chat opened meanwhile wasn't followed.
   testWidgets('a chat of another project opened while the sidebar is '
       'hidden is followed once it shows', (tester) async {
-    sidebarProject.value = cappy;
+    sidebarProject.value = cubby;
     final (d, shown) = await _hideableSidebar(tester);
-    d.select('c'); // cappy's
+    d.select('c'); // cubby's
     await tester.pumpAndSettle();
-    expect(sidebarProject.value, cappy);
+    expect(sidebarProject.value, cubby);
 
     // Hidden and shown again with no other chat opened: as it was, and a
     // tile picked meanwhile stays picked.
@@ -273,15 +273,15 @@ void main() {
   // the open chat, and a later rail change took a tile picked after it.
   testWidgets('a chat opened with the rail off is followed when the rail '
       'is turned on while the sidebar is hidden', (tester) async {
-    sidebarProject.value = cappy;
+    sidebarProject.value = cubby;
     final (d, shown) = await _hideableSidebar(tester);
-    d.select('c'); // cappy's
+    d.select('c'); // cubby's
     await tester.pumpAndSettle();
     projectRail.value = false;
     await tester.pumpAndSettle();
     d.select('d'); // garden's
     await tester.pumpAndSettle();
-    expect(sidebarProject.value, cappy, reason: 'no rail, no pick moved');
+    expect(sidebarProject.value, cubby, reason: 'no rail, no pick moved');
 
     shown.value = false;
     await tester.pumpAndSettle();
@@ -307,7 +307,7 @@ void main() {
       '(grouped by Date, or turned off) is followed once it shows', (
     tester,
   ) async {
-    sidebarProject.value = cappy;
+    sidebarProject.value = cubby;
     final (d, _) = await arrangedSidebar(tester);
     expect(_chats(tester), ['Cap the rates']);
     sidebarGroupBy.value = GroupBy.date;
@@ -315,7 +315,7 @@ void main() {
     expect(find.byType(ProjectRail), findsNothing);
     d.select('d'); // garden's
     await tester.pumpAndSettle();
-    expect(sidebarProject.value, cappy, reason: 'no rail, no pick moved');
+    expect(sidebarProject.value, cubby, reason: 'no rail, no pick moved');
     sidebarGroupBy.value = GroupBy.project;
     await tester.pumpAndSettle();
     expect(sidebarProject.value, garden);
@@ -323,12 +323,12 @@ void main() {
 
     projectRail.value = false;
     await tester.pumpAndSettle();
-    d.select('c'); // cappy's
+    d.select('c'); // cubby's
     await tester.pumpAndSettle();
     expect(sidebarProject.value, garden);
     projectRail.value = true;
     await tester.pumpAndSettle();
-    expect(sidebarProject.value, cappy);
+    expect(sidebarProject.value, cubby);
     expect(_chats(tester), ['Cap the rates']);
     d.dispose();
   });
@@ -347,7 +347,7 @@ void main() {
       _ => null,
     };
     expect(badge('ledger-poc'), '1');
-    expect(badge('cappy'), isNull);
+    expect(badge('cubby'), isNull);
     expect(badge('attic'), isNull);
 
     Future<void> waits(String id, {bool waiting = true}) async {
@@ -432,7 +432,7 @@ void main() {
     tester,
   ) async {
     projectRail.value = false;
-    sidebarProject.value = cappy;
+    sidebarProject.value = cubby;
     final (d, _) = await arrangedSidebar(tester);
     expect(find.byType(ProjectRail), findsNothing);
     expect(railShows, isFalse);
@@ -448,14 +448,14 @@ void main() {
     // A chat of another project opening moves no pick.
     d.select('d');
     await tester.pumpAndSettle();
-    expect(sidebarProject.value, cappy);
+    expect(sidebarProject.value, cubby);
     expect(_chats(tester), hasLength(6));
     d.dispose();
   });
 
   testWidgets('turned on and off, the rail comes and goes, the pick with '
       'it; the sidebar’s buttons and edge stay; none by Date', (tester) async {
-    sidebarProject.value = cappy;
+    sidebarProject.value = cubby;
     final (d, _) = await arrangedSidebar(tester);
     final arrange = find.byTooltip(RegExp('^Arrange the sidebar'));
     expect(find.byType(ProjectRail), findsOneWidget);
@@ -533,12 +533,12 @@ void main() {
 
   testWidgets('a sidebar too narrow for the rail has none, and shows '
       'every project', (tester) async {
-    sidebarProject.value = cappy;
+    sidebarProject.value = cubby;
     final (d, _) = await arrangedSidebar(tester, width: 240);
     expect(find.byType(ProjectRail), findsNothing);
     expect(railShows, isFalse);
     expect(_chats(tester), hasLength(6));
-    expect(sidebarProject.value, cappy); // kept, for when there's room
+    expect(sidebarProject.value, cubby); // kept, for when there's room
     d.dispose();
   });
 
@@ -548,7 +548,7 @@ void main() {
       icons: {garden: await iconPng(tester)},
     );
     await decodeImages(tester);
-    for (final name in ['ledger-poc', 'cappy', 'garden', 'notes', 'attic']) {
+    for (final name in ['ledger-poc', 'cubby', 'garden', 'notes', 'attic']) {
       final small = find.byWidgetPredicate(
         (w) =>
             w is ProjectTile && w.name == name && w.size == ProjectTile.small,
@@ -654,7 +654,7 @@ void main() {
       // Narrowed to ledger-poc, attic's pin stays, marked as attic's.
       pinnedEveryProject.value = true;
       sidebarProjects.value = {'/Users/me/zeta'};
-      projectTiles.value = {cappy: const TileLook(mark: 'CR', color: 'teal')};
+      projectTiles.value = {cubby: const TileLook(mark: 'CR', color: 'teal')};
       final (d, _) = await arrangedSidebar(
         tester,
         tokens: tokens,

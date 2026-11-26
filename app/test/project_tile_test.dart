@@ -138,7 +138,7 @@ void main() {
     int asks() => fake.calls.whereType<GetProjectIconRequest>().length;
 
     expect(d.projectIcons.of(garden), isNull);
-    expect(d.projectIcons.of(cappy), isNull);
+    expect(d.projectIcons.of(cubby), isNull);
     expect(d.projectIcons.of(''), isNull);
     var told = 0;
     d.projectIcons.addListener(() => told++);
@@ -146,7 +146,7 @@ void main() {
     expect(asks(), 2);
     expect(told, 1);
     expect(d.projectIcons.of(garden)?.bytes, png);
-    expect(d.projectIcons.of(cappy), isNull);
+    expect(d.projectIcons.of(cubby), isNull);
     await tester.pump();
     expect(asks(), 2);
     d.dispose();

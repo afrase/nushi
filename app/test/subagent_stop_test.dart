@@ -18,13 +18,13 @@ final _items = <Item>[
   Item(
     id: 'u',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
-    text: 'Build the ClickHouse time binding in sqrly.',
+    text: 'Build the CSV date parser in rusty.',
   ),
   Item(
     id: 'a',
     kind: ItemKind.ITEM_KIND_TOOL_CALL,
     agent: 'general-purpose',
-    title: 'Build ClickHouse time binding in sqrly',
+    title: 'Build CSV date parser in rusty',
     status: 'completed',
     model: 'sonnet',
     agentId: 'ab89b68fab85fc5e7',
@@ -37,8 +37,8 @@ final _items = <Item>[
     ),
   ),
   for (final (id, title) in [
-    ('a1', 'Read sqrly/bind.go'),
-    ('a2', 'Edit sqrly/bind.go'),
+    ('a1', 'Read rusty/date.go'),
+    ('a2', 'Edit rusty/date.go'),
   ])
     Item(
       id: id,
@@ -65,7 +65,7 @@ final _items = <Item>[
     id: 'b',
     kind: ItemKind.ITEM_KIND_TOOL_CALL,
     agent: 'general-purpose',
-    title: 'Build ClickHouse time binding (Opus)',
+    title: 'Build CSV date parser (Opus)',
     status: 'completed',
     model: 'opus',
     agentId: 'aba0c75971268c18b',
@@ -75,14 +75,14 @@ final _items = <Item>[
     id: 'b1',
     kind: ItemKind.ITEM_KIND_TOOL_CALL,
     parent: 'b',
-    title: 'Read sqrly/bind.go',
+    title: 'Read rusty/date.go',
     status: 'completed',
   ),
   Item(
     id: 'b2',
     kind: ItemKind.ITEM_KIND_TOOL_CALL,
     parent: 'b',
-    title: 'go test ./sqrly/...',
+    title: 'go test ./rusty/...',
     toolKind: 'execute',
     status: 'in_progress',
   ),
@@ -112,7 +112,7 @@ Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, double width) async {
   viewport(tester, Size(width, 640));
   // The turn ended; the running subagent and make watch go on (API 84).
   final running = ChatStatus(background: 2);
-  final c = chat('c', 'claude', 'ClickHouse time binding', status: running);
+  final c = chat('c', 'claude', 'CSV date parser', status: running);
   final fake = FakeDaemon([c])
     ..answer = (input) => input is GetChatRequest
         ? GetChatResponse(chat: c, items: _items, status: running)

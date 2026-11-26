@@ -16,12 +16,12 @@ import 'sidebar_fixture.dart';
 
 const _ledger = '/Users/me/ledger-poc';
 
-/// Four projects, the newest chat first: ledger-poc (three chats), cappy,
+/// Four projects, the newest chat first: ledger-poc (three chats), cubby,
 /// garden, notes; [pins] pinned, by id, at their places.
 List<Chat> _chats({Map<String, int> pins = const {}}) => [
   for (final c in [
     chat('a', 'claude', 'Wire the ledger', folder: _ledger),
-    chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cappy', age: 1),
+    chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cubby', age: 1),
     chat('d', 'claude', 'Plant the beds', folder: '/Users/me/garden', age: 2),
     chat('e', 'ante', 'Jot it down', folder: '/Users/me/notes', age: 3),
     chat('b', 'pig', 'Seed data', folder: _ledger, age: 5),
@@ -115,7 +115,7 @@ void main() {
     expect(_opacity(tester, 'Price the bonds'), 0.4);
     expect(_opacity(tester, 'Wire the ledger'), 1);
     // The projects below don't move.
-    expect(_y(tester, 'cappy'), greaterThan(before['Price the bonds']!));
+    expect(_y(tester, 'cubby'), greaterThan(before['Price the bonds']!));
 
     await drag.up();
     await tester.pump();
@@ -141,7 +141,7 @@ void main() {
     const ledger = ['Wire the ledger', 'Price the bonds'];
     final before = _ys(tester, [...ledger, 'Cap the rates', 'Seed data']);
 
-    // Cap the rates (cappy) onto ledger-poc's rows.
+    // Cap the rates (cubby) onto ledger-poc's rows.
     var drag = await _drag(
       tester,
       'Cap the rates',
@@ -161,7 +161,7 @@ void main() {
     await tester.pump(_slide * 2);
     expect(fake.calls.whereType<PinChatsRequest>(), isEmpty);
 
-    // Price the bonds up over Wire the ledger, then off, onto cappy's.
+    // Price the bonds up over Wire the ledger, then off, onto cubby's.
     drag = await _drag(
       tester,
       'Price the bonds',
@@ -199,19 +199,19 @@ void main() {
     );
     await tester.pumpAndSettle(); // its rows fold (a Disclosure)
     expect(_in('Jot it down'), findsNothing);
-    const headers = ['ledger-poc', 'cappy', 'garden', 'notes'];
+    const headers = ['ledger-poc', 'cubby', 'garden', 'notes'];
     final before = _ys(tester, headers);
-    // A collapsed group is its header: cappy's group less its one row.
+    // A collapsed group is its header: cubby's group less its one row.
     final row = _y(tester, 'Seed data') - _y(tester, 'Wire the ledger');
-    final notes = before['garden']! - before['cappy']! - row;
+    final notes = before['garden']! - before['cubby']! - row;
 
     final drag = await _drag(tester, 'notes', before['ledger-poc']! - 4);
     await tester.pump(_slide * 2);
     final moved = _ys(tester, headers);
-    // ledger-poc, cappy and garden down by the same: notes's height.
+    // ledger-poc, cubby and garden down by the same: notes's height.
     final by = moved['ledger-poc']! - before['ledger-poc']!;
     expect(by, closeTo(notes, 0.01));
-    for (final h in ['cappy', 'garden']) {
+    for (final h in ['cubby', 'garden']) {
       expect(moved[h], closeTo(before[h]! + by, 0.01));
     }
     expect(moved['notes'], closeTo(before['ledger-poc']!, 0.01));
@@ -221,13 +221,13 @@ void main() {
     await tester.pump();
     expect(_ys(tester, headers), {
       'notes': closeTo(before['ledger-poc']!, 0.01),
-      for (final h in ['ledger-poc', 'cappy', 'garden'])
+      for (final h in ['ledger-poc', 'cubby', 'garden'])
         h: closeTo(before[h]! + by, 0.01),
     });
     expect(sidebarOrder.value, [
       '/Users/me/notes',
       _ledger,
-      '/Users/me/cappy',
+      '/Users/me/cubby',
       '/Users/me/garden',
     ]);
     expect(sidebarCollapsed.value, {'/Users/me/notes'});

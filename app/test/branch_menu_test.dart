@@ -17,32 +17,33 @@ import 'package:nushi/worktree.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-final String _repo = '${Platform.environment['HOME']}/code/cappy';
-final String _try = '$_repo/.worktrees/cappy/try-sqrly';
+final String _repo = '${Platform.environment['HOME']}/code/cubby';
+final String _try = '$_repo/.worktrees/cubby/try-rusty';
 
-/// The owner's case: cappy on main, try-sqrly in a worktree of its own.
+/// A project on main with a branch in a worktree of its own: cubby on
+/// main, try-rusty in its worktree.
 ListBranchesResponse _list({bool inTry = false}) => ListBranchesResponse(
   branches: [
     GitBranch(name: 'main', worktree: _repo),
-    GitBranch(name: 'try-sqrly', worktree: _try),
+    GitBranch(name: 'try-rusty', worktree: _try),
     GitBranch(name: 'fix/login-redirect'),
     GitBranch(name: 'old-experiment'),
   ],
   worktrees: [
     GitWorktree(path: _repo, branch: 'main', main: true, current: !inTry),
-    GitWorktree(path: _try, branch: 'try-sqrly', current: inTry),
-    GitWorktree(path: '/tmp/cappy-locked', branch: 'kept', locked: true),
+    GitWorktree(path: _try, branch: 'try-rusty', current: inTry),
+    GitWorktree(path: '/tmp/cubby-locked', branch: 'kept', locked: true),
   ],
 );
 
-/// A chat with a message in cappy (or in try-sqrly's worktree).
+/// A chat with a message in cubby (or in try-rusty's worktree).
 ChatState _chat({bool busy = false, bool inTry = false}) =>
     ChatState('c', inTry ? _try : _repo)
       ..worktree = inTry
           ? Worktree(
               repo: _repo,
               path: _try,
-              branch: 'try-sqrly',
+              branch: 'try-rusty',
               base: 'main',
               found: true,
             )
@@ -54,7 +55,7 @@ ChatState _chat({bool busy = false, bool inTry = false}) =>
         ),
       );
 
-/// A daemon whose folder is on main (or try-sqrly), answering SwitchBranch
+/// A daemon whose folder is on main (or try-rusty), answering SwitchBranch
 /// with [switched] in turn (the last one again after).
 FakeDaemon _fake({
   bool inTry = false,
@@ -65,7 +66,7 @@ FakeDaemon _fake({
     ..answer = (input) => switch (input) {
       GetFolderStatusRequest() => GetFolderStatusResponse(
         git: true,
-        branch: inTry ? 'try-sqrly' : 'main',
+        branch: inTry ? 'try-rusty' : 'main',
         defaultBase: 'main',
       ),
       ListBranchesRequest() => _list(inTry: inTry),
@@ -165,7 +166,7 @@ void main() {
       final c = Chat(
         id: 'c',
         agent: 'claude',
-        title: 'Try sqrly',
+        title: 'Try rusty',
         folder: _repo,
       );
       final fake = _fake()
@@ -277,7 +278,7 @@ void main() {
     final y = [
       for (final l in [
         'main',
-        'try-sqrly',
+        'try-rusty',
         'fix/login-redirect',
         'old-experiment',
         'New branch…',
@@ -298,13 +299,13 @@ void main() {
     final fake = _fake();
     final d = await _panel(tester, fake, _chat());
     await _open(tester, 'main');
-    await tester.tap(_row('try-sqrly'));
+    await tester.tap(_row('try-rusty'));
     await tester.pumpAndSettle();
-    expect(find.text('try-sqrly is in a worktree'), findsOneWidget);
+    expect(find.text('try-rusty is in a worktree'), findsOneWidget);
     expect(fake.calls.whereType<SwitchBranchRequest>(), isEmpty);
     await tester.tap(find.text('Open its worktree'));
     await tester.pumpAndSettle();
-    expect(find.text('Move to the worktree of try-sqrly?'), findsOneWidget);
+    expect(find.text('Move to the worktree of try-rusty?'), findsOneWidget);
     await tester.tap(find.text('Move'));
     await tester.pumpAndSettle();
     final moved = fake.calls.whereType<MoveChatRequest>().single;
@@ -421,14 +422,14 @@ void main() {
       'New branch…; another one moves the chat', (tester) async {
     final fake = _fake(inTry: true);
     final d = await _panel(tester, fake, _chat(inTry: true));
-    await _open(tester, 'try-sqrly');
+    await _open(tester, 'try-rusty');
     expect(_row('New branch…'), findsNothing);
     expect(_row('fix/login-redirect'), findsNothing);
     expect(find.textContaining('the repository'), findsOneWidget);
     expect(find.textContaining('locked'), findsOneWidget);
     expect(
       find.descendant(
-        of: _row('try-sqrly'),
+        of: _row('try-rusty'),
         matching: find.byIcon(Icons.check),
       ),
       findsOneWidget,
@@ -449,7 +450,7 @@ void main() {
     expect(find.text('Move to new worktree'), findsNothing);
     await _open(tester, 'None');
     final add = tester.getRect(_row('New worktree…'));
-    expect(tester.getRect(_row('try-sqrly')).top, greaterThan(add.bottom));
+    expect(tester.getRect(_row('try-rusty')).top, greaterThan(add.bottom));
     expect(_row('kept'), findsOneWidget);
     expect(_row('main'), findsNothing); // the chat's own folder
     await tester.tap(_row('New worktree…'));
@@ -461,9 +462,9 @@ void main() {
     expect((moved.folder, moved.worktree), (_repo, true));
 
     await _open(tester, 'None');
-    await tester.tap(_row('try-sqrly'));
+    await tester.tap(_row('try-rusty'));
     await tester.pumpAndSettle();
-    expect(find.text('Move to the worktree of try-sqrly?'), findsOneWidget);
+    expect(find.text('Move to the worktree of try-rusty?'), findsOneWidget);
     d.dispose();
   });
 
@@ -498,7 +499,7 @@ void main() {
     await _open(tester, 'None');
     expect(find.textContaining('Once the agent is done'), findsOneWidget);
     await tester.tap(_row('New worktree…'), warnIfMissed: false);
-    await tester.tap(_row('try-sqrly'), warnIfMissed: false);
+    await tester.tap(_row('try-rusty'), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.text('Move to a new worktree?'), findsNothing);
     expect(fake.calls.whereType<MoveChatRequest>(), isEmpty);
@@ -570,10 +571,10 @@ void main() {
     final chat = ChatState('c', _repo)..load(GetChatResponse());
     await tester.pumpWidget(themed(NewChatBar(chat: chat, daemon: d)));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('cappy'));
+    await tester.tap(find.text('cubby'));
     await tester.pumpAndSettle();
-    expect(find.text('Worktrees of cappy'), findsOneWidget);
-    await tester.tap(_row('try-sqrly'));
+    expect(find.text('Worktrees of cubby'), findsOneWidget);
+    await tester.tap(_row('try-rusty'));
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<MoveChatRequest>().single.folder, _try);
     d.dispose();
@@ -610,9 +611,9 @@ void main() {
     expect(find.text('New worktree'), findsNothing);
     gone = false;
     await fake.restart(tester);
-    await tester.tap(find.text('cappy'));
+    await tester.tap(find.text('cubby'));
     await tester.pumpAndSettle();
-    expect(find.text('Worktrees of cappy'), findsOneWidget);
+    expect(find.text('Worktrees of cubby'), findsOneWidget);
     await closeView(tester, d2);
   });
 }

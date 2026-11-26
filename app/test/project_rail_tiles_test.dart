@@ -92,7 +92,7 @@ void main() {
                           'dotfiles',
                           'attic',
                           'zeta',
-                          'cappy',
+                          'cubby',
                           'web',
                         ].indexed)
                           tile(n, i, size: ProjectTile.small),

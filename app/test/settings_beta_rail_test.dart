@@ -22,8 +22,8 @@ void main() {
     File('$dataDir/app.json').writeAsStringSync(
       jsonEncode({
         'projectRail': true,
-        'sidebarProject': cappy,
-        'sidebarProjects': [ledger, cappy, garden, notes, attic],
+        'sidebarProject': cubby,
+        'sidebarProjects': [ledger, cubby, garden, notes, attic],
         'projectTiles': {
           garden: {'mark': 'G7', 'color': 'amber'},
         },
@@ -36,7 +36,7 @@ void main() {
     tester,
   ) async {
     expect(projectRail.value, isFalse);
-    expect(sidebarProject.value, cappy);
+    expect(sidebarProject.value, cubby);
     expect(shownProject, isNull);
     expect(projectTiles.value[garden]?.toJson(), {
       'mark': 'G7',

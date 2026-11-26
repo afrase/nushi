@@ -39,7 +39,7 @@ Chat _chat(
 /// months before [fixtureNow] (Thursday 29 October 2026, noon):
 /// - Wire the ledger: Claude, ledger-poc, needs you; made today.
 /// - Seed data: PiG, ledger-poc, in a worktree; made yesterday.
-/// - Cap the rates: Codex, cappy, working; made 5 days ago, updated today.
+/// - Cap the rates: Codex, cubby, working; made 5 days ago, updated today.
 /// - Plant the beds: Claude, garden, done; made 19 days ago.
 /// - Jot it down: Ante, notes; made in September.
 /// - Keep this: Claude, attic, pinned.
@@ -68,7 +68,7 @@ List<Chat> arrangeChats() => [
     'c',
     'codex',
     'Cap the rates',
-    '/Users/me/cappy',
+    '/Users/me/cubby',
     created: DateTime(2026, 10, 24, 15),
     updated: fixtureNow.subtract(const Duration(hours: 1)),
     status: ChatStatus(busy: true),

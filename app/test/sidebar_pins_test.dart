@@ -17,12 +17,12 @@ import 'sidebar_fixture.dart';
 
 const _ledger = '/Users/me/ledger-poc';
 
-/// Four projects, the newest chat first: ledger-poc (three chats), cappy,
+/// Four projects, the newest chat first: ledger-poc (three chats), cubby,
 /// garden, notes; [pins] pinned, by id, at their places.
 List<Chat> _chats({Map<String, int> pins = const {}}) => [
   for (final c in [
     chat('a', 'claude', 'Wire the ledger', folder: _ledger),
-    chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cappy', age: 1),
+    chat('c', 'codex', 'Cap the rates', folder: '/Users/me/cubby', age: 1),
     chat('d', 'claude', 'Plant the beds', folder: '/Users/me/garden', age: 2),
     chat('e', 'ante', 'Jot it down', folder: '/Users/me/notes', age: 3),
     chat('b', 'pig', 'Seed data', folder: _ledger, age: 5),
@@ -161,7 +161,7 @@ void main() {
     expect((readSaved()['sidebarChats']! as Map)[_ledger], ['f', 'a', 'b']);
     expect(chatOrder(d).take(3).map((c) => c.id), ['f', 'a', 'b']);
 
-    // Cap the rates (cappy) onto ledger-poc's rows: they stay, no move.
+    // Cap the rates (cubby) onto ledger-poc's rows: they stay, no move.
     final seed = _ys(tester, 'Seed data');
     await _drag(
       tester,
@@ -309,7 +309,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(pinned(), ['a']);
     expect(_inSidebar('Cap the rates'), findsOne);
-    expect(_ys(tester, 'Cap the rates'), greaterThan(_ys(tester, 'cappy')));
+    expect(_ys(tester, 'Cap the rates'), greaterThan(_ys(tester, 'cubby')));
 
     // Archived, a's pin goes (the daemon's), and with it Pinned.
     d.select('a');
